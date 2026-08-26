@@ -1,0 +1,22 @@
+# buf v2 codegen template. Invoked from the repo root as
+#   buf generate --template backend/buf.gen.yaml proto
+# so every `out:` is repo-root-relative (buf resolves out against the cwd, not
+# this file). Plugins are remote (they run on the BSR) — nothing to install locally.
+#
+# Pins track their runtime: protocolbuffers/go ↔ google.golang.org/protobuf,
+# connectrpc/go ↔ connectrpc.com/connect (keep == go.mod to avoid gen/runtime drift).
+version: v2
+plugins:
+  # Go message types → backend/internal/gen/postpilot/v1/*.pb.go (package postpilotv1)
+  - remote: buf.build/protocolbuffers/go:v1.36.11
+    out: backend/internal/gen
+    opt: paths=source_relative
+  # Go Connect handlers/clients → backend/internal/gen/postpilot/v1/postpilotv1connect/
+  - remote: buf.build/connectrpc/go:v1.20.0
+    out: backend/internal/gen
+    opt: paths=source_relative
+  # TS types + Connect service descriptor → frontend/src/shared/api/gen/postpilot/v1/health_pb.ts
+  # connect-es v2: protoc-gen-es alone emits the service (no protoc-gen-connect-es).
+  - remote: buf.build/bufbuild/es:v2.12.0
+    out: frontend/src/shared/api/gen
+    opt: target=ts

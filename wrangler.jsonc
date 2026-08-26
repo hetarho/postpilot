@@ -1,0 +1,22 @@
+// Cloudflare Workers static-asset deploy. The frontend is a pure static Vite SPA,
+// so there is no Worker script ("main") — only the build output is uploaded.
+// `npx wrangler deploy` reads this file from the repo root.
+//
+// Dashboard build command:  pnpm --filter ./frontend build   → frontend/dist
+// Dashboard deploy command: npx wrangler deploy               → uploads ./assets below
+// Dashboard version command (non-production branches): npx wrangler versions upload
+//
+// ⚠️ VITE_* variables are baked in at BUILD time, so they must live in the Worker's
+//    Settings → Build → Variables (VITE_API_URL). Without it the app deploys fine but
+//    never reaches the backend.
+{
+  "name": "postpilot",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    // Build output directory, resolved relative to this file (= repo root).
+    "directory": "./frontend/dist",
+    // SPA: paths with no matching file (deep links, refresh) return index.html with 200
+    // instead of 404.
+    "not_found_handling": "single-page-application"
+  }
+}

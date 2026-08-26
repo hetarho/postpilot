@@ -1,0 +1,33 @@
+# Local dev runtime. `pnpm dev:api` runs the backend here with air hot-reload so the
+# Go toolchain version is pinned by the image, not by whatever is on the host.
+# The frontend runs on the host (`pnpm dev:web`, Vite on :2564) and proxies /api here.
+#
+# Host port 7678 → container 8080. The dev ports spell the project on a phone keypad —
+# 7678 = P-O-S-T (api), 2564 = B-L-O-G (web) — which keeps them clear of 8080/1214 (the
+# sibling cosimosi stack) and of every common dev default. In production the api owns 8080
+# as usual; only the host-side mapping is unusual.
+#
+# No database yet — the API is stateless through the ping milestone. When persistence
+# lands, add the postgres service back here and give the api a DATABASE_URL.
+name: postpilot
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: postpilot-backend
+    profiles: ["dev"]
+    environment:
+      PORT: "8080"
+      CORS_ORIGIN: http://localhost:2564
+    ports:
+      - "7678:8080"
+    volumes:
+      - ./backend:/app
+      - backend_go_mod:/go/pkg/mod
+      - backend_tmp:/app/tmp
+
+volumes:
+  backend_go_mod:
+  backend_tmp:

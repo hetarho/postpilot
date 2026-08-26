@@ -1,0 +1,30 @@
+# Single shared Caddy for the whole VPS — the only binder of ports 80/443. Lives at
+# /srv/edge (copied there once, managed manually: edit → `docker compose up -d`). It is
+# NOT part of the per-env deploy workflow; api stacks roll independently underneath it.
+# Reaches each stack's api via the external `edge` network (docker network create edge),
+# where the stacks register unique aliases (postpilot-api-staging / postpilot-api-prod).
+# /srv/edge/.env provides API_DOMAIN_PROD and API_DOMAIN_STAGING.
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN_PROD: ${API_DOMAIN_PROD}
+      API_DOMAIN_STAGING: ${API_DOMAIN_STAGING}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+
+networks:
+  edge:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

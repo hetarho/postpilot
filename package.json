@@ -1,0 +1,25 @@
+{
+  "name": "postpilot",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Photos + what happened → a ready-to-paste blog post, per platform",
+  "scripts": {
+    "dev": "concurrently -n web,api -c cyan,magenta \"pnpm run dev:web\" \"pnpm run dev:api\"",
+    "dev:web": "pnpm --filter ./frontend dev",
+    "dev:api": "docker compose --profile dev up backend",
+    "gen": "node scripts/gen.mjs",
+    "gen:proto": "node scripts/gen.mjs proto",
+    "build:web": "pnpm --filter ./frontend build",
+    "build:api": "cd backend && go build -o bin/api ./cmd/api",
+    "lint": "pnpm --filter ./frontend lint",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,21 @@
+# Shared edge proxy (deploy/edge): one Caddy terminates TLS for BOTH api domains and
+# proxies to the per-env api containers over the `edge` docker network. Domains come
+# from /srv/edge/.env via the compose environment. Upstreams speak h2c (Connect over
+# HTTP/2 cleartext) on :8080; CORS is handled by the API itself (connectrpc.com/cors,
+# allowed origin = each stack's CORS_ORIGIN), not here. If one env's api container is
+# down, only that domain 502s — the other keeps serving.
+{$API_DOMAIN_PROD} {
+	reverse_proxy postpilot-api-prod:8080 {
+		transport http {
+			versions h2c 2
+		}
+	}
+}
+
+{$API_DOMAIN_STAGING} {
+	reverse_proxy postpilot-api-staging:8080 {
+		transport http {
+			versions h2c 2
+		}
+	}
+}

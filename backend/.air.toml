@@ -1,0 +1,20 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/api ./cmd/api"
+  bin = "./tmp/api"
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_dir = ["tmp", "bin", "internal/gen"]
+  delay = 800
+  stop_on_error = true
+  # Windows bind mounts don't forward inotify events into the container, so fsnotify
+  # silently stops watching (edits never rebuild) — poll instead.
+  poll = true
+  poll_interval = 1000
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+
+# Go
+backend/bin/
+backend/tmp/
+*.exe
+
+# Editor
+.vscode/
+.idea/
+.DS_Store

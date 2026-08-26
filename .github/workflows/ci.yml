@@ -1,0 +1,38 @@
+# CI gate: frontend lint + build and backend vet + build must pass. Runs on PRs (merge
+# gate) AND on direct pushes to develop/main (solo-dev validation — no PR needed to catch
+# a break). No secrets needed, so this is safe to run anytime.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # reads packageManager (pnpm@10.x) from package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter ./frontend lint
+      - run: pnpm --filter ./frontend build
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - run: go vet ./...
+      - run: go build ./...

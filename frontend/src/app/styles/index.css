@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+
+/* Tailwind v4 is configured in CSS, not a JS config file. Design tokens go in
+   @theme once the visual language is decided. */
+
+html,
+body,
+#root {
+  height: 100%;
+}

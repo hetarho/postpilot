@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+// Import path matches the source-relative output dir (proto path postpilot/v1/);
+// the part after ';' sets the Go package name (postpilotv1) + connect subpackage
+// (postpilotv1connect). See backend/buf.gen.yaml (paths=source_relative).
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// health.proto is the transport contract's first slice: a liveness RPC that proves
+// the whole wire works end to end (browser → Connect → Go handler) before any
+// product logic exists. Unary only — no streaming.
+service HealthService {
+  rpc Ping(PingRequest) returns (PingResponse) {}
+}
+
+message PingRequest {}
+
+message PingResponse {
+  // Fixed greeting, so a client can assert on it without knowing the deploy.
+  string message = 1;
+  // Server build version — the same value /health reports.
+  string version = 2;
+}

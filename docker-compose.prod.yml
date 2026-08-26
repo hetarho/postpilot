@@ -1,0 +1,24 @@
+# Production runtime: the GHCR API image, one stack per environment on the VPS
+# (/srv/postpilot-staging, /srv/postpilot-prod), each with its own untracked .env.
+# TLS/reverse-proxy is NOT here — a single shared Caddy (deploy/edge) owns ports 80/443
+# for the whole VPS and reaches each stack's api over the external `edge` docker network
+# (two per-stack caddys would fight over 80/443). API_UPSTREAM (from .env) gives this
+# stack's api its unique DNS name on that network: postpilot-api-staging | postpilot-api-prod.
+# IMAGE_TAG is read from .env — the deploy step writes IMAGE_TAG=<sha> there so `pull`
+# and `up -d` resolve the SAME image (never pass it inline; an inline assignment only
+# reaches the first command).
+services:
+  api:
+    image: ghcr.io/hetarho/postpilot-api:${IMAGE_TAG:-latest}
+    env_file: .env
+    restart: unless-stopped
+    expose:
+      - "8080"
+    networks:
+      edge:
+        aliases:
+          - ${API_UPSTREAM}
+
+networks:
+  edge:
+    external: true # one-time on the VPS: docker network create edge
