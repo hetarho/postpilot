@@ -1,20 +1,26 @@
-# Backend deploy. On push to develop|main (backend paths), the `build` job ALWAYS builds
-# the static image (validating the Dockerfile in CI) and PUSHES it to GHCR only when
-# deploy is enabled. The `rollout` job (swap the API over SSH) only runs once the VPS is
-# ready: set repo variable DEPLOY_ENABLED=true plus the SSH secrets. Until then push +
-# rollout are skipped (not failed) — no GHCR/VPS dependency, so this stays green during
-# prep. develop→staging, main→production (one VPS, two stacks).
+# Backend deploy. The `build` job validates the production Compose file and BUILDS the
+# static image (validating the Dockerfile in CI), pushing to GHCR only when deploy is
+# enabled. The `rollout` job swaps the API over SSH and ROLLS BACK if the new image does
+# not come up healthy. develop→staging, main→production (one VPS, two stacks).
+#
+# DEPLOY_ENABLED (repo variable) gates the GHCR push + VPS rollout, so before the VPS
+# exists a push still validates compose + Dockerfile and the workflow stays green.
+#
+# NO SEPARATE MIGRATE STEP — that is deliberate, not an omission. The database is SQLite
+# living in this stack's volume (PRD §6.3), so there is no shared server to migrate
+# against: migrations are embedded in the API binary and run at startup, which means the
+# schema can never disagree with the code that reads it. A failed migration exits the
+# process, the health gate below fails, and the rollout restores the previous tag.
 name: Deploy backend
 
 on:
+  workflow_dispatch:
   push:
-    branches: [develop, main]
+    branches: [main]
     paths:
       - 'backend/**'
       - 'docker-compose.prod.yml'
       - '.github/workflows/deploy-backend.yml'
-  # Manual redeploy from the Actions tab (deploys the selected branch's environment).
-  workflow_dispatch:
 
 # Serialize deploys per environment (never roll two images at once).
 concurrency:
@@ -29,10 +35,23 @@ jobs:
       packages: write
     env:
       IMAGE: ghcr.io/hetarho/postpilot-api
+      ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
     steps:
       - uses: actions/checkout@v4
 
-      # Login is only needed when we actually push (DEPLOY_ENABLED). GITHUB_TOKEN is automatic.
+      # Catch a broken compose file here, not on the VPS mid-rollout. --no-env-resolution
+      # keeps this a syntax/shape check that does not need the real runtime secrets.
+      - name: Validate production Compose
+        env:
+          IMAGE_TAG: validation
+          API_UPSTREAM: postpilot-api-validation
+        run: |
+          test ! -e .env
+          cp .env.production.example .env
+          trap 'rm -f .env' EXIT
+          docker compose -f docker-compose.prod.yml config --quiet --no-env-resolution
+
+      # Login only needed when we actually push (DEPLOY_ENABLED). GITHUB_TOKEN is automatic.
       - name: Log in to GHCR
         if: ${{ vars.DEPLOY_ENABLED == 'true' }}
         uses: docker/login-action@v3
@@ -41,36 +60,167 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Two tags: the SHA is what a rollout pins (immutable, rollback-able); the env name
+      # is a moving pointer so a human can see what prod is supposed to be running.
       - name: Build image (push to GHCR only when deploy is enabled)
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: ${{ vars.DEPLOY_ENABLED == 'true' }}
-          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:${{ env.ENV_NAME }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   rollout:
     needs: build
-    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
+    # Skipped (not failed) until the VPS is ready: set repo variable DEPLOY_ENABLED=true
+    # plus the SSH secrets and the API_ORIGIN / WEB_ORIGIN variables.
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+    # GitHub Environment → per-env secrets and optional manual approval on production.
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     env:
-      # develop → the staging stack, main → the prod stack. Both live on the one VPS.
-      STACK_DIR: /srv/postpilot-${{ github.ref_name == 'main' && 'prod' || 'staging' }}
+      ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
     steps:
-      - name: Swap the API to this commit's image
-        uses: appleboy/ssh-action@v1
+      - uses: actions/checkout@v4
+
+      # The runtime definition must be on the VPS before rollout, and it must be THIS
+      # commit's version — otherwise a compose change silently never reaches production.
+      - name: Sync production Compose to VPS
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          # IMAGE_TAG is written into the stack .env FIRST so `pull` and `up -d` resolve
-          # the SAME image (an inline assignment would only reach the first command).
+          source: 'docker-compose.prod.yml'
+          target: '/srv/postpilot-${{ env.ENV_NAME }}'
+
+      - name: Pull → swap → health gate → roll back on failure
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: IMAGE_TAG,ENV_NAME,API_ORIGIN
           script: |
-            set -e
-            cd ${{ env.STACK_DIR }}
-            sed -i '/^IMAGE_TAG=/d' .env
-            echo "IMAGE_TAG=${{ github.sha }}" >> .env
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            set -eu
+            cd "/srv/postpilot-${ENV_NAME}"
+
+            compose() {
+              docker compose -f docker-compose.prod.yml "$@"
+            }
+
+            # Read values through Compose itself, so quoted empties and inline comments
+            # mean here exactly what they will mean inside the container.
+            resolved_runtime_env="$(compose config --environment)"
+            runtime_env_value() {
+              printf '%s\n' "$resolved_runtime_env" | sed -n "s/^$1=//p" | tail -n 1
+            }
+            require_nonempty_env() {
+              if [ -z "$(runtime_env_value "$1")" ]; then
+                echo "required runtime env $1 is missing or empty" >&2
+                exit 1
+              fi
+            }
+
+            # Fail BEFORE touching the running stack when the stack .env is incomplete.
+            # API_UPSTREAM wrong = Caddy cannot find this api; CORS_ORIGIN wrong = every
+            # browser call fails auth (the session cookie needs an exact-origin CORS
+            # allow with credentials — PRD F-1).
+            require_nonempty_env API_UPSTREAM
+            require_nonempty_env CORS_ORIGIN
+
+            if [ -z "${API_ORIGIN:-}" ]; then
+              echo "repo variable API_ORIGIN is required for the health gate" >&2
+              exit 1
+            fi
+
+            set_image_tag() {
+              if grep -q '^IMAGE_TAG=' .env; then
+                sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$1|" .env
+              else
+                echo "IMAGE_TAG=$1" >> .env
+              fi
+            }
+
+            # Keep the whole untracked env file, so a rollback restores the previous image
+            # selection without disturbing any other runtime secret.
+            ENV_BACKUP=.env.deploy-backup
+            cp -p .env "$ENV_BACKUP"
+            trap 'rm -f "$ENV_BACKUP"' EXIT
+
+            PREVIOUS_TAG="$(runtime_env_value IMAGE_TAG)"
+
+            # 1) Pull the new image BEFORE stopping anything. A pull failure must not cost
+            #    downtime.
+            set_image_tag "$IMAGE_TAG"
+            if ! compose pull api; then
+              cp -p "$ENV_BACKUP" .env
+              exit 1
+            fi
+
+            # 2) Swap. SQLite is a single-writer file in this stack's volume, so the old
+            #    container must be gone before the new one opens it — `up -d` replaces the
+            #    container rather than running both.
+            #    --remove-orphans drops containers for services deleted from the compose
+            #    file instead of leaving them running.
+            compose up -d --remove-orphans api
+
+            # 3) Health gate. The new binary runs its embedded migrations at startup, so
+            #    this is also the migration gate: a bad migration means the process never
+            #    serves /health. Retry generously — the container has to start, migrate,
+            #    and Caddy has to notice the new upstream.
+            if ! curl --retry 15 --retry-all-errors --retry-delay 2 \
+                 --fail --silent --show-error \
+                 --output /dev/null "${API_ORIGIN}/health"; then
+              echo "new image failed the health gate; rolling back to ${PREVIOUS_TAG}" >&2
+              cp -p "$ENV_BACKUP" .env
+              if [ -n "$PREVIOUS_TAG" ]; then
+                compose up -d api || true
+              fi
+              exit 1
+            fi
+
+            docker image prune -f
+
+      # Separate from the rollout on purpose: a CORS mismatch is a stack .env problem, not
+      # a bad image, so rolling the image back would not fix it — it must fail loudly
+      # instead. This is the check that catches "login silently stops working": the session
+      # cookie needs an exact-origin allow with credentials (PRD F-1).
+      - name: Verify CORS preflight for the browser origin
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: API_ORIGIN,WEB_ORIGIN
+          script: |
+            set -eu
+            if [ -z "${API_ORIGIN:-}" ] || [ -z "${WEB_ORIGIN:-}" ]; then
+              echo "repo variables API_ORIGIN and WEB_ORIGIN are required" >&2
+              exit 1
+            fi
+
+            headers_file="$(mktemp)"
+            trap 'rm -f "$headers_file"' EXIT
+            curl --fail --silent --show-error \
+              --dump-header "$headers_file" --output /dev/null \
+              --request OPTIONS \
+              --header "Origin: ${WEB_ORIGIN}" \
+              --header 'Access-Control-Request-Method: POST' \
+              --header 'Access-Control-Request-Headers: connect-protocol-version,content-type' \
+              "${API_ORIGIN}/postpilot.v1.HealthService/Ping"
+
+            grep --fixed-strings --ignore-case \
+              "access-control-allow-origin: ${WEB_ORIGIN}" "$headers_file"
+            grep --fixed-strings --ignore-case \
+              'access-control-allow-credentials: true' "$headers_file"

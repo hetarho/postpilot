@@ -14,6 +14,15 @@ services:
     restart: unless-stopped
     expose:
       - "8080"
+    volumes:
+      # SQLite lives beside the stack definition (PRD 6.3), so one directory is the whole
+      # backup target. The API opens /data/postpilot.db and runs its embedded migrations
+      # at startup — there is no separate migrate container to coordinate with.
+      #
+      # The image is distroless:nonroot (uid 65532), so the host directory must be owned
+      # by that uid or every write fails at runtime:
+      #   sudo install -d -o 65532 -g 65532 /srv/postpilot-<env>/data
+      - ./data:/data
     networks:
       edge:
         aliases:
