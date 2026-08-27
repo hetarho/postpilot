@@ -17,6 +17,9 @@
 > **현재 상태: 프레임워크 스캐폴드.** 위 로직은 아직 하나도 구현돼 있지 않다.
 > 지금 있는 것은 배포까지 이어지는 뼈대 + 그 뼈대가 살아 있음을 증명하는 최소 왕복
 > (백엔드 `HealthService.Ping`, 프론트 "Hello, world")뿐이다.
+>
+> **무엇을 어떻게 만들지는 [`PRD.md`](./PRD.md)가 권위다** — 기능 요구사항, 데이터 모델,
+> 확정된 기술 선택과 그 근거가 거기 있다. 남은 작업 순서는 `PRD.md §10`.
 
 ## 스택
 
@@ -27,7 +30,9 @@
 | 백엔드 | Go + connect-go, distroless 정적 이미지 | GHCR 이미지 → VPS docker compose (공유 Caddy 뒤) |
 | CI/CD | GitHub Actions (`ci.yml`, `deploy-backend.yml`) | `develop` → staging, `main` → prod |
 
-DB는 아직 없다. 저장이 필요해지는 시점에 붙인다(→ `DEPLOY.md` §다음 단계).
+DB·인증·저장소는 아직 **코드에 없다.** 무엇을 붙일지는 정해져 있다 —
+SQLite(순수 Go 드라이버) · argon2id + HttpOnly 쿠키 세션 · 사진은 Cloudflare R2.
+근거와 대안 비교는 `PRD.md §6`, 붙이는 순서는 `PRD.md §10`.
 
 ## 로컬 실행
 
