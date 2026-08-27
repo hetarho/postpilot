@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Refactor Job"
+  short_description: "Create implementation jobs from refactor reports"
+  default_prompt: "Use $create-refactor-job to create an implementation job from refactor report NN."

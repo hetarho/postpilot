@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Plan Job"
+  short_description: "Turn a plan into a build job"
+  default_prompt: "Use $create-plan-job to create an implementation job from a postpilot plan."

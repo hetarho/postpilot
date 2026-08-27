@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Change Job"
+  short_description: "Turn a change into a build job"
+  default_prompt: "Use $create-change-job to create an implementation job from a change proposal."

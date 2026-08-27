@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Change"
+  short_description: "Draft a postpilot change proposal"
+  default_prompt: "Use $create-change to draft a postpilot change proposal for shipped behavior."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Code Review"
+  short_description: "Create architecture and maintainability review reports"
+  default_prompt: "Use $create-code-review to create a read-only architecture and maintainability report for this codebase."
