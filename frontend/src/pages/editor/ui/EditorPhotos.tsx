@@ -38,7 +38,10 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
         />
       </div>
       {upload.createFailed && (
-        <p role="alert" className="text-xs text-danger">
+        <p
+          role="alert"
+          className="bg-notice-danger-bg text-notice-danger-fg rounded-md px-3 py-2 text-xs"
+        >
           사진을 붙일 글을 만들지 못했어요. 다시 시도해 주세요.
         </p>
       )}

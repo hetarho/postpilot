@@ -1,6 +1,6 @@
 import { useId } from 'react'
-import { clsx } from 'clsx'
 import { UPLOAD_ALLOWED_EXTENSIONS } from '@/shared/config'
+import { buttonStyles } from '@/shared/ui'
 
 // `image/*` alongside the extensions: a phone picker keys off MIME types and would
 // otherwise hide the camera roll on some devices; the extension gate runs afterwards
@@ -19,22 +19,13 @@ export function PhotoPicker({
   const inputId = useId()
   return (
     <>
-      <label
-        htmlFor={inputId}
-        className={clsx(
-          'rounded-md bg-surface-raised px-2.5 py-1 text-xs text-text-muted',
-          disabled ? 'opacity-50' : 'cursor-pointer hover:text-text',
-        )}
-      >
-        사진 추가
-      </label>
       <input
         id={inputId}
         type="file"
         multiple
         accept={ACCEPT}
         disabled={disabled}
-        className="sr-only"
+        className="peer sr-only"
         onChange={(event) => {
           const files = Array.from(event.target.files ?? [])
           // Cleared so picking the same photo again fires a change event.
@@ -42,6 +33,18 @@ export function PhotoPicker({
           onFiles(files)
         }}
       />
+      <label
+        htmlFor={inputId}
+        aria-disabled={disabled || undefined}
+        className={buttonStyles({
+          variant: 'secondary',
+          className: disabled
+            ? undefined
+            : 'peer-focus-visible:outline-focus-ring cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2',
+        })}
+      >
+        사진 추가
+      </label>
     </>
   )
 }

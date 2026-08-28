@@ -69,9 +69,7 @@ describe('login screen', () => {
     await user.type(screen.getByLabelText('비밀번호'), 'pw')
     await user.click(screen.getByRole('button', { name: '로그인' }))
 
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/posts/20260820-jeju'),
-    )
+    await waitFor(() => expect(router.state.location.pathname).toBe('/posts/20260820-jeju'))
     expect(await screen.findByDisplayValue('제주 3일')).toBeInTheDocument()
   })
 
@@ -86,6 +84,10 @@ describe('login screen', () => {
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('아이디 또는 비밀번호가 맞지 않아요')
+    expect(screen.getByLabelText('아이디')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('비밀번호')).toHaveAccessibleDescription(
+      '아이디 또는 비밀번호가 맞지 않아요',
+    )
     // Nothing may hint at whether the id exists.
     expect(alert.textContent).not.toMatch(/ghost|없|존재|not found/i)
     expect(router.state.location.pathname).toBe('/login')

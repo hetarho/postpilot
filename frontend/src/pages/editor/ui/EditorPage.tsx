@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
 import { type PostLoadFailure, usePost } from '@/entities/post'
+import { Button } from '@/shared/ui'
 import { DraftEditor } from './DraftEditor'
 
 /** `/posts/new` — a draft that does not exist yet. The first autosave creates it and
@@ -33,26 +34,25 @@ const FAILURE_MESSAGES: Record<PostLoadFailure, string> = {
   unavailable: '글을 불러오지 못했어요.',
 }
 
-function LoadFailure({
-  failure,
-  onRetry,
-}: {
-  failure: PostLoadFailure
-  onRetry: () => void
-}) {
+function LoadFailure({ failure, onRetry }: { failure: PostLoadFailure; onRetry: () => void }) {
   return (
     <EditorPlaceholder>
-      <span role="alert">{FAILURE_MESSAGES[failure]}</span>
-      <span className="mt-4 flex items-center gap-4">
-        <Link to="/posts" className="text-text-muted underline">
+      <span role="alert" className="text-notice-danger-fg">
+        {FAILURE_MESSAGES[failure]}
+      </span>
+      <span className="mt-4 flex items-center gap-2">
+        <Link
+          to="/posts"
+          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline"
+        >
           글 목록으로
         </Link>
         {/* Only for a failure that is not an answer: retrying a 403 or a 404 would just
             ask the same question again. */}
         {failure === 'unavailable' && (
-          <button type="button" onClick={onRetry} className="text-text-muted underline">
+          <Button variant="ghost" onClick={onRetry} className="underline">
             다시 시도
-          </button>
+          </Button>
         )}
       </span>
     </EditorPlaceholder>
@@ -61,7 +61,7 @@ function LoadFailure({
 
 function EditorPlaceholder({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col items-start px-6 py-16 text-sm text-text-subtle">
+    <main className="text-content-tertiary mx-auto flex w-full max-w-2xl flex-col items-start px-4 py-16 text-sm sm:px-6">
       {children}
     </main>
   )

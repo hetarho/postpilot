@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { type PostImage, Thumbnail } from '@/entities/image'
+import { Button } from '@/shared/ui'
 import type { UploadFailure, UploadItem } from '../model/upload-batch'
 
 interface PhotoStripProps {
@@ -45,15 +46,16 @@ export function PhotoStrip({
       {images.map((image) => (
         <li key={image.id}>
           <Thumbnail src={image.viewUrl} alt={image.filename} dimmed={deletingId === image.id}>
-            <button
-              type="button"
+            <Button
+              variant="danger"
+              size="icon"
               onClick={() => onDelete(image)}
               disabled={deletingId === image.id}
               aria-label={`${image.filename} 삭제`}
-              className="absolute top-1 right-1 rounded bg-overlay/70 px-1.5 text-xs text-text hover:bg-overlay"
+              className="bg-media-scrim-bg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-1 right-1"
             >
-              ✕
-            </button>
+              <span aria-hidden="true">×</span>
+            </Button>
             {deleteFailedId === image.id && <Overlay role="alert">삭제하지 못했어요</Overlay>}
           </Thumbnail>
         </li>
@@ -66,13 +68,21 @@ export function PhotoStrip({
                 <span>{item.failure && FAILURE_LABELS[item.failure]}</span>
                 <span className="flex gap-2">
                   {item.failure === 'network' && (
-                    <button type="button" onClick={() => onRetry(item.id)} className="underline">
+                    <Button
+                      variant="ghost"
+                      onClick={() => onRetry(item.id)}
+                      className="text-media-scrim-fg hover:bg-media-scrim-bg active:bg-media-scrim-bg px-2 text-xs underline"
+                    >
                       다시 시도
-                    </button>
+                    </Button>
                   )}
-                  <button type="button" onClick={() => onDismiss(item.id)} className="underline">
+                  <Button
+                    variant="ghost"
+                    onClick={() => onDismiss(item.id)}
+                    className="text-media-scrim-fg hover:bg-media-scrim-bg active:bg-media-scrim-bg px-2 text-xs underline"
+                  >
                     지우기
-                  </button>
+                  </Button>
                 </span>
               </Overlay>
             ) : (
@@ -89,7 +99,7 @@ function Overlay({ children, role }: { children: ReactNode; role?: string }) {
   return (
     <span
       role={role}
-      className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-1 text-center text-[11px] leading-tight text-text"
+      className="bg-media-scrim-bg/90 text-media-scrim-fg absolute inset-0 flex flex-col items-center justify-center gap-1 p-2 text-center text-xs leading-tight"
     >
       {children}
     </span>

@@ -1,5 +1,6 @@
 import { Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { useLogout, useSession } from '@/entities/session'
+import { Button } from '@/shared/ui'
 import { endSession } from '../model/end-session'
 
 /** The shell every signed-in screen renders inside.
@@ -32,25 +33,31 @@ export function AuthenticatedLayout() {
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-bg text-text">
-      <header className="flex items-center justify-between px-6 py-3">
-        <Link to="/posts" className="text-sm font-medium tracking-tight">
+    <div className="bg-surface-base text-content-primary flex min-h-full flex-col">
+      <header className="bg-surface-raised flex min-h-16 items-center justify-between px-4 sm:px-6">
+        <Link
+          to="/posts"
+          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm font-medium tracking-tight"
+        >
           Postpilot
         </Link>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-text-muted">{user?.id}</span>
-          <button
-            type="button"
+          <span className="text-content-tertiary font-mono text-xs">{user?.id}</span>
+          <Button
+            variant="ghost"
             onClick={() => void onLogout()}
             disabled={logout.isPending}
-            className="rounded-md px-2.5 py-1 text-xs text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50"
+            className="text-xs"
           >
-            로그아웃
-          </button>
+            {logout.isPending ? '로그아웃 중…' : '로그아웃'}
+          </Button>
         </div>
       </header>
       {logout.isError && (
-        <p role="alert" className="bg-danger-surface px-6 py-2 text-xs text-danger">
+        <p
+          role="alert"
+          className="bg-notice-danger-bg text-notice-danger-fg px-4 py-3 text-xs sm:px-6"
+        >
           로그아웃하지 못했어요. 세션이 아직 살아 있으니 다시 시도해 주세요.
         </p>
       )}

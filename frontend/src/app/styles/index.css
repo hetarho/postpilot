@@ -1,23 +1,28 @@
 @import 'tailwindcss';
 
 /*
- * The design tokens — a TWO-TIER system. The rules this file carries are written up in
- * spec/tech/design-language.md; this header only says how the tiers fit together.
+ * The colour system has THREE LAYERS. The rules this file carries are written up in
+ * spec/tech/design-language.md; this header only says how the layers fit together.
  *
- * TIER 1 — the palette (`--palette-*`). OKLCH ramps, one per hue family, eleven steps on ONE
- * shared lightness scale (50 ≈ near white … 950 ≈ deep ground). These are the only raw colour
- * literals in the frontend. They are plain custom properties, NOT Tailwind theme variables, so
- * no utility class can reach them: `bg-palette-violet-400` does not exist on purpose.
+ * TIER 1 — the palette (`--palette-*`). OKLCH ramps, one per hue family, on ONE shared lightness
+ * scale (50 ≈ near white … 950 ≈ deep ground); mauve adds intermediate stops where five close
+ * surfaces need them. These are the only raw colour literals in the frontend. They are plain
+ * custom properties, NOT Tailwind theme variables, so no utility class can reach them:
+ * `bg-palette-violet-400` does not exist on purpose.
  *
- * TIER 2 — the semantic roles (`--bg`, `--text`, `--primary`, …). A theme is one block that maps
- * every role to a palette STEP — never to a literal. `@theme inline` then exposes each role to
- * Tailwind as `--color-<role>`, which is what every `bg-* / text-* / border-*` utility resolves
- * to. Two roles that must match reference the same step, so they cannot drift.
+ * TIER 2 — the semantic foundations (`--surface-*`, `--content-*`, `--intent-*`). A theme maps
+ * each foundation to a palette STEP — never to a literal. The five surfaces describe physical
+ * depth from `lowest` through `highest`; intent names meaning, never a component.
+ *
+ * TIER 3 — functional roles (`--button-cta-*`, `--field-*`, `--notice-*`, …). These map the
+ * foundations onto the things a screen actually renders. `@theme inline` exposes foundations
+ * needed for layout and these functional roles to Tailwind as `--color-<role>`. A primitive uses
+ * its own functional role instead of reaching straight for violet, accent, or a palette step.
  *
  * THEMES. `:root` carries the default role map. A second theme is one more
- * `[data-theme='<key>']` block re-mapping the same roles — nothing else changes, because no
- * component ever reads a step. There is no theme switcher yet; the blocks exist so adding one is
- * a one-attribute change on <html>, not a refactor.
+ * `[data-theme='<key>']` block re-mapping the same foundations — nothing else changes, because
+ * no component ever reads a step. There is no theme switcher yet; the blocks exist so adding one
+ * is a one-attribute change on <html>, not a refactor.
  *
  * Tailwind's stock colour palette is removed (`--color-*: initial`). A class like `bg-gray-100`
  * or `text-red-400` therefore emits NO CSS — and `pnpm lint:style` fails the build on it.
@@ -25,9 +30,10 @@
 
 /* ── Tier 1: palette ────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* mauve — the neutral. Hue 298 (the primary's hue) at a flat, whisper-level chroma: ~5% of
-     the violet ramp's peak, so greys read as "cool, faintly violet" without ever reading as
-     purple. Constant chroma keeps the tint present at both ends of the scale. */
+  /* mauve — the neutral. Hue 298 (the primary's hue) at a whisper-level chroma: ~5% of the
+     violet ramp's peak, so greys read as "cool, faintly violet" without ever reading as purple.
+     Chroma tapers only at the near-white end to stay in gamut. */
+  --palette-mauve-25: oklch(0.99 0.004 298);
   --palette-mauve-50: oklch(0.975 0.006 298);
   --palette-mauve-100: oklch(0.94 0.008 298);
   --palette-mauve-200: oklch(0.885 0.01 298);
@@ -35,9 +41,12 @@
   --palette-mauve-400: oklch(0.72 0.01 298);
   --palette-mauve-500: oklch(0.63 0.01 298);
   --palette-mauve-600: oklch(0.53 0.01 298);
+  --palette-mauve-650: oklch(0.48 0.01 298);
   --palette-mauve-700: oklch(0.435 0.01 298);
   --palette-mauve-800: oklch(0.31 0.01 298);
+  --palette-mauve-850: oklch(0.275 0.01 298);
   --palette-mauve-900: oklch(0.235 0.01 298);
+  --palette-mauve-925: oklch(0.2 0.01 298);
   --palette-mauve-950: oklch(0.165 0.01 298);
 
   /* violet — the primary (shared with cosimosi: hue 298, chroma peaking at L 0.63). */
@@ -110,93 +119,157 @@
   --palette-black: oklch(0 0 0);
 }
 
-/* ── Tier 2: semantic roles ─────────────────────────────────────────────────────────────────── */
+/* ── Tier 2: semantic foundations ───────────────────────────────────────────────────────────── */
 
 /* Default theme: `night`. Dark, mauve ground, violet accent. */
 :root,
 [data-theme='night'] {
   color-scheme: dark;
 
-  /* ground planes — depth is a lighter step, never a border */
-  --bg: var(--palette-mauve-950);
-  --surface: var(--palette-mauve-900);
-  --surface-raised: var(--palette-mauve-800);
-  --surface-hover: var(--palette-mauve-800);
+  /* planes — physical depth from behind the page to the frontmost floating surface */
+  --surface-lowest: var(--palette-mauve-950);
+  --surface-recessed: var(--palette-mauve-925);
+  --surface-base: var(--palette-mauve-900);
+  --surface-raised: var(--palette-mauve-850);
+  --surface-highest: var(--palette-mauve-800);
 
-  /* ink — importance is carried by these three, and nothing else */
-  --text: var(--palette-mauve-50);
-  --text-muted: var(--palette-mauve-300);
-  --text-subtle: var(--palette-mauve-500);
-  --text-faint: var(--palette-mauve-600);
+  /* content — the first three meet AA on every surface; disabled content is exempt */
+  --content-primary: var(--palette-mauve-50);
+  --content-secondary: var(--palette-mauve-300);
+  --content-tertiary: var(--palette-mauve-400);
+  --content-disabled: var(--palette-mauve-600);
 
-  /* the hairline, for the rare places a plane change is not enough */
-  --border: var(--palette-mauve-800);
-  --border-strong: var(--palette-mauve-600);
+  /* structure — only for cases a plane change cannot express */
+  --stroke-subtle: var(--palette-mauve-800);
+  --stroke-strong: var(--palette-mauve-600);
 
-  /* accent */
-  --primary: var(--palette-violet-400);
-  --primary-hover: var(--palette-violet-300);
-  --primary-foreground: var(--palette-violet-950);
-  --primary-surface: var(--palette-violet-900);
+  /* intent — Tier 3 decides which component is allowed to carry each meaning */
+  --intent-accent: var(--palette-violet-400);
+  --intent-accent-hover: var(--palette-violet-300);
+  --intent-accent-active: var(--palette-violet-500);
+  --intent-on-accent: var(--palette-violet-950);
+  --intent-accent-subtle: var(--palette-violet-900);
 
-  /* status — each has a solid, ink for on-top text, and a quiet surface for inline notes */
-  --danger: var(--palette-red-400);
-  --danger-foreground: var(--palette-red-950);
-  --danger-surface: var(--palette-red-950);
-  --success: var(--palette-green-300);
-  --success-foreground: var(--palette-green-950);
-  --success-surface: var(--palette-green-950);
-  --warning: var(--palette-gold-200);
-  --warning-foreground: var(--palette-gold-950);
-  --warning-surface: var(--palette-gold-950);
-  --info: var(--palette-blue-400);
-  --info-foreground: var(--palette-blue-950);
-  --info-surface: var(--palette-blue-950);
+  --intent-danger: var(--palette-red-400);
+  --intent-danger-hover: var(--palette-red-300);
+  --intent-danger-active: var(--palette-red-500);
+  --intent-on-danger: var(--palette-red-950);
+  --intent-danger-subtle: var(--palette-red-950);
+  --intent-success: var(--palette-green-300);
+  --intent-on-success: var(--palette-green-950);
+  --intent-success-subtle: var(--palette-green-950);
+  --intent-warning: var(--palette-gold-200);
+  --intent-on-warning: var(--palette-gold-950);
+  --intent-warning-subtle: var(--palette-gold-950);
+  --intent-info: var(--palette-blue-400);
+  --intent-on-info: var(--palette-blue-950);
+  --intent-info-subtle: var(--palette-blue-950);
 
   /* interaction + physical light */
-  --focus-ring: var(--palette-violet-300);
-  --overlay: var(--palette-mauve-950);
-  --depth: var(--palette-black);
+  --interaction-focus: var(--palette-violet-300);
+  --physical-scrim: var(--palette-mauve-950);
+  --physical-on-scrim: var(--palette-white);
+  --physical-shadow: var(--palette-black);
 }
 
 /* Second theme: `day`. Same roles, light ground. Not switchable yet — see the header. */
 [data-theme='day'] {
   color-scheme: light;
 
-  --bg: var(--palette-mauve-50);
-  --surface: var(--palette-white);
-  --surface-raised: var(--palette-white);
-  --surface-hover: var(--palette-mauve-100);
+  --surface-lowest: var(--palette-mauve-200);
+  --surface-recessed: var(--palette-mauve-100);
+  --surface-base: var(--palette-mauve-50);
+  --surface-raised: var(--palette-mauve-25);
+  --surface-highest: var(--palette-white);
 
-  --text: var(--palette-mauve-950);
-  --text-muted: var(--palette-mauve-700);
-  --text-subtle: var(--palette-mauve-500);
-  --text-faint: var(--palette-mauve-400);
+  --content-primary: var(--palette-mauve-950);
+  --content-secondary: var(--palette-mauve-700);
+  --content-tertiary: var(--palette-mauve-650);
+  --content-disabled: var(--palette-mauve-500);
 
-  --border: var(--palette-mauve-200);
-  --border-strong: var(--palette-mauve-400);
+  --stroke-subtle: var(--palette-mauve-200);
+  --stroke-strong: var(--palette-mauve-400);
 
-  --primary: var(--palette-violet-600);
-  --primary-hover: var(--palette-violet-700);
-  --primary-foreground: var(--palette-white);
-  --primary-surface: var(--palette-violet-50);
+  --intent-accent: var(--palette-violet-600);
+  --intent-accent-hover: var(--palette-violet-700);
+  --intent-accent-active: var(--palette-violet-800);
+  --intent-on-accent: var(--palette-white);
+  --intent-accent-subtle: var(--palette-violet-50);
 
-  --danger: var(--palette-red-600);
-  --danger-foreground: var(--palette-white);
-  --danger-surface: var(--palette-red-50);
-  --success: var(--palette-green-600);
-  --success-foreground: var(--palette-white);
-  --success-surface: var(--palette-green-50);
-  --warning: var(--palette-gold-500);
-  --warning-foreground: var(--palette-gold-950);
-  --warning-surface: var(--palette-gold-50);
-  --info: var(--palette-blue-600);
-  --info-foreground: var(--palette-white);
-  --info-surface: var(--palette-blue-50);
+  --intent-danger: var(--palette-red-600);
+  --intent-danger-hover: var(--palette-red-700);
+  --intent-danger-active: var(--palette-red-800);
+  --intent-on-danger: var(--palette-white);
+  --intent-danger-subtle: var(--palette-red-50);
+  --intent-success: var(--palette-green-600);
+  --intent-on-success: var(--palette-white);
+  --intent-success-subtle: var(--palette-green-50);
+  --intent-warning: var(--palette-gold-600);
+  --intent-on-warning: var(--palette-white);
+  --intent-warning-subtle: var(--palette-gold-50);
+  --intent-info: var(--palette-blue-600);
+  --intent-on-info: var(--palette-white);
+  --intent-info-subtle: var(--palette-blue-50);
 
-  --focus-ring: var(--palette-violet-500);
-  --overlay: var(--palette-mauve-950);
-  --depth: var(--palette-mauve-950);
+  --interaction-focus: var(--palette-violet-500);
+  --physical-scrim: var(--palette-mauve-950);
+  --physical-on-scrim: var(--palette-white);
+  --physical-shadow: var(--palette-mauve-950);
+}
+
+/* ── Tier 3: functional roles ──────────────────────────────────────────────────────────────── */
+:root {
+  /* actions */
+  --button-cta-bg: var(--intent-accent);
+  --button-cta-bg-hover: var(--intent-accent-hover);
+  --button-cta-bg-active: var(--intent-accent-active);
+  --button-cta-fg: var(--intent-on-accent);
+  --button-secondary-bg: var(--surface-raised);
+  --button-secondary-bg-hover: var(--surface-highest);
+  --button-secondary-bg-active: var(--surface-recessed);
+  --button-secondary-fg: var(--content-primary);
+  --button-ghost-bg: transparent;
+  --button-ghost-bg-hover: var(--surface-raised);
+  --button-ghost-bg-active: var(--surface-recessed);
+  --button-ghost-fg: var(--content-secondary);
+  --button-danger-quiet-bg-hover: var(--intent-danger-subtle);
+  --button-danger-quiet-fg: var(--intent-danger);
+
+  /* fields */
+  --field-bg: var(--surface-recessed);
+  --field-bg-hover: var(--surface-lowest);
+  --field-bg-focus: var(--surface-raised);
+  --field-fg: var(--content-primary);
+  --field-label: var(--content-secondary);
+  --field-placeholder: var(--content-tertiary);
+  --field-error: var(--intent-danger);
+
+  /* navigation and rows */
+  --link-fg: var(--content-secondary);
+  --link-fg-hover: var(--content-primary);
+  --row-bg-hover: var(--surface-raised);
+  --row-bg-active: var(--surface-recessed);
+  --divider: var(--stroke-subtle);
+
+  /* compact labels and inline feedback */
+  --badge-neutral-bg: var(--surface-raised);
+  --badge-neutral-fg: var(--content-secondary);
+  --notice-danger-bg: var(--intent-danger-subtle);
+  --notice-danger-fg: var(--intent-danger);
+  --notice-success-bg: var(--intent-success-subtle);
+  --notice-success-fg: var(--intent-success);
+  --notice-warning-bg: var(--intent-warning-subtle);
+  --notice-warning-fg: var(--intent-warning);
+  --notice-info-bg: var(--intent-info-subtle);
+  --notice-info-fg: var(--intent-info);
+
+  /* system interaction */
+  --focus-ring: var(--interaction-focus);
+  --selection-bg: var(--intent-accent);
+  --selection-fg: var(--intent-on-accent);
+  --media-scrim-bg: var(--physical-scrim);
+  --media-scrim-fg: var(--physical-on-scrim);
+  --shadow-color: var(--physical-shadow);
 }
 
 /* ── Tailwind theme: the roles become utilities; stock colours are removed ─────────────────── */
@@ -222,45 +295,71 @@
 }
 
 @theme inline {
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
+  /* compositional foundations */
+  --color-surface-lowest: var(--surface-lowest);
+  --color-surface-recessed: var(--surface-recessed);
+  --color-surface-base: var(--surface-base);
   --color-surface-raised: var(--surface-raised);
-  --color-surface-hover: var(--surface-hover);
+  --color-surface-highest: var(--surface-highest);
+  --color-content-primary: var(--content-primary);
+  --color-content-secondary: var(--content-secondary);
+  --color-content-tertiary: var(--content-tertiary);
+  --color-content-disabled: var(--content-disabled);
 
-  --color-text: var(--text);
-  --color-text-muted: var(--text-muted);
-  --color-text-subtle: var(--text-subtle);
-  --color-text-faint: var(--text-faint);
+  /* actions */
+  --color-button-cta-bg: var(--button-cta-bg);
+  --color-button-cta-bg-hover: var(--button-cta-bg-hover);
+  --color-button-cta-bg-active: var(--button-cta-bg-active);
+  --color-button-cta-fg: var(--button-cta-fg);
+  --color-button-secondary-bg: var(--button-secondary-bg);
+  --color-button-secondary-bg-hover: var(--button-secondary-bg-hover);
+  --color-button-secondary-bg-active: var(--button-secondary-bg-active);
+  --color-button-secondary-fg: var(--button-secondary-fg);
+  --color-button-ghost-bg: var(--button-ghost-bg);
+  --color-button-ghost-bg-hover: var(--button-ghost-bg-hover);
+  --color-button-ghost-bg-active: var(--button-ghost-bg-active);
+  --color-button-ghost-fg: var(--button-ghost-fg);
+  --color-button-danger-quiet-bg-hover: var(--button-danger-quiet-bg-hover);
+  --color-button-danger-quiet-fg: var(--button-danger-quiet-fg);
 
-  --color-border: var(--border);
-  --color-border-strong: var(--border-strong);
+  /* fields */
+  --color-field-bg: var(--field-bg);
+  --color-field-bg-hover: var(--field-bg-hover);
+  --color-field-bg-focus: var(--field-bg-focus);
+  --color-field-fg: var(--field-fg);
+  --color-field-label: var(--field-label);
+  --color-field-placeholder: var(--field-placeholder);
+  --color-field-error: var(--field-error);
 
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary-surface: var(--primary-surface);
+  /* navigation, rows, labels, feedback */
+  --color-link-fg: var(--link-fg);
+  --color-link-fg-hover: var(--link-fg-hover);
+  --color-row-bg-hover: var(--row-bg-hover);
+  --color-row-bg-active: var(--row-bg-active);
+  --color-divider: var(--divider);
+  --color-badge-neutral-bg: var(--badge-neutral-bg);
+  --color-badge-neutral-fg: var(--badge-neutral-fg);
+  --color-notice-danger-bg: var(--notice-danger-bg);
+  --color-notice-danger-fg: var(--notice-danger-fg);
+  --color-notice-success-bg: var(--notice-success-bg);
+  --color-notice-success-fg: var(--notice-success-fg);
+  --color-notice-warning-bg: var(--notice-warning-bg);
+  --color-notice-warning-fg: var(--notice-warning-fg);
+  --color-notice-info-bg: var(--notice-info-bg);
+  --color-notice-info-fg: var(--notice-info-fg);
 
-  --color-danger: var(--danger);
-  --color-danger-foreground: var(--danger-foreground);
-  --color-danger-surface: var(--danger-surface);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-success-surface: var(--success-surface);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-warning-surface: var(--warning-surface);
-  --color-info: var(--info);
-  --color-info-foreground: var(--info-foreground);
-  --color-info-surface: var(--info-surface);
-
+  /* system interaction */
   --color-focus-ring: var(--focus-ring);
-  --color-overlay: var(--overlay);
-  --color-depth: var(--depth);
+  --color-selection-bg: var(--selection-bg);
+  --color-selection-fg: var(--selection-fg);
+  --color-media-scrim-bg: var(--media-scrim-bg);
+  --color-media-scrim-fg: var(--media-scrim-fg);
+  --color-shadow: var(--shadow-color);
 
-  /* shadows are mixed from `depth` so they re-skin with the theme */
-  --shadow-sm: 0 1px 2px color-mix(in oklab, var(--depth) 40%, transparent);
-  --shadow-md: 0 6px 18px color-mix(in oklab, var(--depth) 45%, transparent);
-  --shadow-lg: 0 18px 48px color-mix(in oklab, var(--depth) 50%, transparent);
+  /* shadows are mixed from the physical role so they re-skin with the theme */
+  --shadow-sm: 0 1px 2px color-mix(in oklab, var(--shadow-color) 40%, transparent);
+  --shadow-md: 0 6px 18px color-mix(in oklab, var(--shadow-color) 45%, transparent);
+  --shadow-lg: 0 18px 48px color-mix(in oklab, var(--shadow-color) 50%, transparent);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────────────────────── */
@@ -271,8 +370,8 @@ body,
 }
 
 body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  background-color: var(--color-surface-base);
+  color: var(--color-content-primary);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -284,8 +383,8 @@ body {
 }
 
 ::selection {
-  background-color: var(--color-primary);
-  color: var(--color-primary-foreground);
+  background-color: var(--color-selection-bg);
+  color: var(--color-selection-fg);
 }
 
 @media (prefers-reduced-motion: reduce) {

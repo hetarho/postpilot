@@ -45,7 +45,9 @@ describe('StageModelSelect', () => {
 
     await screen.findByRole('option', { name: 'Free 👁' })
     expect(screen.queryByRole('option', { name: /Writer/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Claude 👁 {} — API key not configured' })).toBeDisabled()
+    expect(
+      screen.getByRole('option', { name: 'Claude 👁 {} — API key not configured' }),
+    ).toBeDisabled()
   })
 
   // AC2: a provider without a key is greyed with the exact reason and cannot be picked.
@@ -80,6 +82,21 @@ describe('StageModelSelect', () => {
     await waitFor(() => expect(select).toHaveValue('openrouter/writer'))
   })
 
+  it('associates a failed save with the select', async () => {
+    const user = userEvent.setup()
+    renderSelect('write', { saveFails: true })
+
+    const select = await screen.findByRole('combobox', { name: '작성 모델' })
+    await waitFor(() => expect(select).toBeEnabled())
+    await user.selectOptions(select, 'openrouter/writer')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '선택을 저장하지 못했어요. 다시 골라 주세요.',
+    )
+    expect(select).toHaveAttribute('aria-invalid', 'true')
+    expect(select).toHaveAccessibleDescription('선택을 저장하지 못했어요. 다시 골라 주세요.')
+  })
+
   // AC5: a vanished model is shown greyed with the reason and counts as unselected.
   it('shows a vanished saved model greyed with the reason and treats the stage as unselected', async () => {
     renderSelect('write', {
@@ -100,6 +117,13 @@ describe('StageModelSelect', () => {
     })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('모델 목록을 불러오지 못했어요')
+    expect(screen.getByRole('combobox', { name: '작성 모델' })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+    expect(screen.getByRole('combobox', { name: '작성 모델' })).toHaveAccessibleDescription(
+      '모델 목록을 불러오지 못했어요.',
+    )
     expect(screen.queryByRole('option', { name: /사라졌어요/ })).not.toBeInTheDocument()
   })
 

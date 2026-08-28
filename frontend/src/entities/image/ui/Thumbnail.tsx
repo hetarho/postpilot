@@ -14,7 +14,7 @@ interface ThumbnailProps {
 /** One square tile of the photo strip. */
 export function Thumbnail({ src, alt, children, dimmed }: ThumbnailProps) {
   return (
-    <figure className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md bg-surface">
+    <figure className="bg-surface-recessed relative size-32 shrink-0 overflow-hidden rounded-lg">
       {src && (
         <img
           src={src}

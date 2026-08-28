@@ -21,7 +21,7 @@ export function UploadProgress({ items, completed, creatingPost }: UploadProgres
   else if (active.length > 0) label = `올리는 중 ${completed}/${total}`
 
   return (
-    <p role="status" aria-live="polite" className="text-xs text-text-subtle">
+    <p role="status" aria-live="polite" className="text-content-tertiary text-xs">
       {label}
     </p>
   )

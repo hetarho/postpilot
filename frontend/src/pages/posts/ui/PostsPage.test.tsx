@@ -71,8 +71,14 @@ describe('PostsPage', () => {
   })
 
   it('says so when the list cannot be loaded', async () => {
-    renderList({ listFails: true })
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderList({ listFails: true, calls })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('목록을 불러오지 못했어요')
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    await waitFor(() =>
+      expect(calls.filter((call) => call === 'ListPosts').length).toBeGreaterThan(1),
+    )
   })
 })

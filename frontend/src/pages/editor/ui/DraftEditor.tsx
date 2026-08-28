@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import type { PostDraft } from '@/entities/post'
 import { SaveStatus, peekPendingDraft, useAutosave } from '@/features/save-draft'
+import { FieldLabel, Textarea, TextField } from '@/shared/ui'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
 import { EditorPhotos } from './EditorPhotos'
 
@@ -65,39 +66,44 @@ export function DraftEditor({ post }: DraftEditorProps) {
   }, [caret])
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-6">
+    <main className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6">
       <div className="flex items-center justify-between">
-        <Link to="/posts" className="text-xs text-text-subtle hover:text-text">
+        <Link
+          to="/posts"
+          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
+        >
           ← 글 목록
         </Link>
         <SaveStatus state={autosave.state} />
       </div>
 
-      <label htmlFor="post-title" className="sr-only">
+      <FieldLabel htmlFor="post-title" className="sr-only">
         제목
-      </label>
-      <input
+      </FieldLabel>
+      <TextField
         id="post-title"
         ref={titleRef}
+        appearance="bare"
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         placeholder="제목"
-        className="mt-4 w-full bg-transparent text-2xl font-semibold tracking-tight outline-none placeholder:text-text-faint"
+        className="mt-4 min-h-11 text-2xl font-semibold tracking-tight"
       />
 
       <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
 
-      <label htmlFor="post-memo" className="sr-only">
+      <FieldLabel htmlFor="post-memo" className="sr-only">
         메모
-      </label>
-      <textarea
+      </FieldLabel>
+      <Textarea
         id="post-memo"
         ref={memoRef}
+        appearance="bare"
         value={memo}
         onChange={(event) => setMemo(event.target.value)}
         placeholder="무슨 일이 있었는지 편하게 적어 주세요"
         rows={16}
-        className="mt-5 w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-text-faint"
+        className="mt-5 text-sm leading-relaxed"
       />
     </main>
   )

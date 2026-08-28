@@ -1,5 +1,4 @@
 import { useId } from 'react'
-import { clsx } from 'clsx'
 import {
   type CatalogModel,
   STAGE_LABELS,
@@ -8,6 +7,7 @@ import {
   useSaveSelection,
   useStageSelection,
 } from '@/entities/model-catalog'
+import { FieldLabel, FieldMessage, Select } from '@/shared/ui'
 
 /** The per-stage model dropdown (PRD §3.3, §6.4, F-4).
  *
@@ -24,20 +24,26 @@ export function StageModelSelect({ stage, className }: { stage: StageName; class
   // The saved choice's key when it can be shown as chosen; the greyed unusable entry
   // otherwise. An empty value is the placeholder.
   const value = selected ? refKey(selected) : unavailable ? UNAVAILABLE_VALUE : ''
+  const loadErrorId = `${id}-load-error`
+  const saveErrorId = `${id}-save-error`
+  const describedBy = [isError && loadErrorId, save.isError && saveErrorId]
+    .filter(Boolean)
+    .join(' ')
 
   return (
-    <label htmlFor={id} className={clsx('flex flex-col gap-1 text-xs text-text-muted', className)}>
-      <span>{STAGE_LABELS[stage]} 모델</span>
-      <select
+    <div className={className}>
+      <FieldLabel htmlFor={id}>{STAGE_LABELS[stage]} 모델</FieldLabel>
+      <Select
         id={id}
         value={value}
         disabled={isPending || save.isPending}
         aria-invalid={isError || save.isError || undefined}
+        aria-describedby={describedBy || undefined}
         onChange={(event) => {
           const chosen = models.find((model) => refKey(model.ref) === event.target.value)
           if (chosen && !chosen.disabled) save.save(stage, chosen.ref)
         }}
-        className="rounded-md bg-surface-raised px-2 py-1.5 text-sm text-text disabled:opacity-50"
+        className="mt-1"
       >
         <option value="">모델을 선택하세요</option>
         {unavailable && (
@@ -50,18 +56,21 @@ export function StageModelSelect({ stage, className }: { stage: StageName; class
             {optionLabel(model)}
           </option>
         ))}
-      </select>
+      </Select>
+      <span role="status" className="sr-only">
+        {save.isPending ? '선택을 저장하는 중…' : ''}
+      </span>
       {isError && (
-        <span role="alert" className="text-danger">
+        <FieldMessage id={loadErrorId} className="mt-1 text-xs">
           모델 목록을 불러오지 못했어요.
-        </span>
+        </FieldMessage>
       )}
       {save.isError && (
-        <span role="alert" className="text-danger">
+        <FieldMessage id={saveErrorId} className="mt-1 text-xs">
           선택을 저장하지 못했어요. 다시 골라 주세요.
-        </span>
+        </FieldMessage>
       )}
-    </label>
+    </div>
   )
 }
 

@@ -15,6 +15,7 @@
     "lint": "pnpm --filter ./frontend lint",
     "lint:fsd": "pnpm --filter ./frontend lint:fsd",
     "lint:style": "node scripts/lint-style-escapes.mjs",
+    "lint:style:probe": "node scripts/lint-style-escapes.mjs --probe",
     "lint:spec": "node scripts/check-spec-hygiene.mjs",
     "lint:spec:probe": "node scripts/check-spec-hygiene.mjs --probe",
     "test": "pnpm --filter ./frontend test",

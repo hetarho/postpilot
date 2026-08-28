@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useLogin } from '@/entities/session'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
+import { Button, FieldLabel, FieldMessage, TextField } from '@/shared/ui'
 
 /** One message for every failure. The server already refuses to distinguish an unknown
  *  id from a wrong password (spec/policy/auth.md); showing anything more specific here
@@ -30,15 +31,15 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-full items-center justify-center bg-bg px-6 text-text">
+    <main className="bg-surface-base text-content-primary flex min-h-full items-center justify-center px-4 py-10 sm:px-6">
       <form onSubmit={onSubmit} className="w-full max-w-xs">
         <h1 className="text-2xl font-semibold tracking-tight">Postpilot</h1>
-        <p className="mt-1 text-sm text-text-muted">계속하려면 로그인하세요</p>
+        <p className="text-content-secondary mt-1 text-sm">계속하려면 로그인하세요</p>
 
-        <label htmlFor="loginId" className="mt-8 block text-sm text-text-muted">
+        <FieldLabel htmlFor="loginId" className="mt-8">
           아이디
-        </label>
-        <input
+        </FieldLabel>
+        <TextField
           id="loginId"
           name="loginId"
           value={loginId}
@@ -46,13 +47,15 @@ export function LoginPage() {
           autoComplete="username"
           autoFocus
           required
-          className="mt-1.5 w-full rounded-md bg-surface px-3 py-2 text-sm placeholder:text-text-faint focus:bg-surface-raised"
+          aria-invalid={login.isError || undefined}
+          aria-describedby={login.isError ? 'login-error' : undefined}
+          className="mt-1.5"
         />
 
-        <label htmlFor="password" className="mt-4 block text-sm text-text-muted">
+        <FieldLabel htmlFor="password" className="mt-4">
           비밀번호
-        </label>
-        <input
+        </FieldLabel>
+        <TextField
           id="password"
           name="password"
           type="password"
@@ -60,21 +63,19 @@ export function LoginPage() {
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="current-password"
           required
-          className="mt-1.5 w-full rounded-md bg-surface px-3 py-2 text-sm placeholder:text-text-faint focus:bg-surface-raised"
+          aria-invalid={login.isError || undefined}
+          aria-describedby={login.isError ? 'login-error' : undefined}
+          className="mt-1.5"
         />
 
-        <button
-          type="submit"
-          disabled={login.isPending}
-          className="mt-6 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
-        >
+        <Button type="submit" variant="cta" disabled={login.isPending} className="mt-6 w-full">
           {login.isPending ? '확인 중…' : '로그인'}
-        </button>
+        </Button>
 
         {login.isError && (
-          <p role="alert" className="mt-3 text-sm text-danger">
+          <FieldMessage id="login-error" className="mt-3">
             {LOGIN_FAILED}
-          </p>
+          </FieldMessage>
         )}
       </form>
     </main>
