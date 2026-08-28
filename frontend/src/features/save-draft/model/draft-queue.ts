@@ -39,6 +39,16 @@ export interface DraftQueueHandle {
   saveNow: () => void
   /** Detaches the editor. A queue with work left keeps going without it. */
   release: () => void
+  /** Resolves with the post's slug, creating the post first when it has none yet — for
+   *  the first photo picked in a new draft, which needs a post to attach to before any
+   *  autosave has fired. Resolves once the create lands, however many retries that
+   *  takes; rejects only if the session ends first. */
+  mint: () => Promise<string>
+}
+
+interface MintWaiter {
+  resolve: (slug: string) => void
+  reject: (error: Error) => void
 }
 
 interface Queue {
@@ -70,6 +80,9 @@ interface Queue {
   send: SendDraft
   listener: ((state: SaveState) => void) | undefined
   onMinted: ((slug: string) => void) | undefined
+  /** Callers of `mint` waiting for the first save to land. On the queue, not the handle,
+   *  so they survive the editor swap the mint itself causes. */
+  mintWaiters: MintWaiter[]
 }
 
 const queues = new Map<string, Queue>()
@@ -93,6 +106,13 @@ function retryDelay(attempt: number): number {
 
 function sameDraft(a: Draft, b: Draft): boolean {
   return a.title === b.title && a.memo === b.memo
+}
+
+/** True while someone is waiting for this draft to become a post. Then "typed back to
+ *  what the server holds" is not a reason to stand down — the server holds nothing yet,
+ *  and the empty draft itself has to be created. */
+function wantsPost(queue: Queue): boolean {
+  return !queue.slug && queue.mintWaiters.length > 0
 }
 
 function stateOf(queue: Queue): SaveState {
@@ -139,6 +159,13 @@ function rekey(queue: Queue, slug: string): void {
   queues.set(slug, queue)
 }
 
+/** Sends what is queued right now, cancelling a waiting debounce or backoff. */
+function sendNow(queue: Queue): void {
+  clearTimers(queue)
+  if (queue.inFlight) queue.urgent = true
+  else void run(queue)
+}
+
 async function run(queue: Queue): Promise<void> {
   if (queue.inFlight || !queue.pending) return
 
@@ -162,6 +189,9 @@ async function run(queue: Queue): Promise<void> {
     if (!queue.slug && slug) {
       rekey(queue, slug)
       queue.onMinted?.(slug)
+      const waiters = queue.mintWaiters
+      queue.mintWaiters = []
+      for (const waiter of waiters) waiter.resolve(slug)
     }
     publish(queue)
 
@@ -179,7 +209,7 @@ async function run(queue: Queue): Promise<void> {
     queue.inFlight = false
     queue.sending = undefined
 
-    if (queue.pending && sameDraft(queue.pending, queue.saved)) {
+    if (queue.pending && sameDraft(queue.pending, queue.saved) && !wantsPost(queue)) {
       // Typed back to what the server holds while this attempt was out — there is nothing
       // left to retry, and "다시 시도 중" would stand there forever.
       queue.pending = undefined
@@ -235,6 +265,7 @@ export function attachDraftQueue(options: {
       send: options.send,
       listener: undefined,
       onMinted: undefined,
+      mintWaiters: [],
     }
     queues.set(key, queue)
   }
@@ -254,7 +285,7 @@ export function attachDraftQueue(options: {
       // Against the request in flight when there is one: a save already sent cannot be
       // recalled, so comparing with the older `saved` would call an undo "already saved"
       // and never send it.
-      if (sameDraft(draft, attached.sending ?? attached.saved)) {
+      if (sameDraft(draft, attached.sending ?? attached.saved) && !wantsPost(attached)) {
         // Typed back to what the server holds. Leaving "저장 대기 중" or "다시 시도 중" on
         // screen with nothing to send would be a standing lie.
         if (attached.pending === undefined && !attached.failed) return
@@ -273,16 +304,25 @@ export function attachDraftQueue(options: {
       if (attached.retryTimer === undefined) scheduleDebounce(attached)
     },
 
-    saveNow: () => {
-      clearTimers(attached)
-      if (attached.inFlight) attached.urgent = true
-      else void run(attached)
-    },
+    saveNow: () => sendNow(attached),
 
     release: () => {
       attached.listener = undefined
       attached.onMinted = undefined
       collect(attached)
+    },
+
+    mint: () => {
+      if (attached.slug) return Promise.resolve(attached.slug)
+      // The editor can outlive its session by a render or two while the redirect runs.
+      if (attached.discarded) return Promise.reject(new Error('session ended'))
+      return new Promise<string>((resolve, reject) => {
+        attached.mintWaiters.push({ resolve, reject })
+        // A photo picked before a single keystroke: nothing is pending, but the post has
+        // to exist, so the empty draft itself is what gets created.
+        if (!attached.pending && !attached.inFlight) attached.pending = { ...attached.saved }
+        sendNow(attached)
+      })
     },
   }
 }
@@ -307,6 +347,8 @@ export function discardDraftQueues(): void {
   for (const queue of queues.values()) {
     queue.discarded = true
     clearTimers(queue)
+    for (const waiter of queue.mintWaiters) waiter.reject(new Error('session ended'))
+    queue.mintWaiters = []
   }
   queues.clear()
 }

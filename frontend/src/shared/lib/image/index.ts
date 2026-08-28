@@ -1,0 +1,6 @@
+export type { DecodeFailure } from './decode-error'
+export { DecodeError } from './decode-error'
+export { decodeImage } from './decode'
+export type { ResizedJpeg } from './resize'
+export { resizeToJpeg } from './resize'
+export { dedupeFilename, fileExtension, jpegFilename } from './filename'

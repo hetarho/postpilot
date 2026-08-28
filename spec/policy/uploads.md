@@ -1,8 +1,47 @@
 # Policy — Photos and object storage
 
-Canonical rules that are **currently true** in the code. Source: [plan/02](../plan/02.post-drafting-and-list.md),
-backend built by job 03. The browser half of the pipeline (extensions, HEIC decode, resize, encode) is job 05 and
-will extend this document.
+Canonical rules that are **currently true** in the code. Source: [plan/02](../plan/02.post-drafting-and-list.md);
+backend built by job 03, the browser half of the pipeline by job 05.
+
+## What leaves the device
+
+The browser is the only place a photo is ever decoded ([I6]). Before a byte is sent:
+
+- **Selection gate.** Extension ∈ `jpg jpeg png webp heic heif` (case-insensitive) and size ≤ `UPLOAD_MAX_FILE_MB`
+  (25) at selection, before conversion. Anything else is listed under "건너뜀" with the reason and is never read,
+  converted or sent. A pick made only of skipped files does not create a post.
+- **Decode.** JPEG/PNG/WebP through the browser's own decoder with EXIF orientation applied. HEIC/HEIF through
+  `libheif-js` (Emscripten libheif) running in a Web Worker that is loaded on the first HEIC and torn down after
+  `HEIF_DECODER_IDLE_MS`. The worker decodes one file at a time. A file the decoder cannot read is skipped as
+  "unreadable"; a device on which the decoder cannot come up skips the HEIC as unsupported on this device (PRD §7).
+  Either way the other files proceed.
+- **Resize + encode.** Long edge ≤ `IMAGE_MAX_LONG_EDGE_PX` (1024), never upscaled, white behind transparency,
+  JPEG at `IMAGE_JPEG_QUALITY` (0.85). Re-encoding through a canvas is what drops the metadata (GPS, device,
+  timestamp) a phone writes into every photo. At most `UPLOAD_CONVERT_CONCURRENCY` (2) files convert at once.
+- **Filename.** The uploaded copy is `<original stem>.jpg`; a name the post already holds, or an earlier file in the
+  same pick, gets ` (2)`, ` (3)`, … before `CreateUpload` is asked.
+
+## Retry, from the client's side
+
+- A failed PUT or an expired URL is `failed` with a per-photo retry that starts over at `CreateUpload` — never the
+  kept URL; the server replaces the pending upload that held the filename.
+- A confirm whose **answer** was lost is retried as `ConfirmUpload` with the **same** `upload_id`: confirm is
+  idempotent, and the photo may already exist — starting over would be answered `AlreadyExists`. Only
+  `FailedPrecondition` (no object behind the id) sends the retry back to `CreateUpload`.
+- `AlreadyExists` and `InvalidArgument` are final: shown with the reason, no retry offered.
+
+## What the client shows after a confirm
+
+The confirm answer has no `view_url`. The photo enters the cached post with the local object URL of its converted
+copy as `view_url`, until the next `GetPost` supplies a presigned one. A save's answer never replaces the cached
+photo list (see plan 02 — *Autosave*); confirm and delete patch it.
+
+## Session boundary
+
+Per-post upload state lives outside React, like the draft queue, so the first photo of a new draft survives the
+route swap the mint causes and a batch keeps going when the editor is left. Logout and a session that dies mid-use
+both discard every batch: a confirm landing after someone else signed in on the device would file the photo under
+the new account.
 
 ## The API never touches photo bytes
 
@@ -85,6 +124,8 @@ ConfirmUpload(upload_id, w, h)     → the server HEADs the object, then records
 | presign PUT/GET TTL | constants | 10 minutes each |
 | `ORPHAN_MIN_AGE` | constant | 1 hour |
 | max object size | constant | 10 MiB |
+| `UPLOAD_MAX_FILE_MB` · `UPLOAD_ALLOWED_EXTENSIONS` · `IMAGE_MAX_LONG_EDGE_PX` · `IMAGE_JPEG_QUALITY` | FE `shared/config` | 25 · `jpg jpeg png webp heic heif` · 1024 · 0.85 |
+| `UPLOAD_CONVERT_CONCURRENCY` · `HEIF_DECODER_IDLE_MS` | FE `shared/config` | 2 · 30 s |
 
 The server **refuses to start** without the four required values, naming the missing one. This is checked before the
 listener, so a missing value keeps `/health` dark and the deploy rolls back — but it is deliberately *not* part of

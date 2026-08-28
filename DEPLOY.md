@@ -205,7 +205,10 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
       "ExposeHeaders": ["etag"],
       "MaxAgeSeconds": 3600 }]
    ```
-   (로컬 개발은 R2가 아니라 compose의 MinIO를 쓴다 — `docker-compose.yml`.)
+   `AllowedMethods`는 브라우저가 실제로 쓰는 세 가지다 — `PUT`(업로드), `GET`(썸네일),
+   `HEAD`(preflight 뒤 확인). (로컬 개발은 R2가 아니라 compose의 MinIO를 쓴다 —
+   `docker-compose.yml`. MinIO는 기본으로 모든 origin을 허용하므로 개발 origin
+   `http://localhost:2564`에 대한 별도 CORS 규칙은 필요 없다.)
 6. **GHCR 로그인**(VPS에서, **sudo 없이**): `echo '<PAT>' | docker login ghcr.io -u <계정> --password-stdin`
 7. **배포 키**: `ssh-keygen -t ed25519 -f ~/.ssh/postpilot-deploy -N "" -C postpilot-github-actions-deploy`
    → 공개키를 VPS `~/.ssh/authorized_keys`에 추가.

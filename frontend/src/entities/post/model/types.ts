@@ -1,15 +1,18 @@
+import type { PostImage } from '@/entities/image/@x/post'
+
 /** A post as the app talks about it.
  *
  *  Deliberately not the generated `Post` message: the screens should speak the app's
  *  vocabulary, so a proto change is absorbed by this entity's api mappers instead of
- *  rippling into every consumer. It also keeps the editor from having to know that
- *  `Post` carries fields (images now, generated content later) it has no use for. */
+ *  rippling into every consumer. It also keeps the editor from having to know about
+ *  fields (generated content, later) it has no use for. */
 export interface PostDraft {
   slug: string
   title: string
   memo: string
   status: string
   updatedAt: string
+  images: PostImage[]
 }
 
 /** One row of the post list (PRD F-8). */

@@ -1,7 +1,9 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { discardUploadBatches } from '@/features/upload-photos'
 import { renderAppAt } from '@/test/app'
+import { FAKE_STORAGE_ORIGIN } from '@/test/posts'
 import { clearCaret } from '../model/editor-handoff'
 
 const USER = { id: 'alice' }
@@ -9,7 +11,33 @@ const USER = { id: 'alice' }
 afterEach(() => {
   // Module state, so an unconsumed handoff would leak into the next test.
   clearCaret()
+  discardUploadBatches()
+  vi.unstubAllGlobals()
 })
+
+/** jsdom has no image decoder, canvas encoder or object URLs; these stand in for the
+ *  browser so the test can follow a file through the whole upload handshake. */
+function stubBrowserImagePipeline() {
+  vi.stubGlobal(
+    'createImageBitmap',
+    vi.fn(async () => ({ width: 4032, height: 3024, close: () => {} })),
+  )
+  vi.stubGlobal(
+    'OffscreenCanvas',
+    class {
+      getContext() {
+        return { fillRect() {}, drawImage() {}, fillStyle: '' }
+      }
+      convertToBlob = async () => new Blob(['jpeg'], { type: 'image/jpeg' })
+    },
+  )
+  // jsdom's URL lacks these two; the class itself must stay (the router constructs URLs).
+  URL.createObjectURL = () => 'blob:preview'
+  URL.revokeObjectURL = () => {}
+  const put = vi.fn(async () => new Response(null, { status: 200 }))
+  vi.stubGlobal('fetch', put)
+  return { put }
+}
 
 describe('opening a post', () => {
   // A2 (title/memo half of plan 02 AC11).
@@ -21,6 +49,73 @@ describe('opening a post', () => {
 
     expect(await screen.findByLabelText('제목')).toHaveValue('제주 3일')
     expect(screen.getByLabelText('메모')).toHaveValue('첫날은 비')
+  })
+
+  // Job 05 A6 (plan 02 AC11, photos half): the strip is rebuilt from the view URLs.
+  it('restores its photos in the strip from their view URLs', async () => {
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            images: [
+              { id: 'img-1', filename: 'IMG_1.jpg', viewUrl: `${FAKE_STORAGE_ORIGIN}/posts/20260820-jeju/img-1.jpg?sig` },
+              { id: 'img-2', filename: 'IMG_2.jpg' },
+            ],
+          },
+        ],
+      },
+    })
+
+    expect(await screen.findByRole('img', { name: 'IMG_1.jpg' })).toHaveAttribute(
+      'src',
+      `${FAKE_STORAGE_ORIGIN}/posts/20260820-jeju/img-1.jpg?sig`,
+    )
+    expect(screen.getByRole('img', { name: 'IMG_2.jpg' })).toBeInTheDocument()
+  })
+
+  // Job 05 A5 (plan 02 AC6, browser half): delete calls DeleteImage and the photo is gone.
+  it('deletes a photo from the strip through DeleteImage', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        calls,
+        posts: [
+          {
+            slug: '20260820-jeju',
+            images: [
+              { id: 'img-1', filename: 'IMG_1.jpg' },
+              { id: 'img-2', filename: 'IMG_2.jpg' },
+            ],
+          },
+        ],
+      },
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'IMG_1.jpg 삭제' }))
+
+    await waitFor(() => expect(screen.queryByRole('img', { name: 'IMG_1.jpg' })).not.toBeInTheDocument())
+    expect(screen.getByRole('img', { name: 'IMG_2.jpg' })).toBeInTheDocument()
+    expect(calls).toContain('DeleteImage')
+  })
+
+  it('keeps a photo whose delete failed and says so', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        deleteFails: true,
+        posts: [{ slug: '20260820-jeju', images: [{ id: 'img-1', filename: 'IMG_1.jpg' }] }],
+      },
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'IMG_1.jpg 삭제' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('삭제하지 못했어요')
+    expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toBeInTheDocument()
   })
 
   // A5. Someone else's slug is 403, not 404 (spec/policy/posts.md).
@@ -72,6 +167,74 @@ describe('a new draft', () => {
     expect(screen.getByLabelText('제목')).toHaveValue('제주 3일')
     // …and the caret is still where the user left it, so the next keystroke lands.
     expect(screen.getByLabelText('제목')).toHaveFocus()
+  })
+
+  // Job 05 A2/A4 through the editor: the first photo of a new draft creates the post,
+  // then CreateUpload → PUT to the storage host → ConfirmUpload, and the photo lands in
+  // the strip of the editor the mint navigation mounted.
+  it('creates the post on the first photo, uploads it straight to storage, and shows it', async () => {
+    const { put } = stubBrowserImagePipeline()
+    const calls: string[] = []
+    const user = userEvent.setup()
+    const { router } = renderAppAt('/posts/new', { user: USER, posts: { calls } })
+
+    // A JPEG, so the stubbed native decoder is the path taken; the HEIC worker path is
+    // covered by shared/lib/image's own tests (jsdom has no Worker).
+    await user.upload(
+      await screen.findByLabelText('사진 추가'),
+      new File(['jpeg'], 'IMG_1.JPG', { type: 'image/jpeg' }),
+    )
+
+    // Shown from the local copy until a GetPost brings a presigned URL.
+    expect(await screen.findByRole('img', { name: 'IMG_1.jpg' })).toHaveAttribute(
+      'src',
+      expect.stringMatching(new RegExp(`^(blob:preview|${FAKE_STORAGE_ORIGIN})`)),
+    )
+    expect(router.state.location.pathname).toBe('/posts/20260828-untitled')
+    const handshake = new Set(['SavePostDraft', 'CreateUpload', 'ConfirmUpload'])
+    expect(calls.filter((call) => handshake.has(call))).toEqual([
+      'SavePostDraft',
+      'CreateUpload',
+      'ConfirmUpload',
+    ])
+    // The bytes went to the storage host with the signed Content-Type, never to the API.
+    expect(put).toHaveBeenCalledWith(
+      expect.stringContaining(FAKE_STORAGE_ORIGIN),
+      expect.objectContaining({ method: 'PUT', headers: { 'Content-Type': 'image/jpeg' } }),
+    )
+    // The confirmed photo is part of the post now: it can be deleted like any other.
+    expect(screen.getByRole('button', { name: 'IMG_1.jpg 삭제' })).toBeInTheDocument()
+  })
+
+  it('says the post is being created while the first save is retried, then uploads', async () => {
+    stubBrowserImagePipeline()
+    const user = userEvent.setup()
+    renderAppAt('/posts/new', { user: USER, posts: { failSaves: 1 } })
+
+    await user.upload(await screen.findByLabelText('사진 추가'), new File(['x'], 'IMG_1.jpg'))
+
+    expect(await screen.findByText('글을 만드는 중…')).toBeInTheDocument()
+    // The retry lands after the backoff and the photo goes on to upload.
+    await waitFor(
+      () => expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toBeInTheDocument(),
+      { timeout: 4_000 },
+    )
+  })
+
+  // Job 05 A1: a pick with nothing to upload is reported and creates no post.
+  it('lists a pick made only of skipped files without creating a post', async () => {
+    const calls: string[] = []
+    // The input's `accept` would hide an .exe in a real picker too; some pickers ignore
+    // it, which is what the filter is for.
+    const user = userEvent.setup({ applyAccept: false })
+    const { router } = renderAppAt('/posts/new', { user: USER, posts: { calls } })
+
+    await user.upload(await screen.findByLabelText('사진 추가'), new File(['x'], 'setup.exe'))
+
+    expect(await screen.findByRole('heading', { name: '건너뜀' })).toBeInTheDocument()
+    expect(screen.getByText('setup.exe')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/posts/new')
+    expect(calls).not.toContain('SavePostDraft')
   })
 
   it('keeps typing in the same post rather than creating another', async () => {

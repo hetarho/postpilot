@@ -29,3 +29,30 @@ export const AUTOSAVE_RETRY_MAX_MS = 30_000
  *  never happened, and applying it would put stale text back into a post that has since
  *  moved on. */
 export const EDITOR_HANDOFF_TTL_MS = 5_000
+
+/** The photo pipeline (PRD F-2, §6.2). Every photo is decoded, downscaled and re-encoded
+ *  in the browser before it is uploaded ([I6]); these are the knobs of that step. */
+
+/** Pre-conversion size cap, checked at selection. Advice to the user, not a security
+ *  boundary — the server enforces its own cap on what actually lands. */
+export const UPLOAD_MAX_FILE_MB = 25
+
+/** Compared case-insensitively against the extension of the selected file. Anything else
+ *  is listed as skipped, never uploaded. */
+export const UPLOAD_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'] as const
+
+/** The long edge a photo is downscaled to. Smaller images are never upscaled. */
+export const IMAGE_MAX_LONG_EDGE_PX = 1024
+
+/** JPEG encoder quality (0–1) for the uploaded copy. */
+export const IMAGE_JPEG_QUALITY = 0.85
+
+/** How many photos may be decoding/resizing at once. Each decoded phone photo is tens of
+ *  megabytes of pixels until it is downscaled, so eight at once would push a phone into
+ *  swapping; one at a time leaves the browser's own parallel JPEG decoder idle. */
+export const UPLOAD_CONVERT_CONCURRENCY = 2
+
+/** How long the HEIC decoder worker stays alive after its last file. Its WASM heap does
+ *  not shrink after a 12 MP decode, so it is not kept for a whole session; the chunk is
+ *  in the browser cache, so bringing it back for the next batch is cheap. */
+export const HEIF_DECODER_IDLE_MS = 30_000

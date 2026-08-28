@@ -1,6 +1,7 @@
 // Query keys and the proto→domain mappers for the post entity.
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
+import { toPostImage } from '@/entities/image/@x/post'
 import { PostService, type Post, type PostSummary } from '@/shared/api'
 import type { PostDraft, PostListItem } from '../model/types'
 
@@ -11,6 +12,7 @@ export function toPostDraft(post: Post): PostDraft {
     memo: post.memo,
     status: post.status,
     updatedAt: post.updatedAt,
+    images: post.images.map(toPostImage),
   }
 }
 

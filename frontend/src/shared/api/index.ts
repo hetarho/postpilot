@@ -20,10 +20,14 @@ export { HealthService, PingResponseSchema } from './gen/postpilot/v1/health_pb'
 export type { PingResponse } from './gen/postpilot/v1/health_pb'
 export { PostService } from './gen/postpilot/v1/post_pb'
 export {
+  ConfirmUploadResponseSchema,
+  CreateUploadResponseSchema,
+  DeleteImageResponseSchema,
   GetPostResponseSchema,
+  ImageSchema,
   ListPostsResponseSchema,
   PostSchema,
   PostSummarySchema,
   SavePostDraftResponseSchema,
 } from './gen/postpilot/v1/post_pb'
-export type { Image, Post, PostSummary } from './gen/postpilot/v1/post_pb'
+export type { GetPostResponse, Image, Post, PostSummary } from './gen/postpilot/v1/post_pb'

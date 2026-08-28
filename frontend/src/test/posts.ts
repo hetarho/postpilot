@@ -1,12 +1,19 @@
 // Shared fake PostService for tests.
 //
-// It models the three server rules the frontend actually depends on: an empty slug mints
-// one (`YYYYMMDD-title`, serial suffix on collision), someone else's slug is 403 and a
-// missing one is 404 (spec/policy/posts.md). Everything else is kept as thin as possible.
+// It models the server rules the frontend actually depends on: an empty slug mints one
+// (`YYYYMMDD-title`, serial suffix on collision), someone else's slug is 403 and a missing
+// one is 404 (spec/policy/posts.md); an upload is a CreateUpload → ConfirmUpload pair
+// and a confirmed filename is taken (spec/policy/uploads.md). Everything else is kept as
+// thin as possible.
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
+  ConfirmUploadResponseSchema,
+  CreateUploadResponseSchema,
+  DeleteImageResponseSchema,
   GetPostResponseSchema,
+  type Image,
+  ImageSchema,
   ListPostsResponseSchema,
   PostSchema,
   PostService,
@@ -16,12 +23,21 @@ import {
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
+export interface FakeImageRow {
+  id: string
+  filename: string
+  width?: number
+  height?: number
+  viewUrl?: string
+}
+
 export interface FakePostRow {
   slug: string
   title?: string
   memo?: string
   status?: string
   updatedAt?: string
+  images?: FakeImageRow[]
 }
 
 export interface FakePostsOptions {
@@ -35,6 +51,8 @@ export interface FakePostsOptions {
   failSaves?: number
   /** Answer SavePostDraft 200 with no post — a confirmation the client must not trust. */
   saveReturnsNoPost?: boolean
+  /** Make DeleteImage fail. */
+  deleteFails?: boolean
   /** The date the fake mints slugs from. */
   today?: string
   /** Records every procedure the transport was asked for. */
@@ -43,12 +61,19 @@ export interface FakePostsOptions {
 
 const DEFAULT_UPDATED_AT = '2026-08-28T12:00:00Z'
 
+/** The storage host presigned URLs point at — anything but the API's own origin. */
+export const FAKE_STORAGE_ORIGIN = 'https://storage.test'
+
+type Row = Omit<Required<FakePostRow>, 'images'> & { images: Image[] }
+
 export function registerPostService(router: ConnectRouter, options: FakePostsOptions = {}) {
   const { rpc } = router
   const { foreign = [], listFails, today = '20260828', calls } = options
   let failuresLeft = options.failSaves ?? 0
+  let uploadSequence = 0
+  const pending = new Map<string, { slug: string; filename: string }>()
 
-  const rows = new Map<string, Required<FakePostRow>>(
+  const rows = new Map<string, Row>(
     (options.posts ?? []).map((row) => [
       row.slug,
       {
@@ -57,6 +82,16 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         memo: row.memo ?? '',
         status: row.status ?? 'draft',
         updatedAt: row.updatedAt ?? DEFAULT_UPDATED_AT,
+        images: (row.images ?? []).map((image) =>
+          create(ImageSchema, {
+            id: image.id,
+            filename: image.filename,
+            width: image.width ?? 1024,
+            height: image.height ?? 768,
+            bytes: 200_000n,
+            viewUrl: image.viewUrl ?? `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=1`,
+          }),
+        ),
       },
     ]),
   )
@@ -66,6 +101,23 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     let slug = `${today}-${base}`
     for (let serial = 2; rows.has(slug); serial += 1) slug = `${today}-${base}-${serial}`
     return slug
+  }
+
+  function toProto(row: Row) {
+    return create(PostSchema, row)
+  }
+
+  /** Like the server, GetPost mints a view URL for every photo, fresh each time. */
+  function withViewUrls(row: Row) {
+    return create(PostSchema, {
+      ...row,
+      images: row.images.map((image) =>
+        create(ImageSchema, {
+          ...image,
+          viewUrl: image.viewUrl || `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=get`,
+        }),
+      ),
+    })
   }
 
   rpc(PostService.method.listPosts, () => {
@@ -81,7 +133,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     if (foreign.includes(req.slug)) throw new ConnectError('not yours', Code.PermissionDenied)
     const row = rows.get(req.slug)
     if (!row) throw new ConnectError('not found', Code.NotFound)
-    return create(GetPostResponseSchema, { post: create(PostSchema, row) })
+    return create(GetPostResponseSchema, { post: withViewUrls(row) })
   })
 
   rpc(PostService.method.savePostDraft, (req) => {
@@ -95,15 +147,63 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       throw new ConnectError('not yours', Code.PermissionDenied)
     }
     const slug = req.slug || mintSlug(req.title)
-    const row = {
+    const row: Row = {
       slug,
       title: req.title,
       memo: req.memo,
       status: rows.get(slug)?.status ?? 'draft',
       updatedAt: DEFAULT_UPDATED_AT,
+      images: rows.get(slug)?.images ?? [],
     }
     rows.set(slug, row)
-    return create(SavePostDraftResponseSchema, { post: create(PostSchema, row) })
+    return create(SavePostDraftResponseSchema, { post: toProto(row) })
+  })
+
+  rpc(PostService.method.createUpload, (req) => {
+    calls?.push('CreateUpload')
+    const row = rows.get(req.postSlug)
+    if (!row) throw new ConnectError('not found', Code.NotFound)
+    if (row.images.some((image) => image.filename === req.filename)) {
+      throw new ConnectError('taken', Code.AlreadyExists)
+    }
+    uploadSequence += 1
+    const uploadId = `upload-${uploadSequence}`
+    pending.set(uploadId, { slug: req.postSlug, filename: req.filename })
+    return create(CreateUploadResponseSchema, {
+      uploadId,
+      putUrl: `${FAKE_STORAGE_ORIGIN}/posts/${req.postSlug}/${uploadId}.jpg?sig=put`,
+      contentType: 'image/jpeg',
+      expiresAt: '2026-08-28T12:10:00Z',
+    })
+  })
+
+  rpc(PostService.method.confirmUpload, (req) => {
+    calls?.push('ConfirmUpload')
+    const upload = pending.get(req.uploadId)
+    if (!upload) throw new ConnectError('not found', Code.NotFound)
+    pending.delete(req.uploadId)
+    const image = create(ImageSchema, {
+      id: req.uploadId,
+      filename: upload.filename,
+      width: req.width,
+      height: req.height,
+      bytes: 200_000n,
+    })
+    rows.get(upload.slug)?.images.push(image)
+    return create(ConfirmUploadResponseSchema, { image })
+  })
+
+  rpc(PostService.method.deleteImage, (req) => {
+    calls?.push('DeleteImage')
+    if (options.deleteFails) throw new ConnectError('unavailable', Code.Unavailable)
+    for (const row of rows.values()) {
+      const index = row.images.findIndex((image) => image.id === req.imageId)
+      if (index !== -1) {
+        row.images.splice(index, 1)
+        return create(DeleteImageResponseSchema, {})
+      }
+    }
+    throw new ConnectError('not found', Code.NotFound)
   })
 }
 

@@ -1,6 +1,6 @@
 import { Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { useLogout, useSession } from '@/entities/session'
-import { discardDraftQueues } from '@/features/save-draft'
+import { endSession } from '../model/end-session'
 
 /** The shell every signed-in screen renders inside.
  *
@@ -27,9 +27,7 @@ export function AuthenticatedLayout() {
     } catch {
       return
     }
-    // Same reason as in auth-redirect: an unfinished draft must not follow the device to
-    // the next account.
-    discardDraftQueues()
+    endSession()
     void navigate({ to: '/login', replace: true })
   }
 

@@ -3,6 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import type { PostDraft } from '@/entities/post'
 import { SaveStatus, peekPendingDraft, useAutosave } from '@/features/save-draft'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
+import { EditorPhotos } from './EditorPhotos'
 
 interface DraftEditorProps {
   /** The saved post being edited, or undefined for a draft the server has not created
@@ -84,9 +85,7 @@ export function DraftEditor({ post }: DraftEditorProps) {
         className="mt-4 w-full bg-transparent text-2xl font-semibold tracking-tight outline-none placeholder:text-neutral-700"
       />
 
-      {/* The photo strip. Left empty and marked on purpose: job 05 (the browser upload
-          pipeline) fills this slot, and the editor's layout is settled before it does. */}
-      <section data-slot="photos" className="mt-5" />
+      <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
 
       <label htmlFor="post-memo" className="sr-only">
         메모
