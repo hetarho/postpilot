@@ -39,6 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # build-push-action's `cache-to: type=gha` needs a buildx (docker-container) builder;
+      # the runner's default docker driver cannot export cache and fails the whole build.
+      - uses: docker/setup-buildx-action@v3
+
       # Catch a broken compose file here, not on the VPS mid-rollout. --no-env-resolution
       # keeps this a syntax/shape check that does not need the real runtime secrets.
       - name: Validate production Compose
