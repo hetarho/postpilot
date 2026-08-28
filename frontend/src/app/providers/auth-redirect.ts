@@ -1,6 +1,7 @@
 import type { Transport } from '@connectrpc/connect'
 import type { QueryClient } from '@tanstack/react-query'
 import { getMeQueryKey } from '@/entities/session'
+import { discardDraftQueues } from '@/features/save-draft'
 import { onUnauthenticated } from '@/shared/api'
 import type { router as AppRouter } from '../routes/router'
 
@@ -25,6 +26,10 @@ export function registerAuthRedirect({
 }: AuthRedirectDeps): () => void {
   return onUnauthenticated(() => {
     queryClient.removeQueries({ queryKey: getMeQueryKey(transport), exact: true })
+    // A queued draft outlives its editor on purpose, but never its session: a retry
+    // firing after someone else signs in on this device would send the previous
+    // account's text under the new account's cookie.
+    discardDraftQueues()
 
     // Already there: navigating again would re-run the login route's beforeLoad, whose
     // own session probe can emit this very event.

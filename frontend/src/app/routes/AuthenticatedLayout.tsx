@@ -1,5 +1,6 @@
-import { Outlet, useNavigate } from '@tanstack/react-router'
+import { Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { useLogout, useSession } from '@/entities/session'
+import { discardDraftQueues } from '@/features/save-draft'
 
 /** The shell every signed-in screen renders inside.
  *
@@ -26,13 +27,18 @@ export function AuthenticatedLayout() {
     } catch {
       return
     }
+    // Same reason as in auth-redirect: an unfinished draft must not follow the device to
+    // the next account.
+    discardDraftQueues()
     void navigate({ to: '/login', replace: true })
   }
 
   return (
     <div className="flex min-h-full flex-col bg-neutral-950 text-neutral-100">
       <header className="flex items-center justify-between border-b border-neutral-900 px-6 py-3">
-        <span className="text-sm font-medium tracking-tight">Postpilot</span>
+        <Link to="/posts" className="text-sm font-medium tracking-tight">
+          Postpilot
+        </Link>
         <div className="flex items-center gap-3">
           <span className="font-mono text-xs text-neutral-400">{user?.id}</span>
           <button

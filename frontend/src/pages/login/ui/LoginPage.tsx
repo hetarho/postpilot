@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useLogin } from '@/entities/session'
-import { isInAppPath } from '@/shared/lib'
+import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 
 /** One message for every failure. The server already refuses to distinguish an unknown
  *  id from a wrong password (spec/policy/auth.md); showing anything more specific here
@@ -23,7 +23,7 @@ export function LoginPage() {
         onSuccess: () => {
           // The guard put the blocked destination in `redirect`; anything else is not
           // ours to follow.
-          void navigate({ to: isInAppPath(redirect) ? redirect : '/', replace: true })
+          void navigate({ to: isInAppPath(redirect) ? redirect : SIGNED_IN_HOME, replace: true })
         },
       },
     )

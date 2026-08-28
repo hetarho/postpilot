@@ -1,0 +1,65 @@
+# Tech — Draft autosave
+
+Why the frontend's autosave is a per-post queue outside React, and the rules that keep it
+honest. Landed by [job 04](../jobs/archive/04.post-list-and-editor-autosave.md) for
+[plan 02](../plan/02.post-drafting-and-list.md). Product basis: PRD F-2 — "폰에서 앱을
+닫아도 안 날아간다".
+
+Owner in code: `frontend/src/features/save-draft/model/draft-queue.ts` (the queue) and
+`model/useAutosave.ts` (its React end).
+
+## The shape
+
+```
+editor (React)              draft-queue (module state, one entry per post)
+  text  ──queue()──▶        pending ──debounce──▶ send ──▶ saved
+  state ◀──publish──        failed  ──backoff───▶ retry
+```
+
+The queue is **not** owned by the component. The editor attaches to it, pushes text into
+it, and releases it; the queue keeps going.
+
+## Why it is not inside the hook
+
+Three things went wrong when the save state lived in the component, and all three are
+invisible to the user at the moment they happen:
+
+- **A failing save died with its editor.** The flush that carries the last keystrokes out
+  of the editor is the one save that most needs a retry, and it was the only one that
+  could never get one.
+- **The `/posts/new` → `/posts/<slug>` mint swaps routes**, so the editor that started the
+  save is not the one that has to finish it. Handing the text across as a snapshot made
+  the next editor believe the server already held text it might still be sending.
+- **Two editors for one post could each run their own chain of saves**, and the loser was
+  decided by which response happened to land last.
+
+One queue per post makes the guarantee statable: *for a given post there is at most one
+save in flight, and what it sends is always the newest text queued.*
+
+## Rules
+
+- **A queue outlives its editor, never its session.** `discardDraftQueues()` is called on
+  logout (`app/routes/AuthenticatedLayout.tsx`) and on a session that died mid-use
+  (`app/providers/auth-redirect.ts`). A retry firing after someone else signs in on the
+  same device would send the previous account's text under the new account's cookie, and
+  the server would file it there.
+- **A draft with no slug yet gets a key of its own** (`new:<n>`), not a shared one. Two
+  "새 글" editors are two different drafts. The key becomes the slug when the first save
+  mints one.
+- **Compare against the request in flight, not against the last saved text.** A request
+  cannot be recalled, so an undo made while one is out has to be sent as its own save.
+- **A 200 with no post is not a confirmation.** Trusting it would mark text saved, and for
+  a draft with no slug yet would leave the next edit creating a second post.
+- **Typing during an outage never restarts the backoff.** A keystroke replaces what the
+  scheduled retry will send; it does not schedule a request of its own.
+- **The text pushes through a layout effect, not a passive one.** A passive effect runs
+  after paint and can be deferred past a `pagehide`, and the keystroke it had not recorded
+  yet is exactly the one that would be lost.
+
+## What is still best-effort
+
+The flush on `visibilitychange`(hidden) and `pagehide` is a normal request; a browser may
+cut it short as it discards the document. `fetch(keepalive)` is not reachable through the
+Connect transport, and `sendBeacon` cannot carry the JSON content type across origins
+without a preflight it is not allowed to make. The bound on the loss is therefore the
+debounce window — one second (`AUTOSAVE_DEBOUNCE_MS`) — which is why it is short.

@@ -34,6 +34,13 @@ Photo upload has its own document: [uploads.md](uploads.md).
 - `SavePostDraft` is create-or-update: an empty slug creates and returns the minted slug; a slug updates `title`,
   `memo` and `updated_at`. It is the autosave endpoint, called about once a second while someone types, so repeated
   saves are plain idempotent updates.
+- **There is no save button.** The editor saves 1 s after the last keystroke, and again on every way out of it
+  (the tab being hidden or unloaded, and leaving the editor). A save that fails retries with a capped backoff.
+- A failed save keeps retrying after the user leaves the editor, but **never after the session ends** — a retry
+  landing under the next account's cookie would file one person's draft in someone else's account. The mechanism
+  and its full rule list are in [spec/tech/draft-autosave.md](../tech/draft-autosave.md).
+- A response that carries no post is not a confirmation, and the client treats it as a failed save. This matters
+  most for the create: trusting it would leave the next edit minting a second post for the same draft.
 - `status` is `draft` here and only here. Generation (plan 06) is what moves a post to `review`.
 - `observations` and `content` belong to the generation pipeline. This context never reads or writes them.
 - **There is no post deletion.** The PRD defines photo deletion but not post deletion; flagged as a PRD gap, not an

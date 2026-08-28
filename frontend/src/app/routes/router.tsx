@@ -7,10 +7,11 @@ import {
   redirect,
 } from '@tanstack/react-router'
 import { loadSession } from '@/entities/session'
-import { HomePage } from '@/pages/home'
+import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { LoginPage } from '@/pages/login'
+import { PostsPage } from '@/pages/posts'
 import { transport } from '@/shared/api'
-import { isInAppPath } from '@/shared/lib'
+import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 import { queryClient } from '../providers/query-client'
 import { AuthenticatedLayout } from './AuthenticatedLayout'
 import { RootLayout } from './RootLayout'
@@ -45,7 +46,10 @@ const loginRoute = createRoute({
       .catch(() => false)
 
     if (signedIn) {
-      throw redirect({ to: isInAppPath(search.redirect) ? search.redirect : '/', replace: true })
+      throw redirect({
+        to: isInAppPath(search.redirect) ? search.redirect : SIGNED_IN_HOME,
+        replace: true,
+      })
     }
   },
   component: LoginPage,
@@ -72,16 +76,40 @@ const authenticatedRoute = createRoute({
   component: AuthenticatedLayout,
 })
 
+// Kept as a redirect rather than dropped: '/' is what a bookmark, a bare domain and an
+// older remembered `?redirect=` all resolve to.
 const indexRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/',
-  component: HomePage,
+  beforeLoad: () => {
+    throw redirect({ to: SIGNED_IN_HOME, replace: true })
+  },
+})
+
+const postsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/posts',
+  component: PostsPage,
+})
+
+// A static segment outranks '$slug', so this route — not the editor below — is what
+// '/posts/new' matches.
+const newDraftRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/posts/new',
+  component: NewDraftPage,
+})
+
+const postEditorRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/posts/$slug',
+  component: PostEditorPage,
 })
 
 /** Exported so a test can mount the real tree against a fake transport. */
 export const routeTree = rootRoute.addChildren([
   loginRoute,
-  authenticatedRoute.addChildren([indexRoute]),
+  authenticatedRoute.addChildren([indexRoute, postsRoute, newDraftRoute, postEditorRoute]),
 ])
 
 export const router = createRouter({ routeTree, context: { queryClient, transport } })

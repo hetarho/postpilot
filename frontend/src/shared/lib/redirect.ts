@@ -19,3 +19,8 @@ export function isInAppPath(value: string | undefined): value is string {
     return false
   }
 }
+
+/** Where a signed-in user lands when no in-app destination was remembered — the post list
+ *  is the app's home (PRD F-8). Shared by the login form and the login route's reverse
+ *  guard so the two can never disagree about it. */
+export const SIGNED_IN_HOME = '/posts'

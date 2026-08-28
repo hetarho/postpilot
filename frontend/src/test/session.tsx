@@ -8,14 +8,8 @@ import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { TransportProvider } from '@connectrpc/connect-query'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { create } from '@bufbuild/protobuf'
-import {
-  AuthService,
-  GetMeResponseSchema,
-  HealthService,
-  LoginResponseSchema,
-  LogoutResponseSchema,
-  PingResponseSchema,
-} from '@/shared/api'
+import { AuthService, GetMeResponseSchema, LoginResponseSchema, LogoutResponseSchema } from '@/shared/api'
+import { type FakePostsOptions, registerPostService } from './posts'
 
 export interface FakeAuthOptions {
   /** The account GetMe reports. `undefined` makes GetMe answer 401, like a real server
@@ -27,6 +21,10 @@ export interface FakeAuthOptions {
   logoutFails?: boolean
   /** Records every procedure the transport was asked for. */
   calls?: string[]
+  /** The PostService the signed-in screens call. Present by default (with no posts) so a
+   *  routing test that lands on /posts is not reading an "unimplemented" error instead of
+   *  the failure it is actually looking for. */
+  posts?: FakePostsOptions
 }
 
 /** A fake backend plus the controls a test needs over it. */
@@ -41,7 +39,8 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
   const { user, loginFails, logoutFails, calls } = options
   let session = user
 
-  const transport = createRouterTransport(({ rpc }) => {
+  const transport = createRouterTransport((router) => {
+    const { rpc } = router
     rpc(AuthService.method.getMe, () => {
       calls?.push('GetMe')
       if (!session) throw new ConnectError('unauthenticated', Code.Unauthenticated)
@@ -59,12 +58,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
       session = undefined
       return create(LogoutResponseSchema, {})
     })
-    // HomePage (the scaffold screen still mounted at '/') pings on render; without a
-    // handler every routing test logs an "unimplemented" error that is not the failure
-    // anyone is looking for.
-    rpc(HealthService.method.ping, () =>
-      create(PingResponseSchema, { message: 'pong', version: 'test' }),
-    )
+    registerPostService(router, { calls, ...options.posts })
   })
 
   return {

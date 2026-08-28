@@ -18,3 +18,12 @@ export {
 export type { User, GetMeResponse } from './gen/postpilot/v1/auth_pb'
 export { HealthService, PingResponseSchema } from './gen/postpilot/v1/health_pb'
 export type { PingResponse } from './gen/postpilot/v1/health_pb'
+export { PostService } from './gen/postpilot/v1/post_pb'
+export {
+  GetPostResponseSchema,
+  ListPostsResponseSchema,
+  PostSchema,
+  PostSummarySchema,
+  SavePostDraftResponseSchema,
+} from './gen/postpilot/v1/post_pb'
+export type { Image, Post, PostSummary } from './gen/postpilot/v1/post_pb'
