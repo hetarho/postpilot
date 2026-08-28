@@ -44,10 +44,7 @@ function backend(options: { failures?: number; mint?: string; holds?: number } =
   }
 }
 
-function attach(
-  send: SendDraft,
-  options: { slug?: string; saved?: Draft } = {},
-) {
+function attach(send: SendDraft, options: { slug?: string; saved?: Draft } = {}) {
   const states: SaveState[] = []
   const minted: string[] = []
   const handle = attachDraftQueue({
@@ -233,6 +230,41 @@ describe('teardown', () => {
     await advance(0)
 
     expect(api.titles()).toEqual(['제주', '제주 3일'])
+  })
+})
+
+describe('an explicit flush', () => {
+  it('sends immediately and resolves only after the latest draft lands', async () => {
+    const api = backend({ holds: 1 })
+    const { handle } = attach(api.send, { slug: 'p' })
+    handle.queue(draft('생성에 쓸 최신 메모'))
+
+    let settled = false
+    const flushed = handle.flush().then(() => {
+      settled = true
+    })
+    await advance(0)
+
+    expect(api.titles()).toEqual(['생성에 쓸 최신 메모'])
+    expect(settled).toBe(false)
+
+    api.open()
+    await flushed
+    expect(settled).toBe(true)
+    expect(handle.state()).toBe('saved')
+  })
+
+  it('rejects the action on a failed attempt while autosave keeps retrying', async () => {
+    const api = backend({ failures: 1 })
+    const { handle } = attach(api.send, { slug: 'p' })
+    handle.queue(draft('제주'))
+
+    await expect(handle.flush()).rejects.toThrow('offline')
+    expect(handle.state()).toBe('error')
+
+    await advance(AUTOSAVE_RETRY_BASE_MS)
+    expect(api.titles()).toEqual(['제주', '제주'])
+    expect(handle.state()).toBe('saved')
   })
 })
 

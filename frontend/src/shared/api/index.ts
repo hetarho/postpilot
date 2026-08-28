@@ -23,6 +23,8 @@ export { HealthService, PingResponseSchema } from './gen/postpilot/v1/health_pb'
 export type { PingResponse } from './gen/postpilot/v1/health_pb'
 export { GenerationService, PostService } from './gen/postpilot/v1/post_pb'
 export {
+  BlockSchema,
+  BlockType,
   ConfirmUploadResponseSchema,
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
@@ -31,17 +33,26 @@ export {
   GenerationJobSchema,
   ImageSchema,
   ListPostsResponseSchema,
+  ObservationSchema,
+  PostContentSchema,
   PostSchema,
   PostSummarySchema,
   SavePostDraftResponseSchema,
+  StartGenerationRequestSchema,
+  StartGenerationResponseSchema,
 } from './gen/postpilot/v1/post_pb'
 export type {
+  Block,
   GenerationJob as ProtoGenerationJob,
   GetGenerationResponse,
   GetPostResponse,
   Image,
+  Observation,
   Post,
+  PostContent,
   PostSummary,
+  StartGenerationRequest,
+  StartGenerationResponse,
 } from './gen/postpilot/v1/post_pb'
 export { ProviderService, Stage } from './gen/postpilot/v1/provider_pb'
 export {

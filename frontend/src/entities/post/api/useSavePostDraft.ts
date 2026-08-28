@@ -10,18 +10,18 @@ import {
 } from '@/shared/api'
 import { getPostQueryKey, listPostsQueryKey } from './post-queries'
 
-/** The saved post, but with the photo list the cache already holds.
+/** Applies only the fields this mutation owns to the cached post.
  *
- *  A save answers with the whole post, photos included, and is in flight about once a
- *  second while someone types. Taking its photo list would race the confirm and delete
- *  patches (`usePostImagesCache`): a save that left before a delete lands after it and
- *  puts the photo back. It would also replace every presigned URL on screen with a fresh
- *  one each second, and the browser would download every thumbnail again. The text is
- *  what a save settles; the photos are settled by `GetPost` and by the patches. */
-function keepingCachedImages(saved: Post, cached: GetPostResponse | undefined): Post {
+ *  SavePostDraft answers with a whole post snapshot, but the request is in flight while
+ *  uploads and generation independently advance images, observations, active_job and
+ *  content. Installing that snapshot wholesale could roll any of them back in the cache.
+ *  Title and memo are the only fields this mutation settles; every other field remains
+ *  owned by GetPost or its focused mutation patch. */
+export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefined): Post {
   if (!cached?.post) return saved
-  const post = clone(PostSchema, saved)
-  post.images = cached.post.images
+  const post = clone(PostSchema, cached.post)
+  post.title = saved.title
+  post.memo = saved.memo
   return post
 }
 
@@ -46,7 +46,7 @@ export function useSavePostDraft() {
       queryClient.setQueryData(
         key,
         create(GetPostResponseSchema, {
-          post: keepingCachedImages(post, queryClient.getQueryData<GetPostResponse>(key)),
+          post: applyingSavedDraft(post, queryClient.getQueryData<GetPostResponse>(key)),
         }),
       )
 

@@ -42,6 +42,8 @@ export interface FakeProvidersOptions {
   listFails?: boolean
   /** Make SaveSelection fail. */
   saveFails?: boolean
+  /** Hold SaveSelection open until this promise settles. */
+  saveGate?: Promise<void>
   /** Records every procedure the transport was asked for. */
   calls?: string[]
 }
@@ -82,14 +84,18 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
       }),
     )
     // Like the server: a vanished choice is told once, then it is gone.
-    selections = selections.filter((selection) => registered(selection.providerId, selection.modelId))
+    selections = selections.filter((selection) =>
+      registered(selection.providerId, selection.modelId),
+    )
     return create(GetSelectionsResponseSchema, { selections: answer })
   })
 
-  rpc(ProviderService.method.saveSelection, (req) => {
+  rpc(ProviderService.method.saveSelection, async (req) => {
     calls?.push('SaveSelection')
+    await options.saveGate
     if (options.saveFails) throw new ConnectError('unavailable', Code.Unavailable)
-    if (req.stage === Stage.UNSPECIFIED) throw new ConnectError('stage is required', Code.InvalidArgument)
+    if (req.stage === Stage.UNSPECIFIED)
+      throw new ConnectError('stage is required', Code.InvalidArgument)
     const ref = req.ref ?? create(ModelRefSchema, {})
     const model = registered(ref.providerId, ref.modelId)
     if (!model) throw new ConnectError('model not registered', Code.NotFound)

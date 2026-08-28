@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { discardUploadBatches } from '@/features/upload-photos'
+import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
+import { OBSERVATION_FIXTURE, POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
 import { FAKE_STORAGE_ORIGIN } from '@/test/posts'
 import { clearCaret } from '../model/editor-handoff'
 
@@ -85,6 +87,125 @@ describe('opening a post', () => {
 
     expect(await screen.findByText('사진 2/4 관찰됨')).toBeInTheDocument()
     expect(calls).toContain('GetGeneration')
+  })
+
+  it('refreshes observations while running and renders the review draft after completion', async () => {
+    const slug = '20260820-jeju'
+    const image = { id: 'img-1', filename: 'IMG_1.jpg' }
+    const active = {
+      id: 'job-1',
+      status: 'running',
+      stage: 'observe',
+      progressDone: 0,
+      progressTotal: 1,
+    }
+    renderAppAt(`/posts/${slug}`, {
+      user: USER,
+      posts: {
+        posts: [{ slug, images: [image], activeJob: active }],
+        getSequence: [
+          { slug, images: [image], activeJob: active },
+          { slug, images: [image], activeJob: active },
+          {
+            slug,
+            images: [image],
+            observations: [OBSERVATION_FIXTURE],
+            activeJob: { ...active, progressDone: 1 },
+          },
+          {
+            slug,
+            status: 'review',
+            images: [image],
+            observations: [OBSERVATION_FIXTURE],
+            content: POST_CONTENT_FIXTURE,
+          },
+        ],
+      },
+      jobs: {
+        sequence: [
+          { ...active, progressDone: 1 },
+          { id: 'job-1', status: 'done', stage: 'write', progressDone: 1, progressTotal: 1 },
+        ],
+      },
+    })
+
+    expect(await screen.findByText('비가 그친 바닷가')).toBeInTheDocument()
+    expect(screen.queryByText('관찰 대기')).not.toBeInTheDocument()
+    expect(await screen.findByText('검토', {}, { timeout: 4_000 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '비 온 뒤의 제주' })).toBeInTheDocument()
+  })
+
+  it('keeps the empty-profile warning non-blocking for zero-photo generation', async () => {
+    renderAppAt('/posts/20260820-memo', {
+      user: USER,
+      posts: { posts: [{ slug: '20260820-memo', memo: '사진 없는 메모' }] },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    expect(await screen.findByText(/문체 프로필이 비어 있어요/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
+    expect(screen.getByText('사진이 없어 관찰 모델은 필요하지 않아요.')).toBeInTheDocument()
+  })
+
+  it('flushes the newest memo before it starts generation', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-memo', {
+      user: USER,
+      calls,
+      posts: { posts: [{ slug: '20260820-memo', memo: '처음 메모' }] },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    const generate = await screen.findByRole('button', { name: '생성' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    await user.type(screen.getByLabelText('메모'), ' + 최신 내용')
+    await user.click(generate)
+
+    await waitFor(() => expect(calls).toContain('StartGeneration'))
+    expect(calls.filter((call) => call === 'SavePostDraft' || call === 'StartGeneration')).toEqual([
+      'SavePostDraft',
+      'StartGeneration',
+    ])
+  })
+
+  it('does not generate with the previous model while a new selection is saving', async () => {
+    const calls: string[] = []
+    let releaseSelection: (() => void) | undefined
+    const saveGate = new Promise<void>((resolve) => {
+      releaseSelection = resolve
+    })
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-memo', {
+      user: USER,
+      calls,
+      posts: { posts: [{ slug: '20260820-memo' }] },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'writer-old' },
+          { providerId: 'openrouter', modelId: 'writer-new' },
+        ],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer-old' }],
+        saveGate,
+      },
+    })
+
+    const generate = await screen.findByRole('button', { name: '생성' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    await user.selectOptions(screen.getByLabelText('작성 모델'), 'openrouter/writer-new')
+    await waitFor(() => expect(calls).toContain('SaveSelection'))
+
+    expect(generate).toBeDisabled()
+    expect(screen.getByText('모델 선택을 저장하는 중이에요.')).toBeInTheDocument()
+
+    releaseSelection?.()
+    await waitFor(() => expect(generate).toBeEnabled())
   })
 
   // Job 05 A6 (plan 02 AC11, photos half): the strip is rebuilt from the view URLs.

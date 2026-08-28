@@ -15,6 +15,8 @@ export function toPostDraft(post: Post): PostDraft {
     updatedAt: post.updatedAt,
     images: post.images.map(toPostImage),
     activeJob: post.activeJob ? toGenerationJob(post.activeJob) : undefined,
+    content: post.content,
+    observations: post.observations,
   }
 }
 

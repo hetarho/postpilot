@@ -16,7 +16,15 @@ import { FieldLabel, FieldMessage, Select } from '@/shared/ui'
  *  with "사라졌어요", and no pre-selection: until the user picks, the stage is empty and
  *  `useStageSelection(stage).selected` is null, which is what the generation and analysis
  *  actions block on ([I3]). Pages mount it; features never import it. */
-export function StageModelSelect({ stage, className }: { stage: StageName; className?: string }) {
+export function StageModelSelect({
+  stage,
+  className,
+  optional = false,
+}: {
+  stage: StageName
+  className?: string
+  optional?: boolean
+}) {
   const id = useId()
   const { models, selected, unavailable, isPending, isError } = useStageSelection(stage)
   const save = useSaveSelection()
@@ -32,7 +40,9 @@ export function StageModelSelect({ stage, className }: { stage: StageName; class
 
   return (
     <div className={className}>
-      <FieldLabel htmlFor={id}>{STAGE_LABELS[stage]} 모델</FieldLabel>
+      <FieldLabel htmlFor={id}>
+        {STAGE_LABELS[stage]} 모델{optional ? ' (선택)' : ''}
+      </FieldLabel>
       <Select
         id={id}
         value={value}

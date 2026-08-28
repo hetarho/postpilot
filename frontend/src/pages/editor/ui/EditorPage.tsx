@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
-import { useTransport } from '@connectrpc/connect-query'
-import { FailureNotice, ProgressLine, useJob, type GenerationJob } from '@/entities/generation-job'
-import { getPostQueryKey, type PostLoadFailure, usePost } from '@/entities/post'
+import { type PostLoadFailure, usePost } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { isEmptyProfile, useVoiceProfile } from '@/entities/voice-profile'
 import { Button } from '@/shared/ui'
@@ -38,13 +36,7 @@ export function PostEditorPage() {
   return (
     <>
       <EditorVoiceWarning />
-      <DraftEditor
-        key={slug}
-        post={post}
-        status={
-          post.activeJob ? <ActiveJobStatus initial={post.activeJob} slug={slug} /> : undefined
-        }
-      />
+      <DraftEditor key={slug} post={post} />
     </>
   )
 }
@@ -58,19 +50,6 @@ function EditorVoiceWarning() {
       <VoiceWarning profile={profile} />
     </div>
   )
-}
-
-function ActiveJobStatus({ initial, slug }: { initial: GenerationJob; slug: string }) {
-  const transport = useTransport()
-  const invalidationKeys = [getPostQueryKey(transport, slug)]
-  const { job, isError, refetch } = useJob(initial.id, invalidationKeys)
-  const current = job ?? initial
-
-  if (isError) {
-    return <FailureNotice error="작업 상태를 확인하지 못했어요." onRetry={refetch} />
-  }
-  if (current.status === 'failed') return <FailureNotice error={current.error} />
-  return <ProgressLine job={current} />
 }
 
 const FAILURE_MESSAGES: Record<PostLoadFailure, string> = {

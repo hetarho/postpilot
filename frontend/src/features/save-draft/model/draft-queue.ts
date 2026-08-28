@@ -37,6 +37,9 @@ export interface DraftQueueHandle {
   /** Sends what is queued right now, cancelling a waiting debounce or backoff — for a
    *  page or an editor that is going away. */
   saveNow: () => void
+  /** Saves everything currently queued and resolves only when the server is known to
+   *  hold it. Used before an action that consumes the saved draft, such as generation. */
+  flush: () => Promise<void>
   /** Detaches the editor. A queue with work left keeps going without it. */
   release: () => void
   /** Resolves with the post's slug, creating the post first when it has none yet — for
@@ -48,6 +51,11 @@ export interface DraftQueueHandle {
 
 interface MintWaiter {
   resolve: (slug: string) => void
+  reject: (error: Error) => void
+}
+
+interface FlushWaiter {
+  resolve: () => void
   reject: (error: Error) => void
 }
 
@@ -83,6 +91,7 @@ interface Queue {
   /** Callers of `mint` waiting for the first save to land. On the queue, not the handle,
    *  so they survive the editor swap the mint itself causes. */
   mintWaiters: MintWaiter[]
+  flushWaiters: FlushWaiter[]
 }
 
 const queues = new Map<string, Queue>()
@@ -124,6 +133,20 @@ function stateOf(queue: Queue): SaveState {
 
 function publish(queue: Queue): void {
   queue.listener?.(stateOf(queue))
+}
+
+function settleFlushes(queue: Queue): void {
+  if (queue.inFlight || queue.pending) return
+  const waiters = queue.flushWaiters
+  queue.flushWaiters = []
+  for (const waiter of waiters) waiter.resolve()
+}
+
+function rejectFlushes(queue: Queue, cause: unknown): void {
+  const error = cause instanceof Error ? cause : new Error('draft save failed')
+  const waiters = queue.flushWaiters
+  queue.flushWaiters = []
+  for (const waiter of waiters) waiter.reject(error)
 }
 
 function clearTimers(queue: Queue): void {
@@ -202,7 +225,8 @@ async function run(queue: Queue): Promise<void> {
       else scheduleDebounce(queue)
     }
     queue.urgent = false
-  } catch {
+    settleFlushes(queue)
+  } catch (cause) {
     // Swallowed rather than rethrown: every caller is a timer or a teardown handler with
     // nobody to catch it. The retry is what the user is actually promised.
     if (queue.discarded) return
@@ -216,6 +240,7 @@ async function run(queue: Queue): Promise<void> {
       queue.failed = false
       queue.attempts = 0
       publish(queue)
+      settleFlushes(queue)
       collect(queue)
       return
     }
@@ -224,6 +249,9 @@ async function run(queue: Queue): Promise<void> {
     queue.failed = true
     queue.urgent = false
     publish(queue)
+    // A flush is an explicit prerequisite for another action. Report this failed
+    // attempt to that action while the ordinary autosave retry continues in background.
+    rejectFlushes(queue, cause)
     // The retry sends whatever is pending WHEN IT FIRES, so typing during an outage
     // neither resets the delay nor adds requests of its own.
     queue.retryTimer = window.setTimeout(() => {
@@ -266,6 +294,7 @@ export function attachDraftQueue(options: {
       listener: undefined,
       onMinted: undefined,
       mintWaiters: [],
+      flushWaiters: [],
     }
     queues.set(key, queue)
   }
@@ -294,6 +323,7 @@ export function attachDraftQueue(options: {
         attached.attempts = 0
         clearTimers(attached)
         publish(attached)
+        settleFlushes(attached)
         return
       }
 
@@ -305,6 +335,15 @@ export function attachDraftQueue(options: {
     },
 
     saveNow: () => sendNow(attached),
+
+    flush: () => {
+      if (attached.discarded) return Promise.reject(new Error('session ended'))
+      if (!attached.inFlight && !attached.pending) return Promise.resolve()
+      return new Promise<void>((resolve, reject) => {
+        attached.flushWaiters.push({ resolve, reject })
+        sendNow(attached)
+      })
+    },
 
     release: () => {
       attached.listener = undefined
@@ -349,6 +388,8 @@ export function discardDraftQueues(): void {
     clearTimers(queue)
     for (const waiter of queue.mintWaiters) waiter.reject(new Error('session ended'))
     queue.mintWaiters = []
+    for (const waiter of queue.flushWaiters) waiter.reject(new Error('session ended'))
+    queue.flushWaiters = []
   }
   queues.clear()
 }

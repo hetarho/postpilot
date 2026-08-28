@@ -1,7 +1,7 @@
 # Policy — Post generation
 
-Canonical backend rules that are **currently true** in the code. Source: [plan/06](../plan/06.two-stage-generation-and-contact-sheet.md),
-backend built by job 10. The contact-sheet and reading-view presentation will be completed by job 11.
+Canonical rules that are **currently true** in the code. Source: [plan/06](../plan/06.two-stage-generation-and-contact-sheet.md),
+built by jobs 10 and 11.
 
 ## Canonical content
 
@@ -45,6 +45,19 @@ backend built by job 10. The contact-sheet and reading-view presentation will be
   With no photos, the observe model is ignored and stored empty on the job.
 - The job queue's one-active-job-per-post constraint is authoritative under concurrency. A collision is
   `FailedPrecondition` and includes the active job id so the client can attach to it.
+
+## Contact sheet and reading view
+
+- The contact sheet pairs each attached image with its persisted observation by exact filename and displays
+  `scene`, `mood`, `visible_text`, and `objects`. During observation, completed entries appear immediately and the
+  remainder say `관찰 대기`; each non-terminal job snapshot refreshes the post read model.
+- Contact-sheet thumbnails use only the presigned GET `view_url` returned by `GetPost`. A temporary browser `blob:`
+  upload preview is never treated as a server-read capability.
+- The generated reading view renders the canonical `PostContent` block array directly. It shows title, summary,
+  tags, every canonical block type, and resolves IMAGE blocks against attached filenames; it does not store or
+  render canonical HTML.
+- Generation remains disabled until the required explicit stage selections are durable, the latest title and memo
+  have been saved, and no active or newly accepted job is unresolved. A 0-photo post requires only the write model.
 
 ## Configuration
 

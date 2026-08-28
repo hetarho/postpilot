@@ -19,6 +19,8 @@ import {
   PostService,
   PostSummarySchema,
   type ProtoGenerationJob,
+  type Observation,
+  type PostContent,
   SavePostDraftResponseSchema,
 } from '@/shared/api'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
@@ -41,11 +43,15 @@ export interface FakePostRow {
   updatedAt?: string
   images?: FakeImageRow[]
   activeJob?: FakeGenerationJobRow
+  content?: PostContent
+  observations?: Observation[]
 }
 
 export interface FakePostsOptions {
   /** The acting user's posts, in the order ListPosts should return them. */
   posts?: FakePostRow[]
+  /** Optional successive snapshots returned by GetPost for the same slug. */
+  getSequence?: FakePostRow[]
   /** Slugs that exist but belong to someone else — 403, the way the server answers. */
   foreign?: string[]
   /** Make ListPosts fail. */
@@ -75,6 +81,8 @@ type Row = {
   updatedAt: string
   images: Image[]
   activeJob?: ProtoGenerationJob
+  content?: PostContent
+  observations: Observation[]
 }
 
 export function registerPostService(router: ConnectRouter, options: FakePostsOptions = {}) {
@@ -82,32 +90,34 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   const { foreign = [], listFails, today = '20260828', calls } = options
   let failuresLeft = options.failSaves ?? 0
   let uploadSequence = 0
+  let getSequenceIndex = 0
   const pending = new Map<string, { slug: string; filename: string }>()
 
-  const rows = new Map<string, Row>(
-    (options.posts ?? []).map((row) => [
-      row.slug,
-      {
-        slug: row.slug,
-        title: row.title ?? '',
-        memo: row.memo ?? '',
-        status: row.status ?? 'draft',
-        updatedAt: row.updatedAt ?? DEFAULT_UPDATED_AT,
-        images: (row.images ?? []).map((image) =>
-          create(ImageSchema, {
-            id: image.id,
-            filename: image.filename,
-            width: image.width ?? 1024,
-            height: image.height ?? 768,
-            bytes: 200_000n,
-            viewUrl:
-              image.viewUrl ?? `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=1`,
-          }),
-        ),
-        activeJob: row.activeJob ? toFakeProto(row.activeJob) : undefined,
-      },
-    ]),
-  )
+  function toRow(row: FakePostRow): Row {
+    return {
+      slug: row.slug,
+      title: row.title ?? '',
+      memo: row.memo ?? '',
+      status: row.status ?? 'draft',
+      updatedAt: row.updatedAt ?? DEFAULT_UPDATED_AT,
+      images: (row.images ?? []).map((image) =>
+        create(ImageSchema, {
+          id: image.id,
+          filename: image.filename,
+          width: image.width ?? 1024,
+          height: image.height ?? 768,
+          bytes: 200_000n,
+          viewUrl:
+            image.viewUrl ?? `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=1`,
+        }),
+      ),
+      activeJob: row.activeJob ? toFakeProto(row.activeJob) : undefined,
+      content: row.content,
+      observations: row.observations ?? [],
+    }
+  }
+
+  const rows = new Map<string, Row>((options.posts ?? []).map((row) => [row.slug, toRow(row)]))
 
   function mintSlug(title: string): string {
     const base = title.trim().toLowerCase().replace(/\s+/g, '-') || 'untitled'
@@ -145,6 +155,12 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   rpc(PostService.method.getPost, (req) => {
     calls?.push('GetPost')
     if (foreign.includes(req.slug)) throw new ConnectError('not yours', Code.PermissionDenied)
+    const sequenced =
+      options.getSequence?.[Math.min(getSequenceIndex, options.getSequence.length - 1)]
+    if (sequenced?.slug === req.slug) {
+      getSequenceIndex += 1
+      rows.set(req.slug, toRow(sequenced))
+    }
     const row = rows.get(req.slug)
     if (!row) throw new ConnectError('not found', Code.NotFound)
     return create(GetPostResponseSchema, { post: withViewUrls(row) })
@@ -169,6 +185,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       updatedAt: DEFAULT_UPDATED_AT,
       images: rows.get(slug)?.images ?? [],
       activeJob: rows.get(slug)?.activeJob,
+      content: rows.get(slug)?.content,
+      observations: rows.get(slug)?.observations ?? [],
     }
     rows.set(slug, row)
     return create(SavePostDraftResponseSchema, { post: toProto(row) })

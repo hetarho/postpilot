@@ -27,6 +27,8 @@ export function useAutosave({ post, title, memo, onMinted }: UseAutosaveArgs): {
   /** The post's slug, creating the post first if it has none yet (see
    *  `DraftQueueHandle.mint`). For anything that needs a post to attach to — photos. */
   ensureSlug: () => Promise<string>
+  /** Waits until the current title and memo are durably saved. */
+  flush: () => Promise<void>
 } {
   const slug = post?.slug
   const saveDraft = useSavePostDraft()
@@ -104,5 +106,7 @@ export function useAutosave({ post, title, memo, onMinted }: UseAutosaveArgs): {
     state,
     ensureSlug: () =>
       queueRef.current?.mint() ?? Promise.reject(new Error('editor is not attached to a draft')),
+    flush: () =>
+      queueRef.current?.flush() ?? Promise.reject(new Error('editor is not attached to a draft')),
   }
 }

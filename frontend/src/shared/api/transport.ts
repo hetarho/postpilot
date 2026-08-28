@@ -63,7 +63,7 @@ export const healthClient = createClient(HealthService, transport)
 /** Typed client for postpilot.v1.ProviderService. */
 export const providerClient = createClient(ProviderService, transport)
 
-/** Typed client for durable generation job reads. */
+/** Typed client for starting and reading durable generation jobs. */
 export const generationClient = createClient(GenerationService, transport)
 
 /** Typed client for the acting account's voice profile. */

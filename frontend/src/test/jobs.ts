@@ -4,6 +4,7 @@ import {
   GenerationJobSchema,
   GenerationService,
   GetGenerationResponseSchema,
+  StartGenerationResponseSchema,
   type ProtoGenerationJob,
 } from '@/shared/api'
 
@@ -25,6 +26,15 @@ export interface FakeJobsOptions {
   /** Optional next snapshots returned on successive reads of the same id. */
   sequence?: FakeGenerationJobRow[]
   calls?: string[]
+  startJobId?: string
+  startFails?: boolean
+  starts?: FakeGenerationStart[]
+}
+
+export interface FakeGenerationStart {
+  postSlug: string
+  observeModel?: { providerId: string; modelId: string }
+  writeModel?: { providerId: string; modelId: string }
 }
 
 export function toFakeProto(row: FakeGenerationJobRow): ProtoGenerationJob {
@@ -47,6 +57,20 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
     const found = sequenced?.id === req.id ? sequenced : jobs.get(req.id)
     if (!found) throw new ConnectError('not found', Code.NotFound)
     return create(GetGenerationResponseSchema, { job: toFakeProto(found) })
+  })
+  router.rpc(GenerationService.method.startGeneration, (req) => {
+    options.calls?.push('StartGeneration')
+    if (options.startFails) throw new ConnectError('생성을 시작하지 못했어요.', Code.Unavailable)
+    options.starts?.push({
+      postSlug: req.postSlug,
+      observeModel: req.observeModel
+        ? { providerId: req.observeModel.providerId, modelId: req.observeModel.modelId }
+        : undefined,
+      writeModel: req.writeModel
+        ? { providerId: req.writeModel.providerId, modelId: req.writeModel.modelId }
+        : undefined,
+    })
+    return create(StartGenerationResponseSchema, { jobId: options.startJobId ?? 'job-started' })
   })
 }
 

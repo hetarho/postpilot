@@ -1,12 +1,12 @@
 import type { PostImage } from '@/entities/image/@x/post'
 import type { GenerationJob } from '@/entities/generation-job/@x/post'
+import type { Observation, PostContent } from '@/shared/api'
 
 /** A post as the app talks about it.
  *
  *  Deliberately not the generated `Post` message: the screens should speak the app's
  *  vocabulary, so a proto change is absorbed by this entity's api mappers instead of
- *  rippling into every consumer. It also keeps the editor from having to know about
- *  fields (generated content, later) it has no use for. */
+ *  rippling into every consumer. */
 export interface PostDraft {
   slug: string
   title: string
@@ -15,6 +15,8 @@ export interface PostDraft {
   updatedAt: string
   images: PostImage[]
   activeJob: GenerationJob | undefined
+  content: PostContent | undefined
+  observations: Observation[]
 }
 
 /** One row of the post list (PRD F-8). */
