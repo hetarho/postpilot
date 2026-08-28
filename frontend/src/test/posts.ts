@@ -40,6 +40,7 @@ export interface FakePostRow {
   title?: string
   memo?: string
   status?: string
+  createdAt?: string
   updatedAt?: string
   images?: FakeImageRow[]
   activeJob?: FakeGenerationJobRow
@@ -78,6 +79,7 @@ type Row = {
   title: string
   memo: string
   status: string
+  createdAt: string
   updatedAt: string
   images: Image[]
   activeJob?: ProtoGenerationJob
@@ -99,6 +101,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       title: row.title ?? '',
       memo: row.memo ?? '',
       status: row.status ?? 'draft',
+      createdAt: row.createdAt ?? DEFAULT_UPDATED_AT,
       updatedAt: row.updatedAt ?? DEFAULT_UPDATED_AT,
       images: (row.images ?? []).map((image) =>
         create(ImageSchema, {
@@ -182,6 +185,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       title: req.title,
       memo: req.memo,
       status: rows.get(slug)?.status ?? 'draft',
+      createdAt: rows.get(slug)?.createdAt ?? DEFAULT_UPDATED_AT,
       updatedAt: DEFAULT_UPDATED_AT,
       images: rows.get(slug)?.images ?? [],
       activeJob: rows.get(slug)?.activeJob,

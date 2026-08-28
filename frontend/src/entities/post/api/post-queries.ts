@@ -12,6 +12,7 @@ export function toPostDraft(post: Post): PostDraft {
     title: post.title,
     memo: post.memo,
     status: post.status,
+    createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     images: post.images.map(toPostImage),
     activeJob: post.activeJob ? toGenerationJob(post.activeJob) : undefined,

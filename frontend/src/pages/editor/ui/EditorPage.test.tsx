@@ -51,6 +51,40 @@ describe('opening a post', () => {
 
     expect(await screen.findByLabelText('제목')).toHaveValue('제주 3일')
     expect(screen.getByLabelText('메모')).toHaveValue('첫날은 비')
+    expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
+  })
+
+  it('switches export formats without making another client request', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'review',
+            createdAt: '2026-08-20T12:00:00Z',
+            content: POST_CONTENT_FIXTURE,
+          },
+        ],
+      },
+    })
+
+    expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(calls).toEqual(
+        expect.arrayContaining(['GetPost', 'ListModels', 'GetSelections', 'GetVoiceProfile']),
+      )
+    })
+    calls.length = 0
+
+    await user.click(screen.getByRole('tab', { name: '티스토리' }))
+    await user.click(screen.getByRole('tab', { name: '자체 사이트' }))
+    await user.click(screen.getByRole('tab', { name: '마크다운' }))
+
+    expect(calls).toEqual([])
   })
 
   it('resumes polling the active job exposed by the post', async () => {

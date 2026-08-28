@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`converts every block to the Tistory fragment contract 1`] = `
+"<p class="summary">비가 그친 뒤 천천히 걸은 하루</p>
+<p>비가 그치기를 기다렸다.</p>
+<p>&lt;바다&gt; &amp; &quot;바람&quot;도 잠잠했다.</p>
+<h2>바닷가로</h2>
+<figure><img src="" alt="잔잔한 제주 바다" data-file="IMG_1.jpg"><!-- IMG_1.jpg 업로드 후 src 교체 --><figcaption>비 뒤의 바다</figcaption></figure>
+<h3>챙긴 것</h3>
+<figure><img src="" alt="구름 사이 햇빛" data-file="IMG_2.jpg"><!-- IMG_2.jpg 업로드 후 src 교체 --></figure>
+<blockquote><p>서두르지 않아도 괜찮다.</p></blockquote>
+<ul><li>우산</li><li>따뜻한 차</li></ul>"
+`;

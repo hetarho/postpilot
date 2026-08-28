@@ -16,6 +16,7 @@ import { SaveStatus, peekPendingDraft, useAutosave } from '@/features/save-draft
 import { StageModelSelect } from '@/features/select-model'
 import { Badge, FieldLabel, Textarea, TextField } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
+import { ExportPanel } from '@/widgets/export-panel'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
 import { EditorPhotos } from './EditorPhotos'
 
@@ -221,6 +222,7 @@ function GenerationSection({
             jobPending={Boolean(jobId) && !job}
             onStarted={setStartedJobId}
           />
+          <ExportPanel content={post.content} images={post.images} createdAt={post.createdAt} />
         </>
       )}
     </>

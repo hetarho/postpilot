@@ -13,6 +13,7 @@ const post: PostDraft = {
   title: '제주',
   memo: '비 온 뒤 산책',
   status: 'draft',
+  createdAt: '2026-08-29T00:00:00Z',
   updatedAt: '',
   images: [
     {

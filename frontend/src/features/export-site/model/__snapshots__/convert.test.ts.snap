@@ -1,0 +1,42 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`converts every block to one standalone fixed-template page 1`] = `
+"<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>비 온 뒤의 제주</title>
+<style>:root { font-family: system-ui, sans-serif; line-height: 1.7; }
+body { max-width: 44rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+h1, h2, h3 { line-height: 1.25; }
+.summary { font-size: 1.1rem; }
+.meta, .tags { font-size: 0.875rem; }
+.tags { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; list-style: none; }
+figure { margin: 2rem 0; }
+img { display: block; width: 100%; height: auto; }
+figcaption { margin-top: 0.5rem; font-size: 0.875rem; }
+blockquote { margin: 1.5rem 0; padding-left: 1rem; }</style>
+</head>
+<body>
+<main>
+<header>
+<h1>비 온 뒤의 제주</h1>
+<p class="summary">비가 그친 뒤 천천히 걸은 하루</p>
+<p class="meta"><time datetime="2026-08-29">2026-08-29</time></p>
+<ul class="tags"><li>제주</li><li>산책</li><li>여행</li></ul>
+</header>
+<article>
+<p>비가 그치기를 기다렸다.</p>
+<p>&lt;바다&gt; &amp; &quot;바람&quot;도 잠잠했다.</p>
+<h2>바닷가로</h2>
+<figure><img src="IMG_1.jpg" alt="잔잔한 제주 바다"><figcaption>비 뒤의 바다</figcaption></figure>
+<h3>챙긴 것</h3>
+<figure><img src="IMG_2.jpg" alt="구름 사이 햇빛"></figure>
+<blockquote><p>서두르지 않아도 괜찮다.</p></blockquote>
+<ul><li>우산</li><li>따뜻한 차</li></ul>
+</article>
+</main>
+</body>
+</html>"
+`;

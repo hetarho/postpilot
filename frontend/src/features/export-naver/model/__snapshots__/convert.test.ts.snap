@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`converts every block to the Naver plain-text contract 1`] = `
+"비가 그치기를 기다렸다.
+
+<바다> & "바람"도 잠잠했다.
+
+바닷가로
+
+[사진 IMG_1.jpg — 비 뒤의 바다]
+
+챙긴 것
+
+[사진 IMG_2.jpg]
+
+“서두르지 않아도 괜찮다.”
+
+- 우산
+- 따뜻한 차"
+`;

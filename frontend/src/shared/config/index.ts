@@ -65,6 +65,9 @@ export const POLL_INTERVAL_MS = 2_000
  * generation context so the field stops before the authoritative RPC validation. */
 export const REVISION_INSTRUCTION_MAX_CHARS = 500
 
+/** How long successful clipboard feedback remains visible. */
+export const COPY_FEEDBACK_MS = 1_500
+
 /** Immediate client feedback for voice samples. The backend remains authoritative. */
 export const VOICE_SAMPLE_MIN_CHARS = 200
 

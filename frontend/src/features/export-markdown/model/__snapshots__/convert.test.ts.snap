@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`converts every block to Markdown with YAML front matter 1`] = `
+"---
+title: "비 온 뒤의 제주"
+date: 2026-08-29
+summary: "비가 그친 뒤 천천히 걸은 하루"
+tags: ["제주", "산책", "여행"]
+---
+
+비가 그치기를 기다렸다.
+
+&lt;바다&gt; &amp; &quot;바람&quot;도 잠잠했다.
+
+## 바닷가로
+
+![잔잔한 제주 바다](IMG_1.jpg)
+*비 뒤의 바다*
+
+### 챙긴 것
+
+![구름 사이 햇빛](IMG_2.jpg)
+
+> 서두르지 않아도 괜찮다.
+
+- 우산
+- 따뜻한 차"
+`;

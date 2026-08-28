@@ -12,6 +12,7 @@ export interface PostDraft {
   title: string
   memo: string
   status: string
+  createdAt: string
   updatedAt: string
   images: PostImage[]
   activeJob: GenerationJob | undefined
