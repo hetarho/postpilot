@@ -1,0 +1,131 @@
+// Package provision is the operator's account tool. postpilot has no signup RPC
+// (PRD F-1), so this is the only path that creates a user — deliberately reachable
+// from a shell on the box and from nowhere on the network.
+package provision
+
+import (
+	"bufio"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+
+	"golang.org/x/term"
+
+	"github.com/postpilot/backend/internal/auth"
+	"github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/platform/config"
+	"github.com/postpilot/backend/internal/platform/db"
+)
+
+// Run executes `adduser <login_id>`, returning an error the caller turns into a
+// non-zero exit.
+//
+// It opens the database and runs migrations itself rather than assuming the api has
+// already booted: on a fresh volume the very first thing an operator does is create an
+// account, and requiring a running server first would be a bootstrap deadlock.
+func Run(ctx context.Context, args []string) error {
+	if len(args) != 1 || strings.TrimSpace(args[0]) == "" {
+		return errors.New("usage: adduser <login_id>")
+	}
+	loginID := strings.TrimSpace(args[0])
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	handle, err := db.Open(cfg.DBPath)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		return err
+	}
+
+	password, err := readPassword()
+	if err != nil {
+		return err
+	}
+
+	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
+	if err := svc.CreateUser(ctx, loginID, password); err != nil {
+		if errors.Is(err, auth.ErrDuplicateUser) {
+			return fmt.Errorf("account %q already exists — pick another id, or delete the row first", loginID)
+		}
+		return err
+	}
+
+	fmt.Fprintf(os.Stdout, "created account %q in %s\n", loginID, cfg.DBPath)
+	return nil
+}
+
+// readPassword prompts twice and requires a match.
+//
+// On a TTY it reads with echo off. Piped input (`docker compose run -T`, a CI check)
+// has no TTY, so it falls back to a plain read — the confirmation prompt still applies,
+// which means a piped password must be sent twice.
+func readPassword() (string, error) {
+	fd := int(os.Stdin.Fd())
+	if !term.IsTerminal(fd) {
+		return readPasswordLines(os.Stdin)
+	}
+
+	fmt.Fprint(os.Stderr, "password: ")
+	first, err := term.ReadPassword(fd)
+	fmt.Fprintln(os.Stderr)
+	if err != nil {
+		return "", fmt.Errorf("read password: %w", err)
+	}
+
+	fmt.Fprint(os.Stderr, "confirm password: ")
+	second, err := term.ReadPassword(fd)
+	fmt.Fprintln(os.Stderr)
+	if err != nil {
+		return "", fmt.Errorf("read password: %w", err)
+	}
+
+	return validatePair(string(first), string(second))
+}
+
+// readPasswordLines takes two whole lines. Splitting on whitespace (fmt.Fscanln) would
+// silently truncate or reject a passphrase containing a space — and a passphrase is
+// exactly what an operator should be typing here.
+func readPasswordLines(r io.Reader) (string, error) {
+	scanner := bufio.NewScanner(r)
+
+	if !scanner.Scan() {
+		return "", fmt.Errorf("read password: %w", inputErr(scanner))
+	}
+	first := scanner.Text()
+
+	if !scanner.Scan() {
+		return "", fmt.Errorf("read password confirmation: %w", inputErr(scanner))
+	}
+	second := scanner.Text()
+
+	return validatePair(first, second)
+}
+
+// inputErr distinguishes a read failure from input that simply ended early; both stop
+// provisioning, but only one is worth an operator looking at the pipe.
+func inputErr(scanner *bufio.Scanner) error {
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return errors.New("unexpected end of input (send the password twice, one per line)")
+}
+
+func validatePair(first, second string) (string, error) {
+	if first == "" {
+		return "", errors.New("password must not be empty")
+	}
+	if first != second {
+		return "", errors.New("passwords do not match")
+	}
+	return first, nil
+}

@@ -96,9 +96,18 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
 - 스택 `.env` 키: `IMAGE_TAG`(배포가 갱신) · `PORT=8080` · `API_UPSTREAM`
   (`postpilot-api-staging`|`postpilot-api-prod` — edge 네트워크에서의 DNS 별칭) ·
   `CORS_ORIGIN`(해당 환경 프론트 origin).
+- 스택 `.env`에 `DB_PATH=/data/postpilot.db`도 넣는다 (`.env.production.example` 참고).
+- `data/`에는 SQLite 파일(`postpilot.db` + WAL 사이드카)이 들어간다. 백업 대상은 이 디렉터리 하나다.
 - `data/`는 **uid 65532 소유**여야 한다. 이미지가 distroless:nonroot로 돌기 때문에,
   root 소유로 두면 컨테이너는 뜨는데 첫 쓰기에서 죽는다.
   `sudo install -d -o 65532 -g 65532 /srv/postpilot-<env>/data`
+- **계정 생성**: 가입 화면이 없으므로(PRD F-1) 운영자가 직접 만든다. api 이미지의
+  `ENTRYPOINT ["/api"]`가 `adduser` 서브커맨드를 받는다 — 별도 이미지가 필요 없다.
+  ```bash
+  cd /srv/postpilot-<env>
+  docker compose -f docker-compose.prod.yml run --rm api adduser <login_id>
+  # 비밀번호를 두 번 입력한다 (TTY면 에코 없음). 중복 id는 non-zero로 거절된다.
+  ```
 - 도커 외부 네트워크 `edge`(`docker network create edge`)로 Caddy↔api가 통신한다.
   **Caddy는 스택마다 띄우지 않는다** — 80/443 충돌.
 - **edge는 프로젝트가 몇 개로 늘어도 확장된다.** `/srv/edge/Caddyfile`은 site 블록을
@@ -175,6 +184,7 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
    - **기존 박스 재사용이면 이 단계 대신 §4의 "이미 도는 박스에 얹기"를 따른다** —
      `Caddyfile`/`docker-compose.yml`은 그 박스 것이라 덮어쓰지 않는다.
    - 스택별 `/srv/postpilot-<env>/.env`: `.env.production.example`을 채워서 (`chmod 600`).
+     `DB_PATH`는 예제 값(`/data/postpilot.db`) 그대로 두면 된다 — 위 볼륨 마운트와 짝이다.
      `API_UPSTREAM`이 스택마다 **달라야** 한다 — `deploy/edge/conf.d/postpilot*.caddy`의
      `reverse_proxy` 업스트림 이름과 일치.
      `CORS_ORIGIN`은 repo variable `WEB_ORIGIN`과 **같아야** 한다 — 다르면 배포 마지막
@@ -194,7 +204,11 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
    deploy `npx wrangler deploy`, version `npx wrangler versions upload`,
    변수 `VITE_API_URL` 입력, 커스텀 도메인 연결.
 
+10. **첫 계정**: 배포가 끝나면 §4의 `adduser`로 계정을 만든다. 만들기 전까지는 로그인할
+    방법이 없다 — 마이그레이션은 기동 때 이미 돌았으므로 이 단계만 남는다.
+
 확인: `curl https://api.postpilot.<도메인>/health` → `{"status":"ok","version":"0.0.1"}`
+(인증이 필요한 RPC는 세션 쿠키 없이 부르면 401이다 — `/health`만 열려 있다.)
 
 ## 6. 롤백
 
@@ -207,11 +221,8 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
 
 지금 뼈대에 **일부러 넣지 않은** 것들. 필요해지는 시점에 붙인다.
 
-- **DB** — 스키마와 코드는 아직 없지만 **배포 쪽 자리는 이미 잡혀 있다**: 스택 볼륨의
-  `data/`, embed된 마이그레이션이 기동 시 돌고 `/health` 게이트가 실패를 잡는 rollout.
-  코드에서 할 일은 `internal/db`(SQLite + goose embed)뿐이다 — 워크플로는 안 건드려도 된다.
-- **인증** — 지금은 인터셉터가 없다. 붙일 때 `rpcserver`에 auth 인터셉터를 추가하고,
-  프론트 transport에 Bearer 인터셉터를 단다.
 - **오브젝트 스토리지** — 사진 원본 저장. 업로드가 생기면 `maxRequestBytes`(현재 256KiB)도
   같이 다시 본다.
+- **비밀번호 변경/재설정** — PRD에 흐름이 정의돼 있지 않다. 지금은 운영자가 계정을
+  다시 만드는 것이 유일한 경로다.
 - **관측(Sentry/PostHog)** — 사용자가 생기면.

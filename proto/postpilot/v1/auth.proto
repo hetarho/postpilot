@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// auth.proto is the identity slice of the contract. Accounts are created by the
+// operator (`api adduser`), never over the wire — there is deliberately no Signup RPC
+// (PRD F-1).
+//
+// The session token appears in NO message on this page. It travels only in the
+// Set-Cookie / Cookie headers of the underlying HTTP exchange, which is what keeps it
+// out of response bodies, logs, and URLs — and out of reach of JavaScript.
+service AuthService {
+  // Sets the session cookie on the HTTP response.
+  rpc Login(LoginRequest) returns (LoginResponse) {}
+  // Revokes the session row server-side and clears the cookie.
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {}
+  // Session probe for app boot; the interceptor answers 401 when there is no session.
+  rpc GetMe(GetMeRequest) returns (GetMeResponse) {}
+}
+
+message LoginRequest {
+  string login_id = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  User user = 1;
+}
+
+message LogoutRequest {}
+
+message LogoutResponse {}
+
+message GetMeRequest {}
+
+message GetMeResponse {
+  User user = 1;
+}
+
+// User is everything the client may know about an account. There is no display name,
+// email, or role — a two-person tool has no use for them (PRD §1).
+message User {
+  string id = 1;
+}

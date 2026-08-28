@@ -1,7 +1,7 @@
 // Package rpcserver is server plumbing only: it wires Connect handlers onto a
 // net/http mux with h2c (cleartext HTTP/2) and CORS, plus a plain /health endpoint.
-// It holds NO business logic — service implementations live in their own packages
-// and are injected into New by the composition root (cmd/api).
+// It holds NO business logic — service implementations and interceptors live in their
+// own packages and are injected into New by the composition root (cmd/api).
 package rpcserver
 
 import (
@@ -15,7 +15,6 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/platform/config"
 )
 
@@ -33,20 +32,37 @@ const (
 	idleTimeout  = 120 * time.Second
 )
 
-// New builds the fully-wired HTTP server: the given HealthService Connect handler
-// plus a /health endpoint, wrapped in CORS and h2c. The caller owns the
-// listen/shutdown lifecycle.
-func New(cfg *config.Config, version string, healthSvc postpilotv1connect.HealthServiceHandler) *http.Server {
+// Registrar mounts one Connect service, given the shared handler options. It matches
+// the shape of the generated NewXxxServiceHandler constructors, so a context registers
+// itself with a one-line closure and this package never imports the generated code.
+type Registrar func(opts ...connect.HandlerOption) (path string, handler http.Handler)
+
+// Options is what the composition root injects.
+type Options struct {
+	// Interceptors run for every registered procedure, outermost first.
+	Interceptors []connect.Interceptor
+	// Handlers are the Connect services to mount.
+	Handlers []Registrar
+}
+
+// New builds the fully-wired HTTP server: the given Connect services plus a /health
+// endpoint, wrapped in CORS and h2c. The caller owns the listen/shutdown lifecycle.
+func New(cfg *config.Config, version string, opts Options) *http.Server {
 	mux := http.NewServeMux()
 
-	opts := []connect.HandlerOption{
+	handlerOpts := []connect.HandlerOption{
 		connect.WithReadMaxBytes(maxRequestBytes),
 	}
-	healthPath, healthHandler := postpilotv1connect.NewHealthServiceHandler(healthSvc, opts...)
-	mux.Handle(healthPath, healthHandler)
+	if len(opts.Interceptors) > 0 {
+		handlerOpts = append(handlerOpts, connect.WithInterceptors(opts.Interceptors...))
+	}
+	for _, register := range opts.Handlers {
+		mux.Handle(register(handlerOpts...))
+	}
 
-	// /health is mounted directly on the mux, so it bypasses the Connect stack — it is
-	// what the platform (Caddy, uptime checks) probes, not an RPC.
+	// /health is mounted directly on the mux, so it bypasses the Connect stack — and
+	// with it the auth interceptor. It is what the platform (Caddy, uptime checks,
+	// the deploy's rollback gate) probes, not an RPC.
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -73,14 +89,19 @@ func New(cfg *config.Config, version string, healthSvc postpilotv1connect.Health
 	}
 }
 
-// withCORS allows the configured browser origin, using connect's recommended
-// method/header sets plus Authorization (for the Bearer token auth will add).
+// withCORS allows exactly the configured browser origin, with credentials.
+//
+// AllowCredentials is what lets the browser send the HttpOnly session cookie
+// cross-origin (the SPA and the API are different origins). It is also why the origin
+// can never be a wildcard — the browser rejects that combination outright, so
+// config.Load refuses to start with one.
 func withCORS(h http.Handler, origin string) http.Handler {
 	return cors.New(cors.Options{
-		AllowedOrigins: []string{origin},
-		AllowedMethods: connectcors.AllowedMethods(),
-		AllowedHeaders: append(connectcors.AllowedHeaders(), "Authorization"),
-		ExposedHeaders: connectcors.ExposedHeaders(),
-		MaxAge:         7200, // cache preflight (seconds)
+		AllowedOrigins:   []string{origin},
+		AllowCredentials: true,
+		AllowedMethods:   connectcors.AllowedMethods(),
+		AllowedHeaders:   connectcors.AllowedHeaders(),
+		ExposedHeaders:   connectcors.ExposedHeaders(),
+		MaxAge:           7200, // cache preflight (seconds)
 	}).Handler(h)
 }

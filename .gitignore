@@ -7,6 +7,7 @@ dist/
 # Go
 backend/bin/
 backend/tmp/
+backend/data/
 *.exe
 
 # Editor

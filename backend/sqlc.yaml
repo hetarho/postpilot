@@ -1,0 +1,18 @@
+# sqlc v2. Run from backend/ (scripts/gen.mjs mounts it as the working dir), so every
+# path here is backend-relative.
+#
+# The schema is the goose migrations directory, not a hand-kept schema.sql: sqlc reads
+# the +goose Up blocks and ignores the Down blocks, which means the generated types can
+# never drift from the migrations that actually run at boot.
+#
+# One `sql` entry per bounded context — each context owns its tables and its queries
+# (ARCHITECTURE §2.2), so a context's generated code never sees another's rows.
+version: "2"
+sql:
+  - engine: "sqlite"
+    schema: "internal/platform/db/migrations"
+    queries: "internal/auth/store/queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/auth/store/sqlc"

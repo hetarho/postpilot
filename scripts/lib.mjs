@@ -19,6 +19,14 @@ const posix = (p) => p.replace(/\\/g, '/')
 export const mount = (hostRel, container) =>
   `${posix(hostRel ? `${repoRoot}/${hostRel}` : repoRoot)}:${container}`
 
+/**
+ * `--user uid:gid` args so a container's generated files land owned by the caller,
+ * not root. Empty on Windows (process.getuid is POSIX-only, and Docker Desktop's
+ * filesystem shim already maps ownership).
+ */
+export const dockerUser = () =>
+  typeof process.getuid === 'function' ? ['--user', `${process.getuid()}:${process.getgid()}`] : []
+
 /** Run a command, inheriting stdio, rooted at the repo. Returns exit code. */
 export function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { stdio: 'inherit', cwd: repoRoot, shell: false, ...opts })
@@ -32,6 +40,7 @@ export function run(cmd, args, opts = {}) {
 
 // --- sentinels: a step runs only once its tool's config is present ---
 export const hasBufConfig = () => existsSync(`${repoRoot}/backend/buf.gen.yaml`)
+export const hasSqlcConfig = () => existsSync(`${repoRoot}/backend/sqlc.yaml`)
 
 // --- console output ---
 export const section = (t) => console.log(`\n\x1b[36m▶ ${t}\x1b[0m`)

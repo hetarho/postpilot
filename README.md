@@ -30,9 +30,9 @@
 | 백엔드 | Go + connect-go, distroless 정적 이미지 | GHCR 이미지 → VPS docker compose (공유 Caddy 뒤) |
 | CI/CD | GitHub Actions (`ci.yml`, `deploy-backend.yml`) | `develop` → staging, `main` → prod |
 
-DB·인증·저장소는 아직 **코드에 없다.** 무엇을 붙일지는 정해져 있다 —
-SQLite(순수 Go 드라이버) · argon2id + HttpOnly 쿠키 세션 · 사진은 Cloudflare R2.
-근거와 대안 비교는 `PRD.md §6`, 붙이는 순서는 `PRD.md §10`.
+DB와 인증은 들어와 있다 — SQLite(순수 Go 드라이버, WAL, 바이너리에 embed된 goose
+마이그레이션이 기동 때 실행) + argon2id · HttpOnly 쿠키 세션. 사진 저장소(Cloudflare R2)는
+아직 없다. 근거와 대안 비교는 `PRD.md §6`, 붙이는 순서는 `PRD.md §10`.
 
 ## 로컬 실행
 
@@ -55,6 +55,18 @@ Docker 없이 백엔드만 띄우려면 (`.env`의 `PORT`를 따른다):
 cd backend && go run ./cmd/api
 ```
 
+### 계정 만들기
+
+가입 화면은 없다(PRD F-1). 계정은 운영자가 만든다:
+
+```bash
+cd backend && go run ./cmd/adduser <login_id>   # 비밀번호 2회 입력
+```
+
+컨테이너에서는 같은 코드가 api 바이너리의 서브커맨드로 붙어 있다 —
+`docker compose run --rm backend go run ./cmd/api adduser <login_id>` (운영은 `DEPLOY.md §4`).
+`/health`를 제외한 모든 RPC는 세션 쿠키가 없으면 401이다.
+
 > 개발 포트는 전화 키패드로 프로젝트를 읽은 것이다 — **2564 = B-L-O-G**(웹),
 > **7678 = P-O-S-T**(api). 흔한 개발 기본값과도, 같은 머신의 cosimosi 스택(8080/1214)과도
 > 겹치지 않는다. 컨테이너·운영 스택 안에서는 api가 평소대로 8080을 쓴다(compose가 7678→8080으로 매핑).
@@ -64,19 +76,26 @@ cd backend && go run ./cmd/api
 전송 계약은 `proto/postpilot/v1/*.proto` 하나가 진실이다. 고치면 재생성한다.
 
 ```bash
-pnpm gen:proto   # buf(Docker) → backend/internal/gen + frontend/src/shared/api/gen
+pnpm gen:proto   # buf(Docker)  → backend/internal/gen + frontend/src/shared/api/gen
+pnpm gen:sql     # sqlc(Docker) → backend/internal/<컨텍스트>/store/sqlc
+pnpm gen         # 둘 다
 ```
 
-생성물은 커밋한다(빌드가 buf에 의존하지 않게). 손으로 고치지 않는다.
+sqlc가 읽는 스키마는 `backend/internal/platform/db/migrations/` — 기동 때 실제로 도는
+그 파일들이다. 스키마를 바꾸면 마이그레이션을 추가하고 `pnpm gen:sql`을 다시 돌린다.
+
+생성물은 커밋한다(빌드가 buf/sqlc에 의존하지 않게). 손으로 고치지 않는다.
 
 ## 리포 구조
 
 ```
 proto/postpilot/v1/     전송 계약 (단일 진실)
 backend/
-  cmd/api/              합성 루트 — 설정·서버 조립만
-  internal/health/      HealthService 구현 (지금은 이것뿐)
-  internal/platform/    config, rpcserver (mux·h2c·CORS·/health)
+  cmd/api/              합성 루트 — 설정·마이그레이션·서버 조립만
+  cmd/adduser/          운영자용 계정 생성 (api 서브커맨드와 같은 코드)
+  internal/auth/        계정·세션 컨텍스트 (service · store · rpc · provision)
+  internal/health/      HealthService 구현
+  internal/platform/    config, db(SQLite·마이그레이션), rpcserver (mux·h2c·CORS·/health)
   internal/gen/         buf 생성물 (수정 금지)
 frontend/src/           FSD: app / pages / widgets / features / entities / shared
 deploy/edge/            VPS 공유 Caddy (80/443 단일 소유자)
@@ -90,3 +109,5 @@ scripts/                codegen 래퍼 (Docker 경유)
 - **순수 레이어(`shared/api`, `shared/config`, `shared/lib`, `entities/*/model`)는
   react/react-dom을 import하지 않는다.** ESLint boundaries가 막는다.
 - **`VITE_*`는 빌드 타임에 번들에 박힌다** — 공개 값만. 비밀은 백엔드 env로.
+- **세션 토큰은 쿠키에만 있다.** 응답 본문·로그·URL에 절대 넣지 않는다. 인증된 핸들러는
+  행위 주체를 인터셉터가 넣어준 context에서 읽고, 요청 payload에서 읽지 않는다.

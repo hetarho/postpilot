@@ -16,8 +16,16 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
+
+	"github.com/postpilot/backend/internal/auth"
+	"github.com/postpilot/backend/internal/auth/provision"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authstore "github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/health"
 	"github.com/postpilot/backend/internal/platform/config"
+	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
@@ -25,6 +33,17 @@ const version = "0.0.1"
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+
+	// Subcommand dispatch keeps the production image at one binary and one ENTRYPOINT,
+	// so `docker compose run --rm api adduser <id>` works against the deployed image
+	// with nothing added to it.
+	if len(os.Args) > 1 && os.Args[1] == "adduser" {
+		if err := provision.Run(context.Background(), os.Args[2:]); err != nil {
+			slog.Error("adduser failed", "err", err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -35,7 +54,41 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	server := rpcserver.New(cfg, version, health.NewHandler(version))
+	handle, err := db.Open(cfg.DBPath)
+	if err != nil {
+		slog.Error("database open failed", "path", cfg.DBPath, "err", err)
+		os.Exit(1)
+	}
+	defer handle.Close()
+
+	// Migrations run before the listener exists, and a failure exits non-zero ([I7]).
+	// That ordering is the whole rollback mechanism: the container never answers
+	// /health, so the deploy gate restores the previous image (DEPLOY.md §2).
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		slog.Error("migration failed", "err", err)
+		os.Exit(1)
+	}
+
+	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), cfg.SessionTTL)
+	if n, err := authSvc.SweepExpired(ctx); err != nil {
+		// Stale rows are harmless — they fail the expiry check on lookup anyway — so a
+		// sweep failure is not worth refusing to serve over.
+		slog.Warn("expired session sweep failed", "err", err)
+	} else if n > 0 {
+		slog.Info("swept expired sessions", "count", n)
+	}
+
+	server := rpcserver.New(cfg, version, rpcserver.Options{
+		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc)},
+		Handlers: []rpcserver.Registrar{
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewHealthServiceHandler(health.NewHandler(version), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(authSvc, cfg.SessionTTL), opts...)
+			},
+		},
+	})
 
 	// A serve error (e.g. the port is already bound) must NOT exit 0 — an orchestrator
 	// would read a clean exit as success and never restart us. Surface it on a channel

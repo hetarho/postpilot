@@ -9,6 +9,7 @@
     "dev:api": "docker compose --profile dev up backend",
     "gen": "node scripts/gen.mjs",
     "gen:proto": "node scripts/gen.mjs proto",
+    "gen:sql": "node scripts/gen.mjs sql",
     "build:web": "pnpm --filter ./frontend build",
     "build:api": "cd backend && go build -o bin/api ./cmd/api",
     "lint": "pnpm --filter ./frontend lint",

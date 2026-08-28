@@ -7,8 +7,9 @@
 # sibling cosimosi stack) and of every common dev default. In production the api owns 8080
 # as usual; only the host-side mapping is unusual.
 #
-# No database yet — the API is stateless through the ping milestone. When persistence
-# lands, add the postgres service back here and give the api a DATABASE_URL.
+# SQLite lives in the named `backend_data` volume, not in the bind-mounted source tree —
+# a WAL database on a Windows/WSL bind mount corrupts under concurrent access, and this
+# way `docker compose down -v` is the reset button.
 name: postpilot
 
 services:
@@ -21,13 +22,16 @@ services:
     environment:
       PORT: "8080"
       CORS_ORIGIN: http://localhost:2564
+      DB_PATH: /app/data/postpilot.db
     ports:
       - "7678:8080"
     volumes:
       - ./backend:/app
       - backend_go_mod:/go/pkg/mod
       - backend_tmp:/app/tmp
+      - backend_data:/app/data
 
 volumes:
   backend_go_mod:
   backend_tmp:
+  backend_data:
