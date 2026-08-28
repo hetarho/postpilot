@@ -1,10 +1,298 @@
 @import 'tailwindcss';
 
-/* Tailwind v4 is configured in CSS, not a JS config file. Design tokens go in
-   @theme once the visual language is decided. */
+/*
+ * The design tokens — a TWO-TIER system. The rules this file carries are written up in
+ * spec/tech/design-language.md; this header only says how the tiers fit together.
+ *
+ * TIER 1 — the palette (`--palette-*`). OKLCH ramps, one per hue family, eleven steps on ONE
+ * shared lightness scale (50 ≈ near white … 950 ≈ deep ground). These are the only raw colour
+ * literals in the frontend. They are plain custom properties, NOT Tailwind theme variables, so
+ * no utility class can reach them: `bg-palette-violet-400` does not exist on purpose.
+ *
+ * TIER 2 — the semantic roles (`--bg`, `--text`, `--primary`, …). A theme is one block that maps
+ * every role to a palette STEP — never to a literal. `@theme inline` then exposes each role to
+ * Tailwind as `--color-<role>`, which is what every `bg-* / text-* / border-*` utility resolves
+ * to. Two roles that must match reference the same step, so they cannot drift.
+ *
+ * THEMES. `:root` carries the default role map. A second theme is one more
+ * `[data-theme='<key>']` block re-mapping the same roles — nothing else changes, because no
+ * component ever reads a step. There is no theme switcher yet; the blocks exist so adding one is
+ * a one-attribute change on <html>, not a refactor.
+ *
+ * Tailwind's stock colour palette is removed (`--color-*: initial`). A class like `bg-gray-100`
+ * or `text-red-400` therefore emits NO CSS — and `pnpm lint:style` fails the build on it.
+ */
 
+/* ── Tier 1: palette ────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* mauve — the neutral. Hue 298 (the primary's hue) at a flat, whisper-level chroma: ~5% of
+     the violet ramp's peak, so greys read as "cool, faintly violet" without ever reading as
+     purple. Constant chroma keeps the tint present at both ends of the scale. */
+  --palette-mauve-50: oklch(0.975 0.006 298);
+  --palette-mauve-100: oklch(0.94 0.008 298);
+  --palette-mauve-200: oklch(0.885 0.01 298);
+  --palette-mauve-300: oklch(0.8 0.01 298);
+  --palette-mauve-400: oklch(0.72 0.01 298);
+  --palette-mauve-500: oklch(0.63 0.01 298);
+  --palette-mauve-600: oklch(0.53 0.01 298);
+  --palette-mauve-700: oklch(0.435 0.01 298);
+  --palette-mauve-800: oklch(0.31 0.01 298);
+  --palette-mauve-900: oklch(0.235 0.01 298);
+  --palette-mauve-950: oklch(0.165 0.01 298);
+
+  /* violet — the primary (shared with cosimosi: hue 298, chroma peaking at L 0.63). */
+  --palette-violet-50: oklch(0.975 0.034 298);
+  --palette-violet-100: oklch(0.94 0.048 298);
+  --palette-violet-200: oklch(0.885 0.076 298);
+  --palette-violet-300: oklch(0.8 0.13 298);
+  --palette-violet-400: oklch(0.72 0.177 298);
+  --palette-violet-500: oklch(0.63 0.2 298);
+  --palette-violet-600: oklch(0.53 0.172 298);
+  --palette-violet-700: oklch(0.435 0.114 298);
+  --palette-violet-800: oklch(0.31 0.044 298);
+  --palette-violet-900: oklch(0.235 0.02 298);
+  --palette-violet-950: oklch(0.165 0.008 298);
+
+  /* red — danger */
+  --palette-red-50: oklch(0.975 0.018 22);
+  --palette-red-100: oklch(0.94 0.026 22);
+  --palette-red-200: oklch(0.885 0.045 22);
+  --palette-red-300: oklch(0.8 0.088 22);
+  --palette-red-400: oklch(0.72 0.135 22);
+  --palette-red-500: oklch(0.63 0.173 22);
+  --palette-red-600: oklch(0.53 0.173 22);
+  --palette-red-700: oklch(0.435 0.132 22);
+  --palette-red-800: oklch(0.31 0.061 22);
+  --palette-red-900: oklch(0.235 0.031 22);
+  --palette-red-950: oklch(0.165 0.014 22);
+
+  /* green — success */
+  --palette-green-50: oklch(0.975 0.062 156);
+  --palette-green-100: oklch(0.94 0.077 156);
+  --palette-green-200: oklch(0.885 0.103 156);
+  --palette-green-300: oklch(0.8 0.133 156);
+  --palette-green-400: oklch(0.72 0.139 156);
+  --palette-green-500: oklch(0.63 0.117 156);
+  --palette-green-600: oklch(0.53 0.073 156);
+  --palette-green-700: oklch(0.435 0.035 156);
+  --palette-green-800: oklch(0.31 0.009 156);
+  --palette-green-900: oklch(0.235 0.003 156);
+  --palette-green-950: oklch(0.165 0.001 156);
+
+  /* gold — warning */
+  --palette-gold-50: oklch(0.975 0.123 85);
+  --palette-gold-100: oklch(0.94 0.136 85);
+  --palette-gold-200: oklch(0.885 0.149 85);
+  --palette-gold-300: oklch(0.8 0.142 85);
+  --palette-gold-400: oklch(0.72 0.112 85);
+  --palette-gold-500: oklch(0.63 0.069 85);
+  --palette-gold-600: oklch(0.53 0.03 85);
+  --palette-gold-700: oklch(0.435 0.01 85);
+  --palette-gold-800: oklch(0.31 0.002 85);
+  --palette-gold-900: oklch(0.235 0 85);
+  --palette-gold-950: oklch(0.165 0 85);
+
+  /* blue — info */
+  --palette-blue-50: oklch(0.975 0.02 240);
+  --palette-blue-100: oklch(0.94 0.029 240);
+  --palette-blue-200: oklch(0.885 0.048 240);
+  --palette-blue-300: oklch(0.8 0.089 240);
+  --palette-blue-400: oklch(0.72 0.129 240);
+  --palette-blue-500: oklch(0.63 0.158 240);
+  --palette-blue-600: oklch(0.53 0.149 240);
+  --palette-blue-700: oklch(0.435 0.107 240);
+  --palette-blue-800: oklch(0.31 0.046 240);
+  --palette-blue-900: oklch(0.235 0.022 240);
+  --palette-blue-950: oklch(0.165 0.01 240);
+
+  /* the two absolutes — for foreground-on-accent and for physical light/shadow only */
+  --palette-white: oklch(1 0 0);
+  --palette-black: oklch(0 0 0);
+}
+
+/* ── Tier 2: semantic roles ─────────────────────────────────────────────────────────────────── */
+
+/* Default theme: `night`. Dark, mauve ground, violet accent. */
+:root,
+[data-theme='night'] {
+  color-scheme: dark;
+
+  /* ground planes — depth is a lighter step, never a border */
+  --bg: var(--palette-mauve-950);
+  --surface: var(--palette-mauve-900);
+  --surface-raised: var(--palette-mauve-800);
+  --surface-hover: var(--palette-mauve-800);
+
+  /* ink — importance is carried by these three, and nothing else */
+  --text: var(--palette-mauve-50);
+  --text-muted: var(--palette-mauve-300);
+  --text-subtle: var(--palette-mauve-500);
+  --text-faint: var(--palette-mauve-600);
+
+  /* the hairline, for the rare places a plane change is not enough */
+  --border: var(--palette-mauve-800);
+  --border-strong: var(--palette-mauve-600);
+
+  /* accent */
+  --primary: var(--palette-violet-400);
+  --primary-hover: var(--palette-violet-300);
+  --primary-foreground: var(--palette-violet-950);
+  --primary-surface: var(--palette-violet-900);
+
+  /* status — each has a solid, ink for on-top text, and a quiet surface for inline notes */
+  --danger: var(--palette-red-400);
+  --danger-foreground: var(--palette-red-950);
+  --danger-surface: var(--palette-red-950);
+  --success: var(--palette-green-300);
+  --success-foreground: var(--palette-green-950);
+  --success-surface: var(--palette-green-950);
+  --warning: var(--palette-gold-200);
+  --warning-foreground: var(--palette-gold-950);
+  --warning-surface: var(--palette-gold-950);
+  --info: var(--palette-blue-400);
+  --info-foreground: var(--palette-blue-950);
+  --info-surface: var(--palette-blue-950);
+
+  /* interaction + physical light */
+  --focus-ring: var(--palette-violet-300);
+  --overlay: var(--palette-mauve-950);
+  --depth: var(--palette-black);
+}
+
+/* Second theme: `day`. Same roles, light ground. Not switchable yet — see the header. */
+[data-theme='day'] {
+  color-scheme: light;
+
+  --bg: var(--palette-mauve-50);
+  --surface: var(--palette-white);
+  --surface-raised: var(--palette-white);
+  --surface-hover: var(--palette-mauve-100);
+
+  --text: var(--palette-mauve-950);
+  --text-muted: var(--palette-mauve-700);
+  --text-subtle: var(--palette-mauve-500);
+  --text-faint: var(--palette-mauve-400);
+
+  --border: var(--palette-mauve-200);
+  --border-strong: var(--palette-mauve-400);
+
+  --primary: var(--palette-violet-600);
+  --primary-hover: var(--palette-violet-700);
+  --primary-foreground: var(--palette-white);
+  --primary-surface: var(--palette-violet-50);
+
+  --danger: var(--palette-red-600);
+  --danger-foreground: var(--palette-white);
+  --danger-surface: var(--palette-red-50);
+  --success: var(--palette-green-600);
+  --success-foreground: var(--palette-white);
+  --success-surface: var(--palette-green-50);
+  --warning: var(--palette-gold-500);
+  --warning-foreground: var(--palette-gold-950);
+  --warning-surface: var(--palette-gold-50);
+  --info: var(--palette-blue-600);
+  --info-foreground: var(--palette-white);
+  --info-surface: var(--palette-blue-50);
+
+  --focus-ring: var(--palette-violet-500);
+  --overlay: var(--palette-mauve-950);
+  --depth: var(--palette-mauve-950);
+}
+
+/* ── Tailwind theme: the roles become utilities; stock colours are removed ─────────────────── */
+@theme {
+  --color-*: initial;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', 'Apple SD Gothic Neo', 'Pretendard',
+    'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+
+  --container-measure: 40rem;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-text-faint: var(--text-faint);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-surface: var(--primary-surface);
+
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-surface: var(--danger-surface);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-surface: var(--warning-surface);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-surface: var(--info-surface);
+
+  --color-focus-ring: var(--focus-ring);
+  --color-overlay: var(--overlay);
+  --color-depth: var(--depth);
+
+  /* shadows are mixed from `depth` so they re-skin with the theme */
+  --shadow-sm: 0 1px 2px color-mix(in oklab, var(--depth) 40%, transparent);
+  --shadow-md: 0 6px 18px color-mix(in oklab, var(--depth) 45%, transparent);
+  --shadow-lg: 0 18px 48px color-mix(in oklab, var(--depth) 50%, transparent);
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────────────────────── */
 html,
 body,
 #root {
   height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* One focus indicator for every control, drawn outside the element so it never fights a border. */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -36,7 +36,7 @@ export async function resizeToJpeg(
     | null
   if (!context) throw new Error('2d canvas unavailable')
   // JPEG has no alpha; a transparent PNG would otherwise come out on black.
-  context.fillStyle = '#fff'
+  context.fillStyle = '#fff' // style-escape: canvas flatten colour for JPEG export, not a UI colour
   context.fillRect(0, 0, width, height)
   context.drawImage(bitmap, 0, 0, width, height)
   const blob = await toBlob(canvas, quality)

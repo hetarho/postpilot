@@ -50,7 +50,7 @@ export function PhotoStrip({
               onClick={() => onDelete(image)}
               disabled={deletingId === image.id}
               aria-label={`${image.filename} 삭제`}
-              className="absolute top-1 right-1 rounded bg-neutral-950/70 px-1.5 text-xs text-neutral-200 hover:bg-neutral-950"
+              className="absolute top-1 right-1 rounded bg-overlay/70 px-1.5 text-xs text-text hover:bg-overlay"
             >
               ✕
             </button>
@@ -89,7 +89,7 @@ function Overlay({ children, role }: { children: ReactNode; role?: string }) {
   return (
     <span
       role={role}
-      className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-1 text-center text-[11px] leading-tight text-neutral-200"
+      className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-1 text-center text-[11px] leading-tight text-text"
     >
       {children}
     </span>

@@ -32,25 +32,25 @@ export function AuthenticatedLayout() {
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-neutral-950 text-neutral-100">
-      <header className="flex items-center justify-between border-b border-neutral-900 px-6 py-3">
+    <div className="flex min-h-full flex-col bg-bg text-text">
+      <header className="flex items-center justify-between px-6 py-3">
         <Link to="/posts" className="text-sm font-medium tracking-tight">
           Postpilot
         </Link>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-neutral-400">{user?.id}</span>
+          <span className="font-mono text-xs text-text-muted">{user?.id}</span>
           <button
             type="button"
             onClick={() => void onLogout()}
             disabled={logout.isPending}
-            className="rounded-md border border-neutral-800 px-2.5 py-1 text-xs text-neutral-300 disabled:opacity-50"
+            className="rounded-md px-2.5 py-1 text-xs text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50"
           >
             로그아웃
           </button>
         </div>
       </header>
       {logout.isError && (
-        <p role="alert" className="border-b border-red-900/50 bg-red-950/40 px-6 py-2 text-xs text-red-300">
+        <p role="alert" className="bg-danger-surface px-6 py-2 text-xs text-danger">
           로그아웃하지 못했어요. 세션이 아직 살아 있으니 다시 시도해 주세요.
         </p>
       )}

@@ -67,7 +67,7 @@ export function DraftEditor({ post }: DraftEditorProps) {
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-6">
       <div className="flex items-center justify-between">
-        <Link to="/posts" className="text-xs text-neutral-500 hover:text-neutral-300">
+        <Link to="/posts" className="text-xs text-text-subtle hover:text-text">
           ← 글 목록
         </Link>
         <SaveStatus state={autosave.state} />
@@ -82,7 +82,7 @@ export function DraftEditor({ post }: DraftEditorProps) {
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         placeholder="제목"
-        className="mt-4 w-full bg-transparent text-2xl font-semibold tracking-tight outline-none placeholder:text-neutral-700"
+        className="mt-4 w-full bg-transparent text-2xl font-semibold tracking-tight outline-none placeholder:text-text-faint"
       />
 
       <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
@@ -97,7 +97,7 @@ export function DraftEditor({ post }: DraftEditorProps) {
         onChange={(event) => setMemo(event.target.value)}
         placeholder="무슨 일이 있었는지 편하게 적어 주세요"
         rows={16}
-        className="mt-5 w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-neutral-700"
+        className="mt-5 w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-text-faint"
       />
     </main>
   )

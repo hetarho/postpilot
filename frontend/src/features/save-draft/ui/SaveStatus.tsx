@@ -18,7 +18,7 @@ export function SaveStatus({ state }: { state: SaveState }) {
       role="status"
       aria-live="polite"
       data-state={state}
-      className={state === 'error' ? 'text-xs text-red-400' : 'text-xs text-neutral-500'}
+      className={state === 'error' ? 'text-xs text-danger' : 'text-xs text-text-subtle'}
     >
       {LABELS[state]}
     </p>

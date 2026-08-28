@@ -22,8 +22,8 @@ export function PhotoPicker({
       <label
         htmlFor={inputId}
         className={clsx(
-          'rounded-md border border-neutral-800 px-2.5 py-1 text-xs text-neutral-300',
-          disabled ? 'opacity-50' : 'cursor-pointer hover:border-neutral-700',
+          'rounded-md bg-surface-raised px-2.5 py-1 text-xs text-text-muted',
+          disabled ? 'opacity-50' : 'cursor-pointer hover:text-text',
         )}
       >
         사진 추가

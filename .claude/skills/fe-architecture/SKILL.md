@@ -64,4 +64,7 @@ kebab-case singular slices; PascalCase component files; camelCase/kebab elsewher
 - [ ] Imports are one-way; no same-layer cross-import; slices expose a single `index.ts`.
 - [ ] No import of `shared/api/gen/**` outside `shared/api`; no hand-edits to generated files.
 - [ ] No config literal inline in a component — it comes from `shared/config`.
+- [ ] Every generic control comes from `shared/ui` (added there first if missing); styling uses only the semantic
+      tokens — no stock Tailwind colours, no arbitrary values, borders/cards only where
+      [tech/design-language.md](../../../spec/tech/design-language.md) allows. `pnpm lint:style` passes.
 - [ ] Gates green: `pnpm lint` · `pnpm --filter ./frontend lint:fsd` (steiger) · `pnpm build:web`.

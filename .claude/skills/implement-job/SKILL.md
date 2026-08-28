@@ -44,6 +44,16 @@ re-run its self-audit at review time (Step 4):** FE (`frontend/src`) → **`/fe-
 `ARCHITECTURE.md` (§3 / §2). This is how structural rules enter the loop — skipping it is how an `app/` layer drifts
 flat.
 
+**Design-language gate — every FE surface (any file under `frontend/src` that renders UI) follows
+[spec/tech/design-language.md](../../../spec/tech/design-language.md), always.** Read it before writing the first
+`className`. Its four hard rules are not negotiable: (1) generic controls come from `shared/ui` — if the primitive you
+need (input, dropdown, popover, …) does not exist, **add it to `shared/ui` first**, then use it; (2) only tokens
+registered in Tailwind's `@theme` — the stock colour palette is removed, so `bg-gray-100` emits no CSS, and arbitrary
+values (`p-[13px]`, `bg-[#…]`) are forbidden; (3) borders only where the guide lists an exception — depth and grouping
+come from surface steps (`bg` → `surface` → `surface-raised`); (4) a card only when its contents must read as one unit
+*and* apart from their neighbours. Its §9 checklist is part of the Step 4 review, and `pnpm lint:style` is part of the
+Step 3 gate.
+
 ## Step 2 — Build the Implementation Checklist top-to-bottom
 
 Implement tasks in order; flip `- [ ]` → `- [x]` in the job as you finish each. Match surrounding code style. Run the
@@ -81,7 +91,7 @@ scripts already do this. Ad-hoc Go:
 ## Step 3 — Verify
 
 1. Codegen/migration applied, no errors (not skipped).
-2. FE specs → `pnpm build:web` + `pnpm lint` + `pnpm --filter ./frontend lint:fsd` (0 errors), and
+2. FE specs → `pnpm build:web` + `pnpm lint` + `pnpm --filter ./frontend lint:fsd` + `pnpm lint:style` (0 errors), and
    `pnpm --filter ./frontend test` where tests exist. BE specs →
    `docker run --rm -v ${PWD}/backend:/app -w /app golang:1.26 sh -c "go vet ./... && go build ./... && go test ./..."`
    (the `&&` must run *inside* the container).
@@ -111,11 +121,14 @@ Fix and re-run any red check before reporting.
      non-Codex review as codex.
    - Run `/code-review` while codex runs (~25 min); **don't end the turn waiting** — block in-turn
      (`TaskOutput(block=true, timeout=600000)` ~3×), then merge (dedupe + severity-rank).
-3. **Comment pass — sweep the diff's new/changed comments against the Step 2 comment rule.** Cut change history,
+3. **Design pass (FE) — run the [design-language §9 checklist](../../../spec/tech/design-language.md) over the diff:**
+   no hand-rolled controls, borders/cards only where the guide allows, one `solid primary` per view, both themes
+   checked. Fix before moving on.
+4. **Comment pass — sweep the diff's new/changed comments against the Step 2 comment rule.** Cut change history,
    tautology, and narration, keeping only the "why". Add a line where non-obvious code is *missing* its
    external-constraint/design-intent note. (If a separate pass is too much, fold "also check comment quality" into
    `/code-review`.)
-4. Re-verify (Step 3) if the review changed code.
+5. Re-verify (Step 3) if the review changed code.
 
 ## Step 5 — Reflect into the SSOT, finish (and do NOT commit)
 

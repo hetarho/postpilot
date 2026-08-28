@@ -44,13 +44,13 @@ function LoadFailure({
     <EditorPlaceholder>
       <span role="alert">{FAILURE_MESSAGES[failure]}</span>
       <span className="mt-4 flex items-center gap-4">
-        <Link to="/posts" className="text-neutral-300 underline">
+        <Link to="/posts" className="text-text-muted underline">
           글 목록으로
         </Link>
         {/* Only for a failure that is not an answer: retrying a 403 or a 404 would just
             ask the same question again. */}
         {failure === 'unavailable' && (
-          <button type="button" onClick={onRetry} className="text-neutral-300 underline">
+          <button type="button" onClick={onRetry} className="text-text-muted underline">
             다시 시도
           </button>
         )}
@@ -61,7 +61,7 @@ function LoadFailure({
 
 function EditorPlaceholder({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col items-start px-6 py-16 text-sm text-neutral-500">
+    <main className="mx-auto flex w-full max-w-2xl flex-col items-start px-6 py-16 text-sm text-text-subtle">
       {children}
     </main>
   )

@@ -99,6 +99,11 @@ exception). Every slice exposes exactly one `index.ts`; nothing reaches inside a
 | a whole route/screen; composes lower layers, holds no domain logic | `pages/<screen>` |
 | domain-agnostic and reused (transport, config, ui primitives, helpers) | `shared` |
 
+`shared/ui` is the design system: every generic control lives there and nowhere else, and every slice styles itself
+with the semantic tokens in `app/styles/index.css`. The visual rules — and the four hard rules on primitives, tokens,
+borders, and cards — are [tech/design-language.md](tech/design-language.md); `pnpm lint:style` enforces the token
+half.
+
 **Segment** — pick by technical role, never by kind (`components/`, `hooks/`, `types/` are wrong):
 `ui` · `model` (types, store, state machines, pure logic) · `api` (Connect calls + proto↔domain mappers) ·
 `lib` (slice-internal helpers) · `config` (slice-local constants).

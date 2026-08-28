@@ -14,6 +14,7 @@
     "build:api": "cd backend && go build -o bin/api ./cmd/api",
     "lint": "pnpm --filter ./frontend lint",
     "lint:fsd": "pnpm --filter ./frontend lint:fsd",
+    "lint:style": "node scripts/lint-style-escapes.mjs",
     "lint:spec": "node scripts/check-spec-hygiene.mjs",
     "lint:spec:probe": "node scripts/check-spec-hygiene.mjs --probe",
     "test": "pnpm --filter ./frontend test",
