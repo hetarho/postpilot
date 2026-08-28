@@ -1,0 +1,19 @@
+# postpilot — staging api. INERT: `import conf.d/*.caddy` only globs *.caddy, so the
+# `.disabled` suffix keeps this out of the assembled config. That is deliberate — the whole
+# directory can be copied to a shared box without any risk, and staging is switched on by
+# a rename rather than by remembering not to copy a file.
+#
+# To enable, in this order:
+#   1. add POSTPILOT_API_DOMAIN_STAGING=… to /srv/edge/.env
+#   2. mv postpilot.staging.caddy.disabled postpilot.staging.caddy
+#   3. validate (DEPLOY.md §4), then `docker compose up -d` (the .env change needs a
+#      recreate, not a reload)
+# Enabling it with the variable unset expands to an empty site address, which Caddy rejects
+# — and that rejection drops TLS for every project on the box, not just postpilot.
+{$POSTPILOT_API_DOMAIN_STAGING} {
+	reverse_proxy postpilot-api-staging:8080 {
+		transport http {
+			versions h2c 2
+		}
+	}
+}

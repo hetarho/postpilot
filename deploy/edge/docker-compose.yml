@@ -1,9 +1,8 @@
-# Single shared Caddy for the whole VPS — the only binder of ports 80/443. Lives at
-# /srv/edge (copied there once, managed manually: edit → `docker compose up -d`). It is
-# NOT part of the per-env deploy workflow; api stacks roll independently underneath it.
-# Reaches each stack's api via the external `edge` network (docker network create edge),
-# where the stacks register unique aliases (postpilot-api-staging / postpilot-api-prod).
-# /srv/edge/.env provides API_DOMAIN_PROD and API_DOMAIN_STAGING.
+# The shared edge Caddy for the whole VPS (see Caddyfile for the ownership contract).
+# Lives at /srv/edge, copied there once and managed by hand. This file belongs to the BOX,
+# not to postpilot: on a VPS that already runs another project's edge, that one stays and
+# this copy is only a reference. Nothing here is per-project, which is the point — adding
+# the third project touches conf.d/ and .env, never this file.
 services:
   caddy:
     image: caddy:2-alpine
@@ -11,11 +10,15 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      API_DOMAIN_PROD: ${API_DOMAIN_PROD}
-      API_DOMAIN_STAGING: ${API_DOMAIN_STAGING}
+    # Every project's domain variables in one shot, so a new project never has to edit
+    # this shared file to get its {$..._API_DOMAIN_...} through to Caddy. The whole file
+    # lands in the container's environment, so /srv/edge/.env carries DOMAINS ONLY —
+    # secrets live in each stack's own .env (chmod 600), never here.
+    env_file: .env
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # One fragment per project. Read-only: Caddy never writes its own config.
+      - ./conf.d:/etc/caddy/conf.d:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
@@ -23,7 +26,7 @@ services:
 
 networks:
   edge:
-    external: true
+    external: true # one-time on the VPS: docker network create edge
 
 volumes:
   caddy_data:

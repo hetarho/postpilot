@@ -1,0 +1,22 @@
+# postpilot — prod api. This fragment is owned by the postpilot repo
+# (deploy/edge/conf.d/postpilot.caddy → /srv/edge/conf.d/). Never merge it into another
+# project's fragment, and never let another project's domain into this one.
+#
+# Upstream: the api container's alias on the external `edge` docker network
+# (docker-compose.prod.yml, API_UPSTREAM), speaking h2c — Connect over HTTP/2 cleartext.
+# CORS belongs to the API (connectrpc.com/cors, allowed origin = the stack's CORS_ORIGIN),
+# not to this proxy. If the api container is down, only this domain 502s.
+#
+# POSTPILOT_ prefix is mandatory: /srv/edge/.env is shared by every project on the box, so
+# a bare API_DOMAIN_PROD would collide with a sibling's and resolve two site blocks to one
+# address — `ambiguous site definition`, whole config rejected, every project loses TLS.
+# The variable must also be SET: unset expands to an empty site address, which is likewise
+# a whole-config error. That is why staging lives in its own file — a box running prod only
+# just does not carry postpilot.staging.caddy.
+{$POSTPILOT_API_DOMAIN_PROD} {
+	reverse_proxy postpilot-api-prod:8080 {
+		transport http {
+			versions h2c 2
+		}
+	}
+}

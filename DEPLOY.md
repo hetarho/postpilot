@@ -5,7 +5,8 @@
 시크릿 값은 절대 커밋하지 않는다 — 이름과 위치만 적는다(§3).
 
 구조는 cosimosi와 동일하다. VPS를 이미 쓰고 있다면 **같은 박스·같은 edge Caddy를
-그대로 재사용**하면 된다(§5의 3번 부트스트랩을 건너뛴다).
+그대로 재사용**하면 된다(§5의 3번 부트스트랩을 건너뛰고, edge는 §4의 공유 절차를 따른다 —
+`/srv/edge`를 덮어쓰면 cosimosi가 같이 내려간다).
 
 ## 1. 목표 구조
 
@@ -71,17 +72,20 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
 | `VITE_API_URL` | Cloudflare Worker → Settings → Build → Variables | 프론트 빌드 타임 주입(번들에 박히는 공개값) |
 | `postpilot build token` | Cloudflare가 자동 관리 (Worker → Settings → Build → API token) | Workers Builds 배포 인증. 빌드가 10001 인증 에러로 죽으면 여기서 재발급 |
 | 스택 `.env` | VPS `/srv/postpilot-{staging,prod}/.env` (`chmod 600`, 비추적) | 런타임 설정 — 키 목록은 `.env.production.example` |
-| edge `.env` | VPS `/srv/edge/.env` | `API_DOMAIN_PROD`/`API_DOMAIN_STAGING` (도메인뿐) |
+| edge `.env` | VPS `/srv/edge/.env` (박스 공유 — **덮어쓰지 말고 append**) | `POSTPILOT_API_DOMAIN_PROD`(+staging을 띄울 때만 `..._STAGING`). 도메인만, 접두사 필수 — 이유는 §4. 템플릿: `deploy/edge/.env.example` |
 | GHCR pull PAT (`read:packages`, classic) | VPS `ubuntu` 계정의 docker 로그인 | VPS가 private 이미지를 pull. **sudo 없이** `docker login` |
 
 ## 4. VPS 내부 구조
 
 ```
 /srv/
-├── edge/                        # 공유 Caddy — 80/443의 유일한 소유자 (수동 관리)
-│   ├── docker-compose.yml       # 리포 deploy/edge/에서 복사
-│   ├── Caddyfile                # 두 api 도메인 TLS + h2c 프록시
-│   └── .env                     # API_DOMAIN_PROD / API_DOMAIN_STAGING
+├── edge/                        # 공유 Caddy — 80/443의 유일한 소유자. **박스 소유**, 수동 관리
+│   ├── docker-compose.yml       # 박스 것 — 프로젝트가 늘어도 안 고친다
+│   ├── Caddyfile                # 라우터뿐: `import conf.d/*.caddy`
+│   ├── conf.d/                  # 프로젝트당 파일 하나 (각 리포가 자기 것만 소유)
+│   │   ├── cosimosi.caddy       #   ← cosimosi 리포
+│   │   └── postpilot.caddy      #   ← 이 리포 (deploy/edge/conf.d/에서 복사)
+│   └── .env                     # 모든 프로젝트의 도메인 변수 (접두사 필수, 도메인만)
 ├── postpilot-staging/           # (지금은 안 씀) staging 스택
 │   ├── docker-compose.prod.yml  # 배포 워크플로가 매번 동기화한다 — 손으로 복사하지 않는다
 │   ├── .env                     # chmod 600
@@ -97,9 +101,50 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
   `sudo install -d -o 65532 -g 65532 /srv/postpilot-<env>/data`
 - 도커 외부 네트워크 `edge`(`docker network create edge`)로 Caddy↔api가 통신한다.
   **Caddy는 스택마다 띄우지 않는다** — 80/443 충돌.
-- 이미 cosimosi용 edge Caddy가 도는 VPS라면 `deploy/edge/Caddyfile`의 두 블록을
-  기존 `/srv/edge/Caddyfile`에 **덧붙이고** `.env`에 도메인 변수를 추가한 뒤
-  `docker compose up -d` 만 하면 된다.
+- **edge는 프로젝트가 몇 개로 늘어도 확장된다.** `/srv/edge/Caddyfile`은 site 블록을
+  담지 않고 `import conf.d/*.caddy` 한 줄만 있다. 프로젝트를 하나 얹는 일은
+  **파일 하나 놓기 + `.env` 한 줄**이고, 남의 파일은 건드리지 않는다.
+
+  | 파일 | 주인 |
+  |---|---|
+  | `Caddyfile`, `docker-compose.yml` | **박스**. 프로젝트별로 고치지 않는다 (전역 옵션 추가만 예외) |
+  | `conf.d/<프로젝트>*.caddy` | 그 프로젝트 리포. 자유롭게 만들고 지운다 |
+  | `.env` | 공유. **자기 접두사 변수만 append** |
+
+- **postpilot을 이미 도는 박스에 얹기** (edge가 이미 conf.d 구조일 때):
+  ```bash
+  scp deploy/edge/conf.d/postpilot.caddy ubuntu@$IP:/srv/edge/conf.d/
+  ssh ubuntu@$IP 'echo POSTPILOT_API_DOMAIN_PROD=api.postpilot.<도메인> >> /srv/edge/.env'
+  ```
+  반영 **전에** 조립된 설정을 검증한다. Caddy는 all-or-nothing이라 프래그먼트 하나가
+  깨지면 **박스의 모든 프로젝트가 TLS를 잃는다** — 이 검증이 그걸 막는 유일한 장치다.
+  ```bash
+  docker run --rm -v /srv/edge/Caddyfile:/etc/caddy/Caddyfile:ro \
+    -v /srv/edge/conf.d:/etc/caddy/conf.d:ro --env-file /srv/edge/.env \
+    caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+  ```
+  `Valid configuration`을 본 뒤 반영한다. **`.env`가 바뀌었으면** 컨테이너를 새로 만들어야
+  변수가 들어간다(`caddy reload`는 기존 프로세스의 env를 그대로 본다):
+  `cd /srv/edge && docker compose up -d`. **`conf.d/`만 바뀐 경우**는 무중단 리로드로 끝난다:
+  `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`.
+
+- **변수 규칙 두 개.** 둘 다 어기면 박스 전체가 내려간다 — 자기 프로젝트만 안 뜨는 게 아니다.
+  1. **접두사 필수** (`POSTPILOT_API_DOMAIN_PROD`). `.env`가 공유라 bare `API_DOMAIN_PROD`는
+     형제 프로젝트와 충돌해 두 site 블록이 같은 주소로 전개되고,
+     Caddy가 `ambiguous site definition`으로 **설정 전체를 거부**한다.
+  2. **설치한 프래그먼트의 변수는 반드시 설정.** 미설정 변수는 빈 site 주소로 전개돼
+     `server block without any key`로 역시 전체가 거부된다. 그래서 staging 프래그먼트는
+     `postpilot.staging.caddy.disabled`로 들어 있다 — `import`가 `*.caddy`만 잡으므로
+     **conf.d를 통째로 복사해도 안전**하고, 켜는 건 `.disabled`를 떼는 rename이다
+     (순서: `.env`에 변수 먼저 → rename → validate → `up -d`).
+     conf.d가 아예 비어 있는 것도 안전하다: glob 미스는 경고만 남기고 통과한다.
+
+- **edge가 아직 conf.d 구조가 아니라면**(`/srv/edge/Caddyfile`에 site 블록이 직접 들어 있는
+  옛 모양) 그 전환은 **박스 주인 프로젝트가** 한다 — postpilot이 남의 파일을 재배치하지
+  않는다. 전환은 이렇다: 기존 site 블록을 `conf.d/<그 프로젝트>.caddy`로 옮기고, Caddyfile은
+  `import conf.d/*.caddy`만 남기고, compose에 `env_file: .env`와
+  `./conf.d:/etc/caddy/conf.d:ro`를 추가하고, 그 프로젝트의 도메인 변수에도 접두사를 붙인다
+  (`.env`와 프래그먼트를 **같이** 바꿔야 한다). 위 validate를 통과한 뒤 `up -d`.
 
 ## 5. 처음부터 세우기
 
@@ -114,18 +159,24 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
    curl -fsSL https://get.docker.com | sudo sh
    sudo usermod -aG docker ubuntu
    docker network create edge || true
-   sudo mkdir -p /srv/edge /srv/postpilot-staging /srv/postpilot-prod
+   sudo mkdir -p /srv/edge/conf.d /srv/postpilot-staging /srv/postpilot-prod
    sudo chown -R ubuntu:ubuntu /srv'
    ```
 4. **파일 배치 + .env**: edge만 손으로 복사한다. 스택의 compose 파일은 **배포 워크플로가
    매번 동기화하므로 복사하지 않는다.**
    ```bash
    scp deploy/edge/docker-compose.yml deploy/edge/Caddyfile ubuntu@$IP:/srv/edge/
+   scp deploy/edge/conf.d/postpilot.caddy ubuntu@$IP:/srv/edge/conf.d/
    ssh ubuntu@$IP 'sudo install -d -o 65532 -g 65532 /srv/postpilot-prod/data'
    ```
-   - `/srv/edge/.env`: `API_DOMAIN_PROD=…`, `API_DOMAIN_STAGING=…`
+   - `/srv/edge/.env`: `deploy/edge/.env.example`을 채운다 — 지금은
+     `POSTPILOT_API_DOMAIN_PROD` 한 줄. staging은 `.disabled`를 떼는 순간 활성화된다
+     (그때 `..._STAGING`을 추가한다).
+   - **기존 박스 재사용이면 이 단계 대신 §4의 "이미 도는 박스에 얹기"를 따른다** —
+     `Caddyfile`/`docker-compose.yml`은 그 박스 것이라 덮어쓰지 않는다.
    - 스택별 `/srv/postpilot-<env>/.env`: `.env.production.example`을 채워서 (`chmod 600`).
-     `API_UPSTREAM`이 스택마다 **달라야** 한다 — Caddyfile의 업스트림 이름과 일치.
+     `API_UPSTREAM`이 스택마다 **달라야** 한다 — `deploy/edge/conf.d/postpilot*.caddy`의
+     `reverse_proxy` 업스트림 이름과 일치.
      `CORS_ORIGIN`은 repo variable `WEB_ORIGIN`과 **같아야** 한다 — 다르면 배포 마지막
      단계의 CORS 검증이 실패한다.
 5. **GHCR 로그인**(VPS에서, **sudo 없이**): `echo '<PAT>' | docker login ghcr.io -u <계정> --password-stdin`

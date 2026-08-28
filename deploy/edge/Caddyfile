@@ -1,21 +1,30 @@
-# Shared edge proxy (deploy/edge): one Caddy terminates TLS for BOTH api domains and
-# proxies to the per-env api containers over the `edge` docker network. Domains come
-# from /srv/edge/.env via the compose environment. Upstreams speak h2c (Connect over
-# HTTP/2 cleartext) on :8080; CORS is handled by the API itself (connectrpc.com/cors,
-# allowed origin = each stack's CORS_ORIGIN), not here. If one env's api container is
-# down, only that domain 502s — the other keeps serving.
-{$API_DOMAIN_PROD} {
-	reverse_proxy postpilot-api-prod:8080 {
-		transport http {
-			versions h2c 2
-		}
-	}
-}
+# Shared edge proxy for the WHOLE VPS — the only binder of ports 80/443, shared by every
+# project on the box (cosimosi, postpilot, whatever comes third). Lives at /srv/edge,
+# managed by hand: edit → validate → `docker compose up -d`. It is NOT part of any
+# project's deploy workflow; api stacks roll independently underneath it.
+#
+# This file is a router, not a config. Every site block lives in its own
+# conf.d/<project>.caddy fragment, so adding the third and fourth project is "drop one
+# file, append one line" instead of a merge conflict in a file everyone shares.
+#
+# Ownership contract (DEPLOY.md §4):
+#   Caddyfile, docker-compose.yml  → the box, not a project. Do not edit them per project.
+#   conf.d/<project>*.caddy        → that project alone owns its own files.
+#   .env                           → append your PREFIXED domain vars; touch no one else's.
+#
+# Caddy config is all-or-nothing: one broken fragment takes down TLS for EVERY project on
+# the box, not just its own. So always validate the assembled config before reloading:
+#
+#   docker run --rm -v /srv/edge/Caddyfile:/etc/caddy/Caddyfile:ro \
+#     -v /srv/edge/conf.d:/etc/caddy/conf.d:ro --env-file /srv/edge/.env \
+#     caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+#
+# Global options (ACME email, etc.) would go here and must be the FIRST block, before the
+# import — that is the one reason to edit this file:
+# {
+# 	email ops@example.com
+# }
 
-{$API_DOMAIN_STAGING} {
-	reverse_proxy postpilot-api-staging:8080 {
-		transport http {
-			versions h2c 2
-		}
-	}
-}
+# Relative to this file, i.e. /etc/caddy/conf.d/ in the container. Alphabetical order,
+# which is irrelevant: distinct site addresses are order-independent.
+import conf.d/*.caddy
