@@ -10,6 +10,9 @@
 # SQLite lives in the named `backend_data` volume, not in the bind-mounted source tree —
 # a WAL database on a Windows/WSL bind mount corrupts under concurrent access, and this
 # way `docker compose down -v` is the reset button.
+#
+# Photos go to MinIO here and to Cloudflare R2 in production. Both speak the S3 API, so
+# it is the same code and the same four R2_* variables — only their values change.
 name: postpilot
 
 services:
@@ -23,6 +26,14 @@ services:
       PORT: "8080"
       CORS_ORIGIN: http://localhost:2564
       DB_PATH: /app/data/postpilot.db
+      # The API talks to MinIO over the compose network; the browser cannot resolve
+      # that name, so presigned URLs are minted against the published one. A signature
+      # covers the Host header, which is why these must differ here and agree in prod.
+      R2_ENDPOINT: http://minio:9000
+      R2_PUBLIC_ENDPOINT: http://localhost:9000
+      R2_ACCESS_KEY_ID: postpilot
+      R2_SECRET_ACCESS_KEY: postpilot-dev-secret
+      R2_BUCKET: postpilot
     ports:
       - "7678:8080"
     volumes:
@@ -30,8 +41,50 @@ services:
       - backend_go_mod:/go/pkg/mod
       - backend_tmp:/app/tmp
       - backend_data:/app/data
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+
+  # Local stand-in for Cloudflare R2. Same S3 API, so nothing in the Go code knows the
+  # difference. Console on 9001 if you want to look at what was uploaded.
+  minio:
+    image: minio/minio:latest
+    container_name: postpilot-minio
+    profiles: ["dev"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: postpilot
+      MINIO_ROOT_PASSWORD: postpilot-dev-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Creates the bucket and leaves it PRIVATE, which is the property the app depends on:
+  # a photo is readable only through a presigned URL the API issues to its owner
+  # (PRD F-5). Runs once and exits; the api waits for it.
+  minio-init:
+    image: minio/mc:latest
+    container_name: postpilot-minio-init
+    profiles: ["dev"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+      mc alias set local http://minio:9000 postpilot postpilot-dev-secret &&
+      mc mb --ignore-existing local/postpilot &&
+      mc anonymous set none local/postpilot
+      "
 
 volumes:
   backend_go_mod:
   backend_tmp:
   backend_data:
+  minio_data:

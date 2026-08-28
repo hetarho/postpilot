@@ -18,8 +18,11 @@ import (
 	"github.com/postpilot/backend/internal/platform/config"
 )
 
-// maxRequestBytes caps a single unary request message. Raise it deliberately when
-// image upload lands — until then a generous cap only bounds cheap large-POST abuse.
+// maxRequestBytes caps a single unary request message.
+//
+// It stays small even though the app handles photos: image bytes never pass through
+// this process ([I6]) — the browser PUTs them straight to object storage with a
+// presigned URL. The largest thing an RPC carries is a memo.
 const maxRequestBytes = 256 << 10 // 256 KiB
 
 // Server hardening timeouts: ReadTimeout bounds slow-body uploads (ReadHeaderTimeout

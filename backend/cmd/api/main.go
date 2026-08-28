@@ -27,6 +27,10 @@ import (
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
+	"github.com/postpilot/backend/internal/post"
+	postrpc "github.com/postpilot/backend/internal/post/rpc"
+	poststore "github.com/postpilot/backend/internal/post/store"
+	"github.com/postpilot/backend/internal/storage"
 )
 
 const version = "0.0.1"
@@ -78,6 +82,34 @@ func main() {
 		slog.Info("swept expired sessions", "count", n)
 	}
 
+	// Checked here rather than in config.Load: `api adduser` must work on a fresh box
+	// before a bucket exists. This still runs before the listener, so a missing value
+	// keeps /health dark and the deploy rolls back.
+	if err := cfg.RequireObjectStorage(); err != nil {
+		slog.Error("object storage config invalid", "err", err)
+		os.Exit(1)
+	}
+
+	bucket, err := storage.New(ctx, storage.Config{
+		Endpoint:        cfg.R2Endpoint,
+		PublicEndpoint:  cfg.R2PublicEndpoint,
+		AccessKeyID:     cfg.R2AccessKeyID,
+		SecretAccessKey: cfg.R2SecretAccessKey,
+		Bucket:          cfg.R2Bucket,
+	})
+	if err != nil {
+		slog.Error("object storage setup failed", "err", err)
+		os.Exit(1)
+	}
+
+	postSvc := post.NewService(
+		poststore.New(handle.Writer, handle.Reader),
+		bucket,
+		cfg.PresignPutTTL,
+		cfg.PresignGetTTL,
+		cfg.MaxImageBytes,
+	)
+
 	server := rpcserver.New(cfg, version, rpcserver.Options{
 		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc)},
 		Handlers: []rpcserver.Registrar{
@@ -87,8 +119,21 @@ func main() {
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(authSvc, cfg.SessionTTL), opts...)
 			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewPostServiceHandler(postrpc.NewHandler(postSvc), opts...)
+			},
 		},
 	})
+
+	// The sweep starts with the server and stops with it. It is deliberately not run at
+	// boot: a restart loop would turn every crash into a full bucket listing, and
+	// nothing it collects is urgent.
+	sweeper := post.NewSweeper(
+		poststore.New(handle.Writer, handle.Reader),
+		bucket,
+		cfg.OrphanMinAge,
+	)
+	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
 
 	// A serve error (e.g. the port is already bound) must NOT exit 0 — an orchestrator
 	// would read a clean exit as success and never restart us. Surface it on a channel

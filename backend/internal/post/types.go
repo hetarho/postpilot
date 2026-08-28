@@ -1,0 +1,100 @@
+// Package post is the drafting context: posts, the photos attached to them, and the
+// upload handshake that puts a photo in object storage without the API touching the
+// bytes ([I6]).
+package post
+
+import (
+	"errors"
+	"time"
+)
+
+// Status values a post can hold. `review` is set by the generation pipeline (plan 06);
+// this context only ever writes `draft`.
+const (
+	StatusDraft  = "draft"
+	StatusReview = "review"
+)
+
+// uploadContentType is what a presigned PUT is signed for. The browser pipeline
+// re-encodes every photo to JPEG before upload (PRD §6.2), and the signature covers
+// this header — a PUT with any other Content-Type is rejected as a signature mismatch.
+const uploadContentType = "image/jpeg"
+
+// maxImageDimension bounds the width and height a client may report. The browser
+// pipeline caps the long edge at 1024 px; this is generous enough to survive a change
+// there while still refusing a value that could only be a bug or an attack.
+const maxImageDimension = 20000
+
+var (
+	// ErrNotFound is a slug or id that does not exist.
+	ErrNotFound = errors.New("not found")
+	// ErrForbidden is a slug or id that exists but belongs to someone else. It is
+	// deliberately distinguishable from ErrNotFound: the PRD (§7) specifies 403 here,
+	// and at two users there is no enumeration concern worth hiding it for.
+	ErrForbidden = errors.New("forbidden")
+	// ErrDuplicateFilename is a filename already attached to the post.
+	ErrDuplicateFilename = errors.New("filename already used in this post")
+	// ErrDuplicateSlug is a slug another post already holds. Only the store raises it,
+	// and only createPost sees it — as the signal to mint the next candidate.
+	ErrDuplicateSlug = errors.New("slug already used")
+	// ErrInvalidImage is a confirm whose dimensions or size cannot describe a photo.
+	ErrInvalidImage = errors.New("invalid image")
+	// ErrObjectMissing is a confirm for an object that never landed in storage.
+	ErrObjectMissing = errors.New("uploaded object not found in storage")
+)
+
+// Post is a draft. Content and observations belong to the generation pipeline and are
+// not read or written here.
+type Post struct {
+	Slug      string
+	UserID    string
+	Title     string
+	Memo      string
+	Status    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+
+	// Images is populated by Get, not by the store's post lookup.
+	Images []Image
+}
+
+// Summary is a row of the post list.
+type Summary struct {
+	Slug      string
+	Title     string
+	Status    string
+	UpdatedAt time.Time
+}
+
+// Image is a photo attached to a post. The bytes live in object storage; this is the
+// record that names them.
+type Image struct {
+	ID        string
+	PostSlug  string
+	Filename  string
+	Key       string
+	Width     int32
+	Height    int32
+	Bytes     int64
+	CreatedAt time.Time
+
+	// ViewURL is a short-lived presigned GET, minted per read and never stored.
+	ViewURL string
+}
+
+// Upload is a presigned PUT that has not been confirmed yet.
+type Upload struct {
+	ID        string
+	PostSlug  string
+	Filename  string
+	Key       string
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
+// ObjectKey is the storage key for a photo (PRD §5). The image id is in the key rather
+// than the filename so that a rename or a duplicate name can never collide, and so the
+// key is not attacker-influenced.
+func ObjectKey(postSlug, imageID string) string {
+	return "posts/" + postSlug + "/" + imageID + ".jpg"
+}

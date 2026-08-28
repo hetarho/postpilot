@@ -74,6 +74,8 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
 | 스택 `.env` | VPS `/srv/postpilot-{staging,prod}/.env` (`chmod 600`, 비추적) | 런타임 설정 — 키 목록은 `.env.production.example` |
 | edge `.env` | VPS `/srv/edge/.env` (박스 공유 — **덮어쓰지 말고 append**) | `POSTPILOT_API_DOMAIN_PROD`(+staging을 띄울 때만 `..._STAGING`). 도메인만, 접두사 필수 — 이유는 §4. 템플릿: `deploy/edge/.env.example` |
 | GHCR pull PAT (`read:packages`, classic) | VPS `ubuntu` 계정의 docker 로그인 | VPS가 private 이미지를 pull. **sudo 없이** `docker login` |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | 스택 `.env` | R2 API 토큰(해당 버킷에만 Object Read & Write). Cloudflare → R2 → Manage API Tokens |
+| `R2_ENDPOINT` / `R2_BUCKET` | 스택 `.env` | `https://<account-id>.r2.cloudflarestorage.com` 과 버킷 이름. 비밀은 아니지만 환경마다 다르다 |
 
 ## 4. VPS 내부 구조
 
@@ -189,22 +191,37 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
      `reverse_proxy` 업스트림 이름과 일치.
      `CORS_ORIGIN`은 repo variable `WEB_ORIGIN`과 **같아야** 한다 — 다르면 배포 마지막
      단계의 CORS 검증이 실패한다.
-5. **GHCR 로그인**(VPS에서, **sudo 없이**): `echo '<PAT>' | docker login ghcr.io -u <계정> --password-stdin`
-6. **배포 키**: `ssh-keygen -t ed25519 -f ~/.ssh/postpilot-deploy -N "" -C postpilot-github-actions-deploy`
+5. **R2 버킷**(Cloudflare → R2): 환경별 버킷을 만들고(`postpilot-prod`), 그 버킷에만
+   Object Read & Write 권한을 가진 API 토큰을 발급해 스택 `.env`에 넣는다.
+   **버킷은 공개하지 않는다** — 사진은 API가 소유자를 확인한 뒤 발급하는 presigned URL로만
+   읽힌다(PRD F-5).
+
+   **CORS 규칙을 반드시 넣는다.** 브라우저가 R2로 직접 PUT 하기 때문에, 빠뜨리면
+   서버 쪽 단계는 전부 성공했다고 보고하는데 업로드만 조용히 실패한다(PRD F-2):
+   ```json
+   [{ "AllowedOrigins": ["https://postpilot.<도메인>"],
+      "AllowedMethods": ["PUT", "GET", "HEAD"],
+      "AllowedHeaders": ["content-type"],
+      "ExposeHeaders": ["etag"],
+      "MaxAgeSeconds": 3600 }]
+   ```
+   (로컬 개발은 R2가 아니라 compose의 MinIO를 쓴다 — `docker-compose.yml`.)
+6. **GHCR 로그인**(VPS에서, **sudo 없이**): `echo '<PAT>' | docker login ghcr.io -u <계정> --password-stdin`
+7. **배포 키**: `ssh-keygen -t ed25519 -f ~/.ssh/postpilot-deploy -N "" -C postpilot-github-actions-deploy`
    → 공개키를 VPS `~/.ssh/authorized_keys`에 추가.
-7. **GitHub** (Settings → Secrets and variables → Actions): secrets `SSH_HOST`, `SSH_USER`(`ubuntu`),
+8. **GitHub** (Settings → Secrets and variables → Actions): secrets `SSH_HOST`, `SSH_USER`(`ubuntu`),
    `SSH_KEY`(개인키 내용) → variables `API_ORIGIN`, `WEB_ORIGIN` → 전부 끝난 뒤
    `DEPLOY_ENABLED=true`.
    - prod에 수동 승인을 걸고 싶으면 Settings → Environments → `production`에 리뷰어를
      지정한다. rollout job이 그 environment를 쓴다.
-8. **기동**: `/srv/edge`에서 `docker compose up -d`. 스택의 api는 첫 배포가 알아서 띄운다
+9. **기동**: `/srv/edge`에서 `docker compose up -d`. 스택의 api는 첫 배포가 알아서 띄운다
    (compose 파일 동기화 → pull → up). 이후는 머지가 알아서 배포한다(§2).
-9. **Cloudflare Worker**(프론트): 리포 import(이름 `postpilot` = `wrangler.jsonc`의 name),
+10. **Cloudflare Worker**(프론트): 리포 import(이름 `postpilot` = `wrangler.jsonc`의 name),
    production 브랜치 `main`, build `pnpm --filter ./frontend build`,
    deploy `npx wrangler deploy`, version `npx wrangler versions upload`,
    변수 `VITE_API_URL` 입력, 커스텀 도메인 연결.
 
-10. **첫 계정**: 배포가 끝나면 §4의 `adduser`로 계정을 만든다. 만들기 전까지는 로그인할
+11. **첫 계정**: 배포가 끝나면 §4의 `adduser`로 계정을 만든다. 만들기 전까지는 로그인할
     방법이 없다 — 마이그레이션은 기동 때 이미 돌았으므로 이 단계만 남는다.
 
 확인: `curl https://api.postpilot.<도메인>/health` → `{"status":"ok","version":"0.0.1"}`
@@ -221,8 +238,8 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
 
 지금 뼈대에 **일부러 넣지 않은** 것들. 필요해지는 시점에 붙인다.
 
-- **오브젝트 스토리지** — 사진 원본 저장. 업로드가 생기면 `maxRequestBytes`(현재 256KiB)도
-  같이 다시 본다.
 - **비밀번호 변경/재설정** — PRD에 흐름이 정의돼 있지 않다. 지금은 운영자가 계정을
   다시 만드는 것이 유일한 경로다.
+- **R2 백업** — 버킷 자체의 백업은 아직 없다(PRD §9.4). `data/`의 SQLite는 디렉터리
+  하나만 받으면 되지만, 사진은 R2에 있다.
 - **관측(Sentry/PostHog)** — 사용자가 생기면.

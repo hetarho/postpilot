@@ -16,3 +16,15 @@ sql:
       go:
         package: "sqlc"
         out: "internal/auth/store/sqlc"
+        # Without this, every generated package gets a struct for every table in the
+        # schema — so adding a table to one context would rewrite another context's
+        # generated code, which is exactly the ownership boundary sqlc is meant to keep.
+        omit_unused_structs: true
+  - engine: "sqlite"
+    schema: "internal/platform/db/migrations"
+    queries: "internal/post/store/queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/post/store/sqlc"
+        omit_unused_structs: true

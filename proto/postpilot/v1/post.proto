@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// post.proto is the drafting slice: a post, its photos, and the upload handshake that
+// puts a photo in object storage without the API ever touching the bytes.
+//
+// Every procedure is scoped to the acting user from the session — no request carries a
+// user id, because a user id in a message is a claim by the caller, not a fact.
+service PostService {
+  // Create-or-update. An empty slug creates the post and returns the minted one.
+  rpc SavePostDraft(SavePostDraftRequest) returns (SavePostDraftResponse) {}
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {}
+  rpc ListPosts(ListPostsRequest) returns (ListPostsResponse) {}
+
+  // Step 1 of the upload handshake: hands back a presigned PUT the BROWSER uses.
+  rpc CreateUpload(CreateUploadRequest) returns (CreateUploadResponse) {}
+  // Step 2: the server verifies the object landed, then records the photo.
+  rpc ConfirmUpload(ConfirmUploadRequest) returns (ConfirmUploadResponse) {}
+  rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse) {}
+}
+
+message Post {
+  // Minted once from the date and title, then immutable — it is the primary key and it
+  // appears in object keys, so retitling must not move it.
+  string slug = 1;
+  string title = 2;
+  string memo = 3;
+  // draft | review. Generation (plan 06) moves it to review.
+  string status = 4;
+  repeated Image images = 5;
+  string created_at = 6;
+  string updated_at = 7;
+  // Fields 8+ are reserved for content / observations / active_job, added by the
+  // generation plans. Appending keeps this message wire-compatible.
+}
+
+message Image {
+  string id = 1;
+  // The name the model and the exporters refer to this photo by. Unique within a post.
+  string filename = 2;
+  // Measured in the browser — the server never decodes an image ([I6]).
+  int32 width = 3;
+  int32 height = 4;
+  // From the storage HEAD at confirm time, not from the client.
+  int64 bytes = 5;
+  // A short-lived presigned GET, minted fresh on every GetPost. The client must not
+  // persist it; the bucket is private and this is the only way in.
+  string view_url = 6;
+}
+
+message PostSummary {
+  string slug = 1;
+  string title = 2;
+  string status = 3;
+  string updated_at = 4;
+}
+
+message SavePostDraftRequest {
+  // Empty on the first save of a new post.
+  string slug = 1;
+  string title = 2;
+  string memo = 3;
+}
+
+message SavePostDraftResponse {
+  Post post = 1;
+}
+
+message GetPostRequest {
+  string slug = 1;
+}
+
+message GetPostResponse {
+  Post post = 1;
+}
+
+message ListPostsRequest {}
+
+message ListPostsResponse {
+  // Newest first.
+  repeated PostSummary posts = 1;
+}
+
+message CreateUploadRequest {
+  string post_slug = 1;
+  string filename = 2;
+}
+
+message CreateUploadResponse {
+  string upload_id = 1;
+  // Presigned PUT on the storage host, never on this API.
+  string put_url = 2;
+  // The Content-Type the PUT must send. It is part of the signature, so a different
+  // value is rejected as a signature mismatch rather than as a bad request.
+  string content_type = 3;
+  string expires_at = 4;
+}
+
+message ConfirmUploadRequest {
+  string upload_id = 1;
+  int32 width = 2;
+  int32 height = 3;
+}
+
+message ConfirmUploadResponse {
+  Image image = 1;
+}
+
+message DeleteImageRequest {
+  string image_id = 1;
+}
+
+message DeleteImageResponse {}

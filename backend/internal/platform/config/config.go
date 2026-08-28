@@ -17,6 +17,26 @@ import (
 // per environment changes a product rule, not a deployment detail.
 const sessionTTL = 720 * time.Hour
 
+// Presigned URL lifetimes. Short on purpose: a leaked URL is a leaked object for as
+// long as it lives, and both are re-minted on demand (PUT at upload time, GET on every
+// GetPost), so nothing breaks by expiring.
+const (
+	presignPutTTL = 10 * time.Minute
+	presignGetTTL = 10 * time.Minute
+)
+
+// orphanMinAge is the grace period before the sweep may delete an object that has no
+// database row. It is not zero because an upload in flight has an object and no row
+// yet — deleting it would race the user's own PUT.
+const orphanMinAge = time.Hour
+
+// maxImageBytes is the largest object accepted as a photo.
+//
+// The browser converts to ~200 KB before uploading, so this is not a limit anyone hits
+// by accident. It exists because a presigned PUT is a URL an authenticated client can
+// use however it likes, and the browser's own cap cannot be trusted on the server side.
+const maxImageBytes int64 = 10 << 20 // 10 MiB
+
 // Config is the fully-resolved process configuration.
 type Config struct {
 	// Port the HTTP server listens on.
@@ -30,6 +50,31 @@ type Config struct {
 	DBPath string
 	// SessionTTL is how long a session is valid after login.
 	SessionTTL time.Duration
+
+	// R2Endpoint is the S3-compatible endpoint the API itself calls (HEAD, DELETE, LIST).
+	R2Endpoint string
+	// R2PublicEndpoint is the endpoint presigned URLs are minted against — the one the
+	// BROWSER will call. It is separate because a signature covers the Host header, so a
+	// URL signed for a name only the API can resolve is rejected when the browser sends
+	// it. In production both are the same R2 endpoint and this is left unset; in local
+	// dev the API reaches MinIO at `minio:9000` while the browser reaches `localhost:9000`.
+	R2PublicEndpoint  string
+	R2AccessKeyID     string
+	R2SecretAccessKey string
+	R2Bucket          string
+
+	// PresignPutTTL bounds an upload URL; it is also how long the uploads row is valid.
+	PresignPutTTL time.Duration
+	// PresignGetTTL bounds a view URL. The frontend never persists one.
+	PresignGetTTL time.Duration
+
+	// OrphanSweepInterval is how often unconfirmed uploads and stray objects are cleaned
+	// up. The PRD leaves the cadence undecided (§9.5); daily is the provisional default.
+	OrphanSweepInterval time.Duration
+	// OrphanMinAge is the grace period before an object with no row may be deleted.
+	OrphanMinAge time.Duration
+	// MaxImageBytes is the largest object recorded as a photo.
+	MaxImageBytes int64
 }
 
 // Load reads the environment, falling back to a repo-root .env when present so a
@@ -49,13 +94,62 @@ func Load() (*Config, error) {
 		CORSOrigin: getenv("CORS_ORIGIN", "http://localhost:2564"),
 		DBPath:     getenv("DB_PATH", "data/postpilot.db"),
 		SessionTTL: sessionTTL,
+
+		R2Endpoint:        os.Getenv("R2_ENDPOINT"),
+		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
+		R2SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
+		R2Bucket:          os.Getenv("R2_BUCKET"),
+
+		PresignPutTTL: presignPutTTL,
+		PresignGetTTL: presignGetTTL,
+		OrphanMinAge:  orphanMinAge,
+		MaxImageBytes: maxImageBytes,
 	}
+	cfg.R2PublicEndpoint = getenv("R2_PUBLIC_ENDPOINT", cfg.R2Endpoint)
 
 	if err := validateOrigin(cfg.CORSOrigin); err != nil {
 		return nil, fmt.Errorf("CORS_ORIGIN: %w", err)
 	}
 
+	sweep, err := time.ParseDuration(getenv("ORPHAN_SWEEP_INTERVAL", "24h"))
+	if err != nil {
+		return nil, fmt.Errorf("ORPHAN_SWEEP_INTERVAL: %w", err)
+	}
+	if sweep <= 0 {
+		return nil, fmt.Errorf("ORPHAN_SWEEP_INTERVAL: must be positive, got %s", sweep)
+	}
+	cfg.OrphanSweepInterval = sweep
+
 	return cfg, nil
+}
+
+// RequireObjectStorage validates the R2 block.
+//
+// It is a separate step rather than part of Load because not every entry point needs
+// object storage: `api adduser` creates an account, and on a fresh VPS that happens
+// before the operator has set up a bucket. Only the server calls this — and it does so
+// before the listener starts, so a missing value still stops the deploy at the health
+// gate rather than surfacing as a failed upload the first time a user picks a photo.
+func (c *Config) RequireObjectStorage() error {
+	for name, value := range map[string]string{
+		"R2_ENDPOINT":          c.R2Endpoint,
+		"R2_ACCESS_KEY_ID":     c.R2AccessKeyID,
+		"R2_SECRET_ACCESS_KEY": c.R2SecretAccessKey,
+		"R2_BUCKET":            c.R2Bucket,
+	} {
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("%s is required (object storage for photos)", name)
+		}
+	}
+	for name, value := range map[string]string{
+		"R2_ENDPOINT":        c.R2Endpoint,
+		"R2_PUBLIC_ENDPOINT": c.R2PublicEndpoint,
+	} {
+		if err := validateEndpoint(value); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+	return nil
 }
 
 // validateOrigin rejects anything the credentialed CORS layer cannot safely serve.
@@ -87,6 +181,22 @@ func validateOrigin(origin string) error {
 		return fmt.Errorf("must be scheme://host[:port] only, got %q", origin)
 	}
 
+	return nil
+}
+
+// validateEndpoint catches an object-storage URL that would only fail later, inside a
+// presigned URL the browser cannot use and cannot explain.
+func validateEndpoint(endpoint string) error {
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return fmt.Errorf("not a valid URL: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("must be an http(s) URL, got %q", endpoint)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("must include a host, got %q", endpoint)
+	}
 	return nil
 }
 
