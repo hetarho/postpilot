@@ -4,7 +4,9 @@ tmp_dir = "tmp"
 [build]
   cmd = "go build -o ./tmp/api ./cmd/api"
   bin = "./tmp/api"
-  include_ext = ["go", "tpl", "tmpl", "html"]
+  # yaml: the model registry (config/providers.yaml) is read once at boot, and its
+  # contract is "edit + restart" — so an edit restarts.
+  include_ext = ["go", "tpl", "tmpl", "html", "yaml"]
   exclude_dir = ["tmp", "bin", "internal/gen"]
   delay = 800
   stop_on_error = true

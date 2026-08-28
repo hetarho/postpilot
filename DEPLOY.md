@@ -76,6 +76,7 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
 | GHCR pull PAT (`read:packages`, classic) | VPS `ubuntu` 계정의 docker 로그인 | VPS가 private 이미지를 pull. **sudo 없이** `docker login` |
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | 스택 `.env` | R2 API 토큰(해당 버킷에만 Object Read & Write). Cloudflare → R2 → Manage API Tokens |
 | `R2_ENDPOINT` / `R2_BUCKET` | 스택 `.env` | `https://<account-id>.r2.cloudflarestorage.com` 과 버킷 이름. 비밀은 아니지만 환경마다 다르다 |
+| `OPENROUTER_API_KEY` (외 `backend/config/providers.yaml`의 `api_key_env`가 가리키는 이름들) | 스택 `.env` | 모델 프로바이더 키. **없어도 API는 뜬다** — 그 프로바이더의 모델만 드롭다운에서 "API key not configured"로 비활성. 이미지는 `/config/providers.yaml`을 내장하며(`PROVIDERS_CONFIG`), 스택이 자기 파일을 그 자리에 마운트해 덮어쓸 수 있다 |
 
 ## 4. VPS 내부 구조
 

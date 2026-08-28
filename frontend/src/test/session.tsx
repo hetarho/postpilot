@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { create } from '@bufbuild/protobuf'
 import { AuthService, GetMeResponseSchema, LoginResponseSchema, LogoutResponseSchema } from '@/shared/api'
 import { type FakePostsOptions, registerPostService } from './posts'
+import { type FakeProvidersOptions, registerProviderService } from './providers'
 
 export interface FakeAuthOptions {
   /** The account GetMe reports. `undefined` makes GetMe answer 401, like a real server
@@ -25,6 +26,8 @@ export interface FakeAuthOptions {
    *  routing test that lands on /posts is not reading an "unimplemented" error instead of
    *  the failure it is actually looking for. */
   posts?: FakePostsOptions
+  /** The ProviderService (model catalog). Present by default with an empty registry. */
+  providers?: FakeProvidersOptions
 }
 
 /** A fake backend plus the controls a test needs over it. */
@@ -59,6 +62,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
       return create(LogoutResponseSchema, {})
     })
     registerPostService(router, { calls, ...options.posts })
+    registerProviderService(router, { calls, ...options.providers })
   })
 
   return {

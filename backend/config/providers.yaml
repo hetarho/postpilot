@@ -1,0 +1,41 @@
+# The model registry (PRD §6.4). Adding a provider or a model is an edit here plus a
+# restart — no code change. The file is validated at boot and a broken entry stops the
+# API from starting, the same posture as a bad migration.
+#
+# Keys are NEVER written here. `api_key_env` names the environment variable the key is
+# read from; when that variable is unset, every model of the provider is listed as
+# disabled with the reason "API key not configured" and cannot be selected. Leave
+# `api_key_env` out for an endpoint that takes no key (a local Ollama / vLLM / LM Studio).
+#
+# Per model:
+#   id                 what the provider's API expects in `model`
+#   label              shown in the dropdowns (defaults to the id)
+#   vision             accepts image parts — the observe stage lists vision models only
+#   structured_output  honours a JSON schema (`response_format: json_schema`); the app
+#                      requests it whenever the model supports it and keeps a parser
+#                      fallback for models that do not
+#
+# Adapters: `openai_compatible` (needs `base_url`) covers OpenRouter, Together, Groq,
+# Fireworks, DeepInfra, OpenAI, Ollama, vLLM, LM Studio and Google's compatible endpoint.
+# `anthropic` (the official Go SDK) is added when a provider entry needs it.
+providers:
+  - id: openrouter
+    adapter: openai_compatible
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    models:
+      # A router entry survives individual free models disappearing (PRD §6.5). Free
+      # models have daily quotas and tend to drift in tone on long outputs, so this one
+      # suits the observe stage more than the write stage.
+      - id: openrouter/free
+        label: OpenRouter free (auto)
+        vision: true
+        structured_output: false
+      - id: anthropic/claude-sonnet-4.5
+        label: Claude Sonnet 4.5 (via OpenRouter)
+        vision: true
+        structured_output: true
+      - id: google/gemini-2.5-flash
+        label: Gemini 2.5 Flash (via OpenRouter)
+        vision: true
+        structured_output: true

@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// provider.proto is the model catalog: what is registered in providers.yaml, what each
+// model can do, and the acting user's last choice per stage (PRD §3.3, §6.4, F-4).
+//
+// Nothing here carries an API key or a provider SDK payload — ids, labels and flags
+// only. Keys live in the server's environment and never cross this wire.
+service ProviderService {
+  // The registry snapshot: every model of every provider, with its flags. A model whose
+  // provider has no API key is `disabled` with the reason, so the client can grey it.
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse) {}
+  // The acting user's per-stage choices. A saved model that is no longer registered comes
+  // back `missing` — and the server has already cleared it, so the user must choose again.
+  rpc GetSelections(GetSelectionsRequest) returns (GetSelectionsResponse) {}
+  rpc SaveSelection(SaveSelectionRequest) returns (SaveSelectionResponse) {}
+}
+
+// The two generation stages and the voice-analysis stage each choose their own model
+// ([I3]); the app never fills one in.
+enum Stage {
+  STAGE_UNSPECIFIED = 0;
+  STAGE_OBSERVE = 1;
+  STAGE_WRITE = 2;
+  STAGE_ANALYZE = 3;
+}
+
+// Reused by the Start* RPCs of the generation plans: a job records exactly which model
+// it ran on.
+message ModelRef {
+  string provider_id = 1;
+  string model_id = 2;
+}
+
+message ModelInfo {
+  ModelRef ref = 1;
+  string label = 2;
+  // Declared per model in providers.yaml — the registry cannot probe them. The observe
+  // stage lists vision models only.
+  bool vision = 3;
+  bool structured_output = 4;
+  bool disabled = 5;
+  string disabled_reason = 6;
+}
+
+message Selection {
+  Stage stage = 1;
+  ModelRef ref = 2;
+  // The saved ref is no longer in the registry. The row is already gone; this tells the
+  // client what to grey out and why.
+  bool missing = 3;
+}
+
+message ListModelsRequest {}
+
+message ListModelsResponse {
+  repeated ModelInfo models = 1;
+}
+
+message GetSelectionsRequest {}
+
+message GetSelectionsResponse {
+  repeated Selection selections = 1;
+}
+
+message SaveSelectionRequest {
+  Stage stage = 1;
+  ModelRef ref = 2;
+}
+
+message SaveSelectionResponse {
+  Selection selection = 1;
+}

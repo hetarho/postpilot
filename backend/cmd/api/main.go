@@ -24,14 +24,26 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/health"
+	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/llm/openaicompat"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/post"
 	postrpc "github.com/postpilot/backend/internal/post/rpc"
 	poststore "github.com/postpilot/backend/internal/post/store"
+	"github.com/postpilot/backend/internal/provider"
+	providerrpc "github.com/postpilot/backend/internal/provider/rpc"
+	providerstore "github.com/postpilot/backend/internal/provider/store"
 	"github.com/postpilot/backend/internal/storage"
 )
+
+// adapters is the set of provider protocols this binary ships (PRD §6.4: 필요할 때
+// 하나씩). This is the only place an adapter package is imported — the composition
+// root injects them into the port, and nothing above the port sees them.
+var adapters = map[string]llm.AdapterFactory{
+	"openai_compatible": openaicompat.Factory,
+}
 
 const version = "0.0.1"
 
@@ -53,6 +65,24 @@ func main() {
 	if err != nil {
 		slog.Error("config load failed", "err", err)
 		os.Exit(1)
+	}
+
+	// Same posture as a migration: a registry that does not validate must not serve.
+	// A missing API key is NOT that — the provider's models come up disabled instead.
+	// Checked before the database is touched: it is pure configuration, and a typo in
+	// the yaml should not leave a half-started process behind.
+	registry, err := llm.Load(cfg.ProvidersConfig, os.Getenv, adapters, llm.Options{
+		Timeout:   cfg.LLMStageTimeout,
+		MaxTokens: cfg.LLMMaxTokensDefault,
+	})
+	if err != nil {
+		slog.Error("providers config invalid", "err", err)
+		os.Exit(1)
+	}
+	for _, m := range registry.Models() {
+		if m.Disabled {
+			slog.Warn("model disabled", "model", m.Ref.String(), "reason", m.DisabledReason)
+		}
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -110,6 +140,8 @@ func main() {
 		cfg.MaxImageBytes,
 	)
 
+	providerSvc := provider.NewService(providerstore.New(handle.Writer, handle.Reader), registry)
+
 	server := rpcserver.New(cfg, version, rpcserver.Options{
 		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc)},
 		Handlers: []rpcserver.Registrar{
@@ -121,6 +153,9 @@ func main() {
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewPostServiceHandler(postrpc.NewHandler(postSvc), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewProviderServiceHandler(providerrpc.NewHandler(providerSvc), opts...)
 			},
 		},
 	})

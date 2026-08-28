@@ -34,6 +34,13 @@ services:
       R2_ACCESS_KEY_ID: postpilot
       R2_SECRET_ACCESS_KEY: postpilot-dev-secret
       R2_BUCKET: postpilot
+    # Provider API keys come from the repo-root .env, whatever names providers.yaml's
+    # `api_key_env` uses — no per-provider line to add here. The explicit values above
+    # win over the file, so its PORT/DB_PATH/R2_* (meant for a host-side run) do not
+    # leak in. A missing file or an empty key is fine: those models show as disabled.
+    env_file:
+      - path: .env
+        required: false
     ports:
       - "7678:8080"
     volumes:

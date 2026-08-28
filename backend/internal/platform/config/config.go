@@ -37,6 +37,16 @@ const orphanMinAge = time.Hour
 // use however it likes, and the browser's own cap cannot be trusted on the server side.
 const maxImageBytes int64 = 10 << 20 // 10 MiB
 
+// llmStageTimeout bounds one provider call. Generation takes 30 s – 2 min and a long
+// draft can take longer on a slow model (PRD §6.6); the API is a long-lived container,
+// so the bound exists to fail a hung call, not to fit a platform limit.
+const llmStageTimeout = 5 * time.Minute
+
+// llmMaxTokensDefault is the completion cap sent when a caller does not set one. Large
+// enough for a full blog draft; a caller with a smaller output (an observation, a style
+// analysis) may pass its own.
+const llmMaxTokensDefault = 4096
+
 // Config is the fully-resolved process configuration.
 type Config struct {
 	// Port the HTTP server listens on.
@@ -75,6 +85,14 @@ type Config struct {
 	OrphanMinAge time.Duration
 	// MaxImageBytes is the largest object recorded as a photo.
 	MaxImageBytes int64
+
+	// ProvidersConfig is the path of providers.yaml — the model registry (PRD §6.4). The
+	// file names the env vars the API keys are read from; it never holds a key itself.
+	ProvidersConfig string
+	// LLMStageTimeout bounds one provider call.
+	LLMStageTimeout time.Duration
+	// LLMMaxTokensDefault is the completion cap when a caller sets none.
+	LLMMaxTokensDefault int
 }
 
 // Load reads the environment, falling back to a repo-root .env when present so a
@@ -104,6 +122,13 @@ func Load() (*Config, error) {
 		PresignGetTTL: presignGetTTL,
 		OrphanMinAge:  orphanMinAge,
 		MaxImageBytes: maxImageBytes,
+
+		// Relative to the working directory, like DB_PATH: `backend/config/providers.yaml`
+		// for a host run and `/app/config/providers.yaml` in the dev container. The
+		// production image sets an absolute path (Dockerfile).
+		ProvidersConfig:     getenv("PROVIDERS_CONFIG", "config/providers.yaml"),
+		LLMStageTimeout:     llmStageTimeout,
+		LLMMaxTokensDefault: llmMaxTokensDefault,
 	}
 	cfg.R2PublicEndpoint = getenv("R2_PUBLIC_ENDPOINT", cfg.R2Endpoint)
 

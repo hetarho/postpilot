@@ -10,6 +10,7 @@ import { API_URL } from '@/shared/config'
 import { emitUnauthenticated } from './auth-events'
 import { AuthService } from './gen/postpilot/v1/auth_pb'
 import { HealthService } from './gen/postpilot/v1/health_pb'
+import { ProviderService } from './gen/postpilot/v1/provider_pb'
 
 const baseUrl = import.meta.env.DEV ? '/api' : API_URL
 
@@ -57,3 +58,6 @@ export const authClient = createClient(AuthService, transport)
 
 /** Typed client for postpilot.v1.HealthService. */
 export const healthClient = createClient(HealthService, transport)
+
+/** Typed client for postpilot.v1.ProviderService. */
+export const providerClient = createClient(ProviderService, transport)

@@ -16,6 +16,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /api ./cmd/a
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /
 COPY --from=builder /api /api
+# The model registry ships with the image it was written for. A stack may still mount
+# its own file over /config/providers.yaml (or point PROVIDERS_CONFIG elsewhere).
+COPY config /config
+ENV PROVIDERS_CONFIG=/config/providers.yaml
 # distroless/static:nonroot runs as uid 65532 and bundles ca-certificates.
 USER nonroot:nonroot
 EXPOSE 8080

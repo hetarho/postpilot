@@ -2,6 +2,7 @@ export {
   transport,
   authClient,
   healthClient,
+  providerClient,
   credentialedFetch,
   unauthenticatedInterceptor,
 } from './transport'
@@ -31,3 +32,18 @@ export {
   SavePostDraftResponseSchema,
 } from './gen/postpilot/v1/post_pb'
 export type { GetPostResponse, Image, Post, PostSummary } from './gen/postpilot/v1/post_pb'
+export { ProviderService, Stage } from './gen/postpilot/v1/provider_pb'
+export {
+  GetSelectionsResponseSchema,
+  ListModelsResponseSchema,
+  ModelInfoSchema,
+  ModelRefSchema,
+  SaveSelectionResponseSchema,
+  SelectionSchema,
+} from './gen/postpilot/v1/provider_pb'
+export type {
+  GetSelectionsResponse,
+  ModelInfo as ProtoModelInfo,
+  ModelRef as ProtoModelRef,
+  Selection as ProtoSelection,
+} from './gen/postpilot/v1/provider_pb'
