@@ -1,7 +1,7 @@
 # Policy — Accounts, passwords, sessions
 
 Canonical rules that are **currently true** in the code. Source: [plan/01](../plan/01.accounts-and-login.md),
-built by job 01. A change to any rule here is a change to shipped behavior — go through `/create-change`.
+built by jobs 01 and 02. A change to any rule here is a change to shipped behavior — go through `/create-change`.
 
 ## Accounts
 
@@ -79,6 +79,28 @@ built by job 01. A change to any rule here is a change to shipped behavior — g
 
   The plain `/health` endpoint is mounted outside the Connect stack and is likewise unauthenticated — it is what the
   deploy's rollback gate probes.
+
+## The browser side
+
+- **The token never reaches JavaScript.** `document.cookie` cannot see it; the browser attaches it as a `Cookie`
+  header. No `Authorization` header is used anywhere.
+- The SPA and the API are different origins in production, so every RPC opts into sending cookies. connect-web has
+  no `credentials` option — the opt-in lives in a `fetch` wrapper the transport is built with.
+- **A 401 on any procedure except `Login` means the session is gone**, and the app returns to `/login`. Login is
+  exempt because its 401 means the password was wrong, which the form reports itself.
+- Every protected screen is a child of one pathless guard route, so a new screen is protected by being added, not by
+  remembering to protect it. The guard re-checks a cached session after `SESSION_STALE_MS` (30 s), so a session
+  revoked elsewhere stops granting access without a full reload.
+- **An outage is not a logout.** A failure that is not a 401 reaches the error boundary rather than sending the user
+  to a login form that cannot work. The one exception is `/login` itself, which renders regardless — it is what a
+  user reaches for when the app is misbehaving.
+- **A post-login `redirect` is followed only if it stays in the app.** It is validated by resolving it against an
+  origin and refusing anything that escapes — `//host` and `/\host` both leave, and the router does not check `to`
+  against the known routes.
+- **Logout that fails does not pretend to succeed.** The cookie is still valid, so the user stays signed in and is
+  told; a "logged out" screen would offer safety the live HttpOnly cookie does not.
+- The login form shows one message for every failure — `아이디 또는 비밀번호가 맞지 않아요` — mirroring the server's
+  refusal to distinguish an unknown id from a wrong password.
 
 ## Transport
 

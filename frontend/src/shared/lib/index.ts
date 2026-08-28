@@ -1,0 +1,1 @@
+export { isInAppPath } from './redirect'

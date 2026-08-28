@@ -109,9 +109,6 @@ They have no slices — but they are still divided into **segments**, not a pile
 `providers/` (query client, transport, theme, error boundary), `routes/` (router), `model/` (app-shell state),
 `styles/` (global CSS). Only `App.tsx`, `main.tsx`, and `index.ts` belong at the `app/` root.
 
-> As of the scaffold, `app/query-client.ts` and `app/router.tsx` still sit at the root. The first job that touches
-> them moves them to `app/providers/` and `app/routes/`.
-
 ### 3.3 The transport seam
 
 `shared/api` owns the Connect transport and the generated client. Slices call it through `shared/api`'s public

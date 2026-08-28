@@ -50,10 +50,6 @@ i18n + their config), **`routes/`** (router), **`model/`** (app-shell state, app
 (global CSS). Only the true entrypoint (`App.tsx`, `main.tsx`, `index.ts`) may sit at the `app/` root. A provider or
 client file dropped directly in `app/` is a **placement bug** — put it in `app/providers/`.
 
-> Current state: `frontend/src/app` still holds `query-client.ts` and `router.tsx` at its root (scaffold shape). The
-> first FE job that touches them should move them into `app/providers/` and `app/routes/` rather than adding more
-> loose files beside them.
-
 ## Generated code
 `frontend/src/shared/api/gen/**` is buf output — never hand-edit it, never import it outside `shared/api`. Slices
 consume the transport + mappers `shared/api` exposes, so a proto rename doesn't ripple into `features/`.
