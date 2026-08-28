@@ -39,6 +39,9 @@ import (
 	providerrpc "github.com/postpilot/backend/internal/provider/rpc"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
 	"github.com/postpilot/backend/internal/storage"
+	"github.com/postpilot/backend/internal/voice"
+	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
+	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
 
 // adapters is the set of provider protocols this binary ships (PRD §6.4: 필요할 때
@@ -153,6 +156,16 @@ func main() {
 	)
 
 	providerSvc := provider.NewService(providerstore.New(handle.Writer, handle.Reader), registry)
+	voiceSvc := voice.NewService(
+		voicestore.New(handle.Writer, handle.Reader),
+		voiceModels{selections: providerSvc, registry: registry},
+		voiceJobs{queue: jobQueue},
+	)
+	jobQueue.Register(job.KindAnalyzeVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return voiceSvc.Analyze(ctx, voice.AnalysisJob{
+			UserID: found.UserID, WriteModel: found.WriteModel,
+		}, voice.Progress(progress))
+	})
 
 	server := rpcserver.New(cfg, version, rpcserver.Options{
 		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc)},
@@ -171,6 +184,9 @@ func main() {
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewGenerationServiceHandler(jobrpc.NewHandler(jobQueue), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewVoiceServiceHandler(voicerpc.NewHandler(voiceSvc), opts...)
 			},
 		},
 	})
@@ -216,6 +232,54 @@ func main() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown failed", "err", err)
 	}
+}
+
+type voiceModels struct {
+	selections *provider.Service
+	registry   *llm.Registry
+}
+
+func (a voiceModels) AnalyzeModel(ctx context.Context, userID string) (llm.ModelRef, bool, error) {
+	selections, err := a.selections.GetSelections(ctx, userID)
+	if err != nil {
+		return llm.ModelRef{}, false, err
+	}
+	for _, selection := range selections {
+		if selection.Stage != provider.StageAnalyze || selection.Missing {
+			continue
+		}
+		info, ok := a.registry.Lookup(selection.Ref)
+		if !ok || info.Disabled {
+			return llm.ModelRef{}, false, nil
+		}
+		return selection.Ref, true, nil
+	}
+	return llm.ModelRef{}, false, nil
+}
+
+func (a voiceModels) Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error) {
+	return a.registry.Complete(ctx, ref, request)
+}
+
+type voiceJobs struct{ queue *job.Queue }
+
+func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
+	id, err := a.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindAnalyzeVoice, UserID: request.UserID, WriteModel: request.WriteModel,
+	})
+	var active *job.ErrAlreadyInProgress
+	if errors.As(err, &active) {
+		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	return id, err
+}
+
+func (a voiceJobs) ActiveForUserKind(ctx context.Context, userID, kind string) (*voice.ActiveJob, error) {
+	found, err := a.queue.ActiveForUserKind(ctx, userID, kind)
+	if err != nil || found == nil {
+		return nil, err
+	}
+	return &voice.ActiveJob{ID: found.ID}, nil
 }
 
 type postJobFinder struct {

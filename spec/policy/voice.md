@@ -1,0 +1,59 @@
+# Policy — Voice profiles
+
+Canonical rules currently enforced by the backend. Source: [plan/03](../plan/03.voice-profile-learning.md), backend
+built by job 08. The `/voice` screen and editor empty-profile warning land in job 09.
+
+## Ownership and persistence
+
+- Each account owns at most one `voice_profiles` row and any number of `voice_samples`. Every store query and RPC is
+  scoped by the authenticated user; voice requests never accept a user id. A foreign sample id is indistinguishable
+  from an unknown one.
+- Profile rows are created lazily. `styleguide` is machine-generated but user-editable. `rules` is user-owned;
+  analysis never changes it. Editing the profile updates both values exactly as supplied.
+- A sample body is private server-side source material. RPCs return only id, label, Unicode character count, and
+  creation time; they never return the body.
+
+## Samples and analysis
+
+- A body is trimmed and must contain at least `SampleMinChars` (200) Unicode characters. Rejection includes the
+  measured count. An empty label falls back to the first `LabelFallbackChars` (20) characters.
+- Before storing a sample, the server requires that the requested model exactly match the account's current enabled
+  analyze-stage selection. With no usable selection, nothing is stored or enqueued.
+- Adding a sample stores it and enqueues `analyze_voice`. If that account already has an active analysis, the sample
+  remains stored and the existing durable job id is returned. Deleting a sample re-enqueues while samples remain;
+  deleting the last sample leaves the existing styleguide untouched.
+- Sample insertion/deletion advances `corpus_version` in the same SQLite transaction. Analysis saves only when that
+  version still matches; if the corpus changed during a provider call, the same job repeats against the newest full
+  snapshot. Deleting the last sample during a call makes the job finish without publishing the stale result.
+- A non-conflict queue failure is compensated before the RPC returns: a just-added sample is removed, or a
+  just-deleted sample is restored. Callers therefore do not see an error paired with a silently committed mutation.
+- Analysis loads the account's full current corpus, with explicit label separators, and runs through the shared job
+  queue. Progress is `analyze 0/1 → 1/1`. The selected model is recorded in the job's `write_model` field.
+- The prompt requires nine ordered Korean sections: 종결어미 distribution first; sentence length; sentences per
+  paragraph; connectives/adverbs; verbal tics; emoji/interjections/ellipses; metaphors/numerals; expressions the
+  author never uses; first-person form. A result whose first section is not 종결어미, or which lacks a “never uses”
+  section, fails instead of replacing the profile.
+- Successful analysis replaces `styleguide` wholesale and preserves `rules`. Provider failures flow through the job
+  queue's normal user-facing error policy.
+
+## Published behavior
+
+- `ProfileForPrompt(userID)` publishes `styleguide`, then up to `ExcerptCount` (3) most-recent sample excerpts of at
+  most `ExcerptChars` (1500) characters each, then `rules`. Generation and revision consumers must inject those parts
+  in exactly that order, with rules last.
+- Its `empty` value means there is neither a styleguide nor a sample. Rules alone do not make the learned voice
+  profile non-empty.
+- `AppendRule` trims one line, de-duplicates an exact existing line, appends with a newline, and never changes the
+  styleguide. Profile writes and rule appends are serialized in the single API process so concurrent revision flows
+  cannot lose a line.
+- `GetVoiceProfile.active_job_id` exposes the account's queued/running analysis so clients can resume polling after
+  navigation or reload.
+
+## Owned constants
+
+| Constant | Value |
+|---|---:|
+| `SampleMinChars` | 200 |
+| `ExcerptCount` | 3 |
+| `ExcerptChars` | 1500 |
+| `LabelFallbackChars` | 20 |

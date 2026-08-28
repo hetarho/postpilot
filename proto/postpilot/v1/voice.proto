@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+import "postpilot/v1/provider.proto";
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// Every procedure is scoped by the authenticated context. No request carries a user id.
+service VoiceService {
+  rpc GetVoiceProfile(GetVoiceProfileRequest) returns (GetVoiceProfileResponse) {}
+  rpc UpdateVoiceProfile(UpdateVoiceProfileRequest) returns (UpdateVoiceProfileResponse) {}
+  rpc AddVoiceSample(AddVoiceSampleRequest) returns (AddVoiceSampleResponse) {}
+  rpc DeleteVoiceSample(DeleteVoiceSampleRequest) returns (DeleteVoiceSampleResponse) {}
+}
+
+message VoiceProfile {
+  string styleguide = 1;
+  string rules = 2;
+  string updated_at = 3;
+  repeated VoiceSample samples = 4;
+  string active_job_id = 5;
+}
+
+message VoiceSample {
+  string id = 1;
+  string label = 2;
+  int32 chars = 3;
+  string created_at = 4;
+}
+
+message GetVoiceProfileRequest {}
+message GetVoiceProfileResponse { VoiceProfile profile = 1; }
+
+message UpdateVoiceProfileRequest {
+  string styleguide = 1;
+  string rules = 2;
+}
+message UpdateVoiceProfileResponse { VoiceProfile profile = 1; }
+
+message AddVoiceSampleRequest {
+  string label = 1;
+  string body = 2;
+  // Verified against the acting user's current enabled analyze selection before the
+  // sample is stored. The job records the exact ref it runs with.
+  ModelRef model = 3;
+}
+message AddVoiceSampleResponse {
+  VoiceSample sample = 1;
+  string job_id = 2;
+}
+
+message DeleteVoiceSampleRequest { string sample_id = 1; }
+message DeleteVoiceSampleResponse { string job_id = 1; }
