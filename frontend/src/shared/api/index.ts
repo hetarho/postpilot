@@ -3,6 +3,7 @@ export {
   authClient,
   healthClient,
   providerClient,
+  generationClient,
   credentialedFetch,
   unauthenticatedInterceptor,
 } from './transport'
@@ -19,19 +20,28 @@ export {
 export type { User, GetMeResponse } from './gen/postpilot/v1/auth_pb'
 export { HealthService, PingResponseSchema } from './gen/postpilot/v1/health_pb'
 export type { PingResponse } from './gen/postpilot/v1/health_pb'
-export { PostService } from './gen/postpilot/v1/post_pb'
+export { GenerationService, PostService } from './gen/postpilot/v1/post_pb'
 export {
   ConfirmUploadResponseSchema,
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
   GetPostResponseSchema,
+  GetGenerationResponseSchema,
+  GenerationJobSchema,
   ImageSchema,
   ListPostsResponseSchema,
   PostSchema,
   PostSummarySchema,
   SavePostDraftResponseSchema,
 } from './gen/postpilot/v1/post_pb'
-export type { GetPostResponse, Image, Post, PostSummary } from './gen/postpilot/v1/post_pb'
+export type {
+  GenerationJob as ProtoGenerationJob,
+  GetGenerationResponse,
+  GetPostResponse,
+  Image,
+  Post,
+  PostSummary,
+} from './gen/postpilot/v1/post_pb'
 export { ProviderService, Stage } from './gen/postpilot/v1/provider_pb'
 export {
   GetSelectionsResponseSchema,

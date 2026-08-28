@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -74,6 +75,7 @@ func (h *Handler) ListPosts(ctx context.Context, _ *connect.Request[postpilotv1.
 			Title:     s.Title,
 			Status:    s.Status,
 			UpdatedAt: s.UpdatedAt.UTC().Format(timeLayout),
+			ActiveJob: toProtoActiveJob(s.ActiveJob),
 		})
 	}
 	return connect.NewResponse(&postpilotv1.ListPostsResponse{Posts: posts}), nil
@@ -173,7 +175,29 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		Images:    images,
 		CreatedAt: p.CreatedAt.UTC().Format(timeLayout),
 		UpdatedAt: p.UpdatedAt.UTC().Format(timeLayout),
+		ActiveJob: toProtoActiveJob(p.ActiveJob),
 	}
+}
+
+func toProtoActiveJob(found *post.ActiveJob) *postpilotv1.GenerationJob {
+	if found == nil {
+		return nil
+	}
+	return &postpilotv1.GenerationJob{
+		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
+		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),
+		Error: found.Error, PostSlug: found.PostSlug, ObserveModel: toProtoModelRef(found.ObserveModel),
+		WriteModel: toProtoModelRef(found.WriteModel), CreatedAt: found.CreatedAt.UTC().Format(timeLayout),
+		UpdatedAt: found.UpdatedAt.UTC().Format(timeLayout),
+	}
+}
+
+func toProtoModelRef(value string) *postpilotv1.ModelRef {
+	providerID, modelID, ok := strings.Cut(value, "/")
+	if !ok || providerID == "" || modelID == "" {
+		return nil
+	}
+	return &postpilotv1.ModelRef{ProviderId: providerID, ModelId: modelID}
 }
 
 // toProtoImage deliberately omits r2_key: the client addresses a photo by id and reads

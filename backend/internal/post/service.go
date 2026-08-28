@@ -19,6 +19,7 @@ type Service struct {
 	putTTL   time.Duration
 	getTTL   time.Duration
 	maxBytes int64
+	jobs     ActiveJobFinder
 
 	// now and newID are seams for tests in this package, not configuration.
 	now   func() time.Time
@@ -27,8 +28,8 @@ type Service struct {
 
 // NewService wires the context with its store, its object storage, the presigned URL
 // lifetimes, and the largest object it will accept as a photo.
-func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, maxBytes int64) *Service {
-	return &Service{
+func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, maxBytes int64, jobs ...ActiveJobFinder) *Service {
+	svc := &Service{
 		store:    store,
 		blobs:    blobs,
 		putTTL:   putTTL,
@@ -37,6 +38,10 @@ func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, ma
 		now:      time.Now,
 		newID:    newObjectID,
 	}
+	if len(jobs) > 0 {
+		svc.jobs = jobs[0]
+	}
+	return svc
 }
 
 // SaveDraft creates the post when slug is empty, otherwise updates the caller's own.
@@ -141,6 +146,12 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 	}
 
 	found.Images = images
+	if s.jobs != nil {
+		found.ActiveJob, err = s.jobs.ActiveForPost(ctx, slug)
+		if err != nil {
+			return Post{}, fmt.Errorf("load active job: %w", err)
+		}
+	}
 	return found, nil
 }
 
@@ -149,6 +160,14 @@ func (s *Service) List(ctx context.Context, userID string) ([]Summary, error) {
 	summaries, err := s.store.ListPosts(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list posts: %w", err)
+	}
+	if s.jobs != nil {
+		for i := range summaries {
+			summaries[i].ActiveJob, err = s.jobs.ActiveForPost(ctx, summaries[i].Slug)
+			if err != nil {
+				return nil, fmt.Errorf("load active job for %s: %w", summaries[i].Slug, err)
+			}
+		}
 	}
 	return summaries, nil
 }

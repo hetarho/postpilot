@@ -58,6 +58,9 @@ export const UPLOAD_CONVERT_CONCURRENCY = 2
  *  while the dropdowns stay instant. */
 export const MODEL_CATALOG_STALE_MS = 5 * 60_000
 
+/** Generation jobs are durable on the server; polling only observes their state. */
+export const POLL_INTERVAL_MS = 2_000
+
 /** How long the HEIC decoder worker stays alive after its last file. Its WASM heap does
  *  not shrink after a 12 MP decode, so it is not kept for a whole session; the chunk is
  *  in the browser cache, so bringing it back for the next batch is cheap. */

@@ -1,4 +1,5 @@
 import type { PostImage } from '@/entities/image/@x/post'
+import type { GenerationJob } from '@/entities/generation-job/@x/post'
 
 /** A post as the app talks about it.
  *
@@ -13,6 +14,7 @@ export interface PostDraft {
   status: string
   updatedAt: string
   images: PostImage[]
+  activeJob: GenerationJob | undefined
 }
 
 /** One row of the post list (PRD F-8). */
@@ -21,6 +23,7 @@ export interface PostListItem {
   title: string
   status: string
   updatedAt: string
+  activeJob: GenerationJob | undefined
 }
 
 /** Shown in place of a title nobody has typed yet. A list of blank rows would be

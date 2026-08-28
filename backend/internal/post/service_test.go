@@ -178,6 +178,35 @@ func TestListIsScopedToTheCaller(t *testing.T) {
 	}
 }
 
+type fakeActiveJobs map[string]*ActiveJob
+
+func (f fakeActiveJobs) ActiveForPost(_ context.Context, slug string) (*ActiveJob, error) {
+	return f[slug], nil
+}
+
+func TestGetAndListPublishTheActiveJobThroughThePort(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	created := mustCreatePost(t, svc, alice, "Generating")
+	svc.jobs = fakeActiveJobs{
+		created.Slug: {ID: "job-1", Status: "running", Stage: "observe", ProgressDone: 2, ProgressTotal: 4},
+	}
+
+	found, err := svc.Get(context.Background(), alice, created.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found.ActiveJob == nil || found.ActiveJob.ID != "job-1" {
+		t.Fatalf("Get active job = %+v", found.ActiveJob)
+	}
+	listed, err := svc.List(context.Background(), alice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 1 || listed[0].ActiveJob == nil || listed[0].ActiveJob.ID != "job-1" {
+		t.Fatalf("List active job = %+v", listed)
+	}
+}
+
 // --- uploads ---
 
 // TestUploadHandshake is job 03 A1 + A2: no bytes touch the API, and the image row

@@ -37,6 +37,12 @@ type ObjectStore interface {
 	List(ctx context.Context, prefix string) ([]Object, error)
 }
 
+// ActiveJobFinder is the one published behavior post reads from the job context. The
+// post store never reaches across the context boundary to generation_jobs.
+type ActiveJobFinder interface {
+	ActiveForPost(ctx context.Context, slug string) (*ActiveJob, error)
+}
+
 // Store is the persistence this context needs.
 //
 // Ownership is a property of the query, not of a check the caller must remember: the

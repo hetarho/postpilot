@@ -10,6 +10,7 @@ import { API_URL } from '@/shared/config'
 import { emitUnauthenticated } from './auth-events'
 import { AuthService } from './gen/postpilot/v1/auth_pb'
 import { HealthService } from './gen/postpilot/v1/health_pb'
+import { GenerationService } from './gen/postpilot/v1/post_pb'
 import { ProviderService } from './gen/postpilot/v1/provider_pb'
 
 const baseUrl = import.meta.env.DEV ? '/api' : API_URL
@@ -36,8 +37,7 @@ export const unauthenticatedInterceptor: Interceptor = (next) => async (req) => 
   } catch (err) {
     // ConnectError.from normalizes anything (network failures included) without throwing.
     const error = ConnectError.from(err)
-    const isLogin =
-      req.service.typeName === AuthService.typeName && req.method.name === 'Login'
+    const isLogin = req.service.typeName === AuthService.typeName && req.method.name === 'Login'
     if (error.code === Code.Unauthenticated && !isLogin) emitUnauthenticated()
     throw error
   }
@@ -61,3 +61,6 @@ export const healthClient = createClient(HealthService, transport)
 
 /** Typed client for postpilot.v1.ProviderService. */
 export const providerClient = createClient(ProviderService, transport)
+
+/** Typed client for durable generation job reads. */
+export const generationClient = createClient(GenerationService, transport)

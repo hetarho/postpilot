@@ -2,6 +2,7 @@
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { toPostImage } from '@/entities/image/@x/post'
+import { toGenerationJob } from '@/entities/generation-job/@x/post'
 import { PostService, type Post, type PostSummary } from '@/shared/api'
 import type { PostDraft, PostListItem } from '../model/types'
 
@@ -13,6 +14,7 @@ export function toPostDraft(post: Post): PostDraft {
     status: post.status,
     updatedAt: post.updatedAt,
     images: post.images.map(toPostImage),
+    activeJob: post.activeJob ? toGenerationJob(post.activeJob) : undefined,
   }
 }
 
@@ -22,6 +24,7 @@ export function toPostListItem(summary: PostSummary): PostListItem {
     title: summary.title,
     status: summary.status,
     updatedAt: summary.updatedAt,
+    activeJob: summary.activeJob ? toGenerationJob(summary.activeJob) : undefined,
   }
 }
 

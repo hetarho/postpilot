@@ -24,6 +24,9 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/health"
+	"github.com/postpilot/backend/internal/job"
+	jobrpc "github.com/postpilot/backend/internal/job/rpc"
+	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/llm/openaicompat"
 	"github.com/postpilot/backend/internal/platform/config"
@@ -103,6 +106,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	jobQueue := job.New(jobstore.New(handle.Writer, handle.Reader), config.WorkerPollInterval)
+	if n, err := jobQueue.SweepRunning(ctx); err != nil {
+		slog.Error("running job sweep failed", "err", err)
+		os.Exit(1)
+	} else if n > 0 {
+		slog.Info("swept interrupted jobs", "count", n)
+	}
+
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), cfg.SessionTTL)
 	if n, err := authSvc.SweepExpired(ctx); err != nil {
 		// Stale rows are harmless — they fail the expiry check on lookup anyway — so a
@@ -138,6 +149,7 @@ func main() {
 		cfg.PresignPutTTL,
 		cfg.PresignGetTTL,
 		cfg.MaxImageBytes,
+		postJobFinder{queue: jobQueue},
 	)
 
 	providerSvc := provider.NewService(providerstore.New(handle.Writer, handle.Reader), registry)
@@ -157,6 +169,9 @@ func main() {
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewProviderServiceHandler(providerrpc.NewHandler(providerSvc), opts...)
 			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewGenerationServiceHandler(jobrpc.NewHandler(jobQueue), opts...)
+			},
 		},
 	})
 
@@ -169,6 +184,12 @@ func main() {
 		cfg.OrphanMinAge,
 	)
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
+
+	workerCtx, cancelWorkers := context.WithCancel(ctx)
+	defer cancelWorkers()
+	for range config.WorkerConcurrency {
+		go jobQueue.Run(workerCtx)
+	}
 
 	// A serve error (e.g. the port is already bound) must NOT exit 0 — an orchestrator
 	// would read a clean exit as success and never restart us. Surface it on a channel
@@ -188,10 +209,32 @@ func main() {
 		slog.Error("listen failed", "err", err)
 		os.Exit(1)
 	}
+	cancelWorkers()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown failed", "err", err)
 	}
+}
+
+type postJobFinder struct {
+	queue *job.Queue
+}
+
+func (a postJobFinder) ActiveForPost(ctx context.Context, slug string) (*post.ActiveJob, error) {
+	found, err := a.queue.ActiveForPost(ctx, slug)
+	if err != nil || found == nil {
+		return nil, err
+	}
+	postSlug := ""
+	if found.PostSlug != nil {
+		postSlug = *found.PostSlug
+	}
+	return &post.ActiveJob{
+		ID: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
+		ProgressDone: found.ProgressDone, ProgressTotal: found.ProgressTotal, Error: found.Error,
+		PostSlug: postSlug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt,
+	}, nil
 }

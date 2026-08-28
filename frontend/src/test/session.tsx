@@ -8,9 +8,15 @@ import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { TransportProvider } from '@connectrpc/connect-query'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { create } from '@bufbuild/protobuf'
-import { AuthService, GetMeResponseSchema, LoginResponseSchema, LogoutResponseSchema } from '@/shared/api'
+import {
+  AuthService,
+  GetMeResponseSchema,
+  LoginResponseSchema,
+  LogoutResponseSchema,
+} from '@/shared/api'
 import { type FakePostsOptions, registerPostService } from './posts'
 import { type FakeProvidersOptions, registerProviderService } from './providers'
+import { type FakeJobsOptions, registerGenerationService } from './jobs'
 
 export interface FakeAuthOptions {
   /** The account GetMe reports. `undefined` makes GetMe answer 401, like a real server
@@ -28,6 +34,8 @@ export interface FakeAuthOptions {
   posts?: FakePostsOptions
   /** The ProviderService (model catalog). Present by default with an empty registry. */
   providers?: FakeProvidersOptions
+  /** The durable job service used by pages that mount active-job polling. */
+  jobs?: FakeJobsOptions
 }
 
 /** A fake backend plus the controls a test needs over it. */
@@ -63,6 +71,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     })
     registerPostService(router, { calls, ...options.posts })
     registerProviderService(router, { calls, ...options.providers })
+    registerGenerationService(router, { calls, ...options.jobs })
   })
 
   return {
@@ -90,10 +99,7 @@ export function createTestQueryClient() {
 }
 
 /** Provider order mirrors App.tsx: TransportProvider outside QueryClientProvider. */
-export function withProviders(
-  transport: FakeAuthBackend['transport'],
-  queryClient: QueryClient,
-) {
+export function withProviders(transport: FakeAuthBackend['transport'], queryClient: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <TransportProvider transport={transport}>

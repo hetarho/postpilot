@@ -18,8 +18,10 @@ import {
   PostSchema,
   PostService,
   PostSummarySchema,
+  type ProtoGenerationJob,
   SavePostDraftResponseSchema,
 } from '@/shared/api'
+import { type FakeGenerationJobRow, toFakeProto } from './jobs'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -38,6 +40,7 @@ export interface FakePostRow {
   status?: string
   updatedAt?: string
   images?: FakeImageRow[]
+  activeJob?: FakeGenerationJobRow
 }
 
 export interface FakePostsOptions {
@@ -64,7 +67,15 @@ const DEFAULT_UPDATED_AT = '2026-08-28T12:00:00Z'
 /** The storage host presigned URLs point at — anything but the API's own origin. */
 export const FAKE_STORAGE_ORIGIN = 'https://storage.test'
 
-type Row = Omit<Required<FakePostRow>, 'images'> & { images: Image[] }
+type Row = {
+  slug: string
+  title: string
+  memo: string
+  status: string
+  updatedAt: string
+  images: Image[]
+  activeJob?: ProtoGenerationJob
+}
 
 export function registerPostService(router: ConnectRouter, options: FakePostsOptions = {}) {
   const { rpc } = router
@@ -89,9 +100,11 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
             width: image.width ?? 1024,
             height: image.height ?? 768,
             bytes: 200_000n,
-            viewUrl: image.viewUrl ?? `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=1`,
+            viewUrl:
+              image.viewUrl ?? `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=1`,
           }),
         ),
+        activeJob: row.activeJob ? toFakeProto(row.activeJob) : undefined,
       },
     ]),
   )
@@ -114,7 +127,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       images: row.images.map((image) =>
         create(ImageSchema, {
           ...image,
-          viewUrl: image.viewUrl || `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=get`,
+          viewUrl:
+            image.viewUrl || `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=get`,
         }),
       ),
     })
@@ -154,6 +168,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       status: rows.get(slug)?.status ?? 'draft',
       updatedAt: DEFAULT_UPDATED_AT,
       images: rows.get(slug)?.images ?? [],
+      activeJob: rows.get(slug)?.activeJob,
     }
     rows.set(slug, row)
     return create(SavePostDraftResponseSchema, { post: toProto(row) })

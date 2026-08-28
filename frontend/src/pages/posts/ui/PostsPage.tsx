@@ -46,7 +46,7 @@ export function PostsPage() {
               className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center gap-3 px-2 py-3"
             >
               <span className="min-w-0 flex-1 truncate text-sm">{displayTitle(post)}</span>
-              <Badge>{postStatusLabel(post.status)}</Badge>
+              <Badge>{post.activeJob ? '생성 중' : postStatusLabel(post.status)}</Badge>
               <time dateTime={post.updatedAt} className="text-content-tertiary shrink-0 text-xs">
                 {formatRelativeTime(post.updatedAt)}
               </time>

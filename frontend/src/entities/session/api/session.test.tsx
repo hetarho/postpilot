@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import { AuthService, GetMeResponseSchema } from '@/shared/api'
@@ -80,7 +80,7 @@ describe('session cache', () => {
       await result.current.mutateAsync({}).catch(() => {})
     })
 
-    expect(result.current.isError).toBe(true)
+    await waitFor(() => expect(result.current.isError).toBe(true))
     expect(queryClient.getQueryData(getMeQueryKey(transport))).toBeDefined()
   })
 })

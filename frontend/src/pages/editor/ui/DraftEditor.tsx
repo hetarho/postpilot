@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import type { PostDraft } from '@/entities/post'
 import { SaveStatus, peekPendingDraft, useAutosave } from '@/features/save-draft'
@@ -10,11 +10,12 @@ interface DraftEditorProps {
   /** The saved post being edited, or undefined for a draft the server has not created
    *  yet (`/posts/new`). */
   post?: PostDraft
+  status?: ReactNode
 }
 
 /** Title + memo, autosaved. The screen the whole input side of the product hangs off
  *  (PRD F-2); photos, generation, revision and export all extend it in later plans. */
-export function DraftEditor({ post }: DraftEditorProps) {
+export function DraftEditor({ post, status }: DraftEditorProps) {
   const navigate = useNavigate()
   const titleRef = useRef<HTMLInputElement>(null)
   const memoRef = useRef<HTMLTextAreaElement>(null)
@@ -76,6 +77,8 @@ export function DraftEditor({ post }: DraftEditorProps) {
         </Link>
         <SaveStatus state={autosave.state} />
       </div>
+
+      {status && <div className="mt-4">{status}</div>}
 
       <FieldLabel htmlFor="post-title" className="sr-only">
         제목

@@ -51,6 +51,42 @@ describe('opening a post', () => {
     expect(screen.getByLabelText('메모')).toHaveValue('첫날은 비')
   })
 
+  it('resumes polling the active job exposed by the post', async () => {
+    const calls: string[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            activeJob: {
+              id: 'job-1',
+              status: 'running',
+              stage: 'observe',
+              progressDone: 2,
+              progressTotal: 4,
+            },
+          },
+        ],
+      },
+      jobs: {
+        jobs: [
+          {
+            id: 'job-1',
+            status: 'running',
+            stage: 'observe',
+            progressDone: 2,
+            progressTotal: 4,
+          },
+        ],
+      },
+    })
+
+    expect(await screen.findByText('사진 2/4 관찰됨')).toBeInTheDocument()
+    expect(calls).toContain('GetGeneration')
+  })
+
   // Job 05 A6 (plan 02 AC11, photos half): the strip is rebuilt from the view URLs.
   it('restores its photos in the strip from their view URLs', async () => {
     renderAppAt('/posts/20260820-jeju', {
@@ -60,7 +96,11 @@ describe('opening a post', () => {
           {
             slug: '20260820-jeju',
             images: [
-              { id: 'img-1', filename: 'IMG_1.jpg', viewUrl: `${FAKE_STORAGE_ORIGIN}/posts/20260820-jeju/img-1.jpg?sig` },
+              {
+                id: 'img-1',
+                filename: 'IMG_1.jpg',
+                viewUrl: `${FAKE_STORAGE_ORIGIN}/posts/20260820-jeju/img-1.jpg?sig`,
+              },
               { id: 'img-2', filename: 'IMG_2.jpg' },
             ],
           },
@@ -97,7 +137,9 @@ describe('opening a post', () => {
 
     await user.click(await screen.findByRole('button', { name: 'IMG_1.jpg 삭제' }))
 
-    await waitFor(() => expect(screen.queryByRole('img', { name: 'IMG_1.jpg' })).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByRole('img', { name: 'IMG_1.jpg' })).not.toBeInTheDocument(),
+    )
     expect(screen.getByRole('img', { name: 'IMG_2.jpg' })).toBeInTheDocument()
     expect(calls).toContain('DeleteImage')
   })

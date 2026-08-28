@@ -40,6 +40,20 @@ describe('PostsPage', () => {
     expect(screen.getByRole('link', { name: /부산/ })).toHaveTextContent('검토')
   })
 
+  it('marks a post with an active job as generating', async () => {
+    renderList({
+      posts: [
+        {
+          slug: '20260828-jeju',
+          title: '제주 3일',
+          activeJob: { id: 'job-1', status: 'running', stage: 'observe' },
+        },
+      ],
+    })
+
+    expect(await screen.findByRole('link', { name: /제주 3일/ })).toHaveTextContent('생성 중')
+  })
+
   it('labels a post nobody has titled yet', async () => {
     renderList({ posts: [{ slug: '20260828-untitled', title: '' }] })
 

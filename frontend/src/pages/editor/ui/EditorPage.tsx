@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
-import { type PostLoadFailure, usePost } from '@/entities/post'
+import { useTransport } from '@connectrpc/connect-query'
+import { FailureNotice, ProgressLine, useJob, type GenerationJob } from '@/entities/generation-job'
+import { getPostQueryKey, type PostLoadFailure, usePost } from '@/entities/post'
 import { Button } from '@/shared/ui'
 import { DraftEditor } from './DraftEditor'
 
@@ -25,7 +27,26 @@ export function PostEditorPage() {
 
   // Keyed by slug: this route stays mounted when the param changes, so opening another
   // post from the list has to start a new editor rather than keep the previous text.
-  return <DraftEditor key={slug} post={post} />
+  return (
+    <DraftEditor
+      key={slug}
+      post={post}
+      status={post.activeJob ? <ActiveJobStatus initial={post.activeJob} slug={slug} /> : undefined}
+    />
+  )
+}
+
+function ActiveJobStatus({ initial, slug }: { initial: GenerationJob; slug: string }) {
+  const transport = useTransport()
+  const invalidationKeys = [getPostQueryKey(transport, slug)]
+  const { job, isError, refetch } = useJob(initial.id, invalidationKeys)
+  const current = job ?? initial
+
+  if (isError) {
+    return <FailureNotice error="작업 상태를 확인하지 못했어요." onRetry={refetch} />
+  }
+  if (current.status === 'failed') return <FailureNotice error={current.error} />
+  return <ProgressLine job={current} />
 }
 
 const FAILURE_MESSAGES: Record<PostLoadFailure, string> = {

@@ -23,6 +23,8 @@ const _ = connect.IsAtLeastVersion1_13_0
 const (
 	// PostServiceName is the fully-qualified name of the PostService service.
 	PostServiceName = "postpilot.v1.PostService"
+	// GenerationServiceName is the fully-qualified name of the GenerationService service.
+	GenerationServiceName = "postpilot.v1.GenerationService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -48,6 +50,9 @@ const (
 	PostServiceConfirmUploadProcedure = "/postpilot.v1.PostService/ConfirmUpload"
 	// PostServiceDeleteImageProcedure is the fully-qualified name of the PostService's DeleteImage RPC.
 	PostServiceDeleteImageProcedure = "/postpilot.v1.PostService/DeleteImage"
+	// GenerationServiceGetGenerationProcedure is the fully-qualified name of the GenerationService's
+	// GetGeneration RPC.
+	GenerationServiceGetGenerationProcedure = "/postpilot.v1.GenerationService/GetGeneration"
 )
 
 // PostServiceClient is a client for the postpilot.v1.PostService service.
@@ -254,4 +259,74 @@ func (UnimplementedPostServiceHandler) ConfirmUpload(context.Context, *connect.R
 
 func (UnimplementedPostServiceHandler) DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.DeleteImage is not implemented"))
+}
+
+// GenerationServiceClient is a client for the postpilot.v1.GenerationService service.
+type GenerationServiceClient interface {
+	GetGeneration(context.Context, *connect.Request[v1.GetGenerationRequest]) (*connect.Response[v1.GetGenerationResponse], error)
+}
+
+// NewGenerationServiceClient constructs a client for the postpilot.v1.GenerationService service. By
+// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
+// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
+// connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewGenerationServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) GenerationServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	generationServiceMethods := v1.File_postpilot_v1_post_proto.Services().ByName("GenerationService").Methods()
+	return &generationServiceClient{
+		getGeneration: connect.NewClient[v1.GetGenerationRequest, v1.GetGenerationResponse](
+			httpClient,
+			baseURL+GenerationServiceGetGenerationProcedure,
+			connect.WithSchema(generationServiceMethods.ByName("GetGeneration")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// generationServiceClient implements GenerationServiceClient.
+type generationServiceClient struct {
+	getGeneration *connect.Client[v1.GetGenerationRequest, v1.GetGenerationResponse]
+}
+
+// GetGeneration calls postpilot.v1.GenerationService.GetGeneration.
+func (c *generationServiceClient) GetGeneration(ctx context.Context, req *connect.Request[v1.GetGenerationRequest]) (*connect.Response[v1.GetGenerationResponse], error) {
+	return c.getGeneration.CallUnary(ctx, req)
+}
+
+// GenerationServiceHandler is an implementation of the postpilot.v1.GenerationService service.
+type GenerationServiceHandler interface {
+	GetGeneration(context.Context, *connect.Request[v1.GetGenerationRequest]) (*connect.Response[v1.GetGenerationResponse], error)
+}
+
+// NewGenerationServiceHandler builds an HTTP handler from the service implementation. It returns
+// the path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewGenerationServiceHandler(svc GenerationServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	generationServiceMethods := v1.File_postpilot_v1_post_proto.Services().ByName("GenerationService").Methods()
+	generationServiceGetGenerationHandler := connect.NewUnaryHandler(
+		GenerationServiceGetGenerationProcedure,
+		svc.GetGeneration,
+		connect.WithSchema(generationServiceMethods.ByName("GetGeneration")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/postpilot.v1.GenerationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case GenerationServiceGetGenerationProcedure:
+			generationServiceGetGenerationHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedGenerationServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedGenerationServiceHandler struct{}
+
+func (UnimplementedGenerationServiceHandler) GetGeneration(context.Context, *connect.Request[v1.GetGenerationRequest]) (*connect.Response[v1.GetGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.GenerationService.GetGeneration is not implemented"))
 }

@@ -47,6 +47,13 @@ const llmStageTimeout = 5 * time.Minute
 // analysis) may pass its own.
 const llmMaxTokensDefault = 4096
 
+// The queue is deliberately single-consumer at this scale: SQLite has one writer and
+// parallel provider calls would only make rate limits and ordering less predictable.
+const WorkerConcurrency = 1
+
+// WorkerPollInterval is the fallback for a missed in-process wake signal.
+const WorkerPollInterval = time.Second
+
 // Config is the fully-resolved process configuration.
 type Config struct {
 	// Port the HTTP server listens on.

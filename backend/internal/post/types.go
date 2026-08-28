@@ -55,7 +55,8 @@ type Post struct {
 	UpdatedAt time.Time
 
 	// Images is populated by Get, not by the store's post lookup.
-	Images []Image
+	Images    []Image
+	ActiveJob *ActiveJob
 }
 
 // Summary is a row of the post list.
@@ -64,6 +65,24 @@ type Summary struct {
 	Title     string
 	Status    string
 	UpdatedAt time.Time
+	ActiveJob *ActiveJob
+}
+
+// ActiveJob is the snapshot the post context publishes on read models. It is owned by
+// the consumer so the post domain does not depend on job persistence or transport.
+type ActiveJob struct {
+	ID            string
+	Kind          string
+	Status        string
+	Stage         string
+	ProgressDone  int
+	ProgressTotal int
+	Error         string
+	PostSlug      string
+	ObserveModel  string
+	WriteModel    string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // Image is a photo attached to a post. The bytes live in object storage; this is the
