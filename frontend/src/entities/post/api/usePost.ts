@@ -36,7 +36,15 @@ export function usePost(slug: string): {
   const { data, isPending, error, refetch } = useQuery(
     PostService.method.getPost,
     { slug },
-    { retry: false },
+    {
+      retry: false,
+      // A cached post may still be fresh while its image capabilities are not. Draft
+      // saves deliberately preserve the cached image list, so they also keep its
+      // short-lived presigned URLs (or the blob URL handed off after an upload) while
+      // advancing React Query's dataUpdatedAt. Always ask GetPost for fresh URLs when
+      // the editor is entered; cached data still paints the first render immediately.
+      refetchOnMount: 'always',
+    },
   )
 
   // Memoised because the editor treats the post object as the identity of one editing
