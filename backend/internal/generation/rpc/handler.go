@@ -36,6 +36,21 @@ func (h *Handler) StartGeneration(ctx context.Context, req *connect.Request[post
 	return connect.NewResponse(&postpilotv1.StartGenerationResponse{JobId: id}), nil
 }
 
+func (h *Handler) StartRevision(ctx context.Context, req *connect.Request[postpilotv1.StartRevisionRequest]) (*connect.Response[postpilotv1.StartRevisionResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := h.service.StartRevision(ctx, generation.StartRevisionRequest{
+		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Instruction: req.Msg.GetInstruction(),
+		SaveAsRule: req.Msg.GetSaveAsRule(), WriteModel: modelRefValue(req.Msg.GetWriteModel()),
+	})
+	if err != nil {
+		return nil, toConnectError("start revision", err)
+	}
+	return connect.NewResponse(&postpilotv1.StartRevisionResponse{JobId: id}), nil
+}
+
 func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpilotv1.GetGenerationRequest]) (*connect.Response[postpilotv1.GetGenerationResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -65,6 +80,10 @@ func toConnectError(op string, err error) error {
 		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
 	case errors.Is(err, generation.ErrWriteModelRequired), errors.Is(err, generation.ErrObserveModelRequired):
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
+	case errors.Is(err, generation.ErrRevisionContentRequired):
+		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
+	case errors.Is(err, generation.ErrRevisionInstructionRequired), errors.Is(err, generation.ErrRevisionInstructionTooLong):
+		return connect.NewError(connect.CodeInvalidArgument, errors.New(err.Error()))
 	case errors.As(err, &active):
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New("generation already in progress: "+active.ActiveID))
 	default:

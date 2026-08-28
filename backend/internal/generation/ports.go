@@ -20,6 +20,10 @@ type Profiles interface {
 	ProfileForPrompt(ctx context.Context, userID string) (Profile, error)
 }
 
+type RuleWriter interface {
+	AppendRule(ctx context.Context, userID, line string) error
+}
+
 type LLM interface {
 	Resolve(ref llm.ModelRef) (llm.ModelInfo, bool)
 	Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error)
@@ -27,6 +31,7 @@ type LLM interface {
 
 type Jobs interface {
 	EnqueueGeneration(ctx context.Context, request StartRequest) (string, error)
+	EnqueueRevision(ctx context.Context, request StartRevisionRequest, payload []byte) (string, error)
 	GetGeneration(ctx context.Context, id, userID string) (*JobSummary, error)
 }
 

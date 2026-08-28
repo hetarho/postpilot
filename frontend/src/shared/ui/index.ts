@@ -1,6 +1,7 @@
 export { Badge } from './badge/Badge'
 export { Button } from './button/Button'
 export { buttonStyles } from './button/buttonStyles'
+export { Checkbox } from './checkbox/Checkbox'
 export { FieldLabel } from './field/FieldLabel'
 export { FieldMessage } from './field/FieldMessage'
 export { Textarea } from './field/Textarea'

@@ -26,6 +26,7 @@ service PostService {
 
 service GenerationService {
   rpc StartGeneration(StartGenerationRequest) returns (StartGenerationResponse) {}
+  rpc StartRevision(StartRevisionRequest) returns (StartRevisionResponse) {}
   rpc GetGeneration(GetGenerationRequest) returns (GetGenerationResponse) {}
 }
 
@@ -132,6 +133,17 @@ message StartGenerationRequest {
 }
 
 message StartGenerationResponse {
+  string job_id = 1;
+}
+
+message StartRevisionRequest {
+  string post_slug = 1;
+  string instruction = 2;
+  bool save_as_rule = 3;
+  ModelRef write_model = 4;
+}
+
+message StartRevisionResponse {
   string job_id = 1;
 }
 

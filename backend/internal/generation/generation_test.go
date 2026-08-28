@@ -127,7 +127,7 @@ func TestObserveBatchesIncrementallyAndMatchesFilenames(t *testing.T) {
 		items = append(items, `{"file":"NOT_ATTACHED.jpg","scene":"extra","mood":"","visible_text":"","objects":[],"people_present":false}`)
 		return llm.Response{Text: `{"observations":[` + strings.Join(items, ",") + `]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
 	var progress []string
 	got, err := svc.observe(context.Background(), post, observeRef, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
@@ -166,7 +166,7 @@ func TestGenerateWithNoPhotosSkipsObserveAndPersistsReviewInput(t *testing.T) {
 		}
 		return llm.Response{Text: `{"title":"완성","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
 	var progress []string
 	err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
@@ -202,7 +202,7 @@ func TestWriteStructuredAndPlainFallback(t *testing.T) {
 				}
 				return llm.Response{Text: raw}, nil
 			}
-			svc := NewService(&fakePosts{}, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4)
+			svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
 			content, err := svc.write(context.Background(), PostInput{UserID: "alice"}, nil, writeRef)
 			if err != nil || len(content.Blocks) != 1 {
 				t.Fatalf("content=%+v err=%v", content, err)
@@ -223,7 +223,7 @@ func TestQueuedZeroPhotoGenerationIgnoresPhotosAttachedAfterStart(t *testing.T) 
 		}
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
-	err := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4).Generate(
+	err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4).Generate(
 		context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()},
 		func(string, int, int) {},
 	)
@@ -241,7 +241,7 @@ func TestProviderTimeoutHasClearStageReason(t *testing.T) {
 		return llm.Response{}, context.DeadlineExceeded
 	}
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice"}}
-	err := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4).Generate(
+	err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4).Generate(
 		context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()},
 		func(string, int, int) {},
 	)
@@ -271,7 +271,7 @@ func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
 			jobs := &fakeJobs{id: "job-1"}
 			request := StartRequest{UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String()}
 			tc.mutate(&request, posts, models)
-			svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4)
+			svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4)
 			id, err := svc.Start(context.Background(), request)
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("id=%q err=%v, want %v", id, err, tc.wantErr)
@@ -291,7 +291,7 @@ func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
 
 	posts, models := &fakePosts{input: basePost}, newFakeModels()
 	jobs := &fakeJobs{err: &JobAlreadyInProgressError{ActiveID: "active"}}
-	_, err := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4).Start(context.Background(), StartRequest{
+	_, err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4).Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
 	})
 	var active *JobAlreadyInProgressError
@@ -302,12 +302,15 @@ func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
 
 type fakePosts struct {
 	input             PostInput
+	err               error
+	reads             int
 	observationWrites [][]Observation
 	contents          []PostContent
 }
 
 func (f *fakePosts) AttachedImages(context.Context, string, string) (PostInput, error) {
-	return f.input, nil
+	f.reads++
+	return f.input, f.err
 }
 func (f *fakePosts) SetObservations(_ context.Context, _, _ string, values []Observation) error {
 	f.observationWrites = append(f.observationWrites, append([]Observation(nil), values...))
@@ -315,12 +318,28 @@ func (f *fakePosts) SetObservations(_ context.Context, _, _ string, values []Obs
 }
 func (f *fakePosts) SetGeneratedContent(_ context.Context, _, _ string, value PostContent) error {
 	f.contents = append(f.contents, value)
+	f.input.Content = &value
 	return nil
 }
 
-type fakeProfiles struct{}
+type fakeProfiles struct {
+	profile Profile
+	calls   int
+}
 
-func (fakeProfiles) ProfileForPrompt(context.Context, string) (Profile, error) { return Profile{}, nil }
+func (f fakeProfiles) ProfileForPrompt(context.Context, string) (Profile, error) {
+	return f.profile, nil
+}
+
+type fakeRules struct {
+	lines []string
+	err   error
+}
+
+func (f *fakeRules) AppendRule(_ context.Context, _ string, line string) error {
+	f.lines = append(f.lines, line)
+	return f.err
+}
 
 type fakeImages struct{}
 
@@ -352,13 +371,21 @@ func (f *fakeModels) Complete(_ context.Context, ref llm.ModelRef, request llm.R
 }
 
 type fakeJobs struct {
-	id       string
-	err      error
-	enqueues int
+	id        string
+	err       error
+	enqueues  int
+	revisions []StartRevisionRequest
+	payloads  [][]byte
 }
 
 func (f *fakeJobs) EnqueueGeneration(context.Context, StartRequest) (string, error) {
 	f.enqueues++
+	return f.id, f.err
+}
+func (f *fakeJobs) EnqueueRevision(_ context.Context, request StartRevisionRequest, payload []byte) (string, error) {
+	f.enqueues++
+	f.revisions = append(f.revisions, request)
+	f.payloads = append(f.payloads, append([]byte(nil), payload...))
 	return f.id, f.err
 }
 func (f fakeJobs) GetGeneration(context.Context, string, string) (*JobSummary, error) {

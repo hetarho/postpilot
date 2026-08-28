@@ -89,6 +89,74 @@ describe('opening a post', () => {
     expect(calls).toContain('GetGeneration')
   })
 
+  it('resumes an active revision beside the rendered content', async () => {
+    const active = {
+      id: 'revision-1',
+      kind: 'revise',
+      status: 'running',
+      stage: 'write',
+      progressDone: 0,
+      progressTotal: 1,
+    }
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'review',
+            content: POST_CONTENT_FIXTURE,
+            activeJob: active,
+          },
+        ],
+      },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+      jobs: { jobs: [active] },
+    })
+
+    expect(await screen.findByRole('heading', { name: '비 온 뒤의 제주' })).toBeInTheDocument()
+    expect(screen.getByText('작성 중')).toBeInTheDocument()
+    expect(screen.getByLabelText('수정 요청')).toBeDisabled()
+  })
+
+  it('does not offer a no-op retry when a resumed revision fails', async () => {
+    const resumed = {
+      id: 'revision-1',
+      kind: 'revise',
+      status: 'running',
+      stage: 'write',
+      progressDone: 0,
+      progressTotal: 1,
+    }
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'review',
+            content: POST_CONTENT_FIXTURE,
+            activeJob: resumed,
+          },
+        ],
+      },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+      jobs: {
+        jobs: [{ ...resumed, status: 'failed', error: 'provider failed' }],
+      },
+    })
+
+    expect(await screen.findByText('provider failed')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('수정 요청')).toBeEnabled()
+  })
+
   it('refreshes observations while running and renders the review draft after completion', async () => {
     const slug = '20260820-jeju'
     const image = { id: 'img-1', filename: 'IMG_1.jpg' }

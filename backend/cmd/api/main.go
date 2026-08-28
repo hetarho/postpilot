@@ -171,6 +171,7 @@ func main() {
 	generationSvc := generation.NewService(
 		generationPosts{service: postSvc},
 		generationProfiles{service: voiceSvc},
+		generationRules{service: voiceSvc},
 		generationModels{registry: registry},
 		generationImages{bucket: bucket},
 		generationJobs{queue: jobQueue},
@@ -183,6 +184,15 @@ func main() {
 		return generationSvc.Generate(ctx, generation.GenerateJob{
 			UserID: found.UserID, PostSlug: *found.PostSlug,
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+		}, generation.Progress(progress))
+	})
+	jobQueue.Register(job.KindRevise, func(ctx context.Context, found job.Job, progress job.Progress) error {
+		if found.PostSlug == nil {
+			return job.ErrInvalidTarget
+		}
+		return generationSvc.Revise(ctx, generation.RevisionJob{
+			UserID: found.UserID, PostSlug: *found.PostSlug, WriteModel: found.WriteModel,
+			Payload: found.Payload,
 		}, generation.Progress(progress))
 	})
 
@@ -328,6 +338,12 @@ func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID string)
 	return generation.Profile{Styleguide: styleguide, Excerpts: excerpts, Rules: rules}, err
 }
 
+type generationRules struct{ service *voice.Service }
+
+func (a generationRules) AppendRule(ctx context.Context, userID, line string) error {
+	return a.service.AppendRule(ctx, userID, line)
+}
+
 type generationPosts struct{ service *post.Service }
 
 func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string) (generation.PostInput, error) {
@@ -338,6 +354,18 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	input := generation.PostInput{
 		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
 		Images: make([]generation.Image, 0, len(found.Images)),
+	}
+	if found.Content != nil {
+		content := generation.PostContent{
+			Title: found.Content.Title, Summary: found.Content.Summary, Tags: found.Content.Tags,
+		}
+		for _, block := range found.Content.Blocks {
+			content.Blocks = append(content.Blocks, generation.Block{
+				Type: generation.BlockType(block.Type), Content: block.Content, Level: block.Level,
+				File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			})
+		}
+		input.Content = &content
 	}
 	for _, image := range found.Images {
 		input.Images = append(input.Images, generation.Image{Filename: image.Filename, Key: image.Key})
@@ -386,6 +414,19 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug,
 		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
+	})
+	var active *job.ErrAlreadyInProgress
+	if errors.As(err, &active) {
+		return "", &generation.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	return id, err
+}
+
+func (a generationJobs) EnqueueRevision(ctx context.Context, request generation.StartRevisionRequest, payload []byte) (string, error) {
+	slug := request.PostSlug
+	id, err := a.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindRevise, UserID: request.UserID, PostSlug: &slug,
+		WriteModel: request.WriteModel, Payload: payload,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {

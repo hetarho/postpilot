@@ -61,6 +61,10 @@ export const MODEL_CATALOG_STALE_MS = 5 * 60_000
 /** Generation jobs are durable on the server; polling only observes their state. */
 export const POLL_INTERVAL_MS = 2_000
 
+/** Maximum natural-language revision instruction length. Mirrored from the backend
+ * generation context so the field stops before the authoritative RPC validation. */
+export const REVISION_INSTRUCTION_MAX_CHARS = 500
+
 /** Immediate client feedback for voice samples. The backend remains authoritative. */
 export const VOICE_SAMPLE_MIN_CHARS = 200
 

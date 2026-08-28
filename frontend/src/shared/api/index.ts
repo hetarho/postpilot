@@ -40,6 +40,8 @@ export {
   SavePostDraftResponseSchema,
   StartGenerationRequestSchema,
   StartGenerationResponseSchema,
+  StartRevisionRequestSchema,
+  StartRevisionResponseSchema,
 } from './gen/postpilot/v1/post_pb'
 export type {
   Block,
@@ -53,6 +55,8 @@ export type {
   PostSummary,
   StartGenerationRequest,
   StartGenerationResponse,
+  StartRevisionRequest,
+  StartRevisionResponse,
 } from './gen/postpilot/v1/post_pb'
 export { ProviderService, Stage } from './gen/postpilot/v1/provider_pb'
 export {

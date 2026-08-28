@@ -47,11 +47,12 @@ type Image struct {
 }
 
 type PostInput struct {
-	Slug   string
-	UserID string
-	Title  string
-	Memo   string
-	Images []Image
+	Slug    string
+	UserID  string
+	Title   string
+	Memo    string
+	Images  []Image
+	Content *PostContent
 }
 
 type Profile struct {
@@ -72,6 +73,21 @@ type GenerateJob struct {
 	PostSlug     string
 	ObserveModel string
 	WriteModel   string
+}
+
+type StartRevisionRequest struct {
+	UserID      string
+	PostSlug    string
+	Instruction string
+	SaveAsRule  bool
+	WriteModel  string
+}
+
+type RevisionJob struct {
+	UserID     string
+	PostSlug   string
+	WriteModel string
+	Payload    []byte
 }
 
 type JobSummary struct {

@@ -11,6 +11,7 @@ import {
   type PostDraft,
 } from '@/entities/post'
 import { GenerateButton, type GenerateButtonHandle } from '@/features/generate-post'
+import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave } from '@/features/save-draft'
 import { StageModelSelect } from '@/features/select-model'
 import { Badge, FieldLabel, Textarea, TextField } from '@/shared/ui'
@@ -136,6 +137,7 @@ function GenerationSection({
   const transport = useTransport()
   const queryClient = useQueryClient()
   const generateRef = useRef<GenerateButtonHandle>(null)
+  const reviseRef = useRef<ReviseFormHandle>(null)
   const refreshedSnapshot = useRef('')
   const [startedJobId, setStartedJobId] = useState('')
   const jobId = startedJobId || post.activeJob?.id || ''
@@ -189,7 +191,17 @@ function GenerationSection({
           {jobState.isError ? (
             <FailureNotice error="작업 상태를 확인하지 못했어요." onRetry={jobState.refetch} />
           ) : job?.status === 'failed' ? (
-            <FailureNotice error={job.error} onRetry={() => generateRef.current?.start()} />
+            <FailureNotice
+              error={job.error}
+              onRetry={
+                job.kind === 'revise' && startedJobId !== job.id
+                  ? undefined
+                  : () =>
+                      job.kind === 'revise'
+                        ? reviseRef.current?.start()
+                        : generateRef.current?.start()
+              }
+            />
           ) : job && !isTerminal(job) ? (
             <ProgressLine job={job} />
           ) : null}
@@ -200,7 +212,16 @@ function GenerationSection({
         <ContactSheet images={post.images} observations={post.observations} activeJob={job} />
       )}
       {hasContent(post) && post.content && (
-        <BlockList content={post.content} images={post.images} />
+        <>
+          <BlockList content={post.content} images={post.images} />
+          <ReviseForm
+            ref={reviseRef}
+            postSlug={post.slug}
+            activeJob={job}
+            jobPending={Boolean(jobId) && !job}
+            onStarted={setStartedJobId}
+          />
+        </>
       )}
     </>
   )

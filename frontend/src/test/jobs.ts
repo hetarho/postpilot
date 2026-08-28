@@ -5,6 +5,7 @@ import {
   GenerationService,
   GetGenerationResponseSchema,
   StartGenerationResponseSchema,
+  StartRevisionResponseSchema,
   type ProtoGenerationJob,
 } from '@/shared/api'
 
@@ -29,11 +30,19 @@ export interface FakeJobsOptions {
   startJobId?: string
   startFails?: boolean
   starts?: FakeGenerationStart[]
+  revisions?: FakeRevisionStart[]
 }
 
 export interface FakeGenerationStart {
   postSlug: string
   observeModel?: { providerId: string; modelId: string }
+  writeModel?: { providerId: string; modelId: string }
+}
+
+export interface FakeRevisionStart {
+  postSlug: string
+  instruction: string
+  saveAsRule: boolean
   writeModel?: { providerId: string; modelId: string }
 }
 
@@ -71,6 +80,19 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
         : undefined,
     })
     return create(StartGenerationResponseSchema, { jobId: options.startJobId ?? 'job-started' })
+  })
+  router.rpc(GenerationService.method.startRevision, (req) => {
+    options.calls?.push('StartRevision')
+    if (options.startFails) throw new ConnectError('수정을 시작하지 못했어요.', Code.Unavailable)
+    options.revisions?.push({
+      postSlug: req.postSlug,
+      instruction: req.instruction,
+      saveAsRule: req.saveAsRule,
+      writeModel: req.writeModel
+        ? { providerId: req.writeModel.providerId, modelId: req.writeModel.modelId }
+        : undefined,
+    })
+    return create(StartRevisionResponseSchema, { jobId: options.startJobId ?? 'job-started' })
   })
 }
 
