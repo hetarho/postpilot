@@ -36,7 +36,17 @@ func (h *Handler) UpdateVoiceProfile(ctx context.Context, req *connect.Request[p
 	if err != nil {
 		return nil, err
 	}
-	profile, err := h.service.Update(ctx, userID, req.Msg.GetStyleguide(), req.Msg.GetRules())
+	var profile voice.Profile
+	switch {
+	case req.Msg.Styleguide != nil && req.Msg.Rules != nil:
+		profile, err = h.service.Update(ctx, userID, req.Msg.GetStyleguide(), req.Msg.GetRules())
+	case req.Msg.Styleguide != nil:
+		profile, err = h.service.UpdateStyleguide(ctx, userID, req.Msg.GetStyleguide())
+	case req.Msg.Rules != nil:
+		profile, err = h.service.UpdateRules(ctx, userID, req.Msg.GetRules())
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("at least one profile field is required"))
+	}
 	if err != nil {
 		return nil, toConnectError("update voice profile", err)
 	}

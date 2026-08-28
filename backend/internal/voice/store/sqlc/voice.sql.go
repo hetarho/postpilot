@@ -249,6 +249,25 @@ func (q *Queries) SetRules(ctx context.Context, arg SetRulesParams) error {
 	return err
 }
 
+const setStyleguide = `-- name: SetStyleguide :exec
+INSERT INTO voice_profiles (user_id, styleguide, rules, updated_at)
+VALUES (?, ?, '', ?)
+ON CONFLICT(user_id) DO UPDATE SET
+    styleguide = excluded.styleguide,
+    updated_at = excluded.updated_at
+`
+
+type SetStyleguideParams struct {
+	UserID     string
+	Styleguide string
+	UpdatedAt  string
+}
+
+func (q *Queries) SetStyleguide(ctx context.Context, arg SetStyleguideParams) error {
+	_, err := q.db.ExecContext(ctx, setStyleguide, arg.UserID, arg.Styleguide, arg.UpdatedAt)
+	return err
+}
+
 const setStyleguideIfCorpusVersion = `-- name: SetStyleguideIfCorpusVersion :execrows
 UPDATE voice_profiles
 SET styleguide = ?, updated_at = ?

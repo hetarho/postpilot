@@ -10,6 +10,7 @@ import { loadSession } from '@/entities/session'
 import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { LoginPage } from '@/pages/login'
 import { PostsPage } from '@/pages/posts'
+import { VoicePage } from '@/pages/voice'
 import { transport } from '@/shared/api'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 import { queryClient } from '../providers/query-client'
@@ -92,6 +93,12 @@ const postsRoute = createRoute({
   component: PostsPage,
 })
 
+const voiceRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/voice',
+  component: VoicePage,
+})
+
 // A static segment outranks '$slug', so this route — not the editor below — is what
 // '/posts/new' matches.
 const newDraftRoute = createRoute({
@@ -109,7 +116,13 @@ const postEditorRoute = createRoute({
 /** Exported so a test can mount the real tree against a fake transport. */
 export const routeTree = rootRoute.addChildren([
   loginRoute,
-  authenticatedRoute.addChildren([indexRoute, postsRoute, newDraftRoute, postEditorRoute]),
+  authenticatedRoute.addChildren([
+    indexRoute,
+    postsRoute,
+    voiceRoute,
+    newDraftRoute,
+    postEditorRoute,
+  ]),
 ])
 
 export const router = createRouter({ routeTree, context: { queryClient, transport } })

@@ -1,7 +1,7 @@
 # Policy — Voice profiles
 
-Canonical rules currently enforced by the backend. Source: [plan/03](../plan/03.voice-profile-learning.md), backend
-built by job 08. The `/voice` screen and editor empty-profile warning land in job 09.
+Canonical backend and frontend rules. Source: [plan/03](../plan/03.voice-profile-learning.md), built by jobs 08 and
+09.
 
 ## Ownership and persistence
 
@@ -9,7 +9,8 @@ built by job 08. The `/voice` screen and editor empty-profile warning land in jo
   scoped by the authenticated user; voice requests never accept a user id. A foreign sample id is indistinguishable
   from an unknown one.
 - Profile rows are created lazily. `styleguide` is machine-generated but user-editable. `rules` is user-owned;
-  analysis never changes it. Editing the profile updates both values exactly as supplied.
+  analysis never changes it. `UpdateVoiceProfile` uses optional field presence and atomically updates only supplied
+  columns, so a rules save cannot write a stale styleguide over a completed analysis.
 - A sample body is private server-side source material. RPCs return only id, label, Unicode character count, and
   creation time; they never return the body.
 
@@ -48,6 +49,23 @@ built by job 08. The `/voice` screen and editor empty-profile warning land in jo
   cannot lose a line.
 - `GetVoiceProfile.active_job_id` exposes the account's queued/running analysis so clients can resume polling after
   navigation or reload.
+
+## Frontend behavior
+
+- `/voice` is authenticated and composes the analyze-stage model selector, sample learning form/list, durable-job
+  progress, and separate styleguide/rules editors. The learn action is disabled below 200 trimmed Unicode characters
+  or without a usable analyze selection; backend validation text is shown verbatim when the RPC rejects it.
+- When a non-empty styleguide exists, adding a sample requires confirmation that re-analysis will overwrite the
+  current styleguide. This confirmation fires for every existing styleguide, not only one known to be hand-edited.
+- `active_job_id` resumes polling after navigation or reload. A successful job refreshes the profile query so the new
+  styleguide appears automatically; deletion does the same and shows re-analysis progress while samples remain.
+- The editor shows the empty-profile warning only when both styleguide and samples are empty and links to `/voice`.
+  Generation remains available.
+- Profile query caches are partitioned by authenticated account id. Save responses patch only their owned field into
+  the newest cache snapshot, and delayed responses clear a draft or sample input only when it still equals the value
+  submitted. Account switches and in-flight operations therefore cannot expose or silently discard newer input.
+- Styleguide and rules saves share an account-scoped in-flight guard so the two controls report one coherent pending
+  state even though the backend updates their columns independently.
 
 ## Owned constants
 

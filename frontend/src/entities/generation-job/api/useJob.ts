@@ -14,6 +14,7 @@ export function useJob(jobId: string, invalidateOnDone: readonly QueryKey[] = []
     GenerationService.method.getGeneration,
     { id: jobId },
     {
+      enabled: jobId !== '',
       refetchInterval: (state) => {
         const found = state.state.data?.job
         return found && isTerminal(found) ? false : POLL_INTERVAL_MS

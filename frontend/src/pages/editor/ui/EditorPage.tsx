@@ -3,13 +3,21 @@ import { Link, useParams } from '@tanstack/react-router'
 import { useTransport } from '@connectrpc/connect-query'
 import { FailureNotice, ProgressLine, useJob, type GenerationJob } from '@/entities/generation-job'
 import { getPostQueryKey, type PostLoadFailure, usePost } from '@/entities/post'
+import { useSession } from '@/entities/session'
+import { isEmptyProfile, useVoiceProfile } from '@/entities/voice-profile'
 import { Button } from '@/shared/ui'
+import { VoiceWarning } from '@/widgets/voice-warning'
 import { DraftEditor } from './DraftEditor'
 
 /** `/posts/new` — a draft that does not exist yet. The first autosave creates it and
  *  moves the URL to the minted slug (see DraftEditor's `onMinted`). */
 export function NewDraftPage() {
-  return <DraftEditor />
+  return (
+    <>
+      <EditorVoiceWarning />
+      <DraftEditor />
+    </>
+  )
 }
 
 /** `/posts/$slug` — an existing post. */
@@ -28,11 +36,27 @@ export function PostEditorPage() {
   // Keyed by slug: this route stays mounted when the param changes, so opening another
   // post from the list has to start a new editor rather than keep the previous text.
   return (
-    <DraftEditor
-      key={slug}
-      post={post}
-      status={post.activeJob ? <ActiveJobStatus initial={post.activeJob} slug={slug} /> : undefined}
-    />
+    <>
+      <EditorVoiceWarning />
+      <DraftEditor
+        key={slug}
+        post={post}
+        status={
+          post.activeJob ? <ActiveJobStatus initial={post.activeJob} slug={slug} /> : undefined
+        }
+      />
+    </>
+  )
+}
+
+function EditorVoiceWarning() {
+  const { user } = useSession()
+  const { profile } = useVoiceProfile(user?.id ?? '')
+  if (!profile || !isEmptyProfile(profile)) return null
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 pt-6 sm:px-6">
+      <VoiceWarning profile={profile} />
+    </div>
   )
 }
 

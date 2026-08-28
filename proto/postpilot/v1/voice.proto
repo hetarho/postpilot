@@ -33,8 +33,10 @@ message GetVoiceProfileRequest {}
 message GetVoiceProfileResponse { VoiceProfile profile = 1; }
 
 message UpdateVoiceProfileRequest {
-  string styleguide = 1;
-  string rules = 2;
+  // Presence is significant: each editor patches only the field it owns so a rules
+  // save cannot write an analysis result back to an older styleguide (or vice versa).
+  optional string styleguide = 1;
+  optional string rules = 2;
 }
 message UpdateVoiceProfileResponse { VoiceProfile profile = 1; }
 

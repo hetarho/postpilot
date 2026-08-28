@@ -63,6 +63,15 @@ func (s *Store) SetStyleguideIfCorpusVersion(ctx context.Context, userID, styleg
 	return n > 0, nil
 }
 
+func (s *Store) SetStyleguide(ctx context.Context, userID, styleguide string, now time.Time) error {
+	if err := s.write.SetStyleguide(ctx, sqlc.SetStyleguideParams{
+		UserID: userID, Styleguide: styleguide, UpdatedAt: formatTime(now),
+	}); err != nil {
+		return fmt.Errorf("set styleguide: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) SetRules(ctx context.Context, userID, rules string, now time.Time) error {
 	if err := s.write.SetRules(ctx, sqlc.SetRulesParams{
 		UserID: userID, Rules: rules, UpdatedAt: formatTime(now),

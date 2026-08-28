@@ -12,6 +12,7 @@ type Store interface {
 	GetProfile(ctx context.Context, userID string) (Profile, error)
 	UpsertProfile(ctx context.Context, profile Profile) error
 	SetStyleguideIfCorpusVersion(ctx context.Context, userID, styleguide string, version int64, now time.Time) (bool, error)
+	SetStyleguide(ctx context.Context, userID, styleguide string, now time.Time) error
 	SetRules(ctx context.Context, userID, rules string, now time.Time) error
 	InsertSample(ctx context.Context, sample Sample) error
 	ListSamples(ctx context.Context, userID string) ([]Sample, error)

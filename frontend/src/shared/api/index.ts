@@ -4,6 +4,7 @@ export {
   healthClient,
   providerClient,
   generationClient,
+  voiceClient,
   credentialedFetch,
   unauthenticatedInterceptor,
 } from './transport'
@@ -51,6 +52,20 @@ export {
   SaveSelectionResponseSchema,
   SelectionSchema,
 } from './gen/postpilot/v1/provider_pb'
+export { VoiceService } from './gen/postpilot/v1/voice_pb'
+export {
+  AddVoiceSampleResponseSchema,
+  DeleteVoiceSampleResponseSchema,
+  GetVoiceProfileResponseSchema,
+  UpdateVoiceProfileResponseSchema,
+  VoiceProfileSchema,
+  VoiceSampleSchema,
+} from './gen/postpilot/v1/voice_pb'
+export type {
+  GetVoiceProfileResponse,
+  VoiceProfile as ProtoVoiceProfile,
+  VoiceSample as ProtoVoiceSample,
+} from './gen/postpilot/v1/voice_pb'
 export type {
   GetSelectionsResponse,
   ModelInfo as ProtoModelInfo,

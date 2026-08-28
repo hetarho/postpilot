@@ -12,6 +12,7 @@ import { AuthService } from './gen/postpilot/v1/auth_pb'
 import { HealthService } from './gen/postpilot/v1/health_pb'
 import { GenerationService } from './gen/postpilot/v1/post_pb'
 import { ProviderService } from './gen/postpilot/v1/provider_pb'
+import { VoiceService } from './gen/postpilot/v1/voice_pb'
 
 const baseUrl = import.meta.env.DEV ? '/api' : API_URL
 
@@ -64,3 +65,6 @@ export const providerClient = createClient(ProviderService, transport)
 
 /** Typed client for durable generation job reads. */
 export const generationClient = createClient(GenerationService, transport)
+
+/** Typed client for the acting account's voice profile. */
+export const voiceClient = createClient(VoiceService, transport)

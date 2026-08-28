@@ -246,9 +246,11 @@ func (x *GetVoiceProfileResponse) GetProfile() *VoiceProfile {
 }
 
 type UpdateVoiceProfileRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Styleguide    string                 `protobuf:"bytes,1,opt,name=styleguide,proto3" json:"styleguide,omitempty"`
-	Rules         string                 `protobuf:"bytes,2,opt,name=rules,proto3" json:"rules,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Presence is significant: each editor patches only the field it owns so a rules
+	// save cannot write an analysis result back to an older styleguide (or vice versa).
+	Styleguide    *string `protobuf:"bytes,1,opt,name=styleguide,proto3,oneof" json:"styleguide,omitempty"`
+	Rules         *string `protobuf:"bytes,2,opt,name=rules,proto3,oneof" json:"rules,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -284,15 +286,15 @@ func (*UpdateVoiceProfileRequest) Descriptor() ([]byte, []int) {
 }
 
 func (x *UpdateVoiceProfileRequest) GetStyleguide() string {
-	if x != nil {
-		return x.Styleguide
+	if x != nil && x.Styleguide != nil {
+		return *x.Styleguide
 	}
 	return ""
 }
 
 func (x *UpdateVoiceProfileRequest) GetRules() string {
-	if x != nil {
-		return x.Rules
+	if x != nil && x.Rules != nil {
+		return *x.Rules
 	}
 	return ""
 }
@@ -565,12 +567,14 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\x18\n" +
 	"\x16GetVoiceProfileRequest\"O\n" +
 	"\x17GetVoiceProfileResponse\x124\n" +
-	"\aprofile\x18\x01 \x01(\v2\x1a.postpilot.v1.VoiceProfileR\aprofile\"Q\n" +
-	"\x19UpdateVoiceProfileRequest\x12\x1e\n" +
+	"\aprofile\x18\x01 \x01(\v2\x1a.postpilot.v1.VoiceProfileR\aprofile\"t\n" +
+	"\x19UpdateVoiceProfileRequest\x12#\n" +
 	"\n" +
-	"styleguide\x18\x01 \x01(\tR\n" +
-	"styleguide\x12\x14\n" +
-	"\x05rules\x18\x02 \x01(\tR\x05rules\"R\n" +
+	"styleguide\x18\x01 \x01(\tH\x00R\n" +
+	"styleguide\x88\x01\x01\x12\x19\n" +
+	"\x05rules\x18\x02 \x01(\tH\x01R\x05rules\x88\x01\x01B\r\n" +
+	"\v_styleguideB\b\n" +
+	"\x06_rules\"R\n" +
 	"\x1aUpdateVoiceProfileResponse\x124\n" +
 	"\aprofile\x18\x01 \x01(\v2\x1a.postpilot.v1.VoiceProfileR\aprofile\"o\n" +
 	"\x15AddVoiceSampleRequest\x12\x14\n" +
@@ -643,6 +647,7 @@ func file_postpilot_v1_voice_proto_init() {
 		return
 	}
 	file_postpilot_v1_provider_proto_init()
+	file_postpilot_v1_voice_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -35,14 +35,24 @@ export function AuthenticatedLayout() {
   return (
     <div className="bg-surface-base text-content-primary flex min-h-full flex-col">
       <header className="bg-surface-raised flex min-h-16 items-center justify-between px-4 sm:px-6">
-        <Link
-          to="/posts"
-          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm font-medium tracking-tight"
-        >
-          Postpilot
-        </Link>
+        <nav className="flex items-center gap-4" aria-label="주요">
+          <Link
+            to="/posts"
+            className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm font-medium tracking-tight"
+          >
+            Postpilot
+          </Link>
+          <Link
+            to="/voice"
+            className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
+          >
+            말투
+          </Link>
+        </nav>
         <div className="flex items-center gap-3">
-          <span className="text-content-tertiary font-mono text-xs">{user?.id}</span>
+          <span className="text-content-tertiary hidden font-mono text-xs sm:inline">
+            {user?.id}
+          </span>
           <Button
             variant="ghost"
             onClick={() => void onLogout()}

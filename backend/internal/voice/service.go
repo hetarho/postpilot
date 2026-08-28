@@ -60,6 +60,28 @@ func (s *Service) Update(ctx context.Context, userID, styleguide, rules string) 
 	return s.Get(ctx, userID)
 }
 
+// UpdateStyleguide changes only the generated/hand-edited guide. The SQL operation is
+// deliberately field-scoped so a concurrent rules edit cannot be lost.
+func (s *Service) UpdateStyleguide(ctx context.Context, userID, styleguide string) (Profile, error) {
+	s.profileMu.Lock()
+	defer s.profileMu.Unlock()
+	if err := s.store.SetStyleguide(ctx, userID, styleguide, s.now()); err != nil {
+		return Profile{}, fmt.Errorf("update styleguide: %w", err)
+	}
+	return s.Get(ctx, userID)
+}
+
+// UpdateRules changes only user-owned rules. In particular, it never writes the
+// styleguide value observed by a client while an analysis may be completing.
+func (s *Service) UpdateRules(ctx context.Context, userID, rules string) (Profile, error) {
+	s.profileMu.Lock()
+	defer s.profileMu.Unlock()
+	if err := s.store.SetRules(ctx, userID, rules, s.now()); err != nil {
+		return Profile{}, fmt.Errorf("update rules: %w", err)
+	}
+	return s.Get(ctx, userID)
+}
+
 func (s *Service) AddSample(ctx context.Context, userID, label, body string, requested llm.ModelRef) (Sample, string, error) {
 	s.sampleMu.Lock()
 	defer s.sampleMu.Unlock()

@@ -16,6 +16,13 @@ UPDATE voice_profiles
 SET styleguide = ?, updated_at = ?
 WHERE user_id = ? AND corpus_version = ?;
 
+-- name: SetStyleguide :exec
+INSERT INTO voice_profiles (user_id, styleguide, rules, updated_at)
+VALUES (?, ?, '', ?)
+ON CONFLICT(user_id) DO UPDATE SET
+    styleguide = excluded.styleguide,
+    updated_at = excluded.updated_at;
+
 -- name: SetRules :exec
 INSERT INTO voice_profiles (user_id, styleguide, rules, updated_at)
 VALUES (?, '', ?, ?)

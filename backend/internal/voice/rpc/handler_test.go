@@ -73,6 +73,25 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 		}
 	}
 
+	newRules := "alice rules updated while analysis completes"
+	updated, err := handler.UpdateVoiceProfile(
+		auth.WithUser(context.Background(), "alice"),
+		connect.NewRequest(&postpilotv1.UpdateVoiceProfileRequest{Rules: &newRules}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := updated.Msg.GetProfile(); got.GetStyleguide() != "alice style" || got.GetRules() != newRules {
+		t.Fatalf("rules-only patch overwrote styleguide: %+v", got)
+	}
+	_, err = handler.UpdateVoiceProfile(
+		auth.WithUser(context.Background(), "alice"),
+		connect.NewRequest(&postpilotv1.UpdateVoiceProfileRequest{}),
+	)
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("empty profile patch error = %v", err)
+	}
+
 	_, err = handler.AddVoiceSample(
 		auth.WithUser(context.Background(), "alice"),
 		connect.NewRequest(&postpilotv1.AddVoiceSampleRequest{Body: strings.Repeat("가", 199)}),
