@@ -9,6 +9,14 @@ VALUES (?, ?, ?, ?, 'draft', ?, ?);
 UPDATE posts SET title = ?, memo = ?, updated_at = ?
 WHERE slug = ? AND user_id = ?;
 
+-- name: UpdatePostObservations :execrows
+UPDATE posts SET observations = ?, updated_at = ?
+WHERE slug = ? AND user_id = ?;
+
+-- name: UpdateGeneratedContent :execrows
+UPDATE posts SET content = ?, status = 'review', updated_at = ?
+WHERE slug = ? AND user_id = ?;
+
 -- name: GetPost :one
 SELECT slug, user_id, title, memo, observations, content, status, created_at, updated_at
 FROM posts WHERE slug = ?;
@@ -17,5 +25,5 @@ FROM posts WHERE slug = ?;
 SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ?);
 
 -- name: ListPostsByUser :many
-SELECT slug, title, status, updated_at
+SELECT slug, title, content, status, updated_at
 FROM posts WHERE user_id = ? ORDER BY updated_at DESC, slug DESC;

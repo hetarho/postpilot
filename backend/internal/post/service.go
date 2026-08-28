@@ -172,6 +172,51 @@ func (s *Service) List(ctx context.Context, userID string) ([]Summary, error) {
 	return summaries, nil
 }
 
+// AttachedImages returns an ownership-checked generation snapshot without presigning
+// browser URLs. Object keys remain backend-only and are consumed by the generation
+// context's storage port.
+func (s *Service) AttachedImages(ctx context.Context, userID, slug string) (Post, error) {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return Post{}, err
+	}
+	found.Images, err = s.store.ListImages(ctx, slug)
+	if err != nil {
+		return Post{}, fmt.Errorf("list attached images: %w", err)
+	}
+	return found, nil
+}
+
+// SetObservations replaces the persisted contact sheet snapshot for one owned post.
+func (s *Service) SetObservations(ctx context.Context, userID, slug string, observations []Observation) error {
+	if _, err := s.ownedPost(ctx, userID, slug); err != nil {
+		return err
+	}
+	updated, err := s.store.UpdateObservations(ctx, slug, userID, observations, s.now())
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SetGeneratedContent atomically replaces canonical content and moves the post to review.
+func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent) error {
+	if _, err := s.ownedPost(ctx, userID, slug); err != nil {
+		return err
+	}
+	updated, err := s.store.UpdateGeneratedContent(ctx, slug, userID, content, s.now())
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // CreateUpload reserves a filename and hands back a presigned PUT.
 //
 // The image id is minted now, not at confirm time, because the object key contains it:

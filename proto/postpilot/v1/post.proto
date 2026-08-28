@@ -25,7 +25,43 @@ service PostService {
 }
 
 service GenerationService {
+  rpc StartGeneration(StartGenerationRequest) returns (StartGenerationResponse) {}
   rpc GetGeneration(GetGenerationRequest) returns (GetGenerationResponse) {}
+}
+
+enum BlockType {
+  BLOCK_TYPE_UNSPECIFIED = 0;
+  TEXT = 1;
+  HEADING = 2;
+  IMAGE = 3;
+  QUOTE = 4;
+  LIST = 5;
+}
+
+message Block {
+  BlockType type = 1;
+  string content = 2;
+  int32 level = 3;
+  string file = 4;
+  string alt = 5;
+  string caption = 6;
+  repeated string items = 7;
+}
+
+message PostContent {
+  string title = 1;
+  string summary = 2;
+  repeated string tags = 3;
+  repeated Block blocks = 4;
+}
+
+message Observation {
+  string file = 1;
+  string scene = 2;
+  string mood = 3;
+  string visible_text = 4;
+  repeated string objects = 5;
+  bool people_present = 6;
 }
 
 message Post {
@@ -40,7 +76,8 @@ message Post {
   string created_at = 6;
   string updated_at = 7;
   GenerationJob active_job = 8;
-  // Fields 9+ are reserved for content / observations, added by the generation plans.
+  PostContent content = 9;
+  repeated Observation observations = 10;
 }
 
 message Image {
@@ -86,6 +123,16 @@ message GetGenerationRequest {
 
 message GetGenerationResponse {
   GenerationJob job = 1;
+}
+
+message StartGenerationRequest {
+  string post_slug = 1;
+  ModelRef observe_model = 2;
+  ModelRef write_model = 3;
+}
+
+message StartGenerationResponse {
+  string job_id = 1;
 }
 
 message SavePostDraftRequest {

@@ -41,8 +41,11 @@ Photo upload has its own document: [uploads.md](uploads.md).
   and its full rule list are in [spec/tech/draft-autosave.md](../tech/draft-autosave.md).
 - A response that carries no post is not a confirmation, and the client treats it as a failed save. This matters
   most for the create: trusting it would leave the next edit minting a second post for the same draft.
-- `status` is `draft` here and only here. Generation (plan 06) is what moves a post to `review`.
-- `observations` and `content` belong to the generation pipeline. This context never reads or writes them.
+- A new post starts as `draft`. A successful generation replaces its canonical content and moves it to `review`;
+  see [generation.md](generation.md).
+- `observations` and `content` are owned by the post aggregate but may be changed by generation only through the
+  post context's ownership-checked `SetObservations` and `SetGeneratedContent` behaviors. `GetPost` returns both;
+  no other context reads or writes the `posts` table directly.
 - **There is no post deletion.** The PRD defines photo deletion but not post deletion; flagged as a PRD gap, not an
   oversight.
 

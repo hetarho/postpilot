@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createPost = `-- name: CreatePost :exec
@@ -61,13 +62,14 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 }
 
 const listPostsByUser = `-- name: ListPostsByUser :many
-SELECT slug, title, status, updated_at
+SELECT slug, title, content, status, updated_at
 FROM posts WHERE user_id = ? ORDER BY updated_at DESC, slug DESC
 `
 
 type ListPostsByUserRow struct {
 	Slug      string
 	Title     string
+	Content   sql.NullString
 	Status    string
 	UpdatedAt string
 }
@@ -84,6 +86,7 @@ func (q *Queries) ListPostsByUser(ctx context.Context, userID string) ([]ListPos
 		if err := rows.Scan(
 			&i.Slug,
 			&i.Title,
+			&i.Content,
 			&i.Status,
 			&i.UpdatedAt,
 		); err != nil {
@@ -111,6 +114,31 @@ func (q *Queries) PostSlugExists(ctx context.Context, slug string) (bool, error)
 	return exists, err
 }
 
+const updateGeneratedContent = `-- name: UpdateGeneratedContent :execrows
+UPDATE posts SET content = ?, status = 'review', updated_at = ?
+WHERE slug = ? AND user_id = ?
+`
+
+type UpdateGeneratedContentParams struct {
+	Content   sql.NullString
+	UpdatedAt string
+	Slug      string
+	UserID    string
+}
+
+func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGeneratedContentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateGeneratedContent,
+		arg.Content,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const updatePostDraft = `-- name: UpdatePostDraft :execrows
 UPDATE posts SET title = ?, memo = ?, updated_at = ?
 WHERE slug = ? AND user_id = ?
@@ -128,6 +156,31 @@ func (q *Queries) UpdatePostDraft(ctx context.Context, arg UpdatePostDraftParams
 	result, err := q.db.ExecContext(ctx, updatePostDraft,
 		arg.Title,
 		arg.Memo,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updatePostObservations = `-- name: UpdatePostObservations :execrows
+UPDATE posts SET observations = ?, updated_at = ?
+WHERE slug = ? AND user_id = ?
+`
+
+type UpdatePostObservationsParams struct {
+	Observations sql.NullString
+	UpdatedAt    string
+	Slug         string
+	UserID       string
+}
+
+func (q *Queries) UpdatePostObservations(ctx context.Context, arg UpdatePostObservationsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updatePostObservations,
+		arg.Observations,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

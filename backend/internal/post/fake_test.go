@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -53,6 +54,33 @@ func (f *fakeStore) UpdateDraft(_ context.Context, slug, userID, title, memo str
 	return true, nil
 }
 
+func (f *fakeStore) UpdateObservations(_ context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID {
+		return false, nil
+	}
+	existing.Observations = append([]Observation(nil), observations...)
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
+func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID string, content PostContent, updatedAt time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID {
+		return false, nil
+	}
+	existing.Content = &content
+	existing.Status = StatusReview
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
 func (f *fakeStore) GetPost(_ context.Context, slug string) (Post, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -83,7 +111,11 @@ func (f *fakeStore) ListPosts(_ context.Context, userID string) ([]Summary, erro
 		if p.UserID != userID {
 			continue
 		}
-		out = append(out, Summary{Slug: p.Slug, Title: p.Title, Status: p.Status, UpdatedAt: p.UpdatedAt})
+		title := p.Title
+		if strings.TrimSpace(title) == "" && p.Content != nil {
+			title = p.Content.Title
+		}
+		out = append(out, Summary{Slug: p.Slug, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].UpdatedAt.After(out[j].UpdatedAt) })
 	return out, nil

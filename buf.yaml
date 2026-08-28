@@ -7,6 +7,9 @@ modules:
 lint:
   use:
     - STANDARD
+  # These unprefixed enum names are the PostContent protojson contract emitted by LLMs.
+  except:
+    - ENUM_VALUE_PREFIX
 breaking:
   use:
     - FILE

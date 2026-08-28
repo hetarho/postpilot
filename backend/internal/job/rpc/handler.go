@@ -12,7 +12,6 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/job"
 )
 
@@ -67,5 +66,3 @@ func modelRef(value string) *postpilotv1.ModelRef {
 	}
 	return &postpilotv1.ModelRef{ProviderId: providerID, ModelId: modelID}
 }
-
-var _ postpilotv1connect.GenerationServiceHandler = (*Handler)(nil)

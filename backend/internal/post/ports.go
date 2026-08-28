@@ -50,6 +50,8 @@ type ActiveJobFinder interface {
 type Store interface {
 	CreatePost(ctx context.Context, p Post) error
 	UpdateDraft(ctx context.Context, slug, userID, title, memo string, updatedAt time.Time) (bool, error)
+	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
+	UpdateGeneratedContent(ctx context.Context, slug, userID string, content PostContent, updatedAt time.Time) (bool, error)
 	GetPost(ctx context.Context, slug string) (Post, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	ListPosts(ctx context.Context, userID string) ([]Summary, error)

@@ -43,20 +43,59 @@ var (
 	ErrObjectMissing = errors.New("uploaded object not found in storage")
 )
 
-// Post is a draft. Content and observations belong to the generation pipeline and are
-// not read or written here.
+// Post is the aggregate exposed by the drafting context. Generation may replace its
+// canonical content and observations only through Service's published behaviors.
 type Post struct {
-	Slug      string
-	UserID    string
-	Title     string
-	Memo      string
-	Status    string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Slug         string
+	UserID       string
+	Title        string
+	Memo         string
+	Status       string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Content      *PostContent
+	Observations []Observation
 
 	// Images is populated by Get, not by the store's post lookup.
 	Images    []Image
 	ActiveJob *ActiveJob
+}
+
+// BlockType is kept as the LLM/protojson spelling at the domain boundary.
+type BlockType string
+
+const (
+	BlockText    BlockType = "TEXT"
+	BlockHeading BlockType = "HEADING"
+	BlockImage   BlockType = "IMAGE"
+	BlockQuote   BlockType = "QUOTE"
+	BlockList    BlockType = "LIST"
+)
+
+type Block struct {
+	Type    BlockType
+	Content string
+	Level   int32
+	File    string
+	Alt     string
+	Caption string
+	Items   []string
+}
+
+type PostContent struct {
+	Title   string
+	Summary string
+	Tags    []string
+	Blocks  []Block
+}
+
+type Observation struct {
+	File          string
+	Scene         string
+	Mood          string
+	VisibleText   string
+	Objects       []string
+	PeoplePresent bool
 }
 
 // Summary is a row of the post list.

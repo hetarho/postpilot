@@ -167,15 +167,59 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 	for _, img := range p.Images {
 		images = append(images, toProtoImage(img))
 	}
+	observations := make([]*postpilotv1.Observation, 0, len(p.Observations))
+	for _, observation := range p.Observations {
+		observations = append(observations, toProtoObservation(observation))
+	}
 	return &postpilotv1.Post{
-		Slug:      p.Slug,
-		Title:     p.Title,
-		Memo:      p.Memo,
-		Status:    p.Status,
-		Images:    images,
-		CreatedAt: p.CreatedAt.UTC().Format(timeLayout),
-		UpdatedAt: p.UpdatedAt.UTC().Format(timeLayout),
-		ActiveJob: toProtoActiveJob(p.ActiveJob),
+		Slug:         p.Slug,
+		Title:        p.Title,
+		Memo:         p.Memo,
+		Status:       p.Status,
+		Images:       images,
+		CreatedAt:    p.CreatedAt.UTC().Format(timeLayout),
+		UpdatedAt:    p.UpdatedAt.UTC().Format(timeLayout),
+		ActiveJob:    toProtoActiveJob(p.ActiveJob),
+		Content:      toProtoContent(p.Content),
+		Observations: observations,
+	}
+}
+
+func toProtoContent(content *post.PostContent) *postpilotv1.PostContent {
+	if content == nil {
+		return nil
+	}
+	blocks := make([]*postpilotv1.Block, 0, len(content.Blocks))
+	for _, block := range content.Blocks {
+		blocks = append(blocks, &postpilotv1.Block{
+			Type: toProtoBlockType(block.Type), Content: block.Content, Level: block.Level,
+			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+		})
+	}
+	return &postpilotv1.PostContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags, Blocks: blocks}
+}
+
+func toProtoBlockType(value post.BlockType) postpilotv1.BlockType {
+	switch value {
+	case post.BlockText:
+		return postpilotv1.BlockType_TEXT
+	case post.BlockHeading:
+		return postpilotv1.BlockType_HEADING
+	case post.BlockImage:
+		return postpilotv1.BlockType_IMAGE
+	case post.BlockQuote:
+		return postpilotv1.BlockType_QUOTE
+	case post.BlockList:
+		return postpilotv1.BlockType_LIST
+	default:
+		return postpilotv1.BlockType_BLOCK_TYPE_UNSPECIFIED
+	}
+}
+
+func toProtoObservation(value post.Observation) *postpilotv1.Observation {
+	return &postpilotv1.Observation{
+		File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText,
+		Objects: value.Objects, PeoplePresent: value.PeoplePresent,
 	}
 }
 

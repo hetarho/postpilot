@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -100,6 +101,8 @@ type Config struct {
 	LLMStageTimeout time.Duration
 	// LLMMaxTokensDefault is the completion cap when a caller sets none.
 	LLMMaxTokensDefault int
+	// ObserveBatchSize is the number of photos sent to one observation call.
+	ObserveBatchSize int
 }
 
 // Load reads the environment, falling back to a repo-root .env when present so a
@@ -151,6 +154,12 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("ORPHAN_SWEEP_INTERVAL: must be positive, got %s", sweep)
 	}
 	cfg.OrphanSweepInterval = sweep
+
+	batchSize, err := strconv.Atoi(getenv("OBSERVE_BATCH_SIZE", "4"))
+	if err != nil || batchSize <= 0 {
+		return nil, fmt.Errorf("OBSERVE_BATCH_SIZE: must be a positive integer")
+	}
+	cfg.ObserveBatchSize = batchSize
 
 	return cfg, nil
 }

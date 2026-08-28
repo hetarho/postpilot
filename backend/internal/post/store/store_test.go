@@ -77,6 +77,42 @@ func TestPostRoundTrip(t *testing.T) {
 	}
 }
 
+func TestGeneratedContentAndObservationsRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedPost(t, s, "p", "alice", testNow)
+	observations := []post.Observation{{
+		File: "IMG_1.jpg", Scene: "바다", Mood: "차분", VisibleText: "표지판",
+		Objects: []string{"파도"}, PeoplePresent: true,
+	}}
+	updated, err := s.UpdateObservations(ctx, "p", "alice", observations, testNow.Add(time.Minute))
+	if err != nil || !updated {
+		t.Fatalf("UpdateObservations: updated=%v err=%v", updated, err)
+	}
+	content := post.PostContent{Title: "완성", Summary: "요약", Tags: []string{"여행"}, Blocks: []post.Block{
+		{Type: post.BlockText, Content: "본문"},
+		{Type: post.BlockImage, File: "IMG_1.jpg", Caption: "바다"},
+	}}
+	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, testNow.Add(2*time.Minute))
+	if err != nil || !updated {
+		t.Fatalf("UpdateGeneratedContent: updated=%v err=%v", updated, err)
+	}
+	got, err := s.GetPost(ctx, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != post.StatusReview || got.Content == nil || got.Content.Title != "완성" || len(got.Content.Blocks) != 2 {
+		t.Fatalf("post = %+v", got)
+	}
+	if len(got.Observations) != 1 || got.Observations[0].VisibleText != "표지판" || !got.Observations[0].PeoplePresent {
+		t.Fatalf("observations = %+v", got.Observations)
+	}
+	updated, err = s.UpdateGeneratedContent(ctx, "p", "bob", post.PostContent{Title: "hijack"}, testNow)
+	if err != nil || updated {
+		t.Fatalf("foreign update: updated=%v err=%v", updated, err)
+	}
+}
+
 func TestGetPostUnknown(t *testing.T) {
 	if _, err := newStore(t).GetPost(context.Background(), "nope"); !errors.Is(err, post.ErrNotFound) {
 		t.Errorf("err = %v, want ErrNotFound (sql.ErrNoRows must not escape)", err)
@@ -125,6 +161,26 @@ func TestListPostsNewestFirstAndScoped(t *testing.T) {
 	}
 	if got[0].Slug != "new" || got[1].Slug != "old" {
 		t.Errorf("order = %s, %s; want new, old", got[0].Slug, got[1].Slug)
+	}
+}
+
+func TestListPostsFallsBackToGeneratedTitle(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	p := seedPost(t, s, "untitled", "alice", testNow)
+	p.Title = ""
+	if updated, err := s.UpdateDraft(ctx, p.Slug, p.UserID, "", "memo", testNow); err != nil || !updated {
+		t.Fatalf("clear title: updated=%v err=%v", updated, err)
+	}
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, post.PostContent{Title: "Generated title"}, testNow); err != nil || !updated {
+		t.Fatalf("generated content: updated=%v err=%v", updated, err)
+	}
+	got, err := s.ListPosts(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Title != "Generated title" {
+		t.Fatalf("summaries = %+v", got)
 	}
 }
 

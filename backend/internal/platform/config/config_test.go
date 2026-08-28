@@ -59,6 +59,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("PORT", "")
 	t.Setenv("CORS_ORIGIN", "")
 	t.Setenv("DB_PATH", "")
+	t.Setenv("OBSERVE_BATCH_SIZE", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -71,6 +72,27 @@ func TestLoadDefaults(t *testing.T) {
 	// Max-Age, so a change here silently changes the login lifetime (PRD F-1).
 	if got := cfg.SessionTTL.Hours(); got != 720 {
 		t.Errorf("SessionTTL = %v hours, want 720", got)
+	}
+	if cfg.ObserveBatchSize != 4 {
+		t.Errorf("ObserveBatchSize = %d, want 4", cfg.ObserveBatchSize)
+	}
+}
+
+func TestLoadObserveBatchSize(t *testing.T) {
+	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
+	t.Setenv("OBSERVE_BATCH_SIZE", "7")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ObserveBatchSize != 7 {
+		t.Fatalf("ObserveBatchSize = %d, want 7", cfg.ObserveBatchSize)
+	}
+	for _, bad := range []string{"nope", "0", "-1"} {
+		t.Setenv("OBSERVE_BATCH_SIZE", bad)
+		if _, err := Load(); err == nil {
+			t.Errorf("OBSERVE_BATCH_SIZE=%q was accepted", bad)
+		}
 	}
 }
 

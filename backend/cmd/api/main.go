@@ -23,9 +23,10 @@ import (
 	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/generation"
+	generationrpc "github.com/postpilot/backend/internal/generation/rpc"
 	"github.com/postpilot/backend/internal/health"
 	"github.com/postpilot/backend/internal/job"
-	jobrpc "github.com/postpilot/backend/internal/job/rpc"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/llm/openaicompat"
@@ -140,6 +141,7 @@ func main() {
 		AccessKeyID:     cfg.R2AccessKeyID,
 		SecretAccessKey: cfg.R2SecretAccessKey,
 		Bucket:          cfg.R2Bucket,
+		MaxReadBytes:    cfg.MaxImageBytes,
 	})
 	if err != nil {
 		slog.Error("object storage setup failed", "err", err)
@@ -166,6 +168,23 @@ func main() {
 			UserID: found.UserID, WriteModel: found.WriteModel,
 		}, voice.Progress(progress))
 	})
+	generationSvc := generation.NewService(
+		generationPosts{service: postSvc},
+		generationProfiles{service: voiceSvc},
+		generationModels{registry: registry},
+		generationImages{bucket: bucket},
+		generationJobs{queue: jobQueue},
+		cfg.ObserveBatchSize,
+	)
+	jobQueue.Register(job.KindGenerate, func(ctx context.Context, found job.Job, progress job.Progress) error {
+		if found.PostSlug == nil {
+			return job.ErrInvalidTarget
+		}
+		return generationSvc.Generate(ctx, generation.GenerateJob{
+			UserID: found.UserID, PostSlug: *found.PostSlug,
+			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+		}, generation.Progress(progress))
+	})
 
 	server := rpcserver.New(cfg, version, rpcserver.Options{
 		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc)},
@@ -183,7 +202,7 @@ func main() {
 				return postpilotv1connect.NewProviderServiceHandler(providerrpc.NewHandler(providerSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
-				return postpilotv1connect.NewGenerationServiceHandler(jobrpc.NewHandler(jobQueue), opts...)
+				return postpilotv1connect.NewGenerationServiceHandler(generationrpc.NewHandler(generationSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewVoiceServiceHandler(voicerpc.NewHandler(voiceSvc), opts...)
@@ -284,6 +303,119 @@ func (a voiceJobs) ActiveForUserKind(ctx context.Context, userID, kind string) (
 
 type postJobFinder struct {
 	queue *job.Queue
+}
+
+type generationModels struct{ registry *llm.Registry }
+
+type generationImages struct{ bucket *storage.Bucket }
+
+func (a generationImages) Read(ctx context.Context, key string) ([]byte, error) {
+	return a.bucket.ReadObject(ctx, key)
+}
+
+func (a generationModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
+	return a.registry.Lookup(ref)
+}
+
+func (a generationModels) Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error) {
+	return a.registry.Complete(ctx, ref, request)
+}
+
+type generationProfiles struct{ service *voice.Service }
+
+func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID string) (generation.Profile, error) {
+	styleguide, excerpts, rules, _, err := a.service.ProfileForPrompt(ctx, userID)
+	return generation.Profile{Styleguide: styleguide, Excerpts: excerpts, Rules: rules}, err
+}
+
+type generationPosts struct{ service *post.Service }
+
+func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string) (generation.PostInput, error) {
+	found, err := a.service.AttachedImages(ctx, userID, slug)
+	if err != nil {
+		return generation.PostInput{}, generationPostError(err)
+	}
+	input := generation.PostInput{
+		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
+		Images: make([]generation.Image, 0, len(found.Images)),
+	}
+	for _, image := range found.Images {
+		input.Images = append(input.Images, generation.Image{Filename: image.Filename, Key: image.Key})
+	}
+	return input, nil
+}
+
+func (a generationPosts) SetObservations(ctx context.Context, userID, slug string, observations []generation.Observation) error {
+	values := make([]post.Observation, 0, len(observations))
+	for _, observation := range observations {
+		values = append(values, post.Observation{
+			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
+			VisibleText: observation.VisibleText, Objects: observation.Objects,
+			PeoplePresent: observation.PeoplePresent,
+		})
+	}
+	return generationPostError(a.service.SetObservations(ctx, userID, slug, values))
+}
+
+func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug string, content generation.PostContent) error {
+	value := post.PostContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags}
+	for _, block := range content.Blocks {
+		value.Blocks = append(value.Blocks, post.Block{
+			Type: post.BlockType(block.Type), Content: block.Content, Level: block.Level,
+			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+		})
+	}
+	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, value))
+}
+
+func generationPostError(err error) error {
+	switch {
+	case errors.Is(err, post.ErrNotFound):
+		return generation.ErrNotFound
+	case errors.Is(err, post.ErrForbidden):
+		return generation.ErrForbidden
+	default:
+		return err
+	}
+}
+
+type generationJobs struct{ queue *job.Queue }
+
+func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest) (string, error) {
+	slug := request.PostSlug
+	id, err := a.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug,
+		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
+	})
+	var active *job.ErrAlreadyInProgress
+	if errors.As(err, &active) {
+		return "", &generation.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	return id, err
+}
+
+func (a generationJobs) GetGeneration(ctx context.Context, id, userID string) (*generation.JobSummary, error) {
+	found, err := a.queue.Get(ctx, id, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, job.ErrNotFound):
+			return nil, generation.ErrNotFound
+		case errors.Is(err, job.ErrForbidden):
+			return nil, generation.ErrForbidden
+		default:
+			return nil, err
+		}
+	}
+	postSlug := ""
+	if found.PostSlug != nil {
+		postSlug = *found.PostSlug
+	}
+	return &generation.JobSummary{
+		ID: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
+		ProgressDone: found.ProgressDone, ProgressTotal: found.ProgressTotal, Error: found.Error,
+		PostSlug: postSlug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt,
+	}, nil
 }
 
 func (a postJobFinder) ActiveForPost(ctx context.Context, slug string) (*post.ActiveJob, error) {

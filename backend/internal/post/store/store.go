@@ -73,6 +73,36 @@ func (s *Store) UpdateDraft(ctx context.Context, slug, userID, title, memo strin
 	return n > 0, nil
 }
 
+func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, observations []post.Observation, updatedAt time.Time) (bool, error) {
+	encoded, err := marshalObservations(observations)
+	if err != nil {
+		return false, fmt.Errorf("encode observations: %w", err)
+	}
+	n, err := s.write.UpdatePostObservations(ctx, sqlc.UpdatePostObservationsParams{
+		Observations: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
+		Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("update observations: %w", err)
+	}
+	return n > 0, nil
+}
+
+func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string, content post.PostContent, updatedAt time.Time) (bool, error) {
+	encoded, err := marshalContent(content)
+	if err != nil {
+		return false, fmt.Errorf("encode content: %w", err)
+	}
+	n, err := s.write.UpdateGeneratedContent(ctx, sqlc.UpdateGeneratedContentParams{
+		Content: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
+		Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("update generated content: %w", err)
+	}
+	return n > 0, nil
+}
+
 func (s *Store) GetPost(ctx context.Context, slug string) (post.Post, error) {
 	row, err := s.read.GetPost(ctx, slug)
 	if err != nil {
@@ -104,9 +134,19 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 		if err != nil {
 			return nil, fmt.Errorf("post %s: %w", row.Slug, err)
 		}
+		title := row.Title
+		if strings.TrimSpace(title) == "" && row.Content.Valid {
+			content, err := unmarshalContent(row.Content.String)
+			if err != nil {
+				return nil, fmt.Errorf("post %s: %w", row.Slug, err)
+			}
+			if content != nil {
+				title = content.Title
+			}
+		}
 		summaries = append(summaries, post.Summary{
 			Slug:      row.Slug,
-			Title:     row.Title,
+			Title:     title,
 			Status:    row.Status,
 			UpdatedAt: updatedAt,
 		})
@@ -349,14 +389,24 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s updated_at: %w", row.Slug, err)
 	}
+	content, err := unmarshalContent(row.Content.String)
+	if err != nil {
+		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
+	}
+	observations, err := unmarshalObservations(row.Observations.String)
+	if err != nil {
+		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
+	}
 	return post.Post{
-		Slug:      row.Slug,
-		UserID:    row.UserID,
-		Title:     row.Title,
-		Memo:      row.Memo,
-		Status:    row.Status,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		Slug:         row.Slug,
+		UserID:       row.UserID,
+		Title:        row.Title,
+		Memo:         row.Memo,
+		Status:       row.Status,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
+		Content:      content,
+		Observations: observations,
 	}, nil
 }
 

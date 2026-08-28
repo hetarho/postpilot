@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -36,8 +37,9 @@ type Bucket struct {
 	// ops issues the calls this process makes itself.
 	ops *s3.Client
 	// presign only ever builds URLs — it never dials anything.
-	presign *s3.PresignClient
-	name    string
+	presign      *s3.PresignClient
+	name         string
+	maxReadBytes int64
 }
 
 // Config is what cmd/api reads out of the process configuration.
@@ -47,12 +49,16 @@ type Config struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	Bucket          string
+	MaxReadBytes    int64
 }
 
 // New builds the adapter. It performs no I/O: a bad endpoint surfaces on the first real
 // call, and failing to start over an unreachable bucket would make the whole app
 // hostage to object storage it does not need to serve a login.
 func New(ctx context.Context, cfg Config) (*Bucket, error) {
+	if cfg.MaxReadBytes <= 0 {
+		return nil, fmt.Errorf("max read bytes must be positive")
+	}
 	ops, err := newClient(ctx, cfg, cfg.Endpoint)
 	if err != nil {
 		return nil, err
@@ -66,7 +72,10 @@ func New(ctx context.Context, cfg Config) (*Bucket, error) {
 		return nil, err
 	}
 
-	return &Bucket{ops: ops, presign: s3.NewPresignClient(signer), name: cfg.Bucket}, nil
+	return &Bucket{
+		ops: ops, presign: s3.NewPresignClient(signer), name: cfg.Bucket,
+		maxReadBytes: cfg.MaxReadBytes,
+	}, nil
 }
 
 func newClient(ctx context.Context, cfg Config, endpoint string) (*s3.Client, error) {
@@ -124,6 +133,35 @@ func (b *Bucket) PresignGet(ctx context.Context, key string, ttl time.Duration) 
 		return "", fmt.Errorf("presign get %s: %w", key, err)
 	}
 	return req.URL, nil
+}
+
+// ReadObject reads one already-normalized JPEG for a model call. Upload bytes still
+// travel browser-to-bucket; this is the generation-side read path only.
+func (b *Bucket) ReadObject(ctx context.Context, key string) ([]byte, error) {
+	out, err := b.ops.GetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(b.name), Key: aws.String(key)})
+	if err != nil {
+		return nil, fmt.Errorf("get %s: %w", key, err)
+	}
+	defer out.Body.Close()
+	if size := aws.ToInt64(out.ContentLength); size > b.maxReadBytes {
+		return nil, fmt.Errorf("read %s: object is %d bytes, limit is %d", key, size, b.maxReadBytes)
+	}
+	data, err := readAtMost(out.Body, b.maxReadBytes)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", key, err)
+	}
+	return data, nil
+}
+
+func readAtMost(reader io.Reader, limit int64) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(reader, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("object exceeds %d-byte read limit", limit)
+	}
+	return data, nil
 }
 
 // Head returns the stored size, or post.ErrObjectNotFound.
