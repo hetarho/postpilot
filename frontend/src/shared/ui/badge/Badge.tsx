@@ -3,10 +3,11 @@ import { twMerge } from 'tailwind-merge'
 
 /** Neutral by default; a STATUS chip takes the tone that matches its meaning. Colour is never the
  *  only signal — the chip always carries its text label too (design-language §2.6, §7). */
-export type BadgeTone = 'neutral' | 'danger' | 'success' | 'warning' | 'info'
+export type BadgeTone = 'neutral' | 'accent' | 'danger' | 'success' | 'warning' | 'info'
 
 const TONE_STYLES: Record<BadgeTone, string> = {
   neutral: 'bg-badge-neutral-bg text-badge-neutral-fg',
+  accent: 'bg-badge-accent-bg text-badge-accent-fg',
   danger: 'bg-notice-danger-bg text-notice-danger-fg',
   success: 'bg-notice-success-bg text-notice-success-fg',
   warning: 'bg-notice-warning-bg text-notice-warning-fg',

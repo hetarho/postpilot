@@ -27,12 +27,25 @@ export function ModelExperimentPage() {
   const activeId = activeSideId(sides, activeCandidateId)
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-      <Link
-        to="/ai-models"
-        className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
-      >
-        ← AI 모델
-      </Link>
+      {/* A comparison started from a post is a detour from that post, so "back" returns there —
+          not to the AI 모델 page the user never visited. Only a post-less (analyze) experiment
+          belongs to AI 모델. */}
+      {experiment.postSlug ? (
+        <Link
+          to="/posts/$slug"
+          params={{ slug: experiment.postSlug }}
+          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
+        >
+          ← 글로 돌아가기
+        </Link>
+      ) : (
+        <Link
+          to="/ai-models"
+          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
+        >
+          ← AI 모델
+        </Link>
+      )}
       <h1 className="mt-4 text-2xl font-semibold tracking-tight">블라인드 비교</h1>
       {/* Desktop-only: on a phone this static instruction costs ~90px — four lines of the candidate
           text the screen exists to show — every single visit, and the A/B switch plus the 후보 A/B

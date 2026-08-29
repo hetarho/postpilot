@@ -214,7 +214,7 @@ cannot be expressed by an existing group; do not create a speculative component-
 | Buttons         | `button-cta-*`, `button-secondary-*`, `button-ghost-*`, `button-danger-quiet-*`                               |
 | Fields          | `field-bg`, `field-bg-hover`, `field-bg-focus`, `field-fg`, `field-label`, `field-placeholder`, `field-error` |
 | Navigation/list | `link-*`, `link-fg-current`, `row-bg-*`, `divider`                                                            |
-| Labels/feedback | `badge-neutral-*`, `notice-{danger,success,warning,info}-*`                                                   |
+| Labels/feedback | `badge-{neutral,accent}-*`, `notice-{danger,success,warning,info}-*`                                          |
 | System/media    | `focus-ring`, `selection-*`, `media-scrim-*`, `shadow-color`                                                  |
 | Brand           | `brand-wordmark`, `brand-mark`                                                                                |
 
@@ -493,8 +493,9 @@ to the page.
   English one does. It is the primitive for a tab row; a slice never hand-rolls
   `role="tablist"`.
 - **Badge / chip** — `rounded-sm`, no border, `px-2 py-0.5`. A neutral chip uses
-  `badge-neutral-*`; a **status** chip takes the matching `notice-*` tone and always carries its
-  text label, so colour is never the only signal.
+  `badge-neutral-*`; a chip for a state the user is mid-way through (a post in review) uses
+  `badge-accent-*`; a **status** chip that means good/bad/urgent takes the matching `notice-*` tone.
+  Every chip carries its text label, so colour is never the only signal.
 - **Notice** — the §2.6 inline-notice contract as a primitive: a tone, explanatory text, no border,
   `px-4 py-3`. It takes the `role` (`alert` for something that went wrong, `status` for progress and
   confirmation) because only the caller knows which. Colour never travels alone — the words carry

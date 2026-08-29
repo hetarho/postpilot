@@ -14,7 +14,16 @@ function rowStatus(
   if (pending?.status === 'failed' || pending?.status === 'partial')
     return { label: 'AI 결과 오류', tone: 'danger' }
   if (post.pendingExperimentId) return { label: 'AI 결과 확인', tone: 'warning' }
-  return { label: postStatusLabel(post.status), tone: 'neutral' }
+  return { label: postStatusLabel(post.status), tone: postStatusTone(post.status) }
+}
+
+/** 초안 · 검토 · 확정 sat in one grey and were indistinguishable at a glance. Draft stays neutral
+ *  (nothing has happened yet), review takes the accent (the user is mid-way), finalized takes
+ *  success (done). The label still carries the meaning on its own (§2.6). */
+function postStatusTone(status: string): BadgeTone {
+  if (status === 'review') return 'accent'
+  if (status === 'finalized') return 'success'
+  return 'neutral'
 }
 
 /** The way back to unfinished work (PRD F-8). The server returns only the acting user's

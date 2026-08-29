@@ -9,7 +9,19 @@ const mocks = vi.hoisted(() => ({ useExperiment: vi.fn() }))
 
 vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ id: 'experiment-1' }),
-  Link: ({ children }: { children: ReactNode }) => <a href="/ai-models">{children}</a>,
+  Link: ({
+    children,
+    to,
+    params,
+  }: {
+    children: ReactNode
+    to: string
+    params?: Record<string, string>
+  }) => (
+    <a href={Object.entries(params ?? {}).reduce((href, [k, v]) => href.replace(`$${k}`, v), to)}>
+      {children}
+    </a>
+  ),
 }))
 
 vi.mock('@/entities/model-experiment', () => ({
@@ -51,6 +63,8 @@ const experiment: ModelExperiment = {
   outcome: '',
   applyError: '',
   appliedAt: '',
+  adoptionError: '',
+  adoptedAt: '',
   createdAt: '',
   finishedAt: '',
   decidedAt: '',

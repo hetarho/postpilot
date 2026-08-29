@@ -256,6 +256,11 @@
   /* compact labels and inline feedback */
   --badge-neutral-bg: var(--surface-raised);
   --badge-neutral-fg: var(--content-secondary);
+  /* a chip for a state that is "in progress by the user" rather than good/bad/urgent — e.g. a post
+     in review. It borrows the accent so it reads as distinct from a neutral draft without claiming
+     the semantic weight of a notice tone. */
+  --badge-accent-bg: var(--intent-accent-subtle);
+  --badge-accent-fg: var(--intent-accent);
   --notice-danger-bg: var(--intent-danger-subtle);
   --notice-danger-fg: var(--intent-danger);
   --notice-success-bg: var(--intent-success-subtle);
@@ -369,6 +374,8 @@
   --color-divider: var(--divider);
   --color-badge-neutral-bg: var(--badge-neutral-bg);
   --color-badge-neutral-fg: var(--badge-neutral-fg);
+  --color-badge-accent-bg: var(--badge-accent-bg);
+  --color-badge-accent-fg: var(--badge-accent-fg);
   --color-notice-danger-bg: var(--notice-danger-bg);
   --color-notice-danger-fg: var(--notice-danger-fg);
   --color-notice-success-bg: var(--notice-success-bg);
