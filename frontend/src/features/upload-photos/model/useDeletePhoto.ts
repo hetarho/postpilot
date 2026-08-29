@@ -17,10 +17,7 @@ export function useDeletePhoto(slug: string | undefined): {
     failedId: deleteImage.isError ? deleteImage.variables?.imageId : undefined,
     deletePhoto: (image) => {
       if (!slug) return
-      deleteImage.mutate(
-        { imageId: image.id },
-        { onSuccess: () => cache.remove(slug, image.id) },
-      )
+      deleteImage.mutate({ imageId: image.id }, { onSuccess: () => cache.remove(slug, image.id) })
     },
   }
 }

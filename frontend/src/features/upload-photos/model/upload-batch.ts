@@ -11,7 +11,8 @@ import { UPLOAD_CONVERT_CONCURRENCY } from '@/shared/config'
 import { DecodeError, dedupeFilename, jpegFilename } from '@/shared/lib'
 import { type SkipReason, filterFile } from './filter'
 
-export type UploadStatus = 'selected' | 'converting' | 'uploading' | 'confirming' | 'skipped' | 'failed'
+export type UploadStatus =
+  'selected' | 'converting' | 'uploading' | 'confirming' | 'skipped' | 'failed'
 
 /** Why an upload stopped. `network` is anything a retry may fix (a failed PUT, an
  *  expired URL, a lost confirm); the others are the server's answer. */
@@ -103,7 +104,11 @@ function publish(batch: Batch): void {
   for (const listener of batch.listeners) listener()
 }
 
-function setItems(batch: Batch, items: readonly UploadItem[], completed = batch.state.completed): void {
+function setItems(
+  batch: Batch,
+  items: readonly UploadItem[],
+  completed = batch.state.completed,
+): void {
   batch.state = { items, completed }
   publish(batch)
 }
@@ -253,7 +258,10 @@ export function uploadBatch(slug: string, deps: UploadBatchDeps): UploadBatchHan
       attached.files.delete(id)
       attached.converted.delete(id)
       attached.awaitingConfirm.delete(id)
-      setItems(attached, attached.state.items.filter((each) => each.id !== id))
+      setItems(
+        attached,
+        attached.state.items.filter((each) => each.id !== id),
+      )
       collect(attached)
     },
   }

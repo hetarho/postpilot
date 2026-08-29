@@ -14,9 +14,18 @@ describe('filterFile', () => {
 
   // A1 (plan AC2): an executable, or anything not on the list, never uploads.
   it('skips an executable and any extension not on the list, with the reason', () => {
-    expect(filterFile({ name: 'setup.exe', size: 10 })).toEqual({ kind: 'skipped', reason: 'extension' })
-    expect(filterFile({ name: 'clip.mov', size: 10 })).toEqual({ kind: 'skipped', reason: 'extension' })
-    expect(filterFile({ name: 'noextension', size: 10 })).toEqual({ kind: 'skipped', reason: 'extension' })
+    expect(filterFile({ name: 'setup.exe', size: 10 })).toEqual({
+      kind: 'skipped',
+      reason: 'extension',
+    })
+    expect(filterFile({ name: 'clip.mov', size: 10 })).toEqual({
+      kind: 'skipped',
+      reason: 'extension',
+    })
+    expect(filterFile({ name: 'noextension', size: 10 })).toEqual({
+      kind: 'skipped',
+      reason: 'extension',
+    })
   })
 
   // A3 (plan AC4): the cap is on the original, at selection.

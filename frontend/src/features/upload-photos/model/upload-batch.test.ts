@@ -22,7 +22,11 @@ function fakePipeline(options: { failPuts?: number; failConvert?: (file: File) =
     createUpload: vi.fn(async (_slug: string, filename: string) => {
       if (filename === 'taken.jpg') throw new UploadRejected('duplicate-filename')
       uploads += 1
-      return { uploadId: `upload-${uploads}`, putUrl: `https://storage.test/${uploads}`, contentType: 'image/jpeg' }
+      return {
+        uploadId: `upload-${uploads}`,
+        putUrl: `https://storage.test/${uploads}`,
+        contentType: 'image/jpeg',
+      }
     }),
     put: vi.fn(async () => {
       if (putsLeftToFail > 0) {
@@ -30,16 +34,14 @@ function fakePipeline(options: { failPuts?: number; failConvert?: (file: File) =
         throw new TypeError('network')
       }
     }),
-    confirm: vi.fn(
-      async (uploadId: string, width: number, height: number): Promise<PostImage> => ({
-        id: uploadId,
-        filename: `${uploadId}.jpg`,
-        width,
-        height,
-        bytes: 1,
-        viewUrl: '',
-      }),
-    ),
+    confirm: vi.fn(async (uploadId: string, width: number, height: number): Promise<PostImage> => ({
+      id: uploadId,
+      filename: `${uploadId}.jpg`,
+      width,
+      height,
+      bytes: 1,
+      viewUrl: '',
+    })),
   }
   return pipeline
 }
@@ -81,7 +83,11 @@ describe('an upload batch', () => {
 
     await vi.waitFor(() => expect(onConfirmed).toHaveBeenCalledTimes(2))
     expect(pipeline.put).toHaveBeenCalledTimes(2)
-    expect(pipeline.put).toHaveBeenCalledWith(expect.stringContaining('storage.test'), 'image/jpeg', expect.any(Blob))
+    expect(pipeline.put).toHaveBeenCalledWith(
+      expect.stringContaining('storage.test'),
+      'image/jpeg',
+      expect.any(Blob),
+    )
     expect(pipeline.confirm).toHaveBeenCalledWith('upload-1', 1024, 768)
     // The confirm answer has no view URL; the local copy stands in for it.
     expect(onConfirmed).toHaveBeenCalledWith(
@@ -125,7 +131,9 @@ describe('an upload batch', () => {
     batch.add([file('bad.heic'), file('good.heic')], [])
 
     await vi.waitFor(() => expect(onConfirmed).toHaveBeenCalledTimes(1))
-    expect(peekUploadState(slug).items).toMatchObject([{ status: 'skipped', reason: 'unreadable', name: 'bad.heic' }])
+    expect(peekUploadState(slug).items).toMatchObject([
+      { status: 'skipped', reason: 'unreadable', name: 'bad.heic' },
+    ])
   })
 
   // A8: a failed PUT is retryable, and the retry starts over at CreateUpload.
@@ -158,7 +166,14 @@ describe('an upload batch', () => {
     pipeline.confirm = vi
       .fn<UploadPipeline['confirm']>()
       .mockRejectedValueOnce(new TypeError('network'))
-      .mockResolvedValueOnce({ id: 'upload-1', filename: 'a.jpg', width: 1024, height: 768, bytes: 1, viewUrl: '' })
+      .mockResolvedValueOnce({
+        id: 'upload-1',
+        filename: 'a.jpg',
+        width: 1024,
+        height: 768,
+        bytes: 1,
+        viewUrl: '',
+      })
     const onConfirmed = vi.fn()
     const batch = uploadBatch(slug, { pipeline, onConfirmed })
 
@@ -178,7 +193,14 @@ describe('an upload batch', () => {
     pipeline.confirm = vi
       .fn<UploadPipeline['confirm']>()
       .mockRejectedValueOnce(new UploadObjectMissing())
-      .mockResolvedValueOnce({ id: 'upload-2', filename: 'a.jpg', width: 1024, height: 768, bytes: 1, viewUrl: '' })
+      .mockResolvedValueOnce({
+        id: 'upload-2',
+        filename: 'a.jpg',
+        width: 1024,
+        height: 768,
+        bytes: 1,
+        viewUrl: '',
+      })
     const onConfirmed = vi.fn()
     const batch = uploadBatch(slug, { pipeline, onConfirmed })
 
@@ -204,7 +226,10 @@ describe('an upload batch', () => {
   })
 
   it('notifies subscribers on every change and lets a failed item be dismissed', async () => {
-    const batch = uploadBatch(slug, { pipeline: fakePipeline({ failPuts: 1 }), onConfirmed: vi.fn() })
+    const batch = uploadBatch(slug, {
+      pipeline: fakePipeline({ failPuts: 1 }),
+      onConfirmed: vi.fn(),
+    })
     const listener = vi.fn()
     subscribeUploadBatch(slug, listener)
 
@@ -238,7 +263,14 @@ describe('an upload batch', () => {
       () =>
         new Promise<PostImage>((resolve) => {
           releaseConfirm = () =>
-            resolve({ id: 'late', filename: 'late.jpg', width: 1, height: 1, bytes: 1, viewUrl: '' })
+            resolve({
+              id: 'late',
+              filename: 'late.jpg',
+              width: 1,
+              height: 1,
+              bytes: 1,
+              viewUrl: '',
+            })
         }),
     )
     const onConfirmed = vi.fn()
@@ -256,7 +288,10 @@ describe('an upload batch', () => {
   })
 
   it('tells a still-mounted subscriber that its items are gone when the session ends', async () => {
-    const batch = uploadBatch(slug, { pipeline: fakePipeline({ failPuts: 1 }), onConfirmed: vi.fn() })
+    const batch = uploadBatch(slug, {
+      pipeline: fakePipeline({ failPuts: 1 }),
+      onConfirmed: vi.fn(),
+    })
     const listener = vi.fn()
     subscribeUploadBatch(slug, listener)
     batch.add([file('a.jpg')], [])

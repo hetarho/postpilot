@@ -22,7 +22,11 @@ export interface UseUploadPhotosArgs {
 }
 
 /** The React end of the upload batch (`upload-batch.ts`). */
-export function useUploadPhotos({ slug, taken, ensureSlug }: UseUploadPhotosArgs): UploadBatchState & {
+export function useUploadPhotos({
+  slug,
+  taken,
+  ensureSlug,
+}: UseUploadPhotosArgs): UploadBatchState & {
   addFiles: (files: File[]) => Promise<void>
   retry: (id: string) => void
   dismiss: (id: string) => void
