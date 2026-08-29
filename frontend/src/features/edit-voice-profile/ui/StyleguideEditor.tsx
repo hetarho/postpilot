@@ -34,14 +34,15 @@ export function StyleguideEditor({ ownerId, styleguide }: { ownerId: string; sty
           const next = event.target.value
           setDraft(next === styleguide ? null : next)
         }}
-        // A generated styleguide is longer than any fixed box, and a fixed one would own every
-        // vertical swipe that lands on it — the page is the only scroller (§4.4). `rows` is now
-        // just the minimum height of an empty editor.
+        // A generated styleguide is longer than any fixed box, so the field grows with it rather
+        // than owning every vertical swipe that lands on it (§4.4). `max-h-field` is the ceiling:
+        // past it the field becomes its own bounded scroller, because an uncapped one would put the
+        // 저장 below it thousands of pixels from the caret (§4.3). `rows` is the empty minimum.
         rows={6}
         autoGrow
         aria-invalid={update.isError || undefined}
         aria-describedby={update.isError ? errorId : undefined}
-        className="mt-1 leading-relaxed"
+        className="max-h-field mt-1 leading-relaxed"
       />
       {update.isError && (
         <FieldMessage id={errorId} className="mt-2">

@@ -40,6 +40,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
     // field would grow monotonically and never shrink when text is deleted.
     node.style.height = 'auto'
     node.style.height = `${node.scrollHeight}px`
+    // A caller may cap the growth with `max-h-*` — a long generated styleguide would otherwise put
+    // the button that saves it thousands of pixels past the caret (§4.3). Once the cap clamps the
+    // box, the field has to scroll again, so the overflow is decided from the measurement rather
+    // than hard-coded: uncapped it stays hidden, capped it becomes the field's own bounded scroller.
+    node.style.overflowY = node.scrollHeight > node.clientHeight ? 'auto' : 'hidden'
   }, [autoGrow])
 
   // Layout effect, not effect: resizing after paint would show one frame at the wrong height on
@@ -69,8 +74,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       className={twMerge(
         clsx(
           'text-field-fg placeholder:text-field-placeholder disabled:text-content-disabled min-h-11 w-full resize-none disabled:opacity-50',
-          // Nothing to scroll when the box always fits its content — this is what stops the field
-          // from competing with the page for the swipe.
+          // `resize()` owns overflow-y from here on (see above); this is only the pre-measurement
+          // state, so the first paint never flashes a scrollbar.
           autoGrow && 'overflow-hidden',
           appearance === 'well'
             ? 'bg-field-bg hover:bg-field-bg-hover focus:bg-field-bg-focus rounded-md px-4 py-2 text-base sm:text-sm'

@@ -88,7 +88,7 @@ export function LearnVoiceForm({ ownerId, profile, onStarted }: LearnVoiceFormPr
           autoGrow
           aria-invalid={addSample.isError || undefined}
           aria-describedby={addSample.isError ? `${bodyHintId} ${bodyErrorId}` : bodyHintId}
-          className="mt-1 leading-relaxed"
+          className="max-h-field mt-1 leading-relaxed"
         />
         {/* Under the field, not above it. This is the only explanation for the disabled 학습
             button, and above the textarea it scrolls off the top as soon as the user is typing

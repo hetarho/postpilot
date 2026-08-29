@@ -112,7 +112,8 @@ allowed only where a plane change _cannot_ do the job:
 
 - the **outlined** button variant (a rim _is_ its identity),
 - a hairline `divide-divider` between list rows that have no background of their own,
-- a table rule.
+- a table rule,
+- a spinner's ring, where the border *is* the shape being drawn.
 
 Not allowed: a border around a card, a panel, an input at rest, a header, a section. If you reach
 for `border` to "separate" two things, step one of them to a different surface or add space.
@@ -192,7 +193,7 @@ clear; jumping several levels makes ordinary chrome look detached from the page.
 | `surface-recessed`                                          | Inputs and regions pressed one step into the current plane                 |
 | `surface-base`                                              | The normal page canvas                                                     |
 | `surface-raised`                                            | Rows on interaction, compact controls, cards, and resting floating content |
-| `surface-highest`                                           | The frontmost floating plane: menus, sheets, dialogs, and popovers         |
+| `surface-highest`                                           | The frontmost floating plane: menus, sheets, dialogs, popovers, and a docked action bar |
 | `content-primary` · `secondary` · `tertiary` · `disabled`   | Main copy → supporting copy → metadata → non-interactive copy              |
 | `stroke-subtle` · `strong`                                  | Rare structural hairlines; never a substitute for a surface step           |
 | `intent-accent` · `danger` · `success` · `warning` · `info` | Meaning before it is assigned to a component                               |
@@ -357,7 +358,7 @@ you wrote.
 | ------------------------------ | ---------------------- | ---------------------- |
 | Button, field, select (44px)   | `px-4` (`px-5` for a CTA) | ≈ 2 : 1 against the 12px the floor produces |
 | Icon-only button               | `size-11`, no padding  | square by definition   |
-| List row (44px, full-bleed)    | `px-3 py-3`            | inset matches the row's own rhythm |
+| List row (44px, full-bleed)    | `px-4 py-3`            | equal to the page gutter it sits in |
 | Badge / chip                   | `px-2 py-0.5`          | ≈ 3 : 1 — small boxes need proportionally more |
 | Inline notice                  | `px-4 py-3`            | ≈ 1.3 : 1 — a text block, not a control |
 | Card / panel                   | `p-4` (`p-5` for a sheet) | uniform               |
@@ -382,8 +383,13 @@ is a re-grip, not a tap.
 - **A control and the thing it commits stay on one screen.** A 저장 button in a section header
   above a 335px textarea is off-screen exactly when the user is typing into that field. The
   committing action goes _after_ the field, or it docks.
+- **One docked bar per scroller.** Two sticky bars in the same scroll container pin to the same
+  offset, and the later one in DOM order paints over the earlier — both are opaque. A section
+  rendered inside a page that already docks puts its action in flow instead.
 - **Feedback renders where the user is looking.** A success message 1,000px below the button that
-  caused it has not been shown. A validation message under a keyboard has not been shown.
+  caused it has not been shown. A validation message under a keyboard has not been shown. A live
+  region that is *inserted* with its text already in it announces nothing: mount it before its
+  content changes and swap the text inside.
 
 ### 4.4 One scroller per screen
 
@@ -395,10 +401,14 @@ So: no `max-h-* overflow-y-auto` on a content panel, and no fixed-`rows` textare
 longer than it shows. A textarea that must grow, grows (`autoGrow`); a panel that is long, is
 long, and the page scrolls it.
 
-The exceptions are deliberate and horizontal: a **horizontal** strip (`overflow-x-auto`, a photo
-strip or a tab row) does not compete with the page's vertical scroll, and a **sheet's** own body
-scrolls because the sheet is a separate surface with its own bounds. Both set
-`overscroll-behavior: contain` so a scroll that reaches the end does not chain to the page.
+Three exceptions are deliberate. A **horizontal** strip (`overflow-x-auto`, a photo strip or a tab
+row) does not compete with the page's vertical scroll. A **sheet's** own body scrolls because the
+sheet is a separate surface with its own bounds. And a **field inside a form** is capped at
+`max-h-field` and scrolls past it — an uncapped `autoGrow` field holding a long generated value
+would put the control that commits it thousands of pixels from the caret, which §4.3 forbids, and
+between the two rules reach wins. The editor's bare fields are *not* capped: there the page is the
+paper. All three set `overscroll-behavior: contain` so a scroll that reaches the end does not chain
+to the page.
 
 ## 5. Elevation and shape
 
@@ -406,7 +416,7 @@ scrolls because the sheet is a separate surface with its own bounds. Both set
   `shadow-lg` a modal. Shadows encode _distance from the page_, never importance. Most surfaces
   cast none — a plane change is enough.
 - Radius scale: `rounded-sm` (6px) chips and small tags · `rounded-md` (10px) controls ·
-  `rounded-lg` (14px) panels and cards · `rounded-xl` (20px) sheets and dialogs · `rounded-full`
+  `rounded-lg` (14px) panels and cards · `rounded-xl` (20px) sheets, dialogs, and a docked bar · `rounded-full`
   avatars and pills. A control and the panel it sits in never share a radius — the inner one is
   one step smaller. A surface attached to a screen edge is rounded on the free side only
   (`rounded-t-xl` for a bottom sheet).
@@ -424,9 +434,12 @@ scrolls because the sheet is a separate surface with its own bounds. Both set
   matches: a variant whose entire resting affordance lives behind `hover:` is invisible on the
   device this product is for. Every interactive element therefore carries an `active:` treatment,
   and a variant that needs a resting plane on touch uses the `pointer-coarse:` variant to get one.
-- **A pending action shows its state in place, at a fixed size.** A spinner replaces the label;
-  the button does not change width. Swapping `생성` for `생성을 시작하는 중…` triples the button's
-  width under the thumb that just pressed it and, in a wrapping row, moves its neighbours.
+- **A pending action shows its state in place, at a fixed size.** A spinner covers the label; the
+  button does not change width. Swapping `생성` for `생성을 시작하는 중…` triples the button's width
+  under the thumb that just pressed it and, in a wrapping row, moves its neighbours. The label is
+  hidden **visually only** — `opacity-0`, never `visibility: hidden`, `display: none`, or
+  unmounting, all of which drop it from the accessibility tree and leave a busy button with no
+  accessible name at all, since the spinner beside it is `aria-hidden`.
 - Feedback is paced to the wait: under 1s, nothing; 2–9s, an indeterminate indicator; 10s or
   more, determinate progress plus a way out.
 - `prefers-reduced-motion` is honoured globally (`index.css`). Don't fight it.
@@ -469,6 +482,17 @@ scrolls because the sheet is a separate surface with its own bounds. Both set
 - **Badge / chip** — `rounded-sm`, no border, `px-2 py-0.5`. A neutral chip uses
   `badge-neutral-*`; a **status** chip takes the matching `notice-*` tone and always carries its
   text label, so colour is never the only signal.
+- **Notice** — the §2.6 inline-notice contract as a primitive: a tone, explanatory text, no border,
+  `px-4 py-3`. It takes the `role` (`alert` for something that went wrong, `status` for progress and
+  confirmation) because only the caller knows which. Colour never travels alone — the words carry
+  the meaning and the tone reinforces it.
+- **ActionBar** — the dock for a view's committing actions, on `surface-highest` with `rounded-xl`
+  and `shadow-md`. It is the one surface that floats over content without interrupting it, which is
+  why it takes the frontmost plane but a floating panel's shadow rather than a modal's. It clears
+  the phone tab bar and the home indicator itself, so a caller never writes a safe-area class. One
+  per scroller (§4.3), and it goes at the end of a `flex-1 flex-col` page with `mt-auto` — `sticky`
+  can pull a bar up to the scrollport edge but can never push one down, so on a short page an
+  undocked bar floats mid-screen.
 - **Overlays** — tooltip explains, toast reports, dialog/sheet interrupts. All portalled, all
   return focus where they found it, all `Escape` closes, all lock the body scroll while open.
   **On a phone a dialog is a bottom sheet**: full-bleed to the bottom edge, `rounded-t-xl`, safe-area
@@ -606,7 +630,10 @@ Run this over any FE diff before calling a job done (it is the design half of th
 - [ ] The committing action is in the lower band and on the same screen as what it commits (§4.3).
 - [ ] One scroller: no nested `overflow-y-auto`, no fixed-`rows` textarea holding more than it shows (§4.4).
 - [ ] Every interactive element has an `active:` state; nothing is hover-only (§6).
-- [ ] Pending states hold the button's size; feedback renders where the user is looking.
+- [ ] Pending states hold the button's size AND its accessible name; feedback renders where the
+      user is looking, in a live region that was already mounted.
+- [ ] At most one docked `ActionBar` per scroller, and its page fills the shell so it docks rather
+      than floating mid-screen.
 - [ ] Edge-anchored chrome is safe-area padded (§8.1).
 
 **Both themes**

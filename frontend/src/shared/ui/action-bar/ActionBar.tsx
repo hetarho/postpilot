@@ -28,7 +28,7 @@ export function ActionBar({
     <div
       aria-label={ariaLabel}
       className={twMerge(
-        'bg-surface-highest bottom-nav sm:pb-dock-b sticky z-20 mt-6 rounded-xl p-4 shadow-lg sm:bottom-0',
+        'bg-surface-highest bottom-nav sm:pb-dock-b sticky z-20 mt-6 rounded-xl p-4 shadow-md sm:bottom-0',
         className,
       )}
     >

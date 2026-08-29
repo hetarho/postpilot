@@ -40,7 +40,7 @@ export function RulesEditor({ ownerId, rules }: { ownerId: string; rules: string
         autoGrow
         aria-invalid={update.isError || undefined}
         aria-describedby={update.isError ? errorId : undefined}
-        className="mt-1 leading-relaxed"
+        className="max-h-field mt-1 leading-relaxed"
       />
       {update.isError && (
         <FieldMessage id={errorId} className="mt-2">

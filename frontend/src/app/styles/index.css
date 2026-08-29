@@ -307,6 +307,12 @@
      inset (0 on every desktop browser), which leaves the bar's contents flush against its own
      rounded corner. */
   --spacing-dock-b: calc(1rem + env(safe-area-inset-bottom, 0px));
+  /* How tall an autoGrow field in a FORM may get before it becomes its own bounded scroller.
+     Roughly half a small phone's viewport: past this the control that commits the field would be
+     off-screen from the caret, which §4.3 forbids. The editor's bare fields are not capped — there
+     the page is the paper. */
+  --spacing-field: 20rem;
+
   /* A bottom sheet's ceiling. `dvh`, not `vh`: only the dynamic unit tracks the mobile URL bar,
      so a `vh`-sized sheet is clipped on every phone — design-language §8.1. */
   --spacing-sheet: 85dvh;
