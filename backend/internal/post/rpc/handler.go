@@ -44,6 +44,22 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 	return connect.NewResponse(&postpilotv1.SavePostDraftResponse{Post: toProtoPost(saved)}), nil
 }
 
+func (h *Handler) SavePostContent(ctx context.Context, req *connect.Request[postpilotv1.SavePostContentRequest]) (*connect.Response[postpilotv1.SavePostContentResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	content, err := fromProtoContent(req.Msg.GetContent())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	saved, err := h.svc.SaveContent(ctx, userID, req.Msg.GetSlug(), content, req.Msg.GetExpectedRevision(), int(req.Msg.GetTargetLength()))
+	if err != nil {
+		return nil, toConnectError("save post content", err)
+	}
+	return connect.NewResponse(&postpilotv1.SavePostContentResponse{Post: toProtoPost(saved)}), nil
+}
+
 func (h *Handler) GetPost(ctx context.Context, req *connect.Request[postpilotv1.GetPostRequest]) (*connect.Response[postpilotv1.GetPostResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -170,6 +186,10 @@ func toConnectError(op string, err error) error {
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New("upload not found in storage — retry the upload"))
 	case errors.Is(err, post.ErrPostBusy):
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New("post has an active job"))
+	case errors.Is(err, post.ErrStaleContentRevision):
+		return connect.NewError(connect.CodeAborted, errors.New("post content changed in another editor; reload and retry"))
+	case errors.Is(err, post.ErrInvalidContent):
+		return connect.NewError(connect.CodeInvalidArgument, errors.New(err.Error()))
 	default:
 		slog.Error(op+" failed", "err", err)
 		return connect.NewError(connect.CodeInternal, errors.New(op+" failed"))
@@ -186,17 +206,52 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		observations = append(observations, toProtoObservation(observation))
 	}
 	return &postpilotv1.Post{
-		Slug:                p.Slug,
-		Title:               p.Title,
-		Memo:                p.Memo,
-		Status:              p.Status,
-		Images:              images,
-		CreatedAt:           p.CreatedAt.UTC().Format(timeLayout),
-		UpdatedAt:           p.UpdatedAt.UTC().Format(timeLayout),
-		ActiveJob:           toProtoActiveJob(p.ActiveJob),
-		Content:             toProtoContent(p.Content),
-		Observations:        observations,
-		PendingExperimentId: p.PendingExperimentID,
+		Slug:                    p.Slug,
+		Title:                   p.Title,
+		Memo:                    p.Memo,
+		Status:                  p.Status,
+		Images:                  images,
+		CreatedAt:               p.CreatedAt.UTC().Format(timeLayout),
+		UpdatedAt:               p.UpdatedAt.UTC().Format(timeLayout),
+		ActiveJob:               toProtoActiveJob(p.ActiveJob),
+		Content:                 toProtoContent(p.Content),
+		Observations:            observations,
+		PendingExperimentId:     p.PendingExperimentID,
+		ContentRevision:         p.ContentRevision,
+		MachineBaselineRevision: p.MachineBaselineRevision,
+		CanFinalize:             p.Content != nil && p.MachineBaselineRevision > 0,
+		TargetLength:            int32(p.TargetLength),
+	}
+}
+
+func fromProtoContent(content *postpilotv1.PostContent) (post.PostContent, error) {
+	if content == nil {
+		return post.PostContent{}, errors.New("content is required")
+	}
+	out := post.PostContent{Title: content.GetTitle(), Summary: content.GetSummary(), Tags: append([]string(nil), content.GetTags()...)}
+	for _, block := range content.GetBlocks() {
+		if block == nil {
+			return post.PostContent{}, errors.New("content contains an empty block")
+		}
+		out.Blocks = append(out.Blocks, post.Block{Type: fromProtoBlockType(block.GetType()), Content: block.GetContent(), Level: block.GetLevel(), File: block.GetFile(), Alt: block.GetAlt(), Caption: block.GetCaption(), Items: append([]string(nil), block.GetItems()...)})
+	}
+	return out, nil
+}
+
+func fromProtoBlockType(value postpilotv1.BlockType) post.BlockType {
+	switch value {
+	case postpilotv1.BlockType_TEXT:
+		return post.BlockText
+	case postpilotv1.BlockType_HEADING:
+		return post.BlockHeading
+	case postpilotv1.BlockType_IMAGE:
+		return post.BlockImage
+	case postpilotv1.BlockType_QUOTE:
+		return post.BlockQuote
+	case postpilotv1.BlockType_LIST:
+		return post.BlockList
+	default:
+		return ""
 	}
 }
 

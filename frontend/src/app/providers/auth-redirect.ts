@@ -1,6 +1,5 @@
 import type { Transport } from '@connectrpc/connect'
 import type { QueryClient } from '@tanstack/react-query'
-import { getMeQueryKey } from '@/entities/session'
 import { onUnauthenticated } from '@/shared/api'
 import { endSession } from '../model/end-session'
 import type { router as AppRouter } from '../routes/router'
@@ -22,10 +21,9 @@ interface AuthRedirectDeps {
 export function registerAuthRedirect({
   router,
   queryClient,
-  transport,
 }: AuthRedirectDeps): () => void {
   return onUnauthenticated(() => {
-    queryClient.removeQueries({ queryKey: getMeQueryKey(transport), exact: true })
+    queryClient.removeQueries()
     endSession()
 
     // Already there: navigating again would re-run the login route's beforeLoad, whose

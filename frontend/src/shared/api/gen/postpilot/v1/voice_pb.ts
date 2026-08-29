@@ -2,8 +2,8 @@
 // @generated from file postpilot/v1/voice.proto (package postpilot.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { ModelRef } from "./provider_pb";
 import { file_postpilot_v1_provider } from "./provider_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +12,535 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/voice.proto.
  */
 export const file_postpilot_v1_voice: GenFile = /*@__PURE__*/
-  fileDesc("Chhwb3N0cGlsb3QvdjEvdm9pY2UucHJvdG8SDHBvc3RwaWxvdC52MSKIAQoMVm9pY2VQcm9maWxlEhIKCnN0eWxlZ3VpZGUYASABKAkSDQoFcnVsZXMYAiABKAkSEgoKdXBkYXRlZF9hdBgDIAEoCRIqCgdzYW1wbGVzGAQgAygLMhkucG9zdHBpbG90LnYxLlZvaWNlU2FtcGxlEhUKDWFjdGl2ZV9qb2JfaWQYBSABKAkiSwoLVm9pY2VTYW1wbGUSCgoCaWQYASABKAkSDQoFbGFiZWwYAiABKAkSDQoFY2hhcnMYAyABKAUSEgoKY3JlYXRlZF9hdBgEIAEoCSIYChZHZXRWb2ljZVByb2ZpbGVSZXF1ZXN0IkYKF0dldFZvaWNlUHJvZmlsZVJlc3BvbnNlEisKB3Byb2ZpbGUYASABKAsyGi5wb3N0cGlsb3QudjEuVm9pY2VQcm9maWxlImEKGVVwZGF0ZVZvaWNlUHJvZmlsZVJlcXVlc3QSFwoKc3R5bGVndWlkZRgBIAEoCUgAiAEBEhIKBXJ1bGVzGAIgASgJSAGIAQFCDQoLX3N0eWxlZ3VpZGVCCAoGX3J1bGVzIkkKGlVwZGF0ZVZvaWNlUHJvZmlsZVJlc3BvbnNlEisKB3Byb2ZpbGUYASABKAsyGi5wb3N0cGlsb3QudjEuVm9pY2VQcm9maWxlIlsKFUFkZFZvaWNlU2FtcGxlUmVxdWVzdBINCgVsYWJlbBgBIAEoCRIMCgRib2R5GAIgASgJEiUKBW1vZGVsGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIlMKFkFkZFZvaWNlU2FtcGxlUmVzcG9uc2USKQoGc2FtcGxlGAEgASgLMhkucG9zdHBpbG90LnYxLlZvaWNlU2FtcGxlEg4KBmpvYl9pZBgCIAEoCSItChhEZWxldGVWb2ljZVNhbXBsZVJlcXVlc3QSEQoJc2FtcGxlX2lkGAEgASgJIisKGURlbGV0ZVZvaWNlU2FtcGxlUmVzcG9uc2USDgoGam9iX2lkGAEgASgJMqIDCgxWb2ljZVNlcnZpY2USYAoPR2V0Vm9pY2VQcm9maWxlEiQucG9zdHBpbG90LnYxLkdldFZvaWNlUHJvZmlsZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuR2V0Vm9pY2VQcm9maWxlUmVzcG9uc2UiABJpChJVcGRhdGVWb2ljZVByb2ZpbGUSJy5wb3N0cGlsb3QudjEuVXBkYXRlVm9pY2VQcm9maWxlUmVxdWVzdBooLnBvc3RwaWxvdC52MS5VcGRhdGVWb2ljZVByb2ZpbGVSZXNwb25zZSIAEl0KDkFkZFZvaWNlU2FtcGxlEiMucG9zdHBpbG90LnYxLkFkZFZvaWNlU2FtcGxlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5BZGRWb2ljZVNhbXBsZVJlc3BvbnNlIgASZgoRRGVsZXRlVm9pY2VTYW1wbGUSJi5wb3N0cGlsb3QudjEuRGVsZXRlVm9pY2VTYW1wbGVSZXF1ZXN0GicucG9zdHBpbG90LnYxLkRlbGV0ZVZvaWNlU2FtcGxlUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_provider]);
+  fileDesc("Chhwb3N0cGlsb3QvdjEvdm9pY2UucHJvdG8SDHBvc3RwaWxvdC52MSJcCgpWb2ljZVZhbHVlEg0KBXZhbHVlGAEgASgJEi4KBnNvdXJjZRgCIAEoDjIeLnBvc3RwaWxvdC52MS5Wb2ljZVZhbHVlU291cmNlEg8KB3Vua25vd24YAyABKAgiQgoMV2VpZ2h0ZWRXb3JkEgwKBHdvcmQYASABKAkSFAoMYWx0ZXJuYXRpdmVzGAIgAygJEg4KBndlaWdodBgDIAEoBSIrCgpCYW5uZWRJdGVtEg0KBXZhbHVlGAEgASgJEg4KBnJlYXNvbhgCIAEoCSIsCgtFbmRpbmdSYXRpbxIOCgZlbmRpbmcYASABKAkSDQoFcmF0aW8YAiABKAEi1QEKDFZvaWNlTGV4aWNhbBIzCg9wcmVmZXJyZWRfd29yZHMYASADKAsyGi5wb3N0cGlsb3QudjEuV2VpZ2h0ZWRXb3JkEi4KDGJhbm5lZF93b3JkcxgCIAMoCzIYLnBvc3RwaWxvdC52MS5CYW5uZWRJdGVtEjEKD2Jhbm5lZF9wYXR0ZXJucxgDIAMoCzIYLnBvc3RwaWxvdC52MS5CYW5uZWRJdGVtEi0KC2Rlc2NyaXB0aW9uGAQgASgLMhgucG9zdHBpbG90LnYxLlZvaWNlVmFsdWUiuAEKDFZvaWNlRW5kaW5ncxIvCg1iYXNlX3JlZ2lzdGVyGAEgASgLMhgucG9zdHBpbG90LnYxLlZvaWNlVmFsdWUSLwoMZGlzdHJpYnV0aW9uGAIgAygLMhkucG9zdHBpbG90LnYxLkVuZGluZ1JhdGlvEhYKDmJhbm5lZF9lbmRpbmdzGAMgAygJEhkKEXNpZ25hdHVyZV9lbmRpbmdzGAQgAygJEhMKC2NvbnN0cmFpbnRzGAUgAygJIpkCCgtWb2ljZVN5bnRheBIeChZhdmVyYWdlX3NlbnRlbmNlX2NoYXJzGAEgASgBEjEKD3NlbnRlbmNlX2xlbmd0aBgCIAEoCzIYLnBvc3RwaWxvdC52MS5Wb2ljZVZhbHVlEjIKEGNvbm5lY3RpdmVfc3R5bGUYAyABKAsyGC5wb3N0cGlsb3QudjEuVm9pY2VWYWx1ZRIdChVwcmVmZXJyZWRfY29ubmVjdGl2ZXMYBCADKAkSMAoObm9taW5hbGl6YXRpb24YBSABKAsyGC5wb3N0cGlsb3QudjEuVm9pY2VWYWx1ZRIyChBwYXNzaXZlX3RlbmRlbmN5GAYgASgLMhgucG9zdHBpbG90LnYxLlZvaWNlVmFsdWUiwgIKDlZvaWNlU3RydWN0dXJlEi8KDWludHJvX3BhdHRlcm4YASABKAsyGC5wb3N0cGlsb3QudjEuVm9pY2VWYWx1ZRIxCg9jbG9zaW5nX3BhdHRlcm4YAiABKAsyGC5wb3N0cGlsb3QudjEuVm9pY2VWYWx1ZRIfChdwYXJhZ3JhcGhfc2VudGVuY2VzX21pbhgDIAEoBRIfChdwYXJhZ3JhcGhfc2VudGVuY2VzX21heBgEIAEoBRIvCg1oZWFkaW5nX2hhYml0GAUgASgLMhgucG9zdHBpbG90LnYxLlZvaWNlVmFsdWUSLAoKbGlzdF9oYWJpdBgGIAEoCzIYLnBvc3RwaWxvdC52MS5Wb2ljZVZhbHVlEisKCWVtb2ppX3VzZRgHIAEoCzIYLnBvc3RwaWxvdC52MS5Wb2ljZVZhbHVlIpEBCglWb2ljZUF4ZXMSEwoLaW52b2x2ZW1lbnQYASABKAUSEwoLbmFycmF0aXZpdHkYAiABKAUSHAoUcGVyc3Vhc2lvbl9vdmVydG5lc3MYAyABKAUSFAoMYWJzdHJhY3RuZXNzGAQgASgFEhcKD2FkZHJlc3NlZV9mb2N1cxgFIAEoBRINCgVodW1vchgGIAEoBSLgAQoRVm9pY2VDb250cmFzdFJ1bGUSCgoCaWQYASABKAkSEQoJc3RhdGVtZW50GAIgASgJEicKBWxheWVyGAMgASgOMhgucG9zdHBpbG90LnYxLlZvaWNlTGF5ZXISFgoOZXZpZGVuY2VfY291bnQYBCABKAUSLQoGc3RhdHVzGAUgASgOMh0ucG9zdHBpbG90LnYxLlZvaWNlUnVsZVN0YXR1cxIOCgZvcmlnaW4YBiABKAkSEgoKY3JlYXRlZF9hdBgHIAEoCRIYChBsYXN0X2V2aWRlbmNlX2F0GAggASgJIoUBCgtWb2ljZVNvdXJjZRIKCgJpZBgBIAEoCRIRCglwb3N0X3NsdWcYAiABKAkSDQoFdGl0bGUYAyABKAkSDAoEdGFncxgEIAMoCRIPCgdleGNlcnB0GAUgASgJEhUKDWhhc19lbWJlZGRpbmcYBiABKAgSEgoKY3JlYXRlZF9hdBgHIAEoCSKWAQoQVm9pY2VGZWVkYmFja1JlZhIKCgJpZBgBIAEoCRIRCglwb3N0X3NsdWcYAiABKAkSDAoEa2luZBgDIAEoCRInCgVsYXllchgEIAEoDjIYLnBvc3RwaWxvdC52MS5Wb2ljZUxheWVyEhgKEHByb2Nlc3Npbmdfc3RhdGUYBSABKAkSEgoKY3JlYXRlZF9hdBgGIAEoCSJNChBWb2ljZVByb2ZpbGVNZXRhEg8KB3ZlcnNpb24YASABKAMSEgoKdXBkYXRlZF9hdBgCIAEoCRIUCgxzb3VyY2VfY291bnQYAyABKAUi0wMKFlN0cnVjdHVyZWRWb2ljZVByb2ZpbGUSLAoEbWV0YRgBIAEoCzIeLnBvc3RwaWxvdC52MS5Wb2ljZVByb2ZpbGVNZXRhEisKB2xleGljYWwYAiABKAsyGi5wb3N0cGlsb3QudjEuVm9pY2VMZXhpY2FsEisKB2VuZGluZ3MYAyABKAsyGi5wb3N0cGlsb3QudjEuVm9pY2VFbmRpbmdzEikKBnN5bnRheBgEIAEoCzIZLnBvc3RwaWxvdC52MS5Wb2ljZVN5bnRheBIvCglzdHJ1Y3R1cmUYBSABKAsyHC5wb3N0cGlsb3QudjEuVm9pY2VTdHJ1Y3R1cmUSJQoEYXhlcxgGIAEoCzIXLnBvc3RwaWxvdC52MS5Wb2ljZUF4ZXMSNwoOY29udHJhc3RfcnVsZXMYByADKAsyHy5wb3N0cGlsb3QudjEuVm9pY2VDb250cmFzdFJ1bGUSMAoNZmV3X3Nob3RfYmFuaxgIIAMoCzIZLnBvc3RwaWxvdC52MS5Wb2ljZVNvdXJjZRI0CgxmZWVkYmFja19sb2cYCSADKAsyHi5wb3N0cGlsb3QudjEuVm9pY2VGZWVkYmFja1JlZhINCgVlbXB0eRgKIAEoCCKYAgoMVm9pY2VQcm9maWxlEhIKCnN0eWxlZ3VpZGUYASABKAkSDQoFcnVsZXMYAiABKAkSEgoKdXBkYXRlZF9hdBgDIAEoCRIqCgdzYW1wbGVzGAQgAygLMhkucG9zdHBpbG90LnYxLlZvaWNlU2FtcGxlEhUKDWFjdGl2ZV9qb2JfaWQYBSABKAkSOAoKc3RydWN0dXJlZBgGIAEoCzIkLnBvc3RwaWxvdC52MS5TdHJ1Y3R1cmVkVm9pY2VQcm9maWxlEh4KFmxlZ2FjeV9tYW51YWxfZ3VpZGFuY2UYByABKAkSHgoWZmluYWxpemVkX3NvdXJjZV9jb3VudBgIIAEoBRIUCgxjYW5fdmFsaWRhdGUYCSABKAgioAEKE1ZvaWNlUHJvZmlsZVZlcnNpb24SDwoHdmVyc2lvbhgBIAEoAxI1Cgdwcm9maWxlGAIgASgLMiQucG9zdHBpbG90LnYxLlN0cnVjdHVyZWRWb2ljZVByb2ZpbGUSDgoGb3JpZ2luGAMgASgJEh0KFXJlc3RvcmVkX2Zyb21fdmVyc2lvbhgEIAEoAxISCgpjcmVhdGVkX2F0GAUgASgJIksKC1ZvaWNlU2FtcGxlEgoKAmlkGAEgASgJEg0KBWxhYmVsGAIgASgJEg0KBWNoYXJzGAMgASgFEhIKCmNyZWF0ZWRfYXQYBCABKAkiGAoWR2V0Vm9pY2VQcm9maWxlUmVxdWVzdCJGChdHZXRWb2ljZVByb2ZpbGVSZXNwb25zZRIrCgdwcm9maWxlGAEgASgLMhoucG9zdHBpbG90LnYxLlZvaWNlUHJvZmlsZSJhChlVcGRhdGVWb2ljZVByb2ZpbGVSZXF1ZXN0EhcKCnN0eWxlZ3VpZGUYASABKAlIAIgBARISCgVydWxlcxgCIAEoCUgBiAEBQg0KC19zdHlsZWd1aWRlQggKBl9ydWxlcyJJChpVcGRhdGVWb2ljZVByb2ZpbGVSZXNwb25zZRIrCgdwcm9maWxlGAEgASgLMhoucG9zdHBpbG90LnYxLlZvaWNlUHJvZmlsZSJbChVBZGRWb2ljZVNhbXBsZVJlcXVlc3QSDQoFbGFiZWwYASABKAkSDAoEYm9keRgCIAEoCRIlCgVtb2RlbBgDIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZiJTChZBZGRWb2ljZVNhbXBsZVJlc3BvbnNlEikKBnNhbXBsZRgBIAEoCzIZLnBvc3RwaWxvdC52MS5Wb2ljZVNhbXBsZRIOCgZqb2JfaWQYAiABKAkiLQoYRGVsZXRlVm9pY2VTYW1wbGVSZXF1ZXN0EhEKCXNhbXBsZV9pZBgBIAEoCSIrChlEZWxldGVWb2ljZVNhbXBsZVJlc3BvbnNlEg4KBmpvYl9pZBgBIAEoCSIhCh9MaXN0Vm9pY2VQcm9maWxlVmVyc2lvbnNSZXF1ZXN0IlcKIExpc3RWb2ljZVByb2ZpbGVWZXJzaW9uc1Jlc3BvbnNlEjMKCHZlcnNpb25zGAEgAygLMiEucG9zdHBpbG90LnYxLlZvaWNlUHJvZmlsZVZlcnNpb24icgoaVXBkYXRlVm9pY2VPdmVycmlkZVJlcXVlc3QSJwoFbGF5ZXIYASABKA4yGC5wb3N0cGlsb3QudjEuVm9pY2VMYXllchINCgVmaWVsZBgCIAEoCRISCgV2YWx1ZRgDIAEoCUgAiAEBQggKBl92YWx1ZSJKChtVcGRhdGVWb2ljZU92ZXJyaWRlUmVzcG9uc2USKwoHcHJvZmlsZRgBIAEoCzIaLnBvc3RwaWxvdC52MS5Wb2ljZVByb2ZpbGUiLQoaUmVzdG9yZVZvaWNlUHJvZmlsZVJlcXVlc3QSDwoHdmVyc2lvbhgBIAEoAyJKChtSZXN0b3JlVm9pY2VQcm9maWxlUmVzcG9uc2USKwoHcHJvZmlsZRgBIAEoCzIaLnBvc3RwaWxvdC52MS5Wb2ljZVByb2ZpbGUqtwEKEFZvaWNlVmFsdWVTb3VyY2USIgoeVk9JQ0VfVkFMVUVfU09VUkNFX1VOU1BFQ0lGSUVEEAASHgoaVk9JQ0VfVkFMVUVfU09VUkNFX1VOS05PV04QARIfChtWT0lDRV9WQUxVRV9TT1VSQ0VfTUVBU1VSRUQQAhIfChtWT0lDRV9WQUxVRV9TT1VSQ0VfQU5BTFlaRUQQAxIdChlWT0lDRV9WQUxVRV9TT1VSQ0VfTUFOVUFMEAQqsgEKD1ZvaWNlUnVsZVN0YXR1cxIhCh1WT0lDRV9SVUxFX1NUQVRVU19VTlNQRUNJRklFRBAAEh8KG1ZPSUNFX1JVTEVfU1RBVFVTX0NBTkRJREFURRABEhwKGFZPSUNFX1JVTEVfU1RBVFVTX0FDVElWRRACEh0KGVZPSUNFX1JVTEVfU1RBVFVTX1JFVElSRUQQAxIeChpWT0lDRV9SVUxFX1NUQVRVU19SRUpFQ1RFRBAEKqQBCgpWb2ljZUxheWVyEhsKF1ZPSUNFX0xBWUVSX1VOU1BFQ0lGSUVEEAASFwoTVk9JQ0VfTEFZRVJfTEVYSUNBTBABEhcKE1ZPSUNFX0xBWUVSX0VORElOR1MQAhIWChJWT0lDRV9MQVlFUl9TWU5UQVgQAxIZChVWT0lDRV9MQVlFUl9TVFJVQ1RVUkUQBBIUChBWT0lDRV9MQVlFUl9BWEVTEAUy+wUKDFZvaWNlU2VydmljZRJgCg9HZXRWb2ljZVByb2ZpbGUSJC5wb3N0cGlsb3QudjEuR2V0Vm9pY2VQcm9maWxlUmVxdWVzdBolLnBvc3RwaWxvdC52MS5HZXRWb2ljZVByb2ZpbGVSZXNwb25zZSIAEmkKElVwZGF0ZVZvaWNlUHJvZmlsZRInLnBvc3RwaWxvdC52MS5VcGRhdGVWb2ljZVByb2ZpbGVSZXF1ZXN0GigucG9zdHBpbG90LnYxLlVwZGF0ZVZvaWNlUHJvZmlsZVJlc3BvbnNlIgASXQoOQWRkVm9pY2VTYW1wbGUSIy5wb3N0cGlsb3QudjEuQWRkVm9pY2VTYW1wbGVSZXF1ZXN0GiQucG9zdHBpbG90LnYxLkFkZFZvaWNlU2FtcGxlUmVzcG9uc2UiABJmChFEZWxldGVWb2ljZVNhbXBsZRImLnBvc3RwaWxvdC52MS5EZWxldGVWb2ljZVNhbXBsZVJlcXVlc3QaJy5wb3N0cGlsb3QudjEuRGVsZXRlVm9pY2VTYW1wbGVSZXNwb25zZSIAEnsKGExpc3RWb2ljZVByb2ZpbGVWZXJzaW9ucxItLnBvc3RwaWxvdC52MS5MaXN0Vm9pY2VQcm9maWxlVmVyc2lvbnNSZXF1ZXN0Gi4ucG9zdHBpbG90LnYxLkxpc3RWb2ljZVByb2ZpbGVWZXJzaW9uc1Jlc3BvbnNlIgASbAoTVXBkYXRlVm9pY2VPdmVycmlkZRIoLnBvc3RwaWxvdC52MS5VcGRhdGVWb2ljZU92ZXJyaWRlUmVxdWVzdBopLnBvc3RwaWxvdC52MS5VcGRhdGVWb2ljZU92ZXJyaWRlUmVzcG9uc2UiABJsChNSZXN0b3JlVm9pY2VQcm9maWxlEigucG9zdHBpbG90LnYxLlJlc3RvcmVWb2ljZVByb2ZpbGVSZXF1ZXN0GikucG9zdHBpbG90LnYxLlJlc3RvcmVWb2ljZVByb2ZpbGVSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_provider]);
+
+/**
+ * @generated from message postpilot.v1.VoiceValue
+ */
+export type VoiceValue = Message<"postpilot.v1.VoiceValue"> & {
+  /**
+   * @generated from field: string value = 1;
+   */
+  value: string;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValueSource source = 2;
+   */
+  source: VoiceValueSource;
+
+  /**
+   * @generated from field: bool unknown = 3;
+   */
+  unknown: boolean;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceValue.
+ * Use `create(VoiceValueSchema)` to create a new message.
+ */
+export const VoiceValueSchema: GenMessage<VoiceValue> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 0);
+
+/**
+ * @generated from message postpilot.v1.WeightedWord
+ */
+export type WeightedWord = Message<"postpilot.v1.WeightedWord"> & {
+  /**
+   * @generated from field: string word = 1;
+   */
+  word: string;
+
+  /**
+   * @generated from field: repeated string alternatives = 2;
+   */
+  alternatives: string[];
+
+  /**
+   * @generated from field: int32 weight = 3;
+   */
+  weight: number;
+};
+
+/**
+ * Describes the message postpilot.v1.WeightedWord.
+ * Use `create(WeightedWordSchema)` to create a new message.
+ */
+export const WeightedWordSchema: GenMessage<WeightedWord> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 1);
+
+/**
+ * @generated from message postpilot.v1.BannedItem
+ */
+export type BannedItem = Message<"postpilot.v1.BannedItem"> & {
+  /**
+   * @generated from field: string value = 1;
+   */
+  value: string;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message postpilot.v1.BannedItem.
+ * Use `create(BannedItemSchema)` to create a new message.
+ */
+export const BannedItemSchema: GenMessage<BannedItem> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 2);
+
+/**
+ * @generated from message postpilot.v1.EndingRatio
+ */
+export type EndingRatio = Message<"postpilot.v1.EndingRatio"> & {
+  /**
+   * @generated from field: string ending = 1;
+   */
+  ending: string;
+
+  /**
+   * @generated from field: double ratio = 2;
+   */
+  ratio: number;
+};
+
+/**
+ * Describes the message postpilot.v1.EndingRatio.
+ * Use `create(EndingRatioSchema)` to create a new message.
+ */
+export const EndingRatioSchema: GenMessage<EndingRatio> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 3);
+
+/**
+ * @generated from message postpilot.v1.VoiceLexical
+ */
+export type VoiceLexical = Message<"postpilot.v1.VoiceLexical"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.WeightedWord preferred_words = 1;
+   */
+  preferredWords: WeightedWord[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.BannedItem banned_words = 2;
+   */
+  bannedWords: BannedItem[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.BannedItem banned_patterns = 3;
+   */
+  bannedPatterns: BannedItem[];
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValue description = 4;
+   */
+  description?: VoiceValue | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceLexical.
+ * Use `create(VoiceLexicalSchema)` to create a new message.
+ */
+export const VoiceLexicalSchema: GenMessage<VoiceLexical> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 4);
+
+/**
+ * @generated from message postpilot.v1.VoiceEndings
+ */
+export type VoiceEndings = Message<"postpilot.v1.VoiceEndings"> & {
+  /**
+   * @generated from field: postpilot.v1.VoiceValue base_register = 1;
+   */
+  baseRegister?: VoiceValue | undefined;
+
+  /**
+   * @generated from field: repeated postpilot.v1.EndingRatio distribution = 2;
+   */
+  distribution: EndingRatio[];
+
+  /**
+   * @generated from field: repeated string banned_endings = 3;
+   */
+  bannedEndings: string[];
+
+  /**
+   * @generated from field: repeated string signature_endings = 4;
+   */
+  signatureEndings: string[];
+
+  /**
+   * @generated from field: repeated string constraints = 5;
+   */
+  constraints: string[];
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceEndings.
+ * Use `create(VoiceEndingsSchema)` to create a new message.
+ */
+export const VoiceEndingsSchema: GenMessage<VoiceEndings> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 5);
+
+/**
+ * @generated from message postpilot.v1.VoiceSyntax
+ */
+export type VoiceSyntax = Message<"postpilot.v1.VoiceSyntax"> & {
+  /**
+   * @generated from field: double average_sentence_chars = 1;
+   */
+  averageSentenceChars: number;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValue sentence_length = 2;
+   */
+  sentenceLength?: VoiceValue | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValue connective_style = 3;
+   */
+  connectiveStyle?: VoiceValue | undefined;
+
+  /**
+   * @generated from field: repeated string preferred_connectives = 4;
+   */
+  preferredConnectives: string[];
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValue nominalization = 5;
+   */
+  nominalization?: VoiceValue | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValue passive_tendency = 6;
+   */
+  passiveTendency?: VoiceValue | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceSyntax.
+ * Use `create(VoiceSyntaxSchema)` to create a new message.
+ */
+export const VoiceSyntaxSchema: GenMessage<VoiceSyntax> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 6);
+
+/**
+ * @generated from message postpilot.v1.VoiceStructure
+ */
+export type VoiceStructure = Message<"postpilot.v1.VoiceStructure"> & {
+  /**
+   * @generated from field: postpilot.v1.VoiceValue intro_pattern = 1;
+   */
+  introPattern?: VoiceValue | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValue closing_pattern = 2;
+   */
+  closingPattern?: VoiceValue | undefined;
+
+  /**
+   * @generated from field: int32 paragraph_sentences_min = 3;
+   */
+  paragraphSentencesMin: number;
+
+  /**
+   * @generated from field: int32 paragraph_sentences_max = 4;
+   */
+  paragraphSentencesMax: number;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValue heading_habit = 5;
+   */
+  headingHabit?: VoiceValue | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValue list_habit = 6;
+   */
+  listHabit?: VoiceValue | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceValue emoji_use = 7;
+   */
+  emojiUse?: VoiceValue | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceStructure.
+ * Use `create(VoiceStructureSchema)` to create a new message.
+ */
+export const VoiceStructureSchema: GenMessage<VoiceStructure> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 7);
+
+/**
+ * @generated from message postpilot.v1.VoiceAxes
+ */
+export type VoiceAxes = Message<"postpilot.v1.VoiceAxes"> & {
+  /**
+   * @generated from field: int32 involvement = 1;
+   */
+  involvement: number;
+
+  /**
+   * @generated from field: int32 narrativity = 2;
+   */
+  narrativity: number;
+
+  /**
+   * @generated from field: int32 persuasion_overtness = 3;
+   */
+  persuasionOvertness: number;
+
+  /**
+   * @generated from field: int32 abstractness = 4;
+   */
+  abstractness: number;
+
+  /**
+   * @generated from field: int32 addressee_focus = 5;
+   */
+  addresseeFocus: number;
+
+  /**
+   * @generated from field: int32 humor = 6;
+   */
+  humor: number;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceAxes.
+ * Use `create(VoiceAxesSchema)` to create a new message.
+ */
+export const VoiceAxesSchema: GenMessage<VoiceAxes> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 8);
+
+/**
+ * @generated from message postpilot.v1.VoiceContrastRule
+ */
+export type VoiceContrastRule = Message<"postpilot.v1.VoiceContrastRule"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string statement = 2;
+   */
+  statement: string;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceLayer layer = 3;
+   */
+  layer: VoiceLayer;
+
+  /**
+   * @generated from field: int32 evidence_count = 4;
+   */
+  evidenceCount: number;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceRuleStatus status = 5;
+   */
+  status: VoiceRuleStatus;
+
+  /**
+   * @generated from field: string origin = 6;
+   */
+  origin: string;
+
+  /**
+   * @generated from field: string created_at = 7;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string last_evidence_at = 8;
+   */
+  lastEvidenceAt: string;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceContrastRule.
+ * Use `create(VoiceContrastRuleSchema)` to create a new message.
+ */
+export const VoiceContrastRuleSchema: GenMessage<VoiceContrastRule> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 9);
+
+/**
+ * @generated from message postpilot.v1.VoiceSource
+ */
+export type VoiceSource = Message<"postpilot.v1.VoiceSource"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string post_slug = 2;
+   */
+  postSlug: string;
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * @generated from field: repeated string tags = 4;
+   */
+  tags: string[];
+
+  /**
+   * @generated from field: string excerpt = 5;
+   */
+  excerpt: string;
+
+  /**
+   * @generated from field: bool has_embedding = 6;
+   */
+  hasEmbedding: boolean;
+
+  /**
+   * @generated from field: string created_at = 7;
+   */
+  createdAt: string;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceSource.
+ * Use `create(VoiceSourceSchema)` to create a new message.
+ */
+export const VoiceSourceSchema: GenMessage<VoiceSource> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 10);
+
+/**
+ * @generated from message postpilot.v1.VoiceFeedbackRef
+ */
+export type VoiceFeedbackRef = Message<"postpilot.v1.VoiceFeedbackRef"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string post_slug = 2;
+   */
+  postSlug: string;
+
+  /**
+   * @generated from field: string kind = 3;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceLayer layer = 4;
+   */
+  layer: VoiceLayer;
+
+  /**
+   * @generated from field: string processing_state = 5;
+   */
+  processingState: string;
+
+  /**
+   * @generated from field: string created_at = 6;
+   */
+  createdAt: string;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceFeedbackRef.
+ * Use `create(VoiceFeedbackRefSchema)` to create a new message.
+ */
+export const VoiceFeedbackRefSchema: GenMessage<VoiceFeedbackRef> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 11);
+
+/**
+ * @generated from message postpilot.v1.VoiceProfileMeta
+ */
+export type VoiceProfileMeta = Message<"postpilot.v1.VoiceProfileMeta"> & {
+  /**
+   * @generated from field: int64 version = 1;
+   */
+  version: bigint;
+
+  /**
+   * @generated from field: string updated_at = 2;
+   */
+  updatedAt: string;
+
+  /**
+   * @generated from field: int32 source_count = 3;
+   */
+  sourceCount: number;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceProfileMeta.
+ * Use `create(VoiceProfileMetaSchema)` to create a new message.
+ */
+export const VoiceProfileMetaSchema: GenMessage<VoiceProfileMeta> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 12);
+
+/**
+ * @generated from message postpilot.v1.StructuredVoiceProfile
+ */
+export type StructuredVoiceProfile = Message<"postpilot.v1.StructuredVoiceProfile"> & {
+  /**
+   * @generated from field: postpilot.v1.VoiceProfileMeta meta = 1;
+   */
+  meta?: VoiceProfileMeta | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceLexical lexical = 2;
+   */
+  lexical?: VoiceLexical | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceEndings endings = 3;
+   */
+  endings?: VoiceEndings | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceSyntax syntax = 4;
+   */
+  syntax?: VoiceSyntax | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceStructure structure = 5;
+   */
+  structure?: VoiceStructure | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.VoiceAxes axes = 6;
+   */
+  axes?: VoiceAxes | undefined;
+
+  /**
+   * @generated from field: repeated postpilot.v1.VoiceContrastRule contrast_rules = 7;
+   */
+  contrastRules: VoiceContrastRule[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.VoiceSource few_shot_bank = 8;
+   */
+  fewShotBank: VoiceSource[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.VoiceFeedbackRef feedback_log = 9;
+   */
+  feedbackLog: VoiceFeedbackRef[];
+
+  /**
+   * @generated from field: bool empty = 10;
+   */
+  empty: boolean;
+};
+
+/**
+ * Describes the message postpilot.v1.StructuredVoiceProfile.
+ * Use `create(StructuredVoiceProfileSchema)` to create a new message.
+ */
+export const StructuredVoiceProfileSchema: GenMessage<StructuredVoiceProfile> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 13);
 
 /**
  * @generated from message postpilot.v1.VoiceProfile
@@ -42,6 +570,26 @@ export type VoiceProfile = Message<"postpilot.v1.VoiceProfile"> & {
    * @generated from field: string active_job_id = 5;
    */
   activeJobId: string;
+
+  /**
+   * @generated from field: postpilot.v1.StructuredVoiceProfile structured = 6;
+   */
+  structured?: StructuredVoiceProfile | undefined;
+
+  /**
+   * @generated from field: string legacy_manual_guidance = 7;
+   */
+  legacyManualGuidance: string;
+
+  /**
+   * @generated from field: int32 finalized_source_count = 8;
+   */
+  finalizedSourceCount: number;
+
+  /**
+   * @generated from field: bool can_validate = 9;
+   */
+  canValidate: boolean;
 };
 
 /**
@@ -49,7 +597,44 @@ export type VoiceProfile = Message<"postpilot.v1.VoiceProfile"> & {
  * Use `create(VoiceProfileSchema)` to create a new message.
  */
 export const VoiceProfileSchema: GenMessage<VoiceProfile> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 0);
+  messageDesc(file_postpilot_v1_voice, 14);
+
+/**
+ * @generated from message postpilot.v1.VoiceProfileVersion
+ */
+export type VoiceProfileVersion = Message<"postpilot.v1.VoiceProfileVersion"> & {
+  /**
+   * @generated from field: int64 version = 1;
+   */
+  version: bigint;
+
+  /**
+   * @generated from field: postpilot.v1.StructuredVoiceProfile profile = 2;
+   */
+  profile?: StructuredVoiceProfile | undefined;
+
+  /**
+   * @generated from field: string origin = 3;
+   */
+  origin: string;
+
+  /**
+   * @generated from field: int64 restored_from_version = 4;
+   */
+  restoredFromVersion: bigint;
+
+  /**
+   * @generated from field: string created_at = 5;
+   */
+  createdAt: string;
+};
+
+/**
+ * Describes the message postpilot.v1.VoiceProfileVersion.
+ * Use `create(VoiceProfileVersionSchema)` to create a new message.
+ */
+export const VoiceProfileVersionSchema: GenMessage<VoiceProfileVersion> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 15);
 
 /**
  * @generated from message postpilot.v1.VoiceSample
@@ -81,7 +666,7 @@ export type VoiceSample = Message<"postpilot.v1.VoiceSample"> & {
  * Use `create(VoiceSampleSchema)` to create a new message.
  */
 export const VoiceSampleSchema: GenMessage<VoiceSample> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 1);
+  messageDesc(file_postpilot_v1_voice, 16);
 
 /**
  * @generated from message postpilot.v1.GetVoiceProfileRequest
@@ -94,7 +679,7 @@ export type GetVoiceProfileRequest = Message<"postpilot.v1.GetVoiceProfileReques
  * Use `create(GetVoiceProfileRequestSchema)` to create a new message.
  */
 export const GetVoiceProfileRequestSchema: GenMessage<GetVoiceProfileRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 2);
+  messageDesc(file_postpilot_v1_voice, 17);
 
 /**
  * @generated from message postpilot.v1.GetVoiceProfileResponse
@@ -111,7 +696,7 @@ export type GetVoiceProfileResponse = Message<"postpilot.v1.GetVoiceProfileRespo
  * Use `create(GetVoiceProfileResponseSchema)` to create a new message.
  */
 export const GetVoiceProfileResponseSchema: GenMessage<GetVoiceProfileResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 3);
+  messageDesc(file_postpilot_v1_voice, 18);
 
 /**
  * @generated from message postpilot.v1.UpdateVoiceProfileRequest
@@ -136,7 +721,7 @@ export type UpdateVoiceProfileRequest = Message<"postpilot.v1.UpdateVoiceProfile
  * Use `create(UpdateVoiceProfileRequestSchema)` to create a new message.
  */
 export const UpdateVoiceProfileRequestSchema: GenMessage<UpdateVoiceProfileRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 4);
+  messageDesc(file_postpilot_v1_voice, 19);
 
 /**
  * @generated from message postpilot.v1.UpdateVoiceProfileResponse
@@ -153,7 +738,7 @@ export type UpdateVoiceProfileResponse = Message<"postpilot.v1.UpdateVoiceProfil
  * Use `create(UpdateVoiceProfileResponseSchema)` to create a new message.
  */
 export const UpdateVoiceProfileResponseSchema: GenMessage<UpdateVoiceProfileResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 5);
+  messageDesc(file_postpilot_v1_voice, 20);
 
 /**
  * @generated from message postpilot.v1.AddVoiceSampleRequest
@@ -183,7 +768,7 @@ export type AddVoiceSampleRequest = Message<"postpilot.v1.AddVoiceSampleRequest"
  * Use `create(AddVoiceSampleRequestSchema)` to create a new message.
  */
 export const AddVoiceSampleRequestSchema: GenMessage<AddVoiceSampleRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 6);
+  messageDesc(file_postpilot_v1_voice, 21);
 
 /**
  * @generated from message postpilot.v1.AddVoiceSampleResponse
@@ -205,7 +790,7 @@ export type AddVoiceSampleResponse = Message<"postpilot.v1.AddVoiceSampleRespons
  * Use `create(AddVoiceSampleResponseSchema)` to create a new message.
  */
 export const AddVoiceSampleResponseSchema: GenMessage<AddVoiceSampleResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 7);
+  messageDesc(file_postpilot_v1_voice, 22);
 
 /**
  * @generated from message postpilot.v1.DeleteVoiceSampleRequest
@@ -222,7 +807,7 @@ export type DeleteVoiceSampleRequest = Message<"postpilot.v1.DeleteVoiceSampleRe
  * Use `create(DeleteVoiceSampleRequestSchema)` to create a new message.
  */
 export const DeleteVoiceSampleRequestSchema: GenMessage<DeleteVoiceSampleRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 8);
+  messageDesc(file_postpilot_v1_voice, 23);
 
 /**
  * @generated from message postpilot.v1.DeleteVoiceSampleResponse
@@ -239,7 +824,228 @@ export type DeleteVoiceSampleResponse = Message<"postpilot.v1.DeleteVoiceSampleR
  * Use `create(DeleteVoiceSampleResponseSchema)` to create a new message.
  */
 export const DeleteVoiceSampleResponseSchema: GenMessage<DeleteVoiceSampleResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_voice, 9);
+  messageDesc(file_postpilot_v1_voice, 24);
+
+/**
+ * @generated from message postpilot.v1.ListVoiceProfileVersionsRequest
+ */
+export type ListVoiceProfileVersionsRequest = Message<"postpilot.v1.ListVoiceProfileVersionsRequest"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.ListVoiceProfileVersionsRequest.
+ * Use `create(ListVoiceProfileVersionsRequestSchema)` to create a new message.
+ */
+export const ListVoiceProfileVersionsRequestSchema: GenMessage<ListVoiceProfileVersionsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 25);
+
+/**
+ * @generated from message postpilot.v1.ListVoiceProfileVersionsResponse
+ */
+export type ListVoiceProfileVersionsResponse = Message<"postpilot.v1.ListVoiceProfileVersionsResponse"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.VoiceProfileVersion versions = 1;
+   */
+  versions: VoiceProfileVersion[];
+};
+
+/**
+ * Describes the message postpilot.v1.ListVoiceProfileVersionsResponse.
+ * Use `create(ListVoiceProfileVersionsResponseSchema)` to create a new message.
+ */
+export const ListVoiceProfileVersionsResponseSchema: GenMessage<ListVoiceProfileVersionsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 26);
+
+/**
+ * @generated from message postpilot.v1.UpdateVoiceOverrideRequest
+ */
+export type UpdateVoiceOverrideRequest = Message<"postpilot.v1.UpdateVoiceOverrideRequest"> & {
+  /**
+   * @generated from field: postpilot.v1.VoiceLayer layer = 1;
+   */
+  layer: VoiceLayer;
+
+  /**
+   * @generated from field: string field = 2;
+   */
+  field: string;
+
+  /**
+   * @generated from field: optional string value = 3;
+   */
+  value?: string | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.UpdateVoiceOverrideRequest.
+ * Use `create(UpdateVoiceOverrideRequestSchema)` to create a new message.
+ */
+export const UpdateVoiceOverrideRequestSchema: GenMessage<UpdateVoiceOverrideRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 27);
+
+/**
+ * @generated from message postpilot.v1.UpdateVoiceOverrideResponse
+ */
+export type UpdateVoiceOverrideResponse = Message<"postpilot.v1.UpdateVoiceOverrideResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.VoiceProfile profile = 1;
+   */
+  profile?: VoiceProfile | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.UpdateVoiceOverrideResponse.
+ * Use `create(UpdateVoiceOverrideResponseSchema)` to create a new message.
+ */
+export const UpdateVoiceOverrideResponseSchema: GenMessage<UpdateVoiceOverrideResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 28);
+
+/**
+ * @generated from message postpilot.v1.RestoreVoiceProfileRequest
+ */
+export type RestoreVoiceProfileRequest = Message<"postpilot.v1.RestoreVoiceProfileRequest"> & {
+  /**
+   * @generated from field: int64 version = 1;
+   */
+  version: bigint;
+};
+
+/**
+ * Describes the message postpilot.v1.RestoreVoiceProfileRequest.
+ * Use `create(RestoreVoiceProfileRequestSchema)` to create a new message.
+ */
+export const RestoreVoiceProfileRequestSchema: GenMessage<RestoreVoiceProfileRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 29);
+
+/**
+ * @generated from message postpilot.v1.RestoreVoiceProfileResponse
+ */
+export type RestoreVoiceProfileResponse = Message<"postpilot.v1.RestoreVoiceProfileResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.VoiceProfile profile = 1;
+   */
+  profile?: VoiceProfile | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.RestoreVoiceProfileResponse.
+ * Use `create(RestoreVoiceProfileResponseSchema)` to create a new message.
+ */
+export const RestoreVoiceProfileResponseSchema: GenMessage<RestoreVoiceProfileResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_voice, 30);
+
+/**
+ * @generated from enum postpilot.v1.VoiceValueSource
+ */
+export enum VoiceValueSource {
+  /**
+   * @generated from enum value: VOICE_VALUE_SOURCE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: VOICE_VALUE_SOURCE_UNKNOWN = 1;
+   */
+  UNKNOWN = 1,
+
+  /**
+   * @generated from enum value: VOICE_VALUE_SOURCE_MEASURED = 2;
+   */
+  MEASURED = 2,
+
+  /**
+   * @generated from enum value: VOICE_VALUE_SOURCE_ANALYZED = 3;
+   */
+  ANALYZED = 3,
+
+  /**
+   * @generated from enum value: VOICE_VALUE_SOURCE_MANUAL = 4;
+   */
+  MANUAL = 4,
+}
+
+/**
+ * Describes the enum postpilot.v1.VoiceValueSource.
+ */
+export const VoiceValueSourceSchema: GenEnum<VoiceValueSource> = /*@__PURE__*/
+  enumDesc(file_postpilot_v1_voice, 0);
+
+/**
+ * @generated from enum postpilot.v1.VoiceRuleStatus
+ */
+export enum VoiceRuleStatus {
+  /**
+   * @generated from enum value: VOICE_RULE_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: VOICE_RULE_STATUS_CANDIDATE = 1;
+   */
+  CANDIDATE = 1,
+
+  /**
+   * @generated from enum value: VOICE_RULE_STATUS_ACTIVE = 2;
+   */
+  ACTIVE = 2,
+
+  /**
+   * @generated from enum value: VOICE_RULE_STATUS_RETIRED = 3;
+   */
+  RETIRED = 3,
+
+  /**
+   * @generated from enum value: VOICE_RULE_STATUS_REJECTED = 4;
+   */
+  REJECTED = 4,
+}
+
+/**
+ * Describes the enum postpilot.v1.VoiceRuleStatus.
+ */
+export const VoiceRuleStatusSchema: GenEnum<VoiceRuleStatus> = /*@__PURE__*/
+  enumDesc(file_postpilot_v1_voice, 1);
+
+/**
+ * @generated from enum postpilot.v1.VoiceLayer
+ */
+export enum VoiceLayer {
+  /**
+   * @generated from enum value: VOICE_LAYER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: VOICE_LAYER_LEXICAL = 1;
+   */
+  LEXICAL = 1,
+
+  /**
+   * @generated from enum value: VOICE_LAYER_ENDINGS = 2;
+   */
+  ENDINGS = 2,
+
+  /**
+   * @generated from enum value: VOICE_LAYER_SYNTAX = 3;
+   */
+  SYNTAX = 3,
+
+  /**
+   * @generated from enum value: VOICE_LAYER_STRUCTURE = 4;
+   */
+  STRUCTURE = 4,
+
+  /**
+   * @generated from enum value: VOICE_LAYER_AXES = 5;
+   */
+  AXES = 5,
+}
+
+/**
+ * Describes the enum postpilot.v1.VoiceLayer.
+ */
+export const VoiceLayerSchema: GenEnum<VoiceLayer> = /*@__PURE__*/
+  enumDesc(file_postpilot_v1_voice, 2);
 
 /**
  * Every procedure is scoped by the authenticated context. No request carries a user id.
@@ -278,6 +1084,30 @@ export const VoiceService: GenService<{
     methodKind: "unary";
     input: typeof DeleteVoiceSampleRequestSchema;
     output: typeof DeleteVoiceSampleResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.VoiceService.ListVoiceProfileVersions
+   */
+  listVoiceProfileVersions: {
+    methodKind: "unary";
+    input: typeof ListVoiceProfileVersionsRequestSchema;
+    output: typeof ListVoiceProfileVersionsResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.VoiceService.UpdateVoiceOverride
+   */
+  updateVoiceOverride: {
+    methodKind: "unary";
+    input: typeof UpdateVoiceOverrideRequestSchema;
+    output: typeof UpdateVoiceOverrideResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.VoiceService.RestoreVoiceProfile
+   */
+  restoreVoiceProfile: {
+    methodKind: "unary";
+    input: typeof RestoreVoiceProfileRequestSchema;
+    output: typeof RestoreVoiceProfileResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_voice, 0);

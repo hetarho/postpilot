@@ -4,7 +4,6 @@ import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { FailureNotice, ProgressLine, isTerminal, useJob } from '@/entities/generation-job'
 import {
-  BlockList,
   getPostQueryKey,
   hasContent,
   listPostsQueryKey,
@@ -14,6 +13,9 @@ import {
 import { useSession } from '@/entities/session'
 import { isEmptyProfile, useVoiceProfile } from '@/entities/voice-profile'
 import { GenerateButton, type GenerateButtonHandle } from '@/features/generate-post'
+import { BlockEditor, type BlockEditorHandle } from '@/features/edit-post-content'
+import { FinalizeAndLearn } from '@/features/finalize-and-learn'
+import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
 import { StageModelSelect } from '@/features/select-model'
@@ -87,8 +89,11 @@ export function DraftEditor({ post }: DraftEditorProps) {
     element.setSelectionRange(caret.selectionStart, caret.selectionEnd)
   }, [caret])
 
+  // `flex-1 flex-col` here plus `mt-auto` on the dock is what puts the bar at the BOTTOM of a
+  // short draft: `sticky` can only pull an element up toward the scrollport edge, never push one
+  // down, so without it a new draft renders its dock mid-page with dead space beneath.
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6 sm:px-6">
       <div className="flex items-center justify-between gap-3">
         {/* Underlined: `link-fg` resolves to `content-secondary`, so at rest this was pixel-identical
             to ordinary copy and the only thing marking it as the way out was a `hover:` colour no
@@ -193,14 +198,19 @@ function EditorVoiceWarning() {
  *  scroll away with the section it sat in. */
 function EditorDock({ saveState, children }: { saveState: SaveState; children?: ReactNode }) {
   return (
-    <ActionBar ariaLabel="저장 상태와 글 작업">
-      {/* A fixed gap even while the save line is empty, so the bar does not change height — and
-          move the button out from under the thumb — as the state changes (§6). */}
-      <div className="flex flex-col gap-2">
-        <SaveStatus state={saveState} />
-        {children}
-      </div>
-    </ActionBar>
+    <>
+      {/* `mt-auto` alone can resolve to zero when the page is taller than the viewport. Keep a
+          real 24px spacer as well, so the generation section never touches the dock card. */}
+      <div aria-hidden className="mt-auto h-6 shrink-0" />
+      <ActionBar ariaLabel="저장 상태와 글 작업" className="mt-0">
+        {/* A fixed gap even while the save line is empty, so the bar does not change height — and
+            move the button out from under the thumb — as the state changes (§6). */}
+        <div className="flex flex-col gap-2">
+          <SaveStatus state={saveState} />
+          {children}
+        </div>
+      </ActionBar>
+    </>
   )
 }
 
@@ -217,6 +227,7 @@ function GenerationSection({
   const queryClient = useQueryClient()
   const generateRef = useRef<GenerateButtonHandle>(null)
   const reviseRef = useRef<ReviseFormHandle>(null)
+  const contentEditorRef = useRef<BlockEditorHandle>(null)
   const resultRef = useRef<HTMLDivElement>(null)
   const refreshedSnapshot = useRef('')
   const [startedJobId, setStartedJobId] = useState('')
@@ -227,6 +238,8 @@ function GenerationSection({
   const jobState = useJob(jobId, invalidateOnDone)
   const job = jobState.job ?? (post.activeJob?.id === jobId ? post.activeJob : undefined)
   const result = hasContent(post) ? post.content : undefined
+  const [liveContent, setLiveContent] = useState(result)
+  const { user } = useSession()
 
   // Observations are persisted batch-by-batch on the post, not on the job. Refresh that
   // read model whenever observe progress changes so the contact sheet fills while the
@@ -311,15 +324,35 @@ function GenerationSection({
         // `scroll-mt-4` so the jump lands the draft's heading clear of the top edge rather than
         // flush against it.
         <div ref={resultRef} className="scroll-mt-4">
-          <BlockList content={result} images={post.images} />
+          <BlockEditor
+            key={`${post.slug}:${post.machineBaselineRevision}`}
+            ref={contentEditorRef}
+            post={post}
+            onContentChange={setLiveContent}
+            renderSentenceAction={(text, flush) => (
+              <SentenceFeedback postSlug={post.slug} text={text} beforeSubmit={flush} />
+            )}
+          />
           <ReviseForm
             ref={reviseRef}
             postSlug={post.slug}
             activeJob={job}
             jobPending={Boolean(jobId) && !job}
             onStarted={setStartedJobId}
+            beforeStart={() => contentEditorRef.current?.flush() ?? Promise.resolve()}
           />
-          <ExportPanel content={result} images={post.images} createdAt={post.createdAt} />
+          {user && (
+            <FinalizeAndLearn
+              ownerId={user.id}
+              post={post}
+              beforeFinalize={() => contentEditorRef.current?.flush() ?? Promise.resolve()}
+            />
+          )}
+          <ExportPanel
+            content={liveContent ?? result}
+            images={post.images}
+            createdAt={post.createdAt}
+          />
         </div>
       )}
 

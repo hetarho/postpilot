@@ -123,6 +123,12 @@ func main() {
 	} else if n > 0 {
 		slog.Info("swept interrupted jobs", "count", n)
 	}
+	if n, err := jobQueue.SweepQueuedPersonalization(ctx); err != nil {
+		slog.Error("queued personalization sweep failed", "err", err)
+		os.Exit(1)
+	} else if n > 0 {
+		slog.Info("held queued personalization for explicit retry", "count", n)
+	}
 
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), cfg.SessionTTL)
 	if n, err := authSvc.SweepExpired(ctx); err != nil {
@@ -169,10 +175,27 @@ func main() {
 		voiceModels{selections: providerSvc, registry: registry},
 		voiceJobs{queue: jobQueue},
 	)
+	voiceSvc.ConfigurePersonalization(voicePosts{service: postSvc}, voice.PersonalizationConfig{
+		FewShotTargetCount: cfg.VoicePersonalization.FewShotTargetCount, FewShotMax: cfg.VoicePersonalization.FewShotMax,
+		FewShotExcerptTargetChars: cfg.VoicePersonalization.FewShotExcerptTargetChars, FewShotExcerptMaxChars: cfg.VoicePersonalization.FewShotExcerptMaxChars,
+		EmbeddingSwitchPosts: cfg.VoicePersonalization.EmbeddingSwitchPosts, DiffMaxRules: cfg.VoicePersonalization.DiffMaxRules,
+		DiffMinPatternEdits: cfg.VoicePersonalization.DiffMinPatternEdits, RuleActivationEvidence: cfg.VoicePersonalization.RuleActivationEvidence,
+		RuleRetireAfter: cfg.VoicePersonalization.RuleRetireAfter, ValidationPostCount: cfg.VoicePersonalization.ValidationPostCount,
+		EndingMaxConsecutive: cfg.VoicePersonalization.EndingMaxConsecutive,
+	})
 	jobQueue.Register(job.KindAnalyzeVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.Analyze(ctx, voice.AnalysisJob{
 			UserID: found.UserID, WriteModel: found.WriteModel,
 		}, voice.Progress(progress))
+	})
+	jobQueue.Register(job.KindLearnVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return voiceSvc.Learn(ctx, voice.LearningJob{UserID: found.UserID, EventID: strings.TrimSpace(string(found.Payload)), WriteModel: found.WriteModel}, voice.Progress(progress))
+	})
+	jobQueue.Register(job.KindCompareVoiceRule, func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return voiceSvc.CompareRule(ctx, found.UserID, strings.TrimSpace(string(found.Payload)), found.WriteModel, voice.Progress(progress))
+	})
+	jobQueue.Register(job.KindValidateVoiceProfile, func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return voiceSvc.ValidateProfile(ctx, found.UserID, strings.TrimSpace(string(found.Payload)), voice.Progress(progress))
 	})
 	generationSvc := generation.NewService(
 		generationPosts{service: postSvc},
@@ -246,6 +269,12 @@ func main() {
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewVoiceServiceHandler(voicerpc.NewHandler(voiceSvc), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewVoiceLearningServiceHandler(voicerpc.NewLearningHandler(voiceSvc), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewVoiceValidationServiceHandler(voicerpc.NewValidationHandler(voiceSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewModelExperimentServiceHandler(experimentrpc.NewHandler(experimentSvc), opts...)
@@ -324,6 +353,11 @@ func (a voiceModels) Complete(ctx context.Context, ref llm.ModelRef, request llm
 	return a.registry.Complete(ctx, ref, request)
 }
 
+func (a voiceModels) ModelEnabled(ref llm.ModelRef) bool {
+	info, ok := a.registry.Lookup(ref)
+	return ok && !info.Disabled
+}
+
 type voiceJobs struct{ queue *job.Queue }
 
 func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
@@ -337,6 +371,38 @@ func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest
 	return id, err
 }
 
+func (a voiceJobs) EnqueuePersonalization(ctx context.Context, request voice.PersonalizationJobRequest) (string, error) {
+	var postSlug *string
+	if request.PostSlug != "" {
+		value := request.PostSlug
+		postSlug = &value
+	}
+	id, err := a.queue.Enqueue(ctx, job.NewJob{Kind: request.Kind, UserID: request.UserID, PostSlug: postSlug, WriteModel: request.Model, Payload: []byte(request.Payload)})
+	var active *job.ErrAlreadyInProgress
+	if errors.As(err, &active) {
+		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	return id, err
+}
+
+func (a voiceJobs) IsPersonalizationJobActive(ctx context.Context, jobID, userID string) (bool, error) {
+	if jobID == "" {
+		return false, nil
+	}
+	found, err := a.queue.Get(ctx, jobID, userID)
+	if errors.Is(err, job.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return found.Status == job.StatusQueued || found.Status == job.StatusRunning, nil
+}
+
+func (a voiceJobs) FailQueuedPersonalization(ctx context.Context, jobID, userID, message string) (bool, error) {
+	return a.queue.FailQueued(ctx, jobID, userID, message)
+}
+
 func (a voiceJobs) ActiveForUserKind(ctx context.Context, userID, kind string) (*voice.ActiveJob, error) {
 	found, err := a.queue.ActiveForUserKind(ctx, userID, kind)
 	if err != nil || found == nil {
@@ -347,6 +413,57 @@ func (a voiceJobs) ActiveForUserKind(ctx context.Context, userID, kind string) (
 
 type postJobFinder struct {
 	queue *job.Queue
+}
+
+type voicePosts struct{ service *post.Service }
+
+func (a voicePosts) LearningSnapshot(ctx context.Context, userID, slug string) (voice.FinalizationInput, error) {
+	found, err := a.service.LearningSnapshot(ctx, userID, slug)
+	if err != nil {
+		switch {
+		case errors.Is(err, post.ErrNotFound):
+			return voice.FinalizationInput{}, voice.ErrPostNotFound
+		case errors.Is(err, post.ErrForbidden):
+			return voice.FinalizationInput{}, voice.ErrForbidden
+		case errors.Is(err, post.ErrNoMachineBaseline):
+			return voice.FinalizationInput{}, voice.ErrInvalidLifecycle
+		default:
+			return voice.FinalizationInput{}, err
+		}
+	}
+	baseline, err := json.Marshal(postContentWire(found.MachineBaseline))
+	if err != nil {
+		return voice.FinalizationInput{}, err
+	}
+	current, err := json.Marshal(postContentWire(found.Current))
+	if err != nil {
+		return voice.FinalizationInput{}, err
+	}
+	return voice.FinalizationInput{PostSlug: found.PostSlug, UserID: found.UserID, BaselineJSON: string(baseline), FinalJSON: string(current), Title: found.Current.Title, Tags: found.Current.Tags, BaselineRevision: found.BaselineRevision, ContentRevision: found.ContentRevision, TargetLength: found.TargetLength}, nil
+}
+
+type postBlockWire struct {
+	Type    string   `json:"type"`
+	Content string   `json:"content,omitempty"`
+	Level   int32    `json:"level,omitempty"`
+	File    string   `json:"file,omitempty"`
+	Alt     string   `json:"alt,omitempty"`
+	Caption string   `json:"caption,omitempty"`
+	Items   []string `json:"items,omitempty"`
+}
+type postContentJSONWire struct {
+	Title   string          `json:"title"`
+	Summary string          `json:"summary"`
+	Tags    []string        `json:"tags"`
+	Blocks  []postBlockWire `json:"blocks"`
+}
+
+func postContentWire(content post.PostContent) postContentJSONWire {
+	out := postContentJSONWire{Title: content.Title, Summary: content.Summary, Tags: content.Tags}
+	for _, block := range content.Blocks {
+		out.Blocks = append(out.Blocks, postBlockWire{Type: string(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items})
+	}
+	return out
 }
 
 type generationModels struct{ registry *llm.Registry }
@@ -368,8 +485,12 @@ func (a generationModels) Complete(ctx context.Context, ref llm.ModelRef, reques
 type generationProfiles struct{ service *voice.Service }
 
 func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID string) (generation.Profile, error) {
-	styleguide, excerpts, rules, _, err := a.service.ProfileForPrompt(ctx, userID)
-	return generation.Profile{Styleguide: styleguide, Excerpts: excerpts, Rules: rules}, err
+	return a.ProfileForPromptForTopic(ctx, userID, "", nil)
+}
+
+func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, topic string, tags []string) (generation.Profile, error) {
+	profile, err := a.service.PromptProfileForTopic(ctx, userID, topic, tags)
+	return generation.Profile{Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: profile.Excerpts, Rules: profile.ManualRules, EndingMaxConsecutive: a.service.EndingMaxConsecutive()}, err
 }
 
 type generationRules struct{ service *voice.Service }
@@ -387,7 +508,8 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	}
 	input := generation.PostInput{
 		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
-		Images: make([]generation.Image, 0, len(found.Images)),
+		TargetLength: found.TargetLength,
+		Images:       make([]generation.Image, 0, len(found.Images)),
 	}
 	if found.Content != nil {
 		content := generation.PostContent{
@@ -420,12 +542,23 @@ func (a generationPosts) SetObservations(ctx context.Context, userID, slug strin
 }
 
 func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug string, content generation.PostContent) error {
+	return a.setGeneratedContent(ctx, userID, slug, content, 0)
+}
+
+func (a generationPosts) SetGeneratedContentWithTarget(ctx context.Context, userID, slug string, content generation.PostContent, targetLength int) error {
+	return a.setGeneratedContent(ctx, userID, slug, content, targetLength)
+}
+
+func (a generationPosts) setGeneratedContent(ctx context.Context, userID, slug string, content generation.PostContent, targetLength int) error {
 	value := post.PostContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags}
 	for _, block := range content.Blocks {
 		value.Blocks = append(value.Blocks, post.Block{
 			Type: post.BlockType(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
 		})
+	}
+	if targetLength > 0 {
+		return generationPostError(a.service.SetGeneratedContentWithTarget(ctx, userID, slug, value, targetLength))
 	}
 	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, value))
 }
@@ -516,6 +649,7 @@ func (a generationExperiments) StartWrite(ctx context.Context, request generatio
 	started, err := a.service.Start(ctx, experiment.StartRequest{
 		UserID: request.UserID, PostSlug: request.PostSlug, Stage: experiment.StageWrite,
 		ObserveModel: experimentRef(request.ObserveModel), ModelA: experimentRef(request.WriteModelA), ModelB: experimentRef(request.WriteModelB),
+		TargetLength: request.TargetLength,
 	})
 	if err != nil {
 		var active *experiment.JobAlreadyInProgressError
@@ -620,7 +754,7 @@ type experimentRunner struct {
 func (a experimentRunner) Snapshot(ctx context.Context, request experiment.StartRequest) (experiment.Snapshot, error) {
 	switch request.Stage {
 	case experiment.StageWrite:
-		content, err := a.generation.SnapshotWriteInput(ctx, request.UserID, request.PostSlug, llmRef(request.ObserveModel))
+		content, err := a.generation.SnapshotWriteInput(ctx, request.UserID, request.PostSlug, llmRef(request.ObserveModel), request.TargetLength)
 		return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion}, mapSnapshotError(err)
 	case experiment.StageObserve:
 		content, err := a.generation.SnapshotObserveInput(ctx, request.UserID, request.PostSlug)
@@ -676,7 +810,7 @@ func (a experimentRunner) ApplyWinner(ctx context.Context, found experiment.Expe
 		if err := json.Unmarshal(candidate.Output, &value); err != nil {
 			return fmt.Errorf("decode write winner: %w", err)
 		}
-		return a.generation.ApplyWriteWinner(ctx, found.UserID, found.PostSlug, fromOutputPost(value))
+		return a.generation.ApplyWriteWinner(ctx, found.UserID, found.PostSlug, fromOutputPost(value), found.InputSnapshot)
 	case experiment.StageObserve:
 		var values []outputObservation
 		if err := json.Unmarshal(candidate.Output, &values); err != nil {

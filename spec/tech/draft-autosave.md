@@ -63,3 +63,14 @@ cut it short as it discards the document. `fetch(keepalive)` is not reachable th
 Connect transport, and `sendBeacon` cannot carry the JSON content type across origins
 without a preflight it is not allowed to make. The bound on the loss is therefore the
 debounce window — one second (`AUTOSAVE_DEBOUNCE_MS`) — which is why it is short.
+
+## Generated-content queue
+
+Editable `PostContent` uses a second per-post queue rather than sharing title/memo state. Its snapshot contains the
+complete protobuf block value and target length, and its server revision is `content_revision`.
+
+- one request is in flight; later edits replace one pending snapshot, so the newest value wins;
+- each response supplies the next expected revision; an `Aborted` conflict stops retry and asks for reload;
+- transport failures use bounded exponential backoff; logout discards timers, snapshots, and flush waiters;
+- page hide/release calls `saveNow()` best-effort, while AI revision/finalization await `flush()`;
+- manual saves never touch `machine_baseline`; machine winner/revision writes do not use this queue.

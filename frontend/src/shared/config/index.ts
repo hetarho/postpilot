@@ -74,6 +74,15 @@ export const COPY_FEEDBACK_MS = 1_500
 /** Immediate client feedback for voice samples. The backend remains authoritative. */
 export const VOICE_SAMPLE_MIN_CHARS = 200
 
+/** Progressive voice-learning display/input mirrors. No interval is present because
+ * personalization work is never scheduled or started by a mount. */
+export const VOICE_FEW_SHOT_MAX = 3
+export const VOICE_FEW_SHOT_EXCERPT_MAX_CHARS = 800
+export const VOICE_VALIDATION_POST_COUNT = 3
+export const POST_TARGET_LENGTH_DEFAULT = 1_200
+export const POST_TARGET_LENGTH_MIN = 100
+export const POST_TARGET_LENGTH_MAX = 10_000
+
 /** How long the HEIC decoder worker stays alive after its last file. Its WASM heap does
  *  not shrink after a 12 MP decode, so it is not kept for a whole session; the chunk is
  *  in the browser cache, so bringing it back for the next batch is cheap. */

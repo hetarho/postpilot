@@ -56,6 +56,33 @@ const WorkerConcurrency = 1
 // two candidates and both may call providers concurrently.
 const ExperimentCandidateConcurrency = 2
 
+// VoicePersonalizationConfig contains product thresholds for progressive learning.
+// They are deliberately code-owned: changing one changes product semantics, while no
+// interval exists because personalization never runs on a clock.
+type VoicePersonalizationConfig struct {
+	FewShotTargetCount        int
+	FewShotMax                int
+	FewShotExcerptTargetChars int
+	FewShotExcerptMaxChars    int
+	EmbeddingSwitchPosts      int
+	DiffMaxRules              int
+	DiffMinPatternEdits       int
+	RuleActivationEvidence    int
+	RuleRetireAfter           time.Duration
+	ValidationPostCount       int
+	EndingMaxConsecutive      int
+}
+
+func defaultVoicePersonalizationConfig() VoicePersonalizationConfig {
+	return VoicePersonalizationConfig{
+		FewShotTargetCount: 2, FewShotMax: 3,
+		FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800,
+		EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2,
+		RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour,
+		ValidationPostCount: 3, EndingMaxConsecutive: 2,
+	}
+}
+
 // WorkerPollInterval is the fallback for a missed in-process wake signal.
 const WorkerPollInterval = time.Second
 
@@ -112,6 +139,9 @@ type Config struct {
 	ExperimentContentRetention time.Duration
 	// ExperimentSweepInterval is how often terminal experiment content is purged.
 	ExperimentSweepInterval time.Duration
+	// VoicePersonalization is injected into the voice and generation contexts. It has
+	// no scheduler or sweep interval: all evaluation is request-time and user-initiated.
+	VoicePersonalization VoicePersonalizationConfig
 }
 
 // Load reads the environment, falling back to a repo-root .env when present so a
@@ -145,9 +175,10 @@ func Load() (*Config, error) {
 		// Relative to the working directory, like DB_PATH: `backend/config/providers.yaml`
 		// for a host run and `/app/config/providers.yaml` in the dev container. The
 		// production image sets an absolute path (Dockerfile).
-		ProvidersConfig:     getenv("PROVIDERS_CONFIG", "config/providers.yaml"),
-		LLMStageTimeout:     llmStageTimeout,
-		LLMMaxTokensDefault: llmMaxTokensDefault,
+		ProvidersConfig:      getenv("PROVIDERS_CONFIG", "config/providers.yaml"),
+		LLMStageTimeout:      llmStageTimeout,
+		LLMMaxTokensDefault:  llmMaxTokensDefault,
+		VoicePersonalization: defaultVoicePersonalizationConfig(),
 	}
 	cfg.R2PublicEndpoint = getenv("R2_PUBLIC_ENDPOINT", cfg.R2Endpoint)
 

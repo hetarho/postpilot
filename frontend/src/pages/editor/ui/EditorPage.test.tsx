@@ -280,6 +280,10 @@ describe('opening a post', () => {
     expect(await screen.findByText(/문체 프로필이 비어 있어요/)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
     expect(screen.getByText('사진이 없어 관찰 모델은 필요하지 않아요.')).toBeInTheDocument()
+    expect(screen.getByLabelText('저장 상태와 글 작업').previousElementSibling).toHaveClass(
+      'mt-auto',
+      'h-6',
+    )
   })
 
   it('flushes the newest memo before it starts generation', async () => {

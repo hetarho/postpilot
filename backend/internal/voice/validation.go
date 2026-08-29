@@ -1,0 +1,546 @@
+package voice
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
+	"sync"
+	"unicode/utf8"
+
+	"github.com/postpilot/backend/internal/llm"
+)
+
+type ruleComparisonSnapshot struct {
+	Rule                 ContrastRule      `json:"rule"`
+	Source               AuthoredSource    `json:"source"`
+	Profile              StructuredProfile `json:"profile"`
+	TargetLength         int               `json:"target_length"`
+	EndingMaxConsecutive int               `json:"ending_max_consecutive"`
+}
+
+func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourceID string, targetLength int, model llm.ModelRef) (string, string, error) {
+	if !s.personalizationModels.ModelEnabled(model) {
+		return "", "", ErrAnalyzeModelRequired
+	}
+	if err := s.retireStaleRules(ctx, userID); err != nil {
+		return "", "", err
+	}
+	rule, err := s.personalization.GetRule(ctx, userID, ruleID)
+	if err != nil {
+		return "", "", err
+	}
+	if rule.Status != RuleCandidate || rule.EvidenceCount < 1 || rule.EvidenceCount > 2 {
+		return "", "", ErrInvalidLifecycle
+	}
+	source, err := s.personalization.GetAuthoredSource(ctx, userID, sourceID)
+	if err != nil {
+		return "", "", err
+	}
+	profile, err := s.Get(ctx, userID)
+	if err != nil {
+		return "", "", err
+	}
+	if profile.Structured.Version == 0 {
+		return "", "", ErrInvalidLifecycle
+	}
+	if targetLength <= 0 {
+		targetLength = 1200
+	}
+	snapshot, err := json.Marshal(ruleComparisonSnapshot{Rule: rule, Source: source, Profile: profile.Structured, TargetLength: targetLength, EndingMaxConsecutive: s.config.EndingMaxConsecutive})
+	if err != nil {
+		return "", "", err
+	}
+	id := s.newID()
+	side := "left"
+	if id[0] >= '8' {
+		side = "right"
+	}
+	comparison := RuleComparison{ID: id, UserID: userID, RuleID: ruleID, SourceID: sourceID, ProfileVersion: profile.Structured.Version, ModelRef: model.String(), TargetLength: targetLength, InputSnapshot: string(snapshot), RuleOnSide: side, Status: "queued", CreatedAt: s.now(), Candidates: []ComparisonCandidate{{ID: s.newID(), ComparisonID: id, DisplaySide: "left", Status: "pending"}, {ID: s.newID(), ComparisonID: id, DisplaySide: "right", Status: "pending"}}}
+	if err = s.personalization.InsertRuleComparison(ctx, comparison); err != nil {
+		return "", "", err
+	}
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: CompareRuleJobKind, UserID: userID, PostSlug: source.PostSlug, Model: model.String(), Payload: id})
+	if err != nil {
+		comparison.Status = "failed"
+		if updateErr := s.personalization.UpdateRuleComparison(ctx, comparison); updateErr != nil {
+			return id, "", fmt.Errorf("enqueue comparison: %w; mark comparison failed: %v", err, updateErr)
+		}
+		return id, "", err
+	}
+	if err = s.personalization.SetRuleComparisonJob(ctx, userID, id, jobID); err != nil {
+		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, "comparison job could not be linked")
+		if cancelErr != nil {
+			return id, jobID, fmt.Errorf("link comparison job: %w; cancel queued job: %v", err, cancelErr)
+		}
+		if !cancelled {
+			// The worker already owns the durable job. Returning its IDs lets the
+			// caller follow the aggregate while the handler finishes it safely.
+			return id, jobID, nil
+		}
+		comparison.Status = "failed"
+		if updateErr := s.personalization.UpdateRuleComparison(ctx, comparison); updateErr != nil {
+			return id, jobID, fmt.Errorf("link comparison job: %w; mark comparison failed: %v", err, updateErr)
+		}
+		return id, jobID, err
+	}
+	return id, jobID, nil
+}
+
+func (s *Service) GetRuleComparison(ctx context.Context, userID, id string) (RuleComparison, error) {
+	return s.personalization.GetRuleComparison(ctx, userID, id)
+}
+
+func (s *Service) RetryRuleComparison(ctx context.Context, userID, id string) (string, error) {
+	comparison, err := s.personalization.GetRuleComparison(ctx, userID, id)
+	if err != nil {
+		return "", err
+	}
+	if comparison.ChosenSide != "" || comparison.Status == "review" {
+		return "", ErrInvalidLifecycle
+	}
+	for i := range comparison.Candidates {
+		if comparison.Candidates[i].Status == "failed" {
+			comparison.Candidates[i].Status = "pending"
+			comparison.Candidates[i].Error = ""
+		}
+	}
+	comparison.Status = "queued"
+	if err = s.personalization.UpdateRuleComparison(ctx, comparison); err != nil {
+		return "", err
+	}
+	source, err := s.personalization.GetAuthoredSource(ctx, userID, comparison.SourceID)
+	if err != nil {
+		return "", err
+	}
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: CompareRuleJobKind, UserID: userID, PostSlug: source.PostSlug, Model: comparison.ModelRef, Payload: id})
+	if err != nil {
+		comparison.Status = "failed"
+		_ = s.personalization.UpdateRuleComparison(ctx, comparison)
+		return "", err
+	}
+	if err = s.personalization.SetRuleComparisonJob(ctx, userID, id, jobID); err != nil {
+		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, "comparison retry could not be linked")
+		if cancelErr == nil && cancelled {
+			comparison.Status = "failed"
+			_ = s.personalization.UpdateRuleComparison(ctx, comparison)
+			return jobID, err
+		}
+		if cancelErr != nil {
+			return jobID, fmt.Errorf("link comparison retry: %w; cancel queued job: %v", err, cancelErr)
+		}
+		return jobID, nil
+	}
+	return jobID, nil
+}
+
+func BuildRuleComparisonPrompts(snapshot ruleComparisonSnapshot) (string, string) {
+	endingMax := snapshot.EndingMaxConsecutive
+	if endingMax <= 0 {
+		endingMax = 2
+	}
+	base := fmt.Sprintf("한국어 블로그 글을 작성하세요. 목표 길이 약 %d자. 같은 종결어미를 %d문장보다 많이 연속 쓰지 마세요.\n%s\n예시의 고유 표현이나 내용을 복사하지 마세요.\n[Candidate rule]\n", snapshot.TargetLength, endingMax, renderStructuredProfile(snapshot.Profile))
+	topic := "[주제]\n" + snapshot.Source.Title + "\n태그: " + strings.Join(snapshot.Source.Tags, ", ")
+	off := base + topic
+	on := base + snapshot.Rule.Statement + "\n" + topic
+	return off, on
+}
+
+func (s *Service) CompareRule(ctx context.Context, userID, comparisonID, modelRef string, progress Progress) error {
+	comparison, err := s.personalization.GetRuleComparison(ctx, userID, comparisonID)
+	if err != nil {
+		return err
+	}
+	var snapshot ruleComparisonSnapshot
+	if err = json.Unmarshal([]byte(comparison.InputSnapshot), &snapshot); err != nil {
+		return err
+	}
+	model, err := parseModelRef(modelRef)
+	if err != nil {
+		return err
+	}
+	off, on := BuildRuleComparisonPrompts(snapshot)
+	comparison.Status = "running"
+	_ = s.personalization.UpdateRuleComparison(ctx, comparison)
+	type result struct {
+		i      int
+		output string
+		err    error
+	}
+	results := make(chan result, 2)
+	var wg sync.WaitGroup
+	done := 0
+	for i := range comparison.Candidates {
+		if comparison.Candidates[i].Status == "succeeded" {
+			done++
+			continue
+		}
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			prompt := off
+			if comparison.Candidates[index].DisplaySide == comparison.RuleOnSide {
+				prompt = on
+			}
+			response, e := s.models.Complete(ctx, model, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart("글 본문만 반환하세요.")}}}})
+			results <- result{i: index, output: response.Text, err: e}
+		}(i)
+	}
+	go func() { wg.Wait(); close(results) }()
+	for result := range results {
+		candidate := &comparison.Candidates[result.i]
+		if result.err != nil {
+			candidate.Status = "failed"
+			candidate.Error = result.err.Error()
+		} else {
+			candidate.Status = "succeeded"
+			candidate.Output = result.output
+			done++
+		}
+		progress("compare_rule", done, 2)
+	}
+	switch done {
+	case 2:
+		comparison.Status = "review"
+	case 1:
+		comparison.Status = "partial"
+	default:
+		comparison.Status = "failed"
+	}
+	return s.personalization.UpdateRuleComparison(ctx, comparison)
+}
+
+func (s *Service) DecideRuleComparison(ctx context.Context, userID, id, side string) (RuleComparison, error) {
+	if side != "left" && side != "right" {
+		return RuleComparison{}, fmt.Errorf("chosen side must be left or right")
+	}
+	comparison, err := s.personalization.GetRuleComparison(ctx, userID, id)
+	if err != nil {
+		return RuleComparison{}, err
+	}
+	if !comparisonReadyForDecision(comparison) {
+		return RuleComparison{}, ErrInvalidLifecycle
+	}
+	now := s.now()
+	comparison.ChosenSide = side
+	comparison.DecidedAt = &now
+	comparison.ActivationEvidence = s.config.RuleActivationEvidence
+	profile, err := s.Get(ctx, userID)
+	if err != nil {
+		return RuleComparison{}, err
+	}
+	for i := range profile.Structured.Rules {
+		if profile.Structured.Rules[i].ID != comparison.RuleID {
+			continue
+		}
+		if side == comparison.RuleOnSide {
+			profile.Structured.Rules[i].EvidenceCount++
+			profile.Structured.Rules[i].LastEvidenceAt = now
+			if profile.Structured.Rules[i].EvidenceCount >= s.config.RuleActivationEvidence {
+				profile.Structured.Rules[i].Status = RuleActive
+			}
+		} else {
+			profile.Structured.Rules[i].Status = RuleRejected
+		}
+	}
+	comparison.ProfileAfterDecision = &profile.Structured
+	if err = s.personalization.UpdateRuleComparison(ctx, comparison); err != nil {
+		return RuleComparison{}, err
+	}
+	return s.personalization.GetRuleComparison(ctx, userID, id)
+}
+
+func comparisonReadyForDecision(comparison RuleComparison) bool {
+	if comparison.Status != "review" || len(comparison.Candidates) != 2 {
+		return false
+	}
+	for _, candidate := range comparison.Candidates {
+		if candidate.Status != "succeeded" || strings.TrimSpace(candidate.Output) == "" {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Service) StartValidation(ctx context.Context, userID string, analyze, write llm.ModelRef, judge bool) (string, string, error) {
+	if analyze.ProviderID == "" || analyze.ModelID == "" || write.ProviderID == "" || write.ModelID == "" {
+		return "", "", ErrAnalyzeModelRequired
+	}
+	if err := s.retireStaleRules(ctx, userID); err != nil {
+		return "", "", err
+	}
+	selected, err := s.resolveAnalyzeModel(ctx, userID, analyze)
+	if err != nil {
+		return "", "", err
+	}
+	if !s.personalizationModels.ModelEnabled(write) {
+		return "", "", ErrAnalyzeModelRequired
+	}
+	sources, err := s.personalization.ListAuthoredSources(ctx, userID)
+	if err != nil {
+		return "", "", err
+	}
+	if len(sources) < s.config.ValidationPostCount {
+		return "", "", ErrInsufficientSources
+	}
+	profile, err := s.Get(ctx, userID)
+	if err != nil {
+		return "", "", err
+	}
+	id := s.newID()
+	selectedSources := pickValidationSources(id, sources, s.config.ValidationPostCount)
+	validation := ProfileValidation{ID: id, UserID: userID, ProfileVersion: profile.Structured.Version, AnalyzeModelRef: selected.String(), WriteModelRef: write.String(), JudgeEnabled: judge, Status: "queued", CreatedAt: s.now()}
+	for i, source := range selectedSources {
+		validation.Items = append(validation.Items, ValidationItem{ID: s.newID(), ValidationID: id, SourceID: source.ID, Position: i, Original: source.Body, Status: "pending"})
+	}
+	if err = s.personalization.InsertProfileValidation(ctx, validation); err != nil {
+		return "", "", err
+	}
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: ValidateProfileJobKind, UserID: userID, Model: write.String(), Payload: id})
+	if err != nil {
+		validation.Status = "failed"
+		now := s.now()
+		validation.FinishedAt = &now
+		if updateErr := s.personalization.UpdateProfileValidation(ctx, validation); updateErr != nil {
+			return id, "", fmt.Errorf("enqueue validation: %w; mark validation failed: %v", err, updateErr)
+		}
+		return id, "", err
+	}
+	if err = s.personalization.SetProfileValidationJob(ctx, userID, id, jobID); err != nil {
+		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, "validation job could not be linked")
+		if cancelErr != nil {
+			return id, jobID, fmt.Errorf("link validation job: %w; cancel queued job: %v", err, cancelErr)
+		}
+		if !cancelled {
+			return id, jobID, nil
+		}
+		validation.Status = "failed"
+		now := s.now()
+		validation.FinishedAt = &now
+		if updateErr := s.personalization.UpdateProfileValidation(ctx, validation); updateErr != nil {
+			return id, jobID, fmt.Errorf("link validation job: %w; mark validation failed: %v", err, updateErr)
+		}
+		return id, jobID, err
+	}
+	return id, jobID, nil
+}
+
+func pickValidationSources(seed string, sources []AuthoredSource, count int) []AuthoredSource {
+	out := append([]AuthoredSource(nil), sources...)
+	sort.Slice(out, func(i, j int) bool {
+		a := sha256.Sum256([]byte(seed + out[i].ID))
+		b := sha256.Sum256([]byte(seed + out[j].ID))
+		return hex.EncodeToString(a[:]) < hex.EncodeToString(b[:])
+	})
+	return out[:min(count, len(out))]
+}
+func (s *Service) GetValidation(ctx context.Context, userID, id string) (ProfileValidation, error) {
+	return s.personalization.GetProfileValidation(ctx, userID, id)
+}
+func (s *Service) ListValidations(ctx context.Context, userID string) ([]ProfileValidation, error) {
+	return s.personalization.ListProfileValidations(ctx, userID)
+}
+
+func (s *Service) RetryValidation(ctx context.Context, userID, id string) (string, error) {
+	validation, err := s.personalization.GetProfileValidation(ctx, userID, id)
+	if err != nil {
+		return "", err
+	}
+	if validation.Status == "done" {
+		return "", ErrInvalidLifecycle
+	}
+	for i := range validation.Items {
+		if validation.Items[i].Status == "failed" {
+			validation.Items[i].Status = "pending"
+			validation.Items[i].Error = ""
+		}
+	}
+	validation.Status = "queued"
+	validation.FinishedAt = nil
+	if err = s.personalization.UpdateProfileValidation(ctx, validation); err != nil {
+		return "", err
+	}
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: ValidateProfileJobKind, UserID: userID, Model: validation.WriteModelRef, Payload: id})
+	if err != nil {
+		validation.Status = "failed"
+		now := s.now()
+		validation.FinishedAt = &now
+		_ = s.personalization.UpdateProfileValidation(ctx, validation)
+		return "", err
+	}
+	if err = s.personalization.SetProfileValidationJob(ctx, userID, id, jobID); err != nil {
+		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, "validation retry could not be linked")
+		if cancelErr == nil && cancelled {
+			validation.Status = "failed"
+			now := s.now()
+			validation.FinishedAt = &now
+			_ = s.personalization.UpdateProfileValidation(ctx, validation)
+			return jobID, err
+		}
+		if cancelErr != nil {
+			return jobID, fmt.Errorf("link validation retry: %w; cancel queued job: %v", err, cancelErr)
+		}
+		return jobID, nil
+	}
+	return jobID, nil
+}
+
+func (s *Service) ValidateProfile(ctx context.Context, userID, validationID string, progress Progress) error {
+	validation, err := s.personalization.GetProfileValidation(ctx, userID, validationID)
+	if err != nil {
+		return err
+	}
+	version, err := s.personalization.GetProfileVersion(ctx, userID, validation.ProfileVersion)
+	if err != nil {
+		return err
+	}
+	analyze, err := parseModelRef(validation.AnalyzeModelRef)
+	if err != nil {
+		return err
+	}
+	write, err := parseModelRef(validation.WriteModelRef)
+	if err != nil {
+		return err
+	}
+	validation.Status = "running"
+	validation.FinishedAt = nil
+	total := len(validation.Items)
+	for i := range validation.Items {
+		item := &validation.Items[i]
+		if item.Status == "generated" || item.Status == "scored" {
+			progress("validate_profile", i+1, total)
+			continue
+		}
+		if item.NeutralSummary == "" {
+			summaryResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: "다음 글의 주제와 사실만 한국어 1–2문장으로 요약하세요. 원문의 문구, 문체, 종결어미를 재사용하거나 설명하지 마세요.", Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.Original)}}}})
+			if e != nil {
+				item.Status = "failed"
+				item.Error = e.Error()
+				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
+					return persistErr
+				}
+				continue
+			}
+			summary := strings.TrimSpace(summaryResponse.Text)
+			summarySentences := SegmentSentences(summary)
+			if len(summarySentences) < 1 || len(summarySentences) > 2 {
+				item.Status = "failed"
+				item.Error = "neutral summary must contain one or two sentences"
+				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
+					return persistErr
+				}
+				continue
+			}
+			if reusesWording(item.Original, summary) {
+				item.Status = "failed"
+				item.Error = "neutral summary reused source wording"
+				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
+					return persistErr
+				}
+				continue
+			}
+			item.NeutralSummary = summary
+			item.Status = "summarized"
+			item.Error = ""
+			if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
+				return persistErr
+			}
+		}
+		if item.Regenerated == "" {
+			writeResponse, e := s.models.Complete(ctx, write, llm.Request{System: fmt.Sprintf("%s\n같은 종결어미를 %d문장보다 많이 연속 쓰지 말고 아래의 중립 주제 요약만으로 새 글을 쓰세요.", renderStructuredProfile(version.Profile), s.config.EndingMaxConsecutive), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.NeutralSummary)}}}})
+			if e != nil {
+				item.Status = "failed"
+				item.Error = e.Error()
+				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
+					return persistErr
+				}
+				continue
+			}
+			item.Regenerated = strings.TrimSpace(writeResponse.Text)
+			item.Status = "generated"
+			item.Error = ""
+			if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
+				return persistErr
+			}
+		}
+		if validation.JudgeEnabled && item.ScoresJSON == "" {
+			judgeResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: "주제 일치는 무시하고 endings, sentence_rhythm, opening_closing, vocabulary, addressee 다섯 항목을 true/false JSON으로만 평가하세요.", Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart("original:\n" + item.Original + "\nregenerated:\n" + item.Regenerated)}}}})
+			if e != nil {
+				item.Status = "failed"
+				item.Error = e.Error()
+				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
+					return persistErr
+				}
+				continue
+			}
+			scores := map[string]bool{}
+			if e = json.Unmarshal([]byte(judgeResponse.Text), &scores); e != nil || !validJudgeScores(scores) {
+				item.Status = "failed"
+				item.Error = "judge returned invalid five-dimension JSON"
+				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
+					return persistErr
+				}
+				continue
+			}
+			encoded, _ := json.Marshal(scores)
+			item.ScoresJSON = string(encoded)
+			for _, key := range []string{"endings", "sentence_rhythm", "opening_closing", "vocabulary", "addressee"} {
+				validation.TotalCount++
+				if scores[key] {
+					validation.YCount++
+				}
+			}
+			item.Status = "scored"
+			item.Error = ""
+			if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
+				return persistErr
+			}
+		}
+		progress("validate_profile", i+1, total)
+	}
+	succeeded := 0
+	for _, item := range validation.Items {
+		if item.Status == "generated" || item.Status == "scored" {
+			succeeded++
+		}
+	}
+	now := s.now()
+	validation.FinishedAt = &now
+	if succeeded == total {
+		validation.Status = "done"
+	} else if succeeded > 0 {
+		validation.Status = "partial"
+	} else {
+		validation.Status = "failed"
+	}
+	return s.personalization.UpdateProfileValidation(ctx, validation)
+}
+
+func reusesWording(source, summary string) bool {
+	runes := []rune(strings.TrimSpace(summary))
+	if len(runes) < 8 {
+		return false
+	}
+	for i := 0; i+8 <= len(runes); i++ {
+		fragment := string(runes[i : i+8])
+		if utf8.RuneCountInString(strings.TrimSpace(fragment)) == 8 && strings.Contains(source, fragment) {
+			return true
+		}
+	}
+	return false
+}
+
+func validJudgeScores(scores map[string]bool) bool {
+	if len(scores) != 5 {
+		return false
+	}
+	for _, key := range []string{"endings", "sentence_rhythm", "opening_closing", "vocabulary", "addressee"} {
+		if _, ok := scores[key]; !ok {
+			return false
+		}
+	}
+	return true
+}

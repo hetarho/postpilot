@@ -166,6 +166,7 @@ type StartRequest struct {
 	ObserveModel ModelRef
 	ModelA       ModelRef
 	ModelB       ModelRef
+	TargetLength int
 }
 
 type StartResult struct {

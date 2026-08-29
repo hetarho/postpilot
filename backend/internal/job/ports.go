@@ -11,7 +11,9 @@ type Store interface {
 	PickNextQueued(ctx context.Context, now time.Time) (Job, error)
 	UpdateProgress(ctx context.Context, id, stage string, done, total int, now time.Time) error
 	Finish(ctx context.Context, id, status, message string, now time.Time) error
+	FailQueued(ctx context.Context, id, userID, message string, now time.Time) (bool, error)
 	SweepRunning(ctx context.Context, message string, now time.Time) (int64, error)
+	SweepQueuedPersonalization(ctx context.Context, message string, now time.Time) (int64, error)
 	ActiveForPost(ctx context.Context, slug string) (*Job, error)
 	ActiveForPostUser(ctx context.Context, slug, userID string) (*Job, error)
 	ActiveForUserKind(ctx context.Context, userID, kind string) (*Job, error)

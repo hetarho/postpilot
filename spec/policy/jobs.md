@@ -40,6 +40,16 @@ their owning feature jobs; this document owns the shared record, worker, query, 
 - There is no automatic retry, cancellation, separate worker process, external queue, job-history RPC, or partial
   text streaming.
 
+### Personalization restart exception
+
+- `learn_voice`, `compare_voice_rule`, and `validate_voice_profile` come only from explicit authenticated actions
+  carrying model refs. At boot, queued rows of these kinds are marked `failed` before the worker starts; boot cannot
+  turn old user intent into a new provider call. Running rows use the ordinary restart sweep.
+- Their owning aggregate exposes failure and explicit retry. A failed aggregate/job link can compensate by failing
+  that id for that owner only while it is queued. If the worker already owns it, compensation cannot cancel it and
+  the original durable ids remain the recovery path.
+- No timer, scheduler, profile age, read RPC, export, copy, or polling operation creates these kinds.
+
 ## Ownership and published read behavior
 
 - `GetGeneration(id)` is authenticated and takes the acting user only from the session context. An existing job
@@ -55,7 +65,8 @@ their owning feature jobs; this document owns the shared record, worker, query, 
 
 - `useJob` asks `GetGeneration` every `POLL_INTERVAL_MS` (2 s) while status is `queued` or `running`, and stops after
   `done` or `failed`. On `done`, it invalidates owner query keys supplied by the caller so completed content reloads.
-- Stage copy is fixed: `observe` → `사진 {done}/{total} 관찰됨`, `write` → `작성 중`, `analyze` → `문체 분석 중`.
+- Stage copy is fixed: `observe` → `사진 {done}/{total} 관찰됨`, `write` → `작성 중`, `analyze` → `문체 분석 중`,
+  `learn` → `말투 학습 중`, `compare_rule` → `규칙 비교 중`, `validate_profile` → `프로필 검증 중`.
   A failed row exposes its stored error. `FailureNotice` delegates retry behavior to an `onRetry` callback supplied
   by the owning feature; the shared queue does not invent retries.
 - Progress and error feedback use live-region semantics. Generic controls come from `shared/ui`, and the feedback

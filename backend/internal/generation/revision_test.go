@@ -28,11 +28,11 @@ func mustRevisionPayload(t *testing.T, instruction string, save bool) []byte {
 
 func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) {
 	system, user := BuildRevisePrompt(Profile{
-		Styleguide: "STYLE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"}, Rules: "RULES",
+		Styleguide: "STYLE", ActiveRules: "ACTIVE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"}, Rules: "RULES", EndingMaxConsecutive: 2,
 	}, *revisionContent("CURRENT"), []string{"IMG_1.jpg"}, "INSTRUCTION")
 	whole := system + "\n" + user
 	positions := []int{
-		strings.Index(whole, "STYLE"), strings.Index(whole, "EXCERPT-1"),
+		strings.Index(whole, "STYLE"), strings.Index(whole, "ACTIVE"), strings.Index(whole, "EXCERPT-1"),
 		strings.Index(whole, "EXCERPT-2"), strings.Index(whole, "RULES"),
 		strings.Index(whole, "CURRENT"), strings.Index(whole, "INSTRUCTION"),
 	}
@@ -44,6 +44,7 @@ func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) 
 	for _, required := range []string{
 		"요청과 무관한 문장은 글자 그대로", "제목, 한 줄 요약, 태그", "완전한 PostContent",
 		"파일명을 바꾸거나 새 이미지를 만들지", "IMG_1.jpg", `"type":"TEXT"`,
+		"고유 사실, 주제, 문구를 복사하지", "같은 종결어미를 2문장보다 많이",
 	} {
 		if !strings.Contains(whole, required) {
 			t.Errorf("revision prompt missing %q", required)

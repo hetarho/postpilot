@@ -3,3 +3,143 @@
 //   sqlc v1.31.1
 
 package sqlc
+
+import (
+	"database/sql"
+)
+
+type VoiceAuthoredSource struct {
+	ID              string
+	UserID          string
+	PostSlug        sql.NullString
+	LearningEventID sql.NullString
+	Title           string
+	Tags            string
+	Body            string
+	Excerpt         string
+	EmbeddingRef    sql.NullString
+	CreatedAt       string
+}
+
+type VoiceContrastRule struct {
+	ID             string
+	UserID         string
+	Statement      string
+	CanonicalKey   string
+	Layer          string
+	EvidenceCount  int64
+	Status         string
+	Origin         string
+	CreatedAt      string
+	LastEvidenceAt string
+}
+
+type VoiceLearningEvent struct {
+	ID               string
+	UserID           string
+	PostSlug         string
+	BaselineRevision int64
+	InputHash        string
+	BaselineContent  string
+	FinalContent     string
+	ModelRef         string
+	Status           string
+	JobID            sql.NullString
+	Error            sql.NullString
+	CreatedAt        string
+	ProcessedAt      sql.NullString
+}
+
+type VoiceManualOverride struct {
+	UserID    string
+	Layer     string
+	Field     string
+	Value     string
+	UpdatedAt string
+}
+
+type VoiceProfileValidation struct {
+	ID              string
+	UserID          string
+	ProfileVersion  int64
+	AnalyzeModelRef string
+	WriteModelRef   string
+	JudgeEnabled    int64
+	Status          string
+	JobID           sql.NullString
+	YCount          sql.NullInt64
+	TotalCount      sql.NullInt64
+	CreatedAt       string
+	FinishedAt      sql.NullString
+}
+
+type VoiceProfileValidationItem struct {
+	ID                 string
+	ValidationID       string
+	SourceID           string
+	Position           int64
+	NeutralSummary     sql.NullString
+	RegeneratedContent sql.NullString
+	Scores             sql.NullString
+	Status             string
+	Error              sql.NullString
+}
+
+type VoiceProfileVersion struct {
+	ID                  string
+	UserID              string
+	Version             int64
+	Snapshot            string
+	Origin              string
+	RestoredFromVersion sql.NullInt64
+	CreatedAt           string
+}
+
+type VoiceRuleComparison struct {
+	ID             string
+	UserID         string
+	RuleID         string
+	SourceID       string
+	ProfileVersion int64
+	ModelRef       string
+	TargetLength   int64
+	InputSnapshot  string
+	RuleOnSide     string
+	Status         string
+	JobID          sql.NullString
+	ChosenSide     sql.NullString
+	CreatedAt      string
+	DecidedAt      sql.NullString
+}
+
+type VoiceRuleComparisonCandidate struct {
+	ID           string
+	ComparisonID string
+	DisplaySide  string
+	Output       sql.NullString
+	Status       string
+	Error        sql.NullString
+}
+
+type VoiceRuleConfirmation struct {
+	ID                string
+	UserID            string
+	RuleID            string
+	ProposedStatement string
+	EventID           sql.NullString
+	Status            string
+	CreatedAt         string
+	ResolvedAt        sql.NullString
+}
+
+type VoiceSentenceFeedback struct {
+	ID              string
+	UserID          string
+	PostSlug        string
+	SentenceRef     string
+	Kind            string
+	Reason          sql.NullString
+	PayloadRef      string
+	ProcessingState string
+	CreatedAt       string
+}

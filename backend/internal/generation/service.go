@@ -30,6 +30,12 @@ func (s *Service) StartExperiment(ctx context.Context, request StartExperimentRe
 	if err != nil {
 		return StartExperimentResult{}, err
 	}
+	if request.TargetLength <= 0 {
+		request.TargetLength = post.TargetLength
+	}
+	if request.TargetLength <= 0 {
+		request.TargetLength = 1200
+	}
 	writeA, okA := parseModelRef(request.WriteModelA)
 	writeB, okB := parseModelRef(request.WriteModelB)
 	if !okA || !okB || writeA == writeB || !modelEnabled(s.models, writeA) || !modelEnabled(s.models, writeB) {

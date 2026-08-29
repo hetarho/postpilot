@@ -113,6 +113,41 @@ func TestGeneratedContentAndObservationsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedPost(t, s, "editable", "alice", testNow)
+	baseline := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "생성 문장입니다."}}}
+	if updated, err := s.UpdateGeneratedContentWithTarget(ctx, "editable", "alice", baseline, 1400, testNow); err != nil || !updated {
+		t.Fatalf("machine save: updated=%v err=%v", updated, err)
+	}
+	final := post.PostContent{Title: "mine", Blocks: []post.Block{{Type: post.BlockText, Content: "제가 고친 문장이에요."}}}
+	if updated, err := s.SaveContent(ctx, "editable", "alice", final, 1, 1500, testNow.Add(time.Minute)); err != nil || !updated {
+		t.Fatalf("manual save: updated=%v err=%v", updated, err)
+	}
+	if updated, err := s.SaveContent(ctx, "editable", "alice", baseline, 1, 999, testNow); err != nil || updated {
+		t.Fatalf("stale save: updated=%v err=%v", updated, err)
+	}
+	snapshot, err := s.LearningSnapshot(ctx, "editable", "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.MachineBaseline.Title != "machine" || snapshot.Current.Title != "mine" || snapshot.BaselineRevision != 1 || snapshot.ContentRevision != 2 || snapshot.TargetLength != 1500 {
+		t.Fatalf("snapshot = %+v", snapshot)
+	}
+	nextBaseline := post.PostContent{Title: "machine 2", Blocks: []post.Block{{Type: post.BlockText, Content: "새 기준 문장입니다."}}}
+	if updated, err := s.UpdateGeneratedContentWithTarget(ctx, "editable", "alice", nextBaseline, 1600, testNow.Add(2*time.Minute)); err != nil || !updated {
+		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
+	}
+	snapshot, err = s.LearningSnapshot(ctx, "editable", "alice")
+	if err != nil || snapshot.BaselineRevision != 3 || snapshot.ContentRevision != 3 || snapshot.MachineBaseline.Title != "machine 2" {
+		t.Fatalf("second snapshot = %+v err=%v", snapshot, err)
+	}
+	if _, err := s.LearningSnapshot(ctx, "editable", "bob"); !errors.Is(err, post.ErrNotFound) {
+		t.Fatalf("foreign snapshot err=%v", err)
+	}
+}
+
 func TestGetPostUnknown(t *testing.T) {
 	if _, err := newStore(t).GetPost(context.Background(), "nope"); !errors.Is(err, post.ErrNotFound) {
 		t.Errorf("err = %v, want ErrNotFound (sql.ErrNoRows must not escape)", err)

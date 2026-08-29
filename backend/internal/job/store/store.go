@@ -76,6 +76,17 @@ func (s *Store) Finish(ctx context.Context, id, status, message string, now time
 	return nil
 }
 
+func (s *Store) FailQueued(ctx context.Context, id, userID, message string, now time.Time) (bool, error) {
+	n, err := s.write.FailQueuedJob(ctx, sqlc.FailQueuedJobParams{
+		Error: nullString(message), FinishedAt: sql.NullString{String: formatTime(now), Valid: true},
+		UpdatedAt: formatTime(now), ID: id, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("fail queued job: %w", err)
+	}
+	return n == 1, nil
+}
+
 func (s *Store) SweepRunning(ctx context.Context, message string, now time.Time) (int64, error) {
 	n, err := s.write.SweepRunning(ctx, sqlc.SweepRunningParams{
 		Error: nullString(message), FinishedAt: sql.NullString{String: formatTime(now), Valid: true},
@@ -83,6 +94,16 @@ func (s *Store) SweepRunning(ctx context.Context, message string, now time.Time)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("sweep running jobs: %w", err)
+	}
+	return n, nil
+}
+
+func (s *Store) SweepQueuedPersonalization(ctx context.Context, message string, now time.Time) (int64, error) {
+	n, err := s.write.SweepQueuedPersonalization(ctx, sqlc.SweepQueuedPersonalizationParams{
+		Error: nullString(message), FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("sweep queued personalization: %w", err)
 	}
 	return n, nil
 }

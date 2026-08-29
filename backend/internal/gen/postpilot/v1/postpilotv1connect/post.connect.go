@@ -38,6 +38,9 @@ const (
 	// PostServiceSavePostDraftProcedure is the fully-qualified name of the PostService's SavePostDraft
 	// RPC.
 	PostServiceSavePostDraftProcedure = "/postpilot.v1.PostService/SavePostDraft"
+	// PostServiceSavePostContentProcedure is the fully-qualified name of the PostService's
+	// SavePostContent RPC.
+	PostServiceSavePostContentProcedure = "/postpilot.v1.PostService/SavePostContent"
 	// PostServiceGetPostProcedure is the fully-qualified name of the PostService's GetPost RPC.
 	PostServiceGetPostProcedure = "/postpilot.v1.PostService/GetPost"
 	// PostServiceListPostsProcedure is the fully-qualified name of the PostService's ListPosts RPC.
@@ -67,6 +70,8 @@ const (
 type PostServiceClient interface {
 	// Create-or-update. An empty slug creates the post and returns the minted one.
 	SavePostDraft(context.Context, *connect.Request[v1.SavePostDraftRequest]) (*connect.Response[v1.SavePostDraftResponse], error)
+	// Optimistic manual save. It never changes the machine baseline.
+	SavePostContent(context.Context, *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error)
 	GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error)
 	ListPosts(context.Context, *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error)
 	DeletePost(context.Context, *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error)
@@ -92,6 +97,12 @@ func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+PostServiceSavePostDraftProcedure,
 			connect.WithSchema(postServiceMethods.ByName("SavePostDraft")),
+			connect.WithClientOptions(opts...),
+		),
+		savePostContent: connect.NewClient[v1.SavePostContentRequest, v1.SavePostContentResponse](
+			httpClient,
+			baseURL+PostServiceSavePostContentProcedure,
+			connect.WithSchema(postServiceMethods.ByName("SavePostContent")),
 			connect.WithClientOptions(opts...),
 		),
 		getPost: connect.NewClient[v1.GetPostRequest, v1.GetPostResponse](
@@ -135,18 +146,24 @@ func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // postServiceClient implements PostServiceClient.
 type postServiceClient struct {
-	savePostDraft *connect.Client[v1.SavePostDraftRequest, v1.SavePostDraftResponse]
-	getPost       *connect.Client[v1.GetPostRequest, v1.GetPostResponse]
-	listPosts     *connect.Client[v1.ListPostsRequest, v1.ListPostsResponse]
-	deletePost    *connect.Client[v1.DeletePostRequest, v1.DeletePostResponse]
-	createUpload  *connect.Client[v1.CreateUploadRequest, v1.CreateUploadResponse]
-	confirmUpload *connect.Client[v1.ConfirmUploadRequest, v1.ConfirmUploadResponse]
-	deleteImage   *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
+	savePostDraft   *connect.Client[v1.SavePostDraftRequest, v1.SavePostDraftResponse]
+	savePostContent *connect.Client[v1.SavePostContentRequest, v1.SavePostContentResponse]
+	getPost         *connect.Client[v1.GetPostRequest, v1.GetPostResponse]
+	listPosts       *connect.Client[v1.ListPostsRequest, v1.ListPostsResponse]
+	deletePost      *connect.Client[v1.DeletePostRequest, v1.DeletePostResponse]
+	createUpload    *connect.Client[v1.CreateUploadRequest, v1.CreateUploadResponse]
+	confirmUpload   *connect.Client[v1.ConfirmUploadRequest, v1.ConfirmUploadResponse]
+	deleteImage     *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
 }
 
 // SavePostDraft calls postpilot.v1.PostService.SavePostDraft.
 func (c *postServiceClient) SavePostDraft(ctx context.Context, req *connect.Request[v1.SavePostDraftRequest]) (*connect.Response[v1.SavePostDraftResponse], error) {
 	return c.savePostDraft.CallUnary(ctx, req)
+}
+
+// SavePostContent calls postpilot.v1.PostService.SavePostContent.
+func (c *postServiceClient) SavePostContent(ctx context.Context, req *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error) {
+	return c.savePostContent.CallUnary(ctx, req)
 }
 
 // GetPost calls postpilot.v1.PostService.GetPost.
@@ -183,6 +200,8 @@ func (c *postServiceClient) DeleteImage(ctx context.Context, req *connect.Reques
 type PostServiceHandler interface {
 	// Create-or-update. An empty slug creates the post and returns the minted one.
 	SavePostDraft(context.Context, *connect.Request[v1.SavePostDraftRequest]) (*connect.Response[v1.SavePostDraftResponse], error)
+	// Optimistic manual save. It never changes the machine baseline.
+	SavePostContent(context.Context, *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error)
 	GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error)
 	ListPosts(context.Context, *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error)
 	DeletePost(context.Context, *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error)
@@ -204,6 +223,12 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 		PostServiceSavePostDraftProcedure,
 		svc.SavePostDraft,
 		connect.WithSchema(postServiceMethods.ByName("SavePostDraft")),
+		connect.WithHandlerOptions(opts...),
+	)
+	postServiceSavePostContentHandler := connect.NewUnaryHandler(
+		PostServiceSavePostContentProcedure,
+		svc.SavePostContent,
+		connect.WithSchema(postServiceMethods.ByName("SavePostContent")),
 		connect.WithHandlerOptions(opts...),
 	)
 	postServiceGetPostHandler := connect.NewUnaryHandler(
@@ -246,6 +271,8 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 		switch r.URL.Path {
 		case PostServiceSavePostDraftProcedure:
 			postServiceSavePostDraftHandler.ServeHTTP(w, r)
+		case PostServiceSavePostContentProcedure:
+			postServiceSavePostContentHandler.ServeHTTP(w, r)
 		case PostServiceGetPostProcedure:
 			postServiceGetPostHandler.ServeHTTP(w, r)
 		case PostServiceListPostsProcedure:
@@ -269,6 +296,10 @@ type UnimplementedPostServiceHandler struct{}
 
 func (UnimplementedPostServiceHandler) SavePostDraft(context.Context, *connect.Request[v1.SavePostDraftRequest]) (*connect.Response[v1.SavePostDraftResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.SavePostDraft is not implemented"))
+}
+
+func (UnimplementedPostServiceHandler) SavePostContent(context.Context, *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.SavePostContent is not implemented"))
 }
 
 func (UnimplementedPostServiceHandler) GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error) {

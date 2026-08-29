@@ -107,14 +107,16 @@ export function StageModelSelect({
 
 const UNAVAILABLE_VALUE = '__unavailable__'
 
-/** `<label> 👁 {}` badges for what the model can do (PRD §6.4), and the reason when it
+/** `<label> 👁 구조화 응답` badges for what the model can do (PRD §6.4), and the reason when it
  *  cannot be chosen. Plain text: an <option> renders no markup.
  *
  *  These strings are only ever read inside the OPEN picker, which is a full-screen sheet on both
  *  phone platforms — a disabled option can never become the closed control's value, because
  *  `onChange` refuses it and an unusable saved choice is rendered as the separate entry above. */
 function optionLabel(model: CatalogModel): string {
-  const badges = [model.vision && '👁', model.structuredOutput && '{}'].filter(Boolean).join(' ')
+  const badges = [model.vision && '👁', model.structuredOutput && '구조화 응답']
+    .filter(Boolean)
+    .join(' ')
   const reason = model.disabled ? ` — ${model.disabledReason}` : ''
   return `${model.label}${badges ? ` ${badges}` : ''}${reason}`
 }

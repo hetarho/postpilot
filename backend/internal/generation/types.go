@@ -47,18 +47,21 @@ type Image struct {
 }
 
 type PostInput struct {
-	Slug    string
-	UserID  string
-	Title   string
-	Memo    string
-	Images  []Image
-	Content *PostContent
+	Slug         string
+	UserID       string
+	Title        string
+	Memo         string
+	Images       []Image
+	Content      *PostContent
+	TargetLength int
 }
 
 type Profile struct {
-	Styleguide string
-	Excerpts   []string
-	Rules      string
+	Styleguide           string
+	ActiveRules          string
+	Excerpts             []string
+	Rules                string
+	EndingMaxConsecutive int
 }
 
 type StartRequest struct {
@@ -74,6 +77,7 @@ type StartExperimentRequest struct {
 	ObserveModel string
 	WriteModelA  string
 	WriteModelB  string
+	TargetLength int
 }
 
 type StartExperimentResult struct {

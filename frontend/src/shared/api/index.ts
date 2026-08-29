@@ -5,6 +5,8 @@ export {
   providerClient,
   generationClient,
   voiceClient,
+  voiceLearningClient,
+  voiceValidationClient,
   modelExperimentClient,
   credentialedFetch,
   unauthenticatedInterceptor,
@@ -39,6 +41,7 @@ export {
   PostSchema,
   PostSummarySchema,
   SavePostDraftResponseSchema,
+  SavePostContentResponseSchema,
   StartGenerationRequestSchema,
   StartGenerationResponseSchema,
   StartRevisionRequestSchema,
@@ -58,6 +61,7 @@ export type {
   StartGenerationResponse,
   StartRevisionRequest,
   StartRevisionResponse,
+  SavePostContentResponse,
 } from './gen/postpilot/v1/post_pb'
 export { ProviderService, Stage, SelectionSlot } from './gen/postpilot/v1/provider_pb'
 export {
@@ -82,12 +86,23 @@ export {
   UpdateVoiceProfileResponseSchema,
   VoiceProfileSchema,
   VoiceSampleSchema,
+  StructuredVoiceProfileSchema,
+  VoiceProfileVersionSchema,
+  VoiceLayer,
+  VoiceRuleStatus,
+  VoiceValueSource,
 } from './gen/postpilot/v1/voice_pb'
 export type {
   GetVoiceProfileResponse,
   VoiceProfile as ProtoVoiceProfile,
   VoiceSample as ProtoVoiceSample,
+  StructuredVoiceProfile,
+  VoiceProfileVersion,
 } from './gen/postpilot/v1/voice_pb'
+export { VoiceLearningService, VoiceFeedbackReason } from './gen/postpilot/v1/voice_learning_pb'
+export type { VoiceLearningEvent } from './gen/postpilot/v1/voice_learning_pb'
+export { VoiceValidationService } from './gen/postpilot/v1/voice_validation_pb'
+export type { VoiceRuleComparison, VoiceProfileValidation } from './gen/postpilot/v1/voice_validation_pb'
 export type {
   GetSelectionsResponse,
   ModelInfo as ProtoModelInfo,

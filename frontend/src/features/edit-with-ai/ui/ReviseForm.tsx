@@ -10,6 +10,7 @@ interface ReviseFormProps {
   activeJob?: GenerationJob
   jobPending?: boolean
   onStarted: (jobId: string) => void
+  beforeStart?: () => Promise<void>
 }
 
 export interface ReviseFormHandle {
@@ -18,11 +19,12 @@ export interface ReviseFormHandle {
 
 /** Replaces the current canonical content through one durable `revise` job. */
 export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function ReviseForm(
-  { postSlug, activeJob, jobPending = false, onStarted },
+  { postSlug, activeJob, jobPending = false, onStarted, beforeStart },
   ref,
 ) {
   const [instruction, setInstruction] = useState('')
   const [saveAsRule, setSaveAsRule] = useState(false)
+  const [prepareError, setPrepareError] = useState(false)
   const write = useStageSelection('write')
   const selectionSaving = useSelectionSavePending()
   const startRevision = useStartRevision()
@@ -39,13 +41,20 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
 
   const start = useCallback(async () => {
     if (disabled || !write.selected) return
+    setPrepareError(false)
+    try {
+      await beforeStart?.()
+    } catch {
+      setPrepareError(true)
+      return
+    }
     try {
       const response = await startRevision.start(postSlug, trimmed, saveAsRule, write.selected)
       onStarted(response.jobId)
     } catch {
       // The mutation owns and renders the transport/provider error.
     }
-  }, [disabled, onStarted, postSlug, saveAsRule, startRevision, trimmed, write.selected])
+  }, [beforeStart, disabled, onStarted, postSlug, saveAsRule, startRevision, trimmed, write.selected])
 
   useImperativeHandle(ref, () => ({ start: () => void start() }), [start])
 
@@ -111,6 +120,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           </p>
         )}
         {startRevision.isError && <FieldMessage>{startRevision.errorMessage}</FieldMessage>}
+        {prepareError && <FieldMessage>편집한 글을 먼저 저장하지 못했어요.</FieldMessage>}
         <Button
           type="submit"
           variant="secondary"

@@ -113,6 +113,10 @@ func TestMigration0006UpgradesActiveSelectionsAndRollsBack(t *testing.T) {
 	if _, err := provider.Down(ctx); err != nil {
 		t.Fatal(err)
 	}
+	// 0007 is now the latest migration; roll it back first, then exercise 0006's Down.
+	if _, err := provider.Down(ctx); err != nil {
+		t.Fatal(err)
+	}
 	var columns int
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('model_selections') WHERE name='slot'`).Scan(&columns); err != nil {
 		t.Fatal(err)
@@ -122,6 +126,63 @@ func TestMigration0006UpgradesActiveSelectionsAndRollsBack(t *testing.T) {
 	}
 	if err := handle.Reader.QueryRow(`SELECT model_id FROM model_selections WHERE user_id='alice' AND stage='write'`).Scan(&model); err != nil || model != "m" {
 		t.Fatalf("down lost active selection: model=%q err=%v", model, err)
+	}
+}
+
+func TestMigration0007PreservesLegacyVoiceAndRollsBack(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	throughSix := fstest.MapFS{}
+	for _, name := range []string{"0001_users_sessions.sql", "0002_posts_images_uploads.sql", "0003_model_selections.sql", "0004_generation_jobs.sql", "0005_voice_profiles_samples.sql", "0006_model_experiments.sql"} {
+		data, err := fs.ReadFile(migrationsFS, "migrations/"+name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		throughSix[name] = &fstest.MapFile{Data: data}
+	}
+	if err := migrate(ctx, handle.Writer, throughSix); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','2026-08-29T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	style, rules := "  legacy style\n그대로  ", "rule A\n\nrule B"
+	if _, err := handle.Writer.Exec(`INSERT INTO voice_profiles(user_id,styleguide,rules,updated_at) VALUES('alice',?,?,?)`, style, rules, "2026-08-29T00:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO posts(slug,user_id,title,memo,status,created_at,updated_at) VALUES('p','alice','t','','review','2026-08-29T00:00:00Z','2026-08-29T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	var gotStyle, gotRules string
+	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&gotStyle, &gotRules); err != nil || gotStyle != style || gotRules != rules {
+		t.Fatalf("legacy guidance changed: %q / %q err=%v", gotStyle, gotRules, err)
+	}
+	for _, table := range []string{"voice_profile_versions", "voice_learning_events", "voice_contrast_rules", "voice_profile_validations"} {
+		var count int
+		if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("table %s missing: count=%d err=%v", table, count, err)
+		}
+	}
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = provider.Down(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var currentVersionColumns int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('voice_profiles') WHERE name='current_version'`).Scan(&currentVersionColumns); err != nil || currentVersionColumns != 0 {
+		t.Fatalf("down retained current_version: %d err=%v", currentVersionColumns, err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&gotStyle, &gotRules); err != nil || gotStyle != style || gotRules != rules {
+		t.Fatalf("down lost legacy guidance: %q / %q err=%v", gotStyle, gotRules, err)
 	}
 }
 

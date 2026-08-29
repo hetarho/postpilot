@@ -51,15 +51,14 @@ export function ModelExperimentPage() {
           className={hasExperimentActions(experiment) ? undefined : 'md:hidden'}
         >
           <div className="grid gap-3">
-            {/* The switch is pressed on every pass of the comparison (A, B, A, B…), so it is docked
-                in the thumb band with the buttons it feeds instead of being pinned to the top edge,
-                ~700px above the resting thumb on a 430x932 phone (§4.3). */}
+            {/* This remains visible at every breakpoint. Phones use it to switch the one visible
+                panel; desktop uses it to identify which of the two visible panels the decision
+                button will choose. Hiding it on desktop made candidate B impossible to select. */}
             <SegmentedControl
               value={activeId}
               options={sides.map(({ candidate, label }) => ({ value: candidate.id, label }))}
               onChange={setActiveCandidateId}
-              ariaLabel="비교 후보"
-              className="md:hidden"
+              ariaLabel="선택할 후보"
             />
             <ExperimentActions experiment={experiment} activeCandidateId={activeId} />
           </div>

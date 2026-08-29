@@ -19,6 +19,10 @@ export function toPostDraft(post: Post): PostDraft {
     content: post.content,
     observations: post.observations,
     pendingExperimentId: post.pendingExperimentId,
+    contentRevision: post.contentRevision,
+    machineBaselineRevision: post.machineBaselineRevision,
+    canFinalize: post.canFinalize,
+    targetLength: post.targetLength,
   }
 }
 

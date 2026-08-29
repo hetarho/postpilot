@@ -145,6 +145,34 @@ func (q *Queries) ActiveModelExperiment(ctx context.Context, payload string) (Ge
 	return i, err
 }
 
+const failQueuedJob = `-- name: FailQueuedJob :execrows
+UPDATE generation_jobs
+SET status = 'failed', error = ?, finished_at = ?, updated_at = ?
+WHERE id = ? AND user_id = ? AND status = 'queued'
+`
+
+type FailQueuedJobParams struct {
+	Error      sql.NullString
+	FinishedAt sql.NullString
+	UpdatedAt  string
+	ID         string
+	UserID     string
+}
+
+func (q *Queries) FailQueuedJob(ctx context.Context, arg FailQueuedJobParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, failQueuedJob,
+		arg.Error,
+		arg.FinishedAt,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const finishJob = `-- name: FinishJob :exec
 UPDATE generation_jobs
 SET status = ?, error = ?, finished_at = ?, updated_at = ?
@@ -238,6 +266,9 @@ UPDATE generation_jobs
 SET status = 'running',
     stage = CASE kind
         WHEN 'analyze_voice' THEN 'analyze'
+        WHEN 'learn_voice' THEN 'learn'
+        WHEN 'compare_voice_rule' THEN 'compare_rule'
+        WHEN 'validate_voice_profile' THEN 'validate_profile'
         WHEN 'revise' THEN 'write'
         ELSE 'observe'
     END,
@@ -279,6 +310,27 @@ func (q *Queries) PickNextQueued(ctx context.Context, arg PickNextQueuedParams) 
 		&i.FinishedAt,
 	)
 	return i, err
+}
+
+const sweepQueuedPersonalization = `-- name: SweepQueuedPersonalization :execrows
+UPDATE generation_jobs
+SET status = 'failed', error = ?, finished_at = ?, updated_at = ?
+WHERE status = 'queued'
+  AND kind IN ('learn_voice', 'compare_voice_rule', 'validate_voice_profile')
+`
+
+type SweepQueuedPersonalizationParams struct {
+	Error      sql.NullString
+	FinishedAt sql.NullString
+	UpdatedAt  string
+}
+
+func (q *Queries) SweepQueuedPersonalization(ctx context.Context, arg SweepQueuedPersonalizationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, sweepQueuedPersonalization, arg.Error, arg.FinishedAt, arg.UpdatedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const sweepRunning = `-- name: SweepRunning :execrows

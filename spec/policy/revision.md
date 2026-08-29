@@ -45,3 +45,11 @@ rule behavior remain canonical in [voice](voice.md).
 | `RevisionInstructionMaxChars` | BE `internal/generation` | `500` Unicode characters |
 | `REVISION_INSTRUCTION_MAX_CHARS` | FE `shared/config` | `500` input characters |
 | `LLMStageTimeout` | BE `internal/platform/config` | `5m` per provider call |
+
+## Baseline and progressive voice
+
+- The frontend flushes block-content autosave before `StartRevision`; a save conflict stops the action.
+- Every revision reloads the current topic-aware structured voice projection and target length while preserving the
+  minimal-change and attachment rules.
+- Successful output atomically establishes a new machine baseline. Failure leaves canonical content and the prior
+  baseline unchanged. Revision never implicitly finalizes or learns.

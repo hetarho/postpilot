@@ -30,6 +30,7 @@ func (h *Handler) StartGeneration(ctx context.Context, req *connect.Request[post
 		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
 		WriteModelA:  modelRefValue(req.Msg.GetWriteModelA()),
 		WriteModelB:  modelRefValue(req.Msg.GetWriteModelB()),
+		TargetLength: int(req.Msg.GetTargetLength()),
 	})
 	if err != nil {
 		return nil, toConnectError("start generation", err)

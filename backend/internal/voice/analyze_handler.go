@@ -15,22 +15,34 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	}
 	attempted := false
 	for {
+		head, err := s.store.GetProfile(ctx, found.UserID)
+		if err != nil {
+			return fmt.Errorf("현재 문체 프로필을 불러오지 못했어요: %w", err)
+		}
 		samples, corpusVersion, err := s.store.CorpusSnapshot(ctx, found.UserID)
 		if err != nil {
 			return fmt.Errorf("문체 샘플을 불러오지 못했어요: %w", err)
 		}
-		if len(samples) == 0 {
+		var sources []AuthoredSource
+		if s.personalization != nil {
+			sources, err = s.personalization.ListAuthoredSources(ctx, found.UserID)
+			if err != nil {
+				return fmt.Errorf("완성 글을 불러오지 못했어요: %w", err)
+			}
+		}
+		if len(samples) == 0 && len(sources) == 0 {
 			if attempted {
 				progress("analyze", 1, 1)
 				return nil
 			}
-			return fmt.Errorf("분석할 문체 샘플이 없어요")
+			return fmt.Errorf("분석할 문체 자료가 없어요")
 		}
+		corpus := personalizationCorpus(samples, sources)
 		attempted = true
 		progress("analyze", 0, 1)
 		response, err := s.models.Complete(ctx, ref, llm.Request{
 			System:   analysisPrompt,
-			Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(AssembleCorpus(samples))}}},
+			Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus)}}},
 		})
 		if err != nil {
 			return err
@@ -44,6 +56,36 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 			return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)
 		}
 		if stored {
+			measured := MeasuredProfile(corpus, s.now)
+			measured.Lexical.Description = VoiceValue{Value: styleguide, Source: SourceAnalyzed}
+			measured.SourceCount = len(samples) + len(sources)
+			measured.Sources = sources
+			measured.Empty = false
+			if s.personalization == nil {
+				progress("analyze", 1, 1)
+				return nil
+			}
+			overrides, overrideErr := s.personalization.ListManualOverrides(ctx, found.UserID)
+			if overrideErr != nil {
+				return fmt.Errorf("manual voice overrides: %w", overrideErr)
+			}
+			for _, override := range overrides {
+				if overrideErr = applyOverride(&measured, override.Layer, override.Field, override.Value); overrideErr != nil {
+					return overrideErr
+				}
+			}
+			measured.Rules, overrideErr = s.personalization.ListRules(ctx, found.UserID)
+			if overrideErr != nil {
+				return fmt.Errorf("voice rules: %w", overrideErr)
+			}
+			if _, published, versionErr := s.personalization.PublishProfileVersionIfHead(ctx, found.UserID, measured, "analysis", head.Structured.Version, s.now()); versionErr != nil {
+				return fmt.Errorf("publish typed voice profile: %w", versionErr)
+			} else if !published {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+				continue
+			}
 			progress("analyze", 1, 1)
 			return nil
 		}
@@ -53,6 +95,23 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 			return err
 		}
 	}
+}
+
+func personalizationCorpus(samples []Sample, sources []AuthoredSource) string {
+	var corpus strings.Builder
+	if len(samples) > 0 {
+		corpus.WriteString(AssembleCorpus(samples))
+	}
+	for _, source := range sources {
+		if corpus.Len() > 0 {
+			corpus.WriteString("\n\n")
+		}
+		corpus.WriteString("--- finalized: ")
+		corpus.WriteString(source.Title)
+		corpus.WriteString(" ---\n")
+		corpus.WriteString(source.Body)
+	}
+	return corpus.String()
 }
 
 func hasRequiredAnalysisShape(styleguide string) bool {

@@ -72,3 +72,15 @@ built by jobs 10 and 11.
 | `LLMStageTimeout` | BE `internal/platform/config` | `5m` per provider call |
 | `TagsMin` / `TagsMax` | BE `internal/generation` | `3` / `6` |
 | `BadOutputErrorHeadChars` | BE `internal/generation` | `200` runes |
+
+## Progressive voice and target length
+
+- `StartGeneration` freezes the visible positive target length with the post, observations, explicit models, and
+  voice projection. The selected winner persists that target and atomically establishes the latest machine baseline.
+- The projection contains typed descriptors, legacy manual guidance, bans, evidence-ranked active rules, and 0–3
+  unique excerpts. Topic/tag matches lead; stable recent fallback keeps a single unrelated finalized post useful.
+  Candidate/retired/rejected rules never enter the prompt.
+- Voice input precedes per-post material and forbids copying example facts/phrases. Measured ending distribution is a
+  first-class constraint, and the prompt forbids a third consecutive identical ending.
+- Zero samples/sources is valid. Generation never requires history or starts learning, rule comparison, validation,
+  embedding, or judge work.

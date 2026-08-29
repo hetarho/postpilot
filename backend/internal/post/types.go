@@ -5,6 +5,7 @@ package post
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -43,26 +44,52 @@ var (
 	ErrObjectMissing = errors.New("uploaded object not found in storage")
 	// ErrPostBusy prevents deleting a source while a handler could still write new
 	// experiment output after the privacy purge.
-	ErrPostBusy = errors.New("post has an active job")
+	ErrPostBusy             = errors.New("post has an active job")
+	ErrStaleContentRevision = errors.New("post content revision is stale")
+	ErrInvalidContent       = errors.New("invalid post content")
+	ErrNoMachineBaseline    = errors.New("post has no machine baseline to finalize")
 )
+
+type InvalidContentError struct{ Reason string }
+
+func (e *InvalidContentError) Error() string {
+	return fmt.Sprintf("%s: %s", ErrInvalidContent, e.Reason)
+}
+func (e *InvalidContentError) Unwrap() error { return ErrInvalidContent }
 
 // Post is the aggregate exposed by the drafting context. Generation may replace its
 // canonical content and observations only through Service's published behaviors.
 type Post struct {
-	Slug         string
-	UserID       string
-	Title        string
-	Memo         string
-	Status       string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	Content      *PostContent
-	Observations []Observation
+	Slug                    string
+	UserID                  string
+	Title                   string
+	Memo                    string
+	Status                  string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	Content                 *PostContent
+	ContentRevision         int64
+	MachineBaselineRevision int64
+	TargetLength            int
+	Observations            []Observation
 
 	// Images is populated by Get, not by the store's post lookup.
 	Images              []Image
 	ActiveJob           *ActiveJob
 	PendingExperimentID string
+}
+
+// LearningSnapshot is the post context's ownership-checked hand-off to voice. The
+// voice context never reads post tables and cannot mutate either snapshot.
+type LearningSnapshot struct {
+	PostSlug         string
+	UserID           string
+	Current          PostContent
+	ContentRevision  int64
+	MachineBaseline  PostContent
+	BaselineRevision int64
+	TargetLength     int
+	UpdatedAt        time.Time
 }
 
 // BlockType is kept as the LLM/protojson spelling at the domain boundary.

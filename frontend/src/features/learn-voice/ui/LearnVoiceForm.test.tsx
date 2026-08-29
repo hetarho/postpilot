@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
 import type { FakeVoiceOptions } from '@/test/voice'
-import type { VoiceProfile } from '@/entities/voice-profile'
+import { emptyStructuredVoiceProfile, type VoiceProfile } from '@/entities/voice-profile'
 import { LearnVoiceForm } from './LearnVoiceForm'
 
 const EMPTY_PROFILE: VoiceProfile = {
@@ -13,6 +13,10 @@ const EMPTY_PROFILE: VoiceProfile = {
   updatedAt: '',
   samples: [],
   activeJobId: '',
+  legacyManualGuidance: '',
+  structured: emptyStructuredVoiceProfile(),
+  finalizedSourceCount: 0,
+  canValidate: false,
 }
 
 function renderForm({

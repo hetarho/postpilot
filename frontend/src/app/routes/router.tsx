@@ -13,6 +13,8 @@ import { PostsPage } from '@/pages/posts'
 import { VoicePage } from '@/pages/voice'
 import { AIModelsPage } from '@/pages/ai-models'
 import { ModelExperimentPage } from '@/pages/model-experiment'
+import { VoiceRuleComparisonPage } from '@/pages/voice-rule-comparison'
+import { VoiceValidationPage } from '@/pages/voice-validation'
 import { transport } from '@/shared/api'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 import { queryClient } from '../providers/query-client'
@@ -113,6 +115,18 @@ const modelExperimentRoute = createRoute({
   component: ModelExperimentPage,
 })
 
+const voiceRuleComparisonRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/voice/rules/$id/compare',
+  component: VoiceRuleComparisonPage,
+})
+
+const voiceValidationRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/voice/validations/$id',
+  component: VoiceValidationPage,
+})
+
 // A static segment outranks '$slug', so this route — not the editor below — is what
 // '/posts/new' matches.
 const newDraftRoute = createRoute({
@@ -136,6 +150,8 @@ export const routeTree = rootRoute.addChildren([
     voiceRoute,
     aiModelsRoute,
     modelExperimentRoute,
+    voiceRuleComparisonRoute,
+    voiceValidationRoute,
     newDraftRoute,
     postEditorRoute,
   ]),

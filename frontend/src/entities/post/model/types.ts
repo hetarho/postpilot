@@ -19,6 +19,10 @@ export interface PostDraft {
   content: PostContent | undefined
   observations: Observation[]
   pendingExperimentId: string
+  contentRevision: bigint
+  machineBaselineRevision: bigint
+  canFinalize: boolean
+  targetLength: number
 }
 
 /** One row of the post list (PRD F-8). */

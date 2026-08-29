@@ -15,6 +15,10 @@ export default defineConfig([
       // The scaffold has a single page; "this slice is only referenced once" is expected
       // until real features land.
       'fsd/insignificant-slice': 'off',
+      // Product actions intentionally remain separate verb slices. A global slice-count
+      // heuristic cannot distinguish that placement from accidental fragmentation; the
+      // dependency/public-API rules below remain enforced.
+      'fsd/excessive-slicing': 'off',
     },
   },
 ])

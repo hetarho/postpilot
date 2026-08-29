@@ -29,6 +29,10 @@ const post: PostDraft = {
   content: undefined,
   observations: [],
   pendingExperimentId: '',
+  contentRevision: 0n,
+  machineBaselineRevision: 0n,
+  canFinalize: false,
+  targetLength: 1200,
 }
 
 const activeJob: GenerationJob = {

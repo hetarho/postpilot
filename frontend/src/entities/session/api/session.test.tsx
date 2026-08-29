@@ -52,6 +52,7 @@ describe('session cache', () => {
 
     await loadSession(queryClient, transport)
     expect(queryClient.getQueryData(getMeQueryKey(transport))).toBeDefined()
+    queryClient.setQueryData(['private-post'], { title: 'alice only' })
 
     const { result } = renderHook(() => useLogout(), {
       wrapper: withProviders(transport, queryClient),
@@ -61,6 +62,7 @@ describe('session cache', () => {
     })
 
     expect(queryClient.getQueryData(getMeQueryKey(transport))).toBeUndefined()
+    expect(queryClient.getQueryData(['private-post'])).toBeUndefined()
     expireSession()
     await expect(loadSession(queryClient, transport)).resolves.toEqual({ status: 'signed-out' })
   })

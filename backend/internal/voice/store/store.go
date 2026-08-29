@@ -38,9 +38,16 @@ func (s *Store) GetProfile(ctx context.Context, userID string) (voice.Profile, e
 	if err != nil {
 		return voice.Profile{}, fmt.Errorf("profile updated_at: %w", err)
 	}
-	return voice.Profile{
-		UserID: row.UserID, Styleguide: row.Styleguide, Rules: row.Rules, UpdatedAt: updated,
-	}, nil
+	structured := voice.StructuredProfile{Empty: true}
+	if row.CurrentVersion > 0 {
+		version, versionErr := s.GetProfileVersion(ctx, userID, row.CurrentVersion)
+		if versionErr != nil {
+			return voice.Profile{}, fmt.Errorf("profile head %d: %w", row.CurrentVersion, versionErr)
+		}
+		structured = version.Profile
+	}
+	return voice.Profile{UserID: row.UserID, Styleguide: row.Styleguide, Rules: row.Rules,
+		UpdatedAt: updated, Structured: structured}, nil
 }
 
 func (s *Store) UpsertProfile(ctx context.Context, profile voice.Profile) error {

@@ -21,7 +21,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if post.Content == nil {
 		return ErrRevisionContentRequired
 	}
-	profile, err := s.profiles.ProfileForPrompt(ctx, job.UserID)
+	profile, err := s.profileForTopic(ctx, job.UserID, post.Title+" "+post.Memo, contentTags(post.Content))
 	if err != nil {
 		return fmt.Errorf("load voice profile: %w", err)
 	}
@@ -33,7 +33,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	for _, image := range post.Images {
 		filenames = append(filenames, image.Filename)
 	}
-	system, user := BuildRevisePrompt(profile, *post.Content, filenames, payload.Instruction)
+	system, user := BuildRevisePrompt(profile, *post.Content, filenames, payload.Instruction, post.TargetLength)
 	request := llm.Request{
 		System:   system,
 		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},

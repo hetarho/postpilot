@@ -45,6 +45,15 @@ const (
 	// VoiceServiceDeleteVoiceSampleProcedure is the fully-qualified name of the VoiceService's
 	// DeleteVoiceSample RPC.
 	VoiceServiceDeleteVoiceSampleProcedure = "/postpilot.v1.VoiceService/DeleteVoiceSample"
+	// VoiceServiceListVoiceProfileVersionsProcedure is the fully-qualified name of the VoiceService's
+	// ListVoiceProfileVersions RPC.
+	VoiceServiceListVoiceProfileVersionsProcedure = "/postpilot.v1.VoiceService/ListVoiceProfileVersions"
+	// VoiceServiceUpdateVoiceOverrideProcedure is the fully-qualified name of the VoiceService's
+	// UpdateVoiceOverride RPC.
+	VoiceServiceUpdateVoiceOverrideProcedure = "/postpilot.v1.VoiceService/UpdateVoiceOverride"
+	// VoiceServiceRestoreVoiceProfileProcedure is the fully-qualified name of the VoiceService's
+	// RestoreVoiceProfile RPC.
+	VoiceServiceRestoreVoiceProfileProcedure = "/postpilot.v1.VoiceService/RestoreVoiceProfile"
 )
 
 // VoiceServiceClient is a client for the postpilot.v1.VoiceService service.
@@ -53,6 +62,9 @@ type VoiceServiceClient interface {
 	UpdateVoiceProfile(context.Context, *connect.Request[v1.UpdateVoiceProfileRequest]) (*connect.Response[v1.UpdateVoiceProfileResponse], error)
 	AddVoiceSample(context.Context, *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error)
 	DeleteVoiceSample(context.Context, *connect.Request[v1.DeleteVoiceSampleRequest]) (*connect.Response[v1.DeleteVoiceSampleResponse], error)
+	ListVoiceProfileVersions(context.Context, *connect.Request[v1.ListVoiceProfileVersionsRequest]) (*connect.Response[v1.ListVoiceProfileVersionsResponse], error)
+	UpdateVoiceOverride(context.Context, *connect.Request[v1.UpdateVoiceOverrideRequest]) (*connect.Response[v1.UpdateVoiceOverrideResponse], error)
+	RestoreVoiceProfile(context.Context, *connect.Request[v1.RestoreVoiceProfileRequest]) (*connect.Response[v1.RestoreVoiceProfileResponse], error)
 }
 
 // NewVoiceServiceClient constructs a client for the postpilot.v1.VoiceService service. By default,
@@ -90,15 +102,36 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(voiceServiceMethods.ByName("DeleteVoiceSample")),
 			connect.WithClientOptions(opts...),
 		),
+		listVoiceProfileVersions: connect.NewClient[v1.ListVoiceProfileVersionsRequest, v1.ListVoiceProfileVersionsResponse](
+			httpClient,
+			baseURL+VoiceServiceListVoiceProfileVersionsProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("ListVoiceProfileVersions")),
+			connect.WithClientOptions(opts...),
+		),
+		updateVoiceOverride: connect.NewClient[v1.UpdateVoiceOverrideRequest, v1.UpdateVoiceOverrideResponse](
+			httpClient,
+			baseURL+VoiceServiceUpdateVoiceOverrideProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("UpdateVoiceOverride")),
+			connect.WithClientOptions(opts...),
+		),
+		restoreVoiceProfile: connect.NewClient[v1.RestoreVoiceProfileRequest, v1.RestoreVoiceProfileResponse](
+			httpClient,
+			baseURL+VoiceServiceRestoreVoiceProfileProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("RestoreVoiceProfile")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // voiceServiceClient implements VoiceServiceClient.
 type voiceServiceClient struct {
-	getVoiceProfile    *connect.Client[v1.GetVoiceProfileRequest, v1.GetVoiceProfileResponse]
-	updateVoiceProfile *connect.Client[v1.UpdateVoiceProfileRequest, v1.UpdateVoiceProfileResponse]
-	addVoiceSample     *connect.Client[v1.AddVoiceSampleRequest, v1.AddVoiceSampleResponse]
-	deleteVoiceSample  *connect.Client[v1.DeleteVoiceSampleRequest, v1.DeleteVoiceSampleResponse]
+	getVoiceProfile          *connect.Client[v1.GetVoiceProfileRequest, v1.GetVoiceProfileResponse]
+	updateVoiceProfile       *connect.Client[v1.UpdateVoiceProfileRequest, v1.UpdateVoiceProfileResponse]
+	addVoiceSample           *connect.Client[v1.AddVoiceSampleRequest, v1.AddVoiceSampleResponse]
+	deleteVoiceSample        *connect.Client[v1.DeleteVoiceSampleRequest, v1.DeleteVoiceSampleResponse]
+	listVoiceProfileVersions *connect.Client[v1.ListVoiceProfileVersionsRequest, v1.ListVoiceProfileVersionsResponse]
+	updateVoiceOverride      *connect.Client[v1.UpdateVoiceOverrideRequest, v1.UpdateVoiceOverrideResponse]
+	restoreVoiceProfile      *connect.Client[v1.RestoreVoiceProfileRequest, v1.RestoreVoiceProfileResponse]
 }
 
 // GetVoiceProfile calls postpilot.v1.VoiceService.GetVoiceProfile.
@@ -121,12 +154,30 @@ func (c *voiceServiceClient) DeleteVoiceSample(ctx context.Context, req *connect
 	return c.deleteVoiceSample.CallUnary(ctx, req)
 }
 
+// ListVoiceProfileVersions calls postpilot.v1.VoiceService.ListVoiceProfileVersions.
+func (c *voiceServiceClient) ListVoiceProfileVersions(ctx context.Context, req *connect.Request[v1.ListVoiceProfileVersionsRequest]) (*connect.Response[v1.ListVoiceProfileVersionsResponse], error) {
+	return c.listVoiceProfileVersions.CallUnary(ctx, req)
+}
+
+// UpdateVoiceOverride calls postpilot.v1.VoiceService.UpdateVoiceOverride.
+func (c *voiceServiceClient) UpdateVoiceOverride(ctx context.Context, req *connect.Request[v1.UpdateVoiceOverrideRequest]) (*connect.Response[v1.UpdateVoiceOverrideResponse], error) {
+	return c.updateVoiceOverride.CallUnary(ctx, req)
+}
+
+// RestoreVoiceProfile calls postpilot.v1.VoiceService.RestoreVoiceProfile.
+func (c *voiceServiceClient) RestoreVoiceProfile(ctx context.Context, req *connect.Request[v1.RestoreVoiceProfileRequest]) (*connect.Response[v1.RestoreVoiceProfileResponse], error) {
+	return c.restoreVoiceProfile.CallUnary(ctx, req)
+}
+
 // VoiceServiceHandler is an implementation of the postpilot.v1.VoiceService service.
 type VoiceServiceHandler interface {
 	GetVoiceProfile(context.Context, *connect.Request[v1.GetVoiceProfileRequest]) (*connect.Response[v1.GetVoiceProfileResponse], error)
 	UpdateVoiceProfile(context.Context, *connect.Request[v1.UpdateVoiceProfileRequest]) (*connect.Response[v1.UpdateVoiceProfileResponse], error)
 	AddVoiceSample(context.Context, *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error)
 	DeleteVoiceSample(context.Context, *connect.Request[v1.DeleteVoiceSampleRequest]) (*connect.Response[v1.DeleteVoiceSampleResponse], error)
+	ListVoiceProfileVersions(context.Context, *connect.Request[v1.ListVoiceProfileVersionsRequest]) (*connect.Response[v1.ListVoiceProfileVersionsResponse], error)
+	UpdateVoiceOverride(context.Context, *connect.Request[v1.UpdateVoiceOverrideRequest]) (*connect.Response[v1.UpdateVoiceOverrideResponse], error)
+	RestoreVoiceProfile(context.Context, *connect.Request[v1.RestoreVoiceProfileRequest]) (*connect.Response[v1.RestoreVoiceProfileResponse], error)
 }
 
 // NewVoiceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -160,6 +211,24 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(voiceServiceMethods.ByName("DeleteVoiceSample")),
 		connect.WithHandlerOptions(opts...),
 	)
+	voiceServiceListVoiceProfileVersionsHandler := connect.NewUnaryHandler(
+		VoiceServiceListVoiceProfileVersionsProcedure,
+		svc.ListVoiceProfileVersions,
+		connect.WithSchema(voiceServiceMethods.ByName("ListVoiceProfileVersions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceUpdateVoiceOverrideHandler := connect.NewUnaryHandler(
+		VoiceServiceUpdateVoiceOverrideProcedure,
+		svc.UpdateVoiceOverride,
+		connect.WithSchema(voiceServiceMethods.ByName("UpdateVoiceOverride")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceRestoreVoiceProfileHandler := connect.NewUnaryHandler(
+		VoiceServiceRestoreVoiceProfileProcedure,
+		svc.RestoreVoiceProfile,
+		connect.WithSchema(voiceServiceMethods.ByName("RestoreVoiceProfile")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.VoiceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case VoiceServiceGetVoiceProfileProcedure:
@@ -170,6 +239,12 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 			voiceServiceAddVoiceSampleHandler.ServeHTTP(w, r)
 		case VoiceServiceDeleteVoiceSampleProcedure:
 			voiceServiceDeleteVoiceSampleHandler.ServeHTTP(w, r)
+		case VoiceServiceListVoiceProfileVersionsProcedure:
+			voiceServiceListVoiceProfileVersionsHandler.ServeHTTP(w, r)
+		case VoiceServiceUpdateVoiceOverrideProcedure:
+			voiceServiceUpdateVoiceOverrideHandler.ServeHTTP(w, r)
+		case VoiceServiceRestoreVoiceProfileProcedure:
+			voiceServiceRestoreVoiceProfileHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -193,4 +268,16 @@ func (UnimplementedVoiceServiceHandler) AddVoiceSample(context.Context, *connect
 
 func (UnimplementedVoiceServiceHandler) DeleteVoiceSample(context.Context, *connect.Request[v1.DeleteVoiceSampleRequest]) (*connect.Response[v1.DeleteVoiceSampleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.DeleteVoiceSample is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) ListVoiceProfileVersions(context.Context, *connect.Request[v1.ListVoiceProfileVersionsRequest]) (*connect.Response[v1.ListVoiceProfileVersionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.ListVoiceProfileVersions is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) UpdateVoiceOverride(context.Context, *connect.Request[v1.UpdateVoiceOverrideRequest]) (*connect.Response[v1.UpdateVoiceOverrideResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.UpdateVoiceOverride is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) RestoreVoiceProfile(context.Context, *connect.Request[v1.RestoreVoiceProfileRequest]) (*connect.Response[v1.RestoreVoiceProfileResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.RestoreVoiceProfile is not implemented"))
 }

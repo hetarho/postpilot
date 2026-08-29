@@ -16,8 +16,16 @@ type Posts interface {
 	SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent) error
 }
 
+type TargetLengthPosts interface {
+	SetGeneratedContentWithTarget(ctx context.Context, userID, slug string, content PostContent, targetLength int) error
+}
+
 type Profiles interface {
 	ProfileForPrompt(ctx context.Context, userID string) (Profile, error)
+}
+
+type TopicProfiles interface {
+	ProfileForPromptForTopic(ctx context.Context, userID, topic string, tags []string) (Profile, error)
 }
 
 type RuleWriter interface {

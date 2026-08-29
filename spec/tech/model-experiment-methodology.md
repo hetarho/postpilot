@@ -96,3 +96,10 @@ post/profile belongs to its existing context and is not touched by the experimen
 
 The shipped post deletion behavior calls the experiment purge in one transaction before deleting the post row. Only
 then may `ON DELETE SET NULL` detach retained leaderboard metadata from its source slug.
+
+## 7. Separate rule A/B methodology
+
+Voice-rule comparison reuses only the blind presentation. Both candidates use the same explicit write model and
+frozen source/profile/target input; exactly one adds one selected candidate rule. The API hides rule-on identity until
+verdict, and both outputs must succeed. The outcome changes only rule evidence/status and a whole voice-profile
+version, with no model match, Elo, usage leaderboard, recommendation, or canonical post write.

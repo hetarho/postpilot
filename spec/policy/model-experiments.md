@@ -65,3 +65,11 @@ and [tech/model-experiment-methodology](../tech/model-experiment-methodology.md)
 | Elo initial/K/minimum matches | BE experiment domain | `1500` / `32` / `3` |
 | `LEADERBOARD_MIN_MATCHES` | FE `shared/config` | `3` |
 | input hash | BE experiment domain | SHA-256 of frozen bytes |
+
+## Voice-rule comparison is not a model experiment
+
+- Rule comparison holds one explicit write model and frozen input constant, changing only whether one candidate
+  voice rule is present. It hides rule-on/off identity until the owner chooses.
+- Its verdict adds evidence to or rejects that rule only. It writes no model experiment, match, Elo, usage ranking,
+  recommendation, or active selection.
+- It never starts on a cadence or mount; both outputs must be successful and non-empty before decision.

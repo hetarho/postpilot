@@ -94,13 +94,71 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 		return false, fmt.Errorf("encode content: %w", err)
 	}
 	n, err := s.write.UpdateGeneratedContent(ctx, sqlc.UpdateGeneratedContentParams{
-		Content: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
+		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
 		Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("update generated content: %w", err)
 	}
 	return n > 0, nil
+}
+
+func (s *Store) UpdateGeneratedContentWithTarget(ctx context.Context, slug, userID string, content post.PostContent, targetLength int, updatedAt time.Time) (bool, error) {
+	encoded, err := marshalContent(content)
+	if err != nil {
+		return false, fmt.Errorf("encode content: %w", err)
+	}
+	n, err := s.write.UpdateGeneratedContentWithTarget(ctx, sqlc.UpdateGeneratedContentWithTargetParams{
+		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true},
+		TargetLength: int64(targetLength), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("update generated content with target: %w", err)
+	}
+	return n > 0, nil
+}
+
+func (s *Store) SaveContent(ctx context.Context, slug, userID string, content post.PostContent, expectedRevision int64, targetLength int, updatedAt time.Time) (bool, error) {
+	encoded, err := marshalContent(content)
+	if err != nil {
+		return false, fmt.Errorf("encode content: %w", err)
+	}
+	n, err := s.write.SavePostContent(ctx, sqlc.SavePostContentParams{
+		Content: sql.NullString{String: encoded, Valid: true}, TargetLength: int64(targetLength),
+		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID, ContentRevision: expectedRevision,
+	})
+	if err != nil {
+		return false, fmt.Errorf("save content: %w", err)
+	}
+	return n == 1, nil
+}
+
+func (s *Store) LearningSnapshot(ctx context.Context, slug, userID string) (post.LearningSnapshot, error) {
+	row, err := s.read.GetLearningSnapshot(ctx, sqlc.GetLearningSnapshotParams{Slug: slug, UserID: userID})
+	if errors.Is(err, sql.ErrNoRows) {
+		return post.LearningSnapshot{}, post.ErrNotFound
+	}
+	if err != nil {
+		return post.LearningSnapshot{}, fmt.Errorf("select learning snapshot: %w", err)
+	}
+	current, err := unmarshalContent(row.Content.String)
+	if err != nil {
+		return post.LearningSnapshot{}, err
+	}
+	baseline, err := unmarshalContent(row.MachineBaseline.String)
+	if err != nil {
+		return post.LearningSnapshot{}, err
+	}
+	if current == nil || baseline == nil {
+		return post.LearningSnapshot{}, post.ErrNoMachineBaseline
+	}
+	updated, err := parseTime(row.UpdatedAt)
+	if err != nil {
+		return post.LearningSnapshot{}, err
+	}
+	return post.LearningSnapshot{PostSlug: row.Slug, UserID: row.UserID, Current: *current,
+		ContentRevision: row.ContentRevision, MachineBaseline: *baseline,
+		BaselineRevision: row.MachineBaselineRevision, TargetLength: int(row.TargetLength), UpdatedAt: updated}, nil
 }
 
 func (s *Store) GetPost(ctx context.Context, slug string) (post.Post, error) {
@@ -403,15 +461,18 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
 	}
 	return post.Post{
-		Slug:         row.Slug,
-		UserID:       row.UserID,
-		Title:        row.Title,
-		Memo:         row.Memo,
-		Status:       row.Status,
-		CreatedAt:    createdAt,
-		UpdatedAt:    updatedAt,
-		Content:      content,
-		Observations: observations,
+		Slug:                    row.Slug,
+		UserID:                  row.UserID,
+		Title:                   row.Title,
+		Memo:                    row.Memo,
+		Status:                  row.Status,
+		CreatedAt:               createdAt,
+		UpdatedAt:               updatedAt,
+		Content:                 content,
+		ContentRevision:         row.ContentRevision,
+		MachineBaselineRevision: row.MachineBaselineRevision,
+		TargetLength:            int(row.TargetLength),
+		Observations:            observations,
 	}, nil
 }
 

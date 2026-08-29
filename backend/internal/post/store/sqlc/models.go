@@ -20,15 +20,19 @@ type Image struct {
 }
 
 type Post struct {
-	Slug         string
-	UserID       string
-	Title        string
-	Memo         string
-	Observations sql.NullString
-	Content      sql.NullString
-	Status       string
-	CreatedAt    string
-	UpdatedAt    string
+	Slug                    string
+	UserID                  string
+	Title                   string
+	Memo                    string
+	Observations            sql.NullString
+	Content                 sql.NullString
+	Status                  string
+	CreatedAt               string
+	UpdatedAt               string
+	ContentRevision         int64
+	MachineBaseline         sql.NullString
+	MachineBaselineRevision int64
+	TargetLength            int64
 }
 
 type Upload struct {

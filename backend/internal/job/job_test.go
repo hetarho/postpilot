@@ -257,6 +257,58 @@ func TestSweepAndOwnership(t *testing.T) {
 	}
 }
 
+func TestBootSweepHoldsQueuedPersonalizationOnly(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	ids := make([]string, 0, 3)
+	for _, kind := range []string{job.KindLearnVoice, job.KindCompareVoiceRule, job.KindValidateVoiceProfile} {
+		id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: kind, UserID: "alice"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, id)
+	}
+	ordinary, err := h.queue.Enqueue(ctx, job.NewJob{Kind: "ordinary", UserID: "alice", PostSlug: postSlug("post-a")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, err := h.queue.SweepQueuedPersonalization(ctx); err != nil || n != 3 {
+		t.Fatalf("sweep queued personalization = %d, %v", n, err)
+	}
+	for _, id := range ids {
+		found, err := h.queue.Get(ctx, id, "alice")
+		if err != nil || found.Status != job.StatusFailed || found.Error != job.PersonalizationRestartMessage {
+			t.Fatalf("personalization job = %+v err=%v", found, err)
+		}
+	}
+	found, err := h.queue.Get(ctx, ordinary, "alice")
+	if err != nil || found.Status != job.StatusQueued {
+		t.Fatalf("ordinary queued job changed: %+v err=%v", found, err)
+	}
+}
+
+func TestFailQueuedIsOwnerScopedAndCannotStopRunningWork(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindValidateVoiceProfile, UserID: "alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if failed, err := h.queue.FailQueued(ctx, id, "bob", "link failed"); err != nil || failed {
+		t.Fatalf("foreign fail queued = %v, %v", failed, err)
+	}
+	if failed, err := h.queue.FailQueued(ctx, id, "alice", "link failed"); err != nil || !failed {
+		t.Fatalf("owner fail queued = %v, %v", failed, err)
+	}
+	found, err := h.queue.Get(ctx, id, "alice")
+	if err != nil || found.Status != job.StatusFailed || found.Error != "link failed" {
+		t.Fatalf("failed queued job = %+v, %v", found, err)
+	}
+	if failed, err := h.queue.FailQueued(ctx, id, "alice", "again"); err != nil || failed {
+		t.Fatalf("terminal fail queued = %v, %v", failed, err)
+	}
+}
+
 func TestShutdownLeavesRunningForNextSweep(t *testing.T) {
 	h := newHarness(t)
 	started := make(chan struct{})

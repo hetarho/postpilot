@@ -1,9 +1,8 @@
-import { useMutation, useTransport } from '@connectrpc/connect-query'
+import { useMutation } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { AuthService } from '@/shared/api'
-import { getMeQueryKey } from './session-queries'
 
-/** Revokes the session server-side and drops the local cache entry.
+/** Revokes the session server-side and drops every account-scoped query.
  *
  *  The cache is cleared only on success, on purpose. A failed Logout means the cookie is
  *  still valid, so clearing local state would be a lie the next page load exposes: the
@@ -12,11 +11,10 @@ import { getMeQueryKey } from './session-queries'
  *  live HttpOnly cookie does not — and nothing in the browser can revoke it. */
 export function useLogout() {
   const queryClient = useQueryClient()
-  const transport = useTransport()
 
   return useMutation(AuthService.method.logout, {
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: getMeQueryKey(transport), exact: true })
+      queryClient.removeQueries()
     },
   })
 }

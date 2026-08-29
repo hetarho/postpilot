@@ -7,7 +7,23 @@
 // If a tool's config isn't present yet, the matching step skips with a note
 // instead of failing.
 
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { run, mount, dockerUser, hasBufConfig, hasSqlcConfig, section, ok, note } from './lib.mjs'
+
+function normalizeGeneratedTypeScriptEOF(dir) {
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name)
+    if (statSync(path).isDirectory()) {
+      normalizeGeneratedTypeScriptEOF(path)
+      continue
+    }
+    if (!name.endsWith('.ts')) continue
+    const source = readFileSync(path, 'utf8')
+    const normalized = `${source.trimEnd()}\n`
+    if (normalized !== source) writeFileSync(path, normalized)
+  }
+}
 
 const target = process.argv[2] // undefined | 'proto' | 'sql'
 const wantProto = !target || target === 'proto'
@@ -30,6 +46,10 @@ if (wantProto) {
       'bufbuild/buf:latest',
       'generate', '--template', 'backend/buf.gen.yaml', 'proto',
     ])
+    // Remote plugin releases do not agree on whether generated TS ends with one
+    // or two newlines. Normalize only EOF whitespace so `git diff --check` stays
+    // deterministic without hand-editing generated contracts.
+    normalizeGeneratedTypeScriptEOF('frontend/src/shared/api/gen')
     ok('buf 완료')
     did = true
   } else {

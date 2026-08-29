@@ -20,10 +20,11 @@ import (
 var analyzeRef = llm.ModelRef{ProviderID: "stub", ModelID: "analyze"}
 
 type fakeModels struct {
-	selected map[string]llm.ModelRef
-	response string
-	err      error
-	request  llm.Request
+	selected      map[string]llm.ModelRef
+	response      string
+	err           error
+	request       llm.Request
+	completeCalls int
 }
 
 type changingCorpusModels struct {
@@ -58,15 +59,22 @@ func (f *fakeModels) AnalyzeModel(_ context.Context, userID string) (llm.ModelRe
 
 func (f *fakeModels) Complete(_ context.Context, _ llm.ModelRef, request llm.Request) (llm.Response, error) {
 	f.request = request
+	f.completeCalls++
 	return llm.Response{Text: f.response}, f.err
 }
 
+func (f *fakeModels) ModelEnabled(ref llm.ModelRef) bool {
+	return ref.ProviderID != "" && ref.ModelID != ""
+}
+
 type fakeJobs struct {
-	mu           sync.Mutex
-	active       map[string]*voice.ActiveJob
-	enqueueID    string
-	enqueueErr   error
-	enqueueCalls []voice.AnalysisJobRequest
+	mu                    sync.Mutex
+	active                map[string]*voice.ActiveJob
+	enqueueID             string
+	enqueueErr            error
+	enqueueCalls          []voice.AnalysisJobRequest
+	personalizationCalls  []voice.PersonalizationJobRequest
+	personalizationActive map[string]bool
 }
 
 func (f *fakeJobs) Enqueue(_ context.Context, request voice.AnalysisJobRequest) (string, error) {
@@ -78,6 +86,29 @@ func (f *fakeJobs) Enqueue(_ context.Context, request voice.AnalysisJobRequest) 
 
 func (f *fakeJobs) ActiveForUserKind(_ context.Context, userID, _ string) (*voice.ActiveJob, error) {
 	return f.active[userID], nil
+}
+
+func (f *fakeJobs) EnqueuePersonalization(_ context.Context, request voice.PersonalizationJobRequest) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.personalizationCalls = append(f.personalizationCalls, request)
+	if f.personalizationActive == nil {
+		f.personalizationActive = make(map[string]bool)
+	}
+	if f.enqueueErr == nil {
+		f.personalizationActive[f.enqueueID] = true
+	}
+	return f.enqueueID, f.enqueueErr
+}
+
+func (f *fakeJobs) IsPersonalizationJobActive(_ context.Context, jobID, _ string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.personalizationActive[jobID], nil
+}
+
+func (f *fakeJobs) FailQueuedPersonalization(context.Context, string, string, string) (bool, error) {
+	return true, nil
 }
 
 func (f *fakeJobs) calls() []voice.AnalysisJobRequest {

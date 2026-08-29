@@ -113,3 +113,14 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 		t.Fatalf("model failure stored %d samples: %v", count, err)
 	}
 }
+
+func TestLearningAndValidationRPCsRequireAuthenticatedContextBeforeServiceAccess(t *testing.T) {
+	_, err := voicerpc.NewLearningHandler(nil).GetVoiceLearningEvent(context.Background(), connect.NewRequest(&postpilotv1.GetVoiceLearningEventRequest{EventId: "event"}))
+	if connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("learning code=%v err=%v", connect.CodeOf(err), err)
+	}
+	_, err = voicerpc.NewValidationHandler(nil).GetVoiceRuleComparison(context.Background(), connect.NewRequest(&postpilotv1.GetVoiceRuleComparisonRequest{ComparisonId: "comparison"}))
+	if connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("validation code=%v err=%v", connect.CodeOf(err), err)
+	}
+}

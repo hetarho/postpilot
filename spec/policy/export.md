@@ -42,3 +42,9 @@ the API and postpilot never publishes to a platform.
 | `COPY_FEEDBACK_MS` | FE `shared/config` | `1500` |
 | site CSS and document shell | FE `features/export-site/config` | fixed code constant |
 | format guidance | FE `widgets/export-panel/config` | fixed Korean copy |
+
+## Learning isolation
+
+- Export reads the latest canonical edited `PostContent`; it does not require finalization.
+- Rendering, opening a tab, copying through either clipboard path, and feedback timers never freeze a learning
+  snapshot, enqueue work, update a profile, or call a provider. **Finalize and learn** is a separate editor action.

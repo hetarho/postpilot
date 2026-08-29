@@ -10,6 +10,9 @@ UPDATE generation_jobs
 SET status = 'running',
     stage = CASE kind
         WHEN 'analyze_voice' THEN 'analyze'
+        WHEN 'learn_voice' THEN 'learn'
+        WHEN 'compare_voice_rule' THEN 'compare_rule'
+        WHEN 'validate_voice_profile' THEN 'validate_profile'
         WHEN 'revise' THEN 'write'
         ELSE 'observe'
     END,
@@ -33,10 +36,21 @@ UPDATE generation_jobs
 SET status = ?, error = ?, finished_at = ?, updated_at = ?
 WHERE id = ? AND status = 'running';
 
+-- name: FailQueuedJob :execrows
+UPDATE generation_jobs
+SET status = 'failed', error = ?, finished_at = ?, updated_at = ?
+WHERE id = ? AND user_id = ? AND status = 'queued';
+
 -- name: SweepRunning :execrows
 UPDATE generation_jobs
 SET status = 'failed', error = ?, finished_at = ?, updated_at = ?
 WHERE status = 'running';
+
+-- name: SweepQueuedPersonalization :execrows
+UPDATE generation_jobs
+SET status = 'failed', error = ?, finished_at = ?, updated_at = ?
+WHERE status = 'queued'
+  AND kind IN ('learn_voice', 'compare_voice_rule', 'validate_voice_profile');
 
 -- name: ActiveForPost :one
 SELECT * FROM generation_jobs

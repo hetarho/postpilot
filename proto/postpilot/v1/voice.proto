@@ -12,6 +12,100 @@ service VoiceService {
   rpc UpdateVoiceProfile(UpdateVoiceProfileRequest) returns (UpdateVoiceProfileResponse) {}
   rpc AddVoiceSample(AddVoiceSampleRequest) returns (AddVoiceSampleResponse) {}
   rpc DeleteVoiceSample(DeleteVoiceSampleRequest) returns (DeleteVoiceSampleResponse) {}
+  rpc ListVoiceProfileVersions(ListVoiceProfileVersionsRequest) returns (ListVoiceProfileVersionsResponse) {}
+  rpc UpdateVoiceOverride(UpdateVoiceOverrideRequest) returns (UpdateVoiceOverrideResponse) {}
+  rpc RestoreVoiceProfile(RestoreVoiceProfileRequest) returns (RestoreVoiceProfileResponse) {}
+}
+
+enum VoiceValueSource {
+  VOICE_VALUE_SOURCE_UNSPECIFIED = 0;
+  VOICE_VALUE_SOURCE_UNKNOWN = 1;
+  VOICE_VALUE_SOURCE_MEASURED = 2;
+  VOICE_VALUE_SOURCE_ANALYZED = 3;
+  VOICE_VALUE_SOURCE_MANUAL = 4;
+}
+
+message VoiceValue {
+  string value = 1;
+  VoiceValueSource source = 2;
+  bool unknown = 3;
+}
+
+message WeightedWord { string word = 1; repeated string alternatives = 2; int32 weight = 3; }
+message BannedItem { string value = 1; string reason = 2; }
+message EndingRatio { string ending = 1; double ratio = 2; }
+message VoiceLexical {
+  repeated WeightedWord preferred_words = 1;
+  repeated BannedItem banned_words = 2;
+  repeated BannedItem banned_patterns = 3;
+  VoiceValue description = 4;
+}
+message VoiceEndings {
+  VoiceValue base_register = 1;
+  repeated EndingRatio distribution = 2;
+  repeated string banned_endings = 3;
+  repeated string signature_endings = 4;
+  repeated string constraints = 5;
+}
+message VoiceSyntax {
+  double average_sentence_chars = 1;
+  VoiceValue sentence_length = 2;
+  VoiceValue connective_style = 3;
+  repeated string preferred_connectives = 4;
+  VoiceValue nominalization = 5;
+  VoiceValue passive_tendency = 6;
+}
+message VoiceStructure {
+  VoiceValue intro_pattern = 1;
+  VoiceValue closing_pattern = 2;
+  int32 paragraph_sentences_min = 3;
+  int32 paragraph_sentences_max = 4;
+  VoiceValue heading_habit = 5;
+  VoiceValue list_habit = 6;
+  VoiceValue emoji_use = 7;
+}
+message VoiceAxes {
+  int32 involvement = 1;
+  int32 narrativity = 2;
+  int32 persuasion_overtness = 3;
+  int32 abstractness = 4;
+  int32 addressee_focus = 5;
+  int32 humor = 6;
+}
+
+enum VoiceRuleStatus {
+  VOICE_RULE_STATUS_UNSPECIFIED = 0;
+  VOICE_RULE_STATUS_CANDIDATE = 1;
+  VOICE_RULE_STATUS_ACTIVE = 2;
+  VOICE_RULE_STATUS_RETIRED = 3;
+  VOICE_RULE_STATUS_REJECTED = 4;
+}
+enum VoiceLayer {
+  VOICE_LAYER_UNSPECIFIED = 0;
+  VOICE_LAYER_LEXICAL = 1;
+  VOICE_LAYER_ENDINGS = 2;
+  VOICE_LAYER_SYNTAX = 3;
+  VOICE_LAYER_STRUCTURE = 4;
+  VOICE_LAYER_AXES = 5;
+}
+message VoiceContrastRule {
+  string id = 1; string statement = 2; VoiceLayer layer = 3; int32 evidence_count = 4;
+  VoiceRuleStatus status = 5; string origin = 6; string created_at = 7; string last_evidence_at = 8;
+}
+message VoiceSource {
+  string id = 1; string post_slug = 2; string title = 3; repeated string tags = 4;
+  string excerpt = 5; bool has_embedding = 6; string created_at = 7;
+}
+message VoiceFeedbackRef {
+  string id = 1; string post_slug = 2; string kind = 3; VoiceLayer layer = 4;
+  string processing_state = 5; string created_at = 6;
+}
+message VoiceProfileMeta { int64 version = 1; string updated_at = 2; int32 source_count = 3; }
+message StructuredVoiceProfile {
+  VoiceProfileMeta meta = 1; VoiceLexical lexical = 2; VoiceEndings endings = 3;
+  VoiceSyntax syntax = 4; VoiceStructure structure = 5; VoiceAxes axes = 6;
+  repeated VoiceContrastRule contrast_rules = 7; repeated VoiceSource few_shot_bank = 8;
+  repeated VoiceFeedbackRef feedback_log = 9; bool empty = 10;
 }
 
 message VoiceProfile {
@@ -20,6 +114,15 @@ message VoiceProfile {
   string updated_at = 3;
   repeated VoiceSample samples = 4;
   string active_job_id = 5;
+  StructuredVoiceProfile structured = 6;
+  string legacy_manual_guidance = 7;
+  int32 finalized_source_count = 8;
+  bool can_validate = 9;
+}
+
+message VoiceProfileVersion {
+  int64 version = 1; StructuredVoiceProfile profile = 2; string origin = 3;
+  int64 restored_from_version = 4; string created_at = 5;
 }
 
 message VoiceSample {
@@ -54,3 +157,10 @@ message AddVoiceSampleResponse {
 
 message DeleteVoiceSampleRequest { string sample_id = 1; }
 message DeleteVoiceSampleResponse { string job_id = 1; }
+
+message ListVoiceProfileVersionsRequest {}
+message ListVoiceProfileVersionsResponse { repeated VoiceProfileVersion versions = 1; }
+message UpdateVoiceOverrideRequest { VoiceLayer layer = 1; string field = 2; optional string value = 3; }
+message UpdateVoiceOverrideResponse { VoiceProfile profile = 1; }
+message RestoreVoiceProfileRequest { int64 version = 1; }
+message RestoreVoiceProfileResponse { VoiceProfile profile = 1; }

@@ -10,10 +10,13 @@ import (
 )
 
 const (
-	KindGenerate        = "generate"
-	KindRevise          = "revise"
-	KindAnalyzeVoice    = "analyze_voice"
-	KindModelExperiment = "model_experiment"
+	KindGenerate             = "generate"
+	KindRevise               = "revise"
+	KindAnalyzeVoice         = "analyze_voice"
+	KindModelExperiment      = "model_experiment"
+	KindLearnVoice           = "learn_voice"
+	KindCompareVoiceRule     = "compare_voice_rule"
+	KindValidateVoiceProfile = "validate_voice_profile"
 
 	StatusQueued  = "queued"
 	StatusRunning = "running"

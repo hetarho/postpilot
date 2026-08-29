@@ -82,10 +82,10 @@ func TestParseContentFallbacksAndBadOutput(t *testing.T) {
 
 func TestBuildWritePromptOrderAndRules(t *testing.T) {
 	system, user := BuildWritePrompt(Profile{
-		Styleguide: "STYLE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"}, Rules: "RULES",
+		Styleguide: "STYLE", ActiveRules: "ACTIVE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"}, Rules: "RULES",
 	}, []Observation{{File: "IMG_1.jpg", Scene: "바다"}}, "MEMO", "TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"})
 	positions := []int{
-		strings.Index(system, "STYLE"), strings.Index(system, "EXCERPT-1"),
+		strings.Index(system, "STYLE"), strings.Index(system, "ACTIVE"), strings.Index(system, "EXCERPT-1"),
 		strings.Index(system, "EXCERPT-2"), strings.Index(system, "RULES"),
 	}
 	for i := 1; i < len(positions); i++ {
@@ -93,7 +93,7 @@ func TestBuildWritePromptOrderAndRules(t *testing.T) {
 			t.Fatalf("profile order wrong: %v\n%s", positions, system)
 		}
 	}
-	for _, required := range []string{"하나의 문단마다 TEXT 블록 하나", "목록에 없는 이미지를 절대", "3–6개"} {
+	for _, required := range []string{"하나의 문단마다 TEXT 블록 하나", "목록에 없는 이미지를 절대", "3–6개", "고유 사실, 주제, 문구를 복사하지", "같은 종결어미를 2문장보다 많이"} {
 		if !strings.Contains(system, required) {
 			t.Errorf("system prompt missing %q", required)
 		}

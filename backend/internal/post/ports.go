@@ -96,3 +96,14 @@ type Store interface {
 	// what is missing from this set, so a key lost to a race here is a deleted photo.
 	AllReferencedKeys(ctx context.Context) (map[string]struct{}, error)
 }
+
+// ContentStore is the progressive editor capability. It is separated from the base
+// drafting store so upload/sweeper collaborators do not acquire unrelated methods.
+type ContentStore interface {
+	SaveContent(ctx context.Context, slug, userID string, content PostContent, expectedRevision int64, targetLength int, updatedAt time.Time) (bool, error)
+	LearningSnapshot(ctx context.Context, slug, userID string) (LearningSnapshot, error)
+}
+
+type MachineContentStore interface {
+	UpdateGeneratedContentWithTarget(ctx context.Context, slug, userID string, content PostContent, targetLength int, updatedAt time.Time) (bool, error)
+}

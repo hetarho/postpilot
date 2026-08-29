@@ -55,3 +55,18 @@ Photo upload has its own document: [uploads.md](uploads.md).
   `expires_at < ?` are plain string comparisons in SQL, and a trimmed fraction (`…08.5Z`) sorts after a longer one
   (`…08.513110616Z`).
 - On the wire, timestamps are RFC3339 strings — the client renders one without needing to know a unit.
+
+## Canonical content editing and learning baseline
+
+- `PostContent` remains the only canonical generated value. Direct editing supports title, summary, tags, target
+  length, and TEXT/HEADING/QUOTE/LIST/IMAGE blocks; backend validation rejects invalid shapes and unattached IMAGE
+  filenames.
+- `content_revision` is optimistic concurrency state. `SavePostContent` is owner-scoped, requires the expected
+  revision, increments it once, and returns `Aborted` on a stale tab. It never changes `machine_baseline`.
+- A selected generation winner or successful AI revision atomically writes canonical content plus an immutable
+  machine baseline. `machine_baseline_revision` is set to that new content revision. A later manual edit makes the
+  two revisions differ until another machine result establishes a new baseline.
+- Only the post context reads these columns. It publishes an ownership-checked frozen baseline/final snapshot to
+  voice; voice never reads or writes post tables directly.
+- `target_length` is visible per post, persisted with direct saves, frozen in write experiments, and restored with
+  the selected machine winner. It is an instruction, not a publishing or validation guarantee.

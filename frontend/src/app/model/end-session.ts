@@ -1,4 +1,6 @@
 import { discardDraftQueues } from '@/features/save-draft'
+import { discardContentQueues } from '@/features/edit-post-content'
+import { discardLearningHandoffs } from '@/features/finalize-and-learn'
 import { discardUploadBatches } from '@/features/upload-photos'
 
 /** Everything that must not outlive the session, in one place.
@@ -10,5 +12,7 @@ import { discardUploadBatches } from '@/features/upload-photos'
  *  slice with work that outlives its screen has one place to register. */
 export function endSession(): void {
   discardDraftQueues()
+  discardContentQueues()
+  discardLearningHandoffs()
   discardUploadBatches()
 }

@@ -15,12 +15,14 @@ export function useStartGeneration() {
       observeModel: ModelRef | undefined,
       writeModelA: ModelRef,
       writeModelB: ModelRef,
+      targetLength: number,
     ) =>
       mutation.mutateAsync({
         postSlug,
         observeModel: observeModel ? create(ModelRefSchema, observeModel) : undefined,
         writeModelA: create(ModelRefSchema, writeModelA),
         writeModelB: create(ModelRefSchema, writeModelB),
+        targetLength,
       }),
   }
 }

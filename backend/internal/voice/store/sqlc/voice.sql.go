@@ -28,6 +28,17 @@ func (q *Queries) BumpCorpusVersion(ctx context.Context, arg BumpCorpusVersionPa
 	return err
 }
 
+const countAuthoredSources = `-- name: CountAuthoredSources :one
+SELECT count(*) FROM voice_authored_sources WHERE user_id=?
+`
+
+func (q *Queries) CountAuthoredSources(ctx context.Context, userID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAuthoredSources, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countSamples = `-- name: CountSamples :one
 SELECT count(*) FROM voice_samples WHERE user_id = ?
 `
@@ -37,6 +48,49 @@ func (q *Queries) CountSamples(ctx context.Context, userID string) (int64, error
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const decideRuleComparison = `-- name: DecideRuleComparison :execrows
+UPDATE voice_rule_comparisons SET status='decided',chosen_side=?,decided_at=?
+WHERE id=? AND user_id=? AND status IN ('review','partial')
+`
+
+type DecideRuleComparisonParams struct {
+	ChosenSide sql.NullString
+	DecidedAt  sql.NullString
+	ID         string
+	UserID     string
+}
+
+func (q *Queries) DecideRuleComparison(ctx context.Context, arg DecideRuleComparisonParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, decideRuleComparison,
+		arg.ChosenSide,
+		arg.DecidedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteManualOverride = `-- name: DeleteManualOverride :execrows
+DELETE FROM voice_manual_overrides WHERE user_id=? AND layer=? AND field=?
+`
+
+type DeleteManualOverrideParams struct {
+	UserID string
+	Layer  string
+	Field  string
+}
+
+func (q *Queries) DeleteManualOverride(ctx context.Context, arg DeleteManualOverrideParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteManualOverride, arg.UserID, arg.Layer, arg.Field)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteSample = `-- name: DeleteSample :execrows
@@ -56,6 +110,112 @@ func (q *Queries) DeleteSample(ctx context.Context, arg DeleteSampleParams) (int
 	return result.RowsAffected()
 }
 
+const finishProfileValidation = `-- name: FinishProfileValidation :exec
+UPDATE voice_profile_validations SET status=?,y_count=?,total_count=?,finished_at=? WHERE id=? AND user_id=?
+`
+
+type FinishProfileValidationParams struct {
+	Status     string
+	YCount     sql.NullInt64
+	TotalCount sql.NullInt64
+	FinishedAt sql.NullString
+	ID         string
+	UserID     string
+}
+
+func (q *Queries) FinishProfileValidation(ctx context.Context, arg FinishProfileValidationParams) error {
+	_, err := q.db.ExecContext(ctx, finishProfileValidation,
+		arg.Status,
+		arg.YCount,
+		arg.TotalCount,
+		arg.FinishedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	return err
+}
+
+const getAuthoredSource = `-- name: GetAuthoredSource :one
+SELECT id, user_id, post_slug, learning_event_id, title, tags, body, excerpt, embedding_ref, created_at FROM voice_authored_sources WHERE id=? AND user_id=?
+`
+
+type GetAuthoredSourceParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) GetAuthoredSource(ctx context.Context, arg GetAuthoredSourceParams) (VoiceAuthoredSource, error) {
+	row := q.db.QueryRowContext(ctx, getAuthoredSource, arg.ID, arg.UserID)
+	var i VoiceAuthoredSource
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PostSlug,
+		&i.LearningEventID,
+		&i.Title,
+		&i.Tags,
+		&i.Body,
+		&i.Excerpt,
+		&i.EmbeddingRef,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getContrastRule = `-- name: GetContrastRule :one
+SELECT id, user_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE id=? AND user_id=?
+`
+
+type GetContrastRuleParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) GetContrastRule(ctx context.Context, arg GetContrastRuleParams) (VoiceContrastRule, error) {
+	row := q.db.QueryRowContext(ctx, getContrastRule, arg.ID, arg.UserID)
+	var i VoiceContrastRule
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Statement,
+		&i.CanonicalKey,
+		&i.Layer,
+		&i.EvidenceCount,
+		&i.Status,
+		&i.Origin,
+		&i.CreatedAt,
+		&i.LastEvidenceAt,
+	)
+	return i, err
+}
+
+const getContrastRuleByKey = `-- name: GetContrastRuleByKey :one
+SELECT id, user_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE user_id=? AND canonical_key=?
+`
+
+type GetContrastRuleByKeyParams struct {
+	UserID       string
+	CanonicalKey string
+}
+
+func (q *Queries) GetContrastRuleByKey(ctx context.Context, arg GetContrastRuleByKeyParams) (VoiceContrastRule, error) {
+	row := q.db.QueryRowContext(ctx, getContrastRuleByKey, arg.UserID, arg.CanonicalKey)
+	var i VoiceContrastRule
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Statement,
+		&i.CanonicalKey,
+		&i.Layer,
+		&i.EvidenceCount,
+		&i.Status,
+		&i.Origin,
+		&i.CreatedAt,
+		&i.LastEvidenceAt,
+	)
+	return i, err
+}
+
 const getCorpusVersion = `-- name: GetCorpusVersion :one
 SELECT corpus_version FROM voice_profiles WHERE user_id = ?
 `
@@ -67,17 +227,87 @@ func (q *Queries) GetCorpusVersion(ctx context.Context, userID string) (int64, e
 	return corpus_version, err
 }
 
+const getLearningEvent = `-- name: GetLearningEvent :one
+SELECT id, user_id, post_slug, baseline_revision, input_hash, baseline_content, final_content, model_ref, status, job_id, error, created_at, processed_at FROM voice_learning_events WHERE id=? AND user_id=?
+`
+
+type GetLearningEventParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) GetLearningEvent(ctx context.Context, arg GetLearningEventParams) (VoiceLearningEvent, error) {
+	row := q.db.QueryRowContext(ctx, getLearningEvent, arg.ID, arg.UserID)
+	var i VoiceLearningEvent
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PostSlug,
+		&i.BaselineRevision,
+		&i.InputHash,
+		&i.BaselineContent,
+		&i.FinalContent,
+		&i.ModelRef,
+		&i.Status,
+		&i.JobID,
+		&i.Error,
+		&i.CreatedAt,
+		&i.ProcessedAt,
+	)
+	return i, err
+}
+
+const getLearningEventByInput = `-- name: GetLearningEventByInput :one
+SELECT id, user_id, post_slug, baseline_revision, input_hash, baseline_content, final_content, model_ref, status, job_id, error, created_at, processed_at FROM voice_learning_events
+WHERE user_id=? AND post_slug=? AND baseline_revision=? AND input_hash=?
+`
+
+type GetLearningEventByInputParams struct {
+	UserID           string
+	PostSlug         string
+	BaselineRevision int64
+	InputHash        string
+}
+
+func (q *Queries) GetLearningEventByInput(ctx context.Context, arg GetLearningEventByInputParams) (VoiceLearningEvent, error) {
+	row := q.db.QueryRowContext(ctx, getLearningEventByInput,
+		arg.UserID,
+		arg.PostSlug,
+		arg.BaselineRevision,
+		arg.InputHash,
+	)
+	var i VoiceLearningEvent
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PostSlug,
+		&i.BaselineRevision,
+		&i.InputHash,
+		&i.BaselineContent,
+		&i.FinalContent,
+		&i.ModelRef,
+		&i.Status,
+		&i.JobID,
+		&i.Error,
+		&i.CreatedAt,
+		&i.ProcessedAt,
+	)
+	return i, err
+}
+
 const getProfile = `-- name: GetProfile :one
-SELECT user_id, styleguide, rules, updated_at
+SELECT user_id, styleguide, rules, current_version, corpus_version, updated_at
 FROM voice_profiles
 WHERE user_id = ?
 `
 
 type GetProfileRow struct {
-	UserID     string
-	Styleguide string
-	Rules      string
-	UpdatedAt  string
+	UserID         string
+	Styleguide     string
+	Rules          string
+	CurrentVersion int64
+	CorpusVersion  int64
+	UpdatedAt      string
 }
 
 func (q *Queries) GetProfile(ctx context.Context, userID string) (GetProfileRow, error) {
@@ -87,7 +317,118 @@ func (q *Queries) GetProfile(ctx context.Context, userID string) (GetProfileRow,
 		&i.UserID,
 		&i.Styleguide,
 		&i.Rules,
+		&i.CurrentVersion,
+		&i.CorpusVersion,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProfileValidation = `-- name: GetProfileValidation :one
+SELECT id, user_id, profile_version, analyze_model_ref, write_model_ref, judge_enabled, status, job_id, y_count, total_count, created_at, finished_at FROM voice_profile_validations WHERE id=? AND user_id=?
+`
+
+type GetProfileValidationParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) GetProfileValidation(ctx context.Context, arg GetProfileValidationParams) (VoiceProfileValidation, error) {
+	row := q.db.QueryRowContext(ctx, getProfileValidation, arg.ID, arg.UserID)
+	var i VoiceProfileValidation
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ProfileVersion,
+		&i.AnalyzeModelRef,
+		&i.WriteModelRef,
+		&i.JudgeEnabled,
+		&i.Status,
+		&i.JobID,
+		&i.YCount,
+		&i.TotalCount,
+		&i.CreatedAt,
+		&i.FinishedAt,
+	)
+	return i, err
+}
+
+const getProfileVersion = `-- name: GetProfileVersion :one
+SELECT id, user_id, version, snapshot, origin, restored_from_version, created_at FROM voice_profile_versions WHERE user_id=? AND version=?
+`
+
+type GetProfileVersionParams struct {
+	UserID  string
+	Version int64
+}
+
+func (q *Queries) GetProfileVersion(ctx context.Context, arg GetProfileVersionParams) (VoiceProfileVersion, error) {
+	row := q.db.QueryRowContext(ctx, getProfileVersion, arg.UserID, arg.Version)
+	var i VoiceProfileVersion
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Version,
+		&i.Snapshot,
+		&i.Origin,
+		&i.RestoredFromVersion,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getRuleComparison = `-- name: GetRuleComparison :one
+SELECT id, user_id, rule_id, source_id, profile_version, model_ref, target_length, input_snapshot, rule_on_side, status, job_id, chosen_side, created_at, decided_at FROM voice_rule_comparisons WHERE id=? AND user_id=?
+`
+
+type GetRuleComparisonParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) GetRuleComparison(ctx context.Context, arg GetRuleComparisonParams) (VoiceRuleComparison, error) {
+	row := q.db.QueryRowContext(ctx, getRuleComparison, arg.ID, arg.UserID)
+	var i VoiceRuleComparison
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.RuleID,
+		&i.SourceID,
+		&i.ProfileVersion,
+		&i.ModelRef,
+		&i.TargetLength,
+		&i.InputSnapshot,
+		&i.RuleOnSide,
+		&i.Status,
+		&i.JobID,
+		&i.ChosenSide,
+		&i.CreatedAt,
+		&i.DecidedAt,
+	)
+	return i, err
+}
+
+const getRuleConfirmation = `-- name: GetRuleConfirmation :one
+SELECT id, user_id, rule_id, proposed_statement, event_id, status, created_at, resolved_at FROM voice_rule_confirmations WHERE id=? AND user_id=?
+`
+
+type GetRuleConfirmationParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) GetRuleConfirmation(ctx context.Context, arg GetRuleConfirmationParams) (VoiceRuleConfirmation, error) {
+	row := q.db.QueryRowContext(ctx, getRuleConfirmation, arg.ID, arg.UserID)
+	var i VoiceRuleConfirmation
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.RuleID,
+		&i.ProposedStatement,
+		&i.EventID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.ResolvedAt,
 	)
 	return i, err
 }
@@ -122,6 +463,307 @@ func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (G
 	return i, err
 }
 
+const insertAuthoredSource = `-- name: InsertAuthoredSource :exec
+INSERT INTO voice_authored_sources
+    (id,user_id,post_slug,learning_event_id,title,tags,body,excerpt,embedding_ref,created_at)
+VALUES (?,?,?,?,?,?,?,?,?,?)
+`
+
+type InsertAuthoredSourceParams struct {
+	ID              string
+	UserID          string
+	PostSlug        sql.NullString
+	LearningEventID sql.NullString
+	Title           string
+	Tags            string
+	Body            string
+	Excerpt         string
+	EmbeddingRef    sql.NullString
+	CreatedAt       string
+}
+
+func (q *Queries) InsertAuthoredSource(ctx context.Context, arg InsertAuthoredSourceParams) error {
+	_, err := q.db.ExecContext(ctx, insertAuthoredSource,
+		arg.ID,
+		arg.UserID,
+		arg.PostSlug,
+		arg.LearningEventID,
+		arg.Title,
+		arg.Tags,
+		arg.Body,
+		arg.Excerpt,
+		arg.EmbeddingRef,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const insertContrastRule = `-- name: InsertContrastRule :exec
+INSERT INTO voice_contrast_rules
+    (id,user_id,statement,canonical_key,layer,evidence_count,status,origin,created_at,last_evidence_at)
+VALUES (?,?,?,?,?,?,?,?,?,?)
+`
+
+type InsertContrastRuleParams struct {
+	ID             string
+	UserID         string
+	Statement      string
+	CanonicalKey   string
+	Layer          string
+	EvidenceCount  int64
+	Status         string
+	Origin         string
+	CreatedAt      string
+	LastEvidenceAt string
+}
+
+func (q *Queries) InsertContrastRule(ctx context.Context, arg InsertContrastRuleParams) error {
+	_, err := q.db.ExecContext(ctx, insertContrastRule,
+		arg.ID,
+		arg.UserID,
+		arg.Statement,
+		arg.CanonicalKey,
+		arg.Layer,
+		arg.EvidenceCount,
+		arg.Status,
+		arg.Origin,
+		arg.CreatedAt,
+		arg.LastEvidenceAt,
+	)
+	return err
+}
+
+const insertLearningEvent = `-- name: InsertLearningEvent :exec
+INSERT INTO voice_learning_events
+    (id,user_id,post_slug,baseline_revision,input_hash,baseline_content,final_content,model_ref,status,job_id,error,created_at,processed_at)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+`
+
+type InsertLearningEventParams struct {
+	ID               string
+	UserID           string
+	PostSlug         string
+	BaselineRevision int64
+	InputHash        string
+	BaselineContent  string
+	FinalContent     string
+	ModelRef         string
+	Status           string
+	JobID            sql.NullString
+	Error            sql.NullString
+	CreatedAt        string
+	ProcessedAt      sql.NullString
+}
+
+func (q *Queries) InsertLearningEvent(ctx context.Context, arg InsertLearningEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertLearningEvent,
+		arg.ID,
+		arg.UserID,
+		arg.PostSlug,
+		arg.BaselineRevision,
+		arg.InputHash,
+		arg.BaselineContent,
+		arg.FinalContent,
+		arg.ModelRef,
+		arg.Status,
+		arg.JobID,
+		arg.Error,
+		arg.CreatedAt,
+		arg.ProcessedAt,
+	)
+	return err
+}
+
+const insertProfileValidation = `-- name: InsertProfileValidation :exec
+INSERT INTO voice_profile_validations
+    (id,user_id,profile_version,analyze_model_ref,write_model_ref,judge_enabled,status,job_id,y_count,total_count,created_at,finished_at)
+VALUES (?,?,?,?,?,?,'queued',?,NULL,NULL,?,NULL)
+`
+
+type InsertProfileValidationParams struct {
+	ID              string
+	UserID          string
+	ProfileVersion  int64
+	AnalyzeModelRef string
+	WriteModelRef   string
+	JudgeEnabled    int64
+	JobID           sql.NullString
+	CreatedAt       string
+}
+
+func (q *Queries) InsertProfileValidation(ctx context.Context, arg InsertProfileValidationParams) error {
+	_, err := q.db.ExecContext(ctx, insertProfileValidation,
+		arg.ID,
+		arg.UserID,
+		arg.ProfileVersion,
+		arg.AnalyzeModelRef,
+		arg.WriteModelRef,
+		arg.JudgeEnabled,
+		arg.JobID,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const insertProfileValidationItem = `-- name: InsertProfileValidationItem :exec
+INSERT INTO voice_profile_validation_items
+    (id,validation_id,source_id,position,neutral_summary,regenerated_content,scores,status,error)
+VALUES (?,?,?,?,NULL,NULL,NULL,'pending',NULL)
+`
+
+type InsertProfileValidationItemParams struct {
+	ID           string
+	ValidationID string
+	SourceID     string
+	Position     int64
+}
+
+func (q *Queries) InsertProfileValidationItem(ctx context.Context, arg InsertProfileValidationItemParams) error {
+	_, err := q.db.ExecContext(ctx, insertProfileValidationItem,
+		arg.ID,
+		arg.ValidationID,
+		arg.SourceID,
+		arg.Position,
+	)
+	return err
+}
+
+const insertProfileVersion = `-- name: InsertProfileVersion :exec
+INSERT INTO voice_profile_versions
+    (id, user_id, version, snapshot, origin, restored_from_version, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+`
+
+type InsertProfileVersionParams struct {
+	ID                  string
+	UserID              string
+	Version             int64
+	Snapshot            string
+	Origin              string
+	RestoredFromVersion sql.NullInt64
+	CreatedAt           string
+}
+
+func (q *Queries) InsertProfileVersion(ctx context.Context, arg InsertProfileVersionParams) error {
+	_, err := q.db.ExecContext(ctx, insertProfileVersion,
+		arg.ID,
+		arg.UserID,
+		arg.Version,
+		arg.Snapshot,
+		arg.Origin,
+		arg.RestoredFromVersion,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const insertRuleComparison = `-- name: InsertRuleComparison :exec
+INSERT INTO voice_rule_comparisons
+    (id,user_id,rule_id,source_id,profile_version,model_ref,target_length,input_snapshot,rule_on_side,status,job_id,chosen_side,created_at,decided_at)
+VALUES (?,?,?,?,?,?,?,?,?,'queued',?,NULL,?,NULL)
+`
+
+type InsertRuleComparisonParams struct {
+	ID             string
+	UserID         string
+	RuleID         string
+	SourceID       string
+	ProfileVersion int64
+	ModelRef       string
+	TargetLength   int64
+	InputSnapshot  string
+	RuleOnSide     string
+	JobID          sql.NullString
+	CreatedAt      string
+}
+
+func (q *Queries) InsertRuleComparison(ctx context.Context, arg InsertRuleComparisonParams) error {
+	_, err := q.db.ExecContext(ctx, insertRuleComparison,
+		arg.ID,
+		arg.UserID,
+		arg.RuleID,
+		arg.SourceID,
+		arg.ProfileVersion,
+		arg.ModelRef,
+		arg.TargetLength,
+		arg.InputSnapshot,
+		arg.RuleOnSide,
+		arg.JobID,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const insertRuleComparisonCandidate = `-- name: InsertRuleComparisonCandidate :exec
+INSERT INTO voice_rule_comparison_candidates(id,comparison_id,display_side,output,status,error)
+VALUES (?,?,?,NULL,'pending',NULL)
+`
+
+type InsertRuleComparisonCandidateParams struct {
+	ID           string
+	ComparisonID string
+	DisplaySide  string
+}
+
+func (q *Queries) InsertRuleComparisonCandidate(ctx context.Context, arg InsertRuleComparisonCandidateParams) error {
+	_, err := q.db.ExecContext(ctx, insertRuleComparisonCandidate, arg.ID, arg.ComparisonID, arg.DisplaySide)
+	return err
+}
+
+const insertRuleConfirmation = `-- name: InsertRuleConfirmation :exec
+INSERT INTO voice_rule_confirmations(id,user_id,rule_id,proposed_statement,event_id,status,created_at,resolved_at)
+VALUES (?,?,?,?,?,'pending',?,NULL)
+`
+
+type InsertRuleConfirmationParams struct {
+	ID                string
+	UserID            string
+	RuleID            string
+	ProposedStatement string
+	EventID           sql.NullString
+	CreatedAt         string
+}
+
+func (q *Queries) InsertRuleConfirmation(ctx context.Context, arg InsertRuleConfirmationParams) error {
+	_, err := q.db.ExecContext(ctx, insertRuleConfirmation,
+		arg.ID,
+		arg.UserID,
+		arg.RuleID,
+		arg.ProposedStatement,
+		arg.EventID,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const insertRuleEvidence = `-- name: InsertRuleEvidence :exec
+INSERT INTO voice_rule_evidence(id,user_id,rule_id,event_id,origin,payload_ref,created_at)
+VALUES (?,?,?,?,?,?,?)
+`
+
+type InsertRuleEvidenceParams struct {
+	ID         string
+	UserID     string
+	RuleID     string
+	EventID    sql.NullString
+	Origin     string
+	PayloadRef string
+	CreatedAt  string
+}
+
+func (q *Queries) InsertRuleEvidence(ctx context.Context, arg InsertRuleEvidenceParams) error {
+	_, err := q.db.ExecContext(ctx, insertRuleEvidence,
+		arg.ID,
+		arg.UserID,
+		arg.RuleID,
+		arg.EventID,
+		arg.Origin,
+		arg.PayloadRef,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const insertSample = `-- name: InsertSample :exec
 INSERT INTO voice_samples (id, user_id, label, body, created_at)
 VALUES (?, ?, ?, ?, ?)
@@ -144,6 +786,332 @@ func (q *Queries) InsertSample(ctx context.Context, arg InsertSampleParams) erro
 		arg.CreatedAt,
 	)
 	return err
+}
+
+const insertSentenceFeedback = `-- name: InsertSentenceFeedback :exec
+INSERT INTO voice_sentence_feedback
+    (id,user_id,post_slug,sentence_ref,kind,reason,payload_ref,processing_state,created_at)
+VALUES (?,?,?,?,?,?,?,?,?)
+`
+
+type InsertSentenceFeedbackParams struct {
+	ID              string
+	UserID          string
+	PostSlug        string
+	SentenceRef     string
+	Kind            string
+	Reason          sql.NullString
+	PayloadRef      string
+	ProcessingState string
+	CreatedAt       string
+}
+
+func (q *Queries) InsertSentenceFeedback(ctx context.Context, arg InsertSentenceFeedbackParams) error {
+	_, err := q.db.ExecContext(ctx, insertSentenceFeedback,
+		arg.ID,
+		arg.UserID,
+		arg.PostSlug,
+		arg.SentenceRef,
+		arg.Kind,
+		arg.Reason,
+		arg.PayloadRef,
+		arg.ProcessingState,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const listAuthoredSources = `-- name: ListAuthoredSources :many
+SELECT id, user_id, post_slug, learning_event_id, title, tags, body, excerpt, embedding_ref, created_at FROM voice_authored_sources WHERE user_id=? ORDER BY created_at DESC,id DESC
+`
+
+func (q *Queries) ListAuthoredSources(ctx context.Context, userID string) ([]VoiceAuthoredSource, error) {
+	rows, err := q.db.QueryContext(ctx, listAuthoredSources, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceAuthoredSource
+	for rows.Next() {
+		var i VoiceAuthoredSource
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.PostSlug,
+			&i.LearningEventID,
+			&i.Title,
+			&i.Tags,
+			&i.Body,
+			&i.Excerpt,
+			&i.EmbeddingRef,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listContrastRules = `-- name: ListContrastRules :many
+SELECT id, user_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE user_id=?
+ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'candidate' THEN 1 WHEN 'retired' THEN 2 ELSE 3 END,
+         evidence_count DESC,last_evidence_at DESC,id
+`
+
+func (q *Queries) ListContrastRules(ctx context.Context, userID string) ([]VoiceContrastRule, error) {
+	rows, err := q.db.QueryContext(ctx, listContrastRules, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceContrastRule
+	for rows.Next() {
+		var i VoiceContrastRule
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Statement,
+			&i.CanonicalKey,
+			&i.Layer,
+			&i.EvidenceCount,
+			&i.Status,
+			&i.Origin,
+			&i.CreatedAt,
+			&i.LastEvidenceAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listManualOverrides = `-- name: ListManualOverrides :many
+SELECT user_id, layer, field, value, updated_at FROM voice_manual_overrides WHERE user_id=? ORDER BY layer, field
+`
+
+func (q *Queries) ListManualOverrides(ctx context.Context, userID string) ([]VoiceManualOverride, error) {
+	rows, err := q.db.QueryContext(ctx, listManualOverrides, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceManualOverride
+	for rows.Next() {
+		var i VoiceManualOverride
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Layer,
+			&i.Field,
+			&i.Value,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProfileValidationItems = `-- name: ListProfileValidationItems :many
+SELECT id, validation_id, source_id, position, neutral_summary, regenerated_content, scores, status, error FROM voice_profile_validation_items WHERE validation_id=? ORDER BY position
+`
+
+func (q *Queries) ListProfileValidationItems(ctx context.Context, validationID string) ([]VoiceProfileValidationItem, error) {
+	rows, err := q.db.QueryContext(ctx, listProfileValidationItems, validationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceProfileValidationItem
+	for rows.Next() {
+		var i VoiceProfileValidationItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.ValidationID,
+			&i.SourceID,
+			&i.Position,
+			&i.NeutralSummary,
+			&i.RegeneratedContent,
+			&i.Scores,
+			&i.Status,
+			&i.Error,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProfileValidations = `-- name: ListProfileValidations :many
+SELECT id, user_id, profile_version, analyze_model_ref, write_model_ref, judge_enabled, status, job_id, y_count, total_count, created_at, finished_at FROM voice_profile_validations WHERE user_id=? ORDER BY created_at DESC,id DESC
+`
+
+func (q *Queries) ListProfileValidations(ctx context.Context, userID string) ([]VoiceProfileValidation, error) {
+	rows, err := q.db.QueryContext(ctx, listProfileValidations, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceProfileValidation
+	for rows.Next() {
+		var i VoiceProfileValidation
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.ProfileVersion,
+			&i.AnalyzeModelRef,
+			&i.WriteModelRef,
+			&i.JudgeEnabled,
+			&i.Status,
+			&i.JobID,
+			&i.YCount,
+			&i.TotalCount,
+			&i.CreatedAt,
+			&i.FinishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProfileVersions = `-- name: ListProfileVersions :many
+SELECT id, user_id, version, snapshot, origin, restored_from_version, created_at FROM voice_profile_versions WHERE user_id=? ORDER BY version DESC
+`
+
+func (q *Queries) ListProfileVersions(ctx context.Context, userID string) ([]VoiceProfileVersion, error) {
+	rows, err := q.db.QueryContext(ctx, listProfileVersions, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceProfileVersion
+	for rows.Next() {
+		var i VoiceProfileVersion
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Version,
+			&i.Snapshot,
+			&i.Origin,
+			&i.RestoredFromVersion,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRuleComparisonCandidates = `-- name: ListRuleComparisonCandidates :many
+SELECT id, comparison_id, display_side, output, status, error FROM voice_rule_comparison_candidates WHERE comparison_id=? ORDER BY display_side
+`
+
+func (q *Queries) ListRuleComparisonCandidates(ctx context.Context, comparisonID string) ([]VoiceRuleComparisonCandidate, error) {
+	rows, err := q.db.QueryContext(ctx, listRuleComparisonCandidates, comparisonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceRuleComparisonCandidate
+	for rows.Next() {
+		var i VoiceRuleComparisonCandidate
+		if err := rows.Scan(
+			&i.ID,
+			&i.ComparisonID,
+			&i.DisplaySide,
+			&i.Output,
+			&i.Status,
+			&i.Error,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRuleConfirmations = `-- name: ListRuleConfirmations :many
+SELECT id, user_id, rule_id, proposed_statement, event_id, status, created_at, resolved_at FROM voice_rule_confirmations WHERE user_id=? ORDER BY created_at DESC,id DESC
+`
+
+func (q *Queries) ListRuleConfirmations(ctx context.Context, userID string) ([]VoiceRuleConfirmation, error) {
+	rows, err := q.db.QueryContext(ctx, listRuleConfirmations, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceRuleConfirmation
+	for rows.Next() {
+		var i VoiceRuleConfirmation
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.RuleID,
+			&i.ProposedStatement,
+			&i.EventID,
+			&i.Status,
+			&i.CreatedAt,
+			&i.ResolvedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listSampleBodies = `-- name: ListSampleBodies :many
@@ -230,6 +1198,194 @@ func (q *Queries) ListSamples(ctx context.Context, userID string) ([]ListSamples
 	return items, nil
 }
 
+const listSentenceFeedback = `-- name: ListSentenceFeedback :many
+SELECT id, user_id, post_slug, sentence_ref, kind, reason, payload_ref, processing_state, created_at FROM voice_sentence_feedback WHERE user_id=? ORDER BY created_at DESC,id DESC
+`
+
+func (q *Queries) ListSentenceFeedback(ctx context.Context, userID string) ([]VoiceSentenceFeedback, error) {
+	rows, err := q.db.QueryContext(ctx, listSentenceFeedback, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceSentenceFeedback
+	for rows.Next() {
+		var i VoiceSentenceFeedback
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.PostSlug,
+			&i.SentenceRef,
+			&i.Kind,
+			&i.Reason,
+			&i.PayloadRef,
+			&i.ProcessingState,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const replaceContrastRule = `-- name: ReplaceContrastRule :exec
+UPDATE voice_contrast_rules SET statement=?,canonical_key=?,evidence_count=1,status='candidate',last_evidence_at=?
+WHERE id=? AND user_id=?
+`
+
+type ReplaceContrastRuleParams struct {
+	Statement      string
+	CanonicalKey   string
+	LastEvidenceAt string
+	ID             string
+	UserID         string
+}
+
+func (q *Queries) ReplaceContrastRule(ctx context.Context, arg ReplaceContrastRuleParams) error {
+	_, err := q.db.ExecContext(ctx, replaceContrastRule,
+		arg.Statement,
+		arg.CanonicalKey,
+		arg.LastEvidenceAt,
+		arg.ID,
+		arg.UserID,
+	)
+	return err
+}
+
+const resolveRuleConfirmation = `-- name: ResolveRuleConfirmation :execrows
+UPDATE voice_rule_confirmations SET status=?,resolved_at=? WHERE id=? AND user_id=? AND status='pending'
+`
+
+type ResolveRuleConfirmationParams struct {
+	Status     string
+	ResolvedAt sql.NullString
+	ID         string
+	UserID     string
+}
+
+func (q *Queries) ResolveRuleConfirmation(ctx context.Context, arg ResolveRuleConfirmationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, resolveRuleConfirmation,
+		arg.Status,
+		arg.ResolvedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const retireStaleRules = `-- name: RetireStaleRules :execrows
+UPDATE voice_contrast_rules SET status='retired'
+WHERE user_id=? AND status='active' AND last_evidence_at < ?
+`
+
+type RetireStaleRulesParams struct {
+	UserID         string
+	LastEvidenceAt string
+}
+
+func (q *Queries) RetireStaleRules(ctx context.Context, arg RetireStaleRulesParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, retireStaleRules, arg.UserID, arg.LastEvidenceAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setLearningEventJob = `-- name: SetLearningEventJob :exec
+UPDATE voice_learning_events SET job_id=?, status='queued', error=NULL WHERE id=? AND user_id=?
+`
+
+type SetLearningEventJobParams struct {
+	JobID  sql.NullString
+	ID     string
+	UserID string
+}
+
+func (q *Queries) SetLearningEventJob(ctx context.Context, arg SetLearningEventJobParams) error {
+	_, err := q.db.ExecContext(ctx, setLearningEventJob, arg.JobID, arg.ID, arg.UserID)
+	return err
+}
+
+const setLearningEventStatus = `-- name: SetLearningEventStatus :exec
+UPDATE voice_learning_events SET status=?, error=?, processed_at=? WHERE id=? AND user_id=?
+`
+
+type SetLearningEventStatusParams struct {
+	Status      string
+	Error       sql.NullString
+	ProcessedAt sql.NullString
+	ID          string
+	UserID      string
+}
+
+func (q *Queries) SetLearningEventStatus(ctx context.Context, arg SetLearningEventStatusParams) error {
+	_, err := q.db.ExecContext(ctx, setLearningEventStatus,
+		arg.Status,
+		arg.Error,
+		arg.ProcessedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	return err
+}
+
+const setProfileHead = `-- name: SetProfileHead :exec
+INSERT INTO voice_profiles(user_id, styleguide, rules, corpus_version, current_version, updated_at)
+VALUES (?, '', '', 0, ?, ?)
+ON CONFLICT(user_id) DO UPDATE SET current_version=excluded.current_version, updated_at=excluded.updated_at
+`
+
+type SetProfileHeadParams struct {
+	UserID         string
+	CurrentVersion int64
+	UpdatedAt      string
+}
+
+func (q *Queries) SetProfileHead(ctx context.Context, arg SetProfileHeadParams) error {
+	_, err := q.db.ExecContext(ctx, setProfileHead, arg.UserID, arg.CurrentVersion, arg.UpdatedAt)
+	return err
+}
+
+const setProfileValidationJob = `-- name: SetProfileValidationJob :exec
+UPDATE voice_profile_validations SET job_id=? WHERE id=? AND user_id=?
+`
+
+type SetProfileValidationJobParams struct {
+	JobID  sql.NullString
+	ID     string
+	UserID string
+}
+
+func (q *Queries) SetProfileValidationJob(ctx context.Context, arg SetProfileValidationJobParams) error {
+	_, err := q.db.ExecContext(ctx, setProfileValidationJob, arg.JobID, arg.ID, arg.UserID)
+	return err
+}
+
+const setRuleComparisonJob = `-- name: SetRuleComparisonJob :exec
+UPDATE voice_rule_comparisons SET job_id=? WHERE id=? AND user_id=?
+`
+
+type SetRuleComparisonJobParams struct {
+	JobID  sql.NullString
+	ID     string
+	UserID string
+}
+
+func (q *Queries) SetRuleComparisonJob(ctx context.Context, arg SetRuleComparisonJobParams) error {
+	_, err := q.db.ExecContext(ctx, setRuleComparisonJob, arg.JobID, arg.ID, arg.UserID)
+	return err
+}
+
 const setRules = `-- name: SetRules :exec
 INSERT INTO voice_profiles (user_id, styleguide, rules, updated_at)
 VALUES (?, '', ?, ?)
@@ -292,6 +1448,142 @@ func (q *Queries) SetStyleguideIfCorpusVersion(ctx context.Context, arg SetStyle
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const updateContrastRuleEvidence = `-- name: UpdateContrastRuleEvidence :exec
+UPDATE voice_contrast_rules SET evidence_count=?,status=?,last_evidence_at=? WHERE id=? AND user_id=?
+`
+
+type UpdateContrastRuleEvidenceParams struct {
+	EvidenceCount  int64
+	Status         string
+	LastEvidenceAt string
+	ID             string
+	UserID         string
+}
+
+func (q *Queries) UpdateContrastRuleEvidence(ctx context.Context, arg UpdateContrastRuleEvidenceParams) error {
+	_, err := q.db.ExecContext(ctx, updateContrastRuleEvidence,
+		arg.EvidenceCount,
+		arg.Status,
+		arg.LastEvidenceAt,
+		arg.ID,
+		arg.UserID,
+	)
+	return err
+}
+
+const updateContrastRuleStatus = `-- name: UpdateContrastRuleStatus :exec
+UPDATE voice_contrast_rules SET status=?,last_evidence_at=? WHERE id=? AND user_id=?
+`
+
+type UpdateContrastRuleStatusParams struct {
+	Status         string
+	LastEvidenceAt string
+	ID             string
+	UserID         string
+}
+
+func (q *Queries) UpdateContrastRuleStatus(ctx context.Context, arg UpdateContrastRuleStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateContrastRuleStatus,
+		arg.Status,
+		arg.LastEvidenceAt,
+		arg.ID,
+		arg.UserID,
+	)
+	return err
+}
+
+const updateProfileValidationItem = `-- name: UpdateProfileValidationItem :exec
+UPDATE voice_profile_validation_items
+SET neutral_summary=?,regenerated_content=?,scores=?,status=?,error=?
+WHERE id=? AND validation_id=?
+`
+
+type UpdateProfileValidationItemParams struct {
+	NeutralSummary     sql.NullString
+	RegeneratedContent sql.NullString
+	Scores             sql.NullString
+	Status             string
+	Error              sql.NullString
+	ID                 string
+	ValidationID       string
+}
+
+func (q *Queries) UpdateProfileValidationItem(ctx context.Context, arg UpdateProfileValidationItemParams) error {
+	_, err := q.db.ExecContext(ctx, updateProfileValidationItem,
+		arg.NeutralSummary,
+		arg.RegeneratedContent,
+		arg.Scores,
+		arg.Status,
+		arg.Error,
+		arg.ID,
+		arg.ValidationID,
+	)
+	return err
+}
+
+const updateRuleComparisonCandidate = `-- name: UpdateRuleComparisonCandidate :exec
+UPDATE voice_rule_comparison_candidates SET output=?,status=?,error=? WHERE id=? AND comparison_id=?
+`
+
+type UpdateRuleComparisonCandidateParams struct {
+	Output       sql.NullString
+	Status       string
+	Error        sql.NullString
+	ID           string
+	ComparisonID string
+}
+
+func (q *Queries) UpdateRuleComparisonCandidate(ctx context.Context, arg UpdateRuleComparisonCandidateParams) error {
+	_, err := q.db.ExecContext(ctx, updateRuleComparisonCandidate,
+		arg.Output,
+		arg.Status,
+		arg.Error,
+		arg.ID,
+		arg.ComparisonID,
+	)
+	return err
+}
+
+const updateRuleComparisonStatus = `-- name: UpdateRuleComparisonStatus :exec
+UPDATE voice_rule_comparisons SET status=? WHERE id=? AND user_id=?
+`
+
+type UpdateRuleComparisonStatusParams struct {
+	Status string
+	ID     string
+	UserID string
+}
+
+func (q *Queries) UpdateRuleComparisonStatus(ctx context.Context, arg UpdateRuleComparisonStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateRuleComparisonStatus, arg.Status, arg.ID, arg.UserID)
+	return err
+}
+
+const upsertManualOverride = `-- name: UpsertManualOverride :exec
+INSERT INTO voice_manual_overrides(user_id, layer, field, value, updated_at)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(user_id,layer,field) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+`
+
+type UpsertManualOverrideParams struct {
+	UserID    string
+	Layer     string
+	Field     string
+	Value     string
+	UpdatedAt string
+}
+
+func (q *Queries) UpsertManualOverride(ctx context.Context, arg UpsertManualOverrideParams) error {
+	_, err := q.db.ExecContext(ctx, upsertManualOverride,
+		arg.UserID,
+		arg.Layer,
+		arg.Field,
+		arg.Value,
+		arg.UpdatedAt,
+	)
+	return err
 }
 
 const upsertProfile = `-- name: UpsertProfile :exec

@@ -46,7 +46,7 @@ describe('StageModelSelect', () => {
     await screen.findByRole('option', { name: 'Free 👁' })
     expect(screen.queryByRole('option', { name: /Writer/ })).not.toBeInTheDocument()
     expect(
-      screen.getByRole('option', { name: 'Claude 👁 {} — API key not configured' }),
+      screen.getByRole('option', { name: 'Claude 👁 구조화 응답 — API key not configured' }),
     ).toBeDisabled()
   })
 

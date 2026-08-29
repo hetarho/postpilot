@@ -1,7 +1,7 @@
 # Policy — Voice profiles
 
-Canonical backend and frontend rules. Source: [plan/03](../plan/03.voice-profile-learning.md), built by jobs 08 and
-09.
+Canonical backend and frontend rules. Source: [plan/03](../plan/03.voice-profile-learning.md), built by jobs 08, 09,
+and 16.
 
 ## Ownership and persistence
 
@@ -82,3 +82,36 @@ Canonical backend and frontend rules. Source: [plan/03](../plan/03.voice-profile
 | `ExcerptCount` | 3 |
 | `ExcerptChars` | 1500 |
 | `LabelFallbackChars` | 20 |
+
+## Progressive finalized-post learning
+
+- Zero sources is supported: the typed profile is empty/unknown and generation remains enabled. Historical imports
+  are optional; only their paste surface has the 200-character minimum. No screen requests or recommends 30 posts.
+- Learning begins only after the owner presses **Finalize and learn** and confirms the enabled analyze model. The
+  input-hashed event freezes post-owned baseline/final JSON before `learn_voice` enqueue. Repeats/retries cannot
+  duplicate a source, profile version, feedback, or evidence row.
+- A completed event adds the finalized post to the authored-source/few-shot bank. The first source is eligible for
+  the next generation even when its topic differs; topic/tag matches rank ahead of stable recent fallback.
+- Typed whole-profile snapshots contain lexical, endings, syntax, structure, bounded axes, explicit unknown/source
+  values, rules, sources, and feedback. Manual overrides and restore publish new heads while old snapshots remain.
+  Legacy styleguide/rules remain byte-preserved manual guidance.
+- Imported-sample analysis includes finalized authored sources. Source writes advance `corpus_version`, and typed
+  publication also compares the profile head, so stale output cannot overwrite a concurrent source, override, rule
+  update, or restore.
+
+## Evidence, feedback, and explicit evaluation
+
+- Deterministic Unicode measurement and LCS alignment reject factual-only edits. A same-kind pattern needs two cited
+  edits and one finalization emits at most three rules.
+- Independent evidence advances `candidate/1 → candidate/2 → active/3`. Only active rules reach generation.
+  Contradictions wait for owner confirmation. Active rules older than 180 days retire only during a later explicit
+  generation/revision request; retirement and profile publication are atomic.
+- Sentence feedback requires vocabulary, ending, length, or structure and is retry-idempotent against owned final
+  text. No-edit satisfaction is auxiliary. Neither alone creates or activates a rule.
+- Rule comparison is an explicitly started blind one-rule job; a verdict requires two successful non-empty outputs
+  and affects that rule only. Profile validation requires three finalized sources; judge calls occur only when the
+  user explicitly enables them. Neither writes model Elo.
+- Page load, copy/export, polling, time, and boot never enqueue or call a personalization model. Queued
+  personalization rows fail before boot worker drain and require explicit retry.
+
+Full details: [voice personalization tech](../tech/voice-personalization-learning.md).

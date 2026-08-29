@@ -15,17 +15,53 @@ import (
 )
 
 type Service struct {
-	store     Store
-	models    Models
-	jobs      Jobs
-	now       func() time.Time
-	newID     func() string
-	profileMu sync.Mutex
-	sampleMu  sync.Mutex
+	store                 Store
+	models                Models
+	jobs                  Jobs
+	now                   func() time.Time
+	newID                 func() string
+	profileMu             sync.Mutex
+	sampleMu              sync.Mutex
+	posts                 Posts
+	config                PersonalizationConfig
+	personalization       PersonalizationStore
+	personalizationJobs   PersonalizationJobs
+	personalizationModels PersonalizationModels
+	personalizationReady  bool
 }
 
 func NewService(store Store, models Models, jobs Jobs) *Service {
-	return &Service{store: store, models: models, jobs: jobs, now: time.Now, newID: newID}
+	svc := &Service{store: store, models: models, jobs: jobs, now: time.Now, newID: newID,
+		config: PersonalizationConfig{FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: 3, EndingMaxConsecutive: 2}}
+	if p, ok := store.(PersonalizationStore); ok {
+		svc.personalization = p
+	}
+	return svc
+}
+
+func (s *Service) ConfigurePersonalization(posts Posts, config PersonalizationConfig) {
+	if posts == nil || config.FewShotMax <= 0 || config.RuleActivationEvidence <= 0 {
+		panic("voice: invalid personalization configuration")
+	}
+	s.posts, s.config = posts, config
+	s.personalizationReady = true
+	if s.personalization == nil {
+		panic("voice: personalization store is not configured")
+	}
+	if jobs, ok := s.jobs.(PersonalizationJobs); ok {
+		s.personalizationJobs = jobs
+	} else {
+		panic("voice: personalization jobs are not configured")
+	}
+	if models, ok := s.models.(PersonalizationModels); ok {
+		s.personalizationModels = models
+	} else {
+		panic("voice: personalization model catalog is not configured")
+	}
+}
+
+func (s *Service) EndingMaxConsecutive() int {
+	return s.config.EndingMaxConsecutive
 }
 
 func (s *Service) Get(ctx context.Context, userID string) (Profile, error) {
@@ -43,6 +79,28 @@ func (s *Service) Get(ctx context.Context, userID string) (Profile, error) {
 	}
 	profile.UserID = userID
 	profile.Samples = samples
+	if s.personalization != nil {
+		profile.SourceCount, err = func() (int, error) {
+			sources, e := s.personalization.ListAuthoredSources(ctx, userID)
+			if e == nil {
+				profile.Structured.Sources = sources
+			}
+			return len(sources), e
+		}()
+		if err != nil {
+			return Profile{}, fmt.Errorf("list authored sources: %w", err)
+		}
+		profile.CanValidate = profile.SourceCount >= s.config.ValidationPostCount
+		profile.Structured.SourceCount = profile.SourceCount
+		profile.Structured.Rules, err = s.personalization.ListRules(ctx, userID)
+		if err != nil {
+			return Profile{}, fmt.Errorf("list voice rules: %w", err)
+		}
+		profile.Structured.Feedback, err = s.personalization.ListFeedback(ctx, userID)
+		if err != nil {
+			return Profile{}, fmt.Errorf("list voice feedback: %w", err)
+		}
+	}
 	if active != nil {
 		profile.ActiveJobID = active.ID
 	}
@@ -126,8 +184,15 @@ func (s *Service) DeleteSample(ctx context.Context, userID, sampleID string) (st
 	if err != nil {
 		return "", fmt.Errorf("count samples before delete: %w", err)
 	}
+	var authoredSources []AuthoredSource
+	if s.personalization != nil {
+		authoredSources, err = s.personalization.ListAuthoredSources(ctx, userID)
+		if err != nil {
+			return "", fmt.Errorf("list finalized sources before delete: %w", err)
+		}
+	}
 	var model llm.ModelRef
-	if before > 1 {
+	if before > 1 || len(authoredSources) > 0 {
 		var ok bool
 		model, ok, err = s.models.AnalyzeModel(ctx, userID)
 		if err != nil {
@@ -148,7 +213,7 @@ func (s *Service) DeleteSample(ctx context.Context, userID, sampleID string) (st
 	if err != nil {
 		return "", fmt.Errorf("count samples: %w", err)
 	}
-	if count == 0 {
+	if count == 0 && len(authoredSources) == 0 {
 		return "", nil
 	}
 	if model == (llm.ModelRef{}) {

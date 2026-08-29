@@ -1,0 +1,48 @@
+syntax = "proto3";
+package postpilot.v1;
+import "postpilot/v1/provider.proto";
+import "postpilot/v1/voice.proto";
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+service VoiceLearningService {
+  rpc FinalizeAndLearn(FinalizeAndLearnRequest) returns (FinalizeAndLearnResponse) {}
+  rpc RetryVoiceLearning(RetryVoiceLearningRequest) returns (RetryVoiceLearningResponse) {}
+  rpc GetVoiceLearningEvent(GetVoiceLearningEventRequest) returns (GetVoiceLearningEventResponse) {}
+  rpc GiveSentenceFeedback(GiveSentenceFeedbackRequest) returns (GiveSentenceFeedbackResponse) {}
+  rpc SetVoiceRuleStatus(SetVoiceRuleStatusRequest) returns (SetVoiceRuleStatusResponse) {}
+  rpc ListRuleConfirmations(ListRuleConfirmationsRequest) returns (ListRuleConfirmationsResponse) {}
+  rpc ResolveRuleConfirmation(ResolveRuleConfirmationRequest) returns (ResolveRuleConfirmationResponse) {}
+}
+
+enum VoiceFeedbackReason {
+  VOICE_FEEDBACK_REASON_UNSPECIFIED = 0;
+  VOICE_FEEDBACK_REASON_VOCABULARY = 1;
+  VOICE_FEEDBACK_REASON_ENDING = 2;
+  VOICE_FEEDBACK_REASON_LENGTH = 3;
+  VOICE_FEEDBACK_REASON_STRUCTURE = 4;
+}
+message VoiceLearningEvent {
+  string id = 1; string post_slug = 2; int64 baseline_revision = 3; string status = 4;
+  string job_id = 5; string error = 6; string created_at = 7; string processed_at = 8;
+}
+message FinalizeAndLearnRequest { string post_slug = 1; ModelRef analyze_model = 2; }
+message FinalizeAndLearnResponse { VoiceLearningEvent event = 1; string job_id = 2; bool reused = 3; }
+message RetryVoiceLearningRequest { string event_id = 1; ModelRef analyze_model = 2; }
+message RetryVoiceLearningResponse { VoiceLearningEvent event = 1; string job_id = 2; }
+message GetVoiceLearningEventRequest { string event_id = 1; }
+message GetVoiceLearningEventResponse { VoiceLearningEvent event = 1; }
+message GiveSentenceFeedbackRequest {
+  string post_slug = 1; string sentence_ref = 2; VoiceFeedbackReason reason = 3;
+  string authored_text = 4; bool satisfaction = 5;
+}
+message GiveSentenceFeedbackResponse { string feedback_id = 1; }
+message SetVoiceRuleStatusRequest { string rule_id = 1; VoiceRuleStatus status = 2; }
+message SetVoiceRuleStatusResponse { VoiceProfile profile = 1; }
+message VoiceRuleConfirmation {
+  string id = 1; string rule_id = 2; string existing_statement = 3;
+  string proposed_statement = 4; string status = 5; string created_at = 6;
+}
+message ListRuleConfirmationsRequest {}
+message ListRuleConfirmationsResponse { repeated VoiceRuleConfirmation confirmations = 1; }
+message ResolveRuleConfirmationRequest { string confirmation_id = 1; bool replace = 2; }
+message ResolveRuleConfirmationResponse { VoiceProfile profile = 1; }
