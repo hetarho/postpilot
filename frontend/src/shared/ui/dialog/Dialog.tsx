@@ -13,6 +13,8 @@ interface DialogProps {
 }
 
 /** On a phone this is a BOTTOM SHEET, not a centred dialog nudged downwards (design-language §7):
+ *  the switch is at `md:`, not `sm:`, because §1.5 makes 768px the SHAPE breakpoint — a 640px
+ *  landscape phone still has a coarse pointer and a keyboard covering 40% of the screen.
  *  full-bleed to the bottom edge, rounded on the free side only, safe-area padded, with its own
  *  body as the one thing that scrolls. It becomes a centred dialog from `sm:` up. */
 export function Dialog({
@@ -71,7 +73,7 @@ export function Dialog({
   if (!open) return null
   return createPortal(
     <div
-      className="bg-media-scrim-bg/60 fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
+      className="bg-media-scrim-bg/60 fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
@@ -84,7 +86,7 @@ export function Dialog({
         tabIndex={-1}
         // `max-h-sheet` in token terms: dvh tracks the mobile URL bar where vh does not. The
         // body is the only scroller inside the sheet, so the confirm row stays pinned.
-        className="bg-surface-highest max-h-sheet pb-safe-b flex w-full flex-col rounded-t-xl p-5 shadow-lg sm:max-w-md sm:rounded-xl sm:p-6 sm:pb-6"
+        className="bg-surface-highest max-h-sheet pb-safe-b flex w-full flex-col rounded-t-xl p-5 shadow-lg md:max-w-md md:rounded-xl md:p-6 md:pb-6"
       >
         <h2 id="dialog-title" className="text-lg font-semibold tracking-tight">
           {title}
@@ -94,11 +96,11 @@ export function Dialog({
         </div>
         {/* Full-width stacked targets on a phone — the §4.2/§4.3 shape for a committing pair —
             collapsing to the desktop right-aligned row from `sm:` up. The CTA is last (§4). */}
-        <div className="mt-6 grid gap-2 pb-5 sm:flex sm:justify-end sm:pb-0">
-          <Button variant="ghost" onClick={onClose} disabled={pending} className="sm:order-1">
+        <div className="mt-6 grid gap-2 pb-5 md:flex md:justify-end md:pb-0">
+          <Button variant="ghost" onClick={onClose} disabled={pending} className="md:order-1">
             취소
           </Button>
-          <Button variant="cta" onClick={onConfirm} pending={pending} className="sm:order-2">
+          <Button variant="cta" onClick={onConfirm} pending={pending} className="md:order-2">
             {confirmLabel}
           </Button>
         </div>

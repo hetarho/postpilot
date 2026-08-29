@@ -1,4 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import { clsx } from 'clsx'
 import { Spinner } from '../spinner/Spinner'
 import { buttonStyles, type ButtonSize, type ButtonVariant } from './buttonStyles'
 
@@ -24,9 +25,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       className={buttonStyles({ variant, size, className })}
       {...props}
     >
-      {/* The label stays in the layout — `invisible`, not unmounted — so the box keeps the exact
-          width it had before the press. The spinner is centred over it. */}
-      <span className={pending ? 'invisible contents' : 'contents'}>{children}</span>
+      {/* The label stays in the layout so the box keeps the exact width it had before the press,
+          and it stays in the ACCESSIBILITY TREE so the button keeps its name while busy —
+          `opacity-0`, never `invisible`/`display:none`, both of which would leave a pending button
+          with no accessible name at all (the spinner beside it is aria-hidden). */}
+      <span className={clsx('inline-flex items-center gap-2', pending && 'opacity-0')}>
+        {children}
+      </span>
       {pending && (
         <span className="absolute inset-0 flex items-center justify-center">
           <Spinner />

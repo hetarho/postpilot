@@ -302,6 +302,11 @@
   --spacing-safe-t: env(safe-area-inset-top, 0px);
   --spacing-safe-b: env(safe-area-inset-bottom, 0px);
   --spacing-nav: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  /* A docked bar's bottom padding where it meets the screen edge. It must ADD the inset to the
+     design padding, never replace it: `p-4` + `pb-safe-b` resolves padding-bottom to the bare
+     inset (0 on every desktop browser), which leaves the bar's contents flush against its own
+     rounded corner. */
+  --spacing-dock-b: calc(1rem + env(safe-area-inset-bottom, 0px));
   /* A bottom sheet's ceiling. `dvh`, not `vh`: only the dynamic unit tracks the mobile URL bar,
      so a `vh`-sized sheet is clipped on every phone — design-language §8.1. */
   --spacing-sheet: 85dvh;

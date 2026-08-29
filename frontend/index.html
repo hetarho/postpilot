@@ -9,9 +9,12 @@
     <!-- Chrome for Android tints its address bar from this tag alone; color-scheme does not reach
          it. The values are the header's own plane (surface-raised) per theme — design-language
          §2.5. They are the only colour literals outside app/styles/index.css. -->
-    <meta name="theme-color" content="#28272c" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#fcfbfe" media="(prefers-color-scheme: light)" />
-    <meta name="color-scheme" content="dark light" />
+    <!-- Unconditional, because `night` is the only theme that renders: index.css maps it on bare
+         :root and nothing sets data-theme yet (design-language §2.5). Keying this off
+         prefers-color-scheme would paint a white address bar above a near-black app for every
+         light-mode user. Re-pair it the day the switcher lands, off data-theme. -->
+    <meta name="theme-color" content="#28272c" />
+    <meta name="color-scheme" content="dark" />
     <title>Postpilot — 사진과 경험을 블로그 글로</title>
   </head>
   <body>

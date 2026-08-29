@@ -7,7 +7,7 @@ import { toTistory } from '@/features/export-tistory'
 import type { PostContent } from '@/shared/api'
 import { COPY_FEEDBACK_MS } from '@/shared/config'
 import { copyText, type CopyFallbackElement } from '@/shared/lib'
-import { ActionBar, Button, FieldLabel, SegmentedControl, Textarea, TextField } from '@/shared/ui'
+import { Button, FieldLabel, SegmentedControl, Textarea, TextField } from '@/shared/ui'
 import { EXPORT_FORMATS, EXPORT_GUIDANCE, type ExportFormat } from '../config/guidance'
 
 const MANUAL_COPY_HINT = '자동 복사가 막혀 있어요 — 선택된 텍스트를 길게 눌러 복사하세요'
@@ -160,11 +160,32 @@ export function ExportPanel({ content, images, createdAt }: ExportPanelProps) {
         <FieldLabel htmlFor="export-output" className="sr-only">
           내보내기 결과
         </FieldLabel>
+        {/* The copy action sits ABOVE the output, not after it. This panel renders inside the
+            editor, which already docks its own bar, and two docked bars in one scroller stick to
+            the same offset and paint over each other — so §4.3's other option applies: put the
+            action where the user already is. Above the field it shares a screen with the format
+            tabs and the first lines of the result, which is what the user checks before copying;
+            after an autoGrow field it would be a whole post's length away. */}
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row-reverse sm:items-center sm:justify-end sm:gap-3">
+          {/* The label stays 복사: a swap to 복사됨 resizes the target under the thumb that just
+              pressed it, and it was also the only signal that anything had happened (§6). */}
+          <Button
+            variant="cta"
+            className="w-full sm:w-auto"
+            onClick={() => void copy('output', output, outputRef.current)}
+          >
+            복사
+          </Button>
+          {/* Always mounted, never conditionally inserted: a live region that first appears WITH
+              its text already in it is not announced (§9). */}
+          <p role="status" className="text-content-tertiary min-h-4 text-xs">
+            {outputStatus}
+          </p>
+        </div>
         {/* A Korean post runs to ~58 lines at this width. A fixed 18-row box scrolled internally,
             so every vertical swipe that landed on it moved the output instead of the page and the
-            only place left to scroll was the 16px gutter (§4.4) — it grows instead, and the copy
-            action docks so it never leaves the screen the output is on. No `font-mono`: Tailwind's
-            stock mono stack carries no Hangul, so every Korean glyph fell back per glyph (§3). */}
+            only place left to scroll was the 16px gutter (§4.4) — it grows instead. No `font-mono`:
+            Tailwind's stock mono stack carries no Hangul, so every glyph fell back (§3). */}
         <Textarea
           id="export-output"
           ref={outputRef}
@@ -173,24 +194,9 @@ export function ExportPanel({ content, images, createdAt }: ExportPanelProps) {
           spellCheck={false}
           rows={8}
           autoGrow
-          className="mt-4 leading-relaxed"
+          className="mt-3 leading-relaxed"
         />
       </div>
-
-      <ActionBar ariaLabel="내보내기 동작">
-        <p role="status" className="text-content-tertiary min-h-4 text-xs">
-          {outputStatus}
-        </p>
-        {/* The label stays 복사: a swap to 복사됨 resizes the target under the thumb that just
-            pressed it, and it was also the only signal that anything had happened (§6). */}
-        <Button
-          variant="cta"
-          className="mt-2 w-full sm:w-auto"
-          onClick={() => void copy('output', output, outputRef.current)}
-        >
-          복사
-        </Button>
-      </ActionBar>
     </section>
   )
 }

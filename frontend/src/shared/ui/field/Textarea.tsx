@@ -46,6 +46,18 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   // every keystroke. Re-runs on `value` so a programmatic change grows the field too.
   useLayoutEffect(resize, [resize, value])
 
+  // The height is an inline pixel value, so anything that changes how the SAME text wraps — a
+  // window resize, an orientation change, or crossing the `sm:` breakpoint where the type steps
+  // from 16px to 14px — invalidates it. Without this the field keeps its stale height and, because
+  // `autoGrow` also sets `overflow-hidden`, the tail is clipped with no scrollbar to reach it.
+  useLayoutEffect(() => {
+    const node = inner.current
+    if (!node || !autoGrow || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(resize)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [autoGrow, resize])
+
   return (
     <textarea
       ref={setRef}
