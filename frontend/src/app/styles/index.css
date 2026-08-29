@@ -272,6 +272,11 @@
   --media-scrim-bg: var(--physical-scrim);
   --media-scrim-fg: var(--physical-on-scrim);
   --shadow-color: var(--physical-shadow);
+
+  /* brand — the wordmark's two inks. It is drawn from tokens like everything else, so the logo
+     re-skins with the theme instead of being a second, frozen palette living inside an .svg. */
+  --brand-wordmark: var(--content-primary);
+  --brand-mark: var(--intent-accent);
 }
 
 /* ── Tailwind theme: the roles become utilities; stock colours are removed ─────────────────── */
@@ -380,6 +385,10 @@
   --color-media-scrim-bg: var(--media-scrim-bg);
   --color-media-scrim-fg: var(--media-scrim-fg);
   --color-shadow: var(--shadow-color);
+
+  /* brand */
+  --color-brand-wordmark: var(--brand-wordmark);
+  --color-brand-mark: var(--brand-mark);
 
   /* shadows are mixed from the physical role so they re-skin with the theme */
   --shadow-sm: 0 1px 2px color-mix(in oklab, var(--shadow-color) 40%, transparent);

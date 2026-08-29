@@ -15,6 +15,15 @@
          light-mode user. Re-pair it the day the switcher lands, off data-theme. -->
     <meta name="theme-color" content="#28272c" />
     <meta name="color-scheme" content="dark" />
+    <!-- The app icon, in the three forms a browser actually asks for. `favicon.svg` is the source
+         of truth and the one every current browser picks; `favicon.ico` (16/32/48, PNG-encoded) is
+         the legacy fallback and the file a browser requests from the origin root whether we link it
+         or not; `apple-touch-icon.png` is what iOS uses for "홈 화면에 추가" — Safari ignores SVG
+         there, and without it iOS screenshots the page instead. All three are generated from
+         public/favicon.svg; regenerate the two rasters if it changes. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Postpilot — 사진과 경험을 블로그 글로</title>
   </head>
   <body>

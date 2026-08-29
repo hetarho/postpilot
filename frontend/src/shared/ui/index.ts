@@ -1,5 +1,6 @@
 export { ActionBar } from './action-bar/ActionBar'
 export { Badge, type BadgeTone } from './badge/Badge'
+export { Logo } from './brand/Logo'
 export { Button } from './button/Button'
 export { buttonStyles } from './button/buttonStyles'
 export { Checkbox } from './checkbox/Checkbox'

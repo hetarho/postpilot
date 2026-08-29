@@ -216,6 +216,7 @@ cannot be expressed by an existing group; do not create a speculative component-
 | Navigation/list | `link-*`, `link-fg-current`, `row-bg-*`, `divider`                                                            |
 | Labels/feedback | `badge-neutral-*`, `notice-{danger,success,warning,info}-*`                                                   |
 | System/media    | `focus-ring`, `selection-*`, `media-scrim-*`, `shadow-color`                                                  |
+| Brand           | `brand-wordmark`, `brand-mark`                                                                                |
 
 State names are explicit (`bg`, `bg-hover`, `bg-active`, `fg`) so a primitive never invents a
 hover colour by changing opacity. Function names describe purpose: the committing action is
@@ -238,6 +239,18 @@ The browser chrome is part of the theme. `<meta name="theme-color">` in `index.h
 header's plane, because Chrome for Android tints its address bar from that tag alone;
 `color-scheme` does not reach it, and a light toolbar band above a near-black app is the most
 visible surface in the product.
+
+The **wordmark** is part of the theme too. `shared/ui/Logo` is inline SVG drawn from
+`brand-wordmark` (the page's own ink) and `brand-mark` (the accent), so it re-skins with every
+theme instead of freezing one palette into an `.svg`. It carries its own accessible name, so the
+element around it — the header's home link, the login `h1` — adds no second text label. Size it by
+height (`h-6` in the header, `h-9` on login); the trimmed viewBox supplies the width.
+
+The **app icon** is the one thing that does _not_ follow the theme: it is fixed art on its own
+near-black tile, because the OS and the browser tab strip render it, not the page.
+`frontend/public/favicon.svg` is the source; `favicon.ico` (16/32/48) and `apple-touch-icon.png`
+(180 — what iOS uses for 홈 화면에 추가, where Safari ignores SVG) are rasterised from it with
+headless Chrome, and must be regenerated when it changes. All three are linked from `index.html`.
 
 ### 2.6 Applying colour
 

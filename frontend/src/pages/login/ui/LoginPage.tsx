@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useLogin } from '@/entities/session'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
-import { Button, FieldLabel, FieldMessage, TextField } from '@/shared/ui'
+import { Button, FieldLabel, FieldMessage, Logo, TextField } from '@/shared/ui'
 
 /** One message for every failure. The server already refuses to distinguish an unknown
  *  id from a wrong password (spec/policy/auth.md); showing anything more specific here
@@ -40,7 +40,14 @@ export function LoginPage() {
     // page's plane down the whole screen.
     <main className="bg-surface-base text-content-primary flex min-h-full items-start justify-center px-4 pt-12 pb-10 sm:px-6">
       <form onSubmit={onSubmit} className="w-full max-w-xs">
-        <h1 className="text-2xl font-semibold tracking-tight">Postpilot</h1>
+        {/* The wordmark replaces the text `Postpilot`, and stays inside the `h1` so the page keeps
+            its heading — the accessible name comes from the svg's own `aria-label`. `h-9` is
+            deliberate restraint: the form block is already 344px with the failure message in it,
+            and on a 360x640 phone the keyboard line lands at ~384 (§8.3). A hero-sized logo here
+            buys presence by pushing the error out of sight. */}
+        <h1>
+          <Logo className="h-9" />
+        </h1>
         <p className="text-content-secondary mt-1 text-sm">계속하려면 로그인하세요</p>
 
         <FieldLabel htmlFor="loginId" className="mt-8">

@@ -2,7 +2,7 @@ import type { ComponentType } from 'react'
 import { Bot, FileText, Quote } from 'lucide-react'
 import { Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { useLogout, useSession } from '@/entities/session'
-import { Button, Notice } from '@/shared/ui'
+import { Button, Logo, Notice } from '@/shared/ui'
 import { endSession } from '../model/end-session'
 
 /** The app's destinations, in one list so the phone tab bar and the desktop header cannot drift.
@@ -59,11 +59,16 @@ export function AuthenticatedLayout() {
     <div className="bg-surface-base text-content-primary flex min-h-full flex-col">
       <header className="bg-surface-raised flex min-h-14 items-center justify-between gap-2 px-4 sm:sticky sm:top-0 sm:z-20 sm:min-h-16 sm:px-6">
         <div className="flex min-w-0 items-center gap-1">
+          {/* The wordmark IS the home link — no separate text label beside it, which would give
+              the same destination two accessible names. Sized by height: `h-6` puts the
+              lowercase band at ~14px, level with the nav links it sits next to, and `min-h-11`
+              keeps the target legal (§4.1) without the mark growing to fill it. */}
           <Link
             to="/posts"
-            className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 text-sm font-medium tracking-tight"
+            className="inline-flex min-h-11 items-center px-2"
+            aria-label="Postpilot 홈"
           >
-            Postpilot
+            <Logo className="h-6" />
           </Link>
           {/* The same destinations as the tab bar, for the pointer breakpoint only. */}
           <nav className="hidden items-center gap-1 sm:flex" aria-label="주요">
