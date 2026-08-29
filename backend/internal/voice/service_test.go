@@ -25,6 +25,7 @@ type fakeModels struct {
 	err           error
 	request       llm.Request
 	completeCalls int
+	structured    bool
 }
 
 type changingCorpusModels struct {
@@ -37,6 +38,8 @@ type changingCorpusModels struct {
 func (f *changingCorpusModels) AnalyzeModel(context.Context, string) (llm.ModelRef, bool, error) {
 	return analyzeRef, true, nil
 }
+
+func (f *changingCorpusModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) { return llm.ModelInfo{}, false }
 
 func (f *changingCorpusModels) Complete(_ context.Context, _ llm.ModelRef, request llm.Request) (llm.Response, error) {
 	corpus := request.Messages[0].Parts[0].Text
@@ -55,6 +58,12 @@ func (f *changingCorpusModels) Complete(_ context.Context, _ llm.ModelRef, reque
 func (f *fakeModels) AnalyzeModel(_ context.Context, userID string) (llm.ModelRef, bool, error) {
 	ref, ok := f.selected[userID]
 	return ref, ok, nil
+}
+
+// structured makes Resolve report a model that declares structured output, so a test can
+// assert the analysis call attaches its schema only then.
+func (f *fakeModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) {
+	return llm.ModelInfo{StructuredOutput: f.structured}, true
 }
 
 func (f *fakeModels) Complete(_ context.Context, _ llm.ModelRef, request llm.Request) (llm.Response, error) {

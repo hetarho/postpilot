@@ -90,6 +90,8 @@ export {
   VoiceSampleSchema,
   StructuredVoiceProfileSchema,
   VoiceProfileVersionSchema,
+  ListVoiceProfileVersionsResponseSchema,
+  UpdateVoiceOverrideResponseSchema,
   VoiceLayer,
   VoiceRuleStatus,
   VoiceValueSource,
@@ -108,9 +110,13 @@ export {
   LearnFromFinalizedPostResponseSchema,
   RetryVoiceLearningResponseSchema,
   GiveSentenceFeedbackResponseSchema,
+  ListRuleConfirmationsResponseSchema,
 } from './gen/postpilot/v1/voice_learning_pb'
 export type { VoiceLearningEvent } from './gen/postpilot/v1/voice_learning_pb'
-export { VoiceValidationService } from './gen/postpilot/v1/voice_validation_pb'
+export {
+  VoiceValidationService,
+  ListVoiceProfileValidationsResponseSchema,
+} from './gen/postpilot/v1/voice_validation_pb'
 export type { VoiceRuleComparison, VoiceProfileValidation } from './gen/postpilot/v1/voice_validation_pb'
 export type {
   GetSelectionsResponse,

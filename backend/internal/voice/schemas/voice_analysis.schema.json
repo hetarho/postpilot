@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "lexical_description", "base_register", "connective_style", "intro_pattern",
+    "closing_pattern", "heading_habit", "list_habit", "emoji_use", "axes"
+  ],
+  "properties": {
+    "lexical_description": {"type": "string"},
+    "base_register": {"type": "string"},
+    "connective_style": {"type": "string"},
+    "intro_pattern": {"type": "string"},
+    "closing_pattern": {"type": "string"},
+    "heading_habit": {"type": "string"},
+    "list_habit": {"type": "string"},
+    "emoji_use": {"type": "string"},
+    "axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["involvement", "narrativity", "persuasion_overtness", "abstractness", "addressee_focus", "humor"],
+      "properties": {
+        "involvement": {"type": "integer", "minimum": -3, "maximum": 3},
+        "narrativity": {"type": "integer", "minimum": -3, "maximum": 3},
+        "persuasion_overtness": {"type": "integer", "minimum": -3, "maximum": 3},
+        "abstractness": {"type": "integer", "minimum": -3, "maximum": 3},
+        "addressee_focus": {"type": "integer", "minimum": -3, "maximum": 3},
+        "humor": {"type": "integer", "minimum": -3, "maximum": 3}
+      }
+    }
+  }
+}

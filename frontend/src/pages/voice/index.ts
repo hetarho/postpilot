@@ -1,1 +1,5 @@
 export { VoicePage } from './ui/VoicePage'
+export { VoiceVersionsPage } from './ui/VoiceVersionsPage'
+export { VoiceImportPage } from './ui/VoiceImportPage'
+export { VoiceRulesPage } from './ui/VoiceRulesPage'
+export { VoiceValidationsPage } from './ui/VoiceValidationsPage'

@@ -1,5 +1,5 @@
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
-import { create } from '@bufbuild/protobuf'
+import { create, type MessageInitShape } from '@bufbuild/protobuf'
 import {
   AddVoiceSampleResponseSchema,
   DeleteVoiceSampleResponseSchema,
@@ -13,6 +13,12 @@ import {
   VoiceLearningService,
   VoiceSampleSchema,
   VoiceService,
+  VoiceValidationService,
+  ListVoiceProfileVersionsResponseSchema,
+  ListRuleConfirmationsResponseSchema,
+  ListVoiceProfileValidationsResponseSchema,
+  StructuredVoiceProfileSchema,
+  UpdateVoiceOverrideResponseSchema,
 } from '@/shared/api'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
@@ -42,6 +48,10 @@ export interface FakeVoiceOptions {
   calls?: string[]
   learningFails?: boolean
   learningJobId?: string
+  versions?: Array<{ version: bigint; origin: string }>
+  /** The typed profile the account has learned. Omitted, the profile reads as empty. */
+  structured?: MessageInitShape<typeof StructuredVoiceProfileSchema>
+  overrideFails?: boolean
 }
 
 const NOW = '2026-08-29T12:00:00Z'
@@ -62,6 +72,9 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
         createdAt: sample.createdAt ?? NOW,
       }),
     ),
+    structured: options.structured
+      ? create(StructuredVoiceProfileSchema, options.structured)
+      : undefined,
   })
 
   rpc(VoiceService.method.getVoiceProfile, () => {
@@ -89,6 +102,14 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       updatedAt: NOW,
     })
     return create(UpdateVoiceProfileResponseSchema, { profile })
+  })
+
+  rpc(VoiceService.method.updateVoiceOverride, () => {
+    options.calls?.push('UpdateVoiceOverride')
+    if (options.overrideFails) throw new ConnectError('직접 설정을 저장하지 못했어요', Code.Internal)
+    // The response is the unchanged profile: what an override publishes is backend behavior with
+    // its own coverage, and a fake that half-rebuilds a typed profile would only test itself.
+    return create(UpdateVoiceOverrideResponseSchema, { profile })
   })
 
   rpc(VoiceService.method.addVoiceSample, async (request) => {
@@ -163,5 +184,22 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   rpc(VoiceLearningService.method.giveSentenceFeedback, () => {
     options.calls?.push('GiveSentenceFeedback')
     return create(GiveSentenceFeedbackResponseSchema, { feedbackId: 'feedback-1' })
+  })
+
+  // The three per-tab lists. They record their calls so a test can prove a tab fetches only what
+  // it renders — the profile screen used to issue all three on every mount.
+  rpc(VoiceService.method.listVoiceProfileVersions, () => {
+    options.calls?.push('ListVoiceProfileVersions')
+    return create(ListVoiceProfileVersionsResponseSchema, { versions: options.versions ?? [] })
+  })
+
+  rpc(VoiceLearningService.method.listRuleConfirmations, () => {
+    options.calls?.push('ListRuleConfirmations')
+    return create(ListRuleConfirmationsResponseSchema, {})
+  })
+
+  rpc(VoiceValidationService.method.listVoiceProfileValidations, () => {
+    options.calls?.push('ListVoiceProfileValidations')
+    return create(ListVoiceProfileValidationsResponseSchema, {})
   })
 }

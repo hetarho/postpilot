@@ -17,6 +17,7 @@ type personalizationModels struct {
 func (m *personalizationModels) AnalyzeModel(context.Context, string) (llm.ModelRef, bool, error) {
 	return llm.ModelRef{}, false, nil
 }
+func (m *personalizationModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) { return llm.ModelInfo{}, false }
 func (m *personalizationModels) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response, error) {
 	response := m.responses[m.calls]
 	m.calls++

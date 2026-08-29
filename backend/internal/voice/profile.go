@@ -123,17 +123,17 @@ func applyOverride(p *StructuredProfile, layer RuleLayer, field, value string) e
 		}
 		switch field {
 		case "involvement":
-			p.Axes.Involvement = parsed
+			p.Axes.Involvement = &parsed
 		case "narrativity":
-			p.Axes.Narrativity = parsed
+			p.Axes.Narrativity = &parsed
 		case "persuasion_overtness":
-			p.Axes.PersuasionOvertness = parsed
+			p.Axes.PersuasionOvertness = &parsed
 		case "abstractness":
-			p.Axes.Abstractness = parsed
+			p.Axes.Abstractness = &parsed
 		case "addressee_focus":
-			p.Axes.AddresseeFocus = parsed
+			p.Axes.AddresseeFocus = &parsed
 		case "humor":
-			p.Axes.Humor = parsed
+			p.Axes.Humor = &parsed
 		default:
 			return fmt.Errorf("unsupported axis")
 		}

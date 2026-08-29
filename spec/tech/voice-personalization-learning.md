@@ -68,11 +68,15 @@ The effective account profile is a whole immutable snapshot containing:
 - endings as a primary layer: base register, measured distribution, bans/signatures, and constraints;
 - syntax measurements and descriptors;
 - opening/closing and paragraph/heading/list/emoji structure;
-- six integer axes bounded to `-3..3`;
+- six integer axes bounded to `-3..3`, each carrying presence — an axis the analysis did not answer is absent
+  (published as unknown), not a neutral 0;
 - contrast-rule metadata, authored-source/few-shot references, feedback references, version, timestamps, and source
   count.
 
-Weak or absent evidence is represented explicitly as `unknown`. Deterministic measurements override conflicting
+The analysis call names every key it expects, including the `axes` object and its six keys, and joins the
+structured-output path: it attaches an embedded JSON schema (`internal/voice/schemas/voice_analysis.schema.json`)
+when the resolved model declares `structured_output`, exactly as write, revise, and observe do, and falls back to the
+prompt alone otherwise. Weak or absent evidence is represented explicitly as `unknown`. Deterministic measurements override conflicting
 model estimates for ending distribution and average sentence length. A manual field override is stored separately,
 replayed after analysis, and published as a new whole-profile version. Clearing it replays the newest analysis
 snapshot plus remaining overrides. Restore copies an old immutable snapshot into a new head; it never moves or

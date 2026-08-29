@@ -354,6 +354,8 @@ func (a voiceModels) AnalyzeModel(ctx context.Context, userID string) (llm.Model
 	return llm.ModelRef{}, false, nil
 }
 
+func (a voiceModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) { return a.registry.Lookup(ref) }
+
 func (a voiceModels) Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error) {
 	return a.registry.Complete(ctx, ref, request)
 }

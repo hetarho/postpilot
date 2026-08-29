@@ -59,9 +59,22 @@ and 16.
 
 ## Frontend behavior
 
-- `/voice` is authenticated and composes the analyze-stage model selector, sample learning form/list, durable-job
-  progress, and separate styleguide/rules editors. The learn action is disabled below 200 trimmed Unicode characters
-  or without a usable analyze selection; backend validation text is shown verbatim when the RPC rejects it.
+- 말투 is five authenticated sibling routes sharing one tab row: `/voice` (the current typed profile),
+  `/voice/versions` (version list and restore), `/voice/import` (analyze-stage model selector, paste form, sample
+  list, analysis progress, legacy manual guidance), `/voice/rules` (rule list, pending confirmations, blind
+  comparison), `/voice/validations` (validation start and record list). The tab row is links, not a state control, so
+  every tab is an address with a working back button; the tab matching the address carries `aria-current="page"`.
+  The top-level destinations stay 글 / 말투 / AI 모델 — these five are sub-navigation.
+- Each tab issues only the queries its own panel renders. The profile query is shared by all five; the version,
+  confirmation, and validation lists are fetched by the tab that displays them, and a list still in flight reads as
+  loading rather than as an empty account.
+- A profile field is read first: label, provenance badge, and the value as wrapping text with no form control. Its
+  pencil (named for the field) opens that one field for editing — a capped growing textarea seeded with the published
+  value, 저장, 취소, and 직접 설정 해제 only when the field's source is `manual`. Fields are independent. 취소 discards
+  the draft; a rejected save keeps edit mode and the draft, and its message does not survive into the next edit.
+- `/voice/rules/$id/compare` and `/voice/validations/$id` keep their addresses and return to their owning tab.
+- The learn action is disabled below 200 trimmed Unicode characters or without a usable analyze selection; backend
+  validation text is shown verbatim when the RPC rejects it.
 - When a non-empty styleguide exists, adding a sample requires confirmation that re-analysis will overwrite the
   current styleguide. This confirmation fires for every existing styleguide, not only one known to be hand-edited.
 - `active_job_id` resumes polling after navigation or reload. A successful job refreshes the profile query so the new
@@ -96,6 +109,11 @@ and 16.
   learning outcome. Retry never repeats finalization or demotes the post.
 - A completed event adds the finalized post to the authored-source/few-shot bank. The first source is eligible for
   the next generation even when its topic differs; topic/tag matches rank ahead of stable recent fallback.
+- The six axes carry presence. The analysis prompt names the `axes` object and its six keys, and the completion
+  attaches a JSON schema requiring them when the resolved model declares `structured_output`; a model without the
+  capability keeps the prompt-only path. An axis the model does not answer publishes as unknown and renders as
+  알 수 없음 — never as 0 — and an answered value outside `-3..3` still fails the job. Snapshots already storing
+  explicit zeros are immutable and keep showing them until the next learn.
 - Typed whole-profile snapshots contain lexical, endings, syntax, structure, bounded axes, explicit unknown/source
   values, rules, sources, and feedback. Manual overrides and restore publish new heads while old snapshots remain.
   Legacy styleguide/rules remain byte-preserved manual guidance.

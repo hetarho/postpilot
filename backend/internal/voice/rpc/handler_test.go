@@ -23,6 +23,7 @@ type models struct{}
 func (models) AnalyzeModel(context.Context, string) (llm.ModelRef, bool, error) {
 	return llm.ModelRef{}, false, nil
 }
+func (models) Resolve(llm.ModelRef) (llm.ModelInfo, bool) { return llm.ModelInfo{}, false }
 func (models) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response, error) {
 	return llm.Response{}, nil
 }

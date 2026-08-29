@@ -10,7 +10,13 @@ import { loadSession } from '@/entities/session'
 import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { LoginPage } from '@/pages/login'
 import { PostsPage } from '@/pages/posts'
-import { VoicePage } from '@/pages/voice'
+import {
+  VoiceImportPage,
+  VoicePage,
+  VoiceRulesPage,
+  VoiceValidationsPage,
+  VoiceVersionsPage,
+} from '@/pages/voice'
 import { AIModelsPage } from '@/pages/ai-models'
 import { ModelExperimentPage } from '@/pages/model-experiment'
 import { VoiceRuleComparisonPage } from '@/pages/voice-rule-comparison'
@@ -20,6 +26,7 @@ import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 import { queryClient } from '../providers/query-client'
 import { AuthenticatedLayout } from './AuthenticatedLayout'
 import { RootLayout } from './RootLayout'
+import { VoiceLayout } from './VoiceLayout'
 
 /** What every route's `beforeLoad` can reach. The transport travels with the query
  *  client because the session cache key is built from it — a guard using a different
@@ -97,10 +104,43 @@ const postsRoute = createRoute({
   component: PostsPage,
 })
 
-const voiceRoute = createRoute({
+// A second pathless layout, this time for sub-navigation: the five voice tabs keep their own
+// addresses and share the tab row. The two detail screens below stay OUTSIDE it — they are
+// full-width review surfaces with their own back link, not a sixth tab.
+const voiceLayoutRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
+  id: 'voice',
+  component: VoiceLayout,
+})
+
+const voiceRoute = createRoute({
+  getParentRoute: () => voiceLayoutRoute,
   path: '/voice',
   component: VoicePage,
+})
+
+const voiceVersionsRoute = createRoute({
+  getParentRoute: () => voiceLayoutRoute,
+  path: '/voice/versions',
+  component: VoiceVersionsPage,
+})
+
+const voiceImportRoute = createRoute({
+  getParentRoute: () => voiceLayoutRoute,
+  path: '/voice/import',
+  component: VoiceImportPage,
+})
+
+const voiceRulesRoute = createRoute({
+  getParentRoute: () => voiceLayoutRoute,
+  path: '/voice/rules',
+  component: VoiceRulesPage,
+})
+
+const voiceValidationsRoute = createRoute({
+  getParentRoute: () => voiceLayoutRoute,
+  path: '/voice/validations',
+  component: VoiceValidationsPage,
 })
 
 const aiModelsRoute = createRoute({
@@ -147,7 +187,13 @@ export const routeTree = rootRoute.addChildren([
   authenticatedRoute.addChildren([
     indexRoute,
     postsRoute,
-    voiceRoute,
+    voiceLayoutRoute.addChildren([
+      voiceRoute,
+      voiceVersionsRoute,
+      voiceImportRoute,
+      voiceRulesRoute,
+      voiceValidationsRoute,
+    ]),
     aiModelsRoute,
     modelExperimentRoute,
     voiceRuleComparisonRoute,

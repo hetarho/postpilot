@@ -94,6 +94,19 @@ func renderValue(value VoiceValue) string {
 	}
 	return value.Value + " (" + string(value.Source) + ")"
 }
+// An unmeasured axis renders as "unknown" rather than a fabricated 0 — printing a neutral the
+// model never claimed into the generation prompt would be the same bug one layer down.
+func renderAxes(a AxesProfile) string {
+	parts := make([]string, 0, 6)
+	for _, axis := range a.AxisValues() {
+		if axis.Value == nil {
+			parts = append(parts, axis.Key+"=unknown")
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s=%d", axis.Key, *axis.Value))
+	}
+	return strings.Join(parts, " ")
+}
 func renderStructuredProfile(p StructuredProfile) string {
 	if p.Empty || p.Version == 0 {
 		return ""
@@ -103,7 +116,7 @@ func renderStructuredProfile(p StructuredProfile) string {
 	for _, ratio := range p.Endings.Distribution {
 		fmt.Fprintf(&b, " %s=%.2f", ratio.Ending, ratio.Ratio)
 	}
-	fmt.Fprintf(&b, "\n[Syntax]\naverage sentence: %.2f chars\nconnectives: %s\n[Structure]\nintro: %s\nclosing: %s\n[Axes]\ninvolvement=%d narrativity=%d persuasion=%d abstractness=%d addressee=%d humor=%d", p.Syntax.AverageSentenceChars, renderValue(p.Syntax.ConnectiveStyle), renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern), p.Axes.Involvement, p.Axes.Narrativity, p.Axes.PersuasionOvertness, p.Axes.Abstractness, p.Axes.AddresseeFocus, p.Axes.Humor)
+	fmt.Fprintf(&b, "\n[Syntax]\naverage sentence: %.2f chars\nconnectives: %s\n[Structure]\nintro: %s\nclosing: %s\n[Axes]\n%s", p.Syntax.AverageSentenceChars, renderValue(p.Syntax.ConnectiveStyle), renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern), renderAxes(p.Axes))
 	if len(p.Lexical.BannedWords) > 0 {
 		b.WriteString("\n[Banned words]")
 		for _, item := range p.Lexical.BannedWords {

@@ -488,6 +488,14 @@ to the page.
   device with no hover. In a _toolbar_ it is a `Menu` behind a `ghost` button that shows the held
   value. An option's text is the choice, not the explanation — a reason or a capability goes in
   the message slot under the field, where it is not truncated by the native control.
+- **TabLinks** — a tab row whose tabs are ADDRESSES: a horizontally scrolling row of links, marking the current one
+  `aria-current="page"`. It is `SegmentedControl`'s shape without its `onChange`, and it is a `nav` rather than
+  `role="tablist"`, because announcing a navigation as tab selection would tell a screen reader the page stayed put.
+  Reach for it when the panels are routes; reach for `SegmentedControl` when they are state.
+- **Editable** — read first, edit on request: a value renders as text until its pencil (always `aria-label`led with
+  the field it edits) is pressed, then the caller's edit view replaces it. The primitive owns only the toggle and the
+  affordance; the caller supplies both views and every action, so leaving edit mode stays the caller's decision — a
+  successful save exits, a rejected one keeps the draft on screen.
 - **SegmentedControl** — a bounded switch of 2–5 options. It scrolls horizontally rather than
   crushing or wrapping its labels, since a Korean option set outgrows the width long before an
   English one does. It is the primitive for a tab row; a slice never hand-rolls

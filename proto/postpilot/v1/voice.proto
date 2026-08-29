@@ -64,13 +64,14 @@ message VoiceStructure {
   VoiceValue list_habit = 6;
   VoiceValue emoji_use = 7;
 }
+// Each axis carries presence: an axis the analysis did not answer is absent, not 0.
 message VoiceAxes {
-  int32 involvement = 1;
-  int32 narrativity = 2;
-  int32 persuasion_overtness = 3;
-  int32 abstractness = 4;
-  int32 addressee_focus = 5;
-  int32 humor = 6;
+  optional int32 involvement = 1;
+  optional int32 narrativity = 2;
+  optional int32 persuasion_overtness = 3;
+  optional int32 abstractness = 4;
+  optional int32 addressee_focus = 5;
+  optional int32 humor = 6;
 }
 
 enum VoiceRuleStatus {

@@ -106,7 +106,22 @@ type StructureProfile struct {
 	ParagraphSentencesMin, ParagraphSentencesMax int
 	HeadingHabit, ListHabit, EmojiUse            VoiceValue
 }
-type AxesProfile struct{ Involvement, Narrativity, PersuasionOvertness, Abstractness, AddresseeFocus, Humor int }
+// Each axis is a pointer so presence survives the round trip: an axis the analysis never
+// answered is nil (published as unknown), not an indistinguishable neutral 0. A stored `0`
+// in an older snapshot still decodes as present-0, so historical versions keep showing what
+// they published.
+type AxesProfile struct{ Involvement, Narrativity, PersuasionOvertness, Abstractness, AddresseeFocus, Humor *int }
+
+// AxisValues lists the six axes in their canonical order with their JSON keys.
+func (a AxesProfile) AxisValues() []struct {
+	Key   string
+	Value *int
+} {
+	return []struct {
+		Key   string
+		Value *int
+	}{{"involvement", a.Involvement}, {"narrativity", a.Narrativity}, {"persuasion_overtness", a.PersuasionOvertness}, {"abstractness", a.Abstractness}, {"addressee_focus", a.AddresseeFocus}, {"humor", a.Humor}}
+}
 
 type RuleLayer string
 

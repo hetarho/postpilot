@@ -12,9 +12,15 @@ import (
 )
 
 const StructuredAnalysisPromptVersion = "voice-profile-v1"
+// The prompt names every key the decoder expects — including the `axes` object and its six
+// keys — because for a model without structured output the prompt is the only channel that
+// carries the shape; a key it is not told about comes back missing and must publish as unknown.
 const structuredAnalysisPrompt = `Analyze the supplied Korean authored corpus as writing style, not subject matter.
-Return one JSON object with lexical_description, base_register, connective_style, intro_pattern, closing_pattern,
-heading_habit, list_habit, emoji_use, and six integer axes (-3..3). Use an empty string for unsupported traits.
+Return one JSON object with these string keys: lexical_description, base_register, connective_style, intro_pattern,
+closing_pattern, heading_habit, list_habit, emoji_use. Use an empty string for unsupported traits.
+Also return an "axes" object with exactly these six integer keys, each between -3 and 3:
+involvement, narrativity, persuasion_overtness, abstractness, addressee_focus, humor.
+Omit an axis key only when the corpus gives no evidence for it; never guess 0 as a filler.
 Never return topic-specific nouns as preferred vocabulary. Deterministic ending distribution and sentence length are calculated separately and override your estimates.`
 
 type authoredContentJSON struct {
@@ -29,12 +35,12 @@ type authoredContentJSON struct {
 	} `json:"blocks"`
 }
 type qualitativeAxesJSON struct {
-	Involvement         int `json:"involvement"`
-	Narrativity         int `json:"narrativity"`
-	PersuasionOvertness int `json:"persuasion_overtness"`
-	Abstractness        int `json:"abstractness"`
-	AddresseeFocus      int `json:"addressee_focus"`
-	Humor               int `json:"humor"`
+	Involvement         *int `json:"involvement"`
+	Narrativity         *int `json:"narrativity"`
+	PersuasionOvertness *int `json:"persuasion_overtness"`
+	Abstractness        *int `json:"abstractness"`
+	AddresseeFocus      *int `json:"addressee_focus"`
+	Humor               *int `json:"humor"`
 }
 type qualitativeJSON struct {
 	LexicalDescription string              `json:"lexical_description"`
@@ -218,7 +224,11 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 		return s.failLearning(ctx, *event, err)
 	}
 	progress("learn", 0, 1)
-	response, err := s.models.Complete(ctx, ref, llm.Request{System: structuredAnalysisPrompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus.String())}}}})
+	request := llm.Request{System: structuredAnalysisPrompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus.String())}}}}
+	if info, ok := s.models.Resolve(ref); ok && info.StructuredOutput {
+		request.JSONSchema = VoiceAnalysisSchema()
+	}
+	response, err := s.models.Complete(ctx, ref, request)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
@@ -281,9 +291,9 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 }
 
 func validateAxes(a AxesProfile) error {
-	for _, v := range []int{a.Involvement, a.Narrativity, a.PersuasionOvertness, a.Abstractness, a.AddresseeFocus, a.Humor} {
-		if v < -3 || v > 3 {
-			return fmt.Errorf("voice axis is outside -3..3")
+	for _, axis := range a.AxisValues() {
+		if axis.Value != nil && (*axis.Value < -3 || *axis.Value > 3) {
+			return fmt.Errorf("voice axis %s is outside -3..3", axis.Key)
 		}
 	}
 	return nil

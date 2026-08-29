@@ -2,6 +2,8 @@ package voice_test
 
 import (
 	"context"
+	"encoding/json"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -28,6 +30,9 @@ func (m *scriptedPersonalizationModels) AnalyzeModel(context.Context, string) (l
 }
 func (m *scriptedPersonalizationModels) ModelEnabled(ref llm.ModelRef) bool {
 	return ref.ProviderID != "" && ref.ModelID != ""
+}
+func (m *scriptedPersonalizationModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) {
+	return llm.ModelInfo{}, false
 }
 func (m *scriptedPersonalizationModels) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response, error) {
 	m.mu.Lock()
@@ -307,4 +312,96 @@ func TestExplicitRuleComparisonAndValidationStayOutsideModelExperiments(t *testi
 	if err != nil || current.Structured.Version != 2 {
 		t.Fatalf("validation mutated profile head: version=%d err=%v", current.Structured.Version, err)
 	}
+}
+
+// A response that never mentions the axes must publish them as unknown, not as six neutral
+// zeros — the fixture above hand-writes the exact key shape, which is how a prompt that never
+// named that shape passed CI while a live account showed 0 everywhere.
+func TestLearnPublishesUnansweredAxesAsUnknownAndRejectsOutOfRange(t *testing.T) {
+	learnWith := func(t *testing.T, response string, structured bool) (voice.Profile, llm.Request, error) {
+		t.Helper()
+		h := newVoiceHarness(t)
+		now := time.Now().UTC().Format(time.RFC3339Nano)
+		if _, err := h.db.Writer.Exec("INSERT INTO posts(slug,user_id,title,memo,status,created_at,updated_at) VALUES('axes','alice','축','','review',?,?)", now, now); err != nil {
+			t.Fatal(err)
+		}
+		raw := `{"title":"축","summary":"","tags":[],"blocks":[{"type":"TEXT","content":"오늘은 천천히 걸어요. 바람이 참 좋아요."}]}`
+		snapshot := voice.FinalizationInput{PostSlug: "axes", UserID: "alice", BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1}
+		h.svc.ConfigurePersonalization(learningPosts{snapshot: snapshot}, voice.PersonalizationConfig{FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: 3, EndingMaxConsecutive: 2})
+		h.models.response = response
+		h.models.structured = structured
+		event, _, _, err := h.svc.LearnFromFinalizedPost(context.Background(), "alice", "axes", analyzeRef)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.svc.Learn(context.Background(), voice.LearningJob{UserID: "alice", EventID: event.ID, WriteModel: analyzeRef.String()}, func(string, int, int) {})
+		profile, getErr := h.svc.Get(context.Background(), "alice")
+		if getErr != nil {
+			t.Fatal(getErr)
+		}
+		return profile, h.models.request, err
+	}
+	strings8 := `"lexical_description":"담백","base_register":"해요","connective_style":"","intro_pattern":"","closing_pattern":"","heading_habit":"","list_habit":"","emoji_use":""`
+
+	t.Run("omitted axes publish as unknown", func(t *testing.T) {
+		profile, request, err := learnWith(t, `{`+strings8+`}`, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, axis := range profile.Structured.Axes.AxisValues() {
+			if axis.Value != nil {
+				t.Fatalf("axis %s published %d for a response that never answered it", axis.Key, *axis.Value)
+			}
+		}
+		if request.JSONSchema != nil {
+			t.Fatal("schema attached to a model without structured output")
+		}
+		for _, key := range []string{`"axes"`, "involvement", "narrativity", "persuasion_overtness", "abstractness", "addressee_focus", "humor"} {
+			if !strings.Contains(request.System, key) {
+				t.Fatalf("prompt does not name %s", key)
+			}
+		}
+	})
+	t.Run("partially answered axes keep the answered values", func(t *testing.T) {
+		profile, _, err := learnWith(t, `{`+strings8+`,"axes":{"involvement":2,"humor":-1}}`, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		axes := profile.Structured.Axes
+		if axes.Involvement == nil || *axes.Involvement != 2 || axes.Humor == nil || *axes.Humor != -1 || axes.Narrativity != nil {
+			t.Fatalf("axes = %+v", axes)
+		}
+	})
+	t.Run("out-of-range axis still fails the job", func(t *testing.T) {
+		profile, _, err := learnWith(t, `{`+strings8+`,"axes":{"involvement":4}}`, false)
+		if err == nil || !strings.Contains(err.Error(), "-3..3") {
+			t.Fatalf("expected range error, got %v", err)
+		}
+		if profile.Structured.Version != 0 {
+			t.Fatalf("a rejected analysis published version %d", profile.Structured.Version)
+		}
+	})
+	t.Run("structured-output model receives the schema", func(t *testing.T) {
+		_, request, err := learnWith(t, `{`+strings8+`,"axes":{"involvement":0,"narrativity":0,"persuasion_overtness":0,"abstractness":0,"addressee_focus":0,"humor":0}}`, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(request.JSONSchema) != string(voice.VoiceAnalysisSchema()) {
+			t.Fatal("structured-output model did not receive the voice analysis schema")
+		}
+		var schema struct {
+			Required   []string `json:"required"`
+			Properties struct {
+				Axes struct {
+					Required []string `json:"required"`
+				} `json:"axes"`
+			} `json:"properties"`
+		}
+		if err := json.Unmarshal(request.JSONSchema, &schema); err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Contains(schema.Required, "axes") || len(schema.Properties.Axes.Required) != 6 {
+			t.Fatalf("schema does not require axes and its six keys: %+v", schema)
+		}
+	})
 }

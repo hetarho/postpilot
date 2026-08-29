@@ -733,14 +733,15 @@ func (x *VoiceStructure) GetEmojiUse() *VoiceValue {
 	return nil
 }
 
+// Each axis carries presence: an axis the analysis did not answer is absent, not 0.
 type VoiceAxes struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
-	Involvement         int32                  `protobuf:"varint,1,opt,name=involvement,proto3" json:"involvement,omitempty"`
-	Narrativity         int32                  `protobuf:"varint,2,opt,name=narrativity,proto3" json:"narrativity,omitempty"`
-	PersuasionOvertness int32                  `protobuf:"varint,3,opt,name=persuasion_overtness,json=persuasionOvertness,proto3" json:"persuasion_overtness,omitempty"`
-	Abstractness        int32                  `protobuf:"varint,4,opt,name=abstractness,proto3" json:"abstractness,omitempty"`
-	AddresseeFocus      int32                  `protobuf:"varint,5,opt,name=addressee_focus,json=addresseeFocus,proto3" json:"addressee_focus,omitempty"`
-	Humor               int32                  `protobuf:"varint,6,opt,name=humor,proto3" json:"humor,omitempty"`
+	Involvement         *int32                 `protobuf:"varint,1,opt,name=involvement,proto3,oneof" json:"involvement,omitempty"`
+	Narrativity         *int32                 `protobuf:"varint,2,opt,name=narrativity,proto3,oneof" json:"narrativity,omitempty"`
+	PersuasionOvertness *int32                 `protobuf:"varint,3,opt,name=persuasion_overtness,json=persuasionOvertness,proto3,oneof" json:"persuasion_overtness,omitempty"`
+	Abstractness        *int32                 `protobuf:"varint,4,opt,name=abstractness,proto3,oneof" json:"abstractness,omitempty"`
+	AddresseeFocus      *int32                 `protobuf:"varint,5,opt,name=addressee_focus,json=addresseeFocus,proto3,oneof" json:"addressee_focus,omitempty"`
+	Humor               *int32                 `protobuf:"varint,6,opt,name=humor,proto3,oneof" json:"humor,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -776,43 +777,43 @@ func (*VoiceAxes) Descriptor() ([]byte, []int) {
 }
 
 func (x *VoiceAxes) GetInvolvement() int32 {
-	if x != nil {
-		return x.Involvement
+	if x != nil && x.Involvement != nil {
+		return *x.Involvement
 	}
 	return 0
 }
 
 func (x *VoiceAxes) GetNarrativity() int32 {
-	if x != nil {
-		return x.Narrativity
+	if x != nil && x.Narrativity != nil {
+		return *x.Narrativity
 	}
 	return 0
 }
 
 func (x *VoiceAxes) GetPersuasionOvertness() int32 {
-	if x != nil {
-		return x.PersuasionOvertness
+	if x != nil && x.PersuasionOvertness != nil {
+		return *x.PersuasionOvertness
 	}
 	return 0
 }
 
 func (x *VoiceAxes) GetAbstractness() int32 {
-	if x != nil {
-		return x.Abstractness
+	if x != nil && x.Abstractness != nil {
+		return *x.Abstractness
 	}
 	return 0
 }
 
 func (x *VoiceAxes) GetAddresseeFocus() int32 {
-	if x != nil {
-		return x.AddresseeFocus
+	if x != nil && x.AddresseeFocus != nil {
+		return *x.AddresseeFocus
 	}
 	return 0
 }
 
 func (x *VoiceAxes) GetHumor() int32 {
-	if x != nil {
-		return x.Humor
+	if x != nil && x.Humor != nil {
+		return *x.Humor
 	}
 	return 0
 }
@@ -2220,14 +2221,20 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\rheading_habit\x18\x05 \x01(\v2\x18.postpilot.v1.VoiceValueR\fheadingHabit\x127\n" +
 	"\n" +
 	"list_habit\x18\x06 \x01(\v2\x18.postpilot.v1.VoiceValueR\tlistHabit\x125\n" +
-	"\temoji_use\x18\a \x01(\v2\x18.postpilot.v1.VoiceValueR\bemojiUse\"\xe5\x01\n" +
-	"\tVoiceAxes\x12 \n" +
-	"\vinvolvement\x18\x01 \x01(\x05R\vinvolvement\x12 \n" +
-	"\vnarrativity\x18\x02 \x01(\x05R\vnarrativity\x121\n" +
-	"\x14persuasion_overtness\x18\x03 \x01(\x05R\x13persuasionOvertness\x12\"\n" +
-	"\fabstractness\x18\x04 \x01(\x05R\fabstractness\x12'\n" +
-	"\x0faddressee_focus\x18\x05 \x01(\x05R\x0eaddresseeFocus\x12\x14\n" +
-	"\x05humor\x18\x06 \x01(\x05R\x05humor\"\xb0\x02\n" +
+	"\temoji_use\x18\a \x01(\v2\x18.postpilot.v1.VoiceValueR\bemojiUse\"\xeb\x02\n" +
+	"\tVoiceAxes\x12%\n" +
+	"\vinvolvement\x18\x01 \x01(\x05H\x00R\vinvolvement\x88\x01\x01\x12%\n" +
+	"\vnarrativity\x18\x02 \x01(\x05H\x01R\vnarrativity\x88\x01\x01\x126\n" +
+	"\x14persuasion_overtness\x18\x03 \x01(\x05H\x02R\x13persuasionOvertness\x88\x01\x01\x12'\n" +
+	"\fabstractness\x18\x04 \x01(\x05H\x03R\fabstractness\x88\x01\x01\x12,\n" +
+	"\x0faddressee_focus\x18\x05 \x01(\x05H\x04R\x0eaddresseeFocus\x88\x01\x01\x12\x19\n" +
+	"\x05humor\x18\x06 \x01(\x05H\x05R\x05humor\x88\x01\x01B\x0e\n" +
+	"\f_involvementB\x0e\n" +
+	"\f_narrativityB\x17\n" +
+	"\x15_persuasion_overtnessB\x0f\n" +
+	"\r_abstractnessB\x12\n" +
+	"\x10_addressee_focusB\b\n" +
+	"\x06_humor\"\xb0\x02\n" +
 	"\x11VoiceContrastRule\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
 	"\tstatement\x18\x02 \x01(\tR\tstatement\x12.\n" +
@@ -2484,6 +2491,7 @@ func file_postpilot_v1_voice_proto_init() {
 		return
 	}
 	file_postpilot_v1_provider_proto_init()
+	file_postpilot_v1_voice_proto_msgTypes[8].OneofWrappers = []any{}
 	file_postpilot_v1_voice_proto_msgTypes[19].OneofWrappers = []any{}
 	file_postpilot_v1_voice_proto_msgTypes[27].OneofWrappers = []any{}
 	type x struct{}

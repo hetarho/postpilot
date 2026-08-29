@@ -72,6 +72,7 @@ type Posts interface {
 // through the provider-neutral llm boundary.
 type Models interface {
 	AnalyzeModel(ctx context.Context, userID string) (llm.ModelRef, bool, error)
+	Resolve(ref llm.ModelRef) (llm.ModelInfo, bool)
 	Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error)
 }
 type PersonalizationModels interface{ ModelEnabled(ref llm.ModelRef) bool }
