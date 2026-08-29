@@ -144,6 +144,27 @@ async function run(queue: Queue): Promise<void> {
   collect(queue)
 }
 
+function flushQueue(queue: Queue): Promise<bigint> {
+  if (queue.discarded) return Promise.reject(new Error('session ended'))
+  if (queue.conflict) return Promise.reject(new ContentRevisionConflictError())
+  if (!queue.inFlight && !queue.pending) return Promise.resolve(queue.revision)
+  return new Promise<bigint>((resolve, reject) => {
+    queue.waiters.push({ resolve, reject })
+    sendNow(queue)
+  })
+}
+
+/** Flush this post's content queue without a mounted editor.
+ *
+ *  The queue outlives the component: it is keyed by slug and kept while it still has work, which is
+ *  what lets an unmounted editor's last save finish. 확정 lives on a different step from the block
+ *  editor now, so it has to be able to wait for that save — and take its revision — without the
+ *  editor on screen. Undefined means there is no queue at all, so there is nothing to wait for. */
+export function flushContentQueue(slug: string): Promise<bigint> | undefined {
+  const queue = queues.get(slug)
+  return queue ? flushQueue(queue) : undefined
+}
+
 export function attachContentQueue(options: {
   slug: string
   revision: bigint
@@ -187,15 +208,7 @@ export function attachContentQueue(options: {
       if (!attached.retryTimer) schedule(attached)
     },
     saveNow: () => sendNow(attached),
-    flush: () => {
-      if (attached.discarded) return Promise.reject(new Error('session ended'))
-      if (attached.conflict) return Promise.reject(new ContentRevisionConflictError())
-      if (!attached.inFlight && !attached.pending) return Promise.resolve(attached.revision)
-      return new Promise<bigint>((resolve, reject) => {
-        attached.waiters.push({ resolve, reject })
-        sendNow(attached)
-      })
-    },
+    flush: () => flushQueue(attached),
     release: () => {
       attached.listener = undefined
       sendNow(attached)

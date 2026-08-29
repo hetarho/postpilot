@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react'
 import { BlockType, type PostContent } from '@/shared/api'
 import type { PostImage } from '@/entities/image/@x/post'
 import { blockKey, imageByFile } from '../model/content'
@@ -5,15 +6,28 @@ import { blockKey, imageByFile } from '../model/content'
 interface BlockListProps {
   content: PostContent
   images: readonly PostImage[]
+  /** Wraps one rendered block, so a consumer can put its own affordance around the reading view
+   *  without this entity gaining one. The entities layer may not depend on features, so the edit
+   *  control has to arrive from the outside — the same render-prop seam `BlockEditor` already uses
+   *  for sentence feedback. */
+  renderBlock?: (block: PostContent['blocks'][number], index: number, rendered: ReactNode) => ReactNode
+  /** Wraps the title/summary/tags header for the same reason. */
+  renderHeader?: (rendered: ReactNode) => ReactNode
 }
 
 /** The canonical block array rendered as a read-only draft. */
-export function BlockList({ content, images }: BlockListProps) {
+export function BlockList({ content, images, renderBlock, renderHeader }: BlockListProps) {
   const imagesByFile = imageByFile(images)
+  // The key stays on this wrapper rather than on whatever the consumer returns — and it is the
+  // block's POSITION, not `blockKey`'s content-derived string: a consumer that edits the block in
+  // place would otherwise remount it on every keystroke and lose both the open editor and the caret.
+  const wrap = (block: PostContent['blocks'][number], index: number, rendered: ReactNode) =>
+    renderBlock ? <Fragment key={index}>{renderBlock(block, index, rendered)}</Fragment> : rendered
 
   return (
     <article aria-label="생성된 글" className="mt-12 pb-12">
-      <header>
+      {(renderHeader ?? ((rendered: ReactNode) => rendered))(
+        <header>
         <p className="text-content-tertiary text-xs font-medium tracking-wide uppercase">Draft</p>
         {/* `break-words` on every model-supplied string in this article: the global rule keeps the
             page from scrolling sideways, the local class keeps the box from being the one that
@@ -36,32 +50,41 @@ export function BlockList({ content, images }: BlockListProps) {
             ))}
           </ul>
         )}
-      </header>
+        </header>,
+      )}
 
       <div className="mt-8 space-y-5">
         {content.blocks.map((block, index) => {
           const key = blockKey(block, index)
           switch (block.type) {
             case BlockType.TEXT:
-              return (
+              return wrap(
+                block,
+                index,
                 <p key={key} className="text-sm leading-relaxed break-words whitespace-pre-wrap">
                   {block.content}
-                </p>
+                </p>,
               )
             case BlockType.HEADING:
-              return block.level === 3 ? (
-                <h3 key={key} className="pt-3 text-base font-semibold tracking-tight">
-                  {block.content}
-                </h3>
-              ) : (
-                <h2 key={key} className="pt-5 text-lg font-semibold tracking-tight">
-                  {block.content}
-                </h2>
+              return wrap(
+                block,
+                index,
+                block.level === 3 ? (
+                  <h3 key={key} className="pt-3 text-base font-semibold tracking-tight">
+                    {block.content}
+                  </h3>
+                ) : (
+                  <h2 key={key} className="pt-5 text-lg font-semibold tracking-tight">
+                    {block.content}
+                  </h2>
+                ),
               )
             case BlockType.IMAGE: {
               const image = imagesByFile.get(block.file)
               if (!image) return null
-              return (
+              return wrap(
+                block,
+                index,
                 <div key={key} className="py-2">
                   {/* Not the photo strip's `Thumbnail`: that tile is a fixed 128px square with
                       `object-cover`, so in the finished draft the photo the post exists for
@@ -88,20 +111,24 @@ export function BlockList({ content, images }: BlockListProps) {
                       {block.caption}
                     </p>
                   )}
-                </div>
+                </div>,
               )
             }
             case BlockType.QUOTE:
-              return (
+              return wrap(
+                block,
+                index,
                 <blockquote
                   key={key}
                   className="bg-surface-recessed text-content-secondary rounded-md px-4 py-3 text-sm leading-relaxed break-words"
                 >
                   {block.content}
-                </blockquote>
+                </blockquote>,
               )
             case BlockType.LIST:
-              return (
+              return wrap(
+                block,
+                index,
                 <ul
                   key={key}
                   className="list-disc space-y-1 pl-5 text-sm leading-relaxed break-words"
@@ -109,7 +136,7 @@ export function BlockList({ content, images }: BlockListProps) {
                   {block.items.map((item, itemIndex) => (
                     <li key={`${item}:${itemIndex}`}>{item}</li>
                   ))}
-                </ul>
+                </ul>,
               )
             default:
               return null

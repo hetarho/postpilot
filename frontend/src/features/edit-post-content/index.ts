@@ -1,2 +1,2 @@
 export { BlockEditor, type BlockEditorHandle } from './ui/BlockEditor'
-export { discardContentQueues, type ContentSaveState } from './model/content-queue'
+export { discardContentQueues, flushContentQueue, type ContentSaveState } from './model/content-queue'

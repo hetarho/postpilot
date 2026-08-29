@@ -1,4 +1,4 @@
-export type { PostDraft, PostListItem } from './model/types'
+export type { PostDraft, PostListItem, PostStatus } from './model/types'
 export { UNTITLED_TITLE, displayTitle, postStatusLabel } from './model/types'
 export { blockKey, hasContent, imageByFile } from './model/content'
 export { BlockList } from './ui/BlockList'

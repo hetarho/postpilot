@@ -14,6 +14,12 @@ import { clearCaret } from '../model/editor-handoff'
 
 const USER = { id: 'alice' }
 
+/** The editor is one mounted component showing three step panels, so a test reaches a panel the
+ *  post's status did not open by pressing its step. */
+async function openStep(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await user.click(await screen.findByRole('tab', { name: label }))
+}
+
 afterEach(() => {
   // Module state, so an unconsumed handoff would leak into the next test.
   clearCaret()
@@ -76,12 +82,15 @@ describe('opening a post', () => {
       },
     })
 
+    await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
+    // 글 완성 loads the post and the analyze selection the finalize control needs. The voice
+    // profile is NOT among them any more: the empty-profile warning belongs to 글 생성, so a post
+    // already past generating no longer pays for that read.
     await waitFor(() => {
-      expect(calls).toEqual(
-        expect.arrayContaining(['GetPost', 'ListModels', 'GetSelections', 'GetVoiceProfile']),
-      )
+      expect(calls).toEqual(expect.arrayContaining(['GetPost', 'ListModels', 'GetSelections']))
     })
+    expect(calls).not.toContain('GetVoiceProfile')
     calls.length = 0
 
     await user.click(screen.getByRole('tab', { name: '티스토리' }))
@@ -239,6 +248,11 @@ describe('opening a post', () => {
       jobs: { jobs: [failed] },
     })
 
+    // The failure is reported on every step; its retry is mounted on the step that owns the job.
+    expect(await screen.findByText('candidate failed')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
+
+    await openStep(user, '글 생성')
     await user.click(await screen.findByRole('button', { name: '다시 시도' }))
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/ai-models/experiments/experiment-pending'),
@@ -524,6 +538,7 @@ describe('opening a post', () => {
         ],
       },
     })
+    await openStep(user, '글 완성')
     const finalize = await screen.findByRole('button', { name: '확정' })
     expect(finalize).toBeEnabled()
     expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
@@ -559,6 +574,7 @@ describe('opening a post', () => {
         selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
       },
     })
+    await openStep(user, '글 완성')
     const combined = await screen.findByRole('button', { name: '확정하고 말투 학습' })
     await waitFor(() => expect(combined).toBeEnabled())
     await user.click(combined)
@@ -595,9 +611,15 @@ describe('opening a post', () => {
       },
     })
 
+    // A finalized post opens on 글 완성.
     expect(await screen.findByRole('button', { name: '말투 학습' })).toBeInTheDocument()
+
+    await openStep(user, '글 다듬기')
+    await user.click(await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }))
     await user.type(screen.getByLabelText('본문 제목'), ' 수정')
     await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
+
+    await openStep(user, '글 완성')
     expect(await screen.findByRole('button', { name: '확정' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '말투 학습' })).not.toBeInTheDocument()
   })
@@ -907,5 +929,256 @@ describe('a new draft', () => {
       AUTOSAVED,
     )
     expect(screen.getByLabelText('메모')).toHaveValue('첫날은 비')
+  })
+})
+
+describe('the editor lifecycle steps', () => {
+  const reviewPost = {
+    slug: '20260820-jeju',
+    status: 'review',
+    content: POST_CONTENT_FIXTURE,
+    images: POST_IMAGES_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+  }
+
+  // Change 05 A1.
+  it.each([
+    ['draft', '글 생성'],
+    ['review', '글 다듬기'],
+    ['finalized', '글 완성'],
+  ])('opens a %s post on %s', async (status, label) => {
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, status, canFinalize: true }] },
+    })
+
+    const tab = await screen.findByRole('tab', { name: label })
+    await waitFor(() => expect(tab).toHaveAttribute('aria-selected', 'true'))
+  })
+
+  // Change 05 A2 / A3: each step renders its own panel and none of the others'.
+  it('scopes the generation controls, the block surface, and finalize to their own steps', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, canFinalize: true }] },
+    })
+
+    // ② is where a review post opens: the draft and revision, no generation controls.
+    expect(await screen.findByRole('heading', { name: '글 다듬기' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('작성 모델')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
+
+    await openStep(user, '글 생성')
+    expect(await screen.findByRole('heading', { name: '글 생성' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'AI 모델에서 두 후보 설정' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '글 다듬기' })).not.toBeInTheDocument()
+
+    await openStep(user, '글 완성')
+    expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '확정' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '글 생성' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
+  })
+
+  // Change 05 A4: a step with no work yet says so and offers the way to the step that produces it.
+  it('opens an empty step without touching the post', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      posts: { posts: [{ slug: '20260820-jeju', status: 'draft', title: '제주 3일' }] },
+    })
+
+    await screen.findByRole('heading', { name: '글 생성' })
+    calls.length = 0
+
+    await openStep(user, '글 다듬기')
+    expect(await screen.findByText(/아직 다듬을 글이 없어요/)).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '글 다듬기' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: '글 생성으로 가기' }))
+    expect(await screen.findByRole('heading', { name: '글 생성' })).toBeInTheDocument()
+
+    // Opening a step is not an action: no status change, no job, no provider call.
+    expect(calls).not.toContain('SavePostDraft')
+    expect(calls).not.toContain('GeneratePost')
+    expect(calls).not.toContain('SavePostContent')
+  })
+
+  // Change 05 A6: steps are panels, so a save started before a step change still completes.
+  it('completes a title save started before the step changed', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      posts: { posts: [{ ...reviewPost, title: '제주 3일' }] },
+    })
+
+    const title = await screen.findByLabelText('제목')
+    await user.type(title, ' 여행기')
+    await openStep(user, '글 완성')
+
+    await waitFor(() => expect(calls).toContain('SavePostDraft'), { timeout: 4_000 })
+    // The field is outside the panels, so it kept both its value and its pending save.
+    expect(screen.getByLabelText('제목')).toHaveValue('제주 3일 여행기')
+  })
+
+  // Change 05 A11.
+  it('docks the save state on every step and one committing action at a time', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, canFinalize: true }] },
+    })
+
+    const dock = await screen.findByLabelText('저장 상태와 글 작업')
+    expect(within(dock).queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
+    expect(within(dock).queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+
+    await openStep(user, '글 생성')
+    expect(await within(dock).findByRole('button', { name: '생성' })).toBeInTheDocument()
+    expect(within(dock).queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+  })
+})
+
+describe('the draft read-first', () => {
+  const reviewPost = {
+    slug: '20260820-jeju',
+    status: 'review',
+    content: POST_CONTENT_FIXTURE,
+    images: POST_IMAGES_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+  }
+
+  // Change 05 A7 / A10.
+  it('renders the draft as prose with no form control until a block is opened', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', { user: USER, posts: { posts: [reviewPost] } })
+
+    const draft = await screen.findByRole('article', { name: '생성된 글' })
+    expect(within(draft).queryByRole('textbox')).not.toBeInTheDocument()
+    expect(within(draft).getByText(POST_CONTENT_FIXTURE.blocks[0].content)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
+    expect(screen.getByLabelText('1번째 블록 내용')).toHaveValue(
+      POST_CONTENT_FIXTURE.blocks[0].content,
+    )
+  })
+
+  // Change 05 A8: cancel restores the value the block had when its editor opened.
+  it('restores a cancelled block and keeps a saved one as prose', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', { user: USER, posts: { posts: [reviewPost] } })
+
+    await user.click(await screen.findByRole('button', { name: '1번째 블록 수정' }))
+    const field = screen.getByLabelText('1번째 블록 내용')
+    await user.clear(field)
+    await user.type(field, '고쳐 쓴 문단')
+    await user.click(screen.getByRole('button', { name: '취소' }))
+
+    expect(screen.queryByLabelText('1번째 블록 내용')).not.toBeInTheDocument()
+    expect(screen.getByText(POST_CONTENT_FIXTURE.blocks[0].content)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
+    const reopened = screen.getByLabelText('1번째 블록 내용')
+    await user.clear(reopened)
+    await user.type(reopened, '확정한 문단')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(screen.queryByLabelText('1번째 블록 내용')).not.toBeInTheDocument()
+    expect(screen.getByText('확정한 문단')).toBeInTheDocument()
+  })
+
+  // Change 05 A9: the editing UI keeps every capability it had.
+  it('keeps add, delete and move available from a block editor', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', { user: USER, calls, posts: { posts: [reviewPost] } })
+
+    await user.click(await screen.findByRole('button', { name: '2번째 블록 수정' }))
+    expect(screen.getByRole('button', { name: '2번째 블록 위로' })).toBeEnabled()
+    expect(screen.getByLabelText('2번째 블록 종류')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '삭제' }))
+    expect(screen.queryByLabelText('2번째 블록 종류')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '문단 추가' }))
+    expect(await screen.findByText('새 문단')).toBeInTheDocument()
+    await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
+  })
+})
+
+describe('the step split and the content save', () => {
+  const reviewPost = {
+    slug: '20260820-final',
+    status: 'review',
+    content: POST_CONTENT_FIXTURE,
+    images: POST_IMAGES_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+    canFinalize: true,
+  }
+
+  // The block editor lives on 글 다듬기 and 확정 on 글 완성, so finalize has to wait for the content
+  // save through the slug's queue rather than through a ref that is null by construction.
+  it('saves an edited block before finalizing from the next step', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-final', { user: USER, calls, posts: { posts: [reviewPost] } })
+
+    await user.click(await screen.findByRole('button', { name: '1번째 블록 수정' }))
+    const field = screen.getByLabelText('1번째 블록 내용')
+    await user.clear(field)
+    await user.type(field, '확정 직전에 고친 문단')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await openStep(user, '글 완성')
+    await user.click(await screen.findByRole('button', { name: '확정' }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확정' }))
+
+    await waitFor(() => expect(calls).toContain('FinalizePost'))
+    // The content save is ahead of the finalize, so the finalized revision includes the edit.
+    expect(calls.indexOf('SavePostContent')).toBeGreaterThan(-1)
+    expect(calls.indexOf('SavePostContent')).toBeLessThan(calls.indexOf('FinalizePost'))
+  })
+
+  // 취소 restores the block it opened on, so moving must close the editor rather than leave a
+  // snapshot pointed at whichever block shifted into that slot.
+  it('closes a block editor when the block moves', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-final', { user: USER, posts: { posts: [reviewPost] } })
+
+    await user.click(await screen.findByRole('button', { name: '2번째 블록 수정' }))
+    await user.click(screen.getByRole('button', { name: '2번째 블록 위로' }))
+
+    expect(screen.queryByRole('button', { name: '취소' })).not.toBeInTheDocument()
+    expect(screen.getByText(POST_CONTENT_FIXTURE.blocks[0].content)).toBeInTheDocument()
+    expect(screen.getByText(POST_CONTENT_FIXTURE.blocks[1].content)).toBeInTheDocument()
+  })
+
+  // The header editor owns the title, summary and tags — cancelling it must not revert a block.
+  it('keeps a block edit made while the header editor was open', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-final', { user: USER, posts: { posts: [reviewPost] } })
+
+    await user.click(await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }))
+    await user.type(screen.getByLabelText('본문 제목'), ' 수정')
+
+    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
+    const block = screen.getByLabelText('1번째 블록 내용')
+    await user.clear(block)
+    await user.type(block, '유지되어야 하는 문단')
+    await user.click(within(block.closest('article')!).getByRole('button', { name: '저장' }))
+
+    // 취소 on the header restores its three fields only.
+    await user.click(screen.getAllByRole('button', { name: '취소' })[0])
+
+    expect(screen.getByText('유지되어야 하는 문단')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: POST_CONTENT_FIXTURE.title })).toBeInTheDocument()
   })
 })
