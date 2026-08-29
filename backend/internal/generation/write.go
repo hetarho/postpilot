@@ -12,6 +12,11 @@ func (s *Service) write(ctx context.Context, post PostInput, observations []Obse
 	if err != nil {
 		return PostContent{}, fmt.Errorf("load voice profile: %w", err)
 	}
+	content, _, err := s.writeCandidate(ctx, post, profile, observations, model)
+	return content, err
+}
+
+func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Profile, observations []Observation, model llm.ModelRef) (PostContent, llm.Usage, error) {
 	filenames := make([]string, 0, len(post.Images))
 	for _, image := range post.Images {
 		filenames = append(filenames, image.Filename)
@@ -26,12 +31,12 @@ func (s *Service) write(ctx context.Context, post PostInput, observations []Obse
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
-		return PostContent{}, providerCallError("글 작성", err)
+		return PostContent{}, llm.Usage{}, providerCallError("글 작성", err)
 	}
 	content, err := ParseContent(response.Text)
 	if err != nil {
-		return PostContent{}, err
+		return PostContent{}, response.Usage, err
 	}
 	content.Blocks = ValidateBlocks(content.Blocks)
-	return FilterAttachments(*content, filenames), nil
+	return FilterAttachments(*content, filenames), response.Usage, nil
 }

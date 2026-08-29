@@ -10,6 +10,10 @@ const text: GenerationModelSelection = {
   ref: { providerId: 'openrouter', modelId: 'writer' },
   vision: false,
 }
+const textB: GenerationModelSelection = {
+  ref: { providerId: 'openrouter', modelId: 'writer-b' },
+  vision: false,
+}
 
 describe('generationPreconditions', () => {
   it.each([
@@ -62,6 +66,8 @@ describe('generationPreconditions', () => {
       ok: false,
     },
   ])('$name → $ok', ({ images, observe, write, active, ok }) => {
-    expect(generationPreconditions(images, observe, write, active).ok).toBe(ok)
+    expect(
+      generationPreconditions(images, observe, write, write ? textB : undefined, active).ok,
+    ).toBe(ok)
   })
 })

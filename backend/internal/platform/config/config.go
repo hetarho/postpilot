@@ -52,6 +52,10 @@ const llmMaxTokensDefault = 4096
 // parallel provider calls would only make rate limits and ordering less predictable.
 const WorkerConcurrency = 1
 
+// ExperimentCandidateConcurrency is the fixed pair width: one comparison has exactly
+// two candidates and both may call providers concurrently.
+const ExperimentCandidateConcurrency = 2
+
 // WorkerPollInterval is the fallback for a missed in-process wake signal.
 const WorkerPollInterval = time.Second
 
@@ -103,6 +107,11 @@ type Config struct {
 	LLMMaxTokensDefault int
 	// ObserveBatchSize is the number of photos sent to one observation call.
 	ObserveBatchSize int
+	// ExperimentContentRetention starts after a verdict/dismissal and bounds how long
+	// private inputs and candidate output remain stored.
+	ExperimentContentRetention time.Duration
+	// ExperimentSweepInterval is how often terminal experiment content is purged.
+	ExperimentSweepInterval time.Duration
 }
 
 // Load reads the environment, falling back to a repo-root .env when present so a
@@ -161,7 +170,29 @@ func Load() (*Config, error) {
 	}
 	cfg.ObserveBatchSize = batchSize
 
+	retention, err := positiveDuration("EXPERIMENT_CONTENT_RETENTION", "720h")
+	if err != nil {
+		return nil, err
+	}
+	cfg.ExperimentContentRetention = retention
+	experimentSweep, err := positiveDuration("EXPERIMENT_SWEEP_INTERVAL", "24h")
+	if err != nil {
+		return nil, err
+	}
+	cfg.ExperimentSweepInterval = experimentSweep
+
 	return cfg, nil
+}
+
+func positiveDuration(name, fallback string) (time.Duration, error) {
+	value, err := time.ParseDuration(getenv(name, fallback))
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", name, err)
+	}
+	if value <= 0 {
+		return 0, fmt.Errorf("%s: must be positive, got %s", name, value)
+	}
+	return value, nil
 }
 
 // RequireObjectStorage validates the R2 block.

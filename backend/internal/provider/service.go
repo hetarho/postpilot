@@ -35,6 +35,9 @@ func (s *Service) GetSelections(ctx context.Context, userID string) ([]Selection
 		return nil, fmt.Errorf("list selections: %w", err)
 	}
 	for i := range selections {
+		if selections[i].Slot == "" {
+			selections[i].Slot = SlotActive
+		}
 		// A model that lost `vision` in the yaml is as gone for observe as one deleted:
 		// the dropdown no longer lists it, so the choice is cleared the same way.
 		if info, ok := s.catalog.Lookup(selections[i].Ref); ok && Suitable(selections[i].Stage, info) {
@@ -47,6 +50,42 @@ func (s *Service) GetSelections(ctx context.Context, userID string) ([]Selection
 		}
 	}
 	return selections, nil
+}
+
+func (s *Service) GetComparisonPairs(ctx context.Context, userID string) ([]ComparisonPair, error) {
+	selections, err := s.store.ListSelectionSlots(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list comparison pairs: %w", err)
+	}
+	byStage := map[Stage]*ComparisonPair{}
+	for _, selection := range selections {
+		if selection.Slot == SlotActive {
+			continue
+		}
+		if info, ok := s.catalog.Lookup(selection.Ref); !ok || info.Disabled || !Suitable(selection.Stage, info) {
+			selection.Missing = true
+			if err := s.store.DeleteSelection(ctx, userID, selection); err != nil {
+				slog.Warn("clear vanished comparison selection failed", "user", userID, "stage", selection.Stage, "slot", selection.Slot, "err", err)
+			}
+		}
+		pair := byStage[selection.Stage]
+		if pair == nil {
+			pair = &ComparisonPair{Stage: selection.Stage}
+			byStage[selection.Stage] = pair
+		}
+		if selection.Slot == SlotCandidateA {
+			pair.CandidateA = selection
+		} else if selection.Slot == SlotCandidateB {
+			pair.CandidateB = selection
+		}
+	}
+	out := make([]ComparisonPair, 0, len(Stages))
+	for _, stage := range Stages {
+		if pair := byStage[stage]; pair != nil {
+			out = append(out, *pair)
+		}
+	}
+	return out, nil
 }
 
 // SaveSelection records a choice. Only a registered, enabled model can be chosen — the
@@ -65,9 +104,104 @@ func (s *Service) SaveSelection(ctx context.Context, userID string, stage Stage,
 	if !Suitable(stage, info) {
 		return Selection{}, fmt.Errorf("%w: %s has no vision, %s needs it", ErrModelUnsuitable, ref, stage)
 	}
-	selection := Selection{Stage: stage, Ref: ref, UpdatedAt: s.now()}
+	selection := Selection{Stage: stage, Slot: SlotActive, Ref: ref, UpdatedAt: s.now()}
 	if err := s.store.UpsertSelection(ctx, userID, selection); err != nil {
 		return Selection{}, fmt.Errorf("save selection: %w", err)
 	}
 	return selection, nil
+}
+
+func (s *Service) SaveComparisonPair(ctx context.Context, userID string, stage Stage, a, b llm.ModelRef) (ComparisonPair, error) {
+	if a == b {
+		return ComparisonPair{}, ErrDuplicateCandidates
+	}
+	if err := s.validateRef(stage, a); err != nil {
+		return ComparisonPair{}, err
+	}
+	if err := s.validateRef(stage, b); err != nil {
+		return ComparisonPair{}, err
+	}
+	now := s.now()
+	pair := ComparisonPair{Stage: stage,
+		CandidateA: Selection{Stage: stage, Slot: SlotCandidateA, Ref: a, UpdatedAt: now},
+		CandidateB: Selection{Stage: stage, Slot: SlotCandidateB, Ref: b, UpdatedAt: now},
+	}
+	if err := s.store.SaveSelections(ctx, userID, []Selection{pair.CandidateA, pair.CandidateB}); err != nil {
+		return ComparisonPair{}, fmt.Errorf("save comparison pair: %w", err)
+	}
+	return pair, nil
+}
+
+func (s *Service) RecommendationSets() []RecommendationSet {
+	sets := s.catalog.RecommendationSets()
+	out := make([]RecommendationSet, 0, len(sets))
+	for _, set := range sets {
+		converted := RecommendationSet{ID: set.ID, Label: set.Label}
+		for _, selection := range set.Selections {
+			stage, err := ParseStage(selection.Stage)
+			if err != nil {
+				continue
+			}
+			converted.Selections = append(converted.Selections, RecommendationStageSelection{
+				Stage: stage, Active: selection.Active, CandidateA: selection.CandidateA, CandidateB: selection.CandidateB,
+			})
+		}
+		out = append(out, converted)
+	}
+	return out
+}
+
+func (s *Service) ApplyRecommendationSet(ctx context.Context, userID, id string) (RecommendationSet, []Selection, []ComparisonPair, error) {
+	var selected *RecommendationSet
+	for _, set := range s.RecommendationSets() {
+		if set.ID == id {
+			copy := set
+			selected = &copy
+			break
+		}
+	}
+	if selected == nil {
+		return RecommendationSet{}, nil, nil, ErrRecommendationNotFound
+	}
+	now := s.now()
+	all := make([]Selection, 0, 9)
+	active := make([]Selection, 0, 3)
+	pairs := make([]ComparisonPair, 0, 3)
+	for _, stageSelection := range selected.Selections {
+		if stageSelection.CandidateA == stageSelection.CandidateB {
+			return RecommendationSet{}, nil, nil, ErrDuplicateCandidates
+		}
+		for _, ref := range []llm.ModelRef{stageSelection.Active, stageSelection.CandidateA, stageSelection.CandidateB} {
+			if err := s.validateRef(stageSelection.Stage, ref); err != nil {
+				return RecommendationSet{}, nil, nil, err
+			}
+		}
+		activeSelection := Selection{Stage: stageSelection.Stage, Slot: SlotActive, Ref: stageSelection.Active, UpdatedAt: now}
+		a := Selection{Stage: stageSelection.Stage, Slot: SlotCandidateA, Ref: stageSelection.CandidateA, UpdatedAt: now}
+		b := Selection{Stage: stageSelection.Stage, Slot: SlotCandidateB, Ref: stageSelection.CandidateB, UpdatedAt: now}
+		all = append(all, activeSelection, a, b)
+		active = append(active, activeSelection)
+		pairs = append(pairs, ComparisonPair{Stage: stageSelection.Stage, CandidateA: a, CandidateB: b})
+	}
+	if err := s.store.SaveSelections(ctx, userID, all); err != nil {
+		return RecommendationSet{}, nil, nil, fmt.Errorf("apply recommendation set: %w", err)
+	}
+	return *selected, active, pairs, nil
+}
+
+func (s *Service) validateRef(stage Stage, ref llm.ModelRef) error {
+	if _, err := ParseStage(string(stage)); err != nil {
+		return err
+	}
+	info, ok := s.catalog.Lookup(ref)
+	if !ok {
+		return fmt.Errorf("%w: %s", ErrModelNotRegistered, ref)
+	}
+	if info.Disabled {
+		return fmt.Errorf("%w: %s (%s)", ErrModelDisabled, ref, info.DisabledReason)
+	}
+	if !Suitable(stage, info) {
+		return fmt.Errorf("%w: %s has no vision, %s needs it", ErrModelUnsuitable, ref, stage)
+	}
+	return nil
 }

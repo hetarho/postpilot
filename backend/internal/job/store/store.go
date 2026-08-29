@@ -125,6 +125,18 @@ func (s *Store) ActiveForUserKind(ctx context.Context, userID, kind string) (*jo
 	return &found, err
 }
 
+func (s *Store) ActiveModelExperiment(ctx context.Context, experimentID string) (*job.Job, error) {
+	row, err := s.read.ActiveModelExperiment(ctx, experimentID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("select active experiment job: %w", err)
+	}
+	found, err := toJob(row)
+	return &found, err
+}
+
 func (s *Store) GetByID(ctx context.Context, id string) (job.Job, error) {
 	row, err := s.read.GetJobByID(ctx, id)
 	if err != nil {

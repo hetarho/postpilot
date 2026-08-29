@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"math/big"
 	"os"
 	"slices"
 	"strings"
@@ -27,12 +28,33 @@ func (r ModelRef) String() string { return r.ProviderID + "/" + r.ModelID }
 
 // ModelInfo is a registry entry as the catalog exposes it — ids, label and flags only.
 type ModelInfo struct {
-	Ref              ModelRef
-	Label            string
-	Vision           bool
-	StructuredOutput bool
-	Disabled         bool
-	DisabledReason   string
+	Ref                 ModelRef
+	Label               string
+	Vision              bool
+	StructuredOutput    bool
+	ContextTokens       int64
+	InputUSDPerMillion  string
+	OutputUSDPerMillion string
+	PricingCheckedAt    string
+	Disabled            bool
+	DisabledReason      string
+}
+
+// RecommendationSelection is the registry-owned, versioned selection for one stage.
+// Stage remains its stable string form so the llm boundary does not import provider.
+type RecommendationSelection struct {
+	Stage      string
+	Active     ModelRef
+	CandidateA ModelRef
+	CandidateB ModelRef
+}
+
+// RecommendationSet is display/config metadata. Applying one is provider-context
+// behavior because it owns model_selections and the acting account.
+type RecommendationSet struct {
+	ID         string
+	Label      string
+	Selections []RecommendationSelection
 }
 
 // Options tune every call the registry dispatches.
@@ -46,7 +68,8 @@ type Options struct {
 // The yaml shape. Field names are the contract documented in providers.yaml; unknown
 // fields are an error so a typo (`vison: true`) cannot silently disable a capability.
 type registryFile struct {
-	Providers []providerEntry `yaml:"providers"`
+	Providers          []providerEntry          `yaml:"providers"`
+	RecommendationSets []recommendationSetEntry `yaml:"recommendation_sets"`
 }
 
 type providerEntry struct {
@@ -58,10 +81,32 @@ type providerEntry struct {
 }
 
 type modelEntry struct {
-	ID               string `yaml:"id"`
-	Label            string `yaml:"label"`
-	Vision           bool   `yaml:"vision"`
-	StructuredOutput bool   `yaml:"structured_output"`
+	ID                  string `yaml:"id"`
+	Label               string `yaml:"label"`
+	Vision              bool   `yaml:"vision"`
+	StructuredOutput    bool   `yaml:"structured_output"`
+	ContextTokens       int64  `yaml:"context_tokens"`
+	InputUSDPerMillion  string `yaml:"input_usd_per_million"`
+	OutputUSDPerMillion string `yaml:"output_usd_per_million"`
+	PricingCheckedAt    string `yaml:"pricing_checked_at"`
+}
+
+type recommendationSetEntry struct {
+	ID         string                         `yaml:"id"`
+	Label      string                         `yaml:"label"`
+	Selections []recommendationSelectionEntry `yaml:"selections"`
+}
+
+type recommendationSelectionEntry struct {
+	Stage      string        `yaml:"stage"`
+	Active     modelRefEntry `yaml:"active"`
+	CandidateA modelRefEntry `yaml:"candidate_a"`
+	CandidateB modelRefEntry `yaml:"candidate_b"`
+}
+
+type modelRefEntry struct {
+	ProviderID string `yaml:"provider_id"`
+	ModelID    string `yaml:"model_id"`
 }
 
 type entry struct {
@@ -74,8 +119,9 @@ type entry struct {
 type Registry struct {
 	entries map[ModelRef]*entry
 	// order is the yaml order — the order the dropdowns show.
-	order []ModelRef
-	opts  Options
+	order           []ModelRef
+	recommendations []RecommendationSet
+	opts            Options
 }
 
 // Load reads and validates the registry file. Any problem is returned as an error the
@@ -169,21 +215,107 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 				label = m.ID
 			}
 			ref := ModelRef{ProviderID: p.ID, ModelID: m.ID}
+			if err := validateModelMetadata(m); err != nil {
+				return nil, fmt.Errorf("%s: model %q: %w", where, m.ID, err)
+			}
 			reg.entries[ref] = &entry{
 				info: ModelInfo{
-					Ref:              ref,
-					Label:            label,
-					Vision:           m.Vision,
-					StructuredOutput: m.StructuredOutput,
-					Disabled:         disabled,
-					DisabledReason:   reason,
+					Ref:                 ref,
+					Label:               label,
+					Vision:              m.Vision,
+					StructuredOutput:    m.StructuredOutput,
+					ContextTokens:       m.ContextTokens,
+					InputUSDPerMillion:  m.InputUSDPerMillion,
+					OutputUSDPerMillion: m.OutputUSDPerMillion,
+					PricingCheckedAt:    m.PricingCheckedAt,
+					Disabled:            disabled,
+					DisabledReason:      reason,
 				},
 				provider: provider,
 			}
 			reg.order = append(reg.order, ref)
 		}
 	}
+	if err := reg.loadRecommendations(file.RecommendationSets); err != nil {
+		return nil, err
+	}
 	return reg, nil
+}
+
+func validateModelMetadata(m modelEntry) error {
+	values := []string{m.InputUSDPerMillion, m.OutputUSDPerMillion, m.PricingCheckedAt}
+	provided := m.ContextTokens != 0 || slices.ContainsFunc(values, func(value string) bool { return value != "" })
+	if !provided {
+		return nil
+	}
+	if m.ContextTokens <= 0 {
+		return fmt.Errorf("context_tokens must be positive when pricing metadata is supplied")
+	}
+	for name, value := range map[string]string{
+		"input_usd_per_million":  m.InputUSDPerMillion,
+		"output_usd_per_million": m.OutputUSDPerMillion,
+	} {
+		parsed, ok := new(big.Rat).SetString(value)
+		if !ok || parsed.Sign() < 0 {
+			return fmt.Errorf("%s must be a non-negative decimal", name)
+		}
+	}
+	if _, err := time.Parse(time.DateOnly, m.PricingCheckedAt); err != nil {
+		return fmt.Errorf("pricing_checked_at must be YYYY-MM-DD")
+	}
+	return nil
+}
+
+func (r *Registry) loadRecommendations(entries []recommendationSetEntry) error {
+	seenSets := map[string]bool{}
+	for i, item := range entries {
+		if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.Label) == "" {
+			return fmt.Errorf("recommendation_sets[%d]: id and label are required", i)
+		}
+		if seenSets[item.ID] {
+			return fmt.Errorf("recommendation set %q: duplicate id", item.ID)
+		}
+		seenSets[item.ID] = true
+		if len(item.Selections) != 3 {
+			return fmt.Errorf("recommendation set %q: exactly three stage selections are required", item.ID)
+		}
+		set := RecommendationSet{ID: item.ID, Label: item.Label}
+		seenStages := map[string]bool{}
+		for _, selection := range item.Selections {
+			if selection.Stage != "observe" && selection.Stage != "write" && selection.Stage != "analyze" {
+				return fmt.Errorf("recommendation set %q: unknown stage %q", item.ID, selection.Stage)
+			}
+			if seenStages[selection.Stage] {
+				return fmt.Errorf("recommendation set %q: duplicate stage %q", item.ID, selection.Stage)
+			}
+			seenStages[selection.Stage] = true
+			converted := RecommendationSelection{
+				Stage:      selection.Stage,
+				Active:     toModelRef(selection.Active),
+				CandidateA: toModelRef(selection.CandidateA),
+				CandidateB: toModelRef(selection.CandidateB),
+			}
+			if converted.CandidateA == converted.CandidateB {
+				return fmt.Errorf("recommendation set %q stage %q: candidates must differ", item.ID, selection.Stage)
+			}
+			for _, ref := range []ModelRef{converted.Active, converted.CandidateA, converted.CandidateB} {
+				info, ok := r.Lookup(ref)
+				if !ok {
+					return fmt.Errorf("recommendation set %q stage %q: model %s is not registered", item.ID, selection.Stage, ref)
+				}
+				if selection.Stage == "observe" && !info.Vision {
+					return fmt.Errorf("recommendation set %q stage observe: model %s has no vision", item.ID, ref)
+				}
+			}
+			set.Selections = append(set.Selections, converted)
+		}
+		r.recommendations = append(r.recommendations, set)
+	}
+	return nil
+}
+
+func toModelRef(ref modelRefEntry) ModelRef {
+	return ModelRef{ProviderID: strings.TrimSpace(ref.ProviderID), ModelID: strings.TrimSpace(ref.ModelID)}
 }
 
 // Models is the catalog in yaml order.
@@ -191,6 +323,16 @@ func (r *Registry) Models() []ModelInfo {
 	out := make([]ModelInfo, 0, len(r.order))
 	for _, ref := range r.order {
 		out = append(out, r.entries[ref].info)
+	}
+	return out
+}
+
+// RecommendationSets returns defensive copies in yaml order.
+func (r *Registry) RecommendationSets() []RecommendationSet {
+	out := make([]RecommendationSet, len(r.recommendations))
+	for i, set := range r.recommendations {
+		out[i] = set
+		out[i].Selections = append([]RecommendationSelection(nil), set.Selections...)
 	}
 	return out
 }

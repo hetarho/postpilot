@@ -114,6 +114,37 @@ func (q *Queries) ActiveForUserKind(ctx context.Context, arg ActiveForUserKindPa
 	return i, err
 }
 
+const activeModelExperiment = `-- name: ActiveModelExperiment :one
+SELECT id, post_slug, user_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
+WHERE kind = 'model_experiment' AND payload = ? AND status IN ('queued', 'running')
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`
+
+func (q *Queries) ActiveModelExperiment(ctx context.Context, payload string) (GenerationJob, error) {
+	row := q.db.QueryRowContext(ctx, activeModelExperiment, payload)
+	var i GenerationJob
+	err := row.Scan(
+		&i.ID,
+		&i.PostSlug,
+		&i.UserID,
+		&i.Kind,
+		&i.Status,
+		&i.Stage,
+		&i.ProgressDone,
+		&i.ProgressTotal,
+		&i.Error,
+		&i.ObserveModel,
+		&i.WriteModel,
+		&i.Payload,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StartedAt,
+		&i.FinishedAt,
+	)
+	return i, err
+}
+
 const finishJob = `-- name: FinishJob :exec
 UPDATE generation_jobs
 SET status = ?, error = ?, finished_at = ?, updated_at = ?

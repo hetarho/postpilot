@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { displayTitle, postStatusLabel, usePosts } from '@/entities/post'
+import { useExperiments } from '@/entities/model-experiment'
 import { formatRelativeTime } from '@/shared/lib'
 import { Badge, Button, buttonStyles } from '@/shared/ui'
 
@@ -7,6 +8,8 @@ import { Badge, Button, buttonStyles } from '@/shared/ui'
  *  posts, newest first — this screen does not sort or filter. */
 export function PostsPage() {
   const { posts, isPending, isError, refetch } = usePosts()
+  const { experiments } = useExperiments()
+  const byId = new Map(experiments.map((experiment) => [experiment.id, experiment]))
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6">
@@ -38,21 +41,47 @@ export function PostsPage() {
       )}
 
       <ul className="divide-divider mt-4 divide-y">
-        {posts.map((post) => (
-          <li key={post.slug}>
-            <Link
-              to="/posts/$slug"
-              params={{ slug: post.slug }}
-              className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center gap-3 px-2 py-3"
-            >
+        {posts.map((post) => {
+          const pending = post.pendingExperimentId ? byId.get(post.pendingExperimentId) : undefined
+          const content = (
+            <>
               <span className="min-w-0 flex-1 truncate text-sm">{displayTitle(post)}</span>
-              <Badge>{post.activeJob ? '생성 중' : postStatusLabel(post.status)}</Badge>
+              <Badge>
+                {post.activeJob
+                  ? 'AI 생성 중'
+                  : pending?.status === 'failed' || pending?.status === 'partial'
+                    ? 'AI 결과 오류'
+                    : post.pendingExperimentId
+                      ? 'AI 결과 확인'
+                      : postStatusLabel(post.status)}
+              </Badge>
               <time dateTime={post.updatedAt} className="text-content-tertiary shrink-0 text-xs">
                 {formatRelativeTime(post.updatedAt)}
               </time>
-            </Link>
-          </li>
-        ))}
+            </>
+          )
+          return (
+            <li key={post.slug}>
+              {post.pendingExperimentId && !post.activeJob ? (
+                <Link
+                  to="/ai-models/experiments/$id"
+                  params={{ id: post.pendingExperimentId }}
+                  className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center gap-3 px-2 py-3"
+                >
+                  {content}
+                </Link>
+              ) : (
+                <Link
+                  to="/posts/$slug"
+                  params={{ slug: post.slug }}
+                  className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center gap-3 px-2 py-3"
+                >
+                  {content}
+                </Link>
+              )}
+            </li>
+          )
+        })}
       </ul>
     </main>
   )

@@ -36,3 +36,10 @@ func (q *Queue) ActiveForUserKind(ctx context.Context, userID, kind string) (*Jo
 	}
 	return summarize(*found), nil
 }
+
+// HasRunnableExperiment supports experiment boot recovery without exposing the job
+// store or making the experiment context read generation_jobs directly.
+func (q *Queue) HasRunnableExperiment(ctx context.Context, experimentID string) (bool, error) {
+	found, err := q.store.ActiveModelExperiment(ctx, experimentID)
+	return found != nil, err
+}

@@ -36,7 +36,8 @@ export interface FakeJobsOptions {
 export interface FakeGenerationStart {
   postSlug: string
   observeModel?: { providerId: string; modelId: string }
-  writeModel?: { providerId: string; modelId: string }
+  writeModelA?: { providerId: string; modelId: string }
+  writeModelB?: { providerId: string; modelId: string }
 }
 
 export interface FakeRevisionStart {
@@ -75,8 +76,11 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
       observeModel: req.observeModel
         ? { providerId: req.observeModel.providerId, modelId: req.observeModel.modelId }
         : undefined,
-      writeModel: req.writeModel
-        ? { providerId: req.writeModel.providerId, modelId: req.writeModel.modelId }
+      writeModelA: req.writeModelA
+        ? { providerId: req.writeModelA.providerId, modelId: req.writeModelA.modelId }
+        : undefined,
+      writeModelB: req.writeModelB
+        ? { providerId: req.writeModelB.providerId, modelId: req.writeModelB.modelId }
         : undefined,
     })
     return create(StartGenerationResponseSchema, { jobId: options.startJobId ?? 'job-started' })

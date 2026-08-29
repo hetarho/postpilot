@@ -5,6 +5,7 @@ export {
   providerClient,
   generationClient,
   voiceClient,
+  modelExperimentClient,
   credentialedFetch,
   unauthenticatedInterceptor,
 } from './transport'
@@ -58,7 +59,7 @@ export type {
   StartRevisionRequest,
   StartRevisionResponse,
 } from './gen/postpilot/v1/post_pb'
-export { ProviderService, Stage } from './gen/postpilot/v1/provider_pb'
+export { ProviderService, Stage, SelectionSlot } from './gen/postpilot/v1/provider_pb'
 export {
   GetSelectionsResponseSchema,
   ListModelsResponseSchema,
@@ -66,6 +67,12 @@ export {
   ModelRefSchema,
   SaveSelectionResponseSchema,
   SelectionSchema,
+  ComparisonPairSchema,
+  RecommendationSetSchema,
+  GetComparisonPairsResponseSchema,
+  ListRecommendationSetsResponseSchema,
+  SaveComparisonPairResponseSchema,
+  ApplyRecommendationSetResponseSchema,
 } from './gen/postpilot/v1/provider_pb'
 export { VoiceService } from './gen/postpilot/v1/voice_pb'
 export {
@@ -86,4 +93,19 @@ export type {
   ModelInfo as ProtoModelInfo,
   ModelRef as ProtoModelRef,
   Selection as ProtoSelection,
+  ComparisonPair as ProtoComparisonPair,
+  RecommendationSet as ProtoRecommendationSet,
 } from './gen/postpilot/v1/provider_pb'
+export {
+  ModelExperimentService,
+  ExperimentStatus,
+  DisplaySide,
+  CandidateStatus,
+  ExperimentOutcome,
+  CostSource,
+} from './gen/postpilot/v1/model_experiment_pb'
+export type {
+  ModelExperiment as ProtoModelExperiment,
+  ExperimentCandidate as ProtoExperimentCandidate,
+  LeaderboardEntry as ProtoLeaderboardEntry,
+} from './gen/postpilot/v1/model_experiment_pb'

@@ -1,8 +1,8 @@
 # Policy — Durable generation jobs
 
 Canonical rules that are **currently true** in the code. Source: [plan/05](../plan/05.generation-job-queue.md),
-built by job 07. The concrete `analyze_voice`, `generate`, and `revise` handlers are registered by their owning
-feature jobs; this document owns the shared record, worker, query, and polling contract.
+built by job 07. The concrete `analyze_voice`, `generate`, `revise`, and `model_experiment` handlers are registered by
+their owning feature jobs; this document owns the shared record, worker, query, and polling contract.
 
 ## Record and lifecycle
 
@@ -11,6 +11,8 @@ feature jobs; this document owns the shared record, worker, query, and polling c
   `queued → running → done | failed` ([I5]). Terminal rows are never reopened; retrying creates a new row.
 - The row records its owner, optional post target, kind, stage, exact progress, user-facing error, selected observe
   and write models, kind-specific JSON payload, and created/updated/started/finished timestamps.
+- `model_experiment` payload is the experiment id. Its progress stages are `observe`, `compare_write`,
+  `compare_observe`, and `compare_analyze`; candidate completion writes one monotonic compare counter.
 - `post_slug` is nullable because `analyze_voice` belongs to an account rather than a post. Model references are
   stored as `provider_id/model_id`; payload is stored as text.
 - One non-terminal job may target a post, regardless of kind. One non-terminal account-scoped job may exist for a
@@ -33,6 +35,8 @@ feature jobs; this document owns the shared record, worker, query, and polling c
   `running`; a handler that already produced success or an ordinary failure gets one bounded terminal write even if
   shutdown raced its return. The next boot sweep changes every still-running row to `failed` with
   `서버가 재시작되어 작업이 중단됐어요. 다시 시도해 주세요.` before a new worker starts.
+- After the job sweep, experiment boot recovery reconciles its own lifecycle: interrupted running work becomes
+  partial/failed, and an orphan queued experiment is failed only if no runnable experiment job remains.
 - There is no automatic retry, cancellation, separate worker process, external queue, job-history RPC, or partial
   text streaming.
 
@@ -44,6 +48,8 @@ feature jobs; this document owns the shared record, worker, query, and polling c
   the job context through its consumer-owned `ActiveJobFinder` port; it never reads `generation_jobs` itself.
 - The post list renders an active row as `생성 중`. Reopening a post recovers the durable id from `active_job`, so
   polling does not depend on component memory.
+- Post lists poll only while at least one returned post has an active job. They stop after the server projection
+  switches to a pending experiment review id.
 
 ## Browser polling and feedback
 

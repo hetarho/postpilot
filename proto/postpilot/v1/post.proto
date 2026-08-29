@@ -16,6 +16,7 @@ service PostService {
   rpc SavePostDraft(SavePostDraftRequest) returns (SavePostDraftResponse) {}
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {}
   rpc ListPosts(ListPostsRequest) returns (ListPostsResponse) {}
+  rpc DeletePost(DeletePostRequest) returns (DeletePostResponse) {}
 
   // Step 1 of the upload handshake: hands back a presigned PUT the BROWSER uses.
   rpc CreateUpload(CreateUploadRequest) returns (CreateUploadResponse) {}
@@ -79,6 +80,7 @@ message Post {
   GenerationJob active_job = 8;
   PostContent content = 9;
   repeated Observation observations = 10;
+  string pending_experiment_id = 11;
 }
 
 message Image {
@@ -101,6 +103,7 @@ message PostSummary {
   string status = 3;
   string updated_at = 4;
   GenerationJob active_job = 5;
+  string pending_experiment_id = 6;
 }
 
 message GenerationJob {
@@ -129,11 +132,13 @@ message GetGenerationResponse {
 message StartGenerationRequest {
   string post_slug = 1;
   ModelRef observe_model = 2;
-  ModelRef write_model = 3;
+  ModelRef write_model_a = 3;
+  ModelRef write_model_b = 4;
 }
 
 message StartGenerationResponse {
   string job_id = 1;
+  string experiment_id = 2;
 }
 
 message StartRevisionRequest {
@@ -172,6 +177,9 @@ message ListPostsResponse {
   // Newest first.
   repeated PostSummary posts = 1;
 }
+
+message DeletePostRequest { string slug = 1; }
+message DeletePostResponse {}
 
 message CreateUploadRequest {
   string post_slug = 1;

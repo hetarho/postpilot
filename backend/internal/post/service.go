@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -14,16 +15,28 @@ import (
 // Service is the drafting context's behavior. Every method takes the acting user id
 // from the caller (the interceptor put it in the context) and never from a payload.
 type Service struct {
-	store    Store
-	blobs    ObjectStore
-	putTTL   time.Duration
-	getTTL   time.Duration
-	maxBytes int64
-	jobs     ActiveJobFinder
+	store         Store
+	blobs         ObjectStore
+	putTTL        time.Duration
+	getTTL        time.Duration
+	maxBytes      int64
+	jobs          ActiveJobFinder
+	experiments   PendingExperimentFinder
+	contentPurger ExperimentContentPurger
 
 	// now and newID are seams for tests in this package, not configuration.
 	now   func() time.Time
 	newID func() string
+}
+
+// SetPendingExperimentFinder wires the experiment projection after both contexts have
+// been constructed in the composition root.
+func (s *Service) SetPendingExperimentFinder(finder PendingExperimentFinder) {
+	s.experiments = finder
+}
+
+func (s *Service) SetExperimentContentPurger(purger ExperimentContentPurger) {
+	s.contentPurger = purger
 }
 
 // NewService wires the context with its store, its object storage, the presigned URL
@@ -152,6 +165,12 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 			return Post{}, fmt.Errorf("load active job: %w", err)
 		}
 	}
+	if s.experiments != nil {
+		found.PendingExperimentID, err = s.experiments.PendingForPost(ctx, userID, slug)
+		if err != nil {
+			return Post{}, fmt.Errorf("load pending experiment: %w", err)
+		}
+	}
 	return found, nil
 }
 
@@ -169,7 +188,56 @@ func (s *Service) List(ctx context.Context, userID string) ([]Summary, error) {
 			}
 		}
 	}
+	if s.experiments != nil {
+		for i := range summaries {
+			summaries[i].PendingExperimentID, err = s.experiments.PendingForPost(ctx, userID, summaries[i].Slug)
+			if err != nil {
+				return nil, fmt.Errorf("load pending experiment for %s: %w", summaries[i].Slug, err)
+			}
+		}
+	}
 	return summaries, nil
+}
+
+// DeletePost removes one owned post only after sensitive experiment payloads have been
+// scrubbed. The durable experiment metadata remains, and its FK is then set to NULL.
+func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return err
+	}
+	images, err := s.store.ListImages(ctx, found.Slug)
+	if err != nil {
+		return fmt.Errorf("list images for post delete: %w", err)
+	}
+	if s.jobs != nil {
+		active, err := s.jobs.ActiveForPost(ctx, slug)
+		if err != nil {
+			return fmt.Errorf("check active job before post delete: %w", err)
+		}
+		if active != nil {
+			return ErrPostBusy
+		}
+	}
+	if s.contentPurger == nil {
+		return errors.New("experiment content purger is not configured")
+	}
+	if err := s.contentPurger.PurgePost(ctx, userID, slug); err != nil {
+		return fmt.Errorf("purge experiment content: %w", err)
+	}
+	for _, image := range images {
+		if err := s.blobs.Delete(ctx, image.Key); err != nil {
+			return fmt.Errorf("delete post image %s: %w", image.ID, err)
+		}
+	}
+	deleted, err := s.store.DeletePost(ctx, slug, userID)
+	if err != nil {
+		return fmt.Errorf("delete post: %w", err)
+	}
+	if !deleted {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // AttachedImages returns an ownership-checked generation snapshot without presigning
@@ -189,8 +257,12 @@ func (s *Service) AttachedImages(ctx context.Context, userID, slug string) (Post
 
 // SetObservations replaces the persisted contact sheet snapshot for one owned post.
 func (s *Service) SetObservations(ctx context.Context, userID, slug string, observations []Observation) error {
-	if _, err := s.ownedPost(ctx, userID, slug); err != nil {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
 		return err
+	}
+	if reflect.DeepEqual(found.Observations, observations) {
+		return nil
 	}
 	updated, err := s.store.UpdateObservations(ctx, slug, userID, observations, s.now())
 	if err != nil {
@@ -204,8 +276,12 @@ func (s *Service) SetObservations(ctx context.Context, userID, slug string, obse
 
 // SetGeneratedContent atomically replaces canonical content and moves the post to review.
 func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent) error {
-	if _, err := s.ownedPost(ctx, userID, slug); err != nil {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
 		return err
+	}
+	if found.Status == StatusReview && found.Content != nil && reflect.DeepEqual(*found.Content, content) {
+		return nil
 	}
 	updated, err := s.store.UpdateGeneratedContent(ctx, slug, userID, content, s.now())
 	if err != nil {

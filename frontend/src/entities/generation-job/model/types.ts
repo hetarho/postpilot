@@ -32,6 +32,12 @@ export function progressLabel(
       return '작성 중'
     case 'analyze':
       return '문체 분석 중'
+    case 'compare_write':
+      return `작성 후보 ${job.progressDone}/${job.progressTotal} 완료`
+    case 'compare_observe':
+      return `관찰 후보 ${job.progressDone}/${job.progressTotal} 완료`
+    case 'compare_analyze':
+      return `문체 분석 후보 ${job.progressDone}/${job.progressTotal} 완료`
     default:
       return '작업 준비 중'
   }

@@ -121,6 +121,27 @@ func (f *fakeStore) ListPosts(_ context.Context, userID string) ([]Summary, erro
 	return out, nil
 }
 
+func (f *fakeStore) DeletePost(_ context.Context, slug, userID string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	found, ok := f.posts[slug]
+	if !ok || found.UserID != userID {
+		return false, nil
+	}
+	delete(f.posts, slug)
+	for id, image := range f.images {
+		if image.PostSlug == slug {
+			delete(f.images, id)
+		}
+	}
+	for id, upload := range f.uploads {
+		if upload.PostSlug == slug {
+			delete(f.uploads, id)
+		}
+	}
+	return true, nil
+}
+
 func (f *fakeStore) CreateImage(_ context.Context, img Image) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()

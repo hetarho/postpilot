@@ -75,6 +75,58 @@ func (Stage) EnumDescriptor() ([]byte, []int) {
 	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{0}
 }
 
+type SelectionSlot int32
+
+const (
+	SelectionSlot_SELECTION_SLOT_UNSPECIFIED SelectionSlot = 0
+	SelectionSlot_SELECTION_SLOT_ACTIVE      SelectionSlot = 1
+	SelectionSlot_SELECTION_SLOT_CANDIDATE_A SelectionSlot = 2
+	SelectionSlot_SELECTION_SLOT_CANDIDATE_B SelectionSlot = 3
+)
+
+// Enum value maps for SelectionSlot.
+var (
+	SelectionSlot_name = map[int32]string{
+		0: "SELECTION_SLOT_UNSPECIFIED",
+		1: "SELECTION_SLOT_ACTIVE",
+		2: "SELECTION_SLOT_CANDIDATE_A",
+		3: "SELECTION_SLOT_CANDIDATE_B",
+	}
+	SelectionSlot_value = map[string]int32{
+		"SELECTION_SLOT_UNSPECIFIED": 0,
+		"SELECTION_SLOT_ACTIVE":      1,
+		"SELECTION_SLOT_CANDIDATE_A": 2,
+		"SELECTION_SLOT_CANDIDATE_B": 3,
+	}
+)
+
+func (x SelectionSlot) Enum() *SelectionSlot {
+	p := new(SelectionSlot)
+	*p = x
+	return p
+}
+
+func (x SelectionSlot) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SelectionSlot) Descriptor() protoreflect.EnumDescriptor {
+	return file_postpilot_v1_provider_proto_enumTypes[1].Descriptor()
+}
+
+func (SelectionSlot) Type() protoreflect.EnumType {
+	return &file_postpilot_v1_provider_proto_enumTypes[1]
+}
+
+func (x SelectionSlot) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SelectionSlot.Descriptor instead.
+func (SelectionSlot) EnumDescriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{1}
+}
+
 // Reused by the Start* RPCs of the generation plans: a job records exactly which model
 // it ran on.
 type ModelRef struct {
@@ -135,12 +187,16 @@ type ModelInfo struct {
 	Label string                 `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
 	// Declared per model in providers.yaml — the registry cannot probe them. The observe
 	// stage lists vision models only.
-	Vision           bool   `protobuf:"varint,3,opt,name=vision,proto3" json:"vision,omitempty"`
-	StructuredOutput bool   `protobuf:"varint,4,opt,name=structured_output,json=structuredOutput,proto3" json:"structured_output,omitempty"`
-	Disabled         bool   `protobuf:"varint,5,opt,name=disabled,proto3" json:"disabled,omitempty"`
-	DisabledReason   string `protobuf:"bytes,6,opt,name=disabled_reason,json=disabledReason,proto3" json:"disabled_reason,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	Vision              bool   `protobuf:"varint,3,opt,name=vision,proto3" json:"vision,omitempty"`
+	StructuredOutput    bool   `protobuf:"varint,4,opt,name=structured_output,json=structuredOutput,proto3" json:"structured_output,omitempty"`
+	Disabled            bool   `protobuf:"varint,5,opt,name=disabled,proto3" json:"disabled,omitempty"`
+	DisabledReason      string `protobuf:"bytes,6,opt,name=disabled_reason,json=disabledReason,proto3" json:"disabled_reason,omitempty"`
+	ContextTokens       int64  `protobuf:"varint,7,opt,name=context_tokens,json=contextTokens,proto3" json:"context_tokens,omitempty"`
+	InputUsdPerMillion  string `protobuf:"bytes,8,opt,name=input_usd_per_million,json=inputUsdPerMillion,proto3" json:"input_usd_per_million,omitempty"`
+	OutputUsdPerMillion string `protobuf:"bytes,9,opt,name=output_usd_per_million,json=outputUsdPerMillion,proto3" json:"output_usd_per_million,omitempty"`
+	PricingCheckedAt    string `protobuf:"bytes,10,opt,name=pricing_checked_at,json=pricingCheckedAt,proto3" json:"pricing_checked_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ModelInfo) Reset() {
@@ -215,13 +271,42 @@ func (x *ModelInfo) GetDisabledReason() string {
 	return ""
 }
 
+func (x *ModelInfo) GetContextTokens() int64 {
+	if x != nil {
+		return x.ContextTokens
+	}
+	return 0
+}
+
+func (x *ModelInfo) GetInputUsdPerMillion() string {
+	if x != nil {
+		return x.InputUsdPerMillion
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetOutputUsdPerMillion() string {
+	if x != nil {
+		return x.OutputUsdPerMillion
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetPricingCheckedAt() string {
+	if x != nil {
+		return x.PricingCheckedAt
+	}
+	return ""
+}
+
 type Selection struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Stage Stage                  `protobuf:"varint,1,opt,name=stage,proto3,enum=postpilot.v1.Stage" json:"stage,omitempty"`
 	Ref   *ModelRef              `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
 	// The saved ref is no longer in the registry. The row is already gone; this tells the
 	// client what to grey out and why.
-	Missing       bool `protobuf:"varint,3,opt,name=missing,proto3" json:"missing,omitempty"`
+	Missing       bool          `protobuf:"varint,3,opt,name=missing,proto3" json:"missing,omitempty"`
+	Slot          SelectionSlot `protobuf:"varint,4,opt,name=slot,proto3,enum=postpilot.v1.SelectionSlot" json:"slot,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -277,6 +362,201 @@ func (x *Selection) GetMissing() bool {
 	return false
 }
 
+func (x *Selection) GetSlot() SelectionSlot {
+	if x != nil {
+		return x.Slot
+	}
+	return SelectionSlot_SELECTION_SLOT_UNSPECIFIED
+}
+
+type ComparisonPair struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stage         Stage                  `protobuf:"varint,1,opt,name=stage,proto3,enum=postpilot.v1.Stage" json:"stage,omitempty"`
+	CandidateA    *Selection             `protobuf:"bytes,2,opt,name=candidate_a,json=candidateA,proto3" json:"candidate_a,omitempty"`
+	CandidateB    *Selection             `protobuf:"bytes,3,opt,name=candidate_b,json=candidateB,proto3" json:"candidate_b,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ComparisonPair) Reset() {
+	*x = ComparisonPair{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ComparisonPair) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ComparisonPair) ProtoMessage() {}
+
+func (x *ComparisonPair) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ComparisonPair.ProtoReflect.Descriptor instead.
+func (*ComparisonPair) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ComparisonPair) GetStage() Stage {
+	if x != nil {
+		return x.Stage
+	}
+	return Stage_STAGE_UNSPECIFIED
+}
+
+func (x *ComparisonPair) GetCandidateA() *Selection {
+	if x != nil {
+		return x.CandidateA
+	}
+	return nil
+}
+
+func (x *ComparisonPair) GetCandidateB() *Selection {
+	if x != nil {
+		return x.CandidateB
+	}
+	return nil
+}
+
+type RecommendationStageSelection struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stage         Stage                  `protobuf:"varint,1,opt,name=stage,proto3,enum=postpilot.v1.Stage" json:"stage,omitempty"`
+	Active        *ModelRef              `protobuf:"bytes,2,opt,name=active,proto3" json:"active,omitempty"`
+	CandidateA    *ModelRef              `protobuf:"bytes,3,opt,name=candidate_a,json=candidateA,proto3" json:"candidate_a,omitempty"`
+	CandidateB    *ModelRef              `protobuf:"bytes,4,opt,name=candidate_b,json=candidateB,proto3" json:"candidate_b,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecommendationStageSelection) Reset() {
+	*x = RecommendationStageSelection{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecommendationStageSelection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecommendationStageSelection) ProtoMessage() {}
+
+func (x *RecommendationStageSelection) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecommendationStageSelection.ProtoReflect.Descriptor instead.
+func (*RecommendationStageSelection) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *RecommendationStageSelection) GetStage() Stage {
+	if x != nil {
+		return x.Stage
+	}
+	return Stage_STAGE_UNSPECIFIED
+}
+
+func (x *RecommendationStageSelection) GetActive() *ModelRef {
+	if x != nil {
+		return x.Active
+	}
+	return nil
+}
+
+func (x *RecommendationStageSelection) GetCandidateA() *ModelRef {
+	if x != nil {
+		return x.CandidateA
+	}
+	return nil
+}
+
+func (x *RecommendationStageSelection) GetCandidateB() *ModelRef {
+	if x != nil {
+		return x.CandidateB
+	}
+	return nil
+}
+
+type RecommendationSet struct {
+	state         protoimpl.MessageState          `protogen:"open.v1"`
+	Id            string                          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Label         string                          `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	Selections    []*RecommendationStageSelection `protobuf:"bytes,3,rep,name=selections,proto3" json:"selections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecommendationSet) Reset() {
+	*x = RecommendationSet{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecommendationSet) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecommendationSet) ProtoMessage() {}
+
+func (x *RecommendationSet) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecommendationSet.ProtoReflect.Descriptor instead.
+func (*RecommendationSet) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *RecommendationSet) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RecommendationSet) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *RecommendationSet) GetSelections() []*RecommendationStageSelection {
+	if x != nil {
+		return x.Selections
+	}
+	return nil
+}
+
 type ListModelsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -285,7 +565,7 @@ type ListModelsRequest struct {
 
 func (x *ListModelsRequest) Reset() {
 	*x = ListModelsRequest{}
-	mi := &file_postpilot_v1_provider_proto_msgTypes[3]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -297,7 +577,7 @@ func (x *ListModelsRequest) String() string {
 func (*ListModelsRequest) ProtoMessage() {}
 
 func (x *ListModelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_provider_proto_msgTypes[3]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -310,7 +590,7 @@ func (x *ListModelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListModelsRequest.ProtoReflect.Descriptor instead.
 func (*ListModelsRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{3}
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{6}
 }
 
 type ListModelsResponse struct {
@@ -322,7 +602,7 @@ type ListModelsResponse struct {
 
 func (x *ListModelsResponse) Reset() {
 	*x = ListModelsResponse{}
-	mi := &file_postpilot_v1_provider_proto_msgTypes[4]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -334,7 +614,7 @@ func (x *ListModelsResponse) String() string {
 func (*ListModelsResponse) ProtoMessage() {}
 
 func (x *ListModelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_provider_proto_msgTypes[4]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -347,7 +627,7 @@ func (x *ListModelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListModelsResponse.ProtoReflect.Descriptor instead.
 func (*ListModelsResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{4}
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListModelsResponse) GetModels() []*ModelInfo {
@@ -365,7 +645,7 @@ type GetSelectionsRequest struct {
 
 func (x *GetSelectionsRequest) Reset() {
 	*x = GetSelectionsRequest{}
-	mi := &file_postpilot_v1_provider_proto_msgTypes[5]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -377,7 +657,7 @@ func (x *GetSelectionsRequest) String() string {
 func (*GetSelectionsRequest) ProtoMessage() {}
 
 func (x *GetSelectionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_provider_proto_msgTypes[5]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -390,7 +670,7 @@ func (x *GetSelectionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSelectionsRequest.ProtoReflect.Descriptor instead.
 func (*GetSelectionsRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{5}
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{8}
 }
 
 type GetSelectionsResponse struct {
@@ -402,7 +682,7 @@ type GetSelectionsResponse struct {
 
 func (x *GetSelectionsResponse) Reset() {
 	*x = GetSelectionsResponse{}
-	mi := &file_postpilot_v1_provider_proto_msgTypes[6]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -414,7 +694,7 @@ func (x *GetSelectionsResponse) String() string {
 func (*GetSelectionsResponse) ProtoMessage() {}
 
 func (x *GetSelectionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_provider_proto_msgTypes[6]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -427,7 +707,7 @@ func (x *GetSelectionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSelectionsResponse.ProtoReflect.Descriptor instead.
 func (*GetSelectionsResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetSelectionsResponse) GetSelections() []*Selection {
@@ -447,7 +727,7 @@ type SaveSelectionRequest struct {
 
 func (x *SaveSelectionRequest) Reset() {
 	*x = SaveSelectionRequest{}
-	mi := &file_postpilot_v1_provider_proto_msgTypes[7]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -459,7 +739,7 @@ func (x *SaveSelectionRequest) String() string {
 func (*SaveSelectionRequest) ProtoMessage() {}
 
 func (x *SaveSelectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_provider_proto_msgTypes[7]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -472,7 +752,7 @@ func (x *SaveSelectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveSelectionRequest.ProtoReflect.Descriptor instead.
 func (*SaveSelectionRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SaveSelectionRequest) GetStage() Stage {
@@ -498,7 +778,7 @@ type SaveSelectionResponse struct {
 
 func (x *SaveSelectionResponse) Reset() {
 	*x = SaveSelectionResponse{}
-	mi := &file_postpilot_v1_provider_proto_msgTypes[8]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -510,7 +790,7 @@ func (x *SaveSelectionResponse) String() string {
 func (*SaveSelectionResponse) ProtoMessage() {}
 
 func (x *SaveSelectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_provider_proto_msgTypes[8]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -523,12 +803,380 @@ func (x *SaveSelectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveSelectionResponse.ProtoReflect.Descriptor instead.
 func (*SaveSelectionResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{8}
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SaveSelectionResponse) GetSelection() *Selection {
 	if x != nil {
 		return x.Selection
+	}
+	return nil
+}
+
+type GetComparisonPairsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetComparisonPairsRequest) Reset() {
+	*x = GetComparisonPairsRequest{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetComparisonPairsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetComparisonPairsRequest) ProtoMessage() {}
+
+func (x *GetComparisonPairsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetComparisonPairsRequest.ProtoReflect.Descriptor instead.
+func (*GetComparisonPairsRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{12}
+}
+
+type GetComparisonPairsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pairs         []*ComparisonPair      `protobuf:"bytes,1,rep,name=pairs,proto3" json:"pairs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetComparisonPairsResponse) Reset() {
+	*x = GetComparisonPairsResponse{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetComparisonPairsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetComparisonPairsResponse) ProtoMessage() {}
+
+func (x *GetComparisonPairsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetComparisonPairsResponse.ProtoReflect.Descriptor instead.
+func (*GetComparisonPairsResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GetComparisonPairsResponse) GetPairs() []*ComparisonPair {
+	if x != nil {
+		return x.Pairs
+	}
+	return nil
+}
+
+type SaveComparisonPairRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stage         Stage                  `protobuf:"varint,1,opt,name=stage,proto3,enum=postpilot.v1.Stage" json:"stage,omitempty"`
+	CandidateA    *ModelRef              `protobuf:"bytes,2,opt,name=candidate_a,json=candidateA,proto3" json:"candidate_a,omitempty"`
+	CandidateB    *ModelRef              `protobuf:"bytes,3,opt,name=candidate_b,json=candidateB,proto3" json:"candidate_b,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveComparisonPairRequest) Reset() {
+	*x = SaveComparisonPairRequest{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveComparisonPairRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveComparisonPairRequest) ProtoMessage() {}
+
+func (x *SaveComparisonPairRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveComparisonPairRequest.ProtoReflect.Descriptor instead.
+func (*SaveComparisonPairRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SaveComparisonPairRequest) GetStage() Stage {
+	if x != nil {
+		return x.Stage
+	}
+	return Stage_STAGE_UNSPECIFIED
+}
+
+func (x *SaveComparisonPairRequest) GetCandidateA() *ModelRef {
+	if x != nil {
+		return x.CandidateA
+	}
+	return nil
+}
+
+func (x *SaveComparisonPairRequest) GetCandidateB() *ModelRef {
+	if x != nil {
+		return x.CandidateB
+	}
+	return nil
+}
+
+type SaveComparisonPairResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pair          *ComparisonPair        `protobuf:"bytes,1,opt,name=pair,proto3" json:"pair,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveComparisonPairResponse) Reset() {
+	*x = SaveComparisonPairResponse{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveComparisonPairResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveComparisonPairResponse) ProtoMessage() {}
+
+func (x *SaveComparisonPairResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveComparisonPairResponse.ProtoReflect.Descriptor instead.
+func (*SaveComparisonPairResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SaveComparisonPairResponse) GetPair() *ComparisonPair {
+	if x != nil {
+		return x.Pair
+	}
+	return nil
+}
+
+type ListRecommendationSetsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRecommendationSetsRequest) Reset() {
+	*x = ListRecommendationSetsRequest{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRecommendationSetsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRecommendationSetsRequest) ProtoMessage() {}
+
+func (x *ListRecommendationSetsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRecommendationSetsRequest.ProtoReflect.Descriptor instead.
+func (*ListRecommendationSetsRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{16}
+}
+
+type ListRecommendationSetsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sets          []*RecommendationSet   `protobuf:"bytes,1,rep,name=sets,proto3" json:"sets,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRecommendationSetsResponse) Reset() {
+	*x = ListRecommendationSetsResponse{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRecommendationSetsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRecommendationSetsResponse) ProtoMessage() {}
+
+func (x *ListRecommendationSetsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRecommendationSetsResponse.ProtoReflect.Descriptor instead.
+func (*ListRecommendationSetsResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListRecommendationSetsResponse) GetSets() []*RecommendationSet {
+	if x != nil {
+		return x.Sets
+	}
+	return nil
+}
+
+type ApplyRecommendationSetRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApplyRecommendationSetRequest) Reset() {
+	*x = ApplyRecommendationSetRequest{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplyRecommendationSetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplyRecommendationSetRequest) ProtoMessage() {}
+
+func (x *ApplyRecommendationSetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplyRecommendationSetRequest.ProtoReflect.Descriptor instead.
+func (*ApplyRecommendationSetRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ApplyRecommendationSetRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ApplyRecommendationSetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Set           *RecommendationSet     `protobuf:"bytes,1,opt,name=set,proto3" json:"set,omitempty"`
+	Selections    []*Selection           `protobuf:"bytes,2,rep,name=selections,proto3" json:"selections,omitempty"`
+	Pairs         []*ComparisonPair      `protobuf:"bytes,3,rep,name=pairs,proto3" json:"pairs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApplyRecommendationSetResponse) Reset() {
+	*x = ApplyRecommendationSetResponse{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplyRecommendationSetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplyRecommendationSetResponse) ProtoMessage() {}
+
+func (x *ApplyRecommendationSetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplyRecommendationSetResponse.ProtoReflect.Descriptor instead.
+func (*ApplyRecommendationSetResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ApplyRecommendationSetResponse) GetSet() *RecommendationSet {
+	if x != nil {
+		return x.Set
+	}
+	return nil
+}
+
+func (x *ApplyRecommendationSetResponse) GetSelections() []*Selection {
+	if x != nil {
+		return x.Selections
+	}
+	return nil
+}
+
+func (x *ApplyRecommendationSetResponse) GetPairs() []*ComparisonPair {
+	if x != nil {
+		return x.Pairs
 	}
 	return nil
 }
@@ -541,18 +1189,43 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\bModelRef\x12\x1f\n" +
 	"\vprovider_id\x18\x01 \x01(\tR\n" +
 	"providerId\x12\x19\n" +
-	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\xd5\x01\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\x92\x03\n" +
 	"\tModelInfo\x12(\n" +
 	"\x03ref\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x16\n" +
 	"\x06vision\x18\x03 \x01(\bR\x06vision\x12+\n" +
 	"\x11structured_output\x18\x04 \x01(\bR\x10structuredOutput\x12\x1a\n" +
 	"\bdisabled\x18\x05 \x01(\bR\bdisabled\x12'\n" +
-	"\x0fdisabled_reason\x18\x06 \x01(\tR\x0edisabledReason\"z\n" +
+	"\x0fdisabled_reason\x18\x06 \x01(\tR\x0edisabledReason\x12%\n" +
+	"\x0econtext_tokens\x18\a \x01(\x03R\rcontextTokens\x121\n" +
+	"\x15input_usd_per_million\x18\b \x01(\tR\x12inputUsdPerMillion\x123\n" +
+	"\x16output_usd_per_million\x18\t \x01(\tR\x13outputUsdPerMillion\x12,\n" +
+	"\x12pricing_checked_at\x18\n" +
+	" \x01(\tR\x10pricingCheckedAt\"\xab\x01\n" +
 	"\tSelection\x12)\n" +
 	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x12(\n" +
 	"\x03ref\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\x12\x18\n" +
-	"\amissing\x18\x03 \x01(\bR\amissing\"\x13\n" +
+	"\amissing\x18\x03 \x01(\bR\amissing\x12/\n" +
+	"\x04slot\x18\x04 \x01(\x0e2\x1b.postpilot.v1.SelectionSlotR\x04slot\"\xaf\x01\n" +
+	"\x0eComparisonPair\x12)\n" +
+	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x128\n" +
+	"\vcandidate_a\x18\x02 \x01(\v2\x17.postpilot.v1.SelectionR\n" +
+	"candidateA\x128\n" +
+	"\vcandidate_b\x18\x03 \x01(\v2\x17.postpilot.v1.SelectionR\n" +
+	"candidateB\"\xeb\x01\n" +
+	"\x1cRecommendationStageSelection\x12)\n" +
+	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x12.\n" +
+	"\x06active\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x06active\x127\n" +
+	"\vcandidate_a\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"candidateA\x127\n" +
+	"\vcandidate_b\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"candidateB\"\x85\x01\n" +
+	"\x11RecommendationSet\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12J\n" +
+	"\n" +
+	"selections\x18\x03 \x03(\v2*.postpilot.v1.RecommendationStageSelectionR\n" +
+	"selections\"\x13\n" +
 	"\x11ListModelsRequest\"E\n" +
 	"\x12ListModelsResponse\x12/\n" +
 	"\x06models\x18\x01 \x03(\v2\x17.postpilot.v1.ModelInfoR\x06models\"\x16\n" +
@@ -565,17 +1238,48 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x12(\n" +
 	"\x03ref\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\"N\n" +
 	"\x15SaveSelectionResponse\x125\n" +
-	"\tselection\x18\x01 \x01(\v2\x17.postpilot.v1.SelectionR\tselection*U\n" +
+	"\tselection\x18\x01 \x01(\v2\x17.postpilot.v1.SelectionR\tselection\"\x1b\n" +
+	"\x19GetComparisonPairsRequest\"P\n" +
+	"\x1aGetComparisonPairsResponse\x122\n" +
+	"\x05pairs\x18\x01 \x03(\v2\x1c.postpilot.v1.ComparisonPairR\x05pairs\"\xb8\x01\n" +
+	"\x19SaveComparisonPairRequest\x12)\n" +
+	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x127\n" +
+	"\vcandidate_a\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"candidateA\x127\n" +
+	"\vcandidate_b\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"candidateB\"N\n" +
+	"\x1aSaveComparisonPairResponse\x120\n" +
+	"\x04pair\x18\x01 \x01(\v2\x1c.postpilot.v1.ComparisonPairR\x04pair\"\x1f\n" +
+	"\x1dListRecommendationSetsRequest\"U\n" +
+	"\x1eListRecommendationSetsResponse\x123\n" +
+	"\x04sets\x18\x01 \x03(\v2\x1f.postpilot.v1.RecommendationSetR\x04sets\"/\n" +
+	"\x1dApplyRecommendationSetRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xc0\x01\n" +
+	"\x1eApplyRecommendationSetResponse\x121\n" +
+	"\x03set\x18\x01 \x01(\v2\x1f.postpilot.v1.RecommendationSetR\x03set\x127\n" +
+	"\n" +
+	"selections\x18\x02 \x03(\v2\x17.postpilot.v1.SelectionR\n" +
+	"selections\x122\n" +
+	"\x05pairs\x18\x03 \x03(\v2\x1c.postpilot.v1.ComparisonPairR\x05pairs*U\n" +
 	"\x05Stage\x12\x15\n" +
 	"\x11STAGE_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rSTAGE_OBSERVE\x10\x01\x12\x0f\n" +
 	"\vSTAGE_WRITE\x10\x02\x12\x11\n" +
-	"\rSTAGE_ANALYZE\x10\x032\x9c\x02\n" +
+	"\rSTAGE_ANALYZE\x10\x03*\x8a\x01\n" +
+	"\rSelectionSlot\x12\x1e\n" +
+	"\x1aSELECTION_SLOT_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15SELECTION_SLOT_ACTIVE\x10\x01\x12\x1e\n" +
+	"\x1aSELECTION_SLOT_CANDIDATE_A\x10\x02\x12\x1e\n" +
+	"\x1aSELECTION_SLOT_CANDIDATE_B\x10\x032\xe0\x05\n" +
 	"\x0fProviderService\x12Q\n" +
 	"\n" +
 	"ListModels\x12\x1f.postpilot.v1.ListModelsRequest\x1a .postpilot.v1.ListModelsResponse\"\x00\x12Z\n" +
 	"\rGetSelections\x12\".postpilot.v1.GetSelectionsRequest\x1a#.postpilot.v1.GetSelectionsResponse\"\x00\x12Z\n" +
-	"\rSaveSelection\x12\".postpilot.v1.SaveSelectionRequest\x1a#.postpilot.v1.SaveSelectionResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\rSaveSelection\x12\".postpilot.v1.SaveSelectionRequest\x1a#.postpilot.v1.SaveSelectionResponse\"\x00\x12i\n" +
+	"\x12GetComparisonPairs\x12'.postpilot.v1.GetComparisonPairsRequest\x1a(.postpilot.v1.GetComparisonPairsResponse\"\x00\x12i\n" +
+	"\x12SaveComparisonPair\x12'.postpilot.v1.SaveComparisonPairRequest\x1a(.postpilot.v1.SaveComparisonPairResponse\"\x00\x12u\n" +
+	"\x16ListRecommendationSets\x12+.postpilot.v1.ListRecommendationSetsRequest\x1a,.postpilot.v1.ListRecommendationSetsResponse\"\x00\x12u\n" +
+	"\x16ApplyRecommendationSet\x12+.postpilot.v1.ApplyRecommendationSetRequest\x1a,.postpilot.v1.ApplyRecommendationSetResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_provider_proto_rawDescOnce sync.Once
@@ -589,40 +1293,78 @@ func file_postpilot_v1_provider_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_provider_proto_rawDescData
 }
 
-var file_postpilot_v1_provider_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_postpilot_v1_provider_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_postpilot_v1_provider_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_postpilot_v1_provider_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_postpilot_v1_provider_proto_goTypes = []any{
-	(Stage)(0),                    // 0: postpilot.v1.Stage
-	(*ModelRef)(nil),              // 1: postpilot.v1.ModelRef
-	(*ModelInfo)(nil),             // 2: postpilot.v1.ModelInfo
-	(*Selection)(nil),             // 3: postpilot.v1.Selection
-	(*ListModelsRequest)(nil),     // 4: postpilot.v1.ListModelsRequest
-	(*ListModelsResponse)(nil),    // 5: postpilot.v1.ListModelsResponse
-	(*GetSelectionsRequest)(nil),  // 6: postpilot.v1.GetSelectionsRequest
-	(*GetSelectionsResponse)(nil), // 7: postpilot.v1.GetSelectionsResponse
-	(*SaveSelectionRequest)(nil),  // 8: postpilot.v1.SaveSelectionRequest
-	(*SaveSelectionResponse)(nil), // 9: postpilot.v1.SaveSelectionResponse
+	(Stage)(0),                             // 0: postpilot.v1.Stage
+	(SelectionSlot)(0),                     // 1: postpilot.v1.SelectionSlot
+	(*ModelRef)(nil),                       // 2: postpilot.v1.ModelRef
+	(*ModelInfo)(nil),                      // 3: postpilot.v1.ModelInfo
+	(*Selection)(nil),                      // 4: postpilot.v1.Selection
+	(*ComparisonPair)(nil),                 // 5: postpilot.v1.ComparisonPair
+	(*RecommendationStageSelection)(nil),   // 6: postpilot.v1.RecommendationStageSelection
+	(*RecommendationSet)(nil),              // 7: postpilot.v1.RecommendationSet
+	(*ListModelsRequest)(nil),              // 8: postpilot.v1.ListModelsRequest
+	(*ListModelsResponse)(nil),             // 9: postpilot.v1.ListModelsResponse
+	(*GetSelectionsRequest)(nil),           // 10: postpilot.v1.GetSelectionsRequest
+	(*GetSelectionsResponse)(nil),          // 11: postpilot.v1.GetSelectionsResponse
+	(*SaveSelectionRequest)(nil),           // 12: postpilot.v1.SaveSelectionRequest
+	(*SaveSelectionResponse)(nil),          // 13: postpilot.v1.SaveSelectionResponse
+	(*GetComparisonPairsRequest)(nil),      // 14: postpilot.v1.GetComparisonPairsRequest
+	(*GetComparisonPairsResponse)(nil),     // 15: postpilot.v1.GetComparisonPairsResponse
+	(*SaveComparisonPairRequest)(nil),      // 16: postpilot.v1.SaveComparisonPairRequest
+	(*SaveComparisonPairResponse)(nil),     // 17: postpilot.v1.SaveComparisonPairResponse
+	(*ListRecommendationSetsRequest)(nil),  // 18: postpilot.v1.ListRecommendationSetsRequest
+	(*ListRecommendationSetsResponse)(nil), // 19: postpilot.v1.ListRecommendationSetsResponse
+	(*ApplyRecommendationSetRequest)(nil),  // 20: postpilot.v1.ApplyRecommendationSetRequest
+	(*ApplyRecommendationSetResponse)(nil), // 21: postpilot.v1.ApplyRecommendationSetResponse
 }
 var file_postpilot_v1_provider_proto_depIdxs = []int32{
-	1,  // 0: postpilot.v1.ModelInfo.ref:type_name -> postpilot.v1.ModelRef
+	2,  // 0: postpilot.v1.ModelInfo.ref:type_name -> postpilot.v1.ModelRef
 	0,  // 1: postpilot.v1.Selection.stage:type_name -> postpilot.v1.Stage
-	1,  // 2: postpilot.v1.Selection.ref:type_name -> postpilot.v1.ModelRef
-	2,  // 3: postpilot.v1.ListModelsResponse.models:type_name -> postpilot.v1.ModelInfo
-	3,  // 4: postpilot.v1.GetSelectionsResponse.selections:type_name -> postpilot.v1.Selection
-	0,  // 5: postpilot.v1.SaveSelectionRequest.stage:type_name -> postpilot.v1.Stage
-	1,  // 6: postpilot.v1.SaveSelectionRequest.ref:type_name -> postpilot.v1.ModelRef
-	3,  // 7: postpilot.v1.SaveSelectionResponse.selection:type_name -> postpilot.v1.Selection
-	4,  // 8: postpilot.v1.ProviderService.ListModels:input_type -> postpilot.v1.ListModelsRequest
-	6,  // 9: postpilot.v1.ProviderService.GetSelections:input_type -> postpilot.v1.GetSelectionsRequest
-	8,  // 10: postpilot.v1.ProviderService.SaveSelection:input_type -> postpilot.v1.SaveSelectionRequest
-	5,  // 11: postpilot.v1.ProviderService.ListModels:output_type -> postpilot.v1.ListModelsResponse
-	7,  // 12: postpilot.v1.ProviderService.GetSelections:output_type -> postpilot.v1.GetSelectionsResponse
-	9,  // 13: postpilot.v1.ProviderService.SaveSelection:output_type -> postpilot.v1.SaveSelectionResponse
-	11, // [11:14] is the sub-list for method output_type
-	8,  // [8:11] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	2,  // 2: postpilot.v1.Selection.ref:type_name -> postpilot.v1.ModelRef
+	1,  // 3: postpilot.v1.Selection.slot:type_name -> postpilot.v1.SelectionSlot
+	0,  // 4: postpilot.v1.ComparisonPair.stage:type_name -> postpilot.v1.Stage
+	4,  // 5: postpilot.v1.ComparisonPair.candidate_a:type_name -> postpilot.v1.Selection
+	4,  // 6: postpilot.v1.ComparisonPair.candidate_b:type_name -> postpilot.v1.Selection
+	0,  // 7: postpilot.v1.RecommendationStageSelection.stage:type_name -> postpilot.v1.Stage
+	2,  // 8: postpilot.v1.RecommendationStageSelection.active:type_name -> postpilot.v1.ModelRef
+	2,  // 9: postpilot.v1.RecommendationStageSelection.candidate_a:type_name -> postpilot.v1.ModelRef
+	2,  // 10: postpilot.v1.RecommendationStageSelection.candidate_b:type_name -> postpilot.v1.ModelRef
+	6,  // 11: postpilot.v1.RecommendationSet.selections:type_name -> postpilot.v1.RecommendationStageSelection
+	3,  // 12: postpilot.v1.ListModelsResponse.models:type_name -> postpilot.v1.ModelInfo
+	4,  // 13: postpilot.v1.GetSelectionsResponse.selections:type_name -> postpilot.v1.Selection
+	0,  // 14: postpilot.v1.SaveSelectionRequest.stage:type_name -> postpilot.v1.Stage
+	2,  // 15: postpilot.v1.SaveSelectionRequest.ref:type_name -> postpilot.v1.ModelRef
+	4,  // 16: postpilot.v1.SaveSelectionResponse.selection:type_name -> postpilot.v1.Selection
+	5,  // 17: postpilot.v1.GetComparisonPairsResponse.pairs:type_name -> postpilot.v1.ComparisonPair
+	0,  // 18: postpilot.v1.SaveComparisonPairRequest.stage:type_name -> postpilot.v1.Stage
+	2,  // 19: postpilot.v1.SaveComparisonPairRequest.candidate_a:type_name -> postpilot.v1.ModelRef
+	2,  // 20: postpilot.v1.SaveComparisonPairRequest.candidate_b:type_name -> postpilot.v1.ModelRef
+	5,  // 21: postpilot.v1.SaveComparisonPairResponse.pair:type_name -> postpilot.v1.ComparisonPair
+	7,  // 22: postpilot.v1.ListRecommendationSetsResponse.sets:type_name -> postpilot.v1.RecommendationSet
+	7,  // 23: postpilot.v1.ApplyRecommendationSetResponse.set:type_name -> postpilot.v1.RecommendationSet
+	4,  // 24: postpilot.v1.ApplyRecommendationSetResponse.selections:type_name -> postpilot.v1.Selection
+	5,  // 25: postpilot.v1.ApplyRecommendationSetResponse.pairs:type_name -> postpilot.v1.ComparisonPair
+	8,  // 26: postpilot.v1.ProviderService.ListModels:input_type -> postpilot.v1.ListModelsRequest
+	10, // 27: postpilot.v1.ProviderService.GetSelections:input_type -> postpilot.v1.GetSelectionsRequest
+	12, // 28: postpilot.v1.ProviderService.SaveSelection:input_type -> postpilot.v1.SaveSelectionRequest
+	14, // 29: postpilot.v1.ProviderService.GetComparisonPairs:input_type -> postpilot.v1.GetComparisonPairsRequest
+	16, // 30: postpilot.v1.ProviderService.SaveComparisonPair:input_type -> postpilot.v1.SaveComparisonPairRequest
+	18, // 31: postpilot.v1.ProviderService.ListRecommendationSets:input_type -> postpilot.v1.ListRecommendationSetsRequest
+	20, // 32: postpilot.v1.ProviderService.ApplyRecommendationSet:input_type -> postpilot.v1.ApplyRecommendationSetRequest
+	9,  // 33: postpilot.v1.ProviderService.ListModels:output_type -> postpilot.v1.ListModelsResponse
+	11, // 34: postpilot.v1.ProviderService.GetSelections:output_type -> postpilot.v1.GetSelectionsResponse
+	13, // 35: postpilot.v1.ProviderService.SaveSelection:output_type -> postpilot.v1.SaveSelectionResponse
+	15, // 36: postpilot.v1.ProviderService.GetComparisonPairs:output_type -> postpilot.v1.GetComparisonPairsResponse
+	17, // 37: postpilot.v1.ProviderService.SaveComparisonPair:output_type -> postpilot.v1.SaveComparisonPairResponse
+	19, // 38: postpilot.v1.ProviderService.ListRecommendationSets:output_type -> postpilot.v1.ListRecommendationSetsResponse
+	21, // 39: postpilot.v1.ProviderService.ApplyRecommendationSet:output_type -> postpilot.v1.ApplyRecommendationSetResponse
+	33, // [33:40] is the sub-list for method output_type
+	26, // [26:33] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_provider_proto_init() }
@@ -635,8 +1377,8 @@ func file_postpilot_v1_provider_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_provider_proto_rawDesc), len(file_postpilot_v1_provider_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   9,
+			NumEnums:      2,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

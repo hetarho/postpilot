@@ -84,7 +84,11 @@ export function useStageSelection(stage: StageName): StageSelectionState {
       return { ...base, selected: null, unavailable: { ref: saved.ref, reason: VANISHED_REASON } }
     }
     if (model.disabled) {
-      return { ...base, selected: null, unavailable: { ref: saved.ref, reason: model.disabledReason } }
+      return {
+        ...base,
+        selected: null,
+        unavailable: { ref: saved.ref, reason: model.disabledReason },
+      }
     }
     if (!models.includes(model)) {
       return { ...base, selected: null, unavailable: { ref: saved.ref, reason: UNSUITABLE_REASON } }

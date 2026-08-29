@@ -48,6 +48,12 @@ export function AuthenticatedLayout() {
           >
             말투
           </Link>
+          <Link
+            to="/ai-models"
+            className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
+          >
+            AI 모델
+          </Link>
         </nav>
         <div className="flex items-center gap-3">
           <span className="text-content-tertiary hidden font-mono text-xs sm:inline">

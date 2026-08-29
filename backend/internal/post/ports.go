@@ -43,6 +43,16 @@ type ActiveJobFinder interface {
 	ActiveForPost(ctx context.Context, slug string) (*ActiveJob, error)
 }
 
+type PendingExperimentFinder interface {
+	PendingForPost(ctx context.Context, userID, slug string) (string, error)
+}
+
+// ExperimentContentPurger is the required privacy hook for post deletion. The post
+// context calls it before the FK detaches experiment history from the source slug.
+type ExperimentContentPurger interface {
+	PurgePost(ctx context.Context, userID, postSlug string) error
+}
+
 // Store is the persistence this context needs.
 //
 // Ownership is a property of the query, not of a check the caller must remember: the
@@ -55,6 +65,7 @@ type Store interface {
 	GetPost(ctx context.Context, slug string) (Post, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	ListPosts(ctx context.Context, userID string) ([]Summary, error)
+	DeletePost(ctx context.Context, slug, userID string) (bool, error)
 
 	ListImages(ctx context.Context, postSlug string) ([]Image, error)
 	GetImage(ctx context.Context, id string) (Image, error)

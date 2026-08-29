@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -222,8 +223,9 @@ type chatChunk struct {
 		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
 	Usage *struct {
-		PromptTokens     int `json:"prompt_tokens"`
-		CompletionTokens int `json:"completion_tokens"`
+		PromptTokens     int             `json:"prompt_tokens"`
+		CompletionTokens int             `json:"completion_tokens"`
+		Cost             json.RawMessage `json:"cost"`
 	} `json:"usage"`
 	Error *apiError `json:"error"`
 }
@@ -304,9 +306,43 @@ func (c *Client) apply(chunk chatChunk, text *strings.Builder, out *llm.Response
 		text.WriteString(choice.Delta.Content)
 	}
 	if chunk.Usage != nil {
-		out.Usage = llm.Usage{PromptTokens: chunk.Usage.PromptTokens, CompletionTokens: chunk.Usage.CompletionTokens}
+		out.Usage.PromptTokens = chunk.Usage.PromptTokens
+		out.Usage.CompletionTokens = chunk.Usage.CompletionTokens
+		if len(chunk.Usage.Cost) > 0 && !bytes.Equal(bytes.TrimSpace(chunk.Usage.Cost), []byte("null")) {
+			cost, err := decimalUSDTomicrousd(chunk.Usage.Cost)
+			if err != nil {
+				return fmt.Errorf("%w: %s sent invalid usage.cost: %v", llm.ErrBadOutput, c.name, err)
+			}
+			out.Usage.CostMicrousd = cost
+			out.Usage.CostReported = true
+		}
 	}
 	return nil
+}
+
+func decimalUSDTomicrousd(raw []byte) (int64, error) {
+	value := strings.TrimSpace(string(raw))
+	if strings.HasPrefix(value, "\"") {
+		var decoded string
+		if err := json.Unmarshal(raw, &decoded); err != nil {
+			return 0, err
+		}
+		value = decoded
+	}
+	amount, ok := new(big.Rat).SetString(value)
+	if !ok || amount.Sign() < 0 {
+		return 0, fmt.Errorf("must be a non-negative decimal")
+	}
+	amount.Mul(amount, big.NewRat(1_000_000, 1))
+	quotient, remainder := new(big.Int), new(big.Int)
+	quotient.QuoRem(amount.Num(), amount.Denom(), remainder)
+	if new(big.Int).Lsh(remainder, 1).Cmp(amount.Denom()) >= 0 {
+		quotient.Add(quotient, big.NewInt(1))
+	}
+	if !quotient.IsInt64() {
+		return 0, fmt.Errorf("overflows int64 microusd")
+	}
+	return quotient.Int64(), nil
 }
 
 // --- error mapping ---

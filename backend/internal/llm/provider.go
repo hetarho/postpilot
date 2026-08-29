@@ -68,6 +68,10 @@ func (r Request) HasImages() bool {
 type Usage struct {
 	PromptTokens     int
 	CompletionTokens int
+	// CostMicrousd is the provider-reported charged amount in millionths of one USD.
+	// CostReported distinguishes a real zero charge from a provider that omitted cost.
+	CostMicrousd int64
+	CostReported bool
 }
 
 // Response is the completion.

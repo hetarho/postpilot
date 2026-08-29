@@ -51,7 +51,27 @@ describe('PostsPage', () => {
       ],
     })
 
-    expect(await screen.findByRole('link', { name: /제주 3일/ })).toHaveTextContent('생성 중')
+    expect(await screen.findByRole('link', { name: /제주 3일/ })).toHaveTextContent('AI 생성 중')
+  })
+
+  it('opens a durable pending AI result in the blind comparison route', async () => {
+    const user = userEvent.setup()
+    const { router } = renderList({
+      posts: [
+        {
+          slug: '20260828-jeju',
+          title: '제주 3일',
+          pendingExperimentId: 'experiment-1',
+        },
+      ],
+    })
+
+    const row = await screen.findByRole('link', { name: /제주 3일/ })
+    expect(row).toHaveTextContent('AI 결과 확인')
+    await user.click(row)
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/ai-models/experiments/experiment-1'),
+    )
   })
 
   it('labels a post nobody has titled yet', async () => {

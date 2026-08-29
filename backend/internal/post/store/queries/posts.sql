@@ -27,3 +27,6 @@ SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ?);
 -- name: ListPostsByUser :many
 SELECT slug, title, content, status, updated_at
 FROM posts WHERE user_id = ? ORDER BY updated_at DESC, slug DESC;
+
+-- name: DeletePost :execrows
+DELETE FROM posts WHERE slug = ? AND user_id = ?;

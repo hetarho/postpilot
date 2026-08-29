@@ -17,6 +17,10 @@ service ProviderService {
   // back `missing` — and the server has already cleared it, so the user must choose again.
   rpc GetSelections(GetSelectionsRequest) returns (GetSelectionsResponse) {}
   rpc SaveSelection(SaveSelectionRequest) returns (SaveSelectionResponse) {}
+  rpc GetComparisonPairs(GetComparisonPairsRequest) returns (GetComparisonPairsResponse) {}
+  rpc SaveComparisonPair(SaveComparisonPairRequest) returns (SaveComparisonPairResponse) {}
+  rpc ListRecommendationSets(ListRecommendationSetsRequest) returns (ListRecommendationSetsResponse) {}
+  rpc ApplyRecommendationSet(ApplyRecommendationSetRequest) returns (ApplyRecommendationSetResponse) {}
 }
 
 // The two generation stages and the voice-analysis stage each choose their own model
@@ -26,6 +30,13 @@ enum Stage {
   STAGE_OBSERVE = 1;
   STAGE_WRITE = 2;
   STAGE_ANALYZE = 3;
+}
+
+enum SelectionSlot {
+  SELECTION_SLOT_UNSPECIFIED = 0;
+  SELECTION_SLOT_ACTIVE = 1;
+  SELECTION_SLOT_CANDIDATE_A = 2;
+  SELECTION_SLOT_CANDIDATE_B = 3;
 }
 
 // Reused by the Start* RPCs of the generation plans: a job records exactly which model
@@ -44,6 +55,10 @@ message ModelInfo {
   bool structured_output = 4;
   bool disabled = 5;
   string disabled_reason = 6;
+  int64 context_tokens = 7;
+  string input_usd_per_million = 8;
+  string output_usd_per_million = 9;
+  string pricing_checked_at = 10;
 }
 
 message Selection {
@@ -52,6 +67,26 @@ message Selection {
   // The saved ref is no longer in the registry. The row is already gone; this tells the
   // client what to grey out and why.
   bool missing = 3;
+  SelectionSlot slot = 4;
+}
+
+message ComparisonPair {
+  Stage stage = 1;
+  Selection candidate_a = 2;
+  Selection candidate_b = 3;
+}
+
+message RecommendationStageSelection {
+  Stage stage = 1;
+  ModelRef active = 2;
+  ModelRef candidate_a = 3;
+  ModelRef candidate_b = 4;
+}
+
+message RecommendationSet {
+  string id = 1;
+  string label = 2;
+  repeated RecommendationStageSelection selections = 3;
 }
 
 message ListModelsRequest {}
@@ -73,4 +108,24 @@ message SaveSelectionRequest {
 
 message SaveSelectionResponse {
   Selection selection = 1;
+}
+
+message GetComparisonPairsRequest {}
+message GetComparisonPairsResponse { repeated ComparisonPair pairs = 1; }
+
+message SaveComparisonPairRequest {
+  Stage stage = 1;
+  ModelRef candidate_a = 2;
+  ModelRef candidate_b = 3;
+}
+message SaveComparisonPairResponse { ComparisonPair pair = 1; }
+
+message ListRecommendationSetsRequest {}
+message ListRecommendationSetsResponse { repeated RecommendationSet sets = 1; }
+
+message ApplyRecommendationSetRequest { string id = 1; }
+message ApplyRecommendationSetResponse {
+  RecommendationSet set = 1;
+  repeated Selection selections = 2;
+  repeated ComparisonPair pairs = 3;
 }

@@ -2,10 +2,13 @@ package db
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
 	"testing/fstest"
+
+	"github.com/pressly/goose/v3"
 )
 
 func openTemp(t *testing.T) *DB {
@@ -58,13 +61,67 @@ func TestMigrateAppliesSchemaAndIsIdempotent(t *testing.T) {
 		t.Fatalf("Migrate (second run): %v", err)
 	}
 
-	for _, table := range []string{"users", "sessions"} {
+	for _, table := range []string{"users", "sessions", "model_experiments", "model_experiment_candidates"} {
 		var name string
 		err := handle.Reader.QueryRow(
 			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", table).Scan(&name)
 		if err != nil {
 			t.Errorf("table %s missing after migration: %v", table, err)
 		}
+	}
+}
+
+func TestMigration0006UpgradesActiveSelectionsAndRollsBack(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	firstThree := fstest.MapFS{}
+	for _, name := range []string{"0001_users_sessions.sql", "0002_posts_images_uploads.sql", "0003_model_selections.sql"} {
+		data, err := fs.ReadFile(migrationsFS, "migrations/"+name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		firstThree[name] = &fstest.MapFile{Data: data}
+	}
+	if err := migrate(ctx, handle.Writer, firstThree); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','2026-08-29T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO model_selections(user_id,stage,provider_id,model_id,updated_at) VALUES('alice','write','p','m','2026-08-29T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	var slot, model string
+	if err := handle.Reader.QueryRow(`SELECT slot,model_id FROM model_selections WHERE user_id='alice' AND stage='write'`).Scan(&slot, &model); err != nil {
+		t.Fatal(err)
+	}
+	if slot != "active" || model != "m" {
+		t.Fatalf("upgraded selection = %s/%s", slot, model)
+	}
+
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.Down(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var columns int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('model_selections') WHERE name='slot'`).Scan(&columns); err != nil {
+		t.Fatal(err)
+	}
+	if columns != 0 {
+		t.Fatal("migration down retained slot column")
+	}
+	if err := handle.Reader.QueryRow(`SELECT model_id FROM model_selections WHERE user_id='alice' AND stage='write'`).Scan(&model); err != nil || model != "m" {
+		t.Fatalf("down lost active selection: model=%q err=%v", model, err)
 	}
 }
 

@@ -50,6 +50,13 @@ Canonical backend and frontend rules. Source: [plan/03](../plan/03.voice-profile
 - `GetVoiceProfile.active_job_id` exposes the account's queued/running analysis so clients can resume polling after
   navigation or reload.
 
+## Analyze model experiments
+
+- The model lab freezes the complete current corpus once and runs two explicit analyze refs through the same
+  nine-section prompt and validator. Candidate completion changes neither profile nor rules.
+- A verdict reveals model identities. Applying the winner requires overwrite confirmation, replaces only
+  `styleguide`, preserves `rules`, and is value-idempotent. Adopting the winner as active analyze model is separate.
+
 ## Frontend behavior
 
 - `/voice` is authenticated and composes the analyze-stage model selector, sample learning form/list, durable-job

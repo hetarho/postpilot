@@ -145,8 +145,18 @@ describe('opening a post', () => {
         ],
       },
       providers: {
-        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        models: [
+          { providerId: 'openrouter', modelId: 'writer' },
+          { providerId: 'openrouter', modelId: 'writer-b' },
+        ],
         selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+        comparisonPairs: [
+          {
+            stage: Stage.WRITE,
+            candidateA: { providerId: 'openrouter', modelId: 'writer' },
+            candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
+          },
+        ],
       },
       jobs: { jobs: [active] },
     })
@@ -178,8 +188,18 @@ describe('opening a post', () => {
         ],
       },
       providers: {
-        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        models: [
+          { providerId: 'openrouter', modelId: 'writer' },
+          { providerId: 'openrouter', modelId: 'writer-b' },
+        ],
         selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+        comparisonPairs: [
+          {
+            stage: Stage.WRITE,
+            candidateA: { providerId: 'openrouter', modelId: 'writer' },
+            candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
+          },
+        ],
       },
       jobs: {
         jobs: [{ ...resumed, status: 'failed', error: 'provider failed' }],
@@ -242,8 +262,18 @@ describe('opening a post', () => {
       user: USER,
       posts: { posts: [{ slug: '20260820-memo', memo: '사진 없는 메모' }] },
       providers: {
-        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        models: [
+          { providerId: 'openrouter', modelId: 'writer' },
+          { providerId: 'openrouter', modelId: 'writer-b' },
+        ],
         selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+        comparisonPairs: [
+          {
+            stage: Stage.WRITE,
+            candidateA: { providerId: 'openrouter', modelId: 'writer' },
+            candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
+          },
+        ],
       },
     })
 
@@ -260,8 +290,18 @@ describe('opening a post', () => {
       calls,
       posts: { posts: [{ slug: '20260820-memo', memo: '처음 메모' }] },
       providers: {
-        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        models: [
+          { providerId: 'openrouter', modelId: 'writer' },
+          { providerId: 'openrouter', modelId: 'writer-b' },
+        ],
         selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+        comparisonPairs: [
+          {
+            stage: Stage.WRITE,
+            candidateA: { providerId: 'openrouter', modelId: 'writer' },
+            candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
+          },
+        ],
       },
     })
 
@@ -277,16 +317,9 @@ describe('opening a post', () => {
     ])
   })
 
-  it('does not generate with the previous model while a new selection is saving', async () => {
-    const calls: string[] = []
-    let releaseSelection: (() => void) | undefined
-    const saveGate = new Promise<void>((resolve) => {
-      releaseSelection = resolve
-    })
-    const user = userEvent.setup()
+  it('does not generate until a distinct write comparison pair is configured', async () => {
     renderAppAt('/posts/20260820-memo', {
       user: USER,
-      calls,
       posts: { posts: [{ slug: '20260820-memo' }] },
       providers: {
         models: [
@@ -294,20 +327,13 @@ describe('opening a post', () => {
           { providerId: 'openrouter', modelId: 'writer-new' },
         ],
         selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer-old' }],
-        saveGate,
       },
     })
 
     const generate = await screen.findByRole('button', { name: '생성' })
-    await waitFor(() => expect(generate).toBeEnabled())
-    await user.selectOptions(screen.getByLabelText('작성 모델'), 'openrouter/writer-new')
-    await waitFor(() => expect(calls).toContain('SaveSelection'))
-
+    await waitFor(() => expect(screen.getByText(/작성 A\/B 모델을 선택하세요/)).toBeInTheDocument())
     expect(generate).toBeDisabled()
-    expect(screen.getByText('모델 선택을 저장하는 중이에요.')).toBeInTheDocument()
-
-    releaseSelection?.()
-    await waitFor(() => expect(generate).toBeEnabled())
+    expect(screen.getByRole('link', { name: 'AI 모델 설정' })).toHaveAttribute('href', '/ai-models')
   })
 
   // Job 05 A6 (plan 02 AC11, photos half): the strip is rebuilt from the view URLs.

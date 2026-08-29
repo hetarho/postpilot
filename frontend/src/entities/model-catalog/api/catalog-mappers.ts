@@ -6,9 +6,20 @@ import {
   type ProtoModelRef,
   type ProtoSelection,
   ProviderService,
+  SelectionSlot,
   Stage,
+  type ProtoComparisonPair,
+  type ProtoRecommendationSet,
 } from '@/shared/api'
-import type { CatalogModel, ModelRef, StageName, StageSelection } from '../model/types'
+import type {
+  CatalogModel,
+  ComparisonPair,
+  ModelRef,
+  RecommendationSet,
+  SelectionSlotName,
+  StageName,
+  StageSelection,
+} from '../model/types'
 
 const STAGE_TO_PROTO: Record<StageName, Stage> = {
   observe: Stage.OBSERVE,
@@ -39,6 +50,10 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
     structuredOutput: info.structuredOutput,
     disabled: info.disabled,
     disabledReason: info.disabledReason,
+    contextTokens: info.contextTokens,
+    inputUsdPerMillion: info.inputUsdPerMillion,
+    outputUsdPerMillion: info.outputUsdPerMillion,
+    pricingCheckedAt: info.pricingCheckedAt,
   }
 }
 
@@ -46,7 +61,48 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
 export function toStageSelection(selection: ProtoSelection): StageSelection | undefined {
   const stage = stageFromProto(selection.stage)
   if (!stage) return undefined
-  return { stage, ref: toModelRef(selection.ref), missing: selection.missing }
+  return {
+    stage,
+    ref: toModelRef(selection.ref),
+    missing: selection.missing,
+    slot: slotFromProto(selection.slot),
+  }
+}
+
+function slotFromProto(slot: SelectionSlot): SelectionSlotName {
+  if (slot === SelectionSlot.CANDIDATE_A) return 'candidateA'
+  if (slot === SelectionSlot.CANDIDATE_B) return 'candidateB'
+  return 'active'
+}
+
+export function toComparisonPair(value: ProtoComparisonPair): ComparisonPair | undefined {
+  const stage = stageFromProto(value.stage)
+  if (!stage) return undefined
+  return {
+    stage,
+    candidateA: value.candidateA ? toStageSelection(value.candidateA) : undefined,
+    candidateB: value.candidateB ? toStageSelection(value.candidateB) : undefined,
+  }
+}
+
+export function toRecommendationSet(value: ProtoRecommendationSet): RecommendationSet {
+  return {
+    id: value.id,
+    label: value.label,
+    selections: value.selections.flatMap((selection) => {
+      const stage = stageFromProto(selection.stage)
+      return stage
+        ? [
+            {
+              stage,
+              active: toModelRef(selection.active),
+              candidateA: toModelRef(selection.candidateA),
+              candidateB: toModelRef(selection.candidateB),
+            },
+          ]
+        : []
+    }),
+  }
 }
 
 export function listModelsQueryKey(transport: Transport) {
@@ -61,6 +117,24 @@ export function listModelsQueryKey(transport: Transport) {
 export function getSelectionsQueryKey(transport: Transport) {
   return createConnectQueryKey({
     schema: ProviderService.method.getSelections,
+    input: {},
+    transport,
+    cardinality: 'finite',
+  })
+}
+
+export function getComparisonPairsQueryKey(transport: Transport) {
+  return createConnectQueryKey({
+    schema: ProviderService.method.getComparisonPairs,
+    input: {},
+    transport,
+    cardinality: 'finite',
+  })
+}
+
+export function listRecommendationSetsQueryKey(transport: Transport) {
+  return createConnectQueryKey({
+    schema: ProviderService.method.listRecommendationSets,
     input: {},
     transport,
     cardinality: 'finite',

@@ -18,6 +18,7 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		post.ErrDuplicateFilename: connect.CodeAlreadyExists,
 		post.ErrObjectMissing:     connect.CodeFailedPrecondition,
 		post.ErrInvalidImage:      connect.CodeInvalidArgument,
+		post.ErrPostBusy:          connect.CodeFailedPrecondition,
 	}
 
 	for domainErr, want := range cases {

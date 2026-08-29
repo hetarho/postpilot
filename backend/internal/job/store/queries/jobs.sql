@@ -57,5 +57,11 @@ WHERE user_id = ? AND kind = ? AND post_slug IS NULL
 ORDER BY created_at DESC, id DESC
 LIMIT 1;
 
+-- name: ActiveModelExperiment :one
+SELECT * FROM generation_jobs
+WHERE kind = 'model_experiment' AND payload = ? AND status IN ('queued', 'running')
+ORDER BY created_at DESC, id DESC
+LIMIT 1;
+
 -- name: GetJobByID :one
 SELECT * FROM generation_jobs WHERE id = ?;

@@ -154,6 +154,11 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 	return summaries, nil
 }
 
+func (s *Store) DeletePost(ctx context.Context, slug, userID string) (bool, error) {
+	count, err := s.write.DeletePost(ctx, sqlc.DeletePostParams{Slug: slug, UserID: userID})
+	return count == 1, err
+}
+
 // --- images ---
 
 func (s *Store) CreateImage(ctx context.Context, img post.Image) error {

@@ -41,6 +41,9 @@ var (
 	ErrInvalidImage = errors.New("invalid image")
 	// ErrObjectMissing is a confirm for an object that never landed in storage.
 	ErrObjectMissing = errors.New("uploaded object not found in storage")
+	// ErrPostBusy prevents deleting a source while a handler could still write new
+	// experiment output after the privacy purge.
+	ErrPostBusy = errors.New("post has an active job")
 )
 
 // Post is the aggregate exposed by the drafting context. Generation may replace its
@@ -57,8 +60,9 @@ type Post struct {
 	Observations []Observation
 
 	// Images is populated by Get, not by the store's post lookup.
-	Images    []Image
-	ActiveJob *ActiveJob
+	Images              []Image
+	ActiveJob           *ActiveJob
+	PendingExperimentID string
 }
 
 // BlockType is kept as the LLM/protojson spelling at the domain boundary.
@@ -100,11 +104,12 @@ type Observation struct {
 
 // Summary is a row of the post list.
 type Summary struct {
-	Slug      string
-	Title     string
-	Status    string
-	UpdatedAt time.Time
-	ActiveJob *ActiveJob
+	Slug                string
+	Title               string
+	Status              string
+	UpdatedAt           time.Time
+	ActiveJob           *ActiveJob
+	PendingExperimentID string
 }
 
 // ActiveJob is the snapshot the post context publishes on read models. It is owned by

@@ -58,6 +58,9 @@ export const UPLOAD_CONVERT_CONCURRENCY = 2
  *  while the dropdowns stay instant. */
 export const MODEL_CATALOG_STALE_MS = 5 * 60_000
 
+/** A leaderboard entry remains provisional until this many pairwise verdicts. */
+export const LEADERBOARD_MIN_MATCHES = 3
+
 /** Generation jobs are durable on the server; polling only observes their state. */
 export const POLL_INTERVAL_MS = 2_000
 

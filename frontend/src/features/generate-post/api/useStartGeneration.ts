@@ -10,11 +10,17 @@ export function useStartGeneration() {
   return {
     ...mutation,
     errorMessage: mutation.error ? ConnectError.from(mutation.error).rawMessage : '',
-    start: (postSlug: string, observeModel: ModelRef | undefined, writeModel: ModelRef) =>
+    start: (
+      postSlug: string,
+      observeModel: ModelRef | undefined,
+      writeModelA: ModelRef,
+      writeModelB: ModelRef,
+    ) =>
       mutation.mutateAsync({
         postSlug,
         observeModel: observeModel ? create(ModelRefSchema, observeModel) : undefined,
-        writeModel: create(ModelRefSchema, writeModel),
+        writeModelA: create(ModelRefSchema, writeModelA),
+        writeModelB: create(ModelRefSchema, writeModelB),
       }),
   }
 }

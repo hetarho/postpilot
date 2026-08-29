@@ -173,6 +173,40 @@ func TestAssembleCorpusIncludesEveryBody(t *testing.T) {
 	}
 }
 
+func TestAnalyzeExperimentSnapshotDoesNotMutateAndApplyPreservesRules(t *testing.T) {
+	h := newVoiceHarness(t)
+	if _, err := h.svc.Update(context.Background(), "alice", "old style", "hand rule"); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.store.InsertSample(context.Background(), voice.Sample{ID: "sample", UserID: "alice", Label: "글", Body: longSample("가"), CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := h.svc.SnapshotAnalysisInput(context.Background(), "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.models.response = "## 1. 종결어미 분포\n새 분석\n## 8. never uses\n없음"
+	first, _, err := h.svc.RunAnalyzeCandidate(context.Background(), raw, analyzeRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, _, err := h.svc.RunAnalyzeCandidate(context.Background(), raw, llm.ModelRef{ProviderID: "stub", ModelID: "other"})
+	if err != nil || first != second {
+		t.Fatalf("same corpus produced invalid candidates: first=%q second=%q err=%v", first, second, err)
+	}
+	profile, err := h.store.GetProfile(context.Background(), "alice")
+	if err != nil || profile.Styleguide != "old style" || profile.Rules != "hand rule" {
+		t.Fatalf("experiment mutated profile before apply: %+v err=%v", profile, err)
+	}
+	if err := h.svc.ApplyStyleguideWinner(context.Background(), "alice", first); err != nil {
+		t.Fatal(err)
+	}
+	profile, err = h.store.GetProfile(context.Background(), "alice")
+	if err != nil || profile.Styleguide != first || profile.Rules != "hand rule" {
+		t.Fatalf("winner apply did not preserve rules: %+v err=%v", profile, err)
+	}
+}
+
 func TestProfileForPromptMostRecentTruncatedAndEmpty(t *testing.T) {
 	h := newVoiceHarness(t)
 	style, excerpts, rules, empty, err := h.svc.ProfileForPrompt(context.Background(), "alice")

@@ -13,13 +13,20 @@ export type GenerationPreconditions = { ok: true; reason: '' } | { ok: false; re
 export function generationPreconditions(
   images: readonly Pick<PostImage, 'id'>[],
   observeSelection: GenerationModelSelection | undefined,
-  writeSelection: GenerationModelSelection | undefined,
+  writeSelectionA: GenerationModelSelection | undefined,
+  writeSelectionB: GenerationModelSelection | undefined,
   activeJob: Pick<GenerationJob, 'status'> | undefined,
 ): GenerationPreconditions {
   if (activeJob && activeJob.status !== 'done' && activeJob.status !== 'failed') {
     return { ok: false, reason: '이미 생성 중이에요.' }
   }
-  if (!writeSelection) return { ok: false, reason: '작성 모델을 선택하세요.' }
+  if (!writeSelectionA || !writeSelectionB)
+    return { ok: false, reason: '작성 A/B 모델을 선택하세요.' }
+  if (
+    writeSelectionA.ref.providerId === writeSelectionB.ref.providerId &&
+    writeSelectionA.ref.modelId === writeSelectionB.ref.modelId
+  )
+    return { ok: false, reason: '서로 다른 작성 모델을 선택하세요.' }
   if (images.length === 0) return { ok: true, reason: '' }
   if (!observeSelection) return { ok: false, reason: '관찰 모델을 선택하세요.' }
   if (!observeSelection.vision) {

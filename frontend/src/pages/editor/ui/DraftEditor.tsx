@@ -7,6 +7,7 @@ import {
   BlockList,
   getPostQueryKey,
   hasContent,
+  listPostsQueryKey,
   postStatusLabel,
   type PostDraft,
 } from '@/entities/post'
@@ -143,7 +144,8 @@ function GenerationSection({
   const [startedJobId, setStartedJobId] = useState('')
   const jobId = startedJobId || post.activeJob?.id || ''
   const postKey = useMemo(() => getPostQueryKey(transport, post.slug), [post.slug, transport])
-  const invalidateOnDone = useMemo(() => [postKey], [postKey])
+  const postsKey = useMemo(() => listPostsQueryKey(transport), [transport])
+  const invalidateOnDone = useMemo(() => [postKey, postsKey], [postKey, postsKey])
   const jobState = useJob(jobId, invalidateOnDone)
   const job = jobState.job ?? (post.activeJob?.id === jobId ? post.activeJob : undefined)
 
@@ -173,7 +175,15 @@ function GenerationSection({
               </p>
             )}
           </div>
-          <StageModelSelect stage="write" />
+          <div>
+            <p className="text-sm font-medium">작성 A/B 모델</p>
+            <Link
+              to="/ai-models"
+              className="text-link-fg hover:text-link-fg-hover mt-1 inline-flex min-h-11 items-center text-sm underline"
+            >
+              AI 모델에서 두 후보 설정
+            </Link>
+          </div>
         </div>
         <div className="mt-5">
           <GenerateButton
@@ -207,6 +217,16 @@ function GenerationSection({
             <ProgressLine job={job} />
           ) : null}
         </section>
+      )}
+
+      {post.pendingExperimentId && (!job || isTerminal(job)) && (
+        <Link
+          to="/ai-models/experiments/$id"
+          params={{ id: post.pendingExperimentId }}
+          className="bg-notice-info-bg text-notice-info-fg mt-6 flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium"
+        >
+          AI 결과 확인 →
+        </Link>
       )}
 
       {post.images.length > 0 && (

@@ -1,13 +1,19 @@
 import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
-import { sameRef, useSelectionSavePending, useStageSelection } from '@/entities/model-catalog'
+import {
+  sameRef,
+  useModelSetup,
+  useModels,
+  useSelectionSavePending,
+  useStageSelection,
+} from '@/entities/model-catalog'
 import { Button, FieldMessage } from '@/shared/ui'
 import { useStartGeneration } from '../api/useStartGeneration'
 import { generationPreconditions, type GenerationModelSelection } from '../model/preconditions'
 
 interface GenerateButtonProps {
-  post: Pick<PostDraft, 'slug' | 'images'>
+  post: Pick<PostDraft, 'slug' | 'images' | 'pendingExperimentId'>
   activeJob?: GenerationJob
   /** A job id was accepted but its first durable snapshot has not arrived yet. */
   jobPending?: boolean
@@ -23,25 +29,43 @@ export interface GenerateButtonHandle {
 export const GenerateButton = forwardRef<GenerateButtonHandle, GenerateButtonProps>(
   function GenerateButton({ post, activeJob, jobPending = false, onStarted, beforeStart }, ref) {
     const observe = useStageSelection('observe')
-    const write = useStageSelection('write')
+    const { models } = useModels()
+    const setup = useModelSetup()
     const startGeneration = useStartGeneration()
     const selectionSaving = useSelectionSavePending()
     const [preparing, setPreparing] = useState(false)
     const [prepareError, setPrepareError] = useState(false)
     const observeSelection = resolveSelection(observe.models, observe.selected)
-    const writeSelection = resolveSelection(write.models, write.selected)
+    const writePair = setup.pairs.find((pair) => pair.stage === 'write')
+    const writeSelectionA = resolveSelection(models, writePair?.candidateA?.ref ?? null)
+    const writeSelectionB = resolveSelection(models, writePair?.candidateB?.ref ?? null)
     const preconditions = generationPreconditions(
       post.images,
       observeSelection,
-      writeSelection,
+      writeSelectionA,
+      writeSelectionB,
       activeJob,
     )
-    const modelPending = observe.isPending || write.isPending || selectionSaving
+    const hasPendingExperiment = Boolean(post.pendingExperimentId)
+    const modelPending = observe.isPending || setup.isPending || selectionSaving
     const disabled =
-      modelPending || jobPending || preparing || startGeneration.isPending || !preconditions.ok
+      modelPending ||
+      jobPending ||
+      hasPendingExperiment ||
+      preparing ||
+      startGeneration.isPending ||
+      !preconditions.ok
 
     const start = useCallback(async () => {
-      if (modelPending || jobPending || !preconditions.ok || !writeSelection) return
+      if (
+        modelPending ||
+        jobPending ||
+        hasPendingExperiment ||
+        !preconditions.ok ||
+        !writeSelectionA ||
+        !writeSelectionB
+      )
+        return
       setPreparing(true)
       setPrepareError(false)
       try {
@@ -55,7 +79,8 @@ export const GenerateButton = forwardRef<GenerateButtonHandle, GenerateButtonPro
         const response = await startGeneration.start(
           post.slug,
           post.images.length > 0 ? observeSelection?.ref : undefined,
-          writeSelection.ref,
+          writeSelectionA.ref,
+          writeSelectionB.ref,
         )
         onStarted(response.jobId)
       } catch {
@@ -66,6 +91,7 @@ export const GenerateButton = forwardRef<GenerateButtonHandle, GenerateButtonPro
     }, [
       modelPending,
       jobPending,
+      hasPendingExperiment,
       beforeStart,
       observeSelection,
       onStarted,
@@ -73,18 +99,21 @@ export const GenerateButton = forwardRef<GenerateButtonHandle, GenerateButtonPro
       post.slug,
       preconditions.ok,
       startGeneration,
-      writeSelection,
+      writeSelectionA,
+      writeSelectionB,
     ])
 
     useImperativeHandle(ref, () => ({ start: () => void start() }), [start])
 
-    const blocker = jobPending
-      ? '생성 작업을 확인하는 중이에요.'
-      : selectionSaving
-        ? '모델 선택을 저장하는 중이에요.'
-        : modelPending
-          ? '모델 선택을 확인하는 중이에요.'
-          : preconditions.reason
+    const blocker = hasPendingExperiment
+      ? '먼저 대기 중인 AI 결과를 확인해 주세요.'
+      : jobPending
+        ? '생성 작업을 확인하는 중이에요.'
+        : selectionSaving
+          ? '모델 선택을 저장하는 중이에요.'
+          : modelPending
+            ? '모델 선택을 확인하는 중이에요.'
+            : preconditions.reason
 
     return (
       <div>
@@ -97,7 +126,19 @@ export const GenerateButton = forwardRef<GenerateButtonHandle, GenerateButtonPro
         </Button>
         {blocker && (
           <p role="status" className="text-content-tertiary mt-2 text-xs">
-            {blocker}
+            {blocker}{' '}
+            {hasPendingExperiment ? (
+              <a
+                href={`/ai-models/experiments/${encodeURIComponent(post.pendingExperimentId)}`}
+                className="text-link-fg underline"
+              >
+                AI 결과 확인
+              </a>
+            ) : (
+              <a href="/ai-models" className="text-link-fg underline">
+                AI 모델 설정
+              </a>
+            )}
           </p>
         )}
         {startGeneration.isError && (

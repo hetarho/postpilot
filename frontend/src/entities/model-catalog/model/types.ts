@@ -23,7 +23,13 @@ export interface CatalogModel {
   structuredOutput: boolean
   disabled: boolean
   disabledReason: string
+  contextTokens: bigint
+  inputUsdPerMillion: string
+  outputUsdPerMillion: string
+  pricingCheckedAt: string
 }
+
+export type SelectionSlotName = 'active' | 'candidateA' | 'candidateB'
 
 /** The acting user's saved choice for a stage. `missing`: the model is no longer
  *  registered — the server has already cleared the row; this is shown once. */
@@ -31,6 +37,26 @@ export interface StageSelection {
   stage: StageName
   ref: ModelRef
   missing: boolean
+  slot: SelectionSlotName
+}
+
+export interface ComparisonPair {
+  stage: StageName
+  candidateA?: StageSelection
+  candidateB?: StageSelection
+}
+
+export interface RecommendationStageSelection {
+  stage: StageName
+  active: ModelRef
+  candidateA: ModelRef
+  candidateB: ModelRef
+}
+
+export interface RecommendationSet {
+  id: string
+  label: string
+  selections: RecommendationStageSelection[]
 }
 
 export function refKey(ref: ModelRef): string {

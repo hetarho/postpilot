@@ -35,4 +35,8 @@ type Jobs interface {
 	GetGeneration(ctx context.Context, id, userID string) (*JobSummary, error)
 }
 
+type ExperimentStarter interface {
+	StartWrite(ctx context.Context, request StartExperimentRequest) (StartExperimentResult, error)
+}
+
 type Progress func(stage string, done, total int)

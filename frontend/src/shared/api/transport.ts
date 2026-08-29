@@ -10,6 +10,7 @@ import { API_URL } from '@/shared/config'
 import { emitUnauthenticated } from './auth-events'
 import { AuthService } from './gen/postpilot/v1/auth_pb'
 import { HealthService } from './gen/postpilot/v1/health_pb'
+import { ModelExperimentService } from './gen/postpilot/v1/model_experiment_pb'
 import { GenerationService } from './gen/postpilot/v1/post_pb'
 import { ProviderService } from './gen/postpilot/v1/provider_pb'
 import { VoiceService } from './gen/postpilot/v1/voice_pb'
@@ -68,3 +69,6 @@ export const generationClient = createClient(GenerationService, transport)
 
 /** Typed client for the acting account's voice profile. */
 export const voiceClient = createClient(VoiceService, transport)
+
+/** Typed client for blind model experiments and private leaderboards. */
+export const modelExperimentClient = createClient(ModelExperimentService, transport)

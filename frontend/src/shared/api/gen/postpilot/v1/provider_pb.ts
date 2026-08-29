@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/provider.proto.
  */
 export const file_postpilot_v1_provider: GenFile = /*@__PURE__*/
-  fileDesc("Chtwb3N0cGlsb3QvdjEvcHJvdmlkZXIucHJvdG8SDHBvc3RwaWxvdC52MSIxCghNb2RlbFJlZhITCgtwcm92aWRlcl9pZBgBIAEoCRIQCghtb2RlbF9pZBgCIAEoCSKVAQoJTW9kZWxJbmZvEiMKA3JlZhgBIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhINCgVsYWJlbBgCIAEoCRIOCgZ2aXNpb24YAyABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBCABKAgSEAoIZGlzYWJsZWQYBSABKAgSFwoPZGlzYWJsZWRfcmVhc29uGAYgASgJImUKCVNlbGVjdGlvbhIiCgVzdGFnZRgBIAEoDjITLnBvc3RwaWxvdC52MS5TdGFnZRIjCgNyZWYYAiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSDwoHbWlzc2luZxgDIAEoCCITChFMaXN0TW9kZWxzUmVxdWVzdCI9ChJMaXN0TW9kZWxzUmVzcG9uc2USJwoGbW9kZWxzGAEgAygLMhcucG9zdHBpbG90LnYxLk1vZGVsSW5mbyIWChRHZXRTZWxlY3Rpb25zUmVxdWVzdCJEChVHZXRTZWxlY3Rpb25zUmVzcG9uc2USKwoKc2VsZWN0aW9ucxgBIAMoCzIXLnBvc3RwaWxvdC52MS5TZWxlY3Rpb24iXwoUU2F2ZVNlbGVjdGlvblJlcXVlc3QSIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USIwoDcmVmGAIgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIkMKFVNhdmVTZWxlY3Rpb25SZXNwb25zZRIqCglzZWxlY3Rpb24YASABKAsyFy5wb3N0cGlsb3QudjEuU2VsZWN0aW9uKlUKBVN0YWdlEhUKEVNUQUdFX1VOU1BFQ0lGSUVEEAASEQoNU1RBR0VfT0JTRVJWRRABEg8KC1NUQUdFX1dSSVRFEAISEQoNU1RBR0VfQU5BTFlaRRADMpwCCg9Qcm92aWRlclNlcnZpY2USUQoKTGlzdE1vZGVscxIfLnBvc3RwaWxvdC52MS5MaXN0TW9kZWxzUmVxdWVzdBogLnBvc3RwaWxvdC52MS5MaXN0TW9kZWxzUmVzcG9uc2UiABJaCg1HZXRTZWxlY3Rpb25zEiIucG9zdHBpbG90LnYxLkdldFNlbGVjdGlvbnNSZXF1ZXN0GiMucG9zdHBpbG90LnYxLkdldFNlbGVjdGlvbnNSZXNwb25zZSIAEloKDVNhdmVTZWxlY3Rpb24SIi5wb3N0cGlsb3QudjEuU2F2ZVNlbGVjdGlvblJlcXVlc3QaIy5wb3N0cGlsb3QudjEuU2F2ZVNlbGVjdGlvblJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
+  fileDesc("Chtwb3N0cGlsb3QvdjEvcHJvdmlkZXIucHJvdG8SDHBvc3RwaWxvdC52MSIxCghNb2RlbFJlZhITCgtwcm92aWRlcl9pZBgBIAEoCRIQCghtb2RlbF9pZBgCIAEoCSKIAgoJTW9kZWxJbmZvEiMKA3JlZhgBIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhINCgVsYWJlbBgCIAEoCRIOCgZ2aXNpb24YAyABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBCABKAgSEAoIZGlzYWJsZWQYBSABKAgSFwoPZGlzYWJsZWRfcmVhc29uGAYgASgJEhYKDmNvbnRleHRfdG9rZW5zGAcgASgDEh0KFWlucHV0X3VzZF9wZXJfbWlsbGlvbhgIIAEoCRIeChZvdXRwdXRfdXNkX3Blcl9taWxsaW9uGAkgASgJEhoKEnByaWNpbmdfY2hlY2tlZF9hdBgKIAEoCSKQAQoJU2VsZWN0aW9uEiIKBXN0YWdlGAEgASgOMhMucG9zdHBpbG90LnYxLlN0YWdlEiMKA3JlZhgCIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIPCgdtaXNzaW5nGAMgASgIEikKBHNsb3QYBCABKA4yGy5wb3N0cGlsb3QudjEuU2VsZWN0aW9uU2xvdCKQAQoOQ29tcGFyaXNvblBhaXISIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USLAoLY2FuZGlkYXRlX2EYAiABKAsyFy5wb3N0cGlsb3QudjEuU2VsZWN0aW9uEiwKC2NhbmRpZGF0ZV9iGAMgASgLMhcucG9zdHBpbG90LnYxLlNlbGVjdGlvbiLEAQocUmVjb21tZW5kYXRpb25TdGFnZVNlbGVjdGlvbhIiCgVzdGFnZRgBIAEoDjITLnBvc3RwaWxvdC52MS5TdGFnZRImCgZhY3RpdmUYAiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLY2FuZGlkYXRlX2EYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLY2FuZGlkYXRlX2IYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYibgoRUmVjb21tZW5kYXRpb25TZXQSCgoCaWQYASABKAkSDQoFbGFiZWwYAiABKAkSPgoKc2VsZWN0aW9ucxgDIAMoCzIqLnBvc3RwaWxvdC52MS5SZWNvbW1lbmRhdGlvblN0YWdlU2VsZWN0aW9uIhMKEUxpc3RNb2RlbHNSZXF1ZXN0Ij0KEkxpc3RNb2RlbHNSZXNwb25zZRInCgZtb2RlbHMYASADKAsyFy5wb3N0cGlsb3QudjEuTW9kZWxJbmZvIhYKFEdldFNlbGVjdGlvbnNSZXF1ZXN0IkQKFUdldFNlbGVjdGlvbnNSZXNwb25zZRIrCgpzZWxlY3Rpb25zGAEgAygLMhcucG9zdHBpbG90LnYxLlNlbGVjdGlvbiJfChRTYXZlU2VsZWN0aW9uUmVxdWVzdBIiCgVzdGFnZRgBIAEoDjITLnBvc3RwaWxvdC52MS5TdGFnZRIjCgNyZWYYAiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYiQwoVU2F2ZVNlbGVjdGlvblJlc3BvbnNlEioKCXNlbGVjdGlvbhgBIAEoCzIXLnBvc3RwaWxvdC52MS5TZWxlY3Rpb24iGwoZR2V0Q29tcGFyaXNvblBhaXJzUmVxdWVzdCJJChpHZXRDb21wYXJpc29uUGFpcnNSZXNwb25zZRIrCgVwYWlycxgBIAMoCzIcLnBvc3RwaWxvdC52MS5Db21wYXJpc29uUGFpciKZAQoZU2F2ZUNvbXBhcmlzb25QYWlyUmVxdWVzdBIiCgVzdGFnZRgBIAEoDjITLnBvc3RwaWxvdC52MS5TdGFnZRIrCgtjYW5kaWRhdGVfYRgCIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIrCgtjYW5kaWRhdGVfYhgDIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZiJIChpTYXZlQ29tcGFyaXNvblBhaXJSZXNwb25zZRIqCgRwYWlyGAEgASgLMhwucG9zdHBpbG90LnYxLkNvbXBhcmlzb25QYWlyIh8KHUxpc3RSZWNvbW1lbmRhdGlvblNldHNSZXF1ZXN0Ik8KHkxpc3RSZWNvbW1lbmRhdGlvblNldHNSZXNwb25zZRItCgRzZXRzGAEgAygLMh8ucG9zdHBpbG90LnYxLlJlY29tbWVuZGF0aW9uU2V0IisKHUFwcGx5UmVjb21tZW5kYXRpb25TZXRSZXF1ZXN0EgoKAmlkGAEgASgJIqgBCh5BcHBseVJlY29tbWVuZGF0aW9uU2V0UmVzcG9uc2USLAoDc2V0GAEgASgLMh8ucG9zdHBpbG90LnYxLlJlY29tbWVuZGF0aW9uU2V0EisKCnNlbGVjdGlvbnMYAiADKAsyFy5wb3N0cGlsb3QudjEuU2VsZWN0aW9uEisKBXBhaXJzGAMgAygLMhwucG9zdHBpbG90LnYxLkNvbXBhcmlzb25QYWlyKlUKBVN0YWdlEhUKEVNUQUdFX1VOU1BFQ0lGSUVEEAASEQoNU1RBR0VfT0JTRVJWRRABEg8KC1NUQUdFX1dSSVRFEAISEQoNU1RBR0VfQU5BTFlaRRADKooBCg1TZWxlY3Rpb25TbG90Eh4KGlNFTEVDVElPTl9TTE9UX1VOU1BFQ0lGSUVEEAASGQoVU0VMRUNUSU9OX1NMT1RfQUNUSVZFEAESHgoaU0VMRUNUSU9OX1NMT1RfQ0FORElEQVRFX0EQAhIeChpTRUxFQ1RJT05fU0xPVF9DQU5ESURBVEVfQhADMuAFCg9Qcm92aWRlclNlcnZpY2USUQoKTGlzdE1vZGVscxIfLnBvc3RwaWxvdC52MS5MaXN0TW9kZWxzUmVxdWVzdBogLnBvc3RwaWxvdC52MS5MaXN0TW9kZWxzUmVzcG9uc2UiABJaCg1HZXRTZWxlY3Rpb25zEiIucG9zdHBpbG90LnYxLkdldFNlbGVjdGlvbnNSZXF1ZXN0GiMucG9zdHBpbG90LnYxLkdldFNlbGVjdGlvbnNSZXNwb25zZSIAEloKDVNhdmVTZWxlY3Rpb24SIi5wb3N0cGlsb3QudjEuU2F2ZVNlbGVjdGlvblJlcXVlc3QaIy5wb3N0cGlsb3QudjEuU2F2ZVNlbGVjdGlvblJlc3BvbnNlIgASaQoSR2V0Q29tcGFyaXNvblBhaXJzEicucG9zdHBpbG90LnYxLkdldENvbXBhcmlzb25QYWlyc1JlcXVlc3QaKC5wb3N0cGlsb3QudjEuR2V0Q29tcGFyaXNvblBhaXJzUmVzcG9uc2UiABJpChJTYXZlQ29tcGFyaXNvblBhaXISJy5wb3N0cGlsb3QudjEuU2F2ZUNvbXBhcmlzb25QYWlyUmVxdWVzdBooLnBvc3RwaWxvdC52MS5TYXZlQ29tcGFyaXNvblBhaXJSZXNwb25zZSIAEnUKFkxpc3RSZWNvbW1lbmRhdGlvblNldHMSKy5wb3N0cGlsb3QudjEuTGlzdFJlY29tbWVuZGF0aW9uU2V0c1JlcXVlc3QaLC5wb3N0cGlsb3QudjEuTGlzdFJlY29tbWVuZGF0aW9uU2V0c1Jlc3BvbnNlIgASdQoWQXBwbHlSZWNvbW1lbmRhdGlvblNldBIrLnBvc3RwaWxvdC52MS5BcHBseVJlY29tbWVuZGF0aW9uU2V0UmVxdWVzdBosLnBvc3RwaWxvdC52MS5BcHBseVJlY29tbWVuZGF0aW9uU2V0UmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
 
 /**
  * Reused by the Start* RPCs of the generation plans: a job records exactly which model
@@ -73,6 +73,26 @@ export type ModelInfo = Message<"postpilot.v1.ModelInfo"> & {
    * @generated from field: string disabled_reason = 6;
    */
   disabledReason: string;
+
+  /**
+   * @generated from field: int64 context_tokens = 7;
+   */
+  contextTokens: bigint;
+
+  /**
+   * @generated from field: string input_usd_per_million = 8;
+   */
+  inputUsdPerMillion: string;
+
+  /**
+   * @generated from field: string output_usd_per_million = 9;
+   */
+  outputUsdPerMillion: string;
+
+  /**
+   * @generated from field: string pricing_checked_at = 10;
+   */
+  pricingCheckedAt: string;
 };
 
 /**
@@ -103,6 +123,11 @@ export type Selection = Message<"postpilot.v1.Selection"> & {
    * @generated from field: bool missing = 3;
    */
   missing: boolean;
+
+  /**
+   * @generated from field: postpilot.v1.SelectionSlot slot = 4;
+   */
+  slot: SelectionSlot;
 };
 
 /**
@@ -111,6 +136,92 @@ export type Selection = Message<"postpilot.v1.Selection"> & {
  */
 export const SelectionSchema: GenMessage<Selection> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_provider, 2);
+
+/**
+ * @generated from message postpilot.v1.ComparisonPair
+ */
+export type ComparisonPair = Message<"postpilot.v1.ComparisonPair"> & {
+  /**
+   * @generated from field: postpilot.v1.Stage stage = 1;
+   */
+  stage: Stage;
+
+  /**
+   * @generated from field: postpilot.v1.Selection candidate_a = 2;
+   */
+  candidateA?: Selection | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.Selection candidate_b = 3;
+   */
+  candidateB?: Selection | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.ComparisonPair.
+ * Use `create(ComparisonPairSchema)` to create a new message.
+ */
+export const ComparisonPairSchema: GenMessage<ComparisonPair> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 3);
+
+/**
+ * @generated from message postpilot.v1.RecommendationStageSelection
+ */
+export type RecommendationStageSelection = Message<"postpilot.v1.RecommendationStageSelection"> & {
+  /**
+   * @generated from field: postpilot.v1.Stage stage = 1;
+   */
+  stage: Stage;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef active = 2;
+   */
+  active?: ModelRef | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef candidate_a = 3;
+   */
+  candidateA?: ModelRef | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef candidate_b = 4;
+   */
+  candidateB?: ModelRef | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.RecommendationStageSelection.
+ * Use `create(RecommendationStageSelectionSchema)` to create a new message.
+ */
+export const RecommendationStageSelectionSchema: GenMessage<RecommendationStageSelection> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 4);
+
+/**
+ * @generated from message postpilot.v1.RecommendationSet
+ */
+export type RecommendationSet = Message<"postpilot.v1.RecommendationSet"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string label = 2;
+   */
+  label: string;
+
+  /**
+   * @generated from field: repeated postpilot.v1.RecommendationStageSelection selections = 3;
+   */
+  selections: RecommendationStageSelection[];
+};
+
+/**
+ * Describes the message postpilot.v1.RecommendationSet.
+ * Use `create(RecommendationSetSchema)` to create a new message.
+ */
+export const RecommendationSetSchema: GenMessage<RecommendationSet> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 5);
 
 /**
  * @generated from message postpilot.v1.ListModelsRequest
@@ -123,7 +234,7 @@ export type ListModelsRequest = Message<"postpilot.v1.ListModelsRequest"> & {
  * Use `create(ListModelsRequestSchema)` to create a new message.
  */
 export const ListModelsRequestSchema: GenMessage<ListModelsRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_provider, 3);
+  messageDesc(file_postpilot_v1_provider, 6);
 
 /**
  * @generated from message postpilot.v1.ListModelsResponse
@@ -140,7 +251,7 @@ export type ListModelsResponse = Message<"postpilot.v1.ListModelsResponse"> & {
  * Use `create(ListModelsResponseSchema)` to create a new message.
  */
 export const ListModelsResponseSchema: GenMessage<ListModelsResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_provider, 4);
+  messageDesc(file_postpilot_v1_provider, 7);
 
 /**
  * @generated from message postpilot.v1.GetSelectionsRequest
@@ -153,7 +264,7 @@ export type GetSelectionsRequest = Message<"postpilot.v1.GetSelectionsRequest"> 
  * Use `create(GetSelectionsRequestSchema)` to create a new message.
  */
 export const GetSelectionsRequestSchema: GenMessage<GetSelectionsRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_provider, 5);
+  messageDesc(file_postpilot_v1_provider, 8);
 
 /**
  * @generated from message postpilot.v1.GetSelectionsResponse
@@ -170,7 +281,7 @@ export type GetSelectionsResponse = Message<"postpilot.v1.GetSelectionsResponse"
  * Use `create(GetSelectionsResponseSchema)` to create a new message.
  */
 export const GetSelectionsResponseSchema: GenMessage<GetSelectionsResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_provider, 6);
+  messageDesc(file_postpilot_v1_provider, 9);
 
 /**
  * @generated from message postpilot.v1.SaveSelectionRequest
@@ -192,7 +303,7 @@ export type SaveSelectionRequest = Message<"postpilot.v1.SaveSelectionRequest"> 
  * Use `create(SaveSelectionRequestSchema)` to create a new message.
  */
 export const SaveSelectionRequestSchema: GenMessage<SaveSelectionRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_provider, 7);
+  messageDesc(file_postpilot_v1_provider, 10);
 
 /**
  * @generated from message postpilot.v1.SaveSelectionResponse
@@ -209,7 +320,155 @@ export type SaveSelectionResponse = Message<"postpilot.v1.SaveSelectionResponse"
  * Use `create(SaveSelectionResponseSchema)` to create a new message.
  */
 export const SaveSelectionResponseSchema: GenMessage<SaveSelectionResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_provider, 8);
+  messageDesc(file_postpilot_v1_provider, 11);
+
+/**
+ * @generated from message postpilot.v1.GetComparisonPairsRequest
+ */
+export type GetComparisonPairsRequest = Message<"postpilot.v1.GetComparisonPairsRequest"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.GetComparisonPairsRequest.
+ * Use `create(GetComparisonPairsRequestSchema)` to create a new message.
+ */
+export const GetComparisonPairsRequestSchema: GenMessage<GetComparisonPairsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 12);
+
+/**
+ * @generated from message postpilot.v1.GetComparisonPairsResponse
+ */
+export type GetComparisonPairsResponse = Message<"postpilot.v1.GetComparisonPairsResponse"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.ComparisonPair pairs = 1;
+   */
+  pairs: ComparisonPair[];
+};
+
+/**
+ * Describes the message postpilot.v1.GetComparisonPairsResponse.
+ * Use `create(GetComparisonPairsResponseSchema)` to create a new message.
+ */
+export const GetComparisonPairsResponseSchema: GenMessage<GetComparisonPairsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 13);
+
+/**
+ * @generated from message postpilot.v1.SaveComparisonPairRequest
+ */
+export type SaveComparisonPairRequest = Message<"postpilot.v1.SaveComparisonPairRequest"> & {
+  /**
+   * @generated from field: postpilot.v1.Stage stage = 1;
+   */
+  stage: Stage;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef candidate_a = 2;
+   */
+  candidateA?: ModelRef | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef candidate_b = 3;
+   */
+  candidateB?: ModelRef | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.SaveComparisonPairRequest.
+ * Use `create(SaveComparisonPairRequestSchema)` to create a new message.
+ */
+export const SaveComparisonPairRequestSchema: GenMessage<SaveComparisonPairRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 14);
+
+/**
+ * @generated from message postpilot.v1.SaveComparisonPairResponse
+ */
+export type SaveComparisonPairResponse = Message<"postpilot.v1.SaveComparisonPairResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.ComparisonPair pair = 1;
+   */
+  pair?: ComparisonPair | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.SaveComparisonPairResponse.
+ * Use `create(SaveComparisonPairResponseSchema)` to create a new message.
+ */
+export const SaveComparisonPairResponseSchema: GenMessage<SaveComparisonPairResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 15);
+
+/**
+ * @generated from message postpilot.v1.ListRecommendationSetsRequest
+ */
+export type ListRecommendationSetsRequest = Message<"postpilot.v1.ListRecommendationSetsRequest"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.ListRecommendationSetsRequest.
+ * Use `create(ListRecommendationSetsRequestSchema)` to create a new message.
+ */
+export const ListRecommendationSetsRequestSchema: GenMessage<ListRecommendationSetsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 16);
+
+/**
+ * @generated from message postpilot.v1.ListRecommendationSetsResponse
+ */
+export type ListRecommendationSetsResponse = Message<"postpilot.v1.ListRecommendationSetsResponse"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.RecommendationSet sets = 1;
+   */
+  sets: RecommendationSet[];
+};
+
+/**
+ * Describes the message postpilot.v1.ListRecommendationSetsResponse.
+ * Use `create(ListRecommendationSetsResponseSchema)` to create a new message.
+ */
+export const ListRecommendationSetsResponseSchema: GenMessage<ListRecommendationSetsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 17);
+
+/**
+ * @generated from message postpilot.v1.ApplyRecommendationSetRequest
+ */
+export type ApplyRecommendationSetRequest = Message<"postpilot.v1.ApplyRecommendationSetRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ApplyRecommendationSetRequest.
+ * Use `create(ApplyRecommendationSetRequestSchema)` to create a new message.
+ */
+export const ApplyRecommendationSetRequestSchema: GenMessage<ApplyRecommendationSetRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 18);
+
+/**
+ * @generated from message postpilot.v1.ApplyRecommendationSetResponse
+ */
+export type ApplyRecommendationSetResponse = Message<"postpilot.v1.ApplyRecommendationSetResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.RecommendationSet set = 1;
+   */
+  set?: RecommendationSet | undefined;
+
+  /**
+   * @generated from field: repeated postpilot.v1.Selection selections = 2;
+   */
+  selections: Selection[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.ComparisonPair pairs = 3;
+   */
+  pairs: ComparisonPair[];
+};
+
+/**
+ * Describes the message postpilot.v1.ApplyRecommendationSetResponse.
+ * Use `create(ApplyRecommendationSetResponseSchema)` to create a new message.
+ */
+export const ApplyRecommendationSetResponseSchema: GenMessage<ApplyRecommendationSetResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 19);
 
 /**
  * The two generation stages and the voice-analysis stage each choose their own model
@@ -244,6 +503,37 @@ export enum Stage {
  */
 export const StageSchema: GenEnum<Stage> = /*@__PURE__*/
   enumDesc(file_postpilot_v1_provider, 0);
+
+/**
+ * @generated from enum postpilot.v1.SelectionSlot
+ */
+export enum SelectionSlot {
+  /**
+   * @generated from enum value: SELECTION_SLOT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: SELECTION_SLOT_ACTIVE = 1;
+   */
+  ACTIVE = 1,
+
+  /**
+   * @generated from enum value: SELECTION_SLOT_CANDIDATE_A = 2;
+   */
+  CANDIDATE_A = 2,
+
+  /**
+   * @generated from enum value: SELECTION_SLOT_CANDIDATE_B = 3;
+   */
+  CANDIDATE_B = 3,
+}
+
+/**
+ * Describes the enum postpilot.v1.SelectionSlot.
+ */
+export const SelectionSlotSchema: GenEnum<SelectionSlot> = /*@__PURE__*/
+  enumDesc(file_postpilot_v1_provider, 1);
 
 /**
  * provider.proto is the model catalog: what is registered in providers.yaml, what each
@@ -284,6 +574,38 @@ export const ProviderService: GenService<{
     methodKind: "unary";
     input: typeof SaveSelectionRequestSchema;
     output: typeof SaveSelectionResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ProviderService.GetComparisonPairs
+   */
+  getComparisonPairs: {
+    methodKind: "unary";
+    input: typeof GetComparisonPairsRequestSchema;
+    output: typeof GetComparisonPairsResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ProviderService.SaveComparisonPair
+   */
+  saveComparisonPair: {
+    methodKind: "unary";
+    input: typeof SaveComparisonPairRequestSchema;
+    output: typeof SaveComparisonPairResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ProviderService.ListRecommendationSets
+   */
+  listRecommendationSets: {
+    methodKind: "unary";
+    input: typeof ListRecommendationSetsRequestSchema;
+    output: typeof ListRecommendationSetsResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ProviderService.ApplyRecommendationSet
+   */
+  applyRecommendationSet: {
+    methodKind: "unary";
+    input: typeof ApplyRecommendationSetRequestSchema;
+    output: typeof ApplyRecommendationSetResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_provider, 0);

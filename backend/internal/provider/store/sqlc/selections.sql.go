@@ -11,12 +11,13 @@ import (
 
 const deleteSelectionIfRef = `-- name: DeleteSelectionIfRef :exec
 DELETE FROM model_selections
-WHERE user_id = ? AND stage = ? AND provider_id = ? AND model_id = ?
+WHERE user_id = ? AND stage = ? AND slot = ? AND provider_id = ? AND model_id = ?
 `
 
 type DeleteSelectionIfRefParams struct {
 	UserID     string
 	Stage      string
+	Slot       string
 	ProviderID string
 	ModelID    string
 }
@@ -27,21 +28,22 @@ func (q *Queries) DeleteSelectionIfRef(ctx context.Context, arg DeleteSelectionI
 	_, err := q.db.ExecContext(ctx, deleteSelectionIfRef,
 		arg.UserID,
 		arg.Stage,
+		arg.Slot,
 		arg.ProviderID,
 		arg.ModelID,
 	)
 	return err
 }
 
-const listSelections = `-- name: ListSelections :many
-SELECT user_id, stage, provider_id, model_id, updated_at
+const listSelectionSlots = `-- name: ListSelectionSlots :many
+SELECT user_id, stage, slot, provider_id, model_id, updated_at
 FROM model_selections
 WHERE user_id = ?
-ORDER BY stage
+ORDER BY stage, slot
 `
 
-func (q *Queries) ListSelections(ctx context.Context, userID string) ([]ModelSelection, error) {
-	rows, err := q.db.QueryContext(ctx, listSelections, userID)
+func (q *Queries) ListSelectionSlots(ctx context.Context, userID string) ([]ModelSelection, error) {
+	rows, err := q.db.QueryContext(ctx, listSelectionSlots, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +51,51 @@ func (q *Queries) ListSelections(ctx context.Context, userID string) ([]ModelSel
 	var items []ModelSelection
 	for rows.Next() {
 		var i ModelSelection
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Stage,
+			&i.Slot,
+			&i.ProviderID,
+			&i.ModelID,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSelections = `-- name: ListSelections :many
+SELECT user_id, stage, provider_id, model_id, updated_at
+FROM model_selections
+WHERE user_id = ? AND slot = 'active'
+ORDER BY stage
+`
+
+type ListSelectionsRow struct {
+	UserID     string
+	Stage      string
+	ProviderID string
+	ModelID    string
+	UpdatedAt  string
+}
+
+func (q *Queries) ListSelections(ctx context.Context, userID string) ([]ListSelectionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSelections, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSelectionsRow
+	for rows.Next() {
+		var i ListSelectionsRow
 		if err := rows.Scan(
 			&i.UserID,
 			&i.Stage,
@@ -71,9 +118,9 @@ func (q *Queries) ListSelections(ctx context.Context, userID string) ([]ModelSel
 
 const upsertSelection = `-- name: UpsertSelection :exec
 
-INSERT INTO model_selections (user_id, stage, provider_id, model_id, updated_at)
-VALUES (?, ?, ?, ?, ?)
-ON CONFLICT(user_id, stage) DO UPDATE SET
+INSERT INTO model_selections (user_id, stage, slot, provider_id, model_id, updated_at)
+VALUES (?, ?, 'active', ?, ?, ?)
+ON CONFLICT(user_id, stage, slot) DO UPDATE SET
     provider_id = excluded.provider_id,
     model_id    = excluded.model_id,
     updated_at  = excluded.updated_at
@@ -93,6 +140,36 @@ func (q *Queries) UpsertSelection(ctx context.Context, arg UpsertSelectionParams
 	_, err := q.db.ExecContext(ctx, upsertSelection,
 		arg.UserID,
 		arg.Stage,
+		arg.ProviderID,
+		arg.ModelID,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const upsertSelectionSlot = `-- name: UpsertSelectionSlot :exec
+INSERT INTO model_selections (user_id, stage, slot, provider_id, model_id, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(user_id, stage, slot) DO UPDATE SET
+    provider_id = excluded.provider_id,
+    model_id    = excluded.model_id,
+    updated_at  = excluded.updated_at
+`
+
+type UpsertSelectionSlotParams struct {
+	UserID     string
+	Stage      string
+	Slot       string
+	ProviderID string
+	ModelID    string
+	UpdatedAt  string
+}
+
+func (q *Queries) UpsertSelectionSlot(ctx context.Context, arg UpsertSelectionSlotParams) error {
+	_, err := q.db.ExecContext(ctx, upsertSelectionSlot,
+		arg.UserID,
+		arg.Stage,
+		arg.Slot,
 		arg.ProviderID,
 		arg.ModelID,
 		arg.UpdatedAt,

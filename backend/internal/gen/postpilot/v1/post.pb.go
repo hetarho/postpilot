@@ -331,15 +331,16 @@ type Post struct {
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	Memo  string `protobuf:"bytes,3,opt,name=memo,proto3" json:"memo,omitempty"`
 	// draft | review. Generation (plan 06) moves it to review.
-	Status        string         `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	Images        []*Image       `protobuf:"bytes,5,rep,name=images,proto3" json:"images,omitempty"`
-	CreatedAt     string         `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string         `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	ActiveJob     *GenerationJob `protobuf:"bytes,8,opt,name=active_job,json=activeJob,proto3" json:"active_job,omitempty"`
-	Content       *PostContent   `protobuf:"bytes,9,opt,name=content,proto3" json:"content,omitempty"`
-	Observations  []*Observation `protobuf:"bytes,10,rep,name=observations,proto3" json:"observations,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Status              string         `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	Images              []*Image       `protobuf:"bytes,5,rep,name=images,proto3" json:"images,omitempty"`
+	CreatedAt           string         `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           string         `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ActiveJob           *GenerationJob `protobuf:"bytes,8,opt,name=active_job,json=activeJob,proto3" json:"active_job,omitempty"`
+	Content             *PostContent   `protobuf:"bytes,9,opt,name=content,proto3" json:"content,omitempty"`
+	Observations        []*Observation `protobuf:"bytes,10,rep,name=observations,proto3" json:"observations,omitempty"`
+	PendingExperimentId string         `protobuf:"bytes,11,opt,name=pending_experiment_id,json=pendingExperimentId,proto3" json:"pending_experiment_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Post) Reset() {
@@ -442,6 +443,13 @@ func (x *Post) GetObservations() []*Observation {
 	return nil
 }
 
+func (x *Post) GetPendingExperimentId() string {
+	if x != nil {
+		return x.PendingExperimentId
+	}
+	return ""
+}
+
 type Image struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -532,14 +540,15 @@ func (x *Image) GetViewUrl() string {
 }
 
 type PostSummary struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Slug          string                 `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	ActiveJob     *GenerationJob         `protobuf:"bytes,5,opt,name=active_job,json=activeJob,proto3" json:"active_job,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Slug                string                 `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
+	Title               string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Status              string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	UpdatedAt           string                 `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ActiveJob           *GenerationJob         `protobuf:"bytes,5,opt,name=active_job,json=activeJob,proto3" json:"active_job,omitempty"`
+	PendingExperimentId string                 `protobuf:"bytes,6,opt,name=pending_experiment_id,json=pendingExperimentId,proto3" json:"pending_experiment_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *PostSummary) Reset() {
@@ -605,6 +614,13 @@ func (x *PostSummary) GetActiveJob() *GenerationJob {
 		return x.ActiveJob
 	}
 	return nil
+}
+
+func (x *PostSummary) GetPendingExperimentId() string {
+	if x != nil {
+		return x.PendingExperimentId
+	}
+	return ""
 }
 
 type GenerationJob struct {
@@ -831,7 +847,8 @@ type StartGenerationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PostSlug      string                 `protobuf:"bytes,1,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
 	ObserveModel  *ModelRef              `protobuf:"bytes,2,opt,name=observe_model,json=observeModel,proto3" json:"observe_model,omitempty"`
-	WriteModel    *ModelRef              `protobuf:"bytes,3,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	WriteModelA   *ModelRef              `protobuf:"bytes,3,opt,name=write_model_a,json=writeModelA,proto3" json:"write_model_a,omitempty"`
+	WriteModelB   *ModelRef              `protobuf:"bytes,4,opt,name=write_model_b,json=writeModelB,proto3" json:"write_model_b,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -880,9 +897,16 @@ func (x *StartGenerationRequest) GetObserveModel() *ModelRef {
 	return nil
 }
 
-func (x *StartGenerationRequest) GetWriteModel() *ModelRef {
+func (x *StartGenerationRequest) GetWriteModelA() *ModelRef {
 	if x != nil {
-		return x.WriteModel
+		return x.WriteModelA
+	}
+	return nil
+}
+
+func (x *StartGenerationRequest) GetWriteModelB() *ModelRef {
+	if x != nil {
+		return x.WriteModelB
 	}
 	return nil
 }
@@ -890,6 +914,7 @@ func (x *StartGenerationRequest) GetWriteModel() *ModelRef {
 type StartGenerationResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	ExperimentId  string                 `protobuf:"bytes,2,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -927,6 +952,13 @@ func (*StartGenerationResponse) Descriptor() ([]byte, []int) {
 func (x *StartGenerationResponse) GetJobId() string {
 	if x != nil {
 		return x.JobId
+	}
+	return ""
+}
+
+func (x *StartGenerationResponse) GetExperimentId() string {
+	if x != nil {
+		return x.ExperimentId
 	}
 	return ""
 }
@@ -1317,6 +1349,86 @@ func (x *ListPostsResponse) GetPosts() []*PostSummary {
 	return nil
 }
 
+type DeletePostRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Slug          string                 `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeletePostRequest) Reset() {
+	*x = DeletePostRequest{}
+	mi := &file_postpilot_v1_post_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeletePostRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePostRequest) ProtoMessage() {}
+
+func (x *DeletePostRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_post_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePostRequest.ProtoReflect.Descriptor instead.
+func (*DeletePostRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *DeletePostRequest) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
+type DeletePostResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeletePostResponse) Reset() {
+	*x = DeletePostResponse{}
+	mi := &file_postpilot_v1_post_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeletePostResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePostResponse) ProtoMessage() {}
+
+func (x *DeletePostResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_post_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePostResponse.ProtoReflect.Descriptor instead.
+func (*DeletePostResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{20}
+}
+
 type CreateUploadRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PostSlug      string                 `protobuf:"bytes,1,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
@@ -1327,7 +1439,7 @@ type CreateUploadRequest struct {
 
 func (x *CreateUploadRequest) Reset() {
 	*x = CreateUploadRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[19]
+	mi := &file_postpilot_v1_post_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1339,7 +1451,7 @@ func (x *CreateUploadRequest) String() string {
 func (*CreateUploadRequest) ProtoMessage() {}
 
 func (x *CreateUploadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[19]
+	mi := &file_postpilot_v1_post_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1352,7 +1464,7 @@ func (x *CreateUploadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateUploadRequest.ProtoReflect.Descriptor instead.
 func (*CreateUploadRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{19}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *CreateUploadRequest) GetPostSlug() string {
@@ -1384,7 +1496,7 @@ type CreateUploadResponse struct {
 
 func (x *CreateUploadResponse) Reset() {
 	*x = CreateUploadResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[20]
+	mi := &file_postpilot_v1_post_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1396,7 +1508,7 @@ func (x *CreateUploadResponse) String() string {
 func (*CreateUploadResponse) ProtoMessage() {}
 
 func (x *CreateUploadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[20]
+	mi := &file_postpilot_v1_post_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1409,7 +1521,7 @@ func (x *CreateUploadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateUploadResponse.ProtoReflect.Descriptor instead.
 func (*CreateUploadResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{20}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CreateUploadResponse) GetUploadId() string {
@@ -1451,7 +1563,7 @@ type ConfirmUploadRequest struct {
 
 func (x *ConfirmUploadRequest) Reset() {
 	*x = ConfirmUploadRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[21]
+	mi := &file_postpilot_v1_post_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1463,7 +1575,7 @@ func (x *ConfirmUploadRequest) String() string {
 func (*ConfirmUploadRequest) ProtoMessage() {}
 
 func (x *ConfirmUploadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[21]
+	mi := &file_postpilot_v1_post_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1476,7 +1588,7 @@ func (x *ConfirmUploadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmUploadRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmUploadRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{21}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ConfirmUploadRequest) GetUploadId() string {
@@ -1509,7 +1621,7 @@ type ConfirmUploadResponse struct {
 
 func (x *ConfirmUploadResponse) Reset() {
 	*x = ConfirmUploadResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[22]
+	mi := &file_postpilot_v1_post_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1521,7 +1633,7 @@ func (x *ConfirmUploadResponse) String() string {
 func (*ConfirmUploadResponse) ProtoMessage() {}
 
 func (x *ConfirmUploadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[22]
+	mi := &file_postpilot_v1_post_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1534,7 +1646,7 @@ func (x *ConfirmUploadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmUploadResponse.ProtoReflect.Descriptor instead.
 func (*ConfirmUploadResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{22}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ConfirmUploadResponse) GetImage() *Image {
@@ -1553,7 +1665,7 @@ type DeleteImageRequest struct {
 
 func (x *DeleteImageRequest) Reset() {
 	*x = DeleteImageRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[23]
+	mi := &file_postpilot_v1_post_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1565,7 +1677,7 @@ func (x *DeleteImageRequest) String() string {
 func (*DeleteImageRequest) ProtoMessage() {}
 
 func (x *DeleteImageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[23]
+	mi := &file_postpilot_v1_post_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1578,7 +1690,7 @@ func (x *DeleteImageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImageRequest.ProtoReflect.Descriptor instead.
 func (*DeleteImageRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{23}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *DeleteImageRequest) GetImageId() string {
@@ -1596,7 +1708,7 @@ type DeleteImageResponse struct {
 
 func (x *DeleteImageResponse) Reset() {
 	*x = DeleteImageResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[24]
+	mi := &file_postpilot_v1_post_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1608,7 +1720,7 @@ func (x *DeleteImageResponse) String() string {
 func (*DeleteImageResponse) ProtoMessage() {}
 
 func (x *DeleteImageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[24]
+	mi := &file_postpilot_v1_post_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1621,7 +1733,7 @@ func (x *DeleteImageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImageResponse.ProtoReflect.Descriptor instead.
 func (*DeleteImageResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{24}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{26}
 }
 
 var File_postpilot_v1_post_proto protoreflect.FileDescriptor
@@ -1648,7 +1760,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x04mood\x18\x03 \x01(\tR\x04mood\x12!\n" +
 	"\fvisible_text\x18\x04 \x01(\tR\vvisibleText\x12\x18\n" +
 	"\aobjects\x18\x05 \x03(\tR\aobjects\x12%\n" +
-	"\x0epeople_present\x18\x06 \x01(\bR\rpeoplePresent\"\xf7\x02\n" +
+	"\x0epeople_present\x18\x06 \x01(\bR\rpeoplePresent\"\xab\x03\n" +
 	"\x04Post\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -1663,14 +1775,15 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"active_job\x18\b \x01(\v2\x1b.postpilot.v1.GenerationJobR\tactiveJob\x123\n" +
 	"\acontent\x18\t \x01(\v2\x19.postpilot.v1.PostContentR\acontent\x12=\n" +
 	"\fobservations\x18\n" +
-	" \x03(\v2\x19.postpilot.v1.ObservationR\fobservations\"\x92\x01\n" +
+	" \x03(\v2\x19.postpilot.v1.ObservationR\fobservations\x122\n" +
+	"\x15pending_experiment_id\x18\v \x01(\tR\x13pendingExperimentId\"\x92\x01\n" +
 	"\x05Image\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x14\n" +
 	"\x05width\x18\x03 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x04 \x01(\x05R\x06height\x12\x14\n" +
 	"\x05bytes\x18\x05 \x01(\x03R\x05bytes\x12\x19\n" +
-	"\bview_url\x18\x06 \x01(\tR\aviewUrl\"\xaa\x01\n" +
+	"\bview_url\x18\x06 \x01(\tR\aviewUrl\"\xde\x01\n" +
 	"\vPostSummary\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
@@ -1678,7 +1791,8 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x04 \x01(\tR\tupdatedAt\x12:\n" +
 	"\n" +
-	"active_job\x18\x05 \x01(\v2\x1b.postpilot.v1.GenerationJobR\tactiveJob\"\x94\x03\n" +
+	"active_job\x18\x05 \x01(\v2\x1b.postpilot.v1.GenerationJobR\tactiveJob\x122\n" +
+	"\x15pending_experiment_id\x18\x06 \x01(\tR\x13pendingExperimentId\"\x94\x03\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
@@ -1699,14 +1813,15 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x14GetGenerationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x15GetGenerationResponse\x12-\n" +
-	"\x03job\x18\x01 \x01(\v2\x1b.postpilot.v1.GenerationJobR\x03job\"\xab\x01\n" +
+	"\x03job\x18\x01 \x01(\v2\x1b.postpilot.v1.GenerationJobR\x03job\"\xea\x01\n" +
 	"\x16StartGenerationRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12;\n" +
-	"\robserve_model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x127\n" +
-	"\vwrite_model\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\"0\n" +
+	"\robserve_model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x12:\n" +
+	"\rwrite_model_a\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\vwriteModelA\x12:\n" +
+	"\rwrite_model_b\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\vwriteModelB\"U\n" +
 	"\x17StartGenerationResponse\x12\x15\n" +
-	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\xb0\x01\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12#\n" +
+	"\rexperiment_id\x18\x02 \x01(\tR\fexperimentId\"\xb0\x01\n" +
 	"\x14StartRevisionRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12 \n" +
 	"\vinstruction\x18\x02 \x01(\tR\vinstruction\x12 \n" +
@@ -1728,7 +1843,10 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\x12\n" +
 	"\x10ListPostsRequest\"D\n" +
 	"\x11ListPostsResponse\x12/\n" +
-	"\x05posts\x18\x01 \x03(\v2\x19.postpilot.v1.PostSummaryR\x05posts\"N\n" +
+	"\x05posts\x18\x01 \x03(\v2\x19.postpilot.v1.PostSummaryR\x05posts\"'\n" +
+	"\x11DeletePostRequest\x12\x12\n" +
+	"\x04slug\x18\x01 \x01(\tR\x04slug\"\x14\n" +
+	"\x12DeletePostResponse\"N\n" +
 	"\x13CreateUploadRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\"\x8e\x01\n" +
@@ -1753,11 +1871,13 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\aHEADING\x10\x02\x12\t\n" +
 	"\x05IMAGE\x10\x03\x12\t\n" +
 	"\x05QUOTE\x10\x04\x12\b\n" +
-	"\x04LIST\x10\x052\x8e\x04\n" +
+	"\x04LIST\x10\x052\xe1\x04\n" +
 	"\vPostService\x12Z\n" +
 	"\rSavePostDraft\x12\".postpilot.v1.SavePostDraftRequest\x1a#.postpilot.v1.SavePostDraftResponse\"\x00\x12H\n" +
 	"\aGetPost\x12\x1c.postpilot.v1.GetPostRequest\x1a\x1d.postpilot.v1.GetPostResponse\"\x00\x12N\n" +
-	"\tListPosts\x12\x1e.postpilot.v1.ListPostsRequest\x1a\x1f.postpilot.v1.ListPostsResponse\"\x00\x12W\n" +
+	"\tListPosts\x12\x1e.postpilot.v1.ListPostsRequest\x1a\x1f.postpilot.v1.ListPostsResponse\"\x00\x12Q\n" +
+	"\n" +
+	"DeletePost\x12\x1f.postpilot.v1.DeletePostRequest\x1a .postpilot.v1.DeletePostResponse\"\x00\x12W\n" +
 	"\fCreateUpload\x12!.postpilot.v1.CreateUploadRequest\x1a\".postpilot.v1.CreateUploadResponse\"\x00\x12Z\n" +
 	"\rConfirmUpload\x12\".postpilot.v1.ConfirmUploadRequest\x1a#.postpilot.v1.ConfirmUploadResponse\"\x00\x12T\n" +
 	"\vDeleteImage\x12 .postpilot.v1.DeleteImageRequest\x1a!.postpilot.v1.DeleteImageResponse\"\x002\xad\x02\n" +
@@ -1779,7 +1899,7 @@ func file_postpilot_v1_post_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_post_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_postpilot_v1_post_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_postpilot_v1_post_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_postpilot_v1_post_proto_goTypes = []any{
 	(BlockType)(0),                  // 0: postpilot.v1.BlockType
 	(*Block)(nil),                   // 1: postpilot.v1.Block
@@ -1801,13 +1921,15 @@ var file_postpilot_v1_post_proto_goTypes = []any{
 	(*GetPostResponse)(nil),         // 17: postpilot.v1.GetPostResponse
 	(*ListPostsRequest)(nil),        // 18: postpilot.v1.ListPostsRequest
 	(*ListPostsResponse)(nil),       // 19: postpilot.v1.ListPostsResponse
-	(*CreateUploadRequest)(nil),     // 20: postpilot.v1.CreateUploadRequest
-	(*CreateUploadResponse)(nil),    // 21: postpilot.v1.CreateUploadResponse
-	(*ConfirmUploadRequest)(nil),    // 22: postpilot.v1.ConfirmUploadRequest
-	(*ConfirmUploadResponse)(nil),   // 23: postpilot.v1.ConfirmUploadResponse
-	(*DeleteImageRequest)(nil),      // 24: postpilot.v1.DeleteImageRequest
-	(*DeleteImageResponse)(nil),     // 25: postpilot.v1.DeleteImageResponse
-	(*ModelRef)(nil),                // 26: postpilot.v1.ModelRef
+	(*DeletePostRequest)(nil),       // 20: postpilot.v1.DeletePostRequest
+	(*DeletePostResponse)(nil),      // 21: postpilot.v1.DeletePostResponse
+	(*CreateUploadRequest)(nil),     // 22: postpilot.v1.CreateUploadRequest
+	(*CreateUploadResponse)(nil),    // 23: postpilot.v1.CreateUploadResponse
+	(*ConfirmUploadRequest)(nil),    // 24: postpilot.v1.ConfirmUploadRequest
+	(*ConfirmUploadResponse)(nil),   // 25: postpilot.v1.ConfirmUploadResponse
+	(*DeleteImageRequest)(nil),      // 26: postpilot.v1.DeleteImageRequest
+	(*DeleteImageResponse)(nil),     // 27: postpilot.v1.DeleteImageResponse
+	(*ModelRef)(nil),                // 28: postpilot.v1.ModelRef
 }
 var file_postpilot_v1_post_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.Block.type:type_name -> postpilot.v1.BlockType
@@ -1817,39 +1939,42 @@ var file_postpilot_v1_post_proto_depIdxs = []int32{
 	2,  // 4: postpilot.v1.Post.content:type_name -> postpilot.v1.PostContent
 	3,  // 5: postpilot.v1.Post.observations:type_name -> postpilot.v1.Observation
 	7,  // 6: postpilot.v1.PostSummary.active_job:type_name -> postpilot.v1.GenerationJob
-	26, // 7: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
-	26, // 8: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
+	28, // 7: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
+	28, // 8: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
 	7,  // 9: postpilot.v1.GetGenerationResponse.job:type_name -> postpilot.v1.GenerationJob
-	26, // 10: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	26, // 11: postpilot.v1.StartGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	26, // 12: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	4,  // 13: postpilot.v1.SavePostDraftResponse.post:type_name -> postpilot.v1.Post
-	4,  // 14: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
-	6,  // 15: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
-	5,  // 16: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
-	14, // 17: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
-	16, // 18: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
-	18, // 19: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
-	20, // 20: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
-	22, // 21: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
-	24, // 22: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
-	10, // 23: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
-	12, // 24: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
-	8,  // 25: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
-	15, // 26: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
-	17, // 27: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
-	19, // 28: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
-	21, // 29: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
-	23, // 30: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
-	25, // 31: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
-	11, // 32: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
-	13, // 33: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
-	9,  // 34: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
-	26, // [26:35] is the sub-list for method output_type
-	17, // [17:26] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	28, // 10: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	28, // 11: postpilot.v1.StartGenerationRequest.write_model_a:type_name -> postpilot.v1.ModelRef
+	28, // 12: postpilot.v1.StartGenerationRequest.write_model_b:type_name -> postpilot.v1.ModelRef
+	28, // 13: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	4,  // 14: postpilot.v1.SavePostDraftResponse.post:type_name -> postpilot.v1.Post
+	4,  // 15: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
+	6,  // 16: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
+	5,  // 17: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
+	14, // 18: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
+	16, // 19: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
+	18, // 20: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
+	20, // 21: postpilot.v1.PostService.DeletePost:input_type -> postpilot.v1.DeletePostRequest
+	22, // 22: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
+	24, // 23: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
+	26, // 24: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
+	10, // 25: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
+	12, // 26: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
+	8,  // 27: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
+	15, // 28: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
+	17, // 29: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
+	19, // 30: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
+	21, // 31: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
+	23, // 32: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
+	25, // 33: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
+	27, // 34: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
+	11, // 35: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
+	13, // 36: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
+	9,  // 37: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
+	28, // [28:38] is the sub-list for method output_type
+	18, // [18:28] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_post_proto_init() }
@@ -1864,7 +1989,7 @@ func file_postpilot_v1_post_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_post_proto_rawDesc), len(file_postpilot_v1_post_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   25,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

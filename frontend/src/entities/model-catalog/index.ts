@@ -1,4 +1,13 @@
-export type { CatalogModel, ModelRef, StageName, StageSelection } from './model/types'
+export type {
+  CatalogModel,
+  ComparisonPair,
+  ModelRef,
+  RecommendationSet,
+  RecommendationStageSelection,
+  SelectionSlotName,
+  StageName,
+  StageSelection,
+} from './model/types'
 export { STAGES, STAGE_LABELS, filterForStage, refKey, sameRef } from './model/types'
 export { useModels } from './api/useModels'
 export type {
@@ -13,3 +22,5 @@ export {
   useStageSelection,
 } from './api/useSelections'
 export { useSaveSelection, useSelectionSavePending } from './api/useSaveSelection'
+export { useApplyRecommendation, useModelSetup, useSaveComparisonPair } from './api/useModelSetup'
+export { getSelectionsQueryKey } from './api/catalog-mappers'

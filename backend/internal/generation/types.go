@@ -68,6 +68,19 @@ type StartRequest struct {
 	WriteModel   string
 }
 
+type StartExperimentRequest struct {
+	UserID       string
+	PostSlug     string
+	ObserveModel string
+	WriteModelA  string
+	WriteModelB  string
+}
+
+type StartExperimentResult struct {
+	JobID        string
+	ExperimentID string
+}
+
 type GenerateJob struct {
 	UserID       string
 	PostSlug     string

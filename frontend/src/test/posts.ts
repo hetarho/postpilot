@@ -46,6 +46,7 @@ export interface FakePostRow {
   activeJob?: FakeGenerationJobRow
   content?: PostContent
   observations?: Observation[]
+  pendingExperimentId?: string
 }
 
 export interface FakePostsOptions {
@@ -85,6 +86,7 @@ type Row = {
   activeJob?: ProtoGenerationJob
   content?: PostContent
   observations: Observation[]
+  pendingExperimentId: string
 }
 
 export function registerPostService(router: ConnectRouter, options: FakePostsOptions = {}) {
@@ -117,6 +119,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       activeJob: row.activeJob ? toFakeProto(row.activeJob) : undefined,
       content: row.content,
       observations: row.observations ?? [],
+      pendingExperimentId: row.pendingExperimentId ?? '',
     }
   }
 
@@ -191,6 +194,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       activeJob: rows.get(slug)?.activeJob,
       content: rows.get(slug)?.content,
       observations: rows.get(slug)?.observations ?? [],
+      pendingExperimentId: rows.get(slug)?.pendingExperimentId ?? '',
     }
     rows.set(slug, row)
     return create(SavePostDraftResponseSchema, { post: toProto(row) })

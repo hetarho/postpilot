@@ -7,12 +7,16 @@ import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
   GetSelectionsResponseSchema,
+  GetComparisonPairsResponseSchema,
+  ListRecommendationSetsResponseSchema,
+  ComparisonPairSchema,
   ListModelsResponseSchema,
   ModelInfoSchema,
   ModelRefSchema,
   ProviderService,
   SaveSelectionResponseSchema,
   SelectionSchema,
+  SelectionSlot,
   Stage,
 } from '@/shared/api'
 
@@ -46,6 +50,11 @@ export interface FakeProvidersOptions {
   saveGate?: Promise<void>
   /** Records every procedure the transport was asked for. */
   calls?: string[]
+  comparisonPairs?: Array<{
+    stage: Stage
+    candidateA: { providerId: string; modelId: string }
+    candidateB: { providerId: string; modelId: string }
+  }>
 }
 
 export function registerProviderService(router: ConnectRouter, options: FakeProvidersOptions = {}) {
@@ -110,6 +119,29 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
       selection: create(SelectionSchema, { stage: req.stage, ref }),
     })
   })
+
+  rpc(ProviderService.method.getComparisonPairs, () =>
+    create(GetComparisonPairsResponseSchema, {
+      pairs: (options.comparisonPairs ?? []).map((pair) =>
+        create(ComparisonPairSchema, {
+          stage: pair.stage,
+          candidateA: create(SelectionSchema, {
+            stage: pair.stage,
+            slot: SelectionSlot.CANDIDATE_A,
+            ref: pair.candidateA,
+          }),
+          candidateB: create(SelectionSchema, {
+            stage: pair.stage,
+            slot: SelectionSlot.CANDIDATE_B,
+            ref: pair.candidateB,
+          }),
+        }),
+      ),
+    }),
+  )
+  rpc(ProviderService.method.listRecommendationSets, () =>
+    create(ListRecommendationSetsResponseSchema, {}),
+  )
 }
 
 /** A transport serving only ProviderService — for tests of the catalog hooks/components. */

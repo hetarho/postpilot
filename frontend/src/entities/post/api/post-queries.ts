@@ -18,6 +18,7 @@ export function toPostDraft(post: Post): PostDraft {
     activeJob: post.activeJob ? toGenerationJob(post.activeJob) : undefined,
     content: post.content,
     observations: post.observations,
+    pendingExperimentId: post.pendingExperimentId,
   }
 }
 
@@ -28,6 +29,7 @@ export function toPostListItem(summary: PostSummary): PostListItem {
     status: summary.status,
     updatedAt: summary.updatedAt,
     activeJob: summary.activeJob ? toGenerationJob(summary.activeJob) : undefined,
+    pendingExperimentId: summary.pendingExperimentId,
   }
 }
 

@@ -14,6 +14,7 @@ import (
 var (
 	observeRef = llm.ModelRef{ProviderID: "provider", ModelID: "observe"}
 	writeRef   = llm.ModelRef{ProviderID: "provider", ModelID: "write"}
+	writeRefB  = llm.ModelRef{ProviderID: "provider", ModelID: "write-b"}
 )
 
 func TestValidateBlocks(t *testing.T) {
@@ -297,6 +298,86 @@ func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
 	var active *JobAlreadyInProgressError
 	if !errors.As(err, &active) || active.ActiveID != "active" {
 		t.Fatalf("active err=%v", err)
+	}
+}
+
+func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *testing.T) {
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Title: "가제", Memo: "같은 메모"}}
+	models := newFakeModels()
+	models.infos[writeRefB] = llm.ModelInfo{Ref: writeRefB, StructuredOutput: true}
+	models.complete = func(ref llm.ModelRef, _ llm.Request) (llm.Response, error) {
+		return llm.Response{
+			Text:  fmt.Sprintf(`{"title":%q,"summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`, ref.ModelID),
+			Usage: llm.Usage{PromptTokens: 10, CompletionTokens: 2, CostMicrousd: 3, CostReported: true},
+		}, nil
+	}
+	svc := NewService(posts, fakeProfiles{profile: Profile{Styleguide: "말투"}}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := svc.PrepareWriteInput(context.Background(), raw, func(string, int, int) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	left, leftUsage, err := svc.RunWriteCandidate(context.Background(), prepared, writeRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, _, err := svc.RunWriteCandidate(context.Background(), prepared, writeRefB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(posts.contents) != 0 {
+		t.Fatalf("candidate completion wrote canonical content: %+v", posts.contents)
+	}
+	if left.Title == right.Title || len(models.calls) != 2 || !reflect.DeepEqual(models.calls[0].request, models.calls[1].request) {
+		t.Fatalf("writers did not receive equal request snapshots: left=%+v right=%+v calls=%+v", left, right, models.calls)
+	}
+	if !leftUsage.CostReported || leftUsage.CostMicrousd != 3 {
+		t.Fatalf("candidate usage = %+v", leftUsage)
+	}
+	if err := svc.ApplyWriteWinner(context.Background(), "alice", "post", right); err != nil {
+		t.Fatal(err)
+	}
+	if len(posts.contents) != 1 || posts.contents[0].Title != "write-b" {
+		t.Fatalf("winner apply = %+v", posts.contents)
+	}
+}
+
+func TestWriteExperimentObservesPhotosExactlyOnceBeforeTwoWriters(t *testing.T) {
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Memo: "memo", Images: []Image{{Filename: "IMG_1.jpg", Key: "key"}}}}
+	models := newFakeModels()
+	models.infos[writeRefB] = llm.ModelInfo{Ref: writeRefB, StructuredOutput: true}
+	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
+		if request.HasImages() {
+			return llm.Response{Text: `{"observations":[{"file":"IMG_1.jpg","scene":"바다","mood":"","visible_text":"","objects":[],"people_present":false}]}`}, nil
+		}
+		return llm.Response{Text: `{"title":"글","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`}, nil
+	}
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := svc.PrepareWriteInput(context.Background(), raw, func(string, int, int) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.RunWriteCandidate(context.Background(), prepared, writeRef); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.RunWriteCandidate(context.Background(), prepared, writeRefB); err != nil {
+		t.Fatal(err)
+	}
+	imageCalls := 0
+	for _, call := range models.calls {
+		if call.request.HasImages() {
+			imageCalls++
+		}
+	}
+	if len(models.calls) != 3 || imageCalls != 1 || len(posts.observationWrites) != 1 || len(posts.contents) != 0 {
+		t.Fatalf("calls=%d imageCalls=%d observationWrites=%d contents=%d", len(models.calls), imageCalls, len(posts.observationWrites), len(posts.contents))
 	}
 }
 

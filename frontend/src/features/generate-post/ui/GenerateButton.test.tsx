@@ -28,6 +28,7 @@ const post: PostDraft = {
   activeJob: undefined,
   content: undefined,
   observations: [],
+  pendingExperimentId: '',
 }
 
 const activeJob: GenerationJob = {
@@ -62,11 +63,21 @@ function renderButton({
       models: [
         { providerId: 'openrouter', modelId: 'vision', vision: true },
         { providerId: 'openrouter', modelId: 'writer' },
+        { providerId: 'openrouter', modelId: 'writer-b' },
       ],
       selections: selected
         ? [
             { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'vision' },
             { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+          ]
+        : [],
+      comparisonPairs: selected
+        ? [
+            {
+              stage: Stage.WRITE,
+              candidateA: { providerId: 'openrouter', modelId: 'writer' },
+              candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
+            },
           ]
         : [],
     },
@@ -82,7 +93,7 @@ function renderButton({
 it('disables generation with the inline reason when the write choice is missing', async () => {
   renderButton({ selected: false })
 
-  expect(await screen.findByText('작성 모델을 선택하세요.')).toBeInTheDocument()
+  expect(await screen.findByText(/작성 A\/B 모델을 선택하세요/)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
 })
 
@@ -100,10 +111,18 @@ it('stays disabled while the accepted job is waiting for its first snapshot', as
       models: [
         { providerId: 'openrouter', modelId: 'vision', vision: true },
         { providerId: 'openrouter', modelId: 'writer' },
+        { providerId: 'openrouter', modelId: 'writer-b' },
       ],
       selections: [
         { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'vision' },
         { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+      ],
+      comparisonPairs: [
+        {
+          stage: Stage.WRITE,
+          candidateA: { providerId: 'openrouter', modelId: 'writer' },
+          candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
+        },
       ],
     },
   })
@@ -113,6 +132,17 @@ it('stays disabled while the accepted job is waiting for its first snapshot', as
 
   expect(await screen.findByText('생성 작업을 확인하는 중이에요.')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+})
+
+it('blocks a second generation until the pending experiment is reviewed', async () => {
+  renderButton({ draft: { ...post, pendingExperimentId: 'experiment-1' } })
+
+  expect(await screen.findByText(/먼저 대기 중인 AI 결과를 확인해 주세요/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+  expect(screen.getByRole('link', { name: 'AI 결과 확인' })).toHaveAttribute(
+    'href',
+    '/ai-models/experiments/experiment-1',
+  )
 })
 
 it('starts with the selected observe and write model payload', async () => {
@@ -128,7 +158,8 @@ it('starts with the selected observe and write model payload', async () => {
     {
       postSlug: post.slug,
       observeModel: { providerId: 'openrouter', modelId: 'vision' },
-      writeModel: { providerId: 'openrouter', modelId: 'writer' },
+      writeModelA: { providerId: 'openrouter', modelId: 'writer' },
+      writeModelB: { providerId: 'openrouter', modelId: 'writer-b' },
     },
   ])
 })

@@ -453,6 +453,73 @@ func TestDeleteImageKeepsTheRowWhenStorageFails(t *testing.T) {
 	}
 }
 
+type recordingContentPurger struct {
+	calls []string
+	err   error
+}
+
+func (p *recordingContentPurger) PurgePost(_ context.Context, userID, slug string) error {
+	p.calls = append(p.calls, userID+"/"+slug)
+	return p.err
+}
+
+func TestDeletePostPurgesExperimentContentBeforeRemovingSource(t *testing.T) {
+	svc, store, blobs := newTestService(t)
+	ctx := context.Background()
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, found.Slug, "IMG_1.jpg")
+	blobs.put(upload.Key, 100, testNow)
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+		t.Fatal(err)
+	}
+	purger := &recordingContentPurger{}
+	svc.SetExperimentContentPurger(purger)
+
+	if err := svc.DeletePost(ctx, alice, found.Slug); err != nil {
+		t.Fatal(err)
+	}
+	if len(purger.calls) != 1 || purger.calls[0] != alice+"/"+found.Slug {
+		t.Fatalf("purge calls = %v", purger.calls)
+	}
+	if _, err := store.GetPost(ctx, found.Slug); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("post survived delete: %v", err)
+	}
+	if blobs.has(upload.Key) {
+		t.Fatal("post image survived delete")
+	}
+}
+
+func TestDeletePostStopsBeforeDeleteWhenExperimentPurgeFails(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	svc.SetExperimentContentPurger(&recordingContentPurger{err: errors.New("database unavailable")})
+
+	if err := svc.DeletePost(context.Background(), alice, found.Slug); err == nil {
+		t.Fatal("delete succeeded without purging experiment content")
+	}
+	if _, err := store.GetPost(context.Background(), found.Slug); err != nil {
+		t.Fatalf("post was deleted after purge failure: %v", err)
+	}
+}
+
+func TestWinnerApplicationIsIdempotentAtPostBoundary(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	content := PostContent{Title: "generated", Blocks: []Block{{Type: BlockText, Content: "body"}}}
+	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content); err != nil {
+		t.Fatal(err)
+	}
+	first, _ := store.GetPost(context.Background(), found.Slug)
+	svc.now = func() time.Time { return testNow.Add(time.Hour) }
+	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content); err != nil {
+		t.Fatal(err)
+	}
+	second, _ := store.GetPost(context.Background(), found.Slug)
+	if !second.UpdatedAt.Equal(first.UpdatedAt) {
+		t.Fatalf("idempotent apply changed updated_at: %v -> %v", first.UpdatedAt, second.UpdatedAt)
+	}
+}
+
 // --- regressions ---
 
 // A confirm the client never saw the answer to must return the photo, not a

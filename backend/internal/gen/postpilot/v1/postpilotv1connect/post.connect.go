@@ -42,6 +42,8 @@ const (
 	PostServiceGetPostProcedure = "/postpilot.v1.PostService/GetPost"
 	// PostServiceListPostsProcedure is the fully-qualified name of the PostService's ListPosts RPC.
 	PostServiceListPostsProcedure = "/postpilot.v1.PostService/ListPosts"
+	// PostServiceDeletePostProcedure is the fully-qualified name of the PostService's DeletePost RPC.
+	PostServiceDeletePostProcedure = "/postpilot.v1.PostService/DeletePost"
 	// PostServiceCreateUploadProcedure is the fully-qualified name of the PostService's CreateUpload
 	// RPC.
 	PostServiceCreateUploadProcedure = "/postpilot.v1.PostService/CreateUpload"
@@ -67,6 +69,7 @@ type PostServiceClient interface {
 	SavePostDraft(context.Context, *connect.Request[v1.SavePostDraftRequest]) (*connect.Response[v1.SavePostDraftResponse], error)
 	GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error)
 	ListPosts(context.Context, *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error)
+	DeletePost(context.Context, *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error)
 	// Step 1 of the upload handshake: hands back a presigned PUT the BROWSER uses.
 	CreateUpload(context.Context, *connect.Request[v1.CreateUploadRequest]) (*connect.Response[v1.CreateUploadResponse], error)
 	// Step 2: the server verifies the object landed, then records the photo.
@@ -103,6 +106,12 @@ func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(postServiceMethods.ByName("ListPosts")),
 			connect.WithClientOptions(opts...),
 		),
+		deletePost: connect.NewClient[v1.DeletePostRequest, v1.DeletePostResponse](
+			httpClient,
+			baseURL+PostServiceDeletePostProcedure,
+			connect.WithSchema(postServiceMethods.ByName("DeletePost")),
+			connect.WithClientOptions(opts...),
+		),
 		createUpload: connect.NewClient[v1.CreateUploadRequest, v1.CreateUploadResponse](
 			httpClient,
 			baseURL+PostServiceCreateUploadProcedure,
@@ -129,6 +138,7 @@ type postServiceClient struct {
 	savePostDraft *connect.Client[v1.SavePostDraftRequest, v1.SavePostDraftResponse]
 	getPost       *connect.Client[v1.GetPostRequest, v1.GetPostResponse]
 	listPosts     *connect.Client[v1.ListPostsRequest, v1.ListPostsResponse]
+	deletePost    *connect.Client[v1.DeletePostRequest, v1.DeletePostResponse]
 	createUpload  *connect.Client[v1.CreateUploadRequest, v1.CreateUploadResponse]
 	confirmUpload *connect.Client[v1.ConfirmUploadRequest, v1.ConfirmUploadResponse]
 	deleteImage   *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
@@ -147,6 +157,11 @@ func (c *postServiceClient) GetPost(ctx context.Context, req *connect.Request[v1
 // ListPosts calls postpilot.v1.PostService.ListPosts.
 func (c *postServiceClient) ListPosts(ctx context.Context, req *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error) {
 	return c.listPosts.CallUnary(ctx, req)
+}
+
+// DeletePost calls postpilot.v1.PostService.DeletePost.
+func (c *postServiceClient) DeletePost(ctx context.Context, req *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error) {
+	return c.deletePost.CallUnary(ctx, req)
 }
 
 // CreateUpload calls postpilot.v1.PostService.CreateUpload.
@@ -170,6 +185,7 @@ type PostServiceHandler interface {
 	SavePostDraft(context.Context, *connect.Request[v1.SavePostDraftRequest]) (*connect.Response[v1.SavePostDraftResponse], error)
 	GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error)
 	ListPosts(context.Context, *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error)
+	DeletePost(context.Context, *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error)
 	// Step 1 of the upload handshake: hands back a presigned PUT the BROWSER uses.
 	CreateUpload(context.Context, *connect.Request[v1.CreateUploadRequest]) (*connect.Response[v1.CreateUploadResponse], error)
 	// Step 2: the server verifies the object landed, then records the photo.
@@ -202,6 +218,12 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(postServiceMethods.ByName("ListPosts")),
 		connect.WithHandlerOptions(opts...),
 	)
+	postServiceDeletePostHandler := connect.NewUnaryHandler(
+		PostServiceDeletePostProcedure,
+		svc.DeletePost,
+		connect.WithSchema(postServiceMethods.ByName("DeletePost")),
+		connect.WithHandlerOptions(opts...),
+	)
 	postServiceCreateUploadHandler := connect.NewUnaryHandler(
 		PostServiceCreateUploadProcedure,
 		svc.CreateUpload,
@@ -228,6 +250,8 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 			postServiceGetPostHandler.ServeHTTP(w, r)
 		case PostServiceListPostsProcedure:
 			postServiceListPostsHandler.ServeHTTP(w, r)
+		case PostServiceDeletePostProcedure:
+			postServiceDeletePostHandler.ServeHTTP(w, r)
 		case PostServiceCreateUploadProcedure:
 			postServiceCreateUploadHandler.ServeHTTP(w, r)
 		case PostServiceConfirmUploadProcedure:
@@ -253,6 +277,10 @@ func (UnimplementedPostServiceHandler) GetPost(context.Context, *connect.Request
 
 func (UnimplementedPostServiceHandler) ListPosts(context.Context, *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.ListPosts is not implemented"))
+}
+
+func (UnimplementedPostServiceHandler) DeletePost(context.Context, *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.DeletePost is not implemented"))
 }
 
 func (UnimplementedPostServiceHandler) CreateUpload(context.Context, *connect.Request[v1.CreateUploadRequest]) (*connect.Response[v1.CreateUploadResponse], error) {

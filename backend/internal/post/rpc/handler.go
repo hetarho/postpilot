@@ -71,14 +71,26 @@ func (h *Handler) ListPosts(ctx context.Context, _ *connect.Request[postpilotv1.
 	posts := make([]*postpilotv1.PostSummary, 0, len(summaries))
 	for _, s := range summaries {
 		posts = append(posts, &postpilotv1.PostSummary{
-			Slug:      s.Slug,
-			Title:     s.Title,
-			Status:    s.Status,
-			UpdatedAt: s.UpdatedAt.UTC().Format(timeLayout),
-			ActiveJob: toProtoActiveJob(s.ActiveJob),
+			Slug:                s.Slug,
+			Title:               s.Title,
+			Status:              s.Status,
+			UpdatedAt:           s.UpdatedAt.UTC().Format(timeLayout),
+			ActiveJob:           toProtoActiveJob(s.ActiveJob),
+			PendingExperimentId: s.PendingExperimentID,
 		})
 	}
 	return connect.NewResponse(&postpilotv1.ListPostsResponse{Posts: posts}), nil
+}
+
+func (h *Handler) DeletePost(ctx context.Context, req *connect.Request[postpilotv1.DeletePostRequest]) (*connect.Response[postpilotv1.DeletePostResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.svc.DeletePost(ctx, userID, req.Msg.GetSlug()); err != nil {
+		return nil, toConnectError("delete post", err)
+	}
+	return connect.NewResponse(&postpilotv1.DeletePostResponse{}), nil
 }
 
 func (h *Handler) CreateUpload(ctx context.Context, req *connect.Request[postpilotv1.CreateUploadRequest]) (*connect.Response[postpilotv1.CreateUploadResponse], error) {
@@ -156,6 +168,8 @@ func toConnectError(op string, err error) error {
 		// FailedPrecondition, not NotFound: the upload record is fine, the object just
 		// is not there yet — the client should retry the PUT, not give up.
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New("upload not found in storage — retry the upload"))
+	case errors.Is(err, post.ErrPostBusy):
+		return connect.NewError(connect.CodeFailedPrecondition, errors.New("post has an active job"))
 	default:
 		slog.Error(op+" failed", "err", err)
 		return connect.NewError(connect.CodeInternal, errors.New(op+" failed"))
@@ -172,16 +186,17 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		observations = append(observations, toProtoObservation(observation))
 	}
 	return &postpilotv1.Post{
-		Slug:         p.Slug,
-		Title:        p.Title,
-		Memo:         p.Memo,
-		Status:       p.Status,
-		Images:       images,
-		CreatedAt:    p.CreatedAt.UTC().Format(timeLayout),
-		UpdatedAt:    p.UpdatedAt.UTC().Format(timeLayout),
-		ActiveJob:    toProtoActiveJob(p.ActiveJob),
-		Content:      toProtoContent(p.Content),
-		Observations: observations,
+		Slug:                p.Slug,
+		Title:               p.Title,
+		Memo:                p.Memo,
+		Status:              p.Status,
+		Images:              images,
+		CreatedAt:           p.CreatedAt.UTC().Format(timeLayout),
+		UpdatedAt:           p.UpdatedAt.UTC().Format(timeLayout),
+		ActiveJob:           toProtoActiveJob(p.ActiveJob),
+		Content:             toProtoContent(p.Content),
+		Observations:        observations,
+		PendingExperimentId: p.PendingExperimentID,
 	}
 }
 

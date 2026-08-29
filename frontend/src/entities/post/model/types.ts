@@ -18,6 +18,7 @@ export interface PostDraft {
   activeJob: GenerationJob | undefined
   content: PostContent | undefined
   observations: Observation[]
+  pendingExperimentId: string
 }
 
 /** One row of the post list (PRD F-8). */
@@ -27,6 +28,7 @@ export interface PostListItem {
   status: string
   updatedAt: string
   activeJob: GenerationJob | undefined
+  pendingExperimentId: string
 }
 
 /** Shown in place of a title nobody has typed yet. A list of blank rows would be

@@ -10,9 +10,11 @@ import (
 )
 
 type fakeStore struct {
-	rows    map[string]provider.Selection // by stage
-	deleted []provider.Stage
-	failDel bool
+	rows      map[string]provider.Selection // by stage
+	deleted   []provider.Stage
+	failDel   bool
+	lastBatch []provider.Selection
+	batchErr  error
 }
 
 func (f *fakeStore) UpsertSelection(_ context.Context, _ string, s provider.Selection) error {
@@ -28,6 +30,23 @@ func (f *fakeStore) ListSelections(_ context.Context, _ string) ([]provider.Sele
 		}
 	}
 	return out, nil
+}
+
+func (f *fakeStore) ListSelectionSlots(ctx context.Context, userID string) ([]provider.Selection, error) {
+	return f.ListSelections(ctx, userID)
+}
+
+func (f *fakeStore) SaveSelections(ctx context.Context, userID string, selections []provider.Selection) error {
+	f.lastBatch = append([]provider.Selection(nil), selections...)
+	if f.batchErr != nil {
+		return f.batchErr
+	}
+	for _, selection := range selections {
+		if err := f.UpsertSelection(ctx, userID, selection); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (f *fakeStore) DeleteSelection(_ context.Context, _ string, s provider.Selection) error {
@@ -55,6 +74,15 @@ func (c fakeCatalog) Lookup(ref llm.ModelRef) (llm.ModelInfo, bool) {
 	m, ok := c[ref]
 	return m, ok
 }
+
+func (c fakeCatalog) RecommendationSets() []llm.RecommendationSet { return nil }
+
+type recommendationCatalog struct {
+	fakeCatalog
+	sets []llm.RecommendationSet
+}
+
+func (c recommendationCatalog) RecommendationSets() []llm.RecommendationSet { return c.sets }
 
 var (
 	live     = llm.ModelRef{ProviderID: "openrouter", ModelID: "live"}
@@ -155,5 +183,55 @@ func TestSaveSelection_Rules(t *testing.T) {
 	}
 	if saved.Ref != live || saved.UpdatedAt.IsZero() || store.rows["write"].Ref != live {
 		t.Errorf("saved = %+v, rows = %+v", saved, store.rows)
+	}
+}
+
+func TestComparisonPairValidation(t *testing.T) {
+	store := &fakeStore{rows: map[string]provider.Selection{}}
+	svc := newService(store)
+	ctx := context.Background()
+	if _, err := svc.SaveComparisonPair(ctx, "alice", provider.StageWrite, live, live); !errors.Is(err, provider.ErrDuplicateCandidates) {
+		t.Fatalf("duplicate pair = %v", err)
+	}
+	if _, err := svc.SaveComparisonPair(ctx, "alice", provider.StageObserve, seeing, live); !errors.Is(err, provider.ErrModelUnsuitable) {
+		t.Fatalf("text-only observe candidate = %v", err)
+	}
+	pair, err := svc.SaveComparisonPair(ctx, "alice", provider.StageWrite, live, seeing)
+	if err != nil || pair.CandidateA.Slot != provider.SlotCandidateA || pair.CandidateB.Slot != provider.SlotCandidateB || len(store.lastBatch) != 2 {
+		t.Fatalf("pair = %+v err=%v batch=%+v", pair, err, store.lastBatch)
+	}
+}
+
+func TestRecommendationValidatesAllNineBeforeOneBatch(t *testing.T) {
+	store := &fakeStore{rows: map[string]provider.Selection{}}
+	catalog := recommendationCatalog{
+		fakeCatalog: fakeCatalog{
+			live:   {Ref: live},
+			seeing: {Ref: seeing, Vision: true},
+		},
+		sets: []llm.RecommendationSet{{
+			ID: "balanced", Label: "Balanced",
+			Selections: []llm.RecommendationSelection{
+				{Stage: "observe", Active: seeing, CandidateA: seeing, CandidateB: live},
+				{Stage: "analyze", Active: live, CandidateA: live, CandidateB: seeing},
+				{Stage: "write", Active: live, CandidateA: live, CandidateB: seeing},
+			},
+		}},
+	}
+	svc := provider.NewService(store, catalog)
+	if _, _, _, err := svc.ApplyRecommendationSet(context.Background(), "alice", "balanced"); !errors.Is(err, provider.ErrModelUnsuitable) {
+		t.Fatalf("invalid recommendation = %v", err)
+	}
+	if len(store.lastBatch) != 0 {
+		t.Fatalf("invalid recommendation partially wrote: %+v", store.lastBatch)
+	}
+
+	catalog.sets[0].Selections[0].CandidateB = llm.ModelRef{ProviderID: "p", ModelID: "vision-two"}
+	visionTwo := catalog.sets[0].Selections[0].CandidateB
+	catalog.fakeCatalog[visionTwo] = llm.ModelInfo{Ref: visionTwo, Vision: true}
+	svc = provider.NewService(store, catalog)
+	_, active, pairs, err := svc.ApplyRecommendationSet(context.Background(), "alice", "balanced")
+	if err != nil || len(active) != 3 || len(pairs) != 3 || len(store.lastBatch) != 9 {
+		t.Fatalf("apply = active:%d pairs:%d batch:%d err=%v", len(active), len(pairs), len(store.lastBatch), err)
 	}
 }

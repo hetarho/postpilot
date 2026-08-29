@@ -177,3 +177,28 @@ func TestLoadOrphanSweepInterval(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadExperimentRetentionAndSweepIntervals(t *testing.T) {
+	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
+	t.Setenv("EXPERIMENT_CONTENT_RETENTION", "48h")
+	t.Setenv("EXPERIMENT_SWEEP_INTERVAL", "30m")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ExperimentContentRetention != 48*time.Hour || cfg.ExperimentSweepInterval != 30*time.Minute {
+		t.Fatalf("experiment durations = %v / %v", cfg.ExperimentContentRetention, cfg.ExperimentSweepInterval)
+	}
+	for _, name := range []string{"EXPERIMENT_CONTENT_RETENTION", "EXPERIMENT_SWEEP_INTERVAL"} {
+		for _, bad := range []string{"invalid", "0s", "-1h"} {
+			t.Run(name+"="+bad, func(t *testing.T) {
+				t.Setenv("EXPERIMENT_CONTENT_RETENTION", "48h")
+				t.Setenv("EXPERIMENT_SWEEP_INTERVAL", "30m")
+				t.Setenv(name, bad)
+				if _, err := Load(); err == nil {
+					t.Fatalf("%s=%q was accepted", name, bad)
+				}
+			})
+		}
+	}
+}

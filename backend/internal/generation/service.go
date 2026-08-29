@@ -10,13 +10,41 @@ import (
 )
 
 type Service struct {
-	posts     Posts
-	profiles  Profiles
-	rules     RuleWriter
-	models    LLM
-	images    ImageReader
-	jobs      Jobs
-	batchSize int
+	posts       Posts
+	profiles    Profiles
+	rules       RuleWriter
+	models      LLM
+	images      ImageReader
+	jobs        Jobs
+	experiments ExperimentStarter
+	batchSize   int
+}
+
+func (s *Service) SetExperimentStarter(starter ExperimentStarter) { s.experiments = starter }
+
+func (s *Service) StartExperiment(ctx context.Context, request StartExperimentRequest) (StartExperimentResult, error) {
+	if s.experiments == nil {
+		return StartExperimentResult{}, fmt.Errorf("generation experiments are not configured")
+	}
+	post, err := s.posts.AttachedImages(ctx, request.UserID, request.PostSlug)
+	if err != nil {
+		return StartExperimentResult{}, err
+	}
+	writeA, okA := parseModelRef(request.WriteModelA)
+	writeB, okB := parseModelRef(request.WriteModelB)
+	if !okA || !okB || writeA == writeB || !modelEnabled(s.models, writeA) || !modelEnabled(s.models, writeB) {
+		return StartExperimentResult{}, ErrWriteModelRequired
+	}
+	if len(post.Images) == 0 {
+		request.ObserveModel = ""
+	} else {
+		observe, valid := parseModelRef(request.ObserveModel)
+		info, found := s.models.Resolve(observe)
+		if !valid || !found || info.Disabled || !info.Vision {
+			return StartExperimentResult{}, ErrObserveModelRequired
+		}
+	}
+	return s.experiments.StartWrite(ctx, request)
 }
 
 func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, images ImageReader, jobs Jobs, batchSize int) *Service {

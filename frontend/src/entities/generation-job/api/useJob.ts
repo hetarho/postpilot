@@ -6,8 +6,8 @@ import { GenerationService } from '@/shared/api'
 import { isTerminal } from '../model/types'
 import { toGenerationJob } from './job-mappers'
 
-/** Polls a durable server job and refreshes its owner once completed. */
-export function useJob(jobId: string, invalidateOnDone: readonly QueryKey[] = []) {
+/** Polls a durable server job and refreshes its owner once it reaches either terminal state. */
+export function useJob(jobId: string, invalidateOnTerminal: readonly QueryKey[] = []) {
   const queryClient = useQueryClient()
   const invalidatedJob = useRef<string | undefined>(undefined)
   const query = useQuery(
@@ -27,12 +27,12 @@ export function useJob(jobId: string, invalidateOnDone: readonly QueryKey[] = []
   )
 
   useEffect(() => {
-    if (job?.status !== 'done' || invalidatedJob.current === job.id) return
+    if (!job || !isTerminal(job) || invalidatedJob.current === job.id) return
     invalidatedJob.current = job.id
-    for (const queryKey of invalidateOnDone) {
+    for (const queryKey of invalidateOnTerminal) {
       void queryClient.invalidateQueries({ queryKey })
     }
-  }, [invalidateOnDone, job, queryClient])
+  }, [invalidateOnTerminal, job, queryClient])
 
   return {
     job,

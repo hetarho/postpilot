@@ -7,6 +7,7 @@ package sqlc
 type ModelSelection struct {
 	UserID     string
 	Stage      string
+	Slot       string
 	ProviderID string
 	ModelID    string
 	UpdatedAt  string

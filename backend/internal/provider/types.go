@@ -26,6 +26,14 @@ const (
 // Stages in display order.
 var Stages = []Stage{StageObserve, StageWrite, StageAnalyze}
 
+type SelectionSlot string
+
+const (
+	SlotActive     SelectionSlot = "active"
+	SlotCandidateA SelectionSlot = "candidate_a"
+	SlotCandidateB SelectionSlot = "candidate_b"
+)
+
 // ParseStage accepts the stored/wire form.
 func ParseStage(s string) (Stage, error) {
 	for _, stage := range Stages {
@@ -39,11 +47,31 @@ func ParseStage(s string) (Stage, error) {
 // Selection is the acting user's choice for one stage.
 type Selection struct {
 	Stage Stage
+	Slot  SelectionSlot
 	Ref   llm.ModelRef
 	// Missing: the ref is no longer registered. GetSelections sets this and clears the
 	// row in the same call, so the client sees it exactly once.
 	Missing   bool
 	UpdatedAt time.Time
+}
+
+type ComparisonPair struct {
+	Stage      Stage
+	CandidateA Selection
+	CandidateB Selection
+}
+
+type RecommendationSet struct {
+	ID         string
+	Label      string
+	Selections []RecommendationStageSelection
+}
+
+type RecommendationStageSelection struct {
+	Stage      Stage
+	Active     llm.ModelRef
+	CandidateA llm.ModelRef
+	CandidateB llm.ModelRef
 }
 
 var (
@@ -53,7 +81,9 @@ var (
 	// selected, the same rule the dropdown enforces.
 	ErrModelDisabled = errors.New("model disabled")
 	// ErrModelUnsuitable: the model lacks what the stage needs (observe needs vision).
-	ErrModelUnsuitable = errors.New("model unsuitable for stage")
+	ErrModelUnsuitable        = errors.New("model unsuitable for stage")
+	ErrDuplicateCandidates    = errors.New("comparison candidates must differ")
+	ErrRecommendationNotFound = errors.New("recommendation set not found")
 )
 
 // Suitable reports whether a model can serve a stage: observation looks at photos, so

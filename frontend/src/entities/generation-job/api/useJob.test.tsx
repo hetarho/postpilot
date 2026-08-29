@@ -61,3 +61,19 @@ it('invalidates the owner query when the job completes', async () => {
 
   expect(queryClient.getQueryState(ownerKey)?.isInvalidated).toBe(true)
 })
+
+it('invalidates the owner query when the job fails so recoverable experiment state appears', async () => {
+  const ownerKey = ['post', 'post-a'] as const
+  const queryClient = createTestQueryClient()
+  queryClient.setQueryData(ownerKey, { title: 'old' })
+  const transport = createFakeJobsTransport({
+    jobs: [{ id: 'job-1', status: 'failed', stage: 'compare_write' }],
+  })
+  renderHook(() => useJob('job-1', [ownerKey]), {
+    wrapper: withProviders(transport, queryClient),
+  })
+
+  await tick(1)
+
+  expect(queryClient.getQueryState(ownerKey)?.isInvalidated).toBe(true)
+})

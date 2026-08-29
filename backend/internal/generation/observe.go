@@ -10,8 +10,14 @@ import (
 )
 
 func (s *Service) observe(ctx context.Context, post PostInput, model llm.ModelRef, progress Progress) ([]Observation, error) {
+	observations, _, err := s.observeCandidate(ctx, post, model, progress, true)
+	return observations, err
+}
+
+func (s *Service) observeCandidate(ctx context.Context, post PostInput, model llm.ModelRef, progress Progress, persist bool) ([]Observation, llm.Usage, error) {
 	total := len(post.Images)
 	merged := make([]Observation, 0, total)
+	var usage llm.Usage
 	for start := 0; start < total; start += s.batchSize {
 		end := min(start+s.batchSize, total)
 		batch := post.Images[start:end]
@@ -20,7 +26,7 @@ func (s *Service) observe(ctx context.Context, post PostInput, model llm.ModelRe
 		for _, image := range batch {
 			data, err := s.images.Read(ctx, image.Key)
 			if err != nil {
-				return nil, fmt.Errorf("read photo %s: %w", image.Filename, err)
+				return nil, usage, fmt.Errorf("read photo %s: %w", image.Filename, err)
 			}
 			parts = append(parts, llm.ImagePart(data, "image/jpeg"))
 			filenames = append(filenames, image.Filename)
@@ -35,19 +41,27 @@ func (s *Service) observe(ctx context.Context, post PostInput, model llm.ModelRe
 		}
 		response, err := s.models.Complete(ctx, model, request)
 		if err != nil {
-			return nil, providerCallError("사진 관찰", err)
+			return nil, usage, providerCallError("사진 관찰", err)
+		}
+		usage.PromptTokens += response.Usage.PromptTokens
+		usage.CompletionTokens += response.Usage.CompletionTokens
+		if response.Usage.CostReported {
+			usage.CostMicrousd += response.Usage.CostMicrousd
+			usage.CostReported = true
 		}
 		returned, err := parseObservations(response.Text)
 		if err != nil {
-			return nil, fmt.Errorf("parse observations: %w", err)
+			return nil, usage, fmt.Errorf("parse observations: %w", err)
 		}
 		merged = append(merged, matchObservations(batch, returned)...)
-		if err := s.posts.SetObservations(ctx, post.UserID, post.Slug, merged); err != nil {
-			return nil, fmt.Errorf("persist observations: %w", err)
+		if persist {
+			if err := s.posts.SetObservations(ctx, post.UserID, post.Slug, merged); err != nil {
+				return nil, usage, fmt.Errorf("persist observations: %w", err)
+			}
 		}
 		progress("observe", end, total)
 	}
-	return merged, nil
+	return merged, usage, nil
 }
 
 func matchObservations(images []Image, returned []Observation) []Observation {

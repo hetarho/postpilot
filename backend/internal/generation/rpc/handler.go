@@ -25,15 +25,16 @@ func (h *Handler) StartGeneration(ctx context.Context, req *connect.Request[post
 	if err != nil {
 		return nil, err
 	}
-	id, err := h.service.Start(ctx, generation.StartRequest{
+	started, err := h.service.StartExperiment(ctx, generation.StartExperimentRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
 		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
-		WriteModel:   modelRefValue(req.Msg.GetWriteModel()),
+		WriteModelA:  modelRefValue(req.Msg.GetWriteModelA()),
+		WriteModelB:  modelRefValue(req.Msg.GetWriteModelB()),
 	})
 	if err != nil {
 		return nil, toConnectError("start generation", err)
 	}
-	return connect.NewResponse(&postpilotv1.StartGenerationResponse{JobId: id}), nil
+	return connect.NewResponse(&postpilotv1.StartGenerationResponse{JobId: started.JobID, ExperimentId: started.ExperimentID}), nil
 }
 
 func (h *Handler) StartRevision(ctx context.Context, req *connect.Request[postpilotv1.StartRevisionRequest]) (*connect.Response[postpilotv1.StartRevisionResponse], error) {

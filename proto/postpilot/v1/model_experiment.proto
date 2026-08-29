@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+import "postpilot/v1/post.proto";
+import "postpilot/v1/provider.proto";
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+service ModelExperimentService {
+  rpc StartObserveExperiment(StartObserveExperimentRequest) returns (StartExperimentResponse) {}
+  rpc StartAnalyzeExperiment(StartAnalyzeExperimentRequest) returns (StartExperimentResponse) {}
+  rpc GetExperiment(GetExperimentRequest) returns (GetExperimentResponse) {}
+  rpc ListExperiments(ListExperimentsRequest) returns (ListExperimentsResponse) {}
+  rpc RetryCandidate(RetryCandidateRequest) returns (RetryCandidateResponse) {}
+  rpc ChooseWinner(ChooseWinnerRequest) returns (ChooseWinnerResponse) {}
+  rpc UseSingleCandidate(UseSingleCandidateRequest) returns (ChooseWinnerResponse) {}
+  rpc DismissExperiment(DismissExperimentRequest) returns (DismissExperimentResponse) {}
+  rpc ApplyWinnerOutput(ApplyWinnerOutputRequest) returns (ApplyWinnerOutputResponse) {}
+  rpc AdoptWinnerModel(AdoptWinnerModelRequest) returns (AdoptWinnerModelResponse) {}
+  rpc GetLeaderboard(GetLeaderboardRequest) returns (GetLeaderboardResponse) {}
+}
+
+enum ExperimentStatus {
+  EXPERIMENT_STATUS_UNSPECIFIED = 0;
+  EXPERIMENT_STATUS_QUEUED = 1;
+  EXPERIMENT_STATUS_RUNNING = 2;
+  EXPERIMENT_STATUS_REVIEW = 3;
+  EXPERIMENT_STATUS_PARTIAL = 4;
+  EXPERIMENT_STATUS_DECIDED = 5;
+  EXPERIMENT_STATUS_DISMISSED = 6;
+  EXPERIMENT_STATUS_FAILED = 7;
+}
+
+enum DisplaySide {
+  DISPLAY_SIDE_UNSPECIFIED = 0;
+  DISPLAY_SIDE_LEFT = 1;
+  DISPLAY_SIDE_RIGHT = 2;
+}
+
+enum CandidateStatus {
+  CANDIDATE_STATUS_UNSPECIFIED = 0;
+  CANDIDATE_STATUS_PENDING = 1;
+  CANDIDATE_STATUS_RUNNING = 2;
+  CANDIDATE_STATUS_SUCCEEDED = 3;
+  CANDIDATE_STATUS_FAILED = 4;
+}
+
+enum ExperimentOutcome {
+  EXPERIMENT_OUTCOME_UNSPECIFIED = 0;
+  EXPERIMENT_OUTCOME_WINNER = 1;
+  EXPERIMENT_OUTCOME_SKIPPED = 2;
+  EXPERIMENT_OUTCOME_UNPAIRED = 3;
+}
+
+enum CostSource {
+  COST_SOURCE_UNSPECIFIED = 0;
+  COST_SOURCE_REPORTED = 1;
+  COST_SOURCE_ESTIMATED = 2;
+  COST_SOURCE_UNAVAILABLE = 3;
+  COST_SOURCE_MIXED = 4;
+}
+
+message CandidateUsage {
+  int64 prompt_tokens = 1;
+  int64 completion_tokens = 2;
+  int64 cost_microusd = 3;
+  CostSource cost_source = 4;
+  int64 latency_ms = 5;
+}
+
+message ObservationSet { repeated Observation observations = 1; }
+
+message ExperimentCandidate {
+  string id = 1;
+  DisplaySide display_side = 2;
+  CandidateStatus status = 3;
+  oneof output {
+    PostContent post_content = 4;
+    ObservationSet observation_set = 5;
+    string styleguide = 6;
+  }
+  string error = 7;
+  // Populated only after a verdict/dismissal. Blindness is enforced on the wire.
+  ModelRef model = 8;
+  string model_label = 9;
+  CandidateUsage usage = 10;
+}
+
+message ModelExperiment {
+  string id = 1;
+  Stage stage = 2;
+  ExperimentStatus status = 3;
+  string post_slug = 4;
+  string job_id = 5;
+  repeated ExperimentCandidate candidates = 6;
+  string winner_candidate_id = 7;
+  ExperimentOutcome outcome = 8;
+  string apply_error = 9;
+  string created_at = 10;
+  string finished_at = 11;
+  string decided_at = 12;
+  bool revealed = 13;
+  string applied_at = 14;
+}
+
+message StartObserveExperimentRequest {
+  string post_slug = 1;
+  ModelRef model_a = 2;
+  ModelRef model_b = 3;
+}
+message StartAnalyzeExperimentRequest {
+  ModelRef model_a = 1;
+  ModelRef model_b = 2;
+}
+message StartExperimentResponse { string experiment_id = 1; string job_id = 2; }
+
+message GetExperimentRequest { string id = 1; }
+message GetExperimentResponse { ModelExperiment experiment = 1; }
+
+message ListExperimentsRequest { Stage stage = 1; }
+message ListExperimentsResponse { repeated ModelExperiment experiments = 1; }
+
+message RetryCandidateRequest { string experiment_id = 1; }
+message RetryCandidateResponse { string job_id = 1; ModelExperiment experiment = 2; }
+
+message ChooseWinnerRequest { string experiment_id = 1; string candidate_id = 2; }
+message UseSingleCandidateRequest { string experiment_id = 1; string candidate_id = 2; }
+message ChooseWinnerResponse { ModelExperiment experiment = 1; }
+
+message DismissExperimentRequest { string experiment_id = 1; }
+message DismissExperimentResponse { ModelExperiment experiment = 1; }
+
+message ApplyWinnerOutputRequest {
+  string experiment_id = 1;
+  bool confirm_styleguide_overwrite = 2;
+}
+message ApplyWinnerOutputResponse { ModelExperiment experiment = 1; }
+
+message AdoptWinnerModelRequest { string experiment_id = 1; }
+message AdoptWinnerModelResponse { Selection selection = 1; }
+
+message LeaderboardEntry {
+  int32 rank = 1;
+  ModelRef model = 2;
+  string model_label = 3;
+  int32 rating = 4;
+  int32 matches = 5;
+  int32 wins = 6;
+  int32 losses = 7;
+  double win_rate = 8;
+  int32 successful_calls = 9;
+  int64 average_latency_ms = 10;
+  int64 prompt_tokens = 11;
+  int64 completion_tokens = 12;
+  int64 total_cost_microusd = 13;
+  CostSource cost_quality = 14;
+  bool provisional = 15;
+  bool active = 16;
+  bool recommended = 17;
+  bool disappeared = 18;
+}
+
+message GetLeaderboardRequest { Stage stage = 1; }
+message GetLeaderboardResponse { repeated LeaderboardEntry entries = 1; }

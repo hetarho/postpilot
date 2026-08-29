@@ -1,7 +1,7 @@
 # Policy — Model providers and the model catalog
 
 Canonical rules that are **currently true** in the code. Source: [plan/04](../plan/04.model-provider-registry.md),
-built by job 06.
+extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); built by jobs 06 and 15.
 
 ## The port is a boundary
 
@@ -47,9 +47,9 @@ built by job 06.
 
 ## Selection memory
 
-- `model_selections (user_id, stage, provider_id, model_id, updated_at)` — one row per account and stage, owned by
-  `internal/provider`. It exists only to refill the dropdowns: the `Start*` RPCs receive their refs explicitly and
-  record them on the job row, and never read this table.
+- `model_selections (user_id, stage, slot, provider_id, model_id, updated_at)` stores `active`, `candidate_a`, and
+  `candidate_b` per account/stage. Existing selection RPCs retain active-slot behavior; pair and preset writes are
+  atomic. Start RPCs still receive refs explicitly and never infer them from this table.
 - The app writes **no default**. A fresh account has no rows; every stage renders "모델을 선택하세요" and reports
   `selected = null`, which is what the generation and analysis actions block on ([I3]).
 - `GetSelections` reports a saved ref that is no longer registered — or that the stage can no longer use (a model
@@ -62,6 +62,16 @@ built by job 06.
 - `SaveSelection` accepts only a known stage and a registered, enabled model that suits the stage (observe needs
   `vision`) — the same rules the dropdown shows, enforced where they can be trusted (`InvalidArgument` /
   `NotFound` / `FailedPrecondition`).
+- A pair must contain two distinct enabled stage-suitable refs. `ApplyRecommendationSet` validates the complete
+  three-stage, nine-slot set before one transaction; no partial rows survive rejection. A recommendation is never
+  applied on mount, login, or account creation.
+
+## Catalog metadata and recommendations
+
+- Models may declare context tokens, dated input/output USD-per-million snapshots, and labels. Unknown/bad metadata
+  or a broken recommendation ref stops boot. Prices are display/estimate metadata only; reported provider cost wins.
+- The shipped opt-in `balanced-2026-08` set pins six model ids and one active/A-B selection per stage. Removed models
+  stay readable from experiment snapshots but cannot be newly selected.
 
 ## What crosses to the browser
 
@@ -77,3 +87,4 @@ has no field for them (plan 04 AC6).
 | `LLM_STAGE_TIMEOUT` | constant | 5 min per provider call (PRD §6.6) |
 | `LLM_MAX_TOKENS_DEFAULT` | constant | 4096 — the completion cap when a caller sets none |
 | `MODEL_CATALOG_STALE_MS` | FE `shared/config` | 5 min — how long the catalog is trusted before a refetch |
+| recommendation/model price metadata | `config/providers.yaml` | strict, dated catalog content; no automatic apply |

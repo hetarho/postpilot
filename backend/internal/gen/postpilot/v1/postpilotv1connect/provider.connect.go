@@ -42,6 +42,18 @@ const (
 	// ProviderServiceSaveSelectionProcedure is the fully-qualified name of the ProviderService's
 	// SaveSelection RPC.
 	ProviderServiceSaveSelectionProcedure = "/postpilot.v1.ProviderService/SaveSelection"
+	// ProviderServiceGetComparisonPairsProcedure is the fully-qualified name of the ProviderService's
+	// GetComparisonPairs RPC.
+	ProviderServiceGetComparisonPairsProcedure = "/postpilot.v1.ProviderService/GetComparisonPairs"
+	// ProviderServiceSaveComparisonPairProcedure is the fully-qualified name of the ProviderService's
+	// SaveComparisonPair RPC.
+	ProviderServiceSaveComparisonPairProcedure = "/postpilot.v1.ProviderService/SaveComparisonPair"
+	// ProviderServiceListRecommendationSetsProcedure is the fully-qualified name of the
+	// ProviderService's ListRecommendationSets RPC.
+	ProviderServiceListRecommendationSetsProcedure = "/postpilot.v1.ProviderService/ListRecommendationSets"
+	// ProviderServiceApplyRecommendationSetProcedure is the fully-qualified name of the
+	// ProviderService's ApplyRecommendationSet RPC.
+	ProviderServiceApplyRecommendationSetProcedure = "/postpilot.v1.ProviderService/ApplyRecommendationSet"
 )
 
 // ProviderServiceClient is a client for the postpilot.v1.ProviderService service.
@@ -53,6 +65,10 @@ type ProviderServiceClient interface {
 	// back `missing` — and the server has already cleared it, so the user must choose again.
 	GetSelections(context.Context, *connect.Request[v1.GetSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error)
 	SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error)
+	GetComparisonPairs(context.Context, *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error)
+	SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error)
+	ListRecommendationSets(context.Context, *connect.Request[v1.ListRecommendationSetsRequest]) (*connect.Response[v1.ListRecommendationSetsResponse], error)
+	ApplyRecommendationSet(context.Context, *connect.Request[v1.ApplyRecommendationSetRequest]) (*connect.Response[v1.ApplyRecommendationSetResponse], error)
 }
 
 // NewProviderServiceClient constructs a client for the postpilot.v1.ProviderService service. By
@@ -84,14 +100,42 @@ func NewProviderServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(providerServiceMethods.ByName("SaveSelection")),
 			connect.WithClientOptions(opts...),
 		),
+		getComparisonPairs: connect.NewClient[v1.GetComparisonPairsRequest, v1.GetComparisonPairsResponse](
+			httpClient,
+			baseURL+ProviderServiceGetComparisonPairsProcedure,
+			connect.WithSchema(providerServiceMethods.ByName("GetComparisonPairs")),
+			connect.WithClientOptions(opts...),
+		),
+		saveComparisonPair: connect.NewClient[v1.SaveComparisonPairRequest, v1.SaveComparisonPairResponse](
+			httpClient,
+			baseURL+ProviderServiceSaveComparisonPairProcedure,
+			connect.WithSchema(providerServiceMethods.ByName("SaveComparisonPair")),
+			connect.WithClientOptions(opts...),
+		),
+		listRecommendationSets: connect.NewClient[v1.ListRecommendationSetsRequest, v1.ListRecommendationSetsResponse](
+			httpClient,
+			baseURL+ProviderServiceListRecommendationSetsProcedure,
+			connect.WithSchema(providerServiceMethods.ByName("ListRecommendationSets")),
+			connect.WithClientOptions(opts...),
+		),
+		applyRecommendationSet: connect.NewClient[v1.ApplyRecommendationSetRequest, v1.ApplyRecommendationSetResponse](
+			httpClient,
+			baseURL+ProviderServiceApplyRecommendationSetProcedure,
+			connect.WithSchema(providerServiceMethods.ByName("ApplyRecommendationSet")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // providerServiceClient implements ProviderServiceClient.
 type providerServiceClient struct {
-	listModels    *connect.Client[v1.ListModelsRequest, v1.ListModelsResponse]
-	getSelections *connect.Client[v1.GetSelectionsRequest, v1.GetSelectionsResponse]
-	saveSelection *connect.Client[v1.SaveSelectionRequest, v1.SaveSelectionResponse]
+	listModels             *connect.Client[v1.ListModelsRequest, v1.ListModelsResponse]
+	getSelections          *connect.Client[v1.GetSelectionsRequest, v1.GetSelectionsResponse]
+	saveSelection          *connect.Client[v1.SaveSelectionRequest, v1.SaveSelectionResponse]
+	getComparisonPairs     *connect.Client[v1.GetComparisonPairsRequest, v1.GetComparisonPairsResponse]
+	saveComparisonPair     *connect.Client[v1.SaveComparisonPairRequest, v1.SaveComparisonPairResponse]
+	listRecommendationSets *connect.Client[v1.ListRecommendationSetsRequest, v1.ListRecommendationSetsResponse]
+	applyRecommendationSet *connect.Client[v1.ApplyRecommendationSetRequest, v1.ApplyRecommendationSetResponse]
 }
 
 // ListModels calls postpilot.v1.ProviderService.ListModels.
@@ -109,6 +153,26 @@ func (c *providerServiceClient) SaveSelection(ctx context.Context, req *connect.
 	return c.saveSelection.CallUnary(ctx, req)
 }
 
+// GetComparisonPairs calls postpilot.v1.ProviderService.GetComparisonPairs.
+func (c *providerServiceClient) GetComparisonPairs(ctx context.Context, req *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error) {
+	return c.getComparisonPairs.CallUnary(ctx, req)
+}
+
+// SaveComparisonPair calls postpilot.v1.ProviderService.SaveComparisonPair.
+func (c *providerServiceClient) SaveComparisonPair(ctx context.Context, req *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error) {
+	return c.saveComparisonPair.CallUnary(ctx, req)
+}
+
+// ListRecommendationSets calls postpilot.v1.ProviderService.ListRecommendationSets.
+func (c *providerServiceClient) ListRecommendationSets(ctx context.Context, req *connect.Request[v1.ListRecommendationSetsRequest]) (*connect.Response[v1.ListRecommendationSetsResponse], error) {
+	return c.listRecommendationSets.CallUnary(ctx, req)
+}
+
+// ApplyRecommendationSet calls postpilot.v1.ProviderService.ApplyRecommendationSet.
+func (c *providerServiceClient) ApplyRecommendationSet(ctx context.Context, req *connect.Request[v1.ApplyRecommendationSetRequest]) (*connect.Response[v1.ApplyRecommendationSetResponse], error) {
+	return c.applyRecommendationSet.CallUnary(ctx, req)
+}
+
 // ProviderServiceHandler is an implementation of the postpilot.v1.ProviderService service.
 type ProviderServiceHandler interface {
 	// The registry snapshot: every model of every provider, with its flags. A model whose
@@ -118,6 +182,10 @@ type ProviderServiceHandler interface {
 	// back `missing` — and the server has already cleared it, so the user must choose again.
 	GetSelections(context.Context, *connect.Request[v1.GetSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error)
 	SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error)
+	GetComparisonPairs(context.Context, *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error)
+	SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error)
+	ListRecommendationSets(context.Context, *connect.Request[v1.ListRecommendationSetsRequest]) (*connect.Response[v1.ListRecommendationSetsResponse], error)
+	ApplyRecommendationSet(context.Context, *connect.Request[v1.ApplyRecommendationSetRequest]) (*connect.Response[v1.ApplyRecommendationSetResponse], error)
 }
 
 // NewProviderServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -145,6 +213,30 @@ func NewProviderServiceHandler(svc ProviderServiceHandler, opts ...connect.Handl
 		connect.WithSchema(providerServiceMethods.ByName("SaveSelection")),
 		connect.WithHandlerOptions(opts...),
 	)
+	providerServiceGetComparisonPairsHandler := connect.NewUnaryHandler(
+		ProviderServiceGetComparisonPairsProcedure,
+		svc.GetComparisonPairs,
+		connect.WithSchema(providerServiceMethods.ByName("GetComparisonPairs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	providerServiceSaveComparisonPairHandler := connect.NewUnaryHandler(
+		ProviderServiceSaveComparisonPairProcedure,
+		svc.SaveComparisonPair,
+		connect.WithSchema(providerServiceMethods.ByName("SaveComparisonPair")),
+		connect.WithHandlerOptions(opts...),
+	)
+	providerServiceListRecommendationSetsHandler := connect.NewUnaryHandler(
+		ProviderServiceListRecommendationSetsProcedure,
+		svc.ListRecommendationSets,
+		connect.WithSchema(providerServiceMethods.ByName("ListRecommendationSets")),
+		connect.WithHandlerOptions(opts...),
+	)
+	providerServiceApplyRecommendationSetHandler := connect.NewUnaryHandler(
+		ProviderServiceApplyRecommendationSetProcedure,
+		svc.ApplyRecommendationSet,
+		connect.WithSchema(providerServiceMethods.ByName("ApplyRecommendationSet")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.ProviderService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProviderServiceListModelsProcedure:
@@ -153,6 +245,14 @@ func NewProviderServiceHandler(svc ProviderServiceHandler, opts ...connect.Handl
 			providerServiceGetSelectionsHandler.ServeHTTP(w, r)
 		case ProviderServiceSaveSelectionProcedure:
 			providerServiceSaveSelectionHandler.ServeHTTP(w, r)
+		case ProviderServiceGetComparisonPairsProcedure:
+			providerServiceGetComparisonPairsHandler.ServeHTTP(w, r)
+		case ProviderServiceSaveComparisonPairProcedure:
+			providerServiceSaveComparisonPairHandler.ServeHTTP(w, r)
+		case ProviderServiceListRecommendationSetsProcedure:
+			providerServiceListRecommendationSetsHandler.ServeHTTP(w, r)
+		case ProviderServiceApplyRecommendationSetProcedure:
+			providerServiceApplyRecommendationSetHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -172,4 +272,20 @@ func (UnimplementedProviderServiceHandler) GetSelections(context.Context, *conne
 
 func (UnimplementedProviderServiceHandler) SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.SaveSelection is not implemented"))
+}
+
+func (UnimplementedProviderServiceHandler) GetComparisonPairs(context.Context, *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.GetComparisonPairs is not implemented"))
+}
+
+func (UnimplementedProviderServiceHandler) SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.SaveComparisonPair is not implemented"))
+}
+
+func (UnimplementedProviderServiceHandler) ListRecommendationSets(context.Context, *connect.Request[v1.ListRecommendationSetsRequest]) (*connect.Response[v1.ListRecommendationSetsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.ListRecommendationSets is not implemented"))
+}
+
+func (UnimplementedProviderServiceHandler) ApplyRecommendationSet(context.Context, *connect.Request[v1.ApplyRecommendationSetRequest]) (*connect.Response[v1.ApplyRecommendationSetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.ApplyRecommendationSet is not implemented"))
 }

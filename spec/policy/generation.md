@@ -12,13 +12,14 @@ built by jobs 10 and 11.
   offending field. An invalid heading level is clamped to `2`.
 - After validation, every `IMAGE.file` is checked against the post's attached filenames with exact,
   case-sensitive matching. Invented or differently-cased filenames are dropped and logged.
-- Successful generation replaces `posts.content` wholesale and sets `status = review`. There is no generation
-  version history or partial content update.
+- A chosen write winner replaces `posts.content` wholesale and sets `status = review`. Candidate job completion alone
+  never mutates canonical content. There is no generation version history or partial content update.
 
 ## Pipeline
 
-- Generation is a durable `generate` job. `StartGeneration` validates ownership and model capabilities, records
-  both selected model references, persists the queued job, and returns its id without making a provider call.
+- Generation is a durable model-experiment job. `StartGeneration` validates ownership and model capabilities,
+  freezes the source, creates two distinct write candidates, persists queued work, and returns `job_id` plus
+  `experiment_id` without making a provider call.
 - When photos are attached, observation always precedes writing. Photos are ordered by `created_at, id`, read from
   private object storage as the already-normalized JPEGs, and sent in configurable batches. The server does not
   decode images and the upload path remains browser-to-storage. Reads are capped again at `MaxImageBytes`, both by
@@ -31,6 +32,9 @@ built by jobs 10 and 11.
 - The writing prompt's stable prefix is always styleguide → recent excerpts → user rules. Per-post title hint, memo,
   observations, and exact filenames follow it. The prompt requires Korean output, one paragraph per `TEXT` block,
   only attached filenames, context-appropriate image placement, a one-line summary, and 3–6 tags.
+- Observation runs once. Both writers receive byte-identical prepared snapshots/schema/options except for model ref,
+  run concurrently, and store validated candidate output under the experiment. Applying the selected value is
+  idempotent and is the only path that changes the post.
 - A model declaring structured-output support receives the relevant JSON schema. Other models use the same parser,
   which accepts direct JSON, fenced JSON, or the first complete JSON object. Unparseable output fails with
   `모델이 JSON 대신 다른 답을 돌려줬어요: ` plus at most 200 characters of the raw response.
@@ -41,7 +45,7 @@ built by jobs 10 and 11.
 
 - The acting user comes only from the authenticated session. A foreign post is `PermissionDenied`; an unknown post
   is `NotFound`.
-- An enabled write model is always required. With photos, an enabled vision-capable observe model is also required.
+- Two distinct enabled write models are always required. With photos, an enabled vision-capable observe model is also required.
   With no photos, the observe model is ignored and stored empty on the job.
 - The job queue's one-active-job-per-post constraint is authoritative under concurrency. A collision is
   `FailedPrecondition` and includes the active job id so the client can attach to it.
@@ -56,8 +60,9 @@ built by jobs 10 and 11.
 - The generated reading view renders the canonical `PostContent` block array directly. It shows title, summary,
   tags, every canonical block type, and resolves IMAGE blocks against attached filenames; it does not store or
   render canonical HTML.
-- Generation remains disabled until the required explicit stage selections are durable, the latest title and memo
-  have been saved, and no active or newly accepted job is unresolved. A 0-photo post requires only the write model.
+- Generation remains disabled until the required explicit active-observe/write-pair selections are durable, the
+  latest title and memo have been saved, and neither an active job nor a pending write experiment exists. A 0-photo
+  post does not require observe but still requires the write pair.
 
 ## Configuration
 

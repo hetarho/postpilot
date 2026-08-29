@@ -8,6 +8,10 @@ const model = (modelId: string, vision: boolean, disabled = false): CatalogModel
   structuredOutput: false,
   disabled,
   disabledReason: disabled ? 'API key not configured' : '',
+  contextTokens: 0n,
+  inputUsdPerMillion: '',
+  outputUsdPerMillion: '',
+  pricingCheckedAt: '',
 })
 
 describe('filterForStage', () => {
@@ -29,6 +33,8 @@ describe('refKey / sameRef', () => {
   it('identifies a model by provider and id', () => {
     expect(refKey({ providerId: 'a', modelId: 'b/c' })).toBe('a/b/c')
     expect(sameRef({ providerId: 'a', modelId: 'b' }, { providerId: 'a', modelId: 'b' })).toBe(true)
-    expect(sameRef({ providerId: 'a', modelId: 'b' }, { providerId: 'x', modelId: 'b' })).toBe(false)
+    expect(sameRef({ providerId: 'a', modelId: 'b' }, { providerId: 'x', modelId: 'b' })).toBe(
+      false,
+    )
   })
 })

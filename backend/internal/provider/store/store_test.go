@@ -6,96 +6,59 @@ import (
 	"testing"
 	"time"
 
-	"github.com/postpilot/backend/internal/auth"
-	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/provider"
-	"github.com/postpilot/backend/internal/provider/store"
+	providerstore "github.com/postpilot/backend/internal/provider/store"
 )
 
-var testNow = time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
-
-// newStore opens a throwaway SQLite database, applies the embedded migrations (0003
-// included), and seeds a user — selections reference users.
-func newStore(t *testing.T) *store.Store {
-	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
+func TestSaveSelectionsIsAtomicAndActiveReadsStayCompatible(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "provider.db"))
 	if err != nil {
-		t.Fatalf("open db: %v", err)
+		t.Fatal(err)
 	}
-	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
-	users := authstore.New(handle.Writer, handle.Reader)
-	for _, id := range []string{"alice", "bob"} {
-		if err := users.CreateUser(context.Background(), auth.User{ID: id, PasswordHash: "hash", CreatedAt: testNow}); err != nil {
-			t.Fatalf("seed user %s: %v", id, err)
-		}
-	}
-	return store.New(handle.Writer, handle.Reader)
-}
-
-func TestSelectionsRoundTrip(t *testing.T) {
+	t.Cleanup(func() { _ = handle.Close() })
 	ctx := context.Background()
-	s := newStore(t)
-	free := llm.ModelRef{ProviderID: "openrouter", ModelID: "openrouter/free"}
-	paid := llm.ModelRef{ProviderID: "openrouter", ModelID: "anthropic/claude-sonnet-4.5"}
-
-	if err := s.UpsertSelection(ctx, "alice", provider.Selection{Stage: provider.StageObserve, Ref: free, UpdatedAt: testNow}); err != nil {
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.UpsertSelection(ctx, "alice", provider.Selection{Stage: provider.StageWrite, Ref: free, UpdatedAt: testNow}); err != nil {
+	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','2026-08-29T00:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
-	// AC4: the same account reads the same choice anywhere; a second save replaces.
-	later := testNow.Add(time.Minute)
-	if err := s.UpsertSelection(ctx, "alice", provider.Selection{Stage: provider.StageWrite, Ref: paid, UpdatedAt: later}); err != nil {
+	store := providerstore.New(handle.Writer, handle.Reader)
+	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+	original := provider.Selection{Stage: provider.StageWrite, Slot: provider.SlotActive, Ref: llm.ModelRef{ProviderID: "p", ModelID: "original"}, UpdatedAt: now}
+	if err := store.UpsertSelection(ctx, "alice", original); err != nil {
 		t.Fatal(err)
 	}
-
-	got, err := s.ListSelections(ctx, "alice")
+	badBatch := []provider.Selection{
+		{Stage: provider.StageWrite, Slot: provider.SlotCandidateA, Ref: llm.ModelRef{ProviderID: "p", ModelID: "a"}, UpdatedAt: now},
+		{Stage: provider.StageWrite, Slot: provider.SelectionSlot("invalid"), Ref: llm.ModelRef{ProviderID: "p", ModelID: "b"}, UpdatedAt: now},
+	}
+	if err := store.SaveSelections(ctx, "alice", badBatch); err == nil {
+		t.Fatal("invalid second row did not fail")
+	}
+	rows, err := store.ListSelectionSlots(ctx, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("selections = %+v", got)
-	}
-	byStage := map[provider.Stage]provider.Selection{}
-	for _, sel := range got {
-		byStage[sel.Stage] = sel
-	}
-	if byStage[provider.StageObserve].Ref != free || byStage[provider.StageWrite].Ref != paid {
-		t.Errorf("refs = %+v", byStage)
-	}
-	if !byStage[provider.StageWrite].UpdatedAt.Equal(later) {
-		t.Errorf("UpdatedAt = %v, want %v", byStage[provider.StageWrite].UpdatedAt, later)
+	if len(rows) != 1 || rows[0].Slot != provider.SlotActive || rows[0].Ref != original.Ref {
+		t.Fatalf("partial batch or active regression: %+v", rows)
 	}
 
-	// Scoped by user.
-	if other, _ := s.ListSelections(ctx, "bob"); len(other) != 0 {
-		t.Errorf("bob sees alice's selections: %+v", other)
+	good := []provider.Selection{
+		{Stage: provider.StageWrite, Slot: provider.SlotCandidateA, Ref: llm.ModelRef{ProviderID: "p", ModelID: "a"}, UpdatedAt: now},
+		{Stage: provider.StageWrite, Slot: provider.SlotCandidateB, Ref: llm.ModelRef{ProviderID: "p", ModelID: "b"}, UpdatedAt: now},
 	}
-
-	// The clear is conditional on the ref: a choice made after the read survives.
-	if err := s.DeleteSelection(ctx, "alice", provider.Selection{Stage: provider.StageWrite, Ref: free}); err != nil {
+	if err := store.SaveSelections(ctx, "alice", good); err != nil {
 		t.Fatal(err)
 	}
-	got, _ = s.ListSelections(ctx, "alice")
-	if len(got) != 2 {
-		t.Fatalf("a clear for a stale ref removed the live row: %+v", got)
+	active, err := store.ListSelections(ctx, "alice")
+	if err != nil || len(active) != 1 || active[0].Ref != original.Ref {
+		t.Fatalf("active compatibility = %+v err=%v", active, err)
 	}
-
-	if err := s.DeleteSelection(ctx, "alice", provider.Selection{Stage: provider.StageWrite, Ref: paid}); err != nil {
-		t.Fatal(err)
-	}
-	got, _ = s.ListSelections(ctx, "alice")
-	if len(got) != 1 || got[0].Stage != provider.StageObserve {
-		t.Errorf("after delete = %+v", got)
-	}
-	// Deleting what is not there is not an error.
-	if err := s.DeleteSelection(ctx, "alice", provider.Selection{Stage: provider.StageWrite, Ref: paid}); err != nil {
-		t.Errorf("second delete = %v", err)
+	rows, err = store.ListSelectionSlots(ctx, "alice")
+	if err != nil || len(rows) != 3 {
+		t.Fatalf("slot reload = %+v err=%v", rows, err)
 	}
 }

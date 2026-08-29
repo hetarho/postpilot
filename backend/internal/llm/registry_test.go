@@ -18,6 +18,83 @@ type fakeProvider struct {
 	ctx   context.Context
 }
 
+func TestLoad_CurrentShippedCatalogAndRecommendation(t *testing.T) {
+	provider := &fakeProvider{}
+	registry, err := llm.Load("../../config/providers.yaml", env(map[string]string{"OPENROUTER_API_KEY": "test"}), map[string]llm.AdapterFactory{
+		"openai_compatible": func(cfg llm.AdapterConfig) (llm.Provider, error) {
+			provider.name = cfg.ProviderID
+			return provider, nil
+		},
+	}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(registry.Models()) != 7 {
+		t.Fatalf("models = %d, want free entry plus six pinned models", len(registry.Models()))
+	}
+	sets := registry.RecommendationSets()
+	if len(sets) != 1 || sets[0].ID != "balanced-2026-08" || len(sets[0].Selections) != 3 {
+		t.Fatalf("sets = %+v", sets)
+	}
+}
+
+func TestParse_RejectsBrokenPriceAndRecommendationMetadata(t *testing.T) {
+	base := `
+providers:
+  - id: p
+    adapter: fake
+    base_url: https://example.test
+    models:
+      - id: vision-a
+        vision: true
+        context_tokens: 1000
+        input_usd_per_million: "1"
+        output_usd_per_million: "2"
+        pricing_checked_at: "2026-08-29"
+      - id: vision-b
+        vision: true
+        context_tokens: 1000
+        input_usd_per_million: "1"
+        output_usd_per_million: "2"
+        pricing_checked_at: "2026-08-29"
+      - id: text
+        context_tokens: 1000
+        input_usd_per_million: "1"
+        output_usd_per_million: "2"
+        pricing_checked_at: "2026-08-29"
+recommendation_sets:
+  - id: set
+    label: Set
+    selections:
+      - stage: observe
+        active: {provider_id: p, model_id: vision-a}
+        candidate_a: {provider_id: p, model_id: vision-a}
+        candidate_b: {provider_id: p, model_id: vision-b}
+      - stage: analyze
+        active: {provider_id: p, model_id: text}
+        candidate_a: {provider_id: p, model_id: text}
+        candidate_b: {provider_id: p, model_id: vision-b}
+      - stage: write
+        active: {provider_id: p, model_id: text}
+        candidate_a: {provider_id: p, model_id: text}
+        candidate_b: {provider_id: p, model_id: vision-b}
+`
+	cases := map[string]string{
+		"negative price": strings.Replace(base, `input_usd_per_million: "1"`, `input_usd_per_million: "-1"`, 1),
+		"bad date":       strings.Replace(base, `pricing_checked_at: "2026-08-29"`, `pricing_checked_at: "August"`, 1),
+		"missing ref":    strings.Replace(base, `model_id: vision-b}`, `model_id: gone}`, 1),
+		"duplicate pair": strings.Replace(base, `candidate_b: {provider_id: p, model_id: vision-b}`, `candidate_b: {provider_id: p, model_id: vision-a}`, 1),
+		"observe text":   strings.Replace(base, `active: {provider_id: p, model_id: vision-a}`, `active: {provider_id: p, model_id: text}`, 1),
+	}
+	for name, content := range cases {
+		t.Run(name, func(t *testing.T) {
+			if _, err := llm.Parse([]byte(content), env(nil), adaptersWith(&fakeProvider{}), opts); err == nil {
+				t.Fatal("broken catalog was accepted")
+			}
+		})
+	}
+}
+
 func (f *fakeProvider) Name() string { return f.name }
 func (f *fakeProvider) Complete(ctx context.Context, req llm.Request) (llm.Response, error) {
 	f.calls++

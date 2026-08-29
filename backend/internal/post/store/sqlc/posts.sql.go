@@ -39,6 +39,23 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
 	return err
 }
 
+const deletePost = `-- name: DeletePost :execrows
+DELETE FROM posts WHERE slug = ? AND user_id = ?
+`
+
+type DeletePostParams struct {
+	Slug   string
+	UserID string
+}
+
+func (q *Queries) DeletePost(ctx context.Context, arg DeletePostParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deletePost, arg.Slug, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getPost = `-- name: GetPost :one
 SELECT slug, user_id, title, memo, observations, content, status, created_at, updated_at
 FROM posts WHERE slug = ?

@@ -139,6 +139,55 @@ func TestComplete_AcceptsANonStreamedAnswer(t *testing.T) {
 	}
 }
 
+func TestComplete_FoldsReportedCostFromStreamAndJSON(t *testing.T) {
+	cases := []struct {
+		name        string
+		contentType string
+		body        string
+	}{
+		{"stream number", "text/event-stream", "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: {\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":2,\"cost\":0.0000015}}\n\ndata: [DONE]\n\n"},
+		{"json string", "application/json", `{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":10,"completion_tokens":2,"cost":"0.0000015"}}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			client, _ := newClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", tc.contentType)
+				io.WriteString(w, tc.body)
+			})
+			response, err := client.Complete(context.Background(), llm.Request{Model: "m"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !response.Usage.CostReported || response.Usage.CostMicrousd != 2 {
+				t.Fatalf("usage = %+v, want rounded 2 microusd reported", response.Usage)
+			}
+		})
+	}
+}
+
+func TestComplete_AbsentCostStaysUnreportedAndInvalidCostFails(t *testing.T) {
+	client, _ := newClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":1}}`)
+	})
+	response, err := client.Complete(context.Background(), llm.Request{Model: "m"})
+	if err != nil || response.Usage.CostReported || response.Usage.CostMicrousd != 0 {
+		t.Fatalf("absent cost = %+v, %v", response.Usage, err)
+	}
+
+	for _, raw := range []string{`-1`, `"not-a-number"`, `999999999999999999999999999999`} {
+		t.Run(raw, func(t *testing.T) {
+			client, _ := newClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}],"usage":{"cost":`+raw+`}}`)
+			})
+			if _, err := client.Complete(context.Background(), llm.Request{Model: "m"}); !errors.Is(err, llm.ErrBadOutput) {
+				t.Fatalf("invalid cost err = %v", err)
+			}
+		})
+	}
+}
+
 // AC8: a 429 is ErrRateLimited with the provider's message intact.
 func TestComplete_RateLimitKeepsTheProviderMessage(t *testing.T) {
 	client, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) {

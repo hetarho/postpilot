@@ -6,12 +6,12 @@ describe('displayTitle', () => {
     expect(displayTitle({ title: '제주 3일' })).toBe('제주 3일')
   })
 
-  it.each([['', 'empty'], ['   ', 'whitespace only']])(
-    'falls back for a %s title (%s)',
-    (title) => {
-      expect(displayTitle({ title })).toBe(UNTITLED_TITLE)
-    },
-  )
+  it.each([
+    ['', 'empty'],
+    ['   ', 'whitespace only'],
+  ])('falls back for a %s title (%s)', (title) => {
+    expect(displayTitle({ title })).toBe(UNTITLED_TITLE)
+  })
 })
 
 describe('postStatusLabel', () => {
