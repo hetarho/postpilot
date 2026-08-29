@@ -2,33 +2,27 @@ import { clone, create } from '@bufbuild/protobuf'
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useState, type ReactNode } from 'react'
 import type { PostDraft } from '@/entities/post'
 import { BlockSchema, BlockType, PostContentSchema, type Block, type PostContent } from '@/shared/api'
-import { POST_TARGET_LENGTH_DEFAULT, POST_TARGET_LENGTH_MAX, POST_TARGET_LENGTH_MIN } from '@/shared/config'
 import { Button, FieldLabel, FieldMessage, Select, Textarea, TextField } from '@/shared/ui'
 import { useContentAutosave } from '../model/useContentAutosave'
 
 export interface BlockEditorHandle {
-  flush: () => Promise<void>
+  flush: () => Promise<bigint>
   content: () => PostContent
 }
 
-export const BlockEditor = forwardRef<BlockEditorHandle, { post: PostDraft; onContentChange?: (content: PostContent) => void; renderSentenceAction?: (text: string, flush: () => Promise<void>) => ReactNode }>(function BlockEditor(
+export const BlockEditor = forwardRef<BlockEditorHandle, { post: PostDraft; onContentChange?: (content: PostContent) => void; renderSentenceAction?: (text: string, flush: () => Promise<bigint>) => ReactNode }>(function BlockEditor(
   { post, onContentChange, renderSentenceAction },
   ref,
 ) {
   const [content, setContent] = useState(() => clone(PostContentSchema, post.content!))
-  const [targetLength, setTargetLength] = useState(post.targetLength || POST_TARGET_LENGTH_DEFAULT)
   const valid = useMemo(
-    () =>
-      targetLength >= POST_TARGET_LENGTH_MIN &&
-      targetLength <= POST_TARGET_LENGTH_MAX &&
-      validContent(content, post.images.map((image) => image.filename)),
-    [content, post.images, targetLength],
+    () => validContent(content, post.images.map((image) => image.filename)),
+    [content, post.images],
   )
   const autosave = useContentAutosave({
     slug: post.slug,
     revision: post.contentRevision,
     content,
-    targetLength,
     valid,
   })
   useEffect(() => onContentChange?.(content), [content, onContentChange])
@@ -68,7 +62,7 @@ export const BlockEditor = forwardRef<BlockEditorHandle, { post: PostDraft; onCo
           다른 화면에서 글이 바뀌었어요. 이 화면을 새로고침한 뒤 다시 수정해 주세요.
         </FieldMessage>
       )}
-      {!valid && <FieldMessage className="mt-2">빈 블록을 채우고 목표 글자 수 범위를 확인해 주세요.</FieldMessage>}
+      {!valid && <FieldMessage className="mt-2">빈 블록을 채워 주세요.</FieldMessage>}
 
       <h3 className="mt-5 text-xl font-semibold tracking-tight">{content.title}</h3>
 
@@ -107,18 +101,6 @@ export const BlockEditor = forwardRef<BlockEditorHandle, { post: PostDraft; onCo
               )
             }
             placeholder="여행, 카페"
-            className="mt-1"
-          />
-        </div>
-        <div>
-          <FieldLabel htmlFor="content-target-length">목표 글자 수</FieldLabel>
-          <TextField
-            id="content-target-length"
-            type="number"
-            min={POST_TARGET_LENGTH_MIN}
-            max={POST_TARGET_LENGTH_MAX}
-            value={targetLength}
-            onChange={(event) => setTargetLength(Number(event.target.value))}
             className="mt-1"
           />
         </div>

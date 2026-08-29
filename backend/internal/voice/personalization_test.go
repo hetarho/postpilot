@@ -86,10 +86,18 @@ func TestComparisonDecisionRequiresTwoSuccessfulOutputs(t *testing.T) {
 }
 
 func TestRuleComparisonPromptsDifferOnlyBySelectedRule(t *testing.T) {
-	snapshot := ruleComparisonSnapshot{Rule: ContrastRule{Statement: "LLM does long sentences, but I do concise sentences"}, Source: AuthoredSource{Title: "서울 산책", Tags: []string{"서울"}}, TargetLength: 900, EndingMaxConsecutive: 2}
+	targetLength := 900
+	snapshot := ruleComparisonSnapshot{Rule: ContrastRule{Statement: "LLM does long sentences, but I do concise sentences"}, Source: AuthoredSource{Title: "서울 산책", Tags: []string{"서울"}}, TargetLength: &targetLength, EndingMaxConsecutive: 2}
 	off, on := BuildRuleComparisonPrompts(snapshot)
 	if strings.Replace(on, snapshot.Rule.Statement+"\n", "", 1) != off {
 		t.Fatalf("comparison prompts differ beyond the rule\noff=%q\non=%q", off, on)
+	}
+	if !strings.Contains(off, "900") {
+		t.Fatalf("configured target missing: %s", off)
+	}
+	withoutTarget, _ := BuildRuleComparisonPrompts(ruleComparisonSnapshot{Rule: snapshot.Rule, Source: snapshot.Source, EndingMaxConsecutive: 2})
+	if strings.Contains(withoutTarget, "목표 길이") || strings.Contains(withoutTarget, "1200") {
+		t.Fatalf("absent target leaked a numeric constraint: %s", withoutTarget)
 	}
 }
 

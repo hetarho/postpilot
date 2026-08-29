@@ -53,11 +53,35 @@ func (h *Handler) SavePostContent(ctx context.Context, req *connect.Request[post
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
-	saved, err := h.svc.SaveContent(ctx, userID, req.Msg.GetSlug(), content, req.Msg.GetExpectedRevision(), int(req.Msg.GetTargetLength()))
+	saved, err := h.svc.SaveContent(ctx, userID, req.Msg.GetSlug(), content, req.Msg.GetExpectedRevision())
 	if err != nil {
 		return nil, toConnectError("save post content", err)
 	}
 	return connect.NewResponse(&postpilotv1.SavePostContentResponse{Post: toProtoPost(saved)}), nil
+}
+
+func (h *Handler) SavePostGenerationOptions(ctx context.Context, req *connect.Request[postpilotv1.SavePostGenerationOptionsRequest]) (*connect.Response[postpilotv1.SavePostGenerationOptionsResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	saved, err := h.svc.SaveGenerationOptions(ctx, userID, req.Msg.GetSlug(), optionalTargetLength(req.Msg.TargetLength))
+	if err != nil {
+		return nil, toConnectError("save post generation options", err)
+	}
+	return connect.NewResponse(&postpilotv1.SavePostGenerationOptionsResponse{Post: toProtoPost(saved)}), nil
+}
+
+func (h *Handler) FinalizePost(ctx context.Context, req *connect.Request[postpilotv1.FinalizePostRequest]) (*connect.Response[postpilotv1.FinalizePostResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	saved, err := h.svc.Finalize(ctx, userID, req.Msg.GetSlug(), req.Msg.GetExpectedRevision())
+	if err != nil {
+		return nil, toConnectError("finalize post", err)
+	}
+	return connect.NewResponse(&postpilotv1.FinalizePostResponse{Post: toProtoPost(saved)}), nil
 }
 
 func (h *Handler) GetPost(ctx context.Context, req *connect.Request[postpilotv1.GetPostRequest]) (*connect.Response[postpilotv1.GetPostResponse], error) {
@@ -188,6 +212,8 @@ func toConnectError(op string, err error) error {
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New("post has an active job"))
 	case errors.Is(err, post.ErrStaleContentRevision):
 		return connect.NewError(connect.CodeAborted, errors.New("post content changed in another editor; reload and retry"))
+	case errors.Is(err, post.ErrNoMachineBaseline), errors.Is(err, post.ErrPostNotFinalized):
+		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
 	case errors.Is(err, post.ErrInvalidContent):
 		return connect.NewError(connect.CodeInvalidArgument, errors.New(err.Error()))
 	default:
@@ -220,8 +246,33 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		ContentRevision:         p.ContentRevision,
 		MachineBaselineRevision: p.MachineBaselineRevision,
 		CanFinalize:             p.Content != nil && p.MachineBaselineRevision > 0,
-		TargetLength:            int32(p.TargetLength),
+		TargetLength:            protoTargetLength(p.TargetLength),
+		FinalizedRevision:       p.FinalizedRevision,
+		FinalizedAt:             formatOptionalTime(p.FinalizedAt),
 	}
+}
+
+func optionalTargetLength(value *int32) *int {
+	if value == nil {
+		return nil
+	}
+	result := int(*value)
+	return &result
+}
+
+func protoTargetLength(value *int) *int32 {
+	if value == nil {
+		return nil
+	}
+	result := int32(*value)
+	return &result
+}
+
+func formatOptionalTime(value *time.Time) string {
+	if value == nil {
+		return ""
+	}
+	return value.UTC().Format(timeLayout)
 }
 
 func fromProtoContent(content *postpilotv1.PostContent) (post.PostContent, error) {

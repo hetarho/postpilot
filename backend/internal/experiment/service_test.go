@@ -207,7 +207,7 @@ func (s *memoryStore) RestoreFailedCandidates(_ context.Context, id string, cand
 	s.rows[id] = row
 	return nil
 }
-func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, status Status, outcome Outcome, decidedAt, expiresAt time.Time) (bool, error) {
+func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, status Status, outcome Outcome, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row := s.rows[id]
@@ -215,6 +215,7 @@ func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, 
 		return false, nil
 	}
 	row.Status, row.WinnerCandidateID, row.Outcome = status, candidateID, outcome
+	row.AdoptionRequested = adoptionRequested
 	row.DecidedAt, row.ContentExpiresAt = &decidedAt, &expiresAt
 	s.rows[id] = row
 	return true, nil
@@ -242,6 +243,29 @@ func (s *memoryStore) SetApplied(_ context.Context, id, userID string, now time.
 	s.rows[id] = row
 	return nil
 }
+func (s *memoryStore) SetAdoptionError(_ context.Context, id, userID, message string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	row := s.rows[id]
+	if row.UserID != userID {
+		return ErrForbidden
+	}
+	row.AdoptionError = message
+	s.rows[id] = row
+	return nil
+}
+func (s *memoryStore) SetAdopted(_ context.Context, id, userID string, now time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	row := s.rows[id]
+	if row.UserID != userID || row.Status != StatusDecided || row.AdoptedAt != nil {
+		return ErrInvalidState
+	}
+	row.AdoptionError = ""
+	row.AdoptedAt = &now
+	s.rows[id] = row
+	return nil
+}
 func (s *memoryStore) LeaderboardData(context.Context, string, Stage) ([]Experiment, []Candidate, error) {
 	return nil, nil, nil
 }
@@ -258,8 +282,12 @@ func cloneExperiment(found Experiment) Experiment {
 }
 
 type fakeCatalog struct {
-	models  map[ModelRef]Model
-	adopted []ModelRef
+	models    map[ModelRef]Model
+	adopted   []ModelRef
+	adoptErr  error
+	active    ModelRef
+	selected  bool
+	activeErr error
 }
 
 func (c *fakeCatalog) Resolve(ref ModelRef) (Model, bool) {
@@ -267,11 +295,103 @@ func (c *fakeCatalog) Resolve(ref ModelRef) (Model, bool) {
 	return model, ok
 }
 func (c *fakeCatalog) Adopt(_ context.Context, _ string, _ Stage, ref ModelRef) error {
+	if c.adoptErr != nil {
+		return c.adoptErr
+	}
 	c.adopted = append(c.adopted, ref)
+	c.active, c.selected = ref, true
 	return nil
 }
+
+func TestDecideWriteSeparatesApplyOnlyFromAdoptionAndRecoversPartialFailure(t *testing.T) {
+	t.Run("apply only", func(t *testing.T) {
+		svc, store, catalog, _, runner := newTestService()
+		started, _ := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
+		if err := svc.Handle(context.Background(), started.ExperimentID, func(string, int, int) {}); err != nil {
+			t.Fatal(err)
+		}
+		ready, _ := store.Get(context.Background(), started.ExperimentID)
+		decided, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, false)
+		if err != nil || decided.AppliedAt == nil || decided.AdoptionRequested || decided.AdoptedAt != nil || len(catalog.adopted) != 0 || runner.applyCalls != 1 {
+			t.Fatalf("apply only = %+v err=%v adopted=%v applies=%d", decided, err, catalog.adopted, runner.applyCalls)
+		}
+	})
+
+	t.Run("application retry preserves adoption request", func(t *testing.T) {
+		svc, store, catalog, _, runner := newTestService()
+		started, _ := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
+		if err := svc.Handle(context.Background(), started.ExperimentID, func(string, int, int) {}); err != nil {
+			t.Fatal(err)
+		}
+		ready, _ := store.Get(context.Background(), started.ExperimentID)
+		runner.applyErr = errors.New("post unavailable")
+		partial, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
+		if err != nil || !partial.AdoptionRequested || partial.AppliedAt != nil || partial.ApplyError == "" || len(catalog.adopted) != 0 {
+			t.Fatalf("partial = %+v err=%v adopted=%v", partial, err, catalog.adopted)
+		}
+		runner.applyErr = nil
+		recovered, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, partial.AdoptionRequested)
+		if err != nil || recovered.AppliedAt == nil || recovered.AdoptedAt == nil || len(catalog.adopted) != 1 || runner.applyCalls != 2 {
+			t.Fatalf("recovered = %+v err=%v adopted=%v applies=%d", recovered, err, catalog.adopted, runner.applyCalls)
+		}
+	})
+
+	t.Run("adoption-only retry", func(t *testing.T) {
+		svc, store, catalog, _, runner := newTestService()
+		started, _ := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
+		if err := svc.Handle(context.Background(), started.ExperimentID, func(string, int, int) {}); err != nil {
+			t.Fatal(err)
+		}
+		ready, _ := store.Get(context.Background(), started.ExperimentID)
+		catalog.adoptErr = errors.New("selection unavailable")
+		partial, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
+		if err != nil || partial.AppliedAt == nil || partial.AdoptionError != adoptFailedReason || partial.AdoptedAt != nil || runner.applyCalls != 1 {
+			t.Fatalf("partial = %+v err=%v applies=%d", partial, err, runner.applyCalls)
+		}
+		catalog.adoptErr = nil
+		recovered, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
+		if err != nil || recovered.AdoptedAt == nil || recovered.AdoptionError != "" || len(catalog.adopted) != 1 || runner.applyCalls != 1 {
+			t.Fatalf("recovered = %+v err=%v adopted=%v applies=%d", recovered, err, catalog.adopted, runner.applyCalls)
+		}
+		if _, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true); err != nil || len(catalog.adopted) != 1 || runner.applyCalls != 1 {
+			t.Fatalf("idempotent retry err=%v adopted=%v applies=%d", err, catalog.adopted, runner.applyCalls)
+		}
+	})
+}
+
+func TestConcurrentWriteDecisionAppliesAndAdoptsExactlyOnce(t *testing.T) {
+	svc, store, catalog, _, runner := newTestService()
+	started, _ := svc.Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", Stage: StageWrite,
+		ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"},
+	})
+	if err := svc.Handle(context.Background(), started.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	ready, _ := store.Get(context.Background(), started.ExperimentID)
+	errs := make(chan error, 2)
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
+			errs <- err
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent decision failed: %v", err)
+		}
+	}
+	if runner.applyCalls != 1 || len(catalog.adopted) != 1 {
+		t.Fatalf("apply calls=%d adoption writes=%d", runner.applyCalls, len(catalog.adopted))
+	}
+}
 func (c *fakeCatalog) Active(context.Context, string, Stage) (ModelRef, bool, error) {
-	return ModelRef{}, false, nil
+	return c.active, c.selected, c.activeErr
 }
 func (c *fakeCatalog) Recommended(Stage, ModelRef) bool { return false }
 
@@ -365,6 +485,18 @@ func TestStartHandleChooseWriteExperiment(t *testing.T) {
 	}
 	if _, err := svc.Get(context.Background(), "mallory", found.ID); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("foreign get = %v", err)
+	}
+}
+
+func TestStartRejectsNonPositiveTargetBeforeSnapshotOrEnqueue(t *testing.T) {
+	svc, _, _, jobs, runner := newTestService()
+	invalid := 0
+	_, err := svc.Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", Stage: StageWrite,
+		ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}, TargetLength: &invalid,
+	})
+	if !errors.Is(err, ErrInvalidTargetLength) || runner.snapshotCalls != 0 || len(jobs.ids) != 0 {
+		t.Fatalf("err=%v snapshots=%d jobs=%v", err, runner.snapshotCalls, jobs.ids)
 	}
 }
 

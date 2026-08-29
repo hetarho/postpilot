@@ -50,6 +50,14 @@ func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) 
 			t.Errorf("revision prompt missing %q", required)
 		}
 	}
+	if strings.Contains(system, "목표 길이") || strings.Contains(system, "1200") {
+		t.Fatalf("revision added a hidden length target: %s", system)
+	}
+	target := 940
+	configured, _ := BuildRevisePrompt(Profile{}, *revisionContent("CURRENT"), nil, "INSTRUCTION", &target)
+	if !strings.Contains(configured, "목표 길이: 약 940자") {
+		t.Fatalf("configured revision target missing: %s", configured)
+	}
 }
 
 type recordingProfiles struct {

@@ -1,6 +1,6 @@
 import { discardDraftQueues } from '@/features/save-draft'
 import { discardContentQueues } from '@/features/edit-post-content'
-import { discardLearningHandoffs } from '@/features/finalize-and-learn'
+import { discardLearningHandoffs } from '@/features/finalize-post'
 import { discardUploadBatches } from '@/features/upload-photos'
 
 /** Everything that must not outlive the session, in one place.

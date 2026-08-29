@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { discardUploadBatches } from '@/features/upload-photos'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import { OBSERVATION_FIXTURE, POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
+import {
+  OBSERVATION_FIXTURE,
+  POST_CONTENT_FIXTURE,
+  POST_IMAGES_FIXTURE,
+} from '@/test/fixtures/postContent'
 import { FAKE_STORAGE_ORIGIN } from '@/test/posts'
 import { clearCaret } from '../model/editor-handoff'
 
@@ -211,6 +215,36 @@ describe('opening a post', () => {
     expect(screen.getByLabelText('수정 요청')).toBeEnabled()
   })
 
+  it('routes a failed A/B job to its existing recovery screen', async () => {
+    const user = userEvent.setup()
+    const failed = {
+      id: 'comparison-job',
+      kind: 'model_experiment',
+      status: 'failed',
+      error: 'candidate failed',
+    }
+    const { router } = renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'review',
+            content: POST_CONTENT_FIXTURE,
+            activeJob: failed,
+            pendingExperimentId: 'experiment-pending',
+          },
+        ],
+      },
+      jobs: { jobs: [failed] },
+    })
+
+    await user.click(await screen.findByRole('button', { name: '다시 시도' }))
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/ai-models/experiments/experiment-pending'),
+    )
+  })
+
   it('refreshes observations while running and renders the review draft after completion', async () => {
     const slug = '20260820-jeju'
     const image = { id: 'img-1', filename: 'IMG_1.jpg' }
@@ -321,7 +355,7 @@ describe('opening a post', () => {
     ])
   })
 
-  it('does not generate until a distinct write comparison pair is configured', async () => {
+  it('keeps ordinary generation usable when only the A/B pair is missing', async () => {
     renderAppAt('/posts/20260820-memo', {
       user: USER,
       posts: { posts: [{ slug: '20260820-memo' }] },
@@ -335,9 +369,327 @@ describe('opening a post', () => {
     })
 
     const generate = await screen.findByRole('button', { name: '생성' })
-    await waitFor(() => expect(screen.getByText(/작성 A\/B 모델을 선택하세요/)).toBeInTheDocument())
-    expect(generate).toBeDisabled()
-    expect(screen.getByRole('link', { name: 'AI 모델 설정' })).toHaveAttribute('href', '/ai-models')
+    const compare = screen.getByRole('button', { name: 'A/B 비교 생성' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    expect(compare).toBeDisabled()
+    expect(screen.getByText(/A\/B 비교: 작성 A\/B 모델 두 개를 선택하세요/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'AI 모델에서 두 후보 설정' })).toHaveAttribute(
+      'href',
+      '/ai-models',
+    )
+  })
+
+  it('sends the active writer only for ordinary generation', async () => {
+    const starts: Array<{
+      postSlug: string
+      writeModel?: { providerId: string; modelId: string }
+      targetLength?: number
+    }> = []
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-memo', {
+      user: USER,
+      calls,
+      posts: { posts: [{ slug: '20260820-memo' }] },
+      jobs: { starts },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'active' },
+          { providerId: 'openrouter', modelId: 'candidate-a' },
+          { providerId: 'openrouter', modelId: 'candidate-b' },
+        ],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'active' }],
+        comparisonPairs: [
+          {
+            stage: Stage.WRITE,
+            candidateA: { providerId: 'openrouter', modelId: 'candidate-a' },
+            candidateB: { providerId: 'openrouter', modelId: 'candidate-b' },
+          },
+        ],
+      },
+    })
+    const generate = await screen.findByRole('button', { name: '생성' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    await user.click(generate)
+    await waitFor(() => expect(calls).toContain('StartGeneration'))
+    expect(starts).toEqual([
+      {
+        postSlug: '20260820-memo',
+        writeModel: { providerId: 'openrouter', modelId: 'active' },
+        targetLength: undefined,
+      },
+    ])
+    expect(calls).not.toContain('StartWriteExperiment')
+  })
+
+  it('starts an explicit A/B comparison with the configured pair and optional target', async () => {
+    const starts: Array<{
+      postSlug: string
+      modelA?: { providerId: string; modelId: string }
+      modelB?: { providerId: string; modelId: string }
+      targetLength?: number
+    }> = []
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-memo', {
+      user: USER,
+      calls,
+      posts: { posts: [{ slug: '20260820-memo' }] },
+      experiments: { starts },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'active' },
+          { providerId: 'openrouter', modelId: 'candidate-a' },
+          { providerId: 'openrouter', modelId: 'candidate-b' },
+        ],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'active' }],
+        comparisonPairs: [
+          {
+            stage: Stage.WRITE,
+            candidateA: { providerId: 'openrouter', modelId: 'candidate-a' },
+            candidateB: { providerId: 'openrouter', modelId: 'candidate-b' },
+          },
+        ],
+      },
+    })
+    const options = await screen.findByRole('button', { name: '생성 옵션' })
+    await user.click(options)
+    await user.click(screen.getByRole('checkbox'))
+    await user.type(screen.getByLabelText('목표 글자 수'), '750')
+    await user.click(
+      within(screen.getByRole('dialog', { name: '생성 옵션' })).getByRole('button', {
+        name: '저장',
+      }),
+    )
+    await waitFor(() => expect(calls).toContain('SavePostGenerationOptions'))
+    const compare = screen.getByRole('button', { name: 'A/B 비교 생성' })
+    await waitFor(() => expect(compare).toBeEnabled())
+    await user.click(compare)
+    await waitFor(() => expect(calls).toContain('StartWriteExperiment'))
+    expect(starts).toEqual([
+      {
+        postSlug: '20260820-memo',
+        observeModel: undefined,
+        modelA: { providerId: 'openrouter', modelId: 'candidate-a' },
+        modelB: { providerId: 'openrouter', modelId: 'candidate-b' },
+        targetLength: 750,
+      },
+    ])
+    expect(calls).not.toContain('StartGeneration')
+  })
+
+  it('restores and explicitly clears a stored target length without starting generation', async () => {
+    const calls: string[] = []
+    const generationOptionSaves: Array<number | undefined> = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-memo', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [{ slug: '20260820-memo', targetLength: 1200 }],
+        generationOptionSaves,
+      },
+    })
+
+    await user.click(await screen.findByRole('button', { name: '생성 옵션' }))
+    const dialog = screen.getByRole('dialog', { name: '생성 옵션' })
+    expect(within(dialog).getByRole('checkbox')).toBeChecked()
+    expect(within(dialog).getByLabelText('목표 글자 수')).toHaveValue(1200)
+    expect(calls).not.toContain('SavePostGenerationOptions')
+
+    await user.click(within(dialog).getByRole('checkbox'))
+    await user.click(within(dialog).getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(generationOptionSaves).toEqual([undefined]))
+    expect(calls).not.toContain('StartGeneration')
+    expect(calls).not.toContain('StartWriteExperiment')
+  })
+
+  it('finalizes without an analyze model or learning call', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-final',
+            status: 'review',
+            content: POST_CONTENT_FIXTURE,
+            images: POST_IMAGES_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+          },
+        ],
+      },
+    })
+    const finalize = await screen.findByRole('button', { name: '확정' })
+    expect(finalize).toBeEnabled()
+    expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
+    await user.click(finalize)
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확정' }))
+    await waitFor(() => expect(calls).toContain('FinalizePost'))
+    expect(calls).not.toContain('LearnFromFinalizedPost')
+    expect(await screen.findByRole('button', { name: '말투 학습' })).toBeDisabled()
+  })
+
+  it('keeps the post finalized when explicit learning fails', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-final',
+            status: 'review',
+            content: POST_CONTENT_FIXTURE,
+            images: POST_IMAGES_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+          },
+        ],
+      },
+      voice: { learningFails: true },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
+        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
+      },
+    })
+    const combined = await screen.findByRole('button', { name: '확정하고 말투 학습' })
+    await waitFor(() => expect(combined).toBeEnabled())
+    await user.click(combined)
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: '확정하고 학습' }),
+    )
+    await waitFor(() =>
+      expect(calls).toEqual(expect.arrayContaining(['FinalizePost', 'LearnFromFinalizedPost'])),
+    )
+    expect(screen.getByText(/글은 확정됐지만 말투 학습은 시작하지 못했어요/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '말투 학습' })).toBeEnabled()
+  })
+
+  it('returns a finalized post to review after the first changed content save', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-final',
+            status: 'finalized',
+            content: POST_CONTENT_FIXTURE,
+            images: POST_IMAGES_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+            finalizedRevision: 1n,
+            finalizedAt: '2026-08-20T12:00:00Z',
+          },
+        ],
+      },
+    })
+
+    expect(await screen.findByRole('button', { name: '말투 학습' })).toBeInTheDocument()
+    await user.type(screen.getByLabelText('본문 제목'), ' 수정')
+    await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
+    expect(await screen.findByRole('button', { name: '확정' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '말투 학습' })).not.toBeInTheDocument()
+  })
+
+  it('keeps a failed learning handoff across reloads so only learning can be retried', async () => {
+    const key = 'postpilot:voice-learning:alice:20260820-final'
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      get length() {
+        return stored.size
+      },
+      key: (index: number) => [...stored.keys()][index] ?? null,
+      getItem: (name: string) => stored.get(name) ?? null,
+      setItem: (name: string, value: string) => stored.set(name, value),
+      removeItem: (name: string) => stored.delete(name),
+    })
+    localStorage.setItem(key, JSON.stringify({ eventId: 'event-1', jobId: 'learn-1' }))
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-final',
+            status: 'finalized',
+            content: POST_CONTENT_FIXTURE,
+            images: POST_IMAGES_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+            finalizedRevision: 1n,
+            finalizedAt: '2026-08-20T12:00:00Z',
+          },
+        ],
+      },
+      jobs: {
+        jobs: [{ id: 'learn-1', kind: 'voice_learn', status: 'failed', error: 'provider failed' }],
+      },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
+        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
+      },
+    })
+
+    expect(await screen.findByText('provider failed')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+    expect(localStorage.getItem(key)).not.toBeNull()
+    localStorage.removeItem(key)
+  })
+
+  it('does not let a completed handoff from an older revision hide later learning', async () => {
+    const key = 'postpilot:voice-learning:alice:20260820-final'
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      get length() {
+        return stored.size
+      },
+      key: (index: number) => [...stored.keys()][index] ?? null,
+      getItem: (name: string) => stored.get(name) ?? null,
+      setItem: (name: string, value: string) => stored.set(name, value),
+      removeItem: (name: string) => stored.delete(name),
+    })
+    localStorage.setItem(
+      key,
+      JSON.stringify({ eventId: 'event-1', jobId: 'learn-1', contentRevision: '1' }),
+    )
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-final',
+            status: 'finalized',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 2n,
+            machineBaselineRevision: 2n,
+            canFinalize: true,
+            finalizedRevision: 2n,
+            finalizedAt: '2026-08-20T12:00:00Z',
+          },
+        ],
+      },
+      jobs: { jobs: [{ id: 'learn-1', kind: 'voice_learn', status: 'done' }] },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
+        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
+      },
+    })
+
+    const learn = await screen.findByRole('button', { name: '말투 학습' })
+    await waitFor(() => expect(learn).toBeEnabled())
+    localStorage.removeItem(key)
   })
 
   // Job 05 A6 (plan 02 AC11, photos half): the strip is rebuilt from the view URLs.

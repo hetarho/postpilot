@@ -18,6 +18,7 @@ import { type FakePostsOptions, registerPostService } from './posts'
 import { type FakeProvidersOptions, registerProviderService } from './providers'
 import { type FakeJobsOptions, registerGenerationService } from './jobs'
 import { type FakeVoiceOptions, registerVoiceService } from './voice'
+import { type FakeExperimentsOptions, registerExperimentService } from './experiments'
 
 export interface FakeAuthOptions {
   /** The account GetMe reports. `undefined` makes GetMe answer 401, like a real server
@@ -39,6 +40,7 @@ export interface FakeAuthOptions {
   jobs?: FakeJobsOptions
   /** The acting account's voice profile and sample mutations. */
   voice?: FakeVoiceOptions
+  experiments?: FakeExperimentsOptions
 }
 
 /** A fake backend plus the controls a test needs over it. */
@@ -76,6 +78,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerProviderService(router, { calls, ...options.providers })
     registerGenerationService(router, { calls, ...options.jobs })
     registerVoiceService(router, { calls, ...options.voice })
+    registerExperimentService(router, { calls, ...options.experiments })
   })
 
   return {

@@ -18,11 +18,11 @@ type ruleComparisonSnapshot struct {
 	Rule                 ContrastRule      `json:"rule"`
 	Source               AuthoredSource    `json:"source"`
 	Profile              StructuredProfile `json:"profile"`
-	TargetLength         int               `json:"target_length"`
+	TargetLength         *int              `json:"target_length,omitempty"`
 	EndingMaxConsecutive int               `json:"ending_max_consecutive"`
 }
 
-func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourceID string, targetLength int, model llm.ModelRef) (string, string, error) {
+func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourceID string, targetLength *int, model llm.ModelRef) (string, string, error) {
 	if !s.personalizationModels.ModelEnabled(model) {
 		return "", "", ErrAnalyzeModelRequired
 	}
@@ -47,8 +47,8 @@ func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourc
 	if profile.Structured.Version == 0 {
 		return "", "", ErrInvalidLifecycle
 	}
-	if targetLength <= 0 {
-		targetLength = 1200
+	if targetLength != nil && *targetLength <= 0 {
+		return "", "", ErrInvalidLifecycle
 	}
 	snapshot, err := json.Marshal(ruleComparisonSnapshot{Rule: rule, Source: source, Profile: profile.Structured, TargetLength: targetLength, EndingMaxConsecutive: s.config.EndingMaxConsecutive})
 	if err != nil {
@@ -142,7 +142,11 @@ func BuildRuleComparisonPrompts(snapshot ruleComparisonSnapshot) (string, string
 	if endingMax <= 0 {
 		endingMax = 2
 	}
-	base := fmt.Sprintf("한국어 블로그 글을 작성하세요. 목표 길이 약 %d자. 같은 종결어미를 %d문장보다 많이 연속 쓰지 마세요.\n%s\n예시의 고유 표현이나 내용을 복사하지 마세요.\n[Candidate rule]\n", snapshot.TargetLength, endingMax, renderStructuredProfile(snapshot.Profile))
+	base := fmt.Sprintf("한국어 블로그 글을 작성하세요. 같은 종결어미를 %d문장보다 많이 연속 쓰지 마세요.\n%s\n예시의 고유 표현이나 내용을 복사하지 마세요.\n", endingMax, renderStructuredProfile(snapshot.Profile))
+	if snapshot.TargetLength != nil {
+		base += fmt.Sprintf("목표 길이 약 %d자.\n", *snapshot.TargetLength)
+	}
+	base += "[Candidate rule]\n"
 	topic := "[주제]\n" + snapshot.Source.Title + "\n태그: " + strings.Join(snapshot.Source.Tags, ", ")
 	off := base + topic
 	on := base + snapshot.Rule.Statement + "\n" + topic

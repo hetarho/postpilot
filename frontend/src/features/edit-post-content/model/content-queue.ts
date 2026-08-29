@@ -11,12 +11,11 @@ import { ContentRevisionConflictError } from '@/entities/post'
 export type ContentSaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict'
 export interface ContentSnapshot {
   content: PostContent
-  targetLength: number
 }
 export type SendContent = (snapshot: ContentSnapshot, expectedRevision: bigint) => Promise<bigint>
 
 interface Waiter {
-  resolve: () => void
+  resolve: (revision: bigint) => void
   reject: (error: Error) => void
 }
 interface Queue {
@@ -42,17 +41,17 @@ export interface ContentQueueHandle {
   state: () => ContentSaveState
   queue: (snapshot: ContentSnapshot) => void
   saveNow: () => void
-  flush: () => Promise<void>
+  flush: () => Promise<bigint>
   release: () => void
 }
 
 const queues = new Map<string, Queue>()
 
 function copy(snapshot: ContentSnapshot): ContentSnapshot {
-  return { content: clone(PostContentSchema, snapshot.content), targetLength: snapshot.targetLength }
+  return { content: clone(PostContentSchema, snapshot.content) }
 }
 function same(a: ContentSnapshot, b: ContentSnapshot): boolean {
-  return a.targetLength === b.targetLength && JSON.stringify(a.content) === JSON.stringify(b.content)
+  return JSON.stringify(a.content) === JSON.stringify(b.content)
 }
 function stateOf(queue: Queue): ContentSaveState {
   if (queue.inFlight) return 'saving'
@@ -78,7 +77,7 @@ function rejectWaiters(queue: Queue, cause: unknown) {
 function settleWaiters(queue: Queue) {
   if (queue.inFlight || queue.pending) return
   const waiters = queue.waiters.splice(0)
-  for (const waiter of waiters) waiter.resolve()
+  for (const waiter of waiters) waiter.resolve(queue.revision)
 }
 function collect(queue: Queue) {
   if (!queue.listener && !queue.inFlight && !queue.pending && !queue.retryTimer)
@@ -191,8 +190,8 @@ export function attachContentQueue(options: {
     flush: () => {
       if (attached.discarded) return Promise.reject(new Error('session ended'))
       if (attached.conflict) return Promise.reject(new ContentRevisionConflictError())
-      if (!attached.inFlight && !attached.pending) return Promise.resolve()
-      return new Promise<void>((resolve, reject) => {
+      if (!attached.inFlight && !attached.pending) return Promise.resolve(attached.revision)
+      return new Promise<bigint>((resolve, reject) => {
         attached.waiters.push({ resolve, reject })
         sendNow(attached)
       })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generationPreconditions, type GenerationModelSelection } from './preconditions'
+import { comparisonGenerationPreconditions, ordinaryGenerationPreconditions, type GenerationModelSelection } from './preconditions'
 
 const image = { id: 'image-1' }
 const vision: GenerationModelSelection = {
@@ -66,8 +66,16 @@ describe('generationPreconditions', () => {
       ok: false,
     },
   ])('$name → $ok', ({ images, observe, write, active, ok }) => {
-    expect(
-      generationPreconditions(images, observe, write, write ? textB : undefined, active).ok,
-    ).toBe(ok)
+    expect(ordinaryGenerationPreconditions(images, observe, write, active).ok).toBe(ok)
+  })
+
+  it('does not require a comparison pair for ordinary generation', () => {
+    expect(ordinaryGenerationPreconditions([], undefined, text, undefined).ok).toBe(true)
+  })
+
+  it('requires two distinct candidates only for A/B generation', () => {
+    expect(comparisonGenerationPreconditions([], undefined, text, undefined, undefined).ok).toBe(false)
+    expect(comparisonGenerationPreconditions([], undefined, text, text, undefined).ok).toBe(false)
+    expect(comparisonGenerationPreconditions([], undefined, text, textB, undefined).ok).toBe(true)
   })
 })

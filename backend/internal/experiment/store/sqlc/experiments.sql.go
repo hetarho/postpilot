@@ -54,7 +54,8 @@ func (q *Queries) CompleteCandidate(ctx context.Context, arg CompleteCandidatePa
 const decideExperiment = `-- name: DecideExperiment :execrows
 UPDATE model_experiments
 SET status = ?, winner_candidate_id = ?, outcome = ?, decided_at = ?,
-    content_expires_at = ?, apply_error = NULL, applied_at = NULL
+    content_expires_at = ?, apply_error = NULL, applied_at = NULL,
+	adoption_requested = ?, adoption_error = NULL, adopted_at = NULL
 WHERE id = ? AND user_id = ?
   AND status IN ('review', 'partial', 'failed')
 `
@@ -65,6 +66,7 @@ type DecideExperimentParams struct {
 	Outcome           sql.NullString
 	DecidedAt         sql.NullString
 	ContentExpiresAt  sql.NullString
+	AdoptionRequested int64
 	ID                string
 	UserID            string
 }
@@ -76,6 +78,7 @@ func (q *Queries) DecideExperiment(ctx context.Context, arg DecideExperimentPara
 		arg.Outcome,
 		arg.DecidedAt,
 		arg.ContentExpiresAt,
+		arg.AdoptionRequested,
 		arg.ID,
 		arg.UserID,
 	)
@@ -141,7 +144,7 @@ func (q *Queries) FinishInterruptedExperiment(ctx context.Context, arg FinishInt
 }
 
 const getExperiment = `-- name: GetExperiment :one
-SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at FROM model_experiments WHERE id = ?
+SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested FROM model_experiments WHERE id = ?
 `
 
 func (q *Queries) GetExperiment(ctx context.Context, id string) (ModelExperiment, error) {
@@ -165,12 +168,15 @@ func (q *Queries) GetExperiment(ctx context.Context, id string) (ModelExperiment
 		&i.FinishedAt,
 		&i.DecidedAt,
 		&i.ContentExpiresAt,
+		&i.AdoptionError,
+		&i.AdoptedAt,
+		&i.AdoptionRequested,
 	)
 	return i, err
 }
 
 const getExperimentForUser = `-- name: GetExperimentForUser :one
-SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at FROM model_experiments WHERE id = ? AND user_id = ?
+SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested FROM model_experiments WHERE id = ? AND user_id = ?
 `
 
 type GetExperimentForUserParams struct {
@@ -199,6 +205,9 @@ func (q *Queries) GetExperimentForUser(ctx context.Context, arg GetExperimentFor
 		&i.FinishedAt,
 		&i.DecidedAt,
 		&i.ContentExpiresAt,
+		&i.AdoptionError,
+		&i.AdoptedAt,
+		&i.AdoptionRequested,
 	)
 	return i, err
 }
@@ -365,7 +374,7 @@ func (q *Queries) ListCandidatesForLeaderboard(ctx context.Context, arg ListCand
 }
 
 const listDecidedForLeaderboard = `-- name: ListDecidedForLeaderboard :many
-SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at FROM model_experiments
+SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested FROM model_experiments
 WHERE user_id = ? AND stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
 ORDER BY decided_at, id
 `
@@ -402,6 +411,9 @@ func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecided
 			&i.FinishedAt,
 			&i.DecidedAt,
 			&i.ContentExpiresAt,
+			&i.AdoptionError,
+			&i.AdoptedAt,
+			&i.AdoptionRequested,
 		); err != nil {
 			return nil, err
 		}
@@ -417,7 +429,7 @@ func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecided
 }
 
 const listExperimentsForUser = `-- name: ListExperimentsForUser :many
-SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at FROM model_experiments
+SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested FROM model_experiments
 WHERE user_id = ? AND (? = '' OR stage = ?)
 ORDER BY created_at DESC, id DESC
 `
@@ -455,6 +467,9 @@ func (q *Queries) ListExperimentsForUser(ctx context.Context, arg ListExperiment
 			&i.FinishedAt,
 			&i.DecidedAt,
 			&i.ContentExpiresAt,
+			&i.AdoptionError,
+			&i.AdoptedAt,
+			&i.AdoptionRequested,
 		); err != nil {
 			return nil, err
 		}
@@ -524,11 +539,11 @@ func (q *Queries) ListQueuedExperimentIDs(ctx context.Context) ([]string, error)
 }
 
 const pendingWriteForPost = `-- name: PendingWriteForPost :one
-SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at FROM model_experiments
+SELECT id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested FROM model_experiments
 WHERE user_id = ? AND post_slug = ? AND stage = 'write'
   AND (
     status IN ('queued', 'running', 'review', 'partial', 'failed')
-    OR (status = 'decided' AND applied_at IS NULL)
+	OR (status = 'decided' AND (applied_at IS NULL OR (adoption_requested = 1 AND adopted_at IS NULL)))
   )
 ORDER BY created_at DESC, id DESC LIMIT 1
 `
@@ -559,6 +574,9 @@ func (q *Queries) PendingWriteForPost(ctx context.Context, arg PendingWriteForPo
 		&i.FinishedAt,
 		&i.DecidedAt,
 		&i.ContentExpiresAt,
+		&i.AdoptionError,
+		&i.AdoptedAt,
+		&i.AdoptionRequested,
 	)
 	return i, err
 }
@@ -667,6 +685,22 @@ func (q *Queries) RestoreFailedCandidate(ctx context.Context, arg RestoreFailedC
 	return result.RowsAffected()
 }
 
+const setAdoptionError = `-- name: SetAdoptionError :exec
+UPDATE model_experiments SET adoption_error = ?
+WHERE id = ? AND user_id = ? AND adoption_requested = 1 AND adopted_at IS NULL
+`
+
+type SetAdoptionErrorParams struct {
+	AdoptionError sql.NullString
+	ID            string
+	UserID        string
+}
+
+func (q *Queries) SetAdoptionError(ctx context.Context, arg SetAdoptionErrorParams) error {
+	_, err := q.db.ExecContext(ctx, setAdoptionError, arg.AdoptionError, arg.ID, arg.UserID)
+	return err
+}
+
 const setApplyError = `-- name: SetApplyError :exec
 UPDATE model_experiments SET apply_error = ?, applied_at = NULL WHERE id = ? AND user_id = ?
 `
@@ -680,6 +714,26 @@ type SetApplyErrorParams struct {
 func (q *Queries) SetApplyError(ctx context.Context, arg SetApplyErrorParams) error {
 	_, err := q.db.ExecContext(ctx, setApplyError, arg.ApplyError, arg.ID, arg.UserID)
 	return err
+}
+
+const setExperimentAdopted = `-- name: SetExperimentAdopted :execrows
+UPDATE model_experiments SET adoption_error = NULL, adopted_at = ?
+WHERE id = ? AND user_id = ? AND status = 'decided'
+  AND adoption_requested = 1 AND adopted_at IS NULL
+`
+
+type SetExperimentAdoptedParams struct {
+	AdoptedAt sql.NullString
+	ID        string
+	UserID    string
+}
+
+func (q *Queries) SetExperimentAdopted(ctx context.Context, arg SetExperimentAdoptedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setExperimentAdopted, arg.AdoptedAt, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setExperimentApplied = `-- name: SetExperimentApplied :execrows

@@ -7,7 +7,6 @@ import { useStageSelection } from '@/entities/model-catalog'
 import type { VoiceProfile } from '@/entities/voice-profile'
 import { voiceConfirmationsQueryKey, voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice-profile'
 import { ModelRefSchema, VoiceLearningService, VoiceRuleStatus, VoiceValidationService } from '@/shared/api'
-import { POST_TARGET_LENGTH_DEFAULT } from '@/shared/config'
 import { Badge, Button, Dialog, Notice } from '@/shared/ui'
 
 export function VoiceRulesManager({ ownerId, profile, confirmations }: { ownerId: string; profile: VoiceProfile; confirmations: Array<{ id: string; ruleId: string; existingStatement: string; proposedStatement: string; status: string }> }) {
@@ -28,7 +27,7 @@ export function VoiceRulesManager({ ownerId, profile, confirmations }: { ownerId
   const startComparison = async () => {
     const source = profile.structured.sources[0]
     if (!compareRule || !source || !write.selected) return
-    const response = await compareMutation.mutateAsync({ ruleId: compareRule, sourceId: source.id, targetLength: POST_TARGET_LENGTH_DEFAULT, writeModel: create(ModelRefSchema, write.selected) })
+    const response = await compareMutation.mutateAsync({ ruleId: compareRule, sourceId: source.id, writeModel: create(ModelRefSchema, write.selected) })
     setCompareRule(undefined)
     if (response.comparisonId) void navigate({ to: '/voice/rules/$id/compare', params: { id: response.comparisonId } })
   }

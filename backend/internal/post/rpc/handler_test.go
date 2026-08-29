@@ -13,12 +13,16 @@ import (
 // Internal, which tells the client to retry something that will never succeed.
 func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 	cases := map[error]connect.Code{
-		post.ErrNotFound:          connect.CodeNotFound,
-		post.ErrForbidden:         connect.CodePermissionDenied,
-		post.ErrDuplicateFilename: connect.CodeAlreadyExists,
-		post.ErrObjectMissing:     connect.CodeFailedPrecondition,
-		post.ErrInvalidImage:      connect.CodeInvalidArgument,
-		post.ErrPostBusy:          connect.CodeFailedPrecondition,
+		post.ErrNotFound:                             connect.CodeNotFound,
+		post.ErrForbidden:                            connect.CodePermissionDenied,
+		post.ErrDuplicateFilename:                    connect.CodeAlreadyExists,
+		post.ErrObjectMissing:                        connect.CodeFailedPrecondition,
+		post.ErrInvalidImage:                         connect.CodeInvalidArgument,
+		post.ErrPostBusy:                             connect.CodeFailedPrecondition,
+		post.ErrStaleContentRevision:                 connect.CodeAborted,
+		post.ErrNoMachineBaseline:                    connect.CodeFailedPrecondition,
+		post.ErrPostNotFinalized:                     connect.CodeFailedPrecondition,
+		&post.InvalidContentError{Reason: "invalid"}: connect.CodeInvalidArgument,
 	}
 
 	for domainErr, want := range cases {

@@ -95,7 +95,7 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 	}
 	n, err := s.write.UpdateGeneratedContent(ctx, sqlc.UpdateGeneratedContentParams{
 		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
-		Slug: slug, UserID: userID,
+		Slug: slug, UserID: userID, Content_2: sql.NullString{String: encoded, Valid: true},
 	})
 	if err != nil {
 		return false, fmt.Errorf("update generated content: %w", err)
@@ -103,32 +103,39 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 	return n > 0, nil
 }
 
-func (s *Store) UpdateGeneratedContentWithTarget(ctx context.Context, slug, userID string, content post.PostContent, targetLength int, updatedAt time.Time) (bool, error) {
-	encoded, err := marshalContent(content)
-	if err != nil {
-		return false, fmt.Errorf("encode content: %w", err)
-	}
-	n, err := s.write.UpdateGeneratedContentWithTarget(ctx, sqlc.UpdateGeneratedContentWithTargetParams{
-		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true},
-		TargetLength: int64(targetLength), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
-	})
-	if err != nil {
-		return false, fmt.Errorf("update generated content with target: %w", err)
-	}
-	return n > 0, nil
-}
-
-func (s *Store) SaveContent(ctx context.Context, slug, userID string, content post.PostContent, expectedRevision int64, targetLength int, updatedAt time.Time) (bool, error) {
+func (s *Store) SaveContent(ctx context.Context, slug, userID string, content post.PostContent, expectedRevision int64, updatedAt time.Time) (bool, error) {
 	encoded, err := marshalContent(content)
 	if err != nil {
 		return false, fmt.Errorf("encode content: %w", err)
 	}
 	n, err := s.write.SavePostContent(ctx, sqlc.SavePostContentParams{
-		Content: sql.NullString{String: encoded, Valid: true}, TargetLength: int64(targetLength),
-		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID, ContentRevision: expectedRevision,
+		Content: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
+		Slug: slug, UserID: userID, ContentRevision: expectedRevision,
 	})
 	if err != nil {
 		return false, fmt.Errorf("save content: %w", err)
+	}
+	return n == 1, nil
+}
+
+func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, updatedAt time.Time) (bool, error) {
+	n, err := s.write.SavePostGenerationOptions(ctx, sqlc.SavePostGenerationOptionsParams{
+		TargetLength: optionalInt64(targetLength), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("save post generation options: %w", err)
+	}
+	return n == 1, nil
+}
+
+func (s *Store) Finalize(ctx context.Context, slug, userID string, expectedRevision int64, finalizedAt time.Time) (bool, error) {
+	stamp := formatTime(finalizedAt)
+	n, err := s.write.FinalizePost(ctx, sqlc.FinalizePostParams{
+		FinalizedAt: sql.NullString{String: stamp, Valid: true}, UpdatedAt: stamp,
+		Slug: slug, UserID: userID, ContentRevision: expectedRevision,
+	})
+	if err != nil {
+		return false, fmt.Errorf("finalize post: %w", err)
 	}
 	return n == 1, nil
 }
@@ -156,9 +163,17 @@ func (s *Store) LearningSnapshot(ctx context.Context, slug, userID string) (post
 	if err != nil {
 		return post.LearningSnapshot{}, err
 	}
+	if row.Status != post.StatusFinalized || !row.FinalizedRevision.Valid || row.FinalizedRevision.Int64 != row.ContentRevision || !row.FinalizedAt.Valid {
+		return post.LearningSnapshot{}, post.ErrPostNotFinalized
+	}
+	finalizedAt, err := parseTime(row.FinalizedAt.String)
+	if err != nil {
+		return post.LearningSnapshot{}, err
+	}
 	return post.LearningSnapshot{PostSlug: row.Slug, UserID: row.UserID, Current: *current,
 		ContentRevision: row.ContentRevision, MachineBaseline: *baseline,
-		BaselineRevision: row.MachineBaselineRevision, TargetLength: int(row.TargetLength), UpdatedAt: updated}, nil
+		BaselineRevision: row.MachineBaselineRevision, TargetLength: optionalInt(row.TargetLength),
+		FinalizedAt: finalizedAt, UpdatedAt: updated}, nil
 }
 
 func (s *Store) GetPost(ctx context.Context, slug string) (post.Post, error) {
@@ -460,6 +475,14 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
 	}
+	var finalizedAt *time.Time
+	if row.FinalizedAt.Valid {
+		value, parseErr := parseTime(row.FinalizedAt.String)
+		if parseErr != nil {
+			return post.Post{}, fmt.Errorf("post %s finalized_at: %w", row.Slug, parseErr)
+		}
+		finalizedAt = &value
+	}
 	return post.Post{
 		Slug:                    row.Slug,
 		UserID:                  row.UserID,
@@ -471,9 +494,26 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		Content:                 content,
 		ContentRevision:         row.ContentRevision,
 		MachineBaselineRevision: row.MachineBaselineRevision,
-		TargetLength:            int(row.TargetLength),
+		TargetLength:            optionalInt(row.TargetLength),
+		FinalizedRevision:       row.FinalizedRevision.Int64,
+		FinalizedAt:             finalizedAt,
 		Observations:            observations,
 	}, nil
+}
+
+func optionalInt(value sql.NullInt64) *int {
+	if !value.Valid {
+		return nil
+	}
+	result := int(value.Int64)
+	return &result
+}
+
+func optionalInt64(value *int) sql.NullInt64 {
+	if value == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: int64(*value), Valid: true}
 }
 
 func toImage(row sqlc.Image) (post.Image, error) {

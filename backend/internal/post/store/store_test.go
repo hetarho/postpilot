@@ -97,12 +97,19 @@ func TestGeneratedContentAndObservationsRoundTrip(t *testing.T) {
 	if err != nil || !updated {
 		t.Fatalf("UpdateGeneratedContent: updated=%v err=%v", updated, err)
 	}
+	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, testNow.Add(3*time.Minute))
+	if err != nil || updated {
+		t.Fatalf("identical machine retry: updated=%v err=%v", updated, err)
+	}
 	got, err := s.GetPost(ctx, "p")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got.Status != post.StatusReview || got.Content == nil || got.Content.Title != "완성" || len(got.Content.Blocks) != 2 {
 		t.Fatalf("post = %+v", got)
+	}
+	if got.ContentRevision != 1 || !got.UpdatedAt.Equal(testNow.Add(2*time.Minute)) {
+		t.Fatalf("identical retry advanced post: revision=%d updated_at=%v", got.ContentRevision, got.UpdatedAt)
 	}
 	if len(got.Observations) != 1 || got.Observations[0].VisibleText != "표지판" || !got.Observations[0].PeoplePresent {
 		t.Fatalf("observations = %+v", got.Observations)
@@ -118,26 +125,43 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	s := newStore(t)
 	seedPost(t, s, "editable", "alice", testNow)
 	baseline := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "생성 문장입니다."}}}
-	if updated, err := s.UpdateGeneratedContentWithTarget(ctx, "editable", "alice", baseline, 1400, testNow); err != nil || !updated {
+	target1400 := 1400
+	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1400, testNow); err != nil || !updated {
+		t.Fatalf("option save: updated=%v err=%v", updated, err)
+	}
+	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", baseline, testNow); err != nil || !updated {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
 	final := post.PostContent{Title: "mine", Blocks: []post.Block{{Type: post.BlockText, Content: "제가 고친 문장이에요."}}}
-	if updated, err := s.SaveContent(ctx, "editable", "alice", final, 1, 1500, testNow.Add(time.Minute)); err != nil || !updated {
+	if updated, err := s.SaveContent(ctx, "editable", "alice", final, 1, testNow.Add(time.Minute)); err != nil || !updated {
 		t.Fatalf("manual save: updated=%v err=%v", updated, err)
 	}
-	if updated, err := s.SaveContent(ctx, "editable", "alice", baseline, 1, 999, testNow); err != nil || updated {
+	if updated, err := s.SaveContent(ctx, "editable", "alice", baseline, 1, testNow); err != nil || updated {
 		t.Fatalf("stale save: updated=%v err=%v", updated, err)
+	}
+	target1500 := 1500
+	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1500, testNow.Add(time.Minute)); err != nil || !updated {
+		t.Fatalf("option update: updated=%v err=%v", updated, err)
+	}
+	if updated, err := s.Finalize(ctx, "editable", "alice", 2, testNow.Add(2*time.Minute)); err != nil || !updated {
+		t.Fatalf("finalize: updated=%v err=%v", updated, err)
 	}
 	snapshot, err := s.LearningSnapshot(ctx, "editable", "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snapshot.MachineBaseline.Title != "machine" || snapshot.Current.Title != "mine" || snapshot.BaselineRevision != 1 || snapshot.ContentRevision != 2 || snapshot.TargetLength != 1500 {
+	if snapshot.MachineBaseline.Title != "machine" || snapshot.Current.Title != "mine" || snapshot.BaselineRevision != 1 || snapshot.ContentRevision != 2 || snapshot.TargetLength == nil || *snapshot.TargetLength != 1500 {
 		t.Fatalf("snapshot = %+v", snapshot)
 	}
 	nextBaseline := post.PostContent{Title: "machine 2", Blocks: []post.Block{{Type: post.BlockText, Content: "새 기준 문장입니다."}}}
-	if updated, err := s.UpdateGeneratedContentWithTarget(ctx, "editable", "alice", nextBaseline, 1600, testNow.Add(2*time.Minute)); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", nextBaseline, testNow.Add(3*time.Minute)); err != nil || !updated {
 		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
+	}
+	if _, err = s.LearningSnapshot(ctx, "editable", "alice"); !errors.Is(err, post.ErrPostNotFinalized) {
+		t.Fatalf("unfinalized snapshot err=%v", err)
+	}
+	if updated, err := s.Finalize(ctx, "editable", "alice", 3, testNow.Add(4*time.Minute)); err != nil || !updated {
+		t.Fatalf("second finalize: updated=%v err=%v", updated, err)
 	}
 	snapshot, err = s.LearningSnapshot(ctx, "editable", "alice")
 	if err != nil || snapshot.BaselineRevision != 3 || snapshot.ContentRevision != 3 || snapshot.MachineBaseline.Title != "machine 2" {

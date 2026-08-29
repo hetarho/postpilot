@@ -3,6 +3,7 @@ package post
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -74,11 +75,87 @@ func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID strin
 	if !ok || existing.UserID != userID {
 		return false, nil
 	}
+	if existing.Status == StatusReview && existing.MachineBaselineRevision == existing.ContentRevision && existing.Content != nil && reflect.DeepEqual(*existing.Content, content) {
+		return false, nil
+	}
 	existing.Content = &content
+	existing.ContentRevision++
+	existing.MachineBaselineRevision = existing.ContentRevision
 	existing.Status = StatusReview
+	existing.FinalizedRevision = 0
+	existing.FinalizedAt = nil
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
 	return true, nil
+}
+
+func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision {
+		return false, nil
+	}
+	existing.Content = &content
+	existing.ContentRevision++
+	existing.Status = StatusReview
+	existing.FinalizedRevision = 0
+	existing.FinalizedAt = nil
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
+func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, targetLength *int, updatedAt time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID {
+		return false, nil
+	}
+	existing.TargetLength = targetLength
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
+func (f *fakeStore) Finalize(_ context.Context, slug, userID string, expectedRevision int64, finalizedAt time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision || existing.Content == nil || existing.MachineBaselineRevision <= 0 {
+		return false, nil
+	}
+	existing.Status = StatusFinalized
+	existing.FinalizedRevision = existing.ContentRevision
+	existing.FinalizedAt = &finalizedAt
+	existing.UpdatedAt = finalizedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
+func (f *fakeStore) LearningSnapshot(_ context.Context, slug, userID string) (LearningSnapshot, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok {
+		return LearningSnapshot{}, ErrNotFound
+	}
+	if existing.UserID != userID {
+		return LearningSnapshot{}, ErrForbidden
+	}
+	if existing.Status != StatusFinalized || existing.FinalizedRevision != existing.ContentRevision || existing.FinalizedAt == nil {
+		return LearningSnapshot{}, ErrPostNotFinalized
+	}
+	if existing.Content == nil || existing.MachineBaselineRevision <= 0 {
+		return LearningSnapshot{}, ErrNoMachineBaseline
+	}
+	return LearningSnapshot{
+		PostSlug: slug, UserID: userID, Current: *existing.Content,
+		ContentRevision: existing.ContentRevision, MachineBaseline: *existing.Content,
+		BaselineRevision: existing.MachineBaselineRevision, TargetLength: existing.TargetLength,
+		FinalizedAt: *existing.FinalizedAt, UpdatedAt: existing.UpdatedAt,
+	}, nil
 }
 
 func (f *fakeStore) GetPost(_ context.Context, slug string) (Post, error) {

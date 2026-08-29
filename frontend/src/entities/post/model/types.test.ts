@@ -18,6 +18,7 @@ describe('postStatusLabel', () => {
   it.each([
     ['draft', '초안'],
     ['review', '검토'],
+    ['finalized', '확정'],
   ])('labels %s', (status, expected) => {
     expect(postStatusLabel(status)).toBe(expected)
   })

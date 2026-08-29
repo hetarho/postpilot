@@ -16,12 +16,12 @@ service VoiceValidationService {
 
 message VoiceComparisonCandidate { string id = 1; string side = 2; string output = 3; string status = 4; string error = 5; }
 message VoiceRuleComparison {
-  string id = 1; string rule_id = 2; int64 profile_version = 3; int32 target_length = 4;
+  string id = 1; string rule_id = 2; int64 profile_version = 3; optional int32 target_length = 4;
   string status = 5; string job_id = 6; repeated VoiceComparisonCandidate candidates = 7;
   string chosen_side = 8; string created_at = 9;
 }
 message StartVoiceRuleComparisonRequest {
-  string rule_id = 1; string source_id = 2; int32 target_length = 3; ModelRef write_model = 4;
+  string rule_id = 1; string source_id = 2; optional int32 target_length = 3; ModelRef write_model = 4;
 }
 message StartVoiceRuleComparisonResponse { string comparison_id = 1; string job_id = 2; }
 message GetVoiceRuleComparisonRequest { string comparison_id = 1; }

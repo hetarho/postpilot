@@ -10,6 +10,21 @@ import (
 	"github.com/postpilot/backend/internal/voice/store/sqlc"
 )
 
+func optionalLengthValue(value *int) int64 {
+	if value == nil {
+		return 0
+	}
+	return int64(*value)
+}
+
+func optionalLengthPointer(value int64) *int {
+	if value <= 0 {
+		return nil
+	}
+	result := int(value)
+	return &result
+}
+
 func (s *Store) InsertRuleComparison(ctx context.Context, c voice.RuleComparison) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
@@ -17,7 +32,7 @@ func (s *Store) InsertRuleComparison(ctx context.Context, c voice.RuleComparison
 	}
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
-	if err = q.InsertRuleComparison(ctx, sqlc.InsertRuleComparisonParams{ID: c.ID, UserID: c.UserID, RuleID: c.RuleID, SourceID: c.SourceID, ProfileVersion: c.ProfileVersion, ModelRef: c.ModelRef, TargetLength: int64(c.TargetLength), InputSnapshot: c.InputSnapshot, RuleOnSide: c.RuleOnSide, JobID: nullableString(c.JobID), CreatedAt: formatTime(c.CreatedAt)}); err != nil {
+	if err = q.InsertRuleComparison(ctx, sqlc.InsertRuleComparisonParams{ID: c.ID, UserID: c.UserID, RuleID: c.RuleID, SourceID: c.SourceID, ProfileVersion: c.ProfileVersion, ModelRef: c.ModelRef, TargetLength: optionalLengthValue(c.TargetLength), InputSnapshot: c.InputSnapshot, RuleOnSide: c.RuleOnSide, JobID: nullableString(c.JobID), CreatedAt: formatTime(c.CreatedAt)}); err != nil {
 		return err
 	}
 	for _, candidate := range c.Candidates {
@@ -50,7 +65,7 @@ func (s *Store) GetRuleComparison(ctx context.Context, userID, comparisonID stri
 		}
 		decided = &v
 	}
-	c := voice.RuleComparison{ID: row.ID, UserID: row.UserID, RuleID: row.RuleID, SourceID: row.SourceID, ProfileVersion: row.ProfileVersion, ModelRef: row.ModelRef, TargetLength: int(row.TargetLength), InputSnapshot: row.InputSnapshot, RuleOnSide: row.RuleOnSide, Status: row.Status, JobID: row.JobID.String, ChosenSide: row.ChosenSide.String, CreatedAt: created, DecidedAt: decided}
+	c := voice.RuleComparison{ID: row.ID, UserID: row.UserID, RuleID: row.RuleID, SourceID: row.SourceID, ProfileVersion: row.ProfileVersion, ModelRef: row.ModelRef, TargetLength: optionalLengthPointer(row.TargetLength), InputSnapshot: row.InputSnapshot, RuleOnSide: row.RuleOnSide, Status: row.Status, JobID: row.JobID.String, ChosenSide: row.ChosenSide.String, CreatedAt: created, DecidedAt: decided}
 	rows, err := s.read.ListRuleComparisonCandidates(ctx, comparisonID)
 	if err != nil {
 		return voice.RuleComparison{}, err

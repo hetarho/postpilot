@@ -6,8 +6,9 @@ extends the original optional pasted-sample analysis without making historical w
 ## Product boundary
 
 - An account with no samples and no finalized posts has an empty typed profile and can generate immediately.
-- A finalized post becomes learning input only after the user presses **Finalize and learn**, confirms the current
-  analyze model, and the current content queue has flushed. Page load, navigation, export, copy, time, and boot never
+- `확정` flushes the content queue and records the exact post revision without voice work or an analyze model.
+  A finalized post becomes learning input only after the user separately presses **Finalize and learn** or the later
+  **Learn voice** action with an explicit analyze model. Page load, navigation, export, copy, time, and boot never
   initiate personalization provider work.
 - Pasted historical posts remain an optional import path with the existing 200-character minimum. There is no
   minimum or recommendation of 30 posts. Three finalized posts are required only for the separately initiated
@@ -35,8 +36,9 @@ increment only `content_revision`; they cannot change the baseline. Consequently
 the current text still equals the latest machine baseline.
 
 `SavePostContent` rejects stale revisions and any invalid block shape or IMAGE filename not attached to the owned
-post. The voice context obtains a frozen ownership-checked baseline/final pair only through the post context's
-`LearningSnapshot` behavior.
+post. A changed save after finalization returns it to `review`; an identical save preserves `finalized`. The voice
+context obtains a frozen ownership-checked baseline/final pair only when `LearningSnapshot` verifies that the current
+revision is exactly the recorded finalized revision.
 
 The browser uses a per-post content queue separate from title/memo autosave. It allows one request in flight, keeps
 only the newest pending snapshot, advances the expected revision from each response, applies bounded exponential
@@ -45,12 +47,14 @@ on page hide. AI revision and finalization await the same explicit `flush()` bou
 
 ## Explicit finalization and idempotency
 
-Finalization hashes the baseline revision plus canonical baseline/final JSON and stores a `voice_learning_events`
-row before queue wake-up. A uniqueness constraint on `(user_id, post_slug, baseline_revision, input_hash)` makes a
-repeated action return the existing event. A failed enqueue leaves that event retryable; an explicit retry creates a
-new durable job without duplicating the event. When boot has deliberately failed an old queued/running
-personalization job, repeating Finalize or Retry checks that durable job and re-enqueues the same immutable event;
-the restart itself performs no provider call.
+Post finalization and voice learning are separate boundaries. `FinalizePost` records status/revision/time without a
+voice event, durable job, or provider call. An explicit learning action then hashes the baseline revision plus
+canonical baseline/final JSON and stores a `voice_learning_events` row before queue wake-up. A uniqueness constraint
+on `(user_id, post_slug, baseline_revision, input_hash)` makes a repeated action return the existing event. A failed
+enqueue leaves the post finalized and that event retryable; an explicit retry creates a new durable job without
+duplicating the event. When boot has deliberately failed an old queued/running personalization job, repeating Learn
+or Retry checks that durable job and re-enqueues the same immutable event; the restart itself performs no provider
+call.
 
 Successful learning writes the authored source, excerpt, extracted evidence/rules, whole profile version, and event
 completion in one short SQLite transaction after provider calls finish. A completed event is a no-op on retry.
@@ -118,14 +122,14 @@ Generation and revision receive, in order:
 2. evidence-ranked active rules, bans, and ending constraints;
 3. up to three unique authored/import excerpts, with topic/tag matches first and stable recent fallback so one
    finalized source is still useful for an unrelated next topic;
-4. the post's frozen observations, title/memo/topic, attachment names, and visible target length.
+4. the post's frozen observations, title/memo/topic, attachment names, and optional target length when configured.
 
 The prompt tells the model not to copy source phrases or facts, follows the measured ending distribution, and
 forbids a third consecutive identical ending. Candidate/retired rules are excluded. Zero excerpts is valid.
 
 ## On-demand comparison and validation
 
-Rule comparison freezes one candidate rule, source, profile version, target length, examples, and explicit write
+Rule comparison freezes one candidate rule, source, profile version, optional target length, examples, and explicit write
 model. Its two calls share the same input and differ only by the selected rule. The server does not reveal the
 rule-on side before a decision and accepts a decision only when exactly two non-empty candidates succeeded. A
 rule-on verdict adds evidence only to that rule; a rule-off verdict rejects it. Model Elo is untouched.

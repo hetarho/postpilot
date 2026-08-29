@@ -106,7 +106,30 @@ func TestBuildWritePromptOrderAndRules(t *testing.T) {
 	if !strings.Contains(user, `"visible_text"`) || strings.Contains(user, `"VisibleText"`) {
 		t.Fatalf("observation JSON is not model-facing: %s", user)
 	}
+	if strings.Contains(system, "목표 길이") || strings.Contains(system, "1200") {
+		t.Fatalf("absent target leaked a numeric constraint: %s", system)
+	}
+	target := 777
+	withTarget, _ := BuildWritePrompt(Profile{}, nil, "", "", nil, &target)
+	if !strings.Contains(withTarget, "목표 길이: 약 777자") {
+		t.Fatalf("configured target missing: %s", withTarget)
+	}
 }
+
+func TestGenerationPayloadPreservesOptionalTargetPresence(t *testing.T) {
+	for _, target := range []*int{nil, intPointer(100), intPointer(10_000)} {
+		raw, err := EncodeGenerationPayload(target)
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, err := DecodeGenerationPayload(raw)
+		if err != nil || (target == nil) != (decoded == nil) || target != nil && *target != *decoded {
+			t.Fatalf("target=%v raw=%s decoded=%v err=%v", target, raw, decoded, err)
+		}
+	}
+}
+
+func intPointer(value int) *int { return &value }
 
 func TestObserveBatchesIncrementallyAndMatchesFilenames(t *testing.T) {
 	post := PostInput{Slug: "post", UserID: "alice"}
@@ -183,6 +206,23 @@ func TestGenerateWithNoPhotosSkipsObserveAndPersistsReviewInput(t *testing.T) {
 	}
 	if !reflect.DeepEqual(progress, []string{"observe:0/0", "write:0/1", "write:1/1"}) {
 		t.Fatalf("progress=%v", progress)
+	}
+}
+
+func TestGenerateUsesFrozenTargetInsteadOfLaterPostOption(t *testing.T) {
+	current := 1600
+	frozen := 850
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", TargetLength: &current}}
+	models := newFakeModels()
+	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
+		if !strings.Contains(request.System, "목표 길이: 약 850자") || strings.Contains(request.System, "1600") {
+			t.Fatalf("prompt did not use frozen target: %s", request.System)
+		}
+		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
+	}
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
+	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), TargetLength: &frozen}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -264,6 +304,10 @@ func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
 			info.Vision = false
 			m.infos[observeRef] = info
 		}, ErrObserveModelRequired},
+		"target must be positive": {func(r *StartRequest, _ *fakePosts, _ *fakeModels) {
+			invalid := 0
+			r.TargetLength = &invalid
+		}, ErrInvalidTargetLength},
 		"zero photos ignores observe": {func(r *StartRequest, p *fakePosts, _ *fakeModels) { p.input.Images = nil; r.ObserveModel = "" }, nil},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -312,7 +356,7 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 		}, nil
 	}
 	svc := NewService(posts, fakeProfiles{profile: Profile{Styleguide: "말투"}}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
-	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{})
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,6 +389,34 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 	}
 }
 
+func TestOrdinaryGenerationAndRevisionRefuseAnUnresolvedWriteExperiment(t *testing.T) {
+	posts := &fakePosts{input: PostInput{
+		Slug: "post", UserID: "alice", Content: revisionContent("existing"),
+	}}
+	jobs := &fakeJobs{id: "should-not-enqueue"}
+	rules := &fakeRules{}
+	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4)
+	svc.SetPendingExperimentFinder(fakePendingExperiments{id: "experiment-pending"})
+
+	_, err := svc.Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
+	})
+	var active *JobAlreadyInProgressError
+	if !errors.As(err, &active) || active.ActiveID != "experiment-pending" {
+		t.Fatalf("ordinary generation error = %v", err)
+	}
+	_, err = svc.StartRevision(context.Background(), StartRevisionRequest{
+		UserID: "alice", PostSlug: "post", Instruction: "더 짧게",
+		WriteModel: writeRef.String(), SaveAsRule: true,
+	})
+	if !errors.As(err, &active) || active.ActiveID != "experiment-pending" {
+		t.Fatalf("revision error = %v", err)
+	}
+	if jobs.enqueues != 0 || len(rules.lines) != 0 {
+		t.Fatalf("blocked starts mutated state: jobs=%d rules=%v", jobs.enqueues, rules.lines)
+	}
+}
+
 func TestWriteExperimentObservesPhotosExactlyOnceBeforeTwoWriters(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Memo: "memo", Images: []Image{{Filename: "IMG_1.jpg", Key: "key"}}}}
 	models := newFakeModels()
@@ -356,7 +428,7 @@ func TestWriteExperimentObservesPhotosExactlyOnceBeforeTwoWriters(t *testing.T) 
 		return llm.Response{Text: `{"title":"글","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`}, nil
 	}
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
-	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -452,15 +524,17 @@ func (f *fakeModels) Complete(_ context.Context, ref llm.ModelRef, request llm.R
 }
 
 type fakeJobs struct {
-	id        string
-	err       error
-	enqueues  int
-	revisions []StartRevisionRequest
-	payloads  [][]byte
+	id          string
+	err         error
+	enqueues    int
+	revisions   []StartRevisionRequest
+	payloads    [][]byte
+	generations []StartRequest
 }
 
-func (f *fakeJobs) EnqueueGeneration(context.Context, StartRequest) (string, error) {
+func (f *fakeJobs) EnqueueGeneration(_ context.Context, request StartRequest) (string, error) {
 	f.enqueues++
+	f.generations = append(f.generations, request)
 	return f.id, f.err
 }
 func (f *fakeJobs) EnqueueRevision(_ context.Context, request StartRevisionRequest, payload []byte) (string, error) {
@@ -471,4 +545,13 @@ func (f *fakeJobs) EnqueueRevision(_ context.Context, request StartRevisionReque
 }
 func (f fakeJobs) GetGeneration(context.Context, string, string) (*JobSummary, error) {
 	return nil, ErrNotFound
+}
+
+type fakePendingExperiments struct {
+	id  string
+	err error
+}
+
+func (f fakePendingExperiments) PendingForPost(context.Context, string, string) (string, error) {
+	return f.id, f.err
 }

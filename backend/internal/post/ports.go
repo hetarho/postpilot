@@ -100,10 +100,8 @@ type Store interface {
 // ContentStore is the progressive editor capability. It is separated from the base
 // drafting store so upload/sweeper collaborators do not acquire unrelated methods.
 type ContentStore interface {
-	SaveContent(ctx context.Context, slug, userID string, content PostContent, expectedRevision int64, targetLength int, updatedAt time.Time) (bool, error)
+	SaveContent(ctx context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error)
+	SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, updatedAt time.Time) (bool, error)
+	Finalize(ctx context.Context, slug, userID string, expectedRevision int64, finalizedAt time.Time) (bool, error)
 	LearningSnapshot(ctx context.Context, slug, userID string) (LearningSnapshot, error)
-}
-
-type MachineContentStore interface {
-	UpdateGeneratedContentWithTarget(ctx context.Context, slug, userID string, content PostContent, targetLength int, updatedAt time.Time) (bool, error)
 }

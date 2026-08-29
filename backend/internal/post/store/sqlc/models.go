@@ -32,7 +32,9 @@ type Post struct {
 	ContentRevision         int64
 	MachineBaseline         sql.NullString
 	MachineBaselineRevision int64
-	TargetLength            int64
+	TargetLength            sql.NullInt64
+	FinalizedRevision       sql.NullInt64
+	FinalizedAt             sql.NullString
 }
 
 type Upload struct {

@@ -11,25 +11,23 @@ export function useContentAutosave(args: {
   slug: string
   revision: bigint
   content: PostContent
-  targetLength: number
   valid: boolean
-}): { state: ContentSaveState; flush: () => Promise<void> } {
+}): { state: ContentSaveState; flush: () => Promise<bigint> } {
   const save = useSavePostContent()
   const [state, setState] = useState<ContentSaveState>('idle')
   const queue = useRef<ContentQueueHandle | undefined>(undefined)
   const send = useRef(save.save)
-  const opened = useRef({ content: args.content, targetLength: args.targetLength })
+  const opened = useRef({ content: args.content })
   useLayoutEffect(() => {
     send.current = save.save
-    opened.current = { content: args.content, targetLength: args.targetLength }
+    opened.current = { content: args.content }
   })
   useLayoutEffect(() => {
     const handle = attachContentQueue({
       slug: args.slug,
       revision: args.revision,
       saved: opened.current,
-      send: (snapshot, revision) =>
-        send.current(args.slug, snapshot.content, revision, snapshot.targetLength),
+      send: (snapshot, revision) => send.current(args.slug, snapshot.content, revision),
       onState: setState,
     })
     queue.current = handle
@@ -41,8 +39,8 @@ export function useContentAutosave(args: {
   }, [args.revision, args.slug])
   useLayoutEffect(() => {
     if (args.valid)
-      queue.current?.queue({ content: args.content, targetLength: args.targetLength })
-  }, [args.content, args.targetLength, args.valid])
+      queue.current?.queue({ content: args.content })
+  }, [args.content, args.valid])
   useEffect(() => {
     const flush = () => queue.current?.saveNow()
     const onVisibility = () => {

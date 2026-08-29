@@ -51,6 +51,22 @@ func (h *Handler) StartAnalyzeExperiment(ctx context.Context, req *connect.Reque
 	return connect.NewResponse(&postpilotv1.StartExperimentResponse{ExperimentId: started.ExperimentID, JobId: started.JobID}), nil
 }
 
+func (h *Handler) StartWriteExperiment(ctx context.Context, req *connect.Request[postpilotv1.StartWriteExperimentRequest]) (*connect.Response[postpilotv1.StartExperimentResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	started, err := h.service.Start(ctx, experiment.StartRequest{
+		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Stage: experiment.StageWrite,
+		ObserveModel: fromProtoRef(req.Msg.GetObserveModel()), ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
+		TargetLength: optionalTargetLength(req.Msg.TargetLength),
+	})
+	if err != nil {
+		return nil, toConnectError("start write experiment", err)
+	}
+	return connect.NewResponse(&postpilotv1.StartExperimentResponse{ExperimentId: started.ExperimentID, JobId: started.JobID}), nil
+}
+
 func (h *Handler) GetExperiment(ctx context.Context, req *connect.Request[postpilotv1.GetExperimentRequest]) (*connect.Response[postpilotv1.GetExperimentResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -154,6 +170,18 @@ func (h *Handler) AdoptWinnerModel(ctx context.Context, req *connect.Request[pos
 	}}), nil
 }
 
+func (h *Handler) DecideWriteExperiment(ctx context.Context, req *connect.Request[postpilotv1.DecideWriteExperimentRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	found, err := h.service.DecideWrite(ctx, userID, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), req.Msg.GetAdoptWinnerModel())
+	if err != nil {
+		return nil, toConnectError("decide write experiment", err)
+	}
+	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: toProtoExperiment(found)}), nil
+}
+
 func (h *Handler) GetLeaderboard(ctx context.Context, req *connect.Request[postpilotv1.GetLeaderboardRequest]) (*connect.Response[postpilotv1.GetLeaderboardResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -192,7 +220,8 @@ func toConnectError(op string, err error) error {
 		return connect.NewError(connect.CodeNotFound, err)
 	case errors.Is(err, experiment.ErrForbidden):
 		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
-	case errors.Is(err, experiment.ErrInvalidStage), errors.Is(err, experiment.ErrDuplicateCandidates):
+	case errors.Is(err, experiment.ErrInvalidStage), errors.Is(err, experiment.ErrDuplicateCandidates),
+		errors.Is(err, experiment.ErrInvalidTargetLength):
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	case errors.Is(err, experiment.ErrModelRequired), errors.Is(err, experiment.ErrInvalidState),
 		errors.Is(err, experiment.ErrConfirmationRequired), errors.Is(err, experiment.ErrSnapshotUnavailable),
@@ -214,8 +243,18 @@ func toProtoExperiment(found experiment.Experiment) *postpilotv1.ModelExperiment
 		JobId: found.JobID, Candidates: candidates, WinnerCandidateId: found.WinnerCandidateID,
 		Outcome: toProtoOutcome(found.Outcome), ApplyError: found.ApplyError, CreatedAt: formatTime(found.CreatedAt),
 		FinishedAt: formatOptional(found.FinishedAt), DecidedAt: formatOptional(found.DecidedAt), Revealed: found.Revealed(),
-		AppliedAt: formatOptional(found.AppliedAt),
+		AppliedAt:         formatOptional(found.AppliedAt),
+		AdoptionRequested: found.AdoptionRequested,
+		AdoptionError:     found.AdoptionError, AdoptedAt: formatOptional(found.AdoptedAt),
 	}
+}
+
+func optionalTargetLength(value *int32) *int {
+	if value == nil {
+		return nil
+	}
+	result := int(*value)
+	return &result
 }
 
 func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidate) *postpilotv1.ExperimentCandidate {

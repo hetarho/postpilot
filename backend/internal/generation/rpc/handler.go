@@ -25,17 +25,24 @@ func (h *Handler) StartGeneration(ctx context.Context, req *connect.Request[post
 	if err != nil {
 		return nil, err
 	}
-	started, err := h.service.StartExperiment(ctx, generation.StartExperimentRequest{
+	id, err := h.service.Start(ctx, generation.StartRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
 		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
-		WriteModelA:  modelRefValue(req.Msg.GetWriteModelA()),
-		WriteModelB:  modelRefValue(req.Msg.GetWriteModelB()),
-		TargetLength: int(req.Msg.GetTargetLength()),
+		WriteModel:   modelRefValue(req.Msg.GetWriteModel()),
+		TargetLength: optionalTargetLength(req.Msg.TargetLength),
 	})
 	if err != nil {
 		return nil, toConnectError("start generation", err)
 	}
-	return connect.NewResponse(&postpilotv1.StartGenerationResponse{JobId: started.JobID, ExperimentId: started.ExperimentID}), nil
+	return connect.NewResponse(&postpilotv1.StartGenerationResponse{JobId: id}), nil
+}
+
+func optionalTargetLength(value *int32) *int {
+	if value == nil {
+		return nil
+	}
+	result := int(*value)
+	return &result
 }
 
 func (h *Handler) StartRevision(ctx context.Context, req *connect.Request[postpilotv1.StartRevisionRequest]) (*connect.Response[postpilotv1.StartRevisionResponse], error) {
@@ -84,7 +91,8 @@ func toConnectError(op string, err error) error {
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
 	case errors.Is(err, generation.ErrRevisionContentRequired):
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
-	case errors.Is(err, generation.ErrRevisionInstructionRequired), errors.Is(err, generation.ErrRevisionInstructionTooLong):
+	case errors.Is(err, generation.ErrRevisionInstructionRequired), errors.Is(err, generation.ErrRevisionInstructionTooLong),
+		errors.Is(err, generation.ErrInvalidTargetLength):
 		return connect.NewError(connect.CodeInvalidArgument, errors.New(err.Error()))
 	case errors.As(err, &active):
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New("generation already in progress: "+active.ActiveID))

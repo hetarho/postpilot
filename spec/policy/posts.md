@@ -41,8 +41,8 @@ Photo upload has its own document: [uploads.md](uploads.md).
   and its full rule list are in [spec/tech/draft-autosave.md](../tech/draft-autosave.md).
 - A response that carries no post is not a confirmation, and the client treats it as a failed save. This matters
   most for the create: trusting it would leave the next edit minting a second post for the same draft.
-- A new post starts as `draft`. A successful generation replaces its canonical content and moves it to `review`;
-  see [generation.md](generation.md).
+- A new post starts as `draft`. A successful ordinary generation, AI revision, or applied write-experiment result
+  replaces its canonical content and moves it to `review`; see [generation.md](generation.md).
 - `observations` and `content` are owned by the post aggregate but may be changed by generation only through the
   post context's ownership-checked `SetObservations` and `SetGeneratedContent` behaviors. `GetPost` returns both;
   no other context reads or writes the `posts` table directly.
@@ -58,15 +58,21 @@ Photo upload has its own document: [uploads.md](uploads.md).
 
 ## Canonical content editing and learning baseline
 
-- `PostContent` remains the only canonical generated value. Direct editing supports title, summary, tags, target
-  length, and TEXT/HEADING/QUOTE/LIST/IMAGE blocks; backend validation rejects invalid shapes and unattached IMAGE
-  filenames.
+- `PostContent` remains the only canonical generated value. Direct editing supports title, summary, tags, and
+  TEXT/HEADING/QUOTE/LIST/IMAGE blocks; backend validation rejects invalid shapes and unattached IMAGE filenames.
 - `content_revision` is optimistic concurrency state. `SavePostContent` is owner-scoped, requires the expected
-  revision, increments it once, and returns `Aborted` on a stale tab. It never changes `machine_baseline`.
+  revision, increments it once for changed content, and returns `Aborted` on a stale tab. It never changes
+  `machine_baseline`. An identical save is a no-op, including for a finalized revision.
 - A selected generation winner or successful AI revision atomically writes canonical content plus an immutable
   machine baseline. `machine_baseline_revision` is set to that new content revision. A later manual edit makes the
   two revisions differ until another machine result establishes a new baseline.
-- Only the post context reads these columns. It publishes an ownership-checked frozen baseline/final snapshot to
-  voice; voice never reads or writes post tables directly.
-- `target_length` is visible per post, persisted with direct saves, frozen in write experiments, and restored with
-  the selected machine winner. It is an instruction, not a publishing or validation guarantee.
+- `draft`, `review`, and `finalized` are durable states. `FinalizePost` requires valid canonical content, a machine
+  baseline, and the exact expected content revision. It records `finalized_revision`/`finalized_at` without creating
+  a job or calling a provider. The first changed-content save or machine result clears that boundary and returns the
+  post to `review`; title/memo and generation-option saves do not.
+- Only the post context reads these columns. It publishes an ownership-checked baseline/final snapshot to voice only
+  while the current revision is exactly finalized; voice never reads or writes post tables directly.
+- `target_length` is an optional per-post generation setting saved/cleared independently of canonical content. NULL
+  means natural length and remains absent in prompts and snapshots; a positive value is frozen by generation,
+  revision, and write comparisons. Option changes do not advance `content_revision`, demote finalization, or start
+  provider work.

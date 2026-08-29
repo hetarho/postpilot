@@ -518,6 +518,20 @@ func TestWinnerApplicationIsIdempotentAtPostBoundary(t *testing.T) {
 	if !second.UpdatedAt.Equal(first.UpdatedAt) {
 		t.Fatalf("idempotent apply changed updated_at: %v -> %v", first.UpdatedAt, second.UpdatedAt)
 	}
+
+	// Content equality alone is not an application token: a manual edit may happen
+	// to equal a later winner and still needs to become the new machine baseline.
+	manual := PostContent{Title: "edited", Blocks: []Block{{Type: BlockText, Content: "body"}}}
+	if _, err := svc.SaveContent(context.Background(), alice, found.Slug, manual, first.ContentRevision); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, manual); err != nil {
+		t.Fatal(err)
+	}
+	third, _ := store.GetPost(context.Background(), found.Slug)
+	if third.ContentRevision != first.ContentRevision+2 || third.MachineBaselineRevision != third.ContentRevision {
+		t.Fatalf("equal manual winner did not establish a baseline: %+v", third)
+	}
 }
 
 // --- regressions ---

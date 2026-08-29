@@ -244,10 +244,11 @@ func (s *Store) RestoreFailedCandidates(ctx context.Context, experimentID string
 	return nil
 }
 
-func (s *Store) Decide(ctx context.Context, id, userID, candidateID string, status experiment.Status, outcome experiment.Outcome, decidedAt, expiresAt time.Time) (bool, error) {
+func (s *Store) Decide(ctx context.Context, id, userID, candidateID string, status experiment.Status, outcome experiment.Outcome, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error) {
 	count, err := s.write.DecideExperiment(ctx, sqlc.DecideExperimentParams{
 		Status: string(status), WinnerCandidateID: nullString(candidateID), Outcome: nullString(string(outcome)),
-		DecidedAt: nullTime(&decidedAt), ContentExpiresAt: nullTime(&expiresAt), ID: id, UserID: userID,
+		DecidedAt: nullTime(&decidedAt), ContentExpiresAt: nullTime(&expiresAt),
+		AdoptionRequested: boolValue(adoptionRequested), ID: id, UserID: userID,
 	})
 	return count == 1, err
 }
@@ -259,6 +260,23 @@ func (s *Store) SetApplyError(ctx context.Context, id, userID, message string) e
 func (s *Store) SetApplied(ctx context.Context, id, userID string, now time.Time) error {
 	count, err := s.write.SetExperimentApplied(ctx, sqlc.SetExperimentAppliedParams{
 		AppliedAt: nullTime(&now), ID: id, UserID: userID,
+	})
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return experiment.ErrInvalidState
+	}
+	return nil
+}
+
+func (s *Store) SetAdoptionError(ctx context.Context, id, userID, message string) error {
+	return s.write.SetAdoptionError(ctx, sqlc.SetAdoptionErrorParams{AdoptionError: nullString(message), ID: id, UserID: userID})
+}
+
+func (s *Store) SetAdopted(ctx context.Context, id, userID string, now time.Time) error {
+	count, err := s.write.SetExperimentAdopted(ctx, sqlc.SetExperimentAdoptedParams{
+		AdoptedAt: nullTime(&now), ID: id, UserID: userID,
 	})
 	if err != nil {
 		return err
@@ -355,10 +373,18 @@ func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 		Status: experiment.Status(row.Status), JobID: row.JobID.String, InputSnapshot: []byte(row.InputSnapshot.String),
 		InputHash: row.InputHash, PromptVersion: row.PromptVersion, WinnerCandidateID: row.WinnerCandidateID.String,
 		Outcome: experiment.Outcome(row.Outcome.String), ApplyError: row.ApplyError.String, CreatedAt: created,
-		AppliedAt:  parseOptional(row.AppliedAt),
+		AppliedAt: parseOptional(row.AppliedAt), AdoptionRequested: row.AdoptionRequested == 1, AdoptionError: row.AdoptionError.String,
+		AdoptedAt:  parseOptional(row.AdoptedAt),
 		FinishedAt: parseOptional(row.FinishedAt), DecidedAt: parseOptional(row.DecidedAt),
 		ContentExpiresAt: parseOptional(row.ContentExpiresAt),
 	}, nil
+}
+
+func boolValue(value bool) int64 {
+	if value {
+		return 1
+	}
+	return 0
 }
 
 func toCandidate(row sqlc.ModelExperimentCandidate) (experiment.Candidate, error) {

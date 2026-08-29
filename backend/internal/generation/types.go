@@ -53,7 +53,7 @@ type PostInput struct {
 	Memo         string
 	Images       []Image
 	Content      *PostContent
-	TargetLength int
+	TargetLength *int
 }
 
 type Profile struct {
@@ -69,20 +69,7 @@ type StartRequest struct {
 	PostSlug     string
 	ObserveModel string
 	WriteModel   string
-}
-
-type StartExperimentRequest struct {
-	UserID       string
-	PostSlug     string
-	ObserveModel string
-	WriteModelA  string
-	WriteModelB  string
-	TargetLength int
-}
-
-type StartExperimentResult struct {
-	JobID        string
-	ExperimentID string
+	TargetLength *int
 }
 
 type GenerateJob struct {
@@ -90,6 +77,7 @@ type GenerateJob struct {
 	PostSlug     string
 	ObserveModel string
 	WriteModel   string
+	TargetLength *int
 }
 
 type StartRevisionRequest struct {

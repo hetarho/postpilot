@@ -11,6 +11,7 @@ import {
   ConfirmUploadResponseSchema,
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
+  FinalizePostResponseSchema,
   GetPostResponseSchema,
   type Image,
   ImageSchema,
@@ -22,6 +23,8 @@ import {
   type Observation,
   type PostContent,
   SavePostDraftResponseSchema,
+  SavePostContentResponseSchema,
+  SavePostGenerationOptionsResponseSchema,
 } from '@/shared/api'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
 
@@ -47,6 +50,12 @@ export interface FakePostRow {
   content?: PostContent
   observations?: Observation[]
   pendingExperimentId?: string
+  contentRevision?: bigint
+  machineBaselineRevision?: bigint
+  canFinalize?: boolean
+  targetLength?: number
+  finalizedRevision?: bigint
+  finalizedAt?: string
 }
 
 export interface FakePostsOptions {
@@ -68,6 +77,8 @@ export interface FakePostsOptions {
   today?: string
   /** Records every procedure the transport was asked for. */
   calls?: string[]
+  /** Records target-length option saves, including an explicit clear as undefined. */
+  generationOptionSaves?: Array<number | undefined>
 }
 
 const DEFAULT_UPDATED_AT = '2026-08-28T12:00:00Z'
@@ -87,6 +98,12 @@ type Row = {
   content?: PostContent
   observations: Observation[]
   pendingExperimentId: string
+  contentRevision: bigint
+  machineBaselineRevision: bigint
+  canFinalize: boolean
+  targetLength?: number
+  finalizedRevision: bigint
+  finalizedAt: string
 }
 
 export function registerPostService(router: ConnectRouter, options: FakePostsOptions = {}) {
@@ -120,6 +137,13 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       content: row.content,
       observations: row.observations ?? [],
       pendingExperimentId: row.pendingExperimentId ?? '',
+      contentRevision: row.contentRevision ?? 0n,
+      machineBaselineRevision: row.machineBaselineRevision ?? 0n,
+      canFinalize:
+        row.canFinalize ?? Boolean(row.content && (row.machineBaselineRevision ?? 0n) > 0n),
+      targetLength: row.targetLength,
+      finalizedRevision: row.finalizedRevision ?? 0n,
+      finalizedAt: row.finalizedAt ?? '',
     }
   }
 
@@ -195,6 +219,12 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       content: rows.get(slug)?.content,
       observations: rows.get(slug)?.observations ?? [],
       pendingExperimentId: rows.get(slug)?.pendingExperimentId ?? '',
+      contentRevision: rows.get(slug)?.contentRevision ?? 0n,
+      machineBaselineRevision: rows.get(slug)?.machineBaselineRevision ?? 0n,
+      canFinalize: rows.get(slug)?.canFinalize ?? false,
+      targetLength: rows.get(slug)?.targetLength,
+      finalizedRevision: rows.get(slug)?.finalizedRevision ?? 0n,
+      finalizedAt: rows.get(slug)?.finalizedAt ?? '',
     }
     rows.set(slug, row)
     return create(SavePostDraftResponseSchema, { post: toProto(row) })
@@ -216,6 +246,44 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       contentType: 'image/jpeg',
       expiresAt: '2026-08-28T12:10:00Z',
     })
+  })
+
+  rpc(PostService.method.savePostContent, (req) => {
+    calls?.push('SavePostContent')
+    const row = rows.get(req.slug)
+    if (!row) throw new ConnectError('not found', Code.NotFound)
+    if (row.contentRevision !== req.expectedRevision) throw new ConnectError('stale', Code.Aborted)
+    if (!req.content) throw new ConnectError('content required', Code.InvalidArgument)
+    if (JSON.stringify(row.content) !== JSON.stringify(req.content)) {
+      row.content = req.content
+      row.contentRevision += 1n
+      row.status = 'review'
+      row.finalizedRevision = 0n
+      row.finalizedAt = ''
+    }
+    return create(SavePostContentResponseSchema, { post: toProto(row) })
+  })
+
+  rpc(PostService.method.savePostGenerationOptions, (req) => {
+    calls?.push('SavePostGenerationOptions')
+    options.generationOptionSaves?.push(req.targetLength)
+    const row = rows.get(req.slug)
+    if (!row) throw new ConnectError('not found', Code.NotFound)
+    row.targetLength = req.targetLength
+    return create(SavePostGenerationOptionsResponseSchema, { post: toProto(row) })
+  })
+
+  rpc(PostService.method.finalizePost, (req) => {
+    calls?.push('FinalizePost')
+    const row = rows.get(req.slug)
+    if (!row) throw new ConnectError('not found', Code.NotFound)
+    if (row.contentRevision !== req.expectedRevision) throw new ConnectError('stale', Code.Aborted)
+    if (!row.content || row.machineBaselineRevision <= 0n)
+      throw new ConnectError('not eligible', Code.FailedPrecondition)
+    row.status = 'finalized'
+    row.finalizedRevision = row.contentRevision
+    row.finalizedAt = DEFAULT_UPDATED_AT
+    return create(FinalizePostResponseSchema, { post: toProto(row) })
   })
 
   rpc(PostService.method.confirmUpload, (req) => {

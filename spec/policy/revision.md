@@ -49,7 +49,9 @@ rule behavior remain canonical in [voice](voice.md).
 ## Baseline and progressive voice
 
 - The frontend flushes block-content autosave before `StartRevision`; a save conflict stops the action.
-- Every revision reloads the current topic-aware structured voice projection and target length while preserving the
-  minimal-change and attachment rules.
-- Successful output atomically establishes a new machine baseline. Failure leaves canonical content and the prior
-  baseline unchanged. Revision never implicitly finalizes or learns.
+- Every revision reloads the current topic-aware structured voice projection and optional target length while
+  preserving the minimal-change and attachment rules. When the setting is absent, the prompt contains no numeric
+  target or hidden 1,200-character fallback.
+- Successful output atomically establishes a new machine baseline and `review` state, clearing any prior finalized
+  revision. Failure leaves canonical content and the prior baseline unchanged. Revision never implicitly finalizes
+  or learns.

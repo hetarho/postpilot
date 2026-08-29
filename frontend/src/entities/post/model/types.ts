@@ -7,11 +7,13 @@ import type { Observation, PostContent } from '@/shared/api'
  *  Deliberately not the generated `Post` message: the screens should speak the app's
  *  vocabulary, so a proto change is absorbed by this entity's api mappers instead of
  *  rippling into every consumer. */
+export type PostStatus = 'draft' | 'review' | 'finalized'
+
 export interface PostDraft {
   slug: string
   title: string
   memo: string
-  status: string
+  status: PostStatus
   createdAt: string
   updatedAt: string
   images: PostImage[]
@@ -22,14 +24,16 @@ export interface PostDraft {
   contentRevision: bigint
   machineBaselineRevision: bigint
   canFinalize: boolean
-  targetLength: number
+  targetLength?: number
+  finalizedRevision: bigint
+  finalizedAt: string
 }
 
 /** One row of the post list (PRD F-8). */
 export interface PostListItem {
   slug: string
   title: string
-  status: string
+  status: PostStatus
   updatedAt: string
   activeJob: GenerationJob | undefined
   pendingExperimentId: string
@@ -46,6 +50,7 @@ export const UNTITLED_TITLE = '제목 없음'
 const STATUS_LABELS: Record<string, string> = {
   draft: '초안',
   review: '검토',
+  finalized: '확정',
 }
 
 export function postStatusLabel(status: string): string {

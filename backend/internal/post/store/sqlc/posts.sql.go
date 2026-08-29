@@ -56,9 +56,38 @@ func (q *Queries) DeletePost(ctx context.Context, arg DeletePostParams) (int64, 
 	return result.RowsAffected()
 }
 
+const finalizePost = `-- name: FinalizePost :execrows
+UPDATE posts SET status = 'finalized', finalized_revision = content_revision,
+    finalized_at = ?, updated_at = ?
+WHERE slug = ? AND user_id = ? AND content_revision = ?
+  AND content IS NOT NULL AND machine_baseline IS NOT NULL
+`
+
+type FinalizePostParams struct {
+	FinalizedAt     sql.NullString
+	UpdatedAt       string
+	Slug            string
+	UserID          string
+	ContentRevision int64
+}
+
+func (q *Queries) FinalizePost(ctx context.Context, arg FinalizePostParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, finalizePost,
+		arg.FinalizedAt,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+		arg.ContentRevision,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getLearningSnapshot = `-- name: GetLearningSnapshot :one
 SELECT slug, user_id, content, content_revision, machine_baseline, machine_baseline_revision,
-       target_length, updated_at
+       target_length, status, finalized_revision, finalized_at, updated_at
 FROM posts WHERE slug = ? AND user_id = ?
 `
 
@@ -74,7 +103,10 @@ type GetLearningSnapshotRow struct {
 	ContentRevision         int64
 	MachineBaseline         sql.NullString
 	MachineBaselineRevision int64
-	TargetLength            int64
+	TargetLength            sql.NullInt64
+	Status                  string
+	FinalizedRevision       sql.NullInt64
+	FinalizedAt             sql.NullString
 	UpdatedAt               string
 }
 
@@ -89,6 +121,9 @@ func (q *Queries) GetLearningSnapshot(ctx context.Context, arg GetLearningSnapsh
 		&i.MachineBaseline,
 		&i.MachineBaselineRevision,
 		&i.TargetLength,
+		&i.Status,
+		&i.FinalizedRevision,
+		&i.FinalizedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -96,7 +131,8 @@ func (q *Queries) GetLearningSnapshot(ctx context.Context, arg GetLearningSnapsh
 
 const getPost = `-- name: GetPost :one
 SELECT slug, user_id, title, memo, observations, content, status, created_at, updated_at,
-       content_revision, machine_baseline, machine_baseline_revision, target_length
+       content_revision, machine_baseline, machine_baseline_revision, target_length,
+       finalized_revision, finalized_at
 FROM posts WHERE slug = ?
 `
 
@@ -117,6 +153,8 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 		&i.MachineBaseline,
 		&i.MachineBaselineRevision,
 		&i.TargetLength,
+		&i.FinalizedRevision,
+		&i.FinalizedAt,
 	)
 	return i, err
 }
@@ -175,13 +213,13 @@ func (q *Queries) PostSlugExists(ctx context.Context, slug string) (bool, error)
 }
 
 const savePostContent = `-- name: SavePostContent :execrows
-UPDATE posts SET content = ?, content_revision = content_revision + 1, target_length = ?, updated_at = ?
+UPDATE posts SET content = ?, content_revision = content_revision + 1,
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?
 WHERE slug = ? AND user_id = ? AND content_revision = ?
 `
 
 type SavePostContentParams struct {
 	Content         sql.NullString
-	TargetLength    int64
 	UpdatedAt       string
 	Slug            string
 	UserID          string
@@ -191,7 +229,6 @@ type SavePostContentParams struct {
 func (q *Queries) SavePostContent(ctx context.Context, arg SavePostContentParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, savePostContent,
 		arg.Content,
-		arg.TargetLength,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
@@ -203,26 +240,21 @@ func (q *Queries) SavePostContent(ctx context.Context, arg SavePostContentParams
 	return result.RowsAffected()
 }
 
-const updateGeneratedContent = `-- name: UpdateGeneratedContent :execrows
-UPDATE posts SET content = ?, machine_baseline = ?,
-    content_revision = content_revision + 1,
-    machine_baseline_revision = content_revision + 1,
-    status = 'review', updated_at = ?
+const savePostGenerationOptions = `-- name: SavePostGenerationOptions :execrows
+UPDATE posts SET target_length = ?, updated_at = ?
 WHERE slug = ? AND user_id = ?
 `
 
-type UpdateGeneratedContentParams struct {
-	Content         sql.NullString
-	MachineBaseline sql.NullString
-	UpdatedAt       string
-	Slug            string
-	UserID          string
+type SavePostGenerationOptionsParams struct {
+	TargetLength sql.NullInt64
+	UpdatedAt    string
+	Slug         string
+	UserID       string
 }
 
-func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGeneratedContentParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, updateGeneratedContent,
-		arg.Content,
-		arg.MachineBaseline,
+func (q *Queries) SavePostGenerationOptions(ctx context.Context, arg SavePostGenerationOptionsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, savePostGenerationOptions,
+		arg.TargetLength,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
@@ -233,31 +265,33 @@ func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGenerate
 	return result.RowsAffected()
 }
 
-const updateGeneratedContentWithTarget = `-- name: UpdateGeneratedContentWithTarget :execrows
-UPDATE posts SET content = ?, machine_baseline = ?, target_length = ?,
+const updateGeneratedContent = `-- name: UpdateGeneratedContent :execrows
+UPDATE posts SET content = ?, machine_baseline = ?,
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
-    status = 'review', updated_at = ?
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?
 WHERE slug = ? AND user_id = ?
+  AND (content IS NULL OR content <> ? OR status <> 'review'
+       OR machine_baseline_revision <> content_revision)
 `
 
-type UpdateGeneratedContentWithTargetParams struct {
+type UpdateGeneratedContentParams struct {
 	Content         sql.NullString
 	MachineBaseline sql.NullString
-	TargetLength    int64
 	UpdatedAt       string
 	Slug            string
 	UserID          string
+	Content_2       sql.NullString
 }
 
-func (q *Queries) UpdateGeneratedContentWithTarget(ctx context.Context, arg UpdateGeneratedContentWithTargetParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, updateGeneratedContentWithTarget,
+func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGeneratedContentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateGeneratedContent,
 		arg.Content,
 		arg.MachineBaseline,
-		arg.TargetLength,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
+		arg.Content_2,
 	)
 	if err != nil {
 		return 0, err

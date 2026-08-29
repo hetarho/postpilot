@@ -39,6 +39,9 @@ const (
 	// ModelExperimentServiceStartAnalyzeExperimentProcedure is the fully-qualified name of the
 	// ModelExperimentService's StartAnalyzeExperiment RPC.
 	ModelExperimentServiceStartAnalyzeExperimentProcedure = "/postpilot.v1.ModelExperimentService/StartAnalyzeExperiment"
+	// ModelExperimentServiceStartWriteExperimentProcedure is the fully-qualified name of the
+	// ModelExperimentService's StartWriteExperiment RPC.
+	ModelExperimentServiceStartWriteExperimentProcedure = "/postpilot.v1.ModelExperimentService/StartWriteExperiment"
 	// ModelExperimentServiceGetExperimentProcedure is the fully-qualified name of the
 	// ModelExperimentService's GetExperiment RPC.
 	ModelExperimentServiceGetExperimentProcedure = "/postpilot.v1.ModelExperimentService/GetExperiment"
@@ -51,6 +54,9 @@ const (
 	// ModelExperimentServiceChooseWinnerProcedure is the fully-qualified name of the
 	// ModelExperimentService's ChooseWinner RPC.
 	ModelExperimentServiceChooseWinnerProcedure = "/postpilot.v1.ModelExperimentService/ChooseWinner"
+	// ModelExperimentServiceDecideWriteExperimentProcedure is the fully-qualified name of the
+	// ModelExperimentService's DecideWriteExperiment RPC.
+	ModelExperimentServiceDecideWriteExperimentProcedure = "/postpilot.v1.ModelExperimentService/DecideWriteExperiment"
 	// ModelExperimentServiceUseSingleCandidateProcedure is the fully-qualified name of the
 	// ModelExperimentService's UseSingleCandidate RPC.
 	ModelExperimentServiceUseSingleCandidateProcedure = "/postpilot.v1.ModelExperimentService/UseSingleCandidate"
@@ -72,10 +78,12 @@ const (
 type ModelExperimentServiceClient interface {
 	StartObserveExperiment(context.Context, *connect.Request[v1.StartObserveExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	StartAnalyzeExperiment(context.Context, *connect.Request[v1.StartAnalyzeExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
+	StartWriteExperiment(context.Context, *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	GetExperiment(context.Context, *connect.Request[v1.GetExperimentRequest]) (*connect.Response[v1.GetExperimentResponse], error)
 	ListExperiments(context.Context, *connect.Request[v1.ListExperimentsRequest]) (*connect.Response[v1.ListExperimentsResponse], error)
 	RetryCandidate(context.Context, *connect.Request[v1.RetryCandidateRequest]) (*connect.Response[v1.RetryCandidateResponse], error)
 	ChooseWinner(context.Context, *connect.Request[v1.ChooseWinnerRequest]) (*connect.Response[v1.ChooseWinnerResponse], error)
+	DecideWriteExperiment(context.Context, *connect.Request[v1.DecideWriteExperimentRequest]) (*connect.Response[v1.ChooseWinnerResponse], error)
 	UseSingleCandidate(context.Context, *connect.Request[v1.UseSingleCandidateRequest]) (*connect.Response[v1.ChooseWinnerResponse], error)
 	DismissExperiment(context.Context, *connect.Request[v1.DismissExperimentRequest]) (*connect.Response[v1.DismissExperimentResponse], error)
 	ApplyWinnerOutput(context.Context, *connect.Request[v1.ApplyWinnerOutputRequest]) (*connect.Response[v1.ApplyWinnerOutputResponse], error)
@@ -106,6 +114,12 @@ func NewModelExperimentServiceClient(httpClient connect.HTTPClient, baseURL stri
 			connect.WithSchema(modelExperimentServiceMethods.ByName("StartAnalyzeExperiment")),
 			connect.WithClientOptions(opts...),
 		),
+		startWriteExperiment: connect.NewClient[v1.StartWriteExperimentRequest, v1.StartExperimentResponse](
+			httpClient,
+			baseURL+ModelExperimentServiceStartWriteExperimentProcedure,
+			connect.WithSchema(modelExperimentServiceMethods.ByName("StartWriteExperiment")),
+			connect.WithClientOptions(opts...),
+		),
 		getExperiment: connect.NewClient[v1.GetExperimentRequest, v1.GetExperimentResponse](
 			httpClient,
 			baseURL+ModelExperimentServiceGetExperimentProcedure,
@@ -128,6 +142,12 @@ func NewModelExperimentServiceClient(httpClient connect.HTTPClient, baseURL stri
 			httpClient,
 			baseURL+ModelExperimentServiceChooseWinnerProcedure,
 			connect.WithSchema(modelExperimentServiceMethods.ByName("ChooseWinner")),
+			connect.WithClientOptions(opts...),
+		),
+		decideWriteExperiment: connect.NewClient[v1.DecideWriteExperimentRequest, v1.ChooseWinnerResponse](
+			httpClient,
+			baseURL+ModelExperimentServiceDecideWriteExperimentProcedure,
+			connect.WithSchema(modelExperimentServiceMethods.ByName("DecideWriteExperiment")),
 			connect.WithClientOptions(opts...),
 		),
 		useSingleCandidate: connect.NewClient[v1.UseSingleCandidateRequest, v1.ChooseWinnerResponse](
@@ -167,10 +187,12 @@ func NewModelExperimentServiceClient(httpClient connect.HTTPClient, baseURL stri
 type modelExperimentServiceClient struct {
 	startObserveExperiment *connect.Client[v1.StartObserveExperimentRequest, v1.StartExperimentResponse]
 	startAnalyzeExperiment *connect.Client[v1.StartAnalyzeExperimentRequest, v1.StartExperimentResponse]
+	startWriteExperiment   *connect.Client[v1.StartWriteExperimentRequest, v1.StartExperimentResponse]
 	getExperiment          *connect.Client[v1.GetExperimentRequest, v1.GetExperimentResponse]
 	listExperiments        *connect.Client[v1.ListExperimentsRequest, v1.ListExperimentsResponse]
 	retryCandidate         *connect.Client[v1.RetryCandidateRequest, v1.RetryCandidateResponse]
 	chooseWinner           *connect.Client[v1.ChooseWinnerRequest, v1.ChooseWinnerResponse]
+	decideWriteExperiment  *connect.Client[v1.DecideWriteExperimentRequest, v1.ChooseWinnerResponse]
 	useSingleCandidate     *connect.Client[v1.UseSingleCandidateRequest, v1.ChooseWinnerResponse]
 	dismissExperiment      *connect.Client[v1.DismissExperimentRequest, v1.DismissExperimentResponse]
 	applyWinnerOutput      *connect.Client[v1.ApplyWinnerOutputRequest, v1.ApplyWinnerOutputResponse]
@@ -186,6 +208,11 @@ func (c *modelExperimentServiceClient) StartObserveExperiment(ctx context.Contex
 // StartAnalyzeExperiment calls postpilot.v1.ModelExperimentService.StartAnalyzeExperiment.
 func (c *modelExperimentServiceClient) StartAnalyzeExperiment(ctx context.Context, req *connect.Request[v1.StartAnalyzeExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
 	return c.startAnalyzeExperiment.CallUnary(ctx, req)
+}
+
+// StartWriteExperiment calls postpilot.v1.ModelExperimentService.StartWriteExperiment.
+func (c *modelExperimentServiceClient) StartWriteExperiment(ctx context.Context, req *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
+	return c.startWriteExperiment.CallUnary(ctx, req)
 }
 
 // GetExperiment calls postpilot.v1.ModelExperimentService.GetExperiment.
@@ -206,6 +233,11 @@ func (c *modelExperimentServiceClient) RetryCandidate(ctx context.Context, req *
 // ChooseWinner calls postpilot.v1.ModelExperimentService.ChooseWinner.
 func (c *modelExperimentServiceClient) ChooseWinner(ctx context.Context, req *connect.Request[v1.ChooseWinnerRequest]) (*connect.Response[v1.ChooseWinnerResponse], error) {
 	return c.chooseWinner.CallUnary(ctx, req)
+}
+
+// DecideWriteExperiment calls postpilot.v1.ModelExperimentService.DecideWriteExperiment.
+func (c *modelExperimentServiceClient) DecideWriteExperiment(ctx context.Context, req *connect.Request[v1.DecideWriteExperimentRequest]) (*connect.Response[v1.ChooseWinnerResponse], error) {
+	return c.decideWriteExperiment.CallUnary(ctx, req)
 }
 
 // UseSingleCandidate calls postpilot.v1.ModelExperimentService.UseSingleCandidate.
@@ -238,10 +270,12 @@ func (c *modelExperimentServiceClient) GetLeaderboard(ctx context.Context, req *
 type ModelExperimentServiceHandler interface {
 	StartObserveExperiment(context.Context, *connect.Request[v1.StartObserveExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	StartAnalyzeExperiment(context.Context, *connect.Request[v1.StartAnalyzeExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
+	StartWriteExperiment(context.Context, *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	GetExperiment(context.Context, *connect.Request[v1.GetExperimentRequest]) (*connect.Response[v1.GetExperimentResponse], error)
 	ListExperiments(context.Context, *connect.Request[v1.ListExperimentsRequest]) (*connect.Response[v1.ListExperimentsResponse], error)
 	RetryCandidate(context.Context, *connect.Request[v1.RetryCandidateRequest]) (*connect.Response[v1.RetryCandidateResponse], error)
 	ChooseWinner(context.Context, *connect.Request[v1.ChooseWinnerRequest]) (*connect.Response[v1.ChooseWinnerResponse], error)
+	DecideWriteExperiment(context.Context, *connect.Request[v1.DecideWriteExperimentRequest]) (*connect.Response[v1.ChooseWinnerResponse], error)
 	UseSingleCandidate(context.Context, *connect.Request[v1.UseSingleCandidateRequest]) (*connect.Response[v1.ChooseWinnerResponse], error)
 	DismissExperiment(context.Context, *connect.Request[v1.DismissExperimentRequest]) (*connect.Response[v1.DismissExperimentResponse], error)
 	ApplyWinnerOutput(context.Context, *connect.Request[v1.ApplyWinnerOutputRequest]) (*connect.Response[v1.ApplyWinnerOutputResponse], error)
@@ -268,6 +302,12 @@ func NewModelExperimentServiceHandler(svc ModelExperimentServiceHandler, opts ..
 		connect.WithSchema(modelExperimentServiceMethods.ByName("StartAnalyzeExperiment")),
 		connect.WithHandlerOptions(opts...),
 	)
+	modelExperimentServiceStartWriteExperimentHandler := connect.NewUnaryHandler(
+		ModelExperimentServiceStartWriteExperimentProcedure,
+		svc.StartWriteExperiment,
+		connect.WithSchema(modelExperimentServiceMethods.ByName("StartWriteExperiment")),
+		connect.WithHandlerOptions(opts...),
+	)
 	modelExperimentServiceGetExperimentHandler := connect.NewUnaryHandler(
 		ModelExperimentServiceGetExperimentProcedure,
 		svc.GetExperiment,
@@ -290,6 +330,12 @@ func NewModelExperimentServiceHandler(svc ModelExperimentServiceHandler, opts ..
 		ModelExperimentServiceChooseWinnerProcedure,
 		svc.ChooseWinner,
 		connect.WithSchema(modelExperimentServiceMethods.ByName("ChooseWinner")),
+		connect.WithHandlerOptions(opts...),
+	)
+	modelExperimentServiceDecideWriteExperimentHandler := connect.NewUnaryHandler(
+		ModelExperimentServiceDecideWriteExperimentProcedure,
+		svc.DecideWriteExperiment,
+		connect.WithSchema(modelExperimentServiceMethods.ByName("DecideWriteExperiment")),
 		connect.WithHandlerOptions(opts...),
 	)
 	modelExperimentServiceUseSingleCandidateHandler := connect.NewUnaryHandler(
@@ -328,6 +374,8 @@ func NewModelExperimentServiceHandler(svc ModelExperimentServiceHandler, opts ..
 			modelExperimentServiceStartObserveExperimentHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceStartAnalyzeExperimentProcedure:
 			modelExperimentServiceStartAnalyzeExperimentHandler.ServeHTTP(w, r)
+		case ModelExperimentServiceStartWriteExperimentProcedure:
+			modelExperimentServiceStartWriteExperimentHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceGetExperimentProcedure:
 			modelExperimentServiceGetExperimentHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceListExperimentsProcedure:
@@ -336,6 +384,8 @@ func NewModelExperimentServiceHandler(svc ModelExperimentServiceHandler, opts ..
 			modelExperimentServiceRetryCandidateHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceChooseWinnerProcedure:
 			modelExperimentServiceChooseWinnerHandler.ServeHTTP(w, r)
+		case ModelExperimentServiceDecideWriteExperimentProcedure:
+			modelExperimentServiceDecideWriteExperimentHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceUseSingleCandidateProcedure:
 			modelExperimentServiceUseSingleCandidateHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceDismissExperimentProcedure:
@@ -363,6 +413,10 @@ func (UnimplementedModelExperimentServiceHandler) StartAnalyzeExperiment(context
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelExperimentService.StartAnalyzeExperiment is not implemented"))
 }
 
+func (UnimplementedModelExperimentServiceHandler) StartWriteExperiment(context.Context, *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelExperimentService.StartWriteExperiment is not implemented"))
+}
+
 func (UnimplementedModelExperimentServiceHandler) GetExperiment(context.Context, *connect.Request[v1.GetExperimentRequest]) (*connect.Response[v1.GetExperimentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelExperimentService.GetExperiment is not implemented"))
 }
@@ -377,6 +431,10 @@ func (UnimplementedModelExperimentServiceHandler) RetryCandidate(context.Context
 
 func (UnimplementedModelExperimentServiceHandler) ChooseWinner(context.Context, *connect.Request[v1.ChooseWinnerRequest]) (*connect.Response[v1.ChooseWinnerResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelExperimentService.ChooseWinner is not implemented"))
+}
+
+func (UnimplementedModelExperimentServiceHandler) DecideWriteExperiment(context.Context, *connect.Request[v1.DecideWriteExperimentRequest]) (*connect.Response[v1.ChooseWinnerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelExperimentService.DecideWriteExperiment is not implemented"))
 }
 
 func (UnimplementedModelExperimentServiceHandler) UseSingleCandidate(context.Context, *connect.Request[v1.UseSingleCandidateRequest]) (*connect.Response[v1.ChooseWinnerResponse], error) {

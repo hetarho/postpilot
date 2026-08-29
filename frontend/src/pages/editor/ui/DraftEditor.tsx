@@ -12,9 +12,9 @@ import {
 } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { isEmptyProfile, useVoiceProfile } from '@/entities/voice-profile'
-import { GenerateButton, type GenerateButtonHandle } from '@/features/generate-post'
+import { GenerationActions, type GenerationActionsHandle } from '@/features/generate-post'
 import { BlockEditor, type BlockEditorHandle } from '@/features/edit-post-content'
-import { FinalizeAndLearn } from '@/features/finalize-and-learn'
+import { FinalizePost } from '@/features/finalize-post'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
@@ -223,9 +223,10 @@ function GenerationSection({
   beforeStart: () => Promise<void>
   saveState: SaveState
 }) {
+  const navigate = useNavigate()
   const transport = useTransport()
   const queryClient = useQueryClient()
-  const generateRef = useRef<GenerateButtonHandle>(null)
+  const generateRef = useRef<GenerationActionsHandle>(null)
   const reviseRef = useRef<ReviseFormHandle>(null)
   const contentEditorRef = useRef<BlockEditorHandle>(null)
   const resultRef = useRef<HTMLDivElement>(null)
@@ -286,7 +287,7 @@ function GenerationSection({
         <h2 id="generation-heading" className="text-lg font-semibold tracking-tight">
           글 생성
         </h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
             <StageModelSelect stage="observe" optional={post.images.length === 0} />
             {post.images.length === 0 && (
@@ -296,7 +297,10 @@ function GenerationSection({
             )}
           </div>
           <div>
-            <p className="text-sm font-medium">작성 A/B 모델</p>
+            <StageModelSelect stage="write" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">작성 A/B 후보</p>
             <Link
               to="/ai-models"
               className="text-link-fg hover:text-link-fg-hover mt-1 inline-flex min-h-11 items-center text-sm underline"
@@ -330,7 +334,11 @@ function GenerationSection({
             post={post}
             onContentChange={setLiveContent}
             renderSentenceAction={(text, flush) => (
-              <SentenceFeedback postSlug={post.slug} text={text} beforeSubmit={flush} />
+              <SentenceFeedback
+                postSlug={post.slug}
+                text={text}
+                beforeSubmit={() => flush().then(() => undefined)}
+              />
             )}
           />
           <ReviseForm
@@ -339,13 +347,17 @@ function GenerationSection({
             activeJob={job}
             jobPending={Boolean(jobId) && !job}
             onStarted={setStartedJobId}
-            beforeStart={() => contentEditorRef.current?.flush() ?? Promise.resolve()}
+            beforeStart={() =>
+              (contentEditorRef.current?.flush() ?? Promise.resolve()).then(() => undefined)
+            }
           />
           {user && (
-            <FinalizeAndLearn
+            <FinalizePost
               ownerId={user.id}
               post={post}
-              beforeFinalize={() => contentEditorRef.current?.flush() ?? Promise.resolve()}
+              beforeFinalize={() =>
+                contentEditorRef.current?.flush() ?? Promise.resolve(post.contentRevision)
+              }
             />
           )}
           <ExportPanel
@@ -371,7 +383,14 @@ function GenerationSection({
                   : () =>
                       job.kind === 'revise'
                         ? reviseRef.current?.start()
-                        : generateRef.current?.start()
+                        : job.kind === 'model_experiment'
+                          ? post.pendingExperimentId
+                            ? void navigate({
+                                to: '/ai-models/experiments/$id',
+                                params: { id: post.pendingExperimentId },
+                              })
+                            : undefined
+                          : generateRef.current?.startGeneration()
               }
             />
           ) : job && !isTerminal(job) ? (
@@ -390,7 +409,7 @@ function GenerationSection({
               )}
             </Notice>
           ) : null)}
-        <GenerateButton
+        <GenerationActions
           ref={generateRef}
           post={post}
           activeJob={job}

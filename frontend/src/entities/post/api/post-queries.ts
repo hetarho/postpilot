@@ -11,7 +11,7 @@ export function toPostDraft(post: Post): PostDraft {
     slug: post.slug,
     title: post.title,
     memo: post.memo,
-    status: post.status,
+    status: post.status as PostDraft['status'],
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     images: post.images.map(toPostImage),
@@ -23,6 +23,8 @@ export function toPostDraft(post: Post): PostDraft {
     machineBaselineRevision: post.machineBaselineRevision,
     canFinalize: post.canFinalize,
     targetLength: post.targetLength,
+    finalizedRevision: post.finalizedRevision,
+    finalizedAt: post.finalizedAt,
   }
 }
 
@@ -30,7 +32,7 @@ export function toPostListItem(summary: PostSummary): PostListItem {
   return {
     slug: summary.slug,
     title: summary.title,
-    status: summary.status,
+    status: summary.status as PostListItem['status'],
     updatedAt: summary.updatedAt,
     activeJob: summary.activeJob ? toGenerationJob(summary.activeJob) : undefined,
     pendingExperimentId: summary.pendingExperimentId,

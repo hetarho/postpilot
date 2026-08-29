@@ -71,7 +71,7 @@ func parseAuthoredContent(raw string) (authoredContentJSON, string, error) {
 	return value, strings.TrimSpace(body.String()), nil
 }
 
-func (s *Service) Finalize(ctx context.Context, userID, postSlug string, requested llm.ModelRef) (LearningEvent, string, bool, error) {
+func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug string, requested llm.ModelRef) (LearningEvent, string, bool, error) {
 	if s.posts == nil {
 		return LearningEvent{}, "", false, fmt.Errorf("voice personalization is not configured")
 	}
@@ -115,7 +115,7 @@ func (s *Service) Finalize(ctx context.Context, userID, postSlug string, request
 	return event, jobID, false, nil
 }
 
-// resumeLearningEvent makes the same explicit Finalize/Retry action the recovery
+// resumeLearningEvent makes the same explicit learn/retry action the recovery
 // boundary for an event whose durable job was failed by the restart sweep. Merely
 // booting or reading the event never enqueues provider work.
 func (s *Service) resumeLearningEvent(ctx context.Context, event *LearningEvent, model llm.ModelRef) (string, error) {

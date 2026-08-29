@@ -14,6 +14,7 @@ import (
 const (
 	interruptedReason = "서버가 재시작되어 비교가 중단됐어요. 실패한 후보를 다시 시도해 주세요."
 	applyFailedReason = "선택한 결과를 적용하지 못했어요. 다시 시도해 주세요."
+	adoptFailedReason = "결과는 적용했지만 활성 모델은 변경하지 못했어요. 다시 시도해 주세요."
 )
 
 type Service struct {
@@ -22,6 +23,8 @@ type Service struct {
 	jobs      Jobs
 	runner    Runner
 	retention time.Duration
+	applyMu   sync.Mutex
+	adoptMu   sync.Mutex
 	now       func() time.Time
 	newID     func() string
 }
@@ -36,6 +39,9 @@ func NewService(store Store, catalog Catalog, jobs Jobs, runner Runner, retentio
 func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult, error) {
 	if _, err := ParseStage(string(request.Stage)); err != nil {
 		return StartResult{}, err
+	}
+	if request.TargetLength != nil && *request.TargetLength <= 0 {
+		return StartResult{}, ErrInvalidTargetLength
 	}
 	if request.ModelA == request.ModelB {
 		return StartResult{}, ErrDuplicateCandidates
@@ -185,6 +191,10 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 }
 
 func (s *Service) Choose(ctx context.Context, userID, id, candidateID string, single bool) (Experiment, error) {
+	return s.choose(ctx, userID, id, candidateID, single, false)
+}
+
+func (s *Service) choose(ctx context.Context, userID, id, candidateID string, single, adoptionRequested bool) (Experiment, error) {
 	found, err := s.owned(ctx, userID, id)
 	if err != nil {
 		return Experiment{}, err
@@ -204,11 +214,18 @@ func (s *Service) Choose(ctx context.Context, userID, id, candidateID string, si
 		outcome = OutcomeUnpaired
 	}
 	now := s.now()
-	changed, err := s.store.Decide(ctx, found.ID, userID, candidate.ID, StatusDecided, outcome, now, now.Add(s.retention))
+	changed, err := s.store.Decide(ctx, found.ID, userID, candidate.ID, StatusDecided, outcome, adoptionRequested, now, now.Add(s.retention))
 	if err != nil {
 		return Experiment{}, err
 	}
 	if !changed {
+		current, loadErr := s.owned(ctx, userID, id)
+		if loadErr == nil && current.Status == StatusDecided && current.WinnerCandidateID == candidateID {
+			if current.Stage == StageWrite && current.AppliedAt == nil {
+				return s.apply(ctx, current, false)
+			}
+			return current, nil
+		}
 		return Experiment{}, ErrInvalidState
 	}
 	found, err = s.owned(ctx, userID, id)
@@ -233,7 +250,7 @@ func (s *Service) Dismiss(ctx context.Context, userID, id string) (Experiment, e
 		return Experiment{}, ErrInvalidState
 	}
 	now := s.now()
-	changed, err := s.store.Decide(ctx, found.ID, userID, "", StatusDismissed, OutcomeSkipped, now, now.Add(s.retention))
+	changed, err := s.store.Decide(ctx, found.ID, userID, "", StatusDismissed, OutcomeSkipped, false, now, now.Add(s.retention))
 	if err != nil {
 		return Experiment{}, err
 	}
@@ -276,6 +293,76 @@ func (s *Service) AdoptWinner(ctx context.Context, userID, id string) (ModelRef,
 		return ModelRef{}, "", err
 	}
 	return winner.Model, found.Stage, nil
+}
+
+// DecideWrite records one blind write verdict, applies the selected content exactly
+// once, and optionally adopts only the winner's write model. Each completed boundary
+// is persisted so an adoption retry never reapplies content or reranks the verdict.
+func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID string, adopt bool) (Experiment, error) {
+	found, err := s.owned(ctx, userID, id)
+	if err != nil {
+		return Experiment{}, err
+	}
+	if found.Stage != StageWrite {
+		return Experiment{}, ErrInvalidStage
+	}
+	found, err = s.choose(ctx, userID, id, candidateID, false, adopt)
+	if err != nil || !found.AdoptionRequested || found.AppliedAt == nil {
+		return found, err
+	}
+	if found.AdoptedAt != nil {
+		return found, nil
+	}
+	s.adoptMu.Lock()
+	defer s.adoptMu.Unlock()
+	found, err = s.owned(ctx, userID, id)
+	if err != nil {
+		return Experiment{}, err
+	}
+	if found.AdoptedAt != nil {
+		return found, nil
+	}
+	winner := found.Winner()
+	if winner == nil {
+		return Experiment{}, ErrInvalidState
+	}
+	if _, err := s.resolveForStage(StageWrite, winner.Model); err != nil {
+		if storeErr := s.store.SetAdoptionError(ctx, found.ID, userID, adoptFailedReason); storeErr != nil {
+			return Experiment{}, storeErr
+		}
+		return s.owned(ctx, userID, id)
+	}
+	active, selected, err := s.catalog.Active(ctx, userID, StageWrite)
+	if err != nil {
+		slog.Error("experiment active winner lookup failed", "experiment_id", found.ID, "err", err)
+		if storeErr := s.store.SetAdoptionError(ctx, found.ID, userID, adoptFailedReason); storeErr != nil {
+			return Experiment{}, storeErr
+		}
+		return s.owned(ctx, userID, id)
+	}
+	if selected && active == winner.Model {
+		if err := s.store.SetAdopted(ctx, found.ID, userID, s.now()); err != nil {
+			return Experiment{}, err
+		}
+		return s.owned(ctx, userID, id)
+	}
+	if err := s.catalog.Adopt(ctx, userID, StageWrite, winner.Model); err != nil {
+		slog.Error("experiment winner adoption failed", "experiment_id", found.ID, "err", err)
+		if storeErr := s.store.SetAdoptionError(ctx, found.ID, userID, adoptFailedReason); storeErr != nil {
+			return Experiment{}, storeErr
+		}
+		return s.owned(ctx, userID, id)
+	}
+	if err := s.store.SetAdopted(ctx, found.ID, userID, s.now()); err != nil {
+		if errors.Is(err, ErrInvalidState) {
+			current, loadErr := s.owned(ctx, userID, id)
+			if loadErr == nil && current.AdoptedAt != nil {
+				return current, nil
+			}
+		}
+		return Experiment{}, err
+	}
+	return s.owned(ctx, userID, id)
 }
 
 func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage) ([]LeaderboardEntry, error) {
@@ -322,6 +409,16 @@ func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage) (
 }
 
 func (s *Service) apply(ctx context.Context, found Experiment, confirmStyleguide bool) (Experiment, error) {
+	// The post write and this aggregate's applied marker cannot share a transaction.
+	// Serialize their read-call-mark sequence inside the single API process, then rely
+	// on the post boundary's value-idempotent SQL for a crash between the two writes.
+	s.applyMu.Lock()
+	defer s.applyMu.Unlock()
+	current, err := s.owned(ctx, found.UserID, found.ID)
+	if err != nil {
+		return Experiment{}, err
+	}
+	found = current
 	if found.AppliedAt != nil {
 		return found, nil
 	}

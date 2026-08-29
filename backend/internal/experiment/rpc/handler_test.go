@@ -3,8 +3,18 @@ package rpc
 import (
 	"testing"
 
+	"connectrpc.com/connect"
+
 	"github.com/postpilot/backend/internal/experiment"
 )
+
+func TestToConnectErrorMapsWriteStartValidation(t *testing.T) {
+	for _, err := range []error{experiment.ErrInvalidStage, experiment.ErrDuplicateCandidates, experiment.ErrInvalidTargetLength} {
+		if got := connect.CodeOf(toConnectError("start write experiment", err)); got != connect.CodeInvalidArgument {
+			t.Errorf("%v mapped to %v", err, got)
+		}
+	}
+}
 
 func TestCandidateMappingIsBlindUntilVerdict(t *testing.T) {
 	candidate := experiment.Candidate{

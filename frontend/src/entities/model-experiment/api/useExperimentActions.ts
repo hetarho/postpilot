@@ -7,6 +7,7 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
   const transport = useTransport()
   const queryClient = useQueryClient()
   const choose = useMutation(ModelExperimentService.method.chooseWinner)
+  const decideWrite = useMutation(ModelExperimentService.method.decideWriteExperiment)
   const useSingle = useMutation(ModelExperimentService.method.useSingleCandidate)
   const dismiss = useMutation(ModelExperimentService.method.dismissExperiment)
   const retry = useMutation(ModelExperimentService.method.retryCandidate)
@@ -27,6 +28,11 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
   return {
     choose: async (candidateId: string) => {
       const value = await choose.mutateAsync({ experimentId: id, candidateId })
+      await refresh()
+      return value
+    },
+    decideWrite: async (candidateId: string, adoptWinnerModel: boolean) => {
+      const value = await decideWrite.mutateAsync({ experimentId: id, candidateId, adoptWinnerModel })
       await refresh()
       return value
     },
@@ -57,12 +63,13 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
     },
     isPending:
       choose.isPending ||
+      decideWrite.isPending ||
       useSingle.isPending ||
       dismiss.isPending ||
       retry.isPending ||
       apply.isPending ||
       adopt.isPending,
     error:
-      choose.error ?? useSingle.error ?? dismiss.error ?? retry.error ?? apply.error ?? adopt.error,
+      choose.error ?? decideWrite.error ?? useSingle.error ?? dismiss.error ?? retry.error ?? apply.error ?? adopt.error,
   }
 }

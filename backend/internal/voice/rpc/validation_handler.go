@@ -21,7 +21,7 @@ func (h *ValidationHandler) StartVoiceRuleComparison(ctx context.Context, req *c
 	if err != nil {
 		return nil, err
 	}
-	id, jobID, err := h.service.StartRuleComparison(ctx, userID, req.Msg.GetRuleId(), req.Msg.GetSourceId(), int(req.Msg.GetTargetLength()), learningModel(req.Msg.GetWriteModel()))
+	id, jobID, err := h.service.StartRuleComparison(ctx, userID, req.Msg.GetRuleId(), req.Msg.GetSourceId(), optionalLength(req.Msg.TargetLength), learningModel(req.Msg.GetWriteModel()))
 	if err != nil {
 		return nil, validationError("start rule comparison", err)
 	}
@@ -114,7 +114,23 @@ func toProtoComparison(v voice.RuleComparison) *postpilotv1.VoiceRuleComparison 
 	for _, c := range v.Candidates {
 		candidates = append(candidates, &postpilotv1.VoiceComparisonCandidate{Id: c.ID, Side: c.DisplaySide, Output: c.Output, Status: c.Status, Error: c.Error})
 	}
-	return &postpilotv1.VoiceRuleComparison{Id: v.ID, RuleId: v.RuleID, ProfileVersion: v.ProfileVersion, TargetLength: int32(v.TargetLength), Status: v.Status, JobId: v.JobID, Candidates: candidates, ChosenSide: v.ChosenSide, CreatedAt: v.CreatedAt.UTC().Format(timeLayout)}
+	return &postpilotv1.VoiceRuleComparison{Id: v.ID, RuleId: v.RuleID, ProfileVersion: v.ProfileVersion, TargetLength: protoOptionalLength(v.TargetLength), Status: v.Status, JobId: v.JobID, Candidates: candidates, ChosenSide: v.ChosenSide, CreatedAt: v.CreatedAt.UTC().Format(timeLayout)}
+}
+
+func optionalLength(value *int32) *int {
+	if value == nil {
+		return nil
+	}
+	result := int(*value)
+	return &result
+}
+
+func protoOptionalLength(value *int) *int32 {
+	if value == nil {
+		return nil
+	}
+	result := int32(*value)
+	return &result
 }
 func toProtoValidation(v voice.ProfileValidation) *postpilotv1.VoiceProfileValidation {
 	items := make([]*postpilotv1.VoiceValidationItem, 0, len(v.Items))

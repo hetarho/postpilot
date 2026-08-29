@@ -102,7 +102,7 @@ type VoiceRuleComparison struct {
 	Id             string                      `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	RuleId         string                      `protobuf:"bytes,2,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
 	ProfileVersion int64                       `protobuf:"varint,3,opt,name=profile_version,json=profileVersion,proto3" json:"profile_version,omitempty"`
-	TargetLength   int32                       `protobuf:"varint,4,opt,name=target_length,json=targetLength,proto3" json:"target_length,omitempty"`
+	TargetLength   *int32                      `protobuf:"varint,4,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
 	Status         string                      `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	JobId          string                      `protobuf:"bytes,6,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
 	Candidates     []*VoiceComparisonCandidate `protobuf:"bytes,7,rep,name=candidates,proto3" json:"candidates,omitempty"`
@@ -164,8 +164,8 @@ func (x *VoiceRuleComparison) GetProfileVersion() int64 {
 }
 
 func (x *VoiceRuleComparison) GetTargetLength() int32 {
-	if x != nil {
-		return x.TargetLength
+	if x != nil && x.TargetLength != nil {
+		return *x.TargetLength
 	}
 	return 0
 }
@@ -209,7 +209,7 @@ type StartVoiceRuleComparisonRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RuleId        string                 `protobuf:"bytes,1,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
 	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
-	TargetLength  int32                  `protobuf:"varint,3,opt,name=target_length,json=targetLength,proto3" json:"target_length,omitempty"`
+	TargetLength  *int32                 `protobuf:"varint,3,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
 	WriteModel    *ModelRef              `protobuf:"bytes,4,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -260,8 +260,8 @@ func (x *StartVoiceRuleComparisonRequest) GetSourceId() string {
 }
 
 func (x *StartVoiceRuleComparisonRequest) GetTargetLength() int32 {
-	if x != nil {
-		return x.TargetLength
+	if x != nil && x.TargetLength != nil {
+		return *x.TargetLength
 	}
 	return 0
 }
@@ -1243,12 +1243,12 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\x04side\x18\x02 \x01(\tR\x04side\x12\x16\n" +
 	"\x06output\x18\x03 \x01(\tR\x06output\x12\x16\n" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12\x14\n" +
-	"\x05error\x18\x05 \x01(\tR\x05error\"\xc3\x02\n" +
+	"\x05error\x18\x05 \x01(\tR\x05error\"\xda\x02\n" +
 	"\x13VoiceRuleComparison\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\arule_id\x18\x02 \x01(\tR\x06ruleId\x12'\n" +
-	"\x0fprofile_version\x18\x03 \x01(\x03R\x0eprofileVersion\x12#\n" +
-	"\rtarget_length\x18\x04 \x01(\x05R\ftargetLength\x12\x16\n" +
+	"\x0fprofile_version\x18\x03 \x01(\x03R\x0eprofileVersion\x12(\n" +
+	"\rtarget_length\x18\x04 \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12\x16\n" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12\x15\n" +
 	"\x06job_id\x18\x06 \x01(\tR\x05jobId\x12F\n" +
 	"\n" +
@@ -1257,13 +1257,15 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\vchosen_side\x18\b \x01(\tR\n" +
 	"chosenSide\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\t \x01(\tR\tcreatedAt\"\xb5\x01\n" +
+	"created_at\x18\t \x01(\tR\tcreatedAtB\x10\n" +
+	"\x0e_target_length\"\xcc\x01\n" +
 	"\x1fStartVoiceRuleComparisonRequest\x12\x17\n" +
 	"\arule_id\x18\x01 \x01(\tR\x06ruleId\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12#\n" +
-	"\rtarget_length\x18\x03 \x01(\x05R\ftargetLength\x127\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12(\n" +
+	"\rtarget_length\x18\x03 \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x127\n" +
 	"\vwrite_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\"^\n" +
+	"writeModelB\x10\n" +
+	"\x0e_target_length\"^\n" +
 	" StartVoiceRuleComparisonResponse\x12#\n" +
 	"\rcomparison_id\x18\x01 \x01(\tR\fcomparisonId\x12\x15\n" +
 	"\x06job_id\x18\x02 \x01(\tR\x05jobId\"D\n" +
@@ -1420,6 +1422,8 @@ func file_postpilot_v1_voice_validation_proto_init() {
 		return
 	}
 	file_postpilot_v1_provider_proto_init()
+	file_postpilot_v1_voice_validation_proto_msgTypes[1].OneofWrappers = []any{}
+	file_postpilot_v1_voice_validation_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

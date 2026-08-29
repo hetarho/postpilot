@@ -1,7 +1,27 @@
 const PREFIX = 'postpilot:voice-learning:'
 
-export interface LearningHandoff { eventId: string; jobId: string }
-export function readLearningHandoff(ownerId: string, postSlug: string): LearningHandoff | undefined {
+export interface LearningHandoff {
+  eventId: string
+  jobId: string
+  /** Decimal bigint. Keeps a completed/failed handoff from shadowing a later edit. */
+  contentRevision?: string
+}
+export function isLearningHandoffForRevision(
+  handoff: LearningHandoff | undefined,
+  revision: bigint,
+) {
+  if (!handoff) return false
+  if (handoff.contentRevision === undefined) return true
+  try {
+    return BigInt(handoff.contentRevision) === revision
+  } catch {
+    return false
+  }
+}
+export function readLearningHandoff(
+  ownerId: string,
+  postSlug: string,
+): LearningHandoff | undefined {
   try {
     const value = localStorage.getItem(`${PREFIX}${ownerId}:${postSlug}`)
     return value ? (JSON.parse(value) as LearningHandoff) : undefined

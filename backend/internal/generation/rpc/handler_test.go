@@ -31,6 +31,7 @@ func TestToConnectErrorMapsRevisionInstructionValidation(t *testing.T) {
 	for _, err := range []error{
 		generation.ErrRevisionInstructionRequired,
 		generation.ErrRevisionInstructionTooLong,
+		generation.ErrInvalidTargetLength,
 	} {
 		if got := connect.CodeOf(toConnectError("start revision", err)); got != connect.CodeInvalidArgument {
 			t.Errorf("%v mapped to %v", err, got)

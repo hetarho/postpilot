@@ -113,7 +113,10 @@ func TestMigration0006UpgradesActiveSelectionsAndRollsBack(t *testing.T) {
 	if _, err := provider.Down(ctx); err != nil {
 		t.Fatal(err)
 	}
-	// 0007 is now the latest migration; roll it back first, then exercise 0006's Down.
+	// Roll back 0008 and 0007 first, then exercise 0006's Down.
+	if _, err := provider.Down(ctx); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := provider.Down(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -177,12 +180,106 @@ func TestMigration0007PreservesLegacyVoiceAndRollsBack(t *testing.T) {
 	if _, err = provider.Down(ctx); err != nil {
 		t.Fatal(err)
 	}
+	// 0008 is the latest migration; the second Down exercises 0007.
+	if _, err = provider.Down(ctx); err != nil {
+		t.Fatal(err)
+	}
 	var currentVersionColumns int
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('voice_profiles') WHERE name='current_version'`).Scan(&currentVersionColumns); err != nil || currentVersionColumns != 0 {
 		t.Fatalf("down retained current_version: %d err=%v", currentVersionColumns, err)
 	}
 	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&gotStyle, &gotRules); err != nil || gotStyle != style || gotRules != rules {
 		t.Fatalf("down lost legacy guidance: %q / %q err=%v", gotStyle, gotRules, err)
+	}
+}
+
+func TestMigration0008PreservesTargetsAndAddsFinalizationProgress(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	throughSeven := fstest.MapFS{}
+	for _, name := range []string{
+		"0001_users_sessions.sql", "0002_posts_images_uploads.sql", "0003_model_selections.sql",
+		"0004_generation_jobs.sql", "0005_voice_profiles_samples.sql", "0006_model_experiments.sql",
+		"0007_voice_personalization.sql",
+	} {
+		data, err := fs.ReadFile(migrationsFS, "migrations/"+name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		throughSeven[name] = &fstest.MapFile{Data: data}
+	}
+	if err := migrate(ctx, handle.Writer, throughSeven); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','2026-08-29T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range []struct {
+		slug, status string
+		target       int
+	}{{"legacy-default", "draft", 1200}, {"legacy-custom", "review", 1777}} {
+		if _, err := handle.Writer.Exec(`INSERT INTO posts(slug,user_id,title,memo,status,created_at,updated_at,target_length) VALUES(?,'alice','','',?,'2026-08-29T00:00:00Z','2026-08-29T00:00:00Z',?)`, row.slug, row.status, row.target); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range []struct {
+		slug, status string
+		target       int
+	}{{"legacy-default", "draft", 1200}, {"legacy-custom", "review", 1777}} {
+		var status string
+		var target int
+		if err := handle.Reader.QueryRow(`SELECT status,target_length FROM posts WHERE slug=?`, row.slug).Scan(&status, &target); err != nil || status != row.status || target != row.target {
+			t.Fatalf("preserved %s = status %q target %d err=%v", row.slug, status, target, err)
+		}
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO posts(slug,user_id,title,memo,status,created_at,updated_at) VALUES('new','alice','','','draft','2026-08-29T00:00:00Z','2026-08-29T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	var nullTarget int
+	if err := handle.Reader.QueryRow(`SELECT target_length IS NULL FROM posts WHERE slug='new'`).Scan(&nullTarget); err != nil || nullTarget != 1 {
+		t.Fatalf("new target null=%d err=%v", nullTarget, err)
+	}
+	for table, columns := range map[string][]string{
+		"posts":             {"finalized_revision", "finalized_at"},
+		"model_experiments": {"adoption_error", "adopted_at"},
+	} {
+		for _, column := range columns {
+			var count int
+			if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info(?) WHERE name=?`, table, column).Scan(&count); err != nil || count != 1 {
+				t.Fatalf("%s.%s missing: count=%d err=%v", table, column, count, err)
+			}
+		}
+	}
+	var foreignKeys int
+	if err := handle.Reader.QueryRow(`PRAGMA foreign_keys`).Scan(&foreignKeys); err != nil || foreignKeys != 1 {
+		t.Fatalf("foreign keys=%d err=%v", foreignKeys, err)
+	}
+	var indexCount int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='index' AND name='idx_posts_user_updated'`).Scan(&indexCount); err != nil || indexCount != 1 {
+		t.Fatalf("post index count=%d err=%v", indexCount, err)
+	}
+
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.Down(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var target int
+	if err := handle.Reader.QueryRow(`SELECT target_length FROM posts WHERE slug='new'`).Scan(&target); err != nil || target != 1200 {
+		t.Fatalf("down target=%d err=%v", target, err)
+	}
+	var finalizedColumns int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('posts') WHERE name='finalized_revision'`).Scan(&finalizedColumns); err != nil || finalizedColumns != 0 {
+		t.Fatalf("down retained finalized column: %d err=%v", finalizedColumns, err)
 	}
 }
 

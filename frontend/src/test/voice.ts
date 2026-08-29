@@ -4,8 +4,13 @@ import {
   AddVoiceSampleResponseSchema,
   DeleteVoiceSampleResponseSchema,
   GetVoiceProfileResponseSchema,
+  GiveSentenceFeedbackResponseSchema,
+  LearnFromFinalizedPostResponseSchema,
+  RetryVoiceLearningResponseSchema,
   UpdateVoiceProfileResponseSchema,
   VoiceProfileSchema,
+  VoiceLearningEventSchema,
+  VoiceLearningService,
   VoiceSampleSchema,
   VoiceService,
 } from '@/shared/api'
@@ -35,6 +40,8 @@ export interface FakeVoiceOptions {
   updateGate?: Promise<void>
   addGate?: Promise<void>
   calls?: string[]
+  learningFails?: boolean
+  learningJobId?: string
 }
 
 const NOW = '2026-08-29T12:00:00Z'
@@ -125,5 +132,36 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const jobId = samples.length > 0 ? (options.deleteJobId ?? 'voice-job') : ''
     profile = create(VoiceProfileSchema, { ...profile, samples, activeJobId: jobId })
     return create(DeleteVoiceSampleResponseSchema, { jobId })
+  })
+
+  rpc(VoiceLearningService.method.learnFromFinalizedPost, (request) => {
+    options.calls?.push('LearnFromFinalizedPost')
+    if (options.learningFails) throw new ConnectError('learning unavailable', Code.Unavailable)
+    const jobId = options.learningJobId ?? 'learning-job'
+    return create(LearnFromFinalizedPostResponseSchema, {
+      event: create(VoiceLearningEventSchema, {
+        id: `event-${request.postSlug}`,
+        postSlug: request.postSlug,
+        baselineRevision: 1n,
+        status: 'queued',
+        jobId,
+        createdAt: NOW,
+      }),
+      jobId,
+    })
+  })
+
+  rpc(VoiceLearningService.method.retryVoiceLearning, (request) => {
+    options.calls?.push('RetryVoiceLearning')
+    const jobId = options.learningJobId ?? 'learning-job-retry'
+    return create(RetryVoiceLearningResponseSchema, {
+      event: create(VoiceLearningEventSchema, { id: request.eventId, status: 'queued', jobId }),
+      jobId,
+    })
+  })
+
+  rpc(VoiceLearningService.method.giveSentenceFeedback, () => {
+    options.calls?.push('GiveSentenceFeedback')
+    return create(GiveSentenceFeedbackResponseSchema, { feedbackId: 'feedback-1' })
   })
 }

@@ -220,7 +220,7 @@ func main() {
 	} else if n > 0 {
 		slog.Info("recovered interrupted experiments", "count", n)
 	}
-	generationSvc.SetExperimentStarter(generationExperiments{service: experimentSvc})
+	generationSvc.SetPendingExperimentFinder(postExperiments{service: experimentSvc})
 	postSvc.SetPendingExperimentFinder(postExperiments{service: experimentSvc})
 	postSvc.SetExperimentContentPurger(postExperiments{service: experimentSvc})
 	jobQueue.Register(job.KindModelExperiment, func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -234,9 +234,14 @@ func main() {
 		if found.PostSlug == nil {
 			return job.ErrInvalidTarget
 		}
+		targetLength, err := generation.DecodeGenerationPayload(found.Payload)
+		if err != nil {
+			return err
+		}
 		return generationSvc.Generate(ctx, generation.GenerateJob{
 			UserID: found.UserID, PostSlug: *found.PostSlug,
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+			TargetLength: targetLength,
 		}, generation.Progress(progress))
 	})
 	jobQueue.Register(job.KindRevise, func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -425,7 +430,7 @@ func (a voicePosts) LearningSnapshot(ctx context.Context, userID, slug string) (
 			return voice.FinalizationInput{}, voice.ErrPostNotFound
 		case errors.Is(err, post.ErrForbidden):
 			return voice.FinalizationInput{}, voice.ErrForbidden
-		case errors.Is(err, post.ErrNoMachineBaseline):
+		case errors.Is(err, post.ErrNoMachineBaseline), errors.Is(err, post.ErrPostNotFinalized):
 			return voice.FinalizationInput{}, voice.ErrInvalidLifecycle
 		default:
 			return voice.FinalizationInput{}, err
@@ -542,23 +547,12 @@ func (a generationPosts) SetObservations(ctx context.Context, userID, slug strin
 }
 
 func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug string, content generation.PostContent) error {
-	return a.setGeneratedContent(ctx, userID, slug, content, 0)
-}
-
-func (a generationPosts) SetGeneratedContentWithTarget(ctx context.Context, userID, slug string, content generation.PostContent, targetLength int) error {
-	return a.setGeneratedContent(ctx, userID, slug, content, targetLength)
-}
-
-func (a generationPosts) setGeneratedContent(ctx context.Context, userID, slug string, content generation.PostContent, targetLength int) error {
 	value := post.PostContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags}
 	for _, block := range content.Blocks {
 		value.Blocks = append(value.Blocks, post.Block{
 			Type: post.BlockType(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
 		})
-	}
-	if targetLength > 0 {
-		return generationPostError(a.service.SetGeneratedContentWithTarget(ctx, userID, slug, value, targetLength))
 	}
 	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, value))
 }
@@ -578,9 +572,14 @@ type generationJobs struct{ queue *job.Queue }
 
 func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest) (string, error) {
 	slug := request.PostSlug
+	payload, err := generation.EncodeGenerationPayload(request.TargetLength)
+	if err != nil {
+		return "", err
+	}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug,
 		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
+		Payload: payload,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -641,24 +640,6 @@ func (a postJobFinder) ActiveForPost(ctx context.Context, slug string) (*post.Ac
 		PostSlug: postSlug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt,
 	}, nil
-}
-
-type generationExperiments struct{ service *experiment.Service }
-
-func (a generationExperiments) StartWrite(ctx context.Context, request generation.StartExperimentRequest) (generation.StartExperimentResult, error) {
-	started, err := a.service.Start(ctx, experiment.StartRequest{
-		UserID: request.UserID, PostSlug: request.PostSlug, Stage: experiment.StageWrite,
-		ObserveModel: experimentRef(request.ObserveModel), ModelA: experimentRef(request.WriteModelA), ModelB: experimentRef(request.WriteModelB),
-		TargetLength: request.TargetLength,
-	})
-	if err != nil {
-		var active *experiment.JobAlreadyInProgressError
-		if errors.As(err, &active) {
-			return generation.StartExperimentResult{}, &generation.JobAlreadyInProgressError{ActiveID: active.ActiveID}
-		}
-		return generation.StartExperimentResult{}, err
-	}
-	return generation.StartExperimentResult{JobID: started.JobID, ExperimentID: started.ExperimentID}, nil
 }
 
 type experimentJobs struct{ queue *job.Queue }

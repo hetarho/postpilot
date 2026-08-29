@@ -29,14 +29,12 @@ type CandidateUsage struct {
 	CostReported     bool
 }
 
-func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug string, observeModel llm.ModelRef, targetLength ...int) ([]byte, error) {
+func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug string, observeModel llm.ModelRef, targetLength *int) ([]byte, error) {
 	post, err := s.posts.AttachedImages(ctx, userID, postSlug)
 	if err != nil {
 		return nil, err
 	}
-	if len(targetLength) > 0 && targetLength[0] > 0 {
-		post.TargetLength = targetLength[0]
-	}
+	post.TargetLength = cloneOptionalInt(targetLength)
 	profile, err := s.profileForTopic(ctx, userID, post.Title+" "+post.Memo, contentTags(post.Content))
 	if err != nil {
 		return nil, fmt.Errorf("load voice profile: %w", err)
@@ -113,17 +111,7 @@ func (s *Service) RunObserveCandidate(ctx context.Context, raw []byte, model llm
 	return observations, candidateUsage(usage), err
 }
 
-func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string, content PostContent, frozenInput ...[]byte) error {
-	if len(frozenInput) > 0 {
-		snapshot, err := decodeExperimentSnapshot(frozenInput[0], "write")
-		if err != nil {
-			return err
-		}
-		targetLength := snapshot.Post.TargetLength
-		if posts, ok := s.posts.(TargetLengthPosts); ok {
-			return posts.SetGeneratedContentWithTarget(ctx, userID, postSlug, content, targetLength)
-		}
-	}
+func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string, content PostContent, _ ...[]byte) error {
 	return s.posts.SetGeneratedContent(ctx, userID, postSlug, content)
 }
 

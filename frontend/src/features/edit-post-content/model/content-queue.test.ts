@@ -7,7 +7,6 @@ import { attachContentQueue, discardContentQueues, type ContentSnapshot } from '
 
 function snapshot(title: string): ContentSnapshot {
   return {
-    targetLength: 1200,
     content: create(PostContentSchema, {
       title,
       blocks: [create(BlockSchema, { type: BlockType.TEXT, content: title })],
@@ -49,7 +48,7 @@ describe('content save queue', () => {
 
     releases[1]?.(3n)
     await Promise.resolve()
-    await expect(handle.flush()).resolves.toBeUndefined()
+    await expect(handle.flush()).resolves.toBe(3n)
   })
 
   it('stops retry timers and rejects pending flushes when the session ends', async () => {

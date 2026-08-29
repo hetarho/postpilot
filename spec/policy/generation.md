@@ -12,14 +12,17 @@ built by jobs 10 and 11.
   offending field. An invalid heading level is clamped to `2`.
 - After validation, every `IMAGE.file` is checked against the post's attached filenames with exact,
   case-sensitive matching. Invented or differently-cased filenames are dropped and logged.
-- A chosen write winner replaces `posts.content` wholesale and sets `status = review`. Candidate job completion alone
-  never mutates canonical content. There is no generation version history or partial content update.
+- Ordinary generation and a chosen write-experiment result replace `posts.content` wholesale, establish a machine
+  baseline, and set `status = review`. A/B candidate completion alone never mutates canonical content. There is no
+  generation version history or partial content update.
 
 ## Pipeline
 
-- Generation is a durable model-experiment job. `StartGeneration` validates ownership and model capabilities,
-  freezes the source, creates two distinct write candidates, persists queued work, and returns `job_id` plus
-  `experiment_id` without making a provider call.
+- Ordinary generation is a durable `generate` job. `StartGeneration` validates ownership and one explicit active
+  write model (plus an explicit vision observe model when photos exist), freezes the optional target length in its
+  payload, and returns only `job_id` without making a provider call or creating a model experiment.
+- `StartWriteExperiment` is the separate explicit A/B path. It validates two distinct write candidates, freezes one
+  shared post/profile/option snapshot, creates the experiment and job, and returns their ids before provider work.
 - When photos are attached, observation always precedes writing. Photos are ordered by `created_at, id`, read from
   private object storage as the already-normalized JPEGs, and sent in configurable batches. The server does not
   decode images and the upload path remains browser-to-storage. Reads are capped again at `MaxImageBytes`, both by
@@ -32,9 +35,9 @@ built by jobs 10 and 11.
 - The writing prompt's stable prefix is always styleguide → recent excerpts → user rules. Per-post title hint, memo,
   observations, and exact filenames follow it. The prompt requires Korean output, one paragraph per `TEXT` block,
   only attached filenames, context-appropriate image placement, a one-line summary, and 3–6 tags.
-- Observation runs once. Both writers receive byte-identical prepared snapshots/schema/options except for model ref,
-  run concurrently, and store validated candidate output under the experiment. Applying the selected value is
-  idempotent and is the only path that changes the post.
+- Observation runs at most once in either mode. Ordinary generation calls one writer and directly persists validated
+  content. A/B generation gives both writers byte-identical prepared snapshots/schema/options except for model ref,
+  runs them concurrently, and stores validated candidate output under the experiment until an explicit verdict.
 - A model declaring structured-output support receives the relevant JSON schema. Other models use the same parser,
   which accepts direct JSON, fenced JSON, or the first complete JSON object. Unparseable output fails with
   `모델이 JSON 대신 다른 답을 돌려줬어요: ` plus at most 200 characters of the raw response.
@@ -45,8 +48,9 @@ built by jobs 10 and 11.
 
 - The acting user comes only from the authenticated session. A foreign post is `PermissionDenied`; an unknown post
   is `NotFound`.
-- Two distinct enabled write models are always required. With photos, an enabled vision-capable observe model is also required.
-  With no photos, the observe model is ignored and stored empty on the job.
+- Ordinary generation requires one enabled explicit write model and never depends on an A/B pair. A/B generation
+  separately requires two distinct enabled write candidates. With photos, both require an enabled vision-capable
+  observe model; with no photos, observation is omitted and its ref is stored empty.
 - The job queue's one-active-job-per-post constraint is authoritative under concurrency. A collision is
   `FailedPrecondition` and includes the active job id so the client can attach to it.
 
@@ -60,9 +64,9 @@ built by jobs 10 and 11.
 - The generated reading view renders the canonical `PostContent` block array directly. It shows title, summary,
   tags, every canonical block type, and resolves IMAGE blocks against attached filenames; it does not store or
   render canonical HTML.
-- Generation remains disabled until the required explicit active-observe/write-pair selections are durable, the
-  latest title and memo have been saved, and neither an active job nor a pending write experiment exists. A 0-photo
-  post does not require observe but still requires the write pair.
+- The editor exposes separate `생성` and `A/B 비교 생성` actions with independent model blockers and pending states.
+  Both await the latest title/memo save and refuse concurrent post work. A missing pair blocks only A/B; a missing
+  active writer blocks only ordinary generation. A zero-photo post does not require observe.
 
 ## Configuration
 
@@ -73,10 +77,11 @@ built by jobs 10 and 11.
 | `TagsMin` / `TagsMax` | BE `internal/generation` | `3` / `6` |
 | `BadOutputErrorHeadChars` | BE `internal/generation` | `200` runes |
 
-## Progressive voice and target length
+## Progressive voice and optional target length
 
-- `StartGeneration` freezes the visible positive target length with the post, observations, explicit models, and
-  voice projection. The selected winner persists that target and atomically establishes the latest machine baseline.
+- A collapsed options popover saves or clears an optional target length separately from content. Absence is carried
+  as absence through ordinary-job payloads, A/B snapshots, revision, and prompts; there is no hidden 1,200-character
+  fallback. A configured positive value is frozen exactly, but machine output never rewrites the saved option.
 - The projection contains typed descriptors, legacy manual guidance, bans, evidence-ranked active rules, and 0–3
   unique excerpts. Topic/tag matches lead; stable recent fallback keeps a single unrelated finalized post useful.
   Candidate/retired/rejected rules never enter the prompt.

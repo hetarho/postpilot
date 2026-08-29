@@ -28,8 +28,8 @@ the API and postpilot never publishes to a platform.
 
 ## Clipboard and UI
 
-- The export panel exists only for a post with canonical content and shows the format-specific guidance defined in
-  code. Its preview is read-only and is the exact string passed to the clipboard.
+- The export panel exists for canonical content in both `review` and `finalized` workflows and shows the
+  format-specific guidance defined in code. Its preview is read-only and is the exact string passed to the clipboard.
 - A successful clipboard write shows “복사됨” for `1500ms`. If the API is absent or rejects, the relevant field is
   focused and fully selected and the manual-copy hint is shown.
 - Copy operations are serialized. A tab/content change or newer copy invalidates stale feedback and fallback
@@ -45,6 +45,7 @@ the API and postpilot never publishes to a platform.
 
 ## Learning isolation
 
-- Export reads the latest canonical edited `PostContent`; it does not require finalization.
+- Export reads the latest canonical edited `PostContent`; it is available before or after finalization.
 - Rendering, opening a tab, copying through either clipboard path, and feedback timers never freeze a learning
-  snapshot, enqueue work, update a profile, or call a provider. **Finalize and learn** is a separate editor action.
+  snapshot, enqueue work, update a profile, or call a provider. `확정`, `확정하고 말투 학습`, and later
+  `말투 학습` are separate explicit editor actions.

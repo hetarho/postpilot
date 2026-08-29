@@ -12,8 +12,9 @@ A verdict changes exactly one variable:
 - **analyze** — identical voice-corpus snapshot and analysis prompt; no profile mutation;
 - **write** — identical observations, memo, filenames and voice-profile snapshot.
 
-Normal post generation observes once and fans out only at write. Fanning out both observe and write would either need
-four drafts (`2 × 2`) or pause a server job for human input. Both make the verdict ambiguous or the UX fragile.
+Ordinary post generation observes once and calls one explicit active writer; it creates no experiment. The separate
+write A/B action observes once and fans out only at write. Fanning out both observe and write would either need four
+drafts (`2 × 2`) or pause a server job for human input. Both make the verdict ambiguous or the UX fragile.
 
 ## 2. Freeze and identify the input
 
@@ -38,9 +39,11 @@ breakpoint never swaps sides. A choice or dismissal reveals both model snapshots
 "둘 다 사용하지 않기" is a valid non-verdict. Forcing a winner from two bad/indistinguishable outputs adds noise.
 An unpaired survivor may be applied after a sibling failure but contributes no quality match.
 
-Winner application uses persisted `applied_at`, not an empty error string, as its idempotency marker. Until that
-marker exists, write experiments stay in the post's pending projection. Stage-owner writes additionally no-op when
-the target already equals the selected value, covering a retry between the target write and marker write.
+Winner application uses persisted `applied_at`, not an empty error string, as its idempotency marker. A combined
+apply-and-adopt verdict also persists `adoption_requested` before application; `adopted_at` completes the second
+boundary. Until every requested boundary is complete, the write experiment stays in the post's pending projection.
+On retry the catalog's active selection is checked first, covering a crash after the idempotent selection write but
+before its experiment marker. No retry reapplies content or replays the ranking verdict.
 
 ## 4. Ranking
 

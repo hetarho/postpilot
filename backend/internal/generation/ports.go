@@ -16,10 +16,6 @@ type Posts interface {
 	SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent) error
 }
 
-type TargetLengthPosts interface {
-	SetGeneratedContentWithTarget(ctx context.Context, userID, slug string, content PostContent, targetLength int) error
-}
-
 type Profiles interface {
 	ProfileForPrompt(ctx context.Context, userID string) (Profile, error)
 }
@@ -43,8 +39,10 @@ type Jobs interface {
 	GetGeneration(ctx context.Context, id, userID string) (*JobSummary, error)
 }
 
-type ExperimentStarter interface {
-	StartWrite(ctx context.Context, request StartExperimentRequest) (StartExperimentResult, error)
+// PendingExperiments is the experiment context's published post guard. Generation
+// asks only whether unresolved write output exists; it never reads experiment rows.
+type PendingExperiments interface {
+	PendingForPost(ctx context.Context, userID, postSlug string) (string, error)
 }
 
 type Progress func(stage string, done, total int)

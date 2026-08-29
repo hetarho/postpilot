@@ -13,6 +13,9 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if err != nil {
 		return fmt.Errorf("load generation input: %w", err)
 	}
+	// Generation options are frozen when the job is enqueued. A later options edit
+	// must not change the prompt of work that is already waiting in the queue.
+	post.TargetLength = cloneOptionalInt(job.TargetLength)
 	// An empty observe model records that StartGeneration accepted a zero-photo input.
 	// Photos attached while the queued job waits belong to the next generation; without
 	// this snapshot bit the accepted job would fail later for lacking a vision model.
@@ -49,6 +52,14 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	}
 	progress("write", 1, 1)
 	return nil
+}
+
+func cloneOptionalInt(value *int) *int {
+	if value == nil {
+		return nil
+	}
+	copy := *value
+	return &copy
 }
 
 func providerCallError(stage string, err error) error {

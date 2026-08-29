@@ -41,6 +41,12 @@ const (
 	// PostServiceSavePostContentProcedure is the fully-qualified name of the PostService's
 	// SavePostContent RPC.
 	PostServiceSavePostContentProcedure = "/postpilot.v1.PostService/SavePostContent"
+	// PostServiceSavePostGenerationOptionsProcedure is the fully-qualified name of the PostService's
+	// SavePostGenerationOptions RPC.
+	PostServiceSavePostGenerationOptionsProcedure = "/postpilot.v1.PostService/SavePostGenerationOptions"
+	// PostServiceFinalizePostProcedure is the fully-qualified name of the PostService's FinalizePost
+	// RPC.
+	PostServiceFinalizePostProcedure = "/postpilot.v1.PostService/FinalizePost"
 	// PostServiceGetPostProcedure is the fully-qualified name of the PostService's GetPost RPC.
 	PostServiceGetPostProcedure = "/postpilot.v1.PostService/GetPost"
 	// PostServiceListPostsProcedure is the fully-qualified name of the PostService's ListPosts RPC.
@@ -72,6 +78,8 @@ type PostServiceClient interface {
 	SavePostDraft(context.Context, *connect.Request[v1.SavePostDraftRequest]) (*connect.Response[v1.SavePostDraftResponse], error)
 	// Optimistic manual save. It never changes the machine baseline.
 	SavePostContent(context.Context, *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error)
+	SavePostGenerationOptions(context.Context, *connect.Request[v1.SavePostGenerationOptionsRequest]) (*connect.Response[v1.SavePostGenerationOptionsResponse], error)
+	FinalizePost(context.Context, *connect.Request[v1.FinalizePostRequest]) (*connect.Response[v1.FinalizePostResponse], error)
 	GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error)
 	ListPosts(context.Context, *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error)
 	DeletePost(context.Context, *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error)
@@ -103,6 +111,18 @@ func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+PostServiceSavePostContentProcedure,
 			connect.WithSchema(postServiceMethods.ByName("SavePostContent")),
+			connect.WithClientOptions(opts...),
+		),
+		savePostGenerationOptions: connect.NewClient[v1.SavePostGenerationOptionsRequest, v1.SavePostGenerationOptionsResponse](
+			httpClient,
+			baseURL+PostServiceSavePostGenerationOptionsProcedure,
+			connect.WithSchema(postServiceMethods.ByName("SavePostGenerationOptions")),
+			connect.WithClientOptions(opts...),
+		),
+		finalizePost: connect.NewClient[v1.FinalizePostRequest, v1.FinalizePostResponse](
+			httpClient,
+			baseURL+PostServiceFinalizePostProcedure,
+			connect.WithSchema(postServiceMethods.ByName("FinalizePost")),
 			connect.WithClientOptions(opts...),
 		),
 		getPost: connect.NewClient[v1.GetPostRequest, v1.GetPostResponse](
@@ -146,14 +166,16 @@ func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // postServiceClient implements PostServiceClient.
 type postServiceClient struct {
-	savePostDraft   *connect.Client[v1.SavePostDraftRequest, v1.SavePostDraftResponse]
-	savePostContent *connect.Client[v1.SavePostContentRequest, v1.SavePostContentResponse]
-	getPost         *connect.Client[v1.GetPostRequest, v1.GetPostResponse]
-	listPosts       *connect.Client[v1.ListPostsRequest, v1.ListPostsResponse]
-	deletePost      *connect.Client[v1.DeletePostRequest, v1.DeletePostResponse]
-	createUpload    *connect.Client[v1.CreateUploadRequest, v1.CreateUploadResponse]
-	confirmUpload   *connect.Client[v1.ConfirmUploadRequest, v1.ConfirmUploadResponse]
-	deleteImage     *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
+	savePostDraft             *connect.Client[v1.SavePostDraftRequest, v1.SavePostDraftResponse]
+	savePostContent           *connect.Client[v1.SavePostContentRequest, v1.SavePostContentResponse]
+	savePostGenerationOptions *connect.Client[v1.SavePostGenerationOptionsRequest, v1.SavePostGenerationOptionsResponse]
+	finalizePost              *connect.Client[v1.FinalizePostRequest, v1.FinalizePostResponse]
+	getPost                   *connect.Client[v1.GetPostRequest, v1.GetPostResponse]
+	listPosts                 *connect.Client[v1.ListPostsRequest, v1.ListPostsResponse]
+	deletePost                *connect.Client[v1.DeletePostRequest, v1.DeletePostResponse]
+	createUpload              *connect.Client[v1.CreateUploadRequest, v1.CreateUploadResponse]
+	confirmUpload             *connect.Client[v1.ConfirmUploadRequest, v1.ConfirmUploadResponse]
+	deleteImage               *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
 }
 
 // SavePostDraft calls postpilot.v1.PostService.SavePostDraft.
@@ -164,6 +186,16 @@ func (c *postServiceClient) SavePostDraft(ctx context.Context, req *connect.Requ
 // SavePostContent calls postpilot.v1.PostService.SavePostContent.
 func (c *postServiceClient) SavePostContent(ctx context.Context, req *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error) {
 	return c.savePostContent.CallUnary(ctx, req)
+}
+
+// SavePostGenerationOptions calls postpilot.v1.PostService.SavePostGenerationOptions.
+func (c *postServiceClient) SavePostGenerationOptions(ctx context.Context, req *connect.Request[v1.SavePostGenerationOptionsRequest]) (*connect.Response[v1.SavePostGenerationOptionsResponse], error) {
+	return c.savePostGenerationOptions.CallUnary(ctx, req)
+}
+
+// FinalizePost calls postpilot.v1.PostService.FinalizePost.
+func (c *postServiceClient) FinalizePost(ctx context.Context, req *connect.Request[v1.FinalizePostRequest]) (*connect.Response[v1.FinalizePostResponse], error) {
+	return c.finalizePost.CallUnary(ctx, req)
 }
 
 // GetPost calls postpilot.v1.PostService.GetPost.
@@ -202,6 +234,8 @@ type PostServiceHandler interface {
 	SavePostDraft(context.Context, *connect.Request[v1.SavePostDraftRequest]) (*connect.Response[v1.SavePostDraftResponse], error)
 	// Optimistic manual save. It never changes the machine baseline.
 	SavePostContent(context.Context, *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error)
+	SavePostGenerationOptions(context.Context, *connect.Request[v1.SavePostGenerationOptionsRequest]) (*connect.Response[v1.SavePostGenerationOptionsResponse], error)
+	FinalizePost(context.Context, *connect.Request[v1.FinalizePostRequest]) (*connect.Response[v1.FinalizePostResponse], error)
 	GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error)
 	ListPosts(context.Context, *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error)
 	DeletePost(context.Context, *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error)
@@ -229,6 +263,18 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 		PostServiceSavePostContentProcedure,
 		svc.SavePostContent,
 		connect.WithSchema(postServiceMethods.ByName("SavePostContent")),
+		connect.WithHandlerOptions(opts...),
+	)
+	postServiceSavePostGenerationOptionsHandler := connect.NewUnaryHandler(
+		PostServiceSavePostGenerationOptionsProcedure,
+		svc.SavePostGenerationOptions,
+		connect.WithSchema(postServiceMethods.ByName("SavePostGenerationOptions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	postServiceFinalizePostHandler := connect.NewUnaryHandler(
+		PostServiceFinalizePostProcedure,
+		svc.FinalizePost,
+		connect.WithSchema(postServiceMethods.ByName("FinalizePost")),
 		connect.WithHandlerOptions(opts...),
 	)
 	postServiceGetPostHandler := connect.NewUnaryHandler(
@@ -273,6 +319,10 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 			postServiceSavePostDraftHandler.ServeHTTP(w, r)
 		case PostServiceSavePostContentProcedure:
 			postServiceSavePostContentHandler.ServeHTTP(w, r)
+		case PostServiceSavePostGenerationOptionsProcedure:
+			postServiceSavePostGenerationOptionsHandler.ServeHTTP(w, r)
+		case PostServiceFinalizePostProcedure:
+			postServiceFinalizePostHandler.ServeHTTP(w, r)
 		case PostServiceGetPostProcedure:
 			postServiceGetPostHandler.ServeHTTP(w, r)
 		case PostServiceListPostsProcedure:
@@ -300,6 +350,14 @@ func (UnimplementedPostServiceHandler) SavePostDraft(context.Context, *connect.R
 
 func (UnimplementedPostServiceHandler) SavePostContent(context.Context, *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.SavePostContent is not implemented"))
+}
+
+func (UnimplementedPostServiceHandler) SavePostGenerationOptions(context.Context, *connect.Request[v1.SavePostGenerationOptionsRequest]) (*connect.Response[v1.SavePostGenerationOptionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.SavePostGenerationOptions is not implemented"))
+}
+
+func (UnimplementedPostServiceHandler) FinalizePost(context.Context, *connect.Request[v1.FinalizePostRequest]) (*connect.Response[v1.FinalizePostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.FinalizePost is not implemented"))
 }
 
 func (UnimplementedPostServiceHandler) GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error) {

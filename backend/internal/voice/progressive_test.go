@@ -48,11 +48,12 @@ func TestZeroHistoryFinalizeLearnsOneSourceOnlyAfterExplicitJob(t *testing.T) {
 		t.Fatal(err)
 	}
 	raw := `{"title":"첫 글","summary":"","tags":["산책"],"blocks":[{"type":"TEXT","content":"오늘은 천천히 걸어요. 바람이 참 좋아요."}]}`
-	snapshot := voice.FinalizationInput{PostSlug: "first", UserID: "alice", BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, TargetLength: 900}
+	targetLength := 900
+	snapshot := voice.FinalizationInput{PostSlug: "first", UserID: "alice", BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, TargetLength: &targetLength}
 	h.svc.ConfigurePersonalization(learningPosts{snapshot: snapshot}, voice.PersonalizationConfig{FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: 3, EndingMaxConsecutive: 2})
 	h.models.response = `{"lexical_description":"담백한 어휘","base_register":"해요","connective_style":"짧은 연결","intro_pattern":"바로 시작","closing_pattern":"짧게 마침","heading_habit":"","list_habit":"","emoji_use":"","axes":{"involvement":1,"narrativity":1,"persuasion_overtness":0,"abstractness":0,"addressee_focus":0,"humor":0}}`
 
-	event, jobID, reused, err := h.svc.Finalize(context.Background(), "alice", "first", analyzeRef)
+	event, jobID, reused, err := h.svc.LearnFromFinalizedPost(context.Background(), "alice", "first", analyzeRef)
 	if err != nil || reused || jobID != "job-new" || h.models.completeCalls != 0 {
 		t.Fatalf("finalize event=%+v job=%q reused=%v calls=%d err=%v", event, jobID, reused, h.models.completeCalls, err)
 	}
@@ -61,7 +62,7 @@ func TestZeroHistoryFinalizeLearnsOneSourceOnlyAfterExplicitJob(t *testing.T) {
 	// learning event with a fresh job.
 	h.jobs.personalizationActive[jobID] = false
 	h.jobs.enqueueID = "job-after-restart"
-	recovered, recoveredJobID, reused, err := h.svc.Finalize(context.Background(), "alice", "first", analyzeRef)
+	recovered, recoveredJobID, reused, err := h.svc.LearnFromFinalizedPost(context.Background(), "alice", "first", analyzeRef)
 	if err != nil || !reused || recovered.ID != event.ID || recoveredJobID != "job-after-restart" || h.models.completeCalls != 0 {
 		t.Fatalf("restart recovery event=%+v job=%q reused=%v calls=%d err=%v", recovered, recoveredJobID, reused, h.models.completeCalls, err)
 	}
@@ -251,7 +252,8 @@ func TestExplicitRuleComparisonAndValidationStayOutsideModelExperiments(t *testi
 		}
 	}
 
-	comparisonID, jobID, err := svc.StartRuleComparison(context.Background(), "alice", "candidate", "source-a", 900, analyzeRef)
+	targetLength := 900
+	comparisonID, jobID, err := svc.StartRuleComparison(context.Background(), "alice", "candidate", "source-a", &targetLength, analyzeRef)
 	if err != nil || comparisonID == "" || jobID == "" || models.calls != 0 {
 		t.Fatalf("comparison start id=%q job=%q calls=%d err=%v", comparisonID, jobID, models.calls, err)
 	}

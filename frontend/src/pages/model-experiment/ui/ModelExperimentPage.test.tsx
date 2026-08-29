@@ -63,6 +63,7 @@ const experiment: ModelExperiment = {
   outcome: '',
   applyError: '',
   appliedAt: '',
+  adoptionRequested: false,
   adoptionError: '',
   adoptedAt: '',
   createdAt: '',

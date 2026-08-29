@@ -34,7 +34,7 @@ func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
 	return value, nil
 }
 
-func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength ...int) (string, string) {
+func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength ...*int) (string, string) {
 	var stable strings.Builder
 	stable.WriteString(RevisePrompt)
 	stable.WriteString("\n\n[스타일가이드]\n")
@@ -48,15 +48,15 @@ func BuildRevisePrompt(profile Profile, content PostContent, filenames []string,
 	stable.WriteString("\n예시의 고유 사실, 주제, 문구를 복사하지 말고 문체 특징만 참고하세요.")
 	stable.WriteString("\n\n[사용자 규칙]\n")
 	stable.WriteString(profile.Rules)
-	length := 1200
-	if len(targetLength) > 0 && targetLength[0] > 0 {
-		length = targetLength[0]
-	}
 	endingMax := profile.EndingMaxConsecutive
 	if endingMax <= 0 {
 		endingMax = 2
 	}
-	fmt.Fprintf(&stable, "\n\n[길이·종결어미 제약]\n목표 길이: 약 %d자. 프로필의 측정된 종결어미 분포를 따르고 같은 종결어미를 %d문장보다 많이 연속 사용하지 마세요.", length, endingMax)
+	stable.WriteString("\n\n[종결어미 제약]\n")
+	if len(targetLength) > 0 && targetLength[0] != nil {
+		fmt.Fprintf(&stable, "목표 길이: 약 %d자. ", *targetLength[0])
+	}
+	fmt.Fprintf(&stable, "프로필의 측정된 종결어미 분포를 따르고 같은 종결어미를 %d문장보다 많이 연속 사용하지 마세요.", endingMax)
 
 	files := "없음"
 	if len(filenames) > 0 {

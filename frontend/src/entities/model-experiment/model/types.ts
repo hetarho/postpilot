@@ -42,6 +42,9 @@ export interface ModelExperiment {
   outcome: 'winner' | 'skipped' | 'unpaired' | ''
   applyError: string
   appliedAt: string
+  adoptionRequested: boolean
+  adoptionError: string
+  adoptedAt: string
   createdAt: string
   finishedAt: string
   decidedAt: string

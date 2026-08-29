@@ -276,22 +276,11 @@ func (s *Service) SetObservations(ctx context.Context, userID, slug string, obse
 
 // SetGeneratedContent atomically replaces canonical content and moves the post to review.
 func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent) error {
-	return s.setGeneratedContent(ctx, userID, slug, content, 0)
-}
-
-func (s *Service) SetGeneratedContentWithTarget(ctx context.Context, userID, slug string, content PostContent, targetLength int) error {
-	if targetLength <= 0 {
-		return &InvalidContentError{Reason: "target length must be positive"}
-	}
-	return s.setGeneratedContent(ctx, userID, slug, content, targetLength)
-}
-
-func (s *Service) setGeneratedContent(ctx context.Context, userID, slug string, content PostContent, targetLength int) error {
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
 		return err
 	}
-	if found.Status == StatusReview && found.Content != nil && reflect.DeepEqual(*found.Content, content) {
+	if found.Status == StatusReview && found.MachineBaselineRevision == found.ContentRevision && found.Content != nil && reflect.DeepEqual(*found.Content, content) {
 		return nil
 	}
 	images, err := s.store.ListImages(ctx, slug)
@@ -301,20 +290,21 @@ func (s *Service) setGeneratedContent(ctx context.Context, userID, slug string, 
 	if err := ValidateContent(content, images); err != nil {
 		return err
 	}
-	var updated bool
-	if targetLength > 0 {
-		machineStore, ok := s.store.(MachineContentStore)
-		if !ok {
-			return errors.New("post machine content store is not configured")
-		}
-		updated, err = machineStore.UpdateGeneratedContentWithTarget(ctx, slug, userID, content, targetLength, s.now())
-	} else {
-		updated, err = s.store.UpdateGeneratedContent(ctx, slug, userID, content, s.now())
-	}
+	updated, err := s.store.UpdateGeneratedContent(ctx, slug, userID, content, s.now())
 	if err != nil {
 		return err
 	}
 	if !updated {
+		// The store predicate makes an identical review write atomic under concurrent
+		// retries. Re-read after a zero-row update so the loser succeeds without
+		// advancing the revision, while deletion/ownership changes remain errors.
+		current, loadErr := s.ownedPost(ctx, userID, slug)
+		if loadErr == nil && current.Status == StatusReview && current.MachineBaselineRevision == current.ContentRevision && current.Content != nil && reflect.DeepEqual(*current.Content, content) {
+			return nil
+		}
+		if loadErr != nil {
+			return loadErr
+		}
 		return ErrNotFound
 	}
 	return nil
@@ -322,12 +312,16 @@ func (s *Service) setGeneratedContent(ctx context.Context, userID, slug string, 
 
 // SaveContent optimistically saves only canonical content. The machine baseline is
 // intentionally absent from the store operation and remains immutable.
-func (s *Service) SaveContent(ctx context.Context, userID, slug string, content PostContent, expectedRevision int64, targetLength int) (Post, error) {
-	if targetLength <= 0 {
-		return Post{}, &InvalidContentError{Reason: "target length must be positive"}
-	}
-	if _, err := s.ownedPost(ctx, userID, slug); err != nil {
+func (s *Service) SaveContent(ctx context.Context, userID, slug string, content PostContent, expectedRevision int64) (Post, error) {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
 		return Post{}, err
+	}
+	if found.ContentRevision != expectedRevision {
+		return Post{}, ErrStaleContentRevision
+	}
+	if found.Content != nil && reflect.DeepEqual(*found.Content, content) {
+		return s.Get(ctx, userID, slug)
 	}
 	images, err := s.store.ListImages(ctx, slug)
 	if err != nil {
@@ -340,7 +334,60 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 	if !ok {
 		return Post{}, errors.New("post content store is not configured")
 	}
-	updated, err := contentStore.SaveContent(ctx, slug, userID, content, expectedRevision, targetLength, s.now())
+	updated, err := contentStore.SaveContent(ctx, slug, userID, content, expectedRevision, s.now())
+	if err != nil {
+		return Post{}, err
+	}
+	if !updated {
+		return Post{}, ErrStaleContentRevision
+	}
+	return s.Get(ctx, userID, slug)
+}
+
+func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, targetLength *int) (Post, error) {
+	if targetLength != nil && *targetLength <= 0 {
+		return Post{}, &InvalidContentError{Reason: "target length must be positive"}
+	}
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return Post{}, err
+	}
+	if equalOptionalInt(found.TargetLength, targetLength) {
+		return s.Get(ctx, userID, slug)
+	}
+	contentStore, ok := s.store.(ContentStore)
+	if !ok {
+		return Post{}, errors.New("post content store is not configured")
+	}
+	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, targetLength, s.now())
+	if err != nil {
+		return Post{}, err
+	}
+	if !updated {
+		return Post{}, ErrNotFound
+	}
+	return s.Get(ctx, userID, slug)
+}
+
+func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRevision int64) (Post, error) {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return Post{}, err
+	}
+	if found.ContentRevision != expectedRevision {
+		return Post{}, ErrStaleContentRevision
+	}
+	if found.Content == nil || found.MachineBaselineRevision <= 0 {
+		return Post{}, ErrNoMachineBaseline
+	}
+	if found.Status == StatusFinalized && found.FinalizedRevision == expectedRevision {
+		return s.Get(ctx, userID, slug)
+	}
+	contentStore, ok := s.store.(ContentStore)
+	if !ok {
+		return Post{}, errors.New("post content store is not configured")
+	}
+	updated, err := contentStore.Finalize(ctx, slug, userID, expectedRevision, s.now())
 	if err != nil {
 		return Post{}, err
 	}
@@ -351,14 +398,25 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 }
 
 func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (LearningSnapshot, error) {
-	if _, err := s.ownedPost(ctx, userID, slug); err != nil {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
 		return LearningSnapshot{}, err
+	}
+	if found.Status != StatusFinalized || found.FinalizedRevision != found.ContentRevision {
+		return LearningSnapshot{}, ErrPostNotFinalized
 	}
 	contentStore, ok := s.store.(ContentStore)
 	if !ok {
 		return LearningSnapshot{}, errors.New("post content store is not configured")
 	}
 	return contentStore.LearningSnapshot(ctx, slug, userID)
+}
+
+func equalOptionalInt(left, right *int) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	return *left == *right
 }
 
 // CreateUpload reserves a filename and hands back a presigned PUT.

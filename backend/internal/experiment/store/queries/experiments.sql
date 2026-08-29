@@ -39,7 +39,7 @@ SELECT * FROM model_experiments
 WHERE user_id = ? AND post_slug = ? AND stage = 'write'
   AND (
     status IN ('queued', 'running', 'review', 'partial', 'failed')
-    OR (status = 'decided' AND applied_at IS NULL)
+	OR (status = 'decided' AND (applied_at IS NULL OR (adoption_requested = 1 AND adopted_at IS NULL)))
   )
 ORDER BY created_at DESC, id DESC LIMIT 1;
 
@@ -95,7 +95,8 @@ WHERE experiment_id = ? AND id = ? AND status = 'pending';
 -- name: DecideExperiment :execrows
 UPDATE model_experiments
 SET status = ?, winner_candidate_id = ?, outcome = ?, decided_at = ?,
-    content_expires_at = ?, apply_error = NULL, applied_at = NULL
+    content_expires_at = ?, apply_error = NULL, applied_at = NULL,
+	adoption_requested = ?, adoption_error = NULL, adopted_at = NULL
 WHERE id = ? AND user_id = ?
   AND status IN ('review', 'partial', 'failed');
 
@@ -105,6 +106,15 @@ UPDATE model_experiments SET apply_error = ?, applied_at = NULL WHERE id = ? AND
 -- name: SetExperimentApplied :execrows
 UPDATE model_experiments SET apply_error = NULL, applied_at = ?
 WHERE id = ? AND user_id = ? AND status = 'decided' AND applied_at IS NULL;
+
+-- name: SetAdoptionError :exec
+UPDATE model_experiments SET adoption_error = ?
+WHERE id = ? AND user_id = ? AND adoption_requested = 1 AND adopted_at IS NULL;
+
+-- name: SetExperimentAdopted :execrows
+UPDATE model_experiments SET adoption_error = NULL, adopted_at = ?
+WHERE id = ? AND user_id = ? AND status = 'decided'
+  AND adoption_requested = 1 AND adopted_at IS NULL;
 
 -- name: PurgeExpiredContent :execrows
 UPDATE model_experiments

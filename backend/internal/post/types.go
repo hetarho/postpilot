@@ -12,8 +12,9 @@ import (
 // Status values a post can hold. `review` is set by the generation pipeline (plan 06);
 // this context only ever writes `draft`.
 const (
-	StatusDraft  = "draft"
-	StatusReview = "review"
+	StatusDraft     = "draft"
+	StatusReview    = "review"
+	StatusFinalized = "finalized"
 )
 
 // uploadContentType is what a presigned PUT is signed for. The browser pipeline
@@ -48,6 +49,7 @@ var (
 	ErrStaleContentRevision = errors.New("post content revision is stale")
 	ErrInvalidContent       = errors.New("invalid post content")
 	ErrNoMachineBaseline    = errors.New("post has no machine baseline to finalize")
+	ErrPostNotFinalized     = errors.New("post content is not finalized")
 )
 
 type InvalidContentError struct{ Reason string }
@@ -70,7 +72,9 @@ type Post struct {
 	Content                 *PostContent
 	ContentRevision         int64
 	MachineBaselineRevision int64
-	TargetLength            int
+	TargetLength            *int
+	FinalizedRevision       int64
+	FinalizedAt             *time.Time
 	Observations            []Observation
 
 	// Images is populated by Get, not by the store's post lookup.
@@ -88,7 +92,8 @@ type LearningSnapshot struct {
 	ContentRevision  int64
 	MachineBaseline  PostContent
 	BaselineRevision int64
-	TargetLength     int
+	TargetLength     *int
+	FinalizedAt      time.Time
 	UpdatedAt        time.Time
 }
 

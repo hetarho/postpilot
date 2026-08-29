@@ -66,11 +66,13 @@ debounce window — one second (`AUTOSAVE_DEBOUNCE_MS`) — which is why it is s
 
 ## Generated-content queue
 
-Editable `PostContent` uses a second per-post queue rather than sharing title/memo state. Its snapshot contains the
-complete protobuf block value and target length, and its server revision is `content_revision`.
+Editable `PostContent` uses a second per-post queue rather than sharing title/memo state. Its snapshot contains only
+the complete protobuf block value; optional generation settings use their own endpoint and never share its
+`content_revision`.
 
 - one request is in flight; later edits replace one pending snapshot, so the newest value wins;
 - each response supplies the next expected revision; an `Aborted` conflict stops retry and asks for reload;
 - transport failures use bounded exponential backoff; logout discards timers, snapshots, and flush waiters;
-- page hide/release calls `saveNow()` best-effort, while AI revision/finalization await `flush()`;
+- page hide/release calls `saveNow()` best-effort, while AI revision/finalization await `flush()`, whose promise
+  returns the exact saved revision used by `FinalizePost`;
 - manual saves never touch `machine_baseline`; machine winner/revision writes do not use this queue.

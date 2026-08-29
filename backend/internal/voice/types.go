@@ -185,7 +185,7 @@ type FinalizationInput struct {
 	PostSlug, UserID, BaselineJSON, FinalJSON, Title string
 	Tags                                             []string
 	BaselineRevision, ContentRevision                int64
-	TargetLength                                     int
+	TargetLength                                     *int
 }
 type LearningEvent struct {
 	ID, UserID, PostSlug                                               string
@@ -219,7 +219,7 @@ type RuleComparison struct {
 	ID, UserID, RuleID, SourceID                         string
 	ProfileVersion                                       int64
 	ModelRef                                             string
-	TargetLength                                         int
+	TargetLength                                         *int
 	InputSnapshot, RuleOnSide, Status, JobID, ChosenSide string
 	Candidates                                           []ComparisonCandidate
 	CreatedAt                                            time.Time

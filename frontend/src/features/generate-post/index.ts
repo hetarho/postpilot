@@ -1,4 +1,4 @@
-export { GenerateButton } from './ui/GenerateButton'
-export type { GenerateButtonHandle } from './ui/GenerateButton'
-export { generationPreconditions } from './model/preconditions'
+export { GenerationActions } from './ui/GenerationActions'
+export type { GenerationActionsHandle } from './ui/GenerationActions'
+export { ordinaryGenerationPreconditions, comparisonGenerationPreconditions } from './model/preconditions'
 export type { GenerationModelSelection, GenerationPreconditions } from './model/preconditions'

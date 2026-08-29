@@ -106,7 +106,7 @@ func TestStorePreservesSiblingOutputAndPurgesPrivateContent(t *testing.T) {
 		t.Fatalf("partial lost sibling output: %+v", reloaded.Candidates)
 	}
 	decided := now.Add(2 * time.Second)
-	changed, err := store.Decide(ctx, found.ID, "alice", left.ID, experiment.StatusDecided, experiment.OutcomeUnpaired, decided, decided)
+	changed, err := store.Decide(ctx, found.ID, "alice", left.ID, experiment.StatusDecided, experiment.OutcomeUnpaired, false, decided, decided)
 	if err != nil || !changed {
 		t.Fatalf("decide = %v, %v", changed, err)
 	}
@@ -219,7 +219,7 @@ func TestPendingWriteKeepsUnappliedVerdictRecoverable(t *testing.T) {
 		t.Fatal(err)
 	}
 	decided := now.Add(2 * time.Second)
-	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, decided, decided.Add(30*24*time.Hour)); err != nil || !changed {
+	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, true, decided, decided.Add(30*24*time.Hour)); err != nil || !changed {
 		t.Fatalf("decide = %v, %v", changed, err)
 	}
 	if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending == nil || pending.ID != found.ID {
@@ -228,7 +228,33 @@ func TestPendingWriteKeepsUnappliedVerdictRecoverable(t *testing.T) {
 	if err := store.SetApplied(ctx, found.ID, "alice", decided.Add(time.Second)); err != nil {
 		t.Fatal(err)
 	}
+	if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending == nil || pending.ID != found.ID {
+		t.Fatalf("requested adoption should remain pending after apply = %+v, %v", pending, err)
+	}
+	if err := store.SetAdoptionError(ctx, found.ID, "alice", "selection unavailable"); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := store.Get(ctx, found.ID)
+	if err != nil || reloaded.AdoptionError != "selection unavailable" || reloaded.AdoptedAt != nil {
+		t.Fatalf("adoption error reload = %+v, %v", reloaded, err)
+	}
+	if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending == nil || pending.ID != found.ID {
+		t.Fatalf("adoption retry pending = %+v, %v", pending, err)
+	}
+	if err := store.Create(ctx, sample("exp-blocked", "alice", "post-a", decided.Add(2*time.Second))); !errors.Is(err, experiment.ErrInvalidState) {
+		t.Fatalf("new comparison during adoption retry = %v", err)
+	}
+	if err := store.SetAdopted(ctx, found.ID, "alice", decided.Add(2*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err = store.Get(ctx, found.ID)
+	if err != nil || reloaded.AdoptionError != "" || reloaded.AdoptedAt == nil {
+		t.Fatalf("adopted reload = %+v, %v", reloaded, err)
+	}
 	if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending != nil {
-		t.Fatalf("applied pending = %+v, %v", pending, err)
+		t.Fatalf("adopted pending = %+v, %v", pending, err)
+	}
+	if err := store.Create(ctx, sample("exp-next", "alice", "post-a", decided.Add(3*time.Second))); err != nil {
+		t.Fatalf("new comparison after adoption = %v", err)
 	}
 }

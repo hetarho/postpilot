@@ -5,7 +5,7 @@ import "postpilot/v1/voice.proto";
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 service VoiceLearningService {
-  rpc FinalizeAndLearn(FinalizeAndLearnRequest) returns (FinalizeAndLearnResponse) {}
+  rpc LearnFromFinalizedPost(LearnFromFinalizedPostRequest) returns (LearnFromFinalizedPostResponse) {}
   rpc RetryVoiceLearning(RetryVoiceLearningRequest) returns (RetryVoiceLearningResponse) {}
   rpc GetVoiceLearningEvent(GetVoiceLearningEventRequest) returns (GetVoiceLearningEventResponse) {}
   rpc GiveSentenceFeedback(GiveSentenceFeedbackRequest) returns (GiveSentenceFeedbackResponse) {}
@@ -25,8 +25,8 @@ message VoiceLearningEvent {
   string id = 1; string post_slug = 2; int64 baseline_revision = 3; string status = 4;
   string job_id = 5; string error = 6; string created_at = 7; string processed_at = 8;
 }
-message FinalizeAndLearnRequest { string post_slug = 1; ModelRef analyze_model = 2; }
-message FinalizeAndLearnResponse { VoiceLearningEvent event = 1; string job_id = 2; bool reused = 3; }
+message LearnFromFinalizedPostRequest { string post_slug = 1; ModelRef analyze_model = 2; }
+message LearnFromFinalizedPostResponse { VoiceLearningEvent event = 1; string job_id = 2; bool reused = 3; }
 message RetryVoiceLearningRequest { string event_id = 1; ModelRef analyze_model = 2; }
 message RetryVoiceLearningResponse { VoiceLearningEvent event = 1; string job_id = 2; }
 message GetVoiceLearningEventRequest { string event_id = 1; }

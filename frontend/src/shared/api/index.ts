@@ -42,6 +42,8 @@ export {
   PostSummarySchema,
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
+  SavePostGenerationOptionsResponseSchema,
+  FinalizePostResponseSchema,
   StartGenerationRequestSchema,
   StartGenerationResponseSchema,
   StartRevisionRequestSchema,
@@ -99,7 +101,14 @@ export type {
   StructuredVoiceProfile,
   VoiceProfileVersion,
 } from './gen/postpilot/v1/voice_pb'
-export { VoiceLearningService, VoiceFeedbackReason } from './gen/postpilot/v1/voice_learning_pb'
+export {
+  VoiceLearningService,
+  VoiceFeedbackReason,
+  VoiceLearningEventSchema,
+  LearnFromFinalizedPostResponseSchema,
+  RetryVoiceLearningResponseSchema,
+  GiveSentenceFeedbackResponseSchema,
+} from './gen/postpilot/v1/voice_learning_pb'
 export type { VoiceLearningEvent } from './gen/postpilot/v1/voice_learning_pb'
 export { VoiceValidationService } from './gen/postpilot/v1/voice_validation_pb'
 export type { VoiceRuleComparison, VoiceProfileValidation } from './gen/postpilot/v1/voice_validation_pb'
@@ -118,6 +127,7 @@ export {
   CandidateStatus,
   ExperimentOutcome,
   CostSource,
+  StartExperimentResponseSchema,
 } from './gen/postpilot/v1/model_experiment_pb'
 export type {
   ModelExperiment as ProtoModelExperiment,

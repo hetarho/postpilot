@@ -16,41 +16,8 @@ type Service struct {
 	models      LLM
 	images      ImageReader
 	jobs        Jobs
-	experiments ExperimentStarter
+	experiments PendingExperiments
 	batchSize   int
-}
-
-func (s *Service) SetExperimentStarter(starter ExperimentStarter) { s.experiments = starter }
-
-func (s *Service) StartExperiment(ctx context.Context, request StartExperimentRequest) (StartExperimentResult, error) {
-	if s.experiments == nil {
-		return StartExperimentResult{}, fmt.Errorf("generation experiments are not configured")
-	}
-	post, err := s.posts.AttachedImages(ctx, request.UserID, request.PostSlug)
-	if err != nil {
-		return StartExperimentResult{}, err
-	}
-	if request.TargetLength <= 0 {
-		request.TargetLength = post.TargetLength
-	}
-	if request.TargetLength <= 0 {
-		request.TargetLength = 1200
-	}
-	writeA, okA := parseModelRef(request.WriteModelA)
-	writeB, okB := parseModelRef(request.WriteModelB)
-	if !okA || !okB || writeA == writeB || !modelEnabled(s.models, writeA) || !modelEnabled(s.models, writeB) {
-		return StartExperimentResult{}, ErrWriteModelRequired
-	}
-	if len(post.Images) == 0 {
-		request.ObserveModel = ""
-	} else {
-		observe, valid := parseModelRef(request.ObserveModel)
-		info, found := s.models.Resolve(observe)
-		if !valid || !found || info.Disabled || !info.Vision {
-			return StartExperimentResult{}, ErrObserveModelRequired
-		}
-	}
-	return s.experiments.StartWrite(ctx, request)
 }
 
 func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, images ImageReader, jobs Jobs, batchSize int) *Service {
@@ -58,6 +25,24 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 		panic("generation: batch size must be positive")
 	}
 	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize}
+}
+
+func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {
+	s.experiments = finder
+}
+
+func (s *Service) refusePendingExperiment(ctx context.Context, userID, postSlug string) error {
+	if s.experiments == nil {
+		return nil
+	}
+	id, err := s.experiments.PendingForPost(ctx, userID, postSlug)
+	if err != nil {
+		return err
+	}
+	if id != "" {
+		return &JobAlreadyInProgressError{ActiveID: id}
+	}
+	return nil
 }
 
 func (s *Service) StartRevision(ctx context.Context, request StartRevisionRequest) (string, error) {
@@ -74,6 +59,9 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 	}
 	if post.Content == nil {
 		return "", ErrRevisionContentRequired
+	}
+	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
+		return "", err
 	}
 	write, ok := parseModelRef(request.WriteModel)
 	if !ok || !modelEnabled(s.models, write) {
@@ -100,6 +88,9 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if err != nil {
 		return "", err
 	}
+	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
+		return "", err
+	}
 	write, ok := parseModelRef(request.WriteModel)
 	if !ok || !modelEnabled(s.models, write) {
 		return "", ErrWriteModelRequired
@@ -112,6 +103,9 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		if !valid || !found || info.Disabled || !info.Vision {
 			return "", ErrObserveModelRequired
 		}
+	}
+	if request.TargetLength != nil && *request.TargetLength <= 0 {
+		return "", ErrInvalidTargetLength
 	}
 	id, err := s.jobs.EnqueueGeneration(ctx, request)
 	if err != nil {

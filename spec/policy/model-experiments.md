@@ -1,14 +1,15 @@
 # Policy — Stage model experiments
 
-Canonical rules implemented by job 15. Source: [plan 09](../plan/09.stage-model-experiments-and-leaderboards.md)
+Canonical rules implemented by jobs 15 and 17. Source: [plan 09](../plan/09.stage-model-experiments-and-leaderboards.md)
 and [tech/model-experiment-methodology](../tech/model-experiment-methodology.md).
 
 ## Fair and blind comparisons
 
 - One experiment varies exactly one stage: `observe`, `analyze`, or `write`. Both candidates receive the same
   immutable snapshot, prompt version, schema and validation path; only the explicit `ModelRef` differs.
-- Normal generation observes once and fans out only the two write candidates. Observe/analyze comparisons run only
-  from the explicit model lab and do not mutate their source while candidates run.
+- Ordinary generation is not an experiment and calls one active writer. Only explicit `A/B 비교 생성` observes once
+  and fans the same optional-length snapshot out to two write candidates. Observe/analyze comparisons run only from
+  the explicit model lab and do not mutate their source while candidates run.
 - The server randomizes and persists left/right once. Before a verdict, RPC responses contain opaque candidate ids,
   sides and outputs but omit model refs, labels, accounting and provider errors. Removed-model retry errors are also
   identity-free. A verdict or dismissal reveals the snapshotted identities and accounting.
@@ -20,19 +21,20 @@ and [tech/model-experiment-methodology](../tech/model-experiment-methodology.md)
 - `queued → running → review | partial | failed`; `review/partial/failed → decided | dismissed`. Only a successful
   paired verdict has `outcome=winner`; `unpaired` and `skipped` never affect ratings.
 - Start persists the experiment and queue job before returning both ids and before any provider call. One unresolved
-  or not-yet-applied write experiment may exist per post. The post projection publishes its id.
+  write experiment may exist per post, including a decided result whose content application or requested model
+  adoption has not completed. The post projection publishes its id.
 - A partial/failed retry resets and invokes only failed candidates against the original snapshot. Enqueue failure
   restores their prior failure state. A missing model or unusable snapshot requires a new comparison without
   exposing the hidden ref.
 - Boot recovery fails interrupted `running` experiments and only those `queued` experiments that have no runnable
   queue record. Surviving queued jobs continue normally; recovered candidates become retryable.
-- Candidate completion never changes canonical post/profile state. Choosing records the verdict, then explicit
-  stage-owner behavior applies the winner. `applied_at` is the durable idempotency marker; an unapplied or
-  apply-failed write remains in `pending_experiment_id` with a retry action. Stage-owner writes are value-idempotent
-  as an additional cross-context retry safeguard.
-- Write apply replaces validated `PostContent` and moves the post to `review`. Observe apply replaces observations.
-  Analyze apply requires confirmation, replaces `styleguide`, and never changes user-owned `rules`. Adopting the
-  winner as the active model is a separate action.
+- Candidate completion never changes canonical post/profile state. A ready paired write result offers `결과 적용`
+  and `결과 적용하고 활성 모델로 변경`; both record one verdict and apply once, while only the latter requests
+  adoption of the winning write model. `applied_at`, `adoption_requested`, `adopted_at`, and fixed public error
+  markers make each boundary reload-safe. Application/adoption retries do not rerank or rewrite completed steps.
+- Write apply replaces validated `PostContent` and moves the post to `review`; it never finalizes or learns. Observe
+  apply replaces observations. Analyze apply requires confirmation, replaces `styleguide`, and never changes
+  user-owned `rules`. Observe/analyze adoption remains a separate explicit action.
 
 ## Ranking and accounting
 

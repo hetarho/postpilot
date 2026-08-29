@@ -21,9 +21,11 @@ type Store interface {
 	ListQueued(ctx context.Context) ([]string, error)
 	ResetFailedCandidates(ctx context.Context, experimentID string) (int64, error)
 	RestoreFailedCandidates(ctx context.Context, experimentID string, candidates []Candidate) error
-	Decide(ctx context.Context, id, userID, candidateID string, status Status, outcome Outcome, decidedAt, expiresAt time.Time) (bool, error)
+	Decide(ctx context.Context, id, userID, candidateID string, status Status, outcome Outcome, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error)
 	SetApplyError(ctx context.Context, id, userID, message string) error
 	SetApplied(ctx context.Context, id, userID string, now time.Time) error
+	SetAdoptionError(ctx context.Context, id, userID, message string) error
+	SetAdopted(ctx context.Context, id, userID string, now time.Time) error
 	LeaderboardData(ctx context.Context, userID string, stage Stage) ([]Experiment, []Candidate, error)
 	PurgeExpired(ctx context.Context, before time.Time) (int64, error)
 	PurgePost(ctx context.Context, userID, postSlug string) error

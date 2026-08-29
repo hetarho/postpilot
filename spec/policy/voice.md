@@ -87,9 +87,13 @@ and 16.
 
 - Zero sources is supported: the typed profile is empty/unknown and generation remains enabled. Historical imports
   are optional; only their paste surface has the 200-character minimum. No screen requests or recommends 30 posts.
-- Learning begins only after the owner presses **Finalize and learn** and confirms the enabled analyze model. The
-  input-hashed event freezes post-owned baseline/final JSON before `learn_voice` enqueue. Repeats/retries cannot
-  duplicate a source, profile version, feedback, or evidence row.
+- Finalization and learning are separate explicit boundaries. **Finalize** records the post's exact finalized
+  revision without a model or voice mutation. **Finalize and learn** performs that same finalization and then starts
+  learning with an explicitly selected enabled analyze model; **Learn voice** may do so later while the same revision
+  remains finalized. The input-hashed event freezes post-owned baseline/final JSON before `learn_voice` enqueue.
+  Repeats/retries cannot duplicate a source, profile version, feedback, or evidence row.
+- A learning setup, enqueue, worker, or provider failure leaves the post finalized and exposes a separate retryable
+  learning outcome. Retry never repeats finalization or demotes the post.
 - A completed event adds the finalized post to the authored-source/few-shot bank. The first source is eligible for
   the next generation even when its topic differs; topic/tag matches rank ahead of stable recent fallback.
 - Typed whole-profile snapshots contain lexical, endings, syntax, structure, bounded axes, explicit unknown/source

@@ -10,10 +10,12 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 service ModelExperimentService {
   rpc StartObserveExperiment(StartObserveExperimentRequest) returns (StartExperimentResponse) {}
   rpc StartAnalyzeExperiment(StartAnalyzeExperimentRequest) returns (StartExperimentResponse) {}
+  rpc StartWriteExperiment(StartWriteExperimentRequest) returns (StartExperimentResponse) {}
   rpc GetExperiment(GetExperimentRequest) returns (GetExperimentResponse) {}
   rpc ListExperiments(ListExperimentsRequest) returns (ListExperimentsResponse) {}
   rpc RetryCandidate(RetryCandidateRequest) returns (RetryCandidateResponse) {}
   rpc ChooseWinner(ChooseWinnerRequest) returns (ChooseWinnerResponse) {}
+  rpc DecideWriteExperiment(DecideWriteExperimentRequest) returns (ChooseWinnerResponse) {}
   rpc UseSingleCandidate(UseSingleCandidateRequest) returns (ChooseWinnerResponse) {}
   rpc DismissExperiment(DismissExperimentRequest) returns (DismissExperimentResponse) {}
   rpc ApplyWinnerOutput(ApplyWinnerOutputRequest) returns (ApplyWinnerOutputResponse) {}
@@ -102,6 +104,9 @@ message ModelExperiment {
   string decided_at = 12;
   bool revealed = 13;
   string applied_at = 14;
+  string adoption_error = 15;
+  string adopted_at = 16;
+	bool adoption_requested = 17;
 }
 
 message StartObserveExperimentRequest {
@@ -112,6 +117,13 @@ message StartObserveExperimentRequest {
 message StartAnalyzeExperimentRequest {
   ModelRef model_a = 1;
   ModelRef model_b = 2;
+}
+message StartWriteExperimentRequest {
+  string post_slug = 1;
+  ModelRef observe_model = 2;
+  ModelRef model_a = 3;
+  ModelRef model_b = 4;
+  optional int32 target_length = 5;
 }
 message StartExperimentResponse { string experiment_id = 1; string job_id = 2; }
 
@@ -125,6 +137,11 @@ message RetryCandidateRequest { string experiment_id = 1; }
 message RetryCandidateResponse { string job_id = 1; ModelExperiment experiment = 2; }
 
 message ChooseWinnerRequest { string experiment_id = 1; string candidate_id = 2; }
+message DecideWriteExperimentRequest {
+  string experiment_id = 1;
+  string candidate_id = 2;
+  bool adopt_winner_model = 3;
+}
 message UseSingleCandidateRequest { string experiment_id = 1; string candidate_id = 2; }
 message ChooseWinnerResponse { ModelExperiment experiment = 1; }
 

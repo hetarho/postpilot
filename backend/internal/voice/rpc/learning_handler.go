@@ -18,16 +18,16 @@ func NewLearningHandler(service *voice.Service) *LearningHandler {
 	return &LearningHandler{service: service}
 }
 
-func (h *LearningHandler) FinalizeAndLearn(ctx context.Context, req *connect.Request[postpilotv1.FinalizeAndLearnRequest]) (*connect.Response[postpilotv1.FinalizeAndLearnResponse], error) {
+func (h *LearningHandler) LearnFromFinalizedPost(ctx context.Context, req *connect.Request[postpilotv1.LearnFromFinalizedPostRequest]) (*connect.Response[postpilotv1.LearnFromFinalizedPostResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	event, jobID, reused, err := h.service.Finalize(ctx, userID, req.Msg.GetPostSlug(), learningModel(req.Msg.GetAnalyzeModel()))
+	event, jobID, reused, err := h.service.LearnFromFinalizedPost(ctx, userID, req.Msg.GetPostSlug(), learningModel(req.Msg.GetAnalyzeModel()))
 	if err != nil {
-		return nil, learningError("finalize and learn", err)
+		return nil, learningError("learn from finalized post", err)
 	}
-	return connect.NewResponse(&postpilotv1.FinalizeAndLearnResponse{Event: toProtoLearningEvent(event), JobId: jobID, Reused: reused}), nil
+	return connect.NewResponse(&postpilotv1.LearnFromFinalizedPostResponse{Event: toProtoLearningEvent(event), JobId: jobID, Reused: reused}), nil
 }
 func (h *LearningHandler) RetryVoiceLearning(ctx context.Context, req *connect.Request[postpilotv1.RetryVoiceLearningRequest]) (*connect.Response[postpilotv1.RetryVoiceLearningResponse], error) {
 	userID, err := actingUser(ctx)

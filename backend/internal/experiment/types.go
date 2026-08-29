@@ -113,6 +113,9 @@ type Experiment struct {
 	Outcome           Outcome
 	ApplyError        string
 	AppliedAt         *time.Time
+	AdoptionRequested bool
+	AdoptionError     string
+	AdoptedAt         *time.Time
 	CreatedAt         time.Time
 	FinishedAt        *time.Time
 	DecidedAt         *time.Time
@@ -166,7 +169,7 @@ type StartRequest struct {
 	ObserveModel ModelRef
 	ModelA       ModelRef
 	ModelB       ModelRef
-	TargetLength int
+	TargetLength *int
 }
 
 type StartResult struct {
@@ -193,6 +196,7 @@ var (
 	ErrInvalidStage          = errors.New("invalid experiment stage")
 	ErrModelRequired         = errors.New("two enabled suitable models are required")
 	ErrDuplicateCandidates   = errors.New("comparison candidates must differ")
+	ErrInvalidTargetLength   = errors.New("target length must be positive")
 	ErrInvalidState          = errors.New("experiment state does not allow this operation")
 	ErrCandidateNotFound     = errors.New("candidate not found")
 	ErrConfirmationRequired  = errors.New("styleguide overwrite confirmation is required")

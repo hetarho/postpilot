@@ -26,6 +26,9 @@ type ModelExperiment struct {
 	FinishedAt        sql.NullString
 	DecidedAt         sql.NullString
 	ContentExpiresAt  sql.NullString
+	AdoptionError     sql.NullString
+	AdoptedAt         sql.NullString
+	AdoptionRequested int64
 }
 
 type ModelExperimentCandidate struct {

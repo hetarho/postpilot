@@ -32,8 +32,9 @@ export function useSavePostContent() {
       post.contentRevision = saved.contentRevision
       post.machineBaselineRevision = saved.machineBaselineRevision
       post.canFinalize = saved.canFinalize
-      post.targetLength = saved.targetLength
       post.status = saved.status
+      post.finalizedRevision = saved.finalizedRevision
+      post.finalizedAt = saved.finalizedAt
       post.updatedAt = saved.updatedAt
       queryClient.setQueryData(key, create(GetPostResponseSchema, { post }))
       void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
@@ -45,14 +46,12 @@ export function useSavePostContent() {
       slug: string,
       content: PostContent,
       expectedRevision: bigint,
-      targetLength: number,
     ) => {
       try {
         const response = await mutation.mutateAsync({
           slug,
           content: create(PostContentSchema, content),
           expectedRevision,
-          targetLength,
         })
         if (!response.post) throw new Error('SavePostContent returned no post')
         return response.post.contentRevision

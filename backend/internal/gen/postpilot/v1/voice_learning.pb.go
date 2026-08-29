@@ -176,7 +176,7 @@ func (x *VoiceLearningEvent) GetProcessedAt() string {
 	return ""
 }
 
-type FinalizeAndLearnRequest struct {
+type LearnFromFinalizedPostRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PostSlug      string                 `protobuf:"bytes,1,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
 	AnalyzeModel  *ModelRef              `protobuf:"bytes,2,opt,name=analyze_model,json=analyzeModel,proto3" json:"analyze_model,omitempty"`
@@ -184,20 +184,20 @@ type FinalizeAndLearnRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *FinalizeAndLearnRequest) Reset() {
-	*x = FinalizeAndLearnRequest{}
+func (x *LearnFromFinalizedPostRequest) Reset() {
+	*x = LearnFromFinalizedPostRequest{}
 	mi := &file_postpilot_v1_voice_learning_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *FinalizeAndLearnRequest) String() string {
+func (x *LearnFromFinalizedPostRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FinalizeAndLearnRequest) ProtoMessage() {}
+func (*LearnFromFinalizedPostRequest) ProtoMessage() {}
 
-func (x *FinalizeAndLearnRequest) ProtoReflect() protoreflect.Message {
+func (x *LearnFromFinalizedPostRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_postpilot_v1_voice_learning_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -209,26 +209,26 @@ func (x *FinalizeAndLearnRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FinalizeAndLearnRequest.ProtoReflect.Descriptor instead.
-func (*FinalizeAndLearnRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use LearnFromFinalizedPostRequest.ProtoReflect.Descriptor instead.
+func (*LearnFromFinalizedPostRequest) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_voice_learning_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *FinalizeAndLearnRequest) GetPostSlug() string {
+func (x *LearnFromFinalizedPostRequest) GetPostSlug() string {
 	if x != nil {
 		return x.PostSlug
 	}
 	return ""
 }
 
-func (x *FinalizeAndLearnRequest) GetAnalyzeModel() *ModelRef {
+func (x *LearnFromFinalizedPostRequest) GetAnalyzeModel() *ModelRef {
 	if x != nil {
 		return x.AnalyzeModel
 	}
 	return nil
 }
 
-type FinalizeAndLearnResponse struct {
+type LearnFromFinalizedPostResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Event         *VoiceLearningEvent    `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
 	JobId         string                 `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
@@ -237,20 +237,20 @@ type FinalizeAndLearnResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *FinalizeAndLearnResponse) Reset() {
-	*x = FinalizeAndLearnResponse{}
+func (x *LearnFromFinalizedPostResponse) Reset() {
+	*x = LearnFromFinalizedPostResponse{}
 	mi := &file_postpilot_v1_voice_learning_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *FinalizeAndLearnResponse) String() string {
+func (x *LearnFromFinalizedPostResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FinalizeAndLearnResponse) ProtoMessage() {}
+func (*LearnFromFinalizedPostResponse) ProtoMessage() {}
 
-func (x *FinalizeAndLearnResponse) ProtoReflect() protoreflect.Message {
+func (x *LearnFromFinalizedPostResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_postpilot_v1_voice_learning_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -262,26 +262,26 @@ func (x *FinalizeAndLearnResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FinalizeAndLearnResponse.ProtoReflect.Descriptor instead.
-func (*FinalizeAndLearnResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use LearnFromFinalizedPostResponse.ProtoReflect.Descriptor instead.
+func (*LearnFromFinalizedPostResponse) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_voice_learning_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *FinalizeAndLearnResponse) GetEvent() *VoiceLearningEvent {
+func (x *LearnFromFinalizedPostResponse) GetEvent() *VoiceLearningEvent {
 	if x != nil {
 		return x.Event
 	}
 	return nil
 }
 
-func (x *FinalizeAndLearnResponse) GetJobId() string {
+func (x *LearnFromFinalizedPostResponse) GetJobId() string {
 	if x != nil {
 		return x.JobId
 	}
 	return ""
 }
 
-func (x *FinalizeAndLearnResponse) GetReused() bool {
+func (x *LearnFromFinalizedPostResponse) GetReused() bool {
 	if x != nil {
 		return x.Reused
 	}
@@ -970,11 +970,11 @@ const file_postpilot_v1_voice_learning_proto_rawDesc = "" +
 	"\x05error\x18\x06 \x01(\tR\x05error\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\a \x01(\tR\tcreatedAt\x12!\n" +
-	"\fprocessed_at\x18\b \x01(\tR\vprocessedAt\"s\n" +
-	"\x17FinalizeAndLearnRequest\x12\x1b\n" +
+	"\fprocessed_at\x18\b \x01(\tR\vprocessedAt\"y\n" +
+	"\x1dLearnFromFinalizedPostRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12;\n" +
-	"\ranalyze_model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\fanalyzeModel\"\x81\x01\n" +
-	"\x18FinalizeAndLearnResponse\x126\n" +
+	"\ranalyze_model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\fanalyzeModel\"\x87\x01\n" +
+	"\x1eLearnFromFinalizedPostResponse\x126\n" +
 	"\x05event\x18\x01 \x01(\v2 .postpilot.v1.VoiceLearningEventR\x05event\x12\x15\n" +
 	"\x06job_id\x18\x02 \x01(\tR\x05jobId\x12\x16\n" +
 	"\x06reused\x18\x03 \x01(\bR\x06reused\"s\n" +
@@ -1023,9 +1023,9 @@ const file_postpilot_v1_voice_learning_proto_rawDesc = "" +
 	" VOICE_FEEDBACK_REASON_VOCABULARY\x10\x01\x12 \n" +
 	"\x1cVOICE_FEEDBACK_REASON_ENDING\x10\x02\x12 \n" +
 	"\x1cVOICE_FEEDBACK_REASON_LENGTH\x10\x03\x12#\n" +
-	"\x1fVOICE_FEEDBACK_REASON_STRUCTURE\x10\x042\xa4\x06\n" +
-	"\x14VoiceLearningService\x12c\n" +
-	"\x10FinalizeAndLearn\x12%.postpilot.v1.FinalizeAndLearnRequest\x1a&.postpilot.v1.FinalizeAndLearnResponse\"\x00\x12i\n" +
+	"\x1fVOICE_FEEDBACK_REASON_STRUCTURE\x10\x042\xb6\x06\n" +
+	"\x14VoiceLearningService\x12u\n" +
+	"\x16LearnFromFinalizedPost\x12+.postpilot.v1.LearnFromFinalizedPostRequest\x1a,.postpilot.v1.LearnFromFinalizedPostResponse\"\x00\x12i\n" +
 	"\x12RetryVoiceLearning\x12'.postpilot.v1.RetryVoiceLearningRequest\x1a(.postpilot.v1.RetryVoiceLearningResponse\"\x00\x12r\n" +
 	"\x15GetVoiceLearningEvent\x12*.postpilot.v1.GetVoiceLearningEventRequest\x1a+.postpilot.v1.GetVoiceLearningEventResponse\"\x00\x12o\n" +
 	"\x14GiveSentenceFeedback\x12).postpilot.v1.GiveSentenceFeedbackRequest\x1a*.postpilot.v1.GiveSentenceFeedbackResponse\"\x00\x12i\n" +
@@ -1050,8 +1050,8 @@ var file_postpilot_v1_voice_learning_proto_msgTypes = make([]protoimpl.MessageIn
 var file_postpilot_v1_voice_learning_proto_goTypes = []any{
 	(VoiceFeedbackReason)(0),                // 0: postpilot.v1.VoiceFeedbackReason
 	(*VoiceLearningEvent)(nil),              // 1: postpilot.v1.VoiceLearningEvent
-	(*FinalizeAndLearnRequest)(nil),         // 2: postpilot.v1.FinalizeAndLearnRequest
-	(*FinalizeAndLearnResponse)(nil),        // 3: postpilot.v1.FinalizeAndLearnResponse
+	(*LearnFromFinalizedPostRequest)(nil),   // 2: postpilot.v1.LearnFromFinalizedPostRequest
+	(*LearnFromFinalizedPostResponse)(nil),  // 3: postpilot.v1.LearnFromFinalizedPostResponse
 	(*RetryVoiceLearningRequest)(nil),       // 4: postpilot.v1.RetryVoiceLearningRequest
 	(*RetryVoiceLearningResponse)(nil),      // 5: postpilot.v1.RetryVoiceLearningResponse
 	(*GetVoiceLearningEventRequest)(nil),    // 6: postpilot.v1.GetVoiceLearningEventRequest
@@ -1070,8 +1070,8 @@ var file_postpilot_v1_voice_learning_proto_goTypes = []any{
 	(*VoiceProfile)(nil),                    // 19: postpilot.v1.VoiceProfile
 }
 var file_postpilot_v1_voice_learning_proto_depIdxs = []int32{
-	17, // 0: postpilot.v1.FinalizeAndLearnRequest.analyze_model:type_name -> postpilot.v1.ModelRef
-	1,  // 1: postpilot.v1.FinalizeAndLearnResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
+	17, // 0: postpilot.v1.LearnFromFinalizedPostRequest.analyze_model:type_name -> postpilot.v1.ModelRef
+	1,  // 1: postpilot.v1.LearnFromFinalizedPostResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
 	17, // 2: postpilot.v1.RetryVoiceLearningRequest.analyze_model:type_name -> postpilot.v1.ModelRef
 	1,  // 3: postpilot.v1.RetryVoiceLearningResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
 	1,  // 4: postpilot.v1.GetVoiceLearningEventResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
@@ -1080,14 +1080,14 @@ var file_postpilot_v1_voice_learning_proto_depIdxs = []int32{
 	19, // 7: postpilot.v1.SetVoiceRuleStatusResponse.profile:type_name -> postpilot.v1.VoiceProfile
 	12, // 8: postpilot.v1.ListRuleConfirmationsResponse.confirmations:type_name -> postpilot.v1.VoiceRuleConfirmation
 	19, // 9: postpilot.v1.ResolveRuleConfirmationResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	2,  // 10: postpilot.v1.VoiceLearningService.FinalizeAndLearn:input_type -> postpilot.v1.FinalizeAndLearnRequest
+	2,  // 10: postpilot.v1.VoiceLearningService.LearnFromFinalizedPost:input_type -> postpilot.v1.LearnFromFinalizedPostRequest
 	4,  // 11: postpilot.v1.VoiceLearningService.RetryVoiceLearning:input_type -> postpilot.v1.RetryVoiceLearningRequest
 	6,  // 12: postpilot.v1.VoiceLearningService.GetVoiceLearningEvent:input_type -> postpilot.v1.GetVoiceLearningEventRequest
 	8,  // 13: postpilot.v1.VoiceLearningService.GiveSentenceFeedback:input_type -> postpilot.v1.GiveSentenceFeedbackRequest
 	10, // 14: postpilot.v1.VoiceLearningService.SetVoiceRuleStatus:input_type -> postpilot.v1.SetVoiceRuleStatusRequest
 	13, // 15: postpilot.v1.VoiceLearningService.ListRuleConfirmations:input_type -> postpilot.v1.ListRuleConfirmationsRequest
 	15, // 16: postpilot.v1.VoiceLearningService.ResolveRuleConfirmation:input_type -> postpilot.v1.ResolveRuleConfirmationRequest
-	3,  // 17: postpilot.v1.VoiceLearningService.FinalizeAndLearn:output_type -> postpilot.v1.FinalizeAndLearnResponse
+	3,  // 17: postpilot.v1.VoiceLearningService.LearnFromFinalizedPost:output_type -> postpilot.v1.LearnFromFinalizedPostResponse
 	5,  // 18: postpilot.v1.VoiceLearningService.RetryVoiceLearning:output_type -> postpilot.v1.RetryVoiceLearningResponse
 	7,  // 19: postpilot.v1.VoiceLearningService.GetVoiceLearningEvent:output_type -> postpilot.v1.GetVoiceLearningEventResponse
 	9,  // 20: postpilot.v1.VoiceLearningService.GiveSentenceFeedback:output_type -> postpilot.v1.GiveSentenceFeedbackResponse

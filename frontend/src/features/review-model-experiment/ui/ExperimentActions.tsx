@@ -69,12 +69,18 @@ export function ExperimentActions({
             variant="secondary"
             disabled={actions.isPending}
             pending={pressed === 'apply'}
-            onClick={() => run('apply', () => actions.apply(experiment.stage === 'analyze'))}
+            onClick={() =>
+              run('apply', () =>
+                experiment.stage === 'write'
+                  ? actions.decideWrite(experiment.winnerCandidateId, experiment.adoptionRequested)
+                  : actions.apply(experiment.stage === 'analyze'),
+              )
+            }
           >
             적용 다시 시도
           </Button>
         )}
-        {experiment.status === 'decided' && (
+        {experiment.status === 'decided' && experiment.stage !== 'write' && (
           <Button
             variant="secondary"
             disabled={actions.isPending}
@@ -82,6 +88,18 @@ export function ExperimentActions({
             onClick={() => run('adopt', actions.adopt)}
           >
             활성 모델로 사용
+          </Button>
+        )}
+        {experiment.adoptionError && (
+          <Button
+            variant="secondary"
+            disabled={actions.isPending}
+            pending={pressed === 'adopt'}
+            onClick={() =>
+              run('adopt', () => actions.decideWrite(experiment.winnerCandidateId, true))
+            }
+          >
+            활성 모델 변경 다시 시도
           </Button>
         )}
         {survivor && (
@@ -94,7 +112,7 @@ export function ExperimentActions({
             이 결과만 사용
           </Button>
         )}
-        {canChoose && (
+        {canChoose && experiment.stage !== 'write' && (
           <Button
             variant="cta"
             disabled={actions.isPending}
@@ -104,20 +122,43 @@ export function ExperimentActions({
             이 결과로 선택
           </Button>
         )}
-        {experiment.status === 'decided' && !experiment.appliedAt && !experiment.applyError && (
-          <Button
-            variant="cta"
-            disabled={actions.isPending}
-            pending={pressed === 'apply'}
-            onClick={() =>
-              experiment.stage === 'analyze'
-                ? setConfirmStyle(true)
-                : run('apply', () => actions.apply())
-            }
-          >
-            결과 적용
-          </Button>
+        {canChoose && experiment.stage === 'write' && (
+          <>
+            <Button
+              variant="secondary"
+              disabled={actions.isPending}
+              pending={pressed === 'decide'}
+              onClick={() => run('decide', () => actions.decideWrite(activeCandidateId, false))}
+            >
+              결과 적용
+            </Button>
+            <Button
+              variant="cta"
+              disabled={actions.isPending}
+              pending={pressed === 'decideAdopt'}
+              onClick={() => run('decideAdopt', () => actions.decideWrite(activeCandidateId, true))}
+            >
+              결과 적용하고 활성 모델로 변경
+            </Button>
+          </>
         )}
+        {experiment.status === 'decided' &&
+          experiment.stage !== 'write' &&
+          !experiment.appliedAt &&
+          !experiment.applyError && (
+            <Button
+              variant="cta"
+              disabled={actions.isPending}
+              pending={pressed === 'apply'}
+              onClick={() =>
+                experiment.stage === 'analyze'
+                  ? setConfirmStyle(true)
+                  : run('apply', () => actions.apply())
+              }
+            >
+              결과 적용
+            </Button>
+          )}
       </div>
       {/* The outcome renders inside the dock, right under the button that was pressed — a result
           reported 1,000px up the page has not been shown (§4.3). */}
@@ -134,6 +175,15 @@ export function ExperimentActions({
       {experiment.appliedAt && !experiment.applyError && (
         <Notice tone="success" role="status">
           선택한 결과를 적용했어요.
+          {experiment.stage === 'write' &&
+            (experiment.adoptedAt
+              ? ' 활성 작성 모델도 변경했어요.'
+              : ' 활성 작성 모델은 변경하지 않았어요.')}
+        </Notice>
+      )}
+      {experiment.adoptionError && (
+        <Notice tone="danger" role="alert">
+          결과는 적용했지만 활성 작성 모델은 변경하지 못했어요. {experiment.adoptionError}
         </Notice>
       )}
       <Dialog

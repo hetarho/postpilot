@@ -16,6 +16,8 @@ service PostService {
   rpc SavePostDraft(SavePostDraftRequest) returns (SavePostDraftResponse) {}
   // Optimistic manual save. It never changes the machine baseline.
   rpc SavePostContent(SavePostContentRequest) returns (SavePostContentResponse) {}
+  rpc SavePostGenerationOptions(SavePostGenerationOptionsRequest) returns (SavePostGenerationOptionsResponse) {}
+  rpc FinalizePost(FinalizePostRequest) returns (FinalizePostResponse) {}
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {}
   rpc ListPosts(ListPostsRequest) returns (ListPostsResponse) {}
   rpc DeletePost(DeletePostRequest) returns (DeletePostResponse) {}
@@ -74,7 +76,7 @@ message Post {
   string slug = 1;
   string title = 2;
   string memo = 3;
-  // draft | review. Generation (plan 06) moves it to review.
+  // draft | review | finalized. Machine output moves it to review; only FinalizePost finalizes it.
   string status = 4;
   repeated Image images = 5;
   string created_at = 6;
@@ -86,7 +88,9 @@ message Post {
   int64 content_revision = 12;
   int64 machine_baseline_revision = 13;
   bool can_finalize = 14;
-  int32 target_length = 15;
+  optional int32 target_length = 15;
+  int64 finalized_revision = 16;
+  string finalized_at = 17;
 }
 
 message Image {
@@ -138,15 +142,11 @@ message GetGenerationResponse {
 message StartGenerationRequest {
   string post_slug = 1;
   ModelRef observe_model = 2;
-  ModelRef write_model_a = 3;
-  ModelRef write_model_b = 4;
-  int32 target_length = 5;
+  ModelRef write_model = 3;
+  optional int32 target_length = 4;
 }
 
-message StartGenerationResponse {
-  string job_id = 1;
-  string experiment_id = 2;
-}
+message StartGenerationResponse { string job_id = 1; }
 
 message StartRevisionRequest {
   string post_slug = 1;
@@ -174,10 +174,22 @@ message SavePostContentRequest {
   string slug = 1;
   PostContent content = 2;
   int64 expected_revision = 3;
-  int32 target_length = 4;
+  reserved 4;
 }
 
 message SavePostContentResponse { Post post = 1; }
+
+message SavePostGenerationOptionsRequest {
+  string slug = 1;
+  optional int32 target_length = 2;
+}
+message SavePostGenerationOptionsResponse { Post post = 1; }
+
+message FinalizePostRequest {
+  string slug = 1;
+  int64 expected_revision = 2;
+}
+message FinalizePostResponse { Post post = 1; }
 
 message GetPostRequest {
   string slug = 1;

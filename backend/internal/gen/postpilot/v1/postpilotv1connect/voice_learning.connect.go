@@ -33,9 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// VoiceLearningServiceFinalizeAndLearnProcedure is the fully-qualified name of the
-	// VoiceLearningService's FinalizeAndLearn RPC.
-	VoiceLearningServiceFinalizeAndLearnProcedure = "/postpilot.v1.VoiceLearningService/FinalizeAndLearn"
+	// VoiceLearningServiceLearnFromFinalizedPostProcedure is the fully-qualified name of the
+	// VoiceLearningService's LearnFromFinalizedPost RPC.
+	VoiceLearningServiceLearnFromFinalizedPostProcedure = "/postpilot.v1.VoiceLearningService/LearnFromFinalizedPost"
 	// VoiceLearningServiceRetryVoiceLearningProcedure is the fully-qualified name of the
 	// VoiceLearningService's RetryVoiceLearning RPC.
 	VoiceLearningServiceRetryVoiceLearningProcedure = "/postpilot.v1.VoiceLearningService/RetryVoiceLearning"
@@ -58,7 +58,7 @@ const (
 
 // VoiceLearningServiceClient is a client for the postpilot.v1.VoiceLearningService service.
 type VoiceLearningServiceClient interface {
-	FinalizeAndLearn(context.Context, *connect.Request[v1.FinalizeAndLearnRequest]) (*connect.Response[v1.FinalizeAndLearnResponse], error)
+	LearnFromFinalizedPost(context.Context, *connect.Request[v1.LearnFromFinalizedPostRequest]) (*connect.Response[v1.LearnFromFinalizedPostResponse], error)
 	RetryVoiceLearning(context.Context, *connect.Request[v1.RetryVoiceLearningRequest]) (*connect.Response[v1.RetryVoiceLearningResponse], error)
 	GetVoiceLearningEvent(context.Context, *connect.Request[v1.GetVoiceLearningEventRequest]) (*connect.Response[v1.GetVoiceLearningEventResponse], error)
 	GiveSentenceFeedback(context.Context, *connect.Request[v1.GiveSentenceFeedbackRequest]) (*connect.Response[v1.GiveSentenceFeedbackResponse], error)
@@ -78,10 +78,10 @@ func NewVoiceLearningServiceClient(httpClient connect.HTTPClient, baseURL string
 	baseURL = strings.TrimRight(baseURL, "/")
 	voiceLearningServiceMethods := v1.File_postpilot_v1_voice_learning_proto.Services().ByName("VoiceLearningService").Methods()
 	return &voiceLearningServiceClient{
-		finalizeAndLearn: connect.NewClient[v1.FinalizeAndLearnRequest, v1.FinalizeAndLearnResponse](
+		learnFromFinalizedPost: connect.NewClient[v1.LearnFromFinalizedPostRequest, v1.LearnFromFinalizedPostResponse](
 			httpClient,
-			baseURL+VoiceLearningServiceFinalizeAndLearnProcedure,
-			connect.WithSchema(voiceLearningServiceMethods.ByName("FinalizeAndLearn")),
+			baseURL+VoiceLearningServiceLearnFromFinalizedPostProcedure,
+			connect.WithSchema(voiceLearningServiceMethods.ByName("LearnFromFinalizedPost")),
 			connect.WithClientOptions(opts...),
 		),
 		retryVoiceLearning: connect.NewClient[v1.RetryVoiceLearningRequest, v1.RetryVoiceLearningResponse](
@@ -125,7 +125,7 @@ func NewVoiceLearningServiceClient(httpClient connect.HTTPClient, baseURL string
 
 // voiceLearningServiceClient implements VoiceLearningServiceClient.
 type voiceLearningServiceClient struct {
-	finalizeAndLearn        *connect.Client[v1.FinalizeAndLearnRequest, v1.FinalizeAndLearnResponse]
+	learnFromFinalizedPost  *connect.Client[v1.LearnFromFinalizedPostRequest, v1.LearnFromFinalizedPostResponse]
 	retryVoiceLearning      *connect.Client[v1.RetryVoiceLearningRequest, v1.RetryVoiceLearningResponse]
 	getVoiceLearningEvent   *connect.Client[v1.GetVoiceLearningEventRequest, v1.GetVoiceLearningEventResponse]
 	giveSentenceFeedback    *connect.Client[v1.GiveSentenceFeedbackRequest, v1.GiveSentenceFeedbackResponse]
@@ -134,9 +134,9 @@ type voiceLearningServiceClient struct {
 	resolveRuleConfirmation *connect.Client[v1.ResolveRuleConfirmationRequest, v1.ResolveRuleConfirmationResponse]
 }
 
-// FinalizeAndLearn calls postpilot.v1.VoiceLearningService.FinalizeAndLearn.
-func (c *voiceLearningServiceClient) FinalizeAndLearn(ctx context.Context, req *connect.Request[v1.FinalizeAndLearnRequest]) (*connect.Response[v1.FinalizeAndLearnResponse], error) {
-	return c.finalizeAndLearn.CallUnary(ctx, req)
+// LearnFromFinalizedPost calls postpilot.v1.VoiceLearningService.LearnFromFinalizedPost.
+func (c *voiceLearningServiceClient) LearnFromFinalizedPost(ctx context.Context, req *connect.Request[v1.LearnFromFinalizedPostRequest]) (*connect.Response[v1.LearnFromFinalizedPostResponse], error) {
+	return c.learnFromFinalizedPost.CallUnary(ctx, req)
 }
 
 // RetryVoiceLearning calls postpilot.v1.VoiceLearningService.RetryVoiceLearning.
@@ -172,7 +172,7 @@ func (c *voiceLearningServiceClient) ResolveRuleConfirmation(ctx context.Context
 // VoiceLearningServiceHandler is an implementation of the postpilot.v1.VoiceLearningService
 // service.
 type VoiceLearningServiceHandler interface {
-	FinalizeAndLearn(context.Context, *connect.Request[v1.FinalizeAndLearnRequest]) (*connect.Response[v1.FinalizeAndLearnResponse], error)
+	LearnFromFinalizedPost(context.Context, *connect.Request[v1.LearnFromFinalizedPostRequest]) (*connect.Response[v1.LearnFromFinalizedPostResponse], error)
 	RetryVoiceLearning(context.Context, *connect.Request[v1.RetryVoiceLearningRequest]) (*connect.Response[v1.RetryVoiceLearningResponse], error)
 	GetVoiceLearningEvent(context.Context, *connect.Request[v1.GetVoiceLearningEventRequest]) (*connect.Response[v1.GetVoiceLearningEventResponse], error)
 	GiveSentenceFeedback(context.Context, *connect.Request[v1.GiveSentenceFeedbackRequest]) (*connect.Response[v1.GiveSentenceFeedbackResponse], error)
@@ -188,10 +188,10 @@ type VoiceLearningServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewVoiceLearningServiceHandler(svc VoiceLearningServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	voiceLearningServiceMethods := v1.File_postpilot_v1_voice_learning_proto.Services().ByName("VoiceLearningService").Methods()
-	voiceLearningServiceFinalizeAndLearnHandler := connect.NewUnaryHandler(
-		VoiceLearningServiceFinalizeAndLearnProcedure,
-		svc.FinalizeAndLearn,
-		connect.WithSchema(voiceLearningServiceMethods.ByName("FinalizeAndLearn")),
+	voiceLearningServiceLearnFromFinalizedPostHandler := connect.NewUnaryHandler(
+		VoiceLearningServiceLearnFromFinalizedPostProcedure,
+		svc.LearnFromFinalizedPost,
+		connect.WithSchema(voiceLearningServiceMethods.ByName("LearnFromFinalizedPost")),
 		connect.WithHandlerOptions(opts...),
 	)
 	voiceLearningServiceRetryVoiceLearningHandler := connect.NewUnaryHandler(
@@ -232,8 +232,8 @@ func NewVoiceLearningServiceHandler(svc VoiceLearningServiceHandler, opts ...con
 	)
 	return "/postpilot.v1.VoiceLearningService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case VoiceLearningServiceFinalizeAndLearnProcedure:
-			voiceLearningServiceFinalizeAndLearnHandler.ServeHTTP(w, r)
+		case VoiceLearningServiceLearnFromFinalizedPostProcedure:
+			voiceLearningServiceLearnFromFinalizedPostHandler.ServeHTTP(w, r)
 		case VoiceLearningServiceRetryVoiceLearningProcedure:
 			voiceLearningServiceRetryVoiceLearningHandler.ServeHTTP(w, r)
 		case VoiceLearningServiceGetVoiceLearningEventProcedure:
@@ -255,8 +255,8 @@ func NewVoiceLearningServiceHandler(svc VoiceLearningServiceHandler, opts ...con
 // UnimplementedVoiceLearningServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedVoiceLearningServiceHandler struct{}
 
-func (UnimplementedVoiceLearningServiceHandler) FinalizeAndLearn(context.Context, *connect.Request[v1.FinalizeAndLearnRequest]) (*connect.Response[v1.FinalizeAndLearnResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceLearningService.FinalizeAndLearn is not implemented"))
+func (UnimplementedVoiceLearningServiceHandler) LearnFromFinalizedPost(context.Context, *connect.Request[v1.LearnFromFinalizedPostRequest]) (*connect.Response[v1.LearnFromFinalizedPostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceLearningService.LearnFromFinalizedPost is not implemented"))
 }
 
 func (UnimplementedVoiceLearningServiceHandler) RetryVoiceLearning(context.Context, *connect.Request[v1.RetryVoiceLearningRequest]) (*connect.Response[v1.RetryVoiceLearningResponse], error) {
