@@ -31,7 +31,14 @@ export function LoginPage() {
   }
 
   return (
-    <main className="bg-surface-base text-content-primary flex min-h-full items-center justify-center px-4 py-10 sm:px-6">
+    // Anchored to the TOP, never centred. The software keyboard covers the bottom ~40% of the
+    // screen and does not resize the layout viewport, so centring parked 로그인 and the failure
+    // message behind it on 360, 390 and 430 alike, with no scroll overflow to lift them out of it
+    // (design-language §8.3). `pt-12` rather than a larger inset because the block is 344px once
+    // the failure message is in it: on the shortest phone (360x640, keyboard line ~384) that is
+    // what keeps the message itself fully in view. `min-h-full` stays — it is what paints the
+    // page's plane down the whole screen.
+    <main className="bg-surface-base text-content-primary flex min-h-full items-start justify-center px-4 pt-12 pb-10 sm:px-6">
       <form onSubmit={onSubmit} className="w-full max-w-xs">
         <h1 className="text-2xl font-semibold tracking-tight">Postpilot</h1>
         <p className="text-content-secondary mt-1 text-sm">계속하려면 로그인하세요</p>
@@ -45,6 +52,13 @@ export function LoginPage() {
           value={loginId}
           onChange={(event) => setLoginId(event.target.value)}
           autoComplete="username"
+          // iOS defaults an <input type="text"> to `autocapitalize="sentences"`, so `hrlee`
+          // is submitted as `Hrlee` and the server answers with the one generic failure it is
+          // required to give — a silent loop the user cannot explain (design-language §7).
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="next"
           autoFocus
           required
           aria-invalid={login.isError || undefined}
@@ -62,21 +76,28 @@ export function LoginPage() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="current-password"
+          // The return key is a real submit path here, so it says 이동 rather than 줄바꿈.
+          enterKeyHint="go"
           required
           aria-invalid={login.isError || undefined}
           aria-describedby={login.isError ? 'login-error' : undefined}
           className="mt-1.5"
         />
 
-        <Button type="submit" variant="cta" disabled={login.isPending} className="mt-6 w-full">
-          {login.isPending ? '확인 중…' : '로그인'}
-        </Button>
-
+        {/* Under the fields it describes and ABOVE the button, not after it (design-language §7,
+            §4.3). Below the button it was both the lowest thing on the keyboard-covered screen and
+            a ~32px insertion that shifted the whole form the instant the thumb lifted off 로그인. */}
         {login.isError && (
           <FieldMessage id="login-error" className="mt-3">
             {LOGIN_FAILED}
           </FieldMessage>
         )}
+
+        {/* `pending`, not a label swap: 로그인 → 확인 중… resizes the target under the thumb that
+            just pressed it (§6). */}
+        <Button type="submit" variant="cta" pending={login.isPending} className="mt-6 w-full">
+          로그인
+        </Button>
       </form>
     </main>
   )

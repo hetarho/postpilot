@@ -10,9 +10,13 @@ export function usePosts(): {
   posts: PostListItem[]
   isPending: boolean
   isError: boolean
+  /** True while a fetch is in flight, including a retry of a query that already failed.
+   *  react-query keeps `status: 'error'` across such a refetch, so `isPending` never flips back —
+   *  this is the only signal a retry control has to show that it did something. */
+  isFetching: boolean
   refetch: () => void
 } {
-  const { data, isPending, isError, refetch } = useQuery(
+  const { data, isPending, isFetching, isError, refetch } = useQuery(
     PostService.method.listPosts,
     {},
     {
@@ -22,5 +26,5 @@ export function usePosts(): {
   )
   const posts = useMemo(() => data?.posts.map(toPostListItem) ?? [], [data])
 
-  return { posts, isPending, isError, refetch: () => void refetch() }
+  return { posts, isPending, isFetching, isError, refetch: () => void refetch() }
 }

@@ -7,7 +7,7 @@ export const FieldMessage = forwardRef<HTMLParagraphElement, HTMLAttributes<HTML
       <p
         ref={ref}
         role={role}
-        className={twMerge('text-field-error text-sm', className)}
+        className={twMerge('text-field-error text-sm break-words', className)}
         {...props}
       />
     )

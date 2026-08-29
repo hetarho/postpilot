@@ -1,81 +1,108 @@
 import { Link } from '@tanstack/react-router'
-import { displayTitle, postStatusLabel, usePosts } from '@/entities/post'
-import { useExperiments } from '@/entities/model-experiment'
+import { displayTitle, postStatusLabel, usePosts, type PostListItem } from '@/entities/post'
+import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
 import { formatRelativeTime } from '@/shared/lib'
-import { Badge, Button, buttonStyles } from '@/shared/ui'
+import { ActionBar, Badge, Button, Notice, buttonStyles, type BadgeTone } from '@/shared/ui'
+
+/** The one status chip a row carries. Colour never travels alone (design-language §2.6): the tone
+ *  only reinforces the label, so the label is chosen first and the tone follows it. */
+function rowStatus(
+  post: PostListItem,
+  pending: ModelExperiment | undefined,
+): { label: string; tone: BadgeTone } {
+  if (post.activeJob) return { label: 'AI 생성 중', tone: 'info' }
+  if (pending?.status === 'failed' || pending?.status === 'partial')
+    return { label: 'AI 결과 오류', tone: 'danger' }
+  if (post.pendingExperimentId) return { label: 'AI 결과 확인', tone: 'warning' }
+  return { label: postStatusLabel(post.status), tone: 'neutral' }
+}
 
 /** The way back to unfinished work (PRD F-8). The server returns only the acting user's
  *  posts, newest first — this screen does not sort or filter. */
 export function PostsPage() {
-  const { posts, isPending, isError, refetch } = usePosts()
+  const { posts, isPending, isFetching, isError, refetch } = usePosts()
   const { experiments } = useExperiments()
   const byId = new Map(experiments.map((experiment) => [experiment.id, experiment]))
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6">
-      <div className="flex items-center justify-between">
+    // The page gutter lives on each block rather than on `main`, so the list rows can run edge to
+    // edge: a pressed row that stops 16px short of the screen edge reads as a card, and a row inset
+    // deeper than the page's own rhythm reads as a mistake (design-language §4.2).
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col py-6">
+      {/* The CTA sits in TWO places because the two breakpoints want different shapes, and only
+          one is ever rendered (the other is `display:none`, so it is absent from the a11y tree
+          too). From `sm:` up the pointer is a mouse, §4.3's reach argument evaporates, and a bar
+          docked to the bottom of a half-empty page reads as debris — so the action goes back
+          beside the heading where a desktop user looks for it. */}
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-6">
         <h1 className="text-lg font-semibold tracking-tight">내 글</h1>
-        <Link to="/posts/new" className={buttonStyles({ variant: 'cta' })}>
+        <Link
+          to="/posts/new"
+          className={buttonStyles({ variant: 'cta', className: 'hidden sm:inline-flex' })}
+        >
           새 글
         </Link>
       </div>
 
       {isError && (
-        <div
-          role="alert"
-          className="bg-notice-danger-bg text-notice-danger-fg mt-8 flex flex-wrap items-center gap-2 rounded-md px-3 py-2 text-sm"
-        >
+        <Notice tone="danger" role="alert" className="mx-4 mt-8 sm:mx-6">
           <span>목록을 불러오지 못했어요.</span>
-          <Button variant="ghost" onClick={refetch} className="text-notice-danger-fg underline">
+          {/* `isFetching`, not `isPending`: react-query keeps `status: 'error'` across a refetch of
+              an errored query, so without it the notice does not move a pixel for the several
+              seconds a retry takes on cellular and the user taps it again and again (§6). */}
+          <Button
+            variant="ghost"
+            onClick={refetch}
+            pending={isFetching}
+            className="text-notice-danger-fg underline"
+          >
             다시 시도
           </Button>
-        </div>
+        </Notice>
       )}
 
-      {!isError && isPending && <p className="text-content-tertiary mt-8 text-sm">불러오는 중…</p>}
-
-      {!isError && !isPending && posts.length === 0 && (
-        <p className="text-content-tertiary mt-8 text-sm">
-          아직 글이 없어요. "새 글"로 시작해 보세요.
+      {/* One live region for both states, so finishing the load is a text change inside it rather
+          than two nodes swapping — a swap announces nothing to VoiceOver or TalkBack (§9). */}
+      {!isError && (isPending || posts.length === 0) && (
+        <p role="status" className="text-content-tertiary mt-8 px-4 text-sm sm:px-6">
+          {isPending ? '불러오는 중…' : '아직 글이 없어요. "새 글"로 시작해 보세요.'}
         </p>
       )}
 
-      <ul className="divide-divider mt-4 divide-y">
+      <ul className="divide-divider mt-4 shrink-0 divide-y">
         {posts.map((post) => {
-          const pending = post.pendingExperimentId ? byId.get(post.pendingExperimentId) : undefined
+          const status = rowStatus(
+            post,
+            post.pendingExperimentId ? byId.get(post.pendingExperimentId) : undefined,
+          )
+          // Two lines, not three items competing on one. At 360px a single row left the title
+          // ~146px — about ten Hangul — and because the badge label swings from 초안 to AI 결과 확인
+          // the cut point moved row to row, so the list read as a ragged column of half-titles.
           const content = (
             <>
-              <span className="min-w-0 flex-1 truncate text-sm">{displayTitle(post)}</span>
-              <Badge>
-                {post.activeJob
-                  ? 'AI 생성 중'
-                  : pending?.status === 'failed' || pending?.status === 'partial'
-                    ? 'AI 결과 오류'
-                    : post.pendingExperimentId
-                      ? 'AI 결과 확인'
-                      : postStatusLabel(post.status)}
-              </Badge>
-              <time dateTime={post.updatedAt} className="text-content-tertiary shrink-0 text-xs">
-                {formatRelativeTime(post.updatedAt)}
-              </time>
+              <span className="w-full truncate text-sm">{displayTitle(post)}</span>
+              <span className="flex items-center gap-2">
+                <Badge tone={status.tone}>{status.label}</Badge>
+                <time dateTime={post.updatedAt} className="text-content-tertiary shrink-0 text-xs">
+                  {formatRelativeTime(post.updatedAt)}
+                </time>
+              </span>
             </>
           )
+          const rowClass =
+            'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6'
           return (
             <li key={post.slug}>
               {post.pendingExperimentId && !post.activeJob ? (
                 <Link
                   to="/ai-models/experiments/$id"
                   params={{ id: post.pendingExperimentId }}
-                  className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center gap-3 px-2 py-3"
+                  className={rowClass}
                 >
                   {content}
                 </Link>
               ) : (
-                <Link
-                  to="/posts/$slug"
-                  params={{ slug: post.slug }}
-                  className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center gap-3 px-2 py-3"
-                >
+                <Link to="/posts/$slug" params={{ slug: post.slug }} className={rowClass}>
                   {content}
                 </Link>
               )}
@@ -83,6 +110,17 @@ export function PostsPage() {
           )
         })}
       </ul>
+
+      {/* The phone shape: the product's entry action docked in the thumb's band. In the top-right
+          corner it was ~820px above the bottom edge of a 430x932 phone — a re-grip away from the
+          one action this screen exists for (§4.3), and above the empty state that points at it.
+          `mt-auto` is what puts it at the bottom of a SHORT list; `sticky` then keeps it there
+          once the list is long enough to scroll. */}
+      <ActionBar ariaLabel="글 작성" className="mx-4 mt-auto sm:hidden">
+        <Link to="/posts/new" className={buttonStyles({ variant: 'cta', className: 'w-full' })}>
+          새 글
+        </Link>
+      </ActionBar>
     </main>
   )
 }

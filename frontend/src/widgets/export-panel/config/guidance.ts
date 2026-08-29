@@ -1,10 +1,11 @@
 export type ExportFormat = 'naver' | 'tistory' | 'site' | 'markdown'
 
-export const EXPORT_FORMATS: readonly { key: ExportFormat; label: string }[] = [
-  { key: 'naver', label: '네이버 블로그' },
-  { key: 'tistory', label: '티스토리' },
-  { key: 'site', label: '자체 사이트' },
-  { key: 'markdown', label: '마크다운' },
+/** Shaped as `{ value, label }` so it is passed straight to `SegmentedControl` as its options. */
+export const EXPORT_FORMATS: readonly { value: ExportFormat; label: string }[] = [
+  { value: 'naver', label: '네이버 블로그' },
+  { value: 'tistory', label: '티스토리' },
+  { value: 'site', label: '자체 사이트' },
+  { value: 'markdown', label: '마크다운' },
 ]
 
 export const EXPORT_GUIDANCE: Record<ExportFormat, string> = {

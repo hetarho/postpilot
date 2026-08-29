@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { type VoiceSample, useDeleteVoiceSample } from '@/entities/voice-profile'
 import { formatRelativeTime } from '@/shared/lib'
-import { Button, FieldMessage } from '@/shared/ui'
+import { Button, Dialog, FieldMessage } from '@/shared/ui'
 
 export function SampleList({
   ownerId,
@@ -12,14 +13,21 @@ export function SampleList({
   onAnalysisStarted: (jobId: string) => void
 }) {
   const removeSample = useDeleteVoiceSample(ownerId)
+  // The sample the confirmation sheet is open for. `window.confirm` is not an option for a
+  // delete the user repeats while pruning a profile: mobile Chrome and Safari offer to suppress
+  // further dialogs on the page, after which every confirm returns false and 삭제 becomes a
+  // silent no-op (§7).
+  const [confirming, setConfirming] = useState<VoiceSample | null>(null)
 
   const remove = async (sample: VoiceSample) => {
-    if (!window.confirm(`"${sample.label}"을(를) 삭제할까요?`)) return
     try {
       const response = await removeSample.remove(sample.id)
       if (response.jobId) onAnalysisStarted(response.jobId)
     } catch {
       // The mutation error is rendered below.
+    } finally {
+      // Closed on failure too, so the message under the list is not left behind the scrim.
+      setConfirming(null)
     }
   }
 
@@ -40,7 +48,7 @@ export function SampleList({
               </span>
               <Button
                 variant="danger"
-                onClick={() => void remove(sample)}
+                onClick={() => setConfirming(sample)}
                 disabled={removeSample.isPending}
                 aria-label={`${sample.label} 삭제`}
               >
@@ -53,6 +61,21 @@ export function SampleList({
       {removeSample.isError && (
         <FieldMessage className="mt-2">{removeSample.errorMessage}</FieldMessage>
       )}
+      <Dialog
+        open={confirming !== null}
+        title="샘플을 삭제할까요?"
+        confirmLabel="삭제"
+        pending={removeSample.isPending}
+        onClose={() => setConfirming(null)}
+        onConfirm={() => {
+          if (confirming) void remove(confirming)
+        }}
+      >
+        {/* The label is stored text the user pasted, so it breaks inside the sheet rather than
+            widening it (§3.2). */}
+        <span className="break-words">"{confirming?.label}"</span>을(를) 지우면 남은 샘플로 문체를
+        다시 분석해요.
+      </Dialog>
     </section>
   )
 }

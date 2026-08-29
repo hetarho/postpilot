@@ -93,7 +93,13 @@ describe('PostsPage', () => {
     const user = userEvent.setup()
     const { router } = renderList()
 
-    await user.click(await screen.findByRole('link', { name: '새 글' }))
+    // The CTA has two breakpoint slots — the heading row from `sm:` up, and a bar docked in the
+    // thumb's band on a phone — and CSS shows exactly one. jsdom applies no CSS, so both are in
+    // the tree here; assert on both and drive the phone one, which is the shape that matters.
+    const [wide, phone] = await screen.findAllByRole('link', { name: '새 글' })
+    expect(wide).toHaveAttribute('href', '/posts/new')
+
+    await user.click(phone)
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/new'))
   })

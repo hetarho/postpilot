@@ -1,5 +1,5 @@
 import { BlockType, type PostContent } from '@/shared/api'
-import { Thumbnail, type PostImage } from '@/entities/image/@x/post'
+import type { PostImage } from '@/entities/image/@x/post'
 import { blockKey, imageByFile } from '../model/content'
 
 interface BlockListProps {
@@ -15,9 +15,14 @@ export function BlockList({ content, images }: BlockListProps) {
     <article aria-label="생성된 글" className="mt-12 pb-12">
       <header>
         <p className="text-content-tertiary text-xs font-medium tracking-wide uppercase">Draft</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{content.title}</h1>
+        {/* `break-words` on every model-supplied string in this article: the global rule keeps the
+            page from scrolling sideways, the local class keeps the box from being the one that
+            overflows (design-language §3.2). A model routinely writes a bare URL or a model id. */}
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight break-words">{content.title}</h1>
         {content.summary && (
-          <p className="text-content-secondary mt-3 text-sm leading-relaxed">{content.summary}</p>
+          <p className="text-content-secondary mt-3 text-sm leading-relaxed break-words">
+            {content.summary}
+          </p>
         )}
         {content.tags.length > 0 && (
           <ul aria-label="태그" className="mt-3 flex flex-wrap gap-2">
@@ -39,7 +44,7 @@ export function BlockList({ content, images }: BlockListProps) {
           switch (block.type) {
             case BlockType.TEXT:
               return (
-                <p key={key} className="text-sm leading-relaxed whitespace-pre-wrap">
+                <p key={key} className="text-sm leading-relaxed break-words whitespace-pre-wrap">
                   {block.content}
                 </p>
               )
@@ -58,9 +63,30 @@ export function BlockList({ content, images }: BlockListProps) {
               if (!image) return null
               return (
                 <div key={key} className="py-2">
-                  <Thumbnail src={image.viewUrl} alt={block.alt || block.file} />
+                  {/* Not the photo strip's `Thumbnail`: that tile is a fixed 128px square with
+                      `object-cover`, so in the finished draft the photo the post exists for
+                      rendered at a third of the column with the top and bottom of a portrait shot
+                      cropped away (design-language §0). Here it fills the column at its own
+                      aspect ratio, which `width`/`height` reserve before the pixels land (§8.6). */}
+                  {image.viewUrl ? (
+                    <img
+                      src={image.viewUrl}
+                      alt={block.alt || block.file}
+                      width={image.width}
+                      height={image.height}
+                      loading="lazy"
+                      decoding="async"
+                      className="bg-surface-recessed h-auto w-full rounded-lg"
+                    />
+                  ) : (
+                    // The view URL is minted per GetPost; until one arrives the box is still held
+                    // open so the text below it does not jump when the photo paints.
+                    <div className="bg-surface-recessed aspect-square w-full rounded-lg" />
+                  )}
                   {block.caption && (
-                    <p className="text-content-tertiary mt-2 text-xs">{block.caption}</p>
+                    <p className="text-content-tertiary mt-2 text-xs break-words">
+                      {block.caption}
+                    </p>
                   )}
                 </div>
               )
@@ -69,14 +95,17 @@ export function BlockList({ content, images }: BlockListProps) {
               return (
                 <blockquote
                   key={key}
-                  className="bg-surface-recessed text-content-secondary rounded-md px-4 py-3 text-sm leading-relaxed"
+                  className="bg-surface-recessed text-content-secondary rounded-md px-4 py-3 text-sm leading-relaxed break-words"
                 >
                   {block.content}
                 </blockquote>
               )
             case BlockType.LIST:
               return (
-                <ul key={key} className="list-disc space-y-1 pl-5 text-sm leading-relaxed">
+                <ul
+                  key={key}
+                  className="list-disc space-y-1 pl-5 text-sm leading-relaxed break-words"
+                >
                   {block.items.map((item, itemIndex) => (
                     <li key={`${item}:${itemIndex}`}>{item}</li>
                   ))}

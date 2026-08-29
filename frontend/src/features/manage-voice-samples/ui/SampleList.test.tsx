@@ -8,7 +8,6 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('SampleList', () => {
   it('deletes after confirmation and hands the re-analysis job to its page', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const calls: string[] = []
     const samples = [
       { id: 'sample-1', label: '제주', chars: 240, createdAt: '2026-08-29T12:00:00Z' },
@@ -24,6 +23,9 @@ describe('SampleList', () => {
     })
 
     await userEvent.click(screen.getByRole('button', { name: '제주 삭제' }))
+    // The confirmation is the Dialog sheet, not window.confirm — its confirm button is the only
+    // control named exactly 삭제 (the rows are '<라벨> 삭제').
+    await userEvent.click(await screen.findByRole('button', { name: '삭제' }))
 
     await waitFor(() => expect(calls).toContain('DeleteVoiceSample'))
     expect(onAnalysisStarted).toHaveBeenCalledWith('reanalyze-1')

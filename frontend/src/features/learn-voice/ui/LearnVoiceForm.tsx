@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { useStageSelection } from '@/entities/model-catalog'
 import { type VoiceProfile, useAddVoiceSample } from '@/entities/voice-profile'
 import { VOICE_SAMPLE_MIN_CHARS } from '@/shared/config'
-import { Button, FieldLabel, FieldMessage, Textarea, TextField } from '@/shared/ui'
+import { Button, Dialog, FieldLabel, FieldMessage, Notice, Textarea, TextField } from '@/shared/ui'
 
 interface LearnVoiceFormProps {
   ownerId: string
@@ -14,23 +14,18 @@ export function LearnVoiceForm({ ownerId, profile, onStarted }: LearnVoiceFormPr
   const labelId = useId()
   const bodyId = useId()
   const bodyErrorId = `${bodyId}-error`
+  const bodyHintId = `${bodyId}-hint`
   const [label, setLabel] = useState('')
   const [body, setBody] = useState('')
+  const [confirmOverwrite, setConfirmOverwrite] = useState(false)
   const { selected, isPending: modelPending } = useStageSelection('analyze')
   const addSample = useAddVoiceSample(ownerId)
   const chars = Array.from(body.trim()).length
   const tooShort = chars < VOICE_SAMPLE_MIN_CHARS
   const disabled = tooShort || !selected || modelPending || addSample.isPending
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (disabled || !selected) return
-    if (
-      profile.styleguide.trim() !== '' &&
-      !window.confirm('재분석하면 현재 문체 규칙을 덮어씁니다')
-    ) {
-      return
-    }
+  const learn = async () => {
+    if (!selected) return
     const submittedLabel = label
     const submittedBody = body
     try {
@@ -40,11 +35,29 @@ export function LearnVoiceForm({ ownerId, profile, onStarted }: LearnVoiceFormPr
       onStarted(response.jobId)
     } catch {
       // The mutation exposes the server's raw message below.
+    } finally {
+      // Closed on failure too: the server's message renders under the field, and an open sheet
+      // would hide it behind the scrim.
+      setConfirmOverwrite(false)
     }
   }
 
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (disabled || !selected) return
+    // Re-analysis rewrites a styleguide the user may have edited by hand, so it is confirmed —
+    // through the sheet, never `window.confirm`: a mobile browser offers to suppress that dialog
+    // after a repeat, and from then on it returns false and 학습 is a silent no-op (§7). The sheet
+    // also renders inside the page, so the keyboard does not slam shut and reflow the viewport.
+    if (profile.styleguide.trim() !== '') {
+      setConfirmOverwrite(true)
+      return
+    }
+    void learn()
+  }
+
   return (
-    <form onSubmit={(event) => void submit(event)} className="mt-5 space-y-4">
+    <form onSubmit={submit} className="mt-5 space-y-4">
       <div>
         <FieldLabel htmlFor={labelId}>라벨 (선택)</FieldLabel>
         <TextField
@@ -52,44 +65,78 @@ export function LearnVoiceForm({ ownerId, profile, onStarted }: LearnVoiceFormPr
           value={label}
           onChange={(event) => setLabel(event.target.value)}
           placeholder="예: 제주 여행기"
+          // A short free-text name, so nothing to autofill and nothing to auto-capitalise. The
+          // return key says 다음 rather than the 이동 that implicit submission renders — that key
+          // does nothing until the body below is long enough, with no way to say so (§7).
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          enterKeyHint="next"
           className="mt-1"
         />
       </div>
       <div>
-        <span className="flex items-center justify-between gap-3">
-          <FieldLabel htmlFor={bodyId}>내가 쓴 글</FieldLabel>
-          <span className="text-content-tertiary text-xs" aria-live="polite">
-            {chars} / {VOICE_SAMPLE_MIN_CHARS}자
-          </span>
-        </span>
+        <FieldLabel htmlFor={bodyId}>내가 쓴 글</FieldLabel>
         <Textarea
           id={bodyId}
           value={body}
           onChange={(event) => setBody(event.target.value)}
           placeholder="기존에 쓴 글 한 편을 붙여 넣어 주세요"
-          rows={10}
+          // A pasted article is always longer than any fixed box; growing keeps the page the one
+          // scroller and leaves the CTA directly under the end of the text (§4.4).
+          rows={6}
+          autoGrow
           aria-invalid={addSample.isError || undefined}
-          aria-describedby={addSample.isError ? bodyErrorId : undefined}
+          aria-describedby={addSample.isError ? `${bodyHintId} ${bodyErrorId}` : bodyHintId}
           className="mt-1 leading-relaxed"
         />
+        {/* Under the field, not above it. This is the only explanation for the disabled 학습
+            button, and above the textarea it scrolls off the top as soon as the user is typing
+            past the first few lines — a validation message behind the keyboard has not been
+            shown (§4.3). */}
+        <div id={bodyHintId} className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="text-content-tertiary shrink-0 text-xs">
+            {chars} / {VOICE_SAMPLE_MIN_CHARS}자
+          </span>
+          {tooShort && (
+            <span className="text-content-secondary min-w-0 text-sm">
+              {VOICE_SAMPLE_MIN_CHARS - chars}자 더 쓰면 학습할 수 있어요
+            </span>
+          )}
+        </div>
       </div>
 
       {!modelPending && !selected && (
-        <p
-          role="status"
-          className="bg-notice-warning-bg text-notice-warning-fg rounded-md px-3 py-2 text-sm"
-        >
+        <Notice tone="warning" role="status">
           모델을 선택하세요
-        </p>
+        </Notice>
       )}
       {addSample.isError && <FieldMessage id={bodyErrorId}>{addSample.errorMessage}</FieldMessage>}
 
-      <Button type="submit" variant="cta" disabled={disabled}>
-        {addSample.isPending ? '학습을 시작하는 중…' : '학습'}
+      <Button
+        type="submit"
+        variant="cta"
+        disabled={disabled}
+        pending={addSample.isPending}
+        aria-describedby={tooShort ? bodyHintId : undefined}
+        className="w-full sm:w-auto"
+      >
+        학습
       </Button>
       <span role="status" className="sr-only">
         {addSample.isPending ? '학습을 시작하는 중' : ''}
       </span>
+
+      <Dialog
+        open={confirmOverwrite}
+        title="문체 규칙을 다시 쓸까요?"
+        confirmLabel="다시 분석"
+        pending={addSample.isPending}
+        onClose={() => setConfirmOverwrite(false)}
+        onConfirm={() => void learn()}
+      >
+        재분석하면 현재 문체 규칙을 덮어씁니다. 직접 작성한 추가 규칙은 그대로 유지됩니다.
+      </Dialog>
     </form>
   )
 }

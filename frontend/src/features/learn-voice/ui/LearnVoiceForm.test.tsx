@@ -67,7 +67,6 @@ describe('LearnVoiceForm', () => {
   })
 
   it('asks before replacing an existing styleguide', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const { calls } = renderForm({ profile: { ...EMPTY_PROFILE, styleguide: '# 종결어미' } })
     fireEvent.change(screen.getByLabelText('내가 쓴 글'), {
       target: { value: '가'.repeat(200) },
@@ -75,7 +74,12 @@ describe('LearnVoiceForm', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: '학습' })).toBeEnabled())
     await userEvent.click(screen.getByRole('button', { name: '학습' }))
 
-    expect(confirm).toHaveBeenCalledWith('재분석하면 현재 문체 규칙을 덮어씁니다')
+    // The overwrite warning is the Dialog sheet, not window.confirm, which a mobile browser lets
+    // the user suppress for the rest of the session.
+    expect(await screen.findByRole('dialog')).toHaveTextContent(
+      '재분석하면 현재 문체 규칙을 덮어씁니다',
+    )
+    await userEvent.click(screen.getByRole('button', { name: '취소' }))
     expect(calls).not.toContain('AddVoiceSample')
   })
 

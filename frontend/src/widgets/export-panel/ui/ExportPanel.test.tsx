@@ -61,7 +61,10 @@ it('copies the exact rendered output and shows transient success', async () => {
   await user.click(screen.getByRole('button', { name: '복사' }))
 
   await waitFor(() => expect(writeText).toHaveBeenCalledWith(output))
-  expect(screen.getByRole('button', { name: '복사됨' })).toBeInTheDocument()
+  // The confirmation is the docked status line, not a label swap on the button: the button keeps
+  // its size and its name under the thumb that pressed it.
+  expect(await screen.findByText('복사됨')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '복사' })).toBeInTheDocument()
 })
 
 it('selects the preview and explains manual copy when the Clipboard API is unavailable', async () => {
@@ -107,5 +110,5 @@ it('ignores a stale clipboard rejection after the format changes', async () => {
   expect(
     screen.queryByText('자동 복사가 막혀 있어요 — 선택된 텍스트를 길게 눌러 복사하세요'),
   ).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: '복사됨' })).not.toBeInTheDocument()
+  expect(screen.queryByText('복사됨')).not.toBeInTheDocument()
 })

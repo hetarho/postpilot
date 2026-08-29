@@ -8,13 +8,21 @@ import { LearnVoiceForm } from '@/features/learn-voice'
 import { SampleList } from '@/features/manage-voice-samples'
 import { StageModelSelect } from '@/features/select-model'
 
+/** Which control started the analysis that is running. Both the 학습 form and a sample deletion
+ *  start one, and the two sit ~800px apart on a phone — the progress line has to render beside
+ *  the control that was pressed, or it has not been shown at all (§4.3). */
+type AnalysisOrigin = 'learn' | 'samples'
+
 export function VoicePage() {
   const transport = useTransport()
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { profile, isPending, isError, refetch } = useVoiceProfile(ownerId)
-  const [startedJobId, setStartedJobId] = useState('')
-  const jobId = startedJobId || profile?.activeJobId || ''
+  const [started, setStarted] = useState<{ jobId: string; origin: AnalysisOrigin } | null>(null)
+  const jobId = started?.jobId || profile?.activeJobId || ''
+  // An analysis resumed from the profile was not started by a press in this session; it belongs
+  // to the learn section, which is where this page has always reported it.
+  const origin: AnalysisOrigin = started?.origin ?? 'learn'
   const invalidateOnDone = useMemo(
     () => [voiceProfileQueryKey(transport, ownerId)],
     [ownerId, transport],
@@ -36,6 +44,18 @@ export function VoicePage() {
     )
   }
 
+  const analysisStatus = jobId ? (
+    <section className="mt-6" aria-label="문체 분석 상태">
+      {jobState.isError ? (
+        <FailureNotice error="문체 분석 상태를 확인하지 못했어요." onRetry={jobState.refetch} />
+      ) : jobState.job?.status === 'failed' ? (
+        <FailureNotice error={jobState.job.error} />
+      ) : jobState.job && !isTerminal(jobState.job) ? (
+        <ProgressLine job={jobState.job} />
+      ) : null}
+    </section>
+  ) : null
+
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
       <header>
@@ -49,27 +69,25 @@ export function VoicePage() {
       <section className="mt-10">
         <h2 className="text-lg font-semibold tracking-tight">샘플 학습</h2>
         <StageModelSelect stage="analyze" className="mt-4" />
-        <LearnVoiceForm ownerId={ownerId} profile={profile} onStarted={setStartedJobId} />
+        <LearnVoiceForm
+          ownerId={ownerId}
+          profile={profile}
+          onStarted={(startedJobId) => setStarted({ jobId: startedJobId, origin: 'learn' })}
+        />
+        {origin === 'learn' && analysisStatus}
       </section>
-
-      {jobId && (
-        <section className="mt-6" aria-label="문체 분석 상태">
-          {jobState.isError ? (
-            <FailureNotice error="문체 분석 상태를 확인하지 못했어요." onRetry={jobState.refetch} />
-          ) : jobState.job?.status === 'failed' ? (
-            <FailureNotice error={jobState.job.error} />
-          ) : jobState.job && !isTerminal(jobState.job) ? (
-            <ProgressLine job={jobState.job} />
-          ) : null}
-        </section>
-      )}
 
       <div className="mt-12">
         <SampleList
           ownerId={ownerId}
           samples={profile.samples}
-          onAnalysisStarted={setStartedJobId}
+          onAnalysisStarted={(startedJobId) =>
+            setStarted({ jobId: startedJobId, origin: 'samples' })
+          }
         />
+        {/* A deletion re-runs the whole analysis. Reported here, next to the row the user just
+            pressed 삭제 on, instead of two screens up beside the 학습 form. */}
+        {origin === 'samples' && analysisStatus}
       </div>
       <div className="mt-12">
         <StyleguideEditor ownerId={ownerId} styleguide={profile.styleguide} />

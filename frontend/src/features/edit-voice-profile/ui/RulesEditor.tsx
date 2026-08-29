@@ -22,19 +22,8 @@ export function RulesEditor({ ownerId, rules }: { ownerId: string; rules: string
 
   return (
     <section>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">추가 규칙</h2>
-          <p className="text-content-tertiary mt-1 text-xs">항상 지켜야 할 사용자 규칙입니다.</p>
-        </div>
-        <Button
-          variant="secondary"
-          onClick={() => void save()}
-          disabled={!dirty || update.isSaving}
-        >
-          {update.isSaving ? '저장 중…' : '저장'}
-        </Button>
-      </div>
+      <h2 className="text-lg font-semibold tracking-tight">추가 규칙</h2>
+      <p className="text-content-tertiary mt-1 text-xs">항상 지켜야 할 사용자 규칙입니다.</p>
       <FieldLabel htmlFor={id} className="mt-4">
         추가 규칙
       </FieldLabel>
@@ -45,7 +34,10 @@ export function RulesEditor({ ownerId, rules }: { ownerId: string; rules: string
           const next = event.target.value
           setDraft(next === rules ? null : next)
         }}
-        rows={8}
+        // Grows with the value rather than scrolling inside itself: the page is the one scroller
+        // (§4.4). `rows` is now just the minimum height of an empty editor.
+        rows={4}
+        autoGrow
         aria-invalid={update.isError || undefined}
         aria-describedby={update.isError ? errorId : undefined}
         className="mt-1 leading-relaxed"
@@ -55,6 +47,20 @@ export function RulesEditor({ ownerId, rules }: { ownerId: string; rules: string
           {update.errorMessage}
         </FieldMessage>
       )}
+      {/* 저장 goes AFTER the field it commits (§4.3): from the section header it was ~240px above
+          the bottom of the rules field, which is off-screen while the keyboard is up. This is the
+          last section on a ~1900px page, so scrolling back up to reach it costs the most here. */}
+      <div className="mt-4 flex justify-end">
+        <Button
+          variant="secondary"
+          onClick={() => void save()}
+          disabled={!dirty}
+          pending={update.isSaving}
+          className="w-full sm:w-auto"
+        >
+          저장
+        </Button>
+      </div>
       <span role="status" className="sr-only">
         {update.isSaving ? '추가 규칙을 저장하는 중' : ''}
       </span>

@@ -105,7 +105,11 @@ describe('StageModelSelect', () => {
 
     const gone = await screen.findByRole('option', { name: /openrouter\/gone/ })
     expect(gone).toBeDisabled()
-    expect(gone).toHaveTextContent('등록된 모델 목록에서 사라졌어요')
+    // The option text is the choice, not the explanation: this entry is the closed control's own
+    // value, so the reason is rendered under the field where it cannot be ellipsised away.
+    expect(screen.getByRole('combobox', { name: '작성 모델' })).toHaveAccessibleDescription(
+      '등록된 모델 목록에서 사라졌어요',
+    )
     // The select points at the greyed entry, not at any usable model.
     expect(screen.getByRole('combobox', { name: '작성 모델' })).toHaveValue('__unavailable__')
   })
@@ -135,7 +139,9 @@ describe('StageModelSelect', () => {
 
     const option = await screen.findByRole('option', { name: /openrouter\/writer/ })
     expect(option).toBeDisabled()
-    expect(option).toHaveTextContent('이 단계에서는 쓸 수 없는 모델이에요')
+    expect(screen.getByRole('combobox', { name: '관찰 모델' })).toHaveAccessibleDescription(
+      '이 단계에서는 쓸 수 없는 모델이에요',
+    )
     expect(screen.getByRole('combobox', { name: '관찰 모델' })).toHaveValue('__unavailable__')
   })
 })

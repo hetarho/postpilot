@@ -2,10 +2,11 @@ import { useCallback, useState } from 'react'
 import { useTransport } from '@connectrpc/connect-query'
 import { type QueryKey, useQueryClient } from '@tanstack/react-query'
 import type { ModelExperiment } from '@/entities/model-experiment'
-import { useExperimentActions } from '@/entities/model-experiment'
+import { needsExperimentReview, useExperimentActions } from '@/entities/model-experiment'
 import { getPostQueryKey, listPostsQueryKey } from '@/entities/post'
 import { getSelectionsQueryKey } from '@/entities/model-catalog'
-import { Button, Dialog, FieldMessage } from '@/shared/ui'
+import { Button, Dialog, Notice } from '@/shared/ui'
+import { hasExperimentActions } from '../model/experiment-actions'
 
 export function ExperimentActions({
   experiment,
@@ -23,37 +24,72 @@ export function ExperimentActions({
   }, [experiment.postSlug, queryClient, transport])
   const actions = useExperimentActions(experiment.id, refreshOwner)
   const [confirmStyle, setConfirmStyle] = useState(false)
+  // `useExperimentActions` reports one `isPending` for all six mutations, so the button the thumb
+  // actually pressed has to be remembered here — otherwise the whole bar spins at once. Without a
+  // pending state at all, a tap on a cellular connection only dropped the button to 50% opacity,
+  // which is not feedback on a device with no hover, and the user fired the mutation twice (§6).
+  const [pressed, setPressed] = useState('')
+  const run = (name: string, action: () => Promise<unknown>) => {
+    setPressed(name)
+    void action().finally(() => setPressed(''))
+  }
   const selected = experiment.candidates.find((candidate) => candidate.id === activeCandidateId)
   const survivor = experiment.status === 'partial' && selected?.status === 'succeeded'
   const canChoose = experiment.status === 'review' && selected?.status === 'succeeded'
+  if (!hasExperimentActions(experiment)) return null
   return (
-    <div className="bg-surface-highest sticky bottom-0 mt-6 rounded-xl p-4 shadow-lg">
-      <div className="flex flex-wrap justify-end gap-2">
+    <div className="grid gap-3">
+      {/* Stacked full-width targets on a phone: three Korean labels measure ~410px against the
+          296px the bar has at 360px, so a wrapping row became two right-aligned rows of ambiguous
+          targets 8px apart, 128px tall over the reading area (§4.1). From `sm:` up they collapse
+          back into the desktop row. The CTA is the last child in every status (§4). */}
+      <div className="grid gap-3 sm:flex sm:flex-wrap sm:justify-end">
         {(experiment.status === 'partial' || experiment.status === 'failed') && (
           <Button
             variant="secondary"
             disabled={actions.isPending}
-            onClick={() => void actions.retry()}
+            pending={pressed === 'retry'}
+            onClick={() => run('retry', actions.retry)}
           >
             실패 후보 재시도
           </Button>
         )}
-        {(experiment.status === 'review' ||
-          experiment.status === 'partial' ||
-          experiment.status === 'failed') && (
+        {needsExperimentReview(experiment.status) && (
           <Button
             variant="ghost"
             disabled={actions.isPending}
-            onClick={() => void actions.dismiss()}
+            pending={pressed === 'dismiss'}
+            onClick={() => run('dismiss', actions.dismiss)}
           >
             둘 다 사용하지 않기
+          </Button>
+        )}
+        {experiment.applyError && (
+          <Button
+            variant="secondary"
+            disabled={actions.isPending}
+            pending={pressed === 'apply'}
+            onClick={() => run('apply', () => actions.apply(experiment.stage === 'analyze'))}
+          >
+            적용 다시 시도
+          </Button>
+        )}
+        {experiment.status === 'decided' && (
+          <Button
+            variant="secondary"
+            disabled={actions.isPending}
+            pending={pressed === 'adopt'}
+            onClick={() => run('adopt', actions.adopt)}
+          >
+            활성 모델로 사용
           </Button>
         )}
         {survivor && (
           <Button
             variant="cta"
             disabled={actions.isPending}
-            onClick={() => void actions.useSingle(activeCandidateId)}
+            pending={pressed === 'useSingle'}
+            onClick={() => run('useSingle', () => actions.useSingle(activeCandidateId))}
           >
             이 결과만 사용
           </Button>
@@ -62,7 +98,8 @@ export function ExperimentActions({
           <Button
             variant="cta"
             disabled={actions.isPending}
-            onClick={() => void actions.choose(activeCandidateId)}
+            pending={pressed === 'choose'}
+            onClick={() => run('choose', () => actions.choose(activeCandidateId))}
           >
             이 결과로 선택
           </Button>
@@ -71,33 +108,34 @@ export function ExperimentActions({
           <Button
             variant="cta"
             disabled={actions.isPending}
+            pending={pressed === 'apply'}
             onClick={() =>
-              experiment.stage === 'analyze' ? setConfirmStyle(true) : void actions.apply()
+              experiment.stage === 'analyze'
+                ? setConfirmStyle(true)
+                : run('apply', () => actions.apply())
             }
           >
             결과 적용
           </Button>
         )}
-        {experiment.status === 'decided' && (
-          <Button
-            variant="secondary"
-            disabled={actions.isPending}
-            onClick={() => void actions.adopt()}
-          >
-            활성 모델로 사용
-          </Button>
-        )}
-        {experiment.applyError && (
-          <Button
-            variant="secondary"
-            disabled={actions.isPending}
-            onClick={() => void actions.apply(experiment.stage === 'analyze')}
-          >
-            적용 다시 시도
-          </Button>
-        )}
       </div>
-      {actions.error && <FieldMessage className="mt-2">요청을 처리하지 못했어요.</FieldMessage>}
+      {/* The outcome renders inside the dock, right under the button that was pressed — a result
+          reported 1,000px up the page has not been shown (§4.3). */}
+      {actions.error && (
+        <Notice tone="danger" role="alert">
+          요청을 처리하지 못했어요.
+        </Notice>
+      )}
+      {experiment.applyError && (
+        <Notice tone="danger" role="alert">
+          적용하지 못했어요. {experiment.applyError}
+        </Notice>
+      )}
+      {experiment.appliedAt && !experiment.applyError && (
+        <Notice tone="success" role="status">
+          선택한 결과를 적용했어요.
+        </Notice>
+      )}
       <Dialog
         open={confirmStyle}
         title="문체 분석 결과를 적용할까요?"

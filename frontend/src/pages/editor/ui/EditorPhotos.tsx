@@ -7,6 +7,7 @@ import {
   useDeletePhoto,
   useUploadPhotos,
 } from '@/features/upload-photos'
+import { Notice } from '@/shared/ui'
 
 interface EditorPhotosProps {
   post: PostDraft | undefined
@@ -37,13 +38,12 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
           creatingPost={upload.creatingPost}
         />
       </div>
+      {/* The §2.6 notice contract, through the primitive: this was an inlined copy of it at 12px,
+          and explanatory copy the user has to act on is never metadata-sized (§3). */}
       {upload.createFailed && (
-        <p
-          role="alert"
-          className="bg-notice-danger-bg text-notice-danger-fg rounded-md px-3 py-2 text-xs"
-        >
+        <Notice tone="danger" role="alert">
           사진을 붙일 글을 만들지 못했어요. 다시 시도해 주세요.
-        </p>
+        </Notice>
       )}
       <PhotoStrip
         images={images}

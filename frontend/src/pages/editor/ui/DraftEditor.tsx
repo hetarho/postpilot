@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
@@ -11,13 +11,16 @@ import {
   postStatusLabel,
   type PostDraft,
 } from '@/entities/post'
+import { useSession } from '@/entities/session'
+import { isEmptyProfile, useVoiceProfile } from '@/entities/voice-profile'
 import { GenerateButton, type GenerateButtonHandle } from '@/features/generate-post'
 import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
-import { SaveStatus, peekPendingDraft, useAutosave } from '@/features/save-draft'
+import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
 import { StageModelSelect } from '@/features/select-model'
-import { Badge, FieldLabel, Textarea, TextField } from '@/shared/ui'
+import { ActionBar, Badge, Button, FieldLabel, Notice, Textarea } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { ExportPanel } from '@/widgets/export-panel'
+import { VoiceWarning } from '@/widgets/voice-warning'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
 import { EditorPhotos } from './EditorPhotos'
 
@@ -31,7 +34,11 @@ interface DraftEditorProps {
  *  (PRD F-2); photos, generation, revision and export all extend it in later plans. */
 export function DraftEditor({ post }: DraftEditorProps) {
   const navigate = useNavigate()
-  const titleRef = useRef<HTMLInputElement>(null)
+  // Both fields are textareas: a Korean title fits ~14 characters across a 360px screen at
+  // `text-2xl`, and a single-line input would scroll the rest of it out of a field that has no
+  // well to show it scrolled (design-language §0 — the title is one of the largest things on the
+  // screen, so it wraps instead).
+  const titleRef = useRef<HTMLTextAreaElement>(null)
   const memoRef = useRef<HTMLTextAreaElement>(null)
 
   // Text still queued for this post outranks what the server reported: it is what the
@@ -82,64 +89,135 @@ export function DraftEditor({ post }: DraftEditorProps) {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
+        {/* Underlined: `link-fg` resolves to `content-secondary`, so at rest this was pixel-identical
+            to ordinary copy and the only thing marking it as the way out was a `hover:` colour no
+            touchscreen ever matches (§6). */}
         <Link
           to="/posts"
-          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
+          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center text-sm underline"
         >
           ← 글 목록
         </Link>
-        <span className="flex items-center gap-2">
-          {post && <Badge>{postStatusLabel(post.status)}</Badge>}
-          <SaveStatus state={autosave.state} />
-        </span>
+        {post && <Badge>{postStatusLabel(post.status)}</Badge>}
       </div>
 
       <FieldLabel htmlFor="post-title" className="sr-only">
         제목
       </FieldLabel>
-      <TextField
+      <Textarea
         id="post-title"
         ref={titleRef}
         appearance="bare"
+        rows={1}
+        autoGrow
         value={title}
-        onChange={(event) => setTitle(event.target.value)}
+        // A pasted newline would otherwise be saved inside the title; the single-line input this
+        // replaced dropped one for free.
+        onChange={(event) => setTitle(event.target.value.replace(/\n/g, ' '))}
+        onKeyDown={(event) => {
+          // The title is one line even though the field wraps, so Enter moves to the memo instead
+          // of typing a newline into it — but never mid-composition, where Enter is how a Hangul
+          // IME commits the syllable being written.
+          if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+          event.preventDefault()
+          memoRef.current?.focus()
+        }}
         placeholder="제목"
-        className="mt-4 min-h-11 text-2xl font-semibold tracking-tight"
+        enterKeyHint="next"
+        autoCapitalize="off"
+        autoComplete="off"
+        className="mt-4 text-2xl font-semibold tracking-tight"
       />
 
       <FieldLabel htmlFor="post-memo" className="sr-only">
         메모
       </FieldLabel>
+      {/* `text-base`, not the `body` role: the bare appearance takes its size from the caller, and
+          iOS Safari zooms the whole layout — permanently, it never zooms back out — the moment a
+          focused control computes under 16px (§3.1). This is the field the product exists for, so
+          the zoom used to fire on every single use of the app.
+          `autoGrow` with a small `rows`: at 16 rows the memo was a 364px box scrolling inside
+          itself, which swallowed every vertical swipe that landed on it and left the 16px gutters
+          as the only place to scroll the page (§4.4). */}
       <Textarea
         id="post-memo"
         ref={memoRef}
         appearance="bare"
+        rows={6}
+        autoGrow
         value={memo}
         onChange={(event) => setMemo(event.target.value)}
         placeholder="무슨 일이 있었는지 편하게 적어 주세요"
-        rows={16}
-        className="mt-5 text-sm leading-relaxed"
+        enterKeyHint="enter"
+        className="mt-5 text-base leading-relaxed"
       />
 
       <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
 
-      {post && <GenerationSection post={post} beforeStart={autosave.flush} />}
+      <EditorVoiceWarning />
+
+      {post ? (
+        <GenerationSection post={post} beforeStart={autosave.flush} saveState={autosave.state} />
+      ) : (
+        // A draft with no post yet has no committing action — but it is also the state where a
+        // failing save is most expensive, since nothing has reached the server at all.
+        <EditorDock saveState={autosave.state} />
+      )}
     </main>
+  )
+}
+
+/** Below the memo, not above it: three wrapped lines of undismissable warning at the top of the
+ *  editor pushed the writing field a fifth of a 640px screen down, for every user who has not
+ *  trained a profile yet — and chrome is small, quiet and at the edges (§0). It still sits above
+ *  글 생성, which is what it is a caveat about. */
+function EditorVoiceWarning() {
+  const { user } = useSession()
+  const { profile } = useVoiceProfile(user?.id ?? '')
+  if (!profile || !isEmptyProfile(profile)) return null
+  return (
+    <div className="mt-6">
+      <VoiceWarning profile={profile} />
+    </div>
+  )
+}
+
+/** The editor's docked bar. Both of the things a phone could not reach live here: the one
+ *  committing action, which sat in normal flow roughly 1,000px down a 4,000px page, and the save
+ *  state, which was only ever visible in the top 3% of that scroll — on a screen that has no save
+ *  button, so a failing autosave was silent everywhere else (§4.3).
+ *
+ *  It is mounted as the LAST child of `main` on purpose: a `sticky bottom-*` box is only pinned
+ *  while its containing block still extends below it, so anywhere earlier in the flow it would
+ *  scroll away with the section it sat in. */
+function EditorDock({ saveState, children }: { saveState: SaveState; children?: ReactNode }) {
+  return (
+    <ActionBar ariaLabel="저장 상태와 글 작업">
+      {/* A fixed gap even while the save line is empty, so the bar does not change height — and
+          move the button out from under the thumb — as the state changes (§6). */}
+      <div className="flex flex-col gap-2">
+        <SaveStatus state={saveState} />
+        {children}
+      </div>
+    </ActionBar>
   )
 }
 
 function GenerationSection({
   post,
   beforeStart,
+  saveState,
 }: {
   post: PostDraft
   beforeStart: () => Promise<void>
+  saveState: SaveState
 }) {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const generateRef = useRef<GenerateButtonHandle>(null)
   const reviseRef = useRef<ReviseFormHandle>(null)
+  const resultRef = useRef<HTMLDivElement>(null)
   const refreshedSnapshot = useRef('')
   const [startedJobId, setStartedJobId] = useState('')
   const jobId = startedJobId || post.activeJob?.id || ''
@@ -148,6 +226,7 @@ function GenerationSection({
   const invalidateOnDone = useMemo(() => [postKey, postsKey], [postKey, postsKey])
   const jobState = useJob(jobId, invalidateOnDone)
   const job = jobState.job ?? (post.activeJob?.id === jobId ? post.activeJob : undefined)
+  const result = hasContent(post) ? post.content : undefined
 
   // Observations are persisted batch-by-batch on the post, not on the job. Refresh that
   // read model whenever observe progress changes so the contact sheet fills while the
@@ -159,6 +238,34 @@ function GenerationSection({
     refreshedSnapshot.current = snapshot
     void queryClient.invalidateQueries({ queryKey: postKey })
   }, [job, postKey, queryClient])
+
+  // The finished draft mounts about a screen and a half below the button that asked for it, so
+  // "done" used to be signalled only by the progress line quietly disappearing — a phone user
+  // reasonably reads that as a failure. The dock says it finished and the page goes there (§4.3).
+  const announcedJob = useRef('')
+  const scrollWanted = useRef(false)
+  useEffect(() => {
+    if (!job || job.status !== 'done' || announcedJob.current === job.id) return
+    announcedJob.current = job.id
+    scrollWanted.current = true
+  }, [job])
+
+  // No dependency list: the draft arrives on a later render than the one that turned the job
+  // terminal (`useJob` invalidates the post, which then refetches), so this waits for whichever
+  // render brings it and disarms itself once it has delivered.
+  useEffect(() => {
+    if (!scrollWanted.current || !resultRef.current) return
+    scrollWanted.current = false
+    showResult()
+  })
+
+  function showResult() {
+    const node = resultRef.current
+    // jsdom has no layout engine and therefore no scrollIntoView; the editor's tests walk this
+    // exact path.
+    if (!node || typeof node.scrollIntoView !== 'function') return
+    node.scrollIntoView({ block: 'start' })
+  }
 
   return (
     <>
@@ -185,21 +292,42 @@ function GenerationSection({
             </Link>
           </div>
         </div>
-        <div className="mt-5">
-          <GenerateButton
-            ref={generateRef}
-            post={post}
+      </section>
+
+      {post.pendingExperimentId && (!job || isTerminal(job)) && (
+        <Link
+          to="/ai-models/experiments/$id"
+          params={{ id: post.pendingExperimentId }}
+          className="bg-notice-info-bg text-notice-info-fg mt-6 flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium"
+        >
+          AI 결과 확인 →
+        </Link>
+      )}
+
+      {post.images.length > 0 && (
+        <ContactSheet images={post.images} observations={post.observations} activeJob={job} />
+      )}
+      {result && (
+        // `scroll-mt-4` so the jump lands the draft's heading clear of the top edge rather than
+        // flush against it.
+        <div ref={resultRef} className="scroll-mt-4">
+          <BlockList content={result} images={post.images} />
+          <ReviseForm
+            ref={reviseRef}
+            postSlug={post.slug}
             activeJob={job}
             jobPending={Boolean(jobId) && !job}
             onStarted={setStartedJobId}
-            beforeStart={beforeStart}
           />
+          <ExportPanel content={result} images={post.images} createdAt={post.createdAt} />
         </div>
-      </section>
+      )}
 
-      {jobId && (
-        <section className="mt-6" aria-label="글 생성 상태">
-          {jobState.isError ? (
+      <EditorDock saveState={saveState}>
+        {/* The job's state rides in the dock with the button that started it: the CTA is docked
+            now, so this is where the user is looking when they press 생성 (§4.3). */}
+        {jobId &&
+          (jobState.isError ? (
             <FailureNotice error="작업 상태를 확인하지 못했어요." onRetry={jobState.refetch} />
           ) : job?.status === 'failed' ? (
             <FailureNotice
@@ -215,36 +343,29 @@ function GenerationSection({
             />
           ) : job && !isTerminal(job) ? (
             <ProgressLine job={job} />
-          ) : null}
-        </section>
-      )}
-
-      {post.pendingExperimentId && (!job || isTerminal(job)) && (
-        <Link
-          to="/ai-models/experiments/$id"
-          params={{ id: post.pendingExperimentId }}
-          className="bg-notice-info-bg text-notice-info-fg mt-6 flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium"
-        >
-          AI 결과 확인 →
-        </Link>
-      )}
-
-      {post.images.length > 0 && (
-        <ContactSheet images={post.images} observations={post.observations} activeJob={job} />
-      )}
-      {hasContent(post) && post.content && (
-        <>
-          <BlockList content={post.content} images={post.images} />
-          <ReviseForm
-            ref={reviseRef}
-            postSlug={post.slug}
-            activeJob={job}
-            jobPending={Boolean(jobId) && !job}
-            onStarted={setStartedJobId}
-          />
-          <ExportPanel content={post.content} images={post.images} createdAt={post.createdAt} />
-        </>
-      )}
+          ) : job?.status === 'done' ? (
+            <Notice tone="success" role="status">
+              <span className="min-w-0">글 생성을 마쳤어요.</span>
+              {result && (
+                <Button
+                  variant="ghost"
+                  onClick={showResult}
+                  className="text-notice-success-fg shrink-0 underline"
+                >
+                  결과 보기
+                </Button>
+              )}
+            </Notice>
+          ) : null)}
+        <GenerateButton
+          ref={generateRef}
+          post={post}
+          activeJob={job}
+          jobPending={Boolean(jobId) && !job}
+          onStarted={setStartedJobId}
+          beforeStart={beforeStart}
+        />
+      </EditorDock>
     </>
   )
 }

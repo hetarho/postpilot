@@ -24,7 +24,11 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
         모델이 각 사진에서 본 것 — 글이 이상하면 여기부터 확인하세요
       </p>
 
-      <div className="mt-4 flex snap-x gap-4 overflow-x-auto pb-3">
+      {/* The phone shape is a plain vertical list — a 240px card inside 328px of content left a
+          27% dead gutter and squeezed the observation prose to 216px. The horizontal snap strip
+          is the wide-screen shape only, and `sm:items-start` stops one verbose photo from making
+          every card as tall as the tallest. */}
+      <div className="mt-4 flex flex-col gap-4 sm:snap-x sm:flex-row sm:items-start sm:overflow-x-auto sm:overscroll-x-contain sm:pb-3">
         {images.map((image) => {
           const observation = observationsByFile.get(image.filename)
           // A just-confirmed upload may temporarily keep its browser blob preview in
@@ -34,12 +38,16 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
           return (
             <article
               key={image.filename}
-              className="bg-surface-raised w-60 shrink-0 snap-start rounded-lg p-3"
+              className="bg-surface-raised w-full rounded-lg p-3 sm:w-60 sm:shrink-0 sm:snap-start"
             >
               {viewUrl ? (
                 <img
                   src={viewUrl}
                   alt={`${image.filename} 관찰 사진`}
+                  width={image.width}
+                  height={image.height}
+                  loading="lazy"
+                  decoding="async"
                   className="aspect-square w-full rounded-md object-cover"
                 />
               ) : (
@@ -49,17 +57,16 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
               )}
               <h3 className="mt-3 truncate text-sm font-medium">{image.filename}</h3>
               {observation ? (
-                <dl className="mt-3 space-y-2 text-xs">
+                <dl className="mt-3 space-y-2">
                   <ObservationField label="장면" value={observation.scene} />
                   <ObservationField label="분위기" value={observation.mood} />
                   <ObservationField label="보이는 글자" value={observation.visibleText} />
                   <ObservationField label="사물" value={observation.objects.join(', ')} />
                 </dl>
               ) : (
-                <p
-                  className="text-content-tertiary mt-3 text-xs"
-                  role={observing ? 'status' : undefined}
-                >
+                // No per-card live region: ten waiting photos meant ten regions all announcing
+                // '관찰 대기' over the one message that carries the count (the ProgressLine).
+                <p className="text-content-tertiary mt-3 text-xs">
                   {observing ? '관찰 대기' : '관찰 결과 없음'}
                 </p>
               )}
@@ -74,8 +81,12 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
 function ObservationField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-content-tertiary">{label}</dt>
-      <dd className="text-content-secondary mt-0.5 leading-relaxed">{value || '없음'}</dd>
+      <dt className="text-content-tertiary text-xs">{label}</dt>
+      {/* The body role, not the meta one: the section's own copy tells the user to read this, and
+          the value is a model-supplied string, so it also breaks rather than overflowing (§3.2). */}
+      <dd className="text-content-secondary mt-0.5 text-sm leading-relaxed break-words">
+        {value || '없음'}
+      </dd>
     </div>
   )
 }

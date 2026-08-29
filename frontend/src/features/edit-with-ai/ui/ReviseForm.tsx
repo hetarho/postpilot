@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import { useSelectionSavePending, useStageSelection } from '@/entities/model-catalog'
 import { REVISION_INSTRUCTION_MAX_CHARS } from '@/shared/config'
-import { Button, Checkbox, FieldLabel, FieldMessage, TextField } from '@/shared/ui'
+import { Button, Checkbox, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
 import { useStartRevision } from '../api/useStartRevision'
 
 interface ReviseFormProps {
@@ -74,14 +74,27 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         }}
       >
         <FieldLabel htmlFor="revision-instruction">수정 요청</FieldLabel>
-        <TextField
+        {/* A textarea, not a single-line field: at 360px one line shows ~20 of the 500 permitted
+            Hangul, so an ordinary instruction scrolled its own beginning out of sight while it was
+            being typed. `autoGrow` keeps it out of the page's scroll (§4.4); Return now inserts a
+            line instead of submitting, which is why `enterKeyHint` is the plain one. */}
+        <Textarea
           id="revision-instruction"
           value={instruction}
+          rows={3}
+          autoGrow
           maxLength={REVISION_INSTRUCTION_MAX_CHARS}
+          autoComplete="off"
+          autoCapitalize="sentences"
+          enterKeyHint="enter"
           disabled={hasActiveJob || jobPending || startRevision.isPending}
           placeholder="어떻게 고칠까요? 예: 더 짧게 · 존댓말로 · 카페 얘기 늘려줘"
           onChange={(event) => setInstruction(event.target.value)}
         />
+        {/* The cap used to stop the keystrokes with nothing on screen explaining why. */}
+        <p className="text-content-tertiary text-xs">
+          {instruction.length}/{REVISION_INSTRUCTION_MAX_CHARS}
+        </p>
         <label className="text-content-secondary flex min-h-11 items-center gap-3 text-sm">
           <Checkbox
             checked={saveAsRule}
@@ -90,19 +103,23 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           />
           이 요청을 규칙으로 저장
         </label>
-        <div>
-          <Button type="submit" variant="secondary" disabled={disabled}>
-            {startRevision.isPending ? '수정을 시작하는 중…' : '수정'}
-          </Button>
-          {blocker && (
-            <p role="status" className="text-content-tertiary mt-2 text-xs">
-              {blocker}
-            </p>
-          )}
-          {startRevision.isError && (
-            <FieldMessage className="mt-2">{startRevision.errorMessage}</FieldMessage>
-          )}
-        </div>
+        {/* Validation and failure sit ABOVE the action, so the keyboard covering the bottom ~40%
+            of the screen hides at most the button and never the reason it is disabled (§8.3). */}
+        {blocker && (
+          <p role="status" className="text-content-secondary text-sm">
+            {blocker}
+          </p>
+        )}
+        {startRevision.isError && <FieldMessage>{startRevision.errorMessage}</FieldMessage>}
+        <Button
+          type="submit"
+          variant="secondary"
+          className="w-full sm:w-auto"
+          disabled={disabled}
+          pending={startRevision.isPending}
+        >
+          수정
+        </Button>
       </form>
     </section>
   )

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { expect, it, vi } from 'vitest'
+import { expect, it } from 'vitest'
 import type { ModelExperiment } from '@/entities/model-experiment'
 import { CandidateComparison } from './CandidateComparison'
 
@@ -38,18 +38,14 @@ const base: ModelExperiment = {
 }
 
 it('keeps stable side order and hides model/accounting before reveal', () => {
-  render(
-    <CandidateComparison
-      experiment={base}
-      activeCandidateId="left"
-      onActiveCandidateChange={vi.fn()}
-    />,
-  )
+  render(<CandidateComparison experiment={base} activeCandidateId="left" />)
   const candidates = screen.getAllByRole('article')
   expect(candidates[0]).toHaveAccessibleName('후보 A')
   expect(candidates[0]).toHaveTextContent('왼쪽 결과')
   expect(screen.queryByText(/secret-provider/)).not.toBeInTheDocument()
-  expect(candidates[0]).toHaveClass('overflow-y-auto')
+  // One scroller per screen (design-language §4.4): the panel must never open a nested one, which
+  // also reset the reader's position on every A/B switch.
+  expect(candidates[0]).not.toHaveClass('overflow-y-auto')
 })
 
 it('reveals label, tokens, latency, and estimated cost only after verdict', () => {
@@ -70,13 +66,9 @@ it('reveals label, tokens, latency, and estimated cost only after verdict', () =
       },
     })),
   }
-  render(
-    <CandidateComparison
-      experiment={revealed}
-      activeCandidateId="left"
-      onActiveCandidateChange={vi.fn()}
-    />,
-  )
+  render(<CandidateComparison experiment={revealed} activeCandidateId="left" />)
   expect(screen.getByText('모델 left')).toBeInTheDocument()
+  // Both candidates' accounting is on screen at once, outside the panels, so the reveal can be
+  // compared without switching (design-language §4.3).
   expect(screen.getAllByText(/≈ \$0\.000012/)).toHaveLength(2)
 })

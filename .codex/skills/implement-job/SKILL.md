@@ -121,7 +121,7 @@ Fix and re-run any red check before reporting.
      non-Codex review as codex.
    - Run `/code-review` while codex runs (~25 min); **don't end the turn waiting** — block in-turn
      (`TaskOutput(block=true, timeout=600000)` ~3×), then merge (dedupe + severity-rank).
-3. **Design pass (FE) — run the [design-language §9 checklist](../../../spec/tech/design-language.md) over the diff:**
+3. **Design pass (FE) — run the [design-language §10 checklist](../../../spec/tech/design-language.md) over the diff:**
    no hand-rolled controls, borders/cards only where the guide allows, one `solid primary` per view, both themes
    checked. Fix before moving on.
 4. **Comment pass — sweep the diff's new/changed comments against the Step 2 comment rule.** Cut change history,

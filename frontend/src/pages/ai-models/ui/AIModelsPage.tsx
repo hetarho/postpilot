@@ -1,12 +1,25 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useExperiments, useLeaderboard } from '@/entities/model-experiment'
+import {
+  type ExperimentStatusName,
+  useExperiments,
+  useLeaderboard,
+} from '@/entities/model-experiment'
 import { STAGE_LABELS, type StageName, useModelSetup } from '@/entities/model-catalog'
 import { displayTitle, usePosts } from '@/entities/post'
 import { ApplyRecommendation } from '@/features/apply-model-recommendation'
 import { ModelPairForm } from '@/features/configure-model-pair'
 import { useStartModelExperiment } from '@/features/start-model-experiment'
-import { Button, FieldLabel, FieldMessage, SegmentedControl, Select } from '@/shared/ui'
+import {
+  Badge,
+  type BadgeTone,
+  Button,
+  FieldLabel,
+  FieldMessage,
+  Notice,
+  SegmentedControl,
+  Select,
+} from '@/shared/ui'
 import { ModelLeaderboard } from '@/widgets/model-leaderboard'
 
 const STAGE_OPTIONS = [
@@ -18,6 +31,7 @@ const STAGE_OPTIONS = [
 export function AIModelsPage() {
   const [stage, setStage] = useState<StageName>('observe')
   const [postSlug, setPostSlug] = useState('')
+  const startHintId = useId()
   const setup = useModelSetup()
   const { posts } = usePosts()
   const { experiments } = useExperiments(stage)
@@ -25,8 +39,19 @@ export function AIModelsPage() {
   const start = useStartModelExperiment()
   const navigate = useNavigate()
   const pair = setup.pairs.find((item) => item.stage === stage)
-  const canStart = pair?.candidateA && pair.candidateB && (stage !== 'observe' || postSlug)
+  // What the CTA is still waiting for, in the user's words. `pair` comes from the server, so
+  // choosing A and B in the form above is not enough — the combination has to have been SAVED,
+  // and a greyed button two screens down cannot say that on its own (§4.3).
+  const unmet = [
+    !pair?.candidateA || !pair.candidateB ? 'A/B 조합을 저장' : '',
+    stage === 'observe' && !postSlug ? '사진이 있는 글을 선택' : '',
+  ].filter(Boolean)
+  const canStart = unmet.length === 0
+  const startHint = canStart ? '' : `${unmet.join('하고, ')}하면 비교를 시작할 수 있어요.`
   const startComparison = async () => {
+    // The CTA is `aria-disabled`, not `disabled`, so it keeps its place in the focus order and can
+    // still be activated from a keyboard — the preconditions are enforced here, not by the browser.
+    if (!canStart || start.isPending) return
     if (!pair?.candidateA || !pair.candidateB || stage === 'write') return
     const response =
       stage === 'observe'
@@ -58,15 +83,23 @@ export function AIModelsPage() {
         <h2 id="settings-heading" className="text-lg font-semibold tracking-tight">
           단계별 설정과 비교
         </h2>
-        <SegmentedControl
-          className="mt-4"
-          value={stage}
-          options={STAGE_OPTIONS}
-          onChange={setStage}
-          ariaLabel="AI 단계"
-        />
+        {/* The switch drives four sections, the last of them ~1,000px below it, so it follows the
+            scroll instead of existing only at the top of the section: otherwise comparing two
+            stages' leaderboards is a ~1,000px round trip each way (§4.3). It carries the page's own
+            plane out to the gutters so the content scrolling underneath is covered, and clears the
+            desktop header, which is sticky and 64px tall from `sm:` up. */}
+        <div className="bg-surface-base sticky top-0 z-10 -mx-4 mt-4 px-4 py-2 sm:top-16 sm:-mx-6 sm:px-6">
+          <SegmentedControl
+            value={stage}
+            options={STAGE_OPTIONS}
+            onChange={setStage}
+            ariaLabel="AI 단계"
+          />
+        </div>
         <div className="mt-6">
-          <ModelPairForm stage={stage} />
+          {/* Keyed by stage: the form's save mutations live inside the feature, and a '저장했어요'
+              or a save error belongs to the tab it was fired from, not to the next one. */}
+          <ModelPairForm key={stage} stage={stage} />
         </div>
         {stage === 'observe' && (
           <div className="mt-6">
@@ -87,18 +120,31 @@ export function AIModelsPage() {
           </div>
         )}
         {stage === 'write' ? (
-          <p className="bg-notice-info-bg text-notice-info-fg mt-6 rounded-md px-3 py-2 text-sm">
+          // `status`: this replaces the CTA at the far end of a two-screen scroll, so switching to
+          // 글 작성 must announce what took its place rather than just losing the button.
+          <Notice tone="info" role="status" className="mt-6">
             작성 비교는 글 편집기의 `AI 생성`을 누를 때 자동으로 같은 관찰 결과를 사용해 시작됩니다.
-          </p>
+          </Notice>
         ) : (
           <div className="mt-6">
             <Button
               variant="cta"
-              disabled={!canStart || start.isPending}
+              className="w-full sm:w-auto"
+              pending={start.isPending}
+              // `aria-disabled` rather than `disabled`: a disabled button is removed from the focus
+              // order, so the reason below it would never reach a screen reader. `buttonStyles`
+              // dims it and blocks the pointer either way.
+              aria-disabled={!canStart || undefined}
+              aria-describedby={startHint ? startHintId : undefined}
               onClick={() => void startComparison()}
             >
-              {start.isPending ? '비교 시작 중…' : '비교 시작'}
+              비교 시작
             </Button>
+            {startHint && (
+              <p id={startHintId} className="text-content-secondary mt-2 text-sm">
+                {startHint}
+              </p>
+            )}
             {start.error && <FieldMessage className="mt-2">비교를 시작하지 못했어요.</FieldMessage>}
           </div>
         )}
@@ -111,16 +157,26 @@ export function AIModelsPage() {
         {experiments.length === 0 ? (
           <p className="text-content-tertiary mt-4 text-sm">아직 비교가 없어요.</p>
         ) : (
-          <ul className="divide-divider mt-4 divide-y">
+          // Full-bleed rows: the negative gutter puts the row's text edge on the same line as the
+          // section headings and lets its pressed plane run to the screen edge (§4.2).
+          <ul className="divide-divider -mx-4 mt-4 divide-y sm:-mx-6">
             {experiments.slice(0, 8).map((item) => (
               <li key={item.id}>
                 <Link
                   to="/ai-models/experiments/$id"
                   params={{ id: item.id }}
-                  className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center justify-between px-2 py-3 text-sm"
+                  className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center justify-between gap-3 px-4 py-3 text-sm sm:px-6"
                 >
-                  <span>{item.postSlug || STAGE_LABELS[item.stage]}</span>
-                  <span className="text-content-tertiary">{statusLabel(item.status)}</span>
+                  {/* `min-w-0` is what makes `truncate` work: a slug is `YYYYMMDD-` plus up to 60
+                      runes of the title, so a spaceless Korean one is ~420px of max-content in a
+                      312px row and would otherwise crush the status chip to a column of single
+                      syllables (§8.5). */}
+                  <span className="min-w-0 truncate">
+                    {item.postSlug || STAGE_LABELS[item.stage]}
+                  </span>
+                  <Badge tone={STATUS_META[item.status].tone}>
+                    {STATUS_META[item.status].label}
+                  </Badge>
                 </Link>
               </li>
             ))}
@@ -139,18 +195,14 @@ export function AIModelsPage() {
   )
 }
 
-function statusLabel(status: string): string {
-  return (
-    (
-      {
-        queued: '대기',
-        running: '진행 중',
-        review: '결과 확인',
-        partial: '일부 오류',
-        failed: '오류',
-        decided: '선택 완료',
-        dismissed: '사용 안 함',
-      } as Record<string, string>
-    )[status] ?? status
-  )
+/** The row's status chip. The tone reinforces the label and never replaces it, so nothing is
+ *  carried by colour alone (§2.6). */
+const STATUS_META: Record<ExperimentStatusName, { label: string; tone: BadgeTone }> = {
+  queued: { label: '대기', tone: 'neutral' },
+  running: { label: '진행 중', tone: 'info' },
+  review: { label: '결과 확인', tone: 'info' },
+  partial: { label: '일부 오류', tone: 'warning' },
+  failed: { label: '오류', tone: 'danger' },
+  decided: { label: '선택 완료', tone: 'success' },
+  dismissed: { label: '사용 안 함', tone: 'neutral' },
 }

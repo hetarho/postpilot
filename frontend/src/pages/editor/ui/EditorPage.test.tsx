@@ -384,7 +384,10 @@ describe('opening a post', () => {
       },
     })
 
+    // Deleting a photo is confirmed through the sheet: the × sits exactly where a thumb lands
+    // when flicking the strip sideways, and the delete is not undoable.
     await user.click(await screen.findByRole('button', { name: 'IMG_1.jpg 삭제' }))
+    await user.click(await screen.findByRole('button', { name: '삭제' }))
 
     await waitFor(() =>
       expect(screen.queryByRole('img', { name: 'IMG_1.jpg' })).not.toBeInTheDocument(),
@@ -404,8 +407,11 @@ describe('opening a post', () => {
     })
 
     await user.click(await screen.findByRole('button', { name: 'IMG_1.jpg 삭제' }))
+    await user.click(await screen.findByRole('button', { name: '삭제' }))
 
+    // The sheet stays open on failure and says so in place, so the retry is one tap away.
     expect(await screen.findByRole('alert')).toHaveTextContent('삭제하지 못했어요')
+    await user.click(screen.getByRole('button', { name: '취소' }))
     expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toBeInTheDocument()
   })
 

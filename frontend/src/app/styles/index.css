@@ -247,6 +247,8 @@
   /* navigation and rows */
   --link-fg: var(--content-secondary);
   --link-fg-hover: var(--content-primary);
+  /* the destination the user is on. Weight + colour, never colour alone — design-language §9. */
+  --link-fg-current: var(--content-primary);
   --row-bg-hover: var(--surface-raised);
   --row-bg-active: var(--surface-recessed);
   --divider: var(--stroke-subtle);
@@ -292,6 +294,17 @@
   --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
 
   --container-measure: 40rem;
+
+  /* Safe area and shell metrics as SPACING tokens, so edge-anchored chrome can be padded with
+     ordinary utilities (`pb-safe-b`, `bottom-nav`) instead of the arbitrary values §1.2 forbids.
+     env() resolves at use time and is 0 until index.html sets viewport-fit=cover — design-language
+     §8.1. --spacing-nav is the phone tab bar's full height so content and docked bars can clear it. */
+  --spacing-safe-t: env(safe-area-inset-top, 0px);
+  --spacing-safe-b: env(safe-area-inset-bottom, 0px);
+  --spacing-nav: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  /* A bottom sheet's ceiling. `dvh`, not `vh`: only the dynamic unit tracks the mobile URL bar,
+     so a `vh`-sized sheet is clipped on every phone — design-language §8.1. */
+  --spacing-sheet: 85dvh;
 }
 
 @theme inline {
@@ -334,6 +347,7 @@
   /* navigation, rows, labels, feedback */
   --color-link-fg: var(--link-fg);
   --color-link-fg-hover: var(--link-fg-hover);
+  --color-link-fg-current: var(--link-fg-current);
   --color-row-bg-hover: var(--row-bg-hover);
   --color-row-bg-active: var(--row-bg-active);
   --color-divider: var(--divider);
@@ -369,11 +383,37 @@ body,
   height: 100%;
 }
 
+html {
+  /* The document is the app's one scroller (design-language §4.4). Without `contain`, Chrome for
+     Android fires pull-to-refresh on any downward swipe at scrollTop 0 — which reloads the SPA and
+     discards whatever autosave has not flushed. The editor opens at scrollTop 0. §8.2. */
+  overscroll-behavior-y: contain;
+}
+
 body {
   background-color: var(--color-surface-base);
   color: var(--color-content-primary);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+
+  /* Korean line breaking, set once for the whole app — design-language §3.2. `keep-all` stops a
+     break falling between two Hangul syllables ('비교합/니다'); `anywhere` is its inseparable
+     partner, so an unbreakable Latin run (a model id, a slug, a provider error URL) still breaks
+     rather than pushing the page into horizontal scroll. Never `break-all` — it excludes CJK. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* A tap is a tap: no 300ms wait for a double-tap-to-zoom that this layout never needs, and no
+   grey flash rectangle on top of the `active:` plane every control already carries. §8.4. */
+a,
+button,
+label,
+summary,
+[role='button'],
+[role='tab'] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* One focus indicator for every control, drawn outside the element so it never fights a border. */
