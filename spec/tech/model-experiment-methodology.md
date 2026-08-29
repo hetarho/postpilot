@@ -72,8 +72,10 @@ Because the provider port defines zero token counts as "not reported", an absent
 OpenRouter currently includes token and cost accounting in API responses without another request:
 [Usage Accounting](https://openrouter.ai/docs/cookbook/administration/usage-accounting). Its model catalog exposes
 context/pricing metadata:
-[Models API](https://openrouter.ai/docs/api/api-reference/models/get-models). The initial model facts in plan 09 were
-checked on 2026-08-29 against the official pages for
+[Models API](https://openrouter.ai/docs/api/api-reference/models/get-models). The model facts in plan 09 and in
+`providers.yaml` were re-checked on 2026-08-30 against that Models API — the authoritative source, and the one to
+re-read rather than the vendor pages, which is how the first pass came to record a halved Gemini price, DeepSeek's
+batch output price, and two wrong capability flags. Earlier pass, 2026-08-29, used the official pages for
 [Gemini 3.7 Flash](https://openrouter.ai/google/gemini-3.7-flash),
 [Qwen3.8 Flash](https://openrouter.ai/qwen/qwen3.8-flash),
 [DeepSeek V4 Flash 0731](https://openrouter.ai/deepseek/deepseek-v4-flash-0731),

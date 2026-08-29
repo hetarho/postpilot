@@ -29,8 +29,8 @@ func TestLoad_CurrentShippedCatalogAndRecommendation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(registry.Models()) != 7 {
-		t.Fatalf("models = %d, want free entry plus six pinned models", len(registry.Models()))
+	if len(registry.Models()) != 12 {
+		t.Fatalf("models = %d, want the free router entry plus the eleven pinned models", len(registry.Models()))
 	}
 	sets := registry.RecommendationSets()
 	if len(sets) != 1 || sets[0].ID != "balanced-2026-08" || len(sets[0].Selections) != 3 {
