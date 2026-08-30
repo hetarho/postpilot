@@ -1,7 +1,7 @@
 # Policy — Post generation
 
 Canonical rules that are **currently true** in the code. Source: [plan/06](../plan/06.two-stage-generation-and-contact-sheet.md),
-built by jobs 10, 11, and 23; voice scoping from
+implemented by jobs 10, 11, 23, and 24; voice scoping from
 [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18.
 
 ## Canonical content
@@ -10,7 +10,8 @@ built by jobs 10, 11, and 23; voice scoping from
   `QUOTE`, and `LIST`; those exact enum names are the model-facing protojson contract.
 - Every model-produced block passes one validation function immediately after parsing. Missing required fields,
   fields forbidden for that block type, empty list items, and unknown types drop that block and log its type and
-  offending field. An invalid heading level is clamped to `2`.
+  offending field. An invalid heading level is clamped to `2`. Because the structured-output schema requires
+  `level` on every block, a non-heading `level` is ignored and normalized to `0` without a warning.
 - After validation, every `IMAGE.file` is checked against the post's attached filenames with exact,
   case-sensitive matching. Invented or differently-cased filenames are dropped and logged.
 - Ordinary generation and a chosen write-experiment result replace `posts.content` wholesale, establish a machine

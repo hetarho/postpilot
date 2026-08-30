@@ -17,6 +17,10 @@ func ValidateBlocks(blocks []Block) []Block {
 		}
 		if block.Type == BlockHeading && block.Level != 2 && block.Level != 3 {
 			block.Level = 2
+		} else if block.Type != BlockHeading {
+			// The structured-output schema requires level on every block. It has no
+			// meaning outside headings, so a schema-obedient value is normalized away.
+			block.Level = 0
 		}
 		valid = append(valid, block)
 	}
@@ -31,21 +35,18 @@ func invalidField(block Block) string {
 		if !hasContent {
 			return "content"
 		}
-		return firstPopulated(block.Level != 0, block.File, block.Alt, block.Caption, hasItems)
+		return firstPopulated(block.File, block.Alt, block.Caption, hasItems)
 	case BlockHeading:
 		if !hasContent {
 			return "content"
 		}
-		return firstPopulated(false, block.File, block.Alt, block.Caption, hasItems)
+		return firstPopulated(block.File, block.Alt, block.Caption, hasItems)
 	case BlockImage:
 		if strings.TrimSpace(block.File) == "" {
 			return "file"
 		}
 		if hasContent {
 			return "content"
-		}
-		if block.Level != 0 {
-			return "level"
 		}
 		if hasItems {
 			return "items"
@@ -55,7 +56,7 @@ func invalidField(block Block) string {
 		if !hasContent {
 			return "content"
 		}
-		return firstPopulated(block.Level != 0, block.File, block.Alt, block.Caption, hasItems)
+		return firstPopulated(block.File, block.Alt, block.Caption, hasItems)
 	case BlockList:
 		if !hasItems {
 			return "items"
@@ -68,16 +69,13 @@ func invalidField(block Block) string {
 		if hasContent {
 			return "content"
 		}
-		return firstPopulated(block.Level != 0, block.File, block.Alt, block.Caption, false)
+		return firstPopulated(block.File, block.Alt, block.Caption, false)
 	default:
 		return "type"
 	}
 }
 
-func firstPopulated(level bool, file, alt, caption string, items bool) string {
-	if level {
-		return "level"
-	}
+func firstPopulated(file, alt, caption string, items bool) string {
 	if file != "" {
 		return "file"
 	}
