@@ -143,7 +143,28 @@ export const GenerationActions = forwardRef<
 
   return (
     <div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      {/* Two rows on a phone: the secondary pair shares one, and 생성 — the committing action —
+          takes the whole width of the next, closest to the thumb (§4.3). `sm:contents` dissolves
+          the pair's wrapper at the pointer breakpoint so all three sit in one row again. */}
+      <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
+        <div className="flex gap-3 sm:contents">
+          <GenerationOptions
+            key={`${post.slug}-${targetLength ?? 'natural'}`}
+            slug={post.slug}
+            targetLength={targetLength}
+            disabled={busy}
+            onSaved={setTargetLength}
+          />
+          <Button
+            variant="secondary"
+            className="flex-1 sm:flex-none"
+            disabled={sharedDisabled || !ab.ok}
+            pending={preparing === 'comparison' || comparison.isPending}
+            onClick={() => void start('comparison')}
+          >
+            A/B 비교 생성
+          </Button>
+        </div>
         <Button
           variant="cta"
           className="w-full sm:w-auto"
@@ -153,22 +174,6 @@ export const GenerationActions = forwardRef<
         >
           생성
         </Button>
-        <Button
-          variant="secondary"
-          className="w-full sm:w-auto"
-          disabled={sharedDisabled || !ab.ok}
-          pending={preparing === 'comparison' || comparison.isPending}
-          onClick={() => void start('comparison')}
-        >
-          A/B 비교 생성
-        </Button>
-        <GenerationOptions
-          key={`${post.slug}-${targetLength ?? 'natural'}`}
-          slug={post.slug}
-          targetLength={targetLength}
-          disabled={busy}
-          onSaved={setTargetLength}
-        />
       </div>
       <div className="mt-2 grid gap-1 text-sm">
         {(sharedReason || !ordinary.ok) && (

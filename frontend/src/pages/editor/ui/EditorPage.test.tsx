@@ -1028,21 +1028,58 @@ describe('the editor lifecycle steps', () => {
     expect(screen.getByLabelText('제목')).toHaveValue('제주 3일 여행기')
   })
 
-  // Change 05 A11.
-  it('docks the save state on every step and one committing action at a time', async () => {
+  // Change 05 A11, as amended: the bar carries at most one committing action, and it is not
+  // there at all on a step that has nothing to commit and nothing to report.
+  it('docks one committing action and nothing on a quiet step', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
       posts: { posts: [{ ...reviewPost, canFinalize: true }] },
     })
 
-    const dock = await screen.findByLabelText('저장 상태와 글 작업')
-    expect(within(dock).queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
-    expect(within(dock).queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+    // 글 다듬기 commits continuously through content autosave, so an idle bar would be a card
+    // with nothing in it.
+    await screen.findByRole('heading', { name: '글 다듬기' })
+    expect(screen.queryByLabelText('저장 상태와 글 작업')).not.toBeInTheDocument()
 
     await openStep(user, '글 생성')
-    expect(await within(dock).findByRole('button', { name: '생성' })).toBeInTheDocument()
+    const dock = await screen.findByLabelText('저장 상태와 글 작업')
+    expect(within(dock).getByRole('button', { name: '생성' })).toBeInTheDocument()
     expect(within(dock).queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+
+    await openStep(user, '글 완성')
+    expect(await screen.findByRole('button', { name: '확정' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('저장 상태와 글 작업')).not.toBeInTheDocument()
+  })
+
+  // The memo is what 글 생성 works from, so it lives there rather than above every step.
+  it('shows the memo on 글 생성 only, without losing what was typed', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, memo: '비 오는 제주' }] },
+    })
+
+    await screen.findByRole('heading', { name: '글 다듬기' })
+    expect(screen.queryByLabelText('메모')).not.toBeInTheDocument()
+
+    await openStep(user, '글 생성')
+    const memo = await screen.findByLabelText('메모')
+    expect(memo).toHaveValue('비 오는 제주')
+    await user.type(memo, ' 산책')
+
+    await openStep(user, '글 다듬기')
+    await openStep(user, '글 생성')
+    expect(await screen.findByLabelText('메모')).toHaveValue('비 오는 제주 산책')
+  })
+
+  // The step bar is the first thing on the screen, above the post's title.
+  it('puts the step bar above the title', async () => {
+    renderAppAt('/posts/20260820-jeju', { user: USER, posts: { posts: [reviewPost] } })
+
+    const tab = await screen.findByRole('tab', { name: '글 생성' })
+    const title = screen.getByLabelText('제목')
+    expect(tab.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
 

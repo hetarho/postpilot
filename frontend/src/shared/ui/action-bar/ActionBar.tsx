@@ -6,11 +6,12 @@ import { twMerge } from 'tailwind-merge'
  *  `features/review-model-experiment`, which hand-rolled this shape — the second slice needing it
  *  is what §1.1 says makes it a primitive.
  *
- *  It sticks ABOVE the phone tab bar (`bottom-nav`) and against the bottom edge from `sm:` up
- *  where that bar does not exist. The padding is what keeps it off the very edge: NN/g's
- *  bottom-sheet research is explicit that the extreme bottom is not the most reachable region, so
- *  a docked bar with real padding is the shape that satisfies both that and the platform tab-bar
- *  convention.
+ *  It sticks ABOVE the phone tab bar (`bottom-nav`), and from `sm:` up — where that bar does not
+ *  exist — it floats a step clear of the bottom edge instead of sitting on it: a rounded card
+ *  flush against the viewport edge reads as a cut-off sheet rather than as a floating dock. The
+ *  padding does the rest: NN/g's bottom-sheet research is explicit that the extreme bottom is not
+ *  the most reachable region, so a docked bar with real padding is the shape that satisfies both
+ *  that and the platform tab-bar convention.
  *
  *  ONE DOCK PER SCROLLER. Two of these in the same scroll container stick to the same offset and
  *  the later one in DOM order paints over the earlier one — both are opaque. A section that lives
@@ -28,7 +29,7 @@ export function ActionBar({
     <div
       aria-label={ariaLabel}
       className={twMerge(
-        'bg-surface-highest bottom-nav sm:pb-dock-b sticky z-20 mt-6 rounded-xl p-4 shadow-md sm:bottom-0',
+        'bg-surface-highest bottom-nav sm:pb-dock-b sticky z-20 mt-6 rounded-xl p-4 shadow-md sm:bottom-4',
         className,
       )}
     >

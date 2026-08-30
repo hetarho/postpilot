@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
@@ -14,13 +22,25 @@ import { useSession } from '@/entities/session'
 import { isEmptyProfile, useVoiceProfile } from '@/entities/voice-profile'
 import type { PostContent } from '@/shared/api'
 import { GenerationActions, type GenerationActionsHandle } from '@/features/generate-post'
-import { BlockEditor, flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
+import {
+  BlockEditor,
+  flushContentQueue,
+  type BlockEditorHandle,
+} from '@/features/edit-post-content'
 import { FinalizePost } from '@/features/finalize-post'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
 import { StageModelSelect } from '@/features/select-model'
-import { ActionBar, Badge, Button, FieldLabel, Notice, SegmentedControl, Textarea } from '@/shared/ui'
+import {
+  ActionBar,
+  Badge,
+  Button,
+  FieldLabel,
+  Notice,
+  SegmentedControl,
+  Textarea,
+} from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { ExportPanel } from '@/widgets/export-panel'
 import { VoiceWarning } from '@/widgets/voice-warning'
@@ -88,6 +108,19 @@ export function DraftEditor({ post }: DraftEditorProps) {
     },
   })
 
+  // The step lives here, above the fields, because the bar that switches it is the first thing
+  // on the screen — the post's lifecycle is what you navigate before you read anything else.
+  const [step, setStep] = useState<EditorStep>(() => stepForStatus(post?.status ?? ''))
+  const followedStatus = useRef(post?.status ?? '')
+  useEffect(() => {
+    const status = post?.status ?? ''
+    if (followedStatus.current === status) return
+    followedStatus.current = status
+    // Also the "generation finished" handoff: the draft lands in 글 다듬기 and the user is taken
+    // there once, rather than being scrolled inside 글 생성 and then moved again.
+    setStep(stepForStatus(status))
+  }, [post?.status])
+
   useEffect(() => {
     if (!caret) return
     clearCaret()
@@ -96,6 +129,8 @@ export function DraftEditor({ post }: DraftEditorProps) {
     element.focus()
     element.setSelectionRange(caret.selectionStart, caret.selectionEnd)
   }, [caret])
+
+  const memoField = <MemoField value={memo} onChange={setMemo} fieldRef={memoRef} />
 
   // `flex-1 flex-col` here plus `mt-auto` on the dock is what puts the bar at the BOTTOM of a
   // short draft: `sticky` can only pull an element up toward the scrollport edge, never push one
@@ -114,6 +149,18 @@ export function DraftEditor({ post }: DraftEditorProps) {
         </Link>
         {post && <Badge>{postStatusLabel(post.status)}</Badge>}
       </div>
+
+      {/* A post with a lifecycle navigates it first. `/posts/new` has none, so it shows no bar. */}
+      {post && (
+        <SegmentedControl
+          value={step}
+          options={EDITOR_STEPS}
+          onChange={setStep}
+          ariaLabel="글 단계"
+          controls={STEP_PANEL_ID}
+          className="mt-4"
+        />
+      )}
 
       <FieldLabel htmlFor="post-title" className="sr-only">
         제목
@@ -143,6 +190,45 @@ export function DraftEditor({ post }: DraftEditorProps) {
         className="mt-4 text-2xl font-semibold tracking-tight"
       />
 
+      {post ? (
+        <LifecycleSteps
+          post={post}
+          step={step}
+          onStepChange={setStep}
+          memoField={memoField}
+          beforeStart={autosave.flush}
+          ensureSlug={autosave.ensureSlug}
+          saveState={autosave.state}
+        />
+      ) : (
+        <>
+          {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
+          {memoField}
+          <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
+          <EditorVoiceWarning />
+          {/* A draft with no post yet has no committing action — but it is also the state where a
+              failing save is most expensive, since nothing has reached the server at all. */}
+          <EditorDock saveState={autosave.state} />
+        </>
+      )}
+    </main>
+  )
+}
+
+/** The memo is the post's own words, and it is what 글 생성 works from — so it is rendered by
+ *  that step while its value and its autosave stay in `DraftEditor`. Unmounting the field on
+ *  another step cannot strand a queued save: the queue is keyed by slug and lives above it. */
+function MemoField({
+  value,
+  onChange,
+  fieldRef,
+}: {
+  value: string
+  onChange: (value: string) => void
+  fieldRef: RefObject<HTMLTextAreaElement | null>
+}) {
+  return (
+    <>
       <FieldLabel htmlFor="post-memo" className="sr-only">
         메모
       </FieldLabel>
@@ -155,35 +241,17 @@ export function DraftEditor({ post }: DraftEditorProps) {
           as the only place to scroll the page (§4.4). */}
       <Textarea
         id="post-memo"
-        ref={memoRef}
+        ref={fieldRef}
         appearance="bare"
         rows={6}
         autoGrow
-        value={memo}
-        onChange={(event) => setMemo(event.target.value)}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         placeholder="무슨 일이 있었는지 편하게 적어 주세요"
         enterKeyHint="enter"
         className="mt-5 text-base leading-relaxed"
       />
-
-      {post ? (
-        <LifecycleSteps
-          post={post}
-          beforeStart={autosave.flush}
-          ensureSlug={autosave.ensureSlug}
-          saveState={autosave.state}
-        />
-      ) : (
-        <>
-          {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
-          <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
-          <EditorVoiceWarning />
-          {/* A draft with no post yet has no committing action — but it is also the state where a
-              failing save is most expensive, since nothing has reached the server at all. */}
-          <EditorDock saveState={autosave.state} />
-        </>
-      )}
-    </main>
+    </>
   )
 }
 
@@ -236,7 +304,15 @@ function EditorDock({ saveState, children }: { saveState: SaveState; children?: 
 /** A step the post has not reached yet. Never a disabled tab: the point of showing all three from
  *  the first screen is that the shape of the flow is visible, so an empty step says what it is
  *  waiting for and offers the way to the step that produces it. */
-function EmptyStep({ children, goTo, goToLabel }: { children: ReactNode; goTo: () => void; goToLabel: string }) {
+function EmptyStep({
+  children,
+  goTo,
+  goToLabel,
+}: {
+  children: ReactNode
+  goTo: () => void
+  goToLabel: string
+}) {
   return (
     <div className="mt-10">
       <p className="text-content-tertiary text-sm leading-relaxed">{children}</p>
@@ -249,11 +325,17 @@ function EmptyStep({ children, goTo, goToLabel }: { children: ReactNode; goTo: (
 
 function LifecycleSteps({
   post,
+  step,
+  onStepChange,
+  memoField,
   beforeStart,
   ensureSlug,
   saveState,
 }: {
   post: PostDraft
+  step: EditorStep
+  onStepChange: (step: EditorStep) => void
+  memoField: ReactNode
   beforeStart: () => Promise<void>
   ensureSlug: () => Promise<string>
   saveState: SaveState
@@ -289,20 +371,9 @@ function LifecycleSteps({
   )
   const { user } = useSession()
 
-  // The step follows the post's status, but a deliberate selection holds until the status moves
-  // again — otherwise every refetch would drag the user back out of the step they opened. Tracking
-  // the status the step last followed is what tells the two apart on a re-render.
-  const [step, setStep] = useState<EditorStep>(() => stepForStatus(post.status))
   // A resumed job has no recorded step, so its kind says which one owns it.
-  const jobStep: EditorStep = started?.id === jobId ? started.step : job?.kind === 'revise' ? 'refine' : 'generate'
-  const followedStatus = useRef(post.status)
-  useEffect(() => {
-    if (followedStatus.current === post.status) return
-    followedStatus.current = post.status
-    // This is also the "generation finished" handoff: the draft lands in 글 다듬기 and the user is
-    // taken there once, rather than being scrolled inside 글 생성 and then moved again.
-    setStep(stepForStatus(post.status))
-  }, [post.status])
+  const jobStep: EditorStep =
+    started?.id === jobId ? started.step : job?.kind === 'revise' ? 'refine' : 'generate'
 
   // Observations are persisted batch-by-batch on the post, not on the job. Refresh that
   // read model whenever observe progress changes so the contact sheet fills while the
@@ -318,6 +389,7 @@ function LifecycleSteps({
 
   const generatePanel = (
     <>
+      {memoField}
       <EditorPhotos post={post} ensureSlug={ensureSlug} />
       <EditorVoiceWarning />
       <section aria-labelledby="generation-heading" className="mt-10">
@@ -391,7 +463,7 @@ function LifecycleSteps({
       />
     </>
   ) : (
-    <EmptyStep goTo={() => setStep('generate')} goToLabel="글 생성으로 가기">
+    <EmptyStep goTo={() => onStepChange('generate')} goToLabel="글 생성으로 가기">
       아직 다듬을 글이 없어요. 글 생성에서 초안을 만들면 여기에서 문단별로 고칠 수 있습니다.
     </EmptyStep>
   )
@@ -413,88 +485,83 @@ function LifecycleSteps({
           }
         />
       )}
-      <ExportPanel content={liveContent ?? result} images={post.images} createdAt={post.createdAt} />
+      <ExportPanel
+        content={liveContent ?? result}
+        images={post.images}
+        createdAt={post.createdAt}
+      />
     </>
   ) : (
-    <EmptyStep goTo={() => setStep('generate')} goToLabel="글 생성으로 가기">
+    <EmptyStep goTo={() => onStepChange('generate')} goToLabel="글 생성으로 가기">
       아직 완성할 글이 없어요. 초안을 만들고 다듬으면 여기에서 확정하고 내보낼 수 있습니다.
     </EmptyStep>
   )
 
+  // What the dock has to say about the durable job, if anything. Computed up here because it is
+  // also what decides whether the bar exists at all: a job's progress and its failure must reach
+  // the user on every step, while a bar holding nothing is chrome with nothing to say (§0).
+  //
+  // The RETRY is offered only on the step that owns the job, because that is where the control it
+  // calls is mounted.
+  const jobNotice = !jobId ? null : jobState.isError ? (
+    <FailureNotice error="작업 상태를 확인하지 못했어요." onRetry={jobState.refetch} />
+  ) : job?.status === 'failed' ? (
+    <FailureNotice
+      error={job.error}
+      onRetry={
+        step !== jobStep || (job.kind === 'revise' && started?.id !== job.id)
+          ? undefined
+          : () =>
+              job.kind === 'revise'
+                ? reviseRef.current?.start()
+                : job.kind === 'model_experiment'
+                  ? post.pendingExperimentId
+                    ? void navigate({
+                        to: '/ai-models/experiments/$id',
+                        params: { id: post.pendingExperimentId },
+                      })
+                    : undefined
+                  : generateRef.current?.startGeneration()
+      }
+    />
+  ) : job && !isTerminal(job) ? (
+    <ProgressLine job={job} />
+  ) : job?.status === 'done' ? (
+    <Notice tone="success" role="status">
+      <span className="min-w-0">글 생성을 마쳤어요.</span>
+      {result && (
+        <Button
+          variant="ghost"
+          onClick={() => onStepChange('refine')}
+          className="text-notice-success-fg shrink-0 underline"
+        >
+          결과 보기
+        </Button>
+      )}
+    </Notice>
+  ) : null
+
   return (
     <>
-      <SegmentedControl
-        value={step}
-        options={EDITOR_STEPS}
-        onChange={setStep}
-        ariaLabel="글 단계"
-        controls={STEP_PANEL_ID}
-        className="mt-8"
-      />
       <div id={STEP_PANEL_ID} role="tabpanel" aria-label={stepLabel(step)}>
         {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
       </div>
 
-      <EditorDock saveState={saveState}>
-        {/* The job's state rides in the dock with the button that started it: the CTA is docked
-            now, so this is where the user is looking when they press 생성 (§4.3).
-            It reports on EVERY step — a failure the user cannot see is the bug the dock exists to
-            prevent — but the RETRY is offered only on the step that owns the job, because that is
-            where the control it calls is mounted. */}
-        {jobId
-          ? jobState.isError
-            ? <FailureNotice error="작업 상태를 확인하지 못했어요." onRetry={jobState.refetch} />
-            : job?.status === 'failed'
-              ? (
-                  <FailureNotice
-                    error={job.error}
-                    onRetry={
-                      step !== jobStep || (job.kind === 'revise' && started?.id !== job.id)
-                        ? undefined
-                        : () =>
-                            job.kind === 'revise'
-                              ? reviseRef.current?.start()
-                              : job.kind === 'model_experiment'
-                                ? post.pendingExperimentId
-                                  ? void navigate({
-                                      to: '/ai-models/experiments/$id',
-                                      params: { id: post.pendingExperimentId },
-                                    })
-                                  : undefined
-                                : generateRef.current?.startGeneration()
-                    }
-                  />
-                )
-              : job && !isTerminal(job)
-                ? <ProgressLine job={job} />
-                : job?.status === 'done'
-                  ? (
-                      <Notice tone="success" role="status">
-                        <span className="min-w-0">글 생성을 마쳤어요.</span>
-                        {result && (
-                          <Button
-                            variant="ghost"
-                            onClick={() => setStep('refine')}
-                            className="text-notice-success-fg shrink-0 underline"
-                          >
-                            결과 보기
-                          </Button>
-                        )}
-                      </Notice>
-                    )
-                  : null
-          : null}
-        {step === 'generate' && (
-          <GenerationActions
-            ref={generateRef}
-            post={post}
-            activeJob={job}
-            jobPending={Boolean(jobId) && !job}
-            onStarted={(id) => setStarted({ id, step: 'generate' })}
-            beforeStart={beforeStart}
-          />
-        )}
-      </EditorDock>
+      {(step === 'generate' || jobNotice || saveState === 'saving' || saveState === 'error') && (
+        <EditorDock saveState={saveState}>
+          {jobNotice}
+          {step === 'generate' && (
+            <GenerationActions
+              ref={generateRef}
+              post={post}
+              activeJob={job}
+              jobPending={Boolean(jobId) && !job}
+              onStarted={(id) => setStarted({ id, step: 'generate' })}
+              beforeStart={beforeStart}
+            />
+          )}
+        </EditorDock>
+      )}
     </>
   )
 }

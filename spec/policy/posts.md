@@ -55,18 +55,22 @@ Photo upload has its own document: [uploads.md](uploads.md).
   **derived from `post.status`** (`draft` → ①, `review` → ②, `finalized` → ③). Nothing new is persisted, so a reload
   and the list badge cannot disagree with the screen. A status transition moves the step; a deliberate selection
   holds until the next transition.
-- Each step renders only its own panel: ① photos, the empty-profile warning, the stage-model selects, the A/B link,
-  the contact sheet and the generation actions; ② the draft and AI revision; ③ finalize, finalize-and-learn and
-  export. Any step is selectable at any time — a step with no work yet says what it is waiting for and offers the
+- The step bar is the first thing on the screen, above the post's title: the lifecycle is what you navigate before
+  you read anything else.
+- Each step renders only its own panel: ① the memo, photos, the empty-profile warning, the stage-model selects, the
+  A/B link, the contact sheet and the generation actions; ② the draft and AI revision; ③ finalize,
+  finalize-and-learn and export. The memo is the post's own words and the input 글 생성 works from, so it belongs to
+  that step; its value and its autosave stay above the panels, so leaving the step cannot strand a queued save. Any step is selectable at any time — a step with no work yet says what it is waiting for and offers the
   way to the step that produces it, and is never disabled. Selecting a step changes no status, starts no job, and
   makes no provider call.
 - `/posts/new` has no lifecycle and therefore no step bar; it renders step ①'s content alone.
 - The steps are **panels of one mounted editor**, not routes: title, memo, the autosave queue, the slug mint and the
   caret handoff live outside them, so a step change can never remount the editor or strand a queued save.
-- The dock keeps its contract — the save state on every step plus at most one committing action: 생성 on ①, 확정 on
-  ③, and none on ②, which commits continuously through content autosave. A running or failed job is reported on
-  every step, because a failure the user cannot see is the bug the dock exists to prevent; its retry is offered only
-  on the step that owns the job.
+- The dock carries at most one committing action — 생성 on ①, 확정 on ③, and none on ②, which commits continuously
+  through content autosave — and it exists only when it has something to say: the current step's action, a running
+  or failed job, or a save that is in flight or has failed. On a quiet 글 다듬기 / 글 완성 it is absent rather than
+  an empty card. A job is reported on every step, because a failure the user cannot see is the bug the dock exists
+  to prevent; its retry is offered only on the step that owns the job.
 - Step ② opens as **prose**: `entities/post`'s `BlockList` renders title, summary, tags and every block read-only,
   and each block plus the header carries one edit control built on the shared `Editable` primitive. Opening one
   block does not close another. Edits write through to the content, so autosave keeps running on every keystroke;

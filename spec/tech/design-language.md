@@ -511,10 +511,13 @@ to the page.
 - **ActionBar** — the dock for a view's committing actions, on `surface-highest` with `rounded-xl`
   and `shadow-md`. It is the one surface that floats over content without interrupting it, which is
   why it takes the frontmost plane but a floating panel's shadow rather than a modal's. It clears
-  the phone tab bar and the home indicator itself, so a caller never writes a safe-area class. One
-  per scroller (§4.3), and it goes at the end of a `flex-1 flex-col` page with `mt-auto` — `sticky`
-  can pull a bar up to the scrollport edge but can never push one down, so on a short page an
-  undocked bar floats mid-screen.
+  the phone tab bar and the home indicator itself, so a caller never writes a safe-area class, and
+  from `sm:` up it floats a step clear of the bottom edge — a rounded card sitting flush on the
+  viewport edge reads as a cut-off sheet, not as a dock. One per scroller (§4.3), and it goes at
+  the end of a `flex-1 flex-col` page with `mt-auto` — `sticky` can pull a bar up to the scrollport
+  edge but can never push one down, so on a short page an undocked bar floats mid-screen. Mount it
+  only when it has something to hold: a bar with no action and nothing to report is chrome with
+  nothing to say (§0).
 - **Overlays** — tooltip explains, toast reports, dialog/sheet interrupts. All portalled, all
   return focus where they found it, all `Escape` closes, all lock the body scroll while open.
   **On a phone a dialog is a bottom sheet**: full-bleed to the bottom edge, `rounded-t-xl`, safe-area
