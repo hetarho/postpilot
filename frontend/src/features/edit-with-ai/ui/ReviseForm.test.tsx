@@ -45,9 +45,18 @@ function renderForm({
   })
   const onStarted = vi.fn()
   const queryClient = createTestQueryClient()
-  render(<ReviseForm ownerId="alice" postSlug="post" voice={{ id: 'voice-a', deleted: false }} activeJob={active} onStarted={onStarted} />, {
-    wrapper: withProviders(transport, queryClient),
-  })
+  render(
+    <ReviseForm
+      ownerId="alice"
+      postSlug="post"
+      voice={{ id: 'voice-a', deleted: false }}
+      activeJob={active}
+      onStarted={onStarted}
+    />,
+    {
+      wrapper: withProviders(transport, queryClient),
+    },
+  )
   return { onStarted, queryClient, transport }
 }
 

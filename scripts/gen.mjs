@@ -7,7 +7,7 @@
 // If a tool's config isn't present yet, the matching step skips with a note
 // instead of failing.
 
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { run, mount, dockerUser, hasBufConfig, hasSqlcConfig, section, ok, note } from './lib.mjs'
 
@@ -46,6 +46,15 @@ if (wantProto) {
       'bufbuild/buf:latest',
       'generate', '--template', 'backend/buf.gen.yaml', 'proto',
     ])
+    // The Mac companion is a separate Go module and therefore receives its own Go
+    // package mapping instead of importing backend/internal generated code.
+    run('docker', [
+      'run', '--rm', ...dockerUser(),
+      '-e', 'HOME=/tmp',
+      '-v', mount('', '/work'), '-w', '/work',
+      'bufbuild/buf:latest',
+      'generate', '--template', 'agent/buf.gen.yaml', 'proto',
+    ])
     // Remote plugin releases do not agree on whether generated TS ends with one
     // or two newlines. Normalize only EOF whitespace so `git diff --check` stays
     // deterministic without hand-editing generated contracts.
@@ -60,6 +69,10 @@ if (wantProto) {
 if (wantSql) {
   if (hasSqlcConfig()) {
     note('sqlc generate (SQL → Go)')
+    // sqlc 1.31 can leave stale bytes when an existing generated file shrinks on a
+    // bind mount. Remove only this job's generated directory so every rerun starts
+    // from an empty target; sources and other contexts are untouched.
+    rmSync('backend/internal/publishing/store/sqlc', { recursive: true, force: true })
     // sqlc.yaml paths are backend-relative, so backend/ is the container's workdir.
     // The schema it reads is internal/platform/db/migrations — the same files goose
     // applies at boot, so generated types cannot drift from the live schema.

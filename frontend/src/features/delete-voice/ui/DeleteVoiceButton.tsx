@@ -47,8 +47,8 @@ export function DeleteVoiceButton({
         onConfirm={() => void confirm()}
       >
         <span className="break-words">‘{voice.name}’</span>로 쓴 글과 학습 기록은 그대로 남아요. 그
-        글에는 삭제된 말투로 표시되고, 복원하거나 다른 말투로 바꾸기 전에는 AI 생성·수정·학습을 할 수
-        없어요. 새 글의 말투 목록에서는 바로 사라집니다.
+        글에는 삭제된 말투로 표시되고, 복원하거나 다른 말투로 바꾸기 전에는 AI 생성·수정·학습을 할
+        수 없어요. 새 글의 말투 목록에서는 바로 사라집니다.
       </Dialog>
     </>
   )

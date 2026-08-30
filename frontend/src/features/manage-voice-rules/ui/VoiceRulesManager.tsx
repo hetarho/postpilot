@@ -193,6 +193,9 @@ export function VoiceRulesManager({
 }
 
 const statusLabel = (status: string) =>
-  ({ candidate: '후보', active: '활성', retired: '중지', rejected: '거절' } as Record<string, string>)[
-    status
-  ] ?? status
+  (
+    ({ candidate: '후보', active: '활성', retired: '중지', rejected: '거절' }) as Record<
+      string,
+      string
+    >
+  )[status] ?? status

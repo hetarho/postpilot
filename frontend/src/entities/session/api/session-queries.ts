@@ -16,9 +16,7 @@ import type { SessionUser } from '../model/types'
  *  A real failure (the API is down) still throws — the two must not be confused, or an
  *  outage would look like a logout and send the user to a login form that cannot work.
  */
-export type SessionState =
-  | { status: 'active'; user: SessionUser }
-  | { status: 'signed-out' }
+export type SessionState = { status: 'active'; user: SessionUser } | { status: 'signed-out' }
 
 const SIGNED_OUT: SessionState = { status: 'signed-out' }
 

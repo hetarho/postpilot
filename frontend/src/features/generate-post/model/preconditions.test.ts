@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { DELETED_VOICE_AI_REASON } from '@/entities/voice'
-import { comparisonGenerationPreconditions, ordinaryGenerationPreconditions, type GenerationModelSelection } from './preconditions'
+import {
+  comparisonGenerationPreconditions,
+  ordinaryGenerationPreconditions,
+  type GenerationModelSelection,
+} from './preconditions'
 
 const image = { id: 'image-1' }
 const vision: GenerationModelSelection = {
@@ -81,16 +85,18 @@ describe('generationPreconditions', () => {
       ok: false,
       reason: DELETED_VOICE_AI_REASON,
     })
-    expect(comparisonGenerationPreconditions([], undefined, text, textB, undefined, deleted).ok).toBe(
-      false,
-    )
-    expect(ordinaryGenerationPreconditions([], undefined, text, undefined, { deleted: false }).ok).toBe(
-      true,
-    )
+    expect(
+      comparisonGenerationPreconditions([], undefined, text, textB, undefined, deleted).ok,
+    ).toBe(false)
+    expect(
+      ordinaryGenerationPreconditions([], undefined, text, undefined, { deleted: false }).ok,
+    ).toBe(true)
   })
 
   it('requires two distinct candidates only for A/B generation', () => {
-    expect(comparisonGenerationPreconditions([], undefined, text, undefined, undefined).ok).toBe(false)
+    expect(comparisonGenerationPreconditions([], undefined, text, undefined, undefined).ok).toBe(
+      false,
+    )
     expect(comparisonGenerationPreconditions([], undefined, text, text, undefined).ok).toBe(false)
     expect(comparisonGenerationPreconditions([], undefined, text, textB, undefined).ok).toBe(true)
   })

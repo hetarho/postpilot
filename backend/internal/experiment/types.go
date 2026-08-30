@@ -107,6 +107,7 @@ type Experiment struct {
 	UserID            string
 	PostSlug          string
 	VoiceID           string
+	PurposeName       string
 	Stage             Stage
 	Status            Status
 	JobID             string
@@ -166,6 +167,10 @@ type Snapshot struct {
 	PromptVersion string
 	// VoiceID is the voice the runner froze the input for; the aggregate records it.
 	VoiceID string
+	// PurposeName is the 용도 the same frozen input carries, by name. Empty when the post had
+	// none. It is a name rather than an id so the detail keeps reading correctly after the
+	// purpose is renamed or deleted.
+	PurposeName string
 }
 
 type StartRequest struct {

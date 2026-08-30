@@ -2,8 +2,8 @@
 -- caller remembering to check it.
 
 -- name: CreatePost :exec
-INSERT INTO posts (slug, user_id, voice_id, title, memo, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, 'draft', ?, ?);
+INSERT INTO posts (slug, user_id, voice_id, purpose_id, title, memo, status, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?);
 
 -- name: UpdatePostDraft :execrows
 UPDATE posts SET title = ?, memo = ?, updated_at = ?
@@ -40,7 +40,7 @@ WHERE slug = ? AND user_id = ? AND content_revision = ?
 -- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
-       target_length, finalized_revision, finalized_at
+       target_length, finalized_revision, finalized_at, purpose_id
 FROM posts WHERE slug = ?;
 
 -- name: GetLearningSnapshot :one
@@ -52,7 +52,7 @@ FROM posts WHERE slug = ? AND user_id = ?;
 SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ?);
 
 -- name: ListPostsByUser :many
-SELECT slug, title, content, status, updated_at, voice_id
+SELECT slug, title, content, status, updated_at, voice_id, purpose_id
 FROM posts WHERE user_id = ? ORDER BY updated_at DESC, slug DESC;
 
 -- name: ReassignPostVoice :execrows
@@ -63,6 +63,13 @@ UPDATE posts SET voice_id = ?, machine_baseline = NULL, machine_baseline_revisio
     machine_baseline_voice_id = NULL,
     updated_at = ?
 WHERE slug = ? AND user_id = ? AND voice_id <> ?;
+
+-- name: AssignPostPurpose :execrows
+-- Assignment is not a reassignment: unlike the voice, a purpose is never learned from, so
+-- this touches no content, revision, machine baseline or finalization column and is allowed
+-- in every status. NULL is the clear.
+UPDATE posts SET purpose_id = ?, updated_at = ?
+WHERE slug = ? AND user_id = ?;
 
 -- name: CountPostsByVoice :one
 SELECT count(*) FROM posts WHERE voice_id = ? AND user_id = ?;

@@ -31,9 +31,7 @@ export async function resizeToJpeg(
   const { width, height } = fitWithin(bitmap.width, bitmap.height, maxEdge)
   const canvas = createCanvas(width, height)
   const context = canvas.getContext('2d') as
-    | OffscreenCanvasRenderingContext2D
-    | CanvasRenderingContext2D
-    | null
+    OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null
   if (!context) throw new Error('2d canvas unavailable')
   // JPEG has no alpha; a transparent PNG would otherwise come out on black.
   context.fillStyle = '#fff' // style-escape: canvas flatten colour for JPEG export, not a UI colour

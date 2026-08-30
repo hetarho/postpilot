@@ -1,0 +1,30 @@
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.11
+    out: agent/internal/gen
+    opt:
+      - paths=source_relative
+      - Mpostpilot/v1/auth.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/health.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/model_experiment.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/post.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/provider.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/publishing.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/purpose.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/voice.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/voice_learning.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/voice_validation.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+  - remote: buf.build/connectrpc/go:v1.20.0
+    out: agent/internal/gen
+    opt:
+      - paths=source_relative
+      - Mpostpilot/v1/auth.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/health.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/model_experiment.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/post.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/provider.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/publishing.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/purpose.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/voice.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/voice_learning.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/voice_validation.proto=github.com/postpilot/agent/internal/gen/postpilot/v1

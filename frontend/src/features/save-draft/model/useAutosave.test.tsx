@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { AUTOSAVE_DEBOUNCE_MS } from '@/shared/config'
-import {
-  type FakeDraftSave,
-  type FakePostsOptions,
-  createFakePostsTransport,
-} from '@/test/posts'
+import { type FakeDraftSave, type FakePostsOptions, createFakePostsTransport } from '@/test/posts'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { discardDraftQueues } from './draft-queue'
 import { useAutosave } from './useAutosave'
@@ -24,7 +20,15 @@ function setup(
   const transport = createFakePostsTransport({ calls, draftSaves, ...backend })
   const view = renderHook(
     ({ title, memo }: Typed) =>
-      useAutosave({ post, title, memo, voiceId: post?.voice.id ?? 'voice-default' }),
+      // These cases are about the text pipeline, so every post here is 없음. The 용도 half of
+      // the queue has its own file.
+      useAutosave({
+        post: post && { ...post, purpose: { id: '' } },
+        title,
+        memo,
+        voiceId: post?.voice.id ?? 'voice-default',
+        purposeId: '',
+      }),
     {
       wrapper: withProviders(transport, createTestQueryClient()),
       initialProps: { title: post?.title ?? '', memo: post?.memo ?? '' },

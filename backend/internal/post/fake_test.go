@@ -107,6 +107,26 @@ func (f *fakeStore) ReassignVoice(_ context.Context, slug, userID, voiceID strin
 	return true, nil
 }
 
+// AssignPurpose mirrors the real single UPDATE: only the assignment and updated_at move.
+// Everything the voice reassignment above withdraws is deliberately left alone here — a
+// purpose is never learned from, so assigning one may not cost a post its learn eligibility.
+func (f *fakeStore) AssignPurpose(_ context.Context, slug, userID string, purposeID *string, updatedAt time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID {
+		return false, nil
+	}
+	if purposeID == nil {
+		existing.PurposeID = ""
+	} else {
+		existing.PurposeID = *purposeID
+	}
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
 func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -210,7 +230,7 @@ func (f *fakeStore) ListPosts(_ context.Context, userID string) ([]Summary, erro
 		if strings.TrimSpace(title) == "" && p.Content != nil {
 			title = p.Content.Title
 		}
-		out = append(out, Summary{Slug: p.Slug, VoiceID: p.VoiceID, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt})
+		out = append(out, Summary{Slug: p.Slug, VoiceID: p.VoiceID, PurposeID: p.PurposeID, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].UpdatedAt.After(out[j].UpdatedAt) })
 	return out, nil

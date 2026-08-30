@@ -49,7 +49,9 @@ describe('the voice directory', () => {
     await user.click(screen.getByRole('button', { name: '말투 만들기' }))
 
     await waitFor(() => expect(calls).toContain('CreateVoice'))
-    expect(await (await section('사용 중')).findByRole('link', { name: '제품 리뷰' })).toBeInTheDocument()
+    expect(
+      await (await section('사용 중')).findByRole('link', { name: '제품 리뷰' }),
+    ).toBeInTheDocument()
     expect(name).toHaveValue('')
   })
 
@@ -79,7 +81,9 @@ describe('the voice directory', () => {
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(calls).toContain('RenameVoice'))
-    expect(await (await section('사용 중')).findByRole('link', { name: '제품 리뷰' })).toBeInTheDocument()
+    expect(
+      await (await section('사용 중')).findByRole('link', { name: '제품 리뷰' }),
+    ).toBeInTheDocument()
     expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
   })
 
@@ -99,8 +103,12 @@ describe('the voice directory', () => {
     })
     expect((await section('사용 중')).getAllByText('기본')).toHaveLength(1)
     // The old default is now deletable, the new one is not.
-    expect((await section('사용 중')).getByRole('button', { name: '기본 말투 삭제' })).toBeInTheDocument()
-    expect((await section('사용 중')).queryByRole('button', { name: '리뷰 삭제' })).not.toBeInTheDocument()
+    expect(
+      (await section('사용 중')).getByRole('button', { name: '기본 말투 삭제' }),
+    ).toBeInTheDocument()
+    expect(
+      (await section('사용 중')).queryByRole('button', { name: '리뷰 삭제' }),
+    ).not.toBeInTheDocument()
   })
 
   // Plan 10 A5: a soft delete after confirmation; the default offers no delete at all.
@@ -110,14 +118,18 @@ describe('the voice directory', () => {
     renderDirectory({}, calls)
 
     await screen.findByRole('heading', { level: 1, name: '말투' })
-    expect((await section('사용 중')).queryByRole('button', { name: '기본 말투 삭제' })).not.toBeInTheDocument()
+    expect(
+      (await section('사용 중')).queryByRole('button', { name: '기본 말투 삭제' }),
+    ).not.toBeInTheDocument()
     await user.click((await section('사용 중')).getByRole('button', { name: '리뷰 삭제' }))
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveTextContent('글과 학습 기록은 그대로 남아요')
     await user.click(within(dialog).getByRole('button', { name: '삭제' }))
 
     await waitFor(() => expect(calls).toContain('DeleteVoice'))
-    expect(await (await section('삭제된 말투')).findByRole('link', { name: '리뷰' })).toBeInTheDocument()
+    expect(
+      await (await section('삭제된 말투')).findByRole('link', { name: '리뷰' }),
+    ).toBeInTheDocument()
     expect((await section('사용 중')).queryByRole('link', { name: '리뷰' })).not.toBeInTheDocument()
   })
 
@@ -126,7 +138,9 @@ describe('the voice directory', () => {
     renderDirectory({ busyVoices: ['voice-review'] })
 
     await user.click(await screen.findByRole('button', { name: '리뷰 삭제' }))
-    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '삭제' }))
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: '삭제' }),
+    )
 
     expect(await screen.findByRole('alert')).toHaveTextContent('지금은 삭제할 수 없어요')
     expect((await section('사용 중')).getByRole('link', { name: '리뷰' })).toBeInTheDocument()
@@ -143,11 +157,9 @@ describe('the voice directory', () => {
 
     await waitFor(() => expect(calls).toContain('RestoreVoice'))
     await waitFor(async () =>
-      expect((await section('사용 중')).getAllByRole('link').map((link) => link.textContent)).toEqual([
-        '기본 말투',
-        '리뷰',
-        '옛 말투',
-      ]),
+      expect(
+        (await section('사용 중')).getAllByRole('link').map((link) => link.textContent),
+      ).toEqual(['기본 말투', '리뷰', '옛 말투']),
     )
     expect(screen.queryByRole('region', { name: '삭제된 말투' })).not.toBeInTheDocument()
     expect((await section('사용 중')).getAllByText('기본')).toHaveLength(1)
@@ -167,7 +179,9 @@ describe('the voice directory', () => {
     await user.click((await section('삭제된 말투')).getByRole('button', { name: '복원' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('이름을 바꾼 뒤 복원해 주세요')
 
-    await user.click((await section('삭제된 말투')).getByRole('button', { name: '리뷰 이름 바꾸기' }))
+    await user.click(
+      (await section('삭제된 말투')).getByRole('button', { name: '리뷰 이름 바꾸기' }),
+    )
     const field = screen.getByLabelText('말투 이름')
     await user.clear(field)
     await user.type(field, '옛 리뷰')
@@ -175,7 +189,9 @@ describe('the voice directory', () => {
     await (await section('삭제된 말투')).findByRole('link', { name: '옛 리뷰' })
 
     await user.click((await section('삭제된 말투')).getByRole('button', { name: '복원' }))
-    expect(await (await section('사용 중')).findByRole('link', { name: '옛 리뷰' })).toBeInTheDocument()
+    expect(
+      await (await section('사용 중')).findByRole('link', { name: '옛 리뷰' }),
+    ).toBeInTheDocument()
   })
 
   it('says so and offers a retry when the directory cannot be loaded', async () => {

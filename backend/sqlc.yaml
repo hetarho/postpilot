@@ -60,3 +60,19 @@ sql:
         package: "sqlc"
         out: "internal/experiment/store/sqlc"
         omit_unused_structs: true
+  - engine: "sqlite"
+    schema: "internal/platform/db/migrations"
+    queries: "internal/publishing/store/queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/publishing/store/sqlc"
+        omit_unused_structs: true
+  - engine: "sqlite"
+    schema: "internal/platform/db/migrations"
+    queries: "internal/purpose/store/queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/purpose/store/sqlc"
+        omit_unused_structs: true

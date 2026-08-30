@@ -187,3 +187,19 @@ describe('logout', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
   })
 })
+
+// Plan 11 A11/A12: 용도 is a top-level destination beside 말투, reachable from the nav.
+describe('the purpose management route', () => {
+  it('mounts /purposes and offers it in the navigation after 말투', async () => {
+    renderAppAt('/purposes', { user: { id: 'alice' } })
+
+    expect(await screen.findByRole('heading', { level: 1, name: '용도' })).toBeInTheDocument()
+    // One list, so the phone tab bar and the desktop header cannot disagree; the entry sits
+    // after 말투 in it.
+    const labels = screen
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'))
+      .filter((href): href is string => href !== null)
+    expect(labels.indexOf('/purposes')).toBeGreaterThan(labels.indexOf('/voices'))
+  })
+})

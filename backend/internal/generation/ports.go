@@ -47,4 +47,11 @@ type PendingExperiments interface {
 	PendingForPost(ctx context.Context, userID, postSlug string) (string, error)
 }
 
+// PurposeBriefs is the purpose context's published brief lookup, consumed only at enqueue
+// time. `ok` false means the post has no purpose or it was deleted between the save and the
+// start — an ordinary case, not an error, because a prompt without a brief is a valid one.
+type PurposeBriefs interface {
+	BriefFor(ctx context.Context, userID, purposeID string) (PurposeBrief, bool, error)
+}
+
 type Progress func(stage string, done, total int)

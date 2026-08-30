@@ -13,7 +13,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ voiceId: mocks.routeVoiceId, id: 'comparison-1' }),
-  Link: ({ children }: { children: ReactNode }) => <a href="/voices/voice-default/rules">{children}</a>,
+  Link: ({ children }: { children: ReactNode }) => (
+    <a href="/voices/voice-default/rules">{children}</a>
+  ),
 }))
 
 vi.mock('@connectrpc/connect-query', () => ({

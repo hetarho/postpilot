@@ -9,8 +9,22 @@ import {
   type ReactNode,
 } from 'react'
 import { BlockList, type PostDraft } from '@/entities/post'
-import { BlockSchema, BlockType, PostContentSchema, type Block, type PostContent } from '@/shared/api'
-import { Button, Editable, FieldLabel, FieldMessage, Select, Textarea, TextField } from '@/shared/ui'
+import {
+  BlockSchema,
+  BlockType,
+  PostContentSchema,
+  type Block,
+  type PostContent,
+} from '@/shared/api'
+import {
+  Button,
+  Editable,
+  FieldLabel,
+  FieldMessage,
+  Select,
+  Textarea,
+  TextField,
+} from '@/shared/ui'
 import { useContentAutosave } from '../model/useContentAutosave'
 
 export interface BlockEditorHandle {
@@ -36,7 +50,11 @@ export const BlockEditor = forwardRef<
 >(function BlockEditor({ post, onContentChange, renderSentenceAction }, ref) {
   const [content, setContent] = useState(() => clone(PostContentSchema, post.content!))
   const valid = useMemo(
-    () => validContent(content, post.images.map((image) => image.filename)),
+    () =>
+      validContent(
+        content,
+        post.images.map((image) => image.filename),
+      ),
     [content, post.images],
   )
   const autosave = useContentAutosave({
@@ -46,7 +64,10 @@ export const BlockEditor = forwardRef<
     valid,
   })
   useEffect(() => onContentChange?.(content), [content, onContentChange])
-  useImperativeHandle(ref, () => ({ flush: autosave.flush, content: () => content }), [autosave.flush, content])
+  useImperativeHandle(ref, () => ({ flush: autosave.flush, content: () => content }), [
+    autosave.flush,
+    content,
+  ])
 
   const updateBlock = (index: number, value: Block) => {
     const next = clone(PostContentSchema, content)
@@ -198,7 +219,9 @@ function BlockControls({
         <Select
           id={`block-type-${index}`}
           value={block.type}
-          onChange={(event) => onChange(freshBlock(Number(event.target.value) as BlockType, filenames[0]))}
+          onChange={(event) =>
+            onChange(freshBlock(Number(event.target.value) as BlockType, filenames[0]))
+          }
           className="w-auto min-w-32"
         >
           <option value={BlockType.TEXT}>문단</option>
@@ -211,8 +234,28 @@ function BlockControls({
           {/* Leaving edit mode is part of moving, for the same reason as deleting: the rows are
               keyed by position, so a mount-time snapshot left open over the block that shifted into
               this slot would overwrite THAT block on 취소. */}
-          <Button variant="ghost" aria-label={`${index + 1}번째 블록 위로`} disabled={index === 0} onClick={() => { onMove(-1); onDone() }}>↑</Button>
-          <Button variant="ghost" aria-label={`${index + 1}번째 블록 아래로`} disabled={index === blockCount - 1} onClick={() => { onMove(1); onDone() }}>↓</Button>
+          <Button
+            variant="ghost"
+            aria-label={`${index + 1}번째 블록 위로`}
+            disabled={index === 0}
+            onClick={() => {
+              onMove(-1)
+              onDone()
+            }}
+          >
+            ↑
+          </Button>
+          <Button
+            variant="ghost"
+            aria-label={`${index + 1}번째 블록 아래로`}
+            disabled={index === blockCount - 1}
+            onClick={() => {
+              onMove(1)
+              onDone()
+            }}
+          >
+            ↓
+          </Button>
           {/* Leaving edit mode is part of deleting: the rows are keyed by position, so without it
               the open editor would stay mounted over whichever block shifted up into this slot. */}
           <Button
@@ -229,7 +272,9 @@ function BlockControls({
       </div>
       <BlockFields block={block} index={index} filenames={filenames} onChange={onChange} />
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={onDone}>저장</Button>
+        <Button variant="secondary" onClick={onDone}>
+          저장
+        </Button>
         <Button
           variant="ghost"
           onClick={() => {
@@ -263,7 +308,9 @@ function HeaderFields({
         <TextField
           id="generated-title"
           value={content.title}
-          onChange={(event) => onChange(create(PostContentSchema, { ...content, title: event.target.value }))}
+          onChange={(event) =>
+            onChange(create(PostContentSchema, { ...content, title: event.target.value }))
+          }
           className="mt-1"
         />
       </div>
@@ -274,7 +321,9 @@ function HeaderFields({
           rows={3}
           autoGrow
           value={content.summary}
-          onChange={(event) => onChange(create(PostContentSchema, { ...content, summary: event.target.value }))}
+          onChange={(event) =>
+            onChange(create(PostContentSchema, { ...content, summary: event.target.value }))
+          }
           className="max-h-field mt-1"
         />
       </div>
@@ -287,7 +336,10 @@ function HeaderFields({
             onChange(
               create(PostContentSchema, {
                 ...content,
-                tags: event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean),
+                tags: event.target.value
+                  .split(',')
+                  .map((tag) => tag.trim())
+                  .filter(Boolean),
               }),
             )
           }
@@ -296,7 +348,9 @@ function HeaderFields({
         />
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={onDone}>저장</Button>
+        <Button variant="secondary" onClick={onDone}>
+          저장
+        </Button>
         <Button
           variant="ghost"
           onClick={() => {
@@ -311,41 +365,107 @@ function HeaderFields({
   )
 }
 
-function BlockFields({ block, index, filenames, onChange }: { block: Block; index: number; filenames: string[]; onChange: (block: Block) => void }) {
+function BlockFields({
+  block,
+  index,
+  filenames,
+  onChange,
+}: {
+  block: Block
+  index: number
+  filenames: string[]
+  onChange: (block: Block) => void
+}) {
   if (block.type === BlockType.IMAGE) {
     return (
       <div className="mt-3 grid gap-3">
         <FieldLabel htmlFor={`block-image-${index}`}>첨부 사진</FieldLabel>
-        <Select id={`block-image-${index}`} value={block.file} onChange={(event) => onChange(create(BlockSchema, { ...block, file: event.target.value }))}>
-          {filenames.map((filename) => <option key={filename} value={filename}>{filename}</option>)}
+        <Select
+          id={`block-image-${index}`}
+          value={block.file}
+          onChange={(event) =>
+            onChange(create(BlockSchema, { ...block, file: event.target.value }))
+          }
+        >
+          {filenames.map((filename) => (
+            <option key={filename} value={filename}>
+              {filename}
+            </option>
+          ))}
         </Select>
-        <TextField aria-label="대체 텍스트" value={block.alt} onChange={(event) => onChange(create(BlockSchema, { ...block, alt: event.target.value }))} placeholder="사진 설명" />
-        <TextField aria-label="사진 캡션" value={block.caption} onChange={(event) => onChange(create(BlockSchema, { ...block, caption: event.target.value }))} placeholder="캡션 (선택)" />
+        <TextField
+          aria-label="대체 텍스트"
+          value={block.alt}
+          onChange={(event) => onChange(create(BlockSchema, { ...block, alt: event.target.value }))}
+          placeholder="사진 설명"
+        />
+        <TextField
+          aria-label="사진 캡션"
+          value={block.caption}
+          onChange={(event) =>
+            onChange(create(BlockSchema, { ...block, caption: event.target.value }))
+          }
+          placeholder="캡션 (선택)"
+        />
       </div>
     )
   }
   if (block.type === BlockType.LIST) {
-    return <Textarea aria-label={`${index + 1}번째 목록, 한 줄에 한 항목`} rows={3} autoGrow value={block.items.join('\n')} onChange={(event) => onChange(create(BlockSchema, { ...block, items: event.target.value.split('\n') }))} className="mt-3" />
+    return (
+      <Textarea
+        aria-label={`${index + 1}번째 목록, 한 줄에 한 항목`}
+        rows={3}
+        autoGrow
+        value={block.items.join('\n')}
+        onChange={(event) =>
+          onChange(create(BlockSchema, { ...block, items: event.target.value.split('\n') }))
+        }
+        className="mt-3"
+      />
+    )
   }
   return (
     <div className="mt-3 grid gap-3">
       {block.type === BlockType.HEADING && (
-        <Select aria-label="제목 단계" value={block.level} onChange={(event) => onChange(create(BlockSchema, { ...block, level: Number(event.target.value) }))}>
-          {[1, 2, 3, 4, 5, 6].map((level) => <option key={level} value={level}>제목 {level}</option>)}
+        <Select
+          aria-label="제목 단계"
+          value={block.level}
+          onChange={(event) =>
+            onChange(create(BlockSchema, { ...block, level: Number(event.target.value) }))
+          }
+        >
+          {[1, 2, 3, 4, 5, 6].map((level) => (
+            <option key={level} value={level}>
+              제목 {level}
+            </option>
+          ))}
         </Select>
       )}
-      <Textarea aria-label={`${index + 1}번째 블록 내용`} rows={block.type === BlockType.HEADING ? 1 : 3} autoGrow value={block.content} onChange={(event) => onChange(create(BlockSchema, { ...block, content: event.target.value }))} />
+      <Textarea
+        aria-label={`${index + 1}번째 블록 내용`}
+        rows={block.type === BlockType.HEADING ? 1 : 3}
+        autoGrow
+        value={block.content}
+        onChange={(event) =>
+          onChange(create(BlockSchema, { ...block, content: event.target.value }))
+        }
+      />
     </div>
   )
 }
 
 function freshBlock(type: BlockType, firstImage?: string): Block {
   switch (type) {
-    case BlockType.HEADING: return create(BlockSchema, { type, level: 2, content: '새 소제목' })
-    case BlockType.QUOTE: return create(BlockSchema, { type, content: '새 인용문' })
-    case BlockType.LIST: return create(BlockSchema, { type, items: ['새 항목'] })
-    case BlockType.IMAGE: return create(BlockSchema, { type, file: firstImage ?? '' })
-    default: return create(BlockSchema, { type: BlockType.TEXT, content: '새 문단' })
+    case BlockType.HEADING:
+      return create(BlockSchema, { type, level: 2, content: '새 소제목' })
+    case BlockType.QUOTE:
+      return create(BlockSchema, { type, content: '새 인용문' })
+    case BlockType.LIST:
+      return create(BlockSchema, { type, items: ['새 항목'] })
+    case BlockType.IMAGE:
+      return create(BlockSchema, { type, file: firstImage ?? '' })
+    default:
+      return create(BlockSchema, { type: BlockType.TEXT, content: '새 문단' })
   }
 }
 
@@ -353,12 +473,24 @@ function validContent(content: PostContent, filenames: string[]): boolean {
   if (content.blocks.length === 0) return false
   return content.blocks.every((block) => {
     if (block.type === BlockType.IMAGE) return filenames.includes(block.file)
-    if (block.type === BlockType.LIST) return block.items.length > 0 && block.items.every((item) => item.trim() !== '')
-    if (block.type === BlockType.HEADING) return block.content.trim() !== '' && block.level >= 1 && block.level <= 6
-    return (block.type === BlockType.TEXT || block.type === BlockType.QUOTE) && block.content.trim() !== ''
+    if (block.type === BlockType.LIST)
+      return block.items.length > 0 && block.items.every((item) => item.trim() !== '')
+    if (block.type === BlockType.HEADING)
+      return block.content.trim() !== '' && block.level >= 1 && block.level <= 6
+    return (
+      (block.type === BlockType.TEXT || block.type === BlockType.QUOTE) &&
+      block.content.trim() !== ''
+    )
   })
 }
 
 function saveLabel(state: ReturnType<typeof useContentAutosave>['state']) {
-  return { idle: '', dirty: '저장 대기 중', saving: '저장 중…', saved: '저장됨', error: '저장하지 못했어요', conflict: '수정 충돌' }[state]
+  return {
+    idle: '',
+    dirty: '저장 대기 중',
+    saving: '저장 중…',
+    saved: '저장됨',
+    error: '저장하지 못했어요',
+    conflict: '수정 충돌',
+  }[state]
 }

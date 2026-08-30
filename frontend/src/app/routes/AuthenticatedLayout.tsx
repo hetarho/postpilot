@@ -1,13 +1,14 @@
 import type { ComponentType } from 'react'
-import { Bot, FileText, Quote } from 'lucide-react'
+import { Bot, FileText, Quote, Send, Target } from 'lucide-react'
 import { Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { useLogout, useSession } from '@/entities/session'
 import { Button, Logo, Notice } from '@/shared/ui'
 import { endSession } from '../model/end-session'
 
 /** The app's destinations, in one list so the phone tab bar and the desktop header cannot drift.
- *  Three is inside the 3–5 a bottom bar is designed for, so every destination stays visible —
- *  NN/g measured a >20% drop in discoverability once navigation is hidden behind a menu. */
+ *  Five is the top of the 3–5 a bottom bar is designed for, so every destination stays visible —
+ *  NN/g measured a >20% drop in discoverability once navigation is hidden behind a menu. A sixth
+ *  would have to displace one of these rather than be squeezed in beside them. */
 const DESTINATIONS: ReadonlyArray<{
   to: string
   label: string
@@ -15,7 +16,9 @@ const DESTINATIONS: ReadonlyArray<{
 }> = [
   { to: '/posts', label: '글', icon: FileText },
   { to: '/voices', label: '말투', icon: Quote },
+  { to: '/purposes', label: '용도', icon: Target },
   { to: '/ai-models', label: 'AI 모델', icon: Bot },
+  { to: '/publishing-agents', label: '발행 Mac', icon: Send },
 ]
 
 /** The shell every signed-in screen renders inside.

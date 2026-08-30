@@ -57,6 +57,10 @@ var (
 	// distinguishable from a nonexistent one.
 	ErrVoiceNotFound = errors.New("voice not found")
 	ErrVoiceDeleted  = errors.New("voice is deleted")
+	// ErrPurposeNotFound covers unknown and foreign purposes alike, like ErrVoiceNotFound.
+	// There is deliberately no ErrPurposeRequired: a post may have none, and clearing the
+	// assignment is a valid save rather than a missing value.
+	ErrPurposeNotFound = errors.New("purpose not found")
 )
 
 type InvalidContentError struct{ Reason string }
@@ -75,14 +79,26 @@ type VoiceRef struct {
 	Deleted bool
 }
 
+// PurposeRef is the purpose a post is written for, as the post context needs it: the id it
+// stores plus the name the purpose context publishes. An empty ID is the ordinary case —
+// a post without a purpose — not a missing value.
+type PurposeRef struct {
+	ID   string
+	Name string
+}
+
 // Post is the aggregate exposed by the drafting context. Generation may replace its
 // canonical content and observations only through Service's published behaviors. The post
 // stores only VoiceID; Voice is enriched on read through the VoiceDirectory port.
 type Post struct {
-	Slug                    string
-	UserID                  string
-	VoiceID                 string
-	Voice                   VoiceRef
+	Slug    string
+	UserID  string
+	VoiceID string
+	Voice   VoiceRef
+	// PurposeID is empty when the post has no purpose. Like VoiceID the post stores only
+	// the id; Purpose is enriched on read through the PurposeDirectory port.
+	PurposeID               string
+	Purpose                 PurposeRef
 	Title                   string
 	Memo                    string
 	Status                  string
@@ -120,6 +136,19 @@ type LearningSnapshot struct {
 	TargetLength           *int
 	FinalizedAt            time.Time
 	UpdatedAt              time.Time
+}
+
+// PublishingSnapshot is the post context's immutable, ownership-checked hand-off.
+// Reading it never finalizes, learns, signs URLs, or mutates the post; publishing copies
+// the named already-normalized JPEG objects through its own storage port.
+type PublishingSnapshot struct {
+	PostSlug          string
+	UserID            string
+	CreatedAt         time.Time
+	Content           PostContent
+	ContentRevision   int64
+	FinalizedRevision int64
+	Images            []Image
 }
 
 // BlockType is kept as the LLM/protojson spelling at the domain boundary.
@@ -164,6 +193,8 @@ type Summary struct {
 	Slug                string
 	VoiceID             string
 	Voice               VoiceRef
+	PurposeID           string
+	Purpose             PurposeRef
 	Title               string
 	Status              string
 	UpdatedAt           time.Time

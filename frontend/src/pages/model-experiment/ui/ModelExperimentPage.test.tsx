@@ -50,6 +50,7 @@ const experiment: ModelExperiment = {
   status: 'review',
   postSlug: '',
   voiceId: 'voice-default',
+  purposeName: '',
   jobId: 'job-1',
   candidates: [
     {

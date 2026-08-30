@@ -2,7 +2,12 @@ import { DecodeError } from './decode-error'
 import { fileExtension } from './filename'
 
 const HEIF_EXTENSIONS = new Set(['heic', 'heif'])
-const HEIF_TYPES = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
+const HEIF_TYPES = new Set([
+  'image/heic',
+  'image/heif',
+  'image/heic-sequence',
+  'image/heif-sequence',
+])
 
 /** By extension or MIME type — a phone's file picker does not always fill in either. */
 export function isHeif(file: { name: string; type: string }): boolean {

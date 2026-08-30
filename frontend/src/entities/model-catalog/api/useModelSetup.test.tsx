@@ -67,9 +67,7 @@ it('exposes the saved comparison pair as soon as the save stops being pending', 
     { wrapper: withProviders(transport, queryClient) },
   )
 
-  await waitFor(() =>
-    expect(view.result.current.pairs[0]?.candidateA?.ref.modelId).toBe('old-a'),
-  )
+  await waitFor(() => expect(view.result.current.pairs[0]?.candidateA?.ref.modelId).toBe('old-a'))
 
   // Deliberately not awaited: `save()` resolves only after the invalidation's refetch, and the
   // whole point is what a reader sees BEFORE that — the moment the pending flag drops.

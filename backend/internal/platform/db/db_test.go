@@ -111,17 +111,10 @@ func TestMigration0006UpgradesActiveSelectionsAndRollsBack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := provider.Down(ctx); err != nil {
-		t.Fatal(err)
-	}
-	// Roll back 0009, 0008 and 0007 first, then exercise 0006's Down.
-	if _, err := provider.Down(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := provider.Down(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := provider.Down(ctx); err != nil {
+	// Every migration above 0006 comes off, then 0006's own Down runs — named by target
+	// version rather than by a count of Down calls, so adding a migration cannot silently
+	// leave this test asserting against the wrong schema.
+	if _, err := provider.DownTo(ctx, 5); err != nil {
 		t.Fatal(err)
 	}
 	var columns int
@@ -181,14 +174,7 @@ func TestMigration0007PreservesLegacyVoiceAndRollsBack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = provider.Down(ctx); err != nil {
-		t.Fatal(err)
-	}
-	// 0009 and 0008 come off first; the third Down exercises 0007.
-	if _, err = provider.Down(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = provider.Down(ctx); err != nil {
+	if _, err = provider.DownTo(ctx, 6); err != nil {
 		t.Fatal(err)
 	}
 	var currentVersionColumns int
@@ -278,11 +264,7 @@ func TestMigration0008PreservesTargetsAndAddsFinalizationProgress(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	// 0009 first, then the 0008 rollback this test is about.
-	if _, err := provider.Down(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := provider.Down(ctx); err != nil {
+	if _, err := provider.DownTo(ctx, 7); err != nil {
 		t.Fatal(err)
 	}
 	var target int
@@ -506,6 +488,10 @@ func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Publishing and purposes are independent of the voice partition and roll back first.
+	if _, err := provider.DownTo(ctx, 9); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := provider.Down(ctx); err == nil {
 		t.Fatal("rollback collapsed a multi-voice database instead of refusing")
 	}
@@ -521,6 +507,76 @@ func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
 	var voiceTables int
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='voices'`).Scan(&voiceTables); err != nil || voiceTables != 0 {
 		t.Fatalf("rollback kept the voices table: %d err=%v", voiceTables, err)
+	}
+}
+
+func TestMigration0010PublishingConstraintsAndRollback(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	const at = "2026-08-30T00:00:00.000000000Z"
+	for _, statement := range []string{
+		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + at + `')`,
+		`INSERT INTO users(id,password_hash,created_at) VALUES('bob','hash','` + at + `')`,
+		`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('av','alice','a',1,'` + at + `','` + at + `')`,
+		`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('bv','bob','b',1,'` + at + `','` + at + `')`,
+		`INSERT INTO posts(slug,user_id,voice_id,status,created_at,updated_at) VALUES('ap','alice','av','finalized','` + at + `','` + at + `')`,
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,created_at,updated_at) VALUES('aa','alice','ath','Mac','naver_blog','` + at + `','` + at + `')`,
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,created_at,updated_at) VALUES('ba','bob','bth','Mac','naver_blog','` + at + `','` + at + `')`,
+		`INSERT INTO publish_job_ids(id,user_id,created_at) VALUES('j1','alice','` + at + `')`,
+		`INSERT INTO publish_job_ids(id,user_id,created_at) VALUES('foreign','alice','` + at + `')`,
+		`INSERT INTO publish_job_ids(id,user_id,created_at) VALUES('duplicate','alice','` + at + `')`,
+		`INSERT INTO publish_job_ids(id,user_id,created_at) VALUES('retry','alice','` + at + `')`,
+		`INSERT INTO publish_jobs(id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,content_revision,manifest_json,settings_json,created_at,updated_at) VALUES('j1','alice','ap','` + at + `','aa','naver_blog','queued','queued',1,'{}','{}','` + at + `','` + at + `')`,
+	} {
+		if _, err := handle.Writer.Exec(statement); err != nil {
+			t.Fatalf("statement failed: %v\n%s", err, statement)
+		}
+	}
+	for _, index := range []string{
+		"publish_jobs_agent_queue_idx",
+		"publish_jobs_post_history_idx",
+		"publish_jobs_deleted_post_history_idx",
+		"publish_jobs_retryable_idx",
+		"publish_jobs_expired_running_idx",
+		"publish_jobs_terminal_cleanup_idx",
+	} {
+		var count int
+		if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='index' AND name=?`, index).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("publishing index %s count=%d err=%v", index, count, err)
+		}
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO publish_jobs(id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,content_revision,manifest_json,settings_json,created_at,updated_at) VALUES('foreign','alice','ap',?,'ba','naver_blog','queued','queued',1,'{}','{}',?,?)`, at, at, at); err == nil {
+		t.Fatal("cross-account agent was accepted")
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO publish_jobs(id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,content_revision,manifest_json,settings_json,created_at,updated_at) VALUES('duplicate','alice','ap',?,'aa','naver_blog','running','claimed',1,'{}','{}',?,?)`, at, at, at); err == nil {
+		t.Fatal("second live publication was accepted")
+	}
+	if _, err := handle.Writer.Exec(`UPDATE publish_jobs SET status='failed' WHERE id='j1'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO publish_jobs(id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,content_revision,manifest_json,settings_json,created_at,updated_at) VALUES('retry','alice','ap',?,'aa','naver_blog','queued','queued',1,'{}','{}',?,?)`, at, at, at); err != nil {
+		t.Fatalf("safe retry after failure was rejected: %v", err)
+	}
+
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.DownTo(ctx, 9); err != nil {
+		t.Fatal(err)
+	}
+	for _, table := range []string{"publishing_pairings", "publishing_agents", "publish_job_ids", "publish_jobs", "publish_assets"} {
+		var count int
+		if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("rollback kept %s: count=%d err=%v", table, count, err)
+		}
 	}
 }
 
@@ -572,5 +628,79 @@ func TestMigration0009SerializesVoiceDeletionAgainstNewWork(t *testing.T) {
 	var retained int
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM posts WHERE slug='work-post' AND voice_id='voice-work'`).Scan(&retained); err != nil || retained != 1 {
 		t.Fatalf("soft delete lost the existing post: retained=%d err=%v", retained, err)
+	}
+}
+
+// A purpose is optional, account-scoped, and detachable: a post may have none, may never
+// name another account's, and outlives the purpose it pointed at.
+func TestMigration0011AddsOptionalAccountScopedPurposes(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	const at = "2026-08-30T00:00:00.000000000Z"
+	for _, statement := range []string{
+		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + at + `')`,
+		`INSERT INTO users(id,password_hash,created_at) VALUES('bob','hash','` + at + `')`,
+		`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('av','alice','a',1,'` + at + `','` + at + `')`,
+		`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('bv','bob','b',1,'` + at + `','` + at + `')`,
+		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('ap','alice','리뷰','','지침','` + at + `','` + at + `')`,
+		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('bp','bob','리뷰','','지침','` + at + `','` + at + `')`,
+		// A post with no purpose is the ordinary case, and the only one an existing row can be.
+		`INSERT INTO posts(slug,user_id,voice_id,status,created_at,updated_at) VALUES('none','alice','av','draft','` + at + `','` + at + `')`,
+		`INSERT INTO posts(slug,user_id,voice_id,purpose_id,status,created_at,updated_at) VALUES('with','alice','av','ap','draft','` + at + `','` + at + `')`,
+	} {
+		if _, err := handle.Writer.Exec(statement); err != nil {
+			t.Fatalf("statement failed: %v\n%s", err, statement)
+		}
+	}
+
+	if _, err := handle.Writer.Exec(`INSERT INTO posts(slug,user_id,voice_id,purpose_id,status,created_at,updated_at) VALUES('foreign','alice','av','bp','draft',?,?)`, at, at); err == nil {
+		t.Fatal("a post named another account's purpose")
+	}
+	if _, err := handle.Writer.Exec(`UPDATE posts SET purpose_id='bp' WHERE slug='none'`); err == nil {
+		t.Fatal("a post was reassigned to another account's purpose")
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('dup','alice','리뷰','','지침',?,?)`, at, at); err == nil {
+		t.Fatal("a duplicate name within one account was accepted")
+	}
+
+	// Deleting the purpose detaches, and deletes no post and no content.
+	if _, err := handle.Writer.Exec(`DELETE FROM purposes WHERE id='ap'`); err != nil {
+		t.Fatalf("delete refused: %v", err)
+	}
+	var posts, assigned int
+	if err := handle.Reader.QueryRow(`SELECT count(*), count(purpose_id) FROM posts WHERE user_id='alice'`).Scan(&posts, &assigned); err != nil {
+		t.Fatal(err)
+	}
+	if posts != 2 || assigned != 0 {
+		t.Fatalf("detach removed posts or left assignments: posts=%d assigned=%d", posts, assigned)
+	}
+
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.DownTo(ctx, 10); err != nil {
+		t.Fatal(err)
+	}
+	var purposeTables, purposeColumns, experimentColumns int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='purposes'`).Scan(&purposeTables); err != nil || purposeTables != 0 {
+		t.Fatalf("rollback kept purposes: count=%d err=%v", purposeTables, err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('posts') WHERE name='purpose_id'`).Scan(&purposeColumns); err != nil || purposeColumns != 0 {
+		t.Fatalf("rollback kept posts.purpose_id: count=%d err=%v", purposeColumns, err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('model_experiments') WHERE name='purpose_name'`).Scan(&experimentColumns); err != nil || experimentColumns != 0 {
+		t.Fatalf("rollback kept model_experiments.purpose_name: count=%d err=%v", experimentColumns, err)
+	}
+	// The rollback is about purposes only: the posts it detached are still there.
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM posts WHERE user_id='alice'`).Scan(&posts); err != nil || posts != 2 {
+		t.Fatalf("rollback lost posts: count=%d err=%v", posts, err)
 	}
 }

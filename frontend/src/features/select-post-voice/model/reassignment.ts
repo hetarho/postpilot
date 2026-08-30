@@ -8,7 +8,8 @@ export function reassignmentBlocker(post: {
   activeJob: Pick<GenerationJob, 'status'> | undefined
   pendingExperimentId: string
 }): string {
-  if (post.activeJob && !isTerminal(post.activeJob)) return 'AI 작업이 끝나면 말투를 바꿀 수 있어요.'
+  if (post.activeJob && !isTerminal(post.activeJob))
+    return 'AI 작업이 끝나면 말투를 바꿀 수 있어요.'
   if (post.pendingExperimentId) return '대기 중인 A/B 결과를 먼저 확인하면 말투를 바꿀 수 있어요.'
   return ''
 }

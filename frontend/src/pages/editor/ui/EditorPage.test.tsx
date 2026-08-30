@@ -2,7 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { discardUploadBatches } from '@/features/upload-photos'
-import { Stage } from '@/shared/api'
+import { create } from '@bufbuild/protobuf'
+import {
+  PublishJobSchema,
+  PublishStatus,
+  PublishVisibility,
+  PublishingAgentSchema,
+  Stage,
+} from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import {
   OBSERVATION_FIXTURE,
@@ -98,6 +105,243 @@ describe('opening a post', () => {
     await user.click(screen.getByRole('tab', { name: '마크다운' }))
 
     expect(calls).toEqual([])
+  })
+
+  it('renders publishing after export without starting on mount', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'review',
+            createdAt: '2026-08-20T12:00:00Z',
+            content: POST_CONTENT_FIXTURE,
+          },
+        ],
+      },
+    })
+
+    await openStep(user, '글 완성')
+    const exportHeading = await screen.findByRole('heading', { name: '내보내기' })
+    const publishHeading = await screen.findByRole('heading', { name: '발행하기' })
+    expect(
+      exportHeading.compareDocumentPosition(publishHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(calls).not.toContain('StartPublish')
+  })
+
+  it('starts only after the explicit final-publish confirmation', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    const agent = create(PublishingAgentSchema, {
+      id: 'agent-1',
+      label: '침실 Mac',
+      platformAccountId: 'my-blog',
+      platformAccountLabel: '내 네이버 블로그',
+      browserLabel: 'Google Chrome',
+      categories: [{ id: 'daily', name: '일상' }],
+      defaultCategoryId: 'daily',
+      defaultVisibility: PublishVisibility.PUBLIC,
+      lastSeenAt: new Date().toISOString(),
+      ready: true,
+    })
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'finalized',
+            createdAt: '2026-08-20T12:00:00Z',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 3n,
+            finalizedRevision: 3n,
+          },
+        ],
+      },
+      publishing: { agents: [agent] },
+    })
+
+    const publishButton = await screen.findByRole('button', { name: '네이버에 발행' })
+    expect(calls).not.toContain('StartPublish')
+    await user.click(publishButton)
+    expect(calls).not.toContain('StartPublish')
+    expect(screen.getByRole('dialog', { name: '네이버에 최종 발행할까요?' })).toHaveTextContent(
+      '추가 확인을 요청하지 않습니다',
+    )
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: '네이버에 발행' }),
+    )
+    await waitFor(() => expect(calls).toContain('StartPublish'))
+  })
+
+  it('flushes a pending edit and refuses to publish the formerly finalized revision', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    let releaseSave!: () => void
+    const contentSaveGate = new Promise<void>((resolve) => {
+      releaseSave = resolve
+    })
+    const agent = create(PublishingAgentSchema, {
+      id: 'agent-1',
+      label: '침실 Mac',
+      platformAccountId: 'my-blog',
+      platformAccountLabel: '내 네이버 블로그',
+      browserLabel: 'Google Chrome',
+      categories: [{ id: 'daily', name: '일상' }],
+      defaultCategoryId: 'daily',
+      defaultVisibility: PublishVisibility.PUBLIC,
+      ready: true,
+    })
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      posts: {
+        contentSaveGate,
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'finalized',
+            content: POST_CONTENT_FIXTURE,
+            images: POST_IMAGES_FIXTURE,
+            contentRevision: 3n,
+            finalizedRevision: 3n,
+            machineBaselineRevision: 3n,
+          },
+        ],
+      },
+      publishing: { agents: [agent] },
+    })
+
+    await openStep(user, '글 다듬기')
+    await user.click(await screen.findByRole('button', { name: '1번째 블록 수정' }))
+    const field = screen.getByLabelText('1번째 블록 내용')
+    await user.clear(field)
+    await user.type(field, '발행 직전에 고친 문단')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
+    await openStep(user, '글 완성')
+    await user.click(await screen.findByRole('button', { name: '네이버에 발행' }))
+
+    expect(calls).not.toContain('StartPublish')
+    expect(
+      screen.queryByRole('dialog', { name: '네이버에 최종 발행할까요?' }),
+    ).not.toBeInTheDocument()
+    releaseSave()
+    await waitFor(() =>
+      expect(
+        screen.getByText('현재 내용을 먼저 확정해야 정확히 이 버전을 발행할 수 있어요.'),
+      ).toBeInTheDocument(),
+    )
+  })
+
+  it('keeps the frozen category and visibility for a safe attention retry', async () => {
+    const calls: string[] = []
+    const startRequests: Array<{
+      expectedContentRevision: bigint
+      agentId: string
+      categoryId: string
+      visibility: number
+    }> = []
+    const user = userEvent.setup()
+    const agent = create(PublishingAgentSchema, {
+      id: 'agent-1',
+      label: '침실 Mac',
+      platformAccountId: 'my-blog',
+      platformAccountLabel: '내 네이버 블로그',
+      browserLabel: 'Google Chrome',
+      categories: [
+        { id: 'daily', name: '일상' },
+        { id: 'travel', name: '여행' },
+      ],
+      defaultCategoryId: 'daily',
+      defaultVisibility: PublishVisibility.PUBLIC,
+      ready: true,
+    })
+    const job = create(PublishJobSchema, {
+      id: 'publish-job-1',
+      postSlug: '20260820-jeju',
+      agentId: 'agent-1',
+      status: PublishStatus.NEEDS_ATTENTION,
+      contentRevision: 3n,
+      categoryId: 'travel',
+      visibility: PublishVisibility.PRIVATE,
+    })
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'review',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 9n,
+            finalizedRevision: 3n,
+          },
+        ],
+      },
+      publishing: { calls, agents: [agent], jobs: [job], startRequests },
+    })
+
+    await openStep(user, '글 완성')
+    const retry = await screen.findByRole('button', { name: '안전하게 다시 시도' })
+    expect(retry).toBeEnabled()
+    expect(screen.getByLabelText('카테고리')).toHaveValue('travel')
+    expect(screen.getByLabelText('카테고리')).toBeDisabled()
+    expect(screen.getByLabelText('공개 설정')).toHaveValue(String(PublishVisibility.PRIVATE))
+    expect(screen.getByLabelText('공개 설정')).toBeDisabled()
+
+    await user.click(retry)
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: '네이버에 발행' }),
+    )
+    await waitFor(() => expect(calls).toContain('StartPublish'))
+    expect(startRequests).toEqual([
+      {
+        expectedContentRevision: 3n,
+        agentId: 'agent-1',
+        categoryId: 'travel',
+        visibility: PublishVisibility.PRIVATE,
+      },
+    ])
+  })
+
+  it('keeps pre-commit cancellation available when the paired agent is unavailable', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    const job = create(PublishJobSchema, {
+      id: 'publish-job-queued',
+      postSlug: '20260820-jeju',
+      agentId: 'revoked-agent',
+      status: PublishStatus.QUEUED,
+      contentRevision: 3n,
+      categoryId: 'travel',
+      visibility: PublishVisibility.PRIVATE,
+    })
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'finalized',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 3n,
+            finalizedRevision: 3n,
+          },
+        ],
+      },
+      publishing: { agents: [], jobs: [job] },
+    })
+
+    await user.click(await screen.findByRole('button', { name: '발행 취소' }))
+    await waitFor(() => expect(calls).toContain('CancelPublish'))
   })
 
   it('resumes polling the active job exposed by the post', async () => {
@@ -1573,5 +1817,161 @@ describe('the post voice', () => {
     )
     await waitFor(() => expect(screen.queryAllByText('삭제된 말투 · 옛 말투')).toHaveLength(0))
     await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
+  })
+})
+
+// Plan 11 A12: 용도 is optional, defaults to 없음, and rides the same draft queue as the text.
+describe('the post purpose', () => {
+  const AUTOSAVED = { timeout: 4_000 }
+  const PURPOSES = [
+    { id: 'purpose-review', name: '정보성 식당 리뷰', description: '협찬 방문 리뷰' },
+    { id: 'purpose-diary', name: '일기' },
+  ]
+  const POST_PURPOSES = [
+    { id: 'purpose-review', name: '정보성 식당 리뷰' },
+    { id: 'purpose-diary', name: '일기' },
+  ]
+
+  async function pickPurpose(user: ReturnType<typeof userEvent.setup>, name: string) {
+    const picker = await screen.findByLabelText('용도')
+    await waitFor(() => expect(picker).toBeEnabled())
+    const option = await screen.findByRole('option', { name })
+    await user.selectOptions(picker, option)
+    return picker
+  }
+
+  it('defaults a new draft to 없음 and sends no purpose with the create', async () => {
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/new', {
+      user: USER,
+      posts: { draftSaves },
+      purposes: { purposes: PURPOSES },
+    })
+
+    const picker = await screen.findByLabelText('용도')
+    expect(picker).toHaveValue('')
+    expect(within(picker).getByRole('option', { name: '없음' })).toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText('제목'), '제주')
+    await waitFor(() => expect(draftSaves).toHaveLength(1), AUTOSAVED)
+    // Omitted, not '': the create has no assignment to clear, so the request is byte-for-byte
+    // what it was before purposes existed.
+    expect(draftSaves[0].purposeId).toBeUndefined()
+  })
+
+  it('carries a chosen purpose into the create and links to the management screen', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/new', {
+      user: USER,
+      posts: { draftSaves, purposes: POST_PURPOSES },
+      purposes: { purposes: PURPOSES },
+    })
+
+    await pickPurpose(user, '정보성 식당 리뷰')
+    // Choosing is not typing: nothing is saved until there is something to save.
+    expect(draftSaves).toHaveLength(0)
+    expect(screen.getByText('협찬 방문 리뷰')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '용도 관리' })).toHaveAttribute('href', '/purposes')
+
+    await user.type(screen.getByLabelText('제목'), '리뷰 글')
+    await waitFor(
+      () => expect(draftSaves[0]).toMatchObject({ slug: '', purposeId: 'purpose-review' }),
+      AUTOSAVED,
+    )
+  })
+
+  it('assigns and clears an existing post through the draft queue', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [{ slug: '20260820-jeju', title: '제주' }],
+        draftSaves,
+        purposes: POST_PURPOSES,
+      },
+      purposes: { purposes: PURPOSES },
+    })
+
+    await pickPurpose(user, '일기')
+    // No confirmation sheet: nothing is learned from a purpose, so there is nothing to warn about.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(draftSaves[0]).toMatchObject({ slug: '20260820-jeju', purposeId: 'purpose-diary' }),
+    )
+    await waitFor(() => expect(screen.getByLabelText('용도')).toHaveValue('purpose-diary'))
+
+    await pickPurpose(user, '없음')
+    // A present empty string, which is what clears it — distinct from omitting the field.
+    await waitFor(() => expect(draftSaves[1]).toMatchObject({ purposeId: '' }))
+    await waitFor(() => expect(screen.getByLabelText('용도')).toHaveValue(''))
+  })
+
+  // The selection goes out on its own request, so a title save still in flight cannot carry the
+  // older assignment over it.
+  it('survives a delayed title save', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [{ slug: '20260820-jeju', title: '제주' }],
+        draftSaves,
+        purposes: POST_PURPOSES,
+      },
+      purposes: { purposes: PURPOSES },
+    })
+
+    await screen.findByLabelText('용도')
+    await user.type(screen.getByLabelText('제목'), ' 여행')
+    await pickPurpose(user, '일기')
+
+    await waitFor(() => expect(draftSaves.length).toBeGreaterThan(0), AUTOSAVED)
+    // Whatever order the requests went out in, the last word on the assignment is the choice.
+    const assignments = draftSaves.map((save) => save.purposeId).filter((id) => id !== undefined)
+    expect(assignments.at(-1)).toBe('purpose-diary')
+    await waitFor(() => expect(screen.getByLabelText('용도')).toHaveValue('purpose-diary'))
+  })
+
+  // A failed directory read must not be indistinguishable from "you have no 용도" — the select
+  // would be enabled with 없음 alone, and clearing would be the only thing left to do.
+  it('says so and offers a retry when the directory cannot be read', async () => {
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ slug: '20260820-jeju', title: '제주' }] },
+      purposes: { listFails: true },
+    })
+
+    expect(await screen.findByText(/용도 목록을 불러오지 못했어요/)).toBeInTheDocument()
+    expect(screen.getByLabelText('용도')).toBeDisabled()
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
+  })
+
+  it('stays usable during a job and says the running one keeps its own brief', async () => {
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            title: '제주',
+            purpose: { id: 'purpose-review', name: '정보성 식당 리뷰' },
+            activeJob: { id: 'job-1', kind: 'generate', status: 'running' },
+          },
+        ],
+        purposes: POST_PURPOSES,
+      },
+      purposes: { purposes: PURPOSES },
+      jobs: { jobs: [{ id: 'job-1', kind: 'generate', status: 'running' }] },
+    })
+
+    const picker = await screen.findByLabelText('용도')
+    await waitFor(() => expect(picker).toHaveValue('purpose-review'))
+    expect(picker).toBeEnabled()
+    expect(
+      await screen.findByText(/진행 중인 AI 작업은 시작할 때의 용도로 끝나요/),
+    ).toBeInTheDocument()
   })
 })

@@ -1,47 +1,224 @@
 import type { Transport } from '@connectrpc/connect'
-import { VoiceLayer, VoiceRuleStatus, VoiceValueSource, type ProtoVoice, type ProtoVoiceProfile, type ProtoVoiceRef, type ProtoVoiceSample, type StructuredVoiceProfile as ProtoStructured, type VoiceProfileVersion as ProtoVersion } from '@/shared/api'
-import { emptyVoice, type StructuredVoiceProfile, type Voice, type VoiceProfile, type VoiceRef, type VoiceSample, type VoiceSourceKind, type VoiceVersion } from '../model/types'
+import {
+  VoiceLayer,
+  VoiceRuleStatus,
+  VoiceValueSource,
+  type ProtoVoice,
+  type ProtoVoiceProfile,
+  type ProtoVoiceRef,
+  type ProtoVoiceSample,
+  type StructuredVoiceProfile as ProtoStructured,
+  type VoiceProfileVersion as ProtoVersion,
+} from '@/shared/api'
+import {
+  emptyVoice,
+  type StructuredVoiceProfile,
+  type Voice,
+  type VoiceProfile,
+  type VoiceRef,
+  type VoiceSample,
+  type VoiceSourceKind,
+  type VoiceVersion,
+} from '../model/types'
 
-const layer = (value: VoiceLayer): string => value === VoiceLayer.LEXICAL ? 'lexical' : value === VoiceLayer.ENDINGS ? 'endings' : value === VoiceLayer.SYNTAX ? 'syntax' : value === VoiceLayer.STRUCTURE ? 'structure' : value === VoiceLayer.AXES ? 'axes' : 'unknown'
-const status = (value: VoiceRuleStatus): 'candidate' | 'active' | 'retired' | 'rejected' | 'unknown' => value === VoiceRuleStatus.CANDIDATE ? 'candidate' : value === VoiceRuleStatus.ACTIVE ? 'active' : value === VoiceRuleStatus.RETIRED ? 'retired' : value === VoiceRuleStatus.REJECTED ? 'rejected' : 'unknown'
-const source = (value: VoiceValueSource): VoiceSourceKind => value === VoiceValueSource.MEASURED ? 'measured' : value === VoiceValueSource.ANALYZED ? 'analyzed' : value === VoiceValueSource.MANUAL ? 'manual' : 'unknown'
-const voiceValue = (value: { value: string; source: VoiceValueSource; unknown: boolean } | undefined) => ({ value: value?.value ?? '', source: source(value?.source ?? VoiceValueSource.UNKNOWN), unknown: value?.unknown ?? true })
+const layer = (value: VoiceLayer): string =>
+  value === VoiceLayer.LEXICAL
+    ? 'lexical'
+    : value === VoiceLayer.ENDINGS
+      ? 'endings'
+      : value === VoiceLayer.SYNTAX
+        ? 'syntax'
+        : value === VoiceLayer.STRUCTURE
+          ? 'structure'
+          : value === VoiceLayer.AXES
+            ? 'axes'
+            : 'unknown'
+const status = (
+  value: VoiceRuleStatus,
+): 'candidate' | 'active' | 'retired' | 'rejected' | 'unknown' =>
+  value === VoiceRuleStatus.CANDIDATE
+    ? 'candidate'
+    : value === VoiceRuleStatus.ACTIVE
+      ? 'active'
+      : value === VoiceRuleStatus.RETIRED
+        ? 'retired'
+        : value === VoiceRuleStatus.REJECTED
+          ? 'rejected'
+          : 'unknown'
+const source = (value: VoiceValueSource): VoiceSourceKind =>
+  value === VoiceValueSource.MEASURED
+    ? 'measured'
+    : value === VoiceValueSource.ANALYZED
+      ? 'analyzed'
+      : value === VoiceValueSource.MANUAL
+        ? 'manual'
+        : 'unknown'
+const voiceValue = (
+  value: { value: string; source: VoiceValueSource; unknown: boolean } | undefined,
+) => ({
+  value: value?.value ?? '',
+  source: source(value?.source ?? VoiceValueSource.UNKNOWN),
+  unknown: value?.unknown ?? true,
+})
 
 export function toVoice(voice: ProtoVoice | undefined): Voice {
   if (!voice) return emptyVoice()
-  return { id: voice.id, name: voice.name, isDefault: voice.isDefault, deleted: voice.deleted, createdAt: voice.createdAt, updatedAt: voice.updatedAt, deletedAt: voice.deletedAt }
+  return {
+    id: voice.id,
+    name: voice.name,
+    isDefault: voice.isDefault,
+    deleted: voice.deleted,
+    createdAt: voice.createdAt,
+    updatedAt: voice.updatedAt,
+    deletedAt: voice.deletedAt,
+  }
 }
 export function toVoiceRef(ref: ProtoVoiceRef | undefined): VoiceRef {
   return { id: ref?.id ?? '', name: ref?.name ?? '', deleted: ref?.deleted ?? false }
 }
-export function toVoiceSample(sample: ProtoVoiceSample): VoiceSample { return { id: sample.id, label: sample.label, chars: sample.chars, createdAt: sample.createdAt } }
+export function toVoiceSample(sample: ProtoVoiceSample): VoiceSample {
+  return { id: sample.id, label: sample.label, chars: sample.chars, createdAt: sample.createdAt }
+}
 export function toStructured(p: ProtoStructured | undefined): StructuredVoiceProfile {
   return {
-    version: p?.meta?.version ?? 0n, updatedAt: p?.meta?.updatedAt ?? '', sourceCount: p?.meta?.sourceCount ?? 0, empty: p?.empty ?? true,
-    lexical: { description: voiceValue(p?.lexical?.description), preferredWords: p?.lexical?.preferredWords.map((v) => ({ word: v.word, alternatives: [...v.alternatives], weight: v.weight })) ?? [], bannedWords: p?.lexical?.bannedWords.map((v) => ({ value: v.value, reason: v.reason })) ?? [], bannedPatterns: p?.lexical?.bannedPatterns.map((v) => ({ value: v.value, reason: v.reason })) ?? [] },
-    endings: { baseRegister: voiceValue(p?.endings?.baseRegister), distribution: p?.endings?.distribution.map((v) => ({ ending: v.ending, ratio: v.ratio })) ?? [], bannedEndings: [...(p?.endings?.bannedEndings ?? [])], signatureEndings: [...(p?.endings?.signatureEndings ?? [])], constraints: [...(p?.endings?.constraints ?? [])] },
-    syntax: { averageSentenceChars: p?.syntax?.averageSentenceChars ?? 0, sentenceLength: voiceValue(p?.syntax?.sentenceLength), connectiveStyle: voiceValue(p?.syntax?.connectiveStyle), preferredConnectives: [...(p?.syntax?.preferredConnectives ?? [])], nominalization: voiceValue(p?.syntax?.nominalization), passiveTendency: voiceValue(p?.syntax?.passiveTendency) },
-    structure: { introPattern: voiceValue(p?.structure?.introPattern), closingPattern: voiceValue(p?.structure?.closingPattern), paragraphSentencesMin: p?.structure?.paragraphSentencesMin ?? 0, paragraphSentencesMax: p?.structure?.paragraphSentencesMax ?? 0, headingHabit: voiceValue(p?.structure?.headingHabit), listHabit: voiceValue(p?.structure?.listHabit), emojiUse: voiceValue(p?.structure?.emojiUse) },
+    version: p?.meta?.version ?? 0n,
+    updatedAt: p?.meta?.updatedAt ?? '',
+    sourceCount: p?.meta?.sourceCount ?? 0,
+    empty: p?.empty ?? true,
+    lexical: {
+      description: voiceValue(p?.lexical?.description),
+      preferredWords:
+        p?.lexical?.preferredWords.map((v) => ({
+          word: v.word,
+          alternatives: [...v.alternatives],
+          weight: v.weight,
+        })) ?? [],
+      bannedWords: p?.lexical?.bannedWords.map((v) => ({ value: v.value, reason: v.reason })) ?? [],
+      bannedPatterns:
+        p?.lexical?.bannedPatterns.map((v) => ({ value: v.value, reason: v.reason })) ?? [],
+    },
+    endings: {
+      baseRegister: voiceValue(p?.endings?.baseRegister),
+      distribution:
+        p?.endings?.distribution.map((v) => ({ ending: v.ending, ratio: v.ratio })) ?? [],
+      bannedEndings: [...(p?.endings?.bannedEndings ?? [])],
+      signatureEndings: [...(p?.endings?.signatureEndings ?? [])],
+      constraints: [...(p?.endings?.constraints ?? [])],
+    },
+    syntax: {
+      averageSentenceChars: p?.syntax?.averageSentenceChars ?? 0,
+      sentenceLength: voiceValue(p?.syntax?.sentenceLength),
+      connectiveStyle: voiceValue(p?.syntax?.connectiveStyle),
+      preferredConnectives: [...(p?.syntax?.preferredConnectives ?? [])],
+      nominalization: voiceValue(p?.syntax?.nominalization),
+      passiveTendency: voiceValue(p?.syntax?.passiveTendency),
+    },
+    structure: {
+      introPattern: voiceValue(p?.structure?.introPattern),
+      closingPattern: voiceValue(p?.structure?.closingPattern),
+      paragraphSentencesMin: p?.structure?.paragraphSentencesMin ?? 0,
+      paragraphSentencesMax: p?.structure?.paragraphSentencesMax ?? 0,
+      headingHabit: voiceValue(p?.structure?.headingHabit),
+      listHabit: voiceValue(p?.structure?.listHabit),
+      emojiUse: voiceValue(p?.structure?.emojiUse),
+    },
     // No `?? 0` here: the wire carries axis presence, and collapsing absence into 0 is exactly
     // the bug this screen used to show — a neutral measurement the model never made.
-    axes: { involvement: p?.axes?.involvement, narrativity: p?.axes?.narrativity, persuasionOvertness: p?.axes?.persuasionOvertness, abstractness: p?.axes?.abstractness, addresseeFocus: p?.axes?.addresseeFocus, humor: p?.axes?.humor },
-    rules: p?.contrastRules.map((v) => ({ id: v.id, statement: v.statement, layer: layer(v.layer), evidenceCount: v.evidenceCount, status: status(v.status), origin: v.origin, createdAt: v.createdAt, lastEvidenceAt: v.lastEvidenceAt })) ?? [],
-    sources: p?.fewShotBank.map((v) => ({ id: v.id, postSlug: v.postSlug, title: v.title, tags: [...v.tags], excerpt: v.excerpt, hasEmbedding: v.hasEmbedding, createdAt: v.createdAt })) ?? [],
-    feedback: p?.feedbackLog.map((v) => ({ id: v.id, postSlug: v.postSlug, kind: v.kind, layer: layer(v.layer), processingState: v.processingState, createdAt: v.createdAt })) ?? [],
+    axes: {
+      involvement: p?.axes?.involvement,
+      narrativity: p?.axes?.narrativity,
+      persuasionOvertness: p?.axes?.persuasionOvertness,
+      abstractness: p?.axes?.abstractness,
+      addresseeFocus: p?.axes?.addresseeFocus,
+      humor: p?.axes?.humor,
+    },
+    rules:
+      p?.contrastRules.map((v) => ({
+        id: v.id,
+        statement: v.statement,
+        layer: layer(v.layer),
+        evidenceCount: v.evidenceCount,
+        status: status(v.status),
+        origin: v.origin,
+        createdAt: v.createdAt,
+        lastEvidenceAt: v.lastEvidenceAt,
+      })) ?? [],
+    sources:
+      p?.fewShotBank.map((v) => ({
+        id: v.id,
+        postSlug: v.postSlug,
+        title: v.title,
+        tags: [...v.tags],
+        excerpt: v.excerpt,
+        hasEmbedding: v.hasEmbedding,
+        createdAt: v.createdAt,
+      })) ?? [],
+    feedback:
+      p?.feedbackLog.map((v) => ({
+        id: v.id,
+        postSlug: v.postSlug,
+        kind: v.kind,
+        layer: layer(v.layer),
+        processingState: v.processingState,
+        createdAt: v.createdAt,
+      })) ?? [],
   }
 }
 export function toVoiceProfile(profile: ProtoVoiceProfile | undefined): VoiceProfile {
-  return { voice: toVoice(profile?.voice), styleguide: profile?.styleguide ?? '', rules: profile?.rules ?? '', legacyManualGuidance: profile?.legacyManualGuidance ?? '', updatedAt: profile?.updatedAt ?? '', samples: profile?.samples.map(toVoiceSample) ?? [], activeJobId: profile?.activeJobId ?? '', structured: toStructured(profile?.structured), finalizedSourceCount: profile?.finalizedSourceCount ?? 0, canValidate: profile?.canValidate ?? false }
+  return {
+    voice: toVoice(profile?.voice),
+    styleguide: profile?.styleguide ?? '',
+    rules: profile?.rules ?? '',
+    legacyManualGuidance: profile?.legacyManualGuidance ?? '',
+    updatedAt: profile?.updatedAt ?? '',
+    samples: profile?.samples.map(toVoiceSample) ?? [],
+    activeJobId: profile?.activeJobId ?? '',
+    structured: toStructured(profile?.structured),
+    finalizedSourceCount: profile?.finalizedSourceCount ?? 0,
+    canValidate: profile?.canValidate ?? false,
+  }
 }
-export function toVoiceVersion(version: ProtoVersion): VoiceVersion { return { version: version.version, profile: toStructured(version.profile), origin: version.origin, restoredFromVersion: version.restoredFromVersion, createdAt: version.createdAt } }
+export function toVoiceVersion(version: ProtoVersion): VoiceVersion {
+  return {
+    version: version.version,
+    profile: toStructured(version.profile),
+    origin: version.origin,
+    restoredFromVersion: version.restoredFromVersion,
+    createdAt: version.createdAt,
+  }
+}
 
 // Every key carries the account AND the voice (tech/multi-voice-partitioning.md): two voices of one
 // account are different aggregates that may contradict each other, and an account switch on the
 // same device must never read the previous account's entry. The directory itself is per account.
-export function voicesQueryKey(transport: Transport, ownerId: string) { return ['voices', transport, ownerId] as const }
-export function voiceProfileQueryKey(transport: Transport, ownerId: string, voiceId: string) { return ['voice-profile', transport, ownerId, voiceId] as const }
-export function voiceVersionsQueryKey(transport: Transport, ownerId: string, voiceId: string) { return ['voice-versions', transport, ownerId, voiceId] as const }
-export function voiceConfirmationsQueryKey(transport: Transport, ownerId: string, voiceId: string) { return ['voice-confirmations', transport, ownerId, voiceId] as const }
-export function voiceValidationsQueryKey(transport: Transport, ownerId: string, voiceId: string) { return ['voice-validations', transport, ownerId, voiceId] as const }
-export function voiceComparisonQueryKey(transport: Transport, ownerId: string, voiceId: string, id: string) { return ['voice-rule-comparison', transport, ownerId, voiceId, id] as const }
-export function voiceValidationQueryKey(transport: Transport, ownerId: string, voiceId: string, id: string) { return ['voice-validation', transport, ownerId, voiceId, id] as const }
+export function voicesQueryKey(transport: Transport, ownerId: string) {
+  return ['voices', transport, ownerId] as const
+}
+export function voiceProfileQueryKey(transport: Transport, ownerId: string, voiceId: string) {
+  return ['voice-profile', transport, ownerId, voiceId] as const
+}
+export function voiceVersionsQueryKey(transport: Transport, ownerId: string, voiceId: string) {
+  return ['voice-versions', transport, ownerId, voiceId] as const
+}
+export function voiceConfirmationsQueryKey(transport: Transport, ownerId: string, voiceId: string) {
+  return ['voice-confirmations', transport, ownerId, voiceId] as const
+}
+export function voiceValidationsQueryKey(transport: Transport, ownerId: string, voiceId: string) {
+  return ['voice-validations', transport, ownerId, voiceId] as const
+}
+export function voiceComparisonQueryKey(
+  transport: Transport,
+  ownerId: string,
+  voiceId: string,
+  id: string,
+) {
+  return ['voice-rule-comparison', transport, ownerId, voiceId, id] as const
+}
+export function voiceValidationQueryKey(
+  transport: Transport,
+  ownerId: string,
+  voiceId: string,
+  id: string,
+) {
+  return ['voice-validation', transport, ownerId, voiceId, id] as const
+}

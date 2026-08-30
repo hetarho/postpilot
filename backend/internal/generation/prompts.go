@@ -15,7 +15,32 @@ IMAGE 블록은 사진이 글의 흐름상 가장 자연스러운 위치에 오�
 출력은 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[]} 형태의 JSON 객체 하나여야 합니다.
 각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.`
 
-func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength ...*int) (string, string) {
+// purposePrecedence keeps the brief from quietly overriding the voice. A brief like
+// "정보성 리뷰, 담담하게" reads as a style instruction to the model unless the split is stated:
+// the purpose owns genre, the voice owns register. It is prompt text, so it lives in code
+// beside the section it belongs to rather than in configuration (ARCHITECTURE §4).
+const purposePrecedence = "용도는 글의 내용·구성·포함할 정보를 정하고, 문체·종결어미·어휘는 위의 말투 프로필을 따릅니다. 지침이 문체와 충돌하면 말투 프로필을 우선하세요."
+
+// writePurposeSection appends the frozen brief AFTER the complete voice profile and before
+// the per-post material. That position is load-bearing twice over: the profile prefix stays
+// byte-identical across posts of different purposes (PRD §5's caching note), and the brief
+// stays in the stable half, so every revision of one post re-injects the identical block.
+//
+// A nil brief writes nothing at all — the prompt for a post without a purpose must be
+// byte-identical to the one this code produced before purposes existed.
+func writePurposeSection(out *strings.Builder, purpose *PurposeBrief) {
+	if purpose == nil {
+		return
+	}
+	fmt.Fprintf(out, "\n\n[글의 용도: %s]", purpose.Name)
+	if purpose.Description != "" {
+		fmt.Fprintf(out, "\n이 글의 용도: %s", purpose.Description)
+	}
+	fmt.Fprintf(out, "\n작성 지침:\n%s", purpose.Instructions)
+	fmt.Fprintf(out, "\n%s", purposePrecedence)
+}
+
+func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, purpose *PurposeBrief) (string, string) {
 	var stable strings.Builder
 	stable.WriteString(WritePrompt)
 	fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, %d–%d개의 tags, blocks를 반환하세요.", TagsMin, TagsMax)
@@ -35,10 +60,11 @@ func BuildWritePrompt(profile Profile, observations []Observation, memo, title s
 		endingMax = 2
 	}
 	stable.WriteString("\n\n[종결어미 제약]\n")
-	if len(targetLength) > 0 && targetLength[0] != nil {
-		fmt.Fprintf(&stable, "목표 길이: 약 %d자. ", *targetLength[0])
+	if targetLength != nil {
+		fmt.Fprintf(&stable, "목표 길이: 약 %d자. ", *targetLength)
 	}
 	fmt.Fprintf(&stable, "프로필의 측정된 종결어미 분포를 따르고 같은 종결어미를 %d문장보다 많이 연속 사용하지 마세요.", endingMax)
+	writePurposeSection(&stable, purpose)
 
 	photoMaterial := "첨부 사진이 없습니다. 이미지 없이 메모만으로 작성하세요."
 	if len(filenames) > 0 {

@@ -90,7 +90,7 @@ func TestParseContentFallbacksAndBadOutput(t *testing.T) {
 func TestBuildWritePromptOrderAndRules(t *testing.T) {
 	system, user := BuildWritePrompt(Profile{
 		Styleguide: "STYLE", ActiveRules: "ACTIVE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"}, Rules: "RULES",
-	}, []Observation{{File: "IMG_1.jpg", Scene: "바다"}}, "MEMO", "TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"})
+	}, []Observation{{File: "IMG_1.jpg", Scene: "바다"}}, "MEMO", "TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil)
 	positions := []int{
 		strings.Index(system, "STYLE"), strings.Index(system, "ACTIVE"), strings.Index(system, "EXCERPT-1"),
 		strings.Index(system, "EXCERPT-2"), strings.Index(system, "RULES"),
@@ -117,7 +117,7 @@ func TestBuildWritePromptOrderAndRules(t *testing.T) {
 		t.Fatalf("absent target leaked a numeric constraint: %s", system)
 	}
 	target := 777
-	withTarget, _ := BuildWritePrompt(Profile{}, nil, "", "", nil, &target)
+	withTarget, _ := BuildWritePrompt(Profile{}, nil, "", "", nil, &target, nil)
 	if !strings.Contains(withTarget, "목표 길이: 약 777자") {
 		t.Fatalf("configured target missing: %s", withTarget)
 	}
@@ -125,13 +125,16 @@ func TestBuildWritePromptOrderAndRules(t *testing.T) {
 
 func TestGenerationPayloadPreservesOptionalTargetPresence(t *testing.T) {
 	for _, target := range []*int{nil, intPointer(100), intPointer(10_000)} {
-		raw, err := EncodeGenerationPayload(target)
+		raw, err := EncodeGenerationPayload(GenerationOptions{TargetLength: target})
 		if err != nil {
 			t.Fatal(err)
 		}
 		decoded, err := DecodeGenerationPayload(raw)
-		if err != nil || (target == nil) != (decoded == nil) || target != nil && *target != *decoded {
-			t.Fatalf("target=%v raw=%s decoded=%v err=%v", target, raw, decoded, err)
+		if err != nil || (target == nil) != (decoded.TargetLength == nil) || target != nil && *target != *decoded.TargetLength {
+			t.Fatalf("target=%v raw=%s decoded=%v err=%v", target, raw, decoded.TargetLength, err)
+		}
+		if decoded.Purpose != nil {
+			t.Fatalf("absent purpose decoded as %+v", decoded.Purpose)
 		}
 	}
 }

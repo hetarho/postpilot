@@ -34,3 +34,14 @@ func TestValidateContentRejectsCrossTypeAndUnattachedImageFields(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateContentRejectsCanonicallyDuplicateTags(t *testing.T) {
+	content := PostContent{
+		Tags:   []string{"여행", " #여행 "},
+		Blocks: []Block{{Type: BlockText, Content: "문단"}},
+	}
+	var invalid *InvalidContentError
+	if err := ValidateContent(content, nil); !errors.As(err, &invalid) {
+		t.Fatalf("error=%v, want InvalidContentError", err)
+	}
+}

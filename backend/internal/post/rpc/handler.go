@@ -37,7 +37,7 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		return nil, err
 	}
 
-	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(), req.Msg.VoiceId)
+	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(), req.Msg.VoiceId, req.Msg.PurposeId)
 	if err != nil {
 		return nil, toConnectError("save draft", err)
 	}
@@ -118,6 +118,7 @@ func (h *Handler) ListPosts(ctx context.Context, _ *connect.Request[postpilotv1.
 			ActiveJob:           toProtoActiveJob(s.ActiveJob),
 			PendingExperimentId: s.PendingExperimentID,
 			Voice:               toProtoVoiceRef(s.Voice),
+			Purpose:             toProtoPurposeRef(s.Purpose),
 		})
 	}
 	return connect.NewResponse(&postpilotv1.ListPostsResponse{Posts: posts}), nil
@@ -219,6 +220,8 @@ func toConnectError(op string, err error) error {
 		return connect.NewError(connect.CodeInvalidArgument, errors.New(err.Error()))
 	case errors.Is(err, post.ErrVoiceNotFound):
 		return connect.NewError(connect.CodeNotFound, errors.New("voice not found"))
+	case errors.Is(err, post.ErrPurposeNotFound):
+		return connect.NewError(connect.CodeNotFound, errors.New("용도를 찾을 수 없어요"))
 	case errors.Is(err, post.ErrVoiceDeleted):
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
 	default:
@@ -256,7 +259,17 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		FinalizedAt:             formatOptionalTime(p.FinalizedAt),
 		Voice:                   toProtoVoiceRef(p.Voice),
 		MachineBaselineVoiceId:  p.MachineBaselineVoiceID,
+		Purpose:                 toProtoPurposeRef(p.Purpose),
 	}
+}
+
+// toProtoPurposeRef leaves the field unset when the post has no purpose: 없음 is the
+// default and the client reads absence, not an empty object, as "none".
+func toProtoPurposeRef(ref post.PurposeRef) *postpilotv1.PurposeRef {
+	if ref.ID == "" {
+		return nil
+	}
+	return &postpilotv1.PurposeRef{Id: ref.ID, Name: ref.Name}
 }
 
 func toProtoVoiceRef(ref post.VoiceRef) *postpilotv1.VoiceRef {

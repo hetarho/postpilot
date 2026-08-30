@@ -96,7 +96,8 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 		sides[0], sides[1] = sides[1], sides[0]
 	}
 	found := Experiment{
-		ID: s.newID(), UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: frozen.VoiceID, Stage: request.Stage,
+		ID: s.newID(), UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: frozen.VoiceID,
+		PurposeName: frozen.PurposeName, Stage: request.Stage,
 		Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
 		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
 	}

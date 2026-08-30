@@ -54,6 +54,17 @@ type VoiceDirectory interface {
 	Voices(ctx context.Context, userID string) ([]VoiceRef, error)
 }
 
+// PurposeDirectory is the purpose context's published directory, consumed here to validate
+// an assignment and to name a post's purpose on read models. It is a directory rather than a
+// single lookup for the same reason VoiceDirectory is: the list read model needs every name
+// at once, and the post context never reads the purposes table.
+//
+// A purpose has no tombstone, so a deleted one simply stops appearing — and the composite
+// foreign key has already set the assignment to NULL by then.
+type PurposeDirectory interface {
+	Purposes(ctx context.Context, userID string) ([]PurposeRef, error)
+}
+
 // ExperimentContentPurger is the required privacy hook for post deletion. The post
 // context calls it before the FK detaches experiment history from the source slug.
 type ExperimentContentPurger interface {
@@ -75,6 +86,11 @@ type Store interface {
 	// voice. Content, revisions, photos and finalization state are untouched. It reports
 	// false when the post already carried that voice.
 	ReassignVoice(ctx context.Context, slug, userID, voiceID string, updatedAt time.Time) (bool, error)
+	// AssignPurpose sets or clears (nil) the post's purpose. It writes that column and
+	// updated_at and nothing else: a purpose is never learned from, so unlike a voice
+	// reassignment it must not disturb content, revisions, the machine baseline or
+	// finalization, and it is allowed in every status.
+	AssignPurpose(ctx context.Context, slug, userID string, purposeID *string, updatedAt time.Time) (bool, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	ListPosts(ctx context.Context, userID string) ([]Summary, error)
 	DeletePost(ctx context.Context, slug, userID string) (bool, error)

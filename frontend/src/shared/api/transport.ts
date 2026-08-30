@@ -4,7 +4,13 @@
 // (vite.config.ts), so calls hit '/postpilot.v1.HealthService/Ping' with no CORS.
 // Built assets (preview/prod) have no such proxy, so they target the backend origin
 // from VITE_API_URL.
-import { Code, ConnectError, createClient, type Interceptor } from '@connectrpc/connect'
+import {
+  Code,
+  ConnectError,
+  createClient,
+  type Interceptor,
+  type Transport,
+} from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
 import { API_URL } from '@/shared/config'
 import { emitUnauthenticated } from './auth-events'
@@ -13,6 +19,8 @@ import { HealthService } from './gen/postpilot/v1/health_pb'
 import { ModelExperimentService } from './gen/postpilot/v1/model_experiment_pb'
 import { GenerationService } from './gen/postpilot/v1/post_pb'
 import { ProviderService } from './gen/postpilot/v1/provider_pb'
+import { PublishingService } from './gen/postpilot/v1/publishing_pb'
+import { PurposeService } from './gen/postpilot/v1/purpose_pb'
 import { VoiceService } from './gen/postpilot/v1/voice_pb'
 import { VoiceLearningService } from './gen/postpilot/v1/voice_learning_pb'
 import { VoiceValidationService } from './gen/postpilot/v1/voice_validation_pb'
@@ -68,6 +76,14 @@ export const providerClient = createClient(ProviderService, transport)
 
 /** Typed client for starting and reading durable generation jobs. */
 export const generationClient = createClient(GenerationService, transport)
+
+/** Human-session client for paired Mac agents and explicit publication jobs. */
+export const publishingClient = createClient(PublishingService, transport)
+export const publishingClientFor = (clientTransport: Transport) =>
+  createClient(PublishingService, clientTransport)
+
+/** Typed client for the acting account's reusable 용도 briefs. */
+export const purposeClient = createClient(PurposeService, transport)
 
 /** Typed client for the acting account's voice profile. */
 export const voiceClient = createClient(VoiceService, transport)

@@ -17,6 +17,7 @@ postpilot/
 │  └─ internal/
 │     ├─ <context>/            one package per bounded context (§2)
 │     └─ platform/             no business meaning: config, db, rpcserver, ids, health
+├─ agent/                      macOS companion. Outbound publishing client, loopback setup, local Hermes/browser.
 ├─ frontend/src/               static SPA. Vite + React 19 + TS, Tailwind v4, TanStack Router/Query, FSD (§3)
 └─ spec/                       plan · changes · jobs · code-review · policy · tech (the workflow SSOT)
 ```
@@ -24,10 +25,24 @@ postpilot/
 Two rules cut across both sides:
 
 - **The proto contract is the only seam.** Neither side reaches past it. Generated code
-  (`backend/internal/gen/**`, `frontend/src/shared/api/gen/**`) is committed, never hand-edited, and consumed only
-  through the adapter layer that owns it (BE: a context's `rpc/`; FE: `shared/api`).
+  (`backend/internal/gen/**`, `agent/internal/gen/**`, `frontend/src/shared/api/gen/**`) is committed, never
+  hand-edited, and consumed only through the adapter layer that owns it (BE: a context's `rpc/`; agent: its
+  postpilot API adapter; FE: `shared/api`).
 - **The frontend stays purely static** (PRD §3.1). It is served as Cloudflare Worker static assets — no SSR, no
-  server-only frontend code. A change that needs a frontend server breaks the deploy model.
+  server-only frontend code. The optional Mac companion is a separate local runtime, not a frontend server; a change
+  that puts server-only code into the SPA still breaks the deploy model.
+
+### 1.1 Mac companion boundary
+
+The `agent/` module exists only for capabilities that must remain on the user's Mac: postpilot device credentials in
+Keychain, Naver login/profile state, local Chromium/CDP and Hermes execution. It makes authenticated outbound calls to
+the same Connect API and may serve setup UI on loopback only. It never opens a public listener or imports backend
+`internal` packages/frontend source; its generated client is a separate consumer of `proto/`.
+
+The API remains the durable source of truth for publish jobs. The agent is an executor with a lease, not another
+database or an authority over post state. Local implementation follows the same inward dependency rule: composition
+root → polling/publishing behavior and consumer-owned ports → pure state transitions, with Keychain, launchd,
+browser and Hermes as outer adapters. See [paired-local-publishing-agent](tech/paired-local-publishing-agent.md).
 
 ## 2. Backend — domain-first Go
 

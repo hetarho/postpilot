@@ -13,20 +13,73 @@ vi.mock('@/entities/model-experiment', async (importOriginal) => ({
 }))
 
 const base: ModelExperiment = {
-  id: 'experiment-1', stage: 'write', status: 'review', postSlug: 'post', voiceId: '', jobId: 'job',
-	winnerCandidateId: '', outcome: '', applyError: '', appliedAt: '', adoptionRequested: false,
-	adoptionError: '', adoptedAt: '',
-  createdAt: '', finishedAt: '', decidedAt: '', revealed: false,
+  id: 'experiment-1',
+  stage: 'write',
+  status: 'review',
+  postSlug: 'post',
+  voiceId: '',
+  purposeName: '',
+  jobId: 'job',
+  winnerCandidateId: '',
+  outcome: '',
+  applyError: '',
+  appliedAt: '',
+  adoptionRequested: false,
+  adoptionError: '',
+  adoptedAt: '',
+  createdAt: '',
+  finishedAt: '',
+  decidedAt: '',
+  revealed: false,
   candidates: [
-    { id: 'left', displaySide: 'left', status: 'succeeded', output: { kind: 'write', content: { $typeName: 'postpilot.v1.PostContent', title: 'A', summary: '', tags: [], blocks: [] } }, error: '', modelLabel: '' },
-    { id: 'right', displaySide: 'right', status: 'succeeded', output: { kind: 'write', content: { $typeName: 'postpilot.v1.PostContent', title: 'B', summary: '', tags: [], blocks: [] } }, error: '', modelLabel: '' },
+    {
+      id: 'left',
+      displaySide: 'left',
+      status: 'succeeded',
+      output: {
+        kind: 'write',
+        content: {
+          $typeName: 'postpilot.v1.PostContent',
+          title: 'A',
+          summary: '',
+          tags: [],
+          blocks: [],
+        },
+      },
+      error: '',
+      modelLabel: '',
+    },
+    {
+      id: 'right',
+      displaySide: 'right',
+      status: 'succeeded',
+      output: {
+        kind: 'write',
+        content: {
+          $typeName: 'postpilot.v1.PostContent',
+          title: 'B',
+          summary: '',
+          tags: [],
+          blocks: [],
+        },
+      },
+      error: '',
+      modelLabel: '',
+    },
   ],
 }
 
 function actionSet() {
   return {
-    choose: vi.fn(), decideWrite: vi.fn().mockResolvedValue({}), useSingle: vi.fn(), dismiss: vi.fn(),
-    retry: vi.fn(), apply: vi.fn(), adopt: vi.fn(), isPending: false, error: undefined,
+    choose: vi.fn(),
+    decideWrite: vi.fn().mockResolvedValue({}),
+    useSingle: vi.fn(),
+    dismiss: vi.fn(),
+    retry: vi.fn(),
+    apply: vi.fn(),
+    adopt: vi.fn(),
+    isPending: false,
+    error: undefined,
   }
 }
 
@@ -65,26 +118,28 @@ it('reports applied content separately and retries only model adoption', async (
     appliedAt: '2026-08-30T00:00:00Z',
     adoptionError: 'temporary selection failure',
   })
-  expect(screen.getByText(/결과는 적용했지만 활성 작성 모델은 변경하지 못했어요/)).toBeInTheDocument()
+  expect(
+    screen.getByText(/결과는 적용했지만 활성 작성 모델은 변경하지 못했어요/),
+  ).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '활성 모델 변경 다시 시도' }))
   expect(actions.decideWrite).toHaveBeenCalledWith('left', true)
   expect(actions.apply).not.toHaveBeenCalled()
 })
 
 it('preserves apply-and-adopt intent when content application itself needs a retry', async () => {
-	const actions = actionSet()
-	mocks.useExperimentActions.mockReturnValue(actions)
-	renderActions({
-		...base,
-		status: 'decided',
-		winnerCandidateId: 'left',
-		revealed: true,
-		applyError: 'temporary post failure',
-		adoptionRequested: true,
-	})
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions({
+    ...base,
+    status: 'decided',
+    winnerCandidateId: 'left',
+    revealed: true,
+    applyError: 'temporary post failure',
+    adoptionRequested: true,
+  })
 
-	await userEvent.click(screen.getByRole('button', { name: '적용 다시 시도' }))
-	expect(actions.decideWrite).toHaveBeenCalledWith('left', true)
+  await userEvent.click(screen.getByRole('button', { name: '적용 다시 시도' }))
+  expect(actions.decideWrite).toHaveBeenCalledWith('left', true)
 })
 
 it('blocks provider and apply work when the experiment voice is deleted', async () => {

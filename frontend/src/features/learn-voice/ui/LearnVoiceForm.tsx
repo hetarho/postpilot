@@ -32,8 +32,7 @@ export function LearnVoiceForm({
   const addSample = useAddVoiceSample(ownerId, voiceId)
   const chars = Array.from(body.trim()).length
   const tooShort = chars < VOICE_SAMPLE_MIN_CHARS
-  const disabled =
-    Boolean(blocked) || tooShort || !selected || modelPending || addSample.isPending
+  const disabled = Boolean(blocked) || tooShort || !selected || modelPending || addSample.isPending
 
   const learn = async () => {
     if (!selected) return

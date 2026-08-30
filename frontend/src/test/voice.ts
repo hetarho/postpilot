@@ -148,7 +148,10 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const trimmed = name.trim()
     const chars = Array.from(trimmed).length
     if (chars === 0 || chars > NAME_MAX_CHARS) {
-      throw new ConnectError(`voice name must be 1-${NAME_MAX_CHARS} characters`, Code.InvalidArgument)
+      throw new ConnectError(
+        `voice name must be 1-${NAME_MAX_CHARS} characters`,
+        Code.InvalidArgument,
+      )
     }
     return trimmed
   }
@@ -291,7 +294,8 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     options.calls?.push('UpdateVoiceOverride')
     const profile = profileOf(request.voiceId)
     active(request.voiceId)
-    if (options.overrideFails) throw new ConnectError('직접 설정을 저장하지 못했어요', Code.Internal)
+    if (options.overrideFails)
+      throw new ConnectError('직접 설정을 저장하지 못했어요', Code.Internal)
     // The response is the unchanged profile: what an override publishes is backend behavior with
     // its own coverage, and a fake that half-rebuilds a typed profile would only test itself.
     return create(UpdateVoiceOverrideResponseSchema, {

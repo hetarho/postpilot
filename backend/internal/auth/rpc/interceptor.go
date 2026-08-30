@@ -31,6 +31,19 @@ var publicProcedures = map[string]bool{
 	postpilotv1connect.HealthServicePingProcedure: true,
 }
 
+// Agent procedures are not authenticated by the human HttpOnly session. The
+// publishing context applies its own bearer-token interceptor; bypassing here is what
+// prevents either credential from being accepted in the other's trust domain.
+var agentProcedures = map[string]bool{
+	postpilotv1connect.PublishingAgentServiceEnrollPublishingAgentProcedure: true,
+	postpilotv1connect.PublishingAgentServiceSyncAgentProfileProcedure:      true,
+	postpilotv1connect.PublishingAgentServiceClaimPublishJobProcedure:       true,
+	postpilotv1connect.PublishingAgentServiceRenewPublishLeaseProcedure:     true,
+	postpilotv1connect.PublishingAgentServiceReportPublishProgressProcedure: true,
+	postpilotv1connect.PublishingAgentServiceCompletePublishProcedure:       true,
+	postpilotv1connect.PublishingAgentServiceFailPublishProcedure:           true,
+}
+
 // Interceptor is the authentication gate for every Connect procedure.
 //
 // It is the only place a request turns into an acting user: it resolves the session
@@ -79,7 +92,7 @@ func (i *Interceptor) WrapStreamingClient(next connect.StreamingClientFunc) conn
 // authorize returns the context downstream handlers should see, or an Unauthenticated
 // error. It fails closed: any path that does not explicitly succeed denies.
 func (i *Interceptor) authorize(ctx context.Context, procedure string, header http.Header) (context.Context, error) {
-	if publicProcedures[procedure] {
+	if publicProcedures[procedure] || agentProcedures[procedure] {
 		return ctx, nil
 	}
 

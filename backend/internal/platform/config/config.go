@@ -162,6 +162,22 @@ type Config struct {
 	// VoicePersonalization is injected into the voice and generation contexts. It has
 	// no scheduler or sweep interval: all evaluation is request-time and user-initiated.
 	VoicePersonalization VoicePersonalizationConfig
+
+	// Publishing owns a separate durable queue because a browser-side external commit
+	// has lease and ambiguity semantics that generation jobs do not have (plan 12).
+	PublishPairingTTL          time.Duration
+	PublishMaxPendingPairings  int
+	PublishLeaseTTL            time.Duration
+	PublishAssetURLTTL         time.Duration
+	PublishOrphanSweepInterval time.Duration
+	PublishOrphanMinAge        time.Duration
+
+	// Purpose brief field ceilings, counted in Unicode scalar values like the voice
+	// sample minimum. They are env-owned rather than constants because a brief that is
+	// too short to be useful is a per-account editorial judgement, not a product rule.
+	PurposeNameMaxChars         int
+	PurposeDescriptionMaxChars  int
+	PurposeInstructionsMaxChars int
 }
 
 // Load reads the environment, falling back to a repo-root .env when present so a
@@ -233,6 +249,53 @@ func Load() (*Config, error) {
 	}
 	cfg.ExperimentSweepInterval = experimentSweep
 
+	pairingTTL, err := positiveDuration("PUBLISH_PAIRING_TTL", "10m")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PublishPairingTTL = pairingTTL
+	maxPairings, err := positiveInt("PUBLISH_MAX_PENDING_PAIRINGS", "8")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PublishMaxPendingPairings = maxPairings
+	leaseTTL, err := positiveDuration("PUBLISH_LEASE_TTL", "45s")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PublishLeaseTTL = leaseTTL
+	assetURLTTL, err := positiveDuration("PUBLISH_ASSET_URL_TTL", "10m")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PublishAssetURLTTL = assetURLTTL
+	publishSweep, err := positiveDuration("PUBLISH_ORPHAN_SWEEP_INTERVAL", "24h")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PublishOrphanSweepInterval = publishSweep
+	publishMinAge, err := positiveDuration("PUBLISH_ORPHAN_MIN_AGE", "1h")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PublishOrphanMinAge = publishMinAge
+
+	purposeName, err := positiveInt("PURPOSE_NAME_MAX_CHARS", "40")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PurposeNameMaxChars = purposeName
+	purposeDescription, err := positiveInt("PURPOSE_DESCRIPTION_MAX_CHARS", "200")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PurposeDescriptionMaxChars = purposeDescription
+	purposeInstructions, err := positiveInt("PURPOSE_INSTRUCTIONS_MAX_CHARS", "2000")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PurposeInstructionsMaxChars = purposeInstructions
+
 	return cfg, nil
 }
 
@@ -243,6 +306,14 @@ func positiveDuration(name, fallback string) (time.Duration, error) {
 	}
 	if value <= 0 {
 		return 0, fmt.Errorf("%s: must be positive, got %s", name, value)
+	}
+	return value, nil
+}
+
+func positiveInt(name, fallback string) (int, error) {
+	value, err := strconv.Atoi(getenv(name, fallback))
+	if err != nil || value <= 0 {
+		return 0, fmt.Errorf("%s: must be a positive integer", name)
 	}
 	return value, nil
 }

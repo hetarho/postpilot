@@ -56,6 +56,14 @@ export function ModelExperimentPage() {
         선택하기 전에는 모델 이름과 비용을 숨깁니다. 좌우 후보는 다시 열어도 바뀌지 않습니다.
       </p>
       {experiment.voiceId && <ExperimentVoice voiceId={experiment.voiceId} />}
+      {/* Read straight off the frozen snapshot's projection rather than looked up: the brief
+          both candidates were given is a property of this comparison, not of whatever the
+          purpose says today. */}
+      {experiment.purposeName && (
+        <p className="text-content-secondary mt-2 text-sm break-words">
+          용도 · {experiment.purposeName}
+        </p>
+      )}
       <div className="mt-6 sm:mt-8">
         <CandidateComparison experiment={experiment} activeCandidateId={activeId} />
       </div>

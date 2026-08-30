@@ -1,0 +1,228 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+import "postpilot/v1/post.proto";
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// Human procedures use the existing HttpOnly session. No request carries a user id
+// or any platform credential.
+service PublishingService {
+  rpc CreateAgentPairing(CreateAgentPairingRequest) returns (CreateAgentPairingResponse) {}
+  rpc ListPublishingAgents(ListPublishingAgentsRequest) returns (ListPublishingAgentsResponse) {}
+  rpc UpdatePublishingAgent(UpdatePublishingAgentRequest) returns (UpdatePublishingAgentResponse) {}
+  rpc RevokePublishingAgent(RevokePublishingAgentRequest) returns (RevokePublishingAgentResponse) {}
+  rpc StartPublish(StartPublishRequest) returns (StartPublishResponse) {}
+  rpc GetPublishJob(GetPublishJobRequest) returns (GetPublishJobResponse) {}
+  rpc ListRetryablePublishJobs(ListRetryablePublishJobsRequest) returns (ListRetryablePublishJobsResponse) {}
+  rpc RetryPublish(RetryPublishRequest) returns (RetryPublishResponse) {}
+  rpc CancelPublish(CancelPublishRequest) returns (CancelPublishResponse) {}
+}
+
+// Local-agent procedures use a publishing bearer token. Enroll consumes a one-time
+// device code; every other call is authenticated before its handler runs.
+service PublishingAgentService {
+  rpc EnrollPublishingAgent(EnrollPublishingAgentRequest) returns (EnrollPublishingAgentResponse) {}
+  rpc SyncAgentProfile(SyncAgentProfileRequest) returns (SyncAgentProfileResponse) {}
+  rpc ClaimPublishJob(ClaimPublishJobRequest) returns (ClaimPublishJobResponse) {}
+  rpc RenewPublishLease(RenewPublishLeaseRequest) returns (RenewPublishLeaseResponse) {}
+  rpc ReportPublishProgress(ReportPublishProgressRequest) returns (ReportPublishProgressResponse) {}
+  rpc CompletePublish(CompletePublishRequest) returns (CompletePublishResponse) {}
+  rpc FailPublish(FailPublishRequest) returns (FailPublishResponse) {}
+}
+
+enum PublishVisibility {
+  PUBLISH_VISIBILITY_UNSPECIFIED = 0;
+  PUBLISH_VISIBILITY_PUBLIC = 1;
+  PUBLISH_VISIBILITY_PRIVATE = 2;
+}
+
+enum PublishStatus {
+  PUBLISH_STATUS_UNSPECIFIED = 0;
+  PUBLISH_STATUS_QUEUED = 1;
+  PUBLISH_STATUS_RUNNING = 2;
+  PUBLISH_STATUS_PUBLISHED = 3;
+  PUBLISH_STATUS_FAILED = 4;
+  PUBLISH_STATUS_NEEDS_ATTENTION = 5;
+  PUBLISH_STATUS_OUTCOME_UNKNOWN = 6;
+  PUBLISH_STATUS_CANCELED = 7;
+}
+
+enum PublishStage {
+  PUBLISH_STAGE_UNSPECIFIED = 0;
+  PUBLISH_STAGE_QUEUED = 1;
+  PUBLISH_STAGE_CLAIMED = 2;
+  PUBLISH_STAGE_PREPARING = 3;
+  PUBLISH_STAGE_OPENING_EDITOR = 4;
+  PUBLISH_STAGE_FILLING_CONTENT = 5;
+  PUBLISH_STAGE_UPLOADING_PHOTOS = 6;
+  PUBLISH_STAGE_COMMITTING = 7;
+  PUBLISH_STAGE_VERIFYING = 8;
+  PUBLISH_STAGE_PUBLISHED = 9;
+}
+
+enum PublishFailureKind {
+  PUBLISH_FAILURE_UNSPECIFIED = 0;
+  PUBLISH_FAILURE_SAFE = 1;
+  PUBLISH_FAILURE_LOGIN_EXPIRED = 2;
+  PUBLISH_FAILURE_CAPTCHA = 3;
+  PUBLISH_FAILURE_TWO_FACTOR = 4;
+  PUBLISH_FAILURE_ACCOUNT_MISMATCH = 5;
+  PUBLISH_FAILURE_BROWSER_LOST = 6;
+  PUBLISH_FAILURE_EDITOR_CHANGED = 7;
+  PUBLISH_FAILURE_ASSET_MISSING = 8;
+}
+
+message PublishingCategory {
+  string id = 1;
+  string name = 2;
+}
+
+message PublishingAgent {
+  string id = 1;
+  string label = 2;
+  string platform = 3;
+  string platform_account_id = 4;
+  string platform_account_label = 5;
+  string browser_label = 6;
+  repeated PublishingCategory categories = 7;
+  string default_category_id = 8;
+  PublishVisibility default_visibility = 9;
+  string last_seen_at = 10;
+  string revoked_at = 11;
+  bool ready = 12;
+}
+
+message StagedPublishAsset {
+  int32 ordinal = 1;
+  string filename = 2;
+  string download_url = 3;
+  int64 bytes = 4;
+  string source_filename = 5;
+}
+
+message PublishManifest {
+  string job_id = 1;
+  string post_slug = 2;
+  int64 content_revision = 3;
+  PostContent content = 4;
+  repeated string tags = 5;
+  string category_id = 6;
+  PublishVisibility visibility = 7;
+  string expected_platform_account_id = 8;
+  repeated StagedPublishAsset assets = 9;
+  string category_name = 10;
+}
+
+message PublishJob {
+  string id = 1;
+  string post_slug = 2;
+  string agent_id = 3;
+  string platform = 4;
+  PublishStatus status = 5;
+  PublishStage stage = 6;
+  int64 progress_sequence = 7;
+  int64 content_revision = 8;
+  string category_id = 9;
+  PublishVisibility visibility = 10;
+  string error_code = 11;
+  string error_message = 12;
+  string platform_post_url = 13;
+  string created_at = 14;
+  string updated_at = 15;
+  string committed_at = 16;
+  string published_at = 17;
+}
+
+message CreateAgentPairingRequest { string label = 1; }
+message CreateAgentPairingResponse {
+  string device_code = 1;
+  string expires_at = 2;
+}
+message ListPublishingAgentsRequest {}
+message ListPublishingAgentsResponse { repeated PublishingAgent agents = 1; }
+message UpdatePublishingAgentRequest {
+  string agent_id = 1;
+  string label = 2;
+  string default_category_id = 3;
+  PublishVisibility default_visibility = 4;
+}
+message UpdatePublishingAgentResponse { PublishingAgent agent = 1; }
+message RevokePublishingAgentRequest { string agent_id = 1; }
+message RevokePublishingAgentResponse {}
+message StartPublishRequest {
+  string post_slug = 1;
+  int64 expected_content_revision = 2;
+  string agent_id = 3;
+  string category_id = 4;
+  PublishVisibility visibility = 5;
+}
+message StartPublishResponse { PublishJob job = 1; }
+message GetPublishJobRequest {
+  string post_slug = 1;
+  string job_id = 2;
+}
+message GetPublishJobResponse { PublishJob job = 1; }
+message ListRetryablePublishJobsRequest {}
+message ListRetryablePublishJobsResponse { repeated PublishJob jobs = 1; }
+message RetryPublishRequest { string job_id = 1; }
+message RetryPublishResponse { PublishJob job = 1; }
+message CancelPublishRequest { string job_id = 1; }
+message CancelPublishResponse { PublishJob job = 1; }
+
+message EnrollPublishingAgentRequest {
+  string device_code = 1;
+  string browser_label = 2;
+}
+message EnrollPublishingAgentResponse {
+  string agent_id = 1;
+  string agent_token = 2;
+  int64 lease_ttl_seconds = 3;
+}
+message SyncAgentProfileRequest {
+  string platform_account_id = 1;
+  string platform_account_label = 2;
+  string browser_label = 3;
+  repeated PublishingCategory categories = 4;
+  string default_category_id = 5;
+  PublishVisibility default_visibility = 6;
+  bool compatibility_ready = 7;
+  string hermes_version = 8;
+}
+message SyncAgentProfileResponse { PublishingAgent agent = 1; }
+message ClaimPublishJobRequest {}
+message ClaimPublishJobResponse {
+  PublishJob job = 1;
+  string lease_token = 2;
+  string lease_expires_at = 3;
+  int64 lease_ttl_seconds = 4;
+  PublishManifest manifest = 5;
+}
+message RenewPublishLeaseRequest {
+  string job_id = 1;
+  string lease_token = 2;
+}
+message RenewPublishLeaseResponse { string lease_expires_at = 1; }
+message ReportPublishProgressRequest {
+  string job_id = 1;
+  string lease_token = 2;
+  int64 progress_sequence = 3;
+  PublishStage stage = 4;
+}
+message ReportPublishProgressResponse { PublishJob job = 1; }
+message CompletePublishRequest {
+  string job_id = 1;
+  string lease_token = 2;
+  int64 progress_sequence = 3;
+  string platform_post_url = 4;
+}
+message CompletePublishResponse { PublishJob job = 1; }
+message FailPublishRequest {
+  string job_id = 1;
+  string lease_token = 2;
+  int64 progress_sequence = 3;
+  PublishFailureKind kind = 4;
+  string detail = 5;
+}
+message FailPublishResponse { PublishJob job = 1; }

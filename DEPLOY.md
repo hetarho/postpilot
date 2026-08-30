@@ -76,6 +76,7 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
 | GHCR pull PAT (`read:packages`, classic) | VPS `ubuntu` 계정의 docker 로그인 | VPS가 private 이미지를 pull. **sudo 없이** `docker login` |
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | 스택 `.env` | R2 API 토큰(해당 버킷에만 Object Read & Write). Cloudflare → R2 → Manage API Tokens |
 | `R2_ENDPOINT` / `R2_BUCKET` | 스택 `.env` | `https://<account-id>.r2.cloudflarestorage.com` 과 버킷 이름. 비밀은 아니지만 환경마다 다르다 |
+| `PUBLISH_*` | 스택 `.env` | Mac 연결 코드·lease·staged JPEG URL/청소 주기. 값과 기본은 `.env.production.example`; 네이버 자격증명은 절대 VPS env에 두지 않는다 |
 | `OPENROUTER_API_KEY` (외 `backend/config/providers.yaml`의 `api_key_env`가 가리키는 이름들) | 스택 `.env` | 모델 프로바이더 키. **없어도 API는 뜬다** — 그 프로바이더의 모델만 드롭다운에서 "API key not configured"로 비활성. 이미지는 `/config/providers.yaml`을 내장하며(`PROVIDERS_CONFIG`), 스택이 자기 파일을 그 자리에 마운트해 덮어쓸 수 있다 |
 
 ## 4. VPS 내부 구조
@@ -230,6 +231,13 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
 
 확인: `curl https://api.postpilot.<도메인>/health` → `{"status":"ok","version":"0.0.1"}`
 (인증이 필요한 RPC는 세션 쿠키 없이 부르면 401이다 — `/health`만 열려 있다.)
+
+### Mac 발행 에이전트
+
+Mac 동반 에이전트는 VPS에 배포하지 않는다. 저장소의 `agent/README.md` 절차로 각 Mac 사용자 계정에
+설치하고, Postpilot의 `발행 Mac` 화면에서 만든 일회용 코드로 연결한다. 설정 UI와 Chromium CDP는
+loopback에만 열리고 작업은 Mac→API 아웃바운드 폴링으로 도착한다. 설치 후 `postpilot-agent diagnostics`
+가 Keychain 토큰, 저장된 Hermes 절대 경로, 전용 브라우저/CDP와 플러그인 doctor를 모두 통과해야 한다.
 
 ## 6. 롤백
 

@@ -83,6 +83,10 @@ export function VoiceVersionHistory({
 }
 
 const originLabel = (origin: string) =>
-  ({ analysis: '분석', manual: '직접 수정', restore: '복원', rule: '규칙 반영', confirmation: '충돌 해결' })[
-    origin
-  ] ?? origin
+  ({
+    analysis: '분석',
+    manual: '직접 수정',
+    restore: '복원',
+    rule: '규칙 반영',
+    confirmation: '충돌 해결',
+  })[origin] ?? origin

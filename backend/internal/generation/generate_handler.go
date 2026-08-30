@@ -19,6 +19,10 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	// Generation options are frozen when the job is enqueued. A later options edit
 	// must not change the prompt of work that is already waiting in the queue.
 	post.TargetLength = cloneOptionalInt(job.TargetLength)
+	// Deliberately the payload's brief and never post.PurposeID: editing or deleting the
+	// purpose after the enqueue — including across a restart-resume or an explicit retry —
+	// must not change the prompt this run builds.
+	post.Purpose = clonePurpose(job.Purpose)
 	// An empty observe model records that StartGeneration accepted a zero-photo input.
 	// Photos attached while the queued job waits belong to the next generation; without
 	// this snapshot bit the accepted job would fail later for lacking a vision model.
@@ -55,6 +59,14 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	}
 	progress("write", 1, 1)
 	return nil
+}
+
+func clonePurpose(value *PurposeBrief) *PurposeBrief {
+	if value == nil {
+		return nil
+	}
+	copied := *value
+	return &copied
 }
 
 func cloneOptionalInt(value *int) *int {

@@ -32,7 +32,11 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
       return value
     },
     decideWrite: async (candidateId: string, adoptWinnerModel: boolean) => {
-      const value = await decideWrite.mutateAsync({ experimentId: id, candidateId, adoptWinnerModel })
+      const value = await decideWrite.mutateAsync({
+        experimentId: id,
+        candidateId,
+        adoptWinnerModel,
+      })
       await refresh()
       return value
     },
@@ -70,6 +74,12 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
       apply.isPending ||
       adopt.isPending,
     error:
-      choose.error ?? decideWrite.error ?? useSingle.error ?? dismiss.error ?? retry.error ?? apply.error ?? adopt.error,
+      choose.error ??
+      decideWrite.error ??
+      useSingle.error ??
+      dismiss.error ??
+      retry.error ??
+      apply.error ??
+      adopt.error,
   }
 }

@@ -3,6 +3,7 @@ syntax = "proto3";
 package postpilot.v1;
 
 import "postpilot/v1/provider.proto";
+import "postpilot/v1/purpose.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
@@ -104,6 +105,9 @@ message Post {
   // The voice the latest machine baseline was written under. Finalization learning refuses
   // unless it still equals `voice`, so a reassigned post cannot publish to the wrong voice.
   string machine_baseline_voice_id = 19;
+  // Unset when the post has no purpose. Unlike `voice` it is optional by design: the
+  // server never picks one and 없음 is the default.
+  PurposeRef purpose = 20;
 }
 
 message Image {
@@ -128,6 +132,7 @@ message PostSummary {
   GenerationJob active_job = 5;
   string pending_experiment_id = 6;
   VoiceRef voice = 7;
+  PurposeRef purpose = 8;
 }
 
 message GenerationJob {
@@ -182,6 +187,11 @@ message SavePostDraftRequest {
   // create, absent preserves the current assignment, and a different present value asks for
   // a reassignment. An empty string is never valid — the server substitutes no default.
   optional string voice_id = 4;
+  // Presence decides the meaning here too, but with one more case than voice_id, because a
+  // post may legitimately have none: absent preserves the current assignment (what ordinary
+  // autosave sends), an empty string clears it, and a non-empty value assigns that purpose.
+  // An unknown or foreign id is refused and nothing else in the request is applied.
+  optional string purpose_id = 5;
 }
 
 message SavePostDraftResponse {

@@ -18,7 +18,12 @@ describe('isInAppPath', () => {
   })
 
   it('rejects absolute URLs and non-http schemes', () => {
-    for (const value of ['https://evil.example.com', 'http://x', 'javascript:alert(1)', 'data:,x']) {
+    for (const value of [
+      'https://evil.example.com',
+      'http://x',
+      'javascript:alert(1)',
+      'data:,x',
+    ]) {
       expect(isInAppPath(value), value).toBe(false)
     }
   })

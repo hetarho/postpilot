@@ -60,7 +60,16 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
     } catch {
       // The mutation owns and renders the transport/provider error.
     }
-  }, [beforeStart, disabled, onStarted, postSlug, saveAsRule, startRevision, trimmed, write.selected])
+  }, [
+    beforeStart,
+    disabled,
+    onStarted,
+    postSlug,
+    saveAsRule,
+    startRevision,
+    trimmed,
+    write.selected,
+  ])
 
   useImperativeHandle(ref, () => ({ start: () => void start() }), [start])
 

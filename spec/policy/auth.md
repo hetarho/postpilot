@@ -80,6 +80,17 @@ built by jobs 01 and 02. A change to any rule here is a change to shipped behavi
   The plain `/health` endpoint is mounted outside the Connect stack and is likewise unauthenticated — it is what the
   deploy's rollback gate probes.
 
+## Paired publishing-agent credentials
+
+- Publishing-agent bearer tokens are device capabilities, not human sessions. Agent procedures are explicitly
+  bypassed by the cookie interceptor and then fail closed in their own interceptor; every human publishing procedure
+  still requires the HttpOnly session. A cookie cannot claim/advance a job, and a bearer token cannot list/start/
+  cancel a user's publication.
+- The raw device token is returned once at pairing, stored only in macOS Keychain, and represented on the server only
+  by SHA-256 of 32 random bytes. Each authenticated request rechecks revocation and updates safe `last_seen_at`
+  metadata. Naver credentials, cookies, profile paths, and CDP endpoints are not postpilot credentials and never
+  cross this boundary. Full lifecycle rules are in [publishing.md](publishing.md).
+
 ## The browser side
 
 - **The token never reaches JavaScript.** `document.cookie` cannot see it; the browser attaches it as a `Cookie`

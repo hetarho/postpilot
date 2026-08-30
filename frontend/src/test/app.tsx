@@ -11,10 +11,7 @@ import { type FakeAuthOptions, createFakeAuthTransport, createTestQueryClient } 
  *  is stubbed, so the guard, the redirects and the URL a screen navigates to are the
  *  things actually under test. Pass `transport` to supply a backend the fake cannot
  *  model (an API that is down, say). */
-export function renderAppAt(
-  at: string,
-  options: FakeAuthOptions & { transport?: Transport } = {},
-) {
+export function renderAppAt(at: string, options: FakeAuthOptions & { transport?: Transport } = {}) {
   const transport = options.transport ?? createFakeAuthTransport(options)
   const queryClient: QueryClient = createTestQueryClient()
   const router = createRouter({

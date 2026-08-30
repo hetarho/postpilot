@@ -42,11 +42,7 @@ export function useSavePostContent() {
   })
 
   return {
-    save: async (
-      slug: string,
-      content: PostContent,
-      expectedRevision: bigint,
-    ) => {
+    save: async (slug: string, content: PostContent, expectedRevision: bigint) => {
       try {
         const response = await mutation.mutateAsync({
           slug,

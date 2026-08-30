@@ -45,6 +45,12 @@ import (
 	"github.com/postpilot/backend/internal/provider"
 	providerrpc "github.com/postpilot/backend/internal/provider/rpc"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
+	"github.com/postpilot/backend/internal/publishing"
+	publishingrpc "github.com/postpilot/backend/internal/publishing/rpc"
+	publishingstore "github.com/postpilot/backend/internal/publishing/store"
+	"github.com/postpilot/backend/internal/purpose"
+	purposerpc "github.com/postpilot/backend/internal/purpose/rpc"
+	purposestore "github.com/postpilot/backend/internal/purpose/store"
 	"github.com/postpilot/backend/internal/storage"
 	"github.com/postpilot/backend/internal/voice"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
@@ -168,6 +174,30 @@ func main() {
 		cfg.MaxImageBytes,
 		postJobFinder{queue: jobQueue},
 	)
+	publishSvc := publishing.NewService(
+		publishingstore.New(handle.Writer, handle.Reader),
+		publishingPosts{service: postSvc},
+		bucket,
+		publishing.Config{
+			PairingTTL: cfg.PublishPairingTTL, MaxPendingPairings: cfg.PublishMaxPendingPairings,
+			LeaseTTL: cfg.PublishLeaseTTL, AssetURLTTL: cfg.PublishAssetURLTTL,
+		},
+	)
+	if requeued, unknown, err := publishSvc.RecoverExpired(ctx); err != nil {
+		slog.Error("publishing recovery failed", "err", err)
+		os.Exit(1)
+	} else if requeued > 0 || unknown > 0 {
+		slog.Info("publishing jobs recovered", "requeued", requeued, "outcome_unknown", unknown)
+	}
+
+	purposeSvc := purpose.NewService(
+		purposestore.New(handle.Writer, handle.Reader),
+		purpose.Limits{
+			NameMaxChars: cfg.PurposeNameMaxChars, DescriptionMaxChars: cfg.PurposeDescriptionMaxChars,
+			InstructionsMaxChars: cfg.PurposeInstructionsMaxChars,
+		},
+	)
+	postSvc.SetPurposeDirectory(postPurposes{service: purposeSvc})
 
 	providerSvc := provider.NewService(providerstore.New(handle.Writer, handle.Reader), registry)
 	voiceSvc := voice.NewService(
@@ -208,6 +238,9 @@ func main() {
 		cfg.ObserveBatchSize,
 		generation.ReasoningPolicy{Observe: cfg.LLMReasoning.Observe, Write: cfg.LLMReasoning.Write},
 	)
+	// Generation reads a brief only at enqueue, to freeze it; the purpose context never
+	// learns that generation exists.
+	generationSvc.SetPurposeBriefs(generationPurposes{service: purposeSvc})
 	experimentStore := experimentstore.New(handle.Writer, handle.Reader)
 	experimentSvc := experiment.NewService(
 		experimentStore,
@@ -241,14 +274,14 @@ func main() {
 		if found.PostSlug == nil {
 			return job.ErrInvalidTarget
 		}
-		targetLength, err := generation.DecodeGenerationPayload(found.Payload)
+		options, err := generation.DecodeGenerationPayload(found.Payload)
 		if err != nil {
 			return err
 		}
 		return generationSvc.Generate(ctx, generation.GenerateJob{
 			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID,
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
-			TargetLength: targetLength,
+			TargetLength: options.TargetLength, Purpose: options.Purpose,
 		}, generation.Progress(progress))
 	})
 	jobQueue.Register(job.KindRevise, func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -262,7 +295,7 @@ func main() {
 	})
 
 	server := rpcserver.New(cfg, version, rpcserver.Options{
-		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc)},
+		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc), publishingrpc.NewAgentInterceptor(publishSvc)},
 		Handlers: []rpcserver.Registrar{
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewHealthServiceHandler(health.NewHandler(version), opts...)
@@ -275,6 +308,9 @@ func main() {
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewProviderServiceHandler(providerrpc.NewHandler(providerSvc), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewPurposeServiceHandler(purposerpc.NewHandler(purposeSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewGenerationServiceHandler(generationrpc.NewHandler(generationSvc), opts...)
@@ -291,6 +327,12 @@ func main() {
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewModelExperimentServiceHandler(experimentrpc.NewHandler(experimentSvc), opts...)
 			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewPublishingServiceHandler(publishingrpc.NewUserHandler(publishSvc), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewPublishingAgentServiceHandler(publishingrpc.NewAgentHandler(publishSvc), opts...)
+			},
 		},
 	})
 
@@ -304,6 +346,7 @@ func main() {
 	)
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
 	go experiment.NewSweeper(experimentStore).Run(ctx, cfg.ExperimentSweepInterval)
+	go publishing.NewSweeper(publishSvc, cfg.PublishOrphanMinAge, cfg.PublishLeaseTTL).Run(ctx, cfg.PublishOrphanSweepInterval)
 
 	workerCtx, cancelWorkers := context.WithCancel(ctx)
 	defer cancelWorkers()
@@ -342,6 +385,55 @@ type voiceModels struct {
 	selections *provider.Service
 	registry   *llm.Registry
 }
+
+type publishingPosts struct{ service *post.Service }
+
+func (a publishingPosts) PostIdentity(ctx context.Context, userID, postSlug string) (time.Time, error) {
+	createdAt, err := a.service.PostIdentity(ctx, userID, postSlug)
+	if err != nil {
+		switch {
+		case errors.Is(err, post.ErrNotFound):
+			return time.Time{}, publishing.ErrNotFound
+		case errors.Is(err, post.ErrForbidden):
+			return time.Time{}, publishing.ErrForbidden
+		default:
+			return time.Time{}, err
+		}
+	}
+	return createdAt, nil
+}
+
+func (a publishingPosts) PublishingSnapshot(ctx context.Context, userID, postSlug string) (publishing.PostSnapshot, error) {
+	snapshot, err := a.service.PublishingSnapshot(ctx, userID, postSlug)
+	if err != nil {
+		switch {
+		case errors.Is(err, post.ErrNotFound):
+			return publishing.PostSnapshot{}, publishing.ErrNotFound
+		case errors.Is(err, post.ErrForbidden):
+			return publishing.PostSnapshot{}, publishing.ErrForbidden
+		case errors.Is(err, post.ErrPostNotFinalized):
+			return publishing.PostSnapshot{}, publishing.ErrPostNotFinalized
+		case errors.Is(err, post.ErrInvalidContent):
+			return publishing.PostSnapshot{}, publishing.ErrInvalid
+		default:
+			return publishing.PostSnapshot{}, err
+		}
+	}
+	content := publishing.Content{Title: snapshot.Content.Title, Summary: snapshot.Content.Summary, Tags: append([]string(nil), snapshot.Content.Tags...)}
+	content.Blocks = make([]publishing.Block, 0, len(snapshot.Content.Blocks))
+	for _, block := range snapshot.Content.Blocks {
+		content.Blocks = append(content.Blocks, publishing.Block{Type: publishing.BlockType(block.Type), Content: block.Content,
+			Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: append([]string(nil), block.Items...)})
+	}
+	images := make([]publishing.SnapshotImage, 0, len(snapshot.Images))
+	for _, image := range snapshot.Images {
+		images = append(images, publishing.SnapshotImage{Filename: image.Filename, Key: image.Key, Bytes: image.Bytes})
+	}
+	return publishing.PostSnapshot{PostSlug: snapshot.PostSlug, UserID: snapshot.UserID, CreatedAt: snapshot.CreatedAt, Content: content,
+		ContentRevision: snapshot.ContentRevision, FinalizedRevision: snapshot.FinalizedRevision, Images: images}, nil
+}
+
+var _ publishing.PostSnapshots = publishingPosts{}
 
 func (a voiceModels) AnalyzeModel(ctx context.Context, userID string) (llm.ModelRef, bool, error) {
 	selections, err := a.selections.GetSelections(ctx, userID)
@@ -456,6 +548,35 @@ func (a postVoices) Voices(ctx context.Context, userID string) ([]post.VoiceRef,
 		out = append(out, post.VoiceRef{ID: v.ID, Name: v.Name, Deleted: v.Deleted()})
 	}
 	return out, nil
+}
+
+// postPurposes adapts the purpose directory for the post context. Unlike voices there are no
+// tombstones: a deleted purpose simply stops being listed, and the composite foreign key has
+// already cleared the assignments that named it.
+type postPurposes struct{ service *purpose.Service }
+
+func (a postPurposes) Purposes(ctx context.Context, userID string) ([]post.PurposeRef, error) {
+	purposes, err := a.service.List(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]post.PurposeRef, 0, len(purposes))
+	for _, p := range purposes {
+		out = append(out, post.PurposeRef{ID: p.ID, Name: p.Name})
+	}
+	return out, nil
+}
+
+// generationPurposes hands the generation context the frozen text of one owned purpose. It is
+// consulted once per enqueue; no handler ever calls it.
+type generationPurposes struct{ service *purpose.Service }
+
+func (a generationPurposes) BriefFor(ctx context.Context, userID, purposeID string) (generation.PurposeBrief, bool, error) {
+	brief, ok, err := a.service.BriefFor(ctx, userID, purposeID)
+	if err != nil || !ok {
+		return generation.PurposeBrief{}, false, err
+	}
+	return generation.PurposeBrief{Name: brief.Name, Description: brief.Description, Instructions: brief.Instructions}, true, nil
 }
 
 // experimentVoices adapts the directory for the experiment context: only an owned, active
@@ -583,7 +704,11 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	}
 	input := generation.PostInput{
 		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
-		Voice:        generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted},
+		Voice: generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted},
+		// The id, never the brief: only the enqueue resolves it, and only through the purpose
+		// context's own port. Dropping it here is what would make the whole feature a silent
+		// no-op — every prompt would be built as if no post ever had a 용도.
+		PurposeID:    found.PurposeID,
 		TargetLength: found.TargetLength,
 		Images:       make([]generation.Image, 0, len(found.Images)),
 	}
@@ -643,7 +768,9 @@ type generationJobs struct{ queue *job.Queue }
 
 func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest) (string, error) {
 	slug := request.PostSlug
-	payload, err := generation.EncodeGenerationPayload(request.TargetLength)
+	payload, err := generation.EncodeGenerationPayload(generation.GenerationOptions{
+		TargetLength: request.TargetLength, Purpose: request.Purpose,
+	})
 	if err != nil {
 		return "", err
 	}
@@ -816,7 +943,10 @@ func (a experimentRunner) Snapshot(ctx context.Context, request experiment.Start
 	switch request.Stage {
 	case experiment.StageWrite:
 		content, err := a.generation.SnapshotWriteInput(ctx, request.UserID, request.PostSlug, llmRef(request.ObserveModel), request.TargetLength)
-		return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion, VoiceID: generation.SnapshotVoice(content)}, mapSnapshotError(err)
+		return experiment.Snapshot{
+			Content: content, PromptVersion: generation.WriteExperimentPromptVersion,
+			VoiceID: generation.SnapshotVoice(content), PurposeName: generation.SnapshotPurposeName(content),
+		}, mapSnapshotError(err)
 	case experiment.StageObserve:
 		content, err := a.generation.SnapshotObserveInput(ctx, request.UserID, request.PostSlug)
 		return experiment.Snapshot{Content: content, PromptVersion: generation.ObserveExperimentPromptVersion}, mapSnapshotError(err)

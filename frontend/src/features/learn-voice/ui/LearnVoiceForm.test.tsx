@@ -35,7 +35,12 @@ function renderForm({
   })
   const onStarted = vi.fn()
   render(
-    <LearnVoiceForm ownerId="alice" voiceId="voice-default" profile={profile} onStarted={onStarted} />,
+    <LearnVoiceForm
+      ownerId="alice"
+      voiceId="voice-default"
+      profile={profile}
+      onStarted={onStarted}
+    />,
     {
       wrapper: withProviders(transport, createTestQueryClient()),
     },

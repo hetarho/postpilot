@@ -231,3 +231,70 @@ func TestLoadExperimentRetentionAndSweepIntervals(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadPublishingDefaultsAndValidation(t *testing.T) {
+	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
+	for _, name := range []string{
+		"PUBLISH_PAIRING_TTL", "PUBLISH_MAX_PENDING_PAIRINGS", "PUBLISH_LEASE_TTL",
+		"PUBLISH_ASSET_URL_TTL", "PUBLISH_ORPHAN_SWEEP_INTERVAL", "PUBLISH_ORPHAN_MIN_AGE",
+	} {
+		t.Setenv(name, "")
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.PublishPairingTTL != 10*time.Minute || cfg.PublishMaxPendingPairings != 8 ||
+		cfg.PublishLeaseTTL != 45*time.Second || cfg.PublishAssetURLTTL != 10*time.Minute ||
+		cfg.PublishOrphanSweepInterval != 24*time.Hour || cfg.PublishOrphanMinAge != time.Hour {
+		t.Fatalf("publishing defaults = %+v", cfg)
+	}
+
+	for _, name := range []string{
+		"PUBLISH_PAIRING_TTL", "PUBLISH_LEASE_TTL", "PUBLISH_ASSET_URL_TTL",
+		"PUBLISH_ORPHAN_SWEEP_INTERVAL", "PUBLISH_ORPHAN_MIN_AGE",
+	} {
+		for _, bad := range []string{"invalid", "0s", "-1s"} {
+			t.Run(name+"="+bad, func(t *testing.T) {
+				t.Setenv(name, bad)
+				if _, err := Load(); err == nil || !strings.Contains(err.Error(), name) {
+					t.Fatalf("%s=%q error = %v", name, bad, err)
+				}
+			})
+		}
+	}
+	for _, bad := range []string{"invalid", "0", "-1"} {
+		t.Run("PUBLISH_MAX_PENDING_PAIRINGS="+bad, func(t *testing.T) {
+			t.Setenv("PUBLISH_MAX_PENDING_PAIRINGS", bad)
+			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "PUBLISH_MAX_PENDING_PAIRINGS") {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestLoadPurposeLimitDefaultsAndValidation(t *testing.T) {
+	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
+	names := []string{"PURPOSE_NAME_MAX_CHARS", "PURPOSE_DESCRIPTION_MAX_CHARS", "PURPOSE_INSTRUCTIONS_MAX_CHARS"}
+	for _, name := range names {
+		t.Setenv(name, "")
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.PurposeNameMaxChars != 40 || cfg.PurposeDescriptionMaxChars != 200 || cfg.PurposeInstructionsMaxChars != 2000 {
+		t.Fatalf("purpose limit defaults = %+v", cfg)
+	}
+
+	for _, name := range names {
+		for _, bad := range []string{"invalid", "0", "-1"} {
+			t.Run(name+"="+bad, func(t *testing.T) {
+				t.Setenv(name, bad)
+				if _, err := Load(); err == nil || !strings.Contains(err.Error(), name) {
+					t.Fatalf("%s=%q error = %v", name, bad, err)
+				}
+			})
+		}
+	}
+}

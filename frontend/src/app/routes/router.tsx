@@ -11,6 +11,7 @@ import { defaultVoice, loadVoices } from '@/entities/voice'
 import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { LoginPage } from '@/pages/login'
 import { PostsPage } from '@/pages/posts'
+import { PublishingAgentsPage } from '@/pages/publishing-agents'
 import {
   VoiceImportPage,
   VoicePage,
@@ -18,6 +19,7 @@ import {
   VoiceValidationsPage,
   VoiceVersionsPage,
 } from '@/pages/voice'
+import { PurposesPage } from '@/pages/purposes'
 import { VoicesPage } from '@/pages/voices'
 import { AIModelsPage } from '@/pages/ai-models'
 import { ModelExperimentPage } from '@/pages/model-experiment'
@@ -106,10 +108,22 @@ const postsRoute = createRoute({
   component: PostsPage,
 })
 
+const publishingAgentsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/publishing-agents',
+  component: PublishingAgentsPage,
+})
+
 const voicesRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/voices',
   component: VoicesPage,
+})
+
+const purposesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/purposes',
+  component: PurposesPage,
 })
 
 // The layout of one voice: the five tabs keep their own addresses under `/voices/$voiceId` and
@@ -244,7 +258,9 @@ export const routeTree = rootRoute.addChildren([
   authenticatedRoute.addChildren([
     indexRoute,
     postsRoute,
+    publishingAgentsRoute,
     voicesRoute,
+    purposesRoute,
     voiceLayoutRoute.addChildren([
       voiceRoute,
       voiceVersionsRoute,

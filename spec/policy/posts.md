@@ -81,6 +81,30 @@ Photo upload has its own document: [uploads.md](uploads.md).
   which offers `복원` beside the picker's reassignment. Every AI control on such a post is disabled with one fixed
   reason (`삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.`); the server enforces the rule regardless.
 
+## Purpose assignment
+
+- A post has **zero or one** purpose of the same account (`posts.purpose_id`, nullable, composite FK to
+  `purposes(id, user_id)`). 없음 is the default and a real answer: the server never picks one. The full rules live in
+  [purposes](purposes.md); what the post context owns is below.
+- `purpose_id` on a draft save is **presence-aware with three meanings**: absent preserves (ordinary autosaves omit
+  it), a present empty string clears it, and a present non-empty value assigns it. An unknown or foreign id is
+  `NotFound` — and it is validated before anything else in the request is applied, so such a save changes no title, no
+  memo, and mints no post.
+- Assignment is allowed in **every** status, including `finalized`, and while a job or an undecided experiment is
+  outstanding. It writes `purpose_id` and `updated_at` and nothing else: no content, revision, machine baseline,
+  finalization field or learn eligibility moves. This is the deliberate contrast with a voice reassignment — nothing is
+  ever learned from a purpose, so assigning one costs the post nothing and needs no confirmation.
+- Deleting a purpose detaches it from every post that named it, in that delete's own transaction, and returns the
+  count. No post or content is removed.
+- `Post.purpose` and `PostSummary.purpose` are a transport-only `PurposeRef {id, name}`, unset when there is none,
+  resolved through the purpose context's published directory — the post context stores only the id and never joins the
+  `purposes` table.
+- Frontend: the editor and `/posts/new` render a `용도` select beside the `말투` picker, defaulting to 없음, with the
+  chosen purpose's description under it and a link to `/purposes`. The assignment travels through the draft queue
+  ([draft-autosave](../tech/draft-autosave.md)), so a title save in flight cannot revert it; on a create 없음 sends no
+  field at all. The select stays enabled while a job runs and says the running job keeps its original purpose. The list
+  row names an assigned post's purpose beside its voice and shows nothing for an unassigned one.
+
 ## Editor presentation
 
 - The editor presents the post's lifecycle as three steps — 글 생성 · 글 다듬기 · 글 완성 — and the current step is
@@ -147,6 +171,9 @@ Photo upload has its own document: [uploads.md](uploads.md).
   post to `review`; title/memo and generation-option saves do not.
 - Only the post context reads these columns. It publishes an ownership-checked baseline/final snapshot to voice only
   while the current revision is exactly finalized; voice never reads or writes post tables directly.
+- It also publishes an ownership-checked, deeply detached finalized snapshot to the publishing context. That read
+  exposes stable JPEG object identities for server-side copies but mints no view URL, advances no revision, changes no
+  finalization/learning state, and calls no provider. See [publishing.md](publishing.md).
 - `target_length` is an optional per-post generation setting saved/cleared independently of canonical content. NULL
   means natural length and remains absent in prompts and snapshots; a positive value is frozen by generation,
   revision, and write comparisons. Option changes do not advance `content_revision`, demote finalization, or start

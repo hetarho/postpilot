@@ -65,7 +65,7 @@ func defaultVoiceFor(userID string) string { return "voice-" + userID }
 func mustCreatePost(t *testing.T, svc *Service, userID, title string) Post {
 	t.Helper()
 	voiceID := defaultVoiceFor(userID)
-	created, err := svc.SaveDraft(context.Background(), userID, "", title, "", &voiceID)
+	created, err := svc.SaveDraft(context.Background(), userID, "", title, "", &voiceID, nil)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 	ctx := context.Background()
 
 	voiceID := aliceVoice
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "first", &voiceID)
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "first", &voiceID, nil)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 		t.Errorf("status = %q, want draft", created.Status)
 	}
 
-	updated, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "second", nil)
+	updated, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "second", nil, nil)
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestSaveDraftKeepsTheSlugOnRetitle(t *testing.T) {
 	svc, _, _ := newTestService(t)
 	created := mustCreatePost(t, svc, alice, "Jeju")
 
-	renamed, err := svc.SaveDraft(context.Background(), alice, created.Slug, "Something else entirely", "", nil)
+	renamed, err := svc.SaveDraft(context.Background(), alice, created.Slug, "Something else entirely", "", nil, nil)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestOwnership(t *testing.T) {
 		if _, err := svc.Get(ctx, bob, mine.Slug); !errors.Is(err, ErrForbidden) {
 			t.Errorf("Get = %v, want ErrForbidden", err)
 		}
-		if _, err := svc.SaveDraft(ctx, bob, mine.Slug, "x", "y", nil); !errors.Is(err, ErrForbidden) {
+		if _, err := svc.SaveDraft(ctx, bob, mine.Slug, "x", "y", nil, nil); !errors.Is(err, ErrForbidden) {
 			t.Errorf("SaveDraft = %v, want ErrForbidden", err)
 		}
 		if _, _, _, err := svc.CreateUpload(ctx, bob, mine.Slug, "a.jpg"); !errors.Is(err, ErrForbidden) {
@@ -181,7 +181,7 @@ func TestOwnership(t *testing.T) {
 		if _, err := svc.Get(ctx, alice, "nope"); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Get = %v, want ErrNotFound", err)
 		}
-		if _, err := svc.SaveDraft(ctx, alice, "nope", "x", "y", nil); !errors.Is(err, ErrNotFound) {
+		if _, err := svc.SaveDraft(ctx, alice, "nope", "x", "y", nil, nil); !errors.Is(err, ErrNotFound) {
 			t.Errorf("SaveDraft = %v, want ErrNotFound", err)
 		}
 	})
@@ -565,6 +565,71 @@ func TestWinnerApplicationIsIdempotentAtPostBoundary(t *testing.T) {
 	}
 }
 
+func TestPublishingSnapshotIsExactFinalizedDetachedRead(t *testing.T) {
+	svc, store, blobs := newTestService(t)
+	ctx := context.Background()
+	post := mustCreatePost(t, svc, alice, "Jeju")
+	upload, _, _, err := svc.CreateUpload(ctx, alice, post.Slug, "photo.jpg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	blobs.put(upload.Key, 123, testNow)
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1024, 768); err != nil {
+		t.Fatal(err)
+	}
+	content := PostContent{Title: "완성 글", Tags: []string{"여행"}, Blocks: []Block{
+		{Type: BlockText, Content: "첫 문단"},
+		{Type: BlockList, Items: []string{"하나", "둘"}},
+		{Type: BlockImage, File: "photo.jpg", Caption: "바다"},
+	}}
+	if err := svc.SetGeneratedContent(ctx, alice, post.Slug, content); err != nil {
+		t.Fatal(err)
+	}
+	current, err := store.GetPost(ctx, post.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Finalize(ctx, alice, post.Slug, current.ContentRevision); err != nil {
+		t.Fatal(err)
+	}
+
+	snapshot, err := svc.PublishingSnapshot(ctx, alice, post.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.ContentRevision != current.ContentRevision || snapshot.FinalizedRevision != current.ContentRevision || snapshot.Images[0].Key != upload.Key {
+		t.Fatalf("snapshot=%#v", snapshot)
+	}
+	snapshot.Content.Tags[0] = "mutated"
+	snapshot.Content.Blocks[1].Items[0] = "mutated"
+	snapshot.Images[0].Filename = "mutated.jpg"
+	again, err := svc.PublishingSnapshot(ctx, alice, post.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.Content.Tags[0] != "여행" || again.Content.Blocks[1].Items[0] != "하나" || again.Images[0].Filename != "photo.jpg" {
+		t.Fatal("publishing snapshot aliases canonical post state")
+	}
+}
+
+func TestPublishingSnapshotRejectsLegacyInvalidCanonicalContent(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	finalizedAt := testNow
+	content := PostContent{
+		Title:  "기존 완성 글",
+		Tags:   []string{"여행", "#여행"},
+		Blocks: []Block{{Type: BlockText, Content: "본문"}},
+	}
+	store.posts["legacy"] = Post{
+		Slug: "legacy", UserID: alice, Status: StatusFinalized, Content: &content,
+		ContentRevision: 1, FinalizedRevision: 1, FinalizedAt: &finalizedAt,
+	}
+
+	if _, err := svc.PublishingSnapshot(context.Background(), alice, "legacy"); !errors.Is(err, ErrInvalidContent) {
+		t.Fatalf("legacy invalid content error=%v", err)
+	}
+}
+
 // --- regressions ---
 
 // A confirm the client never saw the answer to must return the photo, not a
@@ -662,7 +727,7 @@ func TestCreatePostRetriesWhenTheSlugIsTakenMidFlight(t *testing.T) {
 	}
 
 	voiceID := aliceVoice
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID)
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, nil)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}

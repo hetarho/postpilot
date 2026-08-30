@@ -18,10 +18,7 @@ interface AuthRedirectDeps {
  *
  *  Import direction matters: this reads the router, so the router must never import
  *  this — App.tsx is what wires the two together. */
-export function registerAuthRedirect({
-  router,
-  queryClient,
-}: AuthRedirectDeps): () => void {
+export function registerAuthRedirect({ router, queryClient }: AuthRedirectDeps): () => void {
   return onUnauthenticated(() => {
     queryClient.removeQueries()
     endSession()

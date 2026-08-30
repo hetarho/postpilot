@@ -19,6 +19,8 @@ import { type FakeProvidersOptions, registerProviderService } from './providers'
 import { type FakeJobsOptions, registerGenerationService } from './jobs'
 import { type FakeVoiceOptions, registerVoiceService } from './voice'
 import { type FakeExperimentsOptions, registerExperimentService } from './experiments'
+import { type FakePublishingOptions, registerPublishingService } from './publishing'
+import { type FakePurposesOptions, registerPurposeService } from './purposes'
 
 export interface FakeAuthOptions {
   /** The account GetMe reports. `undefined` makes GetMe answer 401, like a real server
@@ -41,6 +43,10 @@ export interface FakeAuthOptions {
   /** The acting account's voice profile and sample mutations. */
   voice?: FakeVoiceOptions
   experiments?: FakeExperimentsOptions
+  publishing?: FakePublishingOptions
+  /** The acting account's 용도 briefs. Present by default with none, so every screen that
+   *  mounts the selector reads an empty directory rather than an "unimplemented" error. */
+  purposes?: FakePurposesOptions
 }
 
 /** A fake backend plus the controls a test needs over it. */
@@ -79,6 +85,8 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerGenerationService(router, { calls, ...options.jobs })
     registerVoiceService(router, { calls, ...options.voice })
     registerExperimentService(router, { calls, ...options.experiments })
+    registerPublishingService(router, { calls, ...options.publishing })
+    registerPurposeService(router, { calls, ...options.purposes })
   })
 
   return {

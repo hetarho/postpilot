@@ -68,6 +68,10 @@ export async function decodeHeif(file: Blob): Promise<ImageBitmap> {
   })
   if (!response.ok) throw new DecodeError('unreadable')
 
-  const pixels = new ImageData(new Uint8ClampedArray(response.rgba), response.width, response.height)
+  const pixels = new ImageData(
+    new Uint8ClampedArray(response.rgba),
+    response.width,
+    response.height,
+  )
   return createImageBitmap(pixels)
 }

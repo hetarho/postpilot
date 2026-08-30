@@ -1,0 +1,267 @@
+package browser
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
+)
+
+func TestConnectVerifiesLoopbackEndpoint(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/json/version" {
+			http.NotFound(writer, request)
+			return
+		}
+		fmt.Fprintf(writer, `{"webSocketDebuggerUrl":%q}`, "ws"+strings.TrimPrefix(serverURL(request), "http")+"/devtools/browser/one")
+	}))
+	defer server.Close()
+	_, port, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := t.TempDir()
+	if err := os.WriteFile(filepath.Join(profile, devToolsActivePort), []byte(port+"\n/devtools/browser/one\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	session, err := Connect(profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(session.CDPURL, "ws://127.0.0.1:"+port+"/devtools/browser/") {
+		t.Fatalf("unexpected CDP URL %q", session.CDPURL)
+	}
+	if err := session.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateCDPURLRejectsRemoteOrMismatchedEndpoint(t *testing.T) {
+	for _, value := range []string{
+		"ws://example.com:9222/devtools/browser/one",
+		"ws://127.0.0.1:9333/devtools/browser/one",
+		"https://127.0.0.1:9222/devtools/browser/one",
+		"ws://127.0.0.1:9222/devtools/browser/two",
+		"ws://127.0.0.1:9222/devtools/browser/one?redirected=true",
+	} {
+		if err := validateCDPURL(value, 9222, "/devtools/browser/one"); err == nil {
+			t.Fatalf("expected %q to be rejected", value)
+		}
+	}
+}
+
+func TestConnectRejectsStalePortReusedByDifferentBrowser(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		fmt.Fprintf(writer, `{"webSocketDebuggerUrl":%q}`, "ws"+strings.TrimPrefix(serverURL(request), "http")+"/devtools/browser/current")
+	}))
+	defer server.Close()
+	_, port, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := t.TempDir()
+	if err := os.WriteFile(filepath.Join(profile, devToolsActivePort), []byte(port+"\n/devtools/browser/stale\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Connect(profile); err == nil || !strings.Contains(err.Error(), "browser id") {
+		t.Fatalf("stale profile endpoint error=%v", err)
+	}
+}
+
+func serverURL(request *http.Request) string {
+	return "http://" + request.Host
+}
+
+func TestObserveNaverIdentityUsesTargetBoundCDPEvidence(t *testing.T) {
+	var server *httptest.Server
+	var stateMu sync.Mutex
+	targetURL := "https://blog.naver.com/PostWriteForm.naver?blogId=alice"
+	server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/json/list":
+			stateMu.Lock()
+			currentURL := targetURL
+			stateMu.Unlock()
+			_ = json.NewEncoder(writer).Encode([]pageTarget{{
+				ID: "page-1", Type: "page", URL: currentURL,
+				WebSocketDebuggerURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/devtools/page/page-1",
+			}})
+		case "/devtools/page/page-1":
+			connection, err := websocket.Accept(writer, request, nil)
+			if err != nil {
+				return
+			}
+			defer connection.CloseNow()
+			for {
+				var call cdpRequest
+				if err := wsjson.Read(request.Context(), connection, &call); err != nil {
+					return
+				}
+				result := map[string]any{}
+				switch call.Method {
+				case "Page.navigate":
+					t.Errorf("identity verifier must not drive Naver UI: %#v", call.Params)
+				case "Runtime.evaluate":
+					params, _ := call.Params.(map[string]any)
+					if params["expression"] == identityPreparationScript {
+						result = map[string]any{"result": map[string]any{"type": "object", "value": map[string]any{
+							"editor_ready": true, "ready": true, "stage": "categories_visible",
+						}}}
+					} else {
+						result = map[string]any{"result": map[string]any{
+							"type": "object",
+							"value": map[string]any{
+								"href":         "https://blog.naver.com/PostWriteForm.naver?blogId=alice",
+								"editor_ready": true,
+								"blog_label":   "Alice Blog",
+								"categories":   []map[string]string{{"id": "7", "name": "Travel"}},
+							},
+						}}
+					}
+				}
+				if err := wsjson.Write(request.Context(), connection, map[string]any{
+					"id": call.ID, "result": result,
+				}); err != nil {
+					return
+				}
+			}
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	identity, err := ObserveNaverIdentity(
+		ctx, "ws"+strings.TrimPrefix(server.URL, "http")+"/devtools/browser/one",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identity.BlogID != "alice" || identity.BlogLabel != "Alice Blog" || len(identity.Categories) != 1 || identity.Categories[0].ID != "7" {
+		t.Fatalf("identity = %+v", identity)
+	}
+}
+
+func TestDiscoverSinglePageRejectsMultipleOrForeignTargets(t *testing.T) {
+	for name, targets := range map[string][]pageTarget{
+		"multiple": {
+			{ID: "one", Type: "page", URL: "about:blank", WebSocketDebuggerURL: "unused"},
+			{ID: "two", Type: "page", URL: "about:blank", WebSocketDebuggerURL: "unused"},
+		},
+		"foreign": {{
+			ID: "one", Type: "page", URL: "https://example.com", WebSocketDebuggerURL: "unused",
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+				_ = json.NewEncoder(writer).Encode(targets)
+			}))
+			defer server.Close()
+			_, err := discoverSinglePage(
+				context.Background(), "ws"+strings.TrimPrefix(server.URL, "http")+"/devtools/browser/one",
+			)
+			if err == nil {
+				t.Fatal("unsafe target set was accepted")
+			}
+		})
+	}
+}
+
+func TestValidateIdentityObservationRejectsErrorPagesOrConflictingCategories(t *testing.T) {
+	for _, observation := range []identityObservation{
+		{Href: "https://blog.naver.com/error.naver?blogId=alice", EditorReady: true, Categories: []NaverCategory{{ID: "7", Name: "Travel"}}},
+		{Href: "https://blog.naver.com/PostWriteForm.naver?blogId=not/valid", EditorReady: true, Categories: []NaverCategory{{ID: "7", Name: "Travel"}}},
+		{Href: "https://blog.naver.com/PostWriteForm.naver?blogId=alice", EditorReady: true, Categories: []NaverCategory{{ID: "7", Name: "Travel"}, {ID: "7", Name: "Other"}}},
+		// Models an access-denied page that retained the requested-looking URL and
+		// happened to contain generic inputs/category-shaped controls.
+		{Href: "https://blog.naver.com/PostWriteForm.naver?blogId=alice", EditorReady: false, Categories: []NaverCategory{{ID: "7", Name: "Travel"}}},
+	} {
+		if _, err := validateIdentityObservation(observation); err == nil {
+			t.Fatalf("unsafe observation accepted: %+v", observation)
+		}
+	}
+}
+
+func TestObserveNaverIdentityRejectsSecondTargetAppearingDuringVerification(t *testing.T) {
+	var server *httptest.Server
+	var stateMu sync.Mutex
+	targetURL := "about:blank"
+	verified := false
+	server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/json/list":
+			stateMu.Lock()
+			currentURL, includeSecond := targetURL, verified
+			stateMu.Unlock()
+			targets := []pageTarget{{
+				ID: "page-1", Type: "page", URL: currentURL,
+				WebSocketDebuggerURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/devtools/page/page-1",
+			}}
+			if includeSecond {
+				targets = append(targets, pageTarget{ID: "page-2", Type: "page", URL: "about:blank"})
+			}
+			_ = json.NewEncoder(writer).Encode(targets)
+		case "/devtools/page/page-1":
+			connection, err := websocket.Accept(writer, request, nil)
+			if err != nil {
+				return
+			}
+			defer connection.CloseNow()
+			for {
+				var call cdpRequest
+				if err := wsjson.Read(request.Context(), connection, &call); err != nil {
+					return
+				}
+				result := map[string]any{}
+				if call.Method == "Page.navigate" {
+					stateMu.Lock()
+					targetURL = "https://blog.naver.com/PostWriteForm.naver?blogId=alice"
+					stateMu.Unlock()
+				}
+				if call.Method == "Runtime.evaluate" {
+					params, _ := call.Params.(map[string]any)
+					if params["expression"] == identityPreparationScript {
+						result = map[string]any{"result": map[string]any{"type": "object", "value": map[string]any{
+							"editor_ready": true, "ready": true, "stage": "categories_visible",
+						}}}
+					} else {
+						result = map[string]any{"result": map[string]any{"type": "object", "value": map[string]any{
+							"href": "https://blog.naver.com/PostWriteForm.naver?blogId=alice", "editor_ready": true,
+							"categories": []map[string]string{{"id": "7", "name": "Travel"}},
+						}}}
+						stateMu.Lock()
+						verified = true
+						stateMu.Unlock()
+					}
+				}
+				if err := wsjson.Write(request.Context(), connection, map[string]any{"id": call.ID, "result": result}); err != nil {
+					return
+				}
+			}
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := ObserveNaverIdentity(ctx, "ws"+strings.TrimPrefix(server.URL, "http")+"/devtools/browser/one")
+	if err == nil || !strings.Contains(err.Error(), "recheck dedicated browser target") {
+		t.Fatalf("target switch error=%v", err)
+	}
+}

@@ -97,6 +97,11 @@ ConfirmUpload(upload_id, w, h)     → the server HEADs the object, then records
 
 ## Keys and cleanup
 
+- A confirmed Naver publication copies the existing JPEG inside R2/S3 to a job-owned `publishing/` key. The API sends
+  only source/target identities to object storage, verifies the copied size with HEAD, and still never receives or
+  decodes image bytes. Short-lived claim URLs are consumed only by the paired Mac; terminal publishing cleanup and a
+  separate old-orphan sweep own those temporary keys ([publishing.md](publishing.md)).
+
 - Key shape: `posts/{slug}/{image_id}.jpg` (PRD §5). The id is random (16 bytes), so a key is not guessable from
   another user's and reveals nothing about how many photos exist.
 - `DeleteImage` removes the **object first, then the row**. The reverse order could drop the only reference to an

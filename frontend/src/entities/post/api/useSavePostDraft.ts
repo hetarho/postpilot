@@ -7,6 +7,7 @@ import {
   type Post,
   PostSchema,
   PostService,
+  PurposeRefSchema,
   VoiceRefSchema,
 } from '@/shared/api'
 import { getPostQueryKey, listPostsQueryKey } from './post-queries'
@@ -16,7 +17,7 @@ import { getPostQueryKey, listPostsQueryKey } from './post-queries'
  *  SavePostDraft answers with a whole post snapshot, but the request is in flight while
  *  uploads and generation independently advance images, observations, active_job and
  *  content. Installing that snapshot wholesale could roll any of them back in the cache.
- *  Title, memo and the voice assignment are the fields this mutation settles; every other
+ *  Title, memo and the two assignments are the fields this mutation settles; every other
  *  field remains owned by GetPost or its focused mutation patch.
  *
  *  A reassignment is the one save that also moves the machine baseline: the server clears
@@ -35,6 +36,10 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
     }
     post.voice = clone(VoiceRefSchema, saved.voice)
   }
+  // Unconditional, unlike the voice: the response always reports the current 용도, and an
+  // unset one is a real answer (없음). A `if (saved.purpose)` guard would make a clear
+  // invisible until the next GetPost.
+  post.purpose = saved.purpose ? clone(PurposeRefSchema, saved.purpose) : undefined
   return post
 }
 

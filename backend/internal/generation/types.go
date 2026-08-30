@@ -54,10 +54,23 @@ type VoiceRef struct {
 	Deleted bool
 }
 
+// PurposeBrief is the post's 용도 as the writer needs it: three authored strings and no id.
+// It carries no id on purpose — once frozen into a job payload or an experiment snapshot it
+// must stay readable after the purpose it came from is renamed or deleted.
+type PurposeBrief struct {
+	Name         string
+	Description  string
+	Instructions string
+}
+
 type PostInput struct {
-	Slug         string
-	UserID       string
-	Voice        VoiceRef
+	Slug   string
+	UserID string
+	Voice  VoiceRef
+	// PurposeID is what the post currently points at, read only at enqueue time. Handlers
+	// never resolve it: they use Purpose, which the job payload froze.
+	PurposeID    string
+	Purpose      *PurposeBrief
 	Title        string
 	Memo         string
 	Images       []Image
@@ -82,6 +95,9 @@ type StartRequest struct {
 	ObserveModel string
 	WriteModel   string
 	TargetLength *int
+	// Purpose is resolved from the post server-side at Start and frozen into the payload;
+	// the request never carries one. Nil means the post had none, or it was deleted first.
+	Purpose *PurposeBrief
 }
 
 type GenerateJob struct {
@@ -91,6 +107,7 @@ type GenerateJob struct {
 	ObserveModel string
 	WriteModel   string
 	TargetLength *int
+	Purpose      *PurposeBrief
 }
 
 type StartRevisionRequest struct {
@@ -100,6 +117,7 @@ type StartRevisionRequest struct {
 	Instruction string
 	SaveAsRule  bool
 	WriteModel  string
+	Purpose     *PurposeBrief
 }
 
 type RevisionJob struct {

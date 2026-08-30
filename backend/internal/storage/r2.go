@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -18,6 +20,7 @@ import (
 	"github.com/aws/smithy-go"
 
 	"github.com/postpilot/backend/internal/post"
+	"github.com/postpilot/backend/internal/publishing"
 )
 
 // R2 authenticates per-bucket with a static key pair and has no notion of regions, but
@@ -35,11 +38,19 @@ const signingRegion = "auto"
 // port.
 type Bucket struct {
 	// ops issues the calls this process makes itself.
-	ops *s3.Client
+	ops s3API
 	// presign only ever builds URLs — it never dials anything.
 	presign      *s3.PresignClient
 	name         string
 	maxReadBytes int64
+}
+
+type s3API interface {
+	CopyObject(context.Context, *s3.CopyObjectInput, ...func(*s3.Options)) (*s3.CopyObjectOutput, error)
+	DeleteObject(context.Context, *s3.DeleteObjectInput, ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
+	GetObject(context.Context, *s3.GetObjectInput, ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+	HeadObject(context.Context, *s3.HeadObjectInput, ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+	ListObjectsV2(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
 }
 
 // Config is what cmd/api reads out of the process configuration.
@@ -135,6 +146,55 @@ func (b *Bucket) PresignGet(ctx context.Context, key string, ttl time.Duration) 
 	return req.URL, nil
 }
 
+// Copy performs an S3/R2 server-side copy. The API sends only object identities and
+// verifies the copied size; JPEG bytes never enter this process ([I6]).
+func (b *Bucket) Copy(ctx context.Context, sourceKey, targetKey string) (int64, error) {
+	_, err := b.ops.CopyObject(ctx, &s3.CopyObjectInput{
+		Bucket:            aws.String(b.name),
+		Key:               aws.String(targetKey),
+		CopySource:        aws.String(copySourceHeader(b.name, sourceKey)),
+		MetadataDirective: types.MetadataDirectiveCopy,
+	})
+	if err != nil {
+		if isNotFound(err) {
+			return 0, publishing.ErrInvalid
+		}
+		return 0, fmt.Errorf("copy %s to %s: %w", sourceKey, targetKey, err)
+	}
+	out, err := b.ops.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(b.name), Key: aws.String(targetKey)})
+	if err != nil {
+		return 0, fmt.Errorf("verify copied object %s: %w", targetKey, err)
+	}
+	return aws.ToInt64(out.ContentLength), nil
+}
+
+// CopySource is a URL-encoded bucket/key path, but its slash separators are part
+// of the S3 wire format and must remain separators. Escaping the whole string
+// turns them into %2F and no longer identifies the documented bucket/key shape.
+func copySourceHeader(bucket, key string) string {
+	segments := strings.Split(key, "/")
+	for index := range segments {
+		segments[index] = url.PathEscape(segments[index])
+	}
+	return url.PathEscape(bucket) + "/" + strings.Join(segments, "/")
+}
+
+func (b *Bucket) SignGet(ctx context.Context, key string, ttl time.Duration) (string, error) {
+	return b.PresignGet(ctx, key, ttl)
+}
+
+func (b *Bucket) ListStaged(ctx context.Context, prefix string) ([]publishing.StagedObject, error) {
+	objects, err := b.List(ctx, prefix)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]publishing.StagedObject, 0, len(objects))
+	for _, object := range objects {
+		out = append(out, publishing.StagedObject{Key: object.Key, LastModified: object.LastModified})
+	}
+	return out, nil
+}
+
 // ReadObject reads one already-normalized JPEG for a model call. Upload bytes still
 // travel browser-to-bucket; this is the generation-side read path only.
 func (b *Bucket) ReadObject(ctx context.Context, key string) ([]byte, error) {
@@ -196,14 +256,14 @@ func (b *Bucket) Delete(ctx context.Context, key string) error {
 // deletes what is missing from this listing, so a short read would delete live photos —
 // hence a page error aborts rather than returning what it has.
 func (b *Bucket) List(ctx context.Context, prefix string) ([]post.Object, error) {
-	paginator := s3.NewListObjectsV2Paginator(b.ops, &s3.ListObjectsV2Input{
+	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(b.name),
 		Prefix: aws.String(prefix),
-	})
+	}
 
 	var objects []post.Object
-	for paginator.HasMorePages() {
-		page, err := paginator.NextPage(ctx)
+	for {
+		page, err := b.ops.ListObjectsV2(ctx, input)
 		if err != nil {
 			return nil, fmt.Errorf("list %s: %w", prefix, err)
 		}
@@ -214,6 +274,13 @@ func (b *Bucket) List(ctx context.Context, prefix string) ([]post.Object, error)
 				LastModified: aws.ToTime(o.LastModified),
 			})
 		}
+		if !aws.ToBool(page.IsTruncated) {
+			break
+		}
+		if page.NextContinuationToken == nil || *page.NextContinuationToken == "" {
+			return nil, fmt.Errorf("list %s: truncated response omitted continuation token", prefix)
+		}
+		input.ContinuationToken = page.NextContinuationToken
 	}
 	return objects, nil
 }
@@ -249,3 +316,4 @@ func isNotFound(err error) bool {
 }
 
 var _ post.ObjectStore = (*Bucket)(nil)
+var _ publishing.ObjectStaging = (*Bucket)(nil)

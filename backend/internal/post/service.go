@@ -24,6 +24,7 @@ type Service struct {
 	experiments   PendingExperimentFinder
 	contentPurger ExperimentContentPurger
 	voices        VoiceDirectory
+	purposes      PurposeDirectory
 
 	// now and newID are seams for tests in this package, not configuration.
 	now   func() time.Time
@@ -44,6 +45,13 @@ func (s *Service) SetExperimentContentPurger(purger ExperimentContentPurger) {
 // be created — failing closed is the point, since a post must name an owned active voice.
 func (s *Service) SetVoiceDirectory(directory VoiceDirectory) {
 	s.voices = directory
+}
+
+// SetPurposeDirectory wires the purpose context's published directory. Unlike the voice
+// directory its absence is survivable: a post needs no purpose, so without it assignment is
+// simply refused and read models project the stored id with no name.
+func (s *Service) SetPurposeDirectory(directory PurposeDirectory) {
+	s.purposes = directory
 }
 
 // NewService wires the context with its store, its object storage, the presigned URL
@@ -72,7 +80,18 @@ func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, ma
 // voiceID is presence-aware, which is what lets autosave keep patching title and memo:
 // required on create, nil preserves the current assignment, and a different present value
 // asks for a reassignment. An empty string is never valid — the server substitutes no default.
-func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID *string) (Post, error) {
+//
+// purposeID is presence-aware too, with one more case, because a post may legitimately have
+// none: nil preserves, a present empty string clears, and a present non-empty value assigns.
+// It is validated before anything else is written, so a bad id applies nothing at all.
+func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID, purposeID *string) (Post, error) {
+	// Ahead of every write, including the create: a request naming an unknown or foreign
+	// purpose must leave the post exactly as it was, title and memo included.
+	targetPurpose, err := s.assignablePurpose(ctx, userID, purposeID)
+	if err != nil {
+		return Post{}, err
+	}
+
 	if slug == "" {
 		if voiceID == nil {
 			return Post{}, ErrVoiceRequired
@@ -81,7 +100,7 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 		if err != nil {
 			return Post{}, err
 		}
-		return s.createPost(ctx, userID, title, memo, target.ID)
+		return s.createPost(ctx, userID, title, memo, target.ID, targetPurpose)
 	}
 
 	found, err := s.ownedPost(ctx, userID, slug)
@@ -91,6 +110,11 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	if voiceID != nil && *voiceID != found.VoiceID {
 		if err := s.reassignVoice(ctx, found, *voiceID); err != nil {
 			return Post{}, err
+		}
+	}
+	if purposeID != nil && targetPurpose != found.PurposeID {
+		if _, err := s.store.AssignPurpose(ctx, slug, userID, &targetPurpose, s.now()); err != nil {
+			return Post{}, fmt.Errorf("assign purpose: %w", err)
 		}
 	}
 
@@ -195,6 +219,56 @@ func (s *Service) voiceRefs(ctx context.Context, userID string) (map[string]Voic
 	return out, nil
 }
 
+// assignablePurpose resolves the presence-aware field to the id that should end up on the
+// post: "" for absent-or-cleared, otherwise an owned purpose's id. An unknown or foreign id
+// is refused here, before any other part of the request is applied.
+func (s *Service) assignablePurpose(ctx context.Context, userID string, purposeID *string) (string, error) {
+	if purposeID == nil || strings.TrimSpace(*purposeID) == "" {
+		return "", nil
+	}
+	wanted := strings.TrimSpace(*purposeID)
+	if s.purposes == nil {
+		return "", errors.New("purpose directory is not configured")
+	}
+	purposes, err := s.purposes.Purposes(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("list purposes: %w", err)
+	}
+	for _, p := range purposes {
+		if p.ID == wanted {
+			return p.ID, nil
+		}
+	}
+	return "", ErrPurposeNotFound
+}
+
+// purposeRefs names every purpose the account owns so a read model can label an assignment.
+// Without a directory the stored id alone is projected, exactly as voiceRefs does.
+func (s *Service) purposeRefs(ctx context.Context, userID string) (map[string]PurposeRef, error) {
+	if s.purposes == nil {
+		return nil, nil
+	}
+	purposes, err := s.purposes.Purposes(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list purposes: %w", err)
+	}
+	out := make(map[string]PurposeRef, len(purposes))
+	for _, p := range purposes {
+		out[p.ID] = p
+	}
+	return out, nil
+}
+
+func projectPurpose(refs map[string]PurposeRef, purposeID string) PurposeRef {
+	if purposeID == "" {
+		return PurposeRef{}
+	}
+	if ref, ok := refs[purposeID]; ok {
+		return ref
+	}
+	return PurposeRef{ID: purposeID}
+}
+
 func projectVoice(refs map[string]VoiceRef, voiceID string) VoiceRef {
 	if ref, ok := refs[voiceID]; ok {
 		return ref
@@ -207,7 +281,7 @@ func projectVoice(refs map[string]VoiceRef, voiceID string) VoiceRef {
 // and each attempt sees one more taken slug, so it converges immediately.
 const slugAttempts = 5
 
-func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID string) (Post, error) {
+func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, purposeID string) (Post, error) {
 	now := s.now()
 
 	// Mint-then-insert is a check-then-act, so the insert is what actually decides:
@@ -235,6 +309,7 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID s
 			Slug:      slug,
 			UserID:    userID,
 			VoiceID:   voiceID,
+			PurposeID: purposeID,
 			Title:     title,
 			Memo:      memo,
 			Status:    StatusDraft,
@@ -295,6 +370,11 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 		return Post{}, err
 	}
 	found.Voice = projectVoice(refs, found.VoiceID)
+	purposeRefs, err := s.purposeRefs(ctx, userID)
+	if err != nil {
+		return Post{}, err
+	}
+	found.Purpose = projectPurpose(purposeRefs, found.PurposeID)
 	return found, nil
 }
 
@@ -324,8 +404,13 @@ func (s *Service) List(ctx context.Context, userID string) ([]Summary, error) {
 	if err != nil {
 		return nil, err
 	}
+	purposeRefs, err := s.purposeRefs(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 	for i := range summaries {
 		summaries[i].Voice = projectVoice(refs, summaries[i].VoiceID)
+		summaries[i].Purpose = projectPurpose(purposeRefs, summaries[i].PurposeID)
 	}
 	return summaries, nil
 }
@@ -547,6 +632,57 @@ func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (Le
 		return LearningSnapshot{}, errors.New("post content store is not configured")
 	}
 	return contentStore.LearningSnapshot(ctx, slug, userID)
+}
+
+// PublishingSnapshot returns the exact current finalized revision without changing any
+// post, voice, generation, experiment, or export state. It deliberately does not call
+// Get: that read mints browser view URLs, while the publishing context needs stable
+// object identities for server-side copies.
+func (s *Service) PublishingSnapshot(ctx context.Context, userID, slug string) (PublishingSnapshot, error) {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return PublishingSnapshot{}, err
+	}
+	if found.Status != StatusFinalized || found.Content == nil || found.ContentRevision <= 0 ||
+		found.FinalizedRevision != found.ContentRevision || found.FinalizedAt == nil {
+		return PublishingSnapshot{}, ErrPostNotFinalized
+	}
+	images, err := s.store.ListImages(ctx, found.Slug)
+	if err != nil {
+		return PublishingSnapshot{}, fmt.Errorf("list publishing images: %w", err)
+	}
+	if strings.TrimSpace(found.Content.Title) == "" {
+		return PublishingSnapshot{}, ErrInvalidContent
+	}
+	// Revalidate at the publishing hand-off as well as at current write paths.
+	// Posts finalized before a validator was tightened must not bypass the frozen
+	// manifest boundary merely because no new save occurs after deployment.
+	if err := ValidateContent(*found.Content, images); err != nil {
+		return PublishingSnapshot{}, err
+	}
+	return PublishingSnapshot{PostSlug: found.Slug, UserID: found.UserID, CreatedAt: found.CreatedAt, Content: clonePostContent(*found.Content),
+		ContentRevision: found.ContentRevision, FinalizedRevision: found.FinalizedRevision, Images: append([]Image(nil), images...)}, nil
+}
+
+// PostIdentity returns the immutable incarnation marker used by consumers whose
+// history must not attach to a later post that happens to reuse a deleted slug.
+func (s *Service) PostIdentity(ctx context.Context, userID, slug string) (time.Time, error) {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return found.CreatedAt, nil
+}
+
+func clonePostContent(content PostContent) PostContent {
+	cloned := content
+	cloned.Tags = append([]string(nil), content.Tags...)
+	cloned.Blocks = make([]Block, len(content.Blocks))
+	for index, block := range content.Blocks {
+		cloned.Blocks[index] = block
+		cloned.Blocks[index].Items = append([]string(nil), block.Items...)
+	}
+	return cloned
 }
 
 func equalOptionalInt(left, right *int) bool {

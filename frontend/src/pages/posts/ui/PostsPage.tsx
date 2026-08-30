@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { displayTitle, postStatusLabel, usePosts, type PostListItem } from '@/entities/post'
 import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
+import { PurposeRefLabel } from '@/entities/purpose'
 import { VoiceRefLabel } from '@/entities/voice'
 import { formatRelativeTime } from '@/shared/lib'
 import { ActionBar, Badge, Button, Notice, buttonStyles, type BadgeTone } from '@/shared/ui'
@@ -97,6 +98,9 @@ export function PostsPage() {
               <span className="flex w-full min-w-0 items-center gap-2">
                 <Badge tone={status.tone}>{status.label}</Badge>
                 <VoiceRefLabel voice={post.voice} className="text-content-tertiary text-xs" />
+                {/* Only for an assigned post, and after the voice: the voice is on every row and
+                    the 용도 is not, so it reads as an addition rather than a second column. */}
+                <PurposeRefLabel purpose={post.purpose} className="text-content-tertiary text-xs" />
                 <time dateTime={post.updatedAt} className="text-content-tertiary shrink-0 text-xs">
                   {formatRelativeTime(post.updatedAt)}
                 </time>

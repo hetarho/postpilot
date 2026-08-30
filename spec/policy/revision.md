@@ -22,6 +22,10 @@ rule behavior remain canonical in [voice](voice.md).
 - Every revision reloads and injects the complete current profile of the frozen voice in canonical order:
   styleguide, recent excerpts, then rules. No profile or prompt state from an earlier revision is reused, and no other
   voice's data is consulted.
+- The post's purpose brief is frozen into the revision payload at `StartRevision` and injected at the same relative
+  position as in the write prompt — after the whole profile, before the current content (see [purposes](purposes.md)).
+  Revision of a post without a purpose is byte-identical to the pre-purpose prompt. Revision never learns, saves or
+  changes any purpose state; "save as rule" continues to write a voice rule only.
 - The user prompt contains the current full `PostContent`, the attached filenames, and the instruction. It requires
   the smallest requested change, verbatim preservation of unrelated sentences, unchanged title/summary/tags unless
   requested, immutable attached filenames, and a complete replacement `PostContent` rather than a diff.

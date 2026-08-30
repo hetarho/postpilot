@@ -5,27 +5,63 @@ import (
 	"fmt"
 )
 
+type purposePayload struct {
+	Name         string `json:"name"`
+	Description  string `json:"description,omitempty"`
+	Instructions string `json:"instructions"`
+}
+
 type generationPayload struct {
-	TargetLength *int `json:"target_length,omitempty"`
+	TargetLength *int            `json:"target_length,omitempty"`
+	Purpose      *purposePayload `json:"purpose,omitempty"`
+}
+
+// GenerationOptions is what a durable generate job froze at enqueue. Both fields are
+// options of that one run: a later edit of the post's target length or of the purpose row
+// must not change the prompt of work already waiting in the queue.
+type GenerationOptions struct {
+	TargetLength *int
+	Purpose      *PurposeBrief
 }
 
 // EncodeGenerationPayload freezes generation-only options in the durable job.
-func EncodeGenerationPayload(targetLength *int) ([]byte, error) {
-	return json.Marshal(generationPayload{TargetLength: cloneOptionalInt(targetLength)})
+func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
+	return json.Marshal(generationPayload{
+		TargetLength: cloneOptionalInt(options.TargetLength),
+		Purpose:      encodePurpose(options.Purpose),
+	})
 }
 
 // DecodeGenerationPayload accepts an empty payload for jobs queued before this
-// contract existed; those jobs intentionally carry no target length.
-func DecodeGenerationPayload(raw []byte) (*int, error) {
+// contract existed; those jobs intentionally carry no target length and no purpose.
+// A payload written before purposes existed simply decodes with the field absent.
+func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 	if len(raw) == 0 {
-		return nil, nil
+		return GenerationOptions{}, nil
 	}
 	var payload generationPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return nil, fmt.Errorf("decode generation payload: %w", err)
+		return GenerationOptions{}, fmt.Errorf("decode generation payload: %w", err)
 	}
 	if payload.TargetLength != nil && *payload.TargetLength <= 0 {
-		return nil, fmt.Errorf("decode generation payload: target length must be positive")
+		return GenerationOptions{}, fmt.Errorf("decode generation payload: target length must be positive")
 	}
-	return cloneOptionalInt(payload.TargetLength), nil
+	return GenerationOptions{
+		TargetLength: cloneOptionalInt(payload.TargetLength),
+		Purpose:      decodePurpose(payload.Purpose),
+	}, nil
+}
+
+func encodePurpose(brief *PurposeBrief) *purposePayload {
+	if brief == nil {
+		return nil
+	}
+	return &purposePayload{Name: brief.Name, Description: brief.Description, Instructions: brief.Instructions}
+}
+
+func decodePurpose(payload *purposePayload) *PurposeBrief {
+	if payload == nil {
+		return nil
+	}
+	return &PurposeBrief{Name: payload.Name, Description: payload.Description, Instructions: payload.Instructions}
 }

@@ -34,7 +34,8 @@ func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
 	queries := sqlc.New(tx)
 	err = queries.InsertExperiment(ctx, sqlc.InsertExperimentParams{
 		ID: found.ID, UserID: found.UserID, PostSlug: nullString(found.PostSlug), VoiceID: nullString(found.VoiceID),
-		Stage: string(found.Stage), Status: string(found.Status), JobID: nullString(found.JobID),
+		PurposeName: found.PurposeName,
+		Stage:       string(found.Stage), Status: string(found.Status), JobID: nullString(found.JobID),
 		InputSnapshot: nullBytes(found.InputSnapshot), InputHash: found.InputHash,
 		PromptVersion: found.PromptVersion, CreatedAt: formatTime(found.CreatedAt),
 	})
@@ -381,7 +382,8 @@ func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 		return experiment.Experiment{}, fmt.Errorf("experiment %s created_at: %w", row.ID, err)
 	}
 	return experiment.Experiment{
-		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, VoiceID: row.VoiceID.String, Stage: experiment.Stage(row.Stage),
+		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, VoiceID: row.VoiceID.String,
+		PurposeName: row.PurposeName, Stage: experiment.Stage(row.Stage),
 		Status: experiment.Status(row.Status), JobID: row.JobID.String, InputSnapshot: []byte(row.InputSnapshot.String),
 		InputHash: row.InputHash, PromptVersion: row.PromptVersion, WinnerCandidateID: row.WinnerCandidateID.String,
 		Outcome: experiment.Outcome(row.Outcome.String), ApplyError: row.ApplyError.String, CreatedAt: created,

@@ -107,9 +107,7 @@ export function VoiceRuleComparisonPage() {
           variant="secondary"
           className="mt-4"
           pending={retry.isPending}
-          onClick={() =>
-            void retry.mutateAsync({ comparisonId: id }).then(() => query.refetch())
-          }
+          onClick={() => void retry.mutateAsync({ comparisonId: id }).then(() => query.refetch())}
         >
           실패한 후보 다시 만들기
         </Button>

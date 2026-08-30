@@ -32,6 +32,7 @@ import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
 import { StageModelSelect } from '@/features/select-model'
+import { PostPurposeSelect } from '@/features/select-post-purpose'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import {
   ActionBar,
@@ -44,6 +45,7 @@ import {
 } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { ExportPanel } from '@/widgets/export-panel'
+import { PublishPanel } from '@/widgets/publish-panel'
 import { DeletedVoiceWarning, VoiceWarning } from '@/widgets/voice-warning'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
 import { EDITOR_STEPS, stepForStatus, type EditorStep } from '../model/steps'
@@ -96,11 +98,16 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   const voiceId = post ? post.voice.id : newVoiceId
   const voice: VoiceRef = post?.voice ?? { id: newVoiceId, name: '', deleted: false }
 
+  // The same shape for the 용도, with 없음 ('') as the default the server never overrides.
+  const [newPurposeId, setNewPurposeId] = useState('')
+  const purposeId = post ? post.purpose.id : newPurposeId
+
   const autosave = useAutosave({
     post,
     title,
     memo,
     voiceId,
+    purposeId,
     onMinted: (slug) => {
       // Read off the live DOM, so this is the caret as it is now rather than as it was
       // when the save left.
@@ -214,6 +221,19 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         blocked={post ? reassignmentBlocker(post) : ''}
         confirm={Boolean(post)}
         onSelect={post ? autosave.reassign : setNewVoiceId}
+        className="mt-4"
+      />
+
+      {/* Beside the voice, and outside the step panels for the same reason: the pair is what the
+          next AI run is given — the voice decides how it sounds, the 용도 what kind of text it is.
+          Unlike the voice it stays usable during a job: the running one keeps the brief frozen at
+          its enqueue, and the select says so. */}
+      <PostPurposeSelect
+        ownerId={ownerId}
+        value={purposeId}
+        current={post?.purpose}
+        jobRunning={Boolean(post?.activeJob && !isTerminal(post.activeJob))}
+        onSelect={post ? autosave.assignPurpose : setNewPurposeId}
         className="mt-4"
       />
 
@@ -542,6 +562,18 @@ function LifecycleSteps({
         content={liveContent ?? result}
         images={post.images}
         createdAt={post.createdAt}
+      />
+      <PublishPanel
+        ownerId={ownerId}
+        postSlug={post.slug}
+        contentRevision={post.contentRevision}
+        finalizedRevision={post.finalizedRevision}
+        status={post.status}
+        beforePublish={() =>
+          contentEditorRef.current?.flush() ??
+          flushContentQueue(post.slug) ??
+          Promise.resolve(post.contentRevision)
+        }
       />
     </>
   ) : (

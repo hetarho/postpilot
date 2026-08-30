@@ -64,6 +64,11 @@ export const LEADERBOARD_MIN_MATCHES = 3
 /** Generation jobs are durable on the server; polling only observes their state. */
 export const POLL_INTERVAL_MS = 2_000
 
+/** Publishing has its own durable queue and a shorter live-status projection. These
+ * values are public display/polling hints only; server leases remain authoritative. */
+export const PUBLISH_JOB_POLL_MS = 2_000
+export const PUBLISH_AGENT_STALE_MS = 30_000
+
 /** Maximum natural-language revision instruction length. Mirrored from the backend
  * generation context so the field stops before the authoritative RPC validation. */
 export const REVISION_INSTRUCTION_MAX_CHARS = 500
@@ -91,3 +96,25 @@ export const HEIF_DECODER_IDLE_MS = 30_000
  *  the round trip; the server stays authoritative. Counted in Unicode scalar values, like the
  *  backend, so a Hangul syllable is one character here too. */
 export const VOICE_NAME_MAX_CHARS = 50
+
+/** Purpose (용도) brief ceilings, mirrored from `PURPOSE_*_MAX_CHARS` on the backend so the
+ *  create/edit fields can count down before the round trip; the server stays authoritative.
+ *  Counted in Unicode scalar values, like the backend, so a Hangul syllable is one character.
+ *  A malformed or non-positive override falls back to the default rather than disabling the
+ *  counter — a build-time typo must not silently remove the client-side bound. */
+const positiveIntEnv = (raw: string | undefined, fallback: number): number => {
+  const value = Number(raw)
+  return Number.isInteger(value) && value > 0 ? value : fallback
+}
+export const PURPOSE_NAME_MAX_CHARS = positiveIntEnv(
+  import.meta.env.VITE_PURPOSE_NAME_MAX_CHARS,
+  40,
+)
+export const PURPOSE_DESCRIPTION_MAX_CHARS = positiveIntEnv(
+  import.meta.env.VITE_PURPOSE_DESCRIPTION_MAX_CHARS,
+  200,
+)
+export const PURPOSE_INSTRUCTIONS_MAX_CHARS = positiveIntEnv(
+  import.meta.env.VITE_PURPOSE_INSTRUCTIONS_MAX_CHARS,
+  2000,
+)

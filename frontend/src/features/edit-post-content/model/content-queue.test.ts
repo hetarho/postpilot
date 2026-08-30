@@ -28,7 +28,13 @@ describe('content save queue', () => {
       void revision
       return new Promise<bigint>((resolve) => releases.push(resolve))
     })
-    const handle = attachContentQueue({ slug: 'post', revision: 1n, saved: snapshot('A'), send, onState: vi.fn() })
+    const handle = attachContentQueue({
+      slug: 'post',
+      revision: 1n,
+      saved: snapshot('A'),
+      send,
+      onState: vi.fn(),
+    })
 
     handle.queue(snapshot('B'))
     await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
@@ -54,7 +60,13 @@ describe('content save queue', () => {
   it('stops retry timers and rejects pending flushes when the session ends', async () => {
     vi.useFakeTimers()
     const send = vi.fn().mockRejectedValue(new Error('offline'))
-    const handle = attachContentQueue({ slug: 'post', revision: 1n, saved: snapshot('A'), send, onState: vi.fn() })
+    const handle = attachContentQueue({
+      slug: 'post',
+      revision: 1n,
+      saved: snapshot('A'),
+      send,
+      onState: vi.fn(),
+    })
     handle.queue(snapshot('B'))
 
     await expect(handle.flush()).rejects.toThrow('offline')
@@ -68,7 +80,13 @@ describe('content save queue', () => {
     vi.useFakeTimers()
     const states: string[] = []
     const send = vi.fn().mockRejectedValue(new ContentRevisionConflictError())
-    const handle = attachContentQueue({ slug: 'post', revision: 7n, saved: snapshot('A'), send, onState: (state) => states.push(state) })
+    const handle = attachContentQueue({
+      slug: 'post',
+      revision: 7n,
+      saved: snapshot('A'),
+      send,
+      onState: (state) => states.push(state),
+    })
     handle.queue(snapshot('B'))
 
     await expect(handle.flush()).rejects.toBeInstanceOf(ContentRevisionConflictError)

@@ -14,11 +14,12 @@ export function useVoiceLearningActions() {
       learnMutation.mutateAsync({ postSlug, analyzeModel: model(analyzeModel) }),
     retry: (eventId: string, analyzeModel: ModelRef) =>
       retryMutation.mutateAsync({ eventId, analyzeModel: model(analyzeModel) }),
-    satisfy: (postSlug: string) => feedbackMutation.mutateAsync({
-      postSlug,
-      satisfaction: true,
-      reason: VoiceFeedbackReason.UNSPECIFIED,
-    }),
+    satisfy: (postSlug: string) =>
+      feedbackMutation.mutateAsync({
+        postSlug,
+        satisfaction: true,
+        reason: VoiceFeedbackReason.UNSPECIFIED,
+      }),
     pending: learnMutation.isPending || retryMutation.isPending,
     feedbackPending: feedbackMutation.isPending,
     errorMessage: learnMutation.error

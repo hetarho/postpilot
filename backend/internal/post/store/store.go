@@ -46,6 +46,7 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 		Slug:      p.Slug,
 		UserID:    p.UserID,
 		VoiceID:   p.VoiceID,
+		PurposeID: optionalText(p.PurposeID),
 		Title:     p.Title,
 		Memo:      p.Memo,
 		CreatedAt: formatTime(p.CreatedAt),
@@ -57,6 +58,9 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 		}
 		if isVoiceOwnershipViolation(err) {
 			return post.ErrVoiceNotFound
+		}
+		if isPurposeOwnershipViolation(err) {
+			return post.ErrPurposeNotFound
 		}
 		return fmt.Errorf("insert post: %w", err)
 	}
@@ -90,10 +94,40 @@ func (s *Store) ReassignVoice(ctx context.Context, slug, userID, voiceID string,
 	return n == 1, nil
 }
 
+// AssignPurpose is the only writer of posts.purpose_id besides the create and the foreign
+// key's ON DELETE SET NULL. A foreign or unknown id is refused by the composite FK even if a
+// service check were bypassed, and that refusal is reported as a missing purpose.
+func (s *Store) AssignPurpose(ctx context.Context, slug, userID string, purposeID *string, updatedAt time.Time) (bool, error) {
+	value := sql.NullString{}
+	if purposeID != nil && *purposeID != "" {
+		value = sql.NullString{String: *purposeID, Valid: true}
+	}
+	n, err := s.write.AssignPostPurpose(ctx, sqlc.AssignPostPurposeParams{
+		PurposeID: value, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		if isPurposeOwnershipViolation(err) {
+			return false, post.ErrPurposeNotFound
+		}
+		return false, fmt.Errorf("assign post purpose: %w", err)
+	}
+	return n == 1, nil
+}
+
+// SQLite reports every composite-FK refusal with the same generic message, so which
+// reference was violated is decided by which write raised it: only a purpose write asks
+// isPurposeOwnershipViolation, and only a voice write asks isVoiceOwnershipViolation. The
+// create writes both references, and prefers the voice reading because a create carries a
+// required voice and an optional purpose.
+func isForeignKeyViolation(err error) bool {
+	return strings.Contains(strings.ToUpper(err.Error()), "FOREIGN KEY CONSTRAINT FAILED")
+}
+
+func isPurposeOwnershipViolation(err error) bool { return isForeignKeyViolation(err) }
+
 func isVoiceOwnershipViolation(err error) bool {
-	message := strings.ToUpper(err.Error())
-	return strings.Contains(message, "FOREIGN KEY CONSTRAINT FAILED") ||
-		strings.Contains(message, "POST VOICE MUST BE ACTIVE")
+	return isForeignKeyViolation(err) ||
+		strings.Contains(strings.ToUpper(err.Error()), "POST VOICE MUST BE ACTIVE")
 }
 
 func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, observations []post.Observation, updatedAt time.Time) (bool, error) {
@@ -245,6 +279,8 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 			Slug:      row.Slug,
 			VoiceID:   row.VoiceID,
 			Voice:     post.VoiceRef{ID: row.VoiceID},
+			PurposeID: row.PurposeID.String,
+			Purpose:   post.PurposeRef{ID: row.PurposeID.String},
 			Title:     title,
 			Status:    row.Status,
 			UpdatedAt: updatedAt,
@@ -514,6 +550,8 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		UserID:                  row.UserID,
 		VoiceID:                 row.VoiceID,
 		Voice:                   post.VoiceRef{ID: row.VoiceID},
+		PurposeID:               row.PurposeID.String,
+		Purpose:                 post.PurposeRef{ID: row.PurposeID.String},
 		Title:                   row.Title,
 		Memo:                    row.Memo,
 		Status:                  row.Status,
@@ -528,6 +566,15 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		FinalizedAt:             finalizedAt,
 		Observations:            observations,
 	}, nil
+}
+
+// optionalText is the store-side spelling of "the post may have none": an empty domain id
+// is NULL in SQLite, never the empty string, so the composite foreign key stays satisfiable.
+func optionalText(value string) sql.NullString {
+	if value == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: value, Valid: true}
 }
 
 func optionalInt(value sql.NullInt64) *int {

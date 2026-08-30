@@ -25,6 +25,9 @@ decision behind the partition is [multi-voice partitioning](../tech/multi-voice-
   and legacy styleguide/rules bytes. `adduser` establishes the same default voice through the voice context's
   idempotent bootstrap immediately after creating the account and exits nonzero if it cannot; a rerun repairs a user
   left without a voice without duplicating data. Reads never create a voice or a profile.
+- A voice profile is never modified by, and never contains, purpose text: a 용도 is a separate account-owned aggregate
+  and is not part of `ProfileForPrompt` (see [purposes](purposes.md)). The prompt appends it after the complete
+  profile, so the profile's own bytes are identical with and without one.
 - `styleguide` is machine-generated but user-editable. `rules` is user-owned; analysis never changes it.
   `UpdateVoiceProfile` uses optional field presence and atomically updates only supplied columns, so a rules save
   cannot write a stale styleguide over a completed analysis.

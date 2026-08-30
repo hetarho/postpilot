@@ -35,6 +35,14 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 		return nil, err
 	}
 	post.TargetLength = cloneOptionalInt(targetLength)
+	// Frozen here, once, for the whole comparison. Both candidates then read the identical
+	// brief out of this snapshot, so their system prompts differ only by model ref — and
+	// because the brief is part of the snapshot, a different purpose is a different input.
+	brief, err := s.freezePurpose(ctx, post)
+	if err != nil {
+		return nil, err
+	}
+	post.Purpose = brief
 	voiceID, err := activeVoice(post)
 	if err != nil {
 		return nil, err
@@ -142,6 +150,17 @@ func SnapshotVoice(raw []byte) string {
 		return ""
 	}
 	return snapshot.Post.Voice.ID
+}
+
+// SnapshotPurposeName reports the purpose a frozen write snapshot was taken for, by name.
+// The name, not the id: the comparison detail has to keep saying which brief both candidates
+// were given even after that purpose is renamed or deleted.
+func SnapshotPurposeName(raw []byte) string {
+	snapshot, err := decodeExperimentSnapshot(raw, "write")
+	if err != nil || snapshot.Post.Purpose == nil {
+		return ""
+	}
+	return snapshot.Post.Purpose.Name
 }
 
 func (s *Service) ApplyObservationWinner(ctx context.Context, userID, postSlug string, observations []Observation) error {

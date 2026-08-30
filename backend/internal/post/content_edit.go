@@ -12,6 +12,17 @@ func ValidateContent(content PostContent, attached []Image) error {
 	if len(content.Blocks) == 0 {
 		return &InvalidContentError{Reason: "at least one block is required"}
 	}
+	tags := make(map[string]struct{}, len(content.Tags))
+	for _, tag := range content.Tags {
+		canonical := strings.TrimSpace(strings.TrimLeft(strings.Join(strings.Fields(tag), " "), "#"))
+		if canonical == "" {
+			return &InvalidContentError{Reason: "tag cannot be empty"}
+		}
+		if _, duplicate := tags[canonical]; duplicate {
+			return &InvalidContentError{Reason: "tags must be unique"}
+		}
+		tags[canonical] = struct{}{}
+	}
 	files := make(map[string]struct{}, len(attached))
 	for _, image := range attached {
 		files[image.Filename] = struct{}{}

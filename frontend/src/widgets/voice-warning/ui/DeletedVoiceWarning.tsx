@@ -11,8 +11,8 @@ export function DeletedVoiceWarning({ ownerId, voice }: { ownerId: string; voice
       <Notice tone="warning" role="status">
         <span className="w-full min-w-0">
           <span className="font-medium break-words">{voiceRefLabel(voice)}</span> — 이 글은 읽고
-          직접 고치고 내보낼 수 있어요. AI 생성·수정·학습은 말투를 복원하거나 위에서 다른 말투로 바꾼
-          뒤에 할 수 있어요.
+          직접 고치고 내보낼 수 있어요. AI 생성·수정·학습은 말투를 복원하거나 위에서 다른 말투로
+          바꾼 뒤에 할 수 있어요.
         </span>
         <RestoreVoiceButton
           ownerId={ownerId}

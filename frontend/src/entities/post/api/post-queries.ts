@@ -3,6 +3,7 @@ import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { toPostImage } from '@/entities/image/@x/post'
 import { toGenerationJob } from '@/entities/generation-job/@x/post'
+import { toPurposeRef } from '@/entities/purpose/@x/post'
 import { toVoiceRef } from '@/entities/voice/@x/post'
 import { PostService, type Post, type PostSummary } from '@/shared/api'
 import type { PostDraft, PostListItem } from '../model/types'
@@ -16,6 +17,7 @@ export function toPostDraft(post: Post): PostDraft {
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     voice: toVoiceRef(post.voice),
+    purpose: toPurposeRef(post.purpose),
     images: post.images.map(toPostImage),
     activeJob: post.activeJob ? toGenerationJob(post.activeJob) : undefined,
     content: post.content,
@@ -38,6 +40,7 @@ export function toPostListItem(summary: PostSummary): PostListItem {
     status: summary.status as PostListItem['status'],
     updatedAt: summary.updatedAt,
     voice: toVoiceRef(summary.voice),
+    purpose: toPurposeRef(summary.purpose),
     activeJob: summary.activeJob ? toGenerationJob(summary.activeJob) : undefined,
     pendingExperimentId: summary.pendingExperimentId,
   }

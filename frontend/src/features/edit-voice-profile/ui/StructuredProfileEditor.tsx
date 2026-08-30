@@ -28,11 +28,36 @@ export function StructuredProfileEditor({
 }) {
   const structured = profile.structured
   const fields = [
-    { label: '어휘 성격', layer: VoiceLayer.LEXICAL, field: 'description', value: structured.lexical.description },
-    { label: '주 종결어미', layer: VoiceLayer.ENDINGS, field: 'base_register', value: structured.endings.baseRegister },
-    { label: '접속 방식', layer: VoiceLayer.SYNTAX, field: 'connective_style', value: structured.syntax.connectiveStyle },
-    { label: '도입 방식', layer: VoiceLayer.STRUCTURE, field: 'intro_pattern', value: structured.structure.introPattern },
-    { label: '마무리 방식', layer: VoiceLayer.STRUCTURE, field: 'closing_pattern', value: structured.structure.closingPattern },
+    {
+      label: '어휘 성격',
+      layer: VoiceLayer.LEXICAL,
+      field: 'description',
+      value: structured.lexical.description,
+    },
+    {
+      label: '주 종결어미',
+      layer: VoiceLayer.ENDINGS,
+      field: 'base_register',
+      value: structured.endings.baseRegister,
+    },
+    {
+      label: '접속 방식',
+      layer: VoiceLayer.SYNTAX,
+      field: 'connective_style',
+      value: structured.syntax.connectiveStyle,
+    },
+    {
+      label: '도입 방식',
+      layer: VoiceLayer.STRUCTURE,
+      field: 'intro_pattern',
+      value: structured.structure.introPattern,
+    },
+    {
+      label: '마무리 방식',
+      layer: VoiceLayer.STRUCTURE,
+      field: 'closing_pattern',
+      value: structured.structure.closingPattern,
+    },
   ]
   return (
     <section aria-labelledby="profile-heading">
@@ -46,7 +71,8 @@ export function StructuredProfileEditor({
       </div>
       {structured.empty ? (
         <p className="text-content-secondary mt-3 text-sm leading-relaxed">
-          아직 배운 말투가 없어요. 첫 글도 그대로 생성할 수 있고, 완성한 글을 직접 확정하면 그때부터 한 편씩 배웁니다.
+          아직 배운 말투가 없어요. 첫 글도 그대로 생성할 수 있고, 완성한 글을 직접 확정하면 그때부터
+          한 편씩 배웁니다.
         </p>
       ) : (
         <div className="mt-5 space-y-6">
@@ -81,7 +107,8 @@ export function StructuredProfileEditor({
               <div>
                 <dt className="text-content-tertiary">문단당 문장</dt>
                 <dd>
-                  {structured.structure.paragraphSentencesMin}–{structured.structure.paragraphSentencesMax}개
+                  {structured.structure.paragraphSentencesMin}–
+                  {structured.structure.paragraphSentencesMax}개
                 </dd>
               </div>
             </dl>

@@ -1,11 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSavePostContent } from '@/entities/post'
 import type { PostContent } from '@/shared/api'
-import {
-  attachContentQueue,
-  type ContentQueueHandle,
-  type ContentSaveState,
-} from './content-queue'
+import { attachContentQueue, type ContentQueueHandle, type ContentSaveState } from './content-queue'
 
 export function useContentAutosave(args: {
   slug: string
@@ -38,8 +34,7 @@ export function useContentAutosave(args: {
     }
   }, [args.revision, args.slug])
   useLayoutEffect(() => {
-    if (args.valid)
-      queue.current?.queue({ content: args.content })
+    if (args.valid) queue.current?.queue({ content: args.content })
   }, [args.content, args.valid])
   useEffect(() => {
     const flush = () => queue.current?.saveNow()

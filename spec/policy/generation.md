@@ -21,8 +21,9 @@ implemented by jobs 10, 11, 23, and 24; voice scoping from
 ## Pipeline
 
 - Ordinary generation is a durable `generate` job. `StartGeneration` validates ownership and one explicit active
-  write model (plus an explicit vision observe model when photos exist), freezes the optional target length in its
-  payload, and returns only `job_id` without making a provider call or creating a model experiment.
+  write model (plus an explicit vision observe model when photos exist), freezes the optional target length **and the
+  post's optional purpose brief** in its payload, and returns only `job_id` without making a provider call or creating
+  a model experiment.
 - `StartWriteExperiment` is the separate explicit A/B path. It validates two distinct write candidates, freezes one
   shared post/profile/option snapshot, creates the experiment and job, and returns their ids before provider work.
 - When photos are attached, observation always precedes writing. Photos are ordered by `created_at, id`, read from
@@ -34,9 +35,16 @@ implemented by jobs 10, 11, 23, and 24; voice scoping from
   before its durable progress update, so the count always converges to the attached photo count.
 - With no photos, observation makes no provider call, reports `observe 0/0`, clears stale observations, and tells
   the writing model to use the memo without images.
-- The writing prompt's stable prefix is always styleguide → recent excerpts → user rules. Per-post title hint, memo,
-  observations, and exact filenames follow it. The prompt requires Korean output, one paragraph per `TEXT` block,
+- The writing prompt's stable prefix is always styleguide → recent excerpts → user rules → ending constraint, then the
+  frozen purpose brief when the post has one (see [purposes](purposes.md)). Per-post title hint, memo, observations,
+  and exact filenames follow it. Without a purpose the prompt is byte-identical to the pre-purpose one. The prompt requires Korean output, one paragraph per `TEXT` block,
   only attached filenames, context-appropriate image placement, a one-line summary, and 3–6 tags.
+- The purpose brief is resolved from the post once, at enqueue, through the purpose context's published lookup, and
+  written into the payload as text. Handlers build the prompt from that payload and never re-read the row, so editing
+  or deleting the purpose afterwards — including across a restart-resume or an explicit retry — cannot change work
+  already queued. A purpose deleted before the start is simply absent. The observe stage never receives a brief.
+- The A/B snapshot freezes the same brief, so both candidates get byte-identical system prompts including it and the
+  input hash changes with the purpose. The experiment records `purpose_name`.
 - Observation runs at most once in either mode. Ordinary generation calls one writer and directly persists validated
   content. A/B generation gives both writers byte-identical prepared snapshots/schema/options except for model ref,
   runs them concurrently, and stores validated candidate output under the experiment until an explicit verdict.

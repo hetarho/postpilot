@@ -17,6 +17,7 @@ type Service struct {
 	images      ImageReader
 	jobs        Jobs
 	experiments PendingExperiments
+	purposes    PurposeBriefs
 	batchSize   int
 	reasoning   ReasoningPolicy
 }
@@ -39,6 +40,11 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {
 	s.experiments = finder
 }
+
+// SetPurposeBriefs wires the purpose context's published brief lookup. Without it the
+// prompt simply carries no brief — the same output this code produced before purposes
+// existed — so a partially wired process degrades to the old behavior rather than failing.
+func (s *Service) SetPurposeBriefs(briefs PurposeBriefs) { s.purposes = briefs }
 
 func (s *Service) refusePendingExperiment(ctx context.Context, userID, postSlug string) error {
 	if s.experiments == nil {
@@ -86,7 +92,12 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 			return "", fmt.Errorf("save revision rule: %w", err)
 		}
 	}
-	payload, err := encodeRevisionPayload(request.Instruction, request.SaveAsRule)
+	brief, err := s.freezePurpose(ctx, post)
+	if err != nil {
+		return "", err
+	}
+	request.Purpose = brief
+	payload, err := encodeRevisionPayload(request.Instruction, request.SaveAsRule, brief)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
 	}
@@ -126,11 +137,34 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if request.TargetLength != nil && *request.TargetLength <= 0 {
 		return "", ErrInvalidTargetLength
 	}
+	brief, err := s.freezePurpose(ctx, post)
+	if err != nil {
+		return "", err
+	}
+	request.Purpose = brief
 	id, err := s.jobs.EnqueueGeneration(ctx, request)
 	if err != nil {
 		return "", fmt.Errorf("enqueue generation: %w", err)
 	}
 	return id, nil
+}
+
+// freezePurpose resolves the post's CURRENT purpose once, at enqueue, so the text the
+// worker prompts with is decided here and never re-read. A purpose deleted between the save
+// and the start is simply absent — that is a post with no purpose, not a failure.
+func (s *Service) freezePurpose(ctx context.Context, post PostInput) (*PurposeBrief, error) {
+	if s.purposes == nil || post.PurposeID == "" {
+		return nil, nil
+	}
+	brief, ok, err := s.purposes.BriefFor(ctx, post.UserID, post.PurposeID)
+	if err != nil {
+		return nil, fmt.Errorf("load purpose brief: %w", err)
+	}
+	if !ok {
+		return nil, nil
+	}
+	frozen := brief
+	return &frozen, nil
 }
 
 func (s *Service) GetJob(ctx context.Context, id, userID string) (*JobSummary, error) {

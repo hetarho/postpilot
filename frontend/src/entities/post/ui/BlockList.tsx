@@ -10,7 +10,11 @@ interface BlockListProps {
    *  without this entity gaining one. The entities layer may not depend on features, so the edit
    *  control has to arrive from the outside — the same render-prop seam `BlockEditor` already uses
    *  for sentence feedback. */
-  renderBlock?: (block: PostContent['blocks'][number], index: number, rendered: ReactNode) => ReactNode
+  renderBlock?: (
+    block: PostContent['blocks'][number],
+    index: number,
+    rendered: ReactNode,
+  ) => ReactNode
   /** Wraps the title/summary/tags header for the same reason. */
   renderHeader?: (rendered: ReactNode) => ReactNode
 }
@@ -28,28 +32,30 @@ export function BlockList({ content, images, renderBlock, renderHeader }: BlockL
     <article aria-label="생성된 글" className="mt-12 pb-12">
       {(renderHeader ?? ((rendered: ReactNode) => rendered))(
         <header>
-        <p className="text-content-tertiary text-xs font-medium tracking-wide uppercase">Draft</p>
-        {/* `break-words` on every model-supplied string in this article: the global rule keeps the
+          <p className="text-content-tertiary text-xs font-medium tracking-wide uppercase">Draft</p>
+          {/* `break-words` on every model-supplied string in this article: the global rule keeps the
             page from scrolling sideways, the local class keeps the box from being the one that
             overflows (design-language §3.2). A model routinely writes a bare URL or a model id. */}
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight break-words">{content.title}</h1>
-        {content.summary && (
-          <p className="text-content-secondary mt-3 text-sm leading-relaxed break-words">
-            {content.summary}
-          </p>
-        )}
-        {content.tags.length > 0 && (
-          <ul aria-label="태그" className="mt-3 flex flex-wrap gap-2">
-            {content.tags.map((tag) => (
-              <li
-                key={tag}
-                className="bg-surface-raised text-content-secondary rounded-sm px-2 py-1 text-xs"
-              >
-                #{tag}
-              </li>
-            ))}
-          </ul>
-        )}
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight break-words">
+            {content.title}
+          </h1>
+          {content.summary && (
+            <p className="text-content-secondary mt-3 text-sm leading-relaxed break-words">
+              {content.summary}
+            </p>
+          )}
+          {content.tags.length > 0 && (
+            <ul aria-label="태그" className="mt-3 flex flex-wrap gap-2">
+              {content.tags.map((tag) => (
+                <li
+                  key={tag}
+                  className="bg-surface-raised text-content-secondary rounded-sm px-2 py-1 text-xs"
+                >
+                  #{tag}
+                </li>
+              ))}
+            </ul>
+          )}
         </header>,
       )}
 

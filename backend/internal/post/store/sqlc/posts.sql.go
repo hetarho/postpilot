@@ -10,6 +10,34 @@ import (
 	"database/sql"
 )
 
+const assignPostPurpose = `-- name: AssignPostPurpose :execrows
+UPDATE posts SET purpose_id = ?, updated_at = ?
+WHERE slug = ? AND user_id = ?
+`
+
+type AssignPostPurposeParams struct {
+	PurposeID sql.NullString
+	UpdatedAt string
+	Slug      string
+	UserID    string
+}
+
+// Assignment is not a reassignment: unlike the voice, a purpose is never learned from, so
+// this touches no content, revision, machine baseline or finalization column and is allowed
+// in every status. NULL is the clear.
+func (q *Queries) AssignPostPurpose(ctx context.Context, arg AssignPostPurposeParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, assignPostPurpose,
+		arg.PurposeID,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const countPostsByVoice = `-- name: CountPostsByVoice :one
 SELECT count(*) FROM posts WHERE voice_id = ? AND user_id = ?
 `
@@ -28,14 +56,15 @@ func (q *Queries) CountPostsByVoice(ctx context.Context, arg CountPostsByVoicePa
 
 const createPost = `-- name: CreatePost :exec
 
-INSERT INTO posts (slug, user_id, voice_id, title, memo, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, 'draft', ?, ?)
+INSERT INTO posts (slug, user_id, voice_id, purpose_id, title, memo, status, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?)
 `
 
 type CreatePostParams struct {
 	Slug      string
 	UserID    string
 	VoiceID   string
+	PurposeID sql.NullString
 	Title     string
 	Memo      string
 	CreatedAt string
@@ -49,6 +78,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
 		arg.Slug,
 		arg.UserID,
 		arg.VoiceID,
+		arg.PurposeID,
 		arg.Title,
 		arg.Memo,
 		arg.CreatedAt,
@@ -154,7 +184,7 @@ func (q *Queries) GetLearningSnapshot(ctx context.Context, arg GetLearningSnapsh
 const getPost = `-- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
-       target_length, finalized_revision, finalized_at
+       target_length, finalized_revision, finalized_at, purpose_id
 FROM posts WHERE slug = ?
 `
 
@@ -179,12 +209,13 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 		&i.TargetLength,
 		&i.FinalizedRevision,
 		&i.FinalizedAt,
+		&i.PurposeID,
 	)
 	return i, err
 }
 
 const listPostsByUser = `-- name: ListPostsByUser :many
-SELECT slug, title, content, status, updated_at, voice_id
+SELECT slug, title, content, status, updated_at, voice_id, purpose_id
 FROM posts WHERE user_id = ? ORDER BY updated_at DESC, slug DESC
 `
 
@@ -195,6 +226,7 @@ type ListPostsByUserRow struct {
 	Status    string
 	UpdatedAt string
 	VoiceID   string
+	PurposeID sql.NullString
 }
 
 func (q *Queries) ListPostsByUser(ctx context.Context, userID string) ([]ListPostsByUserRow, error) {
@@ -213,6 +245,7 @@ func (q *Queries) ListPostsByUser(ctx context.Context, userID string) ([]ListPos
 			&i.Status,
 			&i.UpdatedAt,
 			&i.VoiceID,
+			&i.PurposeID,
 		); err != nil {
 			return nil, err
 		}

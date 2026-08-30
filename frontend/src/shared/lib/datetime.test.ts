@@ -26,10 +26,10 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime('2026-08-28T12:00:20Z', NOW)).toBe('방금')
   })
 
-  it.each([['', 'empty'], ['not-a-date', 'malformed']])(
-    'renders nothing for a %s value (%s)',
-    (value) => {
-      expect(formatRelativeTime(value, NOW)).toBe('')
-    },
-  )
+  it.each([
+    ['', 'empty'],
+    ['not-a-date', 'malformed'],
+  ])('renders nothing for a %s value (%s)', (value) => {
+    expect(formatRelativeTime(value, NOW)).toBe('')
+  })
 })

@@ -1,0 +1,7 @@
+{
+  "checked_at": "2026-08-30",
+  "latest_checked_release": "0.20.6",
+  "required_commands": ["hermes --version", "hermes doctor", "hermes plugins doctor <plugin-dir> --ci", "hermes -p <profile> chat --oneshot"],
+  "required_plugin_hooks": ["register_tool", "register_skill", "pre_tool_call", "transform_tool_result"],
+  "allowed_browser_hosts": ["blog.naver.com", "m.blog.naver.com", "nid.naver.com"]
+}

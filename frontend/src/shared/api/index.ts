@@ -4,6 +4,9 @@ export {
   healthClient,
   providerClient,
   generationClient,
+  publishingClient,
+  publishingClientFor,
+  purposeClient,
   voiceClient,
   voiceLearningClient,
   voiceValidationClient,
@@ -128,7 +131,10 @@ export {
   VoiceValidationService,
   ListVoiceProfileValidationsResponseSchema,
 } from './gen/postpilot/v1/voice_validation_pb'
-export type { VoiceRuleComparison, VoiceProfileValidation } from './gen/postpilot/v1/voice_validation_pb'
+export type {
+  VoiceRuleComparison,
+  VoiceProfileValidation,
+} from './gen/postpilot/v1/voice_validation_pb'
 export type {
   GetComparisonPairsResponse,
   GetSelectionsResponse,
@@ -147,6 +153,41 @@ export {
   CostSource,
   StartExperimentResponseSchema,
 } from './gen/postpilot/v1/model_experiment_pb'
+export {
+  PublishingService,
+  PublishVisibility,
+  PublishStatus,
+  PublishStage,
+  PublishingAgentSchema,
+  PublishJobSchema,
+  CreateAgentPairingResponseSchema,
+  ListPublishingAgentsResponseSchema,
+  UpdatePublishingAgentResponseSchema,
+  RevokePublishingAgentResponseSchema,
+  StartPublishResponseSchema,
+  GetPublishJobResponseSchema,
+  ListRetryablePublishJobsResponseSchema,
+  RetryPublishResponseSchema,
+  CancelPublishResponseSchema,
+} from './gen/postpilot/v1/publishing_pb'
+export type {
+  PublishingAgent as ProtoPublishingAgent,
+  PublishingCategory as ProtoPublishingCategory,
+  PublishJob as ProtoPublishJob,
+} from './gen/postpilot/v1/publishing_pb'
+export {
+  PurposeService,
+  PurposeSchema,
+  PurposeRefSchema,
+  ListPurposesResponseSchema,
+  CreatePurposeResponseSchema,
+  UpdatePurposeResponseSchema,
+  DeletePurposeResponseSchema,
+} from './gen/postpilot/v1/purpose_pb'
+export type {
+  Purpose as ProtoPurpose,
+  PurposeRef as ProtoPurposeRef,
+} from './gen/postpilot/v1/purpose_pb'
 export type {
   ModelExperiment as ProtoModelExperiment,
   ExperimentCandidate as ProtoExperimentCandidate,

@@ -91,6 +91,28 @@ describe('PostsPage', () => {
     expect(screen.getByRole('link', { name: /옛 글/ })).toHaveTextContent('삭제된 말투 · 옛 말투')
   })
 
+  // Plan 11 A12: an assigned row names its 용도 beside the voice; an unassigned one says
+  // nothing at all, since 없음 is the majority of the list.
+  it("names an assigned row's purpose and leaves an unassigned row alone", async () => {
+    renderList({
+      posts: [
+        {
+          slug: '20260828-jeju',
+          title: '제주 3일',
+          purpose: { id: 'purpose-review', name: '정보성 식당 리뷰' },
+        },
+        { slug: '20260820-plain', title: '용도 없는 글' },
+      ],
+    })
+
+    expect(await screen.findByRole('link', { name: /제주 3일/ })).toHaveTextContent(
+      '정보성 식당 리뷰',
+    )
+    const plain = screen.getByRole('link', { name: /용도 없는 글/ })
+    expect(plain).toHaveTextContent('기본 말투')
+    expect(plain).not.toHaveTextContent('정보성 식당 리뷰')
+  })
+
   it('labels a post nobody has titled yet', async () => {
     renderList({ posts: [{ slug: '20260828-untitled', title: '' }] })
 

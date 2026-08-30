@@ -46,7 +46,9 @@ async function handle({ id, file }: HeifDecodeRequest): Promise<void> {
   }
 }
 
-function decode(buffer: ArrayBuffer): Promise<{ width: number; height: number; rgba: ArrayBuffer } | null> {
+function decode(
+  buffer: ArrayBuffer,
+): Promise<{ width: number; height: number; rgba: ArrayBuffer } | null> {
   const images = decoder.decode(buffer)
   // A HEIC from a phone is one primary image plus, at times, auxiliary ones (depth map,
   // burst frames). The primary is the photo.

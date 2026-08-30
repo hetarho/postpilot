@@ -2,7 +2,8 @@
 
 Canonical rules that are **currently true** in the code. Source: [plan/08](../plan/08.platform-export.md), built by
 job 13. Every output is derived in the browser from canonical `PostContent`; no derived format is stored or served by
-the API and postpilot never publishes to a platform.
+the API, and the export surface itself never publishes. The separate paired-Mac action is governed by
+[publishing.md](publishing.md).
 
 ## Shared rules
 
@@ -46,6 +47,8 @@ the API and postpilot never publishes to a platform.
 ## Learning isolation
 
 - Export reads the latest canonical edited `PostContent`; it is available before or after finalization.
+- The separate publishing panel is composed after export in 글 완성. It neither changes the export output nor turns a
+  copy action into a publication request.
 - Rendering, opening a tab, copying through either clipboard path, and feedback timers never freeze a learning
   snapshot, enqueue work, update a profile, or call a provider. `확정`, `확정하고 말투 학습`, and later
   `말투 학습` are separate explicit editor actions.

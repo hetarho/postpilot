@@ -37,6 +37,7 @@ type Post struct {
 	TargetLength            sql.NullInt64
 	FinalizedRevision       sql.NullInt64
 	FinalizedAt             sql.NullString
+	PurposeID               sql.NullString
 }
 
 type Upload struct {

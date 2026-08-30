@@ -1,0 +1,32 @@
+현재 블로그 글에 사용자의 수정 요청만 최소한으로 반영하세요.
+요청과 무관한 문장은 글자 그대로 유지하고, 손대지 않은 블록을 다듬거나 다시 쓰지 마세요.
+제목, 한 줄 요약, 태그는 사용자가 그것들을 고쳐 달라고 한 경우에만 바꾸세요.
+IMAGE 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 순서 변경이나 요청에 따른 제거는 가능하지만 파일명을 바꾸거나 새 이미지를 만들지 마세요.
+출력은 diff가 아니라 완전한 PostContent이며, 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[]} 형태의 JSON 객체 하나여야 합니다.
+각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.
+
+[스타일가이드]
+STYLE 스타일가이드
+
+[활성 대조 규칙]
+ACTIVE 대조 규칙
+
+[글 예시 발췌]
+1. EXCERPT-1
+2. EXCERPT-2
+예시의 고유 사실, 주제, 문구를 복사하지 말고 문체 특징만 참고하세요.
+
+[사용자 규칙]
+RULES 사용자 규칙
+
+[종결어미 제약]
+프로필의 측정된 종결어미 분포를 따르고 같은 종결어미를 2문장보다 많이 연속 사용하지 마세요.
+@@USER@@
+[현재 PostContent]
+{"title":"CURRENT TITLE","summary":"CURRENT SUMMARY","tags":["태그1","태그2"],"blocks":[{"type":"TEXT","content":"CURRENT BODY","level":0,"file":"","alt":"","caption":"","items":null},{"type":"IMAGE","content":"","level":0,"file":"IMG_1.jpg","alt":"","caption":"캡션","items":null}]}
+
+[첨부 파일명]
+IMG_1.jpg
+
+[수정 요청]
+INSTRUCTION 수정 요청
