@@ -119,6 +119,7 @@ export {
 } from './gen/postpilot/v1/voice_validation_pb'
 export type { VoiceRuleComparison, VoiceProfileValidation } from './gen/postpilot/v1/voice_validation_pb'
 export type {
+  GetComparisonPairsResponse,
   GetSelectionsResponse,
   ModelInfo as ProtoModelInfo,
   ModelRef as ProtoModelRef,

@@ -1,7 +1,13 @@
-import { create } from '@bufbuild/protobuf'
+import { clone, create } from '@bufbuild/protobuf'
 import { useMutation, useQuery, useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
-import { ModelRefSchema, ProviderService } from '@/shared/api'
+import { useIsMutating, useQueryClient } from '@tanstack/react-query'
+import {
+  ComparisonPairSchema,
+  type GetComparisonPairsResponse,
+  GetComparisonPairsResponseSchema,
+  ModelRefSchema,
+  ProviderService,
+} from '@/shared/api'
 import type { ModelRef, StageName } from '../model/types'
 import {
   getComparisonPairsQueryKey,
@@ -40,7 +46,32 @@ export function useApplyRecommendation() {
 }
 
 export function useSaveComparisonPair() {
-  const mutation = useMutation(ProviderService.method.saveComparisonPair)
+  const transportForCache = useTransport()
+  const cache = useQueryClient()
+  const mutation = useMutation(ProviderService.method.saveComparisonPair, {
+    mutationKey: SAVE_COMPARISON_PAIR_MUTATION_KEY,
+    // Written synchronously, exactly as `useSaveSelection` does: `useComparisonPairSavePending`
+    // goes false the moment the mutation resolves, so a pair that only arrives with the
+    // invalidate's refetch would leave a window where the start reads the PREVIOUS candidates —
+    // the very stale read this pending flag was added to prevent.
+    onSuccess: (data) => {
+      const saved = data.pair
+      if (!saved) return
+      cache.setQueryData<GetComparisonPairsResponse>(
+        getComparisonPairsQueryKey(transportForCache),
+        (old) => {
+          const next = old
+            ? clone(GetComparisonPairsResponseSchema, old)
+            : create(GetComparisonPairsResponseSchema, {})
+          next.pairs = [
+            ...next.pairs.filter((existing) => existing.stage !== saved.stage),
+            create(ComparisonPairSchema, saved),
+          ]
+          return next
+        },
+      )
+    },
+  })
   const transport = useTransport()
   const queryClient = useQueryClient()
   return {
@@ -56,3 +87,10 @@ export function useSaveComparisonPair() {
     },
   }
 }
+
+/** A model-lab start must not read the previous saved pair while a replacement is in flight. */
+export function useComparisonPairSavePending(): boolean {
+  return useIsMutating({ mutationKey: SAVE_COMPARISON_PAIR_MUTATION_KEY }) > 0
+}
+
+const SAVE_COMPARISON_PAIR_MUTATION_KEY = ['model-comparison-pair', 'save'] as const

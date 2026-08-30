@@ -60,3 +60,40 @@ it('refreshes image view URLs whenever a cached post is entered', async () => {
     ),
   )
 })
+
+it('exposes the required mount refresh even while cached post detail is available', async () => {
+  const slug = '20260829-cached'
+  let releaseRefresh: (() => void) | undefined
+  const refreshGate = new Promise<void>((resolve) => {
+    releaseRefresh = resolve
+  })
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(PostService.method.getPost, async () => {
+      await refreshGate
+      return create(GetPostResponseSchema, {
+        post: create(PostSchema, { slug, targetLength: 1_800 }),
+      })
+    })
+  })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  })
+  queryClient.setQueryData(
+    getPostQueryKey(transport, slug),
+    create(GetPostResponseSchema, {
+      post: create(PostSchema, { slug, targetLength: 900 }),
+    }),
+  )
+
+  const view = renderHook(() => usePost(slug), {
+    wrapper: withProviders(transport, queryClient),
+  })
+
+  expect(view.result.current.post?.targetLength).toBe(900)
+  expect(view.result.current.isPending).toBe(false)
+  expect(view.result.current.isFetching).toBe(true)
+
+  releaseRefresh?.()
+  await waitFor(() => expect(view.result.current.isFetching).toBe(false))
+  expect(view.result.current.post?.targetLength).toBe(1_800)
+})

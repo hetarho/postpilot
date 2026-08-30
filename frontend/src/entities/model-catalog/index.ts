@@ -22,5 +22,10 @@ export {
   useStageSelection,
 } from './api/useSelections'
 export { useSaveSelection, useSelectionSavePending } from './api/useSaveSelection'
-export { useApplyRecommendation, useModelSetup, useSaveComparisonPair } from './api/useModelSetup'
+export {
+  useApplyRecommendation,
+  useComparisonPairSavePending,
+  useModelSetup,
+  useSaveComparisonPair,
+} from './api/useModelSetup'
 export { getSelectionsQueryKey } from './api/catalog-mappers'

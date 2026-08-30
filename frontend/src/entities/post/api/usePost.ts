@@ -27,13 +27,14 @@ function classify(error: unknown): PostLoadFailure {
 export function usePost(slug: string): {
   post: PostDraft | undefined
   isPending: boolean
+  isFetching: boolean
   failure: PostLoadFailure | undefined
   refetch: () => void
 } {
   // `retry: false` because the two failures that matter here are answers, not transient
   // faults: retrying a 403 or a 404 just asks the same question again, and the editor
   // would sit on a spinner for the length of the retry before saying so.
-  const { data, isPending, error, refetch } = useQuery(
+  const { data, isPending, isFetching, error, refetch } = useQuery(
     PostService.method.getPost,
     { slug },
     {
@@ -56,6 +57,7 @@ export function usePost(slug: string): {
   return {
     post,
     isPending,
+    isFetching,
     failure: error ? classify(error) : undefined,
     refetch: () => void refetch(),
   }

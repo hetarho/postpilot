@@ -16,6 +16,11 @@ Ordinary post generation observes once and calls one explicit active writer; it 
 write A/B action observes once and fans out only at write. Fanning out both observe and write would either need four
 drafts (`2 × 2`) or pause a server job for human input. Both make the verdict ambiguous or the UX fragile.
 
+That write A/B action may be entered from the post editor or from the model lab's write tab. The model-lab entry
+selects and loads an existing post, then supplies the same explicit saved pair, optional target, and active observe
+ref required by the existing `StartWriteExperiment`; it is not a standalone prompt benchmark or a second experiment
+kind.
+
 ## 2. Freeze and identify the input
 
 Before enqueue, the stage owner produces a canonical snapshot and prompt-version string. Experiment stores SHA-256 of

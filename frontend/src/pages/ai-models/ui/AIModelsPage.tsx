@@ -1,14 +1,28 @@
 import { useId, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
+  type ComparisonPair,
+  type ModelRef,
+  STAGE_LABELS,
+  type StageName,
+  sameRef,
+  useComparisonPairSavePending,
+  useModelSetup,
+  useStageSelection,
+} from '@/entities/model-catalog'
+import {
   type ExperimentStatusName,
   useExperiments,
   useLeaderboard,
 } from '@/entities/model-experiment'
-import { STAGE_LABELS, type StageName, useModelSetup } from '@/entities/model-catalog'
-import { displayTitle, usePosts } from '@/entities/post'
+import { displayTitle, usePost, usePosts } from '@/entities/post'
 import { ApplyRecommendation } from '@/features/apply-model-recommendation'
 import { ModelPairForm } from '@/features/configure-model-pair'
+import {
+  comparisonGenerationPreconditions,
+  type GenerationModelSelection,
+  useStartWriteExperiment,
+} from '@/features/generate-post'
 import { useStartModelExperiment } from '@/features/start-model-experiment'
 import {
   Badge,
@@ -16,7 +30,6 @@ import {
   Button,
   FieldLabel,
   FieldMessage,
-  Notice,
   SegmentedControl,
   Select,
 } from '@/shared/ui'
@@ -33,6 +46,7 @@ export function AIModelsPage() {
   const [postSlug, setPostSlug] = useState('')
   const startHintId = useId()
   const setup = useModelSetup()
+  const pairSaving = useComparisonPairSavePending()
   const { posts } = usePosts()
   const { experiments } = useExperiments(stage)
   const { entries } = useLeaderboard(stage)
@@ -46,13 +60,17 @@ export function AIModelsPage() {
     !pair?.candidateA || !pair.candidateB ? 'A/B 조합을 저장' : '',
     stage === 'observe' && !postSlug ? '사진이 있는 글을 선택' : '',
   ].filter(Boolean)
-  const canStart = unmet.length === 0
-  const startHint = canStart ? '' : `${unmet.join('하고, ')}하면 비교를 시작할 수 있어요.`
+  const canStart = !pairSaving && unmet.length === 0
+  const startHint = pairSaving
+    ? 'A/B 조합을 저장하는 중이에요.'
+    : canStart
+      ? ''
+      : `${unmet.join('하고, ')}하면 비교를 시작할 수 있어요.`
   const startComparison = async () => {
     // The CTA is `aria-disabled`, not `disabled`, so it keeps its place in the focus order and can
     // still be activated from a keyboard — the preconditions are enforced here, not by the browser.
-    if (!canStart || start.isPending) return
-    if (!pair?.candidateA || !pair.candidateB || stage === 'write') return
+    if (stage === 'write' || !canStart || start.isPending) return
+    if (!pair?.candidateA || !pair.candidateB) return
     const response =
       stage === 'observe'
         ? await start.startObserve(postSlug, pair.candidateA.ref, pair.candidateB.ref)
@@ -101,16 +119,20 @@ export function AIModelsPage() {
               or a save error belongs to the tab it was fired from, not to the next one. */}
           <ModelPairForm key={stage} stage={stage} />
         </div>
-        {stage === 'observe' && (
+        {stage !== 'analyze' && (
           <div className="mt-6">
-            <FieldLabel htmlFor="experiment-post">사진이 있는 글</FieldLabel>
+            <FieldLabel htmlFor="experiment-post">
+              {stage === 'observe' ? '사진이 있는 글' : '비교할 글'}
+            </FieldLabel>
             <Select
               id="experiment-post"
               className="mt-1"
               value={postSlug}
               onChange={(event) => setPostSlug(event.target.value)}
             >
-              <option value="">글을 선택하세요</option>
+              <option value="">
+                {stage === 'observe' ? '사진이 있는 글을 선택하세요' : '글을 선택하세요'}
+              </option>
               {posts.map((post) => (
                 <option key={post.slug} value={post.slug}>
                   {displayTitle(post)}
@@ -120,11 +142,12 @@ export function AIModelsPage() {
           </div>
         )}
         {stage === 'write' ? (
-          // `status`: this replaces the CTA at the far end of a two-screen scroll, so switching to
-          // 글 작성 must announce what took its place rather than just losing the button.
-          <Notice tone="info" role="status" className="mt-6">
-            작성 비교는 글 편집기의 `AI 생성`을 누를 때 자동으로 같은 관찰 결과를 사용해 시작됩니다.
-          </Notice>
+          <WriteComparisonStart
+            postSlug={postSlug}
+            pair={pair}
+            pairPending={setup.isPending}
+            pairSaving={pairSaving}
+          />
         ) : (
           <div className="mt-6">
             <Button
@@ -193,6 +216,145 @@ export function AIModelsPage() {
       </section>
     </main>
   )
+}
+
+function WriteComparisonStart({
+  postSlug,
+  pair,
+  pairPending,
+  pairSaving,
+}: {
+  postSlug: string
+  pair: ComparisonPair | undefined
+  pairPending: boolean
+  pairSaving: boolean
+}) {
+  const hintId = useId()
+  if (!postSlug) {
+    return (
+      <div className="mt-6">
+        <Button variant="cta" className="w-full sm:w-auto" aria-disabled aria-describedby={hintId}>
+          비교 시작
+        </Button>
+        <p id={hintId} className="text-content-secondary mt-2 text-sm">
+          비교할 글을 선택하면 비교를 시작할 수 있어요.
+        </p>
+      </div>
+    )
+  }
+  return (
+    <SelectedPostWriteComparison
+      key={postSlug}
+      postSlug={postSlug}
+      pair={pair}
+      pairPending={pairPending}
+      pairSaving={pairSaving}
+      hintId={hintId}
+    />
+  )
+}
+
+function SelectedPostWriteComparison({
+  postSlug,
+  pair,
+  pairPending,
+  pairSaving,
+  hintId,
+}: {
+  postSlug: string
+  pair: ComparisonPair | undefined
+  pairPending: boolean
+  pairSaving: boolean
+  hintId: string
+}) {
+  const { post, isPending: postPending, isFetching: postFetching, failure } = usePost(postSlug)
+  const observe = useStageSelection('observe')
+  const write = useStageSelection('write')
+  const start = useStartWriteExperiment()
+  const navigate = useNavigate()
+  const observeSelection = resolveSelection(observe.models, observe.selected)
+  const writeA = resolveSelection(
+    write.models,
+    pair?.candidateA && !pair.candidateA.missing ? pair.candidateA.ref : undefined,
+  )
+  const writeB = resolveSelection(
+    write.models,
+    pair?.candidateB && !pair.candidateB.missing ? pair.candidateB.ref : undefined,
+  )
+  const precondition = post
+    ? comparisonGenerationPreconditions(
+        post.images,
+        observeSelection,
+        writeA,
+        writeB,
+        post.activeJob,
+      )
+    : undefined
+  const modelPending =
+    pairPending || write.isPending || (Boolean(post?.images.length) && observe.isPending)
+  const reason =
+    postPending || postFetching
+      ? '글 정보를 확인하는 중이에요.'
+      : failure || !post
+        ? '글 정보를 불러오지 못했어요. 글을 다시 선택해 주세요.'
+        : pairSaving
+          ? 'A/B 조합을 저장하는 중이에요.'
+          : modelPending
+            ? '모델 선택을 확인하는 중이에요.'
+            : post.pendingExperimentId
+              ? '먼저 대기 중인 A/B 결과를 확인해 주세요.'
+              : precondition && !precondition.ok
+                ? precondition.reason
+                : ''
+  const canStart = Boolean(post) && !reason && !start.isPending
+
+  const startComparison = async () => {
+    if (!canStart || !post || !writeA || !writeB) return
+    try {
+      const response = await start.start(
+        post.slug,
+        post.images.length ? observeSelection?.ref : undefined,
+        writeA.ref,
+        writeB.ref,
+        post.targetLength,
+      )
+      void navigate({ to: '/ai-models/experiments/$id', params: { id: response.experimentId } })
+    } catch {
+      // The mutation's transport error is rendered beside the action.
+    }
+  }
+
+  return (
+    <div className="mt-6">
+      <Button
+        variant="cta"
+        className="w-full sm:w-auto"
+        pending={start.isPending}
+        aria-disabled={!canStart || undefined}
+        aria-describedby={reason ? hintId : undefined}
+        onClick={() => void startComparison()}
+      >
+        비교 시작
+      </Button>
+      <p id={hintId} role="status" className="text-content-secondary mt-2 text-sm empty:hidden">
+        {reason}
+      </p>
+      {start.isError && (
+        <FieldMessage className="mt-2">
+          {start.errorMessage || '비교를 시작하지 못했어요. 다시 시도해 주세요.'}
+        </FieldMessage>
+      )}
+    </div>
+  )
+}
+
+function resolveSelection(
+  models: ReturnType<typeof useStageSelection>['models'],
+  ref: ModelRef | null | undefined,
+): GenerationModelSelection | undefined {
+  if (!ref) return undefined
+  const model = models.find((candidate) => sameRef(candidate.ref, ref))
+  return model && !model.disabled ? { ref, vision: model.vision } : undefined
 }
 
 /** The row's status chip. The tone reinforces the label and never replaces it, so nothing is
