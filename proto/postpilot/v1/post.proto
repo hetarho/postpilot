@@ -70,6 +70,15 @@ message Observation {
   bool people_present = 6;
 }
 
+// The voice a post is written in, as the post screens need it. Transport-only: a deleted
+// voice still names itself here so a post assigned to it stays readable and exportable
+// while every AI action refuses.
+message VoiceRef {
+  string id = 1;
+  string name = 2;
+  bool deleted = 3;
+}
+
 message Post {
   // Minted once from the date and title, then immutable — it is the primary key and it
   // appears in object keys, so retitling must not move it.
@@ -91,6 +100,10 @@ message Post {
   optional int32 target_length = 15;
   int64 finalized_revision = 16;
   string finalized_at = 17;
+  VoiceRef voice = 18;
+  // The voice the latest machine baseline was written under. Finalization learning refuses
+  // unless it still equals `voice`, so a reassigned post cannot publish to the wrong voice.
+  string machine_baseline_voice_id = 19;
 }
 
 message Image {
@@ -114,6 +127,7 @@ message PostSummary {
   string updated_at = 4;
   GenerationJob active_job = 5;
   string pending_experiment_id = 6;
+  VoiceRef voice = 7;
 }
 
 message GenerationJob {
@@ -164,6 +178,10 @@ message SavePostDraftRequest {
   string slug = 1;
   string title = 2;
   string memo = 3;
+  // Presence decides the meaning, which is what lets autosave keep patching: required on
+  // create, absent preserves the current assignment, and a different present value asks for
+  // a reassignment. An empty string is never valid — the server substitutes no default.
+  optional string voice_id = 4;
 }
 
 message SavePostDraftResponse {

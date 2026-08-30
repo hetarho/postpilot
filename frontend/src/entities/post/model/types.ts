@@ -1,5 +1,6 @@
 import type { PostImage } from '@/entities/image/@x/post'
 import type { GenerationJob } from '@/entities/generation-job/@x/post'
+import type { VoiceRef } from '@/entities/voice/@x/post'
 import type { Observation, PostContent } from '@/shared/api'
 
 /** A post as the app talks about it.
@@ -16,6 +17,9 @@ export interface PostDraft {
   status: PostStatus
   createdAt: string
   updatedAt: string
+  /** The voice the post is written in. Always present — a post cannot exist without one — and
+   *  still named after the voice is deleted (spec/policy/posts.md). */
+  voice: VoiceRef
   images: PostImage[]
   activeJob: GenerationJob | undefined
   content: PostContent | undefined
@@ -23,6 +27,9 @@ export interface PostDraft {
   pendingExperimentId: string
   contentRevision: bigint
   machineBaselineRevision: bigint
+  /** The voice the latest machine baseline was written under; empty when there is none. Learning
+   *  is possible only while it equals `voice.id`, so a reassigned post must be regenerated first. */
+  machineBaselineVoiceId: string
   canFinalize: boolean
   targetLength?: number
   finalizedRevision: bigint
@@ -35,6 +42,7 @@ export interface PostListItem {
   title: string
   status: PostStatus
   updatedAt: string
+  voice: VoiceRef
   activeJob: GenerationJob | undefined
   pendingExperimentId: string
 }

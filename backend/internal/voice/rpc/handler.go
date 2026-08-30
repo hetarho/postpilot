@@ -19,12 +19,88 @@ type Handler struct{ service *voice.Service }
 
 func NewHandler(service *voice.Service) *Handler { return &Handler{service: service} }
 
-func (h *Handler) GetVoiceProfile(ctx context.Context, _ *connect.Request[postpilotv1.GetVoiceProfileRequest]) (*connect.Response[postpilotv1.GetVoiceProfileResponse], error) {
+// --- directory ---
+
+func (h *Handler) ListVoices(ctx context.Context, _ *connect.Request[postpilotv1.ListVoicesRequest]) (*connect.Response[postpilotv1.ListVoicesResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	profile, err := h.service.Get(ctx, userID)
+	voices, err := h.service.ListVoices(ctx, userID)
+	if err != nil {
+		return nil, toConnectError("list voices", err)
+	}
+	return connect.NewResponse(&postpilotv1.ListVoicesResponse{Voices: toProtoVoices(voices)}), nil
+}
+
+func (h *Handler) CreateVoice(ctx context.Context, req *connect.Request[postpilotv1.CreateVoiceRequest]) (*connect.Response[postpilotv1.CreateVoiceResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	created, err := h.service.CreateVoice(ctx, userID, req.Msg.GetName())
+	if err != nil {
+		return nil, toConnectError("create voice", err)
+	}
+	return connect.NewResponse(&postpilotv1.CreateVoiceResponse{Voice: toProtoVoice(created)}), nil
+}
+
+func (h *Handler) RenameVoice(ctx context.Context, req *connect.Request[postpilotv1.RenameVoiceRequest]) (*connect.Response[postpilotv1.RenameVoiceResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	renamed, err := h.service.RenameVoice(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetName())
+	if err != nil {
+		return nil, toConnectError("rename voice", err)
+	}
+	return connect.NewResponse(&postpilotv1.RenameVoiceResponse{Voice: toProtoVoice(renamed)}), nil
+}
+
+func (h *Handler) SetDefaultVoice(ctx context.Context, req *connect.Request[postpilotv1.SetDefaultVoiceRequest]) (*connect.Response[postpilotv1.SetDefaultVoiceResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	voices, err := h.service.SetDefaultVoice(ctx, userID, req.Msg.GetVoiceId())
+	if err != nil {
+		return nil, toConnectError("set default voice", err)
+	}
+	return connect.NewResponse(&postpilotv1.SetDefaultVoiceResponse{Voices: toProtoVoices(voices)}), nil
+}
+
+func (h *Handler) DeleteVoice(ctx context.Context, req *connect.Request[postpilotv1.DeleteVoiceRequest]) (*connect.Response[postpilotv1.DeleteVoiceResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	deleted, err := h.service.DeleteVoice(ctx, userID, req.Msg.GetVoiceId())
+	if err != nil {
+		return nil, toConnectError("delete voice", err)
+	}
+	return connect.NewResponse(&postpilotv1.DeleteVoiceResponse{Voice: toProtoVoice(deleted)}), nil
+}
+
+func (h *Handler) RestoreVoice(ctx context.Context, req *connect.Request[postpilotv1.RestoreVoiceRequest]) (*connect.Response[postpilotv1.RestoreVoiceResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	restored, err := h.service.RestoreVoice(ctx, userID, req.Msg.GetVoiceId())
+	if err != nil {
+		return nil, toConnectError("restore voice", err)
+	}
+	return connect.NewResponse(&postpilotv1.RestoreVoiceResponse{Voice: toProtoVoice(restored)}), nil
+}
+
+// --- profile ---
+
+func (h *Handler) GetVoiceProfile(ctx context.Context, req *connect.Request[postpilotv1.GetVoiceProfileRequest]) (*connect.Response[postpilotv1.GetVoiceProfileResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	profile, err := h.service.Get(ctx, userID, req.Msg.GetVoiceId())
 	if err != nil {
 		return nil, toConnectError("get voice profile", err)
 	}
@@ -36,14 +112,15 @@ func (h *Handler) UpdateVoiceProfile(ctx context.Context, req *connect.Request[p
 	if err != nil {
 		return nil, err
 	}
+	voiceID := req.Msg.GetVoiceId()
 	var profile voice.Profile
 	switch {
 	case req.Msg.Styleguide != nil && req.Msg.Rules != nil:
-		profile, err = h.service.Update(ctx, userID, req.Msg.GetStyleguide(), req.Msg.GetRules())
+		profile, err = h.service.Update(ctx, userID, voiceID, req.Msg.GetStyleguide(), req.Msg.GetRules())
 	case req.Msg.Styleguide != nil:
-		profile, err = h.service.UpdateStyleguide(ctx, userID, req.Msg.GetStyleguide())
+		profile, err = h.service.UpdateStyleguide(ctx, userID, voiceID, req.Msg.GetStyleguide())
 	case req.Msg.Rules != nil:
-		profile, err = h.service.UpdateRules(ctx, userID, req.Msg.GetRules())
+		profile, err = h.service.UpdateRules(ctx, userID, voiceID, req.Msg.GetRules())
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("at least one profile field is required"))
 	}
@@ -61,7 +138,7 @@ func (h *Handler) AddVoiceSample(ctx context.Context, req *connect.Request[postp
 	ref := llm.ModelRef{
 		ProviderID: req.Msg.GetModel().GetProviderId(), ModelID: req.Msg.GetModel().GetModelId(),
 	}
-	sample, jobID, err := h.service.AddSample(ctx, userID, req.Msg.GetLabel(), req.Msg.GetBody(), ref)
+	sample, jobID, err := h.service.AddSample(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetLabel(), req.Msg.GetBody(), ref)
 	if err != nil {
 		return nil, toConnectError("add voice sample", err)
 	}
@@ -75,19 +152,19 @@ func (h *Handler) DeleteVoiceSample(ctx context.Context, req *connect.Request[po
 	if err != nil {
 		return nil, err
 	}
-	jobID, err := h.service.DeleteSample(ctx, userID, req.Msg.GetSampleId())
+	jobID, err := h.service.DeleteSample(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetSampleId())
 	if err != nil {
 		return nil, toConnectError("delete voice sample", err)
 	}
 	return connect.NewResponse(&postpilotv1.DeleteVoiceSampleResponse{JobId: jobID}), nil
 }
 
-func (h *Handler) ListVoiceProfileVersions(ctx context.Context, _ *connect.Request[postpilotv1.ListVoiceProfileVersionsRequest]) (*connect.Response[postpilotv1.ListVoiceProfileVersionsResponse], error) {
+func (h *Handler) ListVoiceProfileVersions(ctx context.Context, req *connect.Request[postpilotv1.ListVoiceProfileVersionsRequest]) (*connect.Response[postpilotv1.ListVoiceProfileVersionsResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	versions, err := h.service.ListVersions(ctx, userID)
+	versions, err := h.service.ListVersions(ctx, userID, req.Msg.GetVoiceId())
 	if err != nil {
 		return nil, toConnectError("list voice versions", err)
 	}
@@ -103,7 +180,7 @@ func (h *Handler) UpdateVoiceOverride(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-	profile, err := h.service.UpdateOverride(ctx, userID, fromProtoLayer(req.Msg.GetLayer()), req.Msg.GetField(), req.Msg.Value)
+	profile, err := h.service.UpdateOverride(ctx, userID, req.Msg.GetVoiceId(), fromProtoLayer(req.Msg.GetLayer()), req.Msg.GetField(), req.Msg.Value)
 	if err != nil {
 		return nil, toConnectError("update voice override", err)
 	}
@@ -115,7 +192,7 @@ func (h *Handler) RestoreVoiceProfile(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-	profile, err := h.service.RestoreVersion(ctx, userID, req.Msg.GetVersion())
+	profile, err := h.service.RestoreVersion(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetVersion())
 	if err != nil {
 		return nil, toConnectError("restore voice profile", err)
 	}
@@ -130,18 +207,47 @@ func actingUser(ctx context.Context) (string, error) {
 	return userID, nil
 }
 
+// toConnectError maps the context's sentinels to wire codes. A foreign voice is NotFound
+// like an unknown one; a tombstone and every lifecycle refusal are FailedPrecondition so the
+// client can offer the restore/reassign path instead of retrying.
 func toConnectError(op string, err error) error {
 	var tooShort *voice.SampleTooShortError
+	var badName *voice.VoiceNameError
 	switch {
-	case errors.As(err, &tooShort):
+	case errors.As(err, &tooShort), errors.As(err, &badName), errors.Is(err, voice.ErrVoiceRequired):
 		return connect.NewError(connect.CodeInvalidArgument, err)
-	case errors.Is(err, voice.ErrAnalyzeModelRequired):
-		return connect.NewError(connect.CodeFailedPrecondition, err)
-	case errors.Is(err, voice.ErrSampleNotFound):
+	case errors.Is(err, voice.ErrVoiceNotFound), errors.Is(err, voice.ErrSampleNotFound):
 		return connect.NewError(connect.CodeNotFound, err)
+	case errors.Is(err, voice.ErrVoiceNameTaken):
+		return connect.NewError(connect.CodeAlreadyExists, err)
+	case errors.Is(err, voice.ErrVoiceDeleted), errors.Is(err, voice.ErrVoiceIsDefault), errors.Is(err, voice.ErrVoiceBusy),
+		errors.Is(err, voice.ErrBaselineVoiceMismatch), errors.Is(err, voice.ErrAnalyzeModelRequired), errors.Is(err, voice.ErrInvalidLifecycle):
+		return connect.NewError(connect.CodeFailedPrecondition, err)
 	default:
 		slog.Error(op+" failed", "err", err)
 		return connect.NewError(connect.CodeInternal, errors.New(op+" failed"))
+	}
+}
+
+func toProtoVoices(voices []voice.Voice) []*postpilotv1.Voice {
+	out := make([]*postpilotv1.Voice, 0, len(voices))
+	for _, v := range voices {
+		out = append(out, toProtoVoice(v))
+	}
+	return out
+}
+
+func toProtoVoice(v voice.Voice) *postpilotv1.Voice {
+	if v.ID == "" {
+		return nil
+	}
+	deleted := ""
+	if v.DeletedAt != nil {
+		deleted = v.DeletedAt.UTC().Format(timeLayout)
+	}
+	return &postpilotv1.Voice{
+		Id: v.ID, Name: v.Name, IsDefault: v.IsDefault, Deleted: v.Deleted(),
+		CreatedAt: v.CreatedAt.UTC().Format(timeLayout), UpdatedAt: v.UpdatedAt.UTC().Format(timeLayout), DeletedAt: deleted,
 	}
 }
 
@@ -155,6 +261,7 @@ func toProtoProfile(profile voice.Profile) *postpilotv1.VoiceProfile {
 		updated = profile.UpdatedAt.UTC().Format(timeLayout)
 	}
 	return &postpilotv1.VoiceProfile{
+		Voice:      toProtoVoice(profile.Voice),
 		Styleguide: profile.Styleguide, Rules: profile.Rules, UpdatedAt: updated,
 		Samples: samples, ActiveJobId: profile.ActiveJobID,
 		Structured: toProtoStructured(profile.Structured), LegacyManualGuidance: legacyGuidance(profile),
@@ -222,6 +329,7 @@ func toProtoSource(v voice.ValueSource) postpilotv1.VoiceValueSource {
 		return postpilotv1.VoiceValueSource_VOICE_VALUE_SOURCE_UNKNOWN
 	}
 }
+
 // nil stays nil so the wire carries absence; the FE renders it as unknown.
 func toProtoAxis(v *int) *int32 {
 	if v == nil {

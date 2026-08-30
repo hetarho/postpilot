@@ -108,6 +108,7 @@ type VoiceRuleComparison struct {
 	Candidates     []*VoiceComparisonCandidate `protobuf:"bytes,7,rep,name=candidates,proto3" json:"candidates,omitempty"`
 	ChosenSide     string                      `protobuf:"bytes,8,opt,name=chosen_side,json=chosenSide,proto3" json:"chosen_side,omitempty"`
 	CreatedAt      string                      `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	VoiceId        string                      `protobuf:"bytes,10,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -201,6 +202,13 @@ func (x *VoiceRuleComparison) GetChosenSide() string {
 func (x *VoiceRuleComparison) GetCreatedAt() string {
 	if x != nil {
 		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *VoiceRuleComparison) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
 	}
 	return ""
 }
@@ -761,6 +769,7 @@ type VoiceProfileValidation struct {
 	TotalCount     int32                  `protobuf:"varint,8,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	CreatedAt      string                 `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	FinishedAt     string                 `protobuf:"bytes,10,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
+	VoiceId        string                 `protobuf:"bytes,11,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -865,8 +874,16 @@ func (x *VoiceProfileValidation) GetFinishedAt() string {
 	return ""
 }
 
+func (x *VoiceProfileValidation) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
+	}
+	return ""
+}
+
 type StartVoiceProfileValidationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	VoiceId       string                 `protobuf:"bytes,4,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
 	AnalyzeModel  *ModelRef              `protobuf:"bytes,1,opt,name=analyze_model,json=analyzeModel,proto3" json:"analyze_model,omitempty"`
 	WriteModel    *ModelRef              `protobuf:"bytes,2,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
 	JudgeEnabled  bool                   `protobuf:"varint,3,opt,name=judge_enabled,json=judgeEnabled,proto3" json:"judge_enabled,omitempty"`
@@ -902,6 +919,13 @@ func (x *StartVoiceProfileValidationRequest) ProtoReflect() protoreflect.Message
 // Deprecated: Use StartVoiceProfileValidationRequest.ProtoReflect.Descriptor instead.
 func (*StartVoiceProfileValidationRequest) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_voice_validation_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *StartVoiceProfileValidationRequest) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
+	}
+	return ""
 }
 
 func (x *StartVoiceProfileValidationRequest) GetAnalyzeModel() *ModelRef {
@@ -1067,6 +1091,7 @@ func (x *GetVoiceProfileValidationResponse) GetValidation() *VoiceProfileValidat
 
 type ListVoiceProfileValidationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	VoiceId       string                 `protobuf:"bytes,1,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1099,6 +1124,13 @@ func (x *ListVoiceProfileValidationsRequest) ProtoReflect() protoreflect.Message
 // Deprecated: Use ListVoiceProfileValidationsRequest.ProtoReflect.Descriptor instead.
 func (*ListVoiceProfileValidationsRequest) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_voice_validation_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListVoiceProfileValidationsRequest) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
+	}
+	return ""
 }
 
 type ListVoiceProfileValidationsResponse struct {
@@ -1243,7 +1275,7 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\x04side\x18\x02 \x01(\tR\x04side\x12\x16\n" +
 	"\x06output\x18\x03 \x01(\tR\x06output\x12\x16\n" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12\x14\n" +
-	"\x05error\x18\x05 \x01(\tR\x05error\"\xda\x02\n" +
+	"\x05error\x18\x05 \x01(\tR\x05error\"\xf5\x02\n" +
 	"\x13VoiceRuleComparison\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\arule_id\x18\x02 \x01(\tR\x06ruleId\x12'\n" +
@@ -1257,7 +1289,9 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\vchosen_side\x18\b \x01(\tR\n" +
 	"chosenSide\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\t \x01(\tR\tcreatedAtB\x10\n" +
+	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x19\n" +
+	"\bvoice_id\x18\n" +
+	" \x01(\tR\avoiceIdB\x10\n" +
 	"\x0e_target_length\"\xcc\x01\n" +
 	"\x1fStartVoiceRuleComparisonRequest\x12\x17\n" +
 	"\arule_id\x18\x01 \x01(\tR\x06ruleId\x12\x1b\n" +
@@ -1298,7 +1332,7 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\vregenerated\x18\x05 \x01(\tR\vregenerated\x12:\n" +
 	"\x06scores\x18\x06 \x03(\v2\".postpilot.v1.VoiceValidationScoreR\x06scores\x12\x16\n" +
 	"\x06status\x18\a \x01(\tR\x06status\x12\x14\n" +
-	"\x05error\x18\b \x01(\tR\x05error\"\xd8\x02\n" +
+	"\x05error\x18\b \x01(\tR\x05error\"\xf3\x02\n" +
 	"\x16VoiceProfileValidation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0fprofile_version\x18\x02 \x01(\x03R\x0eprofileVersion\x12#\n" +
@@ -1313,8 +1347,10 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x1f\n" +
 	"\vfinished_at\x18\n" +
 	" \x01(\tR\n" +
-	"finishedAt\"\xbf\x01\n" +
-	"\"StartVoiceProfileValidationRequest\x12;\n" +
+	"finishedAt\x12\x19\n" +
+	"\bvoice_id\x18\v \x01(\tR\avoiceId\"\xda\x01\n" +
+	"\"StartVoiceProfileValidationRequest\x12\x19\n" +
+	"\bvoice_id\x18\x04 \x01(\tR\avoiceId\x12;\n" +
 	"\ranalyze_model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\fanalyzeModel\x127\n" +
 	"\vwrite_model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
 	"writeModel\x12#\n" +
@@ -1327,8 +1363,9 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"!GetVoiceProfileValidationResponse\x12D\n" +
 	"\n" +
 	"validation\x18\x01 \x01(\v2$.postpilot.v1.VoiceProfileValidationR\n" +
-	"validation\"$\n" +
-	"\"ListVoiceProfileValidationsRequest\"m\n" +
+	"validation\"?\n" +
+	"\"ListVoiceProfileValidationsRequest\x12\x19\n" +
+	"\bvoice_id\x18\x01 \x01(\tR\avoiceId\"m\n" +
 	"#ListVoiceProfileValidationsResponse\x12F\n" +
 	"\vvalidations\x18\x01 \x03(\v2$.postpilot.v1.VoiceProfileValidationR\vvalidations\"I\n" +
 	"\"RetryVoiceProfileValidationRequest\x12#\n" +

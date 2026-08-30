@@ -81,9 +81,27 @@ func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID strin
 	existing.Content = &content
 	existing.ContentRevision++
 	existing.MachineBaselineRevision = existing.ContentRevision
+	existing.MachineBaselineVoiceID = existing.VoiceID
 	existing.Status = StatusReview
 	existing.FinalizedRevision = 0
 	existing.FinalizedAt = nil
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
+// ReassignVoice mirrors the real single UPDATE: the id moves and the machine baseline is
+// withdrawn; canonical content, its revision, and finalization state stay.
+func (f *fakeStore) ReassignVoice(_ context.Context, slug, userID, voiceID string, updatedAt time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || existing.VoiceID == voiceID {
+		return false, nil
+	}
+	existing.VoiceID = voiceID
+	existing.MachineBaselineRevision = 0
+	existing.MachineBaselineVoiceID = ""
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
 	return true, nil
@@ -123,7 +141,7 @@ func (f *fakeStore) Finalize(_ context.Context, slug, userID string, expectedRev
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
-	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision || existing.Content == nil || existing.MachineBaselineRevision <= 0 {
+	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision || existing.Content == nil {
 		return false, nil
 	}
 	existing.Status = StatusFinalized
@@ -151,7 +169,7 @@ func (f *fakeStore) LearningSnapshot(_ context.Context, slug, userID string) (Le
 		return LearningSnapshot{}, ErrNoMachineBaseline
 	}
 	return LearningSnapshot{
-		PostSlug: slug, UserID: userID, Current: *existing.Content,
+		PostSlug: slug, UserID: userID, VoiceID: existing.VoiceID, MachineBaselineVoiceID: existing.MachineBaselineVoiceID, Current: *existing.Content,
 		ContentRevision: existing.ContentRevision, MachineBaseline: *existing.Content,
 		BaselineRevision: existing.MachineBaselineRevision, TargetLength: existing.TargetLength,
 		FinalizedAt: *existing.FinalizedAt, UpdatedAt: existing.UpdatedAt,
@@ -192,7 +210,7 @@ func (f *fakeStore) ListPosts(_ context.Context, userID string) ([]Summary, erro
 		if strings.TrimSpace(title) == "" && p.Content != nil {
 			title = p.Content.Title
 		}
-		out = append(out, Summary{Slug: p.Slug, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt})
+		out = append(out, Summary{Slug: p.Slug, VoiceID: p.VoiceID, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].UpdatedAt.After(out[j].UpdatedAt) })
 	return out, nil

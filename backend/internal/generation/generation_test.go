@@ -16,6 +16,9 @@ var (
 	writeRef            = llm.ModelRef{ProviderID: "provider", ModelID: "write"}
 	writeRefB           = llm.ModelRef{ProviderID: "provider", ModelID: "write-b"}
 	testReasoningPolicy = ReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}
+	// liveVoice is the post's active voice in every fixture; voice_test.go covers the
+	// deleted and reassigned cases.
+	liveVoice = VoiceRef{ID: "voice-live", Name: "기본 말투"}
 )
 
 func TestValidateBlocks(t *testing.T) {
@@ -136,7 +139,7 @@ func TestGenerationPayloadPreservesOptionalTargetPresence(t *testing.T) {
 func intPointer(value int) *int { return &value }
 
 func TestObserveBatchesIncrementallyAndMatchesFilenames(t *testing.T) {
-	post := PostInput{Slug: "post", UserID: "alice"}
+	post := PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}
 	for i := 1; i <= 9; i++ {
 		post.Images = append(post.Images, Image{Filename: fmt.Sprintf("IMG_%d.jpg", i), Key: fmt.Sprintf("key-%d", i)})
 	}
@@ -251,7 +254,7 @@ func TestLengthLimitedPartialJSONIsOutputTruncated(t *testing.T) {
 }
 
 func TestGenerateWithNoPhotosSkipsObserveAndPersistsReviewInput(t *testing.T) {
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Title: "가제", Memo: "메모"}}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Title: "가제", Memo: "메모"}}
 	models := newFakeModels()
 	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
 		if request.HasImages() {
@@ -284,7 +287,7 @@ func TestGenerateWithNoPhotosSkipsObserveAndPersistsReviewInput(t *testing.T) {
 func TestGenerateUsesFrozenTargetInsteadOfLaterPostOption(t *testing.T) {
 	current := 1600
 	frozen := 850
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", TargetLength: &current}}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, TargetLength: &current}}
 	models := newFakeModels()
 	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
 		if !strings.Contains(request.System, "목표 길이: 약 850자") || strings.Contains(request.System, "1600") {
@@ -316,7 +319,7 @@ func TestWriteStructuredAndPlainFallback(t *testing.T) {
 				return llm.Response{Text: raw}, nil
 			}
 			svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
-			content, err := svc.write(context.Background(), PostInput{UserID: "alice"}, nil, writeRef)
+			content, err := svc.write(context.Background(), PostInput{UserID: "alice", Voice: liveVoice}, nil, writeRef)
 			if err != nil || len(content.Blocks) != 1 {
 				t.Fatalf("content=%+v err=%v", content, err)
 			}
@@ -326,7 +329,7 @@ func TestWriteStructuredAndPlainFallback(t *testing.T) {
 
 func TestQueuedZeroPhotoGenerationIgnoresPhotosAttachedAfterStart(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Memo: "memo",
+		Slug: "post", UserID: "alice", Voice: liveVoice, Memo: "memo",
 		Images: []Image{{Filename: "late.jpg", Key: "late-key"}},
 	}}
 	models := newFakeModels()
@@ -353,7 +356,7 @@ func TestProviderTimeoutHasClearStageReason(t *testing.T) {
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) {
 		return llm.Response{}, context.DeadlineExceeded
 	}
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice"}}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
 	err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy).Generate(
 		context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()},
 		func(string, int, int) {},
@@ -364,7 +367,7 @@ func TestProviderTimeoutHasClearStageReason(t *testing.T) {
 }
 
 func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
-	basePost := PostInput{Slug: "post", UserID: "alice", Images: []Image{{Filename: "a.jpg"}}}
+	basePost := PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: []Image{{Filename: "a.jpg"}}}
 	for name, tc := range map[string]struct {
 		mutate  func(*StartRequest, *fakePosts, *fakeModels)
 		wantErr error
@@ -418,7 +421,7 @@ func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
 }
 
 func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *testing.T) {
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Title: "가제", Memo: "같은 메모"}}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Title: "가제", Memo: "같은 메모"}}
 	models := newFakeModels()
 	models.infos[writeRefB] = llm.ModelInfo{Ref: writeRefB, StructuredOutput: true}
 	models.complete = func(ref llm.ModelRef, _ llm.Request) (llm.Response, error) {
@@ -463,7 +466,7 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 
 func TestOrdinaryGenerationAndRevisionRefuseAnUnresolvedWriteExperiment(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Content: revisionContent("existing"),
+		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("existing"),
 	}}
 	jobs := &fakeJobs{id: "should-not-enqueue"}
 	rules := &fakeRules{}
@@ -490,7 +493,7 @@ func TestOrdinaryGenerationAndRevisionRefuseAnUnresolvedWriteExperiment(t *testi
 }
 
 func TestWriteExperimentObservesPhotosExactlyOnceBeforeTwoWriters(t *testing.T) {
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Memo: "memo", Images: []Image{{Filename: "IMG_1.jpg", Key: "key"}}}}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Memo: "memo", Images: []Image{{Filename: "IMG_1.jpg", Key: "key"}}}}
 	models := newFakeModels()
 	models.infos[writeRefB] = llm.ModelInfo{Ref: writeRefB, StructuredOutput: true}
 	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
@@ -552,17 +555,19 @@ type fakeProfiles struct {
 	calls   int
 }
 
-func (f fakeProfiles) ProfileForPrompt(context.Context, string) (Profile, error) {
+func (f fakeProfiles) ProfileForPrompt(context.Context, string, string) (Profile, error) {
 	return f.profile, nil
 }
 
 type fakeRules struct {
-	lines []string
-	err   error
+	lines  []string
+	voices []string
+	err    error
 }
 
-func (f *fakeRules) AppendRule(_ context.Context, _ string, line string) error {
+func (f *fakeRules) AppendRule(_ context.Context, _, voiceID string, line string) error {
 	f.lines = append(f.lines, line)
+	f.voices = append(f.voices, voiceID)
 	return f.err
 }
 

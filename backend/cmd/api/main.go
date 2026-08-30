@@ -67,7 +67,7 @@ func main() {
 	// so `docker compose run --rm api adduser <id>` works against the deployed image
 	// with nothing added to it.
 	if len(os.Args) > 1 && os.Args[1] == "adduser" {
-		if err := provision.Run(context.Background(), os.Args[2:]); err != nil {
+		if err := provision.Run(context.Background(), os.Args[2:], defaultVoiceBootstrap); err != nil {
 			slog.Error("adduser failed", "err", err)
 			os.Exit(1)
 		}
@@ -183,9 +183,10 @@ func main() {
 		RuleRetireAfter: cfg.VoicePersonalization.RuleRetireAfter, ValidationPostCount: cfg.VoicePersonalization.ValidationPostCount,
 		EndingMaxConsecutive: cfg.VoicePersonalization.EndingMaxConsecutive,
 	})
+	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
 	jobQueue.Register(job.KindAnalyzeVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.Analyze(ctx, voice.AnalysisJob{
-			UserID: found.UserID, WriteModel: found.WriteModel,
+			UserID: found.UserID, VoiceID: found.VoiceID, WriteModel: found.WriteModel,
 		}, voice.Progress(progress))
 	})
 	jobQueue.Register(job.KindLearnVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -224,6 +225,11 @@ func main() {
 	generationSvc.SetPendingExperimentFinder(postExperiments{service: experimentSvc})
 	postSvc.SetPendingExperimentFinder(postExperiments{service: experimentSvc})
 	postSvc.SetExperimentContentPurger(postExperiments{service: experimentSvc})
+	// Voice and experiment guard each other through ports adapted only here: a voice with a
+	// publishable experiment cannot be deleted, and an experiment cannot start or retry in a
+	// deleted voice.
+	voiceSvc.SetExperimentGuard(voiceExperiments{service: experimentSvc})
+	experimentSvc.SetVoiceDirectory(experimentVoices{service: voiceSvc})
 	jobQueue.Register(job.KindModelExperiment, func(ctx context.Context, found job.Job, progress job.Progress) error {
 		experimentID := strings.TrimSpace(string(found.Payload))
 		if experimentID == "" {
@@ -240,7 +246,7 @@ func main() {
 			return err
 		}
 		return generationSvc.Generate(ctx, generation.GenerateJob{
-			UserID: found.UserID, PostSlug: *found.PostSlug,
+			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID,
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 			TargetLength: targetLength,
 		}, generation.Progress(progress))
@@ -250,7 +256,7 @@ func main() {
 			return job.ErrInvalidTarget
 		}
 		return generationSvc.Revise(ctx, generation.RevisionJob{
-			UserID: found.UserID, PostSlug: *found.PostSlug, WriteModel: found.WriteModel,
+			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID, WriteModel: found.WriteModel,
 			Payload: found.Payload,
 		}, generation.Progress(progress))
 	})
@@ -370,11 +376,14 @@ type voiceJobs struct{ queue *job.Queue }
 
 func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindAnalyzeVoice, UserID: request.UserID, WriteModel: request.WriteModel,
+		Kind: job.KindAnalyzeVoice, UserID: request.UserID, VoiceID: request.VoiceID, WriteModel: request.WriteModel,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
 		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	if errors.Is(err, job.ErrVoiceUnavailable) {
+		return "", voice.ErrVoiceDeleted
 	}
 	return id, err
 }
@@ -385,10 +394,13 @@ func (a voiceJobs) EnqueuePersonalization(ctx context.Context, request voice.Per
 		value := request.PostSlug
 		postSlug = &value
 	}
-	id, err := a.queue.Enqueue(ctx, job.NewJob{Kind: request.Kind, UserID: request.UserID, PostSlug: postSlug, WriteModel: request.Model, Payload: []byte(request.Payload)})
+	id, err := a.queue.Enqueue(ctx, job.NewJob{Kind: request.Kind, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID, WriteModel: request.Model, Payload: []byte(request.Payload)})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
 		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	if errors.Is(err, job.ErrVoiceUnavailable) {
+		return "", voice.ErrVoiceDeleted
 	}
 	return id, err
 }
@@ -411,12 +423,56 @@ func (a voiceJobs) FailQueuedPersonalization(ctx context.Context, jobID, userID,
 	return a.queue.FailQueued(ctx, jobID, userID, message)
 }
 
-func (a voiceJobs) ActiveForUserKind(ctx context.Context, userID, kind string) (*voice.ActiveJob, error) {
-	found, err := a.queue.ActiveForUserKind(ctx, userID, kind)
+func (a voiceJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*voice.ActiveJob, error) {
+	found, err := a.queue.ActiveForVoiceKind(ctx, voiceID, kind)
 	if err != nil || found == nil {
 		return nil, err
 	}
 	return &voice.ActiveJob{ID: found.ID}, nil
+}
+
+func (a voiceJobs) HasActiveForVoice(ctx context.Context, voiceID string) (bool, error) {
+	return a.queue.HasActiveForVoice(ctx, voiceID)
+}
+
+// voiceExperiments adapts the experiment context's publishable-work guard for DeleteVoice.
+type voiceExperiments struct{ service *experiment.Service }
+
+func (a voiceExperiments) HasPublishableExperimentForVoice(ctx context.Context, userID, voiceID string) (bool, error) {
+	return a.service.HasPublishableForVoice(ctx, userID, voiceID)
+}
+
+// postVoices adapts the voice directory for the post context: every owned voice, tombstones
+// included, so a post keeps a name after its voice is deleted.
+type postVoices struct{ service *voice.Service }
+
+func (a postVoices) Voices(ctx context.Context, userID string) ([]post.VoiceRef, error) {
+	voices, err := a.service.ListVoices(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]post.VoiceRef, 0, len(voices))
+	for _, v := range voices {
+		out = append(out, post.VoiceRef{ID: v.ID, Name: v.Name, Deleted: v.Deleted()})
+	}
+	return out, nil
+}
+
+// experimentVoices adapts the directory for the experiment context: only an owned, active
+// voice may start or retry a comparison in its name.
+type experimentVoices struct{ service *voice.Service }
+
+func (a experimentVoices) ActiveVoice(ctx context.Context, userID, voiceID string) error {
+	found, err := a.service.GetVoice(ctx, userID, voiceID)
+	switch {
+	case errors.Is(err, voice.ErrVoiceNotFound), errors.Is(err, voice.ErrVoiceRequired):
+		return experiment.ErrVoiceUnavailable
+	case err != nil:
+		return err
+	case found.Deleted():
+		return experiment.ErrVoiceUnavailable
+	}
+	return nil
 }
 
 type postJobFinder struct {
@@ -447,7 +503,7 @@ func (a voicePosts) LearningSnapshot(ctx context.Context, userID, slug string) (
 	if err != nil {
 		return voice.FinalizationInput{}, err
 	}
-	return voice.FinalizationInput{PostSlug: found.PostSlug, UserID: found.UserID, BaselineJSON: string(baseline), FinalJSON: string(current), Title: found.Current.Title, Tags: found.Current.Tags, BaselineRevision: found.BaselineRevision, ContentRevision: found.ContentRevision, TargetLength: found.TargetLength}, nil
+	return voice.FinalizationInput{PostSlug: found.PostSlug, UserID: found.UserID, VoiceID: found.VoiceID, BaselineVoiceID: found.MachineBaselineVoiceID, BaselineJSON: string(baseline), FinalJSON: string(current), Title: found.Current.Title, Tags: found.Current.Tags, BaselineRevision: found.BaselineRevision, ContentRevision: found.ContentRevision, TargetLength: found.TargetLength}, nil
 }
 
 type postBlockWire struct {
@@ -492,19 +548,30 @@ func (a generationModels) Complete(ctx context.Context, ref llm.ModelRef, reques
 
 type generationProfiles struct{ service *voice.Service }
 
-func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID string) (generation.Profile, error) {
-	return a.ProfileForPromptForTopic(ctx, userID, "", nil)
+func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID, voiceID string) (generation.Profile, error) {
+	return a.ProfileForPromptForTopic(ctx, userID, voiceID, "", nil)
 }
 
-func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, topic string, tags []string) (generation.Profile, error) {
-	profile, err := a.service.PromptProfileForTopic(ctx, userID, topic, tags)
-	return generation.Profile{Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: profile.Excerpts, Rules: profile.ManualRules, EndingMaxConsecutive: a.service.EndingMaxConsecutive()}, err
+func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, voiceID, topic string, tags []string) (generation.Profile, error) {
+	profile, err := a.service.PromptProfileForTopic(ctx, userID, voiceID, topic, tags)
+	return generation.Profile{Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: profile.Excerpts, Rules: profile.ManualRules, EndingMaxConsecutive: a.service.EndingMaxConsecutive()}, generationVoiceError(err)
 }
 
 type generationRules struct{ service *voice.Service }
 
-func (a generationRules) AppendRule(ctx context.Context, userID, line string) error {
-	return a.service.AppendRule(ctx, userID, line)
+func (a generationRules) AppendRule(ctx context.Context, userID, voiceID, line string) error {
+	return generationVoiceError(a.service.AppendRule(ctx, userID, voiceID, line))
+}
+
+func generationVoiceError(err error) error {
+	switch {
+	case errors.Is(err, voice.ErrVoiceDeleted):
+		return generation.ErrVoiceDeleted
+	case errors.Is(err, voice.ErrVoiceNotFound), errors.Is(err, voice.ErrVoiceRequired):
+		return generation.ErrVoiceRequired
+	default:
+		return err
+	}
 }
 
 type generationPosts struct{ service *post.Service }
@@ -516,6 +583,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	}
 	input := generation.PostInput{
 		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
+		Voice:        generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted},
 		TargetLength: found.TargetLength,
 		Images:       make([]generation.Image, 0, len(found.Images)),
 	}
@@ -580,7 +648,7 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 		return "", err
 	}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug,
+		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
 		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
 		Payload: payload,
 	})
@@ -588,18 +656,24 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 	if errors.As(err, &active) {
 		return "", &generation.JobAlreadyInProgressError{ActiveID: active.ActiveID}
 	}
+	if errors.Is(err, job.ErrVoiceUnavailable) {
+		return "", generation.ErrVoiceDeleted
+	}
 	return id, err
 }
 
 func (a generationJobs) EnqueueRevision(ctx context.Context, request generation.StartRevisionRequest, payload []byte) (string, error) {
 	slug := request.PostSlug
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindRevise, UserID: request.UserID, PostSlug: &slug,
+		Kind: job.KindRevise, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
 		WriteModel: request.WriteModel, Payload: payload,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
 		return "", &generation.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	if errors.Is(err, job.ErrVoiceUnavailable) {
+		return "", generation.ErrVoiceDeleted
 	}
 	return id, err
 }
@@ -654,11 +728,14 @@ func (a experimentJobs) EnqueueExperiment(ctx context.Context, request experimen
 		postSlug = &value
 	}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindModelExperiment, UserID: request.UserID, PostSlug: postSlug, Payload: []byte(request.ExperimentID),
+		Kind: job.KindModelExperiment, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID, Payload: []byte(request.ExperimentID),
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
 		return "", &experiment.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	if errors.Is(err, job.ErrVoiceUnavailable) {
+		return "", experiment.ErrVoiceUnavailable
 	}
 	return id, err
 }
@@ -739,13 +816,13 @@ func (a experimentRunner) Snapshot(ctx context.Context, request experiment.Start
 	switch request.Stage {
 	case experiment.StageWrite:
 		content, err := a.generation.SnapshotWriteInput(ctx, request.UserID, request.PostSlug, llmRef(request.ObserveModel), request.TargetLength)
-		return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion}, mapSnapshotError(err)
+		return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion, VoiceID: generation.SnapshotVoice(content)}, mapSnapshotError(err)
 	case experiment.StageObserve:
 		content, err := a.generation.SnapshotObserveInput(ctx, request.UserID, request.PostSlug)
 		return experiment.Snapshot{Content: content, PromptVersion: generation.ObserveExperimentPromptVersion}, mapSnapshotError(err)
 	case experiment.StageAnalyze:
-		content, err := a.voice.SnapshotAnalysisInput(ctx, request.UserID)
-		return experiment.Snapshot{Content: content, PromptVersion: voice.AnalyzeExperimentPromptVersion}, err
+		content, err := a.voice.SnapshotAnalysisInput(ctx, request.UserID, request.VoiceID)
+		return experiment.Snapshot{Content: content, PromptVersion: voice.AnalyzeExperimentPromptVersion, VoiceID: request.VoiceID}, experimentVoiceError(err)
 	default:
 		return experiment.Snapshot{}, experiment.ErrInvalidStage
 	}
@@ -753,7 +830,7 @@ func (a experimentRunner) Snapshot(ctx context.Context, request experiment.Start
 
 func (a experimentRunner) PrepareWrite(ctx context.Context, found experiment.Experiment, progress experiment.Progress) (experiment.Snapshot, error) {
 	content, err := a.generation.PrepareWriteInput(ctx, found.InputSnapshot, generation.Progress(progress))
-	return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion}, mapSnapshotError(err)
+	return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion, VoiceID: found.VoiceID}, mapSnapshotError(err)
 }
 
 func (a experimentRunner) RunCandidate(ctx context.Context, found experiment.Experiment, candidate experiment.Candidate, progress experiment.Progress) (experiment.CandidateResult, error) {
@@ -794,7 +871,7 @@ func (a experimentRunner) ApplyWinner(ctx context.Context, found experiment.Expe
 		if err := json.Unmarshal(candidate.Output, &value); err != nil {
 			return fmt.Errorf("decode write winner: %w", err)
 		}
-		return a.generation.ApplyWriteWinner(ctx, found.UserID, found.PostSlug, fromOutputPost(value), found.InputSnapshot)
+		return mapSnapshotError(a.generation.ApplyWriteWinner(ctx, found.UserID, found.PostSlug, fromOutputPost(value), found.InputSnapshot))
 	case experiment.StageObserve:
 		var values []outputObservation
 		if err := json.Unmarshal(candidate.Output, &values); err != nil {
@@ -809,7 +886,7 @@ func (a experimentRunner) ApplyWinner(ctx context.Context, found experiment.Expe
 		if err := json.Unmarshal(candidate.Output, &styleguide); err != nil {
 			return fmt.Errorf("decode styleguide winner: %w", err)
 		}
-		return a.voice.ApplyStyleguideWinner(ctx, found.UserID, styleguide)
+		return experimentVoiceError(a.voice.ApplyStyleguideWinner(ctx, found.UserID, found.VoiceID, styleguide))
 	default:
 		return experiment.ErrInvalidStage
 	}
@@ -882,9 +959,32 @@ func parseLLMRef(value string) llm.ModelRef {
 	return llm.ModelRef{ProviderID: providerID, ModelID: modelID}
 }
 func mapSnapshotError(err error) error {
-	if err != nil && strings.Contains(err.Error(), "read photo") {
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, generation.ErrVoiceDeleted), errors.Is(err, generation.ErrVoiceMismatch), errors.Is(err, generation.ErrVoiceRequired):
+		return experiment.ErrVoiceUnavailable
+	case strings.Contains(err.Error(), "read photo"):
 		return experiment.ErrSnapshotUnavailable
 	}
+	return err
+}
+
+func experimentVoiceError(err error) error {
+	switch {
+	case errors.Is(err, voice.ErrVoiceDeleted), errors.Is(err, voice.ErrVoiceNotFound), errors.Is(err, voice.ErrVoiceRequired):
+		return experiment.ErrVoiceUnavailable
+	default:
+		return err
+	}
+}
+
+// defaultVoiceBootstrap gives a freshly provisioned account its `기본 말투` before it can
+// create a post. It is idempotent, so `adduser` may be rerun to repair an account that was
+// left without a voice; a failure exits non-zero because the invariant is not established.
+func defaultVoiceBootstrap(ctx context.Context, handle *db.DB, userID string) error {
+	directory := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	_, _, err := directory.EnsureDefaultVoice(ctx, userID)
 	return err
 }
 

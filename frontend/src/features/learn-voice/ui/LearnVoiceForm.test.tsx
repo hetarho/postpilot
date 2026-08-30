@@ -4,10 +4,11 @@ import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
 import type { FakeVoiceOptions } from '@/test/voice'
-import { emptyStructuredVoiceProfile, type VoiceProfile } from '@/entities/voice-profile'
+import { emptyStructuredVoiceProfile, emptyVoice, type VoiceProfile } from '@/entities/voice'
 import { LearnVoiceForm } from './LearnVoiceForm'
 
 const EMPTY_PROFILE: VoiceProfile = {
+  voice: { ...emptyVoice(), id: 'voice-default', name: '기본 말투', isDefault: true },
   styleguide: '',
   rules: '',
   updatedAt: '',
@@ -33,9 +34,12 @@ function renderForm({
     voice,
   })
   const onStarted = vi.fn()
-  render(<LearnVoiceForm ownerId="alice" profile={profile} onStarted={onStarted} />, {
-    wrapper: withProviders(transport, createTestQueryClient()),
-  })
+  render(
+    <LearnVoiceForm ownerId="alice" voiceId="voice-default" profile={profile} onStarted={onStarted} />,
+    {
+      wrapper: withProviders(transport, createTestQueryClient()),
+    },
+  )
   return { calls, onStarted }
 }
 
@@ -59,9 +63,15 @@ describe('LearnVoiceForm', () => {
     const transport = createFakeAuthTransport({
       providers: { models: [{ providerId: 'openrouter', modelId: 'writer' }] },
     })
-    render(<LearnVoiceForm ownerId="alice" profile={EMPTY_PROFILE} onStarted={vi.fn()} />, {
-      wrapper: withProviders(transport, createTestQueryClient()),
-    })
+    render(
+      <LearnVoiceForm
+        ownerId="alice"
+        voiceId="voice-default"
+        profile={EMPTY_PROFILE}
+        onStarted={vi.fn()}
+      />,
+      { wrapper: withProviders(transport, createTestQueryClient()) },
+    )
 
     fireEvent.change(screen.getByLabelText('내가 쓴 글'), {
       target: { value: '가'.repeat(200) },

@@ -42,7 +42,7 @@ func (h *Handler) StartAnalyzeExperiment(ctx context.Context, req *connect.Reque
 		return nil, err
 	}
 	started, err := h.service.Start(ctx, experiment.StartRequest{
-		UserID: userID, Stage: experiment.StageAnalyze,
+		UserID: userID, Stage: experiment.StageAnalyze, VoiceID: req.Msg.GetVoiceId(),
 		ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
 	})
 	if err != nil {
@@ -221,11 +221,11 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, experiment.ErrForbidden):
 		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
 	case errors.Is(err, experiment.ErrInvalidStage), errors.Is(err, experiment.ErrDuplicateCandidates),
-		errors.Is(err, experiment.ErrInvalidTargetLength):
+		errors.Is(err, experiment.ErrInvalidTargetLength), errors.Is(err, experiment.ErrVoiceRequired):
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	case errors.Is(err, experiment.ErrModelRequired), errors.Is(err, experiment.ErrInvalidState),
 		errors.Is(err, experiment.ErrConfirmationRequired), errors.Is(err, experiment.ErrSnapshotUnavailable),
-		errors.Is(err, experiment.ErrRetryModelUnavailable), errors.As(err, &active):
+		errors.Is(err, experiment.ErrRetryModelUnavailable), errors.Is(err, experiment.ErrVoiceUnavailable), errors.As(err, &active):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	default:
 		slog.Error(op+" failed", "err", err)
@@ -240,7 +240,7 @@ func toProtoExperiment(found experiment.Experiment) *postpilotv1.ModelExperiment
 	}
 	return &postpilotv1.ModelExperiment{
 		Id: found.ID, Stage: toProtoStage(found.Stage), Status: toProtoStatus(found.Status), PostSlug: found.PostSlug,
-		JobId: found.JobID, Candidates: candidates, WinnerCandidateId: found.WinnerCandidateID,
+		VoiceId: found.VoiceID, JobId: found.JobID, Candidates: candidates, WinnerCandidateId: found.WinnerCandidateID,
 		Outcome: toProtoOutcome(found.Outcome), ApplyError: found.ApplyError, CreatedAt: formatTime(found.CreatedAt),
 		FinishedAt: formatOptional(found.FinishedAt), DecidedAt: formatOptional(found.DecidedAt), Revealed: found.Revealed(),
 		AppliedAt:         formatOptional(found.AppliedAt),

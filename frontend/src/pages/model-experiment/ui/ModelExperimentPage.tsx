@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
 import { useExperiment } from '@/entities/model-experiment'
+import { useSession } from '@/entities/session'
+import { useVoices, voiceRefLabel } from '@/entities/voice'
 import { ExperimentActions, hasExperimentActions } from '@/features/review-model-experiment'
 import {
   CandidateComparison,
@@ -53,6 +55,7 @@ export function ModelExperimentPage() {
       <p className="text-content-secondary mt-2 hidden text-sm sm:block">
         선택하기 전에는 모델 이름과 비용을 숨깁니다. 좌우 후보는 다시 열어도 바뀌지 않습니다.
       </p>
+      {experiment.voiceId && <ExperimentVoice voiceId={experiment.voiceId} />}
       <div className="mt-6 sm:mt-8">
         <CandidateComparison experiment={experiment} activeCandidateId={activeId} />
       </div>
@@ -78,6 +81,19 @@ export function ModelExperimentPage() {
         </ActionBar>
       )}
     </main>
+  )
+}
+
+/** Which voice an analyze comparison froze — and, once it is decided, the only voice the winner
+ *  can be applied to. Named even after that voice is deleted, so the record stays legible. */
+function ExperimentVoice({ voiceId }: { voiceId: string }) {
+  const { user } = useSession()
+  const { voices } = useVoices(user?.id ?? '')
+  const voice = voices.find((candidate) => candidate.id === voiceId)
+  return (
+    <p className="text-content-secondary mt-2 text-sm break-words">
+      말투 · {voice ? voiceRefLabel(voice) : voiceId}
+    </p>
   )
 }
 

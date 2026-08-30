@@ -1,7 +1,10 @@
 # Tech — Progressive voice personalization
 
-This document is the technical SSOT for the progressive learning system introduced by change 02 and job 16. It
-extends the original optional pasted-sample analysis without making historical writing an onboarding requirement.
+This document is the technical SSOT for the progressive learning system introduced by change 02 and job 16, and
+partitioned per voice by job 18 ([multi-voice partitioning](multi-voice-partitioning.md)). It extends the original
+optional pasted-sample analysis without making historical writing an onboarding requirement. Wherever this document
+says "account", read "one voice of the account": every profile, source, rule, event, comparison and validation row
+carries `(user_id, voice_id)`, and no step reads across voices.
 
 ## Product boundary
 
@@ -48,9 +51,11 @@ on page hide. AI revision and finalization await the same explicit `flush()` bou
 ## Explicit finalization and idempotency
 
 Post finalization and voice learning are separate boundaries. `FinalizePost` records status/revision/time without a
-voice event, durable job, or provider call. An explicit learning action then hashes the baseline revision plus
-canonical baseline/final JSON and stores a `voice_learning_events` row before queue wake-up. A uniqueness constraint
-on `(user_id, post_slug, baseline_revision, input_hash)` makes a repeated action return the existing event. A failed
+voice event, durable job, or provider call. An explicit learning action then derives the post's voice — the caller
+cannot nominate one — requires `post.voice_id == machine_baseline_voice_id`, hashes the baseline revision plus
+canonical baseline/final JSON and stores a `voice_learning_events` row carrying that frozen `voice_id` before queue
+wake-up. A uniqueness constraint on the account, voice, post, baseline revision and input hash makes a repeated action
+return the existing event; retries follow the event's voice even after the post is reassigned. A failed
 enqueue leaves the post finalized and that event retryable; an explicit retry creates a new durable job without
 duplicating the event. When boot has deliberately failed an old queued/running personalization job, repeating Learn
 or Retry checks that durable job and re-enqueues the same immutable event; the restart itself performs no provider
@@ -62,7 +67,7 @@ Source and evidence uniqueness constraints are the final concurrency arbiters.
 
 ## Typed profile and versions
 
-The effective account profile is a whole immutable snapshot containing:
+The effective profile of one voice is a whole immutable snapshot containing:
 
 - lexical description, preferred/banned words and patterns;
 - endings as a primary layer: base register, measured distribution, bans/signatures, and constraints;
@@ -157,8 +162,9 @@ profile head remain unchanged.
 ## Retention and deletion
 
 All learning prose, diffs, feedback, comparisons, validations, and versions are private account data. Rows are
-account/post scoped, and deletion cascades from the owning account or post as declared by migration 0007. No private
-prose is logged. There is no cross-account retrieval, comparison, validation, or prompt input. The SPA removes every
+account/voice/post scoped, and deletion cascades from the owning account or post as declared by migrations 0007 and
+0009; a soft-deleted voice keeps every row and only stops accepting new evidence. No private prose is logged. There is
+no cross-account — or cross-voice — retrieval, comparison, validation, or prompt input. The SPA removes every
 account-scoped query cache on successful logout and on a mid-session authentication failure before another account
 can render.
 

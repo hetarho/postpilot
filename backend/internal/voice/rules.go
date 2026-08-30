@@ -6,14 +6,17 @@ import (
 	"strings"
 )
 
-func (s *Service) AppendRule(ctx context.Context, userID, line string) error {
+func (s *Service) AppendRule(ctx context.Context, userID, voiceID, line string) error {
 	line = strings.TrimSpace(line)
 	if line == "" {
 		return nil
 	}
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return err
+	}
 	s.profileMu.Lock()
 	defer s.profileMu.Unlock()
-	profile, err := s.store.GetProfile(ctx, userID)
+	profile, err := s.store.GetProfile(ctx, userID, voiceID)
 	if err != nil {
 		return fmt.Errorf("get profile for rule: %w", err)
 	}
@@ -26,7 +29,7 @@ func (s *Service) AppendRule(ctx context.Context, userID, line string) error {
 	if current != "" {
 		current += "\n"
 	}
-	if err := s.store.SetRules(ctx, userID, current+line, s.now()); err != nil {
+	if err := s.store.SetRules(ctx, userID, voiceID, current+line, s.now()); err != nil {
 		return fmt.Errorf("append rule: %w", err)
 	}
 	return nil

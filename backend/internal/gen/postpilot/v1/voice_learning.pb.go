@@ -86,8 +86,11 @@ type VoiceLearningEvent struct {
 	Error            string                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
 	CreatedAt        string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	ProcessedAt      string                 `protobuf:"bytes,8,opt,name=processed_at,json=processedAt,proto3" json:"processed_at,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Frozen at finalization. A retry follows THIS voice even if the post is reassigned
+	// afterwards, so completed work is never retargeted.
+	VoiceId       string `protobuf:"bytes,9,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *VoiceLearningEvent) Reset() {
@@ -172,6 +175,13 @@ func (x *VoiceLearningEvent) GetCreatedAt() string {
 func (x *VoiceLearningEvent) GetProcessedAt() string {
 	if x != nil {
 		return x.ProcessedAt
+	}
+	return ""
+}
+
+func (x *VoiceLearningEvent) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
 	}
 	return ""
 }
@@ -782,6 +792,7 @@ func (x *VoiceRuleConfirmation) GetCreatedAt() string {
 
 type ListRuleConfirmationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	VoiceId       string                 `protobuf:"bytes,1,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -814,6 +825,13 @@ func (x *ListRuleConfirmationsRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListRuleConfirmationsRequest.ProtoReflect.Descriptor instead.
 func (*ListRuleConfirmationsRequest) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_voice_learning_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListRuleConfirmationsRequest) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
+	}
+	return ""
 }
 
 type ListRuleConfirmationsResponse struct {
@@ -960,7 +978,7 @@ var File_postpilot_v1_voice_learning_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_voice_learning_proto_rawDesc = "" +
 	"\n" +
-	"!postpilot/v1/voice_learning.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x18postpilot/v1/voice.proto\"\xf5\x01\n" +
+	"!postpilot/v1/voice_learning.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x18postpilot/v1/voice.proto\"\x90\x02\n" +
 	"\x12VoiceLearningEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tpost_slug\x18\x02 \x01(\tR\bpostSlug\x12+\n" +
@@ -970,7 +988,8 @@ const file_postpilot_v1_voice_learning_proto_rawDesc = "" +
 	"\x05error\x18\x06 \x01(\tR\x05error\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\a \x01(\tR\tcreatedAt\x12!\n" +
-	"\fprocessed_at\x18\b \x01(\tR\vprocessedAt\"y\n" +
+	"\fprocessed_at\x18\b \x01(\tR\vprocessedAt\x12\x19\n" +
+	"\bvoice_id\x18\t \x01(\tR\avoiceId\"y\n" +
 	"\x1dLearnFromFinalizedPostRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12;\n" +
 	"\ranalyze_model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\fanalyzeModel\"\x87\x01\n" +
@@ -1009,8 +1028,9 @@ const file_postpilot_v1_voice_learning_proto_rawDesc = "" +
 	"\x12proposed_statement\x18\x04 \x01(\tR\x11proposedStatement\x12\x16\n" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\tR\tcreatedAt\"\x1e\n" +
-	"\x1cListRuleConfirmationsRequest\"j\n" +
+	"created_at\x18\x06 \x01(\tR\tcreatedAt\"9\n" +
+	"\x1cListRuleConfirmationsRequest\x12\x19\n" +
+	"\bvoice_id\x18\x01 \x01(\tR\avoiceId\"j\n" +
 	"\x1dListRuleConfirmationsResponse\x12I\n" +
 	"\rconfirmations\x18\x01 \x03(\v2#.postpilot.v1.VoiceRuleConfirmationR\rconfirmations\"c\n" +
 	"\x1eResolveRuleConfirmationRequest\x12'\n" +

@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { displayTitle, postStatusLabel, usePosts, type PostListItem } from '@/entities/post'
 import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
+import { VoiceRefLabel } from '@/entities/voice'
 import { formatRelativeTime } from '@/shared/lib'
 import { ActionBar, Badge, Button, Notice, buttonStyles, type BadgeTone } from '@/shared/ui'
 
@@ -87,11 +88,15 @@ export function PostsPage() {
           // Two lines, not three items competing on one. At 360px a single row left the title
           // ~146px — about ten Hangul — and because the badge label swings from 초안 to AI 결과 확인
           // the cut point moved row to row, so the list read as a ragged column of half-titles.
+          // The voice sits between the status and the time as metadata: which voice a post is in
+          // is the one thing this list newly has to say, and a tombstone must say so on the row
+          // itself (spec/policy/posts.md) — the name gives way before the badge or the time do.
           const content = (
             <>
               <span className="w-full truncate text-sm">{displayTitle(post)}</span>
-              <span className="flex items-center gap-2">
+              <span className="flex w-full min-w-0 items-center gap-2">
                 <Badge tone={status.tone}>{status.label}</Badge>
+                <VoiceRefLabel voice={post.voice} className="text-content-tertiary text-xs" />
                 <time dateTime={post.updatedAt} className="text-content-tertiary shrink-0 text-xs">
                   {formatRelativeTime(post.updatedAt)}
                 </time>

@@ -37,7 +37,7 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		return nil, err
 	}
 
-	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo())
+	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(), req.Msg.VoiceId)
 	if err != nil {
 		return nil, toConnectError("save draft", err)
 	}
@@ -117,6 +117,7 @@ func (h *Handler) ListPosts(ctx context.Context, _ *connect.Request[postpilotv1.
 			UpdatedAt:           s.UpdatedAt.UTC().Format(timeLayout),
 			ActiveJob:           toProtoActiveJob(s.ActiveJob),
 			PendingExperimentId: s.PendingExperimentID,
+			Voice:               toProtoVoiceRef(s.Voice),
 		})
 	}
 	return connect.NewResponse(&postpilotv1.ListPostsResponse{Posts: posts}), nil
@@ -214,8 +215,12 @@ func toConnectError(op string, err error) error {
 		return connect.NewError(connect.CodeAborted, errors.New("post content changed in another editor; reload and retry"))
 	case errors.Is(err, post.ErrNoMachineBaseline), errors.Is(err, post.ErrPostNotFinalized):
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
-	case errors.Is(err, post.ErrInvalidContent):
+	case errors.Is(err, post.ErrInvalidContent), errors.Is(err, post.ErrVoiceRequired):
 		return connect.NewError(connect.CodeInvalidArgument, errors.New(err.Error()))
+	case errors.Is(err, post.ErrVoiceNotFound):
+		return connect.NewError(connect.CodeNotFound, errors.New("voice not found"))
+	case errors.Is(err, post.ErrVoiceDeleted):
+		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
 	default:
 		slog.Error(op+" failed", "err", err)
 		return connect.NewError(connect.CodeInternal, errors.New(op+" failed"))
@@ -245,11 +250,20 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		PendingExperimentId:     p.PendingExperimentID,
 		ContentRevision:         p.ContentRevision,
 		MachineBaselineRevision: p.MachineBaselineRevision,
-		CanFinalize:             p.Content != nil && p.MachineBaselineRevision > 0,
+		CanFinalize:             p.Content != nil,
 		TargetLength:            protoTargetLength(p.TargetLength),
 		FinalizedRevision:       p.FinalizedRevision,
 		FinalizedAt:             formatOptionalTime(p.FinalizedAt),
+		Voice:                   toProtoVoiceRef(p.Voice),
+		MachineBaselineVoiceId:  p.MachineBaselineVoiceID,
 	}
+}
+
+func toProtoVoiceRef(ref post.VoiceRef) *postpilotv1.VoiceRef {
+	if ref.ID == "" {
+		return nil
+	}
+	return &postpilotv1.VoiceRef{Id: ref.ID, Name: ref.Name, Deleted: ref.Deleted}
 }
 
 func optionalTargetLength(value *int32) *int {

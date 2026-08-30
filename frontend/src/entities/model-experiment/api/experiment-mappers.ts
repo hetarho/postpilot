@@ -27,6 +27,7 @@ export function toExperiment(value: ProtoModelExperiment): ModelExperiment {
     stage: stageName(value.stage),
     status: statusName(value.status),
     postSlug: value.postSlug,
+    voiceId: value.voiceId,
     jobId: value.jobId,
     candidates: value.candidates.map(toCandidate),
     winnerCandidateId: value.winnerCandidateId,

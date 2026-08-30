@@ -107,6 +107,9 @@ message ModelExperiment {
   string adoption_error = 15;
   string adopted_at = 16;
 	bool adoption_requested = 17;
+  // The frozen voice for analyze/write work and the only voice its result may affect.
+  // Observe compares the post's image snapshot only and leaves this empty.
+  string voice_id = 18;
 }
 
 message StartObserveExperimentRequest {
@@ -117,6 +120,9 @@ message StartObserveExperimentRequest {
 message StartAnalyzeExperimentRequest {
   ModelRef model_a = 1;
   ModelRef model_b = 2;
+  // Required and explicit: an analyze experiment freezes one voice's corpus and may apply
+  // its winner only back to that same voice.
+  string voice_id = 3;
 }
 message StartWriteExperimentRequest {
   string post_slug = 1;

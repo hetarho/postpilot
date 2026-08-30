@@ -26,15 +26,18 @@ func New(writer, reader *sql.DB) *Store {
 
 func (s *Store) Insert(ctx context.Context, found job.Job) error {
 	err := s.write.InsertJob(ctx, sqlc.InsertJobParams{
-		ID: found.ID, PostSlug: nullStringPtr(found.PostSlug), UserID: found.UserID,
+		ID: found.ID, PostSlug: nullStringPtr(found.PostSlug), UserID: found.UserID, VoiceID: nullString(found.VoiceID),
 		Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
 		WriteModel: nullString(found.WriteModel), Payload: string(found.Payload),
 		CreatedAt: formatTime(found.CreatedAt), UpdatedAt: formatTime(found.UpdatedAt),
 	})
 	if err != nil {
 		message := strings.ToLower(err.Error())
-		if strings.Contains(message, "unique constraint failed") {
+		if strings.Contains(message, "unique constraint failed") || strings.Contains(message, "active voice job already exists") {
 			return job.ErrActiveConflict
+		}
+		if strings.Contains(message, "job voice must be active") {
+			return job.ErrVoiceUnavailable
 		}
 		if strings.Contains(message, "foreign key constraint failed") {
 			return job.ErrInvalidTarget
@@ -146,6 +149,30 @@ func (s *Store) ActiveForUserKind(ctx context.Context, userID, kind string) (*jo
 	return &found, err
 }
 
+func (s *Store) ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*job.Job, error) {
+	row, err := s.read.ActiveForVoiceKind(ctx, sqlc.ActiveForVoiceKindParams{VoiceID: nullString(voiceID), Kind: kind})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("select active voice job: %w", err)
+	}
+	found, err := toJob(row)
+	return &found, err
+}
+
+func (s *Store) ActiveForVoice(ctx context.Context, voiceID string) (*job.Job, error) {
+	row, err := s.read.ActiveForVoice(ctx, nullString(voiceID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("select active jobs for voice: %w", err)
+	}
+	found, err := toJob(row)
+	return &found, err
+}
+
 func (s *Store) ActiveModelExperiment(ctx context.Context, experimentID string) (*job.Job, error) {
 	row, err := s.read.ActiveModelExperiment(ctx, experimentID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -184,7 +211,7 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 		return job.Job{}, fmt.Errorf("job %s finished_at: %w", row.ID, err)
 	}
 	return job.Job{
-		ID: row.ID, PostSlug: stringPtr(row.PostSlug), UserID: row.UserID, Kind: row.Kind,
+		ID: row.ID, PostSlug: stringPtr(row.PostSlug), UserID: row.UserID, VoiceID: row.VoiceID.String, Kind: row.Kind,
 		Status: row.Status, Stage: row.Stage.String, ProgressDone: int(row.ProgressDone),
 		ProgressTotal: int(row.ProgressTotal), Error: row.Error.String,
 		ObserveModel: row.ObserveModel.String, WriteModel: row.WriteModel.String,

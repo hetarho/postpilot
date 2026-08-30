@@ -1,8 +1,8 @@
 import { useId, useState } from 'react'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import type { VoiceValue } from '@/entities/voice-profile'
-import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice-profile'
+import type { VoiceValue } from '@/entities/voice'
+import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
 import { VoiceLayer, VoiceService } from '@/shared/api'
 import { Badge, Button, Editable, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
 
@@ -13,28 +13,36 @@ import { Badge, Button, Editable, FieldLabel, FieldMessage, Textarea } from '@/s
  *  other four into a pending state, and a rejected save must show its message under its own field. */
 export function ProfileField({
   ownerId,
+  voiceId,
   label,
   layer,
   field,
   value,
+  readOnly = false,
 }: {
   ownerId: string
+  voiceId: string
   label: string
   layer: VoiceLayer
   field: string
   value: VoiceValue
+  readOnly?: boolean
 }) {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const override = useMutation(VoiceService.method.updateVoiceOverride)
   // An override publishes a new whole-profile version, so the version list is stale too.
   const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: voiceProfileQueryKey(transport, ownerId) })
-    await queryClient.invalidateQueries({ queryKey: voiceVersionsQueryKey(transport, ownerId) })
+    await queryClient.invalidateQueries({
+      queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
+    })
+    await queryClient.invalidateQueries({
+      queryKey: voiceVersionsQueryKey(transport, ownerId, voiceId),
+    })
   }
   const commit = async (exit: () => void, next?: string) => {
     try {
-      await override.mutateAsync({ layer, field, value: next })
+      await override.mutateAsync({ voiceId, layer, field, value: next })
       await refresh()
       // Only a successful save leaves edit mode. A rejected one keeps the draft on screen, because
       // discarding the owner's text is a worse outcome than showing the server's message twice.
@@ -46,6 +54,7 @@ export function ProfileField({
   return (
     <Editable
       editLabel={`${label} 수정`}
+      readOnly={readOnly}
       edit={(exit) => (
         <ProfileFieldEditor
           label={label}

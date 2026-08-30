@@ -1,11 +1,21 @@
 import type { ReactNode } from 'react'
+import { useParams } from '@tanstack/react-router'
 import { FailureNotice } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
-import { type VoiceProfile, useVoiceProfile } from '@/entities/voice-profile'
+import { type Voice, type VoiceProfile, useVoiceProfile } from '@/entities/voice'
 
-/** The frame every voice tab shares: the account's profile query, its two non-content states, and
- *  the screen's own heading. The profile query is the one read all five tabs need, so it stays
- *  shared here; every other list is fetched by the tab that renders it. */
+export interface VoiceScreenContext {
+  profile: VoiceProfile
+  /** The voice as the profile response names it — the same row the layout shows. */
+  voice: Voice
+  ownerId: string
+  voiceId: string
+}
+
+/** The frame every voice tab shares: THIS voice's profile query, its two non-content states, and
+ *  the tab's own heading. The profile is the one read all five tabs need, so it stays shared here;
+ *  every other list is fetched by the tab that renders it. The page's `h1` is the voice's name in
+ *  the layout, so a tab's title is an `h2`. */
 export function VoiceScreen({
   title,
   description,
@@ -13,11 +23,12 @@ export function VoiceScreen({
 }: {
   title: string
   description?: ReactNode
-  children: (context: { profile: VoiceProfile; ownerId: string }) => ReactNode
+  children: (context: VoiceScreenContext) => ReactNode
 }) {
+  const { voiceId } = useParams({ from: '/authenticated/voices/$voiceId' })
   const { user } = useSession()
   const ownerId = user?.id ?? ''
-  const { profile, isPending, isError, refetch } = useVoiceProfile(ownerId)
+  const { profile, isPending, isError, refetch } = useVoiceProfile(ownerId, voiceId)
 
   if (isError) {
     return (
@@ -31,13 +42,13 @@ export function VoiceScreen({
   }
   return (
     <main className="mt-6 pb-12">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       {description && (
         <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
           {description}
         </p>
       )}
-      <div className="mt-8">{children({ profile, ownerId })}</div>
+      <div className="mt-8">{children({ profile, voice: profile.voice, ownerId, voiceId })}</div>
     </main>
   )
 }

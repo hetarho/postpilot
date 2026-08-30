@@ -12,6 +12,7 @@ type GenerationJob struct {
 	ID            string
 	PostSlug      sql.NullString
 	UserID        string
+	VoiceID       sql.NullString
 	Kind          string
 	Status        string
 	Stage         sql.NullString

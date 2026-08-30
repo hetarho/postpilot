@@ -29,11 +29,70 @@ func testStore(t *testing.T) (*experimentstore.Store, *db.DB) {
 		}
 	}
 	for _, row := range []struct{ slug, user string }{{"post-a", "alice"}, {"post-b", "bob"}} {
-		if _, err := handle.Writer.Exec(`INSERT INTO posts(slug,user_id,created_at,updated_at) VALUES(?,?,?,?)`, row.slug, row.user, now, now); err != nil {
+		if _, err := handle.Writer.Exec(`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES(?,?,'기본 말투',1,?,?)`, "voice-"+row.user, row.user, now, now); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := handle.Writer.Exec(`INSERT INTO posts(slug,user_id,voice_id,created_at,updated_at) VALUES(?,?,?,?,?)`, row.slug, row.user, "voice-"+row.user, now, now); err != nil {
 			t.Fatal(err)
 		}
 	}
 	return experimentstore.New(handle.Writer, handle.Reader), handle
+}
+
+// The frozen voice round-trips, and the publishable count follows the lifecycle: queued,
+// review and decided-but-unapplied hold the voice; applied and dismissed release it.
+func TestStorePersistsVoiceAndCountsPublishableWork(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+	found := sample("exp-voice", "alice", "", now)
+	found.Stage = experiment.StageAnalyze
+	found.VoiceID = "voice-alice"
+	if err := store.Create(ctx, found); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := store.Get(ctx, found.ID)
+	if err != nil || reloaded.VoiceID != "voice-alice" {
+		t.Fatalf("reloaded voice = %q err=%v", reloaded.VoiceID, err)
+	}
+	count := func(user, voiceID string) int {
+		n, err := store.CountPublishableForVoice(ctx, user, voiceID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if count("alice", "voice-alice") != 1 || count("bob", "voice-alice") != 0 || count("alice", "voice-bob") != 0 {
+		t.Fatalf("queued counts = %d/%d/%d", count("alice", "voice-alice"), count("bob", "voice-alice"), count("alice", "voice-bob"))
+	}
+	finished := now.Add(time.Second)
+	for _, candidate := range found.Candidates {
+		candidate.Status = experiment.CandidateSucceeded
+		candidate.Output = []byte(`"style"`)
+		candidate.FinishedAt = &finished
+		if err := store.CompleteCandidate(ctx, candidate); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, &finished); err != nil {
+		t.Fatal(err)
+	}
+	if count("alice", "voice-alice") != 1 {
+		t.Fatal("review does not hold the voice")
+	}
+	decided := now.Add(2 * time.Second)
+	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, decided, decided.Add(time.Hour)); err != nil || !changed {
+		t.Fatalf("decide = %v, %v", changed, err)
+	}
+	if count("alice", "voice-alice") != 1 {
+		t.Fatal("decided-but-unapplied does not hold the voice")
+	}
+	if err := store.SetApplied(ctx, found.ID, "alice", decided.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if count("alice", "voice-alice") != 0 {
+		t.Fatal("applied experiment still holds the voice")
+	}
 }
 
 func sample(id, user, slug string, at time.Time) experiment.Experiment {
@@ -70,6 +129,30 @@ func TestStoreOwnershipStableSidesAndUnresolvedWriteGuard(t *testing.T) {
 	}
 	if err := store.Create(ctx, sample("exp-2", "alice", "post-a", now.Add(time.Second))); !errors.Is(err, experiment.ErrInvalidState) {
 		t.Fatalf("duplicate unresolved = %v", err)
+	}
+}
+
+// The service checks the voice before creating the experiment, but deletion may commit
+// between that read and this write. Preserve the trigger's lifecycle error at the context
+// boundary so callers receive FailedPrecondition rather than Internal.
+func TestStoreMapsInactiveVoiceTrigger(t *testing.T) {
+	store, handle := testStore(t)
+	ctx := context.Background()
+	if _, err := handle.Writer.ExecContext(ctx,
+		"INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('voice-alice-2','alice','다른 말투',0,?,?)",
+		"2026-08-30T00:00:00Z", "2026-08-30T00:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx,
+		"UPDATE voices SET deleted_at = ? WHERE id = 'voice-alice-2'",
+		"2026-08-30T00:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	found := sample("exp-deleted-voice", "alice", "", time.Now().UTC())
+	found.Stage = experiment.StageAnalyze
+	found.VoiceID = "voice-alice-2"
+	if err := store.Create(ctx, found); !errors.Is(err, experiment.ErrVoiceUnavailable) {
+		t.Fatalf("inactive voice create = %v, want ErrVoiceUnavailable", err)
 	}
 }
 

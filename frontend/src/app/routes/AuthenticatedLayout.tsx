@@ -14,7 +14,7 @@ const DESTINATIONS: ReadonlyArray<{
   icon: ComponentType<{ className?: string }>
 }> = [
   { to: '/posts', label: '글', icon: FileText },
-  { to: '/voice', label: '말투', icon: Quote },
+  { to: '/voices', label: '말투', icon: Quote },
   { to: '/ai-models', label: 'AI 모델', icon: Bot },
 ]
 

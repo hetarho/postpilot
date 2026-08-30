@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import type { VoiceProfile, VoiceVersion } from '@/entities/voice-profile'
-import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice-profile'
+import type { VoiceProfile, VoiceVersion } from '@/entities/voice'
+import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
 import { VoiceService } from '@/shared/api'
 import { Button, Dialog } from '@/shared/ui'
 
@@ -11,20 +11,28 @@ import { Button, Dialog } from '@/shared/ui'
  *  mounts one thing and this tab mounts the other. */
 export function VoiceVersionHistory({
   ownerId,
+  voiceId,
   profile,
   versions,
+  readOnly = false,
 }: {
   ownerId: string
+  voiceId: string
   profile: VoiceProfile
   versions: VoiceVersion[]
+  readOnly?: boolean
 }) {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const restore = useMutation(VoiceService.method.restoreVoiceProfile)
   const [restoreVersion, setRestoreVersion] = useState<bigint>()
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: voiceProfileQueryKey(transport, ownerId) })
-    void queryClient.invalidateQueries({ queryKey: voiceVersionsQueryKey(transport, ownerId) })
+    void queryClient.invalidateQueries({
+      queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
+    })
+    void queryClient.invalidateQueries({
+      queryKey: voiceVersionsQueryKey(transport, ownerId, voiceId),
+    })
   }
   return (
     <section aria-label="버전 기록">
@@ -45,7 +53,7 @@ export function VoiceVersionHistory({
               </span>
               <Button
                 variant="ghost"
-                disabled={version.version === profile.structured.version}
+                disabled={readOnly || version.version === profile.structured.version}
                 onClick={() => setRestoreVersion(version.version)}
               >
                 복원
@@ -62,7 +70,7 @@ export function VoiceVersionHistory({
         onClose={() => setRestoreVersion(undefined)}
         onConfirm={() =>
           restoreVersion !== undefined &&
-          void restore.mutateAsync({ version: restoreVersion }).then(() => {
+          void restore.mutateAsync({ voiceId, version: restoreVersion }).then(() => {
             setRestoreVersion(undefined)
             refresh()
           })

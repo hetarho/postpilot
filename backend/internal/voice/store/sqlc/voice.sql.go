@@ -11,43 +11,101 @@ import (
 )
 
 const bumpCorpusVersion = `-- name: BumpCorpusVersion :exec
-INSERT INTO voice_profiles (user_id, styleguide, rules, corpus_version, updated_at)
-VALUES (?, '', '', 1, ?)
-ON CONFLICT(user_id) DO UPDATE SET
+INSERT INTO voice_profiles (voice_id, user_id, styleguide, rules, corpus_version, updated_at)
+VALUES (?, ?, '', '', 1, ?)
+ON CONFLICT(voice_id) DO UPDATE SET
     corpus_version = voice_profiles.corpus_version + 1,
     updated_at = excluded.updated_at
 `
 
 type BumpCorpusVersionParams struct {
+	VoiceID   string
 	UserID    string
 	UpdatedAt string
 }
 
 func (q *Queries) BumpCorpusVersion(ctx context.Context, arg BumpCorpusVersionParams) error {
-	_, err := q.db.ExecContext(ctx, bumpCorpusVersion, arg.UserID, arg.UpdatedAt)
+	_, err := q.db.ExecContext(ctx, bumpCorpusVersion, arg.VoiceID, arg.UserID, arg.UpdatedAt)
 	return err
 }
 
-const countAuthoredSources = `-- name: CountAuthoredSources :one
-SELECT count(*) FROM voice_authored_sources WHERE user_id=?
+const clearDefaultVoice = `-- name: ClearDefaultVoice :exec
+UPDATE voices SET is_default = 0, updated_at = ? WHERE user_id = ? AND is_default = 1
 `
 
-func (q *Queries) CountAuthoredSources(ctx context.Context, userID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAuthoredSources, userID)
+type ClearDefaultVoiceParams struct {
+	UpdatedAt string
+	UserID    string
+}
+
+func (q *Queries) ClearDefaultVoice(ctx context.Context, arg ClearDefaultVoiceParams) error {
+	_, err := q.db.ExecContext(ctx, clearDefaultVoice, arg.UpdatedAt, arg.UserID)
+	return err
+}
+
+const countActiveVoices = `-- name: CountActiveVoices :one
+SELECT count(*) FROM voices WHERE user_id = ? AND deleted_at IS NULL
+`
+
+func (q *Queries) CountActiveVoices(ctx context.Context, userID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countActiveVoices, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countAuthoredSources = `-- name: CountAuthoredSources :one
+SELECT count(*) FROM voice_authored_sources WHERE voice_id=? AND user_id=?
+`
+
+type CountAuthoredSourcesParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) CountAuthoredSources(ctx context.Context, arg CountAuthoredSourcesParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAuthoredSources, arg.VoiceID, arg.UserID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const countSamples = `-- name: CountSamples :one
-SELECT count(*) FROM voice_samples WHERE user_id = ?
+SELECT count(*) FROM voice_samples WHERE voice_id = ? AND user_id = ?
 `
 
-func (q *Queries) CountSamples(ctx context.Context, userID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countSamples, userID)
+type CountSamplesParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) CountSamples(ctx context.Context, arg CountSamplesParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countSamples, arg.VoiceID, arg.UserID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const countUndecidedVoiceWork = `-- name: CountUndecidedVoiceWork :one
+SELECT (SELECT count(*) FROM voice_rule_comparisons c
+         WHERE c.voice_id = ? AND c.status IN ('queued','running','review','partial'))
+     + (SELECT count(*) FROM voice_profile_validations v
+         WHERE v.voice_id = ? AND v.status IN ('queued','running','review','partial'))
+`
+
+type CountUndecidedVoiceWorkParams struct {
+	VoiceID   string
+	VoiceID_2 string
+}
+
+// Work this context owns that would have nowhere to land if the voice left selection. Jobs
+// and analyze experiments are asked for through their own contexts' ports, not read here:
+// a voice query may not touch another aggregate's tables (ARCHITECTURE section 2).
+func (q *Queries) CountUndecidedVoiceWork(ctx context.Context, arg CountUndecidedVoiceWorkParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUndecidedVoiceWork, arg.VoiceID, arg.VoiceID_2)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const decideRuleComparison = `-- name: DecideRuleComparison :execrows
@@ -76,17 +134,23 @@ func (q *Queries) DecideRuleComparison(ctx context.Context, arg DecideRuleCompar
 }
 
 const deleteManualOverride = `-- name: DeleteManualOverride :execrows
-DELETE FROM voice_manual_overrides WHERE user_id=? AND layer=? AND field=?
+DELETE FROM voice_manual_overrides WHERE voice_id=? AND user_id=? AND layer=? AND field=?
 `
 
 type DeleteManualOverrideParams struct {
-	UserID string
-	Layer  string
-	Field  string
+	VoiceID string
+	UserID  string
+	Layer   string
+	Field   string
 }
 
 func (q *Queries) DeleteManualOverride(ctx context.Context, arg DeleteManualOverrideParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteManualOverride, arg.UserID, arg.Layer, arg.Field)
+	result, err := q.db.ExecContext(ctx, deleteManualOverride,
+		arg.VoiceID,
+		arg.UserID,
+		arg.Layer,
+		arg.Field,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -94,16 +158,17 @@ func (q *Queries) DeleteManualOverride(ctx context.Context, arg DeleteManualOver
 }
 
 const deleteSample = `-- name: DeleteSample :execrows
-DELETE FROM voice_samples WHERE id = ? AND user_id = ?
+DELETE FROM voice_samples WHERE id = ? AND voice_id = ? AND user_id = ?
 `
 
 type DeleteSampleParams struct {
-	ID     string
-	UserID string
+	ID      string
+	VoiceID string
+	UserID  string
 }
 
 func (q *Queries) DeleteSample(ctx context.Context, arg DeleteSampleParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteSample, arg.ID, arg.UserID)
+	result, err := q.db.ExecContext(ctx, deleteSample, arg.ID, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return 0, err
 	}
@@ -136,20 +201,22 @@ func (q *Queries) FinishProfileValidation(ctx context.Context, arg FinishProfile
 }
 
 const getAuthoredSource = `-- name: GetAuthoredSource :one
-SELECT id, user_id, post_slug, learning_event_id, title, tags, body, excerpt, embedding_ref, created_at FROM voice_authored_sources WHERE id=? AND user_id=?
+SELECT id, user_id, voice_id, post_slug, learning_event_id, title, tags, body, excerpt, embedding_ref, created_at FROM voice_authored_sources WHERE id=? AND voice_id=? AND user_id=?
 `
 
 type GetAuthoredSourceParams struct {
-	ID     string
-	UserID string
+	ID      string
+	VoiceID string
+	UserID  string
 }
 
 func (q *Queries) GetAuthoredSource(ctx context.Context, arg GetAuthoredSourceParams) (VoiceAuthoredSource, error) {
-	row := q.db.QueryRowContext(ctx, getAuthoredSource, arg.ID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, getAuthoredSource, arg.ID, arg.VoiceID, arg.UserID)
 	var i VoiceAuthoredSource
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.VoiceID,
 		&i.PostSlug,
 		&i.LearningEventID,
 		&i.Title,
@@ -163,20 +230,22 @@ func (q *Queries) GetAuthoredSource(ctx context.Context, arg GetAuthoredSourcePa
 }
 
 const getContrastRule = `-- name: GetContrastRule :one
-SELECT id, user_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE id=? AND user_id=?
+SELECT id, user_id, voice_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE id=? AND voice_id=? AND user_id=?
 `
 
 type GetContrastRuleParams struct {
-	ID     string
-	UserID string
+	ID      string
+	VoiceID string
+	UserID  string
 }
 
 func (q *Queries) GetContrastRule(ctx context.Context, arg GetContrastRuleParams) (VoiceContrastRule, error) {
-	row := q.db.QueryRowContext(ctx, getContrastRule, arg.ID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, getContrastRule, arg.ID, arg.VoiceID, arg.UserID)
 	var i VoiceContrastRule
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.VoiceID,
 		&i.Statement,
 		&i.CanonicalKey,
 		&i.Layer,
@@ -190,20 +259,52 @@ func (q *Queries) GetContrastRule(ctx context.Context, arg GetContrastRuleParams
 }
 
 const getContrastRuleByKey = `-- name: GetContrastRuleByKey :one
-SELECT id, user_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE user_id=? AND canonical_key=?
+SELECT id, user_id, voice_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE voice_id=? AND user_id=? AND canonical_key=?
 `
 
 type GetContrastRuleByKeyParams struct {
+	VoiceID      string
 	UserID       string
 	CanonicalKey string
 }
 
 func (q *Queries) GetContrastRuleByKey(ctx context.Context, arg GetContrastRuleByKeyParams) (VoiceContrastRule, error) {
-	row := q.db.QueryRowContext(ctx, getContrastRuleByKey, arg.UserID, arg.CanonicalKey)
+	row := q.db.QueryRowContext(ctx, getContrastRuleByKey, arg.VoiceID, arg.UserID, arg.CanonicalKey)
 	var i VoiceContrastRule
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.VoiceID,
+		&i.Statement,
+		&i.CanonicalKey,
+		&i.Layer,
+		&i.EvidenceCount,
+		&i.Status,
+		&i.Origin,
+		&i.CreatedAt,
+		&i.LastEvidenceAt,
+	)
+	return i, err
+}
+
+const getContrastRuleForUser = `-- name: GetContrastRuleForUser :one
+SELECT id, user_id, voice_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE id=? AND user_id=?
+`
+
+type GetContrastRuleForUserParams struct {
+	ID     string
+	UserID string
+}
+
+// Rule-derived operations (status changes, comparisons) name only the rule, so the voice is
+// read off the row: a same-account caller cannot point a rule at another voice.
+func (q *Queries) GetContrastRuleForUser(ctx context.Context, arg GetContrastRuleForUserParams) (VoiceContrastRule, error) {
+	row := q.db.QueryRowContext(ctx, getContrastRuleForUser, arg.ID, arg.UserID)
+	var i VoiceContrastRule
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.VoiceID,
 		&i.Statement,
 		&i.CanonicalKey,
 		&i.Layer,
@@ -217,18 +318,42 @@ func (q *Queries) GetContrastRuleByKey(ctx context.Context, arg GetContrastRuleB
 }
 
 const getCorpusVersion = `-- name: GetCorpusVersion :one
-SELECT corpus_version FROM voice_profiles WHERE user_id = ?
+SELECT corpus_version FROM voice_profiles WHERE voice_id = ? AND user_id = ?
 `
 
-func (q *Queries) GetCorpusVersion(ctx context.Context, userID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getCorpusVersion, userID)
+type GetCorpusVersionParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) GetCorpusVersion(ctx context.Context, arg GetCorpusVersionParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getCorpusVersion, arg.VoiceID, arg.UserID)
 	var corpus_version int64
 	err := row.Scan(&corpus_version)
 	return corpus_version, err
 }
 
+const getDefaultVoice = `-- name: GetDefaultVoice :one
+SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at FROM voices WHERE user_id = ? AND is_default = 1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetDefaultVoice(ctx context.Context, userID string) (Voice, error) {
+	row := q.db.QueryRowContext(ctx, getDefaultVoice, userID)
+	var i Voice
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.IsDefault,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getLearningEvent = `-- name: GetLearningEvent :one
-SELECT id, user_id, post_slug, baseline_revision, input_hash, baseline_content, final_content, model_ref, status, job_id, error, created_at, processed_at FROM voice_learning_events WHERE id=? AND user_id=?
+SELECT id, user_id, voice_id, post_slug, baseline_revision, input_hash, baseline_content, final_content, model_ref, status, job_id, error, created_at, processed_at FROM voice_learning_events WHERE id=? AND user_id=?
 `
 
 type GetLearningEventParams struct {
@@ -242,6 +367,7 @@ func (q *Queries) GetLearningEvent(ctx context.Context, arg GetLearningEventPara
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.VoiceID,
 		&i.PostSlug,
 		&i.BaselineRevision,
 		&i.InputHash,
@@ -258,11 +384,12 @@ func (q *Queries) GetLearningEvent(ctx context.Context, arg GetLearningEventPara
 }
 
 const getLearningEventByInput = `-- name: GetLearningEventByInput :one
-SELECT id, user_id, post_slug, baseline_revision, input_hash, baseline_content, final_content, model_ref, status, job_id, error, created_at, processed_at FROM voice_learning_events
-WHERE user_id=? AND post_slug=? AND baseline_revision=? AND input_hash=?
+SELECT id, user_id, voice_id, post_slug, baseline_revision, input_hash, baseline_content, final_content, model_ref, status, job_id, error, created_at, processed_at FROM voice_learning_events
+WHERE voice_id=? AND user_id=? AND post_slug=? AND baseline_revision=? AND input_hash=?
 `
 
 type GetLearningEventByInputParams struct {
+	VoiceID          string
 	UserID           string
 	PostSlug         string
 	BaselineRevision int64
@@ -271,6 +398,7 @@ type GetLearningEventByInputParams struct {
 
 func (q *Queries) GetLearningEventByInput(ctx context.Context, arg GetLearningEventByInputParams) (VoiceLearningEvent, error) {
 	row := q.db.QueryRowContext(ctx, getLearningEventByInput,
+		arg.VoiceID,
 		arg.UserID,
 		arg.PostSlug,
 		arg.BaselineRevision,
@@ -280,6 +408,7 @@ func (q *Queries) GetLearningEventByInput(ctx context.Context, arg GetLearningEv
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.VoiceID,
 		&i.PostSlug,
 		&i.BaselineRevision,
 		&i.InputHash,
@@ -296,12 +425,18 @@ func (q *Queries) GetLearningEventByInput(ctx context.Context, arg GetLearningEv
 }
 
 const getProfile = `-- name: GetProfile :one
-SELECT user_id, styleguide, rules, current_version, corpus_version, updated_at
+SELECT voice_id, user_id, styleguide, rules, current_version, corpus_version, updated_at
 FROM voice_profiles
-WHERE user_id = ?
+WHERE voice_id = ? AND user_id = ?
 `
 
+type GetProfileParams struct {
+	VoiceID string
+	UserID  string
+}
+
 type GetProfileRow struct {
+	VoiceID        string
 	UserID         string
 	Styleguide     string
 	Rules          string
@@ -310,10 +445,11 @@ type GetProfileRow struct {
 	UpdatedAt      string
 }
 
-func (q *Queries) GetProfile(ctx context.Context, userID string) (GetProfileRow, error) {
-	row := q.db.QueryRowContext(ctx, getProfile, userID)
+func (q *Queries) GetProfile(ctx context.Context, arg GetProfileParams) (GetProfileRow, error) {
+	row := q.db.QueryRowContext(ctx, getProfile, arg.VoiceID, arg.UserID)
 	var i GetProfileRow
 	err := row.Scan(
+		&i.VoiceID,
 		&i.UserID,
 		&i.Styleguide,
 		&i.Rules,
@@ -325,7 +461,7 @@ func (q *Queries) GetProfile(ctx context.Context, userID string) (GetProfileRow,
 }
 
 const getProfileValidation = `-- name: GetProfileValidation :one
-SELECT id, user_id, profile_version, analyze_model_ref, write_model_ref, judge_enabled, status, job_id, y_count, total_count, created_at, finished_at FROM voice_profile_validations WHERE id=? AND user_id=?
+SELECT id, user_id, voice_id, profile_version, analyze_model_ref, write_model_ref, judge_enabled, status, job_id, y_count, total_count, created_at, finished_at FROM voice_profile_validations WHERE id=? AND user_id=?
 `
 
 type GetProfileValidationParams struct {
@@ -339,6 +475,7 @@ func (q *Queries) GetProfileValidation(ctx context.Context, arg GetProfileValida
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.VoiceID,
 		&i.ProfileVersion,
 		&i.AnalyzeModelRef,
 		&i.WriteModelRef,
@@ -354,20 +491,22 @@ func (q *Queries) GetProfileValidation(ctx context.Context, arg GetProfileValida
 }
 
 const getProfileVersion = `-- name: GetProfileVersion :one
-SELECT id, user_id, version, snapshot, origin, restored_from_version, created_at FROM voice_profile_versions WHERE user_id=? AND version=?
+SELECT id, user_id, voice_id, version, snapshot, origin, restored_from_version, created_at FROM voice_profile_versions WHERE voice_id=? AND user_id=? AND version=?
 `
 
 type GetProfileVersionParams struct {
+	VoiceID string
 	UserID  string
 	Version int64
 }
 
 func (q *Queries) GetProfileVersion(ctx context.Context, arg GetProfileVersionParams) (VoiceProfileVersion, error) {
-	row := q.db.QueryRowContext(ctx, getProfileVersion, arg.UserID, arg.Version)
+	row := q.db.QueryRowContext(ctx, getProfileVersion, arg.VoiceID, arg.UserID, arg.Version)
 	var i VoiceProfileVersion
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.VoiceID,
 		&i.Version,
 		&i.Snapshot,
 		&i.Origin,
@@ -378,7 +517,7 @@ func (q *Queries) GetProfileVersion(ctx context.Context, arg GetProfileVersionPa
 }
 
 const getRuleComparison = `-- name: GetRuleComparison :one
-SELECT id, user_id, rule_id, source_id, profile_version, model_ref, target_length, input_snapshot, rule_on_side, status, job_id, chosen_side, created_at, decided_at FROM voice_rule_comparisons WHERE id=? AND user_id=?
+SELECT id, user_id, voice_id, rule_id, source_id, profile_version, model_ref, target_length, input_snapshot, rule_on_side, status, job_id, chosen_side, created_at, decided_at FROM voice_rule_comparisons WHERE id=? AND user_id=?
 `
 
 type GetRuleComparisonParams struct {
@@ -392,6 +531,7 @@ func (q *Queries) GetRuleComparison(ctx context.Context, arg GetRuleComparisonPa
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.VoiceID,
 		&i.RuleID,
 		&i.SourceID,
 		&i.ProfileVersion,
@@ -409,7 +549,7 @@ func (q *Queries) GetRuleComparison(ctx context.Context, arg GetRuleComparisonPa
 }
 
 const getRuleConfirmation = `-- name: GetRuleConfirmation :one
-SELECT id, user_id, rule_id, proposed_statement, event_id, status, created_at, resolved_at FROM voice_rule_confirmations WHERE id=? AND user_id=?
+SELECT id, user_id, voice_id, rule_id, proposed_statement, event_id, status, created_at, resolved_at FROM voice_rule_confirmations WHERE id=? AND user_id=?
 `
 
 type GetRuleConfirmationParams struct {
@@ -423,6 +563,7 @@ func (q *Queries) GetRuleConfirmation(ctx context.Context, arg GetRuleConfirmati
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.VoiceID,
 		&i.RuleID,
 		&i.ProposedStatement,
 		&i.EventID,
@@ -436,12 +577,13 @@ func (q *Queries) GetRuleConfirmation(ctx context.Context, arg GetRuleConfirmati
 const getSampleBody = `-- name: GetSampleBody :one
 SELECT id, label, body, created_at
 FROM voice_samples
-WHERE id = ? AND user_id = ?
+WHERE id = ? AND voice_id = ? AND user_id = ?
 `
 
 type GetSampleBodyParams struct {
-	ID     string
-	UserID string
+	ID      string
+	VoiceID string
+	UserID  string
 }
 
 type GetSampleBodyRow struct {
@@ -452,7 +594,7 @@ type GetSampleBodyRow struct {
 }
 
 func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (GetSampleBodyRow, error) {
-	row := q.db.QueryRowContext(ctx, getSampleBody, arg.ID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, getSampleBody, arg.ID, arg.VoiceID, arg.UserID)
 	var i GetSampleBodyRow
 	err := row.Scan(
 		&i.ID,
@@ -463,15 +605,40 @@ func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (G
 	return i, err
 }
 
+const getVoice = `-- name: GetVoice :one
+SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at FROM voices WHERE id = ? AND user_id = ?
+`
+
+type GetVoiceParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) GetVoice(ctx context.Context, arg GetVoiceParams) (Voice, error) {
+	row := q.db.QueryRowContext(ctx, getVoice, arg.ID, arg.UserID)
+	var i Voice
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.IsDefault,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const insertAuthoredSource = `-- name: InsertAuthoredSource :exec
 INSERT INTO voice_authored_sources
-    (id,user_id,post_slug,learning_event_id,title,tags,body,excerpt,embedding_ref,created_at)
-VALUES (?,?,?,?,?,?,?,?,?,?)
+    (id,user_id,voice_id,post_slug,learning_event_id,title,tags,body,excerpt,embedding_ref,created_at)
+VALUES (?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type InsertAuthoredSourceParams struct {
 	ID              string
 	UserID          string
+	VoiceID         string
 	PostSlug        sql.NullString
 	LearningEventID sql.NullString
 	Title           string
@@ -486,6 +653,7 @@ func (q *Queries) InsertAuthoredSource(ctx context.Context, arg InsertAuthoredSo
 	_, err := q.db.ExecContext(ctx, insertAuthoredSource,
 		arg.ID,
 		arg.UserID,
+		arg.VoiceID,
 		arg.PostSlug,
 		arg.LearningEventID,
 		arg.Title,
@@ -500,13 +668,14 @@ func (q *Queries) InsertAuthoredSource(ctx context.Context, arg InsertAuthoredSo
 
 const insertContrastRule = `-- name: InsertContrastRule :exec
 INSERT INTO voice_contrast_rules
-    (id,user_id,statement,canonical_key,layer,evidence_count,status,origin,created_at,last_evidence_at)
-VALUES (?,?,?,?,?,?,?,?,?,?)
+    (id,user_id,voice_id,statement,canonical_key,layer,evidence_count,status,origin,created_at,last_evidence_at)
+VALUES (?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type InsertContrastRuleParams struct {
 	ID             string
 	UserID         string
+	VoiceID        string
 	Statement      string
 	CanonicalKey   string
 	Layer          string
@@ -521,6 +690,7 @@ func (q *Queries) InsertContrastRule(ctx context.Context, arg InsertContrastRule
 	_, err := q.db.ExecContext(ctx, insertContrastRule,
 		arg.ID,
 		arg.UserID,
+		arg.VoiceID,
 		arg.Statement,
 		arg.CanonicalKey,
 		arg.Layer,
@@ -535,13 +705,14 @@ func (q *Queries) InsertContrastRule(ctx context.Context, arg InsertContrastRule
 
 const insertLearningEvent = `-- name: InsertLearningEvent :exec
 INSERT INTO voice_learning_events
-    (id,user_id,post_slug,baseline_revision,input_hash,baseline_content,final_content,model_ref,status,job_id,error,created_at,processed_at)
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    (id,user_id,voice_id,post_slug,baseline_revision,input_hash,baseline_content,final_content,model_ref,status,job_id,error,created_at,processed_at)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type InsertLearningEventParams struct {
 	ID               string
 	UserID           string
+	VoiceID          string
 	PostSlug         string
 	BaselineRevision int64
 	InputHash        string
@@ -559,6 +730,7 @@ func (q *Queries) InsertLearningEvent(ctx context.Context, arg InsertLearningEve
 	_, err := q.db.ExecContext(ctx, insertLearningEvent,
 		arg.ID,
 		arg.UserID,
+		arg.VoiceID,
 		arg.PostSlug,
 		arg.BaselineRevision,
 		arg.InputHash,
@@ -576,13 +748,14 @@ func (q *Queries) InsertLearningEvent(ctx context.Context, arg InsertLearningEve
 
 const insertProfileValidation = `-- name: InsertProfileValidation :exec
 INSERT INTO voice_profile_validations
-    (id,user_id,profile_version,analyze_model_ref,write_model_ref,judge_enabled,status,job_id,y_count,total_count,created_at,finished_at)
-VALUES (?,?,?,?,?,?,'queued',?,NULL,NULL,?,NULL)
+    (id,user_id,voice_id,profile_version,analyze_model_ref,write_model_ref,judge_enabled,status,job_id,y_count,total_count,created_at,finished_at)
+VALUES (?,?,?,?,?,?,?,'queued',?,NULL,NULL,?,NULL)
 `
 
 type InsertProfileValidationParams struct {
 	ID              string
 	UserID          string
+	VoiceID         string
 	ProfileVersion  int64
 	AnalyzeModelRef string
 	WriteModelRef   string
@@ -595,6 +768,7 @@ func (q *Queries) InsertProfileValidation(ctx context.Context, arg InsertProfile
 	_, err := q.db.ExecContext(ctx, insertProfileValidation,
 		arg.ID,
 		arg.UserID,
+		arg.VoiceID,
 		arg.ProfileVersion,
 		arg.AnalyzeModelRef,
 		arg.WriteModelRef,
@@ -607,14 +781,16 @@ func (q *Queries) InsertProfileValidation(ctx context.Context, arg InsertProfile
 
 const insertProfileValidationItem = `-- name: InsertProfileValidationItem :exec
 INSERT INTO voice_profile_validation_items
-    (id,validation_id,source_id,position,neutral_summary,regenerated_content,scores,status,error)
-VALUES (?,?,?,?,NULL,NULL,NULL,'pending',NULL)
+    (id,validation_id,source_id,voice_id,user_id,position,neutral_summary,regenerated_content,scores,status,error)
+VALUES (?,?,?,?,?,?,NULL,NULL,NULL,'pending',NULL)
 `
 
 type InsertProfileValidationItemParams struct {
 	ID           string
 	ValidationID string
 	SourceID     string
+	VoiceID      string
+	UserID       string
 	Position     int64
 }
 
@@ -623,6 +799,8 @@ func (q *Queries) InsertProfileValidationItem(ctx context.Context, arg InsertPro
 		arg.ID,
 		arg.ValidationID,
 		arg.SourceID,
+		arg.VoiceID,
+		arg.UserID,
 		arg.Position,
 	)
 	return err
@@ -630,13 +808,14 @@ func (q *Queries) InsertProfileValidationItem(ctx context.Context, arg InsertPro
 
 const insertProfileVersion = `-- name: InsertProfileVersion :exec
 INSERT INTO voice_profile_versions
-    (id, user_id, version, snapshot, origin, restored_from_version, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+    (id, user_id, voice_id, version, snapshot, origin, restored_from_version, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertProfileVersionParams struct {
 	ID                  string
 	UserID              string
+	VoiceID             string
 	Version             int64
 	Snapshot            string
 	Origin              string
@@ -648,6 +827,7 @@ func (q *Queries) InsertProfileVersion(ctx context.Context, arg InsertProfileVer
 	_, err := q.db.ExecContext(ctx, insertProfileVersion,
 		arg.ID,
 		arg.UserID,
+		arg.VoiceID,
 		arg.Version,
 		arg.Snapshot,
 		arg.Origin,
@@ -659,13 +839,14 @@ func (q *Queries) InsertProfileVersion(ctx context.Context, arg InsertProfileVer
 
 const insertRuleComparison = `-- name: InsertRuleComparison :exec
 INSERT INTO voice_rule_comparisons
-    (id,user_id,rule_id,source_id,profile_version,model_ref,target_length,input_snapshot,rule_on_side,status,job_id,chosen_side,created_at,decided_at)
-VALUES (?,?,?,?,?,?,?,?,?,'queued',?,NULL,?,NULL)
+    (id,user_id,voice_id,rule_id,source_id,profile_version,model_ref,target_length,input_snapshot,rule_on_side,status,job_id,chosen_side,created_at,decided_at)
+VALUES (?,?,?,?,?,?,?,?,?,?,'queued',?,NULL,?,NULL)
 `
 
 type InsertRuleComparisonParams struct {
 	ID             string
 	UserID         string
+	VoiceID        string
 	RuleID         string
 	SourceID       string
 	ProfileVersion int64
@@ -681,6 +862,7 @@ func (q *Queries) InsertRuleComparison(ctx context.Context, arg InsertRuleCompar
 	_, err := q.db.ExecContext(ctx, insertRuleComparison,
 		arg.ID,
 		arg.UserID,
+		arg.VoiceID,
 		arg.RuleID,
 		arg.SourceID,
 		arg.ProfileVersion,
@@ -711,13 +893,14 @@ func (q *Queries) InsertRuleComparisonCandidate(ctx context.Context, arg InsertR
 }
 
 const insertRuleConfirmation = `-- name: InsertRuleConfirmation :exec
-INSERT INTO voice_rule_confirmations(id,user_id,rule_id,proposed_statement,event_id,status,created_at,resolved_at)
-VALUES (?,?,?,?,?,'pending',?,NULL)
+INSERT INTO voice_rule_confirmations(id,user_id,voice_id,rule_id,proposed_statement,event_id,status,created_at,resolved_at)
+VALUES (?,?,?,?,?,?,'pending',?,NULL)
 `
 
 type InsertRuleConfirmationParams struct {
 	ID                string
 	UserID            string
+	VoiceID           string
 	RuleID            string
 	ProposedStatement string
 	EventID           sql.NullString
@@ -728,6 +911,7 @@ func (q *Queries) InsertRuleConfirmation(ctx context.Context, arg InsertRuleConf
 	_, err := q.db.ExecContext(ctx, insertRuleConfirmation,
 		arg.ID,
 		arg.UserID,
+		arg.VoiceID,
 		arg.RuleID,
 		arg.ProposedStatement,
 		arg.EventID,
@@ -737,13 +921,14 @@ func (q *Queries) InsertRuleConfirmation(ctx context.Context, arg InsertRuleConf
 }
 
 const insertRuleEvidence = `-- name: InsertRuleEvidence :exec
-INSERT INTO voice_rule_evidence(id,user_id,rule_id,event_id,origin,payload_ref,created_at)
-VALUES (?,?,?,?,?,?,?)
+INSERT INTO voice_rule_evidence(id,user_id,voice_id,rule_id,event_id,origin,payload_ref,created_at)
+VALUES (?,?,?,?,?,?,?,?)
 `
 
 type InsertRuleEvidenceParams struct {
 	ID         string
 	UserID     string
+	VoiceID    string
 	RuleID     string
 	EventID    sql.NullString
 	Origin     string
@@ -755,6 +940,7 @@ func (q *Queries) InsertRuleEvidence(ctx context.Context, arg InsertRuleEvidence
 	_, err := q.db.ExecContext(ctx, insertRuleEvidence,
 		arg.ID,
 		arg.UserID,
+		arg.VoiceID,
 		arg.RuleID,
 		arg.EventID,
 		arg.Origin,
@@ -765,12 +951,13 @@ func (q *Queries) InsertRuleEvidence(ctx context.Context, arg InsertRuleEvidence
 }
 
 const insertSample = `-- name: InsertSample :exec
-INSERT INTO voice_samples (id, user_id, label, body, created_at)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO voice_samples (id, voice_id, user_id, label, body, created_at)
+VALUES (?, ?, ?, ?, ?, ?)
 `
 
 type InsertSampleParams struct {
 	ID        string
+	VoiceID   string
 	UserID    string
 	Label     string
 	Body      string
@@ -780,6 +967,7 @@ type InsertSampleParams struct {
 func (q *Queries) InsertSample(ctx context.Context, arg InsertSampleParams) error {
 	_, err := q.db.ExecContext(ctx, insertSample,
 		arg.ID,
+		arg.VoiceID,
 		arg.UserID,
 		arg.Label,
 		arg.Body,
@@ -790,13 +978,14 @@ func (q *Queries) InsertSample(ctx context.Context, arg InsertSampleParams) erro
 
 const insertSentenceFeedback = `-- name: InsertSentenceFeedback :exec
 INSERT INTO voice_sentence_feedback
-    (id,user_id,post_slug,sentence_ref,kind,reason,payload_ref,processing_state,created_at)
-VALUES (?,?,?,?,?,?,?,?,?)
+    (id,user_id,voice_id,post_slug,sentence_ref,kind,reason,payload_ref,processing_state,created_at)
+VALUES (?,?,?,?,?,?,?,?,?,?)
 `
 
 type InsertSentenceFeedbackParams struct {
 	ID              string
 	UserID          string
+	VoiceID         string
 	PostSlug        string
 	SentenceRef     string
 	Kind            string
@@ -810,6 +999,7 @@ func (q *Queries) InsertSentenceFeedback(ctx context.Context, arg InsertSentence
 	_, err := q.db.ExecContext(ctx, insertSentenceFeedback,
 		arg.ID,
 		arg.UserID,
+		arg.VoiceID,
 		arg.PostSlug,
 		arg.SentenceRef,
 		arg.Kind,
@@ -821,12 +1011,47 @@ func (q *Queries) InsertSentenceFeedback(ctx context.Context, arg InsertSentence
 	return err
 }
 
-const listAuthoredSources = `-- name: ListAuthoredSources :many
-SELECT id, user_id, post_slug, learning_event_id, title, tags, body, excerpt, embedding_ref, created_at FROM voice_authored_sources WHERE user_id=? ORDER BY created_at DESC,id DESC
+const insertVoice = `-- name: InsertVoice :exec
+
+INSERT INTO voices (id, user_id, name, is_default, deleted_at, created_at, updated_at)
+VALUES (?, ?, ?, ?, NULL, ?, ?)
 `
 
-func (q *Queries) ListAuthoredSources(ctx context.Context, userID string) ([]VoiceAuthoredSource, error) {
-	rows, err := q.db.QueryContext(ctx, listAuthoredSources, userID)
+type InsertVoiceParams struct {
+	ID        string
+	UserID    string
+	Name      string
+	IsDefault int64
+	CreatedAt string
+	UpdatedAt string
+}
+
+// Voices. The account owns the directory; every profile/evidence row below belongs to
+// exactly one voice, and every query names both so a same-account id from another voice
+// cannot reach this one's aggregate.
+func (q *Queries) InsertVoice(ctx context.Context, arg InsertVoiceParams) error {
+	_, err := q.db.ExecContext(ctx, insertVoice,
+		arg.ID,
+		arg.UserID,
+		arg.Name,
+		arg.IsDefault,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const listAuthoredSources = `-- name: ListAuthoredSources :many
+SELECT id, user_id, voice_id, post_slug, learning_event_id, title, tags, body, excerpt, embedding_ref, created_at FROM voice_authored_sources WHERE voice_id=? AND user_id=? ORDER BY created_at DESC,id DESC
+`
+
+type ListAuthoredSourcesParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) ListAuthoredSources(ctx context.Context, arg ListAuthoredSourcesParams) ([]VoiceAuthoredSource, error) {
+	rows, err := q.db.QueryContext(ctx, listAuthoredSources, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -837,6 +1062,7 @@ func (q *Queries) ListAuthoredSources(ctx context.Context, userID string) ([]Voi
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.VoiceID,
 			&i.PostSlug,
 			&i.LearningEventID,
 			&i.Title,
@@ -860,13 +1086,18 @@ func (q *Queries) ListAuthoredSources(ctx context.Context, userID string) ([]Voi
 }
 
 const listContrastRules = `-- name: ListContrastRules :many
-SELECT id, user_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE user_id=?
+SELECT id, user_id, voice_id, statement, canonical_key, layer, evidence_count, status, origin, created_at, last_evidence_at FROM voice_contrast_rules WHERE voice_id=? AND user_id=?
 ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'candidate' THEN 1 WHEN 'retired' THEN 2 ELSE 3 END,
          evidence_count DESC,last_evidence_at DESC,id
 `
 
-func (q *Queries) ListContrastRules(ctx context.Context, userID string) ([]VoiceContrastRule, error) {
-	rows, err := q.db.QueryContext(ctx, listContrastRules, userID)
+type ListContrastRulesParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) ListContrastRules(ctx context.Context, arg ListContrastRulesParams) ([]VoiceContrastRule, error) {
+	rows, err := q.db.QueryContext(ctx, listContrastRules, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -877,6 +1108,7 @@ func (q *Queries) ListContrastRules(ctx context.Context, userID string) ([]Voice
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.VoiceID,
 			&i.Statement,
 			&i.CanonicalKey,
 			&i.Layer,
@@ -900,11 +1132,16 @@ func (q *Queries) ListContrastRules(ctx context.Context, userID string) ([]Voice
 }
 
 const listManualOverrides = `-- name: ListManualOverrides :many
-SELECT user_id, layer, field, value, updated_at FROM voice_manual_overrides WHERE user_id=? ORDER BY layer, field
+SELECT voice_id, user_id, layer, field, value, updated_at FROM voice_manual_overrides WHERE voice_id=? AND user_id=? ORDER BY layer, field
 `
 
-func (q *Queries) ListManualOverrides(ctx context.Context, userID string) ([]VoiceManualOverride, error) {
-	rows, err := q.db.QueryContext(ctx, listManualOverrides, userID)
+type ListManualOverridesParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) ListManualOverrides(ctx context.Context, arg ListManualOverridesParams) ([]VoiceManualOverride, error) {
+	rows, err := q.db.QueryContext(ctx, listManualOverrides, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -913,6 +1150,7 @@ func (q *Queries) ListManualOverrides(ctx context.Context, userID string) ([]Voi
 	for rows.Next() {
 		var i VoiceManualOverride
 		if err := rows.Scan(
+			&i.VoiceID,
 			&i.UserID,
 			&i.Layer,
 			&i.Field,
@@ -933,7 +1171,7 @@ func (q *Queries) ListManualOverrides(ctx context.Context, userID string) ([]Voi
 }
 
 const listProfileValidationItems = `-- name: ListProfileValidationItems :many
-SELECT id, validation_id, source_id, position, neutral_summary, regenerated_content, scores, status, error FROM voice_profile_validation_items WHERE validation_id=? ORDER BY position
+SELECT id, validation_id, source_id, voice_id, user_id, position, neutral_summary, regenerated_content, scores, status, error FROM voice_profile_validation_items WHERE validation_id=? ORDER BY position
 `
 
 func (q *Queries) ListProfileValidationItems(ctx context.Context, validationID string) ([]VoiceProfileValidationItem, error) {
@@ -949,6 +1187,8 @@ func (q *Queries) ListProfileValidationItems(ctx context.Context, validationID s
 			&i.ID,
 			&i.ValidationID,
 			&i.SourceID,
+			&i.VoiceID,
+			&i.UserID,
 			&i.Position,
 			&i.NeutralSummary,
 			&i.RegeneratedContent,
@@ -970,11 +1210,16 @@ func (q *Queries) ListProfileValidationItems(ctx context.Context, validationID s
 }
 
 const listProfileValidations = `-- name: ListProfileValidations :many
-SELECT id, user_id, profile_version, analyze_model_ref, write_model_ref, judge_enabled, status, job_id, y_count, total_count, created_at, finished_at FROM voice_profile_validations WHERE user_id=? ORDER BY created_at DESC,id DESC
+SELECT id, user_id, voice_id, profile_version, analyze_model_ref, write_model_ref, judge_enabled, status, job_id, y_count, total_count, created_at, finished_at FROM voice_profile_validations WHERE voice_id=? AND user_id=? ORDER BY created_at DESC,id DESC
 `
 
-func (q *Queries) ListProfileValidations(ctx context.Context, userID string) ([]VoiceProfileValidation, error) {
-	rows, err := q.db.QueryContext(ctx, listProfileValidations, userID)
+type ListProfileValidationsParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) ListProfileValidations(ctx context.Context, arg ListProfileValidationsParams) ([]VoiceProfileValidation, error) {
+	rows, err := q.db.QueryContext(ctx, listProfileValidations, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -985,6 +1230,7 @@ func (q *Queries) ListProfileValidations(ctx context.Context, userID string) ([]
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.VoiceID,
 			&i.ProfileVersion,
 			&i.AnalyzeModelRef,
 			&i.WriteModelRef,
@@ -1010,11 +1256,16 @@ func (q *Queries) ListProfileValidations(ctx context.Context, userID string) ([]
 }
 
 const listProfileVersions = `-- name: ListProfileVersions :many
-SELECT id, user_id, version, snapshot, origin, restored_from_version, created_at FROM voice_profile_versions WHERE user_id=? ORDER BY version DESC
+SELECT id, user_id, voice_id, version, snapshot, origin, restored_from_version, created_at FROM voice_profile_versions WHERE voice_id=? AND user_id=? ORDER BY version DESC
 `
 
-func (q *Queries) ListProfileVersions(ctx context.Context, userID string) ([]VoiceProfileVersion, error) {
-	rows, err := q.db.QueryContext(ctx, listProfileVersions, userID)
+type ListProfileVersionsParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) ListProfileVersions(ctx context.Context, arg ListProfileVersionsParams) ([]VoiceProfileVersion, error) {
+	rows, err := q.db.QueryContext(ctx, listProfileVersions, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1025,6 +1276,7 @@ func (q *Queries) ListProfileVersions(ctx context.Context, userID string) ([]Voi
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.VoiceID,
 			&i.Version,
 			&i.Snapshot,
 			&i.Origin,
@@ -1079,11 +1331,16 @@ func (q *Queries) ListRuleComparisonCandidates(ctx context.Context, comparisonID
 }
 
 const listRuleConfirmations = `-- name: ListRuleConfirmations :many
-SELECT id, user_id, rule_id, proposed_statement, event_id, status, created_at, resolved_at FROM voice_rule_confirmations WHERE user_id=? ORDER BY created_at DESC,id DESC
+SELECT id, user_id, voice_id, rule_id, proposed_statement, event_id, status, created_at, resolved_at FROM voice_rule_confirmations WHERE voice_id=? AND user_id=? ORDER BY created_at DESC,id DESC
 `
 
-func (q *Queries) ListRuleConfirmations(ctx context.Context, userID string) ([]VoiceRuleConfirmation, error) {
-	rows, err := q.db.QueryContext(ctx, listRuleConfirmations, userID)
+type ListRuleConfirmationsParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) ListRuleConfirmations(ctx context.Context, arg ListRuleConfirmationsParams) ([]VoiceRuleConfirmation, error) {
+	rows, err := q.db.QueryContext(ctx, listRuleConfirmations, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1094,6 +1351,7 @@ func (q *Queries) ListRuleConfirmations(ctx context.Context, userID string) ([]V
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.VoiceID,
 			&i.RuleID,
 			&i.ProposedStatement,
 			&i.EventID,
@@ -1117,9 +1375,14 @@ func (q *Queries) ListRuleConfirmations(ctx context.Context, userID string) ([]V
 const listSampleBodies = `-- name: ListSampleBodies :many
 SELECT id, label, body, created_at
 FROM voice_samples
-WHERE user_id = ?
+WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC
 `
+
+type ListSampleBodiesParams struct {
+	VoiceID string
+	UserID  string
+}
 
 type ListSampleBodiesRow struct {
 	ID        string
@@ -1128,8 +1391,8 @@ type ListSampleBodiesRow struct {
 	CreatedAt string
 }
 
-func (q *Queries) ListSampleBodies(ctx context.Context, userID string) ([]ListSampleBodiesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listSampleBodies, userID)
+func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesParams) ([]ListSampleBodiesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSampleBodies, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1159,9 +1422,14 @@ func (q *Queries) ListSampleBodies(ctx context.Context, userID string) ([]ListSa
 const listSamples = `-- name: ListSamples :many
 SELECT id, label, length(body) AS chars, created_at
 FROM voice_samples
-WHERE user_id = ?
+WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC
 `
+
+type ListSamplesParams struct {
+	VoiceID string
+	UserID  string
+}
 
 type ListSamplesRow struct {
 	ID        string
@@ -1170,8 +1438,8 @@ type ListSamplesRow struct {
 	CreatedAt string
 }
 
-func (q *Queries) ListSamples(ctx context.Context, userID string) ([]ListSamplesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listSamples, userID)
+func (q *Queries) ListSamples(ctx context.Context, arg ListSamplesParams) ([]ListSamplesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSamples, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1199,11 +1467,16 @@ func (q *Queries) ListSamples(ctx context.Context, userID string) ([]ListSamples
 }
 
 const listSentenceFeedback = `-- name: ListSentenceFeedback :many
-SELECT id, user_id, post_slug, sentence_ref, kind, reason, payload_ref, processing_state, created_at FROM voice_sentence_feedback WHERE user_id=? ORDER BY created_at DESC,id DESC
+SELECT id, user_id, voice_id, post_slug, sentence_ref, kind, reason, payload_ref, processing_state, created_at FROM voice_sentence_feedback WHERE voice_id=? AND user_id=? ORDER BY created_at DESC,id DESC
 `
 
-func (q *Queries) ListSentenceFeedback(ctx context.Context, userID string) ([]VoiceSentenceFeedback, error) {
-	rows, err := q.db.QueryContext(ctx, listSentenceFeedback, userID)
+type ListSentenceFeedbackParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) ListSentenceFeedback(ctx context.Context, arg ListSentenceFeedbackParams) ([]VoiceSentenceFeedback, error) {
+	rows, err := q.db.QueryContext(ctx, listSentenceFeedback, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1214,6 +1487,7 @@ func (q *Queries) ListSentenceFeedback(ctx context.Context, userID string) ([]Vo
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.VoiceID,
 			&i.PostSlug,
 			&i.SentenceRef,
 			&i.Kind,
@@ -1235,9 +1509,69 @@ func (q *Queries) ListSentenceFeedback(ctx context.Context, userID string) ([]Vo
 	return items, nil
 }
 
+const listVoices = `-- name: ListVoices :many
+SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at FROM voices WHERE user_id = ?
+ORDER BY deleted_at IS NOT NULL, is_default DESC, name, id
+`
+
+func (q *Queries) ListVoices(ctx context.Context, userID string) ([]Voice, error) {
+	rows, err := q.db.QueryContext(ctx, listVoices, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Voice
+	for rows.Next() {
+		var i Voice
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.IsDefault,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const renameVoice = `-- name: RenameVoice :execrows
+UPDATE voices SET name = ?, updated_at = ? WHERE id = ? AND user_id = ?
+`
+
+type RenameVoiceParams struct {
+	Name      string
+	UpdatedAt string
+	ID        string
+	UserID    string
+}
+
+func (q *Queries) RenameVoice(ctx context.Context, arg RenameVoiceParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, renameVoice,
+		arg.Name,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const replaceContrastRule = `-- name: ReplaceContrastRule :exec
 UPDATE voice_contrast_rules SET statement=?,canonical_key=?,evidence_count=1,status='candidate',last_evidence_at=?
-WHERE id=? AND user_id=?
+WHERE id=? AND voice_id=? AND user_id=?
 `
 
 type ReplaceContrastRuleParams struct {
@@ -1245,6 +1579,7 @@ type ReplaceContrastRuleParams struct {
 	CanonicalKey   string
 	LastEvidenceAt string
 	ID             string
+	VoiceID        string
 	UserID         string
 }
 
@@ -1254,6 +1589,7 @@ func (q *Queries) ReplaceContrastRule(ctx context.Context, arg ReplaceContrastRu
 		arg.CanonicalKey,
 		arg.LastEvidenceAt,
 		arg.ID,
+		arg.VoiceID,
 		arg.UserID,
 	)
 	return err
@@ -1283,18 +1619,57 @@ func (q *Queries) ResolveRuleConfirmation(ctx context.Context, arg ResolveRuleCo
 	return result.RowsAffected()
 }
 
+const restoreVoice = `-- name: RestoreVoice :execrows
+UPDATE voices SET deleted_at = NULL, updated_at = ?
+WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL
+`
+
+type RestoreVoiceParams struct {
+	UpdatedAt string
+	ID        string
+	UserID    string
+}
+
+func (q *Queries) RestoreVoice(ctx context.Context, arg RestoreVoiceParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, restoreVoice, arg.UpdatedAt, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const retireStaleRules = `-- name: RetireStaleRules :execrows
 UPDATE voice_contrast_rules SET status='retired'
-WHERE user_id=? AND status='active' AND last_evidence_at < ?
+WHERE voice_id=? AND user_id=? AND status='active' AND last_evidence_at < ?
 `
 
 type RetireStaleRulesParams struct {
+	VoiceID        string
 	UserID         string
 	LastEvidenceAt string
 }
 
 func (q *Queries) RetireStaleRules(ctx context.Context, arg RetireStaleRulesParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, retireStaleRules, arg.UserID, arg.LastEvidenceAt)
+	result, err := q.db.ExecContext(ctx, retireStaleRules, arg.VoiceID, arg.UserID, arg.LastEvidenceAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setDefaultVoice = `-- name: SetDefaultVoice :execrows
+UPDATE voices SET is_default = 1, updated_at = ?
+WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+`
+
+type SetDefaultVoiceParams struct {
+	UpdatedAt string
+	ID        string
+	UserID    string
+}
+
+func (q *Queries) SetDefaultVoice(ctx context.Context, arg SetDefaultVoiceParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setDefaultVoice, arg.UpdatedAt, arg.ID, arg.UserID)
 	if err != nil {
 		return 0, err
 	}
@@ -1340,19 +1715,25 @@ func (q *Queries) SetLearningEventStatus(ctx context.Context, arg SetLearningEve
 }
 
 const setProfileHead = `-- name: SetProfileHead :exec
-INSERT INTO voice_profiles(user_id, styleguide, rules, corpus_version, current_version, updated_at)
-VALUES (?, '', '', 0, ?, ?)
-ON CONFLICT(user_id) DO UPDATE SET current_version=excluded.current_version, updated_at=excluded.updated_at
+INSERT INTO voice_profiles(voice_id, user_id, styleguide, rules, corpus_version, current_version, updated_at)
+VALUES (?, ?, '', '', 0, ?, ?)
+ON CONFLICT(voice_id) DO UPDATE SET current_version=excluded.current_version, updated_at=excluded.updated_at
 `
 
 type SetProfileHeadParams struct {
+	VoiceID        string
 	UserID         string
 	CurrentVersion int64
 	UpdatedAt      string
 }
 
 func (q *Queries) SetProfileHead(ctx context.Context, arg SetProfileHeadParams) error {
-	_, err := q.db.ExecContext(ctx, setProfileHead, arg.UserID, arg.CurrentVersion, arg.UpdatedAt)
+	_, err := q.db.ExecContext(ctx, setProfileHead,
+		arg.VoiceID,
+		arg.UserID,
+		arg.CurrentVersion,
+		arg.UpdatedAt,
+	)
 	return err
 }
 
@@ -1387,52 +1768,65 @@ func (q *Queries) SetRuleComparisonJob(ctx context.Context, arg SetRuleCompariso
 }
 
 const setRules = `-- name: SetRules :exec
-INSERT INTO voice_profiles (user_id, styleguide, rules, updated_at)
-VALUES (?, '', ?, ?)
-ON CONFLICT(user_id) DO UPDATE SET
+INSERT INTO voice_profiles (voice_id, user_id, styleguide, rules, updated_at)
+VALUES (?, ?, '', ?, ?)
+ON CONFLICT(voice_id) DO UPDATE SET
     rules = excluded.rules,
     updated_at = excluded.updated_at
 `
 
 type SetRulesParams struct {
+	VoiceID   string
 	UserID    string
 	Rules     string
 	UpdatedAt string
 }
 
 func (q *Queries) SetRules(ctx context.Context, arg SetRulesParams) error {
-	_, err := q.db.ExecContext(ctx, setRules, arg.UserID, arg.Rules, arg.UpdatedAt)
+	_, err := q.db.ExecContext(ctx, setRules,
+		arg.VoiceID,
+		arg.UserID,
+		arg.Rules,
+		arg.UpdatedAt,
+	)
 	return err
 }
 
 const setStyleguide = `-- name: SetStyleguide :exec
-INSERT INTO voice_profiles (user_id, styleguide, rules, updated_at)
-VALUES (?, ?, '', ?)
-ON CONFLICT(user_id) DO UPDATE SET
+INSERT INTO voice_profiles (voice_id, user_id, styleguide, rules, updated_at)
+VALUES (?, ?, ?, '', ?)
+ON CONFLICT(voice_id) DO UPDATE SET
     styleguide = excluded.styleguide,
     updated_at = excluded.updated_at
 `
 
 type SetStyleguideParams struct {
+	VoiceID    string
 	UserID     string
 	Styleguide string
 	UpdatedAt  string
 }
 
 func (q *Queries) SetStyleguide(ctx context.Context, arg SetStyleguideParams) error {
-	_, err := q.db.ExecContext(ctx, setStyleguide, arg.UserID, arg.Styleguide, arg.UpdatedAt)
+	_, err := q.db.ExecContext(ctx, setStyleguide,
+		arg.VoiceID,
+		arg.UserID,
+		arg.Styleguide,
+		arg.UpdatedAt,
+	)
 	return err
 }
 
 const setStyleguideIfCorpusVersion = `-- name: SetStyleguideIfCorpusVersion :execrows
 UPDATE voice_profiles
 SET styleguide = ?, updated_at = ?
-WHERE user_id = ? AND corpus_version = ?
+WHERE voice_id = ? AND user_id = ? AND corpus_version = ?
 `
 
 type SetStyleguideIfCorpusVersionParams struct {
 	Styleguide    string
 	UpdatedAt     string
+	VoiceID       string
 	UserID        string
 	CorpusVersion int64
 }
@@ -1441,6 +1835,7 @@ func (q *Queries) SetStyleguideIfCorpusVersion(ctx context.Context, arg SetStyle
 	result, err := q.db.ExecContext(ctx, setStyleguideIfCorpusVersion,
 		arg.Styleguide,
 		arg.UpdatedAt,
+		arg.VoiceID,
 		arg.UserID,
 		arg.CorpusVersion,
 	)
@@ -1450,8 +1845,33 @@ func (q *Queries) SetStyleguideIfCorpusVersion(ctx context.Context, arg SetStyle
 	return result.RowsAffected()
 }
 
+const softDeleteVoice = `-- name: SoftDeleteVoice :execrows
+UPDATE voices SET deleted_at = ?, updated_at = ?
+WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND is_default = 0
+`
+
+type SoftDeleteVoiceParams struct {
+	DeletedAt sql.NullString
+	UpdatedAt string
+	ID        string
+	UserID    string
+}
+
+func (q *Queries) SoftDeleteVoice(ctx context.Context, arg SoftDeleteVoiceParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, softDeleteVoice,
+		arg.DeletedAt,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const updateContrastRuleEvidence = `-- name: UpdateContrastRuleEvidence :exec
-UPDATE voice_contrast_rules SET evidence_count=?,status=?,last_evidence_at=? WHERE id=? AND user_id=?
+UPDATE voice_contrast_rules SET evidence_count=?,status=?,last_evidence_at=? WHERE id=? AND voice_id=? AND user_id=?
 `
 
 type UpdateContrastRuleEvidenceParams struct {
@@ -1459,6 +1879,7 @@ type UpdateContrastRuleEvidenceParams struct {
 	Status         string
 	LastEvidenceAt string
 	ID             string
+	VoiceID        string
 	UserID         string
 }
 
@@ -1468,19 +1889,21 @@ func (q *Queries) UpdateContrastRuleEvidence(ctx context.Context, arg UpdateCont
 		arg.Status,
 		arg.LastEvidenceAt,
 		arg.ID,
+		arg.VoiceID,
 		arg.UserID,
 	)
 	return err
 }
 
 const updateContrastRuleStatus = `-- name: UpdateContrastRuleStatus :exec
-UPDATE voice_contrast_rules SET status=?,last_evidence_at=? WHERE id=? AND user_id=?
+UPDATE voice_contrast_rules SET status=?,last_evidence_at=? WHERE id=? AND voice_id=? AND user_id=?
 `
 
 type UpdateContrastRuleStatusParams struct {
 	Status         string
 	LastEvidenceAt string
 	ID             string
+	VoiceID        string
 	UserID         string
 }
 
@@ -1489,6 +1912,7 @@ func (q *Queries) UpdateContrastRuleStatus(ctx context.Context, arg UpdateContra
 		arg.Status,
 		arg.LastEvidenceAt,
 		arg.ID,
+		arg.VoiceID,
 		arg.UserID,
 	)
 	return err
@@ -1562,12 +1986,13 @@ func (q *Queries) UpdateRuleComparisonStatus(ctx context.Context, arg UpdateRule
 }
 
 const upsertManualOverride = `-- name: UpsertManualOverride :exec
-INSERT INTO voice_manual_overrides(user_id, layer, field, value, updated_at)
-VALUES (?, ?, ?, ?, ?)
-ON CONFLICT(user_id,layer,field) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+INSERT INTO voice_manual_overrides(voice_id, user_id, layer, field, value, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(voice_id,layer,field) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
 `
 
 type UpsertManualOverrideParams struct {
+	VoiceID   string
 	UserID    string
 	Layer     string
 	Field     string
@@ -1577,6 +2002,7 @@ type UpsertManualOverrideParams struct {
 
 func (q *Queries) UpsertManualOverride(ctx context.Context, arg UpsertManualOverrideParams) error {
 	_, err := q.db.ExecContext(ctx, upsertManualOverride,
+		arg.VoiceID,
 		arg.UserID,
 		arg.Layer,
 		arg.Field,
@@ -1587,15 +2013,16 @@ func (q *Queries) UpsertManualOverride(ctx context.Context, arg UpsertManualOver
 }
 
 const upsertProfile = `-- name: UpsertProfile :exec
-INSERT INTO voice_profiles (user_id, styleguide, rules, updated_at)
-VALUES (?, ?, ?, ?)
-ON CONFLICT(user_id) DO UPDATE SET
+INSERT INTO voice_profiles (voice_id, user_id, styleguide, rules, updated_at)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(voice_id) DO UPDATE SET
     styleguide = excluded.styleguide,
     rules = excluded.rules,
     updated_at = excluded.updated_at
 `
 
 type UpsertProfileParams struct {
+	VoiceID    string
 	UserID     string
 	Styleguide string
 	Rules      string
@@ -1604,6 +2031,7 @@ type UpsertProfileParams struct {
 
 func (q *Queries) UpsertProfile(ctx context.Context, arg UpsertProfileParams) error {
 	_, err := q.db.ExecContext(ctx, upsertProfile,
+		arg.VoiceID,
 		arg.UserID,
 		arg.Styleguide,
 		arg.Rules,

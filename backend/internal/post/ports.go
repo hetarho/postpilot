@@ -47,6 +47,13 @@ type PendingExperimentFinder interface {
 	PendingForPost(ctx context.Context, userID, slug string) (string, error)
 }
 
+// VoiceDirectory is the voice context's published directory, consumed here to validate an
+// assignment and to name a post's voice on read models. It lists tombstones too, so a post
+// whose voice was deleted can still be projected; the post context never reads voice tables.
+type VoiceDirectory interface {
+	Voices(ctx context.Context, userID string) ([]VoiceRef, error)
+}
+
 // ExperimentContentPurger is the required privacy hook for post deletion. The post
 // context calls it before the FK detaches experiment history from the source slug.
 type ExperimentContentPurger interface {
@@ -63,6 +70,11 @@ type Store interface {
 	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
 	UpdateGeneratedContent(ctx context.Context, slug, userID string, content PostContent, updatedAt time.Time) (bool, error)
 	GetPost(ctx context.Context, slug string) (Post, error)
+	// ReassignVoice moves the post to another voice in one statement that also drops the
+	// machine baseline's voice association — the part of the post that belonged to the old
+	// voice. Content, revisions, photos and finalization state are untouched. It reports
+	// false when the post already carried that voice.
+	ReassignVoice(ctx context.Context, slug, userID, voiceID string, updatedAt time.Time) (bool, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	ListPosts(ctx context.Context, userID string) ([]Summary, error)
 	DeletePost(ctx context.Context, slug, userID string) (bool, error)

@@ -1,7 +1,9 @@
 # Policy — Stage model experiments
 
-Canonical rules implemented by jobs 15, 17, and 23. Source: [plan 09](../plan/09.stage-model-experiments-and-leaderboards.md)
-and [tech/model-experiment-methodology](../tech/model-experiment-methodology.md).
+Canonical rules implemented by jobs 15, 17, and 23, with analyze experiments scoped to one voice by job 18
+([plan 10](../plan/10.independent-voice-profiles-and-post-assi.md)). Source:
+[plan 09](../plan/09.stage-model-experiments-and-leaderboards.md) and
+[tech/model-experiment-methodology](../tech/model-experiment-methodology.md).
 
 ## Fair and blind comparisons
 
@@ -10,6 +12,10 @@ and [tech/model-experiment-methodology](../tech/model-experiment-methodology.md)
 - Ordinary generation is not an experiment and calls one active writer. Only explicit `A/B 비교 생성` observes once
   and fans the same optional-length snapshot out to two write candidates. Observe/analyze comparisons run only from
   the explicit model lab and do not mutate their source while candidates run.
+- An analyze experiment names one explicit active owned `voice_id` (`InvalidArgument` when missing, `NotFound` for
+  an unknown or foreign id, `FailedPrecondition` for a deleted one); the server never guesses a voice. It freezes only
+  that voice's corpus and stores `voice_id` on the experiment, which the projection exposes. Write experiments freeze
+  the owned post's voice with the post snapshot.
 - The server randomizes and persists left/right once. Before a verdict, RPC responses contain opaque candidate ids,
   sides and outputs but omit model refs, labels, accounting and provider errors. Removed-model retry errors are also
   identity-free. A verdict or dismissal reveals the snapshotted identities and accounting.
@@ -32,9 +38,12 @@ and [tech/model-experiment-methodology](../tech/model-experiment-methodology.md)
   and `결과 적용하고 활성 모델로 변경`; both record one verdict and apply once, while only the latter requests
   adoption of the winning write model. `applied_at`, `adoption_requested`, `adopted_at`, and fixed public error
   markers make each boundary reload-safe. Application/adoption retries do not rerank or rewrite completed steps.
-- Write apply replaces validated `PostContent` and moves the post to `review`; it never finalizes or learns. Observe
-  apply replaces observations. Analyze apply requires confirmation, replaces `styleguide`, and never changes
-  user-owned `rules`. Observe/analyze adoption remains a separate explicit action.
+- Write apply replaces validated `PostContent`, establishes a baseline carrying the post's frozen voice, and moves
+  the post to `review`; it never finalizes or learns. Observe apply replaces observations. Analyze apply requires
+  confirmation, replaces only the experiment's own still-active voice's `styleguide`, and never changes user-owned
+  `rules`; a voice deleted since the freeze refuses the application, and `DeleteVoice` is refused while a publishable
+  analyze experiment for it exists. Observe/analyze adoption remains a separate explicit action. Model Elo and stage
+  selections stay account-scoped.
 
 ## Ranking and accounting
 
@@ -54,6 +63,9 @@ and [tech/model-experiment-methodology](../tech/model-experiment-methodology.md)
 
 - Every experiment/read/action and leaderboard is scoped from the authenticated account; no request accepts an
   account id. Foreign experiment access is denied.
+- The model lab's 문체 분석 tab carries a required voice picker initialized to the account's default (a choice that
+  has since been deleted falls back to it); the recent-comparison list and the experiment detail name the frozen
+  voice, and a decided analyze winner refreshes only that voice's profile and version caches.
 - Verdict/dismissal starts a 30-day content-retention clock. The sweeper clears input snapshots and candidate output,
   retaining verdict, model snapshot, usage and timing for leaderboard replay.
 - `DeletePost` calls the experiment purge behavior transactionally before deleting the post, so the FK may safely

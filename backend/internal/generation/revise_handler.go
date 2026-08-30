@@ -21,7 +21,11 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if post.Content == nil {
 		return ErrRevisionContentRequired
 	}
-	profile, err := s.profileForTopic(ctx, job.UserID, post.Title+" "+post.Memo, contentTags(post.Content))
+	voiceID, err := frozenVoice(post, job.VoiceID)
+	if err != nil {
+		return err
+	}
+	profile, err := s.profileForTopic(ctx, job.UserID, voiceID, post.Title+" "+post.Memo, contentTags(post.Content))
 	if err != nil {
 		return fmt.Errorf("load voice profile: %w", err)
 	}
@@ -58,6 +62,11 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	current, err := s.posts.AttachedImages(ctx, job.UserID, job.PostSlug)
 	if err != nil {
 		return fmt.Errorf("reload revision attachments: %w", err)
+	}
+	// The voice is rechecked on the fresh snapshot too: a reassignment or deletion that
+	// slipped in during the provider call must not persist output into the wrong profile.
+	if _, err := frozenVoice(current, voiceID); err != nil {
+		return err
 	}
 	currentFilenames := make([]string, 0, len(current.Images))
 	for _, image := range current.Images {

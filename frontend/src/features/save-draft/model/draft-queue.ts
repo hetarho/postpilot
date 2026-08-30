@@ -27,8 +27,14 @@ export interface Draft {
  *
  *  Injected so this module knows nothing of React or of the transport. It must REJECT
  *  when the server did not confirm the post: a resolve is taken as proof the text landed,
- *  and for a draft with no slug yet, as proof the post now exists. */
-export type SendDraft = (slug: string, draft: Draft) => Promise<string>
+ *  and for a draft with no slug yet, as proof the post now exists.
+ *
+ *  `voiceId` is the assignment to send WITH this save, or undefined to leave the post's
+ *  voice alone. It is present on every create — a post cannot exist without a voice
+ *  (spec/policy/posts.md) — and on an existing post only while the assignment differs from
+ *  what the server holds, so an ordinary title save can never carry a stale voice over a
+ *  newer one. */
+export type SendDraft = (slug: string, draft: Draft, voiceId: string | undefined) => Promise<string>
 
 export interface DraftQueueHandle {
   state: () => SaveState
@@ -47,6 +53,12 @@ export interface DraftQueueHandle {
    *  autosave has fired. Resolves once the create lands, however many retries that
    *  takes; rejects only if the session ends first. */
   mint: () => Promise<string>
+  /** Records the voice this draft is written in. For a draft with no post yet that is all
+   *  it does — the create carries it. For an existing post it is a reassignment: sent at
+   *  once, and the promise reports that one save's outcome. A refused reassignment is taken
+   *  back, so the retries that follow carry text only instead of failing forever on the
+   *  same answer. */
+  assignVoice: (voiceId: string) => Promise<void>
 }
 
 interface MintWaiter {
@@ -57,6 +69,10 @@ interface MintWaiter {
 interface FlushWaiter {
   resolve: () => void
   reject: (error: Error) => void
+}
+
+interface VoiceWaiter extends FlushWaiter {
+  voiceId: string
 }
 
 interface Queue {
@@ -71,6 +87,10 @@ interface Queue {
   sending: Draft | undefined
   /** The newest text the server is not known to hold. */
   pending: Draft | undefined
+  /** The voice the editor wants the post written in. */
+  voiceId: string
+  /** The voice the server is known to hold; empty until the post exists. */
+  savedVoiceId: string
   /** True once a save has succeeded, so an untouched editor stays silent. */
   everSaved: boolean
   failed: boolean
@@ -92,6 +112,8 @@ interface Queue {
    *  so they survive the editor swap the mint itself causes. */
   mintWaiters: MintWaiter[]
   flushWaiters: FlushWaiter[]
+  /** Callers of `assignVoice` waiting for their reassignment to land. */
+  voiceWaiters: VoiceWaiter[]
 }
 
 const queues = new Map<string, Queue>()
@@ -124,6 +146,19 @@ function wantsPost(queue: Queue): boolean {
   return !queue.slug && queue.mintWaiters.length > 0
 }
 
+/** True while the editor's assignment differs from what the server holds — a reassignment
+ *  that has not landed. Like `wantsPost`, it means unchanged text is not a reason to stand
+ *  down: the save still has something to carry. */
+function voiceDirty(queue: Queue): boolean {
+  return Boolean(queue.slug) && queue.voiceId !== queue.savedVoiceId
+}
+
+/** What a request carries for the assignment — see `SendDraft`. */
+function voiceToSend(queue: Queue): string | undefined {
+  if (!queue.slug) return queue.voiceId
+  return voiceDirty(queue) ? queue.voiceId : undefined
+}
+
 function stateOf(queue: Queue): SaveState {
   if (queue.inFlight) return 'saving'
   if (queue.failed) return 'error'
@@ -146,6 +181,26 @@ function rejectFlushes(queue: Queue, cause: unknown): void {
   const error = cause instanceof Error ? cause : new Error('draft save failed')
   const waiters = queue.flushWaiters
   queue.flushWaiters = []
+  for (const waiter of waiters) waiter.reject(error)
+}
+
+/** Answers the reassignments that have landed. One still differing from what the server
+ *  holds keeps waiting for the save that carries it — unless the editor has since chosen a
+ *  third voice, in which case it will never land and says so. */
+function settleVoiceWaiters(queue: Queue): void {
+  const waiting: VoiceWaiter[] = []
+  for (const waiter of queue.voiceWaiters) {
+    if (waiter.voiceId === queue.savedVoiceId) waiter.resolve()
+    else if (waiter.voiceId !== queue.voiceId) waiter.reject(new Error('voice assignment superseded'))
+    else waiting.push(waiter)
+  }
+  queue.voiceWaiters = waiting
+}
+
+function rejectVoiceWaiters(queue: Queue, cause: unknown): void {
+  const error = cause instanceof Error ? cause : new Error('voice assignment failed')
+  const waiters = queue.voiceWaiters
+  queue.voiceWaiters = []
   for (const waiter of waiters) waiter.reject(error)
 }
 
@@ -193,24 +248,33 @@ async function run(queue: Queue): Promise<void> {
   if (queue.inFlight || !queue.pending) return
 
   const sent = queue.pending
+  const sentVoice = voiceToSend(queue)
   queue.inFlight = true
   queue.sending = sent
   publish(queue)
 
   try {
-    const slug = await queue.send(queue.slug, sent)
+    const slug = await queue.send(queue.slug, sent, sentVoice)
     if (queue.discarded) return
     queue.inFlight = false
     queue.sending = undefined
     queue.attempts = 0
     queue.failed = false
     queue.saved = sent
+    if (sentVoice !== undefined) queue.savedVoiceId = sentVoice
     queue.everSaved = true
-    // Only the text that actually went out is settled; anything typed during the round
-    // trip is still pending.
-    if (queue.pending && sameDraft(queue.pending, sent)) queue.pending = undefined
-    if (!queue.slug && slug) {
-      rekey(queue, slug)
+    const minted = !queue.slug && Boolean(slug)
+    if (minted) rekey(queue, slug)
+    // Only what actually went out is settled; anything typed during the round trip is
+    // still pending — and so is a voice chosen during it.
+    if (queue.pending && sameDraft(queue.pending, sent) && !voiceDirty(queue)) {
+      queue.pending = undefined
+    } else if (voiceDirty(queue)) {
+      // A reassignment does not wait for a debounce: it is an action, not a keystroke.
+      queue.pending ??= { ...sent }
+      queue.urgent = true
+    }
+    if (minted) {
       queue.onMinted?.(slug)
       const waiters = queue.mintWaiters
       queue.mintWaiters = []
@@ -226,6 +290,7 @@ async function run(queue: Queue): Promise<void> {
     }
     queue.urgent = false
     settleFlushes(queue)
+    settleVoiceWaiters(queue)
   } catch (cause) {
     // Swallowed rather than rethrown: every caller is a timer or a teardown handler with
     // nobody to catch it. The retry is what the user is actually promised.
@@ -233,7 +298,15 @@ async function run(queue: Queue): Promise<void> {
     queue.inFlight = false
     queue.sending = undefined
 
-    if (queue.pending && sameDraft(queue.pending, queue.saved) && !wantsPost(queue)) {
+    if (sentVoice !== undefined && queue.slug) {
+      // A refused reassignment is taken back rather than retried. Unlike a text save, the
+      // refusal is usually an answer — a busy post, a voice deleted meanwhile — and retrying
+      // it with every save would keep the title from ever landing again.
+      queue.voiceId = queue.savedVoiceId
+      rejectVoiceWaiters(queue, cause)
+    }
+
+    if (queue.pending && sameDraft(queue.pending, queue.saved) && !wantsPost(queue) && !voiceDirty(queue)) {
       // Typed back to what the server holds while this attempt was out — there is nothing
       // left to retry, and "다시 시도 중" would stand there forever.
       queue.pending = undefined
@@ -268,6 +341,9 @@ export function attachDraftQueue(options: {
   /** What the server holds, as this editor was told. Used only when there is no queue
    *  yet: an existing one has watched every save and knows better. */
   saved: Draft
+  /** The voice the post is written in as this editor was told — or, for a draft with no
+   *  post yet, the one it will be created in. Same caveat as `saved`. */
+  voiceId: string
   send: SendDraft
   onState: (state: SaveState) => void
   onMinted: (slug: string) => void
@@ -282,6 +358,8 @@ export function attachDraftQueue(options: {
       saved: options.saved,
       sending: undefined,
       pending: undefined,
+      voiceId: options.voiceId,
+      savedVoiceId: options.slug ? options.voiceId : '',
       everSaved: false,
       failed: false,
       discarded: false,
@@ -295,6 +373,7 @@ export function attachDraftQueue(options: {
       onMinted: undefined,
       mintWaiters: [],
       flushWaiters: [],
+      voiceWaiters: [],
     }
     queues.set(key, queue)
   }
@@ -314,7 +393,11 @@ export function attachDraftQueue(options: {
       // Against the request in flight when there is one: a save already sent cannot be
       // recalled, so comparing with the older `saved` would call an undo "already saved"
       // and never send it.
-      if (sameDraft(draft, attached.sending ?? attached.saved) && !wantsPost(attached)) {
+      if (
+        sameDraft(draft, attached.sending ?? attached.saved) &&
+        !wantsPost(attached) &&
+        !voiceDirty(attached)
+      ) {
         // Typed back to what the server holds. Leaving "저장 대기 중" or "다시 시도 중" on
         // screen with nothing to send would be a standing lie.
         if (attached.pending === undefined && !attached.failed) return
@@ -363,6 +446,22 @@ export function attachDraftQueue(options: {
         sendNow(attached)
       })
     },
+
+    assignVoice: (voiceId) => {
+      if (attached.discarded) return Promise.reject(new Error('session ended'))
+      attached.voiceId = voiceId
+      // Before the post exists the choice simply rides along with the create — including a
+      // create already in flight, which `run` follows up the moment it lands.
+      if (!attached.slug || voiceId === attached.savedVoiceId) return Promise.resolve()
+      // Nothing typed since the last save: the reassignment still needs a request to ride
+      // on, so the newest known text is re-sent with it.
+      attached.pending ??= { ...(attached.sending ?? attached.saved) }
+      publish(attached)
+      return new Promise<void>((resolve, reject) => {
+        attached.voiceWaiters.push({ voiceId, resolve, reject })
+        sendNow(attached)
+      })
+    },
   }
 }
 
@@ -390,6 +489,8 @@ export function discardDraftQueues(): void {
     queue.mintWaiters = []
     for (const waiter of queue.flushWaiters) waiter.reject(new Error('session ended'))
     queue.flushWaiters = []
+    for (const waiter of queue.voiceWaiters) waiter.reject(new Error('session ended'))
+    queue.voiceWaiters = []
   }
   queues.clear()
 }

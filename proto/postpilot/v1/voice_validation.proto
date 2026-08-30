@@ -18,7 +18,7 @@ message VoiceComparisonCandidate { string id = 1; string side = 2; string output
 message VoiceRuleComparison {
   string id = 1; string rule_id = 2; int64 profile_version = 3; optional int32 target_length = 4;
   string status = 5; string job_id = 6; repeated VoiceComparisonCandidate candidates = 7;
-  string chosen_side = 8; string created_at = 9;
+  string chosen_side = 8; string created_at = 9; string voice_id = 10;
 }
 message StartVoiceRuleComparisonRequest {
   string rule_id = 1; string source_id = 2; optional int32 target_length = 3; ModelRef write_model = 4;
@@ -39,13 +39,13 @@ message VoiceValidationItem {
 message VoiceProfileValidation {
   string id = 1; int64 profile_version = 2; bool judge_enabled = 3; string status = 4;
   string job_id = 5; repeated VoiceValidationItem items = 6; int32 y_count = 7; int32 total_count = 8;
-  string created_at = 9; string finished_at = 10;
+  string created_at = 9; string finished_at = 10; string voice_id = 11;
 }
-message StartVoiceProfileValidationRequest { ModelRef analyze_model = 1; ModelRef write_model = 2; bool judge_enabled = 3; }
+message StartVoiceProfileValidationRequest { string voice_id = 4; ModelRef analyze_model = 1; ModelRef write_model = 2; bool judge_enabled = 3; }
 message StartVoiceProfileValidationResponse { string validation_id = 1; string job_id = 2; }
 message GetVoiceProfileValidationRequest { string validation_id = 1; }
 message GetVoiceProfileValidationResponse { VoiceProfileValidation validation = 1; }
-message ListVoiceProfileValidationsRequest {}
+message ListVoiceProfileValidationsRequest { string voice_id = 1; }
 message ListVoiceProfileValidationsResponse { repeated VoiceProfileValidation validations = 1; }
 message RetryVoiceProfileValidationRequest { string validation_id = 1; }
 message RetryVoiceProfileValidationResponse { string job_id = 1; }

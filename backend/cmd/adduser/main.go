@@ -11,13 +11,24 @@ import (
 	"os"
 
 	"github.com/postpilot/backend/internal/auth/provision"
+	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/voice"
+	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 
-	if err := provision.Run(context.Background(), os.Args[1:]); err != nil {
+	if err := provision.Run(context.Background(), os.Args[1:], defaultVoiceBootstrap); err != nil {
 		slog.Error("adduser failed", "err", err)
 		os.Exit(1)
 	}
+}
+
+// defaultVoiceBootstrap mirrors cmd/api: the account's `기본 말투` must exist before the
+// account can create a post, and rerunning repairs an account left without one.
+func defaultVoiceBootstrap(ctx context.Context, handle *db.DB, userID string) error {
+	directory := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	_, _, err := directory.EnsureDefaultVoice(ctx, userID)
+	return err
 }

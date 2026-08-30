@@ -12,6 +12,7 @@ import (
 )
 
 const StructuredAnalysisPromptVersion = "voice-profile-v1"
+
 // The prompt names every key the decoder expects — including the `axes` object and its six
 // keys — because for a model without structured output the prompt is the only channel that
 // carries the shape; a key it is not told about comes back missing and must publish as unknown.
@@ -77,15 +78,15 @@ func parseAuthoredContent(raw string) (authoredContentJSON, string, error) {
 	return value, strings.TrimSpace(body.String()), nil
 }
 
+// LearnFromFinalizedPost derives the voice from the owned post — the caller never
+// nominates one — and requires the machine baseline to have been written under that same
+// voice, so a reassigned post cannot turn voice A's generated text into evidence about B.
 func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug string, requested llm.ModelRef) (LearningEvent, string, bool, error) {
 	if s.posts == nil {
 		return LearningEvent{}, "", false, fmt.Errorf("voice personalization is not configured")
 	}
 	if requested.ProviderID == "" || requested.ModelID == "" {
 		return LearningEvent{}, "", false, ErrAnalyzeModelRequired
-	}
-	if err := s.retireStaleRules(ctx, userID); err != nil {
-		return LearningEvent{}, "", false, err
 	}
 	model, err := s.resolveAnalyzeModel(ctx, userID, requested)
 	if err != nil {
@@ -95,8 +96,15 @@ func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug s
 	if err != nil {
 		return LearningEvent{}, "", false, err
 	}
+	voiceID, err := s.learnableVoice(ctx, snapshot)
+	if err != nil {
+		return LearningEvent{}, "", false, err
+	}
+	if err := s.retireStaleRules(ctx, userID, voiceID); err != nil {
+		return LearningEvent{}, "", false, err
+	}
 	hash := learningInputHash(snapshot)
-	existing, err := s.personalization.FindLearningEvent(ctx, userID, postSlug, snapshot.BaselineRevision, hash)
+	existing, err := s.personalization.FindLearningEvent(ctx, userID, voiceID, postSlug, snapshot.BaselineRevision, hash)
 	if err != nil {
 		return LearningEvent{}, "", false, err
 	}
@@ -104,11 +112,11 @@ func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug s
 		jobID, resumeErr := s.resumeLearningEvent(ctx, existing, model)
 		return *existing, jobID, true, resumeErr
 	}
-	event := LearningEvent{ID: s.newID(), UserID: userID, PostSlug: postSlug, BaselineRevision: snapshot.BaselineRevision, InputHash: hash, BaselineJSON: snapshot.BaselineJSON, FinalJSON: snapshot.FinalJSON, ModelRef: model.String(), Status: "queued", CreatedAt: s.now()}
+	event := LearningEvent{ID: s.newID(), UserID: userID, VoiceID: voiceID, PostSlug: postSlug, BaselineRevision: snapshot.BaselineRevision, InputHash: hash, BaselineJSON: snapshot.BaselineJSON, FinalJSON: snapshot.FinalJSON, ModelRef: model.String(), Status: "queued", CreatedAt: s.now()}
 	if err = s.personalization.InsertLearningEvent(ctx, event); err != nil {
 		// The database uniqueness constraint is the final arbiter when two tabs
 		// finalize the same immutable input concurrently.
-		if raced, findErr := s.personalization.FindLearningEvent(ctx, userID, postSlug, snapshot.BaselineRevision, hash); findErr == nil && raced != nil {
+		if raced, findErr := s.personalization.FindLearningEvent(ctx, userID, voiceID, postSlug, snapshot.BaselineRevision, hash); findErr == nil && raced != nil {
 			jobID, resumeErr := s.resumeLearningEvent(ctx, raced, model)
 			return *raced, jobID, true, resumeErr
 		}
@@ -119,6 +127,22 @@ func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug s
 		return event, "", false, err
 	}
 	return event, jobID, false, nil
+}
+
+// learnableVoice is the finalization gate: post.voice_id == machine_baseline_voice_id and
+// that voice is still active. It is authoritative even when a stale client still shows
+// an eligible state.
+func (s *Service) learnableVoice(ctx context.Context, snapshot FinalizationInput) (string, error) {
+	if snapshot.VoiceID == "" {
+		return "", ErrVoiceRequired
+	}
+	if snapshot.BaselineVoiceID != snapshot.VoiceID {
+		return "", ErrBaselineVoiceMismatch
+	}
+	if _, err := s.activeVoice(ctx, snapshot.UserID, snapshot.VoiceID); err != nil {
+		return "", err
+	}
+	return snapshot.VoiceID, nil
 }
 
 // resumeLearningEvent makes the same explicit learn/retry action the recovery
@@ -137,6 +161,10 @@ func (s *Service) resumeLearningEvent(ctx context.Context, event *LearningEvent,
 			return event.JobID, nil
 		}
 	}
+	// The event's frozen voice, never the post's current one, receives the retry.
+	if _, err := s.activeVoice(ctx, event.UserID, event.VoiceID); err != nil {
+		return "", err
+	}
 	return s.enqueueLearningEvent(ctx, event, model)
 }
 
@@ -147,7 +175,7 @@ func learningInputHash(snapshot FinalizationInput) string {
 }
 
 func (s *Service) enqueueLearningEvent(ctx context.Context, event *LearningEvent, model llm.ModelRef) (string, error) {
-	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: LearnJobKind, UserID: event.UserID, PostSlug: event.PostSlug, Model: model.String(), Payload: event.ID})
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: LearnJobKind, UserID: event.UserID, VoiceID: event.VoiceID, PostSlug: event.PostSlug, Model: model.String(), Payload: event.ID})
 	if err != nil {
 		_ = s.personalization.SetLearningEventStatus(ctx, event.UserID, event.ID, "retryable", err.Error(), nil)
 		event.Status = "retryable"
@@ -200,6 +228,9 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 		progress("learn", 1, 1)
 		return nil
 	}
+	if _, err := s.activeVoice(ctx, event.UserID, event.VoiceID); err != nil {
+		return s.failLearning(ctx, *event, voiceUnavailableError(err))
+	}
 	_ = s.personalization.SetLearningEventStatus(ctx, job.UserID, event.ID, "running", "", nil)
 	final, body, err := parseAuthoredContent(event.FinalJSON)
 	if err != nil {
@@ -209,7 +240,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
-	sources, err := s.personalization.ListAuthoredSources(ctx, job.UserID)
+	sources, err := s.personalization.ListAuthoredSources(ctx, job.UserID, event.VoiceID)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
@@ -244,8 +275,9 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 		return VoiceValue{Value: strings.TrimSpace(v), Source: SourceAnalyzed}
 	}
 	profile.Lexical.Description = unknown(qualitative.LexicalDescription)
-	if !profile.Endings.BaseRegister.Unknown && qualitative.BaseRegister != "" {
-	} else {
+	// The measured register wins over the model's estimate; the estimate is used only when
+	// measurement found nothing or the model declined to answer.
+	if profile.Endings.BaseRegister.Unknown || qualitative.BaseRegister == "" {
 		profile.Endings.BaseRegister = unknown(qualitative.BaseRegister)
 	}
 	profile.Syntax.ConnectiveStyle = unknown(qualitative.ConnectiveStyle)
@@ -258,7 +290,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	if err = validateAxes(profile.Axes); err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
-	overrides, err := s.personalization.ListManualOverrides(ctx, job.UserID)
+	overrides, err := s.personalization.ListManualOverrides(ctx, job.UserID, event.VoiceID)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
@@ -268,8 +300,8 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 		}
 	}
 	excerpt := excerptAroundTarget(body, s.config.FewShotExcerptTargetChars, s.config.FewShotExcerptMaxChars)
-	source := AuthoredSource{ID: s.newID(), UserID: job.UserID, PostSlug: event.PostSlug, LearningEventID: event.ID, Title: final.Title, Tags: final.Tags, Body: body, Excerpt: excerpt, CreatedAt: s.now()}
-	profile.Rules, err = s.personalization.ListRules(ctx, job.UserID)
+	source := AuthoredSource{ID: s.newID(), UserID: job.UserID, VoiceID: event.VoiceID, PostSlug: event.PostSlug, LearningEventID: event.ID, Title: final.Title, Tags: final.Tags, Body: body, Excerpt: excerpt, CreatedAt: s.now()}
+	profile.Rules, err = s.personalization.ListRules(ctx, job.UserID, event.VoiceID)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}

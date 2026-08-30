@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
 import { Stage } from '@/shared/api'
-import type { FakeWriteExperimentStart } from '@/test/experiments'
+import type { FakeAnalyzeExperimentStart, FakeWriteExperimentStart } from '@/test/experiments'
 import { renderAppAt } from '@/test/app'
 
 const writeModels = [
@@ -151,4 +151,71 @@ it('blocks posts with active work or an unresolved write experiment', async () =
   await user.selectOptions(screen.getByLabelText('비교할 글'), 'pending-post')
   expect(await screen.findByText('먼저 대기 중인 A/B 결과를 확인해 주세요.')).toBeInTheDocument()
   expect(starts).toHaveLength(0)
+})
+
+const analyzePair = {
+  stage: Stage.ANALYZE,
+  candidateA: { providerId: 'openrouter', modelId: 'writer-a' },
+  candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
+}
+
+const twoVoices = [
+  { id: 'voice-default', name: '기본 말투', isDefault: true },
+  { id: 'voice-review', name: '리뷰' },
+]
+
+// Plan 10 A13: an analyze comparison names one voice — initialized to the default.
+it('starts an analyze comparison for the default voice unless another is chosen', async () => {
+  const user = userEvent.setup()
+  const analyzeStarts: FakeAnalyzeExperimentStart[] = []
+  const { router } = renderAppAt('/ai-models', {
+    user: { id: 'owner-1' },
+    providers: { models: writeModels, comparisonPairs: [analyzePair] },
+    voice: { voices: twoVoices },
+    experiments: { analyzeStarts, experimentId: 'analyze-experiment-1' },
+  })
+
+  await user.click(await screen.findByRole('tab', { name: '문체 분석' }))
+  const voice = await screen.findByLabelText('말투')
+  await waitFor(() => expect(voice).toHaveValue('voice-default'))
+  expect(screen.queryByLabelText('비교할 글')).not.toBeInTheDocument()
+
+  const start = screen.getByRole('button', { name: '비교 시작' })
+  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
+  await user.click(start)
+
+  await waitFor(() =>
+    expect(analyzeStarts).toEqual([
+      {
+        voiceId: 'voice-default',
+        modelA: { providerId: 'openrouter', modelId: 'writer-a' },
+        modelB: { providerId: 'openrouter', modelId: 'writer-b' },
+      },
+    ]),
+  )
+  await waitFor(() =>
+    expect(router.state.location.pathname).toBe('/ai-models/experiments/analyze-experiment-1'),
+  )
+})
+
+it('sends the explicitly chosen voice with an analyze comparison', async () => {
+  const user = userEvent.setup()
+  const analyzeStarts: FakeAnalyzeExperimentStart[] = []
+  renderAppAt('/ai-models', {
+    user: { id: 'owner-1' },
+    providers: { models: writeModels, comparisonPairs: [analyzePair] },
+    voice: { voices: twoVoices },
+    experiments: { analyzeStarts },
+  })
+
+  await user.click(await screen.findByRole('tab', { name: '문체 분석' }))
+  const voice = await screen.findByLabelText('말투')
+  await waitFor(() => expect(voice).toHaveValue('voice-default'))
+  await user.selectOptions(voice, 'voice-review')
+
+  const start = screen.getByRole('button', { name: '비교 시작' })
+  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
+  await user.click(start)
+
+  await waitFor(() => expect(analyzeStarts[0]?.voiceId).toBe('voice-review'))
 })

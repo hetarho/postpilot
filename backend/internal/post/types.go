@@ -50,6 +50,13 @@ var (
 	ErrInvalidContent       = errors.New("invalid post content")
 	ErrNoMachineBaseline    = errors.New("post has no machine baseline to finalize")
 	ErrPostNotFinalized     = errors.New("post content is not finalized")
+	// ErrVoiceRequired: a create (or a present voice_id) arrived without a concrete voice.
+	// The server never substitutes the default — that choice belongs to the client's dropdown.
+	ErrVoiceRequired = errors.New("a voice is required")
+	// ErrVoiceNotFound covers unknown and foreign voices alike; a foreign id must not be
+	// distinguishable from a nonexistent one.
+	ErrVoiceNotFound = errors.New("voice not found")
+	ErrVoiceDeleted  = errors.New("voice is deleted")
 )
 
 type InvalidContentError struct{ Reason string }
@@ -59,11 +66,23 @@ func (e *InvalidContentError) Error() string {
 }
 func (e *InvalidContentError) Unwrap() error { return ErrInvalidContent }
 
+// VoiceRef is the voice a post is written in, as the post context needs it: the id it
+// stores plus the name/tombstone the voice context publishes. A deleted voice still names
+// itself here so the post stays readable and exportable while AI actions refuse.
+type VoiceRef struct {
+	ID      string
+	Name    string
+	Deleted bool
+}
+
 // Post is the aggregate exposed by the drafting context. Generation may replace its
-// canonical content and observations only through Service's published behaviors.
+// canonical content and observations only through Service's published behaviors. The post
+// stores only VoiceID; Voice is enriched on read through the VoiceDirectory port.
 type Post struct {
 	Slug                    string
 	UserID                  string
+	VoiceID                 string
+	Voice                   VoiceRef
 	Title                   string
 	Memo                    string
 	Status                  string
@@ -72,10 +91,14 @@ type Post struct {
 	Content                 *PostContent
 	ContentRevision         int64
 	MachineBaselineRevision int64
-	TargetLength            *int
-	FinalizedRevision       int64
-	FinalizedAt             *time.Time
-	Observations            []Observation
+	// MachineBaselineVoiceID is the voice the latest machine result was written under.
+	// Reassignment clears it, so finalization learning can prove the baseline and the
+	// current voice agree.
+	MachineBaselineVoiceID string
+	TargetLength           *int
+	FinalizedRevision      int64
+	FinalizedAt            *time.Time
+	Observations           []Observation
 
 	// Images is populated by Get, not by the store's post lookup.
 	Images              []Image
@@ -86,15 +109,17 @@ type Post struct {
 // LearningSnapshot is the post context's ownership-checked hand-off to voice. The
 // voice context never reads post tables and cannot mutate either snapshot.
 type LearningSnapshot struct {
-	PostSlug         string
-	UserID           string
-	Current          PostContent
-	ContentRevision  int64
-	MachineBaseline  PostContent
-	BaselineRevision int64
-	TargetLength     *int
-	FinalizedAt      time.Time
-	UpdatedAt        time.Time
+	PostSlug               string
+	UserID                 string
+	VoiceID                string
+	MachineBaselineVoiceID string
+	Current                PostContent
+	ContentRevision        int64
+	MachineBaseline        PostContent
+	BaselineRevision       int64
+	TargetLength           *int
+	FinalizedAt            time.Time
+	UpdatedAt              time.Time
 }
 
 // BlockType is kept as the LLM/protojson spelling at the domain boundary.
@@ -137,6 +162,8 @@ type Observation struct {
 // Summary is a row of the post list.
 type Summary struct {
 	Slug                string
+	VoiceID             string
+	Voice               VoiceRef
 	Title               string
 	Status              string
 	UpdatedAt           time.Time

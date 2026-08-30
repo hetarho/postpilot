@@ -1,7 +1,8 @@
 # Policy — Post generation
 
 Canonical rules that are **currently true** in the code. Source: [plan/06](../plan/06.two-stage-generation-and-contact-sheet.md),
-built by jobs 10, 11, and 23.
+built by jobs 10, 11, and 23; voice scoping from
+[plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18.
 
 ## Canonical content
 
@@ -59,6 +60,9 @@ built by jobs 10, 11, and 23.
   observe model; with no photos, observation is omitted and its ref is stored empty.
 - The job queue's one-active-job-per-post constraint is authoritative under concurrency. A collision is
   `FailedPrecondition` and includes the active job id so the client can attach to it.
+- The post's voice must be active. A post whose voice is deleted is refused with `FailedPrecondition` before any
+  enqueue or provider call — both for ordinary generation and for A/B generation — and the server never falls back
+  to the default or another voice.
 
 ## Contact sheet and reading view
 
@@ -72,7 +76,9 @@ built by jobs 10, 11, and 23.
   render canonical HTML.
 - The editor exposes separate `생성` and `A/B 비교 생성` actions with independent model blockers and pending states.
   Both await the latest title/memo save and refuse concurrent post work. A missing pair blocks only A/B; a missing
-  active writer blocks only ordinary generation. A zero-photo post does not require observe.
+  active writer blocks only ordinary generation. A zero-photo post does not require observe. A deleted voice blocks
+  both, before every other reason, with the shared deleted-voice message; the model lab's write comparison applies
+  the same precondition.
 
 ## Configuration
 
@@ -90,9 +96,14 @@ built by jobs 10, 11, and 23.
 - A collapsed options popover saves or clears an optional target length separately from content. Absence is carried
   as absence through ordinary-job payloads, A/B snapshots, revision, and prompts; there is no hidden 1,200-character
   fallback. A configured positive value is frozen exactly, but machine output never rewrites the saved option.
-- The projection contains typed descriptors, legacy manual guidance, bans, evidence-ranked active rules, and 0–3
-  unique excerpts. Topic/tag matches lead; stable recent fallback keeps a single unrelated finalized post useful.
-  Candidate/retired/rejected rules never enter the prompt.
+- Start freezes the owned post's exact active `voice_id` with the input; the handler resolves that voice's profile
+  version and projection and nothing else. The projection contains that voice's typed descriptors, legacy manual
+  guidance, bans, evidence-ranked active rules, and 0–3 unique excerpts. Retrieval text (title/memo) and tag matches
+  lead; stable recent fallback keeps a single unrelated finalized post useful. Candidate/retired/rejected rules and
+  any other voice's data never enter the prompt.
+- A machine result establishes a baseline carrying the frozen voice id; a result whose frozen voice no longer matches
+  the post (reassigned mid-flight) or is deleted is refused rather than written. Applying an A/B winner rechecks the
+  same rule.
 - Voice input precedes per-post material and forbids copying example facts/phrases. Measured ending distribution is a
   first-class constraint, and the prompt forbids a third consecutive identical ending.
 - Zero samples/sources is valid. Generation never requires history or starts learning, rule comparison, validation,

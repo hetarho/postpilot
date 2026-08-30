@@ -1,8 +1,9 @@
 # Policy — Durable generation jobs
 
 Canonical rules that are **currently true** in the code. Source: [plan/05](../plan/05.generation-job-queue.md),
-built by job 07. The concrete `analyze_voice`, `generate`, `revise`, and `model_experiment` handlers are registered by
-their owning feature jobs; this document owns the shared record, worker, query, and polling contract.
+built by job 07; per-voice ownership from [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18.
+The concrete `analyze_voice`, `generate`, `revise`, and `model_experiment` handlers are registered by their owning
+feature jobs; this document owns the shared record, worker, query, and polling contract.
 
 ## Record and lifecycle
 
@@ -13,11 +14,20 @@ their owning feature jobs; this document owns the shared record, worker, query, 
   and write models, kind-specific JSON payload, and created/updated/started/finished timestamps.
 - `model_experiment` payload is the experiment id. Its progress stages are `observe`, `compare_write`,
   `compare_observe`, and `compare_analyze`; candidate completion writes one monotonic compare counter.
-- `post_slug` is nullable because `analyze_voice` belongs to an account rather than a post. Model references are
-  stored as `provider_id/model_id`; payload is stored as text.
-- One non-terminal job may target a post, regardless of kind. One non-terminal account-scoped job may exist for a
-  `(user_id, kind)` pair. Partial unique indexes enforce both rules at the database boundary, closing concurrent
-  enqueue races; `ErrAlreadyInProgress` carries the durable active id the caller should attach to.
+- `post_slug` is nullable because some voice-owned work has no post target. Learning and rule-comparison rows may
+  retain the post that supplied their source while still belonging to a voice. `voice_id` is nullable only for work
+  that neither reads nor publishes voice-owned state (for example an observe comparison); generation, revision,
+  write comparison, and personalization rows freeze the relevant post or explicit target voice. Model references
+  are stored as `provider_id/model_id`; payload is stored as text.
+- One non-terminal job may target a post, regardless of kind. One non-terminal **voice-owned** job may exist for a
+  `(voice_id, kind)` pair, including learning/comparison rows that also target a post, so those rows satisfy both
+  guards. Two voices of one account can analyze or learn independently; a row with neither post nor voice keeps the
+  older `(user_id, kind)` guard. Partial unique indexes enforce the post/account guards. A `BEFORE INSERT` trigger
+  enforces the voice guard so a lossless upgrade can retain pre-0009 active learning rows for different posts without
+  rewriting their durable statuses; SQLite's single writer closes the same concurrent-enqueue race. New work sees
+  every retained row through the guard query and trigger. `ErrAlreadyInProgress` carries the durable active id the
+  caller should attach to. The voice context asks `HasActiveForVoice` before a soft delete; the job context never
+  reads voice tables.
 - A post-targeted row has a composite foreign key to `(posts.slug, posts.user_id)`, and enqueue's guard lookup is
   owner-scoped. A job therefore cannot attach one account's work or status to another account's post, even if a
   future caller forgets its own ownership precheck.
@@ -55,7 +65,8 @@ their owning feature jobs; this document owns the shared record, worker, query, 
 - `GetGeneration(id)` is authenticated and takes the acting user only from the session context. An existing job
   owned by another account is `PermissionDenied` (403); an unknown id is `NotFound` (404).
 - `Post.active_job` and `PostSummary.active_job` contain the post's queued/running job, if any. The post context asks
-  the job context through its consumer-owned `ActiveJobFinder` port; it never reads `generation_jobs` itself.
+  the job context through its consumer-owned `ActiveJobFinder` port; it never reads `generation_jobs` itself. The same
+  port refuses a voice reassignment while a job targets the post.
 - The post list renders an active row as `생성 중`. Reopening a post recovers the durable id from `active_job`, so
   polling does not depend on component memory.
 - Post lists poll only while at least one returned post has an active job. They stop after the server projection

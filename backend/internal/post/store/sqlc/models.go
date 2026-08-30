@@ -22,6 +22,7 @@ type Image struct {
 type Post struct {
 	Slug                    string
 	UserID                  string
+	VoiceID                 string
 	Title                   string
 	Memo                    string
 	Observations            sql.NullString
@@ -32,6 +33,7 @@ type Post struct {
 	ContentRevision         int64
 	MachineBaseline         sql.NullString
 	MachineBaselineRevision int64
+	MachineBaselineVoiceID  sql.NullString
 	TargetLength            sql.NullInt64
 	FinalizedRevision       sql.NullInt64
 	FinalizedAt             sql.NullString

@@ -12,13 +12,15 @@ describe('mint', () => {
     const handle = attachDraftQueue({
       slug: undefined,
       saved: { title: '', memo: '' },
+      voiceId: 'voice-a',
       send,
       onState: () => {},
       onMinted,
     })
 
     await expect(handle.mint()).resolves.toBe('20260828-untitled')
-    expect(send).toHaveBeenCalledWith('', { title: '', memo: '' })
+    // The create names its voice even though nothing else was typed (spec/policy/posts.md).
+    expect(send).toHaveBeenCalledWith('', { title: '', memo: '' }, 'voice-a')
     expect(onMinted).toHaveBeenCalledWith('20260828-untitled')
   })
 
@@ -27,6 +29,7 @@ describe('mint', () => {
     const handle = attachDraftQueue({
       slug: undefined,
       saved: { title: '', memo: '' },
+      voiceId: 'voice-a',
       send,
       onState: () => {},
       onMinted: () => {},
@@ -35,7 +38,7 @@ describe('mint', () => {
 
     await expect(handle.mint()).resolves.toBe('20260828-jeju')
     expect(send).toHaveBeenCalledTimes(1)
-    expect(send).toHaveBeenCalledWith('', { title: '제주', memo: '' })
+    expect(send).toHaveBeenCalledWith('', { title: '제주', memo: '' }, 'voice-a')
   })
 
   // An empty draft equals what the server "holds" for a new post, so without care a
@@ -50,6 +53,7 @@ describe('mint', () => {
       const handle = attachDraftQueue({
         slug: undefined,
         saved: { title: '', memo: '' },
+      voiceId: 'voice-a',
         send,
         onState: () => {},
         onMinted: () => {},
@@ -71,6 +75,7 @@ describe('mint', () => {
     const handle = attachDraftQueue({
       slug: '20260828-jeju',
       saved: { title: '제주', memo: '' },
+      voiceId: 'voice-a',
       send,
       onState: () => {},
       onMinted: () => {},
@@ -84,6 +89,7 @@ describe('mint', () => {
     const handle = attachDraftQueue({
       slug: undefined,
       saved: { title: '', memo: '' },
+      voiceId: 'voice-a',
       send: vi.fn(async () => 'never'),
       onState: () => {},
       onMinted: () => {},
@@ -97,6 +103,7 @@ describe('mint', () => {
     const handle = attachDraftQueue({
       slug: undefined,
       saved: { title: '', memo: '' },
+      voiceId: 'voice-a',
       send: () => new Promise(() => {}),
       onState: () => {},
       onMinted: () => {},

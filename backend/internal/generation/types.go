@@ -46,9 +46,18 @@ type Image struct {
 	Key      string
 }
 
+// VoiceRef is the post's voice as the post context projects it. Deleted is what makes a
+// start or a handler refuse before any provider call.
+type VoiceRef struct {
+	ID      string
+	Name    string
+	Deleted bool
+}
+
 type PostInput struct {
 	Slug         string
 	UserID       string
+	Voice        VoiceRef
 	Title        string
 	Memo         string
 	Images       []Image
@@ -64,9 +73,12 @@ type Profile struct {
 	EndingMaxConsecutive int
 }
 
+// StartRequest.VoiceID is filled by the service from the owned post and frozen into the
+// job, so the handler can prove the post still belongs to the voice it was queued for.
 type StartRequest struct {
 	UserID       string
 	PostSlug     string
+	VoiceID      string
 	ObserveModel string
 	WriteModel   string
 	TargetLength *int
@@ -75,6 +87,7 @@ type StartRequest struct {
 type GenerateJob struct {
 	UserID       string
 	PostSlug     string
+	VoiceID      string
 	ObserveModel string
 	WriteModel   string
 	TargetLength *int
@@ -83,6 +96,7 @@ type GenerateJob struct {
 type StartRevisionRequest struct {
 	UserID      string
 	PostSlug    string
+	VoiceID     string
 	Instruction string
 	SaveAsRule  bool
 	WriteModel  string
@@ -91,6 +105,7 @@ type StartRevisionRequest struct {
 type RevisionJob struct {
 	UserID     string
 	PostSlug   string
+	VoiceID    string
 	WriteModel string
 	Payload    []byte
 }

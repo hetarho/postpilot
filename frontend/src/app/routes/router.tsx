@@ -7,6 +7,7 @@ import {
   redirect,
 } from '@tanstack/react-router'
 import { loadSession } from '@/entities/session'
+import { defaultVoice, loadVoices } from '@/entities/voice'
 import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { LoginPage } from '@/pages/login'
 import { PostsPage } from '@/pages/posts'
@@ -17,6 +18,7 @@ import {
   VoiceValidationsPage,
   VoiceVersionsPage,
 } from '@/pages/voice'
+import { VoicesPage } from '@/pages/voices'
 import { AIModelsPage } from '@/pages/ai-models'
 import { ModelExperimentPage } from '@/pages/model-experiment'
 import { VoiceRuleComparisonPage } from '@/pages/voice-rule-comparison'
@@ -104,43 +106,98 @@ const postsRoute = createRoute({
   component: PostsPage,
 })
 
-// A second pathless layout, this time for sub-navigation: the five voice tabs keep their own
-// addresses and share the tab row. The two detail screens below stay OUTSIDE it — they are
-// full-width review surfaces with their own back link, not a sixth tab.
+const voicesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/voices',
+  component: VoicesPage,
+})
+
+// The layout of one voice: the five tabs keep their own addresses under `/voices/$voiceId` and
+// share the tab row. The two detail screens further down stay OUTSIDE it — they are full-width
+// review surfaces with their own back link, not a sixth tab.
 const voiceLayoutRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  id: 'voice',
+  path: '/voices/$voiceId',
   component: VoiceLayout,
 })
 
 const voiceRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
-  path: '/voice',
+  path: '/',
   component: VoicePage,
 })
 
 const voiceVersionsRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
-  path: '/voice/versions',
+  path: '/versions',
   component: VoiceVersionsPage,
 })
 
 const voiceImportRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
-  path: '/voice/import',
+  path: '/import',
   component: VoiceImportPage,
 })
 
 const voiceRulesRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
-  path: '/voice/rules',
+  path: '/rules',
   component: VoiceRulesPage,
 })
 
 const voiceValidationsRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
-  path: '/voice/validations',
+  path: '/validations',
   component: VoiceValidationsPage,
+})
+
+/** The tabs an old `/voice/<tab>` link may name, so the redirect keeps the user on the same
+ *  screen of the default voice. Anything else lands on the profile tab. */
+const LEGACY_VOICE_TABS = new Set(['versions', 'import', 'rules', 'validations'])
+
+/** Sends an old `/voice` address to the same tab of the account's default voice — read from the
+ *  directory, never created here — or to the directory itself when there is none to show. Always
+ *  throws (a redirect), so a caller's `await` is the whole guard. */
+async function redirectLegacyVoice(
+  context: RouterContext & { user: { id: string } },
+  tab: string,
+): Promise<never> {
+  const voices = await loadVoices(context.queryClient, context.transport, context.user.id).catch(
+    () => [],
+  )
+  const target = defaultVoice(voices)
+  if (!target) throw redirect({ to: '/voices', replace: true })
+  const params = { voiceId: target.id }
+  switch (LEGACY_VOICE_TABS.has(tab) ? tab : '') {
+    case 'versions':
+      throw redirect({ to: '/voices/$voiceId/versions', params, replace: true })
+    case 'import':
+      throw redirect({ to: '/voices/$voiceId/import', params, replace: true })
+    case 'rules':
+      throw redirect({ to: '/voices/$voiceId/rules', params, replace: true })
+    case 'validations':
+      throw redirect({ to: '/voices/$voiceId/validations', params, replace: true })
+    default:
+      throw redirect({ to: '/voices/$voiceId', params, replace: true })
+  }
+}
+
+// The address the app had before voices were plural. Bookmarks and the empty-profile warning
+// of an older draft still point here.
+const legacyVoiceRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/voice',
+  beforeLoad: async ({ context }) => {
+    await redirectLegacyVoice(context, '')
+  },
+})
+
+const legacyVoiceTabRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/voice/$',
+  beforeLoad: async ({ context, params }) => {
+    await redirectLegacyVoice(context, params._splat ?? '')
+  },
 })
 
 const aiModelsRoute = createRoute({
@@ -157,13 +214,13 @@ const modelExperimentRoute = createRoute({
 
 const voiceRuleComparisonRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  path: '/voice/rules/$id/compare',
+  path: '/voices/$voiceId/rules/$id/compare',
   component: VoiceRuleComparisonPage,
 })
 
 const voiceValidationRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  path: '/voice/validations/$id',
+  path: '/voices/$voiceId/validations/$id',
   component: VoiceValidationPage,
 })
 
@@ -187,6 +244,7 @@ export const routeTree = rootRoute.addChildren([
   authenticatedRoute.addChildren([
     indexRoute,
     postsRoute,
+    voicesRoute,
     voiceLayoutRoute.addChildren([
       voiceRoute,
       voiceVersionsRoute,
@@ -194,6 +252,8 @@ export const routeTree = rootRoute.addChildren([
       voiceRulesRoute,
       voiceValidationsRoute,
     ]),
+    legacyVoiceRoute,
+    legacyVoiceTabRoute,
     aiModelsRoute,
     modelExperimentRoute,
     voiceRuleComparisonRoute,

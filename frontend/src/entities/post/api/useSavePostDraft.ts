@@ -7,6 +7,7 @@ import {
   type Post,
   PostSchema,
   PostService,
+  VoiceRefSchema,
 } from '@/shared/api'
 import { getPostQueryKey, listPostsQueryKey } from './post-queries'
 
@@ -15,13 +16,25 @@ import { getPostQueryKey, listPostsQueryKey } from './post-queries'
  *  SavePostDraft answers with a whole post snapshot, but the request is in flight while
  *  uploads and generation independently advance images, observations, active_job and
  *  content. Installing that snapshot wholesale could roll any of them back in the cache.
- *  Title and memo are the only fields this mutation settles; every other field remains
- *  owned by GetPost or its focused mutation patch. */
+ *  Title, memo and the voice assignment are the fields this mutation settles; every other
+ *  field remains owned by GetPost or its focused mutation patch.
+ *
+ *  A reassignment is the one save that also moves the machine baseline: the server clears
+ *  it in the same write (spec/policy/posts.md), and it refuses to reassign while a job could
+ *  advance that baseline, so mirroring the cleared fields cannot roll a job's result back. */
 export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefined): Post {
   if (!cached?.post) return saved
   const post = clone(PostSchema, cached.post)
   post.title = saved.title
   post.memo = saved.memo
+  if (saved.voice) {
+    if (saved.voice.id !== cached.post.voice?.id) {
+      post.machineBaselineRevision = saved.machineBaselineRevision
+      post.machineBaselineVoiceId = saved.machineBaselineVoiceId
+      post.canFinalize = saved.canFinalize
+    }
+    post.voice = clone(VoiceRefSchema, saved.voice)
+  }
   return post
 }
 

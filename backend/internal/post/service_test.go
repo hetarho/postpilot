@@ -14,9 +14,32 @@ const (
 	bob   = "bob"
 )
 
+// Each account's default voice, plus a second active voice and a tombstone for alice, as
+// the voice directory would publish them.
+const (
+	aliceVoice   = "voice-alice"
+	aliceReview  = "voice-alice-review"
+	aliceDeleted = "voice-alice-deleted"
+	bobVoice     = "voice-bob"
+)
+
 var testNow = time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 
 const testMaxBytes int64 = 1 << 20
+
+// fakeVoices is the directory port: every owned voice, tombstones included.
+type fakeVoices map[string][]VoiceRef
+
+func (f fakeVoices) Voices(_ context.Context, userID string) ([]VoiceRef, error) {
+	return f[userID], nil
+}
+
+func testVoices() fakeVoices {
+	return fakeVoices{
+		alice: {{ID: aliceVoice, Name: "기본 말투"}, {ID: aliceReview, Name: "리뷰"}, {ID: aliceDeleted, Name: "옛 말투", Deleted: true}},
+		bob:   {{ID: bobVoice, Name: "기본 말투"}},
+	}
+}
 
 // newTestService returns a service with a frozen clock and predictable ids.
 func newTestService(t *testing.T) (*Service, *fakeStore, *fakeBlobs) {
@@ -26,6 +49,7 @@ func newTestService(t *testing.T) (*Service, *fakeStore, *fakeBlobs) {
 	blobs := newFakeBlobs()
 	svc := NewService(store, blobs, 10*time.Minute, 5*time.Minute, testMaxBytes)
 	svc.now = func() time.Time { return testNow }
+	svc.SetVoiceDirectory(testVoices())
 
 	n := 0
 	svc.newID = func() string {
@@ -36,9 +60,12 @@ func newTestService(t *testing.T) (*Service, *fakeStore, *fakeBlobs) {
 	return svc, store, blobs
 }
 
+func defaultVoiceFor(userID string) string { return "voice-" + userID }
+
 func mustCreatePost(t *testing.T, svc *Service, userID, title string) Post {
 	t.Helper()
-	created, err := svc.SaveDraft(context.Background(), userID, "", title, "")
+	voiceID := defaultVoiceFor(userID)
+	created, err := svc.SaveDraft(context.Background(), userID, "", title, "", &voiceID)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
@@ -53,9 +80,13 @@ func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 	svc, _, _ := newTestService(t)
 	ctx := context.Background()
 
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "first")
+	voiceID := aliceVoice
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "first", &voiceID)
 	if err != nil {
 		t.Fatalf("create: %v", err)
+	}
+	if created.VoiceID != aliceVoice || created.Voice.Name != "기본 말투" {
+		t.Errorf("voice = %+v, want the requested default projected with its name", created.Voice)
 	}
 	if created.Slug != "20260301-jeju" {
 		t.Errorf("slug = %q", created.Slug)
@@ -64,7 +95,7 @@ func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 		t.Errorf("status = %q, want draft", created.Status)
 	}
 
-	updated, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "second")
+	updated, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "second", nil)
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -82,7 +113,7 @@ func TestSaveDraftKeepsTheSlugOnRetitle(t *testing.T) {
 	svc, _, _ := newTestService(t)
 	created := mustCreatePost(t, svc, alice, "Jeju")
 
-	renamed, err := svc.SaveDraft(context.Background(), alice, created.Slug, "Something else entirely", "")
+	renamed, err := svc.SaveDraft(context.Background(), alice, created.Slug, "Something else entirely", "", nil)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
@@ -138,7 +169,7 @@ func TestOwnership(t *testing.T) {
 		if _, err := svc.Get(ctx, bob, mine.Slug); !errors.Is(err, ErrForbidden) {
 			t.Errorf("Get = %v, want ErrForbidden", err)
 		}
-		if _, err := svc.SaveDraft(ctx, bob, mine.Slug, "x", "y"); !errors.Is(err, ErrForbidden) {
+		if _, err := svc.SaveDraft(ctx, bob, mine.Slug, "x", "y", nil); !errors.Is(err, ErrForbidden) {
 			t.Errorf("SaveDraft = %v, want ErrForbidden", err)
 		}
 		if _, _, _, err := svc.CreateUpload(ctx, bob, mine.Slug, "a.jpg"); !errors.Is(err, ErrForbidden) {
@@ -150,7 +181,7 @@ func TestOwnership(t *testing.T) {
 		if _, err := svc.Get(ctx, alice, "nope"); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Get = %v, want ErrNotFound", err)
 		}
-		if _, err := svc.SaveDraft(ctx, alice, "nope", "x", "y"); !errors.Is(err, ErrNotFound) {
+		if _, err := svc.SaveDraft(ctx, alice, "nope", "x", "y", nil); !errors.Is(err, ErrNotFound) {
 			t.Errorf("SaveDraft = %v, want ErrNotFound", err)
 		}
 	})
@@ -630,7 +661,8 @@ func TestCreatePostRetriesWhenTheSlugIsTakenMidFlight(t *testing.T) {
 		}
 	}
 
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "")
+	voiceID := aliceVoice
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}

@@ -1,12 +1,22 @@
 import { useId, useState } from 'react'
-import { useUpdateVoiceProfile } from '@/entities/voice-profile'
+import { useUpdateVoiceProfile } from '@/entities/voice'
 import { Button, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
 
-export function RulesEditor({ ownerId, rules }: { ownerId: string; rules: string }) {
+export function RulesEditor({
+  ownerId,
+  voiceId,
+  rules,
+  readOnly = false,
+}: {
+  ownerId: string
+  voiceId: string
+  rules: string
+  readOnly?: boolean
+}) {
   const id = useId()
   const errorId = `${id}-error`
   const [draft, setDraft] = useState<string | null>(null)
-  const update = useUpdateVoiceProfile(ownerId)
+  const update = useUpdateVoiceProfile(ownerId, voiceId)
   const value = draft ?? rules
   const dirty = draft !== null
 
@@ -29,6 +39,7 @@ export function RulesEditor({ ownerId, rules }: { ownerId: string; rules: string
       </FieldLabel>
       <Textarea
         id={id}
+        disabled={readOnly}
         value={value}
         onChange={(event) => {
           const next = event.target.value
@@ -54,7 +65,7 @@ export function RulesEditor({ ownerId, rules }: { ownerId: string; rules: string
         <Button
           variant="secondary"
           onClick={() => void save()}
-          disabled={!dirty}
+          disabled={readOnly || !dirty}
           pending={update.isSaving}
           className="w-full sm:w-auto"
         >

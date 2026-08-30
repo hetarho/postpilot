@@ -1,8 +1,16 @@
 import { Link } from '@tanstack/react-router'
-import { type VoiceProfile, isEmptyProfile } from '@/entities/voice-profile'
+import { type VoiceProfile, isEmptyProfile } from '@/entities/voice'
 import { Notice, buttonStyles } from '@/shared/ui'
 
-export function VoiceWarning({ profile }: { profile: VoiceProfile | undefined }) {
+/** The caveat below the memo: this voice has learned nothing yet. Links to THAT voice, since a
+ *  post's voice is what the draft will be written in. */
+export function VoiceWarning({
+  profile,
+  voiceId,
+}: {
+  profile: VoiceProfile | undefined
+  voiceId: string
+}) {
   if (!profile || !isEmptyProfile(profile)) return null
 
   return (
@@ -19,7 +27,8 @@ export function VoiceWarning({ profile }: { profile: VoiceProfile | undefined })
             it inside the §2.6 contract. The underline is its resting affordance — ghost has no
             fill until it is pressed, and there is no hover on a phone (§6). */}
         <Link
-          to="/voice"
+          to="/voices/$voiceId"
+          params={{ voiceId }}
           className={buttonStyles({
             variant: 'ghost',
             className: 'text-notice-warning-fg shrink-0 underline',

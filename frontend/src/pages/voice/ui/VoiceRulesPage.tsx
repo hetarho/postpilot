@@ -1,25 +1,27 @@
-import { useRuleConfirmations } from '@/entities/voice-profile'
+import { useRuleConfirmations } from '@/entities/voice'
 import { VoiceRulesManager } from '@/features/manage-voice-rules'
-import { VoiceScreen } from './VoiceScreen'
+import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
 
 export function VoiceRulesPage() {
   return (
     <VoiceScreen
       title="대조 규칙"
-      description="후보 규칙은 생성에 쓰이지 않습니다. 서로 다른 글에서 근거가 3번 모인 활성 규칙만 적용됩니다."
+      description="후보 규칙은 생성에 쓰이지 않습니다. 이 말투의 서로 다른 글에서 근거가 3번 모인 활성 규칙만 적용됩니다."
     >
-      {({ profile, ownerId }) => <RulesPanel ownerId={ownerId} profile={profile} />}
+      {(context) => <RulesPanel {...context} />}
     </VoiceScreen>
   )
 }
 
-function RulesPanel({
-  ownerId,
-  profile,
-}: {
-  ownerId: string
-  profile: Parameters<typeof VoiceRulesManager>[0]['profile']
-}) {
-  const { confirmations } = useRuleConfirmations(ownerId)
-  return <VoiceRulesManager ownerId={ownerId} profile={profile} confirmations={confirmations} />
+function RulesPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext) {
+  const { confirmations } = useRuleConfirmations(ownerId, voiceId)
+  return (
+    <VoiceRulesManager
+      ownerId={ownerId}
+      voiceId={voiceId}
+      profile={profile}
+      confirmations={confirmations}
+      blocked={voice.deleted ? '삭제된 말투는 복원하기 전까지 규칙을 바꿀 수 없어요.' : ''}
+    />
+  )
 }

@@ -19,7 +19,7 @@ import {
   type PostDraft,
 } from '@/entities/post'
 import { useSession } from '@/entities/session'
-import { isEmptyProfile, useVoiceProfile } from '@/entities/voice-profile'
+import { useVoiceProfile, type VoiceRef } from '@/entities/voice'
 import type { PostContent } from '@/shared/api'
 import { GenerationActions, type GenerationActionsHandle } from '@/features/generate-post'
 import {
@@ -32,6 +32,7 @@ import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
 import { StageModelSelect } from '@/features/select-model'
+import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import {
   ActionBar,
   Badge,
@@ -43,7 +44,7 @@ import {
 } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { ExportPanel } from '@/widgets/export-panel'
-import { VoiceWarning } from '@/widgets/voice-warning'
+import { DeletedVoiceWarning, VoiceWarning } from '@/widgets/voice-warning'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
 import { EDITOR_STEPS, stepForStatus, type EditorStep } from '../model/steps'
 import { EditorPhotos } from './EditorPhotos'
@@ -54,6 +55,10 @@ interface DraftEditorProps {
   /** The saved post being edited, or undefined for a draft the server has not created
    *  yet (`/posts/new`). */
   post?: PostDraft
+  /** The voice a draft with no post yet starts in — the account's default, resolved by the
+   *  route before this mounts, so the first save always carries a concrete id
+   *  (spec/policy/posts.md). Ignored for an existing post, whose voice is its own. */
+  defaultVoiceId?: string
 }
 
 /** Title + memo, autosaved, plus the post's lifecycle presented as three steps. The screen the
@@ -62,8 +67,10 @@ interface DraftEditorProps {
  *  The steps are PANELS, not routes: one mounted editor per slug, so a step change cannot remount
  *  the component and strand a queued save (tech/draft-autosave). Title, memo, photos and the mint
  *  plumbing therefore stay outside the panels — they are the post's identity, not one step's work. */
-export function DraftEditor({ post }: DraftEditorProps) {
+export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   const navigate = useNavigate()
+  const { user } = useSession()
+  const ownerId = user?.id ?? ''
   // Both fields are textareas: a Korean title fits ~14 characters across a 360px screen at
   // `text-2xl`, and a single-line input would scroll the rest of it out of a field that has no
   // well to show it scrolled (design-language §0 — the title is one of the largest things on the
@@ -83,10 +90,17 @@ export function DraftEditor({ post }: DraftEditorProps) {
   // Read, not consumed — a component body may run more than once per mount.
   const caret = post ? peekCaret(post.slug) : undefined
 
+  // A draft with no post yet holds its own choice; an existing post's voice is the server's,
+  // and changes only through a confirmed reassignment (see `useAutosave.reassign`).
+  const [newVoiceId, setNewVoiceId] = useState(defaultVoiceId)
+  const voiceId = post ? post.voice.id : newVoiceId
+  const voice: VoiceRef = post?.voice ?? { id: newVoiceId, name: '', deleted: false }
+
   const autosave = useAutosave({
     post,
     title,
     memo,
+    voiceId,
     onMinted: (slug) => {
       // Read off the live DOM, so this is the caret as it is now rather than as it was
       // when the save left.
@@ -190,9 +204,23 @@ export function DraftEditor({ post }: DraftEditorProps) {
         className="mt-4 text-2xl font-semibold tracking-tight"
       />
 
+      {/* The voice is the post's identity like its title, so it sits with the title outside the
+          step panels: it decides what every step's AI work sounds like, and a reassignment must
+          not be lost to a step change any more than a title edit is. */}
+      <PostVoiceSelect
+        ownerId={ownerId}
+        value={voiceId}
+        current={post?.voice}
+        blocked={post ? reassignmentBlocker(post) : ''}
+        confirm={Boolean(post)}
+        onSelect={post ? autosave.reassign : setNewVoiceId}
+        className="mt-4"
+      />
+
       {post ? (
         <LifecycleSteps
           post={post}
+          ownerId={ownerId}
           step={step}
           onStepChange={setStep}
           memoField={memoField}
@@ -205,7 +233,7 @@ export function DraftEditor({ post }: DraftEditorProps) {
           {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
           {memoField}
           <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
-          <EditorVoiceWarning />
+          <EditorVoiceWarning ownerId={ownerId} voice={voice} />
           {/* A draft with no post yet has no committing action — but it is also the state where a
               failing save is most expensive, since nothing has reached the server at all. */}
           <EditorDock saveState={autosave.state} />
@@ -258,16 +286,28 @@ function MemoField({
 /** Below the memo, not above it: three wrapped lines of undismissable warning at the top of the
  *  editor pushed the writing field a fifth of a 640px screen down, for every user who has not
  *  trained a profile yet — and chrome is small, quiet and at the edges (§0). It still sits above
- *  글 생성, which is what it is a caveat about. */
-function EditorVoiceWarning() {
-  const { user } = useSession()
-  const { profile } = useVoiceProfile(user?.id ?? '')
-  if (!profile || !isEmptyProfile(profile)) return null
-  return (
-    <div className="mt-6">
-      <VoiceWarning profile={profile} />
-    </div>
-  )
+ *  글 생성, which is what it is a caveat about.
+ *
+ *  A deleted voice is the other caveat, and the louder one: nothing AI will run until it is
+ *  restored or the post is moved. Its profile is not read — a tombstone's emptiness is not the
+ *  point. */
+function EditorVoiceWarning({ ownerId, voice }: { ownerId: string; voice: VoiceRef }) {
+  if (voice.deleted) {
+    return (
+      <div className="mt-6">
+        <DeletedVoiceWarning ownerId={ownerId} voice={voice} />
+      </div>
+    )
+  }
+  if (!voice.id) return null
+  return <EmptyProfileWarning ownerId={ownerId} voiceId={voice.id} />
+}
+
+function EmptyProfileWarning({ ownerId, voiceId }: { ownerId: string; voiceId: string }) {
+  const { profile } = useVoiceProfile(ownerId, voiceId)
+  const warning = <VoiceWarning profile={profile} voiceId={voiceId} />
+  if (!profile) return null
+  return <div className="mt-6 empty:hidden">{warning}</div>
 }
 
 /** The editor's docked bar. Both of the things a phone could not reach live here: the one
@@ -325,6 +365,7 @@ function EmptyStep({
 
 function LifecycleSteps({
   post,
+  ownerId,
   step,
   onStepChange,
   memoField,
@@ -333,6 +374,7 @@ function LifecycleSteps({
   saveState,
 }: {
   post: PostDraft
+  ownerId: string
   step: EditorStep
   onStepChange: (step: EditorStep) => void
   memoField: ReactNode
@@ -369,8 +411,6 @@ function LifecycleSteps({
     (content: PostContent) => setEdited({ revision: post.contentRevision, content }),
     [post.contentRevision],
   )
-  const { user } = useSession()
-
   // A resumed job has no recorded step, so its kind says which one owns it.
   const jobStep: EditorStep =
     started?.id === jobId ? started.step : job?.kind === 'revise' ? 'refine' : 'generate'
@@ -391,7 +431,7 @@ function LifecycleSteps({
     <>
       {memoField}
       <EditorPhotos post={post} ensureSlug={ensureSlug} />
-      <EditorVoiceWarning />
+      <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
       <section aria-labelledby="generation-heading" className="mt-10">
         <h2 id="generation-heading" className="text-lg font-semibold tracking-tight">
           글 생성
@@ -443,17 +483,25 @@ function LifecycleSteps({
         ref={contentEditorRef}
         post={post}
         onContentChange={reportEdited}
-        renderSentenceAction={(text, flush) => (
-          <SentenceFeedback
-            postSlug={post.slug}
-            text={text}
-            beforeSubmit={() => flush().then(() => undefined)}
-          />
-        )}
+        // Feedback is evidence for the voice, and a deleted voice cannot take any; the server
+        // refuses it, so the control is not offered rather than offered to fail.
+        renderSentenceAction={
+          post.voice.deleted
+            ? undefined
+            : (text, flush) => (
+                <SentenceFeedback
+                  postSlug={post.slug}
+                  text={text}
+                  beforeSubmit={() => flush().then(() => undefined)}
+                />
+              )
+        }
       />
       <ReviseForm
         ref={reviseRef}
+        ownerId={ownerId}
         postSlug={post.slug}
+        voice={post.voice}
         activeJob={job}
         jobPending={Boolean(jobId) && !job}
         onStarted={(id) => setStarted({ id, step: 'refine' })}
@@ -470,9 +518,9 @@ function LifecycleSteps({
 
   const finishPanel = result ? (
     <>
-      {user && (
+      {ownerId && (
         <FinalizePost
-          ownerId={user.id}
+          ownerId={ownerId}
           post={post}
           // 확정 lives on 글 완성 and the block editor on 글 다듬기, so the ref is null here by
           // construction. The queue is keyed by slug and outlives the editor, so the pending save

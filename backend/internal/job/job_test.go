@@ -39,10 +39,19 @@ func newHarness(t *testing.T) *harness {
 			t.Fatalf("insert user %s: %v", id, err)
 		}
 	}
+	for _, id := range []string{"alice", "bob"} {
+		for _, suffix := range []string{"", "-2"} {
+			if _, err := handle.Writer.ExecContext(ctx,
+				"INSERT INTO voices (id, user_id, name, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+				"voice-"+id+suffix, id, "voice"+suffix, suffix == "", now, now); err != nil {
+				t.Fatalf("insert voice %s: %v", id, err)
+			}
+		}
+	}
 	for _, row := range []struct{ slug, user string }{{"post-a", "alice"}, {"post-b", "alice"}, {"post-bob", "bob"}} {
 		if _, err := handle.Writer.ExecContext(ctx,
-			"INSERT INTO posts (slug, user_id, created_at, updated_at) VALUES (?, ?, ?, ?)",
-			row.slug, row.user, now, now); err != nil {
+			"INSERT INTO posts (slug, user_id, voice_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+			row.slug, row.user, "voice-"+row.user, now, now); err != nil {
 			t.Fatalf("insert post %s: %v", row.slug, err)
 		}
 	}
@@ -156,6 +165,92 @@ func TestEnqueueGuardsPostAndUserKind(t *testing.T) {
 	}
 }
 
+// Plan 10 A14: voice-owned work is guarded per (voice, kind), so two voices of one account
+// analyze concurrently while one voice still attaches to its active job; the frozen voice
+// is projected back, and any job frozen to a voice makes that voice busy for deletion.
+func TestVoiceOwnedJobsAreGuardedPerVoice(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	first, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice", VoiceID: "voice-alice"})
+	if err != nil {
+		t.Fatalf("first voice analysis: %v", err)
+	}
+	second, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice", VoiceID: "voice-alice-2"})
+	if err != nil {
+		t.Fatalf("second voice analysis: %v", err)
+	}
+	var active *job.ErrAlreadyInProgress
+	if _, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice", VoiceID: "voice-alice"}); !errors.As(err, &active) || active.ActiveID != first {
+		t.Fatalf("same voice analysis = %v, want active %s", err, first)
+	}
+	if _, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice"}); err != nil {
+		t.Fatalf("another kind for the same voice: %v", err)
+	}
+	found, err := h.queue.Get(ctx, second, "alice")
+	if err != nil || found.VoiceID != "voice-alice-2" {
+		t.Fatalf("job projection = %+v err=%v", found, err)
+	}
+	if summary, err := h.queue.ActiveForVoiceKind(ctx, "voice-alice-2", job.KindAnalyzeVoice); err != nil || summary == nil || summary.ID != second {
+		t.Fatalf("active for voice = %+v err=%v", summary, err)
+	}
+	for voiceID, want := range map[string]bool{"voice-alice": true, "voice-alice-2": true, "voice-bob": false} {
+		if busy, err := h.queue.HasActiveForVoice(ctx, voiceID); err != nil || busy != want {
+			t.Fatalf("HasActiveForVoice(%s) = %v err=%v, want %v", voiceID, busy, err, want)
+		}
+	}
+	// A post-backed job frozen to a voice also holds that voice.
+	if _, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindGenerate, UserID: "bob", PostSlug: postSlug("post-bob"), VoiceID: "voice-bob"}); err != nil {
+		t.Fatal(err)
+	}
+	if busy, _ := h.queue.HasActiveForVoice(ctx, "voice-bob"); !busy {
+		t.Fatal("post-backed job did not hold its voice")
+	}
+	// The (voice, kind) index closes the race the precheck cannot: a direct insert races.
+	if _, err := h.handle.Writer.ExecContext(ctx, "INSERT INTO generation_jobs(id,user_id,voice_id,kind,status,progress_done,progress_total,payload,created_at,updated_at) VALUES('dup','alice','voice-alice','analyze_voice','queued',0,0,'',?,?)", "2026-08-30T00:00:00Z", "2026-08-30T00:00:00Z"); err == nil {
+		t.Fatal("the database accepted a second active analysis for one voice")
+	}
+}
+
+// Learning and comparison jobs carry the triggering post for post-level lifecycle guards,
+// but that must not weaken their per-voice serialization.
+func TestPostBackedVoiceOwnedJobsAreAlsoGuardedPerVoice(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	if _, err := h.handle.Writer.ExecContext(ctx,
+		"INSERT INTO posts (slug, user_id, voice_id, created_at, updated_at) VALUES ('post-c', 'alice', 'voice-alice-2', ?, ?)",
+		"2026-08-30T00:00:00Z", "2026-08-30T00:00:00Z"); err != nil {
+		t.Fatalf("insert second-voice post: %v", err)
+	}
+	first, err := h.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice", PostSlug: postSlug("post-a"),
+	})
+	if err != nil {
+		t.Fatalf("first learning job: %v", err)
+	}
+	var active *job.ErrAlreadyInProgress
+	if _, err := h.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice", PostSlug: postSlug("post-b"),
+	}); !errors.As(err, &active) || active.ActiveID != first {
+		t.Fatalf("same voice learning on another post = %v, want active %s", err, first)
+	}
+	if _, err := h.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice-2", PostSlug: postSlug("post-c"),
+	}); err != nil {
+		t.Fatalf("another voice learning on another post: %v", err)
+	}
+	if _, err := h.handle.Writer.ExecContext(ctx,
+		"INSERT INTO generation_jobs(id,post_slug,user_id,voice_id,kind,status,progress_done,progress_total,payload,created_at,updated_at) VALUES('dup-post','post-b','alice','voice-alice','learn_voice','queued',0,0,'',?,?)",
+		"2026-08-30T00:00:00Z", "2026-08-30T00:00:00Z"); err == nil {
+		t.Fatal("the database accepted a second post-backed learning job for one voice")
+	}
+	if err := h.store.Insert(ctx, job.Job{
+		ID: "store-dup", Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice",
+		PostSlug: postSlug("post-b"), CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}); !errors.Is(err, job.ErrActiveConflict) {
+		t.Fatalf("store duplicate error = %v, want ErrActiveConflict", err)
+	}
+}
+
 func TestEnqueueRejectsPostOwnedByAnotherUser(t *testing.T) {
 	h := newHarness(t)
 	_, err := h.queue.Enqueue(context.Background(), job.NewJob{
@@ -169,6 +264,26 @@ func TestEnqueueRejectsPostOwnedByAnotherUser(t *testing.T) {
 		"SELECT COUNT(*) FROM generation_jobs WHERE post_slug = 'post-bob'",
 	).Scan(&count); scanErr != nil || count != 0 {
 		t.Fatalf("foreign post job count = %d, err = %v", count, scanErr)
+	}
+}
+
+// The active-voice check in a service can race with deletion. The insert trigger is the
+// durable arbiter, and the store must preserve that lifecycle meaning instead of leaking a
+// driver error that the RPC edge would turn into Internal.
+func TestStoreMapsInactiveVoiceTrigger(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	if _, err := h.handle.Writer.ExecContext(ctx,
+		"UPDATE voices SET deleted_at = ? WHERE id = 'voice-alice-2'",
+		"2026-08-30T00:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	err := h.store.Insert(ctx, job.Job{
+		ID: "deleted-voice-job", Kind: job.KindAnalyzeVoice, UserID: "alice", VoiceID: "voice-alice-2",
+		CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	})
+	if !errors.Is(err, job.ErrVoiceUnavailable) {
+		t.Fatalf("inactive voice insert = %v, want ErrVoiceUnavailable", err)
 	}
 }
 

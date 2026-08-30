@@ -69,6 +69,11 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 	if post.Content == nil {
 		return "", ErrRevisionContentRequired
 	}
+	voiceID, err := activeVoice(post)
+	if err != nil {
+		return "", err
+	}
+	request.VoiceID = voiceID
 	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
 		return "", err
 	}
@@ -77,7 +82,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", ErrWriteModelRequired
 	}
 	if request.SaveAsRule {
-		if err := s.rules.AppendRule(ctx, request.UserID, request.Instruction); err != nil {
+		if err := s.rules.AppendRule(ctx, request.UserID, voiceID, request.Instruction); err != nil {
 			return "", fmt.Errorf("save revision rule: %w", err)
 		}
 	}
@@ -97,6 +102,11 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if err != nil {
 		return "", err
 	}
+	voiceID, err := activeVoice(post)
+	if err != nil {
+		return "", err
+	}
+	request.VoiceID = voiceID
 	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
 		return "", err
 	}
@@ -125,6 +135,32 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 
 func (s *Service) GetJob(ctx context.Context, id, userID string) (*JobSummary, error) {
 	return s.jobs.GetGeneration(ctx, id, userID)
+}
+
+// activeVoice is the pre-enqueue gate: a post in a deleted voice gets no generation,
+// revision or rule, and a post with no voice at all is a data error, not a fallback case.
+func activeVoice(post PostInput) (string, error) {
+	if post.Voice.ID == "" {
+		return "", ErrVoiceRequired
+	}
+	if post.Voice.Deleted {
+		return "", ErrVoiceDeleted
+	}
+	return post.Voice.ID, nil
+}
+
+// frozenVoice is the handler-side recheck: the job carries the voice it was queued for, and
+// the result may only land if the post still belongs to that voice and the voice is alive.
+// Jobs queued before voices existed carry no id and skip the mismatch half.
+func frozenVoice(post PostInput, jobVoiceID string) (string, error) {
+	voiceID, err := activeVoice(post)
+	if err != nil {
+		return "", err
+	}
+	if jobVoiceID != "" && jobVoiceID != voiceID {
+		return "", ErrVoiceMismatch
+	}
+	return voiceID, nil
 }
 
 func modelEnabled(models LLM, ref llm.ModelRef) bool {

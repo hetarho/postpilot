@@ -29,6 +29,14 @@ type Store interface {
 	LeaderboardData(ctx context.Context, userID string, stage Stage) ([]Experiment, []Candidate, error)
 	PurgeExpired(ctx context.Context, before time.Time) (int64, error)
 	PurgePost(ctx context.Context, userID, postSlug string) error
+	CountPublishableForVoice(ctx context.Context, userID, voiceID string) (int, error)
+}
+
+// VoiceDirectory is the voice context's published check that a voice is owned and alive,
+// consumed before an analyze start or any retry that would run in a voice's name. The
+// composition root adapts it; this context never reads voice tables.
+type VoiceDirectory interface {
+	ActiveVoice(ctx context.Context, userID, voiceID string) error
 }
 
 type Catalog interface {

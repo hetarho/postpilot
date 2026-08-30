@@ -15,8 +15,11 @@ export function useStartModelExperiment() {
         modelA: create(ModelRefSchema, modelA),
         modelB: create(ModelRefSchema, modelB),
       }),
-    startAnalyze: (modelA: ModelRef, modelB: ModelRef) =>
+    // An analyze experiment compares one voice's corpus, so the voice is named explicitly — the
+    // server never falls back to the default (spec/policy/model-experiments.md).
+    startAnalyze: (voiceId: string, modelA: ModelRef, modelB: ModelRef) =>
       analyze.mutateAsync({
+        voiceId,
         modelA: create(ModelRefSchema, modelA),
         modelB: create(ModelRefSchema, modelB),
       }),

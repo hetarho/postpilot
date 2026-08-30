@@ -35,7 +35,11 @@ func newHandler(t *testing.T) (*jobrpc.Handler, *job.Queue) {
 		}
 	}
 	if _, err := handle.Writer.Exec(
-		"INSERT INTO posts (slug, user_id, created_at, updated_at) VALUES ('post-a', 'alice', ?, ?)", now, now); err != nil {
+		"INSERT INTO voices (id, user_id, name, is_default, created_at, updated_at) VALUES ('voice-alice', 'alice', '기본 말투', 1, ?, ?)", now, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(
+		"INSERT INTO posts (slug, user_id, voice_id, created_at, updated_at) VALUES ('post-a', 'alice', 'voice-alice', ?, ?)", now, now); err != nil {
 		t.Fatal(err)
 	}
 	queue := job.New(jobstore.New(handle.Writer, handle.Reader), time.Second)

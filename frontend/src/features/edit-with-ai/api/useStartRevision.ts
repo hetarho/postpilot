@@ -1,16 +1,23 @@
 import { create } from '@bufbuild/protobuf'
 import { ConnectError } from '@connectrpc/connect'
-import { useMutation } from '@connectrpc/connect-query'
+import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import type { ModelRef } from '@/entities/model-catalog'
+import { voiceProfileQueryKey } from '@/entities/voice'
 import { GenerationService, ModelRefSchema } from '@/shared/api'
 
-export function useStartRevision() {
+export function useStartRevision(ownerId: string, voiceId: string) {
+  const transport = useTransport()
   const queryClient = useQueryClient()
   const mutation = useMutation(GenerationService.method.startRevision, {
     onSuccess: (_response, request) => {
       if (request.saveAsRule) {
-        void queryClient.invalidateQueries({ queryKey: ['voice-profile'] })
+        // The rule belongs to the post's frozen/current voice. Invalidating the broad
+        // `voice-profile` prefix would make unrelated voices refetch and breaks the
+        // account+voice cache boundary that keeps contradictory profiles independent.
+        void queryClient.invalidateQueries({
+          queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
+        })
       }
     },
   })

@@ -25,6 +25,8 @@ import {
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
+  type ProtoVoiceRef,
+  VoiceRefSchema,
 } from '@/shared/api'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
 
@@ -38,6 +40,25 @@ export interface FakeImageRow {
   viewUrl?: string
 }
 
+/** A voice as the post fake knows it: just enough to answer a post's `voice` projection and to
+ *  accept or refuse an assignment. The voice fake owns the full directory. */
+export interface FakePostVoice {
+  id: string
+  name: string
+  deleted?: boolean
+}
+
+/** The voice every fixture post is written in unless it says otherwise — the same one the voice
+ *  fake starts with, so a screen can go from a post to its voice's profile. */
+export const DEFAULT_POST_VOICE: FakePostVoice = { id: 'voice-default', name: '기본 말투' }
+
+/** One SavePostDraft as the server saw its assignment: present on a create or a reassignment,
+ *  absent on an ordinary edit (spec/policy/posts.md). */
+export interface FakeDraftSave {
+  slug: string
+  voiceId: string | undefined
+}
+
 export interface FakePostRow {
   slug: string
   title?: string
@@ -45,6 +66,8 @@ export interface FakePostRow {
   status?: string
   createdAt?: string
   updatedAt?: string
+  voice?: FakePostVoice
+  machineBaselineVoiceId?: string
   images?: FakeImageRow[]
   activeJob?: FakeGenerationJobRow
   content?: PostContent
@@ -79,6 +102,10 @@ export interface FakePostsOptions {
   calls?: string[]
   /** Records target-length option saves, including an explicit clear as undefined. */
   generationOptionSaves?: Array<number | undefined>
+  /** The voices a post may be assigned to. Omitted, only `DEFAULT_POST_VOICE` exists. */
+  voices?: FakePostVoice[]
+  /** Records every SavePostDraft's slug and assignment presence. */
+  draftSaves?: FakeDraftSave[]
 }
 
 const DEFAULT_UPDATED_AT = '2026-08-28T12:00:00Z'
@@ -93,6 +120,7 @@ type Row = {
   status: string
   createdAt: string
   updatedAt: string
+  voice: ProtoVoiceRef
   images: Image[]
   activeJob?: ProtoGenerationJob
   content?: PostContent
@@ -100,6 +128,7 @@ type Row = {
   pendingExperimentId: string
   contentRevision: bigint
   machineBaselineRevision: bigint
+  machineBaselineVoiceId: string
   canFinalize: boolean
   targetLength?: number
   finalizedRevision: bigint
@@ -113,8 +142,21 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   let uploadSequence = 0
   let getSequenceIndex = 0
   const pending = new Map<string, { slug: string; filename: string }>()
+  const voices = options.voices ?? [DEFAULT_POST_VOICE]
+
+  const toVoiceRef = (voice: FakePostVoice) =>
+    create(VoiceRefSchema, { id: voice.id, name: voice.name, deleted: voice.deleted ?? false })
+
+  /** Like the server: an unknown voice is 404, a deleted one is refused, never substituted. */
+  function assignable(voiceId: string): ProtoVoiceRef {
+    const voice = voices.find((candidate) => candidate.id === voiceId)
+    if (!voice) throw new ConnectError('voice not found', Code.NotFound)
+    if (voice.deleted) throw new ConnectError('voice is deleted', Code.FailedPrecondition)
+    return toVoiceRef(voice)
+  }
 
   function toRow(row: FakePostRow): Row {
+    const voice = row.voice ?? DEFAULT_POST_VOICE
     return {
       slug: row.slug,
       title: row.title ?? '',
@@ -122,6 +164,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       status: row.status ?? 'draft',
       createdAt: row.createdAt ?? DEFAULT_UPDATED_AT,
       updatedAt: row.updatedAt ?? DEFAULT_UPDATED_AT,
+      voice: toVoiceRef(voice),
+      machineBaselineVoiceId:
+        row.machineBaselineVoiceId ?? ((row.machineBaselineRevision ?? 0n) > 0n ? voice.id : ''),
       images: (row.images ?? []).map((image) =>
         create(ImageSchema, {
           id: image.id,
@@ -198,6 +243,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
 
   rpc(PostService.method.savePostDraft, (req) => {
     calls?.push('SavePostDraft')
+    options.draftSaves?.push({ slug: req.slug, voiceId: req.voiceId })
     if (failuresLeft > 0) {
       failuresLeft -= 1
       throw new ConnectError('unavailable', Code.Unavailable)
@@ -206,25 +252,47 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     if (req.slug && foreign.includes(req.slug)) {
       throw new ConnectError('not yours', Code.PermissionDenied)
     }
+    const existing = req.slug ? rows.get(req.slug) : undefined
+    // The server's assignment rules (spec/policy/posts.md): a create names its voice, an edit
+    // that omits it preserves it, and a different present value reassigns — refused while a job
+    // or an undecided A/B result could still write a baseline for the old voice.
+    let voice = existing?.voice ?? toVoiceRef(DEFAULT_POST_VOICE)
+    let reassigned = false
+    if (!req.slug) {
+      if (!req.voiceId) throw new ConnectError('voice id is required', Code.InvalidArgument)
+      voice = assignable(req.voiceId)
+    } else if (req.voiceId !== undefined && req.voiceId !== voice.id) {
+      const next = assignable(req.voiceId)
+      const busy =
+        (existing?.activeJob &&
+          existing.activeJob.status !== 'done' &&
+          existing.activeJob.status !== 'failed') ||
+        Boolean(existing?.pendingExperimentId)
+      if (busy) throw new ConnectError('post has an active job', Code.FailedPrecondition)
+      voice = next
+      reassigned = true
+    }
     const slug = req.slug || mintSlug(req.title)
     const row: Row = {
       slug,
       title: req.title,
       memo: req.memo,
-      status: rows.get(slug)?.status ?? 'draft',
-      createdAt: rows.get(slug)?.createdAt ?? DEFAULT_UPDATED_AT,
+      status: existing?.status ?? 'draft',
+      createdAt: existing?.createdAt ?? DEFAULT_UPDATED_AT,
       updatedAt: DEFAULT_UPDATED_AT,
-      images: rows.get(slug)?.images ?? [],
-      activeJob: rows.get(slug)?.activeJob,
-      content: rows.get(slug)?.content,
-      observations: rows.get(slug)?.observations ?? [],
-      pendingExperimentId: rows.get(slug)?.pendingExperimentId ?? '',
-      contentRevision: rows.get(slug)?.contentRevision ?? 0n,
-      machineBaselineRevision: rows.get(slug)?.machineBaselineRevision ?? 0n,
-      canFinalize: rows.get(slug)?.canFinalize ?? false,
-      targetLength: rows.get(slug)?.targetLength,
-      finalizedRevision: rows.get(slug)?.finalizedRevision ?? 0n,
-      finalizedAt: rows.get(slug)?.finalizedAt ?? '',
+      voice,
+      images: existing?.images ?? [],
+      activeJob: existing?.activeJob,
+      content: existing?.content,
+      observations: existing?.observations ?? [],
+      pendingExperimentId: existing?.pendingExperimentId ?? '',
+      contentRevision: existing?.contentRevision ?? 0n,
+      machineBaselineRevision: reassigned ? 0n : (existing?.machineBaselineRevision ?? 0n),
+      machineBaselineVoiceId: reassigned ? '' : (existing?.machineBaselineVoiceId ?? ''),
+      canFinalize: reassigned ? Boolean(existing?.content) : (existing?.canFinalize ?? false),
+      targetLength: existing?.targetLength,
+      finalizedRevision: existing?.finalizedRevision ?? 0n,
+      finalizedAt: existing?.finalizedAt ?? '',
     }
     rows.set(slug, row)
     return create(SavePostDraftResponseSchema, { post: toProto(row) })

@@ -5,6 +5,8 @@ import type { ModelExperiment } from '@/entities/model-experiment'
 import { needsExperimentReview, useExperimentActions } from '@/entities/model-experiment'
 import { getPostQueryKey, listPostsQueryKey } from '@/entities/post'
 import { getSelectionsQueryKey } from '@/entities/model-catalog'
+import { useSession } from '@/entities/session'
+import { useVoices, voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
 import { Button, Dialog, Notice } from '@/shared/ui'
 import { hasExperimentActions } from '../model/experiment-actions'
 
@@ -17,11 +19,30 @@ export function ExperimentActions({
 }) {
   const transport = useTransport()
   const queryClient = useQueryClient()
+  const { user } = useSession()
+  const ownerId = user?.id ?? ''
+  const { voices, isPending: voicesPending } = useVoices(ownerId)
+  const frozenVoice = experiment.voiceId
+    ? voices.find((voice) => voice.id === experiment.voiceId)
+    : undefined
+  // Applying/retrying can publish into the experiment's frozen voice. Keep account-scoped
+  // decisions and model adoption available, but never let provider/profile/post work target a
+  // tombstone (or an unverified route cache entry).
+  const voiceWorkBlocked = Boolean(
+    experiment.voiceId && (voicesPending || !frozenVoice || frozenVoice.deleted),
+  )
   const refreshOwner = useCallback(async () => {
     const keys: QueryKey[] = [listPostsQueryKey(transport), getSelectionsQueryKey(transport)]
     if (experiment.postSlug) keys.push(getPostQueryKey(transport, experiment.postSlug))
+    // An applied analyze winner publishes a new head for the experiment's frozen voice only.
+    if (experiment.voiceId) {
+      keys.push(
+        voiceProfileQueryKey(transport, ownerId, experiment.voiceId),
+        voiceVersionsQueryKey(transport, ownerId, experiment.voiceId),
+      )
+    }
     await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })))
-  }, [experiment.postSlug, queryClient, transport])
+  }, [experiment.postSlug, experiment.voiceId, ownerId, queryClient, transport])
   const actions = useExperimentActions(experiment.id, refreshOwner)
   const [confirmStyle, setConfirmStyle] = useState(false)
   // `useExperimentActions` reports one `isPending` for all six mutations, so the button the thumb
@@ -47,7 +68,7 @@ export function ExperimentActions({
         {(experiment.status === 'partial' || experiment.status === 'failed') && (
           <Button
             variant="secondary"
-            disabled={actions.isPending}
+            disabled={actions.isPending || voiceWorkBlocked}
             pending={pressed === 'retry'}
             onClick={() => run('retry', actions.retry)}
           >
@@ -67,7 +88,7 @@ export function ExperimentActions({
         {experiment.applyError && (
           <Button
             variant="secondary"
-            disabled={actions.isPending}
+            disabled={actions.isPending || voiceWorkBlocked}
             pending={pressed === 'apply'}
             onClick={() =>
               run('apply', () =>
@@ -105,7 +126,7 @@ export function ExperimentActions({
         {survivor && (
           <Button
             variant="cta"
-            disabled={actions.isPending}
+            disabled={actions.isPending || voiceWorkBlocked}
             pending={pressed === 'useSingle'}
             onClick={() => run('useSingle', () => actions.useSingle(activeCandidateId))}
           >
@@ -126,7 +147,7 @@ export function ExperimentActions({
           <>
             <Button
               variant="secondary"
-              disabled={actions.isPending}
+              disabled={actions.isPending || voiceWorkBlocked}
               pending={pressed === 'decide'}
               onClick={() => run('decide', () => actions.decideWrite(activeCandidateId, false))}
             >
@@ -134,7 +155,7 @@ export function ExperimentActions({
             </Button>
             <Button
               variant="cta"
-              disabled={actions.isPending}
+              disabled={actions.isPending || voiceWorkBlocked}
               pending={pressed === 'decideAdopt'}
               onClick={() => run('decideAdopt', () => actions.decideWrite(activeCandidateId, true))}
             >
@@ -148,7 +169,7 @@ export function ExperimentActions({
           !experiment.applyError && (
             <Button
               variant="cta"
-              disabled={actions.isPending}
+              disabled={actions.isPending || voiceWorkBlocked}
               pending={pressed === 'apply'}
               onClick={() =>
                 experiment.stage === 'analyze'
@@ -165,6 +186,12 @@ export function ExperimentActions({
       {actions.error && (
         <Notice tone="danger" role="alert">
           요청을 처리하지 못했어요.
+        </Notice>
+      )}
+      {experiment.voiceId && !voicesPending && voiceWorkBlocked && (
+        <Notice tone="warning" role="status">
+          삭제되었거나 찾을 수 없는 말투에는 결과를 적용하거나 다시 생성할 수 없어요. 먼저 복원해
+          주세요.
         </Notice>
       )}
       {experiment.applyError && (
@@ -193,7 +220,7 @@ export function ExperimentActions({
         pending={actions.isPending}
         onClose={() => setConfirmStyle(false)}
         onConfirm={() => {
-          void actions.apply(true).then(() => setConfirmStyle(false))
+          if (!voiceWorkBlocked) void actions.apply(true).then(() => setConfirmStyle(false))
         }}
       >
         현재 styleguide를 선택한 결과로 교체합니다. 직접 작성한 rules는 그대로 유지됩니다.

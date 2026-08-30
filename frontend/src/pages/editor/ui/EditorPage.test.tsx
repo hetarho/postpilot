@@ -9,7 +9,7 @@ import {
   POST_CONTENT_FIXTURE,
   POST_IMAGES_FIXTURE,
 } from '@/test/fixtures/postContent'
-import { FAKE_STORAGE_ORIGIN } from '@/test/posts'
+import { FAKE_STORAGE_ORIGIN, type FakeDraftSave } from '@/test/posts'
 import { clearCaret } from '../model/editor-handoff'
 
 const USER = { id: 'alice' }
@@ -1217,5 +1217,289 @@ describe('the step split and the content save', () => {
 
     expect(screen.getByText('유지되어야 하는 문단')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: POST_CONTENT_FIXTURE.title })).toBeInTheDocument()
+  })
+})
+
+describe('the post voice', () => {
+  const AUTOSAVED = { timeout: 4_000 }
+  /** The picker lists the directory, which answers after the first paint; choose only once it has. */
+  async function pickVoice(user: ReturnType<typeof userEvent.setup>, voiceId: string) {
+    const picker = await screen.findByLabelText('말투')
+    await waitFor(() => expect(picker).toBeEnabled())
+    await screen.findByRole('option', { name: voiceId === 'voice-review' ? '리뷰' : '기본 말투' })
+    await user.selectOptions(picker, voiceId)
+    return picker
+  }
+  const TWO_VOICES = [
+    { id: 'voice-default', name: '기본 말투', isDefault: true },
+    { id: 'voice-review', name: '리뷰' },
+  ]
+  const POST_VOICES = [
+    { id: 'voice-default', name: '기본 말투' },
+    { id: 'voice-review', name: '리뷰' },
+  ]
+  const reviewPost = {
+    slug: '20260820-jeju',
+    status: 'review',
+    content: POST_CONTENT_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+    canFinalize: true,
+  }
+
+  // Plan 10 A4: the picker opens on the default and the create names it.
+  it('starts a new draft in the default voice and sends its id with the first save', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    const { router } = renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
+
+    expect(await screen.findByLabelText('말투')).toHaveValue('voice-default')
+    await user.type(screen.getByLabelText('제목'), '제주')
+
+    await waitFor(
+      () => expect(router.state.location.pathname).toBe('/posts/20260828-제주'),
+      AUTOSAVED,
+    )
+    expect(draftSaves[0]).toEqual({ slug: '', voiceId: 'voice-default' })
+    // The editor the mint mounted shows the same voice, and later saves leave it alone.
+    expect(screen.getByLabelText('말투')).toHaveValue('voice-default')
+    await user.type(screen.getByLabelText('메모'), '첫날')
+    await waitFor(() => expect(draftSaves).toHaveLength(2), AUTOSAVED)
+    expect(draftSaves[1]).toEqual({ slug: '20260828-제주', voiceId: undefined })
+  })
+
+  it('lets a new draft pick another voice before anything is typed', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    const { router } = renderAppAt('/posts/new', {
+      user: USER,
+      posts: { draftSaves, voices: POST_VOICES },
+      voice: { voices: TWO_VOICES },
+    })
+
+    await pickVoice(user, 'voice-review')
+    // Choosing a voice is not typing: no post exists until there is something to save.
+    expect(draftSaves).toHaveLength(0)
+    await user.type(screen.getByLabelText('제목'), '리뷰 글')
+
+    await waitFor(
+      () => expect(draftSaves[0]).toEqual({ slug: '', voiceId: 'voice-review' }),
+      AUTOSAVED,
+    )
+    await waitFor(() => expect(router.state.location.pathname).toBe('/posts/20260828-리뷰-글'))
+    expect(await screen.findByLabelText('말투')).toHaveValue('voice-review')
+  })
+
+  // Plan 10 A8: reassignment is confirmed, preserves the content, and clears learn eligibility.
+  it('reassigns an existing post after confirmation and clears its learn eligibility', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [reviewPost], draftSaves, voices: POST_VOICES },
+      voice: { voices: TWO_VOICES },
+    })
+
+    const picker = await screen.findByLabelText('말투')
+    await waitFor(() => expect(picker).toHaveValue('voice-default'))
+    await pickVoice(user, 'voice-review')
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent('지금까지 배운 내용은 이전 말투에 남고')
+    // The choice is not applied until it is confirmed.
+    expect(draftSaves).toHaveLength(0)
+    await user.click(within(dialog).getByRole('button', { name: '말투 변경' }))
+
+    await waitFor(() =>
+      expect(draftSaves).toEqual([{ slug: '20260820-jeju', voiceId: 'voice-review' }]),
+    )
+    await waitFor(() => expect(screen.getByLabelText('말투')).toHaveValue('voice-review'))
+    // The canonical content survived; learning needs a new machine result first.
+    await openStep(user, '글 완성')
+    expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '확정' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
+  })
+
+  it('keeps learning disabled when a finalized post is reassigned without a new baseline', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            ...reviewPost,
+            status: 'finalized',
+            finalizedRevision: reviewPost.contentRevision,
+            finalizedAt: '2026-08-20T12:00:00Z',
+          },
+        ],
+        voices: POST_VOICES,
+      },
+      voice: { voices: TWO_VOICES },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
+        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
+      },
+    })
+
+    await pickVoice(user, 'voice-review')
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: '말투 변경' }),
+    )
+    await openStep(user, '글 완성')
+
+    expect(
+      await screen.findByText('새 말투로 다시 생성하거나 AI로 수정한 뒤에 학습할 수 있어요.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '말투 학습' })).toBeDisabled()
+  })
+
+  it('cancels a reassignment from the sheet without saving anything', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [reviewPost], draftSaves, voices: POST_VOICES },
+      voice: { voices: TWO_VOICES },
+    })
+
+    await pickVoice(user, 'voice-review')
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: '취소' }),
+    )
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('말투')).toHaveValue('voice-default')
+    await new Promise((resolve) => setTimeout(resolve, 1_200))
+    expect(draftSaves).toHaveLength(0)
+  })
+
+  it('blocks reassignment while a job is active and says why', async () => {
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [{ slug: '20260820-jeju', activeJob: { id: 'job-1', status: 'running' } }],
+        voices: POST_VOICES,
+      },
+      voice: { voices: TWO_VOICES },
+      jobs: { jobs: [{ id: 'job-1', status: 'running' }] },
+    })
+
+    expect(await screen.findByLabelText('말투')).toBeDisabled()
+    expect(screen.getByText('AI 작업이 끝나면 말투를 바꿀 수 있어요.')).toBeInTheDocument()
+  })
+
+  it('reports a refused reassignment under the field and keeps the old voice', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      // The post service does not know 'voice-review': the directory is stale, and the server
+      // answers NotFound rather than guessing.
+      posts: { posts: [reviewPost] },
+      voice: { voices: TWO_VOICES },
+    })
+
+    await pickVoice(user, 'voice-review')
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: '말투 변경' }),
+    )
+
+    // `findAllByRole`: the dock's own save notice can be an alert at the same moment.
+    const alerts = await screen.findAllByRole('alert')
+    expect(alerts.map((alert) => alert.textContent).join('\n')).toContain(
+      '고른 말투를 찾을 수 없어요',
+    )
+    expect(screen.getByLabelText('말투')).toHaveValue('voice-default')
+    expect(screen.getByLabelText('말투')).toBeEnabled()
+  })
+
+  // Plan 10 A5/A7: the tombstone, the disabled AI controls with their reason, and both ways out.
+  it('renders a deleted voice as a tombstone with disabled AI actions and a way out', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            ...reviewPost,
+            status: 'draft',
+            voice: { id: 'voice-old', name: '옛 말투', deleted: true },
+          },
+        ],
+        voices: [...POST_VOICES, { id: 'voice-old', name: '옛 말투', deleted: true }],
+      },
+      voice: {
+        voices: [...TWO_VOICES, { id: 'voice-old', name: '옛 말투', deleted: true }],
+      },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    // Named twice on purpose: in the picker (as the disabled current option) and in the warning.
+    expect(await screen.findAllByText('삭제된 말투 · 옛 말투')).toHaveLength(2)
+    expect(screen.getByLabelText('말투')).toHaveValue('voice-old')
+    // The reason settles once the model catalog has answered; until then it reports the wait.
+    expect(
+      await screen.findByText('생성: 삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+    // The manual side of the post is untouched: its content and export are still there.
+    await openStep(user, '글 완성')
+    expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
+    expect(
+      screen.getByText('삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
+    ).toBeInTheDocument()
+    await openStep(user, '글 다듬기')
+    expect(
+      await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '수정' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '문장 의견' })).not.toBeInTheDocument()
+
+    // Restore is offered in place and asks the server, nothing else ([I5]).
+    await openStep(user, '글 생성')
+    await user.click(screen.getByRole('button', { name: '복원' }))
+    await waitFor(() => expect(calls).toContain('RestoreVoice'))
+    expect(calls).not.toContain('StartGeneration')
+  })
+
+  it('recovers a deleted-voice post by reassigning it to an active voice', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            memo: '메모',
+            voice: { id: 'voice-old', name: '옛 말투', deleted: true },
+          },
+        ],
+        draftSaves,
+        voices: [...POST_VOICES, { id: 'voice-old', name: '옛 말투', deleted: true }],
+      },
+      voice: { voices: [...TWO_VOICES, { id: 'voice-old', name: '옛 말투', deleted: true }] },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    await screen.findAllByText('삭제된 말투 · 옛 말투')
+    await pickVoice(user, 'voice-review')
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: '말투 변경' }),
+    )
+
+    await waitFor(() =>
+      expect(draftSaves).toEqual([{ slug: '20260820-jeju', voiceId: 'voice-review' }]),
+    )
+    await waitFor(() => expect(screen.queryAllByText('삭제된 말투 · 옛 말투')).toHaveLength(0))
+    await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
   })
 })

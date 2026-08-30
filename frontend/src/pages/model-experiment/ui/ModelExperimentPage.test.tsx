@@ -28,6 +28,15 @@ vi.mock('@/entities/model-experiment', () => ({
   useExperiment: mocks.useExperiment,
 }))
 
+vi.mock('@/entities/session', () => ({ useSession: () => ({ user: { id: 'alice' } }) }))
+vi.mock('@/entities/voice', () => ({
+  useVoices: () => ({
+    voices: [{ id: 'voice-default', name: '기본 말투', isDefault: true, deleted: false }],
+  }),
+  voiceRefLabel: (voice: { name: string; deleted: boolean }) =>
+    voice.deleted ? `삭제된 말투 · ${voice.name}` : voice.name,
+}))
+
 vi.mock('@/features/review-model-experiment', () => ({
   hasExperimentActions: () => true,
   ExperimentActions: ({ activeCandidateId }: { activeCandidateId: string }) => (
@@ -40,6 +49,7 @@ const experiment: ModelExperiment = {
   stage: 'analyze',
   status: 'review',
   postSlug: '',
+  voiceId: 'voice-default',
   jobId: 'job-1',
   candidates: [
     {
@@ -88,6 +98,8 @@ it('keeps the choice control visible on desktop and can target candidate B', asy
   const selector = screen.getByRole('tablist', { name: '선택할 후보' })
   expect(selector).not.toHaveClass('md:hidden')
   expect(screen.getByLabelText('결정 대상')).toHaveTextContent('candidate-a')
+  // An analyze experiment names the voice whose corpus it froze.
+  expect(screen.getByText('말투 · 기본 말투')).toBeInTheDocument()
 
   await user.click(screen.getByRole('tab', { name: 'B' }))
 

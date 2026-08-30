@@ -1,16 +1,26 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useStageSelection } from '@/entities/model-catalog'
-import { type VoiceProfile, useAddVoiceSample } from '@/entities/voice-profile'
+import { type VoiceProfile, useAddVoiceSample } from '@/entities/voice'
 import { VOICE_SAMPLE_MIN_CHARS } from '@/shared/config'
 import { Button, Dialog, FieldLabel, FieldMessage, Notice, Textarea, TextField } from '@/shared/ui'
 
 interface LearnVoiceFormProps {
   ownerId: string
+  voiceId: string
   profile: VoiceProfile
   onStarted: (jobId: string) => void
+  /** Why this voice cannot take a sample right now (a deleted voice), or ''. The server refuses
+   *  it either way; this says so before the paste. */
+  blocked?: string
 }
 
-export function LearnVoiceForm({ ownerId, profile, onStarted }: LearnVoiceFormProps) {
+export function LearnVoiceForm({
+  ownerId,
+  voiceId,
+  profile,
+  onStarted,
+  blocked = '',
+}: LearnVoiceFormProps) {
   const labelId = useId()
   const bodyId = useId()
   const bodyErrorId = `${bodyId}-error`
@@ -19,10 +29,11 @@ export function LearnVoiceForm({ ownerId, profile, onStarted }: LearnVoiceFormPr
   const [body, setBody] = useState('')
   const [confirmOverwrite, setConfirmOverwrite] = useState(false)
   const { selected, isPending: modelPending } = useStageSelection('analyze')
-  const addSample = useAddVoiceSample(ownerId)
+  const addSample = useAddVoiceSample(ownerId, voiceId)
   const chars = Array.from(body.trim()).length
   const tooShort = chars < VOICE_SAMPLE_MIN_CHARS
-  const disabled = tooShort || !selected || modelPending || addSample.isPending
+  const disabled =
+    Boolean(blocked) || tooShort || !selected || modelPending || addSample.isPending
 
   const learn = async () => {
     if (!selected) return
@@ -106,7 +117,12 @@ export function LearnVoiceForm({ ownerId, profile, onStarted }: LearnVoiceFormPr
         </div>
       </div>
 
-      {!modelPending && !selected && (
+      {blocked && (
+        <Notice tone="warning" role="status">
+          {blocked}
+        </Notice>
+      )}
+      {!blocked && !modelPending && !selected && (
         <Notice tone="warning" role="status">
           모델을 선택하세요
         </Notice>

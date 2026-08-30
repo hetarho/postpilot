@@ -18,9 +18,15 @@ describe('SampleList', () => {
       voice: { samples, deleteJobId: 'reanalyze-1' },
     })
     const onAnalysisStarted = vi.fn()
-    render(<SampleList ownerId="alice" samples={samples} onAnalysisStarted={onAnalysisStarted} />, {
-      wrapper: withProviders(transport, createTestQueryClient()),
-    })
+    render(
+      <SampleList
+        ownerId="alice"
+        voiceId="voice-default"
+        samples={samples}
+        onAnalysisStarted={onAnalysisStarted}
+      />,
+      { wrapper: withProviders(transport, createTestQueryClient()) },
+    )
 
     await userEvent.click(screen.getByRole('button', { name: '제주 삭제' }))
     // The confirmation is the Dialog sheet, not window.confirm — its confirm button is the only

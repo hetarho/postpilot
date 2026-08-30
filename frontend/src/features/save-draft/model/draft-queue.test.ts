@@ -19,11 +19,11 @@ function draft(title: string, memo = ''): Draft {
 function backend(options: { failures?: number; mint?: string; holds?: number } = {}) {
   let failures = options.failures ?? 0
   let holds = options.holds ?? 0
-  const sent: Array<{ slug: string; draft: Draft }> = []
+  const sent: Array<{ slug: string; draft: Draft; voiceId: string | undefined }> = []
   const held: Array<() => void> = []
 
-  const send: SendDraft = async (slug, value) => {
-    sent.push({ slug, draft: { ...value } })
+  const send: SendDraft = async (slug, value, voiceId) => {
+    sent.push({ slug, draft: { ...value }, voiceId })
     if (holds > 0) {
       holds -= 1
       await new Promise<void>((resolve) => held.push(resolve))
@@ -39,17 +39,22 @@ function backend(options: { failures?: number; mint?: string; holds?: number } =
     send,
     sent,
     titles: () => sent.map((call) => call.draft.title),
+    voices: () => sent.map((call) => call.voiceId),
     /** Lets the oldest held request finish. */
     open: () => held.shift()?.(),
   }
 }
 
-function attach(send: SendDraft, options: { slug?: string; saved?: Draft } = {}) {
+function attach(
+  send: SendDraft,
+  options: { slug?: string; saved?: Draft; voiceId?: string } = {},
+) {
   const states: SaveState[] = []
   const minted: string[] = []
   const handle = attachDraftQueue({
     slug: options.slug,
     saved: options.saved ?? EMPTY,
+    voiceId: options.voiceId ?? 'voice-a',
     send,
     onState: (state) => states.push(state),
     onMinted: (slug) => minted.push(slug),
@@ -378,5 +383,126 @@ describe('the first save of a new draft', () => {
 
     expect(minted).toEqual(['20260828-제주'])
     expect(api.sent).toHaveLength(1)
+  })
+})
+
+describe('the voice assignment', () => {
+  // spec/policy/posts.md: a create always names its voice; an ordinary edit leaves it alone.
+  it('sends the voice with the create and not with an unchanged edit', async () => {
+    const api = backend({ mint: '20260828-제주' })
+    const { handle } = attach(api.send, { voiceId: 'voice-a' })
+
+    handle.queue(draft('제주'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+
+    expect(api.voices()).toEqual(['voice-a', undefined])
+  })
+
+  it('lets a draft with no post yet change its mind without sending anything', async () => {
+    const api = backend()
+    const { handle } = attach(api.send, { voiceId: 'voice-a' })
+
+    await expect(handle.assignVoice('voice-b')).resolves.toBeUndefined()
+    await advance(10_000)
+    expect(api.sent).toHaveLength(0)
+
+    handle.queue(draft('제주'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.voices()).toEqual(['voice-b'])
+  })
+
+  // The choice landed during the create round trip, so the create carried the old one.
+  it('follows a voice chosen while the create was out with an immediate reassignment', async () => {
+    const api = backend({ holds: 1, mint: '20260828-제주' })
+    const { handle } = attach(api.send, { voiceId: 'voice-a' })
+    handle.queue(draft('제주'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.voices()).toEqual(['voice-a'])
+
+    await handle.assignVoice('voice-b')
+    api.open()
+    await advance(0)
+
+    expect(api.sent[1]).toEqual({ slug: '20260828-제주', draft: draft('제주'), voiceId: 'voice-b' })
+    expect(handle.state()).toBe('saved')
+  })
+
+  it('reassigns an existing post at once and resolves when it lands', async () => {
+    const api = backend()
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
+
+    const done = handle.assignVoice('voice-b')
+    await advance(0)
+
+    expect(api.sent).toEqual([{ slug: 'p', draft: draft('제주'), voiceId: 'voice-b' }])
+    await expect(done).resolves.toBeUndefined()
+    expect(handle.state()).toBe('saved')
+
+    // The assignment is settled: later text goes out without it.
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.voices()).toEqual(['voice-b', undefined])
+  })
+
+  // The bug the queue exists to prevent: a title save that left before the reassignment
+  // must not carry the old voice back over it when its turn comes.
+  it('does not let text typed during a reassignment revert it', async () => {
+    const api = backend({ holds: 1 })
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
+
+    const done = handle.assignVoice('voice-b')
+    await advance(0)
+    handle.queue(draft('제주 3일'))
+    api.open()
+    await done
+    // The text typed meanwhile is an ordinary keystroke: it follows after the debounce.
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+
+    expect(api.sent).toEqual([
+      { slug: 'p', draft: draft('제주'), voiceId: 'voice-b' },
+      { slug: 'p', draft: draft('제주 3일'), voiceId: undefined },
+    ])
+  })
+
+  it('takes a refused reassignment back so the next save carries text only', async () => {
+    const api = backend({ failures: 1 })
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
+
+    await expect(handle.assignVoice('voice-b')).rejects.toThrow('offline')
+    // Nothing else changed, so there is nothing left to retry either — and nothing was ever
+    // saved by this queue, so it is quiet rather than "저장됨".
+    await advance(AUTOSAVE_RETRY_BASE_MS * 4)
+    expect(api.sent).toHaveLength(1)
+    expect(handle.state()).toBe('idle')
+
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.sent[1]).toEqual({ slug: 'p', draft: draft('제주 3일'), voiceId: undefined })
+  })
+
+  it('does not stand down on unchanged text while a reassignment is pending', async () => {
+    const api = backend()
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
+
+    const done = handle.assignVoice('voice-b')
+    // Typed and typed back before the request could leave: still a reassignment to send.
+    handle.queue(draft('제주도'))
+    handle.queue(draft('제주'))
+    await advance(0)
+
+    await expect(done).resolves.toBeUndefined()
+    expect(api.voices()).toEqual(['voice-b'])
+  })
+
+  it('rejects a reassignment when the session ends first', async () => {
+    const api = backend({ holds: 1 })
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
+
+    const done = handle.assignVoice('voice-b')
+    discardDraftQueues()
+
+    await expect(done).rejects.toThrow('session ended')
   })
 })

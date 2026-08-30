@@ -22,25 +22,34 @@ type ruleComparisonSnapshot struct {
 	EndingMaxConsecutive int               `json:"ending_max_consecutive"`
 }
 
+// StartRuleComparison derives the voice from the owned rule; the source must belong to that
+// same voice, so a same-account source from another voice reads as not found.
 func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourceID string, targetLength *int, model llm.ModelRef) (string, string, error) {
 	if !s.personalizationModels.ModelEnabled(model) {
 		return "", "", ErrAnalyzeModelRequired
-	}
-	if err := s.retireStaleRules(ctx, userID); err != nil {
-		return "", "", err
 	}
 	rule, err := s.personalization.GetRule(ctx, userID, ruleID)
 	if err != nil {
 		return "", "", err
 	}
+	voiceID := rule.VoiceID
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return "", "", err
+	}
+	if err := s.retireStaleRules(ctx, userID, voiceID); err != nil {
+		return "", "", err
+	}
+	if rule, err = s.personalization.GetRule(ctx, userID, ruleID); err != nil {
+		return "", "", err
+	}
 	if rule.Status != RuleCandidate || rule.EvidenceCount < 1 || rule.EvidenceCount > 2 {
 		return "", "", ErrInvalidLifecycle
 	}
-	source, err := s.personalization.GetAuthoredSource(ctx, userID, sourceID)
+	source, err := s.personalization.GetAuthoredSource(ctx, userID, voiceID, sourceID)
 	if err != nil {
 		return "", "", err
 	}
-	profile, err := s.Get(ctx, userID)
+	profile, err := s.Get(ctx, userID, voiceID)
 	if err != nil {
 		return "", "", err
 	}
@@ -59,11 +68,11 @@ func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourc
 	if id[0] >= '8' {
 		side = "right"
 	}
-	comparison := RuleComparison{ID: id, UserID: userID, RuleID: ruleID, SourceID: sourceID, ProfileVersion: profile.Structured.Version, ModelRef: model.String(), TargetLength: targetLength, InputSnapshot: string(snapshot), RuleOnSide: side, Status: "queued", CreatedAt: s.now(), Candidates: []ComparisonCandidate{{ID: s.newID(), ComparisonID: id, DisplaySide: "left", Status: "pending"}, {ID: s.newID(), ComparisonID: id, DisplaySide: "right", Status: "pending"}}}
+	comparison := RuleComparison{ID: id, UserID: userID, VoiceID: voiceID, RuleID: ruleID, SourceID: sourceID, ProfileVersion: profile.Structured.Version, ModelRef: model.String(), TargetLength: targetLength, InputSnapshot: string(snapshot), RuleOnSide: side, Status: "queued", CreatedAt: s.now(), Candidates: []ComparisonCandidate{{ID: s.newID(), ComparisonID: id, DisplaySide: "left", Status: "pending"}, {ID: s.newID(), ComparisonID: id, DisplaySide: "right", Status: "pending"}}}
 	if err = s.personalization.InsertRuleComparison(ctx, comparison); err != nil {
 		return "", "", err
 	}
-	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: CompareRuleJobKind, UserID: userID, PostSlug: source.PostSlug, Model: model.String(), Payload: id})
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: CompareRuleJobKind, UserID: userID, VoiceID: voiceID, PostSlug: source.PostSlug, Model: model.String(), Payload: id})
 	if err != nil {
 		comparison.Status = "failed"
 		if updateErr := s.personalization.UpdateRuleComparison(ctx, comparison); updateErr != nil {
@@ -102,6 +111,9 @@ func (s *Service) RetryRuleComparison(ctx context.Context, userID, id string) (s
 	if comparison.ChosenSide != "" || comparison.Status == "review" {
 		return "", ErrInvalidLifecycle
 	}
+	if _, err := s.activeVoice(ctx, userID, comparison.VoiceID); err != nil {
+		return "", err
+	}
 	for i := range comparison.Candidates {
 		if comparison.Candidates[i].Status == "failed" {
 			comparison.Candidates[i].Status = "pending"
@@ -112,11 +124,11 @@ func (s *Service) RetryRuleComparison(ctx context.Context, userID, id string) (s
 	if err = s.personalization.UpdateRuleComparison(ctx, comparison); err != nil {
 		return "", err
 	}
-	source, err := s.personalization.GetAuthoredSource(ctx, userID, comparison.SourceID)
+	source, err := s.personalization.GetAuthoredSource(ctx, userID, comparison.VoiceID, comparison.SourceID)
 	if err != nil {
 		return "", err
 	}
-	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: CompareRuleJobKind, UserID: userID, PostSlug: source.PostSlug, Model: comparison.ModelRef, Payload: id})
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: CompareRuleJobKind, UserID: userID, VoiceID: comparison.VoiceID, PostSlug: source.PostSlug, Model: comparison.ModelRef, Payload: id})
 	if err != nil {
 		comparison.Status = "failed"
 		_ = s.personalization.UpdateRuleComparison(ctx, comparison)
@@ -157,6 +169,9 @@ func (s *Service) CompareRule(ctx context.Context, userID, comparisonID, modelRe
 	comparison, err := s.personalization.GetRuleComparison(ctx, userID, comparisonID)
 	if err != nil {
 		return err
+	}
+	if _, err := s.activeVoice(ctx, userID, comparison.VoiceID); err != nil {
+		return voiceUnavailableError(err)
 	}
 	var snapshot ruleComparisonSnapshot
 	if err = json.Unmarshal([]byte(comparison.InputSnapshot), &snapshot); err != nil {
@@ -228,11 +243,14 @@ func (s *Service) DecideRuleComparison(ctx context.Context, userID, id, side str
 	if !comparisonReadyForDecision(comparison) {
 		return RuleComparison{}, ErrInvalidLifecycle
 	}
+	if _, err := s.activeVoice(ctx, userID, comparison.VoiceID); err != nil {
+		return RuleComparison{}, err
+	}
 	now := s.now()
 	comparison.ChosenSide = side
 	comparison.DecidedAt = &now
 	comparison.ActivationEvidence = s.config.RuleActivationEvidence
-	profile, err := s.Get(ctx, userID)
+	profile, err := s.Get(ctx, userID, comparison.VoiceID)
 	if err != nil {
 		return RuleComparison{}, err
 	}
@@ -269,11 +287,16 @@ func comparisonReadyForDecision(comparison RuleComparison) bool {
 	return true
 }
 
-func (s *Service) StartValidation(ctx context.Context, userID string, analyze, write llm.ModelRef, judge bool) (string, string, error) {
+// StartValidation takes an explicit active voice and counts only that voice's finalized
+// sources toward the three it needs.
+func (s *Service) StartValidation(ctx context.Context, userID, voiceID string, analyze, write llm.ModelRef, judge bool) (string, string, error) {
 	if analyze.ProviderID == "" || analyze.ModelID == "" || write.ProviderID == "" || write.ModelID == "" {
 		return "", "", ErrAnalyzeModelRequired
 	}
-	if err := s.retireStaleRules(ctx, userID); err != nil {
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return "", "", err
+	}
+	if err := s.retireStaleRules(ctx, userID, voiceID); err != nil {
 		return "", "", err
 	}
 	selected, err := s.resolveAnalyzeModel(ctx, userID, analyze)
@@ -283,27 +306,27 @@ func (s *Service) StartValidation(ctx context.Context, userID string, analyze, w
 	if !s.personalizationModels.ModelEnabled(write) {
 		return "", "", ErrAnalyzeModelRequired
 	}
-	sources, err := s.personalization.ListAuthoredSources(ctx, userID)
+	sources, err := s.personalization.ListAuthoredSources(ctx, userID, voiceID)
 	if err != nil {
 		return "", "", err
 	}
 	if len(sources) < s.config.ValidationPostCount {
 		return "", "", ErrInsufficientSources
 	}
-	profile, err := s.Get(ctx, userID)
+	profile, err := s.Get(ctx, userID, voiceID)
 	if err != nil {
 		return "", "", err
 	}
 	id := s.newID()
 	selectedSources := pickValidationSources(id, sources, s.config.ValidationPostCount)
-	validation := ProfileValidation{ID: id, UserID: userID, ProfileVersion: profile.Structured.Version, AnalyzeModelRef: selected.String(), WriteModelRef: write.String(), JudgeEnabled: judge, Status: "queued", CreatedAt: s.now()}
+	validation := ProfileValidation{ID: id, UserID: userID, VoiceID: voiceID, ProfileVersion: profile.Structured.Version, AnalyzeModelRef: selected.String(), WriteModelRef: write.String(), JudgeEnabled: judge, Status: "queued", CreatedAt: s.now()}
 	for i, source := range selectedSources {
 		validation.Items = append(validation.Items, ValidationItem{ID: s.newID(), ValidationID: id, SourceID: source.ID, Position: i, Original: source.Body, Status: "pending"})
 	}
 	if err = s.personalization.InsertProfileValidation(ctx, validation); err != nil {
 		return "", "", err
 	}
-	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: ValidateProfileJobKind, UserID: userID, Model: write.String(), Payload: id})
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: ValidateProfileJobKind, UserID: userID, VoiceID: voiceID, Model: write.String(), Payload: id})
 	if err != nil {
 		validation.Status = "failed"
 		now := s.now()
@@ -344,8 +367,11 @@ func pickValidationSources(seed string, sources []AuthoredSource, count int) []A
 func (s *Service) GetValidation(ctx context.Context, userID, id string) (ProfileValidation, error) {
 	return s.personalization.GetProfileValidation(ctx, userID, id)
 }
-func (s *Service) ListValidations(ctx context.Context, userID string) ([]ProfileValidation, error) {
-	return s.personalization.ListProfileValidations(ctx, userID)
+func (s *Service) ListValidations(ctx context.Context, userID, voiceID string) ([]ProfileValidation, error) {
+	if _, err := s.ownedVoice(ctx, userID, voiceID); err != nil {
+		return nil, err
+	}
+	return s.personalization.ListProfileValidations(ctx, userID, voiceID)
 }
 
 func (s *Service) RetryValidation(ctx context.Context, userID, id string) (string, error) {
@@ -355,6 +381,9 @@ func (s *Service) RetryValidation(ctx context.Context, userID, id string) (strin
 	}
 	if validation.Status == "done" {
 		return "", ErrInvalidLifecycle
+	}
+	if _, err := s.activeVoice(ctx, userID, validation.VoiceID); err != nil {
+		return "", err
 	}
 	for i := range validation.Items {
 		if validation.Items[i].Status == "failed" {
@@ -367,7 +396,7 @@ func (s *Service) RetryValidation(ctx context.Context, userID, id string) (strin
 	if err = s.personalization.UpdateProfileValidation(ctx, validation); err != nil {
 		return "", err
 	}
-	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: ValidateProfileJobKind, UserID: userID, Model: validation.WriteModelRef, Payload: id})
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: ValidateProfileJobKind, UserID: userID, VoiceID: validation.VoiceID, Model: validation.WriteModelRef, Payload: id})
 	if err != nil {
 		validation.Status = "failed"
 		now := s.now()
@@ -397,7 +426,10 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 	if err != nil {
 		return err
 	}
-	version, err := s.personalization.GetProfileVersion(ctx, userID, validation.ProfileVersion)
+	if _, err := s.activeVoice(ctx, userID, validation.VoiceID); err != nil {
+		return voiceUnavailableError(err)
+	}
+	version, err := s.personalization.GetProfileVersion(ctx, userID, validation.VoiceID, validation.ProfileVersion)
 	if err != nil {
 		return err
 	}

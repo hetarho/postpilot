@@ -1,9 +1,9 @@
 -- name: InsertJob :exec
 INSERT INTO generation_jobs (
-    id, post_slug, user_id, kind, status, stage, progress_done, progress_total,
+    id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total,
     error, observe_model, write_model, payload, created_at, updated_at,
     started_at, finished_at
-) VALUES (?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, NULL, NULL);
+) VALUES (?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, NULL, NULL);
 
 -- name: PickNextQueued :one
 UPDATE generation_jobs
@@ -68,6 +68,23 @@ LIMIT 1;
 SELECT * FROM generation_jobs
 WHERE user_id = ? AND kind = ? AND post_slug IS NULL
   AND status IN ('queued', 'running')
+ORDER BY created_at DESC, id DESC
+LIMIT 1;
+
+-- name: ActiveForVoiceKind :one
+-- Voice-owned work is guarded per voice: two voices may analyze at the same time, while one
+-- voice still cannot run two of the same kind. Learning/comparison jobs may carry a post.
+SELECT * FROM generation_jobs
+WHERE voice_id = ? AND kind = ?
+  AND status IN ('queued', 'running')
+ORDER BY created_at DESC, id DESC
+LIMIT 1;
+
+-- name: ActiveForVoice :one
+-- Anything queued or running that was frozen to this voice, post-backed or not: its result
+-- would land in the voice, so a soft delete has to wait for it.
+SELECT * FROM generation_jobs
+WHERE voice_id = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1;
 

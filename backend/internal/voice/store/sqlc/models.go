@@ -8,9 +8,20 @@ import (
 	"database/sql"
 )
 
+type Voice struct {
+	ID        string
+	UserID    string
+	Name      string
+	IsDefault int64
+	DeletedAt sql.NullString
+	CreatedAt string
+	UpdatedAt string
+}
+
 type VoiceAuthoredSource struct {
 	ID              string
 	UserID          string
+	VoiceID         string
 	PostSlug        sql.NullString
 	LearningEventID sql.NullString
 	Title           string
@@ -24,6 +35,7 @@ type VoiceAuthoredSource struct {
 type VoiceContrastRule struct {
 	ID             string
 	UserID         string
+	VoiceID        string
 	Statement      string
 	CanonicalKey   string
 	Layer          string
@@ -37,6 +49,7 @@ type VoiceContrastRule struct {
 type VoiceLearningEvent struct {
 	ID               string
 	UserID           string
+	VoiceID          string
 	PostSlug         string
 	BaselineRevision int64
 	InputHash        string
@@ -51,6 +64,7 @@ type VoiceLearningEvent struct {
 }
 
 type VoiceManualOverride struct {
+	VoiceID   string
 	UserID    string
 	Layer     string
 	Field     string
@@ -61,6 +75,7 @@ type VoiceManualOverride struct {
 type VoiceProfileValidation struct {
 	ID              string
 	UserID          string
+	VoiceID         string
 	ProfileVersion  int64
 	AnalyzeModelRef string
 	WriteModelRef   string
@@ -77,6 +92,8 @@ type VoiceProfileValidationItem struct {
 	ID                 string
 	ValidationID       string
 	SourceID           string
+	VoiceID            string
+	UserID             string
 	Position           int64
 	NeutralSummary     sql.NullString
 	RegeneratedContent sql.NullString
@@ -88,6 +105,7 @@ type VoiceProfileValidationItem struct {
 type VoiceProfileVersion struct {
 	ID                  string
 	UserID              string
+	VoiceID             string
 	Version             int64
 	Snapshot            string
 	Origin              string
@@ -98,6 +116,7 @@ type VoiceProfileVersion struct {
 type VoiceRuleComparison struct {
 	ID             string
 	UserID         string
+	VoiceID        string
 	RuleID         string
 	SourceID       string
 	ProfileVersion int64
@@ -124,6 +143,7 @@ type VoiceRuleComparisonCandidate struct {
 type VoiceRuleConfirmation struct {
 	ID                string
 	UserID            string
+	VoiceID           string
 	RuleID            string
 	ProposedStatement string
 	EventID           sql.NullString
@@ -135,6 +155,7 @@ type VoiceRuleConfirmation struct {
 type VoiceSentenceFeedback struct {
 	ID              string
 	UserID          string
+	VoiceID         string
 	PostSlug        string
 	SentenceRef     string
 	Kind            string

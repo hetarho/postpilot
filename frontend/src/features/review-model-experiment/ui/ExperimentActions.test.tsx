@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
 import type { ModelExperiment } from '@/entities/model-experiment'
 import { createFakeAuthBackend, createTestQueryClient, withProviders } from '@/test/session'
+import type { FakeVoiceRow } from '@/test/voice'
 import { ExperimentActions } from './ExperimentActions'
 
 const mocks = vi.hoisted(() => ({ useExperimentActions: vi.fn() }))
@@ -12,7 +13,7 @@ vi.mock('@/entities/model-experiment', async (importOriginal) => ({
 }))
 
 const base: ModelExperiment = {
-  id: 'experiment-1', stage: 'write', status: 'review', postSlug: 'post', jobId: 'job',
+  id: 'experiment-1', stage: 'write', status: 'review', postSlug: 'post', voiceId: '', jobId: 'job',
 	winnerCandidateId: '', outcome: '', applyError: '', appliedAt: '', adoptionRequested: false,
 	adoptionError: '', adoptedAt: '',
   createdAt: '', finishedAt: '', decidedAt: '', revealed: false,
@@ -29,8 +30,11 @@ function actionSet() {
   }
 }
 
-function renderActions(experiment = base) {
-  const backend = createFakeAuthBackend({ user: { id: 'alice' } })
+function renderActions(
+  experiment = base,
+  voices: FakeVoiceRow[] = [{ id: 'voice-default', name: '기본 말투', isDefault: true }],
+) {
+  const backend = createFakeAuthBackend({ user: { id: 'alice' }, voice: { voices } })
   render(<ExperimentActions experiment={experiment} activeCandidateId="left" />, {
     wrapper: withProviders(backend.transport, createTestQueryClient()),
   })
@@ -81,4 +85,27 @@ it('preserves apply-and-adopt intent when content application itself needs a ret
 
 	await userEvent.click(screen.getByRole('button', { name: '적용 다시 시도' }))
 	expect(actions.decideWrite).toHaveBeenCalledWith('left', true)
+})
+
+it('blocks provider and apply work when the experiment voice is deleted', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions(
+    {
+      ...base,
+      stage: 'analyze',
+      status: 'decided',
+      voiceId: 'voice-old',
+      winnerCandidateId: 'left',
+      revealed: true,
+    },
+    [
+      { id: 'voice-default', name: '기본 말투', isDefault: true },
+      { id: 'voice-old', name: '옛 말투', deleted: true },
+    ],
+  )
+
+  expect(await screen.findByText(/삭제되었거나 찾을 수 없는 말투/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '결과 적용' })).toBeDisabled()
+  expect(actions.apply).not.toHaveBeenCalled()
 })

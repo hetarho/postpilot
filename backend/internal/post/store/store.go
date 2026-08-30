@@ -45,6 +45,7 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 	err := s.write.CreatePost(ctx, sqlc.CreatePostParams{
 		Slug:      p.Slug,
 		UserID:    p.UserID,
+		VoiceID:   p.VoiceID,
 		Title:     p.Title,
 		Memo:      p.Memo,
 		CreatedAt: formatTime(p.CreatedAt),
@@ -53,6 +54,9 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 	if err != nil {
 		if isUniqueViolation(err) {
 			return post.ErrDuplicateSlug
+		}
+		if isVoiceOwnershipViolation(err) {
+			return post.ErrVoiceNotFound
 		}
 		return fmt.Errorf("insert post: %w", err)
 	}
@@ -71,6 +75,25 @@ func (s *Store) UpdateDraft(ctx context.Context, slug, userID, title, memo strin
 		return false, fmt.Errorf("update post: %w", err)
 	}
 	return n > 0, nil
+}
+
+func (s *Store) ReassignVoice(ctx context.Context, slug, userID, voiceID string, updatedAt time.Time) (bool, error) {
+	n, err := s.write.ReassignPostVoice(ctx, sqlc.ReassignPostVoiceParams{
+		VoiceID: voiceID, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID, VoiceID_2: voiceID,
+	})
+	if err != nil {
+		if isVoiceOwnershipViolation(err) {
+			return false, post.ErrVoiceNotFound
+		}
+		return false, fmt.Errorf("reassign post voice: %w", err)
+	}
+	return n == 1, nil
+}
+
+func isVoiceOwnershipViolation(err error) bool {
+	message := strings.ToUpper(err.Error())
+	return strings.Contains(message, "FOREIGN KEY CONSTRAINT FAILED") ||
+		strings.Contains(message, "POST VOICE MUST BE ACTIVE")
 }
 
 func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, observations []post.Observation, updatedAt time.Time) (bool, error) {
@@ -170,7 +193,8 @@ func (s *Store) LearningSnapshot(ctx context.Context, slug, userID string) (post
 	if err != nil {
 		return post.LearningSnapshot{}, err
 	}
-	return post.LearningSnapshot{PostSlug: row.Slug, UserID: row.UserID, Current: *current,
+	return post.LearningSnapshot{PostSlug: row.Slug, UserID: row.UserID, VoiceID: row.VoiceID,
+		MachineBaselineVoiceID: row.MachineBaselineVoiceID.String, Current: *current,
 		ContentRevision: row.ContentRevision, MachineBaseline: *baseline,
 		BaselineRevision: row.MachineBaselineRevision, TargetLength: optionalInt(row.TargetLength),
 		FinalizedAt: finalizedAt, UpdatedAt: updated}, nil
@@ -219,6 +243,8 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 		}
 		summaries = append(summaries, post.Summary{
 			Slug:      row.Slug,
+			VoiceID:   row.VoiceID,
+			Voice:     post.VoiceRef{ID: row.VoiceID},
 			Title:     title,
 			Status:    row.Status,
 			UpdatedAt: updatedAt,
@@ -486,6 +512,8 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	return post.Post{
 		Slug:                    row.Slug,
 		UserID:                  row.UserID,
+		VoiceID:                 row.VoiceID,
+		Voice:                   post.VoiceRef{ID: row.VoiceID},
 		Title:                   row.Title,
 		Memo:                    row.Memo,
 		Status:                  row.Status,
@@ -494,6 +522,7 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		Content:                 content,
 		ContentRevision:         row.ContentRevision,
 		MachineBaselineRevision: row.MachineBaselineRevision,
+		MachineBaselineVoiceID:  row.MachineBaselineVoiceID.String,
 		TargetLength:            optionalInt(row.TargetLength),
 		FinalizedRevision:       row.FinalizedRevision.Int64,
 		FinalizedAt:             finalizedAt,

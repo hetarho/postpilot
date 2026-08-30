@@ -65,7 +65,7 @@ func (h *ValidationHandler) StartVoiceProfileValidation(ctx context.Context, req
 	if err != nil {
 		return nil, err
 	}
-	id, jobID, err := h.service.StartValidation(ctx, userID, learningModel(req.Msg.GetAnalyzeModel()), learningModel(req.Msg.GetWriteModel()), req.Msg.GetJudgeEnabled())
+	id, jobID, err := h.service.StartValidation(ctx, userID, req.Msg.GetVoiceId(), learningModel(req.Msg.GetAnalyzeModel()), learningModel(req.Msg.GetWriteModel()), req.Msg.GetJudgeEnabled())
 	if err != nil {
 		return nil, validationError("start profile validation", err)
 	}
@@ -82,12 +82,12 @@ func (h *ValidationHandler) GetVoiceProfileValidation(ctx context.Context, req *
 	}
 	return connect.NewResponse(&postpilotv1.GetVoiceProfileValidationResponse{Validation: toProtoValidation(found)}), nil
 }
-func (h *ValidationHandler) ListVoiceProfileValidations(ctx context.Context, _ *connect.Request[postpilotv1.ListVoiceProfileValidationsRequest]) (*connect.Response[postpilotv1.ListVoiceProfileValidationsResponse], error) {
+func (h *ValidationHandler) ListVoiceProfileValidations(ctx context.Context, req *connect.Request[postpilotv1.ListVoiceProfileValidationsRequest]) (*connect.Response[postpilotv1.ListVoiceProfileValidationsResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	items, err := h.service.ListValidations(ctx, userID)
+	items, err := h.service.ListValidations(ctx, userID, req.Msg.GetVoiceId())
 	if err != nil {
 		return nil, validationError("list profile validations", err)
 	}
@@ -114,7 +114,7 @@ func toProtoComparison(v voice.RuleComparison) *postpilotv1.VoiceRuleComparison 
 	for _, c := range v.Candidates {
 		candidates = append(candidates, &postpilotv1.VoiceComparisonCandidate{Id: c.ID, Side: c.DisplaySide, Output: c.Output, Status: c.Status, Error: c.Error})
 	}
-	return &postpilotv1.VoiceRuleComparison{Id: v.ID, RuleId: v.RuleID, ProfileVersion: v.ProfileVersion, TargetLength: protoOptionalLength(v.TargetLength), Status: v.Status, JobId: v.JobID, Candidates: candidates, ChosenSide: v.ChosenSide, CreatedAt: v.CreatedAt.UTC().Format(timeLayout)}
+	return &postpilotv1.VoiceRuleComparison{Id: v.ID, RuleId: v.RuleID, ProfileVersion: v.ProfileVersion, TargetLength: protoOptionalLength(v.TargetLength), Status: v.Status, JobId: v.JobID, Candidates: candidates, ChosenSide: v.ChosenSide, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), VoiceId: v.VoiceID}
 }
 
 func optionalLength(value *int32) *int {
@@ -149,7 +149,7 @@ func toProtoValidation(v voice.ProfileValidation) *postpilotv1.VoiceProfileValid
 	if v.FinishedAt != nil {
 		finished = v.FinishedAt.UTC().Format(timeLayout)
 	}
-	return &postpilotv1.VoiceProfileValidation{Id: v.ID, ProfileVersion: v.ProfileVersion, JudgeEnabled: v.JudgeEnabled, Status: v.Status, JobId: v.JobID, Items: items, YCount: int32(v.YCount), TotalCount: int32(v.TotalCount), CreatedAt: v.CreatedAt.UTC().Format(timeLayout), FinishedAt: finished}
+	return &postpilotv1.VoiceProfileValidation{Id: v.ID, ProfileVersion: v.ProfileVersion, JudgeEnabled: v.JudgeEnabled, Status: v.Status, JobId: v.JobID, Items: items, YCount: int32(v.YCount), TotalCount: int32(v.TotalCount), CreatedAt: v.CreatedAt.UTC().Format(timeLayout), FinishedAt: finished, VoiceId: v.VoiceID}
 }
 func validationError(op string, err error) error {
 	switch {

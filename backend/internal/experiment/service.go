@@ -22,6 +22,7 @@ type Service struct {
 	catalog   Catalog
 	jobs      Jobs
 	runner    Runner
+	voices    VoiceDirectory
 	retention time.Duration
 	applyMu   sync.Mutex
 	adoptMu   sync.Mutex
@@ -36,12 +37,36 @@ func NewService(store Store, catalog Catalog, jobs Jobs, runner Runner, retentio
 	return &Service{store: store, catalog: catalog, jobs: jobs, runner: runner, retention: retention, now: time.Now, newID: newID}
 }
 
+// SetVoiceDirectory wires the voice context's published check once both services exist.
+func (s *Service) SetVoiceDirectory(voices VoiceDirectory) { s.voices = voices }
+
+// requireActiveVoice refuses work in a voice that is not the account's or is a tombstone.
+func (s *Service) requireActiveVoice(ctx context.Context, userID, voiceID string) error {
+	if voiceID == "" {
+		return nil
+	}
+	if s.voices == nil {
+		return ErrVoiceUnavailable
+	}
+	return s.voices.ActiveVoice(ctx, userID, voiceID)
+}
+
 func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult, error) {
 	if _, err := ParseStage(string(request.Stage)); err != nil {
 		return StartResult{}, err
 	}
 	if request.TargetLength != nil && *request.TargetLength <= 0 {
 		return StartResult{}, ErrInvalidTargetLength
+	}
+	if request.Stage == StageAnalyze {
+		if request.VoiceID == "" {
+			return StartResult{}, ErrVoiceRequired
+		}
+		if err := s.requireActiveVoice(ctx, request.UserID, request.VoiceID); err != nil {
+			return StartResult{}, err
+		}
+	} else {
+		request.VoiceID = ""
 	}
 	if request.ModelA == request.ModelB {
 		return StartResult{}, ErrDuplicateCandidates
@@ -71,7 +96,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 		sides[0], sides[1] = sides[1], sides[0]
 	}
 	found := Experiment{
-		ID: s.newID(), UserID: request.UserID, PostSlug: request.PostSlug, Stage: request.Stage,
+		ID: s.newID(), UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: frozen.VoiceID, Stage: request.Stage,
 		Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
 		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
 	}
@@ -88,7 +113,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 		return StartResult{}, err
 	}
 	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
-		UserID: request.UserID, PostSlug: request.PostSlug, ExperimentID: found.ID, Stage: request.Stage,
+		UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: request.Stage,
 	})
 	if err != nil {
 		_ = s.store.Delete(ctx, found.ID)
@@ -119,6 +144,14 @@ func (s *Service) PendingForPost(ctx context.Context, userID, postSlug string) (
 
 func (s *Service) PurgePost(ctx context.Context, userID, postSlug string) error {
 	return s.store.PurgePost(ctx, userID, postSlug)
+}
+
+// HasPublishableForVoice is the guard the voice context asks before a soft delete: an
+// experiment frozen to the voice that is unfinished, awaiting a verdict, or decided but not
+// yet applied could still write into it.
+func (s *Service) HasPublishableForVoice(ctx context.Context, userID, voiceID string) (bool, error) {
+	n, err := s.store.CountPublishableForVoice(ctx, userID, voiceID)
+	return n > 0, err
 }
 
 // RecoverInterrupted turns experiments left running by a process exit into retryable
@@ -160,6 +193,9 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 	if len(found.InputSnapshot) == 0 {
 		return StartResult{}, ErrSnapshotUnavailable
 	}
+	if err := s.requireActiveVoice(ctx, userID, found.VoiceID); err != nil {
+		return StartResult{}, err
+	}
 	for _, candidate := range found.Candidates {
 		if candidate.Status == CandidateFailed {
 			if _, err := s.resolveForStage(found.Stage, candidate.Model); err != nil {
@@ -178,7 +214,7 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 		_ = s.store.RestoreFailedCandidates(ctx, found.ID, found.Candidates)
 		return StartResult{}, err
 	}
-	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{UserID: userID, PostSlug: found.PostSlug, ExperimentID: found.ID, Stage: found.Stage})
+	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{UserID: userID, PostSlug: found.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: found.Stage})
 	if err != nil {
 		_ = s.store.RestoreFailedCandidates(ctx, found.ID, found.Candidates)
 		_ = s.store.SetStatus(ctx, found.ID, found.Status, found.FinishedAt)

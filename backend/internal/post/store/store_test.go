@@ -35,15 +35,37 @@ func newStore(t *testing.T) *store.Store {
 		if err := users.CreateUser(context.Background(), auth.User{ID: id, PasswordHash: "hash", CreatedAt: testNow}); err != nil {
 			t.Fatalf("seed user %s: %v", id, err)
 		}
+		// A post names its voice, so each account gets its default plus one more.
+		stamp := testNow.UTC().Format(time.RFC3339Nano)
+		for i, name := range []string{"기본 말투", "리뷰"} {
+			if _, err := handle.Writer.Exec("INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+				voiceIDFor(id, i), id, name, boolInt(i == 0), stamp, stamp); err != nil {
+				t.Fatalf("seed voice %s: %v", id, err)
+			}
+		}
 	}
 
 	return store.New(handle.Writer, handle.Reader)
 }
 
+func voiceIDFor(userID string, index int) string {
+	if index == 0 {
+		return "voice-" + userID
+	}
+	return "voice-" + userID + "-review"
+}
+
+func boolInt(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
+}
+
 func seedPost(t *testing.T, s *store.Store, slug, userID string, updatedAt time.Time) post.Post {
 	t.Helper()
 	p := post.Post{
-		Slug: slug, UserID: userID, Title: slug, Memo: "",
+		Slug: slug, UserID: userID, VoiceID: voiceIDFor(userID, 0), Title: slug, Memo: "",
 		Status: post.StatusDraft, CreatedAt: testNow, UpdatedAt: updatedAt,
 	}
 	if err := s.CreatePost(context.Background(), p); err != nil {
@@ -59,7 +81,7 @@ func TestPostRoundTrip(t *testing.T) {
 	// A non-UTC, sub-second timestamp: the store must normalize it and return the same
 	// instant.
 	created := time.Date(2026, 3, 1, 21, 30, 45, 123456789, time.FixedZone("KST", 9*3600))
-	want := post.Post{Slug: "20260301-jeju", UserID: "alice", Title: "Jeju", Memo: "went",
+	want := post.Post{Slug: "20260301-jeju", UserID: "alice", VoiceID: "voice-alice", Title: "Jeju", Memo: "went",
 		Status: post.StatusDraft, CreatedAt: created, UpdatedAt: created}
 	if err := s.CreatePost(ctx, want); err != nil {
 		t.Fatalf("CreatePost: %v", err)
@@ -69,8 +91,16 @@ func TestPostRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetPost: %v", err)
 	}
-	if got.UserID != "alice" || got.Title != "Jeju" || got.Memo != "went" || got.Status != post.StatusDraft {
+	if got.UserID != "alice" || got.VoiceID != "voice-alice" || got.Title != "Jeju" || got.Memo != "went" || got.Status != post.StatusDraft || got.MachineBaselineVoiceID != "" {
 		t.Errorf("post = %+v", got)
+	}
+	// The schema, not the service, is the last line: a post cannot name another account's
+	// voice or a voice that does not exist.
+	if err := s.CreatePost(ctx, post.Post{Slug: "foreign-voice", UserID: "alice", VoiceID: "voice-bob", Status: post.StatusDraft, CreatedAt: created, UpdatedAt: created}); err == nil {
+		t.Error("a post naming another account's voice was accepted")
+	}
+	if err := s.CreatePost(ctx, post.Post{Slug: "no-voice", UserID: "alice", Status: post.StatusDraft, CreatedAt: created, UpdatedAt: created}); err == nil {
+		t.Error("a post without a voice was accepted")
 	}
 	if !got.CreatedAt.Equal(created) {
 		t.Errorf("created_at = %v, want the same instant as %v", got.CreatedAt, created)
@@ -152,6 +182,9 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	}
 	if snapshot.MachineBaseline.Title != "machine" || snapshot.Current.Title != "mine" || snapshot.BaselineRevision != 1 || snapshot.ContentRevision != 2 || snapshot.TargetLength == nil || *snapshot.TargetLength != 1500 {
 		t.Fatalf("snapshot = %+v", snapshot)
+	}
+	if snapshot.VoiceID != "voice-alice" || snapshot.MachineBaselineVoiceID != "voice-alice" {
+		t.Fatalf("snapshot voices = %q / %q", snapshot.VoiceID, snapshot.MachineBaselineVoiceID)
 	}
 	nextBaseline := post.PostContent{Title: "machine 2", Blocks: []post.Block{{Type: post.BlockText, Content: "새 기준 문장입니다."}}}
 	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", nextBaseline, testNow.Add(3*time.Minute)); err != nil || !updated {
@@ -428,10 +461,76 @@ func TestCreatePostDuplicateSlug(t *testing.T) {
 	s := newStore(t)
 	seedPost(t, s, "p", "alice", testNow)
 
-	err := s.CreatePost(ctx, post.Post{Slug: "p", UserID: "bob", Status: post.StatusDraft,
+	err := s.CreatePost(ctx, post.Post{Slug: "p", UserID: "bob", VoiceID: "voice-bob", Status: post.StatusDraft,
 		CreatedAt: testNow, UpdatedAt: testNow})
 	if !errors.Is(err, post.ErrDuplicateSlug) {
 		t.Errorf("err = %v, want ErrDuplicateSlug", err)
+	}
+}
+
+// Plan 10 A8 at the SQL level: one UPDATE moves the post and withdraws the old voice's
+// baseline/eligibility, and it is owner-scoped and a no-op for the same voice.
+func TestReassignVoiceIsOneOwnedWriteThatKeepsContent(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedPost(t, s, "moving", "alice", testNow)
+	baseline := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "생성 문장입니다."}}}
+	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", baseline, testNow); err != nil || !updated {
+		t.Fatalf("machine save: updated=%v err=%v", updated, err)
+	}
+	if updated, err := s.Finalize(ctx, "moving", "alice", 1, testNow.Add(time.Minute)); err != nil || !updated {
+		t.Fatalf("finalize: updated=%v err=%v", updated, err)
+	}
+	if moved, err := s.ReassignVoice(ctx, "moving", "bob", "voice-bob", testNow.Add(2*time.Minute)); err != nil || moved {
+		t.Fatalf("foreign reassign: moved=%v err=%v", moved, err)
+	}
+	if moved, err := s.ReassignVoice(ctx, "moving", "alice", "voice-alice", testNow.Add(2*time.Minute)); err != nil || moved {
+		t.Fatalf("same-voice reassign: moved=%v err=%v", moved, err)
+	}
+	if _, err := s.ReassignVoice(ctx, "moving", "alice", "voice-bob", testNow.Add(2*time.Minute)); !errors.Is(err, post.ErrVoiceNotFound) {
+		t.Fatalf("reassign to another account's voice = %v", err)
+	}
+	moved, err := s.ReassignVoice(ctx, "moving", "alice", "voice-alice-review", testNow.Add(2*time.Minute))
+	if err != nil || !moved {
+		t.Fatalf("reassign: moved=%v err=%v", moved, err)
+	}
+	got, err := s.GetPost(ctx, "moving")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.VoiceID != "voice-alice-review" || got.MachineBaselineVoiceID != "" {
+		t.Fatalf("voices after reassign = %q / %q", got.VoiceID, got.MachineBaselineVoiceID)
+	}
+	if got.Content == nil || got.Content.Title != "machine" || got.ContentRevision != 1 || got.MachineBaselineRevision != 0 || got.Status != post.StatusFinalized || got.FinalizedRevision != 1 {
+		t.Fatalf("reassign changed content or lifecycle: %+v", got)
+	}
+	// A later machine result under the new voice establishes a fresh baseline and restores
+	// learn eligibility there.
+	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", post.PostContent{Title: "again", Blocks: []post.Block{{Type: post.BlockText, Content: "새 문장입니다."}}}, testNow.Add(3*time.Minute)); err != nil || !updated {
+		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
+	}
+	if got, _ = s.GetPost(ctx, "moving"); got.MachineBaselineVoiceID != "voice-alice-review" {
+		t.Fatalf("new baseline voice = %q", got.MachineBaselineVoiceID)
+	}
+}
+
+func TestFinalizeAfterReassignmentDoesNotRequireALearningBaseline(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedPost(t, s, "moving-review", "alice", testNow)
+	content := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "본문"}}}
+	if updated, err := s.UpdateGeneratedContent(ctx, "moving-review", "alice", content, testNow); err != nil || !updated {
+		t.Fatalf("machine save: updated=%v err=%v", updated, err)
+	}
+	if moved, err := s.ReassignVoice(ctx, "moving-review", "alice", "voice-alice-review", testNow.Add(time.Minute)); err != nil || !moved {
+		t.Fatalf("reassign: moved=%v err=%v", moved, err)
+	}
+	if updated, err := s.Finalize(ctx, "moving-review", "alice", 1, testNow.Add(2*time.Minute)); err != nil || !updated {
+		t.Fatalf("finalize without baseline: updated=%v err=%v", updated, err)
+	}
+	got, err := s.GetPost(ctx, "moving-review")
+	if err != nil || got.Status != post.StatusFinalized || got.MachineBaselineRevision != 0 {
+		t.Fatalf("finalized reassigned post = %+v err=%v", got, err)
 	}
 }
 

@@ -33,6 +33,23 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// VoiceServiceListVoicesProcedure is the fully-qualified name of the VoiceService's ListVoices RPC.
+	VoiceServiceListVoicesProcedure = "/postpilot.v1.VoiceService/ListVoices"
+	// VoiceServiceCreateVoiceProcedure is the fully-qualified name of the VoiceService's CreateVoice
+	// RPC.
+	VoiceServiceCreateVoiceProcedure = "/postpilot.v1.VoiceService/CreateVoice"
+	// VoiceServiceRenameVoiceProcedure is the fully-qualified name of the VoiceService's RenameVoice
+	// RPC.
+	VoiceServiceRenameVoiceProcedure = "/postpilot.v1.VoiceService/RenameVoice"
+	// VoiceServiceSetDefaultVoiceProcedure is the fully-qualified name of the VoiceService's
+	// SetDefaultVoice RPC.
+	VoiceServiceSetDefaultVoiceProcedure = "/postpilot.v1.VoiceService/SetDefaultVoice"
+	// VoiceServiceDeleteVoiceProcedure is the fully-qualified name of the VoiceService's DeleteVoice
+	// RPC.
+	VoiceServiceDeleteVoiceProcedure = "/postpilot.v1.VoiceService/DeleteVoice"
+	// VoiceServiceRestoreVoiceProcedure is the fully-qualified name of the VoiceService's RestoreVoice
+	// RPC.
+	VoiceServiceRestoreVoiceProcedure = "/postpilot.v1.VoiceService/RestoreVoice"
 	// VoiceServiceGetVoiceProfileProcedure is the fully-qualified name of the VoiceService's
 	// GetVoiceProfile RPC.
 	VoiceServiceGetVoiceProfileProcedure = "/postpilot.v1.VoiceService/GetVoiceProfile"
@@ -58,6 +75,14 @@ const (
 
 // VoiceServiceClient is a client for the postpilot.v1.VoiceService service.
 type VoiceServiceClient interface {
+	// The voice directory. A voice owns exactly one profile and every row that can change
+	// it; an account always has at least one active voice and exactly one active default.
+	ListVoices(context.Context, *connect.Request[v1.ListVoicesRequest]) (*connect.Response[v1.ListVoicesResponse], error)
+	CreateVoice(context.Context, *connect.Request[v1.CreateVoiceRequest]) (*connect.Response[v1.CreateVoiceResponse], error)
+	RenameVoice(context.Context, *connect.Request[v1.RenameVoiceRequest]) (*connect.Response[v1.RenameVoiceResponse], error)
+	SetDefaultVoice(context.Context, *connect.Request[v1.SetDefaultVoiceRequest]) (*connect.Response[v1.SetDefaultVoiceResponse], error)
+	DeleteVoice(context.Context, *connect.Request[v1.DeleteVoiceRequest]) (*connect.Response[v1.DeleteVoiceResponse], error)
+	RestoreVoice(context.Context, *connect.Request[v1.RestoreVoiceRequest]) (*connect.Response[v1.RestoreVoiceResponse], error)
 	GetVoiceProfile(context.Context, *connect.Request[v1.GetVoiceProfileRequest]) (*connect.Response[v1.GetVoiceProfileResponse], error)
 	UpdateVoiceProfile(context.Context, *connect.Request[v1.UpdateVoiceProfileRequest]) (*connect.Response[v1.UpdateVoiceProfileResponse], error)
 	AddVoiceSample(context.Context, *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error)
@@ -78,6 +103,42 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 	baseURL = strings.TrimRight(baseURL, "/")
 	voiceServiceMethods := v1.File_postpilot_v1_voice_proto.Services().ByName("VoiceService").Methods()
 	return &voiceServiceClient{
+		listVoices: connect.NewClient[v1.ListVoicesRequest, v1.ListVoicesResponse](
+			httpClient,
+			baseURL+VoiceServiceListVoicesProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("ListVoices")),
+			connect.WithClientOptions(opts...),
+		),
+		createVoice: connect.NewClient[v1.CreateVoiceRequest, v1.CreateVoiceResponse](
+			httpClient,
+			baseURL+VoiceServiceCreateVoiceProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("CreateVoice")),
+			connect.WithClientOptions(opts...),
+		),
+		renameVoice: connect.NewClient[v1.RenameVoiceRequest, v1.RenameVoiceResponse](
+			httpClient,
+			baseURL+VoiceServiceRenameVoiceProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("RenameVoice")),
+			connect.WithClientOptions(opts...),
+		),
+		setDefaultVoice: connect.NewClient[v1.SetDefaultVoiceRequest, v1.SetDefaultVoiceResponse](
+			httpClient,
+			baseURL+VoiceServiceSetDefaultVoiceProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("SetDefaultVoice")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteVoice: connect.NewClient[v1.DeleteVoiceRequest, v1.DeleteVoiceResponse](
+			httpClient,
+			baseURL+VoiceServiceDeleteVoiceProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("DeleteVoice")),
+			connect.WithClientOptions(opts...),
+		),
+		restoreVoice: connect.NewClient[v1.RestoreVoiceRequest, v1.RestoreVoiceResponse](
+			httpClient,
+			baseURL+VoiceServiceRestoreVoiceProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("RestoreVoice")),
+			connect.WithClientOptions(opts...),
+		),
 		getVoiceProfile: connect.NewClient[v1.GetVoiceProfileRequest, v1.GetVoiceProfileResponse](
 			httpClient,
 			baseURL+VoiceServiceGetVoiceProfileProcedure,
@@ -125,6 +186,12 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // voiceServiceClient implements VoiceServiceClient.
 type voiceServiceClient struct {
+	listVoices               *connect.Client[v1.ListVoicesRequest, v1.ListVoicesResponse]
+	createVoice              *connect.Client[v1.CreateVoiceRequest, v1.CreateVoiceResponse]
+	renameVoice              *connect.Client[v1.RenameVoiceRequest, v1.RenameVoiceResponse]
+	setDefaultVoice          *connect.Client[v1.SetDefaultVoiceRequest, v1.SetDefaultVoiceResponse]
+	deleteVoice              *connect.Client[v1.DeleteVoiceRequest, v1.DeleteVoiceResponse]
+	restoreVoice             *connect.Client[v1.RestoreVoiceRequest, v1.RestoreVoiceResponse]
 	getVoiceProfile          *connect.Client[v1.GetVoiceProfileRequest, v1.GetVoiceProfileResponse]
 	updateVoiceProfile       *connect.Client[v1.UpdateVoiceProfileRequest, v1.UpdateVoiceProfileResponse]
 	addVoiceSample           *connect.Client[v1.AddVoiceSampleRequest, v1.AddVoiceSampleResponse]
@@ -132,6 +199,36 @@ type voiceServiceClient struct {
 	listVoiceProfileVersions *connect.Client[v1.ListVoiceProfileVersionsRequest, v1.ListVoiceProfileVersionsResponse]
 	updateVoiceOverride      *connect.Client[v1.UpdateVoiceOverrideRequest, v1.UpdateVoiceOverrideResponse]
 	restoreVoiceProfile      *connect.Client[v1.RestoreVoiceProfileRequest, v1.RestoreVoiceProfileResponse]
+}
+
+// ListVoices calls postpilot.v1.VoiceService.ListVoices.
+func (c *voiceServiceClient) ListVoices(ctx context.Context, req *connect.Request[v1.ListVoicesRequest]) (*connect.Response[v1.ListVoicesResponse], error) {
+	return c.listVoices.CallUnary(ctx, req)
+}
+
+// CreateVoice calls postpilot.v1.VoiceService.CreateVoice.
+func (c *voiceServiceClient) CreateVoice(ctx context.Context, req *connect.Request[v1.CreateVoiceRequest]) (*connect.Response[v1.CreateVoiceResponse], error) {
+	return c.createVoice.CallUnary(ctx, req)
+}
+
+// RenameVoice calls postpilot.v1.VoiceService.RenameVoice.
+func (c *voiceServiceClient) RenameVoice(ctx context.Context, req *connect.Request[v1.RenameVoiceRequest]) (*connect.Response[v1.RenameVoiceResponse], error) {
+	return c.renameVoice.CallUnary(ctx, req)
+}
+
+// SetDefaultVoice calls postpilot.v1.VoiceService.SetDefaultVoice.
+func (c *voiceServiceClient) SetDefaultVoice(ctx context.Context, req *connect.Request[v1.SetDefaultVoiceRequest]) (*connect.Response[v1.SetDefaultVoiceResponse], error) {
+	return c.setDefaultVoice.CallUnary(ctx, req)
+}
+
+// DeleteVoice calls postpilot.v1.VoiceService.DeleteVoice.
+func (c *voiceServiceClient) DeleteVoice(ctx context.Context, req *connect.Request[v1.DeleteVoiceRequest]) (*connect.Response[v1.DeleteVoiceResponse], error) {
+	return c.deleteVoice.CallUnary(ctx, req)
+}
+
+// RestoreVoice calls postpilot.v1.VoiceService.RestoreVoice.
+func (c *voiceServiceClient) RestoreVoice(ctx context.Context, req *connect.Request[v1.RestoreVoiceRequest]) (*connect.Response[v1.RestoreVoiceResponse], error) {
+	return c.restoreVoice.CallUnary(ctx, req)
 }
 
 // GetVoiceProfile calls postpilot.v1.VoiceService.GetVoiceProfile.
@@ -171,6 +268,14 @@ func (c *voiceServiceClient) RestoreVoiceProfile(ctx context.Context, req *conne
 
 // VoiceServiceHandler is an implementation of the postpilot.v1.VoiceService service.
 type VoiceServiceHandler interface {
+	// The voice directory. A voice owns exactly one profile and every row that can change
+	// it; an account always has at least one active voice and exactly one active default.
+	ListVoices(context.Context, *connect.Request[v1.ListVoicesRequest]) (*connect.Response[v1.ListVoicesResponse], error)
+	CreateVoice(context.Context, *connect.Request[v1.CreateVoiceRequest]) (*connect.Response[v1.CreateVoiceResponse], error)
+	RenameVoice(context.Context, *connect.Request[v1.RenameVoiceRequest]) (*connect.Response[v1.RenameVoiceResponse], error)
+	SetDefaultVoice(context.Context, *connect.Request[v1.SetDefaultVoiceRequest]) (*connect.Response[v1.SetDefaultVoiceResponse], error)
+	DeleteVoice(context.Context, *connect.Request[v1.DeleteVoiceRequest]) (*connect.Response[v1.DeleteVoiceResponse], error)
+	RestoreVoice(context.Context, *connect.Request[v1.RestoreVoiceRequest]) (*connect.Response[v1.RestoreVoiceResponse], error)
 	GetVoiceProfile(context.Context, *connect.Request[v1.GetVoiceProfileRequest]) (*connect.Response[v1.GetVoiceProfileResponse], error)
 	UpdateVoiceProfile(context.Context, *connect.Request[v1.UpdateVoiceProfileRequest]) (*connect.Response[v1.UpdateVoiceProfileResponse], error)
 	AddVoiceSample(context.Context, *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error)
@@ -187,6 +292,42 @@ type VoiceServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	voiceServiceMethods := v1.File_postpilot_v1_voice_proto.Services().ByName("VoiceService").Methods()
+	voiceServiceListVoicesHandler := connect.NewUnaryHandler(
+		VoiceServiceListVoicesProcedure,
+		svc.ListVoices,
+		connect.WithSchema(voiceServiceMethods.ByName("ListVoices")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceCreateVoiceHandler := connect.NewUnaryHandler(
+		VoiceServiceCreateVoiceProcedure,
+		svc.CreateVoice,
+		connect.WithSchema(voiceServiceMethods.ByName("CreateVoice")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceRenameVoiceHandler := connect.NewUnaryHandler(
+		VoiceServiceRenameVoiceProcedure,
+		svc.RenameVoice,
+		connect.WithSchema(voiceServiceMethods.ByName("RenameVoice")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceSetDefaultVoiceHandler := connect.NewUnaryHandler(
+		VoiceServiceSetDefaultVoiceProcedure,
+		svc.SetDefaultVoice,
+		connect.WithSchema(voiceServiceMethods.ByName("SetDefaultVoice")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceDeleteVoiceHandler := connect.NewUnaryHandler(
+		VoiceServiceDeleteVoiceProcedure,
+		svc.DeleteVoice,
+		connect.WithSchema(voiceServiceMethods.ByName("DeleteVoice")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceRestoreVoiceHandler := connect.NewUnaryHandler(
+		VoiceServiceRestoreVoiceProcedure,
+		svc.RestoreVoice,
+		connect.WithSchema(voiceServiceMethods.ByName("RestoreVoice")),
+		connect.WithHandlerOptions(opts...),
+	)
 	voiceServiceGetVoiceProfileHandler := connect.NewUnaryHandler(
 		VoiceServiceGetVoiceProfileProcedure,
 		svc.GetVoiceProfile,
@@ -231,6 +372,18 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 	)
 	return "/postpilot.v1.VoiceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case VoiceServiceListVoicesProcedure:
+			voiceServiceListVoicesHandler.ServeHTTP(w, r)
+		case VoiceServiceCreateVoiceProcedure:
+			voiceServiceCreateVoiceHandler.ServeHTTP(w, r)
+		case VoiceServiceRenameVoiceProcedure:
+			voiceServiceRenameVoiceHandler.ServeHTTP(w, r)
+		case VoiceServiceSetDefaultVoiceProcedure:
+			voiceServiceSetDefaultVoiceHandler.ServeHTTP(w, r)
+		case VoiceServiceDeleteVoiceProcedure:
+			voiceServiceDeleteVoiceHandler.ServeHTTP(w, r)
+		case VoiceServiceRestoreVoiceProcedure:
+			voiceServiceRestoreVoiceHandler.ServeHTTP(w, r)
 		case VoiceServiceGetVoiceProfileProcedure:
 			voiceServiceGetVoiceProfileHandler.ServeHTTP(w, r)
 		case VoiceServiceUpdateVoiceProfileProcedure:
@@ -253,6 +406,30 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 
 // UnimplementedVoiceServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedVoiceServiceHandler struct{}
+
+func (UnimplementedVoiceServiceHandler) ListVoices(context.Context, *connect.Request[v1.ListVoicesRequest]) (*connect.Response[v1.ListVoicesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.ListVoices is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) CreateVoice(context.Context, *connect.Request[v1.CreateVoiceRequest]) (*connect.Response[v1.CreateVoiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.CreateVoice is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) RenameVoice(context.Context, *connect.Request[v1.RenameVoiceRequest]) (*connect.Response[v1.RenameVoiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.RenameVoice is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) SetDefaultVoice(context.Context, *connect.Request[v1.SetDefaultVoiceRequest]) (*connect.Response[v1.SetDefaultVoiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.SetDefaultVoice is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) DeleteVoice(context.Context, *connect.Request[v1.DeleteVoiceRequest]) (*connect.Response[v1.DeleteVoiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.DeleteVoice is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) RestoreVoice(context.Context, *connect.Request[v1.RestoreVoiceRequest]) (*connect.Response[v1.RestoreVoiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.RestoreVoice is not implemented"))
+}
 
 func (UnimplementedVoiceServiceHandler) GetVoiceProfile(context.Context, *connect.Request[v1.GetVoiceProfileRequest]) (*connect.Response[v1.GetVoiceProfileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.GetVoiceProfile is not implemented"))

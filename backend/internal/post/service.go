@@ -23,6 +23,7 @@ type Service struct {
 	jobs          ActiveJobFinder
 	experiments   PendingExperimentFinder
 	contentPurger ExperimentContentPurger
+	voices        VoiceDirectory
 
 	// now and newID are seams for tests in this package, not configuration.
 	now   func() time.Time
@@ -37,6 +38,12 @@ func (s *Service) SetPendingExperimentFinder(finder PendingExperimentFinder) {
 
 func (s *Service) SetExperimentContentPurger(purger ExperimentContentPurger) {
 	s.contentPurger = purger
+}
+
+// SetVoiceDirectory wires the voice context's published directory. Without it no post can
+// be created — failing closed is the point, since a post must name an owned active voice.
+func (s *Service) SetVoiceDirectory(directory VoiceDirectory) {
+	s.voices = directory
 }
 
 // NewService wires the context with its store, its object storage, the presigned URL
@@ -61,13 +68,30 @@ func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, ma
 //
 // It is the autosave endpoint, so it is called every second or so while someone types:
 // repeated saves are plain idempotent updates, and only the very first one mints a slug.
-func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string) (Post, error) {
+//
+// voiceID is presence-aware, which is what lets autosave keep patching title and memo:
+// required on create, nil preserves the current assignment, and a different present value
+// asks for a reassignment. An empty string is never valid — the server substitutes no default.
+func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID *string) (Post, error) {
 	if slug == "" {
-		return s.createPost(ctx, userID, title, memo)
+		if voiceID == nil {
+			return Post{}, ErrVoiceRequired
+		}
+		target, err := s.activeVoice(ctx, userID, *voiceID)
+		if err != nil {
+			return Post{}, err
+		}
+		return s.createPost(ctx, userID, title, memo, target.ID)
 	}
 
-	if _, err := s.ownedPost(ctx, userID, slug); err != nil {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
 		return Post{}, err
+	}
+	if voiceID != nil && *voiceID != found.VoiceID {
+		if err := s.reassignVoice(ctx, found, *voiceID); err != nil {
+			return Post{}, err
+		}
 	}
 
 	now := s.now()
@@ -84,12 +108,106 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	return s.Get(ctx, userID, slug)
 }
 
+// reassignVoice moves an idle post to another active owned voice. It is refused while a
+// job or an undecided write experiment could still apply output written for the old voice;
+// otherwise the store's single UPDATE changes the id and clears the machine baseline's voice
+// association, which is what withdraws learn eligibility until a fresh machine result.
+func (s *Service) reassignVoice(ctx context.Context, found Post, voiceID string) error {
+	target, err := s.activeVoice(ctx, found.UserID, voiceID)
+	if err != nil {
+		return err
+	}
+	if s.jobs != nil {
+		active, err := s.jobs.ActiveForPost(ctx, found.Slug)
+		if err != nil {
+			return fmt.Errorf("check active job before reassignment: %w", err)
+		}
+		if active != nil {
+			return ErrPostBusy
+		}
+	}
+	if s.experiments != nil {
+		pending, err := s.experiments.PendingForPost(ctx, found.UserID, found.Slug)
+		if err != nil {
+			return fmt.Errorf("check pending experiment before reassignment: %w", err)
+		}
+		if pending != "" {
+			return ErrPostBusy
+		}
+	}
+	changed, err := s.store.ReassignVoice(ctx, found.Slug, found.UserID, target.ID, s.now())
+	if err != nil {
+		return fmt.Errorf("reassign voice: %w", err)
+	}
+	if !changed {
+		// Zero rows means another save already moved it; only a vanished post is an error.
+		current, err := s.ownedPost(ctx, found.UserID, found.Slug)
+		if err != nil {
+			return err
+		}
+		if current.VoiceID != target.ID {
+			return ErrNotFound
+		}
+	}
+	return nil
+}
+
+// activeVoice resolves an owned, active voice through the directory port. Missing and
+// foreign ids read the same, and a tombstone is refused: a new post or a reassignment may
+// only target a voice that can still receive AI work.
+func (s *Service) activeVoice(ctx context.Context, userID, voiceID string) (VoiceRef, error) {
+	if strings.TrimSpace(voiceID) == "" {
+		return VoiceRef{}, ErrVoiceRequired
+	}
+	if s.voices == nil {
+		return VoiceRef{}, errors.New("voice directory is not configured")
+	}
+	voices, err := s.voices.Voices(ctx, userID)
+	if err != nil {
+		return VoiceRef{}, fmt.Errorf("list voices: %w", err)
+	}
+	for _, v := range voices {
+		if v.ID != voiceID {
+			continue
+		}
+		if v.Deleted {
+			return VoiceRef{}, ErrVoiceDeleted
+		}
+		return v, nil
+	}
+	return VoiceRef{}, ErrVoiceNotFound
+}
+
+// voiceRefs names every voice the account owns, tombstones included, so a read model can
+// label a post whose voice was deleted. Without a directory the id alone is projected.
+func (s *Service) voiceRefs(ctx context.Context, userID string) (map[string]VoiceRef, error) {
+	if s.voices == nil {
+		return nil, nil
+	}
+	voices, err := s.voices.Voices(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list voices: %w", err)
+	}
+	out := make(map[string]VoiceRef, len(voices))
+	for _, v := range voices {
+		out[v.ID] = v
+	}
+	return out, nil
+}
+
+func projectVoice(refs map[string]VoiceRef, voiceID string) VoiceRef {
+	if ref, ok := refs[voiceID]; ok {
+		return ref
+	}
+	return VoiceRef{ID: voiceID}
+}
+
 // slugAttempts bounds the mint-and-insert retry. Minting reads the slugs that exist,
 // so a retry only happens when another request took the candidate in between — rare,
 // and each attempt sees one more taken slug, so it converges immediately.
 const slugAttempts = 5
 
-func (s *Service) createPost(ctx context.Context, userID, title, memo string) (Post, error) {
+func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID string) (Post, error) {
 	now := s.now()
 
 	// Mint-then-insert is a check-then-act, so the insert is what actually decides:
@@ -116,6 +234,7 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo string) (P
 		created := Post{
 			Slug:      slug,
 			UserID:    userID,
+			VoiceID:   voiceID,
 			Title:     title,
 			Memo:      memo,
 			Status:    StatusDraft,
@@ -124,7 +243,7 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo string) (P
 		}
 		err := s.store.CreatePost(ctx, created)
 		if err == nil {
-			return created, nil
+			return s.Get(ctx, userID, slug)
 		}
 		if !errors.Is(err, ErrDuplicateSlug) {
 			return Post{}, fmt.Errorf("create post: %w", err)
@@ -171,6 +290,11 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 			return Post{}, fmt.Errorf("load pending experiment: %w", err)
 		}
 	}
+	refs, err := s.voiceRefs(ctx, userID)
+	if err != nil {
+		return Post{}, err
+	}
+	found.Voice = projectVoice(refs, found.VoiceID)
 	return found, nil
 }
 
@@ -195,6 +319,13 @@ func (s *Service) List(ctx context.Context, userID string) ([]Summary, error) {
 				return nil, fmt.Errorf("load pending experiment for %s: %w", summaries[i].Slug, err)
 			}
 		}
+	}
+	refs, err := s.voiceRefs(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range summaries {
+		summaries[i].Voice = projectVoice(refs, summaries[i].VoiceID)
 	}
 	return summaries, nil
 }
@@ -242,7 +373,8 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 
 // AttachedImages returns an ownership-checked generation snapshot without presigning
 // browser URLs. Object keys remain backend-only and are consumed by the generation
-// context's storage port.
+// context's storage port. The voice is projected too, since a consumer must refuse to
+// write in a deleted voice before it calls a provider.
 func (s *Service) AttachedImages(ctx context.Context, userID, slug string) (Post, error) {
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
@@ -252,6 +384,11 @@ func (s *Service) AttachedImages(ctx context.Context, userID, slug string) (Post
 	if err != nil {
 		return Post{}, fmt.Errorf("list attached images: %w", err)
 	}
+	refs, err := s.voiceRefs(ctx, userID)
+	if err != nil {
+		return Post{}, err
+	}
+	found.Voice = projectVoice(refs, found.VoiceID)
 	return found, nil
 }
 
@@ -377,7 +514,7 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 	if found.ContentRevision != expectedRevision {
 		return Post{}, ErrStaleContentRevision
 	}
-	if found.Content == nil || found.MachineBaselineRevision <= 0 {
+	if found.Content == nil {
 		return Post{}, ErrNoMachineBaseline
 	}
 	if found.Status == StatusFinalized && found.FinalizedRevision == expectedRevision {

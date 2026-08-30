@@ -275,6 +275,25 @@ func (s *memoryStore) LeaderboardData(context.Context, string, Stage) ([]Experim
 }
 func (s *memoryStore) PurgeExpired(context.Context, time.Time) (int64, error) { return 0, nil }
 func (s *memoryStore) PurgePost(context.Context, string, string) error        { return nil }
+func (s *memoryStore) CountPublishableForVoice(_ context.Context, userID, voiceID string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for _, row := range s.rows {
+		if row.UserID != userID || row.VoiceID != voiceID {
+			continue
+		}
+		switch row.Status {
+		case StatusQueued, StatusRunning, StatusReview, StatusPartial:
+			n++
+		case StatusDecided:
+			if row.AppliedAt == nil {
+				n++
+			}
+		}
+	}
+	return n, nil
+}
 
 func cloneExperiment(found Experiment) Experiment {
 	found.InputSnapshot = append([]byte(nil), found.InputSnapshot...)
@@ -401,6 +420,7 @@ func (c *fakeCatalog) Recommended(Stage, ModelRef) bool { return false }
 
 type fakeJobs struct {
 	ids      []string
+	requests []JobRequest
 	runnable map[string]bool
 	err      error
 }
@@ -411,6 +431,7 @@ func (j *fakeJobs) EnqueueExperiment(_ context.Context, request JobRequest) (str
 	}
 	id := fmt.Sprintf("job-%d", len(j.ids)+1)
 	j.ids = append(j.ids, id)
+	j.requests = append(j.requests, request)
 	if j.runnable == nil {
 		j.runnable = map[string]bool{}
 	}
@@ -426,14 +447,89 @@ type fakeRunner struct {
 	fail                                map[string]error
 	results                             map[string]CandidateResult
 	applyErr                            error
+	snapshotVoice                       string
 }
 
-func (r *fakeRunner) Snapshot(context.Context, StartRequest) (Snapshot, error) {
+// Snapshot freezes the request's voice, as the real runner does from the post or the
+// explicit analyze voice.
+func (r *fakeRunner) Snapshot(_ context.Context, request StartRequest) (Snapshot, error) {
 	r.snapshotCalls++
-	return Snapshot{Content: []byte(`{"same":true}`), PromptVersion: "v1"}, nil
+	voiceID := request.VoiceID
+	if request.Stage == StageWrite && r.snapshotVoice != "" {
+		voiceID = r.snapshotVoice
+	}
+	return Snapshot{Content: []byte(`{"same":true}`), PromptVersion: "v1", VoiceID: voiceID}, nil
 }
 func (r *fakeRunner) PrepareWrite(_ context.Context, found Experiment, _ Progress) (Snapshot, error) {
-	return Snapshot{Content: found.InputSnapshot, PromptVersion: found.PromptVersion}, nil
+	return Snapshot{Content: found.InputSnapshot, PromptVersion: found.PromptVersion, VoiceID: found.VoiceID}, nil
+}
+
+type fakeVoices struct{ deleted map[string]bool }
+
+func (v fakeVoices) ActiveVoice(_ context.Context, _, voiceID string) error {
+	if v.deleted[voiceID] {
+		return ErrVoiceUnavailable
+	}
+	return nil
+}
+
+// Plan 10 A13: an analyze comparison names one active voice, freezes it on the experiment
+// and its job, keeps the voice undeletable while publishable, and refuses to start or retry
+// once the voice is gone.
+func TestAnalyzeExperimentIsFrozenToOneActiveVoice(t *testing.T) {
+	unwired, _, _, _, unwiredRunner := newTestService()
+	if _, err := unwired.Start(context.Background(), StartRequest{UserID: "alice", Stage: StageAnalyze, VoiceID: "voice-a", ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}}); !errors.Is(err, ErrVoiceUnavailable) || unwiredRunner.snapshotCalls != 0 {
+		t.Fatalf("analyze without voice directory: err=%v snapshots=%d", err, unwiredRunner.snapshotCalls)
+	}
+
+	svc, store, _, jobs, runner := newTestService()
+	voices := fakeVoices{deleted: map[string]bool{}}
+	svc.SetVoiceDirectory(voices)
+	ctx := context.Background()
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", Stage: StageAnalyze, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}}); !errors.Is(err, ErrVoiceRequired) || runner.snapshotCalls != 0 || len(jobs.ids) != 0 {
+		t.Fatalf("analyze without voice: err=%v snapshots=%d jobs=%v", err, runner.snapshotCalls, jobs.ids)
+	}
+	voices.deleted["gone"] = true
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", Stage: StageAnalyze, VoiceID: "gone", ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}}); !errors.Is(err, ErrVoiceUnavailable) || runner.snapshotCalls != 0 {
+		t.Fatalf("analyze in deleted voice: err=%v snapshots=%d", err, runner.snapshotCalls)
+	}
+	started, err := svc.Start(ctx, StartRequest{UserID: "alice", Stage: StageAnalyze, VoiceID: "voice-a", ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(ctx, started.ExperimentID)
+	if found.VoiceID != "voice-a" || len(jobs.requests) != 1 || jobs.requests[0].VoiceID != "voice-a" {
+		t.Fatalf("voice not frozen: experiment=%+v jobs=%+v", found, jobs.requests)
+	}
+	if busy, err := svc.HasPublishableForVoice(ctx, "alice", "voice-a"); err != nil || !busy {
+		t.Fatalf("queued analyze not publishable: busy=%v err=%v", busy, err)
+	}
+	if busy, _ := svc.HasPublishableForVoice(ctx, "alice", "voice-b"); busy {
+		t.Fatal("another voice reads as busy")
+	}
+	runner.fail["b"] = errors.New("provider failed")
+	if err := svc.Handle(ctx, found.ID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	voices.deleted["voice-a"] = true
+	if _, err := svc.Retry(ctx, "alice", found.ID); !errors.Is(err, ErrVoiceUnavailable) || len(jobs.ids) != 1 {
+		t.Fatalf("retry in deleted voice: err=%v jobs=%v", err, jobs.ids)
+	}
+	if _, err := svc.Dismiss(ctx, "alice", found.ID); err != nil {
+		t.Fatal(err)
+	}
+	if busy, _ := svc.HasPublishableForVoice(ctx, "alice", "voice-a"); busy {
+		t.Fatal("dismissed experiment still holds the voice")
+	}
+	// A write comparison never takes a voice from the request; it is the post's.
+	runner.snapshotVoice = "voice-write"
+	write, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, VoiceID: "gone", ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found, _ := store.Get(ctx, write.ExperimentID); found.VoiceID != "voice-write" {
+		t.Fatalf("write experiment took the request voice: %+v", found)
+	}
 }
 func (r *fakeRunner) RunCandidate(_ context.Context, _ Experiment, candidate Candidate, _ Progress) (CandidateResult, error) {
 	r.runCalls++

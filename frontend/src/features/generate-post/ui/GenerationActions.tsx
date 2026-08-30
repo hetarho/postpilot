@@ -25,7 +25,7 @@ export interface GenerationActionsHandle {
 export const GenerationActions = forwardRef<
   GenerationActionsHandle,
   {
-    post: Pick<PostDraft, 'slug' | 'images' | 'pendingExperimentId' | 'targetLength'>
+    post: Pick<PostDraft, 'slug' | 'images' | 'pendingExperimentId' | 'targetLength' | 'voice'>
     activeJob?: GenerationJob
     jobPending?: boolean
     onStarted: (jobId: string) => void
@@ -53,6 +53,7 @@ export const GenerationActions = forwardRef<
     observeSelection,
     writeSelection,
     activeJob,
+    post.voice,
   )
   const ab = comparisonGenerationPreconditions(
     post.images,
@@ -60,6 +61,7 @@ export const GenerationActions = forwardRef<
     writeA,
     writeB,
     activeJob,
+    post.voice,
   )
   const pendingExperiment = Boolean(post.pendingExperimentId)
   const modelPending = observe.isPending || write.isPending || setup.isPending || selectionSaving

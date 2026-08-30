@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DELETED_VOICE_AI_REASON } from '@/entities/voice'
 import { comparisonGenerationPreconditions, ordinaryGenerationPreconditions, type GenerationModelSelection } from './preconditions'
 
 const image = { id: 'image-1' }
@@ -71,6 +72,21 @@ describe('generationPreconditions', () => {
 
   it('does not require a comparison pair for ordinary generation', () => {
     expect(ordinaryGenerationPreconditions([], undefined, text, undefined).ok).toBe(true)
+  })
+
+  // spec/policy/generation.md: a deleted voice refuses every machine result, whatever the models.
+  it('refuses a deleted voice before anything else', () => {
+    const deleted = { deleted: true }
+    expect(ordinaryGenerationPreconditions([], undefined, text, undefined, deleted)).toEqual({
+      ok: false,
+      reason: DELETED_VOICE_AI_REASON,
+    })
+    expect(comparisonGenerationPreconditions([], undefined, text, textB, undefined, deleted).ok).toBe(
+      false,
+    )
+    expect(ordinaryGenerationPreconditions([], undefined, text, undefined, { deleted: false }).ok).toBe(
+      true,
+    )
   })
 
   it('requires two distinct candidates only for A/B generation', () => {

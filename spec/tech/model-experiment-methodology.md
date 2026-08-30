@@ -9,7 +9,8 @@ claim that a handful of personal votes is statistically significant.
 A verdict changes exactly one variable:
 
 - **observe** — identical ordered photos and observation schema; no writing call;
-- **analyze** — identical voice-corpus snapshot and analysis prompt; no profile mutation;
+- **analyze** — identical corpus snapshot of one explicitly selected active voice and the analysis prompt; no
+  profile mutation, and a winner applies only to that same still-active voice;
 - **write** — identical observations, memo, filenames and voice-profile snapshot.
 
 Ordinary post generation observes once and calls one explicit active writer; it creates no experiment. The separate

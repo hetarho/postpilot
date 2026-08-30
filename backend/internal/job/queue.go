@@ -23,7 +23,7 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 
 	now := q.now()
 	found := Job{
-		ID: q.newID(), Kind: input.Kind, UserID: input.UserID, PostSlug: input.PostSlug,
+		ID: q.newID(), Kind: input.Kind, UserID: input.UserID, PostSlug: input.PostSlug, VoiceID: input.VoiceID,
 		Status: StatusQueued, ObserveModel: input.ObserveModel, WriteModel: input.WriteModel,
 		Payload: append([]byte(nil), input.Payload...), CreatedAt: now, UpdatedAt: now,
 	}
@@ -44,9 +44,20 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	return found.ID, nil
 }
 
+// activeForInput checks every guard the row will be inserted under. Voice-owned work may
+// also point at a post, so it must satisfy both the post guard and the (voice, kind) guard.
 func (q *Queue) activeForInput(ctx context.Context, input NewJob) (*Job, error) {
 	if input.PostSlug != nil {
-		return q.store.ActiveForPostUser(ctx, *input.PostSlug, input.UserID)
+		active, err := q.store.ActiveForPostUser(ctx, *input.PostSlug, input.UserID)
+		if err != nil || active != nil {
+			return active, err
+		}
+	}
+	if input.VoiceID != "" && (input.PostSlug == nil || voiceOwnedKind(input.Kind)) {
+		return q.store.ActiveForVoiceKind(ctx, input.VoiceID, input.Kind)
+	}
+	if input.PostSlug != nil {
+		return nil, nil
 	}
 	return q.store.ActiveForUserKind(ctx, input.UserID, input.Kind)
 }

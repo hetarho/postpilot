@@ -20,13 +20,23 @@ import (
 	"github.com/postpilot/backend/internal/platform/db"
 )
 
+// Bootstrap runs once the user row exists. The composition root supplies it so this
+// package stays inside the auth context: the account's default voice is established here
+// (cmd/api, cmd/adduser), and a failure is the operator's signal that the account is not
+// usable yet.
+type Bootstrap func(ctx context.Context, handle *db.DB, userID string) error
+
 // Run executes `adduser <login_id>`, returning an error the caller turns into a
 // non-zero exit.
 //
 // It opens the database and runs migrations itself rather than assuming the api has
 // already booted: on a fresh volume the very first thing an operator does is create an
 // account, and requiring a running server first would be a bootstrap deadlock.
-func Run(ctx context.Context, args []string) error {
+//
+// The bootstraps also run when the id already exists, so a rerun repairs an account whose
+// bootstrap failed the first time — without touching the password — and still exits
+// non-zero with the duplicate message.
+func Run(ctx context.Context, args []string, bootstraps ...Bootstrap) error {
 	if len(args) != 1 || strings.TrimSpace(args[0]) == "" {
 		return errors.New("usage: adduser <login_id>")
 	}
@@ -55,12 +65,27 @@ func Run(ctx context.Context, args []string) error {
 	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
 	if err := svc.CreateUser(ctx, loginID, password); err != nil {
 		if errors.Is(err, auth.ErrDuplicateUser) {
+			if bootErr := runBootstraps(ctx, handle, loginID, bootstraps); bootErr != nil {
+				return fmt.Errorf("account %q already exists and its bootstrap failed: %w", loginID, bootErr)
+			}
 			return fmt.Errorf("account %q already exists — pick another id, or delete the row first", loginID)
 		}
 		return err
 	}
+	if err := runBootstraps(ctx, handle, loginID, bootstraps); err != nil {
+		return fmt.Errorf("account %q was created but is not usable yet: %w (rerun adduser to repair)", loginID, err)
+	}
 
 	fmt.Fprintf(os.Stdout, "created account %q in %s\n", loginID, cfg.DBPath)
+	return nil
+}
+
+func runBootstraps(ctx context.Context, handle *db.DB, userID string, bootstraps []Bootstrap) error {
+	for _, bootstrap := range bootstraps {
+		if err := bootstrap(ctx, handle, userID); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -1,7 +1,8 @@
 # Policy — Posts and drafts
 
 Canonical rules that are **currently true** in the code. Source: [plan/02](../plan/02.post-drafting-and-list.md),
-backend built by job 03. A change to any rule here is a change to shipped behavior — go through `/create-change`.
+backend built by job 03; voice assignment from [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md),
+built by job 18. A change to any rule here is a change to shipped behavior — go through `/create-change`.
 
 Photo upload has its own document: [uploads.md](uploads.md).
 
@@ -49,6 +50,37 @@ Photo upload has its own document: [uploads.md](uploads.md).
 - **There is no post deletion.** The PRD defines photo deletion but not post deletion; flagged as a PRD gap, not an
   oversight.
 
+## Voice assignment
+
+- Every post is written in exactly one **voice** of the same account (`posts.voice_id`, composite FK to
+  `voices(id, user_id)`). A create must name an active owned voice: `SavePostDraft` with an empty slug and no
+  `voice_id` is `InvalidArgument`, an unknown or foreign id is `NotFound`, a deleted id is `FailedPrecondition`. The
+  server never substitutes the default for an invalid request.
+- `voice_id` on a draft save is **presence-aware**. Absent preserves the assignment — ordinary title/memo autosaves
+  omit it. A present value equal to the current voice also preserves it. A different present value is a
+  **reassignment**: refused with `FailedPrecondition` while a job targets the post or an undecided write experiment
+  could still apply output; otherwise, in one post-owned transaction, it changes `voice_id`, clears
+  `machine_baseline` and `machine_baseline_voice_id`, and makes voice learning ineligible until a new machine result.
+  Finalize-only remains available for preserved canonical content. Slug, title, memo, photos,
+  canonical content, `content_revision`, status, finalized revision and exportability are untouched, and no learning
+  event, source, rule or version already published under the previous voice moves.
+- Every machine-written baseline (generation, revision, applied A/B winner) stores `machine_baseline_voice_id`,
+  the post's voice at that moment. Finalization learning requires it to equal the post's current voice.
+- `Post.voice` and `PostSummary.voice` are a transport-only `VoiceRef {id, name, deleted}` resolved through the
+  voice context's published directory — the post context stores only the id and never joins voice tables. A deleted
+  voice still names itself, so the post stays readable, manually editable, copyable and exportable; generation, AI
+  revision, save-as-rule, sentence feedback and finalization learning are refused before any enqueue or provider
+  call until the voice is restored or the post is reassigned.
+- Frontend: `/posts/new` reads the directory before the editor mounts and renders a required `말투` picker initialized
+  to the default voice; the first save always carries that concrete id, and choosing a voice by itself creates
+  nothing. On an existing post the picker reassigns after a confirmation sheet that says what stays and that prior
+  learning remains with the old voice; it is disabled with a reason while a job runs or an A/B result waits, and a
+  refusal is shown under the field with the old voice kept. The assignment travels through the draft queue
+  ([draft-autosave](../tech/draft-autosave.md)), so a title save in flight cannot revert it. The list row names each
+  post's voice; a tombstone renders `삭제된 말투 · {name}` on the row, in the picker, and in the editor's warning,
+  which offers `복원` beside the picker's reassignment. Every AI control on such a post is disabled with one fixed
+  reason (`삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.`); the server enforces the rule regardless.
+
 ## Editor presentation
 
 - The editor presents the post's lifecycle as three steps — 글 생성 · 글 다듬기 · 글 완성 — and the current step is
@@ -56,7 +88,8 @@ Photo upload has its own document: [uploads.md](uploads.md).
   and the list badge cannot disagree with the screen. A status transition moves the step; a deliberate selection
   holds until the next transition.
 - The step bar is the first thing on the screen, above the post's title: the lifecycle is what you navigate before
-  you read anything else.
+  you read anything else. The voice picker sits with the title, outside the step panels: the voice is the post's
+  identity, and a reassignment must survive a step change exactly as a title edit does.
 - Each step renders only its own panel: ① the memo, photos, the empty-profile warning, the stage-model selects, the
   A/B link, the contact sheet and the generation actions; ② the draft and AI revision; ③ finalize,
   finalize-and-learn and export. The memo is the post's own words and the input 글 생성 works from, so it belongs to
@@ -93,10 +126,12 @@ Photo upload has its own document: [uploads.md](uploads.md).
   revision, increments it once for changed content, and returns `Aborted` on a stale tab. It never changes
   `machine_baseline`. An identical save is a no-op, including for a finalized revision.
 - A selected generation winner or successful AI revision atomically writes canonical content plus an immutable
-  machine baseline. `machine_baseline_revision` is set to that new content revision. A later manual edit makes the
-  two revisions differ until another machine result establishes a new baseline.
-- `draft`, `review`, and `finalized` are durable states. `FinalizePost` requires valid canonical content, a machine
-  baseline, and the exact expected content revision. It records `finalized_revision`/`finalized_at` without creating
+  machine baseline. `machine_baseline_revision` is set to that new content revision and `machine_baseline_voice_id`
+  to the post's voice. A later manual edit makes the two revisions differ until another machine result establishes a
+  new baseline; a reassignment clears the baseline outright (see *Voice assignment*).
+- `draft`, `review`, and `finalized` are durable states. `FinalizePost` requires valid canonical content and the exact
+  expected content revision; it deliberately does not require a learning baseline, so reassignment and a deleted
+  voice cannot prevent a content-only finalization. It records `finalized_revision`/`finalized_at` without creating
   a job or calling a provider. The first changed-content save or machine result clears that boundary and returns the
   post to `review`; title/memo and generation-option saves do not.
 - Only the post context reads these columns. It publishes an ownership-checked baseline/final snapshot to voice only

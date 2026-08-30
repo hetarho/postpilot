@@ -17,6 +17,8 @@ type Store interface {
 	ActiveForPost(ctx context.Context, slug string) (*Job, error)
 	ActiveForPostUser(ctx context.Context, slug, userID string) (*Job, error)
 	ActiveForUserKind(ctx context.Context, userID, kind string) (*Job, error)
+	ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*Job, error)
+	ActiveForVoice(ctx context.Context, voiceID string) (*Job, error)
 	ActiveModelExperiment(ctx context.Context, experimentID string) (*Job, error)
 	GetByID(ctx context.Context, id string) (Job, error)
 }

@@ -12,7 +12,7 @@ describe('StyleguideEditor', () => {
     })
     const calls: string[] = []
     const transport = createFakeAuthTransport({ calls, voice: { updateGate } })
-    render(<StyleguideEditor ownerId="alice" styleguide="기존" />, {
+    render(<StyleguideEditor ownerId="alice" voiceId="voice-default" styleguide="기존" />, {
       wrapper: withProviders(transport, createTestQueryClient()),
     })
     const editor = screen.getByLabelText('문체 규칙')

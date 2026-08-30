@@ -1,18 +1,22 @@
 import { useState } from 'react'
-import { type VoiceSample, useDeleteVoiceSample } from '@/entities/voice-profile'
+import { type VoiceSample, useDeleteVoiceSample } from '@/entities/voice'
 import { formatRelativeTime } from '@/shared/lib'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
 
 export function SampleList({
   ownerId,
+  voiceId,
   samples,
   onAnalysisStarted,
+  blocked = false,
 }: {
   ownerId: string
+  voiceId: string
   samples: readonly VoiceSample[]
   onAnalysisStarted: (jobId: string) => void
+  blocked?: boolean
 }) {
-  const removeSample = useDeleteVoiceSample(ownerId)
+  const removeSample = useDeleteVoiceSample(ownerId, voiceId)
   // The sample the confirmation sheet is open for. `window.confirm` is not an option for a
   // delete the user repeats while pruning a profile: mobile Chrome and Safari offer to suppress
   // further dialogs on the page, after which every confirm returns false and 삭제 becomes a
@@ -49,7 +53,7 @@ export function SampleList({
               <Button
                 variant="danger"
                 onClick={() => setConfirming(sample)}
-                disabled={removeSample.isPending}
+                disabled={blocked || removeSample.isPending}
                 aria-label={`${sample.label} 삭제`}
               >
                 삭제

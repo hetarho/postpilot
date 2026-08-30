@@ -1,4 +1,4 @@
-import type { VoiceAxes, VoiceProfile } from '@/entities/voice-profile'
+import type { VoiceAxes, VoiceProfile } from '@/entities/voice'
 import { VoiceLayer } from '@/shared/api'
 import { Badge } from '@/shared/ui'
 import { ProfileField } from './ProfileField'
@@ -17,10 +17,14 @@ const AXES: ReadonlyArray<{ key: keyof VoiceAxes; label: string }> = [
 
 export function StructuredProfileEditor({
   ownerId,
+  voiceId,
   profile,
+  readOnly = false,
 }: {
   ownerId: string
+  voiceId: string
   profile: VoiceProfile
+  readOnly?: boolean
 }) {
   const structured = profile.structured
   const fields = [
@@ -48,7 +52,13 @@ export function StructuredProfileEditor({
         <div className="mt-5 space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">
             {fields.map((item) => (
-              <ProfileField key={`${item.layer}-${item.field}`} ownerId={ownerId} {...item} />
+              <ProfileField
+                key={`${item.layer}-${item.field}`}
+                ownerId={ownerId}
+                voiceId={voiceId}
+                readOnly={readOnly}
+                {...item}
+              />
             ))}
           </div>
           <section>

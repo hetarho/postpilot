@@ -35,7 +35,11 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 		return nil, err
 	}
 	post.TargetLength = cloneOptionalInt(targetLength)
-	profile, err := s.profileForTopic(ctx, userID, post.Title+" "+post.Memo, contentTags(post.Content))
+	voiceID, err := activeVoice(post)
+	if err != nil {
+		return nil, err
+	}
+	profile, err := s.profileForTopic(ctx, userID, voiceID, post.Title+" "+post.Memo, contentTags(post.Content))
 	if err != nil {
 		return nil, fmt.Errorf("load voice profile: %w", err)
 	}
@@ -111,8 +115,33 @@ func (s *Service) RunObserveCandidate(ctx context.Context, raw []byte, model llm
 	return observations, candidateUsage(usage), err
 }
 
-func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string, content PostContent, _ ...[]byte) error {
+// ApplyWriteWinner establishes a machine baseline, so it is an AI result landing in a
+// voice: the post's current voice must still be alive and match the frozen snapshot's.
+func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string, content PostContent, raw ...[]byte) error {
+	current, err := s.posts.AttachedImages(ctx, userID, postSlug)
+	if err != nil {
+		return err
+	}
+	frozen := ""
+	if len(raw) > 0 && len(raw[0]) > 0 {
+		if snapshot, decodeErr := decodeExperimentSnapshot(raw[0], "write"); decodeErr == nil {
+			frozen = snapshot.Post.Voice.ID
+		}
+	}
+	if _, err := frozenVoice(current, frozen); err != nil {
+		return err
+	}
 	return s.posts.SetGeneratedContent(ctx, userID, postSlug, content)
+}
+
+// SnapshotVoice reports the voice a frozen write snapshot was taken for, so the experiment
+// aggregate can record it without decoding the generation context's private format.
+func SnapshotVoice(raw []byte) string {
+	snapshot, err := decodeExperimentSnapshot(raw, "write")
+	if err != nil {
+		return ""
+	}
+	return snapshot.Post.Voice.ID
 }
 
 func (s *Service) ApplyObservationWinner(ctx context.Context, userID, postSlug string, observations []Observation) error {

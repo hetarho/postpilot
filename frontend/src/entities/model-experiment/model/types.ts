@@ -36,6 +36,8 @@ export interface ModelExperiment {
   stage: StageName
   status: ExperimentStatusName
   postSlug: string
+  /** The frozen voice for analyze/write work; observe compares the image snapshot only. */
+  voiceId: string
   jobId: string
   candidates: ExperimentCandidate[]
   winnerCandidateId: string

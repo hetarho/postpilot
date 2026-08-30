@@ -74,6 +74,23 @@ describe('PostsPage', () => {
     )
   })
 
+  // Plan 10 A5: a row names its voice, and a deleted one says so in words.
+  it("names each row's voice and marks a deleted one as a tombstone", async () => {
+    renderList({
+      posts: [
+        { slug: '20260828-jeju', title: '제주 3일', voice: { id: 'voice-review', name: '리뷰' } },
+        {
+          slug: '20260820-old',
+          title: '옛 글',
+          voice: { id: 'voice-old', name: '옛 말투', deleted: true },
+        },
+      ],
+    })
+
+    expect(await screen.findByRole('link', { name: /제주 3일/ })).toHaveTextContent('리뷰')
+    expect(screen.getByRole('link', { name: /옛 글/ })).toHaveTextContent('삭제된 말투 · 옛 말투')
+  })
+
   it('labels a post nobody has titled yet', async () => {
     renderList({ posts: [{ slug: '20260828-untitled', title: '' }] })
 

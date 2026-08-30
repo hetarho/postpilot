@@ -7,7 +7,7 @@ const base: ModelExperiment = {
   id: 'exp',
   stage: 'analyze',
   status: 'review',
-  postSlug: '',
+  postSlug: '', voiceId: '',
   jobId: 'job',
   winnerCandidateId: '',
   outcome: '',

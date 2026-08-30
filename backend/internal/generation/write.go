@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Service) write(ctx context.Context, post PostInput, observations []Observation, model llm.ModelRef) (PostContent, error) {
-	profile, err := s.profileForTopic(ctx, post.UserID, post.Title+" "+post.Memo, contentTags(post.Content))
+	profile, err := s.profileForTopic(ctx, post.UserID, post.Voice.ID, post.Title+" "+post.Memo, contentTags(post.Content))
 	if err != nil {
 		return PostContent{}, fmt.Errorf("load voice profile: %w", err)
 	}
@@ -49,9 +49,9 @@ func contentTags(content *PostContent) []string {
 	return content.Tags
 }
 
-func (s *Service) profileForTopic(ctx context.Context, userID, topic string, tags []string) (Profile, error) {
+func (s *Service) profileForTopic(ctx context.Context, userID, voiceID, topic string, tags []string) (Profile, error) {
 	if contextual, ok := s.profiles.(TopicProfiles); ok {
-		return contextual.ProfileForPromptForTopic(ctx, userID, topic, tags)
+		return contextual.ProfileForPromptForTopic(ctx, userID, voiceID, topic, tags)
 	}
-	return s.profiles.ProfileForPrompt(ctx, userID)
+	return s.profiles.ProfileForPrompt(ctx, userID, voiceID)
 }

@@ -4,7 +4,7 @@ import type { PostDraft } from '@/entities/post'
 import { getPostQueryKey } from '@/entities/post'
 import { FailureNotice, isTerminal, ProgressLine, useJob } from '@/entities/generation-job'
 import { useStageSelection } from '@/entities/model-catalog'
-import { voiceProfileQueryKey } from '@/entities/voice-profile'
+import { DELETED_VOICE_AI_REASON, voiceProfileQueryKey } from '@/entities/voice'
 import { Button, Dialog, FieldMessage, Notice } from '@/shared/ui'
 import { useFinalizePost } from '../api/useFinalizePost'
 import { useVoiceLearningActions } from '../api/useVoiceLearningActions'
@@ -36,9 +36,14 @@ export function FinalizePost({
   const [preparing, setPreparing] = useState<FinalizeMode | ''>('')
   const [satisfied, setSatisfied] = useState(false)
   const handoffIsCurrent = isLearningHandoffForRevision(handoff, post.contentRevision)
+  // The learning event publishes to the post's voice and no other, so that is the one profile
+  // the completed job makes stale.
   const invalidate = useMemo(
-    () => [getPostQueryKey(transport, post.slug), voiceProfileQueryKey(transport, ownerId)],
-    [ownerId, post.slug, transport],
+    () => [
+      getPostQueryKey(transport, post.slug),
+      voiceProfileQueryKey(transport, ownerId, post.voice.id),
+    ],
+    [ownerId, post.slug, post.voice.id, transport],
   )
   const jobState = useJob(handoffIsCurrent ? (handoff?.jobId ?? '') : '', invalidate)
   const job = jobState.job
@@ -88,6 +93,20 @@ export function FinalizePost({
   const finalized = post.status === 'finalized'
   const learnedCurrent = handoffIsCurrent && job?.status === 'done'
   const noTextEdit = post.contentRevision === post.machineBaselineRevision
+  const hasLearnableBaseline =
+    post.machineBaselineRevision > 0n && post.machineBaselineVoiceId === post.voice.id
+  // Mirrors the server's two voice gates on learning (tech/multi-voice-partitioning.md): a
+  // deleted voice cannot receive evidence, and a baseline written under another voice — a post
+  // reassigned since generation — must not be read as a correction of the new one. Finalizing
+  // itself stays available: it is a content boundary, not a profile mutation.
+  const learnBlocked = post.voice.deleted
+    ? DELETED_VOICE_AI_REASON
+    : post.machineBaselineVoiceId !== '' && post.machineBaselineVoiceId !== post.voice.id
+      ? '이 글의 AI 결과는 다른 말투에서 만들어졌어요. 새 말투로 다시 생성하거나 수정한 뒤에 학습할 수 있어요.'
+      : !hasLearnableBaseline
+        ? '새 말투로 다시 생성하거나 AI로 수정한 뒤에 학습할 수 있어요.'
+        : ''
+  const canLearn = !learnBlocked && Boolean(analyze.selected) && !learningActive
 
   return (
     <section aria-labelledby="finalize-heading" className="mt-8">
@@ -125,10 +144,17 @@ export function FinalizePost({
           글은 확정됐지만 말투 학습은 시작하지 못했어요. {learning.errorMessage}
         </FieldMessage>
       )}
-      {!analyze.isPending && !analyze.selected && (
-        <p className="text-content-tertiary mt-2 text-sm">
-          말투 학습을 하려면 분석 모델을 선택해 주세요. 확정만 하는 데에는 필요하지 않아요.
+      {learnBlocked ? (
+        <p role="status" className="text-content-secondary mt-2 text-sm">
+          {learnBlocked}
         </p>
+      ) : (
+        !analyze.isPending &&
+        !analyze.selected && (
+          <p className="text-content-tertiary mt-2 text-sm">
+            말투 학습을 하려면 분석 모델을 선택해 주세요. 확정만 하는 데에는 필요하지 않아요.
+          </p>
+        )
       )}
       <div className="mt-4 flex flex-wrap gap-2">
         {!finalized && (
@@ -143,7 +169,7 @@ export function FinalizePost({
             </Button>
             <Button
               variant="cta"
-              disabled={!post.canFinalize || !analyze.selected || learningActive}
+              disabled={!post.canFinalize || !canLearn}
               pending={preparing === 'learn'}
               onClick={() => setConfirming('learn')}
             >
@@ -154,7 +180,7 @@ export function FinalizePost({
         {finalized && (!handoff || !handoffIsCurrent) && !learnedCurrent && (
           <Button
             variant="cta"
-            disabled={!analyze.selected || learningActive}
+            disabled={!canLearn}
             pending={learning.pending}
             onClick={() => void learn().catch(() => undefined)}
           >

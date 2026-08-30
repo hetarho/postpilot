@@ -16,6 +16,8 @@ import {
   useLeaderboard,
 } from '@/entities/model-experiment'
 import { displayTitle, usePost, usePosts } from '@/entities/post'
+import { useSession } from '@/entities/session'
+import { useVoices, voiceRefLabel } from '@/entities/voice'
 import { ApplyRecommendation } from '@/features/apply-model-recommendation'
 import { ModelPairForm } from '@/features/configure-model-pair'
 import {
@@ -44,21 +46,37 @@ const STAGE_OPTIONS = [
 export function AIModelsPage() {
   const [stage, setStage] = useState<StageName>('observe')
   const [postSlug, setPostSlug] = useState('')
+  const [chosenVoiceId, setChosenVoiceId] = useState('')
   const startHintId = useId()
   const setup = useModelSetup()
   const pairSaving = useComparisonPairSavePending()
   const { posts } = usePosts()
+  const { user } = useSession()
+  const { voices, active: activeVoices, defaultVoice } = useVoices(user?.id ?? '')
   const { experiments } = useExperiments(stage)
   const { entries } = useLeaderboard(stage)
   const start = useStartModelExperiment()
   const navigate = useNavigate()
   const pair = setup.pairs.find((item) => item.stage === stage)
+  // An analyze comparison freezes ONE voice's corpus, so the voice is chosen here and sent
+  // explicitly — initialized to the default, never guessed by the server
+  // (spec/policy/model-experiments.md). A choice that has since been deleted falls back to the
+  // default rather than to a request the server would refuse.
+  const voiceId =
+    (activeVoices.some((voice) => voice.id === chosenVoiceId) ? chosenVoiceId : '') ||
+    defaultVoice?.id ||
+    ''
+  const voiceName = (id: string) => {
+    const voice = voices.find((candidate) => candidate.id === id)
+    return voice ? voiceRefLabel(voice) : ''
+  }
   // What the CTA is still waiting for, in the user's words. `pair` comes from the server, so
   // choosing A and B in the form above is not enough — the combination has to have been SAVED,
   // and a greyed button two screens down cannot say that on its own (§4.3).
   const unmet = [
     !pair?.candidateA || !pair.candidateB ? 'A/B 조합을 저장' : '',
     stage === 'observe' && !postSlug ? '사진이 있는 글을 선택' : '',
+    stage === 'analyze' && !voiceId ? '말투를 선택' : '',
   ].filter(Boolean)
   const canStart = !pairSaving && unmet.length === 0
   const startHint = pairSaving
@@ -74,7 +92,7 @@ export function AIModelsPage() {
     const response =
       stage === 'observe'
         ? await start.startObserve(postSlug, pair.candidateA.ref, pair.candidateB.ref)
-        : await start.startAnalyze(pair.candidateA.ref, pair.candidateB.ref)
+        : await start.startAnalyze(voiceId, pair.candidateA.ref, pair.candidateB.ref)
     void navigate({ to: '/ai-models/experiments/$id', params: { id: response.experimentId } })
   }
   return (
@@ -119,6 +137,27 @@ export function AIModelsPage() {
               or a save error belongs to the tab it was fired from, not to the next one. */}
           <ModelPairForm key={stage} stage={stage} />
         </div>
+        {stage === 'analyze' && (
+          <div className="mt-6">
+            <FieldLabel htmlFor="experiment-voice">말투</FieldLabel>
+            <Select
+              id="experiment-voice"
+              className="mt-1"
+              value={voiceId}
+              onChange={(event) => setChosenVoiceId(event.target.value)}
+            >
+              {!voiceId && <option value="">말투를 선택하세요</option>}
+              {activeVoices.map((voice) => (
+                <option key={voice.id} value={voice.id}>
+                  {voice.name}
+                </option>
+              ))}
+            </Select>
+            <p className="text-content-secondary mt-2 text-sm">
+              이 말투의 글 전체만 비교하고, 선택한 결과도 이 말투에만 적용돼요.
+            </p>
+          </div>
+        )}
         {stage !== 'analyze' && (
           <div className="mt-6">
             <FieldLabel htmlFor="experiment-post">
@@ -195,7 +234,7 @@ export function AIModelsPage() {
                       312px row and would otherwise crush the status chip to a column of single
                       syllables (§8.5). */}
                   <span className="min-w-0 truncate">
-                    {item.postSlug || STAGE_LABELS[item.stage]}
+                    {item.postSlug || voiceName(item.voiceId) || STAGE_LABELS[item.stage]}
                   </span>
                   <Badge tone={STATUS_META[item.status].tone}>
                     {STATUS_META[item.status].label}
@@ -288,6 +327,7 @@ function SelectedPostWriteComparison({
         writeA,
         writeB,
         post.activeJob,
+        post.voice,
       )
     : undefined
   const modelPending =

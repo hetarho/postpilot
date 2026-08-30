@@ -22,15 +22,26 @@ type CandidateUsage struct {
 	CostReported     bool
 }
 
-func (s *Service) SnapshotAnalysisInput(ctx context.Context, userID string) ([]byte, error) {
-	samples, _, err := s.store.CorpusSnapshot(ctx, userID)
+// SnapshotAnalysisInput freezes one voice's whole corpus — the same samples plus finalized
+// sources the analyze job would read — so both candidates see exactly what analysis sees.
+func (s *Service) SnapshotAnalysisInput(ctx context.Context, userID, voiceID string) ([]byte, error) {
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return nil, err
+	}
+	samples, _, err := s.store.CorpusSnapshot(ctx, userID, voiceID)
 	if err != nil {
 		return nil, fmt.Errorf("문체 샘플을 불러오지 못했어요: %w", err)
 	}
-	if len(samples) == 0 {
-		return nil, fmt.Errorf("분석할 문체 샘플이 없어요")
+	var sources []AuthoredSource
+	if s.personalization != nil {
+		if sources, err = s.personalization.ListAuthoredSources(ctx, userID, voiceID); err != nil {
+			return nil, fmt.Errorf("완성 글을 불러오지 못했어요: %w", err)
+		}
 	}
-	return json.Marshal(analyzeExperimentSnapshot{Corpus: AssembleCorpus(samples)})
+	if len(samples) == 0 && len(sources) == 0 {
+		return nil, fmt.Errorf("분석할 문체 자료가 없어요")
+	}
+	return json.Marshal(analyzeExperimentSnapshot{Corpus: personalizationCorpus(samples, sources)})
 }
 
 func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.ModelRef) (string, CandidateUsage, error) {
@@ -53,14 +64,19 @@ func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.M
 	return styleguide, usage, nil
 }
 
-func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, styleguide string) error {
-	profile, err := s.store.GetProfile(ctx, userID)
+// ApplyStyleguideWinner writes the winner only into the voice the experiment froze, and
+// only while that voice is still active.
+func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, styleguide string) error {
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return err
+	}
+	profile, err := s.store.GetProfile(ctx, userID, voiceID)
 	if err != nil {
 		return err
 	}
 	if profile.Styleguide == styleguide {
 		return nil
 	}
-	_, err = s.UpdateStyleguide(ctx, userID, styleguide)
+	_, err = s.UpdateStyleguide(ctx, userID, voiceID, styleguide)
 	return err
 }

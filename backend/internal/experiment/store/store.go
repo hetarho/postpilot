@@ -33,14 +33,18 @@ func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
 	defer tx.Rollback()
 	queries := sqlc.New(tx)
 	err = queries.InsertExperiment(ctx, sqlc.InsertExperimentParams{
-		ID: found.ID, UserID: found.UserID, PostSlug: nullString(found.PostSlug),
+		ID: found.ID, UserID: found.UserID, PostSlug: nullString(found.PostSlug), VoiceID: nullString(found.VoiceID),
 		Stage: string(found.Stage), Status: string(found.Status), JobID: nullString(found.JobID),
 		InputSnapshot: nullBytes(found.InputSnapshot), InputHash: found.InputHash,
 		PromptVersion: found.PromptVersion, CreatedAt: formatTime(found.CreatedAt),
 	})
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "unique constraint failed") {
+		message := strings.ToLower(err.Error())
+		if strings.Contains(message, "unique constraint failed") {
 			return experiment.ErrInvalidState
+		}
+		if strings.Contains(message, "experiment voice must be active") {
+			return experiment.ErrVoiceUnavailable
 		}
 		return fmt.Errorf("insert experiment: %w", err)
 	}
@@ -327,6 +331,14 @@ func (s *Store) PurgeExpired(ctx context.Context, before time.Time) (int64, erro
 	return count, nil
 }
 
+func (s *Store) CountPublishableForVoice(ctx context.Context, userID, voiceID string) (int, error) {
+	n, err := s.read.CountPublishableForVoice(ctx, sqlc.CountPublishableForVoiceParams{VoiceID: nullString(voiceID), UserID: userID})
+	if err != nil {
+		return 0, fmt.Errorf("count publishable experiments for voice: %w", err)
+	}
+	return int(n), nil
+}
+
 func (s *Store) PurgePost(ctx context.Context, userID, postSlug string) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
@@ -369,7 +381,7 @@ func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 		return experiment.Experiment{}, fmt.Errorf("experiment %s created_at: %w", row.ID, err)
 	}
 	return experiment.Experiment{
-		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, Stage: experiment.Stage(row.Stage),
+		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, VoiceID: row.VoiceID.String, Stage: experiment.Stage(row.Stage),
 		Status: experiment.Status(row.Status), JobID: row.JobID.String, InputSnapshot: []byte(row.InputSnapshot.String),
 		InputHash: row.InputHash, PromptVersion: row.PromptVersion, WinnerCandidateID: row.WinnerCandidateID.String,
 		Outcome: experiment.Outcome(row.Outcome.String), ApplyError: row.ApplyError.String, CreatedAt: created,

@@ -48,9 +48,11 @@ export {
   StartGenerationResponseSchema,
   StartRevisionRequestSchema,
   StartRevisionResponseSchema,
+  VoiceRefSchema,
 } from './gen/postpilot/v1/post_pb'
 export type {
   Block,
+  VoiceRef as ProtoVoiceRef,
   GenerationJob as ProtoGenerationJob,
   GetGenerationResponse,
   GetPostResponse,
@@ -95,9 +97,18 @@ export {
   VoiceLayer,
   VoiceRuleStatus,
   VoiceValueSource,
+  VoiceSchema,
+  ListVoicesResponseSchema,
+  CreateVoiceResponseSchema,
+  RenameVoiceResponseSchema,
+  SetDefaultVoiceResponseSchema,
+  DeleteVoiceResponseSchema,
+  RestoreVoiceResponseSchema,
 } from './gen/postpilot/v1/voice_pb'
 export type {
   GetVoiceProfileResponse,
+  ListVoicesResponse,
+  Voice as ProtoVoice,
   VoiceProfile as ProtoVoiceProfile,
   VoiceSample as ProtoVoiceSample,
   StructuredVoiceProfile,

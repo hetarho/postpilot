@@ -12,6 +12,7 @@ type ModelExperiment struct {
 	ID                string
 	UserID            string
 	PostSlug          sql.NullString
+	VoiceID           sql.NullString
 	Stage             string
 	Status            string
 	JobID             sql.NullString

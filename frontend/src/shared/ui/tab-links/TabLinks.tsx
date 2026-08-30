@@ -4,6 +4,8 @@ import { twMerge } from 'tailwind-merge'
 export interface TabLink {
   to: string
   label: string
+  /** Route params for a `to` with dynamic segments, such as the voice a tab row belongs to. */
+  params?: Record<string, string>
 }
 
 /** A tab row whose tabs are ADDRESSES. `SegmentedControl` is the same shape driven by `onChange`,
@@ -39,8 +41,9 @@ export function TabLinks({
         <Link
           key={item.to}
           to={item.to}
-          // Exact: every tab is a sibling address under one pathless layout, so a prefix match
-          // would leave 말투 (/voice) marked current on all four of the others.
+          params={item.params}
+          // Exact: every tab is a sibling address under one layout, so a prefix match would leave
+          // the first tab marked current on all of the others.
           activeOptions={{ exact: true }}
           // `px-4` pays for `min-h-11`: it sets only the height, and '말투' is two Hangul at 14px —
           // a 28x44 target without the padding (§4.1, §4.2).

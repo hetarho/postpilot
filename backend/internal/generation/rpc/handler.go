@@ -89,7 +89,8 @@ func toConnectError(op string, err error) error {
 		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
 	case errors.Is(err, generation.ErrWriteModelRequired), errors.Is(err, generation.ErrObserveModelRequired):
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
-	case errors.Is(err, generation.ErrRevisionContentRequired):
+	case errors.Is(err, generation.ErrRevisionContentRequired), errors.Is(err, generation.ErrVoiceDeleted),
+		errors.Is(err, generation.ErrVoiceMismatch), errors.Is(err, generation.ErrVoiceRequired):
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
 	case errors.Is(err, generation.ErrRevisionInstructionRequired), errors.Is(err, generation.ErrRevisionInstructionTooLong),
 		errors.Is(err, generation.ErrInvalidTargetLength):

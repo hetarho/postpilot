@@ -16,6 +16,7 @@ export function Editable({
   edit,
   children,
   className,
+  readOnly = false,
 }: {
   /** The pencil's accessible name. An icon-only button has no other name (§9), and it has to name
    *  the field, since a screen full of pencils named "수정" identifies nothing. */
@@ -23,21 +24,25 @@ export function Editable({
   edit: (exit: () => void) => ReactNode
   children: ReactNode
   className?: string
+  /** Keeps the read presentation but removes the mutation affordance. */
+  readOnly?: boolean
 }) {
   const [editing, setEditing] = useState(false)
-  if (editing) return <div className={className}>{edit(() => setEditing(false))}</div>
+  if (editing && !readOnly) return <div className={className}>{edit(() => setEditing(false))}</div>
   return (
     <div className={twMerge('flex items-start gap-2', className)}>
       <div className="min-w-0 flex-1">{children}</div>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={editLabel}
-        onClick={() => setEditing(true)}
-        className="shrink-0"
-      >
-        <Pencil className="size-4" aria-hidden />
-      </Button>
+      {!readOnly && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={editLabel}
+          onClick={() => setEditing(true)}
+          className="shrink-0"
+        >
+          <Pencil className="size-4" aria-hidden />
+        </Button>
+      )}
     </div>
   )
 }

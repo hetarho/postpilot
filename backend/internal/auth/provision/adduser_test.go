@@ -2,6 +2,7 @@ package provision
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +14,22 @@ import (
 
 // runWithStdin drives Run the way a piped invocation does: no TTY, so the password is
 // read twice from stdin.
-func runWithStdin(t *testing.T, dbPath, stdin string, args ...string) error {
+func runWithStdin(t *testing.T, dbPath, stdin string, first string, rest ...any) error {
+	args := []string{}
+	var bootstraps []Bootstrap
+	if first != "" {
+		args = append(args, first)
+	}
+	for _, item := range rest {
+		switch value := item.(type) {
+		case string:
+			args = append(args, value)
+		case Bootstrap:
+			bootstraps = append(bootstraps, value)
+		case func(context.Context, *db.DB, string) error:
+			bootstraps = append(bootstraps, value)
+		}
+	}
 	t.Helper()
 	t.Setenv("DB_PATH", dbPath)
 
@@ -33,7 +49,7 @@ func runWithStdin(t *testing.T, dbPath, stdin string, args ...string) error {
 		r.Close()
 	}()
 
-	return Run(context.Background(), args)
+	return Run(context.Background(), args, bootstraps...)
 }
 
 // TestRunCreatesAccountOnAFreshVolume is job 01 A10's precondition: adduser must work
@@ -95,7 +111,16 @@ func TestRunRejectsBadInput(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := runWithStdin(t, filepath.Join(t.TempDir(), "postpilot.db"), tc.stdin, tc.args...)
+			first := ""
+			rest := []any{}
+			for i, arg := range tc.args {
+				if i == 0 {
+					first = arg
+					continue
+				}
+				rest = append(rest, arg)
+			}
+			err := runWithStdin(t, filepath.Join(t.TempDir(), "postpilot.db"), tc.stdin, first, rest...)
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -132,5 +157,37 @@ func TestRunAcceptsAPassphraseWithSpaces(t *testing.T) {
 	}
 	if ok, _ := auth.VerifyPassword("correct", storedHash); ok {
 		t.Error("only the first word was hashed — the passphrase was truncated at a space")
+	}
+}
+
+// A bootstrap runs after the user row exists and again on a rerun, so an account whose
+// first bootstrap failed is repaired by running adduser again; a failing bootstrap makes Run
+// exit non-zero because the account is not usable yet.
+func TestRunBootstrapsTheAccountAndRepairsOnRerun(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "postpilot.db")
+	var calls []string
+	failing := true
+	bootstrap := func(_ context.Context, _ *db.DB, userID string) error {
+		calls = append(calls, userID)
+		if failing {
+			return errors.New("voice table unavailable")
+		}
+		return nil
+	}
+	err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "alice", bootstrap)
+	if err == nil || !strings.Contains(err.Error(), "not usable yet") {
+		t.Fatalf("failed bootstrap error = %v", err)
+	}
+	if len(calls) != 1 || calls[0] != "alice" {
+		t.Fatalf("bootstrap calls = %v", calls)
+	}
+	// The user row exists, so the rerun is a duplicate — and it still runs the bootstrap.
+	failing = false
+	err = runWithStdin(t, dbPath, "hunter2\nhunter2\n", "alice", bootstrap)
+	if err == nil || !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("rerun error = %v", err)
+	}
+	if len(calls) != 2 {
+		t.Fatalf("rerun did not repair: calls = %v", calls)
 	}
 }

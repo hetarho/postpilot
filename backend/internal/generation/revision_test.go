@@ -63,16 +63,18 @@ func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) 
 type recordingProfiles struct {
 	profile Profile
 	calls   int
+	voices  []string
 }
 
-func (f *recordingProfiles) ProfileForPrompt(context.Context, string) (Profile, error) {
+func (f *recordingProfiles) ProfileForPrompt(_ context.Context, _, voiceID string) (Profile, error) {
 	f.calls++
+	f.voices = append(f.voices, voiceID)
 	return f.profile, nil
 }
 
 func TestFiveRevisionsReinjectProfileAndPersistEveryResult(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Content: revisionContent("pass-0"),
+		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("pass-0"),
 	}}
 	profiles := &recordingProfiles{profile: Profile{
 		Styleguide: "STYLE", Excerpts: []string{"EXCERPT"}, Rules: "RULE",
@@ -112,11 +114,16 @@ func TestFiveRevisionsReinjectProfileAndPersistEveryResult(t *testing.T) {
 	if profiles.calls != 5 || len(posts.contents) != 5 {
 		t.Fatalf("profile calls=%d content writes=%d", profiles.calls, len(posts.contents))
 	}
+	for pass, voiceID := range profiles.voices {
+		if voiceID != liveVoice.ID {
+			t.Fatalf("pass %d reloaded the profile of voice %q, want the post's %q", pass+1, voiceID, liveVoice.ID)
+		}
+	}
 }
 
 func TestRevisionUsesSharedValidationAndAttachmentFilterAndKeepsImageOrder(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Content: revisionContent("before"),
+		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("before"),
 		Images: []Image{{Filename: "A.jpg"}, {Filename: "B.jpg"}},
 	}}
 	models := newFakeModels()
@@ -150,7 +157,7 @@ func TestRevisionUsesSharedValidationAndAttachmentFilterAndKeepsImageOrder(t *te
 
 func TestRevisionRefiltersAgainstAttachmentsAfterProviderCall(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Content: revisionContent("before"),
+		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("before"),
 		Images: []Image{{Filename: "A.jpg"}, {Filename: "B.jpg"}},
 	}}
 	models := newFakeModels()
@@ -182,7 +189,7 @@ type linkedRules struct {
 	lines   []string
 }
 
-func (f *linkedRules) AppendRule(_ context.Context, _ string, line string) error {
+func (f *linkedRules) AppendRule(_ context.Context, _, _ string, line string) error {
 	f.lines = append(f.lines, line)
 	f.profile.Rules = strings.TrimSpace(f.profile.Rules + "\n" + strings.TrimSpace(line))
 	return nil
@@ -192,7 +199,7 @@ func TestStartRevisionSavesRuleBeforeEnqueueAndNewWritePromptSeesIt(t *testing.T
 	profile := Profile{Styleguide: "STYLE", Excerpts: []string{"EXCERPT"}, Rules: "OLD"}
 	rules := &linkedRules{profile: &profile}
 	jobs := &fakeJobs{id: "revision-job"}
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Content: revisionContent("body")}}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body")}}
 	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy)
 
 	id, err := svc.StartRevision(context.Background(), StartRevisionRequest{
@@ -236,7 +243,7 @@ func TestStartRevisionPreconditionsDoNotEnqueue(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			request := base
-			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Content: revisionContent("body")}}
+			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body")}}
 			models, jobs := newFakeModels(), &fakeJobs{id: "job"}
 			tc.mutate(&request, posts, models, jobs)
 			_, err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy).
@@ -260,7 +267,7 @@ func TestStartRevisionPreconditionsDoNotEnqueue(t *testing.T) {
 
 func TestStartRevisionWithoutSaveDoesNotAppendRule(t *testing.T) {
 	rules := &fakeRules{}
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Content: revisionContent("body")}}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body")}}
 	_, err := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, &fakeJobs{id: "job"}, 4, testReasoningPolicy).
 		StartRevision(context.Background(), StartRevisionRequest{
 			UserID: "alice", PostSlug: "post", Instruction: "더 짧게",

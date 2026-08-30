@@ -1,4 +1,5 @@
-// Package voice owns one account's editable writing profile and its source samples.
+// Package voice owns an account's voices: each is an independent writing profile with its
+// own samples, versions, rules and evidence, and a post names exactly one of them.
 package voice
 
 import (
@@ -15,6 +16,15 @@ const (
 	ValidateProfileJobKind = "validate_voice_profile"
 )
 
+// DefaultVoiceName is the name of an account's first voice — created by migration 0009 for
+// existing accounts and by the adduser bootstrap for new ones. The frontend renders the
+// server value rather than repeating it.
+const DefaultVoiceName = "기본 말투"
+
+// VoiceNameMaxChars bounds a display name in Unicode scalar values; the frontend mirrors it
+// in shared/config for early feedback, but this is the authoritative check.
+const VoiceNameMaxChars = 50
+
 var (
 	ErrAnalyzeModelRequired = errors.New("an enabled analyze model is required")
 	ErrSampleNotFound       = errors.New("voice sample not found")
@@ -28,6 +38,20 @@ var (
 	ErrInvalidLifecycle     = errors.New("invalid voice lifecycle transition")
 	ErrPostNotFound         = errors.New("post not found")
 	ErrForbidden            = errors.New("forbidden")
+
+	ErrVoiceRequired = errors.New("a voice is required")
+	// ErrVoiceNotFound covers unknown AND foreign ids on purpose: a voice that belongs to
+	// another account is indistinguishable from one that does not exist.
+	ErrVoiceNotFound  = errors.New("voice not found")
+	ErrVoiceDeleted   = errors.New("voice is deleted")
+	ErrVoiceNameTaken = errors.New("an active voice already has that name")
+	ErrVoiceIsDefault = errors.New("the default voice cannot be deleted")
+	// ErrVoiceBusy refuses a soft delete while a job, comparison, validation or analyze
+	// experiment could still publish into the voice.
+	ErrVoiceBusy = errors.New("voice has unfinished work that could still publish to it")
+	// ErrBaselineVoiceMismatch: the post's machine baseline was written under a voice the
+	// post no longer belongs to, so the finalized text is not evidence about the current one.
+	ErrBaselineVoiceMismatch = errors.New("the machine baseline was written under another voice")
 )
 
 type SampleTooShortError struct{ Chars int }
@@ -36,9 +60,34 @@ func (e *SampleTooShortError) Error() string {
 	return fmt.Sprintf("sample has %d characters; at least %d are required", e.Chars, SampleMinChars)
 }
 
+// VoiceNameError is an empty (after trimming) or over-long display name.
+type VoiceNameError struct{ Chars int }
+
+func (e *VoiceNameError) Error() string {
+	if e.Chars == 0 {
+		return "voice name is required"
+	}
+	return fmt.Sprintf("voice name has %d characters; at most %d are allowed", e.Chars, VoiceNameMaxChars)
+}
+
+// Voice is the aggregate root the directory manages. DeletedAt is a tombstone: the voice
+// keeps its profile and its posts and stays readable, but cannot start or receive AI work.
+type Voice struct {
+	ID        string
+	UserID    string
+	Name      string
+	IsDefault bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
+}
+
+func (v Voice) Deleted() bool { return v.DeletedAt != nil }
+
 type Sample struct {
 	ID        string
 	UserID    string
+	VoiceID   string
 	Label     string
 	Body      string
 	Chars     int
@@ -47,6 +96,8 @@ type Sample struct {
 
 type Profile struct {
 	UserID      string
+	VoiceID     string
+	Voice       Voice
 	Styleguide  string
 	Rules       string
 	UpdatedAt   time.Time
@@ -106,6 +157,7 @@ type StructureProfile struct {
 	ParagraphSentencesMin, ParagraphSentencesMax int
 	HeadingHabit, ListHabit, EmojiUse            VoiceValue
 }
+
 // Each axis is a pointer so presence survives the round trip: an axis the analysis never
 // answered is nil (published as unknown), not an indistinguishable neutral 0. A stored `0`
 // in an older snapshot still decodes as present-0, so historical versions keep showing what
@@ -143,22 +195,22 @@ const (
 )
 
 type ContrastRule struct {
-	ID, UserID, Statement, CanonicalKey string
-	Layer                               RuleLayer
-	EvidenceCount                       int
-	Status                              RuleStatus
-	Origin                              string
-	CreatedAt, LastEvidenceAt           time.Time
+	ID, UserID, VoiceID, Statement, CanonicalKey string
+	Layer                                        RuleLayer
+	EvidenceCount                                int
+	Status                                       RuleStatus
+	Origin                                       string
+	CreatedAt, LastEvidenceAt                    time.Time
 }
 type AuthoredSource struct {
-	ID, UserID, PostSlug, LearningEventID, Title string
-	Tags                                         []string
-	Body, Excerpt, EmbeddingRef                  string
-	CreatedAt                                    time.Time
+	ID, UserID, VoiceID, PostSlug, LearningEventID, Title string
+	Tags                                                  []string
+	Body, Excerpt, EmbeddingRef                           string
+	CreatedAt                                             time.Time
 }
 type Feedback struct {
-	ID, UserID, PostSlug, SentenceRef, Kind, Reason, PayloadRef, ProcessingState string
-	CreatedAt                                                                    time.Time
+	ID, UserID, VoiceID, PostSlug, SentenceRef, Kind, Reason, PayloadRef, ProcessingState string
+	CreatedAt                                                                             time.Time
 }
 type StructuredProfile struct {
 	Version     int64
@@ -175,7 +227,7 @@ type StructuredProfile struct {
 	Feedback    []Feedback
 }
 type ProfileVersion struct {
-	ID, UserID          string
+	ID, UserID, VoiceID string
 	Version             int64
 	Profile             StructuredProfile
 	Origin              string
@@ -183,10 +235,10 @@ type ProfileVersion struct {
 	CreatedAt           time.Time
 }
 type ManualOverride struct {
-	UserID       string
-	Layer        RuleLayer
-	Field, Value string
-	UpdatedAt    time.Time
+	UserID, VoiceID string
+	Layer           RuleLayer
+	Field, Value    string
+	UpdatedAt       time.Time
 }
 
 type PersonalizationConfig struct {
@@ -196,14 +248,20 @@ type PersonalizationConfig struct {
 	ValidationPostCount, EndingMaxConsecutive                                         int
 }
 
+// FinalizationInput is the post context's ownership-checked hand-off. VoiceID is the post's
+// current voice and BaselineVoiceID the one its machine baseline was written under; learning
+// requires them to agree so a correction of voice A's text is never read as evidence about B.
 type FinalizationInput struct {
-	PostSlug, UserID, BaselineJSON, FinalJSON, Title string
-	Tags                                             []string
-	BaselineRevision, ContentRevision                int64
-	TargetLength                                     *int
+	PostSlug, UserID, VoiceID, BaselineVoiceID, BaselineJSON, FinalJSON, Title string
+	Tags                                                                       []string
+	BaselineRevision, ContentRevision                                          int64
+	TargetLength                                                               *int
 }
+
+// LearningEvent freezes VoiceID at finalization; a retry follows the event, not the post's
+// later assignment.
 type LearningEvent struct {
-	ID, UserID, PostSlug                                               string
+	ID, UserID, VoiceID, PostSlug                                      string
 	BaselineRevision                                                   int64
 	InputHash, BaselineJSON, FinalJSON, ModelRef, Status, JobID, Error string
 	CreatedAt                                                          time.Time
@@ -224,14 +282,14 @@ type ExtractedRule struct {
 }
 
 type RuleConfirmation struct {
-	ID, UserID, RuleID, ExistingStatement, ProposedStatement, EventID string
-	Status                                                            string
-	CreatedAt                                                         time.Time
-	ResolvedAt                                                        *time.Time
+	ID, UserID, VoiceID, RuleID, ExistingStatement, ProposedStatement, EventID string
+	Status                                                                     string
+	CreatedAt                                                                  time.Time
+	ResolvedAt                                                                 *time.Time
 }
 
 type RuleComparison struct {
-	ID, UserID, RuleID, SourceID                         string
+	ID, UserID, VoiceID, RuleID, SourceID                string
 	ProfileVersion                                       int64
 	ModelRef                                             string
 	TargetLength                                         *int
@@ -244,7 +302,7 @@ type RuleComparison struct {
 }
 type ComparisonCandidate struct{ ID, ComparisonID, DisplaySide, Output, Status, Error string }
 type ProfileValidation struct {
-	ID, UserID                     string
+	ID, UserID, VoiceID            string
 	ProfileVersion                 int64
 	AnalyzeModelRef, WriteModelRef string
 	JudgeEnabled                   bool
@@ -262,15 +320,19 @@ type ValidationItem struct {
 
 type AnalysisJob struct {
 	UserID     string
+	VoiceID    string
 	WriteModel string
 }
 
 type AnalysisJobRequest struct {
 	UserID     string
+	VoiceID    string
 	WriteModel string
 }
 
-type PersonalizationJobRequest struct{ Kind, UserID, PostSlug, Model, Payload string }
+// PersonalizationJobRequest freezes the owning voice on every provider-backed job so the
+// queue guards per voice and a handler can recheck eligibility when it finally runs.
+type PersonalizationJobRequest struct{ Kind, UserID, VoiceID, PostSlug, Model, Payload string }
 
 type ActiveJob struct{ ID string }
 

@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import type { GenerationJob } from '@/entities/generation-job'
+import { voiceProfileQueryKey } from '@/entities/voice'
 import { Stage } from '@/shared/api'
 import { REVISION_INSTRUCTION_MAX_CHARS } from '@/shared/config'
 import type { FakeRevisionStart } from '@/test/jobs'
@@ -43,10 +44,11 @@ function renderForm({
     jobs: { revisions, startJobId: 'revision-new' },
   })
   const onStarted = vi.fn()
-  render(<ReviseForm postSlug="post" activeJob={active} onStarted={onStarted} />, {
-    wrapper: withProviders(transport, createTestQueryClient()),
+  const queryClient = createTestQueryClient()
+  render(<ReviseForm ownerId="alice" postSlug="post" voice={{ id: 'voice-a', deleted: false }} activeJob={active} onStarted={onStarted} />, {
+    wrapper: withProviders(transport, queryClient),
   })
-  return { onStarted }
+  return { onStarted, queryClient, transport }
 }
 
 it('requires an instruction and the explicit write selection', async () => {
@@ -69,7 +71,11 @@ it('stays disabled while another job is active', async () => {
 
 it('starts a revision with its instruction, rule flag, and selected write model', async () => {
   const revisions: FakeRevisionStart[] = []
-  const { onStarted } = renderForm({ revisions })
+  const { onStarted, queryClient, transport } = renderForm({ revisions })
+  const ownProfile = voiceProfileQueryKey(transport, 'alice', 'voice-a')
+  const siblingProfile = voiceProfileQueryKey(transport, 'alice', 'voice-b')
+  queryClient.setQueryData(ownProfile, { profile: 'own' })
+  queryClient.setQueryData(siblingProfile, { profile: 'sibling' })
   const user = userEvent.setup()
   await user.type(await screen.findByLabelText('수정 요청'), '  존댓말로  ')
   await user.click(screen.getByRole('checkbox', { name: '이 요청을 규칙으로 저장' }))
@@ -79,6 +85,8 @@ it('starts a revision with its instruction, rule flag, and selected write model'
   await user.click(button)
 
   await waitFor(() => expect(onStarted).toHaveBeenCalledWith('revision-new'))
+  expect(queryClient.getQueryState(ownProfile)?.isInvalidated).toBe(true)
+  expect(queryClient.getQueryState(siblingProfile)?.isInvalidated).toBe(false)
   expect(revisions).toEqual([
     {
       postSlug: 'post',

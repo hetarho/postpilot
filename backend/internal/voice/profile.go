@@ -7,22 +7,28 @@ import (
 	"strings"
 )
 
-func (s *Service) ListVersions(ctx context.Context, userID string) ([]ProfileVersion, error) {
-	return s.personalization.ListProfileVersions(ctx, userID)
+func (s *Service) ListVersions(ctx context.Context, userID, voiceID string) ([]ProfileVersion, error) {
+	if _, err := s.ownedVoice(ctx, userID, voiceID); err != nil {
+		return nil, err
+	}
+	return s.personalization.ListProfileVersions(ctx, userID, voiceID)
 }
 
-func (s *Service) UpdateOverride(ctx context.Context, userID string, layer RuleLayer, field string, value *string) (Profile, error) {
+func (s *Service) UpdateOverride(ctx context.Context, userID, voiceID string, layer RuleLayer, field string, value *string) (Profile, error) {
 	if !validLayer(layer) || strings.TrimSpace(field) == "" {
 		return Profile{}, fmt.Errorf("invalid voice override")
 	}
-	profile, err := s.Get(ctx, userID)
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return Profile{}, err
+	}
+	profile, err := s.Get(ctx, userID, voiceID)
 	if err != nil {
 		return Profile{}, err
 	}
 	storedValue := value
 	if value == nil {
 		// Clearing reverts to the last measured/analyzed snapshot by replaying remaining overrides.
-		versions, loadErr := s.personalization.ListProfileVersions(ctx, userID)
+		versions, loadErr := s.personalization.ListProfileVersions(ctx, userID, voiceID)
 		if loadErr != nil {
 			return Profile{}, loadErr
 		}
@@ -42,7 +48,7 @@ func (s *Service) UpdateOverride(ctx context.Context, userID string, layer RuleL
 		}
 		storedValue = &trimmed
 	}
-	overrides, err := s.personalization.ListManualOverrides(ctx, userID)
+	overrides, err := s.personalization.ListManualOverrides(ctx, userID, voiceID)
 	if err != nil {
 		return Profile{}, err
 	}
@@ -55,21 +61,24 @@ func (s *Service) UpdateOverride(ctx context.Context, userID string, layer RuleL
 		}
 	}
 	now := s.now()
-	if err = s.personalization.ApplyOverrideAndPublish(ctx, ManualOverride{UserID: userID, Layer: layer, Field: field, UpdatedAt: now}, storedValue, profile.Structured, now); err != nil {
+	if err = s.personalization.ApplyOverrideAndPublish(ctx, ManualOverride{UserID: userID, VoiceID: voiceID, Layer: layer, Field: field, UpdatedAt: now}, storedValue, profile.Structured, now); err != nil {
 		return Profile{}, err
 	}
-	return s.Get(ctx, userID)
+	return s.Get(ctx, userID, voiceID)
 }
 
-func (s *Service) RestoreVersion(ctx context.Context, userID string, version int64) (Profile, error) {
-	found, err := s.personalization.GetProfileVersion(ctx, userID, version)
+func (s *Service) RestoreVersion(ctx context.Context, userID, voiceID string, version int64) (Profile, error) {
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return Profile{}, err
+	}
+	found, err := s.personalization.GetProfileVersion(ctx, userID, voiceID, version)
 	if err != nil {
 		return Profile{}, err
 	}
-	if _, err = s.personalization.PublishProfileVersion(ctx, userID, found.Profile, "restore", version, s.now()); err != nil {
+	if _, err = s.personalization.PublishProfileVersion(ctx, userID, voiceID, found.Profile, "restore", version, s.now()); err != nil {
 		return Profile{}, err
 	}
-	return s.Get(ctx, userID)
+	return s.Get(ctx, userID, voiceID)
 }
 
 func validLayer(layer RuleLayer) bool {

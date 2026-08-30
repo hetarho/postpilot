@@ -99,10 +99,14 @@ type Candidate struct {
 	FinishedAt   *time.Time
 }
 
+// Experiment.VoiceID is frozen at start: the voice whose corpus an analyze comparison read,
+// or the voice the compared post was in for a write one. A winner may only ever be applied
+// back to that same voice.
 type Experiment struct {
 	ID                string
 	UserID            string
 	PostSlug          string
+	VoiceID           string
 	Stage             Stage
 	Status            Status
 	JobID             string
@@ -160,11 +164,16 @@ type UsageReport struct {
 type Snapshot struct {
 	Content       []byte
 	PromptVersion string
+	// VoiceID is the voice the runner froze the input for; the aggregate records it.
+	VoiceID string
 }
 
 type StartRequest struct {
-	UserID       string
-	PostSlug     string
+	UserID   string
+	PostSlug string
+	// VoiceID is required for an analyze comparison and ignored otherwise: a write or
+	// observe comparison takes its voice from the post.
+	VoiceID      string
 	Stage        Stage
 	ObserveModel ModelRef
 	ModelA       ModelRef
@@ -180,6 +189,7 @@ type StartResult struct {
 type JobRequest struct {
 	UserID       string
 	PostSlug     string
+	VoiceID      string
 	ExperimentID string
 	Stage        Stage
 }
@@ -202,4 +212,6 @@ var (
 	ErrConfirmationRequired  = errors.New("styleguide overwrite confirmation is required")
 	ErrSnapshotUnavailable   = errors.New("입력이 변경되어 같은 조건으로 재시도할 수 없어요. 새 비교를 시작해 주세요.")
 	ErrRetryModelUnavailable = errors.New("비교 모델을 더 이상 사용할 수 없어 새 비교를 시작해야 해요.")
+	ErrVoiceRequired         = errors.New("an active voice is required to compare analyze models")
+	ErrVoiceUnavailable      = errors.New("the voice this comparison belongs to is deleted or unknown")
 )

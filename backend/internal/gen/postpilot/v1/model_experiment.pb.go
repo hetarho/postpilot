@@ -590,8 +590,11 @@ type ModelExperiment struct {
 	AdoptionError     string                 `protobuf:"bytes,15,opt,name=adoption_error,json=adoptionError,proto3" json:"adoption_error,omitempty"`
 	AdoptedAt         string                 `protobuf:"bytes,16,opt,name=adopted_at,json=adoptedAt,proto3" json:"adopted_at,omitempty"`
 	AdoptionRequested bool                   `protobuf:"varint,17,opt,name=adoption_requested,json=adoptionRequested,proto3" json:"adoption_requested,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// The frozen voice for analyze/write work and the only voice its result may affect.
+	// Observe compares the post's image snapshot only and leaves this empty.
+	VoiceId       string `protobuf:"bytes,18,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ModelExperiment) Reset() {
@@ -743,6 +746,13 @@ func (x *ModelExperiment) GetAdoptionRequested() bool {
 	return false
 }
 
+func (x *ModelExperiment) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
+	}
+	return ""
+}
+
 type StartObserveExperimentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PostSlug      string                 `protobuf:"bytes,1,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
@@ -804,9 +814,12 @@ func (x *StartObserveExperimentRequest) GetModelB() *ModelRef {
 }
 
 type StartAnalyzeExperimentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModelA        *ModelRef              `protobuf:"bytes,1,opt,name=model_a,json=modelA,proto3" json:"model_a,omitempty"`
-	ModelB        *ModelRef              `protobuf:"bytes,2,opt,name=model_b,json=modelB,proto3" json:"model_b,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	ModelA *ModelRef              `protobuf:"bytes,1,opt,name=model_a,json=modelA,proto3" json:"model_a,omitempty"`
+	ModelB *ModelRef              `protobuf:"bytes,2,opt,name=model_b,json=modelB,proto3" json:"model_b,omitempty"`
+	// Required and explicit: an analyze experiment freezes one voice's corpus and may apply
+	// its winner only back to that same voice.
+	VoiceId       string `protobuf:"bytes,3,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -853,6 +866,13 @@ func (x *StartAnalyzeExperimentRequest) GetModelB() *ModelRef {
 		return x.ModelB
 	}
 	return nil
+}
+
+func (x *StartAnalyzeExperimentRequest) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
+	}
+	return ""
 }
 
 type StartWriteExperimentRequest struct {
@@ -2033,7 +2053,7 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"modelLabel\x122\n" +
 	"\x05usage\x18\n" +
 	" \x01(\v2\x1c.postpilot.v1.CandidateUsageR\x05usageB\b\n" +
-	"\x06output\"\x96\x05\n" +
+	"\x06output\"\xb1\x05\n" +
 	"\x0fModelExperiment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
 	"\x05stage\x18\x02 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x126\n" +
@@ -2060,14 +2080,16 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x0eadoption_error\x18\x0f \x01(\tR\radoptionError\x12\x1d\n" +
 	"\n" +
 	"adopted_at\x18\x10 \x01(\tR\tadoptedAt\x12-\n" +
-	"\x12adoption_requested\x18\x11 \x01(\bR\x11adoptionRequested\"\x9e\x01\n" +
+	"\x12adoption_requested\x18\x11 \x01(\bR\x11adoptionRequested\x12\x19\n" +
+	"\bvoice_id\x18\x12 \x01(\tR\avoiceId\"\x9e\x01\n" +
 	"\x1dStartObserveExperimentRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12/\n" +
 	"\amodel_a\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelA\x12/\n" +
-	"\amodel_b\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelB\"\x81\x01\n" +
+	"\amodel_b\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelB\"\x9c\x01\n" +
 	"\x1dStartAnalyzeExperimentRequest\x12/\n" +
 	"\amodel_a\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelA\x12/\n" +
-	"\amodel_b\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelB\"\x95\x02\n" +
+	"\amodel_b\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelB\x12\x19\n" +
+	"\bvoice_id\x18\x03 \x01(\tR\avoiceId\"\x95\x02\n" +
 	"\x1bStartWriteExperimentRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12;\n" +
 	"\robserve_model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x12/\n" +

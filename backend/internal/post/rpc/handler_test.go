@@ -23,6 +23,9 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		post.ErrNoMachineBaseline:                    connect.CodeFailedPrecondition,
 		post.ErrPostNotFinalized:                     connect.CodeFailedPrecondition,
 		&post.InvalidContentError{Reason: "invalid"}: connect.CodeInvalidArgument,
+		post.ErrVoiceRequired:                        connect.CodeInvalidArgument,
+		post.ErrVoiceNotFound:                        connect.CodeNotFound,
+		post.ErrVoiceDeleted:                         connect.CodeFailedPrecondition,
 	}
 
 	for domainErr, want := range cases {

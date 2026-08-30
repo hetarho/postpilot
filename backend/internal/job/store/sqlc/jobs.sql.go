@@ -11,7 +11,7 @@ import (
 )
 
 const activeForPost = `-- name: ActiveForPost :one
-SELECT id, post_slug, user_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
 WHERE post_slug = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1
@@ -24,6 +24,7 @@ func (q *Queries) ActiveForPost(ctx context.Context, postSlug sql.NullString) (G
 		&i.ID,
 		&i.PostSlug,
 		&i.UserID,
+		&i.VoiceID,
 		&i.Kind,
 		&i.Status,
 		&i.Stage,
@@ -42,7 +43,7 @@ func (q *Queries) ActiveForPost(ctx context.Context, postSlug sql.NullString) (G
 }
 
 const activeForPostUser = `-- name: ActiveForPostUser :one
-SELECT id, post_slug, user_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
 WHERE post_slug = ? AND user_id = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1
@@ -60,6 +61,7 @@ func (q *Queries) ActiveForPostUser(ctx context.Context, arg ActiveForPostUserPa
 		&i.ID,
 		&i.PostSlug,
 		&i.UserID,
+		&i.VoiceID,
 		&i.Kind,
 		&i.Status,
 		&i.Stage,
@@ -78,7 +80,7 @@ func (q *Queries) ActiveForPostUser(ctx context.Context, arg ActiveForPostUserPa
 }
 
 const activeForUserKind = `-- name: ActiveForUserKind :one
-SELECT id, post_slug, user_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
 WHERE user_id = ? AND kind = ? AND post_slug IS NULL
   AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
@@ -97,6 +99,81 @@ func (q *Queries) ActiveForUserKind(ctx context.Context, arg ActiveForUserKindPa
 		&i.ID,
 		&i.PostSlug,
 		&i.UserID,
+		&i.VoiceID,
+		&i.Kind,
+		&i.Status,
+		&i.Stage,
+		&i.ProgressDone,
+		&i.ProgressTotal,
+		&i.Error,
+		&i.ObserveModel,
+		&i.WriteModel,
+		&i.Payload,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StartedAt,
+		&i.FinishedAt,
+	)
+	return i, err
+}
+
+const activeForVoice = `-- name: ActiveForVoice :one
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
+WHERE voice_id = ? AND status IN ('queued', 'running')
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`
+
+// Anything queued or running that was frozen to this voice, post-backed or not: its result
+// would land in the voice, so a soft delete has to wait for it.
+func (q *Queries) ActiveForVoice(ctx context.Context, voiceID sql.NullString) (GenerationJob, error) {
+	row := q.db.QueryRowContext(ctx, activeForVoice, voiceID)
+	var i GenerationJob
+	err := row.Scan(
+		&i.ID,
+		&i.PostSlug,
+		&i.UserID,
+		&i.VoiceID,
+		&i.Kind,
+		&i.Status,
+		&i.Stage,
+		&i.ProgressDone,
+		&i.ProgressTotal,
+		&i.Error,
+		&i.ObserveModel,
+		&i.WriteModel,
+		&i.Payload,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StartedAt,
+		&i.FinishedAt,
+	)
+	return i, err
+}
+
+const activeForVoiceKind = `-- name: ActiveForVoiceKind :one
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
+WHERE voice_id = ? AND kind = ?
+  AND status IN ('queued', 'running')
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`
+
+type ActiveForVoiceKindParams struct {
+	VoiceID sql.NullString
+	Kind    string
+}
+
+// Voice-owned work is guarded per voice: two voices may analyze at the same time, while one
+// voice still cannot run two of the same kind. Learning/comparison jobs may carry a post.
+func (q *Queries) ActiveForVoiceKind(ctx context.Context, arg ActiveForVoiceKindParams) (GenerationJob, error) {
+	row := q.db.QueryRowContext(ctx, activeForVoiceKind, arg.VoiceID, arg.Kind)
+	var i GenerationJob
+	err := row.Scan(
+		&i.ID,
+		&i.PostSlug,
+		&i.UserID,
+		&i.VoiceID,
 		&i.Kind,
 		&i.Status,
 		&i.Stage,
@@ -115,7 +192,7 @@ func (q *Queries) ActiveForUserKind(ctx context.Context, arg ActiveForUserKindPa
 }
 
 const activeModelExperiment = `-- name: ActiveModelExperiment :one
-SELECT id, post_slug, user_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs
 WHERE kind = 'model_experiment' AND payload = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1
@@ -128,6 +205,7 @@ func (q *Queries) ActiveModelExperiment(ctx context.Context, payload string) (Ge
 		&i.ID,
 		&i.PostSlug,
 		&i.UserID,
+		&i.VoiceID,
 		&i.Kind,
 		&i.Status,
 		&i.Stage,
@@ -199,7 +277,7 @@ func (q *Queries) FinishJob(ctx context.Context, arg FinishJobParams) error {
 }
 
 const getJobByID = `-- name: GetJobByID :one
-SELECT id, post_slug, user_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs WHERE id = ?
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at FROM generation_jobs WHERE id = ?
 `
 
 func (q *Queries) GetJobByID(ctx context.Context, id string) (GenerationJob, error) {
@@ -209,6 +287,7 @@ func (q *Queries) GetJobByID(ctx context.Context, id string) (GenerationJob, err
 		&i.ID,
 		&i.PostSlug,
 		&i.UserID,
+		&i.VoiceID,
 		&i.Kind,
 		&i.Status,
 		&i.Stage,
@@ -228,16 +307,17 @@ func (q *Queries) GetJobByID(ctx context.Context, id string) (GenerationJob, err
 
 const insertJob = `-- name: InsertJob :exec
 INSERT INTO generation_jobs (
-    id, post_slug, user_id, kind, status, stage, progress_done, progress_total,
+    id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total,
     error, observe_model, write_model, payload, created_at, updated_at,
     started_at, finished_at
-) VALUES (?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, NULL, NULL)
+) VALUES (?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, NULL, NULL)
 `
 
 type InsertJobParams struct {
 	ID           string
 	PostSlug     sql.NullString
 	UserID       string
+	VoiceID      sql.NullString
 	Kind         string
 	ObserveModel sql.NullString
 	WriteModel   sql.NullString
@@ -251,6 +331,7 @@ func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) error {
 		arg.ID,
 		arg.PostSlug,
 		arg.UserID,
+		arg.VoiceID,
 		arg.Kind,
 		arg.ObserveModel,
 		arg.WriteModel,
@@ -280,7 +361,7 @@ WHERE id = (
     ORDER BY created_at, id
     LIMIT 1
 )
-RETURNING id, post_slug, user_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at
+RETURNING id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at
 `
 
 type PickNextQueuedParams struct {
@@ -295,6 +376,7 @@ func (q *Queries) PickNextQueued(ctx context.Context, arg PickNextQueuedParams) 
 		&i.ID,
 		&i.PostSlug,
 		&i.UserID,
+		&i.VoiceID,
 		&i.Kind,
 		&i.Status,
 		&i.Stage,

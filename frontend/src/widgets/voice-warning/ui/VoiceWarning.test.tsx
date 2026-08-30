@@ -3,10 +3,13 @@ import { screen } from '@testing-library/react'
 import { renderAppAt } from '@/test/app'
 
 describe('VoiceWarning', () => {
-  it('renders on an editor only for an empty learned profile', async () => {
+  it('renders on an editor only for an empty learned profile, and links to that voice', async () => {
     renderAppAt('/posts/new', { user: { id: 'alice' } })
     expect(await screen.findByText(/문체 프로필이 비어 있어요/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '말투 학습하기' })).toHaveAttribute('href', '/voice')
+    expect(screen.getByRole('link', { name: '말투 학습하기' })).toHaveAttribute(
+      'href',
+      '/voices/voice-default',
+    )
   })
 
   it('does not render after a styleguide exists', async () => {

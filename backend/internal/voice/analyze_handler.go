@@ -2,6 +2,7 @@ package voice
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -13,19 +14,24 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	if err != nil {
 		return err
 	}
+	// The job froze its voice at enqueue; recheck before the provider call so a voice
+	// deleted while the job waited never receives a new styleguide.
+	if _, err := s.activeVoice(ctx, found.UserID, found.VoiceID); err != nil {
+		return voiceUnavailableError(err)
+	}
 	attempted := false
 	for {
-		head, err := s.store.GetProfile(ctx, found.UserID)
+		head, err := s.store.GetProfile(ctx, found.UserID, found.VoiceID)
 		if err != nil {
 			return fmt.Errorf("현재 문체 프로필을 불러오지 못했어요: %w", err)
 		}
-		samples, corpusVersion, err := s.store.CorpusSnapshot(ctx, found.UserID)
+		samples, corpusVersion, err := s.store.CorpusSnapshot(ctx, found.UserID, found.VoiceID)
 		if err != nil {
 			return fmt.Errorf("문체 샘플을 불러오지 못했어요: %w", err)
 		}
 		var sources []AuthoredSource
 		if s.personalization != nil {
-			sources, err = s.personalization.ListAuthoredSources(ctx, found.UserID)
+			sources, err = s.personalization.ListAuthoredSources(ctx, found.UserID, found.VoiceID)
 			if err != nil {
 				return fmt.Errorf("완성 글을 불러오지 못했어요: %w", err)
 			}
@@ -51,7 +57,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		if !hasRequiredAnalysisShape(styleguide) {
 			return fmt.Errorf("문체 분석 결과에 종결어미 또는 never uses 섹션이 없어요. 다시 시도해 주세요")
 		}
-		stored, err := s.store.SetStyleguideIfCorpusVersion(ctx, found.UserID, styleguide, corpusVersion, s.now())
+		stored, err := s.store.SetStyleguideIfCorpusVersion(ctx, found.UserID, found.VoiceID, styleguide, corpusVersion, s.now())
 		if err != nil {
 			return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)
 		}
@@ -65,7 +71,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 				progress("analyze", 1, 1)
 				return nil
 			}
-			overrides, overrideErr := s.personalization.ListManualOverrides(ctx, found.UserID)
+			overrides, overrideErr := s.personalization.ListManualOverrides(ctx, found.UserID, found.VoiceID)
 			if overrideErr != nil {
 				return fmt.Errorf("manual voice overrides: %w", overrideErr)
 			}
@@ -74,11 +80,11 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 					return overrideErr
 				}
 			}
-			measured.Rules, overrideErr = s.personalization.ListRules(ctx, found.UserID)
+			measured.Rules, overrideErr = s.personalization.ListRules(ctx, found.UserID, found.VoiceID)
 			if overrideErr != nil {
 				return fmt.Errorf("voice rules: %w", overrideErr)
 			}
-			if _, published, versionErr := s.personalization.PublishProfileVersionIfHead(ctx, found.UserID, measured, "analysis", head.Structured.Version, s.now()); versionErr != nil {
+			if _, published, versionErr := s.personalization.PublishProfileVersionIfHead(ctx, found.UserID, found.VoiceID, measured, "analysis", head.Structured.Version, s.now()); versionErr != nil {
 				return fmt.Errorf("publish typed voice profile: %w", versionErr)
 			} else if !published {
 				if err := ctx.Err(); err != nil {
@@ -94,6 +100,19 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+	}
+}
+
+// voiceUnavailableError turns a directory refusal into the user-facing reason a job row
+// shows, keeping the sentinel so tests and callers can still identify it.
+func voiceUnavailableError(err error) error {
+	switch {
+	case errors.Is(err, ErrVoiceDeleted):
+		return fmt.Errorf("삭제된 말투에는 AI 작업을 진행할 수 없어요. 말투를 복원하거나 글의 말투를 바꿔 주세요: %w", err)
+	case errors.Is(err, ErrVoiceNotFound), errors.Is(err, ErrVoiceRequired):
+		return fmt.Errorf("작업이 가리키는 말투를 찾을 수 없어요: %w", err)
+	default:
+		return err
 	}
 }
 

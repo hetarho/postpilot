@@ -8,6 +8,15 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 
 // Every procedure is scoped by the authenticated context. No request carries a user id.
 service VoiceService {
+  // The voice directory. A voice owns exactly one profile and every row that can change
+  // it; an account always has at least one active voice and exactly one active default.
+  rpc ListVoices(ListVoicesRequest) returns (ListVoicesResponse) {}
+  rpc CreateVoice(CreateVoiceRequest) returns (CreateVoiceResponse) {}
+  rpc RenameVoice(RenameVoiceRequest) returns (RenameVoiceResponse) {}
+  rpc SetDefaultVoice(SetDefaultVoiceRequest) returns (SetDefaultVoiceResponse) {}
+  rpc DeleteVoice(DeleteVoiceRequest) returns (DeleteVoiceResponse) {}
+  rpc RestoreVoice(RestoreVoiceRequest) returns (RestoreVoiceResponse) {}
+
   rpc GetVoiceProfile(GetVoiceProfileRequest) returns (GetVoiceProfileResponse) {}
   rpc UpdateVoiceProfile(UpdateVoiceProfileRequest) returns (UpdateVoiceProfileResponse) {}
   rpc AddVoiceSample(AddVoiceSampleRequest) returns (AddVoiceSampleResponse) {}
@@ -110,6 +119,9 @@ message StructuredVoiceProfile {
 }
 
 message VoiceProfile {
+  // The owning voice travels with the profile so a cache entry and a deleted-state screen
+  // can never become detached from the voice they describe.
+  Voice voice = 10;
   string styleguide = 1;
   string rules = 2;
   string updated_at = 3;
@@ -133,10 +145,36 @@ message VoiceSample {
   string created_at = 4;
 }
 
-message GetVoiceProfileRequest {}
+// A voice as the directory talks about it. `deleted` is a tombstone: the voice keeps its
+// profile and its posts and stays readable, but cannot start or receive AI work.
+message Voice {
+  string id = 1;
+  string name = 2;
+  bool is_default = 3;
+  bool deleted = 4;
+  string created_at = 5;
+  string updated_at = 6;
+  string deleted_at = 7;
+}
+
+message ListVoicesRequest {}
+message ListVoicesResponse { repeated Voice voices = 1; }
+message CreateVoiceRequest { string name = 1; }
+message CreateVoiceResponse { Voice voice = 1; }
+message RenameVoiceRequest { string voice_id = 1; string name = 2; }
+message RenameVoiceResponse { Voice voice = 1; }
+message SetDefaultVoiceRequest { string voice_id = 1; }
+message SetDefaultVoiceResponse { repeated Voice voices = 1; }
+message DeleteVoiceRequest { string voice_id = 1; }
+message DeleteVoiceResponse { Voice voice = 1; }
+message RestoreVoiceRequest { string voice_id = 1; }
+message RestoreVoiceResponse { Voice voice = 1; }
+
+message GetVoiceProfileRequest { string voice_id = 1; }
 message GetVoiceProfileResponse { VoiceProfile profile = 1; }
 
 message UpdateVoiceProfileRequest {
+  string voice_id = 3;
   // Presence is significant: each editor patches only the field it owns so a rules
   // save cannot write an analysis result back to an older styleguide (or vice versa).
   optional string styleguide = 1;
@@ -145,6 +183,7 @@ message UpdateVoiceProfileRequest {
 message UpdateVoiceProfileResponse { VoiceProfile profile = 1; }
 
 message AddVoiceSampleRequest {
+  string voice_id = 4;
   string label = 1;
   string body = 2;
   // Verified against the acting user's current enabled analyze selection before the
@@ -156,12 +195,12 @@ message AddVoiceSampleResponse {
   string job_id = 2;
 }
 
-message DeleteVoiceSampleRequest { string sample_id = 1; }
+message DeleteVoiceSampleRequest { string voice_id = 2; string sample_id = 1; }
 message DeleteVoiceSampleResponse { string job_id = 1; }
 
-message ListVoiceProfileVersionsRequest {}
+message ListVoiceProfileVersionsRequest { string voice_id = 1; }
 message ListVoiceProfileVersionsResponse { repeated VoiceProfileVersion versions = 1; }
-message UpdateVoiceOverrideRequest { VoiceLayer layer = 1; string field = 2; optional string value = 3; }
+message UpdateVoiceOverrideRequest { string voice_id = 4; VoiceLayer layer = 1; string field = 2; optional string value = 3; }
 message UpdateVoiceOverrideResponse { VoiceProfile profile = 1; }
-message RestoreVoiceProfileRequest { int64 version = 1; }
+message RestoreVoiceProfileRequest { string voice_id = 2; int64 version = 1; }
 message RestoreVoiceProfileResponse { VoiceProfile profile = 1; }

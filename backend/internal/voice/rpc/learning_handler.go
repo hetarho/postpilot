@@ -69,7 +69,15 @@ func (h *LearningHandler) GiveSentenceFeedback(ctx context.Context, req *connect
 	}
 	id, err := h.service.GiveFeedback(ctx, userID, req.Msg.GetPostSlug(), req.Msg.GetSentenceRef(), reason, req.Msg.GetAuthoredText(), req.Msg.GetSatisfaction())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		// Ownership and voice refusals keep their codes; every other failure is a rule of the
+		// feedback itself, which the client shows verbatim.
+		switch {
+		case errors.Is(err, voice.ErrPostNotFound), errors.Is(err, voice.ErrForbidden), errors.Is(err, voice.ErrVoiceNotFound),
+			errors.Is(err, voice.ErrVoiceDeleted), errors.Is(err, voice.ErrBaselineVoiceMismatch):
+			return nil, learningError("give sentence feedback", err)
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
 	}
 	return connect.NewResponse(&postpilotv1.GiveSentenceFeedbackResponse{FeedbackId: id}), nil
 }
@@ -95,12 +103,12 @@ func (h *LearningHandler) SetVoiceRuleStatus(ctx context.Context, req *connect.R
 	}
 	return connect.NewResponse(&postpilotv1.SetVoiceRuleStatusResponse{Profile: toProtoProfile(profile)}), nil
 }
-func (h *LearningHandler) ListRuleConfirmations(ctx context.Context, _ *connect.Request[postpilotv1.ListRuleConfirmationsRequest]) (*connect.Response[postpilotv1.ListRuleConfirmationsResponse], error) {
+func (h *LearningHandler) ListRuleConfirmations(ctx context.Context, req *connect.Request[postpilotv1.ListRuleConfirmationsRequest]) (*connect.Response[postpilotv1.ListRuleConfirmationsResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	items, err := h.service.Confirmations(ctx, userID)
+	items, err := h.service.Confirmations(ctx, userID, req.Msg.GetVoiceId())
 	if err != nil {
 		return nil, learningError("list rule confirmations", err)
 	}
@@ -133,7 +141,7 @@ func toProtoLearningEvent(e voice.LearningEvent) *postpilotv1.VoiceLearningEvent
 	if e.ProcessedAt != nil {
 		processed = e.ProcessedAt.UTC().Format(timeLayout)
 	}
-	return &postpilotv1.VoiceLearningEvent{Id: e.ID, PostSlug: e.PostSlug, BaselineRevision: e.BaselineRevision, Status: e.Status, JobId: e.JobID, Error: e.Error, CreatedAt: e.CreatedAt.UTC().Format(timeLayout), ProcessedAt: processed}
+	return &postpilotv1.VoiceLearningEvent{Id: e.ID, PostSlug: e.PostSlug, BaselineRevision: e.BaselineRevision, Status: e.Status, JobId: e.JobID, Error: e.Error, CreatedAt: e.CreatedAt.UTC().Format(timeLayout), ProcessedAt: processed, VoiceId: e.VoiceID}
 }
 func learningError(op string, err error) error {
 	switch {

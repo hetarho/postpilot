@@ -1,12 +1,16 @@
 import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import { useSelectionSavePending, useStageSelection } from '@/entities/model-catalog'
+import { DELETED_VOICE_AI_REASON, type VoiceRef } from '@/entities/voice'
 import { REVISION_INSTRUCTION_MAX_CHARS } from '@/shared/config'
 import { Button, Checkbox, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
 import { useStartRevision } from '../api/useStartRevision'
 
 interface ReviseFormProps {
+  ownerId: string
   postSlug: string
+  /** The post's voice: a deleted one refuses revision before any provider call. */
+  voice: Pick<VoiceRef, 'id' | 'deleted'>
   activeJob?: GenerationJob
   jobPending?: boolean
   onStarted: (jobId: string) => void
@@ -19,7 +23,7 @@ export interface ReviseFormHandle {
 
 /** Replaces the current canonical content through one durable `revise` job. */
 export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function ReviseForm(
-  { postSlug, activeJob, jobPending = false, onStarted, beforeStart },
+  { ownerId, postSlug, voice, activeJob, jobPending = false, onStarted, beforeStart },
   ref,
 ) {
   const [instruction, setInstruction] = useState('')
@@ -27,10 +31,12 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
   const [prepareError, setPrepareError] = useState(false)
   const write = useStageSelection('write')
   const selectionSaving = useSelectionSavePending()
-  const startRevision = useStartRevision()
+  const startRevision = useStartRevision(ownerId, voice.id)
   const hasActiveJob = Boolean(activeJob && !isTerminal(activeJob))
+  const voiceBlocked = Boolean(voice?.deleted)
   const trimmed = instruction.trim()
   const disabled =
+    voiceBlocked ||
     write.isPending ||
     selectionSaving ||
     jobPending ||
@@ -58,17 +64,19 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
 
   useImperativeHandle(ref, () => ({ start: () => void start() }), [start])
 
-  const blocker = jobPending
-    ? '수정 작업을 확인하는 중이에요.'
-    : hasActiveJob
-      ? '다른 작업이 진행 중이에요.'
-      : selectionSaving || write.isPending
-        ? '작성 모델을 확인하는 중이에요.'
-        : !write.selected
-          ? '작성 모델을 선택하세요.'
-          : trimmed === ''
-            ? '수정 요청을 입력하세요.'
-            : ''
+  const blocker = voiceBlocked
+    ? DELETED_VOICE_AI_REASON
+    : jobPending
+      ? '수정 작업을 확인하는 중이에요.'
+      : hasActiveJob
+        ? '다른 작업이 진행 중이에요.'
+        : selectionSaving || write.isPending
+          ? '작성 모델을 확인하는 중이에요.'
+          : !write.selected
+            ? '작성 모델을 선택하세요.'
+            : trimmed === ''
+              ? '수정 요청을 입력하세요.'
+              : ''
 
   return (
     <section aria-labelledby="revision-heading" className="mt-10 pb-12">
@@ -96,7 +104,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           autoComplete="off"
           autoCapitalize="sentences"
           enterKeyHint="enter"
-          disabled={hasActiveJob || jobPending || startRevision.isPending}
+          disabled={voiceBlocked || hasActiveJob || jobPending || startRevision.isPending}
           placeholder="어떻게 고칠까요? 예: 더 짧게 · 존댓말로 · 카페 얘기 늘려줘"
           onChange={(event) => setInstruction(event.target.value)}
         />
@@ -107,7 +115,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         <label className="text-content-secondary flex min-h-11 items-center gap-3 text-sm">
           <Checkbox
             checked={saveAsRule}
-            disabled={hasActiveJob || jobPending || startRevision.isPending}
+            disabled={voiceBlocked || hasActiveJob || jobPending || startRevision.isPending}
             onChange={(event) => setSaveAsRule(event.target.checked)}
           />
           이 요청을 규칙으로 저장

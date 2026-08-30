@@ -34,7 +34,8 @@ invisible to the user at the moment they happen:
   decided by which response happened to land last.
 
 One queue per post makes the guarantee statable: *for a given post there is at most one
-save in flight, and what it sends is always the newest text queued.*
+save in flight, and what it sends is always the newest text queued — and the newest voice
+assignment chosen.*
 
 ## Rules
 
@@ -55,6 +56,18 @@ save in flight, and what it sends is always the newest text queued.*
 - **The text pushes through a layout effect, not a passive one.** A passive effect runs
   after paint and can be deferred past a `pagehide`, and the keystroke it had not recorded
   yet is exactly the one that would be lost.
+- **The voice assignment rides in the queue, not beside it** (`assignVoice`, job 18). A
+  create always sends `voice_id` — a post cannot exist without one (spec/policy/posts.md) —
+  and an ordinary edit never does, so a delayed title save cannot carry a stale voice over a
+  newer choice. A choice made for a draft with no post yet is simply remembered; one made
+  while the create was already out is followed by an immediate reassignment the moment the
+  create lands.
+- **A reassignment is an action, not a keystroke.** It is sent at once, without the debounce,
+  and its promise reports that one save's outcome. Text typed while it is out waits and goes
+  afterwards without the voice. A refused reassignment is *taken back*: the refusal is usually
+  an answer (a busy post, a voice deleted meanwhile), and retrying it with every save would
+  keep the title from ever landing again — so the retries that follow carry text only, and a
+  queue with nothing else to send goes quiet rather than reporting a failure forever.
 
 ## What is still best-effort
 

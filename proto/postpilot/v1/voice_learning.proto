@@ -24,6 +24,9 @@ enum VoiceFeedbackReason {
 message VoiceLearningEvent {
   string id = 1; string post_slug = 2; int64 baseline_revision = 3; string status = 4;
   string job_id = 5; string error = 6; string created_at = 7; string processed_at = 8;
+  // Frozen at finalization. A retry follows THIS voice even if the post is reassigned
+  // afterwards, so completed work is never retargeted.
+  string voice_id = 9;
 }
 message LearnFromFinalizedPostRequest { string post_slug = 1; ModelRef analyze_model = 2; }
 message LearnFromFinalizedPostResponse { VoiceLearningEvent event = 1; string job_id = 2; bool reused = 3; }
@@ -42,7 +45,7 @@ message VoiceRuleConfirmation {
   string id = 1; string rule_id = 2; string existing_statement = 3;
   string proposed_statement = 4; string status = 5; string created_at = 6;
 }
-message ListRuleConfirmationsRequest {}
+message ListRuleConfirmationsRequest { string voice_id = 1; }
 message ListRuleConfirmationsResponse { repeated VoiceRuleConfirmation confirmations = 1; }
 message ResolveRuleConfirmationRequest { string confirmation_id = 1; bool replace = 2; }
 message ResolveRuleConfirmationResponse { VoiceProfile profile = 1; }

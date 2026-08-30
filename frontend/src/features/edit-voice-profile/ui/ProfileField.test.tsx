@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { VoiceValue } from '@/entities/voice-profile'
+import type { VoiceValue } from '@/entities/voice'
 import { VoiceLayer } from '@/shared/api'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
 import type { FakeVoiceOptions } from '@/test/voice'
@@ -15,6 +15,7 @@ function renderField(value: VoiceValue = ANALYZED, voice: FakeVoiceOptions = {})
   render(
     <ProfileField
       ownerId="alice"
+      voiceId="voice-default"
       label="어휘 성격"
       layer={VoiceLayer.LEXICAL}
       field="description"

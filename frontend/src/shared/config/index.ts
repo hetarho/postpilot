@@ -86,3 +86,8 @@ export const POST_TARGET_LENGTH_MAX = 10_000
  *  not shrink after a 12 MP decode, so it is not kept for a whole session; the chunk is
  *  in the browser cache, so bringing it back for the next batch is cheap. */
 export const HEIF_DECODER_IDLE_MS = 30_000
+
+/** Voice display-name ceiling, mirrored from the voice context so the field can say so before
+ *  the round trip; the server stays authoritative. Counted in Unicode scalar values, like the
+ *  backend, so a Hangul syllable is one character here too. */
+export const VOICE_NAME_MAX_CHARS = 50

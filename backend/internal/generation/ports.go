@@ -16,16 +16,18 @@ type Posts interface {
 	SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent) error
 }
 
+// Profiles projects exactly the post's voice; the voice context never falls back to a
+// sibling voice, so an empty voice prompts as empty.
 type Profiles interface {
-	ProfileForPrompt(ctx context.Context, userID string) (Profile, error)
+	ProfileForPrompt(ctx context.Context, userID, voiceID string) (Profile, error)
 }
 
 type TopicProfiles interface {
-	ProfileForPromptForTopic(ctx context.Context, userID, topic string, tags []string) (Profile, error)
+	ProfileForPromptForTopic(ctx context.Context, userID, voiceID, topic string, tags []string) (Profile, error)
 }
 
 type RuleWriter interface {
-	AppendRule(ctx context.Context, userID, line string) error
+	AppendRule(ctx context.Context, userID, voiceID, line string) error
 }
 
 type LLM interface {

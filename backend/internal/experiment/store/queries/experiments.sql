@@ -1,8 +1,8 @@
 -- name: InsertExperiment :exec
 INSERT INTO model_experiments (
-  id, user_id, post_slug, stage, status, job_id, input_snapshot, input_hash,
+  id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash,
   prompt_version, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: InsertCandidate :exec
 INSERT INTO model_experiment_candidates (
@@ -42,6 +42,16 @@ WHERE user_id = ? AND post_slug = ? AND stage = 'write'
 	OR (status = 'decided' AND (applied_at IS NULL OR (adoption_requested = 1 AND adopted_at IS NULL)))
   )
 ORDER BY created_at DESC, id DESC LIMIT 1;
+
+-- name: CountPublishableForVoice :one
+-- An experiment frozen to the voice that could still publish into it (a styleguide for an
+-- analyze comparison, a machine baseline for a write one): unfinished, awaiting a verdict, or
+-- decided with its winner not yet applied. ASCII only: sqlc expands SELECT * by byte offset
+-- and a multi-byte character in this file corrupts the queries after it.
+SELECT count(*) FROM model_experiments
+WHERE voice_id = ? AND user_id = ?
+  AND (status IN ('queued', 'running', 'review', 'partial')
+       OR (status = 'decided' AND applied_at IS NULL));
 
 -- name: SetExperimentStatus :exec
 UPDATE model_experiments

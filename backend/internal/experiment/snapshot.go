@@ -11,5 +11,5 @@ func FreezeSnapshot(snapshot Snapshot) (Snapshot, string, error) {
 		return Snapshot{}, "", fmt.Errorf("snapshot content and prompt version are required")
 	}
 	digest := sha256.Sum256(snapshot.Content)
-	return Snapshot{Content: append([]byte(nil), snapshot.Content...), PromptVersion: snapshot.PromptVersion}, hex.EncodeToString(digest[:]), nil
+	return Snapshot{Content: append([]byte(nil), snapshot.Content...), PromptVersion: snapshot.PromptVersion, VoiceID: snapshot.VoiceID}, hex.EncodeToString(digest[:]), nil
 }

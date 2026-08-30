@@ -24,11 +24,25 @@ const (
 	StatusFailed  = "failed"
 )
 
+// voiceOwnedKind identifies personalization work whose writes are serialized per voice,
+// even when the job also points at the post or source that caused the work.
+func voiceOwnedKind(kind string) bool {
+	switch kind {
+	case KindAnalyzeVoice, KindLearnVoice, KindCompareVoiceRule, KindValidateVoiceProfile:
+		return true
+	default:
+		return false
+	}
+}
+
 var (
 	ErrNotFound       = errors.New("job not found")
 	ErrForbidden      = errors.New("job belongs to another user")
 	ErrActiveConflict = errors.New("an active job already exists")
 	ErrInvalidTarget  = errors.New("job target does not belong to user")
+	// ErrVoiceUnavailable closes the lifecycle race between a service's active-voice
+	// precheck and the durable insert. The database is the final arbiter.
+	ErrVoiceUnavailable = errors.New("job voice is deleted or unknown")
 )
 
 // ErrAlreadyInProgress identifies the durable job a caller should attach to.
@@ -42,11 +56,15 @@ func (e *ErrAlreadyInProgress) Error() string {
 
 func (e *ErrAlreadyInProgress) Unwrap() error { return ErrActiveConflict }
 
-// NewJob is the immutable input recorded before the worker is woken.
+// NewJob is the immutable input recorded before the worker is woken. VoiceID is the voice
+// the work was started for, frozen here so the handler can recheck it when it finally runs
+// and so voice-owned kinds are guarded per voice rather than per account. The job context
+// only carries the id; it never reads voice tables.
 type NewJob struct {
 	Kind         string
 	UserID       string
 	PostSlug     *string
+	VoiceID      string
 	ObserveModel string
 	WriteModel   string
 	Payload      []byte
@@ -58,6 +76,7 @@ type Job struct {
 	Kind          string
 	UserID        string
 	PostSlug      *string
+	VoiceID       string
 	Status        string
 	Stage         string
 	ProgressDone  int
@@ -78,6 +97,7 @@ type JobSummary struct {
 	Kind          string
 	UserID        string
 	PostSlug      *string
+	VoiceID       string
 	Status        string
 	Stage         string
 	ProgressDone  int
@@ -91,7 +111,7 @@ type JobSummary struct {
 
 func summarize(found Job) *JobSummary {
 	return &JobSummary{
-		ID: found.ID, Kind: found.Kind, UserID: found.UserID, PostSlug: found.PostSlug,
+		ID: found.ID, Kind: found.Kind, UserID: found.UserID, PostSlug: found.PostSlug, VoiceID: found.VoiceID,
 		Status: found.Status, Stage: found.Stage, ProgressDone: found.ProgressDone,
 		ProgressTotal: found.ProgressTotal, Error: found.Error,
 		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
