@@ -32,6 +32,7 @@ type Server struct {
 	OpenLogin func(binary, profileDir string) error
 	nonce     string
 	host      string
+	completed chan struct{}
 }
 
 func (s Server) Run(ctx context.Context) error {
@@ -46,6 +47,7 @@ func (s Server) Run(ctx context.Context) error {
 	}
 	s.nonce = nonce
 	s.host = listener.Addr().String()
+	s.completed = make(chan struct{}, 1)
 	server := &http.Server{ReadHeaderTimeout: 5 * time.Second}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", s.index)
@@ -54,7 +56,13 @@ func (s Server) Run(ctx context.Context) error {
 	url := "http://" + s.host + "/?nonce=" + url.QueryEscape(s.nonce)
 	fmt.Printf("Postpilot agent setup: %s\n", url)
 	_ = exec.Command("/usr/bin/open", url).Start()
-	go func() { <-ctx.Done(); _ = server.Shutdown(context.Background()) }()
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-s.completed:
+		}
+		_ = server.Shutdown(context.Background())
+	}()
 	err = server.Serve(listener)
 	if err == http.ErrServerClosed {
 		return nil
@@ -83,7 +91,7 @@ func (s Server) index(writer http.ResponseWriter, request *http.Request) {
 	if !s.authorize(writer, request, request.URL.Query().Get("nonce")) {
 		return
 	}
-	s.render(writer, pageData{Browsers: browser.Discover(), Values: formValues{APIURL: "https://api.postpilot.app", Label: "내 Mac"}})
+	s.render(writer, pageData{Browsers: browser.Discover(), Values: formValues{APIURL: config.DefaultAPIURL, Label: "내 Mac"}})
 }
 
 func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
@@ -284,6 +292,17 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 	data.Message = "연결을 마쳤습니다. 실행 중인 LaunchAgent가 이 연결을 자동으로 감지하며, Mac이 다시 켜져도 자동으로 대기합니다."
 	data.Values.DeviceCode = ""
 	s.render(writer, data)
+	s.finish()
+}
+
+func (s Server) finish() {
+	if s.completed == nil {
+		return
+	}
+	select {
+	case s.completed <- struct{}{}:
+	default:
+	}
 }
 
 func persistPending(paths config.Paths, cfg config.File, connection config.Connection) (config.File, int, error) {
@@ -353,7 +372,7 @@ func (s Server) authorize(writer http.ResponseWriter, request *http.Request, non
 }
 
 func (s Server) repair(writer http.ResponseWriter, request *http.Request) {
-	data := pageData{Browsers: browser.Discover(), Values: formValues{APIURL: "https://api.postpilot.app", Label: "내 Mac"}}
+	data := pageData{Browsers: browser.Discover(), Values: formValues{APIURL: config.DefaultAPIURL, Label: "내 Mac"}}
 	cfg, err := config.Load(s.Paths)
 	if err != nil {
 		data.Error = "저장된 연결을 읽지 못했어요: " + err.Error()

@@ -4,6 +4,21 @@ This separate Go runtime pairs a Postpilot account to one isolated Chromium prof
 
 ## Install and pair
 
+From the repository root, the normal path is one command:
+
+```sh
+./setup-hermes.sh
+```
+
+It refreshes the checked-in companion and the current official Hermes install, opens local setup only when no armed
+connection exists, runs diagnostics, and installs/reloads the user LaunchAgent. A successful first pairing closes
+the temporary loopback setup server automatically, so the script can finish the remaining steps. Later Mac boots do
+not require this command: launchd starts the polling agent automatically. Run the same command again to update and
+reload the companion. Use `./setup-hermes.sh --setup` only when the local setup page is needed again for another
+connection or interactive Naver-login repair.
+
+The underlying commands remain available for diagnostics and development:
+
 ```sh
 ./packaging/install.sh
 "$HOME/Library/Application Support/Postpilot Agent/bin/postpilot-agent" setup
@@ -17,6 +32,11 @@ configure the wrong profile; setup creates `postpilot-<connection-id>` and insta
 there instead. If its capability probe reports missing model authentication, configure that exact named profile with
 `hermes -p postpilot-<connection-id> setup --portal` (or `hermes -p ... model`), then submit the same recoverable setup
 again.
+
+Postpilot deliberately creates the named profile with `--no-skills` and invokes one-shot publishing with only the
+`postpilot-publisher` and `browser` toolsets. Hermes' general `memory`/`skill_manage` learning surface is therefore
+not available inside a publish run: browser publication stays reproducible and improves through reviewed plugin and
+skill releases rather than silently learning from page content or model guesses.
 
 If a queued job reports `needs_attention`, reopen local setup. Its existing active connections are listed without
 local paths or credentials; **이 연결의 네이버 로그인 열기** reopens that connection's same dedicated browser

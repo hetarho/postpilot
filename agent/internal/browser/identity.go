@@ -29,9 +29,7 @@ const identityPreparationScript = `(() => {
 
   const visibleLayer = document.querySelector('div[class^="layer_popup__"][class*="is_show__"]');
   if (!visibleLayer) {
-    const openers = [...document.querySelectorAll(
-      'div[class^="header_menu__"] div[class^="publish_btn_area__"] > button[class^="publish_btn__"]'
-    )];
+    const openers = [...document.querySelectorAll('button[class^="publish_btn__"]')];
     const finalControls = document.querySelectorAll('button[class^="confirm_btn__"]');
     if (openers.length !== 1 || finalControls.length !== 0) {
       return {editor_ready: true, ready: false, error: 'unrecognized publish-settings opener'};
@@ -136,23 +134,26 @@ type pageTarget struct {
 }
 
 type cdpRequest struct {
-	ID     int    `json:"id"`
-	Method string `json:"method"`
-	Params any    `json:"params,omitempty"`
+	ID        int    `json:"id"`
+	Method    string `json:"method"`
+	Params    any    `json:"params,omitempty"`
+	SessionID string `json:"sessionId,omitempty"`
 }
 
 type cdpResponse struct {
-	ID     int             `json:"id"`
-	Result json.RawMessage `json:"result"`
-	Error  *struct {
+	ID        int             `json:"id"`
+	Result    json.RawMessage `json:"result"`
+	SessionID string          `json:"sessionId,omitempty"`
+	Error     *struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
 }
 
 type cdpClient struct {
-	conn *websocket.Conn
-	next int
+	conn      *websocket.Conn
+	next      int
+	sessionID string
 }
 
 // ObserveNaverIdentity obtains account/category evidence directly from the one
@@ -163,36 +164,49 @@ func ObserveNaverIdentity(ctx context.Context, cdpURL string) (NaverIdentity, er
 	if err != nil {
 		return NaverIdentity{}, err
 	}
-	conn, _, err := websocket.Dial(ctx, target.WebSocketDebuggerURL, &websocket.DialOptions{
+	observationCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(observationCtx, cdpURL, &websocket.DialOptions{
 		HTTPClient: noProxyHTTPClient(10 * time.Second),
 	})
 	if err != nil {
-		return NaverIdentity{}, fmt.Errorf("connect selected browser page: %w", err)
+		return NaverIdentity{}, fmt.Errorf("connect dedicated browser: %w", err)
 	}
 	defer conn.CloseNow()
 	conn.SetReadLimit(1 << 20)
 	client := &cdpClient{conn: conn}
+	var attached struct {
+		SessionID string `json:"sessionId"`
+	}
+	if err := client.call(observationCtx, "Target.attachToTarget", map[string]any{
+		"targetId": target.ID,
+		"flatten":  true,
+	}, &attached); err != nil {
+		return NaverIdentity{}, fmt.Errorf("attach selected browser page: %w", err)
+	}
+	if attached.SessionID == "" {
+		return NaverIdentity{}, errors.New("attach selected browser page returned no session")
+	}
+	client.sessionID = attached.SessionID
 
-	if err := client.call(ctx, "Page.enable", nil, nil); err != nil {
+	if err := client.call(observationCtx, "Page.enable", nil, nil); err != nil {
 		return NaverIdentity{}, err
 	}
 
-	deadline := time.NewTimer(20 * time.Second)
-	defer deadline.Stop()
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		preparation, prepareErr := client.prepareIdentity(ctx)
+		preparation, prepareErr := client.prepareIdentity(observationCtx)
 		if prepareErr != nil {
 			err = prepareErr
 		} else if preparation.Error != "" {
 			err = errors.New(preparation.Error)
 		} else if preparation.Ready {
-			observation, observeErr := client.observe(ctx)
+			observation, observeErr := client.observe(observationCtx)
 			if observeErr == nil {
 				identity, validateErr := validateIdentityObservation(observation)
 				if validateErr == nil {
-					confirmed, confirmErr := discoverSinglePage(ctx, cdpURL)
+					confirmed, confirmErr := discoverSinglePage(observationCtx, cdpURL)
 					if confirmErr != nil || confirmed.ID != target.ID ||
 						confirmed.WebSocketDebuggerURL != target.WebSocketDebuggerURL || confirmed.URL != observation.Href {
 						if confirmErr == nil {
@@ -210,9 +224,10 @@ func ObserveNaverIdentity(ctx context.Context, cdpURL string) (NaverIdentity, er
 			err = fmt.Errorf("Naver editor preparation is incomplete: %s", preparation.Stage)
 		}
 		select {
-		case <-ctx.Done():
-			return NaverIdentity{}, ctx.Err()
-		case <-deadline.C:
+		case <-observationCtx.Done():
+			if ctx.Err() != nil {
+				return NaverIdentity{}, ctx.Err()
+			}
 			return NaverIdentity{}, fmt.Errorf("Naver editor identity was not observable: %w", err)
 		case <-ticker.C:
 		}
@@ -286,7 +301,7 @@ func isNaverHost(host string) bool {
 func (c *cdpClient) call(ctx context.Context, method string, params any, out any) error {
 	c.next++
 	id := c.next
-	if err := wsjson.Write(ctx, c.conn, cdpRequest{ID: id, Method: method, Params: params}); err != nil {
+	if err := wsjson.Write(ctx, c.conn, cdpRequest{ID: id, Method: method, Params: params, SessionID: c.sessionID}); err != nil {
 		return fmt.Errorf("send CDP %s: %w", method, err)
 	}
 	for {
@@ -294,7 +309,7 @@ func (c *cdpClient) call(ctx context.Context, method string, params any, out any
 		if err := wsjson.Read(ctx, c.conn, &response); err != nil {
 			return fmt.Errorf("read CDP %s: %w", method, err)
 		}
-		if response.ID != id {
+		if response.ID != id || (c.sessionID != "" && response.SessionID != c.sessionID) {
 			continue
 		}
 		if response.Error != nil {

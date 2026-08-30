@@ -156,6 +156,21 @@ func TestSetupPageCarriesNonceAndSecurityHeaders(t *testing.T) {
 	if response.Header().Get("Referrer-Policy") != "same-origin" {
 		t.Fatalf("same-origin form contract is not preserved: %v", response.Header())
 	}
+	if !strings.Contains(response.Body.String(), `value="`+config.DefaultAPIURL+`"`) {
+		t.Fatalf("production API default is missing: %s", response.Body.String())
+	}
+}
+
+func TestSuccessfulSetupCompletionCanBeSignaledOnlyOnceWithoutBlocking(t *testing.T) {
+	completed := make(chan struct{}, 1)
+	server := Server{completed: completed}
+	server.finish()
+	server.finish()
+	select {
+	case <-completed:
+	default:
+		t.Fatal("setup completion was not signaled")
+	}
 }
 
 func TestSetupRejectsOversizedForms(t *testing.T) {

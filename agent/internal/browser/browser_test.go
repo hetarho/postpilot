@@ -98,7 +98,7 @@ func TestObserveNaverIdentityUsesTargetBoundCDPEvidence(t *testing.T) {
 				ID: "page-1", Type: "page", URL: currentURL,
 				WebSocketDebuggerURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/devtools/page/page-1",
 			}})
-		case "/devtools/page/page-1":
+		case "/devtools/browser/one":
 			connection, err := websocket.Accept(writer, request, nil)
 			if err != nil {
 				return
@@ -111,6 +111,8 @@ func TestObserveNaverIdentityUsesTargetBoundCDPEvidence(t *testing.T) {
 				}
 				result := map[string]any{}
 				switch call.Method {
+				case "Target.attachToTarget":
+					result = map[string]any{"sessionId": "session-page-1"}
 				case "Page.navigate":
 					t.Errorf("identity verifier must not drive Naver UI: %#v", call.Params)
 				case "Runtime.evaluate":
@@ -131,9 +133,14 @@ func TestObserveNaverIdentityUsesTargetBoundCDPEvidence(t *testing.T) {
 						}}
 					}
 				}
-				if err := wsjson.Write(request.Context(), connection, map[string]any{
-					"id": call.ID, "result": result,
-				}); err != nil {
+				response := map[string]any{"id": call.ID, "result": result}
+				if call.Method != "Target.attachToTarget" {
+					if call.SessionID != "session-page-1" {
+						t.Errorf("page command was not bound to the attached target: %+v", call)
+					}
+					response["sessionId"] = "session-page-1"
+				}
+				if err := wsjson.Write(request.Context(), connection, response); err != nil {
 					return
 				}
 			}
@@ -215,7 +222,7 @@ func TestObserveNaverIdentityRejectsSecondTargetAppearingDuringVerification(t *t
 				targets = append(targets, pageTarget{ID: "page-2", Type: "page", URL: "about:blank"})
 			}
 			_ = json.NewEncoder(writer).Encode(targets)
-		case "/devtools/page/page-1":
+		case "/devtools/browser/one":
 			connection, err := websocket.Accept(writer, request, nil)
 			if err != nil {
 				return
@@ -227,6 +234,9 @@ func TestObserveNaverIdentityRejectsSecondTargetAppearingDuringVerification(t *t
 					return
 				}
 				result := map[string]any{}
+				if call.Method == "Target.attachToTarget" {
+					result = map[string]any{"sessionId": "session-page-1"}
+				}
 				if call.Method == "Page.navigate" {
 					stateMu.Lock()
 					targetURL = "https://blog.naver.com/PostWriteForm.naver?blogId=alice"
@@ -248,7 +258,11 @@ func TestObserveNaverIdentityRejectsSecondTargetAppearingDuringVerification(t *t
 						stateMu.Unlock()
 					}
 				}
-				if err := wsjson.Write(request.Context(), connection, map[string]any{"id": call.ID, "result": result}); err != nil {
+				response := map[string]any{"id": call.ID, "result": result}
+				if call.Method != "Target.attachToTarget" {
+					response["sessionId"] = "session-page-1"
+				}
+				if err := wsjson.Write(request.Context(), connection, response); err != nil {
 					return
 				}
 			}

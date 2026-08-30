@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	PollInterval = 5 * time.Second
-	Heartbeat    = 10 * time.Second
-	JobTimeout   = 15 * time.Minute
-	MaxTurns     = 60
+	DefaultAPIURL = "https://api.postpilot.haeram.me"
+	PollInterval  = 5 * time.Second
+	Heartbeat     = 10 * time.Second
+	JobTimeout    = 15 * time.Minute
+	MaxTurns      = 60
 )
 
 type Connection struct {
