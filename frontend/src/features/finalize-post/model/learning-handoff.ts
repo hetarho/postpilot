@@ -1,5 +1,9 @@
 const PREFIX = 'postpilot:voice-learning:'
 
+/** What a started learning run leaves behind for whichever surface renders next: the run outlives
+ *  the step change that started it, and a completed one outlives the reload after it — that is how
+ *  "이 revision은 이미 학습했어요" survives without a server field to read it from. Only the
+ *  revision guard expires an entry; logout discards them all. */
 export interface LearningHandoff {
   eventId: string
   jobId: string
@@ -31,9 +35,6 @@ export function readLearningHandoff(
 }
 export function writeLearningHandoff(ownerId: string, postSlug: string, value: LearningHandoff) {
   localStorage.setItem(`${PREFIX}${ownerId}:${postSlug}`, JSON.stringify(value))
-}
-export function clearLearningHandoff(ownerId: string, postSlug: string) {
-  localStorage.removeItem(`${PREFIX}${ownerId}:${postSlug}`)
 }
 export function discardLearningHandoffs() {
   for (let index = localStorage.length - 1; index >= 0; index -= 1) {

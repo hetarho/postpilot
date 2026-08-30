@@ -27,7 +27,7 @@ import {
   flushContentQueue,
   type BlockEditorHandle,
 } from '@/features/edit-post-content'
-import { FinalizePost } from '@/features/finalize-post'
+import { FinalizeActions, VoiceLearningPanel, useVoiceLearning } from '@/features/finalize-post'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
@@ -392,6 +392,10 @@ function LifecycleSteps({
   // on 글 생성 and `reviseRef` only on 글 다듬기, so reporting a failure on the other step would
   // offer a retry that reaches nothing.
   const [started, setStarted] = useState<{ id: string; step: EditorStep } | null>(null)
+  // Above both panels on purpose: 확정하고 말투 학습 lives at the end of 글 다듬기 and every
+  // learning outcome is reported on 글 완성, so the run has to outlive the step change that the
+  // finalize itself causes.
+  const learning = useVoiceLearning(ownerId, post)
   const jobId = started?.id || post.activeJob?.id || ''
   const postKey = useMemo(() => getPostQueryKey(transport, post.slug), [post.slug, transport])
   const postsKey = useMemo(() => listPostsQueryKey(transport), [transport])
@@ -509,6 +513,19 @@ function LifecycleSteps({
           (contentEditorRef.current?.flush() ?? Promise.resolve()).then(() => undefined)
         }
       />
+      {/* Last on the step, because it is what ends it: the draft is read, revised, and then
+          confirmed. The block editor is mounted right here, so the flush is a live ref rather
+          than the queue's fallback. */}
+      <FinalizeActions
+        post={post}
+        learning={learning}
+        beforeFinalize={() =>
+          contentEditorRef.current?.flush() ??
+          flushContentQueue(post.slug) ??
+          Promise.resolve(post.contentRevision)
+        }
+        onFinalized={() => onStepChange('finish')}
+      />
     </>
   ) : (
     <EmptyStep goTo={() => onStepChange('generate')} goToLabel="글 생성으로 가기">
@@ -519,19 +536,7 @@ function LifecycleSteps({
   const finishPanel = result ? (
     <>
       {ownerId && (
-        <FinalizePost
-          ownerId={ownerId}
-          post={post}
-          // 확정 lives on 글 완성 and the block editor on 글 다듬기, so the ref is null here by
-          // construction. The queue is keyed by slug and outlives the editor, so the pending save
-          // is still waited on — and its revision used — rather than finalizing a revision that
-          // omits the edit the user just made.
-          beforeFinalize={() =>
-            contentEditorRef.current?.flush() ??
-            flushContentQueue(post.slug) ??
-            Promise.resolve(post.contentRevision)
-          }
-        />
+        <VoiceLearningPanel learning={learning} onBackToRefine={() => onStepChange('refine')} />
       )}
       <ExportPanel
         content={liveContent ?? result}
@@ -541,7 +546,7 @@ function LifecycleSteps({
     </>
   ) : (
     <EmptyStep goTo={() => onStepChange('generate')} goToLabel="글 생성으로 가기">
-      아직 완성할 글이 없어요. 초안을 만들고 다듬으면 여기에서 확정하고 내보낼 수 있습니다.
+      아직 완성할 글이 없어요. 초안을 만들고 글 다듬기에서 확정하면 여기에서 내보낼 수 있습니다.
     </EmptyStep>
   )
 

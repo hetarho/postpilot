@@ -538,7 +538,7 @@ describe('opening a post', () => {
         ],
       },
     })
-    await openStep(user, '글 완성')
+    // 확정 ends 글 다듬기, where the post opens.
     const finalize = await screen.findByRole('button', { name: '확정' })
     expect(finalize).toBeEnabled()
     expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
@@ -546,6 +546,11 @@ describe('opening a post', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확정' }))
     await waitFor(() => expect(calls).toContain('FinalizePost'))
     expect(calls).not.toContain('LearnFromFinalizedPost')
+    // Confirming carries the user to 글 완성, whose own action is learning — and this account has
+    // no analyze model, so it is offered as disabled rather than hidden.
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '글 완성' })).toHaveAttribute('aria-selected', 'true'),
+    )
     expect(await screen.findByRole('button', { name: '말투 학습' })).toBeDisabled()
   })
 
@@ -574,7 +579,6 @@ describe('opening a post', () => {
         selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
       },
     })
-    await openStep(user, '글 완성')
     const combined = await screen.findByRole('button', { name: '확정하고 말투 학습' })
     await waitFor(() => expect(combined).toBeEnabled())
     await user.click(combined)
@@ -583,6 +587,11 @@ describe('opening a post', () => {
     )
     await waitFor(() =>
       expect(calls).toEqual(expect.arrayContaining(['FinalizePost', 'LearnFromFinalizedPost'])),
+    )
+    // The failure is reported on 글 완성 — where the learning run lands — and the finalize it
+    // followed still stands, so only learning is retried.
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '글 완성' })).toHaveAttribute('aria-selected', 'true'),
     )
     expect(screen.getByText(/글은 확정됐지만 말투 학습은 시작하지 못했어요/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '말투 학습' })).toBeEnabled()
@@ -619,9 +628,19 @@ describe('opening a post', () => {
     await user.type(screen.getByLabelText('본문 제목'), ' 수정')
     await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
 
-    await openStep(user, '글 완성')
+    // Back in review, so 확정 is offered again where it belongs, and 글 완성 can no longer learn
+    // from a revision the post has moved past.
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      ),
+    )
     expect(await screen.findByRole('button', { name: '확정' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '말투 학습' })).not.toBeInTheDocument()
+
+    await openStep(user, '글 완성')
+    expect(await screen.findByRole('button', { name: '말투 학습' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
   })
 
   it('keeps a failed learning handoff across reloads so only learning can be retried', async () => {
@@ -667,6 +686,53 @@ describe('opening a post', () => {
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
     expect(localStorage.getItem(key)).not.toBeNull()
+    localStorage.removeItem(key)
+  })
+
+  // The one thing 글 완성 can do, and it is done: the button stays put and says so.
+  it('keeps 말투 학습 disabled for a revision it has already learned from', async () => {
+    const key = 'postpilot:voice-learning:alice:20260820-final'
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      get length() {
+        return stored.size
+      },
+      key: (index: number) => [...stored.keys()][index] ?? null,
+      getItem: (name: string) => stored.get(name) ?? null,
+      setItem: (name: string, value: string) => stored.set(name, value),
+      removeItem: (name: string) => stored.delete(name),
+    })
+    localStorage.setItem(
+      key,
+      JSON.stringify({ eventId: 'event-1', jobId: 'learn-1', contentRevision: '1' }),
+    )
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-final',
+            status: 'finalized',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+            finalizedRevision: 1n,
+            finalizedAt: '2026-08-20T12:00:00Z',
+          },
+        ],
+      },
+      jobs: { jobs: [{ id: 'learn-1', kind: 'voice_learn', status: 'done' }] },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
+        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
+      },
+    })
+
+    // The completed run is read back from the handoff a reload preserved, so the outcome is on
+    // screen and the button cannot start the same run again.
+    expect(await screen.findByText('이 글에서 말투를 배웠어요.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '말투 학습' })).toBeDisabled()
     localStorage.removeItem(key)
   })
 
@@ -965,20 +1031,25 @@ describe('the editor lifecycle steps', () => {
       posts: { posts: [{ ...reviewPost, canFinalize: true }] },
     })
 
-    // ② is where a review post opens: the draft and revision, no generation controls.
+    // ② is where a review post opens: the draft, revision and the 확정 that ends the step, and
+    // no generation controls.
     expect(await screen.findByRole('heading', { name: '글 다듬기' })).toBeInTheDocument()
     expect(screen.queryByLabelText('작성 모델')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '확정' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeInTheDocument()
 
     await openStep(user, '글 생성')
     expect(await screen.findByRole('heading', { name: '글 생성' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'AI 모델에서 두 후보 설정' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '글 다듬기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
 
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '확정' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '말투 학습' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '글 생성' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
   })
@@ -1037,9 +1108,11 @@ describe('the editor lifecycle steps', () => {
       posts: { posts: [{ ...reviewPost, canFinalize: true }] },
     })
 
-    // 글 다듬기 commits continuously through content autosave, so an idle bar would be a card
-    // with nothing in it.
+    // 글 다듬기 commits continuously through content autosave, and 확정 closes the step from
+    // the end of the panel rather than from the bar — so an idle dock would be a card with
+    // nothing in it.
     await screen.findByRole('heading', { name: '글 다듬기' })
+    expect(screen.getByRole('button', { name: '확정' })).toBeInTheDocument()
     expect(screen.queryByLabelText('저장 상태와 글 작업')).not.toBeInTheDocument()
 
     await openStep(user, '글 생성')
@@ -1048,7 +1121,7 @@ describe('the editor lifecycle steps', () => {
     expect(within(dock).queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
 
     await openStep(user, '글 완성')
-    expect(await screen.findByRole('button', { name: '확정' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '말투 학습' })).toBeInTheDocument()
     expect(screen.queryByLabelText('저장 상태와 글 작업')).not.toBeInTheDocument()
   })
 
@@ -1161,9 +1234,9 @@ describe('the step split and the content save', () => {
     canFinalize: true,
   }
 
-  // The block editor lives on 글 다듬기 and 확정 on 글 완성, so finalize has to wait for the content
-  // save through the slug's queue rather than through a ref that is null by construction.
-  it('saves an edited block before finalizing from the next step', async () => {
+  // 확정 sits at the end of the step the block editor lives on, so it flushes that editor's
+  // pending save through its live ref — and the queue behind it — before it names a revision.
+  it('saves an edited block before finalizing it', async () => {
     const calls: string[] = []
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-final', { user: USER, calls, posts: { posts: [reviewPost] } })
@@ -1174,7 +1247,6 @@ describe('the step split and the content save', () => {
     await user.type(field, '확정 직전에 고친 문단')
     await user.click(screen.getByRole('button', { name: '저장' }))
 
-    await openStep(user, '글 완성')
     await user.click(await screen.findByRole('button', { name: '확정' }))
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확정' }))
 
@@ -1314,10 +1386,10 @@ describe('the post voice', () => {
     )
     await waitFor(() => expect(screen.getByLabelText('말투')).toHaveValue('voice-review'))
     // The canonical content survived; learning needs a new machine result first.
+    expect(await screen.findByRole('button', { name: '확정' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '확정' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
   })
 
   it('keeps learning disabled when a finalized post is reassigned without a new baseline', async () => {
