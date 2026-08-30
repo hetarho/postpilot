@@ -205,6 +205,7 @@ func main() {
 		generationImages{bucket: bucket},
 		generationJobs{queue: jobQueue},
 		cfg.ObserveBatchSize,
+		generation.ReasoningPolicy{Observe: cfg.LLMReasoning.Observe, Write: cfg.LLMReasoning.Write},
 	)
 	experimentStore := experimentstore.New(handle.Writer, handle.Reader)
 	experimentSvc := experiment.NewService(

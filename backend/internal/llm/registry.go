@@ -73,22 +73,24 @@ type registryFile struct {
 }
 
 type providerEntry struct {
-	ID        string       `yaml:"id"`
-	Adapter   string       `yaml:"adapter"`
-	BaseURL   string       `yaml:"base_url"`
-	APIKeyEnv string       `yaml:"api_key_env"`
-	Models    []modelEntry `yaml:"models"`
+	ID              string       `yaml:"id"`
+	Adapter         string       `yaml:"adapter"`
+	BaseURL         string       `yaml:"base_url"`
+	APIKeyEnv       string       `yaml:"api_key_env"`
+	ReasoningFormat string       `yaml:"reasoning_format"`
+	Models          []modelEntry `yaml:"models"`
 }
 
 type modelEntry struct {
-	ID                  string `yaml:"id"`
-	Label               string `yaml:"label"`
-	Vision              bool   `yaml:"vision"`
-	StructuredOutput    bool   `yaml:"structured_output"`
-	ContextTokens       int64  `yaml:"context_tokens"`
-	InputUSDPerMillion  string `yaml:"input_usd_per_million"`
-	OutputUSDPerMillion string `yaml:"output_usd_per_million"`
-	PricingCheckedAt    string `yaml:"pricing_checked_at"`
+	ID                  string          `yaml:"id"`
+	Label               string          `yaml:"label"`
+	Vision              bool            `yaml:"vision"`
+	StructuredOutput    bool            `yaml:"structured_output"`
+	ReasoningEffort     ReasoningEffort `yaml:"reasoning_effort"`
+	ContextTokens       int64           `yaml:"context_tokens"`
+	InputUSDPerMillion  string          `yaml:"input_usd_per_million"`
+	OutputUSDPerMillion string          `yaml:"output_usd_per_million"`
+	PricingCheckedAt    string          `yaml:"pricing_checked_at"`
 }
 
 type recommendationSetEntry struct {
@@ -110,8 +112,9 @@ type modelRefEntry struct {
 }
 
 type entry struct {
-	info     ModelInfo
-	provider Provider
+	info      ModelInfo
+	provider  Provider
+	reasoning ReasoningEffort
 }
 
 // Registry is the loaded providers.yaml: every model with its flags, and the provider
@@ -191,7 +194,9 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 		}
 		// Built even without a key so the entry is validated either way; a bad base_url
 		// must not hide behind a missing key until the day the key is set.
-		provider, err := factory(AdapterConfig{ProviderID: p.ID, BaseURL: p.BaseURL, APIKey: key})
+		provider, err := factory(AdapterConfig{
+			ProviderID: p.ID, BaseURL: p.BaseURL, APIKey: key, ReasoningFormat: p.ReasoningFormat,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", where, err)
 		}
@@ -218,6 +223,9 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 			if err := validateModelMetadata(m); err != nil {
 				return nil, fmt.Errorf("%s: model %q: %w", where, m.ID, err)
 			}
+			if !m.ReasoningEffort.Valid() {
+				return nil, fmt.Errorf("%s: model %q: reasoning_effort %q is invalid (want unset, none, minimal, low, medium, high, xhigh, or max)", where, m.ID, m.ReasoningEffort)
+			}
 			reg.entries[ref] = &entry{
 				info: ModelInfo{
 					Ref:                 ref,
@@ -231,7 +239,8 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 					Disabled:            disabled,
 					DisabledReason:      reason,
 				},
-				provider: provider,
+				provider:  provider,
+				reasoning: m.ReasoningEffort,
 			}
 			reg.order = append(reg.order, ref)
 		}
@@ -352,7 +361,7 @@ func (r *Registry) Lookup(ref ModelRef) (ModelInfo, bool) {
 //
 // Unexported on purpose: handing the Provider out would let a caller skip the timeout
 // and the defaults that Complete applies. Callers that need the flags use Lookup.
-func (r *Registry) resolve(ref ModelRef, req Request) (Provider, error) {
+func (r *Registry) resolve(ref ModelRef, req Request) (*entry, error) {
 	e, ok := r.entries[ref]
 	if !ok {
 		return nil, fmt.Errorf("%w: %s is not registered", ErrModelUnavailable, ref)
@@ -366,17 +375,23 @@ func (r *Registry) resolve(ref ModelRef, req Request) (Provider, error) {
 	if req.JSONSchema != nil && !e.info.StructuredOutput {
 		return nil, fmt.Errorf("%w: %s does not support structured output", ErrUnsupported, ref)
 	}
-	return e.provider, nil
+	return e, nil
 }
 
 // Complete resolves the ref, fills in the model and the default cap, and runs the call
 // under the stage timeout. This is the one way the contexts above call a model.
 func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Response, error) {
-	provider, err := r.resolve(ref, req)
+	resolved, err := r.resolve(ref, req)
 	if err != nil {
 		return Response{}, err
 	}
 	req.Model = ref.ModelID
+	if resolved.reasoning != ReasoningUnspecified {
+		req.Reasoning = resolved.reasoning
+	}
+	if !req.Reasoning.Valid() {
+		return Response{}, fmt.Errorf("invalid reasoning effort %q", req.Reasoning)
+	}
 	// Zero and negative both mean "no cap of my own": a caller computing a budget must
 	// not send a negative number to the provider and learn about it as a 400.
 	if req.MaxTokens <= 0 {
@@ -384,5 +399,5 @@ func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Res
 	}
 	ctx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
 	defer cancel()
-	return provider.Complete(ctx, req)
+	return resolved.provider.Complete(ctx, req)
 }

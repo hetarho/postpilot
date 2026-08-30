@@ -85,7 +85,7 @@ func TestFiveRevisionsReinjectProfileAndPersistEveryResult(t *testing.T) {
 			pass,
 		)}, nil
 	}
-	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
+	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
 
 	for pass := 1; pass <= 5; pass++ {
 		instruction := fmt.Sprintf("INSTRUCTION-%d", pass)
@@ -104,6 +104,9 @@ func TestFiveRevisionsReinjectProfileAndPersistEveryResult(t *testing.T) {
 		}
 		if request.JSONSchema == nil {
 			t.Errorf("pass %d did not request structured output", pass)
+		}
+		if request.Reasoning != llm.ReasoningLow {
+			t.Errorf("pass %d reasoning = %q, want low", pass, request.Reasoning)
 		}
 	}
 	if profiles.calls != 5 || len(posts.contents) != 5 {
@@ -125,7 +128,7 @@ func TestRevisionUsesSharedValidationAndAttachmentFilterAndKeepsImageOrder(t *te
           {"type":"IMAGE","file":"A.jpg"}
         ]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
 	var progress []string
 	err := svc.Revise(context.Background(), RevisionJob{
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
@@ -156,7 +159,7 @@ func TestRevisionRefiltersAgainstAttachmentsAfterProviderCall(t *testing.T) {
 		posts.input.Images = []Image{{Filename: "A.jpg"}}
 		return llm.Response{Text: `{"title":"제목","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"IMAGE","file":"B.jpg"},{"type":"IMAGE","file":"A.jpg"}]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
 
 	err := svc.Revise(context.Background(), RevisionJob{
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
@@ -190,7 +193,7 @@ func TestStartRevisionSavesRuleBeforeEnqueueAndNewWritePromptSeesIt(t *testing.T
 	rules := &linkedRules{profile: &profile}
 	jobs := &fakeJobs{id: "revision-job"}
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Content: revisionContent("body")}}
-	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4)
+	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy)
 
 	id, err := svc.StartRevision(context.Background(), StartRevisionRequest{
 		UserID: "alice", PostSlug: "post", Instruction: "  존댓말로  ",
@@ -236,7 +239,7 @@ func TestStartRevisionPreconditionsDoNotEnqueue(t *testing.T) {
 			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Content: revisionContent("body")}}
 			models, jobs := newFakeModels(), &fakeJobs{id: "job"}
 			tc.mutate(&request, posts, models, jobs)
-			_, err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4).
+			_, err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy).
 				StartRevision(context.Background(), request)
 			if name == "active job" {
 				var active *JobAlreadyInProgressError
@@ -258,7 +261,7 @@ func TestStartRevisionPreconditionsDoNotEnqueue(t *testing.T) {
 func TestStartRevisionWithoutSaveDoesNotAppendRule(t *testing.T) {
 	rules := &fakeRules{}
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Content: revisionContent("body")}}
-	_, err := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, &fakeJobs{id: "job"}, 4).
+	_, err := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, &fakeJobs{id: "job"}, 4, testReasoningPolicy).
 		StartRevision(context.Background(), StartRevisionRequest{
 			UserID: "alice", PostSlug: "post", Instruction: "더 짧게",
 			WriteModel: writeRef.String(), SaveAsRule: false,

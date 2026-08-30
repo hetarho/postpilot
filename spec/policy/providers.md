@@ -1,7 +1,7 @@
 # Policy — Model providers and the model catalog
 
 Canonical rules that are **currently true** in the code. Source: [plan/04](../plan/04.model-provider-registry.md),
-extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); built by jobs 06 and 15.
+extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); built by jobs 06, 15, and 23.
 
 ## The port is a boundary
 
@@ -14,9 +14,11 @@ extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); b
 - The model is an **input** to every call (`Registry.Complete(ctx, ref, req)`); the port reads no default. The
   observe, write and analyze stages each carry their own `ModelRef` ([I3]).
 - Errors are normalized to a small set the callers act on — `ErrModelUnavailable`, `ErrProviderDisabled`,
-  `ErrRateLimited`, `ErrUnsupported`, `ErrBadOutput` — and a `ProviderError` that keeps the provider's own message
+  `ErrRateLimited`, `ErrUnsupported`, `ErrBadOutput`, `ErrOutputTruncated` — and a `ProviderError` that keeps the provider's own message
   and wraps the sentinel, so the user is told the cause verbatim (PRD §7) while the code still branches on
-  `errors.Is`.
+  `errors.Is`. `llm.UserMessage` is the one mapper used by jobs and model experiments. Output ending with
+  `finish_reason: length` that has no usable content, including non-empty partial JSON rejected by a caller parser,
+  gets actionable budget-exhaustion copy rather than the generic bad-output error.
 - Capability checks run **before any network call**: an image part on a model without `vision`, or a JSON schema on
   a model without `structured_output`, is `ErrUnsupported` immediately. A caller that wants a plain-text fallback
   checks the model's flag first and omits the schema.
@@ -24,6 +26,24 @@ extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); b
   server-side so a long draft does not idle out an intermediary; the stream never leaves the process (PRD §6.6). A
   stream that ends without `[DONE]` or a `finish_reason` is a truncated answer and fails as `ErrBadOutput` rather
   than being passed on. A 404 means "model gone" only when the body says so — a wrong `base_url` is a generic error.
+- A provider response may carry `Usage` and `FinishReason` together with an error. The adapter preserves those fields
+  once reported, so failed model-experiment candidates retain billable token/cost evidence.
+
+## Reasoning policy
+
+- `ReasoningEffort` accepts `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`. An empty value means no
+  decision has been made; `unset` is an internal/yaml sentinel that deliberately omits the whole wire key.
+- Resolution is strict per-model `reasoning_effort` override → request/stage value → nothing sent. Unknown yaml
+  values stop boot. `anthropic/claude-sonnet-5` ships with `unset`, so the generation stage's `low` default does not
+  replace that model's provider-controlled adaptive behavior.
+- The nested `reasoning: {effort}` wire object is an OpenRouter dialect, enabled only when a provider declares
+  `reasoning_format: openrouter`. Other OpenAI-compatible endpoints omit it even when the stage supplied an effort,
+  retaining their previous request shape; an unknown format stops boot through adapter validation.
+- Observation and writing/revision request `low`; analyze requests no effort. With neither a stage value nor model
+  override, the OpenAI-compatible JSON body remains unchanged and contains no `reasoning` key. `none` is different:
+  it is sent explicitly.
+- `reasoning.exclude` is forbidden: excluding the returned trace does not stop generation or billing of reasoning
+  tokens. Reasoning and visible output share the same 8,192-token completion cap.
 
 ## The registry is a file, the keys are env
 
@@ -40,6 +60,7 @@ extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); b
   one is a keyless endpoint (a local Ollama, vLLM, LM Studio) — enabled as is, and the adapter sends no
   `Authorization` header.
 - `vision` and `structured_output` are declared per model. The observe stage lists vision models only.
+- `reasoning_effort` is optional per model and is validated even when that provider's key is missing.
 - Structured output is requested whenever the model declares it (`response_format: json_schema`, without `strict` —
   the schemas belong to the callers). Callers keep a parser fallback for models that do not.
 - Free-model advice (a router entry such as `openrouter/free`; observe on free, write on paid — PRD §6.5) is yaml
@@ -85,6 +106,9 @@ has no field for them (plan 04 AC6).
 | `PROVIDERS_CONFIG` | env | default `config/providers.yaml` (relative to the working directory); the image sets `/config/providers.yaml` |
 | `<api_key_env>` per provider (`OPENROUTER_API_KEY` in the shipped file) | env, named by the yaml | unset ⇒ that provider's models are disabled with the reason |
 | `LLM_STAGE_TIMEOUT` | constant | 5 min per provider call (PRD §6.6) |
-| `LLM_MAX_TOKENS_DEFAULT` | constant | 4096 — the completion cap when a caller sets none |
+| `LLM_MAX_TOKENS_DEFAULT` | constant | 8192 — shared completion cap for reasoning plus visible output |
+| stage reasoning policy | typed constants | observe `low` · write/revise `low` · analyze omitted |
+| `reasoning_format` | `config/providers.yaml` | optional provider dialect; shipped OpenRouter entry opts in |
+| `reasoning_effort` | `config/providers.yaml` | optional strict model override; `unset` omits the wire key |
 | `MODEL_CATALOG_STALE_MS` | FE `shared/config` | 5 min — how long the catalog is trusted before a refetch |
 | recommendation/model price metadata | `config/providers.yaml` | strict, dated catalog content; no automatic apply |

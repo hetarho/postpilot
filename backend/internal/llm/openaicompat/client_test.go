@@ -15,10 +15,16 @@ import (
 )
 
 func newClient(t *testing.T, handler http.HandlerFunc) (*openaicompat.Client, *httptest.Server) {
+	return newClientWithReasoningFormat(t, "", handler)
+}
+
+func newClientWithReasoningFormat(t *testing.T, format string, handler http.HandlerFunc) (*openaicompat.Client, *httptest.Server) {
 	t.Helper()
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
-	client := openaicompat.New(llm.AdapterConfig{ProviderID: "test", BaseURL: server.URL + "/v1/", APIKey: "secret"}, server.Client())
+	client := openaicompat.New(llm.AdapterConfig{
+		ProviderID: "test", BaseURL: server.URL + "/v1/", APIKey: "secret", ReasoningFormat: format,
+	}, server.Client())
 	return client, server
 }
 
@@ -39,6 +45,9 @@ func TestFactory_RequiresBaseURL(t *testing.T) {
 	}
 	if _, err := openaicompat.Factory(llm.AdapterConfig{ProviderID: "x", BaseURL: "https://openrouter.ai/api/v1"}); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := openaicompat.Factory(llm.AdapterConfig{ProviderID: "x", BaseURL: "https://example.test/v1", ReasoningFormat: "other"}); err == nil || !strings.Contains(err.Error(), "reasoning_format") {
+		t.Fatalf("unsupported reasoning format err = %v", err)
 	}
 }
 
@@ -84,6 +93,9 @@ func TestComplete_ShapesTheRequestAndJoinsTheStream(t *testing.T) {
 	if got["model"] != "vendor/model" || got["stream"] != true || got["max_tokens"] != float64(99) {
 		t.Errorf("request = %v", got)
 	}
+	if _, sent := got["reasoning"]; sent {
+		t.Errorf("reasoning = %v, want the unresolved request shape unchanged", got["reasoning"])
+	}
 	messages := got["messages"].([]any)
 	if len(messages) != 2 || messages[0].(map[string]any)["role"] != "system" || messages[0].(map[string]any)["content"] != "be brief" {
 		t.Errorf("messages = %v", messages)
@@ -104,6 +116,58 @@ func TestComplete_ShapesTheRequestAndJoinsTheStream(t *testing.T) {
 	}
 	if resp.Usage.PromptTokens != 10 || resp.Usage.CompletionTokens != 5 {
 		t.Errorf("Usage = %+v", resp.Usage)
+	}
+}
+
+func TestComplete_SendsOnlyResolvedReasoning(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		effort llm.ReasoningEffort
+		want   string
+	}{
+		{name: "unspecified"},
+		{name: "unset override", effort: llm.ReasoningUnset},
+		{name: "low", effort: llm.ReasoningLow, want: "low"},
+		{name: "none", effort: llm.ReasoningNone, want: "none"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got map[string]any
+			client, _ := newClientWithReasoningFormat(t, "openrouter", func(w http.ResponseWriter, r *http.Request) {
+				if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+					t.Error(err)
+				}
+				sse(w, `{"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}`)
+			})
+			if _, err := client.Complete(context.Background(), llm.Request{Model: "m", Reasoning: tc.effort}); err != nil {
+				t.Fatal(err)
+			}
+			reasoning, sent := got["reasoning"].(map[string]any)
+			if tc.want == "" {
+				if sent {
+					t.Fatalf("reasoning = %v, want no key", reasoning)
+				}
+				return
+			}
+			if !sent || reasoning["effort"] != tc.want {
+				t.Fatalf("reasoning = %v, want effort %q", reasoning, tc.want)
+			}
+		})
+	}
+}
+
+func TestComplete_OmitsOpenRouterReasoningExtensionWithoutOptIn(t *testing.T) {
+	var got map[string]any
+	client, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Error(err)
+		}
+		sse(w, `{"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}`)
+	})
+	if _, err := client.Complete(context.Background(), llm.Request{Model: "m", Reasoning: llm.ReasoningLow}); err != nil {
+		t.Fatal(err)
+	}
+	if _, sent := got["reasoning"]; sent {
+		t.Fatalf("reasoning = %v, want compatible endpoint request unchanged", got["reasoning"])
 	}
 }
 
@@ -235,7 +299,7 @@ func TestComplete_OtherFailuresAreGenericProviderErrors(t *testing.T) {
 	// the user is told to re-pick a model that is fine.
 	for _, message := range []string{
 		"max_tokens too large",
-		"Invalid model parameters: max_tokens must be <= 4096",
+		"Invalid model parameters: max_tokens must be <= 5000",
 		"this model is not available with response_format json_schema",
 	} {
 		t.Run(message, func(t *testing.T) {
@@ -295,6 +359,24 @@ func TestComplete_ErrorInsideTheStream(t *testing.T) {
 	}
 }
 
+func TestComplete_ErrorKeepsUsageReportedBeforeIt(t *testing.T) {
+	client, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) {
+		sse(w,
+			`{"choices":[],"usage":{"prompt_tokens":17,"completion_tokens":23,"cost":"0.000042"}}`,
+			`{"error":{"message":"upstream stopped after billing","code":500}}`,
+		)
+	})
+	response, err := client.Complete(context.Background(), llm.Request{Model: "m"})
+	var providerErr *llm.ProviderError
+	if !errors.As(err, &providerErr) || providerErr.Message != "upstream stopped after billing" {
+		t.Fatalf("err = %v", err)
+	}
+	if response.Usage.PromptTokens != 17 || response.Usage.CompletionTokens != 23 ||
+		!response.Usage.CostReported || response.Usage.CostMicrousd != 42 {
+		t.Fatalf("usage lost with error: %+v", response.Usage)
+	}
+}
+
 // A connection cut mid-stream is a clean EOF to the reader; without [DONE] or a
 // finish_reason the text is a truncated draft, not an answer.
 func TestComplete_StreamCutBeforeTheEndIsBadOutput(t *testing.T) {
@@ -315,7 +397,7 @@ func TestComplete_FinishReasonEndsTheStream(t *testing.T) {
 		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"done\"},\"finish_reason\":\"stop\"}]}\n\n")
 	})
 	resp, err := client.Complete(context.Background(), llm.Request{Model: "m"})
-	if err != nil || resp.Text != "done" {
+	if err != nil || resp.Text != "done" || resp.FinishReason != "stop" {
 		t.Fatalf("resp = %+v, err = %v", resp, err)
 	}
 }
@@ -342,6 +424,29 @@ func TestComplete_EmptyCompletionIsBadOutput(t *testing.T) {
 	_, err := client.Complete(context.Background(), llm.Request{Model: "m"})
 	if !errors.Is(err, llm.ErrBadOutput) {
 		t.Fatalf("err = %v, want ErrBadOutput", err)
+	}
+}
+
+func TestComplete_LengthWithoutContentIsOutputTruncatedAndKeepsUsage(t *testing.T) {
+	client, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) {
+		sse(w,
+			`{"choices":[{"delta":{"content":""},"finish_reason":"length"}]}`,
+			`{"choices":[],"usage":{"prompt_tokens":31,"completion_tokens":1234,"cost":0.125}}`,
+		)
+	})
+	response, err := client.Complete(context.Background(), llm.Request{Model: "m"})
+	if !errors.Is(err, llm.ErrOutputTruncated) || errors.Is(err, llm.ErrBadOutput) {
+		t.Fatalf("err = %v, want only ErrOutputTruncated", err)
+	}
+	if response.FinishReason != "length" || response.Usage.PromptTokens != 31 ||
+		response.Usage.CompletionTokens != 1234 || !response.Usage.CostReported || response.Usage.CostMicrousd != 125_000 {
+		t.Fatalf("response = %+v", response)
+	}
+	message := llm.UserMessage(err)
+	for _, required := range []string{"출력 예산", "목표 길이", "다른 모델"} {
+		if !strings.Contains(message, required) {
+			t.Errorf("message = %q, want %q", message, required)
+		}
 	}
 }
 

@@ -34,10 +34,11 @@ const maxSSELine = 4 << 20
 
 // Client implements llm.Provider over POST {base_url}/chat/completions.
 type Client struct {
-	name    string
-	baseURL string
-	apiKey  string
-	http    *http.Client
+	name            string
+	baseURL         string
+	apiKey          string
+	reasoningFormat string
+	http            *http.Client
 }
 
 // Factory is the llm.AdapterFactory for `adapter: openai_compatible`.
@@ -48,6 +49,9 @@ func Factory(cfg llm.AdapterConfig) (llm.Provider, error) {
 	u, err := url.Parse(cfg.BaseURL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return nil, fmt.Errorf("openai_compatible: base_url must be an http(s) URL, got %q", cfg.BaseURL)
+	}
+	if cfg.ReasoningFormat != "" && cfg.ReasoningFormat != "openrouter" {
+		return nil, fmt.Errorf("openai_compatible: reasoning_format must be openrouter or empty, got %q", cfg.ReasoningFormat)
 	}
 	return New(cfg, nil), nil
 }
@@ -60,10 +64,11 @@ func New(cfg llm.AdapterConfig, httpClient *http.Client) *Client {
 		httpClient = http.DefaultClient
 	}
 	return &Client{
-		name:    cfg.ProviderID,
-		baseURL: strings.TrimRight(cfg.BaseURL, "/"),
-		apiKey:  cfg.APIKey,
-		http:    httpClient,
+		name:            cfg.ProviderID,
+		baseURL:         strings.TrimRight(cfg.BaseURL, "/"),
+		apiKey:          cfg.APIKey,
+		reasoningFormat: cfg.ReasoningFormat,
+		http:            httpClient,
 	}
 }
 
@@ -73,7 +78,7 @@ func (c *Client) Name() string { return c.name }
 // here: a long draft can take minutes, and an idle connection with no bytes flowing is
 // what intermediaries cut (PRD §6.6). The stream never leaves the process.
 func (c *Client) Complete(ctx context.Context, req llm.Request) (llm.Response, error) {
-	body, err := json.Marshal(buildRequest(req))
+	body, err := json.Marshal(c.buildRequest(req))
 	if err != nil {
 		return llm.Response{}, fmt.Errorf("%s: encode request: %w", c.name, err)
 	}
@@ -107,10 +112,14 @@ func (c *Client) Complete(ctx context.Context, req llm.Request) (llm.Response, e
 		out, err = c.readJSON(resp.Body)
 	}
 	if err != nil {
-		return llm.Response{}, err
+		return out, err
 	}
 	if strings.TrimSpace(out.Text) == "" {
-		return llm.Response{}, fmt.Errorf("%w: %s returned an empty completion", llm.ErrBadOutput, c.name)
+		kind := llm.ErrBadOutput
+		if out.FinishReason == "length" {
+			kind = llm.ErrOutputTruncated
+		}
+		return out, fmt.Errorf("%w: %s returned an empty completion (finish_reason=%q)", kind, c.name, out.FinishReason)
 	}
 	return out, nil
 }
@@ -124,6 +133,7 @@ type chatRequest struct {
 	Stream         bool            `json:"stream"`
 	StreamOptions  *streamOptions  `json:"stream_options,omitempty"`
 	ResponseFormat *responseFormat `json:"response_format,omitempty"`
+	Reasoning      *reasoning      `json:"reasoning,omitempty"`
 }
 
 type chatMessage struct {
@@ -147,6 +157,10 @@ type streamOptions struct {
 	IncludeUsage bool `json:"include_usage"`
 }
 
+type reasoning struct {
+	Effort llm.ReasoningEffort `json:"effort"`
+}
+
 type responseFormat struct {
 	Type       string     `json:"type"`
 	JSONSchema jsonSchema `json:"json_schema"`
@@ -157,7 +171,7 @@ type jsonSchema struct {
 	Schema json.RawMessage `json:"schema"`
 }
 
-func buildRequest(req llm.Request) chatRequest {
+func (c *Client) buildRequest(req llm.Request) chatRequest {
 	messages := make([]chatMessage, 0, len(req.Messages)+1)
 	if req.System != "" {
 		messages = append(messages, chatMessage{Role: "system", Content: req.System})
@@ -179,6 +193,9 @@ func buildRequest(req llm.Request) chatRequest {
 			Type:       "json_schema",
 			JSONSchema: jsonSchema{Name: "response", Schema: req.JSONSchema},
 		}
+	}
+	if c.reasoningFormat == "openrouter" && req.Reasoning != llm.ReasoningUnspecified && req.Reasoning != llm.ReasoningUnset {
+		out.Reasoning = &reasoning{Effort: req.Reasoning}
 	}
 	return out
 }
@@ -257,23 +274,27 @@ func (c *Client) readStream(body io.Reader) (llm.Response, error) {
 		}
 		var chunk chatChunk
 		if err := json.Unmarshal(data, &chunk); err != nil {
-			return llm.Response{}, fmt.Errorf("%w: %s sent an unreadable stream chunk: %v", llm.ErrBadOutput, c.name, err)
+			out.Text = text.String()
+			return out, fmt.Errorf("%w: %s sent an unreadable stream chunk: %v", llm.ErrBadOutput, c.name, err)
 		}
 		if err := c.apply(chunk, &text, &out); err != nil {
-			return llm.Response{}, err
+			out.Text = text.String()
+			return out, err
 		}
 		for _, choice := range chunk.Choices {
 			finished = finished || choice.FinishReason != ""
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return llm.Response{}, fmt.Errorf("%s: read stream: %w", c.name, err)
+		out.Text = text.String()
+		return out, fmt.Errorf("%s: read stream: %w", c.name, err)
 	}
 	// A connection cut mid-stream looks like a clean EOF. Without a terminal marker —
 	// `[DONE]` or a `finish_reason` — the text collected so far is a truncated draft, and
 	// handing it on as the answer would be worse than failing.
 	if !finished {
-		return llm.Response{}, fmt.Errorf("%w: %s stream ended before the completion finished", llm.ErrBadOutput, c.name)
+		out.Text = text.String()
+		return out, fmt.Errorf("%w: %s stream ended before the completion finished", llm.ErrBadOutput, c.name)
 	}
 	out.Text = text.String()
 	return out, nil
@@ -287,7 +308,8 @@ func (c *Client) readJSON(body io.Reader) (llm.Response, error) {
 	var out llm.Response
 	var text strings.Builder
 	if err := c.apply(chunk, &text, &out); err != nil {
-		return llm.Response{}, err
+		out.Text = text.String()
+		return out, err
 	}
 	out.Text = text.String()
 	return out, nil
@@ -296,15 +318,6 @@ func (c *Client) readJSON(body io.Reader) (llm.Response, error) {
 // apply folds one chunk — a stream delta or a whole non-streamed answer — into the
 // text and usage being collected. The two shapes differ only in where the content sits.
 func (c *Client) apply(chunk chatChunk, text *strings.Builder, out *llm.Response) error {
-	// A provider can fail mid-stream (a quota reached after the headers went out) and
-	// says so inside the body rather than with a status code.
-	if chunk.Error != nil {
-		return &llm.ProviderError{Provider: c.name, Status: http.StatusOK, Message: chunk.Error.Message, Kind: kindOfMessage(chunk.Error)}
-	}
-	for _, choice := range chunk.Choices {
-		text.WriteString(choice.Message.Content)
-		text.WriteString(choice.Delta.Content)
-	}
 	if chunk.Usage != nil {
 		out.Usage.PromptTokens = chunk.Usage.PromptTokens
 		out.Usage.CompletionTokens = chunk.Usage.CompletionTokens
@@ -315,6 +328,18 @@ func (c *Client) apply(chunk chatChunk, text *strings.Builder, out *llm.Response
 			}
 			out.Usage.CostMicrousd = cost
 			out.Usage.CostReported = true
+		}
+	}
+	// A provider can fail mid-stream (a quota reached after the headers went out) and
+	// says so inside the body rather than with a status code.
+	if chunk.Error != nil {
+		return &llm.ProviderError{Provider: c.name, Status: http.StatusOK, Message: chunk.Error.Message, Kind: kindOfMessage(chunk.Error)}
+	}
+	for _, choice := range chunk.Choices {
+		text.WriteString(choice.Message.Content)
+		text.WriteString(choice.Delta.Content)
+		if choice.FinishReason != "" {
+			out.FinishReason = choice.FinishReason
 		}
 	}
 	return nil

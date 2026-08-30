@@ -23,19 +23,20 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	}
 	system, user := BuildWritePrompt(profile, observations, post.Memo, post.Title, filenames, post.TargetLength)
 	request := llm.Request{
-		System:   system,
-		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
+		System:    system,
+		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
+		Reasoning: s.reasoning.Write,
 	}
 	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
 		request.JSONSchema = PostContentSchema()
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
-		return PostContent{}, llm.Usage{}, providerCallError("글 작성", err)
+		return PostContent{}, response.Usage, providerCallError("글 작성", err)
 	}
 	content, err := ParseContent(response.Text)
 	if err != nil {
-		return PostContent{}, response.Usage, err
+		return PostContent{}, response.Usage, responseParseError(response, err)
 	}
 	content.Blocks = ValidateBlocks(content.Blocks)
 	return FilterAttachments(*content, filenames), response.Usage, nil

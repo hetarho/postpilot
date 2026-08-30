@@ -1,13 +1,17 @@
 package experiment
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 type memoryStore struct {
@@ -420,6 +424,7 @@ func (j *fakeJobs) HasRunnableExperiment(_ context.Context, id string) (bool, er
 type fakeRunner struct {
 	snapshotCalls, runCalls, applyCalls int
 	fail                                map[string]error
+	results                             map[string]CandidateResult
 	applyErr                            error
 }
 
@@ -432,6 +437,9 @@ func (r *fakeRunner) PrepareWrite(_ context.Context, found Experiment, _ Progres
 }
 func (r *fakeRunner) RunCandidate(_ context.Context, _ Experiment, candidate Candidate, _ Progress) (CandidateResult, error) {
 	r.runCalls++
+	if result, ok := r.results[candidate.Model.ModelID]; ok {
+		return result, r.fail[candidate.Model.ModelID]
+	}
 	return CandidateResult{Output: []byte(`{"title":"ok"}`), Usage: UsageReport{PromptTokens: 10, CompletionTokens: 2}}, r.fail[candidate.Model.ModelID]
 }
 func (r *fakeRunner) ApplyWinner(context.Context, Experiment, Candidate, bool) error {
@@ -445,7 +453,7 @@ func newTestService() (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRun
 	store := newMemoryStore()
 	catalog := &fakeCatalog{models: map[ModelRef]Model{a: {Ref: a, Label: "A", Enabled: true, Vision: true, InputUSDPerMillion: "1", OutputUSDPerMillion: "2"}, b: {Ref: b, Label: "B", Enabled: true, Vision: true, InputUSDPerMillion: "1", OutputUSDPerMillion: "2"}}}
 	jobs := &fakeJobs{runnable: map[string]bool{}}
-	runner := &fakeRunner{fail: map[string]error{}}
+	runner := &fakeRunner{fail: map[string]error{}, results: map[string]CandidateResult{}}
 	svc := NewService(store, catalog, jobs, runner, 30*24*time.Hour)
 	n := 0
 	svc.newID = func() string { n++; return fmt.Sprintf("id-%d", n) }
@@ -540,6 +548,76 @@ func TestPartialRetryRunsOnlyFailedCandidateAndUseSingleDoesNotRank(t *testing.T
 	used, err := svc2.Choose(context.Background(), "alice", partial.ID, survivor, true)
 	if err != nil || used.Outcome != OutcomeUnpaired {
 		t.Fatalf("use single = %+v, %v", used, err)
+	}
+}
+
+func TestFailedCandidateStoresProviderMessageUsageAndLogsOnce(t *testing.T) {
+	svc, store, _, _, runner := newTestService()
+	runner.fail["b"] = &llm.ProviderError{
+		Provider: "openrouter", Status: 200, Message: "upstream stopped after billing", Kind: llm.ErrBadOutput,
+	}
+	runner.results["b"] = CandidateResult{Usage: UsageReport{
+		PromptTokens: 17, CompletionTokens: 23, CostMicrousd: 42, CostReported: true,
+	}}
+
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelError})))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	started, err := svc.Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", Stage: StageWrite,
+		ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Handle(context.Background(), started.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, err := store.Get(context.Background(), started.ExperimentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var failed Candidate
+	for _, candidate := range found.Candidates {
+		if candidate.Model.ModelID == "b" {
+			failed = candidate
+		}
+	}
+	if failed.Status != CandidateFailed || failed.Error != "upstream stopped after billing" {
+		t.Fatalf("failed candidate = %+v", failed)
+	}
+	if failed.Usage.PromptTokens != 17 || failed.Usage.CompletionTokens != 23 ||
+		failed.Usage.CostMicrousd != 42 || failed.Usage.CostSource != CostReported {
+		t.Fatalf("failed usage = %+v", failed.Usage)
+	}
+	text := logs.String()
+	if strings.Count(text, "experiment candidate failed") != 1 {
+		t.Fatalf("logs = %q, want exactly one candidate failure", text)
+	}
+	for _, field := range []string{"experiment_id=" + started.ExperimentID, "candidate_id=", "model=p/b", "upstream stopped after billing"} {
+		if !strings.Contains(text, field) {
+			t.Errorf("logs = %q, want %q", text, field)
+		}
+	}
+}
+
+func TestCandidateInternalFailureKeepsGenericPublicMessage(t *testing.T) {
+	got := userFacingError(fmt.Errorf("parse candidate: %w", errors.New("raw model output")))
+	if got != "모델 호출에 실패했어요. 다시 시도해 주세요." {
+		t.Fatalf("userFacingError = %q", got)
+	}
+}
+
+func TestDiagnosticErrorRedactsBadModelOutput(t *testing.T) {
+	err := fmt.Errorf("raw candidate text: %w", llm.ErrBadOutput)
+	if got := diagnosticError(err); got != llm.ErrBadOutput || strings.Contains(got.Error(), "raw candidate text") {
+		t.Fatalf("diagnosticError = %v", got)
+	}
+	providerErr := &llm.ProviderError{Provider: "openrouter", Status: 400, Message: "safe provider cause", Kind: llm.ErrBadOutput}
+	if got := diagnosticError(providerErr); got != providerErr {
+		t.Fatalf("provider error was replaced: %v", got)
 	}
 }
 

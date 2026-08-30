@@ -6,6 +6,8 @@
 # read from; when that variable is unset, every model of the provider is listed as
 # disabled with the reason "API key not configured" and cannot be selected. Leave
 # `api_key_env` out for an endpoint that takes no key (a local Ollama / vLLM / LM Studio).
+# `reasoning_format: openrouter` opts that provider into OpenRouter's nested reasoning
+# request extension; omit it for other OpenAI-compatible endpoints.
 #
 # Per model:
 #   id                 what the provider's API expects in `model`
@@ -14,6 +16,8 @@
 #   structured_output  honours a JSON schema (`response_format: json_schema`); the app
 #                      requests it whenever the model supports it and keeps a parser
 #                      fallback for models that do not
+#   reasoning_effort   optional model override: max, xhigh, high, medium, low, minimal,
+#                      none, or unset (omit the reasoning key and keep provider defaults)
 #   context_tokens     dated display metadata, not an execution limit
 #   *_usd_per_million  dated reference price; reported completion cost remains authoritative
 #   pricing_checked_at ISO date on which the display metadata was verified
@@ -26,6 +30,7 @@ providers:
     adapter: openai_compatible
     base_url: https://openrouter.ai/api/v1
     api_key_env: OPENROUTER_API_KEY
+    reasoning_format: openrouter
     models:
       - id: openrouter/free
         label: OpenRouter free (auto)
@@ -107,6 +112,7 @@ providers:
         label: Claude Sonnet 5
         vision: true
         structured_output: true
+        reasoning_effort: unset
         context_tokens: 1000000
         input_usd_per_million: "2.00"
         output_usd_per_million: "10.00"

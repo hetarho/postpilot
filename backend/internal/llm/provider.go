@@ -6,6 +6,34 @@ package llm
 
 import "context"
 
+// ReasoningEffort is the provider-neutral reasoning strength accepted by the port.
+// Unset is a registry override that deliberately leaves the wire request untouched;
+// None is different because it asks the provider to disable reasoning explicitly.
+type ReasoningEffort string
+
+const (
+	ReasoningUnspecified ReasoningEffort = ""
+	ReasoningUnset       ReasoningEffort = "unset"
+	ReasoningNone        ReasoningEffort = "none"
+	ReasoningMinimal     ReasoningEffort = "minimal"
+	ReasoningLow         ReasoningEffort = "low"
+	ReasoningMedium      ReasoningEffort = "medium"
+	ReasoningHigh        ReasoningEffort = "high"
+	ReasoningXHigh       ReasoningEffort = "xhigh"
+	ReasoningMax         ReasoningEffort = "max"
+)
+
+// Valid reports whether the value is a supported policy or wire value.
+func (e ReasoningEffort) Valid() bool {
+	switch e {
+	case ReasoningUnspecified, ReasoningUnset, ReasoningNone, ReasoningMinimal, ReasoningLow,
+		ReasoningMedium, ReasoningHigh, ReasoningXHigh, ReasoningMax:
+		return true
+	default:
+		return false
+	}
+}
+
 // Role is who said a message.
 type Role string
 
@@ -50,6 +78,7 @@ type Request struct {
 	JSONSchema []byte
 	// MaxTokens caps the completion. Zero means the registry's default.
 	MaxTokens int
+	Reasoning ReasoningEffort
 }
 
 // HasImages reports whether any message carries an image part.
@@ -77,23 +106,27 @@ type Usage struct {
 // Response is the completion.
 type Response struct {
 	// Text is the raw completion, or the JSON document when JSONSchema was set.
-	Text  string
-	Usage Usage
+	Text         string
+	Usage        Usage
+	FinishReason string
 }
 
 // Provider is one registered vendor endpoint. Implementations live in sub-packages and
 // are handed to the registry by the composition root; nothing else constructs one.
 type Provider interface {
 	Name() string
+	// Complete may return reported Usage and FinishReason together with an error. A
+	// failed provider call can still have consumed billable tokens.
 	Complete(ctx context.Context, req Request) (Response, error)
 }
 
 // AdapterConfig is what an adapter needs from a providers.yaml entry. The key is
 // resolved from the environment by the registry, never read from the file.
 type AdapterConfig struct {
-	ProviderID string
-	BaseURL    string
-	APIKey     string
+	ProviderID      string
+	BaseURL         string
+	APIKey          string
+	ReasoningFormat string
 }
 
 // AdapterFactory builds a Provider for one yaml entry. It must validate what it needs

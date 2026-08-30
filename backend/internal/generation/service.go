@@ -18,13 +18,22 @@ type Service struct {
 	jobs        Jobs
 	experiments PendingExperiments
 	batchSize   int
+	reasoning   ReasoningPolicy
 }
 
-func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, images ImageReader, jobs Jobs, batchSize int) *Service {
+type ReasoningPolicy struct {
+	Observe llm.ReasoningEffort
+	Write   llm.ReasoningEffort
+}
+
+func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, images ImageReader, jobs Jobs, batchSize int, reasoning ReasoningPolicy) *Service {
 	if batchSize <= 0 {
 		panic("generation: batch size must be positive")
 	}
-	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize}
+	if !reasoning.Observe.Valid() || !reasoning.Write.Valid() {
+		panic("generation: reasoning policy is invalid")
+	}
+	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning}
 }
 
 func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {

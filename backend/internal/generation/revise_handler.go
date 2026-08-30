@@ -35,8 +35,9 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	}
 	system, user := BuildRevisePrompt(profile, *post.Content, filenames, payload.Instruction, post.TargetLength)
 	request := llm.Request{
-		System:   system,
-		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
+		System:    system,
+		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
+		Reasoning: s.reasoning.Write,
 	}
 	if info, found := s.models.Resolve(model); found && info.StructuredOutput {
 		request.JSONSchema = PostContentSchema()
@@ -48,7 +49,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	}
 	content, err := ParseContent(response.Text)
 	if err != nil {
-		return err
+		return responseParseError(response, err)
 	}
 	content.Blocks = ValidateBlocks(content.Blocks)
 	// Attachments can change while the provider call is in flight. Filter against a

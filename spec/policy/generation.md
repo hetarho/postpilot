@@ -1,7 +1,7 @@
 # Policy — Post generation
 
 Canonical rules that are **currently true** in the code. Source: [plan/06](../plan/06.two-stage-generation-and-contact-sheet.md),
-built by jobs 10 and 11.
+built by jobs 10, 11, and 23.
 
 ## Canonical content
 
@@ -43,6 +43,12 @@ built by jobs 10 and 11.
   `모델이 JSON 대신 다른 답을 돌려줬어요: ` plus at most 200 characters of the raw response.
 - Every provider call is bounded by the registry's five-minute stage timeout. No database transaction spans a
   provider call; observations, progress, and final content are separate short writes.
+- Observation and writing/revision request `low` reasoning effort. A strict model-level override may replace that
+  value or deliberately omit the wire key; voice analysis continues to send no reasoning preference. The shared
+  completion cap is 8,192 tokens for reasoning plus visible output.
+- A write or observe candidate returns provider-reported usage even when its call fails. Output with terminal reason
+  `length` and no usable content—including non-empty partial JSON—is reported as budget exhaustion with a
+  shorter-target/different-model remedy. Revision uses the same classification.
 
 ## Start preconditions and ownership
 
@@ -74,6 +80,8 @@ built by jobs 10 and 11.
 |---|---|---|
 | `OBSERVE_BATCH_SIZE` | BE `internal/platform/config` | env, default `4`, positive integer |
 | `LLMStageTimeout` | BE `internal/platform/config` | `5m` per provider call |
+| `LLMMaxTokensDefault` | BE `internal/platform/config` | `8192` shared reasoning/output tokens |
+| stage reasoning policy | BE `internal/platform/config` | observe `low` · write/revise `low` · analyze omitted |
 | `TagsMin` / `TagsMax` | BE `internal/generation` | `3` / `6` |
 | `BadOutputErrorHeadChars` | BE `internal/generation` | `200` runes |
 

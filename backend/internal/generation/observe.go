@@ -33,25 +33,26 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, model ll
 		}
 		parts = append(parts, llm.TextPart("files: "+strings.Join(filenames, ", ")))
 		request := llm.Request{
-			System:   ObservePrompt,
-			Messages: []llm.Message{{Role: llm.RoleUser, Parts: parts}},
+			System:    ObservePrompt,
+			Messages:  []llm.Message{{Role: llm.RoleUser, Parts: parts}},
+			Reasoning: s.reasoning.Observe,
 		}
 		if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
 			request.JSONSchema = ObservationsSchema()
 		}
 		response, err := s.models.Complete(ctx, model, request)
-		if err != nil {
-			return nil, usage, providerCallError("사진 관찰", err)
-		}
 		usage.PromptTokens += response.Usage.PromptTokens
 		usage.CompletionTokens += response.Usage.CompletionTokens
 		if response.Usage.CostReported {
 			usage.CostMicrousd += response.Usage.CostMicrousd
 			usage.CostReported = true
 		}
+		if err != nil {
+			return nil, usage, providerCallError("사진 관찰", err)
+		}
 		returned, err := parseObservations(response.Text)
 		if err != nil {
-			return nil, usage, fmt.Errorf("parse observations: %w", err)
+			return nil, usage, fmt.Errorf("parse observations: %w", responseParseError(response, err))
 		}
 		merged = append(merged, matchObservations(batch, returned)...)
 		if persist {

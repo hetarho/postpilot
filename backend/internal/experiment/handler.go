@@ -3,6 +3,9 @@ package experiment
 import (
 	"context"
 	"errors"
+	"log/slog"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 // Handle runs one durable experiment job. The queue owns durability; this method owns
@@ -77,11 +80,28 @@ func (s *Service) runCandidate(ctx context.Context, found Experiment, candidate 
 	if runErr != nil {
 		candidate.Status = CandidateFailed
 		candidate.Error = userFacingError(runErr)
+		slog.Error("experiment candidate failed",
+			"experiment_id", found.ID,
+			"candidate_id", candidate.ID,
+			"model", candidate.Model.String(),
+			"err", diagnosticError(runErr),
+		)
 	} else {
 		candidate.Status = CandidateSucceeded
 		candidate.Error = ""
 	}
 	return s.store.CompleteCandidate(ctx, candidate)
+}
+
+func diagnosticError(err error) error {
+	var providerErr *llm.ProviderError
+	if errors.As(err, &providerErr) {
+		return err
+	}
+	if errors.Is(err, llm.ErrBadOutput) {
+		return llm.ErrBadOutput
+	}
+	return err
 }
 
 func userFacingError(err error) string {
@@ -90,6 +110,12 @@ func userFacingError(err error) string {
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
 		return "모델 호출 시간이 초과됐어요. 다시 시도해 주세요."
+	}
+	var providerErr *llm.ProviderError
+	if errors.As(err, &providerErr) || errors.Is(err, llm.ErrOutputTruncated) {
+		if message := llm.UserMessage(err); message != "" {
+			return message
+		}
 	}
 	return "모델 호출에 실패했어요. 다시 시도해 주세요."
 }

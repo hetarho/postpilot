@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -90,11 +89,7 @@ func callHandler(ctx context.Context, handler Handler, found Job, progress Progr
 }
 
 func failureMessage(err error) string {
-	var providerErr *llm.ProviderError
-	if errors.As(err, &providerErr) && strings.TrimSpace(providerErr.Message) != "" {
-		return providerErr.Message
-	}
-	message := strings.TrimSpace(err.Error())
+	message := llm.UserMessage(err)
 	if message == "" {
 		return PanicMessage
 	}

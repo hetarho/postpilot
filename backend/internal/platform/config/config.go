@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/postpilot/backend/internal/llm"
 )
 
 // sessionTTL is how long a session stays valid after login. Fixed at 30 days by the
@@ -46,7 +47,7 @@ const llmStageTimeout = 5 * time.Minute
 // llmMaxTokensDefault is the completion cap sent when a caller does not set one. Large
 // enough for a full blog draft; a caller with a smaller output (an observation, a style
 // analysis) may pass its own.
-const llmMaxTokensDefault = 4096
+const llmMaxTokensDefault = 8192
 
 // The queue is deliberately single-consumer at this scale: SQLite has one writer and
 // parallel provider calls would only make rate limits and ordering less predictable.
@@ -71,6 +72,23 @@ type VoicePersonalizationConfig struct {
 	RuleRetireAfter           time.Duration
 	ValidationPostCount       int
 	EndingMaxConsecutive      int
+}
+
+// LLMReasoningPolicy is code-owned because changing a stage's reasoning strength
+// changes generation behavior rather than deployment topology. A model-level registry
+// override still wins; Unset means the provider request stays untouched.
+type LLMReasoningPolicy struct {
+	Observe llm.ReasoningEffort
+	Write   llm.ReasoningEffort
+	Analyze llm.ReasoningEffort
+}
+
+func defaultLLMReasoningPolicy() LLMReasoningPolicy {
+	return LLMReasoningPolicy{
+		Observe: llm.ReasoningLow,
+		Write:   llm.ReasoningLow,
+		Analyze: llm.ReasoningUnset,
+	}
 }
 
 func defaultVoicePersonalizationConfig() VoicePersonalizationConfig {
@@ -132,6 +150,8 @@ type Config struct {
 	LLMStageTimeout time.Duration
 	// LLMMaxTokensDefault is the completion cap when a caller sets none.
 	LLMMaxTokensDefault int
+	// LLMReasoning supplies stage defaults; model registry overrides take precedence.
+	LLMReasoning LLMReasoningPolicy
 	// ObserveBatchSize is the number of photos sent to one observation call.
 	ObserveBatchSize int
 	// ExperimentContentRetention starts after a verdict/dismissal and bounds how long
@@ -178,6 +198,7 @@ func Load() (*Config, error) {
 		ProvidersConfig:      getenv("PROVIDERS_CONFIG", "config/providers.yaml"),
 		LLMStageTimeout:      llmStageTimeout,
 		LLMMaxTokensDefault:  llmMaxTokensDefault,
+		LLMReasoning:         defaultLLMReasoningPolicy(),
 		VoicePersonalization: defaultVoicePersonalizationConfig(),
 	}
 	cfg.R2PublicEndpoint = getenv("R2_PUBLIC_ENDPOINT", cfg.R2Endpoint)

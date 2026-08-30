@@ -1,6 +1,6 @@
 # Policy — Stage model experiments
 
-Canonical rules implemented by jobs 15 and 17. Source: [plan 09](../plan/09.stage-model-experiments-and-leaderboards.md)
+Canonical rules implemented by jobs 15, 17, and 23. Source: [plan 09](../plan/09.stage-model-experiments-and-leaderboards.md)
 and [tech/model-experiment-methodology](../tech/model-experiment-methodology.md).
 
 ## Fair and blind comparisons
@@ -43,6 +43,10 @@ and [tech/model-experiment-methodology](../tech/model-experiment-methodology.md)
 - Each candidate retains prompt/completion tokens, latency and cost quality. Provider-reported cost is authoritative;
   otherwise catalog prices estimate cost only when usage tokens are present. Missing usage or pricing is
   `unavailable`, never estimated zero. Aggregates preserve `reported`, `estimated`, `mixed`, and `unavailable`.
+- A candidate that fails after usage was reported retains those prompt/completion/cost values and the provider's own
+  message. Each failed candidate emits one ERROR log with experiment id, candidate id, model ref, and the underlying
+  cause; bad-output parser errors are reduced to their normalized class so no snapshot, prompt, photo, voice sample,
+  or candidate output is logged.
 - Model refs, labels and usage remain legible after catalog removal. Removed/disabled models cannot start, retry or
   become active, and capability checks happen before a network call.
 

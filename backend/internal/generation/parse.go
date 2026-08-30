@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 const badOutputPrefix = "모델이 JSON 대신 다른 답을 돌려줬어요: "
@@ -11,6 +13,17 @@ const badOutputPrefix = "모델이 JSON 대신 다른 답을 돌려줬어요: "
 type ErrBadOutput struct{ Head string }
 
 func (e *ErrBadOutput) Error() string { return badOutputPrefix + e.Head }
+func (e *ErrBadOutput) Unwrap() error { return llm.ErrBadOutput }
+
+// responseParseError preserves the provider's completion-budget signal when a
+// non-empty response was cut off mid-JSON. A syntactically invalid full response is
+// still ErrBadOutput; a length-limited partial response has an actionable remedy.
+func responseParseError(response llm.Response, err error) error {
+	if err != nil && response.FinishReason == "length" {
+		return llm.ErrOutputTruncated
+	}
+	return err
+}
 
 type blockJSON struct {
 	Type    string   `json:"type"`

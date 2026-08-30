@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 func TestVoicePersonalizationDefaultsContainNoScheduler(t *testing.T) {
@@ -95,6 +97,13 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.ObserveBatchSize != 4 {
 		t.Errorf("ObserveBatchSize = %d, want 4", cfg.ObserveBatchSize)
+	}
+	if cfg.LLMMaxTokensDefault != 8192 || llmMaxTokensDefault != 8192 {
+		t.Errorf("LLMMaxTokensDefault = %d / %d, want 8192", cfg.LLMMaxTokensDefault, llmMaxTokensDefault)
+	}
+	if cfg.LLMReasoning.Observe != llm.ReasoningLow || cfg.LLMReasoning.Write != llm.ReasoningLow ||
+		cfg.LLMReasoning.Analyze != llm.ReasoningUnset {
+		t.Errorf("LLMReasoning = %+v", cfg.LLMReasoning)
 	}
 }
 

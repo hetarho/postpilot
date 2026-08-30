@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -225,6 +226,30 @@ func TestProviderMessageIsPreserved(t *testing.T) {
 	})
 	if failed.Error != "daily free quota exhausted" {
 		t.Errorf("error = %q", failed.Error)
+	}
+}
+
+func TestOutputTruncationGetsActionableMessage(t *testing.T) {
+	h := newHarness(t)
+	h.queue.Register("truncated", func(context.Context, job.Job, job.Progress) error {
+		return fmt.Errorf("write: %w", llm.ErrOutputTruncated)
+	})
+	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: "truncated", UserID: "alice", PostSlug: postSlug("post-a"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go h.queue.Run(ctx)
+	failed := waitFor(t, h.queue, id, "alice", func(found *job.JobSummary) bool {
+		return found.Status == job.StatusFailed
+	})
+	for _, required := range []string{"출력 예산", "목표 길이", "다른 모델"} {
+		if !strings.Contains(failed.Error, required) {
+			t.Errorf("error = %q, want %q", failed.Error, required)
+		}
 	}
 }
 

@@ -36,6 +36,13 @@ func TestLoad_CurrentShippedCatalogAndRecommendation(t *testing.T) {
 	if len(sets) != 1 || sets[0].ID != "balanced-2026-08" || len(sets[0].Selections) != 3 {
 		t.Fatalf("sets = %+v", sets)
 	}
+	sonnet := llm.ModelRef{ProviderID: "openrouter", ModelID: "anthropic/claude-sonnet-5"}
+	if _, err := registry.Complete(context.Background(), sonnet, llm.Request{Reasoning: llm.ReasoningLow}); err != nil {
+		t.Fatal(err)
+	}
+	if provider.last.Reasoning != llm.ReasoningUnset {
+		t.Fatalf("shipped Sonnet reasoning = %q, want unset override", provider.last.Reasoning)
+	}
 }
 
 func TestParse_RejectsBrokenPriceAndRecommendationMetadata(t *testing.T) {
@@ -305,5 +312,60 @@ func TestComplete_FillsModelDefaultCapAndTimeout(t *testing.T) {
 	}
 	if p.last.MaxTokens != opts.MaxTokens {
 		t.Errorf("a negative cap went out as %d, want the default", p.last.MaxTokens)
+	}
+}
+
+func TestParse_ModelReasoningOverrideWinsAndInvalidValueFails(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		yaml string
+		want llm.ReasoningEffort
+	}{
+		{
+			name: "unset beats stage low",
+			yaml: strings.Replace(goodYAML, "      - id: text-only", "      - id: text-only\n        reasoning_effort: unset", 1),
+			want: llm.ReasoningUnset,
+		},
+		{
+			name: "high beats stage low",
+			yaml: strings.Replace(goodYAML, "      - id: text-only", "      - id: text-only\n        reasoning_effort: high", 1),
+			want: llm.ReasoningHigh,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			provider := &fakeProvider{}
+			registry, err := llm.Parse([]byte(tc.yaml), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(provider), opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "text-only"}
+			if _, err := registry.Complete(context.Background(), ref, llm.Request{Reasoning: llm.ReasoningLow}); err != nil {
+				t.Fatal(err)
+			}
+			if provider.last.Reasoning != tc.want {
+				t.Fatalf("Reasoning = %q, want %q", provider.last.Reasoning, tc.want)
+			}
+		})
+	}
+
+	invalid := strings.Replace(goodYAML, "      - id: text-only", "      - id: text-only\n        reasoning_effort: enormous", 1)
+	_, err := llm.Parse([]byte(invalid), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(&fakeProvider{}), opts)
+	if err == nil || !strings.Contains(err.Error(), `reasoning_effort "enormous" is invalid`) {
+		t.Fatalf("invalid reasoning_effort err = %v", err)
+	}
+}
+
+func TestComplete_RejectsInvalidCallerReasoning(t *testing.T) {
+	provider := &fakeProvider{}
+	registry, err := llm.Parse([]byte(goodYAML), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(provider), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "text-only"}
+	if _, err := registry.Complete(context.Background(), ref, llm.Request{Reasoning: "enormous"}); err == nil {
+		t.Fatal("invalid caller reasoning reached the provider")
+	}
+	if provider.calls != 0 {
+		t.Fatalf("provider calls = %d, want 0", provider.calls)
 	}
 }
