@@ -312,6 +312,10 @@
   --spacing-safe-t: env(safe-area-inset-top, 0px);
   --spacing-safe-b: env(safe-area-inset-bottom, 0px);
   --spacing-nav: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  /* Where a docked bar sits above the phone tab bar. It FLOATS: resting a rounded, shadowed card
+     directly on the tab bar reads as one two-storey block of chrome instead of a sheet over the
+     page, and the two shadows meet with no gap to separate them. */
+  --spacing-dock-nav: calc(var(--spacing-nav) + 0.75rem);
   /* A docked bar's bottom padding where it meets the screen edge. It must ADD the inset to the
      design padding, never replace it: `p-4` + `pb-safe-b` resolves padding-bottom to the bare
      inset (0 on every desktop browser), which leaves the bar's contents flush against its own

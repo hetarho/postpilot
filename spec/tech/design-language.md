@@ -512,8 +512,9 @@ to the page.
   and `shadow-md`. It is the one surface that floats over content without interrupting it, which is
   why it takes the frontmost plane but a floating panel's shadow rather than a modal's. It clears
   the phone tab bar and the home indicator itself, so a caller never writes a safe-area class, and
-  from `sm:` up it floats a step clear of the bottom edge — a rounded card sitting flush on the
-  viewport edge reads as a cut-off sheet, not as a dock. One per scroller (§4.3), and it goes at
+  it FLOATS a step clear of whatever is under it — the tab bar on a phone (`bottom-dock-nav`), the
+  viewport edge from `sm:` up. Resting the card on either reads as a cut-off sheet, or as one
+  two-storey slab of chrome, rather than as a dock hovering over the page. One per scroller (§4.3), and it goes at
   the end of a `flex-1 flex-col` page with `mt-auto` — `sticky` can pull a bar up to the scrollport
   edge but can never push one down, so on a short page an undocked bar floats mid-screen. Mount it
   only when it has something to hold: a bar with no action and nothing to report is chrome with
