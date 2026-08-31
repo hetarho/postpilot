@@ -25,7 +25,7 @@ export function CancelRetainedPublishJobButton({
     onSuccess: async () => {
       setConfirming(false)
       await queryClient.invalidateQueries({
-        queryKey: retryablePublishJobsQueryKey(transport, ownerId),
+        queryKey: retryablePublishJobsQueryKey(ownerId),
       })
     },
   })

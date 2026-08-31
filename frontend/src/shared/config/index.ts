@@ -76,6 +76,20 @@ export const REVISION_INSTRUCTION_MAX_CHARS = 500
 /** How long successful clipboard feedback remains visible. */
 export const COPY_FEEDBACK_MS = 1_500
 
+/** How long a press must be held before it counts as a long press. Short enough that a
+ *  deliberate hold does not feel unresponsive, long enough that a slow tap or a scroll
+ *  that starts on the control is not mistaken for one. */
+export const LONG_PRESS_MS = 600
+
+/** The app-wide TanStack Query defaults, applied in app/providers/query-client. They are a
+ *  conservative floor: any query with its own freshness or failure policy overrides them at
+ *  its call site. The stale window is deliberately twice SESSION_STALE_MS — the session is
+ *  the one query whose staleness gates navigation, so it re-checks while ordinary data is
+ *  still trusted. One retry covers a dropped connection without turning a genuine server
+ *  refusal into a multi-second wait. */
+export const QUERY_STALE_MS = 60_000
+export const QUERY_RETRY_COUNT = 1
+
 /** Immediate client feedback for voice samples. The backend remains authoritative. */
 export const VOICE_SAMPLE_MIN_CHARS = 200
 

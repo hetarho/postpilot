@@ -61,11 +61,11 @@ describe('publishing agent management', () => {
     await waitFor(() => expect(calls).toContain('RevokePublishingAgent'))
   })
 
-  it('keeps publishing-agent cache keys account scoped', () => {
-    const transport = {} as Parameters<typeof publishingAgentsQueryKey>[0]
-    expect(publishingAgentsQueryKey(transport, 'alice')).not.toEqual(
-      publishingAgentsQueryKey(transport, 'bob'),
-    )
+  it('keeps publishing-agent cache keys account scoped and serialisable', () => {
+    expect(publishingAgentsQueryKey('alice')).not.toEqual(publishingAgentsQueryKey('bob'))
+    // TanStack hashes keys with JSON.stringify, so a segment that serialises to {} — a
+    // Connect transport, for one — partitions nothing and only looks like it does.
+    expect(publishingAgentsQueryKey('alice')).toEqual(['publishing-agents', 'alice'])
   })
 
   it('retries a retained needs-attention job outside the deleted post route', async () => {
@@ -120,10 +120,8 @@ describe('publishing agent management', () => {
     await waitFor(() => expect(screen.queryByText('already-deleted-post')).not.toBeInTheDocument())
   })
 
-  it('keeps retryable publish-job cache keys account scoped', () => {
-    const transport = {} as Parameters<typeof retryablePublishJobsQueryKey>[0]
-    expect(retryablePublishJobsQueryKey(transport, 'alice')).not.toEqual(
-      retryablePublishJobsQueryKey(transport, 'bob'),
-    )
+  it('keeps retryable publish-job cache keys account scoped and serialisable', () => {
+    expect(retryablePublishJobsQueryKey('alice')).not.toEqual(retryablePublishJobsQueryKey('bob'))
+    expect(retryablePublishJobsQueryKey('alice')).toEqual(['retryable-publish-jobs', 'alice'])
   })
 })

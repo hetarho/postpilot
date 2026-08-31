@@ -81,6 +81,8 @@ export interface FakeVoiceOptions {
   busyVoices?: string[]
   /** Make ListVoices fail. */
   listFails?: boolean
+  /** Sentence feedback the fake received, for tests that assert *which* sentence was sent. */
+  sentenceFeedback?: Array<{ sentenceRef: string; authoredText: string }>
 }
 
 const NOW = '2026-08-29T12:00:00Z'
@@ -383,8 +385,12 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     })
   })
 
-  rpc(VoiceLearningService.method.giveSentenceFeedback, () => {
+  rpc(VoiceLearningService.method.giveSentenceFeedback, (request) => {
     options.calls?.push('GiveSentenceFeedback')
+    options.sentenceFeedback?.push({
+      sentenceRef: request.sentenceRef,
+      authoredText: request.authoredText,
+    })
     return create(GiveSentenceFeedbackResponseSchema, { feedbackId: 'feedback-1' })
   })
 

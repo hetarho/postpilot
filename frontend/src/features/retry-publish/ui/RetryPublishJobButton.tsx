@@ -18,7 +18,7 @@ export function RetryPublishJobButton({ ownerId, jobId }: RetryPublishJobButtonP
     mutationFn: async () => client.retryPublish({ jobId }),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: retryablePublishJobsQueryKey(transport, ownerId),
+        queryKey: retryablePublishJobsQueryKey(ownerId),
       }),
   })
 

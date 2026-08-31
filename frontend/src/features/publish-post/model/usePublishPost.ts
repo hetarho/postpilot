@@ -26,7 +26,7 @@ export function usePublishPost(ownerId: string, postSlug: string) {
   const transport = useTransport()
   const client = useMemo(() => publishingClientFor(transport), [transport])
   const queryClient = useQueryClient()
-  const key = publishJobQueryKey(transport, ownerId, postSlug)
+  const key = publishJobQueryKey(ownerId, postSlug)
   const start = useMutation({
     mutationFn: async (input: {
       expectedContentRevision: bigint

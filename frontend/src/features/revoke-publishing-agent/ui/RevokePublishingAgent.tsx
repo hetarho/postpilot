@@ -23,7 +23,7 @@ export function RevokePublishingAgent({
     onSuccess: async () => {
       setConfirming(false)
       await queryClient.invalidateQueries({
-        queryKey: publishingAgentsQueryKey(transport, ownerId),
+        queryKey: publishingAgentsQueryKey(ownerId),
       })
     },
   })

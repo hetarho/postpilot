@@ -27,7 +27,7 @@ export function ConfigurePublishingAgent({
         defaultVisibility: visibility,
       }),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: publishingAgentsQueryKey(transport, ownerId) }),
+      queryClient.invalidateQueries({ queryKey: publishingAgentsQueryKey(ownerId) }),
   })
   if (!agent.ready) return null
   return (
