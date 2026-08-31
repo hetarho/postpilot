@@ -1,24 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- The app icon. viewBox is tightened onto the mark (content is 956 units wide, centred at
      1024,1023.5 in the 2048 source) so the symbol fills ~78% of the tile instead of ~47% — at
-     16-32px the source framing left the frame stroke sub-pixel. The background rect still spans
-     0..2048, so it covers the crop. No width/height: the tile scales to whatever the browser,
-     iOS springboard or Chrome's rasteriser asks for. -->
+     16-32px the source framing left the frame stroke sub-pixel. The canvas is intentionally
+     transparent. No width/height: the tile scales to whatever the browser, iOS springboard or
+     Chrome's rasteriser asks for. -->
 <svg xmlns="http://www.w3.org/2000/svg"
      xmlns:xlink="http://www.w3.org/1999/xlink"
      viewBox="411 410 1226 1226"
      role="img"
      aria-labelledby="title desc">
   <title id="title">Postpilot app icon</title>
-  <desc id="desc">A lavender rounded square, dot, and paper-plane symbol on a near-black background.</desc>
+  <desc id="desc">A lavender rounded square, dot, and paper-plane symbol on a transparent background.</desc>
 
   <defs>
-    <radialGradient id="backgroundGlow" cx="50%" cy="43%" r="78%">
-      <stop offset="0" stop-color="#141119"/>
-      <stop offset="0.58" stop-color="#110F14"/>
-      <stop offset="1" stop-color="#0D0C10"/>
-    </radialGradient>
-
     <linearGradient id="frameGradient" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#C0BCC9"/>
       <stop offset="0.48" stop-color="#B7B1C1"/>
@@ -60,18 +54,7 @@
       </feMerge>
     </filter>
 
-    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%"
-            color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="12"/>
-    </filter>
   </defs>
-
-  <!-- Background -->
-  <rect id="background" width="2048" height="2048" fill="url(#backgroundGlow)"/>
-
-  <!-- A faint central violet atmosphere, visible only against the dark field. -->
-  <ellipse cx="1060" cy="980" rx="650" ry="690"
-           fill="#7C55B8" opacity="0.018" filter="url(#softGlow)"/>
 
   <!-- Rounded app window outline -->
   <rect id="window-frame"
