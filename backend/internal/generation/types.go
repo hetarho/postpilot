@@ -70,8 +70,11 @@ type PostInput struct {
 	Voice  VoiceRef
 	// PurposeID is what the post currently points at, read only at enqueue time. Handlers
 	// never resolve it: they use Purpose, which the job payload froze.
-	PurposeID       string
-	Purpose         *PurposeBrief
+	PurposeID string
+	Purpose   *PurposeBrief
+	// Guidelines is the frozen 작문 지침 material in injection order, filled at enqueue from
+	// PurposeID like Purpose is. Handlers never resolve guidelines live either.
+	Guidelines      []string
 	Title           string
 	Memo            string
 	Images          []Image
@@ -105,6 +108,8 @@ type StartRequest struct {
 	// Purpose is resolved from the post server-side at Start and frozen into the payload;
 	// the request never carries one. Nil means the post had none, or it was deleted first.
 	Purpose *PurposeBrief
+	// Guidelines is resolved the same way, from the same purpose id, and frozen alongside.
+	Guidelines []string
 }
 
 type GenerateJob struct {
@@ -116,6 +121,7 @@ type GenerateJob struct {
 	TargetLanguage Language
 	TargetLength   *int
 	Purpose        *PurposeBrief
+	Guidelines     []string
 }
 
 type StartRevisionRequest struct {
@@ -127,6 +133,7 @@ type StartRevisionRequest struct {
 	WriteModel      string
 	ContentLanguage Language
 	Purpose         *PurposeBrief
+	Guidelines      []string
 }
 
 type RevisionJob struct {

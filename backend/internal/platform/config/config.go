@@ -189,6 +189,13 @@ type Config struct {
 	PurposeNameMaxChars         int
 	PurposeDescriptionMaxChars  int
 	PurposeInstructionsMaxChars int
+
+	// Writing-guideline ceilings. GuidelineTextMaxChars bounds one authored rule;
+	// GuidelineMaxPerAccount bounds how many an account may hold, because every applicable
+	// guideline is injected into every prompt — the cap is a prompt-size guard, not a
+	// storage one, so it stays server-side and the frontend only relays the refusal.
+	GuidelineTextMaxChars  int
+	GuidelineMaxPerAccount int
 }
 
 // Load reads the environment, falling back to a repo-root .env when present so a
@@ -311,6 +318,17 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.PurposeInstructionsMaxChars = purposeInstructions
+
+	guidelineText, err := positiveInt("GUIDELINE_TEXT_MAX_CHARS", "300")
+	if err != nil {
+		return nil, err
+	}
+	cfg.GuidelineTextMaxChars = guidelineText
+	guidelineCap, err := positiveInt("GUIDELINE_MAX_PER_ACCOUNT", "100")
+	if err != nil {
+		return nil, err
+	}
+	cfg.GuidelineMaxPerAccount = guidelineCap
 
 	return cfg, nil
 }

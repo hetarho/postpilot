@@ -567,6 +567,7 @@ function LifecycleSteps({
         postSlug={post.slug}
         voice={post.voice}
         ruleLanguageMismatch={languageMismatch}
+        purpose={post.purpose}
         activeJob={job}
         jobPending={Boolean(jobId) && !job}
         onStarted={(id) => setStarted({ id, step: 'refine' })}

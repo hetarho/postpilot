@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// guideline.proto is the 작문 지침 slice: reusable account-owned rules about what a post
+// must avoid or watch out for. A guideline is authored text only — nothing here is learned,
+// inferred, or written by a model, and no procedure enqueues work or calls a provider.
+//
+// Nothing else in the contract references a guideline: jobs and experiment snapshots carry
+// frozen *texts*, never ids, so deleting a guideline detaches nothing.
+//
+// Every procedure is scoped to the acting user from the session — no request carries a
+// user id, because a user id in a message is a claim by the caller, not a fact.
+service GuidelineService {
+  rpc ListGuidelines(ListGuidelinesRequest) returns (ListGuidelinesResponse) {}
+  rpc CreateGuideline(CreateGuidelineRequest) returns (CreateGuidelineResponse) {}
+  rpc UpdateGuideline(UpdateGuidelineRequest) returns (UpdateGuidelineResponse) {}
+  rpc DeleteGuideline(DeleteGuidelineRequest) returns (DeleteGuidelineResponse) {}
+}
+
+enum GuidelineScope {
+  GUIDELINE_SCOPE_UNSPECIFIED = 0;
+  // Applies to every post of the account.
+  GUIDELINE_SCOPE_GLOBAL = 1;
+  // Applies only to posts whose selected purpose is in the guideline's purpose set.
+  GUIDELINE_SCOPE_PURPOSES = 2;
+}
+
+// A purpose a guideline is scoped to, projected by name for the management screen. It is a
+// read projection through the purpose directory, never a stored column on the guideline.
+message GuidelinePurposeRef {
+  string id = 1;
+  string name = 2;
+}
+
+message Guideline {
+  string id = 1;
+  // The authored rule, injected verbatim as one line of the 작문 지침 section.
+  string text = 2;
+  GuidelineScope scope = 3;
+  // Empty for GLOBAL. May also be empty for PURPOSES after every scoped purpose was
+  // deleted — such a guideline applies nowhere until it is rescoped.
+  repeated GuidelinePurposeRef purposes = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}
+
+message ListGuidelinesRequest {}
+message ListGuidelinesResponse {
+  // In injection order: the global group first, then the scoped group, each by creation
+  // time — exactly the order the writer will see them in.
+  repeated Guideline guidelines = 1;
+}
+
+message CreateGuidelineRequest {
+  string text = 1;
+  GuidelineScope scope = 2;
+  // Required (>= 1 owned purpose) for PURPOSES, and must be empty for GLOBAL.
+  repeated string purpose_ids = 3;
+}
+message CreateGuidelineResponse { Guideline guideline = 1; }
+
+// The whole scope as one value. Its message presence in UpdateGuidelineRequest is what
+// distinguishes "leave the scope alone" from "replace it" — a scope is a kind plus a set,
+// so the two are only meaningful together and are replaced atomically.
+message GuidelineScopePatch {
+  GuidelineScope scope = 1;
+  repeated string purpose_ids = 2;
+}
+
+message UpdateGuidelineRequest {
+  string id = 1;
+  optional string text = 2;
+  GuidelineScopePatch scope = 3;
+}
+message UpdateGuidelineResponse { Guideline guideline = 1; }
+
+message DeleteGuidelineRequest { string id = 1; }
+// Empty: nothing references a guideline, so a delete detaches nothing and has nothing to
+// report back.
+message DeleteGuidelineResponse {}

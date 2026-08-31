@@ -8,7 +8,31 @@ import (
 const ObservePrompt = `사진마다 파일명을 정확히 대응해 관찰 사실만 반환하세요. 추측하거나 이야기를 만들지 마세요.
 출력은 설명이나 마크다운 없이 {"observations":[{"file":"...","scene":"...","mood":"...","visible_text":"...","objects":[],"people_present":false}]} 형태의 JSON 객체 하나여야 합니다.`
 
+// koreanGrounding / englishGrounding are the built-in grounding constraint (plan 16): the
+// writer may state no concrete fact the memo and the photo observations do not carry. It
+// ships as fixed prompt text because the invented-fact failure — "주인분에게 건네받았다" for
+// an unmanned store — is one every account hits with zero setup, so it cannot wait for a
+// user-authored 지침. It is deliberately disjoint from NaturalnessBaseline, which owns style
+// and nothing else, and from the observe prompt, which never sees it ([I3]).
+const koreanGrounding = "메모와 사진 관찰에 없는 구체적 사실은 쓰지 마세요. 사람과의 상호작용, 시설, 서비스, 대화, 가격처럼 확인되지 않은 내용을 지어내지 마세요."
+
+const englishGrounding = "State no concrete fact that the memo and the photo observations do not carry. Do not invent interactions with people, facilities, services, conversations, or prices."
+
+// The write pass holds the memo and the observations, so it can also be told to omit what it
+// cannot confirm. The revise pass does not receive either one, so the same instruction there
+// would license stripping real facts out of blocks the request never mentioned — directly
+// against the byte-for-byte preservation rule beside it. Hence the split: the core prohibition
+// is shared, and each pass carries the clause its own material can support.
+const koreanGroundingWriteScope = "확인할 수 없는 것은 생략하거나 관찰된 범위 안에서만 쓰세요."
+
+const englishGroundingWriteScope = "Omit whatever you cannot confirm, or keep it within what was observed."
+
+const koreanGroundingReviseScope = "이 기준은 수정 요청으로 새로 쓰거나 손대는 문장에만 적용하고, 요청 밖의 기존 문장은 사실 확인 없이 그대로 두세요."
+
+const englishGroundingReviseScope = "Apply this only to sentences the request makes you write or touch; leave every sentence outside the request exactly as it is, without re-checking its facts."
+
 const WritePrompt = `첨부 사진 관찰과 메모를 바탕으로 자연스러운 한국어 블로그 글을 작성하세요.
+` + koreanGrounding + " " + koreanGroundingWriteScope + `
 반드시 하나의 문단마다 TEXT 블록 하나만 사용하세요.
 IMAGE 블록은 제공된 정확한 파일명만 사용하고, 목록에 없는 이미지를 절대 만들어내지 마세요.
 IMAGE 블록은 사진이 글의 흐름상 가장 자연스러운 위치에 오도록 배치하세요.
@@ -16,6 +40,7 @@ IMAGE 블록은 사진이 글의 흐름상 가장 자연스러운 위치에 오�
 각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.`
 
 const englishWritePrompt = `Write a natural English blog post from the photo observations and memo.
+` + englishGrounding + " " + englishGroundingWriteScope + `
 Use exactly one TEXT block for each paragraph.
 IMAGE blocks may use only the exact filenames provided. Never invent an image that is not in the list.
 Place each IMAGE block where the photo fits most naturally in the flow of the post.
@@ -57,14 +82,42 @@ func writePurposeSection(out *strings.Builder, purpose *PurposeBrief) {
 	fmt.Fprintf(out, "\n%s", purposePrecedence)
 }
 
+// guidelinePrecedence states the split the user needs guaranteed. A guideline is typically a
+// prohibition the user added precisely because the default output was wrong, so it must beat
+// the purpose's general content instruction — while register stays with the voice profile,
+// consistent with purposePrecedence. Fixed prompt text, so it lives in code (ARCHITECTURE §4).
+const guidelinePrecedence = "지침은 이 글에서 지켜야 할 주의 사항과 피해야 할 내용·표현을 정합니다. 지침이 용도의 요구와 충돌하면 지침을 우선하고, 문체·종결어미·어휘는 위의 말투 프로필을 따르세요."
+
+// writeGuidelinesSection appends the frozen guideline texts as ONE section at ONE position:
+// after the purpose section when the post has one, otherwise directly after the complete
+// voice profile, and always before the per-post material. Both halves of that matter — the
+// voice prefix stays byte-identical across posts (PRD §5's caching note), and prohibitions
+// sit closest to the task material they constrain.
+//
+// The heading and the precedence sentence stay Korean for every target language, exactly as
+// writePurposeSection does: the section frames user-authored text, and its framing is not
+// part of the output-language contract.
+//
+// An empty slice writes nothing at all, preserving the fixed no-guideline prompt byte for byte.
+func writeGuidelinesSection(out *strings.Builder, guidelines []string) {
+	if len(guidelines) == 0 {
+		return
+	}
+	out.WriteString("\n\n[작문 지침]")
+	for _, text := range guidelines {
+		fmt.Fprintf(out, "\n- %s", text)
+	}
+	fmt.Fprintf(out, "\n%s", guidelinePrecedence)
+}
+
 // BuildWritePrompt preserves the legacy Korean call surface for prompt goldens and
 // consumers that explicitly request the established Korean contract. Runtime work uses
 // BuildWritePromptForLanguage with its frozen language.
-func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, purpose *PurposeBrief) (string, string) {
-	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, targetLength, purpose)
+func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, purpose *PurposeBrief, guidelines []string) (string, string) {
+	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, targetLength, purpose, guidelines)
 }
 
-func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, purpose *PurposeBrief) (string, string) {
+func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, purpose *PurposeBrief, guidelines []string) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
@@ -82,6 +135,7 @@ func BuildWritePromptForLanguage(language Language, profile Profile, observation
 	}
 	writeProfileSection(&stable, language, profile, targetLength)
 	writePurposeSection(&stable, purpose)
+	writeGuidelinesSection(&stable, guidelines)
 
 	photoMaterial := "첨부 사진이 없습니다. 이미지 없이 메모만으로 작성하세요."
 	if len(filenames) > 0 {

@@ -1,12 +1,13 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code } from '@connectrpc/connect'
 import { expect, it, vi } from 'vitest'
 import type { GenerationJob } from '@/entities/generation-job'
 import { ContentRevisionConflictError } from '@/entities/post'
 import { voiceProfileQueryKey } from '@/entities/voice'
-import { Stage } from '@/shared/api'
+import { ProtoGuidelineScope, Stage } from '@/shared/api'
 import { REVISION_INSTRUCTION_MAX_CHARS } from '@/shared/config'
+import type { FakeGuidelinesOptions } from '@/test/guidelines'
 import type { FakeRevisionStart } from '@/test/jobs'
 import { connectAppError } from '@/test/app-error'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
@@ -33,14 +34,21 @@ function renderForm({
   active,
   revisions = [],
   beforeStart,
+  purpose,
+  guidelines,
+  calls,
 }: {
   selected?: boolean
   active?: GenerationJob
   revisions?: FakeRevisionStart[]
   beforeStart?: () => Promise<void>
+  purpose?: { id: string; name: string }
+  guidelines?: FakeGuidelinesOptions
+  calls?: string[]
 } = {}) {
   const transport = createFakeAuthTransport({
     user: { id: 'alice' },
+    calls,
     providers: {
       models: [{ providerId: 'openrouter', modelId: 'writer' }],
       selections: selected
@@ -48,6 +56,7 @@ function renderForm({
         : [],
     },
     jobs: { revisions, startJobId: 'revision-new' },
+    guidelines,
   })
   const onStarted = vi.fn()
   const queryClient = createTestQueryClient()
@@ -57,6 +66,7 @@ function renderForm({
       postSlug="post"
       voice={{ id: 'voice-a', deleted: false }}
       activeJob={active}
+      purpose={purpose}
       onStarted={onStarted}
       beforeStart={beforeStart}
     />,
@@ -66,6 +76,8 @@ function renderForm({
   )
   return { onStarted, queryClient, transport }
 }
+
+const doneJob: GenerationJob = { ...activeJob, id: 'done', status: 'done' }
 
 it('requires an instruction and the explicit write selection', async () => {
   renderForm({ selected: false })
@@ -135,4 +147,102 @@ it('starts a revision with its instruction, rule flag, and selected write model'
       writeModel: { providerId: 'openrouter', modelId: 'writer' },
     },
   ])
+})
+
+it('does not offer it after a completed generate job', async () => {
+  renderForm({ active: { ...doneJob, kind: 'generate' } })
+  await screen.findByLabelText('수정 요청')
+  expect(screen.queryByRole('button', { name: '지침으로 저장' })).not.toBeInTheDocument()
+})
+
+// Plan 16 A11: the capture appears only once a revision has FINISHED — the instruction is worth
+// saving as a rule after the user has seen what it did.
+it('offers 지침으로 저장 only after a completed revision', async () => {
+  const user = userEvent.setup()
+  renderForm()
+  await user.type(screen.getByLabelText('수정 요청'), '무인 매장이니까 주인 얘기 빼줘')
+  expect(screen.queryByRole('button', { name: '지침으로 저장' })).not.toBeInTheDocument()
+
+  renderForm({ active: doneJob })
+  await waitFor(() =>
+    expect(screen.getAllByRole('button', { name: '지침으로 저장' })[0]).toBeInTheDocument(),
+  )
+})
+
+it('does not offer it after a failed revision', async () => {
+  renderForm({ active: { ...activeJob, status: 'failed' } })
+  await screen.findByLabelText('수정 요청')
+  expect(screen.queryByRole('button', { name: '지침으로 저장' })).not.toBeInTheDocument()
+})
+
+// Plan 16 A11: the dialog is seeded with the instruction, editable before saving, and offers 전역
+// by default plus the post's purpose when it has one.
+it('seeds the dialog with the instruction and saves it scoped to the post purpose', async () => {
+  const user = userEvent.setup()
+  const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
+  const calls: string[] = []
+  renderForm({
+    active: doneJob,
+    purpose: { id: 'purpose-review', name: '무인가게 리뷰' },
+    guidelines: { creates },
+    calls,
+  })
+  await user.type(screen.getByLabelText('수정 요청'), '무인 매장이니까 주인 얘기 빼줘')
+  await user.click(screen.getByRole('button', { name: '지침으로 저장' }))
+
+  const dialog = await screen.findByRole('dialog')
+  const field = within(dialog).getByLabelText('지침')
+  expect(field).toHaveValue('무인 매장이니까 주인 얘기 빼줘')
+  // 전역 is the default; the post's purpose is offered beside it, by name.
+  expect(within(dialog).getByRole('tab', { name: '전역', selected: true })).toBeInTheDocument()
+
+  // Generalized before saving, which is the whole point of letting the user edit it.
+  await user.clear(field)
+  await user.type(field, '무인 매장 글에서 주인 이야기를 쓰지 않기')
+  await user.click(within(dialog).getByRole('tab', { name: /무인가게 리뷰/ }))
+  await user.click(within(dialog).getByRole('button', { name: '저장' }))
+
+  await waitFor(() => expect(creates).toHaveLength(1))
+  expect(creates[0]).toEqual({
+    text: '무인 매장 글에서 주인 이야기를 쓰지 않기',
+    scope: ProtoGuidelineScope.PURPOSES,
+    purposeIds: ['purpose-review'],
+  })
+  expect(await screen.findByText('지침으로 저장했어요.')).toBeInTheDocument()
+  // A15: the capture is a plain create — it starts nothing and calls no provider ([I5]).
+  expect(calls.filter((call) => call === 'StartRevision')).toEqual([])
+})
+
+// A post with no purpose gets no scope choice at all: 전역 is the only shape available.
+it('offers no purpose scope when the post has none', async () => {
+  const user = userEvent.setup()
+  const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
+  renderForm({ active: doneJob, guidelines: { creates } })
+  await user.type(screen.getByLabelText('수정 요청'), '문장을 짧게 해줘')
+  await user.click(screen.getByRole('button', { name: '지침으로 저장' }))
+
+  const dialog = await screen.findByRole('dialog')
+  expect(within(dialog).queryByRole('tab')).not.toBeInTheDocument()
+  await user.click(within(dialog).getByRole('button', { name: '저장' }))
+
+  await waitFor(() => expect(creates).toHaveLength(1))
+  expect(creates[0]).toEqual({
+    text: '문장을 짧게 해줘',
+    scope: ProtoGuidelineScope.GLOBAL,
+    purposeIds: [],
+  })
+})
+
+// A11: AlreadyExists is information — the rule the user wanted is already saved.
+it('reports an exact duplicate as already saved rather than as a failure', async () => {
+  const user = userEvent.setup()
+  renderForm({ active: doneJob, guidelines: { createDuplicates: true } })
+  await user.type(screen.getByLabelText('수정 요청'), '주인 얘기 빼줘')
+  await user.click(screen.getByRole('button', { name: '지침으로 저장' }))
+
+  const dialog = await screen.findByRole('dialog')
+  await user.click(within(dialog).getByRole('button', { name: '저장' }))
+
+  expect(await screen.findByText('이미 같은 지침이 있어요.')).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })

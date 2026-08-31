@@ -4,6 +4,7 @@ export const nav = {
   posts: 'Posts',
   voices: 'Voices',
   purposes: 'Purposes',
+  guidelines: 'Guidelines',
   models: 'AI models',
   publishingAgents: 'Publishing Mac',
   voice: {

@@ -54,4 +54,11 @@ type PurposeBriefs interface {
 	BriefFor(ctx context.Context, userID, purposeID string) (PurposeBrief, bool, error)
 }
 
+// GuidelinesForPrompt is the guideline context's published resolution, consumed only at
+// enqueue time. purposeID is nil for a post with no purpose, which yields the account's
+// global guidelines alone — an empty result is the ordinary case, not an error.
+type GuidelinesForPrompt interface {
+	ForPrompt(ctx context.Context, userID string, purposeID *string) ([]string, error)
+}
+
 type Progress func(stage string, done, total int)

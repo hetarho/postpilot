@@ -52,8 +52,8 @@ func TestNaturalnessBaselineContract(t *testing.T) {
 }
 
 func TestNaturalnessBaselineIsSharedByWriteAndRevise(t *testing.T) {
-	write, _ := BuildWritePrompt(Profile{}, nil, "memo", "title", nil, nil, nil)
-	revise, _ := BuildRevisePrompt(Profile{}, *revisionContent("body"), nil, "shorten", nil, nil)
+	write, _ := BuildWritePrompt(Profile{}, nil, "memo", "title", nil, nil, nil, nil)
+	revise, _ := BuildRevisePrompt(Profile{}, *revisionContent("body"), nil, "shorten", nil, nil, nil)
 	section := "\n\n" + NaturalnessBaseline + "\n\n[스타일가이드]\n"
 
 	for name, prompt := range map[string]string{"write": write, "revise": revise} {
@@ -74,7 +74,10 @@ func TestNaturalnessBaselineIsSharedByWriteAndRevise(t *testing.T) {
 	}
 }
 
-func TestNaturalnessBaselineIsTheOnlyGoldenDelta(t *testing.T) {
+// The pre-naturalness goldens are the pre-change baseline both fixed-text additions are
+// stated against: job 36's stylistic section and job 35's grounding line. Removing exactly
+// those two leaves the legacy bytes, which is what keeps "one deliberate delta each" checkable.
+func TestFixedTextAdditionsAreTheOnlyGoldenDelta(t *testing.T) {
 	for _, pair := range []struct {
 		current string
 		legacy  string
@@ -84,9 +87,12 @@ func TestNaturalnessBaselineIsTheOnlyGoldenDelta(t *testing.T) {
 	} {
 		currentSystem, currentUser := loadGolden(t, pair.current)
 		legacySystem, legacyUser := loadGolden(t, pair.legacy)
-		withoutBaseline := strings.Replace(currentSystem, "\n\n"+NaturalnessBaseline, "", 1)
-		if withoutBaseline != legacySystem {
-			t.Errorf("%s changed by more than the inserted baseline", pair.current)
+		stripped := strings.Replace(currentSystem, "\n\n"+NaturalnessBaseline, "", 1)
+		for _, scope := range []string{koreanGroundingWriteScope, koreanGroundingReviseScope} {
+			stripped = strings.Replace(stripped, "\n"+koreanGrounding+" "+scope, "", 1)
+		}
+		if stripped != legacySystem {
+			t.Errorf("%s changed by more than the inserted baseline and grounding line", pair.current)
 		}
 		if currentUser != legacyUser {
 			t.Errorf("%s changed the per-post user material", pair.current)
@@ -98,8 +104,8 @@ func TestWriteSystemPrefixIsStableAcrossPostMaterial(t *testing.T) {
 	target := 900
 	profile := goldenProfile()
 	purpose := testBrief()
-	first, firstUser := BuildWritePrompt(profile, goldenObservations(), "first memo", "first title", []string{"one.jpg"}, &target, purpose)
-	second, secondUser := BuildWritePrompt(profile, []Observation{{File: "two.jpg"}}, "second memo", "second title", []string{"two.jpg"}, &target, purpose)
+	first, firstUser := BuildWritePrompt(profile, goldenObservations(), "first memo", "first title", []string{"one.jpg"}, &target, purpose, nil)
+	second, secondUser := BuildWritePrompt(profile, []Observation{{File: "two.jpg"}}, "second memo", "second title", []string{"two.jpg"}, &target, purpose, nil)
 
 	if first != second {
 		t.Fatal("per-post material changed the byte-stable system prefix")

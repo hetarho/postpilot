@@ -309,3 +309,29 @@ func TestLoadPurposeLimitDefaultsAndValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadGuidelineLimitDefaultsAndValidation(t *testing.T) {
+	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
+	names := []string{"GUIDELINE_TEXT_MAX_CHARS", "GUIDELINE_MAX_PER_ACCOUNT"}
+	for _, name := range names {
+		t.Setenv(name, "")
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.GuidelineTextMaxChars != 300 || cfg.GuidelineMaxPerAccount != 100 {
+		t.Fatalf("guideline limit defaults = %+v", cfg)
+	}
+
+	for _, name := range names {
+		for _, bad := range []string{"invalid", "0", "-1"} {
+			t.Run(name+"="+bad, func(t *testing.T) {
+				t.Setenv(name, bad)
+				if _, err := Load(); err == nil || !strings.Contains(err.Error(), name) {
+					t.Fatalf("%s=%q error = %v", name, bad, err)
+				}
+			})
+		}
+	}
+}

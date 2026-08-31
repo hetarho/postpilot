@@ -204,6 +204,20 @@ export type {
   PublishJob as ProtoPublishJob,
 } from './gen/postpilot/v1/publishing_pb'
 export {
+  GuidelineService,
+  GuidelineSchema,
+  GuidelinePurposeRefSchema,
+  GuidelineScope as ProtoGuidelineScope,
+  ListGuidelinesResponseSchema,
+  CreateGuidelineResponseSchema,
+  UpdateGuidelineResponseSchema,
+  DeleteGuidelineResponseSchema,
+} from './gen/postpilot/v1/guideline_pb'
+export type {
+  Guideline as ProtoGuideline,
+  GuidelinePurposeRef as ProtoGuidelinePurposeRef,
+} from './gen/postpilot/v1/guideline_pb'
+export {
   PurposeService,
   PurposeSchema,
   PurposeRefSchema,

@@ -4,6 +4,7 @@ export const nav = {
   posts: '글',
   voices: '말투',
   purposes: '용도',
+  guidelines: '지침',
   models: 'AI 모델',
   publishingAgents: '발행 Mac',
   voice: {

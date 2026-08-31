@@ -11,6 +11,8 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/generation"
+	"github.com/postpilot/backend/internal/guideline"
+	guidelinestore "github.com/postpilot/backend/internal/guideline/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
@@ -181,7 +183,7 @@ func TestGenerationAdapterCarriesThePostPurposeThroughToTheFrozenBrief(t *testin
 		t.Fatalf("brief = %+v, want %+v", brief, want)
 	}
 	// And the prompt that brief produces actually carries it.
-	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, &brief)
+	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, &brief, nil)
 	if !strings.Contains(system, "[글의 용도: 정보성 식당 리뷰]") {
 		t.Fatalf("the frozen brief did not reach the prompt:\n%s", system)
 	}
@@ -277,5 +279,115 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 	}
 	if events != 0 {
 		t.Fatalf("language mismatch inserted %d learning events", events)
+	}
+}
+
+// Plan 16 A4/A8: the composition root is the ONLY place a post's purpose id reaches the
+// guideline context, and the whole prompt section hangs off it. This walks the real adapters
+// end to end — a purpose and two guidelines created through their own services, a post saved
+// with that 용도, read back through generationPosts, resolved through generationGuidelines,
+// rendered by the real prompt builder. The job 22 review caught this seam silently dropping a
+// field, and only a real-wiring test prevents a repeat.
+func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+		t.Fatal(err)
+	}
+
+	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20)
+	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
+	purposeSvc := purpose.NewService(
+		purposestore.New(handle.Writer, handle.Reader),
+		purpose.Limits{NameMaxChars: 40, DescriptionMaxChars: 200, InstructionsMaxChars: 2000},
+	)
+	postSvc.SetPurposeDirectory(postPurposes{service: purposeSvc})
+	guidelineSvc := guideline.NewService(
+		guidelinestore.New(handle.Writer, handle.Reader),
+		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
+	)
+	guidelineSvc.SetPurposeDirectory(guidelinePurposes{service: purposeSvc})
+
+	review, err := purposeSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요")
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := purposeSvc.Create(ctx, "alice", "협찬 리뷰", "", "협찬을 밝히세요")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := guidelineSvc.Create(ctx, "alice", "없는 사실을 쓰지 않기", guideline.ScopeGlobal, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := guidelineSvc.Create(ctx, "alice", "CCTV를 언급하지 않기", guideline.ScopePurposes, []string{review.ID}); err != nil {
+		t.Fatal(err)
+	}
+	// Scoped to the OTHER purpose, so it must never reach this post's prompt.
+	if _, err := guidelineSvc.Create(ctx, "alice", "협찬 표기를 빠뜨리지 않기", guideline.ScopePurposes, []string{other.ID}); err != nil {
+		t.Fatal(err)
+	}
+
+	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	language := post.LanguageKorean
+	saved, err := postSvc.SaveDraft(ctx, "alice", "", "무인 떡집", "", &defaultVoice.ID, &review.ID, &language)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input, err := generationPosts{service: postSvc}.AttachedImages(ctx, "alice", saved.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	adapter := generationGuidelines{service: guidelineSvc}
+	texts, err := adapter.ForPrompt(ctx, "alice", &input.PurposeID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"없는 사실을 쓰지 않기", "CCTV를 언급하지 않기"}
+	if len(texts) != len(want) {
+		t.Fatalf("resolved %v, want %v", texts, want)
+	}
+	for i := range want {
+		if texts[i] != want[i] {
+			t.Fatalf("resolved %v, want %v", texts, want)
+		}
+	}
+	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, nil, texts)
+	if !strings.Contains(system, "[작문 지침]\n- 없는 사실을 쓰지 않기\n- CCTV를 언급하지 않기") {
+		t.Fatalf("the frozen guidelines did not reach the prompt:\n%s", system)
+	}
+	if strings.Contains(system, "협찬 표기") {
+		t.Fatalf("a guideline scoped to another purpose reached the prompt:\n%s", system)
+	}
+
+	// A post left on 없음 receives the global group alone.
+	plain, err := postSvc.SaveDraft(ctx, "alice", "", "용도 없는 글", "", &defaultVoice.ID, nil, &language)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bare, err := generationPosts{service: postSvc}.AttachedImages(ctx, "alice", plain.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	global, err := adapter.ForPrompt(ctx, "alice", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bare.PurposeID != "" || len(global) != 1 || global[0] != "없는 사실을 쓰지 않기" {
+		t.Fatalf("a post with no purpose resolved %v (purpose id %q)", global, bare.PurposeID)
 	}
 }

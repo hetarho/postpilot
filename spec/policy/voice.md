@@ -30,6 +30,9 @@ language, bilingual analysis, portable projection, and language-safe learning ar
 - A voice profile is never modified by, and never contains, purpose text: a 용도 is a separate account-owned aggregate
   and is not part of `ProfileForPrompt` (see [purposes](purposes.md)). The prompt appends it after the complete
   profile, so the profile's own bytes are identical with and without one.
+- The same holds for a 작문 지침: writing guidelines are not voice data, never enter `ProfileForPrompt`, and leave the
+  profile's bytes unchanged (see [guidelines](guidelines.md)). Register stays voice-owned — a guideline's precedence
+  sentence says so explicitly — and `규칙으로 저장` remains the only revision path that writes voice state.
 - `styleguide` is machine-generated but user-editable. `rules` is user-owned; analysis never changes it.
   `UpdateVoiceProfile` uses optional field presence and atomically updates only supplied columns, so a rules save
   cannot write a stale styleguide over a completed analysis.

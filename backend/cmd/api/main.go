@@ -31,6 +31,9 @@ import (
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/generation"
 	generationrpc "github.com/postpilot/backend/internal/generation/rpc"
+	"github.com/postpilot/backend/internal/guideline"
+	guidelinerpc "github.com/postpilot/backend/internal/guideline/rpc"
+	guidelinestore "github.com/postpilot/backend/internal/guideline/store"
 	"github.com/postpilot/backend/internal/health"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
@@ -218,6 +221,14 @@ func main() {
 	)
 	postSvc.SetPurposeDirectory(postPurposes{service: purposeSvc})
 
+	guidelineSvc := guideline.NewService(
+		guidelinestore.New(handle.Writer, handle.Reader),
+		guideline.Limits{TextMaxChars: cfg.GuidelineTextMaxChars, MaxPerAccount: cfg.GuidelineMaxPerAccount},
+	)
+	// Purpose names are a live projection and owned-id validation, never a stored column or
+	// a SQL join: the guideline context asks the purpose context, through this adapter only.
+	guidelineSvc.SetPurposeDirectory(guidelinePurposes{service: purposeSvc})
+
 	providerSvc := provider.NewService(providerstore.New(handle.Writer, handle.Reader), meteredModels)
 	voiceSvc := voice.NewService(
 		voicestore.New(handle.Writer, handle.Reader),
@@ -260,6 +271,9 @@ func main() {
 	// Generation reads a brief only at enqueue, to freeze it; the purpose context never
 	// learns that generation exists.
 	generationSvc.SetPurposeBriefs(generationPurposes{service: purposeSvc})
+	// Likewise for the 지침: read once at enqueue, to freeze. The guideline context never
+	// learns that generation exists.
+	generationSvc.SetGuidelines(generationGuidelines{service: guidelineSvc})
 	experimentStore := experimentstore.New(handle.Writer, handle.Reader)
 	experimentSvc := experiment.NewService(
 		experimentStore,
@@ -301,6 +315,7 @@ func main() {
 			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID,
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, Purpose: options.Purpose,
+			Guidelines: options.Guidelines,
 		}, generation.Progress(progress))
 	}))
 	jobQueue.Register(job.KindRevise, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -336,6 +351,9 @@ func main() {
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewPurposeServiceHandler(purposerpc.NewHandler(purposeSvc), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewGuidelineServiceHandler(guidelinerpc.NewHandler(guidelineSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewGenerationServiceHandler(generationrpc.NewHandler(generationSvc), opts...)
@@ -606,6 +624,30 @@ func (a postPurposes) Purposes(ctx context.Context, userID string) ([]post.Purpo
 // consulted once per enqueue; no handler ever calls it.
 type generationPurposes struct{ service *purpose.Service }
 
+// guidelinePurposes hands the guideline context the account's purpose directory: the ids it
+// must prove are owned before saving a scope, and the names it projects when listing.
+type guidelinePurposes struct{ service *purpose.Service }
+
+func (a guidelinePurposes) Purposes(ctx context.Context, userID string) ([]guideline.PurposeRef, error) {
+	purposes, err := a.service.List(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]guideline.PurposeRef, 0, len(purposes))
+	for _, p := range purposes {
+		out = append(out, guideline.PurposeRef{ID: p.ID, Name: p.Name})
+	}
+	return out, nil
+}
+
+// generationGuidelines hands the generation context the applicable ordered texts for one
+// post. It is consumed only at enqueue, to freeze them into the durable payload.
+type generationGuidelines struct{ service *guideline.Service }
+
+func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, purposeID *string) ([]string, error) {
+	return a.service.ForPrompt(ctx, userID, purposeID)
+}
+
 func (a generationPurposes) BriefFor(ctx context.Context, userID, purposeID string) (generation.PurposeBrief, bool, error) {
 	brief, ok, err := a.service.BriefFor(ctx, userID, purposeID)
 	if err != nil || !ok {
@@ -810,6 +852,7 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 	slug := request.PostSlug
 	payload, err := generation.EncodeGenerationPayload(generation.GenerationOptions{
 		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, Purpose: request.Purpose,
+		Guidelines: request.Guidelines,
 	})
 	if err != nil {
 		return "", err

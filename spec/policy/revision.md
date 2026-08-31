@@ -35,6 +35,17 @@ rule behavior remain canonical in [voice](voice.md). Content-language preservati
   Revision of a post without a purpose adds no purpose bytes and is byte-identical to the current fixed no-purpose
   golden. Revision never learns, saves or changes any purpose state; "save as rule" continues to write a voice rule
   only.
+- The account's applicable writing-guideline texts are frozen into the same payload at `StartRevision` and injected as
+  one `[작문 지침]` section at the same relative position as in the write prompt — after the purpose section when the
+  post has one, otherwise directly after `[종결어미 제약]`, always before the current content (see
+  [guidelines](guidelines.md)). A revision of a post with no applicable guidelines adds no guideline bytes and stays
+  byte-identical to the baseline. The fixed revise prompt text also carries the universal grounding constraint, scoped
+  to the sentences the request writes or touches: the revise pass receives neither the memo nor the observations, so an
+  unscoped "omit what you cannot confirm" would license stripping real facts out of untouched blocks.
+- After a completed revision, `지침으로 저장` saves the user-edited instruction as a guideline through the standard
+  guideline RPC. It is an explicit user save of user-authored text: nothing about a guideline is learned, and no model
+  or job can write one. `AlreadyExists` is surfaced as already-saved information, not a failure. This is beside — not
+  instead of — `규칙으로 저장`, which stays a pre-flight checkbox because the voice learns from the run itself.
 - The user prompt contains the current full `PostContent`, the attached filenames, and the instruction. It requires
   the smallest requested change, verbatim preservation of unrelated sentences, unchanged title/summary/tags unless
   requested, immutable attached filenames, preservation of the frozen content language, no translation semantics,

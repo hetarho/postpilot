@@ -1,5 +1,6 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidateGuidelines } from '@/entities/guideline'
 import { listPostsQueryKey, postDetailQueriesKey } from '@/entities/post'
 import { invalidatePurposes, purposeErrorMessage } from '@/entities/purpose'
 import { PurposeService } from '@/shared/api'
@@ -20,6 +21,8 @@ export function useUpdatePurpose(ownerId: string, purposeId: string) {
       if (saved.name !== undefined) {
         void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
         void queryClient.invalidateQueries({ queryKey: postDetailQueriesKey(transport) })
+        // The guideline list projects the same name onto every scope chip, for the same reason.
+        invalidateGuidelines(queryClient, transport, ownerId)
       }
     },
   })

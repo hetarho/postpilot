@@ -24,7 +24,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	for _, image := range post.Images {
 		filenames = append(filenames, image.Filename)
 	}
-	system, user := BuildWritePromptForLanguage(post.TargetLanguage, profile, observations, post.Memo, post.Title, filenames, post.TargetLength, post.Purpose)
+	system, user := BuildWritePromptForLanguage(post.TargetLanguage, profile, observations, post.Memo, post.Title, filenames, post.TargetLength, post.Purpose, post.Guidelines)
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},

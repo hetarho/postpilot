@@ -18,6 +18,7 @@ type Service struct {
 	jobs        Jobs
 	experiments PendingExperiments
 	purposes    PurposeBriefs
+	guidelines  GuidelinesForPrompt
 	batchSize   int
 	reasoning   ReasoningPolicy
 }
@@ -45,6 +46,11 @@ func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {
 // prompt simply carries no brief, so a partially wired process keeps the no-purpose
 // behavior rather than failing.
 func (s *Service) SetPurposeBriefs(briefs PurposeBriefs) { s.purposes = briefs }
+
+// SetGuidelines wires the guideline context's published resolution. Without it the prompt
+// simply carries no 지침, so a partially wired process keeps the no-guideline behavior
+// rather than failing.
+func (s *Service) SetGuidelines(resolver GuidelinesForPrompt) { s.guidelines = resolver }
 
 func (s *Service) refusePendingExperiment(ctx context.Context, userID, postSlug string) error {
 	if s.experiments == nil {
@@ -104,7 +110,12 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Purpose = brief
-	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief)
+	texts, err := s.freezeGuidelines(ctx, post)
+	if err != nil {
+		return "", err
+	}
+	request.Guidelines = texts
+	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, texts)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
 	}
@@ -153,6 +164,11 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", err
 	}
 	request.Purpose = brief
+	texts, err := s.freezeGuidelines(ctx, post)
+	if err != nil {
+		return "", err
+	}
+	request.Guidelines = texts
 	id, err := s.jobs.EnqueueGeneration(ctx, request)
 	if err != nil {
 		return "", fmt.Errorf("enqueue generation: %w", err)
@@ -176,6 +192,26 @@ func (s *Service) freezePurpose(ctx context.Context, post PostInput) (*PurposeBr
 	}
 	frozen := brief
 	return &frozen, nil
+}
+
+// freezeGuidelines resolves the applicable 지침 once, at enqueue, from the SAME purpose id
+// the brief was resolved from — one read, one consistent view. Editing, rescoping or
+// deleting a guideline afterwards cannot reach the queued work, including across a
+// restart-resume or an explicit retry, because the handlers read only the payload.
+func (s *Service) freezeGuidelines(ctx context.Context, post PostInput) ([]string, error) {
+	if s.guidelines == nil {
+		return nil, nil
+	}
+	var purposeID *string
+	if post.PurposeID != "" {
+		id := post.PurposeID
+		purposeID = &id
+	}
+	texts, err := s.guidelines.ForPrompt(ctx, post.UserID, purposeID)
+	if err != nil {
+		return nil, fmt.Errorf("load applicable guidelines: %w", err)
+	}
+	return texts, nil
 }
 
 func (s *Service) GetJob(ctx context.Context, id, userID string) (*JobSummary, error) {

@@ -84,3 +84,11 @@ sql:
         package: "sqlc"
         out: "internal/purpose/store/sqlc"
         omit_unused_structs: true
+  - engine: "sqlite"
+    schema: "internal/platform/db/migrations"
+    queries: "internal/guideline/store/queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/guideline/store/sqlc"
+        omit_unused_structs: true

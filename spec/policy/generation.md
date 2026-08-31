@@ -23,8 +23,8 @@ from [plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
 
 - Ordinary generation is a durable `generate` job. `StartGeneration` validates ownership and one explicit active
   write model (plus an explicit vision observe model when photos exist), freezes the required post target language,
-  optional target length, **and the post's optional purpose brief** in its payload, and returns only `job_id` without
-  making a provider call or creating a model experiment.
+  optional target length, the post's optional purpose brief, **and the account's applicable writing-guideline texts**
+  in its payload, and returns only `job_id` without making a provider call or creating a model experiment.
 - `StartWriteExperiment` is the separate explicit A/B path. It validates two distinct write candidates, freezes one
   shared post/profile/option snapshot, creates the experiment and job, and returns their ids before provider work.
 - When photos are attached, observation always precedes writing. Photos are ordered by `created_at, id`, read from
@@ -37,7 +37,8 @@ from [plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
 - With no photos, observation makes no provider call, reports `observe 0/0`, clears stale observations, and tells
   the writing model to use the memo without images.
 - The writing prompt's stable prefix is static task/format rules → target-specific baseline when applicable → voice
-  projection → optional frozen purpose brief (see [purposes](purposes.md)). Same-language projection contains the
+  projection → optional frozen purpose brief (see [purposes](purposes.md)) → optional frozen `[작문 지침]` section
+  (see [guidelines](guidelines.md)). Same-language projection contains the
   complete profile/rules/excerpts; cross-language projection contains only the portable structure and six numeric
   axes defined by [languages](languages.md). Per-post title hint, memo, observations, and exact filenames follow it.
   The prompt requires its frozen target for title, summary, tags, prose, alt text, and captions; one paragraph per
@@ -46,9 +47,21 @@ from [plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
   written into the payload as text. Handlers build the prompt from that payload and never re-read the row, so editing
   or deleting the purpose afterwards — including across a restart-resume or an explicit retry — cannot change work
   already queued. A purpose deleted before the start is simply absent. The observe stage never receives a brief.
-- The A/B snapshot freezes the same target, voice projection, and brief, so both candidates get byte-identical inputs
-  except for model ref. The input hash changes with target or purpose, and the experiment records both target and
-  `purpose_name`.
+- The applicable guideline texts are resolved at the same moment, from the same purpose id, through the guideline
+  context's published `ForPrompt`, and frozen the same way. When non-empty they render as exactly one `[작문 지침]`
+  section — after the purpose section when the post has one, otherwise directly after `[종결어미 제약]`, always before
+  the per-post material — closed by a fixed precedence sentence that makes a guideline outrank a conflicting purpose
+  instruction while leaving register to the voice profile. With none applicable there is no section and the prompt is
+  baseline-identical. Retries and restart-resumes use the frozen texts; the observe stage never receives them.
+- The static task/format rules carry a universal **grounding constraint** (code, not config, not a row): the writer
+  may state no concrete fact absent from the memo and the photo observations, and may invent no interaction, facility,
+  service, conversation or price. The write pass, which holds that material, is additionally told to omit or confine
+  to the observed range whatever it cannot confirm; the revise pass, which holds neither, is instead scoped to the
+  sentences the request touches (see [revision](revision.md)). The shared core is present in every write and revise
+  prompt in both languages, is disjoint from the naturalness baseline below, and never enters the observe prompt.
+- The A/B snapshot freezes the same target, voice projection, brief, and guideline texts, so both candidates get
+  byte-identical inputs except for model ref. The input hash changes with target, purpose, or the applicable guideline
+  set, and the experiment records both target and `purpose_name`; the guideline texts are not projected for display.
 - Observation runs at most once in either mode. Ordinary generation calls one writer and directly persists validated
   content. A/B generation gives both writers byte-identical prepared snapshots/schema/options except for model ref,
   runs them concurrently, and stores validated candidate output under the experiment until an explicit verdict.

@@ -36,7 +36,7 @@ func testBrief() *PurposeBrief {
 // Plan 11 A4: no purpose means no purpose-specific change to the fixed prompt.
 func TestWritePromptWithoutAPurposeIsByteIdenticalToTheBaseline(t *testing.T) {
 	wantSystem, wantUser := loadGolden(t, "write_prompt_no_purpose.golden")
-	system, user := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil)
+	system, user := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, nil)
 	if system != wantSystem {
 		t.Fatalf("system prompt drifted from the no-purpose baseline:\n--- got ---\n%s\n--- want ---\n%s", system, wantSystem)
 	}
@@ -48,7 +48,7 @@ func TestWritePromptWithoutAPurposeIsByteIdenticalToTheBaseline(t *testing.T) {
 // Plan 11 A6: the same, for revision.
 func TestRevisePromptWithoutAPurposeIsByteIdenticalToTheBaseline(t *testing.T) {
 	wantSystem, wantUser := loadGolden(t, "revise_prompt_no_purpose.golden")
-	system, user := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, nil)
+	system, user := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, nil, nil)
 	if system != wantSystem || user != wantUser {
 		t.Fatalf("revise prompt drifted from the no-purpose baseline:\n--- got ---\n%s\n--- want ---\n%s", system, wantSystem)
 	}
@@ -58,7 +58,7 @@ func TestRevisePromptWithoutAPurposeIsByteIdenticalToTheBaseline(t *testing.T) {
 // and before the per-post material — and the profile half is untouched by its presence.
 func TestWritePromptAppendsOneBriefAfterTheCompleteVoiceProfile(t *testing.T) {
 	baseline, baselineUser := loadGolden(t, "write_prompt_no_purpose.golden")
-	system, user := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, testBrief())
+	system, user := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, testBrief(), nil)
 
 	// A5: everything up to the section is the same bytes as the no-purpose prompt, so the
 	// cached profile prefix is unchanged across posts of different purposes.
@@ -88,7 +88,7 @@ func TestAnEmptyDescriptionOmitsItsLineEntirely(t *testing.T) {
 	baseline, _ := loadGolden(t, "write_prompt_no_purpose.golden")
 	brief := testBrief()
 	brief.Description = ""
-	system, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, brief)
+	system, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, brief, nil)
 
 	section := strings.TrimPrefix(system, baseline)
 	if strings.Contains(section, "이 글의 용도:") {
@@ -104,8 +104,8 @@ func TestAnEmptyDescriptionOmitsItsLineEntirely(t *testing.T) {
 func TestRevisePromptInjectsTheSameSectionAtTheSamePosition(t *testing.T) {
 	baseline, baselineUser := loadGolden(t, "revise_prompt_no_purpose.golden")
 	writeBaseline, _ := loadGolden(t, "write_prompt_no_purpose.golden")
-	writeSystem, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, testBrief())
-	reviseSystem, reviseUser := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, testBrief())
+	writeSystem, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, testBrief(), nil)
+	reviseSystem, reviseUser := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, testBrief(), nil)
 
 	if !strings.HasPrefix(reviseSystem, baseline) || reviseUser != baselineUser {
 		t.Fatalf("the brief moved something else in the revise prompt:\n%s", reviseSystem)
@@ -140,8 +140,8 @@ func TestTheFrozenPayloadSurvivesAnEditOrDeletionOfTheLiveRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, _ := BuildWritePrompt(goldenProfile(), nil, "", "", nil, nil, decoded.Purpose)
-	second, _ := BuildWritePrompt(goldenProfile(), nil, "", "", nil, nil, again.Purpose)
+	first, _ := BuildWritePrompt(goldenProfile(), nil, "", "", nil, nil, decoded.Purpose, nil)
+	second, _ := BuildWritePrompt(goldenProfile(), nil, "", "", nil, nil, again.Purpose, nil)
 	if first != second {
 		t.Fatal("a resumed run built a different prompt than the first attempt")
 	}
@@ -159,7 +159,7 @@ func TestAPayloadWithoutAPurposeFieldDecodesAsNoPurpose(t *testing.T) {
 
 // The revision payload freezes the brief the same way the generate payload does.
 func TestTheRevisionPayloadFreezesTheBriefToo(t *testing.T) {
-	raw, err := encodeRevisionPayload("INSTRUCTION", false, testBrief())
+	raw, err := encodeRevisionPayload("INSTRUCTION", false, testBrief(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

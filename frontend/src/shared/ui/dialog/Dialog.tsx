@@ -30,6 +30,12 @@ export function Dialog({
   const { t } = useTranslation('common')
   const panel = useRef<HTMLDivElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
+  // TWO effects, deliberately. The focus and scroll setup depends on `open` ALONE: callers pass
+  // an inline `onClose`, so a new identity arrives on every render of the dialog's parent, and
+  // with `onClose` in these deps the effect re-ran on each of them and called `panel.focus()` —
+  // stealing focus out of any field inside the sheet after one keystroke. Nothing noticed while
+  // every dialog held only text and two buttons. Re-registering the key listener below is
+  // harmless by comparison, so it keeps `onClose` in its own deps.
   useEffect(() => {
     if (!open) return
     returnFocus.current = document.activeElement as HTMLElement | null
@@ -39,7 +45,13 @@ export function Dialog({
     // page underneath the sheet, and the user lands somewhere else when it closes (§7).
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-
+    return () => {
+      document.body.style.overflow = previousOverflow
+      returnFocus.current?.focus()
+    }
+  }, [open])
+  useEffect(() => {
+    if (!open) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
       if (event.key !== 'Tab' || !panel.current) return
@@ -66,11 +78,7 @@ export function Dialog({
       }
     }
     document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = previousOverflow
-      returnFocus.current?.focus()
-    }
+    return () => document.removeEventListener('keydown', onKeyDown)
   }, [onClose, open])
   if (!open) return null
   return createPortal(

@@ -37,9 +37,9 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	for _, image := range post.Images {
 		filenames = append(filenames, image.Filename)
 	}
-	// The brief comes from the frozen payload, never from the live row, exactly as the
-	// generate handler does it.
-	system, user := BuildRevisePromptForLanguage(payload.ContentLanguage, profile, *post.Content, filenames, payload.Instruction, post.TargetLength, decodePurpose(payload.Purpose))
+	// The brief and the 지침 come from the frozen payload, never from the live rows, exactly
+	// as the generate handler does it.
+	system, user := BuildRevisePromptForLanguage(payload.ContentLanguage, profile, *post.Content, filenames, payload.Instruction, post.TargetLength, decodePurpose(payload.Purpose), payload.Guidelines)
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},

@@ -19,7 +19,7 @@ func revisionContent(text string, blocks ...Block) *PostContent {
 
 func mustRevisionPayload(t *testing.T, instruction string, save bool) []byte {
 	t.Helper()
-	payload, err := encodeRevisionPayload(instruction, save, nil)
+	payload, err := encodeRevisionPayload(instruction, save, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func mustRevisionPayload(t *testing.T, instruction string, save bool) []byte {
 func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) {
 	system, user := BuildRevisePrompt(Profile{
 		Styleguide: "STYLE", ActiveRules: "ACTIVE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"}, Rules: "RULES", EndingMaxConsecutive: 2,
-	}, *revisionContent("CURRENT"), []string{"IMG_1.jpg"}, "INSTRUCTION", nil, nil)
+	}, *revisionContent("CURRENT"), []string{"IMG_1.jpg"}, "INSTRUCTION", nil, nil, nil)
 	whole := system + "\n" + user
 	positions := []int{
 		strings.Index(whole, "STYLE"), strings.Index(whole, "ACTIVE"), strings.Index(whole, "EXCERPT-1"),
@@ -54,7 +54,7 @@ func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) 
 		t.Fatalf("revision added a hidden length target: %s", system)
 	}
 	target := 940
-	configured, _ := BuildRevisePrompt(Profile{}, *revisionContent("CURRENT"), nil, "INSTRUCTION", &target, nil)
+	configured, _ := BuildRevisePrompt(Profile{}, *revisionContent("CURRENT"), nil, "INSTRUCTION", &target, nil, nil)
 	if !strings.Contains(configured, "목표 길이: 약 940자") {
 		t.Fatalf("configured revision target missing: %s", configured)
 	}
@@ -223,7 +223,7 @@ func TestStartRevisionSavesRuleBeforeEnqueueAndNewWritePromptSeesIt(t *testing.T
 	if err != nil || payload.Instruction != "존댓말로" || !payload.SaveAsRule {
 		t.Fatalf("payload=%+v err=%v", payload, err)
 	}
-	system, _ := BuildWritePrompt(profile, nil, "memo", "title", nil, nil, nil)
+	system, _ := BuildWritePrompt(profile, nil, "memo", "title", nil, nil, nil, nil)
 	if strings.Index(system, "존댓말로") <= strings.Index(system, "EXCERPT") {
 		t.Fatalf("saved rule is not after excerpts: %s", system)
 	}

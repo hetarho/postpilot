@@ -221,6 +221,17 @@ describe('the purpose management route', () => {
   })
 })
 
+// Plan 16 A14: 지침 is a top-level destination after 용도, reachable from the nav.
+describe('the guideline management route', () => {
+  it('mounts /guidelines and offers it in the navigation after 용도', async () => {
+    renderAppAt('/guidelines', { user: { id: 'alice' } })
+
+    expect(await screen.findByRole('heading', { level: 1, name: '지침' })).toBeInTheDocument()
+    const labels = hrefs()
+    expect(labels.indexOf('/guidelines')).toBeGreaterThan(labels.indexOf('/purposes'))
+  })
+})
+
 // Job 31: every screen outside the login → posts → editor core is now fetched when its route
 // is first entered. These mount the app DIRECTLY at each address — createMemoryHistory starts
 // there with no prior navigation, which is what a deep link or a refresh does — so a lazy
@@ -230,6 +241,7 @@ describe('lazily loaded routes', () => {
     ['/publishing-agents', '발행 Mac'],
     ['/voices', '말투'],
     ['/purposes', '용도'],
+    ['/guidelines', '지침'],
     ['/ai-models', 'AI 모델'],
   ])('renders %s on a direct load', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
@@ -455,6 +467,7 @@ describe('localized registered-route smoke', () => {
       publishing: '발행 Mac',
       voices: '말투',
       purposes: '용도',
+      guidelines: '지침',
       profile: '프로필',
       versions: '버전 기록',
       import: '기존 글 가져오기',
@@ -470,6 +483,7 @@ describe('localized registered-route smoke', () => {
       publishing: 'Publishing Macs',
       voices: 'Voices',
       purposes: 'Purposes',
+      guidelines: 'Guidelines',
       profile: 'Profile',
       versions: 'Version history',
       import: 'Import existing posts',
@@ -511,6 +525,7 @@ describe('localized registered-route smoke', () => {
         },
         { path: '/voices', role: 'heading', name: text.voices, signedIn: true },
         { path: '/purposes', role: 'heading', name: text.purposes, signedIn: true },
+        { path: '/guidelines', role: 'heading', name: text.guidelines, signedIn: true },
         {
           path: '/voices/voice-default',
           role: 'heading',
@@ -670,10 +685,10 @@ describe('plan-gated navigation', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '발행 Mac' })).toBeInTheDocument()
   })
 
-  it('keeps the other four destinations for every tier', async () => {
+  it('keeps the other five destinations for every tier', async () => {
     renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
     await screen.findByRole('heading', { level: 1, name: '내 글' })
-    for (const destination of ['/posts', '/voices', '/purposes', '/ai-models']) {
+    for (const destination of ['/posts', '/voices', '/purposes', '/guidelines', '/ai-models']) {
       expect(hrefs()).toContain(destination)
     }
   })

@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { Bot, FileText, Quote, Send, Target } from 'lucide-react'
+import { Bot, FileText, ListChecks, Quote, Send, Target } from 'lucide-react'
 import { Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useLogout, useSession } from '@/entities/session'
@@ -9,12 +9,14 @@ import { PlanUsage } from '@/widgets/plan-usage'
 import { endSession } from '../model/end-session'
 
 /** The app's destinations, in one list so the phone tab bar and the desktop header cannot drift.
- *  Five is the top of the 3–5 a bottom bar is designed for, so every destination stays visible —
- *  NN/g measured a >20% drop in discoverability once navigation is hidden behind a menu. A sixth
- *  would have to displace one of these rather than be squeezed in beside them. */
+ *  Every destination stays visible rather than moving behind a menu — NN/g measured a >20% drop in
+ *  discoverability once navigation is hidden. An ordinary account sees five, which is the top of
+ *  the 3–5 a bottom bar is designed for; the operator sees six, and at 320px that is 53px per tab
+ *  against the 44px minimum, so the targets still hold. A seventh would have to displace one of
+ *  these rather than be squeezed in beside them. */
 const DESTINATIONS: ReadonlyArray<{
   to: string
-  labelKey: 'posts' | 'voices' | 'purposes' | 'models' | 'publishingAgents'
+  labelKey: 'posts' | 'voices' | 'purposes' | 'guidelines' | 'models' | 'publishingAgents'
   icon: ComponentType<{ className?: string }>
   /** The tier this destination requires. Publishing runs through OUR paired agent and OUR
    *  infrastructure ([I1]), so it is the operator's surface — and the server refuses every one
@@ -24,6 +26,7 @@ const DESTINATIONS: ReadonlyArray<{
   { to: '/posts', labelKey: 'posts', icon: FileText },
   { to: '/voices', labelKey: 'voices', icon: Quote },
   { to: '/purposes', labelKey: 'purposes', icon: Target },
+  { to: '/guidelines', labelKey: 'guidelines', icon: ListChecks },
   { to: '/ai-models', labelKey: 'models', icon: Bot },
   { to: '/publishing-agents', labelKey: 'publishingAgents', icon: Send, masterOnly: true },
 ]
@@ -47,8 +50,8 @@ export function AuthenticatedLayout() {
   const { user } = useSession()
   const logout = useLogout()
   const navigate = useNavigate()
-  // Four destinations for an ordinary account, five for the operator — still inside the 3–5 a
-  // bottom bar is designed for, so the phone bar keeps every destination visible either way.
+  // Five destinations for an ordinary account, six for the operator — the phone bar keeps every
+  // destination visible either way.
   const destinations = DESTINATIONS.filter(
     (destination) => !destination.masterOnly || user?.plan === 'master',
   )

@@ -7,6 +7,7 @@ import (
 )
 
 const RevisePrompt = `현재 블로그 글에 사용자의 수정 요청만 최소한으로 반영하세요.
+` + koreanGrounding + " " + koreanGroundingReviseScope + `
 요청과 무관한 문장은 글자 그대로 유지하고, 손대지 않은 블록을 다듬거나 다시 쓰지 마세요.
 제목, 한 줄 요약, 태그는 사용자가 그것들을 고쳐 달라고 한 경우에만 바꾸세요.
 IMAGE 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 순서 변경이나 요청에 따른 제거는 가능하지만 파일명을 바꾸거나 새 이미지를 만들지 마세요.
@@ -14,6 +15,7 @@ IMAGE 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 순
 각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.`
 
 const englishRevisePrompt = `Apply only the user's requested edit to the current blog post, with the smallest possible change.
+` + englishGrounding + " " + englishGroundingReviseScope + `
 Keep every unrelated sentence byte-for-byte and do not polish or rewrite untouched blocks.
 Change the title, one-line summary, or tags only when the user explicitly asks to change them.
 IMAGE blocks may use only exact attached filenames. They may be reordered or removed when requested, but never rename a file or invent an image.
@@ -27,18 +29,21 @@ type revisionPayloadJSON struct {
 	// Frozen at enqueue exactly as the generate payload freezes it. A payload written
 	// before purposes existed decodes with this absent, which is "no purpose".
 	Purpose *purposePayload `json:"purpose,omitempty"`
+	// Likewise for the applicable guideline texts, in injection order.
+	Guidelines []string `json:"guidelines,omitempty"`
 }
 
-func encodeRevisionPayload(instruction string, saveAsRule bool, purpose *PurposeBrief) ([]byte, error) {
-	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, purpose)
+func encodeRevisionPayload(instruction string, saveAsRule bool, purpose *PurposeBrief, guidelines []string) ([]byte, error) {
+	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, purpose, guidelines)
 }
 
-func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, purpose *PurposeBrief) ([]byte, error) {
+func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, purpose *PurposeBrief, guidelines []string) ([]byte, error) {
 	if !language.Valid() {
 		return nil, ErrContentLanguageRequired
 	}
 	return json.Marshal(revisionPayloadJSON{
-		Instruction: instruction, SaveAsRule: saveAsRule, ContentLanguage: language, Purpose: encodePurpose(purpose),
+		Instruction: instruction, SaveAsRule: saveAsRule, ContentLanguage: language,
+		Purpose: encodePurpose(purpose), Guidelines: cloneTexts(guidelines),
 	})
 }
 
@@ -62,11 +67,11 @@ func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
 	return value, nil
 }
 
-func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, purpose *PurposeBrief) (string, string) {
-	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, purpose)
+func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, purpose *PurposeBrief, guidelines []string) (string, string) {
+	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, purpose, guidelines)
 }
 
-func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, purpose *PurposeBrief) (string, string) {
+func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, purpose *PurposeBrief, guidelines []string) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
@@ -82,6 +87,8 @@ func BuildRevisePromptForLanguage(language Language, profile Profile, content Po
 	// The same section, at the same relative position, as the write prompt: a revision of a
 	// post with a purpose must not be given a different brief than the pass that wrote it.
 	writePurposeSection(&stable, purpose)
+	// The same section, at the same relative position, for the same reason.
+	writeGuidelinesSection(&stable, guidelines)
 
 	files := "없음"
 	if len(filenames) > 0 {

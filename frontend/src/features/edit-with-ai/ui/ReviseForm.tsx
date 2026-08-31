@@ -16,6 +16,7 @@ import {
   Textarea,
 } from '@/shared/ui'
 import { useStartRevision } from '../api/useStartRevision'
+import { SaveAsGuidelineButton } from './SaveAsGuidelineButton'
 
 interface ReviseFormProps {
   ownerId: string
@@ -24,6 +25,9 @@ interface ReviseFormProps {
   voice: Pick<VoiceRef, 'id' | 'deleted'>
   /** The revision itself stays available; only publishing its sentence as a voice rule is unsafe. */
   ruleLanguageMismatch?: boolean
+  /** The post's current purpose, read from the already-loaded post so the guideline capture can
+   *  offer it as a scope without issuing a query. Empty id means the post has none. */
+  purpose?: { id: string; name: string }
   activeJob?: GenerationJob
   jobPending?: boolean
   onStarted: (jobId: string) => void
@@ -41,6 +45,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
     postSlug,
     voice,
     ruleLanguageMismatch = false,
+    purpose,
     activeJob,
     jobPending = false,
     onStarted,
@@ -56,6 +61,10 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
   const selectionSaving = useSelectionSavePending()
   const startRevision = useStartRevision(ownerId, voice.id)
   const hasActiveJob = Boolean(activeJob && !isTerminal(activeJob))
+  // A completed REVISION, not just any completed job: a finished `generate` job leaves the
+  // instruction box holding text that never ran, and 'done' rather than merely terminal because a
+  // failed revision produced nothing worth turning into a rule.
+  const revisionCompleted = activeJob?.kind === 'revise' && activeJob.status === 'done'
   const voiceBlocked = Boolean(voice?.deleted)
   const trimmed = instruction.trim()
   const disabled =
@@ -172,6 +181,20 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           <p role="status" className="text-content-secondary text-sm">
             {t('revision.ruleLanguageMismatch')}
           </p>
+        )}
+        {/* Beside 규칙으로 저장, but only after a revision has actually finished: the instruction is
+            worth saving as a rule once the user has seen what it did. `규칙으로 저장` has to be a
+            pre-flight checkbox because the voice learns from the run itself; a guideline is a plain
+            create, so it can wait for the result. */}
+        {revisionCompleted && (
+          <div className="flex flex-wrap items-center gap-2">
+            <SaveAsGuidelineButton
+              ownerId={ownerId}
+              instruction={trimmed}
+              purpose={purpose?.id ? purpose : undefined}
+              disabled={trimmed === '' || startRevision.isPending}
+            />
+          </div>
         )}
         {/* Validation and failure sit ABOVE the action, so the keyboard covering the bottom ~40%
             of the screen hides at most the button and never the reason it is disabled (§8.3). */}

@@ -45,6 +45,16 @@ export const errors = {
   PURPOSE_INSTRUCTIONS_REQUIRED: '작성 지침을 입력해 주세요.',
   PURPOSE_NAME_TAKEN: '같은 이름의 용도가 이미 있어요.',
   PURPOSE_FIELD_TOO_LONG: '입력값은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
+  GUIDELINE_NOT_FOUND: '지침을 찾을 수 없어요.',
+  GUIDELINE_TEXT_REQUIRED: '지침 내용을 입력해 주세요.',
+  GUIDELINE_TEXT_TOO_LONG: '지침은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
+  GUIDELINE_TEXT_TAKEN: '이미 같은 지침이 있어요.',
+  GUIDELINE_SCOPE_INVALID:
+    '적용 범위를 다시 골라 주세요. 전역이면 용도를 비우고, 특정 용도면 하나 이상 골라야 해요.',
+  GUIDELINE_PURPOSE_NOT_FOUND:
+    '고른 용도를 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요.',
+  GUIDELINE_LIMIT_REACHED:
+    '지침은 최대 {{max}}개까지 저장할 수 있어요. 쓰지 않는 지침을 지운 뒤 다시 시도해 주세요.',
   MODEL_STAGE_REQUIRED: 'AI 단계를 선택해 주세요.',
   MODEL_STAGE_INVALID: '지원하지 않는 AI 단계예요.',
   MODEL_NOT_REGISTERED: '등록되지 않은 모델이에요.',

@@ -1111,3 +1111,110 @@ func TestMigration0013BackfillsExistingAccountsToMasterAndRollsBack(t *testing.T
 		t.Fatal("down lost the account")
 	}
 }
+
+// A12/A13: the two guideline tables arrive empty, both foreign keys carry the account, and
+// deleting a purpose unlinks it from every guideline in the same statement while the
+// guideline rows themselves survive as "applies nowhere until rescoped".
+func TestMigration0014AddsAccountScopedGuidelinesAndCascadesLinks(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	const at = "2026-09-01T00:00:00.000000000Z"
+	for _, statement := range []string{
+		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + at + `')`,
+		`INSERT INTO users(id,password_hash,created_at) VALUES('bob','hash','` + at + `')`,
+		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('ap','alice','리뷰','','지침','` + at + `','` + at + `')`,
+		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('ap2','alice','후기','','지침','` + at + `','` + at + `')`,
+		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('bp','bob','리뷰','','지침','` + at + `','` + at + `')`,
+		`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('ag','alice','CCTV 언급 금지','purposes','` + at + `','` + at + `')`,
+		`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('agg','alice','없는 사실 쓰지 않기','global','` + at + `','` + at + `')`,
+		`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','ap','alice')`,
+		`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','ap2','alice')`,
+	} {
+		if _, err := handle.Writer.Exec(statement); err != nil {
+			t.Fatalf("statement failed: %v\n%s", err, statement)
+		}
+	}
+
+	// A fresh database seeds nothing; the two rows above are the only ones that exist.
+	var seeded int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guidelines WHERE user_id='bob'`).Scan(&seeded); err != nil || seeded != 0 {
+		t.Fatalf("migration seeded guidelines: count=%d err=%v", seeded, err)
+	}
+
+	if _, err := handle.Writer.Exec(`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','bp','alice')`); err == nil {
+		t.Fatal("a guideline linked another account's purpose")
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','bp','bob')`); err == nil {
+		t.Fatal("a link named a guideline from another account")
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('dup','alice','CCTV 언급 금지','global',?,?)`, at, at); err == nil {
+		t.Fatal("a duplicate text within one account was accepted")
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('bad','alice','x','voice',?,?)`, at, at); err == nil {
+		t.Fatal("an unknown scope was accepted")
+	}
+
+	// Deleting a purpose unlinks it and keeps every guideline row.
+	if _, err := handle.Writer.Exec(`DELETE FROM purposes WHERE id='ap'`); err != nil {
+		t.Fatalf("delete refused: %v", err)
+	}
+	var links, rows int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guideline_purposes WHERE user_id='alice'`).Scan(&links); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guidelines WHERE user_id='alice'`).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if links != 1 || rows != 2 {
+		t.Fatalf("purpose delete cascaded wrong: links=%d guidelines=%d", links, rows)
+	}
+	// The remaining link vanishing leaves an orphaned 'purposes' guideline, not a deletion.
+	if _, err := handle.Writer.Exec(`DELETE FROM purposes WHERE id='ap2'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guidelines WHERE id='ag'`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("orphaning removed the guideline: count=%d err=%v", rows, err)
+	}
+
+	// Deleting a guideline cascades only its own links.
+	if _, err := handle.Writer.Exec(`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('ap3','alice','재개','','지침',?,?)`, at, at); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','ap3','alice')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`DELETE FROM guidelines WHERE id='ag'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guideline_purposes`).Scan(&links); err != nil || links != 0 {
+		t.Fatalf("guideline delete left links: count=%d err=%v", links, err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM purposes WHERE id='ap3'`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("guideline delete removed a purpose: count=%d err=%v", rows, err)
+	}
+
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.DownTo(ctx, 13); err != nil {
+		t.Fatal(err)
+	}
+	for _, table := range []string{"guidelines", "guideline_purposes"} {
+		var remaining int
+		if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&remaining); err != nil || remaining != 0 {
+			t.Fatalf("rollback kept %s: count=%d err=%v", table, remaining, err)
+		}
+	}
+	// The rollback is about guidelines only: the purposes they were scoped to remain.
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM purposes WHERE user_id='alice'`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("rollback lost purposes: count=%d err=%v", rows, err)
+	}
+}

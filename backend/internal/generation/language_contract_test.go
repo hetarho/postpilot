@@ -144,7 +144,7 @@ func TestLanguageAwarePromptsKeepKoreanBaselineAndDefendPortableProjection(t *te
 		Excerpts: []string{"DO-NOT-LEAK-EXCERPT"}, Rules: "DO-NOT-LEAK-RULE",
 		EndingMaxConsecutive: 7, SourceLanguage: LanguageKorean, TargetLanguage: LanguageEnglish, Portable: true,
 	}
-	english, _ := BuildWritePromptForLanguage(LanguageEnglish, leaky, nil, "memo", "title", nil, nil, nil)
+	english, _ := BuildWritePromptForLanguage(LanguageEnglish, leaky, nil, "memo", "title", nil, nil, nil, nil)
 	for _, required := range []string{"The output language is English", "title, summary, tags", "IMAGE alt and caption", "PORTABLE-STRUCTURE", "Portable voice profile"} {
 		if !strings.Contains(english, required) {
 			t.Errorf("English prompt missing %q", required)
@@ -155,7 +155,7 @@ func TestLanguageAwarePromptsKeepKoreanBaselineAndDefendPortableProjection(t *te
 			t.Errorf("English portable prompt leaked %q", forbidden)
 		}
 	}
-	korean, _ := BuildWritePromptForLanguage(LanguageKorean, Profile{}, nil, "", "", nil, nil, nil)
+	korean, _ := BuildWritePromptForLanguage(LanguageKorean, Profile{}, nil, "", "", nil, nil, nil, nil)
 	if strings.Count(korean, NaturalnessBaseline) != 1 {
 		t.Fatalf("Korean baseline count = %d", strings.Count(korean, NaturalnessBaseline))
 	}

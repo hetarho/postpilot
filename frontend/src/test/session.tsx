@@ -21,6 +21,7 @@ import { type FakeJobsOptions, registerGenerationService } from './jobs'
 import { type FakeVoiceOptions, registerVoiceService } from './voice'
 import { type FakeExperimentsOptions, registerExperimentService } from './experiments'
 import { type FakePublishingOptions, registerPublishingService } from './publishing'
+import { type FakeGuidelinesOptions, registerGuidelineService } from './guidelines'
 import { type FakePurposesOptions, registerPurposeService } from './purposes'
 import { type FakePlansOptions, registerPlanServices } from './plans'
 import { connectAppError } from './app-error'
@@ -55,6 +56,9 @@ export interface FakeAuthOptions {
   /** The acting account's 용도 briefs. Present by default with none, so every screen that
    *  mounts the selector reads an empty directory rather than an "unimplemented" error. */
   purposes?: FakePurposesOptions
+  /** The acting account's 작문 지침. Present by default with none, so a screen that mounts the
+   *  list reads an empty one rather than an "unimplemented" error. */
+  guidelines?: FakeGuidelinesOptions
   /** The plan ladder: the caller's own tier and usage, and the operator's account list. */
   plans?: FakePlansOptions
 }
@@ -103,6 +107,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerExperimentService(router, { calls, ...options.experiments })
     registerPublishingService(router, { calls, ...options.publishing })
     registerPurposeService(router, { calls, ...options.purposes })
+    registerGuidelineService(router, { calls, ...options.guidelines })
     registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
   })
 

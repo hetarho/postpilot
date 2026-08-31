@@ -50,8 +50,13 @@ counter. The backend is authoritative; the frontend mirrors the values only for 
 - It is a trigger rather than `ON DELETE SET NULL` because SQLite sets **every** column of a composite child key to
   NULL, which would try to null `posts.user_id` and fail its NOT NULL constraint. The composite foreign key stays for
   the account guarantee it provides.
-- No post, no content, no photo and no history is deleted. Frozen job payloads and experiment snapshots keep the
-  brief's text, so work already done stays explainable.
+- The same delete also cascades the purpose's writing-guideline scope links (`guideline_purposes`, whole rows on a
+  composite key — the `SET NULL` trap above does not apply when the child row itself goes away). Every guideline row
+  survives; one left with no links applies nowhere and lists on `/guidelines` as 적용 대상 없음 until it is rescoped
+  (see [guidelines](guidelines.md)). `DeletePurpose`'s response and its post-detach behavior are unchanged, and the
+  confirmation keeps naming detached posts only — it does not count affected guidelines.
+- No post, no content, no photo, no guideline and no history is deleted. Frozen job payloads and experiment snapshots
+  keep the brief's text and the guideline texts, so work already done stays explainable.
 
 ## Assignment to a post
 

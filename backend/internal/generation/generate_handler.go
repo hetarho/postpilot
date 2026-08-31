@@ -34,6 +34,8 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	// purpose after the enqueue — including across a restart-resume or an explicit retry —
 	// must not change the prompt this run builds.
 	post.Purpose = clonePurpose(job.Purpose)
+	// Same rule for the 지침: the frozen texts, never a fresh resolution.
+	post.Guidelines = cloneTexts(job.Guidelines)
 	// An empty observe model records that StartGeneration accepted a zero-photo input.
 	// Photos attached while the queued job waits belong to the next generation; without
 	// this snapshot bit the accepted job would fail later for lacking a vision model.

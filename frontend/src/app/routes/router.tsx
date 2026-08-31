@@ -156,6 +156,12 @@ const purposesRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/purposes'), 'PurposesPage'),
 })
 
+const guidelinesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/guidelines',
+  component: lazyRouteComponent(() => import('@/pages/guidelines'), 'GuidelinesPage'),
+})
+
 // The layout of one voice: the five tabs keep their own addresses under `/voices/$voiceId` and
 // share the tab row. The two detail screens further down stay OUTSIDE it — they are full-width
 // review surfaces with their own back link, not a sixth tab.
@@ -295,6 +301,7 @@ export const routeTree = rootRoute.addChildren([
     adminRoute,
     voicesRoute,
     purposesRoute,
+    guidelinesRoute,
     voiceLayoutRoute.addChildren([
       voiceRoute,
       voiceVersionsRoute,

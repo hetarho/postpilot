@@ -15,15 +15,19 @@ type generationPayload struct {
 	TargetLanguage string          `json:"target_language"`
 	TargetLength   *int            `json:"target_length,omitempty"`
 	Purpose        *purposePayload `json:"purpose,omitempty"`
+	// The applicable guideline texts in injection order, frozen exactly as Purpose is. A
+	// payload written before guidelines existed decodes with this absent, which is "none".
+	Guidelines []string `json:"guidelines,omitempty"`
 }
 
-// GenerationOptions is what a durable generate job froze at enqueue. Both fields are
-// options of that one run: a later edit of the post's target length or of the purpose row
-// must not change the prompt of work already waiting in the queue.
+// GenerationOptions is what a durable generate job froze at enqueue. Every field is an
+// option of that one run: a later edit of the post's target length, of the purpose row, or
+// of any guideline must not change the prompt of work already waiting in the queue.
 type GenerationOptions struct {
 	TargetLanguage Language
 	TargetLength   *int
 	Purpose        *PurposeBrief
+	Guidelines     []string
 }
 
 // EncodeGenerationPayload freezes generation-only options in the durable job.
@@ -35,6 +39,7 @@ func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
 		TargetLanguage: options.TargetLanguage.String(),
 		TargetLength:   cloneOptionalInt(options.TargetLength),
 		Purpose:        encodePurpose(options.Purpose),
+		Guidelines:     cloneTexts(options.Guidelines),
 	})
 }
 
@@ -66,7 +71,17 @@ func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 		TargetLanguage: language,
 		TargetLength:   cloneOptionalInt(payload.TargetLength),
 		Purpose:        decodePurpose(payload.Purpose),
+		Guidelines:     cloneTexts(payload.Guidelines),
 	}, nil
+}
+
+// cloneTexts keeps a frozen slice frozen: the payload and the job must not share backing
+// storage with whatever the caller does next to its own slice.
+func cloneTexts(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return append([]string(nil), values...)
 }
 
 func encodePurpose(brief *PurposeBrief) *purposePayload {

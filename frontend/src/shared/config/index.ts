@@ -136,3 +136,12 @@ export const PURPOSE_INSTRUCTIONS_MAX_CHARS = positiveIntEnv(
   import.meta.env.VITE_PURPOSE_INSTRUCTIONS_MAX_CHARS,
   2000,
 )
+
+/** Writing-guideline (작문 지침) text ceiling, mirrored from `GUIDELINE_TEXT_MAX_CHARS` for the
+ *  live counter; the server stays authoritative. The per-account cap is deliberately not
+ *  mirrored — it is a prompt-size guard the backend owns, and the create form relays its
+ *  refusal message instead of predicting it. */
+export const GUIDELINE_TEXT_MAX_CHARS = positiveIntEnv(
+  import.meta.env.VITE_GUIDELINE_TEXT_MAX_CHARS,
+  300,
+)
