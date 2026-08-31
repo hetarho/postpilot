@@ -31,26 +31,18 @@ export function LoginPage() {
   }
 
   return (
-    // Anchored to the TOP, never centred. The software keyboard covers the bottom ~40% of the
-    // screen and does not resize the layout viewport, so centring parked 로그인 and the failure
-    // message behind it on 360, 390 and 430 alike, with no scroll overflow to lift them out of it
-    // (design-language §8.3). `pt-12` rather than a larger inset because the block is 344px once
-    // the failure message is in it: on the shortest phone (360x640, keyboard line ~384) that is
-    // what keeps the message itself fully in view. `min-h-full` stays — it is what paints the
-    // page's plane down the whole screen.
-    <main className="bg-surface-base text-content-primary flex min-h-full items-start justify-center px-4 pt-12 pb-10 sm:px-6">
+    <main className="bg-surface-base text-content-primary flex min-h-full items-start justify-center px-4 pt-8 pb-10 sm:items-center sm:px-6 sm:py-10">
       <form onSubmit={onSubmit} className="w-full max-w-xs">
-        {/* The wordmark replaces the text `Postpilot`, and stays inside the `h1` so the page keeps
-            its heading — the accessible name comes from the svg's own `aria-label`. `h-9` is
-            deliberate restraint: the form block is already 344px with the failure message in it,
-            and on a 360x640 phone the keyboard line lands at ~384 (§8.3). A hero-sized logo here
-            buys presence by pushing the error out of sight. */}
-        <h1>
-          <Logo className="h-9" />
+        {/* The app icon is decorative beside the labelled wordmark, so the pair remains one
+            concise heading for assistive technology. The compact phone lockup keeps the submit
+            path above the software keyboard; wider screens give the mark its full presence. */}
+        <h1 className="flex flex-col items-center gap-1 sm:gap-4">
+          <img src="/favicon.svg" alt="" className="h-10 w-10 sm:h-20 sm:w-20" />
+          <Logo className="h-8 sm:h-9" />
         </h1>
-        <p className="text-content-secondary mt-1 text-sm">계속하려면 로그인하세요</p>
+        <p className="text-content-secondary mt-1 text-center text-sm">계속하려면 로그인하세요</p>
 
-        <FieldLabel htmlFor="loginId" className="mt-8">
+        <FieldLabel htmlFor="loginId" className="mt-4 sm:mt-8">
           아이디
         </FieldLabel>
         <TextField
@@ -102,7 +94,12 @@ export function LoginPage() {
 
         {/* `pending`, not a label swap: 로그인 → 확인 중… resizes the target under the thumb that
             just pressed it (§6). */}
-        <Button type="submit" variant="cta" pending={login.isPending} className="mt-6 w-full">
+        <Button
+          type="submit"
+          variant="cta"
+          pending={login.isPending}
+          className="mt-4 w-full sm:mt-6"
+        >
           로그인
         </Button>
       </form>
