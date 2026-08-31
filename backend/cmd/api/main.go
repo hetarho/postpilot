@@ -36,6 +36,8 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/llm/openaicompat"
+	"github.com/postpilot/backend/internal/plan"
+	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -52,6 +54,8 @@ import (
 	purposerpc "github.com/postpilot/backend/internal/purpose/rpc"
 	purposestore "github.com/postpilot/backend/internal/purpose/store"
 	"github.com/postpilot/backend/internal/storage"
+	"github.com/postpilot/backend/internal/usage"
+	usagestore "github.com/postpilot/backend/internal/usage/store"
 	"github.com/postpilot/backend/internal/voice"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
@@ -75,6 +79,13 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "adduser" {
 		if err := provision.Run(context.Background(), os.Args[2:], defaultVoiceBootstrap); err != nil {
 			slog.Error("adduser failed", "err", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "setplan" {
+		if err := provision.SetPlan(context.Background(), os.Args[2:]); err != nil {
+			slog.Error("setplan failed", "err", err)
 			os.Exit(1)
 		}
 		return
@@ -145,6 +156,13 @@ func main() {
 		slog.Info("swept expired sessions", "count", n)
 	}
 
+	// The ledger is built before any context that can spend: `metered` is the registry
+	// every context is given from here on, so a call made anywhere lands on the ledger
+	// without that context knowing the ledger exists.
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), registry)
+	meteredModels := meteredRegistry{Registry: registry, ledger: ledger}
+	jobQueue.Admit(jobAdmission{ledger: ledger, registry: registry, plans: authSvc})
+
 	// Checked here rather than in config.Load: `api adduser` must work on a fresh box
 	// before a bucket exists. This still runs before the listener, so a missing value
 	// keeps /health dark and the deploy rolls back.
@@ -200,10 +218,10 @@ func main() {
 	)
 	postSvc.SetPurposeDirectory(postPurposes{service: purposeSvc})
 
-	providerSvc := provider.NewService(providerstore.New(handle.Writer, handle.Reader), registry)
+	providerSvc := provider.NewService(providerstore.New(handle.Writer, handle.Reader), meteredModels)
 	voiceSvc := voice.NewService(
 		voicestore.New(handle.Writer, handle.Reader),
-		voiceModels{selections: providerSvc, registry: registry},
+		voiceModels{selections: providerSvc, registry: meteredModels, plans: authSvc},
 		voiceJobs{queue: jobQueue},
 	)
 	voiceSvc.ConfigurePersonalization(voicePosts{service: postSvc}, voice.PersonalizationConfig{
@@ -215,25 +233,25 @@ func main() {
 		EndingMaxConsecutive: cfg.VoicePersonalization.EndingMaxConsecutive,
 	})
 	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
-	jobQueue.Register(job.KindAnalyzeVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
+	jobQueue.Register(job.KindAnalyzeVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.Analyze(ctx, voice.AnalysisJob{
 			UserID: found.UserID, VoiceID: found.VoiceID, WriteModel: found.WriteModel,
 		}, voice.Progress(progress))
-	})
-	jobQueue.Register(job.KindLearnVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
+	}))
+	jobQueue.Register(job.KindLearnVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.Learn(ctx, voice.LearningJob{UserID: found.UserID, EventID: strings.TrimSpace(string(found.Payload)), WriteModel: found.WriteModel}, voice.Progress(progress))
-	})
-	jobQueue.Register(job.KindCompareVoiceRule, func(ctx context.Context, found job.Job, progress job.Progress) error {
+	}))
+	jobQueue.Register(job.KindCompareVoiceRule, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.CompareRule(ctx, found.UserID, strings.TrimSpace(string(found.Payload)), found.WriteModel, voice.Progress(progress))
-	})
-	jobQueue.Register(job.KindValidateVoiceProfile, func(ctx context.Context, found job.Job, progress job.Progress) error {
+	}))
+	jobQueue.Register(job.KindValidateVoiceProfile, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.ValidateProfile(ctx, found.UserID, strings.TrimSpace(string(found.Payload)), voice.Progress(progress))
-	})
+	}))
 	generationSvc := generation.NewService(
 		generationPosts{service: postSvc},
 		generationProfiles{service: voiceSvc},
 		generationRules{service: voiceSvc},
-		generationModels{registry: registry},
+		generationModels{registry: meteredModels},
 		generationImages{bucket: bucket},
 		generationJobs{queue: jobQueue},
 		cfg.ObserveBatchSize,
@@ -245,7 +263,7 @@ func main() {
 	experimentStore := experimentstore.New(handle.Writer, handle.Reader)
 	experimentSvc := experiment.NewService(
 		experimentStore,
-		experimentCatalog{selections: providerSvc, registry: registry},
+		experimentCatalog{selections: providerSvc, registry: meteredModels, plans: authSvc},
 		experimentJobs{queue: jobQueue},
 		experimentRunner{generation: generationSvc, voice: voiceSvc},
 		cfg.ExperimentContentRetention,
@@ -264,14 +282,14 @@ func main() {
 	// deleted voice.
 	voiceSvc.SetExperimentGuard(voiceExperiments{service: experimentSvc})
 	experimentSvc.SetVoiceDirectory(experimentVoices{service: voiceSvc})
-	jobQueue.Register(job.KindModelExperiment, func(ctx context.Context, found job.Job, progress job.Progress) error {
+	jobQueue.Register(job.KindModelExperiment, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		experimentID := strings.TrimSpace(string(found.Payload))
 		if experimentID == "" {
 			return errors.New("model experiment payload is missing")
 		}
 		return experimentSvc.Handle(ctx, experimentID, experiment.Progress(progress))
-	})
-	jobQueue.Register(job.KindGenerate, func(ctx context.Context, found job.Job, progress job.Progress) error {
+	}))
+	jobQueue.Register(job.KindGenerate, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		if found.PostSlug == nil {
 			return job.ErrInvalidTarget
 		}
@@ -284,8 +302,8 @@ func main() {
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, Purpose: options.Purpose,
 		}, generation.Progress(progress))
-	})
-	jobQueue.Register(job.KindRevise, func(ctx context.Context, found job.Job, progress job.Progress) error {
+	}))
+	jobQueue.Register(job.KindRevise, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		if found.PostSlug == nil {
 			return job.ErrInvalidTarget
 		}
@@ -293,7 +311,7 @@ func main() {
 			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID, WriteModel: found.WriteModel,
 			Payload: found.Payload,
 		}, generation.Progress(progress))
-	})
+	}))
 
 	server := rpcserver.New(cfg, version, rpcserver.Options{
 		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc), publishingrpc.NewAgentInterceptor(publishSvc)},
@@ -303,6 +321,12 @@ func main() {
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(authSvc, cfg.SessionTTL), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewPlanServiceHandler(planrpc.NewHandler(ledger), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewAdminServiceHandler(authrpc.NewAdminHandler(authSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewPostServiceHandler(postrpc.NewHandler(postSvc), opts...)
@@ -384,7 +408,8 @@ func main() {
 
 type voiceModels struct {
 	selections *provider.Service
-	registry   *llm.Registry
+	registry   meteredRegistry
+	plans      *auth.Service
 }
 
 type publishingPosts struct{ service *post.Service }
@@ -439,7 +464,11 @@ func (a publishingPosts) PublishingSnapshot(ctx context.Context, userID, postSlu
 var _ publishing.PostSnapshots = publishingPosts{}
 
 func (a voiceModels) AnalyzeModel(ctx context.Context, userID string) (llm.ModelRef, bool, error) {
-	selections, err := a.selections.GetSelections(ctx, userID)
+	acting, err := a.plans.PlanOf(ctx, userID)
+	if err != nil {
+		return llm.ModelRef{}, false, err
+	}
+	selections, err := a.selections.GetSelections(ctx, userID, acting)
 	if err != nil {
 		return llm.ModelRef{}, false, err
 	}
@@ -489,7 +518,10 @@ func (a voiceJobs) EnqueuePersonalization(ctx context.Context, request voice.Per
 		value := request.PostSlug
 		postSlug = &value
 	}
-	id, err := a.queue.Enqueue(ctx, job.NewJob{Kind: request.Kind, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID, WriteModel: request.Model, Payload: []byte(request.Payload)})
+	id, err := a.queue.Enqueue(ctx, job.NewJob{
+		Kind: request.Kind, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID,
+		WriteModel: request.Model, ExtraModels: request.ExtraModels, Payload: []byte(request.Payload),
+	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
 		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
@@ -654,7 +686,7 @@ func postContentWire(content post.PostContent) postContentJSONWire {
 	return out
 }
 
-type generationModels struct{ registry *llm.Registry }
+type generationModels struct{ registry meteredRegistry }
 
 type generationImages struct{ bucket *storage.Bucket }
 
@@ -901,7 +933,7 @@ func (a experimentJobs) EnqueueExperiment(ctx context.Context, request experimen
 	}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindModelExperiment, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID,
-		TargetLanguage: targetLanguage, Payload: []byte(request.ExperimentID),
+		TargetLanguage: targetLanguage, Payload: []byte(request.ExperimentID), ExtraModels: request.Models,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -933,7 +965,8 @@ func (a postExperiments) PurgePost(ctx context.Context, userID, slug string) err
 
 type experimentCatalog struct {
 	selections *provider.Service
-	registry   *llm.Registry
+	registry   meteredRegistry
+	plans      *auth.Service
 }
 
 func (a experimentCatalog) Resolve(ref experiment.ModelRef) (experiment.Model, bool) {
@@ -948,12 +981,20 @@ func (a experimentCatalog) Resolve(ref experiment.ModelRef) (experiment.Model, b
 }
 
 func (a experimentCatalog) Adopt(ctx context.Context, userID string, stage experiment.Stage, ref experiment.ModelRef) error {
-	_, err := a.selections.SaveSelection(ctx, userID, provider.Stage(stage), llmRef(ref))
+	acting, err := a.plans.PlanOf(ctx, userID)
+	if err != nil {
+		return err
+	}
+	_, err = a.selections.SaveSelection(ctx, userID, acting, provider.Stage(stage), llmRef(ref))
 	return err
 }
 
 func (a experimentCatalog) Active(ctx context.Context, userID string, stage experiment.Stage) (experiment.ModelRef, bool, error) {
-	selections, err := a.selections.GetSelections(ctx, userID)
+	acting, err := a.plans.PlanOf(ctx, userID)
+	if err != nil {
+		return experiment.ModelRef{}, false, err
+	}
+	selections, err := a.selections.GetSelections(ctx, userID, acting)
 	if err != nil {
 		return experiment.ModelRef{}, false, err
 	}
@@ -1178,3 +1219,88 @@ func defaultVoiceBootstrap(ctx context.Context, handle *db.DB, userID string) er
 }
 
 var _ experiment.Runner = experimentRunner{}
+
+// meteredRegistry is the model registry every context above the llm port is given. It is
+// the registry, unchanged, except that each completed call is written to the account
+// ledger — so "every server-side LLM call is metered" holds by construction rather than by
+// each caller remembering to record one.
+type meteredRegistry struct {
+	*llm.Registry
+	ledger *usage.Service
+}
+
+func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm.Request) (llm.Response, error) {
+	response, err := m.Registry.Complete(ctx, ref, req)
+	// A ledger failure never fails the user's work: the tokens are already spent, and the
+	// budget it protects is a soft cap enforced at the NEXT admission.
+	if recordErr := m.ledger.RecordCall(ctx, ref, response.Usage, err != nil); recordErr != nil {
+		slog.Error("usage ledger write failed", "model", ref.String(), "err", recordErr)
+	}
+	return response, err
+}
+
+// jobAdmission is the plan gate at the job-enqueue seam. It is the one place that joins
+// the three things the decision needs and that no single context holds: the acting plan
+// (from the request context), the floors of the refs the job will run (from the registry),
+// and the account's ledger position (from usage).
+type jobAdmission struct {
+	ledger   *usage.Service
+	registry *llm.Registry
+	plans    *auth.Service
+}
+
+func (a jobAdmission) Admit(ctx context.Context, start job.Start) error {
+	// The request's own tier is preferred so one request is judged against one tier
+	// throughout; a start made from a worker context has no session to read, and falls back
+	// to the stored row, which is the same authority the interceptor resolved from.
+	acting, ok := auth.PlanFromContext(ctx)
+	if !ok {
+		stored, err := a.plans.PlanOf(ctx, start.UserID)
+		if err != nil {
+			return fmt.Errorf("admit %s: resolve acting plan: %w", start.Kind, err)
+		}
+		acting = stored
+	}
+	floors := make([]plan.ModelFloor, 0, len(start.Models))
+	for _, ref := range start.Models {
+		info, found := a.registry.Lookup(parseRegistryRef(ref))
+		if !found {
+			// An unregistered ref is the enqueuing service's own failure to report, not a
+			// plan refusal; it has already been validated there.
+			continue
+		}
+		floors = append(floors, plan.ModelFloor{Ref: ref, MinPlan: info.MinPlan})
+	}
+	return a.ledger.Admit(ctx, usage.Start{
+		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Models: floors,
+	})
+}
+
+func (a jobAdmission) Release(ctx context.Context, jobID string) {
+	if err := a.ledger.Release(ctx, jobID); err != nil {
+		slog.Error("release admission failed", "job", jobID, "err", err)
+	}
+}
+
+// parseRegistryRef splits the stored "provider/model" form a job records. The model id may
+// itself contain slashes (`anthropic/claude-opus-5` under the `openrouter` provider), so
+// only the first separator is a boundary.
+func parseRegistryRef(ref string) llm.ModelRef {
+	providerID, modelID, ok := strings.Cut(ref, "/")
+	if !ok {
+		return llm.ModelRef{}
+	}
+	return llm.ModelRef{ProviderID: providerID, ModelID: modelID}
+}
+
+// metered attributes every provider call a job handler makes to the account and the job
+// that caused it. Stamped once here, at the worker seam, so no handler below has to carry
+// the ledger's identity through its own call graph.
+func metered(handler job.Handler) job.Handler {
+	return func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return handler(usage.WithWork(ctx, usage.Work{
+			UserID: found.UserID, Kind: found.Kind, JobID: found.ID,
+			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+		}), found, progress)
+	}
+}

@@ -4,7 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 )
+
+// releaseTimeout bounds the one compensating delete. It is a single indexed statement on the
+// writer, so anything longer than this is a stuck database, not a slow query.
+const releaseTimeout = 5 * time.Second
 
 // Enqueue persists queued work and only then wakes the worker. It never runs the
 // handler in the caller's request.
@@ -34,7 +39,20 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 		TargetLanguage: input.TargetLanguage,
 		Payload:        append([]byte(nil), input.Payload...), CreatedAt: now, UpdatedAt: now,
 	}
+
+	// Admission precedes the insert so a refused start leaves no job row at all. The
+	// error is returned unwrapped: the plan refusals it carries are matched by type at
+	// every rpc edge above, and wrapping them here would say nothing a caller needs.
+	if q.admitter != nil {
+		if err := q.admitter.Admit(ctx, Start{
+			UserID: input.UserID, Kind: input.Kind, JobID: found.ID, Models: input.models(),
+		}); err != nil {
+			return "", err
+		}
+	}
+
 	if err := q.store.Insert(ctx, found); err != nil {
+		q.releaseAdmission(ctx, found.ID)
 		if errors.Is(err, ErrActiveConflict) {
 			active, lookupErr := q.activeForInput(ctx, input)
 			if lookupErr == nil && active != nil {
@@ -49,6 +67,20 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	default:
 	}
 	return found.ID, nil
+}
+
+// releaseAdmission compensates an admission whose job row was never created.
+//
+// It deliberately drops the caller's cancellation: the most likely reason the insert failed
+// is that the request went away, and releasing on that same dead context would leave the
+// account charged for a start it never got.
+func (q *Queue) releaseAdmission(ctx context.Context, jobID string) {
+	if q.admitter == nil {
+		return
+	}
+	releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), releaseTimeout)
+	defer cancel()
+	q.admitter.Release(releaseCtx, jobID)
 }
 
 // activeForInput checks every guard the row will be inserted under. Voice-owned work may

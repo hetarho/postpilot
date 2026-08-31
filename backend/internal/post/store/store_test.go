@@ -10,6 +10,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store"
@@ -33,7 +34,7 @@ func newStore(t *testing.T) *store.Store {
 
 	users := authstore.New(handle.Writer, handle.Reader)
 	for _, id := range []string{"alice", "bob"} {
-		if err := users.CreateUser(context.Background(), auth.User{ID: id, PasswordHash: "hash", CreatedAt: testNow}); err != nil {
+		if err := users.CreateUser(context.Background(), auth.User{ID: id, PasswordHash: "hash", Plan: plan.Free, CreatedAt: testNow}); err != nil {
 			t.Fatalf("seed user %s: %v", id, err)
 		}
 		// A post names its voice, so each account gets its default plus one more.

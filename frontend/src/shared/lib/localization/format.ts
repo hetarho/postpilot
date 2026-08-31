@@ -26,6 +26,22 @@ export function formatPercent(
   })
 }
 
+/** Money the ledger stores in millionths of one USD.
+ *
+ *  Two decimals with the fraction always shown: a budget of `$0.10` and a spend of `$0.07`
+ *  have to be comparable at a glance, and `$0.1` next to `$0.07` reads as the larger number.
+ *  A non-numeric input renders as nothing rather than as `$NaN`. */
+export function formatMicroUsd(microusd: number | string, locale: Locale = activeLocale()): string {
+  const value = typeof microusd === 'string' ? Number(microusd) : microusd
+  if (!Number.isFinite(value)) return ''
+  return new Intl.NumberFormat(intlLocale(locale), {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value / 1_000_000)
+}
+
 export function formatDate(value: string | Date, locale: Locale = activeLocale()): string {
   const date = typeof value === 'string' ? new Date(value) : value
   if (Number.isNaN(date.getTime())) return ''

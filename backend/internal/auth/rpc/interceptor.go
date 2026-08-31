@@ -10,6 +10,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
@@ -44,6 +45,35 @@ var agentProcedures = map[string]bool{
 	postpilotv1connect.PublishingAgentServiceCompletePublishProcedure:       true,
 	postpilotv1connect.PublishingAgentServiceFailPublishProcedure:           true,
 }
+
+// masterProcedures may be called only by the operator tier.
+//
+// Publishing is here as a whole surface, not per capability: it runs through OUR paired
+// agent and OUR infrastructure ([I1]), so an account that cannot be billed for it must
+// not be able to pair one, start one, or drive an existing one. Administration is here
+// because it is what assigns the tiers.
+//
+// The set is closed by default in the same sense as publicProcedures: a procedure absent
+// from it is reachable by any authenticated plan, so a NEW master-only procedure must be
+// added here in the same change that adds it to the proto.
+var masterProcedures = map[string]bool{
+	postpilotv1connect.PublishingServiceCreateAgentPairingProcedure:       true,
+	postpilotv1connect.PublishingServiceListPublishingAgentsProcedure:     true,
+	postpilotv1connect.PublishingServiceUpdatePublishingAgentProcedure:    true,
+	postpilotv1connect.PublishingServiceRevokePublishingAgentProcedure:    true,
+	postpilotv1connect.PublishingServiceStartPublishProcedure:             true,
+	postpilotv1connect.PublishingServiceGetPublishJobProcedure:            true,
+	postpilotv1connect.PublishingServiceListRetryablePublishJobsProcedure: true,
+	postpilotv1connect.PublishingServiceRetryPublishProcedure:             true,
+	postpilotv1connect.PublishingServiceCancelPublishProcedure:            true,
+
+	postpilotv1connect.AdminServiceListUsersProcedure:   true,
+	postpilotv1connect.AdminServiceSetUserPlanProcedure: true,
+}
+
+// masterOnlyMessage is what a non-master caller sees. It names no account and no tier
+// membership beyond the requirement itself.
+const masterOnlyMessage = "this procedure requires the master plan"
 
 // Interceptor is the authentication gate for every Connect procedure.
 //
@@ -97,7 +127,7 @@ func (i *Interceptor) authorize(ctx context.Context, procedure string, header ht
 		return ctx, nil
 	}
 
-	userID, err := i.svc.Authenticate(ctx, cookieValue(header))
+	actor, err := i.svc.Authenticate(ctx, cookieValue(header))
 	if err != nil {
 		if !errors.Is(err, auth.ErrNoSession) {
 			// A store failure is not the caller's fault, but it still must not let the
@@ -108,7 +138,11 @@ func (i *Interceptor) authorize(ctx context.Context, procedure string, header ht
 		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, unauthenticatedMessage, "AUTH_REQUIRED", nil)
 	}
 
-	return auth.WithUser(ctx, userID), nil
+	if masterProcedures[procedure] && actor.Plan != plan.Master {
+		return nil, rpcserver.NewAppError(connect.CodePermissionDenied, masterOnlyMessage, plan.ReasonMasterOnly, nil)
+	}
+
+	return auth.WithActor(ctx, actor), nil
 }
 
 var _ connect.Interceptor = (*Interceptor)(nil)

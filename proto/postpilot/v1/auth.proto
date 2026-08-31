@@ -4,6 +4,8 @@ package postpilot.v1;
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
+import "postpilot/v1/plan.proto";
+
 // auth.proto is the identity slice of the contract. Accounts are created by the
 // operator (`api adduser`), never over the wire — there is deliberately no Signup RPC
 // (PRD F-1).
@@ -27,6 +29,9 @@ message LoginRequest {
 
 message LoginResponse {
   User user = 1;
+  // The same tier GetMe reports. It rides the login response so the first authenticated
+  // paint after a login gates on the real tier instead of on nothing.
+  Plan plan = 2;
 }
 
 message LogoutRequest {}
@@ -37,6 +42,9 @@ message GetMeRequest {}
 
 message GetMeResponse {
   User user = 1;
+  // The account's tier rides the session probe so the app can gate master-only surfaces
+  // on boot without a second round-trip.
+  Plan plan = 2;
 }
 
 // User is everything the client may know about an account. There is no display name,

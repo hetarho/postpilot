@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
-import { AuthService } from '@/shared/api'
+import { AuthService, ProtoPlan } from '@/shared/api'
 import { initializeI18n } from '@/app/providers/i18n'
 import { THEME_PREFERENCE_STORAGE_KEY } from '@/shared/config'
 import { renderAppAt } from '@/test/app'
@@ -645,3 +645,43 @@ describe('localized registered-route smoke', () => {
     },
   )
 })
+
+// Job 37: publishing runs through OUR paired agent and OUR infrastructure ([I1]), so it is the
+// operator's surface. The server refuses every one of its procedures to another tier — these
+// prove the shell does not offer what the server would refuse.
+describe('plan-gated navigation', () => {
+  it('offers 발행 Mac only to the operator tier', async () => {
+    renderAppAt('/posts', { user: { id: 'root', plan: ProtoPlan.MASTER } })
+    await screen.findByRole('heading', { level: 1, name: '내 글' })
+    expect(hrefs().filter((href) => href === '/publishing-agents')).not.toHaveLength(0)
+
+    cleanup()
+    renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
+    await screen.findByRole('heading', { level: 1, name: '내 글' })
+    expect(hrefs()).not.toContain('/publishing-agents')
+  })
+
+  it('sends a non-operator away from /publishing-agents', async () => {
+    renderAppAt('/publishing-agents', { user: { id: 'alice', plan: ProtoPlan.FREE } })
+    expect(await screen.findByRole('heading', { level: 1, name: '내 글' })).toBeInTheDocument()
+
+    cleanup()
+    renderAppAt('/publishing-agents', { user: { id: 'root', plan: ProtoPlan.MASTER } })
+    expect(await screen.findByRole('heading', { level: 1, name: '발행 Mac' })).toBeInTheDocument()
+  })
+
+  it('keeps the other four destinations for every tier', async () => {
+    renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
+    await screen.findByRole('heading', { level: 1, name: '내 글' })
+    for (const destination of ['/posts', '/voices', '/purposes', '/ai-models']) {
+      expect(hrefs()).toContain(destination)
+    }
+  })
+})
+
+function hrefs(): string[] {
+  return screen
+    .getAllByRole('link')
+    .map((link) => link.getAttribute('href'))
+    .filter((href): href is string => href !== null)
+}

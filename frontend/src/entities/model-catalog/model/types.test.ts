@@ -12,6 +12,8 @@ const model = (modelId: string, vision: boolean, disabled = false): CatalogModel
   inputUsdPerMillion: '',
   outputUsdPerMillion: '',
   pricingCheckedAt: '',
+  minPlan: 'free',
+  locked: false,
 })
 
 describe('filterForStage', () => {

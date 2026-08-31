@@ -17,6 +17,7 @@ type Handler func(ctx context.Context, found Job, progress Progress) error
 // Queue owns enqueue/query behavior, the handler registry, and the worker wake signal.
 type Queue struct {
 	store        Store
+	admitter     Admitter
 	pollInterval time.Duration
 	wake         chan struct{}
 
@@ -35,6 +36,12 @@ func New(store Store, pollInterval time.Duration) *Queue {
 		handlers: make(map[string]Handler), now: time.Now, newID: newID,
 	}
 }
+
+// Admit installs the plan gate. It is a setter rather than a New parameter because the
+// gate is only meaningful for LLM-consuming kinds, and because the composition root
+// builds the queue before the usage context it depends on. A queue with no admitter
+// enqueues freely — which is what the queue's own tests want.
+func (q *Queue) Admit(admitter Admitter) { q.admitter = admitter }
 
 // Register binds a kind to its owning context at the composition root.
 func (q *Queue) Register(kind string, handler Handler) {

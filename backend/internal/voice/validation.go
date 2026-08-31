@@ -384,7 +384,10 @@ func (s *Service) StartValidation(ctx context.Context, userID, voiceID string, a
 	if err = s.personalization.InsertProfileValidation(ctx, validation); err != nil {
 		return "", "", err
 	}
-	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: ValidateProfileJobKind, UserID: userID, VoiceID: voiceID, Model: write.String(), Payload: id})
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{
+		Kind: ValidateProfileJobKind, UserID: userID, VoiceID: voiceID, Model: write.String(),
+		ExtraModels: []string{selected.String()}, Payload: id,
+	})
 	if err != nil {
 		validation.Status = "failed"
 		now := s.now()
@@ -500,7 +503,12 @@ func (s *Service) RetryValidation(ctx context.Context, userID, id string) (strin
 	if err = s.personalization.UpdateProfileValidation(ctx, validation); err != nil {
 		return "", err
 	}
-	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: ValidateProfileJobKind, UserID: userID, VoiceID: validation.VoiceID, Model: validation.WriteModelRef, Payload: id})
+	// The retry runs the SAME two models the validation froze, so both go through the gate
+	// again: a downgrade between the first run and the retry must refuse the locked one.
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{
+		Kind: ValidateProfileJobKind, UserID: userID, VoiceID: validation.VoiceID, Model: validation.WriteModelRef,
+		ExtraModels: []string{validation.AnalyzeModelRef}, Payload: id,
+	})
 	if err != nil {
 		validation.Status = "failed"
 		now := s.now()

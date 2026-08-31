@@ -19,5 +19,5 @@ export function useSession(): {
     {},
     { retry: false, staleTime: SESSION_STALE_MS },
   )
-  return { user: toSessionUser(data?.user), isPending, isError }
+  return { user: toSessionUser(data), isPending, isError }
 }

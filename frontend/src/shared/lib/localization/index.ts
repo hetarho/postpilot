@@ -14,6 +14,7 @@ export {
 export {
   formatDate,
   formatDateTime,
+  formatMicroUsd,
   formatNumber,
   formatPercent,
   formatRelativeTime,

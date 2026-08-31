@@ -12,6 +12,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
@@ -89,7 +90,7 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	if err := db.Migrate(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
-	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", CreatedAt: time.Now()}); err != nil {
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
@@ -133,7 +134,7 @@ func TestGenerationAdapterCarriesThePostPurposeThroughToTheFrozenBrief(t *testin
 	if err := db.Migrate(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
-	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", CreatedAt: time.Now()}); err != nil {
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
 	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
@@ -213,7 +214,7 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 	if err := db.Migrate(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
-	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", CreatedAt: time.Now()}); err != nil {
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
 	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {

@@ -109,5 +109,17 @@ export const errors = {
   PUBLISH_AGENT_UNAVAILABLE: 'No publishing Mac is available.',
   PUBLISH_NEEDS_ATTENTION: "Check the login in the Mac's dedicated browser.",
   PUBLISH_OUTCOME_UNKNOWN: 'The publishing result is uncertain. Check the blog directly.',
+  DAILY_COUNT:
+    'You have used all {{limit}} AI job starts for today. It reopens at {{resets_at, instant}}.',
+  DAILY_COST:
+    "You have used today's {{limit, microusd}} budget. It reopens at {{resets_at, instant}}.",
+  MONTHLY_COST:
+    "You have used this month's {{limit, microusd}} budget. It reopens at {{resets_at, instant}}.",
+  MODEL_LOCKED: '{{models}} requires the {{required_plan, plan}} plan.',
+  LAST_MASTER: 'The last operator account cannot be moved to another plan.',
+  USER_NOT_FOUND: 'Account not found.',
+  USER_ID_REQUIRED: 'Choose an account.',
+  PLAN_REQUIRED: 'Choose a plan.',
+  MASTER_ONLY: 'This is available to operator accounts only.',
   NETWORK_UNAVAILABLE: 'Could not connect to the network.',
 } as const

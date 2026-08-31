@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@connectrpc/connect-query'
 import { useTranslation } from 'react-i18next'
+import { planLabel } from '@/entities/plan/@x/model-catalog'
 import { ProviderService } from '@/shared/api'
 import {
   type CatalogModel,
@@ -73,7 +74,22 @@ export function useStageSelection(stage: StageName): StageSelectionState {
     const base = { models, isError, isPending: catalogPending || selectionsPending }
     if (!saved) return { ...base, selected: null, unavailable: undefined }
     if (saved.missing) {
-      return { ...base, selected: null, unavailable: { ref: saved.ref, reason: t('vanished') } }
+      // The server reports a plan-locked choice as missing too — but its row is kept, and an
+      // upgrade restores it. Saying "no longer registered" there would send the user off to
+      // pick a replacement they do not need, so the catalog's own `locked` decides the reason.
+      const locked = catalog.find(
+        (candidate) => sameRef(candidate.ref, saved.ref) && candidate.locked,
+      )
+      return {
+        ...base,
+        selected: null,
+        unavailable: {
+          ref: saved.ref,
+          reason: locked
+            ? t('selectField.locked', { plan: planLabel(locked.minPlan) })
+            : t('vanished'),
+        },
+      }
     }
     if (catalogPending || isError) return { ...base, selected: null, unavailable: undefined }
 

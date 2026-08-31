@@ -23,6 +23,12 @@ const (
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product
 // identifier; params contains only display-safe values allowlisted by that reason.
+//
+// Plan enforcement (plan 17) rides this same detail rather than a message string:
+//   - resource_exhausted · `DAILY_COUNT` | `DAILY_COST` | `MONTHLY_COST`
+//     params: limit, used, resets_at (RFC3339)
+//   - permission_denied  · `MODEL_LOCKED`  params: model, models, required_plan
+//   - permission_denied  · `MASTER_ONLY`   params: none
 type AppErrorDetail struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Reason        string                 `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`

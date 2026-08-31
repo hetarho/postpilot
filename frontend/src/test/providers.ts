@@ -15,6 +15,7 @@ import {
   ListModelsResponseSchema,
   ModelInfoSchema,
   ModelRefSchema,
+  ProtoPlan,
   ProviderService,
   SaveComparisonPairResponseSchema,
   SaveSelectionResponseSchema,
@@ -34,6 +35,11 @@ export interface FakeModel {
   structuredOutput?: boolean
   /** The reason the model is disabled; undefined means enabled. */
   disabledReason?: string
+  /** The tier the model requires. Defaults to `free`, so a test that says nothing about
+   *  plans gets a registry every account can run. */
+  minPlan?: ProtoPlan
+  /** What the server computed for THIS caller — the model's floor is above their tier. */
+  locked?: boolean
 }
 
 export interface FakeSelection {
@@ -66,6 +72,9 @@ export interface FakeProvidersOptions {
   saveGate?: Promise<void>
   /** Records every procedure the transport was asked for. */
   calls?: string[]
+  /** Report saved selections whose model is `locked` as missing WITHOUT clearing them, the
+   *  way the server treats a plan-locked choice: a downgrade is reversible state. */
+  lockedSelections?: boolean
   comparisonPairs?: Array<{
     stage: Stage
     candidateA: { providerId: string; modelId: string }
@@ -95,10 +104,15 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
           structuredOutput: model.structuredOutput ?? false,
           disabled: model.disabledReason !== undefined,
           disabledReason: model.disabledReason ?? '',
+          minPlan: model.minPlan ?? ProtoPlan.FREE,
+          locked: model.locked ?? false,
         }),
       ),
     })
   })
+
+  const lockedFor = (selection: FakeSelection) =>
+    Boolean(options.lockedSelections && registered(selection.providerId, selection.modelId)?.locked)
 
   rpc(ProviderService.method.getSelections, () => {
     calls?.push('GetSelections')
@@ -106,12 +120,13 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
       create(SelectionSchema, {
         stage: selection.stage,
         ref: { providerId: selection.providerId, modelId: selection.modelId },
-        missing: !registered(selection.providerId, selection.modelId),
+        missing: !registered(selection.providerId, selection.modelId) || lockedFor(selection),
       }),
     )
-    // Like the server: a vanished choice is told once, then it is gone.
-    selections = selections.filter((selection) =>
-      registered(selection.providerId, selection.modelId),
+    // Like the server: a vanished choice is told once, then it is gone — but a plan-locked one
+    // is kept, because an upgrade must restore it with no re-selection.
+    selections = selections.filter(
+      (selection) => registered(selection.providerId, selection.modelId) || lockedFor(selection),
     )
     return create(GetSelectionsResponseSchema, { selections: answer })
   })
@@ -128,6 +143,14 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
     if (!model) throw connectAppError('MODEL_NOT_REGISTERED', Code.NotFound)
     if (model.disabledReason !== undefined) {
       throw connectAppError('MODEL_DISABLED', Code.FailedPrecondition)
+    }
+    // Like the server: the client's rendering is never the gate.
+    if (model.locked) {
+      throw connectAppError('MODEL_LOCKED', Code.PermissionDenied, {
+        model: `${ref.providerId}/${ref.modelId}`,
+        models: `${ref.providerId}/${ref.modelId}`,
+        required_plan: 'max',
+      })
     }
     selections = [
       ...selections.filter((selection) => selection.stage !== req.stage),

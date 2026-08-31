@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// plan.proto is the authorization slice of the contract: which tier an account is on,
+// what that tier is allowed to spend, and the operator surface that changes it.
+//
+// Nothing here moves money (PRD §9). The ladder is shaped like a subscription ladder,
+// but plans are assigned by the operator — there is no signup, upgrade, or checkout RPC.
+service PlanService {
+  // The caller's own tier, limits and live usage. Every number the client displays comes
+  // from here; the frontend never hardcodes a limit.
+  rpc GetMyPlan(GetMyPlanRequest) returns (GetMyPlanResponse) {}
+}
+
+// AdminService is master-only, enforced by the auth interceptor rather than by these
+// handlers — a new admin procedure is therefore closed until it is added to that set.
+service AdminService {
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
+  rpc SetUserPlan(SetUserPlanRequest) returns (SetUserPlanResponse) {}
+}
+
+// The ordered ladder. `free < basic < max < master`: every gate in the product asks the
+// one question "is the acting plan at least this model's / procedure's floor?".
+enum Plan {
+  PLAN_UNSPECIFIED = 0;
+  PLAN_FREE = 1;
+  PLAN_BASIC = 2;
+  PLAN_MAX = 3;
+  PLAN_MASTER = 4;
+}
+
+// Zero on any field means unlimited (the master tier), not "none".
+message PlanLimits {
+  int32 daily_job_starts = 1;
+  int64 daily_budget_microusd = 2;
+  int64 monthly_budget_microusd = 3;
+}
+
+// Usage is measured over calendar windows in the product's home timezone, so a refusal
+// can always name the instant it lifts. Both reset fields are RFC3339.
+message PlanUsage {
+  int32 jobs_started_today = 1;
+  int64 cost_today_microusd = 2;
+  int64 cost_month_microusd = 3;
+  string day_resets_at = 4;
+  string month_resets_at = 5;
+}
+
+message GetMyPlanRequest {}
+
+message GetMyPlanResponse {
+  Plan plan = 1;
+  PlanLimits limits = 2;
+  PlanUsage usage = 3;
+}
+
+message ListUsersRequest {}
+
+message ListUsersResponse {
+  repeated PlanUser users = 1;
+}
+
+// PlanUser is an account as the admin screen sees it. There is still no display name or
+// email to show (PRD §1) — an id, a tier, and when it was provisioned.
+message PlanUser {
+  string id = 1;
+  Plan plan = 2;
+  string created_at = 3;
+}
+
+message SetUserPlanRequest {
+  string user_id = 1;
+  Plan plan = 2;
+}
+
+message SetUserPlanResponse {
+  PlanUser user = 1;
+}

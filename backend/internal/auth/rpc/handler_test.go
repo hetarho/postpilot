@@ -15,6 +15,7 @@ import (
 	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 const sessionTTL = 720 * time.Hour
@@ -29,7 +30,7 @@ func newServer(t *testing.T) (postpilotv1connect.AuthServiceClient, *httptest.Se
 	t.Helper()
 
 	svc := auth.NewService(newStore(t), sessionTTL)
-	if err := svc.CreateUser(context.Background(), "alice", "s3cret"); err != nil {
+	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
 

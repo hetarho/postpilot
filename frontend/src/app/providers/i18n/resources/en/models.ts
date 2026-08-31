@@ -61,6 +61,7 @@ export const models = {
   stage: { observe: 'Observe', write: 'Write', analyze: 'Analyze voice' },
   select: 'Select a model',
   selectField: {
+    locked: 'requires {{plan}}',
     stage: { observe: 'Observe', write: 'Write', analyze: 'Analyze voice' },
     label: '{{stage}} model{{optional}}',
     optional: ' (optional)',
@@ -78,6 +79,7 @@ export const models = {
   unsuitable: 'Cannot be used for this stage',
   unavailable: 'Unregistered model',
   recommendation: {
+    locked: 'This set includes {{models}}, so it needs the {{plan}} plan.',
     description: 'Saves the active models and nine A/B pairs across all three stages at once.',
     apply: 'Apply recommendation',
     applied: 'Applied the active models and A/B pairs for all three stages.',

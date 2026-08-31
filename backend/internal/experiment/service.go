@@ -117,6 +117,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
 		UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: request.Stage,
 		TargetLanguage: cloneLanguage(found.TargetLanguage),
+		Models:         startModels(request),
 	})
 	if err != nil {
 		_ = s.store.Delete(ctx, found.ID)
@@ -217,9 +218,11 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 		_ = s.store.RestoreFailedCandidates(ctx, found.ID, found.Candidates)
 		return StartResult{}, err
 	}
+	// A retry re-runs the candidates the experiment froze, so it passes them through the gate
+	// again: a downgrade after the first run must refuse a model that is now above the tier.
 	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
 		UserID: userID, PostSlug: found.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: found.Stage,
-		TargetLanguage: cloneLanguage(found.TargetLanguage),
+		TargetLanguage: cloneLanguage(found.TargetLanguage), Models: candidateModels(found),
 	})
 	if err != nil {
 		_ = s.store.RestoreFailedCandidates(ctx, found.ID, found.Candidates)
@@ -560,4 +563,24 @@ func (s *Service) runCandidates(ctx context.Context, found Experiment, progress 
 		return err
 	}
 	return nil
+}
+
+// startModels are every ref a comparison will run. A write comparison also runs the caller's
+// explicit observe model over the post's photos, and that call spends tokens like any other —
+// gating only the two candidates would leave one paid stage ungated.
+func startModels(request StartRequest) []string {
+	models := []string{request.ModelA.String(), request.ModelB.String()}
+	if request.Stage == StageWrite && request.ObserveModel.ProviderID != "" {
+		models = append(models, request.ObserveModel.String())
+	}
+	return models
+}
+
+// candidateModels are the refs a retry will re-run, in candidate order.
+func candidateModels(found Experiment) []string {
+	models := make([]string, 0, len(found.Candidates))
+	for _, candidate := range found.Candidates {
+		models = append(models, candidate.Model.String())
+	}
+	return models
 }

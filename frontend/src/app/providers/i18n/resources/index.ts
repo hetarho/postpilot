@@ -4,6 +4,7 @@ import { errors as enErrors } from './en/errors'
 import { marketing as enMarketing } from './en/marketing'
 import { models as enModels } from './en/models'
 import { nav as enNav } from './en/nav'
+import { plans as enPlans } from './en/plans'
 import { posts as enPosts } from './en/posts'
 import { publishing as enPublishing } from './en/publishing'
 import { purposes as enPurposes } from './en/purposes'
@@ -14,6 +15,7 @@ import { errors as koErrors } from './ko/errors'
 import { marketing as koMarketing } from './ko/marketing'
 import { models as koModels } from './ko/models'
 import { nav as koNav } from './ko/nav'
+import { plans as koPlans } from './ko/plans'
 import { posts as koPosts } from './ko/posts'
 import { publishing as koPublishing } from './ko/publishing'
 import { purposes as koPurposes } from './ko/purposes'
@@ -32,6 +34,7 @@ export const RESOURCE_NAMESPACES = [
   'publishing',
   'errors',
   'marketing',
+  'plans',
 ] as const
 
 export const resources = {
@@ -46,6 +49,7 @@ export const resources = {
     publishing: koPublishing,
     errors: koErrors,
     marketing: koMarketing,
+    plans: koPlans,
   },
   en: {
     common: enCommon,
@@ -58,5 +62,6 @@ export const resources = {
     publishing: enPublishing,
     errors: enErrors,
     marketing: enMarketing,
+    plans: enPlans,
   },
 } as const

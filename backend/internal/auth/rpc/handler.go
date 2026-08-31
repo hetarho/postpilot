@@ -14,6 +14,7 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
@@ -50,6 +51,7 @@ func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.Lo
 
 	res := connect.NewResponse(&postpilotv1.LoginResponse{
 		User: &postpilotv1.User{Id: user.ID},
+		Plan: planrpc.ToProto(user.Plan),
 	})
 	// The token leaves the process here and nowhere else: a Set-Cookie header, not a
 	// response field. HttpOnly keeps it away from JavaScript (so an XSS cannot read
@@ -74,14 +76,20 @@ func (h *Handler) Logout(ctx context.Context, req *connect.Request[postpilotv1.L
 }
 
 // GetMe reports the account behind the current session. It carries no logic: the
-// interceptor has already proven the session, so reaching this function IS the answer.
+// interceptor has already proven the session and resolved the tier, so reaching this
+// function IS the answer.
+//
+// The plan rides this probe so the app can gate master-only surfaces during boot without
+// a second round-trip; the server still refuses those procedures on its own.
 func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetMeRequest]) (*connect.Response[postpilotv1.GetMeResponse], error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
 		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
+	acting, _ := auth.PlanFromContext(ctx)
 	return connect.NewResponse(&postpilotv1.GetMeResponse{
 		User: &postpilotv1.User{Id: userID},
+		Plan: planrpc.ToProto(acting),
 	}), nil
 }
 

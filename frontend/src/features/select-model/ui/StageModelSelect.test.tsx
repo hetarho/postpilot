@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
-import { Stage } from '@/shared/api'
+import { Code } from '@connectrpc/connect'
+import { ProtoPlan, Stage } from '@/shared/api'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { type FakeProvidersOptions, createFakeProviderTransport } from '@/test/providers'
 import { StageModelSelect } from './StageModelSelect'
@@ -153,5 +154,83 @@ describe('StageModelSelect', () => {
       '이 단계에서는 쓸 수 없는 모델이에요',
     )
     expect(screen.getByRole('combobox', { name: '관찰 모델' })).toHaveValue('__unavailable__')
+  })
+})
+
+describe('a model above the account tier', () => {
+  // A6: it stays listed as upsell, disabled and labelled with the tier that unlocks it —
+  // vanishing would teach the user nothing about why the model is not there.
+  it('is listed, disabled, and says which plan it needs', async () => {
+    renderSelect('write', {
+      models: [
+        { providerId: 'openrouter', modelId: 'writer', label: 'Writer' },
+        {
+          providerId: 'openrouter',
+          modelId: 'anthropic/claude-opus-5',
+          label: 'Claude Opus 5',
+          minPlan: ProtoPlan.MAX,
+          locked: true,
+        },
+      ],
+    })
+
+    const select = await screen.findByRole('combobox', { name: '작성 모델' })
+    await waitFor(() => expect(select).toBeEnabled())
+
+    const locked = screen.getByRole('option', { name: 'Claude Opus 5 — Max 플랜부터' })
+    expect(locked).toBeDisabled()
+    expect(screen.getByRole('option', { name: 'Writer' })).toBeEnabled()
+  })
+
+  // A saved choice the tier can no longer run is kept by the server, so the field says which
+  // plan restores it rather than "no longer registered" — which would send the user off to
+  // pick a replacement they do not need.
+  it('explains a saved choice that a downgrade locked, without calling it vanished', async () => {
+    renderSelect('write', {
+      models: [
+        { providerId: 'openrouter', modelId: 'writer', label: 'Writer' },
+        {
+          providerId: 'openrouter',
+          modelId: 'premium',
+          label: 'Premium',
+          minPlan: ProtoPlan.MAX,
+          locked: true,
+        },
+      ],
+      selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'premium' }],
+      lockedSelections: true,
+    })
+
+    expect(await screen.findByText('Max 플랜부터')).toBeInTheDocument()
+    expect(screen.queryByText('더 이상 등록되지 않은 모델이에요.')).not.toBeInTheDocument()
+  })
+
+  // The client's rendering is never the gate: a save that reaches the server anyway is
+  // refused, and the refusal is what the field reports.
+  it('reports the server’s refusal rather than predicting it', async () => {
+    const user = userEvent.setup()
+    renderSelect('write', {
+      models: [
+        { providerId: 'openrouter', modelId: 'writer', label: 'Writer' },
+        { providerId: 'openrouter', modelId: 'premium', label: 'Premium', locked: true },
+      ],
+      saveFailure: {
+        reason: 'MODEL_LOCKED',
+        code: Code.PermissionDenied,
+        params: {
+          model: 'openrouter/premium',
+          models: 'openrouter/premium',
+          required_plan: 'max',
+        },
+      },
+    })
+
+    const select = await screen.findByRole('combobox', { name: '작성 모델' })
+    await waitFor(() => expect(select).toBeEnabled())
+    await user.selectOptions(select, 'openrouter/writer')
+
+    expect(
+      await screen.findByText('openrouter/premium 모델은 Max 플랜부터 쓸 수 있어요.'),
+    ).toBeInTheDocument()
   })
 })

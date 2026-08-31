@@ -1,16 +1,20 @@
 # Policy — Accounts, passwords, sessions
 
 Canonical rules that are **currently true** in the code. Source: [plan/01](../plan/01.accounts-and-login.md),
-built by jobs 01 and 02. A change to any rule here is a change to shipped behavior — go through `/create-change`.
+built by jobs 01 and 02; the account's plan and the master-only procedure set come from
+[plan/17](../plan/17.plan-based-authorization-and-usage-quota.md) (job 37) and are owned by
+[plans.md](plans.md). A change to any rule here is a change to shipped behavior — go through `/create-change`.
 
 ## Accounts
 
 - **There is no registration surface.** No `Signup` RPC, no signup screen, no invite flow. The API exposes exactly
   three auth procedures: `Login`, `Logout`, `GetMe` (PRD F-1).
 - Accounts are created **only** by the operator, from a shell on the box:
-  `api adduser <login_id>` (the deployed image dispatches the subcommand through its unchanged
-  `ENTRYPOINT ["/api"]`) or `go run ./cmd/adduser <login_id>` on a host. Both read the password twice from stdin,
-  require the two to match, and refuse an existing id with a non-zero exit.
+  `api adduser <login_id> [--plan=<free|basic|max|master>]` (the deployed image dispatches the subcommand through its
+  unchanged `ENTRYPOINT ["/api"]`) or `go run ./cmd/adduser <login_id>` on a host. Both read the password twice from
+  stdin, require the two to match, and refuse an existing id with a non-zero exit.
+- **Every account carries a plan**, defaulting to `free`, and only `master` changes it — `api setplan <id> <tier>`
+  or the master-only admin RPC. The ladder, its limits, and the last-master guard are in [plans.md](plans.md).
 - A duplicate login id is rejected at the database (primary key) and reported as `auth.ErrDuplicateUser`.
 - There is **no password change or reset flow.** The operator recreates the account. This is a known PRD gap, not an
   oversight — see plan 01 Non-goals.
@@ -65,7 +69,8 @@ built by jobs 01 and 02. A change to any rule here is a change to shipped behavi
 ## Authorization on every RPC
 
 - A single Connect interceptor (`internal/auth/rpc`) is the **only** place a request becomes an acting user. It
-  resolves the cookie, checks expiry, and puts the user id in the `context`.
+  resolves the cookie, checks expiry, and puts the user id **and the account's current plan** in the `context`. The
+  plan is read from the row on every request, so a tier change takes effect on the caller's next call.
 - **Authenticated handlers take the acting user from the context, never from a request payload.** A user id in a
   message is a claim by the caller, not a fact.
 - The interceptor **fails closed**: missing, forged, expired, and "the store is down" all return
@@ -82,6 +87,11 @@ built by jobs 01 and 02. A change to any rule here is a change to shipped behavi
 
   The plain `/health` endpoint is mounted outside the Connect stack and is likewise unauthenticated — it is what the
   deploy's rollback gate probes.
+- A second closed set in the same file (`masterProcedures`) is **master-only**: the nine human `PublishingService`
+  procedures and the two `AdminService` procedures, refused `permission_denied` with reason `MASTER_ONLY`. Adding a
+  privileged procedure means adding it there in the same change ([plans.md](plans.md)).
+- `GetMe` and `Login` both report the acting tier, so the frontend gates master-only surfaces on boot without a
+  second round-trip. The server still refuses those procedures on its own.
 
 ## Paired publishing-agent credentials
 

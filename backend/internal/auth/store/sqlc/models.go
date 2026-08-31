@@ -10,9 +10,3 @@ type Session struct {
 	ExpiresAt string
 	CreatedAt string
 }
-
-type User struct {
-	ID           string
-	PasswordHash string
-	CreatedAt    string
-}

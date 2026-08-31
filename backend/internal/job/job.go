@@ -69,6 +69,22 @@ type NewJob struct {
 	WriteModel     string
 	TargetLanguage string
 	Payload        []byte
+	// ExtraModels are refs the job will run that no stage column records — the two
+	// candidates of an A/B comparison. They exist for the admission gate and are not
+	// persisted: the experiment aggregate is where they are durable.
+	ExtraModels []string
+}
+
+// models are the refs this job will actually run, for the admission gate. Both stage
+// choices are explicit inputs ([I3]); an empty one means the kind does not use that stage.
+func (n NewJob) models() []string {
+	refs := make([]string, 0, 2+len(n.ExtraModels))
+	for _, ref := range append([]string{n.ObserveModel, n.WriteModel}, n.ExtraModels...) {
+		if ref != "" {
+			refs = append(refs, ref)
+		}
+	}
+	return refs
 }
 
 // Job is the worker-facing record, including the kind-specific payload.

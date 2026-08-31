@@ -44,6 +44,14 @@ func ParseStage(s string) (Stage, error) {
 	return "", fmt.Errorf("%w: %q", ErrUnknownStage, s)
 }
 
+// CatalogModel is a registry entry as ONE caller sees it: the model's own facts plus
+// whether that caller's plan may run it. Locked lives here rather than on llm.ModelInfo
+// because it is a fact about the pair, not about the model.
+type CatalogModel struct {
+	Info   llm.ModelInfo
+	Locked bool
+}
+
 // Selection is the acting user's choice for one stage.
 type Selection struct {
 	Stage Stage

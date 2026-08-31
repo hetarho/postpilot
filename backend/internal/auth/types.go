@@ -10,6 +10,8 @@ package auth
 import (
 	"errors"
 	"time"
+
+	"github.com/postpilot/backend/internal/plan"
 )
 
 // ErrInvalidCredentials is the single failure Login ever reports. Callers must not
@@ -33,8 +35,13 @@ var ErrNoSession = errors.New("no session")
 type User struct {
 	ID           string
 	PasswordHash string
+	Plan         plan.Plan
 	CreatedAt    time.Time
 }
+
+// ErrLastMaster refuses the demotion that would leave the deployment with no operator
+// account — and therefore no way to promote anyone back.
+var ErrLastMaster = errors.New("cannot demote the last remaining master account")
 
 // Session is a login that has not been revoked or expired.
 type Session struct {

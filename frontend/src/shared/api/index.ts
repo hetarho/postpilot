@@ -42,6 +42,18 @@ export {
 } from './gen/postpilot/v1/auth_pb'
 export type { User, GetMeResponse } from './gen/postpilot/v1/auth_pb'
 export { HealthService, PingResponseSchema } from './gen/postpilot/v1/health_pb'
+export { AdminService, Plan as ProtoPlan, PlanService } from './gen/postpilot/v1/plan_pb'
+export {
+  GetMyPlanResponseSchema,
+  ListUsersResponseSchema,
+  SetUserPlanResponseSchema,
+} from './gen/postpilot/v1/plan_pb'
+export type {
+  GetMyPlanResponse,
+  PlanLimits as ProtoPlanLimits,
+  PlanUsage as ProtoPlanUsage,
+  PlanUser as ProtoPlanUser,
+} from './gen/postpilot/v1/plan_pb'
 export type { PingResponse } from './gen/postpilot/v1/health_pb'
 export { GenerationService, PostService } from './gen/postpilot/v1/post_pb'
 export {

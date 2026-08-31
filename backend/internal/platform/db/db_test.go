@@ -1011,3 +1011,103 @@ func TestMigration0011AddsOptionalAccountScopedPurposes(t *testing.T) {
 		t.Fatalf("rollback lost posts: count=%d err=%v", posts, err)
 	}
 }
+
+// A1: the plan column arrives with the operator's existing accounts backfilled to `master`.
+// Nothing about their authority may regress on the deploy that introduces the ladder, while a
+// NEW account provisioned afterwards gets the column's `free` default.
+func TestMigration0013BackfillsExistingAccountsToMasterAndRollsBack(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+
+	beforePlans := fstest.MapFS{}
+	entries, err := fs.ReadDir(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.Name() >= "0013" {
+			continue
+		}
+		data, err := fs.ReadFile(migrationsFS, "migrations/"+entry.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		beforePlans[entry.Name()] = &fstest.MapFile{Data: data}
+	}
+	if err := migrate(ctx, handle.Writer, beforePlans); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('operator','hash','2026-08-29T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+
+	var plan string
+	if err := handle.Reader.QueryRow(`SELECT plan FROM users WHERE id='operator'`).Scan(&plan); err != nil {
+		t.Fatal(err)
+	}
+	if plan != "master" {
+		t.Fatalf("pre-existing account plan = %q, want master", plan)
+	}
+
+	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('newcomer','hash','2026-09-01T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT plan FROM users WHERE id='newcomer'`).Scan(&plan); err != nil {
+		t.Fatal(err)
+	}
+	if plan != "free" {
+		t.Fatalf("new account plan = %q, want the free default", plan)
+	}
+
+	// The CHECK is what keeps a hand-edited row off the ladder.
+	if _, err := handle.Writer.Exec(`UPDATE users SET plan='pro' WHERE id='newcomer'`); err == nil {
+		t.Fatal("an off-ladder plan was accepted")
+	}
+
+	// A ledger row must not outlive its account.
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO usage_events(user_id,kind,job_id,stage,model,prompt_tokens,completion_tokens,cost_microusd,cost_source,created_at)
+		 VALUES('newcomer','generate','job','write','p/m',1,2,3,'reported','2026-09-01T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`DELETE FROM users WHERE id='newcomer'`); err != nil {
+		t.Fatal(err)
+	}
+	var events int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM usage_events`).Scan(&events); err != nil {
+		t.Fatal(err)
+	}
+	if events != 0 {
+		t.Fatalf("usage_events = %d, want the cascade to have removed them", events)
+	}
+
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.DownTo(ctx, 12); err != nil {
+		t.Fatal(err)
+	}
+	var columns int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('users') WHERE name='plan'`).Scan(&columns); err != nil {
+		t.Fatal(err)
+	}
+	if columns != 0 {
+		t.Fatal("migration down retained the plan column")
+	}
+	var accounts int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM users WHERE id='operator'`).Scan(&accounts); err != nil {
+		t.Fatal(err)
+	}
+	if accounts != 1 {
+		t.Fatal("down lost the account")
+	}
+}

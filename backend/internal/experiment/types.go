@@ -202,6 +202,9 @@ type JobRequest struct {
 	Stage        Stage
 	// TargetLanguage is frozen for write jobs and absent for observe/analyze jobs.
 	TargetLanguage *Language
+	// Models are the two candidate refs this comparison will run. The enqueue seam gates
+	// them against the caller's plan; one comparison still consumes exactly one admission.
+	Models []string
 }
 
 type JobAlreadyInProgressError struct{ ActiveID string }

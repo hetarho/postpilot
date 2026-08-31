@@ -32,19 +32,25 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 
 const createUser = `-- name: CreateUser :exec
 
-INSERT INTO users (id, password_hash, created_at) VALUES (?, ?, ?)
+INSERT INTO users (id, password_hash, plan, created_at) VALUES (?, ?, ?, ?)
 `
 
 type CreateUserParams struct {
 	ID           string
 	PasswordHash string
+	Plan         string
 	CreatedAt    string
 }
 
 // Queries for the auth context. sqlc compiles these into internal/auth/store/sqlc;
 // internal/auth/store maps the generated rows to domain types.
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.db.ExecContext(ctx, createUser, arg.ID, arg.PasswordHash, arg.CreatedAt)
+	_, err := q.db.ExecContext(ctx, createUser,
+		arg.ID,
+		arg.PasswordHash,
+		arg.Plan,
+		arg.CreatedAt,
+	)
 	return err
 }
 
@@ -86,12 +92,90 @@ func (q *Queries) GetSessionByToken(ctx context.Context, token string) (Session,
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, password_hash, created_at FROM users WHERE id = ?
+SELECT id, password_hash, plan, created_at FROM users WHERE id = ?
 `
 
-func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
+type GetUserRow struct {
+	ID           string
+	PasswordHash string
+	Plan         string
+	CreatedAt    string
+}
+
+func (q *Queries) GetUser(ctx context.Context, id string) (GetUserRow, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
-	var i User
-	err := row.Scan(&i.ID, &i.PasswordHash, &i.CreatedAt)
+	var i GetUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.PasswordHash,
+		&i.Plan,
+		&i.CreatedAt,
+	)
 	return i, err
+}
+
+const getUserPlan = `-- name: GetUserPlan :one
+SELECT plan FROM users WHERE id = ?
+`
+
+func (q *Queries) GetUserPlan(ctx context.Context, id string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getUserPlan, id)
+	var plan string
+	err := row.Scan(&plan)
+	return plan, err
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT id, plan, created_at FROM users ORDER BY created_at, id
+`
+
+type ListUsersRow struct {
+	ID        string
+	Plan      string
+	CreatedAt string
+}
+
+func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUsersRow
+	for rows.Next() {
+		var i ListUsersRow
+		if err := rows.Scan(&i.ID, &i.Plan, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setUserPlan = `-- name: SetUserPlan :execrows
+UPDATE users SET plan = ?
+WHERE users.id = ?
+  AND (users.plan <> 'master' OR (SELECT COUNT(*) FROM users AS m WHERE m.plan = 'master') > 1)
+`
+
+type SetUserPlanParams struct {
+	Plan string
+	ID   string
+}
+
+// The last-master guard is part of the statement, not a check before it: two concurrent
+// demotions that each counted two masters would both commit and leave the deployment with
+// none, and nothing could promote anyone back.
+func (q *Queries) SetUserPlan(ctx context.Context, arg SetUserPlanParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setUserPlan, arg.Plan, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

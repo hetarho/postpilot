@@ -120,10 +120,28 @@ const postsRoute = createRoute({
   component: PostsPage,
 })
 
+// Master-only for the same reason the nav entry is: every PublishingService procedure is
+// refused to another tier, so a direct visit would otherwise mount a screen whose every
+// request comes back MASTER_ONLY.
 const publishingAgentsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/publishing-agents',
+  beforeLoad: ({ context }) => {
+    if (context.user.plan !== 'master') throw redirect({ to: SIGNED_IN_HOME, replace: true })
+  },
   component: lazyRouteComponent(() => import('@/pages/publishing-agents'), 'PublishingAgentsPage'),
+})
+
+// Master-only, and redirected rather than refused: the account HAS a session, so bouncing it to
+// /login would be a lie. The redirect is UX only — every admin procedure is refused server-side
+// for a non-master caller, whatever route the client managed to render.
+const adminRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/admin',
+  beforeLoad: ({ context }) => {
+    if (context.user.plan !== 'master') throw redirect({ to: SIGNED_IN_HOME, replace: true })
+  },
+  component: lazyRouteComponent(() => import('@/pages/admin'), 'AdminPage'),
 })
 
 const voicesRoute = createRoute({
@@ -274,6 +292,7 @@ export const routeTree = rootRoute.addChildren([
     indexRoute,
     postsRoute,
     publishingAgentsRoute,
+    adminRoute,
     voicesRoute,
     purposesRoute,
     voiceLayoutRoute.addChildren([

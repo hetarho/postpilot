@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/postpilot/backend/internal/plan"
 )
 
 // DisabledReasonNoKey is the reason shown for every model of a provider whose
@@ -38,6 +40,11 @@ type ModelInfo struct {
 	PricingCheckedAt    string
 	Disabled            bool
 	DisabledReason      string
+	// MinPlan is the lowest plan allowed to run this model — a property of the model's
+	// price class, declared once in providers.yaml. The registry only carries the floor:
+	// it never learns who is asking, so the comparison happens in callers that already
+	// know the acting plan.
+	MinPlan plan.Plan
 }
 
 // RecommendationSelection is the registry-owned, versioned selection for one stage.
@@ -91,6 +98,7 @@ type modelEntry struct {
 	InputUSDPerMillion  string          `yaml:"input_usd_per_million"`
 	OutputUSDPerMillion string          `yaml:"output_usd_per_million"`
 	PricingCheckedAt    string          `yaml:"pricing_checked_at"`
+	MinPlan             string          `yaml:"min_plan"`
 }
 
 type recommendationSetEntry struct {
@@ -223,6 +231,10 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 			if err := validateModelMetadata(m); err != nil {
 				return nil, fmt.Errorf("%s: model %q: %w", where, m.ID, err)
 			}
+			minPlan, err := plan.Parse(m.MinPlan)
+			if err != nil {
+				return nil, fmt.Errorf("%s: model %q: min_plan: %w", where, m.ID, err)
+			}
 			if !m.ReasoningEffort.Valid() {
 				return nil, fmt.Errorf("%s: model %q: reasoning_effort %q is invalid (want unset, none, minimal, low, medium, high, xhigh, or max)", where, m.ID, m.ReasoningEffort)
 			}
@@ -238,6 +250,7 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 					PricingCheckedAt:    m.PricingCheckedAt,
 					Disabled:            disabled,
 					DisabledReason:      reason,
+					MinPlan:             minPlan,
 				},
 				provider:  provider,
 				reasoning: m.ReasoningEffort,

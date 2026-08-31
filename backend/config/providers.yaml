@@ -21,6 +21,10 @@
 #   context_tokens     dated display metadata, not an execution limit
 #   *_usd_per_million  dated reference price; reported completion cost remains authoritative
 #   pricing_checked_at ISO date on which the display metadata was verified
+#   min_plan           REQUIRED lowest plan allowed to run the model: free, basic, or max
+#                      (plan 17). Access is a property of the model's price class, so it is
+#                      declared here once rather than as an allowlist per account. A missing
+#                      or unknown value stops the API from starting.
 #
 # Adapters: `openai_compatible` (needs `base_url`) covers OpenRouter, Together, Groq,
 # Fireworks, DeepInfra, OpenAI, Ollama, vLLM, LM Studio and Google's compatible endpoint.
@@ -36,6 +40,7 @@ providers:
         label: OpenRouter free (auto)
         vision: true
         structured_output: false
+        min_plan: free
       - id: z-ai/glm-5.3-flash
         label: GLM 5.3 Flash
         vision: true
@@ -44,6 +49,7 @@ providers:
         input_usd_per_million: "0.075"
         output_usd_per_million: "0.25"
         pricing_checked_at: "2026-08-30"
+        min_plan: free
       - id: qwen/qwen3.8-flash
         label: Qwen3.8 Flash
         vision: true
@@ -52,6 +58,7 @@ providers:
         input_usd_per_million: "0.15"
         output_usd_per_million: "0.47"
         pricing_checked_at: "2026-08-30"
+        min_plan: free
       - id: google/gemini-3.7-flash
         label: Gemini 3.7 Flash
         vision: true
@@ -60,6 +67,7 @@ providers:
         input_usd_per_million: "0.75"
         output_usd_per_million: "3.75"
         pricing_checked_at: "2026-08-30"
+        min_plan: basic
       - id: deepseek/deepseek-v4-flash-0731
         label: DeepSeek V4 Flash 0731
         vision: false
@@ -68,6 +76,7 @@ providers:
         input_usd_per_million: "0.045"
         output_usd_per_million: "0.09"
         pricing_checked_at: "2026-08-30"
+        min_plan: free
       - id: deepseek/deepseek-v4-pro-0813
         label: DeepSeek V4 Pro 0813
         vision: false
@@ -76,6 +85,7 @@ providers:
         input_usd_per_million: "0.66"
         output_usd_per_million: "1.98"
         pricing_checked_at: "2026-08-30"
+        min_plan: basic
       - id: z-ai/glm-5.3
         label: GLM 5.3
         vision: false
@@ -84,6 +94,7 @@ providers:
         input_usd_per_million: "1.40"
         output_usd_per_million: "4.40"
         pricing_checked_at: "2026-08-30"
+        min_plan: basic
       - id: openai/gpt-5.6-luna
         label: GPT-5.6 Luna
         vision: true
@@ -92,6 +103,7 @@ providers:
         input_usd_per_million: "0.20"
         output_usd_per_million: "1.20"
         pricing_checked_at: "2026-08-30"
+        min_plan: basic
       - id: openai/gpt-5.6-sol
         label: GPT-5.6 Sol
         vision: true
@@ -100,6 +112,7 @@ providers:
         input_usd_per_million: "2.00"
         output_usd_per_million: "10.00"
         pricing_checked_at: "2026-08-30"
+        min_plan: max
       - id: x-ai/grok-4.6
         label: Grok 4.6
         vision: true
@@ -108,6 +121,7 @@ providers:
         input_usd_per_million: "2.00"
         output_usd_per_million: "6.00"
         pricing_checked_at: "2026-08-30"
+        min_plan: max
       - id: anthropic/claude-sonnet-5
         label: Claude Sonnet 5
         vision: true
@@ -117,6 +131,7 @@ providers:
         input_usd_per_million: "2.00"
         output_usd_per_million: "10.00"
         pricing_checked_at: "2026-08-30"
+        min_plan: max
       - id: anthropic/claude-opus-5
         label: Claude Opus 5
         vision: true
@@ -125,6 +140,7 @@ providers:
         input_usd_per_million: "5.00"
         output_usd_per_million: "25.00"
         pricing_checked_at: "2026-08-30"
+        min_plan: max
 
 recommendation_sets:
   - id: balanced-2026-08

@@ -5,6 +5,16 @@ server, frontend, and Mac companion paths are in offline verification, and the a
 remains a release gate: this document does not claim that SmartEditor compatibility has been proven against a real
 account.
 
+## Who may publish
+
+- The entire human publishing surface is **`master`-only** (plan 17): all nine `PublishingService` procedures are in
+  the auth interceptor's master set and refuse another tier with `permission_denied` / `MASTER_ONLY`. Publishing runs
+  through our paired agent and our infrastructure ([I1]), so an account that cannot be billed for it cannot pair one,
+  start one, or drive an existing one. The frontend hides the nav entry, the publish panel, and `/publishing-agents`
+  from other tiers; the server remains authoritative ([plans.md](plans.md)).
+- The `PublishingAgentService` bearer path is unaffected: a device capability is not a human session, and it is
+  bypassed by the cookie interceptor before the master check is reached.
+
 ## Explicit user action
 
 - Publishing is separate from finalization, learning, autosave, generation, export, reconnect, and polling. Rendering

@@ -3,14 +3,20 @@
 Canonical rules that are **currently true** in the code. Source: [plan/05](../plan/05.generation-job-queue.md),
 built by job 07; per-voice ownership from [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18.
 The concrete `analyze_voice`, `generate`, `revise`, and `model_experiment` handlers are registered by their owning
-feature jobs; job 32 adds frozen target and structured failure fields. This document owns the shared record, worker,
-query, and polling contract.
+feature jobs; job 32 adds frozen target and structured failure fields; job 37 adds the plan gate at enqueue. This
+document owns the shared record, worker, query, and polling contract.
 
 ## Record and lifecycle
 
 - Long model work is represented by a durable `generation_jobs` row. Enqueue writes `queued` and returns its id
   without running the handler in the request; the API process's worker later moves it through
   `queued → running → done | failed` ([I5]). Terminal rows are never reopened; retrying creates a new row.
+- **Enqueue is the one plan gate.** Every kind here consumes LLM calls, so a start passes the model floors and the
+  three quota axes before any row exists; a refusal creates no job ([plans.md](plans.md)). The queue itself stays
+  plan-ignorant — it hands the refs the job will run to an injected admitter and returns its refusal unwrapped, so
+  each rpc edge maps one typed error rather than seven.
+- The worker stamps the job's owner, kind, id, and stage model refs onto the handler's context, which is how every
+  provider call the handler makes lands on the account's usage ledger without the handler knowing it exists.
 - The row records its owner, optional post target, kind, stage, exact progress, optional frozen target language,
   structured `reason + params + technical_detail` failure, selected observe and write models, kind-specific JSON
   payload, and created/updated/started/finished timestamps. Deprecated raw error text is read only for legacy rows.

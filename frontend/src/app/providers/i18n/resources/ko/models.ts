@@ -60,6 +60,7 @@ export const models = {
   stage: { observe: '관찰', write: '글 작성', analyze: '문체 분석' },
   select: '모델을 선택하세요',
   selectField: {
+    locked: '{{plan}} 플랜부터',
     stage: { observe: '관찰', write: '작성', analyze: '문체 분석' },
     label: '{{stage}} 모델{{optional}}',
     optional: ' (선택)',
@@ -77,6 +78,7 @@ export const models = {
   unsuitable: '이 단계에서는 쓸 수 없는 모델이에요',
   unavailable: '등록 해제된 모델',
   recommendation: {
+    locked: '{{models}} 모델이 포함돼 있어 {{plan}} 플랜부터 적용할 수 있어요.',
     description: '활성 모델과 세 단계 A/B 쌍 9개를 한 번에 저장합니다.',
     apply: '추천 조합 적용',
     applied: '세 단계의 활성 모델과 A/B 조합을 적용했어요.',

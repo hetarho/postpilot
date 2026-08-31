@@ -268,6 +268,13 @@
   --notice-info-bg: var(--intent-info-subtle);
   --notice-info-fg: var(--intent-info);
 
+  /* a usage meter: how much of a bounded allowance is spent. The track is a surface step so the
+     bar reads as a recess rather than a bordered box, and the fill borrows the accent because a
+     quota is the user's own progress through a window, not a warning. Colour is never the only
+     signal — every meter renders its used/limit figures beside it (design-language §2.6). */
+  --meter-track: var(--surface-recessed);
+  --meter-fill: var(--intent-accent);
+
   /* system interaction */
   --focus-ring: var(--interaction-focus);
   --selection-bg: var(--intent-accent);
@@ -378,6 +385,8 @@
   --color-badge-neutral-fg: var(--badge-neutral-fg);
   --color-badge-accent-bg: var(--badge-accent-bg);
   --color-badge-accent-fg: var(--badge-accent-fg);
+  --color-meter-track: var(--meter-track);
+  --color-meter-fill: var(--meter-fill);
   --color-notice-danger-bg: var(--notice-danger-bg);
   --color-notice-danger-fg: var(--notice-danger-fg);
   --color-notice-success-bg: var(--notice-success-bg);

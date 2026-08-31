@@ -387,7 +387,13 @@ type AnalysisJobRequest struct {
 
 // PersonalizationJobRequest freezes the owning voice on every provider-backed job so the
 // queue guards per voice and a handler can recheck eligibility when it finally runs.
-type PersonalizationJobRequest struct{ Kind, UserID, VoiceID, PostSlug, Model, Payload string }
+type PersonalizationJobRequest struct {
+	Kind, UserID, VoiceID, PostSlug, Model, Payload string
+	// ExtraModels are refs the job will run besides Model — profile validation also runs an
+	// analyze model. The plan gate sees every ref the work will actually spend on, not just
+	// the one the job row records.
+	ExtraModels []string
+}
 
 type ActiveJob struct{ ID string }
 

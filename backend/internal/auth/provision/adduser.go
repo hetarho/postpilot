@@ -16,6 +16,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 )
@@ -26,8 +27,8 @@ import (
 // usable yet.
 type Bootstrap func(ctx context.Context, handle *db.DB, userID string) error
 
-// Run executes `adduser <login_id>`, returning an error the caller turns into a
-// non-zero exit.
+// Run executes `adduser <login_id> [--plan=<free|basic|max|master>]`, returning an error
+// the caller turns into a non-zero exit.
 //
 // It opens the database and runs migrations itself rather than assuming the api has
 // already booted: on a fresh volume the very first thing an operator does is create an
@@ -37,10 +38,10 @@ type Bootstrap func(ctx context.Context, handle *db.DB, userID string) error
 // bootstrap failed the first time — without touching the password — and still exits
 // non-zero with the duplicate message.
 func Run(ctx context.Context, args []string, bootstraps ...Bootstrap) error {
-	if len(args) != 1 || strings.TrimSpace(args[0]) == "" {
-		return errors.New("usage: adduser <login_id>")
+	loginID, tier, err := parseAddUserArgs(args)
+	if err != nil {
+		return err
 	}
-	loginID := strings.TrimSpace(args[0])
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -63,7 +64,7 @@ func Run(ctx context.Context, args []string, bootstraps ...Bootstrap) error {
 	}
 
 	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
-	if err := svc.CreateUser(ctx, loginID, password); err != nil {
+	if err := svc.CreateUser(ctx, loginID, password, tier); err != nil {
 		if errors.Is(err, auth.ErrDuplicateUser) {
 			if bootErr := runBootstraps(ctx, handle, loginID, bootstraps); bootErr != nil {
 				return fmt.Errorf("account %q already exists and its bootstrap failed: %w", loginID, bootErr)
@@ -76,7 +77,77 @@ func Run(ctx context.Context, args []string, bootstraps ...Bootstrap) error {
 		return fmt.Errorf("account %q was created but is not usable yet: %w (rerun adduser to repair)", loginID, err)
 	}
 
-	fmt.Fprintf(os.Stdout, "created account %q in %s\n", loginID, cfg.DBPath)
+	fmt.Fprintf(os.Stdout, "created account %q on the %s plan in %s\n", loginID, tier, cfg.DBPath)
+	return nil
+}
+
+// parseAddUserArgs accepts the id and an optional tier in either order, so an operator
+// does not have to remember which comes first.
+//
+// The default is `free`, not `master`: a provisioning command that hands out unlimited
+// spend by omission is the failure mode this ladder exists to prevent. The operator's own
+// account is promoted explicitly, with --plan=master or `setplan`.
+func parseAddUserArgs(args []string) (string, plan.Plan, error) {
+	const usage = "usage: adduser <login_id> [--plan=<free|basic|max|master>]"
+	loginID := ""
+	tier := plan.Free
+	for _, arg := range args {
+		value, isPlan := strings.CutPrefix(arg, "--plan=")
+		switch {
+		case isPlan:
+			parsed, err := plan.Parse(value)
+			if err != nil {
+				return "", "", fmt.Errorf("%s: %w", usage, err)
+			}
+			tier = parsed
+		case loginID != "" || strings.TrimSpace(arg) == "":
+			return "", "", errors.New(usage)
+		default:
+			loginID = strings.TrimSpace(arg)
+		}
+	}
+	if loginID == "" {
+		return "", "", errors.New(usage)
+	}
+	return loginID, tier, nil
+}
+
+// SetPlan executes `setplan <login_id> <plan>`. It is the operator's path to the same
+// change the master-only RPC makes, for a deployment whose last master needs promoting
+// from a shell — and it enforces the same last-master guard, so neither path can lock
+// administration out.
+func SetPlan(ctx context.Context, args []string) error {
+	if len(args) != 2 || strings.TrimSpace(args[0]) == "" {
+		return errors.New("usage: setplan <login_id> <free|basic|max|master>")
+	}
+	loginID := strings.TrimSpace(args[0])
+	target, err := plan.Parse(args[1])
+	if err != nil {
+		return err
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	handle, err := db.Open(cfg.DBPath)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		return err
+	}
+
+	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
+	if err := svc.SetUserPlan(ctx, loginID, target); err != nil {
+		if errors.Is(err, auth.ErrUserNotFound) {
+			return fmt.Errorf("account %q does not exist", loginID)
+		}
+		return err
+	}
+
+	fmt.Fprintf(os.Stdout, "account %q is now on the %s plan\n", loginID, target)
 	return nil
 }
 

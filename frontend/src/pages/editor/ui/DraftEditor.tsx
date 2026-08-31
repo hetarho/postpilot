@@ -448,6 +448,7 @@ function LifecycleSteps({
   // learning outcome is reported on 글 완성, so the run has to outlive the step change that the
   // finalize itself causes.
   const learning = useVoiceLearning(ownerId, post)
+  const { user } = useSession()
   const languageMismatch = voiceContentLanguageMismatch(
     post.contentLanguage,
     post.voice.sourceLanguage,
@@ -610,18 +611,23 @@ function LifecycleSteps({
           {t('export.languageMissing')}
         </Notice>
       )}
-      <PublishPanel
-        ownerId={ownerId}
-        postSlug={post.slug}
-        contentRevision={post.contentRevision}
-        finalizedRevision={post.finalizedRevision}
-        status={post.status}
-        beforePublish={() =>
-          contentEditorRef.current?.flush() ??
-          flushContentQueue(post.slug) ??
-          Promise.resolve(post.contentRevision)
-        }
-      />
+      {/* Publishing is the operator's surface (plan 17): every PublishingService procedure is
+          refused to another tier, so the panel would show a pair-and-publish flow that cannot
+          complete. The server stays authoritative — this only keeps the promise off the screen. */}
+      {user?.plan === 'master' && (
+        <PublishPanel
+          ownerId={ownerId}
+          postSlug={post.slug}
+          contentRevision={post.contentRevision}
+          finalizedRevision={post.finalizedRevision}
+          status={post.status}
+          beforePublish={() =>
+            contentEditorRef.current?.flush() ??
+            flushContentQueue(post.slug) ??
+            Promise.resolve(post.contentRevision)
+          }
+        />
+      )}
     </>
   ) : (
     <EmptyStep goTo={() => onStepChange('generate')} goToLabel={t('editor.goGenerate')}>

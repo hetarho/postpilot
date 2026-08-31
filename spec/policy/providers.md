@@ -1,7 +1,9 @@
 # Policy — Model providers and the model catalog
 
 Canonical rules that are **currently true** in the code. Source: [plan/04](../plan/04.model-provider-registry.md),
-extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); built by jobs 06, 15, and 23.
+extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md) and by
+[plan/17](../plan/17.plan-based-authorization-and-usage-quota.md)'s per-model plan floor; built by jobs 06, 15, 23,
+and 37. The floor's own rules are owned by [plans.md](plans.md).
 
 ## The port is a boundary
 
@@ -61,6 +63,9 @@ extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); b
   one is a keyless endpoint (a local Ollama, vLLM, LM Studio) — enabled as is, and the adapter sends no
   `Authorization` header.
 - `vision` and `structured_output` are declared per model. The observe stage lists vision models only.
+- `min_plan` is **required** per model (`free|basic|max`) and validated at boot like every other field — a missing or
+  unknown value stops the process. The registry carries the floor and nothing else about accounts: the comparison
+  happens in callers that already know the acting plan ([plans.md](plans.md)).
 - `reasoning_effort` is optional per model and is validated even when that provider's key is missing.
 - Structured output is requested whenever the model declares it (`response_format: json_schema`, without `strict` —
   the schemas belong to the callers). Callers keep a parser fallback for models that do not.
@@ -82,22 +87,29 @@ extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); b
   likewise unusable: greyed with the key reason, `selected = null`. While the catalog is loading or failed to load,
   nothing is judged — a valid choice is never called vanished because its list is not here.
 - `SaveSelection` accepts only a known stage and a registered, enabled model that suits the stage (observe needs
-  `vision`) — the same rules the dropdown shows, enforced where they can be trusted (`InvalidArgument` /
-  `NotFound` / `FailedPrecondition`).
+  `vision`) **and that the caller's plan may run** — the same rules the dropdown shows, enforced where they can be
+  trusted (`InvalidArgument` / `NotFound` / `FailedPrecondition` / `PermissionDenied` with `MODEL_LOCKED`).
+- A saved selection the caller's plan may **not** run is reported `missing` but its **row is kept**: a downgrade is
+  reversible state, so an upgrade restores the choice with no re-selection. The picker greys it with the tier that
+  unlocks it rather than with the vanished reason.
 - A pair must contain two distinct enabled stage-suitable refs. `ApplyRecommendationSet` validates the complete
   three-stage, nine-slot set before one transaction; no partial rows survive rejection. A recommendation is never
-  applied on mount, login, or account creation.
+  applied on mount, login, or account creation. The plan floor is checked over all nine refs first, so a refusal
+  names every offending selection at once with the one tier that clears them.
 
 ## Catalog metadata and recommendations
 
 - Models may declare context tokens, dated input/output USD-per-million snapshots, and labels. Unknown/bad metadata
   or a broken recommendation ref stops boot. Prices are display/estimate metadata only; reported provider cost wins.
 - The shipped opt-in `balanced-2026-08` set pins six model ids and one active/A-B selection per stage. Removed models
-  stay readable from experiment snapshots but cannot be newly selected.
+  stay readable from experiment snapshots but cannot be newly selected. It names `min_plan: max` models, so it is
+  refused below the `max` tier and the frontend disables its action with that reason.
 
 ## What crosses to the browser
 
-Ids, labels and flags (`ModelInfo`), and per-stage `Selection`s. No key, no SDK payload, no base URL — the proto
+Ids, labels and flags (`ModelInfo`, including `min_plan` and the per-caller `locked`), and per-stage `Selection`s.
+`locked` is display only — the server refuses a locked ref on every RPC that accepts one, whatever the client
+rendered. No key, no SDK payload, no base URL — the proto
 has no field for them (plan 04 AC6).
 
 ## Configuration

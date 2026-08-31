@@ -10,6 +10,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/provider"
 )
 
@@ -51,7 +52,7 @@ func TestProviderUnknownErrorDoesNotLeakDetail(t *testing.T) {
 
 func TestSaveSelectionDistinguishesMissingAndUnknownStage(t *testing.T) {
 	handler := NewHandler(nil)
-	ctx := auth.WithUser(context.Background(), "alice")
+	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "alice", Plan: plan.Free})
 	for name, tc := range map[string]struct {
 		stage  postpilotv1.Stage
 		reason string

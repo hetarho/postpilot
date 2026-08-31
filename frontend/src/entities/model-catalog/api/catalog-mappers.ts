@@ -11,6 +11,7 @@ import {
   type ProtoComparisonPair,
   type ProtoRecommendationSet,
 } from '@/shared/api'
+import { planFromProto } from '@/entities/plan/@x/model-catalog'
 import type {
   CatalogModel,
   ComparisonPair,
@@ -54,6 +55,8 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
     inputUsdPerMillion: info.inputUsdPerMillion,
     outputUsdPerMillion: info.outputUsdPerMillion,
     pricingCheckedAt: info.pricingCheckedAt,
+    minPlan: planFromProto(info.minPlan),
+    locked: info.locked,
   }
 }
 

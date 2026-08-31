@@ -1,6 +1,12 @@
 export { isInAppPath, SIGNED_IN_HOME } from './redirect'
 export { formatRelativeTime } from './datetime'
-export { formatDate, formatDateTime, formatNumber, formatPercent } from './localization'
+export {
+  formatDate,
+  formatDateTime,
+  formatMicroUsd,
+  formatNumber,
+  formatPercent,
+} from './localization'
 export { formatAppFailure } from './localization'
 export { activeLocale } from './localization'
 export type { Locale } from './localization'

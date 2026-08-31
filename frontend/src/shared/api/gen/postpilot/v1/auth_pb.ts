@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Plan } from "./plan_pb";
+import { file_postpilot_v1_plan } from "./plan_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file postpilot/v1/auth.proto.
  */
 export const file_postpilot_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb3N0cGlsb3QvdjEvYXV0aC5wcm90bxIMcG9zdHBpbG90LnYxIjIKDExvZ2luUmVxdWVzdBIQCghsb2dpbl9pZBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSIxCg1Mb2dpblJlc3BvbnNlEiAKBHVzZXIYASABKAsyEi5wb3N0cGlsb3QudjEuVXNlciIPCg1Mb2dvdXRSZXF1ZXN0IhAKDkxvZ291dFJlc3BvbnNlIg4KDEdldE1lUmVxdWVzdCIxCg1HZXRNZVJlc3BvbnNlEiAKBHVzZXIYASABKAsyEi5wb3N0cGlsb3QudjEuVXNlciISCgRVc2VyEgoKAmlkGAEgASgJMtwBCgtBdXRoU2VydmljZRJCCgVMb2dpbhIaLnBvc3RwaWxvdC52MS5Mb2dpblJlcXVlc3QaGy5wb3N0cGlsb3QudjEuTG9naW5SZXNwb25zZSIAEkUKBkxvZ291dBIbLnBvc3RwaWxvdC52MS5Mb2dvdXRSZXF1ZXN0GhwucG9zdHBpbG90LnYxLkxvZ291dFJlc3BvbnNlIgASQgoFR2V0TWUSGi5wb3N0cGlsb3QudjEuR2V0TWVSZXF1ZXN0GhsucG9zdHBpbG90LnYxLkdldE1lUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
+  fileDesc("Chdwb3N0cGlsb3QvdjEvYXV0aC5wcm90bxIMcG9zdHBpbG90LnYxIjIKDExvZ2luUmVxdWVzdBIQCghsb2dpbl9pZBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSJTCg1Mb2dpblJlc3BvbnNlEiAKBHVzZXIYASABKAsyEi5wb3N0cGlsb3QudjEuVXNlchIgCgRwbGFuGAIgASgOMhIucG9zdHBpbG90LnYxLlBsYW4iDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiUwoNR2V0TWVSZXNwb25zZRIgCgR1c2VyGAEgASgLMhIucG9zdHBpbG90LnYxLlVzZXISIAoEcGxhbhgCIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuIhIKBFVzZXISCgoCaWQYASABKAky3AEKC0F1dGhTZXJ2aWNlEkIKBUxvZ2luEhoucG9zdHBpbG90LnYxLkxvZ2luUmVxdWVzdBobLnBvc3RwaWxvdC52MS5Mb2dpblJlc3BvbnNlIgASRQoGTG9nb3V0EhsucG9zdHBpbG90LnYxLkxvZ291dFJlcXVlc3QaHC5wb3N0cGlsb3QudjEuTG9nb3V0UmVzcG9uc2UiABJCCgVHZXRNZRIaLnBvc3RwaWxvdC52MS5HZXRNZVJlcXVlc3QaGy5wb3N0cGlsb3QudjEuR2V0TWVSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_plan]);
 
 /**
  * @generated from message postpilot.v1.LoginRequest
@@ -42,6 +44,14 @@ export type LoginResponse = Message<"postpilot.v1.LoginResponse"> & {
    * @generated from field: postpilot.v1.User user = 1;
    */
   user?: User | undefined;
+
+  /**
+   * The same tier GetMe reports. It rides the login response so the first authenticated
+   * paint after a login gates on the real tier instead of on nothing.
+   *
+   * @generated from field: postpilot.v1.Plan plan = 2;
+   */
+  plan: Plan;
 };
 
 /**
@@ -98,6 +108,14 @@ export type GetMeResponse = Message<"postpilot.v1.GetMeResponse"> & {
    * @generated from field: postpilot.v1.User user = 1;
    */
   user?: User | undefined;
+
+  /**
+   * The account's tier rides the session probe so the app can gate master-only surfaces
+   * on boot without a second round-trip.
+   *
+   * @generated from field: postpilot.v1.Plan plan = 2;
+   */
+  plan: Plan;
 };
 
 /**

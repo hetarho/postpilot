@@ -1,6 +1,7 @@
 import i18next from 'i18next'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
+import { planLabel } from '@/entities/plan'
 import {
   type CatalogModel,
   type StageName,
@@ -61,7 +62,7 @@ export function StageModelSelect({
         aria-describedby={describedBy || undefined}
         onChange={(event) => {
           const chosen = models.find((model) => refKey(model.ref) === event.target.value)
-          if (chosen && !chosen.disabled) save.save(stage, chosen.ref)
+          if (chosen && !chosen.disabled && !chosen.locked) save.save(stage, chosen.ref)
         }}
         className="mt-1"
       >
@@ -77,7 +78,11 @@ export function StageModelSelect({
           </option>
         )}
         {models.map((model) => (
-          <option key={refKey(model.ref)} value={refKey(model.ref)} disabled={model.disabled}>
+          <option
+            key={refKey(model.ref)}
+            value={refKey(model.ref)}
+            disabled={model.disabled || model.locked}
+          >
             {optionLabel(model)}
           </option>
         ))}
@@ -125,6 +130,13 @@ function optionLabel(model: CatalogModel): string {
   ]
     .filter(Boolean)
     .join(' ')
-  const reason = model.disabled ? ` — ${model.disabledReason}` : ''
+  // A locked model stays listed rather than vanishing, and says which tier unlocks it: the
+  // reason it cannot be chosen is the only thing this entry has to teach. A provider without
+  // a key is the more immediate obstacle, so that reason wins when both apply.
+  const reason = model.disabled
+    ? ` — ${model.disabledReason}`
+    : model.locked
+      ? ` — ${i18next.t('selectField.locked', { ns: 'models', plan: planLabel(model.minPlan) })}`
+      : ''
   return `${model.label}${badges ? ` ${badges}` : ''}${reason}`
 }

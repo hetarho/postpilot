@@ -119,6 +119,18 @@ export const appFailureSpecs = {
   PUBLISH_NEEDS_ATTENTION: {},
   PUBLISH_OUTCOME_UNKNOWN: {},
   NETWORK_UNAVAILABLE: {},
+  // Plan enforcement (plan 17). The two budget axes carry micro-USD integers and the count
+  // axis carries a plain count; both are rendered through the catalogs' formatters, so the
+  // server never has to guess the reader's currency or timezone.
+  DAILY_COUNT: { required: ['limit', 'used', 'resets_at'] },
+  DAILY_COST: { required: ['limit', 'used', 'resets_at'] },
+  MONTHLY_COST: { required: ['limit', 'used', 'resets_at'] },
+  MODEL_LOCKED: { required: ['required_plan'], optional: ['model', 'models'] },
+  MASTER_ONLY: {},
+  LAST_MASTER: {},
+  USER_NOT_FOUND: {},
+  USER_ID_REQUIRED: {},
+  PLAN_REQUIRED: {},
 } as const satisfies Readonly<Record<string, FailureParamSpec>>
 
 export type AppFailureReason = keyof typeof appFailureSpecs

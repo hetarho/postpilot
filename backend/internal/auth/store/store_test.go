@@ -9,6 +9,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
 )
 
@@ -34,7 +35,7 @@ func TestUserRoundTrip(t *testing.T) {
 	// A sub-second, non-UTC timestamp: the store must normalize it, and the value that
 	// comes back must be the same instant.
 	created := time.Date(2026, 3, 1, 12, 30, 45, 123456789, time.FixedZone("KST", 9*3600))
-	want := auth.User{ID: "alice", PasswordHash: "$argon2id$...", CreatedAt: created}
+	want := auth.User{ID: "alice", PasswordHash: "$argon2id$...", Plan: plan.Basic, CreatedAt: created}
 
 	if err := s.CreateUser(ctx, want); err != nil {
 		t.Fatalf("CreateUser: %v", err)
@@ -44,7 +45,7 @@ func TestUserRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetUser: %v", err)
 	}
-	if got.ID != want.ID || got.PasswordHash != want.PasswordHash {
+	if got.ID != want.ID || got.PasswordHash != want.PasswordHash || got.Plan != want.Plan {
 		t.Errorf("user = %+v, want %+v", got, want)
 	}
 	if !got.CreatedAt.Equal(want.CreatedAt) {
@@ -63,7 +64,7 @@ func TestGetUserUnknown(t *testing.T) {
 func TestCreateUserDuplicate(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
-	user := auth.User{ID: "alice", PasswordHash: "hash", CreatedAt: time.Now()}
+	user := auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}
 
 	if err := s.CreateUser(ctx, user); err != nil {
 		t.Fatalf("CreateUser: %v", err)
@@ -77,7 +78,7 @@ func TestSessionRoundTripAndDelete(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
 
-	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", CreatedAt: time.Now()}); err != nil {
+	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 
@@ -110,7 +111,7 @@ func TestDeleteExpiredSessions(t *testing.T) {
 	s := newStore(t)
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 
-	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", CreatedAt: now}); err != nil {
+	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: now}); err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	sessions := map[string]time.Time{
@@ -143,7 +144,7 @@ func TestSessionCascadesWithUser(t *testing.T) {
 	s := newStore(t)
 	now := time.Now()
 
-	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", CreatedAt: now}); err != nil {
+	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: now}); err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	if err := s.CreateSession(ctx, auth.Session{Token: "t", UserID: "alice", ExpiresAt: now.Add(time.Hour), CreatedAt: now}); err != nil {
@@ -165,7 +166,7 @@ func TestTimestampsSortLexicographically(t *testing.T) {
 	s := newStore(t)
 	base := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 
-	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", CreatedAt: base}); err != nil {
+	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: base}); err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 

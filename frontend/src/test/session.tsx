@@ -11,6 +11,7 @@ import { create } from '@bufbuild/protobuf'
 import {
   AuthService,
   GetMeResponseSchema,
+  ProtoPlan,
   LoginResponseSchema,
   LogoutResponseSchema,
 } from '@/shared/api'
@@ -21,12 +22,18 @@ import { type FakeVoiceOptions, registerVoiceService } from './voice'
 import { type FakeExperimentsOptions, registerExperimentService } from './experiments'
 import { type FakePublishingOptions, registerPublishingService } from './publishing'
 import { type FakePurposesOptions, registerPurposeService } from './purposes'
+import { type FakePlansOptions, registerPlanServices } from './plans'
 import { connectAppError } from './app-error'
 
 export interface FakeAuthOptions {
   /** The account GetMe reports. `undefined` makes GetMe answer 401, like a real server
-   *  with no session. */
-  user?: { id: string }
+   *  with no session.
+   *
+   *  `plan` defaults to `master` for the same reason migration 0013 backfills existing
+   *  accounts to it: every test written before the ladder existed assumed an account with
+   *  full authority, and that is what those accounts became. A test about a gated surface
+   *  sets a lower tier explicitly. */
+  user?: { id: string; plan?: ProtoPlan }
   /** Makes Login answer 401, like wrong credentials. */
   loginFails?: boolean
   /** Makes Logout fail, like an API that went away mid-session. */
@@ -48,6 +55,8 @@ export interface FakeAuthOptions {
   /** The acting account's 용도 briefs. Present by default with none, so every screen that
    *  mounts the selector reads an empty directory rather than an "unimplemented" error. */
   purposes?: FakePurposesOptions
+  /** The plan ladder: the caller's own tier and usage, and the operator's account list. */
+  plans?: FakePlansOptions
 }
 
 /** A fake backend plus the controls a test needs over it. */
@@ -67,13 +76,19 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     rpc(AuthService.method.getMe, () => {
       calls?.push('GetMe')
       if (!session) throw connectAppError('AUTH_REQUIRED', Code.Unauthenticated)
-      return create(GetMeResponseSchema, { user: session })
+      return create(GetMeResponseSchema, {
+        user: { id: session.id },
+        plan: session.plan ?? ProtoPlan.MASTER,
+      })
     })
     rpc(AuthService.method.login, (req) => {
       calls?.push('Login')
       if (loginFails) throw connectAppError('INVALID_CREDENTIALS', Code.Unauthenticated)
-      session = { id: req.loginId }
-      return create(LoginResponseSchema, { user: session })
+      session = { id: req.loginId, plan: user?.plan }
+      return create(LoginResponseSchema, {
+        user: { id: session.id },
+        plan: session.plan ?? ProtoPlan.MASTER,
+      })
     })
     rpc(AuthService.method.logout, () => {
       calls?.push('Logout')
@@ -88,6 +103,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerExperimentService(router, { calls, ...options.experiments })
     registerPublishingService(router, { calls, ...options.publishing })
     registerPurposeService(router, { calls, ...options.purposes })
+    registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
   })
 
   return {

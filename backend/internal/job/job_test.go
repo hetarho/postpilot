@@ -766,3 +766,106 @@ func TestStoreRejectsFailureThatDoesNotMatchTerminalStatus(t *testing.T) {
 		t.Fatalf("rejected terminal writes changed job = %+v, err=%v", found, err)
 	}
 }
+
+// recordingAdmitter stands in for the plan gate. The queue is deliberately ignorant of what
+// a refusal means, so the fake only has to answer yes or no and remember what it was asked.
+type recordingAdmitter struct {
+	starts   []job.Start
+	released []string
+	refuse   error
+}
+
+func (a *recordingAdmitter) Admit(_ context.Context, start job.Start) error {
+	if a.refuse != nil {
+		return a.refuse
+	}
+	a.starts = append(a.starts, start)
+	return nil
+}
+
+func (a *recordingAdmitter) Release(_ context.Context, jobID string) {
+	a.released = append(a.released, jobID)
+}
+
+// A2/A3: a refused start creates no job row at all — the client is told to try later, not
+// handed a job that will never run.
+func TestRefusedAdmissionCreatesNoJob(t *testing.T) {
+	h := newHarness(t)
+	refusal := errors.New("quota exhausted")
+	admitter := &recordingAdmitter{refuse: refusal}
+	h.queue.Admit(admitter)
+
+	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		WriteModel: "openrouter/free", TargetLanguage: "ko",
+	})
+	if !errors.Is(err, refusal) {
+		t.Fatalf("error = %v, want the gate's own refusal unwrapped", err)
+	}
+	if id != "" {
+		t.Errorf("job id = %q, want none", id)
+	}
+	active, err := h.store.ActiveForPostUser(context.Background(), "post-a", "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if active != nil {
+		t.Errorf("a refused start left job %s behind", active.ID)
+	}
+}
+
+// A4: one comparison is one admission, however many candidate models it fans out to — and the
+// gate is asked about every ref the job will actually run ([I3]'s explicit fan-out).
+func TestOneComparisonIsOneAdmissionOverBothCandidates(t *testing.T) {
+	h := newHarness(t)
+	admitter := &recordingAdmitter{}
+	h.queue.Admit(admitter)
+
+	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindModelExperiment, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		ExtraModels: []string{"openrouter/a", "openrouter/b"},
+	})
+	if err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if got, want := len(admitter.starts), 1; got != want {
+		t.Fatalf("admissions = %d, want %d", got, want)
+	}
+	start := admitter.starts[0]
+	if start.JobID != id || start.UserID != "alice" || start.Kind != job.KindModelExperiment {
+		t.Errorf("start = %+v", start)
+	}
+	if got, want := strings.Join(start.Models, ","), "openrouter/a,openrouter/b"; got != want {
+		t.Errorf("gated models = %q, want %q", got, want)
+	}
+}
+
+// Both stage choices are gated, and an unused stage contributes nothing to ask about.
+func TestAdmissionGatesBothStageModels(t *testing.T) {
+	h := newHarness(t)
+	admitter := &recordingAdmitter{}
+	h.queue.Admit(admitter)
+
+	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		ObserveModel: "openrouter/vision", WriteModel: "openrouter/writer", TargetLanguage: "ko",
+	}); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if got, want := strings.Join(admitter.starts[0].Models, ","), "openrouter/vision,openrouter/writer"; got != want {
+		t.Fatalf("gated models = %q, want %q", got, want)
+	}
+
+	// A second start on the same post is refused by the existing active-job guard, which runs
+	// BEFORE admission — so a duplicate request must not consume a start either.
+	before := len(admitter.starts)
+	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		WriteModel: "openrouter/writer", TargetLanguage: "ko",
+	}); err == nil {
+		t.Fatal("a second start on a busy post must be refused")
+	}
+	if len(admitter.starts) != before {
+		t.Errorf("admissions = %d, want the busy-post refusal to consume none", len(admitter.starts))
+	}
+}

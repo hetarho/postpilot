@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useLogout, useSession } from '@/entities/session'
 import { AppFailureMessage, Button, Logo, Notice } from '@/shared/ui'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
+import { PlanUsage } from '@/widgets/plan-usage'
 import { endSession } from '../model/end-session'
 
 /** The app's destinations, in one list so the phone tab bar and the desktop header cannot drift.
@@ -15,12 +16,16 @@ const DESTINATIONS: ReadonlyArray<{
   to: string
   labelKey: 'posts' | 'voices' | 'purposes' | 'models' | 'publishingAgents'
   icon: ComponentType<{ className?: string }>
+  /** The tier this destination requires. Publishing runs through OUR paired agent and OUR
+   *  infrastructure ([I1]), so it is the operator's surface — and the server refuses every one
+   *  of its procedures to anyone else, which is what makes hiding it honest rather than a tease. */
+  masterOnly?: true
 }> = [
   { to: '/posts', labelKey: 'posts', icon: FileText },
   { to: '/voices', labelKey: 'voices', icon: Quote },
   { to: '/purposes', labelKey: 'purposes', icon: Target },
   { to: '/ai-models', labelKey: 'models', icon: Bot },
-  { to: '/publishing-agents', labelKey: 'publishingAgents', icon: Send },
+  { to: '/publishing-agents', labelKey: 'publishingAgents', icon: Send, masterOnly: true },
 ]
 
 /** The shell every signed-in screen renders inside.
@@ -42,6 +47,11 @@ export function AuthenticatedLayout() {
   const { user } = useSession()
   const logout = useLogout()
   const navigate = useNavigate()
+  // Four destinations for an ordinary account, five for the operator — still inside the 3–5 a
+  // bottom bar is designed for, so the phone bar keeps every destination visible either way.
+  const destinations = DESTINATIONS.filter(
+    (destination) => !destination.masterOnly || user?.plan === 'master',
+  )
 
   // Where logout lands is the shell's decision, not the entity's — so the navigation
   // lives here rather than in useLogout. Awaiting is what orders it correctly:
@@ -81,7 +91,7 @@ export function AuthenticatedLayout() {
             className="hidden items-center gap-1 sm:flex"
             aria-label={t('primary', { ns: 'nav' })}
           >
-            {DESTINATIONS.map((destination) => (
+            {destinations.map((destination) => (
               <Link
                 key={destination.to}
                 to={destination.to}
@@ -102,6 +112,7 @@ export function AuthenticatedLayout() {
           <span className="text-content-tertiary hidden font-mono text-xs sm:inline">
             {user?.id}
           </span>
+          <PlanUsage plan={user?.plan} />
           {/* `secondary`, not `ghost`: a ghost button's only fill lives behind `hover:`, which
               Tailwind compiles to `@media (hover: hover)` and a phone never matches — so the one
               control in the header used to render as text (§6). */}
@@ -132,7 +143,7 @@ export function AuthenticatedLayout() {
         className="bg-surface-raised pb-safe-b fixed inset-x-0 bottom-0 z-30 flex shadow-lg sm:hidden"
         aria-label={t('primary', { ns: 'nav' })}
       >
-        {DESTINATIONS.map((destination) => (
+        {destinations.map((destination) => (
           <Link
             key={destination.to}
             to={destination.to}

@@ -4,6 +4,8 @@ package postpilot.v1;
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
+import "postpilot/v1/plan.proto";
+
 // provider.proto is the model catalog: what is registered in providers.yaml, what each
 // model can do, and the acting user's last choice per stage (PRD §3.3, §6.4, F-4).
 //
@@ -59,6 +61,11 @@ message ModelInfo {
   string input_usd_per_million = 8;
   string output_usd_per_million = 9;
   string pricing_checked_at = 10;
+  // The lowest plan allowed to run this model, declared per model in providers.yaml.
+  Plan min_plan = 11;
+  // min_plan exceeds the CALLING account's plan. Display only — the server refuses a
+  // locked ref on every RPC that accepts one, whatever the client rendered.
+  bool locked = 12;
 }
 
 message Selection {

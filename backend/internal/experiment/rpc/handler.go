@@ -15,6 +15,7 @@ import (
 	"github.com/postpilot/backend/internal/experiment"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
@@ -223,6 +224,17 @@ func actingUser(ctx context.Context) (string, error) {
 }
 
 func toConnectError(op string, err error) error {
+	// Plan refusals are matched by type here rather than mapped by each service: the
+	// admission gate lives at one seam (job enqueue), so its two failures must translate
+	// identically wherever they surface.
+	var quota *plan.QuotaError
+	if errors.As(err, &quota) {
+		return rpcserver.AppErrorFrom(connect.CodeResourceExhausted, quota)
+	}
+	var locked *plan.ModelLockedError
+	if errors.As(err, &locked) {
+		return rpcserver.AppErrorFrom(connect.CodePermissionDenied, locked)
+	}
 	var active *experiment.JobAlreadyInProgressError
 	switch {
 	case errors.Is(err, experiment.ErrNotFound):

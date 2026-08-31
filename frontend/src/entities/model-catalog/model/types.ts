@@ -1,4 +1,5 @@
 import i18next from 'i18next'
+import type { PlanName } from '@/entities/plan/@x/model-catalog'
 
 /** The three places a model is chosen ([I3]); the app never fills one in. */
 export type StageName = 'observe' | 'write' | 'analyze'
@@ -27,6 +28,11 @@ export interface CatalogModel {
   inputUsdPerMillion: string
   outputUsdPerMillion: string
   pricingCheckedAt: string
+  /** The lowest plan allowed to run this model, declared per model in the registry. */
+  minPlan: PlanName | undefined
+  /** `minPlan` is above the CALLING account's tier. Display only: the server refuses a
+   *  locked ref on every RPC that accepts one, whatever this client rendered. */
+  locked: boolean
 }
 
 export type SelectionSlotName = 'active' | 'candidateA' | 'candidateB'

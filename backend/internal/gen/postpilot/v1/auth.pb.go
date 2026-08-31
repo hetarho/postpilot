@@ -74,8 +74,11 @@ func (x *LoginRequest) GetPassword() string {
 }
 
 type LoginResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	User  *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	// The same tier GetMe reports. It rides the login response so the first authenticated
+	// paint after a login gates on the real tier instead of on nothing.
+	Plan          Plan `protobuf:"varint,2,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,6 +118,13 @@ func (x *LoginResponse) GetUser() *User {
 		return x.User
 	}
 	return nil
+}
+
+func (x *LoginResponse) GetPlan() Plan {
+	if x != nil {
+		return x.Plan
+	}
+	return Plan_PLAN_UNSPECIFIED
 }
 
 type LogoutRequest struct {
@@ -226,8 +236,11 @@ func (*GetMeRequest) Descriptor() ([]byte, []int) {
 }
 
 type GetMeResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	User  *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	// The account's tier rides the session probe so the app can gate master-only surfaces
+	// on boot without a second round-trip.
+	Plan          Plan `protobuf:"varint,2,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -267,6 +280,13 @@ func (x *GetMeResponse) GetUser() *User {
 		return x.User
 	}
 	return nil
+}
+
+func (x *GetMeResponse) GetPlan() Plan {
+	if x != nil {
+		return x.Plan
+	}
+	return Plan_PLAN_UNSPECIFIED
 }
 
 // User is everything the client may know about an account. There is no display name,
@@ -319,17 +339,19 @@ var File_postpilot_v1_auth_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x17postpilot/v1/auth.proto\x12\fpostpilot.v1\"E\n" +
+	"\x17postpilot/v1/auth.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/plan.proto\"E\n" +
 	"\fLoginRequest\x12\x19\n" +
 	"\blogin_id\x18\x01 \x01(\tR\aloginId\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"7\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"_\n" +
 	"\rLoginResponse\x12&\n" +
-	"\x04user\x18\x01 \x01(\v2\x12.postpilot.v1.UserR\x04user\"\x0f\n" +
+	"\x04user\x18\x01 \x01(\v2\x12.postpilot.v1.UserR\x04user\x12&\n" +
+	"\x04plan\x18\x02 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\"\x0f\n" +
 	"\rLogoutRequest\"\x10\n" +
 	"\x0eLogoutResponse\"\x0e\n" +
-	"\fGetMeRequest\"7\n" +
+	"\fGetMeRequest\"_\n" +
 	"\rGetMeResponse\x12&\n" +
-	"\x04user\x18\x01 \x01(\v2\x12.postpilot.v1.UserR\x04user\"\x16\n" +
+	"\x04user\x18\x01 \x01(\v2\x12.postpilot.v1.UserR\x04user\x12&\n" +
+	"\x04plan\x18\x02 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\"\x16\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id2\xdc\x01\n" +
 	"\vAuthService\x12B\n" +
@@ -358,21 +380,24 @@ var file_postpilot_v1_auth_proto_goTypes = []any{
 	(*GetMeRequest)(nil),   // 4: postpilot.v1.GetMeRequest
 	(*GetMeResponse)(nil),  // 5: postpilot.v1.GetMeResponse
 	(*User)(nil),           // 6: postpilot.v1.User
+	(Plan)(0),              // 7: postpilot.v1.Plan
 }
 var file_postpilot_v1_auth_proto_depIdxs = []int32{
 	6, // 0: postpilot.v1.LoginResponse.user:type_name -> postpilot.v1.User
-	6, // 1: postpilot.v1.GetMeResponse.user:type_name -> postpilot.v1.User
-	0, // 2: postpilot.v1.AuthService.Login:input_type -> postpilot.v1.LoginRequest
-	2, // 3: postpilot.v1.AuthService.Logout:input_type -> postpilot.v1.LogoutRequest
-	4, // 4: postpilot.v1.AuthService.GetMe:input_type -> postpilot.v1.GetMeRequest
-	1, // 5: postpilot.v1.AuthService.Login:output_type -> postpilot.v1.LoginResponse
-	3, // 6: postpilot.v1.AuthService.Logout:output_type -> postpilot.v1.LogoutResponse
-	5, // 7: postpilot.v1.AuthService.GetMe:output_type -> postpilot.v1.GetMeResponse
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	7, // 1: postpilot.v1.LoginResponse.plan:type_name -> postpilot.v1.Plan
+	6, // 2: postpilot.v1.GetMeResponse.user:type_name -> postpilot.v1.User
+	7, // 3: postpilot.v1.GetMeResponse.plan:type_name -> postpilot.v1.Plan
+	0, // 4: postpilot.v1.AuthService.Login:input_type -> postpilot.v1.LoginRequest
+	2, // 5: postpilot.v1.AuthService.Logout:input_type -> postpilot.v1.LogoutRequest
+	4, // 6: postpilot.v1.AuthService.GetMe:input_type -> postpilot.v1.GetMeRequest
+	1, // 7: postpilot.v1.AuthService.Login:output_type -> postpilot.v1.LoginResponse
+	3, // 8: postpilot.v1.AuthService.Logout:output_type -> postpilot.v1.LogoutResponse
+	5, // 9: postpilot.v1.AuthService.GetMe:output_type -> postpilot.v1.GetMeResponse
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_auth_proto_init() }
@@ -380,6 +405,7 @@ func file_postpilot_v1_auth_proto_init() {
 	if File_postpilot_v1_auth_proto != nil {
 		return
 	}
+	file_postpilot_v1_plan_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

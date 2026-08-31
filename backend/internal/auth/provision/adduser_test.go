@@ -191,3 +191,87 @@ func TestRunBootstrapsTheAccountAndRepairsOnRerun(t *testing.T) {
 		t.Fatalf("rerun did not repair: calls = %v", calls)
 	}
 }
+
+// A1: provisioning defaults to the smallest tier. A command that hands out unlimited spend by
+// omission is the exact failure the ladder exists to prevent.
+func TestRunDefaultsToFreeAndAcceptsAnExplicitTier(t *testing.T) {
+	for name, tc := range map[string]struct {
+		args []string
+		want string
+	}{
+		"default":    {[]string{"alice"}, "free"},
+		"explicit":   {[]string{"alice", "--plan=max"}, "max"},
+		"flag first": {[]string{"--plan=master", "alice"}, "master"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dbPath := filepath.Join(t.TempDir(), "postpilot.db")
+			rest := make([]any, 0, len(tc.args)-1)
+			for _, arg := range tc.args[1:] {
+				rest = append(rest, arg)
+			}
+			if err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", tc.args[0], rest...); err != nil {
+				t.Fatalf("Run: %v", err)
+			}
+			if got := storedPlan(t, dbPath, "alice"); got != tc.want {
+				t.Errorf("plan = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRunRejectsAnUnknownTier(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "postpilot.db")
+	err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "alice", "--plan=pro")
+	if err == nil || !strings.Contains(err.Error(), "unknown plan") {
+		t.Fatalf("error = %v, want an unknown-plan refusal", err)
+	}
+}
+
+// A1/A10: `setplan` is the operator's path to the same change the master-only RPC makes, and
+// it enforces the same last-master guard — neither path may lock administration out.
+func TestSetPlanChangesAnAccountAndKeepsTheLastMaster(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "postpilot.db")
+	if err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "root", "--plan=master"); err != nil {
+		t.Fatalf("seed master: %v", err)
+	}
+	t.Setenv("DB_PATH", dbPath)
+	ctx := context.Background()
+
+	if err := SetPlan(ctx, []string{"root", "basic"}); !errors.Is(err, auth.ErrLastMaster) {
+		t.Fatalf("demoting the last master = %v, want ErrLastMaster", err)
+	}
+	if got := storedPlan(t, dbPath, "root"); got != "master" {
+		t.Fatalf("plan = %q, want the refused demotion to have changed nothing", got)
+	}
+
+	if err := SetPlan(ctx, []string{"ghost", "free"}); err == nil || !strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("unknown account = %v, want a clear message", err)
+	}
+	if err := SetPlan(ctx, []string{"root", "pro"}); err == nil {
+		t.Error("an unknown tier was accepted")
+	}
+
+	if err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "alice"); err != nil {
+		t.Fatalf("seed alice: %v", err)
+	}
+	if err := SetPlan(ctx, []string{"alice", "max"}); err != nil {
+		t.Fatalf("SetPlan: %v", err)
+	}
+	if got := storedPlan(t, dbPath, "alice"); got != "max" {
+		t.Errorf("plan = %q, want max", got)
+	}
+}
+
+func storedPlan(t *testing.T, dbPath, id string) string {
+	t.Helper()
+	handle, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer handle.Close()
+	var stored string
+	if err := handle.Reader.QueryRow("SELECT plan FROM users WHERE id = ?", id).Scan(&stored); err != nil {
+		t.Fatalf("read plan: %v", err)
+	}
+	return stored
+}

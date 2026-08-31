@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/plan"
 )
 
 // fakeStore is an in-memory auth.Store. It exists because these tests are about the
@@ -36,6 +38,46 @@ func (f *fakeStore) GetUser(_ context.Context, id string) (User, error) {
 		return User{}, ErrUserNotFound
 	}
 	return u, nil
+}
+
+func (f *fakeStore) GetUserPlan(_ context.Context, id string) (plan.Plan, error) {
+	u, ok := f.users[id]
+	if !ok {
+		return "", ErrUserNotFound
+	}
+	return u.Plan, nil
+}
+
+// SetUserPlan mirrors the real statement's guard, which refuses to demote the only master.
+func (f *fakeStore) SetUserPlan(_ context.Context, id string, p plan.Plan) error {
+	u, ok := f.users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+	if u.Plan == plan.Master && p != plan.Master && f.masters() <= 1 {
+		return ErrLastMaster
+	}
+	u.Plan = p
+	f.users[id] = u
+	return nil
+}
+
+func (f *fakeStore) masters() int {
+	var n int
+	for _, u := range f.users {
+		if u.Plan == plan.Master {
+			n++
+		}
+	}
+	return n
+}
+
+func (f *fakeStore) ListUsers(_ context.Context) ([]User, error) {
+	out := make([]User, 0, len(f.users))
+	for _, u := range f.users {
+		out = append(out, u)
+	}
+	return out, nil
 }
 
 func (f *fakeStore) CreateSession(_ context.Context, s Session) error {
@@ -79,7 +121,7 @@ func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 	svc := NewService(store, 720*time.Hour)
 	svc.now = func() time.Time { return now }
 
-	if err := svc.CreateUser(context.Background(), "alice", "s3cret"); err != nil {
+	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
 	return svc, store
@@ -211,12 +253,15 @@ func TestAuthenticate(t *testing.T) {
 	}
 
 	t.Run("valid", func(t *testing.T) {
-		id, err := svc.Authenticate(context.Background(), raw)
+		actor, err := svc.Authenticate(context.Background(), raw)
 		if err != nil {
 			t.Fatalf("Authenticate: %v", err)
 		}
-		if id != "alice" {
-			t.Errorf("user id = %q, want alice", id)
+		if actor.UserID != "alice" {
+			t.Errorf("user id = %q, want alice", actor.UserID)
+		}
+		if actor.Plan != plan.Free {
+			t.Errorf("plan = %q, want free", actor.Plan)
 		}
 	})
 
@@ -323,13 +368,13 @@ func TestSweepExpired(t *testing.T) {
 func TestCreateUserRejectsDuplicateAndBlanks(t *testing.T) {
 	svc, _ := newTestService(t, time.Now())
 
-	if err := svc.CreateUser(context.Background(), "alice", "another"); !errors.Is(err, ErrDuplicateUser) {
+	if err := svc.CreateUser(context.Background(), "alice", "another", plan.Free); !errors.Is(err, ErrDuplicateUser) {
 		t.Errorf("duplicate id: %v, want ErrDuplicateUser", err)
 	}
-	if err := svc.CreateUser(context.Background(), "  ", "pw"); err == nil {
+	if err := svc.CreateUser(context.Background(), "  ", "pw", plan.Free); err == nil {
 		t.Error("a blank login id was accepted")
 	}
-	if err := svc.CreateUser(context.Background(), "bob", ""); err == nil {
+	if err := svc.CreateUser(context.Background(), "bob", "", plan.Free); err == nil {
 		t.Error("a blank password was accepted")
 	}
 }

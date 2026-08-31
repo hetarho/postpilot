@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 // fakeProvider records calls so a test can prove a capability refusal never reached it.
@@ -54,17 +55,20 @@ providers:
     models:
       - id: vision-a
         vision: true
+        min_plan: free
         context_tokens: 1000
         input_usd_per_million: "1"
         output_usd_per_million: "2"
         pricing_checked_at: "2026-08-29"
       - id: vision-b
         vision: true
+        min_plan: free
         context_tokens: 1000
         input_usd_per_million: "1"
         output_usd_per_million: "2"
         pricing_checked_at: "2026-08-29"
       - id: text
+        min_plan: free
         context_tokens: 1000
         input_usd_per_million: "1"
         output_usd_per_million: "2"
@@ -135,7 +139,9 @@ providers:
         label: Vision JSON
         vision: true
         structured_output: true
+        min_plan: basic
       - id: text-only
+        min_plan: free
 `
 
 func env(values map[string]string) func(string) string {
@@ -367,5 +373,39 @@ func TestComplete_RejectsInvalidCallerReasoning(t *testing.T) {
 	}
 	if provider.calls != 0 {
 		t.Fatalf("provider calls = %d, want 0", provider.calls)
+	}
+}
+
+// A11: min_plan is required on every model and validated against the ladder. A registry that
+// does not validate must not serve — the same posture as a bad migration.
+func TestParse_RequiresAValidMinPlanOnEveryModel(t *testing.T) {
+	for name, replacement := range map[string]string{
+		"missing": "",
+		"unknown": "        min_plan: pro\n",
+		"empty":   "        min_plan:\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			broken := strings.Replace(goodYAML, "        min_plan: basic\n", replacement, 1)
+			if _, err := llm.Parse([]byte(broken), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(&fakeProvider{}), opts); err == nil {
+				t.Fatal("a model without a usable min_plan must fail boot")
+			} else if !strings.Contains(err.Error(), "min_plan") {
+				t.Errorf("err = %v, want it to name min_plan", err)
+			}
+		})
+	}
+}
+
+// The registry only carries the declared floor; comparing it to an account is the caller's job.
+func TestParse_CarriesTheDeclaredFloor(t *testing.T) {
+	reg, err := llm.Parse([]byte(goodYAML), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(&fakeProvider{}), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	models := reg.Models()
+	if got, want := models[0].MinPlan, plan.Basic; got != want {
+		t.Errorf("first model min_plan = %q, want %q", got, want)
+	}
+	if got, want := models[1].MinPlan, plan.Free; got != want {
+		t.Errorf("second model min_plan = %q, want %q", got, want)
 	}
 }

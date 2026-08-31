@@ -70,6 +70,14 @@ sql:
         omit_unused_structs: true
   - engine: "sqlite"
     schema: "internal/platform/db/migrations"
+    queries: "internal/usage/store/queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/usage/store/sqlc"
+        omit_unused_structs: true
+  - engine: "sqlite"
+    schema: "internal/platform/db/migrations"
     queries: "internal/purpose/store/queries"
     gen:
       go:

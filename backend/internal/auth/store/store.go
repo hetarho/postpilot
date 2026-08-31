@@ -13,6 +13,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/auth/store/sqlc"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 // writeLayout is how timestamps live in SQLite. SQLite has no date type; RFC3339 in
@@ -43,6 +44,7 @@ func (s *Store) CreateUser(ctx context.Context, u auth.User) error {
 	err := s.write.CreateUser(ctx, sqlc.CreateUserParams{
 		ID:           u.ID,
 		PasswordHash: u.PasswordHash,
+		Plan:         u.Plan.String(),
 		CreatedAt:    formatTime(u.CreatedAt),
 	})
 	if err != nil {
@@ -67,7 +69,64 @@ func (s *Store) GetUser(ctx context.Context, id string) (auth.User, error) {
 	if err != nil {
 		return auth.User{}, fmt.Errorf("user %s: %w", row.ID, err)
 	}
-	return auth.User{ID: row.ID, PasswordHash: row.PasswordHash, CreatedAt: createdAt}, nil
+	stored, err := plan.Parse(row.Plan)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("user %s: %w", row.ID, err)
+	}
+	return auth.User{ID: row.ID, PasswordHash: row.PasswordHash, Plan: stored, CreatedAt: createdAt}, nil
+}
+
+func (s *Store) GetUserPlan(ctx context.Context, id string) (plan.Plan, error) {
+	value, err := s.read.GetUserPlan(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", auth.ErrUserNotFound
+		}
+		return "", fmt.Errorf("select user plan: %w", err)
+	}
+	stored, err := plan.Parse(value)
+	if err != nil {
+		return "", fmt.Errorf("user %s: %w", id, err)
+	}
+	return stored, nil
+}
+
+// SetUserPlan carries the last-master guard inside its statement, so it reports which of the
+// two reasons a zero-row update had rather than guessing.
+func (s *Store) SetUserPlan(ctx context.Context, id string, p plan.Plan) error {
+	rows, err := s.write.SetUserPlan(ctx, sqlc.SetUserPlanParams{Plan: p.String(), ID: id})
+	if err != nil {
+		return fmt.Errorf("update user plan: %w", err)
+	}
+	if rows > 0 {
+		return nil
+	}
+	// Nothing changed: either there is no such account, or the statement's own guard refused
+	// to demote the only remaining master.
+	if _, err := s.GetUserPlan(ctx, id); err != nil {
+		return err
+	}
+	return auth.ErrLastMaster
+}
+
+func (s *Store) ListUsers(ctx context.Context) ([]auth.User, error) {
+	rows, err := s.read.ListUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("select users: %w", err)
+	}
+	users := make([]auth.User, 0, len(rows))
+	for _, row := range rows {
+		createdAt, err := parseTime(row.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("user %s: %w", row.ID, err)
+		}
+		stored, err := plan.Parse(row.Plan)
+		if err != nil {
+			return nil, fmt.Errorf("user %s: %w", row.ID, err)
+		}
+		users = append(users, auth.User{ID: row.ID, Plan: stored, CreatedAt: createdAt})
+	}
+	return users, nil
 }
 
 func (s *Store) CreateSession(ctx context.Context, sess auth.Session) error {

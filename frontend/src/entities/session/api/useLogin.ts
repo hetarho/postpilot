@@ -18,9 +18,11 @@ export function useLogin() {
     onSuccess: (data) => {
       // setQueryData is typed to the query's own data, so this has to be a real
       // protobuf message, not a plain object literal.
+      // The tier is seeded with the id: the shell's first paint gates master-only surfaces
+      // on it, and a seed that carried only the id would render them wrong for one refetch.
       queryClient.setQueryData(
         getMeQueryKey(transport),
-        create(GetMeResponseSchema, { user: data.user }),
+        create(GetMeResponseSchema, { user: data.user, plan: data.plan }),
       )
     },
   })

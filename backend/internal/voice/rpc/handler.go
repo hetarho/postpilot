@@ -13,6 +13,7 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/voice"
 )
@@ -220,6 +221,17 @@ func actingUser(ctx context.Context) (string, error) {
 // like an unknown one; a tombstone and every lifecycle refusal are FailedPrecondition so the
 // client can offer the restore/reassign path instead of retrying.
 func toConnectError(op string, err error) error {
+	// Plan refusals are matched by type here rather than mapped by each service: the
+	// admission gate lives at one seam (job enqueue), so its two failures must translate
+	// identically wherever they surface.
+	var quota *plan.QuotaError
+	if errors.As(err, &quota) {
+		return rpcserver.AppErrorFrom(connect.CodeResourceExhausted, quota)
+	}
+	var locked *plan.ModelLockedError
+	if errors.As(err, &locked) {
+		return rpcserver.AppErrorFrom(connect.CodePermissionDenied, locked)
+	}
 	var tooShort *voice.SampleTooShortError
 	var badName *voice.VoiceNameError
 	var mismatch *voice.ContentLanguageMismatchError

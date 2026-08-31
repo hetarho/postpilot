@@ -6,7 +6,8 @@
 import { type Transport, Code, ConnectError } from '@connectrpc/connect'
 import { createConnectQueryKey, createQueryOptions } from '@connectrpc/connect-query'
 import type { QueryClient } from '@tanstack/react-query'
-import { AuthService, type User } from '@/shared/api'
+import { planFromProto } from '@/entities/plan/@x/session'
+import { AuthService, type GetMeResponse } from '@/shared/api'
 import { SESSION_STALE_MS } from '@/shared/config'
 import type { SessionUser } from '../model/types'
 
@@ -20,9 +21,16 @@ export type SessionState = { status: 'active'; user: SessionUser } | { status: '
 
 const SIGNED_OUT: SessionState = { status: 'signed-out' }
 
-/** Maps the wire message to the app's vocabulary. */
-export function toSessionUser(user: User | undefined): SessionUser | undefined {
-  return user ? { id: user.id } : undefined
+/** Maps the wire message to the app's vocabulary.
+ *
+ *  The tier travels with the user rather than beside it: every consumer that asks "who is
+ *  this" also asks "what may they reach", and splitting the two invites a screen that reads
+ *  one without the other. */
+export function toSessionUser(
+  response: Pick<GetMeResponse, 'user' | 'plan'> | undefined,
+): SessionUser | undefined {
+  if (!response?.user) return undefined
+  return { id: response.user.id, plan: planFromProto(response.plan) }
 }
 
 /** The exact key `useQuery(getMe, {})` registers under.
@@ -73,7 +81,7 @@ export async function loadSession(
       // The app QueryClient defaults to retry: 1, which would double every 401.
       retry: false,
     })
-    const user = toSessionUser(response.user)
+    const user = toSessionUser(response)
     // A 200 carrying no user is not a session. Treating it as one would let a malformed
     // or half-migrated response open every protected route.
     return user ? { status: 'active', user } : SIGNED_OUT
