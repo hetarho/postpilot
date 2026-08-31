@@ -251,11 +251,14 @@ func TestLoadPublishingDefaultsAndValidation(t *testing.T) {
 		cfg.PublishAgentHeartbeatInterval != 15*time.Second {
 		t.Fatalf("publishing defaults = %+v", cfg)
 	}
-	// The frontend hides an agent after PUBLISH_AGENT_STALE_MS = 30s. A default heartbeat
-	// at or beyond that window would render a live agent offline, and no gate spans the
-	// two config seams, so the relationship is asserted here.
-	if cfg.PublishAgentHeartbeatInterval >= 30*time.Second {
-		t.Fatalf("heartbeat %s does not fit the 30s staleness window", cfg.PublishAgentHeartbeatInterval)
+	// The frontend hides an agent after PUBLISH_AGENT_STALE_MS = 30s, and a refresh only
+	// lands on the poll that follows the elapsed interval, so the budget is the heartbeat
+	// plus the agent's 5s poll — not the heartbeat alone. No gate spans the three seams
+	// those values live in, so the relationship is asserted here.
+	const staleWindow, agentPoll = 30 * time.Second, 5 * time.Second
+	if cfg.PublishAgentHeartbeatInterval+agentPoll >= staleWindow {
+		t.Fatalf("heartbeat %s plus a %s poll does not fit the %s staleness window",
+			cfg.PublishAgentHeartbeatInterval, agentPoll, staleWindow)
 	}
 
 	for _, name := range []string{

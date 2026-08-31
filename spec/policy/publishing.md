@@ -178,8 +178,9 @@ account.
 `last_seen_at` is a display hint and never an authorization input. Because every agent procedure authenticates and the
 Mac polls far faster than the freshness window, the server refreshes the column at most once per
 `PUBLISH_AGENT_HEARTBEAT_INTERVAL` per agent instead of once per call, keeping the single serialized writer free for
-real work. That interval must stay strictly below the frontend's `PUBLISH_AGENT_STALE_MS`, or a live agent renders as
-offline. A refresh that fails is logged and the call proceeds: the token was already proven valid, so a storage fault
+real work. A refresh lands on the first poll after the interval has elapsed, so the worst staleness a
+viewer sees is the interval plus the agent's poll (`5s`); that **sum** must stay below the frontend's
+`PUBLISH_AGENT_STALE_MS`, or a live agent renders as offline. A refresh that fails is logged and the call proceeds: the token was already proven valid, so a storage fault
 degrades the liveness display rather than the agent's ability to authenticate. The one exception is a revocation the
 write itself discovers, which is still a refusal.
 

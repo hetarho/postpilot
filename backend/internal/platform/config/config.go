@@ -172,10 +172,12 @@ type Config struct {
 	PublishOrphanSweepInterval time.Duration
 	PublishOrphanMinAge        time.Duration
 	// PublishAgentHeartbeatInterval is the minimum spacing between last_seen_at writes
-	// for one agent; calls arriving sooner are served without touching the writer. It
-	// must stay shorter than the frontend's PUBLISH_AGENT_STALE_MS (30s), which is the
-	// window a live agent is rendered as online in — the two sit in different config
-	// seams, so nothing but this note connects them.
+	// for one agent; calls arriving sooner are served without touching the writer. The
+	// refresh only happens on a poll that lands after the interval has elapsed, so the
+	// worst observed staleness is this interval plus the agent's poll (5s), and that sum
+	// must stay under the frontend's PUBLISH_AGENT_STALE_MS (30s) or a live agent renders
+	// as offline. The three values sit in three different seams, so nothing but this note
+	// connects them.
 	PublishAgentHeartbeatInterval time.Duration
 
 	// Purpose brief field ceilings, counted in Unicode scalar values like the voice
