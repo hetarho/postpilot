@@ -5,6 +5,7 @@ import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { AuthService, ProtoPlan } from '@/shared/api'
 import { initializeI18n } from '@/app/providers/i18n'
 import { THEME_PREFERENCE_STORAGE_KEY } from '@/shared/config'
+import { SIGNED_IN_HOME } from '@/shared/lib'
 import { renderAppAt } from '@/test/app'
 import { createThemeTestEnvironment } from '@/test/theme'
 
@@ -221,6 +222,135 @@ describe('the purpose management route', () => {
   })
 })
 
+// Plan 15 A1–A3/A14/A15: /about is PUBLIC — a direct child of the root route, with no guard, no
+// session probe, and no network of any kind. These mount the real tree at /about, so a stray
+// beforeLoad or a query inside the page would show up as a Connect call in the log.
+describe('the public About route', () => {
+  it('deep-links to /about anonymously with an empty Connect log', async () => {
+    const calls: string[] = []
+    const { router } = renderAppAt('/about', { calls })
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '사진과 메모를 내 말투의 블로그 초안으로',
+      }),
+    ).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/about')
+    // Not "no GetMe" — NOTHING. A2/A15: no session probe, no provider call, no job, no mutation.
+    expect(calls).toEqual([])
+  })
+
+  it('stays network-free for a signed-in visitor too', async () => {
+    const calls: string[] = []
+    const { router } = renderAppAt('/about', { user: { id: 'alice' }, calls })
+
+    await screen.findByRole('heading', { level: 1 })
+    expect(router.state.location.pathname).toBe('/about')
+    // About never branches on session state, so a live session changes nothing about it (A14).
+    expect(calls).toEqual([])
+  })
+
+  // A3: making /about public must not have loosened anything else.
+  it('leaves the authenticated routes guarded', async () => {
+    const { router } = renderAppAt('/posts')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(router.state.location.search).toEqual({ redirect: '/posts' })
+  })
+
+  // A4: the login page reaches About, and About's Login CTA delegates to the unchanged guard.
+  it('links login → about → login, with the guard still deciding', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAppAt('/login')
+
+    await user.click(await screen.findByRole('link', { name: 'Postpilot이란?' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/about'))
+
+    await user.click(await screen.findByRole('link', { name: '로그인' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument()
+  })
+
+  // A4: the blocked destination survives a detour through the public page. Without this, reading
+  // /about mid-login silently downgraded the post-login landing to the signed-in home.
+  it('carries the blocked destination through the About detour', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAppAt('/posts/abc')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(router.state.location.search).toEqual({ redirect: '/posts/abc' })
+
+    await user.click(await screen.findByRole('link', { name: 'Postpilot이란?' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/about'))
+    expect(router.state.location.search).toEqual({ redirect: '/posts/abc' })
+
+    await user.click(await screen.findByRole('link', { name: '로그인' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(router.state.location.search).toEqual({ redirect: '/posts/abc' })
+  })
+
+  // An off-site value must not survive the round trip through a public page.
+  it('drops an off-site redirect rather than handing it back', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAppAt('/about?redirect=https://evil.test/steal')
+    await screen.findByRole('heading', { level: 1 })
+
+    await user.click(screen.getByRole('link', { name: '로그인' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(router.state.location.search).toEqual({})
+  })
+
+  // A14: a signed-in visitor following About's Login CTA is redirected by the EXISTING login
+  // guard, not by anything About does.
+  it('sends a signed-in visitor home through the login guard', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAppAt('/about', { user: { id: 'alice' } })
+
+    await user.click(await screen.findByRole('link', { name: '로그인' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe(SIGNED_IN_HOME))
+  })
+})
+
+// Plan 15 A5–A7/A15: /about consumes the SHIPPED locale and theme runtimes rather than forking
+// either one, so switching either from the public header behaves exactly as it does in the app.
+describe('About consumes the shared locale and theme runtimes', () => {
+  it('switches the whole page between locales without moving the URL or calling anything', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const { router } = renderAppAt('/about', { calls })
+    await screen.findByRole('heading', {
+      level: 1,
+      name: '사진과 메모를 내 말투의 블로그 초안으로',
+    })
+
+    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
+    await user.click(screen.getByRole('tab', { name: 'English' }))
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Photos and rough notes into a blog draft in your own voice',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Plans' })).toBeInTheDocument()
+    // A6: the language is a browser preference, not a URL segment.
+    expect(router.state.location.pathname).toBe('/about')
+    expect(calls).toEqual([])
+  })
+
+  it('applies a theme choice from the public header', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/about', { calls })
+    await screen.findByRole('heading', { level: 1 })
+
+    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
+    await user.click(screen.getByRole('tab', { name: '밝게' }))
+
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('day'))
+    expect(calls).toEqual([])
+  })
+})
+
 // Plan 16 A14: 지침 is a top-level destination after 용도, reachable from the nav.
 describe('the guideline management route', () => {
   it('mounts /guidelines and offers it in the navigation after 용도', async () => {
@@ -242,6 +372,7 @@ describe('lazily loaded routes', () => {
     ['/voices', '말투'],
     ['/purposes', '용도'],
     ['/guidelines', '지침'],
+    ['/about', '사진과 메모를 내 말투의 블로그 초안으로'],
     ['/ai-models', 'AI 모델'],
   ])('renders %s on a direct load', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
@@ -468,6 +599,7 @@ describe('localized registered-route smoke', () => {
       voices: '말투',
       purposes: '용도',
       guidelines: '지침',
+      about: '사진과 메모를 내 말투의 블로그 초안으로',
       profile: '프로필',
       versions: '버전 기록',
       import: '기존 글 가져오기',
@@ -484,6 +616,7 @@ describe('localized registered-route smoke', () => {
       voices: 'Voices',
       purposes: 'Purposes',
       guidelines: 'Guidelines',
+      about: 'Photos and rough notes into a blog draft in your own voice',
       profile: 'Profile',
       versions: 'Version history',
       import: 'Import existing posts',
@@ -515,6 +648,8 @@ describe('localized registered-route smoke', () => {
         expectedPath?: string
       }> = [
         { path: '/login', role: 'button', name: text.login },
+        // Public: the only entry in this table with no session.
+        { path: '/about', role: 'heading', name: text.about },
         { path: '/', role: 'heading', name: text.posts, signedIn: true, expectedPath: '/posts' },
         { path: '/posts', role: 'heading', name: text.posts, signedIn: true },
         {

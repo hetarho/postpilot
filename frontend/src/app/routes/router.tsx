@@ -83,6 +83,21 @@ const loginRoute = createRoute({
   component: LoginPage,
 })
 
+// Public, and structurally so: a direct child of the root route, beside /login and NOT under the
+// authenticated layout below. No beforeLoad, no loader, no session branch — mounting /about must
+// not issue GetMe, because the page exists for visitors who have no account at all (plan 15).
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/about',
+  // `redirect` is carried through, not consumed: a session that expired on /posts/x and then read
+  // /about must still land back on /posts/x after logging in. About never reads it for itself —
+  // it only hands it back to /login, which is the one route allowed to decide where it points.
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
+  component: lazyRouteComponent(() => import('@/pages/about'), 'AboutPage'),
+})
+
 // Pathless layout route: `id` with no `path`, so its children keep their own URLs and
 // only inherit the guard. Every authenticated screen is added under this one, which is
 // what makes "protected by default" structural rather than a thing to remember.
@@ -294,6 +309,7 @@ const postEditorRoute = createRoute({
 /** Exported so a test can mount the real tree against a fake transport. */
 export const routeTree = rootRoute.addChildren([
   loginRoute,
+  aboutRoute,
   authenticatedRoute.addChildren([
     indexRoute,
     postsRoute,

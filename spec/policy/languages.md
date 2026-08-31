@@ -28,13 +28,17 @@ The locale is resolved synchronously before React renders:
 Storage failures are ignored. A locale change updates i18next, `<html lang>`, title, description,
 and locale-aware date, relative-time, and number helpers; it then attempts to persist the canonical
 tag. It changes no URL, session, query cache, post, voice, or server preference. Selectors use the
-autonyms `한국어` and `English` and currently appear on login and the authenticated shell. The public
-header is composed by plan 15/job 34.
+autonyms `한국어` and `English` and currently appear on login, the authenticated shell, and the public
+`/about` header, which composes the same shared preferences widget rather than forking either control.
 
 Resources are bundled TypeScript catalogs with no runtime fetch or translation service. Their exact
-namespace topology is `common`, `auth`, `nav`, `posts`, `voices`, `purposes`, `models`, `publishing`,
-`errors`, and the reserved `marketing` namespace. Korean is also the static/no-JavaScript document
-fallback. The installed product contract is i18next 26.4.0 and react-i18next 17.0.12; no detector or
+namespace topology is `common`, `auth`, `nav`, `posts`, `voices`, `purposes`, `guidelines`, `models`,
+`publishing`, `errors`, `plans`, and `marketing`. The `marketing` namespace carries every visible
+label, accessible name and metadata string of the public `/about` page at full ko/en parity, and
+that page's locale changes never alter its URL — there is no locale prefix and no automatic locale
+redirect ([public-marketing](public-marketing.md)). Korean is also the static/no-JavaScript document
+fallback, and that fallback is product-level: it is neither route-specific nor localized, because it
+is the only metadata a client that refuses JavaScript ever sees. The installed product contract is i18next 26.4.0 and react-i18next 17.0.12; no detector or
 HTTP backend is installed.
 
 ## Post language transitions

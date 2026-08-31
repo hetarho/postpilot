@@ -24,6 +24,12 @@ Theme is not account or session state. It survives navigation, logout, later log
 the same browser, but it has no RPC, database row, cross-device synchronization, provider call,
 job, analytics event, or environment value.
 
+Because it is browser-owned rather than account-owned, the same single preference also serves the
+public `/about` page, which composes the shared `InterfacePreferences` widget and adds no
+page-local theme state ([public-marketing](public-marketing.md)). A visitor with no account gets
+the same three preferences, and the value they choose there is the one the app starts from after
+they log in.
+
 ## Bootstrap and runtime lifecycle
 
 The application resolves and applies one synchronous bootstrap snapshot before React creates its

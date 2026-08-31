@@ -11,6 +11,12 @@
          These theme-color values are the header's surface-raised plane (design-language §2.5). -->
     <meta name="theme-color" content="#28272c" data-day="#fcfbfe" data-night="#28272c" />
     <meta name="color-scheme" content="dark" />
+    <!-- The ONLY metadata a client that does not run JS ever sees — on /about as much as on
+         /login, since there is no SSR or prerender and wrangler serves this same file for every
+         deep link. So it stays PRODUCT-level: true of the whole app, never one route's marketing
+         copy, and never an Open Graph promise the running app alone can keep. It cannot be
+         localized either (the file cannot know the visitor's locale); the app replaces both values
+         with the localized ones the moment it runs. -->
     <meta name="description" content="사진과 경험을 나만의 말투로 블로그 글에 옮겨 보세요." />
     <!-- The app icon, in the three forms a browser actually asks for. `favicon.svg` is the source
          of truth and the one every current browser picks; `favicon.ico` (16/32/48, PNG-encoded) is

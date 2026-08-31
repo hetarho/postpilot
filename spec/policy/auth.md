@@ -87,6 +87,9 @@ built by jobs 01 and 02; the account's plan and the master-only procedure set co
 
   The plain `/health` endpoint is mounted outside the Connect stack and is likewise unauthenticated — it is what the
   deploy's rollback gate probes.
+- The public **SPA route** `/about` ([public-marketing](public-marketing.md)) adds nothing to that list. It is public
+  in the browser's route tree, not on the wire: it calls no procedure at all, so the server's public-procedure
+  allowlist stays exactly three.
 - A second closed set in the same file (`masterProcedures`) is **master-only**: the nine human `PublishingService`
   procedures and the two `AdminService` procedures, refused `permission_denied` with reason `MASTER_ONLY`. Adding a
   privileged procedure means adding it there in the same change ([plans.md](plans.md)).

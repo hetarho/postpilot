@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useLogin } from '@/entities/session'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
@@ -10,7 +10,7 @@ import { InterfacePreferences } from '@/widgets/interface-preferences'
  *  distinguish an unknown id from a wrong password (spec/policy/auth.md), and structured failure
  *  parsing never falls back to backend prose that could reintroduce that enumeration signal. */
 export function LoginPage() {
-  const { t } = useTranslation('auth')
+  const { t } = useTranslation(['auth', 'marketing'])
   const { redirect } = useSearch({ from: '/login' })
   const navigate = useNavigate()
   const login = useLogin()
@@ -49,10 +49,12 @@ export function LoginPage() {
             <img src="/favicon.svg" alt="" className="h-10 w-10 sm:h-20 sm:w-20" />
             <Logo className="h-8 sm:h-9" />
           </h1>
-          <p className="text-content-secondary mt-1 text-center text-sm">{t('login.intro')}</p>
+          <p className="text-content-secondary mt-1 text-center text-sm">
+            {t('login.intro', { ns: 'auth' })}
+          </p>
 
           <FieldLabel htmlFor="loginId" className="mt-4 sm:mt-8">
-            {t('login.id')}
+            {t('login.id', { ns: 'auth' })}
           </FieldLabel>
           <TextField
             id="loginId"
@@ -75,7 +77,7 @@ export function LoginPage() {
           />
 
           <FieldLabel htmlFor="password" className="mt-4">
-            {t('login.password')}
+            {t('login.password', { ns: 'auth' })}
           </FieldLabel>
           <TextField
             id="password"
@@ -113,9 +115,23 @@ export function LoginPage() {
             pending={login.isPending}
             className="mt-4 w-full sm:mt-6"
           >
-            {t('login.submit')}
+            {t('login.submit', { ns: 'auth' })}
           </Button>
         </form>
+        {/* Below the credential action and OUTSIDE the form: a secondary link inside it would be
+            one more tab stop between the password field and 로그인, and a link is not part of the
+            submission. It changes nothing about the form's failure or redirect behavior. */}
+        <p className="mt-6 text-center">
+          <Link
+            to="/about"
+            // The blocked destination travels with the visitor: About hands it back to this page,
+            // so reading the explanation mid-login does not reset where they were going.
+            search={isInAppPath(redirect) ? { redirect } : {}}
+            className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 text-sm underline"
+          >
+            {t('about.link', { ns: 'marketing' })}
+          </Link>
+        </p>
       </div>
     </main>
   )

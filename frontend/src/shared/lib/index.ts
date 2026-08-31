@@ -1,4 +1,6 @@
 export { isInAppPath, SIGNED_IN_HOME } from './redirect'
+export { applyDocumentMetadata } from './document-metadata'
+export type { DocumentMetadata } from './document-metadata'
 export { formatRelativeTime } from './datetime'
 export {
   formatDate,
