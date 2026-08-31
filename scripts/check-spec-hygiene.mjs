@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // Spec & workflow hygiene keeps executable documentation and the job board internally consistent.
 //
-//   A  Workflow-skill links resolve. Anchor fragments and {{placeholders}} are skipped; only the file part of a
+//   A  Workflow and spec links resolve. Anchor fragments and {{placeholders}} are skipped; only the file part of a
 //      relative link is checked. Scaffold-template links are relative to the generated destination, not the template.
 //   B  Job status ↔ location consistency. A `status: done` job belongs under spec/jobs/archive/; a
 //      `status: todo|doing` job belongs under spec/jobs/. This keeps the board trustworthy.
 //   C  Scaffold templates substitute cleanly, so `pnpm spec:*` cannot emit a doc with a live placeholder in it.
-//      `--probe` runs C's self-check alone and proves it bites.
+//      `--probe` runs A and C's self-checks and proves both guards bite without rejecting documentation examples.
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { repoRoot, section, ok, note, fail } from './lib.mjs'
 
 const problems = []
@@ -17,7 +17,7 @@ const probeMode = process.argv.includes('--probe')
 
 section(
   probeMode
-    ? 'Spec & workflow hygiene — scaffold-substitution probe'
+    ? 'Spec & workflow hygiene — link + scaffold-substitution probes'
     : 'Spec & workflow hygiene — doc links + job status/location + scaffolds',
 )
 
@@ -99,11 +99,9 @@ const readScaffold = (scaffold) => ({
   scriptText: readFileSync(join(repoRoot, 'scripts', scaffold.script), 'utf8'),
 })
 
-// The probe is the whole run when asked for: it proves C bites, and has nothing to say about A or B.
-if (probeMode) probeScaffolds()
-
-// ---- A) workflow-skill links resolve ----
+// ---- A) workflow and spec links resolve ----
 const SKILL_ROOTS = ['.claude/skills', '.codex/skills']
+const ROOT_DOCS = ['PRD.md', 'DEPLOY.md', 'README.md']
 const skillFiles = (absDir) => {
   const out = []
   const walk = (d) => {
@@ -116,28 +114,127 @@ const skillFiles = (absDir) => {
   if (existsSync(absDir)) walk(absDir)
   return out
 }
-const LINK = /\]\(([^)]+)\)/g
-let checkedLinks = 0
-for (const root of SKILL_ROOTS) {
-  for (const file of skillFiles(join(repoRoot, root))) {
-    const text = readFileSync(file, 'utf8')
-    for (const m of text.matchAll(LINK)) {
-      let target = m[1].trim()
-      if (!target || target.includes('{{')) continue // template placeholder
-      if (/^(https?:|mailto:|#)/.test(target)) continue // external / pure anchor
-      target = target.split('#')[0] // drop anchor fragment
-      if (!target) continue
-      checkedLinks++
-      const resolved = resolve(dirname(file), target)
-      if (!existsSync(resolved)) {
-        problems.push(
-          `${file.replace(repoRoot + '/', '')} → broken link \`${m[1]}\` (resolves to a path that doesn't exist).`,
-        )
-      }
+const markdownFiles = (absDir) => {
+  const out = []
+  const walk = (d) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name)
+      if (e.isDirectory()) walk(p)
+      else if (e.name.endsWith('.md')) out.push(p)
     }
   }
+  if (existsSync(absDir)) walk(absDir)
+  return out
 }
-note(`checked ${checkedLinks} relative links across ${SKILL_ROOTS.join(', ')} (SKILL.md only)`)
+
+const blankCode = (text) => text.replace(/[^\n]/g, ' ')
+
+function withoutFencedCode(text) {
+  let fence = null
+  return text
+    .split('\n')
+    .map((line) => {
+      if (fence) {
+        const closing = line.match(/^ {0,3}(`{3,}|~{3,})[\t ]*$/)?.[1]
+        if (closing && closing[0] === fence[0] && closing.length >= fence.length) fence = null
+        return blankCode(line)
+      }
+      const opening = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/)
+      const marker = opening?.[1]
+      if (marker && (marker[0] === '~' || !opening[2].includes('`'))) {
+        fence = marker
+        return blankCode(line)
+      }
+      return line
+    })
+    .join('\n')
+}
+
+const tickRunLength = (text, at) => {
+  let end = at
+  while (text[end] === '`') end++
+  return end - at
+}
+
+// spec/code-review/01 intentionally quotes a broken link as evidence. Markdown code spans and fenced blocks are
+// examples, not navigation, so treating their link-shaped text as live would make the checker reject its own docs.
+function withoutMarkdownCode(text) {
+  const masked = [...withoutFencedCode(text)]
+  for (let at = 0; at < masked.length; at++) {
+    if (masked[at] !== '`') continue
+    const width = tickRunLength(masked, at)
+    let close = at + width
+    while (close < masked.length) {
+      if (masked[close] !== '`') {
+        close++
+        continue
+      }
+      const candidateWidth = tickRunLength(masked, close)
+      if (candidateWidth === width) break
+      close += candidateWidth
+    }
+    if (close >= masked.length) {
+      at += width - 1
+      continue
+    }
+    for (let i = at; i < close + width; i++) {
+      if (masked[i] !== '\n') masked[i] = ' '
+    }
+    at = close + width - 1
+  }
+  return masked.join('')
+}
+
+const LINK = /\]\(([^)]+)\)/g
+function linkDestination(raw) {
+  const value = raw.trim()
+  if (value.startsWith('<')) {
+    const close = value.indexOf('>')
+    if (close !== -1) return { target: value.slice(1, close), angleWrapped: true }
+  }
+  return { target: value.match(/^\S+/)?.[0] ?? '', angleWrapped: false }
+}
+
+function linkProblems(file, text, pathExists = existsSync) {
+  const found = []
+  let checked = 0
+  for (const m of withoutMarkdownCode(text).matchAll(LINK)) {
+    const destination = linkDestination(m[1])
+    let target = destination.target
+    if (!target || target.includes('{{')) continue // template placeholder
+    if (/^(https?:|mailto:|#)/.test(target)) continue // external / pure anchor
+    // plan/08 and archived job 13 use `](<file>)` to illustrate export syntax. That named placeholder is not a
+    // repository path; other angle-wrapped destinations are valid Markdown links and stay checked.
+    if (destination.angleWrapped && target === 'file') continue
+    target = target.split('#')[0] // drop anchor fragment
+    if (!target) continue
+    checked++
+    if (!pathExists(resolve(dirname(file), target))) {
+      found.push(
+        `${relative(repoRoot, file)} → broken link \`${m[1]}\` (resolves to a path that doesn't exist).`,
+      )
+    }
+  }
+  return { checked, problems: found }
+}
+
+// The probe is the whole run when asked for: A and C must both prove they reject corruption before the real gate runs.
+if (probeMode) runProbes()
+
+const linkFiles = [
+  ...SKILL_ROOTS.flatMap((root) => skillFiles(join(repoRoot, root))),
+  ...markdownFiles(join(repoRoot, 'spec')),
+  ...ROOT_DOCS.map((file) => join(repoRoot, file)).filter(existsSync),
+]
+let checkedLinks = 0
+for (const file of linkFiles) {
+  const result = linkProblems(file, readFileSync(file, 'utf8'))
+  checkedLinks += result.checked
+  problems.push(...result.problems)
+}
+note(
+  `checked ${checkedLinks} relative links across spec/**, ${ROOT_DOCS.join(', ')}, and ${SKILL_ROOTS.join(', ')} (SKILL.md only)`,
+)
 
 // ---- B) job status ↔ location ----
 const readStatus = (file) => {
@@ -179,12 +276,50 @@ note(`rendered ${SCAFFOLDS.length} scaffold template(s) against their scaffold's
 if (problems.length) {
   for (const p of problems) console.error(`  \x1b[31m✗\x1b[0m ${p}`)
   fail(
-    `${problems.length} spec-hygiene issue(s). Every relative link in a workflow doc must resolve; a job's ` +
+    `${problems.length} spec-hygiene issue(s). Every checked relative link must resolve; a job's ` +
       `status must match its directory (done → spec/jobs/archive/, todo|doing → spec/jobs/); and a scaffold ` +
       `template's frontmatter placeholders must stay quoted so \`fill()\` can substitute them.`,
   )
 }
 ok('workflow-doc links resolve; job status matches location; scaffolds substitute cleanly')
+
+function runProbes() {
+  probeLinks()
+  probeScaffolds()
+  process.exit(0)
+}
+
+// Proves A catches a broken navigation link while preserving the documentation examples it intentionally excludes.
+function probeLinks() {
+  const file = join(repoRoot, 'spec/__link-probe__.md')
+  const brokenCases = [
+    '[broken](./missing.md)',
+    '[angle-wrapped](<./missing file.md>)',
+    '[titled](./missing.md "title")',
+  ].join('\n')
+  const broken = linkProblems(file, brokenCases, () => false)
+  if (broken.checked !== 3 || broken.problems.length !== 3) {
+    fail('the doc-link check did not report every known-broken relative-link form.')
+  }
+  const titledExisting = linkProblems(file, '[titled](./existing.md "title")', (resolved) =>
+    resolved === join(dirname(file), 'existing.md'),
+  )
+  if (titledExisting.checked !== 1 || titledExisting.problems.length !== 0) {
+    fail('the doc-link check treated a Markdown link title as part of an existing path.')
+  }
+  const examples = [
+    '`[quoted evidence](./missing.md)`',
+    '`multiline evidence\n[quoted evidence](./missing.md)\ncontinues here`',
+    '```md\n```not a closing fence\n[fenced example](./missing.md)\n```',
+    '~~~md\n[tilde-fenced example](./missing.md)\n~~~',
+    '![placeholder](<file>)',
+  ].join('\n')
+  const ignored = linkProblems(file, examples, () => false)
+  if (ignored.checked !== 0 || ignored.problems.length !== 0) {
+    fail('the doc-link check rejected a code example or angle-bracket placeholder.')
+  }
+  ok('doc-link check catches 3 relative-link forms, accepts link titles, and ignores code examples/placeholders')
+}
 
 // Proves C fails on the two shapes it exists to catch, using in-memory fixtures — a guard is only
 // worth having once someone has watched it bite. It also asserts the real template passes, so the
@@ -211,5 +346,4 @@ function probeScaffolds() {
     fail('the real code-review template is reported as broken — the check is too strict.')
   }
   ok(`scaffold check catches ${cases.length} corruption shape(s) and passes the real template`)
-  process.exit(0)
 }

@@ -29,7 +29,9 @@ jobs:
       - run: pnpm --filter ./frontend lint
       - run: pnpm --filter ./frontend format:check
       - run: pnpm --filter ./frontend lint:fsd
+      - run: pnpm lint:style:probe
       - run: pnpm lint:style
+      - run: pnpm lint:spec:probe
       - run: pnpm lint:spec
       - run: pnpm --filter ./frontend test
       - run: pnpm --filter ./frontend build

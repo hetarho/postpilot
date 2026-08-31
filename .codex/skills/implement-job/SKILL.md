@@ -142,14 +142,16 @@ A job is done when the **docs are true again**, not just when code builds:
    don't silently rewrite the PRD.
 3. **Config owners** — a setting that was set or changed lives in `frontend/src/shared/config` /
    `backend/internal/platform/config` (and `.env.example` when it's a new env var).
-4. **If `type: change`** — move the `source` `spec/changes/NN.*.md` → `spec/changes/archive/NN.*.md`.
+4. **If `type: change`** — move the `source` `spec/changes/NN.*.md` → `spec/changes/archive/NN.*.md`. Moving a doc
+   changes its relative-link base: re-resolve links inside the moved doc and every inbound spec link whose target
+   moved. `pnpm lint:spec` enforces both directions.
 5. **Close out** — job frontmatter `status: done`, all checkboxes ✅; 00.overview progress board for the `plan` → ✅
    (clear the 🟡 claim).
 6. **Archive the job** — move this `spec/jobs/NN.*.md` → `spec/jobs/archive/NN.*.md`, so `jobs/` lists only
-   todo/doing work. (Enforced: `pnpm lint:spec` fails if a `status: done` job is left in `spec/jobs/`.) The archived
-   doc is a historical record — its relative links may go stale (no depth fix needed); only its frontmatter
-   `source`/`plan` numbers must stay correct. Numbering stays safe: `pnpm spec:job` counts `archive/` too
-   (monotonic), so the next job never reuses NN.
+   todo/doing work. Re-resolve links inside the moved job and inbound spec links to it; `pnpm lint:spec` fails on
+   either stale path as well as a `status: done` job left in `spec/jobs/`. Its frontmatter `source`/`plan` numbers
+   must stay correct. Numbering stays safe: `pnpm spec:job` counts `archive/` too (monotonic), so the next job never
+   reuses NN.
 
 Report to the user in Korean, keeping commands, file paths, and identifiers verbatim. Be friendly and review-oriented:
 summarize what changed, then explain the core logic and review path. The report must include:
