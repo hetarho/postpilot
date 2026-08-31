@@ -23,6 +23,7 @@ jobs:
       - run: pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen agent/internal/gen
       - run: pnpm gen:sql && git diff --exit-code -- backend
       - run: pnpm --filter ./frontend lint
+      - run: pnpm --filter ./frontend format:check
       - run: pnpm --filter ./frontend lint:fsd
       - run: pnpm lint:style
       - run: pnpm lint:spec

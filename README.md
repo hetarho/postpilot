@@ -119,6 +119,9 @@ scripts/                codegen 래퍼 (Docker 경유)
 
 - **로직은 `internal/<도메인>`, 조립은 `cmd/api`.** `rpcserver`에 비즈니스 로직을 넣지 않는다.
 - **프론트는 FSD.** 슬라이스는 `index.ts`로만 노출한다 (`pnpm --filter ./frontend lint:fsd`).
+- **프론트 포맷은 Prettier가 결정한다** (`pnpm format:check`, `pnpm lint`와 CI에 포함). 고치려면
+  `pnpm --filter ./frontend format`을 쓴다. `dist/`와 buf 생성물 `src/shared/api/gen/`은
+  `frontend/.prettierignore`로 제외한다 — 생성물을 포맷하면 재생성 결과와 영구히 어긋난다.
 - **순수 레이어(`shared/api`, `shared/config`, `shared/lib`, `entities/*/model`)는
   react/react-dom을 import하지 않는다.** ESLint boundaries가 막는다.
 - **`VITE_*`는 빌드 타임에 번들에 박힌다** — 공개 값만. 비밀은 백엔드 env로.

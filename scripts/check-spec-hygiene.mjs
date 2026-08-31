@@ -18,7 +18,7 @@ const probeMode = process.argv.includes('--probe')
 section(
   probeMode
     ? 'Spec & workflow hygiene — scaffold-substitution probe'
-    : 'Spec & workflow hygiene — doc links (R003) + job status/location (R004) + scaffolds',
+    : 'Spec & workflow hygiene — doc links + job status/location + scaffolds',
 )
 
 // ---- C) scaffold templates substitute cleanly (defined first; the probe dispatches off it) ----
@@ -27,10 +27,12 @@ section(
 // nothing downstream validates it.
 //
 // A frontmatter placeholder must therefore stay QUOTED (`key: '{{X}}'`). Unquoted, `key: {{X}}` is a
-// nested flow mapping in YAML, so Prettier reformats its spacing to `{ { X } }` — and since
-// `format:check` runs inside `pnpm lint`, the reformatted shape becomes the one the gate demands while
-// `fill()` matches nothing. Quoting is what makes the substituting form and the Prettier-stable form
-// the same form.
+// nested flow mapping in YAML, so any formatter or editor that normalizes YAML respaces it to
+// `{ { X } }` and `fill()` then matches nothing. Quoting makes the substituting form and the
+// formatter-stable form the same form.
+//
+// No formatter gate stands behind this rule: `format:check` is scoped to the frontend workspace and
+// these templates live in scripts/templates/, so this check is the only thing enforcing it.
 const SCAFFOLDS = [
   { kind: 'plan', template: 'plan.md', script: 'new-plan.mjs' },
   { kind: 'change', template: 'change.md', script: 'new-change.mjs' },
@@ -177,7 +179,9 @@ note(`rendered ${SCAFFOLDS.length} scaffold template(s) against their scaffold's
 if (problems.length) {
   for (const p of problems) console.error(`  \x1b[31m✗\x1b[0m ${p}`)
   fail(
-    `${problems.length} spec-hygiene issue(s). See code-review 03 (R003 doc links · R004 job status/location) and code-review 11 (R002 scaffold placeholders).`,
+    `${problems.length} spec-hygiene issue(s). Every relative link in a workflow doc must resolve; a job's ` +
+      `status must match its directory (done → spec/jobs/archive/, todo|doing → spec/jobs/); and a scaffold ` +
+      `template's frontmatter placeholders must stay quoted so \`fill()\` can substitute them.`,
   )
 }
 ok('workflow-doc links resolve; job status matches location; scaffolds substitute cleanly')

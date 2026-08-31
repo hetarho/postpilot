@@ -1,0 +1,5 @@
+dist/
+
+# buf output. CI gates it with `git diff --exit-code` right after `pnpm gen:proto`, so a
+# formatting pass here would put the tree permanently at odds with regeneration.
+src/shared/api/gen/

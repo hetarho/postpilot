@@ -76,18 +76,21 @@ type VoicePersonalizationConfig struct {
 
 // LLMReasoningPolicy is code-owned because changing a stage's reasoning strength
 // changes generation behavior rather than deployment topology. A model-level registry
-// override still wins; Unset means the provider request stays untouched.
+// override still wins.
+//
+// Analyze has no field on purpose: policy/providers.md requires it to send no effort, and
+// a request that carries no stage value already sends none (registry.go forwards only a
+// resolved effort). Adding the field back would be a second place for one rule to live,
+// which is how it previously came to be set, asserted, and forwarded nowhere.
 type LLMReasoningPolicy struct {
 	Observe llm.ReasoningEffort
 	Write   llm.ReasoningEffort
-	Analyze llm.ReasoningEffort
 }
 
 func defaultLLMReasoningPolicy() LLMReasoningPolicy {
 	return LLMReasoningPolicy{
 		Observe: llm.ReasoningLow,
 		Write:   llm.ReasoningLow,
-		Analyze: llm.ReasoningUnset,
 	}
 }
 

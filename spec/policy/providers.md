@@ -107,7 +107,7 @@ has no field for them (plan 04 AC6).
 | `<api_key_env>` per provider (`OPENROUTER_API_KEY` in the shipped file) | env, named by the yaml | unset ⇒ that provider's models are disabled with the reason |
 | `LLM_STAGE_TIMEOUT` | constant | 5 min per provider call (PRD §6.6) |
 | `LLM_MAX_TOKENS_DEFAULT` | constant | 8192 — shared completion cap for reasoning plus visible output |
-| stage reasoning policy | typed constants | observe `low` · write/revise `low` · analyze omitted |
+| stage reasoning policy | typed constants | observe `low` · write/revise `low` · analyze has **no field**: a request with no stage value already sends nothing |
 | `reasoning_format` | `config/providers.yaml` | optional provider dialect; shipped OpenRouter entry opts in |
 | `reasoning_effort` | `config/providers.yaml` | optional strict model override; `unset` omits the wire key |
 | `MODEL_CATALOG_STALE_MS` | FE `shared/config` | 5 min — how long the catalog is trusted before a refetch |

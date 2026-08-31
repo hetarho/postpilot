@@ -96,7 +96,7 @@ implemented by jobs 10, 11, 23, and 24; voice scoping from
 | `OBSERVE_BATCH_SIZE` | BE `internal/platform/config` | env, default `4`, positive integer |
 | `LLMStageTimeout` | BE `internal/platform/config` | `5m` per provider call |
 | `LLMMaxTokensDefault` | BE `internal/platform/config` | `8192` shared reasoning/output tokens |
-| stage reasoning policy | BE `internal/platform/config` | observe `low` · write/revise `low` · analyze omitted |
+| stage reasoning policy | BE `internal/platform/config` | observe `low` · write/revise `low` · analyze has **no field**: it carries no stage value, which is how "send nothing" is expressed |
 | `TagsMin` / `TagsMax` | BE `internal/generation` | `3` / `6` |
 | `BadOutputErrorHeadChars` | BE `internal/generation` | `200` runes |
 

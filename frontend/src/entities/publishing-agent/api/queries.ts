@@ -5,8 +5,7 @@ import { publishingClientFor, type ProtoPublishingAgent } from '@/shared/api'
 import { PUBLISH_AGENT_STALE_MS } from '@/shared/config'
 import type { PublishingAgent } from '../model/types'
 
-export const publishingAgentsQueryKey = (ownerId: string) =>
-  ['publishing-agents', ownerId] as const
+export const publishingAgentsQueryKey = (ownerId: string) => ['publishing-agents', ownerId] as const
 
 export function toPublishingAgent(agent: ProtoPublishingAgent): PublishingAgent {
   return {

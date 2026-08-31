@@ -693,6 +693,24 @@ func TestAnalyzeReplacesStyleguideAndNeverRules(t *testing.T) {
 	}
 }
 
+// policy/providers.md requires analyze to send no reasoning effort. That rule lives in one
+// place only — the absence of a stage value on the request — so it is asserted against the
+// request the provider receives rather than against a config field.
+func TestAnalyzeRequestsNoReasoningEffort(t *testing.T) {
+	h := newVoiceHarness(t)
+	alice := h.voice("alice")
+	h.addSample(t, "alice", alice, "sample", "post", longSample("글"), time.Now())
+	h.models.response = "## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장"
+	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	// Unspecified is "no stage decision", which registry.go forwards as nothing. Unset would
+	// be a different statement — the yaml sentinel for a model override that omits the key.
+	if h.models.request.Reasoning != llm.ReasoningUnspecified {
+		t.Fatalf("analyze request reasoning = %q, want no stage value", h.models.request.Reasoning)
+	}
+}
+
 func TestAnalyzeRetriesWhenCorpusChangesDuringProviderCall(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")

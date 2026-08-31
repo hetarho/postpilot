@@ -12,8 +12,7 @@ export function PairPublishingAgent({ ownerId }: { ownerId: string }) {
   const queryClient = useQueryClient()
   const pairing = useMutation({
     mutationFn: () => client.createAgentPairing({ label: label.trim() }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: publishingAgentsQueryKey(ownerId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: publishingAgentsQueryKey(ownerId) }),
   })
 
   return (

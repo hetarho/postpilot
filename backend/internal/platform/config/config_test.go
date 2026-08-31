@@ -101,8 +101,7 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.LLMMaxTokensDefault != 8192 || llmMaxTokensDefault != 8192 {
 		t.Errorf("LLMMaxTokensDefault = %d / %d, want 8192", cfg.LLMMaxTokensDefault, llmMaxTokensDefault)
 	}
-	if cfg.LLMReasoning.Observe != llm.ReasoningLow || cfg.LLMReasoning.Write != llm.ReasoningLow ||
-		cfg.LLMReasoning.Analyze != llm.ReasoningUnset {
+	if cfg.LLMReasoning.Observe != llm.ReasoningLow || cfg.LLMReasoning.Write != llm.ReasoningLow {
 		t.Errorf("LLMReasoning = %+v", cfg.LLMReasoning)
 	}
 }
