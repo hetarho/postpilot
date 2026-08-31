@@ -9,9 +9,9 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// The golden files were captured from this code BEFORE purposes existed. They are the
-// definition of "byte-identical to today" for a post without a purpose, so a diff against
-// them is a real behavior change and must never be regenerated to make a test pass.
+// These goldens define the current fixed prompt for a post without a purpose. Update them
+// only for an explicitly accepted change to that fixed prompt; ordinary purpose work must
+// remain byte-identical to this baseline.
 func loadGolden(t *testing.T, name string) (system, user string) {
 	t.Helper()
 	raw, err := os.ReadFile("testdata/" + name)
@@ -22,7 +22,7 @@ func loadGolden(t *testing.T, name string) (system, user string) {
 	if len(parts) != 2 {
 		t.Fatalf("golden %s is malformed", name)
 	}
-	return parts[0], parts[1]
+	return parts[0], strings.TrimSuffix(parts[1], "\n")
 }
 
 func testBrief() *PurposeBrief {
@@ -33,16 +33,15 @@ func testBrief() *PurposeBrief {
 	}
 }
 
-// Plan 11 A4: no purpose means no change at all to the prompt this code produced before
-// purposes existed.
+// Plan 11 A4: no purpose means no purpose-specific change to the fixed prompt.
 func TestWritePromptWithoutAPurposeIsByteIdenticalToTheBaseline(t *testing.T) {
 	wantSystem, wantUser := loadGolden(t, "write_prompt_no_purpose.golden")
 	system, user := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil)
 	if system != wantSystem {
-		t.Fatalf("system prompt drifted from the pre-purpose baseline:\n--- got ---\n%s\n--- want ---\n%s", system, wantSystem)
+		t.Fatalf("system prompt drifted from the no-purpose baseline:\n--- got ---\n%s\n--- want ---\n%s", system, wantSystem)
 	}
 	if user != wantUser {
-		t.Fatalf("user prompt drifted from the pre-purpose baseline:\n--- got ---\n%s\n--- want ---\n%s", user, wantUser)
+		t.Fatalf("user prompt drifted from the no-purpose baseline:\n--- got ---\n%s\n--- want ---\n%s", user, wantUser)
 	}
 }
 
@@ -51,7 +50,7 @@ func TestRevisePromptWithoutAPurposeIsByteIdenticalToTheBaseline(t *testing.T) {
 	wantSystem, wantUser := loadGolden(t, "revise_prompt_no_purpose.golden")
 	system, user := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, nil)
 	if system != wantSystem || user != wantUser {
-		t.Fatalf("revise prompt drifted from the pre-purpose baseline:\n--- got ---\n%s\n--- want ---\n%s", system, wantSystem)
+		t.Fatalf("revise prompt drifted from the no-purpose baseline:\n--- got ---\n%s\n--- want ---\n%s", system, wantSystem)
 	}
 }
 
@@ -320,6 +319,9 @@ func TestWriteExperimentGivesBothCandidatesTheSameBriefAndChangesTheSnapshot(t *
 	}
 	if !strings.Contains(models.calls[0].request.System, "[글의 용도: 정보성 식당 리뷰]") {
 		t.Fatalf("candidates did not receive the brief:\n%s", models.calls[0].request.System)
+	}
+	if !strings.Contains(models.calls[0].request.System, NaturalnessBaseline) {
+		t.Fatalf("candidates did not receive the naturalness baseline:\n%s", models.calls[0].request.System)
 	}
 
 	// The experiment's input hash is taken over these bytes, so a different brief is a

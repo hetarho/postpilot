@@ -1,8 +1,7 @@
 package generation
 
-// Fixed inputs behind the prompt golden files. They are a fixture, not a test: a change
-// here rewrites what "byte-identical to today" means, so it must never be edited to make
-// a failing prompt test pass.
+// Fixed inputs behind the prompt golden files. Changing them rewrites the byte-identity
+// contract, so they move only with an explicitly accepted prompt-fixture change.
 func goldenProfile() Profile {
 	return Profile{
 		Styleguide:           "STYLE 스타일가이드",

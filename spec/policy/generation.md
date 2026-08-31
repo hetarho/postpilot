@@ -1,7 +1,7 @@
 # Policy — Post generation
 
 Canonical rules that are **currently true** in the code. Source: [plan/06](../plan/06.two-stage-generation-and-contact-sheet.md),
-implemented by jobs 10, 11, 23, and 24; voice scoping from
+implemented by jobs 10, 11, 23, 24, and 36; voice scoping from
 [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18.
 
 ## Canonical content
@@ -35,10 +35,12 @@ implemented by jobs 10, 11, 23, and 24; voice scoping from
   before its durable progress update, so the count always converges to the attached photo count.
 - With no photos, observation makes no provider call, reports `observe 0/0`, clears stale observations, and tells
   the writing model to use the memo without images.
-- The writing prompt's stable prefix is always styleguide → recent excerpts → user rules → ending constraint, then the
-  frozen purpose brief when the post has one (see [purposes](purposes.md)). Per-post title hint, memo, observations,
-  and exact filenames follow it. Without a purpose the prompt is byte-identical to the pre-purpose one. The prompt requires Korean output, one paragraph per `TEXT` block,
-  only attached filenames, context-appropriate image placement, a one-line summary, and 3–6 tags.
+- The writing prompt's stable prefix is static task/format rules → fixed Korean naturalness baseline → styleguide →
+  active contrast rules → recent excerpts → user rules → ending constraint → optional frozen purpose brief (see
+  [purposes](purposes.md)). Per-post title hint, memo, observations, and exact filenames follow it. Without a purpose
+  the prompt is byte-identical to the post-naturalness no-purpose golden. The prompt requires Korean output, one
+  paragraph per `TEXT` block, only attached filenames, context-appropriate image placement, a one-line summary, and
+  3–6 tags.
 - The purpose brief is resolved from the post once, at enqueue, through the purpose context's published lookup, and
   written into the payload as text. Handlers build the prompt from that payload and never re-read the row, so editing
   or deleting the purpose afterwards — including across a restart-resume or an explicit retry — cannot change work
@@ -59,6 +61,23 @@ implemented by jobs 10, 11, 23, and 24; voice scoping from
 - A write or observe candidate returns provider-reported usage even when its call fails. Output with terminal reason
   `length` and no usable content—including non-empty partial JSON—is reported as budget exhaustion with a
   shorter-target/different-model remedy. Revision uses the same classification.
+
+## Korean naturalness baseline
+
+- `NaturalnessBaseline` is one code-owned constant shared by write and revise. It appears exactly once after the
+  static task/format rules and before `[스타일가이드]`; an empty voice does not remove it.
+- The section is subtraction-only: it caps stock antithesis, formulaic closers, obligation-ended paragraphs,
+  connective-ending commas, uniform sentence structure, generic policy verbs, piled invented metaphors,
+  abstract-noun chains, hype, and unwarranted rhetoric. It applies only to newly written or explicitly revised
+  `TEXT` prose; titles, summaries, `HEADING`/`LIST` content, and untouched revision text are excluded. It does not add
+  a rewrite/verification pass or provider call.
+- The corpus-rejected folk rules from archived change 10 are intentionally absent. A future prompt edit must not add
+  bans on `~에 대해`, `~를 통해`, `~것이다`, or sentence-initial conjunctions.
+- The closing precedence line makes the voice profile, active contrast rules, and user rules authoritative when they
+  conflict with the baseline. The measured voice remains the source of personal register.
+- Ordinary generation and both A/B candidates inherit identical baseline bytes through `BuildWritePrompt`.
+  `ObservePrompt` is unchanged. Plan 13's language-aware builders must keep the section for Korean output and omit it
+  for every non-Korean target.
 
 ## Start preconditions and ownership
 

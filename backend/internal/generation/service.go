@@ -42,8 +42,8 @@ func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {
 }
 
 // SetPurposeBriefs wires the purpose context's published brief lookup. Without it the
-// prompt simply carries no brief — the same output this code produced before purposes
-// existed — so a partially wired process degrades to the old behavior rather than failing.
+// prompt simply carries no brief, so a partially wired process keeps the no-purpose
+// behavior rather than failing.
 func (s *Service) SetPurposeBriefs(briefs PurposeBriefs) { s.purposes = briefs }
 
 func (s *Service) refusePendingExperiment(ctx context.Context, userID, postSlug string) error {

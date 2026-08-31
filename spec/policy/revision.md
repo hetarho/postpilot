@@ -1,7 +1,8 @@
 # Policy — AI revision
 
 Canonical rules that are **currently true** in the code. Source: [plan/07](../plan/07.ai-revision.md), built by job
-12; voice scoping from [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18. The shared content and queue rules remain canonical in [generation](generation.md); voice profile ownership and
+12; voice scoping from [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18; and the Korean
+naturalness floor from [plan/06](../plan/06.two-stage-generation-and-contact-sheet.md), job 36. The shared content and queue rules remain canonical in [generation](generation.md); voice profile ownership and
 rule behavior remain canonical in [voice](voice.md).
 
 ## Request and queue contract
@@ -20,12 +21,17 @@ rule behavior remain canonical in [voice](voice.md).
 ## Prompt and output
 
 - Every revision reloads and injects the complete current profile of the frozen voice in canonical order:
-  styleguide, recent excerpts, then rules. No profile or prompt state from an earlier revision is reused, and no other
-  voice's data is consulted.
+  styleguide → active contrast rules → recent excerpts → user rules → ending constraint. No profile or prompt state
+  from an earlier revision is reused, and no other voice's data is consulted.
+- Before that profile, every Korean revision injects the same fixed `[한국어 자연 문체 기준선]` bytes used by a fresh
+  write. The section itself limits the floor to requested changes in `TEXT` prose and excludes titles, summaries,
+  `HEADING`/`LIST` content, and untouched text. The profile, active contrast rules, and user rules override it on
+  conflict.
 - The post's purpose brief is frozen into the revision payload at `StartRevision` and injected at the same relative
   position as in the write prompt — after the whole profile, before the current content (see [purposes](purposes.md)).
-  Revision of a post without a purpose is byte-identical to the pre-purpose prompt. Revision never learns, saves or
-  changes any purpose state; "save as rule" continues to write a voice rule only.
+  Revision of a post without a purpose adds no purpose bytes and is byte-identical to the current fixed no-purpose
+  golden. Revision never learns, saves or changes any purpose state; "save as rule" continues to write a voice rule
+  only.
 - The user prompt contains the current full `PostContent`, the attached filenames, and the instruction. It requires
   the smallest requested change, verbatim preservation of unrelated sentences, unchanged title/summary/tags unless
   requested, immutable attached filenames, and a complete replacement `PostContent` rather than a diff.

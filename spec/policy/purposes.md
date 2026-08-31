@@ -71,8 +71,8 @@ counter. The backend is authoritative; the frontend mirrors the values only for 
 - The frozen brief enters the write and revise prompts at one fixed position: after the **complete** voice profile
   (styleguide → active rules → excerpts → user rules → ending constraint) and before the per-post material, as
   `[글의 용도: {name}]`, the `이 글의 용도` line when the description is non-empty, `작성 지침:` + the instructions
-  verbatim, then a fixed precedence sentence. Absent a purpose the prompt is **byte-identical** to the one this code
-  produced before purposes existed (golden files under `internal/generation/testdata`).
+  verbatim, then a fixed precedence sentence. Absent a purpose the builder adds no purpose bytes and remains
+  **byte-identical** to the current fixed no-purpose golden under `internal/generation/testdata`.
 - The position is load-bearing twice: the voice-profile prefix stays byte-stable across posts of different purposes
   (PRD §5's caching note), and the brief stays in the stable half, so every revision of one post re-injects the
   identical block.

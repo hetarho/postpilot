@@ -40,6 +40,8 @@ func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
 func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, purpose *PurposeBrief) (string, string) {
 	var stable strings.Builder
 	stable.WriteString(RevisePrompt)
+	stable.WriteString("\n\n")
+	stable.WriteString(NaturalnessBaseline)
 	stable.WriteString("\n\n[스타일가이드]\n")
 	stable.WriteString(profile.Styleguide)
 	stable.WriteString("\n\n[활성 대조 규칙]\n")
