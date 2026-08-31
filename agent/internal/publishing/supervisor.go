@@ -31,6 +31,8 @@ type Supervisor struct {
 func (s Supervisor) Run(ctx context.Context) error {
 	interval := s.PollInterval
 	if interval <= 0 {
+		// Mirrors config.PollInterval, which is what callers actually pass; keep the
+		// two in step so a change to the poll rate is not half-applied.
 		interval = 5 * time.Second
 	}
 	logger := s.Logger

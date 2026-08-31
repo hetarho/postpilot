@@ -149,6 +149,11 @@ connection. Lease-renewal failure cancels Hermes, and abandoned work directories
 after the process lock is held. Publisher diagnostics are reduced to a local redacted marker; only normalized failure
 kinds cross to the VPS.
 
+The daemon's 5 s poll (mirrored as `Supervisor.Run`'s fallback) drives the server's agent authentication, which
+refreshes `last_seen_at` at most once per `PUBLISH_AGENT_HEARTBEAT_INTERVAL` (`15s`) per agent. That interval is chosen
+against the frontend's `PUBLISH_AGENT_STALE_MS` (`30000`) and must stay below it; lowering the poll therefore
+multiplies requests without multiplying writes.
+
 The Connect client rejects HTTP redirects and its transport adds the agent bearer only to the exact configured API
 origin. Lease recovery at startup is database-only; terminal R2 deletion remains retryable sweeper housekeeping, so a
 storage outage cannot prevent the rest of the API from serving or turn a durable terminal transition into an

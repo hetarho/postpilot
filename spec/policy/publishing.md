@@ -171,8 +171,17 @@ account.
 | `PUBLISH_ASSET_URL_TTL` | BE env/config | `10m` |
 | `PUBLISH_ORPHAN_SWEEP_INTERVAL` | BE env/config | `24h` |
 | `PUBLISH_ORPHAN_MIN_AGE` | BE env/config | `1h` |
+| `PUBLISH_AGENT_HEARTBEAT_INTERVAL` | BE env/config | `15s` |
 | `PUBLISH_JOB_POLL_MS` | FE shared config | `2000` |
 | `PUBLISH_AGENT_STALE_MS` | FE shared config | `30000` |
+
+`last_seen_at` is a display hint and never an authorization input. Because every agent procedure authenticates and the
+Mac polls far faster than the freshness window, the server refreshes the column at most once per
+`PUBLISH_AGENT_HEARTBEAT_INTERVAL` per agent instead of once per call, keeping the single serialized writer free for
+real work. That interval must stay strictly below the frontend's `PUBLISH_AGENT_STALE_MS`, or a live agent renders as
+offline. A refresh that fails is logged and the call proceeds: the token was already proven valid, so a storage fault
+degrades the liveness display rather than the agent's ability to authenticate. The one exception is a revocation the
+write itself discovers, which is still a refusal.
 
 The Mac companion uses typed defaults of 5 s polling with backoff/jitter, 10 s lease heartbeats, a 15 minute job
 timeout, and 60 Hermes turns. It validates the enrollment lease before ready sync/activation and every claim's current

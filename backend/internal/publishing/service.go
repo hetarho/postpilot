@@ -8,18 +8,21 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"path"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Config struct {
-	PairingTTL         time.Duration
-	MaxPendingPairings int
-	LeaseTTL           time.Duration
-	AssetURLTTL        time.Duration
+	PairingTTL             time.Duration
+	MaxPendingPairings     int
+	LeaseTTL               time.Duration
+	AssetURLTTL            time.Duration
+	AgentHeartbeatInterval time.Duration
 }
 
 type Service struct {
@@ -29,10 +32,18 @@ type Service struct {
 	clock   Clock
 	tokens  Tokens
 	config  Config
+
+	// Suppresses repeat last_seen_at writes: every agent procedure authenticates, and
+	// the Mac polls several times per freshness window, so an unthrottled touch spends
+	// the single SQLite writer on a display hint. Guarded because the agent interceptor
+	// authenticates concurrently. RevokeAgent drops its entry, so the map stays bounded
+	// by the agents currently enrolled and needs no sweeper.
+	touchMu   sync.Mutex
+	lastTouch map[string]time.Time
 }
 
 func NewService(store Store, posts PostSnapshots, staging ObjectStaging, cfg Config) *Service {
-	return &Service{store: store, posts: posts, staging: staging, clock: realClock{}, tokens: cryptoTokens{}, config: cfg}
+	return &Service{store: store, posts: posts, staging: staging, clock: realClock{}, tokens: cryptoTokens{}, config: cfg, lastTouch: map[string]time.Time{}}
 }
 
 func (s *Service) CreatePairing(ctx context.Context, userID, label string) (Pairing, error) {
@@ -101,12 +112,56 @@ func (s *Service) AuthenticateAgent(ctx context.Context, rawToken string) (Agent
 		return Agent{}, ErrAgentRevoked
 	}
 	now := s.clock.Now()
-	if err := s.store.TouchAgent(ctx, agent.UserID, agent.ID, now); err != nil {
+	if err := s.touchAgent(ctx, agent, now); err != nil {
 		return Agent{}, err
 	}
+	// Reported as seen even when the write was skipped: the agent did just call, this
+	// struct is per-request context, and ListAgents reads the column independently.
 	agent.LastSeenAt = &now
 	agent.UpdatedAt = now
 	return agent, nil
+}
+
+// touchAgent refreshes last_seen_at at most once per heartbeat interval. A storage
+// failure is not the caller's problem — the token was already proven valid, so it
+// degrades the freshness display rather than refusing a legitimate agent — but the store
+// reports a revocation that landed since the token lookup as ErrAgentRevoked, and that
+// one is a real refusal.
+func (s *Service) touchAgent(ctx context.Context, agent Agent, now time.Time) error {
+	s.touchMu.Lock()
+	previous, seen := s.lastTouch[agent.ID]
+	if seen && now.Sub(previous) < s.config.AgentHeartbeatInterval {
+		s.touchMu.Unlock()
+		return nil
+	}
+	// Claim the interval before releasing the lock. Calls that arrive together at the
+	// boundary would otherwise all read the old stamp and all reach the writer, which is
+	// the cost this throttle exists to remove. The lock is not held across the write, so
+	// authentication never serializes behind the database.
+	s.lastTouch[agent.ID] = now
+	s.touchMu.Unlock()
+
+	err := s.store.TouchAgent(ctx, agent.UserID, agent.ID, now)
+	if err == nil {
+		return nil
+	}
+	// Give the claim back so the next call retries instead of waiting out an interval
+	// that was never actually refreshed. A newer claim has already superseded this one.
+	s.touchMu.Lock()
+	if current, ok := s.lastTouch[agent.ID]; ok && current.Equal(now) {
+		if seen {
+			s.lastTouch[agent.ID] = previous
+		} else {
+			delete(s.lastTouch, agent.ID)
+		}
+	}
+	s.touchMu.Unlock()
+
+	if errors.Is(err, ErrAgentRevoked) {
+		return err
+	}
+	slog.Warn("publishing agent last_seen_at refresh failed", "agent_id", agent.ID, "err", err)
+	return nil
 }
 
 func (s *Service) ListAgents(ctx context.Context, userID string) ([]Agent, error) {
@@ -139,7 +194,15 @@ func (s *Service) SyncAgent(ctx context.Context, agent Agent, update ProfileUpda
 }
 
 func (s *Service) RevokeAgent(ctx context.Context, userID, agentID string) error {
-	return s.store.RevokeAgent(ctx, userID, agentID, s.clock.Now())
+	if err := s.store.RevokeAgent(ctx, userID, agentID, s.clock.Now()); err != nil {
+		return err
+	}
+	// Drops the suppression entry so the map stays bounded by the agents currently
+	// enrolled, rather than by every agent this process has ever seen.
+	s.touchMu.Lock()
+	delete(s.lastTouch, agentID)
+	s.touchMu.Unlock()
+	return nil
 }
 
 func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 )
@@ -82,7 +83,11 @@ type fakeStore struct {
 	retried          string
 	pairingHash      string
 	pairingErr       error
+	touchMu          sync.Mutex
 	touchedAt        time.Time
+	touchCalls       int
+	touchErr         error
+	agentErr         error
 	terminalCalls    int
 	createGuard      func()
 	reserveErr       error
@@ -103,10 +108,24 @@ func (f *fakeStore) CreatePairing(_ context.Context, hash, _, _ string, _, _ tim
 func (f *fakeStore) Enroll(context.Context, string, string, string, string, time.Time) (Agent, error) {
 	return Agent{}, nil
 }
-func (f *fakeStore) AgentByTokenHash(context.Context, string) (Agent, error) { return f.agent, nil }
+func (f *fakeStore) AgentByTokenHash(context.Context, string) (Agent, error) {
+	return f.agent, f.agentErr
+}
 func (f *fakeStore) TouchAgent(_ context.Context, _, _ string, now time.Time) error {
+	f.touchMu.Lock()
+	defer f.touchMu.Unlock()
+	f.touchCalls++
+	if f.touchErr != nil {
+		return f.touchErr
+	}
 	f.touchedAt = now
 	return nil
+}
+
+func (f *fakeStore) writes() int {
+	f.touchMu.Lock()
+	defer f.touchMu.Unlock()
+	return f.touchCalls
 }
 func (f *fakeStore) OwnedAgent(context.Context, string, string) (Agent, error) { return f.agent, nil }
 func (f *fakeStore) ListAgents(context.Context, string) ([]Agent, error) {
@@ -562,6 +581,143 @@ func TestAuthenticateAgentTouchesLastSeen(t *testing.T) {
 	}
 	if store.touchedAt != now || agent.LastSeenAt == nil || !agent.LastSeenAt.Equal(now) {
 		t.Fatalf("touch=%v agent.last_seen=%v", store.touchedAt, agent.LastSeenAt)
+	}
+}
+
+func TestAuthenticateAgentWritesLastSeenOncePerHeartbeatInterval(t *testing.T) {
+	start := time.Date(2026, 8, 30, 13, 0, 0, 0, time.UTC)
+	store := &fakeStore{agent: readyAgent()}
+	service := NewService(store, &fakePosts{}, &fakeStaging{}, Config{AgentHeartbeatInterval: 15 * time.Second})
+
+	for _, offset := range []time.Duration{0, time.Second, 2 * time.Second} {
+		service.clock = fakeClock{now: start.Add(offset)}
+		agent, err := service.AuthenticateAgent(context.Background(), "raw-token")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if agent.LastSeenAt == nil || !agent.LastSeenAt.Equal(start.Add(offset)) {
+			t.Fatalf("last_seen at +%s = %v", offset, agent.LastSeenAt)
+		}
+	}
+	if store.writes() != 1 {
+		t.Fatalf("writes inside one heartbeat interval = %d", store.writes())
+	}
+
+	service.clock = fakeClock{now: start.Add(15 * time.Second)}
+	if _, err := service.AuthenticateAgent(context.Background(), "raw-token"); err != nil {
+		t.Fatal(err)
+	}
+	if store.writes() != 2 || !store.touchedAt.Equal(start.Add(15*time.Second)) {
+		t.Fatalf("writes=%d touchedAt=%v after the interval elapsed", store.writes(), store.touchedAt)
+	}
+}
+
+func TestConcurrentAuthenticationStillWritesLastSeenOnce(t *testing.T) {
+	now := time.Date(2026, 8, 30, 13, 0, 0, 0, time.UTC)
+	store := &fakeStore{agent: readyAgent()}
+	service := NewService(store, &fakePosts{}, &fakeStaging{}, Config{AgentHeartbeatInterval: 15 * time.Second})
+	service.clock = fakeClock{now: now}
+
+	// Every caller sees the same instant, so without a claim taken under the lock they
+	// would all read an empty registry and all reach the single writer.
+	var start, done sync.WaitGroup
+	start.Add(1)
+	for range 16 {
+		done.Add(1)
+		go func() {
+			defer done.Done()
+			start.Wait()
+			if _, err := service.AuthenticateAgent(context.Background(), "raw-token"); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	start.Done()
+	done.Wait()
+
+	if store.writes() != 1 {
+		t.Fatalf("concurrent authentications produced %d writes", store.writes())
+	}
+}
+
+func TestRevokingAnAgentDropsItsHeartbeatEntry(t *testing.T) {
+	now := time.Date(2026, 8, 30, 13, 0, 0, 0, time.UTC)
+	store := &fakeStore{agent: readyAgent()}
+	service := NewService(store, &fakePosts{}, &fakeStaging{}, Config{AgentHeartbeatInterval: 15 * time.Second})
+	service.clock = fakeClock{now: now}
+	if _, err := service.AuthenticateAgent(context.Background(), "raw-token"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := service.RevokeAgent(context.Background(), "alice", readyAgent().ID); err != nil {
+		t.Fatal(err)
+	}
+	service.touchMu.Lock()
+	remaining := len(service.lastTouch)
+	service.touchMu.Unlock()
+	if remaining != 0 {
+		t.Fatalf("revoked agent left %d suppression entries", remaining)
+	}
+}
+
+func TestAuthenticateAgentSurvivesAFailedLastSeenWrite(t *testing.T) {
+	now := time.Date(2026, 8, 30, 13, 0, 0, 0, time.UTC)
+	store := &fakeStore{agent: readyAgent(), touchErr: errors.New("database is locked")}
+	service := NewService(store, &fakePosts{}, &fakeStaging{}, Config{AgentHeartbeatInterval: 15 * time.Second})
+	service.clock = fakeClock{now: now}
+
+	agent, err := service.AuthenticateAgent(context.Background(), "raw-token")
+	if err != nil {
+		t.Fatalf("a storage failure refused a valid agent: %v", err)
+	}
+	if agent.ID != readyAgent().ID {
+		t.Fatalf("agent = %#v", agent)
+	}
+
+	// The failed write was not recorded, so the next call retries it rather than
+	// suppressing the refresh for a whole interval.
+	service.clock = fakeClock{now: now.Add(time.Second)}
+	if _, err := service.AuthenticateAgent(context.Background(), "raw-token"); err != nil {
+		t.Fatal(err)
+	}
+	if store.writes() != 2 {
+		t.Fatalf("writes after a failed one = %d", store.writes())
+	}
+}
+
+func TestAuthenticateAgentRefusesARevocationSeenOnlyByTheWrite(t *testing.T) {
+	now := time.Date(2026, 8, 30, 13, 0, 0, 0, time.UTC)
+	store := &fakeStore{agent: readyAgent(), touchErr: ErrAgentRevoked}
+	service := NewService(store, &fakePosts{}, &fakeStaging{}, Config{AgentHeartbeatInterval: 15 * time.Second})
+	service.clock = fakeClock{now: now}
+
+	if _, err := service.AuthenticateAgent(context.Background(), "raw-token"); !errors.Is(err, ErrAgentRevoked) {
+		t.Fatalf("revocation that landed after the token lookup: err = %v", err)
+	}
+}
+
+func TestAuthenticateAgentRefusesRevokedAndUnknownTokensBeforeTouching(t *testing.T) {
+	now := time.Date(2026, 8, 30, 13, 0, 0, 0, time.UTC)
+	revoked := readyAgent()
+	revoked.RevokedAt = &now
+	for name, tc := range map[string]struct {
+		store *fakeStore
+		token string
+	}{
+		"revoked": {&fakeStore{agent: revoked}, "raw-token"},
+		"unknown": {&fakeStore{agentErr: ErrNotFound}, "raw-token"},
+		"empty":   {&fakeStore{agent: readyAgent()}, "   "},
+	} {
+		t.Run(name, func(t *testing.T) {
+			service := NewService(tc.store, &fakePosts{}, &fakeStaging{}, Config{AgentHeartbeatInterval: 15 * time.Second})
+			service.clock = fakeClock{now: now}
+			if _, err := service.AuthenticateAgent(context.Background(), tc.token); !errors.Is(err, ErrAgentRevoked) {
+				t.Fatalf("err = %v", err)
+			}
+			if tc.store.writes() != 0 {
+				t.Fatalf("refused agent was touched %d times", tc.store.writes())
+			}
+		})
 	}
 }
 

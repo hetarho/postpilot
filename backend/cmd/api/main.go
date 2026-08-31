@@ -181,6 +181,7 @@ func main() {
 		publishing.Config{
 			PairingTTL: cfg.PublishPairingTTL, MaxPendingPairings: cfg.PublishMaxPendingPairings,
 			LeaseTTL: cfg.PublishLeaseTTL, AssetURLTTL: cfg.PublishAssetURLTTL,
+			AgentHeartbeatInterval: cfg.PublishAgentHeartbeatInterval,
 		},
 	)
 	if requeued, unknown, err := publishSvc.RecoverExpired(ctx); err != nil {

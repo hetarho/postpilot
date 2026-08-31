@@ -237,6 +237,7 @@ func TestLoadPublishingDefaultsAndValidation(t *testing.T) {
 	for _, name := range []string{
 		"PUBLISH_PAIRING_TTL", "PUBLISH_MAX_PENDING_PAIRINGS", "PUBLISH_LEASE_TTL",
 		"PUBLISH_ASSET_URL_TTL", "PUBLISH_ORPHAN_SWEEP_INTERVAL", "PUBLISH_ORPHAN_MIN_AGE",
+		"PUBLISH_AGENT_HEARTBEAT_INTERVAL",
 	} {
 		t.Setenv(name, "")
 	}
@@ -246,13 +247,21 @@ func TestLoadPublishingDefaultsAndValidation(t *testing.T) {
 	}
 	if cfg.PublishPairingTTL != 10*time.Minute || cfg.PublishMaxPendingPairings != 8 ||
 		cfg.PublishLeaseTTL != 45*time.Second || cfg.PublishAssetURLTTL != 10*time.Minute ||
-		cfg.PublishOrphanSweepInterval != 24*time.Hour || cfg.PublishOrphanMinAge != time.Hour {
+		cfg.PublishOrphanSweepInterval != 24*time.Hour || cfg.PublishOrphanMinAge != time.Hour ||
+		cfg.PublishAgentHeartbeatInterval != 15*time.Second {
 		t.Fatalf("publishing defaults = %+v", cfg)
+	}
+	// The frontend hides an agent after PUBLISH_AGENT_STALE_MS = 30s. A default heartbeat
+	// at or beyond that window would render a live agent offline, and no gate spans the
+	// two config seams, so the relationship is asserted here.
+	if cfg.PublishAgentHeartbeatInterval >= 30*time.Second {
+		t.Fatalf("heartbeat %s does not fit the 30s staleness window", cfg.PublishAgentHeartbeatInterval)
 	}
 
 	for _, name := range []string{
 		"PUBLISH_PAIRING_TTL", "PUBLISH_LEASE_TTL", "PUBLISH_ASSET_URL_TTL",
 		"PUBLISH_ORPHAN_SWEEP_INTERVAL", "PUBLISH_ORPHAN_MIN_AGE",
+		"PUBLISH_AGENT_HEARTBEAT_INTERVAL",
 	} {
 		for _, bad := range []string{"invalid", "0s", "-1s"} {
 			t.Run(name+"="+bad, func(t *testing.T) {

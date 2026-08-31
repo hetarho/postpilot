@@ -59,9 +59,10 @@ func (i *AgentInterceptor) authorize(ctx context.Context, procedure string, head
 		if errors.Is(err, publishing.ErrAgentRevoked) {
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("publishing agent authentication failed"))
 		}
-		// Database/touch failures are operational, not credential revocation. Returning
+		// A token lookup failure is operational, not credential revocation. Returning
 		// Unauthenticated would make the Mac supervisor stop permanently instead of
-		// applying its transient-error backoff.
+		// applying its transient-error backoff. The last_seen_at refresh cannot arrive
+		// here: the service keeps it non-fatal so a failed write costs only freshness.
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("publishing agent authentication is temporarily unavailable"))
 	}
 	return withAgent(ctx, agent), nil

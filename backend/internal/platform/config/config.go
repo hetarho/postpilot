@@ -171,6 +171,12 @@ type Config struct {
 	PublishAssetURLTTL         time.Duration
 	PublishOrphanSweepInterval time.Duration
 	PublishOrphanMinAge        time.Duration
+	// PublishAgentHeartbeatInterval is the minimum spacing between last_seen_at writes
+	// for one agent; calls arriving sooner are served without touching the writer. It
+	// must stay shorter than the frontend's PUBLISH_AGENT_STALE_MS (30s), which is the
+	// window a live agent is rendered as online in — the two sit in different config
+	// seams, so nothing but this note connects them.
+	PublishAgentHeartbeatInterval time.Duration
 
 	// Purpose brief field ceilings, counted in Unicode scalar values like the voice
 	// sample minimum. They are env-owned rather than constants because a brief that is
@@ -279,6 +285,11 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.PublishOrphanMinAge = publishMinAge
+	agentHeartbeat, err := positiveDuration("PUBLISH_AGENT_HEARTBEAT_INTERVAL", "15s")
+	if err != nil {
+		return nil, err
+	}
+	cfg.PublishAgentHeartbeatInterval = agentHeartbeat
 
 	purposeName, err := positiveInt("PURPOSE_NAME_MAX_CHARS", "40")
 	if err != nil {

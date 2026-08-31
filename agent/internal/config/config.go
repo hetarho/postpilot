@@ -13,10 +13,14 @@ import (
 
 const (
 	DefaultAPIURL = "https://api.postpilot.haeram.me"
-	PollInterval  = 5 * time.Second
-	Heartbeat     = 10 * time.Second
-	JobTimeout    = 15 * time.Minute
-	MaxTurns      = 60
+	// PollInterval is repeated as publishing.Supervisor.Run's fallback default; change
+	// both together. The server absorbs the resulting call rate with its own heartbeat
+	// throttle (PUBLISH_AGENT_HEARTBEAT_INTERVAL), so lowering this multiplies requests
+	// without multiplying writes.
+	PollInterval = 5 * time.Second
+	Heartbeat    = 10 * time.Second
+	JobTimeout   = 15 * time.Minute
+	MaxTurns     = 60
 )
 
 type Connection struct {
