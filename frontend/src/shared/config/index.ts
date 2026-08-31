@@ -5,6 +5,10 @@
  *  backend (vite.config.ts), which also sidesteps CORS. */
 export const API_URL = import.meta.env.VITE_API_URL ?? ''
 
+/** Theme is a browser-local interface preference, never deployment or account state. */
+export const THEME_PREFERENCE_STORAGE_KEY = 'postpilot.theme' as const
+export const DEFAULT_THEME_PREFERENCE = 'system' as const
+
 /** How long a resolved session is trusted before the route guard re-checks it with the
  *  server. Zero would cost a round trip on every navigation; Infinity would let a
  *  session revoked elsewhere (another tab, an expiry, an operator) keep rendering

@@ -1,19 +1,15 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="night" style="color-scheme: dark">
   <head>
     <meta charset="UTF-8" />
     <!-- viewport-fit=cover makes env(safe-area-inset-*) non-zero, which the safe-b/nav spacing
          tokens in app/styles/index.css depend on. No user-scalable/maximum-scale: they are a
          WCAG 1.4.4 failure on Android and are ignored on iOS. See design-language §8.1. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <!-- Chrome for Android tints its address bar from this tag alone; color-scheme does not reach
-         it. The values are the header's own plane (surface-raised) per theme — design-language
-         §2.5. They are the only colour literals outside app/styles/index.css. -->
-    <!-- Unconditional, because `night` is the only theme that renders: index.css maps it on bare
-         :root and nothing sets data-theme yet (design-language §2.5). Keying this off
-         prefers-color-scheme would paint a white address bar above a near-black app for every
-         light-mode user. Re-pair it the day the switcher lands, off data-theme. -->
-    <meta name="theme-color" content="#28272c" />
+    <!-- Static/no-JS fallback is night. The synchronous theme bootstrap replaces data-theme,
+         color-scheme, and both meta values from one effective-theme snapshot before React renders.
+         These theme-color values are the header's surface-raised plane (design-language §2.5). -->
+    <meta name="theme-color" content="#28272c" data-day="#fcfbfe" data-night="#28272c" />
     <meta name="color-scheme" content="dark" />
     <meta name="description" content="사진과 경험을 나만의 말투로 블로그 글에 옮겨 보세요." />
     <!-- The app icon, in the three forms a browser actually asks for. `favicon.svg` is the source
@@ -26,9 +22,9 @@
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Postpilot — 사진과 경험을 블로그 글로</title>
+    <script type="module" src="/src/main.tsx" blocking="render"></script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

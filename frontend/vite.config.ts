@@ -4,8 +4,25 @@ import { loadEnv } from 'vite'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import type { Plugin } from 'vite'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function preserveRenderBlockingEntry(): Plugin {
+  return {
+    name: 'preserve-render-blocking-entry',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        // Vite replaces the source entry tag during build, so restore its standard render token.
+        return html.replace(
+          /<script\b(?=[^>]*\btype="module")(?=[^>]*\bsrc="[^"]+")(?![^>]*\bblocking=)[^>]*>/,
+          (entry) => entry.replace('<script', '<script blocking="render"'),
+        )
+      },
+    },
+  }
+}
 
 export default defineConfig(({ mode }) => {
   // A single repo-root .env is shared by FE and BE (`cp .env.example .env`). Vite's
@@ -17,7 +34,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     envDir,
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), preserveRenderBlockingEntry()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

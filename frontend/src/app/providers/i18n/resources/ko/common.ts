@@ -9,6 +9,16 @@ export const common = {
     en: 'English',
     changed: '인터페이스 언어가 {{language}}(으)로 바뀌었어요.',
   },
+  theme: {
+    label: '테마',
+    system: '시스템',
+    light: '밝게',
+    dark: '어둡게',
+  },
+  interfacePreferences: {
+    label: '인터페이스 환경설정',
+    trigger: '환경설정',
+  },
   contentLanguage: {
     ko: '한국어',
     en: '영어',

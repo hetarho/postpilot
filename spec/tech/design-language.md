@@ -225,20 +225,29 @@ hover colour by changing opacity. Function names describe purpose: the committin
 ### 2.5 Themes
 
 A theme is one `[data-theme='<key>']` block re-mapping the semantic foundations. `night` (dark,
-the default on `:root`) and `day` (light) ship; there is **no switcher yet**. Adding one is: set
-`data-theme` on `<html>` from the app layer. Adding a _third_ theme is one more block. Nothing in
-a component ever changes, because nothing in a component names a palette step — that is the
-point of the layers.
+the static/no-JavaScript fallback on `:root`) and `day` (light) ship. The browser-owned
+preference is `system|light|dark`: System is the default and follows `prefers-color-scheme`, while
+Light and Dark explicitly select `day` and `night`. Nothing in a component changes, because
+nothing in a component names a palette step — that is the point of the layers.
+
+The app resolves the valid `localStorage['postpilot.theme']` override and OS preference
+synchronously before React creates its root, applies one bootstrap snapshot, and then mounts one
+provider from that same snapshot. Choosing System removes the key. Missing, malformed, or
+throwing storage is non-fatal. The provider observes OS changes only in System mode and consumes
+same-origin storage events without writing them back; route and session changes do not reset it.
+Locale and theme remain independent browser preferences.
 
 Both themes must keep primary/secondary/tertiary content on every surface, and every functional
 foreground on its background, at WCAG AA (4.5:1 for body, 3:1 for large text). Check all mapped
 pairs with a contrast tool when a foundation moves. For Korean, "large text" is the CJK size
 equivalent of 18 pt, not the Latin pixel value — do not claim the 3:1 exemption on 19px Hangul.
 
-The browser chrome is part of the theme. `<meta name="theme-color">` in `index.html` carries the
-header's plane, because Chrome for Android tints its address bar from that tag alone;
-`color-scheme` does not reach it, and a light toolbar band above a near-black app is the most
-visible surface in the product.
+The browser chrome is part of the theme. Every transition synchronizes `<html data-theme>`, the
+document's native `color-scheme`, `<meta name="color-scheme">`, and `<meta name="theme-color">`
+from the same effective theme. The theme-colour element in `index.html` owns the raw day/night
+header-plane values as `data-day` and `data-night`; TypeScript selects them instead of duplicating
+colour literals. Chrome for Android tints its address bar from that tag alone, so `color-scheme`
+cannot substitute for it. Theme changes are immediate and introduce no full-page transition.
 
 The **wordmark** is part of the theme too. `shared/ui/Logo` is inline SVG drawn from
 `brand-wordmark` (the page's own ink) and `brand-mark` (the accent), so it re-skins with every

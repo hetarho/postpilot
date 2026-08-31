@@ -10,6 +10,7 @@ it('opens from the keyboard, closes on Escape, and restores trigger focus', asyn
   trigger.focus()
   await user.keyboard('{Enter}')
   expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toHaveClass('bottom-full')
   expect(screen.getByLabelText('옵션 값')).toHaveFocus()
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -28,4 +29,32 @@ it('dismisses when the user presses outside', async () => {
   await user.click(screen.getByRole('button', { name: '테스트 옵션' }))
   await user.click(screen.getByRole('button', { name: '바깥' }))
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+it('cycles Tab focus inside the open dialog', async () => {
+  const user = userEvent.setup()
+  render(
+    <div>
+      <Popover label="테스트 옵션">
+        {() => (
+          <>
+            <input aria-label="첫 번째 옵션" />
+            <button>마지막 옵션</button>
+          </>
+        )}
+      </Popover>
+      <button>바깥</button>
+    </div>,
+  )
+
+  await user.click(screen.getByRole('button', { name: '테스트 옵션' }))
+  const first = screen.getByRole('textbox', { name: '첫 번째 옵션' })
+  const last = screen.getByRole('button', { name: '마지막 옵션' })
+  expect(first).toHaveFocus()
+
+  await user.tab({ shift: true })
+  expect(last).toHaveFocus()
+  await user.tab()
+  expect(first).toHaveFocus()
+  expect(screen.getByRole('button', { name: '바깥' })).not.toHaveFocus()
 })

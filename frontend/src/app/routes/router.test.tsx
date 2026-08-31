@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { AuthService } from '@/shared/api'
 import { initializeI18n } from '@/app/providers/i18n'
+import { THEME_PREFERENCE_STORAGE_KEY } from '@/shared/config'
 import { renderAppAt } from '@/test/app'
+import { createThemeTestEnvironment } from '@/test/theme'
 
 afterEach(() => {
   cleanup()
@@ -244,6 +246,183 @@ describe('lazily loaded routes', () => {
     expect(await screen.findByRole('link', { name: '프로필' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '버전 기록' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/voices/voice-default/versions')
+  })
+})
+
+describe('theme preferences in the real route tree', () => {
+  it.each([
+    {
+      surface: 'login',
+      at: '/login?redirect=%2Fposts#preferences',
+      user: undefined,
+      readyRole: 'button' as const,
+      readyName: '로그인',
+      expectedCalls: ['GetMe'],
+    },
+    {
+      surface: 'authenticated',
+      at: '/posts?view=recent#preferences',
+      user: { id: 'alice' },
+      readyRole: 'heading' as const,
+      readyName: '내 글',
+      expectedCalls: ['GetMe', 'ListPosts'],
+    },
+  ])(
+    'reaches and applies all three preferences on the $surface surface without an RPC',
+    async ({ at, user: account, readyRole, readyName, expectedCalls }) => {
+      const user = userEvent.setup()
+      const calls: string[] = []
+      const theme = createThemeTestEnvironment({ prefersDark: false })
+      const { router } = renderAppAt(at, { user: account, calls, theme: theme.ports })
+
+      expect(await screen.findByRole(readyRole, { name: readyName })).toBeInTheDocument()
+      await waitFor(() => expect(calls).toEqual(expectedCalls))
+      const callsBeforePreferences = [...calls]
+      const locationBeforePreferences = router.state.location.href
+      const localeBeforePreferences = document.documentElement.lang
+
+      await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
+      const select = await screen.findByRole('combobox', { name: '테마' })
+      expect(select).toHaveValue('system')
+
+      await user.selectOptions(select, 'light')
+      expect(select).toHaveValue('light')
+      expect(document.documentElement).toHaveAttribute('data-theme', 'day')
+      expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('light')
+
+      await user.selectOptions(select, 'dark')
+      expect(select).toHaveValue('dark')
+      expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+      expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('dark')
+
+      await user.selectOptions(select, 'system')
+      expect(select).toHaveValue('system')
+      expect(document.documentElement).toHaveAttribute('data-theme', 'day')
+      expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBeNull()
+
+      expect(document.documentElement.lang).toBe(localeBeforePreferences)
+      expect(router.state.location.href).toBe(locationBeforePreferences)
+      expect(calls).toEqual(callsBeforePreferences)
+    },
+  )
+
+  it('persists an explicit choice across navigation, logout/login, and a fresh app mount', async () => {
+    const user = userEvent.setup()
+    const theme = createThemeTestEnvironment()
+    const first = renderAppAt('/posts', {
+      user: { id: 'alice' },
+      theme: theme.ports,
+    })
+
+    expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
+    await user.selectOptions(await screen.findByRole('combobox', { name: '테마' }), 'dark')
+    expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+
+    await act(() => first.router.navigate({ to: '/posts/new' }))
+    expect(await screen.findByRole('textbox', { name: '제목' })).toBeInTheDocument()
+    expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+
+    await user.click(screen.getByRole('button', { name: '로그아웃' }))
+    await waitFor(() => expect(first.router.state.location.pathname).toBe('/login'))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+
+    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
+    expect(await screen.findByRole('combobox', { name: '테마' })).toHaveValue('dark')
+    await user.keyboard('{Escape}')
+    await user.type(screen.getByLabelText('아이디'), 'alice')
+    await user.type(screen.getByLabelText('비밀번호'), 'pw')
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+    await waitFor(() => expect(first.router.state.location.pathname).toBe('/posts'))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+    expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('dark')
+
+    first.unmount()
+    expect(theme.mediaQuery.listenerCount()).toBe(0)
+    expect(theme.storageEvents.listenerCount()).toBe(0)
+
+    const reloaded = renderAppAt('/posts', {
+      user: { id: 'alice' },
+      theme: theme.ports,
+    })
+    expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
+    expect(await screen.findByRole('combobox', { name: '테마' })).toHaveValue('dark')
+    reloaded.unmount()
+  })
+
+  it('follows System media changes and consumes another tab storage change', async () => {
+    const theme = createThemeTestEnvironment({ prefersDark: false })
+    renderAppAt('/login', { theme: theme.ports })
+
+    expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument()
+    expect(document.documentElement).toHaveAttribute('data-theme', 'day')
+
+    act(() => theme.mediaQuery.change(true))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+
+    act(() => theme.changeStorageFromAnotherTab('light'))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'day')
+
+    act(() => theme.mediaQuery.change(false))
+    act(() => theme.mediaQuery.change(true))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'day')
+
+    act(() => theme.changeStorageFromAnotherTab(null))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
+    expect(await screen.findByRole('combobox', { name: '테마' })).toHaveValue('system')
+  })
+
+  it('keeps the active locale and complete URL unchanged while selecting a theme', async () => {
+    initializeI18n('en')
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const theme = createThemeTestEnvironment()
+    const { router } = renderAppAt('/posts?view=recent#draft', {
+      user: { id: 'alice' },
+      calls,
+      theme: theme.ports,
+    })
+
+    expect(await screen.findByRole('heading', { name: 'My posts' })).toBeInTheDocument()
+    await waitFor(() => expect(calls).toContain('ListPosts'))
+    const callsBeforeSelection = [...calls]
+    const locationBeforeSelection = router.state.location.href
+
+    await user.click(screen.getByRole('button', { name: 'Interface preferences' }))
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Theme' }), 'dark')
+
+    expect(document.documentElement.lang).toBe('en')
+    expect(router.state.location.href).toBe(locationBeforeSelection)
+    expect(calls).toEqual(callsBeforeSelection)
+  })
+
+  it('anchors the 320px authenticated popover to the viewport-side shell edge', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 })
+    window.dispatchEvent(new Event('resize'))
+    const user = userEvent.setup()
+    renderAppAt('/posts', { user: { id: 'alice' } })
+
+    expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    const logout = screen.getByRole('button', { name: '로그아웃' })
+    const preferences = screen.getByRole('button', { name: '인터페이스 환경설정' })
+    expect(logout.compareDocumentPosition(preferences) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
+      0,
+    )
+    expect(preferences).toHaveClass('px-3', 'sm:px-4')
+
+    await user.click(preferences)
+    expect(screen.getByRole('dialog', { name: '인터페이스 환경설정' })).toHaveClass(
+      'right-0',
+      'w-72',
+    )
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    window.dispatchEvent(new Event('resize'))
   })
 })
 

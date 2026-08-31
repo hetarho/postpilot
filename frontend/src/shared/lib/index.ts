@@ -16,6 +16,34 @@ export {
 export { copyText } from './clipboard'
 export type { BlockVisitor } from './blocks'
 export type { CopyFallbackElement } from './clipboard'
+export {
+  EFFECTIVE_THEMES,
+  PREFERS_DARK_MEDIA_QUERY,
+  THEME_PREFERENCES,
+  browserThemeMatchMedia,
+  browserThemeMediaQuery,
+  browserThemeStorage,
+  isEffectiveTheme,
+  isThemePreference,
+  parseStoredThemePreference,
+  readPrefersDark,
+  readThemePreference,
+  resolveBrowserTheme,
+  resolveEffectiveTheme,
+  writeThemePreference,
+} from './theme'
+export type {
+  BrowserThemeSnapshot,
+  EffectiveTheme,
+  StoredThemePreference,
+  ThemeBrowserPorts,
+  ThemeMatchMedia,
+  ThemeMediaQuery,
+  ThemePreference,
+  ThemeStorage,
+  ThemeStorageReader,
+  ThemeStorageWriter,
+} from './theme'
 export type { DecodeFailure, ResizedJpeg } from './image'
 export {
   DecodeError,

@@ -19,10 +19,8 @@
  * needed for layout and these functional roles to Tailwind as `--color-<role>`. A primitive uses
  * its own functional role instead of reaching straight for violet, accent, or a palette step.
  *
- * THEMES. `:root` carries the default role map. A second theme is one more
- * `[data-theme='<key>']` block re-mapping the same foundations — nothing else changes, because
- * no component ever reads a step. There is no theme switcher yet; the blocks exist so adding one
- * is a one-attribute change on <html>, not a refactor.
+ * THEMES. The pre-paint app bootstrap selects `night` or `day` on `<html data-theme>`; each block
+ * re-maps the same foundations, so components never branch on a palette or effective theme.
  *
  * Tailwind's stock colour palette is removed (`--color-*: initial`). A class like `bg-gray-100`
  * or `text-red-400` therefore emits NO CSS — and `pnpm lint:style` fails the build on it.
@@ -121,7 +119,7 @@
 
 /* ── Tier 2: semantic foundations ───────────────────────────────────────────────────────────── */
 
-/* Default theme: `night`. Dark, mauve ground, violet accent. */
+/* Static/no-JS fallback and explicit `night`: dark, mauve ground, violet accent. */
 :root,
 [data-theme='night'] {
   color-scheme: dark;
@@ -172,7 +170,7 @@
   --physical-shadow: var(--palette-black);
 }
 
-/* Second theme: `day`. Same roles, light ground. Not switchable yet — see the header. */
+/* `day`: the same semantic roles on a light ground. */
 [data-theme='day'] {
   color-scheme: light;
 

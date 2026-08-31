@@ -2,9 +2,9 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useLogin } from '@/entities/session'
-import { LocaleSelect } from '@/features/change-locale'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 import { AppFailureMessage, Button, FieldLabel, Logo, TextField } from '@/shared/ui'
+import { InterfacePreferences } from '@/widgets/interface-preferences'
 
 /** Credential refusals use one stable INVALID_CREDENTIALS reason. The server already refuses to
  *  distinguish an unknown id from a wrong password (spec/policy/auth.md), and structured failure
@@ -36,7 +36,7 @@ export function LoginPage() {
     <main className="bg-surface-base text-content-primary flex min-h-full items-start justify-center px-4 pt-8 pb-10 sm:items-center sm:px-6 sm:py-10">
       <div className="w-full max-w-xs">
         <div className="flex justify-end">
-          <LocaleSelect />
+          <InterfacePreferences />
         </div>
         <form onSubmit={onSubmit} className="mt-4 w-full">
           {/* The app icon is decorative beside the labelled wordmark, so the pair remains one

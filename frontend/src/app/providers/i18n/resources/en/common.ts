@@ -9,6 +9,16 @@ export const common = {
     en: 'English',
     changed: 'Interface language changed to {{language}}.',
   },
+  theme: {
+    label: 'Theme',
+    system: 'System',
+    light: 'Light',
+    dark: 'Dark',
+  },
+  interfacePreferences: {
+    label: 'Interface preferences',
+    trigger: 'Preferences',
+  },
   contentLanguage: {
     ko: 'Korean',
     en: 'English',

@@ -3,8 +3,8 @@ import { Bot, FileText, Quote, Send, Target } from 'lucide-react'
 import { Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useLogout, useSession } from '@/entities/session'
-import { LocaleSelect } from '@/features/change-locale'
 import { AppFailureMessage, Button, Logo, Notice } from '@/shared/ui'
+import { InterfacePreferences } from '@/widgets/interface-preferences'
 import { endSession } from '../model/end-session'
 
 /** The app's destinations, in one list so the phone tab bar and the desktop header cannot drift.
@@ -102,13 +102,15 @@ export function AuthenticatedLayout() {
           <span className="text-content-tertiary hidden font-mono text-xs sm:inline">
             {user?.id}
           </span>
-          <LocaleSelect />
           {/* `secondary`, not `ghost`: a ghost button's only fill lives behind `hover:`, which
               Tailwind compiles to `@media (hover: hover)` and a phone never matches — so the one
               control in the header used to render as text (§6). */}
           <Button variant="secondary" onClick={() => void onLogout()} pending={logout.isPending}>
             {t('action.logout', { ns: 'common' })}
           </Button>
+          {/* Keep preferences at the viewport-side edge. Its right-aligned 18rem panel then lands
+              exactly inside the 320px shell gutters instead of extending left by Logout's width. */}
+          <InterfacePreferences />
         </div>
       </header>
       {logout.failure && (
