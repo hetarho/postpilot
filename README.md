@@ -36,6 +36,9 @@ DB와 인증은 들어와 있다 — SQLite(순수 Go 드라이버, WAL, 바이�
 
 ## 로컬 실행
 
+Node 버전은 `.node-version`에 고정되어 있다. fnm·nvm·asdf 같은 도구는 이 파일을 읽어
+자동으로 맞춰 주고, CI도 같은 파일을 읽는다. 도구가 없다면 그 버전을 직접 설치한다.
+
 ```bash
 cp .env.example .env
 pnpm install

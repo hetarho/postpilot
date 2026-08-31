@@ -1,6 +1,8 @@
-# CI gate: frontend lint + build and backend vet + build must pass. Runs on PRs (merge
-# gate) AND on direct pushes to develop/main (solo-dev validation — no PR needed to catch
-# a break). No secrets needed, so this is safe to run anytime.
+# CI gate: frontend lint + build and backend vet + build must pass. Today it runs on PRs
+# into main (merge gate) and on direct pushes to main (solo-dev validation — no PR needed
+# to catch a break). A `develop` branch does not exist yet; adding one to `branches:` is a
+# one-line change when it does, the same dormancy DEPLOY.md §1 records for the staging
+# deploy. No secrets needed, so this is safe to run anytime.
 name: CI
 
 on:
@@ -17,7 +19,9 @@ jobs:
       - uses: pnpm/action-setup@v4 # reads packageManager (pnpm@10.x) from package.json
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Reads .node-version, so CI and a contributor's fnm/nvm land on one version —
+          # the same pattern the Go jobs use with go-version-file.
+          node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen agent/internal/gen
