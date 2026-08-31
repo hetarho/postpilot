@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -88,6 +89,13 @@ func Start(binary, profileDir, initialURL string) (*Session, error) {
 		return nil, err
 	}
 	if existing, err := Connect(profileDir); err == nil {
+		if initialURL != "" {
+			ctx, cancel := context.WithTimeout(context.Background(), endpointTimeout)
+			defer cancel()
+			if err := navigateSinglePage(ctx, existing.CDPURL, initialURL); err != nil {
+				return nil, fmt.Errorf("navigate existing dedicated browser: %w", err)
+			}
+		}
 		return existing, nil
 	}
 	if err := os.Remove(filepath.Join(profileDir, devToolsActivePort)); err != nil && !errors.Is(err, os.ErrNotExist) {

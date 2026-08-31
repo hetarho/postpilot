@@ -58,7 +58,14 @@ func TestNaverURLBelongsToExpectedBlog(t *testing.T) {
 	if !validNaverURL("https://blog.naver.com/my-blog/123", "my-blog") {
 		t.Fatal("expected blog URL rejected")
 	}
-	for _, value := range []string{"http://blog.naver.com/my-blog/123", "https://evil.test/my-blog/123", "https://blog.naver.com/other/123", "https://blog.naver.com/my-blog"} {
+	for _, value := range []string{
+		"http://blog.naver.com/my-blog/123",
+		"https://evil.test/my-blog/123",
+		"https://blog.naver.com/other/123",
+		"https://blog.naver.com/my-blog",
+		"https://blog.naver.com/my-blog/category",
+		"https://blog.naver.com/my-blog/123/extra",
+	} {
 		if validNaverURL(value, "my-blog") {
 			t.Fatalf("unsafe URL accepted: %s", value)
 		}

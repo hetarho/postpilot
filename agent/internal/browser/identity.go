@@ -234,6 +234,52 @@ func ObserveNaverIdentity(ctx context.Context, cdpURL string) (NaverIdentity, er
 	}
 }
 
+func navigateSinglePage(ctx context.Context, cdpURL, destination string) error {
+	targetURL, err := url.Parse(destination)
+	if err != nil || targetURL.Scheme != "https" || !isNaverHost(targetURL.Hostname()) || targetURL.User != nil {
+		return errors.New("browser navigation destination is outside approved Naver hosts")
+	}
+	target, err := discoverSinglePage(ctx, cdpURL)
+	if err != nil {
+		return err
+	}
+	conn, _, err := websocket.Dial(ctx, cdpURL, &websocket.DialOptions{
+		HTTPClient: noProxyHTTPClient(10 * time.Second),
+	})
+	if err != nil {
+		return fmt.Errorf("connect dedicated browser: %w", err)
+	}
+	defer conn.CloseNow()
+	conn.SetReadLimit(1 << 20)
+	client := &cdpClient{conn: conn}
+	var attached struct {
+		SessionID string `json:"sessionId"`
+	}
+	if err := client.call(ctx, "Target.attachToTarget", map[string]any{
+		"targetId": target.ID,
+		"flatten":  true,
+	}, &attached); err != nil {
+		return fmt.Errorf("attach selected browser page: %w", err)
+	}
+	if attached.SessionID == "" {
+		return errors.New("attach selected browser page returned no session")
+	}
+	client.sessionID = attached.SessionID
+	if err := client.call(ctx, "Page.enable", nil, nil); err != nil {
+		return err
+	}
+	var navigation struct {
+		ErrorText string `json:"errorText"`
+	}
+	if err := client.call(ctx, "Page.navigate", map[string]any{"url": destination}, &navigation); err != nil {
+		return err
+	}
+	if navigation.ErrorText != "" {
+		return fmt.Errorf("browser refused Naver navigation: %s", navigation.ErrorText)
+	}
+	return nil
+}
+
 func discoverSinglePage(ctx context.Context, cdpURL string) (pageTarget, error) {
 	parsed, err := url.Parse(cdpURL)
 	if err != nil || (parsed.Scheme != "ws" && parsed.Scheme != "wss") || parsed.User != nil {

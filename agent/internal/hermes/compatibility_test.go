@@ -10,7 +10,7 @@ import (
 )
 
 func TestCompatibilityRequiresCapabilitiesRatherThanExactVersion(t *testing.T) {
-	manifest := []byte(`{"checked_at":"2026-08-30","latest_checked_release":"0.20.6","required_commands":["doctor"],"required_plugin_hooks":["pre_tool_call"],"allowed_browser_hosts":["blog.naver.com"]}`)
+	manifest := []byte(`{"checked_at":"2026-08-31","latest_checked_release":"0.20.6","required_commands":["doctor"],"required_plugin_hooks":["pre_tool_call"],"allowed_browser_hosts":["blog.naver.com"]}`)
 	parsed, err := ReadCompatibility(manifest)
 	if err != nil {
 		t.Fatal(err)

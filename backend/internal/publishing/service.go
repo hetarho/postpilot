@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"path"
 	"reflect"
 	"strings"
 	"sync"
@@ -651,8 +650,16 @@ func validNaverURL(raw, accountID string) bool {
 	if err != nil || u.Scheme != "https" || strings.ToLower(u.Hostname()) != "blog.naver.com" {
 		return false
 	}
-	parts := strings.Split(strings.Trim(path.Clean(u.Path), "/"), "/")
-	return len(parts) >= 2 && parts[0] == accountID && parts[1] != ""
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(parts) != 2 || parts[0] != accountID || parts[1] == "" {
+		return false
+	}
+	for _, digit := range parts[1] {
+		if digit < '0' || digit > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 type realClock struct{}
