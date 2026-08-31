@@ -282,21 +282,20 @@ describe('theme preferences in the real route tree', () => {
       const localeBeforePreferences = document.documentElement.lang
 
       await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-      const select = await screen.findByRole('combobox', { name: '테마' })
-      expect(select).toHaveValue('system')
+      expect(await screen.findByRole('tab', { name: '시스템', selected: true })).toBeInTheDocument()
 
-      await user.selectOptions(select, 'light')
-      expect(select).toHaveValue('light')
+      await user.click(screen.getByRole('tab', { name: '밝게' }))
+      expect(screen.getByRole('tab', { name: '밝게', selected: true })).toBeInTheDocument()
       expect(document.documentElement).toHaveAttribute('data-theme', 'day')
       expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('light')
 
-      await user.selectOptions(select, 'dark')
-      expect(select).toHaveValue('dark')
+      await user.click(screen.getByRole('tab', { name: '어둡게' }))
+      expect(screen.getByRole('tab', { name: '어둡게', selected: true })).toBeInTheDocument()
       expect(document.documentElement).toHaveAttribute('data-theme', 'night')
       expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('dark')
 
-      await user.selectOptions(select, 'system')
-      expect(select).toHaveValue('system')
+      await user.click(screen.getByRole('tab', { name: '시스템' }))
+      expect(screen.getByRole('tab', { name: '시스템', selected: true })).toBeInTheDocument()
       expect(document.documentElement).toHaveAttribute('data-theme', 'day')
       expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBeNull()
 
@@ -316,7 +315,7 @@ describe('theme preferences in the real route tree', () => {
 
     expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    await user.selectOptions(await screen.findByRole('combobox', { name: '테마' }), 'dark')
+    await user.click(await screen.findByRole('tab', { name: '어둡게' }))
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
     await act(() => first.router.navigate({ to: '/posts/new' }))
@@ -328,7 +327,7 @@ describe('theme preferences in the real route tree', () => {
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
     await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    expect(await screen.findByRole('combobox', { name: '테마' })).toHaveValue('dark')
+    expect(await screen.findByRole('tab', { name: '어둡게', selected: true })).toBeInTheDocument()
     await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText('아이디'), 'alice')
     await user.type(screen.getByLabelText('비밀번호'), 'pw')
@@ -348,7 +347,7 @@ describe('theme preferences in the real route tree', () => {
     expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
     await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    expect(await screen.findByRole('combobox', { name: '테마' })).toHaveValue('dark')
+    expect(await screen.findByRole('tab', { name: '어둡게', selected: true })).toBeInTheDocument()
     reloaded.unmount()
   })
 
@@ -374,7 +373,7 @@ describe('theme preferences in the real route tree', () => {
 
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    expect(await screen.findByRole('combobox', { name: '테마' })).toHaveValue('system')
+    expect(await screen.findByRole('tab', { name: '시스템', selected: true })).toBeInTheDocument()
   })
 
   it('keeps the active locale and complete URL unchanged while selecting a theme', async () => {
@@ -394,7 +393,7 @@ describe('theme preferences in the real route tree', () => {
     const locationBeforeSelection = router.state.location.href
 
     await user.click(screen.getByRole('button', { name: 'Interface preferences' }))
-    await user.selectOptions(await screen.findByRole('combobox', { name: 'Theme' }), 'dark')
+    await user.click(await screen.findByRole('tab', { name: 'Dark' }))
 
     expect(document.documentElement.lang).toBe('en')
     expect(router.state.location.href).toBe(locationBeforeSelection)

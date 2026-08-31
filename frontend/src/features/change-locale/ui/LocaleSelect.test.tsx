@@ -17,19 +17,18 @@ describe('LocaleSelect', () => {
   it('uses autonyms, persists a canonical override, and preserves focus and URL', async () => {
     history.replaceState(null, '', '/posts?view=recent#draft')
     render(<LocaleSelect />)
-    const select = screen.getByRole('combobox', { name: '언어' })
+    const tabs = screen.getByRole('tablist', { name: '언어' })
+    expect(tabs).toBeInTheDocument()
 
-    await userEvent.click(select)
-    await userEvent.selectOptions(select, 'en')
+    const english = screen.getByRole('tab', { name: 'English' })
+    await userEvent.click(english)
 
-    expect(select).toHaveFocus()
-    expect(select).toHaveValue('en')
-    expect(screen.getByRole('option', { name: '한국어' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: 'English', selected: true })).toHaveFocus()
+    expect(screen.getByRole('tab', { name: '한국어', selected: false })).toBeInTheDocument()
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('en')
     expect(document.documentElement.lang).toBe('en')
     expect(location.pathname + location.search + location.hash).toBe('/posts?view=recent#draft')
-    expect(screen.getByText('Interface language changed to English.')).toBeInTheDocument()
+    expect(await screen.findByText('Interface language changed to English.')).toBeInTheDocument()
     expect(resolveLocale({ navigatorLanguages: ['ko-KR'] })).toBe('en')
   })
 
@@ -40,11 +39,11 @@ describe('LocaleSelect', () => {
     render(<LocaleSelect />)
 
     await userEvent.tab()
-    const select = screen.getByRole('combobox', { name: '언어' })
-    expect(select).toHaveFocus()
-    await userEvent.selectOptions(select, 'en')
+    const korean = screen.getByRole('tab', { name: '한국어' })
+    expect(korean).toHaveFocus()
+    await userEvent.keyboard('{ArrowRight}')
 
-    expect(select).toHaveValue('en')
+    expect(await screen.findByRole('tab', { name: 'English', selected: true })).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('en')
   })
 
@@ -55,10 +54,10 @@ describe('LocaleSelect', () => {
     history.replaceState(null, '', '/voices?tab=profile#current')
 
     const view = render(<LocaleSelect />)
-    const select = screen.getByRole('combobox', { name: 'Language' })
-    await userEvent.selectOptions(select, 'ko')
+    expect(screen.getByRole('tablist', { name: 'Language' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: '한국어' }))
 
-    expect(select).toHaveValue('ko')
+    expect(await screen.findByRole('tab', { name: '한국어', selected: true })).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('ko')
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('ko')
     expect(invalidate).not.toHaveBeenCalled()
@@ -68,7 +67,8 @@ describe('LocaleSelect', () => {
     view.unmount()
     initializeI18n(resolveLocale({ navigatorLanguages: ['en-US'] }))
     render(<LocaleSelect />)
-    expect(screen.getByRole('combobox', { name: '언어' })).toHaveValue('ko')
+    expect(screen.getByRole('tablist', { name: '언어' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '한국어', selected: true })).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('ko')
   })
 })

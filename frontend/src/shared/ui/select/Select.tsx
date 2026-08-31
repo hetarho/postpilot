@@ -2,8 +2,10 @@ import { forwardRef, type SelectHTMLAttributes } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 
-/** A bounded choice in a form: a native `<select>` wearing the field well, so the platform picker
- *  and its accessibility come for free (design-language §7).
+/** LEGACY — a native `<select>` wearing the field well. Its open option list is OS-drawn, which
+ *  design-language §7 now rules out: do not mount this in any new surface. Existing form surfaces
+ *  keep it until they migrate to the app-drawn listbox (§7); a bounded switch of a few fixed
+ *  options uses `SegmentedControl` instead.
  *
  *  The chevron is drawn because the well alone is not a sufficient signal on touch: `hover:` never
  *  matches on a phone, so without it a Select and a TextField are the same rectangle and the user

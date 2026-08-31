@@ -67,11 +67,11 @@ describe('InterfacePreferences', () => {
       const panel = screen.getByRole('dialog', { name: dialog })
       expect(panel).toHaveClass('top-full', 'w-72', 'bg-surface-highest')
       expect(panel).not.toHaveClass('border')
-      const languageSelect = screen.getByRole('combobox', { name: language })
-      const themeSelect = screen.getByRole('combobox', { name: theme })
-      expect(languageSelect).toHaveFocus()
-      expect(languageSelect).toHaveClass('min-h-11')
-      expect(themeSelect).toHaveClass('min-h-11')
+      const languageTabs = screen.getByRole('tablist', { name: language })
+      const themeTabs = screen.getByRole('tablist', { name: theme })
+      expect(screen.getByRole('tab', { name: '한국어' })).toHaveFocus()
+      expect(languageTabs).toHaveClass('min-h-11')
+      expect(themeTabs).toHaveClass('min-h-11')
     },
   )
 
@@ -81,11 +81,11 @@ describe('InterfacePreferences', () => {
     const trigger = screen.getByRole('button', { name: '인터페이스 환경설정' })
     await user.click(trigger)
 
-    await user.selectOptions(screen.getByRole('combobox', { name: '테마' }), 'dark')
-    expect(screen.getByRole('combobox', { name: '테마' })).toHaveValue('dark')
-    await user.selectOptions(screen.getByRole('combobox', { name: '언어' }), 'en')
-    expect(screen.getByRole('dialog', { name: 'Interface preferences' })).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('dark')
+    await user.click(screen.getByRole('tab', { name: '어둡게' }))
+    expect(screen.getByRole('tab', { name: '어둡게', selected: true })).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'English' }))
+    expect(await screen.findByRole('dialog', { name: 'Interface preferences' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Dark', selected: true })).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -109,7 +109,7 @@ describe('InterfacePreferences', () => {
 
     await user.click(trigger)
     expect(screen.getByRole('dialog', { name: 'Interface preferences' })).toHaveClass('w-72')
-    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveClass('min-h-11')
-    expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveClass('min-h-11')
+    expect(screen.getByRole('tablist', { name: 'Language' })).toHaveClass('min-h-11')
+    expect(screen.getByRole('tablist', { name: 'Theme' })).toHaveClass('min-h-11')
   })
 })

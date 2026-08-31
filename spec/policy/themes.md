@@ -58,7 +58,8 @@ locale and theme controls. It is available on login and every authenticated rout
 public page reuses the same widget. Theme and locale remain independent: changing either one does
 not change the other, the URL, session state, query state, or server data.
 
-The control exposes a translated accessible name and native System/Light/Dark select, preserves
+The control exposes a translated accessible name and an app-drawn System/Light/Dark segmented
+switch (no native select — its OS-drawn option list cannot follow the design system), preserves
 the 44 px target floor, traps focus while its popover is open, closes on Escape with focus return,
 and uses a compact icon trigger at phone widths so locale, theme, and session actions do not cause
 horizontal overflow.

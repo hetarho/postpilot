@@ -492,11 +492,16 @@ to the page.
 - **The editor is bare.** Title and body are `bg-transparent` fields with no well at all — the
   page _is_ the paper. This is the one place a field has no surface. It is not an exception to
   §3.1: the caller sets `text-base` itself.
-- **Menu / Select** — a bounded choice in a _form_ is a native `<select>` wearing the field well
-  (platform keyboard and a11y for free), with a chevron so it does not read as a text input on a
-  device with no hover. In a _toolbar_ it is a `Menu` behind a `ghost` button that shows the held
-  value. An option's text is the choice, not the explanation — a reason or a capability goes in
-  the message slot under the field, where it is not truncated by the native control.
+- **Menu / Select — no new native `<select>`.** The OS draws a native select's open option list,
+  so it cannot wear the app's surfaces or tokens and it visibly breaks the design system the
+  moment it opens (owner decision, 2026-08-31). A bounded choice with a few fixed options
+  (roughly 2–5: a switch, a preference, a mode) is a `SegmentedControl`, which keeps every state
+  app-drawn. A longer bounded list belongs in an app-drawn listbox inside a popover — build that
+  shared primitive when the first surface needs it rather than reaching for `<select>`. The
+  legacy `Select` primitive (a styled native select) still serves the existing form surfaces
+  (model pickers, voice/purpose selects, publish settings, …) and is slated for migration to the
+  app-drawn listbox; do not mount it in any new surface. An option's text is the choice, not the
+  explanation — a reason or a capability goes in the message slot under the field.
 - **TabLinks** — a tab row whose tabs are ADDRESSES: a horizontally scrolling row of links, marking the current one
   `aria-current="page"`. It is `SegmentedControl`'s shape without its `onChange`, and it is a `nav` rather than
   `role="tablist"`, because announcing a navigation as tab selection would tell a screen reader the page stayed put.

@@ -8,6 +8,12 @@ import { resolveEffectiveTheme, type ThemePreference } from '@/shared/lib'
 import { ThemeControllerProvider } from '../model/theme-controller'
 import { ThemeSelector } from './ThemeSelector'
 
+const koLabels: Record<ThemePreference, string> = {
+  system: '시스템',
+  light: '밝게',
+  dark: '어둡게',
+}
+
 function Harness({
   initial = 'system',
   onChange,
@@ -57,10 +63,10 @@ describe('ThemeSelector', () => {
       await i18next.changeLanguage(locale)
       render(<Harness initial="dark" />)
 
-      const select = screen.getByRole('combobox', { name: label })
-      expect(select).toHaveValue('dark')
-      expect(select).toHaveClass('min-h-11')
-      expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(options)
+      const tabs = screen.getByRole('tablist', { name: label })
+      expect(tabs).toHaveClass('min-h-11')
+      expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(options)
+      expect(screen.getByRole('tab', { selected: true })).toHaveTextContent(options[2])
     },
   )
 
@@ -77,12 +83,10 @@ describe('ThemeSelector', () => {
     render(<Harness initial={initial} onChange={onChange} />)
 
     await user.tab()
-    const select = screen.getByRole('combobox', { name: '테마' })
-    expect(select).toHaveFocus()
-    await user.selectOptions(select, next)
+    expect(screen.getByRole('tab', { name: koLabels[initial] })).toHaveFocus()
+    await user.click(screen.getByRole('tab', { name: koLabels[next] }))
 
-    expect(select).toHaveFocus()
-    expect(select).toHaveValue(next)
+    expect(screen.getByRole('tab', { name: koLabels[next], selected: true })).toHaveFocus()
     expect(onChange).toHaveBeenCalledWith(next)
     expect(document.documentElement.lang).toBe('ko')
     expect(location.pathname + location.search + location.hash).toBe('/posts?view=recent#draft')
