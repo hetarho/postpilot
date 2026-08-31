@@ -33,12 +33,15 @@ export function LoginPage() {
   }
 
   return (
-    <main className="bg-surface-base text-content-primary flex min-h-full items-start justify-center px-4 pt-8 pb-10 sm:items-center sm:px-6 sm:py-10">
+    <main className="bg-surface-base text-content-primary relative flex min-h-full items-center justify-center px-4 py-10 sm:px-6">
+      {/* Preferences are page chrome, not part of the credential form. Pinning them to the page
+          edge keeps the same top-right location at every breakpoint and leaves the form itself
+          truly centred. */}
+      <div className="absolute top-4 right-4 z-10 sm:top-6 sm:right-6">
+        <InterfacePreferences />
+      </div>
       <div className="w-full max-w-xs">
-        <div className="flex justify-end">
-          <InterfacePreferences />
-        </div>
-        <form onSubmit={onSubmit} className="mt-4 w-full">
+        <form onSubmit={onSubmit} className="w-full">
           {/* The app icon is decorative beside the labelled wordmark, so the pair remains one
             concise heading for assistive technology. The compact phone lockup keeps the submit
             path above the software keyboard; wider screens give the mark its full presence. */}

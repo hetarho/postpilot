@@ -17,7 +17,7 @@ export function InterfacePreferences() {
       label={t('interfacePreferences.label')}
       triggerLabel={
         <>
-          <SlidersHorizontal aria-hidden="true" className="size-5" />
+          <SlidersHorizontal aria-hidden="true" className="size-7" />
           <span className="hidden sm:inline">{t('interfacePreferences.trigger')}</span>
         </>
       }

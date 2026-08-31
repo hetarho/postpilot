@@ -101,7 +101,7 @@ describe('InterfacePreferences', () => {
 
     const trigger = screen.getByRole('button', { name: 'Interface preferences' })
     expect(trigger).toHaveClass('min-h-11', 'px-3', 'sm:px-4')
-    expect(trigger.querySelector('svg')).toHaveClass('size-5')
+    expect(trigger.querySelector('svg')).toHaveClass('size-7')
     const responsiveLabel = [...trigger.querySelectorAll('span')].find((value) =>
       value.classList.contains('sm:inline'),
     )

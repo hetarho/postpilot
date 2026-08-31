@@ -414,6 +414,7 @@ describe('theme preferences in the real route tree', () => {
       0,
     )
     expect(preferences).toHaveClass('px-3', 'sm:px-4')
+    expect(preferences.querySelector('svg')).toHaveClass('size-7')
 
     await user.click(preferences)
     expect(screen.getByRole('dialog', { name: '인터페이스 환경설정' })).toHaveClass(
@@ -423,6 +424,22 @@ describe('theme preferences in the real route tree', () => {
 
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
     window.dispatchEvent(new Event('resize'))
+  })
+
+  it('pins login preferences top-right while centring the credential form at every breakpoint', async () => {
+    renderAppAt('/login')
+
+    expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument()
+    const preferences = screen.getByRole('button', { name: '인터페이스 환경설정' })
+    const preferencesAnchor = preferences.parentElement?.parentElement
+    const main = preferences.closest('main')
+    const form = screen.getByRole('button', { name: '로그인' }).closest('form')
+
+    expect(main).toHaveClass('relative', 'items-center', 'justify-center')
+    expect(preferencesAnchor).toHaveClass('absolute', 'top-4', 'right-4', 'sm:top-6', 'sm:right-6')
+    expect(preferences.querySelector('svg')).toHaveClass('size-7')
+    expect(form).toHaveClass('w-full')
+    expect(form?.parentElement).toHaveClass('w-full', 'max-w-xs')
   })
 })
 
