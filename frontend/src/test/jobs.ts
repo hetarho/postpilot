@@ -1,4 +1,4 @@
-import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
+import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
   GenerationJobSchema,
@@ -7,7 +7,11 @@ import {
   StartGenerationResponseSchema,
   StartRevisionResponseSchema,
   type ProtoGenerationJob,
+  contentLanguageToProto,
+  type AppFailureReason,
+  type ContentLanguage,
 } from '@/shared/api'
+import { connectAppError, durableFailure } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -18,7 +22,9 @@ export interface FakeGenerationJobRow {
   stage?: string
   progressDone?: number
   progressTotal?: number
-  error?: string
+  failureReason?: AppFailureReason
+  failureParams?: Record<string, string>
+  targetLanguage?: ContentLanguage
   postSlug?: string
 }
 
@@ -54,6 +60,8 @@ export function toFakeProto(row: FakeGenerationJobRow): ProtoGenerationJob {
     stage: 'observe',
     progressTotal: 1,
     ...row,
+    targetLanguage: row.targetLanguage ? contentLanguageToProto(row.targetLanguage) : undefined,
+    failure: row.failureReason ? durableFailure(row.failureReason, row.failureParams) : undefined,
   })
 }
 
@@ -65,12 +73,12 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
     const sequenced = options.sequence?.[Math.min(sequenceIndex, options.sequence.length - 1)]
     sequenceIndex += 1
     const found = sequenced?.id === req.id ? sequenced : jobs.get(req.id)
-    if (!found) throw new ConnectError('not found', Code.NotFound)
+    if (!found) throw connectAppError('JOB_NOT_FOUND', Code.NotFound)
     return create(GetGenerationResponseSchema, { job: toFakeProto(found) })
   })
   router.rpc(GenerationService.method.startGeneration, (req) => {
     options.calls?.push('StartGeneration')
-    if (options.startFails) throw new ConnectError('생성을 시작하지 못했어요.', Code.Unavailable)
+    if (options.startFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     options.starts?.push({
       postSlug: req.postSlug,
       observeModel: req.observeModel
@@ -85,7 +93,7 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
   })
   router.rpc(GenerationService.method.startRevision, (req) => {
     options.calls?.push('StartRevision')
-    if (options.startFails) throw new ConnectError('수정을 시작하지 못했어요.', Code.Unavailable)
+    if (options.startFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     options.revisions?.push({
       postSlug: req.postSlug,
       instruction: req.instruction,

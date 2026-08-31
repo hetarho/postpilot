@@ -9,27 +9,14 @@ import (
 )
 
 type Voice struct {
-	ID        string
-	UserID    string
-	Name      string
-	IsDefault int64
-	DeletedAt sql.NullString
-	CreatedAt string
-	UpdatedAt string
-}
-
-type VoiceAuthoredSource struct {
-	ID              string
-	UserID          string
-	VoiceID         string
-	PostSlug        sql.NullString
-	LearningEventID sql.NullString
-	Title           string
-	Tags            string
-	Body            string
-	Excerpt         string
-	EmbeddingRef    sql.NullString
-	CreatedAt       string
+	ID             string
+	UserID         string
+	Name           string
+	IsDefault      int64
+	DeletedAt      sql.NullString
+	CreatedAt      string
+	UpdatedAt      string
+	SourceLanguage string
 }
 
 type VoiceContrastRule struct {
@@ -61,6 +48,11 @@ type VoiceLearningEvent struct {
 	Error            sql.NullString
 	CreatedAt        string
 	ProcessedAt      sql.NullString
+	ContentLanguage  sql.NullString
+	SourceLanguage   sql.NullString
+	ErrorReason      sql.NullString
+	ErrorParams      sql.NullString
+	TechnicalDetail  sql.NullString
 }
 
 type VoiceManualOverride struct {
@@ -86,6 +78,7 @@ type VoiceProfileValidation struct {
 	TotalCount      sql.NullInt64
 	CreatedAt       string
 	FinishedAt      sql.NullString
+	SourceLanguage  sql.NullString
 }
 
 type VoiceProfileValidationItem struct {
@@ -100,6 +93,9 @@ type VoiceProfileValidationItem struct {
 	Scores             sql.NullString
 	Status             string
 	Error              sql.NullString
+	ErrorReason        sql.NullString
+	ErrorParams        sql.NullString
+	TechnicalDetail    sql.NullString
 }
 
 type VoiceProfileVersion struct {
@@ -129,15 +125,19 @@ type VoiceRuleComparison struct {
 	ChosenSide     sql.NullString
 	CreatedAt      string
 	DecidedAt      sql.NullString
+	SourceLanguage sql.NullString
 }
 
 type VoiceRuleComparisonCandidate struct {
-	ID           string
-	ComparisonID string
-	DisplaySide  string
-	Output       sql.NullString
-	Status       string
-	Error        sql.NullString
+	ID              string
+	ComparisonID    string
+	DisplaySide     string
+	Output          sql.NullString
+	Status          string
+	Error           sql.NullString
+	ErrorReason     sql.NullString
+	ErrorParams     sql.NullString
+	TechnicalDetail sql.NullString
 }
 
 type VoiceRuleConfirmation struct {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Button } from '../button/Button'
 
 interface DialogProps {
@@ -26,6 +27,7 @@ export function Dialog({
   onClose,
   pending = false,
 }: DialogProps) {
+  const { t } = useTranslation('common')
   const panel = useRef<HTMLDivElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   useEffect(() => {
@@ -98,7 +100,7 @@ export function Dialog({
             collapsing to the desktop right-aligned row from `sm:` up. The CTA is last (§4). */}
         <div className="mt-6 grid gap-2 pb-5 md:flex md:justify-end md:pb-0">
           <Button variant="ghost" onClick={onClose} disabled={pending} className="md:order-1">
-            취소
+            {t('dialog.cancel')}
           </Button>
           <Button variant="cta" onClick={onConfirm} pending={pending} className="md:order-2">
             {confirmLabel}

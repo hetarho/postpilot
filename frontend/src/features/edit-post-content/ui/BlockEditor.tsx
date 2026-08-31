@@ -1,4 +1,5 @@
 import { clone, create } from '@bufbuild/protobuf'
+import i18next from 'i18next'
 import {
   forwardRef,
   useEffect,
@@ -8,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BlockList, type PostDraft } from '@/entities/post'
 import {
   BlockSchema,
@@ -48,6 +50,7 @@ export const BlockEditor = forwardRef<
     renderSentenceAction?: (text: string, flush: () => Promise<bigint>) => ReactNode
   }
 >(function BlockEditor({ post, onContentChange, renderSentenceAction }, ref) {
+  const { t } = useTranslation('posts')
   const [content, setContent] = useState(() => clone(PostContentSchema, post.content!))
   const valid = useMemo(
     () =>
@@ -92,25 +95,23 @@ export const BlockEditor = forwardRef<
     <section aria-labelledby="content-editor-heading" className="mt-10">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="content-editor-heading" className="text-lg font-semibold tracking-tight">
-          글 다듬기
+          {t('edit.refine')}
         </h2>
         <p role="status" className="text-content-tertiary text-sm">
           {saveLabel(autosave.state)}
         </p>
       </div>
       {autosave.state === 'conflict' && (
-        <FieldMessage className="mt-2">
-          다른 화면에서 글이 바뀌었어요. 이 화면을 새로고침한 뒤 다시 수정해 주세요.
-        </FieldMessage>
+        <FieldMessage className="mt-2">{t('edit.conflict')}</FieldMessage>
       )}
-      {!valid && <FieldMessage className="mt-2">빈 블록을 채워 주세요.</FieldMessage>}
+      {!valid && <FieldMessage className="mt-2">{t('edit.emptyBlock')}</FieldMessage>}
 
       <BlockList
         content={content}
         images={post.images}
         renderHeader={(rendered) => (
           <Editable
-            editLabel="제목과 요약, 태그 수정"
+            editLabel={t('edit.titleSummaryTags')}
             edit={(exit) => <HeaderFields content={content} onChange={setContent} onDone={exit} />}
           >
             {rendered}
@@ -142,7 +143,7 @@ export const BlockEditor = forwardRef<
           setContent(next)
         }}
       >
-        문단 추가
+        {t('edit.addParagraph')}
       </Button>
     </section>
   )
@@ -167,9 +168,10 @@ function BlockEditRow({
   onRemove: () => void
   children: ReactNode
 }) {
+  const { t } = useTranslation('posts')
   return (
     <Editable
-      editLabel={`${index + 1}번째 블록 수정`}
+      editLabel={t('edit.blockEdit', { index: index + 1 })}
       edit={(exit) => (
         <BlockControls
           block={block}
@@ -207,6 +209,7 @@ function BlockControls({
   onRemove: () => void
   onDone: () => void
 }) {
+  const { t } = useTranslation(['posts', 'common'])
   // Captured on mount — the moment the block entered edit mode — because the edits write through
   // to the content as they are typed. This ref IS the saved value 취소 restores.
   const opened = useRef(block)
@@ -214,7 +217,7 @@ function BlockControls({
     <article className="bg-surface-raised rounded-lg p-4">
       <div className="flex flex-wrap items-center gap-2">
         <FieldLabel htmlFor={`block-type-${index}`} className="sr-only">
-          {index + 1}번째 블록 종류
+          {t('edit.blockType', { ns: 'posts', index: index + 1 })}
         </FieldLabel>
         <Select
           id={`block-type-${index}`}
@@ -224,11 +227,19 @@ function BlockControls({
           }
           className="w-auto min-w-32"
         >
-          <option value={BlockType.TEXT}>문단</option>
-          <option value={BlockType.HEADING}>소제목</option>
-          <option value={BlockType.QUOTE}>인용</option>
-          <option value={BlockType.LIST}>목록</option>
-          {filenames.length > 0 && <option value={BlockType.IMAGE}>사진</option>}
+          <option value={BlockType.TEXT}>{t('edit.blockTypeOption.text', { ns: 'posts' })}</option>
+          <option value={BlockType.HEADING}>
+            {t('edit.blockTypeOption.heading', { ns: 'posts' })}
+          </option>
+          <option value={BlockType.QUOTE}>
+            {t('edit.blockTypeOption.quote', { ns: 'posts' })}
+          </option>
+          <option value={BlockType.LIST}>{t('edit.blockTypeOption.list', { ns: 'posts' })}</option>
+          {filenames.length > 0 && (
+            <option value={BlockType.IMAGE}>
+              {t('edit.blockTypeOption.image', { ns: 'posts' })}
+            </option>
+          )}
         </Select>
         <span className="ml-auto flex gap-1">
           {/* Leaving edit mode is part of moving, for the same reason as deleting: the rows are
@@ -236,7 +247,7 @@ function BlockControls({
               this slot would overwrite THAT block on 취소. */}
           <Button
             variant="ghost"
-            aria-label={`${index + 1}번째 블록 위로`}
+            aria-label={t('edit.moveUp', { ns: 'posts', index: index + 1 })}
             disabled={index === 0}
             onClick={() => {
               onMove(-1)
@@ -247,7 +258,7 @@ function BlockControls({
           </Button>
           <Button
             variant="ghost"
-            aria-label={`${index + 1}번째 블록 아래로`}
+            aria-label={t('edit.moveDown', { ns: 'posts', index: index + 1 })}
             disabled={index === blockCount - 1}
             onClick={() => {
               onMove(1)
@@ -266,14 +277,14 @@ function BlockControls({
               onDone()
             }}
           >
-            삭제
+            {t('action.delete', { ns: 'common' })}
           </Button>
         </span>
       </div>
       <BlockFields block={block} index={index} filenames={filenames} onChange={onChange} />
       <div className="mt-3 flex flex-wrap gap-2">
         <Button variant="secondary" onClick={onDone}>
-          저장
+          {t('action.save', { ns: 'common' })}
         </Button>
         <Button
           variant="ghost"
@@ -282,7 +293,7 @@ function BlockControls({
             onDone()
           }}
         >
-          취소
+          {t('action.cancel', { ns: 'common' })}
         </Button>
       </div>
     </article>
@@ -298,13 +309,14 @@ function HeaderFields({
   onChange: (content: PostContent) => void
   onDone: () => void
 }) {
+  const { t } = useTranslation(['posts', 'common'])
   // Only the three fields this editor owns. Snapshotting the whole PostContent would make 취소
   // revert block edits made while the header happened to be open — the two editors are independent.
   const opened = useRef({ title: content.title, summary: content.summary, tags: [...content.tags] })
   return (
     <div className="bg-surface-raised mt-12 grid gap-4 rounded-lg p-4">
       <div>
-        <FieldLabel htmlFor="generated-title">본문 제목</FieldLabel>
+        <FieldLabel htmlFor="generated-title">{t('edit.bodyTitle', { ns: 'posts' })}</FieldLabel>
         <TextField
           id="generated-title"
           value={content.title}
@@ -315,7 +327,7 @@ function HeaderFields({
         />
       </div>
       <div>
-        <FieldLabel htmlFor="generated-summary">요약</FieldLabel>
+        <FieldLabel htmlFor="generated-summary">{t('edit.summary', { ns: 'posts' })}</FieldLabel>
         <Textarea
           id="generated-summary"
           rows={3}
@@ -328,7 +340,7 @@ function HeaderFields({
         />
       </div>
       <div>
-        <FieldLabel htmlFor="generated-tags">태그</FieldLabel>
+        <FieldLabel htmlFor="generated-tags">{t('tags', { ns: 'posts' })}</FieldLabel>
         <TextField
           id="generated-tags"
           value={content.tags.join(', ')}
@@ -343,13 +355,13 @@ function HeaderFields({
               }),
             )
           }
-          placeholder="여행, 카페"
+          placeholder={t('edit.tagPlaceholder', { ns: 'posts' })}
           className="mt-1"
         />
       </div>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={onDone}>
-          저장
+          {t('action.save', { ns: 'common' })}
         </Button>
         <Button
           variant="ghost"
@@ -358,7 +370,7 @@ function HeaderFields({
             onDone()
           }}
         >
-          취소
+          {t('action.cancel', { ns: 'common' })}
         </Button>
       </div>
     </div>
@@ -376,10 +388,11 @@ function BlockFields({
   filenames: string[]
   onChange: (block: Block) => void
 }) {
+  const { t } = useTranslation('posts')
   if (block.type === BlockType.IMAGE) {
     return (
       <div className="mt-3 grid gap-3">
-        <FieldLabel htmlFor={`block-image-${index}`}>첨부 사진</FieldLabel>
+        <FieldLabel htmlFor={`block-image-${index}`}>{t('edit.attachedPhoto')}</FieldLabel>
         <Select
           id={`block-image-${index}`}
           value={block.file}
@@ -394,18 +407,18 @@ function BlockFields({
           ))}
         </Select>
         <TextField
-          aria-label="대체 텍스트"
+          aria-label={t('edit.altText')}
           value={block.alt}
           onChange={(event) => onChange(create(BlockSchema, { ...block, alt: event.target.value }))}
-          placeholder="사진 설명"
+          placeholder={t('edit.photoDescription')}
         />
         <TextField
-          aria-label="사진 캡션"
+          aria-label={t('edit.caption')}
           value={block.caption}
           onChange={(event) =>
             onChange(create(BlockSchema, { ...block, caption: event.target.value }))
           }
-          placeholder="캡션 (선택)"
+          placeholder={t('edit.captionPlaceholder')}
         />
       </div>
     )
@@ -413,7 +426,7 @@ function BlockFields({
   if (block.type === BlockType.LIST) {
     return (
       <Textarea
-        aria-label={`${index + 1}번째 목록, 한 줄에 한 항목`}
+        aria-label={t('edit.listLabel', { index: index + 1 })}
         rows={3}
         autoGrow
         value={block.items.join('\n')}
@@ -428,7 +441,7 @@ function BlockFields({
     <div className="mt-3 grid gap-3">
       {block.type === BlockType.HEADING && (
         <Select
-          aria-label="제목 단계"
+          aria-label={t('edit.headingLevel')}
           value={block.level}
           onChange={(event) =>
             onChange(create(BlockSchema, { ...block, level: Number(event.target.value) }))
@@ -436,13 +449,13 @@ function BlockFields({
         >
           {[1, 2, 3, 4, 5, 6].map((level) => (
             <option key={level} value={level}>
-              제목 {level}
+              {t('edit.headingOption', { level })}
             </option>
           ))}
         </Select>
       )}
       <Textarea
-        aria-label={`${index + 1}번째 블록 내용`}
+        aria-label={t('edit.blockContent', { index: index + 1 })}
         rows={block.type === BlockType.HEADING ? 1 : 3}
         autoGrow
         value={block.content}
@@ -457,15 +470,28 @@ function BlockFields({
 function freshBlock(type: BlockType, firstImage?: string): Block {
   switch (type) {
     case BlockType.HEADING:
-      return create(BlockSchema, { type, level: 2, content: '새 소제목' })
+      return create(BlockSchema, {
+        type,
+        level: 2,
+        content: i18next.t('edit.newBlock.heading', { ns: 'posts' }),
+      })
     case BlockType.QUOTE:
-      return create(BlockSchema, { type, content: '새 인용문' })
+      return create(BlockSchema, {
+        type,
+        content: i18next.t('edit.newBlock.quote', { ns: 'posts' }),
+      })
     case BlockType.LIST:
-      return create(BlockSchema, { type, items: ['새 항목'] })
+      return create(BlockSchema, {
+        type,
+        items: [i18next.t('edit.newBlock.list', { ns: 'posts' })],
+      })
     case BlockType.IMAGE:
       return create(BlockSchema, { type, file: firstImage ?? '' })
     default:
-      return create(BlockSchema, { type: BlockType.TEXT, content: '새 문단' })
+      return create(BlockSchema, {
+        type: BlockType.TEXT,
+        content: i18next.t('edit.newBlock.text', { ns: 'posts' }),
+      })
   }
 }
 
@@ -485,12 +511,18 @@ function validContent(content: PostContent, filenames: string[]): boolean {
 }
 
 function saveLabel(state: ReturnType<typeof useContentAutosave>['state']) {
-  return {
-    idle: '',
-    dirty: '저장 대기 중',
-    saving: '저장 중…',
-    saved: '저장됨',
-    error: '저장하지 못했어요',
-    conflict: '수정 충돌',
-  }[state]
+  switch (state) {
+    case 'dirty':
+      return i18next.t('state.savePending', { ns: 'common' })
+    case 'saving':
+      return i18next.t('action.saving', { ns: 'common' })
+    case 'saved':
+      return i18next.t('state.saved', { ns: 'common' })
+    case 'error':
+      return i18next.t('state.saveFailed', { ns: 'common' })
+    case 'conflict':
+      return i18next.t('state.conflict', { ns: 'common' })
+    default:
+      return ''
+  }
 }

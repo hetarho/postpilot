@@ -63,8 +63,9 @@ WHERE publish_job_ids.id=? AND publish_job_ids.user_id=?
 -- name: CreatePublishJob :exec
 INSERT INTO publish_jobs(
   id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,progress_seq,attempt,
-  content_revision,manifest_json,settings_json,created_at,updated_at
-) VALUES(?,?,?,?,?,'naver_blog','queued','queued',0,0,?,?,?,?,?);
+  content_revision,target_language,content_language,voice_source_language,
+  manifest_json,settings_json,created_at,updated_at
+) VALUES(?,?,?,?,?,'naver_blog','queued','queued',0,0,?,?,?,?,?,?,?,?);
 
 -- name: CreatePublishAsset :exec
 INSERT INTO publish_assets(job_id,user_id,ordinal,filename,source_filename,staged_key,bytes,created_at)
@@ -72,7 +73,9 @@ VALUES(?,?,?,?,?,?,?,?);
 
 -- name: RetryAttentionPublishJob :execrows
 UPDATE publish_jobs
-SET status='queued',stage='queued',progress_seq=0,error_code=NULL,error_message=NULL,updated_at=?
+SET status='queued',stage='queued',progress_seq=0,
+    error_code=NULL,error_message=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL,
+    updated_at=?
 WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.status='needs_attention'
   AND publish_jobs.committed_at IS NULL AND publish_jobs.manifest_json IS NOT NULL
   AND EXISTS (
@@ -162,7 +165,8 @@ WHERE publish_jobs.id=sqlc.arg(id) AND publish_jobs.user_id=sqlc.arg(user_id)
 -- name: CompletePublishJob :execrows
 UPDATE publish_jobs
 SET status='published',stage='published',progress_seq=?,platform_post_url=?,published_at=?,
-    manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,error_code=NULL,error_message=NULL,updated_at=?
+    manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,
+    error_code=NULL,error_message=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL,updated_at=?
 WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.agent_id=?
   AND publish_jobs.status='running' AND publish_jobs.stage='verifying'
   AND publish_jobs.lease_token_hash=? AND publish_jobs.lease_expires_at>?
@@ -181,13 +185,19 @@ SET status=CASE
       ELSE sqlc.arg(precommit_status)
     END,
     progress_seq=sqlc.arg(next_seq),
-    error_code=CASE
-      WHEN committed_at IS NOT NULL OR stage IN ('committing','verifying','published') THEN sqlc.arg(commit_error_code)
-      ELSE sqlc.arg(precommit_error_code)
+    error_code=NULL,
+    error_message=NULL,
+    error_reason=CASE
+      WHEN committed_at IS NOT NULL OR stage IN ('committing','verifying','published') THEN sqlc.arg(commit_error_reason)
+      ELSE sqlc.arg(precommit_error_reason)
     END,
-    error_message=CASE
-      WHEN committed_at IS NOT NULL OR stage IN ('committing','verifying','published') THEN sqlc.arg(commit_error_message)
-      ELSE sqlc.arg(precommit_error_message)
+    error_params=CASE
+      WHEN committed_at IS NOT NULL OR stage IN ('committing','verifying','published') THEN sqlc.arg(commit_error_params)
+      ELSE sqlc.arg(precommit_error_params)
+    END,
+    technical_detail=CASE
+      WHEN committed_at IS NOT NULL OR stage IN ('committing','verifying','published') THEN sqlc.arg(commit_technical_detail)
+      ELSE sqlc.arg(precommit_technical_detail)
     END,
     manifest_json=CASE
       WHEN committed_at IS NULL AND stage NOT IN ('committing','verifying','published')
@@ -209,19 +219,21 @@ WHERE publish_jobs.id=sqlc.arg(id) AND publish_jobs.user_id=sqlc.arg(user_id)
 
 -- name: CancelPublishJob :execrows
 UPDATE publish_jobs
-SET status='canceled',manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,updated_at=?
+SET status='canceled',manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,
+    error_code=NULL,error_message=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL,updated_at=?
 WHERE id=? AND user_id=? AND status IN ('queued','running','needs_attention')
   AND committed_at IS NULL AND stage NOT IN ('committing','verifying','published');
 
 -- name: RequeueExpiredPreCommitJobs :execrows
 UPDATE publish_jobs
-SET status='queued',stage='queued',progress_seq=0,lease_token_hash=NULL,lease_expires_at=NULL,updated_at=?
+SET status='queued',stage='queued',progress_seq=0,lease_token_hash=NULL,lease_expires_at=NULL,
+    error_code=NULL,error_message=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL,updated_at=?
 WHERE status='running' AND stage NOT IN ('committing','verifying','published') AND lease_expires_at<=?;
 
 -- name: MarkExpiredCommittedJobsUnknown :execrows
 UPDATE publish_jobs
 SET status='outcome_unknown',manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,
-    error_code=?,error_message=?,updated_at=?
+    error_code=NULL,error_message=NULL,error_reason=?,error_params=?,technical_detail=?,updated_at=?
 WHERE status='running' AND stage IN ('committing','verifying') AND lease_expires_at<=?;
 
 -- name: DeletePublishAssets :exec

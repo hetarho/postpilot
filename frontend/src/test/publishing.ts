@@ -1,6 +1,7 @@
-import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
+import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
+  type AppFailureReason,
   CancelPublishResponseSchema,
   CreateAgentPairingResponseSchema,
   GetPublishJobResponseSchema,
@@ -17,8 +18,17 @@ import {
   type ProtoPublishJob,
   type ProtoPublishingAgent,
 } from '@/shared/api'
+import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
+
+type FakePublishingMutation = 'pair' | 'configure' | 'revoke' | 'retry' | 'cancel'
+
+export interface FakePublishingMutationFailure {
+  reason: AppFailureReason
+  code?: Code
+  params?: Record<string, string>
+}
 
 export interface FakePublishingOptions {
   calls?: string[]
@@ -30,6 +40,7 @@ export interface FakePublishingOptions {
     categoryId: string
     visibility: number
   }>
+  mutationFailures?: Partial<Record<FakePublishingMutation, FakePublishingMutationFailure>>
 }
 
 export function registerPublishingService(
@@ -38,6 +49,12 @@ export function registerPublishingService(
 ) {
   const agents = [...(options.agents ?? [])]
   const jobs = [...(options.jobs ?? [])]
+  const failMutation = (mutation: FakePublishingMutation) => {
+    const failure = options.mutationFailures?.[mutation]
+    if (failure) {
+      throw connectAppError(failure.reason, failure.code ?? Code.InvalidArgument, failure.params)
+    }
+  }
   router.rpc(PublishingService.method.listPublishingAgents, () => {
     options.calls?.push('ListPublishingAgents')
     return create(ListPublishingAgentsResponseSchema, { agents })
@@ -47,7 +64,7 @@ export function registerPublishingService(
     const job = jobs.find(
       (candidate) => candidate.id === request.jobId || candidate.postSlug === request.postSlug,
     )
-    if (!job) throw new ConnectError('not found', Code.NotFound)
+    if (!job) throw connectAppError('PUBLISH_NOT_FOUND', Code.NotFound)
     return create(GetPublishJobResponseSchema, { job })
   })
   router.rpc(PublishingService.method.listRetryablePublishJobs, () => {
@@ -58,8 +75,9 @@ export function registerPublishingService(
   })
   router.rpc(PublishingService.method.retryPublish, (request) => {
     options.calls?.push('RetryPublish')
+    failMutation('retry')
     const index = jobs.findIndex((job) => job.id === request.jobId)
-    if (index < 0) throw new ConnectError('not found', Code.NotFound)
+    if (index < 0) throw connectAppError('PUBLISH_NOT_FOUND', Code.NotFound)
     const job = create(PublishJobSchema, { ...jobs[index], status: 1, stage: 1 })
     jobs[index] = job
     return create(RetryPublishResponseSchema, { job })
@@ -85,14 +103,16 @@ export function registerPublishingService(
   })
   router.rpc(PublishingService.method.cancelPublish, (request) => {
     options.calls?.push('CancelPublish')
+    failMutation('cancel')
     const index = jobs.findIndex((job) => job.id === request.jobId)
-    if (index < 0) throw new ConnectError('not found', Code.NotFound)
+    if (index < 0) throw connectAppError('PUBLISH_NOT_FOUND', Code.NotFound)
     const job = create(PublishJobSchema, { ...jobs[index], status: 7 })
     jobs[index] = job
     return create(CancelPublishResponseSchema, { job })
   })
   router.rpc(PublishingService.method.createAgentPairing, () => {
     options.calls?.push('CreateAgentPairing')
+    failMutation('pair')
     return create(CreateAgentPairingResponseSchema, {
       deviceCode: 'ABCD-1234-EF56',
       expiresAt: '2026-08-30T12:10:00Z',
@@ -100,8 +120,9 @@ export function registerPublishingService(
   })
   router.rpc(PublishingService.method.updatePublishingAgent, (request) => {
     options.calls?.push('UpdatePublishingAgent')
+    failMutation('configure')
     const existing = agents.find((agent) => agent.id === request.agentId)
-    if (!existing) throw new ConnectError('not found', Code.NotFound)
+    if (!existing) throw connectAppError('PUBLISH_AGENT_UNAVAILABLE', Code.NotFound)
     const agent = create(PublishingAgentSchema, {
       ...existing,
       label: request.label,
@@ -112,6 +133,7 @@ export function registerPublishingService(
   })
   router.rpc(PublishingService.method.revokePublishingAgent, () => {
     options.calls?.push('RevokePublishingAgent')
+    failMutation('revoke')
     return create(RevokePublishingAgentResponseSchema, {})
   })
 }

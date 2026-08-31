@@ -1,6 +1,6 @@
 export type { Purpose, PurposeRef } from './model/types'
 export {
-  NO_PURPOSE_LABEL,
+  noPurposeLabel,
   NO_PURPOSE_VALUE,
   PURPOSE_LIMITS,
   canSavePurpose,

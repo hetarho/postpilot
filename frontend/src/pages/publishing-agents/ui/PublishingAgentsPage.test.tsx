@@ -11,6 +11,7 @@ import {
   PublishingAgentSchema,
 } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
+import { durableFailure } from '@/test/app-error'
 
 const AGENT = create(PublishingAgentSchema, {
   id: 'agent-alice',
@@ -76,7 +77,7 @@ describe('publishing agent management', () => {
       postSlug: 'deleted-post',
       agentId: AGENT.id,
       status: PublishStatus.NEEDS_ATTENTION,
-      errorMessage: '네이버 로그인이 필요합니다.',
+      failure: durableFailure('PUBLISH_NEEDS_ATTENTION'),
     })
     renderAppAt('/publishing-agents', {
       user: { id: 'alice' },
@@ -85,7 +86,9 @@ describe('publishing agent management', () => {
     })
 
     expect(await screen.findByText('deleted-post')).toBeInTheDocument()
-    expect(screen.getByText('네이버 로그인이 필요합니다.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Mac의 전용 브라우저에서 로그인 상태를 확인해 주세요.'),
+    ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '로그인 복구 후 다시 시도' }))
     await waitFor(() => expect(calls).toContain('RetryPublish'))
   })

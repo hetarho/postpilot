@@ -543,6 +543,9 @@ type PublishManifest struct {
 	ExpectedPlatformAccountId string                 `protobuf:"bytes,8,opt,name=expected_platform_account_id,json=expectedPlatformAccountId,proto3" json:"expected_platform_account_id,omitempty"`
 	Assets                    []*StagedPublishAsset  `protobuf:"bytes,9,rep,name=assets,proto3" json:"assets,omitempty"`
 	CategoryName              string                 `protobuf:"bytes,10,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
+	TargetLanguage            ContentLanguage        `protobuf:"varint,11,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
+	ContentLanguage           ContentLanguage        `protobuf:"varint,12,opt,name=content_language,json=contentLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"content_language,omitempty"`
+	VoiceSourceLanguage       ContentLanguage        `protobuf:"varint,13,opt,name=voice_source_language,json=voiceSourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"voice_source_language,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -647,6 +650,27 @@ func (x *PublishManifest) GetCategoryName() string {
 	return ""
 }
 
+func (x *PublishManifest) GetTargetLanguage() ContentLanguage {
+	if x != nil {
+		return x.TargetLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *PublishManifest) GetContentLanguage() ContentLanguage {
+	if x != nil {
+		return x.ContentLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *PublishManifest) GetVoiceSourceLanguage() ContentLanguage {
+	if x != nil {
+		return x.VoiceSourceLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
 type PublishJob struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -659,15 +683,21 @@ type PublishJob struct {
 	ContentRevision  int64                  `protobuf:"varint,8,opt,name=content_revision,json=contentRevision,proto3" json:"content_revision,omitempty"`
 	CategoryId       string                 `protobuf:"bytes,9,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	Visibility       PublishVisibility      `protobuf:"varint,10,opt,name=visibility,proto3,enum=postpilot.v1.PublishVisibility" json:"visibility,omitempty"`
-	ErrorCode        string                 `protobuf:"bytes,11,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
-	ErrorMessage     string                 `protobuf:"bytes,12,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
-	PlatformPostUrl  string                 `protobuf:"bytes,13,opt,name=platform_post_url,json=platformPostUrl,proto3" json:"platform_post_url,omitempty"`
-	CreatedAt        string                 `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt        string                 `protobuf:"bytes,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	CommittedAt      string                 `protobuf:"bytes,16,opt,name=committed_at,json=committedAt,proto3" json:"committed_at,omitempty"`
-	PublishedAt      string                 `protobuf:"bytes,17,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Deprecated: Marked as deprecated in postpilot/v1/publishing.proto.
+	ErrorCode string `protobuf:"bytes,11,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
+	// Deprecated: Marked as deprecated in postpilot/v1/publishing.proto.
+	ErrorMessage        string          `protobuf:"bytes,12,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	PlatformPostUrl     string          `protobuf:"bytes,13,opt,name=platform_post_url,json=platformPostUrl,proto3" json:"platform_post_url,omitempty"`
+	CreatedAt           string          `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           string          `protobuf:"bytes,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CommittedAt         string          `protobuf:"bytes,16,opt,name=committed_at,json=committedAt,proto3" json:"committed_at,omitempty"`
+	PublishedAt         string          `protobuf:"bytes,17,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
+	TargetLanguage      ContentLanguage `protobuf:"varint,18,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
+	ContentLanguage     ContentLanguage `protobuf:"varint,19,opt,name=content_language,json=contentLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"content_language,omitempty"`
+	VoiceSourceLanguage ContentLanguage `protobuf:"varint,20,opt,name=voice_source_language,json=voiceSourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"voice_source_language,omitempty"`
+	Failure             *Failure        `protobuf:"bytes,21,opt,name=failure,proto3" json:"failure,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *PublishJob) Reset() {
@@ -770,6 +800,7 @@ func (x *PublishJob) GetVisibility() PublishVisibility {
 	return PublishVisibility_PUBLISH_VISIBILITY_UNSPECIFIED
 }
 
+// Deprecated: Marked as deprecated in postpilot/v1/publishing.proto.
 func (x *PublishJob) GetErrorCode() string {
 	if x != nil {
 		return x.ErrorCode
@@ -777,6 +808,7 @@ func (x *PublishJob) GetErrorCode() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in postpilot/v1/publishing.proto.
 func (x *PublishJob) GetErrorMessage() string {
 	if x != nil {
 		return x.ErrorMessage
@@ -817,6 +849,34 @@ func (x *PublishJob) GetPublishedAt() string {
 		return x.PublishedAt
 	}
 	return ""
+}
+
+func (x *PublishJob) GetTargetLanguage() ContentLanguage {
+	if x != nil {
+		return x.TargetLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *PublishJob) GetContentLanguage() ContentLanguage {
+	if x != nil {
+		return x.ContentLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *PublishJob) GetVoiceSourceLanguage() ContentLanguage {
+	if x != nil {
+		return x.VoiceSourceLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *PublishJob) GetFailure() *Failure {
+	if x != nil {
+		return x.Failure
+	}
+	return nil
 }
 
 type CreateAgentPairingRequest struct {
@@ -2471,7 +2531,7 @@ var File_postpilot_v1_publishing_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_publishing_proto_rawDesc = "" +
 	"\n" +
-	"\x1dpostpilot/v1/publishing.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/post.proto\"8\n" +
+	"\x1dpostpilot/v1/publishing.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/post.proto\x1a\x18postpilot/v1/error.proto\x1a\x1bpostpilot/v1/language.proto\"8\n" +
 	"\x12PublishingCategory\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"\xf7\x03\n" +
@@ -2498,7 +2558,7 @@ const file_postpilot_v1_publishing_proto_rawDesc = "" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12!\n" +
 	"\fdownload_url\x18\x03 \x01(\tR\vdownloadUrl\x12\x14\n" +
 	"\x05bytes\x18\x04 \x01(\x03R\x05bytes\x12'\n" +
-	"\x0fsource_filename\x18\x05 \x01(\tR\x0esourceFilename\"\xbb\x03\n" +
+	"\x0fsource_filename\x18\x05 \x01(\tR\x0esourceFilename\"\xa0\x05\n" +
 	"\x0fPublishManifest\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x1b\n" +
 	"\tpost_slug\x18\x02 \x01(\tR\bpostSlug\x12)\n" +
@@ -2513,7 +2573,10 @@ const file_postpilot_v1_publishing_proto_rawDesc = "" +
 	"\x1cexpected_platform_account_id\x18\b \x01(\tR\x19expectedPlatformAccountId\x128\n" +
 	"\x06assets\x18\t \x03(\v2 .postpilot.v1.StagedPublishAssetR\x06assets\x12#\n" +
 	"\rcategory_name\x18\n" +
-	" \x01(\tR\fcategoryName\"\x85\x05\n" +
+	" \x01(\tR\fcategoryName\x12F\n" +
+	"\x0ftarget_language\x18\v \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
+	"\x10content_language\x18\f \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12Q\n" +
+	"\x15voice_source_language\x18\r \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x13voiceSourceLanguage\"\xa3\a\n" +
 	"\n" +
 	"PublishJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -2529,17 +2592,21 @@ const file_postpilot_v1_publishing_proto_rawDesc = "" +
 	"\n" +
 	"visibility\x18\n" +
 	" \x01(\x0e2\x1f.postpilot.v1.PublishVisibilityR\n" +
-	"visibility\x12\x1d\n" +
+	"visibility\x12!\n" +
 	"\n" +
-	"error_code\x18\v \x01(\tR\terrorCode\x12#\n" +
-	"\rerror_message\x18\f \x01(\tR\ferrorMessage\x12*\n" +
+	"error_code\x18\v \x01(\tB\x02\x18\x01R\terrorCode\x12'\n" +
+	"\rerror_message\x18\f \x01(\tB\x02\x18\x01R\ferrorMessage\x12*\n" +
 	"\x11platform_post_url\x18\r \x01(\tR\x0fplatformPostUrl\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x0e \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\x0f \x01(\tR\tupdatedAt\x12!\n" +
 	"\fcommitted_at\x18\x10 \x01(\tR\vcommittedAt\x12!\n" +
-	"\fpublished_at\x18\x11 \x01(\tR\vpublishedAt\"1\n" +
+	"\fpublished_at\x18\x11 \x01(\tR\vpublishedAt\x12F\n" +
+	"\x0ftarget_language\x18\x12 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
+	"\x10content_language\x18\x13 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12Q\n" +
+	"\x15voice_source_language\x18\x14 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x13voiceSourceLanguage\x12/\n" +
+	"\afailure\x18\x15 \x01(\v2\x15.postpilot.v1.FailureR\afailure\"1\n" +
 	"\x19CreateAgentPairingRequest\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\"\\\n" +
 	"\x1aCreateAgentPairingResponse\x12\x1f\n" +
@@ -2758,6 +2825,8 @@ var file_postpilot_v1_publishing_proto_goTypes = []any{
 	(*FailPublishRequest)(nil),               // 39: postpilot.v1.FailPublishRequest
 	(*FailPublishResponse)(nil),              // 40: postpilot.v1.FailPublishResponse
 	(*PostContent)(nil),                      // 41: postpilot.v1.PostContent
+	(ContentLanguage)(0),                     // 42: postpilot.v1.ContentLanguage
+	(*Failure)(nil),                          // 43: postpilot.v1.Failure
 }
 var file_postpilot_v1_publishing_proto_depIdxs = []int32{
 	4,  // 0: postpilot.v1.PublishingAgent.categories:type_name -> postpilot.v1.PublishingCategory
@@ -2765,65 +2834,72 @@ var file_postpilot_v1_publishing_proto_depIdxs = []int32{
 	41, // 2: postpilot.v1.PublishManifest.content:type_name -> postpilot.v1.PostContent
 	0,  // 3: postpilot.v1.PublishManifest.visibility:type_name -> postpilot.v1.PublishVisibility
 	6,  // 4: postpilot.v1.PublishManifest.assets:type_name -> postpilot.v1.StagedPublishAsset
-	1,  // 5: postpilot.v1.PublishJob.status:type_name -> postpilot.v1.PublishStatus
-	2,  // 6: postpilot.v1.PublishJob.stage:type_name -> postpilot.v1.PublishStage
-	0,  // 7: postpilot.v1.PublishJob.visibility:type_name -> postpilot.v1.PublishVisibility
-	5,  // 8: postpilot.v1.ListPublishingAgentsResponse.agents:type_name -> postpilot.v1.PublishingAgent
-	0,  // 9: postpilot.v1.UpdatePublishingAgentRequest.default_visibility:type_name -> postpilot.v1.PublishVisibility
-	5,  // 10: postpilot.v1.UpdatePublishingAgentResponse.agent:type_name -> postpilot.v1.PublishingAgent
-	0,  // 11: postpilot.v1.StartPublishRequest.visibility:type_name -> postpilot.v1.PublishVisibility
-	8,  // 12: postpilot.v1.StartPublishResponse.job:type_name -> postpilot.v1.PublishJob
-	8,  // 13: postpilot.v1.GetPublishJobResponse.job:type_name -> postpilot.v1.PublishJob
-	8,  // 14: postpilot.v1.ListRetryablePublishJobsResponse.jobs:type_name -> postpilot.v1.PublishJob
-	8,  // 15: postpilot.v1.RetryPublishResponse.job:type_name -> postpilot.v1.PublishJob
-	8,  // 16: postpilot.v1.CancelPublishResponse.job:type_name -> postpilot.v1.PublishJob
-	4,  // 17: postpilot.v1.SyncAgentProfileRequest.categories:type_name -> postpilot.v1.PublishingCategory
-	0,  // 18: postpilot.v1.SyncAgentProfileRequest.default_visibility:type_name -> postpilot.v1.PublishVisibility
-	5,  // 19: postpilot.v1.SyncAgentProfileResponse.agent:type_name -> postpilot.v1.PublishingAgent
-	8,  // 20: postpilot.v1.ClaimPublishJobResponse.job:type_name -> postpilot.v1.PublishJob
-	7,  // 21: postpilot.v1.ClaimPublishJobResponse.manifest:type_name -> postpilot.v1.PublishManifest
-	2,  // 22: postpilot.v1.ReportPublishProgressRequest.stage:type_name -> postpilot.v1.PublishStage
-	8,  // 23: postpilot.v1.ReportPublishProgressResponse.job:type_name -> postpilot.v1.PublishJob
-	8,  // 24: postpilot.v1.CompletePublishResponse.job:type_name -> postpilot.v1.PublishJob
-	3,  // 25: postpilot.v1.FailPublishRequest.kind:type_name -> postpilot.v1.PublishFailureKind
-	8,  // 26: postpilot.v1.FailPublishResponse.job:type_name -> postpilot.v1.PublishJob
-	9,  // 27: postpilot.v1.PublishingService.CreateAgentPairing:input_type -> postpilot.v1.CreateAgentPairingRequest
-	11, // 28: postpilot.v1.PublishingService.ListPublishingAgents:input_type -> postpilot.v1.ListPublishingAgentsRequest
-	13, // 29: postpilot.v1.PublishingService.UpdatePublishingAgent:input_type -> postpilot.v1.UpdatePublishingAgentRequest
-	15, // 30: postpilot.v1.PublishingService.RevokePublishingAgent:input_type -> postpilot.v1.RevokePublishingAgentRequest
-	17, // 31: postpilot.v1.PublishingService.StartPublish:input_type -> postpilot.v1.StartPublishRequest
-	19, // 32: postpilot.v1.PublishingService.GetPublishJob:input_type -> postpilot.v1.GetPublishJobRequest
-	21, // 33: postpilot.v1.PublishingService.ListRetryablePublishJobs:input_type -> postpilot.v1.ListRetryablePublishJobsRequest
-	23, // 34: postpilot.v1.PublishingService.RetryPublish:input_type -> postpilot.v1.RetryPublishRequest
-	25, // 35: postpilot.v1.PublishingService.CancelPublish:input_type -> postpilot.v1.CancelPublishRequest
-	27, // 36: postpilot.v1.PublishingAgentService.EnrollPublishingAgent:input_type -> postpilot.v1.EnrollPublishingAgentRequest
-	29, // 37: postpilot.v1.PublishingAgentService.SyncAgentProfile:input_type -> postpilot.v1.SyncAgentProfileRequest
-	31, // 38: postpilot.v1.PublishingAgentService.ClaimPublishJob:input_type -> postpilot.v1.ClaimPublishJobRequest
-	33, // 39: postpilot.v1.PublishingAgentService.RenewPublishLease:input_type -> postpilot.v1.RenewPublishLeaseRequest
-	35, // 40: postpilot.v1.PublishingAgentService.ReportPublishProgress:input_type -> postpilot.v1.ReportPublishProgressRequest
-	37, // 41: postpilot.v1.PublishingAgentService.CompletePublish:input_type -> postpilot.v1.CompletePublishRequest
-	39, // 42: postpilot.v1.PublishingAgentService.FailPublish:input_type -> postpilot.v1.FailPublishRequest
-	10, // 43: postpilot.v1.PublishingService.CreateAgentPairing:output_type -> postpilot.v1.CreateAgentPairingResponse
-	12, // 44: postpilot.v1.PublishingService.ListPublishingAgents:output_type -> postpilot.v1.ListPublishingAgentsResponse
-	14, // 45: postpilot.v1.PublishingService.UpdatePublishingAgent:output_type -> postpilot.v1.UpdatePublishingAgentResponse
-	16, // 46: postpilot.v1.PublishingService.RevokePublishingAgent:output_type -> postpilot.v1.RevokePublishingAgentResponse
-	18, // 47: postpilot.v1.PublishingService.StartPublish:output_type -> postpilot.v1.StartPublishResponse
-	20, // 48: postpilot.v1.PublishingService.GetPublishJob:output_type -> postpilot.v1.GetPublishJobResponse
-	22, // 49: postpilot.v1.PublishingService.ListRetryablePublishJobs:output_type -> postpilot.v1.ListRetryablePublishJobsResponse
-	24, // 50: postpilot.v1.PublishingService.RetryPublish:output_type -> postpilot.v1.RetryPublishResponse
-	26, // 51: postpilot.v1.PublishingService.CancelPublish:output_type -> postpilot.v1.CancelPublishResponse
-	28, // 52: postpilot.v1.PublishingAgentService.EnrollPublishingAgent:output_type -> postpilot.v1.EnrollPublishingAgentResponse
-	30, // 53: postpilot.v1.PublishingAgentService.SyncAgentProfile:output_type -> postpilot.v1.SyncAgentProfileResponse
-	32, // 54: postpilot.v1.PublishingAgentService.ClaimPublishJob:output_type -> postpilot.v1.ClaimPublishJobResponse
-	34, // 55: postpilot.v1.PublishingAgentService.RenewPublishLease:output_type -> postpilot.v1.RenewPublishLeaseResponse
-	36, // 56: postpilot.v1.PublishingAgentService.ReportPublishProgress:output_type -> postpilot.v1.ReportPublishProgressResponse
-	38, // 57: postpilot.v1.PublishingAgentService.CompletePublish:output_type -> postpilot.v1.CompletePublishResponse
-	40, // 58: postpilot.v1.PublishingAgentService.FailPublish:output_type -> postpilot.v1.FailPublishResponse
-	43, // [43:59] is the sub-list for method output_type
-	27, // [27:43] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	42, // 5: postpilot.v1.PublishManifest.target_language:type_name -> postpilot.v1.ContentLanguage
+	42, // 6: postpilot.v1.PublishManifest.content_language:type_name -> postpilot.v1.ContentLanguage
+	42, // 7: postpilot.v1.PublishManifest.voice_source_language:type_name -> postpilot.v1.ContentLanguage
+	1,  // 8: postpilot.v1.PublishJob.status:type_name -> postpilot.v1.PublishStatus
+	2,  // 9: postpilot.v1.PublishJob.stage:type_name -> postpilot.v1.PublishStage
+	0,  // 10: postpilot.v1.PublishJob.visibility:type_name -> postpilot.v1.PublishVisibility
+	42, // 11: postpilot.v1.PublishJob.target_language:type_name -> postpilot.v1.ContentLanguage
+	42, // 12: postpilot.v1.PublishJob.content_language:type_name -> postpilot.v1.ContentLanguage
+	42, // 13: postpilot.v1.PublishJob.voice_source_language:type_name -> postpilot.v1.ContentLanguage
+	43, // 14: postpilot.v1.PublishJob.failure:type_name -> postpilot.v1.Failure
+	5,  // 15: postpilot.v1.ListPublishingAgentsResponse.agents:type_name -> postpilot.v1.PublishingAgent
+	0,  // 16: postpilot.v1.UpdatePublishingAgentRequest.default_visibility:type_name -> postpilot.v1.PublishVisibility
+	5,  // 17: postpilot.v1.UpdatePublishingAgentResponse.agent:type_name -> postpilot.v1.PublishingAgent
+	0,  // 18: postpilot.v1.StartPublishRequest.visibility:type_name -> postpilot.v1.PublishVisibility
+	8,  // 19: postpilot.v1.StartPublishResponse.job:type_name -> postpilot.v1.PublishJob
+	8,  // 20: postpilot.v1.GetPublishJobResponse.job:type_name -> postpilot.v1.PublishJob
+	8,  // 21: postpilot.v1.ListRetryablePublishJobsResponse.jobs:type_name -> postpilot.v1.PublishJob
+	8,  // 22: postpilot.v1.RetryPublishResponse.job:type_name -> postpilot.v1.PublishJob
+	8,  // 23: postpilot.v1.CancelPublishResponse.job:type_name -> postpilot.v1.PublishJob
+	4,  // 24: postpilot.v1.SyncAgentProfileRequest.categories:type_name -> postpilot.v1.PublishingCategory
+	0,  // 25: postpilot.v1.SyncAgentProfileRequest.default_visibility:type_name -> postpilot.v1.PublishVisibility
+	5,  // 26: postpilot.v1.SyncAgentProfileResponse.agent:type_name -> postpilot.v1.PublishingAgent
+	8,  // 27: postpilot.v1.ClaimPublishJobResponse.job:type_name -> postpilot.v1.PublishJob
+	7,  // 28: postpilot.v1.ClaimPublishJobResponse.manifest:type_name -> postpilot.v1.PublishManifest
+	2,  // 29: postpilot.v1.ReportPublishProgressRequest.stage:type_name -> postpilot.v1.PublishStage
+	8,  // 30: postpilot.v1.ReportPublishProgressResponse.job:type_name -> postpilot.v1.PublishJob
+	8,  // 31: postpilot.v1.CompletePublishResponse.job:type_name -> postpilot.v1.PublishJob
+	3,  // 32: postpilot.v1.FailPublishRequest.kind:type_name -> postpilot.v1.PublishFailureKind
+	8,  // 33: postpilot.v1.FailPublishResponse.job:type_name -> postpilot.v1.PublishJob
+	9,  // 34: postpilot.v1.PublishingService.CreateAgentPairing:input_type -> postpilot.v1.CreateAgentPairingRequest
+	11, // 35: postpilot.v1.PublishingService.ListPublishingAgents:input_type -> postpilot.v1.ListPublishingAgentsRequest
+	13, // 36: postpilot.v1.PublishingService.UpdatePublishingAgent:input_type -> postpilot.v1.UpdatePublishingAgentRequest
+	15, // 37: postpilot.v1.PublishingService.RevokePublishingAgent:input_type -> postpilot.v1.RevokePublishingAgentRequest
+	17, // 38: postpilot.v1.PublishingService.StartPublish:input_type -> postpilot.v1.StartPublishRequest
+	19, // 39: postpilot.v1.PublishingService.GetPublishJob:input_type -> postpilot.v1.GetPublishJobRequest
+	21, // 40: postpilot.v1.PublishingService.ListRetryablePublishJobs:input_type -> postpilot.v1.ListRetryablePublishJobsRequest
+	23, // 41: postpilot.v1.PublishingService.RetryPublish:input_type -> postpilot.v1.RetryPublishRequest
+	25, // 42: postpilot.v1.PublishingService.CancelPublish:input_type -> postpilot.v1.CancelPublishRequest
+	27, // 43: postpilot.v1.PublishingAgentService.EnrollPublishingAgent:input_type -> postpilot.v1.EnrollPublishingAgentRequest
+	29, // 44: postpilot.v1.PublishingAgentService.SyncAgentProfile:input_type -> postpilot.v1.SyncAgentProfileRequest
+	31, // 45: postpilot.v1.PublishingAgentService.ClaimPublishJob:input_type -> postpilot.v1.ClaimPublishJobRequest
+	33, // 46: postpilot.v1.PublishingAgentService.RenewPublishLease:input_type -> postpilot.v1.RenewPublishLeaseRequest
+	35, // 47: postpilot.v1.PublishingAgentService.ReportPublishProgress:input_type -> postpilot.v1.ReportPublishProgressRequest
+	37, // 48: postpilot.v1.PublishingAgentService.CompletePublish:input_type -> postpilot.v1.CompletePublishRequest
+	39, // 49: postpilot.v1.PublishingAgentService.FailPublish:input_type -> postpilot.v1.FailPublishRequest
+	10, // 50: postpilot.v1.PublishingService.CreateAgentPairing:output_type -> postpilot.v1.CreateAgentPairingResponse
+	12, // 51: postpilot.v1.PublishingService.ListPublishingAgents:output_type -> postpilot.v1.ListPublishingAgentsResponse
+	14, // 52: postpilot.v1.PublishingService.UpdatePublishingAgent:output_type -> postpilot.v1.UpdatePublishingAgentResponse
+	16, // 53: postpilot.v1.PublishingService.RevokePublishingAgent:output_type -> postpilot.v1.RevokePublishingAgentResponse
+	18, // 54: postpilot.v1.PublishingService.StartPublish:output_type -> postpilot.v1.StartPublishResponse
+	20, // 55: postpilot.v1.PublishingService.GetPublishJob:output_type -> postpilot.v1.GetPublishJobResponse
+	22, // 56: postpilot.v1.PublishingService.ListRetryablePublishJobs:output_type -> postpilot.v1.ListRetryablePublishJobsResponse
+	24, // 57: postpilot.v1.PublishingService.RetryPublish:output_type -> postpilot.v1.RetryPublishResponse
+	26, // 58: postpilot.v1.PublishingService.CancelPublish:output_type -> postpilot.v1.CancelPublishResponse
+	28, // 59: postpilot.v1.PublishingAgentService.EnrollPublishingAgent:output_type -> postpilot.v1.EnrollPublishingAgentResponse
+	30, // 60: postpilot.v1.PublishingAgentService.SyncAgentProfile:output_type -> postpilot.v1.SyncAgentProfileResponse
+	32, // 61: postpilot.v1.PublishingAgentService.ClaimPublishJob:output_type -> postpilot.v1.ClaimPublishJobResponse
+	34, // 62: postpilot.v1.PublishingAgentService.RenewPublishLease:output_type -> postpilot.v1.RenewPublishLeaseResponse
+	36, // 63: postpilot.v1.PublishingAgentService.ReportPublishProgress:output_type -> postpilot.v1.ReportPublishProgressResponse
+	38, // 64: postpilot.v1.PublishingAgentService.CompletePublish:output_type -> postpilot.v1.CompletePublishResponse
+	40, // 65: postpilot.v1.PublishingAgentService.FailPublish:output_type -> postpilot.v1.FailPublishResponse
+	50, // [50:66] is the sub-list for method output_type
+	34, // [34:50] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_publishing_proto_init() }
@@ -2832,6 +2908,8 @@ func file_postpilot_v1_publishing_proto_init() {
 		return
 	}
 	file_postpilot_v1_post_proto_init()
+	file_postpilot_v1_error_proto_init()
+	file_postpilot_v1_language_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

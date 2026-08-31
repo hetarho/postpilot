@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useStageSelection } from '@/entities/model-catalog'
 import { type VoiceProfile, useAddVoiceSample } from '@/entities/voice'
 import { VOICE_SAMPLE_MIN_CHARS } from '@/shared/config'
@@ -21,6 +22,7 @@ export function LearnVoiceForm({
   onStarted,
   blocked = '',
 }: LearnVoiceFormProps) {
+  const { t } = useTranslation(['voices', 'common'])
   const labelId = useId()
   const bodyId = useId()
   const bodyErrorId = `${bodyId}-error`
@@ -69,12 +71,12 @@ export function LearnVoiceForm({
   return (
     <form onSubmit={submit} className="mt-5 space-y-4">
       <div>
-        <FieldLabel htmlFor={labelId}>라벨 (선택)</FieldLabel>
+        <FieldLabel htmlFor={labelId}>{t('learn.label')}</FieldLabel>
         <TextField
           id={labelId}
           value={label}
           onChange={(event) => setLabel(event.target.value)}
-          placeholder="예: 제주 여행기"
+          placeholder={t('learn.labelPlaceholder')}
           // A short free-text name, so nothing to autofill and nothing to auto-capitalise. The
           // return key says 다음 rather than the 이동 that implicit submission renders — that key
           // does nothing until the body below is long enough, with no way to say so (§7).
@@ -86,12 +88,17 @@ export function LearnVoiceForm({
         />
       </div>
       <div>
-        <FieldLabel htmlFor={bodyId}>내가 쓴 글</FieldLabel>
+        <FieldLabel htmlFor={bodyId}>{t('learn.body')}</FieldLabel>
+        <p className="text-content-secondary mt-1 text-sm">
+          {t('learn.declaredLanguage', {
+            language: t(`contentLanguage.${profile.voice.sourceLanguage}`, { ns: 'common' }),
+          })}
+        </p>
         <Textarea
           id={bodyId}
           value={body}
           onChange={(event) => setBody(event.target.value)}
-          placeholder="기존에 쓴 글 한 편을 붙여 넣어 주세요"
+          placeholder={t('learn.bodyPlaceholder')}
           // A pasted article is always longer than any fixed box; growing keeps the page the one
           // scroller and leaves the CTA directly under the end of the text (§4.4).
           rows={6}
@@ -106,11 +113,11 @@ export function LearnVoiceForm({
             shown (§4.3). */}
         <div id={bodyHintId} className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="text-content-tertiary shrink-0 text-xs">
-            {chars} / {VOICE_SAMPLE_MIN_CHARS}자
+            {t('learn.count', { count: chars, min: VOICE_SAMPLE_MIN_CHARS })}
           </span>
           {tooShort && (
             <span className="text-content-secondary min-w-0 text-sm">
-              {VOICE_SAMPLE_MIN_CHARS - chars}자 더 쓰면 학습할 수 있어요
+              {t('learn.remaining', { count: VOICE_SAMPLE_MIN_CHARS - chars })}
             </span>
           )}
         </div>
@@ -123,7 +130,7 @@ export function LearnVoiceForm({
       )}
       {!blocked && !modelPending && !selected && (
         <Notice tone="warning" role="status">
-          모델을 선택하세요
+          {t('learn.selectModel')}
         </Notice>
       )}
       {addSample.isError && <FieldMessage id={bodyErrorId}>{addSample.errorMessage}</FieldMessage>}
@@ -136,21 +143,21 @@ export function LearnVoiceForm({
         aria-describedby={tooShort ? bodyHintId : undefined}
         className="w-full sm:w-auto"
       >
-        학습
+        {t('learn.action')}
       </Button>
       <span role="status" className="sr-only">
-        {addSample.isPending ? '학습을 시작하는 중' : ''}
+        {addSample.isPending ? t('learn.pending') : ''}
       </span>
 
       <Dialog
         open={confirmOverwrite}
-        title="문체 규칙을 다시 쓸까요?"
-        confirmLabel="다시 분석"
+        title={t('learn.confirmTitle')}
+        confirmLabel={t('learn.confirm')}
         pending={addSample.isPending}
         onClose={() => setConfirmOverwrite(false)}
         onConfirm={() => void learn()}
       >
-        재분석하면 현재 문체 규칙을 덮어씁니다. 직접 작성한 추가 규칙은 그대로 유지됩니다.
+        {t('learn.confirmDescription')}
       </Dialog>
     </form>
   )

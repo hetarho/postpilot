@@ -16,13 +16,19 @@ export function filterFile(file: { name: string; size: number }): FileVerdict {
   return { kind: 'accepted' }
 }
 
-const SKIP_LABELS: Record<SkipReason, string> = {
-  extension: `사진 파일이 아니에요 (${UPLOAD_ALLOWED_EXTENSIONS.join(', ')}만 올릴 수 있어요)`,
-  'too-large': `${UPLOAD_MAX_FILE_MB}MB를 넘어요`,
-  unreadable: '사진을 읽을 수 없어요',
-  'heif-unsupported': '이 기기에서는 HEIC를 변환할 수 없어요',
-}
-
 export function skipReasonLabel(reason: SkipReason): string {
-  return SKIP_LABELS[reason]
+  switch (reason) {
+    case 'extension':
+      return i18next.t('upload.skip.extension', {
+        ns: 'posts',
+        extensions: UPLOAD_ALLOWED_EXTENSIONS.join(', '),
+      })
+    case 'too-large':
+      return i18next.t('upload.skip.tooLarge', { ns: 'posts', max: UPLOAD_MAX_FILE_MB })
+    case 'unreadable':
+      return i18next.t('upload.skip.unreadable', { ns: 'posts' })
+    case 'heif-unsupported':
+      return i18next.t('upload.skip.heifUnsupported', { ns: 'posts' })
+  }
 }
+import i18next from 'i18next'

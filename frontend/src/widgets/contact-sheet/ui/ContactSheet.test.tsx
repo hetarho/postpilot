@@ -34,12 +34,13 @@ it('shows persisted observations and waiting photos during observe', () => {
         stage: 'observe',
         progressDone: 1,
         progressTotal: 2,
-        error: '',
+        failure: undefined,
         postSlug: 'post-a',
         observeModel: undefined,
         writeModel: undefined,
         createdAt: '',
         updatedAt: '',
+        targetLanguage: 'ko',
       }}
     />,
   )

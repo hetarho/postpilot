@@ -75,11 +75,18 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 	if post.Content == nil {
 		return "", ErrRevisionContentRequired
 	}
+	if post.ContentLanguage == nil || !post.ContentLanguage.Valid() {
+		return "", ErrContentLanguageRequired
+	}
+	request.ContentLanguage = *post.ContentLanguage
 	voiceID, err := activeVoice(post)
 	if err != nil {
 		return "", err
 	}
 	request.VoiceID = voiceID
+	if request.SaveAsRule && (!post.Voice.SourceLanguage.Valid() || *post.ContentLanguage != post.Voice.SourceLanguage) {
+		return "", ErrVoiceContentLanguageMismatch
+	}
 	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
 		return "", err
 	}
@@ -97,7 +104,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Purpose = brief
-	payload, err := encodeRevisionPayload(request.Instruction, request.SaveAsRule, brief)
+	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
 	}
@@ -113,6 +120,10 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if err != nil {
 		return "", err
 	}
+	if !post.TargetLanguage.Valid() {
+		return "", ErrLanguageRequired
+	}
+	request.TargetLanguage = post.TargetLanguage
 	voiceID, err := activeVoice(post)
 	if err != nil {
 		return "", err

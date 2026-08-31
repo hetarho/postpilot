@@ -49,9 +49,10 @@ type Image struct {
 // VoiceRef is the post's voice as the post context projects it. Deleted is what makes a
 // start or a handler refuse before any provider call.
 type VoiceRef struct {
-	ID      string
-	Name    string
-	Deleted bool
+	ID             string
+	Name           string
+	Deleted        bool
+	SourceLanguage Language
 }
 
 // PurposeBrief is the post's 용도 as the writer needs it: three authored strings and no id.
@@ -69,13 +70,15 @@ type PostInput struct {
 	Voice  VoiceRef
 	// PurposeID is what the post currently points at, read only at enqueue time. Handlers
 	// never resolve it: they use Purpose, which the job payload froze.
-	PurposeID    string
-	Purpose      *PurposeBrief
-	Title        string
-	Memo         string
-	Images       []Image
-	Content      *PostContent
-	TargetLength *int
+	PurposeID       string
+	Purpose         *PurposeBrief
+	Title           string
+	Memo            string
+	Images          []Image
+	Content         *PostContent
+	TargetLanguage  Language
+	ContentLanguage *Language
+	TargetLength    *int
 }
 
 type Profile struct {
@@ -84,40 +87,46 @@ type Profile struct {
 	Excerpts             []string
 	Rules                string
 	EndingMaxConsecutive int
+	SourceLanguage       Language
+	TargetLanguage       Language
+	Portable             bool
 }
 
 // StartRequest.VoiceID is filled by the service from the owned post and frozen into the
 // job, so the handler can prove the post still belongs to the voice it was queued for.
 type StartRequest struct {
-	UserID       string
-	PostSlug     string
-	VoiceID      string
-	ObserveModel string
-	WriteModel   string
-	TargetLength *int
+	UserID         string
+	PostSlug       string
+	VoiceID        string
+	ObserveModel   string
+	WriteModel     string
+	TargetLanguage Language
+	TargetLength   *int
 	// Purpose is resolved from the post server-side at Start and frozen into the payload;
 	// the request never carries one. Nil means the post had none, or it was deleted first.
 	Purpose *PurposeBrief
 }
 
 type GenerateJob struct {
-	UserID       string
-	PostSlug     string
-	VoiceID      string
-	ObserveModel string
-	WriteModel   string
-	TargetLength *int
-	Purpose      *PurposeBrief
+	UserID         string
+	PostSlug       string
+	VoiceID        string
+	ObserveModel   string
+	WriteModel     string
+	TargetLanguage Language
+	TargetLength   *int
+	Purpose        *PurposeBrief
 }
 
 type StartRevisionRequest struct {
-	UserID      string
-	PostSlug    string
-	VoiceID     string
-	Instruction string
-	SaveAsRule  bool
-	WriteModel  string
-	Purpose     *PurposeBrief
+	UserID          string
+	PostSlug        string
+	VoiceID         string
+	Instruction     string
+	SaveAsRule      bool
+	WriteModel      string
+	ContentLanguage Language
+	Purpose         *PurposeBrief
 }
 
 type RevisionJob struct {
@@ -129,18 +138,27 @@ type RevisionJob struct {
 }
 
 type JobSummary struct {
-	ID            string
-	Kind          string
-	Status        string
-	Stage         string
-	ProgressDone  int
-	ProgressTotal int
-	Error         string
-	PostSlug      string
-	ObserveModel  string
-	WriteModel    string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID             string
+	Kind           string
+	Status         string
+	Stage          string
+	ProgressDone   int
+	ProgressTotal  int
+	Failure        *Failure
+	PostSlug       string
+	ObserveModel   string
+	WriteModel     string
+	TargetLanguage Language
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Failure is generation's consumer-owned projection of a durable job failure. It keeps
+// the generation context independent from the job context's persistence types.
+type Failure struct {
+	Reason          string
+	Params          map[string]string
+	TechnicalDetail string
 }
 
 type JobAlreadyInProgressError struct{ ActiveID string }

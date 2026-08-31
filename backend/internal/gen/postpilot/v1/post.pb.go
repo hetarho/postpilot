@@ -327,12 +327,13 @@ func (x *Observation) GetPeoplePresent() bool {
 // voice still names itself here so a post assigned to it stays readable and exportable
 // while every AI action refuses.
 type VoiceRef struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Deleted       bool                   `protobuf:"varint,3,opt,name=deleted,proto3" json:"deleted,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Deleted        bool                   `protobuf:"varint,3,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	SourceLanguage ContentLanguage        `protobuf:"varint,4,opt,name=source_language,json=sourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"source_language,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *VoiceRef) Reset() {
@@ -386,6 +387,13 @@ func (x *VoiceRef) GetDeleted() bool {
 	return false
 }
 
+func (x *VoiceRef) GetSourceLanguage() ContentLanguage {
+	if x != nil {
+		return x.SourceLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
 type Post struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Minted once from the date and title, then immutable — it is the primary key and it
@@ -414,9 +422,12 @@ type Post struct {
 	MachineBaselineVoiceId string `protobuf:"bytes,19,opt,name=machine_baseline_voice_id,json=machineBaselineVoiceId,proto3" json:"machine_baseline_voice_id,omitempty"`
 	// Unset when the post has no purpose. Unlike `voice` it is optional by design: the
 	// server never picks one and 없음 is the default.
-	Purpose       *PurposeRef `protobuf:"bytes,20,opt,name=purpose,proto3" json:"purpose,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Purpose        *PurposeRef     `protobuf:"bytes,20,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	TargetLanguage ContentLanguage `protobuf:"varint,21,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
+	// UNSPECIFIED until canonical machine content establishes provenance.
+	ContentLanguage ContentLanguage `protobuf:"varint,22,opt,name=content_language,json=contentLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"content_language,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Post) Reset() {
@@ -589,6 +600,20 @@ func (x *Post) GetPurpose() *PurposeRef {
 	return nil
 }
 
+func (x *Post) GetTargetLanguage() ContentLanguage {
+	if x != nil {
+		return x.TargetLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *Post) GetContentLanguage() ContentLanguage {
+	if x != nil {
+		return x.ContentLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
 type Image struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -688,6 +713,8 @@ type PostSummary struct {
 	PendingExperimentId string                 `protobuf:"bytes,6,opt,name=pending_experiment_id,json=pendingExperimentId,proto3" json:"pending_experiment_id,omitempty"`
 	Voice               *VoiceRef              `protobuf:"bytes,7,opt,name=voice,proto3" json:"voice,omitempty"`
 	Purpose             *PurposeRef            `protobuf:"bytes,8,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	TargetLanguage      ContentLanguage        `protobuf:"varint,9,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
+	ContentLanguage     ContentLanguage        `protobuf:"varint,10,opt,name=content_language,json=contentLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"content_language,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -778,6 +805,20 @@ func (x *PostSummary) GetPurpose() *PurposeRef {
 	return nil
 }
 
+func (x *PostSummary) GetTargetLanguage() ContentLanguage {
+	if x != nil {
+		return x.TargetLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *PostSummary) GetContentLanguage() ContentLanguage {
+	if x != nil {
+		return x.ContentLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
 type GenerationJob struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -786,14 +827,17 @@ type GenerationJob struct {
 	Stage         string                 `protobuf:"bytes,4,opt,name=stage,proto3" json:"stage,omitempty"`
 	ProgressDone  int32                  `protobuf:"varint,5,opt,name=progress_done,json=progressDone,proto3" json:"progress_done,omitempty"`
 	ProgressTotal int32                  `protobuf:"varint,6,opt,name=progress_total,json=progressTotal,proto3" json:"progress_total,omitempty"`
-	Error         string                 `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`
-	PostSlug      string                 `protobuf:"bytes,8,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
-	ObserveModel  *ModelRef              `protobuf:"bytes,9,opt,name=observe_model,json=observeModel,proto3" json:"observe_model,omitempty"`
-	WriteModel    *ModelRef              `protobuf:"bytes,10,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Deprecated: Marked as deprecated in postpilot/v1/post.proto.
+	Error          string          `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`
+	PostSlug       string          `protobuf:"bytes,8,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
+	ObserveModel   *ModelRef       `protobuf:"bytes,9,opt,name=observe_model,json=observeModel,proto3" json:"observe_model,omitempty"`
+	WriteModel     *ModelRef       `protobuf:"bytes,10,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	CreatedAt      string          `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      string          `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	TargetLanguage ContentLanguage `protobuf:"varint,13,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
+	Failure        *Failure        `protobuf:"bytes,14,opt,name=failure,proto3" json:"failure,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GenerationJob) Reset() {
@@ -868,6 +912,7 @@ func (x *GenerationJob) GetProgressTotal() int32 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in postpilot/v1/post.proto.
 func (x *GenerationJob) GetError() string {
 	if x != nil {
 		return x.Error
@@ -908,6 +953,20 @@ func (x *GenerationJob) GetUpdatedAt() string {
 		return x.UpdatedAt
 	}
 	return ""
+}
+
+func (x *GenerationJob) GetTargetLanguage() ContentLanguage {
+	if x != nil {
+		return x.TargetLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *GenerationJob) GetFailure() *Failure {
+	if x != nil {
+		return x.Failure
+	}
+	return nil
 }
 
 type GetGenerationRequest struct {
@@ -1236,9 +1295,11 @@ type SavePostDraftRequest struct {
 	// post may legitimately have none: absent preserves the current assignment (what ordinary
 	// autosave sends), an empty string clears it, and a non-empty value assigns that purpose.
 	// An unknown or foreign id is refused and nothing else in the request is applied.
-	PurposeId     *string `protobuf:"bytes,5,opt,name=purpose_id,json=purposeId,proto3,oneof" json:"purpose_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	PurposeId *string `protobuf:"bytes,5,opt,name=purpose_id,json=purposeId,proto3,oneof" json:"purpose_id,omitempty"`
+	// Required on create; absent preserves the stored target on an update.
+	TargetLanguage *ContentLanguage `protobuf:"varint,6,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage,oneof" json:"target_language,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *SavePostDraftRequest) Reset() {
@@ -1304,6 +1365,13 @@ func (x *SavePostDraftRequest) GetPurposeId() string {
 		return *x.PurposeId
 	}
 	return ""
+}
+
+func (x *SavePostDraftRequest) GetTargetLanguage() ContentLanguage {
+	if x != nil && x.TargetLanguage != nil {
+		return *x.TargetLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
 }
 
 type SavePostDraftResponse struct {
@@ -2206,7 +2274,7 @@ var File_postpilot_v1_post_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\n" +
-	"\x17postpilot/v1/post.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x1apostpilot/v1/purpose.proto\"\xba\x01\n" +
+	"\x17postpilot/v1/post.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x1apostpilot/v1/purpose.proto\x1a\x18postpilot/v1/error.proto\x1a\x1bpostpilot/v1/language.proto\"\xba\x01\n" +
 	"\x05Block\x12+\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x17.postpilot.v1.BlockTypeR\x04type\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x14\n" +
@@ -2226,11 +2294,12 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x04mood\x18\x03 \x01(\tR\x04mood\x12!\n" +
 	"\fvisible_text\x18\x04 \x01(\tR\vvisibleText\x12\x18\n" +
 	"\aobjects\x18\x05 \x03(\tR\aobjects\x12%\n" +
-	"\x0epeople_present\x18\x06 \x01(\bR\rpeoplePresent\"H\n" +
+	"\x0epeople_present\x18\x06 \x01(\bR\rpeoplePresent\"\x90\x01\n" +
 	"\bVoiceRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
-	"\adeleted\x18\x03 \x01(\bR\adeleted\"\xe0\x06\n" +
+	"\adeleted\x18\x03 \x01(\bR\adeleted\x12F\n" +
+	"\x0fsource_language\x18\x04 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\xf2\a\n" +
 	"\x04Post\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -2255,7 +2324,9 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\ffinalized_at\x18\x11 \x01(\tR\vfinalizedAt\x12,\n" +
 	"\x05voice\x18\x12 \x01(\v2\x16.postpilot.v1.VoiceRefR\x05voice\x129\n" +
 	"\x19machine_baseline_voice_id\x18\x13 \x01(\tR\x16machineBaselineVoiceId\x122\n" +
-	"\apurpose\x18\x14 \x01(\v2\x18.postpilot.v1.PurposeRefR\apurposeB\x10\n" +
+	"\apurpose\x18\x14 \x01(\v2\x18.postpilot.v1.PurposeRefR\apurpose\x12F\n" +
+	"\x0ftarget_language\x18\x15 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
+	"\x10content_language\x18\x16 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguageB\x10\n" +
 	"\x0e_target_length\"\x92\x01\n" +
 	"\x05Image\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
@@ -2263,7 +2334,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x05width\x18\x03 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x04 \x01(\x05R\x06height\x12\x14\n" +
 	"\x05bytes\x18\x05 \x01(\x03R\x05bytes\x12\x19\n" +
-	"\bview_url\x18\x06 \x01(\tR\aviewUrl\"\xc0\x02\n" +
+	"\bview_url\x18\x06 \x01(\tR\aviewUrl\"\xd2\x03\n" +
 	"\vPostSummary\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
@@ -2274,15 +2345,18 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"active_job\x18\x05 \x01(\v2\x1b.postpilot.v1.GenerationJobR\tactiveJob\x122\n" +
 	"\x15pending_experiment_id\x18\x06 \x01(\tR\x13pendingExperimentId\x12,\n" +
 	"\x05voice\x18\a \x01(\v2\x16.postpilot.v1.VoiceRefR\x05voice\x122\n" +
-	"\apurpose\x18\b \x01(\v2\x18.postpilot.v1.PurposeRefR\apurpose\"\x94\x03\n" +
+	"\apurpose\x18\b \x01(\v2\x18.postpilot.v1.PurposeRefR\apurpose\x12F\n" +
+	"\x0ftarget_language\x18\t \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
+	"\x10content_language\x18\n" +
+	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\"\x91\x04\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x12\x14\n" +
 	"\x05stage\x18\x04 \x01(\tR\x05stage\x12#\n" +
 	"\rprogress_done\x18\x05 \x01(\x05R\fprogressDone\x12%\n" +
-	"\x0eprogress_total\x18\x06 \x01(\x05R\rprogressTotal\x12\x14\n" +
-	"\x05error\x18\a \x01(\tR\x05error\x12\x1b\n" +
+	"\x0eprogress_total\x18\x06 \x01(\x05R\rprogressTotal\x12\x18\n" +
+	"\x05error\x18\a \x01(\tB\x02\x18\x01R\x05error\x12\x1b\n" +
 	"\tpost_slug\x18\b \x01(\tR\bpostSlug\x12;\n" +
 	"\robserve_model\x18\t \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x127\n" +
 	"\vwrite_model\x18\n" +
@@ -2291,7 +2365,9 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\v \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\f \x01(\tR\tupdatedAt\"&\n" +
+	"updated_at\x18\f \x01(\tR\tupdatedAt\x12F\n" +
+	"\x0ftarget_language\x18\r \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12/\n" +
+	"\afailure\x18\x0e \x01(\v2\x15.postpilot.v1.FailureR\afailure\"&\n" +
 	"\x14GetGenerationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x15GetGenerationResponse\x12-\n" +
@@ -2313,16 +2389,18 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\vwrite_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
 	"writeModel\".\n" +
 	"\x15StartRevisionResponse\x12\x15\n" +
-	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\xb4\x01\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\x95\x02\n" +
 	"\x14SavePostDraftRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
 	"\x04memo\x18\x03 \x01(\tR\x04memo\x12\x1e\n" +
 	"\bvoice_id\x18\x04 \x01(\tH\x00R\avoiceId\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"purpose_id\x18\x05 \x01(\tH\x01R\tpurposeId\x88\x01\x01B\v\n" +
+	"purpose_id\x18\x05 \x01(\tH\x01R\tpurposeId\x88\x01\x01\x12K\n" +
+	"\x0ftarget_language\x18\x06 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageH\x02R\x0etargetLanguage\x88\x01\x01B\v\n" +
 	"\t_voice_idB\r\n" +
-	"\v_purpose_id\"?\n" +
+	"\v_purpose_idB\x12\n" +
+	"\x10_target_language\"?\n" +
 	"\x15SavePostDraftResponse\x12&\n" +
 	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\x94\x01\n" +
 	"\x16SavePostContentRequest\x12\x12\n" +
@@ -2444,66 +2522,76 @@ var file_postpilot_v1_post_proto_goTypes = []any{
 	(*ConfirmUploadResponse)(nil),             // 32: postpilot.v1.ConfirmUploadResponse
 	(*DeleteImageRequest)(nil),                // 33: postpilot.v1.DeleteImageRequest
 	(*DeleteImageResponse)(nil),               // 34: postpilot.v1.DeleteImageResponse
-	(*PurposeRef)(nil),                        // 35: postpilot.v1.PurposeRef
-	(*ModelRef)(nil),                          // 36: postpilot.v1.ModelRef
+	(ContentLanguage)(0),                      // 35: postpilot.v1.ContentLanguage
+	(*PurposeRef)(nil),                        // 36: postpilot.v1.PurposeRef
+	(*ModelRef)(nil),                          // 37: postpilot.v1.ModelRef
+	(*Failure)(nil),                           // 38: postpilot.v1.Failure
 }
 var file_postpilot_v1_post_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.Block.type:type_name -> postpilot.v1.BlockType
 	1,  // 1: postpilot.v1.PostContent.blocks:type_name -> postpilot.v1.Block
-	6,  // 2: postpilot.v1.Post.images:type_name -> postpilot.v1.Image
-	8,  // 3: postpilot.v1.Post.active_job:type_name -> postpilot.v1.GenerationJob
-	2,  // 4: postpilot.v1.Post.content:type_name -> postpilot.v1.PostContent
-	3,  // 5: postpilot.v1.Post.observations:type_name -> postpilot.v1.Observation
-	4,  // 6: postpilot.v1.Post.voice:type_name -> postpilot.v1.VoiceRef
-	35, // 7: postpilot.v1.Post.purpose:type_name -> postpilot.v1.PurposeRef
-	8,  // 8: postpilot.v1.PostSummary.active_job:type_name -> postpilot.v1.GenerationJob
-	4,  // 9: postpilot.v1.PostSummary.voice:type_name -> postpilot.v1.VoiceRef
-	35, // 10: postpilot.v1.PostSummary.purpose:type_name -> postpilot.v1.PurposeRef
-	36, // 11: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
-	36, // 12: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
-	8,  // 13: postpilot.v1.GetGenerationResponse.job:type_name -> postpilot.v1.GenerationJob
-	36, // 14: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	36, // 15: postpilot.v1.StartGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	36, // 16: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	5,  // 17: postpilot.v1.SavePostDraftResponse.post:type_name -> postpilot.v1.Post
-	2,  // 18: postpilot.v1.SavePostContentRequest.content:type_name -> postpilot.v1.PostContent
-	5,  // 19: postpilot.v1.SavePostContentResponse.post:type_name -> postpilot.v1.Post
-	5,  // 20: postpilot.v1.SavePostGenerationOptionsResponse.post:type_name -> postpilot.v1.Post
-	5,  // 21: postpilot.v1.FinalizePostResponse.post:type_name -> postpilot.v1.Post
-	5,  // 22: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
-	7,  // 23: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
-	6,  // 24: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
-	15, // 25: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
-	17, // 26: postpilot.v1.PostService.SavePostContent:input_type -> postpilot.v1.SavePostContentRequest
-	19, // 27: postpilot.v1.PostService.SavePostGenerationOptions:input_type -> postpilot.v1.SavePostGenerationOptionsRequest
-	21, // 28: postpilot.v1.PostService.FinalizePost:input_type -> postpilot.v1.FinalizePostRequest
-	23, // 29: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
-	25, // 30: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
-	27, // 31: postpilot.v1.PostService.DeletePost:input_type -> postpilot.v1.DeletePostRequest
-	29, // 32: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
-	31, // 33: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
-	33, // 34: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
-	11, // 35: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
-	13, // 36: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
-	9,  // 37: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
-	16, // 38: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
-	18, // 39: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
-	20, // 40: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
-	22, // 41: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
-	24, // 42: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
-	26, // 43: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
-	28, // 44: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
-	30, // 45: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
-	32, // 46: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
-	34, // 47: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
-	12, // 48: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
-	14, // 49: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
-	10, // 50: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
-	38, // [38:51] is the sub-list for method output_type
-	25, // [25:38] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	35, // 2: postpilot.v1.VoiceRef.source_language:type_name -> postpilot.v1.ContentLanguage
+	6,  // 3: postpilot.v1.Post.images:type_name -> postpilot.v1.Image
+	8,  // 4: postpilot.v1.Post.active_job:type_name -> postpilot.v1.GenerationJob
+	2,  // 5: postpilot.v1.Post.content:type_name -> postpilot.v1.PostContent
+	3,  // 6: postpilot.v1.Post.observations:type_name -> postpilot.v1.Observation
+	4,  // 7: postpilot.v1.Post.voice:type_name -> postpilot.v1.VoiceRef
+	36, // 8: postpilot.v1.Post.purpose:type_name -> postpilot.v1.PurposeRef
+	35, // 9: postpilot.v1.Post.target_language:type_name -> postpilot.v1.ContentLanguage
+	35, // 10: postpilot.v1.Post.content_language:type_name -> postpilot.v1.ContentLanguage
+	8,  // 11: postpilot.v1.PostSummary.active_job:type_name -> postpilot.v1.GenerationJob
+	4,  // 12: postpilot.v1.PostSummary.voice:type_name -> postpilot.v1.VoiceRef
+	36, // 13: postpilot.v1.PostSummary.purpose:type_name -> postpilot.v1.PurposeRef
+	35, // 14: postpilot.v1.PostSummary.target_language:type_name -> postpilot.v1.ContentLanguage
+	35, // 15: postpilot.v1.PostSummary.content_language:type_name -> postpilot.v1.ContentLanguage
+	37, // 16: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
+	37, // 17: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
+	35, // 18: postpilot.v1.GenerationJob.target_language:type_name -> postpilot.v1.ContentLanguage
+	38, // 19: postpilot.v1.GenerationJob.failure:type_name -> postpilot.v1.Failure
+	8,  // 20: postpilot.v1.GetGenerationResponse.job:type_name -> postpilot.v1.GenerationJob
+	37, // 21: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	37, // 22: postpilot.v1.StartGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	37, // 23: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	35, // 24: postpilot.v1.SavePostDraftRequest.target_language:type_name -> postpilot.v1.ContentLanguage
+	5,  // 25: postpilot.v1.SavePostDraftResponse.post:type_name -> postpilot.v1.Post
+	2,  // 26: postpilot.v1.SavePostContentRequest.content:type_name -> postpilot.v1.PostContent
+	5,  // 27: postpilot.v1.SavePostContentResponse.post:type_name -> postpilot.v1.Post
+	5,  // 28: postpilot.v1.SavePostGenerationOptionsResponse.post:type_name -> postpilot.v1.Post
+	5,  // 29: postpilot.v1.FinalizePostResponse.post:type_name -> postpilot.v1.Post
+	5,  // 30: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
+	7,  // 31: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
+	6,  // 32: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
+	15, // 33: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
+	17, // 34: postpilot.v1.PostService.SavePostContent:input_type -> postpilot.v1.SavePostContentRequest
+	19, // 35: postpilot.v1.PostService.SavePostGenerationOptions:input_type -> postpilot.v1.SavePostGenerationOptionsRequest
+	21, // 36: postpilot.v1.PostService.FinalizePost:input_type -> postpilot.v1.FinalizePostRequest
+	23, // 37: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
+	25, // 38: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
+	27, // 39: postpilot.v1.PostService.DeletePost:input_type -> postpilot.v1.DeletePostRequest
+	29, // 40: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
+	31, // 41: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
+	33, // 42: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
+	11, // 43: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
+	13, // 44: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
+	9,  // 45: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
+	16, // 46: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
+	18, // 47: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
+	20, // 48: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
+	22, // 49: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
+	24, // 50: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
+	26, // 51: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
+	28, // 52: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
+	30, // 53: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
+	32, // 54: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
+	34, // 55: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
+	12, // 56: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
+	14, // 57: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
+	10, // 58: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
+	46, // [46:59] is the sub-list for method output_type
+	33, // [33:46] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_post_proto_init() }
@@ -2513,6 +2601,8 @@ func file_postpilot_v1_post_proto_init() {
 	}
 	file_postpilot_v1_provider_proto_init()
 	file_postpilot_v1_purpose_proto_init()
+	file_postpilot_v1_error_proto_init()
+	file_postpilot_v1_language_proto_init()
 	file_postpilot_v1_post_proto_msgTypes[4].OneofWrappers = []any{}
 	file_postpilot_v1_post_proto_msgTypes[10].OneofWrappers = []any{}
 	file_postpilot_v1_post_proto_msgTypes[14].OneofWrappers = []any{}

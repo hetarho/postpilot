@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { publishingAgentsQueryKey } from '@/entities/publishing-agent'
-import { publishingClientFor } from '@/shared/api'
-import { Button, FieldLabel, Notice, TextField } from '@/shared/ui'
+import { appFailureFromConnect, publishingClientFor } from '@/shared/api'
+import { formatDateTime } from '@/shared/lib'
+import { AppFailureMessage, Button, FieldLabel, Notice, TextField } from '@/shared/ui'
 
 export function PairPublishingAgent({ ownerId }: { ownerId: string }) {
-  const [label, setLabel] = useState('내 Mac')
+  const { t } = useTranslation('publishing')
+  const [label, setLabel] = useState<string>(() => t('pair.defaultLabel'))
   const transport = useTransport()
   const client = useMemo(() => publishingClientFor(transport), [transport])
   const queryClient = useQueryClient()
@@ -14,17 +17,16 @@ export function PairPublishingAgent({ ownerId }: { ownerId: string }) {
     mutationFn: () => client.createAgentPairing({ label: label.trim() }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: publishingAgentsQueryKey(ownerId) }),
   })
+  const failure = pairing.error ? appFailureFromConnect(pairing.error) : undefined
 
   return (
     <section aria-labelledby="pair-agent-heading">
       <h2 id="pair-agent-heading" className="text-lg font-semibold tracking-tight">
-        Mac 연결
+        {t('pair.title')}
       </h2>
-      <p className="text-content-secondary mt-2 text-sm leading-relaxed">
-        네이버 로그인은 Mac의 전용 브라우저에만 남습니다. 아래 코드를 Mac 설정 화면에 입력하세요.
-      </p>
+      <p className="text-content-secondary mt-2 text-sm leading-relaxed">{t('pair.description')}</p>
       <div className="mt-4">
-        <FieldLabel htmlFor="publishing-agent-label">연결 이름</FieldLabel>
+        <FieldLabel htmlFor="publishing-agent-label">{t('pair.label')}</FieldLabel>
         <TextField
           id="publishing-agent-label"
           value={label}
@@ -44,20 +46,24 @@ export function PairPublishingAgent({ ownerId }: { ownerId: string }) {
         pending={pairing.isPending}
         disabled={!label.trim()}
       >
-        연결 코드 만들기
+        {t('pair.create')}
       </Button>
-      <div role="status" aria-live="polite" className="mt-4 empty:hidden">
+      <div className="mt-4 empty:hidden">
         {pairing.data && (
-          <Notice tone="success">
+          <Notice tone="success" role="status">
             <span>
-              연결 코드 <strong className="font-mono text-base">{pairing.data.deviceCode}</strong>
+              {t('pair.code')}{' '}
+              <strong className="font-mono text-base">{pairing.data.deviceCode}</strong>
               <br />
-              {new Date(pairing.data.expiresAt).toLocaleString('ko-KR')}까지 한 번만 사용할 수
-              있어요.
+              {t('pair.expires', { date: formatDateTime(pairing.data.expiresAt) })}
             </span>
           </Notice>
         )}
-        {pairing.isError && <Notice tone="danger">연결 코드를 만들지 못했어요.</Notice>}
+        {failure && (
+          <Notice tone="danger" role="alert">
+            <AppFailureMessage failure={failure} />
+          </Notice>
+        )}
       </div>
     </section>
   )

@@ -56,19 +56,20 @@ func (q *Queries) CountPostsByVoice(ctx context.Context, arg CountPostsByVoicePa
 
 const createPost = `-- name: CreatePost :exec
 
-INSERT INTO posts (slug, user_id, voice_id, purpose_id, title, memo, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?)
+INSERT INTO posts (slug, user_id, voice_id, purpose_id, title, memo, target_language, status, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)
 `
 
 type CreatePostParams struct {
-	Slug      string
-	UserID    string
-	VoiceID   string
-	PurposeID sql.NullString
-	Title     string
-	Memo      string
-	CreatedAt string
-	UpdatedAt string
+	Slug           string
+	UserID         string
+	VoiceID        string
+	PurposeID      sql.NullString
+	Title          string
+	Memo           string
+	TargetLanguage string
+	CreatedAt      string
+	UpdatedAt      string
 }
 
 // Posts. Every query is scoped by user_id: ownership is enforced in SQL, not by a
@@ -81,6 +82,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
 		arg.PurposeID,
 		arg.Title,
 		arg.Memo,
+		arg.TargetLanguage,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -135,7 +137,8 @@ func (q *Queries) FinalizePost(ctx context.Context, arg FinalizePostParams) (int
 
 const getLearningSnapshot = `-- name: GetLearningSnapshot :one
 SELECT slug, user_id, voice_id, content, content_revision, machine_baseline, machine_baseline_revision,
-       machine_baseline_voice_id, target_length, status, finalized_revision, finalized_at, updated_at
+       machine_baseline_voice_id, target_length, status, finalized_revision, finalized_at, updated_at,
+       target_language, content_language
 FROM posts WHERE slug = ? AND user_id = ?
 `
 
@@ -158,6 +161,8 @@ type GetLearningSnapshotRow struct {
 	FinalizedRevision       sql.NullInt64
 	FinalizedAt             sql.NullString
 	UpdatedAt               string
+	TargetLanguage          string
+	ContentLanguage         sql.NullString
 }
 
 func (q *Queries) GetLearningSnapshot(ctx context.Context, arg GetLearningSnapshotParams) (GetLearningSnapshotRow, error) {
@@ -177,6 +182,8 @@ func (q *Queries) GetLearningSnapshot(ctx context.Context, arg GetLearningSnapsh
 		&i.FinalizedRevision,
 		&i.FinalizedAt,
 		&i.UpdatedAt,
+		&i.TargetLanguage,
+		&i.ContentLanguage,
 	)
 	return i, err
 }
@@ -184,7 +191,7 @@ func (q *Queries) GetLearningSnapshot(ctx context.Context, arg GetLearningSnapsh
 const getPost = `-- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
-       target_length, finalized_revision, finalized_at, purpose_id
+       target_length, finalized_revision, finalized_at, purpose_id, target_language, content_language
 FROM posts WHERE slug = ?
 `
 
@@ -210,23 +217,27 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 		&i.FinalizedRevision,
 		&i.FinalizedAt,
 		&i.PurposeID,
+		&i.TargetLanguage,
+		&i.ContentLanguage,
 	)
 	return i, err
 }
 
 const listPostsByUser = `-- name: ListPostsByUser :many
-SELECT slug, title, content, status, updated_at, voice_id, purpose_id
+SELECT slug, title, content, status, updated_at, voice_id, purpose_id, target_language, content_language
 FROM posts WHERE user_id = ? ORDER BY updated_at DESC, slug DESC
 `
 
 type ListPostsByUserRow struct {
-	Slug      string
-	Title     string
-	Content   sql.NullString
-	Status    string
-	UpdatedAt string
-	VoiceID   string
-	PurposeID sql.NullString
+	Slug            string
+	Title           string
+	Content         sql.NullString
+	Status          string
+	UpdatedAt       string
+	VoiceID         string
+	PurposeID       sql.NullString
+	TargetLanguage  string
+	ContentLanguage sql.NullString
 }
 
 func (q *Queries) ListPostsByUser(ctx context.Context, userID string) ([]ListPostsByUserRow, error) {
@@ -246,6 +257,8 @@ func (q *Queries) ListPostsByUser(ctx context.Context, userID string) ([]ListPos
 			&i.UpdatedAt,
 			&i.VoiceID,
 			&i.PurposeID,
+			&i.TargetLanguage,
+			&i.ContentLanguage,
 		); err != nil {
 			return nil, err
 		}
@@ -357,32 +370,34 @@ func (q *Queries) SavePostGenerationOptions(ctx context.Context, arg SavePostGen
 }
 
 const updateGeneratedContent = `-- name: UpdateGeneratedContent :execrows
-UPDATE posts SET content = ?, machine_baseline = ?, machine_baseline_voice_id = voice_id,
+UPDATE posts SET content = ?1, machine_baseline = ?2, machine_baseline_voice_id = voice_id,
+    content_language = ?3,
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
-    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?
-WHERE slug = ? AND user_id = ?
-  AND (content IS NULL OR content <> ? OR status <> 'review'
-       OR machine_baseline_revision <> content_revision)
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?4
+WHERE slug = ?5 AND user_id = ?6
+  AND (content IS NULL OR content <> ?1 OR status <> 'review'
+       OR machine_baseline_revision <> content_revision
+       OR content_language IS NULL OR content_language <> ?3)
 `
 
 type UpdateGeneratedContentParams struct {
 	Content         sql.NullString
 	MachineBaseline sql.NullString
+	ContentLanguage sql.NullString
 	UpdatedAt       string
 	Slug            string
 	UserID          string
-	Content_2       sql.NullString
 }
 
 func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGeneratedContentParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateGeneratedContent,
 		arg.Content,
 		arg.MachineBaseline,
+		arg.ContentLanguage,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
-		arg.Content_2,
 	)
 	if err != nil {
 		return 0, err
@@ -391,22 +406,26 @@ func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGenerate
 }
 
 const updatePostDraft = `-- name: UpdatePostDraft :execrows
-UPDATE posts SET title = ?, memo = ?, updated_at = ?
-WHERE slug = ? AND user_id = ?
+UPDATE posts SET title = ?1, memo = ?2,
+    target_language = COALESCE(?3, target_language),
+    updated_at = ?4
+WHERE slug = ?5 AND user_id = ?6
 `
 
 type UpdatePostDraftParams struct {
-	Title     string
-	Memo      string
-	UpdatedAt string
-	Slug      string
-	UserID    string
+	Title          string
+	Memo           string
+	TargetLanguage sql.NullString
+	UpdatedAt      string
+	Slug           string
+	UserID         string
 }
 
 func (q *Queries) UpdatePostDraft(ctx context.Context, arg UpdatePostDraftParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updatePostDraft,
 		arg.Title,
 		arg.Memo,
+		arg.TargetLanguage,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

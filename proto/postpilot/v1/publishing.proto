@@ -3,6 +3,8 @@ syntax = "proto3";
 package postpilot.v1;
 
 import "postpilot/v1/post.proto";
+import "postpilot/v1/error.proto";
+import "postpilot/v1/language.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
@@ -113,6 +115,9 @@ message PublishManifest {
   string expected_platform_account_id = 8;
   repeated StagedPublishAsset assets = 9;
   string category_name = 10;
+  ContentLanguage target_language = 11;
+  ContentLanguage content_language = 12;
+  ContentLanguage voice_source_language = 13;
 }
 
 message PublishJob {
@@ -126,13 +131,17 @@ message PublishJob {
   int64 content_revision = 8;
   string category_id = 9;
   PublishVisibility visibility = 10;
-  string error_code = 11;
-  string error_message = 12;
+  string error_code = 11 [deprecated = true];
+  string error_message = 12 [deprecated = true];
   string platform_post_url = 13;
   string created_at = 14;
   string updated_at = 15;
   string committed_at = 16;
   string published_at = 17;
+  ContentLanguage target_language = 18;
+  ContentLanguage content_language = 19;
+  ContentLanguage voice_source_language = 20;
+  Failure failure = 21;
 }
 
 message CreateAgentPairingRequest { string label = 1; }

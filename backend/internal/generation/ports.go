@@ -13,17 +13,17 @@ type ImageReader interface {
 type Posts interface {
 	AttachedImages(ctx context.Context, userID, slug string) (PostInput, error)
 	SetObservations(ctx context.Context, userID, slug string, observations []Observation) error
-	SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent) error
+	SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent, language Language) error
 }
 
 // Profiles projects exactly the post's voice; the voice context never falls back to a
 // sibling voice, so an empty voice prompts as empty.
 type Profiles interface {
-	ProfileForPrompt(ctx context.Context, userID, voiceID string) (Profile, error)
+	ProfileForPrompt(ctx context.Context, userID, voiceID string, target Language) (Profile, error)
 }
 
 type TopicProfiles interface {
-	ProfileForPromptForTopic(ctx context.Context, userID, voiceID, topic string, tags []string) (Profile, error)
+	ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target Language, topic string, tags []string) (Profile, error)
 }
 
 type RuleWriter interface {

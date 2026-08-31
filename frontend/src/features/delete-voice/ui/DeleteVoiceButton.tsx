@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Voice } from '@/entities/voice'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
 import { useDeleteVoice } from '../api/useDeleteVoice'
@@ -12,6 +13,7 @@ export function DeleteVoiceButton({
   ownerId: string
   voice: Pick<Voice, 'id' | 'name' | 'isDefault'>
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const remove = useDeleteVoice(ownerId)
   const [confirming, setConfirming] = useState(false)
   if (voice.isDefault) return null
@@ -33,22 +35,31 @@ export function DeleteVoiceButton({
         variant="danger"
         disabled={remove.isPending}
         onClick={() => setConfirming(true)}
-        aria-label={`${voice.name} 삭제`}
+        aria-label={t('delete.aria', { ns: 'voices', name: voice.name })}
       >
-        삭제
+        {t('action.delete', { ns: 'common' })}
       </Button>
-      {remove.isError && <FieldMessage className="w-full">{remove.errorMessage}</FieldMessage>}
+      {remove.isError && (
+        <FieldMessage className="w-full">
+          {remove.failure?.reason === 'VOICE_BUSY' ||
+          remove.failure?.reason === 'VOICE_DEFAULT_DELETE_FORBIDDEN'
+            ? t('error.deleteBlockedDetail', {
+                ns: 'voices',
+                error: remove.errorMessage,
+                interpolation: { escapeValue: false },
+              })
+            : remove.errorMessage}
+        </FieldMessage>
+      )}
       <Dialog
         open={confirming}
-        title="이 말투를 삭제할까요?"
-        confirmLabel="삭제"
+        title={t('delete.title', { ns: 'voices' })}
+        confirmLabel={t('action.delete', { ns: 'common' })}
         pending={remove.isPending}
         onClose={() => setConfirming(false)}
         onConfirm={() => void confirm()}
       >
-        <span className="break-words">‘{voice.name}’</span>로 쓴 글과 학습 기록은 그대로 남아요. 그
-        글에는 삭제된 말투로 표시되고, 복원하거나 다른 말투로 바꾸기 전에는 AI 생성·수정·학습을 할
-        수 없어요. 새 글의 말투 목록에서는 바로 사라집니다.
+        {t('delete.description', { ns: 'voices', name: voice.name })}
       </Dialog>
     </>
   )

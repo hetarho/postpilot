@@ -38,8 +38,9 @@ counter. The backend is authoritative; the frontend mirrors the values only for 
   runs **one statement per present field** inside one transaction, so a field the request omitted is never named by any
   statement — two fields edited from two tabs cannot overwrite each other, and no read-modify-write can restore a stale
   value. A present empty `description` clears it; a present empty `name` or `instructions` is refused.
-- A duplicate name is `AlreadyExists` with a Korean message; a bound violation is `InvalidArgument` naming the field and
-  both counts. The wire message is what the form shows, verbatim.
+- A duplicate name is `AlreadyExists` with reason `PURPOSE_NAME_TAKEN`; a bound violation is `InvalidArgument` with
+  `PURPOSE_FIELD_TOO_LONG` and allowlisted `field`, `max`, and `actual` params. The frontend renders these stable
+  details in the active locale and never treats raw wire prose as translation input.
 
 ## Deletion detaches, never cascades
 

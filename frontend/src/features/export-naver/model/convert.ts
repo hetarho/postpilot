@@ -1,9 +1,13 @@
 import type { PostImage } from '@/entities/image'
-import { BlockType, type PostContent } from '@/shared/api'
+import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import { walkBlocks } from '@/shared/lib'
 
 /** Plain text for SmartEditor ONE. The post title is copied separately by the panel. */
-export function toNaver(content: PostContent, images: readonly PostImage[]): string {
+export function toNaver(
+  content: PostContent,
+  images: readonly PostImage[],
+  contentLanguage: ContentLanguage,
+): string {
   // The attachment objects carry expiring view URLs; export contracts deliberately use
   // only canonical block filenames, including for an unknown-but-already-validated file.
   void images
@@ -13,7 +17,9 @@ export function toNaver(content: PostContent, images: readonly PostImage[]): str
       case BlockType.HEADING:
         return block.content
       case BlockType.IMAGE:
-        return block.caption ? `[사진 ${block.file} — ${block.caption}]` : `[사진 ${block.file}]`
+        return block.caption
+          ? `[${contentLanguage === 'en' ? 'Photo' : '사진'} ${block.file} — ${block.caption}]`
+          : `[${contentLanguage === 'en' ? 'Photo' : '사진'} ${block.file}]`
       case BlockType.QUOTE:
         return `“${block.content}”`
       case BlockType.LIST:

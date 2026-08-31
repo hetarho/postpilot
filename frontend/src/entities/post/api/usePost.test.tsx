@@ -1,10 +1,17 @@
 import { create } from '@bufbuild/protobuf'
-import { createRouterTransport } from '@connectrpc/connect'
+import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { QueryClient } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { expect, it } from 'vitest'
-import { GetPostResponseSchema, ImageSchema, PostSchema, PostService } from '@/shared/api'
+import {
+  contentLanguageToProto,
+  GetPostResponseSchema,
+  ImageSchema,
+  PostSchema,
+  PostService,
+} from '@/shared/api'
 import { withProviders } from '@/test/session'
+import { connectAppError } from '@/test/app-error'
 import { getPostQueryKey } from './post-queries'
 import { usePost } from './usePost'
 
@@ -17,6 +24,7 @@ it('refreshes image view URLs whenever a cached post is entered', async () => {
       return create(GetPostResponseSchema, {
         post: create(PostSchema, {
           slug,
+          targetLanguage: contentLanguageToProto('ko'),
           images: [
             create(ImageSchema, {
               id: 'image-1',
@@ -38,6 +46,7 @@ it('refreshes image view URLs whenever a cached post is entered', async () => {
     create(GetPostResponseSchema, {
       post: create(PostSchema, {
         slug,
+        targetLanguage: contentLanguageToProto('ko'),
         images: [
           create(ImageSchema, {
             id: 'image-1',
@@ -71,7 +80,11 @@ it('exposes the required mount refresh even while cached post detail is availabl
     rpc(PostService.method.getPost, async () => {
       await refreshGate
       return create(GetPostResponseSchema, {
-        post: create(PostSchema, { slug, targetLength: 1_800 }),
+        post: create(PostSchema, {
+          slug,
+          targetLength: 1_800,
+          targetLanguage: contentLanguageToProto('ko'),
+        }),
       })
     })
   })
@@ -81,7 +94,11 @@ it('exposes the required mount refresh even while cached post detail is availabl
   queryClient.setQueryData(
     getPostQueryKey(transport, slug),
     create(GetPostResponseSchema, {
-      post: create(PostSchema, { slug, targetLength: 900 }),
+      post: create(PostSchema, {
+        slug,
+        targetLength: 900,
+        targetLanguage: contentLanguageToProto('ko'),
+      }),
     }),
   )
 
@@ -96,4 +113,41 @@ it('exposes the required mount refresh even while cached post detail is availabl
   releaseRefresh?.()
   await waitFor(() => expect(view.result.current.isFetching).toBe(false))
   expect(view.result.current.post?.targetLength).toBe(1_800)
+})
+
+it.each([
+  ['POST_FORBIDDEN' as const, Code.PermissionDenied],
+  ['POST_NOT_FOUND' as const, Code.NotFound],
+])('classifies only the structured %s reason as a semantic load failure', async (reason, code) => {
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(PostService.method.getPost, () => {
+      throw connectAppError(reason, code)
+    })
+  })
+  const view = renderHook(() => usePost('missing'), {
+    wrapper: withProviders(
+      transport,
+      new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    ),
+  })
+
+  await waitFor(() => expect(view.result.current.failure?.reason).toBe(reason))
+})
+
+it('does not infer a product reason from a Connect status without AppErrorDetail', async () => {
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(PostService.method.getPost, () => {
+      throw new ConnectError('private transport prose', Code.PermissionDenied)
+    })
+  })
+  const view = renderHook(() => usePost('private'), {
+    wrapper: withProviders(
+      transport,
+      new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    ),
+  })
+
+  await waitFor(() =>
+    expect(view.result.current.failure).toEqual({ reason: 'UNKNOWN_FAILURE', params: {} }),
+  )
 })

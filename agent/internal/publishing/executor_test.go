@@ -221,6 +221,18 @@ func TestExecutorReportsSafeFailureWhenPublisherDiesBeforeCommitFence(t *testing
 	if len(api.failKinds) != 1 || api.failKinds[0] != postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE {
 		t.Fatalf("pre-fence exit kinds = %v", api.failKinds)
 	}
+	if len(api.failDetails) != 1 || api.failDetails[0] != "redacted (17 bytes)" {
+		t.Fatalf("failure detail = %#v, want bounded redaction metadata", api.failDetails)
+	}
+	if strings.Contains(api.failDetails[0], "publisher crashed") {
+		t.Fatalf("raw local detail crossed the RPC boundary: %q", api.failDetails[0])
+	}
+}
+
+func TestRedactedLocalDetailKeepsEmptyDiagnosticsAbsent(t *testing.T) {
+	if got := redactedLocalDetail(" \n\t "); got != "" {
+		t.Fatalf("empty diagnostic = %q", got)
+	}
 }
 
 func TestExecutorUsesAuthenticatedFinishInsteadOfPublisherReturn(t *testing.T) {

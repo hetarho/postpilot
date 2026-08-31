@@ -11,7 +11,7 @@ export function hasExperimentActions(experiment: ModelExperiment): boolean {
   return (
     needsExperimentReview(experiment.status) ||
     experiment.status === 'decided' ||
-    Boolean(experiment.applyError) ||
-    Boolean(experiment.adoptionError)
+    Boolean(experiment.applyFailure) ||
+    Boolean(experiment.adoptionFailure)
   )
 }

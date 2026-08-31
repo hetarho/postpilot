@@ -10,6 +10,10 @@ lint:
   # These unprefixed enum names are the PostContent protojson contract emitted by LLMs.
   except:
     - ENUM_VALUE_PREFIX
+    # These shared response envelopes predate Job 32 and are part of the generated-client API.
+    # Keep their source-compatible names instead of renaming public messages only for lint shape.
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_RESPONSE_STANDARD_NAME
 breaking:
   use:
     - FILE

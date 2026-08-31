@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import type { PostDraft } from '@/entities/post'
-import { Button, Dialog, FieldMessage, Notice } from '@/shared/ui'
+import { useTranslation } from 'react-i18next'
+import { ContentRevisionConflictError, type PostDraft } from '@/entities/post'
+import { appFailureFromConnect, type AppFailure } from '@/shared/api'
+import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
 import { useFinalizePost } from '../api/useFinalizePost'
 import type { VoiceLearning } from '../model/useVoiceLearning'
 
@@ -25,9 +27,11 @@ export function FinalizeActions({
   beforeFinalize: () => Promise<bigint>
   onFinalized: () => void
 }) {
+  const { t } = useTranslation('posts')
   const finalize = useFinalizePost()
   const [confirming, setConfirming] = useState<FinalizeMode | ''>('')
   const [preparing, setPreparing] = useState<FinalizeMode | ''>('')
+  const [prepareFailure, setPrepareFailure] = useState<AppFailure | 'content-conflict'>()
   // The status is the state (policy/posts.md): a content save after a finalize returns the post
   // to `review`, so this comes back on its own when the user edits again.
   const finalized = post.status === 'finalized'
@@ -35,8 +39,20 @@ export function FinalizeActions({
   const run = async (mode: FinalizeMode) => {
     if (mode === 'learn' && !learning.canLearn) return
     setPreparing(mode)
+    setPrepareFailure(undefined)
+    let revision: bigint
     try {
-      const revision = await beforeFinalize()
+      revision = await beforeFinalize()
+    } catch (cause) {
+      setPrepareFailure(
+        cause instanceof ContentRevisionConflictError
+          ? 'content-conflict'
+          : appFailureFromConnect(cause),
+      )
+      setPreparing('')
+      return
+    }
+    try {
       await finalize.finalize(post.slug, revision)
       setConfirming('')
       // A learning failure does not undo the finalize written immediately before it, and it is
@@ -53,21 +69,32 @@ export function FinalizeActions({
   return (
     <section aria-labelledby="finalize-heading" className="mt-12">
       <h2 id="finalize-heading" className="text-lg font-semibold tracking-tight">
-        확정
+        {t('finalize.title')}
       </h2>
       <p className="text-content-secondary mt-2 text-sm leading-relaxed">
-        {finalized
-          ? '이 내용은 이미 확정했어요. 글 완성에서 내보내거나 발행할 수 있습니다.'
-          : '다 다듬었다면 지금 내용을 확정해 주세요. 확정하면 글 완성으로 넘어갑니다.'}
+        {finalized ? t('finalize.already') : t('finalize.description')}
       </p>
-      {finalize.isError && <FieldMessage className="mt-2">글을 확정하지 못했어요.</FieldMessage>}
+      {finalize.error && (
+        <Notice tone="danger" role="alert" className="mt-2">
+          <AppFailureMessage failure={appFailureFromConnect(finalize.error)} />
+        </Notice>
+      )}
+      {prepareFailure && (
+        <Notice tone="danger" role="alert" className="mt-2">
+          {prepareFailure === 'content-conflict' ? (
+            t('edit.conflict')
+          ) : (
+            <AppFailureMessage failure={prepareFailure} />
+          )}
+        </Notice>
+      )}
       {finalized ? (
         <>
           <Notice tone="success" role="status" className="mt-3">
-            이 revision을 확정했어요.
+            {t('finalize.success')}
           </Notice>
           <Button variant="secondary" className="mt-4" onClick={onFinalized}>
-            글 완성으로 가기
+            {t('finalize.goFinish')}
           </Button>
         </>
       ) : (
@@ -78,9 +105,7 @@ export function FinalizeActions({
             </p>
           ) : (
             learning.needsAnalyzeModel && (
-              <p className="text-content-tertiary mt-2 text-sm">
-                말투 학습을 하려면 분석 모델을 선택해 주세요. 확정만 하는 데에는 필요하지 않아요.
-              </p>
+              <p className="text-content-tertiary mt-2 text-sm">{t('finalize.analyzeHelp')}</p>
             )
           )}
           <div className="mt-4 flex flex-wrap gap-2">
@@ -90,7 +115,7 @@ export function FinalizeActions({
               pending={preparing === 'finalize'}
               onClick={() => setConfirming('finalize')}
             >
-              확정
+              {t('finalize.action')}
             </Button>
             <Button
               variant="cta"
@@ -98,23 +123,22 @@ export function FinalizeActions({
               pending={preparing === 'learn'}
               onClick={() => setConfirming('learn')}
             >
-              확정하고 말투 학습
+              {t('finalize.actionLearn')}
             </Button>
           </div>
         </>
       )}
       <Dialog
         open={Boolean(confirming)}
-        title="이 revision을 확정할까요?"
-        confirmLabel={confirming === 'learn' ? '확정하고 학습' : '확정'}
+        title={t('finalize.confirmTitle')}
+        confirmLabel={confirming === 'learn' ? t('finalize.confirmLearn') : t('finalize.action')}
         pending={Boolean(preparing)}
         onClose={() => setConfirming('')}
         onConfirm={() => confirming && void run(confirming)}
       >
-        현재 편집 내용을 먼저 저장한 뒤 정확한 revision을 확정하고 글 완성으로 넘어갑니다.
         {confirming === 'learn'
-          ? ' 그 다음에만 말투 학습을 시작합니다.'
-          : ' 모델 호출이나 말투 학습은 하지 않습니다.'}
+          ? t('finalize.confirmLearnDescription')
+          : t('finalize.confirmOnlyDescription')}
       </Dialog>
     </section>
   )

@@ -1,0 +1,116 @@
+export const publishing = {
+  title: 'Publish',
+  stage: {
+    queued: 'Waiting for a Mac connection',
+    claimed: 'The Mac accepted the job',
+    preparing: 'Preparing to publish',
+    openingEditor: 'Opening the Naver editor',
+    fillingContent: 'Entering the post',
+    uploadingPhotos: 'Uploading photos',
+    committing: 'Publishing to Naver',
+    verifying: 'Verifying the published post',
+    published: 'Published',
+    progress: 'Publishing in progress',
+  },
+  visibility: { public: 'Public', private: 'Private' },
+  lastSeen: 'Last seen',
+  configure: {
+    label: 'Connection name',
+    category: 'Default category',
+    visibility: 'Default visibility',
+    save: 'Save defaults',
+    failed: 'Could not save the defaults.',
+  },
+  pair: {
+    defaultLabel: 'My Mac',
+    title: 'Connect a Mac',
+    description:
+      'Your Naver login stays only in the dedicated browser on your Mac. Enter the code below in the Mac settings screen.',
+    label: 'Connection name',
+    create: 'Create connection code',
+    code: 'Connection code',
+    expires: 'This code can be used once until {{date}}.',
+    failed: 'Could not create a connection code.',
+  },
+  retry: {
+    pending: 'Requesting again…',
+    action: 'Retry after restoring login',
+    failed: 'Could not restart the same publishing job. Check the Mac connection and category.',
+  },
+  revoke: {
+    action: 'Disconnect',
+    failed: 'Could not disconnect the Mac.',
+    title: 'Disconnect this Mac?',
+    description:
+      "{{label}}'s publishing token will be invalidated immediately. The Naver login and browser profile remain on the Mac until you remove them there.",
+  },
+  cancelRetained: {
+    action: 'Cancel recovery job',
+    failed: 'Could not cancel the recovery job.',
+    title: 'Cancel this retained publishing job?',
+    confirm: 'Cancel job',
+    description:
+      'The retained content and temporary photos for {{postSlug}} will be deleted. This job cannot be retried afterward.',
+  },
+  startError: {
+    aborted: 'The post changed in another screen. Refresh and review it again.',
+    alreadyExists: 'This post is already being published or has been published.',
+    failedPrecondition: 'Check the finalized post, Mac connection, and category.',
+    permissionDenied: 'This Mac connection cannot publish the post.',
+    unknown: 'Could not save the publishing request. Try again.',
+  },
+  form: {
+    unavailableAgent:
+      'The Mac assigned to this job is unavailable, so Postpilot did not retry it through a different Mac. Reactivate the connection or cancel this job.',
+    cancel: 'Cancel publishing',
+    cancelFailed: 'Could not cancel publishing.',
+    finalizeFirst: 'Finalize the current content first to publish this exact version.',
+    offline:
+      'Even if the Mac is not responding now, the request stays on the server and starts automatically when the agent comes online.',
+    agent: 'Mac connection',
+    category: 'Category',
+    visibility: 'Visibility',
+    changedFinalize: 'Finalize the changes you just made before publishing.',
+    saveFailed: 'Publishing did not start because the changes could not be saved.',
+    retry: 'Retry safely',
+    publish: 'Publish to Naver',
+    confirmTitle: 'Publish to Naver now?',
+    confirmDescription:
+      "This will publish to the {{category}} category on the {{account}} blog. The Mac agent enters the photos and content, then presses Naver's final publish button without asking for another confirmation.",
+  },
+  agents: {
+    title: 'Publishing Macs',
+    description:
+      'Each account uses a separate Mac token, Hermes profile, and dedicated browser profile.',
+    list: 'Connections',
+    loadFailed: 'Could not load the connections.',
+    empty: 'No Macs are connected yet.',
+    naverPending: 'Waiting for Naver verification',
+    revoked: 'Revoked',
+    ready: 'Ready',
+    setup: 'Setup needed',
+    retryTitle: 'Retry after restoring login',
+    retryDescription:
+      'Resolve login, CAPTCHA, or two-factor authentication in the same dedicated browser on the Mac, then resume the retained publishing job. You can resume here even if the original post was deleted.',
+    retryLoading: 'Loading retained jobs…',
+    retryLoadFailed: 'Could not load retained jobs.',
+    retryEmpty: 'There are no jobs waiting to retry after login recovery.',
+    loginCheck: 'Check the dedicated Naver login on the Mac.',
+  },
+  panel: {
+    description:
+      'A connected Mac opens the Naver editor, enters the post and JPEG photos, and completes publishing.',
+    loading: 'Loading publishing status…',
+    loadFailed: 'Could not load publishing status.',
+    reload: 'Reload publishing status',
+    noAgent: 'No Mac is ready to publish yet. Your Naver login never leaves the Mac.',
+    connectAgent: 'Connect a Mac',
+    published: 'Publishing is complete.',
+    viewPost: 'View on Naver',
+    failed: 'The job stopped safely before final publishing.',
+    needsAttention:
+      "Check the Naver login in the Mac's dedicated browser, then retry the same job below.",
+    outcomeUnknown:
+      'The final publish button may have been pressed. To prevent duplicates, the job will not retry automatically. Check Naver Blog directly.',
+  },
+} as const

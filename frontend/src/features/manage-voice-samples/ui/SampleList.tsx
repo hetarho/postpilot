@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { type VoiceSample, useDeleteVoiceSample } from '@/entities/voice'
-import { formatRelativeTime } from '@/shared/lib'
+import { formatNumber, formatRelativeTime } from '@/shared/lib'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
 
 export function SampleList({
@@ -16,6 +17,7 @@ export function SampleList({
   onAnalysisStarted: (jobId: string) => void
   blocked?: boolean
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const removeSample = useDeleteVoiceSample(ownerId, voiceId)
   // The sample the confirmation sheet is open for. `window.confirm` is not an option for a
   // delete the user repeats while pruning a profile: mobile Chrome and Safari offer to suppress
@@ -37,9 +39,11 @@ export function SampleList({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold tracking-tight">학습 샘플</h2>
+      <h2 className="text-lg font-semibold tracking-tight">
+        {t('samples.title', { ns: 'voices' })}
+      </h2>
       {samples.length === 0 ? (
-        <p className="text-content-tertiary mt-4 text-sm">아직 학습한 글이 없어요.</p>
+        <p className="text-content-tertiary mt-4 text-sm">{t('samples.empty', { ns: 'voices' })}</p>
       ) : (
         <ul className="divide-divider mt-3 divide-y">
           {samples.map((sample) => (
@@ -47,16 +51,21 @@ export function SampleList({
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm">{sample.label}</span>
                 <span className="text-content-tertiary mt-1 block text-xs">
-                  {sample.chars}자 · {formatRelativeTime(sample.createdAt)}
+                  {t('samples.meta', {
+                    ns: 'voices',
+                    count: sample.chars,
+                    characters: formatNumber(sample.chars),
+                    time: formatRelativeTime(sample.createdAt),
+                  })}
                 </span>
               </span>
               <Button
                 variant="danger"
                 onClick={() => setConfirming(sample)}
                 disabled={blocked || removeSample.isPending}
-                aria-label={`${sample.label} 삭제`}
+                aria-label={t('samples.deleteAria', { ns: 'voices', label: sample.label })}
               >
-                삭제
+                {t('action.delete', { ns: 'common' })}
               </Button>
             </li>
           ))}
@@ -67,8 +76,8 @@ export function SampleList({
       )}
       <Dialog
         open={confirming !== null}
-        title="샘플을 삭제할까요?"
-        confirmLabel="삭제"
+        title={t('samples.deleteTitle', { ns: 'voices' })}
+        confirmLabel={t('action.delete', { ns: 'common' })}
         pending={removeSample.isPending}
         onClose={() => setConfirming(null)}
         onConfirm={() => {
@@ -77,8 +86,7 @@ export function SampleList({
       >
         {/* The label is stored text the user pasted, so it breaks inside the sheet rather than
             widening it (§3.2). */}
-        <span className="break-words">"{confirming?.label}"</span>을(를) 지우면 남은 샘플로 문체를
-        다시 분석해요.
+        {t('samples.deleteDescription', { ns: 'voices', label: confirming?.label ?? '' })}
       </Dialog>
     </section>
   )

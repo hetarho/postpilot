@@ -36,8 +36,8 @@ func (f fakeVoices) Voices(_ context.Context, userID string) ([]VoiceRef, error)
 
 func testVoices() fakeVoices {
 	return fakeVoices{
-		alice: {{ID: aliceVoice, Name: "기본 말투"}, {ID: aliceReview, Name: "리뷰"}, {ID: aliceDeleted, Name: "옛 말투", Deleted: true}},
-		bob:   {{ID: bobVoice, Name: "기본 말투"}},
+		alice: {{ID: aliceVoice, Name: "기본 말투", SourceLanguage: LanguageKorean}, {ID: aliceReview, Name: "리뷰", SourceLanguage: LanguageKorean}, {ID: aliceDeleted, Name: "옛 말투", Deleted: true, SourceLanguage: LanguageKorean}},
+		bob:   {{ID: bobVoice, Name: "기본 말투", SourceLanguage: LanguageKorean}},
 	}
 }
 
@@ -65,7 +65,8 @@ func defaultVoiceFor(userID string) string { return "voice-" + userID }
 func mustCreatePost(t *testing.T, svc *Service, userID, title string) Post {
 	t.Helper()
 	voiceID := defaultVoiceFor(userID)
-	created, err := svc.SaveDraft(context.Background(), userID, "", title, "", &voiceID, nil)
+	language := LanguageKorean
+	created, err := svc.SaveDraft(context.Background(), userID, "", title, "", &voiceID, nil, &language)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
@@ -81,7 +82,8 @@ func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 	ctx := context.Background()
 
 	voiceID := aliceVoice
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "first", &voiceID, nil)
+	language := LanguageKorean
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "first", &voiceID, nil, &language)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -95,7 +97,7 @@ func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 		t.Errorf("status = %q, want draft", created.Status)
 	}
 
-	updated, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "second", nil, nil)
+	updated, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "second", nil, nil, nil)
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -113,7 +115,7 @@ func TestSaveDraftKeepsTheSlugOnRetitle(t *testing.T) {
 	svc, _, _ := newTestService(t)
 	created := mustCreatePost(t, svc, alice, "Jeju")
 
-	renamed, err := svc.SaveDraft(context.Background(), alice, created.Slug, "Something else entirely", "", nil, nil)
+	renamed, err := svc.SaveDraft(context.Background(), alice, created.Slug, "Something else entirely", "", nil, nil, nil)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
@@ -169,7 +171,7 @@ func TestOwnership(t *testing.T) {
 		if _, err := svc.Get(ctx, bob, mine.Slug); !errors.Is(err, ErrForbidden) {
 			t.Errorf("Get = %v, want ErrForbidden", err)
 		}
-		if _, err := svc.SaveDraft(ctx, bob, mine.Slug, "x", "y", nil, nil); !errors.Is(err, ErrForbidden) {
+		if _, err := svc.SaveDraft(ctx, bob, mine.Slug, "x", "y", nil, nil, nil); !errors.Is(err, ErrForbidden) {
 			t.Errorf("SaveDraft = %v, want ErrForbidden", err)
 		}
 		if _, _, _, err := svc.CreateUpload(ctx, bob, mine.Slug, "a.jpg"); !errors.Is(err, ErrForbidden) {
@@ -181,7 +183,7 @@ func TestOwnership(t *testing.T) {
 		if _, err := svc.Get(ctx, alice, "nope"); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Get = %v, want ErrNotFound", err)
 		}
-		if _, err := svc.SaveDraft(ctx, alice, "nope", "x", "y", nil, nil); !errors.Is(err, ErrNotFound) {
+		if _, err := svc.SaveDraft(ctx, alice, "nope", "x", "y", nil, nil, nil); !errors.Is(err, ErrNotFound) {
 			t.Errorf("SaveDraft = %v, want ErrNotFound", err)
 		}
 	})
@@ -537,12 +539,12 @@ func TestWinnerApplicationIsIdempotentAtPostBoundary(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	found := mustCreatePost(t, svc, alice, "Jeju")
 	content := PostContent{Title: "generated", Blocks: []Block{{Type: BlockText, Content: "body"}}}
-	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content, LanguageKorean); err != nil {
 		t.Fatal(err)
 	}
 	first, _ := store.GetPost(context.Background(), found.Slug)
 	svc.now = func() time.Time { return testNow.Add(time.Hour) }
-	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content, LanguageKorean); err != nil {
 		t.Fatal(err)
 	}
 	second, _ := store.GetPost(context.Background(), found.Slug)
@@ -556,7 +558,7 @@ func TestWinnerApplicationIsIdempotentAtPostBoundary(t *testing.T) {
 	if _, err := svc.SaveContent(context.Background(), alice, found.Slug, manual, first.ContentRevision); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, manual); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, manual, LanguageKorean); err != nil {
 		t.Fatal(err)
 	}
 	third, _ := store.GetPost(context.Background(), found.Slug)
@@ -582,7 +584,7 @@ func TestPublishingSnapshotIsExactFinalizedDetachedRead(t *testing.T) {
 		{Type: BlockList, Items: []string{"하나", "둘"}},
 		{Type: BlockImage, File: "photo.jpg", Caption: "바다"},
 	}}
-	if err := svc.SetGeneratedContent(ctx, alice, post.Slug, content); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, post.Slug, content, LanguageKorean); err != nil {
 		t.Fatal(err)
 	}
 	current, err := store.GetPost(ctx, post.Slug)
@@ -727,7 +729,8 @@ func TestCreatePostRetriesWhenTheSlugIsTakenMidFlight(t *testing.T) {
 	}
 
 	voiceID := aliceVoice
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, nil)
+	language := LanguageKorean
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, nil, &language)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}

@@ -1,9 +1,20 @@
 import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import { useSelectionSavePending, useStageSelection } from '@/entities/model-catalog'
-import { DELETED_VOICE_AI_REASON, type VoiceRef } from '@/entities/voice'
+import { ContentRevisionConflictError } from '@/entities/post'
+import { deletedVoiceAIReason, type VoiceRef } from '@/entities/voice'
+import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { REVISION_INSTRUCTION_MAX_CHARS } from '@/shared/config'
-import { Button, Checkbox, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  Checkbox,
+  FieldLabel,
+  FieldMessage,
+  Notice,
+  Textarea,
+} from '@/shared/ui'
 import { useStartRevision } from '../api/useStartRevision'
 
 interface ReviseFormProps {
@@ -11,6 +22,8 @@ interface ReviseFormProps {
   postSlug: string
   /** The post's voice: a deleted one refuses revision before any provider call. */
   voice: Pick<VoiceRef, 'id' | 'deleted'>
+  /** The revision itself stays available; only publishing its sentence as a voice rule is unsafe. */
+  ruleLanguageMismatch?: boolean
   activeJob?: GenerationJob
   jobPending?: boolean
   onStarted: (jobId: string) => void
@@ -23,12 +36,22 @@ export interface ReviseFormHandle {
 
 /** Replaces the current canonical content through one durable `revise` job. */
 export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function ReviseForm(
-  { ownerId, postSlug, voice, activeJob, jobPending = false, onStarted, beforeStart },
+  {
+    ownerId,
+    postSlug,
+    voice,
+    ruleLanguageMismatch = false,
+    activeJob,
+    jobPending = false,
+    onStarted,
+    beforeStart,
+  },
   ref,
 ) {
+  const { t } = useTranslation('posts')
   const [instruction, setInstruction] = useState('')
   const [saveAsRule, setSaveAsRule] = useState(false)
-  const [prepareError, setPrepareError] = useState(false)
+  const [prepareFailure, setPrepareFailure] = useState<AppFailure | 'content-conflict'>()
   const write = useStageSelection('write')
   const selectionSaving = useSelectionSavePending()
   const startRevision = useStartRevision(ownerId, voice.id)
@@ -47,15 +70,24 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
 
   const start = useCallback(async () => {
     if (disabled || !write.selected) return
-    setPrepareError(false)
+    setPrepareFailure(undefined)
     try {
       await beforeStart?.()
-    } catch {
-      setPrepareError(true)
+    } catch (cause) {
+      setPrepareFailure(
+        cause instanceof ContentRevisionConflictError
+          ? 'content-conflict'
+          : appFailureFromConnect(cause),
+      )
       return
     }
     try {
-      const response = await startRevision.start(postSlug, trimmed, saveAsRule, write.selected)
+      const response = await startRevision.start(
+        postSlug,
+        trimmed,
+        saveAsRule && !ruleLanguageMismatch,
+        write.selected,
+      )
       onStarted(response.jobId)
     } catch {
       // The mutation owns and renders the transport/provider error.
@@ -65,6 +97,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
     disabled,
     onStarted,
     postSlug,
+    ruleLanguageMismatch,
     saveAsRule,
     startRevision,
     trimmed,
@@ -74,23 +107,23 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
   useImperativeHandle(ref, () => ({ start: () => void start() }), [start])
 
   const blocker = voiceBlocked
-    ? DELETED_VOICE_AI_REASON
+    ? deletedVoiceAIReason()
     : jobPending
-      ? '수정 작업을 확인하는 중이에요.'
+      ? t('revision.blocked.jobChecking')
       : hasActiveJob
-        ? '다른 작업이 진행 중이에요.'
+        ? t('revision.blocked.activeJob')
         : selectionSaving || write.isPending
-          ? '작성 모델을 확인하는 중이에요.'
+          ? t('revision.blocked.modelChecking')
           : !write.selected
-            ? '작성 모델을 선택하세요.'
+            ? t('revision.blocked.model')
             : trimmed === ''
-              ? '수정 요청을 입력하세요.'
+              ? t('revision.blocked.instruction')
               : ''
 
   return (
     <section aria-labelledby="revision-heading" className="mt-10 pb-12">
       <h2 id="revision-heading" className="text-lg font-semibold tracking-tight">
-        AI로 수정
+        {t('revision.title')}
       </h2>
       <form
         className="mt-4 space-y-3"
@@ -99,7 +132,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           void start()
         }}
       >
-        <FieldLabel htmlFor="revision-instruction">수정 요청</FieldLabel>
+        <FieldLabel htmlFor="revision-instruction">{t('revision.instruction')}</FieldLabel>
         {/* A textarea, not a single-line field: at 360px one line shows ~20 of the 500 permitted
             Hangul, so an ordinary instruction scrolled its own beginning out of sight while it was
             being typed. `autoGrow` keeps it out of the page's scroll (§4.4); Return now inserts a
@@ -114,7 +147,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           autoCapitalize="sentences"
           enterKeyHint="enter"
           disabled={voiceBlocked || hasActiveJob || jobPending || startRevision.isPending}
-          placeholder="어떻게 고칠까요? 예: 더 짧게 · 존댓말로 · 카페 얘기 늘려줘"
+          placeholder={t('revision.placeholder')}
           onChange={(event) => setInstruction(event.target.value)}
         />
         {/* The cap used to stop the keystrokes with nothing on screen explaining why. */}
@@ -124,11 +157,22 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         <label className="text-content-secondary flex min-h-11 items-center gap-3 text-sm">
           <Checkbox
             checked={saveAsRule}
-            disabled={voiceBlocked || hasActiveJob || jobPending || startRevision.isPending}
+            disabled={
+              voiceBlocked ||
+              ruleLanguageMismatch ||
+              hasActiveJob ||
+              jobPending ||
+              startRevision.isPending
+            }
             onChange={(event) => setSaveAsRule(event.target.checked)}
           />
-          이 요청을 규칙으로 저장
+          {t('revision.saveAsRule')}
         </label>
+        {ruleLanguageMismatch && (
+          <p role="status" className="text-content-secondary text-sm">
+            {t('revision.ruleLanguageMismatch')}
+          </p>
+        )}
         {/* Validation and failure sit ABOVE the action, so the keyboard covering the bottom ~40%
             of the screen hides at most the button and never the reason it is disabled (§8.3). */}
         {blocker && (
@@ -137,7 +181,15 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           </p>
         )}
         {startRevision.isError && <FieldMessage>{startRevision.errorMessage}</FieldMessage>}
-        {prepareError && <FieldMessage>편집한 글을 먼저 저장하지 못했어요.</FieldMessage>}
+        {prepareFailure && (
+          <Notice tone="danger" role="alert">
+            {prepareFailure === 'content-conflict' ? (
+              t('edit.conflict')
+            ) : (
+              <AppFailureMessage failure={prepareFailure} />
+            )}
+          </Notice>
+        )}
         <Button
           type="submit"
           variant="secondary"
@@ -145,7 +197,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           disabled={disabled}
           pending={startRevision.isPending}
         >
-          수정
+          {t('revision.submit')}
         </Button>
       </form>
     </section>

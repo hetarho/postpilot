@@ -1,4 +1,4 @@
-import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
+import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create, type MessageInitShape } from '@bufbuild/protobuf'
 import {
   AddVoiceSampleResponseSchema,
@@ -27,7 +27,11 @@ import {
   StructuredVoiceProfileSchema,
   UpdateVoiceOverrideResponseSchema,
   type ProtoVoiceProfile,
+  contentLanguageFromProto,
+  contentLanguageToProto,
+  type ContentLanguage,
 } from '@/shared/api'
+import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -43,6 +47,7 @@ export interface FakeVoiceRow {
   name: string
   isDefault?: boolean
   deleted?: boolean
+  sourceLanguage?: ContentLanguage
 }
 
 /** The one voice every account starts with (the migration and adduser create it). The profile
@@ -72,6 +77,15 @@ export interface FakeVoiceOptions {
   learningFails?: boolean
   learningJobId?: string
   versions?: Array<{ version: bigint; origin: string }>
+  validations?: Array<{
+    id: string
+    voiceId: string
+    profileVersion: bigint
+    status: string
+    judgeEnabled?: boolean
+    totalCount?: number
+    yCount?: number
+  }>
   /** The typed profile the account has learned. Omitted, the profile reads as empty. */
   structured?: MessageInitShape<typeof StructuredVoiceProfileSchema>
   overrideFails?: boolean
@@ -83,6 +97,8 @@ export interface FakeVoiceOptions {
   listFails?: boolean
   /** Sentence feedback the fake received, for tests that assert *which* sentence was sent. */
   sentenceFeedback?: Array<{ sentenceRef: string; authoredText: string }>
+  /** Voice creates, including the concrete language that must never be inferred server-side. */
+  creates?: Array<{ name: string; sourceLanguage: ContentLanguage }>
 }
 
 const NOW = '2026-08-29T12:00:00Z'
@@ -93,6 +109,7 @@ interface VoiceRow {
   name: string
   isDefault: boolean
   deletedAt: string
+  sourceLanguage: ContentLanguage
 }
 
 export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOptions = {}) {
@@ -108,6 +125,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
         name: row.name,
         isDefault: row.isDefault ?? false,
         deletedAt: row.deleted ? NOW : '',
+        sourceLanguage: row.sourceLanguage ?? 'ko',
       },
     ]),
   )
@@ -124,6 +142,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       createdAt: NOW,
       updatedAt: NOW,
       deletedAt: row.deletedAt,
+      sourceLanguage: contentLanguageToProto(row.sourceLanguage),
     })
   const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
   // The server's order: active before deleted, the default first, then by name.
@@ -136,25 +155,25 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
         compare(a.id, b.id),
     )
   const owned = (voiceId: string): VoiceRow => {
-    if (!voiceId) throw new ConnectError('voice id is required', Code.InvalidArgument)
+    if (!voiceId) throw connectAppError('VOICE_REQUIRED', Code.InvalidArgument)
     const row = voices.get(voiceId)
-    if (!row) throw new ConnectError('voice not found', Code.NotFound)
+    if (!row) throw connectAppError('VOICE_NOT_FOUND', Code.NotFound)
     return row
   }
   const active = (voiceId: string): VoiceRow => {
     const row = owned(voiceId)
-    if (row.deletedAt) throw new ConnectError('voice is deleted', Code.FailedPrecondition)
+    if (row.deletedAt) throw connectAppError('VOICE_DELETED', Code.FailedPrecondition)
     return row
   }
   const validName = (name: string): string => {
     const trimmed = name.trim()
     const chars = Array.from(trimmed).length
-    if (chars === 0 || chars > NAME_MAX_CHARS) {
-      throw new ConnectError(
-        `voice name must be 1-${NAME_MAX_CHARS} characters`,
-        Code.InvalidArgument,
-      )
-    }
+    if (chars === 0) throw connectAppError('VOICE_NAME_REQUIRED', Code.InvalidArgument)
+    if (chars > NAME_MAX_CHARS)
+      throw connectAppError('VOICE_NAME_TOO_LONG', Code.InvalidArgument, {
+        actual: String(chars),
+        max: String(NAME_MAX_CHARS),
+      })
     return trimmed
   }
   const nameTaken = (name: string, except: string) =>
@@ -197,16 +216,26 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
 
   rpc(VoiceService.method.listVoices, () => {
     options.calls?.push('ListVoices')
-    if (options.listFails) throw new ConnectError('unavailable', Code.Unavailable)
+    if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListVoicesResponseSchema, { voices: directory().map(toProtoVoice) })
   })
 
   rpc(VoiceService.method.createVoice, (request) => {
     options.calls?.push('CreateVoice')
     const name = validName(request.name)
-    if (nameTaken(name, '')) throw new ConnectError('voice name is taken', Code.AlreadyExists)
+    if (nameTaken(name, '')) throw connectAppError('VOICE_NAME_TAKEN', Code.AlreadyExists)
+    const sourceLanguage = contentLanguageFromProto(request.sourceLanguage ?? 0)
+    if (!sourceLanguage)
+      throw connectAppError('VOICE_SOURCE_LANGUAGE_REQUIRED', Code.InvalidArgument)
+    options.creates?.push({ name, sourceLanguage })
     voiceSequence += 1
-    const row: VoiceRow = { id: `voice-${voiceSequence}`, name, isDefault: false, deletedAt: '' }
+    const row: VoiceRow = {
+      id: `voice-${voiceSequence}`,
+      name,
+      isDefault: false,
+      deletedAt: '',
+      sourceLanguage,
+    }
     voices.set(row.id, row)
     return create(CreateVoiceResponseSchema, { voice: toProtoVoice(row) })
   })
@@ -216,7 +245,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const row = owned(request.voiceId)
     const name = validName(request.name)
     if (!row.deletedAt && nameTaken(name, row.id)) {
-      throw new ConnectError('voice name is taken', Code.AlreadyExists)
+      throw connectAppError('VOICE_NAME_TAKEN', Code.AlreadyExists)
     }
     row.name = name
     return create(RenameVoiceResponseSchema, { voice: toProtoVoice(row) })
@@ -236,10 +265,10 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     if (!row.deletedAt) {
       const activeCount = [...voices.values()].filter((other) => !other.deletedAt).length
       if (row.isDefault || activeCount <= 1) {
-        throw new ConnectError('the default voice cannot be deleted', Code.FailedPrecondition)
+        throw connectAppError('VOICE_DEFAULT_DELETE_FORBIDDEN', Code.FailedPrecondition)
       }
       if (options.busyVoices?.includes(row.id)) {
-        throw new ConnectError('voice has active or undecided work', Code.FailedPrecondition)
+        throw connectAppError('VOICE_BUSY', Code.FailedPrecondition)
       }
       row.deletedAt = NOW
     }
@@ -251,7 +280,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const row = owned(request.voiceId)
     if (row.deletedAt) {
       if (nameTaken(row.name, row.id)) {
-        throw new ConnectError('voice name is taken', Code.AlreadyExists)
+        throw connectAppError('VOICE_NAME_TAKEN', Code.AlreadyExists)
       }
       row.deletedAt = ''
     }
@@ -281,7 +310,8 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const profile = profileOf(request.voiceId)
     active(request.voiceId)
     if (options.updateGate) await options.updateGate
-    if (options.updateFails) throw new ConnectError('update voice profile failed', Code.Internal)
+    if (options.updateFails)
+      throw connectAppError('VOICE_INVALID_LIFECYCLE', Code.FailedPrecondition)
     const next = create(VoiceProfileSchema, {
       ...profile,
       styleguide: request.styleguide ?? profile.styleguide,
@@ -297,7 +327,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const profile = profileOf(request.voiceId)
     active(request.voiceId)
     if (options.overrideFails)
-      throw new ConnectError('직접 설정을 저장하지 못했어요', Code.Internal)
+      throw connectAppError('VOICE_PROFILE_FIELD_REQUIRED', Code.InvalidArgument)
     // The response is the unchanged profile: what an override publishes is backend behavior with
     // its own coverage, and a fake that half-rebuilds a typed profile would only test itself.
     return create(UpdateVoiceOverrideResponseSchema, {
@@ -310,17 +340,21 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const profile = profileOf(request.voiceId)
     active(request.voiceId)
     if (options.addGate) await options.addGate
-    if (options.addError) throw new ConnectError(options.addError, Code.InvalidArgument)
+    if (options.addError)
+      throw connectAppError('VOICE_SAMPLE_TOO_SHORT', Code.InvalidArgument, {
+        actual: '199',
+        min: '200',
+      })
     const body = request.body.trim()
     const chars = Array.from(body).length
     if (chars < 200) {
-      throw new ConnectError(
-        `sample has ${chars} characters; at least 200 are required`,
-        Code.InvalidArgument,
-      )
+      throw connectAppError('VOICE_SAMPLE_TOO_SHORT', Code.InvalidArgument, {
+        actual: String(chars),
+        min: '200',
+      })
     }
     if (!request.model?.providerId || !request.model.modelId) {
-      throw new ConnectError('an enabled analyze model is required', Code.FailedPrecondition)
+      throw connectAppError('VOICE_ANALYZE_MODEL_REQUIRED', Code.FailedPrecondition)
     }
     sequence += 1
     const sample = create(VoiceSampleSchema, {
@@ -345,10 +379,10 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     options.calls?.push('DeleteVoiceSample')
     const profile = profileOf(request.voiceId)
     active(request.voiceId)
-    if (options.deleteFails) throw new ConnectError('delete voice sample failed', Code.Internal)
+    if (options.deleteFails) throw connectAppError('VOICE_SAMPLE_MUTATION_FAILED', Code.Internal)
     const samples = profile.samples.filter((sample) => sample.id !== request.sampleId)
     if (samples.length === profile.samples.length) {
-      throw new ConnectError('voice sample not found', Code.NotFound)
+      throw connectAppError('VOICE_SAMPLE_NOT_FOUND', Code.NotFound)
     }
     const jobId = samples.length > 0 ? (options.deleteJobId ?? 'voice-job') : ''
     setProfile(
@@ -360,7 +394,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
 
   rpc(VoiceLearningService.method.learnFromFinalizedPost, (request) => {
     options.calls?.push('LearnFromFinalizedPost')
-    if (options.learningFails) throw new ConnectError('learning unavailable', Code.Unavailable)
+    if (options.learningFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     const jobId = options.learningJobId ?? 'learning-job'
     return create(LearnFromFinalizedPostResponseSchema, {
       event: create(VoiceLearningEventSchema, {
@@ -411,6 +445,8 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   rpc(VoiceValidationService.method.listVoiceProfileValidations, (request) => {
     options.calls?.push('ListVoiceProfileValidations')
     owned(request.voiceId)
-    return create(ListVoiceProfileValidationsResponseSchema, {})
+    return create(ListVoiceProfileValidationsResponseSchema, {
+      validations: options.validations ?? [],
+    })
   })
 }

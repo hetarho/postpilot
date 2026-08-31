@@ -119,7 +119,7 @@ func TestRevisePromptInjectsTheSameSectionAtTheSamePosition(t *testing.T) {
 // enqueue — the case a restart-resume or an explicit retry also lands in — changes nothing.
 func TestTheFrozenPayloadSurvivesAnEditOrDeletionOfTheLiveRow(t *testing.T) {
 	frozen := testBrief()
-	raw, err := EncodeGenerationPayload(GenerationOptions{Purpose: frozen})
+	raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Purpose: frozen})
 	if err != nil {
 		t.Fatal(err)
 	}

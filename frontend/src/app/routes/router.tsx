@@ -17,6 +17,7 @@ import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 import { queryClient } from '../providers/query-client'
 import { AuthenticatedLayout } from './AuthenticatedLayout'
 import { RootLayout } from './RootLayout'
+import { RouteError } from './RouteError'
 import { RoutePending } from './RoutePending'
 
 // Everything outside the login → posts → editor path is fetched when its route is first
@@ -50,7 +51,10 @@ export interface RouterContext {
 
 // The curried form is required: plain createRootRoute pins the context type to {} and
 // then every `context.queryClient` below compiles as `any`.
-const rootRoute = createRootRouteWithContext<RouterContext>()({ component: RootLayout })
+const rootRoute = createRootRouteWithContext<RouterContext>()({
+  component: RootLayout,
+  errorComponent: RouteError,
+})
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,

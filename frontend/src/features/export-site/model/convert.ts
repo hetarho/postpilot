@@ -1,5 +1,5 @@
 import type { PostImage } from '@/entities/image'
-import { BlockType, type PostContent } from '@/shared/api'
+import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import { escapeHtml, headingTag, relativeFileUrl, walkBlocks } from '@/shared/lib'
 import { SITE_DOCUMENT_PREFIX, SITE_DOCUMENT_SUFFIX, SITE_STYLE } from '../config/template'
 
@@ -8,6 +8,7 @@ export function toSite(
   content: PostContent,
   _images: readonly PostImage[],
   createdAt: string,
+  contentLanguage: ContentLanguage,
 ): string {
   const date = createdAt.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? ''
   const article = walkBlocks(content, (block) => {
@@ -34,7 +35,7 @@ export function toSite(
     .join('\n')
   const tags = content.tags.map((tag) => `<li>${escapeHtml(tag)}</li>`).join('')
 
-  return `${SITE_DOCUMENT_PREFIX}
+  return `${SITE_DOCUMENT_PREFIX.replace('{{language}}', contentLanguage)}
 <title>${escapeHtml(content.title)}</title>
 <style>${SITE_STYLE}</style>
 </head>

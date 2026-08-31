@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EDITOR_STEPS, stepForStatus } from './steps'
+import { editorSteps, stepForStatus } from './steps'
 
 describe('stepForStatus', () => {
   it('maps each shipped status to its step', () => {
@@ -15,6 +15,6 @@ describe('stepForStatus', () => {
   })
 
   it('labels the three steps in lifecycle order', () => {
-    expect(EDITOR_STEPS.map((step) => step.label)).toEqual(['글 생성', '글 다듬기', '글 완성'])
+    expect(editorSteps().map((step) => step.label)).toEqual(['글 생성', '글 다듬기', '글 완성'])
   })
 })

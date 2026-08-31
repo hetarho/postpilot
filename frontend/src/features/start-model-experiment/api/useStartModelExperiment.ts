@@ -1,14 +1,17 @@
 import { create } from '@bufbuild/protobuf'
 import { useMutation } from '@connectrpc/connect-query'
 import type { ModelRef } from '@/entities/model-catalog'
-import { ModelExperimentService, ModelRefSchema } from '@/shared/api'
+import { appFailureFromConnect, ModelExperimentService, ModelRefSchema } from '@/shared/api'
 
 export function useStartModelExperiment() {
   const observe = useMutation(ModelExperimentService.method.startObserveExperiment)
   const analyze = useMutation(ModelExperimentService.method.startAnalyzeExperiment)
   return {
     isPending: observe.isPending || analyze.isPending,
-    error: observe.error ?? analyze.error,
+    failure:
+      observe.error || analyze.error
+        ? appFailureFromConnect(observe.error ?? analyze.error)
+        : undefined,
     startObserve: (postSlug: string, modelA: ModelRef, modelB: ModelRef) =>
       observe.mutateAsync({
         postSlug,

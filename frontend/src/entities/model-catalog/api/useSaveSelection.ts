@@ -2,6 +2,7 @@ import { clone, create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useIsMutating, useQueryClient } from '@tanstack/react-query'
 import {
+  appFailureFromConnect,
   type GetSelectionsResponse,
   GetSelectionsResponseSchema,
   ModelRefSchema,
@@ -37,6 +38,7 @@ export function useSaveSelection() {
 
   return {
     ...mutation,
+    failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
     save: (stage: StageName, ref: ModelRef) =>
       mutation.mutate({
         stage: stageToProto(stage),

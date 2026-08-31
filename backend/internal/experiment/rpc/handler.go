@@ -15,6 +15,7 @@ import (
 	"github.com/postpilot/backend/internal/experiment"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
 type Handler struct{ service *experiment.Service }
@@ -113,23 +114,31 @@ func (h *Handler) RetryCandidate(ctx context.Context, req *connect.Request[postp
 }
 
 func (h *Handler) ChooseWinner(ctx context.Context, req *connect.Request[postpilotv1.ChooseWinnerRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
-	return h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), false)
-}
-
-func (h *Handler) UseSingleCandidate(ctx context.Context, req *connect.Request[postpilotv1.UseSingleCandidateRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
-	return h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), true)
-}
-
-func (h *Handler) choose(ctx context.Context, experimentID, candidateID string, single bool) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
-	userID, err := actingUser(ctx)
+	found, err := h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), false)
 	if err != nil {
 		return nil, err
 	}
-	found, err := h.service.Choose(ctx, userID, experimentID, candidateID, single)
+	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: toProtoExperiment(found)}), nil
+}
+
+func (h *Handler) UseSingleCandidate(ctx context.Context, req *connect.Request[postpilotv1.UseSingleCandidateRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
+	found, err := h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), true)
 	if err != nil {
-		return nil, toConnectError("choose experiment candidate", err)
+		return nil, err
 	}
 	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: toProtoExperiment(found)}), nil
+}
+
+func (h *Handler) choose(ctx context.Context, experimentID, candidateID string, single bool) (experiment.Experiment, error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return experiment.Experiment{}, err
+	}
+	found, err := h.service.Choose(ctx, userID, experimentID, candidateID, single)
+	if err != nil {
+		return experiment.Experiment{}, toConnectError("choose experiment candidate", err)
+	}
+	return found, nil
 }
 
 func (h *Handler) DismissExperiment(ctx context.Context, req *connect.Request[postpilotv1.DismissExperimentRequest]) (*connect.Response[postpilotv1.DismissExperimentResponse], error) {
@@ -208,7 +217,7 @@ func (h *Handler) GetLeaderboard(ctx context.Context, req *connect.Request[postp
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
 	return userID, nil
 }
@@ -216,21 +225,54 @@ func actingUser(ctx context.Context) (string, error) {
 func toConnectError(op string, err error) error {
 	var active *experiment.JobAlreadyInProgressError
 	switch {
-	case errors.Is(err, experiment.ErrNotFound), errors.Is(err, experiment.ErrCandidateNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+	case errors.Is(err, experiment.ErrNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "experiment not found", "EXPERIMENT_NOT_FOUND", nil)
+	case errors.Is(err, experiment.ErrCandidateNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "experiment candidate not found", "EXPERIMENT_CANDIDATE_NOT_FOUND", nil)
 	case errors.Is(err, experiment.ErrForbidden):
-		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
-	case errors.Is(err, experiment.ErrInvalidStage), errors.Is(err, experiment.ErrDuplicateCandidates),
-		errors.Is(err, experiment.ErrInvalidTargetLength), errors.Is(err, experiment.ErrVoiceRequired):
-		return connect.NewError(connect.CodeInvalidArgument, err)
-	case errors.Is(err, experiment.ErrModelRequired), errors.Is(err, experiment.ErrInvalidState),
-		errors.Is(err, experiment.ErrConfirmationRequired), errors.Is(err, experiment.ErrSnapshotUnavailable),
-		errors.Is(err, experiment.ErrRetryModelUnavailable), errors.Is(err, experiment.ErrVoiceUnavailable), errors.As(err, &active):
-		return connect.NewError(connect.CodeFailedPrecondition, err)
+		return rpcserver.NewAppError(connect.CodePermissionDenied, "experiment belongs to another user", "EXPERIMENT_FORBIDDEN", nil)
+	case errors.Is(err, experiment.ErrInvalidStage):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid experiment stage", "EXPERIMENT_STAGE_INVALID", nil)
+	case errors.Is(err, experiment.ErrDuplicateCandidates):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment candidates must differ", "EXPERIMENT_CANDIDATES_DUPLICATE", nil)
+	case errors.Is(err, experiment.ErrInvalidTargetLength):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment target length must be positive", "EXPERIMENT_TARGET_LENGTH_INVALID", nil)
+	case errors.Is(err, experiment.ErrVoiceRequired):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "an active voice is required", "EXPERIMENT_VOICE_REQUIRED", nil)
+	case errors.Is(err, experiment.ErrModelRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "two enabled suitable models are required", "EXPERIMENT_MODELS_REQUIRED", nil)
+	case errors.Is(err, experiment.ErrLanguageRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", "POST_TARGET_LANGUAGE_REQUIRED", nil)
+	case errors.Is(err, experiment.ErrInvalidState):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment state does not allow this operation", "EXPERIMENT_STATE_INVALID", nil)
+	case errors.Is(err, experiment.ErrConfirmationRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment confirmation is required", "EXPERIMENT_CONFIRMATION_REQUIRED", nil)
+	case errors.Is(err, experiment.ErrSnapshotUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment snapshot is unavailable", "EXPERIMENT_SNAPSHOT_UNAVAILABLE", nil)
+	case errors.Is(err, experiment.ErrRetryModelUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment retry model is unavailable", "EXPERIMENT_RETRY_MODEL_UNAVAILABLE", nil)
+	case errors.Is(err, experiment.ErrVoiceUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment voice is unavailable", "EXPERIMENT_VOICE_UNAVAILABLE", nil)
+	case errors.As(err, &active):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment is already in progress", "EXPERIMENT_ALREADY_RUNNING", activeJobParams(active.ActiveID))
 	default:
 		slog.Error(op+" failed", "err", err)
-		return connect.NewError(connect.CodeInternal, errors.New(op+" failed"))
+		return rpcserver.NewAppError(connect.CodeInternal, "experiment request failed", "UNKNOWN_FAILURE", nil)
 	}
+}
+
+func activeJobParams(id string) map[string]string {
+	if id == "" || len(id) > 128 {
+		return nil
+	}
+	for i := range len(id) {
+		char := id[i]
+		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') &&
+			(char < '0' || char > '9') && char != '-' && char != '_' {
+			return nil
+		}
+	}
+	return map[string]string{"active_job_id": id}
 }
 
 func toProtoExperiment(found experiment.Experiment) *postpilotv1.ModelExperiment {
@@ -241,11 +283,28 @@ func toProtoExperiment(found experiment.Experiment) *postpilotv1.ModelExperiment
 	return &postpilotv1.ModelExperiment{
 		Id: found.ID, Stage: toProtoStage(found.Stage), Status: toProtoStatus(found.Status), PostSlug: found.PostSlug,
 		VoiceId: found.VoiceID, PurposeName: found.PurposeName, JobId: found.JobID, Candidates: candidates, WinnerCandidateId: found.WinnerCandidateID,
-		Outcome: toProtoOutcome(found.Outcome), ApplyError: found.ApplyError, CreatedAt: formatTime(found.CreatedAt),
+		TargetLanguage: toProtoLanguage(found.TargetLanguage),
+		Outcome:        toProtoOutcome(found.Outcome), CreatedAt: formatTime(found.CreatedAt),
 		FinishedAt: formatOptional(found.FinishedAt), DecidedAt: formatOptional(found.DecidedAt), Revealed: found.Revealed(),
 		AppliedAt:         formatOptional(found.AppliedAt),
 		AdoptionRequested: found.AdoptionRequested,
-		AdoptionError:     found.AdoptionError, AdoptedAt: formatOptional(found.AdoptedAt),
+		AdoptedAt:         formatOptional(found.AdoptedAt),
+		ApplyFailure:      failureToProto(found.ApplyFailure),
+		AdoptionFailure:   failureToProto(found.AdoptionFailure),
+	}
+}
+
+func toProtoLanguage(value *experiment.Language) postpilotv1.ContentLanguage {
+	if value == nil {
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+	}
+	switch *value {
+	case experiment.LanguageKorean:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
+	case experiment.LanguageEnglish:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
+	default:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
 	}
 }
 
@@ -263,11 +322,22 @@ func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidat
 	if found.Revealed() {
 		out.Model = toProtoRef(candidate.Model)
 		out.ModelLabel = candidate.ModelLabel
-		out.Error = candidate.Error
+		out.Failure = failureToProto(candidate.Failure)
 		out.Usage = &postpilotv1.CandidateUsage{PromptTokens: candidate.Usage.PromptTokens, CompletionTokens: candidate.Usage.CompletionTokens,
 			CostMicrousd: candidate.Usage.CostMicrousd, CostSource: toProtoCost(candidate.Usage.CostSource), LatencyMs: candidate.Usage.LatencyMS}
 	}
 	return out
+}
+
+func failureToProto(found *experiment.Failure) *postpilotv1.Failure {
+	if found == nil || found.Reason == "" {
+		return nil
+	}
+	params := make(map[string]string, len(found.Params))
+	for key, value := range found.Params {
+		params[key] = value
+	}
+	return &postpilotv1.Failure{Reason: found.Reason, Params: params, TechnicalDetail: found.TechnicalDetail}
 }
 
 type outputPost struct {

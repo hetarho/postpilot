@@ -15,6 +15,22 @@ export {
   unauthenticatedInterceptor,
 } from './transport'
 export { onUnauthenticated, emitUnauthenticated } from './auth-events'
+export {
+  contentLanguages,
+  contentLanguageFromProto,
+  contentLanguageToProto,
+  requireContentLanguage,
+} from './language'
+export type { ContentLanguage } from './language'
+export {
+  appFailureFromConnect,
+  appFailureFromProto,
+  appFailureSpecs,
+  normalizeAppFailure,
+} from './app-failure'
+export type { AppFailure, AppFailureReason } from './app-failure'
+export { AppErrorDetailSchema, FailureSchema } from './gen/postpilot/v1/error_pb'
+export type { Failure as ProtoFailure } from './gen/postpilot/v1/error_pb'
 
 // The generated module is re-exported ONLY from here (ARCHITECTURE §3.3): a proto
 // rename stops at this directory instead of rippling through the slices.

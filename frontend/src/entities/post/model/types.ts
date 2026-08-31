@@ -1,8 +1,9 @@
+import i18next from 'i18next'
 import type { PostImage } from '@/entities/image/@x/post'
 import type { GenerationJob } from '@/entities/generation-job/@x/post'
 import type { PurposeRef } from '@/entities/purpose/@x/post'
 import type { VoiceRef } from '@/entities/voice/@x/post'
-import type { Observation, PostContent } from '@/shared/api'
+import type { ContentLanguage, Observation, PostContent } from '@/shared/api'
 
 /** A post as the app talks about it.
  *
@@ -38,6 +39,8 @@ export interface PostDraft {
   targetLength?: number
   finalizedRevision: bigint
   finalizedAt: string
+  targetLanguage: ContentLanguage
+  contentLanguage: ContentLanguage | undefined
 }
 
 /** One row of the post list (PRD F-8). */
@@ -50,26 +53,27 @@ export interface PostListItem {
   purpose: PurposeRef
   activeJob: GenerationJob | undefined
   pendingExperimentId: string
+  targetLanguage: ContentLanguage
+  contentLanguage: ContentLanguage | undefined
 }
 
 /** Shown in place of a title nobody has typed yet. A list of blank rows would be
  *  unusable, and a draft is created by typing a memo just as often as a title. */
-export const UNTITLED_TITLE = '제목 없음'
+export function untitledTitle(): string {
+  return i18next.t('untitled', { ns: 'posts' })
+}
 
 /** `draft` and `review` are the statuses the drafting context knows
  *  (spec/policy/posts.md); generation is what moves a post to `review`. An unknown value
  *  falls through to itself rather than being hidden, so a status a later plan adds shows
  *  up as something rather than as a blank badge. */
-const STATUS_LABELS: Record<string, string> = {
-  draft: '초안',
-  review: '검토',
-  finalized: '확정',
-}
-
 export function postStatusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? status
+  if (status === 'draft' || status === 'review' || status === 'finalized') {
+    return i18next.t(`status.${status}`, { ns: 'posts' })
+  }
+  return status
 }
 
 export function displayTitle(post: { title: string }): string {
-  return post.title.trim() || UNTITLED_TITLE
+  return post.title.trim() || untitledTitle()
 }

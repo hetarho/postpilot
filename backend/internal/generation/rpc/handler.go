@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/generation"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
 type Handler struct{ service *generation.Service }
@@ -75,7 +77,7 @@ func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpi
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
 	return userID, nil
 }
@@ -84,23 +86,61 @@ func toConnectError(op string, err error) error {
 	var active *generation.JobAlreadyInProgressError
 	switch {
 	case errors.Is(err, generation.ErrNotFound):
-		return connect.NewError(connect.CodeNotFound, errors.New("not found"))
+		if op == "get generation" {
+			return rpcserver.NewAppError(connect.CodeNotFound, "generation job not found", "JOB_NOT_FOUND", nil)
+		}
+		return rpcserver.NewAppError(connect.CodeNotFound, "post not found", "POST_NOT_FOUND", nil)
 	case errors.Is(err, generation.ErrForbidden):
-		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
-	case errors.Is(err, generation.ErrWriteModelRequired), errors.Is(err, generation.ErrObserveModelRequired):
-		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
-	case errors.Is(err, generation.ErrRevisionContentRequired), errors.Is(err, generation.ErrVoiceDeleted),
-		errors.Is(err, generation.ErrVoiceMismatch), errors.Is(err, generation.ErrVoiceRequired):
-		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
-	case errors.Is(err, generation.ErrRevisionInstructionRequired), errors.Is(err, generation.ErrRevisionInstructionTooLong),
-		errors.Is(err, generation.ErrInvalidTargetLength):
-		return connect.NewError(connect.CodeInvalidArgument, errors.New(err.Error()))
+		if op == "get generation" {
+			return rpcserver.NewAppError(connect.CodePermissionDenied, "generation job belongs to another user", "JOB_FORBIDDEN", nil)
+		}
+		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", "POST_FORBIDDEN", nil)
+	case errors.Is(err, generation.ErrWriteModelRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled write model is required", "GENERATION_WRITE_MODEL_REQUIRED", nil)
+	case errors.Is(err, generation.ErrObserveModelRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled photo observation model is required", "GENERATION_OBSERVE_MODEL_REQUIRED", nil)
+	case errors.Is(err, generation.ErrLanguageRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", "POST_TARGET_LANGUAGE_REQUIRED", nil)
+	case errors.Is(err, generation.ErrContentLanguageRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "content language is required for revision", "CONTENT_LANGUAGE_REQUIRED", nil)
+	case errors.Is(err, generation.ErrRevisionContentRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content is required for revision", "REVISION_CONTENT_REQUIRED", nil)
+	case errors.Is(err, generation.ErrVoiceDeleted):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is deleted", "VOICE_DELETED", nil)
+	case errors.Is(err, generation.ErrVoiceMismatch):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice changed after enqueue", "GENERATION_VOICE_MISMATCH", nil)
+	case errors.Is(err, generation.ErrVoiceContentLanguageMismatch):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content language does not match the voice source language", "VOICE_CONTENT_LANGUAGE_MISMATCH", nil)
+	case errors.Is(err, generation.ErrVoiceRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is required", "VOICE_REQUIRED", nil)
+	case errors.Is(err, generation.ErrRevisionInstructionRequired):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "revision instruction is required", "REVISION_INSTRUCTION_REQUIRED", nil)
+	case errors.Is(err, generation.ErrRevisionInstructionTooLong):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "revision instruction is too long", "REVISION_INSTRUCTION_TOO_LONG", map[string]string{
+			"max": strconv.Itoa(generation.RevisionInstructionMaxChars),
+		})
+	case errors.Is(err, generation.ErrInvalidTargetLength):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "target length must be positive", "GENERATION_TARGET_LENGTH_INVALID", nil)
 	case errors.As(err, &active):
-		return connect.NewError(connect.CodeFailedPrecondition, errors.New("generation already in progress: "+active.ActiveID))
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "generation is already in progress", "GENERATION_ALREADY_RUNNING", activeJobParams(active.ActiveID))
 	default:
 		slog.Error(op+" failed", "err", err)
-		return connect.NewError(connect.CodeInternal, errors.New(op+" failed"))
+		return rpcserver.NewAppError(connect.CodeInternal, "generation request failed", "UNKNOWN_FAILURE", nil)
 	}
+}
+
+func activeJobParams(id string) map[string]string {
+	if id == "" || len(id) > 128 {
+		return nil
+	}
+	for i := range len(id) {
+		char := id[i]
+		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') &&
+			(char < '0' || char > '9') && char != '-' && char != '_' {
+			return nil
+		}
+	}
+	return map[string]string{"active_job_id": id}
 }
 
 func modelRefValue(ref *postpilotv1.ModelRef) string {
@@ -117,9 +157,33 @@ func toProtoJob(found *generation.JobSummary) *postpilotv1.GenerationJob {
 	return &postpilotv1.GenerationJob{
 		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),
-		Error: found.Error, PostSlug: found.PostSlug, ObserveModel: splitModelRef(found.ObserveModel),
-		WriteModel: splitModelRef(found.WriteModel), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt: found.UpdatedAt.UTC().Format(time.RFC3339),
+		PostSlug: found.PostSlug, ObserveModel: splitModelRef(found.ObserveModel),
+		WriteModel: splitModelRef(found.WriteModel), TargetLanguage: languageToProto(found.TargetLanguage), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt: found.UpdatedAt.UTC().Format(time.RFC3339), Failure: failureToProto(found.Failure),
+	}
+}
+
+func failureToProto(found *generation.Failure) *postpilotv1.Failure {
+	if found == nil || found.Reason == "" {
+		return nil
+	}
+	params := make(map[string]string, len(found.Params))
+	for key, value := range found.Params {
+		params[key] = value
+	}
+	return &postpilotv1.Failure{
+		Reason: found.Reason, Params: params, TechnicalDetail: found.TechnicalDetail,
+	}
+}
+
+func languageToProto(value generation.Language) postpilotv1.ContentLanguage {
+	switch value {
+	case generation.LanguageKorean:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
+	case generation.LanguageEnglish:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
+	default:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
 	}
 }
 

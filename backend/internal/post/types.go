@@ -61,7 +61,29 @@ var (
 	// There is deliberately no ErrPurposeRequired: a post may have none, and clearing the
 	// assignment is a valid save rather than a missing value.
 	ErrPurposeNotFound = errors.New("purpose not found")
+	// ErrLanguageRequired is returned at create/machine-write boundaries when the
+	// caller supplies no concrete supported language.
+	ErrLanguageRequired = errors.New("a content language is required")
 )
+
+// Language is the post context's pure, canonical language value. Proto enums and SQL
+// strings are converted only in rpc/ and store/ respectively.
+type Language string
+
+const (
+	LanguageKorean  Language = "ko"
+	LanguageEnglish Language = "en"
+)
+
+func ParseLanguage(value string) (Language, error) {
+	language := Language(value)
+	if !language.Valid() {
+		return "", fmt.Errorf("%w: %q", ErrLanguageRequired, value)
+	}
+	return language, nil
+}
+
+func (l Language) Valid() bool { return l == LanguageKorean || l == LanguageEnglish }
 
 type InvalidContentError struct{ Reason string }
 
@@ -74,9 +96,10 @@ func (e *InvalidContentError) Unwrap() error { return ErrInvalidContent }
 // stores plus the name/tombstone the voice context publishes. A deleted voice still names
 // itself here so the post stays readable and exportable while AI actions refuse.
 type VoiceRef struct {
-	ID      string
-	Name    string
-	Deleted bool
+	ID             string
+	Name           string
+	Deleted        bool
+	SourceLanguage Language
 }
 
 // PurposeRef is the purpose a post is written for, as the post context needs it: the id it
@@ -99,6 +122,8 @@ type Post struct {
 	// the id; Purpose is enriched on read through the PurposeDirectory port.
 	PurposeID               string
 	Purpose                 PurposeRef
+	TargetLanguage          Language
+	ContentLanguage         *Language
 	Title                   string
 	Memo                    string
 	Status                  string
@@ -136,19 +161,24 @@ type LearningSnapshot struct {
 	TargetLength           *int
 	FinalizedAt            time.Time
 	UpdatedAt              time.Time
+	ContentLanguage        Language
+	VoiceSourceLanguage    Language
 }
 
 // PublishingSnapshot is the post context's immutable, ownership-checked hand-off.
 // Reading it never finalizes, learns, signs URLs, or mutates the post; publishing copies
 // the named already-normalized JPEG objects through its own storage port.
 type PublishingSnapshot struct {
-	PostSlug          string
-	UserID            string
-	CreatedAt         time.Time
-	Content           PostContent
-	ContentRevision   int64
-	FinalizedRevision int64
-	Images            []Image
+	PostSlug            string
+	UserID              string
+	CreatedAt           time.Time
+	Content             PostContent
+	ContentRevision     int64
+	FinalizedRevision   int64
+	Images              []Image
+	TargetLanguage      Language
+	ContentLanguage     Language
+	VoiceSourceLanguage Language
 }
 
 // BlockType is kept as the LLM/protojson spelling at the domain boundary.
@@ -200,23 +230,33 @@ type Summary struct {
 	UpdatedAt           time.Time
 	ActiveJob           *ActiveJob
 	PendingExperimentID string
+	TargetLanguage      Language
+	ContentLanguage     *Language
 }
 
 // ActiveJob is the snapshot the post context publishes on read models. It is owned by
 // the consumer so the post domain does not depend on job persistence or transport.
 type ActiveJob struct {
-	ID            string
-	Kind          string
-	Status        string
-	Stage         string
-	ProgressDone  int
-	ProgressTotal int
-	Error         string
-	PostSlug      string
-	ObserveModel  string
-	WriteModel    string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID             string
+	Kind           string
+	Status         string
+	Stage          string
+	ProgressDone   int
+	ProgressTotal  int
+	Failure        *Failure
+	PostSlug       string
+	ObserveModel   string
+	WriteModel     string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	TargetLanguage Language
+}
+
+// Failure is the post read model's consumer-owned durable job failure projection.
+type Failure struct {
+	Reason          string
+	Params          map[string]string
+	TechnicalDetail string
 }
 
 // Image is a photo attached to a post. The bytes live in object storage; this is the

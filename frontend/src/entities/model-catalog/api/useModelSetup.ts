@@ -2,6 +2,7 @@ import { clone, create } from '@bufbuild/protobuf'
 import { useMutation, useQuery, useTransport } from '@connectrpc/connect-query'
 import { useIsMutating, useQueryClient } from '@tanstack/react-query'
 import {
+  appFailureFromConnect,
   ComparisonPairSchema,
   type GetComparisonPairsResponse,
   GetComparisonPairsResponseSchema,
@@ -34,6 +35,7 @@ export function useApplyRecommendation() {
   const queryClient = useQueryClient()
   return {
     ...mutation,
+    failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
     apply: async (id: string) => {
       const response = await mutation.mutateAsync({ id })
       await Promise.all([
@@ -76,6 +78,7 @@ export function useSaveComparisonPair() {
   const queryClient = useQueryClient()
   return {
     ...mutation,
+    failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
     save: async (stage: StageName, candidateA: ModelRef, candidateB: ModelRef) => {
       const response = await mutation.mutateAsync({
         stage: stageToProto(stage),

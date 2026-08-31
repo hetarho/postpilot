@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next'
 import type { RecommendationSet } from '@/entities/model-catalog'
 import { useApplyRecommendation } from '@/entities/model-catalog'
-import { Button, Notice } from '@/shared/ui'
+import { AppFailureMessage, Button, Notice } from '@/shared/ui'
 
 export function ApplyRecommendation({ recommendation }: { recommendation: RecommendationSet }) {
+  const { t } = useTranslation('models')
   const mutation = useApplyRecommendation()
   return (
     // No card: this is the whole content of a page section, and §1.4 excludes a section from the
@@ -12,15 +14,19 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
       <p className="text-sm font-medium">{recommendation.label}</p>
       {/* `break-words`: the set id is a server-supplied slug (§3.2). */}
       <p className="text-content-tertiary mt-1 text-xs break-words">
-        {recommendation.id} · 활성 모델과 세 단계 A/B 쌍 9개를 한 번에 저장합니다.
+        {recommendation.id} · {t('recommendation.description')}
       </p>
       <Button
         variant="secondary"
         className="mt-4 w-full sm:w-auto"
         pending={mutation.isPending}
-        onClick={() => void mutation.apply(recommendation.id)}
+        onClick={() => {
+          void mutation.apply(recommendation.id).catch(() => {
+            // The mutation state carries the structured failure rendered below.
+          })
+        }}
       >
-        추천 조합 적용
+        {t('recommendation.apply')}
       </Button>
       {/* Everything this action rewrites — the active model and the A/B selects for all three
           stages — is 400–900px further down the page, off-screen on any phone. Without a
@@ -28,12 +34,12 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
           spinner going away, which reads exactly like a failure (§4.3). */}
       {mutation.isSuccess && (
         <Notice tone="success" role="status" className="mt-2">
-          세 단계의 활성 모델과 A/B 조합을 적용했어요.
+          {t('recommendation.applied')}
         </Notice>
       )}
-      {mutation.isError && (
+      {mutation.failure && (
         <Notice tone="danger" role="alert" className="mt-2">
-          추천 조합을 적용하지 못했어요.
+          <AppFailureMessage failure={mutation.failure} />
         </Notice>
       )}
     </div>

@@ -1,13 +1,14 @@
+import i18next from 'i18next'
 import { useId } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   type CatalogModel,
-  STAGE_LABELS,
   type StageName,
   refKey,
   useSaveSelection,
   useStageSelection,
 } from '@/entities/model-catalog'
-import { FieldLabel, FieldMessage, Select } from '@/shared/ui'
+import { AppFailureMessage, FieldLabel, FieldMessage, Select } from '@/shared/ui'
 
 /** The per-stage model dropdown (PRD §3.3, §6.4, F-4).
  *
@@ -25,6 +26,7 @@ export function StageModelSelect({
   className?: string
   optional?: boolean
 }) {
+  const { t } = useTranslation('models')
   const id = useId()
   const { models, selected, unavailable, isPending, isError } = useStageSelection(stage)
   const save = useSaveSelection()
@@ -37,7 +39,7 @@ export function StageModelSelect({
   const unavailableId = `${id}-unavailable`
   const describedBy = [
     isError && loadErrorId,
-    save.isError && saveErrorId,
+    save.failure && saveErrorId,
     unavailable && unavailableId,
   ]
     .filter(Boolean)
@@ -46,13 +48,16 @@ export function StageModelSelect({
   return (
     <div className={className}>
       <FieldLabel htmlFor={id}>
-        {STAGE_LABELS[stage]} 모델{optional ? ' (선택)' : ''}
+        {t('selectField.label', {
+          stage: t(`selectField.stage.${stage}`),
+          optional: optional ? t('selectField.optional') : '',
+        })}
       </FieldLabel>
       <Select
         id={id}
         value={value}
         disabled={isPending || save.isPending}
-        aria-invalid={isError || save.isError || undefined}
+        aria-invalid={isError || Boolean(save.failure) || undefined}
         aria-describedby={describedBy || undefined}
         onChange={(event) => {
           const chosen = models.find((model) => refKey(model.ref) === event.target.value)
@@ -60,7 +65,7 @@ export function StageModelSelect({
         }}
         className="mt-1"
       >
-        <option value="">모델을 선택하세요</option>
+        <option value="">{t('select')}</option>
         {unavailable && (
           // An option's text is the CHOICE, not the explanation (§7). This entry is the select's
           // current value, so its whole string has to fit the CLOSED control — ~284px at 360px,
@@ -82,7 +87,7 @@ export function StageModelSelect({
           cause (§6). The region stays mounted so it announces when it fills, and `empty:hidden`
           keeps it out of the layout while it is idle. */}
       <p role="status" className="text-content-tertiary mt-1 text-xs empty:hidden">
-        {save.isPending ? '선택을 저장하는 중…' : null}
+        {save.isPending ? t('selectField.saving') : null}
       </p>
       {unavailable && (
         // `status`, not the default `alert`: this is a standing condition of the saved value, not
@@ -93,13 +98,13 @@ export function StageModelSelect({
       )}
       {isError && (
         <FieldMessage id={loadErrorId} className="mt-1 text-xs">
-          모델 목록을 불러오지 못했어요.
+          {t('selectField.loadFailed')}
         </FieldMessage>
       )}
-      {save.isError && (
-        <FieldMessage id={saveErrorId} className="mt-1 text-xs">
-          선택을 저장하지 못했어요. 다시 골라 주세요.
-        </FieldMessage>
+      {save.failure && (
+        <div id={saveErrorId} role="alert" className="text-field-error mt-1 text-xs break-words">
+          <AppFailureMessage failure={save.failure} />
+        </div>
       )}
     </div>
   )
@@ -114,7 +119,10 @@ const UNAVAILABLE_VALUE = '__unavailable__'
  *  phone platforms — a disabled option can never become the closed control's value, because
  *  `onChange` refuses it and an unusable saved choice is rendered as the separate entry above. */
 function optionLabel(model: CatalogModel): string {
-  const badges = [model.vision && '👁', model.structuredOutput && '구조화 응답']
+  const badges = [
+    model.vision && '👁',
+    model.structuredOutput && i18next.t('selectField.structuredOutput', { ns: 'models' }),
+  ]
     .filter(Boolean)
     .join(' ')
   const reason = model.disabled ? ` — ${model.disabledReason}` : ''

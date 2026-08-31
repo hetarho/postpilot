@@ -1,4 +1,5 @@
 import { useId, type ChangeEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { UPLOAD_ALLOWED_EXTENSIONS } from '@/shared/config'
 import { buttonStyles } from '@/shared/ui'
 
@@ -24,6 +25,7 @@ export function PhotoPicker({
   onFiles: (files: File[]) => void
   disabled?: boolean
 }) {
+  const { t } = useTranslation('posts')
   const galleryId = useId()
   const cameraId = useId()
   const pick = (event: ChangeEvent<HTMLInputElement>) => {
@@ -52,7 +54,7 @@ export function PhotoPicker({
           className: disabled ? undefined : GALLERY_FOCUS,
         })}
       >
-        사진 추가
+        {t('upload.add')}
       </label>
       {/* A second input, because `capture` belongs to the control and not to the pick: an
           image-only `accept` sends Android Chrome to the system photo picker, which offers no way
@@ -77,7 +79,7 @@ export function PhotoPicker({
           className: disabled ? undefined : CAMERA_FOCUS,
         })}
       >
-        촬영
+        {t('upload.camera')}
       </label>
     </>
   )

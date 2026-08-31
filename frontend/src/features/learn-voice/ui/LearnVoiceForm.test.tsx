@@ -102,16 +102,17 @@ describe('LearnVoiceForm', () => {
     expect(calls).not.toContain('AddVoiceSample')
   })
 
-  it('shows the server InvalidArgument message verbatim', async () => {
-    const message = 'sample has 199 characters; at least 200 are required'
-    renderForm({ voice: { addError: message } })
+  it('translates the server InvalidArgument reason with its structured parameters', async () => {
+    renderForm({ voice: { addError: 'invalid sample' } })
     fireEvent.change(screen.getByLabelText('내가 쓴 글'), {
       target: { value: '가'.repeat(200) },
     })
     await waitFor(() => expect(screen.getByRole('button', { name: '학습' })).toBeEnabled())
     await userEvent.click(screen.getByRole('button', { name: '학습' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(message)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '샘플은 최소 200자가 필요해요. 현재 199자예요.',
+    )
   })
 
   it('keeps a new sample typed while the previous submission is pending', async () => {

@@ -61,60 +61,63 @@ func (e *ErrAlreadyInProgress) Unwrap() error { return ErrActiveConflict }
 // and so voice-owned kinds are guarded per voice rather than per account. The job context
 // only carries the id; it never reads voice tables.
 type NewJob struct {
-	Kind         string
-	UserID       string
-	PostSlug     *string
-	VoiceID      string
-	ObserveModel string
-	WriteModel   string
-	Payload      []byte
+	Kind           string
+	UserID         string
+	PostSlug       *string
+	VoiceID        string
+	ObserveModel   string
+	WriteModel     string
+	TargetLanguage string
+	Payload        []byte
 }
 
 // Job is the worker-facing record, including the kind-specific payload.
 type Job struct {
-	ID            string
-	Kind          string
-	UserID        string
-	PostSlug      *string
-	VoiceID       string
-	Status        string
-	Stage         string
-	ProgressDone  int
-	ProgressTotal int
-	Error         string
-	ObserveModel  string
-	WriteModel    string
-	Payload       []byte
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	StartedAt     *time.Time
-	FinishedAt    *time.Time
+	ID             string
+	Kind           string
+	UserID         string
+	PostSlug       *string
+	VoiceID        string
+	Status         string
+	Stage          string
+	ProgressDone   int
+	ProgressTotal  int
+	Failure        *Failure
+	ObserveModel   string
+	WriteModel     string
+	TargetLanguage string
+	Payload        []byte
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	StartedAt      *time.Time
+	FinishedAt     *time.Time
 }
 
 // JobSummary is the public view returned to other contexts and the RPC edge.
 type JobSummary struct {
-	ID            string
-	Kind          string
-	UserID        string
-	PostSlug      *string
-	VoiceID       string
-	Status        string
-	Stage         string
-	ProgressDone  int
-	ProgressTotal int
-	Error         string
-	ObserveModel  string
-	WriteModel    string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID             string
+	Kind           string
+	UserID         string
+	PostSlug       *string
+	VoiceID        string
+	Status         string
+	Stage          string
+	ProgressDone   int
+	ProgressTotal  int
+	Failure        *Failure
+	ObserveModel   string
+	WriteModel     string
+	TargetLanguage string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func summarize(found Job) *JobSummary {
 	return &JobSummary{
 		ID: found.ID, Kind: found.Kind, UserID: found.UserID, PostSlug: found.PostSlug, VoiceID: found.VoiceID,
 		Status: found.Status, Stage: found.Stage, ProgressDone: found.ProgressDone,
-		ProgressTotal: found.ProgressTotal, Error: found.Error,
-		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+		ProgressTotal: found.ProgressTotal, Failure: cloneFailure(found.Failure),
+		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel, TargetLanguage: found.TargetLanguage,
 		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt,
 	}
 }

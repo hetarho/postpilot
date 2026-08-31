@@ -1,8 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation } from '@connectrpc/connect-query'
-import { VoiceFeedbackReason, VoiceLearningService } from '@/shared/api'
+import { ContentRevisionConflictError } from '@/entities/post'
+import {
+  appFailureFromConnect,
+  type AppFailure,
+  VoiceFeedbackReason,
+  VoiceLearningService,
+} from '@/shared/api'
 import { LONG_PRESS_MS } from '@/shared/config'
-import { Button, Dialog, FieldLabel, Select } from '@/shared/ui'
+import { AppFailureMessage, Button, Dialog, FieldLabel, Notice, Select } from '@/shared/ui'
 
 export function SentenceFeedback({
   postSlug,
@@ -13,6 +20,7 @@ export function SentenceFeedback({
   text: string
   beforeSubmit: () => Promise<void>
 }) {
+  const { t } = useTranslation('voices')
   const sentences = text
     .split(/(?<=[.!?])\s+|\n+/)
     .map((value) => value.trim())
@@ -25,6 +33,7 @@ export function SentenceFeedback({
   const [sentence, setSentence] = useState('')
   const selected = sentences.includes(sentence) ? sentence : (sentences[0] ?? '')
   const [reason, setReason] = useState(VoiceFeedbackReason.VOCABULARY)
+  const [prepareFailure, setPrepareFailure] = useState<AppFailure | 'content-conflict'>()
   const timer = useRef<number | undefined>(undefined)
   const mutation = useMutation(VoiceLearningService.method.giveSentenceFeedback)
   // A component unmounted mid-press keeps the long-press timeout scheduled. React ignores
@@ -32,9 +41,28 @@ export function SentenceFeedback({
   useEffect(() => () => window.clearTimeout(timer.current), [])
   if (sentences.length === 0) return null
   const submit = async () => {
-    await beforeSubmit()
-    await mutation.mutateAsync({ postSlug, sentenceRef: selected, authoredText: selected, reason })
-    setOpen(false)
+    setPrepareFailure(undefined)
+    try {
+      await beforeSubmit()
+    } catch (cause) {
+      setPrepareFailure(
+        cause instanceof ContentRevisionConflictError
+          ? 'content-conflict'
+          : appFailureFromConnect(cause),
+      )
+      return
+    }
+    try {
+      await mutation.mutateAsync({
+        postSlug,
+        sentenceRef: selected,
+        authoredText: selected,
+        reason,
+      })
+      setOpen(false)
+    } catch {
+      // The stable application failure remains in the dialog next to the action.
+    }
   }
   return (
     <>
@@ -48,19 +76,19 @@ export function SentenceFeedback({
         onPointerUp={() => window.clearTimeout(timer.current)}
         onPointerCancel={() => window.clearTimeout(timer.current)}
       >
-        문장 의견
+        {t('feedback.action')}
       </Button>
       <Dialog
         open={open}
-        title="어떤 점을 바꾸고 싶나요?"
-        confirmLabel="의견 남기기"
+        title={t('feedback.title')}
+        confirmLabel={t('feedback.confirm')}
         pending={mutation.isPending}
         onClose={() => setOpen(false)}
         onConfirm={() => void submit()}
       >
         <div className="grid gap-4">
           <div>
-            <FieldLabel htmlFor="feedback-sentence">문장</FieldLabel>
+            <FieldLabel htmlFor="feedback-sentence">{t('feedback.sentence')}</FieldLabel>
             <Select
               id="feedback-sentence"
               value={selected}
@@ -75,20 +103,34 @@ export function SentenceFeedback({
             </Select>
           </div>
           <div>
-            <FieldLabel htmlFor="feedback-reason">이유</FieldLabel>
+            <FieldLabel htmlFor="feedback-reason">{t('feedback.reason')}</FieldLabel>
             <Select
               id="feedback-reason"
               value={reason}
               onChange={(event) => setReason(Number(event.target.value) as VoiceFeedbackReason)}
               className="mt-1"
             >
-              <option value={VoiceFeedbackReason.VOCABULARY}>단어 선택</option>
-              <option value={VoiceFeedbackReason.ENDING}>종결어미</option>
-              <option value={VoiceFeedbackReason.LENGTH}>문장 길이</option>
-              <option value={VoiceFeedbackReason.STRUCTURE}>구조</option>
+              <option value={VoiceFeedbackReason.VOCABULARY}>{t('feedback.vocabulary')}</option>
+              <option value={VoiceFeedbackReason.ENDING}>{t('feedback.ending')}</option>
+              <option value={VoiceFeedbackReason.LENGTH}>{t('feedback.length')}</option>
+              <option value={VoiceFeedbackReason.STRUCTURE}>{t('feedback.structure')}</option>
             </Select>
           </div>
-          <p>이 반응만으로 새 규칙이 생기거나 활성화되지는 않습니다.</p>
+          <p>{t('feedback.help')}</p>
+          {mutation.error && (
+            <Notice tone="danger" role="alert">
+              <AppFailureMessage failure={appFailureFromConnect(mutation.error)} />
+            </Notice>
+          )}
+          {prepareFailure && (
+            <Notice tone="danger" role="alert">
+              {prepareFailure === 'content-conflict' ? (
+                t('edit.conflict', { ns: 'posts' })
+              ) : (
+                <AppFailureMessage failure={prepareFailure} />
+              )}
+            </Notice>
+          )}
         </div>
       </Dialog>
     </>

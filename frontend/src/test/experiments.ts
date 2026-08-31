@@ -1,7 +1,8 @@
 import type { ModelRef } from '@/entities/model-catalog'
 import { create } from '@bufbuild/protobuf'
-import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
+import { Code, createRouterTransport } from '@connectrpc/connect'
 import { ModelExperimentService, StartExperimentResponseSchema } from '@/shared/api'
+import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -34,7 +35,7 @@ export function registerExperimentService(
 ) {
   router.rpc(ModelExperimentService.method.startWriteExperiment, (request) => {
     options.calls?.push('StartWriteExperiment')
-    if (options.startError) throw new ConnectError(options.startError, Code.Unavailable)
+    if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     options.starts?.push({
       postSlug: request.postSlug,
       observeModel: request.observeModel
@@ -55,9 +56,9 @@ export function registerExperimentService(
   })
   router.rpc(ModelExperimentService.method.startAnalyzeExperiment, (request) => {
     options.calls?.push('StartAnalyzeExperiment')
-    if (options.startError) throw new ConnectError(options.startError, Code.Unavailable)
+    if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     // The server never guesses a voice (spec/policy/model-experiments.md).
-    if (!request.voiceId) throw new ConnectError('voice id is required', Code.InvalidArgument)
+    if (!request.voiceId) throw connectAppError('EXPERIMENT_VOICE_REQUIRED', Code.InvalidArgument)
     options.analyzeStarts?.push({
       voiceId: request.voiceId,
       modelA: request.modelA

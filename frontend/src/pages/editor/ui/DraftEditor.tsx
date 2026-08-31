@@ -7,6 +7,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
@@ -19,8 +20,13 @@ import {
   type PostDraft,
 } from '@/entities/post'
 import { useSession } from '@/entities/session'
-import { useVoiceProfile, type VoiceRef } from '@/entities/voice'
-import type { PostContent } from '@/shared/api'
+import {
+  useVoiceProfile,
+  voiceContentLanguageMismatch,
+  voiceContentLanguageMismatchReason,
+  type VoiceRef,
+} from '@/entities/voice'
+import type { ContentLanguage, PostContent } from '@/shared/api'
 import { GenerationActions, type GenerationActionsHandle } from '@/features/generate-post'
 import {
   BlockEditor,
@@ -33,6 +39,7 @@ import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
 import { StageModelSelect } from '@/features/select-model'
 import { PostPurposeSelect } from '@/features/select-post-purpose'
+import { PostLanguageSelect } from '@/features/select-post-language'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import {
   ActionBar,
@@ -48,7 +55,8 @@ import { ExportPanel } from '@/widgets/export-panel'
 import { PublishPanel } from '@/widgets/publish-panel'
 import { DeletedVoiceWarning, VoiceWarning } from '@/widgets/voice-warning'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
-import { EDITOR_STEPS, stepForStatus, type EditorStep } from '../model/steps'
+import { activeLocale } from '@/shared/lib'
+import { editorStepLabel, editorSteps, stepForStatus, type EditorStep } from '../model/steps'
 import { EditorPhotos } from './EditorPhotos'
 
 const STEP_PANEL_ID = 'editor-step-panel'
@@ -70,6 +78,7 @@ interface DraftEditorProps {
  *  the component and strand a queued save (tech/draft-autosave). Title, memo, photos and the mint
  *  plumbing therefore stay outside the panels — they are the post's identity, not one step's work. */
 export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
+  const { t } = useTranslation('posts')
   const navigate = useNavigate()
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -96,11 +105,20 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   // and changes only through a confirmed reassignment (see `useAutosave.reassign`).
   const [newVoiceId, setNewVoiceId] = useState(defaultVoiceId)
   const voiceId = post ? post.voice.id : newVoiceId
-  const voice: VoiceRef = post?.voice ?? { id: newVoiceId, name: '', deleted: false }
+  const voice: VoiceRef = post?.voice ?? {
+    id: newVoiceId,
+    name: '',
+    deleted: false,
+    sourceLanguage: undefined,
+  }
 
   // The same shape for the 용도, with 없음 ('') as the default the server never overrides.
   const [newPurposeId, setNewPurposeId] = useState('')
   const purposeId = post ? post.purpose.id : newPurposeId
+  // Snapshot once when /posts/new opens. Later interface-locale switches are presentation-only;
+  // the explicit selector is the sole way this draft's target changes.
+  const [newTargetLanguage, setNewTargetLanguage] = useState<ContentLanguage>(() => activeLocale())
+  const targetLanguage = post?.targetLanguage ?? newTargetLanguage
 
   const autosave = useAutosave({
     post,
@@ -108,6 +126,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     memo,
     voiceId,
     purposeId,
+    targetLanguage,
     onMinted: (slug) => {
       // Read off the live DOM, so this is the caret as it is now rather than as it was
       // when the save left.
@@ -166,7 +185,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           to="/posts"
           className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center text-sm underline"
         >
-          ← 글 목록
+          {t('editor.backToList')}
         </Link>
         {post && <Badge>{postStatusLabel(post.status)}</Badge>}
       </div>
@@ -175,16 +194,16 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       {post && (
         <SegmentedControl
           value={step}
-          options={EDITOR_STEPS}
+          options={editorSteps()}
           onChange={setStep}
-          ariaLabel="글 단계"
+          ariaLabel={t('editor.stepAria')}
           controls={STEP_PANEL_ID}
           className="mt-4"
         />
       )}
 
       <FieldLabel htmlFor="post-title" className="sr-only">
-        제목
+        {t('editor.title')}
       </FieldLabel>
       <Textarea
         id="post-title"
@@ -204,7 +223,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           event.preventDefault()
           memoRef.current?.focus()
         }}
-        placeholder="제목"
+        placeholder={t('editor.titlePlaceholder')}
         enterKeyHint="next"
         autoCapitalize="off"
         autoComplete="off"
@@ -234,6 +253,16 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         current={post?.purpose}
         jobRunning={Boolean(post?.activeJob && !isTerminal(post.activeJob))}
         onSelect={post ? autosave.assignPurpose : setNewPurposeId}
+        className="mt-4"
+      />
+
+      <PostLanguageSelect
+        value={targetLanguage}
+        contentLanguage={post?.contentLanguage}
+        frozenLanguage={
+          post?.activeJob && !isTerminal(post.activeJob) ? post.activeJob.targetLanguage : undefined
+        }
+        onSelect={post ? autosave.assignTargetLanguage : setNewTargetLanguage}
         className="mt-4"
       />
 
@@ -275,10 +304,11 @@ function MemoField({
   onChange: (value: string) => void
   fieldRef: RefObject<HTMLTextAreaElement | null>
 }) {
+  const { t } = useTranslation('posts')
   return (
     <>
       <FieldLabel htmlFor="post-memo" className="sr-only">
-        메모
+        {t('editor.memo')}
       </FieldLabel>
       {/* `text-base`, not the `body` role: the bare appearance takes its size from the caller, and
           iOS Safari zooms the whole layout — permanently, it never zooms back out — the moment a
@@ -295,7 +325,7 @@ function MemoField({
         autoGrow
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="무슨 일이 있었는지 편하게 적어 주세요"
+        placeholder={t('editor.memoPlaceholder')}
         enterKeyHint="enter"
         className="mt-5 text-base leading-relaxed"
       />
@@ -339,6 +369,7 @@ function EmptyProfileWarning({ ownerId, voiceId }: { ownerId: string; voiceId: s
  *  while its containing block still extends below it, so anywhere earlier in the flow it would
  *  scroll away with the section it sat in. */
 function EditorDock({ saveState, children }: { saveState: SaveState; children?: ReactNode }) {
+  const { t } = useTranslation('posts')
   // An untouched `/posts/new` has neither: `idle` is SaveStatus's deliberately empty state, and a
   // draft the server has not created yet carries no action — so the bar renders as a bare elevated
   // card across the bottom of the screen. Chrome with nothing to say is not chrome (§0); it comes
@@ -349,7 +380,7 @@ function EditorDock({ saveState, children }: { saveState: SaveState; children?: 
       {/* `mt-auto` alone can resolve to zero when the page is taller than the viewport. Keep a
           real 24px spacer as well, so the step panel never touches the dock card. */}
       <div aria-hidden className="mt-auto h-6 shrink-0" />
-      <ActionBar ariaLabel="저장 상태와 글 작업" className="mt-0">
+      <ActionBar ariaLabel={t('editor.actionAria')} className="mt-0">
         {/* A fixed gap even while the save line is empty, so the bar does not change height — and
             move the button out from under the thumb — as the state changes (§6). */}
         <div className="flex flex-col gap-2">
@@ -402,6 +433,7 @@ function LifecycleSteps({
   ensureSlug: () => Promise<string>
   saveState: SaveState
 }) {
+  const { t } = useTranslation('posts')
   const navigate = useNavigate()
   const transport = useTransport()
   const queryClient = useQueryClient()
@@ -416,6 +448,10 @@ function LifecycleSteps({
   // learning outcome is reported on 글 완성, so the run has to outlive the step change that the
   // finalize itself causes.
   const learning = useVoiceLearning(ownerId, post)
+  const languageMismatch = voiceContentLanguageMismatch(
+    post.contentLanguage,
+    post.voice.sourceLanguage,
+  )
   const jobId = started?.id || post.activeJob?.id || ''
   const postKey = useMemo(() => getPostQueryKey(transport, post.slug), [post.slug, transport])
   const postsKey = useMemo(() => listPostsQueryKey(transport), [transport])
@@ -458,27 +494,25 @@ function LifecycleSteps({
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
       <section aria-labelledby="generation-heading" className="mt-10">
         <h2 id="generation-heading" className="text-lg font-semibold tracking-tight">
-          글 생성
+          {t('editor.generation')}
         </h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
             <StageModelSelect stage="observe" optional={post.images.length === 0} />
             {post.images.length === 0 && (
-              <p className="text-content-tertiary mt-1 text-xs">
-                사진이 없어 관찰 모델은 필요하지 않아요.
-              </p>
+              <p className="text-content-tertiary mt-1 text-xs">{t('editor.noPhotoModel')}</p>
             )}
           </div>
           <div>
             <StageModelSelect stage="write" />
           </div>
           <div>
-            <p className="text-sm font-medium">작성 A/B 후보</p>
+            <p className="text-sm font-medium">{t('editor.writeCandidates')}</p>
             <Link
               to="/ai-models"
               className="text-link-fg hover:text-link-fg-hover mt-1 inline-flex min-h-11 items-center text-sm underline"
             >
-              AI 모델에서 두 후보 설정
+              {t('editor.configureCandidates')}
             </Link>
           </div>
         </div>
@@ -490,7 +524,7 @@ function LifecycleSteps({
           params={{ id: post.pendingExperimentId }}
           className="bg-notice-info-bg text-notice-info-fg mt-6 flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium"
         >
-          AI 결과 확인 →
+          {t('editor.reviewAiResult')}
         </Link>
       )}
 
@@ -502,6 +536,11 @@ function LifecycleSteps({
 
   const refinePanel = result ? (
     <>
+      {languageMismatch && (
+        <Notice tone="warning" role="status" className="mb-4">
+          {voiceContentLanguageMismatchReason()}
+        </Notice>
+      )}
       <BlockEditor
         key={`${post.slug}:${post.machineBaselineRevision}`}
         ref={contentEditorRef}
@@ -510,7 +549,7 @@ function LifecycleSteps({
         // Feedback is evidence for the voice, and a deleted voice cannot take any; the server
         // refuses it, so the control is not offered rather than offered to fail.
         renderSentenceAction={
-          post.voice.deleted
+          post.voice.deleted || languageMismatch
             ? undefined
             : (text, flush) => (
                 <SentenceFeedback
@@ -526,6 +565,7 @@ function LifecycleSteps({
         ownerId={ownerId}
         postSlug={post.slug}
         voice={post.voice}
+        ruleLanguageMismatch={languageMismatch}
         activeJob={job}
         jobPending={Boolean(jobId) && !job}
         onStarted={(id) => setStarted({ id, step: 'refine' })}
@@ -548,8 +588,8 @@ function LifecycleSteps({
       />
     </>
   ) : (
-    <EmptyStep goTo={() => onStepChange('generate')} goToLabel="글 생성으로 가기">
-      아직 다듬을 글이 없어요. 글 생성에서 초안을 만들면 여기에서 문단별로 고칠 수 있습니다.
+    <EmptyStep goTo={() => onStepChange('generate')} goToLabel={t('editor.goGenerate')}>
+      {t('editor.refineEmpty')}
     </EmptyStep>
   )
 
@@ -558,11 +598,18 @@ function LifecycleSteps({
       {ownerId && (
         <VoiceLearningPanel learning={learning} onBackToRefine={() => onStepChange('refine')} />
       )}
-      <ExportPanel
-        content={liveContent ?? result}
-        images={post.images}
-        createdAt={post.createdAt}
-      />
+      {post.contentLanguage ? (
+        <ExportPanel
+          content={liveContent ?? result}
+          images={post.images}
+          createdAt={post.createdAt}
+          contentLanguage={post.contentLanguage}
+        />
+      ) : (
+        <Notice tone="danger" role="alert" className="mt-10">
+          {t('export.languageMissing')}
+        </Notice>
+      )}
       <PublishPanel
         ownerId={ownerId}
         postSlug={post.slug}
@@ -577,8 +624,8 @@ function LifecycleSteps({
       />
     </>
   ) : (
-    <EmptyStep goTo={() => onStepChange('generate')} goToLabel="글 생성으로 가기">
-      아직 완성할 글이 없어요. 초안을 만들고 글 다듬기에서 확정하면 여기에서 내보낼 수 있습니다.
+    <EmptyStep goTo={() => onStepChange('generate')} goToLabel={t('editor.goGenerate')}>
+      {t('editor.finishEmpty')}
     </EmptyStep>
   )
 
@@ -589,10 +636,10 @@ function LifecycleSteps({
   // The RETRY is offered only on the step that owns the job, because that is where the control it
   // calls is mounted.
   const jobNotice = !jobId ? null : jobState.isError ? (
-    <FailureNotice error="작업 상태를 확인하지 못했어요." onRetry={jobState.refetch} />
+    <FailureNotice message={t('editor.jobLoadFailed')} onRetry={jobState.refetch} />
   ) : job?.status === 'failed' ? (
     <FailureNotice
-      error={job.error}
+      failure={job.failure}
       onRetry={
         step !== jobStep || (job.kind === 'revise' && started?.id !== job.id)
           ? undefined
@@ -613,14 +660,14 @@ function LifecycleSteps({
     <ProgressLine job={job} />
   ) : job?.status === 'done' ? (
     <Notice tone="success" role="status">
-      <span className="min-w-0">글 생성을 마쳤어요.</span>
+      <span className="min-w-0">{t('editor.generationComplete')}</span>
       {result && (
         <Button
           variant="ghost"
           onClick={() => onStepChange('refine')}
           className="text-notice-success-fg shrink-0 underline"
         >
-          결과 보기
+          {t('editor.viewResult')}
         </Button>
       )}
     </Notice>
@@ -628,7 +675,7 @@ function LifecycleSteps({
 
   return (
     <>
-      <div id={STEP_PANEL_ID} role="tabpanel" aria-label={stepLabel(step)}>
+      <div id={STEP_PANEL_ID} role="tabpanel" aria-label={editorStepLabel(step)}>
         {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
       </div>
 
@@ -650,6 +697,3 @@ function LifecycleSteps({
     </>
   )
 }
-
-const stepLabel = (step: EditorStep) =>
-  EDITOR_STEPS.find((item) => item.value === step)?.label ?? ''

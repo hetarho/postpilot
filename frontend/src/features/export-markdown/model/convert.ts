@@ -1,5 +1,5 @@
 import type { PostImage } from '@/entities/image'
-import { BlockType, type PostContent } from '@/shared/api'
+import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import {
   escapeHtml,
   escapeMarkdownLabel,
@@ -13,12 +13,14 @@ export function toMarkdown(
   content: PostContent,
   _images: readonly PostImage[],
   createdAt: string,
+  contentLanguage: ContentLanguage,
 ): string {
   const date = createdAt.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? ''
   const frontMatter = [
     '---',
     `title: ${yamlString(content.title)}`,
     `date: ${date}`,
+    `language: ${contentLanguage}`,
     `summary: ${yamlString(content.summary)}`,
     `tags: [${content.tags.map(yamlString).join(', ')}]`,
     '---',

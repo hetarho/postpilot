@@ -1,4 +1,8 @@
-import type { ProtoGenerationJob } from '@/shared/api'
+import {
+  appFailureFromProto,
+  contentLanguageFromProto,
+  type ProtoGenerationJob,
+} from '@/shared/api'
 import type { GenerationJob, ModelRef } from '../model/types'
 
 function toModelRef(ref: ProtoGenerationJob['observeModel']): ModelRef | undefined {
@@ -14,11 +18,12 @@ export function toGenerationJob(job: ProtoGenerationJob): GenerationJob {
     stage: job.stage,
     progressDone: job.progressDone,
     progressTotal: job.progressTotal,
-    error: job.error,
+    failure: job.failure || job.status === 'failed' ? appFailureFromProto(job.failure) : undefined,
     postSlug: job.postSlug,
     observeModel: toModelRef(job.observeModel),
     writeModel: toModelRef(job.writeModel),
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
+    targetLanguage: contentLanguageFromProto(job.targetLanguage),
   }
 }

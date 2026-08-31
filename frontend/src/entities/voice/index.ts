@@ -5,21 +5,25 @@ export type {
   VoiceProfile,
   VoiceRef,
   VoiceRule,
+  VoiceRuleLayer,
   VoiceSample,
+  VoiceValidationState,
   VoiceValue,
   VoiceVersion,
 } from './model/types'
 export {
-  DELETED_VOICE_AI_REASON,
-  DELETED_VOICE_PREFIX,
   activeVoices,
   defaultVoice,
+  deletedVoiceAIReason,
   deletedVoices,
   emptyStructuredVoiceProfile,
   emptyVoice,
   isEmptyProfile,
   sortVoices,
   voiceRefLabel,
+  voiceContentLanguageMismatch,
+  voiceContentLanguageMismatchReason,
+  voiceValidationState,
 } from './model/types'
 export { loadVoices, useVoices, voiceDirectoryQuery } from './api/useVoices'
 export { useVoiceProfile } from './api/useVoiceProfile'

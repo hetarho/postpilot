@@ -23,9 +23,19 @@ func toProtoJob(job publishing.Job) *postpilotv1.PublishJob {
 	return &postpilotv1.PublishJob{Id: job.ID, PostSlug: job.PostSlug, AgentId: job.AgentID, Platform: job.Platform,
 		Status: toProtoStatus(job.Status), Stage: toProtoStage(job.Stage), ProgressSequence: job.ProgressSeq,
 		ContentRevision: job.ContentRevision, CategoryId: job.CategoryID, Visibility: toProtoVisibility(job.Visibility),
-		ErrorCode: job.ErrorCode, ErrorMessage: job.ErrorMessage, PlatformPostUrl: job.PlatformPostURL,
+		TargetLanguage: toProtoLanguage(job.TargetLanguage), ContentLanguage: toProtoLanguage(job.ContentLanguage), VoiceSourceLanguage: toProtoLanguage(job.VoiceSourceLanguage),
+		Failure: toProtoFailure(job.Failure), PlatformPostUrl: job.PlatformPostURL,
 		CreatedAt: job.CreatedAt.UTC().Format(time.RFC3339), UpdatedAt: job.UpdatedAt.UTC().Format(time.RFC3339),
 		CommittedAt: formatTime(job.CommittedAt), PublishedAt: formatTime(job.PublishedAt)}
+}
+
+func toProtoFailure(failure publishing.Failure) *postpilotv1.Failure {
+	if failure.Empty() {
+		return nil
+	}
+	return &postpilotv1.Failure{
+		Reason: failure.Reason, Params: failure.Clone().Params, TechnicalDetail: failure.TechnicalDetail,
+	}
 }
 
 func toProtoManifest(manifest publishing.Manifest, urls []string) *postpilotv1.PublishManifest {
@@ -40,7 +50,19 @@ func toProtoManifest(manifest publishing.Manifest, urls []string) *postpilotv1.P
 	return &postpilotv1.PublishManifest{JobId: manifest.JobID, PostSlug: manifest.PostSlug,
 		ContentRevision: manifest.ContentRevision, Content: toProtoContent(manifest.Content), Tags: manifest.Tags,
 		CategoryId: manifest.CategoryID, CategoryName: manifest.CategoryName, Visibility: toProtoVisibility(manifest.Visibility),
+		TargetLanguage: toProtoLanguage(manifest.TargetLanguage), ContentLanguage: toProtoLanguage(manifest.ContentLanguage), VoiceSourceLanguage: toProtoLanguage(manifest.VoiceSourceLanguage),
 		ExpectedPlatformAccountId: manifest.ExpectedPlatformAccountID, Assets: assets}
+}
+
+func toProtoLanguage(value publishing.Language) postpilotv1.ContentLanguage {
+	switch value {
+	case publishing.LanguageKorean:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
+	case publishing.LanguageEnglish:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
+	default:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+	}
 }
 
 func toProtoContent(content publishing.Content) *postpilotv1.PostContent {

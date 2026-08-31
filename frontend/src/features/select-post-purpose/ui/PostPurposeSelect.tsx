@@ -1,13 +1,9 @@
 import { useId, useState, type ChangeEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
-import {
-  NO_PURPOSE_LABEL,
-  NO_PURPOSE_VALUE,
-  usePurposes,
-  type PurposeRef,
-} from '@/entities/purpose'
+import { NO_PURPOSE_VALUE, noPurposeLabel, usePurposes, type PurposeRef } from '@/entities/purpose'
 import { Button, FieldLabel, FieldMessage, Select } from '@/shared/ui'
-import { RUNNING_JOB_NOTE, assignmentFailureMessage } from '../model/assignment'
+import { runningJobNote, assignmentFailureMessage } from '../model/assignment'
 
 interface PostPurposeSelectProps {
   ownerId: string
@@ -34,6 +30,7 @@ export function PostPurposeSelect({
   onSelect,
   className,
 }: PostPurposeSelectProps) {
+  const { t } = useTranslation(['purposes', 'common'])
   const id = useId()
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
@@ -76,7 +73,7 @@ export function PostPurposeSelect({
     <div className={className}>
       <div className="flex items-center gap-3">
         <FieldLabel htmlFor={id} className="shrink-0">
-          용도
+          {t('title', { ns: 'purposes' })}
         </FieldLabel>
         <span className="min-w-0 flex-1">
           <Select
@@ -87,7 +84,7 @@ export function PostPurposeSelect({
             aria-invalid={error || isError ? true : undefined}
             aria-describedby={describedBy || undefined}
           >
-            <option value={NO_PURPOSE_VALUE}>{NO_PURPOSE_LABEL}</option>
+            <option value={NO_PURPOSE_VALUE}>{noPurposeLabel()}</option>
             {unlisted && <option value={unlisted.id}>{unlisted.name || unlisted.id}</option>}
             {purposes.map((purpose) => (
               <option key={purpose.id} value={purpose.id}>
@@ -102,7 +99,7 @@ export function PostPurposeSelect({
       )}
       {jobRunning && (
         <p id={hintId} role="status" className="text-content-secondary mt-2 text-sm">
-          {RUNNING_JOB_NOTE}
+          {runningJobNote()}
         </p>
       )}
       {/* A failed directory read must not render as "you have no 용도": the select would be
@@ -110,14 +107,14 @@ export function PostPurposeSelect({
           still have. Disabled, said out loud, with a retry. */}
       {isError && (
         <FieldMessage id={errorId} className="mt-2">
-          용도 목록을 불러오지 못했어요.{' '}
+          {t('loadFailed', { ns: 'purposes' })}{' '}
           <Button
             variant="ghost"
             onClick={refetch}
             pending={isFetching}
             className="text-field-error underline"
           >
-            다시 시도
+            {t('action.retry', { ns: 'common' })}
           </Button>
         </FieldMessage>
       )}
@@ -128,7 +125,7 @@ export function PostPurposeSelect({
       )}
       <p className="mt-2 text-sm">
         <Link to="/purposes" className="text-content-secondary underline underline-offset-2">
-          용도 관리
+          {t('assignment.manage', { ns: 'purposes' })}
         </Link>
       </p>
     </div>

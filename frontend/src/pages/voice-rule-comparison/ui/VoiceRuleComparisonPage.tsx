@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation } from '@connectrpc/connect-query'
@@ -11,12 +12,13 @@ import {
   voiceProfileQueryKey,
   voiceVersionsQueryKey,
 } from '@/entities/voice'
-import { VoiceValidationService } from '@/shared/api'
+import { appFailureFromConnect, appFailureFromProto, VoiceValidationService } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
-import { ActionBar, Button, SegmentedControl } from '@/shared/ui'
+import { ActionBar, AppFailureMessage, Button, Notice, SegmentedControl } from '@/shared/ui'
 import { TextCandidateComparison } from '@/widgets/candidate-comparison'
 
 export function VoiceRuleComparisonPage() {
+  const { t } = useTranslation(['voices', 'common'])
   const { voiceId, id } = useParams({ from: '/authenticated/voices/$voiceId/rules/$id/compare' })
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -35,15 +37,17 @@ export function VoiceRuleComparisonPage() {
   const jobState = useJob(query.data?.comparison?.jobId ?? '', [key])
   const decide = useMutation(VoiceValidationService.method.decideVoiceRuleComparison)
   const retry = useMutation(VoiceValidationService.method.retryVoiceRuleComparison)
+  const decideFailure = decide.error ? appFailureFromConnect(decide.error) : undefined
+  const retryFailure = retry.error ? appFailureFromConnect(retry.error) : undefined
   const [active, setActive] = useState('')
-  if (query.isPending) return <Placeholder>비교 결과를 불러오는 중…</Placeholder>
+  if (query.isPending) return <Placeholder>{t('comparison.loading', { ns: 'voices' })}</Placeholder>
   const comparison = query.data?.comparison
   if (!comparison || query.isError) {
     return (
       <Placeholder>
-        비교 결과를 불러오지 못했어요.{' '}
+        {t('comparison.loadFailed', { ns: 'voices' })}{' '}
         <Button variant="ghost" onClick={() => void query.refetch()}>
-          다시 시도
+          {t('action.retry', { ns: 'common' })}
         </Button>
       </Placeholder>
     )
@@ -54,7 +58,7 @@ export function VoiceRuleComparisonPage() {
   if (comparison.voiceId !== voiceId) {
     return (
       <Placeholder>
-        <p role="alert">이 비교는 다른 말투의 기록이에요.</p>
+        <p role="alert">{t('comparison.wrongVoice', { ns: 'voices' })}</p>
       </Placeholder>
     )
   }
@@ -63,7 +67,10 @@ export function VoiceRuleComparisonPage() {
     label: candidate.side || (index === 0 ? 'A' : 'B'),
     text: candidate.output,
     status: candidate.status,
-    error: candidate.error,
+    failure:
+      candidate.failure || candidate.status === 'failed'
+        ? appFailureFromProto(candidate.failure)
+        : undefined,
   }))
   const activeId = candidates.some((candidate) => candidate.id === active)
     ? active
@@ -74,7 +81,12 @@ export function VoiceRuleComparisonPage() {
   const choose = async (candidateId: string) => {
     const side = comparison.candidates.find((candidate) => candidate.id === candidateId)?.side
     if (!side) return
-    await decide.mutateAsync({ comparisonId: id, chosenSide: side })
+    try {
+      await decide.mutateAsync({ comparisonId: id, chosenSide: side })
+    } catch {
+      // The structured mutation failure is rendered in the action bar.
+      return
+    }
     // The decision publishes to the comparison's own voice, so only that voice's profile and
     // version list are stale.
     await queryClient.invalidateQueries({ queryKey: key })
@@ -89,6 +101,14 @@ export function VoiceRuleComparisonPage() {
     comparison.status === 'partial' ||
     comparison.status === 'failed' ||
     jobState.job?.status === 'failed'
+  const retryComparison = async () => {
+    try {
+      await retry.mutateAsync({ comparisonId: id })
+      await query.refetch()
+    } catch {
+      // The structured mutation failure is rendered beside the retry action.
+    }
+  }
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
       <Link
@@ -96,27 +116,32 @@ export function VoiceRuleComparisonPage() {
         params={{ voiceId }}
         className="text-link-fg inline-flex min-h-11 items-center text-sm"
       >
-        ← 대조 규칙
+        {t('comparison.back', { ns: 'voices' })}
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold">규칙 블라인드 비교</h1>
+      <h1 className="mt-4 text-2xl font-semibold">{t('comparison.title', { ns: 'voices' })}</h1>
       <p className="text-content-secondary mt-2 text-sm">
-        두 결과는 같은 입력으로 만들었고 선택 전에는 규칙을 적용한 쪽을 숨깁니다.
+        {t('comparison.description', { ns: 'voices' })}
       </p>
       {canRetry && (
         <Button
           variant="secondary"
           className="mt-4"
           pending={retry.isPending}
-          onClick={() => void retry.mutateAsync({ comparisonId: id }).then(() => query.refetch())}
+          onClick={() => void retryComparison()}
         >
-          실패한 후보 다시 만들기
+          {t('comparison.retry', { ns: 'voices' })}
         </Button>
+      )}
+      {retryFailure && (
+        <Notice tone="danger" role="alert" className="mt-2">
+          <AppFailureMessage failure={retryFailure} />
+        </Notice>
       )}
       <div className="mt-6">
         <TextCandidateComparison candidates={candidates} activeCandidateId={activeId} />
       </div>
       {activeId && (
-        <ActionBar ariaLabel="후보 전환과 선택">
+        <ActionBar ariaLabel={t('comparison.actionAria', { ns: 'voices' })}>
           <div className="grid gap-3">
             <SegmentedControl
               value={activeId}
@@ -125,10 +150,10 @@ export function VoiceRuleComparisonPage() {
                 label: candidate.label,
               }))}
               onChange={setActive}
-              ariaLabel="선택할 후보"
+              ariaLabel={t('comparison.selectAria', { ns: 'voices' })}
             />
             {comparison.chosenSide ? (
-              <p className="text-sm">선택을 반영했어요.</p>
+              <p className="text-sm">{t('comparison.applied', { ns: 'voices' })}</p>
             ) : (
               <Button
                 variant="cta"
@@ -136,8 +161,13 @@ export function VoiceRuleComparisonPage() {
                 pending={decide.isPending}
                 onClick={() => void choose(activeId)}
               >
-                이 글이 더 나아요
+                {t('comparison.prefer', { ns: 'voices' })}
               </Button>
+            )}
+            {decideFailure && (
+              <Notice tone="danger" role="alert">
+                <AppFailureMessage failure={decideFailure} />
+              </Notice>
             )}
           </div>
         </ActionBar>

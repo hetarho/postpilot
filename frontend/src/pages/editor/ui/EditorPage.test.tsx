@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { initializeI18n } from '@/app/providers/i18n'
 import { discardUploadBatches } from '@/features/upload-photos'
 import { create } from '@bufbuild/protobuf'
 import {
@@ -28,9 +29,11 @@ async function openStep(user: ReturnType<typeof userEvent.setup>, label: string)
 }
 
 afterEach(() => {
+  cleanup()
   // Module state, so an unconsumed handoff would leak into the next test.
   clearCaret()
   discardUploadBatches()
+  initializeI18n('ko')
   vi.unstubAllGlobals()
 })
 
@@ -459,11 +462,11 @@ describe('opening a post', () => {
         ],
       },
       jobs: {
-        jobs: [{ ...resumed, status: 'failed', error: 'provider failed' }],
+        jobs: [{ ...resumed, status: 'failed', failureReason: 'MODEL_UNAVAILABLE' }],
       },
     })
 
-    expect(await screen.findByText('provider failed')).toBeInTheDocument()
+    expect(await screen.findByText('AI 모델을 잠시 사용할 수 없어요.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('수정 요청')).toBeEnabled()
   })
@@ -474,7 +477,7 @@ describe('opening a post', () => {
       id: 'comparison-job',
       kind: 'model_experiment',
       status: 'failed',
-      error: 'candidate failed',
+      failureReason: 'MODEL_OUTPUT_INVALID' as const,
     }
     const { router } = renderAppAt('/posts/20260820-jeju', {
       user: USER,
@@ -493,7 +496,7 @@ describe('opening a post', () => {
     })
 
     // The failure is reported on every step; its retry is mounted on the step that owns the job.
-    expect(await screen.findByText('candidate failed')).toBeInTheDocument()
+    expect(await screen.findByText('AI 결과 형식을 읽을 수 없어요.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
 
     await openStep(user, '글 생성')
@@ -918,7 +921,14 @@ describe('opening a post', () => {
         ],
       },
       jobs: {
-        jobs: [{ id: 'learn-1', kind: 'voice_learn', status: 'failed', error: 'provider failed' }],
+        jobs: [
+          {
+            id: 'learn-1',
+            kind: 'voice_learn',
+            status: 'failed',
+            failureReason: 'MODEL_UNAVAILABLE',
+          },
+        ],
       },
       providers: {
         models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
@@ -926,10 +936,71 @@ describe('opening a post', () => {
       },
     })
 
-    expect(await screen.findByText('provider failed')).toBeInTheDocument()
+    expect(await screen.findByText('AI 모델을 잠시 사용할 수 없어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
     expect(localStorage.getItem(key)).not.toBeNull()
+    localStorage.removeItem(key)
+  })
+
+  it('removes a failed-learning retry when the current voice language is ineligible', async () => {
+    const key = 'postpilot:voice-learning:alice:20260820-mismatch'
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      get length() {
+        return stored.size
+      },
+      key: (index: number) => [...stored.keys()][index] ?? null,
+      getItem: (name: string) => stored.get(name) ?? null,
+      setItem: (name: string, value: string) => stored.set(name, value),
+      removeItem: (name: string) => stored.delete(name),
+    })
+    localStorage.setItem(
+      key,
+      JSON.stringify({ eventId: 'event-1', jobId: 'learn-1', contentRevision: '1' }),
+    )
+    const calls: string[] = []
+    renderAppAt('/posts/20260820-mismatch', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-mismatch',
+            status: 'finalized',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            finalizedRevision: 1n,
+            contentLanguage: 'en',
+            voice: {
+              id: 'voice-default',
+              name: '기본 말투',
+              sourceLanguage: 'ko',
+            },
+          },
+        ],
+      },
+      jobs: {
+        jobs: [
+          {
+            id: 'learn-1',
+            kind: 'voice_learn',
+            status: 'failed',
+            failureReason: 'MODEL_UNAVAILABLE',
+          },
+        ],
+      },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
+        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
+      },
+    })
+
+    expect(await screen.findByText('글과 말투의 언어가 달라 학습할 수 없어요.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '말투 학습' })).toBeDisabled()
+    expect(calls).not.toContain('RetryVoiceLearning')
     localStorage.removeItem(key)
   })
 
@@ -1098,7 +1169,10 @@ describe('opening a post', () => {
     await user.click(await screen.findByRole('button', { name: '삭제' }))
 
     // The sheet stays open on failure and says so in place, so the retry is one tap away.
-    expect(await screen.findByRole('alert')).toHaveTextContent('삭제하지 못했어요')
+    const failure = await screen.findByRole('alert')
+    expect(failure).toHaveTextContent('삭제하지 못했어요')
+    expect(failure).toHaveTextContent('네트워크에 연결할 수 없어요.')
+    expect(failure).not.toHaveTextContent('private backend prose')
     await user.click(screen.getByRole('button', { name: '취소' }))
     expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toBeInTheDocument()
   })
@@ -1576,12 +1650,22 @@ describe('the post voice', () => {
       () => expect(router.state.location.pathname).toBe('/posts/20260828-제주'),
       AUTOSAVED,
     )
-    expect(draftSaves[0]).toEqual({ slug: '', voiceId: 'voice-default' })
+    expect(draftSaves[0]).toEqual({
+      slug: '',
+      voiceId: 'voice-default',
+      purposeId: undefined,
+      targetLanguage: 'ko',
+    })
     // The editor the mint mounted shows the same voice, and later saves leave it alone.
     expect(screen.getByLabelText('말투')).toHaveValue('voice-default')
     await user.type(screen.getByLabelText('메모'), '첫날')
     await waitFor(() => expect(draftSaves).toHaveLength(2), AUTOSAVED)
-    expect(draftSaves[1]).toEqual({ slug: '20260828-제주', voiceId: undefined })
+    expect(draftSaves[1]).toEqual({
+      slug: '20260828-제주',
+      voiceId: undefined,
+      purposeId: undefined,
+      targetLanguage: undefined,
+    })
   })
 
   it('lets a new draft pick another voice before anything is typed', async () => {
@@ -1599,7 +1683,13 @@ describe('the post voice', () => {
     await user.type(screen.getByLabelText('제목'), '리뷰 글')
 
     await waitFor(
-      () => expect(draftSaves[0]).toEqual({ slug: '', voiceId: 'voice-review' }),
+      () =>
+        expect(draftSaves[0]).toEqual({
+          slug: '',
+          voiceId: 'voice-review',
+          purposeId: undefined,
+          targetLanguage: 'ko',
+        }),
       AUTOSAVED,
     )
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/20260828-리뷰-글'))
@@ -1817,6 +1907,100 @@ describe('the post voice', () => {
     )
     await waitFor(() => expect(screen.queryAllByText('삭제된 말투 · 옛 말투')).toHaveLength(0))
     await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
+  })
+})
+
+describe('the post language', () => {
+  const AUTOSAVED = { timeout: 4_000 }
+
+  it('snapshots the current UI locale for a new post and sends it on the first request', async () => {
+    initializeI18n('en')
+    const draftSaves: FakeDraftSave[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
+
+    expect(await screen.findByRole('combobox', { name: 'Post language' })).toHaveValue('en')
+    await user.type(screen.getByLabelText('Title'), 'English draft')
+
+    await waitFor(() => expect(draftSaves[0]?.targetLanguage).toBe('en'), AUTOSAVED)
+  })
+
+  it('sends an explicit pre-create language instead of the UI-locale default', async () => {
+    initializeI18n('en')
+    const draftSaves: FakeDraftSave[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
+
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Post language' }), 'ko')
+    await user.type(screen.getByLabelText('Title'), 'Korean target')
+
+    await waitFor(() => expect(draftSaves[0]?.targetLanguage).toBe('ko'), AUTOSAVED)
+  })
+
+  it('restores an existing post language independently of the current UI locale', async () => {
+    initializeI18n('en')
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/korean-post', {
+      user: USER,
+      posts: {
+        posts: [{ slug: 'korean-post', title: '한국어 글', targetLanguage: 'ko' }],
+        draftSaves,
+      },
+    })
+
+    expect(await screen.findByRole('combobox', { name: 'Post language' })).toHaveValue('ko')
+    expect(draftSaves).toHaveLength(0)
+  })
+
+  it('exports the frozen content provenance rather than a different current target', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/english-content', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: 'english-content',
+            status: 'finalized',
+            targetLanguage: 'ko',
+            contentLanguage: 'en',
+            content: POST_CONTENT_FIXTURE,
+          },
+        ],
+      },
+    })
+
+    await openStep(user, '글 완성')
+    await user.click(screen.getByRole('tab', { name: '자체 사이트' }))
+    expect(screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과').value).toContain(
+      '<html lang="en">',
+    )
+    await user.click(screen.getByRole('tab', { name: '마크다운' }))
+    expect(screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과').value).toContain(
+      '\nlanguage: en\n',
+    )
+  })
+
+  it('fails closed instead of guessing when finalized content provenance is missing', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/malformed-content', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: 'malformed-content',
+            status: 'finalized',
+            contentLanguage: null,
+            content: POST_CONTENT_FIXTURE,
+          },
+        ],
+      },
+    })
+
+    await openStep(user, '글 완성')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '글의 내용 언어 정보가 없어 내보낼 수 없어요.',
+    )
+    expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
   })
 })
 

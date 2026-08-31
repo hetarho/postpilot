@@ -2,25 +2,29 @@
 -- caller remembering to check it.
 
 -- name: CreatePost :exec
-INSERT INTO posts (slug, user_id, voice_id, purpose_id, title, memo, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?);
+INSERT INTO posts (slug, user_id, voice_id, purpose_id, title, memo, target_language, status, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?);
 
 -- name: UpdatePostDraft :execrows
-UPDATE posts SET title = ?, memo = ?, updated_at = ?
-WHERE slug = ? AND user_id = ?;
+UPDATE posts SET title = sqlc.arg(title), memo = sqlc.arg(memo),
+    target_language = COALESCE(sqlc.narg(target_language), target_language),
+    updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id);
 
 -- name: UpdatePostObservations :execrows
 UPDATE posts SET observations = ?, updated_at = ?
 WHERE slug = ? AND user_id = ?;
 
 -- name: UpdateGeneratedContent :execrows
-UPDATE posts SET content = ?, machine_baseline = ?, machine_baseline_voice_id = voice_id,
+UPDATE posts SET content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline), machine_baseline_voice_id = voice_id,
+    content_language = sqlc.arg(content_language),
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
-    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?
-WHERE slug = ? AND user_id = ?
-  AND (content IS NULL OR content <> ? OR status <> 'review'
-       OR machine_baseline_revision <> content_revision);
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id)
+  AND (content IS NULL OR content <> sqlc.arg(content) OR status <> 'review'
+       OR machine_baseline_revision <> content_revision
+       OR content_language IS NULL OR content_language <> sqlc.arg(content_language));
 
 -- name: SavePostContent :execrows
 UPDATE posts SET content = ?, content_revision = content_revision + 1,
@@ -40,19 +44,20 @@ WHERE slug = ? AND user_id = ? AND content_revision = ?
 -- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
-       target_length, finalized_revision, finalized_at, purpose_id
+       target_length, finalized_revision, finalized_at, purpose_id, target_language, content_language
 FROM posts WHERE slug = ?;
 
 -- name: GetLearningSnapshot :one
 SELECT slug, user_id, voice_id, content, content_revision, machine_baseline, machine_baseline_revision,
-       machine_baseline_voice_id, target_length, status, finalized_revision, finalized_at, updated_at
+       machine_baseline_voice_id, target_length, status, finalized_revision, finalized_at, updated_at,
+       target_language, content_language
 FROM posts WHERE slug = ? AND user_id = ?;
 
 -- name: PostSlugExists :one
 SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ?);
 
 -- name: ListPostsByUser :many
-SELECT slug, title, content, status, updated_at, voice_id, purpose_id
+SELECT slug, title, content, status, updated_at, voice_id, purpose_id, target_language, content_language
 FROM posts WHERE user_id = ? ORDER BY updated_at DESC, slug DESC;
 
 -- name: ReassignPostVoice :execrows

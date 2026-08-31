@@ -1,6 +1,18 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { appFailureFromConnect } from '@/shared/api'
 import { POST_TARGET_LENGTH_MAX, POST_TARGET_LENGTH_MIN } from '@/shared/config'
-import { Button, Checkbox, FieldLabel, FieldMessage, Popover, TextField } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  Checkbox,
+  FieldLabel,
+  FieldMessage,
+  Notice,
+  Popover,
+  TextField,
+} from '@/shared/ui'
+import { formatNumber } from '@/shared/lib'
 import { useGenerationOptions } from '../api/useGenerationOptions'
 
 export function GenerationOptions({
@@ -14,6 +26,7 @@ export function GenerationOptions({
   disabled: boolean
   onSaved: (value?: number) => void
 }) {
+  const { t } = useTranslation(['posts', 'common'])
   const save = useGenerationOptions()
   const [enabled, setEnabled] = useState(targetLength !== undefined)
   const [value, setValue] = useState(targetLength?.toString() ?? '')
@@ -25,26 +38,31 @@ export function GenerationOptions({
       parsed <= POST_TARGET_LENGTH_MAX)
 
   return (
-    <Popover label="생성 옵션" disabled={disabled}>
+    <Popover label={t('generation.options.title', { ns: 'posts' })} disabled={disabled}>
       {(close) => (
         <form
           onSubmit={(event) => {
             event.preventDefault()
             if (!valid) return
             const next = enabled ? parsed : undefined
-            void save.save(slug, next).then(() => {
-              onSaved(next)
-              close()
-            })
+            void save
+              .save(slug, next)
+              .then(() => {
+                onSaved(next)
+                close()
+              })
+              .catch(() => undefined)
           }}
         >
           <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
             <Checkbox checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
-            목표 글자 수 사용
+            {t('generation.options.useTarget', { ns: 'posts' })}
           </label>
           {enabled && (
             <div className="mt-3">
-              <FieldLabel htmlFor={`generation-target-${slug}`}>목표 글자 수</FieldLabel>
+              <FieldLabel htmlFor={`generation-target-${slug}`}>
+                {t('generation.options.target', { ns: 'posts' })}
+              </FieldLabel>
               <TextField
                 id={`generation-target-${slug}`}
                 type="number"
@@ -57,19 +75,26 @@ export function GenerationOptions({
               />
               {!valid && (
                 <FieldMessage className="mt-1">
-                  {POST_TARGET_LENGTH_MIN.toLocaleString()}–
-                  {POST_TARGET_LENGTH_MAX.toLocaleString()}자로 입력해 주세요.
+                  {t('generation.options.range', {
+                    ns: 'posts',
+                    min: formatNumber(POST_TARGET_LENGTH_MIN),
+                    max: formatNumber(POST_TARGET_LENGTH_MAX),
+                  })}
                 </FieldMessage>
               )}
             </div>
           )}
-          {save.isError && <FieldMessage className="mt-2">옵션을 저장하지 못했어요.</FieldMessage>}
+          {save.error && (
+            <Notice tone="danger" role="alert" className="mt-2">
+              <AppFailureMessage failure={appFailureFromConnect(save.error)} />
+            </Notice>
+          )}
           <div className="mt-4 flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={close}>
-              취소
+              {t('action.cancel', { ns: 'common' })}
             </Button>
             <Button type="submit" variant="secondary" disabled={!valid} pending={save.isPending}>
-              저장
+              {t('action.save', { ns: 'common' })}
             </Button>
           </div>
         </form>

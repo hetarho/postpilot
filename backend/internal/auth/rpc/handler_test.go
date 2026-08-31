@@ -2,6 +2,7 @@ package rpc_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -94,6 +95,12 @@ func TestLoginFailureIsGenericAndSetsNoCookie(t *testing.T) {
 	if !strings.Contains(unknown.Error(), "invalid credentials") {
 		t.Errorf("unexpected message: %s", unknown)
 	}
+	for _, err := range []error{unknown, wrong} {
+		detail := authAppErrorDetail(t, err)
+		if detail.GetReason() != "INVALID_CREDENTIALS" || len(detail.GetParams()) != 0 {
+			t.Errorf("credential detail = %#v", detail)
+		}
+	}
 }
 
 // TestInterceptorGuardsEveryProcedure is plan 01 AC1: no cookie means 401 on anything
@@ -103,6 +110,8 @@ func TestInterceptorGuardsEveryProcedure(t *testing.T) {
 
 	if _, err := client.GetMe(context.Background(), connect.NewRequest(&postpilotv1.GetMeRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Errorf("GetMe without a cookie: %v, want unauthenticated", err)
+	} else if detail := authAppErrorDetail(t, err); detail.GetReason() != "AUTH_REQUIRED" || len(detail.GetParams()) != 0 {
+		t.Errorf("authentication detail = %#v", detail)
 	}
 
 	cookie := login(t, client)
@@ -266,4 +275,24 @@ func flipFirstChar(s string) string {
 		replacement = 'B'
 	}
 	return string(replacement) + s[1:]
+}
+
+func authAppErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
+	t.Helper()
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) {
+		t.Fatalf("error type = %T, want *connect.Error", err)
+	}
+	if len(connectErr.Details()) != 1 {
+		t.Fatalf("details = %d, want 1", len(connectErr.Details()))
+	}
+	value, valueErr := connectErr.Details()[0].Value()
+	if valueErr != nil {
+		t.Fatalf("decode detail: %v", valueErr)
+	}
+	detail, ok := value.(*postpilotv1.AppErrorDetail)
+	if !ok {
+		t.Fatalf("detail type = %T", value)
+	}
+	return detail
 }

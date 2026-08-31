@@ -29,6 +29,6 @@ func main() {
 // account can create a post, and rerunning repairs an account left without one.
 func defaultVoiceBootstrap(ctx context.Context, handle *db.DB, userID string) error {
 	directory := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	_, _, err := directory.EnsureDefaultVoice(ctx, userID)
+	_, _, err := directory.EnsureDefaultVoice(ctx, userID, voice.LanguageKorean)
 	return err
 }

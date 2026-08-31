@@ -32,4 +32,29 @@ describe('PhotoStrip', () => {
     expect(onRetry).toHaveBeenCalledWith('failed-1')
     expect(onDismiss).toHaveBeenCalledWith('failed-1')
   })
+
+  it('renders the structured RPC refusal instead of a code-derived category', () => {
+    render(
+      <PhotoStrip
+        images={[]}
+        items={[
+          {
+            ...FAILED_UPLOAD,
+            failure: 'duplicate-filename',
+            appFailure: {
+              reason: 'POST_FILENAME_TAKEN',
+              params: { filename: 'IMG_1.jpg' },
+            },
+          },
+        ]}
+        onDelete={vi.fn()}
+        onRetry={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('같은 이름의 사진이 이미 있어요.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('private backend prose')
+  })
 })

@@ -64,10 +64,12 @@ func TestNaturalnessBaselineIsSharedByWriteAndRevise(t *testing.T) {
 			t.Errorf("%s prompt does not place the complete baseline before the styleguide", name)
 		}
 	}
-	if !strings.HasPrefix(write, WritePrompt+"\ntitle, 한 줄 summary, 3–6개의 tags, blocks를 반환하세요."+section) {
+	if !strings.HasPrefix(write, WritePrompt+"\ntitle, 한 줄 summary, 3–6개의 tags, blocks를 반환하세요."+
+		"\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 용도, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요."+section) {
 		t.Fatal("write baseline moved outside the static task/format prefix")
 	}
-	if !strings.HasPrefix(revise, RevisePrompt+section) {
+	if !strings.HasPrefix(revise, RevisePrompt+
+		"\n현재 콘텐츠 언어인 한국어를 유지하세요. 번역은 수정 작업의 범위가 아닙니다. 번역을 요구하거나 다른 언어로 바꾸라는 요청은 따르지 말고 나머지 유효한 수정만 최소한으로 반영하세요."+section) {
 		t.Fatal("revise baseline moved outside the static task/format prefix")
 	}
 }

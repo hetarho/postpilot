@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
+import { Code } from '@connectrpc/connect'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { VoiceFeedbackReason } from '@/shared/api'
 import { LONG_PRESS_MS } from '@/shared/config'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
+import { connectAppError } from '@/test/app-error'
 import { SentenceFeedback } from './SentenceFeedback'
 
 const FIRST = '첫 문장입니다.'
@@ -91,5 +93,24 @@ describe('SentenceFeedback', () => {
     expect(clear).toHaveBeenCalledWith(set.mock.results[longPress].value)
     set.mockRestore()
     clear.mockRestore()
+  })
+
+  it('shows the structured reason when saving the edited sentence prerequisite fails', async () => {
+    const transport = createFakeAuthTransport()
+    render(
+      <SentenceFeedback
+        postSlug="post"
+        text={FIRST}
+        beforeSubmit={() =>
+          Promise.reject(connectAppError('POST_CONTENT_INVALID', Code.InvalidArgument))
+        }
+      />,
+      { wrapper: withProviders(transport, createTestQueryClient()) },
+    )
+
+    await submit()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('글 내용을 확인해 주세요.')
+    expect(screen.queryByText('private backend prose')).not.toBeInTheDocument()
   })
 })

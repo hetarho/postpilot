@@ -3,6 +3,7 @@ syntax = "proto3";
 package postpilot.v1;
 
 import "postpilot/v1/provider.proto";
+import "postpilot/v1/language.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
@@ -63,6 +64,7 @@ message VoiceSyntax {
   repeated string preferred_connectives = 4;
   VoiceValue nominalization = 5;
   VoiceValue passive_tendency = 6;
+  optional double average_sentence_words = 7;
 }
 message VoiceStructure {
   VoiceValue intro_pattern = 1;
@@ -155,11 +157,12 @@ message Voice {
   string created_at = 5;
   string updated_at = 6;
   string deleted_at = 7;
+  ContentLanguage source_language = 8;
 }
 
 message ListVoicesRequest {}
 message ListVoicesResponse { repeated Voice voices = 1; }
-message CreateVoiceRequest { string name = 1; }
+message CreateVoiceRequest { string name = 1; optional ContentLanguage source_language = 2; }
 message CreateVoiceResponse { Voice voice = 1; }
 message RenameVoiceRequest { string voice_id = 1; string name = 2; }
 message RenameVoiceResponse { Voice voice = 1; }

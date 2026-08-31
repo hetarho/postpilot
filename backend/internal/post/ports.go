@@ -77,9 +77,9 @@ type ExperimentContentPurger interface {
 // post-scoped lookups take the post, and the service resolves the post's owner first.
 type Store interface {
 	CreatePost(ctx context.Context, p Post) error
-	UpdateDraft(ctx context.Context, slug, userID, title, memo string, updatedAt time.Time) (bool, error)
+	UpdateDraft(ctx context.Context, slug, userID, title, memo string, targetLanguage *Language, updatedAt time.Time) (bool, error)
 	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
-	UpdateGeneratedContent(ctx context.Context, slug, userID string, content PostContent, updatedAt time.Time) (bool, error)
+	UpdateGeneratedContent(ctx context.Context, slug, userID string, content PostContent, language Language, updatedAt time.Time) (bool, error)
 	GetPost(ctx context.Context, slug string) (Post, error)
 	// ReassignVoice moves the post to another voice in one statement that also drops the
 	// machine baseline's voice association — the part of the post that belonged to the old

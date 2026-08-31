@@ -189,7 +189,14 @@ func (s *Store) ApplyOverrideAndPublish(ctx context.Context, override voice.Manu
 }
 
 func (s *Store) InsertLearningEvent(ctx context.Context, e voice.LearningEvent) error {
-	return s.write.InsertLearningEvent(ctx, sqlc.InsertLearningEventParams{ID: e.ID, UserID: e.UserID, VoiceID: e.VoiceID, PostSlug: e.PostSlug, BaselineRevision: e.BaselineRevision, InputHash: e.InputHash, BaselineContent: e.BaselineJSON, FinalContent: e.FinalJSON, ModelRef: e.ModelRef, Status: e.Status, JobID: nullableString(e.JobID), Error: nullableString(e.Error), CreatedAt: formatTime(e.CreatedAt), ProcessedAt: nullableTime(e.ProcessedAt)})
+	if !e.ContentLanguage.Valid() || !e.SourceLanguage.Valid() {
+		return voice.ErrLanguageRequired
+	}
+	reason, params, detail, err := encodeFailure(e.Failure)
+	if err != nil {
+		return err
+	}
+	return s.write.InsertLearningEvent(ctx, sqlc.InsertLearningEventParams{ID: e.ID, UserID: e.UserID, VoiceID: e.VoiceID, PostSlug: e.PostSlug, BaselineRevision: e.BaselineRevision, InputHash: e.InputHash, BaselineContent: e.BaselineJSON, FinalContent: e.FinalJSON, ModelRef: e.ModelRef, Status: e.Status, JobID: nullableString(e.JobID), Error: sql.NullString{}, CreatedAt: formatTime(e.CreatedAt), ProcessedAt: nullableTime(e.ProcessedAt), ContentLanguage: nullableString(string(e.ContentLanguage)), SourceLanguage: nullableString(string(e.SourceLanguage)), ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail})
 }
 func (s *Store) FindLearningEvent(ctx context.Context, userID, voiceID, postSlug string, baselineRevision int64, inputHash string) (*voice.LearningEvent, error) {
 	row, err := s.read.GetLearningEventByInput(ctx, sqlc.GetLearningEventByInputParams{VoiceID: voiceID, UserID: userID, PostSlug: postSlug, BaselineRevision: baselineRevision, InputHash: inputHash})
@@ -226,13 +233,29 @@ func learningEvent(r sqlc.VoiceLearningEvent) (voice.LearningEvent, error) {
 		}
 		processed = &v
 	}
-	return voice.LearningEvent{ID: r.ID, UserID: r.UserID, VoiceID: r.VoiceID, PostSlug: r.PostSlug, BaselineRevision: r.BaselineRevision, InputHash: r.InputHash, BaselineJSON: r.BaselineContent, FinalJSON: r.FinalContent, ModelRef: r.ModelRef, Status: r.Status, JobID: r.JobID.String, Error: r.Error.String, CreatedAt: created, ProcessedAt: processed}, nil
+	contentLanguage, err := voice.ParseLanguage(r.ContentLanguage.String)
+	if err != nil {
+		return voice.LearningEvent{}, err
+	}
+	sourceLanguage, err := voice.ParseLanguage(r.SourceLanguage.String)
+	if err != nil {
+		return voice.LearningEvent{}, err
+	}
+	failure, err := decodeFailure(r.ErrorReason, r.ErrorParams, r.TechnicalDetail, r.Error)
+	if err != nil {
+		return voice.LearningEvent{}, err
+	}
+	return voice.LearningEvent{ID: r.ID, UserID: r.UserID, VoiceID: r.VoiceID, PostSlug: r.PostSlug, BaselineRevision: r.BaselineRevision, InputHash: r.InputHash, BaselineJSON: r.BaselineContent, FinalJSON: r.FinalContent, ModelRef: r.ModelRef, Status: r.Status, JobID: r.JobID.String, Error: r.Error.String, CreatedAt: created, ProcessedAt: processed, ContentLanguage: contentLanguage, SourceLanguage: sourceLanguage, Failure: failure}, nil
 }
 func (s *Store) SetLearningEventJob(ctx context.Context, userID, eventID, jobID string) error {
 	return s.write.SetLearningEventJob(ctx, sqlc.SetLearningEventJobParams{JobID: nullableString(jobID), ID: eventID, UserID: userID})
 }
-func (s *Store) SetLearningEventStatus(ctx context.Context, userID, eventID, status, message string, processedAt *time.Time) error {
-	return s.write.SetLearningEventStatus(ctx, sqlc.SetLearningEventStatusParams{Status: status, Error: nullableString(message), ProcessedAt: nullableTime(processedAt), ID: eventID, UserID: userID})
+func (s *Store) SetLearningEventStatus(ctx context.Context, userID, eventID, status string, failure *voice.Failure, processedAt *time.Time) error {
+	reason, params, detail, err := encodeFailure(failure)
+	if err != nil {
+		return err
+	}
+	return s.write.SetLearningEventStatus(ctx, sqlc.SetLearningEventStatusParams{Status: status, ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail, ProcessedAt: nullableTime(processedAt), ID: eventID, UserID: userID})
 }
 
 func (s *Store) ListAuthoredSources(ctx context.Context, userID, voiceID string) ([]voice.AuthoredSource, error) {
@@ -242,7 +265,7 @@ func (s *Store) ListAuthoredSources(ctx context.Context, userID, voiceID string)
 	}
 	out := make([]voice.AuthoredSource, 0, len(rows))
 	for _, r := range rows {
-		v, e := authoredSource(r)
+		v, e := authoredSourceFromList(r)
 		if e != nil {
 			return nil, e
 		}
@@ -258,18 +281,28 @@ func (s *Store) GetAuthoredSource(ctx context.Context, userID, voiceID, sourceID
 	if err != nil {
 		return voice.AuthoredSource{}, err
 	}
-	return authoredSource(r)
+	return authoredSourceFromGet(r)
 }
-func authoredSource(r sqlc.VoiceAuthoredSource) (voice.AuthoredSource, error) {
-	created, err := parseTime(r.CreatedAt)
+func authoredSourceFromList(r sqlc.ListAuthoredSourcesRow) (voice.AuthoredSource, error) {
+	return authoredSource(r.ID, r.UserID, r.VoiceID, r.PostSlug, r.LearningEventID, r.Title, r.Tags, r.Body, r.Excerpt, r.EmbeddingRef, r.CreatedAt, r.SourceLanguage)
+}
+func authoredSourceFromGet(r sqlc.GetAuthoredSourceRow) (voice.AuthoredSource, error) {
+	return authoredSource(r.ID, r.UserID, r.VoiceID, r.PostSlug, r.LearningEventID, r.Title, r.Tags, r.Body, r.Excerpt, r.EmbeddingRef, r.CreatedAt, r.SourceLanguage)
+}
+func authoredSource(id, userID, voiceID string, postSlug, learningEventID sql.NullString, title, rawTags, body, excerpt string, embeddingRef sql.NullString, rawCreated, rawLanguage string) (voice.AuthoredSource, error) {
+	created, err := parseTime(rawCreated)
 	if err != nil {
 		return voice.AuthoredSource{}, err
 	}
 	var tags []string
-	if err = json.Unmarshal([]byte(r.Tags), &tags); err != nil {
+	if err = json.Unmarshal([]byte(rawTags), &tags); err != nil {
 		return voice.AuthoredSource{}, err
 	}
-	return voice.AuthoredSource{ID: r.ID, UserID: r.UserID, VoiceID: r.VoiceID, PostSlug: r.PostSlug.String, LearningEventID: r.LearningEventID.String, Title: r.Title, Tags: tags, Body: r.Body, Excerpt: r.Excerpt, EmbeddingRef: r.EmbeddingRef.String, CreatedAt: created}, nil
+	language, err := voice.ParseLanguage(rawLanguage)
+	if err != nil {
+		return voice.AuthoredSource{}, err
+	}
+	return voice.AuthoredSource{ID: id, UserID: userID, VoiceID: voiceID, PostSlug: postSlug.String, LearningEventID: learningEventID.String, Title: title, Tags: tags, Body: body, Excerpt: excerpt, EmbeddingRef: embeddingRef.String, CreatedAt: created, SourceLanguage: language}, nil
 }
 
 func (s *Store) ListRules(ctx context.Context, userID, voiceID string) ([]voice.ContrastRule, error) {

@@ -4,6 +4,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -29,7 +30,8 @@ func (s *Store) Insert(ctx context.Context, found job.Job) error {
 		ID: found.ID, PostSlug: nullStringPtr(found.PostSlug), UserID: found.UserID, VoiceID: nullString(found.VoiceID),
 		Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
 		WriteModel: nullString(found.WriteModel), Payload: string(found.Payload),
-		CreatedAt: formatTime(found.CreatedAt), UpdatedAt: formatTime(found.UpdatedAt),
+		TargetLanguage: nullString(found.TargetLanguage),
+		CreatedAt:      formatTime(found.CreatedAt), UpdatedAt: formatTime(found.UpdatedAt),
 	})
 	if err != nil {
 		message := strings.ToLower(err.Error())
@@ -68,10 +70,20 @@ func (s *Store) UpdateProgress(ctx context.Context, id, stage string, done, tota
 	return nil
 }
 
-func (s *Store) Finish(ctx context.Context, id, status, message string, now time.Time) error {
-	err := s.write.FinishJob(ctx, sqlc.FinishJobParams{
-		Status: status, Error: nullString(message), FinishedAt: sql.NullString{String: formatTime(now), Valid: true},
-		UpdatedAt: formatTime(now), ID: id,
+func (s *Store) Finish(ctx context.Context, id, status string, failure *job.Failure, now time.Time) error {
+	if status == job.StatusFailed && failure == nil {
+		return errors.New("finish job: failed status requires failure")
+	}
+	if status == job.StatusDone && failure != nil {
+		return errors.New("finish job: done status cannot carry failure")
+	}
+	reason, params, detail, err := failureColumns(failure)
+	if err != nil {
+		return fmt.Errorf("finish job failure: %w", err)
+	}
+	err = s.write.FinishJob(ctx, sqlc.FinishJobParams{
+		Status: status, ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
+		FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now), ID: id,
 	})
 	if err != nil {
 		return fmt.Errorf("finish job: %w", err)
@@ -79,10 +91,14 @@ func (s *Store) Finish(ctx context.Context, id, status, message string, now time
 	return nil
 }
 
-func (s *Store) FailQueued(ctx context.Context, id, userID, message string, now time.Time) (bool, error) {
+func (s *Store) FailQueued(ctx context.Context, id, userID string, failure job.Failure, now time.Time) (bool, error) {
+	reason, params, detail, err := failureColumns(&failure)
+	if err != nil {
+		return false, fmt.Errorf("fail queued job failure: %w", err)
+	}
 	n, err := s.write.FailQueuedJob(ctx, sqlc.FailQueuedJobParams{
-		Error: nullString(message), FinishedAt: sql.NullString{String: formatTime(now), Valid: true},
-		UpdatedAt: formatTime(now), ID: id, UserID: userID,
+		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
+		FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now), ID: id, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("fail queued job: %w", err)
@@ -90,10 +106,14 @@ func (s *Store) FailQueued(ctx context.Context, id, userID, message string, now 
 	return n == 1, nil
 }
 
-func (s *Store) SweepRunning(ctx context.Context, message string, now time.Time) (int64, error) {
+func (s *Store) SweepRunning(ctx context.Context, failure job.Failure, now time.Time) (int64, error) {
+	reason, params, detail, err := failureColumns(&failure)
+	if err != nil {
+		return 0, fmt.Errorf("sweep running job failure: %w", err)
+	}
 	n, err := s.write.SweepRunning(ctx, sqlc.SweepRunningParams{
-		Error: nullString(message), FinishedAt: sql.NullString{String: formatTime(now), Valid: true},
-		UpdatedAt: formatTime(now),
+		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
+		FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("sweep running jobs: %w", err)
@@ -101,9 +121,14 @@ func (s *Store) SweepRunning(ctx context.Context, message string, now time.Time)
 	return n, nil
 }
 
-func (s *Store) SweepQueuedPersonalization(ctx context.Context, message string, now time.Time) (int64, error) {
+func (s *Store) SweepQueuedPersonalization(ctx context.Context, failure job.Failure, now time.Time) (int64, error) {
+	reason, params, detail, err := failureColumns(&failure)
+	if err != nil {
+		return 0, fmt.Errorf("sweep queued personalization failure: %w", err)
+	}
 	n, err := s.write.SweepQueuedPersonalization(ctx, sqlc.SweepQueuedPersonalizationParams{
-		Error: nullString(message), FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now),
+		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
+		FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("sweep queued personalization: %w", err)
@@ -210,14 +235,86 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 	if err != nil {
 		return job.Job{}, fmt.Errorf("job %s finished_at: %w", row.ID, err)
 	}
+	failure, err := failureFromRow(row.ErrorReason, row.ErrorParams, row.TechnicalDetail, row.Error)
+	if err != nil {
+		return job.Job{}, fmt.Errorf("job %s failure: %w", row.ID, err)
+	}
 	return job.Job{
 		ID: row.ID, PostSlug: stringPtr(row.PostSlug), UserID: row.UserID, VoiceID: row.VoiceID.String, Kind: row.Kind,
 		Status: row.Status, Stage: row.Stage.String, ProgressDone: int(row.ProgressDone),
-		ProgressTotal: int(row.ProgressTotal), Error: row.Error.String,
-		ObserveModel: row.ObserveModel.String, WriteModel: row.WriteModel.String,
+		ProgressTotal: int(row.ProgressTotal), Failure: failure,
+		ObserveModel: row.ObserveModel.String, WriteModel: row.WriteModel.String, TargetLanguage: row.TargetLanguage.String,
 		Payload: []byte(row.Payload), CreatedAt: created, UpdatedAt: updated,
 		StartedAt: started, FinishedAt: finished,
 	}, nil
+}
+
+func failureColumns(failure *job.Failure) (sql.NullString, sql.NullString, sql.NullString, error) {
+	if failure == nil {
+		return sql.NullString{}, sql.NullString{}, sql.NullString{}, nil
+	}
+	if !validFailureReason(failure.Reason) {
+		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("invalid reason %q", failure.Reason)
+	}
+	params := failure.Params
+	if params == nil {
+		params = map[string]string{}
+	}
+	raw, err := json.Marshal(params)
+	if err != nil {
+		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("encode params: %w", err)
+	}
+	return nullString(failure.Reason), sql.NullString{String: string(raw), Valid: true}, nullString(failure.TechnicalDetail), nil
+}
+
+func failureFromRow(reason, params, detail, legacy sql.NullString) (*job.Failure, error) {
+	if !reason.Valid || strings.TrimSpace(reason.String) == "" {
+		if params.Valid || detail.Valid {
+			return nil, errors.New("failure params/detail present without reason")
+		}
+		technical := strings.TrimSpace(legacy.String)
+		if technical == "" {
+			return nil, nil
+		}
+		return &job.Failure{Reason: job.FailureReasonUnknown, TechnicalDetail: technical}, nil
+	}
+	if !validFailureReason(reason.String) {
+		return nil, fmt.Errorf("invalid reason %q", reason.String)
+	}
+	if !params.Valid || !strings.HasPrefix(strings.TrimSpace(params.String), "{") {
+		return nil, errors.New("failure params must be a JSON object")
+	}
+	decoded := map[string]string{}
+	if err := json.Unmarshal([]byte(params.String), &decoded); err != nil {
+		return nil, fmt.Errorf("decode failure params: %w", err)
+	}
+	if len(decoded) == 0 {
+		decoded = nil
+	}
+	return &job.Failure{Reason: reason.String, Params: decoded, TechnicalDetail: detail.String}, nil
+}
+
+func validFailureReason(reason string) bool {
+	if reason == "" || reason[0] < 'A' || reason[0] > 'Z' || reason[len(reason)-1] == '_' {
+		return false
+	}
+	previousUnderscore := false
+	for i, char := range reason {
+		if char >= 'A' && char <= 'Z' {
+			previousUnderscore = false
+			continue
+		}
+		if char == '_' && !previousUnderscore {
+			previousUnderscore = true
+			continue
+		}
+		if i > 0 && char >= '0' && char <= '9' {
+			previousUnderscore = false
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func mapNotFound(err error, op string) error {

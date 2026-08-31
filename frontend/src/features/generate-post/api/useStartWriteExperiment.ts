@@ -1,14 +1,14 @@
 import { create } from '@bufbuild/protobuf'
-import { ConnectError } from '@connectrpc/connect'
 import { useMutation } from '@connectrpc/connect-query'
 import type { ModelRef } from '@/entities/model-catalog'
-import { ModelExperimentService, ModelRefSchema } from '@/shared/api'
+import { appFailureFromConnect, ModelExperimentService, ModelRefSchema } from '@/shared/api'
+import { formatAppFailure } from '@/shared/lib'
 
 export function useStartWriteExperiment() {
   const mutation = useMutation(ModelExperimentService.method.startWriteExperiment)
   return {
     ...mutation,
-    errorMessage: mutation.error ? ConnectError.from(mutation.error).rawMessage : '',
+    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
     start: (
       postSlug: string,
       observeModel: ModelRef | undefined,

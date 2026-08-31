@@ -1,7 +1,7 @@
-import { ConnectError } from '@connectrpc/connect'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { VoiceService } from '@/shared/api'
+import { appFailureFromConnect, VoiceService } from '@/shared/api'
+import { formatAppFailure } from '@/shared/lib'
 import { voiceProfileQueryKey } from './voice-queries'
 
 export function useDeleteVoiceSample(ownerId: string, voiceId: string) {
@@ -15,7 +15,7 @@ export function useDeleteVoiceSample(ownerId: string, voiceId: string) {
   })
   return {
     ...mutation,
-    errorMessage: mutation.error ? ConnectError.from(mutation.error).rawMessage : '',
+    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
     remove: (sampleId: string) => mutation.mutateAsync({ voiceId, sampleId }),
   }
 }

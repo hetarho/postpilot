@@ -282,7 +282,7 @@ func main() {
 		return generationSvc.Generate(ctx, generation.GenerateJob{
 			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID,
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
-			TargetLength: options.TargetLength, Purpose: options.Purpose,
+			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, Purpose: options.Purpose,
 		}, generation.Progress(progress))
 	})
 	jobQueue.Register(job.KindRevise, func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -414,7 +414,7 @@ func (a publishingPosts) PublishingSnapshot(ctx context.Context, userID, postSlu
 			return publishing.PostSnapshot{}, publishing.ErrForbidden
 		case errors.Is(err, post.ErrPostNotFinalized):
 			return publishing.PostSnapshot{}, publishing.ErrPostNotFinalized
-		case errors.Is(err, post.ErrInvalidContent):
+		case errors.Is(err, post.ErrInvalidContent), errors.Is(err, post.ErrLanguageRequired):
 			return publishing.PostSnapshot{}, publishing.ErrInvalid
 		default:
 			return publishing.PostSnapshot{}, err
@@ -431,7 +431,9 @@ func (a publishingPosts) PublishingSnapshot(ctx context.Context, userID, postSlu
 		images = append(images, publishing.SnapshotImage{Filename: image.Filename, Key: image.Key, Bytes: image.Bytes})
 	}
 	return publishing.PostSnapshot{PostSlug: snapshot.PostSlug, UserID: snapshot.UserID, CreatedAt: snapshot.CreatedAt, Content: content,
-		ContentRevision: snapshot.ContentRevision, FinalizedRevision: snapshot.FinalizedRevision, Images: images}, nil
+		ContentRevision: snapshot.ContentRevision, FinalizedRevision: snapshot.FinalizedRevision, Images: images,
+		TargetLanguage: publishing.Language(snapshot.TargetLanguage), ContentLanguage: publishing.Language(snapshot.ContentLanguage),
+		VoiceSourceLanguage: publishing.Language(snapshot.VoiceSourceLanguage)}, nil
 }
 
 var _ publishing.PostSnapshots = publishingPosts{}
@@ -512,8 +514,8 @@ func (a voiceJobs) IsPersonalizationJobActive(ctx context.Context, jobID, userID
 	return found.Status == job.StatusQueued || found.Status == job.StatusRunning, nil
 }
 
-func (a voiceJobs) FailQueuedPersonalization(ctx context.Context, jobID, userID, message string) (bool, error) {
-	return a.queue.FailQueued(ctx, jobID, userID, message)
+func (a voiceJobs) FailQueuedPersonalization(ctx context.Context, jobID, userID string, failure voice.Failure) (bool, error) {
+	return a.queue.FailQueued(ctx, jobID, userID, job.Failure{Reason: failure.Reason, Params: failure.Params, TechnicalDetail: failure.TechnicalDetail})
 }
 
 func (a voiceJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*voice.ActiveJob, error) {
@@ -546,7 +548,7 @@ func (a postVoices) Voices(ctx context.Context, userID string) ([]post.VoiceRef,
 	}
 	out := make([]post.VoiceRef, 0, len(voices))
 	for _, v := range voices {
-		out = append(out, post.VoiceRef{ID: v.ID, Name: v.Name, Deleted: v.Deleted()})
+		out = append(out, post.VoiceRef{ID: v.ID, Name: v.Name, Deleted: v.Deleted(), SourceLanguage: post.Language(v.SourceLanguage)})
 	}
 	return out, nil
 }
@@ -625,7 +627,7 @@ func (a voicePosts) LearningSnapshot(ctx context.Context, userID, slug string) (
 	if err != nil {
 		return voice.FinalizationInput{}, err
 	}
-	return voice.FinalizationInput{PostSlug: found.PostSlug, UserID: found.UserID, VoiceID: found.VoiceID, BaselineVoiceID: found.MachineBaselineVoiceID, BaselineJSON: string(baseline), FinalJSON: string(current), Title: found.Current.Title, Tags: found.Current.Tags, BaselineRevision: found.BaselineRevision, ContentRevision: found.ContentRevision, TargetLength: found.TargetLength}, nil
+	return voice.FinalizationInput{PostSlug: found.PostSlug, UserID: found.UserID, VoiceID: found.VoiceID, BaselineVoiceID: found.MachineBaselineVoiceID, BaselineJSON: string(baseline), FinalJSON: string(current), Title: found.Current.Title, Tags: found.Current.Tags, BaselineRevision: found.BaselineRevision, ContentRevision: found.ContentRevision, TargetLength: found.TargetLength, ContentLanguage: voice.Language(found.ContentLanguage), VoiceSourceLanguage: voice.Language(found.VoiceSourceLanguage)}, nil
 }
 
 type postBlockWire struct {
@@ -670,13 +672,13 @@ func (a generationModels) Complete(ctx context.Context, ref llm.ModelRef, reques
 
 type generationProfiles struct{ service *voice.Service }
 
-func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID, voiceID string) (generation.Profile, error) {
-	return a.ProfileForPromptForTopic(ctx, userID, voiceID, "", nil)
+func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID, voiceID string, target generation.Language) (generation.Profile, error) {
+	return a.ProfileForPromptForTopic(ctx, userID, voiceID, target, "", nil)
 }
 
-func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, voiceID, topic string, tags []string) (generation.Profile, error) {
-	profile, err := a.service.PromptProfileForTopic(ctx, userID, voiceID, topic, tags)
-	return generation.Profile{Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: profile.Excerpts, Rules: profile.ManualRules, EndingMaxConsecutive: a.service.EndingMaxConsecutive()}, generationVoiceError(err)
+func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target generation.Language, topic string, tags []string) (generation.Profile, error) {
+	profile, err := a.service.PromptProfileForTopicAndLanguage(ctx, userID, voiceID, voice.Language(target), topic, tags)
+	return generation.Profile{Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: profile.Excerpts, Rules: profile.ManualRules, EndingMaxConsecutive: a.service.EndingMaxConsecutive(), SourceLanguage: generation.Language(profile.SourceLanguage), TargetLanguage: generation.Language(profile.TargetLanguage), Portable: profile.Portable}, generationVoiceError(err)
 }
 
 type generationRules struct{ service *voice.Service }
@@ -705,13 +707,18 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	}
 	input := generation.PostInput{
 		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
-		Voice: generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted},
+		Voice:          generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted, SourceLanguage: generation.Language(found.Voice.SourceLanguage)},
+		TargetLanguage: generation.Language(found.TargetLanguage),
 		// The id, never the brief: only the enqueue resolves it, and only through the purpose
 		// context's own port. Dropping it here is what would make the whole feature a silent
 		// no-op — every prompt would be built as if no post ever had a 용도.
 		PurposeID:    found.PurposeID,
 		TargetLength: found.TargetLength,
 		Images:       make([]generation.Image, 0, len(found.Images)),
+	}
+	if found.ContentLanguage != nil {
+		contentLanguage := generation.Language(*found.ContentLanguage)
+		input.ContentLanguage = &contentLanguage
 	}
 	if found.Content != nil {
 		content := generation.PostContent{
@@ -743,7 +750,7 @@ func (a generationPosts) SetObservations(ctx context.Context, userID, slug strin
 	return generationPostError(a.service.SetObservations(ctx, userID, slug, values))
 }
 
-func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug string, content generation.PostContent) error {
+func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug string, content generation.PostContent, language generation.Language) error {
 	value := post.PostContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags}
 	for _, block := range content.Blocks {
 		value.Blocks = append(value.Blocks, post.Block{
@@ -751,7 +758,7 @@ func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug s
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
 		})
 	}
-	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, value))
+	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, value, post.Language(language)))
 }
 
 func generationPostError(err error) error {
@@ -770,7 +777,7 @@ type generationJobs struct{ queue *job.Queue }
 func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest) (string, error) {
 	slug := request.PostSlug
 	payload, err := generation.EncodeGenerationPayload(generation.GenerationOptions{
-		TargetLength: request.TargetLength, Purpose: request.Purpose,
+		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, Purpose: request.Purpose,
 	})
 	if err != nil {
 		return "", err
@@ -778,7 +785,7 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
 		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
-		Payload: payload,
+		TargetLanguage: request.TargetLanguage.String(), Payload: payload,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -794,7 +801,7 @@ func (a generationJobs) EnqueueRevision(ctx context.Context, request generation.
 	slug := request.PostSlug
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindRevise, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
-		WriteModel: request.WriteModel, Payload: payload,
+		WriteModel: request.WriteModel, TargetLanguage: request.ContentLanguage.String(), Payload: payload,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -824,9 +831,11 @@ func (a generationJobs) GetGeneration(ctx context.Context, id, userID string) (*
 	}
 	return &generation.JobSummary{
 		ID: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
-		ProgressDone: found.ProgressDone, ProgressTotal: found.ProgressTotal, Error: found.Error,
+		ProgressDone: found.ProgressDone, ProgressTotal: found.ProgressTotal,
+		Failure:  generationFailure(found.Failure),
 		PostSlug: postSlug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
-		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt,
+		TargetLanguage: generation.Language(found.TargetLanguage),
+		CreatedAt:      found.CreatedAt, UpdatedAt: found.UpdatedAt,
 	}, nil
 }
 
@@ -841,10 +850,41 @@ func (a postJobFinder) ActiveForPost(ctx context.Context, slug string) (*post.Ac
 	}
 	return &post.ActiveJob{
 		ID: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
-		ProgressDone: found.ProgressDone, ProgressTotal: found.ProgressTotal, Error: found.Error,
+		ProgressDone: found.ProgressDone, ProgressTotal: found.ProgressTotal,
+		Failure:  postFailure(found.Failure),
 		PostSlug: postSlug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
-		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt,
+		TargetLanguage: post.Language(found.TargetLanguage),
+		CreatedAt:      found.CreatedAt, UpdatedAt: found.UpdatedAt,
 	}, nil
+}
+
+func generationFailure(found *job.Failure) *generation.Failure {
+	if found == nil || found.Reason == "" {
+		return nil
+	}
+	return &generation.Failure{
+		Reason: found.Reason, Params: cloneStringMap(found.Params), TechnicalDetail: found.TechnicalDetail,
+	}
+}
+
+func postFailure(found *job.Failure) *post.Failure {
+	if found == nil || found.Reason == "" {
+		return nil
+	}
+	return &post.Failure{
+		Reason: found.Reason, Params: cloneStringMap(found.Params), TechnicalDetail: found.TechnicalDetail,
+	}
+}
+
+func cloneStringMap(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	cloned := make(map[string]string, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
 }
 
 type experimentJobs struct{ queue *job.Queue }
@@ -855,8 +895,13 @@ func (a experimentJobs) EnqueueExperiment(ctx context.Context, request experimen
 		value := request.PostSlug
 		postSlug = &value
 	}
+	targetLanguage := ""
+	if request.TargetLanguage != nil {
+		targetLanguage = request.TargetLanguage.String()
+	}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindModelExperiment, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID, Payload: []byte(request.ExperimentID),
+		Kind: job.KindModelExperiment, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID,
+		TargetLanguage: targetLanguage, Payload: []byte(request.ExperimentID),
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -944,9 +989,14 @@ func (a experimentRunner) Snapshot(ctx context.Context, request experiment.Start
 	switch request.Stage {
 	case experiment.StageWrite:
 		content, err := a.generation.SnapshotWriteInput(ctx, request.UserID, request.PostSlug, llmRef(request.ObserveModel), request.TargetLength)
+		targetLanguage := experiment.Language(generation.SnapshotTargetLanguage(content))
+		var frozenTarget *experiment.Language
+		if targetLanguage.Valid() {
+			frozenTarget = &targetLanguage
+		}
 		return experiment.Snapshot{
 			Content: content, PromptVersion: generation.WriteExperimentPromptVersion,
-			VoiceID: generation.SnapshotVoice(content), PurposeName: generation.SnapshotPurposeName(content),
+			VoiceID: generation.SnapshotVoice(content), PurposeName: generation.SnapshotPurposeName(content), TargetLanguage: frozenTarget,
 		}, mapSnapshotError(err)
 	case experiment.StageObserve:
 		content, err := a.generation.SnapshotObserveInput(ctx, request.UserID, request.PostSlug)
@@ -961,7 +1011,15 @@ func (a experimentRunner) Snapshot(ctx context.Context, request experiment.Start
 
 func (a experimentRunner) PrepareWrite(ctx context.Context, found experiment.Experiment, progress experiment.Progress) (experiment.Snapshot, error) {
 	content, err := a.generation.PrepareWriteInput(ctx, found.InputSnapshot, generation.Progress(progress))
-	return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion, VoiceID: found.VoiceID}, mapSnapshotError(err)
+	return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion, VoiceID: found.VoiceID, PurposeName: found.PurposeName, TargetLanguage: cloneExperimentLanguage(found.TargetLanguage)}, mapSnapshotError(err)
+}
+
+func cloneExperimentLanguage(value *experiment.Language) *experiment.Language {
+	if value == nil {
+		return nil
+	}
+	copy := *value
+	return &copy
 }
 
 func (a experimentRunner) RunCandidate(ctx context.Context, found experiment.Experiment, candidate experiment.Candidate, progress experiment.Progress) (experiment.CandidateResult, error) {
@@ -1115,7 +1173,7 @@ func experimentVoiceError(err error) error {
 // left without a voice; a failure exits non-zero because the invariant is not established.
 func defaultVoiceBootstrap(ctx context.Context, handle *db.DB, userID string) error {
 	directory := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	_, _, err := directory.EnsureDefaultVoice(ctx, userID)
+	_, _, err := directory.EnsureDefaultVoice(ctx, userID, voice.LanguageKorean)
 	return err
 }
 

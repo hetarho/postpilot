@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { displayTitle, postStatusLabel, usePosts, type PostListItem } from '@/entities/post'
 import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
@@ -11,11 +13,12 @@ import { ActionBar, Badge, Button, Notice, buttonStyles, type BadgeTone } from '
 function rowStatus(
   post: PostListItem,
   pending: ModelExperiment | undefined,
+  t: TFunction<'posts'>,
 ): { label: string; tone: BadgeTone } {
-  if (post.activeJob) return { label: 'AI 생성 중', tone: 'info' }
+  if (post.activeJob) return { label: t('list.state.generating'), tone: 'info' }
   if (pending?.status === 'failed' || pending?.status === 'partial')
-    return { label: 'AI 결과 오류', tone: 'danger' }
-  if (post.pendingExperimentId) return { label: 'AI 결과 확인', tone: 'warning' }
+    return { label: t('list.state.failed'), tone: 'danger' }
+  if (post.pendingExperimentId) return { label: t('list.state.review'), tone: 'warning' }
   return { label: postStatusLabel(post.status), tone: postStatusTone(post.status) }
 }
 
@@ -31,6 +34,7 @@ function postStatusTone(status: string): BadgeTone {
 /** The way back to unfinished work (PRD F-8). The server returns only the acting user's
  *  posts, newest first — this screen does not sort or filter. */
 export function PostsPage() {
+  const { t } = useTranslation(['posts', 'common'])
   const { posts, isPending, isFetching, isError, refetch } = usePosts()
   const { experiments } = useExperiments()
   const byId = new Map(experiments.map((experiment) => [experiment.id, experiment]))
@@ -46,18 +50,18 @@ export function PostsPage() {
           docked to the bottom of a half-empty page reads as debris — so the action goes back
           beside the heading where a desktop user looks for it. */}
       <div className="flex items-center justify-between gap-3 px-4 sm:px-6">
-        <h1 className="text-lg font-semibold tracking-tight">내 글</h1>
+        <h1 className="text-lg font-semibold tracking-tight">{t('list.mine', { ns: 'posts' })}</h1>
         <Link
           to="/posts/new"
           className={buttonStyles({ variant: 'cta', className: 'hidden sm:inline-flex' })}
         >
-          새 글
+          {t('new', { ns: 'posts' })}
         </Link>
       </div>
 
       {isError && (
         <Notice tone="danger" role="alert" className="mx-4 mt-8 sm:mx-6">
-          <span>목록을 불러오지 못했어요.</span>
+          <span>{t('list.loadFailed', { ns: 'posts' })}</span>
           {/* `isFetching`, not `isPending`: react-query keeps `status: 'error'` across a refetch of
               an errored query, so without it the notice does not move a pixel for the several
               seconds a retry takes on cellular and the user taps it again and again (§6). */}
@@ -67,7 +71,7 @@ export function PostsPage() {
             pending={isFetching}
             className="text-notice-danger-fg underline"
           >
-            다시 시도
+            {t('action.retry', { ns: 'common' })}
           </Button>
         </Notice>
       )}
@@ -76,7 +80,7 @@ export function PostsPage() {
           than two nodes swapping — a swap announces nothing to VoiceOver or TalkBack (§9). */}
       {!isError && (isPending || posts.length === 0) && (
         <p role="status" className="text-content-tertiary mt-8 px-4 text-sm sm:px-6">
-          {isPending ? '불러오는 중…' : '아직 글이 없어요. "새 글"로 시작해 보세요.'}
+          {isPending ? t('state.loading', { ns: 'common' }) : t('list.empty', { ns: 'posts' })}
         </p>
       )}
 
@@ -85,6 +89,7 @@ export function PostsPage() {
           const status = rowStatus(
             post,
             post.pendingExperimentId ? byId.get(post.pendingExperimentId) : undefined,
+            t,
           )
           // Two lines, not three items competing on one. At 360px a single row left the title
           // ~146px — about ten Hangul — and because the badge label swings from 초안 to AI 결과 확인
@@ -134,9 +139,12 @@ export function PostsPage() {
           one action this screen exists for (§4.3), and above the empty state that points at it.
           `mt-auto` is what puts it at the bottom of a SHORT list; `sticky` then keeps it there
           once the list is long enough to scroll. */}
-      <ActionBar ariaLabel="글 작성" className="mx-4 mt-auto sm:hidden">
+      <ActionBar
+        ariaLabel={t('list.writingAria', { ns: 'posts' })}
+        className="mx-4 mt-auto sm:hidden"
+      >
         <Link to="/posts/new" className={buttonStyles({ variant: 'cta', className: 'w-full' })}>
-          새 글
+          {t('new', { ns: 'posts' })}
         </Link>
       </ActionBar>
     </main>

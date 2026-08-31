@@ -94,6 +94,7 @@ func renderValue(value VoiceValue) string {
 	}
 	return value.Value + " (" + string(value.Source) + ")"
 }
+
 // An unmeasured axis renders as "unknown" rather than a fabricated 0 — printing a neutral the
 // model never claimed into the generation prompt would be the same bug one layer down.
 func renderAxes(a AxesProfile) string {
@@ -132,5 +133,42 @@ func renderStructuredProfile(p StructuredProfile) string {
 	if len(p.Endings.BannedEndings) > 0 {
 		b.WriteString("\n[Banned endings]\n" + strings.Join(p.Endings.BannedEndings, ", "))
 	}
+	return b.String()
+}
+
+func renderStructuredProfileForLanguage(p StructuredProfile, language Language) string {
+	if language != LanguageEnglish {
+		return renderStructuredProfile(p)
+	}
+	if p.Empty || p.Version == 0 {
+		return ""
+	}
+	averageWords := "unknown"
+	if p.Syntax.AverageSentenceWords != nil {
+		averageWords = fmt.Sprintf("%.2f", *p.Syntax.AverageSentenceWords)
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "[Structured English voice profile v%d]\n[Lexical]\n%s\n[Register and cadence]\nregister: %s\ncadence:", p.Version, renderValue(p.Lexical.Description), renderValue(p.Endings.BaseRegister))
+	for _, ratio := range p.Endings.Distribution {
+		fmt.Fprintf(&b, " %s=%.2f", ratio.Ending, ratio.Ratio)
+	}
+	fmt.Fprintf(&b, "\n[Syntax]\naverage sentence: %.2f chars / %s words\nconnectives: %s\npreferred connectives: %s\npassive: %s\nnominalization: %s", p.Syntax.AverageSentenceChars, averageWords, renderValue(p.Syntax.ConnectiveStyle), strings.Join(p.Syntax.PreferredConnectives, ", "), renderValue(p.Syntax.PassiveTendency), renderValue(p.Syntax.Nominalization))
+	fmt.Fprintf(&b, "\n[Structure]\nintro: %s\nclosing: %s\nparagraph sentences: %d-%d\nheadings: %s\nlists: %s\nemojis: %s\n[Axes]\n%s", renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern), p.Structure.ParagraphSentencesMin, p.Structure.ParagraphSentencesMax, renderValue(p.Structure.HeadingHabit), renderValue(p.Structure.ListHabit), renderValue(p.Structure.EmojiUse), renderAxes(p.Axes))
+	return b.String()
+}
+
+// renderPortableProfile is intentionally a separate allowlist, not a redaction pass over
+// the full rendering. Adding a new source-language field to the full profile therefore
+// cannot make it cross languages by accident.
+func renderPortableProfile(p StructuredProfile) string {
+	if p.Empty || p.Version == 0 {
+		return ""
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "[Portable voice structure v%d]\n", p.Version)
+	fmt.Fprintf(&b, "intro: %s\nclosing: %s\n", renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern))
+	fmt.Fprintf(&b, "paragraph sentences: %d-%d\n", p.Structure.ParagraphSentencesMin, p.Structure.ParagraphSentencesMax)
+	fmt.Fprintf(&b, "headings: %s\nlists: %s\nemojis: %s\n", renderValue(p.Structure.HeadingHabit), renderValue(p.Structure.ListHabit), renderValue(p.Structure.EmojiUse))
+	fmt.Fprintf(&b, "[Portable axes]\n%s", renderAxes(p.Axes))
 	return b.String()
 }

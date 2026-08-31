@@ -22,12 +22,14 @@ const (
 )
 
 type VoiceComparisonCandidate struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Side          string                 `protobuf:"bytes,2,opt,name=side,proto3" json:"side,omitempty"`
-	Output        string                 `protobuf:"bytes,3,opt,name=output,proto3" json:"output,omitempty"`
-	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	Error         string                 `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Side   string                 `protobuf:"bytes,2,opt,name=side,proto3" json:"side,omitempty"`
+	Output string                 `protobuf:"bytes,3,opt,name=output,proto3" json:"output,omitempty"`
+	Status string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	// Deprecated: Marked as deprecated in postpilot/v1/voice_validation.proto.
+	Error         string   `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	Failure       *Failure `protobuf:"bytes,6,opt,name=failure,proto3" json:"failure,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -90,11 +92,19 @@ func (x *VoiceComparisonCandidate) GetStatus() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in postpilot/v1/voice_validation.proto.
 func (x *VoiceComparisonCandidate) GetError() string {
 	if x != nil {
 		return x.Error
 	}
 	return ""
+}
+
+func (x *VoiceComparisonCandidate) GetFailure() *Failure {
+	if x != nil {
+		return x.Failure
+	}
+	return nil
 }
 
 type VoiceRuleComparison struct {
@@ -109,6 +119,7 @@ type VoiceRuleComparison struct {
 	ChosenSide     string                      `protobuf:"bytes,8,opt,name=chosen_side,json=chosenSide,proto3" json:"chosen_side,omitempty"`
 	CreatedAt      string                      `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	VoiceId        string                      `protobuf:"bytes,10,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
+	SourceLanguage ContentLanguage             `protobuf:"varint,11,opt,name=source_language,json=sourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"source_language,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -211,6 +222,13 @@ func (x *VoiceRuleComparison) GetVoiceId() string {
 		return x.VoiceId
 	}
 	return ""
+}
+
+func (x *VoiceRuleComparison) GetSourceLanguage() ContentLanguage {
+	if x != nil {
+		return x.SourceLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
 }
 
 type StartVoiceRuleComparisonRequest struct {
@@ -666,9 +684,11 @@ type VoiceValidationItem struct {
 	Regenerated    string                  `protobuf:"bytes,5,opt,name=regenerated,proto3" json:"regenerated,omitempty"`
 	Scores         []*VoiceValidationScore `protobuf:"bytes,6,rep,name=scores,proto3" json:"scores,omitempty"`
 	Status         string                  `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
-	Error          string                  `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Deprecated: Marked as deprecated in postpilot/v1/voice_validation.proto.
+	Error         string   `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
+	Failure       *Failure `protobuf:"bytes,9,opt,name=failure,proto3" json:"failure,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *VoiceValidationItem) Reset() {
@@ -750,11 +770,19 @@ func (x *VoiceValidationItem) GetStatus() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in postpilot/v1/voice_validation.proto.
 func (x *VoiceValidationItem) GetError() string {
 	if x != nil {
 		return x.Error
 	}
 	return ""
+}
+
+func (x *VoiceValidationItem) GetFailure() *Failure {
+	if x != nil {
+		return x.Failure
+	}
+	return nil
 }
 
 type VoiceProfileValidation struct {
@@ -770,6 +798,7 @@ type VoiceProfileValidation struct {
 	CreatedAt      string                 `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	FinishedAt     string                 `protobuf:"bytes,10,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
 	VoiceId        string                 `protobuf:"bytes,11,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
+	SourceLanguage ContentLanguage        `protobuf:"varint,12,opt,name=source_language,json=sourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"source_language,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -879,6 +908,13 @@ func (x *VoiceProfileValidation) GetVoiceId() string {
 		return x.VoiceId
 	}
 	return ""
+}
+
+func (x *VoiceProfileValidation) GetSourceLanguage() ContentLanguage {
+	if x != nil {
+		return x.SourceLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
 }
 
 type StartVoiceProfileValidationRequest struct {
@@ -1269,13 +1305,14 @@ var File_postpilot_v1_voice_validation_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\n" +
-	"#postpilot/v1/voice_validation.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\"\x84\x01\n" +
+	"#postpilot/v1/voice_validation.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x18postpilot/v1/error.proto\x1a\x1bpostpilot/v1/language.proto\"\xb9\x01\n" +
 	"\x18VoiceComparisonCandidate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04side\x18\x02 \x01(\tR\x04side\x12\x16\n" +
 	"\x06output\x18\x03 \x01(\tR\x06output\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\x12\x14\n" +
-	"\x05error\x18\x05 \x01(\tR\x05error\"\xf5\x02\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12\x18\n" +
+	"\x05error\x18\x05 \x01(\tB\x02\x18\x01R\x05error\x12/\n" +
+	"\afailure\x18\x06 \x01(\v2\x15.postpilot.v1.FailureR\afailure\"\xbd\x03\n" +
 	"\x13VoiceRuleComparison\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\arule_id\x18\x02 \x01(\tR\x06ruleId\x12'\n" +
@@ -1291,7 +1328,8 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bvoice_id\x18\n" +
-	" \x01(\tR\avoiceIdB\x10\n" +
+	" \x01(\tR\avoiceId\x12F\n" +
+	"\x0fsource_language\x18\v \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguageB\x10\n" +
 	"\x0e_target_length\"\xcc\x01\n" +
 	"\x1fStartVoiceRuleComparisonRequest\x12\x17\n" +
 	"\arule_id\x18\x01 \x01(\tR\x06ruleId\x12\x1b\n" +
@@ -1323,7 +1361,7 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"N\n" +
 	"\x14VoiceValidationScore\x12\x1c\n" +
 	"\tdimension\x18\x01 \x01(\tR\tdimension\x12\x18\n" +
-	"\amatched\x18\x02 \x01(\bR\amatched\"\x93\x02\n" +
+	"\amatched\x18\x02 \x01(\bR\amatched\"\xc8\x02\n" +
 	"\x13VoiceValidationItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x1a\n" +
@@ -1331,8 +1369,9 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\x0fneutral_summary\x18\x04 \x01(\tR\x0eneutralSummary\x12 \n" +
 	"\vregenerated\x18\x05 \x01(\tR\vregenerated\x12:\n" +
 	"\x06scores\x18\x06 \x03(\v2\".postpilot.v1.VoiceValidationScoreR\x06scores\x12\x16\n" +
-	"\x06status\x18\a \x01(\tR\x06status\x12\x14\n" +
-	"\x05error\x18\b \x01(\tR\x05error\"\xf3\x02\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12\x18\n" +
+	"\x05error\x18\b \x01(\tB\x02\x18\x01R\x05error\x12/\n" +
+	"\afailure\x18\t \x01(\v2\x15.postpilot.v1.FailureR\afailure\"\xbb\x03\n" +
 	"\x16VoiceProfileValidation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0fprofile_version\x18\x02 \x01(\x03R\x0eprofileVersion\x12#\n" +
@@ -1348,7 +1387,8 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\vfinished_at\x18\n" +
 	" \x01(\tR\n" +
 	"finishedAt\x12\x19\n" +
-	"\bvoice_id\x18\v \x01(\tR\avoiceId\"\xda\x01\n" +
+	"\bvoice_id\x18\v \x01(\tR\avoiceId\x12F\n" +
+	"\x0fsource_language\x18\f \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\xda\x01\n" +
 	"\"StartVoiceProfileValidationRequest\x12\x19\n" +
 	"\bvoice_id\x18\x04 \x01(\tR\avoiceId\x12;\n" +
 	"\ranalyze_model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\fanalyzeModel\x127\n" +
@@ -1417,40 +1457,46 @@ var file_postpilot_v1_voice_validation_proto_goTypes = []any{
 	(*ListVoiceProfileValidationsResponse)(nil), // 18: postpilot.v1.ListVoiceProfileValidationsResponse
 	(*RetryVoiceProfileValidationRequest)(nil),  // 19: postpilot.v1.RetryVoiceProfileValidationRequest
 	(*RetryVoiceProfileValidationResponse)(nil), // 20: postpilot.v1.RetryVoiceProfileValidationResponse
-	(*ModelRef)(nil),                            // 21: postpilot.v1.ModelRef
+	(*Failure)(nil),                             // 21: postpilot.v1.Failure
+	(ContentLanguage)(0),                        // 22: postpilot.v1.ContentLanguage
+	(*ModelRef)(nil),                            // 23: postpilot.v1.ModelRef
 }
 var file_postpilot_v1_voice_validation_proto_depIdxs = []int32{
-	0,  // 0: postpilot.v1.VoiceRuleComparison.candidates:type_name -> postpilot.v1.VoiceComparisonCandidate
-	21, // 1: postpilot.v1.StartVoiceRuleComparisonRequest.write_model:type_name -> postpilot.v1.ModelRef
-	1,  // 2: postpilot.v1.GetVoiceRuleComparisonResponse.comparison:type_name -> postpilot.v1.VoiceRuleComparison
-	1,  // 3: postpilot.v1.DecideVoiceRuleComparisonResponse.comparison:type_name -> postpilot.v1.VoiceRuleComparison
-	10, // 4: postpilot.v1.VoiceValidationItem.scores:type_name -> postpilot.v1.VoiceValidationScore
-	11, // 5: postpilot.v1.VoiceProfileValidation.items:type_name -> postpilot.v1.VoiceValidationItem
-	21, // 6: postpilot.v1.StartVoiceProfileValidationRequest.analyze_model:type_name -> postpilot.v1.ModelRef
-	21, // 7: postpilot.v1.StartVoiceProfileValidationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	12, // 8: postpilot.v1.GetVoiceProfileValidationResponse.validation:type_name -> postpilot.v1.VoiceProfileValidation
-	12, // 9: postpilot.v1.ListVoiceProfileValidationsResponse.validations:type_name -> postpilot.v1.VoiceProfileValidation
-	2,  // 10: postpilot.v1.VoiceValidationService.StartVoiceRuleComparison:input_type -> postpilot.v1.StartVoiceRuleComparisonRequest
-	4,  // 11: postpilot.v1.VoiceValidationService.GetVoiceRuleComparison:input_type -> postpilot.v1.GetVoiceRuleComparisonRequest
-	6,  // 12: postpilot.v1.VoiceValidationService.DecideVoiceRuleComparison:input_type -> postpilot.v1.DecideVoiceRuleComparisonRequest
-	8,  // 13: postpilot.v1.VoiceValidationService.RetryVoiceRuleComparison:input_type -> postpilot.v1.RetryVoiceRuleComparisonRequest
-	13, // 14: postpilot.v1.VoiceValidationService.StartVoiceProfileValidation:input_type -> postpilot.v1.StartVoiceProfileValidationRequest
-	15, // 15: postpilot.v1.VoiceValidationService.GetVoiceProfileValidation:input_type -> postpilot.v1.GetVoiceProfileValidationRequest
-	17, // 16: postpilot.v1.VoiceValidationService.ListVoiceProfileValidations:input_type -> postpilot.v1.ListVoiceProfileValidationsRequest
-	19, // 17: postpilot.v1.VoiceValidationService.RetryVoiceProfileValidation:input_type -> postpilot.v1.RetryVoiceProfileValidationRequest
-	3,  // 18: postpilot.v1.VoiceValidationService.StartVoiceRuleComparison:output_type -> postpilot.v1.StartVoiceRuleComparisonResponse
-	5,  // 19: postpilot.v1.VoiceValidationService.GetVoiceRuleComparison:output_type -> postpilot.v1.GetVoiceRuleComparisonResponse
-	7,  // 20: postpilot.v1.VoiceValidationService.DecideVoiceRuleComparison:output_type -> postpilot.v1.DecideVoiceRuleComparisonResponse
-	9,  // 21: postpilot.v1.VoiceValidationService.RetryVoiceRuleComparison:output_type -> postpilot.v1.RetryVoiceRuleComparisonResponse
-	14, // 22: postpilot.v1.VoiceValidationService.StartVoiceProfileValidation:output_type -> postpilot.v1.StartVoiceProfileValidationResponse
-	16, // 23: postpilot.v1.VoiceValidationService.GetVoiceProfileValidation:output_type -> postpilot.v1.GetVoiceProfileValidationResponse
-	18, // 24: postpilot.v1.VoiceValidationService.ListVoiceProfileValidations:output_type -> postpilot.v1.ListVoiceProfileValidationsResponse
-	20, // 25: postpilot.v1.VoiceValidationService.RetryVoiceProfileValidation:output_type -> postpilot.v1.RetryVoiceProfileValidationResponse
-	18, // [18:26] is the sub-list for method output_type
-	10, // [10:18] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	21, // 0: postpilot.v1.VoiceComparisonCandidate.failure:type_name -> postpilot.v1.Failure
+	0,  // 1: postpilot.v1.VoiceRuleComparison.candidates:type_name -> postpilot.v1.VoiceComparisonCandidate
+	22, // 2: postpilot.v1.VoiceRuleComparison.source_language:type_name -> postpilot.v1.ContentLanguage
+	23, // 3: postpilot.v1.StartVoiceRuleComparisonRequest.write_model:type_name -> postpilot.v1.ModelRef
+	1,  // 4: postpilot.v1.GetVoiceRuleComparisonResponse.comparison:type_name -> postpilot.v1.VoiceRuleComparison
+	1,  // 5: postpilot.v1.DecideVoiceRuleComparisonResponse.comparison:type_name -> postpilot.v1.VoiceRuleComparison
+	10, // 6: postpilot.v1.VoiceValidationItem.scores:type_name -> postpilot.v1.VoiceValidationScore
+	21, // 7: postpilot.v1.VoiceValidationItem.failure:type_name -> postpilot.v1.Failure
+	11, // 8: postpilot.v1.VoiceProfileValidation.items:type_name -> postpilot.v1.VoiceValidationItem
+	22, // 9: postpilot.v1.VoiceProfileValidation.source_language:type_name -> postpilot.v1.ContentLanguage
+	23, // 10: postpilot.v1.StartVoiceProfileValidationRequest.analyze_model:type_name -> postpilot.v1.ModelRef
+	23, // 11: postpilot.v1.StartVoiceProfileValidationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	12, // 12: postpilot.v1.GetVoiceProfileValidationResponse.validation:type_name -> postpilot.v1.VoiceProfileValidation
+	12, // 13: postpilot.v1.ListVoiceProfileValidationsResponse.validations:type_name -> postpilot.v1.VoiceProfileValidation
+	2,  // 14: postpilot.v1.VoiceValidationService.StartVoiceRuleComparison:input_type -> postpilot.v1.StartVoiceRuleComparisonRequest
+	4,  // 15: postpilot.v1.VoiceValidationService.GetVoiceRuleComparison:input_type -> postpilot.v1.GetVoiceRuleComparisonRequest
+	6,  // 16: postpilot.v1.VoiceValidationService.DecideVoiceRuleComparison:input_type -> postpilot.v1.DecideVoiceRuleComparisonRequest
+	8,  // 17: postpilot.v1.VoiceValidationService.RetryVoiceRuleComparison:input_type -> postpilot.v1.RetryVoiceRuleComparisonRequest
+	13, // 18: postpilot.v1.VoiceValidationService.StartVoiceProfileValidation:input_type -> postpilot.v1.StartVoiceProfileValidationRequest
+	15, // 19: postpilot.v1.VoiceValidationService.GetVoiceProfileValidation:input_type -> postpilot.v1.GetVoiceProfileValidationRequest
+	17, // 20: postpilot.v1.VoiceValidationService.ListVoiceProfileValidations:input_type -> postpilot.v1.ListVoiceProfileValidationsRequest
+	19, // 21: postpilot.v1.VoiceValidationService.RetryVoiceProfileValidation:input_type -> postpilot.v1.RetryVoiceProfileValidationRequest
+	3,  // 22: postpilot.v1.VoiceValidationService.StartVoiceRuleComparison:output_type -> postpilot.v1.StartVoiceRuleComparisonResponse
+	5,  // 23: postpilot.v1.VoiceValidationService.GetVoiceRuleComparison:output_type -> postpilot.v1.GetVoiceRuleComparisonResponse
+	7,  // 24: postpilot.v1.VoiceValidationService.DecideVoiceRuleComparison:output_type -> postpilot.v1.DecideVoiceRuleComparisonResponse
+	9,  // 25: postpilot.v1.VoiceValidationService.RetryVoiceRuleComparison:output_type -> postpilot.v1.RetryVoiceRuleComparisonResponse
+	14, // 26: postpilot.v1.VoiceValidationService.StartVoiceProfileValidation:output_type -> postpilot.v1.StartVoiceProfileValidationResponse
+	16, // 27: postpilot.v1.VoiceValidationService.GetVoiceProfileValidation:output_type -> postpilot.v1.GetVoiceProfileValidationResponse
+	18, // 28: postpilot.v1.VoiceValidationService.ListVoiceProfileValidations:output_type -> postpilot.v1.ListVoiceProfileValidationsResponse
+	20, // 29: postpilot.v1.VoiceValidationService.RetryVoiceProfileValidation:output_type -> postpilot.v1.RetryVoiceProfileValidationResponse
+	22, // [22:30] is the sub-list for method output_type
+	14, // [14:22] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_voice_validation_proto_init() }
@@ -1459,6 +1505,8 @@ func file_postpilot_v1_voice_validation_proto_init() {
 		return
 	}
 	file_postpilot_v1_provider_proto_init()
+	file_postpilot_v1_error_proto_init()
+	file_postpilot_v1_language_proto_init()
 	file_postpilot_v1_voice_validation_proto_msgTypes[1].OneofWrappers = []any{}
 	file_postpilot_v1_voice_validation_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}

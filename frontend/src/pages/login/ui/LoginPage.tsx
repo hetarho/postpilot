@@ -1,20 +1,22 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useLogin } from '@/entities/session'
+import { LocaleSelect } from '@/features/change-locale'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
-import { Button, FieldLabel, FieldMessage, Logo, TextField } from '@/shared/ui'
+import { AppFailureMessage, Button, FieldLabel, Logo, TextField } from '@/shared/ui'
 
-/** One message for every failure. The server already refuses to distinguish an unknown
- *  id from a wrong password (spec/policy/auth.md); showing anything more specific here
- *  would hand back the id-enumeration signal the backend works to hide. */
-const LOGIN_FAILED = '아이디 또는 비밀번호가 맞지 않아요'
-
+/** Credential refusals use one stable INVALID_CREDENTIALS reason. The server already refuses to
+ *  distinguish an unknown id from a wrong password (spec/policy/auth.md), and structured failure
+ *  parsing never falls back to backend prose that could reintroduce that enumeration signal. */
 export function LoginPage() {
+  const { t } = useTranslation('auth')
   const { redirect } = useSearch({ from: '/login' })
   const navigate = useNavigate()
   const login = useLogin()
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
+  const invalidCredentials = login.failure?.reason === 'INVALID_CREDENTIALS'
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -32,77 +34,86 @@ export function LoginPage() {
 
   return (
     <main className="bg-surface-base text-content-primary flex min-h-full items-start justify-center px-4 pt-8 pb-10 sm:items-center sm:px-6 sm:py-10">
-      <form onSubmit={onSubmit} className="w-full max-w-xs">
-        {/* The app icon is decorative beside the labelled wordmark, so the pair remains one
+      <div className="w-full max-w-xs">
+        <div className="flex justify-end">
+          <LocaleSelect />
+        </div>
+        <form onSubmit={onSubmit} className="mt-4 w-full">
+          {/* The app icon is decorative beside the labelled wordmark, so the pair remains one
             concise heading for assistive technology. The compact phone lockup keeps the submit
             path above the software keyboard; wider screens give the mark its full presence. */}
-        <h1 className="flex flex-col items-center gap-1 sm:gap-4">
-          <img src="/favicon.svg" alt="" className="h-10 w-10 sm:h-20 sm:w-20" />
-          <Logo className="h-8 sm:h-9" />
-        </h1>
-        <p className="text-content-secondary mt-1 text-center text-sm">계속하려면 로그인하세요</p>
+          <h1 className="flex flex-col items-center gap-1 sm:gap-4">
+            <img src="/favicon.svg" alt="" className="h-10 w-10 sm:h-20 sm:w-20" />
+            <Logo className="h-8 sm:h-9" />
+          </h1>
+          <p className="text-content-secondary mt-1 text-center text-sm">{t('login.intro')}</p>
 
-        <FieldLabel htmlFor="loginId" className="mt-4 sm:mt-8">
-          아이디
-        </FieldLabel>
-        <TextField
-          id="loginId"
-          name="loginId"
-          value={loginId}
-          onChange={(event) => setLoginId(event.target.value)}
-          autoComplete="username"
-          // iOS defaults an <input type="text"> to `autocapitalize="sentences"`, so `hrlee`
-          // is submitted as `Hrlee` and the server answers with the one generic failure it is
-          // required to give — a silent loop the user cannot explain (design-language §7).
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          enterKeyHint="next"
-          autoFocus
-          required
-          aria-invalid={login.isError || undefined}
-          aria-describedby={login.isError ? 'login-error' : undefined}
-          className="mt-1.5"
-        />
+          <FieldLabel htmlFor="loginId" className="mt-4 sm:mt-8">
+            {t('login.id')}
+          </FieldLabel>
+          <TextField
+            id="loginId"
+            name="loginId"
+            value={loginId}
+            onChange={(event) => setLoginId(event.target.value)}
+            autoComplete="username"
+            // iOS defaults an <input type="text"> to `autocapitalize="sentences"`, so `hrlee`
+            // is submitted as `Hrlee` and the server answers with the one generic failure it is
+            // required to give — a silent loop the user cannot explain (design-language §7).
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="next"
+            autoFocus
+            required
+            aria-invalid={invalidCredentials || undefined}
+            aria-describedby={invalidCredentials ? 'login-error' : undefined}
+            className="mt-1.5"
+          />
 
-        <FieldLabel htmlFor="password" className="mt-4">
-          비밀번호
-        </FieldLabel>
-        <TextField
-          id="password"
-          name="password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="current-password"
-          // The return key is a real submit path here, so it says 이동 rather than 줄바꿈.
-          enterKeyHint="go"
-          required
-          aria-invalid={login.isError || undefined}
-          aria-describedby={login.isError ? 'login-error' : undefined}
-          className="mt-1.5"
-        />
+          <FieldLabel htmlFor="password" className="mt-4">
+            {t('login.password')}
+          </FieldLabel>
+          <TextField
+            id="password"
+            name="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            // The return key is a real submit path here, so it says 이동 rather than 줄바꿈.
+            enterKeyHint="go"
+            required
+            aria-invalid={invalidCredentials || undefined}
+            aria-describedby={invalidCredentials ? 'login-error' : undefined}
+            className="mt-1.5"
+          />
 
-        {/* Under the fields it describes and ABOVE the button, not after it (design-language §7,
+          {/* Under the fields it describes and ABOVE the button, not after it (design-language §7,
             §4.3). Below the button it was both the lowest thing on the keyboard-covered screen and
             a ~32px insertion that shifted the whole form the instant the thumb lifted off 로그인. */}
-        {login.isError && (
-          <FieldMessage id="login-error" className="mt-3">
-            {LOGIN_FAILED}
-          </FieldMessage>
-        )}
+          {login.failure && (
+            <div
+              id="login-error"
+              role="alert"
+              className="text-field-error mt-3 text-sm break-words"
+            >
+              <AppFailureMessage failure={login.failure} />
+            </div>
+          )}
 
-        {/* `pending`, not a label swap: 로그인 → 확인 중… resizes the target under the thumb that
+          {/* `pending`, not a label swap: 로그인 → 확인 중… resizes the target under the thumb that
             just pressed it (§6). */}
-        <Button
-          type="submit"
-          variant="cta"
-          pending={login.isPending}
-          className="mt-4 w-full sm:mt-6"
-        >
-          로그인
-        </Button>
-      </form>
+          <Button
+            type="submit"
+            variant="cta"
+            pending={login.isPending}
+            className="mt-4 w-full sm:mt-6"
+          >
+            {t('login.submit')}
+          </Button>
+        </form>
+      </div>
     </main>
   )
 }

@@ -1,6 +1,6 @@
 import { useMutation } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { AuthService } from '@/shared/api'
+import { appFailureFromConnect, AuthService } from '@/shared/api'
 
 /** Revokes the session server-side and drops every account-scoped query.
  *
@@ -12,9 +12,14 @@ import { AuthService } from '@/shared/api'
 export function useLogout() {
   const queryClient = useQueryClient()
 
-  return useMutation(AuthService.method.logout, {
+  const mutation = useMutation(AuthService.method.logout, {
     onSuccess: () => {
       queryClient.removeQueries()
     },
   })
+
+  return {
+    ...mutation,
+    failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
+  }
 }

@@ -41,7 +41,7 @@ func (f *fakeStore) CreatePost(_ context.Context, p Post) error {
 	return nil
 }
 
-func (f *fakeStore) UpdateDraft(_ context.Context, slug, userID, title, memo string, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) UpdateDraft(_ context.Context, slug, userID, title, memo string, targetLanguage *Language, updatedAt time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
@@ -50,6 +50,9 @@ func (f *fakeStore) UpdateDraft(_ context.Context, slug, userID, title, memo str
 	}
 	existing.Title = title
 	existing.Memo = memo
+	if targetLanguage != nil {
+		existing.TargetLanguage = *targetLanguage
+	}
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
 	return true, nil
@@ -68,17 +71,18 @@ func (f *fakeStore) UpdateObservations(_ context.Context, slug, userID string, o
 	return true, nil
 }
 
-func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID string, content PostContent, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID string, content PostContent, language Language, updatedAt time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
 	if !ok || existing.UserID != userID {
 		return false, nil
 	}
-	if existing.Status == StatusReview && existing.MachineBaselineRevision == existing.ContentRevision && existing.Content != nil && reflect.DeepEqual(*existing.Content, content) {
+	if existing.Status == StatusReview && existing.MachineBaselineRevision == existing.ContentRevision && existing.Content != nil && existing.ContentLanguage != nil && *existing.ContentLanguage == language && reflect.DeepEqual(*existing.Content, content) {
 		return false, nil
 	}
 	existing.Content = &content
+	existing.ContentLanguage = &language
 	existing.ContentRevision++
 	existing.MachineBaselineRevision = existing.ContentRevision
 	existing.MachineBaselineVoiceID = existing.VoiceID
@@ -193,6 +197,7 @@ func (f *fakeStore) LearningSnapshot(_ context.Context, slug, userID string) (Le
 		ContentRevision: existing.ContentRevision, MachineBaseline: *existing.Content,
 		BaselineRevision: existing.MachineBaselineRevision, TargetLength: existing.TargetLength,
 		FinalizedAt: *existing.FinalizedAt, UpdatedAt: existing.UpdatedAt,
+		ContentLanguage: valueLanguage(existing.ContentLanguage),
 	}, nil
 }
 
@@ -230,10 +235,17 @@ func (f *fakeStore) ListPosts(_ context.Context, userID string) ([]Summary, erro
 		if strings.TrimSpace(title) == "" && p.Content != nil {
 			title = p.Content.Title
 		}
-		out = append(out, Summary{Slug: p.Slug, VoiceID: p.VoiceID, PurposeID: p.PurposeID, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt})
+		out = append(out, Summary{Slug: p.Slug, VoiceID: p.VoiceID, PurposeID: p.PurposeID, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt, TargetLanguage: p.TargetLanguage, ContentLanguage: p.ContentLanguage})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].UpdatedAt.After(out[j].UpdatedAt) })
 	return out, nil
+}
+
+func valueLanguage(value *Language) Language {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func (f *fakeStore) DeletePost(_ context.Context, slug, userID string) (bool, error) {

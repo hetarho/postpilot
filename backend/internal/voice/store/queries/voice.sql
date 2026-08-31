@@ -3,18 +3,18 @@
 -- cannot reach this one's aggregate.
 
 -- name: InsertVoice :exec
-INSERT INTO voices (id, user_id, name, is_default, deleted_at, created_at, updated_at)
-VALUES (?, ?, ?, ?, NULL, ?, ?);
+INSERT INTO voices (id, user_id, name, source_language, is_default, deleted_at, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, NULL, ?, ?);
 
 -- name: ListVoices :many
-SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at FROM voices WHERE user_id = ?
+SELECT * FROM voices WHERE user_id = ?
 ORDER BY deleted_at IS NOT NULL, is_default DESC, name, id;
 
 -- name: GetVoice :one
-SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at FROM voices WHERE id = ? AND user_id = ?;
+SELECT * FROM voices WHERE id = ? AND user_id = ?;
 
 -- name: GetDefaultVoice :one
-SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at FROM voices WHERE user_id = ? AND is_default = 1 AND deleted_at IS NULL;
+SELECT * FROM voices WHERE user_id = ? AND is_default = 1 AND deleted_at IS NULL;
 
 -- name: CountActiveVoices :one
 SELECT count(*) FROM voices WHERE user_id = ? AND deleted_at IS NULL;
@@ -144,21 +144,22 @@ DELETE FROM voice_manual_overrides WHERE voice_id=? AND user_id=? AND layer=? AN
 
 -- name: InsertLearningEvent :exec
 INSERT INTO voice_learning_events
-    (id,user_id,voice_id,post_slug,baseline_revision,input_hash,baseline_content,final_content,model_ref,status,job_id,error,created_at,processed_at)
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+    (id,user_id,voice_id,post_slug,baseline_revision,input_hash,baseline_content,final_content,model_ref,status,job_id,error,created_at,processed_at,content_language,source_language,error_reason,error_params,technical_detail)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 
 -- name: GetLearningEventByInput :one
-SELECT id, user_id, voice_id, post_slug, baseline_revision, input_hash, baseline_content, final_content, model_ref, status, job_id, error, created_at, processed_at FROM voice_learning_events
+SELECT * FROM voice_learning_events
 WHERE voice_id=? AND user_id=? AND post_slug=? AND baseline_revision=? AND input_hash=?;
 
 -- name: GetLearningEvent :one
-SELECT id, user_id, voice_id, post_slug, baseline_revision, input_hash, baseline_content, final_content, model_ref, status, job_id, error, created_at, processed_at FROM voice_learning_events WHERE id=? AND user_id=?;
+SELECT * FROM voice_learning_events WHERE id=? AND user_id=?;
 
 -- name: SetLearningEventJob :exec
-UPDATE voice_learning_events SET job_id=?, status='queued', error=NULL WHERE id=? AND user_id=?;
+UPDATE voice_learning_events SET job_id=?, status='queued', error=NULL,
+    error_reason=NULL,error_params=NULL,technical_detail=NULL WHERE id=? AND user_id=?;
 
 -- name: SetLearningEventStatus :exec
-UPDATE voice_learning_events SET status=?, error=?, processed_at=? WHERE id=? AND user_id=?;
+UPDATE voice_learning_events SET status=?, error=?, error_reason=?,error_params=?,technical_detail=?,processed_at=? WHERE id=? AND user_id=?;
 
 -- name: InsertAuthoredSource :exec
 INSERT INTO voice_authored_sources
@@ -166,10 +167,23 @@ INSERT INTO voice_authored_sources
 VALUES (?,?,?,?,?,?,?,?,?,?,?);
 
 -- name: ListAuthoredSources :many
-SELECT id, user_id, voice_id, post_slug, learning_event_id, title, tags, body, excerpt, embedding_ref, created_at FROM voice_authored_sources WHERE voice_id=? AND user_id=? ORDER BY created_at DESC,id DESC;
+SELECT s.id, s.user_id, s.voice_id, s.post_slug, s.learning_event_id, s.title, s.tags,
+       s.body, s.excerpt, s.embedding_ref, s.created_at,
+       COALESCE(e.source_language, v.source_language) AS source_language
+FROM voice_authored_sources s
+JOIN voices v ON v.id = s.voice_id AND v.user_id = s.user_id
+LEFT JOIN voice_learning_events e ON e.id = s.learning_event_id
+WHERE s.voice_id=? AND s.user_id=?
+ORDER BY s.created_at DESC,s.id DESC;
 
 -- name: GetAuthoredSource :one
-SELECT id, user_id, voice_id, post_slug, learning_event_id, title, tags, body, excerpt, embedding_ref, created_at FROM voice_authored_sources WHERE id=? AND voice_id=? AND user_id=?;
+SELECT s.id, s.user_id, s.voice_id, s.post_slug, s.learning_event_id, s.title, s.tags,
+       s.body, s.excerpt, s.embedding_ref, s.created_at,
+       COALESCE(e.source_language, v.source_language) AS source_language
+FROM voice_authored_sources s
+JOIN voices v ON v.id = s.voice_id AND v.user_id = s.user_id
+LEFT JOIN voice_learning_events e ON e.id = s.learning_event_id
+WHERE s.id=? AND s.voice_id=? AND s.user_id=?;
 
 -- name: CountAuthoredSources :one
 SELECT count(*) FROM voice_authored_sources WHERE voice_id=? AND user_id=?;
@@ -236,21 +250,23 @@ SELECT id, user_id, voice_id, post_slug, sentence_ref, kind, reason, payload_ref
 
 -- name: InsertRuleComparison :exec
 INSERT INTO voice_rule_comparisons
-    (id,user_id,voice_id,rule_id,source_id,profile_version,model_ref,target_length,input_snapshot,rule_on_side,status,job_id,chosen_side,created_at,decided_at)
-VALUES (?,?,?,?,?,?,?,?,?,?,'queued',?,NULL,?,NULL);
+    (id,user_id,voice_id,rule_id,source_id,profile_version,model_ref,target_length,input_snapshot,rule_on_side,status,job_id,chosen_side,created_at,decided_at,source_language)
+VALUES (?,?,?,?,?,?,?,?,?,?,'queued',?,NULL,?,NULL,?);
 
 -- name: InsertRuleComparisonCandidate :exec
 INSERT INTO voice_rule_comparison_candidates(id,comparison_id,display_side,output,status,error)
 VALUES (?,?,?,NULL,'pending',NULL);
 
 -- name: GetRuleComparison :one
-SELECT id, user_id, voice_id, rule_id, source_id, profile_version, model_ref, target_length, input_snapshot, rule_on_side, status, job_id, chosen_side, created_at, decided_at FROM voice_rule_comparisons WHERE id=? AND user_id=?;
+SELECT * FROM voice_rule_comparisons WHERE id=? AND user_id=?;
 
 -- name: ListRuleComparisonCandidates :many
-SELECT id, comparison_id, display_side, output, status, error FROM voice_rule_comparison_candidates WHERE comparison_id=? ORDER BY display_side;
+SELECT * FROM voice_rule_comparison_candidates WHERE comparison_id=? ORDER BY display_side;
 
 -- name: UpdateRuleComparisonCandidate :exec
-UPDATE voice_rule_comparison_candidates SET output=?,status=?,error=? WHERE id=? AND comparison_id=?;
+UPDATE voice_rule_comparison_candidates
+SET output=?,status=?,error=?,error_reason=?,error_params=?,technical_detail=?
+WHERE id=? AND comparison_id=?;
 
 -- name: UpdateRuleComparisonStatus :exec
 UPDATE voice_rule_comparisons SET status=? WHERE id=? AND user_id=?;
@@ -264,8 +280,8 @@ WHERE id=? AND user_id=? AND status IN ('review','partial');
 
 -- name: InsertProfileValidation :exec
 INSERT INTO voice_profile_validations
-    (id,user_id,voice_id,profile_version,analyze_model_ref,write_model_ref,judge_enabled,status,job_id,y_count,total_count,created_at,finished_at)
-VALUES (?,?,?,?,?,?,?,'queued',?,NULL,NULL,?,NULL);
+    (id,user_id,voice_id,profile_version,analyze_model_ref,write_model_ref,judge_enabled,status,job_id,y_count,total_count,created_at,finished_at,source_language)
+VALUES (?,?,?,?,?,?,?,'queued',?,NULL,NULL,?,NULL,?);
 
 -- name: InsertProfileValidationItem :exec
 INSERT INTO voice_profile_validation_items
@@ -273,17 +289,18 @@ INSERT INTO voice_profile_validation_items
 VALUES (?,?,?,?,?,?,NULL,NULL,NULL,'pending',NULL);
 
 -- name: GetProfileValidation :one
-SELECT id, user_id, voice_id, profile_version, analyze_model_ref, write_model_ref, judge_enabled, status, job_id, y_count, total_count, created_at, finished_at FROM voice_profile_validations WHERE id=? AND user_id=?;
+SELECT * FROM voice_profile_validations WHERE id=? AND user_id=?;
 
 -- name: ListProfileValidations :many
-SELECT id, user_id, voice_id, profile_version, analyze_model_ref, write_model_ref, judge_enabled, status, job_id, y_count, total_count, created_at, finished_at FROM voice_profile_validations WHERE voice_id=? AND user_id=? ORDER BY created_at DESC,id DESC;
+SELECT * FROM voice_profile_validations WHERE voice_id=? AND user_id=? ORDER BY created_at DESC,id DESC;
 
 -- name: ListProfileValidationItems :many
-SELECT id, validation_id, source_id, voice_id, user_id, position, neutral_summary, regenerated_content, scores, status, error FROM voice_profile_validation_items WHERE validation_id=? ORDER BY position;
+SELECT * FROM voice_profile_validation_items WHERE validation_id=? ORDER BY position;
 
 -- name: UpdateProfileValidationItem :exec
 UPDATE voice_profile_validation_items
-SET neutral_summary=?,regenerated_content=?,scores=?,status=?,error=?
+SET neutral_summary=?,regenerated_content=?,scores=?,status=?,error=?,
+    error_reason=?,error_params=?,technical_detail=?
 WHERE id=? AND validation_id=?;
 
 -- name: FinishProfileValidation :exec

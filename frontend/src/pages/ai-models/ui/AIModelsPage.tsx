@@ -1,9 +1,10 @@
 import { useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
   type ComparisonPair,
   type ModelRef,
-  STAGE_LABELS,
+  stageLabel,
   type StageName,
   sameRef,
   useComparisonPairSavePending,
@@ -29,6 +30,7 @@ import { useStartModelExperiment } from '@/features/start-model-experiment'
 import {
   Badge,
   type BadgeTone,
+  AppFailureMessage,
   Button,
   FieldLabel,
   FieldMessage,
@@ -37,13 +39,8 @@ import {
 } from '@/shared/ui'
 import { ModelLeaderboard } from '@/widgets/model-leaderboard'
 
-const STAGE_OPTIONS = [
-  { value: 'observe' as const, label: '관찰' },
-  { value: 'analyze' as const, label: '문체 분석' },
-  { value: 'write' as const, label: '글 작성' },
-]
-
 export function AIModelsPage() {
+  const { t } = useTranslation(['models', 'common'])
   const [stage, setStage] = useState<StageName>('observe')
   const [postSlug, setPostSlug] = useState('')
   const [chosenVoiceId, setChosenVoiceId] = useState('')
@@ -57,6 +54,11 @@ export function AIModelsPage() {
   const { entries } = useLeaderboard(stage)
   const start = useStartModelExperiment()
   const navigate = useNavigate()
+  const stageOptions = [
+    { value: 'observe' as const, label: t('stage.observe', { ns: 'models' }) },
+    { value: 'analyze' as const, label: t('stage.analyze', { ns: 'models' }) },
+    { value: 'write' as const, label: t('stage.write', { ns: 'models' }) },
+  ]
   const pair = setup.pairs.find((item) => item.stage === stage)
   // An analyze comparison freezes ONE voice's corpus, so the voice is chosen here and sent
   // explicitly — initialized to the default, never guessed by the server
@@ -74,16 +76,19 @@ export function AIModelsPage() {
   // choosing A and B in the form above is not enough — the combination has to have been SAVED,
   // and a greyed button two screens down cannot say that on its own (§4.3).
   const unmet = [
-    !pair?.candidateA || !pair.candidateB ? 'A/B 조합을 저장' : '',
-    stage === 'observe' && !postSlug ? '사진이 있는 글을 선택' : '',
-    stage === 'analyze' && !voiceId ? '말투를 선택' : '',
+    !pair?.candidateA || !pair.candidateB ? t('page.requirement.pair', { ns: 'models' }) : '',
+    stage === 'observe' && !postSlug ? t('page.requirement.photoPost', { ns: 'models' }) : '',
+    stage === 'analyze' && !voiceId ? t('page.requirement.voice', { ns: 'models' }) : '',
   ].filter(Boolean)
   const canStart = !pairSaving && unmet.length === 0
   const startHint = pairSaving
-    ? 'A/B 조합을 저장하는 중이에요.'
+    ? t('page.pairSaving', { ns: 'models' })
     : canStart
       ? ''
-      : `${unmet.join('하고, ')}하면 비교를 시작할 수 있어요.`
+      : t('page.canStart', {
+          ns: 'models',
+          requirements: unmet.join(t('page.requirementSeparator', { ns: 'models' })),
+        })
   const startComparison = async () => {
     // The CTA is `aria-disabled`, not `disabled`, so it keeps its place in the focus order and can
     // still be activated from a keyboard — the preconditions are enforced here, not by the browser.
@@ -97,27 +102,29 @@ export function AIModelsPage() {
   }
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">AI 모델</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t('title', { ns: 'models' })}</h1>
       <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
-        추천 조합을 명시적으로 적용하거나, 내 사진·문체·글에서 더 나은 모델을 직접 비교합니다.
+        {t('page.description', { ns: 'models' })}
       </p>
 
       <section className="mt-10" aria-labelledby="recommendation-heading">
         <h2 id="recommendation-heading" className="text-lg font-semibold tracking-tight">
-          추천 조합
+          {t('page.recommendation', { ns: 'models' })}
         </h2>
         <div className="mt-4">
           {setup.recommendations[0] ? (
             <ApplyRecommendation recommendation={setup.recommendations[0]} />
           ) : (
-            <p className="text-content-tertiary text-sm">추천 조합을 불러오는 중…</p>
+            <p className="text-content-tertiary text-sm">
+              {t('page.recommendationLoading', { ns: 'models' })}
+            </p>
           )}
         </div>
       </section>
 
       <section className="mt-12" aria-labelledby="settings-heading">
         <h2 id="settings-heading" className="text-lg font-semibold tracking-tight">
-          단계별 설정과 비교
+          {t('page.settings', { ns: 'models' })}
         </h2>
         {/* The switch drives four sections, the last of them ~1,000px below it, so it follows the
             scroll instead of existing only at the top of the section: otherwise comparing two
@@ -127,9 +134,9 @@ export function AIModelsPage() {
         <div className="bg-surface-base sticky top-0 z-10 -mx-4 mt-4 px-4 py-2 sm:top-16 sm:-mx-6 sm:px-6">
           <SegmentedControl
             value={stage}
-            options={STAGE_OPTIONS}
+            options={stageOptions}
             onChange={setStage}
-            ariaLabel="AI 단계"
+            ariaLabel={t('page.stageAria', { ns: 'models' })}
           />
         </div>
         <div className="mt-6">
@@ -139,14 +146,14 @@ export function AIModelsPage() {
         </div>
         {stage === 'analyze' && (
           <div className="mt-6">
-            <FieldLabel htmlFor="experiment-voice">말투</FieldLabel>
+            <FieldLabel htmlFor="experiment-voice">{t('page.voice', { ns: 'models' })}</FieldLabel>
             <Select
               id="experiment-voice"
               className="mt-1"
               value={voiceId}
               onChange={(event) => setChosenVoiceId(event.target.value)}
             >
-              {!voiceId && <option value="">말투를 선택하세요</option>}
+              {!voiceId && <option value="">{t('page.selectVoice', { ns: 'models' })}</option>}
               {activeVoices.map((voice) => (
                 <option key={voice.id} value={voice.id}>
                   {voice.name}
@@ -154,14 +161,16 @@ export function AIModelsPage() {
               ))}
             </Select>
             <p className="text-content-secondary mt-2 text-sm">
-              이 말투의 글 전체만 비교하고, 선택한 결과도 이 말투에만 적용돼요.
+              {t('page.voiceHelp', { ns: 'models' })}
             </p>
           </div>
         )}
         {stage !== 'analyze' && (
           <div className="mt-6">
             <FieldLabel htmlFor="experiment-post">
-              {stage === 'observe' ? '사진이 있는 글' : '비교할 글'}
+              {stage === 'observe'
+                ? t('page.photoPost', { ns: 'models' })
+                : t('page.comparePost', { ns: 'models' })}
             </FieldLabel>
             <Select
               id="experiment-post"
@@ -170,7 +179,9 @@ export function AIModelsPage() {
               onChange={(event) => setPostSlug(event.target.value)}
             >
               <option value="">
-                {stage === 'observe' ? '사진이 있는 글을 선택하세요' : '글을 선택하세요'}
+                {stage === 'observe'
+                  ? t('page.selectPhotoPost', { ns: 'models' })
+                  : t('page.selectPost', { ns: 'models' })}
               </option>
               {posts.map((post) => (
                 <option key={post.slug} value={post.slug}>
@@ -200,24 +211,30 @@ export function AIModelsPage() {
               aria-describedby={startHint ? startHintId : undefined}
               onClick={() => void startComparison()}
             >
-              비교 시작
+              {t('page.start', { ns: 'models' })}
             </Button>
             {startHint && (
               <p id={startHintId} className="text-content-secondary mt-2 text-sm">
                 {startHint}
               </p>
             )}
-            {start.error && <FieldMessage className="mt-2">비교를 시작하지 못했어요.</FieldMessage>}
+            {start.failure && (
+              <div role="alert" className="text-field-error mt-2 text-sm">
+                <AppFailureMessage failure={start.failure} />
+              </div>
+            )}
           </div>
         )}
       </section>
 
       <section className="mt-12" aria-labelledby="recent-heading">
         <h2 id="recent-heading" className="text-lg font-semibold tracking-tight">
-          최근 {STAGE_LABELS[stage]} 비교
+          {t('page.recent', { ns: 'models', stage: stageLabel(stage) })}
         </h2>
         {experiments.length === 0 ? (
-          <p className="text-content-tertiary mt-4 text-sm">아직 비교가 없어요.</p>
+          <p className="text-content-tertiary mt-4 text-sm">
+            {t('page.noComparison', { ns: 'models' })}
+          </p>
         ) : (
           // Full-bleed rows: the negative gutter puts the row's text edge on the same line as the
           // section headings and lets its pressed plane run to the screen edge (§4.2).
@@ -234,10 +251,10 @@ export function AIModelsPage() {
                       312px row and would otherwise crush the status chip to a column of single
                       syllables (§8.5). */}
                   <span className="min-w-0 truncate">
-                    {item.postSlug || voiceName(item.voiceId) || STAGE_LABELS[item.stage]}
+                    {item.postSlug || voiceName(item.voiceId) || stageLabel(item.stage)}
                   </span>
-                  <Badge tone={STATUS_META[item.status].tone}>
-                    {STATUS_META[item.status].label}
+                  <Badge tone={STATUS_TONES[item.status]}>
+                    {t(`experimentStatus.${item.status}`, { ns: 'models' })}
                   </Badge>
                 </Link>
               </li>
@@ -247,7 +264,7 @@ export function AIModelsPage() {
       </section>
       <section className="mt-12" aria-labelledby="leaderboard-heading">
         <h2 id="leaderboard-heading" className="text-lg font-semibold tracking-tight">
-          내 {STAGE_LABELS[stage]} 리더보드
+          {t('page.myLeaderboard', { ns: 'models', stage: stageLabel(stage) })}
         </h2>
         <div className="mt-4">
           <ModelLeaderboard entries={entries} />
@@ -268,15 +285,16 @@ function WriteComparisonStart({
   pairPending: boolean
   pairSaving: boolean
 }) {
+  const { t } = useTranslation('models')
   const hintId = useId()
   if (!postSlug) {
     return (
       <div className="mt-6">
         <Button variant="cta" className="w-full sm:w-auto" aria-disabled aria-describedby={hintId}>
-          비교 시작
+          {t('page.start')}
         </Button>
         <p id={hintId} className="text-content-secondary mt-2 text-sm">
-          비교할 글을 선택하면 비교를 시작할 수 있어요.
+          {t('page.choosePostHelp')}
         </p>
       </div>
     )
@@ -306,6 +324,7 @@ function SelectedPostWriteComparison({
   pairSaving: boolean
   hintId: string
 }) {
+  const { t } = useTranslation('models')
   const { post, isPending: postPending, isFetching: postFetching, failure } = usePost(postSlug)
   const observe = useStageSelection('observe')
   const write = useStageSelection('write')
@@ -334,15 +353,15 @@ function SelectedPostWriteComparison({
     pairPending || write.isPending || (Boolean(post?.images.length) && observe.isPending)
   const reason =
     postPending || postFetching
-      ? '글 정보를 확인하는 중이에요.'
+      ? t('page.postChecking')
       : failure || !post
-        ? '글 정보를 불러오지 못했어요. 글을 다시 선택해 주세요.'
+        ? t('page.postLoadFailed')
         : pairSaving
-          ? 'A/B 조합을 저장하는 중이에요.'
+          ? t('page.pairSaving')
           : modelPending
-            ? '모델 선택을 확인하는 중이에요.'
+            ? t('page.modelChecking')
             : post.pendingExperimentId
-              ? '먼저 대기 중인 A/B 결과를 확인해 주세요.'
+              ? t('page.pendingResult')
               : precondition && !precondition.ok
                 ? precondition.reason
                 : ''
@@ -374,15 +393,13 @@ function SelectedPostWriteComparison({
         aria-describedby={reason ? hintId : undefined}
         onClick={() => void startComparison()}
       >
-        비교 시작
+        {t('page.start')}
       </Button>
       <p id={hintId} role="status" className="text-content-secondary mt-2 text-sm empty:hidden">
         {reason}
       </p>
       {start.isError && (
-        <FieldMessage className="mt-2">
-          {start.errorMessage || '비교를 시작하지 못했어요. 다시 시도해 주세요.'}
-        </FieldMessage>
+        <FieldMessage className="mt-2">{start.errorMessage || t('page.startRetry')}</FieldMessage>
       )}
     </div>
   )
@@ -399,12 +416,12 @@ function resolveSelection(
 
 /** The row's status chip. The tone reinforces the label and never replaces it, so nothing is
  *  carried by colour alone (§2.6). */
-const STATUS_META: Record<ExperimentStatusName, { label: string; tone: BadgeTone }> = {
-  queued: { label: '대기', tone: 'neutral' },
-  running: { label: '진행 중', tone: 'info' },
-  review: { label: '결과 확인', tone: 'info' },
-  partial: { label: '일부 오류', tone: 'warning' },
-  failed: { label: '오류', tone: 'danger' },
-  decided: { label: '선택 완료', tone: 'success' },
-  dismissed: { label: '사용 안 함', tone: 'neutral' },
+const STATUS_TONES: Record<ExperimentStatusName, BadgeTone> = {
+  queued: 'neutral',
+  running: 'info',
+  review: 'info',
+  partial: 'warning',
+  failed: 'danger',
+  decided: 'success',
+  dismissed: 'neutral',
 }

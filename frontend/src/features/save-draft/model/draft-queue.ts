@@ -11,6 +11,7 @@ import {
   AUTOSAVE_RETRY_BASE_MS,
   AUTOSAVE_RETRY_MAX_MS,
 } from '@/shared/config'
+import type { ContentLanguage } from '@/shared/api'
 
 /** What the editor tells the user about the last save.
  *
@@ -43,6 +44,7 @@ export type SendDraft = (
   draft: Draft,
   voiceId: string | undefined,
   purposeId: string | undefined,
+  targetLanguage: ContentLanguage | undefined,
 ) => Promise<string>
 
 export interface DraftQueueHandle {
@@ -72,6 +74,9 @@ export interface DraftQueueHandle {
    *  back, so the retries that follow carry text only instead of failing forever on the
    *  same answer. */
   assignVoice: (voiceId: string) => Promise<void>
+  /** Records the language requested for the next full write. It is required on create and,
+   *  for an existing post, settles through this same serial queue as title and memo. */
+  assignTargetLanguage: (language: ContentLanguage) => Promise<void>
 }
 
 interface MintWaiter {
@@ -90,6 +95,10 @@ interface VoiceWaiter extends FlushWaiter {
 
 interface PurposeWaiter extends FlushWaiter {
   purposeId: string
+}
+
+interface TargetLanguageWaiter extends FlushWaiter {
+  targetLanguage: ContentLanguage
 }
 
 interface Queue {
@@ -113,6 +122,9 @@ interface Queue {
   /** The 용도 the server is known to hold. Empty means 없음 — which is also the value a post
    *  starts at, so unlike the voice there is no "not known yet" state to distinguish. */
   savedPurposeId: string
+  /** The target the editor wants and the target the server is known to hold. */
+  targetLanguage: ContentLanguage
+  savedTargetLanguage: ContentLanguage | undefined
   /** True once a save has succeeded, so an untouched editor stays silent. */
   everSaved: boolean
   failed: boolean
@@ -137,6 +149,7 @@ interface Queue {
   /** Callers of `assignVoice` waiting for their reassignment to land. */
   voiceWaiters: VoiceWaiter[]
   purposeWaiters: PurposeWaiter[]
+  targetLanguageWaiters: TargetLanguageWaiter[]
 }
 
 const queues = new Map<string, Queue>()
@@ -197,6 +210,15 @@ function purposeToSend(queue: Queue): string | undefined {
   return purposeDirty(queue) ? queue.purposeId : undefined
 }
 
+function targetLanguageDirty(queue: Queue): boolean {
+  return Boolean(queue.slug) && queue.targetLanguage !== queue.savedTargetLanguage
+}
+
+function targetLanguageToSend(queue: Queue): ContentLanguage | undefined {
+  if (!queue.slug) return queue.targetLanguage
+  return targetLanguageDirty(queue) ? queue.targetLanguage : undefined
+}
+
 function stateOf(queue: Queue): SaveState {
   if (queue.inFlight) return 'saving'
   if (queue.failed) return 'error'
@@ -240,6 +262,24 @@ function rejectPurposeWaiters(queue: Queue, cause: unknown): void {
   const error = cause instanceof Error ? cause : new Error('purpose assignment failed')
   const waiters = queue.purposeWaiters
   queue.purposeWaiters = []
+  for (const waiter of waiters) waiter.reject(error)
+}
+
+function settleTargetLanguageWaiters(queue: Queue): void {
+  const waiting: TargetLanguageWaiter[] = []
+  for (const waiter of queue.targetLanguageWaiters) {
+    if (waiter.targetLanguage === queue.savedTargetLanguage) waiter.resolve()
+    else if (waiter.targetLanguage !== queue.targetLanguage)
+      waiter.reject(new Error('target language assignment superseded'))
+    else waiting.push(waiter)
+  }
+  queue.targetLanguageWaiters = waiting
+}
+
+function rejectTargetLanguageWaiters(queue: Queue, cause: unknown): void {
+  const error = cause instanceof Error ? cause : new Error('target language assignment failed')
+  const waiters = queue.targetLanguageWaiters
+  queue.targetLanguageWaiters = []
   for (const waiter of waiters) waiter.reject(error)
 }
 
@@ -307,12 +347,13 @@ async function run(queue: Queue): Promise<void> {
   const sent = queue.pending
   const sentVoice = voiceToSend(queue)
   const sentPurpose = purposeToSend(queue)
+  const sentTargetLanguage = targetLanguageToSend(queue)
   queue.inFlight = true
   queue.sending = sent
   publish(queue)
 
   try {
-    const slug = await queue.send(queue.slug, sent, sentVoice, sentPurpose)
+    const slug = await queue.send(queue.slug, sent, sentVoice, sentPurpose, sentTargetLanguage)
     if (queue.discarded) return
     queue.inFlight = false
     queue.sending = undefined
@@ -321,6 +362,7 @@ async function run(queue: Queue): Promise<void> {
     queue.saved = sent
     if (sentVoice !== undefined) queue.savedVoiceId = sentVoice
     if (sentPurpose !== undefined) queue.savedPurposeId = sentPurpose
+    if (sentTargetLanguage !== undefined) queue.savedTargetLanguage = sentTargetLanguage
     queue.everSaved = true
     const minted = !queue.slug && Boolean(slug)
     if (minted) rekey(queue, slug)
@@ -330,10 +372,11 @@ async function run(queue: Queue): Promise<void> {
       queue.pending &&
       sameDraft(queue.pending, sent) &&
       !voiceDirty(queue) &&
-      !purposeDirty(queue)
+      !purposeDirty(queue) &&
+      !targetLanguageDirty(queue)
     ) {
       queue.pending = undefined
-    } else if (voiceDirty(queue) || purposeDirty(queue)) {
+    } else if (voiceDirty(queue) || purposeDirty(queue) || targetLanguageDirty(queue)) {
       // An assignment does not wait for a debounce: it is an action, not a keystroke.
       queue.pending ??= { ...sent }
       queue.urgent = true
@@ -356,6 +399,7 @@ async function run(queue: Queue): Promise<void> {
     settleFlushes(queue)
     settleVoiceWaiters(queue)
     settlePurposeWaiters(queue)
+    settleTargetLanguageWaiters(queue)
   } catch (cause) {
     // Swallowed rather than rethrown: every caller is a timer or a teardown handler with
     // nobody to catch it. The retry is what the user is actually promised.
@@ -379,12 +423,18 @@ async function run(queue: Queue): Promise<void> {
       rejectPurposeWaiters(queue, cause)
     }
 
+    if (sentTargetLanguage !== undefined && queue.slug) {
+      queue.targetLanguage = queue.savedTargetLanguage ?? queue.targetLanguage
+      rejectTargetLanguageWaiters(queue, cause)
+    }
+
     if (
       queue.pending &&
       sameDraft(queue.pending, queue.saved) &&
       !wantsPost(queue) &&
       !voiceDirty(queue) &&
-      !purposeDirty(queue)
+      !purposeDirty(queue) &&
+      !targetLanguageDirty(queue)
     ) {
       // Typed back to what the server holds while this attempt was out — there is nothing
       // left to retry, and "다시 시도 중" would stand there forever.
@@ -425,6 +475,8 @@ export function attachDraftQueue(options: {
   voiceId: string
   /** The 용도 the post is assigned to as this editor was told, '' for 없음. */
   purposeId: string
+  /** Concrete on both new and existing editors; a new draft sends it only when it is created. */
+  targetLanguage: ContentLanguage
   send: SendDraft
   onState: (state: SaveState) => void
   onMinted: (slug: string) => void
@@ -445,6 +497,8 @@ export function attachDraftQueue(options: {
       // '' either way: an existing post with no purpose and a draft with no post both hold
       // 없음, so the create's "send only when chosen" rule needs no extra state.
       savedPurposeId: options.slug ? options.purposeId : '',
+      targetLanguage: options.targetLanguage,
+      savedTargetLanguage: options.slug ? options.targetLanguage : undefined,
       everSaved: false,
       failed: false,
       discarded: false,
@@ -460,6 +514,7 @@ export function attachDraftQueue(options: {
       flushWaiters: [],
       voiceWaiters: [],
       purposeWaiters: [],
+      targetLanguageWaiters: [],
     }
     queues.set(key, queue)
   }
@@ -483,7 +538,8 @@ export function attachDraftQueue(options: {
         sameDraft(draft, attached.sending ?? attached.saved) &&
         !wantsPost(attached) &&
         !voiceDirty(attached) &&
-        !purposeDirty(attached)
+        !purposeDirty(attached) &&
+        !targetLanguageDirty(attached)
       ) {
         // Typed back to what the server holds. Leaving "저장 대기 중" or "다시 시도 중" on
         // screen with nothing to send would be a standing lie.
@@ -566,6 +622,22 @@ export function attachDraftQueue(options: {
         sendNow(attached)
       })
     },
+
+    assignTargetLanguage: (targetLanguage) => {
+      if (attached.discarded) return Promise.reject(new Error('session ended'))
+      attached.targetLanguage = targetLanguage
+      // Selecting a target on /posts/new is local state only. If a create is already in
+      // flight, its response is followed by an immediate update carrying this newer choice.
+      if (!attached.slug || targetLanguage === attached.savedTargetLanguage) {
+        return Promise.resolve()
+      }
+      attached.pending ??= { ...(attached.sending ?? attached.saved) }
+      publish(attached)
+      return new Promise<void>((resolve, reject) => {
+        attached.targetLanguageWaiters.push({ targetLanguage, resolve, reject })
+        sendNow(attached)
+      })
+    },
   }
 }
 
@@ -597,6 +669,8 @@ export function discardDraftQueues(): void {
     queue.voiceWaiters = []
     for (const waiter of queue.purposeWaiters) waiter.reject(new Error('session ended'))
     queue.purposeWaiters = []
+    for (const waiter of queue.targetLanguageWaiters) waiter.reject(new Error('session ended'))
+    queue.targetLanguageWaiters = []
   }
   queues.clear()
 }

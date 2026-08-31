@@ -5,7 +5,7 @@ import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postC
 import { toSite } from './convert'
 
 it('converts every block to one standalone fixed-template page', () => {
-  const output = toSite(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, '2026-08-29T03:04:05Z')
+  const output = toSite(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, '2026-08-29T03:04:05Z', 'ko')
 
   expect(output).toMatchSnapshot()
   expect(output.startsWith('<!doctype html>')).toBe(true)
@@ -16,7 +16,7 @@ it('converts every block to one standalone fixed-template page', () => {
 })
 
 it('uses byte-identical style content for different posts', () => {
-  const first = toSite(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, '2026-08-29T03:04:05Z')
+  const first = toSite(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, '2026-08-29T03:04:05Z', 'ko')
   const second = toSite(
     create(PostContentSchema, {
       title: '완전히 다른 글',
@@ -26,6 +26,7 @@ it('uses byte-identical style content for different posts', () => {
     }),
     [],
     '2025-01-02T00:00:00Z',
+    'ko',
   )
   const style = (value: string) => value.match(/<style>([\s\S]*?)<\/style>/)?.[1]
 
@@ -43,5 +44,12 @@ it('uses a URL-safe relative path for an accepted filename', () => {
     ],
   })
 
-  expect(toSite(content, [], '2026-08-29')).toContain('src="trip%20photo%3F%23.jpg"')
+  expect(toSite(content, [], '2026-08-29', 'ko')).toContain('src="trip%20photo%3F%23.jpg"')
+})
+
+it('uses the concrete English content provenance in the document language', () => {
+  const output = toSite(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, '2026-08-29', 'en')
+
+  expect(output).toContain('<html lang="en">')
+  expect(output).not.toContain('<html lang="ko">')
 })

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -11,6 +12,19 @@ import (
 
 	"github.com/pressly/goose/v3"
 )
+
+func migrationsThrough(t *testing.T, names ...string) fstest.MapFS {
+	t.Helper()
+	selected := fstest.MapFS{}
+	for _, name := range names {
+		data, err := fs.ReadFile(migrationsFS, "migrations/"+name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		selected[name] = &fstest.MapFile{Data: data}
+	}
+	return selected
+}
 
 func openTemp(t *testing.T) *DB {
 	t.Helper()
@@ -70,6 +84,299 @@ func TestMigrateAppliesSchemaAndIsIdempotent(t *testing.T) {
 			t.Errorf("table %s missing after migration: %v", table, err)
 		}
 	}
+}
+
+func TestMigration0012BackfillsLanguagesAndFailuresWithoutLosingLegacyRows(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	throughEleven := migrationsThrough(t,
+		"0001_users_sessions.sql", "0002_posts_images_uploads.sql", "0003_model_selections.sql",
+		"0004_generation_jobs.sql", "0005_voice_profiles_samples.sql", "0006_model_experiments.sql",
+		"0007_voice_personalization.sql", "0008_generation_modes_and_finalization.sql",
+		"0009_independent_voice_profiles.sql", "0010_publishing.sql", "0011_post_purposes.sql",
+	)
+	if err := migrate(ctx, handle.Writer, throughEleven); err != nil {
+		t.Fatal(err)
+	}
+	const at = "2026-08-31T00:00:00Z"
+	content := `{"title":"원문","blocks":[{"type":"TEXT","content":"바이트 보존"}]}`
+	baseline := `{"title":"기계","blocks":[{"type":"TEXT","content":"기준선"}]}`
+	observations := `[{"file":"one.jpg","visible_text":"원문 그대로"}]`
+	for _, statement := range []string{
+		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + at + `')`,
+		`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('voice','alice','기본 말투',1,'` + at + `','` + at + `')`,
+		`INSERT INTO posts(slug,user_id,voice_id,title,memo,observations,content,status,created_at,updated_at,content_revision,machine_baseline,machine_baseline_revision,machine_baseline_voice_id,finalized_revision,finalized_at) VALUES('content','alice','voice','제목','메모',? ,?,'finalized','` + at + `','` + at + `',7,?,5,'voice',7,'` + at + `')`,
+		`INSERT INTO posts(slug,user_id,voice_id,title,memo,status,created_at,updated_at) VALUES('empty','alice','voice','초안','','draft','` + at + `','` + at + `')`,
+	} {
+		var err error
+		if strings.Contains(statement, "VALUES('content'") {
+			_, err = handle.Writer.ExecContext(ctx, statement, observations, content, baseline)
+		} else {
+			_, err = handle.Writer.ExecContext(ctx, statement)
+		}
+		if err != nil {
+			t.Fatalf("seed %q: %v", statement, err)
+		}
+	}
+
+	generatePayload := `{"topic":"제주","nested":{"keep":true}}`
+	revisePayload := `{"content":{"title":"기존"}}`
+	opaquePayload := "not-json\x00keep-exact"
+	for _, row := range []struct {
+		id, kind, payload, legacyError string
+	}{
+		{id: "generate", kind: "generate", payload: generatePayload, legacyError: "provider raw generate"},
+		{id: "revise", kind: "revise", payload: revisePayload},
+		{id: "opaque", kind: "generate", payload: opaquePayload},
+		{id: "observe", kind: "observe", payload: `{"keep":"independent"}`},
+	} {
+		if _, err := handle.Writer.ExecContext(ctx,
+			`INSERT INTO generation_jobs(id,user_id,kind,status,error,payload,created_at,updated_at) VALUES(?,?,?,'done',?,?,?,?)`,
+			row.id, "alice", row.kind, nullIfEmpty(row.legacyError), row.payload, at, at,
+		); err != nil {
+			t.Fatalf("seed job %s: %v", row.id, err)
+		}
+	}
+
+	writeSnapshot := `{"post":{"title":"A"},"nested":{"keep":1}}`
+	if _, err := handle.Writer.ExecContext(ctx,
+		`INSERT INTO model_experiments(id,user_id,post_slug,voice_id,purpose_name,stage,status,input_snapshot,input_hash,prompt_version,apply_error,adoption_error,created_at) VALUES('write','alice','content','voice','리뷰','write','dismissed',?,'hash','v1','apply raw','adopt raw',?)`,
+		writeSnapshot, at,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx,
+		`INSERT INTO model_experiments(id,user_id,voice_id,purpose_name,stage,status,input_snapshot,input_hash,prompt_version,created_at) VALUES('observe','alice',NULL,'','observe','dismissed','not-json','observe-hash','v1',?)`, at,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx,
+		`INSERT INTO model_experiment_candidates(id,experiment_id,model_provider_id,model_id,model_label,display_side,status,error) VALUES('candidate','write','p','m','Model','left','failed','candidate raw')`,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	// Seed all three durable voice failure paths under the pre-0012 schema. Their
+	// prose and aggregate language provenance must survive the additive migration.
+	for _, statement := range []string{
+		`INSERT INTO voice_learning_events(id,user_id,voice_id,post_slug,baseline_revision,input_hash,baseline_content,final_content,model_ref,status,error,created_at) VALUES('voice-event','alice','voice','content',1,'voice-hash','{}','{}','p/m','failed','learning raw','` + at + `')`,
+		`INSERT INTO voice_authored_sources(id,user_id,voice_id,post_slug,learning_event_id,title,tags,body,excerpt,created_at) VALUES('voice-source','alice','voice','content','voice-event','원문','[]','본문','본문','` + at + `')`,
+		`INSERT INTO voice_contrast_rules(id,user_id,voice_id,statement,canonical_key,layer,evidence_count,status,origin,created_at,last_evidence_at) VALUES('voice-rule','alice','voice','규칙','voice-rule','syntax',1,'candidate','manual','` + at + `','` + at + `')`,
+		`INSERT INTO voice_rule_comparisons(id,user_id,voice_id,rule_id,source_id,profile_version,model_ref,target_length,input_snapshot,rule_on_side,status,created_at) VALUES('voice-comparison','alice','voice','voice-rule','voice-source',1,'p/m',1200,'{}','left','failed','` + at + `')`,
+		`INSERT INTO voice_rule_comparison_candidates(id,comparison_id,display_side,status,error) VALUES('voice-candidate','voice-comparison','left','failed','comparison raw')`,
+		`INSERT INTO voice_profile_validations(id,user_id,voice_id,profile_version,analyze_model_ref,write_model_ref,judge_enabled,status,created_at) VALUES('voice-validation','alice','voice',1,'p/a','p/w',0,'failed','` + at + `')`,
+		`INSERT INTO voice_profile_validation_items(id,validation_id,source_id,voice_id,user_id,position,status,error) VALUES('voice-item','voice-validation','voice-source','voice','alice',0,'failed','validation raw')`,
+	} {
+		if _, err := handle.Writer.ExecContext(ctx, statement); err != nil {
+			t.Fatalf("seed voice migration row %q: %v", statement, err)
+		}
+	}
+
+	if _, err := handle.Writer.ExecContext(ctx,
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog',?,?)`, at, at,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `INSERT INTO publish_job_ids(id,user_id,created_at) VALUES('publish','alice',?)`, at); err != nil {
+		t.Fatal(err)
+	}
+	manifest := `{"job_id":"publish","content":{"title":"보존"}}`
+	if _, err := handle.Writer.ExecContext(ctx,
+		`INSERT INTO publish_jobs(id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,content_revision,manifest_json,settings_json,error_code,error_message,created_at,updated_at) VALUES('publish','alice','content',?,'agent','naver_blog','failed','opening_editor',7,?,'{}','legacy_code','publish raw',?,?)`,
+		at, manifest, at, at,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	beforeCounts := map[string]int{}
+	for _, table := range []string{"voices", "posts", "generation_jobs", "model_experiments", "model_experiment_candidates", "voice_learning_events", "voice_rule_comparisons", "voice_rule_comparison_candidates", "voice_profile_validations", "voice_profile_validation_items", "publish_jobs"} {
+		var count int
+		if err := handle.Reader.QueryRowContext(ctx, `SELECT count(*) FROM `+table).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		beforeCounts[table] = count
+	}
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	// Boot runs migration discovery every time. The already-applied version must be a no-op.
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatalf("second boot migrate: %v", err)
+	}
+
+	for _, table := range []string{"voices", "posts", "generation_jobs", "model_experiments", "model_experiment_candidates", "voice_learning_events", "voice_rule_comparisons", "voice_rule_comparison_candidates", "voice_profile_validations", "voice_profile_validation_items", "publish_jobs"} {
+		var count int
+		if err := handle.Reader.QueryRowContext(ctx, `SELECT count(*) FROM `+table).Scan(&count); err != nil || count != beforeCounts[table] {
+			t.Fatalf("%s row count = %d, want %d err=%v", table, count, beforeCounts[table], err)
+		}
+	}
+	var gotObservations, gotContent, gotBaseline, target, provenance string
+	if err := handle.Reader.QueryRowContext(ctx,
+		`SELECT observations,content,machine_baseline,target_language,content_language FROM posts WHERE slug='content'`,
+	).Scan(&gotObservations, &gotContent, &gotBaseline, &target, &provenance); err != nil {
+		t.Fatal(err)
+	}
+	if gotObservations != observations || gotContent != content || gotBaseline != baseline || target != "ko" || provenance != "ko" {
+		t.Fatalf("content post changed: observations=%q content=%q baseline=%q languages=%s/%s", gotObservations, gotContent, gotBaseline, target, provenance)
+	}
+	var emptyProvenance sql.NullString
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT content_language FROM posts WHERE slug='empty'`).Scan(&emptyProvenance); err != nil || emptyProvenance.Valid {
+		t.Fatalf("contentless provenance = %+v err=%v", emptyProvenance, err)
+	}
+	var source string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT source_language FROM voices WHERE id='voice'`).Scan(&source); err != nil || source != "ko" {
+		t.Fatalf("voice source = %q err=%v", source, err)
+	}
+
+	var generated, revised, opaque, observe string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT payload FROM generation_jobs WHERE id='generate'`).Scan(&generated); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT payload FROM generation_jobs WHERE id='revise'`).Scan(&revised); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT payload FROM generation_jobs WHERE id='opaque'`).Scan(&opaque); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT payload FROM generation_jobs WHERE id='observe'`).Scan(&observe); err != nil {
+		t.Fatal(err)
+	}
+	if opaque != opaquePayload || observe != `{"keep":"independent"}` {
+		t.Fatalf("opaque/observe payload changed: %q / %q", opaque, observe)
+	}
+	var generatedTarget, generatedContent, revisedTarget, revisedContent sql.NullString
+	if err := handle.Reader.QueryRowContext(ctx,
+		`SELECT json_extract(?,'$.target_language'),json_extract(?,'$.content_language'),json_extract(?,'$.target_language'),json_extract(?,'$.content_language')`,
+		generated, generated, revised, revised,
+	).Scan(&generatedTarget, &generatedContent, &revisedTarget, &revisedContent); err != nil {
+		t.Fatal(err)
+	}
+	if generatedTarget.String != "ko" || generatedContent.Valid || revisedTarget.Valid || revisedContent.String != "ko" {
+		t.Fatalf("payload classification generate=%+v/%+v revise=%+v/%+v", generatedTarget, generatedContent, revisedTarget, revisedContent)
+	}
+	var experimentTarget, migratedSnapshot string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT target_language,input_snapshot FROM model_experiments WHERE id='write'`).Scan(&experimentTarget, &migratedSnapshot); err != nil {
+		t.Fatal(err)
+	}
+	var snapshotTarget string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT json_extract(?,'$.target_language')`, migratedSnapshot).Scan(&snapshotTarget); err != nil || experimentTarget != "ko" || snapshotTarget != "ko" {
+		t.Fatalf("write experiment target=%q snapshot=%q err=%v", experimentTarget, snapshotTarget, err)
+	}
+	var observeTarget sql.NullString
+	var observeSnapshot string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT target_language,input_snapshot FROM model_experiments WHERE id='observe'`).Scan(&observeTarget, &observeSnapshot); err != nil || observeTarget.Valid || observeSnapshot != "not-json" {
+		t.Fatalf("observe experiment = target %+v snapshot %q err=%v", observeTarget, observeSnapshot, err)
+	}
+
+	for _, check := range []struct {
+		query      string
+		args       []any
+		wantDetail string
+	}{
+		{query: `SELECT error_reason,error_params,technical_detail FROM generation_jobs WHERE id='generate'`, wantDetail: "provider raw generate"},
+		{query: `SELECT error_reason,error_params,technical_detail FROM model_experiment_candidates WHERE id='candidate'`, wantDetail: "candidate raw"},
+		{query: `SELECT apply_error_reason,apply_error_params,apply_technical_detail FROM model_experiments WHERE id='write'`, wantDetail: "apply raw"},
+		{query: `SELECT adoption_error_reason,adoption_error_params,adoption_technical_detail FROM model_experiments WHERE id='write'`, wantDetail: "adopt raw"},
+		{query: `SELECT error_reason,error_params,technical_detail FROM voice_learning_events WHERE id='voice-event'`, wantDetail: "learning raw"},
+		{query: `SELECT error_reason,error_params,technical_detail FROM voice_rule_comparison_candidates WHERE id='voice-candidate'`, wantDetail: "comparison raw"},
+		{query: `SELECT error_reason,error_params,technical_detail FROM voice_profile_validation_items WHERE id='voice-item'`, wantDetail: "validation raw"},
+		{query: `SELECT error_reason,error_params,technical_detail FROM publish_jobs WHERE id='publish'`, wantDetail: "publish raw"},
+	} {
+		var reason, params, detail string
+		if err := handle.Reader.QueryRowContext(ctx, check.query, check.args...).Scan(&reason, &params, &detail); err != nil || reason != "UNKNOWN_FAILURE" || params != "{}" || detail != check.wantDetail {
+			t.Fatalf("failure backfill for %q = %q %q %q err=%v", check.query, reason, params, detail, err)
+		}
+	}
+	var eventContent, eventSource, comparisonSource, validationSource string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT content_language,source_language FROM voice_learning_events WHERE id='voice-event'`).Scan(&eventContent, &eventSource); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT source_language FROM voice_rule_comparisons WHERE id='voice-comparison'`).Scan(&comparisonSource); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT source_language FROM voice_profile_validations WHERE id='voice-validation'`).Scan(&validationSource); err != nil {
+		t.Fatal(err)
+	}
+	if eventContent != "ko" || eventSource != "ko" || comparisonSource != "ko" || validationSource != "ko" {
+		t.Fatalf("voice language backfill event=%s/%s comparison=%s validation=%s", eventContent, eventSource, comparisonSource, validationSource)
+	}
+	var publishTarget, publishContent, publishSource, gotManifest string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT target_language,content_language,voice_source_language,manifest_json FROM publish_jobs WHERE id='publish'`).Scan(&publishTarget, &publishContent, &publishSource, &gotManifest); err != nil || publishTarget != "ko" || publishContent != "ko" || publishSource != "ko" || gotManifest != manifest {
+		t.Fatalf("publish freeze = %s/%s/%s manifest=%q err=%v", publishTarget, publishContent, publishSource, gotManifest, err)
+	}
+
+	for name, statement := range map[string]string{
+		"voice language":      `UPDATE voices SET source_language='fr' WHERE id='voice'`,
+		"post language":       `UPDATE posts SET target_language='fr' WHERE slug='content'`,
+		"array params":        `UPDATE generation_jobs SET error_params='[]' WHERE id='generate'`,
+		"scalar params":       `UPDATE generation_jobs SET error_params='1' WHERE id='generate'`,
+		"malformed params":    `UPDATE generation_jobs SET error_params='{bad' WHERE id='generate'`,
+		"experiment language": `UPDATE model_experiments SET target_language='fr' WHERE id='write'`,
+		"learning content":    `UPDATE voice_learning_events SET content_language='fr' WHERE id='voice-event'`,
+		"learning source":     `UPDATE voice_learning_events SET source_language='fr' WHERE id='voice-event'`,
+		"comparison language": `UPDATE voice_rule_comparisons SET source_language='fr' WHERE id='voice-comparison'`,
+		"validation language": `UPDATE voice_profile_validations SET source_language='fr' WHERE id='voice-validation'`,
+		"voice array params":  `UPDATE voice_rule_comparison_candidates SET error_params='[]' WHERE id='voice-candidate'`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := handle.Writer.ExecContext(ctx, statement); err == nil {
+				t.Fatalf("constraint accepted %s", statement)
+			}
+		})
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `UPDATE generation_jobs SET error_params='{"attempt":2}' WHERE id='generate'`); err != nil {
+		t.Fatalf("valid object params rejected: %v", err)
+	}
+	rows, err := handle.Reader.QueryContext(ctx, `PRAGMA foreign_key_check`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	if rows.Next() {
+		t.Fatal("migration left a foreign-key violation")
+	}
+
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.DownTo(ctx, 11); err != nil {
+		t.Fatal(err)
+	}
+	for table, columns := range map[string][]string{
+		"voices":                           {"source_language"},
+		"posts":                            {"target_language", "content_language"},
+		"generation_jobs":                  {"target_language", "error_reason", "error_params", "technical_detail"},
+		"model_experiments":                {"target_language", "apply_error_reason", "adoption_error_reason"},
+		"voice_learning_events":            {"content_language", "source_language", "error_reason", "error_params", "technical_detail"},
+		"voice_rule_comparisons":           {"source_language"},
+		"voice_rule_comparison_candidates": {"error_reason", "error_params", "technical_detail"},
+		"voice_profile_validations":        {"source_language"},
+		"voice_profile_validation_items":   {"error_reason", "error_params", "technical_detail"},
+		"publish_jobs":                     {"target_language", "content_language", "voice_source_language", "error_reason"},
+	} {
+		for _, column := range columns {
+			var count int
+			if err := handle.Reader.QueryRowContext(ctx, `SELECT count(*) FROM pragma_table_info(?) WHERE name=?`, table, column).Scan(&count); err != nil || count != 0 {
+				t.Fatalf("down retained %s.%s: count=%d err=%v", table, column, count, err)
+			}
+		}
+	}
+	var downContent, downObservations string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT content,observations FROM posts WHERE slug='content'`).Scan(&downContent, &downObservations); err != nil || downContent != content || downObservations != observations {
+		t.Fatalf("down lost post bytes: content=%q observations=%q err=%v", downContent, downObservations, err)
+	}
+}
+
+func nullIfEmpty(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
 }
 
 func TestMigration0006UpgradesActiveSelectionsAndRollsBack(t *testing.T) {

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { publishingAgentsQueryKey, type PublishingAgent } from '@/entities/publishing-agent'
-import { publishingClientFor, PublishVisibility } from '@/shared/api'
-import { Button, FieldLabel, Notice, Select, TextField } from '@/shared/ui'
+import { appFailureFromConnect, publishingClientFor, PublishVisibility } from '@/shared/api'
+import { AppFailureMessage, Button, FieldLabel, Notice, Select, TextField } from '@/shared/ui'
 
 export function ConfigurePublishingAgent({
   ownerId,
@@ -12,6 +13,7 @@ export function ConfigurePublishingAgent({
   ownerId: string
   agent: PublishingAgent
 }) {
+  const { t } = useTranslation('publishing')
   const [label, setLabel] = useState(agent.label)
   const [categoryId, setCategoryId] = useState(agent.defaultCategoryId)
   const [visibility, setVisibility] = useState(agent.defaultVisibility)
@@ -28,11 +30,12 @@ export function ConfigurePublishingAgent({
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: publishingAgentsQueryKey(ownerId) }),
   })
+  const failure = update.error ? appFailureFromConnect(update.error) : undefined
   if (!agent.ready) return null
   return (
     <div className="mt-4 grid gap-4">
       <div>
-        <FieldLabel htmlFor={`agent-label-${agent.id}`}>연결 이름</FieldLabel>
+        <FieldLabel htmlFor={`agent-label-${agent.id}`}>{t('configure.label')}</FieldLabel>
         <TextField
           id={`agent-label-${agent.id}`}
           value={label}
@@ -46,7 +49,7 @@ export function ConfigurePublishingAgent({
         />
       </div>
       <div>
-        <FieldLabel htmlFor={`agent-category-${agent.id}`}>기본 카테고리</FieldLabel>
+        <FieldLabel htmlFor={`agent-category-${agent.id}`}>{t('configure.category')}</FieldLabel>
         <Select
           id={`agent-category-${agent.id}`}
           value={categoryId}
@@ -61,15 +64,17 @@ export function ConfigurePublishingAgent({
         </Select>
       </div>
       <div>
-        <FieldLabel htmlFor={`agent-visibility-${agent.id}`}>기본 공개 설정</FieldLabel>
+        <FieldLabel htmlFor={`agent-visibility-${agent.id}`}>
+          {t('configure.visibility')}
+        </FieldLabel>
         <Select
           id={`agent-visibility-${agent.id}`}
           value={visibility}
           onChange={(event) => setVisibility(Number(event.target.value) as PublishVisibility)}
           className="mt-2"
         >
-          <option value={PublishVisibility.PUBLIC}>전체 공개</option>
-          <option value={PublishVisibility.PRIVATE}>비공개</option>
+          <option value={PublishVisibility.PUBLIC}>{t('visibility.public')}</option>
+          <option value={PublishVisibility.PRIVATE}>{t('visibility.private')}</option>
         </Select>
       </div>
       <Button
@@ -78,9 +83,13 @@ export function ConfigurePublishingAgent({
         pending={update.isPending}
         disabled={!label.trim() || !categoryId}
       >
-        기본값 저장
+        {t('configure.save')}
       </Button>
-      {update.isError && <Notice tone="danger">기본값을 저장하지 못했어요.</Notice>}
+      {failure && (
+        <Notice tone="danger" role="alert">
+          <AppFailureMessage failure={failure} />
+        </Notice>
+      )}
     </div>
   )
 }

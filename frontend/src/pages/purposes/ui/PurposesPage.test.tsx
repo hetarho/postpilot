@@ -93,7 +93,7 @@ describe('the purpose directory', () => {
     await user.type(form.getByLabelText('작성 지침'), '지침')
     await user.click(form.getByRole('button', { name: '용도 만들기' }))
 
-    expect(await screen.findByText('같은 이름의 용도가 이미 있어요')).toBeInTheDocument()
+    expect(await screen.findByText('같은 이름의 용도가 이미 있어요.')).toBeInTheDocument()
     expect(form.getByLabelText('용도 이름')).toHaveValue('일기')
   })
 
@@ -134,7 +134,7 @@ describe('the purpose directory', () => {
     await user.type(editor, '정보성 식당 리뷰')
     await user.click(diary.getByRole('button', { name: '저장' }))
 
-    expect(await diary.findByText('같은 이름의 용도가 이미 있어요')).toBeInTheDocument()
+    expect(await diary.findByText('같은 이름의 용도가 이미 있어요.')).toBeInTheDocument()
     expect(diary.getByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
   })
 

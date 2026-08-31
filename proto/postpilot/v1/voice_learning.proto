@@ -2,6 +2,8 @@ syntax = "proto3";
 package postpilot.v1;
 import "postpilot/v1/provider.proto";
 import "postpilot/v1/voice.proto";
+import "postpilot/v1/error.proto";
+import "postpilot/v1/language.proto";
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 service VoiceLearningService {
@@ -23,10 +25,13 @@ enum VoiceFeedbackReason {
 }
 message VoiceLearningEvent {
   string id = 1; string post_slug = 2; int64 baseline_revision = 3; string status = 4;
-  string job_id = 5; string error = 6; string created_at = 7; string processed_at = 8;
+  string job_id = 5; string error = 6 [deprecated = true]; string created_at = 7; string processed_at = 8;
   // Frozen at finalization. A retry follows THIS voice even if the post is reassigned
   // afterwards, so completed work is never retargeted.
   string voice_id = 9;
+  ContentLanguage content_language = 10;
+  ContentLanguage source_language = 11;
+  Failure failure = 12;
 }
 message LearnFromFinalizedPostRequest { string post_slug = 1; ModelRef analyze_model = 2; }
 message LearnFromFinalizedPostResponse { VoiceLearningEvent event = 1; string job_id = 2; bool reused = 3; }

@@ -1,59 +1,63 @@
+import { useTranslation } from 'react-i18next'
 import type { VoiceAxes, VoiceProfile } from '@/entities/voice'
-import { VoiceLayer } from '@/shared/api'
+import { type ContentLanguage, VoiceLayer } from '@/shared/api'
+import { formatNumber, formatPercent } from '@/shared/lib'
 import { Badge } from '@/shared/ui'
 import { ProfileField } from './ProfileField'
 
 /** The six axes in their canonical order. They are listed explicitly rather than iterated from the
  *  object, because an axis the analysis never answered is ABSENT — iterating its keys would drop
  *  the unknown ones from the screen instead of reporting them. */
-const AXES: ReadonlyArray<{ key: keyof VoiceAxes; label: string }> = [
-  { key: 'involvement', label: '관여도' },
-  { key: 'narrativity', label: '서사성' },
-  { key: 'persuasionOvertness', label: '설득 노출' },
-  { key: 'abstractness', label: '추상성' },
-  { key: 'addresseeFocus', label: '독자 지향' },
-  { key: 'humor', label: '유머' },
-]
-
 export function StructuredProfileEditor({
   ownerId,
   voiceId,
   profile,
+  sourceLanguage,
   readOnly = false,
 }: {
   ownerId: string
   voiceId: string
   profile: VoiceProfile
+  sourceLanguage: ContentLanguage
   readOnly?: boolean
 }) {
+  const { t } = useTranslation('voices')
   const structured = profile.structured
+  const axes: ReadonlyArray<{ key: keyof VoiceAxes; label: string }> = [
+    { key: 'involvement', label: t('profile.axis.involvement') },
+    { key: 'narrativity', label: t('profile.axis.narrativity') },
+    { key: 'persuasionOvertness', label: t('profile.axis.persuasionOvertness') },
+    { key: 'abstractness', label: t('profile.axis.abstractness') },
+    { key: 'addresseeFocus', label: t('profile.axis.addresseeFocus') },
+    { key: 'humor', label: t('profile.axis.humor') },
+  ]
   const fields = [
     {
-      label: '어휘 성격',
+      label: t('profile.field.lexical'),
       layer: VoiceLayer.LEXICAL,
       field: 'description',
       value: structured.lexical.description,
     },
     {
-      label: '주 종결어미',
+      label: t(`profile.field.${sourceLanguage === 'en' ? 'endingEn' : 'endingKo'}`),
       layer: VoiceLayer.ENDINGS,
       field: 'base_register',
       value: structured.endings.baseRegister,
     },
     {
-      label: '접속 방식',
+      label: t('profile.field.connective'),
       layer: VoiceLayer.SYNTAX,
       field: 'connective_style',
       value: structured.syntax.connectiveStyle,
     },
     {
-      label: '도입 방식',
+      label: t('profile.field.intro'),
       layer: VoiceLayer.STRUCTURE,
       field: 'intro_pattern',
       value: structured.structure.introPattern,
     },
     {
-      label: '마무리 방식',
+      label: t('profile.field.closing'),
       layer: VoiceLayer.STRUCTURE,
       field: 'closing_pattern',
       value: structured.structure.closingPattern,
@@ -63,17 +67,17 @@ export function StructuredProfileEditor({
     <section aria-labelledby="profile-heading">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="profile-heading" className="text-lg font-semibold tracking-tight">
-          현재 말투 프로필
+          {t('profile.current')}
         </h2>
         <span className="text-content-tertiary text-sm">
-          v{structured.version.toString()} · 완성 글 {profile.finalizedSourceCount}편
+          {t('profile.finalizedCount', {
+            version: structured.version.toString(),
+            count: profile.finalizedSourceCount,
+          })}
         </span>
       </div>
       {structured.empty ? (
-        <p className="text-content-secondary mt-3 text-sm leading-relaxed">
-          아직 배운 말투가 없어요. 첫 글도 그대로 생성할 수 있고, 완성한 글을 직접 확정하면 그때부터
-          한 편씩 배웁니다.
-        </p>
+        <p className="text-content-secondary mt-3 text-sm leading-relaxed">{t('profile.empty')}</p>
       ) : (
         <div className="mt-5 space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -88,41 +92,72 @@ export function StructuredProfileEditor({
             ))}
           </div>
           <section>
-            <h3 className="font-medium">종결어미 분포</h3>
+            <h3 className="font-medium">{t('profile.endings')}</h3>
             <div className="mt-2 flex flex-wrap gap-2">
               {structured.endings.distribution.map((item) => (
                 <Badge key={item.ending}>
-                  {item.ending} {Math.round(item.ratio * 100)}%
+                  {t('profile.endingShare', {
+                    ending: item.ending,
+                    rate: formatPercent(item.ratio),
+                  })}
                 </Badge>
               ))}
             </div>
           </section>
           <section>
-            <h3 className="font-medium">문장과 구조</h3>
+            <h3 className="font-medium">{t('profile.sentenceStructure')}</h3>
             <dl className="text-content-secondary mt-2 grid gap-2 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-content-tertiary">평균 문장 길이</dt>
-                <dd>{structured.syntax.averageSentenceChars.toFixed(1)}자</dd>
+                <dt className="text-content-tertiary">
+                  {sourceLanguage === 'en'
+                    ? t('profile.averageSentenceWords')
+                    : t('profile.averageSentenceChars')}
+                </dt>
+                {sourceLanguage === 'en' ? (
+                  <dd
+                    className={
+                      structured.syntax.averageSentenceWords === undefined
+                        ? 'text-content-tertiary'
+                        : undefined
+                    }
+                  >
+                    {structured.syntax.averageSentenceWords === undefined
+                      ? t('profile.unknown')
+                      : t('profile.words', {
+                          count: structured.syntax.averageSentenceWords,
+                          formatted: formatNumber(structured.syntax.averageSentenceWords),
+                        })}
+                  </dd>
+                ) : (
+                  <dd>
+                    {t('profile.characters', {
+                      count: structured.syntax.averageSentenceChars,
+                      formatted: formatNumber(structured.syntax.averageSentenceChars),
+                    })}
+                  </dd>
+                )}
               </div>
               <div>
-                <dt className="text-content-tertiary">문단당 문장</dt>
+                <dt className="text-content-tertiary">{t('profile.sentencesPerParagraph')}</dt>
                 <dd>
-                  {structured.structure.paragraphSentencesMin}–
-                  {structured.structure.paragraphSentencesMax}개
+                  {t('profile.rangeCount', {
+                    min: formatNumber(structured.structure.paragraphSentencesMin),
+                    max: formatNumber(structured.structure.paragraphSentencesMax),
+                  })}
                 </dd>
               </div>
             </dl>
           </section>
           <section>
-            <h3 className="font-medium">여섯 성향 (-3~3)</h3>
+            <h3 className="font-medium">{t('profile.tendencies')}</h3>
             <dl className="text-content-secondary mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-              {AXES.map((axis) => {
+              {axes.map((axis) => {
                 const value = structured.axes[axis.key]
                 return (
                   <div key={axis.key}>
                     <dt className="text-content-tertiary">{axis.label}</dt>
                     <dd className={value === undefined ? 'text-content-tertiary' : undefined}>
-                      {value === undefined ? '알 수 없음' : value}
+                      {value === undefined ? t('profile.unknown') : formatNumber(value)}
                     </dd>
                   </div>
                 )
@@ -133,7 +168,7 @@ export function StructuredProfileEditor({
             structured.lexical.bannedPatterns.length > 0 ||
             structured.endings.bannedEndings.length > 0) && (
             <section>
-              <h3 className="font-medium">피할 표현</h3>
+              <h3 className="font-medium">{t('profile.avoidExpressions')}</h3>
               <ul className="text-content-secondary mt-2 list-disc pl-5 text-sm">
                 {structured.lexical.bannedWords.map((v) => (
                   <li key={v.value}>

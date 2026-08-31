@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button, FieldMessage } from '@/shared/ui'
 import { useRestoreVoice } from '../api/useRestoreVoice'
 
@@ -13,6 +14,7 @@ export function RestoreVoiceButton({
   variant?: 'secondary' | 'ghost'
   className?: string
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const restore = useRestoreVoice(ownerId)
   return (
     <>
@@ -22,9 +24,19 @@ export function RestoreVoiceButton({
         onClick={() => void restore.restore(voiceId).catch(() => undefined)}
         className={className}
       >
-        복원
+        {t('action.restore', { ns: 'common' })}
       </Button>
-      {restore.isError && <FieldMessage className="w-full">{restore.errorMessage}</FieldMessage>}
+      {restore.isError && (
+        <FieldMessage className="w-full">
+          {restore.failure?.reason === 'VOICE_NAME_TAKEN'
+            ? t('error.restoreNameConflictDetail', {
+                ns: 'voices',
+                error: restore.errorMessage,
+                interpolation: { escapeValue: false },
+              })
+            : restore.errorMessage}
+        </FieldMessage>
+      )}
     </>
   )
 }

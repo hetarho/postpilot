@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -106,6 +107,7 @@ func (s *memoryStore) StartCandidate(_ context.Context, experimentID, candidateI
 	for i := range row.Candidates {
 		if row.Candidates[i].ID == candidateID {
 			row.Candidates[i].Status = CandidateRunning
+			row.Candidates[i].Failure = nil
 			row.Candidates[i].StartedAt = &now
 		}
 	}
@@ -124,12 +126,12 @@ func (s *memoryStore) CompleteCandidate(_ context.Context, candidate Candidate) 
 	s.rows[row.ID] = row
 	return nil
 }
-func (s *memoryStore) FailUnfinished(_ context.Context, id, reason string, now time.Time) error {
+func (s *memoryStore) FailUnfinished(_ context.Context, id string, failure Failure, now time.Time) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.failUnfinished(id, reason, now)
+	return s.failUnfinished(id, failure, now)
 }
-func (s *memoryStore) RecoverInterrupted(_ context.Context, reason string, now time.Time) (int64, error) {
+func (s *memoryStore) RecoverInterrupted(_ context.Context, failure Failure, now time.Time) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var count int64
@@ -137,7 +139,7 @@ func (s *memoryStore) RecoverInterrupted(_ context.Context, reason string, now t
 		if row.Status != StatusRunning {
 			continue
 		}
-		if err := s.failUnfinished(id, reason, now); err != nil {
+		if err := s.failUnfinished(id, failure, now); err != nil {
 			return count, err
 		}
 		count++
@@ -155,7 +157,7 @@ func (s *memoryStore) ListQueued(context.Context) ([]string, error) {
 	}
 	return ids, nil
 }
-func (s *memoryStore) failUnfinished(id, reason string, now time.Time) error {
+func (s *memoryStore) failUnfinished(id string, failure Failure, now time.Time) error {
 	row, ok := s.rows[id]
 	if !ok || (row.Status != StatusQueued && row.Status != StatusRunning) {
 		return ErrInvalidState
@@ -167,7 +169,7 @@ func (s *memoryStore) failUnfinished(id, reason string, now time.Time) error {
 		}
 		if row.Candidates[i].Status == CandidatePending || row.Candidates[i].Status == CandidateRunning {
 			row.Candidates[i].Status = CandidateFailed
-			row.Candidates[i].Error = reason
+			row.Candidates[i].Failure = cloneFailure(&failure)
 			row.Candidates[i].FinishedAt = &now
 		}
 	}
@@ -187,7 +189,7 @@ func (s *memoryStore) ResetFailedCandidates(_ context.Context, id string) (int64
 	for i := range row.Candidates {
 		if row.Candidates[i].Status == CandidateFailed {
 			row.Candidates[i].Status = CandidatePending
-			row.Candidates[i].Error = ""
+			row.Candidates[i].Failure = nil
 			n++
 		}
 	}
@@ -220,18 +222,19 @@ func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, 
 	}
 	row.Status, row.WinnerCandidateID, row.Outcome = status, candidateID, outcome
 	row.AdoptionRequested = adoptionRequested
+	row.ApplyFailure, row.AdoptionFailure = nil, nil
 	row.DecidedAt, row.ContentExpiresAt = &decidedAt, &expiresAt
 	s.rows[id] = row
 	return true, nil
 }
-func (s *memoryStore) SetApplyError(_ context.Context, id, userID, message string) error {
+func (s *memoryStore) SetApplyFailure(_ context.Context, id, userID string, failure Failure) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row := s.rows[id]
 	if row.UserID != userID {
 		return ErrForbidden
 	}
-	row.ApplyError = message
+	row.ApplyFailure = cloneFailure(&failure)
 	s.rows[id] = row
 	return nil
 }
@@ -242,19 +245,19 @@ func (s *memoryStore) SetApplied(_ context.Context, id, userID string, now time.
 	if row.UserID != userID || row.Status != StatusDecided || row.AppliedAt != nil {
 		return ErrInvalidState
 	}
-	row.ApplyError = ""
+	row.ApplyFailure = nil
 	row.AppliedAt = &now
 	s.rows[id] = row
 	return nil
 }
-func (s *memoryStore) SetAdoptionError(_ context.Context, id, userID, message string) error {
+func (s *memoryStore) SetAdoptionFailure(_ context.Context, id, userID string, failure Failure) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row := s.rows[id]
 	if row.UserID != userID {
 		return ErrForbidden
 	}
-	row.AdoptionError = message
+	row.AdoptionFailure = cloneFailure(&failure)
 	s.rows[id] = row
 	return nil
 }
@@ -265,7 +268,7 @@ func (s *memoryStore) SetAdopted(_ context.Context, id, userID string, now time.
 	if row.UserID != userID || row.Status != StatusDecided || row.AdoptedAt != nil {
 		return ErrInvalidState
 	}
-	row.AdoptionError = ""
+	row.AdoptionFailure = nil
 	row.AdoptedAt = &now
 	s.rows[id] = row
 	return nil
@@ -297,9 +300,13 @@ func (s *memoryStore) CountPublishableForVoice(_ context.Context, userID, voiceI
 
 func cloneExperiment(found Experiment) Experiment {
 	found.InputSnapshot = append([]byte(nil), found.InputSnapshot...)
+	found.TargetLanguage = cloneLanguage(found.TargetLanguage)
+	found.ApplyFailure = cloneFailure(found.ApplyFailure)
+	found.AdoptionFailure = cloneFailure(found.AdoptionFailure)
 	found.Candidates = append([]Candidate(nil), found.Candidates...)
 	for i := range found.Candidates {
 		found.Candidates[i].Output = append([]byte(nil), found.Candidates[i].Output...)
+		found.Candidates[i].Failure = cloneFailure(found.Candidates[i].Failure)
 	}
 	return found
 }
@@ -349,7 +356,8 @@ func TestDecideWriteSeparatesApplyOnlyFromAdoptionAndRecoversPartialFailure(t *t
 		ready, _ := store.Get(context.Background(), started.ExperimentID)
 		runner.applyErr = errors.New("post unavailable")
 		partial, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
-		if err != nil || !partial.AdoptionRequested || partial.AppliedAt != nil || partial.ApplyError == "" || len(catalog.adopted) != 0 {
+		if err != nil || !partial.AdoptionRequested || partial.AppliedAt != nil || partial.ApplyFailure == nil ||
+			partial.ApplyFailure.Reason != FailureReasonUnknown || len(catalog.adopted) != 0 {
 			t.Fatalf("partial = %+v err=%v adopted=%v", partial, err, catalog.adopted)
 		}
 		runner.applyErr = nil
@@ -368,12 +376,13 @@ func TestDecideWriteSeparatesApplyOnlyFromAdoptionAndRecoversPartialFailure(t *t
 		ready, _ := store.Get(context.Background(), started.ExperimentID)
 		catalog.adoptErr = errors.New("selection unavailable")
 		partial, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
-		if err != nil || partial.AppliedAt == nil || partial.AdoptionError != adoptFailedReason || partial.AdoptedAt != nil || runner.applyCalls != 1 {
+		if err != nil || partial.AppliedAt == nil || partial.AdoptionFailure == nil ||
+			partial.AdoptionFailure.Reason != FailureReasonUnknown || partial.AdoptedAt != nil || runner.applyCalls != 1 {
 			t.Fatalf("partial = %+v err=%v applies=%d", partial, err, runner.applyCalls)
 		}
 		catalog.adoptErr = nil
 		recovered, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
-		if err != nil || recovered.AdoptedAt == nil || recovered.AdoptionError != "" || len(catalog.adopted) != 1 || runner.applyCalls != 1 {
+		if err != nil || recovered.AdoptedAt == nil || recovered.AdoptionFailure != nil || len(catalog.adopted) != 1 || runner.applyCalls != 1 {
 			t.Fatalf("recovered = %+v err=%v adopted=%v applies=%d", recovered, err, catalog.adopted, runner.applyCalls)
 		}
 		if _, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true); err != nil || len(catalog.adopted) != 1 || runner.applyCalls != 1 {
@@ -443,11 +452,14 @@ func (j *fakeJobs) HasRunnableExperiment(_ context.Context, id string) (bool, er
 }
 
 type fakeRunner struct {
+	runMu                               sync.Mutex
 	snapshotCalls, runCalls, applyCalls int
 	fail                                map[string]error
 	results                             map[string]CandidateResult
 	applyErr                            error
 	snapshotVoice                       string
+	snapshotTarget                      Language
+	omitSnapshotTarget                  bool
 }
 
 // Snapshot freezes the request's voice, as the real runner does from the post or the
@@ -458,10 +470,18 @@ func (r *fakeRunner) Snapshot(_ context.Context, request StartRequest) (Snapshot
 	if request.Stage == StageWrite && r.snapshotVoice != "" {
 		voiceID = r.snapshotVoice
 	}
-	return Snapshot{Content: []byte(`{"same":true}`), PromptVersion: "v1", VoiceID: voiceID}, nil
+	var target *Language
+	if request.Stage == StageWrite && !r.omitSnapshotTarget {
+		language := r.snapshotTarget
+		if language == "" {
+			language = LanguageKorean
+		}
+		target = &language
+	}
+	return Snapshot{Content: []byte(`{"same":true}`), PromptVersion: "v1", VoiceID: voiceID, TargetLanguage: target}, nil
 }
 func (r *fakeRunner) PrepareWrite(_ context.Context, found Experiment, _ Progress) (Snapshot, error) {
-	return Snapshot{Content: found.InputSnapshot, PromptVersion: found.PromptVersion, VoiceID: found.VoiceID}, nil
+	return Snapshot{Content: found.InputSnapshot, PromptVersion: found.PromptVersion, VoiceID: found.VoiceID, TargetLanguage: cloneLanguage(found.TargetLanguage)}, nil
 }
 
 type fakeVoices struct{ deleted map[string]bool }
@@ -498,7 +518,7 @@ func TestAnalyzeExperimentIsFrozenToOneActiveVoice(t *testing.T) {
 		t.Fatal(err)
 	}
 	found, _ := store.Get(ctx, started.ExperimentID)
-	if found.VoiceID != "voice-a" || len(jobs.requests) != 1 || jobs.requests[0].VoiceID != "voice-a" {
+	if found.VoiceID != "voice-a" || len(jobs.requests) != 1 || jobs.requests[0].VoiceID != "voice-a" || jobs.requests[0].TargetLanguage != nil {
 		t.Fatalf("voice not frozen: experiment=%+v jobs=%+v", found, jobs.requests)
 	}
 	if busy, err := svc.HasPublishableForVoice(ctx, "alice", "voice-a"); err != nil || !busy {
@@ -532,7 +552,9 @@ func TestAnalyzeExperimentIsFrozenToOneActiveVoice(t *testing.T) {
 	}
 }
 func (r *fakeRunner) RunCandidate(_ context.Context, _ Experiment, candidate Candidate, _ Progress) (CandidateResult, error) {
+	r.runMu.Lock()
 	r.runCalls++
+	r.runMu.Unlock()
 	if result, ok := r.results[candidate.Model.ModelID]; ok {
 		return result, r.fail[candidate.Model.ModelID]
 	}
@@ -589,6 +611,38 @@ func TestStartHandleChooseWriteExperiment(t *testing.T) {
 	}
 	if _, err := svc.Get(context.Background(), "mallory", found.ID); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("foreign get = %v", err)
+	}
+}
+
+func TestHandleMissingSnapshotPersistsOwnedFailure(t *testing.T) {
+	svc, store, _, _, _ := newTestService()
+	started, err := svc.Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", Stage: StageWrite,
+		ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := store.rows[started.ExperimentID]
+	row.InputSnapshot = nil
+	store.rows[started.ExperimentID] = row
+
+	if err := svc.Handle(context.Background(), started.ExperimentID, func(string, int, int) {}); !errors.Is(err, ErrSnapshotUnavailable) {
+		t.Fatalf("Handle error = %v, want ErrSnapshotUnavailable", err)
+	}
+	found, err := store.Get(context.Background(), started.ExperimentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found.Status != StatusFailed || found.FinishedAt == nil {
+		t.Fatalf("experiment = %+v, want durably failed", found)
+	}
+	for _, candidate := range found.Candidates {
+		if candidate.Status != CandidateFailed || candidate.Failure == nil ||
+			candidate.Failure.Reason != FailureReasonSnapshotUnavailable ||
+			candidate.Failure.Params != nil || candidate.Failure.TechnicalDetail != "" {
+			t.Fatalf("candidate = %+v, want owned snapshot failure", candidate)
+		}
 	}
 }
 
@@ -681,7 +735,8 @@ func TestFailedCandidateStoresProviderMessageUsageAndLogsOnce(t *testing.T) {
 			failed = candidate
 		}
 	}
-	if failed.Status != CandidateFailed || failed.Error != "upstream stopped after billing" {
+	if failed.Status != CandidateFailed || failed.Failure == nil || failed.Failure.Reason != llm.FailureReasonOutputInvalid ||
+		failed.Failure.TechnicalDetail != "upstream stopped after billing" || failed.Failure.Params != nil {
 		t.Fatalf("failed candidate = %+v", failed)
 	}
 	if failed.Usage.PromptTokens != 17 || failed.Usage.CompletionTokens != 23 ||
@@ -699,10 +754,10 @@ func TestFailedCandidateStoresProviderMessageUsageAndLogsOnce(t *testing.T) {
 	}
 }
 
-func TestCandidateInternalFailureKeepsGenericPublicMessage(t *testing.T) {
-	got := userFacingError(fmt.Errorf("parse candidate: %w", errors.New("raw model output")))
-	if got != "모델 호출에 실패했어요. 다시 시도해 주세요." {
-		t.Fatalf("userFacingError = %q", got)
+func TestCandidateInternalFailureKeepsGenericReasonWithoutRawDetail(t *testing.T) {
+	got := normalizeFailure(fmt.Errorf("parse candidate: %w", errors.New("raw model output")))
+	if got.Reason != FailureReasonUnknown || got.TechnicalDetail != "" || got.Params != nil {
+		t.Fatalf("failure = %#v", got)
 	}
 }
 
@@ -740,7 +795,7 @@ func TestRecoverInterruptedMakesRunningExperimentRetryable(t *testing.T) {
 		t.Fatalf("recovered experiment = %+v", recovered)
 	}
 	for _, candidate := range recovered.Candidates {
-		if candidate.Status != CandidateFailed || candidate.Error != interruptedReason {
+		if candidate.Status != CandidateFailed || candidate.Failure == nil || candidate.Failure.Reason != FailureReasonInterrupted {
 			t.Fatalf("recovered candidate = %+v", candidate)
 		}
 	}
@@ -785,7 +840,7 @@ func TestRetryEnqueueFailureRestoresCandidateState(t *testing.T) {
 		t.Fatalf("status = %s, want %s", after.Status, before.Status)
 	}
 	for i := range before.Candidates {
-		if after.Candidates[i].Status != before.Candidates[i].Status || after.Candidates[i].Error != before.Candidates[i].Error {
+		if after.Candidates[i].Status != before.Candidates[i].Status || !reflect.DeepEqual(after.Candidates[i].Failure, before.Candidates[i].Failure) {
 			t.Fatalf("candidate %d changed: before=%+v after=%+v", i, before.Candidates[i], after.Candidates[i])
 		}
 	}
@@ -808,7 +863,7 @@ func TestRetryDoesNotRevealRemovedCandidateModel(t *testing.T) {
 	}
 }
 
-func TestApplyFailureStoresOnlyPublicMessage(t *testing.T) {
+func TestApplyFailureStoresOnlyStableReason(t *testing.T) {
 	svc, store, _, _, runner := newTestService()
 	runner.applyErr = errors.New("SQLITE_CONSTRAINT posts.content internal-secret")
 	started, _ := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
@@ -820,8 +875,9 @@ func TestApplyFailureStoresOnlyPublicMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if chosen.ApplyError != applyFailedReason {
-		t.Fatalf("apply error = %q", chosen.ApplyError)
+	if chosen.ApplyFailure == nil || chosen.ApplyFailure.Reason != FailureReasonUnknown ||
+		chosen.ApplyFailure.TechnicalDetail != "" || chosen.ApplyFailure.Params != nil {
+		t.Fatalf("apply failure = %#v", chosen.ApplyFailure)
 	}
 }
 

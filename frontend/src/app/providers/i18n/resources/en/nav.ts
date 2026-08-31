@@ -1,0 +1,18 @@
+export const nav = {
+  primary: 'Primary',
+  home: 'Postpilot home',
+  posts: 'Posts',
+  voices: 'Voices',
+  purposes: 'Purposes',
+  models: 'AI models',
+  publishingAgents: 'Publishing Mac',
+  voice: {
+    profile: 'Profile',
+    versions: 'Version history',
+    import: 'Import existing posts',
+    rules: 'Contrast rules',
+    validations: 'Profile validation',
+    settings: 'Voice settings',
+    backToList: '← Voices',
+  },
+} as const

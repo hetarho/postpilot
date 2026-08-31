@@ -84,7 +84,10 @@ func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, ma
 // purposeID is presence-aware too, with one more case, because a post may legitimately have
 // none: nil preserves, a present empty string clears, and a present non-empty value assigns.
 // It is validated before anything else is written, so a bad id applies nothing at all.
-func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID, purposeID *string) (Post, error) {
+func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID, purposeID *string, targetLanguage *Language) (Post, error) {
+	if targetLanguage != nil && !targetLanguage.Valid() {
+		return Post{}, ErrLanguageRequired
+	}
 	// Ahead of every write, including the create: a request naming an unknown or foreign
 	// purpose must leave the post exactly as it was, title and memo included.
 	targetPurpose, err := s.assignablePurpose(ctx, userID, purposeID)
@@ -93,6 +96,9 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	}
 
 	if slug == "" {
+		if targetLanguage == nil {
+			return Post{}, ErrLanguageRequired
+		}
 		if voiceID == nil {
 			return Post{}, ErrVoiceRequired
 		}
@@ -100,7 +106,7 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 		if err != nil {
 			return Post{}, err
 		}
-		return s.createPost(ctx, userID, title, memo, target.ID, targetPurpose)
+		return s.createPost(ctx, userID, title, memo, target.ID, targetPurpose, *targetLanguage)
 	}
 
 	found, err := s.ownedPost(ctx, userID, slug)
@@ -119,7 +125,7 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	}
 
 	now := s.now()
-	updated, err := s.store.UpdateDraft(ctx, slug, userID, title, memo, now)
+	updated, err := s.store.UpdateDraft(ctx, slug, userID, title, memo, targetLanguage, now)
 	if err != nil {
 		return Post{}, fmt.Errorf("update draft: %w", err)
 	}
@@ -281,7 +287,7 @@ func projectVoice(refs map[string]VoiceRef, voiceID string) VoiceRef {
 // and each attempt sees one more taken slug, so it converges immediately.
 const slugAttempts = 5
 
-func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, purposeID string) (Post, error) {
+func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, purposeID string, targetLanguage Language) (Post, error) {
 	now := s.now()
 
 	// Mint-then-insert is a check-then-act, so the insert is what actually decides:
@@ -306,15 +312,16 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, 
 		}
 
 		created := Post{
-			Slug:      slug,
-			UserID:    userID,
-			VoiceID:   voiceID,
-			PurposeID: purposeID,
-			Title:     title,
-			Memo:      memo,
-			Status:    StatusDraft,
-			CreatedAt: now,
-			UpdatedAt: now,
+			Slug:           slug,
+			UserID:         userID,
+			VoiceID:        voiceID,
+			PurposeID:      purposeID,
+			Title:          title,
+			Memo:           memo,
+			Status:         StatusDraft,
+			TargetLanguage: targetLanguage,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		}
 		err := s.store.CreatePost(ctx, created)
 		if err == nil {
@@ -497,12 +504,15 @@ func (s *Service) SetObservations(ctx context.Context, userID, slug string, obse
 }
 
 // SetGeneratedContent atomically replaces canonical content and moves the post to review.
-func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent) error {
+func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent, language Language) error {
+	if !language.Valid() {
+		return ErrLanguageRequired
+	}
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
 		return err
 	}
-	if found.Status == StatusReview && found.MachineBaselineRevision == found.ContentRevision && found.Content != nil && reflect.DeepEqual(*found.Content, content) {
+	if found.Status == StatusReview && found.MachineBaselineRevision == found.ContentRevision && found.Content != nil && found.ContentLanguage != nil && *found.ContentLanguage == language && reflect.DeepEqual(*found.Content, content) {
 		return nil
 	}
 	images, err := s.store.ListImages(ctx, slug)
@@ -512,7 +522,7 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 	if err := ValidateContent(content, images); err != nil {
 		return err
 	}
-	updated, err := s.store.UpdateGeneratedContent(ctx, slug, userID, content, s.now())
+	updated, err := s.store.UpdateGeneratedContent(ctx, slug, userID, content, language, s.now())
 	if err != nil {
 		return err
 	}
@@ -521,7 +531,7 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 		// retries. Re-read after a zero-row update so the loser succeeds without
 		// advancing the revision, while deletion/ownership changes remain errors.
 		current, loadErr := s.ownedPost(ctx, userID, slug)
-		if loadErr == nil && current.Status == StatusReview && current.MachineBaselineRevision == current.ContentRevision && current.Content != nil && reflect.DeepEqual(*current.Content, content) {
+		if loadErr == nil && current.Status == StatusReview && current.MachineBaselineRevision == current.ContentRevision && current.Content != nil && current.ContentLanguage != nil && *current.ContentLanguage == language && reflect.DeepEqual(*current.Content, content) {
 			return nil
 		}
 		if loadErr != nil {
@@ -631,7 +641,20 @@ func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (Le
 	if !ok {
 		return LearningSnapshot{}, errors.New("post content store is not configured")
 	}
-	return contentStore.LearningSnapshot(ctx, slug, userID)
+	snapshot, err := contentStore.LearningSnapshot(ctx, slug, userID)
+	if err != nil {
+		return LearningSnapshot{}, err
+	}
+	// The post store owns content provenance but does not own the voice directory. Enrich the
+	// hand-off through the published directory projection so the voice context can enforce
+	// equality without reading either sibling's tables. ownedPost intentionally returns only
+	// stored post state, so resolve the reference here just as Get and PublishingSnapshot do.
+	refs, err := s.voiceRefs(ctx, userID)
+	if err != nil {
+		return LearningSnapshot{}, err
+	}
+	snapshot.VoiceSourceLanguage = projectVoice(refs, found.VoiceID).SourceLanguage
+	return snapshot, nil
 }
 
 // PublishingSnapshot returns the exact current finalized revision without changing any
@@ -660,8 +683,20 @@ func (s *Service) PublishingSnapshot(ctx context.Context, userID, slug string) (
 	if err := ValidateContent(*found.Content, images); err != nil {
 		return PublishingSnapshot{}, err
 	}
+	if found.ContentLanguage == nil || !found.ContentLanguage.Valid() || !found.TargetLanguage.Valid() {
+		return PublishingSnapshot{}, ErrLanguageRequired
+	}
+	refs, err := s.voiceRefs(ctx, userID)
+	if err != nil {
+		return PublishingSnapshot{}, err
+	}
+	voice := projectVoice(refs, found.VoiceID)
+	if !voice.SourceLanguage.Valid() {
+		return PublishingSnapshot{}, ErrLanguageRequired
+	}
 	return PublishingSnapshot{PostSlug: found.Slug, UserID: found.UserID, CreatedAt: found.CreatedAt, Content: clonePostContent(*found.Content),
-		ContentRevision: found.ContentRevision, FinalizedRevision: found.FinalizedRevision, Images: append([]Image(nil), images...)}, nil
+		ContentRevision: found.ContentRevision, FinalizedRevision: found.FinalizedRevision, Images: append([]Image(nil), images...),
+		TargetLanguage: found.TargetLanguage, ContentLanguage: *found.ContentLanguage, VoiceSourceLanguage: voice.SourceLanguage}, nil
 }
 
 // PostIdentity returns the immutable incarnation marker used by consumers whose

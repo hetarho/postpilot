@@ -16,7 +16,8 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	}
 	// The job froze its voice at enqueue; recheck before the provider call so a voice
 	// deleted while the job waited never receives a new styleguide.
-	if _, err := s.activeVoice(ctx, found.UserID, found.VoiceID); err != nil {
+	active, err := s.activeVoice(ctx, found.UserID, found.VoiceID)
+	if err != nil {
 		return voiceUnavailableError(err)
 	}
 	attempted := false
@@ -35,6 +36,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 			if err != nil {
 				return fmt.Errorf("완성 글을 불러오지 못했어요: %w", err)
 			}
+			sources = authoredSourcesForLanguage(sources, active.SourceLanguage)
 		}
 		if len(samples) == 0 && len(sources) == 0 {
 			if attempted {
@@ -47,14 +49,14 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		attempted = true
 		progress("analyze", 0, 1)
 		response, err := s.models.Complete(ctx, ref, llm.Request{
-			System:   analysisPrompt,
+			System:   analysisPromptForLanguage(active.SourceLanguage),
 			Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus)}}},
 		})
 		if err != nil {
 			return err
 		}
 		styleguide := strings.TrimSpace(response.Text)
-		if !hasRequiredAnalysisShape(styleguide) {
+		if !hasRequiredAnalysisShapeForLanguage(styleguide, active.SourceLanguage) {
 			return fmt.Errorf("문체 분석 결과에 종결어미 또는 never uses 섹션이 없어요. 다시 시도해 주세요")
 		}
 		stored, err := s.store.SetStyleguideIfCorpusVersion(ctx, found.UserID, found.VoiceID, styleguide, corpusVersion, s.now())
@@ -62,7 +64,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 			return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)
 		}
 		if stored {
-			measured := MeasuredProfile(corpus, s.now)
+			measured := MeasuredProfileForLanguage(corpus, active.SourceLanguage, s.now)
 			measured.Lexical.Description = VoiceValue{Value: styleguide, Source: SourceAnalyzed}
 			measured.SourceCount = len(samples) + len(sources)
 			measured.Sources = sources
@@ -134,11 +136,22 @@ func personalizationCorpus(samples []Sample, sources []AuthoredSource) string {
 }
 
 func hasRequiredAnalysisShape(styleguide string) bool {
+	return hasRequiredAnalysisShapeForLanguage(styleguide, LanguageKorean)
+}
+
+func hasRequiredAnalysisShapeForLanguage(styleguide string, language Language) bool {
 	lines := strings.Split(strings.TrimSpace(styleguide), "\n")
-	if len(lines) == 0 || !strings.Contains(lines[0], "종결어미") {
+	if len(lines) == 0 {
 		return false
 	}
 	lower := strings.ToLower(styleguide)
+	if language == LanguageEnglish {
+		first := strings.ToLower(lines[0])
+		return (strings.Contains(first, "register") || strings.Contains(first, "formality")) && strings.Contains(lower, "never uses")
+	}
+	if !strings.Contains(lines[0], "종결어미") {
+		return false
+	}
 	return strings.Contains(lower, "never uses") || strings.Contains(styleguide, "사용하지 않는") || strings.Contains(styleguide, "쓰지 않는")
 }
 

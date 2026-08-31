@@ -22,15 +22,16 @@ const base: ModelExperiment = {
   jobId: 'job',
   winnerCandidateId: '',
   outcome: '',
-  applyError: '',
+  applyFailure: undefined,
   appliedAt: '',
   adoptionRequested: false,
-  adoptionError: '',
+  adoptionFailure: undefined,
   adoptedAt: '',
   createdAt: '',
   finishedAt: '',
   decidedAt: '',
   revealed: false,
+  targetLanguage: 'ko',
   candidates: [
     {
       id: 'left',
@@ -46,7 +47,7 @@ const base: ModelExperiment = {
           blocks: [],
         },
       },
-      error: '',
+      failure: undefined,
       modelLabel: '',
     },
     {
@@ -63,7 +64,7 @@ const base: ModelExperiment = {
           blocks: [],
         },
       },
-      error: '',
+      failure: undefined,
       modelLabel: '',
     },
   ],
@@ -79,7 +80,7 @@ function actionSet() {
     apply: vi.fn(),
     adopt: vi.fn(),
     isPending: false,
-    error: undefined,
+    failure: undefined,
   }
 }
 
@@ -116,7 +117,7 @@ it('reports applied content separately and retries only model adoption', async (
     winnerCandidateId: 'left',
     revealed: true,
     appliedAt: '2026-08-30T00:00:00Z',
-    adoptionError: 'temporary selection failure',
+    adoptionFailure: { reason: 'MODEL_UNAVAILABLE', params: {} },
   })
   expect(
     screen.getByText(/결과는 적용했지만 활성 작성 모델은 변경하지 못했어요/),
@@ -134,7 +135,7 @@ it('preserves apply-and-adopt intent when content application itself needs a ret
     status: 'decided',
     winnerCandidateId: 'left',
     revealed: true,
-    applyError: 'temporary post failure',
+    applyFailure: { reason: 'POST_BUSY', params: {} },
     adoptionRequested: true,
   })
 

@@ -2,13 +2,13 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"connectrpc.com/connect"
 
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/publishing"
 )
 
@@ -105,7 +105,7 @@ func (h *AgentHandler) FailPublish(ctx context.Context, req *connect.Request[pos
 func actingAgent(ctx context.Context) (publishing.Agent, error) {
 	agent, ok := agentFromContext(ctx)
 	if !ok {
-		return publishing.Agent{}, connect.NewError(connect.CodeUnauthenticated, errors.New("publishing agent authentication required"))
+		return publishing.Agent{}, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent authentication required", "AUTH_REQUIRED", nil)
 	}
 	return agent, nil
 }

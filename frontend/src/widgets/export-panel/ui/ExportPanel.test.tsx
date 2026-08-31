@@ -22,6 +22,7 @@ function renderPanel() {
       content={POST_CONTENT_FIXTURE}
       images={POST_IMAGES_FIXTURE}
       createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
     />,
   )
 }
@@ -56,7 +57,7 @@ it('copies the exact rendered output and shows transient success', async () => {
   const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
   setClipboard({ writeText })
   renderPanel()
-  const output = toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE)
+  const output = toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')
 
   await user.click(screen.getByRole('button', { name: '복사' }))
 

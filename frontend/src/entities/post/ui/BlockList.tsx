@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BlockType, type PostContent } from '@/shared/api'
 import type { PostImage } from '@/entities/image/@x/post'
 import { blockKey, imageByFile } from '../model/content'
@@ -21,6 +22,7 @@ interface BlockListProps {
 
 /** The canonical block array rendered as a read-only draft. */
 export function BlockList({ content, images, renderBlock, renderHeader }: BlockListProps) {
+  const { t } = useTranslation('posts')
   const imagesByFile = imageByFile(images)
   // The key stays on this wrapper rather than on whatever the consumer returns — and it is the
   // block's POSITION, not `blockKey`'s content-derived string: a consumer that edits the block in
@@ -29,10 +31,12 @@ export function BlockList({ content, images, renderBlock, renderHeader }: BlockL
     renderBlock ? <Fragment key={index}>{renderBlock(block, index, rendered)}</Fragment> : rendered
 
   return (
-    <article aria-label="생성된 글" className="mt-12 pb-12">
+    <article aria-label={t('generatedContent')} className="mt-12 pb-12">
       {(renderHeader ?? ((rendered: ReactNode) => rendered))(
         <header>
-          <p className="text-content-tertiary text-xs font-medium tracking-wide uppercase">Draft</p>
+          <p className="text-content-tertiary text-xs font-medium tracking-wide uppercase">
+            {t('draftLabel')}
+          </p>
           {/* `break-words` on every model-supplied string in this article: the global rule keeps the
             page from scrolling sideways, the local class keeps the box from being the one that
             overflows (design-language §3.2). A model routinely writes a bare URL or a model id. */}
@@ -45,7 +49,7 @@ export function BlockList({ content, images, renderBlock, renderHeader }: BlockL
             </p>
           )}
           {content.tags.length > 0 && (
-            <ul aria-label="태그" className="mt-3 flex flex-wrap gap-2">
+            <ul aria-label={t('tags')} className="mt-3 flex flex-wrap gap-2">
               {content.tags.map((tag) => (
                 <li
                   key={tag}

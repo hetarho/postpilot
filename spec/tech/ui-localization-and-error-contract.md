@@ -58,10 +58,10 @@ preference, and notifies React. It never navigates or invalidates server/query d
 
 ## 3. i18next integration and catalog ownership
 
-The implementation job follows `/library-setup`: read the current official i18next/react-i18next React/Vite docs,
-install the latest packages, and verify their resolved lockfile versions. Only `i18next` and `react-i18next` are
-needed. Resources are bundled; `i18next-browser-languagedetector` and `i18next-http-backend` would duplicate the
-resolver and add a network failure mode, so they are not installed.
+Job 32 followed `/library-setup` against the implementation-time official React/Vite documentation and locks
+`i18next` 26.4.0 plus `react-i18next` 17.0.12. Only those two runtime packages are needed. Resources are bundled;
+`i18next-browser-languagedetector` and `i18next-http-backend` would duplicate the resolver and add a network failure
+mode, so they are not installed.
 
 Initialization and catalog configuration belong to the app provider segment:
 
@@ -168,8 +168,14 @@ interface AppFailure {
 }
 ```
 
-Presentation translates `errors.${reason}`. An unknown reason, missing detail, malformed parameter set, or legacy
-row maps to localized `errors.UNKNOWN_FAILURE`. Code must not recover meaning by substring-matching `rawMessage`.
+Presentation translates `errors.${reason}`. An unknown reason, missing/duplicate detail, malformed parameter set, or
+legacy row maps to localized `errors.UNKNOWN_FAILURE`, regardless of the Connect code. Code must not recover meaning
+by substring-matching `rawMessage`.
+
+The same parser is used by mutation controls and route failures. The root route owns an eagerly available localized
+error component so even a lazy-route exception discards arbitrary `error.message`, offers an explicit router
+invalidation retry, and cannot fall through to TanStack Router's diagnostic default UI. Device decoding/direct upload
+network classification may remain local, but Connect create/confirm failures retain their structured app detail.
 
 ## 6. Durable failure persistence
 

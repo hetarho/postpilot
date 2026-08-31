@@ -118,7 +118,7 @@ it('keeps photo-backed writing blocked without an active observe model and repor
   const start = screen.getByRole('button', { name: '비교 시작' })
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   await user.click(start)
-  expect(await screen.findByText('provider unavailable')).toBeInTheDocument()
+  expect(await screen.findByText('네트워크에 연결할 수 없어요.')).toBeInTheDocument()
 })
 
 it('blocks posts with active work or an unresolved write experiment', async () => {

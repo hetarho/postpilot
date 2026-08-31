@@ -1,10 +1,16 @@
-import { describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'vitest'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { initializeI18n } from '@/app/providers/i18n'
 import { renderAppAt } from '@/test/app'
 import type { FakeVoiceOptions, FakeVoiceRow } from '@/test/voice'
 
 const USER = { id: 'alice' }
+
+afterEach(() => {
+  cleanup()
+  initializeI18n('ko')
+})
 
 const VOICES: FakeVoiceRow[] = [
   { id: 'voice-review', name: '리뷰' },
@@ -53,6 +59,44 @@ describe('the voice directory', () => {
       await (await section('사용 중')).findByRole('link', { name: '제품 리뷰' }),
     ).toBeInTheDocument()
     expect(name).toHaveValue('')
+  })
+
+  it('defaults a create to the current UI locale and sends it explicitly', async () => {
+    initializeI18n('en')
+    const creates: NonNullable<FakeVoiceOptions['creates']> = []
+    const user = userEvent.setup()
+    renderDirectory({ creates })
+
+    const language = await screen.findByRole('combobox', { name: 'Sample language' })
+    expect(language).toHaveValue('en')
+    await user.type(screen.getByLabelText('New voice name'), 'English samples')
+    await user.click(screen.getByRole('button', { name: 'Create voice' }))
+
+    await waitFor(() =>
+      expect(creates).toEqual([{ name: 'English samples', sourceLanguage: 'en' }]),
+    )
+  })
+
+  it('keeps an explicitly selected source language on a reloaded directory', async () => {
+    const creates: NonNullable<FakeVoiceOptions['creates']> = []
+    const user = userEvent.setup()
+    renderDirectory({ creates })
+
+    await user.selectOptions(await screen.findByLabelText('샘플 언어'), 'en')
+    await user.type(screen.getByLabelText('새 말투 이름'), '영어 말투')
+    await user.click(screen.getByRole('button', { name: '말투 만들기' }))
+    await waitFor(() => expect(creates[0]?.sourceLanguage).toBe('en'))
+
+    cleanup()
+    renderDirectory({
+      voices: [...VOICES, { id: 'voice-english', name: '영어 말투', sourceLanguage: 'en' }],
+    })
+    const active = await section('사용 중')
+    const reloaded = active
+      .getAllByRole('listitem')
+      .find((item) => within(item).queryByRole('link', { name: '영어 말투' }))
+    expect(reloaded).toBeDefined()
+    expect(within(reloaded!).getByText('영어')).toBeInTheDocument()
   })
 
   it('reports a duplicate name under the field and keeps it', async () => {
@@ -143,6 +187,7 @@ describe('the voice directory', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent('지금은 삭제할 수 없어요')
+    expect(screen.getByRole('alert')).toHaveTextContent('이 말투에서 작업이 진행 중이에요.')
     expect((await section('사용 중')).getByRole('link', { name: '리뷰' })).toBeInTheDocument()
   })
 
@@ -178,6 +223,7 @@ describe('the voice directory', () => {
     await screen.findByRole('heading', { level: 1, name: '말투' })
     await user.click((await section('삭제된 말투')).getByRole('button', { name: '복원' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('이름을 바꾼 뒤 복원해 주세요')
+    expect(screen.getByRole('alert')).toHaveTextContent('같은 이름의 말투가 이미 있어요.')
 
     await user.click(
       (await section('삭제된 말투')).getByRole('button', { name: '리뷰 이름 바꾸기' }),

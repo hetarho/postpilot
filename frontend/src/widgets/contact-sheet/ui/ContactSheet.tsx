@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostImage } from '@/entities/image'
 import { observationByFile } from '@/entities/observation'
@@ -11,6 +12,7 @@ interface ContactSheetProps {
 
 /** Persisted model eyesight, paired to photos only by their exact filenames. */
 export function ContactSheet({ images, observations, activeJob }: ContactSheetProps) {
+  const { t } = useTranslation('posts')
   const observationsByFile = observationByFile(observations)
   const observing =
     activeJob?.stage === 'observe' && activeJob.status !== 'done' && activeJob.status !== 'failed'
@@ -18,10 +20,10 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
   return (
     <section aria-labelledby="contact-sheet-heading" className="mt-12">
       <h2 id="contact-sheet-heading" className="text-lg font-semibold tracking-tight">
-        사진 관찰
+        {t('observation.title')}
       </h2>
       <p className="text-content-secondary mt-2 text-sm leading-relaxed">
-        모델이 각 사진에서 본 것 — 글이 이상하면 여기부터 확인하세요
+        {t('observation.description')}
       </p>
 
       {/* The phone shape is a plain vertical list — a 240px card inside 328px of content left a
@@ -43,7 +45,7 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
               {viewUrl ? (
                 <img
                   src={viewUrl}
-                  alt={`${image.filename} 관찰 사진`}
+                  alt={t('observation.imageAlt', { filename: image.filename })}
                   width={image.width}
                   height={image.height}
                   loading="lazy"
@@ -52,22 +54,28 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
                 />
               ) : (
                 <div className="bg-surface-recessed text-content-tertiary flex aspect-square w-full items-center justify-center rounded-md px-3 text-center text-xs">
-                  사진 주소를 준비하는 중…
+                  {t('observation.urlPending')}
                 </div>
               )}
               <h3 className="mt-3 truncate text-sm font-medium">{image.filename}</h3>
               {observation ? (
                 <dl className="mt-3 space-y-2">
-                  <ObservationField label="장면" value={observation.scene} />
-                  <ObservationField label="분위기" value={observation.mood} />
-                  <ObservationField label="보이는 글자" value={observation.visibleText} />
-                  <ObservationField label="사물" value={observation.objects.join(', ')} />
+                  <ObservationField label={t('observation.scene')} value={observation.scene} />
+                  <ObservationField label={t('observation.mood')} value={observation.mood} />
+                  <ObservationField
+                    label={t('observation.visibleText')}
+                    value={observation.visibleText}
+                  />
+                  <ObservationField
+                    label={t('observation.objects')}
+                    value={observation.objects.join(', ')}
+                  />
                 </dl>
               ) : (
                 // No per-card live region: ten waiting photos meant ten regions all announcing
                 // '관찰 대기' over the one message that carries the count (the ProgressLine).
                 <p className="text-content-tertiary mt-3 text-xs">
-                  {observing ? '관찰 대기' : '관찰 결과 없음'}
+                  {observing ? t('observation.waiting') : t('observation.empty')}
                 </p>
               )}
             </article>
@@ -79,13 +87,14 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
 }
 
 function ObservationField({ label, value }: { label: string; value: string }) {
+  const { t } = useTranslation('posts')
   return (
     <div>
       <dt className="text-content-tertiary text-xs">{label}</dt>
       {/* The body role, not the meta one: the section's own copy tells the user to read this, and
           the value is a model-supplied string, so it also breaks rather than overflowing (§3.2). */}
       <dd className="text-content-secondary mt-0.5 text-sm leading-relaxed break-words">
-        {value || '없음'}
+        {value || t('observation.none')}
       </dd>
     </div>
   )

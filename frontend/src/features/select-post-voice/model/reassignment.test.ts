@@ -1,5 +1,6 @@
-import { Code, ConnectError } from '@connectrpc/connect'
+import { Code } from '@connectrpc/connect'
 import { describe, expect, it } from 'vitest'
+import { connectAppError } from '@/test/app-error'
 import { reassignmentBlocker, reassignmentFailureMessage } from './reassignment'
 
 describe('reassignmentBlocker', () => {
@@ -19,15 +20,15 @@ describe('reassignmentBlocker', () => {
 })
 
 describe('reassignmentFailureMessage', () => {
-  it('names the precondition and falls back for anything else', () => {
-    expect(reassignmentFailureMessage(new ConnectError('busy', Code.FailedPrecondition))).toMatch(
-      /지금은 말투를 바꿀 수 없어요/,
+  it('uses stable reasons and falls back without exposing raw prose', () => {
+    expect(reassignmentFailureMessage(connectAppError('POST_BUSY', Code.FailedPrecondition))).toBe(
+      '이 글에서 다른 작업이 진행 중이에요.',
     )
-    expect(reassignmentFailureMessage(new ConnectError('gone', Code.NotFound))).toMatch(
-      /찾을 수 없어요/,
+    expect(reassignmentFailureMessage(connectAppError('VOICE_NOT_FOUND', Code.NotFound))).toBe(
+      '고른 말투를 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요. 말투를 찾을 수 없어요.',
     )
     expect(reassignmentFailureMessage(new Error('boom'))).toBe(
-      '말투를 바꾸지 못했어요. 다시 시도해 주세요.',
+      '요청을 마치지 못했어요. 다시 시도해 주세요.',
     )
   })
 })

@@ -13,5 +13,5 @@ blockquote { margin: 1.5rem 0; padding-left: 1rem; }
 `.trim()
 
 export const SITE_DOCUMENT_PREFIX =
-  '<!doctype html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">'
+  '<!doctype html>\n<html lang="{{language}}">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">'
 export const SITE_DOCUMENT_SUFFIX = '</body>\n</html>'

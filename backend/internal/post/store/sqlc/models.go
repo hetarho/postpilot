@@ -38,6 +38,8 @@ type Post struct {
 	FinalizedRevision       sql.NullInt64
 	FinalizedAt             sql.NullString
 	PurposeID               sql.NullString
+	TargetLanguage          string
+	ContentLanguage         sql.NullString
 }
 
 type Upload struct {

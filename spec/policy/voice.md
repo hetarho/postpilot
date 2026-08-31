@@ -2,7 +2,9 @@
 
 Canonical backend and frontend rules. Source: [plan/03](../plan/03.voice-profile-learning.md), built by jobs 08, 09,
 and 16, and [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), built by job 18. The cross-context
-decision behind the partition is [multi-voice partitioning](../tech/multi-voice-partitioning.md).
+decision behind the partition is [multi-voice partitioning](../tech/multi-voice-partitioning.md). Immutable source
+language, bilingual analysis, portable projection, and language-safe learning are from
+[plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
 
 ## Voices, ownership, and persistence
 
@@ -38,9 +40,10 @@ decision behind the partition is [multi-voice partitioning](../tech/multi-voice-
 
 - `ListVoices` returns the account's voices including tombstones, active first, the default first among them, then
   by name. `GetVoiceProfile` returns the owning `voice` summary with the profile.
-- `CreateVoice` trims the name, requires 1–`VoiceNameMaxChars` (50) Unicode scalar values (`InvalidArgument`
-  otherwise), refuses an active-name collision (`AlreadyExists`), and creates an empty isolated profile. It never
-  copies the default profile. There is no voice-count limit.
+- `CreateVoice` trims the name, requires 1–`VoiceNameMaxChars` (50) Unicode scalar values and an explicitly present
+  supported immutable `source_language` (`InvalidArgument` otherwise), refuses an active-name collision
+  (`AlreadyExists`), and creates an empty isolated profile. It never copies the default profile. Existing/bootstrap
+  voices are Korean; no RPC changes source language after creation. There is no voice-count limit.
 - `RenameVoice` changes the display name of an active or deleted owned voice with the same validation; it rewrites
   no post row and no immutable snapshot. `SetDefaultVoice` accepts only an active owned voice and atomically clears the
   previous default; it answers with the whole directory.
@@ -76,19 +79,20 @@ decision behind the partition is [multi-voice partitioning](../tech/multi-voice-
   just-deleted sample is restored.
 - Analysis loads the voice's full current corpus, with explicit label separators, and runs through the shared job
   queue. Progress is `analyze 0/1 → 1/1`. The selected model is recorded in the job's `write_model` field.
-- The prompt requires nine ordered Korean sections: 종결어미 distribution first; sentence length; sentences per
-  paragraph; connectives/adverbs; verbal tics; emoji/interjections/ellipses; metaphors/numerals; expressions the
-  author never uses; first-person form. A result whose first section is not 종결어미, or which lacks a “never uses”
-  section, fails instead of replacing the profile.
+- Analysis selects a source-language-specific prompt and schema. Korean retains the nine ordered sections and
+  deterministic ending distribution. English measures word length, register/contractions, connectives, passive and
+  nominal tendencies, terminal cadence, structure, lexical habits, and the same six axes without projecting those
+  values into Korean ending categories. Each corpus contains only evidence declared for that immutable source.
 - Successful analysis replaces that voice's `styleguide` wholesale and preserves `rules`. Provider failures flow
   through the job queue's normal user-facing error policy.
 
 ## Published behavior
 
-- `PromptProfileForTopic(userID, voiceID, retrievalText, tags)` publishes one voice's projection: typed descriptors
-  and legacy manual guidance, then evidence-ranked active rules, bans and ending constraints, then up to
-  `ExcerptCount` (3) excerpts of at most `ExcerptChars` (1500) characters, then `rules`. It never falls back to the
-  default or to another voice. Generation and revision consumers must inject those parts in exactly that order.
+- `PromptProfileForTopic(userID, voiceID, retrievalText, tags, targetLanguage)` publishes one voice's language-aware
+  projection. Equal source/target languages contain the complete typed descriptors, legacy/manual guidance, ranked
+  active rules and up to `ExcerptCount` (3) excerpts; cross-language projection contains only the exact portable
+  structure/axes allowlist from [languages](languages.md). It never translates or leaks excluded fields, falls back
+  to another voice, or consults another language's evidence.
 - Its `empty` value means there is neither a styleguide nor a sample nor a finalized source for that voice. Rules
   alone do not make the learned voice profile non-empty.
 - `AppendRule(userID, voiceID, line)` trims one line, de-duplicates an exact existing line, appends with a newline,
@@ -132,8 +136,9 @@ decision behind the partition is [multi-voice partitioning](../tech/multi-voice-
   pencil (named for the field) opens that one field for editing — a capped growing textarea seeded with the published
   value, 저장, 취소, and 직접 설정 해제 only when the field's source is `manual`. Fields are independent. 취소 discards
   the draft; a rejected save keeps edit mode and the draft, and its message does not survive into the next edit.
-- The learn action is disabled below 200 trimmed Unicode characters or without a usable analyze selection; backend
-  validation text is shown verbatim when the RPC rejects it. When a non-empty styleguide exists, adding a sample
+- The learn action is disabled below 200 trimmed Unicode characters or without a usable analyze selection; an RPC
+  rejection is rendered from stable `AppFailure` reason/params in the active locale, never raw transport prose. When
+  a non-empty styleguide exists, adding a sample
   requires confirmation that re-analysis will overwrite the current styleguide.
 - `active_job_id` resumes polling after navigation or reload. A successful job refreshes that voice's profile query
   so the new styleguide appears automatically; deletion does the same and shows re-analysis progress while samples
@@ -170,7 +175,9 @@ decision behind the partition is [multi-voice partitioning](../tech/multi-voice-
   Repeats/retries cannot duplicate a source, profile version, feedback, or evidence row.
 - Learning derives its voice from the post and freezes it on the event; the caller cannot nominate another. It
   requires `post.voice_id == machine_baseline_voice_id == event.voice_id` — a post reassigned since its machine
-  result must be regenerated or revised under the new voice first — and a deleted voice cannot receive evidence.
+  result must be regenerated or revised under the new voice first — plus concrete frozen content/source languages
+  equal to the active voice's source language. A mismatch is refused before event/job/provider creation; a deleted
+  voice cannot receive evidence.
   Retries follow the event's frozen voice even after the post is reassigned; completed sources, rules and versions
   stay in their original voice.
 - A learning setup, enqueue, worker, or provider failure leaves the post finalized and exposes a separate retryable
@@ -200,7 +207,9 @@ decision behind the partition is [multi-voice partitioning](../tech/multi-voice-
 - Rule status changes, confirmations and comparisons name only the rule; the server reads the voice off the owned row,
   so a same-account caller cannot point a rule at another voice. Sentence feedback derives its voice from the post and
   its finalization source, requires vocabulary, ending, length, or structure, and is retry-idempotent against owned
-  final text. No-edit satisfaction is auxiliary. Neither alone creates or activates a rule.
+  final text. Sentence feedback, revision save-as-rule, post-backed comparison, and profile validation all repeat the
+  same content/source-language equality gate before mutation or provider work. No-edit satisfaction is auxiliary.
+  Neither alone creates or activates a rule.
 - Rule comparison is an explicitly started blind one-rule job frozen to the rule's voice; a verdict requires two
   successful non-empty outputs and affects that rule only. Profile validation starts with an explicit active voice,
   requires three finalized sources of that voice, and calls a judge only when the user explicitly enables it. Neither

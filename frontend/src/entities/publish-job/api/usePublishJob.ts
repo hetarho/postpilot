@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
-import { Code, ConnectError } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
-import { publishingClientFor } from '@/shared/api'
+import { appFailureFromConnect, publishingClientFor } from '@/shared/api'
 import { PUBLISH_JOB_POLL_MS } from '@/shared/config'
 import { TERMINAL_PUBLISH_STATUSES, toPublishJob } from '../model/types'
 
@@ -19,7 +18,7 @@ export function usePublishJob(ownerId: string, postSlug: string) {
         const response = await client.getPublishJob({ postSlug })
         return response.job ? toPublishJob(response.job) : null
       } catch (cause) {
-        if (ConnectError.from(cause).code === Code.NotFound) return null
+        if (appFailureFromConnect(cause).reason === 'PUBLISH_NOT_FOUND') return null
         throw cause
       }
     },

@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useUpdateVoiceProfile } from '@/entities/voice'
 import { Button, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
 
@@ -13,6 +14,7 @@ export function StyleguideEditor({
   styleguide: string
   readOnly?: boolean
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const id = useId()
   const errorId = `${id}-error`
   const [draft, setDraft] = useState<string | null>(null)
@@ -32,10 +34,14 @@ export function StyleguideEditor({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold tracking-tight">문체 규칙</h2>
-      <p className="text-content-tertiary mt-1 text-xs">새 샘플을 학습하면 다시 작성됩니다.</p>
+      <h2 className="text-lg font-semibold tracking-tight">
+        {t('profile.styleguide', { ns: 'voices' })}
+      </h2>
+      <p className="text-content-tertiary mt-1 text-xs">
+        {t('profile.styleguideHelp', { ns: 'voices' })}
+      </p>
       <FieldLabel htmlFor={id} className="mt-4">
-        문체 규칙
+        {t('profile.styleguide', { ns: 'voices' })}
       </FieldLabel>
       <Textarea
         id={id}
@@ -72,11 +78,11 @@ export function StyleguideEditor({
           pending={update.isSaving}
           className="w-full sm:w-auto"
         >
-          저장
+          {t('action.save', { ns: 'common' })}
         </Button>
       </div>
       <span role="status" className="sr-only">
-        {update.isSaving ? '문체 규칙을 저장하는 중' : ''}
+        {update.isSaving ? t('profile.savingStyleguide', { ns: 'voices' }) : ''}
       </span>
     </section>
   )

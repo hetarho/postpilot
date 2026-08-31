@@ -1,4 +1,5 @@
 import { useState, type DragEvent, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface PhotoDropZoneProps {
   onFiles: (files: File[]) => void
@@ -16,6 +17,7 @@ const carriesFiles = (event: DragEvent) => Array.from(event.dataTransfer.types).
  * accessibility tree except a cue while a file drag is over it.
  */
 export function PhotoDropZone({ onFiles, disabled, children }: PhotoDropZoneProps) {
+  const { t } = useTranslation('posts')
   // Counted rather than toggled: `dragleave` fires for every child the pointer crosses, and only
   // the balance says whether the pointer has left the zone itself.
   const [depth, setDepth] = useState(0)
@@ -60,7 +62,7 @@ export function PhotoDropZone({ onFiles, disabled, children }: PhotoDropZoneProp
           aria-hidden
           className="bg-notice-info-bg/80 text-notice-info-fg outline-focus-ring pointer-events-none absolute -inset-2 flex items-center justify-center rounded-lg text-sm outline-2 outline-dashed"
         >
-          여기에 놓으면 사진이 추가돼요
+          {t('upload.drop')}
         </div>
       )}
     </div>

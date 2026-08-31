@@ -12,8 +12,17 @@ interface Typed {
 }
 
 function setup(
-  post: { slug: string; title: string; memo: string; voice: { id: string } } | undefined,
+  post:
+    | {
+        slug: string
+        title: string
+        memo: string
+        voice: { id: string }
+        targetLanguage: 'ko' | 'en'
+      }
+    | undefined,
   backend: FakePostsOptions = {},
+  initialTarget: 'ko' | 'en' = 'ko',
 ) {
   const calls: string[] = []
   const draftSaves: FakeDraftSave[] = []
@@ -28,6 +37,7 @@ function setup(
         memo,
         voiceId: post?.voice.id ?? 'voice-default',
         purposeId: '',
+        targetLanguage: post?.targetLanguage ?? initialTarget,
       }),
     {
       wrapper: withProviders(transport, createTestQueryClient()),
@@ -53,6 +63,7 @@ const EXISTING = {
   title: '제주',
   memo: '첫날',
   voice: { id: 'voice-default', name: '기본 말투' },
+  targetLanguage: 'ko' as const,
 }
 
 /** jsdom reports the document as visible and offers no way to background it, so the flag
@@ -73,6 +84,19 @@ afterEach(() => {
 })
 
 describe('useAutosave', () => {
+  it('sends a concrete locale-derived target on the first create request', async () => {
+    const { rerender, draftSaves } = setup(undefined, {}, 'en')
+
+    act(() => rerender({ title: 'First post', memo: '' }))
+    await tick(AUTOSAVE_DEBOUNCE_MS)
+
+    expect(draftSaves[0]).toMatchObject({
+      slug: '',
+      voiceId: 'voice-default',
+      targetLanguage: 'en',
+    })
+  })
+
   // Opening a post must not write to it, and opening /posts/new must not create an empty
   // post just by being looked at.
   it('saves nothing while the text is untouched', async () => {
@@ -133,11 +157,23 @@ describe('useAutosave', () => {
     })
 
     await act(() => result.current.reassign('voice-review'))
-    expect(draftSaves).toEqual([{ slug: EXISTING.slug, voiceId: 'voice-review' }])
+    expect(draftSaves).toEqual([
+      {
+        slug: EXISTING.slug,
+        voiceId: 'voice-review',
+        purposeId: undefined,
+        targetLanguage: undefined,
+      },
+    ])
 
     act(() => rerender({ title: '제주 3일', memo: '첫날' }))
     await tick(AUTOSAVE_DEBOUNCE_MS)
-    expect(draftSaves[1]).toEqual({ slug: EXISTING.slug, voiceId: undefined })
+    expect(draftSaves[1]).toEqual({
+      slug: EXISTING.slug,
+      voiceId: undefined,
+      purposeId: undefined,
+      targetLanguage: undefined,
+    })
   })
 
   it('reports a refused reassignment to the caller', async () => {

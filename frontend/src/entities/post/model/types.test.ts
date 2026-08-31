@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { UNTITLED_TITLE, displayTitle, postStatusLabel } from './types'
+import { displayTitle, postStatusLabel, untitledTitle } from './types'
 
 describe('displayTitle', () => {
   it('keeps a real title', () => {
@@ -10,7 +10,7 @@ describe('displayTitle', () => {
     ['', 'empty'],
     ['   ', 'whitespace only'],
   ])('falls back for a %s title (%s)', (title) => {
-    expect(displayTitle({ title })).toBe(UNTITLED_TITLE)
+    expect(displayTitle({ title })).toBe(untitledTitle())
   })
 })
 

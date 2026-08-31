@@ -1,9 +1,15 @@
+import i18next from 'i18next'
 import { useMemo, useState } from 'react'
 import { useTransport } from '@connectrpc/connect-query'
 import { isTerminal, useJob, type GenerationJob } from '@/entities/generation-job'
 import { useStageSelection } from '@/entities/model-catalog'
 import { getPostQueryKey, type PostDraft } from '@/entities/post'
-import { DELETED_VOICE_AI_REASON, voiceProfileQueryKey } from '@/entities/voice'
+import {
+  deletedVoiceAIReason,
+  voiceContentLanguageMismatch,
+  voiceContentLanguageMismatchReason,
+  voiceProfileQueryKey,
+} from '@/entities/voice'
 import { useVoiceLearningActions } from '../api/useVoiceLearningActions'
 import {
   isLearningHandoffForRevision,
@@ -82,12 +88,14 @@ export function useVoiceLearning(ownerId: string, post: PostDraft): VoiceLearnin
   const hasLearnableBaseline =
     post.machineBaselineRevision > 0n && post.machineBaselineVoiceId === post.voice.id
   const blocked = post.voice.deleted
-    ? DELETED_VOICE_AI_REASON
-    : post.machineBaselineVoiceId !== '' && post.machineBaselineVoiceId !== post.voice.id
-      ? '이 글의 AI 결과는 다른 말투에서 만들어졌어요. 새 말투로 다시 생성하거나 수정한 뒤에 학습할 수 있어요.'
-      : !hasLearnableBaseline
-        ? '새 말투로 다시 생성하거나 AI로 수정한 뒤에 학습할 수 있어요.'
-        : ''
+    ? deletedVoiceAIReason()
+    : voiceContentLanguageMismatch(post.contentLanguage, post.voice.sourceLanguage)
+      ? voiceContentLanguageMismatchReason()
+      : post.machineBaselineVoiceId !== '' && post.machineBaselineVoiceId !== post.voice.id
+        ? i18next.t('learning.blocked.otherVoice', { ns: 'posts' })
+        : !hasLearnableBaseline
+          ? i18next.t('learning.blocked.noBaseline', { ns: 'posts' })
+          : ''
   const canLearn = !blocked && Boolean(analyze.selected) && !active && !learned
   // The server refuses learning unless the exact revision on screen is the finalized one
   // (policy/voice.md), so the button says so rather than offering a call that would fail.
@@ -97,7 +105,8 @@ export function useVoiceLearning(ownerId: string, post: PostDraft): VoiceLearnin
   const learn = async (revision = post.contentRevision) => {
     if (!analyze.selected) return
     const response = await actions.learn(post.slug, analyze.selected)
-    if (!response.event || !response.jobId) throw new Error('학습 작업 정보가 비어 있어요.')
+    if (!response.event || !response.jobId)
+      throw new Error(i18next.t('learning.missingJob', { ns: 'posts' }))
     // The revision the caller actually finalized, not the one this render happened to see: a
     // flush immediately before the finalize can have moved it.
     const next = {
@@ -110,7 +119,9 @@ export function useVoiceLearning(ownerId: string, post: PostDraft): VoiceLearnin
   }
 
   const retry = async () => {
-    if (!analyze.selected || !handoff) return
+    // A failed job can outlive the voice/content pairing that was eligible when it started.
+    // Re-evaluate the current language, deletion and baseline gates before any retry RPC.
+    if (blocked || !analyze.selected || !handoff) return
     const response = await actions.retry(handoff.eventId, analyze.selected)
     if (!response.jobId) return
     const next = { ...handoff, jobId: response.jobId }
@@ -124,7 +135,7 @@ export function useVoiceLearning(ownerId: string, post: PostDraft): VoiceLearnin
     refetch: jobState.refetch,
     active,
     learned,
-    retryable: current && job?.status === 'failed',
+    retryable: !blocked && current && job?.status === 'failed',
     blocked,
     canLearn,
     revisionFinalized: finalizedNow,

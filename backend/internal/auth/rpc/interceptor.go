@@ -10,6 +10,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
 // unauthenticatedMessage is what an unauthenticated call sees. Missing, forged, and
@@ -104,7 +105,7 @@ func (i *Interceptor) authorize(ctx context.Context, procedure string, header ht
 			// response.
 			slog.Error("session lookup failed", "procedure", procedure, "err", err)
 		}
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New(unauthenticatedMessage))
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, unauthenticatedMessage, "AUTH_REQUIRED", nil)
 	}
 
 	return auth.WithUser(ctx, userID), nil

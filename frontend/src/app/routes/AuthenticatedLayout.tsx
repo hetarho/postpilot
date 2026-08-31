@@ -1,8 +1,10 @@
 import type { ComponentType } from 'react'
 import { Bot, FileText, Quote, Send, Target } from 'lucide-react'
 import { Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useLogout, useSession } from '@/entities/session'
-import { Button, Logo, Notice } from '@/shared/ui'
+import { LocaleSelect } from '@/features/change-locale'
+import { AppFailureMessage, Button, Logo, Notice } from '@/shared/ui'
 import { endSession } from '../model/end-session'
 
 /** The app's destinations, in one list so the phone tab bar and the desktop header cannot drift.
@@ -11,14 +13,14 @@ import { endSession } from '../model/end-session'
  *  would have to displace one of these rather than be squeezed in beside them. */
 const DESTINATIONS: ReadonlyArray<{
   to: string
-  label: string
+  labelKey: 'posts' | 'voices' | 'purposes' | 'models' | 'publishingAgents'
   icon: ComponentType<{ className?: string }>
 }> = [
-  { to: '/posts', label: '글', icon: FileText },
-  { to: '/voices', label: '말투', icon: Quote },
-  { to: '/purposes', label: '용도', icon: Target },
-  { to: '/ai-models', label: 'AI 모델', icon: Bot },
-  { to: '/publishing-agents', label: '발행 Mac', icon: Send },
+  { to: '/posts', labelKey: 'posts', icon: FileText },
+  { to: '/voices', labelKey: 'voices', icon: Quote },
+  { to: '/purposes', labelKey: 'purposes', icon: Target },
+  { to: '/ai-models', labelKey: 'models', icon: Bot },
+  { to: '/publishing-agents', labelKey: 'publishingAgents', icon: Send },
 ]
 
 /** The shell every signed-in screen renders inside.
@@ -36,6 +38,7 @@ const DESTINATIONS: ReadonlyArray<{
  *  gives its 56px back to the content. From `sm:` up the pointer is a mouse, the reach argument
  *  disappears, and the familiar sticky top nav returns. */
 export function AuthenticatedLayout() {
+  const { t } = useTranslation(['nav', 'auth', 'common'])
   const { user } = useSession()
   const logout = useLogout()
   const navigate = useNavigate()
@@ -69,12 +72,15 @@ export function AuthenticatedLayout() {
           <Link
             to="/posts"
             className="inline-flex min-h-11 items-center px-2"
-            aria-label="Postpilot 홈"
+            aria-label={t('home', { ns: 'nav' })}
           >
             <Logo className="h-6" />
           </Link>
           {/* The same destinations as the tab bar, for the pointer breakpoint only. */}
-          <nav className="hidden items-center gap-1 sm:flex" aria-label="주요">
+          <nav
+            className="hidden items-center gap-1 sm:flex"
+            aria-label={t('primary', { ns: 'nav' })}
+          >
             {DESTINATIONS.map((destination) => (
               <Link
                 key={destination.to}
@@ -87,7 +93,7 @@ export function AuthenticatedLayout() {
                   'aria-current': 'page',
                 }}
               >
-                {destination.label}
+                {t(destination.labelKey, { ns: 'nav' })}
               </Link>
             ))}
           </nav>
@@ -96,17 +102,19 @@ export function AuthenticatedLayout() {
           <span className="text-content-tertiary hidden font-mono text-xs sm:inline">
             {user?.id}
           </span>
+          <LocaleSelect />
           {/* `secondary`, not `ghost`: a ghost button's only fill lives behind `hover:`, which
               Tailwind compiles to `@media (hover: hover)` and a phone never matches — so the one
               control in the header used to render as text (§6). */}
           <Button variant="secondary" onClick={() => void onLogout()} pending={logout.isPending}>
-            로그아웃
+            {t('action.logout', { ns: 'common' })}
           </Button>
         </div>
       </header>
-      {logout.isError && (
+      {logout.failure && (
         <Notice tone="danger" role="alert" className="rounded-none px-4 sm:px-6">
-          로그아웃하지 못했어요. 세션이 아직 살아 있으니 다시 시도해 주세요.
+          <AppFailureMessage failure={logout.failure} />
+          <span>{t('logout.failed', { ns: 'auth' })}</span>
         </Notice>
       )}
       {/* `pb-nav` reserves the tab bar's height plus the home indicator, so the last thing on every
@@ -120,7 +128,7 @@ export function AuthenticatedLayout() {
       </div>
       <nav
         className="bg-surface-raised pb-safe-b fixed inset-x-0 bottom-0 z-30 flex shadow-lg sm:hidden"
-        aria-label="주요"
+        aria-label={t('primary', { ns: 'nav' })}
       >
         {DESTINATIONS.map((destination) => (
           <Link
@@ -135,7 +143,7 @@ export function AuthenticatedLayout() {
             }}
           >
             <destination.icon className="size-5" />
-            {destination.label}
+            {t(destination.labelKey, { ns: 'nav' })}
           </Link>
         ))}
       </nav>

@@ -1,8 +1,13 @@
 import { create } from '@bufbuild/protobuf'
-import { ConnectError } from '@connectrpc/connect'
 import { useMutation } from '@connectrpc/connect-query'
 import type { ModelRef } from '@/entities/model-catalog'
-import { ModelRefSchema, VoiceFeedbackReason, VoiceLearningService } from '@/shared/api'
+import {
+  appFailureFromConnect,
+  ModelRefSchema,
+  VoiceFeedbackReason,
+  VoiceLearningService,
+} from '@/shared/api'
+import { formatAppFailure } from '@/shared/lib'
 
 export function useVoiceLearningActions() {
   const learnMutation = useMutation(VoiceLearningService.method.learnFromFinalizedPost)
@@ -22,12 +27,12 @@ export function useVoiceLearningActions() {
       }),
     pending: learnMutation.isPending || retryMutation.isPending,
     feedbackPending: feedbackMutation.isPending,
-    errorMessage: learnMutation.error
-      ? ConnectError.from(learnMutation.error).rawMessage
-      : retryMutation.error
-        ? ConnectError.from(retryMutation.error).rawMessage
-        : feedbackMutation.error
-          ? ConnectError.from(feedbackMutation.error).rawMessage
-          : '',
+    errorMessage: formatMutationFailure(
+      learnMutation.error ?? retryMutation.error ?? feedbackMutation.error,
+    ),
   }
+}
+
+function formatMutationFailure(error: Error | null): string {
+  return error ? formatAppFailure(appFailureFromConnect(error)) : ''
 }

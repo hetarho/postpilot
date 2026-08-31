@@ -57,7 +57,7 @@ type PersonalizationStore interface {
 	FindLearningEvent(ctx context.Context, userID, voiceID, postSlug string, baselineRevision int64, inputHash string) (*LearningEvent, error)
 	GetLearningEvent(ctx context.Context, userID, eventID string) (*LearningEvent, error)
 	SetLearningEventJob(ctx context.Context, userID, eventID, jobID string) error
-	SetLearningEventStatus(ctx context.Context, userID, eventID, status, message string, processedAt *time.Time) error
+	SetLearningEventStatus(ctx context.Context, userID, eventID, status string, failure *Failure, processedAt *time.Time) error
 	ListAuthoredSources(ctx context.Context, userID, voiceID string) ([]AuthoredSource, error)
 	GetAuthoredSource(ctx context.Context, userID, voiceID, sourceID string) (AuthoredSource, error)
 	ApplyLearningResult(ctx context.Context, event LearningEvent, result LearningResult, cfg PersonalizationConfig, now time.Time) error
@@ -112,7 +112,7 @@ type Jobs interface {
 type PersonalizationJobs interface {
 	EnqueuePersonalization(ctx context.Context, request PersonalizationJobRequest) (string, error)
 	IsPersonalizationJobActive(ctx context.Context, jobID, userID string) (bool, error)
-	FailQueuedPersonalization(ctx context.Context, jobID, userID, message string) (bool, error)
+	FailQueuedPersonalization(ctx context.Context, jobID, userID string, failure Failure) (bool, error)
 }
 
 // Experiments is the model-experiment context's published guard, consumed only by

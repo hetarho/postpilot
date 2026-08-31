@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from '@tanstack/react-router'
 import { useExperiment } from '@/entities/model-experiment'
 import { useSession } from '@/entities/session'
@@ -9,19 +10,20 @@ import {
   candidateSides,
   type CandidateSide,
 } from '@/widgets/candidate-comparison'
-import { ActionBar, Button, SegmentedControl } from '@/shared/ui'
+import { ActionBar, Badge, Button, SegmentedControl } from '@/shared/ui'
 
 export function ModelExperimentPage() {
+  const { t } = useTranslation(['models', 'common'])
   const { id } = useParams({ from: '/authenticated/ai-models/experiments/$id' })
   const { experiment, isPending, isError, refetch } = useExperiment(id)
   const [activeCandidateId, setActiveCandidateId] = useState('')
-  if (isPending) return <Placeholder>비교 결과를 불러오는 중…</Placeholder>
+  if (isPending) return <Placeholder>{t('experiment.loading', { ns: 'models' })}</Placeholder>
   if (isError || !experiment)
     return (
       <Placeholder>
-        <p>비교 결과를 불러오지 못했어요.</p>
+        <p>{t('experiment.loadFailed', { ns: 'models' })}</p>
         <Button variant="ghost" className="mt-4" onClick={() => void refetch()}>
-          다시 시도
+          {t('action.retry', { ns: 'common' })}
         </Button>
       </Placeholder>
     )
@@ -38,30 +40,38 @@ export function ModelExperimentPage() {
           params={{ slug: experiment.postSlug }}
           className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
         >
-          ← 글로 돌아가기
+          {t('experiment.backPost', { ns: 'models' })}
         </Link>
       ) : (
         <Link
           to="/ai-models"
           className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
         >
-          ← AI 모델
+          {t('experiment.backModels', { ns: 'models' })}
         </Link>
       )}
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight">블라인드 비교</h1>
+      <h1 className="mt-4 text-2xl font-semibold tracking-tight">
+        {t('experiment.title', { ns: 'models' })}
+      </h1>
       {/* Desktop-only: on a phone this static instruction costs ~90px — four lines of the candidate
           text the screen exists to show — every single visit, and the A/B switch plus the 후보 A/B
           headings already carry what it says (§0). */}
       <p className="text-content-secondary mt-2 hidden text-sm sm:block">
-        선택하기 전에는 모델 이름과 비용을 숨깁니다. 좌우 후보는 다시 열어도 바뀌지 않습니다.
+        {t('experiment.description', { ns: 'models' })}
       </p>
       {experiment.voiceId && <ExperimentVoice voiceId={experiment.voiceId} />}
+      {experiment.targetLanguage && (
+        <p className="text-content-secondary mt-2 flex items-center gap-2 text-sm">
+          <span>{t('experiment.language', { ns: 'models' })}</span>
+          <Badge>{t(`contentLanguage.${experiment.targetLanguage}`, { ns: 'common' })}</Badge>
+        </p>
+      )}
       {/* Read straight off the frozen snapshot's projection rather than looked up: the brief
           both candidates were given is a property of this comparison, not of whatever the
           purpose says today. */}
       {experiment.purposeName && (
         <p className="text-content-secondary mt-2 text-sm break-words">
-          용도 · {experiment.purposeName}
+          {t('experiment.purpose', { ns: 'models', name: experiment.purposeName })}
         </p>
       )}
       <div className="mt-6 sm:mt-8">
@@ -69,7 +79,7 @@ export function ModelExperimentPage() {
       </div>
       {activeId && (
         <ActionBar
-          ariaLabel="후보 전환과 결정"
+          ariaLabel={t('experiment.actionAria', { ns: 'models' })}
           // With no action left to offer, the dock exists only to carry the phone's A/B switch —
           // which the `md:` two-pane layout does not render, so there it would be an empty slab.
           className={hasExperimentActions(experiment) ? undefined : 'md:hidden'}
@@ -82,7 +92,7 @@ export function ModelExperimentPage() {
               value={activeId}
               options={sides.map(({ candidate, label }) => ({ value: candidate.id, label }))}
               onChange={setActiveCandidateId}
-              ariaLabel="선택할 후보"
+              ariaLabel={t('experiment.selectAria', { ns: 'models' })}
             />
             <ExperimentActions experiment={experiment} activeCandidateId={activeId} />
           </div>
@@ -95,12 +105,13 @@ export function ModelExperimentPage() {
 /** Which voice an analyze comparison froze — and, once it is decided, the only voice the winner
  *  can be applied to. Named even after that voice is deleted, so the record stays legible. */
 function ExperimentVoice({ voiceId }: { voiceId: string }) {
+  const { t } = useTranslation('models')
   const { user } = useSession()
   const { voices } = useVoices(user?.id ?? '')
   const voice = voices.find((candidate) => candidate.id === voiceId)
   return (
     <p className="text-content-secondary mt-2 text-sm break-words">
-      말투 · {voice ? voiceRefLabel(voice) : voiceId}
+      {t('experiment.voice', { ns: 'models', name: voice ? voiceRefLabel(voice) : voiceId })}
     </p>
   )
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -23,6 +24,22 @@ Also return an "axes" object with exactly these six integer keys, each between -
 involvement, narrativity, persuasion_overtness, abstractness, addressee_focus, humor.
 Omit an axis key only when the corpus gives no evidence for it; never guess 0 as a filler.
 Never return topic-specific nouns as preferred vocabulary. Deterministic ending distribution and sentence length are calculated separately and override your estimates.`
+
+const structuredEnglishAnalysisPrompt = `Analyze the supplied English authored corpus as writing style, not subject matter.
+Return one JSON object with these string keys: lexical_description, base_register, connective_style, intro_pattern,
+closing_pattern, heading_habit, list_habit, emoji_use. Use an empty string for unsupported traits.
+Also return an "axes" object with exactly these six integer keys, each between -3 and 3:
+involvement, narrativity, persuasion_overtness, abstractness, addressee_focus, humor.
+Omit an axis key only when the corpus gives no evidence for it; never guess 0 as a filler.
+Never return topic-specific nouns as preferred vocabulary. Deterministic word length, register, contractions, connectives,
+passive and nominal style, sentence cadence, structure, lexical habits, and axes are calculated separately and override estimates.`
+
+func structuredAnalysisPromptForLanguage(language Language) string {
+	if language == LanguageEnglish {
+		return structuredEnglishAnalysisPrompt
+	}
+	return structuredAnalysisPrompt
+}
 
 type authoredContentJSON struct {
 	Title   string   `json:"title"`
@@ -53,6 +70,51 @@ type qualitativeJSON struct {
 	ListHabit          string              `json:"list_habit"`
 	EmojiUse           string              `json:"emoji_use"`
 	Axes               qualitativeAxesJSON `json:"axes"`
+}
+
+func mergeQualitativeProfile(profile *StructuredProfile, qualitative qualitativeJSON, language Language, unknown func(string) VoiceValue) {
+	if language != LanguageEnglish {
+		// Keep the Korean merge order byte-for-byte equivalent to the original analyzer.
+		profile.Lexical.Description = unknown(qualitative.LexicalDescription)
+		if profile.Endings.BaseRegister.Unknown || qualitative.BaseRegister == "" {
+			profile.Endings.BaseRegister = unknown(qualitative.BaseRegister)
+		}
+		profile.Syntax.ConnectiveStyle = unknown(qualitative.ConnectiveStyle)
+		profile.Structure.IntroPattern = unknown(qualitative.IntroPattern)
+		profile.Structure.ClosingPattern = unknown(qualitative.ClosingPattern)
+		profile.Structure.HeadingHabit = unknown(qualitative.HeadingHabit)
+		profile.Structure.ListHabit = unknown(qualitative.ListHabit)
+		profile.Structure.EmojiUse = unknown(qualitative.EmojiUse)
+		profile.Axes = AxesProfile{Involvement: qualitative.Axes.Involvement, Narrativity: qualitative.Axes.Narrativity, PersuasionOvertness: qualitative.Axes.PersuasionOvertness, Abstractness: qualitative.Axes.Abstractness, AddresseeFocus: qualitative.Axes.AddresseeFocus, Humor: qualitative.Axes.Humor}
+		return
+	}
+	// English deterministic measurements are authoritative. Qualitative output fills only
+	// genuinely unsupported fields and axes; it never turns English cadence into Korean
+	// ending categories.
+	fill := func(target *VoiceValue, candidate string) {
+		if target.Unknown || strings.TrimSpace(target.Value) == "" {
+			*target = unknown(candidate)
+		}
+	}
+	fill(&profile.Lexical.Description, qualitative.LexicalDescription)
+	fill(&profile.Endings.BaseRegister, qualitative.BaseRegister)
+	fill(&profile.Syntax.ConnectiveStyle, qualitative.ConnectiveStyle)
+	fill(&profile.Structure.IntroPattern, qualitative.IntroPattern)
+	fill(&profile.Structure.ClosingPattern, qualitative.ClosingPattern)
+	fill(&profile.Structure.HeadingHabit, qualitative.HeadingHabit)
+	fill(&profile.Structure.ListHabit, qualitative.ListHabit)
+	fill(&profile.Structure.EmojiUse, qualitative.EmojiUse)
+	fillAxis := func(target **int, candidate *int) {
+		if *target == nil {
+			*target = candidate
+		}
+	}
+	fillAxis(&profile.Axes.Involvement, qualitative.Axes.Involvement)
+	fillAxis(&profile.Axes.Narrativity, qualitative.Axes.Narrativity)
+	fillAxis(&profile.Axes.PersuasionOvertness, qualitative.Axes.PersuasionOvertness)
+	fillAxis(&profile.Axes.Abstractness, qualitative.Axes.Abstractness)
+	fillAxis(&profile.Axes.AddresseeFocus, qualitative.Axes.AddresseeFocus)
+	fillAxis(&profile.Axes.Humor, qualitative.Axes.Humor)
 }
 
 func parseAuthoredContent(raw string) (authoredContentJSON, string, error) {
@@ -88,18 +150,19 @@ func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug s
 	if requested.ProviderID == "" || requested.ModelID == "" {
 		return LearningEvent{}, "", false, ErrAnalyzeModelRequired
 	}
-	model, err := s.resolveAnalyzeModel(ctx, userID, requested)
-	if err != nil {
-		return LearningEvent{}, "", false, err
-	}
 	snapshot, err := s.posts.LearningSnapshot(ctx, userID, postSlug)
 	if err != nil {
 		return LearningEvent{}, "", false, err
 	}
-	voiceID, err := s.learnableVoice(ctx, snapshot)
+	active, err := s.learnableVoice(ctx, snapshot)
 	if err != nil {
 		return LearningEvent{}, "", false, err
 	}
+	model, err := s.resolveAnalyzeModel(ctx, userID, requested)
+	if err != nil {
+		return LearningEvent{}, "", false, err
+	}
+	voiceID := active.ID
 	if err := s.retireStaleRules(ctx, userID, voiceID); err != nil {
 		return LearningEvent{}, "", false, err
 	}
@@ -112,7 +175,7 @@ func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug s
 		jobID, resumeErr := s.resumeLearningEvent(ctx, existing, model)
 		return *existing, jobID, true, resumeErr
 	}
-	event := LearningEvent{ID: s.newID(), UserID: userID, VoiceID: voiceID, PostSlug: postSlug, BaselineRevision: snapshot.BaselineRevision, InputHash: hash, BaselineJSON: snapshot.BaselineJSON, FinalJSON: snapshot.FinalJSON, ModelRef: model.String(), Status: "queued", CreatedAt: s.now()}
+	event := LearningEvent{ID: s.newID(), UserID: userID, VoiceID: voiceID, PostSlug: postSlug, BaselineRevision: snapshot.BaselineRevision, InputHash: hash, BaselineJSON: snapshot.BaselineJSON, FinalJSON: snapshot.FinalJSON, ModelRef: model.String(), Status: "queued", CreatedAt: s.now(), ContentLanguage: snapshot.ContentLanguage, SourceLanguage: active.SourceLanguage}
 	if err = s.personalization.InsertLearningEvent(ctx, event); err != nil {
 		// The database uniqueness constraint is the final arbiter when two tabs
 		// finalize the same immutable input concurrently.
@@ -132,17 +195,21 @@ func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug s
 // learnableVoice is the finalization gate: post.voice_id == machine_baseline_voice_id and
 // that voice is still active. It is authoritative even when a stale client still shows
 // an eligible state.
-func (s *Service) learnableVoice(ctx context.Context, snapshot FinalizationInput) (string, error) {
+func (s *Service) learnableVoice(ctx context.Context, snapshot FinalizationInput) (Voice, error) {
 	if snapshot.VoiceID == "" {
-		return "", ErrVoiceRequired
+		return Voice{}, ErrVoiceRequired
 	}
 	if snapshot.BaselineVoiceID != snapshot.VoiceID {
-		return "", ErrBaselineVoiceMismatch
+		return Voice{}, ErrBaselineVoiceMismatch
 	}
-	if _, err := s.activeVoice(ctx, snapshot.UserID, snapshot.VoiceID); err != nil {
-		return "", err
+	active, err := s.activeVoice(ctx, snapshot.UserID, snapshot.VoiceID)
+	if err != nil {
+		return Voice{}, err
 	}
-	return snapshot.VoiceID, nil
+	if err = requireContentLanguageMatch(snapshot.ContentLanguage, snapshot.VoiceSourceLanguage, active.SourceLanguage); err != nil {
+		return Voice{}, err
+	}
+	return active, nil
 }
 
 // resumeLearningEvent makes the same explicit learn/retry action the recovery
@@ -151,6 +218,11 @@ func (s *Service) learnableVoice(ctx context.Context, snapshot FinalizationInput
 func (s *Service) resumeLearningEvent(ctx context.Context, event *LearningEvent, model llm.ModelRef) (string, error) {
 	if event.Status == "done" {
 		return event.JobID, nil
+	}
+	// The event's frozen voice and both frozen language tags, never the post's current
+	// assignment, are authoritative for every retry.
+	if _, err := s.learningVoice(ctx, *event); err != nil {
+		return "", err
 	}
 	if event.Status != "retryable" && event.JobID != "" {
 		active, err := s.personalizationJobs.IsPersonalizationJobActive(ctx, event.JobID, event.UserID)
@@ -161,31 +233,30 @@ func (s *Service) resumeLearningEvent(ctx context.Context, event *LearningEvent,
 			return event.JobID, nil
 		}
 	}
-	// The event's frozen voice, never the post's current one, receives the retry.
-	if _, err := s.activeVoice(ctx, event.UserID, event.VoiceID); err != nil {
-		return "", err
-	}
 	return s.enqueueLearningEvent(ctx, event, model)
 }
 
 func learningInputHash(snapshot FinalizationInput) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "%d\x00%s\x00%s", snapshot.BaselineRevision, snapshot.BaselineJSON, snapshot.FinalJSON)
+	fmt.Fprintf(h, "%d\x00%s\x00%s\x00%s\x00%s", snapshot.BaselineRevision, snapshot.BaselineJSON, snapshot.FinalJSON, snapshot.ContentLanguage, snapshot.VoiceSourceLanguage)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (s *Service) enqueueLearningEvent(ctx context.Context, event *LearningEvent, model llm.ModelRef) (string, error) {
 	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: LearnJobKind, UserID: event.UserID, VoiceID: event.VoiceID, PostSlug: event.PostSlug, Model: model.String(), Payload: event.ID})
 	if err != nil {
-		_ = s.personalization.SetLearningEventStatus(ctx, event.UserID, event.ID, "retryable", err.Error(), nil)
+		failure := normalizeFailure(err)
+		_ = s.personalization.SetLearningEventStatus(ctx, event.UserID, event.ID, "retryable", &failure, nil)
 		event.Status = "retryable"
-		event.Error = err.Error()
+		event.Error = ""
+		event.Failure = &failure
 		return "", err
 	}
 	event.JobID = jobID
 	event.ModelRef = model.String()
 	event.Status = "queued"
 	event.Error = ""
+	event.Failure = nil
 	if err = s.personalization.SetLearningEventJob(ctx, event.UserID, event.ID, jobID); err != nil {
 		return jobID, err
 	}
@@ -202,6 +273,9 @@ func (s *Service) RetryLearning(ctx context.Context, userID, eventID string, req
 	}
 	if requested.ProviderID == "" || requested.ModelID == "" {
 		return LearningEvent{}, "", ErrAnalyzeModelRequired
+	}
+	if _, err = s.learningVoice(ctx, *event); err != nil {
+		return *event, "", err
 	}
 	model, err := s.resolveAnalyzeModel(ctx, userID, requested)
 	if err != nil {
@@ -228,10 +302,13 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 		progress("learn", 1, 1)
 		return nil
 	}
-	if _, err := s.activeVoice(ctx, event.UserID, event.VoiceID); err != nil {
+	if _, err := s.learningVoice(ctx, *event); err != nil {
+		if errors.Is(err, ErrContentLanguageMismatch) {
+			return err
+		}
 		return s.failLearning(ctx, *event, voiceUnavailableError(err))
 	}
-	_ = s.personalization.SetLearningEventStatus(ctx, job.UserID, event.ID, "running", "", nil)
+	_ = s.personalization.SetLearningEventStatus(ctx, job.UserID, event.ID, "running", nil, nil)
 	final, body, err := parseAuthoredContent(event.FinalJSON)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
@@ -244,6 +321,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
+	sources = authoredSourcesForLanguage(sources, event.SourceLanguage)
 	var corpus strings.Builder
 	for _, source := range sources {
 		corpus.WriteString(source.Body)
@@ -255,9 +333,9 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 		return s.failLearning(ctx, *event, err)
 	}
 	progress("learn", 0, 1)
-	request := llm.Request{System: structuredAnalysisPrompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus.String())}}}}
+	request := llm.Request{System: structuredAnalysisPromptForLanguage(event.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus.String())}}}}
 	if info, ok := s.models.Resolve(ref); ok && info.StructuredOutput {
-		request.JSONSchema = VoiceAnalysisSchema()
+		request.JSONSchema = VoiceAnalysisSchemaForLanguage(event.SourceLanguage)
 	}
 	response, err := s.models.Complete(ctx, ref, request)
 	if err != nil {
@@ -267,26 +345,14 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	if err = json.Unmarshal([]byte(strings.TrimSpace(response.Text)), &qualitative); err != nil {
 		return s.failLearning(ctx, *event, fmt.Errorf("typed voice analysis returned invalid JSON: %w", err))
 	}
-	profile := MeasuredProfile(corpus.String(), s.now)
+	profile := MeasuredProfileForLanguage(corpus.String(), event.SourceLanguage, s.now)
 	unknown := func(v string) VoiceValue {
 		if strings.TrimSpace(v) == "" {
 			return VoiceValue{Unknown: true, Source: SourceUnknown}
 		}
 		return VoiceValue{Value: strings.TrimSpace(v), Source: SourceAnalyzed}
 	}
-	profile.Lexical.Description = unknown(qualitative.LexicalDescription)
-	// The measured register wins over the model's estimate; the estimate is used only when
-	// measurement found nothing or the model declined to answer.
-	if profile.Endings.BaseRegister.Unknown || qualitative.BaseRegister == "" {
-		profile.Endings.BaseRegister = unknown(qualitative.BaseRegister)
-	}
-	profile.Syntax.ConnectiveStyle = unknown(qualitative.ConnectiveStyle)
-	profile.Structure.IntroPattern = unknown(qualitative.IntroPattern)
-	profile.Structure.ClosingPattern = unknown(qualitative.ClosingPattern)
-	profile.Structure.HeadingHabit = unknown(qualitative.HeadingHabit)
-	profile.Structure.ListHabit = unknown(qualitative.ListHabit)
-	profile.Structure.EmojiUse = unknown(qualitative.EmojiUse)
-	profile.Axes = AxesProfile{Involvement: qualitative.Axes.Involvement, Narrativity: qualitative.Axes.Narrativity, PersuasionOvertness: qualitative.Axes.PersuasionOvertness, Abstractness: qualitative.Axes.Abstractness, AddresseeFocus: qualitative.Axes.AddresseeFocus, Humor: qualitative.Axes.Humor}
+	mergeQualitativeProfile(&profile, qualitative, event.SourceLanguage, unknown)
 	if err = validateAxes(profile.Axes); err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
@@ -300,16 +366,16 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 		}
 	}
 	excerpt := excerptAroundTarget(body, s.config.FewShotExcerptTargetChars, s.config.FewShotExcerptMaxChars)
-	source := AuthoredSource{ID: s.newID(), UserID: job.UserID, VoiceID: event.VoiceID, PostSlug: event.PostSlug, LearningEventID: event.ID, Title: final.Title, Tags: final.Tags, Body: body, Excerpt: excerpt, CreatedAt: s.now()}
+	source := AuthoredSource{ID: s.newID(), UserID: job.UserID, VoiceID: event.VoiceID, PostSlug: event.PostSlug, LearningEventID: event.ID, Title: final.Title, Tags: final.Tags, Body: body, Excerpt: excerpt, CreatedAt: s.now(), SourceLanguage: event.SourceLanguage}
 	profile.Rules, err = s.personalization.ListRules(ctx, job.UserID, event.VoiceID)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
-	rules, err := s.extractStyleRules(ctx, ref, AlignSentences(baselineBody, body))
+	rules, err := s.extractStyleRulesForLanguage(ctx, ref, AlignSentences(baselineBody, body), event.SourceLanguage)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
-	rules, err = s.classifyRuleRelations(ctx, ref, rules, profile.Rules)
+	rules, err = s.classifyRuleRelationsForLanguage(ctx, ref, rules, profile.Rules, event.SourceLanguage)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
@@ -331,6 +397,7 @@ func validateAxes(a AxesProfile) error {
 	return nil
 }
 func (s *Service) failLearning(ctx context.Context, event LearningEvent, cause error) error {
-	_ = s.personalization.SetLearningEventStatus(ctx, event.UserID, event.ID, "retryable", cause.Error(), nil)
+	failure := normalizeFailure(cause)
+	_ = s.personalization.SetLearningEventStatus(ctx, event.UserID, event.ID, "retryable", &failure, nil)
 	return cause
 }

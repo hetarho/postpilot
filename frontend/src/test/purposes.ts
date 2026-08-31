@@ -1,4 +1,4 @@
-import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
+import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
   CreatePurposeResponseSchema,
@@ -8,6 +8,7 @@ import {
   PurposeService,
   UpdatePurposeResponseSchema,
 } from '@/shared/api'
+import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -78,18 +79,17 @@ export function registerPurposeService(router: ConnectRouter, options: FakePurpo
 
   rpc(PurposeService.method.listPurposes, () => {
     calls?.push('ListPurposes')
-    if (options.listFails) throw new ConnectError('unavailable', Code.Unavailable)
+    if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListPurposesResponseSchema, { purposes: listed().map(toProto) })
   })
 
   rpc(PurposeService.method.createPurpose, (req) => {
     calls?.push('CreatePurpose')
     const name = req.name.trim()
-    if (!name) throw new ConnectError('용도 이름을 입력해 주세요', Code.InvalidArgument)
+    if (!name) throw connectAppError('PURPOSE_NAME_REQUIRED', Code.InvalidArgument)
     if (!req.instructions.trim())
-      throw new ConnectError('작성 지침을 입력해 주세요', Code.InvalidArgument)
-    if (nameTaken(name, ''))
-      throw new ConnectError('같은 이름의 용도가 이미 있어요', Code.AlreadyExists)
+      throw connectAppError('PURPOSE_INSTRUCTIONS_REQUIRED', Code.InvalidArgument)
+    if (nameTaken(name, '')) throw connectAppError('PURPOSE_NAME_TAKEN', Code.AlreadyExists)
     sequence += 1
     const row: Row = {
       id: `purpose-${sequence}`,
@@ -111,19 +111,19 @@ export function registerPurposeService(router: ConnectRouter, options: FakePurpo
       instructions: req.instructions,
     })
     const row = rows.get(req.id)
-    if (!row) throw new ConnectError('용도를 찾을 수 없어요', Code.NotFound)
+    if (!row) throw connectAppError('PURPOSE_NOT_FOUND', Code.NotFound)
     // Presence, like the server: an absent field is not part of the edit at all.
     if (req.name !== undefined) {
       const name = req.name.trim()
-      if (!name) throw new ConnectError('용도 이름을 입력해 주세요', Code.InvalidArgument)
-      if (nameTaken(name, row.id))
-        throw new ConnectError('같은 이름의 용도가 이미 있어요', Code.AlreadyExists)
+      if (!name) throw connectAppError('PURPOSE_NAME_REQUIRED', Code.InvalidArgument)
+      if (nameTaken(name, row.id)) throw connectAppError('PURPOSE_NAME_TAKEN', Code.AlreadyExists)
       row.name = name
     }
     if (req.description !== undefined) row.description = req.description.trim()
     if (req.instructions !== undefined) {
       const instructions = req.instructions.trim()
-      if (!instructions) throw new ConnectError('작성 지침을 입력해 주세요', Code.InvalidArgument)
+      if (!instructions)
+        throw connectAppError('PURPOSE_INSTRUCTIONS_REQUIRED', Code.InvalidArgument)
       row.instructions = instructions
     }
     return create(UpdatePurposeResponseSchema, { purpose: toProto(row) })
@@ -132,7 +132,7 @@ export function registerPurposeService(router: ConnectRouter, options: FakePurpo
   rpc(PurposeService.method.deletePurpose, (req) => {
     calls?.push('DeletePurpose')
     const row = rows.get(req.id)
-    if (!row) throw new ConnectError('용도를 찾을 수 없어요', Code.NotFound)
+    if (!row) throw connectAppError('PURPOSE_NOT_FOUND', Code.NotFound)
     rows.delete(req.id)
     return create(DeletePurposeResponseSchema, { detachedPosts: row.postCount })
   })

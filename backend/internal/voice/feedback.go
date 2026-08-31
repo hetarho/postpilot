@@ -28,16 +28,20 @@ func (s *Service) GiveFeedback(ctx context.Context, userID, postSlug, sentenceRe
 	if err != nil {
 		return "", err
 	}
-	voiceID, err := s.learnableVoice(ctx, snapshot)
+	active, err := s.learnableVoice(ctx, snapshot)
 	if err != nil {
 		return "", err
 	}
+	voiceID := active.ID
 	event, err := s.personalization.FindLearningEvent(ctx, userID, voiceID, postSlug, snapshot.BaselineRevision, learningInputHash(snapshot))
 	if err != nil {
 		return "", err
 	}
 	if event == nil || event.Status != "done" {
 		return "", fmt.Errorf("%w: feedback requires a completed finalization", ErrInvalidLifecycle)
+	}
+	if err = requireContentLanguageMatch(event.ContentLanguage, event.SourceLanguage, active.SourceLanguage); err != nil {
+		return "", err
 	}
 	_, finalBody, err := parseAuthoredContent(snapshot.FinalJSON)
 	if err != nil {

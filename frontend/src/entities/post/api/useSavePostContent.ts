@@ -1,8 +1,9 @@
 import { clone, create } from '@bufbuild/protobuf'
-import { Code, ConnectError } from '@connectrpc/connect'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
+import i18next from 'i18next'
 import {
+  appFailureFromConnect,
   GetPostResponseSchema,
   type GetPostResponse,
   PostContentSchema,
@@ -14,7 +15,7 @@ import { getPostQueryKey, listPostsQueryKey } from './post-queries'
 
 export class ContentRevisionConflictError extends Error {
   constructor() {
-    super('다른 화면에서 글이 바뀌었어요. 최신 글을 불러온 뒤 다시 수정해 주세요.')
+    super(i18next.t('POST_CONTENT_STALE', { ns: 'errors' }))
   }
 }
 
@@ -30,6 +31,7 @@ export function useSavePostContent() {
       const post = cached?.post ? clone(PostSchema, cached.post) : clone(PostSchema, saved)
       post.content = saved.content ? clone(PostContentSchema, saved.content) : undefined
       post.contentRevision = saved.contentRevision
+      post.contentLanguage = saved.contentLanguage
       post.machineBaselineRevision = saved.machineBaselineRevision
       post.canFinalize = saved.canFinalize
       post.status = saved.status
@@ -52,7 +54,9 @@ export function useSavePostContent() {
         if (!response.post) throw new Error('SavePostContent returned no post')
         return response.post.contentRevision
       } catch (cause) {
-        if (ConnectError.from(cause).code === Code.Aborted) throw new ContentRevisionConflictError()
+        if (appFailureFromConnect(cause).reason === 'POST_CONTENT_STALE') {
+          throw new ContentRevisionConflictError()
+        }
         throw cause
       }
     },

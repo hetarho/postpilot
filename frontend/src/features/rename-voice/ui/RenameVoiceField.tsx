@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Voice } from '@/entities/voice'
 import { VOICE_NAME_MAX_CHARS } from '@/shared/config'
 import { Button, Editable, FieldLabel, FieldMessage, TextField } from '@/shared/ui'
@@ -16,6 +17,7 @@ export function RenameVoiceField({
   voice: Pick<Voice, 'id' | 'name'>
   children: ReactNode
 }) {
+  const { t } = useTranslation('voices')
   const rename = useRenameVoice(ownerId)
   const commit = async (exit: () => void, name: string) => {
     try {
@@ -28,7 +30,7 @@ export function RenameVoiceField({
   }
   return (
     <Editable
-      editLabel={`${voice.name} 이름 바꾸기`}
+      editLabel={t('rename.aria', { name: voice.name })}
       edit={(exit) => (
         <RenameEditor
           name={voice.name}
@@ -60,6 +62,7 @@ function RenameEditor({
   onSave: (name: string) => void
   onCancel: () => void
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const id = useId()
   const errorId = `${id}-error`
   const [draft, setDraft] = useState(name)
@@ -72,7 +75,7 @@ function RenameEditor({
         if (valid && !pending) onSave(draft.trim())
       }}
     >
-      <FieldLabel htmlFor={id}>말투 이름</FieldLabel>
+      <FieldLabel htmlFor={id}>{t('rename.label', { ns: 'voices' })}</FieldLabel>
       <TextField
         id={id}
         value={draft}
@@ -88,7 +91,7 @@ function RenameEditor({
         className="mt-1"
       />
       <p className="text-content-tertiary mt-2 text-xs">
-        {chars} / {VOICE_NAME_MAX_CHARS}자
+        {t('rename.count', { ns: 'voices', count: chars, max: VOICE_NAME_MAX_CHARS })}
       </p>
       {errorMessage && (
         <FieldMessage id={errorId} className="mt-2">
@@ -97,10 +100,10 @@ function RenameEditor({
       )}
       <div className="mt-2 flex flex-wrap gap-2">
         <Button type="submit" variant="secondary" disabled={!valid} pending={pending}>
-          저장
+          {t('action.save', { ns: 'common' })}
         </Button>
         <Button variant="ghost" disabled={pending} onClick={onCancel}>
-          취소
+          {t('action.cancel', { ns: 'common' })}
         </Button>
       </div>
     </form>

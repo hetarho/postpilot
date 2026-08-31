@@ -1,5 +1,5 @@
 import type { ModelRef, StageName } from '@/entities/model-catalog/@x/model-experiment'
-import type { Observation, PostContent } from '@/shared/api'
+import type { AppFailure, ContentLanguage, Observation, PostContent } from '@/shared/api'
 
 export type ExperimentStatusName =
   'queued' | 'running' | 'review' | 'partial' | 'decided' | 'dismissed' | 'failed'
@@ -25,7 +25,7 @@ export interface ExperimentCandidate {
   displaySide: DisplaySideName
   status: CandidateStatusName
   output?: CandidateOutput
-  error: string
+  failure: AppFailure | undefined
   model?: ModelRef
   modelLabel: string
   usage?: CandidateUsage
@@ -45,15 +45,16 @@ export interface ModelExperiment {
   candidates: ExperimentCandidate[]
   winnerCandidateId: string
   outcome: 'winner' | 'skipped' | 'unpaired' | ''
-  applyError: string
+  applyFailure: AppFailure | undefined
   appliedAt: string
   adoptionRequested: boolean
-  adoptionError: string
+  adoptionFailure: AppFailure | undefined
   adoptedAt: string
   createdAt: string
   finishedAt: string
   decidedAt: string
   revealed: boolean
+  targetLanguage: ContentLanguage | undefined
 }
 
 export interface LeaderboardEntry {

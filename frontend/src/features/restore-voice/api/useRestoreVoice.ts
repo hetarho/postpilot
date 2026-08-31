@@ -1,9 +1,9 @@
-import { Code, ConnectError } from '@connectrpc/connect'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { listPostsQueryKey, postDetailQueriesKey } from '@/entities/post'
 import { invalidateVoiceScope, upsertCachedVoice } from '@/entities/voice'
-import { VoiceService } from '@/shared/api'
+import { appFailureFromConnect, VoiceService } from '@/shared/api'
+import { formatAppFailure } from '@/shared/lib'
 
 export function useRestoreVoice(ownerId: string) {
   const transport = useTransport()
@@ -17,20 +17,11 @@ export function useRestoreVoice(ownerId: string) {
       void queryClient.invalidateQueries({ queryKey: postDetailQueriesKey(transport) })
     },
   })
+  const failure = mutation.error ? appFailureFromConnect(mutation.error) : undefined
   return {
     ...mutation,
-    errorMessage: mutation.error ? describe(ConnectError.from(mutation.error).code) : '',
+    failure,
+    errorMessage: failure ? formatAppFailure(failure) : '',
     restore: (voiceId: string) => mutation.mutateAsync({ voiceId }),
-  }
-}
-
-function describe(code: Code): string {
-  switch (code) {
-    case Code.AlreadyExists:
-      return '같은 이름의 말투가 이미 있어요. 이름을 바꾼 뒤 복원해 주세요.'
-    case Code.NotFound:
-      return '말투를 찾을 수 없어요. 목록을 새로 고쳐 주세요.'
-    default:
-      return '말투를 복원하지 못했어요. 다시 시도해 주세요.'
   }
 }

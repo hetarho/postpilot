@@ -1,12 +1,13 @@
 import { clone, create } from '@bufbuild/protobuf'
-import { ConnectError } from '@connectrpc/connect'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useIsMutating, useQueryClient } from '@tanstack/react-query'
 import {
   type GetVoiceProfileResponse,
   GetVoiceProfileResponseSchema,
+  appFailureFromConnect,
   VoiceService,
 } from '@/shared/api'
+import { formatAppFailure } from '@/shared/lib'
 import { voiceProfileQueryKey } from './voice-queries'
 
 export function useUpdateVoiceProfile(ownerId: string, voiceId: string) {
@@ -38,7 +39,7 @@ export function useUpdateVoiceProfile(ownerId: string, voiceId: string) {
   return {
     ...mutation,
     isSaving,
-    errorMessage: mutation.error ? ConnectError.from(mutation.error).rawMessage : '',
+    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
     saveStyleguide: (styleguide: string) => mutation.mutateAsync({ voiceId, styleguide }),
     saveRules: (rules: string) => mutation.mutateAsync({ voiceId, rules }),
   }

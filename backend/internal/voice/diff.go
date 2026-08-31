@@ -20,11 +20,24 @@ Discard factual, topical, and preference-about-content changes completely. Retur
 Every rule needs at least the requested number of distinct same-kind edit citations. Return {"rules":[]} when unsupported.
 Do not quote private prose in statements. Generalize only the writing behavior demonstrated by the cited edits.`
 
+const englishDiffRulePrompt = `You classify edits between an AI draft and the user's finalized English prose.
+Discard factual, topical, and preference-about-content changes completely. Return JSON only:
+{"rules":[{"statement":"LLM does X, but I do Y","layer":"lexical|endings|syntax|structure","citation_indexes":[0,1]}]}.
+Every rule needs at least the requested number of distinct same-kind edit citations. Return {"rules":[]} when unsupported.
+Treat the endings layer as English register, contraction, or statement/question/exclamation/fragment cadence, never Korean endings.
+Do not quote private prose in statements. Generalize only the writing behavior demonstrated by the cited edits.`
+
 const SemanticRulePromptVersion = "voice-semantic-rule-v1"
 
 const semanticRulePrompt = `Compare one newly observed writing-style rule with the account's existing rules.
 Return JSON only: {"relation":"same|contradicts|distinct","rule_id":"existing id or empty"}.
 "same" means the behavior is semantically equivalent. "contradicts" means the new behavior reverses an active rule.
+Otherwise return "distinct" with an empty rule_id.`
+
+const englishSemanticRulePrompt = `Compare one newly observed English writing-style rule with the account's existing English rules.
+Return JSON only: {"relation":"same|contradicts|distinct","rule_id":"existing id or empty"}.
+"same" means the behavior is semantically equivalent. "contradicts" means the new behavior reverses an active rule.
+Compare English register, contractions, cadence, syntax, structure, and lexical behavior without translating them into Korean ending categories.
 Otherwise return "distinct" with an empty rule_id.`
 
 type diffRuleWire struct {
@@ -111,9 +124,24 @@ func endingOf(sentence string) string {
 	return "기타"
 }
 
+func englishStyleEnding(sentence string) string {
+	register := "uncontracted"
+	for _, word := range englishWords(sentence) {
+		if englishContraction(word) {
+			register = "contracted"
+			break
+		}
+	}
+	return register + "-" + englishCadenceKind(sentence)
+}
+
 // ExtractStyleRules rejects factual-only edits and emits a rule only when the same
 // ending or length pattern appears in at least minEvidence independent aligned edits.
 func ExtractStyleRules(edits []SentenceEdit, minEvidence, maxRules int) []ExtractedRule {
+	return ExtractStyleRulesForLanguage(edits, minEvidence, maxRules, LanguageKorean)
+}
+
+func ExtractStyleRulesForLanguage(edits []SentenceEdit, minEvidence, maxRules int, language Language) []ExtractedRule {
 	type pattern struct {
 		before, after string
 		citations     []string
@@ -138,6 +166,9 @@ func ExtractStyleRules(edits []SentenceEdit, minEvidence, maxRules int) []Extrac
 			continue
 		}
 		from, to := endingOf(edit.Before), endingOf(edit.After)
+		if language == LanguageEnglish {
+			from, to = englishStyleEnding(edit.Before), englishStyleEnding(edit.After)
+		}
 		if from != to {
 			key := "ending:" + from + ">" + to
 			if patterns[key] == nil {
@@ -171,6 +202,10 @@ func ExtractStyleRules(edits []SentenceEdit, minEvidence, maxRules int) []Extrac
 }
 
 func (s *Service) extractStyleRules(ctx context.Context, ref llm.ModelRef, edits []SentenceEdit) ([]ExtractedRule, error) {
+	return s.extractStyleRulesForLanguage(ctx, ref, edits, LanguageKorean)
+}
+
+func (s *Service) extractStyleRulesForLanguage(ctx context.Context, ref llm.ModelRef, edits []SentenceEdit, language Language) ([]ExtractedRule, error) {
 	eligible := make([]SentenceEdit, 0, len(edits))
 	for _, edit := range edits {
 		if strings.TrimSpace(edit.Before) != "" && strings.TrimSpace(edit.After) != "" && edit.Before != edit.After {
@@ -189,7 +224,11 @@ func (s *Service) extractStyleRules(ctx context.Context, ref llm.ModelRef, edits
 	if err != nil {
 		return nil, err
 	}
-	response, err := s.models.Complete(ctx, ref, llm.Request{System: diffRulePrompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(payload))}}}})
+	prompt := diffRulePrompt
+	if language == LanguageEnglish {
+		prompt = englishDiffRulePrompt
+	}
+	response, err := s.models.Complete(ctx, ref, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(payload))}}}})
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +254,7 @@ func (s *Service) extractStyleRules(ctx context.Context, ref llm.ModelRef, edits
 		if len(indexes) < s.config.DiffMinPatternEdits {
 			return nil, fmt.Errorf("diff rule has insufficient cited edits")
 		}
-		if !citationsHaveSameStylePattern(layer, eligible, indexes) {
+		if !citationsHaveSameStylePatternForLanguage(layer, eligible, indexes, language) {
 			return nil, fmt.Errorf("diff rule citations do not demonstrate one repeated style pattern")
 		}
 		key := canonicalRule(statement)
@@ -250,6 +289,10 @@ func uniqueValidIndexes(values []int, length int) []int {
 }
 
 func citationsHaveSameStylePattern(layer RuleLayer, edits []SentenceEdit, indexes []int) bool {
+	return citationsHaveSameStylePatternForLanguage(layer, edits, indexes, LanguageKorean)
+}
+
+func citationsHaveSameStylePatternForLanguage(layer RuleLayer, edits []SentenceEdit, indexes []int, language Language) bool {
 	var signature string
 	for _, index := range indexes {
 		edit := edits[index]
@@ -257,6 +300,9 @@ func citationsHaveSameStylePattern(layer RuleLayer, edits []SentenceEdit, indexe
 		switch layer {
 		case LayerEndings:
 			from, to := endingOf(edit.Before), endingOf(edit.After)
+			if language == LanguageEnglish {
+				from, to = englishStyleEnding(edit.Before), englishStyleEnding(edit.After)
+			}
 			if from == to {
 				return false
 			}
@@ -286,6 +332,10 @@ func citationsHaveSameStylePattern(layer RuleLayer, edits []SentenceEdit, indexe
 }
 
 func (s *Service) classifyRuleRelations(ctx context.Context, ref llm.ModelRef, candidates []ExtractedRule, existing []ContrastRule) ([]ExtractedRule, error) {
+	return s.classifyRuleRelationsForLanguage(ctx, ref, candidates, existing, LanguageKorean)
+}
+
+func (s *Service) classifyRuleRelationsForLanguage(ctx context.Context, ref llm.ModelRef, candidates []ExtractedRule, existing []ContrastRule, language Language) ([]ExtractedRule, error) {
 	for i := range candidates {
 		candidate := &candidates[i]
 		var comparable []ContrastRule
@@ -314,7 +364,11 @@ func (s *Service) classifyRuleRelations(ctx context.Context, ref llm.ModelRef, c
 		if err != nil {
 			return nil, err
 		}
-		response, err := s.models.Complete(ctx, ref, llm.Request{System: semanticRulePrompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(payload))}}}})
+		prompt := semanticRulePrompt
+		if language == LanguageEnglish {
+			prompt = englishSemanticRulePrompt
+		}
+		response, err := s.models.Complete(ctx, ref, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(payload))}}}})
 		if err != nil {
 			return nil, err
 		}

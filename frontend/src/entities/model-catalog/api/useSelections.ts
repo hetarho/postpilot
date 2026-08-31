@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@connectrpc/connect-query'
+import { useTranslation } from 'react-i18next'
 import { ProviderService } from '@/shared/api'
 import {
   type CatalogModel,
@@ -38,9 +39,6 @@ export interface UnavailableSelection {
   reason: string
 }
 
-export const VANISHED_REASON = '등록된 모델 목록에서 사라졌어요'
-export const UNSUITABLE_REASON = '이 단계에서는 쓸 수 없는 모델이에요'
-
 export interface StageSelectionState {
   /** The models this stage may list, in catalog order. */
   models: readonly CatalogModel[]
@@ -65,6 +63,7 @@ export interface StageSelectionState {
  *  choice must not be called "vanished" because the list it would be found in is not
  *  here. */
 export function useStageSelection(stage: StageName): StageSelectionState {
+  const { t } = useTranslation('models')
   const { models: catalog, isPending: catalogPending, isError } = useModels()
   const { selections, isPending: selectionsPending } = useSelections()
   const saved = selections[stage]
@@ -74,14 +73,14 @@ export function useStageSelection(stage: StageName): StageSelectionState {
     const base = { models, isError, isPending: catalogPending || selectionsPending }
     if (!saved) return { ...base, selected: null, unavailable: undefined }
     if (saved.missing) {
-      return { ...base, selected: null, unavailable: { ref: saved.ref, reason: VANISHED_REASON } }
+      return { ...base, selected: null, unavailable: { ref: saved.ref, reason: t('vanished') } }
     }
     if (catalogPending || isError) return { ...base, selected: null, unavailable: undefined }
 
     const model = catalog.find((candidate) => sameRef(candidate.ref, saved.ref))
     if (!model) {
       // The selections answer predates a registry change the catalog already reflects.
-      return { ...base, selected: null, unavailable: { ref: saved.ref, reason: VANISHED_REASON } }
+      return { ...base, selected: null, unavailable: { ref: saved.ref, reason: t('vanished') } }
     }
     if (model.disabled) {
       return {
@@ -91,8 +90,8 @@ export function useStageSelection(stage: StageName): StageSelectionState {
       }
     }
     if (!models.includes(model)) {
-      return { ...base, selected: null, unavailable: { ref: saved.ref, reason: UNSUITABLE_REASON } }
+      return { ...base, selected: null, unavailable: { ref: saved.ref, reason: t('unsuitable') } }
     }
     return { ...base, selected: saved.ref, unavailable: undefined }
-  }, [saved, catalog, stage, catalogPending, selectionsPending, isError])
+  }, [saved, catalog, stage, catalogPending, selectionsPending, isError, t])
 }

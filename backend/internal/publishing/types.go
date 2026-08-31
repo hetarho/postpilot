@@ -5,6 +5,7 @@ package publishing
 
 import (
 	"errors"
+	"maps"
 	"time"
 )
 
@@ -56,6 +57,24 @@ const (
 	FailureAssetMissing    FailureKind = "asset_missing"
 )
 
+// Failure is the publishing context's durable, localizable failure value. Reason and
+// params are safe for presentation; TechnicalDetail is inert diagnostic text and is
+// never the only user-facing explanation.
+type Failure struct {
+	Reason          string
+	Params          map[string]string
+	TechnicalDetail string
+}
+
+func (f Failure) Clone() Failure {
+	f.Params = maps.Clone(f.Params)
+	return f
+}
+
+func (f Failure) Empty() bool {
+	return f.Reason == "" && len(f.Params) == 0 && f.TechnicalDetail == ""
+}
+
 var (
 	ErrNotFound            = errors.New("publishing record not found")
 	ErrForbidden           = errors.New("publishing record belongs to another account")
@@ -72,6 +91,7 @@ var (
 	ErrTransition          = errors.New("publish transition is not allowed")
 	ErrCommitFence         = errors.New("publish job crossed the commit fence")
 	ErrPublishedURLInvalid = errors.New("published URL does not belong to the paired blog")
+	ErrLanguageRequired    = errors.New("canonical publishing languages are required")
 )
 
 type Category struct {
@@ -154,13 +174,16 @@ type SnapshotImage struct {
 }
 
 type PostSnapshot struct {
-	PostSlug          string
-	UserID            string
-	CreatedAt         time.Time
-	Content           Content
-	ContentRevision   int64
-	FinalizedRevision int64
-	Images            []SnapshotImage
+	PostSlug            string
+	UserID              string
+	CreatedAt           time.Time
+	TargetLanguage      Language
+	ContentLanguage     Language
+	VoiceSourceLanguage Language
+	Content             Content
+	ContentRevision     int64
+	FinalizedRevision   int64
+	Images              []SnapshotImage
 }
 
 type Asset struct {
@@ -178,6 +201,9 @@ type Manifest struct {
 	JobID                     string
 	PostSlug                  string
 	ContentRevision           int64
+	TargetLanguage            Language
+	ContentLanguage           Language
+	VoiceSourceLanguage       Language
 	Content                   Content
 	Tags                      []string
 	CategoryID                string
@@ -188,30 +214,34 @@ type Manifest struct {
 }
 
 type Job struct {
-	ID              string
-	UserID          string
-	PostSlug        string
-	PostCreatedAt   time.Time
-	AgentID         string
-	Platform        string
-	Status          Status
-	Stage           Stage
-	ProgressSeq     int64
-	Attempt         int64
-	ContentRevision int64
-	Manifest        *Manifest
-	CategoryID      string
-	Visibility      Visibility
-	LeaseTokenHash  string
-	LeaseExpiresAt  *time.Time
-	ErrorCode       string
-	ErrorMessage    string
-	PlatformPostURL string
-	CreatedAt       time.Time
-	ClaimedAt       *time.Time
-	CommittedAt     *time.Time
-	PublishedAt     *time.Time
-	UpdatedAt       time.Time
+	ID                  string
+	UserID              string
+	PostSlug            string
+	PostCreatedAt       time.Time
+	AgentID             string
+	Platform            string
+	Status              Status
+	Stage               Stage
+	ProgressSeq         int64
+	Attempt             int64
+	ContentRevision     int64
+	TargetLanguage      Language
+	ContentLanguage     Language
+	VoiceSourceLanguage Language
+	Manifest            *Manifest
+	CategoryID          string
+	Visibility          Visibility
+	LeaseTokenHash      string
+	LeaseExpiresAt      *time.Time
+	ErrorCode           string
+	ErrorMessage        string
+	Failure             Failure
+	PlatformPostURL     string
+	CreatedAt           time.Time
+	ClaimedAt           *time.Time
+	CommittedAt         *time.Time
+	PublishedAt         *time.Time
+	UpdatedAt           time.Time
 }
 
 func (j Job) Terminal() bool {

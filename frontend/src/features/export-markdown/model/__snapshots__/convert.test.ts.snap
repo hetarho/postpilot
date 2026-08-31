@@ -4,6 +4,7 @@ exports[`converts every block to Markdown with YAML front matter 1`] = `
 "---
 title: "비 온 뒤의 제주"
 date: 2026-08-29
+language: ko
 summary: "비가 그친 뒤 천천히 걸은 하루"
 tags: ["제주", "산책", "여행"]
 ---

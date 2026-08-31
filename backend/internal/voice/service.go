@@ -34,7 +34,7 @@ type Service struct {
 
 func NewService(store Store, models Models, jobs Jobs) *Service {
 	svc := &Service{store: store, models: models, jobs: jobs, now: time.Now, newID: newID,
-		config: PersonalizationConfig{FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: 3, EndingMaxConsecutive: 2}}
+		config: PersonalizationConfig{FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: DefaultValidationPostCount, EndingMaxConsecutive: 2}}
 	if p, ok := store.(PersonalizationStore); ok {
 		svc.personalization = p
 	}
@@ -102,7 +102,10 @@ func (s *Service) DefaultVoice(ctx context.Context, userID string) (Voice, error
 // path that creates a voice without a user asking for one. An account that already has an
 // active default is left alone; one whose default is missing gets its oldest active voice
 // promoted; one with no active voice at all gets `기본 말투`. The bool reports a new row.
-func (s *Service) EnsureDefaultVoice(ctx context.Context, userID string) (Voice, bool, error) {
+func (s *Service) EnsureDefaultVoice(ctx context.Context, userID string, sourceLanguage Language) (Voice, bool, error) {
+	if !sourceLanguage.Valid() {
+		return Voice{}, false, ErrLanguageRequired
+	}
 	s.directoryMu.Lock()
 	defer s.directoryMu.Unlock()
 	if found, ok, err := s.store.DefaultVoice(ctx, userID); err != nil {
@@ -131,14 +134,17 @@ func (s *Service) EnsureDefaultVoice(ctx context.Context, userID string) (Voice,
 		return promoted, false, err
 	}
 	now := s.now()
-	created := Voice{ID: s.newID(), UserID: userID, Name: DefaultVoiceName, IsDefault: true, CreatedAt: now, UpdatedAt: now}
+	created := Voice{ID: s.newID(), UserID: userID, Name: DefaultVoiceName, IsDefault: true, CreatedAt: now, UpdatedAt: now, SourceLanguage: sourceLanguage}
 	if err := s.store.InsertVoice(ctx, created); err != nil {
 		return Voice{}, false, fmt.Errorf("create default voice: %w", err)
 	}
 	return created, true, nil
 }
 
-func (s *Service) CreateVoice(ctx context.Context, userID, name string) (Voice, error) {
+func (s *Service) CreateVoice(ctx context.Context, userID, name string, sourceLanguage Language) (Voice, error) {
+	if !sourceLanguage.Valid() {
+		return Voice{}, ErrLanguageRequired
+	}
 	name, err := normalizeVoiceName(name)
 	if err != nil {
 		return Voice{}, err
@@ -146,7 +152,7 @@ func (s *Service) CreateVoice(ctx context.Context, userID, name string) (Voice, 
 	s.directoryMu.Lock()
 	defer s.directoryMu.Unlock()
 	now := s.now()
-	created := Voice{ID: s.newID(), UserID: userID, Name: name, CreatedAt: now, UpdatedAt: now}
+	created := Voice{ID: s.newID(), UserID: userID, Name: name, SourceLanguage: sourceLanguage, CreatedAt: now, UpdatedAt: now}
 	if err := s.store.InsertVoice(ctx, created); err != nil {
 		if errors.Is(err, ErrVoiceNameTaken) {
 			return Voice{}, err
@@ -338,6 +344,7 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 		profile.SourceCount, err = func() (int, error) {
 			sources, e := s.personalization.ListAuthoredSources(ctx, userID, voiceID)
 			if e == nil {
+				sources = authoredSourcesForLanguage(sources, found.SourceLanguage)
 				profile.Structured.Sources = sources
 			}
 			return len(sources), e

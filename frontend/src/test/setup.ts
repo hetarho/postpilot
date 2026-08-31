@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom/vitest'
 import { configure } from '@testing-library/react'
+import { initializeI18n } from '@/app/providers/i18n'
+
+initializeI18n('ko')
 
 // The suite runs 70+ files in parallel, so a page-level `findBy*` can exceed testing-library's
 // 1s default from scheduling pressure alone rather than from anything being wrong — PostsPage's

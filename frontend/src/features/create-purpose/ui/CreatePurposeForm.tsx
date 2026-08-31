@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PURPOSE_LIMITS, canSavePurpose, remainingChars } from '@/entities/purpose'
 import { Button, FieldLabel, FieldMessage, TextField, Textarea } from '@/shared/ui'
 import { useCreatePurpose } from '../api/useCreatePurpose'
@@ -7,6 +8,7 @@ import { useCreatePurpose } from '../api/useCreatePurpose'
  *  never docked, since a text field inside a bottom bar sits behind the keyboard the moment it
  *  is focused (design-language §8.3). */
 export function CreatePurposeForm({ ownerId, className }: { ownerId: string; className?: string }) {
+  const { t } = useTranslation(['purposes', 'common'])
   const id = useId()
   const errorId = `${id}-error`
   const [name, setName] = useState('')
@@ -38,12 +40,12 @@ export function CreatePurposeForm({ ownerId, className }: { ownerId: string; cla
 
   return (
     <form onSubmit={(event) => void submit(event)} className={className}>
-      <FieldLabel htmlFor={`${id}-name`}>용도 이름</FieldLabel>
+      <FieldLabel htmlFor={`${id}-name`}>{t('create.name', { ns: 'purposes' })}</FieldLabel>
       <TextField
         id={`${id}-name`}
         value={name}
         onChange={(event) => setName(event.target.value)}
-        placeholder="예: 정보성 식당 리뷰"
+        placeholder={t('create.namePlaceholder', { ns: 'purposes' })}
         autoComplete="off"
         enterKeyHint="next"
         aria-invalid={create.isError || undefined}
@@ -53,7 +55,10 @@ export function CreatePurposeForm({ ownerId, className }: { ownerId: string; cla
       <CharCount value={name} max={PURPOSE_LIMITS.name} />
 
       <FieldLabel htmlFor={`${id}-description`} className="mt-6 block">
-        어떤 글인가요 <span className="text-content-tertiary font-normal">(선택)</span>
+        {t('create.description', { ns: 'purposes' })}{' '}
+        <span className="text-content-tertiary font-normal">
+          {t('form.optional', { ns: 'common' })}
+        </span>
       </FieldLabel>
       <Textarea
         id={`${id}-description`}
@@ -61,13 +66,13 @@ export function CreatePurposeForm({ ownerId, className }: { ownerId: string; cla
         onChange={(event) => setDescription(event.target.value)}
         rows={2}
         autoGrow
-        placeholder="예: 식사를 제공받고 쓰는 방문 리뷰"
+        placeholder={t('create.descriptionPlaceholder', { ns: 'purposes' })}
         className="mt-1"
       />
       <CharCount value={description} max={PURPOSE_LIMITS.description} />
 
       <FieldLabel htmlFor={`${id}-instructions`} className="mt-6 block">
-        작성 지침
+        {t('create.instructions', { ns: 'purposes' })}
       </FieldLabel>
       <Textarea
         id={`${id}-instructions`}
@@ -75,15 +80,11 @@ export function CreatePurposeForm({ ownerId, className }: { ownerId: string; cla
         onChange={(event) => setInstructions(event.target.value)}
         rows={5}
         autoGrow
-        placeholder={
-          '예: 사진마다 무엇인지 설명하세요.\n일기체로 쓰지 마세요.\n방문 정보를 마지막에 적으세요.'
-        }
+        placeholder={t('create.instructionsPlaceholder', { ns: 'purposes' })}
         className="mt-1"
       />
       <CharCount value={instructions} max={PURPOSE_LIMITS.instructions} />
-      <p className="text-content-tertiary mt-2 text-xs">
-        용도는 글의 내용과 구성을 정해요. 문체와 종결어미는 그대로 말투 프로필을 따릅니다.
-      </p>
+      <p className="text-content-tertiary mt-2 text-xs">{t('create.help', { ns: 'purposes' })}</p>
 
       {create.isError && (
         <FieldMessage id={errorId} className="mt-3">
@@ -97,7 +98,7 @@ export function CreatePurposeForm({ ownerId, className }: { ownerId: string; cla
         pending={create.isPending}
         className="mt-5 w-full sm:w-auto"
       >
-        용도 만들기
+        {t('create.submit', { ns: 'purposes' })}
       </Button>
     </form>
   )
@@ -106,13 +107,14 @@ export function CreatePurposeForm({ ownerId, className }: { ownerId: string; cla
 /** Counts down rather than up: what a writer needs to know is how much room is left, and the
  *  count goes negative rather than clamping so an over-long paste says how much to cut. */
 function CharCount({ value, max }: { value: string; max: number }) {
+  const { t } = useTranslation('common')
   const left = remainingChars(value, max)
   return (
     <p
       className={left < 0 ? 'text-field-error mt-2 text-xs' : 'text-content-tertiary mt-2 text-xs'}
       role={left < 0 ? 'status' : undefined}
     >
-      {left < 0 ? `${-left}자 초과` : `${left}자 남음`}
+      {left < 0 ? t('count.exceeded', { count: -left }) : t('count.remaining', { count: left })}
     </p>
   )
 }

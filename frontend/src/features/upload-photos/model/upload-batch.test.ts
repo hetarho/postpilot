@@ -20,7 +20,11 @@ function fakePipeline(options: { failPuts?: number; failConvert?: (file: File) =
       return { blob: new Blob(['jpeg'], { type: 'image/jpeg' }), width: 1024, height: 768 }
     }),
     createUpload: vi.fn(async (_slug: string, filename: string) => {
-      if (filename === 'taken.jpg') throw new UploadRejected('duplicate-filename')
+      if (filename === 'taken.jpg')
+        throw new UploadRejected({
+          reason: 'POST_FILENAME_TAKEN',
+          params: { filename },
+        })
       uploads += 1
       return {
         uploadId: `upload-${uploads}`,
@@ -223,6 +227,10 @@ describe('an upload batch', () => {
 
     await vi.waitFor(() => expect(statuses(peekUploadState(slug).items)).toEqual(['failed']))
     expect(peekUploadState(slug).items[0].failure).toBe('duplicate-filename')
+    expect(peekUploadState(slug).items[0].appFailure).toEqual({
+      reason: 'POST_FILENAME_TAKEN',
+      params: { filename: 'taken.jpg' },
+    })
   })
 
   it('notifies subscribers on every change and lets a failed item be dismissed', async () => {

@@ -18,7 +18,7 @@ var (
 	testReasoningPolicy = ReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}
 	// liveVoice is the post's active voice in every fixture; voice_test.go covers the
 	// deleted and reassigned cases.
-	liveVoice = VoiceRef{ID: "voice-live", Name: "기본 말투"}
+	liveVoice = VoiceRef{ID: "voice-live", Name: "기본 말투", SourceLanguage: LanguageKorean}
 )
 
 func TestValidateBlocks(t *testing.T) {
@@ -125,7 +125,7 @@ func TestBuildWritePromptOrderAndRules(t *testing.T) {
 
 func TestGenerationPayloadPreservesOptionalTargetPresence(t *testing.T) {
 	for _, target := range []*int{nil, intPointer(100), intPointer(10_000)} {
-		raw, err := EncodeGenerationPayload(GenerationOptions{TargetLength: target})
+		raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, TargetLength: target})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -325,7 +325,7 @@ func TestWriteStructuredAndPlainFallback(t *testing.T) {
 				return llm.Response{Text: raw}, nil
 			}
 			svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
-			content, err := svc.write(context.Background(), PostInput{UserID: "alice", Voice: liveVoice}, nil, writeRef)
+			content, err := svc.write(context.Background(), PostInput{UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean}, nil, writeRef)
 			if err != nil || len(content.Blocks) != 1 {
 				t.Fatalf("content=%+v err=%v", content, err)
 			}
@@ -465,7 +465,7 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 	if !leftUsage.CostReported || leftUsage.CostMicrousd != 3 {
 		t.Fatalf("candidate usage = %+v", leftUsage)
 	}
-	if err := svc.ApplyWriteWinner(context.Background(), "alice", "post", right); err != nil {
+	if err := svc.ApplyWriteWinner(context.Background(), "alice", "post", right, prepared); err != nil {
 		t.Fatal(err)
 	}
 	if len(posts.contents) != 1 || posts.contents[0].Title != "write-b" {
@@ -538,24 +538,39 @@ func TestWriteExperimentObservesPhotosExactlyOnceBeforeTwoWriters(t *testing.T) 
 }
 
 type fakePosts struct {
-	input             PostInput
-	err               error
-	reads             int
-	observationWrites [][]Observation
-	contents          []PostContent
+	input                    PostInput
+	err                      error
+	reads                    int
+	observationWrites        [][]Observation
+	contents                 []PostContent
+	contentLanguages         []Language
+	preserveMissingLanguages bool
 }
 
 func (f *fakePosts) AttachedImages(context.Context, string, string) (PostInput, error) {
 	f.reads++
-	return f.input, f.err
+	value := f.input
+	if value.TargetLanguage == "" && !f.preserveMissingLanguages {
+		value.TargetLanguage = LanguageKorean
+	}
+	if value.Voice.SourceLanguage == "" && !f.preserveMissingLanguages {
+		value.Voice.SourceLanguage = LanguageKorean
+	}
+	if value.Content != nil && value.ContentLanguage == nil && !f.preserveMissingLanguages {
+		language := LanguageKorean
+		value.ContentLanguage = &language
+	}
+	return value, f.err
 }
 func (f *fakePosts) SetObservations(_ context.Context, _, _ string, values []Observation) error {
 	f.observationWrites = append(f.observationWrites, append([]Observation(nil), values...))
 	return nil
 }
-func (f *fakePosts) SetGeneratedContent(_ context.Context, _, _ string, value PostContent) error {
+func (f *fakePosts) SetGeneratedContent(_ context.Context, _, _ string, value PostContent, language Language) error {
 	f.contents = append(f.contents, value)
+	f.contentLanguages = append(f.contentLanguages, language)
 	f.input.Content = &value
+	f.input.ContentLanguage = &language
 	return nil
 }
 
@@ -564,8 +579,15 @@ type fakeProfiles struct {
 	calls   int
 }
 
-func (f fakeProfiles) ProfileForPrompt(context.Context, string, string) (Profile, error) {
-	return f.profile, nil
+func (f fakeProfiles) ProfileForPrompt(_ context.Context, _, _ string, target Language) (Profile, error) {
+	profile := f.profile
+	if profile.TargetLanguage == "" {
+		profile.TargetLanguage = target
+	}
+	if profile.SourceLanguage == "" {
+		profile.SourceLanguage = target
+	}
+	return profile, nil
 }
 
 type fakeRules struct {

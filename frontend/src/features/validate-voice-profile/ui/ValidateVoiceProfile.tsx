@@ -1,12 +1,13 @@
 import { create } from '@bufbuild/protobuf'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@connectrpc/connect-query'
 import { useStageSelection } from '@/entities/model-catalog'
 import type { VoiceProfile } from '@/entities/voice'
-import { ModelRefSchema, VoiceValidationService } from '@/shared/api'
+import { appFailureFromConnect, ModelRefSchema, VoiceValidationService } from '@/shared/api'
 import { VOICE_VALIDATION_POST_COUNT } from '@/shared/config'
-import { Button, Checkbox, Dialog, Notice } from '@/shared/ui'
+import { AppFailureMessage, Button, Checkbox, Dialog, Notice } from '@/shared/ui'
 
 /** Starts a validation of ONE voice's profile against that voice's own finalized sources; the
  *  request names the voice explicitly (spec/policy/voice.md). */
@@ -19,6 +20,7 @@ export function ValidateVoiceProfile({
   profile: VoiceProfile
   blocked?: string
 }) {
+  const { t } = useTranslation('voices')
   const analyze = useStageSelection('analyze')
   const write = useStageSelection('write')
   const mutation = useMutation(VoiceValidationService.method.startVoiceProfileValidation)
@@ -43,14 +45,14 @@ export function ValidateVoiceProfile({
     }
   }
   return (
-    <section aria-label="프로필 검증">
+    <section aria-label={t('validate.title')}>
       <label className="text-content-secondary flex min-h-11 items-center gap-3 text-sm">
         <Checkbox
           checked={judge}
           disabled={Boolean(blocked)}
           onChange={(event) => setJudge(event.target.checked)}
         />
-        AI 심사로 5개 항목의 일치율도 계산
+        {t('validate.judge')}
       </label>
       <Button
         variant="secondary"
@@ -58,11 +60,11 @@ export function ValidateVoiceProfile({
         disabled={Boolean(blocked) || !profile.canValidate || !analyze.selected || !write.selected}
         onClick={() => setConfirming(true)}
       >
-        검증 시작
+        {t('validate.action')}
       </Button>
       {missing > 0 && (
         <p className="text-content-tertiary mt-2 text-sm">
-          완성하고 학습한 글이 {missing}편 더 필요해요.
+          {t('validate.missing', { count: missing })}
         </p>
       )}
       {blocked && (
@@ -70,16 +72,20 @@ export function ValidateVoiceProfile({
           {blocked}
         </Notice>
       )}
+      {mutation.error && (
+        <Notice tone="danger" role="alert" className="mt-3">
+          <AppFailureMessage failure={appFailureFromConnect(mutation.error)} />
+        </Notice>
+      )}
       <Dialog
         open={confirming}
-        title="프로필 검증을 시작할까요?"
-        confirmLabel="검증 작업 시작"
+        title={t('validate.confirmTitle')}
+        confirmLabel={t('validate.confirm')}
         pending={mutation.isPending}
         onClose={() => setConfirming(false)}
-        onConfirm={() => void start()}
+        onConfirm={() => void start().catch(() => undefined)}
       >
-        분석 모델과 작성 모델을 명시적으로 사용합니다.
-        {judge ? ' AI 심사 호출도 포함합니다.' : ' AI 심사는 호출하지 않습니다.'}
+        {judge ? t('validate.confirmJudgeDescription') : t('validate.confirmPlainDescription')}
       </Dialog>
     </section>
   )

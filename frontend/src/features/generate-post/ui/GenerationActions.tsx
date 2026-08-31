@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
 import {
@@ -7,7 +8,8 @@ import {
   useSelectionSavePending,
   useStageSelection,
 } from '@/entities/model-catalog'
-import { Button, FieldMessage, buttonStyles } from '@/shared/ui'
+import { appFailureFromConnect, type AppFailure } from '@/shared/api'
+import { AppFailureMessage, Button, FieldMessage, Notice, buttonStyles } from '@/shared/ui'
 import { useStartGeneration } from '../api/useStartGeneration'
 import { useStartWriteExperiment } from '../api/useStartWriteExperiment'
 import {
@@ -32,6 +34,7 @@ export const GenerationActions = forwardRef<
     beforeStart?: () => Promise<void>
   }
 >(function GenerationActions({ post, activeJob, jobPending = false, onStarted, beforeStart }, ref) {
+  const { t } = useTranslation('posts')
   const observe = useStageSelection('observe')
   const write = useStageSelection('write')
   const setup = useModelSetup()
@@ -39,7 +42,7 @@ export const GenerationActions = forwardRef<
   const generation = useStartGeneration()
   const comparison = useStartWriteExperiment()
   const [preparing, setPreparing] = useState<'generation' | 'comparison' | ''>('')
-  const [prepareError, setPrepareError] = useState(false)
+  const [prepareFailure, setPrepareFailure] = useState<AppFailure>()
   const [targetLength, setTargetLength] = useState(post.targetLength)
   useEffect(() => setTargetLength(post.targetLength), [post.slug, post.targetLength])
 
@@ -75,11 +78,11 @@ export const GenerationActions = forwardRef<
       if (mode === 'generation' && !writeSelection) return
       if (mode === 'comparison' && (!writeA || !writeB)) return
       setPreparing(mode)
-      setPrepareError(false)
+      setPrepareFailure(undefined)
       try {
         await beforeStart?.()
-      } catch {
-        setPrepareError(true)
+      } catch (cause) {
+        setPrepareFailure(appFailureFromConnect(cause))
         setPreparing('')
         return
       }
@@ -134,13 +137,13 @@ export const GenerationActions = forwardRef<
   )
 
   const sharedReason = pendingExperiment
-    ? '먼저 대기 중인 A/B 결과를 확인해 주세요.'
+    ? t('generation.pendingExperiment')
     : jobPending
-      ? '작업 상태를 확인하는 중이에요.'
+      ? t('generation.jobChecking')
       : selectionSaving
-        ? '모델 선택을 저장하는 중이에요.'
+        ? t('generation.selectionSaving')
         : modelPending
-          ? '모델 선택을 확인하는 중이에요.'
+          ? t('generation.selectionChecking')
           : ''
 
   return (
@@ -164,7 +167,7 @@ export const GenerationActions = forwardRef<
             pending={preparing === 'comparison' || comparison.isPending}
             onClick={() => void start('comparison')}
           >
-            A/B 비교 생성
+            {t('generation.compare')}
           </Button>
         </div>
         <Button
@@ -174,18 +177,27 @@ export const GenerationActions = forwardRef<
           pending={preparing === 'generation' || generation.isPending}
           onClick={() => void start('generation')}
         >
-          생성
+          {t('generation.generate')}
         </Button>
       </div>
       <div className="mt-2 grid gap-1 text-sm">
         {(sharedReason || !ordinary.ok) && (
           <p role="status" className="text-content-secondary">
-            생성: {sharedReason || ordinary.reason}
+            {t('generation.generateReason', {
+              reason: sharedReason || ordinary.reason,
+              interpolation: { escapeValue: false },
+            })}
           </p>
         )}
         {(sharedReason || !ab.ok) && (
           <p role="status" className="text-content-secondary">
-            A/B 비교: {sharedReason || ab.reason}
+            {t('generation.compareReason', {
+              reason: sharedReason || ab.reason,
+              // This value is another catalog sentence, never user or model data. Avoid
+              // double-escaping its slash into visible `&#x2F;` while global interpolation
+              // escaping remains enabled for untrusted values.
+              interpolation: { escapeValue: false },
+            })}
           </p>
         )}
       </div>
@@ -194,7 +206,7 @@ export const GenerationActions = forwardRef<
           href={`/ai-models/experiments/${encodeURIComponent(post.pendingExperimentId)}`}
           className={buttonStyles({ variant: 'secondary', className: 'mt-2 w-full sm:w-auto' })}
         >
-          A/B 결과 확인
+          {t('generation.reviewResult')}
         </a>
       )}
       {(generation.isError || comparison.isError) && (
@@ -202,7 +214,11 @@ export const GenerationActions = forwardRef<
           {generation.errorMessage || comparison.errorMessage}
         </FieldMessage>
       )}
-      {prepareError && <FieldMessage className="mt-2">글을 저장하지 못했어요.</FieldMessage>}
+      {prepareFailure && (
+        <Notice tone="danger" role="alert" className="mt-2">
+          <AppFailureMessage failure={prepareFailure} />
+        </Notice>
+      )}
     </div>
   )
 })

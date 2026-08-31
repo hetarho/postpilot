@@ -1,10 +1,10 @@
 import { create } from '@bufbuild/protobuf'
-import { ConnectError } from '@connectrpc/connect'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import type { ModelRef } from '@/entities/model-catalog'
 import { voiceProfileQueryKey } from '@/entities/voice'
-import { GenerationService, ModelRefSchema } from '@/shared/api'
+import { appFailureFromConnect, GenerationService, ModelRefSchema } from '@/shared/api'
+import { formatAppFailure } from '@/shared/lib'
 
 export function useStartRevision(ownerId: string, voiceId: string) {
   const transport = useTransport()
@@ -24,7 +24,7 @@ export function useStartRevision(ownerId: string, voiceId: string) {
 
   return {
     ...mutation,
-    errorMessage: mutation.error ? ConnectError.from(mutation.error).rawMessage : '',
+    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
     start: (postSlug: string, instruction: string, saveAsRule: boolean, writeModel: ModelRef) =>
       mutation.mutateAsync({
         postSlug,

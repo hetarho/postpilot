@@ -1,11 +1,19 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { Code } from '@connectrpc/connect'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { initializeI18n } from '@/app/providers/i18n'
 import type { PublishingAgent } from '@/entities/publishing-agent'
 import type { PublishJob } from '@/entities/publish-job'
 import { PublishStage, PublishStatus, PublishVisibility } from '@/shared/api'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
+import { connectAppError } from '@/test/app-error'
 import { PublishPostForm } from './PublishPostForm'
+
+afterEach(() => {
+  cleanup()
+  initializeI18n('ko')
+})
 
 function agent(
   id: string,
@@ -29,6 +37,49 @@ function agent(
 }
 
 describe('PublishPostForm', () => {
+  it.each([
+    {
+      locale: 'ko' as const,
+      action: '네이버에 발행',
+      message: '다른 화면에서 글이 바뀌었어요. 최신 글을 불러온 뒤 다시 시도해 주세요.',
+    },
+    {
+      locale: 'en' as const,
+      action: 'Publish to Naver',
+      message: 'This post changed in another screen. Load the latest version and try again.',
+    },
+  ])(
+    'renders a structured beforePublish refusal without raw prose in $locale',
+    async ({ locale, action, message }) => {
+      initializeI18n(locale)
+      const user = userEvent.setup()
+      const transport = createFakeAuthTransport()
+      render(
+        <PublishPostForm
+          ownerId="alice"
+          postSlug="post"
+          contentRevision={3n}
+          finalizedRevision={3n}
+          finalized
+          beforePublish={vi
+            .fn()
+            .mockRejectedValue(connectAppError('POST_CONTENT_STALE', Code.Aborted))}
+          agents={[agent('first', 'daily', 'Daily', PublishVisibility.PUBLIC)]}
+          observedAt={new Date('2026-08-30T12:00:01Z').getTime()}
+          job={undefined}
+        />,
+        { wrapper: withProviders(transport, createTestQueryClient()) },
+      )
+
+      await user.click(screen.getByRole('button', { name: action }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(message)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(document.body).not.toHaveTextContent('private backend prose')
+      expect(document.body).not.toHaveTextContent('[aborted]')
+    },
+  )
+
   it('uses the replacement agent defaults when the selected agent disappears', async () => {
     const startRequests: Array<{
       expectedContentRevision: bigint
@@ -103,10 +154,12 @@ describe('PublishPostForm', () => {
       contentRevision: 3n,
       categoryId: 'daily',
       visibility: PublishVisibility.PUBLIC,
-      errorCode: 'login_expired',
-      errorMessage: '',
+      failure: { reason: 'PUBLISH_NEEDS_ATTENTION', params: {} },
       platformPostUrl: '',
       updatedAt: '2026-08-30T12:00:00Z',
+      targetLanguage: 'ko',
+      contentLanguage: 'ko',
+      voiceSourceLanguage: 'ko',
     }
     view.rerender(<PublishPostForm {...props} agents={[replacement]} job={retryJob} />)
 

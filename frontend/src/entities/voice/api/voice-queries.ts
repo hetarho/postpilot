@@ -1,5 +1,6 @@
 import type { Transport } from '@connectrpc/connect'
 import {
+  requireContentLanguage,
   VoiceLayer,
   VoiceRuleStatus,
   VoiceValueSource,
@@ -16,12 +17,13 @@ import {
   type Voice,
   type VoiceProfile,
   type VoiceRef,
+  type VoiceRuleLayer,
   type VoiceSample,
   type VoiceSourceKind,
   type VoiceVersion,
 } from '../model/types'
 
-const layer = (value: VoiceLayer): string =>
+const layer = (value: VoiceLayer): VoiceRuleLayer =>
   value === VoiceLayer.LEXICAL
     ? 'lexical'
     : value === VoiceLayer.ENDINGS
@@ -71,10 +73,16 @@ export function toVoice(voice: ProtoVoice | undefined): Voice {
     createdAt: voice.createdAt,
     updatedAt: voice.updatedAt,
     deletedAt: voice.deletedAt,
+    sourceLanguage: requireContentLanguage(voice.sourceLanguage),
   }
 }
 export function toVoiceRef(ref: ProtoVoiceRef | undefined): VoiceRef {
-  return { id: ref?.id ?? '', name: ref?.name ?? '', deleted: ref?.deleted ?? false }
+  return {
+    id: ref?.id ?? '',
+    name: ref?.name ?? '',
+    deleted: ref?.deleted ?? false,
+    sourceLanguage: ref ? requireContentLanguage(ref.sourceLanguage) : undefined,
+  }
 }
 export function toVoiceSample(sample: ProtoVoiceSample): VoiceSample {
   return { id: sample.id, label: sample.label, chars: sample.chars, createdAt: sample.createdAt }
@@ -107,6 +115,7 @@ export function toStructured(p: ProtoStructured | undefined): StructuredVoicePro
     },
     syntax: {
       averageSentenceChars: p?.syntax?.averageSentenceChars ?? 0,
+      averageSentenceWords: p?.syntax?.averageSentenceWords,
       sentenceLength: voiceValue(p?.syntax?.sentenceLength),
       connectiveStyle: voiceValue(p?.syntax?.connectiveStyle),
       preferredConnectives: [...(p?.syntax?.preferredConnectives ?? [])],

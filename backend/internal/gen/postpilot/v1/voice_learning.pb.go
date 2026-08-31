@@ -83,14 +83,18 @@ type VoiceLearningEvent struct {
 	BaselineRevision int64                  `protobuf:"varint,3,opt,name=baseline_revision,json=baselineRevision,proto3" json:"baseline_revision,omitempty"`
 	Status           string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	JobId            string                 `protobuf:"bytes,5,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
-	Error            string                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
-	CreatedAt        string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	ProcessedAt      string                 `protobuf:"bytes,8,opt,name=processed_at,json=processedAt,proto3" json:"processed_at,omitempty"`
+	// Deprecated: Marked as deprecated in postpilot/v1/voice_learning.proto.
+	Error       string `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	CreatedAt   string `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ProcessedAt string `protobuf:"bytes,8,opt,name=processed_at,json=processedAt,proto3" json:"processed_at,omitempty"`
 	// Frozen at finalization. A retry follows THIS voice even if the post is reassigned
 	// afterwards, so completed work is never retargeted.
-	VoiceId       string `protobuf:"bytes,9,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	VoiceId         string          `protobuf:"bytes,9,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
+	ContentLanguage ContentLanguage `protobuf:"varint,10,opt,name=content_language,json=contentLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"content_language,omitempty"`
+	SourceLanguage  ContentLanguage `protobuf:"varint,11,opt,name=source_language,json=sourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"source_language,omitempty"`
+	Failure         *Failure        `protobuf:"bytes,12,opt,name=failure,proto3" json:"failure,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *VoiceLearningEvent) Reset() {
@@ -158,6 +162,7 @@ func (x *VoiceLearningEvent) GetJobId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in postpilot/v1/voice_learning.proto.
 func (x *VoiceLearningEvent) GetError() string {
 	if x != nil {
 		return x.Error
@@ -184,6 +189,27 @@ func (x *VoiceLearningEvent) GetVoiceId() string {
 		return x.VoiceId
 	}
 	return ""
+}
+
+func (x *VoiceLearningEvent) GetContentLanguage() ContentLanguage {
+	if x != nil {
+		return x.ContentLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *VoiceLearningEvent) GetSourceLanguage() ContentLanguage {
+	if x != nil {
+		return x.SourceLanguage
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *VoiceLearningEvent) GetFailure() *Failure {
+	if x != nil {
+		return x.Failure
+	}
+	return nil
 }
 
 type LearnFromFinalizedPostRequest struct {
@@ -978,18 +1004,22 @@ var File_postpilot_v1_voice_learning_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_voice_learning_proto_rawDesc = "" +
 	"\n" +
-	"!postpilot/v1/voice_learning.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x18postpilot/v1/voice.proto\"\x90\x02\n" +
+	"!postpilot/v1/voice_learning.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x18postpilot/v1/voice.proto\x1a\x18postpilot/v1/error.proto\x1a\x1bpostpilot/v1/language.proto\"\xd7\x03\n" +
 	"\x12VoiceLearningEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tpost_slug\x18\x02 \x01(\tR\bpostSlug\x12+\n" +
 	"\x11baseline_revision\x18\x03 \x01(\x03R\x10baselineRevision\x12\x16\n" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12\x15\n" +
-	"\x06job_id\x18\x05 \x01(\tR\x05jobId\x12\x14\n" +
-	"\x05error\x18\x06 \x01(\tR\x05error\x12\x1d\n" +
+	"\x06job_id\x18\x05 \x01(\tR\x05jobId\x12\x18\n" +
+	"\x05error\x18\x06 \x01(\tB\x02\x18\x01R\x05error\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\a \x01(\tR\tcreatedAt\x12!\n" +
 	"\fprocessed_at\x18\b \x01(\tR\vprocessedAt\x12\x19\n" +
-	"\bvoice_id\x18\t \x01(\tR\avoiceId\"y\n" +
+	"\bvoice_id\x18\t \x01(\tR\avoiceId\x12H\n" +
+	"\x10content_language\x18\n" +
+	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12F\n" +
+	"\x0fsource_language\x18\v \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\x12/\n" +
+	"\afailure\x18\f \x01(\v2\x15.postpilot.v1.FailureR\afailure\"y\n" +
 	"\x1dLearnFromFinalizedPostRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12;\n" +
 	"\ranalyze_model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\fanalyzeModel\"\x87\x01\n" +
@@ -1085,40 +1115,45 @@ var file_postpilot_v1_voice_learning_proto_goTypes = []any{
 	(*ListRuleConfirmationsResponse)(nil),   // 14: postpilot.v1.ListRuleConfirmationsResponse
 	(*ResolveRuleConfirmationRequest)(nil),  // 15: postpilot.v1.ResolveRuleConfirmationRequest
 	(*ResolveRuleConfirmationResponse)(nil), // 16: postpilot.v1.ResolveRuleConfirmationResponse
-	(*ModelRef)(nil),                        // 17: postpilot.v1.ModelRef
-	(VoiceRuleStatus)(0),                    // 18: postpilot.v1.VoiceRuleStatus
-	(*VoiceProfile)(nil),                    // 19: postpilot.v1.VoiceProfile
+	(ContentLanguage)(0),                    // 17: postpilot.v1.ContentLanguage
+	(*Failure)(nil),                         // 18: postpilot.v1.Failure
+	(*ModelRef)(nil),                        // 19: postpilot.v1.ModelRef
+	(VoiceRuleStatus)(0),                    // 20: postpilot.v1.VoiceRuleStatus
+	(*VoiceProfile)(nil),                    // 21: postpilot.v1.VoiceProfile
 }
 var file_postpilot_v1_voice_learning_proto_depIdxs = []int32{
-	17, // 0: postpilot.v1.LearnFromFinalizedPostRequest.analyze_model:type_name -> postpilot.v1.ModelRef
-	1,  // 1: postpilot.v1.LearnFromFinalizedPostResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
-	17, // 2: postpilot.v1.RetryVoiceLearningRequest.analyze_model:type_name -> postpilot.v1.ModelRef
-	1,  // 3: postpilot.v1.RetryVoiceLearningResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
-	1,  // 4: postpilot.v1.GetVoiceLearningEventResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
-	0,  // 5: postpilot.v1.GiveSentenceFeedbackRequest.reason:type_name -> postpilot.v1.VoiceFeedbackReason
-	18, // 6: postpilot.v1.SetVoiceRuleStatusRequest.status:type_name -> postpilot.v1.VoiceRuleStatus
-	19, // 7: postpilot.v1.SetVoiceRuleStatusResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	12, // 8: postpilot.v1.ListRuleConfirmationsResponse.confirmations:type_name -> postpilot.v1.VoiceRuleConfirmation
-	19, // 9: postpilot.v1.ResolveRuleConfirmationResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	2,  // 10: postpilot.v1.VoiceLearningService.LearnFromFinalizedPost:input_type -> postpilot.v1.LearnFromFinalizedPostRequest
-	4,  // 11: postpilot.v1.VoiceLearningService.RetryVoiceLearning:input_type -> postpilot.v1.RetryVoiceLearningRequest
-	6,  // 12: postpilot.v1.VoiceLearningService.GetVoiceLearningEvent:input_type -> postpilot.v1.GetVoiceLearningEventRequest
-	8,  // 13: postpilot.v1.VoiceLearningService.GiveSentenceFeedback:input_type -> postpilot.v1.GiveSentenceFeedbackRequest
-	10, // 14: postpilot.v1.VoiceLearningService.SetVoiceRuleStatus:input_type -> postpilot.v1.SetVoiceRuleStatusRequest
-	13, // 15: postpilot.v1.VoiceLearningService.ListRuleConfirmations:input_type -> postpilot.v1.ListRuleConfirmationsRequest
-	15, // 16: postpilot.v1.VoiceLearningService.ResolveRuleConfirmation:input_type -> postpilot.v1.ResolveRuleConfirmationRequest
-	3,  // 17: postpilot.v1.VoiceLearningService.LearnFromFinalizedPost:output_type -> postpilot.v1.LearnFromFinalizedPostResponse
-	5,  // 18: postpilot.v1.VoiceLearningService.RetryVoiceLearning:output_type -> postpilot.v1.RetryVoiceLearningResponse
-	7,  // 19: postpilot.v1.VoiceLearningService.GetVoiceLearningEvent:output_type -> postpilot.v1.GetVoiceLearningEventResponse
-	9,  // 20: postpilot.v1.VoiceLearningService.GiveSentenceFeedback:output_type -> postpilot.v1.GiveSentenceFeedbackResponse
-	11, // 21: postpilot.v1.VoiceLearningService.SetVoiceRuleStatus:output_type -> postpilot.v1.SetVoiceRuleStatusResponse
-	14, // 22: postpilot.v1.VoiceLearningService.ListRuleConfirmations:output_type -> postpilot.v1.ListRuleConfirmationsResponse
-	16, // 23: postpilot.v1.VoiceLearningService.ResolveRuleConfirmation:output_type -> postpilot.v1.ResolveRuleConfirmationResponse
-	17, // [17:24] is the sub-list for method output_type
-	10, // [10:17] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	17, // 0: postpilot.v1.VoiceLearningEvent.content_language:type_name -> postpilot.v1.ContentLanguage
+	17, // 1: postpilot.v1.VoiceLearningEvent.source_language:type_name -> postpilot.v1.ContentLanguage
+	18, // 2: postpilot.v1.VoiceLearningEvent.failure:type_name -> postpilot.v1.Failure
+	19, // 3: postpilot.v1.LearnFromFinalizedPostRequest.analyze_model:type_name -> postpilot.v1.ModelRef
+	1,  // 4: postpilot.v1.LearnFromFinalizedPostResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
+	19, // 5: postpilot.v1.RetryVoiceLearningRequest.analyze_model:type_name -> postpilot.v1.ModelRef
+	1,  // 6: postpilot.v1.RetryVoiceLearningResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
+	1,  // 7: postpilot.v1.GetVoiceLearningEventResponse.event:type_name -> postpilot.v1.VoiceLearningEvent
+	0,  // 8: postpilot.v1.GiveSentenceFeedbackRequest.reason:type_name -> postpilot.v1.VoiceFeedbackReason
+	20, // 9: postpilot.v1.SetVoiceRuleStatusRequest.status:type_name -> postpilot.v1.VoiceRuleStatus
+	21, // 10: postpilot.v1.SetVoiceRuleStatusResponse.profile:type_name -> postpilot.v1.VoiceProfile
+	12, // 11: postpilot.v1.ListRuleConfirmationsResponse.confirmations:type_name -> postpilot.v1.VoiceRuleConfirmation
+	21, // 12: postpilot.v1.ResolveRuleConfirmationResponse.profile:type_name -> postpilot.v1.VoiceProfile
+	2,  // 13: postpilot.v1.VoiceLearningService.LearnFromFinalizedPost:input_type -> postpilot.v1.LearnFromFinalizedPostRequest
+	4,  // 14: postpilot.v1.VoiceLearningService.RetryVoiceLearning:input_type -> postpilot.v1.RetryVoiceLearningRequest
+	6,  // 15: postpilot.v1.VoiceLearningService.GetVoiceLearningEvent:input_type -> postpilot.v1.GetVoiceLearningEventRequest
+	8,  // 16: postpilot.v1.VoiceLearningService.GiveSentenceFeedback:input_type -> postpilot.v1.GiveSentenceFeedbackRequest
+	10, // 17: postpilot.v1.VoiceLearningService.SetVoiceRuleStatus:input_type -> postpilot.v1.SetVoiceRuleStatusRequest
+	13, // 18: postpilot.v1.VoiceLearningService.ListRuleConfirmations:input_type -> postpilot.v1.ListRuleConfirmationsRequest
+	15, // 19: postpilot.v1.VoiceLearningService.ResolveRuleConfirmation:input_type -> postpilot.v1.ResolveRuleConfirmationRequest
+	3,  // 20: postpilot.v1.VoiceLearningService.LearnFromFinalizedPost:output_type -> postpilot.v1.LearnFromFinalizedPostResponse
+	5,  // 21: postpilot.v1.VoiceLearningService.RetryVoiceLearning:output_type -> postpilot.v1.RetryVoiceLearningResponse
+	7,  // 22: postpilot.v1.VoiceLearningService.GetVoiceLearningEvent:output_type -> postpilot.v1.GetVoiceLearningEventResponse
+	9,  // 23: postpilot.v1.VoiceLearningService.GiveSentenceFeedback:output_type -> postpilot.v1.GiveSentenceFeedbackResponse
+	11, // 24: postpilot.v1.VoiceLearningService.SetVoiceRuleStatus:output_type -> postpilot.v1.SetVoiceRuleStatusResponse
+	14, // 25: postpilot.v1.VoiceLearningService.ListRuleConfirmations:output_type -> postpilot.v1.ListRuleConfirmationsResponse
+	16, // 26: postpilot.v1.VoiceLearningService.ResolveRuleConfirmation:output_type -> postpilot.v1.ResolveRuleConfirmationResponse
+	20, // [20:27] is the sub-list for method output_type
+	13, // [13:20] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_voice_learning_proto_init() }
@@ -1128,6 +1163,8 @@ func file_postpilot_v1_voice_learning_proto_init() {
 	}
 	file_postpilot_v1_provider_proto_init()
 	file_postpilot_v1_voice_proto_init()
+	file_postpilot_v1_error_proto_init()
+	file_postpilot_v1_language_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

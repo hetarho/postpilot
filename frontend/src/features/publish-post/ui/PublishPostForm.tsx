@@ -1,9 +1,16 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { PublishingAgent } from '@/entities/publishing-agent'
 import type { PublishJob } from '@/entities/publish-job'
-import { PublishStage, PublishStatus, PublishVisibility } from '@/shared/api'
+import {
+  appFailureFromConnect,
+  type AppFailure,
+  PublishStage,
+  PublishStatus,
+  PublishVisibility,
+} from '@/shared/api'
 import { PUBLISH_AGENT_STALE_MS } from '@/shared/config'
-import { Button, Dialog, FieldLabel, Notice, Select } from '@/shared/ui'
+import { AppFailureMessage, Button, Dialog, FieldLabel, Notice, Select } from '@/shared/ui'
 import { usePublishPost } from '../model/usePublishPost'
 
 export function PublishPostForm({
@@ -27,6 +34,7 @@ export function PublishPostForm({
   observedAt: number
   job: PublishJob | undefined
 }) {
+  const { t } = useTranslation('publishing')
   const available = agents.filter((agent) => !agent.revokedAt && agent.ready)
   const retryJob = job?.status === PublishStatus.NEEDS_ATTENTION ? job : undefined
   const retryAgent = retryJob ? available.find((agent) => agent.id === retryJob.agentId) : undefined
@@ -57,7 +65,8 @@ export function PublishPostForm({
   const [confirming, setConfirming] = useState(false)
   const [preparing, setPreparing] = useState(false)
   const [prepareError, setPrepareError] = useState('')
-  const { start, cancel } = usePublishPost(ownerId, postSlug)
+  const [prepareFailure, setPrepareFailure] = useState<AppFailure>()
+  const { start, cancel, startFailure, cancelFailure } = usePublishPost(ownerId, postSlug)
   const offline =
     !selected?.lastSeenAt ||
     observedAt - new Date(selected.lastSeenAt).getTime() > PUBLISH_AGENT_STALE_MS
@@ -74,16 +83,15 @@ export function PublishPostForm({
       <div className="mt-5">
         {retryJob && (
           <Notice tone="warning" role="alert" className="mb-4">
-            이 작업에 연결된 Mac을 현재 사용할 수 없어 다른 Mac으로 바꾸어 재시도하지 않았어요. Mac
-            연결을 다시 활성화하거나 이 작업을 취소해 주세요.
+            {t('form.unavailableAgent')}
           </Notice>
         )}
         <Button variant="danger" onClick={() => cancel.mutate(job.id)} pending={cancel.isPending}>
-          발행 취소
+          {t('form.cancel')}
         </Button>
-        {cancel.isError && (
+        {cancelFailure && (
           <Notice tone="danger" role="alert" className="mt-4">
-            발행을 취소하지 못했어요.
+            <AppFailureMessage failure={cancelFailure} />
           </Notice>
         )}
       </div>
@@ -91,12 +99,10 @@ export function PublishPostForm({
   }
   return (
     <div className="mt-5">
-      {!finalized && !retry && (
-        <Notice tone="warning">현재 내용을 먼저 확정해야 정확히 이 버전을 발행할 수 있어요.</Notice>
-      )}
+      {!finalized && !retry && <Notice tone="warning">{t('form.finalizeFirst')}</Notice>}
       {offline && !running && (
         <Notice tone="info" className="mt-3">
-          Mac이 지금 응답하지 않아도 요청은 서버에 보관되고, 에이전트가 켜지면 자동으로 시작됩니다.
+          {t('form.offline')}
         </Notice>
       )}
       {!running &&
@@ -104,7 +110,7 @@ export function PublishPostForm({
         job?.status !== PublishStatus.OUTCOME_UNKNOWN && (
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="publish-agent">Mac 연결</FieldLabel>
+              <FieldLabel htmlFor="publish-agent">{t('form.agent')}</FieldLabel>
               <Select
                 id="publish-agent"
                 value={selected.id}
@@ -127,7 +133,7 @@ export function PublishPostForm({
               </Select>
             </div>
             <div>
-              <FieldLabel htmlFor="publish-category">카테고리</FieldLabel>
+              <FieldLabel htmlFor="publish-category">{t('form.category')}</FieldLabel>
               <Select
                 id="publish-category"
                 value={effectiveCategoryId}
@@ -147,7 +153,7 @@ export function PublishPostForm({
               </Select>
             </div>
             <div>
-              <FieldLabel htmlFor="publish-visibility">공개 설정</FieldLabel>
+              <FieldLabel htmlFor="publish-visibility">{t('form.visibility')}</FieldLabel>
               <Select
                 id="publish-visibility"
                 value={effectiveVisibility}
@@ -159,8 +165,8 @@ export function PublishPostForm({
                 }}
                 className="mt-2"
               >
-                <option value={PublishVisibility.PUBLIC}>전체 공개</option>
-                <option value={PublishVisibility.PRIVATE}>비공개</option>
+                <option value={PublishVisibility.PUBLIC}>{t('visibility.public')}</option>
+                <option value={PublishVisibility.PRIVATE}>{t('visibility.private')}</option>
               </Select>
             </div>
           </div>
@@ -176,6 +182,7 @@ export function PublishPostForm({
               pending={preparing}
               onClick={async () => {
                 setPrepareError('')
+                setPrepareFailure(undefined)
                 if (retry) {
                   setConfirming(true)
                   return
@@ -184,23 +191,23 @@ export function PublishPostForm({
                 try {
                   const savedRevision = await beforePublish()
                   if (savedRevision !== finalizedRevision) {
-                    setPrepareError('방금 수정한 내용을 다시 확정한 뒤 발행해 주세요.')
+                    setPrepareError(t('form.changedFinalize'))
                     return
                   }
                   setConfirming(true)
-                } catch {
-                  setPrepareError('수정 내용을 저장하지 못해 발행을 시작하지 않았어요.')
+                } catch (cause) {
+                  setPrepareFailure(appFailureFromConnect(cause))
                 } finally {
                   setPreparing(false)
                 }
               }}
             >
-              {retry ? '안전하게 다시 시도' : '네이버에 발행'}
+              {retry ? t('form.retry') : t('form.publish')}
             </Button>
           )}
         {canCancel && (
           <Button variant="danger" onClick={() => cancel.mutate(job.id)} pending={cancel.isPending}>
-            발행 취소
+            {t('form.cancel')}
           </Button>
         )}
       </div>
@@ -210,21 +217,26 @@ export function PublishPostForm({
             {prepareError}
           </Notice>
         )}
-        {start.error && (
+        {prepareFailure && (
           <Notice tone="danger" role="alert">
-            {start.error.message}
+            <AppFailureMessage failure={prepareFailure} />
           </Notice>
         )}
-        {cancel.isError && (
+        {startFailure && (
           <Notice tone="danger" role="alert">
-            발행을 취소하지 못했어요.
+            <AppFailureMessage failure={startFailure} />
+          </Notice>
+        )}
+        {cancelFailure && (
+          <Notice tone="danger" role="alert">
+            <AppFailureMessage failure={cancelFailure} />
           </Notice>
         )}
       </div>
       <Dialog
         open={confirming}
-        title="네이버에 최종 발행할까요?"
-        confirmLabel="네이버에 발행"
+        title={t('form.confirmTitle')}
+        confirmLabel={t('form.publish')}
         onClose={() => setConfirming(false)}
         pending={start.isPending}
         onConfirm={() =>
@@ -239,13 +251,12 @@ export function PublishPostForm({
           )
         }
       >
-        <strong>{selected.platformAccountLabel}</strong> 블로그의{' '}
-        <strong>
-          {selected.categories.find((category) => category.id === effectiveCategoryId)?.name ??
-            effectiveCategoryId}
-        </strong>{' '}
-        카테고리에 올립니다. Mac 에이전트가 사진과 글을 입력한 뒤 네이버의 최종 발행 버튼까지
-        누르며, 그 순간에는 추가 확인을 요청하지 않습니다.
+        {t('form.confirmDescription', {
+          account: selected.platformAccountLabel,
+          category:
+            selected.categories.find((category) => category.id === effectiveCategoryId)?.name ??
+            effectiveCategoryId,
+        })}
       </Dialog>
     </div>
   )

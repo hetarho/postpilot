@@ -6,7 +6,7 @@ import (
 )
 
 func (q *Queue) SweepRunning(ctx context.Context) (int64, error) {
-	n, err := q.store.SweepRunning(ctx, RestartMessage, q.now())
+	n, err := q.store.SweepRunning(ctx, interruptedFailure, q.now())
 	if err != nil {
 		return 0, fmt.Errorf("sweep running jobs: %w", err)
 	}
@@ -16,7 +16,7 @@ func (q *Queue) SweepRunning(ctx context.Context) (int64, error) {
 // SweepQueuedPersonalization prevents boot's worker drain from becoming the user
 // action that starts a provider call.
 func (q *Queue) SweepQueuedPersonalization(ctx context.Context) (int64, error) {
-	n, err := q.store.SweepQueuedPersonalization(ctx, PersonalizationRestartMessage, q.now())
+	n, err := q.store.SweepQueuedPersonalization(ctx, interruptedFailure, q.now())
 	if err != nil {
 		return 0, fmt.Errorf("sweep queued personalization jobs: %w", err)
 	}

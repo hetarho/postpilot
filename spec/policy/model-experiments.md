@@ -3,7 +3,8 @@
 Canonical rules implemented by jobs 15, 17, and 23, with analyze experiments scoped to one voice by job 18
 ([plan 10](../plan/10.independent-voice-profiles-and-post-assi.md)). Source:
 [plan 09](../plan/09.stage-model-experiments-and-leaderboards.md) and
-[tech/model-experiment-methodology](../tech/model-experiment-methodology.md).
+[tech/model-experiment-methodology](../tech/model-experiment-methodology.md). Job 32 adds frozen language metadata,
+projection, provenance application, and structured failures.
 
 ## Fair and blind comparisons
 
@@ -16,6 +17,10 @@ Canonical rules implemented by jobs 15, 17, and 23, with analyze experiments sco
   an unknown or foreign id, `FailedPrecondition` for a deleted one); the server never guesses a voice. It freezes only
   that voice's corpus and stores `voice_id` on the experiment, which the projection exposes. Write experiments freeze
   the owned post's voice with the post snapshot.
+- A write experiment freezes one required post target and the voice projection selected for that target. Both
+  candidates and every retry retain those bytes; target is included in input detail/hash and winner application
+  atomically establishes matching post content provenance. Analyze freezes the voice source language and source-only
+  corpus. Observe remains target-independent.
 - The server randomizes and persists left/right once. Before a verdict, RPC responses contain opaque candidate ids,
   sides and outputs but omit model refs, labels, accounting and provider errors. Removed-model retry errors are also
   identity-free. A verdict or dismissal reveals the snapshotted identities and accounting.
@@ -39,7 +44,8 @@ Canonical rules implemented by jobs 15, 17, and 23, with analyze experiments sco
   adoption of the winning write model. `applied_at`, `adoption_requested`, `adopted_at`, and fixed public error
   markers make each boundary reload-safe. Application/adoption retries do not rerank or rewrite completed steps.
 - Write apply replaces validated `PostContent`, establishes a baseline carrying the post's frozen voice, and moves
-  the post to `review`; it never finalizes or learns. Observe apply replaces observations. Analyze apply requires
+  the post to `review`, storing the experiment's frozen target as content language without overwriting a newer post
+  target; it never finalizes or learns. Observe apply replaces observations. Analyze apply requires
   confirmation, replaces only the experiment's own still-active voice's `styleguide`, and never changes user-owned
   `rules`; a voice deleted since the freeze refuses the application, and `DeleteVoice` is refused while a publishable
   analyze experiment for it exists. Observe/analyze adoption remains a separate explicit action. Model Elo and stage
@@ -48,12 +54,14 @@ Canonical rules implemented by jobs 15, 17, and 23, with analyze experiments sco
 ## Ranking and accounting
 
 - Leaderboards are private to `(account, stage)`. Winner verdicts replay in decision order from Elo 1500 with K=32.
+  Target language is retained in write experiment metadata but does not partition the current leaderboard.
   Dismissed, failed and unpaired outcomes are excluded. Entries below three matches are provisional.
 - Each candidate retains prompt/completion tokens, latency and cost quality. Provider-reported cost is authoritative;
   otherwise catalog prices estimate cost only when usage tokens are present. Missing usage or pricing is
   `unavailable`, never estimated zero. Aggregates preserve `reported`, `estimated`, `mixed`, and `unavailable`.
-- A candidate that fails after usage was reported retains those prompt/completion/cost values and the provider's own
-  message. Each failed candidate emits one ERROR log with experiment id, candidate id, model ref, and the underlying
+- A candidate that fails after usage was reported retains those prompt/completion/cost values and a structured stable
+  failure; optional provider text remains technical detail. Each failed candidate emits one ERROR log with experiment
+  id, candidate id, model ref, and the underlying
   cause; bad-output parser errors are reduced to their normalized class so no snapshot, prompt, photo, voice sample,
   or candidate output is logged.
 - Model refs, labels and usage remain legible after catalog removal. Removed/disabled models cannot start, retry or
@@ -70,8 +78,9 @@ Canonical rules implemented by jobs 15, 17, and 23, with analyze experiments sco
   retaining verdict, model snapshot, usage and timing for leaderboard replay.
 - `DeletePost` calls the experiment purge behavior transactionally before deleting the post, so the FK may safely
   detach retained metadata only after private payload/output is gone. Account deletion cascades all experiment rows.
-- Logs may contain ids, stage and accounting, but never snapshots, photos, voice samples or candidate output. Apply
-  failures store fixed user-facing copy; internal errors stay in logs.
+- Logs may contain ids, stage and accounting, but never snapshots, photos, voice samples or candidate output. Candidate,
+  application, and adoption failures persist stable reason/params plus optional technical detail; internal errors stay
+  in logs and raw legacy fields are not UI copy.
 
 ## Configuration
 

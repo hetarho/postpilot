@@ -67,7 +67,7 @@ describe('ProfileField', () => {
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(calls).toContain('UpdateVoiceOverride'))
-    expect(await screen.findByRole('alert')).toHaveTextContent('직접 설정을 저장하지 못했어요')
+    expect(await screen.findByRole('alert')).toHaveTextContent('말투 프로필 내용을 입력해 주세요.')
     expect(screen.getByRole('textbox')).toHaveValue('새 설명')
   })
 

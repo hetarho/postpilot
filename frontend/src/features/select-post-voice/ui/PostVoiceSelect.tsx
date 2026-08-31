@@ -1,6 +1,7 @@
 import { useId, useState, type ChangeEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useVoices, voiceRefLabel, type VoiceRef } from '@/entities/voice'
-import { Dialog, FieldLabel, FieldMessage, Select } from '@/shared/ui'
+import { Badge, Dialog, FieldLabel, FieldMessage, Select } from '@/shared/ui'
 import { reassignmentFailureMessage } from '../model/reassignment'
 
 interface PostVoiceSelectProps {
@@ -30,6 +31,7 @@ export function PostVoiceSelect({
   onSelect,
   className,
 }: PostVoiceSelectProps) {
+  const { t } = useTranslation(['voices', 'common'])
   const id = useId()
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
@@ -42,6 +44,7 @@ export function PostVoiceSelect({
   // option under a post that plainly has a voice reads as broken — and a deleted one stays
   // listed, disabled, so the field can still say what the post is written in.
   const unlisted = current && !active.some((voice) => voice.id === current.id) ? current : undefined
+  const selectedVoice = active.find((voice) => voice.id === value) ?? unlisted
 
   const apply = async (voiceId: string) => {
     setApplying(true)
@@ -72,7 +75,7 @@ export function PostVoiceSelect({
     <div className={className}>
       <div className="flex items-center gap-3">
         <FieldLabel htmlFor={id} className="shrink-0">
-          말투
+          {t('title')}
         </FieldLabel>
         <span className="min-w-0 flex-1">
           <Select
@@ -95,6 +98,9 @@ export function PostVoiceSelect({
             ))}
           </Select>
         </span>
+        {selectedVoice?.sourceLanguage && (
+          <Badge>{t(`contentLanguage.${selectedVoice.sourceLanguage}`, { ns: 'common' })}</Badge>
+        )}
       </div>
       {blocked && (
         <p id={hintId} role="status" className="text-content-secondary mt-2 text-sm">
@@ -108,8 +114,8 @@ export function PostVoiceSelect({
       )}
       <Dialog
         open={target !== ''}
-        title="말투를 바꿀까요?"
-        confirmLabel="말투 변경"
+        title={t('assignment.title')}
+        confirmLabel={t('assignment.confirm')}
         pending={applying}
         onClose={() => {
           if (!applying) setTarget('')
@@ -118,9 +124,7 @@ export function PostVoiceSelect({
           if (target) void apply(target)
         }}
       >
-        <span className="break-words">‘{targetName}’</span>(으)로 바꿉니다. 제목, 메모, 사진, 본문과
-        확정 상태는 그대로 남아요. 지금까지 배운 내용은 이전 말투에 남고, 새 말투로 학습하려면 먼저
-        AI 생성이나 수정으로 새 결과를 만들어야 해요.
+        {t('assignment.description', { name: targetName })}
       </Dialog>
     </div>
   )

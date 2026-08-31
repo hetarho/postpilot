@@ -13,6 +13,7 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
 type Handler struct {
@@ -24,18 +25,18 @@ func NewHandler(queue *job.Queue) *Handler { return &Handler{queue: queue} }
 func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpilotv1.GetGenerationRequest]) (*connect.Response[postpilotv1.GetGenerationResponse], error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
 	found, err := h.queue.Get(ctx, req.Msg.GetId(), userID)
 	if err != nil {
 		switch {
 		case errors.Is(err, job.ErrNotFound):
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("job not found"))
+			return nil, rpcserver.NewAppError(connect.CodeNotFound, "job not found", "JOB_NOT_FOUND", nil)
 		case errors.Is(err, job.ErrForbidden):
-			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("job belongs to another user"))
+			return nil, rpcserver.NewAppError(connect.CodePermissionDenied, "job belongs to another user", "JOB_FORBIDDEN", nil)
 		default:
 			slog.Error("get generation failed", "err", err)
-			return nil, connect.NewError(connect.CodeInternal, errors.New("get generation failed"))
+			return nil, rpcserver.NewAppError(connect.CodeInternal, "get generation failed", "UNKNOWN_FAILURE", nil)
 		}
 	}
 	return connect.NewResponse(&postpilotv1.GetGenerationResponse{Job: ToProto(found)}), nil
@@ -53,9 +54,31 @@ func ToProto(found *job.JobSummary) *postpilotv1.GenerationJob {
 	return &postpilotv1.GenerationJob{
 		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),
-		Error: found.Error, PostSlug: postSlug, ObserveModel: modelRef(found.ObserveModel),
-		WriteModel: modelRef(found.WriteModel), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt: found.UpdatedAt.UTC().Format(time.RFC3339),
+		PostSlug: postSlug, ObserveModel: modelRef(found.ObserveModel),
+		WriteModel: modelRef(found.WriteModel), TargetLanguage: languageToProto(found.TargetLanguage), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt: found.UpdatedAt.UTC().Format(time.RFC3339), Failure: failureToProto(found.Failure),
+	}
+}
+
+func failureToProto(found *job.Failure) *postpilotv1.Failure {
+	if found == nil || found.Reason == "" {
+		return nil
+	}
+	params := make(map[string]string, len(found.Params))
+	for key, value := range found.Params {
+		params[key] = value
+	}
+	return &postpilotv1.Failure{Reason: found.Reason, Params: params, TechnicalDetail: found.TechnicalDetail}
+}
+
+func languageToProto(value string) postpilotv1.ContentLanguage {
+	switch value {
+	case "ko":
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
+	case "en":
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
+	default:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
 	}
 }
 

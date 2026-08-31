@@ -184,6 +184,12 @@ func (s *Store) ReleaseJobID(ctx context.Context, userID, jobID string) error {
 }
 
 func (s *Store) CreateJob(ctx context.Context, job publishing.Job, assets []publishing.Asset, guard func(context.Context) error) error {
+	if !job.TargetLanguage.Valid() || !job.ContentLanguage.Valid() || !job.VoiceSourceLanguage.Valid() {
+		return publishing.ErrLanguageRequired
+	}
+	if job.Manifest == nil || job.Manifest.TargetLanguage != job.TargetLanguage || job.Manifest.ContentLanguage != job.ContentLanguage || job.Manifest.VoiceSourceLanguage != job.VoiceSourceLanguage {
+		return publishing.ErrLanguageRequired
+	}
 	manifest, err := marshalManifest(job.Manifest)
 	if err != nil {
 		return err
@@ -211,7 +217,9 @@ func (s *Store) CreateJob(ctx context.Context, job publishing.Job, assets []publ
 	if err := guard(ctx); err != nil {
 		return err
 	}
-	err = q.CreatePublishJob(ctx, sqlc.CreatePublishJobParams{ID: job.ID, UserID: job.UserID, PostSlug: job.PostSlug, PostCreatedAt: formatTime(job.PostCreatedAt), AgentID: job.AgentID, ContentRevision: job.ContentRevision, ManifestJson: nullableString(manifest), SettingsJson: string(settings), CreatedAt: formatTime(job.CreatedAt), UpdatedAt: formatTime(job.UpdatedAt)})
+	err = q.CreatePublishJob(ctx, sqlc.CreatePublishJobParams{ID: job.ID, UserID: job.UserID, PostSlug: job.PostSlug, PostCreatedAt: formatTime(job.PostCreatedAt), AgentID: job.AgentID, ContentRevision: job.ContentRevision,
+		TargetLanguage: nullableString(job.TargetLanguage.String()), ContentLanguage: nullableString(job.ContentLanguage.String()), VoiceSourceLanguage: nullableString(job.VoiceSourceLanguage.String()),
+		ManifestJson: nullableString(manifest), SettingsJson: string(settings), CreatedAt: formatTime(job.CreatedAt), UpdatedAt: formatTime(job.UpdatedAt)})
 	if err != nil {
 		if isUnique(err) {
 			return publishing.ErrAlreadyPublishing
@@ -339,12 +347,22 @@ func (s *Store) Complete(ctx context.Context, agent publishing.Agent, jobID, lea
 	return s.OwnedJob(ctx, agent.UserID, jobID)
 }
 
-func (s *Store) Fail(ctx context.Context, agent publishing.Agent, jobID, leaseHash string, seq int64, status publishing.Status, code, message string, now time.Time) (publishing.Job, error) {
+func (s *Store) Fail(ctx context.Context, agent publishing.Agent, jobID, leaseHash string, seq int64, status publishing.Status, precommitFailure, commitFailure publishing.Failure, now time.Time) (publishing.Job, error) {
+	precommitReason, precommitParams, precommitDetail, err := encodeFailure(precommitFailure)
+	if err != nil {
+		return publishing.Job{}, fmt.Errorf("encode precommit publish failure: %w", err)
+	}
+	commitReason, commitParams, commitDetail, err := encodeFailure(commitFailure)
+	if err != nil {
+		return publishing.Job{}, fmt.Errorf("encode commit publish failure: %w", err)
+	}
 	stamp := formatTime(now)
 	n, err := s.write.FailPublishJob(ctx, sqlc.FailPublishJobParams{
 		CommitStatus: string(publishing.StatusOutcomeUnknown), PrecommitStatus: string(status), NextSeq: seq,
-		CommitErrorCode: nullableString("commit_outcome_unknown"), PrecommitErrorCode: nullableString(code),
-		CommitErrorMessage: nullableString("최종 발행 결과를 확인할 수 없어요."), PrecommitErrorMessage: nullableString(message), UpdatedAt: stamp, ID: jobID, UserID: agent.UserID,
+		CommitErrorReason: commitReason, PrecommitErrorReason: precommitReason,
+		CommitErrorParams: commitParams, PrecommitErrorParams: precommitParams,
+		CommitTechnicalDetail: commitDetail, PrecommitTechnicalDetail: precommitDetail,
+		UpdatedAt: stamp, ID: jobID, UserID: agent.UserID,
 		AgentID: agent.ID, LeaseTokenHash: nullableString(leaseHash), Now: nullableString(stamp),
 	})
 	if err != nil {
@@ -373,7 +391,15 @@ func (s *Store) RequeueExpired(ctx context.Context, now time.Time) (int64, int64
 	if err != nil {
 		return 0, 0, err
 	}
-	unknown, err := s.write.MarkExpiredCommittedJobsUnknown(ctx, sqlc.MarkExpiredCommittedJobsUnknownParams{ErrorCode: nullableString("commit_outcome_unknown"), ErrorMessage: nullableString("최종 발행 결과를 확인할 수 없어요."), UpdatedAt: stamp, LeaseExpiresAt: nullableString(stamp)})
+	unknownFailure := publishing.Failure{Reason: "PUBLISH_OUTCOME_UNKNOWN"}
+	reason, params, detail, encodeErr := encodeFailure(unknownFailure)
+	if encodeErr != nil {
+		return requeued, 0, encodeErr
+	}
+	unknown, err := s.write.MarkExpiredCommittedJobsUnknown(ctx, sqlc.MarkExpiredCommittedJobsUnknownParams{
+		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
+		UpdatedAt: stamp, LeaseExpiresAt: nullableString(stamp),
+	})
 	return requeued, unknown, err
 }
 
@@ -442,6 +468,18 @@ func toAgent(row sqlc.PublishingAgent) (publishing.Agent, error) {
 }
 
 func toJob(row sqlc.PublishJob) (publishing.Job, error) {
+	targetLanguage, err := languageFromSQL(row.TargetLanguage)
+	if err != nil {
+		return publishing.Job{}, fmt.Errorf("publish job %s target_language: %w", row.ID, err)
+	}
+	contentLanguage, err := languageFromSQL(row.ContentLanguage)
+	if err != nil {
+		return publishing.Job{}, fmt.Errorf("publish job %s content_language: %w", row.ID, err)
+	}
+	voiceSourceLanguage, err := languageFromSQL(row.VoiceSourceLanguage)
+	if err != nil {
+		return publishing.Job{}, fmt.Errorf("publish job %s voice_source_language: %w", row.ID, err)
+	}
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
 		return publishing.Job{}, err
@@ -472,7 +510,7 @@ func toJob(row sqlc.PublishJob) (publishing.Job, error) {
 	}
 	var manifest *publishing.Manifest
 	if row.ManifestJson.Valid {
-		manifest, err = unmarshalManifest(row.ManifestJson.String)
+		manifest, err = unmarshalManifest(row.ManifestJson.String, targetLanguage, contentLanguage, voiceSourceLanguage)
 		if err != nil {
 			return publishing.Job{}, err
 		}
@@ -481,12 +519,85 @@ func toJob(row sqlc.PublishJob) (publishing.Job, error) {
 	if err != nil {
 		return publishing.Job{}, err
 	}
+	failure, err := decodeFailure(row.ErrorReason, row.ErrorParams, row.TechnicalDetail, row.ErrorCode, row.ErrorMessage)
+	if err != nil {
+		return publishing.Job{}, fmt.Errorf("publish job %s failure: %w", row.ID, err)
+	}
 	return publishing.Job{ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug, PostCreatedAt: postCreatedAt, AgentID: row.AgentID, Platform: row.Platform,
 		Status: publishing.Status(row.Status), Stage: publishing.Stage(row.Stage), ProgressSeq: row.ProgressSeq, Attempt: row.Attempt,
-		ContentRevision: row.ContentRevision, Manifest: manifest, CategoryID: settings.CategoryID, Visibility: publishing.Visibility(settings.Visibility),
+		ContentRevision: row.ContentRevision, TargetLanguage: targetLanguage, ContentLanguage: contentLanguage, VoiceSourceLanguage: voiceSourceLanguage,
+		Manifest: manifest, CategoryID: settings.CategoryID, Visibility: publishing.Visibility(settings.Visibility),
 		LeaseTokenHash: row.LeaseTokenHash.String, LeaseExpiresAt: leaseExpires, ErrorCode: row.ErrorCode.String,
-		ErrorMessage: row.ErrorMessage.String, PlatformPostURL: row.PlatformPostUrl.String, CreatedAt: created,
+		ErrorMessage: row.ErrorMessage.String, Failure: failure, PlatformPostURL: row.PlatformPostUrl.String, CreatedAt: created,
 		ClaimedAt: claimed, CommittedAt: committed, PublishedAt: publishedAt, UpdatedAt: updated}, nil
+}
+
+func encodeFailure(failure publishing.Failure) (sql.NullString, sql.NullString, sql.NullString, error) {
+	if failure.Empty() {
+		return sql.NullString{}, sql.NullString{}, sql.NullString{}, nil
+	}
+	if !validFailureReason(failure.Reason) {
+		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("invalid reason %q", failure.Reason)
+	}
+	params := failure.Params
+	if params == nil {
+		params = map[string]string{}
+	}
+	raw, err := json.Marshal(params)
+	if err != nil {
+		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("encode params: %w", err)
+	}
+	return nullableString(failure.Reason), nullableString(string(raw)), nullableString(failure.TechnicalDetail), nil
+}
+
+func decodeFailure(reason, params, detail, legacyCode, legacyMessage sql.NullString) (publishing.Failure, error) {
+	if !reason.Valid || strings.TrimSpace(reason.String) == "" {
+		if params.Valid || detail.Valid {
+			return publishing.Failure{}, errors.New("failure params/detail present without reason")
+		}
+		legacy := strings.TrimSpace(legacyMessage.String)
+		if legacy == "" {
+			legacy = strings.TrimSpace(legacyCode.String)
+		}
+		if legacy == "" {
+			return publishing.Failure{}, nil
+		}
+		return publishing.Failure{Reason: "UNKNOWN_FAILURE", Params: map[string]string{}, TechnicalDetail: legacy}, nil
+	}
+	if !validFailureReason(reason.String) {
+		return publishing.Failure{}, fmt.Errorf("invalid reason %q", reason.String)
+	}
+	if !params.Valid || !strings.HasPrefix(strings.TrimSpace(params.String), "{") {
+		return publishing.Failure{}, errors.New("failure params must be a JSON object")
+	}
+	decoded := map[string]string{}
+	if err := json.Unmarshal([]byte(params.String), &decoded); err != nil {
+		return publishing.Failure{}, fmt.Errorf("decode failure params: %w", err)
+	}
+	return publishing.Failure{Reason: reason.String, Params: decoded, TechnicalDetail: detail.String}, nil
+}
+
+func validFailureReason(reason string) bool {
+	if reason == "" || reason[0] < 'A' || reason[0] > 'Z' || reason[len(reason)-1] == '_' {
+		return false
+	}
+	previousUnderscore := false
+	for i, char := range reason {
+		if char >= 'A' && char <= 'Z' {
+			previousUnderscore = false
+			continue
+		}
+		if char == '_' && !previousUnderscore {
+			previousUnderscore = true
+			continue
+		}
+		if i > 0 && char >= '0' && char <= '9' {
+			previousUnderscore = false
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 type settingsDTO struct {
@@ -498,6 +609,9 @@ type manifestDTO struct {
 	JobID                     string             `json:"job_id"`
 	PostSlug                  string             `json:"post_slug"`
 	ContentRevision           int64              `json:"content_revision"`
+	TargetLanguage            string             `json:"target_language"`
+	ContentLanguage           string             `json:"content_language"`
+	VoiceSourceLanguage       string             `json:"voice_source_language"`
 	Content                   contentDTO         `json:"content"`
 	Tags                      []string           `json:"tags"`
 	CategoryID                string             `json:"category_id"`
@@ -529,20 +643,51 @@ func marshalManifest(manifest *publishing.Manifest) (string, error) {
 		return "", publishing.ErrInvalid
 	}
 	dto := manifestDTO{JobID: manifest.JobID, PostSlug: manifest.PostSlug, ContentRevision: manifest.ContentRevision,
+		TargetLanguage: manifest.TargetLanguage.String(), ContentLanguage: manifest.ContentLanguage.String(), VoiceSourceLanguage: manifest.VoiceSourceLanguage.String(),
 		Content: toContentDTO(manifest.Content), Tags: manifest.Tags, CategoryID: manifest.CategoryID,
 		CategoryName: manifest.CategoryName, Visibility: string(manifest.Visibility), ExpectedPlatformAccountID: manifest.ExpectedPlatformAccountID, Assets: manifest.Assets}
 	data, err := json.Marshal(dto)
 	return string(data), err
 }
 
-func unmarshalManifest(value string) (*publishing.Manifest, error) {
+func unmarshalManifest(value string, fallbackTarget, fallbackContent, fallbackVoiceSource publishing.Language) (*publishing.Manifest, error) {
 	var dto manifestDTO
 	if err := json.Unmarshal([]byte(value), &dto); err != nil {
 		return nil, fmt.Errorf("decode job manifest: %w", err)
 	}
+	var err error
+	targetLanguage := fallbackTarget
+	if dto.TargetLanguage != "" {
+		targetLanguage, err = publishing.ParseLanguage(dto.TargetLanguage)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("decode job manifest target_language: %w", err)
+	}
+	contentLanguage := fallbackContent
+	if dto.ContentLanguage != "" {
+		contentLanguage, err = publishing.ParseLanguage(dto.ContentLanguage)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("decode job manifest content_language: %w", err)
+	}
+	voiceSourceLanguage := fallbackVoiceSource
+	if dto.VoiceSourceLanguage != "" {
+		voiceSourceLanguage, err = publishing.ParseLanguage(dto.VoiceSourceLanguage)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("decode job manifest voice_source_language: %w", err)
+	}
 	return &publishing.Manifest{JobID: dto.JobID, PostSlug: dto.PostSlug, ContentRevision: dto.ContentRevision,
+		TargetLanguage: targetLanguage, ContentLanguage: contentLanguage, VoiceSourceLanguage: voiceSourceLanguage,
 		Content: fromContentDTO(dto.Content), Tags: dto.Tags, CategoryID: dto.CategoryID,
 		CategoryName: dto.CategoryName, Visibility: publishing.Visibility(dto.Visibility), ExpectedPlatformAccountID: dto.ExpectedPlatformAccountID, Assets: dto.Assets}, nil
+}
+
+func languageFromSQL(value sql.NullString) (publishing.Language, error) {
+	if !value.Valid {
+		return "", publishing.ErrLanguageRequired
+	}
+	return publishing.ParseLanguage(value.String)
 }
 
 func toContentDTO(content publishing.Content) contentDTO {

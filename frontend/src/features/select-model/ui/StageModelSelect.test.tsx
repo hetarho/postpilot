@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { initializeI18n } from '@/app/providers/i18n'
 import { Stage } from '@/shared/api'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { type FakeProvidersOptions, createFakeProviderTransport } from '@/test/providers'
 import { StageModelSelect } from './StageModelSelect'
+
+afterEach(() => initializeI18n('ko'))
 
 const MODELS: FakeProvidersOptions['models'] = [
   { providerId: 'openrouter', modelId: 'openrouter/free', label: 'Free', vision: true },
@@ -82,20 +85,27 @@ describe('StageModelSelect', () => {
     await waitFor(() => expect(select).toHaveValue('openrouter/writer'))
   })
 
-  it('associates a failed save with the select', async () => {
-    const user = userEvent.setup()
-    renderSelect('write', { saveFails: true })
+  it.each([
+    { locale: 'ko' as const, message: '네트워크에 연결할 수 없어요.' },
+    { locale: 'en' as const, message: 'Could not connect to the network.' },
+  ])(
+    'associates a structured failed save with the select in $locale',
+    async ({ locale, message }) => {
+      initializeI18n(locale)
+      const user = userEvent.setup()
+      renderSelect('write', { saveFails: true })
 
-    const select = await screen.findByRole('combobox', { name: '작성 모델' })
-    await waitFor(() => expect(select).toBeEnabled())
-    await user.selectOptions(select, 'openrouter/writer')
+      const select = await screen.findByRole('combobox')
+      await waitFor(() => expect(select).toBeEnabled())
+      await user.selectOptions(select, 'openrouter/writer')
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      '선택을 저장하지 못했어요. 다시 골라 주세요.',
-    )
-    expect(select).toHaveAttribute('aria-invalid', 'true')
-    expect(select).toHaveAccessibleDescription('선택을 저장하지 못했어요. 다시 골라 주세요.')
-  })
+      expect(await screen.findByRole('alert')).toHaveTextContent(message)
+      expect(select).toHaveAttribute('aria-invalid', 'true')
+      expect(select).toHaveAccessibleDescription(message)
+      expect(document.body).not.toHaveTextContent('private backend prose')
+      expect(document.body).not.toHaveTextContent('[unavailable]')
+    },
+  )
 
   // AC5: a vanished model is shown greyed with the reason and counts as unselected.
   it('shows a vanished saved model greyed with the reason and treats the stage as unselected', async () => {

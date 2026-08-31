@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { remainingChars } from '@/entities/purpose'
 import { Button, Editable, FieldLabel, FieldMessage, TextField, Textarea } from '@/shared/ui'
 
@@ -36,11 +37,12 @@ export function EditablePurposeField({
   pending: boolean
   className?: string
 }) {
+  const { t } = useTranslation('common')
   const id = useId()
   return (
     <Editable
       className={className}
-      editLabel={`${label} 수정`}
+      editLabel={t('action.editNamed', { name: label })}
       edit={(exit) => (
         <PurposeFieldEditor
           id={id}
@@ -92,6 +94,7 @@ function PurposeFieldEditor({
   pending: boolean
   exit: () => void
 }) {
+  const { t } = useTranslation('common')
   // Seeded once, at the mount this editor gets when edit mode opens. It is deliberately not
   // resynced from `value` afterwards: while someone is typing here, their draft outranks a
   // value that arrives from a refetch or from a sibling field's save.
@@ -149,7 +152,7 @@ function PurposeFieldEditor({
           left < 0 ? 'text-field-error mt-2 text-xs' : 'text-content-tertiary mt-2 text-xs'
         }
       >
-        {left < 0 ? `${-left}자 초과` : `${left}자 남음`}
+        {left < 0 ? t('count.exceeded', { count: -left }) : t('count.remaining', { count: left })}
       </p>
       {failed && errorMessage && (
         <FieldMessage id={errorId} className="mt-2">
@@ -158,10 +161,10 @@ function PurposeFieldEditor({
       )}
       <div className="mt-3 flex gap-2">
         <Button onClick={() => void commit()} disabled={disabled} pending={pending}>
-          저장
+          {t('action.save')}
         </Button>
         <Button variant="ghost" onClick={exit} disabled={pending}>
-          취소
+          {t('action.cancel')}
         </Button>
       </div>
     </div>

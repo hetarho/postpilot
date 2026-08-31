@@ -12,7 +12,8 @@ import (
 
 const cancelPublishJob = `-- name: CancelPublishJob :execrows
 UPDATE publish_jobs
-SET status='canceled',manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,updated_at=?
+SET status='canceled',manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,
+    error_code=NULL,error_message=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL,updated_at=?
 WHERE id=? AND user_id=? AND status IN ('queued','running','needs_attention')
   AND committed_at IS NULL AND stage NOT IN ('committing','verifying','published')
 `
@@ -41,7 +42,7 @@ WHERE id=(
   WHERE j.status='queued' AND a.id=? AND a.user_id=? AND a.revoked_at IS NULL
   ORDER BY j.created_at,j.id LIMIT 1
 )
-RETURNING id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at
+RETURNING id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at, target_language, content_language, voice_source_language, error_reason, error_params, technical_detail
 `
 
 type ClaimQueuedPublishJobParams struct {
@@ -87,6 +88,12 @@ func (q *Queries) ClaimQueuedPublishJob(ctx context.Context, arg ClaimQueuedPubl
 		&i.CommittedAt,
 		&i.PublishedAt,
 		&i.UpdatedAt,
+		&i.TargetLanguage,
+		&i.ContentLanguage,
+		&i.VoiceSourceLanguage,
+		&i.ErrorReason,
+		&i.ErrorParams,
+		&i.TechnicalDetail,
 	)
 	return i, err
 }
@@ -94,7 +101,8 @@ func (q *Queries) ClaimQueuedPublishJob(ctx context.Context, arg ClaimQueuedPubl
 const completePublishJob = `-- name: CompletePublishJob :execrows
 UPDATE publish_jobs
 SET status='published',stage='published',progress_seq=?,platform_post_url=?,published_at=?,
-    manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,error_code=NULL,error_message=NULL,updated_at=?
+    manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,
+    error_code=NULL,error_message=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL,updated_at=?
 WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.agent_id=?
   AND publish_jobs.status='running' AND publish_jobs.stage='verifying'
   AND publish_jobs.lease_token_hash=? AND publish_jobs.lease_expires_at>?
@@ -259,21 +267,25 @@ func (q *Queries) CreatePublishAsset(ctx context.Context, arg CreatePublishAsset
 const createPublishJob = `-- name: CreatePublishJob :exec
 INSERT INTO publish_jobs(
   id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,progress_seq,attempt,
-  content_revision,manifest_json,settings_json,created_at,updated_at
-) VALUES(?,?,?,?,?,'naver_blog','queued','queued',0,0,?,?,?,?,?)
+  content_revision,target_language,content_language,voice_source_language,
+  manifest_json,settings_json,created_at,updated_at
+) VALUES(?,?,?,?,?,'naver_blog','queued','queued',0,0,?,?,?,?,?,?,?,?)
 `
 
 type CreatePublishJobParams struct {
-	ID              string
-	UserID          string
-	PostSlug        string
-	PostCreatedAt   string
-	AgentID         string
-	ContentRevision int64
-	ManifestJson    sql.NullString
-	SettingsJson    string
-	CreatedAt       string
-	UpdatedAt       string
+	ID                  string
+	UserID              string
+	PostSlug            string
+	PostCreatedAt       string
+	AgentID             string
+	ContentRevision     int64
+	TargetLanguage      sql.NullString
+	ContentLanguage     sql.NullString
+	VoiceSourceLanguage sql.NullString
+	ManifestJson        sql.NullString
+	SettingsJson        string
+	CreatedAt           string
+	UpdatedAt           string
 }
 
 func (q *Queries) CreatePublishJob(ctx context.Context, arg CreatePublishJobParams) error {
@@ -284,6 +296,9 @@ func (q *Queries) CreatePublishJob(ctx context.Context, arg CreatePublishJobPara
 		arg.PostCreatedAt,
 		arg.AgentID,
 		arg.ContentRevision,
+		arg.TargetLanguage,
+		arg.ContentLanguage,
+		arg.VoiceSourceLanguage,
 		arg.ManifestJson,
 		arg.SettingsJson,
 		arg.CreatedAt,
@@ -308,24 +323,30 @@ SET status=CASE
       ELSE ?2
     END,
     progress_seq=?3,
-    error_code=CASE
+    error_code=NULL,
+    error_message=NULL,
+    error_reason=CASE
       WHEN committed_at IS NOT NULL OR stage IN ('committing','verifying','published') THEN ?4
       ELSE ?5
     END,
-    error_message=CASE
+    error_params=CASE
       WHEN committed_at IS NOT NULL OR stage IN ('committing','verifying','published') THEN ?6
       ELSE ?7
+    END,
+    technical_detail=CASE
+      WHEN committed_at IS NOT NULL OR stage IN ('committing','verifying','published') THEN ?8
+      ELSE ?9
     END,
     manifest_json=CASE
       WHEN committed_at IS NULL AND stage NOT IN ('committing','verifying','published')
         AND ?2='needs_attention' THEN manifest_json
       ELSE NULL
     END,
-    lease_token_hash=NULL,lease_expires_at=NULL,updated_at=?8
-WHERE publish_jobs.id=?9 AND publish_jobs.user_id=?10
-  AND publish_jobs.agent_id=?11 AND publish_jobs.status='running'
-  AND publish_jobs.lease_token_hash=?12
-  AND publish_jobs.lease_expires_at>?13
+    lease_token_hash=NULL,lease_expires_at=NULL,updated_at=?10
+WHERE publish_jobs.id=?11 AND publish_jobs.user_id=?12
+  AND publish_jobs.agent_id=?13 AND publish_jobs.status='running'
+  AND publish_jobs.lease_token_hash=?14
+  AND publish_jobs.lease_expires_at>?15
   AND publish_jobs.progress_seq<?3
   AND EXISTS (
     SELECT 1 FROM publishing_agents AS active_agent
@@ -336,19 +357,21 @@ WHERE publish_jobs.id=?9 AND publish_jobs.user_id=?10
 `
 
 type FailPublishJobParams struct {
-	CommitStatus          string
-	PrecommitStatus       string
-	NextSeq               int64
-	CommitErrorCode       sql.NullString
-	PrecommitErrorCode    sql.NullString
-	CommitErrorMessage    sql.NullString
-	PrecommitErrorMessage sql.NullString
-	UpdatedAt             string
-	ID                    string
-	UserID                string
-	AgentID               string
-	LeaseTokenHash        sql.NullString
-	Now                   sql.NullString
+	CommitStatus             string
+	PrecommitStatus          string
+	NextSeq                  int64
+	CommitErrorReason        sql.NullString
+	PrecommitErrorReason     sql.NullString
+	CommitErrorParams        sql.NullString
+	PrecommitErrorParams     sql.NullString
+	CommitTechnicalDetail    sql.NullString
+	PrecommitTechnicalDetail sql.NullString
+	UpdatedAt                string
+	ID                       string
+	UserID                   string
+	AgentID                  string
+	LeaseTokenHash           sql.NullString
+	Now                      sql.NullString
 }
 
 func (q *Queries) FailPublishJob(ctx context.Context, arg FailPublishJobParams) (int64, error) {
@@ -356,10 +379,12 @@ func (q *Queries) FailPublishJob(ctx context.Context, arg FailPublishJobParams) 
 		arg.CommitStatus,
 		arg.PrecommitStatus,
 		arg.NextSeq,
-		arg.CommitErrorCode,
-		arg.PrecommitErrorCode,
-		arg.CommitErrorMessage,
-		arg.PrecommitErrorMessage,
+		arg.CommitErrorReason,
+		arg.PrecommitErrorReason,
+		arg.CommitErrorParams,
+		arg.PrecommitErrorParams,
+		arg.CommitTechnicalDetail,
+		arg.PrecommitTechnicalDetail,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,
@@ -403,7 +428,7 @@ func (q *Queries) GetActiveAgentByTokenHash(ctx context.Context, tokenHash strin
 }
 
 const getLatestPublishJobForDeletedPost = `-- name: GetLatestPublishJobForDeletedPost :one
-SELECT id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at FROM publish_jobs WHERE post_slug=? AND user_id=?
+SELECT id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at, target_language, content_language, voice_source_language, error_reason, error_params, technical_detail FROM publish_jobs WHERE post_slug=? AND user_id=?
 ORDER BY created_at DESC,id DESC LIMIT 1
 `
 
@@ -441,12 +466,18 @@ func (q *Queries) GetLatestPublishJobForDeletedPost(ctx context.Context, arg Get
 		&i.CommittedAt,
 		&i.PublishedAt,
 		&i.UpdatedAt,
+		&i.TargetLanguage,
+		&i.ContentLanguage,
+		&i.VoiceSourceLanguage,
+		&i.ErrorReason,
+		&i.ErrorParams,
+		&i.TechnicalDetail,
 	)
 	return i, err
 }
 
 const getLatestPublishJobForPost = `-- name: GetLatestPublishJobForPost :one
-SELECT id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at FROM publish_jobs WHERE post_slug=? AND user_id=? AND post_created_at=?
+SELECT id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at, target_language, content_language, voice_source_language, error_reason, error_params, technical_detail FROM publish_jobs WHERE post_slug=? AND user_id=? AND post_created_at=?
 ORDER BY created_at DESC,id DESC LIMIT 1
 `
 
@@ -483,6 +514,12 @@ func (q *Queries) GetLatestPublishJobForPost(ctx context.Context, arg GetLatestP
 		&i.CommittedAt,
 		&i.PublishedAt,
 		&i.UpdatedAt,
+		&i.TargetLanguage,
+		&i.ContentLanguage,
+		&i.VoiceSourceLanguage,
+		&i.ErrorReason,
+		&i.ErrorParams,
+		&i.TechnicalDetail,
 	)
 	return i, err
 }
@@ -522,7 +559,7 @@ func (q *Queries) GetOwnedAgent(ctx context.Context, arg GetOwnedAgentParams) (P
 }
 
 const getOwnedPublishJob = `-- name: GetOwnedPublishJob :one
-SELECT id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at FROM publish_jobs WHERE id=? AND user_id=?
+SELECT id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at, target_language, content_language, voice_source_language, error_reason, error_params, technical_detail FROM publish_jobs WHERE id=? AND user_id=?
 `
 
 type GetOwnedPublishJobParams struct {
@@ -557,6 +594,12 @@ func (q *Queries) GetOwnedPublishJob(ctx context.Context, arg GetOwnedPublishJob
 		&i.CommittedAt,
 		&i.PublishedAt,
 		&i.UpdatedAt,
+		&i.TargetLanguage,
+		&i.ContentLanguage,
+		&i.VoiceSourceLanguage,
+		&i.ErrorReason,
+		&i.ErrorParams,
+		&i.TechnicalDetail,
 	)
 	return i, err
 }
@@ -672,7 +715,7 @@ func (q *Queries) ListPublishAssets(ctx context.Context, jobID string) ([]Publis
 }
 
 const listRetryablePublishJobs = `-- name: ListRetryablePublishJobs :many
-SELECT id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at FROM publish_jobs
+SELECT id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at, target_language, content_language, voice_source_language, error_reason, error_params, technical_detail FROM publish_jobs
 WHERE user_id=? AND status='needs_attention' AND committed_at IS NULL
   AND manifest_json IS NOT NULL
 ORDER BY updated_at DESC,id DESC
@@ -711,6 +754,12 @@ func (q *Queries) ListRetryablePublishJobs(ctx context.Context, userID string) (
 			&i.CommittedAt,
 			&i.PublishedAt,
 			&i.UpdatedAt,
+			&i.TargetLanguage,
+			&i.ContentLanguage,
+			&i.VoiceSourceLanguage,
+			&i.ErrorReason,
+			&i.ErrorParams,
+			&i.TechnicalDetail,
 		); err != nil {
 			return nil, err
 		}
@@ -778,21 +827,23 @@ func (q *Queries) LockReadyAgentForPublish(ctx context.Context, arg LockReadyAge
 const markExpiredCommittedJobsUnknown = `-- name: MarkExpiredCommittedJobsUnknown :execrows
 UPDATE publish_jobs
 SET status='outcome_unknown',manifest_json=NULL,lease_token_hash=NULL,lease_expires_at=NULL,
-    error_code=?,error_message=?,updated_at=?
+    error_code=NULL,error_message=NULL,error_reason=?,error_params=?,technical_detail=?,updated_at=?
 WHERE status='running' AND stage IN ('committing','verifying') AND lease_expires_at<=?
 `
 
 type MarkExpiredCommittedJobsUnknownParams struct {
-	ErrorCode      sql.NullString
-	ErrorMessage   sql.NullString
-	UpdatedAt      string
-	LeaseExpiresAt sql.NullString
+	ErrorReason     sql.NullString
+	ErrorParams     sql.NullString
+	TechnicalDetail sql.NullString
+	UpdatedAt       string
+	LeaseExpiresAt  sql.NullString
 }
 
 func (q *Queries) MarkExpiredCommittedJobsUnknown(ctx context.Context, arg MarkExpiredCommittedJobsUnknownParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, markExpiredCommittedJobsUnknown,
-		arg.ErrorCode,
-		arg.ErrorMessage,
+		arg.ErrorReason,
+		arg.ErrorParams,
+		arg.TechnicalDetail,
 		arg.UpdatedAt,
 		arg.LeaseExpiresAt,
 	)
@@ -861,7 +912,8 @@ func (q *Queries) RenewPublishLease(ctx context.Context, arg RenewPublishLeasePa
 
 const requeueExpiredPreCommitJobs = `-- name: RequeueExpiredPreCommitJobs :execrows
 UPDATE publish_jobs
-SET status='queued',stage='queued',progress_seq=0,lease_token_hash=NULL,lease_expires_at=NULL,updated_at=?
+SET status='queued',stage='queued',progress_seq=0,lease_token_hash=NULL,lease_expires_at=NULL,
+    error_code=NULL,error_message=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL,updated_at=?
 WHERE status='running' AND stage NOT IN ('committing','verifying','published') AND lease_expires_at<=?
 `
 
@@ -899,7 +951,9 @@ func (q *Queries) ReservePublishJobID(ctx context.Context, arg ReservePublishJob
 
 const retryAttentionPublishJob = `-- name: RetryAttentionPublishJob :execrows
 UPDATE publish_jobs
-SET status='queued',stage='queued',progress_seq=0,error_code=NULL,error_message=NULL,updated_at=?
+SET status='queued',stage='queued',progress_seq=0,
+    error_code=NULL,error_message=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL,
+    updated_at=?
 WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.status='needs_attention'
   AND publish_jobs.committed_at IS NULL AND publish_jobs.manifest_json IS NOT NULL
   AND EXISTS (

@@ -3,26 +3,29 @@
 Canonical rules that are **currently true** in the code. Source: [plan/07](../plan/07.ai-revision.md), built by job
 12; voice scoping from [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18; and the Korean
 naturalness floor from [plan/06](../plan/06.two-stage-generation-and-contact-sheet.md), job 36. The shared content and queue rules remain canonical in [generation](generation.md); voice profile ownership and
-rule behavior remain canonical in [voice](voice.md).
+rule behavior remain canonical in [voice](voice.md). Content-language preservation is from
+[plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
 
 ## Request and queue contract
 
 - Revision is a durable `revise` job. `StartRevision` validates the authenticated user's post, existing content, a
-  trimmed non-empty instruction of at most `500` Unicode characters, and an enabled explicit write model before it
-  enqueues and returns the job id.
+  concrete `content_language`, a trimmed non-empty instruction of at most `500` Unicode characters, and an enabled
+  explicit write model before it enqueues and returns the job id. It freezes content language and never substitutes
+  the post's newer target language.
 - The one-active-job-per-post queue constraint is authoritative. A collision is `FailedPrecondition` and carries the
   active job id; revision uses the same polling, progress, restart, and boot recovery mechanics as generation.
 - The post's voice must be active; a deleted voice is `FailedPrecondition` before enqueue, rule append, or any
   provider call. Start freezes the post's exact `voice_id` on the job.
-- When “save as rule” is checked, the trimmed instruction is appended to the **post's current voice** before
-  enqueue — never to the default or another voice. That preference remains even if enqueue or the provider call later
-  fails. Exact trimmed duplicate lines are not appended twice.
+- When “save as rule” is checked, content language must equal the current voice's immutable source language. A
+  mismatch is refused before any rule or job is created. When eligible, the trimmed instruction is appended to the
+  **post's current voice** before enqueue — never to the default or another voice. That preference remains even if
+  enqueue or the provider call later fails. Exact trimmed duplicate lines are not appended twice.
 
 ## Prompt and output
 
-- Every revision reloads and injects the complete current profile of the frozen voice in canonical order:
-  styleguide → active contrast rules → recent excerpts → user rules → ending constraint. No profile or prompt state
-  from an earlier revision is reused, and no other voice's data is consulted.
+- Every revision reloads the current profile of the frozen voice and projects it relative to frozen content language.
+  Equal languages receive the complete profile in canonical order; cross-language revision receives only the portable
+  allowlist. No profile or prompt state from an earlier revision is reused, and no other voice's data is consulted.
 - Before that profile, every Korean revision injects the same fixed `[한국어 자연 문체 기준선]` bytes used by a fresh
   write. The section itself limits the floor to requested changes in `TEXT` prose and excludes titles, summaries,
   `HEADING`/`LIST` content, and untouched text. The profile, active contrast rules, and user rules override it on
@@ -34,12 +37,13 @@ rule behavior remain canonical in [voice](voice.md).
   only.
 - The user prompt contains the current full `PostContent`, the attached filenames, and the instruction. It requires
   the smallest requested change, verbatim preservation of unrelated sentences, unchanged title/summary/tags unless
-  requested, immutable attached filenames, and a complete replacement `PostContent` rather than a diff.
+  requested, immutable attached filenames, preservation of the frozen content language, no translation semantics,
+  and a complete replacement `PostContent` rather than a diff.
 - Provider output uses the generation parser and the same block validator. IMAGE blocks are then filtered with exact,
   case-sensitive filenames from a fresh attachment snapshot taken after the provider call, so deletion during an
   in-flight revision cannot leave a dangling image reference. Reordering attached IMAGE blocks is preserved.
-- Successful revision replaces the whole canonical content through `post.SetGeneratedContent`; status remains
-  `review`. There is no revision history or partial-range update.
+- Successful revision replaces the whole canonical content and machine baseline atomically while preserving the
+  frozen `content_language`; status remains `review`. There is no revision history or partial-range update.
 
 ## Frontend behavior
 

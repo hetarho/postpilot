@@ -20,21 +20,30 @@ type ruleComparisonSnapshot struct {
 	Profile              StructuredProfile `json:"profile"`
 	TargetLength         *int              `json:"target_length,omitempty"`
 	EndingMaxConsecutive int               `json:"ending_max_consecutive"`
+	SourceLanguage       Language          `json:"source_language"`
 }
 
 // StartRuleComparison derives the voice from the owned rule; the source must belong to that
 // same voice, so a same-account source from another voice reads as not found.
 func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourceID string, targetLength *int, model llm.ModelRef) (string, string, error) {
-	if !s.personalizationModels.ModelEnabled(model) {
-		return "", "", ErrAnalyzeModelRequired
-	}
 	rule, err := s.personalization.GetRule(ctx, userID, ruleID)
 	if err != nil {
 		return "", "", err
 	}
 	voiceID := rule.VoiceID
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+	active, err := s.activeVoice(ctx, userID, voiceID)
+	if err != nil {
 		return "", "", err
+	}
+	source, err := s.personalization.GetAuthoredSource(ctx, userID, voiceID, sourceID)
+	if err != nil {
+		return "", "", err
+	}
+	if err = requireSourceLanguageMatch(source, active); err != nil {
+		return "", "", err
+	}
+	if !s.personalizationModels.ModelEnabled(model) {
+		return "", "", ErrAnalyzeModelRequired
 	}
 	if err := s.retireStaleRules(ctx, userID, voiceID); err != nil {
 		return "", "", err
@@ -44,10 +53,6 @@ func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourc
 	}
 	if rule.Status != RuleCandidate || rule.EvidenceCount < 1 || rule.EvidenceCount > 2 {
 		return "", "", ErrInvalidLifecycle
-	}
-	source, err := s.personalization.GetAuthoredSource(ctx, userID, voiceID, sourceID)
-	if err != nil {
-		return "", "", err
 	}
 	profile, err := s.Get(ctx, userID, voiceID)
 	if err != nil {
@@ -59,7 +64,7 @@ func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourc
 	if targetLength != nil && *targetLength <= 0 {
 		return "", "", ErrInvalidLifecycle
 	}
-	snapshot, err := json.Marshal(ruleComparisonSnapshot{Rule: rule, Source: source, Profile: profile.Structured, TargetLength: targetLength, EndingMaxConsecutive: s.config.EndingMaxConsecutive})
+	snapshot, err := json.Marshal(ruleComparisonSnapshot{Rule: rule, Source: source, Profile: profile.Structured, TargetLength: targetLength, EndingMaxConsecutive: s.config.EndingMaxConsecutive, SourceLanguage: active.SourceLanguage})
 	if err != nil {
 		return "", "", err
 	}
@@ -68,7 +73,7 @@ func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourc
 	if id[0] >= '8' {
 		side = "right"
 	}
-	comparison := RuleComparison{ID: id, UserID: userID, VoiceID: voiceID, RuleID: ruleID, SourceID: sourceID, ProfileVersion: profile.Structured.Version, ModelRef: model.String(), TargetLength: targetLength, InputSnapshot: string(snapshot), RuleOnSide: side, Status: "queued", CreatedAt: s.now(), Candidates: []ComparisonCandidate{{ID: s.newID(), ComparisonID: id, DisplaySide: "left", Status: "pending"}, {ID: s.newID(), ComparisonID: id, DisplaySide: "right", Status: "pending"}}}
+	comparison := RuleComparison{ID: id, UserID: userID, VoiceID: voiceID, RuleID: ruleID, SourceID: sourceID, ProfileVersion: profile.Structured.Version, ModelRef: model.String(), TargetLength: targetLength, InputSnapshot: string(snapshot), RuleOnSide: side, Status: "queued", CreatedAt: s.now(), SourceLanguage: active.SourceLanguage, Candidates: []ComparisonCandidate{{ID: s.newID(), ComparisonID: id, DisplaySide: "left", Status: "pending"}, {ID: s.newID(), ComparisonID: id, DisplaySide: "right", Status: "pending"}}}
 	if err = s.personalization.InsertRuleComparison(ctx, comparison); err != nil {
 		return "", "", err
 	}
@@ -81,7 +86,7 @@ func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourc
 		return id, "", err
 	}
 	if err = s.personalization.SetRuleComparisonJob(ctx, userID, id, jobID); err != nil {
-		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, "comparison job could not be linked")
+		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, Failure{Reason: FailureReasonUnknown})
 		if cancelErr != nil {
 			return id, jobID, fmt.Errorf("link comparison job: %w; cancel queued job: %v", err, cancelErr)
 		}
@@ -103,6 +108,23 @@ func (s *Service) GetRuleComparison(ctx context.Context, userID, id string) (Rul
 	return s.personalization.GetRuleComparison(ctx, userID, id)
 }
 
+func (s *Service) comparisonSource(ctx context.Context, comparison RuleComparison, active Voice) (AuthoredSource, error) {
+	if !comparison.SourceLanguage.Valid() || comparison.SourceLanguage != active.SourceLanguage {
+		return AuthoredSource{}, contentLanguageMismatch(comparison.SourceLanguage, active.SourceLanguage)
+	}
+	source, err := s.personalization.GetAuthoredSource(ctx, comparison.UserID, comparison.VoiceID, comparison.SourceID)
+	if err != nil {
+		return AuthoredSource{}, err
+	}
+	if err = requireSourceLanguageMatch(source, active); err != nil {
+		return AuthoredSource{}, err
+	}
+	if source.SourceLanguage != comparison.SourceLanguage {
+		return AuthoredSource{}, contentLanguageMismatch(source.SourceLanguage, comparison.SourceLanguage)
+	}
+	return source, nil
+}
+
 func (s *Service) RetryRuleComparison(ctx context.Context, userID, id string) (string, error) {
 	comparison, err := s.personalization.GetRuleComparison(ctx, userID, id)
 	if err != nil {
@@ -111,21 +133,23 @@ func (s *Service) RetryRuleComparison(ctx context.Context, userID, id string) (s
 	if comparison.ChosenSide != "" || comparison.Status == "review" {
 		return "", ErrInvalidLifecycle
 	}
-	if _, err := s.activeVoice(ctx, userID, comparison.VoiceID); err != nil {
+	active, err := s.activeVoice(ctx, userID, comparison.VoiceID)
+	if err != nil {
+		return "", err
+	}
+	source, err := s.comparisonSource(ctx, comparison, active)
+	if err != nil {
 		return "", err
 	}
 	for i := range comparison.Candidates {
 		if comparison.Candidates[i].Status == "failed" {
 			comparison.Candidates[i].Status = "pending"
 			comparison.Candidates[i].Error = ""
+			comparison.Candidates[i].Failure = nil
 		}
 	}
 	comparison.Status = "queued"
 	if err = s.personalization.UpdateRuleComparison(ctx, comparison); err != nil {
-		return "", err
-	}
-	source, err := s.personalization.GetAuthoredSource(ctx, userID, comparison.VoiceID, comparison.SourceID)
-	if err != nil {
 		return "", err
 	}
 	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: CompareRuleJobKind, UserID: userID, VoiceID: comparison.VoiceID, PostSlug: source.PostSlug, Model: comparison.ModelRef, Payload: id})
@@ -135,7 +159,7 @@ func (s *Service) RetryRuleComparison(ctx context.Context, userID, id string) (s
 		return "", err
 	}
 	if err = s.personalization.SetRuleComparisonJob(ctx, userID, id, jobID); err != nil {
-		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, "comparison retry could not be linked")
+		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, Failure{Reason: FailureReasonUnknown})
 		if cancelErr == nil && cancelled {
 			comparison.Status = "failed"
 			_ = s.personalization.UpdateRuleComparison(ctx, comparison)
@@ -150,6 +174,9 @@ func (s *Service) RetryRuleComparison(ctx context.Context, userID, id string) (s
 }
 
 func BuildRuleComparisonPrompts(snapshot ruleComparisonSnapshot) (string, string) {
+	if snapshot.SourceLanguage == LanguageEnglish {
+		return buildEnglishRuleComparisonPrompts(snapshot)
+	}
 	endingMax := snapshot.EndingMaxConsecutive
 	if endingMax <= 0 {
 		endingMax = 2
@@ -165,17 +192,34 @@ func BuildRuleComparisonPrompts(snapshot ruleComparisonSnapshot) (string, string
 	return off, on
 }
 
+func buildEnglishRuleComparisonPrompts(snapshot ruleComparisonSnapshot) (string, string) {
+	base := "Write an English blog post. Preserve the measured register, contraction pattern, connective style, and sentence cadence.\n" + renderStructuredProfileForLanguage(snapshot.Profile, LanguageEnglish) + "\nDo not copy distinctive wording or subject matter from the example.\n"
+	if snapshot.TargetLength != nil {
+		base += fmt.Sprintf("Target approximately %d characters.\n", *snapshot.TargetLength)
+	}
+	base += "[Candidate rule]\n"
+	topic := "[Topic]\n" + snapshot.Source.Title + "\nTags: " + strings.Join(snapshot.Source.Tags, ", ")
+	return base + topic, base + snapshot.Rule.Statement + "\n" + topic
+}
+
 func (s *Service) CompareRule(ctx context.Context, userID, comparisonID, modelRef string, progress Progress) error {
 	comparison, err := s.personalization.GetRuleComparison(ctx, userID, comparisonID)
 	if err != nil {
 		return err
 	}
-	if _, err := s.activeVoice(ctx, userID, comparison.VoiceID); err != nil {
+	active, err := s.activeVoice(ctx, userID, comparison.VoiceID)
+	if err != nil {
 		return voiceUnavailableError(err)
+	}
+	if _, err = s.comparisonSource(ctx, comparison, active); err != nil {
+		return err
 	}
 	var snapshot ruleComparisonSnapshot
 	if err = json.Unmarshal([]byte(comparison.InputSnapshot), &snapshot); err != nil {
 		return err
+	}
+	if snapshot.SourceLanguage != comparison.SourceLanguage || snapshot.Source.SourceLanguage != comparison.SourceLanguage {
+		return contentLanguageMismatch(snapshot.SourceLanguage, comparison.SourceLanguage)
 	}
 	model, err := parseModelRef(modelRef)
 	if err != nil {
@@ -204,7 +248,11 @@ func (s *Service) CompareRule(ctx context.Context, userID, comparisonID, modelRe
 			if comparison.Candidates[index].DisplaySide == comparison.RuleOnSide {
 				prompt = on
 			}
-			response, e := s.models.Complete(ctx, model, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart("글 본문만 반환하세요.")}}}})
+			userInstruction := "글 본문만 반환하세요."
+			if comparison.SourceLanguage == LanguageEnglish {
+				userInstruction = "Return only the article body."
+			}
+			response, e := s.models.Complete(ctx, model, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(userInstruction)}}}})
 			results <- result{i: index, output: response.Text, err: e}
 		}(i)
 	}
@@ -213,10 +261,14 @@ func (s *Service) CompareRule(ctx context.Context, userID, comparisonID, modelRe
 		candidate := &comparison.Candidates[result.i]
 		if result.err != nil {
 			candidate.Status = "failed"
-			candidate.Error = result.err.Error()
+			candidate.Error = ""
+			failure := normalizeFailure(result.err)
+			candidate.Failure = &failure
 		} else {
 			candidate.Status = "succeeded"
 			candidate.Output = result.output
+			candidate.Error = ""
+			candidate.Failure = nil
 			done++
 		}
 		progress("compare_rule", done, 2)
@@ -243,7 +295,11 @@ func (s *Service) DecideRuleComparison(ctx context.Context, userID, id, side str
 	if !comparisonReadyForDecision(comparison) {
 		return RuleComparison{}, ErrInvalidLifecycle
 	}
-	if _, err := s.activeVoice(ctx, userID, comparison.VoiceID); err != nil {
+	active, err := s.activeVoice(ctx, userID, comparison.VoiceID)
+	if err != nil {
+		return RuleComparison{}, err
+	}
+	if _, err = s.comparisonSource(ctx, comparison, active); err != nil {
 		return RuleComparison{}, err
 	}
 	now := s.now()
@@ -293,8 +349,17 @@ func (s *Service) StartValidation(ctx context.Context, userID, voiceID string, a
 	if analyze.ProviderID == "" || analyze.ModelID == "" || write.ProviderID == "" || write.ModelID == "" {
 		return "", "", ErrAnalyzeModelRequired
 	}
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+	active, err := s.activeVoice(ctx, userID, voiceID)
+	if err != nil {
 		return "", "", err
+	}
+	sources, err := s.personalization.ListAuthoredSources(ctx, userID, voiceID)
+	if err != nil {
+		return "", "", err
+	}
+	sources = authoredSourcesForLanguage(sources, active.SourceLanguage)
+	if len(sources) < s.config.ValidationPostCount {
+		return "", "", &InsufficientSourcesError{Minimum: s.config.ValidationPostCount}
 	}
 	if err := s.retireStaleRules(ctx, userID, voiceID); err != nil {
 		return "", "", err
@@ -306,20 +371,13 @@ func (s *Service) StartValidation(ctx context.Context, userID, voiceID string, a
 	if !s.personalizationModels.ModelEnabled(write) {
 		return "", "", ErrAnalyzeModelRequired
 	}
-	sources, err := s.personalization.ListAuthoredSources(ctx, userID, voiceID)
-	if err != nil {
-		return "", "", err
-	}
-	if len(sources) < s.config.ValidationPostCount {
-		return "", "", ErrInsufficientSources
-	}
 	profile, err := s.Get(ctx, userID, voiceID)
 	if err != nil {
 		return "", "", err
 	}
 	id := s.newID()
 	selectedSources := pickValidationSources(id, sources, s.config.ValidationPostCount)
-	validation := ProfileValidation{ID: id, UserID: userID, VoiceID: voiceID, ProfileVersion: profile.Structured.Version, AnalyzeModelRef: selected.String(), WriteModelRef: write.String(), JudgeEnabled: judge, Status: "queued", CreatedAt: s.now()}
+	validation := ProfileValidation{ID: id, UserID: userID, VoiceID: voiceID, ProfileVersion: profile.Structured.Version, AnalyzeModelRef: selected.String(), WriteModelRef: write.String(), JudgeEnabled: judge, Status: "queued", CreatedAt: s.now(), SourceLanguage: active.SourceLanguage}
 	for i, source := range selectedSources {
 		validation.Items = append(validation.Items, ValidationItem{ID: s.newID(), ValidationID: id, SourceID: source.ID, Position: i, Original: source.Body, Status: "pending"})
 	}
@@ -337,7 +395,7 @@ func (s *Service) StartValidation(ctx context.Context, userID, voiceID string, a
 		return id, "", err
 	}
 	if err = s.personalization.SetProfileValidationJob(ctx, userID, id, jobID); err != nil {
-		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, "validation job could not be linked")
+		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, Failure{Reason: FailureReasonUnknown})
 		if cancelErr != nil {
 			return id, jobID, fmt.Errorf("link validation job: %w; cancel queued job: %v", err, cancelErr)
 		}
@@ -364,6 +422,47 @@ func pickValidationSources(seed string, sources []AuthoredSource, count int) []A
 	})
 	return out[:min(count, len(out))]
 }
+
+func (s *Service) requireValidationSources(ctx context.Context, validation ProfileValidation, active Voice) error {
+	if !validation.SourceLanguage.Valid() || validation.SourceLanguage != active.SourceLanguage {
+		return contentLanguageMismatch(validation.SourceLanguage, active.SourceLanguage)
+	}
+	for _, item := range validation.Items {
+		source, err := s.personalization.GetAuthoredSource(ctx, validation.UserID, validation.VoiceID, item.SourceID)
+		if err != nil {
+			return err
+		}
+		if err = requireSourceLanguageMatch(source, active); err != nil {
+			return err
+		}
+		if source.SourceLanguage != validation.SourceLanguage {
+			return contentLanguageMismatch(source.SourceLanguage, validation.SourceLanguage)
+		}
+	}
+	return nil
+}
+
+func validationSummaryPrompt(language Language) string {
+	if language == LanguageEnglish {
+		return "Summarize only the topic and facts of the following article in one or two English sentences. Do not reuse or describe its wording, style, contractions, or sentence cadence."
+	}
+	return "다음 글의 주제와 사실만 한국어 1–2문장으로 요약하세요. 원문의 문구, 문체, 종결어미를 재사용하거나 설명하지 마세요."
+}
+
+func validationWritePrompt(language Language, profile StructuredProfile, endingMax int) string {
+	if language == LanguageEnglish {
+		return fmt.Sprintf("%s\nUsing only the neutral topic summary below, write a new English article that follows the profile's register, contractions, connectives, passive/nominal tendency, and sentence cadence.", renderStructuredProfileForLanguage(profile, LanguageEnglish))
+	}
+	return fmt.Sprintf("%s\n같은 종결어미를 %d문장보다 많이 연속 쓰지 말고 아래의 중립 주제 요약만으로 새 글을 쓰세요.", renderStructuredProfile(profile), endingMax)
+}
+
+func validationJudgePrompt(language Language) string {
+	if language == LanguageEnglish {
+		return "Ignore topic overlap and evaluate exactly five dimensions as true/false JSON only: endings (English register, contractions, and cadence), sentence_rhythm, opening_closing, vocabulary, addressee."
+	}
+	return "주제 일치는 무시하고 endings, sentence_rhythm, opening_closing, vocabulary, addressee 다섯 항목을 true/false JSON으로만 평가하세요."
+}
+
 func (s *Service) GetValidation(ctx context.Context, userID, id string) (ProfileValidation, error) {
 	return s.personalization.GetProfileValidation(ctx, userID, id)
 }
@@ -382,13 +481,18 @@ func (s *Service) RetryValidation(ctx context.Context, userID, id string) (strin
 	if validation.Status == "done" {
 		return "", ErrInvalidLifecycle
 	}
-	if _, err := s.activeVoice(ctx, userID, validation.VoiceID); err != nil {
+	active, err := s.activeVoice(ctx, userID, validation.VoiceID)
+	if err != nil {
+		return "", err
+	}
+	if err = s.requireValidationSources(ctx, validation, active); err != nil {
 		return "", err
 	}
 	for i := range validation.Items {
 		if validation.Items[i].Status == "failed" {
 			validation.Items[i].Status = "pending"
 			validation.Items[i].Error = ""
+			validation.Items[i].Failure = nil
 		}
 	}
 	validation.Status = "queued"
@@ -405,7 +509,7 @@ func (s *Service) RetryValidation(ctx context.Context, userID, id string) (strin
 		return "", err
 	}
 	if err = s.personalization.SetProfileValidationJob(ctx, userID, id, jobID); err != nil {
-		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, "validation retry could not be linked")
+		cancelled, cancelErr := s.personalizationJobs.FailQueuedPersonalization(ctx, jobID, userID, Failure{Reason: FailureReasonUnknown})
 		if cancelErr == nil && cancelled {
 			validation.Status = "failed"
 			now := s.now()
@@ -426,8 +530,12 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 	if err != nil {
 		return err
 	}
-	if _, err := s.activeVoice(ctx, userID, validation.VoiceID); err != nil {
+	active, err := s.activeVoice(ctx, userID, validation.VoiceID)
+	if err != nil {
 		return voiceUnavailableError(err)
+	}
+	if err = s.requireValidationSources(ctx, validation, active); err != nil {
+		return err
 	}
 	version, err := s.personalization.GetProfileVersion(ctx, userID, validation.VoiceID, validation.ProfileVersion)
 	if err != nil {
@@ -451,10 +559,9 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 			continue
 		}
 		if item.NeutralSummary == "" {
-			summaryResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: "다음 글의 주제와 사실만 한국어 1–2문장으로 요약하세요. 원문의 문구, 문체, 종결어미를 재사용하거나 설명하지 마세요.", Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.Original)}}}})
+			summaryResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: validationSummaryPrompt(validation.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.Original)}}}})
 			if e != nil {
-				item.Status = "failed"
-				item.Error = e.Error()
+				setValidationItemFailure(item, e)
 				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
 					return persistErr
 				}
@@ -463,16 +570,14 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 			summary := strings.TrimSpace(summaryResponse.Text)
 			summarySentences := SegmentSentences(summary)
 			if len(summarySentences) < 1 || len(summarySentences) > 2 {
-				item.Status = "failed"
-				item.Error = "neutral summary must contain one or two sentences"
+				setValidationItemFailure(item, fmt.Errorf("neutral summary must contain one or two sentences"))
 				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
 					return persistErr
 				}
 				continue
 			}
 			if reusesWording(item.Original, summary) {
-				item.Status = "failed"
-				item.Error = "neutral summary reused source wording"
+				setValidationItemFailure(item, fmt.Errorf("neutral summary reused source wording"))
 				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
 					return persistErr
 				}
@@ -480,16 +585,15 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 			}
 			item.NeutralSummary = summary
 			item.Status = "summarized"
-			item.Error = ""
+			clearValidationItemFailure(item)
 			if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
 				return persistErr
 			}
 		}
 		if item.Regenerated == "" {
-			writeResponse, e := s.models.Complete(ctx, write, llm.Request{System: fmt.Sprintf("%s\n같은 종결어미를 %d문장보다 많이 연속 쓰지 말고 아래의 중립 주제 요약만으로 새 글을 쓰세요.", renderStructuredProfile(version.Profile), s.config.EndingMaxConsecutive), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.NeutralSummary)}}}})
+			writeResponse, e := s.models.Complete(ctx, write, llm.Request{System: validationWritePrompt(validation.SourceLanguage, version.Profile, s.config.EndingMaxConsecutive), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.NeutralSummary)}}}})
 			if e != nil {
-				item.Status = "failed"
-				item.Error = e.Error()
+				setValidationItemFailure(item, e)
 				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
 					return persistErr
 				}
@@ -497,16 +601,15 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 			}
 			item.Regenerated = strings.TrimSpace(writeResponse.Text)
 			item.Status = "generated"
-			item.Error = ""
+			clearValidationItemFailure(item)
 			if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
 				return persistErr
 			}
 		}
 		if validation.JudgeEnabled && item.ScoresJSON == "" {
-			judgeResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: "주제 일치는 무시하고 endings, sentence_rhythm, opening_closing, vocabulary, addressee 다섯 항목을 true/false JSON으로만 평가하세요.", Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart("original:\n" + item.Original + "\nregenerated:\n" + item.Regenerated)}}}})
+			judgeResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: validationJudgePrompt(validation.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart("original:\n" + item.Original + "\nregenerated:\n" + item.Regenerated)}}}})
 			if e != nil {
-				item.Status = "failed"
-				item.Error = e.Error()
+				setValidationItemFailure(item, e)
 				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
 					return persistErr
 				}
@@ -514,8 +617,7 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 			}
 			scores := map[string]bool{}
 			if e = json.Unmarshal([]byte(judgeResponse.Text), &scores); e != nil || !validJudgeScores(scores) {
-				item.Status = "failed"
-				item.Error = "judge returned invalid five-dimension JSON"
+				setValidationItemFailure(item, fmt.Errorf("judge returned invalid five-dimension JSON"))
 				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
 					return persistErr
 				}
@@ -530,7 +632,7 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 				}
 			}
 			item.Status = "scored"
-			item.Error = ""
+			clearValidationItemFailure(item)
 			if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
 				return persistErr
 			}
@@ -553,6 +655,18 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 		validation.Status = "failed"
 	}
 	return s.personalization.UpdateProfileValidation(ctx, validation)
+}
+
+func setValidationItemFailure(item *ValidationItem, cause error) {
+	failure := normalizeFailure(cause)
+	item.Status = "failed"
+	item.Error = ""
+	item.Failure = &failure
+}
+
+func clearValidationItemFailure(item *ValidationItem) {
+	item.Error = ""
+	item.Failure = nil
 }
 
 func reusesWording(source, summary string) bool {

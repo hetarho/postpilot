@@ -52,7 +52,50 @@ var (
 	// ErrBaselineVoiceMismatch: the post's machine baseline was written under a voice the
 	// post no longer belongs to, so the finalized text is not evidence about the current one.
 	ErrBaselineVoiceMismatch = errors.New("the machine baseline was written under another voice")
+	ErrLanguageRequired      = errors.New("a content language is required")
+	ErrLanguageUnsupported   = errors.New("the content language is unsupported")
+	// ErrContentLanguageMismatch protects every post-derived learning boundary: content
+	// may teach only a voice whose immutable source language is the same.
+	ErrContentLanguageMismatch = errors.New("post content language does not match voice source language")
 )
+
+// Language is the voice context's pure canonical source/target language. Conversion to
+// proto enums and SQL tags stays at the context edges.
+type Language string
+
+const (
+	LanguageKorean  Language = "ko"
+	LanguageEnglish Language = "en"
+)
+
+func ParseLanguage(value string) (Language, error) {
+	language := Language(value)
+	if !language.Valid() {
+		return "", fmt.Errorf("%w: %q", ErrLanguageRequired, value)
+	}
+	return language, nil
+}
+
+func (l Language) Valid() bool { return l == LanguageKorean || l == LanguageEnglish }
+
+// ContentLanguageMismatchError carries only canonical language tags. They are safe for
+// the RPC edge to expose as localized-message parameters; authored content and ids never
+// enter this error.
+type ContentLanguageMismatchError struct {
+	ContentLanguage Language
+	SourceLanguage  Language
+}
+
+type InsufficientSourcesError struct{ Minimum int }
+
+func (e *InsufficientSourcesError) Error() string { return ErrInsufficientSources.Error() }
+func (e *InsufficientSourcesError) Unwrap() error { return ErrInsufficientSources }
+
+func (e *ContentLanguageMismatchError) Error() string {
+	return fmt.Sprintf("%v: content=%q source=%q", ErrContentLanguageMismatch, e.ContentLanguage, e.SourceLanguage)
+}
+
+func (e *ContentLanguageMismatchError) Unwrap() error { return ErrContentLanguageMismatch }
 
 type SampleTooShortError struct{ Chars int }
 
@@ -73,13 +116,14 @@ func (e *VoiceNameError) Error() string {
 // Voice is the aggregate root the directory manages. DeletedAt is a tombstone: the voice
 // keeps its profile and its posts and stays readable, but cannot start or receive AI work.
 type Voice struct {
-	ID        string
-	UserID    string
-	Name      string
-	IsDefault bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time
+	ID             string
+	UserID         string
+	Name           string
+	IsDefault      bool
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DeletedAt      *time.Time
+	SourceLanguage Language
 }
 
 func (v Voice) Deleted() bool { return v.DeletedAt != nil }
@@ -148,6 +192,7 @@ type EndingsProfile struct {
 }
 type SyntaxProfile struct {
 	AverageSentenceChars            float64
+	AverageSentenceWords            *float64
 	SentenceLength, ConnectiveStyle VoiceValue
 	PreferredConnectives            []string
 	Nominalization, PassiveTendency VoiceValue
@@ -207,6 +252,7 @@ type AuthoredSource struct {
 	Tags                                                  []string
 	Body, Excerpt, EmbeddingRef                           string
 	CreatedAt                                             time.Time
+	SourceLanguage                                        Language
 }
 type Feedback struct {
 	ID, UserID, VoiceID, PostSlug, SentenceRef, Kind, Reason, PayloadRef, ProcessingState string
@@ -256,6 +302,7 @@ type FinalizationInput struct {
 	Tags                                                                       []string
 	BaselineRevision, ContentRevision                                          int64
 	TargetLength                                                               *int
+	ContentLanguage, VoiceSourceLanguage                                       Language
 }
 
 // LearningEvent freezes VoiceID at finalization; a retry follows the event, not the post's
@@ -266,6 +313,8 @@ type LearningEvent struct {
 	InputHash, BaselineJSON, FinalJSON, ModelRef, Status, JobID, Error string
 	CreatedAt                                                          time.Time
 	ProcessedAt                                                        *time.Time
+	ContentLanguage, SourceLanguage                                    Language
+	Failure                                                            *Failure
 }
 type LearningJob struct{ UserID, EventID, WriteModel string }
 type LearningResult struct {
@@ -299,8 +348,12 @@ type RuleComparison struct {
 	DecidedAt                                            *time.Time
 	ActivationEvidence                                   int
 	ProfileAfterDecision                                 *StructuredProfile
+	SourceLanguage                                       Language
 }
-type ComparisonCandidate struct{ ID, ComparisonID, DisplaySide, Output, Status, Error string }
+type ComparisonCandidate struct {
+	ID, ComparisonID, DisplaySide, Output, Status, Error string
+	Failure                                              *Failure
+}
 type ProfileValidation struct {
 	ID, UserID, VoiceID            string
 	ProfileVersion                 int64
@@ -311,11 +364,13 @@ type ProfileValidation struct {
 	Items                          []ValidationItem
 	CreatedAt                      time.Time
 	FinishedAt                     *time.Time
+	SourceLanguage                 Language
 }
 type ValidationItem struct {
 	ID, ValidationID, SourceID                                       string
 	Position                                                         int
 	Original, NeutralSummary, Regenerated, ScoresJSON, Status, Error string
+	Failure                                                          *Failure
 }
 
 type AnalysisJob struct {

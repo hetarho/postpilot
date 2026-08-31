@@ -28,6 +28,7 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
   const post = clone(PostSchema, cached.post)
   post.title = saved.title
   post.memo = saved.memo
+  post.targetLanguage = saved.targetLanguage
   if (saved.voice) {
     if (saved.voice.id !== cached.post.voice?.id) {
       post.machineBaselineRevision = saved.machineBaselineRevision

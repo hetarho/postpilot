@@ -1,7 +1,7 @@
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostImage } from '@/entities/image'
 import type { ModelRef } from '@/entities/model-catalog'
-import { DELETED_VOICE_AI_REASON, type VoiceRef } from '@/entities/voice'
+import { deletedVoiceAIReason, type VoiceRef } from '@/entities/voice'
 
 export interface GenerationModelSelection {
   ref: ModelRef
@@ -19,14 +19,15 @@ function sharedPreconditions(
   activeJob: Pick<GenerationJob, 'status'> | undefined,
   voice: Pick<VoiceRef, 'deleted'> | undefined,
 ): GenerationPreconditions {
-  if (voice?.deleted) return { ok: false, reason: DELETED_VOICE_AI_REASON }
+  if (voice?.deleted) return { ok: false, reason: deletedVoiceAIReason() }
   if (activeJob && activeJob.status !== 'done' && activeJob.status !== 'failed') {
-    return { ok: false, reason: '이미 생성 중이에요.' }
+    return { ok: false, reason: i18next.t('generation.blocked.active', { ns: 'posts' }) }
   }
   if (images.length === 0) return { ok: true, reason: '' }
-  if (!observeSelection) return { ok: false, reason: '관찰 모델을 선택하세요.' }
+  if (!observeSelection)
+    return { ok: false, reason: i18next.t('generation.blocked.observe', { ns: 'posts' }) }
   if (!observeSelection.vision) {
-    return { ok: false, reason: '사진을 볼 수 있는 관찰 모델을 선택하세요.' }
+    return { ok: false, reason: i18next.t('generation.blocked.vision', { ns: 'posts' }) }
   }
   return { ok: true, reason: '' }
 }
@@ -40,7 +41,8 @@ export function ordinaryGenerationPreconditions(
 ): GenerationPreconditions {
   const shared = sharedPreconditions(images, observeSelection, activeJob, voice)
   if (!shared.ok) return shared
-  if (!writeSelection) return { ok: false, reason: '활성 작성 모델을 선택하세요.' }
+  if (!writeSelection)
+    return { ok: false, reason: i18next.t('generation.blocked.write', { ns: 'posts' }) }
   return { ok: true, reason: '' }
 }
 
@@ -55,11 +57,12 @@ export function comparisonGenerationPreconditions(
   const shared = sharedPreconditions(images, observeSelection, activeJob, voice)
   if (!shared.ok) return shared
   if (!writeSelectionA || !writeSelectionB)
-    return { ok: false, reason: '작성 A/B 모델 두 개를 선택하세요.' }
+    return { ok: false, reason: i18next.t('generation.blocked.pair', { ns: 'posts' }) }
   if (
     writeSelectionA.ref.providerId === writeSelectionB.ref.providerId &&
     writeSelectionA.ref.modelId === writeSelectionB.ref.modelId
   )
-    return { ok: false, reason: '서로 다른 작성 모델을 선택하세요.' }
+    return { ok: false, reason: i18next.t('generation.blocked.different', { ns: 'posts' }) }
   return { ok: true, reason: '' }
 }
+import i18next from 'i18next'

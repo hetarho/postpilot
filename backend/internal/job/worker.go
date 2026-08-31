@@ -5,8 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"time"
-
-	"github.com/postpilot/backend/internal/llm"
 )
 
 // A terminal write is one SQLite update. It gets a fresh, bounded context so a
@@ -50,7 +48,7 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	handler := q.handler(found.Kind)
 	var runErr error
 	if handler == nil {
-		runErr = errors.New(missingHandlerMessage)
+		runErr = errHandlerMissing
 	} else {
 		runErr = callHandler(ctx, handler, found, func(stage string, done, total int) {
 			if err := q.store.UpdateProgress(ctx, found.ID, stage, done, total, q.now()); err != nil && ctx.Err() == nil {
@@ -67,13 +65,17 @@ func (q *Queue) run(ctx context.Context, found Job) {
 		return
 	}
 
-	status, message := StatusDone, ""
+	status := StatusDone
+	var failure *Failure
 	if runErr != nil {
-		status, message = StatusFailed, failureMessage(runErr)
+		status = StatusFailed
+		normalized := failureFromError(runErr)
+		failure = &normalized
+		slog.Error("job failed", "job", found.ID, "kind", found.Kind, "reason", normalized.Reason, "err", runErr)
 	}
 	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), finishTimeout)
 	defer cancel()
-	if err := q.store.Finish(finishCtx, found.ID, status, message, q.now()); err != nil {
+	if err := q.store.Finish(finishCtx, found.ID, status, failure, q.now()); err != nil {
 		slog.Error("finish job failed", "job", found.ID, "status", status, "err", err)
 	}
 }
@@ -82,16 +84,8 @@ func callHandler(ctx context.Context, handler Handler, found Job, progress Progr
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			slog.Error("job handler panicked", "job", found.ID, "kind", found.Kind, "panic", recovered)
-			err = errors.New(PanicMessage)
+			err = errHandlerPanicked
 		}
 	}()
 	return handler(ctx, found, progress)
-}
-
-func failureMessage(err error) string {
-	message := llm.UserMessage(err)
-	if message == "" {
-		return PanicMessage
-	}
-	return message
 }

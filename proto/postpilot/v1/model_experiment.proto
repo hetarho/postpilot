@@ -4,6 +4,8 @@ package postpilot.v1;
 
 import "postpilot/v1/post.proto";
 import "postpilot/v1/provider.proto";
+import "postpilot/v1/error.proto";
+import "postpilot/v1/language.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
@@ -82,11 +84,12 @@ message ExperimentCandidate {
     ObservationSet observation_set = 5;
     string styleguide = 6;
   }
-  string error = 7;
+  string error = 7 [deprecated = true];
   // Populated only after a verdict/dismissal. Blindness is enforced on the wire.
   ModelRef model = 8;
   string model_label = 9;
   CandidateUsage usage = 10;
+  Failure failure = 11;
 }
 
 message ModelExperiment {
@@ -98,13 +101,13 @@ message ModelExperiment {
   repeated ExperimentCandidate candidates = 6;
   string winner_candidate_id = 7;
   ExperimentOutcome outcome = 8;
-  string apply_error = 9;
+  string apply_error = 9 [deprecated = true];
   string created_at = 10;
   string finished_at = 11;
   string decided_at = 12;
   bool revealed = 13;
   string applied_at = 14;
-  string adoption_error = 15;
+  string adoption_error = 15 [deprecated = true];
   string adopted_at = 16;
 	bool adoption_requested = 17;
   // The frozen voice for analyze/write work and the only voice its result may affect.
@@ -114,6 +117,9 @@ message ModelExperiment {
   // say which brief both candidates were given. Empty when the post had none, and it keeps
   // the name the snapshot froze even after the purpose is renamed or deleted.
   string purpose_name = 19;
+  ContentLanguage target_language = 20;
+  Failure apply_failure = 21;
+  Failure adoption_failure = 22;
 }
 
 message StartObserveExperimentRequest {

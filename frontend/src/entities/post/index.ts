@@ -1,5 +1,5 @@
 export type { PostDraft, PostListItem, PostStatus } from './model/types'
-export { UNTITLED_TITLE, displayTitle, postStatusLabel } from './model/types'
+export { untitledTitle, displayTitle, postStatusLabel } from './model/types'
 export { blockKey, hasContent, imageByFile } from './model/content'
 export { BlockList } from './ui/BlockList'
 export type { PostLoadFailure } from './api/usePost'

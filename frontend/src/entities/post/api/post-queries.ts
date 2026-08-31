@@ -5,7 +5,13 @@ import { toPostImage } from '@/entities/image/@x/post'
 import { toGenerationJob } from '@/entities/generation-job/@x/post'
 import { toPurposeRef } from '@/entities/purpose/@x/post'
 import { toVoiceRef } from '@/entities/voice/@x/post'
-import { PostService, type Post, type PostSummary } from '@/shared/api'
+import {
+  contentLanguageFromProto,
+  PostService,
+  requireContentLanguage,
+  type Post,
+  type PostSummary,
+} from '@/shared/api'
 import type { PostDraft, PostListItem } from '../model/types'
 
 export function toPostDraft(post: Post): PostDraft {
@@ -30,6 +36,8 @@ export function toPostDraft(post: Post): PostDraft {
     targetLength: post.targetLength,
     finalizedRevision: post.finalizedRevision,
     finalizedAt: post.finalizedAt,
+    targetLanguage: requireContentLanguage(post.targetLanguage),
+    contentLanguage: contentLanguageFromProto(post.contentLanguage),
   }
 }
 
@@ -43,6 +51,8 @@ export function toPostListItem(summary: PostSummary): PostListItem {
     purpose: toPurposeRef(summary.purpose),
     activeJob: summary.activeJob ? toGenerationJob(summary.activeJob) : undefined,
     pendingExperimentId: summary.pendingExperimentId,
+    targetLanguage: requireContentLanguage(summary.targetLanguage),
+    contentLanguage: contentLanguageFromProto(summary.contentLanguage),
   }
 }
 

@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// The normalized failures callers can act on. A job layer maps these to what the user
-// sees (PRD §7: 한도 초과 → 다른 모델 선택 유도, 사라진 모델 → 다시 선택).
+// The normalized failures callers can act on. A job layer maps these stable reasons
+// to localized recovery guidance at the transport edge.
 var (
 	// ErrModelUnavailable: the ref is not in the registry, or the provider says the model
 	// does not exist (a free model that vanished — PRD §6.5).
@@ -26,28 +26,72 @@ var (
 	ErrOutputTruncated = errors.New("model output truncated by completion budget")
 )
 
-const outputTruncatedMessage = "모델이 답변을 만들기 전에 출력 예산을 모두 사용했어요. 목표 길이를 줄이거나 다른 모델을 선택해 주세요."
+// Stable failure reasons owned by the LLM context. They are intentionally prose-free:
+// callers persist or project them while choosing the user-facing copy at the edge.
+const (
+	FailureReasonProviderDisabled = "PROVIDER_DISABLED"
+	FailureReasonModelUnavailable = "MODEL_UNAVAILABLE"
+	FailureReasonModelRateLimited = "MODEL_RATE_LIMITED"
+	FailureReasonModelUnsupported = "MODEL_UNSUPPORTED"
+	FailureReasonOutputInvalid    = "MODEL_OUTPUT_INVALID"
+	FailureReasonOutputTruncated  = "MODEL_OUTPUT_TRUNCATED"
+	FailureReasonUnknown          = "UNKNOWN_FAILURE"
+)
 
-// UserMessage is the single mapping from an LLM failure to persisted user-facing
-// copy. Provider messages remain intact; the named truncation failure explains both
-// the cause and the remedy. Other existing failures retain their current text.
-func UserMessage(err error) string {
+// Failure is the provider-neutral, durable projection of an LLM error.
+//
+// Params is nil when there are no display-safe interpolation values. LLM failures
+// currently expose none: provider names, status text, and messages are not public
+// parameters. TechnicalDetail may contain the provider's original message and must
+// remain separate from localized user-facing copy.
+//
+// The zero value means no failure and is returned only for a nil error.
+type Failure struct {
+	Reason          string
+	Params          map[string]string
+	TechnicalDetail string
+}
+
+// NormalizeFailure converts provider and adapter failures into the context-owned
+// structured contract. It retains errors.Is behavior on the original error; callers
+// use this projection only for persistence or transport.
+func NormalizeFailure(err error) Failure {
 	if err == nil {
-		return ""
+		return Failure{}
 	}
+
+	failure := Failure{Reason: failureReason(err)}
 	var providerErr *ProviderError
-	if errors.As(err, &providerErr) && strings.TrimSpace(providerErr.Message) != "" {
-		return strings.TrimSpace(providerErr.Message)
+	if errors.As(err, &providerErr) {
+		// The provider's prose is deliberately technical-only. In particular, do not
+		// copy it into Params or make it the stable reason.
+		failure.TechnicalDetail = strings.TrimSpace(providerErr.Message)
 	}
-	if errors.Is(err, ErrOutputTruncated) {
-		return outputTruncatedMessage
+	return failure
+}
+
+func failureReason(err error) string {
+	switch {
+	case errors.Is(err, ErrProviderDisabled):
+		return FailureReasonProviderDisabled
+	case errors.Is(err, ErrModelUnavailable):
+		return FailureReasonModelUnavailable
+	case errors.Is(err, ErrRateLimited):
+		return FailureReasonModelRateLimited
+	case errors.Is(err, ErrUnsupported):
+		return FailureReasonModelUnsupported
+	case errors.Is(err, ErrOutputTruncated):
+		return FailureReasonOutputTruncated
+	case errors.Is(err, ErrBadOutput):
+		return FailureReasonOutputInvalid
+	default:
+		return FailureReasonUnknown
 	}
-	return strings.TrimSpace(err.Error())
 }
 
 // ProviderError is what an adapter returns for an HTTP-level failure. It keeps the
-// provider's own message — the user is told the cause verbatim (PRD §7) — and wraps the
-// normalized sentinel it maps to, so `errors.Is(err, ErrRateLimited)` still works.
+// provider's own message as technical detail and wraps the normalized sentinel it
+// maps to, so `errors.Is(err, ErrRateLimited)` still works.
 type ProviderError struct {
 	Provider string
 	Status   int

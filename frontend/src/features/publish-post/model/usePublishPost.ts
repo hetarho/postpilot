@@ -1,24 +1,18 @@
 import { useMemo } from 'react'
-import { Code, ConnectError } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { publishJobQueryKey, toPublishJob } from '@/entities/publish-job'
-import { publishingClientFor, type PublishVisibility } from '@/shared/api'
+import {
+  appFailureFromConnect,
+  publishingClientFor,
+  type AppFailure,
+  type PublishVisibility,
+} from '@/shared/api'
 
-export class PublishStartError extends Error {}
-
-function startMessage(cause: unknown): string {
-  switch (ConnectError.from(cause).code) {
-    case Code.Aborted:
-      return '다른 화면에서 글이 바뀌었어요. 새로고침한 뒤 다시 확인해 주세요.'
-    case Code.AlreadyExists:
-      return '이미 진행 중이거나 발행을 마친 글이에요.'
-    case Code.FailedPrecondition:
-      return '글 확정, Mac 연결, 카테고리 상태를 확인해 주세요.'
-    case Code.PermissionDenied:
-      return '이 Mac 연결로는 발행할 수 없어요.'
-    default:
-      return '발행 요청을 저장하지 못했어요. 다시 시도해 주세요.'
+export class PublishStartError extends Error {
+  constructor(readonly failure: AppFailure) {
+    super('publish start failed')
+    this.name = 'PublishStartError'
   }
 }
 
@@ -36,11 +30,11 @@ export function usePublishPost(ownerId: string, postSlug: string) {
     }) => {
       try {
         const response = await client.startPublish({ postSlug, ...input })
-        if (!response.job) throw new Error('StartPublish returned no job')
+        if (!response.job) throw new PublishStartError(appFailureFromConnect(undefined))
         return toPublishJob(response.job)
       } catch (cause) {
-        if (cause instanceof Error && cause.message === 'StartPublish returned no job') throw cause
-        throw new PublishStartError(startMessage(cause))
+        if (cause instanceof PublishStartError) throw cause
+        throw new PublishStartError(appFailureFromConnect(cause))
       }
     },
     onSuccess: (job) => queryClient.setQueryData(key, job),
@@ -53,5 +47,14 @@ export function usePublishPost(ownerId: string, postSlug: string) {
     },
     onSuccess: (job) => queryClient.setQueryData(key, job),
   })
-  return { start, cancel }
+  return {
+    start,
+    cancel,
+    startFailure: start.error
+      ? start.error instanceof PublishStartError
+        ? start.error.failure
+        : appFailureFromConnect(start.error)
+      : undefined,
+    cancelFailure: cancel.error ? appFailureFromConnect(cancel.error) : undefined,
+  }
 }

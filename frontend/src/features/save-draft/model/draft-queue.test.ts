@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_RETRY_BASE_MS } from '@/shared/config'
+import type { ContentLanguage } from '@/shared/api'
 import {
   type Draft,
   type SaveState,
@@ -26,9 +27,11 @@ function backend(options: { failures?: number; mint?: string; holds?: number } =
     purposeId: string | undefined
   }> = []
   const held: Array<() => void> = []
+  const targets: Array<ContentLanguage | undefined> = []
 
-  const send: SendDraft = async (slug, value, voiceId, purposeId) => {
+  const send: SendDraft = async (slug, value, voiceId, purposeId, targetLanguage) => {
     sent.push({ slug, draft: { ...value }, voiceId, purposeId })
+    targets.push(targetLanguage)
     if (holds > 0) {
       holds -= 1
       await new Promise<void>((resolve) => held.push(resolve))
@@ -46,6 +49,7 @@ function backend(options: { failures?: number; mint?: string; holds?: number } =
     titles: () => sent.map((call) => call.draft.title),
     voices: () => sent.map((call) => call.voiceId),
     purposes: () => sent.map((call) => call.purposeId),
+    targets: () => targets,
     /** Lets the oldest held request finish. */
     open: () => held.shift()?.(),
   }
@@ -53,7 +57,13 @@ function backend(options: { failures?: number; mint?: string; holds?: number } =
 
 function attach(
   send: SendDraft,
-  options: { slug?: string; saved?: Draft; voiceId?: string; purposeId?: string } = {},
+  options: {
+    slug?: string
+    saved?: Draft
+    voiceId?: string
+    purposeId?: string
+    targetLanguage?: ContentLanguage
+  } = {},
 ) {
   const states: SaveState[] = []
   const minted: string[] = []
@@ -62,6 +72,7 @@ function attach(
     saved: options.saved ?? EMPTY,
     voiceId: options.voiceId ?? 'voice-a',
     purposeId: options.purposeId ?? '',
+    targetLanguage: options.targetLanguage ?? 'ko',
     send,
     onState: (state) => states.push(state),
     onMinted: (slug) => minted.push(slug),
@@ -123,6 +134,29 @@ describe('the debounce', () => {
     expect(handle.state()).toBe('idle')
     await advance(10_000)
     expect(api.sent).toHaveLength(0)
+  })
+})
+
+describe('target language', () => {
+  it('follows an in-flight text save with the newest target and never resends the old target', async () => {
+    const api = backend({ holds: 1 })
+    const { handle } = attach(api.send, {
+      slug: 'p',
+      saved: draft('제주'),
+      targetLanguage: 'ko',
+    })
+
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.targets()).toEqual([undefined])
+
+    const changed = handle.assignTargetLanguage('en')
+    api.open()
+    await advance(0)
+    await expect(changed).resolves.toBeUndefined()
+
+    expect(api.targets()).toEqual([undefined, 'en'])
+    expect(api.titles()).toEqual(['제주 3일', '제주 3일'])
   })
 })
 

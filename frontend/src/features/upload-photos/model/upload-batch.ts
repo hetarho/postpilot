@@ -6,7 +6,8 @@
 // per post. A confirmed photo leaves the batch at once — from then on it is the post's
 // photo, shown from the cached post like every other.
 import type { PostImage } from '@/entities/image'
-import { UploadObjectMissing, UploadRejected } from '@/entities/image'
+import { UploadObjectMissing, UploadRejected, UploadRpcFailure } from '@/entities/image'
+import type { AppFailure } from '@/shared/api'
 import { UPLOAD_CONVERT_CONCURRENCY } from '@/shared/config'
 import { DecodeError, dedupeFilename, jpegFilename } from '@/shared/lib'
 import { type SkipReason, filterFile } from './filter'
@@ -31,6 +32,8 @@ export interface UploadItem {
   previewUrl?: string
   /** Set when `status` is `failed`. */
   failure?: UploadFailure
+  /** Stable server refusal for an RPC failure. Local decode/PUT failures have none. */
+  appFailure?: AppFailure
 }
 
 export interface UploadBatchState {
@@ -172,7 +175,7 @@ async function upload(batch: Batch, id: string): Promise<void> {
   try {
     let uploadId = batch.awaitingConfirm.get(id)
     if (!uploadId) {
-      patch(batch, id, { status: 'uploading', failure: undefined })
+      patch(batch, id, { status: 'uploading', failure: undefined, appFailure: undefined })
       // Never from a kept URL: a fresh `upload_id` each time, and the server replaces the
       // pending upload that held this filename.
       const presigned = await batch.deps.pipeline.createUpload(batch.slug, item.filename)
@@ -184,7 +187,7 @@ async function upload(batch: Batch, id: string): Promise<void> {
       uploadId = presigned.uploadId
       batch.awaitingConfirm.set(id, uploadId)
     }
-    patch(batch, id, { status: 'confirming', failure: undefined })
+    patch(batch, id, { status: 'confirming', failure: undefined, appFailure: undefined })
     const image = await batch.deps.pipeline.confirm(uploadId, converted.width, converted.height)
     if (batch.discarded) return
     batch.awaitingConfirm.delete(id)
@@ -194,7 +197,13 @@ async function upload(batch: Batch, id: string): Promise<void> {
     // The object is not there, so the PUT is what has to happen again.
     if (error instanceof UploadObjectMissing) batch.awaitingConfirm.delete(id)
     const failure: UploadFailure = error instanceof UploadRejected ? error.reason : 'network'
-    patch(batch, id, { status: 'failed', failure })
+    const appFailure =
+      error instanceof UploadRejected ||
+      error instanceof UploadObjectMissing ||
+      error instanceof UploadRpcFailure
+        ? error.failure
+        : undefined
+    patch(batch, id, { status: 'failed', failure, appFailure })
   }
 }
 

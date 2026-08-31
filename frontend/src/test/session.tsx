@@ -4,7 +4,7 @@
 // singletons, and connect-query keys the cache by transport identity, so reusing them
 // would leak one test's session into the next.
 import type { ReactNode } from 'react'
-import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
+import { Code, createRouterTransport } from '@connectrpc/connect'
 import { TransportProvider } from '@connectrpc/connect-query'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { create } from '@bufbuild/protobuf'
@@ -21,6 +21,7 @@ import { type FakeVoiceOptions, registerVoiceService } from './voice'
 import { type FakeExperimentsOptions, registerExperimentService } from './experiments'
 import { type FakePublishingOptions, registerPublishingService } from './publishing'
 import { type FakePurposesOptions, registerPurposeService } from './purposes'
+import { connectAppError } from './app-error'
 
 export interface FakeAuthOptions {
   /** The account GetMe reports. `undefined` makes GetMe answer 401, like a real server
@@ -65,18 +66,18 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     const { rpc } = router
     rpc(AuthService.method.getMe, () => {
       calls?.push('GetMe')
-      if (!session) throw new ConnectError('unauthenticated', Code.Unauthenticated)
+      if (!session) throw connectAppError('AUTH_REQUIRED', Code.Unauthenticated)
       return create(GetMeResponseSchema, { user: session })
     })
     rpc(AuthService.method.login, (req) => {
       calls?.push('Login')
-      if (loginFails) throw new ConnectError('invalid credentials', Code.Unauthenticated)
+      if (loginFails) throw connectAppError('INVALID_CREDENTIALS', Code.Unauthenticated)
       session = { id: req.loginId }
       return create(LoginResponseSchema, { user: session })
     })
     rpc(AuthService.method.logout, () => {
       calls?.push('Logout')
-      if (logoutFails) throw new ConnectError('unavailable', Code.Unavailable)
+      if (logoutFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
       session = undefined
       return create(LogoutResponseSchema, {})
     })

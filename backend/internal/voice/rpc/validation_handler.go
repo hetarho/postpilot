@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/voice"
 )
 
@@ -112,9 +114,9 @@ func (h *ValidationHandler) RetryVoiceProfileValidation(ctx context.Context, req
 func toProtoComparison(v voice.RuleComparison) *postpilotv1.VoiceRuleComparison {
 	candidates := make([]*postpilotv1.VoiceComparisonCandidate, 0, len(v.Candidates))
 	for _, c := range v.Candidates {
-		candidates = append(candidates, &postpilotv1.VoiceComparisonCandidate{Id: c.ID, Side: c.DisplaySide, Output: c.Output, Status: c.Status, Error: c.Error})
+		candidates = append(candidates, &postpilotv1.VoiceComparisonCandidate{Id: c.ID, Side: c.DisplaySide, Output: c.Output, Status: c.Status, Error: "", Failure: toProtoFailure(c.Failure)})
 	}
-	return &postpilotv1.VoiceRuleComparison{Id: v.ID, RuleId: v.RuleID, ProfileVersion: v.ProfileVersion, TargetLength: protoOptionalLength(v.TargetLength), Status: v.Status, JobId: v.JobID, Candidates: candidates, ChosenSide: v.ChosenSide, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), VoiceId: v.VoiceID}
+	return &postpilotv1.VoiceRuleComparison{Id: v.ID, RuleId: v.RuleID, ProfileVersion: v.ProfileVersion, TargetLength: protoOptionalLength(v.TargetLength), Status: v.Status, JobId: v.JobID, Candidates: candidates, ChosenSide: v.ChosenSide, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), VoiceId: v.VoiceID, SourceLanguage: languageToProto(v.SourceLanguage)}
 }
 
 func optionalLength(value *int32) *int {
@@ -143,20 +145,33 @@ func toProtoValidation(v voice.ProfileValidation) *postpilotv1.VoiceProfileValid
 				scores = append(scores, &postpilotv1.VoiceValidationScore{Dimension: key, Matched: matched})
 			}
 		}
-		items = append(items, &postpilotv1.VoiceValidationItem{Id: item.ID, SourceId: item.SourceID, Original: item.Original, NeutralSummary: item.NeutralSummary, Regenerated: item.Regenerated, Scores: scores, Status: item.Status, Error: item.Error})
+		items = append(items, &postpilotv1.VoiceValidationItem{Id: item.ID, SourceId: item.SourceID, Original: item.Original, NeutralSummary: item.NeutralSummary, Regenerated: item.Regenerated, Scores: scores, Status: item.Status, Error: "", Failure: toProtoFailure(item.Failure)})
 	}
 	finished := ""
 	if v.FinishedAt != nil {
 		finished = v.FinishedAt.UTC().Format(timeLayout)
 	}
-	return &postpilotv1.VoiceProfileValidation{Id: v.ID, ProfileVersion: v.ProfileVersion, JudgeEnabled: v.JudgeEnabled, Status: v.Status, JobId: v.JobID, Items: items, YCount: int32(v.YCount), TotalCount: int32(v.TotalCount), CreatedAt: v.CreatedAt.UTC().Format(timeLayout), FinishedAt: finished, VoiceId: v.VoiceID}
+	return &postpilotv1.VoiceProfileValidation{Id: v.ID, ProfileVersion: v.ProfileVersion, JudgeEnabled: v.JudgeEnabled, Status: v.Status, JobId: v.JobID, Items: items, YCount: int32(v.YCount), TotalCount: int32(v.TotalCount), CreatedAt: v.CreatedAt.UTC().Format(timeLayout), FinishedAt: finished, VoiceId: v.VoiceID, SourceLanguage: languageToProto(v.SourceLanguage)}
 }
 func validationError(op string, err error) error {
 	switch {
-	case errors.Is(err, voice.ErrComparisonNotFound), errors.Is(err, voice.ErrValidationNotFound), errors.Is(err, voice.ErrRuleNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
-	case errors.Is(err, voice.ErrInsufficientSources), errors.Is(err, voice.ErrInvalidLifecycle), errors.Is(err, voice.ErrAnalyzeModelRequired):
-		return connect.NewError(connect.CodeFailedPrecondition, err)
+	case errors.Is(err, voice.ErrComparisonNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice rule comparison not found", "VOICE_COMPARISON_NOT_FOUND", nil)
+	case errors.Is(err, voice.ErrValidationNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice profile validation not found", "VOICE_VALIDATION_NOT_FOUND", nil)
+	case errors.Is(err, voice.ErrRuleNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice rule not found", "VOICE_RULE_NOT_FOUND", nil)
+	case errors.Is(err, voice.ErrInsufficientSources):
+		minimum := voice.DefaultValidationPostCount
+		var insufficient *voice.InsufficientSourcesError
+		if errors.As(err, &insufficient) && insufficient.Minimum > 0 {
+			minimum = insufficient.Minimum
+		}
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "not enough authored sources", "VOICE_INSUFFICIENT_SOURCES", map[string]string{"min": fmt.Sprint(minimum)})
+	case errors.Is(err, voice.ErrInvalidLifecycle):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice validation state does not allow this operation", "VOICE_INVALID_LIFECYCLE", nil)
+	case errors.Is(err, voice.ErrAnalyzeModelRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "enabled analyze and write models are required", "VOICE_ANALYZE_MODEL_REQUIRED", nil)
 	default:
 		return toConnectError(op, err)
 	}

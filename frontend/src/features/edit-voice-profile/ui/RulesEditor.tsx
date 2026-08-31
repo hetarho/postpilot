@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useUpdateVoiceProfile } from '@/entities/voice'
 import { Button, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
 
@@ -13,6 +14,7 @@ export function RulesEditor({
   rules: string
   readOnly?: boolean
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const id = useId()
   const errorId = `${id}-error`
   const [draft, setDraft] = useState<string | null>(null)
@@ -32,10 +34,14 @@ export function RulesEditor({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold tracking-tight">추가 규칙</h2>
-      <p className="text-content-tertiary mt-1 text-xs">항상 지켜야 할 사용자 규칙입니다.</p>
+      <h2 className="text-lg font-semibold tracking-tight">
+        {t('profile.customRules', { ns: 'voices' })}
+      </h2>
+      <p className="text-content-tertiary mt-1 text-xs">
+        {t('profile.customRulesHelp', { ns: 'voices' })}
+      </p>
       <FieldLabel htmlFor={id} className="mt-4">
-        추가 규칙
+        {t('profile.customRules', { ns: 'voices' })}
       </FieldLabel>
       <Textarea
         id={id}
@@ -69,11 +75,11 @@ export function RulesEditor({
           pending={update.isSaving}
           className="w-full sm:w-auto"
         >
-          저장
+          {t('action.save', { ns: 'common' })}
         </Button>
       </div>
       <span role="status" className="sr-only">
-        {update.isSaving ? '추가 규칙을 저장하는 중' : ''}
+        {update.isSaving ? t('profile.savingRules', { ns: 'voices' }) : ''}
       </span>
     </section>
   )

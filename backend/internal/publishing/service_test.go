@@ -99,6 +99,9 @@ type fakeStore struct {
 	deletedAssets    int
 	deletedAssetJobs []string
 	terminalJobIDs   []string
+	failedStatus     Status
+	precommitFailure Failure
+	commitFailure    Failure
 }
 
 func (f *fakeStore) CreatePairing(_ context.Context, hash, _, _ string, _, _ time.Time, _ int) error {
@@ -198,7 +201,10 @@ func (f *fakeStore) Complete(context.Context, Agent, string, string, int64, stri
 	}
 	return f.latest, nil
 }
-func (f *fakeStore) Fail(context.Context, Agent, string, string, int64, Status, string, string, time.Time) (Job, error) {
+func (f *fakeStore) Fail(_ context.Context, _ Agent, _ string, _ string, _ int64, status Status, precommitFailure, commitFailure Failure, _ time.Time) (Job, error) {
+	f.failedStatus = status
+	f.precommitFailure = precommitFailure.Clone()
+	f.commitFailure = commitFailure.Clone()
 	if f.result.ID != "" {
 		return f.result, nil
 	}
@@ -238,6 +244,7 @@ func readyAgent() Agent {
 
 func startFixture() PostSnapshot {
 	return PostSnapshot{PostSlug: "post", UserID: "alice", CreatedAt: time.Date(2026, 8, 30, 11, 0, 0, 0, time.UTC), ContentRevision: 7, FinalizedRevision: 7,
+		TargetLanguage: LanguageEnglish, ContentLanguage: LanguageEnglish, VoiceSourceLanguage: LanguageKorean,
 		Content: Content{Title: "title", Tags: []string{"tag"}, Blocks: []Block{{Type: BlockText, Content: "first"}, {Type: BlockImage, File: "b.jpg", Caption: "B"}, {Type: BlockImage, File: "a.jpg", Caption: "A"}}},
 		Images:  []SnapshotImage{{Filename: "a.jpg", Key: "posts/a.jpg", Bytes: 10}, {Filename: "b.jpg", Key: "posts/b.jpg", Bytes: 20}}}
 }
@@ -264,6 +271,10 @@ func TestStartFreezesExactContentAndStagesImagesInBlockOrder(t *testing.T) {
 	}
 	if job.Manifest == nil || job.Manifest.Content.Title != "title" || job.Manifest.CategoryName != "일상" || job.Manifest.Visibility != VisibilityPrivate || !reflect.DeepEqual(job.Manifest.Tags, []string{"tag"}) {
 		t.Fatalf("manifest = %#v", job.Manifest)
+	}
+	if job.TargetLanguage != LanguageEnglish || job.ContentLanguage != LanguageEnglish || job.VoiceSourceLanguage != LanguageKorean ||
+		job.Manifest.TargetLanguage != LanguageEnglish || job.Manifest.ContentLanguage != LanguageEnglish || job.Manifest.VoiceSourceLanguage != LanguageKorean {
+		t.Fatalf("frozen languages job=%+v manifest=%+v", job, job.Manifest)
 	}
 	if got := []Asset(job.Manifest.Assets); len(got) != 2 || got[0].Filename != "0000.jpg" || got[0].SourceFilename != "b.jpg" || got[1].Filename != "0001.jpg" || got[1].SourceFilename != "a.jpg" {
 		t.Fatalf("manifest assets = %#v", got)
@@ -729,6 +740,42 @@ func TestLeaseRecoveryDoesNotDependOnObjectCleanup(t *testing.T) {
 	}
 	if store.terminalCalls != 0 {
 		t.Fatal("lease recovery attempted terminal object cleanup")
+	}
+}
+
+func TestAgentFailureKindsBecomeOwnedDurableReasons(t *testing.T) {
+	tests := []struct {
+		name       string
+		stage      Stage
+		kind       FailureKind
+		wantStatus Status
+		wantReason string
+	}{
+		{name: "ordinary precommit", stage: StageOpeningEditor, kind: FailureEditorChanged, wantStatus: StatusFailed, wantReason: "PUBLISH_AGENT_UNAVAILABLE"},
+		{name: "human repair", stage: StageOpeningEditor, kind: FailureCaptcha, wantStatus: StatusNeedsAttention, wantReason: "PUBLISH_NEEDS_ATTENTION"},
+		{name: "commit fence", stage: StageCommitting, kind: FailureEditorChanged, wantStatus: StatusOutcomeUnknown, wantReason: "PUBLISH_OUTCOME_UNKNOWN"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			store := &fakeStore{
+				latest: Job{ID: "job", UserID: "alice", AgentID: "agent", Stage: test.stage, ProgressSeq: 1},
+				result: Job{ID: "job", Status: test.wantStatus},
+			}
+			service := NewService(store, &fakePosts{}, &fakeStaging{}, Config{})
+			if _, err := service.Fail(context.Background(), Agent{ID: "agent", UserID: "alice"}, "job", "lease", 2, test.kind, "  redacted (17 bytes)  "); err != nil {
+				t.Fatal(err)
+			}
+			if store.failedStatus != test.wantStatus || store.precommitFailure.Reason != test.wantReason {
+				t.Fatalf("status=%q failure=%+v", store.failedStatus, store.precommitFailure)
+			}
+			if store.precommitFailure.TechnicalDetail != "redacted (17 bytes)" {
+				t.Fatalf("technical detail=%q", store.precommitFailure.TechnicalDetail)
+			}
+			if store.commitFailure.Reason != "PUBLISH_OUTCOME_UNKNOWN" || store.commitFailure.TechnicalDetail != "redacted (17 bytes)" {
+				t.Fatalf("commit failure=%+v", store.commitFailure)
+			}
+		})
 	}
 }
 

@@ -250,6 +250,9 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 	if err != nil {
 		return Job{}, err
 	}
+	if !snapshot.TargetLanguage.Valid() || !snapshot.ContentLanguage.Valid() || !snapshot.VoiceSourceLanguage.Valid() {
+		return Job{}, ErrLanguageRequired
+	}
 	if snapshot.ContentRevision != request.ExpectedContentRevision || snapshot.FinalizedRevision != snapshot.ContentRevision {
 		return Job{}, ErrStaleRevision
 	}
@@ -288,10 +291,12 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 		assets = append(assets, Asset{JobID: jobID, UserID: request.UserID, Ordinal: ordinal, Filename: localFilename, SourceFilename: image.Filename, StagedKey: target, Bytes: bytes, CreatedAt: now})
 	}
 	manifest := Manifest{JobID: jobID, PostSlug: snapshot.PostSlug, ContentRevision: snapshot.ContentRevision,
+		TargetLanguage: snapshot.TargetLanguage, ContentLanguage: snapshot.ContentLanguage, VoiceSourceLanguage: snapshot.VoiceSourceLanguage,
 		Content: cloneContent(snapshot.Content), Tags: append([]string(nil), snapshot.Content.Tags...), CategoryID: request.CategoryID,
 		CategoryName: categoryName, Visibility: request.Visibility, ExpectedPlatformAccountID: agent.PlatformAccountID, Assets: assets}
 	job := Job{ID: jobID, UserID: request.UserID, PostSlug: snapshot.PostSlug, PostCreatedAt: snapshot.CreatedAt, AgentID: agent.ID,
 		Platform: PlatformNaverBlog, Status: StatusQueued, Stage: StageQueued, ContentRevision: snapshot.ContentRevision,
+		TargetLanguage: snapshot.TargetLanguage, ContentLanguage: snapshot.ContentLanguage, VoiceSourceLanguage: snapshot.VoiceSourceLanguage,
 		Manifest: &manifest, CategoryID: request.CategoryID, Visibility: request.Visibility, CreatedAt: now, UpdatedAt: now}
 	// Staging can take long enough for another tab to edit the post or for the owner
 	// to revoke/reconfigure the Mac. CreateJob holds the one writer transaction while
@@ -510,18 +515,31 @@ func (s *Service) Fail(ctx context.Context, agent Agent, jobID, leaseToken strin
 		return Job{}, ErrLeaseInvalid
 	}
 	status := FailureStatus(current.Stage, kind)
-	message := safeFailureMessage(status, kind)
-	job, err := s.store.Fail(ctx, agent, jobID, hashToken(leaseToken), seq, status, string(kind), message, s.clock.Now())
+	precommitFailure := failureForAgentReport(status, kind, detail)
+	commitFailure := Failure{Reason: "PUBLISH_OUTCOME_UNKNOWN", TechnicalDetail: precommitFailure.TechnicalDetail}
+	job, err := s.store.Fail(ctx, agent, jobID, hashToken(leaseToken), seq, status, precommitFailure, commitFailure, s.clock.Now())
 	if err != nil {
 		return Job{}, err
 	}
-	_ = detail // raw browser/model detail stays in local redacted logs, never the VPS.
 	if job.Status != StatusNeedsAttention {
 		// As with Complete and Cancel, terminal persistence is authoritative; the
 		// cleanup sweeper owns retrying any transient object-store failure.
 		_ = s.cleanupAssets(ctx, job.ID)
 	}
 	return job, nil
+}
+
+func failureForAgentReport(status Status, kind FailureKind, detail string) Failure {
+	reason := "PUBLISH_AGENT_UNAVAILABLE"
+	switch status {
+	case StatusNeedsAttention:
+		reason = "PUBLISH_NEEDS_ATTENTION"
+	case StatusOutcomeUnknown:
+		reason = "PUBLISH_OUTCOME_UNKNOWN"
+	}
+	// The Mac adapter sends bounded redaction metadata rather than browser/model prose.
+	// Treat it as inert diagnostic text and never interpolate it into a translation.
+	return Failure{Reason: reason, TechnicalDetail: strings.TrimSpace(detail)}
 }
 
 func (s *Service) RecoverExpired(ctx context.Context) (int64, int64, error) {
@@ -635,23 +653,6 @@ func validNaverURL(raw, accountID string) bool {
 	}
 	parts := strings.Split(strings.Trim(path.Clean(u.Path), "/"), "/")
 	return len(parts) >= 2 && parts[0] == accountID && parts[1] != ""
-}
-
-func safeFailureMessage(status Status, kind FailureKind) string {
-	if status == StatusOutcomeUnknown {
-		return "최종 발행 결과를 확인할 수 없어요. 네이버 블로그에서 직접 확인해 주세요."
-	}
-	if status == StatusNeedsAttention {
-		return "Mac의 전용 브라우저에서 네이버 로그인 또는 보안 확인을 마쳐 주세요."
-	}
-	switch kind {
-	case FailureEditorChanged:
-		return "네이버 편집기 화면이 달라져 안전하게 중단했어요."
-	case FailureAssetMissing:
-		return "발행할 사진을 확인하지 못해 중단했어요."
-	default:
-		return "발행 준비 중 문제가 생겨 최종 발행 전에 중단했어요."
-	}
 }
 
 type realClock struct{}

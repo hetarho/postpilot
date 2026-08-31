@@ -1,8 +1,8 @@
 -- name: InsertExperiment :exec
 INSERT INTO model_experiments (
-  id, user_id, post_slug, voice_id, purpose_name, stage, status, job_id, input_snapshot, input_hash,
+  id, user_id, post_slug, voice_id, purpose_name, target_language, stage, status, job_id, input_snapshot, input_hash,
   prompt_version, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: InsertCandidate :exec
 INSERT INTO model_experiment_candidates (
@@ -60,13 +60,15 @@ WHERE id = ?;
 
 -- name: StartCandidate :execrows
 UPDATE model_experiment_candidates
-SET status = 'running', error = NULL, started_at = ?, finished_at = NULL
+SET status = 'running', error = NULL, error_reason = NULL, error_params = NULL,
+    technical_detail = NULL, started_at = ?, finished_at = NULL
 WHERE id = ? AND experiment_id = ? AND status IN ('pending', 'failed');
 
 -- name: CompleteCandidate :execrows
 UPDATE model_experiment_candidates
-SET status = ?, output = ?, error = ?, prompt_tokens = ?, completion_tokens = ?,
-    cost_microusd = ?, cost_source = ?, latency_ms = ?, finished_at = ?
+SET status = ?, output = ?, error = NULL, error_reason = ?, error_params = ?,
+    technical_detail = ?, prompt_tokens = ?, completion_tokens = ?, cost_microusd = ?,
+    cost_source = ?, latency_ms = ?, finished_at = ?
 WHERE id = ? AND experiment_id = ?;
 
 -- name: ListInterruptedExperimentIDs :many
@@ -77,7 +79,8 @@ SELECT id FROM model_experiments WHERE status = 'queued' ORDER BY created_at, id
 
 -- name: FailUnfinishedCandidates :execrows
 UPDATE model_experiment_candidates
-SET status = 'failed', error = ?, finished_at = ?
+SET status = 'failed', error = NULL, error_reason = ?, error_params = ?,
+    technical_detail = ?, finished_at = ?
 WHERE experiment_id = ? AND status IN ('pending', 'running');
 
 -- name: FinishInterruptedExperiment :execrows
@@ -94,35 +97,48 @@ WHERE model_experiments.id = ? AND model_experiments.status IN ('queued', 'runni
 
 -- name: ResetFailedCandidates :execrows
 UPDATE model_experiment_candidates
-SET status = 'pending', error = NULL, started_at = NULL, finished_at = NULL
+SET status = 'pending', error = NULL, error_reason = NULL, error_params = NULL,
+    technical_detail = NULL, started_at = NULL, finished_at = NULL
 WHERE experiment_id = ? AND status = 'failed';
 
 -- name: RestoreFailedCandidate :execrows
 UPDATE model_experiment_candidates
-SET status = 'failed', error = ?, started_at = ?, finished_at = ?
+SET status = 'failed', error = NULL, error_reason = ?, error_params = ?,
+    technical_detail = ?, started_at = ?, finished_at = ?
 WHERE experiment_id = ? AND id = ? AND status = 'pending';
 
 -- name: DecideExperiment :execrows
 UPDATE model_experiments
 SET status = ?, winner_candidate_id = ?, outcome = ?, decided_at = ?,
-    content_expires_at = ?, apply_error = NULL, applied_at = NULL,
-	adoption_requested = ?, adoption_error = NULL, adopted_at = NULL
+    content_expires_at = ?, apply_error = NULL, apply_error_reason = NULL,
+    apply_error_params = NULL, apply_technical_detail = NULL, applied_at = NULL,
+	adoption_requested = ?, adoption_error = NULL, adoption_error_reason = NULL,
+    adoption_error_params = NULL, adoption_technical_detail = NULL, adopted_at = NULL
 WHERE id = ? AND user_id = ?
   AND status IN ('review', 'partial', 'failed');
 
--- name: SetApplyError :exec
-UPDATE model_experiments SET apply_error = ?, applied_at = NULL WHERE id = ? AND user_id = ?;
+-- name: SetApplyFailure :exec
+UPDATE model_experiments
+SET apply_error = NULL, apply_error_reason = ?, apply_error_params = ?,
+    apply_technical_detail = ?, applied_at = NULL
+WHERE id = ? AND user_id = ?;
 
 -- name: SetExperimentApplied :execrows
-UPDATE model_experiments SET apply_error = NULL, applied_at = ?
+UPDATE model_experiments
+SET apply_error = NULL, apply_error_reason = NULL, apply_error_params = NULL,
+    apply_technical_detail = NULL, applied_at = ?
 WHERE id = ? AND user_id = ? AND status = 'decided' AND applied_at IS NULL;
 
--- name: SetAdoptionError :exec
-UPDATE model_experiments SET adoption_error = ?
+-- name: SetAdoptionFailure :exec
+UPDATE model_experiments
+SET adoption_error = NULL, adoption_error_reason = ?, adoption_error_params = ?,
+    adoption_technical_detail = ?
 WHERE id = ? AND user_id = ? AND adoption_requested = 1 AND adopted_at IS NULL;
 
 -- name: SetExperimentAdopted :execrows
-UPDATE model_experiments SET adoption_error = NULL, adopted_at = ?
+UPDATE model_experiments
+SET adoption_error = NULL, adoption_error_reason = NULL, adoption_error_params = NULL,
+    adoption_technical_detail = NULL, adopted_at = ?
 WHERE id = ? AND user_id = ? AND status = 'decided'
   AND adoption_requested = 1 AND adopted_at IS NULL;
 

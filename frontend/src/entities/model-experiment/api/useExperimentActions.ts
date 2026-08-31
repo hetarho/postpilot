@@ -1,6 +1,6 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { ModelExperimentService } from '@/shared/api'
+import { appFailureFromConnect, ModelExperimentService } from '@/shared/api'
 import { experimentQueryKey, experimentsQueryKey, leaderboardQueryKey } from './experiment-mappers'
 
 export function useExperimentActions(id: string, onChanged?: () => Promise<unknown>) {
@@ -73,13 +73,18 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
       retry.isPending ||
       apply.isPending ||
       adopt.isPending,
-    error:
+    failure: mutationFailure(
       choose.error ??
-      decideWrite.error ??
-      useSingle.error ??
-      dismiss.error ??
-      retry.error ??
-      apply.error ??
-      adopt.error,
+        decideWrite.error ??
+        useSingle.error ??
+        dismiss.error ??
+        retry.error ??
+        apply.error ??
+        adopt.error,
+    ),
   }
+}
+
+function mutationFailure(error: Error | null) {
+  return error ? appFailureFromConnect(error) : undefined
 }

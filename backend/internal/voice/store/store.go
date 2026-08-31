@@ -33,6 +33,9 @@ func New(writer, reader *sql.DB) *Store {
 // unique indexes on active name and active default are the arbiter of a race between two
 // creates; either failure surfaces as ErrVoiceNameTaken.
 func (s *Store) InsertVoice(ctx context.Context, v voice.Voice) error {
+	if !v.SourceLanguage.Valid() {
+		return voice.ErrLanguageRequired
+	}
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin insert voice: %w", err)
@@ -44,7 +47,7 @@ func (s *Store) InsertVoice(ctx context.Context, v voice.Voice) error {
 		isDefault = 1
 	}
 	if err := q.InsertVoice(ctx, sqlc.InsertVoiceParams{
-		ID: v.ID, UserID: v.UserID, Name: v.Name, IsDefault: isDefault,
+		ID: v.ID, UserID: v.UserID, Name: v.Name, SourceLanguage: string(v.SourceLanguage), IsDefault: isDefault,
 		CreatedAt: formatTime(v.CreatedAt), UpdatedAt: formatTime(v.UpdatedAt),
 	}); err != nil {
 		if isUniqueViolation(err) {
@@ -198,7 +201,11 @@ func toVoice(row sqlc.Voice) (voice.Voice, error) {
 		}
 		deleted = &value
 	}
-	return voice.Voice{ID: row.ID, UserID: row.UserID, Name: row.Name, IsDefault: row.IsDefault == 1, CreatedAt: created, UpdatedAt: updated, DeletedAt: deleted}, nil
+	sourceLanguage, err := voice.ParseLanguage(row.SourceLanguage)
+	if err != nil {
+		return voice.Voice{}, fmt.Errorf("voice %s source language: %w", row.ID, err)
+	}
+	return voice.Voice{ID: row.ID, UserID: row.UserID, Name: row.Name, SourceLanguage: sourceLanguage, IsDefault: row.IsDefault == 1, CreatedAt: created, UpdatedAt: updated, DeletedAt: deleted}, nil
 }
 
 // --- profile and samples ---

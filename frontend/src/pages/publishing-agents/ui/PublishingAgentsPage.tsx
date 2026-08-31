@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ConfigurePublishingAgent } from '@/features/configure-publishing-agent'
 import { CancelRetainedPublishJobButton } from '@/features/cancel-publish'
 import { PairPublishingAgent } from '@/features/pair-publishing-agent'
@@ -6,37 +7,47 @@ import { usePublishingAgents } from '@/entities/publishing-agent'
 import { useRetryablePublishJobs } from '@/entities/publish-job'
 import { RetryPublishJobButton } from '@/features/retry-publish'
 import { useSession } from '@/entities/session'
-import { Badge, Button, Notice } from '@/shared/ui'
+import { AppFailureMessage, Badge, Button, Notice } from '@/shared/ui'
+import { formatDateTime } from '@/shared/lib'
 
 export function PublishingAgentsPage() {
+  const { t } = useTranslation(['publishing', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const agents = usePublishingAgents(ownerId)
   const retryable = useRetryablePublishJobs(ownerId)
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">발행 Mac</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {t('agents.title', { ns: 'publishing' })}
+      </h1>
       <p className="text-content-secondary mt-3 text-sm leading-relaxed">
-        계정마다 별도의 Mac 토큰, Hermes 프로필과 전용 브라우저 프로필을 사용합니다.
+        {t('agents.description', { ns: 'publishing' })}
       </p>
       <div className="mt-10">
         <PairPublishingAgent ownerId={ownerId} />
       </div>
       <section aria-labelledby="agents-heading" className="mt-12">
         <h2 id="agents-heading" className="text-lg font-semibold tracking-tight">
-          연결 목록
+          {t('agents.list', { ns: 'publishing' })}
         </h2>
-        {agents.isPending && <p className="text-content-tertiary mt-4 text-sm">불러오는 중…</p>}
+        {agents.isPending && (
+          <p className="text-content-tertiary mt-4 text-sm">
+            {t('state.loading', { ns: 'common' })}
+          </p>
+        )}
         {agents.isError && (
           <Notice tone="danger" role="alert" className="mt-4">
-            연결 목록을 불러오지 못했어요.
+            {t('agents.loadFailed', { ns: 'publishing' })}
             <Button variant="ghost" onClick={agents.refetch}>
-              다시 시도
+              {t('action.retry', { ns: 'common' })}
             </Button>
           </Notice>
         )}
         {!agents.isPending && !agents.isError && agents.agents.length === 0 && (
-          <p className="text-content-tertiary mt-4 text-sm">아직 연결한 Mac이 없어요.</p>
+          <p className="text-content-tertiary mt-4 text-sm">
+            {t('agents.empty', { ns: 'publishing' })}
+          </p>
         )}
         <div className="mt-4 grid gap-4">
           {agents.agents.map((agent) => (
@@ -45,16 +56,23 @@ export function PublishingAgentsPage() {
                 <div className="min-w-0">
                   <h3 className="font-semibold break-words">{agent.label}</h3>
                   <p className="text-content-secondary mt-1 text-sm break-words">
-                    {agent.platformAccountLabel || '네이버 확인 대기'} · {agent.browserLabel}
+                    {agent.platformAccountLabel || t('agents.naverPending', { ns: 'publishing' })} ·{' '}
+                    {agent.browserLabel}
                   </p>
                 </div>
                 <Badge tone={agent.revokedAt ? 'neutral' : agent.ready ? 'accent' : 'neutral'}>
-                  {agent.revokedAt ? '해제됨' : agent.ready ? '준비됨' : '설정 필요'}
+                  {agent.revokedAt
+                    ? t('agents.revoked', { ns: 'publishing' })
+                    : agent.ready
+                      ? t('agents.ready', { ns: 'publishing' })
+                      : t('agents.setup', { ns: 'publishing' })}
                 </Badge>
               </div>
               <p className="text-content-tertiary mt-3 text-xs">
-                마지막 확인{' '}
-                {agent.lastSeenAt ? new Date(agent.lastSeenAt).toLocaleString('ko-KR') : '없음'}
+                {t('lastSeen', { ns: 'publishing' })}{' '}
+                {agent.lastSeenAt
+                  ? formatDateTime(agent.lastSeenAt)
+                  : t('state.none', { ns: 'common' })}
               </p>
               <ConfigurePublishingAgent
                 key={`${agent.id}:${agent.label}:${agent.defaultCategoryId}:${agent.defaultVisibility}`}
@@ -72,33 +90,40 @@ export function PublishingAgentsPage() {
       </section>
       <section aria-labelledby="retryable-publishing-heading" className="mt-12">
         <h2 id="retryable-publishing-heading" className="text-lg font-semibold tracking-tight">
-          로그인 복구 후 다시 시도
+          {t('agents.retryTitle', { ns: 'publishing' })}
         </h2>
         <p className="text-content-secondary mt-2 text-sm leading-relaxed">
-          Mac의 같은 전용 브라우저에서 로그인·CAPTCHA·2단계 인증을 해결한 뒤, 고정해 둔 발행 작업을
-          그대로 다시 시작합니다. 원본 글을 삭제했어도 이 목록에서 재개할 수 있어요.
+          {t('agents.retryDescription', { ns: 'publishing' })}
         </p>
         {retryable.isPending && (
-          <p className="text-content-tertiary mt-4 text-sm">복구 대기 작업을 불러오는 중…</p>
+          <p className="text-content-tertiary mt-4 text-sm">
+            {t('agents.retryLoading', { ns: 'publishing' })}
+          </p>
         )}
         {retryable.isError && (
           <Notice tone="danger" role="alert" className="mt-4">
-            복구 대기 작업을 불러오지 못했어요.
+            {t('agents.retryLoadFailed', { ns: 'publishing' })}
             <Button variant="ghost" onClick={retryable.refetch}>
-              다시 시도
+              {t('action.retry', { ns: 'common' })}
             </Button>
           </Notice>
         )}
         {!retryable.isPending && !retryable.isError && retryable.jobs.length === 0 && (
-          <p className="text-content-tertiary mt-4 text-sm">복구 후 다시 시도할 작업이 없어요.</p>
+          <p className="text-content-tertiary mt-4 text-sm">
+            {t('agents.retryEmpty', { ns: 'publishing' })}
+          </p>
         )}
         <div className="mt-4 grid gap-4">
           {retryable.jobs.map((job) => (
             <article key={job.id} className="bg-surface-raised rounded-lg p-4">
               <h3 className="font-semibold break-words">{job.postSlug}</h3>
-              <p className="text-content-secondary mt-1 text-sm">
-                {job.errorMessage || 'Mac의 전용 네이버 로그인을 확인해 주세요.'}
-              </p>
+              <div className="text-content-secondary mt-1 text-sm">
+                {job.failure ? (
+                  <AppFailureMessage failure={job.failure} />
+                ) : (
+                  t('agents.loginCheck', { ns: 'publishing' })
+                )}
+              </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <RetryPublishJobButton ownerId={ownerId} jobId={job.id} />
                 <CancelRetainedPublishJobButton

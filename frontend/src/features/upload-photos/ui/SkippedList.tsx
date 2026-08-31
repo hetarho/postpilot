@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { skipReasonLabel } from '../model/filter'
 import type { UploadItem } from '../model/upload-batch'
 import { Button } from '@/shared/ui'
@@ -10,13 +11,14 @@ export function SkippedList({
   items: readonly UploadItem[]
   onDismiss: (id: string) => void
 }) {
+  const { t } = useTranslation('posts')
   const skipped = items.filter((item) => item.status === 'skipped')
   if (skipped.length === 0) return null
 
   return (
     <section aria-labelledby="skipped-heading" className="text-content-secondary text-sm">
       <h3 id="skipped-heading" className="text-content-secondary font-medium">
-        건너뜀
+        {t('upload.skipped')}
       </h3>
       {/* A hairline between rows instead of a 4px gap: the rows have no background of their own
           (§1.3), and 4px put two 44px dismiss boxes under the same thumb (§4.1). */}
@@ -28,7 +30,7 @@ export function SkippedList({
               variant="danger"
               size="icon"
               onClick={() => onDismiss(item.id)}
-              aria-label={`${item.name} 목록에서 지우기`}
+              aria-label={t('upload.dismissAria', { name: item.name })}
               className="text-xl"
             >
               <span aria-hidden="true">×</span>

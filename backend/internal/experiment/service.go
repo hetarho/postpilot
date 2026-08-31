@@ -11,12 +11,6 @@ import (
 	"time"
 )
 
-const (
-	interruptedReason = "서버가 재시작되어 비교가 중단됐어요. 실패한 후보를 다시 시도해 주세요."
-	applyFailedReason = "선택한 결과를 적용하지 못했어요. 다시 시도해 주세요."
-	adoptFailedReason = "결과는 적용했지만 활성 모델은 변경하지 못했어요. 다시 시도해 주세요."
-)
-
 type Service struct {
 	store     Store
 	catalog   Catalog
@@ -83,6 +77,13 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	if err != nil {
 		return StartResult{}, err
 	}
+	if request.Stage == StageWrite {
+		if snapshot.TargetLanguage == nil || !snapshot.TargetLanguage.Valid() {
+			return StartResult{}, ErrLanguageRequired
+		}
+	} else if snapshot.TargetLanguage != nil {
+		return StartResult{}, ErrLanguageRequired
+	}
 	frozen, hash, err := FreezeSnapshot(snapshot)
 	if err != nil {
 		return StartResult{}, err
@@ -97,7 +98,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	}
 	found := Experiment{
 		ID: s.newID(), UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: frozen.VoiceID,
-		PurposeName: frozen.PurposeName, Stage: request.Stage,
+		PurposeName: frozen.PurposeName, TargetLanguage: cloneLanguage(frozen.TargetLanguage), Stage: request.Stage,
 		Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
 		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
 	}
@@ -115,6 +116,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	}
 	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
 		UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: request.Stage,
+		TargetLanguage: cloneLanguage(found.TargetLanguage),
 	})
 	if err != nil {
 		_ = s.store.Delete(ctx, found.ID)
@@ -159,7 +161,7 @@ func (s *Service) HasPublishableForVoice(ctx context.Context, userID, voiceID st
 // terminal states. It runs before workers start, so it cannot race a live candidate.
 func (s *Service) RecoverInterrupted(ctx context.Context) (int64, error) {
 	now := s.now()
-	count, err := s.store.RecoverInterrupted(ctx, interruptedReason, now)
+	count, err := s.store.RecoverInterrupted(ctx, interruptedFailure, now)
 	if err != nil {
 		return 0, err
 	}
@@ -175,7 +177,7 @@ func (s *Service) RecoverInterrupted(ctx context.Context) (int64, error) {
 		if runnable {
 			continue
 		}
-		if err := s.store.FailUnfinished(ctx, id, interruptedReason, now); err != nil {
+		if err := s.store.FailUnfinished(ctx, id, interruptedFailure, now); err != nil {
 			return count, err
 		}
 		count++
@@ -215,7 +217,10 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 		_ = s.store.RestoreFailedCandidates(ctx, found.ID, found.Candidates)
 		return StartResult{}, err
 	}
-	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{UserID: userID, PostSlug: found.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: found.Stage})
+	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
+		UserID: userID, PostSlug: found.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: found.Stage,
+		TargetLanguage: cloneLanguage(found.TargetLanguage),
+	})
 	if err != nil {
 		_ = s.store.RestoreFailedCandidates(ctx, found.ID, found.Candidates)
 		_ = s.store.SetStatus(ctx, found.ID, found.Status, found.FinishedAt)
@@ -364,7 +369,8 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 		return Experiment{}, ErrInvalidState
 	}
 	if _, err := s.resolveForStage(StageWrite, winner.Model); err != nil {
-		if storeErr := s.store.SetAdoptionError(ctx, found.ID, userID, adoptFailedReason); storeErr != nil {
+		slog.Error("experiment winner adoption model unavailable", "experiment_id", found.ID, "err", err)
+		if storeErr := s.store.SetAdoptionFailure(ctx, found.ID, userID, normalizeFailure(err)); storeErr != nil {
 			return Experiment{}, storeErr
 		}
 		return s.owned(ctx, userID, id)
@@ -372,7 +378,7 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 	active, selected, err := s.catalog.Active(ctx, userID, StageWrite)
 	if err != nil {
 		slog.Error("experiment active winner lookup failed", "experiment_id", found.ID, "err", err)
-		if storeErr := s.store.SetAdoptionError(ctx, found.ID, userID, adoptFailedReason); storeErr != nil {
+		if storeErr := s.store.SetAdoptionFailure(ctx, found.ID, userID, normalizeFailure(err)); storeErr != nil {
 			return Experiment{}, storeErr
 		}
 		return s.owned(ctx, userID, id)
@@ -385,7 +391,7 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 	}
 	if err := s.catalog.Adopt(ctx, userID, StageWrite, winner.Model); err != nil {
 		slog.Error("experiment winner adoption failed", "experiment_id", found.ID, "err", err)
-		if storeErr := s.store.SetAdoptionError(ctx, found.ID, userID, adoptFailedReason); storeErr != nil {
+		if storeErr := s.store.SetAdoptionFailure(ctx, found.ID, userID, normalizeFailure(err)); storeErr != nil {
 			return Experiment{}, storeErr
 		}
 		return s.owned(ctx, userID, id)
@@ -465,7 +471,7 @@ func (s *Service) apply(ctx context.Context, found Experiment, confirmStyleguide
 	}
 	if err := s.runner.ApplyWinner(ctx, found, *winner, confirmStyleguide); err != nil {
 		slog.Error("experiment winner apply failed", "experiment_id", found.ID, "stage", found.Stage, "err", err)
-		_ = s.store.SetApplyError(ctx, found.ID, found.UserID, applyFailedReason)
+		_ = s.store.SetApplyFailure(ctx, found.ID, found.UserID, normalizeFailure(err))
 		return s.owned(ctx, found.UserID, found.ID)
 	}
 	if err := s.store.SetApplied(ctx, found.ID, found.UserID, s.now()); err != nil {

@@ -444,8 +444,8 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
   후보만 재시도하기를 지원하며, 단일 생존 결과는 쓸 수 있지만 승패에는 넣지 않는다.
 - 계정별·단계별 리더보드에서 Elo, 비교 수, 승/패/승률, 평균 지연, 토큰과 비용을 본다.
   다른 계정의 결과나 순위는 볼 수 없다.
-- 작성 실험은 `target_language`를 입력 스냅샷·해시·보존 메타데이터에 포함하고, 두 후보와 재시도에 같은 값을 쓴다. 작성 품질은
-  언어에 따라 달라지므로 작성 리더보드는 계정과 target language별로 분리하고 관찰 리더보드는 언어와 독립적으로 유지한다.
+- 작성 실험은 `target_language`를 입력 스냅샷·해시·보존 메타데이터에 포함하고, 두 후보와 재시도에 같은 값을 쓴다.
+  현재 리더보드는 모든 단계에서 계정·단계별로 집계하며, target language는 재현 가능한 비교 입력으로만 보존한다.
 - 관찰/분석 승자는 결과 적용과 활성 모델 적용을 각각 명시적으로 선택한다. 분석 결과는 실험이 고정한 같은 활성 말투에만
   적용할 수 있고, 사용자가 쓴 `rules`는 바뀌지 않는다.
 - 선택·기각 후 입력과 두 후보 본문은 30일 뒤 지우되, 리더보드 재계산에 필요한 모델,
@@ -476,16 +476,18 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
 
 ### F-11. UI 다국어 지원
 
-- 로그인부터 로그인 후 모든 SPA 화면과 공개 설명 페이지의 정적 문구, validation, loading/empty/error,
-  dialog, 접근성 이름을 한국어·영어 catalog로 제공한다.
+- 로그인부터 로그인 후 현재 SPA 화면의 정적 문구, validation, loading/empty/error, dialog, 접근성 이름을
+  한국어·영어 catalog로 제공한다. 공개 설명 페이지용 `marketing` namespace는 예약되어 있으며 그 페이지
+  자체는 plan 15/job 34에서 추가한다.
 - 사용자가 쓴 글·메모·말투/용도 이름, 모델·provider·플랫폼 고유명, 외부 provider 진단 원문은 번역하지 않는다.
-  제품이 아는 동기 오류는 `AppErrorDetail { reason, params }`, 영속 오류는 `Failure { reason, params }`로 전달·저장하고,
-  화면에서 현재 locale로 번역한다. 알 수 없거나 detail이 없는 실패는 Connect code에 맞는 일반 번역으로 폴백하며 raw message를
-  UI 문구로 사용하지 않는다.
+  제품이 아는 동기 오류는 `AppErrorDetail { reason, params }`, 영속 오류는
+  `Failure { reason, params, technical_detail }`로 전달·저장하고 화면에서 현재 locale로 번역한다. 알 수 없거나
+  detail이 없거나 손상된 실패는 `UNKNOWN_FAILURE`의 일반 번역으로 폴백하며 raw message를 UI 문구로 사용하지 않는다.
 - 날짜·숫자·상대 시간은 같은 데이터에 `Intl` locale formatting만 적용한다. locale 전환은 데이터·세션·URL·작업 상태를
   바꾸지 않는다.
-- 첫 React 화면 전에 저장값과 `navigator.languages`로 locale을 결정하고 `<html lang>`을 맞춘다. 사용자는 로그인 전·후
-  header에서 locale을 바꿀 수 있고, 명시적 선택은 같은 브라우저에 저장된다.
+- 첫 React 화면 전에 저장값과 `navigator.languages`로 locale을 결정하고 `<html lang>`을 맞춘다. 사용자는 로그인 화면과
+  로그인 후 shell에서 locale을 바꿀 수 있고, 명시적 선택은 같은 브라우저에 저장된다. 공개 header는 job 34가 같은 control을
+  합성한다.
 - 한국어·영어 catalog의 key 집합은 같아야 하며 누락은 CI에서 실패한다. 런타임에 번역 key 자체를 사용자에게 노출하지 않는다.
 
 **완료 조건**
@@ -537,7 +539,7 @@ generation_jobs  id, post_slug FK, user_id FK, voice_id FK nullable -- §3.5, �
                  status TEXT                    -- queued | running | done | failed
                  stage TEXT                     -- observe | write
                  progress_done, progress_total
-                 failure_reason TEXT, failure_params_json TEXT
+                 error_reason TEXT, error_params TEXT, technical_detail TEXT
                  error TEXT                     -- 이전 행/내부 진단 호환, UI 표시 금지
                  observe_model TEXT, write_model TEXT   -- 어떤 선택으로 돌았는지
                  created_at, updated_at
@@ -546,12 +548,13 @@ model_experiments id, user_id FK, voice_id FK nullable, post_slug FK nullable
                   stage, target_language nullable, status, job_id
                   input_snapshot, input_hash, prompt_version
                   winner_candidate_id, outcome
-                  apply_failure_reason, apply_failure_params_json
+                  apply_error_reason, apply_error_params, apply_technical_detail
+                  adoption_error_reason, adoption_error_params, adoption_technical_detail
                   created_at, finished_at, decided_at, content_expires_at
 
 model_experiment_candidates id, experiment_id FK
                   provider_id, model_id, model_label, display_side
-                  status, output, failure_reason, failure_params_json
+                  status, output, error_reason, error_params, technical_detail
                   error                              -- 이전 행/내부 진단 호환
                   prompt_tokens, completion_tokens, cost_microusd, latency_ms
 
@@ -564,7 +567,7 @@ publish_jobs      id, user_id FK, post_slug snapshot, post_created_at incarnatio
                   (agent_id,user_id) composite FK, platform, status, stage, progress_seq
                   content_revision, manifest_json, settings_json
                   lease_token_hash, lease_expires_at
-                  failure_reason, failure_params_json, error_message, platform_post_url
+                  error_reason, error_params, technical_detail, error_message, platform_post_url
                   created_at, claimed_at, committed_at, published_at, updated_at
 
 publish_assets    job_id FK, ordinal, filename, source_filename, staged_key, bytes
@@ -585,8 +588,8 @@ plan 10의 후속 임베디드 마이그레이션은 기존 계정마다 `기본
 명시적으로 저장하며 DB 기본값으로 요청 누락을 숨기지 않는다. 기존 영속 오류 문장은 내부 호환용으로 남기되 알려진
 상태는 구조화된 사유로 옮기고, 나머지 이전 실패는 raw 문장 대신 `UNKNOWN_FAILURE`로 투영한다.
 
-사용자에게 보이는 모든 영속 실패는 렌더링된 문장 대신 `failure_reason`과 flat scalar만 담는
-`failure_params_json`을 정본으로 삼는다. SQL 오류·stack·secret·provider response body·prompt·사용자 글은 params에
+사용자에게 보이는 모든 영속 실패는 렌더링된 문장 대신 `error_reason`과 flat scalar만 담는
+JSON object `error_params`를 정본으로 삼고, 선택적 진단은 `technical_detail`에 둔다. SQL 오류·stack·secret·provider response body·prompt·사용자 글은 params에
 넣지 않으며 `error`/`error_message` 호환 필드는 UI가 직접 표시하지 않는다.
 
 - **세션 토큰은 해시해서 저장한다.** DB가 새도 세션이 바로 탈취되지 않게.
@@ -791,7 +794,7 @@ type Request struct {
 | 기존 정본이 있는 글의 target language를 변경                          | 정본·기계 기준본·확정 상태·`content_language`·관찰 결과는 유지하고 다음 전체 생성/A-B에만 적용                                                                          |
 | 작업 실행 중 또는 A/B 선택 대기 중 target language를 다시 변경        | 실행·후보는 시작 당시 target을 유지하고 적용 시 그 값으로 `content_language`만 기록. 글에 더 나중에 저장한 target은 덮어쓰지 않음                                       |
 | 말투 기준 언어와 정본 언어가 다름                                     | 생성·수정·확정·내보내기·발행은 허용, 말투 학습·문장 의견·대조 근거·규칙 저장은 provider 호출 전에 거부                                                                  |
-| 알 수 없는 오류 reason 또는 detail 없는 네트워크 실패                 | Connect code에 맞는 일반 번역으로 폴백하고 raw backend/provider message는 표시하지 않음                                                                                 |
+| 알 수 없는 오류 reason 또는 detail 없는 네트워크 실패                 | `UNKNOWN_FAILURE`의 일반 번역으로 폴백하고 raw backend/provider message는 표시하지 않음                                                                                  |
 | 클립보드 API 차단                                                     | 텍스트 자동 선택으로 폴백                                                                                                                                               |
 | 발행 요청 때 Mac이 꺼짐                                               | SQLite의 `queued`로 대기, Mac이 다시 폴링하면 claim                                                                                                                     |
 | 네이버 로그인 만료 / CAPTCHA / 2FA                                    | `needs_attention`, 로컬 전용 프로필에서 사람이 해결하기 전까지 중단                                                                                                     |

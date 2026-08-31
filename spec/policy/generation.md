@@ -2,7 +2,8 @@
 
 Canonical rules that are **currently true** in the code. Source: [plan/06](../plan/06.two-stage-generation-and-contact-sheet.md),
 implemented by jobs 10, 11, 23, 24, and 36; voice scoping from
-[plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18.
+[plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18; language freezing and structured failures
+from [plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
 
 ## Canonical content
 
@@ -21,9 +22,9 @@ implemented by jobs 10, 11, 23, 24, and 36; voice scoping from
 ## Pipeline
 
 - Ordinary generation is a durable `generate` job. `StartGeneration` validates ownership and one explicit active
-  write model (plus an explicit vision observe model when photos exist), freezes the optional target length **and the
-  post's optional purpose brief** in its payload, and returns only `job_id` without making a provider call or creating
-  a model experiment.
+  write model (plus an explicit vision observe model when photos exist), freezes the required post target language,
+  optional target length, **and the post's optional purpose brief** in its payload, and returns only `job_id` without
+  making a provider call or creating a model experiment.
 - `StartWriteExperiment` is the separate explicit A/B path. It validates two distinct write candidates, freezes one
   shared post/profile/option snapshot, creates the experiment and job, and returns their ids before provider work.
 - When photos are attached, observation always precedes writing. Photos are ordered by `created_at, id`, read from
@@ -35,24 +36,25 @@ implemented by jobs 10, 11, 23, 24, and 36; voice scoping from
   before its durable progress update, so the count always converges to the attached photo count.
 - With no photos, observation makes no provider call, reports `observe 0/0`, clears stale observations, and tells
   the writing model to use the memo without images.
-- The writing prompt's stable prefix is static task/format rules → fixed Korean naturalness baseline → styleguide →
-  active contrast rules → recent excerpts → user rules → ending constraint → optional frozen purpose brief (see
-  [purposes](purposes.md)). Per-post title hint, memo, observations, and exact filenames follow it. Without a purpose
-  the prompt is byte-identical to the post-naturalness no-purpose golden. The prompt requires Korean output, one
-  paragraph per `TEXT` block, only attached filenames, context-appropriate image placement, a one-line summary, and
-  3–6 tags.
+- The writing prompt's stable prefix is static task/format rules → target-specific baseline when applicable → voice
+  projection → optional frozen purpose brief (see [purposes](purposes.md)). Same-language projection contains the
+  complete profile/rules/excerpts; cross-language projection contains only the portable structure and six numeric
+  axes defined by [languages](languages.md). Per-post title hint, memo, observations, and exact filenames follow it.
+  The prompt requires its frozen target for title, summary, tags, prose, alt text, and captions; one paragraph per
+  `TEXT` block; only attached filenames; context-appropriate image placement; a one-line summary; and 3–6 tags.
 - The purpose brief is resolved from the post once, at enqueue, through the purpose context's published lookup, and
   written into the payload as text. Handlers build the prompt from that payload and never re-read the row, so editing
   or deleting the purpose afterwards — including across a restart-resume or an explicit retry — cannot change work
   already queued. A purpose deleted before the start is simply absent. The observe stage never receives a brief.
-- The A/B snapshot freezes the same brief, so both candidates get byte-identical system prompts including it and the
-  input hash changes with the purpose. The experiment records `purpose_name`.
+- The A/B snapshot freezes the same target, voice projection, and brief, so both candidates get byte-identical inputs
+  except for model ref. The input hash changes with target or purpose, and the experiment records both target and
+  `purpose_name`.
 - Observation runs at most once in either mode. Ordinary generation calls one writer and directly persists validated
   content. A/B generation gives both writers byte-identical prepared snapshots/schema/options except for model ref,
   runs them concurrently, and stores validated candidate output under the experiment until an explicit verdict.
 - A model declaring structured-output support receives the relevant JSON schema. Other models use the same parser,
-  which accepts direct JSON, fenced JSON, or the first complete JSON object. Unparseable output fails with
-  `모델이 JSON 대신 다른 답을 돌려줬어요: ` plus at most 200 characters of the raw response.
+  which accepts direct JSON, fenced JSON, or the first complete JSON object. Unparseable output becomes the stable
+  durable reason `MODEL_OUTPUT_INVALID`; raw response detail is diagnostic and never primary user-facing copy.
 - Every provider call is bounded by the registry's five-minute stage timeout. No database transaction spans a
   provider call; observations, progress, and final content are separate short writes.
 - Observation and writing/revision request `low` reasoning effort. A strict model-level override may replace that
@@ -65,7 +67,7 @@ implemented by jobs 10, 11, 23, 24, and 36; voice scoping from
 ## Korean naturalness baseline
 
 - `NaturalnessBaseline` is one code-owned constant shared by write and revise. It appears exactly once after the
-  static task/format rules and before `[스타일가이드]`; an empty voice does not remove it.
+  static task/format rules for Korean output and before the voice projection; an empty voice does not remove it.
 - The section is subtraction-only: it caps stock antithesis, formulaic closers, obligation-ended paragraphs,
   connective-ending commas, uniform sentence structure, generic policy verbs, piled invented metaphors,
   abstract-noun chains, hype, and unwarranted rhetoric. It applies only to newly written or explicitly revised
@@ -75,9 +77,9 @@ implemented by jobs 10, 11, 23, 24, and 36; voice scoping from
   bans on `~에 대해`, `~를 통해`, `~것이다`, or sentence-initial conjunctions.
 - The closing precedence line makes the voice profile, active contrast rules, and user rules authoritative when they
   conflict with the baseline. The measured voice remains the source of personal register.
-- Ordinary generation and both A/B candidates inherit identical baseline bytes through `BuildWritePrompt`.
-  `ObservePrompt` is unchanged. Plan 13's language-aware builders must keep the section for Korean output and omit it
-  for every non-Korean target.
+- Ordinary generation and both A/B candidates inherit identical baseline bytes through `BuildWritePrompt` for a
+  Korean target and omit the complete section for an English target. `ObservePrompt` is target-independent and
+  unchanged across otherwise-equal Korean/English jobs.
 
 ## Start preconditions and ownership
 
@@ -125,9 +127,9 @@ implemented by jobs 10, 11, 23, 24, and 36; voice scoping from
   as absence through ordinary-job payloads, A/B snapshots, revision, and prompts; there is no hidden 1,200-character
   fallback. A configured positive value is frozen exactly, but machine output never rewrites the saved option.
 - Start freezes the owned post's exact active `voice_id` with the input; the handler resolves that voice's profile
-  version and projection and nothing else. The projection contains that voice's typed descriptors, legacy manual
-  guidance, bans, evidence-ranked active rules, and 0–3 unique excerpts. Retrieval text (title/memo) and tag matches
-  lead; stable recent fallback keeps a single unrelated finalized post useful. Candidate/retired/rejected rules and
+  version and language projection and nothing else. Equal source/target languages receive the complete typed profile,
+  legacy guidance, rules, and 0–3 excerpts; a mismatch receives only the portable allowlist. Retrieval text and tag
+  matches lead only for the full projection. Candidate/retired/rejected rules, excluded cross-language fields, and
   any other voice's data never enter the prompt.
 - A machine result establishes a baseline carrying the frozen voice id; a result whose frozen voice no longer matches
   the post (reassigned mid-flight) or is deleted is refused rather than written. Applying an A/B winner rechecks the

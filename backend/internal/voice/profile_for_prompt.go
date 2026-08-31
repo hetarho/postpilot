@@ -31,13 +31,38 @@ type PromptProfile struct {
 	Styleguide, ActiveRules, ManualRules string
 	Excerpts                             []string
 	Empty                                bool
+	SourceLanguage, TargetLanguage       Language
+	Portable                             bool
+}
+
+// PromptProfileForLanguage publishes a deterministic full or portable projection for one
+// concrete target. Voice owns the field selection so no consumer can accidentally leak
+// source-language excerpts or lexical rules across languages.
+func (s *Service) PromptProfileForLanguage(ctx context.Context, userID, voiceID string, target Language) (PromptProfile, error) {
+	return s.PromptProfileForTopicAndLanguage(ctx, userID, voiceID, target, "", nil)
+}
+
+func (s *Service) PromptProfileForTopicAndLanguage(ctx context.Context, userID, voiceID string, target Language, topic string, tags []string) (PromptProfile, error) {
+	if !target.Valid() {
+		return PromptProfile{}, ErrLanguageRequired
+	}
+	return s.promptProfileForTopic(ctx, userID, voiceID, target, topic, tags)
 }
 
 // PromptProfileForTopic projects exactly one voice. Every row it reads is keyed by that
 // voice, so a well-trained sibling voice contributes nothing — an empty voice prompts as
 // empty rather than borrowing. A deleted voice is refused: nothing may be written in it.
 func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, topic string, tags []string) (PromptProfile, error) {
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+	voice, err := s.activeVoice(ctx, userID, voiceID)
+	if err != nil {
+		return PromptProfile{}, err
+	}
+	return s.promptProfileForTopic(ctx, userID, voiceID, voice.SourceLanguage, topic, tags)
+}
+
+func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID string, target Language, topic string, tags []string) (PromptProfile, error) {
+	voice, err := s.activeVoice(ctx, userID, voiceID)
+	if err != nil {
 		return PromptProfile{}, err
 	}
 	// Retirement is evaluated only inside this explicit consumer request. No timer or
@@ -48,6 +73,13 @@ func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, to
 	profile, err := s.store.GetProfile(ctx, userID, voiceID)
 	if err != nil {
 		return PromptProfile{}, fmt.Errorf("get profile for prompt: %w", err)
+	}
+	if target != voice.SourceLanguage {
+		style := renderPortableProfile(profile.Structured)
+		return PromptProfile{
+			Styleguide: style, Empty: style == "", SourceLanguage: voice.SourceLanguage,
+			TargetLanguage: target, Portable: true,
+		}, nil
 	}
 	samples, err := s.store.ListSampleBodies(ctx, userID, voiceID)
 	if err != nil {
@@ -60,6 +92,7 @@ func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, to
 	if err != nil {
 		return PromptProfile{}, fmt.Errorf("list authored excerpts: %w", err)
 	}
+	sources = authoredSourcesForLanguage(sources, voice.SourceLanguage)
 	excerptLimit, excerptChars := s.config.FewShotMax, s.config.FewShotExcerptMaxChars
 	if !s.personalizationReady {
 		excerptLimit, excerptChars = ExcerptCount, ExcerptChars
@@ -90,7 +123,7 @@ func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, to
 			active = append(active, rule.Statement)
 		}
 	}
-	style := renderStructuredProfile(profile.Structured)
+	style := renderStructuredProfileForLanguage(profile.Structured, voice.SourceLanguage)
 	if profile.Styleguide != "" {
 		if !s.personalizationReady {
 			style = profile.Styleguide
@@ -102,7 +135,7 @@ func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, to
 		}
 	}
 	empty := profile.Styleguide == "" && len(samples) == 0 && len(sources) == 0 && profile.Structured.Version == 0
-	return PromptProfile{Styleguide: style, ActiveRules: strings.Join(active, "\n"), ManualRules: strings.TrimSpace(profile.Rules), Excerpts: excerpts, Empty: empty}, nil
+	return PromptProfile{Styleguide: style, ActiveRules: strings.Join(active, "\n"), ManualRules: strings.TrimSpace(profile.Rules), Excerpts: excerpts, Empty: empty, SourceLanguage: voice.SourceLanguage, TargetLanguage: target}, nil
 }
 
 func (s *Service) retireStaleRules(ctx context.Context, userID, voiceID string) error {

@@ -56,7 +56,7 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 	service := voice.NewService(voicestore.New(handle.Writer, handle.Reader), models{}, jobs{})
 	voices := map[string]string{}
 	for _, userID := range []string{"alice", "bob"} {
-		created, _, err := service.EnsureDefaultVoice(context.Background(), userID)
+		created, _, err := service.EnsureDefaultVoice(context.Background(), userID, voice.LanguageKorean)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -121,7 +121,7 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 		auth.WithUser(context.Background(), "alice"),
 		connect.NewRequest(&postpilotv1.AddVoiceSampleRequest{VoiceId: voices["alice"], Body: strings.Repeat("가", 199)}),
 	)
-	if connect.CodeOf(err) != connect.CodeInvalidArgument || !strings.Contains(err.Error(), "199") {
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("short sample RPC error = %v", err)
 	}
 	_, err = handler.AddVoiceSample(
@@ -158,7 +158,7 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 		}
 	}
 	service := voice.NewService(voicestore.New(handle.Writer, handle.Reader), models{}, jobs{})
-	defaultVoice, _, err := service.EnsureDefaultVoice(context.Background(), "alice")
+	defaultVoice, _, err := service.EnsureDefaultVoice(context.Background(), "alice", voice.LanguageKorean)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,14 +166,14 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	alice := auth.WithUser(context.Background(), "alice")
 	bob := auth.WithUser(context.Background(), "bob")
 
-	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "  "})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "  ", SourceLanguage: contentLanguagePtr(postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN)})); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("blank name code = %v", err)
 	}
-	created, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "리뷰"}))
+	created, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "리뷰", SourceLanguage: contentLanguagePtr(postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN)}))
 	if err != nil || created.Msg.GetVoice().GetName() != "리뷰" || created.Msg.GetVoice().GetIsDefault() {
 		t.Fatalf("create = %+v err=%v", created, err)
 	}
-	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "리뷰"})); connect.CodeOf(err) != connect.CodeAlreadyExists {
+	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "리뷰", SourceLanguage: contentLanguagePtr(postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN)})); connect.CodeOf(err) != connect.CodeAlreadyExists {
 		t.Fatalf("duplicate name code = %v", err)
 	}
 	review := created.Msg.GetVoice().GetId()
@@ -207,7 +207,7 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	if err != nil || len(listed.Msg.GetVoices()) != 2 || listed.Msg.GetVoices()[1].GetId() != defaultVoice.ID || !listed.Msg.GetVoices()[1].GetDeleted() {
 		t.Fatalf("list = %+v err=%v", listed, err)
 	}
-	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: voice.DefaultVoiceName})); err != nil {
+	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: voice.DefaultVoiceName, SourceLanguage: contentLanguagePtr(postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN)})); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := handler.RestoreVoice(alice, connect.NewRequest(&postpilotv1.RestoreVoiceRequest{VoiceId: defaultVoice.ID})); connect.CodeOf(err) != connect.CodeAlreadyExists {
@@ -223,6 +223,10 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	if bobList, err := handler.ListVoices(bob, connect.NewRequest(&postpilotv1.ListVoicesRequest{})); err != nil || len(bobList.Msg.GetVoices()) != 0 {
 		t.Fatalf("bob sees alice's voices: %+v err=%v", bobList, err)
 	}
+}
+
+func contentLanguagePtr(value postpilotv1.ContentLanguage) *postpilotv1.ContentLanguage {
+	return &value
 }
 
 func TestLearningAndValidationRPCsRequireAuthenticatedContextBeforeServiceAccess(t *testing.T) {

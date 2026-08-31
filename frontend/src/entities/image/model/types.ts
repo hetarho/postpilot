@@ -17,17 +17,30 @@ export interface PostImage {
 export type UploadRejection = 'duplicate-filename' | 'invalid'
 
 export class UploadRejected extends Error {
-  constructor(readonly reason: UploadRejection) {
+  readonly reason: UploadRejection
+
+  constructor(readonly failure: AppFailure) {
+    const reason = failure.reason === 'POST_FILENAME_TAKEN' ? 'duplicate-filename' : 'invalid'
     super(reason)
     this.name = 'UploadRejected'
+    this.reason = reason
   }
 }
 
 /** The server found no object behind the upload id at confirm time: the PUT did not
  *  land. Retryable, but from `CreateUpload`, not by confirming again. */
 export class UploadObjectMissing extends Error {
-  constructor() {
-    super('object missing')
+  constructor(readonly failure: AppFailure = { reason: 'UPLOAD_OBJECT_MISSING', params: {} }) {
+    super(failure.reason)
     this.name = 'UploadObjectMissing'
   }
 }
+
+/** A retryable CreateUpload/ConfirmUpload transport failure with its public structured reason. */
+export class UploadRpcFailure extends Error {
+  constructor(readonly failure: AppFailure) {
+    super(failure.reason)
+    this.name = 'UploadRpcFailure'
+  }
+}
+import type { AppFailure } from '@/shared/api'

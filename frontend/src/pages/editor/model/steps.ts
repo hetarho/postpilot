@@ -1,13 +1,20 @@
+import i18next from 'i18next'
 import type { PostStatus } from '@/entities/post'
 
 export type EditorStep = 'generate' | 'refine' | 'finish'
 
 /** The post's lifecycle as three steps. One list, so the bar and the panels cannot drift. */
-export const EDITOR_STEPS: ReadonlyArray<{ value: EditorStep; label: string }> = [
-  { value: 'generate', label: '글 생성' },
-  { value: 'refine', label: '글 다듬기' },
-  { value: 'finish', label: '글 완성' },
-]
+export function editorSteps(): ReadonlyArray<{ value: EditorStep; label: string }> {
+  return [
+    { value: 'generate', label: i18next.t('editor.steps.generate', { ns: 'posts' }) },
+    { value: 'refine', label: i18next.t('editor.steps.refine', { ns: 'posts' }) },
+    { value: 'finish', label: i18next.t('editor.steps.finish', { ns: 'posts' }) },
+  ]
+}
+
+export function editorStepLabel(step: EditorStep): string {
+  return editorSteps().find((item) => item.value === step)?.label ?? ''
+}
 
 const BY_STATUS: Record<PostStatus, EditorStep> = {
   draft: 'generate',

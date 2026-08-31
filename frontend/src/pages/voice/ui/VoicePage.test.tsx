@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'vitest'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { VoiceValueSource } from '@/shared/api'
+import { initializeI18n } from '@/app/providers/i18n'
+import { VoiceLayer, VoiceRuleStatus, VoiceValueSource } from '@/shared/api'
 import { voiceProfileQueryKey } from '@/entities/voice'
 import { renderAppAt } from '@/test/app'
 
@@ -20,6 +21,8 @@ const LEARNED = {
 }
 
 const DEFAULT = '/voices/voice-default'
+
+afterEach(() => initializeI18n('ko'))
 
 describe('the 프로필 tab', () => {
   // Change 04 A1, now under one voice: the layout names the voice, the tab keeps its title.
@@ -55,6 +58,58 @@ describe('the 프로필 tab', () => {
     expect(within(axes).getByText('관여도').nextElementSibling).toHaveTextContent('2')
     expect(within(axes).getByText('서사성').nextElementSibling).toHaveTextContent('알 수 없음')
     expect(within(axes).queryByText('0')).not.toBeInTheDocument()
+  })
+
+  it('keeps Korean syntax measurement in characters', async () => {
+    renderAppAt(DEFAULT, {
+      user: { id: 'alice' },
+      voice: {
+        structured: { ...LEARNED, syntax: { averageSentenceChars: 14 } },
+      },
+    })
+
+    const label = await screen.findByText('평균 문장 길이(글자)')
+    expect(label.nextElementSibling).toHaveTextContent('14자')
+    expect(screen.getByText('주 종결어미')).toBeInTheDocument()
+  })
+
+  it('shows English syntax measurement in words and preserves unknown presence', async () => {
+    const englishVoice = [
+      {
+        id: 'voice-default',
+        name: 'English voice',
+        isDefault: true,
+        sourceLanguage: 'en' as const,
+      },
+    ]
+    renderAppAt(DEFAULT, {
+      user: { id: 'alice' },
+      voice: {
+        voices: englishVoice,
+        structured: {
+          ...LEARNED,
+          syntax: { averageSentenceChars: 99, averageSentenceWords: 12.5 },
+        },
+      },
+    })
+
+    const measured = await screen.findByText('평균 문장 길이(단어)')
+    expect(measured.nextElementSibling).toHaveTextContent('12.5단어')
+    expect(screen.getByText('기본 문체 격식')).toBeInTheDocument()
+    expect(screen.queryByText('주 종결어미')).not.toBeInTheDocument()
+
+    cleanup()
+    renderAppAt(DEFAULT, {
+      user: { id: 'alice' },
+      voice: {
+        voices: englishVoice,
+        structured: { ...LEARNED, syntax: { averageSentenceChars: 99 } },
+      },
+    })
+
+    const unknown = await screen.findByText('평균 문장 길이(단어)')
+    expect(unknown.nextElementSibling).toHaveTextContent('알 수 없음')
+    expect(unknown.nextElementSibling).not.toHaveTextContent('99')
   })
 
   // Plan 10 A2: another voice of the same account is genuinely empty.
@@ -141,6 +196,62 @@ describe('the voice tab row', () => {
     expect(await screen.findByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(path)
     expect(screen.queryByText('현재 말투 프로필')).not.toBeInTheDocument()
+  })
+})
+
+describe('localized durable voice records', () => {
+  it.each([
+    { locale: 'ko' as const, label: 'v7 · 완료 · 33%' },
+    { locale: 'en' as const, label: 'v7 · Done · 33%' },
+  ])('localizes validation status and Intl percentage in $locale', async ({ locale, label }) => {
+    initializeI18n(locale)
+    renderAppAt(`${DEFAULT}/validations`, {
+      user: { id: 'alice' },
+      voice: {
+        validations: [
+          {
+            id: 'validation-1',
+            voiceId: 'voice-default',
+            profileVersion: 7n,
+            status: 'done',
+            judgeEnabled: true,
+            totalCount: 3,
+            yCount: 1,
+          },
+        ],
+      },
+    })
+
+    expect(await screen.findByRole('link', { name: label })).toBeInTheDocument()
+    expect(screen.queryByText('done')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { locale: 'ko' as const, layer: '어휘', evidence: '활성 · 근거 1' },
+    { locale: 'en' as const, layer: 'Lexical', evidence: 'Active · 1 evidence' },
+  ])('localizes the normalized rule layer in $locale', async ({ locale, layer, evidence }) => {
+    initializeI18n(locale)
+    renderAppAt(`${DEFAULT}/rules`, {
+      user: { id: 'alice' },
+      voice: {
+        structured: {
+          ...LEARNED,
+          contrastRules: [
+            {
+              id: 'rule-1',
+              statement: 'Keep sentences concise.',
+              layer: VoiceLayer.LEXICAL,
+              evidenceCount: 1,
+              status: VoiceRuleStatus.ACTIVE,
+            },
+          ],
+        },
+      },
+    })
+
+    expect(await screen.findByText(layer)).toBeInTheDocument()
+    expect(screen.getByText(evidence)).toBeInTheDocument()
+    expect(screen.queryByText('lexical')).not.toBeInTheDocument()
   })
 })
 

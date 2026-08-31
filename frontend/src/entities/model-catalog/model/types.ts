@@ -1,12 +1,12 @@
+import i18next from 'i18next'
+
 /** The three places a model is chosen ([I3]); the app never fills one in. */
 export type StageName = 'observe' | 'write' | 'analyze'
 
 export const STAGES: readonly StageName[] = ['observe', 'write', 'analyze']
 
-export const STAGE_LABELS: Record<StageName, string> = {
-  observe: '관찰',
-  write: '작성',
-  analyze: '문체 분석',
+export function stageLabel(stage: StageName): string {
+  return i18next.t(`stage.${stage}`, { ns: 'models' })
 }
 
 /** One model of one provider — what a job records and what a dropdown saves. */

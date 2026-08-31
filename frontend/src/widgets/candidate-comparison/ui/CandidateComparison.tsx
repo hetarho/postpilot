@@ -1,22 +1,18 @@
 import { useMemo } from 'react'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import type {
   CandidateStatusName,
   ExperimentCandidate,
   ModelExperiment,
 } from '@/entities/model-experiment'
-import { Badge, Notice, type BadgeTone } from '@/shared/ui'
+import { AppFailureMessage, Badge, Notice, type BadgeTone } from '@/shared/ui'
+import { formatNumber } from '@/shared/lib'
 import { candidateSides, type CandidateSide } from '../model/sides'
 
 interface CandidateComparisonProps {
   experiment: ModelExperiment
   activeCandidateId: string
-}
-
-const STATUS_LABELS: Record<CandidateStatusName, string> = {
-  pending: '생성 중',
-  running: '생성 중',
-  succeeded: '완료',
-  failed: '오류',
 }
 
 const STATUS_TONES: Record<CandidateStatusName, BadgeTone> = {
@@ -30,6 +26,7 @@ const STATUS_TONES: Record<CandidateStatusName, BadgeTone> = {
  *  the comparison, so it belongs in the same thumb band as the buttons that commit it, not pinned
  *  to the top edge ~700px away from the resting thumb (design-language §4.3). */
 export function CandidateComparison({ experiment, activeCandidateId }: CandidateComparisonProps) {
+  const { t } = useTranslation('posts')
   const sides = useMemo(() => candidateSides(experiment.candidates), [experiment.candidates])
   return (
     <div>
@@ -37,7 +34,7 @@ export function CandidateComparison({ experiment, activeCandidateId }: Candidate
         {sides.map(({ candidate, label }) => (
           <article
             key={candidate.id}
-            aria-label={`후보 ${label}`}
+            aria-label={t('comparison.candidate', { label })}
             // The panel is NOT its own scroll container. A phone screen has one scroller, the
             // document (§4.4), and the inner one lost the reader's place on every switch because
             // `hidden` resets its scrollTop — paragraph-by-paragraph comparison, the whole point of
@@ -47,8 +44,12 @@ export function CandidateComparison({ experiment, activeCandidateId }: Candidate
             className={`${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-surface-raised md:block md:rounded-lg md:p-4`}
           >
             <div className="flex min-h-11 items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold tracking-tight">후보 {label}</h2>
-              <Badge tone={STATUS_TONES[candidate.status]}>{STATUS_LABELS[candidate.status]}</Badge>
+              <h2 className="text-lg font-semibold tracking-tight">
+                {t('comparison.candidate', { label })}
+              </h2>
+              <Badge tone={STATUS_TONES[candidate.status]}>
+                {t(`comparison.status.${candidate.status}`)}
+              </Badge>
             </div>
             <CandidateOutput candidate={candidate} />
           </article>
@@ -60,14 +61,19 @@ export function CandidateComparison({ experiment, activeCandidateId }: Candidate
 }
 
 function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
+  const { t } = useTranslation('posts')
   if (candidate.status === 'failed')
     return (
       <Notice tone="danger" role="alert" className="mt-4">
-        {candidate.error || '결과를 만들지 못했어요.'}
+        {candidate.failure ? (
+          <AppFailureMessage failure={candidate.failure} />
+        ) : (
+          t('comparison.failed')
+        )}
       </Notice>
     )
   if (!candidate.output)
-    return <p className="text-content-tertiary mt-4 text-sm">결과를 기다리는 중…</p>
+    return <p className="text-content-tertiary mt-4 text-sm">{t('comparison.waiting')}</p>
   if (candidate.output.kind === 'write') {
     const content = candidate.output.content
     return (
@@ -94,7 +100,7 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
                 key={index}
                 className="bg-surface-recessed rounded-md px-3 py-2 text-sm break-words"
               >
-                사진 · {block.file}
+                {t('comparison.photo', { filename: block.file })}
                 {block.caption ? ` — ${block.caption}` : ''}
               </p>
             ) : (
@@ -115,20 +121,24 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
             <dt className="text-sm font-medium break-words">{item.file}</dt>
             <dd className="text-content-secondary mt-2 space-y-1 text-sm">
               <p>
-                <span className="text-content-tertiary">장면</span> {item.scene || '—'}
+                <span className="text-content-tertiary">{t('comparison.scene')}</span>{' '}
+                {item.scene || '—'}
               </p>
               <p>
-                <span className="text-content-tertiary">분위기</span> {item.mood || '—'}
+                <span className="text-content-tertiary">{t('comparison.mood')}</span>{' '}
+                {item.mood || '—'}
               </p>
               <p>
-                <span className="text-content-tertiary">글자</span> {item.visibleText || '—'}
+                <span className="text-content-tertiary">{t('comparison.visibleText')}</span>{' '}
+                {item.visibleText || '—'}
               </p>
               <p>
-                <span className="text-content-tertiary">사물</span> {item.objects.join(', ') || '—'}
+                <span className="text-content-tertiary">{t('comparison.objects')}</span>{' '}
+                {item.objects.join(', ') || '—'}
               </p>
               <p>
-                <span className="text-content-tertiary">사람</span>{' '}
-                {item.peoplePresent ? '있음' : '없음'}
+                <span className="text-content-tertiary">{t('comparison.people')}</span>{' '}
+                {item.peoplePresent ? t('comparison.present') : t('comparison.absent')}
               </p>
             </dd>
           </div>
@@ -148,20 +158,23 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
  *  bottom of a post-length column — so comparing the two costs, the payoff of the whole exercise,
  *  meant memorising one number and switching (design-language §4.3). */
 function RevealBand({ sides }: { sides: CandidateSide[] }) {
+  const { t } = useTranslation('posts')
   return (
     <dl className="bg-surface-recessed divide-divider mt-6 divide-y rounded-lg px-4">
       {sides.map(({ candidate, label }) => (
         <div key={candidate.id} className="py-4">
           <dt className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-content-tertiary text-sm">후보 {label}</span>
+            <span className="text-content-tertiary text-sm">
+              {t('comparison.candidate', { label })}
+            </span>
             <span className="min-w-0 text-sm font-medium">
-              {candidate.modelLabel || '등록 해제된 모델'}
+              {candidate.modelLabel || t('comparison.modelUnavailable')}
             </span>
           </dt>
           <dd className="mt-1">
             {/* `text-sm`, not the metadata role: after the reveal this is the most important
                 content on the screen (§3). */}
-            <p className="text-content-secondary text-sm">{usageLine(candidate)}</p>
+            <p className="text-content-secondary text-sm">{usageLine(candidate, t)}</p>
             {candidate.model && (
               <p className="text-content-tertiary mt-1 text-xs break-words">
                 {candidate.model.providerId}/{candidate.model.modelId}
@@ -174,12 +187,27 @@ function RevealBand({ sides }: { sides: CandidateSide[] }) {
   )
 }
 
-function usageLine(candidate: ExperimentCandidate): string {
+function usageLine(candidate: ExperimentCandidate, t: TFunction<'posts'>): string {
   const usage = candidate.usage
-  if (!usage) return '사용량 미제공'
+  if (!usage) return t('comparison.usageUnavailable')
   const cost =
     usage.costSource === 'unavailable'
-      ? '비용 미제공'
-      : `${usage.costSource === 'estimated' ? '≈ ' : ''}$${(Number(usage.costMicrousd) / 1_000_000).toFixed(6)}`
-  return `${usage.promptTokens.toLocaleString()} 입력 · ${usage.completionTokens.toLocaleString()} 출력 · ${usage.latencyMs.toLocaleString()}ms · ${cost}`
+      ? t('comparison.costUnavailable')
+      : `${usage.costSource === 'estimated' ? '≈ ' : ''}${formatNumber(
+          Number(usage.costMicrousd) / 1_000_000,
+          undefined,
+          {
+            style: 'currency',
+            currency: 'USD',
+            currencyDisplay: 'narrowSymbol',
+            minimumFractionDigits: 6,
+            maximumFractionDigits: 6,
+          },
+        )}`
+  return t('comparison.usage', {
+    prompt: formatNumber(usage.promptTokens),
+    completion: formatNumber(usage.completionTokens),
+    latency: formatNumber(usage.latencyMs),
+    cost,
+  })
 }

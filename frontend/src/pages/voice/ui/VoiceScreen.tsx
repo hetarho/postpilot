@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useParams } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { FailureNotice } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
 import { type Voice, type VoiceProfile, useVoiceProfile } from '@/entities/voice'
@@ -25,6 +26,7 @@ export function VoiceScreen({
   description?: ReactNode
   children: (context: VoiceScreenContext) => ReactNode
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const { voiceId } = useParams({ from: '/authenticated/voices/$voiceId' })
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -33,12 +35,19 @@ export function VoiceScreen({
   if (isError) {
     return (
       <main className="mt-6">
-        <FailureNotice error="문체 프로필을 불러오지 못했어요." onRetry={refetch} />
+        <FailureNotice
+          message={t('screens.profileLoadFailed', { ns: 'voices' })}
+          onRetry={refetch}
+        />
       </main>
     )
   }
   if (isPending || !profile) {
-    return <main className="text-content-tertiary mt-6 text-sm">불러오는 중…</main>
+    return (
+      <main className="text-content-tertiary mt-6 text-sm">
+        {t('state.loading', { ns: 'common' })}
+      </main>
+    )
   }
   return (
     <main className="mt-6 pb-12">

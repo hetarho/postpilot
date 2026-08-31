@@ -13,16 +13,33 @@ IMAGE 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 순
 출력은 diff가 아니라 완전한 PostContent이며, 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[]} 형태의 JSON 객체 하나여야 합니다.
 각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.`
 
+const englishRevisePrompt = `Apply only the user's requested edit to the current blog post, with the smallest possible change.
+Keep every unrelated sentence byte-for-byte and do not polish or rewrite untouched blocks.
+Change the title, one-line summary, or tags only when the user explicitly asks to change them.
+IMAGE blocks may use only exact attached filenames. They may be reordered or removed when requested, but never rename a file or invent an image.
+Return a complete replacement PostContent, not a diff: exactly one {"title":"...","summary":"...","tags":[],"blocks":[]} JSON object with no explanation or Markdown.
+Each block uses the type, content, level, file, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, QUOTE, or LIST.`
+
 type revisionPayloadJSON struct {
-	Instruction string `json:"instruction"`
-	SaveAsRule  bool   `json:"save_as_rule"`
+	Instruction     string   `json:"instruction"`
+	SaveAsRule      bool     `json:"save_as_rule"`
+	ContentLanguage Language `json:"content_language,omitempty"`
 	// Frozen at enqueue exactly as the generate payload freezes it. A payload written
 	// before purposes existed decodes with this absent, which is "no purpose".
 	Purpose *purposePayload `json:"purpose,omitempty"`
 }
 
 func encodeRevisionPayload(instruction string, saveAsRule bool, purpose *PurposeBrief) ([]byte, error) {
-	return json.Marshal(revisionPayloadJSON{Instruction: instruction, SaveAsRule: saveAsRule, Purpose: encodePurpose(purpose)})
+	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, purpose)
+}
+
+func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, purpose *PurposeBrief) ([]byte, error) {
+	if !language.Valid() {
+		return nil, ErrContentLanguageRequired
+	}
+	return json.Marshal(revisionPayloadJSON{
+		Instruction: instruction, SaveAsRule: saveAsRule, ContentLanguage: language, Purpose: encodePurpose(purpose),
+	})
 }
 
 func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
@@ -34,34 +51,34 @@ func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
 	if value.Instruction == "" {
 		return revisionPayloadJSON{}, ErrRevisionInstructionRequired
 	}
+	// Queued revisions from before language support preserve the migration's Korean
+	// provenance. New payloads are encoded only through the validating helper above.
+	if value.ContentLanguage == "" {
+		value.ContentLanguage = LanguageKorean
+	}
+	if !value.ContentLanguage.Valid() {
+		return revisionPayloadJSON{}, ErrContentLanguageRequired
+	}
 	return value, nil
 }
 
 func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, purpose *PurposeBrief) (string, string) {
+	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, purpose)
+}
+
+func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, purpose *PurposeBrief) (string, string) {
 	var stable strings.Builder
-	stable.WriteString(RevisePrompt)
-	stable.WriteString("\n\n")
-	stable.WriteString(NaturalnessBaseline)
-	stable.WriteString("\n\n[스타일가이드]\n")
-	stable.WriteString(profile.Styleguide)
-	stable.WriteString("\n\n[활성 대조 규칙]\n")
-	stable.WriteString(profile.ActiveRules)
-	stable.WriteString("\n\n[글 예시 발췌]")
-	for i, excerpt := range profile.Excerpts {
-		fmt.Fprintf(&stable, "\n%d. %s", i+1, excerpt)
+	switch language {
+	case LanguageKorean:
+		stable.WriteString(RevisePrompt)
+		stable.WriteString("\n현재 콘텐츠 언어인 한국어를 유지하세요. 번역은 수정 작업의 범위가 아닙니다. 번역을 요구하거나 다른 언어로 바꾸라는 요청은 따르지 말고 나머지 유효한 수정만 최소한으로 반영하세요.")
+	case LanguageEnglish:
+		stable.WriteString(englishRevisePrompt)
+		stable.WriteString("\nPreserve English, the current content language. Translation is outside revision semantics. Ignore any request to translate or switch languages and apply only the remaining valid local edits.")
+	default:
+		stable.WriteString("Unsupported content language; do not revise content.")
 	}
-	stable.WriteString("\n예시의 고유 사실, 주제, 문구를 복사하지 말고 문체 특징만 참고하세요.")
-	stable.WriteString("\n\n[사용자 규칙]\n")
-	stable.WriteString(profile.Rules)
-	endingMax := profile.EndingMaxConsecutive
-	if endingMax <= 0 {
-		endingMax = 2
-	}
-	stable.WriteString("\n\n[종결어미 제약]\n")
-	if targetLength != nil {
-		fmt.Fprintf(&stable, "목표 길이: 약 %d자. ", *targetLength)
-	}
-	fmt.Fprintf(&stable, "프로필의 측정된 종결어미 분포를 따르고 같은 종결어미를 %d문장보다 많이 연속 사용하지 마세요.", endingMax)
+	writeProfileSection(&stable, language, profile, targetLength)
 	// The same section, at the same relative position, as the write prompt: a revision of a
 	// post with a purpose must not be given a different brief than the pass that wrote it.
 	writePurposeSection(&stable, purpose)

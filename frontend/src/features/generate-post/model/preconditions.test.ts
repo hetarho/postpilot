@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DELETED_VOICE_AI_REASON } from '@/entities/voice'
+import { deletedVoiceAIReason } from '@/entities/voice'
 import {
   comparisonGenerationPreconditions,
   ordinaryGenerationPreconditions,
@@ -83,7 +83,7 @@ describe('generationPreconditions', () => {
     const deleted = { deleted: true }
     expect(ordinaryGenerationPreconditions([], undefined, text, undefined, deleted)).toEqual({
       ok: false,
-      reason: DELETED_VOICE_AI_REASON,
+      reason: deletedVoiceAIReason(),
     })
     expect(
       comparisonGenerationPreconditions([], undefined, text, textB, undefined, deleted).ok,

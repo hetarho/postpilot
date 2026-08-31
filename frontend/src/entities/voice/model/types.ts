@@ -1,3 +1,6 @@
+import i18next from 'i18next'
+import type { ContentLanguage } from '@/shared/api'
+
 export interface VoiceSample {
   id: string
   label: string
@@ -10,10 +13,11 @@ export interface VoiceValue {
   source: VoiceSourceKind
   unknown: boolean
 }
+export type VoiceRuleLayer = 'lexical' | 'endings' | 'syntax' | 'structure' | 'axes' | 'unknown'
 export interface VoiceRule {
   id: string
   statement: string
-  layer: string
+  layer: VoiceRuleLayer
   evidenceCount: number
   status: 'candidate' | 'active' | 'retired' | 'rejected' | 'unknown'
   origin: string
@@ -33,9 +37,23 @@ export interface VoiceFeedback {
   id: string
   postSlug: string
   kind: string
-  layer: string
+  layer: VoiceRuleLayer
   processingState: string
   createdAt: string
+}
+export type VoiceValidationState = 'queued' | 'running' | 'partial' | 'failed' | 'done' | 'unknown'
+
+export function voiceValidationState(value: string): VoiceValidationState {
+  switch (value) {
+    case 'queued':
+    case 'running':
+    case 'partial':
+    case 'failed':
+    case 'done':
+      return value
+    default:
+      return 'unknown'
+  }
 }
 /** Every axis is optional because absence is a real answer: an axis the analysis never measured is
  *  missing, not 0, and the screen shows it as 알 수 없음 next to the other unknown-capable fields. */
@@ -67,6 +85,7 @@ export interface StructuredVoiceProfile {
   }
   syntax: {
     averageSentenceChars: number
+    averageSentenceWords?: number
     sentenceLength: VoiceValue
     connectiveStyle: VoiceValue
     preferredConnectives: string[]
@@ -99,6 +118,7 @@ export interface Voice {
   createdAt: string
   updatedAt: string
   deletedAt: string
+  sourceLanguage: ContentLanguage
 }
 
 /** The voice a post is written in, as a post screen needs it — just enough to name it, including
@@ -107,6 +127,7 @@ export interface VoiceRef {
   id: string
   name: string
   deleted: boolean
+  sourceLanguage: ContentLanguage | undefined
 }
 
 export interface VoiceProfile {
@@ -138,6 +159,7 @@ export function emptyVoice(): Voice {
     createdAt: '',
     updatedAt: '',
     deletedAt: '',
+    sourceLanguage: 'ko',
   }
 }
 
@@ -163,6 +185,7 @@ export function emptyStructuredVoiceProfile(): StructuredVoiceProfile {
     },
     syntax: {
       averageSentenceChars: 0,
+      averageSentenceWords: undefined,
       sentenceLength: unknownValue(),
       connectiveStyle: unknownValue(),
       preferredConnectives: [],
@@ -196,17 +219,27 @@ export function isEmptyProfile(
   )
 }
 
-/** How a deleted voice is named wherever a post still points at it (spec/policy/posts.md). */
-export const DELETED_VOICE_PREFIX = '삭제된 말투'
-
 export function voiceRefLabel(voice: Pick<VoiceRef, 'name' | 'deleted'>): string {
-  return voice.deleted ? `${DELETED_VOICE_PREFIX} · ${voice.name}` : voice.name
+  return voice.deleted ? i18next.t('deletedRef', { ns: 'voices', name: voice.name }) : voice.name
 }
 
 /** Why every AI action on a deleted-voice post is unavailable. One string, so generate, revise and
  *  finalize cannot explain the same server rule three different ways. The server enforces it;
  *  this only says so before the round trip. */
-export const DELETED_VOICE_AI_REASON = '삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'
+export function deletedVoiceAIReason(): string {
+  return i18next.t('deletedAiReason', { ns: 'voices' })
+}
+
+export function voiceContentLanguageMismatch(
+  contentLanguage: ContentLanguage | undefined,
+  sourceLanguage: ContentLanguage | undefined,
+): boolean {
+  return Boolean(contentLanguage && sourceLanguage && contentLanguage !== sourceLanguage)
+}
+
+export function voiceContentLanguageMismatchReason(): string {
+  return i18next.t('VOICE_CONTENT_LANGUAGE_MISMATCH', { ns: 'errors' })
+}
 
 export function activeVoices<T extends Pick<Voice, 'deleted'>>(voices: readonly T[]): T[] {
   return voices.filter((voice) => !voice.deleted)

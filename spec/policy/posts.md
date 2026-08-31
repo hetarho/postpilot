@@ -2,7 +2,8 @@
 
 Canonical rules that are **currently true** in the code. Source: [plan/02](../plan/02.post-drafting-and-list.md),
 backend built by job 03; voice assignment from [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md),
-built by job 18. A change to any rule here is a change to shipped behavior — go through `/create-change`.
+built by job 18; language state from [plan/13](../plan/13.multilingual-interface-and-target-langua.md), built by job
+32. A change to any rule here is a change to shipped behavior — go through `/create-change`.
 
 Photo upload has its own document: [uploads.md](uploads.md).
 
@@ -33,8 +34,10 @@ Photo upload has its own document: [uploads.md](uploads.md).
 ## Drafts
 
 - `SavePostDraft` is create-or-update: an empty slug creates and returns the minted slug; a slug updates `title`,
-  `memo` and `updated_at`. It is the autosave endpoint, called about once a second while someone types, so repeated
-  saves are plain idempotent updates.
+  `memo` and `updated_at`. A create also requires a concrete supported `target_language`; on update that field is
+  presence-aware, so absence preserves the target and presence replaces only the target alongside the current full
+  title/memo snapshot. The server does not infer a language. It is the autosave endpoint, called about once a second
+  while someone types, so repeated saves are plain idempotent updates.
 - **There is no save button.** The editor saves 1 s after the last keystroke, and again on every way out of it
   (the tab being hidden or unloaded, and leaving the editor). A save that fails retries with a capped backoff.
 - A failed save keeps retrying after the user leaves the editor, but **never after the session ends** — a retry
@@ -44,6 +47,11 @@ Photo upload has its own document: [uploads.md](uploads.md).
   most for the create: trusting it would leave the next edit minting a second post for the same draft.
 - A new post starts as `draft`. A successful ordinary generation, AI revision, or applied write-experiment result
   replaces its canonical content and moves it to `review`; see [generation.md](generation.md).
+- `target_language` is the language of the next ordinary generation or write A/B run. `content_language` is nullable
+  provenance for the current machine-established canonical content. Changing target preserves content, observations,
+  revisions, machine baseline, status, finalization, assignments, and content language; it never translates or
+  relabels existing prose. A frozen older run may therefore land with target and content language intentionally
+  different.
 - `observations` and `content` are owned by the post aggregate but may be changed by generation only through the
   post context's ownership-checked `SetObservations` and `SetGeneratedContent` behaviors. `GetPost` returns both;
   no other context reads or writes the `posts` table directly.
@@ -65,8 +73,10 @@ Photo upload has its own document: [uploads.md](uploads.md).
   canonical content, `content_revision`, status, finalized revision and exportability are untouched, and no learning
   event, source, rule or version already published under the previous voice moves.
 - Every machine-written baseline (generation, revision, applied A/B winner) stores `machine_baseline_voice_id`,
-  the post's voice at that moment. Finalization learning requires it to equal the post's current voice.
-- `Post.voice` and `PostSummary.voice` are a transport-only `VoiceRef {id, name, deleted}` resolved through the
+  the post's voice at that moment. The same atomic post-owned write stores or preserves `content_language` as required
+  by the operation. Finalization learning requires the baseline voice to equal the current voice and content language
+  to equal that voice's immutable source language.
+- `Post.voice` and `PostSummary.voice` are a transport-only `VoiceRef {id, name, deleted, source_language}` resolved through the
   voice context's published directory — the post context stores only the id and never joins voice tables. A deleted
   voice still names itself, so the post stays readable, manually editable, copyable and exportable; generation, AI
   revision, save-as-rule, sentence feedback and finalization learning are refused before any enqueue or provider

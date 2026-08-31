@@ -1,25 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { PostImage } from '@/entities/image'
 import { toMarkdown } from '@/features/export-markdown'
 import { toNaver } from '@/features/export-naver'
 import { toSite } from '@/features/export-site'
 import { toTistory } from '@/features/export-tistory'
-import type { PostContent } from '@/shared/api'
+import type { ContentLanguage, PostContent } from '@/shared/api'
 import { COPY_FEEDBACK_MS } from '@/shared/config'
 import { copyText, type CopyFallbackElement } from '@/shared/lib'
 import { Button, FieldLabel, SegmentedControl, Textarea, TextField } from '@/shared/ui'
-import { EXPORT_FORMATS, EXPORT_GUIDANCE, type ExportFormat } from '../config/guidance'
-
-const MANUAL_COPY_HINT = '자동 복사가 막혀 있어요 — 선택된 텍스트를 길게 눌러 복사하세요'
+import { EXPORT_FORMATS, type ExportFormat } from '../config/guidance'
 
 interface ExportPanelProps {
   content: PostContent
   images: readonly PostImage[]
   createdAt: string
+  contentLanguage: ContentLanguage
 }
 
 /** Four synchronous browser-only derivations of the canonical block array. */
-export function ExportPanel({ content, images, createdAt }: ExportPanelProps) {
+export function ExportPanel({ content, images, createdAt, contentLanguage }: ExportPanelProps) {
+  const { t } = useTranslation('posts')
   const [format, setFormat] = useState<ExportFormat>('naver')
   const [copiedTarget, setCopiedTarget] = useState<'output' | 'title'>()
   // Which control's copy fell back to manual selection, so its hint renders beside that control
@@ -33,14 +34,18 @@ export function ExportPanel({ content, images, createdAt }: ExportPanelProps) {
   const mounted = useRef(false)
   const outputs = useMemo(
     () => ({
-      naver: toNaver(content, images),
-      tistory: toTistory(content, images),
-      site: toSite(content, images, createdAt),
-      markdown: toMarkdown(content, images, createdAt),
+      naver: toNaver(content, images, contentLanguage),
+      tistory: toTistory(content, images, contentLanguage),
+      site: toSite(content, images, createdAt, contentLanguage),
+      markdown: toMarkdown(content, images, createdAt, contentLanguage),
     }),
-    [content, createdAt, images],
+    [content, contentLanguage, createdAt, images],
   )
   const output = outputs[format]
+  const formatOptions = EXPORT_FORMATS.map((value) => ({
+    value,
+    label: t(`export.formatLabel.${value}`),
+  }))
 
   useEffect(() => {
     mounted.current = true
@@ -100,25 +105,29 @@ export function ExportPanel({ content, images, createdAt }: ExportPanelProps) {
   // used to be a 1.5s label swap on the button under the thumb that hid it.
   const titleStatus =
     copiedTarget === 'title'
-      ? '제목이 복사됐어요'
+      ? t('export.titleCopied')
       : manualCopyTarget === 'title'
-        ? MANUAL_COPY_HINT
+        ? t('export.manualCopy')
         : ''
   const outputStatus =
-    copiedTarget === 'output' ? '복사됨' : manualCopyTarget === 'output' ? MANUAL_COPY_HINT : ''
+    copiedTarget === 'output'
+      ? t('action.copied', { ns: 'common' })
+      : manualCopyTarget === 'output'
+        ? t('export.manualCopy')
+        : ''
 
   return (
     <section aria-labelledby="export-heading" className="mt-10">
       <h2 id="export-heading" className="text-lg font-semibold tracking-tight">
-        내보내기
+        {t('export.title')}
       </h2>
       {/* The four Korean format names measure ~380px in one row against 328px of content at 360px,
           which cut 마크다운 in half with no scrollbar to say so. Two columns at the base
           breakpoint fit all four; the strip comes back where the width exists. */}
       <SegmentedControl
         value={format}
-        options={EXPORT_FORMATS}
-        ariaLabel="내보내기 형식"
+        options={formatOptions}
+        ariaLabel={t('export.format')}
         controls="export-output-panel"
         onChange={(next) => {
           invalidateCopyFeedback()
@@ -128,11 +137,11 @@ export function ExportPanel({ content, images, createdAt }: ExportPanelProps) {
       />
 
       <div id="export-output-panel" role="tabpanel" className="mt-4">
-        <p className="text-content-secondary text-sm">{EXPORT_GUIDANCE[format]}</p>
+        <p className="text-content-secondary text-sm">{t(`export.guidance.${format}`)}</p>
 
         {format === 'naver' && (
           <div className="mt-4">
-            <FieldLabel htmlFor="export-title">네이버 제목</FieldLabel>
+            <FieldLabel htmlFor="export-title">{t('export.naverTitle')}</FieldLabel>
             <div className="mt-2 flex items-center gap-2">
               {/* `min-w-0` on the field, `shrink-0` on the button: the title is a server string
                   and must be the thing that gives way, never the control beside it (§8.5). */}
@@ -148,7 +157,7 @@ export function ExportPanel({ content, images, createdAt }: ExportPanelProps) {
                 className="shrink-0"
                 onClick={() => void copy('title', content.title, titleRef.current)}
               >
-                제목 복사
+                {t('export.copyTitle')}
               </Button>
             </div>
             <p role="status" className="text-content-tertiary mt-1 min-h-4 text-xs">
@@ -158,7 +167,7 @@ export function ExportPanel({ content, images, createdAt }: ExportPanelProps) {
         )}
 
         <FieldLabel htmlFor="export-output" className="sr-only">
-          내보내기 결과
+          {t('export.result')}
         </FieldLabel>
         {/* The copy action sits ABOVE the output, not after it. This panel renders inside the
             editor, which already docks its own bar, and two docked bars in one scroller stick to
@@ -174,7 +183,7 @@ export function ExportPanel({ content, images, createdAt }: ExportPanelProps) {
             className="w-full sm:w-auto"
             onClick={() => void copy('output', output, outputRef.current)}
           >
-            복사
+            {t('action.copy', { ns: 'common' })}
           </Button>
           {/* Always mounted, never conditionally inserted: a live region that first appears WITH
               its text already in it is not announced (§9). */}

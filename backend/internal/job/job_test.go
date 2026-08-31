@@ -2,6 +2,7 @@ package job_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -76,6 +77,34 @@ func waitFor(t *testing.T, queue *job.Queue, id, userID string, match func(*job.
 
 func postSlug(value string) *string { return &value }
 
+func TestEnqueuePersistsFrozenTargetLanguageAndRejectsUnknownTag(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	id, err := h.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), TargetLanguage: "en",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, err := h.queue.Get(ctx, id, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found.TargetLanguage != "en" {
+		t.Fatalf("target language = %q, want en", found.TargetLanguage)
+	}
+	if _, err := h.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-b"), TargetLanguage: "fr",
+	}); err == nil {
+		t.Fatal("unknown target language was accepted")
+	}
+	if _, err := h.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindRevise, UserID: "alice", PostSlug: postSlug("post-b"),
+	}); err == nil {
+		t.Fatal("missing revision content language was accepted")
+	}
+}
+
 func TestEnqueueReturnsBeforeHandlerAndWorkerPublishesProgress(t *testing.T) {
 	h := newHarness(t)
 	started := make(chan struct{})
@@ -145,11 +174,11 @@ func TestEnqueueReturnsBeforeHandlerAndWorkerPublishesProgress(t *testing.T) {
 func TestEnqueueGuardsPostAndUserKind(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
-	first, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a")})
+	first, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), TargetLanguage: "ko"})
 	if err != nil {
 		t.Fatalf("first post job: %v", err)
 	}
-	_, err = h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindRevise, UserID: "alice", PostSlug: postSlug("post-a")})
+	_, err = h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindRevise, UserID: "alice", PostSlug: postSlug("post-a"), TargetLanguage: "ko"})
 	var active *job.ErrAlreadyInProgress
 	if !errors.As(err, &active) || active.ActiveID != first {
 		t.Fatalf("second post job = %v, want active %s", err, first)
@@ -199,7 +228,7 @@ func TestVoiceOwnedJobsAreGuardedPerVoice(t *testing.T) {
 		}
 	}
 	// A post-backed job frozen to a voice also holds that voice.
-	if _, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindGenerate, UserID: "bob", PostSlug: postSlug("post-bob"), VoiceID: "voice-bob"}); err != nil {
+	if _, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindGenerate, UserID: "bob", PostSlug: postSlug("post-bob"), VoiceID: "voice-bob", TargetLanguage: "ko"}); err != nil {
 		t.Fatal(err)
 	}
 	if busy, _ := h.queue.HasActiveForVoice(ctx, "voice-bob"); !busy {
@@ -254,7 +283,7 @@ func TestPostBackedVoiceOwnedJobsAreAlsoGuardedPerVoice(t *testing.T) {
 func TestEnqueueRejectsPostOwnedByAnotherUser(t *testing.T) {
 	h := newHarness(t)
 	_, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-bob"),
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-bob"), TargetLanguage: "ko",
 	})
 	if !errors.Is(err, job.ErrInvalidTarget) {
 		t.Fatalf("foreign post enqueue = %v, want ErrInvalidTarget", err)
@@ -314,15 +343,15 @@ func TestPanicFailsOneJobAndWorkerContinues(t *testing.T) {
 	failed := waitFor(t, h.queue, first, "alice", func(found *job.JobSummary) bool {
 		return found.Status == job.StatusFailed
 	})
-	if failed.Error != job.PanicMessage {
-		t.Errorf("panic error = %q", failed.Error)
+	if failed.Failure == nil || failed.Failure.Reason != job.FailureReasonPanicked || failed.Failure.TechnicalDetail != "" {
+		t.Errorf("panic failure = %#v", failed.Failure)
 	}
 	waitFor(t, h.queue, second, "alice", func(found *job.JobSummary) bool {
 		return found.Status == job.StatusDone
 	})
 }
 
-func TestProviderMessageIsPreserved(t *testing.T) {
+func TestProviderMessageIsTechnicalDetailOnly(t *testing.T) {
 	h := newHarness(t)
 	h.queue.Register("quota", func(context.Context, job.Job, job.Progress) error {
 		return &llm.ProviderError{Provider: "stub", Status: 429, Message: "daily free quota exhausted", Kind: llm.ErrRateLimited}
@@ -339,12 +368,17 @@ func TestProviderMessageIsPreserved(t *testing.T) {
 	failed := waitFor(t, h.queue, id, "alice", func(found *job.JobSummary) bool {
 		return found.Status == job.StatusFailed
 	})
-	if failed.Error != "daily free quota exhausted" {
-		t.Errorf("error = %q", failed.Error)
+	if failed.Failure == nil || failed.Failure.Reason != llm.FailureReasonModelRateLimited ||
+		failed.Failure.TechnicalDetail != "daily free quota exhausted" || failed.Failure.Params != nil {
+		t.Errorf("failure = %#v", failed.Failure)
+	}
+	var rawError sql.NullString
+	if err := h.handle.Reader.QueryRow("SELECT error FROM generation_jobs WHERE id = ?", id).Scan(&rawError); err != nil || rawError.Valid {
+		t.Fatalf("deprecated raw error = %#v, err=%v", rawError, err)
 	}
 }
 
-func TestOutputTruncationGetsActionableMessage(t *testing.T) {
+func TestOutputTruncationGetsStableReason(t *testing.T) {
 	h := newHarness(t)
 	h.queue.Register("truncated", func(context.Context, job.Job, job.Progress) error {
 		return fmt.Errorf("write: %w", llm.ErrOutputTruncated)
@@ -361,10 +395,8 @@ func TestOutputTruncationGetsActionableMessage(t *testing.T) {
 	failed := waitFor(t, h.queue, id, "alice", func(found *job.JobSummary) bool {
 		return found.Status == job.StatusFailed
 	})
-	for _, required := range []string{"출력 예산", "목표 길이", "다른 모델"} {
-		if !strings.Contains(failed.Error, required) {
-			t.Errorf("error = %q, want %q", failed.Error, required)
-		}
+	if failed.Failure == nil || failed.Failure.Reason != llm.FailureReasonOutputTruncated || failed.Failure.TechnicalDetail != "" {
+		t.Fatalf("failure = %#v", failed.Failure)
 	}
 }
 
@@ -386,7 +418,7 @@ func TestSweepAndOwnership(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if found.Status != job.StatusFailed || found.Error != job.RestartMessage {
+	if found.Status != job.StatusFailed || found.Failure == nil || found.Failure.Reason != job.FailureReasonInterrupted {
 		t.Errorf("swept = %+v", found)
 	}
 	if _, err := h.queue.Get(context.Background(), id, "bob"); !errors.Is(err, job.ErrForbidden) {
@@ -417,7 +449,7 @@ func TestBootSweepHoldsQueuedPersonalizationOnly(t *testing.T) {
 	}
 	for _, id := range ids {
 		found, err := h.queue.Get(ctx, id, "alice")
-		if err != nil || found.Status != job.StatusFailed || found.Error != job.PersonalizationRestartMessage {
+		if err != nil || found.Status != job.StatusFailed || found.Failure == nil || found.Failure.Reason != job.FailureReasonInterrupted {
 			t.Fatalf("personalization job = %+v err=%v", found, err)
 		}
 	}
@@ -434,17 +466,24 @@ func TestFailQueuedIsOwnerScopedAndCannotStopRunningWork(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if failed, err := h.queue.FailQueued(ctx, id, "bob", "link failed"); err != nil || failed {
+	failure := job.Failure{Reason: "VOICE_SAMPLE_MUTATION_FAILED", Params: map[string]string{"field": "sample"}}
+	if failed, err := h.queue.FailQueued(ctx, id, "bob", failure); err != nil || failed {
 		t.Fatalf("foreign fail queued = %v, %v", failed, err)
 	}
-	if failed, err := h.queue.FailQueued(ctx, id, "alice", "link failed"); err != nil || !failed {
+	if failed, err := h.queue.FailQueued(ctx, id, "alice", failure); err != nil || !failed {
 		t.Fatalf("owner fail queued = %v, %v", failed, err)
 	}
 	found, err := h.queue.Get(ctx, id, "alice")
-	if err != nil || found.Status != job.StatusFailed || found.Error != "link failed" {
+	if err != nil || found.Status != job.StatusFailed || found.Failure == nil ||
+		found.Failure.Reason != failure.Reason || found.Failure.Params["field"] != "sample" {
 		t.Fatalf("failed queued job = %+v, %v", found, err)
 	}
-	if failed, err := h.queue.FailQueued(ctx, id, "alice", "again"); err != nil || failed {
+	found.Failure.Params["field"] = "mutated"
+	reloaded, err := h.queue.Get(ctx, id, "alice")
+	if err != nil || reloaded.Failure.Params["field"] != "sample" {
+		t.Fatalf("failure params alias store state: %+v, %v", reloaded, err)
+	}
+	if failed, err := h.queue.FailQueued(ctx, id, "alice", failure); err != nil || failed {
 		t.Fatalf("terminal fail queued = %v, %v", failed, err)
 	}
 }
@@ -525,7 +564,205 @@ func TestOrdinaryHandlerErrorIsNonEmpty(t *testing.T) {
 	found := waitFor(t, h.queue, id, "alice", func(found *job.JobSummary) bool {
 		return found.Status == job.StatusFailed
 	})
-	if found.Error == "" {
-		t.Fatal("failed job has an empty error")
+	if found.Failure == nil || found.Failure.Reason != job.FailureReasonUnknown || found.Failure.TechnicalDetail != "" {
+		t.Fatalf("ordinary failure = %#v", found.Failure)
+	}
+}
+
+func TestMissingHandlerGetsOwnedReason(t *testing.T) {
+	h := newHarness(t)
+	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: "not-registered", UserID: "alice", PostSlug: postSlug("post-a"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go h.queue.Run(ctx)
+	found := waitFor(t, h.queue, id, "alice", func(found *job.JobSummary) bool { return found.Status == job.StatusFailed })
+	if found.Failure == nil || found.Failure.Reason != job.FailureReasonHandlerMissing || found.Failure.TechnicalDetail != "" {
+		t.Fatalf("missing handler failure = %#v", found.Failure)
+	}
+}
+
+func TestStoreMapsLegacyFailureAndRejectsMalformedParams(t *testing.T) {
+	t.Run("legacy raw error", func(t *testing.T) {
+		h := newHarness(t)
+		id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+			Kind: "legacy", UserID: "alice", PostSlug: postSlug("post-a"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.handle.Writer.Exec(
+			"UPDATE generation_jobs SET status='failed', error='legacy private detail', error_reason=NULL, error_params=NULL, technical_detail=NULL WHERE id=?",
+			id,
+		); err != nil {
+			t.Fatal(err)
+		}
+		found, err := h.queue.Get(context.Background(), id, "alice")
+		if err != nil || found.Failure == nil || found.Failure.Reason != job.FailureReasonUnknown ||
+			found.Failure.TechnicalDetail != "legacy private detail" || found.Failure.Params != nil {
+			t.Fatalf("legacy failure = %+v, err=%v", found, err)
+		}
+	})
+
+	t.Run("non-object params", func(t *testing.T) {
+		h := newHarness(t)
+		id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+			Kind: "malformed", UserID: "alice", PostSlug: postSlug("post-a"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.handle.Writer.Exec("PRAGMA ignore_check_constraints = ON"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.handle.Writer.Exec(
+			"UPDATE generation_jobs SET error_reason='MODEL_UNAVAILABLE', error_params='[]' WHERE id=?", id,
+		); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.queue.Get(context.Background(), id, "alice"); err == nil || !strings.Contains(err.Error(), "JSON object") {
+			t.Fatalf("malformed params error = %v", err)
+		}
+	})
+
+	malformed := map[string]struct {
+		set  string
+		want string
+	}{
+		"invalid JSON params": {
+			set:  "error_reason='MODEL_UNAVAILABLE', error_params='{not-json}', technical_detail=NULL",
+			want: "decode failure params",
+		},
+		"non-string param value": {
+			set:  "error_reason='MODEL_UNAVAILABLE', error_params='{\"retry\":1}', technical_detail=NULL",
+			want: "decode failure params",
+		},
+		"reason without params": {
+			set:  "error_reason='MODEL_UNAVAILABLE', error_params=NULL, technical_detail=NULL",
+			want: "JSON object",
+		},
+		"params without reason": {
+			set:  "error_reason=NULL, error_params='{}', technical_detail=NULL",
+			want: "without reason",
+		},
+		"detail without reason": {
+			set:  "error_reason=NULL, error_params=NULL, technical_detail='provider detail'",
+			want: "without reason",
+		},
+		"invalid lowercase reason": {
+			set:  "error_reason='model_unavailable', error_params='{}', technical_detail=NULL",
+			want: "invalid reason",
+		},
+		"invalid repeated underscore": {
+			set:  "error_reason='MODEL__UNAVAILABLE', error_params='{}', technical_detail=NULL",
+			want: "invalid reason",
+		},
+		"invalid trailing underscore": {
+			set:  "error_reason='MODEL_UNAVAILABLE_', error_params='{}', technical_detail=NULL",
+			want: "invalid reason",
+		},
+		"invalid leading digit": {
+			set:  "error_reason='1MODEL_UNAVAILABLE', error_params='{}', technical_detail=NULL",
+			want: "invalid reason",
+		},
+	}
+	for name, test := range malformed {
+		t.Run(name, func(t *testing.T) {
+			h := newHarness(t)
+			id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+				Kind: "malformed", UserID: "alice", PostSlug: postSlug("post-a"),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := h.handle.Writer.Exec("PRAGMA ignore_check_constraints = ON"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := h.handle.Writer.Exec("UPDATE generation_jobs SET "+test.set+" WHERE id=?", id); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := h.queue.Get(context.Background(), id, "alice"); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("malformed failure error = %v, want %q", err, test.want)
+			}
+		})
+	}
+
+	t.Run("invalid reason rejected before write", func(t *testing.T) {
+		h := newHarness(t)
+		id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+			Kind: "invalid-write", UserID: "alice", PostSlug: postSlug("post-a"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.store.PickNextQueued(context.Background(), time.Now()); err != nil {
+			t.Fatal(err)
+		}
+		err = h.store.Finish(context.Background(), id, job.StatusFailed, &job.Failure{Reason: "not_stable"}, time.Now())
+		if err == nil || !strings.Contains(err.Error(), "invalid reason") {
+			t.Fatalf("invalid reason write error = %v", err)
+		}
+	})
+}
+
+func TestSuccessfulFinishClearsAllFailureColumnsAtomically(t *testing.T) {
+	h := newHarness(t)
+	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: "clear", UserID: "alice", PostSlug: postSlug("post-a"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.store.PickNextQueued(context.Background(), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.handle.Writer.Exec(
+		"UPDATE generation_jobs SET error='legacy', error_reason='MODEL_RATE_LIMITED', error_params='{}', technical_detail='provider' WHERE id=?", id,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.store.Finish(context.Background(), id, job.StatusDone, nil, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	var raw, reason, params, detail sql.NullString
+	if err := h.handle.Reader.QueryRow(
+		"SELECT error, error_reason, error_params, technical_detail FROM generation_jobs WHERE id=?", id,
+	).Scan(&raw, &reason, &params, &detail); err != nil {
+		t.Fatal(err)
+	}
+	if raw.Valid || reason.Valid || params.Valid || detail.Valid {
+		t.Fatalf("failure columns not cleared: raw=%#v reason=%#v params=%#v detail=%#v", raw, reason, params, detail)
+	}
+	found, err := h.queue.Get(context.Background(), id, "alice")
+	if err != nil || found.Failure != nil || found.Status != job.StatusDone {
+		t.Fatalf("finished job = %+v, err=%v", found, err)
+	}
+}
+
+func TestStoreRejectsFailureThatDoesNotMatchTerminalStatus(t *testing.T) {
+	h := newHarness(t)
+	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: "terminal-invariant", UserID: "alice", PostSlug: postSlug("post-a"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.store.PickNextQueued(context.Background(), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.store.Finish(context.Background(), id, job.StatusFailed, nil, time.Now()); err == nil || !strings.Contains(err.Error(), "requires failure") {
+		t.Fatalf("failed without failure error = %v", err)
+	}
+	failure := &job.Failure{Reason: job.FailureReasonUnknown}
+	if err := h.store.Finish(context.Background(), id, job.StatusDone, failure, time.Now()); err == nil || !strings.Contains(err.Error(), "cannot carry failure") {
+		t.Fatalf("done with failure error = %v", err)
+	}
+	found, err := h.queue.Get(context.Background(), id, "alice")
+	if err != nil || found.Status != job.StatusRunning || found.Failure != nil {
+		t.Fatalf("rejected terminal writes changed job = %+v, err=%v", found, err)
 	}
 }

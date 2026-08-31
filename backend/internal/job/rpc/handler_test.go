@@ -2,6 +2,7 @@ package rpc_test
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -50,7 +51,7 @@ func TestGetGenerationMapsOwnershipAndMissing(t *testing.T) {
 	handler, queue := newHandler(t)
 	slug := "post-a"
 	id, err := queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: &slug,
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: &slug, TargetLanguage: "en",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -63,13 +64,85 @@ func TestGetGenerationMapsOwnershipAndMissing(t *testing.T) {
 		)
 		return err
 	}
-	if code := connect.CodeOf(request(id, "bob")); code != connect.CodePermissionDenied {
+	foreignErr := request(id, "bob")
+	if code := connect.CodeOf(foreignErr); code != connect.CodePermissionDenied {
 		t.Errorf("foreign code = %s", code)
 	}
-	if code := connect.CodeOf(request("missing", "alice")); code != connect.CodeNotFound {
+	if reason := jobErrorReason(t, foreignErr); reason != "JOB_FORBIDDEN" {
+		t.Errorf("foreign reason = %q", reason)
+	}
+	missingErr := request("missing", "alice")
+	if code := connect.CodeOf(missingErr); code != connect.CodeNotFound {
 		t.Errorf("missing code = %s", code)
 	}
-	if err := request(id, "alice"); err != nil {
-		t.Errorf("owner GetGeneration: %v", err)
+	if reason := jobErrorReason(t, missingErr); reason != "JOB_NOT_FOUND" {
+		t.Errorf("missing reason = %q", reason)
 	}
+	response, err := handler.GetGeneration(
+		auth.WithUser(context.Background(), "alice"),
+		connect.NewRequest(&postpilotv1.GetGenerationRequest{Id: id}),
+	)
+	if err != nil {
+		t.Errorf("owner GetGeneration: %v", err)
+	} else if got := response.Msg.GetJob().GetTargetLanguage(); got != postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH {
+		t.Errorf("target language = %s, want English", got)
+	}
+}
+
+func TestToProtoMapsOnlyCanonicalJobLanguages(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		tag  string
+		want postpilotv1.ContentLanguage
+	}{
+		{name: "absent", want: postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED},
+		{name: "Korean", tag: "ko", want: postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN},
+		{name: "English", tag: "en", want: postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH},
+		{name: "unknown", tag: "fr", want: postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := jobrpc.ToProto(&job.JobSummary{TargetLanguage: test.tag}).GetTargetLanguage()
+			if got != test.want {
+				t.Fatalf("language = %s, want %s", got, test.want)
+			}
+		})
+	}
+}
+
+func TestToProtoProjectsStructuredFailureWithoutDeprecatedRawError(t *testing.T) {
+	params := map[string]string{"safe": "value"}
+	mapped := jobrpc.ToProto(&job.JobSummary{Failure: &job.Failure{
+		Reason: "MODEL_RATE_LIMITED", Params: params, TechnicalDetail: "provider detail",
+	}})
+	if mapped.GetFailure().GetReason() != "MODEL_RATE_LIMITED" || mapped.GetFailure().GetParams()["safe"] != "value" ||
+		mapped.GetFailure().GetTechnicalDetail() != "provider detail" || mapped.GetError() != "" {
+		t.Fatalf("mapped failure = %+v", mapped)
+	}
+	params["safe"] = "mutated"
+	if mapped.GetFailure().GetParams()["safe"] != "value" {
+		t.Fatalf("proto params alias domain map: %#v", mapped.GetFailure().GetParams())
+	}
+}
+
+func jobErrorReason(t *testing.T, err error) string {
+	t.Helper()
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) {
+		t.Fatalf("error type = %T", err)
+	}
+	if len(connectErr.Details()) != 1 {
+		t.Fatalf("details = %d, want 1", len(connectErr.Details()))
+	}
+	value, valueErr := connectErr.Details()[0].Value()
+	if valueErr != nil {
+		t.Fatalf("decode detail: %v", valueErr)
+	}
+	detail, ok := value.(*postpilotv1.AppErrorDetail)
+	if !ok {
+		t.Fatalf("detail type = %T", value)
+	}
+	if len(detail.GetParams()) != 0 {
+		t.Fatalf("unexpected params = %#v", detail.GetParams())
+	}
+	return detail.GetReason()
 }

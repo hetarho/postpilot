@@ -4,6 +4,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"connectrpc.com/connect"
@@ -12,6 +13,7 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/voice"
 )
 
@@ -38,7 +40,14 @@ func (h *Handler) CreateVoice(ctx context.Context, req *connect.Request[postpilo
 	if err != nil {
 		return nil, err
 	}
-	created, err := h.service.CreateVoice(ctx, userID, req.Msg.GetName())
+	if req.Msg.SourceLanguage == nil {
+		return nil, toConnectError("create voice", voice.ErrLanguageRequired)
+	}
+	sourceLanguage, err := languageFromProto(req.Msg.GetSourceLanguage())
+	if err != nil {
+		return nil, toConnectError("create voice", err)
+	}
+	created, err := h.service.CreateVoice(ctx, userID, req.Msg.GetName(), sourceLanguage)
 	if err != nil {
 		return nil, toConnectError("create voice", err)
 	}
@@ -122,7 +131,7 @@ func (h *Handler) UpdateVoiceProfile(ctx context.Context, req *connect.Request[p
 	case req.Msg.Rules != nil:
 		profile, err = h.service.UpdateRules(ctx, userID, voiceID, req.Msg.GetRules())
 	default:
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("at least one profile field is required"))
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "at least one profile field is required", "VOICE_PROFILE_FIELD_REQUIRED", nil)
 	}
 	if err != nil {
 		return nil, toConnectError("update voice profile", err)
@@ -202,7 +211,7 @@ func (h *Handler) RestoreVoiceProfile(ctx context.Context, req *connect.Request[
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
 	return userID, nil
 }
@@ -213,20 +222,58 @@ func actingUser(ctx context.Context) (string, error) {
 func toConnectError(op string, err error) error {
 	var tooShort *voice.SampleTooShortError
 	var badName *voice.VoiceNameError
+	var mismatch *voice.ContentLanguageMismatchError
 	switch {
-	case errors.As(err, &tooShort), errors.As(err, &badName), errors.Is(err, voice.ErrVoiceRequired):
-		return connect.NewError(connect.CodeInvalidArgument, err)
-	case errors.Is(err, voice.ErrVoiceNotFound), errors.Is(err, voice.ErrSampleNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+	case errors.As(err, &tooShort):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice sample is too short", "VOICE_SAMPLE_TOO_SHORT", map[string]string{"actual": fmt.Sprint(tooShort.Chars), "min": fmt.Sprint(voice.SampleMinChars)})
+	case errors.As(err, &badName):
+		if badName.Chars == 0 {
+			return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is required", "VOICE_NAME_REQUIRED", nil)
+		}
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is too long", "VOICE_NAME_TOO_LONG", map[string]string{"actual": fmt.Sprint(badName.Chars), "max": fmt.Sprint(voice.VoiceNameMaxChars)})
+	case errors.Is(err, voice.ErrVoiceRequired):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice is required", "VOICE_REQUIRED", nil)
+	case errors.Is(err, voice.ErrLanguageRequired):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice source language is required", "VOICE_SOURCE_LANGUAGE_REQUIRED", nil)
+	case errors.Is(err, voice.ErrLanguageUnsupported):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice source language is unsupported", "VOICE_SOURCE_LANGUAGE_UNSUPPORTED", nil)
+	case errors.Is(err, voice.ErrVoiceNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", "VOICE_NOT_FOUND", nil)
+	case errors.Is(err, voice.ErrSampleNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice sample not found", "VOICE_SAMPLE_NOT_FOUND", nil)
+	case errors.Is(err, voice.ErrSampleMutation):
+		return rpcserver.NewAppError(connect.CodeInternal, "voice sample could not be updated", "VOICE_SAMPLE_MUTATION_FAILED", nil)
 	case errors.Is(err, voice.ErrVoiceNameTaken):
-		return connect.NewError(connect.CodeAlreadyExists, err)
-	case errors.Is(err, voice.ErrVoiceDeleted), errors.Is(err, voice.ErrVoiceIsDefault), errors.Is(err, voice.ErrVoiceBusy),
-		errors.Is(err, voice.ErrBaselineVoiceMismatch), errors.Is(err, voice.ErrAnalyzeModelRequired), errors.Is(err, voice.ErrInvalidLifecycle):
-		return connect.NewError(connect.CodeFailedPrecondition, err)
+		return rpcserver.NewAppError(connect.CodeAlreadyExists, "voice name already exists", "VOICE_NAME_TAKEN", nil)
+	case errors.Is(err, voice.ErrVoiceDeleted):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", "VOICE_DELETED", nil)
+	case errors.Is(err, voice.ErrVoiceIsDefault):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "default voice cannot be deleted", "VOICE_DEFAULT_DELETE_FORBIDDEN", nil)
+	case errors.Is(err, voice.ErrVoiceBusy):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice has unfinished work", "VOICE_BUSY", nil)
+	case errors.Is(err, voice.ErrBaselineVoiceMismatch):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post baseline voice does not match current voice", "VOICE_BASELINE_MISMATCH", nil)
+	case errors.As(err, &mismatch):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content language does not match voice source language", "VOICE_CONTENT_LANGUAGE_MISMATCH", languageMismatchParams(mismatch))
+	case errors.Is(err, voice.ErrAnalyzeModelRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled analyze model is required", "VOICE_ANALYZE_MODEL_REQUIRED", nil)
+	case errors.Is(err, voice.ErrInvalidLifecycle):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice state does not allow this operation", "VOICE_INVALID_LIFECYCLE", nil)
 	default:
 		slog.Error(op+" failed", "err", err)
-		return connect.NewError(connect.CodeInternal, errors.New(op+" failed"))
+		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
 	}
+}
+
+func languageMismatchParams(mismatch *voice.ContentLanguageMismatchError) map[string]string {
+	params := map[string]string{}
+	if mismatch.ContentLanguage.Valid() {
+		params["content_language"] = string(mismatch.ContentLanguage)
+	}
+	if mismatch.SourceLanguage.Valid() {
+		params["source_language"] = string(mismatch.SourceLanguage)
+	}
+	return params
 }
 
 func toProtoVoices(voices []voice.Voice) []*postpilotv1.Voice {
@@ -248,7 +295,43 @@ func toProtoVoice(v voice.Voice) *postpilotv1.Voice {
 	return &postpilotv1.Voice{
 		Id: v.ID, Name: v.Name, IsDefault: v.IsDefault, Deleted: v.Deleted(),
 		CreatedAt: v.CreatedAt.UTC().Format(timeLayout), UpdatedAt: v.UpdatedAt.UTC().Format(timeLayout), DeletedAt: deleted,
+		SourceLanguage: languageToProto(v.SourceLanguage),
 	}
+}
+
+func languageFromProto(value postpilotv1.ContentLanguage) (voice.Language, error) {
+	switch value {
+	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN:
+		return voice.LanguageKorean, nil
+	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH:
+		return voice.LanguageEnglish, nil
+	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED:
+		return "", voice.ErrLanguageRequired
+	default:
+		return "", voice.ErrLanguageUnsupported
+	}
+}
+
+func languageToProto(value voice.Language) postpilotv1.ContentLanguage {
+	switch value {
+	case voice.LanguageKorean:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
+	case voice.LanguageEnglish:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
+	default:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+	}
+}
+
+func toProtoFailure(value *voice.Failure) *postpilotv1.Failure {
+	if value == nil || value.Empty() {
+		return nil
+	}
+	params := make(map[string]string, len(value.Params))
+	for key, item := range value.Params {
+		params[key] = item
+	}
+	return &postpilotv1.Failure{Reason: value.Reason, Params: params, TechnicalDetail: value.TechnicalDetail}
 }
 
 func toProtoProfile(profile voice.Profile) *postpilotv1.VoiceProfile {
@@ -312,7 +395,7 @@ func toProtoStructured(p voice.StructuredProfile) *postpilotv1.StructuredVoicePr
 	if !p.UpdatedAt.IsZero() {
 		updated = p.UpdatedAt.UTC().Format(timeLayout)
 	}
-	return &postpilotv1.StructuredVoiceProfile{Meta: &postpilotv1.VoiceProfileMeta{Version: p.Version, UpdatedAt: updated, SourceCount: int32(p.SourceCount)}, Lexical: &postpilotv1.VoiceLexical{PreferredWords: words, BannedWords: bannedWords, BannedPatterns: bannedPatterns, Description: toProtoValue(p.Lexical.Description)}, Endings: &postpilotv1.VoiceEndings{BaseRegister: toProtoValue(p.Endings.BaseRegister), Distribution: ending, BannedEndings: p.Endings.BannedEndings, SignatureEndings: p.Endings.SignatureEndings, Constraints: p.Endings.Constraints}, Syntax: &postpilotv1.VoiceSyntax{AverageSentenceChars: p.Syntax.AverageSentenceChars, SentenceLength: toProtoValue(p.Syntax.SentenceLength), ConnectiveStyle: toProtoValue(p.Syntax.ConnectiveStyle), PreferredConnectives: p.Syntax.PreferredConnectives, Nominalization: toProtoValue(p.Syntax.Nominalization), PassiveTendency: toProtoValue(p.Syntax.PassiveTendency)}, Structure: &postpilotv1.VoiceStructure{IntroPattern: toProtoValue(p.Structure.IntroPattern), ClosingPattern: toProtoValue(p.Structure.ClosingPattern), ParagraphSentencesMin: int32(p.Structure.ParagraphSentencesMin), ParagraphSentencesMax: int32(p.Structure.ParagraphSentencesMax), HeadingHabit: toProtoValue(p.Structure.HeadingHabit), ListHabit: toProtoValue(p.Structure.ListHabit), EmojiUse: toProtoValue(p.Structure.EmojiUse)}, Axes: &postpilotv1.VoiceAxes{Involvement: toProtoAxis(p.Axes.Involvement), Narrativity: toProtoAxis(p.Axes.Narrativity), PersuasionOvertness: toProtoAxis(p.Axes.PersuasionOvertness), Abstractness: toProtoAxis(p.Axes.Abstractness), AddresseeFocus: toProtoAxis(p.Axes.AddresseeFocus), Humor: toProtoAxis(p.Axes.Humor)}, ContrastRules: rules, FewShotBank: sources, FeedbackLog: feedback, Empty: p.Empty}
+	return &postpilotv1.StructuredVoiceProfile{Meta: &postpilotv1.VoiceProfileMeta{Version: p.Version, UpdatedAt: updated, SourceCount: int32(p.SourceCount)}, Lexical: &postpilotv1.VoiceLexical{PreferredWords: words, BannedWords: bannedWords, BannedPatterns: bannedPatterns, Description: toProtoValue(p.Lexical.Description)}, Endings: &postpilotv1.VoiceEndings{BaseRegister: toProtoValue(p.Endings.BaseRegister), Distribution: ending, BannedEndings: p.Endings.BannedEndings, SignatureEndings: p.Endings.SignatureEndings, Constraints: p.Endings.Constraints}, Syntax: &postpilotv1.VoiceSyntax{AverageSentenceChars: p.Syntax.AverageSentenceChars, AverageSentenceWords: p.Syntax.AverageSentenceWords, SentenceLength: toProtoValue(p.Syntax.SentenceLength), ConnectiveStyle: toProtoValue(p.Syntax.ConnectiveStyle), PreferredConnectives: p.Syntax.PreferredConnectives, Nominalization: toProtoValue(p.Syntax.Nominalization), PassiveTendency: toProtoValue(p.Syntax.PassiveTendency)}, Structure: &postpilotv1.VoiceStructure{IntroPattern: toProtoValue(p.Structure.IntroPattern), ClosingPattern: toProtoValue(p.Structure.ClosingPattern), ParagraphSentencesMin: int32(p.Structure.ParagraphSentencesMin), ParagraphSentencesMax: int32(p.Structure.ParagraphSentencesMax), HeadingHabit: toProtoValue(p.Structure.HeadingHabit), ListHabit: toProtoValue(p.Structure.ListHabit), EmojiUse: toProtoValue(p.Structure.EmojiUse)}, Axes: &postpilotv1.VoiceAxes{Involvement: toProtoAxis(p.Axes.Involvement), Narrativity: toProtoAxis(p.Axes.Narrativity), PersuasionOvertness: toProtoAxis(p.Axes.PersuasionOvertness), Abstractness: toProtoAxis(p.Axes.Abstractness), AddresseeFocus: toProtoAxis(p.Axes.AddresseeFocus), Humor: toProtoAxis(p.Axes.Humor)}, ContrastRules: rules, FewShotBank: sources, FeedbackLog: feedback, Empty: p.Empty}
 }
 func toProtoValue(v voice.VoiceValue) *postpilotv1.VoiceValue {
 	return &postpilotv1.VoiceValue{Value: v.Value, Source: toProtoSource(v.Source), Unknown: v.Unknown}

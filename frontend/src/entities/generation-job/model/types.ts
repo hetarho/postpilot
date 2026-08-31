@@ -1,3 +1,6 @@
+import i18next from 'i18next'
+import type { AppFailure, ContentLanguage } from '@/shared/api'
+
 export interface ModelRef {
   providerId: string
   modelId: string
@@ -10,12 +13,13 @@ export interface GenerationJob {
   stage: string
   progressDone: number
   progressTotal: number
-  error: string
+  failure: AppFailure | undefined
   postSlug: string
   observeModel: ModelRef | undefined
   writeModel: ModelRef | undefined
   createdAt: string
   updatedAt: string
+  targetLanguage: ContentLanguage | undefined
 }
 
 export function isTerminal(job: Pick<GenerationJob, 'status'> | undefined): boolean {
@@ -27,18 +31,38 @@ export function progressLabel(
 ): string {
   switch (job.stage) {
     case 'observe':
-      return `사진 ${job.progressDone}/${job.progressTotal} 관찰됨`
+      return i18next.t('generation.observingPhotos', {
+        ns: 'posts',
+        count: job.progressTotal,
+        done: job.progressDone,
+        total: job.progressTotal,
+      })
     case 'write':
-      return '작성 중'
+      return i18next.t('generation.writing', { ns: 'posts' })
     case 'analyze':
-      return '문체 분석 중'
+      return i18next.t('generation.analyzing', { ns: 'posts' })
     case 'compare_write':
-      return `작성 후보 ${job.progressDone}/${job.progressTotal} 완료`
+      return i18next.t('generation.writeCandidates', {
+        ns: 'posts',
+        count: job.progressTotal,
+        done: job.progressDone,
+        total: job.progressTotal,
+      })
     case 'compare_observe':
-      return `관찰 후보 ${job.progressDone}/${job.progressTotal} 완료`
+      return i18next.t('generation.observeCandidates', {
+        ns: 'posts',
+        count: job.progressTotal,
+        done: job.progressDone,
+        total: job.progressTotal,
+      })
     case 'compare_analyze':
-      return `문체 분석 후보 ${job.progressDone}/${job.progressTotal} 완료`
+      return i18next.t('generation.analyzeCandidates', {
+        ns: 'posts',
+        count: job.progressTotal,
+        done: job.progressDone,
+        total: job.progressTotal,
+      })
     default:
-      return '작업 준비 중'
+      return i18next.t('generation.preparing', { ns: 'posts' })
   }
 }

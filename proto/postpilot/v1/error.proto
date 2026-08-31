@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// AppErrorDetail accompanies a synchronous Connect status. reason is a stable product
+// identifier; params contains only display-safe values allowlisted by that reason.
+message AppErrorDetail {
+  string reason = 1;
+  map<string, string> params = 2;
+}
+
+// Failure is the durable equivalent used by jobs and other retryable projections.
+// technical_detail may carry operator-facing provider/agent diagnostics, but is never the
+// only user explanation.
+message Failure {
+  string reason = 1;
+  map<string, string> params = 2;
+  string technical_detail = 3;
+}

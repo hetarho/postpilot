@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { retryablePublishJobsQueryKey } from '@/entities/publish-job'
-import { publishingClientFor } from '@/shared/api'
-import { Button, Dialog, Notice } from '@/shared/ui'
+import { appFailureFromConnect, publishingClientFor } from '@/shared/api'
+import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
 
 interface CancelRetainedPublishJobButtonProps {
   ownerId: string
@@ -16,6 +17,7 @@ export function CancelRetainedPublishJobButton({
   jobId,
   postSlug,
 }: CancelRetainedPublishJobButtonProps) {
+  const { t } = useTranslation('publishing')
   const [confirming, setConfirming] = useState(false)
   const transport = useTransport()
   const client = useMemo(() => publishingClientFor(transport), [transport])
@@ -29,22 +31,29 @@ export function CancelRetainedPublishJobButton({
       })
     },
   })
+  const failure = cancel.error ? appFailureFromConnect(cancel.error) : undefined
 
   return (
     <>
       <Button variant="danger" onClick={() => setConfirming(true)}>
-        복구 작업 취소
+        {t('cancelRetained.action')}
       </Button>
-      {cancel.isError && <Notice tone="danger">복구 작업을 취소하지 못했어요.</Notice>}
       <Dialog
         open={confirming}
-        title="고정해 둔 발행 작업을 취소할까요?"
-        confirmLabel="작업 취소"
+        title={t('cancelRetained.title')}
+        confirmLabel={t('cancelRetained.confirm')}
         onClose={() => setConfirming(false)}
         onConfirm={() => cancel.mutate()}
         pending={cancel.isPending}
       >
-        {postSlug}의 고정된 글과 임시 사진을 삭제합니다. 이 작업은 다시 시도할 수 없습니다.
+        <div className="space-y-3">
+          <p>{t('cancelRetained.description', { postSlug })}</p>
+          {failure && (
+            <Notice tone="danger" role="alert">
+              <AppFailureMessage failure={failure} />
+            </Notice>
+          )}
+        </div>
       </Dialog>
     </>
   )

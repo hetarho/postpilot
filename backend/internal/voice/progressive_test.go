@@ -26,6 +26,82 @@ func personalizationConfig() voice.PersonalizationConfig {
 	return voice.PersonalizationConfig{FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: 3, EndingMaxConsecutive: 2}
 }
 
+func TestPromptProfileProjectionKeepsSourceSpecificEvidenceOutOfCrossLanguagePrompts(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	voiceID := h.voice("alice")
+	h.svc.ConfigurePersonalization(learningPosts{}, personalizationConfig())
+	measured := func(value string) voice.VoiceValue {
+		return voice.VoiceValue{Value: value, Source: voice.SourceMeasured}
+	}
+	axis := func(value int) *int { return &value }
+	structured := voice.StructuredProfile{
+		Lexical: voice.LexicalProfile{
+			Description: measured("LEXICAL_SECRET"),
+			BannedWords: []voice.BannedItem{{Value: "BANNED_WORD_SECRET", Reason: "private lexical rule"}},
+		},
+		Endings: voice.EndingsProfile{
+			BaseRegister: measured("ENDING_REGISTER_SECRET"), Distribution: []voice.EndingRatio{{Ending: "ENDING_SECRET", Ratio: 1}},
+			BannedEndings: []string{"BANNED_ENDING_SECRET"},
+		},
+		Syntax: voice.SyntaxProfile{AverageSentenceChars: 37, ConnectiveStyle: measured("SYNTAX_SECRET")},
+		Structure: voice.StructureProfile{
+			IntroPattern: measured("PORTABLE_INTRO"), ClosingPattern: measured("PORTABLE_CLOSE"),
+			ParagraphSentencesMin: 2, ParagraphSentencesMax: 4, HeadingHabit: measured("PORTABLE_HEADINGS"),
+			ListHabit: measured("PORTABLE_LISTS"), EmojiUse: measured("PORTABLE_EMOJIS"),
+		},
+		Axes: voice.AxesProfile{Involvement: axis(1), Narrativity: axis(2), PersuasionOvertness: axis(3), Abstractness: axis(4), AddresseeFocus: axis(5), Humor: axis(6)},
+	}
+	if _, err := h.store.PublishProfileVersion(ctx, "alice", voiceID, structured, "analysis", 0, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.svc.Update(ctx, "alice", voiceID, "FREEFORM_STYLE_SECRET", "MANUAL_RULE_SECRET"); err != nil {
+		t.Fatal(err)
+	}
+	h.addSample(t, "alice", voiceID, "portable-sample", "sample", strings.Repeat("EXCERPT_SECRET ", 80), time.Now().UTC())
+	now := time.Now().UTC()
+	if _, err := h.db.Writer.Exec(
+		"INSERT INTO voice_contrast_rules(id,user_id,voice_id,statement,canonical_key,layer,evidence_count,status,origin,created_at,last_evidence_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+		"portable-rule", "alice", voiceID, "ACTIVE_RULE_SECRET", "portable-rule", string(voice.LayerLexical), 3, string(voice.RuleActive), "manual", now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	full, err := h.svc.PromptProfileForLanguage(ctx, "alice", voiceID, voice.LanguageKorean)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if full.Portable || full.SourceLanguage != voice.LanguageKorean || full.TargetLanguage != voice.LanguageKorean {
+		t.Fatalf("full tags = %+v", full)
+	}
+	for _, required := range []string{"LEXICAL_SECRET", "ENDING_REGISTER_SECRET", "SYNTAX_SECRET", "FREEFORM_STYLE_SECRET", "MANUAL_RULE_SECRET", "ACTIVE_RULE_SECRET"} {
+		if !strings.Contains(full.Styleguide+full.ManualRules+full.ActiveRules, required) {
+			t.Errorf("full projection missing %q: %+v", required, full)
+		}
+	}
+	if len(full.Excerpts) == 0 || !strings.Contains(full.Excerpts[0], "EXCERPT_SECRET") {
+		t.Fatalf("full excerpts = %q", full.Excerpts)
+	}
+
+	portable, err := h.svc.PromptProfileForLanguage(ctx, "alice", voiceID, voice.LanguageEnglish)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !portable.Portable || portable.SourceLanguage != voice.LanguageKorean || portable.TargetLanguage != voice.LanguageEnglish || len(portable.Excerpts) != 0 || portable.ManualRules != "" || portable.ActiveRules != "" {
+		t.Fatalf("portable tags/evidence = %+v", portable)
+	}
+	for _, required := range []string{"PORTABLE_INTRO", "PORTABLE_CLOSE", "PORTABLE_HEADINGS", "PORTABLE_LISTS", "PORTABLE_EMOJIS", "paragraph sentences: 2-4", "involvement=1", "humor=6"} {
+		if !strings.Contains(portable.Styleguide, required) {
+			t.Errorf("portable projection missing %q: %s", required, portable.Styleguide)
+		}
+	}
+	for _, forbidden := range []string{"LEXICAL_SECRET", "BANNED_WORD_SECRET", "ENDING_REGISTER_SECRET", "ENDING_SECRET", "BANNED_ENDING_SECRET", "SYNTAX_SECRET", "FREEFORM_STYLE_SECRET", "MANUAL_RULE_SECRET", "ACTIVE_RULE_SECRET", "EXCERPT_SECRET"} {
+		if strings.Contains(portable.Styleguide, forbidden) {
+			t.Errorf("portable projection leaked %q: %s", forbidden, portable.Styleguide)
+		}
+	}
+}
+
 func insertPost(t *testing.T, h *voiceHarness, slug, user, voiceID, title, now string) {
 	t.Helper()
 	if _, err := h.db.Writer.Exec("INSERT INTO posts(slug,user_id,voice_id,title,memo,status,created_at,updated_at) VALUES(?,?,?,?,'','review',?,?)", slug, user, voiceID, title, now, now); err != nil {
@@ -67,7 +143,7 @@ func TestZeroHistoryFinalizeLearnsOneSourceOnlyAfterExplicitJob(t *testing.T) {
 	insertPost(t, h, "first", "alice", alice, "첫 글", now)
 	raw := `{"title":"첫 글","summary":"","tags":["산책"],"blocks":[{"type":"TEXT","content":"오늘은 천천히 걸어요. 바람이 참 좋아요."}]}`
 	targetLength := 900
-	snapshot := voice.FinalizationInput{PostSlug: "first", UserID: "alice", VoiceID: alice, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, TargetLength: &targetLength}
+	snapshot := voice.FinalizationInput{PostSlug: "first", UserID: "alice", VoiceID: alice, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, TargetLength: &targetLength, ContentLanguage: voice.LanguageKorean, VoiceSourceLanguage: voice.LanguageKorean}
 	h.svc.ConfigurePersonalization(learningPosts{snapshot: snapshot}, personalizationConfig())
 	h.models.response = `{"lexical_description":"담백한 어휘","base_register":"해요","connective_style":"짧은 연결","intro_pattern":"바로 시작","closing_pattern":"짧게 마침","heading_habit":"","list_habit":"","emoji_use":"","axes":{"involvement":1,"narrativity":1,"persuasion_overtness":0,"abstractness":0,"addressee_focus":0,"humor":0}}`
 
@@ -99,7 +175,7 @@ func TestZeroHistoryFinalizeLearnsOneSourceOnlyAfterExplicitJob(t *testing.T) {
 		t.Fatalf("prompt excerpts=%v empty=%v err=%v", excerpts, empty, err)
 	}
 	// The source, version and excerpt belong to the learned voice alone.
-	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투")
+	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean)
 	if otherProfile, err := h.svc.Get(context.Background(), "alice", other.ID); err != nil || otherProfile.SourceCount != 0 || otherProfile.Structured.Version != 0 {
 		t.Fatalf("learning leaked into another voice: %+v err=%v", otherProfile, err)
 	}
@@ -123,12 +199,12 @@ func TestContradictoryEvidenceLeavesProfileHeadAndActiveRuleUnchanged(t *testing
 	if _, err := h.db.Writer.Exec("INSERT INTO voice_contrast_rules(id,user_id,voice_id,statement,canonical_key,layer,evidence_count,status,origin,created_at,last_evidence_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)", rule.ID, rule.UserID, alice, rule.Statement, rule.CanonicalKey, string(rule.Layer), rule.EvidenceCount, string(rule.Status), rule.Origin, now, now); err != nil {
 		t.Fatal(err)
 	}
-	event := voice.LearningEvent{ID: "event-contradiction", UserID: "alice", VoiceID: alice, PostSlug: "second", BaselineRevision: 1, InputHash: "hash", BaselineJSON: `{}`, FinalJSON: `{}`, ModelRef: analyzeRef.String(), Status: "running", CreatedAt: nowTime}
+	event := voice.LearningEvent{ID: "event-contradiction", UserID: "alice", VoiceID: alice, PostSlug: "second", BaselineRevision: 1, InputHash: "hash", BaselineJSON: `{}`, FinalJSON: `{}`, ModelRef: analyzeRef.String(), Status: "running", CreatedAt: nowTime, ContentLanguage: voice.LanguageKorean, SourceLanguage: voice.LanguageKorean}
 	if err := h.store.InsertLearningEvent(context.Background(), event); err != nil {
 		t.Fatal(err)
 	}
 	result := voice.LearningResult{
-		Source:  voice.AuthoredSource{ID: "source-contradiction", UserID: "alice", VoiceID: alice, PostSlug: "second", LearningEventID: event.ID, Title: "둘째", Body: "새 근거", Excerpt: "새 근거", CreatedAt: nowTime},
+		Source:  voice.AuthoredSource{ID: "source-contradiction", UserID: "alice", VoiceID: alice, PostSlug: "second", LearningEventID: event.ID, Title: "둘째", Body: "새 근거", Excerpt: "새 근거", CreatedAt: nowTime, SourceLanguage: voice.LanguageKorean},
 		Profile: voice.StructuredProfile{SourceCount: 2},
 		Rules:   []voice.ExtractedRule{{Statement: "LLM does polite endings, but I do formal endings", Layer: voice.LayerEndings, ContradictsRuleID: rule.ID}},
 	}
@@ -186,7 +262,7 @@ func TestManualOverrideClearAndRestorePublishImmutableWholeVersions(t *testing.T
 		t.Fatalf("versions=%+v err=%v", versions, err)
 	}
 	// Version numbers count per voice: a sibling voice starts at v1 and sees none of these.
-	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투")
+	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean)
 	if otherVersions, err := h.svc.ListVersions(context.Background(), "alice", other.ID); err != nil || len(otherVersions) != 0 {
 		t.Fatalf("other voice versions=%+v err=%v", otherVersions, err)
 	}
@@ -204,11 +280,11 @@ func TestIndependentLearningEventsPromoteRuleAtConfiguredEvidenceCount(t *testin
 		now := nowTime.Format(time.RFC3339Nano)
 		slug := "rule-post-" + string(rune('0'+i))
 		insertPost(t, h, slug, "alice", alice, "규칙", now)
-		event := voice.LearningEvent{ID: "rule-event-" + string(rune('0'+i)), UserID: "alice", VoiceID: alice, PostSlug: slug, BaselineRevision: 1, InputHash: "hash-" + slug, BaselineJSON: `{}`, FinalJSON: `{}`, ModelRef: analyzeRef.String(), Status: "running", CreatedAt: nowTime}
+		event := voice.LearningEvent{ID: "rule-event-" + string(rune('0'+i)), UserID: "alice", VoiceID: alice, PostSlug: slug, BaselineRevision: 1, InputHash: "hash-" + slug, BaselineJSON: `{}`, FinalJSON: `{}`, ModelRef: analyzeRef.String(), Status: "running", CreatedAt: nowTime, ContentLanguage: voice.LanguageKorean, SourceLanguage: voice.LanguageKorean}
 		if err := h.store.InsertLearningEvent(context.Background(), event); err != nil {
 			t.Fatal(err)
 		}
-		result := voice.LearningResult{Source: voice.AuthoredSource{ID: "rule-source-" + string(rune('0'+i)), UserID: "alice", VoiceID: alice, PostSlug: slug, LearningEventID: event.ID, Title: slug, Body: slug, Excerpt: slug, CreatedAt: nowTime}, Rules: []voice.ExtractedRule{{Statement: statement, Layer: voice.LayerEndings}}}
+		result := voice.LearningResult{Source: voice.AuthoredSource{ID: "rule-source-" + string(rune('0'+i)), UserID: "alice", VoiceID: alice, PostSlug: slug, LearningEventID: event.ID, Title: slug, Body: slug, Excerpt: slug, CreatedAt: nowTime, SourceLanguage: voice.LanguageKorean}, Rules: []voice.ExtractedRule{{Statement: statement, Layer: voice.LayerEndings}}}
 		if err := h.store.ApplyLearningResult(context.Background(), event, result, voice.PersonalizationConfig{RuleActivationEvidence: 3}, nowTime); err != nil {
 			t.Fatal(err)
 		}
@@ -229,7 +305,7 @@ func TestIndependentLearningEventsPromoteRuleAtConfiguredEvidenceCount(t *testin
 		t.Fatalf("active projection=%q err=%v", projected, err)
 	}
 	// The same statement in a sibling voice is a different rule with its own evidence.
-	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투")
+	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean)
 	if _, _, projectedOther, _, err := h.svc.ProfileForPrompt(context.Background(), "alice", other.ID); err != nil || projectedOther != "" {
 		t.Fatalf("active rule leaked into another voice: %q err=%v", projectedOther, err)
 	}
@@ -244,12 +320,12 @@ func TestOneLearningEventCountsAtMostOneEvidencePerMatchedRule(t *testing.T) {
 	if _, err := h.db.Writer.Exec("INSERT INTO voice_contrast_rules(id,user_id,voice_id,statement,canonical_key,layer,evidence_count,status,origin,created_at,last_evidence_at) VALUES('shared','alice',?,'LLM does formal endings, but I do polite endings','shared','endings',1,'candidate','diff',?,?)", alice, now, now); err != nil {
 		t.Fatal(err)
 	}
-	event := voice.LearningEvent{ID: "event-dedupe", UserID: "alice", VoiceID: alice, PostSlug: "dedupe", BaselineRevision: 1, InputHash: "dedupe-hash", BaselineJSON: `{}`, FinalJSON: `{}`, ModelRef: analyzeRef.String(), Status: "running", CreatedAt: nowTime}
+	event := voice.LearningEvent{ID: "event-dedupe", UserID: "alice", VoiceID: alice, PostSlug: "dedupe", BaselineRevision: 1, InputHash: "dedupe-hash", BaselineJSON: `{}`, FinalJSON: `{}`, ModelRef: analyzeRef.String(), Status: "running", CreatedAt: nowTime, ContentLanguage: voice.LanguageKorean, SourceLanguage: voice.LanguageKorean}
 	if err := h.store.InsertLearningEvent(context.Background(), event); err != nil {
 		t.Fatal(err)
 	}
 	result := voice.LearningResult{
-		Source: voice.AuthoredSource{ID: "source-dedupe", UserID: "alice", VoiceID: alice, PostSlug: "dedupe", LearningEventID: event.ID, Title: "중복", Body: "본문", Excerpt: "본문", CreatedAt: nowTime},
+		Source: voice.AuthoredSource{ID: "source-dedupe", UserID: "alice", VoiceID: alice, PostSlug: "dedupe", LearningEventID: event.ID, Title: "중복", Body: "본문", Excerpt: "본문", CreatedAt: nowTime, SourceLanguage: voice.LanguageKorean},
 		Rules: []voice.ExtractedRule{
 			{Statement: "LLM does rigid endings, but I do gentle endings", Layer: voice.LayerEndings, MatchRuleID: "shared"},
 			{Statement: "LLM does stiff endings, but I do conversational endings", Layer: voice.LayerEndings, MatchRuleID: "shared"},
@@ -290,7 +366,7 @@ func TestExplicitRuleComparisonAndValidationStayOutsideModelExperiments(t *testi
 		}
 	}
 	// A source from another voice of the same account is not comparison material for this rule.
-	other, _ := svc.CreateVoice(context.Background(), "alice", "다른 말투")
+	other, _ := svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean)
 	if _, err := h.db.Writer.Exec("INSERT INTO voice_authored_sources(id,user_id,voice_id,title,tags,body,excerpt,created_at) VALUES('source-other','alice',?,'다른','[]','다른 말투의 원문입니다.','다른',?)", other.ID, now); err != nil {
 		t.Fatal(err)
 	}
@@ -377,7 +453,7 @@ func TestLearnPublishesUnansweredAxesAsUnknownAndRejectsOutOfRange(t *testing.T)
 		now := time.Now().UTC().Format(time.RFC3339Nano)
 		insertPost(t, h, "axes", "alice", alice, "축", now)
 		raw := `{"title":"축","summary":"","tags":[],"blocks":[{"type":"TEXT","content":"오늘은 천천히 걸어요. 바람이 참 좋아요."}]}`
-		snapshot := voice.FinalizationInput{PostSlug: "axes", UserID: "alice", VoiceID: alice, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1}
+		snapshot := voice.FinalizationInput{PostSlug: "axes", UserID: "alice", VoiceID: alice, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, ContentLanguage: voice.LanguageKorean, VoiceSourceLanguage: voice.LanguageKorean}
 		h.svc.ConfigurePersonalization(learningPosts{snapshot: snapshot}, personalizationConfig())
 		h.models.response = response
 		h.models.structured = structured
@@ -463,11 +539,11 @@ func TestLearnPublishesUnansweredAxesAsUnknownAndRejectsOutOfRange(t *testing.T)
 func TestFinalizeLearnRequiresMatchingLiveVoiceAndRetryFollowsTheEvent(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	formal, _ := h.svc.CreateVoice(context.Background(), "alice", "격식")
+	formal, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	insertPost(t, h, "moved", "alice", formal.ID, "옮긴 글", now)
 	raw := `{"title":"옮긴 글","summary":"","tags":[],"blocks":[{"type":"TEXT","content":"본문입니다."}]}`
-	posts := &mutableLearningPosts{snapshot: voice.FinalizationInput{PostSlug: "moved", UserID: "alice", VoiceID: formal.ID, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1}}
+	posts := &mutableLearningPosts{snapshot: voice.FinalizationInput{PostSlug: "moved", UserID: "alice", VoiceID: formal.ID, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, ContentLanguage: voice.LanguageKorean, VoiceSourceLanguage: voice.LanguageKorean}}
 	h.svc.ConfigurePersonalization(posts, personalizationConfig())
 
 	// Reassigned after generation: baseline voice != current voice.
@@ -526,7 +602,7 @@ func (p *mutableLearningPosts) LearningSnapshot(context.Context, string, string)
 func TestRuleStatusChangesStayInsideTheRulesVoice(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	formal, _ := h.svc.CreateVoice(context.Background(), "alice", "격식")
+	formal, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean)
 	nowTime := time.Now().UTC()
 	now := nowTime.Format(time.RFC3339Nano)
 	for _, v := range []string{alice, formal.ID} {

@@ -1,4 +1,5 @@
 import { Link, Outlet, useParams } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
 import { RestoreVoiceButton } from '@/features/restore-voice'
@@ -7,18 +8,21 @@ import { Badge, Button, Notice, TabLinks, type TabLink } from '@/shared/ui'
 /** The five tabs of one voice, in one list so the row and the routes cannot drift — the same
  *  reason `AuthenticatedLayout` keeps one `DESTINATIONS`. They are sub-navigation inside one voice,
  *  not destinations of their own. */
-const VOICE_TABS: readonly Omit<TabLink, 'params'>[] = [
-  { to: '/voices/$voiceId', label: '프로필' },
-  { to: '/voices/$voiceId/versions', label: '버전 기록' },
-  { to: '/voices/$voiceId/import', label: '기존 글 가져오기' },
-  { to: '/voices/$voiceId/rules', label: '대조 규칙' },
-  { to: '/voices/$voiceId/validations', label: '프로필 검증' },
+const VOICE_TABS: readonly (Omit<TabLink, 'params' | 'label'> & {
+  labelKey: 'profile' | 'versions' | 'import' | 'rules' | 'validations'
+})[] = [
+  { to: '/voices/$voiceId', labelKey: 'profile' },
+  { to: '/voices/$voiceId/versions', labelKey: 'versions' },
+  { to: '/voices/$voiceId/import', labelKey: 'import' },
+  { to: '/voices/$voiceId/rules', labelKey: 'rules' },
+  { to: '/voices/$voiceId/validations', labelKey: 'validations' },
 ]
 
 /** The frame of `/voices/$voiceId`: which voice this is, its state, and the tab row. The voice
  *  comes from the directory rather than from the profile so an unknown or foreign id can say so
  *  before any tab asks for a profile that does not exist. */
 export function VoiceLayout() {
+  const { t } = useTranslation(['nav', 'voices', 'common'])
   const { voiceId } = useParams({ from: '/authenticated/voices/$voiceId' })
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -31,27 +35,27 @@ export function VoiceLayout() {
         to="/voices"
         className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm underline"
       >
-        ← 말투 목록
+        {t('voice.backToList', { ns: 'nav' })}
       </Link>
       {isError ? (
         <Notice tone="danger" role="alert" className="mt-4">
-          <span>말투를 불러오지 못했어요.</span>
+          <span>{t('voiceLoadFailed', { ns: 'voices' })}</span>
           <Button
             variant="ghost"
             onClick={refetch}
             pending={isFetching}
             className="text-notice-danger-fg underline"
           >
-            다시 시도
+            {t('action.retry', { ns: 'common' })}
           </Button>
         </Notice>
       ) : isPending ? (
         <p role="status" className="text-content-tertiary mt-4 text-sm">
-          불러오는 중…
+          {t('state.loading', { ns: 'common' })}
         </p>
       ) : !voice ? (
         <p role="alert" className="text-notice-danger-fg mt-4 text-sm">
-          없는 말투예요.
+          {t('missing', { ns: 'voices' })}
         </p>
       ) : (
         <>
@@ -59,14 +63,13 @@ export function VoiceLayout() {
             <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">
               {voice.name}
             </h1>
-            {voice.isDefault && <Badge tone="accent">기본</Badge>}
-            {voice.deleted && <Badge tone="warning">삭제됨</Badge>}
+            {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}
+            {voice.deleted && <Badge tone="warning">{t('state.deleted', { ns: 'common' })}</Badge>}
+            <Badge>{t(`contentLanguage.${voice.sourceLanguage}`, { ns: 'common' })}</Badge>
           </div>
           {voice.deleted && (
             <Notice tone="warning" role="status" className="mt-4">
-              <span className="w-full min-w-0">
-                삭제된 말투예요. 기록은 볼 수 있지만, 복원하기 전에는 배우거나 고칠 수 없어요.
-              </span>
+              <span className="w-full min-w-0">{t('deletedWarning', { ns: 'voices' })}</span>
               <RestoreVoiceButton
                 ownerId={ownerId}
                 voiceId={voice.id}
@@ -76,8 +79,12 @@ export function VoiceLayout() {
             </Notice>
           )}
           <TabLinks
-            items={VOICE_TABS.map((tab) => ({ ...tab, params: { voiceId } }))}
-            ariaLabel="말투 설정"
+            items={VOICE_TABS.map(({ labelKey, ...tab }) => ({
+              ...tab,
+              label: t(`voice.${labelKey}`, { ns: 'nav' }),
+              params: { voiceId },
+            }))}
+            ariaLabel={t('voice.settings', { ns: 'nav' })}
             className="mt-4"
           />
           <Outlet />

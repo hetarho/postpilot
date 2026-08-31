@@ -16,6 +16,17 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if _, err := frozenVoice(post, job.VoiceID); err != nil {
 		return err
 	}
+	// Jobs queued before the language payload existed retain their established Korean
+	// behavior. New starts cannot omit the field and EncodeGenerationPayload refuses it.
+	if job.TargetLanguage == "" {
+		job.TargetLanguage = LanguageKorean
+	}
+	if !job.TargetLanguage.Valid() {
+		return ErrLanguageRequired
+	}
+	// Language is frozen in the durable payload. Never let the live post target retarget
+	// queued work after dequeue.
+	post.TargetLanguage = job.TargetLanguage
 	// Generation options are frozen when the job is enqueued. A later options edit
 	// must not change the prompt of work that is already waiting in the queue.
 	post.TargetLength = cloneOptionalInt(job.TargetLength)
@@ -54,7 +65,7 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if err != nil {
 		return err
 	}
-	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, content); err != nil {
+	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, content, job.TargetLanguage); err != nil {
 		return fmt.Errorf("persist generated content: %w", err)
 	}
 	progress("write", 1, 1)

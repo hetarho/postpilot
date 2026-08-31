@@ -9,28 +9,35 @@ import (
 )
 
 type ModelExperiment struct {
-	ID                string
-	UserID            string
-	PostSlug          sql.NullString
-	VoiceID           sql.NullString
-	Stage             string
-	Status            string
-	JobID             sql.NullString
-	InputSnapshot     sql.NullString
-	InputHash         string
-	PromptVersion     string
-	WinnerCandidateID sql.NullString
-	Outcome           sql.NullString
-	ApplyError        sql.NullString
-	AppliedAt         sql.NullString
-	CreatedAt         string
-	FinishedAt        sql.NullString
-	DecidedAt         sql.NullString
-	ContentExpiresAt  sql.NullString
-	AdoptionError     sql.NullString
-	AdoptedAt         sql.NullString
-	AdoptionRequested int64
-	PurposeName       string
+	ID                      string
+	UserID                  string
+	PostSlug                sql.NullString
+	VoiceID                 sql.NullString
+	Stage                   string
+	Status                  string
+	JobID                   sql.NullString
+	InputSnapshot           sql.NullString
+	InputHash               string
+	PromptVersion           string
+	WinnerCandidateID       sql.NullString
+	Outcome                 sql.NullString
+	ApplyError              sql.NullString
+	AppliedAt               sql.NullString
+	CreatedAt               string
+	FinishedAt              sql.NullString
+	DecidedAt               sql.NullString
+	ContentExpiresAt        sql.NullString
+	AdoptionError           sql.NullString
+	AdoptedAt               sql.NullString
+	AdoptionRequested       int64
+	PurposeName             string
+	TargetLanguage          sql.NullString
+	ApplyErrorReason        sql.NullString
+	ApplyErrorParams        sql.NullString
+	ApplyTechnicalDetail    sql.NullString
+	AdoptionErrorReason     sql.NullString
+	AdoptionErrorParams     sql.NullString
+	AdoptionTechnicalDetail sql.NullString
 }
 
 type ModelExperimentCandidate struct {
@@ -50,4 +57,7 @@ type ModelExperimentCandidate struct {
 	LatencyMs        sql.NullInt64
 	StartedAt        sql.NullString
 	FinishedAt       sql.NullString
+	ErrorReason      sql.NullString
+	ErrorParams      sql.NullString
+	TechnicalDetail  sql.NullString
 }

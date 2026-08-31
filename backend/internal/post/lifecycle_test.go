@@ -10,7 +10,7 @@ func TestFinalizedLifecycleKeepsIdenticalSavesAndDemotesChangedContent(t *testin
 	svc, _, _ := newTestService(t)
 	created := mustCreatePost(t, svc, alice, "Final")
 	content := PostContent{Title: "완성", Blocks: []Block{{Type: BlockText, Content: "생성 문장"}}}
-	if err := svc.SetGeneratedContent(context.Background(), alice, created.Slug, content); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, created.Slug, content, LanguageKorean); err != nil {
 		t.Fatal(err)
 	}
 	target := 900
@@ -43,7 +43,7 @@ func TestFinalizeIsRevisionCheckedOwnedAndIdempotent(t *testing.T) {
 		t.Fatalf("finalize without baseline = %v", err)
 	}
 	content := PostContent{Blocks: []Block{{Type: BlockText, Content: "본문"}}}
-	if err := svc.SetGeneratedContent(context.Background(), alice, created.Slug, content); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, created.Slug, content, LanguageKorean); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Finalize(context.Background(), bob, created.Slug, 1); !errors.Is(err, ErrForbidden) {
@@ -59,5 +59,32 @@ func TestFinalizeIsRevisionCheckedOwnedAndIdempotent(t *testing.T) {
 	second, err := svc.Finalize(context.Background(), alice, created.Slug, 1)
 	if err != nil || second.FinalizedAt == nil || !second.FinalizedAt.Equal(*first.FinalizedAt) {
 		t.Fatalf("idempotent finalize = %+v err=%v", second, err)
+	}
+}
+
+func TestFinalizeAllowsCrossLanguageContentAndPreservesProvenance(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	ctx := context.Background()
+	voiceID := aliceVoice // Korean source voice.
+	target := LanguageEnglish
+	created, err := svc.SaveDraft(ctx, alice, "", "English target", "", &voiceID, nil, &target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := PostContent{Title: "An English post", Blocks: []Block{{Type: BlockText, Content: "English content remains publishable under a Korean source voice."}}}
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageEnglish); err != nil {
+		t.Fatal(err)
+	}
+	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)
+	if err != nil || finalized.Status != StatusFinalized || finalized.TargetLanguage != LanguageEnglish || finalized.ContentLanguage == nil || *finalized.ContentLanguage != LanguageEnglish || finalized.Voice.SourceLanguage != LanguageKorean {
+		t.Fatalf("cross-language finalize = %#v, err=%v", finalized, err)
+	}
+	learning, err := svc.LearningSnapshot(ctx, alice, created.Slug)
+	if err != nil || learning.ContentLanguage != LanguageEnglish || learning.VoiceSourceLanguage != LanguageKorean {
+		t.Fatalf("learning language projection = %#v, err=%v", learning, err)
+	}
+	snapshot, err := svc.PublishingSnapshot(ctx, alice, created.Slug)
+	if err != nil || snapshot.TargetLanguage != LanguageEnglish || snapshot.ContentLanguage != LanguageEnglish || snapshot.VoiceSourceLanguage != LanguageKorean {
+		t.Fatalf("cross-language publishing provenance = %#v, err=%v", snapshot, err)
 	}
 }

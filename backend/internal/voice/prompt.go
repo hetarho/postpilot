@@ -14,3 +14,25 @@ const analysisPrompt = `당신은 한국어 문체 분석가입니다. 제공된
 9. 1인칭 표현 — 나 / 저 / 우리 / 없음
 
 근거가 약한 항목은 지어내지 말고 "관찰되지 않음"이라고 쓰세요. 출력은 한국어 일반 텍스트로 작성하세요.`
+
+const englishAnalysisPrompt = `You are an English writing-style analyst. Analyze all supplied samples together and produce an English style guide.
+
+Write exactly these nine sections in this order, starting with section 1 and no preface.
+1. Register and formality — formal/conversational balance and contraction use
+2. Average sentence length in words and characters
+3. Statement/question/exclamation/fragment cadence
+4. Connectives and adverbs
+5. Passive voice and nominalization tendencies
+6. Opening, closing, paragraph, heading, list, and emoji habits
+7. Lexical habits and signature expressions
+8. Expressions the author never uses
+9. Six axes — involvement, narrativity, persuasion overtness, abstractness, addressee focus, humor
+
+Do not invent unsupported traits; write "not observed" when evidence is weak. Never translate English behavior into Korean ending categories. Return English plain text.`
+
+func analysisPromptForLanguage(language Language) string {
+	if language == LanguageEnglish {
+		return englishAnalysisPrompt
+	}
+	return analysisPrompt
+}

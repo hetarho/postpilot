@@ -27,8 +27,11 @@ built by jobs 01 and 02. A change to any rule here is a change to shipped behavi
 
 ## Login and what a failure may reveal
 
-- **Every login failure is byte-identical**: `connect.CodeUnauthenticated` with the fixed message
-  `invalid credentials`. Unknown id, wrong password, and an unusable stored hash are indistinguishable.
+- **Every credential-rejection failure is byte-identical**: `connect.CodeUnauthenticated` with the fixed message
+  `invalid credentials` and stable reason `INVALID_CREDENTIALS`. Unknown id, wrong password, and an unusable stored
+  hash are indistinguishable. Other missing/expired session paths use `AUTH_REQUIRED`. Login/logout infrastructure
+  failures use `UNKNOWN_FAILURE`; session-lookup infrastructure failures deliberately fail closed as `AUTH_REQUIRED`.
+  The frontend localizes the reason and does not render raw transport prose.
 - **Unknown ids run a real argon2id verification** against a dummy hash whose password nobody knows, so the
   "no such account" path costs the same as "wrong password" and id existence does not leak by timing. The dummy hash
   is derived at boot (not on first use) and always carries the *current* cost parameters — a hardcoded one would
@@ -110,8 +113,9 @@ built by jobs 01 and 02. A change to any rule here is a change to shipped behavi
   against the known routes.
 - **Logout that fails does not pretend to succeed.** The cookie is still valid, so the user stays signed in and is
   told; a "logged out" screen would offer safety the live HttpOnly cookie does not.
-- The login form shows one message for every failure — `아이디 또는 비밀번호가 맞지 않아요` — mirroring the server's
-  refusal to distinguish an unknown id from a wrong password.
+- The login form shows the localized invalid-credentials message only for stable reason `INVALID_CREDENTIALS`, still
+  refusing to distinguish an unknown id from a wrong password. Infrastructure failure renders localized
+  `UNKNOWN_FAILURE`, so an outage is not presented as a typo.
 
 ## Transport
 

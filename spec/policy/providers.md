@@ -14,11 +14,12 @@ extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md); b
 - The model is an **input** to every call (`Registry.Complete(ctx, ref, req)`); the port reads no default. The
   observe, write and analyze stages each carry their own `ModelRef` ([I3]).
 - Errors are normalized to a small set the callers act on — `ErrModelUnavailable`, `ErrProviderDisabled`,
-  `ErrRateLimited`, `ErrUnsupported`, `ErrBadOutput`, `ErrOutputTruncated` — and a `ProviderError` that keeps the provider's own message
-  and wraps the sentinel, so the user is told the cause verbatim (PRD §7) while the code still branches on
-  `errors.Is`. `llm.UserMessage` is the one mapper used by jobs and model experiments. Output ending with
-  `finish_reason: length` that has no usable content, including non-empty partial JSON rejected by a caller parser,
-  gets actionable budget-exhaustion copy rather than the generic bad-output error.
+  `ErrRateLimited`, `ErrUnsupported`, `ErrBadOutput`, `ErrOutputTruncated` — and a `ProviderError` that keeps optional
+  provider prose as diagnostic detail while still supporting `errors.Is`. `llm.Failure` is the one stable mapper used
+  by jobs and model experiments (`MODEL_UNAVAILABLE`, `MODEL_RATE_LIMITED`, `MODEL_UNSUPPORTED`,
+  `MODEL_OUTPUT_INVALID`, `MODEL_OUTPUT_TRUNCATED`, or `UNKNOWN_FAILURE`). Provider text is never primary UI copy or
+  an interpolated param. Output ending with `finish_reason: length` that has no usable content, including non-empty
+  partial JSON rejected by a caller parser, maps to the truncated-output reason.
 - Capability checks run **before any network call**: an image part on a model without `vision`, or a JSON schema on
   a model without `structured_output`, is `ErrUnsupported` immediately. A caller that wants a plain-text fallback
   checks the model's flag first and omits the schema.

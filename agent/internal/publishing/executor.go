@@ -153,10 +153,11 @@ func (e Executor) fail(ctx context.Context, claim *postpilotv1.ClaimPublishJobRe
 		"failure_kind", kind.String(),
 		"detail", redactedLocalDetail(detail),
 	)
-	// The RPC intentionally carries no model/browser text, local path, post content,
-	// callback address, or provider diagnostic. The server derives its safe Korean
-	// message only from the normalized failure kind.
-	return e.API.Fail(ctx, claim.GetJob().GetId(), claim.GetLeaseToken(), sequence, kind, "")
+	// The RPC carries only bounded redaction metadata, never model/browser text, local
+	// paths, post content, callback addresses, or provider diagnostics. The server maps
+	// the constrained kind to a stable reason and retains this inert value as optional
+	// technical detail.
+	return e.API.Fail(ctx, claim.GetJob().GetId(), claim.GetLeaseToken(), sequence, kind, redactedLocalDetail(detail))
 }
 
 func (e Executor) heartbeatEvery() time.Duration {
@@ -197,7 +198,7 @@ func (e Executor) heartbeat(ctx context.Context, claim *postpilotv1.ClaimPublish
 func redactedLocalDetail(detail string) string {
 	detail = strings.TrimSpace(detail)
 	if detail == "" {
-		return "none"
+		return ""
 	}
 	// Raw Hermes/browser diagnostics can contain post text, URLs and local paths.
 	// Record that a diagnostic existed, and its bounded size for troubleshooting,

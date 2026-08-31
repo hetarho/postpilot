@@ -38,7 +38,7 @@ language field.
 A new-post screen initializes target from the resolved UI locale, but the create request carries the concrete enum.
 The server knows no browser preference and substitutes no default. Existing migrated posts backfill Korean.
 
-Target changes are presence-aware draft patches:
+Target changes are presence-aware fields on the draft snapshot:
 
 ```text
 create: target required
@@ -46,8 +46,9 @@ update + field absent: preserve target
 update + field present and valid: replace target
 ```
 
-The draft queue gives target selection the same newest-wins protection as voice/purpose assignment. A delayed
-title/memo request cannot carry an old target back over a newer choice. Target updates do not change content JSON,
+The request still carries the latest complete title/memo snapshot; presence awareness does not make those scalar
+fields a sparse patch. The draft queue gives target selection the same newest-wins protection as voice/purpose
+assignment. A delayed title/memo request cannot carry an old target back over a newer choice. Target updates do not change content JSON,
 observations, status, revisions, machine baseline, voice/purpose assignment, or finalization.
 
 `content_language` changes only when canonical machine content changes:
@@ -170,6 +171,9 @@ detail records target; applying a winner passes target to the post context with 
 
 Analyze experiments use the selected voice's source language and source-only corpus. Observe experiments remain
 target-independent as described above.
+
+The current leaderboard remains private to `(account, stage)` for every stage. Write target is retained in immutable
+experiment metadata and input hash for reproducibility but does not partition the ranking projection.
 
 Revision uses `content_language`, never `target_language`:
 

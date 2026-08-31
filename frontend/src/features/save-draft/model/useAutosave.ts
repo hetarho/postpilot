@@ -1,12 +1,20 @@
 import { useLayoutEffect, useEffect, useRef, useState } from 'react'
 import { useSavePostDraft } from '@/entities/post'
+import { contentLanguageToProto, type ContentLanguage } from '@/shared/api'
 import { type DraftQueueHandle, type SaveState, attachDraftQueue } from './draft-queue'
 
 export interface UseAutosaveArgs {
   /** The post as the server last reported it, or undefined for a draft with no slug yet.
    *  It is the identity of this editing session — the editor is mounted per post. */
   post:
-    | { slug: string; title: string; memo: string; voice: { id: string }; purpose: { id: string } }
+    | {
+        slug: string
+        title: string
+        memo: string
+        voice: { id: string }
+        purpose: { id: string }
+        targetLanguage: ContentLanguage
+      }
     | undefined
   /** What is in the inputs right now. */
   title: string
@@ -18,6 +26,8 @@ export interface UseAutosaveArgs {
   /** The 용도 a draft with no post yet will be created with, '' for 없음. Same rule as
    *  `voiceId`: once the post exists its assignment changes only through `assignPurpose`. */
   purposeId: string
+  /** The next full-write language; local-only until an unsaved draft is first created. */
+  targetLanguage: ContentLanguage
   /** Called with the slug the first save minted. */
   onMinted?: (slug: string) => void
 }
@@ -27,7 +37,15 @@ export interface UseAutosaveArgs {
  *  The hook is only the React end of it: the debounce, the retries and the in-flight
  *  bookkeeping live in the per-post queue (`draft-queue.ts`), which outlives this
  *  component on purpose. */
-export function useAutosave({ post, title, memo, voiceId, purposeId, onMinted }: UseAutosaveArgs): {
+export function useAutosave({
+  post,
+  title,
+  memo,
+  voiceId,
+  purposeId,
+  targetLanguage,
+  onMinted,
+}: UseAutosaveArgs): {
   state: SaveState
   /** The post's slug, creating the post first if it has none yet (see
    *  `DraftQueueHandle.mint`). For anything that needs a post to attach to — photos. */
@@ -41,6 +59,7 @@ export function useAutosave({ post, title, memo, voiceId, purposeId, onMinted }:
   /** Assigns or clears ('') an existing post's 용도 through the same queue as the text, so a
    *  title save still in flight cannot carry the old assignment over a newer selection. */
   assignPurpose: (purposeId: string) => Promise<void>
+  assignTargetLanguage: (language: ContentLanguage) => Promise<void>
 } {
   const slug = post?.slug
   const saveDraft = useSavePostDraft()
@@ -51,6 +70,7 @@ export function useAutosave({ post, title, memo, voiceId, purposeId, onMinted }:
   const postRef = useRef(post)
   const voiceRef = useRef(voiceId)
   const purposeRef = useRef(purposeId)
+  const targetLanguageRef = useRef(targetLanguage)
 
   // Layout effects throughout, not passive ones. A passive effect runs after paint and can
   // be deferred past a `pagehide` or a `visibilitychange`, and the keystroke it had not
@@ -61,6 +81,7 @@ export function useAutosave({ post, title, memo, voiceId, purposeId, onMinted }:
     postRef.current = post
     voiceRef.current = voiceId
     purposeRef.current = purposeId
+    targetLanguageRef.current = targetLanguage
   })
 
   // Keyed by the slug alone, not by the post object: every successful save reseeds the
@@ -74,13 +95,16 @@ export function useAutosave({ post, title, memo, voiceId, purposeId, onMinted }:
       saved: { title: opened?.title ?? '', memo: opened?.memo ?? '' },
       voiceId: opened?.voice.id ?? voiceRef.current,
       purposeId: opened?.purpose.id ?? purposeRef.current,
-      send: async (slug, draft, voiceId, purposeId) => {
+      targetLanguage: opened?.targetLanguage ?? targetLanguageRef.current,
+      send: async (slug, draft, voiceId, purposeId, targetLanguage) => {
         const response = await sendRef.current({
           slug,
           title: draft.title,
           memo: draft.memo,
           voiceId,
           purposeId,
+          targetLanguage:
+            targetLanguage === undefined ? undefined : contentLanguageToProto(targetLanguage),
         })
         // A 200 carrying no post is not a confirmation. Taking it as one would mark the
         // text saved, and for a draft with no slug yet would leave the next edit creating
@@ -118,6 +142,10 @@ export function useAutosave({ post, title, memo, voiceId, purposeId, onMinted }:
     if (!postRef.current) void queueRef.current?.assignPurpose(purposeId)
   }, [purposeId])
 
+  useLayoutEffect(() => {
+    if (!postRef.current) void queueRef.current?.assignTargetLanguage(targetLanguage)
+  }, [targetLanguage])
+
   useEffect(() => {
     const flush = () => queueRef.current?.saveNow()
     // `visibilitychange` is the one that fires while the page can still finish a request —
@@ -146,6 +174,9 @@ export function useAutosave({ post, title, memo, voiceId, purposeId, onMinted }:
       Promise.reject(new Error('editor is not attached to a draft')),
     assignPurpose: (purposeId) =>
       queueRef.current?.assignPurpose(purposeId) ??
+      Promise.reject(new Error('editor is not attached to a draft')),
+    assignTargetLanguage: (language) =>
+      queueRef.current?.assignTargetLanguage(language) ??
       Promise.reject(new Error('editor is not attached to a draft')),
   }
 }

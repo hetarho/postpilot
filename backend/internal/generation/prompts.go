@@ -15,6 +15,13 @@ IMAGE 블록은 사진이 글의 흐름상 가장 자연스러운 위치에 오�
 출력은 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[]} 형태의 JSON 객체 하나여야 합니다.
 각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.`
 
+const englishWritePrompt = `Write a natural English blog post from the photo observations and memo.
+Use exactly one TEXT block for each paragraph.
+IMAGE blocks may use only the exact filenames provided. Never invent an image that is not in the list.
+Place each IMAGE block where the photo fits most naturally in the flow of the post.
+Return exactly one JSON object shaped as {"title":"...","summary":"...","tags":[],"blocks":[]} with no explanation or Markdown.
+Each block uses the type, content, level, file, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, QUOTE, or LIST.`
+
 const NaturalnessBaseline = `[한국어 자연 문체 기준선]
 - 아래 기준은 새로 쓰거나 수정 요청으로 손대는 TEXT 본문에만 적용하세요. 제목·요약·HEADING·LIST에는 적용하지 말고, 수정에서는 요청 밖의 기존 문장을 그대로 두세요.
 - 대조 수사는 글 전체에서 “A가 아니라 B”, “~것이 아니라” 꼴을 합쳐 한 번만 쓰세요.
@@ -50,32 +57,30 @@ func writePurposeSection(out *strings.Builder, purpose *PurposeBrief) {
 	fmt.Fprintf(out, "\n%s", purposePrecedence)
 }
 
+// BuildWritePrompt preserves the legacy Korean call surface for prompt goldens and
+// consumers that explicitly request the established Korean contract. Runtime work uses
+// BuildWritePromptForLanguage with its frozen language.
 func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, purpose *PurposeBrief) (string, string) {
+	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, targetLength, purpose)
+}
+
+func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, purpose *PurposeBrief) (string, string) {
 	var stable strings.Builder
-	stable.WriteString(WritePrompt)
-	fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, %d–%d개의 tags, blocks를 반환하세요.", TagsMin, TagsMax)
-	stable.WriteString("\n\n")
-	stable.WriteString(NaturalnessBaseline)
-	stable.WriteString("\n\n[스타일가이드]\n")
-	stable.WriteString(profile.Styleguide)
-	stable.WriteString("\n\n[활성 대조 규칙]\n")
-	stable.WriteString(profile.ActiveRules)
-	stable.WriteString("\n\n[글 예시 발췌]")
-	for i, excerpt := range profile.Excerpts {
-		fmt.Fprintf(&stable, "\n%d. %s", i+1, excerpt)
+	switch language {
+	case LanguageKorean:
+		stable.WriteString(WritePrompt)
+		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, %d–%d개의 tags, blocks를 반환하세요.", TagsMin, TagsMax)
+		stable.WriteString("\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 용도, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
+	case LanguageEnglish:
+		stable.WriteString(englishWritePrompt)
+		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, %d–%d tags, and blocks.", TagsMin, TagsMax)
+		stable.WriteString("\nThe output language is English. Write the title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, purpose, memo, or title hint.")
+	default:
+		// Callers validate before prompt construction. Keeping this branch explicit makes
+		// direct prompt use fail closed instead of silently defaulting to Korean.
+		stable.WriteString("Unsupported output language; do not generate content.")
 	}
-	stable.WriteString("\n예시의 고유 사실, 주제, 문구를 복사하지 말고 문체 특징만 참고하세요.")
-	stable.WriteString("\n\n[사용자 규칙]\n")
-	stable.WriteString(profile.Rules)
-	endingMax := profile.EndingMaxConsecutive
-	if endingMax <= 0 {
-		endingMax = 2
-	}
-	stable.WriteString("\n\n[종결어미 제약]\n")
-	if targetLength != nil {
-		fmt.Fprintf(&stable, "목표 길이: 약 %d자. ", *targetLength)
-	}
-	fmt.Fprintf(&stable, "프로필의 측정된 종결어미 분포를 따르고 같은 종결어미를 %d문장보다 많이 연속 사용하지 마세요.", endingMax)
+	writeProfileSection(&stable, language, profile, targetLength)
 	writePurposeSection(&stable, purpose)
 
 	photoMaterial := "첨부 사진이 없습니다. 이미지 없이 메모만으로 작성하세요."
@@ -85,6 +90,56 @@ func BuildWritePrompt(profile Profile, observations []Observation, memo, title s
 	}
 	perPost := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s", title, memo, photoMaterial)
 	return stable.String(), perPost
+}
+
+func writeProfileSection(stable *strings.Builder, language Language, profile Profile, targetLength *int) {
+	if language == LanguageKorean {
+		stable.WriteString("\n\n")
+		stable.WriteString(NaturalnessBaseline)
+	}
+	if profile.Portable {
+		stable.WriteString("\n\n[휴대 가능한 말투 프로필 / Portable voice profile]\n")
+		stable.WriteString(profile.Styleguide)
+		stable.WriteString("\n이 섹션에는 언어를 넘어 유지 가능한 구조와 수치 축만 포함됩니다. 출력 언어 지시를 우선하고 제외된 원문 표현을 추측하거나 번역해 보충하지 마세요.")
+		writeGenericLength(stable, language, targetLength)
+		return
+	}
+
+	stable.WriteString("\n\n[스타일가이드]\n")
+	stable.WriteString(profile.Styleguide)
+	stable.WriteString("\n\n[활성 대조 규칙]\n")
+	stable.WriteString(profile.ActiveRules)
+	stable.WriteString("\n\n[글 예시 발췌]")
+	for i, excerpt := range profile.Excerpts {
+		fmt.Fprintf(stable, "\n%d. %s", i+1, excerpt)
+	}
+	stable.WriteString("\n예시의 고유 사실, 주제, 문구를 복사하지 말고 문체 특징만 참고하세요.")
+	stable.WriteString("\n\n[사용자 규칙]\n")
+	stable.WriteString(profile.Rules)
+	if language != LanguageKorean {
+		writeGenericLength(stable, language, targetLength)
+		return
+	}
+	endingMax := profile.EndingMaxConsecutive
+	if endingMax <= 0 {
+		endingMax = 2
+	}
+	stable.WriteString("\n\n[종결어미 제약]\n")
+	if targetLength != nil {
+		fmt.Fprintf(stable, "목표 길이: 약 %d자. ", *targetLength)
+	}
+	fmt.Fprintf(stable, "프로필의 측정된 종결어미 분포를 따르고 같은 종결어미를 %d문장보다 많이 연속 사용하지 마세요.", endingMax)
+}
+
+func writeGenericLength(stable *strings.Builder, language Language, targetLength *int) {
+	if targetLength == nil {
+		return
+	}
+	if language == LanguageEnglish {
+		fmt.Fprintf(stable, "\n\n[Length]\nTarget approximately %d Unicode characters.", *targetLength)
+		return
+	}
+	fmt.Fprintf(stable, "\n\n[길이]\n목표 길이: 약 %d자.", *targetLength)
 }
 
 func observationsForPrompt(observations []Observation) []observationJSON {

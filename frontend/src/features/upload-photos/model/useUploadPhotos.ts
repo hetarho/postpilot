@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 import { useTransport } from '@connectrpc/connect-query'
 import { usePostImagesCache } from '@/entities/post'
+import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { createUploadPipeline } from '../api/upload-pipeline'
 import {
   type UploadBatchState,
@@ -33,8 +34,8 @@ export function useUploadPhotos({
   /** True while the post the photos need is being created (a new draft's first pick).
    *  The picker should be disabled: a second pick would attach the same files twice. */
   creatingPost: boolean
-  /** Set when the post could not be created, so the selected files were dropped. */
-  createFailed: boolean
+  /** Structured reason why the post could not be created; selected files were dropped. */
+  createFailure: AppFailure | undefined
 } {
   const transport = useTransport()
   const cache = usePostImagesCache()
@@ -43,7 +44,7 @@ export function useUploadPhotos({
     [transport, cache.append],
   )
   const [creatingPost, setCreatingPost] = useState(false)
-  const [createFailed, setCreateFailed] = useState(false)
+  const [createFailure, setCreateFailure] = useState<AppFailure>()
   // Skipped files from a pick that had nothing to upload: there is no post to hang a
   // batch on, and none should be created just to list them.
   const [skippedWithoutPost, setSkippedWithoutPost] = useState<readonly UploadItem[]>([])
@@ -64,7 +65,7 @@ export function useUploadPhotos({
     items,
     completed: state.completed,
     creatingPost,
-    createFailed,
+    createFailure,
     addFiles: async (files) => {
       if (files.length === 0 || creatingPost) return
       if (slug) {
@@ -80,12 +81,12 @@ export function useUploadPhotos({
       // the minted slug, so the editor that navigation mounts picks it up — skipped files
       // included, so the list survives the move.
       setCreatingPost(true)
-      setCreateFailed(false)
+      setCreateFailure(undefined)
       try {
         const target = await ensureSlug()
         uploadBatch(target, deps).add(files, taken)
-      } catch {
-        setCreateFailed(true)
+      } catch (cause) {
+        setCreateFailure(appFailureFromConnect(cause))
       } finally {
         setCreatingPost(false)
       }

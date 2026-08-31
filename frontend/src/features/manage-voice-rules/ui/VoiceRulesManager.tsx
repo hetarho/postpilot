@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
@@ -11,12 +12,13 @@ import {
   voiceVersionsQueryKey,
 } from '@/entities/voice'
 import {
+  appFailureFromConnect,
   ModelRefSchema,
   VoiceLearningService,
   VoiceRuleStatus,
   VoiceValidationService,
 } from '@/shared/api'
-import { Badge, Button, Dialog, Notice } from '@/shared/ui'
+import { AppFailureMessage, Badge, Button, Dialog, Notice } from '@/shared/ui'
 
 interface RuleConfirmation {
   id: string
@@ -42,6 +44,7 @@ export function VoiceRulesManager({
   confirmations: RuleConfirmation[]
   blocked?: string
 }) {
+  const { t } = useTranslation('voices')
   const transport = useTransport()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -61,7 +64,10 @@ export function VoiceRulesManager({
   }
   const changeStatus = (ruleId: string, status: VoiceRuleStatus) => {
     if (blocked) return
-    void statusMutation.mutateAsync({ ruleId, status }).then(refresh)
+    void statusMutation
+      .mutateAsync({ ruleId, status })
+      .then(refresh)
+      .catch(() => undefined)
   }
   const startComparison = async () => {
     if (blocked) return
@@ -81,15 +87,21 @@ export function VoiceRulesManager({
     }
   }
   const pending = confirmations.filter((item) => item.status === 'pending')
+  const actionError = statusMutation.error ?? resolveMutation.error ?? compareMutation.error
   return (
-    <section aria-label="대조 규칙">
+    <section aria-label={t('rules.title')}>
       {blocked && (
         <Notice tone="warning" role="status" className="mb-4">
           {blocked}
         </Notice>
       )}
+      {actionError && (
+        <Notice tone="danger" role="alert" className="mb-4">
+          <AppFailureMessage failure={appFailureFromConnect(actionError)} />
+        </Notice>
+      )}
       {profile.structured.rules.length === 0 ? (
-        <p className="text-content-tertiary mt-4 text-sm">아직 편집 패턴에서 찾은 규칙이 없어요.</p>
+        <p className="text-content-tertiary mt-4 text-sm">{t('rules.empty')}</p>
       ) : (
         <ul className="divide-divider divide-y">
           {profile.structured.rules.map((rule) => (
@@ -105,10 +117,13 @@ export function VoiceRulesManager({
                         : 'neutral'
                   }
                 >
-                  {statusLabel(rule.status)} · 근거 {rule.evidenceCount}
+                  {t('rules.evidence', {
+                    status: t(`rules.status.${rule.status}`),
+                    count: rule.evidenceCount,
+                  })}
                 </Badge>
               </div>
-              <p className="text-content-tertiary mt-1 text-xs">{rule.layer}</p>
+              <p className="text-content-tertiary mt-1 text-xs">{t(`rules.layer.${rule.layer}`)}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {rule.status !== 'active' && (
                   <Button
@@ -116,7 +131,7 @@ export function VoiceRulesManager({
                     disabled={Boolean(blocked)}
                     onClick={() => changeStatus(rule.id, VoiceRuleStatus.ACTIVE)}
                   >
-                    활성화
+                    {t('rules.activate')}
                   </Button>
                 )}
                 {rule.status !== 'retired' && (
@@ -125,7 +140,7 @@ export function VoiceRulesManager({
                     disabled={Boolean(blocked)}
                     onClick={() => changeStatus(rule.id, VoiceRuleStatus.RETIRED)}
                   >
-                    사용 중지
+                    {t('rules.retire')}
                   </Button>
                 )}
                 {rule.status === 'candidate' && (
@@ -134,7 +149,7 @@ export function VoiceRulesManager({
                     disabled={Boolean(blocked) || !profile.structured.sources[0] || !write.selected}
                     onClick={() => setCompareRule(rule.id)}
                   >
-                    블라인드 비교
+                    {t('rules.compare')}
                   </Button>
                 )}
               </div>
@@ -144,11 +159,11 @@ export function VoiceRulesManager({
       )}
       {pending.length > 0 && (
         <section className="mt-8">
-          <h3 className="font-medium">확인이 필요한 충돌</h3>
+          <h3 className="font-medium">{t('rules.conflicts')}</h3>
           {pending.map((item) => (
             <Notice key={item.id} tone="warning" className="mt-3">
-              <p>현재: {item.existingStatement}</p>
-              <p className="mt-1">새 근거: {item.proposedStatement}</p>
+              <p>{t('rules.current', { statement: item.existingStatement })}</p>
+              <p className="mt-1">{t('rules.proposed', { statement: item.proposedStatement })}</p>
               <div className="mt-3 flex gap-2">
                 <Button
                   variant="secondary"
@@ -157,9 +172,10 @@ export function VoiceRulesManager({
                     void resolveMutation
                       .mutateAsync({ confirmationId: item.id, replace: false })
                       .then(refresh)
+                      .catch(() => undefined)
                   }
                 >
-                  현재 규칙 유지
+                  {t('rules.keep')}
                 </Button>
                 <Button
                   variant="cta"
@@ -168,9 +184,10 @@ export function VoiceRulesManager({
                     void resolveMutation
                       .mutateAsync({ confirmationId: item.id, replace: true })
                       .then(refresh)
+                      .catch(() => undefined)
                   }
                 >
-                  새 규칙으로 교체
+                  {t('rules.replace')}
                 </Button>
               </div>
             </Notice>
@@ -179,23 +196,14 @@ export function VoiceRulesManager({
       )}
       <Dialog
         open={compareRule !== undefined}
-        title="이 규칙만 비교할까요?"
-        confirmLabel="비교 작업 시작"
+        title={t('rules.compareTitle')}
+        confirmLabel={t('rules.compareConfirm')}
         pending={compareMutation.isPending}
         onClose={() => setCompareRule(undefined)}
-        onConfirm={() => void startComparison()}
+        onConfirm={() => void startComparison().catch(() => undefined)}
       >
-        같은 입력과 같은 작성 모델로 두 글을 만들고, 선택한 규칙의 포함 여부만 다르게 합니다. 판정
-        전에는 어느 쪽에 규칙이 들어갔는지 숨깁니다.
+        {t('rules.compareDescription')}
       </Dialog>
     </section>
   )
 }
-
-const statusLabel = (status: string) =>
-  (
-    ({ candidate: '후보', active: '활성', retired: '중지', rejected: '거절' }) as Record<
-      string,
-      string
-    >
-  )[status] ?? status

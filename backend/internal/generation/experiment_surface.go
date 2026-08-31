@@ -9,17 +9,32 @@ import (
 )
 
 const (
-	WriteExperimentPromptVersion   = "write-v2-ab"
+	WriteExperimentPromptVersion   = "write-v3-language-ab"
 	ObserveExperimentPromptVersion = "observe-v1-ab"
 )
 
 type experimentSnapshot struct {
-	Kind         string        `json:"kind"`
-	Prepared     bool          `json:"prepared"`
-	ObserveModel string        `json:"observe_model,omitempty"`
-	Post         PostInput     `json:"post"`
-	Profile      Profile       `json:"profile,omitempty"`
-	Observations []Observation `json:"observations,omitempty"`
+	Kind           string        `json:"kind"`
+	Prepared       bool          `json:"prepared"`
+	TargetLanguage Language      `json:"target_language,omitempty"`
+	ObserveModel   string        `json:"observe_model,omitempty"`
+	Post           PostInput     `json:"post"`
+	Profile        Profile       `json:"profile,omitempty"`
+	Observations   []Observation `json:"observations,omitempty"`
+}
+
+// observeExperimentSnapshot is intentionally narrower than PostInput. Target/content
+// language, voice, prose, purpose and write options cannot affect photo facts, so they
+// cannot enter an observation experiment's candidate input or observation-only hash.
+type observeExperimentSnapshot struct {
+	Kind string                `json:"kind"`
+	Post observeExperimentPost `json:"post"`
+}
+
+type observeExperimentPost struct {
+	Slug   string  `json:"slug"`
+	UserID string  `json:"user_id"`
+	Images []Image `json:"images"`
 }
 
 type CandidateUsage struct {
@@ -34,6 +49,9 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 	if err != nil {
 		return nil, err
 	}
+	if !post.TargetLanguage.Valid() {
+		return nil, ErrLanguageRequired
+	}
 	post.TargetLength = cloneOptionalInt(targetLength)
 	// Frozen here, once, for the whole comparison. Both candidates then read the identical
 	// brief out of this snapshot, so their system prompts differ only by model ref — and
@@ -47,7 +65,7 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 	if err != nil {
 		return nil, err
 	}
-	profile, err := s.profileForTopic(ctx, userID, voiceID, post.Title+" "+post.Memo, contentTags(post.Content))
+	profile, err := s.profileForTopic(ctx, userID, voiceID, post.TargetLanguage, post.Title+" "+post.Memo, contentTags(post.Content))
 	if err != nil {
 		return nil, fmt.Errorf("load voice profile: %w", err)
 	}
@@ -58,7 +76,8 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 		}
 	}
 	return json.Marshal(experimentSnapshot{
-		Kind: "write", ObserveModel: observeModel.String(), Post: post, Profile: profile,
+		Kind: "write", TargetLanguage: post.TargetLanguage,
+		ObserveModel: observeModel.String(), Post: post, Profile: profile,
 	})
 }
 
@@ -70,7 +89,9 @@ func (s *Service) SnapshotObserveInput(ctx context.Context, userID, postSlug str
 	if len(post.Images) == 0 {
 		return nil, fmt.Errorf("관찰 비교에는 사진이 한 장 이상 필요해요")
 	}
-	return json.Marshal(experimentSnapshot{Kind: "observe", Post: post})
+	return json.Marshal(observeExperimentSnapshot{Kind: "observe", Post: observeExperimentPost{
+		Slug: post.Slug, UserID: post.UserID, Images: append([]Image(nil), post.Images...),
+	}})
 }
 
 func (s *Service) PrepareWriteInput(ctx context.Context, raw []byte, progress Progress) ([]byte, error) {
@@ -115,11 +136,12 @@ func (s *Service) RunWriteCandidate(ctx context.Context, raw []byte, model llm.M
 }
 
 func (s *Service) RunObserveCandidate(ctx context.Context, raw []byte, model llm.ModelRef, progress Progress) ([]Observation, CandidateUsage, error) {
-	snapshot, err := decodeExperimentSnapshot(raw, "observe")
+	snapshot, err := decodeObserveExperimentSnapshot(raw)
 	if err != nil {
 		return nil, CandidateUsage{}, err
 	}
-	observations, usage, err := s.observeCandidate(ctx, snapshot.Post, model, progress, false)
+	post := PostInput{Slug: snapshot.Post.Slug, UserID: snapshot.Post.UserID, Images: append([]Image(nil), snapshot.Post.Images...)}
+	observations, usage, err := s.observeCandidate(ctx, post, model, progress, false)
 	return observations, candidateUsage(usage), err
 }
 
@@ -130,16 +152,21 @@ func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string,
 	if err != nil {
 		return err
 	}
-	frozen := ""
+	frozenVoiceID := ""
+	var frozenLanguage Language
 	if len(raw) > 0 && len(raw[0]) > 0 {
 		if snapshot, decodeErr := decodeExperimentSnapshot(raw[0], "write"); decodeErr == nil {
-			frozen = snapshot.Post.Voice.ID
+			frozenVoiceID = snapshot.Post.Voice.ID
+			frozenLanguage = snapshot.TargetLanguage
 		}
 	}
-	if _, err := frozenVoice(current, frozen); err != nil {
+	if _, err := frozenVoice(current, frozenVoiceID); err != nil {
 		return err
 	}
-	return s.posts.SetGeneratedContent(ctx, userID, postSlug, content)
+	if !frozenLanguage.Valid() {
+		return ErrLanguageRequired
+	}
+	return s.posts.SetGeneratedContent(ctx, userID, postSlug, content, frozenLanguage)
 }
 
 // SnapshotVoice reports the voice a frozen write snapshot was taken for, so the experiment
@@ -163,6 +190,16 @@ func SnapshotPurposeName(raw []byte) string {
 	return snapshot.Post.Purpose.Name
 }
 
+// SnapshotTargetLanguage exposes only the frozen canonical language required by the
+// experiment aggregate's detail projection. The snapshot wire shape stays generation-owned.
+func SnapshotTargetLanguage(raw []byte) Language {
+	snapshot, err := decodeExperimentSnapshot(raw, "write")
+	if err != nil {
+		return ""
+	}
+	return snapshot.TargetLanguage
+}
+
 func (s *Service) ApplyObservationWinner(ctx context.Context, userID, postSlug string, observations []Observation) error {
 	return s.posts.SetObservations(ctx, userID, postSlug, observations)
 }
@@ -171,6 +208,31 @@ func decodeExperimentSnapshot(raw []byte, kind string) (experimentSnapshot, erro
 	var snapshot experimentSnapshot
 	if len(raw) == 0 || json.Unmarshal(raw, &snapshot) != nil || snapshot.Kind != kind {
 		return experimentSnapshot{}, fmt.Errorf("saved %s input is unavailable", kind)
+	}
+	if kind == "write" {
+		// Write snapshots persisted before the language field existed retain Korean on
+		// retry. New snapshots cannot omit it because SnapshotWriteInput validates first.
+		if snapshot.TargetLanguage == "" {
+			snapshot.TargetLanguage = snapshot.Post.TargetLanguage
+		}
+		if snapshot.TargetLanguage == "" {
+			snapshot.TargetLanguage = LanguageKorean
+		}
+		if !snapshot.TargetLanguage.Valid() {
+			return experimentSnapshot{}, ErrLanguageRequired
+		}
+		if snapshot.Post.TargetLanguage != "" && snapshot.Post.TargetLanguage != snapshot.TargetLanguage {
+			return experimentSnapshot{}, ErrLanguageRequired
+		}
+		snapshot.Post.TargetLanguage = snapshot.TargetLanguage
+	}
+	return snapshot, nil
+}
+
+func decodeObserveExperimentSnapshot(raw []byte) (observeExperimentSnapshot, error) {
+	var snapshot observeExperimentSnapshot
+	if len(raw) == 0 || json.Unmarshal(raw, &snapshot) != nil || snapshot.Kind != "observe" {
+		return observeExperimentSnapshot{}, fmt.Errorf("saved observe input is unavailable")
 	}
 	return snapshot, nil
 }

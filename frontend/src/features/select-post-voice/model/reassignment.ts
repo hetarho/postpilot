@@ -1,5 +1,7 @@
-import { Code, ConnectError } from '@connectrpc/connect'
+import i18next from 'i18next'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
+import { appFailureFromConnect } from '@/shared/api'
+import { formatAppFailure } from '@/shared/lib'
 
 /** Mirrors the server's reassignment gate (spec/policy/posts.md) so the picker can say why it is
  *  disabled instead of letting the request fail: a job or an undecided A/B result could still
@@ -9,20 +11,20 @@ export function reassignmentBlocker(post: {
   pendingExperimentId: string
 }): string {
   if (post.activeJob && !isTerminal(post.activeJob))
-    return 'AI 작업이 끝나면 말투를 바꿀 수 있어요.'
-  if (post.pendingExperimentId) return '대기 중인 A/B 결과를 먼저 확인하면 말투를 바꿀 수 있어요.'
+    return i18next.t('assignment.jobBlocked', { ns: 'voices' })
+  if (post.pendingExperimentId) return i18next.t('assignment.experimentBlocked', { ns: 'voices' })
   return ''
 }
 
-/** The server's refusal, in the user's words. FailedPrecondition covers both a post that became
- *  busy and a voice deleted since the list was read; the message names both. */
+/** The server's stable refusal, translated through the public application-failure contract. */
 export function reassignmentFailureMessage(cause: unknown): string {
-  switch (ConnectError.from(cause).code) {
-    case Code.FailedPrecondition:
-      return '지금은 말투를 바꿀 수 없어요. 진행 중인 AI 작업이 끝났는지, 고른 말투가 아직 있는지 확인해 주세요.'
-    case Code.NotFound:
-      return '고른 말투를 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요.'
-    default:
-      return '말투를 바꾸지 못했어요. 다시 시도해 주세요.'
-  }
+  const failure = appFailureFromConnect(cause)
+  const message = formatAppFailure(failure)
+  return failure.reason === 'VOICE_NOT_FOUND'
+    ? i18next.t('assignment.notFoundDetail', {
+        ns: 'voices',
+        error: message,
+        interpolation: { escapeValue: false },
+      })
+    : message
 }

@@ -1,6 +1,11 @@
-import { Code, ConnectError, type Transport, createClient } from '@connectrpc/connect'
-import { PostService } from '@/shared/api'
-import { type PostImage, UploadObjectMissing, UploadRejected } from '../model/types'
+import { type Transport, createClient } from '@connectrpc/connect'
+import { appFailureFromConnect, PostService } from '@/shared/api'
+import {
+  type PostImage,
+  UploadObjectMissing,
+  UploadRejected,
+  UploadRpcFailure,
+} from '../model/types'
 import { toPostImage } from './image-mappers'
 
 export interface PresignedUpload {
@@ -48,14 +53,15 @@ export function createUploadHandshake(transport: Transport): {
 }
 
 function classify(error: unknown): unknown {
-  switch (ConnectError.from(error).code) {
-    case Code.AlreadyExists:
-      return new UploadRejected('duplicate-filename')
-    case Code.InvalidArgument:
-      return new UploadRejected('invalid')
-    case Code.FailedPrecondition:
-      return new UploadObjectMissing()
+  const failure = appFailureFromConnect(error)
+  switch (failure.reason) {
+    case 'POST_FILENAME_TAKEN':
+    case 'UPLOAD_INVALID':
+    case 'UPLOAD_NOT_FOUND':
+      return new UploadRejected(failure)
+    case 'UPLOAD_OBJECT_MISSING':
+      return new UploadObjectMissing(failure)
     default:
-      return error
+      return new UploadRpcFailure(failure)
   }
 }

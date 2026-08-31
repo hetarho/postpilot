@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// ContentLanguage is the closed set of declared content languages Postpilot supports.
+// UNSPECIFIED is a transport-only absence marker and is never persisted for a required
+// language role.
+enum ContentLanguage {
+  CONTENT_LANGUAGE_UNSPECIFIED = 0;
+  CONTENT_LANGUAGE_KOREAN = 1;
+  CONTENT_LANGUAGE_ENGLISH = 2;
+}

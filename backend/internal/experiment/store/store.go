@@ -4,6 +4,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -26,6 +27,10 @@ func New(writer, reader *sql.DB) *Store {
 }
 
 func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
+	targetLanguage, err := targetLanguageForStage(found.Stage, found.TargetLanguage)
+	if err != nil {
+		return err
+	}
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin experiment create: %w", err)
@@ -34,8 +39,8 @@ func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
 	queries := sqlc.New(tx)
 	err = queries.InsertExperiment(ctx, sqlc.InsertExperimentParams{
 		ID: found.ID, UserID: found.UserID, PostSlug: nullString(found.PostSlug), VoiceID: nullString(found.VoiceID),
-		PurposeName: found.PurposeName,
-		Stage:       string(found.Stage), Status: string(found.Status), JobID: nullString(found.JobID),
+		PurposeName: found.PurposeName, TargetLanguage: targetLanguage,
+		Stage: string(found.Stage), Status: string(found.Status), JobID: nullString(found.JobID),
 		InputSnapshot: nullBytes(found.InputSnapshot), InputHash: found.InputHash,
 		PromptVersion: found.PromptVersion, CreatedAt: formatTime(found.CreatedAt),
 	})
@@ -135,9 +140,20 @@ func (s *Store) StartCandidate(ctx context.Context, experimentID, candidateID st
 }
 
 func (s *Store) CompleteCandidate(ctx context.Context, candidate experiment.Candidate) error {
+	if candidate.Status == experiment.CandidateFailed && candidate.Failure == nil {
+		return fmt.Errorf("complete candidate: failed candidate requires failure")
+	}
+	if candidate.Status != experiment.CandidateFailed && candidate.Failure != nil {
+		return fmt.Errorf("complete candidate: non-failed candidate cannot carry failure")
+	}
+	reason, params, detail, err := failureColumns(candidate.Failure)
+	if err != nil {
+		return fmt.Errorf("complete candidate failure: %w", err)
+	}
 	usageKnown := candidate.Usage.CostSource != experiment.CostUnavailable && candidate.Usage.CostSource != ""
 	count, err := s.write.CompleteCandidate(ctx, sqlc.CompleteCandidateParams{
-		Status: string(candidate.Status), Output: nullBytes(candidate.Output), Error: nullString(candidate.Error),
+		Status: string(candidate.Status), Output: nullBytes(candidate.Output), ErrorReason: reason,
+		ErrorParams: params, TechnicalDetail: detail,
 		PromptTokens:     sql.NullInt64{Int64: candidate.Usage.PromptTokens, Valid: candidate.Usage.PromptTokens > 0},
 		CompletionTokens: sql.NullInt64{Int64: candidate.Usage.CompletionTokens, Valid: candidate.Usage.CompletionTokens > 0},
 		CostMicrousd:     sql.NullInt64{Int64: candidate.Usage.CostMicrousd, Valid: usageKnown},
@@ -154,13 +170,13 @@ func (s *Store) CompleteCandidate(ctx context.Context, candidate experiment.Cand
 	return nil
 }
 
-func (s *Store) FailUnfinished(ctx context.Context, experimentID, reason string, now time.Time) error {
+func (s *Store) FailUnfinished(ctx context.Context, experimentID string, failure experiment.Failure, now time.Time) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin interrupted experiment recovery: %w", err)
 	}
 	defer tx.Rollback()
-	if err := failUnfinished(ctx, sqlc.New(tx), experimentID, reason, now); err != nil {
+	if err := failUnfinished(ctx, sqlc.New(tx), experimentID, failure, now); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
@@ -169,7 +185,7 @@ func (s *Store) FailUnfinished(ctx context.Context, experimentID, reason string,
 	return nil
 }
 
-func (s *Store) RecoverInterrupted(ctx context.Context, reason string, now time.Time) (int64, error) {
+func (s *Store) RecoverInterrupted(ctx context.Context, failure experiment.Failure, now time.Time) (int64, error) {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, fmt.Errorf("begin interrupted experiment sweep: %w", err)
@@ -181,7 +197,7 @@ func (s *Store) RecoverInterrupted(ctx context.Context, reason string, now time.
 		return 0, fmt.Errorf("list interrupted experiments: %w", err)
 	}
 	for _, id := range ids {
-		if err := failUnfinished(ctx, queries, id, reason, now); err != nil {
+		if err := failUnfinished(ctx, queries, id, failure, now); err != nil {
 			return 0, err
 		}
 	}
@@ -199,9 +215,14 @@ func (s *Store) ListQueued(ctx context.Context) ([]string, error) {
 	return ids, nil
 }
 
-func failUnfinished(ctx context.Context, queries *sqlc.Queries, experimentID, reason string, now time.Time) error {
+func failUnfinished(ctx context.Context, queries *sqlc.Queries, experimentID string, failure experiment.Failure, now time.Time) error {
+	reason, params, detail, err := failureColumns(&failure)
+	if err != nil {
+		return fmt.Errorf("fail unfinished candidate failure: %w", err)
+	}
 	if _, err := queries.FailUnfinishedCandidates(ctx, sqlc.FailUnfinishedCandidatesParams{
-		Error: nullString(reason), FinishedAt: nullTime(&now), ExperimentID: experimentID,
+		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
+		FinishedAt: nullTime(&now), ExperimentID: experimentID,
 	}); err != nil {
 		return fmt.Errorf("fail unfinished candidates: %w", err)
 	}
@@ -232,8 +253,15 @@ func (s *Store) RestoreFailedCandidates(ctx context.Context, experimentID string
 		if candidate.Status != experiment.CandidateFailed {
 			continue
 		}
+		if candidate.Failure == nil {
+			return fmt.Errorf("restore failed candidate: failure is required")
+		}
+		reason, params, detail, err := failureColumns(candidate.Failure)
+		if err != nil {
+			return fmt.Errorf("restore failed candidate failure: %w", err)
+		}
 		count, err := queries.RestoreFailedCandidate(ctx, sqlc.RestoreFailedCandidateParams{
-			Error: candidateError(candidate.Error), StartedAt: nullTime(candidate.StartedAt),
+			ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail, StartedAt: nullTime(candidate.StartedAt),
 			FinishedAt: nullTime(candidate.FinishedAt), ExperimentID: experimentID, ID: candidate.ID,
 		})
 		if err != nil {
@@ -258,8 +286,14 @@ func (s *Store) Decide(ctx context.Context, id, userID, candidateID string, stat
 	return count == 1, err
 }
 
-func (s *Store) SetApplyError(ctx context.Context, id, userID, message string) error {
-	return s.write.SetApplyError(ctx, sqlc.SetApplyErrorParams{ApplyError: nullString(message), ID: id, UserID: userID})
+func (s *Store) SetApplyFailure(ctx context.Context, id, userID string, failure experiment.Failure) error {
+	reason, params, detail, err := failureColumns(&failure)
+	if err != nil {
+		return fmt.Errorf("set apply failure: %w", err)
+	}
+	return s.write.SetApplyFailure(ctx, sqlc.SetApplyFailureParams{
+		ApplyErrorReason: reason, ApplyErrorParams: params, ApplyTechnicalDetail: detail, ID: id, UserID: userID,
+	})
 }
 
 func (s *Store) SetApplied(ctx context.Context, id, userID string, now time.Time) error {
@@ -275,8 +309,14 @@ func (s *Store) SetApplied(ctx context.Context, id, userID string, now time.Time
 	return nil
 }
 
-func (s *Store) SetAdoptionError(ctx context.Context, id, userID, message string) error {
-	return s.write.SetAdoptionError(ctx, sqlc.SetAdoptionErrorParams{AdoptionError: nullString(message), ID: id, UserID: userID})
+func (s *Store) SetAdoptionFailure(ctx context.Context, id, userID string, failure experiment.Failure) error {
+	reason, params, detail, err := failureColumns(&failure)
+	if err != nil {
+		return fmt.Errorf("set adoption failure: %w", err)
+	}
+	return s.write.SetAdoptionFailure(ctx, sqlc.SetAdoptionFailureParams{
+		AdoptionErrorReason: reason, AdoptionErrorParams: params, AdoptionTechnicalDetail: detail, ID: id, UserID: userID,
+	})
 }
 
 func (s *Store) SetAdopted(ctx context.Context, id, userID string, now time.Time) error {
@@ -381,17 +421,59 @@ func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 	if err != nil {
 		return experiment.Experiment{}, fmt.Errorf("experiment %s created_at: %w", row.ID, err)
 	}
+	targetLanguage, err := languageFromRow(row.Stage, row.TargetLanguage)
+	if err != nil {
+		return experiment.Experiment{}, fmt.Errorf("experiment %s target_language: %w", row.ID, err)
+	}
+	applyFailure, err := failureFromRow(row.ApplyErrorReason, row.ApplyErrorParams, row.ApplyTechnicalDetail, row.ApplyError)
+	if err != nil {
+		return experiment.Experiment{}, fmt.Errorf("experiment %s apply failure: %w", row.ID, err)
+	}
+	adoptionFailure, err := failureFromRow(row.AdoptionErrorReason, row.AdoptionErrorParams, row.AdoptionTechnicalDetail, row.AdoptionError)
+	if err != nil {
+		return experiment.Experiment{}, fmt.Errorf("experiment %s adoption failure: %w", row.ID, err)
+	}
 	return experiment.Experiment{
 		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, VoiceID: row.VoiceID.String,
-		PurposeName: row.PurposeName, Stage: experiment.Stage(row.Stage),
+		PurposeName: row.PurposeName, TargetLanguage: targetLanguage, Stage: experiment.Stage(row.Stage),
 		Status: experiment.Status(row.Status), JobID: row.JobID.String, InputSnapshot: []byte(row.InputSnapshot.String),
 		InputHash: row.InputHash, PromptVersion: row.PromptVersion, WinnerCandidateID: row.WinnerCandidateID.String,
-		Outcome: experiment.Outcome(row.Outcome.String), ApplyError: row.ApplyError.String, CreatedAt: created,
-		AppliedAt: parseOptional(row.AppliedAt), AdoptionRequested: row.AdoptionRequested == 1, AdoptionError: row.AdoptionError.String,
+		Outcome: experiment.Outcome(row.Outcome.String), ApplyFailure: applyFailure, CreatedAt: created,
+		AppliedAt: parseOptional(row.AppliedAt), AdoptionRequested: row.AdoptionRequested == 1, AdoptionFailure: adoptionFailure,
 		AdoptedAt:  parseOptional(row.AdoptedAt),
 		FinishedAt: parseOptional(row.FinishedAt), DecidedAt: parseOptional(row.DecidedAt),
 		ContentExpiresAt: parseOptional(row.ContentExpiresAt),
 	}, nil
+}
+
+func targetLanguageForStage(stage experiment.Stage, value *experiment.Language) (sql.NullString, error) {
+	if stage != experiment.StageWrite {
+		if value != nil {
+			return sql.NullString{}, experiment.ErrLanguageRequired
+		}
+		return sql.NullString{}, nil
+	}
+	if value == nil || !value.Valid() {
+		return sql.NullString{}, experiment.ErrLanguageRequired
+	}
+	return sql.NullString{String: value.String(), Valid: true}, nil
+}
+
+func languageFromRow(stage string, value sql.NullString) (*experiment.Language, error) {
+	if experiment.Stage(stage) != experiment.StageWrite {
+		if value.Valid {
+			return nil, experiment.ErrLanguageRequired
+		}
+		return nil, nil
+	}
+	if !value.Valid {
+		return nil, experiment.ErrLanguageRequired
+	}
+	language, err := experiment.ParseLanguage(value.String)
+	if err != nil {
+		return nil, err
+	}
+	return &language, nil
 }
 
 func boolValue(value bool) int64 {
@@ -402,22 +484,93 @@ func boolValue(value bool) int64 {
 }
 
 func toCandidate(row sqlc.ModelExperimentCandidate) (experiment.Candidate, error) {
+	failure, err := failureFromRow(row.ErrorReason, row.ErrorParams, row.TechnicalDetail, row.Error)
+	if err != nil {
+		return experiment.Candidate{}, fmt.Errorf("candidate %s failure: %w", row.ID, err)
+	}
 	return experiment.Candidate{
 		ID: row.ID, ExperimentID: row.ExperimentID,
 		Model: experiment.ModelRef{ProviderID: row.ModelProviderID, ModelID: row.ModelID}, ModelLabel: row.ModelLabel,
 		DisplaySide: experiment.DisplaySide(row.DisplaySide), Status: experiment.CandidateStatus(row.Status),
-		Output: []byte(row.Output.String), Error: row.Error.String,
+		Output: []byte(row.Output.String), Failure: failure,
 		Usage: experiment.Usage{PromptTokens: row.PromptTokens.Int64, CompletionTokens: row.CompletionTokens.Int64,
 			CostMicrousd: row.CostMicrousd.Int64, CostSource: experiment.CostSource(row.CostSource.String), LatencyMS: row.LatencyMs.Int64},
 		StartedAt: parseOptional(row.StartedAt), FinishedAt: parseOptional(row.FinishedAt),
 	}, nil
 }
 
+func failureColumns(failure *experiment.Failure) (sql.NullString, sql.NullString, sql.NullString, error) {
+	if failure == nil {
+		return sql.NullString{}, sql.NullString{}, sql.NullString{}, nil
+	}
+	if !validFailureReason(failure.Reason) {
+		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("invalid reason %q", failure.Reason)
+	}
+	params := failure.Params
+	if params == nil {
+		params = map[string]string{}
+	}
+	raw, err := json.Marshal(params)
+	if err != nil {
+		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("encode params: %w", err)
+	}
+	return nullString(failure.Reason), sql.NullString{String: string(raw), Valid: true}, nullString(failure.TechnicalDetail), nil
+}
+
+func failureFromRow(reason, params, detail, legacy sql.NullString) (*experiment.Failure, error) {
+	if !reason.Valid || strings.TrimSpace(reason.String) == "" {
+		if params.Valid || detail.Valid {
+			return nil, errors.New("failure params/detail present without reason")
+		}
+		technical := strings.TrimSpace(legacy.String)
+		if technical == "" {
+			return nil, nil
+		}
+		return &experiment.Failure{Reason: experiment.FailureReasonUnknown, TechnicalDetail: technical}, nil
+	}
+	if !validFailureReason(reason.String) {
+		return nil, fmt.Errorf("invalid reason %q", reason.String)
+	}
+	if !params.Valid || !strings.HasPrefix(strings.TrimSpace(params.String), "{") {
+		return nil, errors.New("failure params must be a JSON object")
+	}
+	decoded := map[string]string{}
+	if err := json.Unmarshal([]byte(params.String), &decoded); err != nil {
+		return nil, fmt.Errorf("decode failure params: %w", err)
+	}
+	if len(decoded) == 0 {
+		decoded = nil
+	}
+	return &experiment.Failure{Reason: reason.String, Params: decoded, TechnicalDetail: detail.String}, nil
+}
+
+func validFailureReason(reason string) bool {
+	if reason == "" || reason[0] < 'A' || reason[0] > 'Z' || reason[len(reason)-1] == '_' {
+		return false
+	}
+	previousUnderscore := false
+	for i, char := range reason {
+		if char >= 'A' && char <= 'Z' {
+			previousUnderscore = false
+			continue
+		}
+		if char == '_' && !previousUnderscore {
+			previousUnderscore = true
+			continue
+		}
+		if i > 0 && char >= '0' && char <= '9' {
+			previousUnderscore = false
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 func nullString(value string) sql.NullString {
 	return sql.NullString{String: value, Valid: value != ""}
 }
-func candidateError(value string) sql.NullString { return sql.NullString{String: value, Valid: true} }
-func nullBytes(value []byte) sql.NullString      { return nullString(string(value)) }
+func nullBytes(value []byte) sql.NullString { return nullString(string(value)) }
 func nullTime(value *time.Time) sql.NullString {
 	if value == nil {
 		return sql.NullString{}

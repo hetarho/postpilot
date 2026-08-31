@@ -1,10 +1,12 @@
+import i18next from 'i18next'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import type { VoiceProfile, VoiceVersion } from '@/entities/voice'
 import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
-import { VoiceService } from '@/shared/api'
-import { Button, Dialog } from '@/shared/ui'
+import { appFailureFromConnect, VoiceService } from '@/shared/api'
+import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
 
 /** The version list and its restore confirmation. Still "edit the voice profile" — restoring
  *  publishes a new head exactly as an override does — but its own screen, so the profile tab
@@ -22,6 +24,7 @@ export function VoiceVersionHistory({
   versions: VoiceVersion[]
   readOnly?: boolean
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const transport = useTransport()
   const queryClient = useQueryClient()
   const restore = useMutation(VoiceService.method.restoreVoiceProfile)
@@ -35,9 +38,9 @@ export function VoiceVersionHistory({
     })
   }
   return (
-    <section aria-label="버전 기록">
+    <section aria-label={t('versions.title', { ns: 'voices' })}>
       {versions.length === 0 ? (
-        <p className="text-content-tertiary text-sm">아직 저장된 버전이 없어요.</p>
+        <p className="text-content-tertiary text-sm">{t('versions.empty', { ns: 'voices' })}</p>
       ) : (
         <ul className="divide-divider divide-y">
           {versions.map((version) => (
@@ -48,7 +51,10 @@ export function VoiceVersionHistory({
               <span className="min-w-0 text-sm break-words">
                 v{version.version.toString()} · {originLabel(version.origin)}
                 {version.restoredFromVersion > 0n
-                  ? ` (v${version.restoredFromVersion.toString()}에서 복원)`
+                  ? t('versions.restoredFrom', {
+                      ns: 'voices',
+                      version: version.restoredFromVersion.toString(),
+                    })
                   : ''}
               </span>
               <Button
@@ -56,37 +62,53 @@ export function VoiceVersionHistory({
                 disabled={readOnly || version.version === profile.structured.version}
                 onClick={() => setRestoreVersion(version.version)}
               >
-                복원
+                {t('action.restore', { ns: 'common' })}
               </Button>
             </li>
           ))}
         </ul>
       )}
+      {restore.error && (
+        <Notice tone="danger" role="alert" className="mt-3">
+          <AppFailureMessage failure={appFailureFromConnect(restore.error)} />
+        </Notice>
+      )}
       <Dialog
         open={restoreVersion !== undefined}
-        title="이 버전으로 복원할까요?"
-        confirmLabel="새 버전으로 복원"
+        title={t('versions.restoreTitle', { ns: 'voices' })}
+        confirmLabel={t('versions.restoreConfirm', { ns: 'voices' })}
         pending={restore.isPending}
         onClose={() => setRestoreVersion(undefined)}
         onConfirm={() =>
           restoreVersion !== undefined &&
-          void restore.mutateAsync({ voiceId, version: restoreVersion }).then(() => {
-            setRestoreVersion(undefined)
-            refresh()
-          })
+          void restore
+            .mutateAsync({ voiceId, version: restoreVersion })
+            .then(() => {
+              setRestoreVersion(undefined)
+              refresh()
+            })
+            .catch(() => undefined)
         }
       >
-        기존 기록은 지우지 않고, 선택한 스냅샷을 새 현재 버전으로 만듭니다.
+        {t('versions.restoreDescription', { ns: 'voices' })}
       </Dialog>
     </section>
   )
 }
 
-const originLabel = (origin: string) =>
-  ({
-    analysis: '분석',
-    manual: '직접 수정',
-    restore: '복원',
-    rule: '규칙 반영',
-    confirmation: '충돌 해결',
-  })[origin] ?? origin
+const originLabel = (origin: string) => {
+  switch (origin) {
+    case 'analysis':
+      return i18next.t('versions.reason.analysis', { ns: 'voices' })
+    case 'manual':
+      return i18next.t('versions.reason.manual', { ns: 'voices' })
+    case 'restore':
+      return i18next.t('versions.reason.restore', { ns: 'voices' })
+    case 'rule':
+      return i18next.t('versions.reason.rule', { ns: 'voices' })
+    case 'confirmation':
+      return i18next.t('versions.reason.confirmation', { ns: 'voices' })
+    default:
+      return origin
+  }
+}

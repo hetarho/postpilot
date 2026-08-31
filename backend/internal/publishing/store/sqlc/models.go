@@ -20,29 +20,35 @@ type PublishAsset struct {
 }
 
 type PublishJob struct {
-	ID              string
-	UserID          string
-	PostSlug        string
-	PostCreatedAt   string
-	AgentID         string
-	Platform        string
-	Status          string
-	Stage           string
-	ProgressSeq     int64
-	Attempt         int64
-	ContentRevision int64
-	ManifestJson    sql.NullString
-	SettingsJson    string
-	LeaseTokenHash  sql.NullString
-	LeaseExpiresAt  sql.NullString
-	ErrorCode       sql.NullString
-	ErrorMessage    sql.NullString
-	PlatformPostUrl sql.NullString
-	CreatedAt       string
-	ClaimedAt       sql.NullString
-	CommittedAt     sql.NullString
-	PublishedAt     sql.NullString
-	UpdatedAt       string
+	ID                  string
+	UserID              string
+	PostSlug            string
+	PostCreatedAt       string
+	AgentID             string
+	Platform            string
+	Status              string
+	Stage               string
+	ProgressSeq         int64
+	Attempt             int64
+	ContentRevision     int64
+	ManifestJson        sql.NullString
+	SettingsJson        string
+	LeaseTokenHash      sql.NullString
+	LeaseExpiresAt      sql.NullString
+	ErrorCode           sql.NullString
+	ErrorMessage        sql.NullString
+	PlatformPostUrl     sql.NullString
+	CreatedAt           string
+	ClaimedAt           sql.NullString
+	CommittedAt         sql.NullString
+	PublishedAt         sql.NullString
+	UpdatedAt           string
+	TargetLanguage      sql.NullString
+	ContentLanguage     sql.NullString
+	VoiceSourceLanguage sql.NullString
+	ErrorReason         sql.NullString
+	ErrorParams         sql.NullString
+	TechnicalDetail     sql.NullString
 }
 
 type PublishingAgent struct {

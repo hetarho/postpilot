@@ -27,13 +27,16 @@ func optionalLengthPointer(value int64) *int {
 }
 
 func (s *Store) InsertRuleComparison(ctx context.Context, c voice.RuleComparison) error {
+	if !c.SourceLanguage.Valid() {
+		return voice.ErrLanguageRequired
+	}
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
-	if err = q.InsertRuleComparison(ctx, sqlc.InsertRuleComparisonParams{ID: c.ID, UserID: c.UserID, VoiceID: c.VoiceID, RuleID: c.RuleID, SourceID: c.SourceID, ProfileVersion: c.ProfileVersion, ModelRef: c.ModelRef, TargetLength: optionalLengthValue(c.TargetLength), InputSnapshot: c.InputSnapshot, RuleOnSide: c.RuleOnSide, JobID: nullableString(c.JobID), CreatedAt: formatTime(c.CreatedAt)}); err != nil {
+	if err = q.InsertRuleComparison(ctx, sqlc.InsertRuleComparisonParams{ID: c.ID, UserID: c.UserID, VoiceID: c.VoiceID, RuleID: c.RuleID, SourceID: c.SourceID, ProfileVersion: c.ProfileVersion, ModelRef: c.ModelRef, TargetLength: optionalLengthValue(c.TargetLength), InputSnapshot: c.InputSnapshot, RuleOnSide: c.RuleOnSide, JobID: nullableString(c.JobID), CreatedAt: formatTime(c.CreatedAt), SourceLanguage: nullableString(string(c.SourceLanguage))}); err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "comparison voice must be active") {
 			return voice.ErrVoiceDeleted
 		}
@@ -69,13 +72,21 @@ func (s *Store) GetRuleComparison(ctx context.Context, userID, comparisonID stri
 		}
 		decided = &v
 	}
-	c := voice.RuleComparison{ID: row.ID, UserID: row.UserID, VoiceID: row.VoiceID, RuleID: row.RuleID, SourceID: row.SourceID, ProfileVersion: row.ProfileVersion, ModelRef: row.ModelRef, TargetLength: optionalLengthPointer(row.TargetLength), InputSnapshot: row.InputSnapshot, RuleOnSide: row.RuleOnSide, Status: row.Status, JobID: row.JobID.String, ChosenSide: row.ChosenSide.String, CreatedAt: created, DecidedAt: decided}
+	sourceLanguage, err := voice.ParseLanguage(row.SourceLanguage.String)
+	if err != nil {
+		return voice.RuleComparison{}, err
+	}
+	c := voice.RuleComparison{ID: row.ID, UserID: row.UserID, VoiceID: row.VoiceID, RuleID: row.RuleID, SourceID: row.SourceID, ProfileVersion: row.ProfileVersion, ModelRef: row.ModelRef, TargetLength: optionalLengthPointer(row.TargetLength), InputSnapshot: row.InputSnapshot, RuleOnSide: row.RuleOnSide, Status: row.Status, JobID: row.JobID.String, ChosenSide: row.ChosenSide.String, CreatedAt: created, DecidedAt: decided, SourceLanguage: sourceLanguage}
 	rows, err := s.read.ListRuleComparisonCandidates(ctx, comparisonID)
 	if err != nil {
 		return voice.RuleComparison{}, err
 	}
 	for _, v := range rows {
-		c.Candidates = append(c.Candidates, voice.ComparisonCandidate{ID: v.ID, ComparisonID: v.ComparisonID, DisplaySide: v.DisplaySide, Output: v.Output.String, Status: v.Status, Error: v.Error.String})
+		failure, failureErr := decodeFailure(v.ErrorReason, v.ErrorParams, v.TechnicalDetail, v.Error)
+		if failureErr != nil {
+			return voice.RuleComparison{}, failureErr
+		}
+		c.Candidates = append(c.Candidates, voice.ComparisonCandidate{ID: v.ID, ComparisonID: v.ComparisonID, DisplaySide: v.DisplaySide, Output: v.Output.String, Status: v.Status, Error: v.Error.String, Failure: failure})
 	}
 	return c, nil
 }
@@ -87,7 +98,11 @@ func (s *Store) UpdateRuleComparison(ctx context.Context, c voice.RuleComparison
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
 	for _, v := range c.Candidates {
-		if err = q.UpdateRuleComparisonCandidate(ctx, sqlc.UpdateRuleComparisonCandidateParams{Output: nullableString(v.Output), Status: v.Status, Error: nullableString(v.Error), ID: v.ID, ComparisonID: c.ID}); err != nil {
+		reason, params, detail, encodeErr := encodeFailure(v.Failure)
+		if encodeErr != nil {
+			return encodeErr
+		}
+		if err = q.UpdateRuleComparisonCandidate(ctx, sqlc.UpdateRuleComparisonCandidateParams{Output: nullableString(v.Output), Status: v.Status, Error: sql.NullString{}, ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail, ID: v.ID, ComparisonID: c.ID}); err != nil {
 			return err
 		}
 	}
@@ -142,6 +157,9 @@ func (s *Store) UpdateRuleComparison(ctx context.Context, c voice.RuleComparison
 }
 
 func (s *Store) InsertProfileValidation(ctx context.Context, v voice.ProfileValidation) error {
+	if !v.SourceLanguage.Valid() {
+		return voice.ErrLanguageRequired
+	}
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -152,7 +170,7 @@ func (s *Store) InsertProfileValidation(ctx context.Context, v voice.ProfileVali
 	if v.JudgeEnabled {
 		judge = 1
 	}
-	if err = q.InsertProfileValidation(ctx, sqlc.InsertProfileValidationParams{ID: v.ID, UserID: v.UserID, VoiceID: v.VoiceID, ProfileVersion: v.ProfileVersion, AnalyzeModelRef: v.AnalyzeModelRef, WriteModelRef: v.WriteModelRef, JudgeEnabled: judge, JobID: nullableString(v.JobID), CreatedAt: formatTime(v.CreatedAt)}); err != nil {
+	if err = q.InsertProfileValidation(ctx, sqlc.InsertProfileValidationParams{ID: v.ID, UserID: v.UserID, VoiceID: v.VoiceID, ProfileVersion: v.ProfileVersion, AnalyzeModelRef: v.AnalyzeModelRef, WriteModelRef: v.WriteModelRef, JudgeEnabled: judge, JobID: nullableString(v.JobID), CreatedAt: formatTime(v.CreatedAt), SourceLanguage: nullableString(string(v.SourceLanguage))}); err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "validation voice must be active") {
 			return voice.ErrVoiceDeleted
 		}
@@ -206,7 +224,11 @@ func (s *Store) profileValidation(ctx context.Context, row sqlc.VoiceProfileVali
 		}
 		finished = &v
 	}
-	out := voice.ProfileValidation{ID: row.ID, UserID: row.UserID, VoiceID: row.VoiceID, ProfileVersion: row.ProfileVersion, AnalyzeModelRef: row.AnalyzeModelRef, WriteModelRef: row.WriteModelRef, JudgeEnabled: row.JudgeEnabled == 1, Status: row.Status, JobID: row.JobID.String, YCount: int(row.YCount.Int64), TotalCount: int(row.TotalCount.Int64), CreatedAt: created, FinishedAt: finished}
+	sourceLanguage, err := voice.ParseLanguage(row.SourceLanguage.String)
+	if err != nil {
+		return voice.ProfileValidation{}, err
+	}
+	out := voice.ProfileValidation{ID: row.ID, UserID: row.UserID, VoiceID: row.VoiceID, ProfileVersion: row.ProfileVersion, AnalyzeModelRef: row.AnalyzeModelRef, WriteModelRef: row.WriteModelRef, JudgeEnabled: row.JudgeEnabled == 1, Status: row.Status, JobID: row.JobID.String, YCount: int(row.YCount.Int64), TotalCount: int(row.TotalCount.Int64), CreatedAt: created, FinishedAt: finished, SourceLanguage: sourceLanguage}
 	rows, err := s.read.ListProfileValidationItems(ctx, row.ID)
 	if err != nil {
 		return voice.ProfileValidation{}, err
@@ -217,7 +239,11 @@ func (s *Store) profileValidation(ctx context.Context, row sqlc.VoiceProfileVali
 		if sourceErr == nil {
 			original = source.Body
 		}
-		out.Items = append(out.Items, voice.ValidationItem{ID: item.ID, ValidationID: item.ValidationID, SourceID: item.SourceID, Position: int(item.Position), Original: original, NeutralSummary: item.NeutralSummary.String, Regenerated: item.RegeneratedContent.String, ScoresJSON: item.Scores.String, Status: item.Status, Error: item.Error.String})
+		failure, failureErr := decodeFailure(item.ErrorReason, item.ErrorParams, item.TechnicalDetail, item.Error)
+		if failureErr != nil {
+			return voice.ProfileValidation{}, failureErr
+		}
+		out.Items = append(out.Items, voice.ValidationItem{ID: item.ID, ValidationID: item.ValidationID, SourceID: item.SourceID, Position: int(item.Position), Original: original, NeutralSummary: item.NeutralSummary.String, Regenerated: item.RegeneratedContent.String, ScoresJSON: item.Scores.String, Status: item.Status, Error: item.Error.String, Failure: failure})
 	}
 	return out, nil
 }
@@ -229,7 +255,11 @@ func (s *Store) UpdateProfileValidation(ctx context.Context, v voice.ProfileVali
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
 	for _, item := range v.Items {
-		if err = q.UpdateProfileValidationItem(ctx, sqlc.UpdateProfileValidationItemParams{NeutralSummary: nullableString(item.NeutralSummary), RegeneratedContent: nullableString(item.Regenerated), Scores: nullableString(item.ScoresJSON), Status: item.Status, Error: nullableString(item.Error), ID: item.ID, ValidationID: v.ID}); err != nil {
+		reason, params, detail, encodeErr := encodeFailure(item.Failure)
+		if encodeErr != nil {
+			return encodeErr
+		}
+		if err = q.UpdateProfileValidationItem(ctx, sqlc.UpdateProfileValidationItemParams{NeutralSummary: nullableString(item.NeutralSummary), RegeneratedContent: nullableString(item.Regenerated), Scores: nullableString(item.ScoresJSON), Status: item.Status, Error: sql.NullString{}, ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail, ID: item.ID, ValidationID: v.ID}); err != nil {
 			return err
 		}
 	}

@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react'
 import { createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
+  contentLanguageToProto,
   GenerationJobSchema,
   ListPostsResponseSchema,
   PostService,
@@ -30,6 +31,7 @@ it('polls an active post until its durable experiment is ready for review', asyn
         posts: [
           create(PostSummarySchema, {
             slug: 'post-a',
+            targetLanguage: contentLanguageToProto('ko'),
             activeJob:
               calls === 1
                 ? create(GenerationJobSchema, { id: 'job-1', status: 'running' })

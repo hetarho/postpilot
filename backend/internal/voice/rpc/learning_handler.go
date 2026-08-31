@@ -9,6 +9,7 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/voice"
 )
 
@@ -69,17 +70,22 @@ func (h *LearningHandler) GiveSentenceFeedback(ctx context.Context, req *connect
 	}
 	id, err := h.service.GiveFeedback(ctx, userID, req.Msg.GetPostSlug(), req.Msg.GetSentenceRef(), reason, req.Msg.GetAuthoredText(), req.Msg.GetSatisfaction())
 	if err != nil {
-		// Ownership and voice refusals keep their codes; every other failure is a rule of the
-		// feedback itself, which the client shows verbatim.
-		switch {
-		case errors.Is(err, voice.ErrPostNotFound), errors.Is(err, voice.ErrForbidden), errors.Is(err, voice.ErrVoiceNotFound),
-			errors.Is(err, voice.ErrVoiceDeleted), errors.Is(err, voice.ErrBaselineVoiceMismatch):
-			return nil, learningError("give sentence feedback", err)
-		default:
-			return nil, connect.NewError(connect.CodeInvalidArgument, err)
-		}
+		return nil, feedbackError(err)
 	}
 	return connect.NewResponse(&postpilotv1.GiveSentenceFeedbackResponse{FeedbackId: id}), nil
+}
+
+func feedbackError(err error) error {
+	// Ownership, frozen-language, and lifecycle refusals keep their stable meanings;
+	// every other failure is a validation rule of the feedback payload itself.
+	switch {
+	case errors.Is(err, voice.ErrPostNotFound), errors.Is(err, voice.ErrForbidden), errors.Is(err, voice.ErrVoiceNotFound),
+		errors.Is(err, voice.ErrVoiceDeleted), errors.Is(err, voice.ErrBaselineVoiceMismatch),
+		errors.Is(err, voice.ErrContentLanguageMismatch), errors.Is(err, voice.ErrInvalidLifecycle):
+		return learningError("give sentence feedback", err)
+	default:
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid voice feedback", "VOICE_FEEDBACK_INVALID", nil)
+	}
 }
 func (h *LearningHandler) SetVoiceRuleStatus(ctx context.Context, req *connect.Request[postpilotv1.SetVoiceRuleStatusRequest]) (*connect.Response[postpilotv1.SetVoiceRuleStatusResponse], error) {
 	userID, err := actingUser(ctx)
@@ -141,20 +147,24 @@ func toProtoLearningEvent(e voice.LearningEvent) *postpilotv1.VoiceLearningEvent
 	if e.ProcessedAt != nil {
 		processed = e.ProcessedAt.UTC().Format(timeLayout)
 	}
-	return &postpilotv1.VoiceLearningEvent{Id: e.ID, PostSlug: e.PostSlug, BaselineRevision: e.BaselineRevision, Status: e.Status, JobId: e.JobID, Error: e.Error, CreatedAt: e.CreatedAt.UTC().Format(timeLayout), ProcessedAt: processed, VoiceId: e.VoiceID}
+	return &postpilotv1.VoiceLearningEvent{Id: e.ID, PostSlug: e.PostSlug, BaselineRevision: e.BaselineRevision, Status: e.Status, JobId: e.JobID, Error: "", CreatedAt: e.CreatedAt.UTC().Format(timeLayout), ProcessedAt: processed, VoiceId: e.VoiceID, ContentLanguage: languageToProto(e.ContentLanguage), SourceLanguage: languageToProto(e.SourceLanguage), Failure: toProtoFailure(e.Failure)}
 }
 func learningError(op string, err error) error {
 	switch {
-	case errors.Is(err, voice.ErrLearningNotFound), errors.Is(err, voice.ErrRuleNotFound), errors.Is(err, voice.ErrConfirmationNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+	case errors.Is(err, voice.ErrLearningNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice learning event not found", "VOICE_LEARNING_NOT_FOUND", nil)
+	case errors.Is(err, voice.ErrRuleNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice rule not found", "VOICE_RULE_NOT_FOUND", nil)
+	case errors.Is(err, voice.ErrConfirmationNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice rule confirmation not found", "VOICE_CONFIRMATION_NOT_FOUND", nil)
 	case errors.Is(err, voice.ErrPostNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+		return rpcserver.NewAppError(connect.CodeNotFound, "post not found", "POST_NOT_FOUND", nil)
 	case errors.Is(err, voice.ErrForbidden):
-		return connect.NewError(connect.CodePermissionDenied, err)
+		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", "POST_FORBIDDEN", nil)
 	case errors.Is(err, voice.ErrAnalyzeModelRequired):
-		return connect.NewError(connect.CodeFailedPrecondition, err)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled analyze model is required", "VOICE_ANALYZE_MODEL_REQUIRED", nil)
 	case errors.Is(err, voice.ErrInvalidLifecycle):
-		return connect.NewError(connect.CodeFailedPrecondition, err)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice learning state does not allow this operation", "VOICE_INVALID_LIFECYCLE", nil)
 	default:
 		return toConnectError(op, err)
 	}

@@ -1,3 +1,4 @@
+import i18next from 'i18next'
 import {
   PURPOSE_DESCRIPTION_MAX_CHARS,
   PURPOSE_INSTRUCTIONS_MAX_CHARS,
@@ -34,8 +35,10 @@ export const PURPOSE_LIMITS = {
   instructions: PURPOSE_INSTRUCTIONS_MAX_CHARS,
 } as const
 
-/** How 없음 is written wherever a purpose can be chosen or shown. */
-export const NO_PURPOSE_LABEL = '없음'
+/** How the empty purpose is written wherever it can be chosen or shown. */
+export function noPurposeLabel(): string {
+  return i18next.t('noPurpose', { ns: 'purposes' })
+}
 
 /** The `<option>` value standing for 없음. Empty, because that is exactly what the wire
  *  carries to clear an assignment (a present empty `purpose_id`). */
@@ -75,6 +78,6 @@ export function canSavePurpose(fields: {
  *  detaches rather than cascading: no post and no content is removed. */
 export function detachWarning(postCount: number): string {
   return postCount > 0
-    ? `${postCount}개의 글에서 용도가 해제됩니다. 글과 본문은 그대로 남아요.`
-    : '이 용도를 쓰는 글이 없어요.'
+    ? i18next.t('detachWarning.used', { ns: 'purposes', count: postCount })
+    : i18next.t('detachWarning.unused', { ns: 'purposes' })
 }

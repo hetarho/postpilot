@@ -14,6 +14,7 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/provider"
 )
 
@@ -63,10 +64,10 @@ func (h *Handler) SaveSelection(ctx context.Context, req *connect.Request[postpi
 	stage, ok := fromProtoStage(req.Msg.GetStage())
 	if !ok {
 		if req.Msg.GetStage() == postpilotv1.Stage_STAGE_UNSPECIFIED {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage is required"))
+			return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "stage is required", "MODEL_STAGE_REQUIRED", nil)
 		}
 		// A newer client than this server: say so rather than "required".
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%w: %s", provider.ErrUnknownStage, req.Msg.GetStage()))
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, fmt.Sprintf("unknown stage: %s", req.Msg.GetStage()), "MODEL_STAGE_INVALID", nil)
 	}
 	ref := llm.ModelRef{ProviderID: req.Msg.GetRef().GetProviderId(), ModelID: req.Msg.GetRef().GetModelId()}
 	saved, err := h.svc.SaveSelection(ctx, userID, stage, ref)
@@ -99,7 +100,13 @@ func (h *Handler) SaveComparisonPair(ctx context.Context, req *connect.Request[p
 	}
 	stage, ok := fromProtoStage(req.Msg.GetStage())
 	if !ok {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage is required"))
+		reason := "MODEL_STAGE_INVALID"
+		message := "unknown stage"
+		if req.Msg.GetStage() == postpilotv1.Stage_STAGE_UNSPECIFIED {
+			reason = "MODEL_STAGE_REQUIRED"
+			message = "stage is required"
+		}
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, message, reason, nil)
 	}
 	pair, err := h.svc.SaveComparisonPair(ctx, userID, stage, fromProtoRef(req.Msg.GetCandidateA()), fromProtoRef(req.Msg.GetCandidateB()))
 	if err != nil {
@@ -145,7 +152,7 @@ func (h *Handler) ApplyRecommendationSet(ctx context.Context, req *connect.Reque
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
 	return userID, nil
 }
@@ -153,14 +160,20 @@ func actingUser(ctx context.Context) (string, error) {
 func toConnectError(op string, err error) error {
 	switch {
 	case errors.Is(err, provider.ErrUnknownStage):
-		return connect.NewError(connect.CodeInvalidArgument, err)
-	case errors.Is(err, provider.ErrModelNotRegistered), errors.Is(err, provider.ErrRecommendationNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
-	case errors.Is(err, provider.ErrModelDisabled), errors.Is(err, provider.ErrModelUnsuitable), errors.Is(err, provider.ErrDuplicateCandidates):
-		return connect.NewError(connect.CodeFailedPrecondition, err)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown stage", "MODEL_STAGE_INVALID", nil)
+	case errors.Is(err, provider.ErrModelNotRegistered):
+		return rpcserver.NewAppError(connect.CodeNotFound, "model not registered", "MODEL_NOT_REGISTERED", nil)
+	case errors.Is(err, provider.ErrRecommendationNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "recommendation not found", "MODEL_RECOMMENDATION_NOT_FOUND", nil)
+	case errors.Is(err, provider.ErrModelDisabled):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model disabled", "MODEL_DISABLED", nil)
+	case errors.Is(err, provider.ErrModelUnsuitable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model unsuitable", "MODEL_UNSUITABLE", nil)
+	case errors.Is(err, provider.ErrDuplicateCandidates):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "duplicate candidates", "MODEL_CANDIDATES_DUPLICATE", nil)
 	default:
 		slog.Error(op+" failed", "err", err)
-		return connect.NewError(connect.CodeInternal, errors.New(op+" failed"))
+		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
 	}
 }
 

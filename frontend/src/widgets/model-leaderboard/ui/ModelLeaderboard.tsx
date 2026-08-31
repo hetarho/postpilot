@@ -1,9 +1,13 @@
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import type { LeaderboardEntry } from '@/entities/model-experiment'
+import { formatNumber } from '@/shared/lib'
 import { Badge } from '@/shared/ui'
 
 export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
+  const { t } = useTranslation('models')
   if (entries.length === 0)
-    return <p className="text-content-tertiary text-sm">아직 비교 결과가 없어요.</p>
+    return <p className="text-content-tertiary text-sm">{t('leaderboard.empty')}</p>
   return (
     <ol className="divide-divider divide-y">
       {entries.map((entry) => (
@@ -23,23 +27,33 @@ export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
                   label and the ellipsis can never fire. A model registered without a label falls
                   back to its id, which overflows the page into horizontal scroll (§8.5). */}
               <span className="min-w-0 truncate text-sm font-medium">
-                {entry.modelLabel || '등록 해제된 모델'}
+                {entry.modelLabel || t('unavailable')}
               </span>
-              {entry.provisional && <Badge>데이터 수집 중</Badge>}
-              {entry.active && <Badge tone="success">활성</Badge>}
-              {entry.recommended && <Badge tone="info">추천</Badge>}
-              {entry.disappeared && <Badge tone="warning">등록 해제</Badge>}
+              {entry.provisional && <Badge>{t('leaderboard.collecting')}</Badge>}
+              {entry.active && <Badge tone="success">{t('leaderboard.active')}</Badge>}
+              {entry.recommended && <Badge tone="info">{t('leaderboard.recommended')}</Badge>}
+              {entry.disappeared && <Badge tone="warning">{t('leaderboard.disappeared')}</Badge>}
             </div>
             <p className="text-content-tertiary mt-1 text-xs">
-              {entry.matches}전 {entry.wins}승 {entry.losses}패 · 승률{' '}
-              {(entry.winRate * 100).toFixed(0)}%
+              {t('leaderboard.record', {
+                matches: entry.matches,
+                wins: entry.wins,
+                losses: entry.losses,
+                rate: formatNumber(entry.winRate * 100, undefined, {
+                  maximumFractionDigits: 0,
+                }),
+              })}
             </p>
             {/* The accounting detail is the desktop's; on a phone the record and the rating are
                 what the board is read for, and this second line doubled the height of every row. */}
             <p className="text-content-tertiary mt-1 hidden text-xs sm:block">
-              성공 호출 {entry.successfulCalls} · 평균 {entry.averageLatencyMs.toLocaleString()}ms ·
-              토큰 {entry.promptTokens.toLocaleString()} / {entry.completionTokens.toLocaleString()}{' '}
-              · {costLabel(entry)}
+              {t('leaderboard.metrics', {
+                calls: formatNumber(entry.successfulCalls),
+                latency: formatNumber(entry.averageLatencyMs),
+                prompt: formatNumber(entry.promptTokens),
+                completion: formatNumber(entry.completionTokens),
+                cost: costLabel(entry, t),
+              })}
             </p>
           </div>
           <strong className="text-sm whitespace-nowrap">Elo {entry.rating}</strong>
@@ -49,9 +63,19 @@ export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
   )
 }
 
-function costLabel(entry: LeaderboardEntry): string {
-  if (entry.costQuality === 'unavailable') return '비용 미제공'
+function costLabel(entry: LeaderboardEntry, t: TFunction<'models'>): string {
+  if (entry.costQuality === 'unavailable') return t('leaderboard.costUnavailable')
   const prefix =
-    entry.costQuality === 'estimated' ? '≈ ' : entry.costQuality === 'mixed' ? '일부 ≈ ' : ''
-  return `${prefix}$${(Number(entry.totalCostMicrousd) / 1_000_000).toFixed(6)}`
+    entry.costQuality === 'estimated'
+      ? '≈ '
+      : entry.costQuality === 'mixed'
+        ? t('leaderboard.partlyEstimated')
+        : ''
+  return `${prefix}${formatNumber(Number(entry.totalCostMicrousd) / 1_000_000, undefined, {
+    style: 'currency',
+    currency: 'USD',
+    currencyDisplay: 'narrowSymbol',
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 6,
+  })}`
 }

@@ -3,9 +3,11 @@
 // It models the server rules the frontend depends on (spec/policy/providers.md): a saved
 // model that is not registered comes back `missing` once and is cleared, and a disabled
 // or unregistered model cannot be saved.
-import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
+import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
+  ApplyRecommendationSetResponseSchema,
+  type AppFailureReason,
   GetSelectionsResponseSchema,
   GetComparisonPairsResponseSchema,
   ListRecommendationSetsResponseSchema,
@@ -14,11 +16,13 @@ import {
   ModelInfoSchema,
   ModelRefSchema,
   ProviderService,
+  SaveComparisonPairResponseSchema,
   SaveSelectionResponseSchema,
   SelectionSchema,
   SelectionSlot,
   Stage,
 } from '@/shared/api'
+import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -38,6 +42,12 @@ export interface FakeSelection {
   modelId: string
 }
 
+export interface FakeProviderMutationFailure {
+  reason: AppFailureReason
+  code?: Code
+  params?: Record<string, string>
+}
+
 export interface FakeProvidersOptions {
   models?: FakeModel[]
   /** Saved choices; one whose model is not in `models` is reported missing and cleared. */
@@ -46,6 +56,12 @@ export interface FakeProvidersOptions {
   listFails?: boolean
   /** Make SaveSelection fail. */
   saveFails?: boolean
+  /** Return a structured application failure from SaveSelection. */
+  saveFailure?: FakeProviderMutationFailure
+  /** Return a structured application failure from SaveComparisonPair. */
+  savePairFailure?: FakeProviderMutationFailure
+  /** Return a structured application failure from ApplyRecommendationSet. */
+  applyRecommendationFailure?: FakeProviderMutationFailure
   /** Hold SaveSelection open until this promise settles. */
   saveGate?: Promise<void>
   /** Records every procedure the transport was asked for. */
@@ -62,13 +78,14 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
   const { calls } = options
   const models = options.models ?? []
   let selections = [...(options.selections ?? [])]
+  let comparisonPairs = [...(options.comparisonPairs ?? [])]
 
   const registered = (providerId: string, modelId: string) =>
     models.find((model) => model.providerId === providerId && model.modelId === modelId)
 
   rpc(ProviderService.method.listModels, () => {
     calls?.push('ListModels')
-    if (options.listFails) throw new ConnectError('unavailable', Code.Unavailable)
+    if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListModelsResponseSchema, {
       models: models.map((model) =>
         create(ModelInfoSchema, {
@@ -102,14 +119,15 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
   rpc(ProviderService.method.saveSelection, async (req) => {
     calls?.push('SaveSelection')
     await options.saveGate
-    if (options.saveFails) throw new ConnectError('unavailable', Code.Unavailable)
+    if (options.saveFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    if (options.saveFailure) throwFakeMutationFailure(options.saveFailure)
     if (req.stage === Stage.UNSPECIFIED)
-      throw new ConnectError('stage is required', Code.InvalidArgument)
+      throw connectAppError('MODEL_STAGE_REQUIRED', Code.InvalidArgument)
     const ref = req.ref ?? create(ModelRefSchema, {})
     const model = registered(ref.providerId, ref.modelId)
-    if (!model) throw new ConnectError('model not registered', Code.NotFound)
+    if (!model) throw connectAppError('MODEL_NOT_REGISTERED', Code.NotFound)
     if (model.disabledReason !== undefined) {
-      throw new ConnectError('model disabled', Code.FailedPrecondition)
+      throw connectAppError('MODEL_DISABLED', Code.FailedPrecondition)
     }
     selections = [
       ...selections.filter((selection) => selection.stage !== req.stage),
@@ -122,7 +140,7 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
 
   rpc(ProviderService.method.getComparisonPairs, () =>
     create(GetComparisonPairsResponseSchema, {
-      pairs: (options.comparisonPairs ?? []).map((pair) =>
+      pairs: comparisonPairs.map((pair) =>
         create(ComparisonPairSchema, {
           stage: pair.stage,
           candidateA: create(SelectionSchema, {
@@ -142,6 +160,42 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
   rpc(ProviderService.method.listRecommendationSets, () =>
     create(ListRecommendationSetsResponseSchema, {}),
   )
+  rpc(ProviderService.method.saveComparisonPair, (request) => {
+    calls?.push('SaveComparisonPair')
+    if (options.savePairFailure) throwFakeMutationFailure(options.savePairFailure)
+    const candidateA = request.candidateA ?? create(ModelRefSchema, {})
+    const candidateB = request.candidateB ?? create(ModelRefSchema, {})
+    comparisonPairs = [
+      ...comparisonPairs.filter((pair) => pair.stage !== request.stage),
+      { stage: request.stage, candidateA, candidateB },
+    ]
+    return create(SaveComparisonPairResponseSchema, {
+      pair: create(ComparisonPairSchema, {
+        stage: request.stage,
+        candidateA: create(SelectionSchema, {
+          stage: request.stage,
+          slot: SelectionSlot.CANDIDATE_A,
+          ref: candidateA,
+        }),
+        candidateB: create(SelectionSchema, {
+          stage: request.stage,
+          slot: SelectionSlot.CANDIDATE_B,
+          ref: candidateB,
+        }),
+      }),
+    })
+  })
+  rpc(ProviderService.method.applyRecommendationSet, () => {
+    calls?.push('ApplyRecommendationSet')
+    if (options.applyRecommendationFailure) {
+      throwFakeMutationFailure(options.applyRecommendationFailure)
+    }
+    return create(ApplyRecommendationSetResponseSchema, {})
+  })
+}
+
+function throwFakeMutationFailure(failure: FakeProviderMutationFailure): never {
+  throw connectAppError(failure.reason, failure.code ?? Code.InvalidArgument, failure.params)
 }
 
 /** A transport serving only ProviderService — for tests of the catalog hooks/components. */

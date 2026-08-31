@@ -35,8 +35,9 @@ func TestSaveDraftAssignsClearsOrPreservesThePurpose(t *testing.T) {
 	voiceID := defaultVoiceFor(alice)
 	review := "purpose-review"
 	blank := ""
+	language := LanguageKorean
 
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "memo", &voiceID, &review)
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "memo", &voiceID, &review, &language)
 	if err != nil || created.PurposeID != review {
 		t.Fatalf("create with a purpose: %+v err=%v", created, err)
 	}
@@ -45,19 +46,19 @@ func TestSaveDraftAssignsClearsOrPreservesThePurpose(t *testing.T) {
 	}
 
 	// Absent is what ordinary autosave sends. It must not disturb the assignment.
-	kept, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 2", nil, nil)
+	kept, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 2", nil, nil, nil)
 	if err != nil || kept.PurposeID != review {
 		t.Fatalf("absent purpose changed the assignment: %+v err=%v", kept, err)
 	}
 
 	// A present empty string is the explicit 없음.
-	cleared, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 3", nil, &blank)
+	cleared, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 3", nil, &blank, nil)
 	if err != nil || cleared.PurposeID != "" || cleared.Purpose != (PurposeRef{}) {
 		t.Fatalf("clear failed: %+v err=%v", cleared, err)
 	}
 
 	// And a present id assigns again, from 없음, with no voice in the request.
-	reassigned, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 4", nil, &review)
+	reassigned, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 4", nil, &review, nil)
 	if err != nil || reassigned.PurposeID != review {
 		t.Fatalf("reassign failed: %+v err=%v", reassigned, err)
 	}
@@ -74,14 +75,15 @@ func TestSaveDraftRejectsAnUnknownOrForeignPurposeAndAppliesNothingElse(t *testi
 	for name, id := range map[string]string{"unknown": "purpose-nobody", "foreign": "purpose-bob"} {
 		t.Run(name, func(t *testing.T) {
 			bad := id
-			if _, err := svc.SaveDraft(ctx, alice, created.Slug, "새 제목", "새 메모", nil, &bad); !errors.Is(err, ErrPurposeNotFound) {
+			if _, err := svc.SaveDraft(ctx, alice, created.Slug, "새 제목", "새 메모", nil, &bad, nil); !errors.Is(err, ErrPurposeNotFound) {
 				t.Fatalf("SaveDraft = %v, want ErrPurposeNotFound", err)
 			}
 			current := store.posts[created.Slug]
 			if current.Title != "Jeju" || current.Memo != "" || current.PurposeID != "" {
 				t.Fatalf("a refused purpose let the rest of the request through: %+v", current)
 			}
-			if _, err := svc.SaveDraft(ctx, alice, "", "새 글", "", &voiceID, &bad); !errors.Is(err, ErrPurposeNotFound) {
+			language := LanguageKorean
+			if _, err := svc.SaveDraft(ctx, alice, "", "새 글", "", &voiceID, &bad, &language); !errors.Is(err, ErrPurposeNotFound) {
 				t.Fatalf("create = %v, want ErrPurposeNotFound", err)
 			}
 			if len(store.posts) != 1 {
@@ -99,7 +101,7 @@ func TestAssigningAPurposeTouchesNoContentOrFinalizationState(t *testing.T) {
 	created := mustCreatePost(t, svc, alice, "Jeju")
 
 	generated := PostContent{Title: "생성됨", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, generated); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, generated, LanguageKorean); err != nil {
 		t.Fatal(err)
 	}
 	baseline := store.posts[created.Slug]
@@ -109,7 +111,7 @@ func TestAssigningAPurposeTouchesNoContentOrFinalizationState(t *testing.T) {
 	before := store.posts[created.Slug]
 
 	review := "purpose-review"
-	after, err := svc.SaveDraft(ctx, alice, created.Slug, before.Title, before.Memo, nil, &review)
+	after, err := svc.SaveDraft(ctx, alice, created.Slug, before.Title, before.Memo, nil, &review, nil)
 	if err != nil {
 		t.Fatalf("assignment refused on a finalized post: %v", err)
 	}
@@ -133,7 +135,8 @@ func TestGetAndListProjectThePurposeName(t *testing.T) {
 	svc, store := newPurposeAwareService(t)
 	review := "purpose-review"
 	voiceID := defaultVoiceFor(alice)
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, &review)
+	language := LanguageKorean
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, &review, &language)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +168,7 @@ func TestWithoutAPurposeDirectoryPostsStillWorkAndAssignmentIsRefused(t *testing
 		t.Fatalf("get without a directory: %+v err=%v", found.Purpose, err)
 	}
 	review := "purpose-review"
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", nil, &review); err == nil {
+	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", nil, &review, nil); err == nil {
 		t.Fatal("assignment succeeded without a purpose directory")
 	}
 }

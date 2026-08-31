@@ -64,12 +64,19 @@ type recordingProfiles struct {
 	profile Profile
 	calls   int
 	voices  []string
+	targets []Language
 }
 
-func (f *recordingProfiles) ProfileForPrompt(_ context.Context, _, voiceID string) (Profile, error) {
+func (f *recordingProfiles) ProfileForPrompt(_ context.Context, _, voiceID string, target Language) (Profile, error) {
 	f.calls++
 	f.voices = append(f.voices, voiceID)
-	return f.profile, nil
+	f.targets = append(f.targets, target)
+	profile := f.profile
+	profile.TargetLanguage = target
+	if profile.SourceLanguage == "" {
+		profile.SourceLanguage = target
+	}
+	return profile, nil
 }
 
 func TestFiveRevisionsReinjectProfileAndPersistEveryResult(t *testing.T) {

@@ -13,25 +13,29 @@ import (
 	"github.com/postpilot/backend/internal/purpose"
 )
 
-func TestConnectCodesAndKoreanMessages(t *testing.T) {
+func TestConnectCodesAndStableReasons(t *testing.T) {
 	for name, tc := range map[string]struct {
-		err     error
-		code    connect.Code
-		message string
+		err    error
+		code   connect.Code
+		reason string
 	}{
-		"duplicate":             {purpose.ErrDuplicateName, connect.CodeAlreadyExists, "같은 이름의 용도가 이미 있어요"},
-		"unknown or foreign":    {purpose.ErrNotFound, connect.CodeNotFound, "용도를 찾을 수 없어요"},
-		"blank name":            {purpose.ErrNameRequired, connect.CodeInvalidArgument, "용도 이름을 입력해 주세요"},
-		"blank instructions":    {purpose.ErrInstructionsRequired, connect.CodeInvalidArgument, "작성 지침을 입력해 주세요"},
-		"instructions too long": {&purpose.FieldTooLongError{Field: "instructions", Chars: 2001, Max: 2000}, connect.CodeInvalidArgument, "작성 지침은(는) 2000자까지 쓸 수 있어요 (지금 2001자)"},
+		"duplicate":             {purpose.ErrDuplicateName, connect.CodeAlreadyExists, "PURPOSE_NAME_TAKEN"},
+		"unknown or foreign":    {purpose.ErrNotFound, connect.CodeNotFound, "PURPOSE_NOT_FOUND"},
+		"blank name":            {purpose.ErrNameRequired, connect.CodeInvalidArgument, "PURPOSE_NAME_REQUIRED"},
+		"blank instructions":    {purpose.ErrInstructionsRequired, connect.CodeInvalidArgument, "PURPOSE_INSTRUCTIONS_REQUIRED"},
+		"instructions too long": {&purpose.FieldTooLongError{Field: "instructions", Chars: 2001, Max: 2000}, connect.CodeInvalidArgument, "PURPOSE_FIELD_TOO_LONG"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			mapped := toConnectError("op", tc.err)
 			if connect.CodeOf(mapped) != tc.code {
 				t.Fatalf("code = %v, want %v", connect.CodeOf(mapped), tc.code)
 			}
-			if !strings.Contains(mapped.Error(), tc.message) {
-				t.Fatalf("message = %q, want it to contain %q", mapped.Error(), tc.message)
+			detail := appErrorDetail(t, mapped)
+			if got := detail.GetReason(); got != tc.reason {
+				t.Fatalf("reason = %q, want %q", got, tc.reason)
+			}
+			if tc.reason == "PURPOSE_FIELD_TOO_LONG" && (detail.GetParams()["field"] != "instructions" || detail.GetParams()["max"] != "2000" || detail.GetParams()["actual"] != "2001") {
+				t.Fatalf("params = %#v", detail.GetParams())
 			}
 		})
 	}
@@ -41,6 +45,29 @@ func TestConnectCodesAndKoreanMessages(t *testing.T) {
 	if connect.CodeOf(leaky) != connect.CodeInternal || strings.Contains(leaky.Error(), "secret_internal_detail") {
 		t.Fatalf("internal error leaked: %v", leaky)
 	}
+	if detail := appErrorDetail(t, leaky); detail.GetReason() != "UNKNOWN_FAILURE" || len(detail.GetParams()) != 0 {
+		t.Fatalf("internal detail = %#v", detail)
+	}
+}
+
+func appErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
+	t.Helper()
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) {
+		t.Fatalf("error type = %T, want *connect.Error", err)
+	}
+	if len(connectErr.Details()) != 1 {
+		t.Fatalf("details = %d, want 1", len(connectErr.Details()))
+	}
+	value, valueErr := connectErr.Details()[0].Value()
+	if valueErr != nil {
+		t.Fatalf("decode detail: %v", valueErr)
+	}
+	detail, ok := value.(*postpilotv1.AppErrorDetail)
+	if !ok {
+		t.Fatalf("detail type = %T", value)
+	}
+	return detail
 }
 
 func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) {

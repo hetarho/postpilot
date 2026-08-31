@@ -1,9 +1,9 @@
 -- name: InsertJob :exec
 INSERT INTO generation_jobs (
     id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total,
-    error, observe_model, write_model, payload, created_at, updated_at,
+    error, observe_model, write_model, target_language, payload, created_at, updated_at,
     started_at, finished_at
-) VALUES (?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, NULL, NULL);
+) VALUES (?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, ?, NULL, NULL);
 
 -- name: PickNextQueued :one
 UPDATE generation_jobs
@@ -16,6 +16,10 @@ SET status = 'running',
         WHEN 'revise' THEN 'write'
         ELSE 'observe'
     END,
+    error = NULL,
+    error_reason = NULL,
+    error_params = NULL,
+    technical_detail = NULL,
     started_at = ?,
     updated_at = ?
 WHERE id = (
@@ -33,22 +37,26 @@ WHERE id = ? AND status = 'running';
 
 -- name: FinishJob :exec
 UPDATE generation_jobs
-SET status = ?, error = ?, finished_at = ?, updated_at = ?
+SET status = ?, error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
+    finished_at = ?, updated_at = ?
 WHERE id = ? AND status = 'running';
 
 -- name: FailQueuedJob :execrows
 UPDATE generation_jobs
-SET status = 'failed', error = ?, finished_at = ?, updated_at = ?
+SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
+    finished_at = ?, updated_at = ?
 WHERE id = ? AND user_id = ? AND status = 'queued';
 
 -- name: SweepRunning :execrows
 UPDATE generation_jobs
-SET status = 'failed', error = ?, finished_at = ?, updated_at = ?
+SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
+    finished_at = ?, updated_at = ?
 WHERE status = 'running';
 
 -- name: SweepQueuedPersonalization :execrows
 UPDATE generation_jobs
-SET status = 'failed', error = ?, finished_at = ?, updated_at = ?
+SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
+    finished_at = ?, updated_at = ?
 WHERE status = 'queued'
   AND kind IN ('learn_voice', 'compare_voice_rule', 'validate_voice_profile');
 

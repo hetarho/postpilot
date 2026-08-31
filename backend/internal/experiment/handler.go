@@ -16,6 +16,7 @@ func (s *Service) Handle(ctx context.Context, experimentID string, progress Prog
 		return err
 	}
 	if len(found.InputSnapshot) == 0 {
+		_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(ErrSnapshotUnavailable), s.now())
 		return ErrSnapshotUnavailable
 	}
 	if err := s.store.SetStatus(ctx, found.ID, StatusRunning, nil); err != nil {
@@ -24,16 +25,20 @@ func (s *Service) Handle(ctx context.Context, experimentID string, progress Prog
 	if found.Stage == StageWrite {
 		prepared, err := s.runner.PrepareWrite(ctx, found, progress)
 		if err != nil {
-			_ = s.store.FailUnfinished(ctx, found.ID, userFacingError(err), s.now())
+			_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
 			return err
+		}
+		if prepared.TargetLanguage == nil || found.TargetLanguage == nil || *prepared.TargetLanguage != *found.TargetLanguage {
+			_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(ErrLanguageRequired), s.now())
+			return ErrLanguageRequired
 		}
 		frozen, hash, err := FreezeSnapshot(prepared)
 		if err != nil {
-			_ = s.store.FailUnfinished(ctx, found.ID, userFacingError(err), s.now())
+			_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
 			return err
 		}
 		if err := s.store.SetSnapshot(ctx, found.ID, frozen, hash); err != nil {
-			_ = s.store.FailUnfinished(ctx, found.ID, "비교 입력을 저장하지 못했어요. 다시 시도해 주세요.", s.now())
+			_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
 			return err
 		}
 		found.InputSnapshot = frozen.Content
@@ -41,7 +46,7 @@ func (s *Service) Handle(ctx context.Context, experimentID string, progress Prog
 		found.PromptVersion = frozen.PromptVersion
 	}
 	if err := s.runCandidates(ctx, found, progress); err != nil {
-		_ = s.store.FailUnfinished(ctx, found.ID, "비교 결과를 저장하지 못했어요. 다시 시도해 주세요.", s.now())
+		_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
 		return err
 	}
 	updated, err := s.store.Get(ctx, found.ID)
@@ -57,7 +62,7 @@ func (s *Service) Handle(ctx context.Context, experimentID string, progress Prog
 		return err
 	}
 	if status == StatusFailed {
-		return errors.New("두 모델 모두 결과를 만들지 못했어요. 실패한 후보를 다시 시도해 주세요")
+		return errAllCandidatesFailed
 	}
 	return nil
 }
@@ -79,7 +84,8 @@ func (s *Service) runCandidate(ctx context.Context, found Experiment, candidate 
 	candidate.Output = append([]byte(nil), result.Output...)
 	if runErr != nil {
 		candidate.Status = CandidateFailed
-		candidate.Error = userFacingError(runErr)
+		failure := normalizeFailure(runErr)
+		candidate.Failure = &failure
 		slog.Error("experiment candidate failed",
 			"experiment_id", found.ID,
 			"candidate_id", candidate.ID,
@@ -88,7 +94,7 @@ func (s *Service) runCandidate(ctx context.Context, found Experiment, candidate 
 		)
 	} else {
 		candidate.Status = CandidateSucceeded
-		candidate.Error = ""
+		candidate.Failure = nil
 	}
 	return s.store.CompleteCandidate(ctx, candidate)
 }
@@ -102,20 +108,4 @@ func diagnosticError(err error) error {
 		return llm.ErrBadOutput
 	}
 	return err
-}
-
-func userFacingError(err error) string {
-	if errors.Is(err, ErrSnapshotUnavailable) {
-		return ErrSnapshotUnavailable.Error()
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return "모델 호출 시간이 초과됐어요. 다시 시도해 주세요."
-	}
-	var providerErr *llm.ProviderError
-	if errors.As(err, &providerErr) || errors.Is(err, llm.ErrOutputTruncated) {
-		if message := llm.UserMessage(err); message != "" {
-			return message
-		}
-	}
-	return "모델 호출에 실패했어요. 다시 시도해 주세요."
 }

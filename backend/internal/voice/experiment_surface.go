@@ -12,7 +12,8 @@ import (
 const AnalyzeExperimentPromptVersion = "analyze-v1-ab"
 
 type analyzeExperimentSnapshot struct {
-	Corpus string `json:"corpus"`
+	Corpus         string   `json:"corpus"`
+	SourceLanguage Language `json:"source_language,omitempty"`
 }
 
 type CandidateUsage struct {
@@ -25,7 +26,8 @@ type CandidateUsage struct {
 // SnapshotAnalysisInput freezes one voice's whole corpus — the same samples plus finalized
 // sources the analyze job would read — so both candidates see exactly what analysis sees.
 func (s *Service) SnapshotAnalysisInput(ctx context.Context, userID, voiceID string) ([]byte, error) {
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+	active, err := s.activeVoice(ctx, userID, voiceID)
+	if err != nil {
 		return nil, err
 	}
 	samples, _, err := s.store.CorpusSnapshot(ctx, userID, voiceID)
@@ -37,11 +39,12 @@ func (s *Service) SnapshotAnalysisInput(ctx context.Context, userID, voiceID str
 		if sources, err = s.personalization.ListAuthoredSources(ctx, userID, voiceID); err != nil {
 			return nil, fmt.Errorf("완성 글을 불러오지 못했어요: %w", err)
 		}
+		sources = authoredSourcesForLanguage(sources, active.SourceLanguage)
 	}
 	if len(samples) == 0 && len(sources) == 0 {
 		return nil, fmt.Errorf("분석할 문체 자료가 없어요")
 	}
-	return json.Marshal(analyzeExperimentSnapshot{Corpus: personalizationCorpus(samples, sources)})
+	return json.Marshal(analyzeExperimentSnapshot{Corpus: personalizationCorpus(samples, sources), SourceLanguage: active.SourceLanguage})
 }
 
 func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.ModelRef) (string, CandidateUsage, error) {
@@ -49,8 +52,13 @@ func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.M
 	if len(raw) == 0 || json.Unmarshal(raw, &snapshot) != nil || strings.TrimSpace(snapshot.Corpus) == "" {
 		return "", CandidateUsage{}, fmt.Errorf("saved analyze input is unavailable")
 	}
+	if !snapshot.SourceLanguage.Valid() {
+		// Pre-language analyze snapshots are migration-compatible Korean input; no text
+		// inspection or runtime language guessing is involved.
+		snapshot.SourceLanguage = LanguageKorean
+	}
 	response, err := s.models.Complete(ctx, ref, llm.Request{
-		System:   analysisPrompt,
+		System:   analysisPromptForLanguage(snapshot.SourceLanguage),
 		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(snapshot.Corpus)}}},
 	})
 	usage := CandidateUsage{PromptTokens: int64(response.Usage.PromptTokens), CompletionTokens: int64(response.Usage.CompletionTokens), CostMicrousd: response.Usage.CostMicrousd, CostReported: response.Usage.CostReported}
@@ -58,7 +66,7 @@ func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.M
 		return "", usage, err
 	}
 	styleguide := strings.TrimSpace(response.Text)
-	if !hasRequiredAnalysisShape(styleguide) {
+	if !hasRequiredAnalysisShapeForLanguage(styleguide, snapshot.SourceLanguage) {
 		return "", usage, fmt.Errorf("문체 분석 결과에 종결어미 또는 never uses 섹션이 없어요. 다시 시도해 주세요")
 	}
 	return styleguide, usage, nil

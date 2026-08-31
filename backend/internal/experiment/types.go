@@ -93,7 +93,7 @@ type Candidate struct {
 	DisplaySide  DisplaySide
 	Status       CandidateStatus
 	Output       []byte
-	Error        string
+	Failure      *Failure
 	Usage        Usage
 	StartedAt    *time.Time
 	FinishedAt   *time.Time
@@ -108,6 +108,7 @@ type Experiment struct {
 	PostSlug          string
 	VoiceID           string
 	PurposeName       string
+	TargetLanguage    *Language
 	Stage             Stage
 	Status            Status
 	JobID             string
@@ -116,10 +117,10 @@ type Experiment struct {
 	PromptVersion     string
 	WinnerCandidateID string
 	Outcome           Outcome
-	ApplyError        string
+	ApplyFailure      *Failure
 	AppliedAt         *time.Time
 	AdoptionRequested bool
-	AdoptionError     string
+	AdoptionFailure   *Failure
 	AdoptedAt         *time.Time
 	CreatedAt         time.Time
 	FinishedAt        *time.Time
@@ -171,6 +172,8 @@ type Snapshot struct {
 	// none. It is a name rather than an id so the detail keeps reading correctly after the
 	// purpose is renamed or deleted.
 	PurposeName string
+	// TargetLanguage is required for write snapshots and absent for observe/analyze.
+	TargetLanguage *Language
 }
 
 type StartRequest struct {
@@ -197,6 +200,8 @@ type JobRequest struct {
 	VoiceID      string
 	ExperimentID string
 	Stage        Stage
+	// TargetLanguage is frozen for write jobs and absent for observe/analyze jobs.
+	TargetLanguage *Language
 }
 
 type JobAlreadyInProgressError struct{ ActiveID string }
@@ -212,11 +217,12 @@ var (
 	ErrModelRequired         = errors.New("two enabled suitable models are required")
 	ErrDuplicateCandidates   = errors.New("comparison candidates must differ")
 	ErrInvalidTargetLength   = errors.New("target length must be positive")
+	ErrLanguageRequired      = errors.New("a supported write target language is required")
 	ErrInvalidState          = errors.New("experiment state does not allow this operation")
 	ErrCandidateNotFound     = errors.New("candidate not found")
 	ErrConfirmationRequired  = errors.New("styleguide overwrite confirmation is required")
-	ErrSnapshotUnavailable   = errors.New("입력이 변경되어 같은 조건으로 재시도할 수 없어요. 새 비교를 시작해 주세요.")
-	ErrRetryModelUnavailable = errors.New("비교 모델을 더 이상 사용할 수 없어 새 비교를 시작해야 해요.")
+	ErrSnapshotUnavailable   = errors.New("experiment snapshot is unavailable")
+	ErrRetryModelUnavailable = errors.New("experiment retry model is unavailable")
 	ErrVoiceRequired         = errors.New("an active voice is required to compare analyze models")
 	ErrVoiceUnavailable      = errors.New("the voice this comparison belongs to is deleted or unknown")
 )

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useTransport } from '@connectrpc/connect-query'
 import { type QueryKey, useQueryClient } from '@tanstack/react-query'
 import type { ModelExperiment } from '@/entities/model-experiment'
@@ -7,7 +8,7 @@ import { getPostQueryKey, listPostsQueryKey } from '@/entities/post'
 import { getSelectionsQueryKey } from '@/entities/model-catalog'
 import { useSession } from '@/entities/session'
 import { useVoices, voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
-import { Button, Dialog, Notice } from '@/shared/ui'
+import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
 import { hasExperimentActions } from '../model/experiment-actions'
 
 export function ExperimentActions({
@@ -17,6 +18,7 @@ export function ExperimentActions({
   experiment: ModelExperiment
   activeCandidateId: string
 }) {
+  const { t } = useTranslation('models')
   const transport = useTransport()
   const queryClient = useQueryClient()
   const { user } = useSession()
@@ -72,7 +74,7 @@ export function ExperimentActions({
             pending={pressed === 'retry'}
             onClick={() => run('retry', actions.retry)}
           >
-            실패 후보 재시도
+            {t('actions.retryFailed')}
           </Button>
         )}
         {needsExperimentReview(experiment.status) && (
@@ -82,10 +84,10 @@ export function ExperimentActions({
             pending={pressed === 'dismiss'}
             onClick={() => run('dismiss', actions.dismiss)}
           >
-            둘 다 사용하지 않기
+            {t('actions.dismiss')}
           </Button>
         )}
-        {experiment.applyError && (
+        {experiment.applyFailure && (
           <Button
             variant="secondary"
             disabled={actions.isPending || voiceWorkBlocked}
@@ -98,7 +100,7 @@ export function ExperimentActions({
               )
             }
           >
-            적용 다시 시도
+            {t('actions.retryApply')}
           </Button>
         )}
         {experiment.status === 'decided' && experiment.stage !== 'write' && (
@@ -108,10 +110,10 @@ export function ExperimentActions({
             pending={pressed === 'adopt'}
             onClick={() => run('adopt', actions.adopt)}
           >
-            활성 모델로 사용
+            {t('actions.useActive')}
           </Button>
         )}
-        {experiment.adoptionError && (
+        {experiment.adoptionFailure && (
           <Button
             variant="secondary"
             disabled={actions.isPending}
@@ -120,7 +122,7 @@ export function ExperimentActions({
               run('adopt', () => actions.decideWrite(experiment.winnerCandidateId, true))
             }
           >
-            활성 모델 변경 다시 시도
+            {t('actions.retryAdopt')}
           </Button>
         )}
         {survivor && (
@@ -130,7 +132,7 @@ export function ExperimentActions({
             pending={pressed === 'useSingle'}
             onClick={() => run('useSingle', () => actions.useSingle(activeCandidateId))}
           >
-            이 결과만 사용
+            {t('actions.useSingle')}
           </Button>
         )}
         {canChoose && experiment.stage !== 'write' && (
@@ -140,7 +142,7 @@ export function ExperimentActions({
             pending={pressed === 'choose'}
             onClick={() => run('choose', () => actions.choose(activeCandidateId))}
           >
-            이 결과로 선택
+            {t('actions.choose')}
           </Button>
         )}
         {canChoose && experiment.stage === 'write' && (
@@ -151,7 +153,7 @@ export function ExperimentActions({
               pending={pressed === 'decide'}
               onClick={() => run('decide', () => actions.decideWrite(activeCandidateId, false))}
             >
-              결과 적용
+              {t('actions.apply')}
             </Button>
             <Button
               variant="cta"
@@ -159,14 +161,14 @@ export function ExperimentActions({
               pending={pressed === 'decideAdopt'}
               onClick={() => run('decideAdopt', () => actions.decideWrite(activeCandidateId, true))}
             >
-              결과 적용하고 활성 모델로 변경
+              {t('actions.applyAndAdopt')}
             </Button>
           </>
         )}
         {experiment.status === 'decided' &&
           experiment.stage !== 'write' &&
           !experiment.appliedAt &&
-          !experiment.applyError && (
+          !experiment.applyFailure && (
             <Button
               variant="cta"
               disabled={actions.isPending || voiceWorkBlocked}
@@ -177,53 +179,52 @@ export function ExperimentActions({
                   : run('apply', () => actions.apply())
               }
             >
-              결과 적용
+              {t('actions.apply')}
             </Button>
           )}
       </div>
       {/* The outcome renders inside the dock, right under the button that was pressed — a result
           reported 1,000px up the page has not been shown (§4.3). */}
-      {actions.error && (
+      {actions.failure && (
         <Notice tone="danger" role="alert">
-          요청을 처리하지 못했어요.
+          <AppFailureMessage failure={actions.failure} />
         </Notice>
       )}
       {experiment.voiceId && !voicesPending && voiceWorkBlocked && (
         <Notice tone="warning" role="status">
-          삭제되었거나 찾을 수 없는 말투에는 결과를 적용하거나 다시 생성할 수 없어요. 먼저 복원해
-          주세요.
+          {t('actions.voiceUnavailable')}
         </Notice>
       )}
-      {experiment.applyError && (
+      {experiment.applyFailure && (
         <Notice tone="danger" role="alert">
-          적용하지 못했어요. {experiment.applyError}
+          <span>{t('actions.applyFailed')} </span>
+          <AppFailureMessage failure={experiment.applyFailure} />
         </Notice>
       )}
-      {experiment.appliedAt && !experiment.applyError && (
+      {experiment.appliedAt && !experiment.applyFailure && (
         <Notice tone="success" role="status">
-          선택한 결과를 적용했어요.
+          {t('actions.applied')}
           {experiment.stage === 'write' &&
-            (experiment.adoptedAt
-              ? ' 활성 작성 모델도 변경했어요.'
-              : ' 활성 작성 모델은 변경하지 않았어요.')}
+            (experiment.adoptedAt ? t('actions.adopted') : t('actions.notAdopted'))}
         </Notice>
       )}
-      {experiment.adoptionError && (
+      {experiment.adoptionFailure && (
         <Notice tone="danger" role="alert">
-          결과는 적용했지만 활성 작성 모델은 변경하지 못했어요. {experiment.adoptionError}
+          <span>{t('actions.adoptionFailed')} </span>
+          <AppFailureMessage failure={experiment.adoptionFailure} />
         </Notice>
       )}
       <Dialog
         open={confirmStyle}
-        title="문체 분석 결과를 적용할까요?"
-        confirmLabel="문체 덮어쓰기"
+        title={t('actions.confirmStyleTitle')}
+        confirmLabel={t('actions.confirmStyle')}
         pending={actions.isPending}
         onClose={() => setConfirmStyle(false)}
         onConfirm={() => {
           if (!voiceWorkBlocked) void actions.apply(true).then(() => setConfirmStyle(false))
         }}
       >
-        현재 styleguide를 선택한 결과로 교체합니다. 직접 작성한 rules는 그대로 유지됩니다.
+        {t('actions.confirmStyleDescription')}
       </Dialog>
     </div>
   )

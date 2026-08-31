@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -66,7 +67,7 @@ func seedPost(t *testing.T, s *store.Store, slug, userID string, updatedAt time.
 	t.Helper()
 	p := post.Post{
 		Slug: slug, UserID: userID, VoiceID: voiceIDFor(userID, 0), Title: slug, Memo: "",
-		Status: post.StatusDraft, CreatedAt: testNow, UpdatedAt: updatedAt,
+		Status: post.StatusDraft, TargetLanguage: post.LanguageKorean, CreatedAt: testNow, UpdatedAt: updatedAt,
 	}
 	if err := s.CreatePost(context.Background(), p); err != nil {
 		t.Fatalf("CreatePost: %v", err)
@@ -82,7 +83,7 @@ func TestPostRoundTrip(t *testing.T) {
 	// instant.
 	created := time.Date(2026, 3, 1, 21, 30, 45, 123456789, time.FixedZone("KST", 9*3600))
 	want := post.Post{Slug: "20260301-jeju", UserID: "alice", VoiceID: "voice-alice", Title: "Jeju", Memo: "went",
-		Status: post.StatusDraft, CreatedAt: created, UpdatedAt: created}
+		Status: post.StatusDraft, TargetLanguage: post.LanguageKorean, CreatedAt: created, UpdatedAt: created}
 	if err := s.CreatePost(ctx, want); err != nil {
 		t.Fatalf("CreatePost: %v", err)
 	}
@@ -96,10 +97,10 @@ func TestPostRoundTrip(t *testing.T) {
 	}
 	// The schema, not the service, is the last line: a post cannot name another account's
 	// voice or a voice that does not exist.
-	if err := s.CreatePost(ctx, post.Post{Slug: "foreign-voice", UserID: "alice", VoiceID: "voice-bob", Status: post.StatusDraft, CreatedAt: created, UpdatedAt: created}); err == nil {
+	if err := s.CreatePost(ctx, post.Post{Slug: "foreign-voice", UserID: "alice", VoiceID: "voice-bob", Status: post.StatusDraft, TargetLanguage: post.LanguageKorean, CreatedAt: created, UpdatedAt: created}); err == nil {
 		t.Error("a post naming another account's voice was accepted")
 	}
-	if err := s.CreatePost(ctx, post.Post{Slug: "no-voice", UserID: "alice", Status: post.StatusDraft, CreatedAt: created, UpdatedAt: created}); err == nil {
+	if err := s.CreatePost(ctx, post.Post{Slug: "no-voice", UserID: "alice", Status: post.StatusDraft, TargetLanguage: post.LanguageKorean, CreatedAt: created, UpdatedAt: created}); err == nil {
 		t.Error("a post without a voice was accepted")
 	}
 	if !got.CreatedAt.Equal(created) {
@@ -123,11 +124,11 @@ func TestGeneratedContentAndObservationsRoundTrip(t *testing.T) {
 		{Type: post.BlockText, Content: "본문"},
 		{Type: post.BlockImage, File: "IMG_1.jpg", Caption: "바다"},
 	}}
-	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, testNow.Add(2*time.Minute))
+	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, testNow.Add(2*time.Minute))
 	if err != nil || !updated {
 		t.Fatalf("UpdateGeneratedContent: updated=%v err=%v", updated, err)
 	}
-	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, testNow.Add(3*time.Minute))
+	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, testNow.Add(3*time.Minute))
 	if err != nil || updated {
 		t.Fatalf("identical machine retry: updated=%v err=%v", updated, err)
 	}
@@ -144,9 +145,69 @@ func TestGeneratedContentAndObservationsRoundTrip(t *testing.T) {
 	if len(got.Observations) != 1 || got.Observations[0].VisibleText != "표지판" || !got.Observations[0].PeoplePresent {
 		t.Fatalf("observations = %+v", got.Observations)
 	}
-	updated, err = s.UpdateGeneratedContent(ctx, "p", "bob", post.PostContent{Title: "hijack"}, testNow)
+	updated, err = s.UpdateGeneratedContent(ctx, "p", "bob", post.PostContent{Title: "hijack"}, post.LanguageKorean, testNow)
 	if err != nil || updated {
 		t.Fatalf("foreign update: updated=%v err=%v", updated, err)
+	}
+}
+
+func TestTargetChangePreservesPostStateAndFrozenMachineWriteKeepsItsOwnLanguage(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedPost(t, s, "language-transition", "alice", testNow)
+	observations := []post.Observation{{File: "one.jpg", Scene: "raw-scene", Objects: []string{"raw-object"}}}
+	if updated, err := s.UpdateObservations(ctx, "language-transition", "alice", observations, testNow.Add(time.Minute)); err != nil || !updated {
+		t.Fatalf("observations: updated=%v err=%v", updated, err)
+	}
+	content := post.PostContent{Title: "동일 본문", Summary: "raw-summary", Tags: []string{"raw-tag"}, Blocks: []post.Block{{Type: post.BlockText, Content: "raw-content"}}}
+	if updated, err := s.UpdateGeneratedContent(ctx, "language-transition", "alice", content, post.LanguageKorean, testNow.Add(2*time.Minute)); err != nil || !updated {
+		t.Fatalf("machine write: updated=%v err=%v", updated, err)
+	}
+	before, err := s.GetPost(ctx, "language-transition")
+	if err != nil {
+		t.Fatal(err)
+	}
+	english := post.LanguageEnglish
+	changedAt := testNow.Add(3 * time.Minute)
+	if updated, err := s.UpdateDraft(ctx, before.Slug, before.UserID, before.Title, before.Memo, &english, changedAt); err != nil || !updated {
+		t.Fatalf("target update: updated=%v err=%v", updated, err)
+	}
+	after, err := s.GetPost(ctx, before.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := before
+	want.TargetLanguage = post.LanguageEnglish
+	want.UpdatedAt = changedAt
+	if !reflect.DeepEqual(after, want) {
+		t.Fatalf("target update changed unrelated state\n got: %#v\nwant: %#v", after, want)
+	}
+	if after.ContentLanguage == nil || *after.ContentLanguage != post.LanguageKorean {
+		t.Fatalf("target update changed provenance = %v", after.ContentLanguage)
+	}
+
+	// A Korean run frozen before the target changed may still complete afterwards. Its
+	// content provenance follows the frozen run, not the post's newer English target.
+	oldFrozenResult := post.PostContent{Title: "늦게 도착한 결과", Blocks: []post.Block{{Type: post.BlockText, Content: "한국어 결과"}}}
+	if updated, err := s.UpdateGeneratedContent(ctx, after.Slug, after.UserID, oldFrozenResult, post.LanguageKorean, testNow.Add(4*time.Minute)); err != nil || !updated {
+		t.Fatalf("old frozen write: updated=%v err=%v", updated, err)
+	}
+	landed, err := s.GetPost(ctx, after.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if landed.TargetLanguage != post.LanguageEnglish || landed.ContentLanguage == nil || *landed.ContentLanguage != post.LanguageKorean {
+		t.Fatalf("frozen result was retargeted: target=%q content=%v", landed.TargetLanguage, landed.ContentLanguage)
+	}
+
+	// Provenance is part of idempotence: identical bytes with a different canonical
+	// language still require one atomic machine write.
+	if updated, err := s.UpdateGeneratedContent(ctx, after.Slug, after.UserID, oldFrozenResult, post.LanguageEnglish, testNow.Add(5*time.Minute)); err != nil || !updated {
+		t.Fatalf("provenance-only machine write: updated=%v err=%v", updated, err)
+	}
+	remapped, err := s.GetPost(ctx, after.Slug)
+	if err != nil || remapped.ContentLanguage == nil || *remapped.ContentLanguage != post.LanguageEnglish || remapped.ContentRevision != landed.ContentRevision+1 {
+		t.Fatalf("provenance-only write = %+v err=%v", remapped, err)
 	}
 }
 
@@ -159,7 +220,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1400, testNow); err != nil || !updated {
 		t.Fatalf("option save: updated=%v err=%v", updated, err)
 	}
-	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", baseline, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", baseline, post.LanguageKorean, testNow); err != nil || !updated {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
 	final := post.PostContent{Title: "mine", Blocks: []post.Block{{Type: post.BlockText, Content: "제가 고친 문장이에요."}}}
@@ -187,7 +248,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 		t.Fatalf("snapshot voices = %q / %q", snapshot.VoiceID, snapshot.MachineBaselineVoiceID)
 	}
 	nextBaseline := post.PostContent{Title: "machine 2", Blocks: []post.Block{{Type: post.BlockText, Content: "새 기준 문장입니다."}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", nextBaseline, testNow.Add(3*time.Minute)); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", nextBaseline, post.LanguageKorean, testNow.Add(3*time.Minute)); err != nil || !updated {
 		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
 	}
 	if _, err = s.LearningSnapshot(ctx, "editable", "alice"); !errors.Is(err, post.ErrPostNotFinalized) {
@@ -218,7 +279,7 @@ func TestUpdateDraftIsScopedToTheOwner(t *testing.T) {
 	s := newStore(t)
 	seedPost(t, s, "p", "alice", testNow)
 
-	updated, err := s.UpdateDraft(ctx, "p", "bob", "hijacked", "hijacked", testNow)
+	updated, err := s.UpdateDraft(ctx, "p", "bob", "hijacked", "hijacked", nil, testNow)
 	if err != nil {
 		t.Fatalf("UpdateDraft: %v", err)
 	}
@@ -231,7 +292,7 @@ func TestUpdateDraftIsScopedToTheOwner(t *testing.T) {
 		t.Error("the row was modified")
 	}
 
-	updated, err = s.UpdateDraft(ctx, "p", "alice", "mine", "memo", testNow.Add(time.Hour))
+	updated, err = s.UpdateDraft(ctx, "p", "alice", "mine", "memo", nil, testNow.Add(time.Hour))
 	if err != nil || !updated {
 		t.Fatalf("owner update: updated=%v err=%v", updated, err)
 	}
@@ -261,10 +322,10 @@ func TestListPostsFallsBackToGeneratedTitle(t *testing.T) {
 	s := newStore(t)
 	p := seedPost(t, s, "untitled", "alice", testNow)
 	p.Title = ""
-	if updated, err := s.UpdateDraft(ctx, p.Slug, p.UserID, "", "memo", testNow); err != nil || !updated {
+	if updated, err := s.UpdateDraft(ctx, p.Slug, p.UserID, "", "memo", nil, testNow); err != nil || !updated {
 		t.Fatalf("clear title: updated=%v err=%v", updated, err)
 	}
-	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, post.PostContent{Title: "Generated title"}, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, post.PostContent{Title: "Generated title"}, post.LanguageKorean, testNow); err != nil || !updated {
 		t.Fatalf("generated content: updated=%v err=%v", updated, err)
 	}
 	got, err := s.ListPosts(ctx, "alice")
@@ -462,7 +523,7 @@ func TestCreatePostDuplicateSlug(t *testing.T) {
 	seedPost(t, s, "p", "alice", testNow)
 
 	err := s.CreatePost(ctx, post.Post{Slug: "p", UserID: "bob", VoiceID: "voice-bob", Status: post.StatusDraft,
-		CreatedAt: testNow, UpdatedAt: testNow})
+		TargetLanguage: post.LanguageKorean, CreatedAt: testNow, UpdatedAt: testNow})
 	if !errors.Is(err, post.ErrDuplicateSlug) {
 		t.Errorf("err = %v, want ErrDuplicateSlug", err)
 	}
@@ -475,7 +536,7 @@ func TestReassignVoiceIsOneOwnedWriteThatKeepsContent(t *testing.T) {
 	s := newStore(t)
 	seedPost(t, s, "moving", "alice", testNow)
 	baseline := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "생성 문장입니다."}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", baseline, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", baseline, post.LanguageKorean, testNow); err != nil || !updated {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.Finalize(ctx, "moving", "alice", 1, testNow.Add(time.Minute)); err != nil || !updated {
@@ -506,7 +567,7 @@ func TestReassignVoiceIsOneOwnedWriteThatKeepsContent(t *testing.T) {
 	}
 	// A later machine result under the new voice establishes a fresh baseline and restores
 	// learn eligibility there.
-	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", post.PostContent{Title: "again", Blocks: []post.Block{{Type: post.BlockText, Content: "새 문장입니다."}}}, testNow.Add(3*time.Minute)); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", post.PostContent{Title: "again", Blocks: []post.Block{{Type: post.BlockText, Content: "새 문장입니다."}}}, post.LanguageKorean, testNow.Add(3*time.Minute)); err != nil || !updated {
 		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
 	}
 	if got, _ = s.GetPost(ctx, "moving"); got.MachineBaselineVoiceID != "voice-alice-review" {
@@ -519,7 +580,7 @@ func TestFinalizeAfterReassignmentDoesNotRequireALearningBaseline(t *testing.T) 
 	s := newStore(t)
 	seedPost(t, s, "moving-review", "alice", testNow)
 	content := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "본문"}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, "moving-review", "alice", content, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "moving-review", "alice", content, post.LanguageKorean, testNow); err != nil || !updated {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
 	if moved, err := s.ReassignVoice(ctx, "moving-review", "alice", "voice-alice-review", testNow.Add(time.Minute)); err != nil || !moved {

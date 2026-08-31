@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '../button/Button'
 
 export function Popover({
@@ -10,6 +11,7 @@ export function Popover({
   children: (close: () => void) => ReactNode
   disabled?: boolean
 }) {
+  const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   const id = useId()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -58,7 +60,7 @@ export function Popover({
         disabled={disabled}
         onClick={() => setOpen((value) => !value)}
       >
-        옵션
+        {t('popover.options')}
       </Button>
       {open && (
         <div

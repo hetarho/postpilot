@@ -3,11 +3,13 @@ import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { toModelRef, type StageName } from '@/entities/model-catalog/@x/model-experiment'
 import {
   CandidateStatus,
+  contentLanguageFromProto,
   CostSource,
   DisplaySide,
   ExperimentOutcome,
   ExperimentStatus,
   ModelExperimentService,
+  appFailureFromProto,
   type ProtoExperimentCandidate,
   type ProtoLeaderboardEntry,
   type ProtoModelExperiment,
@@ -33,15 +35,16 @@ export function toExperiment(value: ProtoModelExperiment): ModelExperiment {
     candidates: value.candidates.map(toCandidate),
     winnerCandidateId: value.winnerCandidateId,
     outcome: outcomeName(value.outcome),
-    applyError: value.applyError,
+    applyFailure: value.applyFailure ? appFailureFromProto(value.applyFailure) : undefined,
     appliedAt: value.appliedAt,
     adoptionRequested: value.adoptionRequested,
-    adoptionError: value.adoptionError,
+    adoptionFailure: value.adoptionFailure ? appFailureFromProto(value.adoptionFailure) : undefined,
     adoptedAt: value.adoptedAt,
     createdAt: value.createdAt,
     finishedAt: value.finishedAt,
     decidedAt: value.decidedAt,
     revealed: value.revealed,
+    targetLanguage: contentLanguageFromProto(value.targetLanguage),
   }
 }
 
@@ -59,7 +62,10 @@ function toCandidate(value: ProtoExperimentCandidate): ExperimentCandidate {
           : output.case === 'styleguide'
             ? { kind: 'analyze', styleguide: output.value }
             : undefined,
-    error: value.error,
+    failure:
+      value.failure || value.status === CandidateStatus.FAILED
+        ? appFailureFromProto(value.failure)
+        : undefined,
     model: value.model ? toModelRef(value.model) : undefined,
     modelLabel: value.modelLabel,
     usage: value.usage

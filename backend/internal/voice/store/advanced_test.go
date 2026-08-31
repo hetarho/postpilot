@@ -45,14 +45,14 @@ func TestInactiveVoiceAggregateTriggersMapToDeleted(t *testing.T) {
 	comparisonErr := store.InsertRuleComparison(ctx, voice.RuleComparison{
 		ID: "comparison", UserID: "alice", VoiceID: "gone", RuleID: "rule", SourceID: "source",
 		ProfileVersion: 1, ModelRef: "provider/model", InputSnapshot: "{}", RuleOnSide: "left",
-		Status: "queued", CreatedAt: createdAt,
+		Status: "queued", CreatedAt: createdAt, SourceLanguage: voice.LanguageKorean,
 	})
 	if !errors.Is(comparisonErr, voice.ErrVoiceDeleted) {
 		t.Fatalf("comparison insert = %v, want ErrVoiceDeleted", comparisonErr)
 	}
 	validationErr := store.InsertProfileValidation(ctx, voice.ProfileValidation{
 		ID: "validation", UserID: "alice", VoiceID: "gone", ProfileVersion: 1,
-		AnalyzeModelRef: "provider/analyze", WriteModelRef: "provider/write", Status: "queued", CreatedAt: createdAt,
+		AnalyzeModelRef: "provider/analyze", WriteModelRef: "provider/write", Status: "queued", CreatedAt: createdAt, SourceLanguage: voice.LanguageKorean,
 	})
 	if !errors.Is(validationErr, voice.ErrVoiceDeleted) {
 		t.Fatalf("validation insert = %v, want ErrVoiceDeleted", validationErr)

@@ -1,9 +1,12 @@
+import i18next from 'i18next'
 import { useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import type { VoiceValue } from '@/entities/voice'
 import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
-import { VoiceLayer, VoiceService } from '@/shared/api'
+import { appFailureFromConnect, VoiceLayer, VoiceService } from '@/shared/api'
+import { formatAppFailure } from '@/shared/lib'
 import { Badge, Button, Editable, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
 
 /** One overridable profile field, read first. The published value is prose that wraps to as many
@@ -28,6 +31,7 @@ export function ProfileField({
   value: VoiceValue
   readOnly?: boolean
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const transport = useTransport()
   const queryClient = useQueryClient()
   const override = useMutation(VoiceService.method.updateVoiceOverride)
@@ -53,14 +57,16 @@ export function ProfileField({
   }
   return (
     <Editable
-      editLabel={`${label} 수정`}
+      editLabel={t('action.editNamed', { ns: 'common', name: label })}
       readOnly={readOnly}
       edit={(exit) => (
         <ProfileFieldEditor
           label={label}
           value={value}
           pending={override.isPending}
-          errorMessage={override.error?.message}
+          errorMessage={
+            override.error ? formatAppFailure(appFailureFromConnect(override.error)) : undefined
+          }
           showClear={value.source === 'manual'}
           onSave={(next) => commit(exit, next)}
           onClear={() => commit(exit)}
@@ -76,14 +82,14 @@ export function ProfileField({
       <div className="flex flex-wrap items-center gap-2">
         <FieldLabel>{label}</FieldLabel>
         <Badge tone={value.source === 'manual' ? 'info' : 'neutral'}>
-          {value.unknown ? '알 수 없음' : sourceLabel(value.source)}
+          {value.unknown ? t('profile.unknown', { ns: 'voices' }) : sourceLabel(value.source)}
         </Badge>
       </div>
       {/* `break-words`: a Korean description has no spaces to break at, so without it a long value
           pushes the grid column wider than the screen (§3.2). */}
       <p className="mt-1 text-sm leading-relaxed break-words">
         {value.unknown || value.value.trim() === '' ? (
-          <span className="text-content-tertiary">알 수 없음</span>
+          <span className="text-content-tertiary">{t('profile.unknown', { ns: 'voices' })}</span>
         ) : (
           value.value
         )}
@@ -111,6 +117,7 @@ function ProfileFieldEditor({
   onClear: () => void
   onCancel: () => void
 }) {
+  const { t } = useTranslation(['voices', 'common'])
   const id = useId()
   const errorId = `${id}-error`
   // Seeded once, on mount: this component exists only while the field is in edit mode, so 취소 —
@@ -143,14 +150,14 @@ function ProfileFieldEditor({
           pending={pending}
           onClick={() => onSave(draft.trim())}
         >
-          저장
+          {t('action.save', { ns: 'common' })}
         </Button>
         <Button variant="ghost" disabled={pending} onClick={onCancel}>
-          취소
+          {t('action.cancel', { ns: 'common' })}
         </Button>
         {showClear && (
           <Button variant="ghost" disabled={pending} onClick={onClear}>
-            직접 설정 해제
+            {t('profile.clearManual', { ns: 'voices' })}
           </Button>
         )}
       </div>
@@ -159,4 +166,4 @@ function ProfileFieldEditor({
 }
 
 const sourceLabel = (source: VoiceValue['source']) =>
-  ({ measured: '측정', analyzed: '분석', manual: '직접 설정', unknown: '알 수 없음' })[source]
+  i18next.t(`source.${source}`, { ns: 'voices' })

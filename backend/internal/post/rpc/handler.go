@@ -14,6 +14,7 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/post"
 )
 
@@ -37,7 +38,15 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		return nil, err
 	}
 
-	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(), req.Msg.VoiceId, req.Msg.PurposeId)
+	targetLanguage, err := optionalLanguageFromProto(req.Msg.TargetLanguage)
+	if err != nil {
+		reason := "POST_TARGET_LANGUAGE_UNSUPPORTED"
+		if req.Msg.TargetLanguage != nil && *req.Msg.TargetLanguage == postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED {
+			reason = "POST_TARGET_LANGUAGE_REQUIRED"
+		}
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post target language", reason, nil)
+	}
+	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(), req.Msg.VoiceId, req.Msg.PurposeId, targetLanguage)
 	if err != nil {
 		return nil, toConnectError("save draft", err)
 	}
@@ -51,7 +60,7 @@ func (h *Handler) SavePostContent(ctx context.Context, req *connect.Request[post
 	}
 	content, err := fromProtoContent(req.Msg.GetContent())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post content", "POST_CONTENT_INVALID", nil)
 	}
 	saved, err := h.svc.SaveContent(ctx, userID, req.Msg.GetSlug(), content, req.Msg.GetExpectedRevision())
 	if err != nil {
@@ -119,6 +128,8 @@ func (h *Handler) ListPosts(ctx context.Context, _ *connect.Request[postpilotv1.
 			PendingExperimentId: s.PendingExperimentID,
 			Voice:               toProtoVoiceRef(s.Voice),
 			Purpose:             toProtoPurposeRef(s.Purpose),
+			TargetLanguage:      languageToProto(s.TargetLanguage),
+			ContentLanguage:     optionalLanguageToProto(s.ContentLanguage),
 		})
 	}
 	return connect.NewResponse(&postpilotv1.ListPostsResponse{Posts: posts}), nil
@@ -186,7 +197,7 @@ func (h *Handler) DeleteImage(ctx context.Context, req *connect.Request[postpilo
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
 	return userID, nil
 }
@@ -197,36 +208,43 @@ func actingUser(ctx context.Context) (string, error) {
 func toConnectError(op string, err error) error {
 	switch {
 	case errors.Is(err, post.ErrNotFound):
-		return connect.NewError(connect.CodeNotFound, errors.New("not found"))
+		if op == "confirm upload" {
+			return rpcserver.NewAppError(connect.CodeNotFound, "upload not found", "UPLOAD_NOT_FOUND", nil)
+		}
+		return rpcserver.NewAppError(connect.CodeNotFound, "post resource not found", "POST_NOT_FOUND", nil)
 	case errors.Is(err, post.ErrForbidden):
-		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
+		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", "POST_FORBIDDEN", nil)
 	case errors.Is(err, post.ErrDuplicateFilename):
-		return connect.NewError(connect.CodeAlreadyExists, errors.New("a photo with that filename is already attached"))
+		return rpcserver.NewAppError(connect.CodeAlreadyExists, "photo filename already exists", "POST_FILENAME_TAKEN", nil)
 	case errors.Is(err, post.ErrInvalidImage):
-		// The client's own numbers, or an object that cannot be one of our photos.
-		// Safe to echo: it says nothing the caller did not send.
-		return connect.NewError(connect.CodeInvalidArgument, errors.New(err.Error()))
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid uploaded image", "UPLOAD_INVALID", nil)
 	case errors.Is(err, post.ErrObjectMissing):
 		// FailedPrecondition, not NotFound: the upload record is fine, the object just
 		// is not there yet — the client should retry the PUT, not give up.
-		return connect.NewError(connect.CodeFailedPrecondition, errors.New("upload not found in storage — retry the upload"))
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "uploaded object is missing", "UPLOAD_OBJECT_MISSING", nil)
 	case errors.Is(err, post.ErrPostBusy):
-		return connect.NewError(connect.CodeFailedPrecondition, errors.New("post has an active job"))
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has an active job", "POST_BUSY", nil)
 	case errors.Is(err, post.ErrStaleContentRevision):
-		return connect.NewError(connect.CodeAborted, errors.New("post content changed in another editor; reload and retry"))
-	case errors.Is(err, post.ErrNoMachineBaseline), errors.Is(err, post.ErrPostNotFinalized):
-		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
-	case errors.Is(err, post.ErrInvalidContent), errors.Is(err, post.ErrVoiceRequired):
-		return connect.NewError(connect.CodeInvalidArgument, errors.New(err.Error()))
+		return rpcserver.NewAppError(connect.CodeAborted, "post content revision is stale", "POST_CONTENT_STALE", nil)
+	case errors.Is(err, post.ErrNoMachineBaseline):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has no machine baseline", "POST_MACHINE_BASELINE_REQUIRED", nil)
+	case errors.Is(err, post.ErrPostNotFinalized):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post is not finalized", "POST_NOT_FINALIZED", nil)
+	case errors.Is(err, post.ErrInvalidContent):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post content", "POST_CONTENT_INVALID", nil)
+	case errors.Is(err, post.ErrVoiceRequired):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "post voice is required", "VOICE_REQUIRED", nil)
+	case errors.Is(err, post.ErrLanguageRequired):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "post target language is required", "POST_TARGET_LANGUAGE_REQUIRED", nil)
 	case errors.Is(err, post.ErrVoiceNotFound):
-		return connect.NewError(connect.CodeNotFound, errors.New("voice not found"))
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", "VOICE_NOT_FOUND", nil)
 	case errors.Is(err, post.ErrPurposeNotFound):
-		return connect.NewError(connect.CodeNotFound, errors.New("용도를 찾을 수 없어요"))
+		return rpcserver.NewAppError(connect.CodeNotFound, "purpose not found", "PURPOSE_NOT_FOUND", nil)
 	case errors.Is(err, post.ErrVoiceDeleted):
-		return connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", "VOICE_DELETED", nil)
 	default:
 		slog.Error(op+" failed", "err", err)
-		return connect.NewError(connect.CodeInternal, errors.New(op+" failed"))
+		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
 	}
 }
 
@@ -260,6 +278,8 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		Voice:                   toProtoVoiceRef(p.Voice),
 		MachineBaselineVoiceId:  p.MachineBaselineVoiceID,
 		Purpose:                 toProtoPurposeRef(p.Purpose),
+		TargetLanguage:          languageToProto(p.TargetLanguage),
+		ContentLanguage:         optionalLanguageToProto(p.ContentLanguage),
 	}
 }
 
@@ -276,7 +296,47 @@ func toProtoVoiceRef(ref post.VoiceRef) *postpilotv1.VoiceRef {
 	if ref.ID == "" {
 		return nil
 	}
-	return &postpilotv1.VoiceRef{Id: ref.ID, Name: ref.Name, Deleted: ref.Deleted}
+	return &postpilotv1.VoiceRef{Id: ref.ID, Name: ref.Name, Deleted: ref.Deleted, SourceLanguage: languageToProto(ref.SourceLanguage)}
+}
+
+func optionalLanguageFromProto(value *postpilotv1.ContentLanguage) (*post.Language, error) {
+	if value == nil {
+		return nil, nil
+	}
+	language, err := languageFromProto(*value)
+	if err != nil {
+		return nil, err
+	}
+	return &language, nil
+}
+
+func languageFromProto(value postpilotv1.ContentLanguage) (post.Language, error) {
+	switch value {
+	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN:
+		return post.LanguageKorean, nil
+	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH:
+		return post.LanguageEnglish, nil
+	default:
+		return "", post.ErrLanguageRequired
+	}
+}
+
+func languageToProto(value post.Language) postpilotv1.ContentLanguage {
+	switch value {
+	case post.LanguageKorean:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
+	case post.LanguageEnglish:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
+	default:
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+	}
+}
+
+func optionalLanguageToProto(value *post.Language) postpilotv1.ContentLanguage {
+	if value == nil {
+		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+	}
+	return languageToProto(*value)
 }
 
 func optionalTargetLength(value *int32) *int {
@@ -378,9 +438,23 @@ func toProtoActiveJob(found *post.ActiveJob) *postpilotv1.GenerationJob {
 	return &postpilotv1.GenerationJob{
 		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),
-		Error: found.Error, PostSlug: found.PostSlug, ObserveModel: toProtoModelRef(found.ObserveModel),
+		PostSlug: found.PostSlug, ObserveModel: toProtoModelRef(found.ObserveModel),
 		WriteModel: toProtoModelRef(found.WriteModel), CreatedAt: found.CreatedAt.UTC().Format(timeLayout),
-		UpdatedAt: found.UpdatedAt.UTC().Format(timeLayout),
+		UpdatedAt: found.UpdatedAt.UTC().Format(timeLayout), TargetLanguage: languageToProto(found.TargetLanguage),
+		Failure: activeJobFailureToProto(found.Failure),
+	}
+}
+
+func activeJobFailureToProto(found *post.Failure) *postpilotv1.Failure {
+	if found == nil || found.Reason == "" {
+		return nil
+	}
+	params := make(map[string]string, len(found.Params))
+	for key, value := range found.Params {
+		params[key] = value
+	}
+	return &postpilotv1.Failure{
+		Reason: found.Reason, Params: params, TechnicalDetail: found.TechnicalDetail,
 	}
 }
 

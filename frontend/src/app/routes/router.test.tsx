@@ -1,9 +1,15 @@
-import { describe, expect, it } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'vitest'
+import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { AuthService } from '@/shared/api'
+import { initializeI18n } from '@/app/providers/i18n'
 import { renderAppAt } from '@/test/app'
+
+afterEach(() => {
+  cleanup()
+  initializeI18n('ko')
+})
 
 /** A backend that cannot answer at all — an outage, not a logout. */
 function createBrokenTransport() {
@@ -86,7 +92,7 @@ describe('login screen', () => {
     expect(alert).toHaveTextContent('아이디 또는 비밀번호가 맞지 않아요')
     expect(screen.getByLabelText('아이디')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByLabelText('비밀번호')).toHaveAccessibleDescription(
-      '아이디 또는 비밀번호가 맞지 않아요',
+      '아이디 또는 비밀번호가 맞지 않아요.',
     )
     // Nothing may hint at whether the id exists.
     expect(alert.textContent).not.toMatch(/ghost|없|존재|not found/i)
@@ -122,12 +128,21 @@ describe('login screen', () => {
 
 describe('outage', () => {
   // An outage is not a logout. Bouncing to /login would tell the user something false
-  // and cost them the page they were on.
-  it('does not report an unreachable API as a signed-out session', async () => {
+  // and cost them the page they were on. The root boundary also must not expose the
+  // Connect message: it is private backend prose, even when TanStack catches it.
+  it.each([
+    ['ko', '요청을 마치지 못했어요. 다시 시도해 주세요.', '다시 시도'],
+    ['en', 'Could not complete the request. Please try again.', 'Try again'],
+  ] as const)('renders a safe %s route failure without raw prose', async (locale, copy, retry) => {
+    initializeI18n(locale)
     const { router } = renderAppAt('/posts', { transport: createBrokenTransport() })
 
     await waitFor(() => expect(router.state.status).toBe('idle'))
     expect(router.state.location.pathname).not.toBe('/login')
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy)
+    expect(screen.getByRole('button', { name: retry })).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('down')
+    expect(document.body).not.toHaveTextContent('[unavailable]')
   })
 })
 
@@ -230,4 +245,208 @@ describe('lazily loaded routes', () => {
     expect(screen.getByRole('link', { name: '버전 기록' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/voices/voice-default/versions')
   })
+})
+
+// Job 32 A3/A17: this table mirrors every concrete path registered in routeTree. The pathless
+// authenticated layout is exercised by every signed-in row; `/voices/$voiceId` is represented by
+// its index and all five child paths; the two redirect-only registrations assert their landing
+// paths. Running the same real route tree in both locales catches a catalog key that exists but is
+// wired to the wrong page just as reliably as a missing translation.
+describe('localized registered-route smoke', () => {
+  const copy = {
+    ko: {
+      login: '로그인',
+      posts: '내 글',
+      publishing: '발행 Mac',
+      voices: '말투',
+      purposes: '용도',
+      profile: '프로필',
+      versions: '버전 기록',
+      import: '기존 글 가져오기',
+      rules: '대조 규칙',
+      validations: '프로필 검증',
+      models: 'AI 모델',
+      retry: '다시 시도',
+      title: '제목',
+    },
+    en: {
+      login: 'Log in',
+      posts: 'My posts',
+      publishing: 'Publishing Macs',
+      voices: 'Voices',
+      purposes: 'Purposes',
+      profile: 'Profile',
+      versions: 'Version history',
+      import: 'Import existing posts',
+      rules: 'Contrast rules',
+      validations: 'Profile validation',
+      models: 'AI models',
+      retry: 'Try again',
+      title: 'Title',
+    },
+  } as const
+
+  it.each([
+    ['ko', 360],
+    ['ko', 1280],
+    ['en', 360],
+    ['en', 1280],
+  ] as const)(
+    'mounts every registered route with %s copy at the %ipx structural breakpoint',
+    async (locale, width) => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+      window.dispatchEvent(new Event('resize'))
+      initializeI18n(locale)
+      const text = copy[locale]
+      const cases: Array<{
+        path: string
+        role: 'button' | 'heading' | 'textbox'
+        name: string
+        signedIn?: boolean
+        expectedPath?: string
+      }> = [
+        { path: '/login', role: 'button', name: text.login },
+        { path: '/', role: 'heading', name: text.posts, signedIn: true, expectedPath: '/posts' },
+        { path: '/posts', role: 'heading', name: text.posts, signedIn: true },
+        {
+          path: '/publishing-agents',
+          role: 'heading',
+          name: text.publishing,
+          signedIn: true,
+        },
+        { path: '/voices', role: 'heading', name: text.voices, signedIn: true },
+        { path: '/purposes', role: 'heading', name: text.purposes, signedIn: true },
+        {
+          path: '/voices/voice-default',
+          role: 'heading',
+          name: text.profile,
+          signedIn: true,
+        },
+        {
+          path: '/voices/voice-default/versions',
+          role: 'heading',
+          name: text.versions,
+          signedIn: true,
+        },
+        {
+          path: '/voices/voice-default/import',
+          role: 'heading',
+          name: text.import,
+          signedIn: true,
+        },
+        {
+          path: '/voices/voice-default/rules',
+          role: 'heading',
+          name: text.rules,
+          signedIn: true,
+        },
+        {
+          path: '/voices/voice-default/validations',
+          role: 'heading',
+          name: text.validations,
+          signedIn: true,
+        },
+        {
+          path: '/voice',
+          role: 'heading',
+          name: text.profile,
+          signedIn: true,
+          expectedPath: '/voices/voice-default',
+        },
+        {
+          path: '/voice/rules',
+          role: 'heading',
+          name: text.rules,
+          signedIn: true,
+          expectedPath: '/voices/voice-default/rules',
+        },
+        { path: '/ai-models', role: 'heading', name: text.models, signedIn: true },
+        {
+          path: '/ai-models/experiments/smoke',
+          role: 'button',
+          name: text.retry,
+          signedIn: true,
+        },
+        {
+          path: '/voices/voice-default/rules/smoke/compare',
+          role: 'button',
+          name: text.retry,
+          signedIn: true,
+        },
+        {
+          path: '/voices/voice-default/validations/smoke',
+          role: 'button',
+          name: text.retry,
+          signedIn: true,
+        },
+        { path: '/posts/new', role: 'textbox', name: text.title, signedIn: true },
+        { path: '/posts/smoke-post', role: 'textbox', name: text.title, signedIn: true },
+      ]
+
+      for (const routeCase of cases) {
+        cleanup()
+        const { router } = renderAppAt(routeCase.path, {
+          user: routeCase.signedIn ? { id: 'alice' } : undefined,
+          posts:
+            routeCase.path === '/posts/smoke-post'
+              ? { posts: [{ slug: 'smoke-post', title: 'Fixture title' }] }
+              : undefined,
+        })
+
+        expect(
+          await screen.findByRole(routeCase.role, { name: routeCase.name }),
+          routeCase.path,
+        ).toBeInTheDocument()
+        expect(router.state.location.pathname).toBe(routeCase.expectedPath ?? routeCase.path)
+        expect(document.documentElement.lang).toBe(locale)
+
+        // JSDOM cannot calculate geometry, so this is deliberately a structural contract over
+        // every real route at both acceptance widths. Bounded horizontal strips must contain
+        // their own overscroll; the app/page must not introduce a competing vertical scroller;
+        // and native action/field primitives retain the 44px role token at either breakpoint.
+        const main = screen.getByRole('main')
+        expect(main.querySelectorAll('[class~="overflow-y-auto"]'), routeCase.path).toHaveLength(0)
+        for (const scroller of main.querySelectorAll('[class*="overflow-x-auto"]')) {
+          expect(scroller, routeCase.path).toHaveClass('overscroll-x-contain')
+        }
+        expect(main.querySelector('[class~="w-screen"]'), routeCase.path).not.toBeInTheDocument()
+        expect(
+          main.querySelector('[class~="min-w-screen"]'),
+          routeCase.path,
+        ).not.toBeInTheDocument()
+
+        const directControls = main.querySelectorAll(
+          'button, select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"])',
+        )
+        for (const control of directControls) {
+          expect(control.className, `${routeCase.path}: ${control.tagName}`).toMatch(
+            /(?:^|\s)(?:min-h-11|size-11)(?:\s|$)/,
+          )
+        }
+        for (const choice of main.querySelectorAll('input[type="checkbox"], input[type="radio"]')) {
+          expect(choice.closest('label')?.className, routeCase.path).toMatch(
+            /(?:^|\s)min-h-11(?:\s|$)/,
+          )
+        }
+      }
+    },
+    60_000,
+  )
+
+  it.each([360, 1280])(
+    'keeps the authenticated composition single-scroll and responsive at %ipx',
+    async (width) => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+      window.dispatchEvent(new Event('resize'))
+      renderAppAt('/posts', { user: { id: 'alice' } })
+
+      const main = await screen.findByRole('main')
+      const shell = main.closest('.pb-nav')
+      expect(shell).toHaveClass('flex', 'flex-1', 'flex-col', 'sm:pb-0')
+      expect(shell?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
+      expect(screen.getAllByRole('navigation', { name: '주요' })).toHaveLength(2)
+      expect(document.querySelector('nav.sm\\:hidden')).toBeInTheDocument()
+      expect(document.querySelector('nav.hidden.sm\\:flex')).toBeInTheDocument()
+    },
+  )
 })

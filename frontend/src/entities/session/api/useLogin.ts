@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { AuthService, GetMeResponseSchema } from '@/shared/api'
+import { appFailureFromConnect, AuthService, GetMeResponseSchema } from '@/shared/api'
 import { getMeQueryKey } from './session-queries'
 
 /** Logs in and seeds the session cache from the response.
@@ -14,7 +14,7 @@ export function useLogin() {
   // The transport the hooks are mounted on — the same one the key must be built from.
   const transport = useTransport()
 
-  return useMutation(AuthService.method.login, {
+  const mutation = useMutation(AuthService.method.login, {
     onSuccess: (data) => {
       // setQueryData is typed to the query's own data, so this has to be a real
       // protobuf message, not a plain object literal.
@@ -24,4 +24,9 @@ export function useLogin() {
       )
     },
   })
+
+  return {
+    ...mutation,
+    failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
+  }
 }

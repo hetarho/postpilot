@@ -14,6 +14,7 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
 // invalidCredentialsMessage is the single text every login failure returns. It is a
@@ -39,12 +40,12 @@ func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.Lo
 	user, rawToken, err := h.svc.Login(ctx, req.Msg.GetLoginId(), req.Msg.GetPassword())
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
-			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New(invalidCredentialsMessage))
+			return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, invalidCredentialsMessage, "INVALID_CREDENTIALS", nil)
 		}
 		// An infrastructure failure must not become "invalid credentials" — that would
 		// hide an outage behind a login form. The detail stays in the log.
 		slog.Error("login failed", "err", err)
-		return nil, connect.NewError(connect.CodeInternal, errors.New("login failed"))
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "login failed", "UNKNOWN_FAILURE", nil)
 	}
 
 	res := connect.NewResponse(&postpilotv1.LoginResponse{
@@ -62,7 +63,7 @@ func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.Lo
 func (h *Handler) Logout(ctx context.Context, req *connect.Request[postpilotv1.LogoutRequest]) (*connect.Response[postpilotv1.LogoutResponse], error) {
 	if err := h.svc.Logout(ctx, cookieValue(req.Header())); err != nil {
 		slog.Error("logout failed", "err", err)
-		return nil, connect.NewError(connect.CodeInternal, errors.New("logout failed"))
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "logout failed", "UNKNOWN_FAILURE", nil)
 	}
 
 	res := connect.NewResponse(&postpilotv1.LogoutResponse{})
@@ -77,7 +78,7 @@ func (h *Handler) Logout(ctx context.Context, req *connect.Request[postpilotv1.L
 func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetMeRequest]) (*connect.Response[postpilotv1.GetMeResponse], error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("no session"))
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
 	return connect.NewResponse(&postpilotv1.GetMeResponse{
 		User: &postpilotv1.User{Id: userID},

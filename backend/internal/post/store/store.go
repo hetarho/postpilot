@@ -42,15 +42,19 @@ func New(writer, reader *sql.DB) *Store {
 // --- posts ---
 
 func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
+	if !p.TargetLanguage.Valid() {
+		return post.ErrLanguageRequired
+	}
 	err := s.write.CreatePost(ctx, sqlc.CreatePostParams{
-		Slug:      p.Slug,
-		UserID:    p.UserID,
-		VoiceID:   p.VoiceID,
-		PurposeID: optionalText(p.PurposeID),
-		Title:     p.Title,
-		Memo:      p.Memo,
-		CreatedAt: formatTime(p.CreatedAt),
-		UpdatedAt: formatTime(p.UpdatedAt),
+		Slug:           p.Slug,
+		UserID:         p.UserID,
+		VoiceID:        p.VoiceID,
+		PurposeID:      optionalText(p.PurposeID),
+		Title:          p.Title,
+		Memo:           p.Memo,
+		TargetLanguage: string(p.TargetLanguage),
+		CreatedAt:      formatTime(p.CreatedAt),
+		UpdatedAt:      formatTime(p.UpdatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -67,13 +71,17 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 	return nil
 }
 
-func (s *Store) UpdateDraft(ctx context.Context, slug, userID, title, memo string, updatedAt time.Time) (bool, error) {
+func (s *Store) UpdateDraft(ctx context.Context, slug, userID, title, memo string, targetLanguage *post.Language, updatedAt time.Time) (bool, error) {
+	if targetLanguage != nil && !targetLanguage.Valid() {
+		return false, post.ErrLanguageRequired
+	}
 	n, err := s.write.UpdatePostDraft(ctx, sqlc.UpdatePostDraftParams{
-		Title:     title,
-		Memo:      memo,
-		UpdatedAt: formatTime(updatedAt),
-		Slug:      slug,
-		UserID:    userID,
+		Title:          title,
+		Memo:           memo,
+		TargetLanguage: optionalLanguage(targetLanguage),
+		UpdatedAt:      formatTime(updatedAt),
+		Slug:           slug,
+		UserID:         userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("update post: %w", err)
@@ -145,14 +153,18 @@ func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, obs
 	return n > 0, nil
 }
 
-func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string, content post.PostContent, updatedAt time.Time) (bool, error) {
+func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string, content post.PostContent, language post.Language, updatedAt time.Time) (bool, error) {
+	if !language.Valid() {
+		return false, post.ErrLanguageRequired
+	}
 	encoded, err := marshalContent(content)
 	if err != nil {
 		return false, fmt.Errorf("encode content: %w", err)
 	}
 	n, err := s.write.UpdateGeneratedContent(ctx, sqlc.UpdateGeneratedContentParams{
-		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
-		Slug: slug, UserID: userID, Content_2: sql.NullString{String: encoded, Valid: true},
+		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true},
+		ContentLanguage: sql.NullString{String: string(language), Valid: true}, UpdatedAt: formatTime(updatedAt),
+		Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("update generated content: %w", err)
@@ -227,11 +239,15 @@ func (s *Store) LearningSnapshot(ctx context.Context, slug, userID string) (post
 	if err != nil {
 		return post.LearningSnapshot{}, err
 	}
+	contentLanguage, err := requiredLanguage(row.ContentLanguage)
+	if err != nil {
+		return post.LearningSnapshot{}, fmt.Errorf("post %s content language: %w", row.Slug, err)
+	}
 	return post.LearningSnapshot{PostSlug: row.Slug, UserID: row.UserID, VoiceID: row.VoiceID,
 		MachineBaselineVoiceID: row.MachineBaselineVoiceID.String, Current: *current,
 		ContentRevision: row.ContentRevision, MachineBaseline: *baseline,
 		BaselineRevision: row.MachineBaselineRevision, TargetLength: optionalInt(row.TargetLength),
-		FinalizedAt: finalizedAt, UpdatedAt: updated}, nil
+		FinalizedAt: finalizedAt, UpdatedAt: updated, ContentLanguage: contentLanguage}, nil
 }
 
 func (s *Store) GetPost(ctx context.Context, slug string) (post.Post, error) {
@@ -276,14 +292,16 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 			}
 		}
 		summaries = append(summaries, post.Summary{
-			Slug:      row.Slug,
-			VoiceID:   row.VoiceID,
-			Voice:     post.VoiceRef{ID: row.VoiceID},
-			PurposeID: row.PurposeID.String,
-			Purpose:   post.PurposeRef{ID: row.PurposeID.String},
-			Title:     title,
-			Status:    row.Status,
-			UpdatedAt: updatedAt,
+			Slug:            row.Slug,
+			VoiceID:         row.VoiceID,
+			Voice:           post.VoiceRef{ID: row.VoiceID},
+			PurposeID:       row.PurposeID.String,
+			Purpose:         post.PurposeRef{ID: row.PurposeID.String},
+			Title:           title,
+			Status:          row.Status,
+			UpdatedAt:       updatedAt,
+			TargetLanguage:  post.Language(row.TargetLanguage),
+			ContentLanguage: nullableLanguage(row.ContentLanguage),
 		})
 	}
 	return summaries, nil
@@ -545,6 +563,14 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		}
 		finalizedAt = &value
 	}
+	targetLanguage, err := post.ParseLanguage(row.TargetLanguage)
+	if err != nil {
+		return post.Post{}, fmt.Errorf("post %s target language: %w", row.Slug, err)
+	}
+	contentLanguage, err := parseNullableLanguage(row.ContentLanguage)
+	if err != nil {
+		return post.Post{}, fmt.Errorf("post %s content language: %w", row.Slug, err)
+	}
 	return post.Post{
 		Slug:                    row.Slug,
 		UserID:                  row.UserID,
@@ -552,6 +578,8 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		Voice:                   post.VoiceRef{ID: row.VoiceID},
 		PurposeID:               row.PurposeID.String,
 		Purpose:                 post.PurposeRef{ID: row.PurposeID.String},
+		TargetLanguage:          targetLanguage,
+		ContentLanguage:         contentLanguage,
 		Title:                   row.Title,
 		Memo:                    row.Memo,
 		Status:                  row.Status,
@@ -566,6 +594,39 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		FinalizedAt:             finalizedAt,
 		Observations:            observations,
 	}, nil
+}
+
+func optionalLanguage(value *post.Language) sql.NullString {
+	if value == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: string(*value), Valid: true}
+}
+
+func parseNullableLanguage(value sql.NullString) (*post.Language, error) {
+	if !value.Valid {
+		return nil, nil
+	}
+	language, err := post.ParseLanguage(value.String)
+	if err != nil {
+		return nil, err
+	}
+	return &language, nil
+}
+
+func nullableLanguage(value sql.NullString) *post.Language {
+	language, err := parseNullableLanguage(value)
+	if err != nil {
+		return nil
+	}
+	return language
+}
+
+func requiredLanguage(value sql.NullString) (post.Language, error) {
+	if !value.Valid {
+		return "", post.ErrLanguageRequired
+	}
+	return post.ParseLanguage(value.String)
 }
 
 // optionalText is the store-side spelling of "the post may have none": an empty domain id

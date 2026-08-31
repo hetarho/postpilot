@@ -5,7 +5,7 @@ import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postC
 import { toTistory } from './convert'
 
 it('converts every block to the Tistory fragment contract', () => {
-  const output = toTistory(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE)
+  const output = toTistory(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')
   const doc = new DOMParser().parseFromString(`<div id="root">${output}</div>`, 'text/html')
   const root = doc.querySelector('#root')
 
@@ -27,11 +27,18 @@ it('keeps a comment-closing filename inside the adjacent comment', () => {
   const content = create(PostContentSchema, {
     blocks: [create(BlockSchema, { type: BlockType.IMAGE, file: filename, alt: '사진' })],
   })
-  const output = toTistory(content, [])
+  const output = toTistory(content, [], 'ko')
   const doc = new DOMParser().parseFromString(`<div id="root">${output}</div>`, 'text/html')
   const image = doc.querySelector('img')
 
   expect(image?.dataset.file).toBe(filename)
   expect(image?.nextSibling?.nodeType).toBe(Node.COMMENT_NODE)
   expect(doc.querySelector('script')).toBeNull()
+})
+
+it('uses the content provenance for app-owned English upload instructions', () => {
+  const output = toTistory(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'en')
+
+  expect(output).toContain('replace src after uploading')
+  expect(output).not.toContain('업로드 후 src 교체')
 })

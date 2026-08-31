@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { type VoiceProfile, isEmptyProfile } from '@/entities/voice'
 import { Notice, buttonStyles } from '@/shared/ui'
 
@@ -11,6 +12,7 @@ export function VoiceWarning({
   profile: VoiceProfile | undefined
   voiceId: string
 }) {
+  const { t } = useTranslation('voices')
   if (!profile || !isEmptyProfile(profile)) return null
 
   return (
@@ -18,9 +20,7 @@ export function VoiceWarning({
       <Notice tone="warning">
         {/* `w-full` drops the link onto its own line instead of leaving it inline at the end of
             the third wrapped row, where it was an ~84 × 20 target (§4.1). */}
-        <span className="w-full min-w-0">
-          문체 프로필이 비어 있어요 — 말투 탭에서 글 한 편을 학습시키면 내 문체로 나와요.
-        </span>
+        <span className="w-full min-w-0">{t('warning.empty')}</span>
         {/* The one thing to press in this box used to be its greyest, smallest text: `link-fg`
             resolves to `content-secondary` against the notice's gold. As a ghost button it takes
             the 44px floor with its own horizontal padding, and the notice's own foreground keeps
@@ -34,7 +34,7 @@ export function VoiceWarning({
             className: 'text-notice-warning-fg shrink-0 underline',
           })}
         >
-          말투 학습하기
+          {t('warning.learn')}
         </Link>
       </Notice>
     </aside>

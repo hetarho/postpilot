@@ -146,7 +146,7 @@ account.
 ## Retention and user-visible state
 
 - Published, failed, canceled, and ambiguous jobs purge manifest content and staged objects while retaining metadata,
-  normalized safe error text, settings, timestamps, and the verified URL. `needs_attention` retains its exact frozen
+  structured stable failure, settings, timestamps, and the verified URL. `needs_attention` retains its exact frozen
   manifest/assets only for explicit safe retry.
 - Recovery checks leases at half the configured lease TTL, marks expired post-commit work ambiguous, and requeues
   only pre-commit work. Lease recovery is a database-only startup requirement; terminal object cleanup is retryable
@@ -156,7 +156,8 @@ account.
   fails. Cleanup is idempotent sweeper work; an object-store outage must not make a successful publish/cancel/failure
   transition look ambiguous to either the Mac or the human client.
 - Raw browser/model failure detail never enters an agent RPC. The Mac records only a redacted diagnostic marker, and
-  the VPS derives normalized Korean-safe messages solely from the failure kind. Transient agent-auth storage failures
+  the VPS derives `PUBLISH_AGENT_UNAVAILABLE`, `PUBLISH_NEEDS_ATTENTION`, or `PUBLISH_OUTCOME_UNKNOWN` plus optional
+  technical detail solely from the constrained failure kind. The frontend localizes that stable reason. Transient agent-auth storage failures
   remain retryable; only a revoked token permanently stops that connection. A revoked Mac encountered by a human
   session is `FailedPrecondition`, not `Unauthenticated`, and therefore never logs out the human user.
   The in-app panel is the only completion/status channel in this version.

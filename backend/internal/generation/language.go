@@ -1,0 +1,38 @@
+package generation
+
+import "fmt"
+
+// Language is the generation context's canonical output-language value. Post and
+// voice own equivalent values at their boundaries; composition adapters map between
+// them instead of leaking a sibling context's domain type inward.
+type Language string
+
+const (
+	LanguageKorean  Language = "ko"
+	LanguageEnglish Language = "en"
+)
+
+func ParseLanguage(value string) (Language, error) {
+	language := Language(value)
+	if !language.Valid() {
+		return "", fmt.Errorf("%w: %q", ErrLanguageRequired, value)
+	}
+	return language, nil
+}
+
+func (l Language) Valid() bool {
+	return l == LanguageKorean || l == LanguageEnglish
+}
+
+func (l Language) String() string { return string(l) }
+
+func (l Language) displayName() string {
+	switch l {
+	case LanguageKorean:
+		return "Korean"
+	case LanguageEnglish:
+		return "English"
+	default:
+		return "unknown"
+	}
+}

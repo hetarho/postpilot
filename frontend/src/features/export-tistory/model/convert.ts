@@ -1,9 +1,13 @@
 import type { PostImage } from '@/entities/image'
-import { BlockType, type PostContent } from '@/shared/api'
+import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import { escapeHtml, escapeHtmlComment, headingTag, walkBlocks } from '@/shared/lib'
 
 /** HTML fragment for Tistory's HTML editor; photo URLs are deliberately left blank. */
-export function toTistory(content: PostContent, images: readonly PostImage[]): string {
+export function toTistory(
+  content: PostContent,
+  images: readonly PostImage[],
+  contentLanguage: ContentLanguage,
+): string {
   // Never leak the attachment objects' expiring view URLs into the fragment.
   void images
   const blocks = walkBlocks(content, (block) => {
@@ -18,7 +22,9 @@ export function toTistory(content: PostContent, images: readonly PostImage[]): s
         const file = escapeHtml(block.file)
         const caption = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : ''
         const commentFile = escapeHtmlComment(block.file)
-        return `<figure><img src="" alt="${escapeHtml(block.alt)}" data-file="${file}"><!-- ${commentFile} 업로드 후 src 교체 -->${caption}</figure>`
+        const instruction =
+          contentLanguage === 'en' ? 'replace src after uploading' : '업로드 후 src 교체'
+        return `<figure><img src="" alt="${escapeHtml(block.alt)}" data-file="${file}"><!-- ${commentFile} ${instruction} -->${caption}</figure>`
       }
       case BlockType.QUOTE:
         return `<blockquote><p>${escapeHtml(block.content)}</p></blockquote>`

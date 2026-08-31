@@ -5,7 +5,7 @@
 // one is 404 (spec/policy/posts.md); an upload is a CreateUpload → ConfirmUpload pair
 // and a confirmed filename is taken (spec/policy/uploads.md). Everything else is kept as
 // thin as possible.
-import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
+import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
   ConfirmUploadResponseSchema,
@@ -29,8 +29,12 @@ import {
   SavePostGenerationOptionsResponseSchema,
   type ProtoVoiceRef,
   VoiceRefSchema,
+  contentLanguageFromProto,
+  contentLanguageToProto,
+  type ContentLanguage,
 } from '@/shared/api'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
+import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -48,11 +52,16 @@ export interface FakePostVoice {
   id: string
   name: string
   deleted?: boolean
+  sourceLanguage?: ContentLanguage
 }
 
 /** The voice every fixture post is written in unless it says otherwise — the same one the voice
  *  fake starts with, so a screen can go from a post to its voice's profile. */
-export const DEFAULT_POST_VOICE: FakePostVoice = { id: 'voice-default', name: '기본 말투' }
+export const DEFAULT_POST_VOICE: FakePostVoice = {
+  id: 'voice-default',
+  name: '기본 말투',
+  sourceLanguage: 'ko',
+}
 
 /** A 용도 as the post fake knows it: just enough to answer a post's `purpose` projection and to
  *  accept or refuse an assignment. The purpose fake owns the full directory. */
@@ -68,6 +77,7 @@ export interface FakeDraftSave {
   slug: string
   voiceId: string | undefined
   purposeId: string | undefined
+  targetLanguage: ContentLanguage | undefined
 }
 
 export interface FakePostRow {
@@ -91,6 +101,10 @@ export interface FakePostRow {
   targetLength?: number
   finalizedRevision?: bigint
   finalizedAt?: string
+  targetLanguage?: ContentLanguage
+  /** `null` deliberately models malformed pre-migration data; learned content defaults to the
+   *  migration's Korean backfill when a fixture omits the field. */
+  contentLanguage?: ContentLanguage | null
 }
 
 export interface FakePostsOptions {
@@ -150,6 +164,8 @@ type Row = {
   targetLength?: number
   finalizedRevision: bigint
   finalizedAt: string
+  targetLanguage: ReturnType<typeof contentLanguageToProto>
+  contentLanguage: ReturnType<typeof contentLanguageToProto>
 }
 
 export function registerPostService(router: ConnectRouter, options: FakePostsOptions = {}) {
@@ -169,18 +185,23 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   function assignablePurpose(purposeId: string): ProtoPurposeRef | undefined {
     if (purposeId === '') return undefined
     const purpose = purposes.find((candidate) => candidate.id === purposeId)
-    if (!purpose) throw new ConnectError('용도를 찾을 수 없어요', Code.NotFound)
+    if (!purpose) throw connectAppError('PURPOSE_NOT_FOUND', Code.NotFound)
     return toPurposeRef(purpose)
   }
 
   const toVoiceRef = (voice: FakePostVoice) =>
-    create(VoiceRefSchema, { id: voice.id, name: voice.name, deleted: voice.deleted ?? false })
+    create(VoiceRefSchema, {
+      id: voice.id,
+      name: voice.name,
+      deleted: voice.deleted ?? false,
+      sourceLanguage: contentLanguageToProto(voice.sourceLanguage ?? 'ko'),
+    })
 
   /** Like the server: an unknown voice is 404, a deleted one is refused, never substituted. */
   function assignable(voiceId: string): ProtoVoiceRef {
     const voice = voices.find((candidate) => candidate.id === voiceId)
-    if (!voice) throw new ConnectError('voice not found', Code.NotFound)
-    if (voice.deleted) throw new ConnectError('voice is deleted', Code.FailedPrecondition)
+    if (!voice) throw connectAppError('VOICE_NOT_FOUND', Code.NotFound)
+    if (voice.deleted) throw connectAppError('VOICE_DELETED', Code.FailedPrecondition)
     return toVoiceRef(voice)
   }
 
@@ -219,6 +240,15 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       targetLength: row.targetLength,
       finalizedRevision: row.finalizedRevision ?? 0n,
       finalizedAt: row.finalizedAt ?? '',
+      targetLanguage: contentLanguageToProto(row.targetLanguage ?? 'ko'),
+      contentLanguage:
+        row.contentLanguage === null
+          ? 0
+          : row.contentLanguage
+            ? contentLanguageToProto(row.contentLanguage)
+            : row.content
+              ? contentLanguageToProto('ko')
+              : 0,
     }
   }
 
@@ -251,7 +281,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
 
   rpc(PostService.method.listPosts, () => {
     calls?.push('ListPosts')
-    if (listFails) throw new ConnectError('unavailable', Code.Unavailable)
+    if (listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListPostsResponseSchema, {
       posts: [...rows.values()].map((row) => create(PostSummarySchema, row)),
     })
@@ -259,7 +289,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
 
   rpc(PostService.method.getPost, (req) => {
     calls?.push('GetPost')
-    if (foreign.includes(req.slug)) throw new ConnectError('not yours', Code.PermissionDenied)
+    if (foreign.includes(req.slug)) throw connectAppError('POST_FORBIDDEN', Code.PermissionDenied)
     const sequenced =
       options.getSequence?.[Math.min(getSequenceIndex, options.getSequence.length - 1)]
     if (sequenced?.slug === req.slug) {
@@ -267,22 +297,34 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       rows.set(req.slug, toRow(sequenced))
     }
     const row = rows.get(req.slug)
-    if (!row) throw new ConnectError('not found', Code.NotFound)
+    if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
     return create(GetPostResponseSchema, { post: withViewUrls(row) })
   })
 
   rpc(PostService.method.savePostDraft, (req) => {
     calls?.push('SavePostDraft')
-    options.draftSaves?.push({ slug: req.slug, voiceId: req.voiceId, purposeId: req.purposeId })
+    options.draftSaves?.push({
+      slug: req.slug,
+      voiceId: req.voiceId,
+      purposeId: req.purposeId,
+      targetLanguage:
+        req.targetLanguage === undefined ? undefined : contentLanguageFromProto(req.targetLanguage),
+    })
     if (failuresLeft > 0) {
       failuresLeft -= 1
-      throw new ConnectError('unavailable', Code.Unavailable)
+      throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     }
     if (options.saveReturnsNoPost) return create(SavePostDraftResponseSchema, {})
     if (req.slug && foreign.includes(req.slug)) {
-      throw new ConnectError('not yours', Code.PermissionDenied)
+      throw connectAppError('POST_FORBIDDEN', Code.PermissionDenied)
     }
     const existing = req.slug ? rows.get(req.slug) : undefined
+    const requestedTarget =
+      req.targetLanguage === undefined ? undefined : contentLanguageFromProto(req.targetLanguage)
+    if (!req.slug && !requestedTarget)
+      throw connectAppError('POST_TARGET_LANGUAGE_REQUIRED', Code.InvalidArgument)
+    if (req.targetLanguage !== undefined && !requestedTarget)
+      throw connectAppError('POST_TARGET_LANGUAGE_UNSUPPORTED', Code.InvalidArgument)
     // The server's assignment rules (spec/policy/posts.md): a create names its voice, an edit
     // that omits it preserves it, and a different present value reassigns — refused while a job
     // or an undecided A/B result could still write a baseline for the old voice.
@@ -293,7 +335,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     let voice = existing?.voice ?? toVoiceRef(DEFAULT_POST_VOICE)
     let reassigned = false
     if (!req.slug) {
-      if (!req.voiceId) throw new ConnectError('voice id is required', Code.InvalidArgument)
+      if (!req.voiceId) throw connectAppError('VOICE_REQUIRED', Code.InvalidArgument)
       voice = assignable(req.voiceId)
     } else if (req.voiceId !== undefined && req.voiceId !== voice.id) {
       const next = assignable(req.voiceId)
@@ -302,7 +344,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
           existing.activeJob.status !== 'done' &&
           existing.activeJob.status !== 'failed') ||
         Boolean(existing?.pendingExperimentId)
-      if (busy) throw new ConnectError('post has an active job', Code.FailedPrecondition)
+      if (busy) throw connectAppError('POST_BUSY', Code.FailedPrecondition)
       voice = next
       reassigned = true
     }
@@ -328,6 +370,12 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       targetLength: existing?.targetLength,
       finalizedRevision: existing?.finalizedRevision ?? 0n,
       finalizedAt: existing?.finalizedAt ?? '',
+      targetLanguage: contentLanguageToProto(
+        requestedTarget ??
+          (existing ? contentLanguageFromProto(existing.targetLanguage) : undefined) ??
+          'ko',
+      ),
+      contentLanguage: existing?.contentLanguage ?? 0,
     }
     rows.set(slug, row)
     return create(SavePostDraftResponseSchema, { post: toProto(row) })
@@ -336,9 +384,11 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   rpc(PostService.method.createUpload, (req) => {
     calls?.push('CreateUpload')
     const row = rows.get(req.postSlug)
-    if (!row) throw new ConnectError('not found', Code.NotFound)
+    if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
     if (row.images.some((image) => image.filename === req.filename)) {
-      throw new ConnectError('taken', Code.AlreadyExists)
+      throw connectAppError('POST_FILENAME_TAKEN', Code.AlreadyExists, {
+        filename: req.filename,
+      })
     }
     uploadSequence += 1
     const uploadId = `upload-${uploadSequence}`
@@ -355,9 +405,10 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     calls?.push('SavePostContent')
     await options.contentSaveGate
     const row = rows.get(req.slug)
-    if (!row) throw new ConnectError('not found', Code.NotFound)
-    if (row.contentRevision !== req.expectedRevision) throw new ConnectError('stale', Code.Aborted)
-    if (!req.content) throw new ConnectError('content required', Code.InvalidArgument)
+    if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+    if (row.contentRevision !== req.expectedRevision)
+      throw connectAppError('POST_CONTENT_STALE', Code.Aborted)
+    if (!req.content) throw connectAppError('POST_CONTENT_INVALID', Code.InvalidArgument)
     if (JSON.stringify(row.content) !== JSON.stringify(req.content)) {
       row.content = req.content
       row.contentRevision += 1n
@@ -372,7 +423,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     calls?.push('SavePostGenerationOptions')
     options.generationOptionSaves?.push(req.targetLength)
     const row = rows.get(req.slug)
-    if (!row) throw new ConnectError('not found', Code.NotFound)
+    if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
     row.targetLength = req.targetLength
     return create(SavePostGenerationOptionsResponseSchema, { post: toProto(row) })
   })
@@ -380,10 +431,11 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   rpc(PostService.method.finalizePost, (req) => {
     calls?.push('FinalizePost')
     const row = rows.get(req.slug)
-    if (!row) throw new ConnectError('not found', Code.NotFound)
-    if (row.contentRevision !== req.expectedRevision) throw new ConnectError('stale', Code.Aborted)
+    if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+    if (row.contentRevision !== req.expectedRevision)
+      throw connectAppError('POST_CONTENT_STALE', Code.Aborted)
     if (!row.content || row.machineBaselineRevision <= 0n)
-      throw new ConnectError('not eligible', Code.FailedPrecondition)
+      throw connectAppError('POST_MACHINE_BASELINE_REQUIRED', Code.FailedPrecondition)
     row.status = 'finalized'
     row.finalizedRevision = row.contentRevision
     row.finalizedAt = DEFAULT_UPDATED_AT
@@ -393,7 +445,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   rpc(PostService.method.confirmUpload, (req) => {
     calls?.push('ConfirmUpload')
     const upload = pending.get(req.uploadId)
-    if (!upload) throw new ConnectError('not found', Code.NotFound)
+    if (!upload) throw connectAppError('UPLOAD_NOT_FOUND', Code.NotFound)
     pending.delete(req.uploadId)
     const image = create(ImageSchema, {
       id: req.uploadId,
@@ -408,7 +460,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
 
   rpc(PostService.method.deleteImage, (req) => {
     calls?.push('DeleteImage')
-    if (options.deleteFails) throw new ConnectError('unavailable', Code.Unavailable)
+    if (options.deleteFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     for (const row of rows.values()) {
       const index = row.images.findIndex((image) => image.id === req.imageId)
       if (index !== -1) {
@@ -416,7 +468,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         return create(DeleteImageResponseSchema, {})
       }
     }
-    throw new ConnectError('not found', Code.NotFound)
+    throw connectAppError('UPLOAD_NOT_FOUND', Code.NotFound)
   })
 }
 

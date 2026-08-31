@@ -57,7 +57,7 @@ type Store interface {
 	RenewLease(ctx context.Context, agent Agent, jobID, leaseHash string, expiresAt, now time.Time) error
 	UpdateProgress(ctx context.Context, agent Agent, jobID, leaseHash string, currentStage Stage, currentSeq int64, nextStage Stage, nextSeq int64, now time.Time) (Job, error)
 	Complete(ctx context.Context, agent Agent, jobID, leaseHash string, seq int64, url string, now time.Time) (Job, error)
-	Fail(ctx context.Context, agent Agent, jobID, leaseHash string, seq int64, status Status, code, message string, now time.Time) (Job, error)
+	Fail(ctx context.Context, agent Agent, jobID, leaseHash string, seq int64, status Status, precommitFailure, commitFailure Failure, now time.Time) (Job, error)
 	Cancel(ctx context.Context, userID, jobID string, now time.Time) (Job, error)
 	RequeueExpired(ctx context.Context, now time.Time) (requeued, unknown int64, err error)
 	Assets(ctx context.Context, jobID string) ([]Asset, error)

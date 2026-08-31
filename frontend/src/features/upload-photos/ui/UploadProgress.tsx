@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { UploadBatchState } from '../model/upload-batch'
 
 interface UploadProgressProps extends UploadBatchState {
@@ -10,6 +11,7 @@ interface UploadProgressProps extends UploadBatchState {
  *  on an empty line: a `role="status"` that goes blank announces nothing, and the only other
  *  confirmation is a strip the user has to count. What went wrong is the strip's notice. */
 export function UploadProgress({ items, completed, creatingPost }: UploadProgressProps) {
+  const { t } = useTranslation('posts')
   const active = items.filter((item) => item.status !== 'skipped' && item.status !== 'failed')
   const failed = items.filter((item) => item.status === 'failed').length
   // Failures stay in the denominator. Counting them out shrinks it as they happen, so losing
@@ -21,10 +23,11 @@ export function UploadProgress({ items, completed, creatingPost }: UploadProgres
   ).length
 
   let label = ''
-  if (creatingPost) label = '글을 만드는 중…'
-  else if (converting > 0) label = `변환 중 ${total - converting}/${total}`
-  else if (active.length > 0) label = `올리는 중 ${completed}/${total}`
-  else if (completed > 0) label = `${completed}장을 올렸어요`
+  if (creatingPost) label = t('upload.progress.creatingPost')
+  else if (converting > 0)
+    label = t('upload.progress.converting', { done: total - converting, total })
+  else if (active.length > 0) label = t('upload.progress.uploading', { done: completed, total })
+  else if (completed > 0) label = t('upload.progress.completed', { count: completed })
 
   // `role="status"` already implies `aria-live="polite"`; declaring both made every file
   // transition a doubled announcement that queues ahead of the user's own gestures (§9).

@@ -1,6 +1,8 @@
 syntax = "proto3";
 package postpilot.v1;
 import "postpilot/v1/provider.proto";
+import "postpilot/v1/error.proto";
+import "postpilot/v1/language.proto";
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 service VoiceValidationService {
@@ -14,11 +16,15 @@ service VoiceValidationService {
   rpc RetryVoiceProfileValidation(RetryVoiceProfileValidationRequest) returns (RetryVoiceProfileValidationResponse) {}
 }
 
-message VoiceComparisonCandidate { string id = 1; string side = 2; string output = 3; string status = 4; string error = 5; }
+message VoiceComparisonCandidate {
+  string id = 1; string side = 2; string output = 3; string status = 4;
+  string error = 5 [deprecated = true]; Failure failure = 6;
+}
 message VoiceRuleComparison {
   string id = 1; string rule_id = 2; int64 profile_version = 3; optional int32 target_length = 4;
   string status = 5; string job_id = 6; repeated VoiceComparisonCandidate candidates = 7;
   string chosen_side = 8; string created_at = 9; string voice_id = 10;
+  ContentLanguage source_language = 11;
 }
 message StartVoiceRuleComparisonRequest {
   string rule_id = 1; string source_id = 2; optional int32 target_length = 3; ModelRef write_model = 4;
@@ -34,12 +40,14 @@ message RetryVoiceRuleComparisonResponse { string job_id = 1; }
 message VoiceValidationScore { string dimension = 1; bool matched = 2; }
 message VoiceValidationItem {
   string id = 1; string source_id = 2; string original = 3; string neutral_summary = 4;
-  string regenerated = 5; repeated VoiceValidationScore scores = 6; string status = 7; string error = 8;
+  string regenerated = 5; repeated VoiceValidationScore scores = 6; string status = 7;
+  string error = 8 [deprecated = true]; Failure failure = 9;
 }
 message VoiceProfileValidation {
   string id = 1; int64 profile_version = 2; bool judge_enabled = 3; string status = 4;
   string job_id = 5; repeated VoiceValidationItem items = 6; int32 y_count = 7; int32 total_count = 8;
   string created_at = 9; string finished_at = 10; string voice_id = 11;
+  ContentLanguage source_language = 12;
 }
 message StartVoiceProfileValidationRequest { string voice_id = 4; ModelRef analyze_model = 1; ModelRef write_model = 2; bool judge_enabled = 3; }
 message StartVoiceProfileValidationResponse { string validation_id = 1; string job_id = 2; }

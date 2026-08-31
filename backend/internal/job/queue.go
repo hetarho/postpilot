@@ -12,6 +12,12 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	if input.Kind == "" || input.UserID == "" {
 		return "", fmt.Errorf("enqueue job: kind and user are required")
 	}
+	if (input.Kind == KindGenerate || input.Kind == KindRevise) && input.TargetLanguage == "" {
+		return "", fmt.Errorf("enqueue job: target language is required for %s", input.Kind)
+	}
+	if input.TargetLanguage != "" && input.TargetLanguage != "ko" && input.TargetLanguage != "en" {
+		return "", fmt.Errorf("enqueue job: unsupported target language %q", input.TargetLanguage)
+	}
 
 	active, err := q.activeForInput(ctx, input)
 	if err != nil {
@@ -25,7 +31,8 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	found := Job{
 		ID: q.newID(), Kind: input.Kind, UserID: input.UserID, PostSlug: input.PostSlug, VoiceID: input.VoiceID,
 		Status: StatusQueued, ObserveModel: input.ObserveModel, WriteModel: input.WriteModel,
-		Payload: append([]byte(nil), input.Payload...), CreatedAt: now, UpdatedAt: now,
+		TargetLanguage: input.TargetLanguage,
+		Payload:        append([]byte(nil), input.Payload...), CreatedAt: now, UpdatedAt: now,
 	}
 	if err := q.store.Insert(ctx, found); err != nil {
 		if errors.Is(err, ErrActiveConflict) {

@@ -269,6 +269,11 @@ func TestComplete_RateLimitKeepsTheProviderMessage(t *testing.T) {
 	if !strings.Contains(err.Error(), "free-models-per-day") {
 		t.Errorf("Error() = %q, must carry the provider's message", err.Error())
 	}
+	failure := llm.NormalizeFailure(err)
+	if failure.Reason != llm.FailureReasonModelRateLimited || failure.Params != nil ||
+		failure.TechnicalDetail != "Rate limit exceeded: free-models-per-day" {
+		t.Fatalf("normalized failure = %#v", failure)
+	}
 }
 
 func TestComplete_MapsModelNotFound(t *testing.T) {
@@ -311,6 +316,10 @@ func TestComplete_OtherFailuresAreGenericProviderErrors(t *testing.T) {
 			var perr *llm.ProviderError
 			if !errors.As(err, &perr) || perr.Kind != nil || perr.Message != message {
 				t.Fatalf("err = %v", err)
+			}
+			failure := llm.NormalizeFailure(err)
+			if failure.Reason != llm.FailureReasonUnknown || failure.Params != nil || failure.TechnicalDetail != message {
+				t.Fatalf("normalized failure = %#v", failure)
 			}
 		})
 	}
@@ -438,15 +447,12 @@ func TestComplete_LengthWithoutContentIsOutputTruncatedAndKeepsUsage(t *testing.
 	if !errors.Is(err, llm.ErrOutputTruncated) || errors.Is(err, llm.ErrBadOutput) {
 		t.Fatalf("err = %v, want only ErrOutputTruncated", err)
 	}
+	if failure := llm.NormalizeFailure(err); failure.Reason != llm.FailureReasonOutputTruncated || failure.Params != nil || failure.TechnicalDetail != "" {
+		t.Fatalf("normalized failure = %#v", failure)
+	}
 	if response.FinishReason != "length" || response.Usage.PromptTokens != 31 ||
 		response.Usage.CompletionTokens != 1234 || !response.Usage.CostReported || response.Usage.CostMicrousd != 125_000 {
 		t.Fatalf("response = %+v", response)
-	}
-	message := llm.UserMessage(err)
-	for _, required := range []string{"출력 예산", "목표 길이", "다른 모델"} {
-		if !strings.Contains(message, required) {
-			t.Errorf("message = %q, want %q", message, required)
-		}
 	}
 }
 

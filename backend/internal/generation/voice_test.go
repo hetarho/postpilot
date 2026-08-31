@@ -193,7 +193,7 @@ func TestApplyWriteWinnerRequiresTheFrozenVoice(t *testing.T) {
 // fallback to another voice would surface as an error rather than a silent borrow.
 type voiceProfiles map[string]Profile
 
-func (p voiceProfiles) ProfileForPrompt(_ context.Context, _, voiceID string) (Profile, error) {
+func (p voiceProfiles) ProfileForPrompt(_ context.Context, _, voiceID string, _ Language) (Profile, error) {
 	profile, ok := p[voiceID]
 	if !ok {
 		return Profile{}, fmt.Errorf("no profile for voice %q", voiceID)

@@ -1,4 +1,9 @@
+import i18next from 'i18next'
 import {
+  appFailureFromProto,
+  type AppFailure,
+  contentLanguageFromProto,
+  type ContentLanguage,
   PublishStage,
   PublishStatus,
   type ProtoPublishJob,
@@ -14,10 +19,12 @@ export interface PublishJob {
   contentRevision: bigint
   categoryId: string
   visibility: PublishVisibility
-  errorCode: string
-  errorMessage: string
+  failure: AppFailure | undefined
   platformPostUrl: string
   updatedAt: string
+  targetLanguage: ContentLanguage | undefined
+  contentLanguage: ContentLanguage | undefined
+  voiceSourceLanguage: ContentLanguage | undefined
 }
 
 export const TERMINAL_PUBLISH_STATUSES = new Set([
@@ -28,16 +35,29 @@ export const TERMINAL_PUBLISH_STATUSES = new Set([
   PublishStatus.CANCELED,
 ])
 
-export const PUBLISH_STAGE_LABELS: Record<number, string> = {
-  [PublishStage.QUEUED]: 'Mac 연결을 기다리는 중',
-  [PublishStage.CLAIMED]: 'Mac에서 작업을 받았어요',
-  [PublishStage.PREPARING]: '발행 준비 중',
-  [PublishStage.OPENING_EDITOR]: '네이버 편집기 여는 중',
-  [PublishStage.FILLING_CONTENT]: '글 입력 중',
-  [PublishStage.UPLOADING_PHOTOS]: '사진 올리는 중',
-  [PublishStage.COMMITTING]: '네이버에 최종 발행 중',
-  [PublishStage.VERIFYING]: '발행 결과 확인 중',
-  [PublishStage.PUBLISHED]: '발행 완료',
+export function publishStageLabel(stage: PublishStage): string {
+  switch (stage) {
+    case PublishStage.QUEUED:
+      return i18next.t('stage.queued', { ns: 'publishing' })
+    case PublishStage.CLAIMED:
+      return i18next.t('stage.claimed', { ns: 'publishing' })
+    case PublishStage.PREPARING:
+      return i18next.t('stage.preparing', { ns: 'publishing' })
+    case PublishStage.OPENING_EDITOR:
+      return i18next.t('stage.openingEditor', { ns: 'publishing' })
+    case PublishStage.FILLING_CONTENT:
+      return i18next.t('stage.fillingContent', { ns: 'publishing' })
+    case PublishStage.UPLOADING_PHOTOS:
+      return i18next.t('stage.uploadingPhotos', { ns: 'publishing' })
+    case PublishStage.COMMITTING:
+      return i18next.t('stage.committing', { ns: 'publishing' })
+    case PublishStage.VERIFYING:
+      return i18next.t('stage.verifying', { ns: 'publishing' })
+    case PublishStage.PUBLISHED:
+      return i18next.t('stage.published', { ns: 'publishing' })
+    default:
+      return i18next.t('stage.progress', { ns: 'publishing' })
+  }
 }
 
 export function toPublishJob(job: ProtoPublishJob): PublishJob {
@@ -50,9 +70,17 @@ export function toPublishJob(job: ProtoPublishJob): PublishJob {
     contentRevision: job.contentRevision,
     categoryId: job.categoryId,
     visibility: job.visibility,
-    errorCode: job.errorCode,
-    errorMessage: job.errorMessage,
+    failure:
+      job.failure ||
+      job.status === PublishStatus.FAILED ||
+      job.status === PublishStatus.NEEDS_ATTENTION ||
+      job.status === PublishStatus.OUTCOME_UNKNOWN
+        ? appFailureFromProto(job.failure)
+        : undefined,
     platformPostUrl: job.platformPostUrl,
     updatedAt: job.updatedAt,
+    targetLanguage: contentLanguageFromProto(job.targetLanguage),
+    contentLanguage: contentLanguageFromProto(job.contentLanguage),
+    voiceSourceLanguage: contentLanguageFromProto(job.voiceSourceLanguage),
   }
 }

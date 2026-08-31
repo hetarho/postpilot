@@ -25,7 +25,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if err != nil {
 		return err
 	}
-	profile, err := s.profileForTopic(ctx, job.UserID, voiceID, post.Title+" "+post.Memo, contentTags(post.Content))
+	profile, err := s.profileForTopic(ctx, job.UserID, voiceID, payload.ContentLanguage, post.Title+" "+post.Memo, contentTags(post.Content))
 	if err != nil {
 		return fmt.Errorf("load voice profile: %w", err)
 	}
@@ -39,7 +39,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	}
 	// The brief comes from the frozen payload, never from the live row, exactly as the
 	// generate handler does it.
-	system, user := BuildRevisePrompt(profile, *post.Content, filenames, payload.Instruction, post.TargetLength, decodePurpose(payload.Purpose))
+	system, user := BuildRevisePromptForLanguage(payload.ContentLanguage, profile, *post.Content, filenames, payload.Instruction, post.TargetLength, decodePurpose(payload.Purpose))
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
@@ -75,7 +75,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 		currentFilenames = append(currentFilenames, image.Filename)
 	}
 	filtered := FilterAttachments(*content, currentFilenames)
-	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered); err != nil {
+	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage); err != nil {
 		return fmt.Errorf("persist revised content: %w", err)
 	}
 	progress("write", 1, 1)
