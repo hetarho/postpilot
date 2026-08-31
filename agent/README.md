@@ -43,7 +43,7 @@ local paths or credentials; **이 연결의 네이버 로그인 열기** reopens
 profile without issuing a new device code. Repair the login/challenge there, then use the retained retry action on
 Postpilot's **발행 Mac** page; it remains available even if the source post was deleted.
 
-Before a connection is armed, setup starts or attaches to the selected dedicated browser profile on an ephemeral loopback CDP port, injects its verified WebSocket URL through Hermes' documented `BROWSER_CDP_URL`, and runs `hermes doctor` plus `hermes plugins doctor ... --ci`. The absolute Hermes binary path is stored per connection so launchd does not depend on an interactive shell's `PATH`; `diagnostics` repeats the browser/CDP/plugin checks. The compatibility manifest records what was checked on 2026-08-31, but the installer always consults the official current installer and capability checks remain authoritative.
+Before a connection is armed, setup starts or attaches to the selected dedicated browser profile on an ephemeral loopback CDP port, injects its verified WebSocket URL through Hermes' documented `BROWSER_CDP_URL`, and runs `hermes doctor` plus `hermes plugins doctor ... --ci`. The absolute Hermes binary path is stored per connection so launchd does not depend on an interactive shell's `PATH`; `diagnostics` repeats the browser/CDP/plugin checks. The compatibility manifest records what was checked on 2026-09-01, but the installer always consults the official current installer and capability checks remain authoritative.
 
 ```sh
 postpilot-agent diagnostics

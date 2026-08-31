@@ -150,6 +150,102 @@ func TestOpenLoginNavigatesAnExistingDedicatedPage(t *testing.T) {
 	}
 }
 
+func TestOpenLoginCreatesAPageWhenTheDedicatedBrowserHasNoWindow(t *testing.T) {
+	var server *httptest.Server
+	var stateMu sync.Mutex
+	created := false
+	createdURL := ""
+	attachedTarget := ""
+	attachFlatten := false
+	navigated := ""
+	navigationSession := ""
+	server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/json/version":
+			fmt.Fprintf(writer, `{"webSocketDebuggerUrl":%q}`, "ws"+strings.TrimPrefix(server.URL, "http")+"/devtools/browser/one")
+		case "/json/list":
+			stateMu.Lock()
+			defer stateMu.Unlock()
+			if !created {
+				_ = json.NewEncoder(writer).Encode([]pageTarget{})
+				return
+			}
+			_ = json.NewEncoder(writer).Encode([]pageTarget{{
+				ID: "page-1", Type: "page", URL: "about:blank",
+				WebSocketDebuggerURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/devtools/page/page-1",
+			}})
+		case "/devtools/browser/one":
+			connection, err := websocket.Accept(writer, request, nil)
+			if err != nil {
+				return
+			}
+			defer connection.CloseNow()
+			for {
+				var call cdpRequest
+				if err := wsjson.Read(request.Context(), connection, &call); err != nil {
+					return
+				}
+				result := map[string]any{}
+				switch call.Method {
+				case "Target.createTarget":
+					params, _ := call.Params.(map[string]any)
+					stateMu.Lock()
+					created = true
+					createdURL, _ = params["url"].(string)
+					stateMu.Unlock()
+					result = map[string]any{"targetId": "page-1"}
+				case "Target.attachToTarget":
+					params, _ := call.Params.(map[string]any)
+					stateMu.Lock()
+					attachedTarget, _ = params["targetId"].(string)
+					attachFlatten, _ = params["flatten"].(bool)
+					stateMu.Unlock()
+					result = map[string]any{"sessionId": "session-page-1"}
+				case "Page.navigate":
+					params, _ := call.Params.(map[string]any)
+					stateMu.Lock()
+					navigated, _ = params["url"].(string)
+					navigationSession = call.SessionID
+					stateMu.Unlock()
+				}
+				response := map[string]any{"id": call.ID, "result": result}
+				if call.Method != "Target.createTarget" && call.Method != "Target.attachToTarget" {
+					response["sessionId"] = "session-page-1"
+				}
+				if err := wsjson.Write(request.Context(), connection, response); err != nil {
+					return
+				}
+			}
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+	_, port, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := t.TempDir()
+	if err := os.WriteFile(filepath.Join(profile, devToolsActivePort), []byte(port+"\n/devtools/browser/one\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "browser")
+	if err := os.WriteFile(binary, []byte("browser"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := OpenLogin(binary, profile); err != nil {
+		t.Fatal(err)
+	}
+	stateMu.Lock()
+	defer stateMu.Unlock()
+	if !created || createdURL != "about:blank" || attachedTarget != "page-1" || !attachFlatten ||
+		navigated != "https://nid.naver.com/nidlogin.login" || navigationSession != "session-page-1" {
+		t.Fatalf("created=%t createdURL=%q attachedTarget=%q flatten=%t navigated=%q session=%q",
+			created, createdURL, attachedTarget, attachFlatten, navigated, navigationSession)
+	}
+}
+
 func serverURL(request *http.Request) string {
 	return "http://" + request.Host
 }

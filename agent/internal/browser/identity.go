@@ -239,9 +239,12 @@ func navigateSinglePage(ctx context.Context, cdpURL, destination string) error {
 	if err != nil || targetURL.Scheme != "https" || !isNaverHost(targetURL.Hostname()) || targetURL.User != nil {
 		return errors.New("browser navigation destination is outside approved Naver hosts")
 	}
-	target, err := discoverSinglePage(ctx, cdpURL)
+	pages, err := discoverDedicatedPages(ctx, cdpURL)
 	if err != nil {
 		return err
+	}
+	if len(pages) > 1 {
+		return errors.New("identity verification requires exactly one dedicated browser page")
 	}
 	conn, _, err := websocket.Dial(ctx, cdpURL, &websocket.DialOptions{
 		HTTPClient: noProxyHTTPClient(10 * time.Second),
@@ -252,6 +255,27 @@ func navigateSinglePage(ctx context.Context, cdpURL, destination string) error {
 	defer conn.CloseNow()
 	conn.SetReadLimit(1 << 20)
 	client := &cdpClient{conn: conn}
+	var target pageTarget
+	if len(pages) == 0 {
+		var created struct {
+			TargetID string `json:"targetId"`
+		}
+		if err := client.call(ctx, "Target.createTarget", map[string]any{"url": "about:blank"}, &created); err != nil {
+			return fmt.Errorf("create dedicated browser page: %w", err)
+		}
+		if created.TargetID == "" {
+			return errors.New("create dedicated browser page returned no target")
+		}
+		target, err = discoverSinglePage(ctx, cdpURL)
+		if err != nil {
+			return fmt.Errorf("verify created dedicated browser page: %w", err)
+		}
+		if target.ID != created.TargetID {
+			return errors.New("dedicated browser target changed while creating a page")
+		}
+	} else {
+		target = pages[0]
+	}
 	var attached struct {
 		SessionID string `json:"sessionId"`
 	}
@@ -281,13 +305,24 @@ func navigateSinglePage(ctx context.Context, cdpURL, destination string) error {
 }
 
 func discoverSinglePage(ctx context.Context, cdpURL string) (pageTarget, error) {
+	pages, err := discoverDedicatedPages(ctx, cdpURL)
+	if err != nil {
+		return pageTarget{}, err
+	}
+	if len(pages) != 1 {
+		return pageTarget{}, errors.New("identity verification requires exactly one dedicated browser page")
+	}
+	return pages[0], nil
+}
+
+func discoverDedicatedPages(ctx context.Context, cdpURL string) ([]pageTarget, error) {
 	parsed, err := url.Parse(cdpURL)
 	if err != nil || (parsed.Scheme != "ws" && parsed.Scheme != "wss") || parsed.User != nil {
-		return pageTarget{}, errors.New("invalid browser CDP endpoint")
+		return nil, errors.New("invalid browser CDP endpoint")
 	}
 	address := net.ParseIP(parsed.Hostname())
 	if address == nil || !address.IsLoopback() || parsed.Port() == "" {
-		return pageTarget{}, errors.New("browser CDP endpoint is not loopback")
+		return nil, errors.New("browser CDP endpoint is not loopback")
 	}
 	scheme := "http"
 	if parsed.Scheme == "wss" {
@@ -296,40 +331,37 @@ func discoverSinglePage(ctx context.Context, cdpURL string) (pageTarget, error) 
 	listURL := scheme + "://" + net.JoinHostPort(parsed.Hostname(), parsed.Port()) + "/json/list"
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, listURL, nil)
 	if err != nil {
-		return pageTarget{}, err
+		return nil, err
 	}
 	response, err := noProxyHTTPClient(5 * time.Second).Do(request)
 	if err != nil {
-		return pageTarget{}, err
+		return nil, err
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return pageTarget{}, fmt.Errorf("browser target discovery returned %d", response.StatusCode)
+		return nil, fmt.Errorf("browser target discovery returned %d", response.StatusCode)
 	}
 	var targets []pageTarget
 	if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&targets); err != nil {
-		return pageTarget{}, err
+		return nil, err
 	}
 	pages := make([]pageTarget, 0, 1)
 	for _, target := range targets {
-		if target.Type == "page" {
-			pages = append(pages, target)
+		if target.Type != "page" {
+			continue
 		}
+		pageURL, err := url.Parse(target.URL)
+		if err != nil || (target.URL != "about:blank" && (pageURL.Scheme != "https" || !isNaverHost(pageURL.Hostname()))) {
+			return nil, errors.New("dedicated browser page is outside approved Naver hosts")
+		}
+		pageWS, err := url.Parse(target.WebSocketDebuggerURL)
+		if err != nil || pageWS.Scheme != parsed.Scheme || pageWS.Host != parsed.Host || pageWS.User != nil ||
+			pageWS.RawQuery != "" || pageWS.Fragment != "" || pageWS.EscapedPath() != "/devtools/page/"+target.ID {
+			return nil, errors.New("browser returned an unbound page WebSocket endpoint")
+		}
+		pages = append(pages, target)
 	}
-	if len(pages) != 1 {
-		return pageTarget{}, errors.New("identity verification requires exactly one dedicated browser page")
-	}
-	target := pages[0]
-	pageURL, err := url.Parse(target.URL)
-	if err != nil || (target.URL != "about:blank" && (pageURL.Scheme != "https" || !isNaverHost(pageURL.Hostname()))) {
-		return pageTarget{}, errors.New("dedicated browser page is outside approved Naver hosts")
-	}
-	pageWS, err := url.Parse(target.WebSocketDebuggerURL)
-	if err != nil || pageWS.Scheme != parsed.Scheme || pageWS.Host != parsed.Host || pageWS.User != nil ||
-		pageWS.RawQuery != "" || pageWS.Fragment != "" || pageWS.EscapedPath() != "/devtools/page/"+target.ID {
-		return pageTarget{}, errors.New("browser returned an unbound page WebSocket endpoint")
-	}
-	return target, nil
+	return pages, nil
 }
 
 func noProxyHTTPClient(timeout time.Duration) *http.Client {
