@@ -203,3 +203,31 @@ describe('the purpose management route', () => {
     expect(labels.indexOf('/purposes')).toBeGreaterThan(labels.indexOf('/voices'))
   })
 })
+
+// Job 31: every screen outside the login → posts → editor core is now fetched when its route
+// is first entered. These mount the app DIRECTLY at each address — createMemoryHistory starts
+// there with no prior navigation, which is what a deep link or a refresh does — so a lazy
+// boundary that only resolves via in-app navigation would fail here.
+describe('lazily loaded routes', () => {
+  it.each([
+    ['/publishing-agents', '발행 Mac'],
+    ['/voices', '말투'],
+    ['/purposes', '용도'],
+    ['/ai-models', 'AI 모델'],
+  ])('renders %s on a direct load', async (path, heading) => {
+    const { router } = renderAppAt(path, { user: { id: 'alice' } })
+
+    expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(path)
+  })
+
+  // The five voice tabs share one chunk, so reaching any tab proves the whole tab area
+  // resolved; the tab row proves VoiceLayout's separate boundary resolved with it.
+  it('renders a voice tab and its layout on a direct load', async () => {
+    const { router } = renderAppAt('/voices/voice-default/versions', { user: { id: 'alice' } })
+
+    expect(await screen.findByRole('link', { name: '프로필' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '버전 기록' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/voices/voice-default/versions')
+  })
+})

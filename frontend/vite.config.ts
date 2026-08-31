@@ -34,6 +34,14 @@ export default defineConfig(({ mode }) => {
         '/health': { target: apiUrl, changeOrigin: true },
       },
     },
+    build: {
+      // Kept at the 500 kB default deliberately rather than raised. Route-level splitting
+      // brought the entry chunk to 352 kB, so nothing trips it and the build carries no
+      // standing warning; raising the number would only hide the next regression. (The
+      // HEIC worker is far larger but is built in its own environment and is fetched only
+      // when the first HEIC is selected, so it is not what this limit is about.)
+      chunkSizeWarningLimit: 500,
+    },
     test: {
       globals: true,
       environment: 'jsdom',

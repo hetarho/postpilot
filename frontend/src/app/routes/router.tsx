@@ -4,6 +4,7 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
 } from '@tanstack/react-router'
 import { loadSession } from '@/entities/session'
@@ -11,26 +12,33 @@ import { defaultVoice, loadVoices } from '@/entities/voice'
 import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { LoginPage } from '@/pages/login'
 import { PostsPage } from '@/pages/posts'
-import { PublishingAgentsPage } from '@/pages/publishing-agents'
-import {
-  VoiceImportPage,
-  VoicePage,
-  VoiceRulesPage,
-  VoiceValidationsPage,
-  VoiceVersionsPage,
-} from '@/pages/voice'
-import { PurposesPage } from '@/pages/purposes'
-import { VoicesPage } from '@/pages/voices'
-import { AIModelsPage } from '@/pages/ai-models'
-import { ModelExperimentPage } from '@/pages/model-experiment'
-import { VoiceRuleComparisonPage } from '@/pages/voice-rule-comparison'
-import { VoiceValidationPage } from '@/pages/voice-validation'
 import { transport } from '@/shared/api'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 import { queryClient } from '../providers/query-client'
 import { AuthenticatedLayout } from './AuthenticatedLayout'
 import { RootLayout } from './RootLayout'
-import { VoiceLayout } from './VoiceLayout'
+import { RoutePending } from './RoutePending'
+
+// Everything outside the login → posts → editor path is fetched when its route is first
+// entered. A session's first paint is the post list or the editor, so those stay eager;
+// the remaining nine screens were costing every first paint on a mobile-first product.
+// Only `component` moves behind the boundary — every beforeLoad and loader below still
+// runs first, so a signed-out visitor is redirected without fetching a screen's code.
+//
+// The five voice tabs all name the same specifier, so the bundler emits one 23 kB chunk for
+// the whole tab area rather than five: the tabs are one screen and are always reached
+// together. VoiceLayout is lazy too but stays its own 2 kB chunk — it belongs to app/routes,
+// not to the pages/voice slice, and sharing their chunk would mean moving it across layers.
+const lazyVoice = <
+  K extends
+    | 'VoicePage'
+    | 'VoiceVersionsPage'
+    | 'VoiceImportPage'
+    | 'VoiceRulesPage'
+    | 'VoiceValidationsPage',
+>(
+  name: K,
+) => lazyRouteComponent(() => import('@/pages/voice'), name)
 
 /** What every route's `beforeLoad` can reach. The transport travels with the query
  *  client because the session cache key is built from it — a guard using a different
@@ -111,19 +119,19 @@ const postsRoute = createRoute({
 const publishingAgentsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/publishing-agents',
-  component: PublishingAgentsPage,
+  component: lazyRouteComponent(() => import('@/pages/publishing-agents'), 'PublishingAgentsPage'),
 })
 
 const voicesRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/voices',
-  component: VoicesPage,
+  component: lazyRouteComponent(() => import('@/pages/voices'), 'VoicesPage'),
 })
 
 const purposesRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/purposes',
-  component: PurposesPage,
+  component: lazyRouteComponent(() => import('@/pages/purposes'), 'PurposesPage'),
 })
 
 // The layout of one voice: the five tabs keep their own addresses under `/voices/$voiceId` and
@@ -132,37 +140,37 @@ const purposesRoute = createRoute({
 const voiceLayoutRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/voices/$voiceId',
-  component: VoiceLayout,
+  component: lazyRouteComponent(() => import('./VoiceLayout'), 'VoiceLayout'),
 })
 
 const voiceRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
   path: '/',
-  component: VoicePage,
+  component: lazyVoice('VoicePage'),
 })
 
 const voiceVersionsRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
   path: '/versions',
-  component: VoiceVersionsPage,
+  component: lazyVoice('VoiceVersionsPage'),
 })
 
 const voiceImportRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
   path: '/import',
-  component: VoiceImportPage,
+  component: lazyVoice('VoiceImportPage'),
 })
 
 const voiceRulesRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
   path: '/rules',
-  component: VoiceRulesPage,
+  component: lazyVoice('VoiceRulesPage'),
 })
 
 const voiceValidationsRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
   path: '/validations',
-  component: VoiceValidationsPage,
+  component: lazyVoice('VoiceValidationsPage'),
 })
 
 /** The tabs an old `/voice/<tab>` link may name, so the redirect keeps the user on the same
@@ -217,25 +225,28 @@ const legacyVoiceTabRoute = createRoute({
 const aiModelsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/ai-models',
-  component: AIModelsPage,
+  component: lazyRouteComponent(() => import('@/pages/ai-models'), 'AIModelsPage'),
 })
 
 const modelExperimentRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/ai-models/experiments/$id',
-  component: ModelExperimentPage,
+  component: lazyRouteComponent(() => import('@/pages/model-experiment'), 'ModelExperimentPage'),
 })
 
 const voiceRuleComparisonRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/voices/$voiceId/rules/$id/compare',
-  component: VoiceRuleComparisonPage,
+  component: lazyRouteComponent(
+    () => import('@/pages/voice-rule-comparison'),
+    'VoiceRuleComparisonPage',
+  ),
 })
 
 const voiceValidationRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/voices/$voiceId/validations/$id',
-  component: VoiceValidationPage,
+  component: lazyRouteComponent(() => import('@/pages/voice-validation'), 'VoiceValidationPage'),
 })
 
 // A static segment outranks '$slug', so this route — not the editor below — is what
@@ -279,7 +290,11 @@ export const routeTree = rootRoute.addChildren([
   ]),
 ])
 
-export const router = createRouter({ routeTree, context: { queryClient, transport } })
+export const router = createRouter({
+  routeTree,
+  context: { queryClient, transport },
+  defaultPendingComponent: RoutePending,
+})
 
 // Register the router instance for type safety across the app (Link, useNavigate, …).
 declare module '@tanstack/react-router' {
