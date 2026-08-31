@@ -3,13 +3,17 @@
 사진과 거친 메모를 넣으면 각자의 문체로 블로그 초안을 만들고, 플랫폼별 형식으로
 복사하거나 연결된 로컬 기기를 통해 네이버 블로그에 발행할 수 있게 하는 개인용 도구.
 
-| | |
-|---|---|
-| 버전 | 1.3 |
-| 사용자 | 2명 (본인, 배우자) |
-| 기술 스택 | 확정 — §6 |
+|           |                    |
+| --------- | ------------------ |
+| 버전      | 1.4                |
+| 사용자    | 2명 (본인, 배우자) |
+| 기술 스택 | 확정 — §6          |
 
-> 1.3에서 바뀐 것: 실제 사용에서 네이버 사진 배치가 여전히 가장 큰 수작업으로 남아, 사용자가 명시적으로
+> 1.4에서 바뀐 것: 사이트 UI를 한국어·영어로 제공하고, 새 글마다 현재 UI 언어를 초기값으로 삼되
+> 독립적으로 바꿀 수 있는 생성 대상 언어를 추가했다. UI locale, 다음 전체 생성의 `target_language`, 현재
+> 정본의 `content_language`를 분리해 화면 언어 전환이나 대상 언어 변경이 기존 글을 암묵적으로 번역하지
+> 않게 했다. 각 말투는 기준 언어 하나를 가지며, 다른 언어 생성에는 언어 중립 특성만 투영하고 다른 언어의
+> 글은 그 말투 학습에 섞지 않는다. 1.3에서는 실제 사용에서 네이버 사진 배치가 여전히 가장 큰 수작업으로 남아, 사용자가 명시적으로
 > 요청한 확정 글을 계정별로 연결된 Mac/Hermes 브라우저가 최종 발행하도록 §3.1·F-10을 개정했다. 플랫폼
 > 로그인은 VPS가 아니라 로컬 기기에만 남고 기존 복사 내보내기는 유지된다. 1.2에서는 계정당 하나였던 문체 프로필을 계정 안의 여러 독립 `말투`로 확장하고,
 > 모든 글이 하나의 말투를 명시적으로 선택하도록 §3.4·F-2~F-9·§5를 개정했다. 1.0→1.1에서는
@@ -32,6 +36,8 @@
 - 두 사용자가 서로의 말투를 볼 수 없고, 각 사용자는 용도에 맞는 여러 말투를 서로 섞지 않고 쓴다.
 - 네이버 · 티스토리 · 자체 사이트에 각각 맞는 형식으로 바로 복사할 수 있다.
 - 확정한 네이버 글은 휴대폰에서 명시적으로 요청하면 연결된 Mac이 사진 배치와 최종 발행까지 끝낸다.
+- 사이트 UI를 한국어와 영어로 사용할 수 있다.
+- 글마다 한국어·영어 중 생성 언어를 고르며, 현재 UI 언어를 초기값으로 쓰되 글의 언어는 독립적으로 유지한다.
 
 ### 비목표
 
@@ -40,6 +46,8 @@
 - 네이버 블로그 외 플랫폼의 자동 발행, 인스타그램 릴스·네이버 클립 생성/발행(후속 계획)
 - 이미지 생성, 이미지 보정, 얼굴 모자이크 (§8 참조)
 - 3인 이상, 조직 계정, 권한 등급
+- 기존 글·메모·관찰 결과의 자동 번역, 언어별 URL, locale 선택의 계정 간 동기화
+- 한 말투 안의 언어별 하위 프로필. 다른 언어를 학습하려면 그 언어를 기준으로 하는 별도 말투를 만든다.
 
 ### 성공 기준
 
@@ -56,7 +64,8 @@
 ## 2. 사용자 시나리오
 
 **주 시나리오 (S1)**
-저녁에 폰으로 접속 → 새 글의 말투를 드롭다운에서 선택 → 오늘 찍은 사진 8장 업로드 → 메모 5줄 입력 → `A/B 비교 생성` → 앱을 닫음 →
+저녁에 폰으로 접속 → 저장된 선택 또는 브라우저 선호 언어로 UI가 열림 → 새 글의 생성 언어가 그 UI 언어로 시작함 → 필요하면
+한국어·영어 중 다른 언어로 변경 → 새 글의 말투를 드롭다운에서 선택 → 오늘 찍은 사진 8장 업로드 → 메모 5줄 입력 → `A/B 비교 생성` → 앱을 닫음 →
 목록의 `AI 결과 확인`으로 돌아와 두 후보 중 하나를 적용 → "더 짧게" 한 번 → 글을 `확정` → `네이버에 발행`을 명시적으로 확인 →
 Mac의 연결된 브라우저가 글과 사진을 배치하고 최종 발행 → 휴대폰에서 결과 URL 확인. 앱 안에서 문장을 직접 다듬었다면, 사용자가
 `말투 학습`까지 명시적으로 선택했을 때만 그 최종본을
@@ -203,6 +212,31 @@ GetGeneration(job_id)       → { 상태, 단계, 진행률, 실패 사유 }  �
 말투 학습·규칙 비교·프로필 검증도 명시적 사용자 동작 뒤에만 작업으로 등록된다. 서버 기동, 타이머, 페이지 열기, 복사/내보내기는
 이 작업이나 프로바이더 호출을 시작하지 않는다.
 
+### 3.6 UI locale과 글의 언어는 서로 다른 상태다
+
+화면을 어떤 언어로 읽는지와 글을 어떤 언어로 생성하는지는 같은 초기값을 공유할 뿐, 같은 상태가 아니다.
+둘을 묶으면 영어 UI로 잠깐 바꾼 것만으로 이미 쓰던 한국어 글의 수정·내보내기 언어가 바뀌는 오류가 생긴다.
+
+- 지원 언어 코드는 `ko`, `en`이다. `ko-KR`은 `ko`, `en-US`는 `en`처럼 브라우저 locale의 base tag를
+  정규화한다.
+- UI locale 우선순위는 **브라우저에 저장한 명시적 선택 → `navigator.languages`의 첫 지원 언어 → `ko`**다.
+  URL과 로그인 세션은 locale 전환으로 바뀌지 않으며, 계정이나 다른 기기로 동기화하지 않는다.
+- 새 글의 `target_language`는 생성 당시 UI locale로 시작하지만 사용자가 바꿀 수 있다. 이후 UI locale을
+  바꿔도 저장된 글의 target은 변하지 않는다.
+- `content_language`는 현재 정본을 만든 마지막 기계 결과의 명시적 언어 계약이다. target을 바꾸거나 직접 편집해도 기존
+  정본을 번역·감지·relabel하지 않는다. 다음 명시적 전체 생성 또는 작성 A/B 결과를 적용할 때만 target이 content language가 된다.
+- AI 수정은 현재 `content_language`를 유지한다. target과 다른 언어로 바꾸는 경로는 전체 생성/A-B이며,
+  자동 번역은 없다.
+- 관찰은 사진의 사실을 구조화할 뿐이므로 언어 대상과 독립적이다([I3]). 작성·수정·작성 A/B는 작업을 시작할
+  때 언어를 스냅샷에 고정하고 재시도·재접속에서도 바꾸지 않는다([I5]).
+- 각 말투는 기준 언어 하나를 가진다. 같은 언어에서는 전체 프로필을 쓰고, 다른 언어에서는 구조·성향 같은
+  언어 중립 특성만 투영한다. 기준 언어와 다른 정본은 그 말투의 샘플·완성 글·규칙 근거로 학습하지 않는다([I4]).
+- target이 말투·용도·수정 지시의 언어 요구와 충돌하면 target/content language 제약이 우선한다. 모델이나
+  서버가 다른 언어를 추측해 선택하지 않는다.
+- 동기 RPC 실패는 Connect 상태와 별도로 안정적인 `reason + params` detail을 보내고, 생성 작업·실험·검증·발행처럼
+  나중에 다시 읽는 실패는 같은 구조의 `Failure`를 저장한다. 서버가 미리 만든 한국어·영어 문장과 provider 원문은
+  표시 계약이 아니며, 브라우저가 현재 UI locale의 catalog에서 사유를 렌더링한다.
+
 ---
 
 ## 4. 기능 요구사항
@@ -236,6 +270,7 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
   즉시 무효화가 가능해야 하고, 2인 규모에 조회 비용은 문제가 안 된다.
 
 **완료 조건**
+
 - 세션 없이 API 호출 시 401.
 - 세션 토큰을 한 글자 변조하면 401.
 - 로그인 실패 응답에 아이디 존재 여부가 드러나지 않는다.
@@ -247,6 +282,9 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
   `voice_id`를 보내며, 서버는 누락·타인 소유·삭제된 말투를 기본값으로 대체하지 않는다.
 - 글의 말투는 나중에 활성 말투로 바꿀 수 있다. 본문·사진·확정 상태는 유지하고 기존 말투의 학습 이력은 옮기지 않는다. 이전
   말투로 만든 기계 기준본은 무효화하여 새 말투로 생성/수정한 뒤에만 그 말투 학습에 쓸 수 있다.
+- 새 글은 `target_language`를 반드시 저장한다. 프론트는 현재 UI locale을 초기값으로 보내지만 사용자가 `ko`·`en` 중
+  바꿀 수 있고, 서버는 누락되거나 지원하지 않는 값을 다른 언어로 추측하지 않는다. 기존 정본이 있는 글에서 target을 바꾸면
+  정본과 `content_language`는 그대로이며 다음 전체 생성/A-B부터 적용된다.
 - 가제(선택), 경험 메모(자유 텍스트), 사진 다중 업로드.
 - **메모 자동 저장.** 입력 후 1초 내외로 저장(디바운스된 `SavePostDraft` 호출).
   폰에서 앱을 닫아도 안 날아간다.
@@ -274,6 +312,7 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
   되므로 주기적으로 정리한다(§9).
 
 **완료 조건**
+
 - 메모 입력 후 브라우저를 강제 종료하고 재접속하면 내용이 남아 있다.
 - 실행 파일을 업로드하면 저장되지 않고 건너뛴 목록에 표시된다.
 - 아이폰에서 찍은 HEIC 사진 8장이 전부 올라가고 컨택트 시트에 보인다.
@@ -293,6 +332,9 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
 - 과거 글 붙여넣기는 선택 사항이며 이 경로에만 최소 200자를 적용한다. 추가·삭제 시 그 말투에 속한 가져오기 자료와 완성 글
   전체만 함께 재분석한다. 다른 말투의 앱 내 글이나 샘플을 선택·복사·공유하는 경로는 제공하지 않는다.
 - 규칙 블라인드 비교와 3편 기반 프로필 검증은 별도의 명시적 동작이다. 모델을 확인한 후에만 실행하며 자동/주기 실행하지 않는다.
+- 각 말투는 생성 시 정한 기준 언어 `ko` 또는 `en` 하나를 가지며 나중에 relabel하지 않는다. 같은 언어의 정본만 샘플·완성 글·
+  규칙 근거로 학습할 수 있다. 교차 언어 생성은 허용하지만 언어 중립 프로필만 투영하고, 다른 언어 정본의 말투 학습은 사유와
+  함께 거부해 한 프로필을 두 언어의 평균으로 오염시키지 않는다.
 
 **문체 분석이 반드시 다뤄야 할 항목**
 종결어미 분포 / 평균 문장 길이 / 문단당 문장 수 / 자주 쓰는 접속사·부사 /
@@ -302,6 +344,7 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
 마지막 항목이 중요하다. "이건 안 쓴다"가 지키기 가장 쉬운 규칙이다.
 
 **완료 조건**
+
 - 프로필이 비어 있으면 그 사실을 알리되 생성은 막지 않는다.
 - 두 계정이 서로의 문체 규칙을 읽지 못하고, 한 계정의 두 말투도 프로필·예시·규칙·검증 이력을 섞지 않는다.
 - 앱을 가만히 두거나 다시 시작해도 말투 관련 프로바이더 호출이 발생하지 않는다.
@@ -318,11 +361,15 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
 - 결과는 블록 배열 + 제목 + 요약 + 태그.
 - 목표 글자 수는 접힌 옵션에서 필요할 때만 켠다. 꺼져 있으면 길이 제한 없이 자연스럽게 생성하고, 켜져 있으면 사용자가 고른
   정확한 값과 글에 지정된 활성 말투의 문체 규칙·최대 3개 작성 예시를 같은 입력 스냅샷에 고정한다.
+- 일반 생성과 작성 A/B는 글의 `target_language`를 같은 입력 스냅샷에 고정한다. 제목·요약·태그와 모든 텍스트 블록,
+  이미지 alt·caption을 그 언어로 작성하되 실제 파일명·인용 원문·고유명사를 억지로 번역하지 않는다. A/B 두 후보는 반드시
+  같은 target을 받고, 적용된 결과만 그 글의 `content_language`를 원자적으로 갱신한다.
 - **모델이 지어낸 사진 파일명은 걸러낸다.** 실제 첨부된 파일만 남긴다.
 - 사진을 안 넣어도 메모만으로 생성된다.
 - 진행 상태는 §3.5의 폴링으로 표시한다.
 
 **완료 조건**
+
 - 사진 0장으로 생성해도 오류 없이 글이 나온다.
 - 결과에 첨부되지 않은 이미지 참조가 하나도 없다.
 - 생성 중 브라우저를 닫았다 열어도 진행 상태가 이어서 보인다.
@@ -350,8 +397,13 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
   다음 글부터 적용된다. 같은 지적을 반복하지 않게 하는 장치다.
 - 여러 번 반복 가능.
 - 성공한 AI 수정은 새 기계 기준본이 된다. 이후 직접 편집만 현재 내용 revision을 바꾸며, 학습 확정 전에는 기존 기준본이 보존된다.
+- AI 수정은 현재 정본의 `content_language`를 작업 스냅샷에 고정한다. 저장된 다음 target이나 “다른 언어로 써줘” 같은 충돌
+  지시는 기존 정본을 암묵적으로 번역하지 않으며, 언어를 바꾸려면 전체 생성/A-B를 명시적으로 실행한다.
+- 현재 정본 언어가 말투 기준 언어와 다르면 수정 자체는 허용하지만 `이 요청을 규칙으로 저장`은 비활성화한다. 서버도
+  `save_as_rule = true`를 작업 등록과 규칙 변경 전에 거부해 다른 언어의 지시가 말투 프로필에 들어가지 않게 한다.
 
 **완료 조건**
+
 - "존댓말로"를 저장한 뒤 같은 말투로 새 글을 생성하면 존댓말로 나오고 다른 말투에는 적용되지 않는다.
 - 5회 연속 수정 후에도 원래 문체가 유지된다.
 
@@ -359,12 +411,12 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
 
 네 가지 형식을 탭으로 전환하며 보고, 버튼 하나로 클립보드에 복사한다.
 
-| 형식 | 출력 | 안내 문구 |
-|---|---|---|
-| 네이버 블로그 | 평문. 사진 위치를 `[사진 파일명 — 캡션]`으로 표시 | 붙여넣고 표시된 자리에 사진 드래그 |
-| 티스토리 | HTML 조각. 이미지 태그 옆에 교체 안내 주석 | HTML 모드에 붙여넣고 사진 업로드 후 src 교체 |
-| 자체 사이트 | 완성된 단독 HTML 페이지 | 그대로 저장 |
-| 마크다운 | front matter 포함 | Hugo / Jekyll / Obsidian |
+| 형식          | 출력                                              | 안내 문구                                    |
+| ------------- | ------------------------------------------------- | -------------------------------------------- |
+| 네이버 블로그 | 평문. 사진 위치를 `[사진 파일명 — 캡션]`으로 표시 | 붙여넣고 표시된 자리에 사진 드래그           |
+| 티스토리      | HTML 조각. 이미지 태그 옆에 교체 안내 주석        | HTML 모드에 붙여넣고 사진 업로드 후 src 교체 |
+| 자체 사이트   | 완성된 단독 HTML 페이지                           | 그대로 저장                                  |
+| 마크다운      | front matter 포함                                 | Hugo / Jekyll / Obsidian                     |
 
 - 자체 사이트 형식의 **디자인은 고정 템플릿**이다. 모델이 매번 CSS를 만들면 글마다
   디자인이 달라진다.
@@ -372,6 +424,8 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
   순수 함수(블록 → 문자열)라 서버 왕복이 필요 없다. 탭 전환이 즉시 반응한다.
   → `frontend/src/features/export-*` 에 형식당 함수 하나 + 스냅샷 테스트.
 - 클립보드 API가 막힌 환경(http 등)에서는 텍스트를 자동 선택해 수동 복사를 유도한다.
+- 내보내기는 `content_language`를 따라 정본을 그대로 변환하며 번역하지 않는다. 단독 HTML의 `lang`과 Markdown의 언어
+  메타데이터는 실제 content language를 사용하고, 나중에 바꾼 target만으로 기존 출력이 변하지 않는다.
 
 ### F-8. 글 목록
 
@@ -390,6 +444,8 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
   후보만 재시도하기를 지원하며, 단일 생존 결과는 쓸 수 있지만 승패에는 넣지 않는다.
 - 계정별·단계별 리더보드에서 Elo, 비교 수, 승/패/승률, 평균 지연, 토큰과 비용을 본다.
   다른 계정의 결과나 순위는 볼 수 없다.
+- 작성 실험은 `target_language`를 입력 스냅샷·해시·보존 메타데이터에 포함하고, 두 후보와 재시도에 같은 값을 쓴다. 작성 품질은
+  언어에 따라 달라지므로 작성 리더보드는 계정과 target language별로 분리하고 관찰 리더보드는 언어와 독립적으로 유지한다.
 - 관찰/분석 승자는 결과 적용과 활성 모델 적용을 각각 명시적으로 선택한다. 분석 결과는 실험이 고정한 같은 활성 말투에만
   적용할 수 있고, 사용자가 쓴 `rules`는 바뀌지 않는다.
 - 선택·기각 후 입력과 두 후보 본문은 30일 뒤 지우되, 리더보드 재계산에 필요한 모델,
@@ -413,9 +469,30 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
 - 공개/비공개, 카테고리, 정본 태그를 지원한다. 예약 발행과 휴대폰 Push 알림은 후속이다.
 
 **완료 조건**
+
 - Mac이 꺼진 상태에서 휴대폰으로 발행을 요청하고 나중에 Mac을 켜면, 확정 당시의 글과 JPEG 8장이 올바른
   순서로 한 번만 발행되고 휴대폰 화면에 Naver URL이 표시된다.
 - 최종 클릭 직후 Mac 프로세스를 강제 종료해도 시스템은 자동 재시도하지 않아 중복 글을 만들지 않는다.
+
+### F-11. UI 다국어 지원
+
+- 로그인부터 로그인 후 모든 SPA 화면과 공개 설명 페이지의 정적 문구, validation, loading/empty/error,
+  dialog, 접근성 이름을 한국어·영어 catalog로 제공한다.
+- 사용자가 쓴 글·메모·말투/용도 이름, 모델·provider·플랫폼 고유명, 외부 provider 진단 원문은 번역하지 않는다.
+  제품이 아는 동기 오류는 `AppErrorDetail { reason, params }`, 영속 오류는 `Failure { reason, params }`로 전달·저장하고,
+  화면에서 현재 locale로 번역한다. 알 수 없거나 detail이 없는 실패는 Connect code에 맞는 일반 번역으로 폴백하며 raw message를
+  UI 문구로 사용하지 않는다.
+- 날짜·숫자·상대 시간은 같은 데이터에 `Intl` locale formatting만 적용한다. locale 전환은 데이터·세션·URL·작업 상태를
+  바꾸지 않는다.
+- 첫 React 화면 전에 저장값과 `navigator.languages`로 locale을 결정하고 `<html lang>`을 맞춘다. 사용자는 로그인 전·후
+  header에서 locale을 바꿀 수 있고, 명시적 선택은 같은 브라우저에 저장된다.
+- 한국어·영어 catalog의 key 집합은 같아야 하며 누락은 CI에서 실패한다. 런타임에 번역 key 자체를 사용자에게 노출하지 않는다.
+
+**완료 조건**
+
+- 저장된 선택이 없는 `en-US` 브라우저는 같은 URL에서 영어, `ko-KR`은 한국어, 지원하지 않는 locale은 한국어로 열린다.
+- 언어를 바꾸면 `<html lang>`, 화면 문구와 locale formatting이 즉시 바뀌며 사용자가 쓴 데이터와 진행 중 작업은 그대로다.
+- 제품이 아는 동기·영속 오류는 현재 locale로 다시 렌더링되고, 내부 오류·비밀·provider 원문으로 번역 분기하지 않는다.
 
 ---
 
@@ -430,7 +507,8 @@ sessions         token TEXT PK          -- 32바이트 랜덤의 해시
                  user_id TEXT FK, expires_at, created_at
 
 voices           id TEXT PK, user_id FK -- 계정당 여러 말투, 활성 기본값 하나
-                 name, is_default, deleted_at, created_at, updated_at
+                 name, source_language    -- 말투 근거의 기준 언어 ko | en, 생성 뒤 불변
+                 is_default, deleted_at, created_at, updated_at
 
 voice_profiles   voice_id TEXT PK FK, user_id FK -- 말투당 1:1
                  styleguide TEXT        -- 생성·수정된 문체 규칙
@@ -441,6 +519,8 @@ voice_samples    id, voice_id FK, user_id FK, label TEXT, body TEXT, created_at
 
 posts            slug TEXT PK, user_id FK, voice_id FK
                  title TEXT, memo TEXT          -- 사용자 입력
+                 target_language TEXT           -- 다음 전체 생성/A-B의 ko | en
+                 content_language TEXT nullable -- 현재 content가 실제로 쓰인 언어
                  observations TEXT              -- 관찰 단계 결과 (JSON)
                  content TEXT                   -- 블록 배열 (protojson) ← 정본
                  status TEXT                    -- draft | review | finalized
@@ -457,19 +537,22 @@ generation_jobs  id, post_slug FK, user_id FK, voice_id FK nullable -- §3.5, �
                  status TEXT                    -- queued | running | done | failed
                  stage TEXT                     -- observe | write
                  progress_done, progress_total
-                 error TEXT
+                 failure_reason TEXT, failure_params_json TEXT
+                 error TEXT                     -- 이전 행/내부 진단 호환, UI 표시 금지
                  observe_model TEXT, write_model TEXT   -- 어떤 선택으로 돌았는지
                  created_at, updated_at
 
 model_experiments id, user_id FK, voice_id FK nullable, post_slug FK nullable
-                  stage, status, job_id
+                  stage, target_language nullable, status, job_id
                   input_snapshot, input_hash, prompt_version
-                  winner_candidate_id, outcome, apply_error
+                  winner_candidate_id, outcome
+                  apply_failure_reason, apply_failure_params_json
                   created_at, finished_at, decided_at, content_expires_at
 
 model_experiment_candidates id, experiment_id FK
                   provider_id, model_id, model_label, display_side
-                  status, output, error
+                  status, output, failure_reason, failure_params_json
+                  error                              -- 이전 행/내부 진단 호환
                   prompt_tokens, completion_tokens, cost_microusd, latency_ms
 
 publishing_agents id, user_id FK, token_hash, platform, label
@@ -480,7 +563,8 @@ publishing_agents id, user_id FK, token_hash, platform, label
 publish_jobs      id, user_id FK, post_slug snapshot, post_created_at incarnation
                   (agent_id,user_id) composite FK, platform, status, stage, progress_seq
                   content_revision, manifest_json, settings_json
-                  lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url
+                  lease_token_hash, lease_expires_at
+                  failure_reason, failure_params_json, error_message, platform_post_url
                   created_at, claimed_at, committed_at, published_at, updated_at
 
 publish_assets    job_id FK, ordinal, filename, source_filename, staged_key, bytes
@@ -495,6 +579,16 @@ plan 10의 후속 임베디드 마이그레이션은 기존 계정마다 `기본
 무손실 backfill한다. 그 뒤 문체 테이블의 버전·유일성·작업 경계를 `user_id` 단독이 아니라 `(user_id, voice_id)`로 분할하고,
 `posts.machine_baseline_voice_id`로 말투 변경 전 기준본이 새 말투 학습에 섞이지 않게 한다.
 
+1.4의 임베디드 마이그레이션은 provider나 언어 감지기를 호출하지 않고 기존 말투의 `source_language`와 기존 글의
+`target_language`를 모두 `ko`로 결정적으로 backfill한다. 비어 있지 않은 기존 정본과 기계 기준본의
+`content_language`도 `ko`로 채우고, 정본이 없는 글은 `NULL`로 둔다. 새 말투·글은 서비스가 검증한 `ko | en`을
+명시적으로 저장하며 DB 기본값으로 요청 누락을 숨기지 않는다. 기존 영속 오류 문장은 내부 호환용으로 남기되 알려진
+상태는 구조화된 사유로 옮기고, 나머지 이전 실패는 raw 문장 대신 `UNKNOWN_FAILURE`로 투영한다.
+
+사용자에게 보이는 모든 영속 실패는 렌더링된 문장 대신 `failure_reason`과 flat scalar만 담는
+`failure_params_json`을 정본으로 삼는다. SQL 오류·stack·secret·provider response body·prompt·사용자 글은 params에
+넣지 않으며 `error`/`error_message` 호환 필드는 UI가 직접 표시하지 않는다.
+
 - **세션 토큰은 해시해서 저장한다.** DB가 새도 세션이 바로 탈취되지 않게.
 - **이미지 바이트는 DB에 없다.** R2 오브젝트 키만 들고, 실제 파일은 R2에 있다(§6.2).
   키 규칙: `posts/{slug}/{image_id}.jpg`.
@@ -508,16 +602,22 @@ plan 10의 후속 임베디드 마이그레이션은 기존 계정마다 `기본
   "summary": "바람 많던 날",
   "tags": ["제주", "성산"],
   "blocks": [
-    { "type": "TEXT",    "content": "문단 하나" },
+    { "type": "TEXT", "content": "문단 하나" },
     { "type": "HEADING", "level": 2, "content": "소제목" },
-    { "type": "IMAGE",   "file": "IMG_1.jpg", "alt": "...", "caption": "..." },
-    { "type": "QUOTE",   "content": "강조할 한 줄" },
-    { "type": "LIST",    "items": ["항목", "항목"] }
-  ]
+    { "type": "IMAGE", "file": "IMG_1.jpg", "alt": "...", "caption": "..." },
+    { "type": "QUOTE", "content": "강조할 한 줄" },
+    { "type": "LIST", "items": ["항목", "항목"] },
+  ],
 }
 ```
 
 **프로필 주입 순서** — 글에 지정된 단 하나의 말투에서만 아래 순서로 넣는다.
+
+전체 생성의 `target_language` 또는 수정의 `content_language`가 말투의 `source_language`와 같을 때만 전체
+프로필을 아래 순서로 넣는다. 다르면 그 말투의 typed `structure`와 여섯 `axes`만 결정적으로 투영하고,
+lexical·endings·syntax/connectives·legacy styleguide·자유 `rules`·활성 대조 규칙·샘플·완성 글 발췌는 모두
+제외한다. 이 투영은 번역이나 추가 모델 호출 없이 같은 말투 스냅샷을 whitelist하는 순수 동작이며 다른 말투의 근거를
+읽지 않는다([I3], [I4]). 관찰 결과는 이 언어별 프로필 투영에 들어가지 않고 기존처럼 언어와 독립적인 사진 사실로 남는다.
 
 ```
 1. styleguide          규칙
@@ -622,12 +722,12 @@ type Request struct {
   ```yaml
   providers:
     - id: openrouter
-      adapter: openai_compatible          # base_url만 다르면 이 어댑터로 끝
+      adapter: openai_compatible # base_url만 다르면 이 어댑터로 끝
       base_url: https://openrouter.ai/api/v1
       api_key_env: OPENROUTER_API_KEY
       models: [...]
     - id: anthropic
-      adapter: anthropic                  # 스키마가 실제로 다른 소수 중 하나
+      adapter: anthropic # 스키마가 실제로 다른 소수 중 하나
       api_key_env: ANTHROPIC_API_KEY
       models: [...]
   ```
@@ -672,27 +772,32 @@ type Request struct {
 
 ## 7. 엣지 케이스
 
-| 상황 | 처리 |
-|---|---|
-| 모델이 JSON 대신 설명문이나 코드펜스를 반환 | 구조화 출력을 지원하면 애초에 안 생김. 아니면 펜스 제거 후 파싱, 실패 시 원문 앞부분과 함께 오류 표시 |
-| 블록 필드 조합이 어긋남 (`type=TEXT`인데 `items`가 참) | 역직렬화 직후 검증에서 해당 블록 폐기 + 로그 (§3.2의 대가) |
-| 모델이 첨부되지 않은 파일명을 참조 | 해당 이미지 블록 제거 |
-| 관찰 결과 개수가 사진 개수와 불일치 | 실제 파일명 기준으로 매칭, 초과분 버림 |
-| 같은 날 같은 제목으로 두 번 생성 | slug 뒤에 일련번호 |
-| 사진 0장 | 메모만으로 생성 |
-| API 키 미설정 | 해당 프로바이더의 모델이 드롭다운에서 비활성 |
-| 무료 모델 한도 초과 | 작업이 `failed`, 오류 메시지에 원인 노출, 다른 모델 선택 유도 |
-| 선택했던 모델이 사라짐 | 드롭다운에서 회색 + 사유 표시, 마지막 선택 초기화 |
-| 브라우저가 HEIC를 못 여는 구형 기기 | 그 파일만 건너뛴 목록에 넣고 사유 표시 (§F-2) |
-| R2 PUT 실패 / presigned 만료 | 그 사진만 재시도 버튼. `ConfirmUpload` 없는 오브젝트는 고아로 정리 |
-| 생성 중 서버 재시작 | 기동 시 `running` 작업을 `failed`로 정리, 사용자에게 재시도 안내 |
-| 대기 중 말투 작업과 함께 서버 재시작 | 워커 시작 전에 실패 처리해 기동 자체가 프로바이더 호출을 시작하지 않음 |
-| 클립보드 API 차단 | 텍스트 자동 선택으로 폴백 |
-| 발행 요청 때 Mac이 꺼짐 | SQLite의 `queued`로 대기, Mac이 다시 폴링하면 claim |
-| 네이버 로그인 만료 / CAPTCHA / 2FA | `needs_attention`, 로컬 전용 프로필에서 사람이 해결하기 전까지 중단 |
-| 최종 발행 클릭 후 연결이 끊김 | `outcome_unknown`, 중복 방지를 위해 자동 재시도 금지 |
-| 남의 글 slug로 직접 접근 | 403 |
-| 남의 사진 R2 키를 알아냄 | presigned URL 없이는 못 읽음(버킷 비공개), 발급은 소유자 확인 후에만 |
+| 상황                                                                  | 처리                                                                                                                                                                    |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 모델이 JSON 대신 설명문이나 코드펜스를 반환                           | 구조화 출력을 지원하면 애초에 안 생김. 아니면 펜스 제거 후 파싱하고, 실패 시 `MODEL_OUTPUT_INVALID`를 현재 locale로 표시. 응답 원문은 UI나 영속 실패 params에 넣지 않음 |
+| 블록 필드 조합이 어긋남 (`type=TEXT`인데 `items`가 참)                | 역직렬화 직후 검증에서 해당 블록 폐기 + 로그 (§3.2의 대가)                                                                                                              |
+| 모델이 첨부되지 않은 파일명을 참조                                    | 해당 이미지 블록 제거                                                                                                                                                   |
+| 관찰 결과 개수가 사진 개수와 불일치                                   | 실제 파일명 기준으로 매칭, 초과분 버림                                                                                                                                  |
+| 같은 날 같은 제목으로 두 번 생성                                      | slug 뒤에 일련번호                                                                                                                                                      |
+| 사진 0장                                                              | 메모만으로 생성                                                                                                                                                         |
+| API 키 미설정                                                         | 해당 프로바이더의 모델이 드롭다운에서 비활성                                                                                                                            |
+| 무료 모델 한도 초과                                                   | 작업이 `failed`, `MODEL_RATE_LIMITED`를 현재 locale로 표시하고 다른 모델 선택 유도                                                                                      |
+| 선택했던 모델이 사라짐                                                | 드롭다운에서 회색 + 사유 표시, 마지막 선택 초기화                                                                                                                       |
+| 브라우저가 HEIC를 못 여는 구형 기기                                   | 그 파일만 건너뛴 목록에 넣고 사유 표시 (§F-2)                                                                                                                           |
+| R2 PUT 실패 / presigned 만료                                          | 그 사진만 재시도 버튼. `ConfirmUpload` 없는 오브젝트는 고아로 정리                                                                                                      |
+| 생성 중 서버 재시작                                                   | 기동 시 `running` 작업을 `failed`로 정리, 사용자에게 재시도 안내                                                                                                        |
+| 대기 중 말투 작업과 함께 서버 재시작                                  | 워커 시작 전에 실패 처리해 기동 자체가 프로바이더 호출을 시작하지 않음                                                                                                  |
+| 저장한 UI locale이 손상되었거나 브라우저 선호 언어가 `ko`·`en`이 아님 | 저장값을 무시하고 `navigator.languages`의 첫 지원 언어, 없으면 `ko` 사용                                                                                                |
+| 기존 정본이 있는 글의 target language를 변경                          | 정본·기계 기준본·확정 상태·`content_language`·관찰 결과는 유지하고 다음 전체 생성/A-B에만 적용                                                                          |
+| 작업 실행 중 또는 A/B 선택 대기 중 target language를 다시 변경        | 실행·후보는 시작 당시 target을 유지하고 적용 시 그 값으로 `content_language`만 기록. 글에 더 나중에 저장한 target은 덮어쓰지 않음                                       |
+| 말투 기준 언어와 정본 언어가 다름                                     | 생성·수정·확정·내보내기·발행은 허용, 말투 학습·문장 의견·대조 근거·규칙 저장은 provider 호출 전에 거부                                                                  |
+| 알 수 없는 오류 reason 또는 detail 없는 네트워크 실패                 | Connect code에 맞는 일반 번역으로 폴백하고 raw backend/provider message는 표시하지 않음                                                                                 |
+| 클립보드 API 차단                                                     | 텍스트 자동 선택으로 폴백                                                                                                                                               |
+| 발행 요청 때 Mac이 꺼짐                                               | SQLite의 `queued`로 대기, Mac이 다시 폴링하면 claim                                                                                                                     |
+| 네이버 로그인 만료 / CAPTCHA / 2FA                                    | `needs_attention`, 로컬 전용 프로필에서 사람이 해결하기 전까지 중단                                                                                                     |
+| 최종 발행 클릭 후 연결이 끊김                                         | `outcome_unknown`, 중복 방지를 위해 자동 재시도 금지                                                                                                                    |
+| 남의 글 slug로 직접 접근                                              | 403                                                                                                                                                                     |
+| 남의 사진 R2 키를 알아냄                                              | presigned URL 없이는 못 읽음(버킷 비공개), 발급은 소유자 확인 후에만                                                                                                    |
 
 ---
 
@@ -707,7 +812,6 @@ type Request struct {
 - 인스타그램 릴스·네이버 클립의 영상 생성/발행 — 네이버 블로그 발행 자동화 이후 별도 계획
 - 이미지 생성
 - 초안 버전 히스토리 / 되돌리기 (문체 프로필의 불변 버전·복원 기록은 포함)
-- 다국어 출력
 
 ---
 
