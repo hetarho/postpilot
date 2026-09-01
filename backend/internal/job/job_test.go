@@ -16,6 +16,27 @@ import (
 	"github.com/postpilot/backend/internal/platform/db"
 )
 
+// Every deadline in this file guards a liveness property — work starts, a status lands, an
+// enqueue does not block on its handler — and none of them measures how *fast* that happens.
+// The budgets are therefore sized for the slowest machine that runs them, not for a quiet
+// laptop: on CI the whole backend builds and tests at once, and packages that hammer SQLite
+// (post/store, voice, platform/db) run beside this one, so a worker can wait tens of
+// milliseconds for a scheduler slot or a disk flush. A budget tight enough to notice that
+// contention reports it as a product failure, which is what happened. Nothing here weakens an
+// assertion: the handler that never starts, or the Enqueue that blocks on one, is still a
+// failure — it is simply reported later.
+const (
+	// A queued job must reach the asserted state. The queue polls every 10ms and a correct
+	// run lands in milliseconds.
+	stateDeadline = 30 * time.Second
+	// A registered handler must be picked up once the worker is running.
+	handlerStartDeadline = 10 * time.Second
+	// Enqueue must return without waiting for the handler. The handlers that this guards
+	// block until the test itself releases them, so an Enqueue that did wait on one would
+	// never return at all and would exhaust any budget.
+	enqueueReturnDeadline = 10 * time.Second
+)
+
 type harness struct {
 	queue  *job.Queue
 	store  *jobstore.Store
@@ -62,7 +83,7 @@ func newHarness(t *testing.T) *harness {
 
 func waitFor(t *testing.T, queue *job.Queue, id, userID string, match func(*job.JobSummary) bool) *job.JobSummary {
 	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
+	deadline := time.Now().Add(stateDeadline)
 	for time.Now().Before(deadline) {
 		found, err := queue.Get(context.Background(), id, userID)
 		if err == nil && match(found) {
@@ -138,12 +159,12 @@ func TestEnqueueReturnsBeforeHandlerAndWorkerPublishesProgress(t *testing.T) {
 		if queued.err != nil {
 			t.Fatalf("Enqueue: %v", queued.err)
 		}
-	case <-time.After(200 * time.Millisecond):
+	case <-time.After(enqueueReturnDeadline):
 		t.Fatal("Enqueue blocked on the handler")
 	}
 	select {
 	case <-started:
-	case <-time.After(time.Second):
+	case <-time.After(handlerStartDeadline):
 		t.Fatal("handler did not start")
 	}
 
@@ -506,7 +527,7 @@ func TestShutdownLeavesRunningForNextSweep(t *testing.T) {
 	go h.queue.Run(ctx)
 	select {
 	case <-started:
-	case <-time.After(time.Second):
+	case <-time.After(handlerStartDeadline):
 		t.Fatal("handler did not start")
 	}
 	cancel()
@@ -540,7 +561,7 @@ func TestShutdownAfterSuccessfulHandlerPersistsDone(t *testing.T) {
 	go h.queue.Run(ctx)
 	select {
 	case <-started:
-	case <-time.After(time.Second):
+	case <-time.After(handlerStartDeadline):
 		t.Fatal("handler did not start")
 	}
 	cancel()
