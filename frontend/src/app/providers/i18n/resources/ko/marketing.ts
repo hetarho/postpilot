@@ -9,7 +9,7 @@
  *    (spec/policy/plans.md). Changing the ladder means changing this copy in the same change. */
 export const marketing = {
   metadata: {
-    title: 'Postpilot이란? — 사진과 메모로 블로그 글 초안 만들기',
+    title: 'Postpilot이란? | 사진과 메모로 블로그 글 초안 만들기',
     description:
       '사진과 거친 메모를 내가 고른 말투로 블로그 초안까지 옮기는 도구입니다. 사진 관찰과 글쓰기를 나누고, 어떤 AI 모델을 쓸지 직접 고릅니다.',
   },

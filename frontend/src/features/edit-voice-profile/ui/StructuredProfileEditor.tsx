@@ -195,13 +195,13 @@ export function StructuredProfileEditor({
                 {structured.lexical.bannedWords.map((v) => (
                   <li key={v.value}>
                     {v.value}
-                    {v.reason ? ` — ${v.reason}` : ''}
+                    {v.reason ? ` (${v.reason})` : ''}
                   </li>
                 ))}
                 {structured.lexical.bannedPatterns.map((v) => (
                   <li key={v.value}>
                     {v.value}
-                    {v.reason ? ` — ${v.reason}` : ''}
+                    {v.reason ? ` (${v.reason})` : ''}
                   </li>
                 ))}
                 {structured.endings.bannedEndings.map((v) => (

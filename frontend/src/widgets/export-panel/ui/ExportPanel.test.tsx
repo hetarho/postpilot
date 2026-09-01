@@ -47,7 +47,7 @@ it('switches four synchronous outputs with their guidance and keeps the Naver ti
   expect(screen.getByText('그대로 .html로 저장하고 사진 파일을 옆에 두세요')).toBeInTheDocument()
   await user.click(screen.getByRole('tab', { name: '마크다운' }))
   expect(
-    screen.getByText('Hugo · Jekyll · Obsidian — 사진 파일을 같은 폴더에 두세요'),
+    screen.getByText('Hugo · Jekyll · Obsidian에 맞는 형식이에요. 사진 파일을 같은 폴더에 두세요'),
   ).toBeInTheDocument()
   expect(fetchSpy).not.toHaveBeenCalled()
 })
@@ -79,7 +79,7 @@ it('selects the preview and explains manual copy when the Clipboard API is unava
   await waitFor(() => expect(select).toHaveBeenCalledOnce())
   expect(screen.getByLabelText('내보내기 결과')).toHaveFocus()
   expect(
-    screen.getByText('자동 복사가 막혀 있어요 — 선택된 텍스트를 길게 눌러 복사하세요'),
+    screen.getByText('자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요'),
   ).toBeInTheDocument()
 })
 
@@ -109,7 +109,7 @@ it('ignores a stale clipboard rejection after the format changes', async () => {
   )
   expect(select).not.toHaveBeenCalled()
   expect(
-    screen.queryByText('자동 복사가 막혀 있어요 — 선택된 텍스트를 길게 눌러 복사하세요'),
+    screen.queryByText('자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요'),
   ).not.toBeInTheDocument()
   expect(screen.queryByText('복사됨')).not.toBeInTheDocument()
 })

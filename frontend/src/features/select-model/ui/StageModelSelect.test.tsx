@@ -64,7 +64,7 @@ describe('StageModelSelect', () => {
     expect(screen.getByRole('option', { name: 'Free 👁' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: /Writer/ })).not.toBeInTheDocument()
     expect(
-      screen.getByRole('option', { name: 'Claude 👁 구조화 응답 — API key not configured' }),
+      screen.getByRole('option', { name: 'Claude 👁 구조화 응답 (API key not configured)' }),
     ).toHaveAttribute('aria-disabled', 'true')
   })
 
@@ -195,7 +195,7 @@ describe('a model above the account tier', () => {
     const user = userEvent.setup()
     await openPanel(user, /작성 모델/)
 
-    const locked = screen.getByRole('option', { name: 'Claude Opus 5 — Max 플랜부터' })
+    const locked = screen.getByRole('option', { name: 'Claude Opus 5 (Max 플랜부터)' })
     expect(locked).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('option', { name: 'Writer' })).not.toHaveAttribute('aria-disabled')
   })

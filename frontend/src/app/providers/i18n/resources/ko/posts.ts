@@ -247,7 +247,7 @@ export const posts = {
   },
   observation: {
     title: '사진 관찰',
-    description: '모델이 각 사진에서 본 것 — 글이 이상하면 여기부터 확인하세요',
+    description: '모델이 각 사진에서 본 것입니다. 글이 이상하면 여기부터 확인하세요',
     position: '{{current}} / {{total}}',
     imageAlt: '{{filename}} 관찰 사진',
     urlPending: '사진 주소를 준비하는 중…',
@@ -266,7 +266,7 @@ export const posts = {
     naverTitle: '네이버 제목',
     copyTitle: '제목 복사',
     titleCopied: '제목이 복사됐어요',
-    manualCopy: '자동 복사가 막혀 있어요 — 선택된 텍스트를 길게 눌러 복사하세요',
+    manualCopy: '자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요',
     languageMissing: '글의 내용 언어 정보가 없어 내보낼 수 없어요. 글을 다시 불러와 주세요.',
     formatLabel: {
       naver: '네이버 블로그',
@@ -278,7 +278,7 @@ export const posts = {
       naver: '붙여넣고 표시된 자리에 사진을 드래그하세요',
       tistory: 'HTML 모드에 붙여넣고 사진 업로드 후 src를 교체하세요',
       site: '그대로 .html로 저장하고 사진 파일을 옆에 두세요',
-      markdown: 'Hugo · Jekyll · Obsidian — 사진 파일을 같은 폴더에 두세요',
+      markdown: 'Hugo · Jekyll · Obsidian에 맞는 형식이에요. 사진 파일을 같은 폴더에 두세요',
     },
   },
 } as const

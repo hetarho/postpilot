@@ -2,7 +2,7 @@
  *  topology, same interpolation, same meaning as `ko/marketing.ts`, which carries the claim rules. */
 export const marketing = {
   metadata: {
-    title: 'What is Postpilot? — Blog drafts from photos and rough notes',
+    title: 'What is Postpilot? | Blog drafts from photos and rough notes',
     description:
       'Turn photos and rough notes into a blog draft in a voice you trained. Photo observation is separated from writing, and you pick the AI model for each step.',
   },

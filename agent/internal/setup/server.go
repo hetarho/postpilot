@@ -159,7 +159,7 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 	}
 	browserSession, err := browser.OpenEditor(values.BrowserBinary, profileDir)
 	if err != nil {
-		data.Error = "전용 브라우저에서 네이버 글쓰기 화면을 열지 못했어요: " + err.Error() + " — 로그인 또는 보안 확인이 필요한지 확인한 뒤 다시 시도하세요."
+		data.Error = "전용 브라우저에서 네이버 글쓰기 화면을 열지 못했어요: " + err.Error() + ". 로그인 또는 보안 확인이 필요한지 확인한 뒤 다시 시도하세요."
 		s.render(writer, data)
 		return
 	}

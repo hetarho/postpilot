@@ -113,7 +113,7 @@ func renderStructuredProfile(p StructuredProfile) string {
 		return ""
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "[Structured voice profile v%d]\n[Lexical]\n%s\n[Endings — primary]\nregister: %s\ndistribution:", p.Version, renderValue(p.Lexical.Description), renderValue(p.Endings.BaseRegister))
+	fmt.Fprintf(&b, "[Structured voice profile v%d]\n[Lexical]\n%s\n[Primary endings]\nregister: %s\ndistribution:", p.Version, renderValue(p.Lexical.Description), renderValue(p.Endings.BaseRegister))
 	for _, ratio := range p.Endings.Distribution {
 		fmt.Fprintf(&b, " %s=%.2f", ratio.Ending, ratio.Ratio)
 	}

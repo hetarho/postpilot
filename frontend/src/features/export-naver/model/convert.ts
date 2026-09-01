@@ -18,7 +18,7 @@ export function toNaver(
         return block.content
       case BlockType.IMAGE:
         return block.caption
-          ? `[${contentLanguage === 'en' ? 'Photo' : '사진'} ${block.file} — ${block.caption}]`
+          ? `[${contentLanguage === 'en' ? 'Photo' : '사진'} ${block.file}: ${block.caption}]`
           : `[${contentLanguage === 'en' ? 'Photo' : '사진'} ${block.file}]`
       case BlockType.QUOTE:
         return `“${block.content}”`

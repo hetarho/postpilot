@@ -258,7 +258,7 @@ export const posts = {
   },
   observation: {
     title: 'Photo observations',
-    description: 'What the model saw in each photo — start here if the post looks wrong',
+    description: 'What the model saw in each photo. Start here if the post looks wrong',
     position: '{{current}} / {{total}}',
     imageAlt: 'Observation photo: {{filename}}',
     urlPending: 'Preparing the photo URL…',
@@ -277,7 +277,7 @@ export const posts = {
     naverTitle: 'Naver title',
     copyTitle: 'Copy title',
     titleCopied: 'Title copied',
-    manualCopy: 'Automatic copying is blocked — press and hold the selected text to copy it',
+    manualCopy: 'Automatic copying is blocked. Press and hold the selected text to copy it',
     languageMissing:
       'This post has no content-language provenance, so it cannot be exported. Reload the post and try again.',
     formatLabel: {
@@ -290,7 +290,7 @@ export const posts = {
       naver: 'Paste it, then drag photos to the marked locations',
       tistory: 'Paste in HTML mode, upload the photos, then replace each src',
       site: 'Save it as an .html file and place the photo files beside it',
-      markdown: 'Hugo · Jekyll · Obsidian — place the photo files in the same folder',
+      markdown: 'For Hugo · Jekyll · Obsidian. Place the photo files in the same folder',
     },
   },
 } as const

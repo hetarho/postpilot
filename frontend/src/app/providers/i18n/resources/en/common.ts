@@ -1,6 +1,6 @@
 export const common = {
   metadata: {
-    title: 'Postpilot — Turn photos and experiences into blog posts',
+    title: 'Postpilot | Turn photos and experiences into blog posts',
     description: 'Turn your photos and experiences into blog posts in your own voice.',
   },
   locale: {

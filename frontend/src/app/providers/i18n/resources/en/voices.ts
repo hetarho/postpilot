@@ -239,9 +239,9 @@ export const voices = {
     'This voice has been deleted. You can view its history, but it cannot learn or be edited until it is restored.',
   warning: {
     deletedPost:
-      '<voice>{{voice}}</voice> — You can still read, edit, and export this post. To generate, revise, or learn with AI, restore the voice or choose another one above.',
+      '<voice>{{voice}}</voice>. You can still read, edit, and export this post. To generate, revise, or learn with AI, restore the voice or choose another one above.',
     empty:
-      'The voice profile is empty — teach it with one post in the Voice tab to generate in your style.',
+      'The voice profile is empty. Teach it with one post in the Voice tab to generate in your style.',
     learn: 'Teach this voice',
   },
   screens: {

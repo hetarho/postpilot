@@ -1,6 +1,6 @@
 export const common = {
   metadata: {
-    title: 'Postpilot — 사진과 경험을 블로그 글로',
+    title: 'Postpilot | 사진과 경험을 블로그 글로',
     description: '사진과 경험을 나만의 말투로 블로그 글에 옮겨 보세요.',
   },
   locale: {

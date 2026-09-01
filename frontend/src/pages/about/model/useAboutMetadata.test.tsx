@@ -11,8 +11,8 @@ function href(selector: string): string | null {
   return document.head.querySelector(selector)?.getAttribute('href') ?? null
 }
 
-const APP_TITLE_KO = 'Postpilot — 사진과 경험을 블로그 글로'
-const APP_TITLE_EN = 'Postpilot — Turn photos and experiences into blog posts'
+const APP_TITLE_KO = 'Postpilot | 사진과 경험을 블로그 글로'
+const APP_TITLE_EN = 'Postpilot | Turn photos and experiences into blog posts'
 
 beforeEach(() => {
   document.head.innerHTML = ''
@@ -29,7 +29,7 @@ describe('/about document metadata', () => {
     await screen.findByRole('heading', { level: 1 })
 
     const url = `${window.location.origin}/about`
-    expect(document.title).toBe('Postpilot이란? — 사진과 메모로 블로그 글 초안 만들기')
+    expect(document.title).toBe('Postpilot이란? | 사진과 메모로 블로그 글 초안 만들기')
     expect(content('meta[name="description"]')).toMatch(/사진과 거친 메모를/)
     expect(content('meta[property="og:type"]')).toBe('website')
     expect(content('meta[property="og:title"]')).toBe(document.title)
@@ -104,7 +104,7 @@ describe('/about document metadata', () => {
 
     await router.navigate({ to: '/about' })
     await screen.findByRole('heading', { level: 1 })
-    expect(document.title).toBe('Postpilot이란? — 사진과 메모로 블로그 글 초안 만들기')
+    expect(document.title).toBe('Postpilot이란? | 사진과 메모로 블로그 글 초안 만들기')
 
     await router.navigate({ to: '/login' })
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))

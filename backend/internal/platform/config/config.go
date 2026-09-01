@@ -396,7 +396,7 @@ func validateOrigin(origin string) error {
 		return fmt.Errorf("required (the exact browser origin, e.g. https://postpilot.example.com)")
 	}
 	if strings.Contains(origin, "*") {
-		return fmt.Errorf("must be one exact origin — a wildcard cannot be combined with credentialed CORS, got %q", origin)
+		return fmt.Errorf("must be one exact origin; a wildcard cannot be combined with credentialed CORS, got %q", origin)
 	}
 
 	u, err := url.Parse(origin)

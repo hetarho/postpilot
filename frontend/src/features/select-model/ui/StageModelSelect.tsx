@@ -150,9 +150,9 @@ function optionLabel(model: CatalogModel): string {
   // reason it cannot be chosen is the only thing this entry has to teach. A provider without
   // a key is the more immediate obstacle, so that reason wins when both apply.
   const reason = model.disabled
-    ? ` — ${model.disabledReason}`
+    ? ` (${model.disabledReason})`
     : model.locked
-      ? ` — ${i18next.t('selectField.locked', { ns: 'models', plan: planLabel(model.minPlan) })}`
+      ? ` (${i18next.t('selectField.locked', { ns: 'models', plan: planLabel(model.minPlan) })})`
       : ''
   return `${model.label}${badges ? ` ${badges}` : ''}${reason}`
 }

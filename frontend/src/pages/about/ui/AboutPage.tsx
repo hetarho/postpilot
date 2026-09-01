@@ -207,7 +207,7 @@ export function AboutPage() {
           className: 'text-content-tertiary mb-safe-b px-4 pb-8 sm:px-6',
         })}
       >
-        <p>Postpilot — {t('footer.tagline')}</p>
+        <p>Postpilot · {t('footer.tagline')}</p>
       </footer>
     </div>
   )

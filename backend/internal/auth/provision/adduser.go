@@ -69,7 +69,7 @@ func Run(ctx context.Context, args []string, bootstraps ...Bootstrap) error {
 			if bootErr := runBootstraps(ctx, handle, loginID, bootstraps); bootErr != nil {
 				return fmt.Errorf("account %q already exists and its bootstrap failed: %w", loginID, bootErr)
 			}
-			return fmt.Errorf("account %q already exists — pick another id, or delete the row first", loginID)
+			return fmt.Errorf("account %q already exists; pick another id, or delete the row first", loginID)
 		}
 		return err
 	}

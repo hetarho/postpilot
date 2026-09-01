@@ -108,7 +108,7 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
                 className="bg-surface-recessed rounded-md px-3 py-2 break-words"
               >
                 {t('comparison.photo', { filename: block.file })}
-                {block.caption ? ` — ${block.caption}` : ''}
+                {block.caption ? `: ${block.caption}` : ''}
               </Typography>
             ) : (
               <Typography key={index} variant="body" className="whitespace-pre-wrap">
@@ -131,19 +131,19 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
             <Typography variant="label" as="dd" className="mt-2 space-y-1">
               <p>
                 <span className="text-content-tertiary">{t('comparison.scene')}</span>{' '}
-                {item.scene || '—'}
+                {item.scene || '-'}
               </p>
               <p>
                 <span className="text-content-tertiary">{t('comparison.mood')}</span>{' '}
-                {item.mood || '—'}
+                {item.mood || '-'}
               </p>
               <p>
                 <span className="text-content-tertiary">{t('comparison.visibleText')}</span>{' '}
-                {item.visibleText || '—'}
+                {item.visibleText || '-'}
               </p>
               <p>
                 <span className="text-content-tertiary">{t('comparison.objects')}</span>{' '}
-                {item.objects.join(', ') || '—'}
+                {item.objects.join(', ') || '-'}
               </p>
               <p>
                 <span className="text-content-tertiary">{t('comparison.people')}</span>{' '}
