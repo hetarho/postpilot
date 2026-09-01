@@ -103,13 +103,19 @@ describe('PublishPostForm', () => {
     }
     const view = render(<PublishPostForm {...props} agents={[first]} />, { wrapper })
 
-    expect(screen.getByLabelText('카테고리')).toHaveValue('daily')
-    expect(screen.getByLabelText('공개 설정')).toHaveValue(String(PublishVisibility.PUBLIC))
+    const category = () => screen.getByRole('combobox', { name: /카테고리/ })
+    const visibility = () => screen.getByRole('combobox', { name: /공개 설정/ })
+    expect(category()).toHaveTextContent('일상')
+    expect(visibility()).toHaveTextContent('전체 공개')
 
     view.rerender(<PublishPostForm {...props} agents={[replacement]} />)
-    await waitFor(() => expect(screen.getByLabelText('Mac 연결')).toHaveValue('replacement'))
-    expect(screen.getByLabelText('카테고리')).toHaveValue('travel')
-    expect(screen.getByLabelText('공개 설정')).toHaveValue(String(PublishVisibility.PRIVATE))
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: /Mac 연결/ })).toHaveTextContent(
+        'replacement Mac',
+      ),
+    )
+    expect(category()).toHaveTextContent('여행')
+    expect(visibility()).toHaveTextContent('비공개')
 
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: '네이버에 발행' }))

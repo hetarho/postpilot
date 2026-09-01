@@ -9,7 +9,7 @@ import {
   VoiceLearningService,
 } from '@/shared/api'
 import { LONG_PRESS_MS } from '@/shared/config'
-import { AppFailureMessage, Button, Dialog, FieldLabel, Notice, Select } from '@/shared/ui'
+import { AppFailureMessage, Button, Dialog, FieldLabel, Listbox, Notice } from '@/shared/ui'
 
 export function SentenceFeedback({
   postSlug,
@@ -88,33 +88,35 @@ export function SentenceFeedback({
       >
         <div className="grid gap-4">
           <div>
-            <FieldLabel htmlFor="feedback-sentence">{t('feedback.sentence')}</FieldLabel>
-            <Select
+            <FieldLabel id="feedback-sentence-label" htmlFor="feedback-sentence">
+              {t('feedback.sentence')}
+            </FieldLabel>
+            <Listbox
               id="feedback-sentence"
+              aria-labelledby="feedback-sentence-label"
               value={selected}
-              onChange={(event) => setSentence(event.target.value)}
+              options={sentences.map((value) => ({ value, label: value }))}
+              onChange={setSentence}
               className="mt-1"
-            >
-              {sentences.map((value, index) => (
-                <option key={`${index}-${value}`} value={value}>
-                  {value}
-                </option>
-              ))}
-            </Select>
+            />
           </div>
           <div>
-            <FieldLabel htmlFor="feedback-reason">{t('feedback.reason')}</FieldLabel>
-            <Select
+            <FieldLabel id="feedback-reason-label" htmlFor="feedback-reason">
+              {t('feedback.reason')}
+            </FieldLabel>
+            <Listbox<VoiceFeedbackReason>
               id="feedback-reason"
+              aria-labelledby="feedback-reason-label"
               value={reason}
-              onChange={(event) => setReason(Number(event.target.value) as VoiceFeedbackReason)}
+              options={[
+                { value: VoiceFeedbackReason.VOCABULARY, label: t('feedback.vocabulary') },
+                { value: VoiceFeedbackReason.ENDING, label: t('feedback.ending') },
+                { value: VoiceFeedbackReason.LENGTH, label: t('feedback.length') },
+                { value: VoiceFeedbackReason.STRUCTURE, label: t('feedback.structure') },
+              ]}
+              onChange={setReason}
               className="mt-1"
-            >
-              <option value={VoiceFeedbackReason.VOCABULARY}>{t('feedback.vocabulary')}</option>
-              <option value={VoiceFeedbackReason.ENDING}>{t('feedback.ending')}</option>
-              <option value={VoiceFeedbackReason.LENGTH}>{t('feedback.length')}</option>
-              <option value={VoiceFeedbackReason.STRUCTURE}>{t('feedback.structure')}</option>
-            </Select>
+            />
           </div>
           <p>{t('feedback.help')}</p>
           {mutation.error && (

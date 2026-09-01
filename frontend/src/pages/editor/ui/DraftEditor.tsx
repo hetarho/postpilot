@@ -33,14 +33,11 @@ import {
   flushContentQueue,
   type BlockEditorHandle,
 } from '@/features/edit-post-content'
-import { FinalizeActions, VoiceLearningPanel, useVoiceLearning } from '@/features/finalize-post'
+import { VoiceLearningPanel, useVoiceLearning } from '@/features/finalize-post'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
-import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
+import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
-import { StageModelSelect } from '@/features/select-model'
-import { PostPurposeSelect } from '@/features/select-post-purpose'
-import { PostLanguageSelect } from '@/features/select-post-language'
-import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
+import { reassignmentBlocker } from '@/features/select-post-voice'
 import {
   ActionBar,
   Badge,
@@ -54,7 +51,9 @@ import {
 } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { ExportPanel } from '@/widgets/export-panel'
+import { GenerationBrief } from '@/widgets/generation-brief'
 import { PublishPanel } from '@/widgets/publish-panel'
+import { RefineDock } from '@/widgets/refine-dock'
 import { DeletedVoiceWarning, VoiceWarning } from '@/widgets/voice-warning'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
 import { activeLocale } from '@/shared/lib'
@@ -172,7 +171,58 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     element.setSelectionRange(caret.selectionStart, caret.selectionEnd)
   }, [caret])
 
+  // Lifted out of `GenerationActions`: the brief widget SETS the target length and the generate
+  // action SENDS it, and the two now live on different layers, so the value has to be owned by
+  // the one screen they both hang off.
+  // It is adjusted DURING RENDER rather than from an effect — an effect would paint one frame
+  // carrying the value the server has already moved past.
+  const [targetLength, setTargetLength] = useState(post?.targetLength)
+  const [serverTargetLength, setServerTargetLength] = useState(post?.targetLength)
+  if (serverTargetLength !== post?.targetLength) {
+    setServerTargetLength(post?.targetLength)
+    setTargetLength(post?.targetLength)
+  }
+
+  const titleField = (
+    <TitleField value={title} onChange={setTitle} fieldRef={titleRef} nextRef={memoRef} />
+  )
   const memoField = <MemoField value={memo} onChange={setMemo} fieldRef={memoRef} />
+
+  // Everything the next AI run is given, in one surface. Every callback goes through the autosave
+  // queue for an existing post, and through local state for a draft the server has not created.
+  const brief = (
+    <GenerationBrief
+      ownerId={ownerId}
+      voiceId={voiceId}
+      currentVoice={post?.voice}
+      voiceBlocked={post ? reassignmentBlocker(post) : ''}
+      confirmVoiceChange={Boolean(post)}
+      onVoiceSelect={post ? autosave.reassign : setNewVoiceId}
+      purposeId={purposeId}
+      currentPurpose={post?.purpose}
+      jobRunning={Boolean(post?.activeJob && !isTerminal(post.activeJob))}
+      onPurposeSelect={post ? autosave.assignPurpose : setNewPurposeId}
+      targetLanguage={targetLanguage}
+      contentLanguage={post?.contentLanguage}
+      frozenLanguage={
+        post?.activeJob && !isTerminal(post.activeJob) ? post.activeJob.targetLanguage : undefined
+      }
+      onTargetLanguageSelect={post ? autosave.assignTargetLanguage : setNewTargetLanguage}
+      photoCount={post?.images.length ?? 0}
+      targetLength={
+        post
+          ? {
+              slug: post.slug,
+              value: targetLength,
+              // The length is the one field in the brief a running job has already frozen; the
+              // others are still worth changing for the NEXT run, which is why only this one greys.
+              disabled: Boolean(post.activeJob && !isTerminal(post.activeJob)),
+              onSaved: setTargetLength,
+            }
+          : undefined
+      }
+    />
+  )
 
   // `flex-1 flex-col` here plus `mt-auto` on the dock is what puts the bar at the BOTTOM of a
   // short draft: `sticky` can only pull an element up toward the scrollport edge, never push one
@@ -208,31 +258,85 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         />
       )}
 
+      {post ? (
+        <LifecycleSteps
+          post={post}
+          ownerId={ownerId}
+          step={step}
+          onStepChange={setStep}
+          titleField={titleField}
+          memoField={memoField}
+          brief={brief}
+          targetLength={targetLength}
+          onTitleFinalized={setTitle}
+          beforeStart={autosave.flush}
+          ensureSlug={autosave.ensureSlug}
+          saveState={autosave.state}
+        />
+      ) : (
+        <>
+          {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
+          {titleField}
+          {memoField}
+          <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
+          <EditorVoiceWarning ownerId={ownerId} voice={voice} />
+          {/* A draft with no post yet has no committing action, but the brief is still where its
+              말투 is chosen — and that choice has to be reachable before the first word is typed. */}
+          <EditorDock saveState={autosave.state}>{brief}</EditorDock>
+        </>
+      )}
+    </main>
+  )
+}
+
+/** The 가제 belongs to 글 생성 alone (policy/posts.md). From 글 다듬기 on there is exactly one
+ *  title on the screen and it is `content.title`, edited through the block editor's header — two
+ *  title fields side by side is a question the user cannot answer.
+ *
+ *  A textarea, not an input: a Korean title fits ~14 characters across a 360px screen at the
+ *  display size, and a single-line input would scroll the rest of it out of a field that has no
+ *  well to show it scrolled (§0 — the title is one of the largest things on the screen, so it
+ *  wraps instead). Its value and its autosave stay in `DraftEditor`, so unmounting it on another
+ *  step cannot strand a queued save. */
+function TitleField({
+  value,
+  onChange,
+  fieldRef,
+  nextRef,
+}: {
+  value: string
+  onChange: (value: string) => void
+  fieldRef: RefObject<HTMLTextAreaElement | null>
+  nextRef: RefObject<HTMLTextAreaElement | null>
+}) {
+  const { t } = useTranslation('posts')
+  return (
+    <>
       <FieldLabel htmlFor="post-title" className="sr-only">
         {t('editor.title')}
       </FieldLabel>
       {/* The visible title remains an editable field, so this mirrors its current value into the
           document outline without replacing the field or creating a second tab stop. */}
       <Typography variant="display" className="sr-only">
-        {title.trim() || t('editor.titlePlaceholder')}
+        {value.trim() || t('editor.titlePlaceholder')}
       </Typography>
       <Textarea
         id="post-title"
-        ref={titleRef}
+        ref={fieldRef}
         appearance="bare"
         rows={1}
         autoGrow
-        value={title}
+        value={value}
         // A pasted newline would otherwise be saved inside the title; the single-line input this
         // replaced dropped one for free.
-        onChange={(event) => setTitle(event.target.value.replace(/\n/g, ' '))}
+        onChange={(event) => onChange(event.target.value.replace(/\n/g, ' '))}
         onKeyDown={(event) => {
           // The title is one line even though the field wraps, so Enter moves to the memo instead
           // of typing a newline into it — but never mid-composition, where Enter is how a Hangul
           // IME commits the syllable being written.
           if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
           event.preventDefault()
-          memoRef.current?.focus()
+          nextRef.current?.focus()
         }}
         placeholder={t('editor.titlePlaceholder')}
         enterKeyHint="next"
@@ -242,66 +346,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         // the post title is the largest thing on the screen (§0).
         className={typographyStyles({ variant: 'display', className: 'mt-4' })}
       />
-
-      {/* The voice is the post's identity like its title, so it sits with the title outside the
-          step panels: it decides what every step's AI work sounds like, and a reassignment must
-          not be lost to a step change any more than a title edit is. */}
-      <PostVoiceSelect
-        ownerId={ownerId}
-        value={voiceId}
-        current={post?.voice}
-        blocked={post ? reassignmentBlocker(post) : ''}
-        confirm={Boolean(post)}
-        onSelect={post ? autosave.reassign : setNewVoiceId}
-        className="mt-4"
-      />
-
-      {/* Beside the voice, and outside the step panels for the same reason: the pair is what the
-          next AI run is given — the voice decides how it sounds, the 용도 what kind of text it is.
-          Unlike the voice it stays usable during a job: the running one keeps the brief frozen at
-          its enqueue, and the select says so. */}
-      <PostPurposeSelect
-        ownerId={ownerId}
-        value={purposeId}
-        current={post?.purpose}
-        jobRunning={Boolean(post?.activeJob && !isTerminal(post.activeJob))}
-        onSelect={post ? autosave.assignPurpose : setNewPurposeId}
-        className="mt-4"
-      />
-
-      <PostLanguageSelect
-        value={targetLanguage}
-        contentLanguage={post?.contentLanguage}
-        frozenLanguage={
-          post?.activeJob && !isTerminal(post.activeJob) ? post.activeJob.targetLanguage : undefined
-        }
-        onSelect={post ? autosave.assignTargetLanguage : setNewTargetLanguage}
-        className="mt-4"
-      />
-
-      {post ? (
-        <LifecycleSteps
-          post={post}
-          ownerId={ownerId}
-          step={step}
-          onStepChange={setStep}
-          memoField={memoField}
-          beforeStart={autosave.flush}
-          ensureSlug={autosave.ensureSlug}
-          saveState={autosave.state}
-        />
-      ) : (
-        <>
-          {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
-          {memoField}
-          <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
-          <EditorVoiceWarning ownerId={ownerId} voice={voice} />
-          {/* A draft with no post yet has no committing action — but it is also the state where a
-              failing save is most expensive, since nothing has reached the server at all. */}
-          <EditorDock saveState={autosave.state} />
-        </>
-      )}
-    </main>
+    </>
   )
 }
 
@@ -380,10 +425,9 @@ function EmptyProfileWarning({ ownerId, voiceId }: { ownerId: string; voiceId: s
  *  scroll away with the section it sat in. */
 function EditorDock({ saveState, children }: { saveState: SaveState; children?: ReactNode }) {
   const { t } = useTranslation('posts')
-  // An untouched `/posts/new` has neither: `idle` is SaveStatus's deliberately empty state, and a
-  // draft the server has not created yet carries no action — so the bar renders as a bare elevated
-  // card across the bottom of the screen. Chrome with nothing to say is not chrome (§0); it comes
-  // back with the first keystroke, which is also the first thing it has to report.
+  // A bar with nothing to say is not chrome (§0). `idle` is SaveStatus's deliberately empty state,
+  // so a dock holding neither a save line nor a control is not rendered at all. Every step that
+  // carries an action passes one, which is why 글 다듬기's dock is now always present.
   if (saveState === 'idle' && !children) return null
   return (
     <>
@@ -431,7 +475,11 @@ function LifecycleSteps({
   ownerId,
   step,
   onStepChange,
+  titleField,
   memoField,
+  brief,
+  targetLength,
+  onTitleFinalized,
   beforeStart,
   ensureSlug,
   saveState,
@@ -440,7 +488,12 @@ function LifecycleSteps({
   ownerId: string
   step: EditorStep
   onStepChange: (step: EditorStep) => void
+  titleField: ReactNode
   memoField: ReactNode
+  brief: ReactNode
+  targetLength?: number
+  /** Re-seeds the editor's local 가제 with what 확정 wrote into `posts.title`. */
+  onTitleFinalized: (title: string) => void
   beforeStart: () => Promise<void>
   ensureSlug: () => Promise<string>
   saveState: SaveState
@@ -500,44 +553,15 @@ function LifecycleSteps({
     void queryClient.invalidateQueries({ queryKey: postKey })
   }, [job, postKey, queryClient])
 
+  // 제목 · 메모 · 사진 · the voice caveat · the contact sheet. Everything that DESCRIBES the next
+  // AI run left this panel for the one brief surface in the dock, so what is left is the post's
+  // own material (change 12).
   const generatePanel = (
     <>
+      {titleField}
       {memoField}
       <EditorPhotos post={post} ensureSlug={ensureSlug} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
-      <section aria-labelledby="generation-heading" className="mt-10">
-        <Typography variant="title" id="generation-heading">
-          {t('editor.generation')}
-        </Typography>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <div>
-            <StageModelSelect stage="observe" optional={post.images.length === 0} />
-            {post.images.length === 0 && (
-              <Typography variant="body" as="p" className="text-content-secondary mt-1">
-                {t('editor.noPhotoModel')}
-              </Typography>
-            )}
-          </div>
-          <div>
-            <StageModelSelect stage="write" />
-          </div>
-          <div>
-            <Typography variant="label" as="p">
-              {t('editor.writeCandidates')}
-            </Typography>
-            <Link
-              to="/ai-models"
-              className={typographyStyles({
-                variant: 'label',
-                className:
-                  'text-link-fg hover:text-link-fg-hover mt-1 inline-flex min-h-11 items-center underline',
-              })}
-            >
-              {t('editor.configureCandidates')}
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {post.pendingExperimentId && (!job || isTerminal(job)) && (
         <Link
@@ -584,33 +608,6 @@ function LifecycleSteps({
                 />
               )
         }
-      />
-      <ReviseForm
-        ref={reviseRef}
-        ownerId={ownerId}
-        postSlug={post.slug}
-        voice={post.voice}
-        ruleLanguageMismatch={languageMismatch}
-        purpose={post.purpose}
-        activeJob={job}
-        jobPending={Boolean(jobId) && !job}
-        onStarted={(id) => setStarted({ id, step: 'refine' })}
-        beforeStart={() =>
-          (contentEditorRef.current?.flush() ?? Promise.resolve()).then(() => undefined)
-        }
-      />
-      {/* Last on the step, because it is what ends it: the draft is read, revised, and then
-          confirmed. The block editor is mounted right here, so the flush is a live ref rather
-          than the queue's fallback. */}
-      <FinalizeActions
-        post={post}
-        learning={learning}
-        beforeFinalize={() =>
-          contentEditorRef.current?.flush() ??
-          flushContentQueue(post.slug) ??
-          Promise.resolve(post.contentRevision)
-        }
-        onFinalized={() => onStepChange('finish')}
       />
     </>
   ) : (
@@ -710,17 +707,57 @@ function LifecycleSteps({
         {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
       </div>
 
-      {(step === 'generate' || jobNotice || saveState === 'saving' || saveState === 'error') && (
+      {/* ① and ② both always dock: 생성 ends the first step and 확정 ends the second, and the
+          draft between them is routinely thousands of pixels tall (§4.3). ③ still docks only when
+          the job has something to report. There is exactly ONE ActionBar in this scroller either
+          way — the revision and finalize sections no longer exist in the panel. */}
+      {(step === 'generate' ||
+        (step === 'refine' && Boolean(result)) ||
+        jobNotice ||
+        saveState === 'saving' ||
+        saveState === 'error') && (
         <EditorDock saveState={saveState}>
           {jobNotice}
           {step === 'generate' && (
             <GenerationActions
               ref={generateRef}
               post={post}
+              targetLength={targetLength}
               activeJob={job}
               jobPending={Boolean(jobId) && !job}
               onStarted={(id) => setStarted({ id, step: 'generate' })}
               beforeStart={beforeStart}
+              brief={brief}
+            />
+          )}
+          {step === 'refine' && result && (
+            <RefineDock
+              ref={reviseRef}
+              ownerId={ownerId}
+              post={post}
+              ruleLanguageMismatch={languageMismatch}
+              learning={learning}
+              activeJob={job}
+              jobPending={Boolean(jobId) && !job}
+              onRevisionStarted={(id) => setStarted({ id, step: 'refine' })}
+              // The block editor is mounted in the panel above, so the flush is a live ref; the
+              // queue's fallback covers the beat between a step change and its unmount. A finalize
+              // may never name a revision that omits an edit the user has already made.
+              beforeStart={() =>
+                (contentEditorRef.current?.flush() ?? Promise.resolve()).then(() => undefined)
+              }
+              beforeFinalize={() =>
+                contentEditorRef.current?.flush() ??
+                flushContentQueue(post.slug) ??
+                Promise.resolve(post.contentRevision)
+              }
+              onFinalized={(finalizedTitle) => {
+                // 확정 copies the AI title into `posts.title` on the server. The editor still holds
+                // the 가제 in state and `useAutosave` sends it on every save, so without this the
+                // next keystroke would write the placeholder straight back over it.
+                onTitleFinalized(finalizedTitle)
+                onStepChange('finish')
+              }}
             />
           )}
         </EditorDock>

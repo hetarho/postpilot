@@ -1,4 +1,5 @@
 import { type KeyboardEvent } from 'react'
+import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export interface SegmentedOption<T extends string> {
@@ -15,6 +16,9 @@ interface SegmentedControlProps<T extends string> {
    *  switch. Without it the panel is an orphan in the accessibility tree and a screen-reader user
    *  gets no signal that the panel changed. */
   controls?: string
+  /** Refuses every switch while a change is in flight. The whole control greys, because a bounded
+   *  switch has no single "pending" option to grey on its own. */
+  disabled?: boolean
   className?: string
 }
 
@@ -32,9 +36,11 @@ export function SegmentedControl<T extends string>({
   onChange,
   ariaLabel,
   controls,
+  disabled = false,
   className,
 }: SegmentedControlProps<T>) {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) return
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
     const current = options.findIndex((option) => option.value === value)
@@ -51,7 +57,10 @@ export function SegmentedControl<T extends string>({
       // `overscroll-x-contain`: a swipe that reaches the end of the strip must not chain to the
       // page or to the browser's back gesture (§4.4).
       className={twMerge(
-        'bg-surface-recessed flex min-h-11 gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 select-none',
+        clsx(
+          'bg-surface-recessed flex min-h-11 gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 select-none',
+          disabled && 'opacity-50',
+        ),
         className,
       )}
     >
@@ -62,6 +71,7 @@ export function SegmentedControl<T extends string>({
           role="tab"
           aria-selected={option.value === value}
           aria-controls={controls}
+          disabled={disabled}
           tabIndex={option.value === value ? 0 : -1}
           onClick={() => onChange(option.value)}
           // No `focus-visible:ring-*` here: the global `:focus-visible` outline in

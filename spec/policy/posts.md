@@ -121,16 +121,23 @@ Photo upload has its own document: [uploads.md](uploads.md).
   **derived from `post.status`** (`draft` → ①, `review` → ②, `finalized` → ③). Nothing new is persisted, so a reload
   and the list badge cannot disagree with the screen. A status transition moves the step; a deliberate selection
   holds until the next transition.
-- The step bar is the first thing on the screen, above the post's title: the lifecycle is what you navigate before
-  you read anything else. The voice picker sits with the title, outside the step panels: the voice is the post's
-  identity, and a reassignment must survive a step change exactly as a title edit does.
-- Each step renders only its own panel: ① the memo, photos, the empty-profile warning, the stage-model
-  selects, the A/B link, the contact sheet and the generation actions; ② the draft, AI revision and — last on
-  the step, because it is what ends it — `확정` and `확정하고 말투 학습`; ③ `말투 학습`, export and publishing. The memo is
-  the post's own words and the input 글 생성 works from, so it belongs to that step; its value and its autosave
-  stay above the panels, so leaving the step cannot strand a queued save. Any step is selectable at any time —
-  a step with no work yet says what it is waiting for and offers the way to the step that produces it, and is
-  never disabled. Selecting a step changes no status, starts no job, and makes no provider call.
+- The step bar is the first thing on the screen, above the post's 가제: the lifecycle is what you navigate before
+  you read anything else.
+- **The 가제 belongs to ① alone.** It is rendered only there; from ② on the one title on screen is
+  `content.title`, edited through the block editor's header. Its value and its autosave still live above the
+  panels, so unmounting the field on another step cannot strand a queued save.
+- **One options surface holds the whole writing brief.** 관찰 모델 · 작성 모델 · 말투 · 용도 · 목표 언어 · 목표 분량 and
+  the A/B 후보 설정 link live behind a single trigger in ①'s dock, and nowhere else in the editor. The trigger
+  **names the post's current voice**, because a wrong voice silently ruins a draft and is the one thing a closed
+  surface must still report. Every control keeps the semantics it had: a voice reassignment still confirms and
+  is still blocked while a job runs, the 용도 select stays usable during a job and says the running one keeps its
+  enqueued brief, the language select still shows its frozen note, and every assignment still rides the draft
+  autosave queue. On a phone the surface is a bottom sheet; from `sm:` up it is a right-aligned popover.
+- Each step renders only its own panel: ① the 가제, the memo, photos, the empty-profile warning and the contact
+  sheet; ② the draft as prose; ③ `말투 학습`, export and publishing. The memo is the post's own words and the input
+  글 생성 works from, so it belongs to that step. Any step is selectable at any time — a step with no work yet
+  says what it is waiting for and offers the way to the step that produces it, and is never disabled. Selecting
+  a step changes no status, starts no job, and makes no provider call.
 - `/posts/new` has no lifecycle and therefore no step bar; it renders step ①'s content alone.
 - The steps are **panels of one mounted editor**, not routes: title, memo, the autosave queue, the slug mint and the
   caret handoff live outside them, so a step change can never remount the editor or strand a queued save.
@@ -141,17 +148,24 @@ Photo upload has its own document: [uploads.md](uploads.md).
   removed. It is likewise disabled, with the reason said in place, while the exact revision on screen is not
   the finalized one, or while a voice gate refuses learning; the voice gate is named ahead of the finalize
   gate, since confirming would not unblock it.
-- The dock carries at most one committing action — 생성 on ①, and none on ② or ③: ②'s 확정 sits at the end of the
-  panel it closes, and content autosave commits continuously — and it exists only when it has something to
-  say: the current step's action, a running or failed job, or a save that is in flight or has failed. On a
-  quiet 글 다듬기 / 글 완성 it is absent rather than an empty card. A job is reported on every step, because a
-  failure the user cannot see is the bug the dock exists to prevent; its retry is offered only on the step
-  that owns the job.
+- **① and ② always dock; ③ docks only when it has something to say.** ①'s dock carries the brief trigger,
+  A/B 비교 생성 and 생성. ②'s dock carries the step in two rows: **row 1** the AI revision instruction with an
+  icon-only send button, **row 2** `확정` beside `확정하고 말투 학습`. Neither the revision nor the finalize section
+  is rendered in ②'s panel any more — a draft there is routinely thousands of pixels tall, so an action at the
+  end of the flow is an action off the screen. ③ keeps its in-flow `말투 학습`, and its dock exists only for a
+  running or failed job or a save in flight, never as an empty card. There is exactly **one** docked bar in the
+  page's scroller on every step. Every blocker, validation message and failure renders **above** the control it
+  explains, because the software keyboard may hide a control but never the reason it is disabled. A job is
+  reported on every step, because a failure the user cannot see is the bug the dock exists to prevent; its
+  retry is offered only on the step that owns the job.
+- ②'s revision row collapses its secondary controls — the character counter, `규칙으로 저장` and the post-revision
+  `지침으로 저장` — while the instruction field is empty and unfocused, and shows them while it is focused, holds
+  text, or a revision is running or failed. `규칙으로 저장` itself is unchanged in every other respect.
 - Step ② opens as **prose**: `entities/post`'s `BlockList` renders title, summary, tags and every block
   read-only, and each block plus the header carries one edit control built on the shared `Editable` primitive.
   Opening one block does not close another. Edits write through to the content, so autosave keeps running on
   every keystroke; 취소 restores the value the block held when its editor opened, and moving or deleting a block
-  closes it. 확정 sits under that editor on the same step, so it flushes it — and the slug's content queue
+  closes it. 확정 is docked over that editor on the same step, so it flushes it — and the slug's content queue
   behind it, which outlives the unmounted editor — before naming a revision, and can never finalize one that
   omits a pending edit. The learning run a `확정하고 말투 학습` starts is owned above both panels, so the step change
   the finalize causes cannot strand it: the job, its handoff and its failure are all reported on ③.
@@ -179,6 +193,14 @@ Photo upload has its own document: [uploads.md](uploads.md).
   voice cannot prevent a content-only finalization. It records `finalized_revision`/`finalized_at` without creating
   a job or calling a provider. The first changed-content save or machine result clears that boundary and returns the
   post to `review`; title/memo and generation-option saves do not.
+- **`FinalizePost` also copies the confirmed content's title into `posts.title`**, in the same guarded statement as
+  the finalization, so a concurrent content save simply matches zero rows rather than splitting the two. A
+  `content.title` that is empty after trimming leaves the 가제 in place. The copy advances no `content_revision`,
+  changes no `machine_baseline_*`, starts no job and calls no provider — and **the slug never changes**: a post
+  keeps the URL it was minted with. The already-finalized-at-this-revision early return happens before the store
+  call, so confirming the same revision twice cannot overwrite a title edited in between. Consequently the list
+  shows the 가제 while a post is `draft` or `review` and the confirmed title once it is `finalized`; the existing
+  fallback to `content.title` for an empty 가제 is unchanged.
 - Only the post context reads these columns. It publishes an ownership-checked baseline/final snapshot to voice only
   while the current revision is exactly finalized; voice never reads or writes post tables directly.
 - It also publishes an ownership-checked, deeply detached finalized snapshot to the publishing context. That read

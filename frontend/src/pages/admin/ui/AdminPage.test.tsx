@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoPlan } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
@@ -24,12 +24,16 @@ describe('the admin screen', () => {
     })
 
     expect(await screen.findByRole('heading', { name: '계정 관리' })).toBeInTheDocument()
-    const alice = await screen.findByRole('combobox', { name: 'alice 계정의 플랜' })
-    expect(alice).toHaveValue('free')
+    // A bounded switch of tiers, so every rung is on screen at once and the current one is the
+    // selected tab rather than a closed control's value.
+    const alice = await screen.findByRole('tablist', { name: 'alice 계정의 플랜' })
+    expect(within(alice).getByRole('tab', { name: 'Free', selected: true })).toBeInTheDocument()
 
-    await user.selectOptions(alice, 'max')
+    await user.click(within(alice).getByRole('tab', { name: 'Max' }))
     expect(calls).toContain('SetUserPlan')
-    expect(await screen.findByRole('combobox', { name: 'alice 계정의 플랜' })).toHaveValue('max')
+    await waitFor(() =>
+      expect(within(alice).getByRole('tab', { name: 'Max', selected: true })).toBeInTheDocument(),
+    )
   })
 
   // A10: the last-master guard lives on the server, so the screen renders its refusal rather
@@ -45,14 +49,14 @@ describe('the admin screen', () => {
       },
     })
 
-    const root = await screen.findByRole('combobox', { name: 'root 계정의 플랜' })
-    await user.selectOptions(root, 'basic')
+    const root = await screen.findByRole('tablist', { name: 'root 계정의 플랜' })
+    await user.click(within(root).getByRole('tab', { name: 'Basic' }))
 
     const alert = await screen.findByRole('alert')
     expect(
       within(alert).getByText('마지막 운영자 계정은 다른 플랜으로 바꿀 수 없어요.'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'root 계정의 플랜' })).toHaveValue('master')
+    expect(within(root).getByRole('tab', { name: '운영자', selected: true })).toBeInTheDocument()
   })
 
   // A10: a tier that cannot use the screen never reaches it. The server refuses the two

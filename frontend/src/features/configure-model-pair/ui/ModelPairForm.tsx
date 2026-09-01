@@ -18,7 +18,7 @@ import {
   Button,
   FieldLabel,
   FieldMessage,
-  Select,
+  Listbox,
   Typography,
 } from '@/shared/ui'
 
@@ -154,29 +154,33 @@ function ModelSelect({
 }) {
   const { t } = useTranslation('models')
   const id = useId()
+  const labelId = `${id}-label`
   const errorId = `${id}-error`
   return (
     <div>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Select
+      <FieldLabel id={labelId} htmlFor={id}>
+        {label}
+      </FieldLabel>
+      <Listbox
         id={id}
+        aria-labelledby={labelId}
         className="mt-1"
         value={value}
+        options={[
+          { value: '', label: t('select') },
+          ...models.map((model) => ({
+            value: refKey(model.ref),
+            label: `${model.label}${model.disabled ? ` · ${model.disabledReason}` : ''}`,
+            disabled: model.disabled,
+          })),
+        ]}
         // Disabled only while a save is in flight: on 3G the round trip is seconds long and a
         // second tap would fire a second SaveSelection against the first one's result.
         disabled={saving}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        <option value="">{t('select')}</option>
-        {models.map((model) => (
-          <option key={refKey(model.ref)} value={refKey(model.ref)} disabled={model.disabled}>
-            {model.label}
-            {model.disabled ? ` · ${model.disabledReason}` : ''}
-          </option>
-        ))}
-      </Select>
+        onChange={onChange}
+      />
       {value && <ModelMeta model={models.find((model) => refKey(model.ref) === value)} />}
       {/* The live region stays mounted so it announces when it fills, and `empty:hidden` keeps it
           out of the layout while it is idle. */}

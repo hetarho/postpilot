@@ -88,3 +88,84 @@ func TestFinalizeAllowsCrossLanguageContentAndPreservesProvenance(t *testing.T) 
 		t.Fatalf("cross-language publishing provenance = %#v, err=%v", snapshot, err)
 	}
 }
+
+// A8/A9: 확정 copies the confirmed content title into posts.title, and nothing else moves with it.
+func TestFinalizeCopiesContentTitleIntoThePost(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	ctx := context.Background()
+	created := mustCreatePost(t, svc, alice, "가제")
+	content := PostContent{Title: "  모델이 지은 제목  ", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+		t.Fatal(err)
+	}
+	// The list read falls back to content.title only while the working title is empty, so a
+	// draft is still listed under its 가제 before the confirmation.
+	before, err := svc.List(ctx, alice)
+	if err != nil || len(before) != 1 || before[0].Title != "가제" {
+		t.Fatalf("list before finalize = %+v err=%v", before, err)
+	}
+
+	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finalized.Title != "모델이 지은 제목" {
+		t.Fatalf("finalized title = %q", finalized.Title)
+	}
+	if finalized.Slug != created.Slug {
+		t.Fatalf("slug moved: %q -> %q", created.Slug, finalized.Slug)
+	}
+	if finalized.ContentRevision != 1 || finalized.MachineBaselineRevision != 1 {
+		t.Fatalf("revision moved: %+v", finalized)
+	}
+	after, err := svc.List(ctx, alice)
+	if err != nil || len(after) != 1 || after[0].Title != "모델이 지은 제목" {
+		t.Fatalf("list after finalize = %+v err=%v", after, err)
+	}
+	// The copy is not a content save: it starts no job and calls no provider, which is what
+	// keeping it inside the one guarded UPDATE buys.
+	stored, err := store.GetPost(ctx, created.Slug)
+	if err != nil || stored.Title != "모델이 지은 제목" || stored.Content == nil || stored.Content.Title != "  모델이 지은 제목  " {
+		t.Fatalf("stored post = %+v err=%v", stored, err)
+	}
+}
+
+func TestFinalizeLeavesTheWorkingTitleWhenTheContentHasNone(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	ctx := context.Background()
+	created := mustCreatePost(t, svc, alice, "가제")
+	content := PostContent{Title: "   ", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+		t.Fatal(err)
+	}
+	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)
+	if err != nil || finalized.Title != "가제" {
+		t.Fatalf("untitled finalize = %+v err=%v", finalized, err)
+	}
+}
+
+// The already-finalized early return happens BEFORE the store call, so a second confirmation of
+// the same revision cannot re-copy over a title the user has edited since.
+func TestSecondFinalizeOfTheSameRevisionDoesNotRewriteTheTitle(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	ctx := context.Background()
+	created := mustCreatePost(t, svc, alice, "가제")
+	content := PostContent{Title: "모델 제목", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Finalize(ctx, alice, created.Slug, 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "사람이 고친 제목", "", nil, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	again, err := svc.Finalize(ctx, alice, created.Slug, 1)
+	if err != nil || again.Title != "사람이 고친 제목" {
+		t.Fatalf("re-finalize = %+v err=%v", again, err)
+	}
+	stored, err := store.GetPost(ctx, created.Slug)
+	if err != nil || stored.Title != "사람이 고친 제목" {
+		t.Fatalf("stored title = %+v err=%v", stored, err)
+	}
+}

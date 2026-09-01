@@ -619,7 +619,14 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 	if !ok {
 		return Post{}, errors.New("post content store is not configured")
 	}
-	updated, err := contentStore.Finalize(ctx, slug, userID, expectedRevision, s.now())
+	// The confirmed AI title becomes the post's title (spec/policy/posts.md). An untitled
+	// generation leaves the user's working title in place rather than blanking the list row, and
+	// the slug is not re-minted: a post keeps the URL it was created with.
+	title := strings.TrimSpace(found.Content.Title)
+	if title == "" {
+		title = found.Title
+	}
+	updated, err := contentStore.Finalize(ctx, slug, userID, title, expectedRevision, s.now())
 	if err != nil {
 		return Post{}, err
 	}

@@ -32,6 +32,33 @@ async function openStep(user: ReturnType<typeof userEvent.setup>, label: string)
   await user.click(await screen.findByRole('tab', { name: label }))
 }
 
+/** The whole writing brief — 관찰/작성 모델, 말투, 용도, 목표 언어, 목표 분량 and the A/B link — lives
+ *  behind ONE trigger in the dock now (change 12), so a test that drives any of them opens it
+ *  first. The trigger names the post's current voice, hence the pattern rather than a fixed name. */
+const BRIEF_TRIGGER = /옵션|Options/i
+const GENERATE_STEP = /^(글 생성|Generate)$/
+const generateTab = () =>
+  screen.queryAllByRole('tab').find((tab) => GENERATE_STEP.test(tab.textContent ?? ''))
+async function openBrief(user: ReturnType<typeof userEvent.setup>) {
+  // Wait for the editor to have its post: the lifecycle bar exists only once it does, and the
+  // brief belongs to that bar's first step. `/posts/new` has no bar, so its trigger is already up.
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: BRIEF_TRIGGER }) ?? generateTab()).toBeDefined(),
+  )
+  const generate = generateTab()
+  if (generate && generate.getAttribute('aria-selected') !== 'true') await user.click(generate)
+  const trigger = await screen.findByRole('button', { name: BRIEF_TRIGGER })
+  if (trigger.getAttribute('aria-expanded') !== 'true') await user.click(trigger)
+  return screen.getByRole('dialog', { name: BRIEF_TRIGGER })
+}
+
+/** A field inside the brief. Its accessible name is "<label> <current value>" — the WAI-APG
+ *  select-only combobox shape — so the label is a prefix, not the whole name. */
+async function briefField(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await openBrief(user)
+  return screen.findByRole('combobox', { name: new RegExp(label) })
+}
+
 afterEach(() => {
   cleanup()
   // Module state, so an unconsumed handoff would leak into the next test.
@@ -300,10 +327,12 @@ describe('opening a post', () => {
     await openStep(user, '글 완성')
     const retry = await screen.findByRole('button', { name: '안전하게 다시 시도' })
     expect(retry).toBeEnabled()
-    expect(screen.getByLabelText('카테고리')).toHaveValue('travel')
-    expect(screen.getByLabelText('카테고리')).toBeDisabled()
-    expect(screen.getByLabelText('공개 설정')).toHaveValue(String(PublishVisibility.PRIVATE))
-    expect(screen.getByLabelText('공개 설정')).toBeDisabled()
+    const category = screen.getByRole('combobox', { name: /카테고리/ })
+    const visibility = screen.getByRole('combobox', { name: /공개 설정/ })
+    expect(category).toHaveTextContent('여행')
+    expect(category).toBeDisabled()
+    expect(visibility).toHaveTextContent('비공개')
+    expect(visibility).toBeDisabled()
 
     await user.click(retry)
     await user.click(
@@ -578,13 +607,16 @@ describe('opening a post', () => {
       },
     })
 
+    const user = userEvent.setup()
     expect(await screen.findByText(/문체 프로필이 비어 있어요/)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
-    expect(screen.getByText('사진이 없어 관찰 모델은 필요하지 않아요.')).toBeInTheDocument()
     expect(screen.getByLabelText('저장 상태와 글 작업').previousElementSibling).toHaveClass(
       'mt-auto',
       'h-6',
     )
+
+    const brief = await openBrief(user)
+    expect(within(brief).getByText('사진이 없어 관찰 모델은 필요하지 않아요.')).toBeInTheDocument()
   })
 
   it('flushes the newest memo before it starts generation', async () => {
@@ -635,12 +667,15 @@ describe('opening a post', () => {
       },
     })
 
+    const user = userEvent.setup()
     const generate = await screen.findByRole('button', { name: '생성' })
     const compare = screen.getByRole('button', { name: 'A/B 비교 생성' })
     await waitFor(() => expect(generate).toBeEnabled())
     expect(compare).toBeDisabled()
     expect(screen.getByText(/A\/B 비교: 작성 A\/B 모델 두 개를 선택하세요/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'AI 모델에서 두 후보 설정' })).toHaveAttribute(
+
+    const brief = await openBrief(user)
+    expect(within(brief).getByRole('link', { name: 'AI 모델에서 두 후보 설정' })).toHaveAttribute(
       'href',
       '/ai-models',
     )
@@ -719,15 +754,10 @@ describe('opening a post', () => {
         ],
       },
     })
-    const options = await screen.findByRole('button', { name: '생성 옵션' })
-    await user.click(options)
-    await user.click(screen.getByRole('checkbox'))
-    await user.type(screen.getByLabelText('목표 글자 수'), '750')
-    await user.click(
-      within(screen.getByRole('dialog', { name: '생성 옵션' })).getByRole('button', {
-        name: '저장',
-      }),
-    )
+    const brief = await openBrief(user)
+    await user.click(within(brief).getByRole('checkbox'))
+    await user.type(within(brief).getByLabelText('목표 글자 수'), '750')
+    await user.click(within(brief).getByRole('button', { name: '저장' }))
     await waitFor(() => expect(calls).toContain('SavePostGenerationOptions'))
     const compare = screen.getByRole('button', { name: 'A/B 비교 생성' })
     await waitFor(() => expect(compare).toBeEnabled())
@@ -758,8 +788,7 @@ describe('opening a post', () => {
       },
     })
 
-    await user.click(await screen.findByRole('button', { name: '생성 옵션' }))
-    const dialog = screen.getByRole('dialog', { name: '생성 옵션' })
+    const dialog = await openBrief(user)
     expect(within(dialog).getByRole('checkbox')).toBeChecked()
     expect(within(dialog).getByLabelText('목표 글자 수')).toHaveValue(1200)
     expect(calls).not.toContain('SavePostGenerationOptions')
@@ -769,6 +798,56 @@ describe('opening a post', () => {
     await waitFor(() => expect(generationOptionSaves).toEqual([undefined]))
     expect(calls).not.toContain('StartGeneration')
     expect(calls).not.toContain('StartWriteExperiment')
+  })
+
+  // A8 (client half): 확정 copies the AI title into `posts.title`, and the editor still holds the
+  // 가제 in state where `useAutosave` would write it straight back on the next keystroke.
+  it('re-seeds the local 가제 from the confirmed title before another save can queue', async () => {
+    const draftSaves: FakeDraftSave[] = []
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      calls,
+      posts: {
+        draftSaves,
+        posts: [
+          {
+            slug: '20260820-final',
+            status: 'review',
+            title: '가제',
+            content: POST_CONTENT_FIXTURE,
+            images: POST_IMAGES_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+          },
+        ],
+      },
+    })
+
+    await user.click(await screen.findByRole('button', { name: '확정' }))
+    await user.click(
+      within(await screen.findByRole('dialog', { name: '이 revision을 확정할까요?' })).getByRole(
+        'button',
+        { name: '확정' },
+      ),
+    )
+
+    await waitFor(() => expect(calls).toContain('FinalizePost'))
+    await openStep(user, '글 생성')
+    await waitFor(() =>
+      expect(screen.getByLabelText('제목')).toHaveValue(POST_CONTENT_FIXTURE.title),
+    )
+    // The next ordinary save must carry the confirmed title, not the placeholder — which is what
+    // the list row is read from (A8/A9).
+    await user.type(screen.getByLabelText('메모'), '뒷이야기')
+    await waitFor(() => expect(draftSaves).toHaveLength(1), { timeout: 4_000 })
+    await user.click(screen.getByRole('link', { name: '← 글 목록' }))
+    expect(
+      await screen.findByRole('link', { name: new RegExp(POST_CONTENT_FIXTURE.title) }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /가제/ })).not.toBeInTheDocument()
   })
 
   it('finalizes without an analyze model or learning call', async () => {
@@ -1355,26 +1434,33 @@ describe('the editor lifecycle steps', () => {
       posts: { posts: [{ ...reviewPost, canFinalize: true }] },
     })
 
-    // ② is where a review post opens: the draft, revision and the 확정 that ends the step, and
-    // no generation controls.
+    // ② is where a review post opens: the draft, and the dock that carries the revision and both
+    // confirmations. No 가제, no writing brief, no generation control.
     expect(await screen.findByRole('heading', { name: '글 다듬기' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('작성 모델')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('제목')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /옵션/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('수정 요청')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '확정' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeInTheDocument()
 
     await openStep(user, '글 생성')
-    expect(await screen.findByRole('heading', { name: '글 생성' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'AI 모델에서 두 후보 설정' })).toBeInTheDocument()
+    expect(await screen.findByLabelText('제목')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '글 다듬기' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('수정 요청')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+    const brief = await openBrief(user)
+    expect(
+      within(brief).getByRole('link', { name: 'AI 모델에서 두 후보 설정' }),
+    ).toBeInTheDocument()
+    await user.keyboard('{Escape}')
 
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '말투 학습' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '글 생성' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('제목')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
   })
 
@@ -1388,7 +1474,7 @@ describe('the editor lifecycle steps', () => {
       posts: { posts: [{ slug: '20260820-jeju', status: 'draft', title: '제주 3일' }] },
     })
 
-    await screen.findByRole('heading', { name: '글 생성' })
+    await screen.findByLabelText('제목')
     calls.length = 0
 
     await openStep(user, '글 다듬기')
@@ -1396,7 +1482,7 @@ describe('the editor lifecycle steps', () => {
     expect(screen.queryByRole('tab', { name: '글 다듬기' })).toBeEnabled()
 
     await user.click(screen.getByRole('button', { name: '글 생성으로 가기' }))
-    expect(await screen.findByRole('heading', { name: '글 생성' })).toBeInTheDocument()
+    expect(await screen.findByLabelText('제목')).toBeInTheDocument()
 
     // Opening a step is not an action: no status change, no job, no provider call.
     expect(calls).not.toContain('SavePostDraft')
@@ -1405,6 +1491,8 @@ describe('the editor lifecycle steps', () => {
   })
 
   // Change 05 A6: steps are panels, so a save started before a step change still completes.
+  // The 가제 now belongs to 글 생성 alone (change 12), so this also proves that unmounting the
+  // FIELD cannot strand the queued save — the value and its queue live above the panels.
   it('completes a title save started before the step changed', async () => {
     const calls: string[] = []
     const user = userEvent.setup()
@@ -1414,35 +1502,42 @@ describe('the editor lifecycle steps', () => {
       posts: { posts: [{ ...reviewPost, title: '제주 3일' }] },
     })
 
+    await openStep(user, '글 생성')
     const title = await screen.findByLabelText('제목')
     await user.type(title, ' 여행기')
     await openStep(user, '글 완성')
+    expect(screen.queryByLabelText('제목')).not.toBeInTheDocument()
 
     await waitFor(() => expect(calls).toContain('SavePostDraft'), { timeout: 4_000 })
-    // The field is outside the panels, so it kept both its value and its pending save.
-    expect(screen.getByLabelText('제목')).toHaveValue('제주 3일 여행기')
+    await openStep(user, '글 생성')
+    expect(await screen.findByLabelText('제목')).toHaveValue('제주 3일 여행기')
   })
 
-  // Change 05 A11, as amended: the bar carries at most one committing action, and it is not
-  // there at all on a step that has nothing to commit and nothing to report.
-  it('docks one committing action and nothing on a quiet step', async () => {
+  // A10/A14, amending change 05 A11: ① and ② both always dock — 생성 ends the first step and
+  // 확정 the second — while ③ still docks only when there is something to report. There is
+  // exactly ONE bar in the scroller on every step (§4.3).
+  it('docks the step-ending actions on ① and ②, and nothing on a quiet ③', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
       posts: { posts: [{ ...reviewPost, canFinalize: true }] },
     })
 
-    // 글 다듬기 commits continuously through content autosave, and 확정 closes the step from
-    // the end of the panel rather than from the bar — so an idle dock would be a card with
-    // nothing in it.
-    await screen.findByRole('heading', { name: '글 다듬기' })
-    expect(screen.getByRole('button', { name: '확정' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('저장 상태와 글 작업')).not.toBeInTheDocument()
+    const dock = await screen.findByLabelText('저장 상태와 글 작업')
+    expect(screen.getAllByLabelText('저장 상태와 글 작업')).toHaveLength(1)
+    // Row 1 is the revision instruction with its icon send button; row 2 is the pair that ends
+    // the step. Neither section is rendered in the panel any more.
+    expect(within(dock).getByLabelText('수정 요청')).toBeInTheDocument()
+    expect(within(dock).getByRole('button', { name: '수정' })).toBeInTheDocument()
+    expect(within(dock).getByRole('button', { name: '확정' })).toBeInTheDocument()
+    expect(within(dock).getByRole('button', { name: '확정하고 말투 학습' })).toBeInTheDocument()
 
     await openStep(user, '글 생성')
-    const dock = await screen.findByLabelText('저장 상태와 글 작업')
-    expect(within(dock).getByRole('button', { name: '생성' })).toBeInTheDocument()
-    expect(within(dock).queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+    const generateDock = await screen.findByLabelText('저장 상태와 글 작업')
+    expect(screen.getAllByLabelText('저장 상태와 글 작업')).toHaveLength(1)
+    expect(within(generateDock).getByRole('button', { name: '생성' })).toBeInTheDocument()
+    expect(within(generateDock).getByRole('button', { name: /옵션/ })).toBeInTheDocument()
+    expect(within(generateDock).queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
 
     await openStep(user, '글 완성')
     expect(await screen.findByRole('button', { name: '말투 학습' })).toBeInTheDocument()
@@ -1470,12 +1565,15 @@ describe('the editor lifecycle steps', () => {
     expect(await screen.findByLabelText('메모')).toHaveValue('비 오는 제주 산책')
   })
 
-  // The step bar is the first thing on the screen, above the post's title.
+  // The step bar is the first thing on the screen, above the 가제 that 글 생성 now owns.
   it('puts the step bar above the title', async () => {
-    renderAppAt('/posts/20260820-jeju', { user: USER, posts: { posts: [reviewPost] } })
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, status: 'draft' }] },
+    })
 
     const tab = await screen.findByRole('tab', { name: '글 생성' })
-    const title = screen.getByLabelText('제목')
+    const title = await screen.findByLabelText('제목')
     expect(tab.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
@@ -1618,14 +1716,20 @@ describe('the step split and the content save', () => {
 
 describe('the post voice', () => {
   const AUTOSAVED = { timeout: 4_000 }
-  /** The picker lists the directory, which answers after the first paint; choose only once it has. */
+  /** The picker lists the directory, which answers after the first paint; choose only once it has.
+   *  It lives in the writing brief now, so the surface is opened first. */
   async function pickVoice(user: ReturnType<typeof userEvent.setup>, voiceId: string) {
-    const picker = await screen.findByLabelText('말투')
+    const picker = await briefField(user, '말투')
     await waitFor(() => expect(picker).toBeEnabled())
-    await screen.findByRole('option', { name: voiceId === 'voice-review' ? '리뷰' : '기본 말투' })
-    await user.selectOptions(picker, voiceId)
+    await user.click(picker)
+    await user.click(
+      await screen.findByRole('option', {
+        name: voiceId === 'voice-review' ? '리뷰' : '기본 말투',
+      }),
+    )
     return picker
   }
+  const confirmDialog = () => screen.findByRole('dialog', { name: '말투를 바꿀까요?' })
   const TWO_VOICES = [
     { id: 'voice-default', name: '기본 말투', isDefault: true },
     { id: 'voice-review', name: '리뷰' },
@@ -1649,7 +1753,8 @@ describe('the post voice', () => {
     const draftSaves: FakeDraftSave[] = []
     const { router } = renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
 
-    expect(await screen.findByLabelText('말투')).toHaveValue('voice-default')
+    expect(await briefField(user, '말투')).toHaveTextContent('기본 말투')
+    await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText('제목'), '제주')
 
     await waitFor(
@@ -1663,7 +1768,8 @@ describe('the post voice', () => {
       targetLanguage: 'ko',
     })
     // The editor the mint mounted shows the same voice, and later saves leave it alone.
-    expect(screen.getByLabelText('말투')).toHaveValue('voice-default')
+    expect(await briefField(user, '말투')).toHaveTextContent('기본 말투')
+    await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText('메모'), '첫날')
     await waitFor(() => expect(draftSaves).toHaveLength(2), AUTOSAVED)
     expect(draftSaves[1]).toEqual({
@@ -1699,7 +1805,7 @@ describe('the post voice', () => {
       AUTOSAVED,
     )
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/20260828-리뷰-글'))
-    expect(await screen.findByLabelText('말투')).toHaveValue('voice-review')
+    expect(await briefField(user, '말투')).toHaveTextContent('리뷰')
   })
 
   // Plan 10 A8: reassignment is confirmed, preserves the content, and clears learn eligibility.
@@ -1712,10 +1818,10 @@ describe('the post voice', () => {
       voice: { voices: TWO_VOICES },
     })
 
-    const picker = await screen.findByLabelText('말투')
-    await waitFor(() => expect(picker).toHaveValue('voice-default'))
+    const picker = await briefField(user, '말투')
+    await waitFor(() => expect(picker).toHaveTextContent('기본 말투'))
     await pickVoice(user, 'voice-review')
-    const dialog = await screen.findByRole('dialog')
+    const dialog = await confirmDialog()
     expect(dialog).toHaveTextContent('지금까지 배운 내용은 이전 말투에 남고')
     // The choice is not applied until it is confirmed.
     expect(draftSaves).toHaveLength(0)
@@ -1724,8 +1830,11 @@ describe('the post voice', () => {
     await waitFor(() =>
       expect(draftSaves).toEqual([{ slug: '20260820-jeju', voiceId: 'voice-review' }]),
     )
-    await waitFor(() => expect(screen.getByLabelText('말투')).toHaveValue('voice-review'))
-    // The canonical content survived; learning needs a new machine result first.
+    await waitFor(() => expect(picker).toHaveTextContent('리뷰'))
+    await user.keyboard('{Escape}')
+    // The canonical content survived; learning needs a new machine result first. Both live in
+    // 글 다듬기's dock, so the step has to be the one that owns them.
+    await openStep(user, '글 다듬기')
     expect(await screen.findByRole('button', { name: '확정' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
     await openStep(user, '글 완성')
@@ -1755,9 +1864,7 @@ describe('the post voice', () => {
     })
 
     await pickVoice(user, 'voice-review')
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: '말투 변경' }),
-    )
+    await user.click(within(await confirmDialog()).getByRole('button', { name: '말투 변경' }))
     await openStep(user, '글 완성')
 
     expect(
@@ -1776,12 +1883,10 @@ describe('the post voice', () => {
     })
 
     await pickVoice(user, 'voice-review')
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: '취소' }),
-    )
+    await user.click(within(await confirmDialog()).getByRole('button', { name: '취소' }))
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('말투')).toHaveValue('voice-default')
+    expect(screen.queryByRole('dialog', { name: '말투를 바꿀까요?' })).not.toBeInTheDocument()
+    expect(await briefField(user, '말투')).toHaveTextContent('기본 말투')
     await new Promise((resolve) => setTimeout(resolve, 1_200))
     expect(draftSaves).toHaveLength(0)
   })
@@ -1797,7 +1902,8 @@ describe('the post voice', () => {
       jobs: { jobs: [{ id: 'job-1', status: 'running' }] },
     })
 
-    expect(await screen.findByLabelText('말투')).toBeDisabled()
+    const user = userEvent.setup()
+    expect(await briefField(user, '말투')).toBeDisabled()
     expect(screen.getByText('AI 작업이 끝나면 말투를 바꿀 수 있어요.')).toBeInTheDocument()
   })
 
@@ -1812,17 +1918,16 @@ describe('the post voice', () => {
     })
 
     await pickVoice(user, 'voice-review')
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: '말투 변경' }),
-    )
+    await user.click(within(await confirmDialog()).getByRole('button', { name: '말투 변경' }))
 
     // `findAllByRole`: the dock's own save notice can be an alert at the same moment.
     const alerts = await screen.findAllByRole('alert')
     expect(alerts.map((alert) => alert.textContent).join('\n')).toContain(
       '고른 말투를 찾을 수 없어요',
     )
-    expect(screen.getByLabelText('말투')).toHaveValue('voice-default')
-    expect(screen.getByLabelText('말투')).toBeEnabled()
+    const picker = await briefField(user, '말투')
+    expect(picker).toHaveTextContent('기본 말투')
+    expect(picker).toBeEnabled()
   })
 
   // Plan 10 A5/A7: the tombstone, the disabled AI controls with their reason, and both ways out.
@@ -1851,9 +1956,13 @@ describe('the post voice', () => {
       },
     })
 
-    // Named twice on purpose: in the picker (as the disabled current option) and in the warning.
-    expect(await screen.findAllByText('삭제된 말투 · 옛 말투')).toHaveLength(2)
-    expect(screen.getByLabelText('말투')).toHaveValue('voice-old')
+    // Named twice on purpose: in the brief's picker (as the disabled current option) and in the
+    // warning that 글 생성 renders regardless of whether the brief is open.
+    expect(await screen.findByText('삭제된 말투 · 옛 말투')).toBeInTheDocument()
+    const picker = await briefField(user, '말투')
+    expect(picker).toHaveTextContent('삭제된 말투 · 옛 말투')
+    expect(screen.getAllByText('삭제된 말투 · 옛 말투')).toHaveLength(2)
+    await user.keyboard('{Escape}')
     // The reason settles once the model catalog has answered; until then it reports the wait.
     expect(
       await screen.findByText('생성: 삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
@@ -1902,11 +2011,9 @@ describe('the post voice', () => {
       },
     })
 
-    await screen.findAllByText('삭제된 말투 · 옛 말투')
+    await screen.findByText('삭제된 말투 · 옛 말투')
     await pickVoice(user, 'voice-review')
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: '말투 변경' }),
-    )
+    await user.click(within(await confirmDialog()).getByRole('button', { name: '말투 변경' }))
 
     await waitFor(() =>
       expect(draftSaves).toEqual([{ slug: '20260820-jeju', voiceId: 'voice-review' }]),
@@ -1925,7 +2032,8 @@ describe('the post language', () => {
     const user = userEvent.setup()
     renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
 
-    expect(await screen.findByRole('combobox', { name: 'Post language' })).toHaveValue('en')
+    expect(await briefField(user, 'Post language')).toHaveTextContent('English')
+    await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText('Title'), 'English draft')
 
     await waitFor(() => expect(draftSaves[0]?.targetLanguage).toBe('en'), AUTOSAVED)
@@ -1937,7 +2045,10 @@ describe('the post language', () => {
     const user = userEvent.setup()
     renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
 
-    await user.selectOptions(await screen.findByRole('combobox', { name: 'Post language' }), 'ko')
+    const language = await briefField(user, 'Post language')
+    await user.click(language)
+    await user.click(await screen.findByRole('option', { name: 'Korean' }))
+    await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText('Title'), 'Korean target')
 
     await waitFor(() => expect(draftSaves[0]?.targetLanguage).toBe('ko'), AUTOSAVED)
@@ -1954,7 +2065,8 @@ describe('the post language', () => {
       },
     })
 
-    expect(await screen.findByRole('combobox', { name: 'Post language' })).toHaveValue('ko')
+    const user = userEvent.setup()
+    expect(await briefField(user, 'Post language')).toHaveTextContent('Korean')
     expect(draftSaves).toHaveLength(0)
   })
 
@@ -2023,10 +2135,10 @@ describe('the post purpose', () => {
   ]
 
   async function pickPurpose(user: ReturnType<typeof userEvent.setup>, name: string) {
-    const picker = await screen.findByLabelText('용도')
+    const picker = await briefField(user, '용도')
     await waitFor(() => expect(picker).toBeEnabled())
-    const option = await screen.findByRole('option', { name })
-    await user.selectOptions(picker, option)
+    await user.click(picker)
+    await user.click(await screen.findByRole('option', { name }))
     return picker
   }
 
@@ -2038,11 +2150,14 @@ describe('the post purpose', () => {
       purposes: { purposes: PURPOSES },
     })
 
-    const picker = await screen.findByLabelText('용도')
-    expect(picker).toHaveValue('')
-    expect(within(picker).getByRole('option', { name: '없음' })).toBeInTheDocument()
-
     const user = userEvent.setup()
+    const picker = await briefField(user, '용도')
+    expect(picker).toHaveTextContent('없음')
+    await user.click(picker)
+    expect(screen.getByRole('option', { name: '없음', selected: true })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+
+    await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText('제목'), '제주')
     await waitFor(() => expect(draftSaves).toHaveLength(1), AUTOSAVED)
     // Omitted, not '': the create has no assignment to clear, so the request is byte-for-byte
@@ -2065,6 +2180,7 @@ describe('the post purpose', () => {
     expect(screen.getByText('협찬 방문 리뷰')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '용도 관리' })).toHaveAttribute('href', '/purposes')
 
+    await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText('제목'), '리뷰 글')
     await waitFor(
       () => expect(draftSaves[0]).toMatchObject({ slug: '', purposeId: 'purpose-review' }),
@@ -2085,18 +2201,18 @@ describe('the post purpose', () => {
       purposes: { purposes: PURPOSES },
     })
 
-    await pickPurpose(user, '일기')
+    const picker = await pickPurpose(user, '일기')
     // No confirmation sheet: nothing is learned from a purpose, so there is nothing to warn about.
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '말투를 바꿀까요?' })).not.toBeInTheDocument()
     await waitFor(() =>
       expect(draftSaves[0]).toMatchObject({ slug: '20260820-jeju', purposeId: 'purpose-diary' }),
     )
-    await waitFor(() => expect(screen.getByLabelText('용도')).toHaveValue('purpose-diary'))
+    await waitFor(() => expect(picker).toHaveTextContent('일기'))
 
     await pickPurpose(user, '없음')
     // A present empty string, which is what clears it — distinct from omitting the field.
     await waitFor(() => expect(draftSaves[1]).toMatchObject({ purposeId: '' }))
-    await waitFor(() => expect(screen.getByLabelText('용도')).toHaveValue(''))
+    await waitFor(() => expect(picker).toHaveTextContent('없음'))
   })
 
   // The selection goes out on its own request, so a title save still in flight cannot carry the
@@ -2114,15 +2230,14 @@ describe('the post purpose', () => {
       purposes: { purposes: PURPOSES },
     })
 
-    await screen.findByLabelText('용도')
-    await user.type(screen.getByLabelText('제목'), ' 여행')
-    await pickPurpose(user, '일기')
+    await user.type(await screen.findByLabelText('제목'), ' 여행')
+    const picker = await pickPurpose(user, '일기')
 
     await waitFor(() => expect(draftSaves.length).toBeGreaterThan(0), AUTOSAVED)
     // Whatever order the requests went out in, the last word on the assignment is the choice.
     const assignments = draftSaves.map((save) => save.purposeId).filter((id) => id !== undefined)
     expect(assignments.at(-1)).toBe('purpose-diary')
-    await waitFor(() => expect(screen.getByLabelText('용도')).toHaveValue('purpose-diary'))
+    await waitFor(() => expect(picker).toHaveTextContent('일기'))
   })
 
   // A failed directory read must not be indistinguishable from "you have no 용도" — the select
@@ -2134,8 +2249,10 @@ describe('the post purpose', () => {
       purposes: { listFails: true },
     })
 
+    const user = userEvent.setup()
+    const picker = await briefField(user, '용도')
     expect(await screen.findByText(/용도 목록을 불러오지 못했어요/)).toBeInTheDocument()
-    expect(screen.getByLabelText('용도')).toBeDisabled()
+    expect(picker).toBeDisabled()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
 
@@ -2157,8 +2274,9 @@ describe('the post purpose', () => {
       jobs: { jobs: [{ id: 'job-1', kind: 'generate', status: 'running' }] },
     })
 
-    const picker = await screen.findByLabelText('용도')
-    await waitFor(() => expect(picker).toHaveValue('purpose-review'))
+    const user = userEvent.setup()
+    const picker = await briefField(user, '용도')
+    await waitFor(() => expect(picker).toHaveTextContent('정보성 식당 리뷰'))
     expect(picker).toBeEnabled()
     expect(
       await screen.findByText(/진행 중인 AI 작업은 시작할 때의 용도로 끝나요/),

@@ -8,13 +8,15 @@ import type { VoiceLearning } from '../model/useVoiceLearning'
 
 type FinalizeMode = 'finalize' | 'learn'
 
-/** The bottom of 글 다듬기: the boundary that ends the drafting loop.
+/** The boundary that ends the drafting loop, as the second row of 글 다듬기's dock
+ *  (`widgets/refine-dock`).
  *
- *  It sits at the end of the step whose work it closes — you finish reading the draft and the
- *  next thing under your thumb is the way out of it — and both actions carry the user to 글 완성,
- *  so finishing a step is one gesture rather than a click plus a tab change. 확정 records the
- *  revision and nothing else; 확정하고 말투 학습 additionally starts the learning run, which is
- *  reported on 글 완성 because that is where it lands. */
+ *  It has no heading and no surface of its own: it used to sit at the end of a step whose draft is
+ *  routinely thousands of pixels tall, so reaching either action meant scrolling to the end of the
+ *  page (§4.3). Both actions carry the user to 글 완성, so finishing a step is one gesture rather
+ *  than a press plus a tab change. 확정 records the revision and nothing else; 확정하고 말투 학습
+ *  additionally starts the learning run, which is reported on 글 완성 because that is where it
+ *  lands. */
 export function FinalizeActions({
   post,
   learning,
@@ -25,7 +27,10 @@ export function FinalizeActions({
   learning: VoiceLearning
   /** Flushes pending edits and resolves the exact revision to finalize. */
   beforeFinalize: () => Promise<bigint>
-  onFinalized: () => void
+  /** Carries the post's title AS THE SERVER NOW HOLDS IT: 확정 copies the finalized content's
+   *  title into `posts.title`, and the editor still has the old 가제 in state where the next
+   *  autosave would write it straight back. */
+  onFinalized: (title: string) => void
 }) {
   const { t } = useTranslation('posts')
   const finalize = useFinalizePost()
@@ -53,12 +58,12 @@ export function FinalizeActions({
       return
     }
     try {
-      await finalize.finalize(post.slug, revision)
+      const written = await finalize.finalize(post.slug, revision)
       setConfirming('')
       // A learning failure does not undo the finalize written immediately before it, and it is
       // reported on 글 완성 — so the step moves either way.
       if (mode === 'learn') await learning.learn(revision).catch(() => undefined)
-      onFinalized()
+      onFinalized(written.title)
     } catch {
       // The finalize itself failed. Its mutation renders the error below, and the step holds.
     } finally {
@@ -67,20 +72,16 @@ export function FinalizeActions({
   }
 
   return (
-    <section aria-labelledby="finalize-heading" className="mt-12">
-      <Typography variant="title" id="finalize-heading">
-        {t('finalize.title')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary mt-2">
-        {finalized ? t('finalize.already') : t('finalize.description')}
-      </Typography>
+    <div className="grid gap-2">
+      {/* Every reason renders ABOVE the pair it explains, so the software keyboard hides at most a
+          button and never why it is disabled (§8.3). */}
       {finalize.error && (
-        <Notice tone="danger" role="alert" className="mt-2">
+        <Notice tone="danger" role="alert">
           <AppFailureMessage failure={appFailureFromConnect(finalize.error)} />
         </Notice>
       )}
       {prepareFailure && (
-        <Notice tone="danger" role="alert" className="mt-2">
+        <Notice tone="danger" role="alert">
           {prepareFailure === 'content-conflict' ? (
             t('edit.conflict')
           ) : (
@@ -90,27 +91,30 @@ export function FinalizeActions({
       )}
       {finalized ? (
         <>
-          <Notice tone="success" role="status" className="mt-3">
+          <Notice tone="success" role="status">
             {t('finalize.success')}
           </Notice>
-          <Button variant="secondary" className="mt-4" onClick={onFinalized}>
+          <Button variant="secondary" onClick={() => onFinalized(post.title)}>
             {t('finalize.goFinish')}
           </Button>
         </>
       ) : (
         <>
           {learning.blocked ? (
-            <Typography variant="body" role="status" className="text-content-secondary mt-2">
+            <Typography variant="body" role="status" className="text-content-secondary">
               {learning.blocked}
             </Typography>
           ) : (
             learning.needsAnalyzeModel && (
-              <Typography variant="body" className="text-content-tertiary mt-2">
+              <Typography variant="body" className="text-content-tertiary">
                 {t('finalize.analyzeHelp')}
               </Typography>
             )
           )}
-          <div className="mt-4 flex flex-wrap gap-2">
+          {/* Both actions share the row and its width: neither is the obvious default — 확정 ends
+              the post, 확정하고 말투 학습 also teaches the voice — and a phone row of two Korean
+              labels only fits when each takes half (§4.2). */}
+          <div className="grid grid-cols-2 gap-2">
             <Button
               variant="secondary"
               disabled={!post.canFinalize || learning.active}
@@ -142,6 +146,6 @@ export function FinalizeActions({
           ? t('finalize.confirmLearnDescription')
           : t('finalize.confirmOnlyDescription')}
       </Dialog>
-    </section>
+    </div>
   )
 }

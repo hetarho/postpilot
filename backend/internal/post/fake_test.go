@@ -161,7 +161,7 @@ func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string
 	return true, nil
 }
 
-func (f *fakeStore) Finalize(_ context.Context, slug, userID string, expectedRevision int64, finalizedAt time.Time) (bool, error) {
+func (f *fakeStore) Finalize(_ context.Context, slug, userID, title string, expectedRevision int64, finalizedAt time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
@@ -170,6 +170,9 @@ func (f *fakeStore) Finalize(_ context.Context, slug, userID string, expectedRev
 	}
 	existing.Status = StatusFinalized
 	existing.FinalizedRevision = existing.ContentRevision
+	// The one statement writes the title with the finalization, so the fake does too — the slug
+	// and the content revision are untouched by the copy.
+	existing.Title = title
 	existing.FinalizedAt = &finalizedAt
 	existing.UpdatedAt = finalizedAt
 	f.posts[slug] = existing

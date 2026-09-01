@@ -28,8 +28,11 @@ it.each([
       />,
     )
 
-    const select = screen.getByRole('combobox', { name: label })
-    await user.selectOptions(select, 'en')
+    // A WAI-APG select-only combobox names itself "<label> <current value>", so the label is a
+    // prefix rather than the whole name.
+    const select = screen.getByRole('combobox', { name: new RegExp(label) })
+    await user.click(select)
+    await user.click(screen.getByRole('option', { name: locale === 'ko' ? '영어' : 'English' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(copy)
     expect(select).toHaveAttribute('aria-invalid', 'true')

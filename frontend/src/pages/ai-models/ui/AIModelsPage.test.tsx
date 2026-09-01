@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
 import { Stage } from '@/shared/api'
 import type { FakeAnalyzeExperimentStart, FakeWriteExperimentStart } from '@/test/experiments'
+import { chooseOption } from '@/test/listbox'
 import { renderAppAt } from '@/test/app'
 
 const writeModels = [
@@ -30,7 +31,7 @@ it('starts a no-photo write comparison from the model tab with the persisted tar
 
   await user.click(await screen.findByRole('tab', { name: '글 작성' }))
   expect(starts).toHaveLength(0)
-  await user.selectOptions(screen.getByLabelText('비교할 글'), 'post-1')
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '첫 글')
 
   const start = screen.getByRole('button', { name: '비교 시작' })
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
@@ -78,7 +79,7 @@ it('requires and sends the explicit active observe model for a post with photos'
   })
 
   await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-  await user.selectOptions(screen.getByLabelText('비교할 글'), 'photo-post')
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '사진 글')
   const start = screen.getByRole('button', { name: '비교 시작' })
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   await user.click(start)
@@ -110,11 +111,11 @@ it('keeps photo-backed writing blocked without an active observe model and repor
   })
 
   await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-  await user.selectOptions(screen.getByLabelText('비교할 글'), 'photo-post')
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '사진 글')
   expect(await screen.findByText('관찰 모델을 선택하세요.')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '비교 시작' })).toHaveAttribute('aria-disabled', 'true')
 
-  await user.selectOptions(screen.getByLabelText('비교할 글'), 'text-post')
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '텍스트 글')
   const start = screen.getByRole('button', { name: '비교 시작' })
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   await user.click(start)
@@ -145,10 +146,10 @@ it('blocks posts with active work or an unresolved write experiment', async () =
   })
 
   await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-  await user.selectOptions(screen.getByLabelText('비교할 글'), 'busy-post')
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '작업 중인 글')
   expect(await screen.findByText('이미 생성 중이에요.')).toBeInTheDocument()
 
-  await user.selectOptions(screen.getByLabelText('비교할 글'), 'pending-post')
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '결과 대기 글')
   expect(await screen.findByText('먼저 대기 중인 A/B 결과를 확인해 주세요.')).toBeInTheDocument()
   expect(starts).toHaveLength(0)
 })
@@ -176,9 +177,9 @@ it('starts an analyze comparison for the default voice unless another is chosen'
   })
 
   await user.click(await screen.findByRole('tab', { name: '문체 분석' }))
-  const voice = await screen.findByLabelText('말투')
-  await waitFor(() => expect(voice).toHaveValue('voice-default'))
-  expect(screen.queryByLabelText('비교할 글')).not.toBeInTheDocument()
+  const voice = await screen.findByRole('combobox', { name: /말투/ })
+  await waitFor(() => expect(voice).toHaveTextContent('기본 말투'))
+  expect(screen.queryByRole('combobox', { name: /비교할 글/ })).not.toBeInTheDocument()
 
   const start = screen.getByRole('button', { name: '비교 시작' })
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
@@ -209,9 +210,9 @@ it('sends the explicitly chosen voice with an analyze comparison', async () => {
   })
 
   await user.click(await screen.findByRole('tab', { name: '문체 분석' }))
-  const voice = await screen.findByLabelText('말투')
-  await waitFor(() => expect(voice).toHaveValue('voice-default'))
-  await user.selectOptions(voice, 'voice-review')
+  const voice = await screen.findByRole('combobox', { name: /말투/ })
+  await waitFor(() => expect(voice).toHaveTextContent('기본 말투'))
+  await chooseOption(user, voice, '리뷰')
 
   const start = screen.getByRole('button', { name: '비교 시작' })
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))

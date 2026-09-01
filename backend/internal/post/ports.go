@@ -130,6 +130,9 @@ type Store interface {
 type ContentStore interface {
 	SaveContent(ctx context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error)
 	SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, updatedAt time.Time) (bool, error)
-	Finalize(ctx context.Context, slug, userID string, expectedRevision int64, finalizedAt time.Time) (bool, error)
+	// Finalize also writes title, which the caller has already resolved: the confirmed content's
+	// title, or the post's existing one when that is empty. The copy rides the same guarded
+	// statement as the finalization, so it can never land without it.
+	Finalize(ctx context.Context, slug, userID, title string, expectedRevision int64, finalizedAt time.Time) (bool, error)
 	LearningSnapshot(ctx context.Context, slug, userID string) (LearningSnapshot, error)
 }

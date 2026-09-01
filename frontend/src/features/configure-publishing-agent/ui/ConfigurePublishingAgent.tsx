@@ -4,7 +4,7 @@ import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { publishingAgentsQueryKey, type PublishingAgent } from '@/entities/publishing-agent'
 import { appFailureFromConnect, publishingClientFor, PublishVisibility } from '@/shared/api'
-import { AppFailureMessage, Button, FieldLabel, Notice, Select, TextField } from '@/shared/ui'
+import { AppFailureMessage, Button, FieldLabel, Listbox, Notice, TextField } from '@/shared/ui'
 
 export function ConfigurePublishingAgent({
   ownerId,
@@ -49,33 +49,42 @@ export function ConfigurePublishingAgent({
         />
       </div>
       <div>
-        <FieldLabel htmlFor={`agent-category-${agent.id}`}>{t('configure.category')}</FieldLabel>
-        <Select
+        <FieldLabel id={`agent-category-label-${agent.id}`} htmlFor={`agent-category-${agent.id}`}>
+          {t('configure.category')}
+        </FieldLabel>
+        <Listbox
           id={`agent-category-${agent.id}`}
+          aria-labelledby={`agent-category-label-${agent.id}`}
           value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
+          options={agent.categories.map((category) => ({
+            value: category.id,
+            label: category.name,
+          }))}
+          onChange={setCategoryId}
           className="mt-2"
-        >
-          {agent.categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </Select>
+        />
       </div>
       <div>
-        <FieldLabel htmlFor={`agent-visibility-${agent.id}`}>
+        <FieldLabel
+          id={`agent-visibility-label-${agent.id}`}
+          htmlFor={`agent-visibility-${agent.id}`}
+        >
           {t('configure.visibility')}
         </FieldLabel>
-        <Select
+        {/* A `Listbox` rather than the `SegmentedControl` two fixed options would also allow (§7):
+            it sits directly under 카테고리, and the pair reads as one settings form only while both
+            wear the same field well. */}
+        <Listbox<PublishVisibility>
           id={`agent-visibility-${agent.id}`}
+          aria-labelledby={`agent-visibility-label-${agent.id}`}
           value={visibility}
-          onChange={(event) => setVisibility(Number(event.target.value) as PublishVisibility)}
+          options={[
+            { value: PublishVisibility.PUBLIC, label: t('visibility.public') },
+            { value: PublishVisibility.PRIVATE, label: t('visibility.private') },
+          ]}
+          onChange={setVisibility}
           className="mt-2"
-        >
-          <option value={PublishVisibility.PUBLIC}>{t('visibility.public')}</option>
-          <option value={PublishVisibility.PRIVATE}>{t('visibility.private')}</option>
-        </Select>
+        />
       </div>
       <Button
         variant="secondary"

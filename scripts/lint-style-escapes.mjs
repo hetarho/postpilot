@@ -13,6 +13,10 @@
 //      non-test `.tsx` outside `shared/ui`. The §3 type roles live in the Typography primitive
 //      (`shared/ui/typography`); a raw recipe in a slice is hierarchy drift by construction.
 //      Alignment/wrapping utilities (`text-center`, `text-balance`, …) are not type and pass.
+//   5. A native `<select>` element in any non-test `.tsx` outside the generated client. The OS
+//      draws its open option list, so it cannot wear the app's surfaces and it leaves the design
+//      system the moment it opens (§7, owner decision 2026-08-31). `shared/ui/listbox` is the
+//      app-drawn replacement; a bounded 2–5 switch is a `SegmentedControl`.
 //
 // A line that is not UI colour/type at all — a canvas compositing fill, a test fixture, a control
 // state the §3 roles do not model — opts out with an inline `// style-escape: <why>` pragma on
@@ -88,6 +92,10 @@ const TYPE_UTILITY = new RegExp(
   'g',
 )
 
+// The opening tag only — `</select>` and the word in prose are not mounts. A `<selection…>`
+// component name must not match, hence the boundary.
+const NATIVE_SELECT = /<select(?![\w-])/g
+
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name)
@@ -98,7 +106,7 @@ function walk(dir, out = []) {
   return out
 }
 
-function scanLine(line, { isTokenFile = false, isTypeGated = false } = {}) {
+function scanLine(line, { isTokenFile = false, isTypeGated = false, isSelectGated = false } = {}) {
   const findings = []
   const trimmed = line.trim()
   if (/\/\/\s*style-escape:\s*\S/.test(line)) return findings
@@ -120,6 +128,9 @@ function scanLine(line, { isTokenFile = false, isTypeGated = false } = {}) {
   }
   if (isTypeGated) {
     for (const match of line.matchAll(TYPE_UTILITY)) report('ad-hoc type utility', match[0])
+  }
+  if (isSelectGated) {
+    for (const match of line.matchAll(NATIVE_SELECT)) report('native select element', match[0])
   }
   return findings
 }
@@ -179,6 +190,31 @@ function runProbe() {
     process.exit(1)
   }
 
+  const selectCases = [
+    { source: '<select id="model">', gated: true },
+    { source: '        <select', gated: true },
+    { source: '<select\n', gated: true },
+    { source: '<Select id="model">', gated: false },
+    { source: '<Selection />', gated: false },
+    { source: '</select>', gated: false },
+    { source: "// a native `<select>` is what this replaces", gated: true },
+    { source: 'const selected = options.find(...)', gated: false },
+  ]
+  const selectFailures = selectCases.filter(({ source, gated }) => {
+    const inSlice = scanLine(source, { isSelectGated: true }).some(
+      ({ kind }) => kind === 'native select element',
+    )
+    // The gate is off for tests and generated code, so the same line must pass without the flag.
+    const ungated = scanLine(source).some(({ kind }) => kind === 'native select element')
+    return inSlice !== gated || ungated
+  })
+  if (selectFailures.length) {
+    for (const failure of selectFailures) {
+      console.error(`lint:style:probe — ${failure.source} expected select-gated=${failure.gated}`)
+    }
+    process.exit(1)
+  }
+
   const cases = [
     { source: 'bg-bg', retired: true },
     { source: 'hover:bg-surface-hover/60', retired: true },
@@ -208,7 +244,9 @@ function runProbe() {
     }
     process.exit(1)
   }
-  console.log(`lint:style:probe — ok (${cases.length + typeCases.length} scanner cases)`)
+  console.log(
+    `lint:style:probe — ok (${cases.length + typeCases.length + selectCases.length} scanner cases)`,
+  )
 }
 
 if (process.argv.includes('--probe')) {
@@ -226,11 +264,15 @@ for (const file of walk(ROOT)) {
   // stay out of the type gate (they still go through the colour gates above).
   const isTypeGated =
     file.endsWith('.tsx') && !file.endsWith('.test.tsx') && !file.startsWith(SHARED_UI_DIR)
+  // Everywhere, including shared/ui: there is no longer a primitive allowed to wrap a native
+  // select. Generated code is already excluded by `walk`, which skips every `gen` directory.
+  const isSelectGated = file.endsWith('.tsx') && !file.endsWith('.test.tsx')
   const lines = readFileSync(file, 'utf8').split('\n')
   lines.forEach((line, index) => {
     for (const { kind, match } of scanLine(line, {
       isTokenFile,
       isTypeGated,
+      isSelectGated,
     })) {
       findings.push(`${relative(process.cwd(), file)}:${index + 1}  ${kind}: ${match}`)
     }
@@ -246,6 +288,8 @@ if (findings.length) {
     'frontend/src/app/styles/index.css; the rules are in spec/tech/design-language.md §2.',
     '\nFor an ad-hoc type utility, render the text through shared/ui Typography (or',
     'typographyStyles for a self-semantic element) — the type roles are design-language §3.',
+    '\nFor a native <select>, use shared/ui Listbox (or SegmentedControl for a bounded 2–5',
+    'switch) — the OS-drawn option list is design-language §7.',
   )
   process.exit(1)
 }

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Stage } from '@/shared/api'
 import { createFakeProviderTransport } from '@/test/providers'
+import { chooseOption } from '@/test/listbox'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { ModelPairForm } from './ModelPairForm'
 
@@ -44,15 +45,15 @@ describe('ModelPairForm structured failures', () => {
       })
 
       const selects = await screen.findAllByRole('combobox')
-      await waitFor(() => expect(selects[0]).toHaveValue('openrouter/writer-a'))
+      await waitFor(() => expect(selects[0]).toHaveTextContent('Writer A'))
 
-      await user.selectOptions(selects[0], 'openrouter/writer-c')
+      await chooseOption(user, selects[0], 'Writer C')
       expect(await screen.findByText(activeMessage)).toBeInTheDocument()
       expect(selects[0]).toHaveAttribute('aria-invalid', 'true')
       expect(selects[0]).toHaveAccessibleDescription(activeMessage)
 
-      await user.selectOptions(selects[1], 'openrouter/writer-a')
-      await user.selectOptions(selects[2], 'openrouter/writer-b')
+      await chooseOption(user, selects[1], 'Writer A')
+      await chooseOption(user, selects[2], 'Writer B')
       await user.click(screen.getByRole('button'))
 
       expect(await screen.findByText(pairMessage)).toBeInTheDocument()

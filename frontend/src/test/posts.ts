@@ -439,6 +439,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     row.status = 'finalized'
     row.finalizedRevision = row.contentRevision
     row.finalizedAt = DEFAULT_UPDATED_AT
+    // Like the server: the confirmed content's title becomes the post's title, and an untitled
+    // generation leaves the working title in place (spec/policy/posts.md).
+    row.title = row.content.title.trim() || row.title
     return create(FinalizePostResponseSchema, { post: toProto(row) })
   })
 

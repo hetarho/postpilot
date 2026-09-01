@@ -235,7 +235,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1500, testNow.Add(time.Minute)); err != nil || !updated {
 		t.Fatalf("option update: updated=%v err=%v", updated, err)
 	}
-	if updated, err := s.Finalize(ctx, "editable", "alice", 2, testNow.Add(2*time.Minute)); err != nil || !updated {
+	if updated, err := s.Finalize(ctx, "editable", "alice", "machine", 2, testNow.Add(2*time.Minute)); err != nil || !updated {
 		t.Fatalf("finalize: updated=%v err=%v", updated, err)
 	}
 	snapshot, err := s.LearningSnapshot(ctx, "editable", "alice")
@@ -255,7 +255,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	if _, err = s.LearningSnapshot(ctx, "editable", "alice"); !errors.Is(err, post.ErrPostNotFinalized) {
 		t.Fatalf("unfinalized snapshot err=%v", err)
 	}
-	if updated, err := s.Finalize(ctx, "editable", "alice", 3, testNow.Add(4*time.Minute)); err != nil || !updated {
+	if updated, err := s.Finalize(ctx, "editable", "alice", "machine 2", 3, testNow.Add(4*time.Minute)); err != nil || !updated {
 		t.Fatalf("second finalize: updated=%v err=%v", updated, err)
 	}
 	snapshot, err = s.LearningSnapshot(ctx, "editable", "alice")
@@ -540,7 +540,7 @@ func TestReassignVoiceIsOneOwnedWriteThatKeepsContent(t *testing.T) {
 	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", baseline, post.LanguageKorean, testNow); err != nil || !updated {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
-	if updated, err := s.Finalize(ctx, "moving", "alice", 1, testNow.Add(time.Minute)); err != nil || !updated {
+	if updated, err := s.Finalize(ctx, "moving", "alice", "machine", 1, testNow.Add(time.Minute)); err != nil || !updated {
 		t.Fatalf("finalize: updated=%v err=%v", updated, err)
 	}
 	if moved, err := s.ReassignVoice(ctx, "moving", "bob", "voice-bob", testNow.Add(2*time.Minute)); err != nil || moved {
@@ -587,7 +587,7 @@ func TestFinalizeAfterReassignmentDoesNotRequireALearningBaseline(t *testing.T) 
 	if moved, err := s.ReassignVoice(ctx, "moving-review", "alice", "voice-alice-review", testNow.Add(time.Minute)); err != nil || !moved {
 		t.Fatalf("reassign: moved=%v err=%v", moved, err)
 	}
-	if updated, err := s.Finalize(ctx, "moving-review", "alice", 1, testNow.Add(2*time.Minute)); err != nil || !updated {
+	if updated, err := s.Finalize(ctx, "moving-review", "alice", "machine", 1, testNow.Add(2*time.Minute)); err != nil || !updated {
 		t.Fatalf("finalize without baseline: updated=%v err=%v", updated, err)
 	}
 	got, err := s.GetPost(ctx, "moving-review")

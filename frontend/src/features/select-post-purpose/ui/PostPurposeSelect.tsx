@@ -1,8 +1,16 @@
-import { useId, useState, type ChangeEvent } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { NO_PURPOSE_VALUE, noPurposeLabel, usePurposes, type PurposeRef } from '@/entities/purpose'
-import { Button, FieldLabel, FieldMessage, Select, Typography, typographyStyles } from '@/shared/ui'
+import {
+  Button,
+  FieldLabel,
+  FieldMessage,
+  Listbox,
+  Typography,
+  typographyStyles,
+  type ListboxOption,
+} from '@/shared/ui'
 import { runningJobNote, assignmentFailureMessage } from '../model/assignment'
 
 interface PostPurposeSelectProps {
@@ -20,7 +28,7 @@ interface PostPurposeSelectProps {
   className?: string
 }
 
-/** The optional 용도 of a post: a native select wearing the field well (design-language §7),
+/** The optional 용도 of a post: an app-drawn listbox wearing the field well (design-language §7),
  *  defaulting to 없음, beside the required voice select. */
 export function PostPurposeSelect({
   ownerId,
@@ -32,6 +40,7 @@ export function PostPurposeSelect({
 }: PostPurposeSelectProps) {
   const { t } = useTranslation(['purposes', 'common'])
   const id = useId()
+  const labelId = `${id}-label`
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
   const { purposes, isPending, isError, isFetching, refetch } = usePurposes(ownerId)
@@ -49,6 +58,12 @@ export function PostPurposeSelect({
     .filter(Boolean)
     .join(' ')
 
+  const options: ListboxOption<string>[] = [
+    { value: NO_PURPOSE_VALUE, label: noPurposeLabel() },
+    ...(unlisted ? [{ value: unlisted.id, label: unlisted.name || unlisted.id }] : []),
+    ...purposes.map((purpose) => ({ value: purpose.id, label: purpose.name })),
+  ]
+
   const apply = async (purposeId: string) => {
     setApplying(true)
     setError('')
@@ -61,8 +76,7 @@ export function PostPurposeSelect({
     }
   }
 
-  const onChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const next = event.target.value
+  const onChange = (next: string) => {
     if (next === value) return
     // No confirmation sheet, unlike the voice: changing a purpose moves no content, drops no
     // baseline and costs no learning, so there is nothing to warn about.
@@ -72,26 +86,20 @@ export function PostPurposeSelect({
   return (
     <div className={className}>
       <div className="flex items-center gap-3">
-        <FieldLabel htmlFor={id} className="shrink-0">
+        <FieldLabel id={labelId} htmlFor={id} className="shrink-0">
           {t('title', { ns: 'purposes' })}
         </FieldLabel>
         <span className="min-w-0 flex-1">
-          <Select
+          <Listbox
             id={id}
+            aria-labelledby={labelId}
             value={value}
+            options={options}
             onChange={onChange}
             disabled={applying || isError || (isPending && !unlisted)}
             aria-invalid={error || isError ? true : undefined}
             aria-describedby={describedBy || undefined}
-          >
-            <option value={NO_PURPOSE_VALUE}>{noPurposeLabel()}</option>
-            {unlisted && <option value={unlisted.id}>{unlisted.name || unlisted.id}</option>}
-            {purposes.map((purpose) => (
-              <option key={purpose.id} value={purpose.id}>
-                {purpose.name}
-              </option>
-            ))}
-          </Select>
+          />
         </span>
       </div>
       {selected?.description && (

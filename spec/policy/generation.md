@@ -112,11 +112,18 @@ from [plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
 - The contact sheet pairs each attached image with its persisted observation by exact filename and displays
   `scene`, `mood`, `visible_text`, and `objects`. During observation, completed entries appear immediately and the
   remainder say `관찰 대기`; each non-terminal job snapshot refreshes the post read model.
+- On a phone the contact sheet is one **horizontal snap carousel**: cards narrower than the strip so a sliver of the
+  next one is visible, a `현재 / 전체` position indicator under it, and no inner vertical scroller — a verbose
+  observation makes its own card taller. From `sm:` up it keeps its existing fixed-width strip.
 - Contact-sheet thumbnails use only the presigned GET `view_url` returned by `GetPost`. A temporary browser `blob:`
   upload preview is never treated as a server-read capability.
 - The generated reading view renders the canonical `PostContent` block array directly. It shows title, summary,
   tags, every canonical block type, and resolves IMAGE blocks against attached filenames; it does not store or
   render canonical HTML.
+- Everything the next run is GIVEN — 관찰 모델, 작성 모델, 말투, 용도, 목표 언어, 목표 분량 and the A/B 후보 설정 link —
+  is set in one options surface behind a single trigger in 글 생성's dock, and is rendered nowhere else in the editor
+  ([posts.md](posts.md) *Editor presentation*). Relocating a control changes the screen, never what is sent: every
+  model choice stays explicit and is never auto-applied ([I3]).
 - The editor exposes separate `생성` and `A/B 비교 생성` actions with independent model blockers and pending states.
   Both await the latest title/memo save and refuse concurrent post work. A missing pair blocks only A/B; a missing
   active writer blocks only ordinary generation. A zero-photo post does not require observe. A deleted voice blocks

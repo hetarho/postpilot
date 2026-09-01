@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostImage } from '@/entities/image'
@@ -17,6 +18,30 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
   const observationsByFile = observationByFile(observations)
   const observing =
     activeJob?.stage === 'observe' && activeJob.status !== 'done' && activeJob.status !== 'failed'
+  const [current, setCurrent] = useState(0)
+  const stripRef = useRef<HTMLDivElement>(null)
+
+  // An IntersectionObserver, not a scroll handler: reading a card's offset on every scroll frame
+  // forces a layout on the thread that is trying to animate the swipe. The observer reports the
+  // card that is mostly on screen, which is the one the snap has settled on.
+  useEffect(() => {
+    const strip = stripRef.current
+    if (!strip || typeof IntersectionObserver === 'undefined') return
+    const cards = Array.from(strip.children)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
+        if (!visible) return
+        const index = cards.indexOf(visible.target)
+        if (index >= 0) setCurrent(index)
+      },
+      { root: strip, threshold: 0.6 },
+    )
+    for (const card of cards) observer.observe(card)
+    return () => observer.disconnect()
+  }, [images])
 
   return (
     <section aria-labelledby="contact-sheet-heading" className="mt-12">
@@ -27,11 +52,19 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
         {t('observation.description')}
       </Typography>
 
-      {/* The phone shape is a plain vertical list — a 240px card inside 328px of content left a
-          27% dead gutter and squeezed the observation prose to 216px. The horizontal snap strip
-          is the wide-screen shape only, and `sm:items-start` stops one verbose photo from making
-          every card as tall as the tallest. */}
-      <div className="mt-4 flex flex-col gap-4 sm:snap-x sm:flex-row sm:items-start sm:overflow-x-auto sm:overscroll-x-contain sm:pb-3">
+      {/* One horizontal snap carousel on a phone: eight photos as full-width cards was eight
+          screenfuls of vertical scrolling to reach the last observation. A horizontal strip is
+          §4.4's deliberate exception — it does not compete with the page's vertical scroll — and
+          `overscroll-x-contain` keeps a swipe that reaches the end off the browser's back gesture.
+          The card is deliberately narrower than the strip so a SLIVER of the next one shows: a
+          phone has no hover and no scrollbar, so the sliver is the only thing that says the strip
+          scrolls at all. `items-start` stops one verbose photo from making every card as tall as
+          the tallest, and no card gains an inner vertical scroller — a long observation makes its
+          own card taller. */}
+      <div
+        ref={stripRef}
+        className="mt-4 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto overscroll-x-contain pb-3"
+      >
         {images.map((image) => {
           const observation = observationsByFile.get(image.filename)
           // A just-confirmed upload may temporarily keep its browser blob preview in
@@ -41,7 +74,7 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
           return (
             <article
               key={image.filename}
-              className="bg-surface-raised w-full rounded-lg p-3 sm:w-60 sm:shrink-0 sm:snap-start"
+              className="bg-surface-raised w-carousel-card shrink-0 snap-start rounded-lg p-3 sm:w-60"
             >
               {viewUrl ? (
                 <img
@@ -89,6 +122,18 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
           )
         })}
       </div>
+      {/* Where you are in the strip, since only one card and a sliver are on screen. Hidden from
+          `sm:` up, where several cards are visible at once and the count says nothing new. */}
+      {images.length > 1 && (
+        <Typography
+          variant="meta"
+          as="p"
+          role="status"
+          className="text-content-tertiary mt-2 sm:hidden"
+        >
+          {t('observation.position', { current: current + 1, total: images.length })}
+        </Typography>
+      )}
     </section>
   )
 }

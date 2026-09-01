@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { ContentLanguage } from '@/shared/api'
 import { VOICE_NAME_MAX_CHARS } from '@/shared/config'
 import { activeLocale } from '@/shared/lib'
-import { Button, FieldLabel, FieldMessage, Select, TextField, Typography } from '@/shared/ui'
+import { Button, FieldLabel, FieldMessage, Listbox, TextField, Typography } from '@/shared/ui'
 import { useCreateVoice } from '../api/useCreateVoice'
 
 /** One field and the page's committing action. In flow, right after the field it commits — never
@@ -72,20 +72,22 @@ export function CreateVoiceForm({ ownerId, className }: { ownerId: string; class
       <Typography variant="body" as="p" id={hintId} className="text-content-secondary mt-1">
         {t('create.emptyHelp')}
       </Typography>
-      <FieldLabel htmlFor={`${id}-language`} className="mt-4">
+      <FieldLabel id={`${id}-language-label`} htmlFor={`${id}-language`} className="mt-4">
         {t('create.sourceLanguage')}
       </FieldLabel>
-      <Select
+      <Listbox<ContentLanguage>
         id={`${id}-language`}
+        aria-labelledby={`${id}-language-label`}
         value={sourceLanguage}
+        options={[
+          { value: 'ko', label: t('contentLanguage.ko', { ns: 'common' }) },
+          { value: 'en', label: t('contentLanguage.en', { ns: 'common' }) },
+        ]}
         disabled={create.isPending}
         aria-describedby={sourceLanguageHintId}
-        onChange={(event) => setSourceLanguage(event.target.value as ContentLanguage)}
+        onChange={setSourceLanguage}
         className="mt-1"
-      >
-        <option value="ko">{t('contentLanguage.ko', { ns: 'common' })}</option>
-        <option value="en">{t('contentLanguage.en', { ns: 'common' })}</option>
-      </Select>
+      />
       <Typography
         variant="body"
         as="p"

@@ -60,7 +60,6 @@ export const posts = {
     memo: 'Notes',
     memoPlaceholder: 'Write down what happened in your own words',
     actionAria: 'Save status and post actions',
-    generation: 'Generate post',
     noPhotoModel: 'A photo-observation model is not needed because this post has no photos.',
     writeCandidates: 'Writing A/B candidates',
     configureCandidates: 'Configure two candidates in AI models',
@@ -125,8 +124,12 @@ export const posts = {
     compareReason: 'A/B comparison: {{reason}}',
     reviewResult: 'Review A/B result',
     saveFailed: 'Could not save the post.',
+    brief: {
+      title: 'Writing options',
+      trigger: 'Options · {{voice}}',
+      length: 'Target length',
+    },
     options: {
-      title: 'Generation options',
       useTarget: 'Use a target length',
       target: 'Target length',
       range: 'Enter between {{min}} and {{max}} characters.',
@@ -147,7 +150,7 @@ export const posts = {
       jobChecking: 'Checking the revision job…',
       activeJob: 'Another job is in progress.',
       modelChecking: 'Checking the writing model…',
-      model: 'Select a writing model.',
+      model: 'Choose a writing model in the writing options on the Generate step.',
       instruction: 'Enter a revision request.',
     },
   },
@@ -253,6 +256,7 @@ export const posts = {
   observation: {
     title: 'Photo observations',
     description: 'What the model saw in each photo — start here if the post looks wrong',
+    position: '{{current}} / {{total}}',
     imageAlt: 'Observation photo: {{filename}}',
     urlPending: 'Preparing the photo URL…',
     scene: 'Scene',

@@ -108,12 +108,13 @@ func (q *Queries) DeletePost(ctx context.Context, arg DeletePostParams) (int64, 
 
 const finalizePost = `-- name: FinalizePost :execrows
 UPDATE posts SET status = 'finalized', finalized_revision = content_revision,
-    finalized_at = ?, updated_at = ?
+    title = ?, finalized_at = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND content_revision = ?
   AND content IS NOT NULL
 `
 
 type FinalizePostParams struct {
+	Title           string
 	FinalizedAt     sql.NullString
 	UpdatedAt       string
 	Slug            string
@@ -121,8 +122,13 @@ type FinalizePostParams struct {
 	ContentRevision int64
 }
 
+// Finalizing also copies the confirmed AI title into posts.title (spec/policy/posts.md). ONE
+// statement, still guarded by the exact revision, so the copy is atomic with the finalization and
+// a concurrent content save simply matches zero rows. The caller resolves which title to write: an
+// empty content title leaves the user's working title in place. The slug is never re-minted.
 func (q *Queries) FinalizePost(ctx context.Context, arg FinalizePostParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, finalizePost,
+		arg.Title,
 		arg.FinalizedAt,
 		arg.UpdatedAt,
 		arg.Slug,

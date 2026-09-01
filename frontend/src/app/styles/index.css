@@ -309,6 +309,10 @@
   --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
 
   --container-measure: 40rem;
+  /* A popover panel's ceiling: the viewport minus both page gutters (`px-4`). Its horizontal
+     POSITION is corrected in JS — nothing in CSS knows where an anchored panel's trigger sits —
+     but the width is a plain bound, so it stays a token. */
+  --container-popover: calc(100vw - 2rem);
   /* Five full English voice-tab labels fit only at the very top of VoiceLayout's content width.
      Name that content breakpoint so TabLinks never guesses with an arbitrary query value. */
   --container-tabs: 38rem;
@@ -322,6 +326,10 @@
   --spacing-nav: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   /* A below-header popover must keep its final action reachable in phone landscape. */
   --spacing-popover-below-max: calc(100dvh - 5rem - env(safe-area-inset-top, 0px));
+  /* An above-DOCK popover opens into the space between the bar and the top of the screen. A tall
+     panel (the whole writing brief) must scroll inside that space rather than run off the top,
+     where its first fields would be unreachable. */
+  --spacing-popover-above-max: calc(100dvh - var(--spacing-dock-nav) - 6rem);
   /* Where a docked bar sits above the phone tab bar. It FLOATS: resting a rounded, shadowed card
      directly on the tab bar reads as one two-storey block of chrome instead of a sheet over the
      page, and the two shadows meet with no gap to separate them. */
@@ -340,6 +348,16 @@
   /* A bottom sheet's ceiling. `dvh`, not `vh`: only the dynamic unit tracks the mobile URL bar,
      so a `vh`-sized sheet is clipped on every phone — design-language §8.1. */
   --spacing-sheet: 85dvh;
+
+  /* An open listbox panel's ceiling. It is an OVERLAY with its own bounds, which is the §4.4
+     exception a dropdown shares with a sheet; half the viewport keeps a 40-model list scrollable
+     without covering the field it belongs to. */
+  --spacing-listbox: 50dvh;
+
+  /* A carousel card's share of the strip. Under 100% ON PURPOSE: the visible sliver of the next
+     card is what tells the user the strip scrolls sideways at all, since a phone has no hover and
+     no scrollbar to say so (§4.4, §8.4). */
+  --spacing-carousel-card: 85%;
 }
 
 @theme inline {

@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SendHorizontal } from 'lucide-react'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import { useSelectionSavePending, useStageSelection } from '@/entities/model-catalog'
 import { ContentRevisionConflictError } from '@/entities/post'
@@ -40,7 +41,17 @@ export interface ReviseFormHandle {
   start: () => void
 }
 
-/** Replaces the current canonical content through one durable `revise` job. */
+/** Replaces the current canonical content through one durable `revise` job.
+ *
+ *  It is the first row of 글 다듬기's dock (`widgets/refine-dock`), so it renders no heading and no
+ *  surface of its own: a 4,000px draft used to put this form past the end of the page, which is
+ *  exactly where §4.3 says a committing action may not live.
+ *
+ *  Its SECONDARY controls — the counter, 규칙으로 저장 and 지침으로 저장 — collapse while the field
+ *  is empty and unfocused. The dock is over the draft the whole time, so the row that is not being
+ *  used is height taken from the thing the screen is for (§0). They come back on focus, on the
+ *  first character, and for as long as a revision is running or has failed, because that is when
+ *  their state is worth reading. */
 export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function ReviseForm(
   {
     ownerId,
@@ -58,6 +69,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
   const { t } = useTranslation('posts')
   const [instruction, setInstruction] = useState('')
   const [saveAsRule, setSaveAsRule] = useState(false)
+  const [focused, setFocused] = useState(false)
   const [prepareFailure, setPrepareFailure] = useState<AppFailure | 'content-conflict'>()
   const write = useStageSelection('write')
   const selectionSaving = useSelectionSavePending()
@@ -67,6 +79,8 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
   // instruction box holding text that never ran, and 'done' rather than merely terminal because a
   // failed revision produced nothing worth turning into a rule.
   const revisionCompleted = activeJob?.kind === 'revise' && activeJob.status === 'done'
+  const revisionBusy =
+    activeJob?.kind === 'revise' && (!isTerminal(activeJob) || activeJob.status === 'failed')
   const voiceBlocked = Boolean(voice?.deleted)
   const trimmed = instruction.trim()
   const disabled =
@@ -78,6 +92,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
     !write.selected ||
     trimmed === '' ||
     startRevision.isPending
+  const expanded = focused || instruction !== '' || revisionBusy
 
   const start = useCallback(async () => {
     if (disabled || !write.selected) return
@@ -132,26 +147,49 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
               : ''
 
   return (
-    <section aria-labelledby="revision-heading" className="mt-10 pb-12">
-      <Typography variant="title" id="revision-heading">
-        {t('revision.title')}
-      </Typography>
-      <form
-        className="mt-4 space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void start()
-        }}
-      >
-        <FieldLabel htmlFor="revision-instruction">{t('revision.instruction')}</FieldLabel>
+    <form
+      className="grid gap-2"
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        // Only a focus move OUT of the form collapses the row: tabbing from the field onto the
+        // 규칙으로 저장 checkbox inside it must not unmount the checkbox mid-gesture.
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false)
+      }}
+      onSubmit={(event) => {
+        event.preventDefault()
+        void start()
+      }}
+    >
+      {/* Validation and failure sit ABOVE the controls, so the keyboard covering the bottom ~40%
+          of the screen hides at most a button and never the reason it is disabled (§8.3). */}
+      {blocker && (
+        <Typography variant="body" role="status" className="text-content-secondary">
+          {blocker}
+        </Typography>
+      )}
+      {startRevision.isError && <FieldMessage>{startRevision.errorMessage}</FieldMessage>}
+      {prepareFailure && (
+        <Notice tone="danger" role="alert">
+          {prepareFailure === 'content-conflict' ? (
+            t('edit.conflict')
+          ) : (
+            <AppFailureMessage failure={prepareFailure} />
+          )}
+        </Notice>
+      )}
+      <FieldLabel htmlFor="revision-instruction" className="sr-only">
+        {t('revision.instruction')}
+      </FieldLabel>
+      <div className="flex items-end gap-2">
         {/* A textarea, not a single-line field: at 360px one line shows ~20 of the 500 permitted
             Hangul, so an ordinary instruction scrolled its own beginning out of sight while it was
-            being typed. `autoGrow` keeps it out of the page's scroll (§4.4); Return now inserts a
-            line instead of submitting, which is why `enterKeyHint` is the plain one. */}
+            being typed. `autoGrow` keeps it out of the page's scroll (§4.4); Return inserts a line
+            instead of submitting, which is why `enterKeyHint` is the plain one — the send button
+            beside it is how the instruction is committed. */}
         <Textarea
           id="revision-instruction"
           value={instruction}
-          rows={3}
+          rows={1}
           autoGrow
           maxLength={REVISION_INSTRUCTION_MAX_CHARS}
           autoComplete="off"
@@ -159,78 +197,69 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           enterKeyHint="enter"
           disabled={voiceBlocked || hasActiveJob || jobPending || startRevision.isPending}
           placeholder={t('revision.placeholder')}
-          aria-describedby="revision-instruction-count"
+          // The counter is only mounted while the secondary row is open, and a dangling reference
+          // is read as no description at all rather than as the one below.
+          aria-describedby={expanded ? 'revision-instruction-count' : undefined}
           onChange={(event) => setInstruction(event.target.value)}
+          className="max-h-field min-w-0 flex-1"
         />
-        {/* The cap used to stop the keystrokes with nothing on screen explaining why. */}
-        <Typography variant="meta" as="p" id="revision-instruction-count">
-          {instruction.length}/{REVISION_INSTRUCTION_MAX_CHARS}
-        </Typography>
-        <label
-          className={typographyStyles({
-            variant: 'label',
-            className: 'flex min-h-11 items-center gap-3',
-          })}
-        >
-          <Checkbox
-            checked={saveAsRule}
-            disabled={
-              voiceBlocked ||
-              ruleLanguageMismatch ||
-              hasActiveJob ||
-              jobPending ||
-              startRevision.isPending
-            }
-            onChange={(event) => setSaveAsRule(event.target.checked)}
-          />
-          {t('revision.saveAsRule')}
-        </label>
-        {ruleLanguageMismatch && (
-          <Typography variant="body" role="status" className="text-content-secondary">
-            {t('revision.ruleLanguageMismatch')}
-          </Typography>
-        )}
-        {/* Beside 규칙으로 저장, but only after a revision has actually finished: the instruction is
-            worth saving as a rule once the user has seen what it did. `규칙으로 저장` has to be a
-            pre-flight checkbox because the voice learns from the run itself; a guideline is a plain
-            create, so it can wait for the result. */}
-        {revisionCompleted && (
-          <div className="flex flex-wrap items-center gap-2">
-            <SaveAsGuidelineButton
-              ownerId={ownerId}
-              instruction={trimmed}
-              purpose={purpose?.id ? purpose : undefined}
-              disabled={trimmed === '' || startRevision.isPending}
-            />
-          </div>
-        )}
-        {/* Validation and failure sit ABOVE the action, so the keyboard covering the bottom ~40%
-            of the screen hides at most the button and never the reason it is disabled (§8.3). */}
-        {blocker && (
-          <Typography variant="body" role="status" className="text-content-secondary">
-            {blocker}
-          </Typography>
-        )}
-        {startRevision.isError && <FieldMessage>{startRevision.errorMessage}</FieldMessage>}
-        {prepareFailure && (
-          <Notice tone="danger" role="alert">
-            {prepareFailure === 'content-conflict' ? (
-              t('edit.conflict')
-            ) : (
-              <AppFailureMessage failure={prepareFailure} />
-            )}
-          </Notice>
-        )}
         <Button
           type="submit"
           variant="secondary"
-          className="w-full sm:w-auto"
+          size="icon"
+          aria-label={t('revision.submit')}
           disabled={disabled}
           pending={startRevision.isPending}
         >
-          {t('revision.submit')}
+          <SendHorizontal aria-hidden="true" className="size-5" />
         </Button>
-      </form>
-    </section>
+      </div>
+      {expanded && (
+        <div className="grid gap-2">
+          {/* The cap used to stop the keystrokes with nothing on screen explaining why. */}
+          <Typography variant="meta" as="p" id="revision-instruction-count">
+            {instruction.length}/{REVISION_INSTRUCTION_MAX_CHARS}
+          </Typography>
+          <label
+            className={typographyStyles({
+              variant: 'label',
+              className: 'flex min-h-11 items-center gap-3',
+            })}
+          >
+            <Checkbox
+              checked={saveAsRule}
+              disabled={
+                voiceBlocked ||
+                ruleLanguageMismatch ||
+                hasActiveJob ||
+                jobPending ||
+                startRevision.isPending
+              }
+              onChange={(event) => setSaveAsRule(event.target.checked)}
+            />
+            {t('revision.saveAsRule')}
+          </label>
+          {ruleLanguageMismatch && (
+            <Typography variant="body" role="status" className="text-content-secondary">
+              {t('revision.ruleLanguageMismatch')}
+            </Typography>
+          )}
+          {/* Beside 규칙으로 저장, but only after a revision has actually finished: the instruction is
+              worth saving as a rule once the user has seen what it did. `규칙으로 저장` has to be a
+              pre-flight checkbox because the voice learns from the run itself; a guideline is a plain
+              create, so it can wait for the result. */}
+          {revisionCompleted && (
+            <div className="flex flex-wrap items-center gap-2">
+              <SaveAsGuidelineButton
+                ownerId={ownerId}
+                instruction={trimmed}
+                purpose={purpose?.id ? purpose : undefined}
+                disabled={trimmed === '' || startRevision.isPending}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </form>
   )
 })

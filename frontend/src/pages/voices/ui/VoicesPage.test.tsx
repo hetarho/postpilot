@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import { chooseOption } from '@/test/listbox'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
@@ -67,8 +68,8 @@ describe('the voice directory', () => {
     const user = userEvent.setup()
     renderDirectory({ creates })
 
-    const language = await screen.findByRole('combobox', { name: 'Sample language' })
-    expect(language).toHaveValue('en')
+    const language = await screen.findByRole('combobox', { name: /Sample language/ })
+    expect(language).toHaveTextContent('English')
     await user.type(screen.getByLabelText('New voice name'), 'English samples')
     await user.click(screen.getByRole('button', { name: 'Create voice' }))
 
@@ -82,7 +83,7 @@ describe('the voice directory', () => {
     const user = userEvent.setup()
     renderDirectory({ creates })
 
-    await user.selectOptions(await screen.findByLabelText('샘플 언어'), 'en')
+    await chooseOption(user, await screen.findByRole('combobox', { name: /샘플 언어/ }), '영어')
     await user.type(screen.getByLabelText('새 말투 이름'), '영어 말투')
     await user.click(screen.getByRole('button', { name: '말투 만들기' }))
     await waitFor(() => expect(creates[0]?.sourceLanguage).toBe('en'))

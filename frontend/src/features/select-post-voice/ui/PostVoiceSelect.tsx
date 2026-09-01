@@ -1,7 +1,15 @@
-import { useId, useState, type ChangeEvent } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useVoices, voiceRefLabel, type VoiceRef } from '@/entities/voice'
-import { Badge, Dialog, FieldLabel, FieldMessage, Select, Typography } from '@/shared/ui'
+import {
+  Badge,
+  Dialog,
+  FieldLabel,
+  FieldMessage,
+  Listbox,
+  Typography,
+  type ListboxOption,
+} from '@/shared/ui'
 import { reassignmentFailureMessage } from '../model/reassignment'
 
 interface PostVoiceSelectProps {
@@ -20,7 +28,7 @@ interface PostVoiceSelectProps {
   className?: string
 }
 
-/** The required voice of a post: a native select wearing the field well (design-language §7),
+/** The required voice of a post: an app-drawn listbox wearing the field well (design-language §7),
  *  listing only the voices a post may be assigned to. */
 export function PostVoiceSelect({
   ownerId,
@@ -33,6 +41,7 @@ export function PostVoiceSelect({
 }: PostVoiceSelectProps) {
   const { t } = useTranslation(['voices', 'common'])
   const id = useId()
+  const labelId = `${id}-label`
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
   const { active, isPending } = useVoices(ownerId)
@@ -61,12 +70,18 @@ export function PostVoiceSelect({
     }
   }
 
-  const onChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const next = event.target.value
+  const onChange = (next: string) => {
     if (!next || next === value) return
     if (confirm) setTarget(next)
     else void apply(next)
   }
+
+  const options: ListboxOption<string>[] = [
+    ...(unlisted
+      ? [{ value: unlisted.id, label: voiceRefLabel(unlisted), disabled: unlisted.deleted }]
+      : []),
+    ...active.map((voice) => ({ value: voice.id, label: voice.name })),
+  ]
 
   const targetName = active.find((voice) => voice.id === target)?.name ?? ''
   const describedBy = [blocked ? hintId : '', error ? errorId : ''].filter(Boolean).join(' ')
@@ -74,29 +89,20 @@ export function PostVoiceSelect({
   return (
     <div className={className}>
       <div className="flex items-center gap-3">
-        <FieldLabel htmlFor={id} className="shrink-0">
+        <FieldLabel id={labelId} htmlFor={id} className="shrink-0">
           {t('title')}
         </FieldLabel>
         <span className="min-w-0 flex-1">
-          <Select
+          <Listbox
             id={id}
+            aria-labelledby={labelId}
             value={value}
+            options={options}
             onChange={onChange}
             disabled={disabled}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy || undefined}
-          >
-            {unlisted && (
-              <option value={unlisted.id} disabled={unlisted.deleted}>
-                {voiceRefLabel(unlisted)}
-              </option>
-            )}
-            {active.map((voice) => (
-              <option key={voice.id} value={voice.id}>
-                {voice.name}
-              </option>
-            ))}
-          </Select>
+          />
         </span>
         {selectedVoice?.sourceLanguage && (
           <Badge>{t(`contentLanguage.${selectedVoice.sourceLanguage}`, { ns: 'common' })}</Badge>

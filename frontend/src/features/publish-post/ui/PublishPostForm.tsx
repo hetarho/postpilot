@@ -10,7 +10,7 @@ import {
   PublishVisibility,
 } from '@/shared/api'
 import { PUBLISH_AGENT_STALE_MS } from '@/shared/config'
-import { AppFailureMessage, Button, Dialog, FieldLabel, Notice, Select } from '@/shared/ui'
+import { AppFailureMessage, Button, Dialog, FieldLabel, Listbox, Notice } from '@/shared/ui'
 import { usePublishPost } from '../model/usePublishPost'
 
 export function PublishPostForm({
@@ -110,64 +110,70 @@ export function PublishPostForm({
         job?.status !== PublishStatus.OUTCOME_UNKNOWN && (
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="publish-agent">{t('form.agent')}</FieldLabel>
-              <Select
+              <FieldLabel id="publish-agent-label" htmlFor="publish-agent">
+                {t('form.agent')}
+              </FieldLabel>
+              <Listbox
                 id="publish-agent"
+                aria-labelledby="publish-agent-label"
                 value={selected.id}
+                options={available.map((agent) => ({
+                  value: agent.id,
+                  label: `${agent.label} · ${agent.platformAccountLabel}`,
+                }))}
                 disabled={retry}
-                onChange={(event) => {
-                  const next = available.find((agent) => agent.id === event.target.value)
-                  setAgentId(event.target.value)
+                onChange={(id) => {
+                  const next = available.find((agent) => agent.id === id)
+                  setAgentId(id)
                   if (next) {
                     setCategoryId(next.defaultCategoryId)
                     setVisibility(next.defaultVisibility)
                   }
                 }}
                 className="mt-2"
-              >
-                {available.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.label} · {agent.platformAccountLabel}
-                  </option>
-                ))}
-              </Select>
+              />
             </div>
             <div>
-              <FieldLabel htmlFor="publish-category">{t('form.category')}</FieldLabel>
-              <Select
+              <FieldLabel id="publish-category-label" htmlFor="publish-category">
+                {t('form.category')}
+              </FieldLabel>
+              <Listbox
                 id="publish-category"
+                aria-labelledby="publish-category-label"
                 value={effectiveCategoryId}
+                options={selected.categories.map((category) => ({
+                  value: category.id,
+                  label: category.name,
+                }))}
                 disabled={retry}
-                onChange={(event) => {
+                onChange={(categoryId) => {
                   setAgentId(selected.id)
-                  setCategoryId(event.target.value)
+                  setCategoryId(categoryId)
                   setVisibility(effectiveVisibility)
                 }}
                 className="mt-2"
-              >
-                {selected.categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
+              />
             </div>
             <div>
-              <FieldLabel htmlFor="publish-visibility">{t('form.visibility')}</FieldLabel>
-              <Select
+              <FieldLabel id="publish-visibility-label" htmlFor="publish-visibility">
+                {t('form.visibility')}
+              </FieldLabel>
+              <Listbox<PublishVisibility>
                 id="publish-visibility"
+                aria-labelledby="publish-visibility-label"
                 value={effectiveVisibility}
+                options={[
+                  { value: PublishVisibility.PUBLIC, label: t('visibility.public') },
+                  { value: PublishVisibility.PRIVATE, label: t('visibility.private') },
+                ]}
                 disabled={retry}
-                onChange={(event) => {
+                onChange={(visibility) => {
                   setAgentId(selected.id)
                   setCategoryId(effectiveCategoryId)
-                  setVisibility(Number(event.target.value) as PublishVisibility)
+                  setVisibility(visibility)
                 }}
                 className="mt-2"
-              >
-                <option value={PublishVisibility.PUBLIC}>{t('visibility.public')}</option>
-                <option value={PublishVisibility.PRIVATE}>{t('visibility.private')}</option>
-              </Select>
+              />
             </div>
           </div>
         )}

@@ -106,10 +106,12 @@ counter. The backend is authoritative; the frontend mirrors the values only for 
   mutation can invalidate it — and it is the number the user confirms a destructive detach against.
 - A rename invalidates the post caches as well as the directory: the name is projected onto every assigned post and
   rendered on the list, so those rows change what they display without changing at all.
-- The editor and `/posts/new` show a `용도` select defaulting to 없음, beside the voice select, with the selected
-  purpose's description under it and a link to `/purposes`. Selecting writes a presence-aware patch through the
-  per-post draft queue, so a delayed title save cannot revert a newer selection. On a create, 없음 sends **no** field at
-  all rather than an empty one.
+- The editor and `/posts/new` show a `용도` picker defaulting to 없음, with the selected purpose's description under it
+  and a link to `/purposes`. It lives in the writing brief — the one options surface that also holds the models, the
+  voice, the target language and the target length ([posts.md](posts.md) *Editor presentation*) — rather than beside
+  the voice above the step panels. Selecting writes a presence-aware patch through the per-post draft queue, so a
+  delayed title save cannot revert a newer selection. On a create, 없음 sends **no** field at all rather than an empty
+  one.
 - The select stays enabled while a job runs and says that the running job keeps the purpose it started with. A failed
   directory read is shown as a failure with a retry — never as an empty directory, which would leave clearing as the
   only available action.

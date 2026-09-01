@@ -197,9 +197,10 @@ func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, 
 	return n == 1, nil
 }
 
-func (s *Store) Finalize(ctx context.Context, slug, userID string, expectedRevision int64, finalizedAt time.Time) (bool, error) {
+func (s *Store) Finalize(ctx context.Context, slug, userID, title string, expectedRevision int64, finalizedAt time.Time) (bool, error) {
 	stamp := formatTime(finalizedAt)
 	n, err := s.write.FinalizePost(ctx, sqlc.FinalizePostParams{
+		Title:       title,
 		FinalizedAt: sql.NullString{String: stamp, Valid: true}, UpdatedAt: stamp,
 		Slug: slug, UserID: userID, ContentRevision: expectedRevision,
 	})

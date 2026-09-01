@@ -8,7 +8,7 @@ export interface MenuOption<T extends string> {
   label: string
 }
 
-/** The app-drawn dropdown for one bounded choice (design-language §7). A native `<select>`'s open
+/** The app-drawn dropdown for one bounded choice (design-language §7). A native select's open
  *  option list is OS-drawn, so it cannot wear the app's surfaces — this menu exists so a compact
  *  trigger can offer a short option list without breaking the design system the moment it opens.
  *

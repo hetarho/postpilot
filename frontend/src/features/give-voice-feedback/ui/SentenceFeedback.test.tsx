@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
+import { chooseOption } from '@/test/listbox'
 import { Code } from '@connectrpc/connect'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { VoiceFeedbackReason } from '@/shared/api'
 import { LONG_PRESS_MS } from '@/shared/config'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
 import { connectAppError } from '@/test/app-error'
@@ -45,7 +45,11 @@ describe('SentenceFeedback', () => {
   it('keeps an explicitly chosen sentence while the text still contains it', async () => {
     const { sentenceFeedback, view } = renderFeedback(`${FIRST} ${SECOND}`)
     await userEvent.click(screen.getByRole('button', { name: '문장 의견' }))
-    await userEvent.selectOptions(await screen.findByLabelText('문장'), SECOND)
+    await chooseOption(
+      userEvent.setup(),
+      await screen.findByRole('combobox', { name: /문장/ }),
+      SECOND,
+    )
 
     // A later edit appends a sentence but leaves the chosen one in place.
     view.rerender(
@@ -64,7 +68,11 @@ describe('SentenceFeedback', () => {
   it('survives an edit without losing the open dialog or the chosen reason', async () => {
     const { view } = renderFeedback(`${FIRST} ${SECOND}`)
     await userEvent.click(screen.getByRole('button', { name: '문장 의견' }))
-    await userEvent.selectOptions(await screen.findByLabelText('이유'), '종결어미')
+    await chooseOption(
+      userEvent.setup(),
+      await screen.findByRole('combobox', { name: /이유/ }),
+      '종결어미',
+    )
 
     view.rerender(
       <SentenceFeedback
@@ -75,7 +83,7 @@ describe('SentenceFeedback', () => {
     )
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByLabelText('이유')).toHaveValue(String(VoiceFeedbackReason.ENDING))
+    expect(screen.getByRole('combobox', { name: /이유/ })).toHaveTextContent('종결어미')
   })
 
   it('clears the long-press timer when it unmounts mid-press', async () => {

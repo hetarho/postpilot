@@ -58,12 +58,21 @@ rule behavior remain canonical in [voice](voice.md). Content-language preservati
 
 ## Frontend behavior
 
-- The revision form is shown only when canonical content exists. It uses the account's explicit write-stage selection
-  and is disabled for an empty instruction, missing or pending selection, an unresolved start, another active job, or
-  a deleted voice — the last with the shared deleted-voice message, before every other reason; the sentence-feedback
-  control is not offered on such a post at all.
-- The form can optionally save the request as a rule and refreshes the voice-profile cache after acceptance. Progress
-  and completion use the shared generation-job polling path, including resume after navigation or reload.
+- The revision form is shown only when canonical content exists. It is the **first row of 글 다듬기's dock** — the
+  instruction field beside an icon-only send button — rather than a section at the end of a draft that is routinely
+  thousands of pixels tall ([posts.md](posts.md) *Editor presentation*). It uses the account's explicit write-stage
+  selection and is disabled for an empty instruction, missing or pending selection, an unresolved start, another
+  active job, or a deleted voice — the last with the shared deleted-voice message, before every other reason; the
+  sentence-feedback control is not offered on such a post at all. Every blocker, validation message and failure
+  renders above the row.
+- Its secondary controls — the character counter, the `규칙으로 저장` checkbox with its language-mismatch note, and the
+  post-revision `지침으로 저장` button — **collapse** while the instruction field is empty and unfocused, and are shown
+  while it is focused, holds text, or a revision is running or failed. Focus moving between controls inside the form
+  does not collapse it.
+- The form can optionally save the request as a rule and refreshes the voice-profile cache after acceptance. That
+  behavior is unchanged in every respect by the move into the dock — the pre-flight checkbox, the append at request
+  time, the duplicate guard and the content/voice language gate all stand; only where the checkbox sits has moved.
+  Progress and completion use the shared generation-job polling path, including resume after navigation or reload.
 - A failed revision started in the current editor session can retry with its retained instruction. A revision resumed
   from an earlier session cannot reconstruct private job payload in the browser, so it shows the failure and enables
   a new instruction instead of presenting a no-op retry button.

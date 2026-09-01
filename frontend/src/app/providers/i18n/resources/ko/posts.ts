@@ -55,7 +55,6 @@ export const posts = {
     memo: '메모',
     memoPlaceholder: '무슨 일이 있었는지 편하게 적어 주세요',
     actionAria: '저장 상태와 글 작업',
-    generation: '글 생성',
     noPhotoModel: '사진이 없어 관찰 모델은 필요하지 않아요.',
     writeCandidates: '작성 A/B 후보',
     configureCandidates: 'AI 모델에서 두 후보 설정',
@@ -120,8 +119,12 @@ export const posts = {
     compareReason: 'A/B 비교: {{reason}}',
     reviewResult: 'A/B 결과 확인',
     saveFailed: '글을 저장하지 못했어요.',
+    brief: {
+      title: '글쓰기 옵션',
+      trigger: '옵션 · {{voice}}',
+      length: '목표 분량',
+    },
     options: {
-      title: '생성 옵션',
       useTarget: '목표 글자 수 사용',
       target: '목표 글자 수',
       range: '{{min}}–{{max}}자로 입력해 주세요.',
@@ -141,7 +144,7 @@ export const posts = {
       jobChecking: '수정 작업을 확인하는 중이에요.',
       activeJob: '다른 작업이 진행 중이에요.',
       modelChecking: '작성 모델을 확인하는 중이에요.',
-      model: '작성 모델을 선택하세요.',
+      model: '글 생성 단계의 글쓰기 옵션에서 작성 모델을 선택하세요.',
       instruction: '수정 요청을 입력하세요.',
     },
   },
@@ -242,6 +245,7 @@ export const posts = {
   observation: {
     title: '사진 관찰',
     description: '모델이 각 사진에서 본 것 — 글이 이상하면 여기부터 확인하세요',
+    position: '{{current}} / {{total}}',
     imageAlt: '{{filename}} 관찰 사진',
     urlPending: '사진 주소를 준비하는 중…',
     scene: '장면',

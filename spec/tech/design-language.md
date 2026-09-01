@@ -427,6 +427,11 @@ is a re-grip, not a tap.
 - **One docked bar per scroller.** Two sticky bars in the same scroll container pin to the same
   offset, and the later one in DOM order paints over the earlier — both are opaque. A section
   rendered inside a page that already docks puts its action in flow instead.
+- **A dock may carry more than one row.** The editor's 글 다듬기 docks the revision instruction above
+  its two confirming actions, because the draft between them is routinely thousands of pixels tall
+  and an action at the end of that flow is an action off the screen. A row that is not in use
+  collapses (the revision's counter and its two save controls) rather than standing over the
+  content it hides.
 - **Feedback renders where the user is looking.** A success message 1,000px below the button that
   caused it has not been shown. A validation message under a keyboard has not been shown. A live
   region that is _inserted_ with its text already in it announces nothing: mount it before its
@@ -442,8 +447,11 @@ So: no `max-h-* overflow-y-auto` on a content panel, and no fixed-`rows` textare
 longer than it shows. A textarea that must grow, grows (`autoGrow`); a panel that is long, is
 long, and the page scrolls it.
 
-Three exceptions are deliberate. A **horizontal** strip (`overflow-x-auto`, a photo strip or a tab
-row) does not compete with the page's vertical scroll. A **sheet's** own body scrolls because the
+Three exceptions are deliberate. A **horizontal** strip (`overflow-x-auto`, a photo strip, a tab
+row, or the editor's contact-sheet carousel) does not compete with the page's vertical scroll. A
+carousel's cards are deliberately narrower than the strip so a **sliver of the next one** is
+visible: a phone has no hover and no scrollbar, so that sliver is the only thing saying the strip
+scrolls at all, and a `현재 / 전체` indicator says where in it you are. A **sheet's** own body scrolls because the
 sheet is a separate surface with its own bounds. And a **field inside a form** is capped at
 `max-h-field` and scrolls past it — an uncapped `autoGrow` field holding a long generated value
 would put the control that commits it thousands of pixels from the caret, which §4.3 forbids, and
@@ -462,7 +470,9 @@ bare, the memo uses a visible field well, and both grow with the page. All three
   one step smaller. A surface attached to a screen edge is rounded on the free side only
   (`rounded-t-xl` for a bottom sheet).
 - No gradients on surfaces. No glassmorphism — there is nothing behind the chrome worth seeing
-  through to.
+  through to. The docked bar was the one candidate worth re-testing, since it stands over the
+  draft the whole time; a translucent variant was built and compared beside the opaque one in both
+  themes, and the owner kept the opaque bar (change 12, 2026-09-01).
 
 ## 6. Motion
 
@@ -512,20 +522,29 @@ bare, the memo uses a visible field well, and both grow with the page. All three
   the page is its paper. The memo uses the standard recessed field background so the writing
   surface remains visibly editable. Both auto-grow with the page, and the field primitive owns
   the memo's §3.1 input size while the bare title takes the `display` role from its caller.
-- **Menu / Select — no new native `<select>`.** The OS draws a native select's open option list,
+- **Listbox / Menu — there is no native select.** The OS draws a native select's open option list,
   so it cannot wear the app's surfaces or tokens and it visibly breaks the design system the
-  moment it opens (owner decision, 2026-08-31). A bounded choice with a few fixed options is
-  either an inline `SegmentedControl` (every option visible, e.g. the editor steps) or the
-  app-drawn **`Menu`** — a WAI-APG menu button: an icon-capable 44px trigger
-  (`aria-haspopup="menu"`), a `surface-highest` panel opening below-right, `menuitemradio` rows
-  with a check on the active option, arrow/Home/End roving focus, Escape/outside-press closing
-  with focus returned. The header's theme and locale controls are `Menu`s whose trigger icon
-  shows the current value (the theme trigger wears monitor/sun/moon for the stored preference),
-  so the closed control still reports its state. The legacy `Select` primitive (a styled native
-  select) still serves the existing form surfaces (model pickers, voice/purpose selects, publish
-  settings, …) and is slated for migration to an app-drawn listbox; do not mount it in any new
-  surface. An option's text is the choice, not the explanation — a reason or a capability goes in
-  the message slot under the field.
+  moment it opens (owner decision, 2026-08-31). The primitive is gone from `shared/ui`, and
+  `pnpm lint:style` fails on a literal `<select` in any non-test `.tsx` — the ban is mechanical.
+  Three shapes replace it, chosen per surface:
+  - **`Listbox`** is the labelled FORM FIELD: a 44px trigger wearing the `field-bg` well with the
+    current option's label and a chevron, `role="combobox"` + `aria-haspopup="listbox"` (the role a
+    native select exposed), and an app-drawn `surface-highest` panel of `role="option"` rows with a
+    check on the current one. The trigger is the only tab stop; arrow/Home/End move programmatic
+    focus, Enter/Space select, Escape and an outside press close and return focus. Its name is
+    `"<label> <current value>"` — the WAI-APG select-only combobox shape — so the closed control
+    still reports its value. It is generic over the option value, so a numeric enum round-trips
+    without a stringly-typed cast. Its panel is a bounded scroller (`max-h-listbox`), which is the
+    §4.4 overlay exception.
+  - **`SegmentedControl`** where the choice is a bounded 2–5 and every option is worth showing at
+    once — the editor steps, the admin plan ladder.
+  - **`Menu`** where the trigger is an icon and the list is a short preference set — a WAI-APG menu
+    button (`aria-haspopup="menu"`, `menuitemradio` rows). The header's theme and locale controls
+    are `Menu`s whose trigger icon shows the current value, so the closed control still reports its
+    state.
+
+  An option's text is the choice, not the explanation — a reason or a capability goes in the
+  message slot under the field, where the trigger's truncation cannot cut it off.
 - **TabLinks** — a tab row whose tabs are ADDRESSES: a row of links marking the current one
   `aria-current="page"`. It is `SegmentedControl`'s shape without its `onChange`, and it is a `nav` rather than
   `role="tablist"`, because announcing a navigation as tab selection would tell a screen reader the page stayed put.
@@ -554,7 +573,10 @@ bare, the memo uses a visible field well, and both grow with the page. All three
   confirmation) because only the caller knows which. Colour never travels alone — the words carry
   the meaning and the tone reinforces it.
 - **ActionBar** — the dock for a view's committing actions, on `surface-highest` with `rounded-xl`
-  and `shadow-md`. It is the one surface that floats over content without interrupting it, which is
+  and `shadow-md`. Its padding is one step tighter on a phone (`p-3 sm:p-4`), where the bar may
+  carry two rows of controls and the content behind it is what the screen is for. It stays OPAQUE:
+  a translucent glass variant was built and compared side by side in both themes, and the owner
+  chose the opaque one (change 12, 2026-09-01) — §5's "no glassmorphism" stands. It is the one surface that floats over content without interrupting it, which is
   why it takes the frontmost plane but a floating panel's shadow rather than a modal's. It clears
   the phone tab bar and the home indicator itself, so a caller never writes a safe-area class, and
   it FLOATS a step clear of whatever is under it — the tab bar on a phone (`bottom-dock-nav`), the
@@ -568,9 +590,16 @@ bare, the memo uses a visible field well, and both grow with the page. All three
   return focus where they found it, all `Escape` closes, all lock the body scroll while open.
   **On a phone a dialog is a bottom sheet**: full-bleed to the bottom edge, `rounded-t-xl`, safe-area
   padded, its body the one thing that scrolls, dismissible by the scrim and a visible control —
-  becoming a centred `rounded-xl` dialog from `md:` up. A destructive action is confirmed through
-  this primitive, never through `window.confirm`, which mobile browsers let the user suppress
-  permanently.
+  becoming a centred `rounded-xl` dialog from `md:` up. Those mechanics belong to **`Sheet`**, which
+  takes arbitrary content; **`Dialog`** is `Sheet` with the confirm shape (one title, one
+  explanation, cancel and confirm) fixed on top. A destructive action is confirmed through `Dialog`,
+  never through `window.confirm`, which mobile browsers let the user suppress permanently.
+  **`Popover`** anchors a panel to a trigger: `align` picks the pinned edge, the panel's horizontal
+  overflow is measured and corrected back inside the page gutters (nothing in CSS knows where an
+  anchored panel's trigger sits), and `phone="sheet"` swaps the panel for a `Sheet` below `sm:` —
+  a long options surface needs the whole phone screen and its own scroller, not a 288px card over
+  the content. A press inside a modal opened FROM a popover is not a press outside it; closing
+  there would unmount the control that opened the modal.
 - **Empty and loading states** are text on the page (`text-content-tertiary`) — not a card, not an
   illustration. A section that renders nothing at all is worse than an empty state: it leaves a
   gap the user reads as a bug. A skeleton mirrors the shape of the content it stands in for and is

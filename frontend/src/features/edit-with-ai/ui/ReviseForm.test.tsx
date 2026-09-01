@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code } from '@connectrpc/connect'
 import { expect, it, vi } from 'vitest'
@@ -82,7 +82,9 @@ const doneJob: GenerationJob = { ...activeJob, id: 'done', status: 'done' }
 it('requires an instruction and the explicit write selection', async () => {
   renderForm({ selected: false })
 
-  expect(await screen.findByText('작성 모델을 선택하세요.')).toBeInTheDocument()
+  expect(
+    await screen.findByText('글 생성 단계의 글쓰기 옵션에서 작성 모델을 선택하세요.'),
+  ).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '수정' })).toBeDisabled()
   expect(screen.getByLabelText('수정 요청')).toHaveAttribute(
     'maxlength',
@@ -163,10 +165,48 @@ it('offers 지침으로 저장 only after a completed revision', async () => {
   await user.type(screen.getByLabelText('수정 요청'), '무인 매장이니까 주인 얘기 빼줘')
   expect(screen.queryByRole('button', { name: '지침으로 저장' })).not.toBeInTheDocument()
 
+  cleanup()
   renderForm({ active: doneJob })
+  // The secondary row collapses while the field is empty and unfocused, so the instruction the
+  // revision actually ran with is what puts the capture on screen.
+  await user.type(await screen.findByLabelText('수정 요청'), '무인 매장이니까 주인 얘기 빼줘')
   await waitFor(() =>
-    expect(screen.getAllByRole('button', { name: '지침으로 저장' })[0]).toBeInTheDocument(),
+    expect(screen.getByRole('button', { name: '지침으로 저장' })).toBeInTheDocument(),
   )
+})
+
+// A11: the dock is over the draft the whole time, so the row that is not being used is height
+// taken from the thing the screen is for.
+it('collapses its secondary controls while the instruction is empty and unfocused', async () => {
+  const user = userEvent.setup()
+  renderForm()
+
+  const field = await screen.findByLabelText('수정 요청')
+  const counter = () => screen.queryByText(`0/${REVISION_INSTRUCTION_MAX_CHARS}`)
+  const ruleCheckbox = () => screen.queryByRole('checkbox', { name: '이 요청을 규칙으로 저장' })
+  expect(counter()).not.toBeInTheDocument()
+  expect(ruleCheckbox()).not.toBeInTheDocument()
+
+  await user.click(field)
+  expect(counter()).toBeInTheDocument()
+  expect(ruleCheckbox()).toBeInTheDocument()
+
+  // Focus moving onto the checkbox INSIDE the form must not unmount it mid-gesture.
+  await user.click(ruleCheckbox()!)
+  expect(ruleCheckbox()).toBeChecked()
+
+  // One Tab past the last control in the form lands on the body, which is a focus move OUT.
+  await user.tab()
+  await waitFor(() => expect(ruleCheckbox()).not.toBeInTheDocument())
+})
+
+// A11: a running revision keeps the row open with nothing typed, because that is exactly when its
+// state is worth reading.
+it('keeps the secondary controls open while a revision is running', async () => {
+  renderForm({ active: activeJob })
+  expect(
+    await screen.findByRole('checkbox', { name: '이 요청을 규칙으로 저장' }),
+  ).toBeInTheDocument()
 })
 
 it('does not offer it after a failed revision', async () => {

@@ -35,9 +35,13 @@ WHERE slug = ? AND user_id = ? AND content_revision = ?;
 UPDATE posts SET target_length = ?, updated_at = ?
 WHERE slug = ? AND user_id = ?;
 
+-- Finalizing also copies the confirmed AI title into posts.title (spec/policy/posts.md). ONE
+-- statement, still guarded by the exact revision, so the copy is atomic with the finalization and
+-- a concurrent content save simply matches zero rows. The caller resolves which title to write: an
+-- empty content title leaves the user's working title in place. The slug is never re-minted.
 -- name: FinalizePost :execrows
 UPDATE posts SET status = 'finalized', finalized_revision = content_revision,
-    finalized_at = ?, updated_at = ?
+    title = ?, finalized_at = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND content_revision = ?
   AND content IS NOT NULL;
 

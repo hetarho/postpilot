@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
@@ -24,7 +24,6 @@ import {
   ordinaryGenerationPreconditions,
   type GenerationModelSelection,
 } from '../model/preconditions'
-import { GenerationOptions } from './GenerationOptions'
 
 export interface GenerationActionsHandle {
   startGeneration: () => void
@@ -34,13 +33,23 @@ export interface GenerationActionsHandle {
 export const GenerationActions = forwardRef<
   GenerationActionsHandle,
   {
-    post: Pick<PostDraft, 'slug' | 'images' | 'pendingExperimentId' | 'targetLength' | 'voice'>
+    post: Pick<PostDraft, 'slug' | 'images' | 'pendingExperimentId' | 'voice'>
+    /** Owned by the editor, not by this action: the writing brief sets it from another layer
+     *  (`widgets/generation-brief`) and the two must agree on what the next run is given. */
+    targetLength?: number
     activeJob?: GenerationJob
     jobPending?: boolean
     onStarted: (jobId: string) => void
     beforeStart?: () => Promise<void>
+    /** The writing-brief trigger, supplied by `pages/editor`. It shares the secondary row with
+     *  A/B 비교 because it is the other thing you reach for BEFORE 생성, and a feature may not
+     *  import the widget that composes five sibling features (ARCHITECTURE §3). */
+    brief?: ReactNode
   }
->(function GenerationActions({ post, activeJob, jobPending = false, onStarted, beforeStart }, ref) {
+>(function GenerationActions(
+  { post, targetLength, activeJob, jobPending = false, onStarted, beforeStart, brief },
+  ref,
+) {
   const { t } = useTranslation('posts')
   const observe = useStageSelection('observe')
   const write = useStageSelection('write')
@@ -50,8 +59,6 @@ export const GenerationActions = forwardRef<
   const comparison = useStartWriteExperiment()
   const [preparing, setPreparing] = useState<'generation' | 'comparison' | ''>('')
   const [prepareFailure, setPrepareFailure] = useState<AppFailure>()
-  const [targetLength, setTargetLength] = useState(post.targetLength)
-  useEffect(() => setTargetLength(post.targetLength), [post.slug, post.targetLength])
 
   const observeSelection = resolveSelection(observe.models, observe.selected)
   const writeSelection = resolveSelection(write.models, write.selected)
@@ -160,13 +167,7 @@ export const GenerationActions = forwardRef<
           the pair's wrapper at the pointer breakpoint so all three sit in one row again. */}
       <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
         <div className="flex gap-3 sm:contents">
-          <GenerationOptions
-            key={`${post.slug}-${targetLength ?? 'natural'}`}
-            slug={post.slug}
-            targetLength={targetLength}
-            disabled={busy}
-            onSaved={setTargetLength}
-          />
+          {brief}
           <Button
             variant="secondary"
             className="flex-1 sm:flex-none"

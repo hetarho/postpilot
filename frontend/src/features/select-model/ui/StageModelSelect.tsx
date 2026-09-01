@@ -9,7 +9,14 @@ import {
   useSaveSelection,
   useStageSelection,
 } from '@/entities/model-catalog'
-import { AppFailureMessage, FieldLabel, FieldMessage, Select, Typography } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  FieldLabel,
+  FieldMessage,
+  Listbox,
+  Typography,
+  type ListboxOption,
+} from '@/shared/ui'
 
 /** The per-stage model dropdown (PRD §3.3, §6.4, F-4).
  *
@@ -35,6 +42,7 @@ export function StageModelSelect({
   // The saved choice's key when it can be shown as chosen; the greyed unusable entry
   // otherwise. An empty value is the placeholder.
   const value = selected ? refKey(selected) : unavailable ? UNAVAILABLE_VALUE : ''
+  const labelId = `${id}-label`
   const loadErrorId = `${id}-load-error`
   const saveErrorId = `${id}-save-error`
   const unavailableId = `${id}-unavailable`
@@ -46,47 +54,44 @@ export function StageModelSelect({
     .filter(Boolean)
     .join(' ')
 
+  const options: ListboxOption<string>[] = [
+    { value: '', label: t('select') },
+    // An option's text is the CHOICE, not the explanation (§7). This entry is the field's current
+    // value, so its whole string has to fit the CLOSED trigger — ~284px at 360px, which a
+    // `provider/model` path alone already fills, and the trigger truncates. The reason therefore
+    // goes in the message slot under the field, where it cannot be cut off.
+    ...(unavailable
+      ? [{ value: UNAVAILABLE_VALUE, label: refKey(unavailable.ref), disabled: true }]
+      : []),
+    ...models.map((model) => ({
+      value: refKey(model.ref),
+      label: optionLabel(model),
+      disabled: model.disabled || model.locked,
+    })),
+  ]
+
   return (
     <div className={className}>
-      <FieldLabel htmlFor={id}>
+      <FieldLabel id={labelId} htmlFor={id}>
         {t('selectField.label', {
           stage: t(`selectField.stage.${stage}`),
           optional: optional ? t('selectField.optional') : '',
         })}
       </FieldLabel>
-      <Select
+      <Listbox
         id={id}
+        aria-labelledby={labelId}
         value={value}
+        options={options}
         disabled={isPending || save.isPending}
         aria-invalid={isError || Boolean(save.failure) || undefined}
         aria-describedby={describedBy || undefined}
-        onChange={(event) => {
-          const chosen = models.find((model) => refKey(model.ref) === event.target.value)
+        onChange={(next) => {
+          const chosen = models.find((model) => refKey(model.ref) === next)
           if (chosen && !chosen.disabled && !chosen.locked) save.save(stage, chosen.ref)
         }}
         className="mt-1"
-      >
-        <option value="">{t('select')}</option>
-        {unavailable && (
-          // An option's text is the CHOICE, not the explanation (§7). This entry is the select's
-          // current value, so its whole string has to fit the CLOSED control — ~284px at 360px,
-          // which a `provider/model` path alone already fills. The native control would ellipsise
-          // the reason away, which is the only thing this entry exists to say, so the reason goes
-          // in the message slot under the field instead.
-          <option value={UNAVAILABLE_VALUE} disabled>
-            {refKey(unavailable.ref)}
-          </option>
-        )}
-        {models.map((model) => (
-          <option
-            key={refKey(model.ref)}
-            value={refKey(model.ref)}
-            disabled={model.disabled || model.locked}
-          >
-            {optionLabel(model)}
-          </option>
-        ))}
-      </Select>
+      />
       {/* Visible, not sr-only: the control greys out for the 1–3s a SaveSelection takes on mobile
           data, and a touch user watching the field it just closed over is exactly who needs the
           cause (§6). The region stays mounted so it announces when it fills, and `empty:hidden`
@@ -129,11 +134,11 @@ export function StageModelSelect({
 const UNAVAILABLE_VALUE = '__unavailable__'
 
 /** `<label> 👁 구조화 응답` badges for what the model can do (PRD §6.4), and the reason when it
- *  cannot be chosen. Plain text: an <option> renders no markup.
+ *  cannot be chosen. Plain text: a listbox row renders the label as one string.
  *
- *  These strings are only ever read inside the OPEN picker, which is a full-screen sheet on both
- *  phone platforms — a disabled option can never become the closed control's value, because
- *  `onChange` refuses it and an unusable saved choice is rendered as the separate entry above. */
+ *  These strings are only ever read inside the OPEN panel, where the row wraps them — a disabled
+ *  option can never become the closed trigger's value, because `onChange` refuses it and an
+ *  unusable saved choice is rendered as the separate entry above. */
 function optionLabel(model: CatalogModel): string {
   const badges = [
     model.vision && '👁',

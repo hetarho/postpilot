@@ -12,7 +12,7 @@ import type { GuidelineScope, GuidelineScopeKind } from '../model/types'
  *
  *  Switching to 전역 clears the set instead of remembering it: the two contradictory shapes the
  *  server refuses are `global` with ids and `purposes` with none, so the control can never hold
- *  one. The picker is a checkbox list rather than a multi-select `<select>` — a native multiple
+ *  one. The picker is a checkbox list rather than a native multi-select — a multiple-choice
  *  select needs ctrl-click on a desktop and is close to unusable on a phone (design-language §1.1).
  */
 export function GuidelineScopeField({

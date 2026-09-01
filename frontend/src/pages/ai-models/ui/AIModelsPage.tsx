@@ -35,7 +35,7 @@ import {
   FieldLabel,
   FieldMessage,
   SegmentedControl,
-  Select,
+  Listbox,
   Typography,
   typographyStyles,
 } from '@/shared/ui'
@@ -148,20 +148,20 @@ export function AIModelsPage() {
         </div>
         {stage === 'analyze' && (
           <div className="mt-6">
-            <FieldLabel htmlFor="experiment-voice">{t('page.voice', { ns: 'models' })}</FieldLabel>
-            <Select
+            <FieldLabel id="experiment-voice-label" htmlFor="experiment-voice">
+              {t('page.voice', { ns: 'models' })}
+            </FieldLabel>
+            <Listbox
               id="experiment-voice"
+              aria-labelledby="experiment-voice-label"
               className="mt-1"
               value={voiceId}
-              onChange={(event) => setChosenVoiceId(event.target.value)}
-            >
-              {!voiceId && <option value="">{t('page.selectVoice', { ns: 'models' })}</option>}
-              {activeVoices.map((voice) => (
-                <option key={voice.id} value={voice.id}>
-                  {voice.name}
-                </option>
-              ))}
-            </Select>
+              options={[
+                ...(voiceId ? [] : [{ value: '', label: t('page.selectVoice', { ns: 'models' }) }]),
+                ...activeVoices.map((voice) => ({ value: voice.id, label: voice.name })),
+              ]}
+              onChange={setChosenVoiceId}
+            />
             <Typography variant="label" as="p" className="mt-2">
               {t('page.voiceHelp', { ns: 'models' })}
             </Typography>
@@ -169,28 +169,28 @@ export function AIModelsPage() {
         )}
         {stage !== 'analyze' && (
           <div className="mt-6">
-            <FieldLabel htmlFor="experiment-post">
+            <FieldLabel id="experiment-post-label" htmlFor="experiment-post">
               {stage === 'observe'
                 ? t('page.photoPost', { ns: 'models' })
                 : t('page.comparePost', { ns: 'models' })}
             </FieldLabel>
-            <Select
+            <Listbox
               id="experiment-post"
+              aria-labelledby="experiment-post-label"
               className="mt-1"
               value={postSlug}
-              onChange={(event) => setPostSlug(event.target.value)}
-            >
-              <option value="">
-                {stage === 'observe'
-                  ? t('page.selectPhotoPost', { ns: 'models' })
-                  : t('page.selectPost', { ns: 'models' })}
-              </option>
-              {posts.map((post) => (
-                <option key={post.slug} value={post.slug}>
-                  {displayTitle(post)}
-                </option>
-              ))}
-            </Select>
+              options={[
+                {
+                  value: '',
+                  label:
+                    stage === 'observe'
+                      ? t('page.selectPhotoPost', { ns: 'models' })
+                      : t('page.selectPost', { ns: 'models' }),
+                },
+                ...posts.map((post) => ({ value: post.slug, label: displayTitle(post) })),
+              ]}
+              onChange={setPostSlug}
+            />
           </div>
         )}
         {stage === 'write' ? (

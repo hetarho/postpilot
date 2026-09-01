@@ -23,7 +23,7 @@ import {
   Editable,
   FieldLabel,
   FieldMessage,
-  Select,
+  Listbox,
   Textarea,
   TextField,
   Typography,
@@ -217,31 +217,37 @@ function BlockControls({
   return (
     <article className="bg-surface-raised rounded-lg p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <FieldLabel htmlFor={`block-type-${index}`} className="sr-only">
+        <FieldLabel
+          id={`block-type-label-${index}`}
+          htmlFor={`block-type-${index}`}
+          className="sr-only"
+        >
           {t('edit.blockType', { ns: 'posts', index: index + 1 })}
         </FieldLabel>
-        <Select
+        {/* A `Listbox`, not a `SegmentedControl`: five Korean type names measure past 320px inside
+            a card that already carries the move/delete row, and the fifth option only exists when
+            the post has photos — so the switch would change width as well as content (§7). */}
+        <Listbox<BlockType>
           id={`block-type-${index}`}
+          aria-labelledby={`block-type-label-${index}`}
           value={block.type}
-          onChange={(event) =>
-            onChange(freshBlock(Number(event.target.value) as BlockType, filenames[0]))
-          }
+          options={[
+            { value: BlockType.TEXT, label: t('edit.blockTypeOption.text', { ns: 'posts' }) },
+            { value: BlockType.HEADING, label: t('edit.blockTypeOption.heading', { ns: 'posts' }) },
+            { value: BlockType.QUOTE, label: t('edit.blockTypeOption.quote', { ns: 'posts' }) },
+            { value: BlockType.LIST, label: t('edit.blockTypeOption.list', { ns: 'posts' }) },
+            ...(filenames.length > 0
+              ? [
+                  {
+                    value: BlockType.IMAGE,
+                    label: t('edit.blockTypeOption.image', { ns: 'posts' }),
+                  },
+                ]
+              : []),
+          ]}
+          onChange={(type) => onChange(freshBlock(type, filenames[0]))}
           className="w-auto min-w-32"
-        >
-          <option value={BlockType.TEXT}>{t('edit.blockTypeOption.text', { ns: 'posts' })}</option>
-          <option value={BlockType.HEADING}>
-            {t('edit.blockTypeOption.heading', { ns: 'posts' })}
-          </option>
-          <option value={BlockType.QUOTE}>
-            {t('edit.blockTypeOption.quote', { ns: 'posts' })}
-          </option>
-          <option value={BlockType.LIST}>{t('edit.blockTypeOption.list', { ns: 'posts' })}</option>
-          {filenames.length > 0 && (
-            <option value={BlockType.IMAGE}>
-              {t('edit.blockTypeOption.image', { ns: 'posts' })}
-            </option>
-          )}
-        </Select>
+        />
         <span className="ml-auto flex gap-1">
           {/* Leaving edit mode is part of moving, for the same reason as deleting: the rows are
               keyed by position, so a mount-time snapshot left open over the block that shifted into
@@ -393,20 +399,16 @@ function BlockFields({
   if (block.type === BlockType.IMAGE) {
     return (
       <div className="mt-3 grid gap-3">
-        <FieldLabel htmlFor={`block-image-${index}`}>{t('edit.attachedPhoto')}</FieldLabel>
-        <Select
+        <FieldLabel id={`block-image-label-${index}`} htmlFor={`block-image-${index}`}>
+          {t('edit.attachedPhoto')}
+        </FieldLabel>
+        <Listbox
           id={`block-image-${index}`}
+          aria-labelledby={`block-image-label-${index}`}
           value={block.file}
-          onChange={(event) =>
-            onChange(create(BlockSchema, { ...block, file: event.target.value }))
-          }
-        >
-          {filenames.map((filename) => (
-            <option key={filename} value={filename}>
-              {filename}
-            </option>
-          ))}
-        </Select>
+          options={filenames.map((filename) => ({ value: filename, label: filename }))}
+          onChange={(file) => onChange(create(BlockSchema, { ...block, file }))}
+        />
         <TextField
           aria-label={t('edit.altText')}
           value={block.alt}
@@ -441,19 +443,15 @@ function BlockFields({
   return (
     <div className="mt-3 grid gap-3">
       {block.type === BlockType.HEADING && (
-        <Select
+        <Listbox<number>
           aria-label={t('edit.headingLevel')}
           value={block.level}
-          onChange={(event) =>
-            onChange(create(BlockSchema, { ...block, level: Number(event.target.value) }))
-          }
-        >
-          {[1, 2, 3, 4, 5, 6].map((level) => (
-            <option key={level} value={level}>
-              {t('edit.headingOption', { level })}
-            </option>
-          ))}
-        </Select>
+          options={[1, 2, 3, 4, 5, 6].map((level) => ({
+            value: level,
+            label: t('edit.headingOption', { level }),
+          }))}
+          onChange={(level) => onChange(create(BlockSchema, { ...block, level }))}
+        />
       )}
       <Textarea
         aria-label={t('edit.blockContent', { index: index + 1 })}

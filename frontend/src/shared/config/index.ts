@@ -77,6 +77,11 @@ export const PUBLISH_AGENT_STALE_MS = 30_000
  * generation context so the field stops before the authoritative RPC validation. */
 export const REVISION_INSTRUCTION_MAX_CHARS = 500
 
+/** The clear space a popover panel keeps from either viewport edge when its anchor would push it
+ *  past one. It matches the page's own `px-4` gutter, so a corrected panel lines up with the
+ *  content column instead of floating against the glass. */
+export const POPOVER_VIEWPORT_GUTTER_PX = 16
+
 /** How long successful clipboard feedback remains visible. */
 export const COPY_FEEDBACK_MS = 1_500
 
