@@ -18,7 +18,7 @@ describe('LocaleMenu', () => {
     history.replaceState(null, '', '/posts?view=recent#draft')
     render(<LocaleMenu />)
     const trigger = screen.getByRole('button', { name: '언어' })
-    expect(trigger.querySelector('svg')).toHaveClass('lucide-languages')
+    expect(trigger.querySelector('svg')).toHaveClass('lucide-languages', 'size-4')
 
     await userEvent.click(trigger)
     expect(screen.getAllByRole('menuitemradio').map((option) => option.textContent)).toEqual([

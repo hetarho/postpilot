@@ -12,13 +12,14 @@ async function openAccountPopover(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('AccountMenu', () => {
-  it('shows the avatar initial, the id, and the logout action behind one control', async () => {
+  it('shows a profile icon, the id, and the logout action behind one control', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts', { user: { ...USER, plan: ProtoPlan.FREE } })
 
     const trigger = await screen.findByRole('button', { name: '내 계정' })
     expect(trigger).toHaveClass('rounded-full', 'size-11')
-    expect(trigger).toHaveTextContent('A')
+    expect(trigger.querySelector('svg')).toHaveClass('lucide-user-round', 'size-5')
+    expect(trigger).not.toHaveTextContent('A')
     // The header itself carries no id text or logout button until the popover opens.
     expect(screen.queryByText('alice')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument()

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
+import { UserRound } from 'lucide-react'
 import { useMyPlan, planLabel } from '@/entities/plan'
 import { useLogout, useSession } from '@/entities/session'
 import { formatMicroUsd } from '@/shared/lib'
@@ -42,9 +43,9 @@ export function AccountMenu({ onLoggedOut }: { onLoggedOut: () => void }) {
     <Popover
       label={t('account.label', { ns: 'auth' })}
       triggerLabel={
-        // The session model has no display name or picture, so the avatar is the id's first
-        // character; the accessible name stays the translated label on the trigger itself.
-        <span aria-hidden="true">{(user?.id ?? '?').charAt(0).toUpperCase()}</span>
+        // The session model has no profile picture, so the header uses one stable profile glyph
+        // instead of turning an arbitrary account-id character into an avatar.
+        <UserRound aria-hidden="true" className="size-5" />
       }
       triggerClassName="size-11 rounded-full px-0"
       placement="below"

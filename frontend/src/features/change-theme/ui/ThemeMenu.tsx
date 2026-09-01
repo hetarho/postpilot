@@ -30,7 +30,7 @@ export function ThemeMenu() {
         { value: 'dark', label: t('theme.dark') },
       ]}
       onChange={setPreference}
-      triggerIcon={<TriggerIcon aria-hidden="true" className="size-5" />}
+      triggerIcon={<TriggerIcon aria-hidden="true" className="size-4" />}
     />
   )
 }

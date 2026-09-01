@@ -70,6 +70,7 @@ describe('ThemeMenu', () => {
         locale === 'ko' ? '현재 테마 설정: 어둡게' : 'Current theme preference: Dark',
       )
       expect(trigger.querySelector('svg')).toHaveClass('lucide-moon')
+      expect(trigger.querySelector('svg')).toHaveClass('size-4')
       await user.click(trigger)
 
       const menu = screen.getByRole('menu', { name: label })
