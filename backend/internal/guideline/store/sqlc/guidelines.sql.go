@@ -318,7 +318,7 @@ type UpdateGuidelineTextParams struct {
 }
 
 // A text edit and a scope replacement are separate statements run in one transaction, so an
-// edit that carries only one of them never names the other at all, so two tabs editing the two
+// edit that carries only one of them never names the other at all, and two tabs editing the two
 // halves cannot overwrite each other, and no read-modify-write can put a stale value back.
 func (q *Queries) UpdateGuidelineText(ctx context.Context, arg UpdateGuidelineTextParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateGuidelineText,

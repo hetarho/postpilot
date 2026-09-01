@@ -64,6 +64,12 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
       css: true,
+      // Every rendered instant goes through Intl with the machine's own zone (localization/
+      // format.ts), which is right in a browser and non-deterministic in a test: an assertion
+      // written against a wall clock passes in KST on a contributor's machine and fails in UTC
+      // on CI. Pinning the runner to the product's home zone makes those assertions mean one
+      // thing everywhere; a test that cares about another zone still sets its own.
+      env: { TZ: 'Asia/Seoul' },
     },
   }
 })
