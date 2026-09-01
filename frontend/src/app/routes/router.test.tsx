@@ -607,7 +607,7 @@ describe('theme preferences in the real route tree', () => {
 
     expect(main).toHaveClass('relative', 'items-center', 'justify-center')
     expect(preferencesAnchor).toHaveClass('absolute', 'top-4', 'right-4', 'sm:top-6', 'sm:right-6')
-    expect(preferences.querySelector('svg')).toHaveClass('size-6')
+    expect(preferences.querySelector('svg')).toHaveClass('size-4')
     expect(form).toHaveClass('w-full')
     expect(form?.parentElement).toHaveClass('w-full', 'max-w-xs')
   })
