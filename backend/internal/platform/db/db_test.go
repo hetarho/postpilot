@@ -1218,3 +1218,115 @@ func TestMigration0014AddsAccountScopedGuidelinesAndCascadesLinks(t *testing.T) 
 		t.Fatalf("rollback lost purposes: count=%d err=%v", rows, err)
 	}
 }
+
+func TestDeterministicPublisherMigrationFencesLegacyExecutorAndRollback(t *testing.T) {
+	ctx := context.Background()
+	handle := openTemp(t)
+	selected := migrationsThrough(t,
+		"0001_users_sessions.sql",
+		"0010_publishing.sql",
+		"0015_deterministic_publishing_executor.sql",
+	)
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, selected, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.UpTo(ctx, 10); err != nil {
+		t.Fatal(err)
+	}
+	at := "2026-09-01T00:00:00Z"
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash',?)`, at,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,hermes_version,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog','legacy-0.20',?,?)`, at, at,
+	); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"precommit", "committed"} {
+		if _, err := handle.Writer.Exec(
+			`INSERT INTO publish_job_ids(id,user_id,created_at) VALUES(?,'alice',?)`, id, at,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO publish_jobs(id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,progress_seq,attempt,content_revision,manifest_json,settings_json,lease_token_hash,lease_expires_at,created_at,updated_at)
+		 VALUES('precommit','alice','precommit-post',?,'agent','naver_blog','running','opening_editor',2,1,1,'{}','{}','lease-pre',? ,?,?)`,
+		at, at, at, at,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO publish_jobs(id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,progress_seq,attempt,content_revision,manifest_json,settings_json,lease_token_hash,lease_expires_at,created_at,committed_at,updated_at)
+		 VALUES('committed','alice','committed-post',?,'agent','naver_blog','running','committing',6,1,1,'{}','{}','lease-commit',?,?,?,?)`,
+		at, at, at, at, at,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.UpTo(ctx, 15); err != nil {
+		t.Fatal(err)
+	}
+	var legacy, executor string
+	var ready int
+	if err := handle.Reader.QueryRow(
+		`SELECT hermes_version,executor_version,compatibility_ready FROM publishing_agents WHERE id='agent'`,
+	).Scan(&legacy, &executor, &ready); err != nil {
+		t.Fatal(err)
+	}
+	if legacy != "legacy-0.20" || executor != "" || ready != 0 {
+		t.Fatalf("capability migration legacy=%q executor=%q ready=%d", legacy, executor, ready)
+	}
+	var status string
+	var manifest, lease sql.NullString
+	if err := handle.Reader.QueryRow(
+		`SELECT status,manifest_json,lease_token_hash FROM publish_jobs WHERE id='precommit'`,
+	).Scan(&status, &manifest, &lease); err != nil {
+		t.Fatal(err)
+	}
+	if status != "needs_attention" || !manifest.Valid || lease.Valid {
+		t.Fatalf("precommit transition status=%q manifest=%+v lease=%+v", status, manifest, lease)
+	}
+	if err := handle.Reader.QueryRow(
+		`SELECT status,manifest_json,lease_token_hash FROM publish_jobs WHERE id='committed'`,
+	).Scan(&status, &manifest, &lease); err != nil {
+		t.Fatal(err)
+	}
+	if status != "outcome_unknown" || manifest.Valid || lease.Valid {
+		t.Fatalf("committed transition status=%q manifest=%+v lease=%+v", status, manifest, lease)
+	}
+
+	// A rolled-back server updates the retired physical column. The transition
+	// trigger must clear readiness and any previously recorded replacement proof.
+	if _, err := handle.Writer.Exec(
+		`UPDATE publishing_agents SET compatibility_ready=1,hermes_version='legacy-rollback',executor_version='postpilot-naver/1.0.0' WHERE id='agent'`,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRow(
+		`SELECT hermes_version,executor_version,compatibility_ready FROM publishing_agents WHERE id='agent'`,
+	).Scan(&legacy, &executor, &ready); err != nil {
+		t.Fatal(err)
+	}
+	if legacy != "legacy-rollback" || executor != "" || ready != 0 {
+		t.Fatalf("retired sync legacy=%q executor=%q ready=%d", legacy, executor, ready)
+	}
+	if _, err := handle.Writer.Exec(
+		`UPDATE publishing_agents SET compatibility_ready=1,executor_version='postpilot-naver/1.0.0' WHERE id='agent'`,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.DownTo(ctx, 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRow(
+		`SELECT hermes_version,compatibility_ready FROM publishing_agents WHERE id='agent'`,
+	).Scan(&legacy, &ready); err != nil || legacy != "legacy-rollback" || ready != 0 {
+		t.Fatalf("rollback compatibility value=%q ready=%d err=%v", legacy, ready, err)
+	}
+	if _, err := handle.Reader.Exec(`SELECT executor_version FROM publishing_agents`); err == nil {
+		t.Fatal("rollback retained executor_version")
+	}
+}

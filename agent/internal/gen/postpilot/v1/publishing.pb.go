@@ -1840,9 +1840,10 @@ type SyncAgentProfileRequest struct {
 	DefaultCategoryId    string                 `protobuf:"bytes,5,opt,name=default_category_id,json=defaultCategoryId,proto3" json:"default_category_id,omitempty"`
 	DefaultVisibility    PublishVisibility      `protobuf:"varint,6,opt,name=default_visibility,json=defaultVisibility,proto3,enum=postpilot.v1.PublishVisibility" json:"default_visibility,omitempty"`
 	CompatibilityReady   bool                   `protobuf:"varint,7,opt,name=compatibility_ready,json=compatibilityReady,proto3" json:"compatibility_ready,omitempty"`
-	HermesVersion        string                 `protobuf:"bytes,8,opt,name=hermes_version,json=hermesVersion,proto3" json:"hermes_version,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// A ready deterministic publisher reports postpilot-naver/<driver-version>.
+	ExecutorVersion string `protobuf:"bytes,8,opt,name=executor_version,json=executorVersion,proto3" json:"executor_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SyncAgentProfileRequest) Reset() {
@@ -1924,9 +1925,9 @@ func (x *SyncAgentProfileRequest) GetCompatibilityReady() bool {
 	return false
 }
 
-func (x *SyncAgentProfileRequest) GetHermesVersion() string {
+func (x *SyncAgentProfileRequest) GetExecutorVersion() string {
 	if x != nil {
-		return x.HermesVersion
+		return x.ExecutorVersion
 	}
 	return ""
 }
@@ -2662,7 +2663,7 @@ const file_postpilot_v1_publishing_proto_rawDesc = "" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vagent_token\x18\x02 \x01(\tR\n" +
 	"agentToken\x12*\n" +
-	"\x11lease_ttl_seconds\x18\x03 \x01(\x03R\x0fleaseTtlSeconds\"\xbe\x03\n" +
+	"\x11lease_ttl_seconds\x18\x03 \x01(\x03R\x0fleaseTtlSeconds\"\xc2\x03\n" +
 	"\x17SyncAgentProfileRequest\x12.\n" +
 	"\x13platform_account_id\x18\x01 \x01(\tR\x11platformAccountId\x124\n" +
 	"\x16platform_account_label\x18\x02 \x01(\tR\x14platformAccountLabel\x12#\n" +
@@ -2672,8 +2673,8 @@ const file_postpilot_v1_publishing_proto_rawDesc = "" +
 	"categories\x12.\n" +
 	"\x13default_category_id\x18\x05 \x01(\tR\x11defaultCategoryId\x12N\n" +
 	"\x12default_visibility\x18\x06 \x01(\x0e2\x1f.postpilot.v1.PublishVisibilityR\x11defaultVisibility\x12/\n" +
-	"\x13compatibility_ready\x18\a \x01(\bR\x12compatibilityReady\x12%\n" +
-	"\x0ehermes_version\x18\b \x01(\tR\rhermesVersion\"O\n" +
+	"\x13compatibility_ready\x18\a \x01(\bR\x12compatibilityReady\x12)\n" +
+	"\x10executor_version\x18\b \x01(\tR\x0fexecutorVersion\"O\n" +
 	"\x18SyncAgentProfileResponse\x123\n" +
 	"\x05agent\x18\x01 \x01(\v2\x1d.postpilot.v1.PublishingAgentR\x05agent\"\x18\n" +
 	"\x16ClaimPublishJobRequest\"\xf7\x01\n" +

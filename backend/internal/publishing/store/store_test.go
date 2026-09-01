@@ -150,7 +150,7 @@ func TestCompleteClearsStructuredAndLegacyFailuresAtomically(t *testing.T) {
 		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + stamp + `')`,
 		`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('voice','alice','Default',1,'` + stamp + `','` + stamp + `')`,
 		`INSERT INTO posts(slug,user_id,voice_id,status,content_revision,finalized_revision,created_at,updated_at) VALUES('post','alice','voice','finalized',1,1,'` + stamp + `','` + stamp + `')`,
-		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,platform_account_id,browser_label,categories_json,default_category_id,compatibility_ready,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog','alice-blog','Chrome','[{"ID":"daily","Name":"Daily"}]','daily',1,'` + stamp + `','` + stamp + `')`,
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,platform_account_id,browser_label,categories_json,default_category_id,compatibility_ready,executor_version,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog','alice-blog','Chrome','[{"ID":"daily","Name":"Daily"}]','daily',1,'postpilot-naver/1.0.0','` + stamp + `','` + stamp + `')`,
 	} {
 		if _, err := handle.Writer.ExecContext(ctx, statement); err != nil {
 			t.Fatal(err)
@@ -223,8 +223,8 @@ func TestTwoAccountsClaimOnlyTheirOwnJobsAndRevocationLeavesTheOtherUsable(t *te
 	for _, statement := range []string{
 		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + stamp + `')`,
 		`INSERT INTO users(id,password_hash,created_at) VALUES('bob','hash','` + stamp + `')`,
-		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,compatibility_ready,created_at,updated_at) VALUES('alice-agent','alice','alice-token','Alice Mac','naver_blog',1,'` + stamp + `','` + stamp + `')`,
-		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,compatibility_ready,created_at,updated_at) VALUES('bob-agent','bob','bob-token','Bob Mac','naver_blog',1,'` + stamp + `','` + stamp + `')`,
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,compatibility_ready,executor_version,created_at,updated_at) VALUES('alice-agent','alice','alice-token','Alice Mac','naver_blog',1,'postpilot-naver/1.0.0','` + stamp + `','` + stamp + `')`,
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,compatibility_ready,executor_version,created_at,updated_at) VALUES('bob-agent','bob','bob-token','Bob Mac','naver_blog',1,'postpilot-naver/1.0.0','` + stamp + `','` + stamp + `')`,
 	} {
 		if _, err := handle.Writer.ExecContext(ctx, statement); err != nil {
 			t.Fatal(err)
@@ -249,6 +249,15 @@ func TestTwoAccountsClaimOnlyTheirOwnJobsAndRevocationLeavesTheOtherUsable(t *te
 	}
 
 	alice := publishing.Agent{ID: "alice-agent", UserID: "alice"}
+	if _, err := handle.Writer.ExecContext(ctx, `UPDATE publishing_agents SET executor_version='' WHERE id='alice-agent'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.ClaimJob(ctx, alice, "legacy-lease", now.Add(time.Minute), now); !errors.Is(err, publishing.ErrNotFound) {
+		t.Fatalf("legacy executor claimed queued job: %v", err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `UPDATE publishing_agents SET executor_version='postpilot-naver/1.0.0' WHERE id='alice-agent'`); err != nil {
+		t.Fatal(err)
+	}
 	claimed, err := store.ClaimJob(ctx, alice, "alice-lease", now.Add(time.Minute), now)
 	if err != nil || claimed.ID != "alice-job" || claimed.UserID != "alice" {
 		t.Fatalf("alice claim = %+v, %v", claimed, err)
@@ -256,6 +265,23 @@ func TestTwoAccountsClaimOnlyTheirOwnJobsAndRevocationLeavesTheOtherUsable(t *te
 	if claimed.TargetLanguage != publishing.LanguageEnglish || claimed.ContentLanguage != publishing.LanguageEnglish || claimed.VoiceSourceLanguage != publishing.LanguageKorean ||
 		claimed.Manifest == nil || claimed.Manifest.TargetLanguage != publishing.LanguageEnglish || claimed.Manifest.ContentLanguage != publishing.LanguageEnglish || claimed.Manifest.VoiceSourceLanguage != publishing.LanguageKorean {
 		t.Fatalf("claimed frozen languages = %+v manifest=%+v", claimed, claimed.Manifest)
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `UPDATE publishing_agents SET executor_version='' WHERE id='alice-agent'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RenewLease(
+		ctx, alice, "alice-job", "alice-lease", now.Add(2*time.Minute), now.Add(time.Second),
+	); !errors.Is(err, publishing.ErrLeaseInvalid) {
+		t.Fatalf("legacy executor renewed an authenticated lease: %v", err)
+	}
+	if _, err := store.UpdateProgress(
+		ctx, alice, "alice-job", "alice-lease", publishing.StageClaimed, 1,
+		publishing.StagePreparing, 2, now.Add(time.Second),
+	); !errors.Is(err, publishing.ErrLeaseInvalid) {
+		t.Fatalf("legacy executor crossed the progress fence: %v", err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `UPDATE publishing_agents SET executor_version='postpilot-naver/1.0.0' WHERE id='alice-agent'`); err != nil {
+		t.Fatal(err)
 	}
 	if err := store.RevokeAgent(ctx, "alice", "alice-agent", now.Add(2*time.Second)); err != nil {
 		t.Fatal(err)
@@ -294,7 +320,7 @@ func TestExpiredOrStaleLeaseCannotMutateJob(t *testing.T) {
 		`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('voice','alice','기본',1,'` + stamp + `','` + stamp + `')`,
 		`INSERT INTO posts(slug,user_id,voice_id,status,content_revision,finalized_revision,created_at,updated_at) VALUES('post','alice','voice','finalized',1,1,'` + stamp + `','` + stamp + `')`,
 		`INSERT INTO posts(slug,user_id,voice_id,status,content_revision,finalized_revision,created_at,updated_at) VALUES('post-attention','alice','voice','finalized',1,1,'` + stamp + `','` + stamp + `')`,
-		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,platform_account_id,browser_label,categories_json,default_category_id,compatibility_ready,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog','alice-blog','Chrome','[{"ID":"daily","Name":"일상"}]','daily',1,'` + stamp + `','` + stamp + `')`,
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,platform_account_id,browser_label,categories_json,default_category_id,compatibility_ready,executor_version,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog','alice-blog','Chrome','[{"ID":"daily","Name":"일상"}]','daily',1,'postpilot-naver/1.0.0','` + stamp + `','` + stamp + `')`,
 	} {
 		if _, err := handle.Writer.Exec(statement); err != nil {
 			t.Fatalf("seed: %v", err)
@@ -415,7 +441,7 @@ func TestRetryAttentionAtomicallyRequiresFrozenActiveProfile(t *testing.T) {
 			stamp := formatTime(now)
 			for _, statement := range []string{
 				`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + stamp + `')`,
-				`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,platform_account_id,browser_label,categories_json,default_category_id,compatibility_ready,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog','alice-blog','Chrome','[{"ID":"daily","Name":"일상"}]','daily',1,'` + stamp + `','` + stamp + `')`,
+				`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,platform_account_id,browser_label,categories_json,default_category_id,compatibility_ready,executor_version,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog','alice-blog','Chrome','[{"ID":"daily","Name":"일상"}]','daily',1,'postpilot-naver/1.0.0','` + stamp + `','` + stamp + `')`,
 			} {
 				if _, err := handle.Writer.ExecContext(ctx, statement); err != nil {
 					t.Fatal(err)
@@ -472,7 +498,7 @@ func TestDeletedSlugHistoryDoesNotAttachToNewPostIncarnation(t *testing.T) {
 	stamp := formatTime(firstCreated)
 	for _, statement := range []string{
 		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + stamp + `')`,
-		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,compatibility_ready,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog',1,'` + stamp + `','` + stamp + `')`,
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,compatibility_ready,executor_version,created_at,updated_at) VALUES('agent','alice','token','Mac','naver_blog',1,'postpilot-naver/1.0.0','` + stamp + `','` + stamp + `')`,
 	} {
 		if _, err := handle.Writer.Exec(statement); err != nil {
 			t.Fatal(err)

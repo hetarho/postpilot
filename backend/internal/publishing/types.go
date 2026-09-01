@@ -6,6 +6,7 @@ package publishing
 import (
 	"errors"
 	"maps"
+	"strings"
 	"time"
 )
 
@@ -111,7 +112,7 @@ type Agent struct {
 	DefaultCategoryID    string
 	DefaultVisibility    Visibility
 	CompatibilityReady   bool
-	HermesVersion        string
+	ExecutorVersion      string
 	LastSeenAt           *time.Time
 	RevokedAt            *time.Time
 	CreatedAt            time.Time
@@ -120,7 +121,21 @@ type Agent struct {
 
 func (a Agent) Ready() bool {
 	return a.RevokedAt == nil && a.CompatibilityReady && a.PlatformAccountID != "" &&
-		a.BrowserLabel != "" && a.HasCategory(a.DefaultCategoryID)
+		a.BrowserLabel != "" && a.HasCategory(a.DefaultCategoryID) && validExecutorVersion(a.ExecutorVersion)
+}
+
+func validExecutorVersion(value string) bool {
+	const prefix = "postpilot-naver/"
+	if value != strings.TrimSpace(value) || !strings.HasPrefix(value, prefix) || len(value) > 128 || len(value) == len(prefix) {
+		return false
+	}
+	for _, char := range value[len(prefix):] {
+		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') &&
+			(char < '0' || char > '9') && char != '.' && char != '-' && char != '_' {
+			return false
+		}
+	}
+	return true
 }
 
 func (a Agent) HasCategory(id string) bool {
@@ -290,5 +305,5 @@ type ProfileUpdate struct {
 	DefaultCategoryID    string
 	DefaultVisibility    Visibility
 	CompatibilityReady   bool
-	HermesVersion        string
+	ExecutorVersion      string
 }

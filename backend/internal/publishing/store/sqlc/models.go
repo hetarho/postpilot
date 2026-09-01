@@ -69,4 +69,5 @@ type PublishingAgent struct {
 	RevokedAt            sql.NullString
 	CreatedAt            string
 	UpdatedAt            string
+	ExecutorVersion      string
 }

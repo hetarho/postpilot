@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,7 +18,7 @@ func TestConnectionIsPersistedUnarmedBeforeActivation(t *testing.T) {
 		Root: root, ConfigFile: filepath.Join(root, "config.json"),
 		Profiles: filepath.Join(root, "profiles"), Jobs: filepath.Join(root, "jobs"), Logs: filepath.Join(root, "logs"),
 	}
-	connection := config.Connection{ID: "pending", APIURL: "https://api.example.com", AgentID: "agent", KeychainAccount: "key", BrowserBinary: "/browser", ProfileDir: "/profile", HermesBinary: "/hermes", HermesProfile: "postpilot-pending", LeaseTTLSeconds: 45, Armed: true}
+	connection := config.Connection{ID: "pending", APIURL: "https://api.example.com", AgentID: "agent", KeychainAccount: "key", BrowserBinary: "/browser", ProfileDir: "/profile", LeaseTTLSeconds: 45, Armed: true}
 
 	cfg, index, err := persistPending(paths, config.File{}, connection)
 	if err != nil {
@@ -182,6 +183,36 @@ func TestSetupRejectsOversizedForms(t *testing.T) {
 	server.submit(response, request)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("oversized form code=%d", response.Code)
+	}
+}
+
+func TestPairingFailsClosedBeforeCreatingAProfileWithoutPublisherProbe(t *testing.T) {
+	root := t.TempDir()
+	server := Server{
+		Paths: config.Paths{Profiles: filepath.Join(root, "profiles")},
+		nonce: "test-nonce",
+		host:  "127.0.0.1:43210",
+	}
+	form := url.Values{
+		"action":             {"pair"},
+		"api_url":            {"https://api.example.com"},
+		"device_code":        {"ABCD-EFGH"},
+		"label":              {"내 Mac"},
+		"browser_binary":     {"/not/an/installed/browser"},
+		"identity_confirmed": {"yes"},
+		"nonce":              {server.nonce},
+	}
+	request := httptest.NewRequest(http.MethodPost, "/setup", strings.NewReader(form.Encode()))
+	authorizeSetupRequest(request, server)
+	response := httptest.NewRecorder()
+
+	server.submit(response, request)
+
+	if !strings.Contains(response.Body.String(), "아직 구현되지 않아 연결을 활성화할 수 없") {
+		t.Fatalf("unexpected response: %s", response.Body.String())
+	}
+	if _, err := os.Stat(server.Paths.Profiles); !os.IsNotExist(err) {
+		t.Fatalf("fail-closed pairing created a profile: %v", err)
 	}
 }
 

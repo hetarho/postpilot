@@ -17,7 +17,10 @@ import (
 	"time"
 )
 
-const devToolsActivePort = "DevToolsActivePort"
+const (
+	devToolsActivePort = "DevToolsActivePort"
+	naverEditorURL     = "https://blog.naver.com/PostWriteForm.naver"
+)
 
 var endpointTimeout = 10 * time.Second
 
@@ -79,6 +82,12 @@ func PrepareProfile(root, connectionID string) (string, error) {
 func OpenLogin(binary, profileDir string) error {
 	_, err := Start(binary, profileDir, "https://nid.naver.com/nidlogin.login")
 	return err
+}
+
+// OpenEditor starts or reuses the dedicated browser and navigates its sole page
+// to Naver's generic writer. Naver resolves the signed-in blog identity locally.
+func OpenEditor(binary, profileDir string) (*Session, error) {
+	return Start(binary, profileDir, naverEditorURL)
 }
 
 // Start reuses a live CDP endpoint recorded by the dedicated profile or starts
@@ -144,7 +153,7 @@ func Start(binary, profileDir, initialURL string) (*Session, error) {
 }
 
 // Connect verifies the profile's DevToolsActivePort file against Chrome's
-// version endpoint and returns the exact browser WebSocket URL Hermes expects.
+// version endpoint and returns the exact browser WebSocket URL the local driver uses.
 func Connect(profileDir string) (*Session, error) {
 	data, err := os.ReadFile(filepath.Join(profileDir, devToolsActivePort))
 	if err != nil {

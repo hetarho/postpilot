@@ -32,7 +32,7 @@ WHERE id=? AND user_id=? AND revoked_at IS NULL;
 -- name: SyncAgentProfile :execrows
 UPDATE publishing_agents
 SET platform_account_id=?,platform_account_label=?,browser_label=?,categories_json=?,
-    default_category_id=?,default_visibility=?,compatibility_ready=?,hermes_version=?,
+    default_category_id=?,default_visibility=?,compatibility_ready=?,executor_version=?,
     last_seen_at=?,updated_at=?
 WHERE id=? AND user_id=? AND revoked_at IS NULL;
 
@@ -49,7 +49,8 @@ WHERE id=? AND user_id=? AND revoked_at IS NULL;
 -- post and agent through their owning contexts. No relevant mutation can slip
 -- between that guard and CreatePublishJob in the same transaction.
 UPDATE publishing_agents SET updated_at=updated_at
-WHERE id=? AND user_id=? AND revoked_at IS NULL AND compatibility_ready=1;
+WHERE id=? AND user_id=? AND revoked_at IS NULL AND compatibility_ready=1
+  AND executor_version LIKE 'postpilot-naver/%';
 
 -- name: ReservePublishJobID :execrows
 INSERT INTO publish_job_ids(id,user_id,created_at) VALUES(?,?,?)
@@ -84,6 +85,7 @@ WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.status='need
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
       AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
       AND TRIM(active_agent.browser_label)<>''
       AND active_agent.platform_account_id=json_extract(publish_jobs.manifest_json,'$.expected_platform_account_id')
       AND EXISTS (
@@ -122,6 +124,8 @@ WHERE id=(
   SELECT j.id FROM publish_jobs j
   JOIN publishing_agents a ON a.id=j.agent_id AND a.user_id=j.user_id
   WHERE j.status='queued' AND a.id=? AND a.user_id=? AND a.revoked_at IS NULL
+    AND a.compatibility_ready=1
+    AND a.executor_version LIKE 'postpilot-naver/%'
   ORDER BY j.created_at,j.id LIMIT 1
 )
 RETURNING *;
@@ -141,6 +145,8 @@ WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.agent_id=? A
     WHERE active_agent.id=publish_jobs.agent_id
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
+      AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
   );
 
 -- name: UpdatePublishProgress :execrows
@@ -160,6 +166,8 @@ WHERE publish_jobs.id=sqlc.arg(id) AND publish_jobs.user_id=sqlc.arg(user_id)
     WHERE active_agent.id=publish_jobs.agent_id
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
+      AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
   );
 
 -- name: CompletePublishJob :execrows
@@ -176,6 +184,8 @@ WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.agent_id=?
     WHERE active_agent.id=publish_jobs.agent_id
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
+      AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
   );
 
 -- name: FailPublishJob :execrows
@@ -215,6 +225,8 @@ WHERE publish_jobs.id=sqlc.arg(id) AND publish_jobs.user_id=sqlc.arg(user_id)
     WHERE active_agent.id=publish_jobs.agent_id
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
+      AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
   );
 
 -- name: CancelPublishJob :execrows

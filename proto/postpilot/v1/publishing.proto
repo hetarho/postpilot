@@ -197,7 +197,8 @@ message SyncAgentProfileRequest {
   string default_category_id = 5;
   PublishVisibility default_visibility = 6;
   bool compatibility_ready = 7;
-  string hermes_version = 8;
+  // A ready deterministic publisher reports postpilot-naver/<driver-version>.
+  string executor_version = 8;
 }
 message SyncAgentProfileResponse { PublishingAgent agent = 1; }
 message ClaimPublishJobRequest {}

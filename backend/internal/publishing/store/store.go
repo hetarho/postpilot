@@ -139,7 +139,7 @@ func (s *Store) SyncAgent(ctx context.Context, userID, agentID string, update pu
 	n, err := s.write.SyncAgentProfile(ctx, sqlc.SyncAgentProfileParams{
 		PlatformAccountID: update.PlatformAccountID, PlatformAccountLabel: update.PlatformAccountLabel,
 		BrowserLabel: update.BrowserLabel, CategoriesJson: string(categories), DefaultCategoryID: update.DefaultCategoryID,
-		DefaultVisibility: string(update.DefaultVisibility), CompatibilityReady: ready, HermesVersion: update.HermesVersion,
+		DefaultVisibility: string(update.DefaultVisibility), CompatibilityReady: ready, ExecutorVersion: update.ExecutorVersion,
 		LastSeenAt: nullableString(stamp), UpdatedAt: stamp, ID: agentID, UserID: userID,
 	})
 	if err != nil {
@@ -464,7 +464,7 @@ func toAgent(row sqlc.PublishingAgent) (publishing.Agent, error) {
 		PlatformAccountID: row.PlatformAccountID, PlatformAccountLabel: row.PlatformAccountLabel,
 		BrowserLabel: row.BrowserLabel, Categories: categories, DefaultCategoryID: row.DefaultCategoryID,
 		DefaultVisibility: publishing.Visibility(row.DefaultVisibility), CompatibilityReady: row.CompatibilityReady == 1,
-		HermesVersion: row.HermesVersion, LastSeenAt: lastSeen, RevokedAt: revoked, CreatedAt: created, UpdatedAt: updated}, nil
+		ExecutorVersion: row.ExecutorVersion, LastSeenAt: lastSeen, RevokedAt: revoked, CreatedAt: created, UpdatedAt: updated}, nil
 }
 
 func toJob(row sqlc.PublishJob) (publishing.Job, error) {

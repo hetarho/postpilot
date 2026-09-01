@@ -20,7 +20,6 @@ const (
 	PollInterval = 5 * time.Second
 	Heartbeat    = 10 * time.Second
 	JobTimeout   = 15 * time.Minute
-	MaxTurns     = 60
 )
 
 type Connection struct {
@@ -32,8 +31,6 @@ type Connection struct {
 	BrowserBinary   string `json:"browser_binary"`
 	BrowserLabel    string `json:"browser_label"`
 	ProfileDir      string `json:"profile_dir"`
-	HermesBinary    string `json:"hermes_binary"`
-	HermesProfile   string `json:"hermes_profile"`
 	LeaseTTLSeconds int64  `json:"lease_ttl_seconds"`
 	Armed           bool   `json:"armed"`
 }
@@ -108,7 +105,7 @@ func ValidateConnection(connection Connection) error {
 	if err := ValidateAPIURL(connection.APIURL); err != nil {
 		return err
 	}
-	if connection.ID == "" || connection.AgentID == "" || connection.KeychainAccount == "" || connection.BrowserBinary == "" || connection.ProfileDir == "" || connection.HermesBinary == "" || connection.HermesProfile == "" {
+	if connection.ID == "" || connection.AgentID == "" || connection.KeychainAccount == "" || connection.BrowserBinary == "" || connection.ProfileDir == "" {
 		return errors.New("connection is incomplete")
 	}
 	return ValidateLeaseTTL(connection.LeaseTTLSeconds)

@@ -80,7 +80,7 @@ export const publishing = {
   },
   agents: {
     title: '발행 Mac',
-    description: '계정마다 별도의 Mac 토큰, Hermes 프로필과 전용 브라우저 프로필을 사용합니다.',
+    description: '계정마다 별도의 Mac 토큰과 전용 브라우저 프로필을 사용합니다.',
     list: '연결 목록',
     loadFailed: '연결 목록을 불러오지 못했어요.',
     empty: '아직 연결한 Mac이 없어요.',

@@ -20,19 +20,17 @@ import (
 	"github.com/postpilot/agent/internal/config"
 	"github.com/postpilot/agent/internal/credentials"
 	postpilotv1 "github.com/postpilot/agent/internal/gen/postpilot/v1"
-	"github.com/postpilot/agent/internal/hermes"
 	"github.com/postpilot/agent/internal/postpilot"
 )
 
 type Server struct {
-	Paths     config.Paths
-	Keychain  credentials.Store
-	Hermes    string
-	PluginDir string
-	OpenLogin func(binary, profileDir string) error
-	nonce     string
-	host      string
-	completed chan struct{}
+	Paths          config.Paths
+	Keychain       credentials.Store
+	OpenLogin      func(binary, profileDir string) error
+	ProbePublisher func(context.Context, string) (string, error)
+	nonce          string
+	host           string
+	completed      chan struct{}
 }
 
 func (s Server) Run(ctx context.Context) error {
@@ -124,6 +122,14 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		s.render(writer, data)
 		return
 	}
+	// Pairing must not create a profile, open or mutate the editor, consume its
+	// one-time device code, or advertise ready until the deterministic driver can
+	// prove support. Login-only setup remains available for an existing profile.
+	if action == "pair" && s.ProbePublisher == nil {
+		data.Error = "결정론적 Naver 퍼블리셔가 아직 구현되지 않아 연결을 활성화할 수 없어요. Job 25 구현을 완료한 에이전트로 업데이트해 주세요."
+		s.render(writer, data)
+		return
+	}
 	installation, supported := browser.Supported(values.BrowserBinary)
 	if !supported {
 		data.Error = "지원하는 전용 Chromium 브라우저를 선택해 주세요."
@@ -141,7 +147,7 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		if err := browser.OpenLogin(values.BrowserBinary, profileDir); err != nil {
 			data.Error = err.Error()
 		} else {
-			data.Message = "전용 브라우저를 열었습니다. 네이버 로그인을 마친 뒤 이 화면에서 연결을 완료하세요. Hermes가 내 블로그의 글쓰기 화면을 열고, Postpilot이 계정과 카테고리를 검증합니다."
+			data.Message = "전용 브라우저를 열었습니다. 네이버 로그인을 마친 뒤 이 화면에서 연결을 완료하세요. Postpilot이 내 블로그의 글쓰기 화면을 열고 계정과 카테고리를 검증합니다."
 		}
 		s.render(writer, data)
 		return
@@ -151,32 +157,16 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		s.render(writer, data)
 		return
 	}
-	profile := "postpilot-" + connectionID
-	browserSession, err := browser.Start(values.BrowserBinary, profileDir, "")
+	browserSession, err := browser.OpenEditor(values.BrowserBinary, profileDir)
 	if err != nil {
-		data.Error = "전용 브라우저의 자동화 연결을 확인하지 못했어요: " + err.Error()
+		data.Error = "전용 브라우저에서 네이버 글쓰기 화면을 열지 못했어요: " + err.Error() + " — 로그인 또는 보안 확인이 필요한지 확인한 뒤 다시 시도하세요."
 		s.render(writer, data)
 		return
 	}
 	defer browserSession.Close()
-	if err := hermes.InstallProfile(request.Context(), s.Hermes, profile, s.PluginDir); err != nil {
-		data.Error = err.Error()
-		s.render(writer, data)
-		return
-	}
-	if err := hermes.EnsureProfileInference(request.Context(), s.Hermes, profile); err != nil {
-		data.Error = err.Error()
-		s.render(writer, data)
-		return
-	}
-	version, err := hermes.Probe(request.Context(), s.Hermes, profile, s.PluginDir, browserSession.CDPURL)
-	if err != nil {
-		data.Error = err.Error() + " — 터미널에서 해당 프로필의 모델 인증을 마친 뒤 다시 시도하세요."
-		s.render(writer, data)
-		return
-	}
-	if err := hermes.PrepareNaverEditor(request.Context(), s.Hermes, profile, browserSession.CDPURL); err != nil {
-		data.Error = "Hermes가 네이버 글쓰기 화면을 열지 못했어요: " + err.Error() + " — 전용 브라우저에서 로그인 또는 보안 확인이 필요한지 확인한 뒤 다시 시도하세요."
+	version, err := s.ProbePublisher(request.Context(), browserSession.CDPURL)
+	if err != nil || strings.TrimSpace(version) == "" {
+		data.Error = "Naver 퍼블리셔 호환성 검사를 통과하지 못해 연결을 활성화하지 않았어요."
 		s.render(writer, data)
 		return
 	}
@@ -247,7 +237,7 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		// can expose it as ready. If SyncProfile commits but its response is lost, the
 		// same setup submission resumes with this Keychain token instead of consuming a
 		// second device code or leaving an unreachable ready agent.
-		pending := config.Connection{ID: connectionID, Label: strings.TrimSpace(values.Label), APIURL: strings.TrimRight(values.APIURL, "/"), AgentID: agentID, KeychainAccount: keyAccount, BrowserBinary: values.BrowserBinary, BrowserLabel: installation.Label, ProfileDir: profileDir, HermesBinary: s.Hermes, HermesProfile: profile, LeaseTTLSeconds: leaseTTLSeconds}
+		pending := config.Connection{ID: connectionID, Label: strings.TrimSpace(values.Label), APIURL: strings.TrimRight(values.APIURL, "/"), AgentID: agentID, KeychainAccount: keyAccount, BrowserBinary: values.BrowserBinary, BrowserLabel: installation.Label, ProfileDir: profileDir, LeaseTTLSeconds: leaseTTLSeconds}
 		cfg, pendingIndex, err = persistPending(s.Paths, cfg, pending)
 		if err != nil {
 			_ = s.Keychain.Delete(request.Context(), keyAccount)
@@ -266,7 +256,7 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	client := postpilot.New(values.APIURL, agentToken)
-	agent, err := client.SyncProfile(request.Context(), &postpilotv1.SyncAgentProfileRequest{PlatformAccountId: identity.BlogID, PlatformAccountLabel: identity.BlogLabel, BrowserLabel: installation.Label, Categories: categories, DefaultCategoryId: defaultCategoryID, DefaultVisibility: postpilotv1.PublishVisibility_PUBLISH_VISIBILITY_PUBLIC, CompatibilityReady: true, HermesVersion: version})
+	agent, err := client.SyncProfile(request.Context(), &postpilotv1.SyncAgentProfileRequest{PlatformAccountId: identity.BlogID, PlatformAccountLabel: identity.BlogLabel, BrowserLabel: installation.Label, Categories: categories, DefaultCategoryId: defaultCategoryID, DefaultVisibility: postpilotv1.PublishVisibility_PUBLISH_VISIBILITY_PUBLIC, CompatibilityReady: true, ExecutorVersion: version})
 	if err != nil {
 		data.Error = "서버에 Mac 프로필을 확인하지 못했어요. 미완료 연결은 이 Mac에 안전하게 보관했으니 같은 연결 코드로 다시 시도하세요: " + err.Error()
 		s.render(writer, data)
@@ -282,8 +272,6 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 	connection.BrowserBinary = values.BrowserBinary
 	connection.BrowserLabel = installation.Label
 	connection.ProfileDir = profileDir
-	connection.HermesBinary = s.Hermes
-	connection.HermesProfile = profile
 	if err := activatePending(s.Paths, cfg, pendingIndex, connection); err != nil {
 		data.Error = "서버 확인은 끝났지만 로컬 활성화 저장에 실패했어요. 미완료 연결과 토큰은 남아 있으니 같은 연결 코드로 다시 시도하세요: " + err.Error()
 		s.render(writer, data)

@@ -60,16 +60,12 @@ cd backend && go run ./cmd/api
 
 ### Mac 발행 에이전트
 
-저장소 루트에서 아래 한 줄로 설치 확인, 최초 연결, 진단, 로그인 시 자동 실행 등록까지 진행한다.
+Job 25는 모바일의 발행 요청을 durable queue에 보관하고, 집 Mac의 `postpilot-agent`가
+outbound polling으로 가져가는 구조다. 로컬 실행기는 모델 기반 에이전트가 아니라 버전이 고정된
+DOM·Accessibility·CDP 기반 Naver 퍼블리셔로 구현한다.
 
-```sh
-./setup-hermes.sh
-```
-
-최초 연결이 끝나면 Mac을 다시 켜도 LaunchAgent가 자동으로 대기하므로 매번 `setup`을 실행하지 않는다.
-업데이트와 자동 실행 갱신은 같은 명령을 다시 실행하고, 네이버 로그인 복구나 다른 계정 연결처럼 설정
-화면이 필요할 때만 `./setup-hermes.sh --setup`을 사용한다. 자세한 동작과 개별 명령은
-[`agent/README.md`](./agent/README.md)에 있다.
+현재 전환 중으로, 결정론적 퍼블리셔와 실 Naver 검증이 완료되기 전에는 LaunchAgent를 배포하지
+않는다. 로컬 런타임의 설계·개발 명령은 [`agent/README.md`](./agent/README.md)에 있다.
 
 ### 계정 만들기
 

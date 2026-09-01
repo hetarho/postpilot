@@ -2,14 +2,10 @@ package publishing
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,7 +15,6 @@ import (
 	"time"
 
 	postpilotv1 "github.com/postpilot/agent/internal/gen/postpilot/v1"
-	"github.com/postpilot/agent/internal/hermes"
 	"github.com/postpilot/agent/internal/workdir"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -32,8 +27,36 @@ type API interface {
 	Fail(context.Context, string, string, int64, postpilotv1.PublishFailureKind, string) error
 }
 
+// Result is the executor-neutral terminal report produced by the local Naver
+// publisher. It deliberately contains only the bounded data needed to complete
+// or fail the durable server job.
+type Result struct {
+	Status       string
+	PublishedURL string
+	FailureKind  string
+	Detail       string
+}
+
+// Reporter is the narrow in-process protocol between the reviewed Naver driver
+// and the durable job executor. Advance is synchronous: returning from the
+// committing transition is the only authorization to activate the final control.
+type Reporter interface {
+	Advance(context.Context, Stage) error
+}
+
+type Stage string
+
+const (
+	StagePreparing       Stage = "preparing"
+	StageOpeningEditor   Stage = "opening_editor"
+	StageFillingContent  Stage = "filling_content"
+	StageUploadingPhotos Stage = "uploading_photos"
+	StageCommitting      Stage = "committing"
+	StageVerifying       Stage = "verifying"
+)
+
 type Publisher interface {
-	Run(context.Context, string, string, string, string) (hermes.Result, error)
+	Run(context.Context, string, Reporter) (Result, error)
 }
 
 type Executor struct {
@@ -91,46 +114,37 @@ func (e Executor) Execute(ctx context.Context, claim *postpilotv1.ClaimPublishJo
 	if err := os.WriteFile(filepath.Join(dir, "manifest.json"), manifest, 0o600); err != nil {
 		return err
 	}
-	handle, token, err := randomPair()
-	if err != nil {
-		return err
-	}
-	callback, err := newCallback(e.API, jobID, claim.GetLeaseToken(), token, claim.GetJob().GetProgressSequence())
-	if err != nil {
-		return err
-	}
-	defer callback.Close()
-	_, runErr := e.Publisher.Run(runCtx, handle, dir, callback.URL(), token)
+	reporter := newProgressReporter(e.API, jobID, claim.GetLeaseToken(), claim.GetJob().GetProgressSequence())
+	result, runErr := e.Publisher.Run(runCtx, dir, reporter)
+	reporter.Close()
 	if renewalErr := stopHeartbeat(); renewalErr != nil {
 		// Do not race a still-valid lease with FailPublish. The server-owned expiry
 		// recovery will safely requeue a pre-commit job or mark a fenced job unknown.
 		return fmt.Errorf("publishing lease renewal failed; leaving the job for server recovery: %w", renewalErr)
 	}
-	sequence, stage := callback.State()
-	result, reported := callback.Result()
-	if !reported {
+	sequence, stage := reporter.State()
+	if runErr != nil {
 		kind := postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE
 		if stage >= postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING {
 			kind = postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST
 		}
-		detail := "publisher exited without an authenticated terminal report"
-		if runErr != nil {
-			detail = runErr.Error()
-		}
-		return e.fail(ctx, claim, sequence+1, kind, detail)
+		return e.fail(ctx, claim, sequence+1, kind, runErr.Error())
 	}
 	if result.Status == "published" {
-		if stage != postpilotv1.PublishStage_PUBLISH_STAGE_VERIFYING {
-			return e.fail(ctx, claim, sequence+1, postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST, "publisher did not reach verifying")
+		if stage != postpilotv1.PublishStage_PUBLISH_STAGE_VERIFYING || strings.TrimSpace(result.PublishedURL) == "" {
+			return e.fail(ctx, claim, sequence+1, postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST, "publisher returned an incomplete verified result")
 		}
 		return e.API.Complete(ctx, jobID, claim.GetLeaseToken(), sequence+1, result.PublishedURL)
 	}
-	return e.fail(ctx, claim, sequence+1, failureKind(result.FailureKind), result.Detail)
+	if result.Status == "failed" {
+		return e.fail(ctx, claim, sequence+1, failureKind(result.FailureKind), result.Detail)
+	}
+	return e.fail(ctx, claim, sequence+1, postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE, "publisher returned an invalid terminal result")
 }
 
 // localManifestBytes preserves the immutable manifest but removes the temporary
 // signed storage capabilities after the agent has downloaded and verified every
-// JPEG. Hermes receives filenames and local resolver handles only.
+// JPEG. The local publisher receives filenames and local resolver handles only.
 func localManifestBytes(manifest *postpilotv1.PublishManifest) ([]byte, error) {
 	local, ok := proto.Clone(manifest).(*postpilotv1.PublishManifest)
 	if !ok || local == nil {
@@ -154,7 +168,7 @@ func (e Executor) fail(ctx context.Context, claim *postpilotv1.ClaimPublishJobRe
 		"detail", redactedLocalDetail(detail),
 	)
 	// The RPC carries only bounded redaction metadata, never model/browser text, local
-	// paths, post content, callback addresses, or provider diagnostics. The server maps
+	// paths, post content, browser endpoints, or driver diagnostics. The server maps
 	// the constrained kind to a stable reason and retains this inert value as optional
 	// technical detail.
 	return e.API.Fail(ctx, claim.GetJob().GetId(), claim.GetLeaseToken(), sequence, kind, redactedLocalDetail(detail))
@@ -200,7 +214,7 @@ func redactedLocalDetail(detail string) string {
 	if detail == "" {
 		return ""
 	}
-	// Raw Hermes/browser diagnostics can contain post text, URLs and local paths.
+	// Raw publisher/browser diagnostics can contain post text, URLs and local paths.
 	// Record that a diagnostic existed, and its bounded size for troubleshooting,
 	// without reproducing any of those values in logs.
 	return fmt.Sprintf("redacted (%d bytes)", min(len(detail), 10_000))
@@ -268,138 +282,65 @@ func downloadAssets(ctx context.Context, dir string, assets []*postpilotv1.Stage
 	return nil
 }
 
-type callbackServer struct {
+type progressReporter struct {
 	api        API
 	jobID      string
 	leaseToken string
-	token      string
-	listener   net.Listener
-	server     *http.Server
 	mu         sync.Mutex
 	sequence   int64
 	stage      postpilotv1.PublishStage
-	result     *hermes.Result
+	closed     bool
 }
 
-func newCallback(api API, jobID, leaseToken, token string, sequence int64) (*callbackServer, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return nil, err
+func newProgressReporter(api API, jobID, leaseToken string, sequence int64) *progressReporter {
+	return &progressReporter{
+		api: api, jobID: jobID, leaseToken: leaseToken, sequence: sequence,
+		stage: postpilotv1.PublishStage_PUBLISH_STAGE_CLAIMED,
 	}
-	callback := &callbackServer{api: api, jobID: jobID, leaseToken: leaseToken, token: token, listener: listener, sequence: sequence, stage: postpilotv1.PublishStage_PUBLISH_STAGE_CLAIMED}
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /progress", callback.progress)
-	mux.HandleFunc("POST /finish", callback.finish)
-	callback.server = &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}
-	go callback.server.Serve(listener)
-	return callback, nil
 }
 
-func (s *callbackServer) URL() string { return "http://" + s.listener.Addr().String() }
-
-func (s *callbackServer) Close() { _ = s.server.Close() }
-
-func (s *callbackServer) State() (int64, postpilotv1.PublishStage) {
+func (s *progressReporter) State() (int64, postpilotv1.PublishStage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.sequence, s.stage
 }
 
-func (s *callbackServer) Result() (hermes.Result, bool) {
+func (s *progressReporter) Close() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.result == nil {
-		return hermes.Result{}, false
-	}
-	return *s.result, true
+	s.closed = true
 }
 
-func (s *callbackServer) progress(writer http.ResponseWriter, request *http.Request) {
-	if request.Header.Get("Authorization") != "Bearer "+s.token {
-		http.Error(writer, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	var body struct {
-		Stage string `json:"stage"`
-	}
-	decoder := json.NewDecoder(io.LimitReader(request.Body, 1024))
-	if decoder.Decode(&body) != nil {
-		http.Error(writer, "invalid JSON", http.StatusBadRequest)
-		return
-	}
-	next, ok := callbackStages[body.Stage]
+func (s *progressReporter) Advance(ctx context.Context, stage Stage) error {
+	next, ok := publisherStages[stage]
 	if !ok {
-		http.Error(writer, "invalid stage", http.StatusBadRequest)
-		return
+		return errors.New("publisher reported an invalid stage")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.closed {
+		return errors.New("publisher reported progress after returning a terminal result")
+	}
 	if next != s.stage+1 {
-		http.Error(writer, "non-monotonic stage", http.StatusConflict)
-		return
+		return errors.New("publisher reported non-monotonic progress")
 	}
 	sequence := s.sequence + 1
 	// In particular, committing is persisted by this synchronous call before the
-	// plugin receives 204 and is allowed to activate Naver's final control.
-	if err := s.api.Progress(request.Context(), s.jobID, s.leaseToken, sequence, next); err != nil {
-		http.Error(writer, "server rejected progress", http.StatusConflict)
-		return
+	// driver returns from Advance and is allowed to activate Naver's final control.
+	if err := s.api.Progress(ctx, s.jobID, s.leaseToken, sequence, next); err != nil {
+		return fmt.Errorf("server rejected publisher progress: %w", err)
 	}
 	s.sequence, s.stage = sequence, next
-	writer.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
-func (s *callbackServer) finish(writer http.ResponseWriter, request *http.Request) {
-	if request.Header.Get("Authorization") != "Bearer "+s.token {
-		http.Error(writer, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	var result hermes.Result
-	decoder := json.NewDecoder(io.LimitReader(request.Body, 2048))
-	decoder.DisallowUnknownFields()
-	if decoder.Decode(&result) != nil {
-		http.Error(writer, "invalid JSON", http.StatusBadRequest)
-		return
-	}
-	if result.Status != "published" && result.Status != "failed" {
-		http.Error(writer, "invalid terminal status", http.StatusBadRequest)
-		return
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.result != nil {
-		http.Error(writer, "terminal result already recorded", http.StatusConflict)
-		return
-	}
-	if result.Status == "published" {
-		if s.stage != postpilotv1.PublishStage_PUBLISH_STAGE_VERIFYING || result.PublishedURL == "" {
-			http.Error(writer, "published result requires verified readback", http.StatusConflict)
-			return
-		}
-		result.FailureKind, result.Detail = "", ""
-	} else {
-		result.PublishedURL = ""
-		result.Detail = truncateRunes(result.Detail, 500)
-	}
-	s.result = &result
-	writer.WriteHeader(http.StatusNoContent)
-}
-
-func truncateRunes(value string, limit int) string {
-	runes := []rune(value)
-	if len(runes) <= limit {
-		return value
-	}
-	return string(runes[:limit])
-}
-
-var callbackStages = map[string]postpilotv1.PublishStage{
-	"preparing":        postpilotv1.PublishStage_PUBLISH_STAGE_PREPARING,
-	"opening_editor":   postpilotv1.PublishStage_PUBLISH_STAGE_OPENING_EDITOR,
-	"filling_content":  postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_CONTENT,
-	"uploading_photos": postpilotv1.PublishStage_PUBLISH_STAGE_UPLOADING_PHOTOS,
-	"committing":       postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING,
-	"verifying":        postpilotv1.PublishStage_PUBLISH_STAGE_VERIFYING,
+var publisherStages = map[Stage]postpilotv1.PublishStage{
+	StagePreparing:       postpilotv1.PublishStage_PUBLISH_STAGE_PREPARING,
+	StageOpeningEditor:   postpilotv1.PublishStage_PUBLISH_STAGE_OPENING_EDITOR,
+	StageFillingContent:  postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_CONTENT,
+	StageUploadingPhotos: postpilotv1.PublishStage_PUBLISH_STAGE_UPLOADING_PHOTOS,
+	StageCommitting:      postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING,
+	StageVerifying:       postpilotv1.PublishStage_PUBLISH_STAGE_VERIFYING,
 }
 
 func failureKind(value string) postpilotv1.PublishFailureKind {
@@ -419,18 +360,6 @@ func failureKind(value string) postpilotv1.PublishFailureKind {
 	default:
 		return postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE
 	}
-}
-
-func randomPair() (string, string, error) {
-	values := make([]string, 2)
-	for i := range values {
-		bytes := make([]byte, 24)
-		if _, err := rand.Read(bytes); err != nil {
-			return "", "", err
-		}
-		values[i] = hex.EncodeToString(bytes)
-	}
-	return values[0], values[1], nil
 }
 
 func isLoopback(host string) bool { return host == "localhost" || host == "127.0.0.1" || host == "::1" }

@@ -4,10 +4,6 @@ dist/
 .env.local
 *.log
 
-# Python (the agent's Hermes plugin tests)
-__pycache__/
-*.pyc
-
 # Go
 backend/bin/
 backend/tmp/

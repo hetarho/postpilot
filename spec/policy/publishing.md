@@ -1,9 +1,10 @@
 # Policy — Paired local Naver publishing
 
 Canonical rules under implementation for [plan 12](../plan/12.automated-naver-publishing-through-a-pai.md). Job 25's
-server, frontend, and Mac companion paths are in offline verification, and the authorized live-Naver acceptance run
-remains a release gate: this document does not claim that SmartEditor compatibility has been proven against a real
-account.
+server, frontend, durable queue, and Mac companion foundation remain, but the replacement deterministic browser driver
+is not implemented yet and the agent therefore fails closed without claiming publish work. Driver tests and the
+authorized live-Naver acceptance run both remain release gates: this document does not claim that SmartEditor
+compatibility has been proven against a real account.
 
 ## Who may publish
 
@@ -34,18 +35,21 @@ account.
   one atomic conditional insert, and consumed once.
   The raw agent token is returned once, stored only in macOS Keychain, hashed on the server, account-scoped, and invalid
   immediately after revocation.
-- Naver credentials, cookies, browser profile paths, CDP URLs, and Hermes provider credentials never enter the VPS,
-  frontend state, RPC contract, or logs. Two Postpilot accounts on one Mac use separate Keychain entries, browser
-  directories, Hermes profiles, queues, and job directories.
+- Naver credentials, cookies, browser profile paths, and CDP URLs never enter the VPS, frontend state, RPC contract,
+  or logs. Two Postpilot accounts on one Mac use separate Keychain entries, browser directories, queues, and job
+  directories.
+- Agent profile sync may carry safe driver/browser labels, driver version, an opaque compatibility-signature id and
+  readiness. It never carries locators, JavaScript, coordinates, action sequences, profile paths, or other executable
+  driver configuration.
 - Setup is loopback-only and work delivery is outbound authenticated polling. Public HTTP API URLs are refused; HTTP
   is allowed only for loopback development.
 - Each setup server run uses a cryptographic URL/form nonce, accepts only its exact loopback Host and same-origin POST,
-  and limits form size and actions. A constrained Hermes pairing skill follows the signed-in Naver UI to the account's
-  own blog and opens its writer without typing, uploading, or publishing. Setup then reads the logged-in blog identity,
-  editor readiness, and non-conflicting categories directly through the single local CDP page; Hermes/model stdout is
-  never identity evidence. The probe accepts only the versioned editor root and the blog identity Naver selected from
-  the signed-in session, then rechecks that the same exact page remains the sole CDP target. The first observed category
-  is the initial default and can be changed in Postpilot. Only then may an unarmed
+  and limits form size and actions. The deterministic driver follows only the signed-in Naver UI to the account's own
+  blog and opens its writer without typing, uploading, or publishing. Setup then reads the logged-in blog identity,
+  editor readiness, and non-conflicting categories directly through the single local CDP page; user input, page prose,
+  and claimed identifiers are never identity evidence. The probe accepts only the versioned editor root and the blog
+  identity Naver selected from the signed-in session, then rechecks that the same exact page remains the sole CDP
+  target. The first observed category is the initial default and can be changed in Postpilot. Only then may an unarmed
   recoverable local connection be persisted and server profile sync mark it ready. A lost sync response can therefore
   be retried with the same Keychain credential.
 
@@ -68,8 +72,8 @@ account.
   unused reservation after every staged object was successfully removed.
 - Claims mint short-lived GET URLs for the active lease. The manifest is detached from subsequent post edits and is
   retained only while the job can still run or receive an explicit safe retry.
-- The Mac removes those signed GET capabilities from `manifest.json` after verified download, before Hermes can read
-  it. Publication history is not foreign-keyed to the source post, so post deletion detaches rather than erases it.
+- The Mac removes those signed GET capabilities from `manifest.json` after verified download, before the publisher can
+  read it. Publication history is not foreign-keyed to the source post, so post deletion detaches rather than erases it.
 - After staging, Start reserves the serialized writer, re-reads the exact post snapshot through post behavior and the
   current connection through publishing behavior, then inserts the job/assets in that transaction. Concurrent post
   edits, photo changes, profile sync, or revocation therefore either happen before the guard and reject Start or after
@@ -86,16 +90,18 @@ account.
 - Progress writes compare the persisted stage and sequence atomically. Failure classification also reads the durable
   commit timestamp/stage in the same SQL mutation, so a delayed pre-commit failure cannot overwrite a concurrent
   commit fence.
-- Every lease renewal, progress, completion, and failure SQL mutation also rechecks that the owning agent is not
-  revoked. Revocation therefore fences an already-authenticated in-flight request atomically, not only its next RPC.
+- Every lease renewal, progress, completion, and failure service boundary and SQL mutation also rechecks that the
+  owning agent is ready, not revoked, and carries a validated deterministic executor version. Revocation or executor
+  retirement therefore fences an already-authenticated in-flight request atomically, not only its next claim.
 - Any failure, timeout, browser loss, or lease expiry at or after `committing` becomes `outcome_unknown`. It is never
   automatically retried, canceled, or treated as failed. Only a verified HTTPS URL under the paired
   `blog.naver.com/<blog-id>/...` path that is still open in the active paired browser completes a job. Its post-fence
   accessibility snapshot must match the frozen title, block/image/caption order, tags, and category; visibility is
   bound by the fully verified pre-fence editor snapshot.
-- `postpilot_finish` validates locally and records its result once through the per-run authenticated loopback callback.
-  Hermes stdout/stderr is discarded as non-authoritative model prose; a process exit without that callback becomes a
-  normalized failure (or `outcome_unknown` after the fence).
+- The local publisher returns one typed terminal result through the in-process driver contract. Its typed reporter is
+  the only progress authority and closes as soon as the publisher returns, so skipped, duplicate, or late progress is
+  rejected. Page prose and driver logs are non-authoritative. An error or invalid terminal result becomes a normalized
+  failure (or `outcome_unknown` after the fence).
 - Editor/readback boundaries identify category, visibility, and tags by accessibility role/state, not label text
   alone. Body paragraphs may equal setting labels without being truncated. Terminal cleanup attempts all assets and
   all terminal jobs before returning an aggregated error; only fully cleaned jobs lose their asset rows, so one
@@ -113,43 +119,47 @@ account.
 ## Local executor boundary
 
 - The companion launches the chosen supported Chromium binary with an agent-owned `user-data-dir` and an ephemeral
-  loopback CDP port, verifies Chrome's WebSocket endpoint, and supplies only that local URL through Hermes'
-  `BROWSER_CDP_URL` environment variable.
-- Hermes receives a constant prompt containing one random local handle. The plugin checks that handle before reading
-  the owner-only manifest directory. Manifest strings remain tool data; only enumerated current-job JPEG paths may be
-  resolved or passed to the restricted CDP upload method.
-- The profile exposes only the Postpilot publisher tools and a narrow browser allowlist. Direct shell/filesystem,
-  search, messaging, delegation, arbitrary JavaScript evaluation, cookie/storage CDP methods, non-Naver navigation,
-  and arbitrary local paths are blocked. Exactly one dedicated CDP page must exist, and its target id is bound across
-  URL reads, DOM calls, full snapshots, refs, the final activation, and readback. The page is rechecked before and
-  after every browser action; a target switch or leaving the allowlist poisons the run before later data entry. A full accessibility snapshot is bound to an immediately preceding exact
-  `window.location.href` read through the only permitted read-only console expression. The editor URL's query/path
-  identity must equal the paired blog before verification, and readback evidence applies only to that exact page URL.
-  Before the fence, a click must reference the current real accessibility snapshot; any DOM mutation invalidates
-  those refs. Snapshot-labelled final controls, renamed/unknown buttons, keyboard submission,
-  and native-dialog acceptance are blocked regardless of model-reported stage. JPEGs must be uploaded one at a time in
-  exact manifest-ordinal order. Each needs a successful one-file `DOM.setFileInputFiles` result followed by a fresh
-  full accessibility snapshot with exactly one additional editor image; a compact snapshot or merely resolving a path
-  is not upload evidence. The fence additionally requires one current full snapshot matching the title and exact
-  semantic body sequence with no inserted text or image, block/image/caption order, the exact ordered tag collection
-  with no extra or duplicate tag,
-  frozen category name, and visibility. The frozen category ID must also resolve through its exact manifest-derived
-  DOM selector, and both category and visibility require selected/checked accessibility state. Any subsequent
-  pre-fence browser interaction invalidates that verification.
-  From photo verification onward every activation is blocked. The fence accepts exactly one button whose accessible
-  name is in the versioned final-control allowlist; scheduled, generic, renamed, or duplicate publish-like controls
-  cannot arm it. After synchronous acknowledgement, only that exact ref may be activated, exactly once. Its authorization is
-  consumed before the click, and every other or repeated mutation is blocked. Missing assets/evidence, mistaken tool
-  ordering, stale refs, or a rejected durable progress call therefore fail closed.
+  loopback CDP port and verifies Chrome's WebSocket endpoint and browser id before giving that local endpoint only to
+  the deterministic publisher.
+- The publisher reads one owner-only local manifest after the downloader has removed signed GET URLs. Manifest strings
+  are inert data, including strings that resemble instructions; only enumerated current-job JPEG paths may be resolved
+  or passed to the restricted upload operation. The publication path contains no prompt, model, learned behavior, or
+  general-purpose agent tools.
+- Browser behavior is fixed, versioned local code. The server may send the typed immutable manifest and settings but
+  must never supply executable JavaScript, selectors, screen coordinates, keystroke scripts, or a general macro/action
+  language. Screen-coordinate recording is not an allowed fallback. A Naver editor change requires a reviewed driver
+  release and compatibility probe.
+- The driver exposes only the narrow DOM/accessibility/CDP methods required by the versioned publisher. Direct
+  shell/filesystem, search, messaging, delegation, cookie/storage inspection, non-Naver navigation, arbitrary script
+  execution, and arbitrary local paths are absent. Exactly one dedicated CDP page must exist, and its target id is
+  bound across URL reads, DOM calls, full accessibility snapshots, semantic locators, the final activation, and
+  readback. The page is rechecked before and after every action; a target switch or leaving the allowlist poisons the
+  run before later data entry. The editor URL's query/path identity must equal the paired blog before verification,
+  and readback evidence applies only to that exact page URL.
+- Before the fence, every mutation must resolve a versioned semantic locator against current DOM/accessibility
+  evidence. Any DOM mutation invalidates cached evidence. Missing, renamed, duplicate, or unexpected controls,
+  keyboard submission, native-dialog acceptance, and unversioned publish-like controls fail closed. JPEGs must be
+  uploaded one at a time in exact manifest-ordinal order. Each needs a successful one-file upload followed by a fresh
+  full accessibility snapshot with exactly one additional editor image; resolving a path or receiving an upload API
+  acknowledgement alone is not evidence.
+- The fence requires a current full snapshot matching the title and exact semantic body sequence with no inserted text
+  or image, block/image/caption order, the exact ordered tag collection with no extra or duplicate tag, frozen category
+  name/id, and visibility. Category and visibility require selected/checked accessibility state. Any subsequent
+  pre-fence interaction invalidates that verification. From photo verification onward every activation is blocked.
+  The fence accepts exactly one button whose accessible name is in the versioned final-control allowlist; scheduled,
+  generic, renamed, or duplicate publish-like controls cannot arm it. After synchronous server acknowledgement,
+  authorization is consumed before exactly one low-level activation is sent. The driver must disable automatic retry
+  for that action, and every other or repeated mutation is blocked. Missing evidence, action-order errors, or a rejected
+  durable progress call therefore fail closed.
 - One owner-only OS file lock permits only one companion daemon on a Mac; a process-local permit additionally
   serializes all paired accounts. Startup removes abandoned job directories only after acquiring that lock. The
   daemon reloads the owner-only config every two seconds and starts newly armed account connections without restart.
 - Agent HTTP clients reject redirects and inject the bearer only when the request origin exactly matches the configured
   API origin, so a redirect cannot carry the raw Keychain credential elsewhere.
-- Setup and diagnostics run the current official Hermes install/profile/plugin doctor flow and a real loopback CDP
-  connection probe. The Postpilot profile disables Hermes' Browser Use CLI backend so the guarded built-in
-  `browser_*` tools attach to the exact injected CDP endpoint. A recorded checked release is evidence, not a forever
-  pin or substitute for capability checks.
+- Setup and diagnostics run a non-publishing, versioned driver compatibility probe against the exact dedicated profile.
+  It verifies the required Chromium/CDP/accessibility capabilities, sole target, Naver-selected account identity,
+  category discovery, and editor signature before marking the connection ready. Recorded driver/browser/editor
+  versions are diagnostics, not a substitute for capability evidence.
 - Reusing a live Chromium debugging port requires the `/json/version` WebSocket browser path to equal the browser id
   recorded in that connection's `DevToolsActivePort`; a stale file whose port now belongs to another profile is refused.
 
@@ -165,7 +175,7 @@ account.
 - Once a terminal transition is durable, its RPC returns that terminal job even if immediate staged-object deletion
   fails. Cleanup is idempotent sweeper work; an object-store outage must not make a successful publish/cancel/failure
   transition look ambiguous to either the Mac or the human client.
-- Raw browser/model failure detail never enters an agent RPC. The Mac records only a redacted diagnostic marker, and
+- Raw browser/driver failure detail never enters an agent RPC. The Mac records only a redacted diagnostic marker, and
   the VPS derives `PUBLISH_AGENT_UNAVAILABLE`, `PUBLISH_NEEDS_ATTENTION`, or `PUBLISH_OUTCOME_UNKNOWN` plus optional
   technical detail solely from the constrained failure kind. The frontend localizes that stable reason. Transient agent-auth storage failures
   remain retryable; only a revoked token permanently stops that connection. A revoked Mac encountered by a human
@@ -195,7 +205,6 @@ viewer sees is the interval plus the agent's poll (`5s`); that **sum** must stay
 degrades the liveness display rather than the agent's ability to authenticate. The one exception is a revocation the
 write itself discovers, which is still a refusal.
 
-The Mac companion uses typed defaults of 5 s polling with backoff/jitter, 10 s lease heartbeats, a 15 minute job
-timeout, and 60 Hermes turns. It validates the enrollment lease before ready sync/activation and every claim's current
-advertised lease TTL against the heartbeat cadence;
-a renewal failure cancels the active Hermes run immediately.
+The Mac companion uses typed defaults of 5 s polling with backoff/jitter, 10 s lease heartbeats, and a 15 minute job
+timeout. It validates the enrollment lease before ready sync/activation and every claim's current advertised lease TTL
+against the heartbeat cadence; a renewal failure cancels the active driver immediately.

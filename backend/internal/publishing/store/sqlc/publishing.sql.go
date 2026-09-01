@@ -40,6 +40,8 @@ WHERE id=(
   SELECT j.id FROM publish_jobs j
   JOIN publishing_agents a ON a.id=j.agent_id AND a.user_id=j.user_id
   WHERE j.status='queued' AND a.id=? AND a.user_id=? AND a.revoked_at IS NULL
+    AND a.compatibility_ready=1
+    AND a.executor_version LIKE 'postpilot-naver/%'
   ORDER BY j.created_at,j.id LIMIT 1
 )
 RETURNING id, user_id, post_slug, post_created_at, agent_id, platform, status, stage, progress_seq, attempt, content_revision, manifest_json, settings_json, lease_token_hash, lease_expires_at, error_code, error_message, platform_post_url, created_at, claimed_at, committed_at, published_at, updated_at, target_language, content_language, voice_source_language, error_reason, error_params, technical_detail
@@ -112,6 +114,8 @@ WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.agent_id=?
     WHERE active_agent.id=publish_jobs.agent_id
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
+      AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
   )
 `
 
@@ -353,6 +357,8 @@ WHERE publish_jobs.id=?11 AND publish_jobs.user_id=?12
     WHERE active_agent.id=publish_jobs.agent_id
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
+      AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
   )
 `
 
@@ -399,7 +405,7 @@ func (q *Queries) FailPublishJob(ctx context.Context, arg FailPublishJobParams) 
 }
 
 const getActiveAgentByTokenHash = `-- name: GetActiveAgentByTokenHash :one
-SELECT id, user_id, token_hash, label, platform, platform_account_id, platform_account_label, browser_label, categories_json, default_category_id, default_visibility, compatibility_ready, hermes_version, last_seen_at, revoked_at, created_at, updated_at FROM publishing_agents WHERE token_hash = ? AND revoked_at IS NULL
+SELECT id, user_id, token_hash, label, platform, platform_account_id, platform_account_label, browser_label, categories_json, default_category_id, default_visibility, compatibility_ready, hermes_version, last_seen_at, revoked_at, created_at, updated_at, executor_version FROM publishing_agents WHERE token_hash = ? AND revoked_at IS NULL
 `
 
 func (q *Queries) GetActiveAgentByTokenHash(ctx context.Context, tokenHash string) (PublishingAgent, error) {
@@ -423,6 +429,7 @@ func (q *Queries) GetActiveAgentByTokenHash(ctx context.Context, tokenHash strin
 		&i.RevokedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ExecutorVersion,
 	)
 	return i, err
 }
@@ -525,7 +532,7 @@ func (q *Queries) GetLatestPublishJobForPost(ctx context.Context, arg GetLatestP
 }
 
 const getOwnedAgent = `-- name: GetOwnedAgent :one
-SELECT id, user_id, token_hash, label, platform, platform_account_id, platform_account_label, browser_label, categories_json, default_category_id, default_visibility, compatibility_ready, hermes_version, last_seen_at, revoked_at, created_at, updated_at FROM publishing_agents WHERE id = ? AND user_id = ?
+SELECT id, user_id, token_hash, label, platform, platform_account_id, platform_account_label, browser_label, categories_json, default_category_id, default_visibility, compatibility_ready, hermes_version, last_seen_at, revoked_at, created_at, updated_at, executor_version FROM publishing_agents WHERE id = ? AND user_id = ?
 `
 
 type GetOwnedAgentParams struct {
@@ -554,6 +561,7 @@ func (q *Queries) GetOwnedAgent(ctx context.Context, arg GetOwnedAgentParams) (P
 		&i.RevokedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ExecutorVersion,
 	)
 	return i, err
 }
@@ -605,7 +613,7 @@ func (q *Queries) GetOwnedPublishJob(ctx context.Context, arg GetOwnedPublishJob
 }
 
 const listAgentsByUser = `-- name: ListAgentsByUser :many
-SELECT id, user_id, token_hash, label, platform, platform_account_id, platform_account_label, browser_label, categories_json, default_category_id, default_visibility, compatibility_ready, hermes_version, last_seen_at, revoked_at, created_at, updated_at FROM publishing_agents WHERE user_id = ? ORDER BY created_at DESC,id DESC
+SELECT id, user_id, token_hash, label, platform, platform_account_id, platform_account_label, browser_label, categories_json, default_category_id, default_visibility, compatibility_ready, hermes_version, last_seen_at, revoked_at, created_at, updated_at, executor_version FROM publishing_agents WHERE user_id = ? ORDER BY created_at DESC,id DESC
 `
 
 func (q *Queries) ListAgentsByUser(ctx context.Context, userID string) ([]PublishingAgent, error) {
@@ -635,6 +643,7 @@ func (q *Queries) ListAgentsByUser(ctx context.Context, userID string) ([]Publis
 			&i.RevokedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ExecutorVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -806,6 +815,7 @@ func (q *Queries) ListTerminalJobsWithAssets(ctx context.Context) ([]string, err
 const lockReadyAgentForPublish = `-- name: LockReadyAgentForPublish :execrows
 UPDATE publishing_agents SET updated_at=updated_at
 WHERE id=? AND user_id=? AND revoked_at IS NULL AND compatibility_ready=1
+  AND executor_version LIKE 'postpilot-naver/%'
 `
 
 type LockReadyAgentForPublishParams struct {
@@ -881,6 +891,8 @@ WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.agent_id=? A
     WHERE active_agent.id=publish_jobs.agent_id
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
+      AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
   )
 `
 
@@ -962,6 +974,7 @@ WHERE publish_jobs.id=? AND publish_jobs.user_id=? AND publish_jobs.status='need
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
       AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
       AND TRIM(active_agent.browser_label)<>''
       AND active_agent.platform_account_id=json_extract(publish_jobs.manifest_json,'$.expected_platform_account_id')
       AND EXISTS (
@@ -1019,7 +1032,7 @@ func (q *Queries) RevokeOwnedAgent(ctx context.Context, arg RevokeOwnedAgentPara
 const syncAgentProfile = `-- name: SyncAgentProfile :execrows
 UPDATE publishing_agents
 SET platform_account_id=?,platform_account_label=?,browser_label=?,categories_json=?,
-    default_category_id=?,default_visibility=?,compatibility_ready=?,hermes_version=?,
+    default_category_id=?,default_visibility=?,compatibility_ready=?,executor_version=?,
     last_seen_at=?,updated_at=?
 WHERE id=? AND user_id=? AND revoked_at IS NULL
 `
@@ -1032,7 +1045,7 @@ type SyncAgentProfileParams struct {
 	DefaultCategoryID    string
 	DefaultVisibility    string
 	CompatibilityReady   int64
-	HermesVersion        string
+	ExecutorVersion      string
 	LastSeenAt           sql.NullString
 	UpdatedAt            string
 	ID                   string
@@ -1048,7 +1061,7 @@ func (q *Queries) SyncAgentProfile(ctx context.Context, arg SyncAgentProfilePara
 		arg.DefaultCategoryID,
 		arg.DefaultVisibility,
 		arg.CompatibilityReady,
-		arg.HermesVersion,
+		arg.ExecutorVersion,
 		arg.LastSeenAt,
 		arg.UpdatedAt,
 		arg.ID,
@@ -1132,6 +1145,8 @@ WHERE publish_jobs.id=?5 AND publish_jobs.user_id=?6
     WHERE active_agent.id=publish_jobs.agent_id
       AND active_agent.user_id=publish_jobs.user_id
       AND active_agent.revoked_at IS NULL
+      AND active_agent.compatibility_ready=1
+      AND active_agent.executor_version LIKE 'postpilot-naver/%'
   )
 `
 

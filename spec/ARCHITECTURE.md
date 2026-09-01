@@ -17,7 +17,7 @@ postpilot/
 │  └─ internal/
 │     ├─ <context>/            one package per bounded context (§2)
 │     └─ platform/             no business meaning: config, db, rpcserver, ids, health
-├─ agent/                      macOS companion. Outbound publishing client, loopback setup, local Hermes/browser.
+├─ agent/                      macOS companion. Outbound client + loopback setup; deterministic browser driver pending.
 ├─ frontend/src/               static SPA. Vite + React 19 + TS, Tailwind v4, TanStack Router/Query, FSD (§3)
 └─ spec/                       plan · changes · jobs · code-review · policy · tech (the workflow SSOT)
 ```
@@ -35,14 +35,16 @@ Two rules cut across both sides:
 ### 1.1 Mac companion boundary
 
 The `agent/` module exists only for capabilities that must remain on the user's Mac: postpilot device credentials in
-Keychain, Naver login/profile state, local Chromium/CDP and Hermes execution. It makes authenticated outbound calls to
-the same Connect API and may serve setup UI on loopback only. It never opens a public listener or imports backend
-`internal` packages/frontend source; its generated client is a separate consumer of `proto/`.
+Keychain, Naver login/profile state, and, once the replacement driver is implemented, deterministic local Chromium/CDP
+execution. It makes authenticated outbound calls to the same Connect API and may serve setup UI on loopback only. It
+never opens a public listener or imports backend `internal` packages/frontend source; its generated client is a separate
+consumer of `proto/`.
 
 The API remains the durable source of truth for publish jobs. The agent is an executor with a lease, not another
 database or an authority over post state. Local implementation follows the same inward dependency rule: composition
-root → polling/publishing behavior and consumer-owned ports → pure state transitions, with Keychain, launchd,
-browser and Hermes as outer adapters. See [paired-local-publishing-agent](tech/paired-local-publishing-agent.md).
+root → polling/publishing behavior and consumer-owned ports → pure state transitions, with Keychain and launchd as
+outer adapters today and the planned versioned browser driver joining that boundary after implementation. See
+[paired-local-publishing-agent](tech/paired-local-publishing-agent.md).
 
 ## 2. Backend — domain-first Go
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
@@ -15,7 +14,6 @@ import (
 	"github.com/postpilot/agent/internal/browser"
 	"github.com/postpilot/agent/internal/config"
 	"github.com/postpilot/agent/internal/credentials"
-	"github.com/postpilot/agent/internal/hermes"
 	"github.com/postpilot/agent/internal/launchd"
 	"github.com/postpilot/agent/internal/postpilot"
 	"github.com/postpilot/agent/internal/publishing"
@@ -45,29 +43,13 @@ func run() error {
 	}
 	switch command {
 	case "setup":
-		pluginDir, err := findPluginDir()
-		if err != nil {
-			return err
-		}
-		hermesBinary, err := exec.LookPath("hermes")
-		if err != nil {
-			return errors.New("Hermes is not installed; run agent/packaging/install.sh first")
-		}
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
-		return (setup.Server{Paths: paths, Keychain: credentials.Keychain{}, Hermes: hermesBinary, PluginDir: pluginDir}).Run(ctx)
+		return (setup.Server{Paths: paths, Keychain: credentials.Keychain{}}).Run(ctx)
 	case "run":
-		return runAgents(paths)
+		return runAgents(paths, nil)
 	case "install":
-		binary, err := os.Executable()
-		if err != nil {
-			return err
-		}
-		if err := launchd.Install(binary, paths.Logs); err != nil {
-			return err
-		}
-		fmt.Println("LaunchAgent installed. The Mac will poll Postpilot after login.")
-		return nil
+		return installUnavailable()
 	case "uninstall":
 		if err := launchd.Uninstall(); err != nil {
 			return err
@@ -81,7 +63,16 @@ func run() error {
 	}
 }
 
-func runAgents(paths config.Paths) error {
+func installUnavailable() error {
+	return errors.New("deterministic Naver publisher is not implemented; LaunchAgent installation is disabled until Job 25 passes its release gates")
+}
+
+type publisherFactory func(config.Connection) (publishing.Publisher, error)
+
+func runAgents(paths config.Paths, newPublisher publisherFactory) error {
+	if newPublisher == nil {
+		return errors.New("deterministic Naver publisher is not implemented; finish Job 25 before starting the LaunchAgent")
+	}
 	processLock, err := singleton.Acquire(filepath.Join(paths.Root, "run.lock"))
 	if err != nil {
 		return err
@@ -119,8 +110,12 @@ func runAgents(paths config.Paths) error {
 				continue
 			}
 			client := postpilot.New(connection.APIURL, token)
-			runner := hermes.Runner{Binary: connection.HermesBinary, Profile: connection.HermesProfile, BrowserBinary: connection.BrowserBinary, BrowserProfile: connection.ProfileDir, MaxTurns: config.MaxTurns}
-			executor := publishing.Executor{API: client, Publisher: runner, JobsRoot: paths.Jobs, ConnectionID: connection.ID, HeartbeatEvery: config.Heartbeat, Timeout: config.JobTimeout, Logger: logger.With("connection_id", connection.ID)}
+			publisher, err := newPublisher(connection)
+			if err != nil {
+				logger.Error("deterministic publisher unavailable", "connection_id", connection.ID, "error", err)
+				continue
+			}
+			executor := publishing.Executor{API: client, Publisher: publisher, JobsRoot: paths.Jobs, ConnectionID: connection.ID, HeartbeatEvery: config.Heartbeat, Timeout: config.JobTimeout, Logger: logger.With("connection_id", connection.ID)}
 			supervisor := publishing.Supervisor{Client: client, Executor: executor, PollInterval: config.PollInterval, Logger: logger.With("connection_id", connection.ID), Permit: executionPermit}
 			launched[connection.ID] = struct{}{}
 			running++
@@ -170,10 +165,6 @@ func diagnostics(paths config.Paths) error {
 	if err != nil {
 		return err
 	}
-	pluginDir, err := findPluginDir()
-	if err != nil {
-		return err
-	}
 	keychain := credentials.Keychain{}
 	for _, connection := range cfg.Connections {
 		if err := config.ValidateConnection(connection); err != nil {
@@ -185,35 +176,12 @@ func diagnostics(paths config.Paths) error {
 		if _, err := os.Stat(connection.BrowserBinary); err != nil {
 			return fmt.Errorf("connection %s: browser unavailable", connection.ID)
 		}
-		if _, err := os.Stat(connection.HermesBinary); err != nil {
-			return fmt.Errorf("connection %s: Hermes unavailable", connection.ID)
-		}
 		browserSession, err := browser.Start(connection.BrowserBinary, connection.ProfileDir, "")
 		if err != nil {
 			return fmt.Errorf("connection %s: browser CDP unavailable: %w", connection.ID, err)
 		}
-		_, probeErr := hermes.Probe(context.Background(), connection.HermesBinary, connection.HermesProfile, pluginDir, browserSession.CDPURL)
 		_ = browserSession.Close()
-		if probeErr != nil {
-			return fmt.Errorf("connection %s: %w", connection.ID, probeErr)
-		}
-		fmt.Printf("%s: ready (%s, token present, browser present)\n", connection.Label, connection.HermesProfile)
+		fmt.Printf("%s: transport ready (token and browser present)\n", connection.Label)
 	}
-	return nil
-}
-
-func findPluginDir() (string, error) {
-	if configured := os.Getenv("POSTPILOT_PLUGIN_DIR"); configured != "" {
-		return filepath.Abs(configured)
-	}
-	candidates := []string{"agent/hermes/postpilot-publisher", "hermes/postpilot-publisher"}
-	if binary, err := os.Executable(); err == nil {
-		candidates = append(candidates, filepath.Join(filepath.Dir(binary), "..", "share", "postpilot-agent", "postpilot-publisher"))
-	}
-	for _, candidate := range candidates {
-		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
-			return filepath.Abs(candidate)
-		}
-	}
-	return "", errors.New("postpilot-publisher Hermes plugin directory not found")
+	return errors.New("deterministic Naver publisher compatibility probe is not implemented; Job 25 remains unarmed")
 }

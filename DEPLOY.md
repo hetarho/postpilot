@@ -237,7 +237,16 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
 Mac 동반 에이전트는 VPS에 배포하지 않는다. 저장소의 `agent/README.md` 절차로 각 Mac 사용자 계정에
 설치하고, Postpilot의 `발행 Mac` 화면에서 만든 일회용 코드로 연결한다. 설정 UI와 Chromium CDP는
 loopback에만 열리고 작업은 Mac→API 아웃바운드 폴링으로 도착한다. 설치 후 `postpilot-agent diagnostics`
-가 Keychain 토큰, 저장된 Hermes 절대 경로, 전용 브라우저/CDP와 플러그인 doctor를 모두 통과해야 한다.
+가 Keychain 토큰, 전용 브라우저/CDP, 버전이 고정된 Naver 퍼블리셔 compatibility probe를 모두
+통과해야 한다. Job 25의 결정론적 퍼블리셔와 live Naver 게이트가 완료되기 전에는 LaunchAgent를
+배포하지 않는다.
+
+폐기된 구 에이전트를 설치했던 Mac의 전환 순서는 고정한다. 먼저 migration 0015를 포함한
+백엔드를 배포해 기존 연결과 실행 중 lease를 fail-closed로 차단한다. 다음으로 각 Mac에서 새
+`agent/packaging/install.sh`를 실행해 기존 KeepAlive LaunchAgent를 bootout하고 바이너리를 교체한다.
+결정론적 퍼블리셔가 Job 25의 테스트와 live gate를 통과한 뒤에만 연결을 다시 probe/sync하고
+LaunchAgent를 설치한다. 운영 롤백은 migration 0015를 내리지 않는다. 구 서버 이미지가 잠시 필요해도
+기존 실행기를 다시 활성화하지 않으며, `outcome_unknown` 작업은 네이버에서 직접 확인한다.
 
 ## 6. 롤백
 

@@ -157,8 +157,8 @@ type cdpClient struct {
 }
 
 // ObserveNaverIdentity obtains account/category evidence directly from the one
-// Naver editor page Hermes reached through visible UI. No model output, page
-// prose, cookie, or CDP endpoint is accepted as authority or sent to Postpilot.
+// Naver editor page reached through the dedicated browser. No page prose,
+// cookie, or CDP endpoint is accepted as authority or sent to Postpilot.
 func ObserveNaverIdentity(ctx context.Context, cdpURL string) (NaverIdentity, error) {
 	target, err := discoverSinglePage(ctx, cdpURL)
 	if err != nil {

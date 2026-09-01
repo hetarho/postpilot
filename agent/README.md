@@ -1,73 +1,76 @@
 # Postpilot Mac publishing agent
 
-This separate Go runtime pairs a Postpilot account to one isolated Chromium profile and one named Hermes profile. It has no public listener: setup binds `127.0.0.1` on an OS-selected port, and queued work arrives through authenticated outbound Connect polling.
+This Go runtime is the always-on receiver for mobile publication requests. It pairs each Postpilot account with one
+Mac Keychain token and one dedicated Chromium profile. It exposes no public listener: setup binds to `127.0.0.1`, and
+the background worker obtains durable jobs through authenticated outbound polling.
 
-## Install and pair
+The publication path is intentionally deterministic:
 
-From the repository root, the normal path is one command:
-
-```sh
-./setup-hermes.sh
+```text
+mobile StartPublish
+  -> Postpilot durable queue and immutable manifest
+  -> Mac LaunchAgent outbound claim/lease
+  -> versioned local Naver DOM/Accessibility/CDP driver
+  -> synchronous commit fence
+  -> final click, URL/readback verification, terminal report
 ```
 
-It refreshes the checked-in companion and the current official Hermes install, opens local setup only when no armed
-connection exists, runs diagnostics, and installs/reloads the user LaunchAgent. A successful first pairing closes
-the temporary loopback setup server automatically, so the script can finish the remaining steps. Later Mac boots do
-not require this command: launchd starts the polling agent automatically. Run the same command again to update and
-reload the companion. Use `./setup-hermes.sh --setup` only when the local setup page is needed again for another
-connection or interactive Naver-login repair.
+There is no model or general-purpose agent in the execution path. The server sends typed manifest data, never browser
+selectors, JavaScript, shell commands, arbitrary URLs, credentials, cookies, profile paths, or CDP endpoints. Driver
+behavior ships as reviewed local code. A changed editor, ambiguous control, missing asset, login challenge, or failed
+readback must fail closed before commit or become `outcome_unknown` after the commit fence.
 
-The underlying commands remain available for diagnostics and development:
+## Transition status
+
+The previous local executor has been removed. Job 25 now tracks the deterministic Naver publisher and its fake-editor
+and authorized live-Naver verification. Until that implementation and compatibility probe are complete:
+
+- `postpilot-agent run` refuses to start before it can claim a queued job;
+- `postpilot-agent diagnostics` verifies stored credentials and the dedicated browser transport, then reports that the
+  publisher probe is unavailable;
+- `packaging/install.sh` builds the companion but does not install the LaunchAgent automatically.
+
+This fail-closed transition prevents an incomplete replacement from consuming or failing queued publication jobs.
+
+For a Mac that ran the retired package, deploy backend migration 0015 first. It disarms every legacy connection and
+terminates any old lease conservatively (`needs_attention` before the commit fence, `outcome_unknown` after it). Then
+run `./packaging/install.sh`: it boots out and removes the old KeepAlive LaunchAgent before replacing the binary. Do
+not run `postpilot-agent install` until Job 25's replacement-driver gates pass; the command is disabled in this build.
+Existing browser profiles, config, logs, and Keychain credentials are deliberately retained for account recovery.
+
+## Pairing and recovery contract
+
+Local setup discovers an installed Chromium-family browser, opens a dedicated profile for Naver login, navigates that
+same sole page to Naver's generic writer, and reads the resolved blog identity and categories through local CDP. A
+per-run nonce plus exact Host/Origin checks protect the loopback form. The raw agent token is returned once and stored
+only in macOS Keychain.
+
+Each additional Postpilot account receives separate Keychain, browser-profile, and job directories. Reopening a
+connection for login, CAPTCHA, or two-factor repair must reuse the same stable browser profile without issuing a new
+device code. Postpilot retains a pre-commit retry action; the driver never attempts to bypass a challenge.
+
+## Development commands
 
 ```sh
 ./packaging/install.sh
 "$HOME/Library/Application Support/Postpilot Agent/bin/postpilot-agent" setup
-"$HOME/Library/Application Support/Postpilot Agent/bin/postpilot-agent" install
-```
 
-Create the single-use device code in Postpilot's **발행 Mac** page. In local setup, choose the dedicated browser, sign into Naver, and complete pairing; there is no blog/category ID to copy by hand. The agent opens Naver's generic writer URL and accepts only the blog identity and categories resolved by that signed-in session together with a versioned editor root and the same sole CDP target after navigation. The loopback setup form is protected by a per-run nonce and exact local Host/Origin checks, and never trusts model output. The raw agent token is returned once and saved only in macOS Keychain. Each additional Postpilot account repeats this flow into separate Keychain, browser, Hermes and job directories; an already-running daemon detects the new armed connection within two seconds.
-
-The installer deliberately passes the official Hermes `--skip-setup` option. A global Hermes model wizard would
-configure the wrong profile; setup creates `postpilot-<connection-id>` and installs the restricted publisher plugin
-there instead. If its capability probe reports missing model authentication, configure that exact named profile with
-`hermes -p postpilot-<connection-id> setup --portal` (or `hermes -p ... model`), then submit the same recoverable setup
-again.
-
-Postpilot deliberately creates the named profile with `--no-skills` and invokes one-shot publishing with only the
-`postpilot-publisher` and `browser` toolsets. Hermes' general `memory`/`skill_manage` learning surface is therefore
-not available inside a publish run: browser publication stays reproducible and improves through reviewed plugin and
-skill releases rather than silently learning from page content or model guesses.
-
-If a queued job reports `needs_attention`, reopen local setup. Its existing active connections are listed without
-local paths or credentials; **이 연결의 네이버 로그인 열기** reopens that connection's same dedicated browser
-profile without issuing a new device code. Repair the login/challenge there, then use the retained retry action on
-Postpilot's **발행 Mac** page; it remains available even if the source post was deleted.
-
-Before a connection is armed, setup starts or attaches to the selected dedicated browser profile on an ephemeral loopback CDP port, injects its verified WebSocket URL through Hermes' documented `BROWSER_CDP_URL`, and runs `hermes doctor` plus `hermes plugins doctor ... --ci`. The absolute Hermes binary path is stored per connection so launchd does not depend on an interactive shell's `PATH`; `diagnostics` repeats the browser/CDP/plugin checks. The compatibility manifest records what was checked on 2026-09-01, but the installer always consults the official current installer and capability checks remain authoritative.
-
-```sh
-postpilot-agent diagnostics
-postpilot-agent run
-postpilot-agent uninstall
-```
-
-`uninstall` removes only the user LaunchAgent. It deliberately retains browser profiles and Keychain credentials unless the user separately confirms those destructive deletions.
-
-## Verify the companion
-
-```sh
 go test ./...
 go vet ./...
 go build ./cmd/postpilot-agent
-python3 -m unittest discover -s hermes/postpilot-publisher -p 'test_*.py'
+sh -n packaging/install.sh packaging/uninstall.sh
 ```
 
-These checks use fake browser/CDP, callback, storage, and Hermes boundaries and do not publish. A release is not considered live-verified until an explicitly authorized Naver test-blog smoke run exercises every block type and eight JPEGs across the durable commit fence.
+`uninstall` removes only the user LaunchAgent. Browser profiles, config, logs, and Keychain credentials remain until
+the user explicitly removes the account-specific data.
 
-The publisher requires one dedicated CDP page and binds its target id across URL reads, DOM calls, full accessibility
-snapshots, refs, the final control, and readback. The editor URL must identify the paired blog before the fence, the
-category ID must match its exact DOM selector, category/visibility must be selected or checked, and the readback URL
-must be that exact open Naver post. Once the
-server acknowledges the fence, exactly one button must match the versioned final accessible name and only that exact
-control from the verified snapshot may be activated, once; scheduled/generic/duplicate controls fail closed, and the
-authorization is consumed before the click and cannot be retried.
+## Release gate
+
+The deterministic publisher must bind one CDP page and target id across all DOM/accessibility operations. It must
+verify title, ordered blocks, up to eight JPEGs and captions, ordered unique tags, category, visibility, final-control
+uniqueness, and post-publication readback. The server must acknowledge `committing` before exactly one final click.
+
+Automated tests require a fake Naver editor covering normal publication, editor fingerprint drift, login challenges,
+target changes, asset mismatch, pre/post-commit process death, duplicate/late progress, and cleanup. A release is not
+live-verified until an explicitly authorized Naver test-blog smoke run exercises every canonical block type and eight
+JPEGs across the durable commit fence.

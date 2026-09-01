@@ -24,7 +24,7 @@ type Supervisor struct {
 	PollInterval time.Duration
 	Logger       *slog.Logger
 	// Permit is shared by every connection. Holding it across claim+execute keeps
-	// the first release to one browser/Hermes publication at a time.
+	// the first release to one deterministic browser publication at a time.
 	Permit chan struct{}
 }
 

@@ -80,8 +80,7 @@ export const publishing = {
   },
   agents: {
     title: 'Publishing Macs',
-    description:
-      'Each account uses a separate Mac token, Hermes profile, and dedicated browser profile.',
+    description: 'Each account uses a separate Mac token and dedicated browser profile.',
     list: 'Connections',
     loadFailed: 'Could not load the connections.',
     empty: 'No Macs are connected yet.',

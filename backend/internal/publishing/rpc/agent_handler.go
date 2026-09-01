@@ -35,7 +35,7 @@ func (h *AgentHandler) SyncAgentProfile(ctx context.Context, req *connect.Reques
 	for _, category := range req.Msg.GetCategories() {
 		categories = append(categories, publishing.Category{ID: category.GetId(), Name: category.GetName()})
 	}
-	updated, err := h.service.SyncAgent(ctx, agent, publishing.ProfileUpdate{PlatformAccountID: req.Msg.GetPlatformAccountId(), PlatformAccountLabel: req.Msg.GetPlatformAccountLabel(), BrowserLabel: req.Msg.GetBrowserLabel(), Categories: categories, DefaultCategoryID: req.Msg.GetDefaultCategoryId(), DefaultVisibility: fromProtoVisibility(req.Msg.GetDefaultVisibility()), CompatibilityReady: req.Msg.GetCompatibilityReady(), HermesVersion: req.Msg.GetHermesVersion()})
+	updated, err := h.service.SyncAgent(ctx, agent, publishing.ProfileUpdate{PlatformAccountID: req.Msg.GetPlatformAccountId(), PlatformAccountLabel: req.Msg.GetPlatformAccountLabel(), BrowserLabel: req.Msg.GetBrowserLabel(), Categories: categories, DefaultCategoryID: req.Msg.GetDefaultCategoryId(), DefaultVisibility: fromProtoVisibility(req.Msg.GetDefaultVisibility()), CompatibilityReady: req.Msg.GetCompatibilityReady(), ExecutorVersion: req.Msg.GetExecutorVersion()})
 	if err != nil {
 		return nil, toConnectError(err)
 	}

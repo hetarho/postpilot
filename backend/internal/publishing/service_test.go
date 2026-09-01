@@ -102,6 +102,8 @@ type fakeStore struct {
 	failedStatus     Status
 	precommitFailure Failure
 	commitFailure    Failure
+	syncUpdate       ProfileUpdate
+	syncCalls        int
 }
 
 func (f *fakeStore) CreatePairing(_ context.Context, hash, _, _ string, _, _ time.Time, _ int) error {
@@ -137,7 +139,9 @@ func (f *fakeStore) ListAgents(context.Context, string) ([]Agent, error) {
 func (f *fakeStore) UpdateAgent(context.Context, string, string, string, string, Visibility, time.Time) (Agent, error) {
 	return f.agent, nil
 }
-func (f *fakeStore) SyncAgent(context.Context, string, string, ProfileUpdate, time.Time) (Agent, error) {
+func (f *fakeStore) SyncAgent(_ context.Context, _, _ string, update ProfileUpdate, _ time.Time) (Agent, error) {
+	f.syncUpdate = update
+	f.syncCalls++
 	return f.agent, nil
 }
 func (f *fakeStore) RevokeAgent(context.Context, string, string, time.Time) error { return nil }
@@ -239,7 +243,21 @@ func (f *fakeStore) TerminalJobsWithAssets(context.Context) ([]string, error) {
 }
 
 func readyAgent() Agent {
-	return Agent{ID: "agent", UserID: "alice", Platform: PlatformNaverBlog, PlatformAccountID: "my-blog", BrowserLabel: "Chrome", Categories: []Category{{ID: "daily", Name: "일상"}}, DefaultCategoryID: "daily", DefaultVisibility: VisibilityPublic, CompatibilityReady: true}
+	return Agent{ID: "agent", UserID: "alice", Platform: PlatformNaverBlog, PlatformAccountID: "my-blog", BrowserLabel: "Chrome", Categories: []Category{{ID: "daily", Name: "일상"}}, DefaultCategoryID: "daily", DefaultVisibility: VisibilityPublic, CompatibilityReady: true, ExecutorVersion: "postpilot-naver/1.0.0"}
+}
+
+func TestAgentReadyRequiresDeterministicExecutorVersion(t *testing.T) {
+	agent := readyAgent()
+	for _, version := range []string{"", "0.20.6", "other/1.0.0"} {
+		agent.ExecutorVersion = version
+		if agent.Ready() {
+			t.Fatalf("legacy executor %q made agent ready", version)
+		}
+	}
+	agent.ExecutorVersion = "postpilot-naver/1.0.0"
+	if !agent.Ready() {
+		t.Fatal("deterministic executor did not make complete profile ready")
+	}
 }
 
 func startFixture() PostSnapshot {
@@ -254,6 +272,83 @@ func newStartService(store *fakeStore, posts *fakePosts, staging *fakeStaging) *
 	service.clock = fakeClock{now: time.Date(2026, 8, 30, 12, 0, 0, 0, time.UTC)}
 	service.tokens = &fakeTokens{id: "job", secrets: []string{"secret"}}
 	return service
+}
+
+func TestRetiredExecutorCannotMutateAnExistingLease(t *testing.T) {
+	agent := readyAgent()
+	agent.ExecutorVersion = "legacy-0.20"
+	service := newStartService(&fakeStore{}, &fakePosts{}, &fakeStaging{})
+
+	checks := []struct {
+		name string
+		act  func() error
+	}{
+		{name: "renew", act: func() error {
+			_, err := service.Renew(context.Background(), agent, "job", "lease")
+			return err
+		}},
+		{name: "progress", act: func() error {
+			_, err := service.Progress(context.Background(), agent, "job", "lease", StagePreparing, 2)
+			return err
+		}},
+		{name: "complete", act: func() error {
+			_, err := service.Complete(context.Background(), agent, "job", "lease", 2, "https://blog.naver.com/my-blog/1")
+			return err
+		}},
+		{name: "fail", act: func() error {
+			_, err := service.Fail(context.Background(), agent, "job", "lease", 2, FailureEditorChanged, "detail")
+			return err
+		}},
+	}
+	for _, check := range checks {
+		t.Run(check.name, func(t *testing.T) {
+			if err := check.act(); !errors.Is(err, ErrAgentNotReady) {
+				t.Fatalf("retired executor error = %v", err)
+			}
+		})
+	}
+}
+
+func TestSyncAgentRequiresDeterministicExecutorVersionBeforeReady(t *testing.T) {
+	store := &fakeStore{agent: readyAgent()}
+	service := newStartService(store, &fakePosts{}, &fakeStaging{})
+	update := ProfileUpdate{
+		PlatformAccountID: "my-blog", BrowserLabel: "Chrome",
+		Categories: []Category{{ID: "daily", Name: "일상"}}, DefaultCategoryID: "daily",
+		DefaultVisibility: VisibilityPublic, CompatibilityReady: true,
+	}
+	for _, version := range []string{"", "0.20.6", "postpilot-naver/1 with space", "other/1"} {
+		update.ExecutorVersion = version
+		if _, err := service.SyncAgent(context.Background(), store.agent, update); !errors.Is(err, ErrInvalid) {
+			t.Fatalf("executor version %q error = %v", version, err)
+		}
+	}
+	if store.syncCalls != 0 {
+		t.Fatalf("invalid executor reached store %d times", store.syncCalls)
+	}
+	update.ExecutorVersion = " postpilot-naver/1.0.0 "
+	if _, err := service.SyncAgent(context.Background(), store.agent, update); err != nil {
+		t.Fatal(err)
+	}
+	if store.syncCalls != 1 || store.syncUpdate.ExecutorVersion != "postpilot-naver/1.0.0" {
+		t.Fatalf("valid sync calls=%d update=%+v", store.syncCalls, store.syncUpdate)
+	}
+}
+
+func TestSyncAgentClearsExecutorVersionWhileUnready(t *testing.T) {
+	store := &fakeStore{agent: readyAgent()}
+	service := newStartService(store, &fakePosts{}, &fakeStaging{})
+	update := ProfileUpdate{
+		PlatformAccountID: "my-blog", BrowserLabel: "Chrome",
+		Categories: []Category{{ID: "daily", Name: "일상"}}, DefaultCategoryID: "daily",
+		DefaultVisibility: VisibilityPublic, CompatibilityReady: false, ExecutorVersion: "retired-executor",
+	}
+	if _, err := service.SyncAgent(context.Background(), store.agent, update); err != nil {
+		t.Fatal(err)
+	}
+	if store.syncUpdate.ExecutorVersion != "" {
+		t.Fatalf("unready executor version = %q", store.syncUpdate.ExecutorVersion)
+	}
 }
 
 func TestStartFreezesExactContentAndStagesImagesInBlockOrder(t *testing.T) {
@@ -763,7 +858,7 @@ func TestAgentFailureKindsBecomeOwnedDurableReasons(t *testing.T) {
 				result: Job{ID: "job", Status: test.wantStatus},
 			}
 			service := NewService(store, &fakePosts{}, &fakeStaging{}, Config{})
-			if _, err := service.Fail(context.Background(), Agent{ID: "agent", UserID: "alice"}, "job", "lease", 2, test.kind, "  redacted (17 bytes)  "); err != nil {
+			if _, err := service.Fail(context.Background(), readyAgent(), "job", "lease", 2, test.kind, "  redacted (17 bytes)  "); err != nil {
 				t.Fatal(err)
 			}
 			if store.failedStatus != test.wantStatus || store.precommitFailure.Reason != test.wantReason {

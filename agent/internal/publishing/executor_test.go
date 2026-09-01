@@ -16,7 +16,6 @@ import (
 	"time"
 
 	postpilotv1 "github.com/postpilot/agent/internal/gen/postpilot/v1"
-	"github.com/postpilot/agent/internal/hermes"
 )
 
 type progressCall struct {
@@ -45,10 +44,10 @@ func (f *fakeAPI) Fail(_ context.Context, _, _ string, _ int64, kind postpilotv1
 	return nil
 }
 
-type publisherFunc func(context.Context, string, string, string, string) (hermes.Result, error)
+type publisherFunc func(context.Context, string, Reporter) (Result, error)
 
-func (f publisherFunc) Run(ctx context.Context, handle, dir, callback, token string) (hermes.Result, error) {
-	return f(ctx, handle, dir, callback, token)
+func (f publisherFunc) Run(ctx context.Context, dir string, reporter Reporter) (Result, error) {
+	return f(ctx, dir, reporter)
 }
 
 type renewalAPI struct {
@@ -68,28 +67,15 @@ func (*renewalAPI) Fail(context.Context, string, string, int64, postpilotv1.Publ
 	return nil
 }
 
-func TestCallbackPersistsCommitFenceBeforeAcknowledging(t *testing.T) {
+func TestReporterPersistsCommitFenceBeforeReturning(t *testing.T) {
 	api := &fakeAPI{}
-	callback, err := newCallback(api, "job", "lease", "secret", 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer callback.Close()
-	stages := []string{"preparing", "opening_editor", "filling_content", "uploading_photos", "committing", "verifying"}
+	reporter := newProgressReporter(api, "job", "lease", 1)
+	stages := []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageCommitting, StageVerifying}
 	for _, stage := range stages {
-		body := bytes.NewBufferString(`{"stage":"` + stage + `"}`)
-		request, _ := http.NewRequest(http.MethodPost, callback.URL()+"/progress", body)
-		request.Header.Set("Authorization", "Bearer secret")
-		request.Header.Set("Content-Type", "application/json")
-		response, err := http.DefaultClient.Do(request)
-		if err != nil {
+		if err := reporter.Advance(context.Background(), stage); err != nil {
 			t.Fatal(err)
 		}
-		response.Body.Close()
-		if response.StatusCode != http.StatusNoContent {
-			t.Fatalf("%s = %d", stage, response.StatusCode)
-		}
-		if got := api.calls[len(api.calls)-1].stage; got != callbackStages[stage] {
+		if got := api.calls[len(api.calls)-1].stage; got != publisherStages[stage] {
 			t.Fatalf("acknowledged before persistence: got %v", got)
 		}
 	}
@@ -98,83 +84,37 @@ func TestCallbackPersistsCommitFenceBeforeAcknowledging(t *testing.T) {
 	}
 }
 
-func TestCallbackRejectsUnauthorizedAndSkippedProgress(t *testing.T) {
+func TestReporterRejectsSkippedAndPostTerminalProgress(t *testing.T) {
 	api := &fakeAPI{}
-	callback, err := newCallback(api, "job", "lease", "secret", 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer callback.Close()
-	for _, test := range []struct {
-		token, stage string
-		status       int
-	}{{"wrong", "preparing", 401}, {"secret", "committing", 409}} {
-		request, _ := http.NewRequest(http.MethodPost, callback.URL()+"/progress", bytes.NewBufferString(`{"stage":"`+test.stage+`"}`))
-		request.Header.Set("Authorization", "Bearer "+test.token)
-		response, err := http.DefaultClient.Do(request)
-		if err != nil {
-			t.Fatal(err)
-		}
-		io.Copy(io.Discard, response.Body)
-		response.Body.Close()
-		if response.StatusCode != test.status {
-			t.Fatalf("%s status = %d", test.stage, response.StatusCode)
-		}
+	reporter := newProgressReporter(api, "job", "lease", 1)
+	if err := reporter.Advance(context.Background(), StageCommitting); err == nil {
+		t.Fatal("skipped progress was accepted")
 	}
 	if len(api.calls) != 0 {
 		t.Fatal("rejected transitions reached API")
 	}
-}
-
-func postLocalCallback(t *testing.T, callbackURL, token, path, body string) int {
-	t.Helper()
-	request, err := http.NewRequest(http.MethodPost, callbackURL+path, bytes.NewBufferString(body))
-	if err != nil {
+	if err := reporter.Advance(context.Background(), StagePreparing); err != nil {
 		t.Fatal(err)
 	}
-	request.Header.Set("Authorization", "Bearer "+token)
-	request.Header.Set("Content-Type", "application/json")
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		t.Fatal(err)
+	reporter.Close()
+	if err := reporter.Advance(context.Background(), StageOpeningEditor); err == nil {
+		t.Fatal("progress after terminal return was accepted")
 	}
-	io.Copy(io.Discard, response.Body)
-	response.Body.Close()
-	return response.StatusCode
+	if len(api.calls) != 1 {
+		t.Fatalf("post-terminal progress reached API: %+v", api.calls)
+	}
 }
 
-func reportAllStages(t *testing.T, callbackURL, token string) {
+func advanceAllStages(t *testing.T, ctx context.Context, reporter Reporter) {
 	t.Helper()
-	for _, stage := range []string{"preparing", "opening_editor", "filling_content", "uploading_photos", "committing", "verifying"} {
-		if status := postLocalCallback(t, callbackURL, token, "/progress", `{"stage":"`+stage+`"}`); status != http.StatusNoContent {
-			t.Fatalf("progress %s status = %d", stage, status)
+	for _, stage := range []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageCommitting, StageVerifying} {
+		if err := reporter.Advance(ctx, stage); err != nil {
+			t.Fatalf("progress %s: %v", stage, err)
 		}
 	}
 }
 
-func TestCallbackRecordsOnlyAuthenticatedTerminalResultAfterReadback(t *testing.T) {
-	callback, err := newCallback(&fakeAPI{}, "job", "lease", "secret", 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer callback.Close()
-	if status := postLocalCallback(t, callback.URL(), "wrong", "/finish", `{"status":"failed"}`); status != http.StatusUnauthorized {
-		t.Fatalf("unauthorized finish status = %d", status)
-	}
-	if status := postLocalCallback(t, callback.URL(), "secret", "/finish", `{"status":"published","published_url":"https://blog.naver.com/alice/1"}`); status != http.StatusConflict {
-		t.Fatalf("pre-readback finish status = %d", status)
-	}
-	reportAllStages(t, callback.URL(), "secret")
-	if status := postLocalCallback(t, callback.URL(), "secret", "/finish", `{"status":"published","published_url":"https://blog.naver.com/alice/1"}`); status != http.StatusNoContent {
-		t.Fatalf("verified finish status = %d", status)
-	}
-	result, ok := callback.Result()
-	if !ok || result.Status != "published" || result.PublishedURL != "https://blog.naver.com/alice/1" {
-		t.Fatalf("terminal result = %+v, %v", result, ok)
-	}
-}
-
-func TestExecutorIgnoresPublisherReturnUntilAuthenticatedFinish(t *testing.T) {
+func TestExecutorUsesTypedPublisherResultAfterReadback(t *testing.T) {
 	api := &fakeAPI{}
 	claim := &postpilotv1.ClaimPublishJobResponse{
 		Job: &postpilotv1.PublishJob{Id: "job", ProgressSequence: 1}, Manifest: &postpilotv1.PublishManifest{},
@@ -182,19 +122,16 @@ func TestExecutorIgnoresPublisherReturnUntilAuthenticatedFinish(t *testing.T) {
 	}
 	executor := Executor{
 		API: api, JobsRoot: t.TempDir(), ConnectionID: "connection", HeartbeatEvery: time.Second, Timeout: time.Second,
-		Publisher: publisherFunc(func(_ context.Context, _, _, callbackURL, token string) (hermes.Result, error) {
-			reportAllStages(t, callbackURL, token)
-			return hermes.Result{Status: "published", PublishedURL: "https://blog.naver.com/alice/invented"}, nil
+		Publisher: publisherFunc(func(ctx context.Context, _ string, reporter Reporter) (Result, error) {
+			advanceAllStages(t, ctx, reporter)
+			return Result{Status: "published", PublishedURL: "https://blog.naver.com/alice/real"}, nil
 		}),
 	}
 	if err := executor.Execute(context.Background(), claim); err != nil {
 		t.Fatal(err)
 	}
-	if len(api.completed) != 0 || len(api.failDetails) != 1 {
-		t.Fatalf("stdout result was accepted: completed=%v failures=%v", api.completed, api.failDetails)
-	}
-	if api.failKinds[0] != postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST {
-		t.Fatalf("post-fence exit kind = %v", api.failKinds[0])
+	if len(api.completed) != 1 || api.completed[0] != "https://blog.naver.com/alice/real" || len(api.failDetails) != 0 {
+		t.Fatalf("typed result was not authoritative: completed=%v failures=%v", api.completed, api.failDetails)
 	}
 }
 
@@ -206,13 +143,13 @@ func TestExecutorReportsSafeFailureWhenPublisherDiesBeforeCommitFence(t *testing
 	}
 	executor := Executor{
 		API: api, JobsRoot: t.TempDir(), ConnectionID: "connection", HeartbeatEvery: time.Second, Timeout: time.Second,
-		Publisher: publisherFunc(func(_ context.Context, _, _, callbackURL, token string) (hermes.Result, error) {
-			for _, stage := range []string{"preparing", "opening_editor"} {
-				if status := postLocalCallback(t, callbackURL, token, "/progress", `{"stage":"`+stage+`"}`); status != http.StatusNoContent {
-					t.Fatalf("progress %s status = %d", stage, status)
+		Publisher: publisherFunc(func(ctx context.Context, _ string, reporter Reporter) (Result, error) {
+			for _, stage := range []Stage{StagePreparing, StageOpeningEditor} {
+				if err := reporter.Advance(ctx, stage); err != nil {
+					t.Fatal(err)
 				}
 			}
-			return hermes.Result{}, errors.New("publisher crashed")
+			return Result{}, errors.New("publisher crashed")
 		}),
 	}
 	if err := executor.Execute(context.Background(), claim); err != nil {
@@ -235,7 +172,7 @@ func TestRedactedLocalDetailKeepsEmptyDiagnosticsAbsent(t *testing.T) {
 	}
 }
 
-func TestExecutorUsesAuthenticatedFinishInsteadOfPublisherReturn(t *testing.T) {
+func TestExecutorRejectsPublishedResultBeforeReadback(t *testing.T) {
 	api := &fakeAPI{}
 	claim := &postpilotv1.ClaimPublishJobResponse{
 		Job: &postpilotv1.PublishJob{Id: "job", ProgressSequence: 1}, Manifest: &postpilotv1.PublishManifest{},
@@ -243,19 +180,18 @@ func TestExecutorUsesAuthenticatedFinishInsteadOfPublisherReturn(t *testing.T) {
 	}
 	executor := Executor{
 		API: api, JobsRoot: t.TempDir(), ConnectionID: "connection", HeartbeatEvery: time.Second, Timeout: time.Second,
-		Publisher: publisherFunc(func(_ context.Context, _, _, callbackURL, token string) (hermes.Result, error) {
-			reportAllStages(t, callbackURL, token)
-			if status := postLocalCallback(t, callbackURL, token, "/finish", `{"status":"published","published_url":"https://blog.naver.com/alice/real"}`); status != http.StatusNoContent {
-				t.Fatalf("finish status = %d", status)
+		Publisher: publisherFunc(func(ctx context.Context, _ string, reporter Reporter) (Result, error) {
+			if err := reporter.Advance(ctx, StagePreparing); err != nil {
+				t.Fatal(err)
 			}
-			return hermes.Result{Status: "failed", FailureKind: "safe"}, nil
+			return Result{Status: "published", PublishedURL: "https://blog.naver.com/alice/unverified"}, nil
 		}),
 	}
 	if err := executor.Execute(context.Background(), claim); err != nil {
 		t.Fatal(err)
 	}
-	if len(api.completed) != 1 || api.completed[0] != "https://blog.naver.com/alice/real" || len(api.failDetails) != 0 {
-		t.Fatalf("authenticated result was not authoritative: completed=%v failures=%v", api.completed, api.failDetails)
+	if len(api.completed) != 0 || len(api.failKinds) != 1 || api.failKinds[0] != postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST {
+		t.Fatalf("unverified result completed=%v failure kinds=%v", api.completed, api.failKinds)
 	}
 }
 
@@ -300,7 +236,7 @@ func TestLocalManifestRemovesSignedStorageCapabilities(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bytes.Contains(data, []byte("storage.test")) || bytes.Contains(data, []byte("secret")) {
-		t.Fatalf("signed URL reached Hermes manifest: %s", data)
+		t.Fatalf("signed URL reached local publisher manifest: %s", data)
 	}
 	if original.GetAssets()[0].GetDownloadUrl() == "" {
 		t.Fatal("local manifest sanitization mutated the server claim")
@@ -328,8 +264,8 @@ func TestLeaseRenewsWhileAssetsAreStillDownloading(t *testing.T) {
 	executor := Executor{
 		API: api, JobsRoot: t.TempDir(), ConnectionID: "connection", HeartbeatEvery: 5 * time.Millisecond,
 		Timeout: time.Second,
-		Publisher: publisherFunc(func(context.Context, string, string, string, string) (hermes.Result, error) {
-			return hermes.Result{Status: "failed", FailureKind: "safe"}, nil
+		Publisher: publisherFunc(func(context.Context, string, Reporter) (Result, error) {
+			return Result{Status: "failed", FailureKind: "safe"}, nil
 		}),
 	}
 	if err := executor.Execute(context.Background(), claim); err != nil {
@@ -346,9 +282,9 @@ func TestExecutorRefusesUnsafeAdvertisedLeaseBeforeRunningPublisher(t *testing.T
 	called := false
 	executor := Executor{
 		API: &fakeAPI{}, JobsRoot: t.TempDir(), ConnectionID: "connection", HeartbeatEvery: 10 * time.Second,
-		Publisher: publisherFunc(func(context.Context, string, string, string, string) (hermes.Result, error) {
+		Publisher: publisherFunc(func(context.Context, string, Reporter) (Result, error) {
 			called = true
-			return hermes.Result{}, nil
+			return Result{}, nil
 		}),
 	}
 	claim := &postpilotv1.ClaimPublishJobResponse{
@@ -380,9 +316,9 @@ func TestLeaseRenewalFailureCancelsPublisherAndLeavesServerToRecoverLease(t *tes
 	executor := Executor{
 		API: api, JobsRoot: t.TempDir(), ConnectionID: "connection", HeartbeatEvery: 5 * time.Millisecond,
 		Timeout: time.Second, Logger: slog.New(slog.NewTextHandler(&logs, nil)),
-		Publisher: publisherFunc(func(ctx context.Context, _, _, _, _ string) (hermes.Result, error) {
+		Publisher: publisherFunc(func(ctx context.Context, _ string, _ Reporter) (Result, error) {
 			<-ctx.Done()
-			return hermes.Result{}, errors.New("secret post text /Users/alice/private.jpg")
+			return Result{}, errors.New("secret post text /Users/alice/private.jpg")
 		}),
 	}
 	claim := &postpilotv1.ClaimPublishJobResponse{

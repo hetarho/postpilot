@@ -3,7 +3,7 @@ package config
 import "testing"
 
 func TestValidateConnectionTrustAndLease(t *testing.T) {
-	valid := Connection{ID: "one", APIURL: "https://api.example.com", AgentID: "agent", KeychainAccount: "key", BrowserBinary: "/browser", ProfileDir: "/profile", HermesBinary: "/hermes", HermesProfile: "postpilot-one", LeaseTTLSeconds: 45}
+	valid := Connection{ID: "one", APIURL: "https://api.example.com", AgentID: "agent", KeychainAccount: "key", BrowserBinary: "/browser", ProfileDir: "/profile", LeaseTTLSeconds: 45}
 	if err := ValidateConnection(valid); err != nil {
 		t.Fatalf("valid connection: %v", err)
 	}

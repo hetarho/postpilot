@@ -185,9 +185,14 @@ func (s *Service) UpdateAgent(ctx context.Context, userID, agentID, label, categ
 }
 
 func (s *Service) SyncAgent(ctx context.Context, agent Agent, update ProfileUpdate) (Agent, error) {
+	update.ExecutorVersion = strings.TrimSpace(update.ExecutorVersion)
 	if strings.TrimSpace(update.PlatformAccountID) == "" || strings.TrimSpace(update.BrowserLabel) == "" ||
-		!validVisibility(update.DefaultVisibility) || !containsCategory(update.Categories, update.DefaultCategoryID) {
+		!validVisibility(update.DefaultVisibility) || !containsCategory(update.Categories, update.DefaultCategoryID) ||
+		(update.CompatibilityReady && !validExecutorVersion(update.ExecutorVersion)) {
 		return Agent{}, ErrInvalid
+	}
+	if !update.CompatibilityReady {
+		update.ExecutorVersion = ""
 	}
 	return s.store.SyncAgent(ctx, agent.UserID, agent.ID, update, s.clock.Now())
 }
@@ -459,6 +464,9 @@ func (s *Service) Claim(ctx context.Context, agent Agent) (Claim, error) {
 }
 
 func (s *Service) Renew(ctx context.Context, agent Agent, jobID, leaseToken string) (time.Time, error) {
+	if !agent.Ready() {
+		return time.Time{}, ErrAgentNotReady
+	}
 	now := s.clock.Now()
 	expires := now.Add(s.config.LeaseTTL)
 	if err := s.store.RenewLease(ctx, agent, jobID, hashToken(leaseToken), expires, now); err != nil {
@@ -468,6 +476,9 @@ func (s *Service) Renew(ctx context.Context, agent Agent, jobID, leaseToken stri
 }
 
 func (s *Service) Progress(ctx context.Context, agent Agent, jobID, leaseToken string, stage Stage, seq int64) (Job, error) {
+	if !agent.Ready() {
+		return Job{}, ErrAgentNotReady
+	}
 	current, err := s.store.OwnedJob(ctx, agent.UserID, jobID)
 	if err != nil {
 		return Job{}, err
@@ -482,6 +493,9 @@ func (s *Service) Progress(ctx context.Context, agent Agent, jobID, leaseToken s
 }
 
 func (s *Service) Complete(ctx context.Context, agent Agent, jobID, leaseToken string, seq int64, publishedURL string) (Job, error) {
+	if !agent.Ready() {
+		return Job{}, ErrAgentNotReady
+	}
 	current, err := s.store.OwnedJob(ctx, agent.UserID, jobID)
 	if err != nil {
 		return Job{}, err
@@ -506,6 +520,9 @@ func (s *Service) Complete(ctx context.Context, agent Agent, jobID, leaseToken s
 }
 
 func (s *Service) Fail(ctx context.Context, agent Agent, jobID, leaseToken string, seq int64, kind FailureKind, detail string) (Job, error) {
+	if !agent.Ready() {
+		return Job{}, ErrAgentNotReady
+	}
 	current, err := s.store.OwnedJob(ctx, agent.UserID, jobID)
 	if err != nil {
 		return Job{}, err
