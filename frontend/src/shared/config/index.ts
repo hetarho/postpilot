@@ -82,6 +82,15 @@ export const REVISION_INSTRUCTION_MAX_CHARS = 500
  *  content column instead of floating against the glass. */
 export const POPOVER_VIEWPORT_GUTTER_PX = 16
 
+/** The `mt-2` / `mb-2` a popover panel keeps between itself and its trigger, as a number, so the
+ *  height measurement can subtract the gap the CSS is about to add. */
+export const POPOVER_TRIGGER_GAP_PX = 8
+
+/** The shortest a popover panel is squeezed to before it stops honouring the room it measured.
+ *  Below roughly three rows a scroller is worse than a panel that overhangs the viewport edge a
+ *  little, and a trigger that close to the edge is a layout bug to fix at the call site. */
+export const POPOVER_MIN_PANEL_PX = 160
+
 /** How long successful clipboard feedback remains visible. */
 export const COPY_FEEDBACK_MS = 1_500
 

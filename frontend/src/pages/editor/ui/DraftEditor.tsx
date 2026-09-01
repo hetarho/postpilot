@@ -37,7 +37,7 @@ import { VoiceLearningPanel, useVoiceLearning } from '@/features/finalize-post'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
-import { reassignmentBlocker } from '@/features/select-post-voice'
+import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import {
   ActionBar,
   Badge,
@@ -48,6 +48,7 @@ import {
   Textarea,
   Typography,
   typographyStyles,
+  type PopoverHandle,
 } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { ExportPanel } from '@/widgets/export-panel'
@@ -177,6 +178,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   // It is adjusted DURING RENDER rather than from an effect — an effect would paint one frame
   // carrying the value the server has already moved past.
   const [targetLength, setTargetLength] = useState(post?.targetLength)
+  const briefRef = useRef<PopoverHandle>(null)
   const [serverTargetLength, setServerTargetLength] = useState(post?.targetLength)
   if (serverTargetLength !== post?.targetLength) {
     setServerTargetLength(post?.targetLength)
@@ -190,14 +192,13 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
 
   // Everything the next AI run is given, in one surface. Every callback goes through the autosave
   // queue for an existing post, and through local state for a draft the server has not created.
+  //
+  // The ref is how 글 생성's empty state offers a way IN: with no active 작성 모델 chosen there is
+  // nothing to press in the bar, and this surface is the answer.
   const brief = (
     <GenerationBrief
       ownerId={ownerId}
-      voiceId={voiceId}
-      currentVoice={post?.voice}
-      voiceBlocked={post ? reassignmentBlocker(post) : ''}
-      confirmVoiceChange={Boolean(post)}
-      onVoiceSelect={post ? autosave.reassign : setNewVoiceId}
+      ref={briefRef}
       purposeId={purposeId}
       currentPurpose={post?.purpose}
       jobRunning={Boolean(post?.activeJob && !isTerminal(post.activeJob))}
@@ -222,6 +223,31 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           : undefined
       }
     />
+  )
+
+  // The 말투 rides the dock's own surface beside the brief's glyph, not inside it: a wrong voice
+  // silently ruins a draft, so it is the one part of the brief that must be readable — and
+  // changeable — without opening anything (policy/posts.md).
+  const voiceSelect = (
+    <PostVoiceSelect
+      ownerId={ownerId}
+      value={voiceId}
+      current={post?.voice}
+      blocked={post ? reassignmentBlocker(post) : ''}
+      confirm={Boolean(post)}
+      onSelect={post ? autosave.reassign : setNewVoiceId}
+      className="min-w-0 flex-1"
+    />
+  )
+
+  // `items-start` so the glyph stays level with the listbox when the field grows a hint or an
+  // error underneath it; `min-w-0` on the field so a long voice name truncates inside the trigger
+  // instead of pushing the glyph off a 320px screen (§8.5).
+  const dockHeader = (
+    <div className="flex items-start gap-2">
+      {voiceSelect}
+      {brief}
+    </div>
   )
 
   // `flex-1 flex-col` here plus `mt-auto` on the dock is what puts the bar at the BOTTOM of a
@@ -266,7 +292,8 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           onStepChange={setStep}
           titleField={titleField}
           memoField={memoField}
-          brief={brief}
+          dockHeader={dockHeader}
+          onOpenBrief={() => briefRef.current?.open()}
           targetLength={targetLength}
           onTitleFinalized={setTitle}
           beforeStart={autosave.flush}
@@ -280,9 +307,9 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           {memoField}
           <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
           <EditorVoiceWarning ownerId={ownerId} voice={voice} />
-          {/* A draft with no post yet has no committing action, but the brief is still where its
-              말투 is chosen — and that choice has to be reachable before the first word is typed. */}
-          <EditorDock saveState={autosave.state}>{brief}</EditorDock>
+          {/* A draft with no post yet has no committing action, but its 말투 and the rest of the
+              brief still have to be reachable before the first word is typed. */}
+          <EditorDock saveState={autosave.state} header={dockHeader} />
         </>
       )}
     </main>
@@ -423,22 +450,36 @@ function EmptyProfileWarning({ ownerId, voiceId }: { ownerId: string; voiceId: s
  *  It is mounted as the LAST child of `main` on purpose: a `sticky bottom-*` box is only pinned
  *  while its containing block still extends below it, so anywhere earlier in the flow it would
  *  scroll away with the section it sat in. */
-function EditorDock({ saveState, children }: { saveState: SaveState; children?: ReactNode }) {
+function EditorDock({
+  saveState,
+  header,
+  children,
+}: {
+  saveState: SaveState
+  /** The bar's first row: 글 생성 puts 말투 and the writing brief's glyph here, above whatever the
+   *  step's own actions are. */
+  header?: ReactNode
+  children?: ReactNode
+}) {
   const { t } = useTranslation('posts')
   // A bar with nothing to say is not chrome (§0). `idle` is SaveStatus's deliberately empty state,
   // so a dock holding neither a save line nor a control is not rendered at all. Every step that
   // carries an action passes one, which is why 글 다듬기's dock is now always present.
-  if (saveState === 'idle' && !children) return null
+  if (saveState === 'idle' && !children && !header) return null
   return (
     <>
       {/* `mt-auto` alone can resolve to zero when the page is taller than the viewport. Keep a
           real 24px spacer as well, so the step panel never touches the dock card. */}
       <div aria-hidden className="mt-auto h-6 shrink-0" />
       <ActionBar ariaLabel={t('editor.actionAria')} className="mt-0">
-        {/* A fixed gap even while the save line is empty, so the bar does not change height — and
-            move the button out from under the thumb — as the state changes (§6). */}
         <div className="flex flex-col gap-2">
-          <SaveStatus state={saveState} />
+          {/* At `idle` the live region renders an EMPTY paragraph: no height, but a flex `gap`
+              still spends its 8px on it, which is what made the bar read as 20px of padding on
+              top against 12px underneath. `sr-only` is `position: absolute`, so the region stops
+              being a flex item and the gap goes with it — while staying MOUNTED, because a live
+              region inserted with its text already inside announces nothing (§4.3). */}
+          <SaveStatus state={saveState} className={saveState === 'idle' ? 'sr-only' : undefined} />
+          {header}
           {children}
         </div>
       </ActionBar>
@@ -477,7 +518,8 @@ function LifecycleSteps({
   onStepChange,
   titleField,
   memoField,
-  brief,
+  dockHeader,
+  onOpenBrief,
   targetLength,
   onTitleFinalized,
   beforeStart,
@@ -490,7 +532,8 @@ function LifecycleSteps({
   onStepChange: (step: EditorStep) => void
   titleField: ReactNode
   memoField: ReactNode
-  brief: ReactNode
+  dockHeader: ReactNode
+  onOpenBrief: () => void
   targetLength?: number
   /** Re-seeds the editor's local 가제 with what 확정 wrote into `posts.title`. */
   onTitleFinalized: (title: string) => void
@@ -716,7 +759,7 @@ function LifecycleSteps({
         jobNotice ||
         saveState === 'saving' ||
         saveState === 'error') && (
-        <EditorDock saveState={saveState}>
+        <EditorDock saveState={saveState} header={step === 'generate' ? dockHeader : undefined}>
           {jobNotice}
           {step === 'generate' && (
             <GenerationActions
@@ -727,7 +770,7 @@ function LifecycleSteps({
               jobPending={Boolean(jobId) && !job}
               onStarted={(id) => setStarted({ id, step: 'generate' })}
               beforeStart={beforeStart}
-              brief={brief}
+              onOpenBrief={onOpenBrief}
             />
           )}
           {step === 'refine' && result && (

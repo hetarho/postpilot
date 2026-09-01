@@ -1,43 +1,74 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
-import { POPOVER_VIEWPORT_GUTTER_PX } from '@/shared/config'
+import {
+  POPOVER_VIEWPORT_GUTTER_PX,
+  POPOVER_MIN_PANEL_PX,
+  POPOVER_TRIGGER_GAP_PX,
+} from '@/shared/config'
 import { Button } from '../button/Button'
+import type { ButtonSize } from '../button/buttonStyles'
 import { Sheet } from '../sheet/Sheet'
 import { SM_MEDIA_QUERY, useMediaQuery } from './useMediaQuery'
 
 const focusableSelector =
   'a[href], summary, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])'
 
-export function Popover({
-  label,
-  triggerLabel,
-  triggerClassName,
-  children,
-  disabled = false,
-  placement = 'above',
-  align = 'end',
-  phone = 'popover',
-  className,
-}: {
-  label: string
-  triggerLabel?: ReactNode
-  triggerClassName?: string
-  children: (close: () => void) => ReactNode
-  disabled?: boolean
-  /** Above remains the action-bar default; compact header controls explicitly open below. */
-  placement?: 'above' | 'below'
-  /** Which edge of the panel is pinned to the trigger. `end` is the action-bar default: a dock
-   *  control's panel grows leftwards, away from the viewport edge it sits nearest. */
-  align?: 'start' | 'end'
-  /** `sheet` swaps the panel for a full-bleed bottom sheet below `sm:`. A 288px panel opening
-   *  over the draft is a desktop shape borrowed by a phone; a long brief needs the whole screen
-   *  and its own scroller (design-language §7). */
-  phone?: 'popover' | 'sheet'
-  /** On the popover's ROOT, so a caller can make the trigger share a flex row. */
-  className?: string
-}) {
+/** Opens the surface from elsewhere on the page. The editor's generation empty state offers a way
+ *  into the writing brief it is blocked on, and an imperative handle keeps the popover's own state
+ *  where it belongs — the listeners that close it capture one stable `close` for their lifetime. */
+export interface PopoverHandle {
+  open: () => void
+}
+
+export const Popover = forwardRef<
+  PopoverHandle,
+  {
+    label: string
+    triggerLabel?: ReactNode
+    /** `icon` for a glyph-only trigger. `label` is already the button's `aria-label`, so the
+     *  control keeps its name — and the panel keeps its heading — with no visible text. */
+    triggerSize?: ButtonSize
+    triggerClassName?: string
+    children: (close: () => void) => ReactNode
+    disabled?: boolean
+    /** Above remains the action-bar default; compact header controls explicitly open below. */
+    placement?: 'above' | 'below'
+    /** Which edge of the panel is pinned to the trigger. `end` is the action-bar default: a dock
+     *  control's panel grows leftwards, away from the viewport edge it sits nearest. */
+    align?: 'start' | 'end'
+    /** `sheet` swaps the panel for a full-bleed bottom sheet below `sm:`. A 288px panel opening
+     *  over the draft is a desktop shape borrowed by a phone; a long brief needs the whole screen
+     *  and its own scroller (design-language §7). */
+    phone?: 'popover' | 'sheet'
+    /** On the popover's ROOT, so a caller can make the trigger share a flex row. */
+    className?: string
+  }
+>(function Popover(
+  {
+    label,
+    triggerLabel,
+    triggerSize,
+    triggerClassName,
+    children,
+    disabled = false,
+    placement = 'above',
+    align = 'end',
+    phone = 'popover',
+    className,
+  },
+  ref,
+) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   const id = useId()
@@ -54,13 +85,28 @@ export function Popover({
     setOpen(false)
   }
 
-  // The panel is anchored to the trigger, and a trigger can sit anywhere along the width. Nothing
-  // in CSS knows where that puts a fixed-width panel, so the overflow is measured and corrected
-  // here — inside the viewport gutters, on whichever side it ran past.
+  useImperativeHandle(ref, () => ({ open: () => setOpen(true) }), [])
+
+  // The panel is anchored to the trigger, and a trigger can sit anywhere in the viewport. Nothing
+  // in CSS knows where, so both bounds are measured here.
+  //
+  // HEIGHT first: the panel opens into the gap between the trigger and the edge it grows toward,
+  // and a `dvh`-based token can only guess at that gap. A tall surface — the whole writing brief —
+  // has to scroll inside the gap it actually has, because the part that runs past the viewport
+  // edge is unreachable: the page behind is scroll-locked on a phone and the panel is anchored to
+  // a docked bar that does not move on a pointer. The floor keeps the panel usable rather than
+  // squeezing it to a sliver when the trigger sits almost against that edge.
   useLayoutEffect(() => {
     const panel = panelRef.current
-    if (!open || asSheet || !panel) return
+    const trigger = triggerRef.current
+    if (!open || asSheet || !panel || !trigger) return
     panel.style.transform = ''
+    const anchor = trigger.getBoundingClientRect()
+    const room =
+      placement === 'above'
+        ? anchor.top - POPOVER_TRIGGER_GAP_PX - POPOVER_VIEWPORT_GUTTER_PX
+        : window.innerHeight - anchor.bottom - POPOVER_TRIGGER_GAP_PX - POPOVER_VIEWPORT_GUTTER_PX
+    panel.style.maxHeight = `${Math.max(room, POPOVER_MIN_PANEL_PX)}px`
     const rect = panel.getBoundingClientRect()
     if (!rect.width) return
     let shift = 0
@@ -69,7 +115,7 @@ export function Popover({
     const overflowLeft = POPOVER_VIEWPORT_GUTTER_PX - (rect.left + shift)
     if (overflowLeft > 0) shift += overflowLeft
     if (shift) panel.style.transform = `translateX(${shift}px)`
-  }, [asSheet, open])
+  }, [asSheet, open, placement])
 
   useEffect(() => {
     if (!open || asSheet) return
@@ -132,6 +178,7 @@ export function Popover({
     <Button
       ref={triggerRef}
       variant="secondary"
+      size={triggerSize}
       aria-label={label}
       aria-haspopup="dialog"
       aria-expanded={open}
@@ -197,4 +244,4 @@ export function Popover({
       )}
     </div>
   )
-}
+})

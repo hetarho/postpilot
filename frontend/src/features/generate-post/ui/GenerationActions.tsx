@@ -1,5 +1,7 @@
-import { forwardRef, useCallback, useImperativeHandle, useState, type ReactNode } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { clsx } from 'clsx'
+import { Link } from '@tanstack/react-router'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
 import {
@@ -21,7 +23,9 @@ import { useStartGeneration } from '../api/useStartGeneration'
 import { useStartWriteExperiment } from '../api/useStartWriteExperiment'
 import {
   comparisonGenerationPreconditions,
+  isSetupBlocker,
   ordinaryGenerationPreconditions,
+  setupBlockerTarget,
   type GenerationModelSelection,
 } from '../model/preconditions'
 
@@ -41,13 +45,13 @@ export const GenerationActions = forwardRef<
     jobPending?: boolean
     onStarted: (jobId: string) => void
     beforeStart?: () => Promise<void>
-    /** The writing-brief trigger, supplied by `pages/editor`. It shares the secondary row with
-     *  A/B 비교 because it is the other thing you reach for BEFORE 생성, and a feature may not
-     *  import the widget that composes five sibling features (ARCHITECTURE §3). */
-    brief?: ReactNode
+    /** Opens the writing brief, which is where the active 관찰/작성 모델 are chosen. Supplied by
+     *  `pages/editor`, which owns the brief's open state — a feature may not import the widget
+     *  that composes its siblings (ARCHITECTURE §3). */
+    onOpenBrief?: () => void
   }
 >(function GenerationActions(
-  { post, targetLength, activeJob, jobPending = false, onStarted, beforeStart, brief },
+  { post, targetLength, activeJob, jobPending = false, onStarted, beforeStart, onOpenBrief },
   ref,
 ) {
   const { t } = useTranslation('posts')
@@ -160,27 +164,91 @@ export const GenerationActions = forwardRef<
           ? t('generation.selectionChecking')
           : ''
 
+  // Nothing this step can start yet, and the only reason is that the models have never been
+  // chosen. Two dead buttons are not an empty state (§7): the bar drops them and offers the way to
+  // the surface each missing piece is actually chosen on — the brief for the active selections,
+  // the AI 모델 page for the A/B pair. Any other blocker (a job in flight, a deleted voice, a
+  // selection still loading) keeps the ordinary disabled buttons, because waiting IS the answer.
+  const blockedOnSetup =
+    !modelPending &&
+    !busy &&
+    !pendingExperiment &&
+    isSetupBlocker(ordinary.blocker) &&
+    isSetupBlocker(ab.blocker)
+  const needsBrief =
+    blockedOnSetup &&
+    Boolean(onOpenBrief) &&
+    (setupBlockerTarget(ordinary.blocker) === 'brief' || setupBlockerTarget(ab.blocker) === 'brief')
+  const needsPair =
+    blockedOnSetup &&
+    (setupBlockerTarget(ordinary.blocker) === 'models' ||
+      setupBlockerTarget(ab.blocker) === 'models')
+
+  // One line per action, in the action's own words. Rendered ABOVE the controls in the setup
+  // state, where it is the message and the buttons are the answer to it, and below them otherwise,
+  // where it explains a control the user can already see.
+  const reasons = (className?: string) => (
+    <div className={clsx('grid gap-1 empty:hidden', className)}>
+      {(sharedReason || !ordinary.ok) && (
+        <Typography variant="label" as="p" role="status">
+          {t('generation.generateReason', {
+            reason: sharedReason || ordinary.reason,
+            interpolation: { escapeValue: false },
+          })}
+        </Typography>
+      )}
+      {(sharedReason || !ab.ok) && (
+        <Typography variant="label" as="p" role="status">
+          {t('generation.compareReason', {
+            reason: sharedReason || ab.reason,
+            // This value is another catalog sentence, never user or model data. Avoid
+            // double-escaping its slash into visible `&#x2F;` while global interpolation
+            // escaping remains enabled for untrusted values.
+            interpolation: { escapeValue: false },
+          })}
+        </Typography>
+      )}
+    </div>
+  )
+
+  if (blockedOnSetup) {
+    return (
+      <div className="grid gap-3">
+        {reasons()}
+        <div className="grid gap-3 sm:flex sm:flex-wrap sm:justify-end">
+          {needsBrief && (
+            <Button variant="secondary" onClick={onOpenBrief}>
+              {t('generation.setup.brief')}
+            </Button>
+          )}
+          {needsPair && (
+            <Link to="/ai-models" className={buttonStyles({ variant: 'secondary' })}>
+              {t('generation.setup.pair')}
+            </Link>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
-      {/* Two rows on a phone: the secondary pair shares one, and 생성 — the committing action —
-          takes the whole width of the next, closest to the thumb (§4.3). `sm:contents` dissolves
-          the pair's wrapper at the pointer breakpoint so all three sit in one row again. */}
-      <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
-        <div className="flex gap-3 sm:contents">
-          {brief}
-          <Button
-            variant="secondary"
-            className="flex-1 sm:flex-none"
-            disabled={sharedDisabled || !ab.ok}
-            pending={preparing === 'comparison' || comparison.isPending}
-            onClick={() => void start('comparison')}
-          >
-            {t('generation.compare')}
-          </Button>
-        </div>
+      {/* ONE row on a phone, halves: A/B 비교 left, 생성 — the committing action — right, which is
+          both the §4 emphasis order and the side the thumb of a right-handed one-handed grip
+          reaches first. The writing brief no longer shares this row; it is the dock's top-right
+          glyph, so the two things the step actually starts are the only full-size targets here.
+          From `sm:` up the pair right-aligns at its natural width. */}
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+        <Button
+          variant="secondary"
+          disabled={sharedDisabled || !ab.ok}
+          pending={preparing === 'comparison' || comparison.isPending}
+          onClick={() => void start('comparison')}
+        >
+          {t('generation.compare')}
+        </Button>
         <Button
           variant="cta"
-          className="w-full sm:w-auto"
           disabled={sharedDisabled || !ordinary.ok}
           pending={preparing === 'generation' || generation.isPending}
           onClick={() => void start('generation')}
@@ -188,27 +256,7 @@ export const GenerationActions = forwardRef<
           {t('generation.generate')}
         </Button>
       </div>
-      <div className="mt-2 grid gap-1">
-        {(sharedReason || !ordinary.ok) && (
-          <Typography variant="label" as="p" role="status">
-            {t('generation.generateReason', {
-              reason: sharedReason || ordinary.reason,
-              interpolation: { escapeValue: false },
-            })}
-          </Typography>
-        )}
-        {(sharedReason || !ab.ok) && (
-          <Typography variant="label" as="p" role="status">
-            {t('generation.compareReason', {
-              reason: sharedReason || ab.reason,
-              // This value is another catalog sentence, never user or model data. Avoid
-              // double-escaping its slash into visible `&#x2F;` while global interpolation
-              // escaping remains enabled for untrusted values.
-              interpolation: { escapeValue: false },
-            })}
-          </Typography>
-        )}
-      </div>
+      {reasons('mt-2')}
       {pendingExperiment && (
         <a
           href={`/ai-models/experiments/${encodeURIComponent(post.pendingExperimentId)}`}

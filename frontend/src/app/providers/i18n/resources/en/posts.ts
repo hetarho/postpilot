@@ -120,13 +120,16 @@ export const posts = {
     selectionChecking: 'Checking model selections…',
     compare: 'Generate A/B comparison',
     generate: 'Generate',
+    setup: {
+      brief: 'Choose models in writing options',
+      pair: 'Set the candidates on AI models',
+    },
     generateReason: 'Generate: {{reason}}',
     compareReason: 'A/B comparison: {{reason}}',
     reviewResult: 'Review A/B result',
     saveFailed: 'Could not save the post.',
     brief: {
       title: 'Writing options',
-      trigger: 'Options · {{voice}}',
       length: 'Target length',
     },
     options: {

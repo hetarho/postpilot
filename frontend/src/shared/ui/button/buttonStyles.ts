@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export type ButtonVariant = 'cta' | 'secondary' | 'ghost' | 'danger'
-export type ButtonSize = 'default' | 'icon'
+export type ButtonSize = 'default' | 'compact' | 'icon'
 
 // Every variant carries an `active:` treatment. Tailwind compiles `hover:` to
 // `@media (hover: hover)`, so a variant whose only fill lives behind `hover:` emits CSS a
@@ -24,9 +24,18 @@ const VARIANT_STYLES: Record<ButtonVariant, string> = {
  *  computed height, so a `py-2` control ends up with ~12px of effective vertical padding. Pairing
  *  that with `px-3` gives a 1:1 box, and because text is far wider than it is tall a 1:1 control
  *  always reads squat. `px-4` restores the ~2:1 ratio; the committing action takes one step more
- *  so it is also the physically heavier target. */
+ *  so it is also the physically heavier target.
+ *
+ *  `compact` is the ONE documented step below the 44px floor (36px, still far above the 24px WCAG
+ *  2.5.8 minimum). It exists for a low-emphasis WAY OUT that shares a dock with the reading area
+ *  it would otherwise cover — 둘 다 사용하지 않기 over an A/B draft. A committing action never takes
+ *  it. Inside a `sm:` flex row it stretches back to its siblings' height, so the shorter box is a
+ *  phone-only saving. */
 function sizeStyles(size: ButtonSize, variant: ButtonVariant): string {
   if (size === 'icon') return 'size-11 shrink-0 p-0'
+  // 36px against a 20px line box leaves 8px of effective vertical padding, so `px-4` keeps §4.2's
+  // 2 : 1 ratio rather than turning the shorter control into a square one.
+  if (size === 'compact') return 'min-h-9 px-4'
   return variant === 'cta' ? 'min-h-11 px-5' : 'min-h-11 px-4'
 }
 
@@ -43,7 +52,11 @@ export function buttonStyles({
 } = {}) {
   return twMerge(
     clsx(
-      'relative inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50',
+      // `leading-snug` rather than the 1.43 that `text-sm` carries: a button has NO vertical
+      // padding, its height IS the `min-h` floor, so the one case that decides the box is a label
+      // wrapping in a narrow column — and two 20px lines leave 2px of air inside 44px. On the
+      // single line every other button has, `items-center` makes the tighter line box invisible.
+      'relative inline-flex items-center justify-center gap-2 rounded-md text-sm leading-snug font-medium active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50',
       VARIANT_STYLES[variant],
       sizeStyles(size, variant),
       className,

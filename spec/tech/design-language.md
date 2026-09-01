@@ -501,8 +501,15 @@ bare, the memo uses a visible field well, and both grow with the page. All three
   quiet `danger` variants. `cta` uses `button-cta-*` and is the one committing action;
   `secondary` uses `button-secondary-*`; `ghost` uses `button-ghost-*`; `danger` stays quiet and
   uses `button-danger-quiet-*`, with a pressed plane on touch. The `default` and `icon` sizes are
-  both 44 px tall/wide where pressed, padded to the §4.2 ratio. A `pending` prop swaps the label
-  for a `Spinner` while holding the box and setting `aria-busy`. `buttonStyles` applies the same
+  both 44 px tall/wide where pressed, padded to the §4.2 ratio. `compact` is the one sanctioned
+  step below that floor — 36 px, still far above the 24 px WCAG 2.5.8 minimum — and is reserved for
+  a **low-emphasis way out that shares a dock with the content it would otherwise cover** (A/B
+  비교's 둘 다 사용하지 않기). A committing action never takes it, and inside a `sm:` flex row it
+  stretches back to its siblings' height, so the shorter box is a phone-only saving. A button has
+  no vertical padding at all — its height IS the `min-h` floor — so the label carries `leading-snug`:
+  the only case that decides the box is a label wrapping in a narrow column, and two 20 px lines
+  would leave 2 px of air inside 44 px. A `pending` prop swaps the label for a `Spinner` while
+  holding the box and setting `aria-busy`. `buttonStyles` applies the same
   contract to router links and the native file-input label without replacing their semantics.
   A committing action on a phone is `w-full sm:w-auto` — the full-bleed rule of §4 applied to the
   one target that matters most. No outlined or solid-danger variant is exposed until a current
@@ -594,12 +601,22 @@ bare, the memo uses a visible field well, and both grow with the page. All three
   takes arbitrary content; **`Dialog`** is `Sheet` with the confirm shape (one title, one
   explanation, cancel and confirm) fixed on top. A destructive action is confirmed through `Dialog`,
   never through `window.confirm`, which mobile browsers let the user suppress permanently.
-  **`Popover`** anchors a panel to a trigger: `align` picks the pinned edge, the panel's horizontal
-  overflow is measured and corrected back inside the page gutters (nothing in CSS knows where an
-  anchored panel's trigger sits), and `phone="sheet"` swaps the panel for a `Sheet` below `sm:` —
-  a long options surface needs the whole phone screen and its own scroller, not a 288px card over
-  the content. A press inside a modal opened FROM a popover is not a press outside it; closing
-  there would unmount the control that opened the modal.
+  **`Popover`** anchors a panel to a trigger: `align` picks the pinned edge, and BOTH of the
+  panel's bounds are measured against where that trigger actually sits, because nothing in CSS
+  knows. Horizontally the overflow is corrected back inside the page gutters. Vertically the panel
+  is capped at the room between the trigger and the edge it grows toward and scrolls inside it —
+  a `dvh` token can only guess at that room, and the part of a tall panel that runs past the edge
+  is unreachable, since the page behind it is scroll-locked on a phone and the trigger is a docked
+  bar that does not move on a pointer. The token stays as the pre-measurement ceiling, and a floor
+  (`POPOVER_MIN_PANEL_PX`) keeps a panel usable rather than squeezing it to a sliver. `phone="sheet"`
+  swaps the panel for a `Sheet` below `sm:` — a long options surface needs the whole phone screen
+  and its own scroller, not a 288px card over the content. `triggerSize` takes the `Button` sizes,
+  so a glyph-only trigger is `icon`; `label` is already the trigger's `aria-label` and the panel's
+  heading, so an icon trigger keeps its name and the closed surface still reports what it holds. A
+  `PopoverHandle` ref opens the surface from elsewhere on the page — the state stays inside the
+  primitive, where the listeners that close it capture one stable `close` for their lifetime. A
+  press inside a modal opened FROM a popover is not a press outside it; closing there would
+  unmount the control that opened the modal.
 - **Empty and loading states** are text on the page (`text-content-tertiary`) — not a card, not an
   illustration. A section that renders nothing at all is worse than an empty state: it leaves a
   gap the user reads as a bug. A skeleton mirrors the shape of the content it stands in for and is

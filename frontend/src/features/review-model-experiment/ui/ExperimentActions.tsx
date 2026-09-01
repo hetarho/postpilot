@@ -62,10 +62,12 @@ export function ExperimentActions({
   if (!hasExperimentActions(experiment)) return null
   return (
     <div className="grid gap-3">
-      {/* Stacked full-width targets on a phone: three Korean labels measure ~410px against the
-          296px the bar has at 360px, so a wrapping row became two right-aligned rows of ambiguous
-          targets 8px apart, 128px tall over the reading area (§4.1). From `sm:` up they collapse
-          back into the desktop row. The CTA is the last child in every status (§4). */}
+      {/* Full-width targets on a phone: three Korean labels measure ~410px against the 296px the
+          bar has at 360px, so a wrapping row became two right-aligned rows of ambiguous targets
+          8px apart (§4.1). One row per action is the default; the write decision's two committing
+          actions pair off into a single row of their own below, because three stacked rows of
+          chrome hide the draft the decision is about. From `sm:` up everything collapses back
+          into the desktop row. The CTA is the last child in every status (§4). */}
       <div className="grid gap-3 sm:flex sm:flex-wrap sm:justify-end">
         {(experiment.status === 'partial' || experiment.status === 'failed') && (
           <Button
@@ -77,9 +79,13 @@ export function ExperimentActions({
             {t('actions.retryFailed')}
           </Button>
         )}
+        {/* `compact` on the way out: the dock stands over the very draft the decision is about,
+            so on a phone this row is 36px of chrome instead of 44px. It stretches back to its
+            siblings' height inside the `sm:` flex row. */}
         {needsExperimentReview(experiment.status) && (
           <Button
             variant="ghost"
+            size="compact"
             disabled={actions.isPending}
             pending={pressed === 'dismiss'}
             onClick={() => run('dismiss', actions.dismiss)}
@@ -146,7 +152,13 @@ export function ExperimentActions({
           </Button>
         )}
         {canChoose && experiment.stage === 'write' && (
-          <>
+          /* The write decision is the one status that offers TWO committing actions, and stacking
+             both full-width put 100px of dock over the draft they are about. Side by side on the
+             phone — the plain apply left, the one that also moves the active model right (§4) —
+             halves that; `sm:contents` dissolves the pair back into the desktop row. 결과 적용하고
+             활성 모델로 변경 wraps to two lines in a 146px column, which the tighter line box the
+             Button primitive carries keeps inside the 44px floor. */
+          <div className="grid grid-cols-2 gap-3 sm:contents">
             <Button
               variant="secondary"
               disabled={actions.isPending || voiceWorkBlocked}
@@ -163,7 +175,7 @@ export function ExperimentActions({
             >
               {t('actions.applyAndAdopt')}
             </Button>
-          </>
+          </div>
         )}
         {experiment.status === 'decided' &&
           experiment.stage !== 'write' &&

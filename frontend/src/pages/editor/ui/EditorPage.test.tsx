@@ -35,7 +35,7 @@ async function openStep(user: ReturnType<typeof userEvent.setup>, label: string)
 /** The whole writing brief — 관찰/작성 모델, 말투, 용도, 목표 언어, 목표 분량 and the A/B link — lives
  *  behind ONE trigger in the dock now (change 12), so a test that drives any of them opens it
  *  first. The trigger names the post's current voice, hence the pattern rather than a fixed name. */
-const BRIEF_TRIGGER = /옵션|Options/i
+const BRIEF_TRIGGER = /^(글쓰기 옵션|Writing options)$/
 const GENERATE_STEP = /^(글 생성|Generate)$/
 const generateTab = () =>
   screen.queryAllByRole('tab').find((tab) => GENERATE_STEP.test(tab.textContent ?? ''))
@@ -57,6 +57,19 @@ async function openBrief(user: ReturnType<typeof userEvent.setup>) {
 async function briefField(user: ReturnType<typeof userEvent.setup>, label: string) {
   await openBrief(user)
   return screen.findByRole('combobox', { name: new RegExp(label) })
+}
+
+/** 말투 is the one part of the brief that is NOT behind the trigger: it rides the dock's own row
+ *  beside the glyph, so a wrong voice is visible without opening anything. */
+async function voiceField(user: ReturnType<typeof userEvent.setup>) {
+  // Same wait as `openBrief`: the lifecycle bar exists only once the editor has its post, and the
+  // dock row the field rides belongs to that bar's first step.
+  await waitFor(() =>
+    expect(screen.queryByRole('combobox', { name: /말투/ }) ?? generateTab()).toBeDefined(),
+  )
+  const generate = generateTab()
+  if (generate && generate.getAttribute('aria-selected') !== 'true') await user.click(generate)
+  return screen.findByRole('combobox', { name: /말투/ })
 }
 
 afterEach(() => {
@@ -1521,6 +1534,19 @@ describe('the editor lifecycle steps', () => {
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
       posts: { posts: [{ ...reviewPost, canFinalize: true }] },
+      // ① only offers 생성 once the models it needs have been chosen — this post has photos, so
+      // that is a vision 관찰 model as well as a 작성 model. With none of them chosen the bar
+      // renders the way to go and choose them instead, which is a different test.
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'seer', vision: true },
+          { providerId: 'openrouter', modelId: 'writer' },
+        ],
+        selections: [
+          { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'seer' },
+          { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+        ],
+      },
     })
 
     const dock = await screen.findByLabelText('저장 상태와 글 작업')
@@ -1542,6 +1568,32 @@ describe('the editor lifecycle steps', () => {
     await openStep(user, '글 완성')
     expect(await screen.findByRole('button', { name: '말투 학습' })).toBeInTheDocument()
     expect(screen.queryByLabelText('저장 상태와 글 작업')).not.toBeInTheDocument()
+  })
+
+  // A step that cannot start anything offers the way to set it up, not two dead buttons.
+  it('replaces ①’s actions with the routes to model setup when nothing is chosen', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, status: 'draft', images: [] }] },
+    })
+
+    const dock = await screen.findByLabelText('저장 상태와 글 작업')
+    expect(await within(dock).findByText('생성: 활성 작성 모델을 선택하세요.')).toBeInTheDocument()
+    expect(
+      within(dock).getByText('A/B 비교: 작성 A/B 모델 두 개를 선택하세요.'),
+    ).toBeInTheDocument()
+    expect(within(dock).queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
+    expect(within(dock).queryByRole('button', { name: 'A/B 비교 생성' })).not.toBeInTheDocument()
+
+    // The A/B pair is set on the models page; the active 작성 모델 is set in the brief, which this
+    // button opens rather than sending the user somewhere that cannot change it.
+    expect(within(dock).getByRole('link', { name: 'AI 모델에서 후보 설정' })).toHaveAttribute(
+      'href',
+      '/ai-models',
+    )
+    await user.click(within(dock).getByRole('button', { name: '글쓰기 옵션에서 모델 선택' }))
+    expect(await screen.findByRole('dialog', { name: '글쓰기 옵션' })).toBeInTheDocument()
   })
 
   // The memo is what 글 생성 works from, so it lives there rather than above every step.
@@ -1716,10 +1768,9 @@ describe('the step split and the content save', () => {
 
 describe('the post voice', () => {
   const AUTOSAVED = { timeout: 4_000 }
-  /** The picker lists the directory, which answers after the first paint; choose only once it has.
-   *  It lives in the writing brief now, so the surface is opened first. */
+  /** The picker lists the directory, which answers after the first paint; choose only once it has. */
   async function pickVoice(user: ReturnType<typeof userEvent.setup>, voiceId: string) {
-    const picker = await briefField(user, '말투')
+    const picker = await voiceField(user)
     await waitFor(() => expect(picker).toBeEnabled())
     await user.click(picker)
     await user.click(
@@ -1753,8 +1804,7 @@ describe('the post voice', () => {
     const draftSaves: FakeDraftSave[] = []
     const { router } = renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
 
-    expect(await briefField(user, '말투')).toHaveTextContent('기본 말투')
-    await user.keyboard('{Escape}')
+    expect(await voiceField(user)).toHaveTextContent('기본 말투')
     await user.type(screen.getByLabelText('제목'), '제주')
 
     await waitFor(
@@ -1768,8 +1818,7 @@ describe('the post voice', () => {
       targetLanguage: 'ko',
     })
     // The editor the mint mounted shows the same voice, and later saves leave it alone.
-    expect(await briefField(user, '말투')).toHaveTextContent('기본 말투')
-    await user.keyboard('{Escape}')
+    expect(await voiceField(user)).toHaveTextContent('기본 말투')
     await user.type(screen.getByLabelText('메모'), '첫날')
     await waitFor(() => expect(draftSaves).toHaveLength(2), AUTOSAVED)
     expect(draftSaves[1]).toEqual({
@@ -1805,7 +1854,7 @@ describe('the post voice', () => {
       AUTOSAVED,
     )
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/20260828-리뷰-글'))
-    expect(await briefField(user, '말투')).toHaveTextContent('리뷰')
+    expect(await voiceField(user)).toHaveTextContent('리뷰')
   })
 
   // Plan 10 A8: reassignment is confirmed, preserves the content, and clears learn eligibility.
@@ -1818,7 +1867,7 @@ describe('the post voice', () => {
       voice: { voices: TWO_VOICES },
     })
 
-    const picker = await briefField(user, '말투')
+    const picker = await voiceField(user)
     await waitFor(() => expect(picker).toHaveTextContent('기본 말투'))
     await pickVoice(user, 'voice-review')
     const dialog = await confirmDialog()
@@ -1886,7 +1935,7 @@ describe('the post voice', () => {
     await user.click(within(await confirmDialog()).getByRole('button', { name: '취소' }))
 
     expect(screen.queryByRole('dialog', { name: '말투를 바꿀까요?' })).not.toBeInTheDocument()
-    expect(await briefField(user, '말투')).toHaveTextContent('기본 말투')
+    expect(await voiceField(user)).toHaveTextContent('기본 말투')
     await new Promise((resolve) => setTimeout(resolve, 1_200))
     expect(draftSaves).toHaveLength(0)
   })
@@ -1903,7 +1952,7 @@ describe('the post voice', () => {
     })
 
     const user = userEvent.setup()
-    expect(await briefField(user, '말투')).toBeDisabled()
+    expect(await voiceField(user)).toBeDisabled()
     expect(screen.getByText('AI 작업이 끝나면 말투를 바꿀 수 있어요.')).toBeInTheDocument()
   })
 
@@ -1925,7 +1974,7 @@ describe('the post voice', () => {
     expect(alerts.map((alert) => alert.textContent).join('\n')).toContain(
       '고른 말투를 찾을 수 없어요',
     )
-    const picker = await briefField(user, '말투')
+    const picker = await voiceField(user)
     expect(picker).toHaveTextContent('기본 말투')
     expect(picker).toBeEnabled()
   })
@@ -1956,13 +2005,12 @@ describe('the post voice', () => {
       },
     })
 
-    // Named twice on purpose: in the brief's picker (as the disabled current option) and in the
-    // warning that 글 생성 renders regardless of whether the brief is open.
-    expect(await screen.findByText('삭제된 말투 · 옛 말투')).toBeInTheDocument()
-    const picker = await briefField(user, '말투')
+    // Named twice on purpose, and both are on the page from the first paint now that the picker
+    // rides the dock: the picker's closed trigger (the disabled current option) and 글 생성's own
+    // warning.
+    expect(await screen.findAllByText('삭제된 말투 · 옛 말투')).toHaveLength(2)
+    const picker = await voiceField(user)
     expect(picker).toHaveTextContent('삭제된 말투 · 옛 말투')
-    expect(screen.getAllByText('삭제된 말투 · 옛 말투')).toHaveLength(2)
-    await user.keyboard('{Escape}')
     // The reason settles once the model catalog has answered; until then it reports the wait.
     expect(
       await screen.findByText('생성: 삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
@@ -2011,7 +2059,8 @@ describe('the post voice', () => {
       },
     })
 
-    await screen.findByText('삭제된 말투 · 옛 말투')
+    // Twice from the first paint: the dock's picker names the tombstone, and 글 생성 warns about it.
+    await screen.findAllByText('삭제된 말투 · 옛 말투')
     await pickVoice(user, 'voice-review')
     await user.click(within(await confirmDialog()).getByRole('button', { name: '말투 변경' }))
 

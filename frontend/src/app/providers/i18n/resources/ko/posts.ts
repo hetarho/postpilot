@@ -115,13 +115,16 @@ export const posts = {
     selectionChecking: '모델 선택을 확인하는 중이에요.',
     compare: 'A/B 비교 생성',
     generate: '생성',
+    setup: {
+      brief: '글쓰기 옵션에서 모델 선택',
+      pair: 'AI 모델에서 후보 설정',
+    },
     generateReason: '생성: {{reason}}',
     compareReason: 'A/B 비교: {{reason}}',
     reviewResult: 'A/B 결과 확인',
     saveFailed: '글을 저장하지 못했어요.',
     brief: {
       title: '글쓰기 옵션',
-      trigger: '옵션 · {{voice}}',
       length: '목표 분량',
     },
     options: {

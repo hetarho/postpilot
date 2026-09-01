@@ -4,7 +4,7 @@ import type { SaveState } from '../model/draft-queue'
 
 /** Nothing at all while the editor is untouched: a "저장됨" on a post nobody has edited
  *  yet would claim a save that never happened. */
-export function SaveStatus({ state }: { state: SaveState }) {
+export function SaveStatus({ state, className }: { state: SaveState; className?: string }) {
   const { t } = useTranslation('common')
   const label = {
     idle: '',
@@ -20,7 +20,7 @@ export function SaveStatus({ state }: { state: SaveState }) {
     //
     // Polite, not assertive: this changes about once a second while someone types, and a
     // screen reader interrupting every keystroke would make the editor unusable.
-    <div role="status" aria-live="polite" data-state={state}>
+    <div role="status" aria-live="polite" data-state={state} className={className}>
       {state === 'error' ? (
         // A failed autosave is the only thing this screen has to say instead of a save button
         // (PRD F-2), so it takes the §2.6 notice contract rather than 12px of bare red text.

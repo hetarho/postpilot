@@ -126,13 +126,19 @@ Photo upload has its own document: [uploads.md](uploads.md).
 - **The 가제 belongs to ① alone.** It is rendered only there; from ② on the one title on screen is
   `content.title`, edited through the block editor's header. Its value and its autosave still live above the
   panels, so unmounting the field on another step cannot strand a queued save.
-- **One options surface holds the whole writing brief.** 관찰 모델 · 작성 모델 · 말투 · 용도 · 목표 언어 · 목표 분량 and
-  the A/B 후보 설정 link live behind a single trigger in ①'s dock, and nowhere else in the editor. The trigger
-  **names the post's current voice**, because a wrong voice silently ruins a draft and is the one thing a closed
-  surface must still report. Every control keeps the semantics it had: a voice reassignment still confirms and
+- **One options surface holds the writing brief, and 말투 stays outside it.** 관찰 모델 · 작성 모델 · 용도 · 목표 언어 ·
+  목표 분량 and the A/B 후보 설정 link live behind a single trigger in ①'s dock, and nowhere else in the editor. The
+  trigger is a **settings glyph at the right end of the dock's first row**. **말투 is the exception**: it sits on that
+  same row as its own dropdown, on the dock's own surface, because a wrong voice silently ruins a draft and is the one
+  thing that must be readable — and changeable — without opening anything. Every control keeps the semantics it had: a voice reassignment still confirms and
   is still blocked while a job runs, the 용도 select stays usable during a job and says the running one keeps its
   enqueued brief, the language select still shows its frozen note, and every assignment still rides the draft
   autosave queue. On a phone the surface is a bottom sheet; from `sm:` up it is a right-aligned popover.
+- **A step that cannot start anything offers the way to set it up, not a dead button.** When the only thing standing
+  between ① and a run is that the models have never been chosen, the bar drops 생성 and A/B 비교 entirely and renders
+  the per-action reason plus the route to the surface each missing piece is chosen on — the writing brief for the
+  active 관찰/작성 모델, the AI 모델 page for the A/B pair. Any other blocker (a job already running, a deleted voice, a
+  selection still loading) keeps the ordinary disabled buttons, because waiting is the answer to it.
 - Each step renders only its own panel: ① the 가제, the memo, photos, the empty-profile warning and the contact
   sheet; ② the draft as prose; ③ `말투 학습`, export and publishing. The memo is the post's own words and the input
   글 생성 works from, so it belongs to that step. Any step is selectable at any time — a step with no work yet

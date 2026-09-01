@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { deletedVoiceAIReason } from '@/entities/voice'
 import {
   comparisonGenerationPreconditions,
+  isSetupBlocker,
   ordinaryGenerationPreconditions,
+  setupBlockerTarget,
   type GenerationModelSelection,
 } from './preconditions'
 
@@ -84,6 +86,9 @@ describe('generationPreconditions', () => {
     expect(ordinaryGenerationPreconditions([], undefined, text, undefined, deleted)).toEqual({
       ok: false,
       reason: deletedVoiceAIReason(),
+      // Not a setup blocker: no route to the models fixes a tombstoned voice, so the bar keeps
+      // its disabled buttons and the reason under them.
+      blocker: 'voiceDeleted',
     })
     expect(
       comparisonGenerationPreconditions([], undefined, text, textB, undefined, deleted).ok,
@@ -99,5 +104,39 @@ describe('generationPreconditions', () => {
     )
     expect(comparisonGenerationPreconditions([], undefined, text, text, undefined).ok).toBe(false)
     expect(comparisonGenerationPreconditions([], undefined, text, textB, undefined).ok).toBe(true)
+  })
+})
+
+describe('setup blockers', () => {
+  // The editor drops its buttons and offers a route out only for the blockers a route can fix.
+  it('routes the model blockers and leaves the rest to wait', () => {
+    const missingWrite = ordinaryGenerationPreconditions([], undefined, undefined, undefined)
+    expect(isSetupBlocker(missingWrite.blocker)).toBe(true)
+    expect(setupBlockerTarget(missingWrite.blocker)).toBe('brief')
+
+    const missingPair = comparisonGenerationPreconditions([], undefined, text, undefined, undefined)
+    expect(setupBlockerTarget(missingPair.blocker)).toBe('models')
+    expect(
+      setupBlockerTarget(
+        comparisonGenerationPreconditions([], undefined, text, text, undefined).blocker,
+      ),
+    ).toBe('models')
+
+    const missingObserve = ordinaryGenerationPreconditions([image], undefined, text, undefined)
+    expect(setupBlockerTarget(missingObserve.blocker)).toBe('brief')
+
+    const running = ordinaryGenerationPreconditions([], undefined, text, { status: 'running' })
+    expect(running.blocker).toBe('activeJob')
+    expect(isSetupBlocker(running.blocker)).toBe(false)
+    expect(
+      isSetupBlocker(
+        ordinaryGenerationPreconditions([], undefined, text, undefined, { deleted: true }).blocker,
+      ),
+    ).toBe(false)
+
+    // A run that CAN start carries no blocker at all, which is not a setup state either.
+    expect(
+      isSetupBlocker(ordinaryGenerationPreconditions([], undefined, text, undefined).blocker),
+    ).toBe(false)
   })
 })

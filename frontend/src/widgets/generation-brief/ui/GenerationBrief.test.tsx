@@ -56,10 +56,6 @@ function renderBrief(overrides: Partial<Parameters<typeof GenerationBrief>[0]> =
   renderInRouter(
     <GenerationBrief
       ownerId="alice"
-      voiceId="voice-a"
-      currentVoice={{ id: 'voice-a', name: '일상 말투', deleted: false, sourceLanguage: 'ko' }}
-      confirmVoiceChange
-      onVoiceSelect={vi.fn()}
       purposeId=""
       onPurposeSelect={vi.fn()}
       targetLanguage="ko"
@@ -78,31 +74,28 @@ function renderBrief(overrides: Partial<Parameters<typeof GenerationBrief>[0]> =
 }
 
 describe('GenerationBrief', () => {
-  // A2: a wrong voice silently ruins a draft, so the closed surface still reports it.
-  it('names the post’s current voice on its closed trigger', async () => {
+  // A glyph-only trigger keeps its name: the surface it opens is what the button is called.
+  it('names the surface on its closed icon trigger', async () => {
     renderBrief()
-    expect(await screen.findByRole('button', { name: '옵션 · 일상 말투' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '글쓰기 옵션' })).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('falls back to the surface’s own name for a draft with no voice yet', async () => {
-    renderBrief({ currentVoice: undefined, voiceId: '', confirmVoiceChange: false })
-    expect(await screen.findByRole('button', { name: '글쓰기 옵션' })).toBeInTheDocument()
-  })
-
-  // A1: ONE surface holds the whole brief, in the order the run consumes it.
-  it('holds the whole writing brief in one panel', async () => {
+  // A1: ONE surface holds the whole brief, in the order the run consumes it — 말투 excepted, which
+  // rides the dock's own row beside this trigger so a wrong voice is visible without opening it.
+  it('holds the whole writing brief in one panel, without 말투', async () => {
     const user = userEvent.setup()
     renderBrief()
 
-    await user.click(await screen.findByRole('button', { name: '옵션 · 일상 말투' }))
-    const panel = screen.getByRole('dialog', { name: '옵션 · 일상 말투' })
+    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
+    const panel = screen.getByRole('dialog', { name: '글쓰기 옵션' })
 
-    for (const label of ['관찰 모델', '작성 모델', '말투', '용도', '글 언어']) {
+    for (const label of ['관찰 모델', '작성 모델', '용도', '글 언어']) {
       await waitFor(() =>
         expect(screen.getByRole('combobox', { name: new RegExp(label) })).toBeInTheDocument(),
       )
     }
+    expect(screen.queryByRole('combobox', { name: /말투/ })).not.toBeInTheDocument()
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeInTheDocument()
     expect(panel.textContent).toContain('AI 모델에서 두 후보 설정')
   })
@@ -113,8 +106,8 @@ describe('GenerationBrief', () => {
     const user = userEvent.setup()
     renderBrief({ targetLength: undefined })
 
-    await user.click(await screen.findByRole('button', { name: '옵션 · 일상 말투' }))
+    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
     expect(screen.queryByLabelText('목표 글자 수 사용')).not.toBeInTheDocument()
-    expect(await screen.findByRole('combobox', { name: /말투/ })).toBeInTheDocument()
+    expect(await screen.findByRole('combobox', { name: /용도/ })).toBeInTheDocument()
   })
 })
