@@ -6,10 +6,6 @@ export const plans = {
     master: '운영자',
     unknown: '알 수 없음',
   },
-  badge: {
-    label: '{{plan}} 플랜',
-    trigger: '플랜',
-  },
   usage: {
     heading: '오늘 사용량',
     dailyStarts: '오늘 시작한 AI 작업',

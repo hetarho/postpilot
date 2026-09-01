@@ -4,7 +4,7 @@ import { PURPOSE_LIMITS, usePurposes, type Purpose } from '@/entities/purpose'
 import { CreatePurposeForm } from '@/features/create-purpose'
 import { DeletePurposeButton } from '@/features/delete-purpose'
 import { EditablePurposeField, useUpdatePurpose } from '@/features/edit-purpose'
-import { Badge, Button, Notice } from '@/shared/ui'
+import { Badge, Button, Notice, Typography, typographyStyles } from '@/shared/ui'
 
 /** The account's 용도 briefs (plan 11). Composition only — every action is its own feature.
  *
@@ -18,10 +18,10 @@ export function PurposesPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('title', { ns: 'purposes' })}</h1>
-      <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
+      <Typography variant="display">{t('title', { ns: 'purposes' })}</Typography>
+      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'purposes' })}
-      </p>
+      </Typography>
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -37,9 +37,9 @@ export function PurposesPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <p role="status" className="text-content-tertiary mt-8 text-sm">
+        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
           {t('state.loading', { ns: 'common' })}
-        </p>
+        </Typography>
       )}
 
       {!isError && !isPending && (
@@ -48,9 +48,9 @@ export function PurposesPage() {
             <EmptyState />
           ) : (
             <section aria-labelledby="purposes-heading" className="mt-8">
-              <h2 id="purposes-heading" className="text-lg font-semibold tracking-tight">
+              <Typography variant="title" id="purposes-heading">
                 {t('page.saved', { ns: 'purposes' })}
-              </h2>
+              </Typography>
               <ul className="divide-divider mt-3 divide-y">
                 {purposes.map((purpose) => (
                   <PurposeRow key={purpose.id} ownerId={ownerId} purpose={purpose} />
@@ -60,9 +60,9 @@ export function PurposesPage() {
           )}
 
           <section aria-labelledby="create-purpose-heading" className="mt-10">
-            <h2 id="create-purpose-heading" className="text-lg font-semibold tracking-tight">
+            <Typography variant="title" id="create-purpose-heading">
               {t('page.new', { ns: 'purposes' })}
-            </h2>
+            </Typography>
             <CreatePurposeForm ownerId={ownerId} className="mt-3" />
           </section>
         </>
@@ -77,23 +77,28 @@ function EmptyState() {
   const { t } = useTranslation('purposes')
   return (
     <section aria-labelledby="purposes-empty-heading" className="mt-8">
-      <h2 id="purposes-empty-heading" className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" id="purposes-empty-heading">
         {t('page.empty')}
-      </h2>
-      <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
+      </Typography>
+      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.emptyHelp')}
-      </p>
-      <dl className="text-content-secondary mt-4 space-y-2 text-sm leading-relaxed">
+      </Typography>
+      <dl
+        className={typographyStyles({
+          variant: 'body',
+          className: 'text-content-secondary mt-4 space-y-2',
+        })}
+      >
         <div>
-          <dt className="text-content-tertiary text-xs font-medium">{t('page.name')}</dt>
+          <dt className={typographyStyles({ variant: 'label' })}>{t('page.name')}</dt>
           <dd className="text-content-primary">{t('page.exampleName')}</dd>
         </div>
         <div>
-          <dt className="text-content-tertiary text-xs font-medium">{t('create.description')}</dt>
+          <dt className={typographyStyles({ variant: 'label' })}>{t('create.description')}</dt>
           <dd>{t('page.exampleDescription')}</dd>
         </div>
         <div>
-          <dt className="text-content-tertiary text-xs font-medium">{t('create.instructions')}</dt>
+          <dt className={typographyStyles({ variant: 'label' })}>{t('create.instructions')}</dt>
           <dd className="whitespace-pre-wrap">{t('page.exampleInstructions')}</dd>
         </div>
       </dl>

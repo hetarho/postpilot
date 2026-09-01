@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient } from '@tanstack/react-query'
 import { initializeI18n, resolveLocale } from '@/app/providers/i18n'
 import { LOCALE_STORAGE_KEY } from '@/shared/lib/localization'
-import { LocaleSelect } from './LocaleSelect'
+import { LocaleMenu } from './LocaleMenu'
 
 afterEach(() => {
   initializeI18n('ko')
@@ -13,18 +13,23 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('LocaleSelect', () => {
+describe('LocaleMenu', () => {
   it('uses autonyms, persists a canonical override, and preserves focus and URL', async () => {
     history.replaceState(null, '', '/posts?view=recent#draft')
-    render(<LocaleSelect />)
-    const tabs = screen.getByRole('tablist', { name: '언어' })
-    expect(tabs).toBeInTheDocument()
+    render(<LocaleMenu />)
+    const trigger = screen.getByRole('button', { name: '언어' })
+    expect(trigger.querySelector('svg')).toHaveClass('lucide-languages')
 
-    const english = screen.getByRole('tab', { name: 'English' })
-    await userEvent.click(english)
+    await userEvent.click(trigger)
+    expect(screen.getAllByRole('menuitemradio').map((option) => option.textContent)).toEqual([
+      '한국어',
+      'English',
+    ])
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'English' }))
 
-    expect(await screen.findByRole('tab', { name: 'English', selected: true })).toHaveFocus()
-    expect(screen.getByRole('tab', { name: '한국어', selected: false })).toBeInTheDocument()
+    // The menu closes and focus returns to the trigger, now named in the new language.
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Language' })).toHaveFocus()
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('en')
     expect(document.documentElement.lang).toBe('en')
     expect(location.pathname + location.search + location.hash).toBe('/posts?view=recent#draft')
@@ -32,18 +37,19 @@ describe('LocaleSelect', () => {
     expect(resolveLocale({ navigatorLanguages: ['ko-KR'] })).toBe('en')
   })
 
-  it('is keyboard reachable and still changes in memory when storage is denied', async () => {
+  it('is keyboard operable and still changes in memory when storage is denied', async () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('denied')
     })
-    render(<LocaleSelect />)
+    render(<LocaleMenu />)
 
     await userEvent.tab()
-    const korean = screen.getByRole('tab', { name: '한국어' })
-    expect(korean).toHaveFocus()
-    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByRole('button', { name: '언어' })).toHaveFocus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('menuitemradio', { name: '한국어' })).toHaveFocus()
+    await userEvent.keyboard('{ArrowDown}{Enter}')
 
-    expect(await screen.findByRole('tab', { name: 'English', selected: true })).toBeInTheDocument()
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     expect(document.documentElement.lang).toBe('en')
   })
 
@@ -53,11 +59,11 @@ describe('LocaleSelect', () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unexpected request'))
     history.replaceState(null, '', '/voices?tab=profile#current')
 
-    const view = render(<LocaleSelect />)
-    expect(screen.getByRole('tablist', { name: 'Language' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: '한국어' }))
+    const view = render(<LocaleMenu />)
+    await userEvent.click(screen.getByRole('button', { name: 'Language' }))
+    await userEvent.click(screen.getByRole('menuitemradio', { name: '한국어' }))
 
-    expect(await screen.findByRole('tab', { name: '한국어', selected: true })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '언어' })).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('ko')
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('ko')
     expect(invalidate).not.toHaveBeenCalled()
@@ -66,9 +72,9 @@ describe('LocaleSelect', () => {
 
     view.unmount()
     initializeI18n(resolveLocale({ navigatorLanguages: ['en-US'] }))
-    render(<LocaleSelect />)
-    expect(screen.getByRole('tablist', { name: '언어' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '한국어', selected: true })).toBeInTheDocument()
-    expect(document.documentElement.lang).toBe('ko')
+    render(<LocaleMenu />)
+    const trigger = screen.getByRole('button', { name: '언어' })
+    await userEvent.click(trigger)
+    expect(screen.getByRole('menuitemradio', { name: '한국어', checked: true })).toBeInTheDocument()
   })
 })

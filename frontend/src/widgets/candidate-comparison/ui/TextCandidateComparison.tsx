@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { AppFailure } from '@/shared/api'
-import { AppFailureMessage, Badge, Notice } from '@/shared/ui'
+import { AppFailureMessage, Badge, Notice, Typography } from '@/shared/ui'
 
 export interface TextComparisonCandidate {
   id: string
@@ -27,9 +27,9 @@ export function TextCandidateComparison({
           className={`${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-surface-raised md:block md:rounded-lg md:p-4`}
         >
           <div className="flex min-h-11 items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">
+            <Typography variant="title">
               {t('comparison.candidate', { label: candidate.label })}
-            </h2>
+            </Typography>
             <Badge
               tone={
                 candidate.status === 'failed'
@@ -51,11 +51,13 @@ export function TextCandidateComparison({
               <AppFailureMessage failure={candidate.failure} />
             </Notice>
           ) : candidate.text ? (
-            <p className="mt-4 text-sm leading-relaxed whitespace-pre-wrap">
+            <Typography variant="body" className="mt-4 whitespace-pre-wrap">
               {highlight(candidate.text, candidate === first ? second?.text : first?.text)}
-            </p>
+            </Typography>
           ) : (
-            <p className="text-content-tertiary mt-4 text-sm">{t('comparison.waiting')}</p>
+            <Typography variant="body" className="text-content-tertiary mt-4">
+              {t('comparison.waiting')}
+            </Typography>
           )}
         </article>
       ))}

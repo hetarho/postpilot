@@ -1,7 +1,7 @@
 import { useId, useState, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useVoices, voiceRefLabel, type VoiceRef } from '@/entities/voice'
-import { Badge, Dialog, FieldLabel, FieldMessage, Select } from '@/shared/ui'
+import { Badge, Dialog, FieldLabel, FieldMessage, Select, Typography } from '@/shared/ui'
 import { reassignmentFailureMessage } from '../model/reassignment'
 
 interface PostVoiceSelectProps {
@@ -103,9 +103,9 @@ export function PostVoiceSelect({
         )}
       </div>
       {blocked && (
-        <p id={hintId} role="status" className="text-content-secondary mt-2 text-sm">
+        <Typography variant="label" as="p" id={hintId} role="status" className="mt-2">
           {blocked}
-        </p>
+        </Typography>
       )}
       {error && (
         <FieldMessage id={errorId} className="mt-2">

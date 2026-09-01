@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { remainingGuidelineChars } from '@/entities/guideline'
-import { Button, Editable, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
+import { Button, Editable, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 
 /** A guideline's text, read first and edited on request (design-language: read first).
  *
@@ -42,7 +42,9 @@ export function EditableGuidelineText({
     >
       {/* A plain paragraph, not FieldLabel: the read view has no control to label, and a
           `<label>` pointing at nothing is a broken association for a screen reader. */}
-      <p className="text-content-primary text-sm whitespace-pre-wrap">{value}</p>
+      <Typography variant="body" className="text-content-primary whitespace-pre-wrap">
+        {value}
+      </Typography>
     </Editable>
   )
 }
@@ -69,9 +71,12 @@ function GuidelineTextEditor({
   // `value`: while someone is typing here, their draft outranks a value arriving from a refetch.
   const [draft, setDraft] = useState(value)
   const [failed, setFailed] = useState(false)
+  const countId = `${id}-count`
   const errorId = `${id}-error`
 
   const left = remainingGuidelineChars(draft)
+  const exceeded = left < 0
+  const showSaveError = failed && Boolean(errorMessage)
   const disabled = pending || left < 0 || !draft.trim()
 
   const commit = async () => {
@@ -96,18 +101,20 @@ function GuidelineTextEditor({
         rows={3}
         autoGrow
         autoFocus
-        aria-invalid={failed || undefined}
-        aria-describedby={failed ? errorId : undefined}
+        aria-invalid={exceeded || failed || undefined}
+        aria-describedby={`${countId}${showSaveError ? ` ${errorId}` : ''}`}
         className="mt-1"
       />
-      <p
-        className={
-          left < 0 ? 'text-field-error mt-2 text-xs' : 'text-content-tertiary mt-2 text-xs'
-        }
-      >
-        {left < 0 ? t('count.exceeded', { count: -left }) : t('count.remaining', { count: left })}
-      </p>
-      {failed && errorMessage && (
+      {exceeded ? (
+        <FieldMessage id={countId} role="status" className="mt-2">
+          {t('count.exceeded', { count: -left })}
+        </FieldMessage>
+      ) : (
+        <Typography variant="meta" as="p" id={countId} className="mt-2">
+          {t('count.remaining', { count: left })}
+        </Typography>
+      )}
+      {showSaveError && (
         <FieldMessage id={errorId} className="mt-2">
           {errorMessage}
         </FieldMessage>

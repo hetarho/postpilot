@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { PLANS, planLabel, type PlanName } from '@/entities/plan'
 import type { CatalogModel, ModelRef, RecommendationSet } from '@/entities/model-catalog'
 import { refKey, sameRef, useApplyRecommendation, useModels } from '@/entities/model-catalog'
-import { AppFailureMessage, Button, Notice } from '@/shared/ui'
+import { AppFailureMessage, Button, Notice, Typography } from '@/shared/ui'
 
 export function ApplyRecommendation({ recommendation }: { recommendation: RecommendationSet }) {
   const { t } = useTranslation('models')
@@ -16,11 +16,16 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
     // card contract. On a 360px phone its padding cost 32px of a 328px column in the one region
     // §0 says content should be largest, and pushed everything below it further from the thumb.
     <div>
-      <p className="text-sm font-medium">{recommendation.label}</p>
+      <Typography variant="label" as="p" className="text-content-primary">
+        {recommendation.label}
+      </Typography>
       {/* `break-words`: the set id is a server-supplied slug (§3.2). */}
-      <p className="text-content-tertiary mt-1 text-xs break-words">
-        {recommendation.id} · {t('recommendation.description')}
-      </p>
+      <Typography variant="body" as="p" className="text-content-secondary mt-1 break-words">
+        <Typography variant="meta" as="span" mono>
+          {recommendation.id}
+        </Typography>{' '}
+        · {t('recommendation.description')}
+      </Typography>
       <Button
         variant="secondary"
         className="mt-4 w-full sm:w-auto"

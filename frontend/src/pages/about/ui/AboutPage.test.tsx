@@ -194,8 +194,9 @@ describe('the About page layout invariants', () => {
     expect(header?.className).toContain('sticky')
     const login = screen.getByRole('link', { name: '로그인' })
     expect(login.className).toContain('min-h-11')
-    const preferences = screen.getByRole('button', { name: '인터페이스 환경설정' })
-    expect(preferences.className).toMatch(/min-h-11|size-11/)
+    for (const name of ['테마', '언어']) {
+      expect(screen.getByRole('button', { name }).className).toMatch(/min-h-11|size-11/)
+    }
     // The inset is a MARGIN here: `pb-8 pb-safe-b` would collide and leave 0 on desktop.
     const footer = container.querySelector('footer')
     expect(footer?.className).toContain('mb-safe-b')
@@ -208,11 +209,13 @@ describe('the About page layout invariants', () => {
     renderAppAt('/about')
     await screen.findByRole('heading', { level: 1 })
 
-    // The wordmark is not a link on its own page, so the first stop is the preferences trigger
-    // and the second is the single CTA — nothing focusable sits between them.
-    await user.tab()
-    expect(screen.getByRole('button', { name: '인터페이스 환경설정' })).toHaveFocus()
+    // The wordmark is not a link on its own page. Login comes first, then the two menus stay at
+    // the viewport edge so their right-aligned panels cannot cross the 320px left edge.
     await user.tab()
     expect(screen.getByRole('link', { name: '로그인' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('button', { name: '테마' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('button', { name: '언어' })).toHaveFocus()
   })
 })

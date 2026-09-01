@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BlockType, type PostContent } from '@/shared/api'
+import { Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'
 import { blockKey, imageByFile } from '../model/content'
 
@@ -34,29 +35,34 @@ export function BlockList({ content, images, renderBlock, renderHeader }: BlockL
     <article aria-label={t('generatedContent')} className="mt-12 pb-12">
       {(renderHeader ?? ((rendered: ReactNode) => rendered))(
         <header>
-          <p className="text-content-tertiary text-xs font-medium tracking-wide uppercase">
+          <Typography variant="eyebrow" as="p">
             {t('draftLabel')}
-          </p>
+          </Typography>
           {/* `break-words` on every model-supplied string in this article: the global rule keeps the
             page from scrolling sideways, the local class keeps the box from being the one that
             overflows (design-language §3.2). A model routinely writes a bare URL or a model id. */}
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight break-words">
+          {/* The bare editor title is the screen's one `display`. This generated article title is
+              a nested reading section, so it keeps heading semantics without competing with the
+              page title for the top visual role (design-language §3 / Job 38 A10). */}
+          <Typography variant="title" as="h3" className="mt-1 break-words">
             {content.title}
-          </h1>
+          </Typography>
           {content.summary && (
-            <p className="text-content-secondary mt-3 text-sm leading-relaxed break-words">
+            <Typography variant="body" className="text-content-secondary mt-3 break-words">
               {content.summary}
-            </p>
+            </Typography>
           )}
           {content.tags.length > 0 && (
             <ul aria-label={t('tags')} className="mt-3 flex flex-wrap gap-2">
               {content.tags.map((tag) => (
-                <li
+                <Typography
+                  variant="meta"
+                  as="li"
                   key={tag}
-                  className="bg-surface-raised text-content-secondary rounded-sm px-2 py-1 text-xs"
+                  className="bg-surface-raised text-content-secondary rounded-sm px-2 py-1 break-words"
                 >
                   #{tag}
-                </li>
+                </Typography>
               ))}
             </ul>
           )}
@@ -71,22 +77,22 @@ export function BlockList({ content, images, renderBlock, renderHeader }: BlockL
               return wrap(
                 block,
                 index,
-                <p key={key} className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                <Typography variant="body" key={key} className="break-words whitespace-pre-wrap">
                   {block.content}
-                </p>,
+                </Typography>,
               )
             case BlockType.HEADING:
               return wrap(
                 block,
                 index,
                 block.level === 3 ? (
-                  <h3 key={key} className="pt-3 text-base font-semibold tracking-tight">
+                  <Typography variant="title" as="h5" key={key} className="pt-3 break-words">
                     {block.content}
-                  </h3>
+                  </Typography>
                 ) : (
-                  <h2 key={key} className="pt-5 text-lg font-semibold tracking-tight">
+                  <Typography variant="title" as="h4" key={key} className="pt-5 break-words">
                     {block.content}
-                  </h2>
+                  </Typography>
                 ),
               )
             case BlockType.IMAGE: {
@@ -117,9 +123,9 @@ export function BlockList({ content, images, renderBlock, renderHeader }: BlockL
                     <div className="bg-surface-recessed aspect-square w-full rounded-lg" />
                   )}
                   {block.caption && (
-                    <p className="text-content-tertiary mt-2 text-xs break-words">
+                    <Typography variant="label" as="p" className="mt-2 break-words">
                       {block.caption}
-                    </p>
+                    </Typography>
                   )}
                 </div>,
               )
@@ -128,25 +134,29 @@ export function BlockList({ content, images, renderBlock, renderHeader }: BlockL
               return wrap(
                 block,
                 index,
-                <blockquote
+                <Typography
+                  variant="body"
+                  as="blockquote"
                   key={key}
-                  className="bg-surface-recessed text-content-secondary rounded-md px-4 py-3 text-sm leading-relaxed break-words"
+                  className="bg-surface-recessed text-content-secondary rounded-md px-4 py-3 break-words"
                 >
                   {block.content}
-                </blockquote>,
+                </Typography>,
               )
             case BlockType.LIST:
               return wrap(
                 block,
                 index,
-                <ul
+                <Typography
+                  variant="body"
+                  as="ul"
                   key={key}
-                  className="list-disc space-y-1 pl-5 text-sm leading-relaxed break-words"
+                  className="list-disc space-y-1 pl-5 break-words"
                 >
                   {block.items.map((item, itemIndex) => (
                     <li key={`${item}:${itemIndex}`}>{item}</li>
                   ))}
-                </ul>,
+                </Typography>,
               )
             default:
               return null

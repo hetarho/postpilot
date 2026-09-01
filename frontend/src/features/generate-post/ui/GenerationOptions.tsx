@@ -11,6 +11,7 @@ import {
   Notice,
   Popover,
   TextField,
+  typographyStyles,
 } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
 import { useGenerationOptions } from '../api/useGenerationOptions'
@@ -54,7 +55,12 @@ export function GenerationOptions({
               .catch(() => undefined)
           }}
         >
-          <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+          <label
+            className={typographyStyles({
+              variant: 'label',
+              className: 'flex min-h-11 items-center gap-3',
+            })}
+          >
             <Checkbox checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
             {t('generation.options.useTarget', { ns: 'posts' })}
           </label>

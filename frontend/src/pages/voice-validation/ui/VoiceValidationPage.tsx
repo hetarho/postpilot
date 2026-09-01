@@ -10,7 +10,7 @@ import { voiceValidationQueryKey, voiceValidationState } from '@/entities/voice'
 import { appFailureFromConnect, appFailureFromProto, VoiceValidationService } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import { formatNumber, formatPercent } from '@/shared/lib'
-import { AppFailureMessage, Badge, Button, Notice } from '@/shared/ui'
+import { AppFailureMessage, Badge, Button, Notice, Typography, typographyStyles } from '@/shared/ui'
 
 export function VoiceValidationPage() {
   const { t } = useTranslation(['voices', 'common'])
@@ -68,14 +68,17 @@ export function VoiceValidationPage() {
       <Link
         to="/voices/$voiceId/validations"
         params={{ voiceId }}
-        className="text-link-fg inline-flex min-h-11 items-center text-sm"
+        className={typographyStyles({
+          variant: 'label',
+          className: 'text-link-fg inline-flex min-h-11 items-center',
+        })}
       >
         {t('validation.back', { ns: 'voices' })}
       </Link>
       <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-semibold">
+        <Typography variant="display">
           {t('validation.title', { ns: 'voices', version: validation.profileVersion.toString() })}
-        </h1>
+        </Typography>
         <Badge tone={status === 'done' ? 'success' : status === 'failed' ? 'danger' : 'neutral'}>
           {t(`validation.status.${status}`, { ns: 'voices' })}
         </Badge>
@@ -108,9 +111,9 @@ export function VoiceValidationPage() {
       <div className="mt-6 space-y-8">
         {validation.items.map((item, index) => (
           <article key={item.id}>
-            <h2 className="font-semibold">
+            <Typography variant="title">
               {t('validation.item', { ns: 'voices', index: index + 1 })}
-            </h2>
+            </Typography>
             {(item.failure || item.status === 'failed') && (
               <Notice tone="danger" className="mt-2">
                 <AppFailureMessage failure={appFailureFromProto(item.failure)} />
@@ -118,22 +121,26 @@ export function VoiceValidationPage() {
             )}
             <div className="mt-3 grid gap-4 md:grid-cols-2">
               <section className="bg-surface-raised rounded-lg p-4">
-                <h3 className="text-sm font-medium">
+                <Typography variant="title" as="h3">
                   {t('validation.original', { ns: 'voices' })}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{item.original}</p>
+                </Typography>
+                <Typography variant="body" className="mt-2 whitespace-pre-wrap">
+                  {item.original}
+                </Typography>
               </section>
               <section className="bg-surface-raised rounded-lg p-4">
-                <h3 className="text-sm font-medium">{t('validation.summary', { ns: 'voices' })}</h3>
-                <p className="text-content-secondary mt-2 text-sm">
+                <Typography variant="title" as="h3">
+                  {t('validation.summary', { ns: 'voices' })}
+                </Typography>
+                <Typography variant="body" className="text-content-secondary mt-2">
                   {item.neutralSummary || t('validation.generating', { ns: 'voices' })}
-                </p>
-                <h3 className="mt-4 text-sm font-medium">
+                </Typography>
+                <Typography variant="title" as="h3" className="mt-4">
                   {t('validation.rewritten', { ns: 'voices' })}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">
+                </Typography>
+                <Typography variant="body" className="mt-2 whitespace-pre-wrap">
                   {item.regenerated || t('validation.generating', { ns: 'voices' })}
-                </p>
+                </Typography>
                 {item.scores.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {item.scores.map((score) => (
@@ -153,7 +160,12 @@ export function VoiceValidationPage() {
 }
 function Placeholder({ children }: { children: ReactNode }) {
   return (
-    <main className="text-content-tertiary mx-auto w-full max-w-2xl px-4 py-10 text-sm sm:px-6">
+    <main
+      className={typographyStyles({
+        variant: 'body',
+        className: 'text-content-tertiary mx-auto w-full max-w-2xl px-4 py-10 sm:px-6',
+      })}
+    >
       {children}
     </main>
   )

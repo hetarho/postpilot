@@ -1,7 +1,15 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { remainingChars } from '@/entities/purpose'
-import { Button, Editable, FieldLabel, FieldMessage, TextField, Textarea } from '@/shared/ui'
+import {
+  Button,
+  Editable,
+  FieldLabel,
+  FieldMessage,
+  TextField,
+  Textarea,
+  Typography,
+} from '@/shared/ui'
 
 /** One read-first field of a purpose (design-language: read first, edit on request).
  *
@@ -61,10 +69,12 @@ export function EditablePurposeField({
     >
       {/* A plain paragraph, not FieldLabel: the read view has no control to label, and a
           `<label>` pointing at nothing is a broken association for a screen reader. */}
-      <p className="text-content-tertiary text-xs font-medium">{label}</p>
-      <p className="text-content-primary mt-1 text-sm whitespace-pre-wrap">
+      <Typography variant="label" as="p">
+        {label}
+      </Typography>
+      <Typography variant="body" className="text-content-primary mt-1 whitespace-pre-wrap">
         {value.trim() || <span className="text-content-tertiary">{emptyText}</span>}
-      </p>
+      </Typography>
     </Editable>
   )
 }
@@ -100,9 +110,13 @@ function PurposeFieldEditor({
   // value that arrives from a refetch or from a sibling field's save.
   const [draft, setDraft] = useState(value)
   const [failed, setFailed] = useState(false)
+  const countId = `${id}-count`
   const errorId = `${id}-error`
 
   const left = remainingChars(draft, limit)
+  const exceeded = left < 0
+  const showSaveError = failed && Boolean(errorMessage)
+  const describedBy = `${countId}${showSaveError ? ` ${errorId}` : ''}`
   const disabled = pending || left < 0 || (!optional && !draft.trim())
 
   const commit = async () => {
@@ -129,8 +143,8 @@ function PurposeFieldEditor({
           autoGrow
           autoFocus
           placeholder={placeholder}
-          aria-invalid={failed || undefined}
-          aria-describedby={failed ? errorId : undefined}
+          aria-invalid={exceeded || failed || undefined}
+          aria-describedby={describedBy}
           className="mt-1"
         />
       ) : (
@@ -142,19 +156,21 @@ function PurposeFieldEditor({
           autoComplete="off"
           enterKeyHint="done"
           placeholder={placeholder}
-          aria-invalid={failed || undefined}
-          aria-describedby={failed ? errorId : undefined}
+          aria-invalid={exceeded || failed || undefined}
+          aria-describedby={describedBy}
           className="mt-1"
         />
       )}
-      <p
-        className={
-          left < 0 ? 'text-field-error mt-2 text-xs' : 'text-content-tertiary mt-2 text-xs'
-        }
-      >
-        {left < 0 ? t('count.exceeded', { count: -left }) : t('count.remaining', { count: left })}
-      </p>
-      {failed && errorMessage && (
+      {exceeded ? (
+        <FieldMessage id={countId} role="status" className="mt-2">
+          {t('count.exceeded', { count: -left })}
+        </FieldMessage>
+      ) : (
+        <Typography variant="meta" as="p" id={countId} className="mt-2">
+          {t('count.remaining', { count: left })}
+        </Typography>
+      )}
+      {showSaveError && (
         <FieldMessage id={errorId} className="mt-2">
           {errorMessage}
         </FieldMessage>

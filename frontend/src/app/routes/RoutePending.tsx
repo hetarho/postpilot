@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Typography } from '@/shared/ui'
 
 /** Shown only when a route takes longer than TanStack's 1 s `defaultPendingMs`, so a fast
  *  connection never sees it. Route splitting made a silent wait possible where none existed:
@@ -7,8 +8,8 @@ import { useTranslation } from 'react-i18next'
 export function RoutePending() {
   const { t } = useTranslation('common')
   return (
-    <p role="status" className="text-content-tertiary mt-8 text-sm">
+    <Typography variant="body" role="status" className="text-content-tertiary mt-8">
       {t('state.loading')}
-    </p>
+    </Typography>
   )
 }

@@ -9,7 +9,7 @@ import {
   useSaveSelection,
   useStageSelection,
 } from '@/entities/model-catalog'
-import { AppFailureMessage, FieldLabel, FieldMessage, Select } from '@/shared/ui'
+import { AppFailureMessage, FieldLabel, FieldMessage, Select, Typography } from '@/shared/ui'
 
 /** The per-stage model dropdown (PRD §3.3, §6.4, F-4).
  *
@@ -91,25 +91,36 @@ export function StageModelSelect({
           data, and a touch user watching the field it just closed over is exactly who needs the
           cause (§6). The region stays mounted so it announces when it fills, and `empty:hidden`
           keeps it out of the layout while it is idle. */}
-      <p role="status" className="text-content-tertiary mt-1 text-xs empty:hidden">
+      <Typography
+        variant="body"
+        as="p"
+        role="status"
+        className="text-content-tertiary mt-1 empty:hidden"
+      >
         {save.isPending ? t('selectField.saving') : null}
-      </p>
+      </Typography>
       {unavailable && (
         // `status`, not the default `alert`: this is a standing condition of the saved value, not
         // something that just went wrong, and it renders on first paint.
-        <FieldMessage id={unavailableId} role="status" className="mt-1 text-xs">
+        <FieldMessage id={unavailableId} role="status" className="mt-1">
           {unavailable.reason}
         </FieldMessage>
       )}
       {isError && (
-        <FieldMessage id={loadErrorId} className="mt-1 text-xs">
+        <FieldMessage id={loadErrorId} className="mt-1">
           {t('selectField.loadFailed')}
         </FieldMessage>
       )}
       {save.failure && (
-        <div id={saveErrorId} role="alert" className="text-field-error mt-1 text-xs break-words">
+        <Typography
+          variant="body"
+          as="div"
+          id={saveErrorId}
+          role="alert"
+          className="text-field-error mt-1 break-words"
+        >
           <AppFailureMessage failure={save.failure} />
-        </div>
+        </Typography>
       )}
     </div>
   )

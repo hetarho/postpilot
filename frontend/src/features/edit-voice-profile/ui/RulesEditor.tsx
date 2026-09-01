@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUpdateVoiceProfile } from '@/entities/voice'
-import { Button, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
+import { Button, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 
 export function RulesEditor({
   ownerId,
@@ -34,12 +34,12 @@ export function RulesEditor({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" as="h4">
         {t('profile.customRules', { ns: 'voices' })}
-      </h2>
-      <p className="text-content-tertiary mt-1 text-xs">
+      </Typography>
+      <Typography variant="body" as="p" className="text-content-secondary mt-1">
         {t('profile.customRulesHelp', { ns: 'voices' })}
-      </p>
+      </Typography>
       <FieldLabel htmlFor={id} className="mt-4">
         {t('profile.customRules', { ns: 'voices' })}
       </FieldLabel>
@@ -57,7 +57,7 @@ export function RulesEditor({
         autoGrow
         aria-invalid={update.isError || undefined}
         aria-describedby={update.isError ? errorId : undefined}
-        className="max-h-field mt-1 leading-relaxed"
+        className="max-h-field mt-1"
       />
       {update.isError && (
         <FieldMessage id={errorId} className="mt-2">

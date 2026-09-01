@@ -6,10 +6,32 @@ import { renderAppAt } from '@/test/app'
 
 const USER = { id: 'alice' }
 
-describe('PlanUsage', () => {
-  // A9: the shell shows the tier, and every number behind it comes from GetMyPlan — nothing
-  // about a limit is known to the client until the server says it.
-  it('shows the tier and the three meters from the server, on demand', async () => {
+async function openAccountPopover(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '내 계정' }))
+  return screen.findByRole('dialog', { name: '내 계정' })
+}
+
+describe('AccountMenu', () => {
+  it('shows the avatar initial, the id, and the logout action behind one control', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts', { user: { ...USER, plan: ProtoPlan.FREE } })
+
+    const trigger = await screen.findByRole('button', { name: '내 계정' })
+    expect(trigger).toHaveClass('rounded-full', 'size-11')
+    expect(trigger).toHaveTextContent('A')
+    // The header itself carries no id text or logout button until the popover opens.
+    expect(screen.queryByText('alice')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument()
+
+    const panel = await openAccountPopover(user)
+    expect(within(panel).getByText('로그인한 계정')).toBeInTheDocument()
+    expect(within(panel).getByText('alice')).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: '로그아웃' })).toBeInTheDocument()
+  })
+
+  // Plan 17 A9: the shell shows the tier, and every number behind it comes from GetMyPlan —
+  // nothing about a limit is known to the client until the server says it.
+  it('fetches the tier and the three meters only when the popover opens', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     renderAppAt('/posts', {
@@ -32,13 +54,13 @@ describe('PlanUsage', () => {
       },
     })
 
-    const trigger = await screen.findByRole('button', { name: 'Free 플랜' })
+    await screen.findByRole('button', { name: '내 계정' })
     // The panel is what costs a request, so nothing is asked until it is opened.
     expect(calls).not.toContain('GetMyPlan')
 
-    await user.click(trigger)
-    const panel = await screen.findByRole('dialog', { name: 'Free 플랜' })
+    const panel = await openAccountPopover(user)
     expect(calls).toContain('GetMyPlan')
+    expect(within(panel).getByText('Free')).toBeInTheDocument()
 
     // Micro-USD is the wire unit; the reader sees money.
     expect(await within(panel).findByText('US$0.07 / US$0.10')).toBeInTheDocument()
@@ -52,7 +74,7 @@ describe('PlanUsage', () => {
     expect(meters[0]).toHaveAttribute('aria-valuetext', '4 / 10')
   })
 
-  // A9: an unlimited axis is stated, not drawn as an empty bar that reads as "none left".
+  // Plan 17 A9: an unlimited axis is stated, not drawn as an empty bar that reads as "none left".
   it('states unlimited for the operator tier and links the admin screen', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts', {
@@ -63,12 +85,11 @@ describe('PlanUsage', () => {
       },
     })
 
-    await user.click(await screen.findByRole('button', { name: '운영자 플랜' }))
-    const panel = await screen.findByRole('dialog', { name: '운영자 플랜' })
+    const panel = await openAccountPopover(user)
     expect(await within(panel).findByText('12 · 제한 없음')).toBeInTheDocument()
     expect(within(panel).getByText('US$4.12 · 제한 없음')).toBeInTheDocument()
     expect(within(panel).queryAllByRole('meter')).toHaveLength(0)
-    expect(within(panel).getByRole('link', { name: '계정 관리' })).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: '계정 관리' })).toHaveClass('min-h-11')
   })
 
   it('does not offer the admin screen to a tier that cannot use it', async () => {
@@ -78,8 +99,7 @@ describe('PlanUsage', () => {
       plans: { plan: ProtoPlan.MAX },
     })
 
-    await user.click(await screen.findByRole('button', { name: 'Max 플랜' }))
-    const panel = await screen.findByRole('dialog', { name: 'Max 플랜' })
+    const panel = await openAccountPopover(user)
     await within(panel).findByText('오늘 사용량')
     expect(within(panel).queryByRole('link', { name: '계정 관리' })).not.toBeInTheDocument()
   })
@@ -91,7 +111,7 @@ describe('PlanUsage', () => {
       plans: { plan: ProtoPlan.FREE, planFails: true },
     })
 
-    await user.click(await screen.findByRole('button', { name: 'Free 플랜' }))
+    await openAccountPopover(user)
     expect(await screen.findByText('사용량을 불러오지 못했어요.')).toBeInTheDocument()
   })
 })

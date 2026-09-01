@@ -7,7 +7,15 @@ import { useStageSelection } from '@/entities/model-catalog'
 import type { VoiceProfile } from '@/entities/voice'
 import { appFailureFromConnect, ModelRefSchema, VoiceValidationService } from '@/shared/api'
 import { VOICE_VALIDATION_POST_COUNT } from '@/shared/config'
-import { AppFailureMessage, Button, Checkbox, Dialog, Notice } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  Checkbox,
+  Dialog,
+  Notice,
+  Typography,
+  typographyStyles,
+} from '@/shared/ui'
 
 /** Starts a validation of ONE voice's profile against that voice's own finalized sources; the
  *  request names the voice explicitly (spec/policy/voice.md). */
@@ -46,7 +54,12 @@ export function ValidateVoiceProfile({
   }
   return (
     <section aria-label={t('validate.title')}>
-      <label className="text-content-secondary flex min-h-11 items-center gap-3 text-sm">
+      <label
+        className={typographyStyles({
+          variant: 'label',
+          className: 'flex min-h-11 items-center gap-3',
+        })}
+      >
         <Checkbox
           checked={judge}
           disabled={Boolean(blocked)}
@@ -63,9 +76,9 @@ export function ValidateVoiceProfile({
         {t('validate.action')}
       </Button>
       {missing > 0 && (
-        <p className="text-content-tertiary mt-2 text-sm">
+        <Typography variant="body" className="text-content-tertiary mt-2">
           {t('validate.missing', { count: missing })}
-        </p>
+        </Typography>
       )}
       {blocked && (
         <Notice tone="warning" role="status" className="mt-3">

@@ -26,6 +26,7 @@ import {
   Select,
   Textarea,
   TextField,
+  Typography,
 } from '@/shared/ui'
 import { useContentAutosave } from '../model/useContentAutosave'
 
@@ -94,12 +95,12 @@ export const BlockEditor = forwardRef<
   return (
     <section aria-labelledby="content-editor-heading" className="mt-10">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="content-editor-heading" className="text-lg font-semibold tracking-tight">
+        <Typography variant="title" id="content-editor-heading">
           {t('edit.refine')}
-        </h2>
-        <p role="status" className="text-content-tertiary text-sm">
+        </Typography>
+        <Typography variant="body" role="status" className="text-content-tertiary">
           {saveLabel(autosave.state)}
-        </p>
+        </Typography>
       </div>
       {autosave.state === 'conflict' && (
         <FieldMessage className="mt-2">{t('edit.conflict')}</FieldMessage>

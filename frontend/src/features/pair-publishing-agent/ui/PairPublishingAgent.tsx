@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { publishingAgentsQueryKey } from '@/entities/publishing-agent'
 import { appFailureFromConnect, publishingClientFor } from '@/shared/api'
 import { formatDateTime } from '@/shared/lib'
-import { AppFailureMessage, Button, FieldLabel, Notice, TextField } from '@/shared/ui'
+import { AppFailureMessage, Button, FieldLabel, Notice, TextField, Typography } from '@/shared/ui'
 
 export function PairPublishingAgent({ ownerId }: { ownerId: string }) {
   const { t } = useTranslation('publishing')
@@ -21,10 +21,12 @@ export function PairPublishingAgent({ ownerId }: { ownerId: string }) {
 
   return (
     <section aria-labelledby="pair-agent-heading">
-      <h2 id="pair-agent-heading" className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" id="pair-agent-heading">
         {t('pair.title')}
-      </h2>
-      <p className="text-content-secondary mt-2 text-sm leading-relaxed">{t('pair.description')}</p>
+      </Typography>
+      <Typography variant="body" className="text-content-secondary mt-2">
+        {t('pair.description')}
+      </Typography>
       <div className="mt-4">
         <FieldLabel htmlFor="publishing-agent-label">{t('pair.label')}</FieldLabel>
         <TextField
@@ -53,7 +55,9 @@ export function PairPublishingAgent({ ownerId }: { ownerId: string }) {
           <Notice tone="success" role="status">
             <span>
               {t('pair.code')}{' '}
-              <strong className="font-mono text-base">{pairing.data.deviceCode}</strong>
+              <Typography variant="body" as="span" mono>
+                {pairing.data.deviceCode}
+              </Typography>
               <br />
               {t('pair.expires', { date: formatDateTime(pairing.data.expiresAt) })}
             </span>

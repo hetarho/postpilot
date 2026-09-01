@@ -18,7 +18,7 @@ import {
   VoiceRuleStatus,
   VoiceValidationService,
 } from '@/shared/api'
-import { AppFailureMessage, Badge, Button, Dialog, Notice } from '@/shared/ui'
+import { AppFailureMessage, Badge, Button, Dialog, Notice, Typography } from '@/shared/ui'
 
 interface RuleConfirmation {
   id: string
@@ -101,13 +101,17 @@ export function VoiceRulesManager({
         </Notice>
       )}
       {profile.structured.rules.length === 0 ? (
-        <p className="text-content-tertiary mt-4 text-sm">{t('rules.empty')}</p>
+        <Typography variant="body" className="text-content-tertiary mt-4">
+          {t('rules.empty')}
+        </Typography>
       ) : (
         <ul className="divide-divider divide-y">
           {profile.structured.rules.map((rule) => (
             <li key={rule.id} className="py-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="min-w-0 text-sm leading-relaxed">{rule.statement}</p>
+                <Typography variant="body" className="min-w-0">
+                  {rule.statement}
+                </Typography>
                 <Badge
                   tone={
                     rule.status === 'active'
@@ -123,7 +127,9 @@ export function VoiceRulesManager({
                   })}
                 </Badge>
               </div>
-              <p className="text-content-tertiary mt-1 text-xs">{t(`rules.layer.${rule.layer}`)}</p>
+              <Typography variant="meta" as="p" className="mt-1">
+                {t(`rules.layer.${rule.layer}`)}
+              </Typography>
               <div className="mt-3 flex flex-wrap gap-2">
                 {rule.status !== 'active' && (
                   <Button
@@ -159,7 +165,9 @@ export function VoiceRulesManager({
       )}
       {pending.length > 0 && (
         <section className="mt-8">
-          <h3 className="font-medium">{t('rules.conflicts')}</h3>
+          <Typography variant="title" as="h3">
+            {t('rules.conflicts')}
+          </Typography>
           {pending.map((item) => (
             <Notice key={item.id} tone="warning" className="mt-3">
               <p>{t('rules.current', { statement: item.existingStatement })}</p>

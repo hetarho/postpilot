@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useVoiceVersions } from '@/entities/voice'
 import { VoiceVersionHistory } from '@/features/edit-voice-profile'
+import { Typography } from '@/shared/ui'
 import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
 
 export function VoiceVersionsPage() {
@@ -22,7 +23,12 @@ function VersionList({ ownerId, voiceId, voice, profile }: VoiceScreenContext) {
   const { versions, isPending } = useVoiceVersions(ownerId, voiceId)
   // "아직 저장된 버전이 없어요" while the list is still in flight would be a claim about the
   // voice, not about the request.
-  if (isPending) return <p className="text-content-tertiary text-sm">{t('state.loading')}</p>
+  if (isPending)
+    return (
+      <Typography variant="body" className="text-content-tertiary">
+        {t('state.loading')}
+      </Typography>
+    )
   return (
     <VoiceVersionHistory
       ownerId={ownerId}

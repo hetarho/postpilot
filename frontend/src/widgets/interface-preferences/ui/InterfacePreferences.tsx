@@ -1,46 +1,22 @@
-import { useId } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { LocaleSelect } from '@/features/change-locale'
-import { ThemeSelector } from '@/features/change-theme'
-import { Popover } from '@/shared/ui'
+import { LocaleMenu } from '@/features/change-locale'
+import { ThemeMenu } from '@/features/change-theme'
 
-/** One compact public surface for browser-local interface preferences. Keeping both segmented
- * switches inside the popover makes their current values visible at a glance without making the
- * 320px app header carry two controls beside its session action, and keeps every open state
- * app-drawn — no OS-native option list breaks the surface (design-language §7). */
+/** The one locale/theme composition, mounted by the login, authenticated, and `/about` shells.
+ * Each preference is its own icon-triggered app-drawn menu — the theme trigger wears the current
+ * preference, so both values stay legible from the closed header — and no open state is ever
+ * OS-native (design-language §7). The pair is one labelled group so assistive tech hears "인터페이스
+ * 환경설정" once rather than two unrelated buttons. */
 export function InterfacePreferences() {
   const { t } = useTranslation('common')
-  const localeHeadingId = useId()
-  const themeHeadingId = useId()
   return (
-    <Popover
-      label={t('interfacePreferences.label')}
-      triggerLabel={
-        <>
-          <SlidersHorizontal aria-hidden="true" className="size-7" />
-          <span className="hidden sm:inline">{t('interfacePreferences.trigger')}</span>
-        </>
-      }
-      triggerClassName="px-3 sm:px-4"
-      placement="below"
+    <div
+      role="group"
+      aria-label={t('interfacePreferences.label')}
+      className="flex shrink-0 items-center gap-2"
     >
-      {() => (
-        <div className="grid gap-4">
-          <section aria-labelledby={localeHeadingId}>
-            <h2 id={localeHeadingId} className="text-content-secondary mb-1 text-sm font-medium">
-              {t('locale.label')}
-            </h2>
-            <LocaleSelect />
-          </section>
-          <section aria-labelledby={themeHeadingId}>
-            <h2 id={themeHeadingId} className="text-content-secondary mb-1 text-sm font-medium">
-              {t('theme.label')}
-            </h2>
-            <ThemeSelector />
-          </section>
-        </div>
-      )}
-    </Popover>
+      <ThemeMenu />
+      <LocaleMenu />
+    </div>
   )
 }

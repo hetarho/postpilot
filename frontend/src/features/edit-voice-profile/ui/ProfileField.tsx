@@ -7,7 +7,15 @@ import type { VoiceValue } from '@/entities/voice'
 import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
 import { appFailureFromConnect, VoiceLayer, VoiceService } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
-import { Badge, Button, Editable, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
+import {
+  Badge,
+  Button,
+  Editable,
+  FieldLabel,
+  FieldMessage,
+  Textarea,
+  Typography,
+} from '@/shared/ui'
 
 /** One overridable profile field, read first. The published value is prose that wraps to as many
  *  lines as it needs; the form control exists only while the owner is actually editing.
@@ -87,13 +95,13 @@ export function ProfileField({
       </div>
       {/* `break-words`: a Korean description has no spaces to break at, so without it a long value
           pushes the grid column wider than the screen (§3.2). */}
-      <p className="mt-1 text-sm leading-relaxed break-words">
+      <Typography variant="body" className="mt-1 break-words">
         {value.unknown || value.value.trim() === '' ? (
           <span className="text-content-tertiary">{t('profile.unknown', { ns: 'voices' })}</span>
         ) : (
           value.value
         )}
-      </p>
+      </Typography>
     </Editable>
   )
 }
@@ -136,7 +144,7 @@ function ProfileFieldEditor({
         aria-describedby={errorMessage ? errorId : undefined}
         // Capped per §4.4's in-form rule: past the cap the field scrolls itself rather than pushing
         // 저장 off the screen the caret is on.
-        className="max-h-field mt-1 leading-relaxed"
+        className="max-h-field mt-1"
       />
       {errorMessage && (
         <FieldMessage id={errorId} className="mt-2">

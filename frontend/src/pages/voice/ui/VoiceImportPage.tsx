@@ -7,6 +7,7 @@ import { RulesEditor, StyleguideEditor } from '@/features/edit-voice-profile'
 import { LearnVoiceForm } from '@/features/learn-voice'
 import { SampleList } from '@/features/manage-voice-samples'
 import { StageModelSelect } from '@/features/select-model'
+import { Typography } from '@/shared/ui'
 import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
 
 export function VoiceImportPage() {
@@ -64,8 +65,12 @@ function ImportPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext) {
       </div>
       {(profile.styleguide || profile.rules) && (
         <section className="mt-12">
-          <h3 className="text-lg font-semibold tracking-tight">{t('screens.previousGuidance')}</h3>
-          <p className="text-content-secondary mt-2 text-sm">{t('screens.previousGuidanceHelp')}</p>
+          <Typography variant="title" as="h3">
+            {t('screens.previousGuidance')}
+          </Typography>
+          <Typography variant="body" className="text-content-secondary mt-2">
+            {t('screens.previousGuidanceHelp')}
+          </Typography>
           <div className="mt-6">
             <StyleguideEditor
               ownerId={ownerId}

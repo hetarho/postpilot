@@ -9,7 +9,14 @@ import {
   useStageSelection,
 } from '@/entities/model-catalog'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
-import { AppFailureMessage, Button, FieldMessage, Notice, buttonStyles } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  FieldMessage,
+  Notice,
+  Typography,
+  buttonStyles,
+} from '@/shared/ui'
 import { useStartGeneration } from '../api/useStartGeneration'
 import { useStartWriteExperiment } from '../api/useStartWriteExperiment'
 import {
@@ -180,17 +187,17 @@ export const GenerationActions = forwardRef<
           {t('generation.generate')}
         </Button>
       </div>
-      <div className="mt-2 grid gap-1 text-sm">
+      <div className="mt-2 grid gap-1">
         {(sharedReason || !ordinary.ok) && (
-          <p role="status" className="text-content-secondary">
+          <Typography variant="label" as="p" role="status">
             {t('generation.generateReason', {
               reason: sharedReason || ordinary.reason,
               interpolation: { escapeValue: false },
             })}
-          </p>
+          </Typography>
         )}
         {(sharedReason || !ab.ok) && (
-          <p role="status" className="text-content-secondary">
+          <Typography variant="label" as="p" role="status">
             {t('generation.compareReason', {
               reason: sharedReason || ab.reason,
               // This value is another catalog sentence, never user or model data. Avoid
@@ -198,7 +205,7 @@ export const GenerationActions = forwardRef<
               // escaping remains enabled for untrusted values.
               interpolation: { escapeValue: false },
             })}
-          </p>
+          </Typography>
         )}
       </div>
       {pendingExperiment && (

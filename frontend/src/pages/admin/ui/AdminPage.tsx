@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useAccounts } from '@/entities/plan'
 import { UserPlanSelect } from '@/features/manage-users'
 import { formatDate } from '@/shared/lib'
-import { Notice } from '@/shared/ui'
+import { Notice, Typography } from '@/shared/ui'
 
 /** The operator's account list (plan 17). Composition only: the tier control is its own feature,
  *  and every refusal is the server's — this screen is reachable only for `master`, but the two
@@ -13,10 +13,10 @@ export function AdminPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('admin.title')}</h1>
-      <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
+      <Typography variant="display">{t('admin.title')}</Typography>
+      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('admin.description')}
-      </p>
+      </Typography>
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -24,12 +24,14 @@ export function AdminPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <p role="status" className="text-content-tertiary mt-8 text-sm">
+        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
           {t('admin.loading')}
-        </p>
+        </Typography>
       )}
       {!isError && !isPending && accounts.length === 0 && (
-        <p className="text-content-tertiary mt-8 text-sm">{t('admin.empty')}</p>
+        <Typography variant="body" className="text-content-tertiary mt-8">
+          {t('admin.empty')}
+        </Typography>
       )}
 
       {!isError && !isPending && accounts.length > 0 && (
@@ -39,10 +41,12 @@ export function AdminPage() {
             // scroll sideways or crush the id, and each row is one unit anyway (§1.4).
             <li key={account.id} className="bg-surface-raised rounded-md p-4">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="min-w-0 font-mono text-sm break-all">{account.id}</span>
-                <span className="text-content-tertiary shrink-0 text-xs">
+                <Typography variant="label" mono className="text-content-primary min-w-0 break-all">
+                  {account.id}
+                </Typography>
+                <Typography variant="meta" className="shrink-0">
                   {formatDate(account.createdAt)}
-                </span>
+                </Typography>
               </div>
               <UserPlanSelect account={account} />
             </li>

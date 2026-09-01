@@ -14,7 +14,15 @@ import {
 } from '@/entities/voice'
 import { appFailureFromConnect, appFailureFromProto, VoiceValidationService } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
-import { ActionBar, AppFailureMessage, Button, Notice, SegmentedControl } from '@/shared/ui'
+import {
+  ActionBar,
+  AppFailureMessage,
+  Button,
+  Notice,
+  SegmentedControl,
+  Typography,
+  typographyStyles,
+} from '@/shared/ui'
 import { TextCandidateComparison } from '@/widgets/candidate-comparison'
 
 export function VoiceRuleComparisonPage() {
@@ -114,14 +122,19 @@ export function VoiceRuleComparisonPage() {
       <Link
         to="/voices/$voiceId/rules"
         params={{ voiceId }}
-        className="text-link-fg inline-flex min-h-11 items-center text-sm"
+        className={typographyStyles({
+          variant: 'label',
+          className: 'text-link-fg inline-flex min-h-11 items-center',
+        })}
       >
         {t('comparison.back', { ns: 'voices' })}
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold">{t('comparison.title', { ns: 'voices' })}</h1>
-      <p className="text-content-secondary mt-2 text-sm">
+      <Typography variant="display" className="mt-4">
+        {t('comparison.title', { ns: 'voices' })}
+      </Typography>
+      <Typography variant="body" className="text-content-secondary mt-2">
         {t('comparison.description', { ns: 'voices' })}
-      </p>
+      </Typography>
       {canRetry && (
         <Button
           variant="secondary"
@@ -153,7 +166,7 @@ export function VoiceRuleComparisonPage() {
               ariaLabel={t('comparison.selectAria', { ns: 'voices' })}
             />
             {comparison.chosenSide ? (
-              <p className="text-sm">{t('comparison.applied', { ns: 'voices' })}</p>
+              <Typography variant="body">{t('comparison.applied', { ns: 'voices' })}</Typography>
             ) : (
               <Button
                 variant="cta"
@@ -178,7 +191,12 @@ export function VoiceRuleComparisonPage() {
 
 function Placeholder({ children }: { children: ReactNode }) {
   return (
-    <main className="text-content-tertiary mx-auto w-full max-w-2xl px-4 py-10 text-sm sm:px-6">
+    <main
+      className={typographyStyles({
+        variant: 'body',
+        className: 'text-content-tertiary mx-auto w-full max-w-2xl px-4 py-10 sm:px-6',
+      })}
+    >
       {children}
     </main>
   )

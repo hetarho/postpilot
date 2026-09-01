@@ -10,7 +10,14 @@ import {
   candidateSides,
   type CandidateSide,
 } from '@/widgets/candidate-comparison'
-import { ActionBar, Badge, Button, SegmentedControl } from '@/shared/ui'
+import {
+  ActionBar,
+  Badge,
+  Button,
+  SegmentedControl,
+  Typography,
+  typographyStyles,
+} from '@/shared/ui'
 
 export function ModelExperimentPage() {
   const { t } = useTranslation(['models', 'common'])
@@ -38,41 +45,47 @@ export function ModelExperimentPage() {
         <Link
           to="/posts/$slug"
           params={{ slug: experiment.postSlug }}
-          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
+          className={typographyStyles({
+            variant: 'label',
+            className: 'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center',
+          })}
         >
           {t('experiment.backPost', { ns: 'models' })}
         </Link>
       ) : (
         <Link
           to="/ai-models"
-          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm"
+          className={typographyStyles({
+            variant: 'label',
+            className: 'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center',
+          })}
         >
           {t('experiment.backModels', { ns: 'models' })}
         </Link>
       )}
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight">
+      <Typography variant="display" className="mt-4">
         {t('experiment.title', { ns: 'models' })}
-      </h1>
+      </Typography>
       {/* Desktop-only: on a phone this static instruction costs ~90px — four lines of the candidate
           text the screen exists to show — every single visit, and the A/B switch plus the 후보 A/B
           headings already carry what it says (§0). */}
-      <p className="text-content-secondary mt-2 hidden text-sm sm:block">
+      <Typography variant="body" className="text-content-secondary mt-2 hidden sm:block">
         {t('experiment.description', { ns: 'models' })}
-      </p>
+      </Typography>
       {experiment.voiceId && <ExperimentVoice voiceId={experiment.voiceId} />}
       {experiment.targetLanguage && (
-        <p className="text-content-secondary mt-2 flex items-center gap-2 text-sm">
+        <Typography variant="label" as="p" className="mt-2 flex items-center gap-2">
           <span>{t('experiment.language', { ns: 'models' })}</span>
           <Badge>{t(`contentLanguage.${experiment.targetLanguage}`, { ns: 'common' })}</Badge>
-        </p>
+        </Typography>
       )}
       {/* Read straight off the frozen snapshot's projection rather than looked up: the brief
           both candidates were given is a property of this comparison, not of whatever the
           purpose says today. */}
       {experiment.purposeName && (
-        <p className="text-content-secondary mt-2 text-sm break-words">
+        <Typography variant="label" as="p" className="mt-2 break-words">
           {t('experiment.purpose', { ns: 'models', name: experiment.purposeName })}
-        </p>
+        </Typography>
       )}
       <div className="mt-6 sm:mt-8">
         <CandidateComparison experiment={experiment} activeCandidateId={activeId} />
@@ -110,9 +123,9 @@ function ExperimentVoice({ voiceId }: { voiceId: string }) {
   const { voices } = useVoices(user?.id ?? '')
   const voice = voices.find((candidate) => candidate.id === voiceId)
   return (
-    <p className="text-content-secondary mt-2 text-sm break-words">
+    <Typography variant="label" as="p" className="mt-2 break-words">
       {t('experiment.voice', { ns: 'models', name: voice ? voiceRefLabel(voice) : voiceId })}
-    </p>
+    </Typography>
   )
 }
 
@@ -129,9 +142,9 @@ function Placeholder({ children }: { children: ReactNode }) {
           inside this same node, so the failure is announced as a change instead of silently
           replacing the pending state, which was never announced at all (§9). `py-10` keeps the
           retry button — the only way out of a failed load — within reach on a tall phone (§4.3). */}
-      <div role="status" className="text-content-tertiary text-sm">
+      <Typography variant="body" as="div" role="status" className="text-content-tertiary">
         {children}
-      </div>
+      </Typography>
     </main>
   )
 }

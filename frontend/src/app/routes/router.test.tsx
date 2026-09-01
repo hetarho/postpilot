@@ -33,10 +33,14 @@ describe('session guard', () => {
     expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument()
   })
 
-  it('lets a signed-in visit through and shows the account in the header', async () => {
+  it('lets a signed-in visit through and shows the account behind the avatar', async () => {
+    const user = userEvent.setup()
     const { router } = renderAppAt('/posts', { user: { id: 'alice' } })
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+    // The header row itself carries no id text; the avatar popover is where the session shows.
+    expect(screen.queryByText('alice')).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: '내 계정' }))
     expect(await screen.findByText('alice')).toBeInTheDocument()
   })
 
@@ -152,14 +156,18 @@ describe('outage', () => {
 describe('logout', () => {
   // A failed Logout leaves the cookie valid, so "you are logged out" would be a lie the
   // next navigation exposes.
-  it('keeps the user in the app and says so when logout fails', async () => {
+  it('keeps the user in the app and says so in the open popover when logout fails', async () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/posts', { user: { id: 'alice' }, logoutFails: true })
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
 
+    await user.click(await screen.findByRole('button', { name: '내 계정' }))
     await user.click(await screen.findByRole('button', { name: '로그아웃' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('로그아웃하지 못했어요')
+    // The failure renders where the user is looking — inside the still-open popover (§4.3).
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('로그아웃하지 못했어요')
+    expect(screen.getByRole('dialog', { name: '내 계정' })).toContainElement(alert)
     expect(router.state.location.pathname).toBe('/posts')
   })
 
@@ -178,7 +186,8 @@ describe('logout', () => {
     const saves = () => calls.filter((call) => call === 'SavePostDraft').length
     await waitFor(() => expect(saves()).toBeGreaterThan(0), { timeout: 4_000 })
 
-    await user.click(screen.getByRole('button', { name: '로그아웃' }))
+    await user.click(screen.getByRole('button', { name: '내 계정' }))
+    await user.click(await screen.findByRole('button', { name: '로그아웃' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
 
     const afterLogout = saves()
@@ -195,6 +204,7 @@ describe('logout', () => {
     })
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
 
+    await user.click(await screen.findByRole('button', { name: '내 계정' }))
     await user.click(await screen.findByRole('button', { name: '로그아웃' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
@@ -322,8 +332,8 @@ describe('About consumes the shared locale and theme runtimes', () => {
       name: '사진과 메모를 내 말투의 블로그 초안으로',
     })
 
-    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    await user.click(screen.getByRole('tab', { name: 'English' }))
+    await user.click(screen.getByRole('button', { name: '언어' }))
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }))
 
     expect(
       await screen.findByRole('heading', {
@@ -343,8 +353,8 @@ describe('About consumes the shared locale and theme runtimes', () => {
     renderAppAt('/about', { calls })
     await screen.findByRole('heading', { level: 1 })
 
-    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    await user.click(screen.getByRole('tab', { name: '밝게' }))
+    await user.click(screen.getByRole('button', { name: '테마' }))
+    await user.click(screen.getByRole('menuitemradio', { name: '밝게' }))
 
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe('day'))
     expect(calls).toEqual([])
@@ -424,21 +434,28 @@ describe('theme preferences in the real route tree', () => {
       const locationBeforePreferences = router.state.location.href
       const localeBeforePreferences = document.documentElement.lang
 
-      await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-      expect(await screen.findByRole('tab', { name: '시스템', selected: true })).toBeInTheDocument()
+      // Each selection closes the menu (focus back on the trigger), so every step reopens it.
+      const themeTrigger = () => screen.getByRole('button', { name: '테마' })
+      await user.click(themeTrigger())
+      expect(
+        await screen.findByRole('menuitemradio', { name: '시스템', checked: true }),
+      ).toBeInTheDocument()
 
-      await user.click(screen.getByRole('tab', { name: '밝게' }))
-      expect(screen.getByRole('tab', { name: '밝게', selected: true })).toBeInTheDocument()
+      await user.click(screen.getByRole('menuitemradio', { name: '밝게' }))
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+      expect(themeTrigger().querySelector('svg')).toHaveClass('lucide-sun')
       expect(document.documentElement).toHaveAttribute('data-theme', 'day')
       expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('light')
 
-      await user.click(screen.getByRole('tab', { name: '어둡게' }))
-      expect(screen.getByRole('tab', { name: '어둡게', selected: true })).toBeInTheDocument()
+      await user.click(themeTrigger())
+      await user.click(screen.getByRole('menuitemradio', { name: '어둡게' }))
+      expect(themeTrigger().querySelector('svg')).toHaveClass('lucide-moon')
       expect(document.documentElement).toHaveAttribute('data-theme', 'night')
       expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('dark')
 
-      await user.click(screen.getByRole('tab', { name: '시스템' }))
-      expect(screen.getByRole('tab', { name: '시스템', selected: true })).toBeInTheDocument()
+      await user.click(themeTrigger())
+      await user.click(screen.getByRole('menuitemradio', { name: '시스템' }))
+      expect(themeTrigger().querySelector('svg')).toHaveClass('lucide-monitor')
       expect(document.documentElement).toHaveAttribute('data-theme', 'day')
       expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBeNull()
 
@@ -457,20 +474,23 @@ describe('theme preferences in the real route tree', () => {
     })
 
     expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    await user.click(await screen.findByRole('tab', { name: '어둡게' }))
+    await user.click(screen.getByRole('button', { name: '테마' }))
+    await user.click(await screen.findByRole('menuitemradio', { name: '어둡게' }))
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
     await act(() => first.router.navigate({ to: '/posts/new' }))
     expect(await screen.findByRole('textbox', { name: '제목' })).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
-    await user.click(screen.getByRole('button', { name: '로그아웃' }))
+    await user.click(screen.getByRole('button', { name: '내 계정' }))
+    await user.click(await screen.findByRole('button', { name: '로그아웃' }))
     await waitFor(() => expect(first.router.state.location.pathname).toBe('/login'))
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
-    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    expect(await screen.findByRole('tab', { name: '어둡게', selected: true })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '테마' }))
+    expect(
+      await screen.findByRole('menuitemradio', { name: '어둡게', checked: true }),
+    ).toBeInTheDocument()
     await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText('아이디'), 'alice')
     await user.type(screen.getByLabelText('비밀번호'), 'pw')
@@ -489,8 +509,10 @@ describe('theme preferences in the real route tree', () => {
     })
     expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
-    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    expect(await screen.findByRole('tab', { name: '어둡게', selected: true })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '테마' }))
+    expect(
+      await screen.findByRole('menuitemradio', { name: '어둡게', checked: true }),
+    ).toBeInTheDocument()
     reloaded.unmount()
   })
 
@@ -515,8 +537,10 @@ describe('theme preferences in the real route tree', () => {
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    expect(await screen.findByRole('tab', { name: '시스템', selected: true })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '테마' }))
+    expect(
+      await screen.findByRole('menuitemradio', { name: '시스템', checked: true }),
+    ).toBeInTheDocument()
   })
 
   it('keeps the active locale and complete URL unchanged while selecting a theme', async () => {
@@ -535,34 +559,38 @@ describe('theme preferences in the real route tree', () => {
     const callsBeforeSelection = [...calls]
     const locationBeforeSelection = router.state.location.href
 
-    await user.click(screen.getByRole('button', { name: 'Interface preferences' }))
-    await user.click(await screen.findByRole('tab', { name: 'Dark' }))
+    await user.click(screen.getByRole('button', { name: 'Theme' }))
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Dark' }))
 
     expect(document.documentElement.lang).toBe('en')
     expect(router.state.location.href).toBe(locationBeforeSelection)
     expect(calls).toEqual(callsBeforeSelection)
   })
 
-  it('anchors the 320px authenticated popover to the viewport-side shell edge', async () => {
+  it('keeps the 320px authenticated header to three icon controls, account at the shell edge', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 })
     window.dispatchEvent(new Event('resize'))
     const user = userEvent.setup()
     renderAppAt('/posts', { user: { id: 'alice' } })
 
     expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
-    const logout = screen.getByRole('button', { name: '로그아웃' })
-    const preferences = screen.getByRole('button', { name: '인터페이스 환경설정' })
-    expect(logout.compareDocumentPosition(preferences) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
-      0,
-    )
-    expect(preferences).toHaveClass('px-3', 'sm:px-4')
-    expect(preferences.querySelector('svg')).toHaveClass('size-7')
+    const theme = screen.getByRole('button', { name: '테마' })
+    const locale = screen.getByRole('button', { name: '언어' })
+    const account = screen.getByRole('button', { name: '내 계정' })
+    // Reading order: theme · locale · account — the account control owns the viewport-side edge,
+    // so its right-aligned panel lands inside the 320px shell gutters.
+    expect(theme.compareDocumentPosition(locale) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    expect(locale.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    for (const trigger of [theme, locale, account]) {
+      expect(trigger).toHaveClass('size-11')
+    }
 
-    await user.click(preferences)
-    expect(screen.getByRole('dialog', { name: '인터페이스 환경설정' })).toHaveClass(
-      'right-0',
-      'w-72',
-    )
+    await user.click(account)
+    expect(screen.getByRole('dialog', { name: '내 계정' })).toHaveClass('right-0', 'w-72')
+    await user.keyboard('{Escape}')
+
+    await user.click(theme)
+    expect(screen.getByRole('menu', { name: '테마' })).toHaveClass('right-0')
 
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
     window.dispatchEvent(new Event('resize'))
@@ -572,14 +600,14 @@ describe('theme preferences in the real route tree', () => {
     renderAppAt('/login')
 
     expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument()
-    const preferences = screen.getByRole('button', { name: '인터페이스 환경설정' })
-    const preferencesAnchor = preferences.parentElement?.parentElement
+    const preferences = screen.getByRole('group', { name: '인터페이스 환경설정' })
+    const preferencesAnchor = preferences.parentElement
     const main = preferences.closest('main')
     const form = screen.getByRole('button', { name: '로그인' }).closest('form')
 
     expect(main).toHaveClass('relative', 'items-center', 'justify-center')
     expect(preferencesAnchor).toHaveClass('absolute', 'top-4', 'right-4', 'sm:top-6', 'sm:right-6')
-    expect(preferences.querySelector('svg')).toHaveClass('size-7')
+    expect(preferences.querySelector('svg')).toHaveClass('size-6')
     expect(form).toHaveClass('w-full')
     expect(form?.parentElement).toHaveClass('w-full', 'max-w-xs')
   })

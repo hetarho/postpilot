@@ -19,11 +19,10 @@ export const voices = {
     title: '새 말투 이름',
     placeholder: '예: 제품 리뷰',
     submit: '말투 만들기',
-    hint: '{{count}} / {{max}}자 · 새 말투는 빈 프로필로 시작하고, 다른 말투와 아무것도 공유하지 않아요.',
-    hint_one:
-      '{{count}} / {{max}}자 · 새 말투는 빈 프로필로 시작하고, 다른 말투와 아무것도 공유하지 않아요.',
-    hint_other:
-      '{{count}} / {{max}}자 · 새 말투는 빈 프로필로 시작하고, 다른 말투와 아무것도 공유하지 않아요.',
+    count: '{{count}} / {{max}}자',
+    count_one: '{{count}} / {{max}}자',
+    count_other: '{{count}} / {{max}}자',
+    emptyHelp: '새 말투는 빈 프로필로 시작하고, 다른 말투와 아무것도 공유하지 않아요.',
     sourceLanguage: '샘플 언어',
     sourceLanguageHelp: '이 말투가 배울 글의 언어예요. 만든 뒤에는 바꿀 수 없어요.',
   },

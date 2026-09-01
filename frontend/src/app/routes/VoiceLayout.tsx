@@ -1,21 +1,31 @@
 import { Link, Outlet, useParams } from '@tanstack/react-router'
+import { ClipboardCheck, FolderInput, History, IdCard, Scale } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
 import { RestoreVoiceButton } from '@/features/restore-voice'
-import { Badge, Button, Notice, TabLinks, type TabLink } from '@/shared/ui'
+import {
+  Badge,
+  Button,
+  Notice,
+  TabLinks,
+  Typography,
+  typographyStyles,
+  type TabLink,
+} from '@/shared/ui'
 
 /** The five tabs of one voice, in one list so the row and the routes cannot drift — the same
  *  reason `AuthenticatedLayout` keeps one `DESTINATIONS`. They are sub-navigation inside one voice,
- *  not destinations of their own. */
-const VOICE_TABS: readonly (Omit<TabLink, 'params' | 'label'> & {
+ *  not destinations of their own. Every tab carries an icon and a short caption so the row can
+ *  compact itself instead of horizontally scrolling on a phone (TabLinks' container mode). */
+const VOICE_TABS: readonly (Omit<TabLink, 'params' | 'label' | 'shortLabel'> & {
   labelKey: 'profile' | 'versions' | 'import' | 'rules' | 'validations'
 })[] = [
-  { to: '/voices/$voiceId', labelKey: 'profile' },
-  { to: '/voices/$voiceId/versions', labelKey: 'versions' },
-  { to: '/voices/$voiceId/import', labelKey: 'import' },
-  { to: '/voices/$voiceId/rules', labelKey: 'rules' },
-  { to: '/voices/$voiceId/validations', labelKey: 'validations' },
+  { to: '/voices/$voiceId', labelKey: 'profile', icon: IdCard },
+  { to: '/voices/$voiceId/versions', labelKey: 'versions', icon: History },
+  { to: '/voices/$voiceId/import', labelKey: 'import', icon: FolderInput },
+  { to: '/voices/$voiceId/rules', labelKey: 'rules', icon: Scale },
+  { to: '/voices/$voiceId/validations', labelKey: 'validations', icon: ClipboardCheck },
 ]
 
 /** The frame of `/voices/$voiceId`: which voice this is, its state, and the tab row. The voice
@@ -33,7 +43,11 @@ export function VoiceLayout() {
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
       <Link
         to="/voices"
-        className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center text-sm underline"
+        className={typographyStyles({
+          variant: 'label',
+          className:
+            'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center underline',
+        })}
       >
         {t('voice.backToList', { ns: 'nav' })}
       </Link>
@@ -50,19 +64,19 @@ export function VoiceLayout() {
           </Button>
         </Notice>
       ) : isPending ? (
-        <p role="status" className="text-content-tertiary mt-4 text-sm">
+        <Typography variant="body" role="status" className="text-content-tertiary mt-4">
           {t('state.loading', { ns: 'common' })}
-        </p>
+        </Typography>
       ) : !voice ? (
-        <p role="alert" className="text-notice-danger-fg mt-4 text-sm">
+        <Typography variant="body" role="alert" className="text-notice-danger-fg mt-4">
           {t('missing', { ns: 'voices' })}
-        </p>
+        </Typography>
       ) : (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">
+            <Typography variant="display" className="min-w-0 break-words">
               {voice.name}
-            </h1>
+            </Typography>
             {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}
             {voice.deleted && <Badge tone="warning">{t('state.deleted', { ns: 'common' })}</Badge>}
             <Badge>{t(`contentLanguage.${voice.sourceLanguage}`, { ns: 'common' })}</Badge>
@@ -82,6 +96,7 @@ export function VoiceLayout() {
             items={VOICE_TABS.map(({ labelKey, ...tab }) => ({
               ...tab,
               label: t(`voice.${labelKey}`, { ns: 'nav' }),
+              shortLabel: t(`voice.short.${labelKey}`, { ns: 'nav' }),
               params: { voiceId },
             }))}
             ariaLabel={t('voice.settings', { ns: 'nav' })}

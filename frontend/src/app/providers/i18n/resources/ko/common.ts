@@ -11,13 +11,13 @@ export const common = {
   },
   theme: {
     label: '테마',
+    current: '현재 테마 설정: {{theme}}',
     system: '시스템',
     light: '밝게',
     dark: '어둡게',
   },
   interfacePreferences: {
     label: '인터페이스 환경설정',
-    trigger: '환경설정',
   },
   contentLanguage: {
     ko: '한국어',

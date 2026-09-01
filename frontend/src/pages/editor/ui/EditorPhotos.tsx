@@ -28,7 +28,7 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
 
   return (
     <PhotoDropZone onFiles={(files) => void upload.addFiles(files)} disabled={upload.creatingPost}>
-      <section data-slot="photos" className="mt-5 flex flex-col gap-3">
+      <div data-slot="photos" className="mt-5 flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <PhotoPicker
             onFiles={(files) => void upload.addFiles(files)}
@@ -58,7 +58,7 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
           onDismiss={upload.dismiss}
         />
         <SkippedList items={upload.items} onDismiss={upload.dismiss} />
-      </section>
+      </div>
     </PhotoDropZone>
   )
 }

@@ -16,7 +16,7 @@ export function DeletedVoiceWarning({ ownerId, voice }: { ownerId: string; voice
             t={t}
             i18nKey="warning.deletedPost"
             values={{ voice: voiceRefLabel(voice) }}
-            components={{ voice: <span className="font-medium break-words" /> }}
+            components={{ voice: <span className="break-words" /> }}
           />
         </span>
         <RestoreVoiceButton

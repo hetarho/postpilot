@@ -3,7 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { useStageSelection } from '@/entities/model-catalog'
 import { type VoiceProfile, useAddVoiceSample } from '@/entities/voice'
 import { VOICE_SAMPLE_MIN_CHARS } from '@/shared/config'
-import { Button, Dialog, FieldLabel, FieldMessage, Notice, Textarea, TextField } from '@/shared/ui'
+import {
+  Button,
+  Dialog,
+  FieldLabel,
+  FieldMessage,
+  Notice,
+  Textarea,
+  TextField,
+  Typography,
+} from '@/shared/ui'
 
 interface LearnVoiceFormProps {
   ownerId: string
@@ -89,11 +98,11 @@ export function LearnVoiceForm({
       </div>
       <div>
         <FieldLabel htmlFor={bodyId}>{t('learn.body')}</FieldLabel>
-        <p className="text-content-secondary mt-1 text-sm">
+        <Typography variant="label" as="p" className="mt-1">
           {t('learn.declaredLanguage', {
             language: t(`contentLanguage.${profile.voice.sourceLanguage}`, { ns: 'common' }),
           })}
-        </p>
+        </Typography>
         <Textarea
           id={bodyId}
           value={body}
@@ -105,20 +114,20 @@ export function LearnVoiceForm({
           autoGrow
           aria-invalid={addSample.isError || undefined}
           aria-describedby={addSample.isError ? `${bodyHintId} ${bodyErrorId}` : bodyHintId}
-          className="max-h-field mt-1 leading-relaxed"
+          className="max-h-field mt-1"
         />
         {/* Under the field, not above it. This is the only explanation for the disabled 학습
             button, and above the textarea it scrolls off the top as soon as the user is typing
             past the first few lines — a validation message behind the keyboard has not been
             shown (§4.3). */}
         <div id={bodyHintId} className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="text-content-tertiary shrink-0 text-xs">
+          <Typography variant="meta" className="shrink-0">
             {t('learn.count', { count: chars, min: VOICE_SAMPLE_MIN_CHARS })}
-          </span>
+          </Typography>
           {tooShort && (
-            <span className="text-content-secondary min-w-0 text-sm">
+            <Typography variant="label" className="min-w-0">
               {t('learn.remaining', { count: VOICE_SAMPLE_MIN_CHARS - chars })}
-            </span>
+            </Typography>
           )}
         </div>
       </div>

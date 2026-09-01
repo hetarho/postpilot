@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { VoiceAxes, VoiceProfile } from '@/entities/voice'
 import { type ContentLanguage, VoiceLayer } from '@/shared/api'
 import { formatNumber, formatPercent } from '@/shared/lib'
-import { Badge } from '@/shared/ui'
+import { Badge, Typography, typographyStyles } from '@/shared/ui'
 import { ProfileField } from './ProfileField'
 
 /** The six axes in their canonical order. They are listed explicitly rather than iterated from the
@@ -66,18 +66,20 @@ export function StructuredProfileEditor({
   return (
     <section aria-labelledby="profile-heading">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="profile-heading" className="text-lg font-semibold tracking-tight">
+        <Typography variant="title" as="h3" id="profile-heading">
           {t('profile.current')}
-        </h2>
-        <span className="text-content-tertiary text-sm">
+        </Typography>
+        <Typography variant="label" className="text-content-tertiary">
           {t('profile.finalizedCount', {
             version: structured.version.toString(),
             count: profile.finalizedSourceCount,
           })}
-        </span>
+        </Typography>
       </div>
       {structured.empty ? (
-        <p className="text-content-secondary mt-3 text-sm leading-relaxed">{t('profile.empty')}</p>
+        <Typography variant="body" className="text-content-secondary mt-3">
+          {t('profile.empty')}
+        </Typography>
       ) : (
         <div className="mt-5 space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -92,7 +94,9 @@ export function StructuredProfileEditor({
             ))}
           </div>
           <section>
-            <h3 className="font-medium">{t('profile.endings')}</h3>
+            <Typography variant="title" as="h4">
+              {t('profile.endings')}
+            </Typography>
             <div className="mt-2 flex flex-wrap gap-2">
               {structured.endings.distribution.map((item) => (
                 <Badge key={item.ending}>
@@ -105,8 +109,15 @@ export function StructuredProfileEditor({
             </div>
           </section>
           <section>
-            <h3 className="font-medium">{t('profile.sentenceStructure')}</h3>
-            <dl className="text-content-secondary mt-2 grid gap-2 text-sm sm:grid-cols-2">
+            <Typography variant="title" as="h4">
+              {t('profile.sentenceStructure')}
+            </Typography>
+            <dl
+              className={typographyStyles({
+                variant: 'label',
+                className: 'mt-2 grid gap-2 sm:grid-cols-2',
+              })}
+            >
               <div>
                 <dt className="text-content-tertiary">
                   {sourceLanguage === 'en'
@@ -149,8 +160,15 @@ export function StructuredProfileEditor({
             </dl>
           </section>
           <section>
-            <h3 className="font-medium">{t('profile.tendencies')}</h3>
-            <dl className="text-content-secondary mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+            <Typography variant="title" as="h4">
+              {t('profile.tendencies')}
+            </Typography>
+            <dl
+              className={typographyStyles({
+                variant: 'label',
+                className: 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3',
+              })}
+            >
               {axes.map((axis) => {
                 const value = structured.axes[axis.key]
                 return (
@@ -168,8 +186,12 @@ export function StructuredProfileEditor({
             structured.lexical.bannedPatterns.length > 0 ||
             structured.endings.bannedEndings.length > 0) && (
             <section>
-              <h3 className="font-medium">{t('profile.avoidExpressions')}</h3>
-              <ul className="text-content-secondary mt-2 list-disc pl-5 text-sm">
+              <Typography variant="title" as="h4">
+                {t('profile.avoidExpressions')}
+              </Typography>
+              <ul
+                className={typographyStyles({ variant: 'label', className: 'mt-2 list-disc pl-5' })}
+              >
                 {structured.lexical.bannedWords.map((v) => (
                   <li key={v.value}>
                     {v.value}

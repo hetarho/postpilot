@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { VoiceProfile, VoiceVersion } from '@/entities/voice'
 import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
 import { appFailureFromConnect, VoiceService } from '@/shared/api'
-import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
+import { AppFailureMessage, Button, Dialog, Notice, Typography } from '@/shared/ui'
 
 /** The version list and its restore confirmation. Still "edit the voice profile" — restoring
  *  publishes a new head exactly as an override does — but its own screen, so the profile tab
@@ -40,7 +40,9 @@ export function VoiceVersionHistory({
   return (
     <section aria-label={t('versions.title', { ns: 'voices' })}>
       {versions.length === 0 ? (
-        <p className="text-content-tertiary text-sm">{t('versions.empty', { ns: 'voices' })}</p>
+        <Typography variant="body" className="text-content-tertiary">
+          {t('versions.empty', { ns: 'voices' })}
+        </Typography>
       ) : (
         <ul className="divide-divider divide-y">
           {versions.map((version) => (
@@ -48,7 +50,7 @@ export function VoiceVersionHistory({
               key={version.version.toString()}
               className="flex min-h-14 items-center justify-between gap-3 py-2"
             >
-              <span className="min-w-0 text-sm break-words">
+              <Typography variant="body" as="span" className="min-w-0 break-words">
                 v{version.version.toString()} · {originLabel(version.origin)}
                 {version.restoredFromVersion > 0n
                   ? t('versions.restoredFrom', {
@@ -56,7 +58,7 @@ export function VoiceVersionHistory({
                       version: version.restoredFromVersion.toString(),
                     })
                   : ''}
-              </span>
+              </Typography>
               <Button
                 variant="ghost"
                 disabled={readOnly || version.version === profile.structured.version}

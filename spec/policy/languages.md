@@ -27,9 +27,11 @@ The locale is resolved synchronously before React renders:
 
 Storage failures are ignored. A locale change updates i18next, `<html lang>`, title, description,
 and locale-aware date, relative-time, and number helpers; it then attempts to persist the canonical
-tag. It changes no URL, session, query cache, post, voice, or server preference. Selectors use the
-autonyms `한국어` and `English` and currently appear on login, the authenticated shell, and the public
-`/about` header, which composes the same shared preferences widget rather than forking either control.
+tag. It changes no URL, session, query cache, post, voice, or server preference. The app-drawn locale
+menu uses a 44px icon trigger and `menuitemradio` options labelled with the autonyms `한국어` and
+`English`; it marks the active option with a check and announces a selection politely. The control
+appears on login, the authenticated shell, and the public `/about` header through the same shared
+preferences widget rather than being forked per shell.
 
 Resources are bundled TypeScript catalogs with no runtime fetch or translation service. Their exact
 namespace topology is `common`, `auth`, `nav`, `posts`, `voices`, `purposes`, `guidelines`, `models`,

@@ -4,7 +4,7 @@ import { publishStageLabel, usePublishJob } from '@/entities/publish-job'
 import { usePublishingAgents } from '@/entities/publishing-agent'
 import { PublishPostForm } from '@/features/publish-post'
 import { PublishStage, PublishStatus } from '@/shared/api'
-import { Button, Notice } from '@/shared/ui'
+import { Button, Notice, Typography } from '@/shared/ui'
 
 export function PublishPanel({
   ownerId,
@@ -35,14 +35,16 @@ export function PublishPanel({
 
   return (
     <section aria-labelledby="publish-heading" className="mt-12">
-      <h2 id="publish-heading" className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" id="publish-heading">
         {t('title')}
-      </h2>
-      <p className="text-content-secondary mt-2 text-sm leading-relaxed">
+      </Typography>
+      <Typography variant="body" className="text-content-secondary mt-2">
         {t('panel.description')}
-      </p>
+      </Typography>
       {(agents.isPending || publication.isPending) && (
-        <p className="text-content-tertiary mt-4 text-sm">{t('panel.loading')}</p>
+        <Typography variant="body" className="text-content-tertiary mt-4">
+          {t('panel.loading')}
+        </Typography>
       )}
       {(agents.isError || publication.isError) && (
         <Notice tone="danger" role="alert" className="mt-4">

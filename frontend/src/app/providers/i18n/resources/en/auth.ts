@@ -9,4 +9,8 @@ export const auth = {
   logout: {
     failed: 'Could not log out. Your session is still active, so please try again.',
   },
+  account: {
+    label: 'My account',
+    signedInAs: 'Signed in as',
+  },
 } as const

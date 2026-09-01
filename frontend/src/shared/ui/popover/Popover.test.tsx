@@ -18,6 +18,22 @@ it('opens from the keyboard, closes on Escape, and restores trigger focus', asyn
   expect(trigger).toHaveClass('min-h-11')
 })
 
+it('bounds a below-header panel to the viewport and lets its contents scroll', async () => {
+  const user = userEvent.setup()
+  render(
+    <Popover label="계정" placement="below">
+      {() => <button>로그아웃</button>}
+    </Popover>,
+  )
+
+  await user.click(screen.getByRole('button', { name: '계정' }))
+  expect(screen.getByRole('dialog', { name: '계정' })).toHaveClass(
+    'max-h-popover-below-max',
+    'overflow-y-auto',
+    'overscroll-contain',
+  )
+})
+
 it('dismisses when the user presses outside', async () => {
   const user = userEvent.setup()
   render(
@@ -57,4 +73,28 @@ it('cycles Tab focus inside the open dialog', async () => {
   await user.tab()
   expect(first).toHaveFocus()
   expect(screen.getByRole('button', { name: '바깥' })).not.toHaveFocus()
+})
+
+it('includes a native details summary in the focus cycle', async () => {
+  const user = userEvent.setup()
+  render(
+    <Popover label="오류 세부정보">
+      {() => (
+        <>
+          <button>다시 시도</button>
+          <details>
+            <summary>기술 세부 정보</summary>
+            실패 코드
+          </details>
+        </>
+      )}
+    </Popover>,
+  )
+
+  await user.click(screen.getByRole('button', { name: '오류 세부정보' }))
+  expect(screen.getByRole('button', { name: '다시 시도' })).toHaveFocus()
+  await user.tab()
+  expect(screen.getByText('기술 세부 정보')).toHaveFocus()
+  await user.tab()
+  expect(screen.getByRole('button', { name: '다시 시도' })).toHaveFocus()
 })

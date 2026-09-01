@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PLANS, isPlanName, planLabel, useSetUserPlan, type PlanAccount } from '@/entities/plan'
-import { AppFailureMessage, Select } from '@/shared/ui'
+import { AppFailureMessage, Select, Typography } from '@/shared/ui'
 
 /** The operator's per-account tier control.
  *
@@ -35,13 +35,23 @@ export function UserPlanSelect({ account }: { account: PlanAccount }) {
           </option>
         ))}
       </Select>
-      <p role="status" className="text-content-tertiary mt-1 text-xs empty:hidden">
+      <Typography
+        variant="body"
+        as="p"
+        role="status"
+        className="text-content-tertiary mt-1 empty:hidden"
+      >
         {change.isPending ? t('admin.saving') : null}
-      </p>
+      </Typography>
       {change.failure && (
-        <div role="alert" className="text-field-error mt-1 text-xs break-words">
+        <Typography
+          variant="body"
+          as="div"
+          role="alert"
+          className="text-field-error mt-1 break-words"
+        >
           <AppFailureMessage failure={change.failure} />
-        </div>
+        </Typography>
       )}
     </div>
   )

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Typography } from '@/shared/ui'
 import type { UploadBatchState } from '../model/upload-batch'
 
 interface UploadProgressProps extends UploadBatchState {
@@ -32,8 +33,8 @@ export function UploadProgress({ items, completed, creatingPost }: UploadProgres
   // `role="status"` already implies `aria-live="polite"`; declaring both made every file
   // transition a doubled announcement that queues ahead of the user's own gestures (§9).
   return (
-    <p role="status" className="text-content-tertiary min-w-0 text-xs">
+    <Typography variant="body" as="p" role="status" className="text-content-tertiary min-w-0">
       {label}
-    </p>
+    </Typography>
   )
 }

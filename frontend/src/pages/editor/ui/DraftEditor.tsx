@@ -49,6 +49,8 @@ import {
   Notice,
   SegmentedControl,
   Textarea,
+  Typography,
+  typographyStyles,
 } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { ExportPanel } from '@/widgets/export-panel'
@@ -82,8 +84,8 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   const navigate = useNavigate()
   const { user } = useSession()
   const ownerId = user?.id ?? ''
-  // Both fields are textareas: a Korean title fits ~14 characters across a 360px screen at
-  // `text-2xl`, and a single-line input would scroll the rest of it out of a field that has no
+  // Both fields are textareas: a Korean title fits ~14 characters across a 360px screen at the
+  // display size, and a single-line input would scroll the rest of it out of a field that has no
   // well to show it scrolled (design-language §0 — the title is one of the largest things on the
   // screen, so it wraps instead).
   const titleRef = useRef<HTMLTextAreaElement>(null)
@@ -183,7 +185,11 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
             touchscreen ever matches (§6). */}
         <Link
           to="/posts"
-          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center text-sm underline"
+          className={typographyStyles({
+            variant: 'label',
+            className:
+              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center underline',
+          })}
         >
           {t('editor.backToList')}
         </Link>
@@ -205,6 +211,11 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       <FieldLabel htmlFor="post-title" className="sr-only">
         {t('editor.title')}
       </FieldLabel>
+      {/* The visible title remains an editable field, so this mirrors its current value into the
+          document outline without replacing the field or creating a second tab stop. */}
+      <Typography variant="display" className="sr-only">
+        {title.trim() || t('editor.titlePlaceholder')}
+      </Typography>
       <Textarea
         id="post-title"
         ref={titleRef}
@@ -227,7 +238,9 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         enterKeyHint="next"
         autoCapitalize="off"
         autoComplete="off"
-        className="mt-4 text-2xl font-semibold tracking-tight"
+        // The bare editor's caller owns the field's type (§7): the title wears the display role —
+        // the post title is the largest thing on the screen (§0).
+        className={typographyStyles({ variant: 'display', className: 'mt-4' })}
       />
 
       {/* The voice is the post's identity like its title, so it sits with the title outside the
@@ -310,24 +323,21 @@ function MemoField({
       <FieldLabel htmlFor="post-memo" className="sr-only">
         {t('editor.memo')}
       </FieldLabel>
-      {/* `text-base`, not the `body` role: the bare appearance takes its size from the caller, and
-          iOS Safari zooms the whole layout — permanently, it never zooms back out — the moment a
-          focused control computes under 16px (§3.1). This is the field the product exists for, so
-          the zoom used to fire on every single use of the app.
-          `autoGrow` with a small `rows`: at 16 rows the memo was a 364px box scrolling inside
+      {/* `autoGrow` with a small `rows`: at 16 rows the memo was a 364px box scrolling inside
           itself, which swallowed every vertical swipe that landed on it and left the 16px gutters
-          as the only place to scroll the page (§4.4). */}
+          as the only place to scroll the page (§4.4). The well appearance owns the §3.1 input
+          size, so the focused field remains at least 16px on a phone. */}
       <Textarea
         id="post-memo"
         ref={fieldRef}
-        appearance="bare"
+        appearance="well"
         rows={6}
         autoGrow
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={t('editor.memoPlaceholder')}
         enterKeyHint="enter"
-        className="mt-5 text-base leading-relaxed"
+        className="mt-5"
       />
     </>
   )
@@ -406,7 +416,9 @@ function EmptyStep({
 }) {
   return (
     <div className="mt-10">
-      <p className="text-content-tertiary text-sm leading-relaxed">{children}</p>
+      <Typography variant="body" className="text-content-tertiary">
+        {children}
+      </Typography>
       <Button variant="secondary" className="mt-4" onClick={goTo}>
         {goToLabel}
       </Button>
@@ -494,24 +506,32 @@ function LifecycleSteps({
       <EditorPhotos post={post} ensureSlug={ensureSlug} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
       <section aria-labelledby="generation-heading" className="mt-10">
-        <h2 id="generation-heading" className="text-lg font-semibold tracking-tight">
+        <Typography variant="title" id="generation-heading">
           {t('editor.generation')}
-        </h2>
+        </Typography>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
             <StageModelSelect stage="observe" optional={post.images.length === 0} />
             {post.images.length === 0 && (
-              <p className="text-content-tertiary mt-1 text-xs">{t('editor.noPhotoModel')}</p>
+              <Typography variant="body" as="p" className="text-content-secondary mt-1">
+                {t('editor.noPhotoModel')}
+              </Typography>
             )}
           </div>
           <div>
             <StageModelSelect stage="write" />
           </div>
           <div>
-            <p className="text-sm font-medium">{t('editor.writeCandidates')}</p>
+            <Typography variant="label" as="p">
+              {t('editor.writeCandidates')}
+            </Typography>
             <Link
               to="/ai-models"
-              className="text-link-fg hover:text-link-fg-hover mt-1 inline-flex min-h-11 items-center text-sm underline"
+              className={typographyStyles({
+                variant: 'label',
+                className:
+                  'text-link-fg hover:text-link-fg-hover mt-1 inline-flex min-h-11 items-center underline',
+              })}
             >
               {t('editor.configureCandidates')}
             </Link>
@@ -523,7 +543,11 @@ function LifecycleSteps({
         <Link
           to="/ai-models/experiments/$id"
           params={{ id: post.pendingExperimentId }}
-          className="bg-notice-info-bg text-notice-info-fg mt-6 flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium"
+          className={typographyStyles({
+            variant: 'label',
+            className:
+              'bg-notice-info-bg text-notice-info-fg mt-6 flex min-h-11 items-center rounded-md px-3 py-2',
+          })}
         >
           {t('editor.reviewAiResult')}
         </Link>

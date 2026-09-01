@@ -7,7 +7,7 @@ import {
   type Guideline,
   type GuidelineScope,
 } from '@/entities/guideline'
-import { Badge, Button, Editable, FieldMessage } from '@/shared/ui'
+import { Badge, Button, Editable, FieldMessage, Typography } from '@/shared/ui'
 
 /** A guideline's whole scope, read first and replaced as one patch on save.
  *
@@ -64,7 +64,9 @@ export function GuidelineScopeBadges({
     return (
       <div>
         <Badge tone="warning">{t('scope.orphaned')}</Badge>
-        <p className="text-content-tertiary mt-1 text-xs">{t('scope.orphanedHelp')}</p>
+        <Typography variant="body" as="p" className="text-content-secondary mt-1">
+          {t('scope.orphanedHelp')}
+        </Typography>
       </div>
     )
   }

@@ -3,7 +3,15 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useLogin } from '@/entities/session'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
-import { AppFailureMessage, Button, FieldLabel, Logo, TextField } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  FieldLabel,
+  Logo,
+  TextField,
+  Typography,
+  typographyStyles,
+} from '@/shared/ui'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
 
 /** Credential refusals use one stable INVALID_CREDENTIALS reason. The server already refuses to
@@ -45,13 +53,17 @@ export function LoginPage() {
           {/* The app icon is decorative beside the labelled wordmark, so the pair remains one
             concise heading for assistive technology. The compact phone lockup keeps the submit
             path above the software keyboard; wider screens give the mark its full presence. */}
-          <h1 className="flex flex-col items-center gap-1 sm:gap-4">
+          <Typography
+            variant="display"
+            as="h1"
+            className="flex flex-col items-center gap-1 sm:gap-4"
+          >
             <img src="/favicon.svg" alt="" className="h-10 w-10 sm:h-20 sm:w-20" />
             <Logo className="h-8 sm:h-9" />
-          </h1>
-          <p className="text-content-secondary mt-1 text-center text-sm">
+          </Typography>
+          <Typography variant="body" className="text-content-secondary mt-1 text-center">
             {t('login.intro', { ns: 'auth' })}
-          </p>
+          </Typography>
 
           <FieldLabel htmlFor="loginId" className="mt-4 sm:mt-8">
             {t('login.id', { ns: 'auth' })}
@@ -98,13 +110,15 @@ export function LoginPage() {
             §4.3). Below the button it was both the lowest thing on the keyboard-covered screen and
             a ~32px insertion that shifted the whole form the instant the thumb lifted off 로그인. */}
           {login.failure && (
-            <div
+            <Typography
+              variant="body"
+              as="div"
               id="login-error"
               role="alert"
-              className="text-field-error mt-3 text-sm break-words"
+              className="text-field-error mt-3 break-words"
             >
               <AppFailureMessage failure={login.failure} />
-            </div>
+            </Typography>
           )}
 
           {/* `pending`, not a label swap: 로그인 → 확인 중… resizes the target under the thumb that
@@ -127,7 +141,11 @@ export function LoginPage() {
             // The blocked destination travels with the visitor: About hands it back to this page,
             // so reading the explanation mid-login does not reset where they were going.
             search={isInAppPath(redirect) ? { redirect } : {}}
-            className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 text-sm underline"
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline',
+            })}
           >
             {t('about.link', { ns: 'marketing' })}
           </Link>

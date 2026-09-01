@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { FailureNotice } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
 import { type Voice, type VoiceProfile, useVoiceProfile } from '@/entities/voice'
+import { Typography, typographyStyles } from '@/shared/ui'
 
 export interface VoiceScreenContext {
   profile: VoiceProfile
@@ -44,18 +45,20 @@ export function VoiceScreen({
   }
   if (isPending || !profile) {
     return (
-      <main className="text-content-tertiary mt-6 text-sm">
+      <main
+        className={typographyStyles({ variant: 'body', className: 'text-content-tertiary mt-6' })}
+      >
         {t('state.loading', { ns: 'common' })}
       </main>
     )
   }
   return (
     <main className="mt-6 pb-12">
-      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+      <Typography variant="title">{title}</Typography>
       {description && (
-        <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
+        <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
           {description}
-        </p>
+        </Typography>
       )}
       <div className="mt-8">{children({ profile, voice: profile.voice, ownerId, voiceId })}</div>
     </main>

@@ -47,8 +47,8 @@ describe('/about document metadata', () => {
     const { router } = renderAppAt('/about')
     await screen.findByRole('heading', { level: 1 })
 
-    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    await user.click(screen.getByRole('tab', { name: 'English' }))
+    await user.click(screen.getByRole('button', { name: '언어' }))
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }))
 
     await waitFor(() => expect(document.title).toMatch(/^What is Postpilot\?/))
     expect(content('meta[property="og:title"]')).toBe(document.title)
@@ -65,8 +65,8 @@ describe('/about document metadata', () => {
     const { router } = renderAppAt('/about')
     await screen.findByRole('heading', { level: 1 })
 
-    await user.click(screen.getByRole('button', { name: '인터페이스 환경설정' }))
-    await user.click(screen.getByRole('tab', { name: 'English' }))
+    await user.click(screen.getByRole('button', { name: '언어' }))
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }))
     await waitFor(() => expect(document.title).toMatch(/^What is Postpilot\?/))
 
     await router.navigate({ to: '/login' })

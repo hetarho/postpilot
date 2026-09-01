@@ -8,7 +8,7 @@ import { toTistory } from '@/features/export-tistory'
 import type { ContentLanguage, PostContent } from '@/shared/api'
 import { COPY_FEEDBACK_MS } from '@/shared/config'
 import { copyText, type CopyFallbackElement } from '@/shared/lib'
-import { Button, FieldLabel, SegmentedControl, Textarea, TextField } from '@/shared/ui'
+import { Button, FieldLabel, SegmentedControl, Textarea, TextField, Typography } from '@/shared/ui'
 import { EXPORT_FORMATS, type ExportFormat } from '../config/guidance'
 
 interface ExportPanelProps {
@@ -118,9 +118,9 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
 
   return (
     <section aria-labelledby="export-heading" className="mt-10">
-      <h2 id="export-heading" className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" id="export-heading">
         {t('export.title')}
-      </h2>
+      </Typography>
       {/* The four Korean format names measure ~380px in one row against 328px of content at 360px,
           which cut 마크다운 in half with no scrollbar to say so. Two columns at the base
           breakpoint fit all four; the strip comes back where the width exists. */}
@@ -137,7 +137,9 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
       />
 
       <div id="export-output-panel" role="tabpanel" className="mt-4">
-        <p className="text-content-secondary text-sm">{t(`export.guidance.${format}`)}</p>
+        <Typography variant="label" as="p">
+          {t(`export.guidance.${format}`)}
+        </Typography>
 
         {format === 'naver' && (
           <div className="mt-4">
@@ -160,9 +162,14 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
                 {t('export.copyTitle')}
               </Button>
             </div>
-            <p role="status" className="text-content-tertiary mt-1 min-h-4 text-xs">
+            <Typography
+              variant="body"
+              as="p"
+              role="status"
+              className="text-content-tertiary mt-1 min-h-5"
+            >
               {titleStatus}
-            </p>
+            </Typography>
           </div>
         )}
 
@@ -187,13 +194,13 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
           </Button>
           {/* Always mounted, never conditionally inserted: a live region that first appears WITH
               its text already in it is not announced (§9). */}
-          <p role="status" className="text-content-tertiary min-h-4 text-xs">
+          <Typography variant="body" as="p" role="status" className="text-content-tertiary min-h-5">
             {outputStatus}
-          </p>
+          </Typography>
         </div>
         {/* A Korean post runs to ~58 lines at this width. A fixed 18-row box scrolled internally,
             so every vertical swipe that landed on it moved the output instead of the page and the
-            only place left to scroll was the 16px gutter (§4.4) — it grows instead. No `font-mono`:
+            only place left to scroll was the 16px gutter (§4.4) — it grows instead. No mono face:
             Tailwind's stock mono stack carries no Hangul, so every glyph fell back (§3). */}
         <Textarea
           id="export-output"
@@ -203,7 +210,7 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
           spellCheck={false}
           rows={8}
           autoGrow
-          className="mt-3 leading-relaxed"
+          className="mt-3"
         />
       </div>
     </section>

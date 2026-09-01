@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '../button/Button'
 
 const focusableSelector =
-  'a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])'
+  'a[href], summary, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])'
 
 export function Popover({
   label,
@@ -107,7 +107,9 @@ export function Popover({
           tabIndex={-1}
           aria-label={label}
           className={`bg-surface-highest absolute right-0 z-30 w-72 rounded-lg p-4 shadow-lg ${
-            placement === 'below' ? 'top-full mt-2' : 'bottom-full mb-2'
+            placement === 'below'
+              ? 'max-h-popover-below-max top-full mt-2 overflow-y-auto overscroll-contain'
+              : 'bottom-full mb-2'
           }`}
         >
           {children(close)}

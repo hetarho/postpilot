@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { FailureNotice, ProgressLine } from '@/entities/generation-job'
-import { Button, FieldMessage, Notice } from '@/shared/ui'
+import { Button, FieldMessage, Notice, Typography } from '@/shared/ui'
 import type { VoiceLearning } from '../model/useVoiceLearning'
 
 /** 글 완성's own action, and the one place every learning outcome is reported.
@@ -23,12 +23,12 @@ export function VoiceLearningPanel({
 
   return (
     <section aria-labelledby="learning-heading" className="mt-8">
-      <h2 id="learning-heading" className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" id="learning-heading">
         {t('learning.title')}
-      </h2>
-      <p className="text-content-secondary mt-2 text-sm leading-relaxed">
+      </Typography>
+      <Typography variant="body" className="text-content-secondary mt-2">
         {t('learning.description')}
-      </p>
+      </Typography>
       {learning.isError ? (
         <div className="mt-3">
           <FailureNotice message={t('learning.statusFailed')} onRetry={learning.refetch} />
@@ -58,16 +58,18 @@ export function VoiceLearningPanel({
       {/* The voice gate outranks the finalize gate: telling someone to confirm a revision that
           could never be learned from either way would be a detour to the same refusal. */}
       {learning.blocked ? (
-        <p role="status" className="text-content-secondary mt-2 text-sm">
+        <Typography variant="body" role="status" className="text-content-secondary mt-2">
           {learning.blocked}
-        </p>
+        </Typography>
       ) : !finalized ? (
-        <p role="status" className="text-content-secondary mt-2 text-sm">
+        <Typography variant="body" role="status" className="text-content-secondary mt-2">
           {t('learning.notFinalized')}
-        </p>
+        </Typography>
       ) : (
         learning.needsAnalyzeModel && (
-          <p className="text-content-tertiary mt-2 text-sm">{t('learning.needAnalyze')}</p>
+          <Typography variant="body" className="text-content-tertiary mt-2">
+            {t('learning.needAnalyze')}
+          </Typography>
         )
       )}
       <div className="mt-4 flex flex-wrap gap-2">

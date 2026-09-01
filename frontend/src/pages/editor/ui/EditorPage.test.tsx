@@ -22,6 +22,10 @@ import { clearCaret } from '../model/editor-handoff'
 
 const USER = { id: 'alice' }
 
+// This integration file mounts the full routed editor 71 times. Individual cases finish well
+// below this bound, but the default 5s becomes flaky while all test files transform in parallel.
+vi.setConfig({ testTimeout: 10_000 })
+
 /** The editor is one mounted component showing three step panels, so a test reaches a panel the
  *  post's status did not open by pressing its step. */
 async function openStep(user: ReturnType<typeof userEvent.setup>, label: string) {
@@ -70,7 +74,9 @@ describe('opening a post', () => {
     })
 
     expect(await screen.findByLabelText('제목')).toHaveValue('제주 3일')
+    expect(screen.getByRole('heading', { level: 1, name: '제주 3일' })).toBeInTheDocument()
     expect(screen.getByLabelText('메모')).toHaveValue('첫날은 비')
+    expect(screen.getByLabelText('메모')).toHaveClass('bg-field-bg')
     expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
   })
 

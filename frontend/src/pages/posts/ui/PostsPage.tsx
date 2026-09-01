@@ -6,7 +6,16 @@ import { useExperiments, type ModelExperiment } from '@/entities/model-experimen
 import { PurposeRefLabel } from '@/entities/purpose'
 import { VoiceRefLabel } from '@/entities/voice'
 import { formatRelativeTime } from '@/shared/lib'
-import { ActionBar, Badge, Button, Notice, buttonStyles, type BadgeTone } from '@/shared/ui'
+import {
+  ActionBar,
+  Badge,
+  Button,
+  Notice,
+  Typography,
+  buttonStyles,
+  typographyStyles,
+  type BadgeTone,
+} from '@/shared/ui'
 
 /** The one status chip a row carries. Colour never travels alone (design-language §2.6): the tone
  *  only reinforces the label, so the label is chosen first and the tone follows it. */
@@ -50,7 +59,7 @@ export function PostsPage() {
           docked to the bottom of a half-empty page reads as debris — so the action goes back
           beside the heading where a desktop user looks for it. */}
       <div className="flex items-center justify-between gap-3 px-4 sm:px-6">
-        <h1 className="text-lg font-semibold tracking-tight">{t('list.mine', { ns: 'posts' })}</h1>
+        <Typography variant="display">{t('list.mine', { ns: 'posts' })}</Typography>
         <Link
           to="/posts/new"
           className={buttonStyles({ variant: 'cta', className: 'hidden sm:inline-flex' })}
@@ -79,9 +88,13 @@ export function PostsPage() {
       {/* One live region for both states, so finishing the load is a text change inside it rather
           than two nodes swapping — a swap announces nothing to VoiceOver or TalkBack (§9). */}
       {!isError && (isPending || posts.length === 0) && (
-        <p role="status" className="text-content-tertiary mt-8 px-4 text-sm sm:px-6">
+        <Typography
+          variant="body"
+          role="status"
+          className="text-content-tertiary mt-8 px-4 sm:px-6"
+        >
           {isPending ? t('state.loading', { ns: 'common' }) : t('list.empty', { ns: 'posts' })}
-        </p>
+        </Typography>
       )}
 
       <ul className="divide-divider mt-4 shrink-0 divide-y">
@@ -99,14 +112,25 @@ export function PostsPage() {
           // itself (spec/policy/posts.md) — the name gives way before the badge or the time do.
           const content = (
             <>
-              <span className="w-full truncate text-sm">{displayTitle(post)}</span>
+              <Typography variant="label" className="text-content-primary w-full truncate">
+                {displayTitle(post)}
+              </Typography>
               <span className="flex w-full min-w-0 items-center gap-2">
                 <Badge tone={status.tone}>{status.label}</Badge>
-                <VoiceRefLabel voice={post.voice} className="text-content-tertiary text-xs" />
+                <VoiceRefLabel
+                  voice={post.voice}
+                  className={typographyStyles({ variant: 'meta' })}
+                />
                 {/* Only for an assigned post, and after the voice: the voice is on every row and
                     the 용도 is not, so it reads as an addition rather than a second column. */}
-                <PurposeRefLabel purpose={post.purpose} className="text-content-tertiary text-xs" />
-                <time dateTime={post.updatedAt} className="text-content-tertiary shrink-0 text-xs">
+                <PurposeRefLabel
+                  purpose={post.purpose}
+                  className={typographyStyles({ variant: 'meta' })}
+                />
+                <time
+                  dateTime={post.updatedAt}
+                  className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}
+                >
                   {formatRelativeTime(post.updatedAt)}
                 </time>
               </span>

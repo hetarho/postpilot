@@ -14,6 +14,8 @@ import {
   FieldMessage,
   Notice,
   Textarea,
+  Typography,
+  typographyStyles,
 } from '@/shared/ui'
 import { useStartRevision } from '../api/useStartRevision'
 import { SaveAsGuidelineButton } from './SaveAsGuidelineButton'
@@ -131,9 +133,9 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
 
   return (
     <section aria-labelledby="revision-heading" className="mt-10 pb-12">
-      <h2 id="revision-heading" className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" id="revision-heading">
         {t('revision.title')}
-      </h2>
+      </Typography>
       <form
         className="mt-4 space-y-3"
         onSubmit={(event) => {
@@ -157,13 +159,19 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           enterKeyHint="enter"
           disabled={voiceBlocked || hasActiveJob || jobPending || startRevision.isPending}
           placeholder={t('revision.placeholder')}
+          aria-describedby="revision-instruction-count"
           onChange={(event) => setInstruction(event.target.value)}
         />
         {/* The cap used to stop the keystrokes with nothing on screen explaining why. */}
-        <p className="text-content-tertiary text-xs">
+        <Typography variant="meta" as="p" id="revision-instruction-count">
           {instruction.length}/{REVISION_INSTRUCTION_MAX_CHARS}
-        </p>
-        <label className="text-content-secondary flex min-h-11 items-center gap-3 text-sm">
+        </Typography>
+        <label
+          className={typographyStyles({
+            variant: 'label',
+            className: 'flex min-h-11 items-center gap-3',
+          })}
+        >
           <Checkbox
             checked={saveAsRule}
             disabled={
@@ -178,9 +186,9 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           {t('revision.saveAsRule')}
         </label>
         {ruleLanguageMismatch && (
-          <p role="status" className="text-content-secondary text-sm">
+          <Typography variant="body" role="status" className="text-content-secondary">
             {t('revision.ruleLanguageMismatch')}
-          </p>
+          </Typography>
         )}
         {/* Beside 규칙으로 저장, but only after a revision has actually finished: the instruction is
             worth saving as a rule once the user has seen what it did. `규칙으로 저장` has to be a
@@ -199,9 +207,9 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         {/* Validation and failure sit ABOVE the action, so the keyboard covering the bottom ~40%
             of the screen hides at most the button and never the reason it is disabled (§8.3). */}
         {blocker && (
-          <p role="status" className="text-content-secondary text-sm">
+          <Typography variant="body" role="status" className="text-content-secondary">
             {blocker}
-          </p>
+          </Typography>
         )}
         {startRevision.isError && <FieldMessage>{startRevision.errorMessage}</FieldMessage>}
         {prepareFailure && (

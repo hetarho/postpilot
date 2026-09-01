@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useVoiceValidations, voiceValidationState } from '@/entities/voice'
 import { ValidateVoiceProfile } from '@/features/validate-voice-profile'
 import { formatPercent } from '@/shared/lib'
+import { Typography, typographyStyles } from '@/shared/ui'
 import { VoiceScreen } from './VoiceScreen'
 
 export function VoiceValidationsPage() {
@@ -31,18 +32,22 @@ function ValidationRecords({ ownerId, voiceId }: { ownerId: string; voiceId: str
   const { validations, isPending } = useVoiceValidations(ownerId, voiceId)
   if (isPending)
     return (
-      <p className="text-content-tertiary mt-8 text-sm">{t('state.loading', { ns: 'common' })}</p>
+      <Typography variant="body" className="text-content-tertiary mt-8">
+        {t('state.loading', { ns: 'common' })}
+      </Typography>
     )
   if (validations.length === 0) {
     return (
-      <p className="text-content-tertiary mt-8 text-sm">
+      <Typography variant="body" className="text-content-tertiary mt-8">
         {t('screens.noValidations', { ns: 'voices' })}
-      </p>
+      </Typography>
     )
   }
   return (
     <section className="mt-8">
-      <h3 className="font-medium">{t('screens.validationHistory', { ns: 'voices' })}</h3>
+      <Typography variant="title" as="h3">
+        {t('screens.validationHistory', { ns: 'voices' })}
+      </Typography>
       <ul className="mt-2 space-y-2">
         {validations.map((validation) => {
           const status = t(`validation.status.${voiceValidationState(validation.status)}`, {
@@ -66,7 +71,10 @@ function ValidationRecords({ ownerId, voiceId }: { ownerId: string; voiceId: str
               <Link
                 to="/voices/$voiceId/validations/$id"
                 params={{ voiceId, id: validation.id }}
-                className="text-link-fg inline-flex min-h-11 items-center text-sm underline"
+                className={typographyStyles({
+                  variant: 'label',
+                  className: 'text-link-fg inline-flex min-h-11 items-center underline',
+                })}
               >
                 {copy}
               </Link>

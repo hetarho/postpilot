@@ -13,7 +13,14 @@ import {
 } from '@/entities/model-catalog'
 import { formatNumber } from '@/shared/lib'
 import type { AppFailure } from '@/shared/api'
-import { AppFailureMessage, Button, FieldLabel, FieldMessage, Select } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  FieldLabel,
+  FieldMessage,
+  Select,
+  Typography,
+} from '@/shared/ui'
 
 export function ModelPairForm({ stage }: { stage: StageName }) {
   const { models } = useModels()
@@ -108,14 +115,19 @@ function ModelPairFields({
             to rest — indistinguishable from success — and the user only learns something is wrong
             from a CTA that stays disabled two screens away (§4.3). */}
         {savePair.failure && (
-          <div role="alert" className="text-field-error mt-2 text-sm break-words">
+          <Typography
+            variant="body"
+            as="div"
+            role="alert"
+            className="text-field-error mt-2 break-words"
+          >
             <AppFailureMessage failure={savePair.failure} />
-          </div>
+          </Typography>
         )}
         {savePair.isSuccess && (
-          <p role="status" className="text-content-secondary mt-2 text-sm">
+          <Typography variant="body" role="status" className="text-content-secondary mt-2">
             {t('pair.saved')}
-          </p>
+          </Typography>
         )}
       </div>
     </div>
@@ -168,13 +180,24 @@ function ModelSelect({
       {value && <ModelMeta model={models.find((model) => refKey(model.ref) === value)} />}
       {/* The live region stays mounted so it announces when it fills, and `empty:hidden` keeps it
           out of the layout while it is idle. */}
-      <p role="status" className="text-content-tertiary mt-1 text-xs empty:hidden">
+      <Typography
+        variant="body"
+        as="p"
+        role="status"
+        className="text-content-tertiary mt-1 empty:hidden"
+      >
         {saving ? t('pair.saving') : null}
-      </p>
+      </Typography>
       {error && (
-        <div id={errorId} role="alert" className="text-field-error mt-1 text-xs break-words">
+        <Typography
+          variant="body"
+          as="div"
+          id={errorId}
+          role="alert"
+          className="text-field-error mt-1 break-words"
+        >
           <AppFailureMessage failure={error} />
-        </div>
+        </Typography>
       )}
     </div>
   )
@@ -189,7 +212,7 @@ function ModelMeta({
   if (!model) return null
   const context = formatNumber(Number(model.contextTokens))
   return (
-    <p className="text-content-tertiary mt-1 text-xs">
+    <Typography variant="label" as="p" className="mt-1">
       {t('pair.pricing', {
         tokens: context,
         input: model.inputUsdPerMillion || '?',
@@ -202,6 +225,6 @@ function ModelMeta({
         {' · '}
         {model.pricingCheckedAt || t('pair.priceUnchecked')}
       </span>
-    </p>
+    </Typography>
   )
 }

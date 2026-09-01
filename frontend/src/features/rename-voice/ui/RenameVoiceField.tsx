@@ -2,7 +2,7 @@ import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Voice } from '@/entities/voice'
 import { VOICE_NAME_MAX_CHARS } from '@/shared/config'
-import { Button, Editable, FieldLabel, FieldMessage, TextField } from '@/shared/ui'
+import { Button, Editable, FieldLabel, FieldMessage, TextField, Typography } from '@/shared/ui'
 import { useRenameVoice } from '../api/useRenameVoice'
 
 /** Read first, rename on request (the `Editable` shape the profile fields use). The caller supplies
@@ -64,9 +64,11 @@ function RenameEditor({
 }) {
   const { t } = useTranslation(['voices', 'common'])
   const id = useId()
+  const countId = `${id}-count`
   const errorId = `${id}-error`
   const [draft, setDraft] = useState(name)
   const chars = Array.from(draft.trim()).length
+  const exceeded = chars > VOICE_NAME_MAX_CHARS
   const valid = chars > 0 && chars <= VOICE_NAME_MAX_CHARS
   return (
     <form
@@ -86,13 +88,22 @@ function RenameEditor({
         autoCorrect="off"
         enterKeyHint="done"
         autoFocus
-        aria-invalid={errorMessage ? true : undefined}
-        aria-describedby={errorMessage ? errorId : undefined}
+        aria-invalid={exceeded || Boolean(errorMessage) || undefined}
+        aria-describedby={`${countId}${errorMessage ? ` ${errorId}` : ''}`}
         className="mt-1"
       />
-      <p className="text-content-tertiary mt-2 text-xs">
-        {t('rename.count', { ns: 'voices', count: chars, max: VOICE_NAME_MAX_CHARS })}
-      </p>
+      {exceeded ? (
+        <FieldMessage id={countId} role="status" className="mt-2">
+          {t('count.exceeded', {
+            ns: 'common',
+            count: chars - VOICE_NAME_MAX_CHARS,
+          })}
+        </FieldMessage>
+      ) : (
+        <Typography variant="meta" as="p" id={countId} className="mt-2">
+          {t('rename.count', { ns: 'voices', count: chars, max: VOICE_NAME_MAX_CHARS })}
+        </Typography>
+      )}
       {errorMessage && (
         <FieldMessage id={errorId} className="mt-2">
           {errorMessage}

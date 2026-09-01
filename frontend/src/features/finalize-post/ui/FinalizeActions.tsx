@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ContentRevisionConflictError, type PostDraft } from '@/entities/post'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
-import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
+import { AppFailureMessage, Button, Dialog, Notice, Typography } from '@/shared/ui'
 import { useFinalizePost } from '../api/useFinalizePost'
 import type { VoiceLearning } from '../model/useVoiceLearning'
 
@@ -68,12 +68,12 @@ export function FinalizeActions({
 
   return (
     <section aria-labelledby="finalize-heading" className="mt-12">
-      <h2 id="finalize-heading" className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" id="finalize-heading">
         {t('finalize.title')}
-      </h2>
-      <p className="text-content-secondary mt-2 text-sm leading-relaxed">
+      </Typography>
+      <Typography variant="body" className="text-content-secondary mt-2">
         {finalized ? t('finalize.already') : t('finalize.description')}
-      </p>
+      </Typography>
       {finalize.error && (
         <Notice tone="danger" role="alert" className="mt-2">
           <AppFailureMessage failure={appFailureFromConnect(finalize.error)} />
@@ -100,12 +100,14 @@ export function FinalizeActions({
       ) : (
         <>
           {learning.blocked ? (
-            <p role="status" className="text-content-secondary mt-2 text-sm">
+            <Typography variant="body" role="status" className="text-content-secondary mt-2">
               {learning.blocked}
-            </p>
+            </Typography>
           ) : (
             learning.needsAnalyzeModel && (
-              <p className="text-content-tertiary mt-2 text-sm">{t('finalize.analyzeHelp')}</p>
+              <Typography variant="body" className="text-content-tertiary mt-2">
+                {t('finalize.analyzeHelp')}
+              </Typography>
             )
           )}
           <div className="mt-4 flex flex-wrap gap-2">

@@ -2,7 +2,7 @@ import { useId, useState, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { NO_PURPOSE_VALUE, noPurposeLabel, usePurposes, type PurposeRef } from '@/entities/purpose'
-import { Button, FieldLabel, FieldMessage, Select } from '@/shared/ui'
+import { Button, FieldLabel, FieldMessage, Select, Typography, typographyStyles } from '@/shared/ui'
 import { runningJobNote, assignmentFailureMessage } from '../model/assignment'
 
 interface PostPurposeSelectProps {
@@ -95,12 +95,14 @@ export function PostPurposeSelect({
         </span>
       </div>
       {selected?.description && (
-        <p className="text-content-secondary mt-2 text-sm break-words">{selected.description}</p>
+        <Typography variant="label" as="p" className="mt-2 break-words">
+          {selected.description}
+        </Typography>
       )}
       {jobRunning && (
-        <p id={hintId} role="status" className="text-content-secondary mt-2 text-sm">
+        <Typography variant="label" as="p" id={hintId} role="status" className="mt-2">
           {runningJobNote()}
-        </p>
+        </Typography>
       )}
       {/* A failed directory read must not render as "you have no 용도": the select would be
           enabled with 없음 alone, and the only thing the user could do is clear a purpose they
@@ -123,8 +125,14 @@ export function PostPurposeSelect({
           {error}
         </FieldMessage>
       )}
-      <p className="mt-2 text-sm">
-        <Link to="/purposes" className="text-content-secondary underline underline-offset-2">
+      <p className="mt-2">
+        <Link
+          to="/purposes"
+          className={typographyStyles({
+            variant: 'label',
+            className: 'underline underline-offset-2',
+          })}
+        >
           {t('assignment.manage', { ns: 'purposes' })}
         </Link>
       </p>

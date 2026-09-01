@@ -1,1 +1,1 @@
-export { LocaleSelect } from './ui/LocaleSelect'
+export { LocaleMenu } from './ui/LocaleMenu'

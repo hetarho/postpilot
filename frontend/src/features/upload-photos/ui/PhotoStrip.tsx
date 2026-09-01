@@ -1,8 +1,9 @@
 import { useCallback, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { X } from 'lucide-react'
 import { type PostImage, Thumbnail } from '@/entities/image'
 import type { AppFailure } from '@/shared/api'
-import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
+import { AppFailureMessage, Button, Dialog, Notice, Typography } from '@/shared/ui'
 import type { UploadItem } from '../model/upload-batch'
 
 interface PhotoStripProps {
@@ -51,10 +52,14 @@ export function PhotoStrip({
     attempted && confirming !== undefined && deleteFailedId === confirming.id && !deleting
 
   // An empty section reads as a bug on a phone, where there is no other chrome around it
-  // (design-language §7): the slot says what photos are for instead of collapsing. `text-sm`,
-  // not the 12px of a status line — it is a sentence the user is meant to act on (§3).
+  // (design-language §7): the slot says what photos are for instead of collapsing. The body
+  // role, not the 12px of a status line — it is a sentence the user is meant to act on (§3).
   if (images.length === 0 && inFlight.length === 0) {
-    return <p className="text-content-tertiary text-sm">{t('upload.empty', { ns: 'posts' })}</p>
+    return (
+      <Typography variant="body" className="text-content-tertiary">
+        {t('upload.empty', { ns: 'posts' })}
+      </Typography>
+    )
   }
 
   return (
@@ -108,9 +113,9 @@ export function PhotoStrip({
                 }}
                 disabled={deletingId === image.id}
                 aria-label={t('upload.deleteAria', { ns: 'posts', filename: image.filename })}
-                className="bg-media-scrim-bg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-1 right-1 text-xl"
+                className="bg-media-scrim-bg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-1 right-1"
               >
-                <span aria-hidden="true">×</span>
+                <X aria-hidden="true" className="size-5" />
               </Button>
             </Thumbnail>
           </li>
@@ -121,12 +126,14 @@ export function PhotoStrip({
               {item.status === 'failed' ? (
                 <Overlay>
                   {item.appFailure ? (
-                    <AppFailureMessage failure={item.appFailure} />
+                    <Typography variant="body" as="div">
+                      <AppFailureMessage failure={item.appFailure} />
+                    </Typography>
                   ) : (
-                    <span>
+                    <Typography variant="body" as="span">
                       {item.failure &&
                         t(`upload.failure.${failureKey(item.failure)}`, { ns: 'posts' })}
-                    </span>
+                    </Typography>
                   )}
                   {/* One full-width action per tile. Two 44px targets side by side inside a 128px
                       square shrink to ~45px and break their Korean labels mid-word, and stacked
@@ -141,7 +148,11 @@ export function PhotoStrip({
                   </Button>
                 </Overlay>
               ) : (
-                <Overlay>{t(`upload.status.${statusKey(item.status)}`, { ns: 'posts' })}</Overlay>
+                <Overlay>
+                  <Typography variant="body" as="span">
+                    {t(`upload.status.${statusKey(item.status)}`, { ns: 'posts' })}
+                  </Typography>
+                </Overlay>
               )}
             </Thumbnail>
           </li>
@@ -194,7 +205,7 @@ function statusKey(status: UploadItem['status']) {
 
 function Overlay({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-media-scrim-bg/90 text-media-scrim-fg absolute inset-0 flex flex-col items-center justify-center gap-2 p-2 text-center text-xs leading-tight">
+    <div className="bg-media-scrim-bg/90 text-media-scrim-fg absolute inset-0 flex flex-col items-center justify-center gap-2 p-2 text-center">
       {children}
     </div>
   )

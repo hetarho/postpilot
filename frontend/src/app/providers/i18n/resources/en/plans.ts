@@ -6,10 +6,6 @@ export const plans = {
     master: 'Operator',
     unknown: 'Unknown',
   },
-  badge: {
-    label: '{{plan}} plan',
-    trigger: 'Plan',
-  },
   usage: {
     heading: 'Usage today',
     dailyStarts: 'AI jobs started today',

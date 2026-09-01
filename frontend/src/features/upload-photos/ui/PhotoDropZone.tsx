@@ -1,5 +1,6 @@
 import { useState, type DragEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Typography } from '@/shared/ui'
 
 interface PhotoDropZoneProps {
   onFiles: (files: File[]) => void
@@ -58,12 +59,14 @@ export function PhotoDropZone({ onFiles, disabled, children }: PhotoDropZoneProp
     >
       {children}
       {active && (
-        <div
+        <Typography
+          variant="body"
+          as="div"
           aria-hidden
-          className="bg-notice-info-bg/80 text-notice-info-fg outline-focus-ring pointer-events-none absolute -inset-2 flex items-center justify-center rounded-lg text-sm outline-2 outline-dashed"
+          className="bg-notice-info-bg/80 text-notice-info-fg outline-focus-ring pointer-events-none absolute -inset-2 flex items-center justify-center rounded-lg outline-2 outline-dashed"
         >
           {t('upload.drop')}
-        </div>
+        </Typography>
       )}
     </div>
   )

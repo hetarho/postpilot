@@ -7,7 +7,7 @@ import { DeleteVoiceButton } from '@/features/delete-voice'
 import { RenameVoiceField } from '@/features/rename-voice'
 import { RestoreVoiceButton } from '@/features/restore-voice'
 import { SetDefaultVoiceButton } from '@/features/set-default-voice'
-import { Badge, Button, Notice } from '@/shared/ui'
+import { Badge, Button, Notice, Typography, typographyStyles } from '@/shared/ui'
 
 /** The account's voices (PRD §3.4): the active ones first, then the tombstones. Composition only —
  *  every action is its own feature, and the rows are links into one voice's profile. */
@@ -19,10 +19,10 @@ export function VoicesPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('title', { ns: 'voices' })}</h1>
-      <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
+      <Typography variant="display">{t('title', { ns: 'voices' })}</Typography>
+      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'voices' })}
-      </p>
+      </Typography>
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -38,17 +38,17 @@ export function VoicesPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <p role="status" className="text-content-tertiary mt-8 text-sm">
+        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
           {t('state.loading', { ns: 'common' })}
-        </p>
+        </Typography>
       )}
 
       {!isError && !isPending && (
         <>
           <section aria-labelledby="active-voices-heading" className="mt-8">
-            <h2 id="active-voices-heading" className="text-lg font-semibold tracking-tight">
+            <Typography variant="title" id="active-voices-heading">
               {t('page.active', { ns: 'voices' })}
-            </h2>
+            </Typography>
             <ul className="divide-divider mt-3 divide-y">
               {active.map((voice) => (
                 <VoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
@@ -57,20 +57,20 @@ export function VoicesPage() {
           </section>
 
           <section aria-labelledby="create-voice-heading" className="mt-10">
-            <h2 id="create-voice-heading" className="text-lg font-semibold tracking-tight">
+            <Typography variant="title" id="create-voice-heading">
               {t('page.new', { ns: 'voices' })}
-            </h2>
+            </Typography>
             <CreateVoiceForm ownerId={ownerId} className="mt-3" />
           </section>
 
           {deleted.length > 0 && (
             <section aria-labelledby="deleted-voices-heading" className="mt-12">
-              <h2 id="deleted-voices-heading" className="text-lg font-semibold tracking-tight">
+              <Typography variant="title" id="deleted-voices-heading">
                 {t('page.deleted', { ns: 'voices' })}
-              </h2>
-              <p className="text-content-secondary mt-2 text-sm leading-relaxed">
+              </Typography>
+              <Typography variant="body" className="text-content-secondary mt-2">
                 {t('page.deletedHelp', { ns: 'voices' })}
-              </p>
+              </Typography>
               <ul className="divide-divider mt-3 divide-y">
                 {deleted.map((voice) => (
                   <DeletedVoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
@@ -95,7 +95,11 @@ function VoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
           <Link
             to="/voices/$voiceId"
             params={{ voiceId: voice.id }}
-            className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center text-sm underline"
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center underline',
+            })}
           >
             <span className="truncate">{voice.name}</span>
           </Link>
@@ -122,7 +126,11 @@ function DeletedVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) 
           <Link
             to="/voices/$voiceId"
             params={{ voiceId: voice.id }}
-            className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center text-sm underline"
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center underline',
+            })}
           >
             <span className="truncate">{voice.name}</span>
           </Link>

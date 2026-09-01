@@ -4,7 +4,7 @@ import { Link, useParams } from '@tanstack/react-router'
 import { usePost } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
-import { AppFailureMessage, Button } from '@/shared/ui'
+import { AppFailureMessage, Button, typographyStyles } from '@/shared/ui'
 import { DraftEditor } from './DraftEditor'
 
 /** `/posts/new` — a draft that does not exist yet. The first autosave creates it and
@@ -115,7 +115,13 @@ function LoadFailure({
 
 function EditorPlaceholder({ children }: { children: ReactNode }) {
   return (
-    <main className="text-content-tertiary mx-auto flex w-full max-w-2xl flex-col items-start px-4 py-16 text-sm sm:px-6">
+    <main
+      className={typographyStyles({
+        variant: 'body',
+        className:
+          'text-content-tertiary mx-auto flex w-full max-w-2xl flex-col items-start px-4 py-16 sm:px-6',
+      })}
+    >
       {children}
     </main>
   )

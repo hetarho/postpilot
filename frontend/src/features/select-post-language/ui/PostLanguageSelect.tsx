@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appFailureFromConnect, type AppFailure, type ContentLanguage } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
-import { FieldLabel, FieldMessage, Select } from '@/shared/ui'
+import { FieldLabel, FieldMessage, Select, Typography } from '@/shared/ui'
 
 export function PostLanguageSelect({
   value,
@@ -49,7 +49,7 @@ export function PostLanguageSelect({
         <option value="ko">{t('contentLanguage.ko', { ns: 'common' })}</option>
         <option value="en">{t('contentLanguage.en', { ns: 'common' })}</option>
       </Select>
-      <p id={hintId} className="text-content-tertiary mt-2 text-xs leading-relaxed">
+      <Typography variant="body" as="p" id={hintId} className="text-content-secondary mt-2">
         {frozenLanguage && frozenLanguage !== value
           ? t('editor.language.frozen', {
               ns: 'posts',
@@ -61,7 +61,7 @@ export function PostLanguageSelect({
                 language: t(`contentLanguage.${contentLanguage}`, { ns: 'common' }),
               })
             : t('editor.language.help', { ns: 'posts' })}
-      </p>
+      </Typography>
       {failure && (
         <FieldMessage id={errorId} className="mt-2">
           {formatAppFailure(failure)}

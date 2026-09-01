@@ -26,7 +26,6 @@ export function AboutHeader() {
           link to the current route is a dead control. */}
       <Logo className="h-6 shrink-0" />
       <div className="flex min-w-0 shrink items-center gap-2">
-        <InterfacePreferences />
         <Link
           to="/login"
           search={carried ? { redirect: carried } : {}}
@@ -34,6 +33,10 @@ export function AboutHeader() {
         >
           {t('header.login')}
         </Link>
+        {/* Keep the two right-aligned menu panels viewport-side last. At 320px, putting Login
+            after them pushed the theme trigger far enough left that its 176px panel crossed the
+            viewport edge even though the header row itself still fit. */}
+        <InterfacePreferences />
       </div>
     </header>
   )

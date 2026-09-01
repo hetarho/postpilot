@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, Layers, PencilLine, SlidersHorizontal } from 'lucide-react'
+import { Typography, typographyStyles } from '@/shared/ui'
 import { useAboutMetadata } from '../model/useAboutMetadata'
 import { AboutHeader } from './AboutHeader'
 
@@ -23,15 +24,15 @@ export function AboutPage() {
       <AboutHeader />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 sm:px-6">
         <section aria-labelledby="about-hero" className="pt-10 sm:pt-16">
-          <h1 id="about-hero" className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <Typography variant="display" id="about-hero">
             {t('hero.title')}
-          </h1>
-          <p className="text-content-secondary max-w-measure mt-4 text-base leading-relaxed">
+          </Typography>
+          <Typography variant="body" className="text-content-secondary max-w-measure mt-4">
             {t('hero.body')}
-          </p>
-          <p className="text-content-tertiary max-w-measure mt-3 text-sm leading-relaxed">
+          </Typography>
+          <Typography variant="body" className="text-content-tertiary max-w-measure mt-3">
             {t('hero.access')}
-          </p>
+          </Typography>
         </section>
 
         <Section id="about-flow" title={t('flow.title')}>
@@ -42,17 +43,20 @@ export function AboutPage() {
               <li key={step} className="flex gap-3">
                 {/* Decorative: the ordinal is already in the list semantics, so it is hidden
                     rather than read out twice. */}
-                <span
+                <Typography
+                  variant="label"
                   aria-hidden="true"
-                  className="bg-surface-raised text-content-secondary mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-medium"
+                  className="bg-surface-raised mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full"
                 >
                   {index + 1}
-                </span>
+                </Typography>
                 <div className="min-w-0">
-                  <h3 className="text-base font-medium">{t(`flow.${step}.title`)}</h3>
-                  <p className="text-content-secondary max-w-measure mt-1 text-sm leading-relaxed">
+                  <Typography variant="label" as="h3">
+                    {t(`flow.${step}.title`)}
+                  </Typography>
+                  <Typography variant="body" className="text-content-secondary max-w-measure mt-1">
                     {t(`flow.${step}.body`)}
-                  </p>
+                  </Typography>
                 </div>
               </li>
             ))}
@@ -70,63 +74,71 @@ export function AboutPage() {
               ] as const
             ).map(([key, Icon]) => (
               <li key={key} className="min-w-0">
-                <h3 className="flex items-center gap-2 text-base font-medium">
+                <Typography variant="label" as="h3" className="flex items-center gap-2">
                   <Icon aria-hidden="true" className="text-content-tertiary size-4 shrink-0" />
                   <span className="min-w-0">{t(`different.${key}.title`)}</span>
-                </h3>
-                <p className="text-content-secondary mt-1 text-sm leading-relaxed">
+                </Typography>
+                <Typography variant="body" className="text-content-secondary mt-1">
                   {t(`different.${key}.body`)}
-                </p>
+                </Typography>
               </li>
             ))}
           </ul>
         </Section>
 
         <Section id="about-outputs" title={t('outputs.title')}>
-          <p className="text-content-secondary max-w-measure mt-3 text-sm leading-relaxed">
+          <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
             {t('outputs.body')}
-          </p>
+          </Typography>
           <ul className="text-content-primary mt-4 flex flex-wrap gap-2">
             {(['naver', 'tistory', 'html', 'markdown'] as const).map((format) => (
-              <li
+              <Typography
+                variant="label"
+                as="li"
                 key={format}
-                className="bg-surface-raised rounded-md px-3 py-1.5 text-sm whitespace-nowrap"
+                className="bg-surface-raised text-content-primary rounded-md px-3 py-1.5 whitespace-nowrap"
               >
                 {t(`outputs.${format}`)}
-              </li>
+              </Typography>
             ))}
           </ul>
           {/* The publishing boundary, stated rather than marketed: an operator-tier surface whose
               live verification is still open (plan 12). Never softened into a shipped feature. */}
-          <p className="text-content-tertiary max-w-measure mt-4 text-sm leading-relaxed">
+          <Typography variant="body" className="text-content-tertiary max-w-measure mt-4">
             {t('outputs.publishing')}
-          </p>
+          </Typography>
         </Section>
 
         <Section id="about-plans" title={t('plans.title')}>
-          <p className="text-content-secondary max-w-measure mt-3 text-sm leading-relaxed">
+          <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
             {t('plans.body')}
-          </p>
+          </Typography>
           {/* Scrolls inside its own container: five columns of Korean headers do not fit 320px,
               and the page itself must never scroll sideways (design-language §1.5). */}
           <div className="-mx-4 mt-4 overflow-x-auto overscroll-x-contain px-4 sm:mx-0 sm:px-0">
-            <table className="w-full min-w-md text-left text-sm">
+            {/* The label role carries the table's 14px; every visible cell sets its own colour. */}
+            <table
+              className={typographyStyles({
+                variant: 'label',
+                className: 'w-full min-w-md text-left',
+              })}
+            >
               <caption className="sr-only">{t('plans.title')}</caption>
-              <thead className="text-content-tertiary text-xs">
+              <thead className={typographyStyles({ variant: 'label' })}>
                 <tr>
-                  <th scope="col" className="py-2 pr-4 font-medium">
+                  <th scope="col" className="py-2 pr-4">
                     {t('plans.columns.plan')}
                   </th>
-                  <th scope="col" className="py-2 pr-4 font-medium">
+                  <th scope="col" className="py-2 pr-4">
                     {t('plans.columns.dailyStarts')}
                   </th>
-                  <th scope="col" className="py-2 pr-4 font-medium">
+                  <th scope="col" className="py-2 pr-4">
                     {t('plans.columns.dailyBudget')}
                   </th>
-                  <th scope="col" className="py-2 pr-4 font-medium">
+                  <th scope="col" className="py-2 pr-4">
                     {t('plans.columns.monthlyBudget')}
                   </th>
-                  <th scope="col" className="py-2 font-medium">
+                  <th scope="col" className="py-2">
                     {t('plans.columns.models')}
                   </th>
                 </tr>
@@ -134,7 +146,14 @@ export function AboutPage() {
               <tbody className="divide-divider divide-y">
                 {(['free', 'basic', 'max'] as const).map((tier) => (
                   <tr key={tier}>
-                    <th scope="row" className="py-3 pr-4 font-mono text-sm font-medium">
+                    <th
+                      scope="row"
+                      className={typographyStyles({
+                        variant: 'label',
+                        mono: true,
+                        className: 'text-content-primary py-3 pr-4',
+                      })}
+                    >
                       {t(`plans.${tier}.name`)}
                     </th>
                     <td className="text-content-secondary py-3 pr-4 whitespace-nowrap">
@@ -152,12 +171,12 @@ export function AboutPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-content-secondary max-w-measure mt-4 text-sm leading-relaxed">
+          <Typography variant="body" className="text-content-secondary max-w-measure mt-4">
             {t('plans.assignment')}
-          </p>
-          <p className="text-content-tertiary max-w-measure mt-2 text-sm leading-relaxed">
+          </Typography>
+          <Typography variant="body" className="text-content-tertiary max-w-measure mt-2">
             {t('plans.master')}
-          </p>
+          </Typography>
         </Section>
 
         <Section id="about-facts" title={t('facts.title')}>
@@ -166,12 +185,14 @@ export function AboutPage() {
               rest of the app uses for a plain fact list. */}
           <ul className="divide-divider mt-3 divide-y">
             {(['images', 'isolation', 'noBackground', 'credentials'] as const).map((fact) => (
-              <li
+              <Typography
+                variant="body"
+                as="li"
                 key={fact}
-                className="text-content-secondary max-w-measure py-3 text-sm leading-relaxed"
+                className="text-content-secondary max-w-measure py-3"
               >
                 {t(`facts.${fact}`)}
-              </li>
+              </Typography>
             ))}
           </ul>
         </Section>
@@ -180,7 +201,12 @@ export function AboutPage() {
       {/* `pb-8 mb-safe-b`, not `pb-8 pb-safe-b`: two padding utilities on the same side collide and
           the later one in the emitted CSS wins, which would resolve the footer's bottom padding to
           the bare inset — 0 on every desktop browser (app/styles/index.css). Margin adds instead. */}
-      <footer className="text-content-tertiary mb-safe-b px-4 pb-8 text-sm sm:px-6">
+      <footer
+        className={typographyStyles({
+          variant: 'body',
+          className: 'text-content-tertiary mb-safe-b px-4 pb-8 sm:px-6',
+        })}
+      >
         <p>Postpilot — {t('footer.tagline')}</p>
       </footer>
     </div>
@@ -190,9 +216,9 @@ export function AboutPage() {
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="mt-14 sm:mt-20">
-      <h2 id={id} className="text-xl font-semibold tracking-tight">
+      <Typography variant="title" id={id}>
         {title}
-      </h2>
+      </Typography>
       {children}
     </section>
   )

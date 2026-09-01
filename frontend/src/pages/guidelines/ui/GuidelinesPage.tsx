@@ -4,7 +4,7 @@ import { useSession } from '@/entities/session'
 import { CreateGuidelineForm } from '@/features/create-guideline'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
 import { EditableGuidelineScope, EditableGuidelineText } from '@/features/edit-guideline'
-import { Button, Notice } from '@/shared/ui'
+import { Button, Notice, Typography } from '@/shared/ui'
 
 /** The account's 작문 지침 (plan 16). Composition only — every action is its own feature.
  *
@@ -19,10 +19,10 @@ export function GuidelinesPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('title', { ns: 'guidelines' })}</h1>
-      <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
+      <Typography variant="display">{t('title', { ns: 'guidelines' })}</Typography>
+      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'guidelines' })}
-      </p>
+      </Typography>
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -38,9 +38,9 @@ export function GuidelinesPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <p role="status" className="text-content-tertiary mt-8 text-sm">
+        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
           {t('state.loading', { ns: 'common' })}
-        </p>
+        </Typography>
       )}
 
       {!isError && !isPending && (
@@ -49,12 +49,12 @@ export function GuidelinesPage() {
             <EmptyState />
           ) : (
             <section aria-labelledby="guidelines-heading" className="mt-8">
-              <h2 id="guidelines-heading" className="text-lg font-semibold tracking-tight">
+              <Typography variant="title" id="guidelines-heading">
                 {t('page.saved', { ns: 'guidelines' })}
-              </h2>
-              <p className="text-content-tertiary mt-1 text-xs">
+              </Typography>
+              <Typography variant="body" as="p" className="text-content-secondary mt-1">
                 {t('page.order', { ns: 'guidelines' })}
-              </p>
+              </Typography>
               <ul className="divide-divider mt-3 divide-y">
                 {guidelines.map((guideline) => (
                   <GuidelineRow key={guideline.id} ownerId={ownerId} guideline={guideline} />
@@ -64,9 +64,9 @@ export function GuidelinesPage() {
           )}
 
           <section aria-labelledby="create-guideline-heading" className="mt-10">
-            <h2 id="create-guideline-heading" className="text-lg font-semibold tracking-tight">
+            <Typography variant="title" id="create-guideline-heading">
               {t('page.new', { ns: 'guidelines' })}
-            </h2>
+            </Typography>
             <CreateGuidelineForm ownerId={ownerId} className="mt-3" />
           </section>
         </>
@@ -81,13 +81,15 @@ function EmptyState() {
   const { t } = useTranslation('guidelines')
   return (
     <section aria-labelledby="guidelines-empty-heading" className="mt-8">
-      <h2 id="guidelines-empty-heading" className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" id="guidelines-empty-heading">
         {t('page.empty')}
-      </h2>
-      <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
+      </Typography>
+      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.emptyHelp')}
-      </p>
-      <p className="text-content-primary mt-3 text-sm">{t('page.example')}</p>
+      </Typography>
+      <Typography variant="body" className="text-content-primary mt-3">
+        {t('page.example')}
+      </Typography>
     </section>
   )
 }

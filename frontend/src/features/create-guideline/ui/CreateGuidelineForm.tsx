@@ -8,7 +8,7 @@ import {
   useCreateGuidelineCall,
   type GuidelineScope,
 } from '@/entities/guideline'
-import { Button, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
+import { Button, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 
 /** One rule plus its scope, and the page's committing action right after the fields it commits —
  *  never docked, since a text field inside a bottom bar sits behind the keyboard the moment it is
@@ -23,11 +23,14 @@ export function CreateGuidelineForm({
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
   const id = useId()
+  const countId = `${id}-count`
+  const helpId = `${id}-help`
   const errorId = `${id}-error`
   const [text, setText] = useState('')
   const [scope, setScope] = useState<GuidelineScope>(globalScope)
   const create = useCreateGuidelineCall(ownerId)
 
+  const textExceeded = remainingGuidelineChars(text) < 0
   const disabled = !canSaveGuideline(text, scope) || create.isPending
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -55,12 +58,14 @@ export function CreateGuidelineForm({
         rows={3}
         autoGrow
         placeholder={t('create.textPlaceholder', { ns: 'guidelines' })}
-        aria-invalid={create.isError || undefined}
-        aria-describedby={create.isError ? errorId : undefined}
+        aria-invalid={textExceeded || create.isError || undefined}
+        aria-describedby={`${countId} ${helpId}${create.isError ? ` ${errorId}` : ''}`}
         className="mt-1"
       />
-      <CharCount value={text} />
-      <p className="text-content-tertiary mt-2 text-xs">{t('create.help', { ns: 'guidelines' })}</p>
+      <CharCount id={countId} value={text} />
+      <Typography variant="body" as="p" id={helpId} className="text-content-secondary mt-2">
+        {t('create.help', { ns: 'guidelines' })}
+      </Typography>
 
       <GuidelineScopeField
         ownerId={ownerId}
@@ -90,15 +95,16 @@ export function CreateGuidelineForm({
 
 /** Counts down rather than up: what a writer needs to know is how much room is left, and the count
  *  goes negative rather than clamping so an over-long paste says how much to cut. */
-function CharCount({ value }: { value: string }) {
+function CharCount({ id, value }: { id: string; value: string }) {
   const { t } = useTranslation('common')
   const left = remainingGuidelineChars(value)
-  return (
-    <p
-      className={left < 0 ? 'text-field-error mt-2 text-xs' : 'text-content-tertiary mt-2 text-xs'}
-      role={left < 0 ? 'status' : undefined}
-    >
-      {left < 0 ? t('count.exceeded', { count: -left }) : t('count.remaining', { count: left })}
-    </p>
+  return left < 0 ? (
+    <FieldMessage id={id} role="status" className="mt-2">
+      {t('count.exceeded', { count: -left })}
+    </FieldMessage>
+  ) : (
+    <Typography variant="meta" as="p" id={id} className="mt-2">
+      {t('count.remaining', { count: left })}
+    </Typography>
   )
 }

@@ -19,11 +19,10 @@ export const voices = {
     title: 'New voice name',
     placeholder: 'For example: Product reviews',
     submit: 'Create voice',
-    hint: '{{count}} / {{max}} characters · A new voice starts with an empty profile and shares nothing with other voices.',
-    hint_one:
-      '{{count}} / {{max}} character · A new voice starts with an empty profile and shares nothing with other voices.',
-    hint_other:
-      '{{count}} / {{max}} characters · A new voice starts with an empty profile and shares nothing with other voices.',
+    count: '{{count}} / {{max}} characters',
+    count_one: '{{count}} / {{max}} character',
+    count_other: '{{count}} / {{max}} characters',
+    emptyHelp: 'A new voice starts with an empty profile and shares nothing with other voices.',
     sourceLanguage: 'Sample language',
     sourceLanguageHelp:
       'This is the language the voice learns from. It cannot be changed after creation.',

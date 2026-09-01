@@ -3,6 +3,7 @@ import type { GenerationJob } from '@/entities/generation-job'
 import type { PostImage } from '@/entities/image'
 import { observationByFile } from '@/entities/observation'
 import type { Observation } from '@/shared/api'
+import { Typography } from '@/shared/ui'
 
 interface ContactSheetProps {
   images: readonly PostImage[]
@@ -19,12 +20,12 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
 
   return (
     <section aria-labelledby="contact-sheet-heading" className="mt-12">
-      <h2 id="contact-sheet-heading" className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" id="contact-sheet-heading">
         {t('observation.title')}
-      </h2>
-      <p className="text-content-secondary mt-2 text-sm leading-relaxed">
+      </Typography>
+      <Typography variant="body" className="text-content-secondary mt-2">
         {t('observation.description')}
-      </p>
+      </Typography>
 
       {/* The phone shape is a plain vertical list — a 240px card inside 328px of content left a
           27% dead gutter and squeezed the observation prose to 216px. The horizontal snap strip
@@ -53,11 +54,17 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
                   className="aspect-square w-full rounded-md object-cover"
                 />
               ) : (
-                <div className="bg-surface-recessed text-content-tertiary flex aspect-square w-full items-center justify-center rounded-md px-3 text-center text-xs">
+                <Typography
+                  variant="body"
+                  as="div"
+                  className="bg-surface-recessed flex aspect-square w-full items-center justify-center rounded-md px-3 text-center"
+                >
                   {t('observation.urlPending')}
-                </div>
+                </Typography>
               )}
-              <h3 className="mt-3 truncate text-sm font-medium">{image.filename}</h3>
+              <Typography variant="label" as="h3" className="text-content-primary mt-3 truncate">
+                {image.filename}
+              </Typography>
               {observation ? (
                 <dl className="mt-3 space-y-2">
                   <ObservationField label={t('observation.scene')} value={observation.scene} />
@@ -74,9 +81,9 @@ export function ContactSheet({ images, observations, activeJob }: ContactSheetPr
               ) : (
                 // No per-card live region: ten waiting photos meant ten regions all announcing
                 // '관찰 대기' over the one message that carries the count (the ProgressLine).
-                <p className="text-content-tertiary mt-3 text-xs">
+                <Typography variant="body" as="p" className="text-content-tertiary mt-3">
                   {observing ? t('observation.waiting') : t('observation.empty')}
-                </p>
+                </Typography>
               )}
             </article>
           )
@@ -90,12 +97,14 @@ function ObservationField({ label, value }: { label: string; value: string }) {
   const { t } = useTranslation('posts')
   return (
     <div>
-      <dt className="text-content-tertiary text-xs">{label}</dt>
+      <Typography variant="label" as="dt">
+        {label}
+      </Typography>
       {/* The body role, not the meta one: the section's own copy tells the user to read this, and
           the value is a model-supplied string, so it also breaks rather than overflowing (§3.2). */}
-      <dd className="text-content-secondary mt-0.5 text-sm leading-relaxed break-words">
+      <Typography variant="body" as="dd" className="text-content-secondary mt-0.5 break-words">
         {value || t('observation.none')}
-      </dd>
+      </Typography>
     </div>
   )
 }

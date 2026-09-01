@@ -9,4 +9,8 @@ export const auth = {
   logout: {
     failed: '로그아웃하지 못했어요. 세션이 아직 살아 있으니 다시 시도해 주세요.',
   },
+  account: {
+    label: '내 계정',
+    signedInAs: '로그인한 계정',
+  },
 } as const

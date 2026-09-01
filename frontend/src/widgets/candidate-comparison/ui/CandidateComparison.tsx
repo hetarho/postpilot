@@ -6,7 +6,7 @@ import type {
   ExperimentCandidate,
   ModelExperiment,
 } from '@/entities/model-experiment'
-import { AppFailureMessage, Badge, Notice, type BadgeTone } from '@/shared/ui'
+import { AppFailureMessage, Badge, Notice, Typography, type BadgeTone } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
 import { candidateSides, type CandidateSide } from '../model/sides'
 
@@ -44,9 +44,7 @@ export function CandidateComparison({ experiment, activeCandidateId }: Candidate
             className={`${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-surface-raised md:block md:rounded-lg md:p-4`}
           >
             <div className="flex min-h-11 items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold tracking-tight">
-                {t('comparison.candidate', { label })}
-              </h2>
+              <Typography variant="title">{t('comparison.candidate', { label })}</Typography>
               <Badge tone={STATUS_TONES[candidate.status]}>
                 {t(`comparison.status.${candidate.status}`)}
               </Badge>
@@ -73,40 +71,49 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
       </Notice>
     )
   if (!candidate.output)
-    return <p className="text-content-tertiary mt-4 text-sm">{t('comparison.waiting')}</p>
+    return (
+      <Typography variant="body" className="text-content-tertiary mt-4">
+        {t('comparison.waiting')}
+      </Typography>
+    )
   if (candidate.output.kind === 'write') {
     const content = candidate.output.content
     return (
       <div className="mt-4">
-        <h3 className="text-lg font-semibold tracking-tight">{content.title}</h3>
+        <Typography variant="title" as="h3">
+          {content.title}
+        </Typography>
         {content.summary && (
-          <p className="text-content-secondary mt-2 text-sm">{content.summary}</p>
+          <Typography variant="label" as="p" className="mt-2">
+            {content.summary}
+          </Typography>
         )}
         <div className="mt-5 space-y-4">
           {content.blocks.map((block, index) =>
             block.type === 5 ? (
-              <ul key={index} className="list-disc space-y-1 pl-5 text-sm leading-relaxed">
+              <Typography key={index} variant="body" as="ul" className="list-disc space-y-1 pl-5">
                 {block.items.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
-              </ul>
+              </Typography>
             ) : block.type === 2 ? (
-              <h4 key={index} className="font-semibold">
+              <Typography key={index} variant="title" as="h4">
                 {block.content}
-              </h4>
+              </Typography>
             ) : block.type === 3 ? (
               // `break-words`: the filename comes from the server (§3.2).
-              <p
+              <Typography
                 key={index}
-                className="bg-surface-recessed rounded-md px-3 py-2 text-sm break-words"
+                variant="body"
+                className="bg-surface-recessed rounded-md px-3 py-2 break-words"
               >
                 {t('comparison.photo', { filename: block.file })}
                 {block.caption ? ` — ${block.caption}` : ''}
-              </p>
+              </Typography>
             ) : (
-              <p key={index} className="text-sm leading-relaxed whitespace-pre-wrap">
+              <Typography key={index} variant="body" className="whitespace-pre-wrap">
                 {block.content}
-              </p>
+              </Typography>
             ),
           )}
         </div>
@@ -118,8 +125,10 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
       <dl className="divide-divider mt-4 divide-y">
         {candidate.output.observations.map((item) => (
           <div key={item.file} className="py-4">
-            <dt className="text-sm font-medium break-words">{item.file}</dt>
-            <dd className="text-content-secondary mt-2 space-y-1 text-sm">
+            <Typography variant="label" as="dt" className="text-content-primary break-words">
+              {item.file}
+            </Typography>
+            <Typography variant="label" as="dd" className="mt-2 space-y-1">
               <p>
                 <span className="text-content-tertiary">{t('comparison.scene')}</span>{' '}
                 {item.scene || '—'}
@@ -140,16 +149,16 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
                 <span className="text-content-tertiary">{t('comparison.people')}</span>{' '}
                 {item.peoplePresent ? t('comparison.present') : t('comparison.absent')}
               </p>
-            </dd>
+            </Typography>
           </div>
         ))}
       </dl>
     )
   }
   return (
-    <div className="mt-4 text-sm leading-relaxed whitespace-pre-wrap">
+    <Typography variant="body" as="div" className="mt-4 whitespace-pre-wrap">
       {candidate.output.styleguide}
-    </div>
+    </Typography>
   )
 }
 
@@ -164,21 +173,23 @@ function RevealBand({ sides }: { sides: CandidateSide[] }) {
       {sides.map(({ candidate, label }) => (
         <div key={candidate.id} className="py-4">
           <dt className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-content-tertiary text-sm">
+            <Typography variant="label" className="text-content-tertiary">
               {t('comparison.candidate', { label })}
-            </span>
-            <span className="min-w-0 text-sm font-medium">
+            </Typography>
+            <Typography variant="label" className="text-content-primary min-w-0">
               {candidate.modelLabel || t('comparison.modelUnavailable')}
-            </span>
+            </Typography>
           </dt>
           <dd className="mt-1">
-            {/* `text-sm`, not the metadata role: after the reveal this is the most important
+            {/* The label role, not the metadata one: after the reveal this is the most important
                 content on the screen (§3). */}
-            <p className="text-content-secondary text-sm">{usageLine(candidate, t)}</p>
+            <Typography variant="label" as="p">
+              {usageLine(candidate, t)}
+            </Typography>
             {candidate.model && (
-              <p className="text-content-tertiary mt-1 text-xs break-words">
+              <Typography variant="meta" as="p" mono className="mt-1 break-words">
                 {candidate.model.providerId}/{candidate.model.modelId}
-              </p>
+              </Typography>
             )}
           </dd>
         </div>

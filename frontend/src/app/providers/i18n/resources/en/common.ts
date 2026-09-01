@@ -11,13 +11,13 @@ export const common = {
   },
   theme: {
     label: 'Theme',
+    current: 'Current theme preference: {{theme}}',
     system: 'System',
     light: 'Light',
     dark: 'Dark',
   },
   interfacePreferences: {
     label: 'Interface preferences',
-    trigger: 'Preferences',
   },
   contentLanguage: {
     ko: 'Korean',

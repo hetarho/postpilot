@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { ContentLanguage } from '@/shared/api'
 import { VOICE_NAME_MAX_CHARS } from '@/shared/config'
 import { activeLocale } from '@/shared/lib'
-import { Button, FieldLabel, FieldMessage, Select, TextField } from '@/shared/ui'
+import { Button, FieldLabel, FieldMessage, Select, TextField, Typography } from '@/shared/ui'
 import { useCreateVoice } from '../api/useCreateVoice'
 
 /** One field and the page's committing action. In flow, right after the field it commits — never
@@ -12,7 +12,9 @@ import { useCreateVoice } from '../api/useCreateVoice'
 export function CreateVoiceForm({ ownerId, className }: { ownerId: string; className?: string }) {
   const { t } = useTranslation('voices')
   const id = useId()
+  const countId = `${id}-count`
   const hintId = `${id}-hint`
+  const sourceLanguageHintId = `${id}-language-hint`
   const errorId = `${id}-error`
   const [name, setName] = useState('')
   const [sourceLanguage, setSourceLanguage] = useState<ContentLanguage>(() => activeLocale())
@@ -20,6 +22,7 @@ export function CreateVoiceForm({ ownerId, className }: { ownerId: string; class
   // Counted the way the server counts (Unicode scalar values), so the field and the rule agree
   // on a name made of Hangul and emoji alike.
   const chars = Array.from(name.trim()).length
+  const exceeded = chars > VOICE_NAME_MAX_CHARS
   const disabled = chars === 0 || chars > VOICE_NAME_MAX_CHARS || create.isPending
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -48,13 +51,27 @@ export function CreateVoiceForm({ ownerId, className }: { ownerId: string; class
         autoCapitalize="off"
         autoCorrect="off"
         enterKeyHint="done"
-        aria-invalid={create.isError || undefined}
-        aria-describedby={create.isError ? `${hintId} ${errorId}` : hintId}
+        aria-invalid={exceeded || create.isError || undefined}
+        aria-describedby={
+          create.isError ? `${countId} ${hintId} ${errorId}` : `${countId} ${hintId}`
+        }
         className="mt-1"
       />
-      <p id={hintId} className="text-content-tertiary mt-2 text-xs">
-        {t('create.hint', { count: chars, max: VOICE_NAME_MAX_CHARS })}
-      </p>
+      {exceeded ? (
+        <FieldMessage id={countId} role="status" className="mt-2">
+          {t('count.exceeded', {
+            ns: 'common',
+            count: chars - VOICE_NAME_MAX_CHARS,
+          })}
+        </FieldMessage>
+      ) : (
+        <Typography variant="meta" as="p" id={countId} className="mt-2">
+          {t('create.count', { count: chars, max: VOICE_NAME_MAX_CHARS })}
+        </Typography>
+      )}
+      <Typography variant="body" as="p" id={hintId} className="text-content-secondary mt-1">
+        {t('create.emptyHelp')}
+      </Typography>
       <FieldLabel htmlFor={`${id}-language`} className="mt-4">
         {t('create.sourceLanguage')}
       </FieldLabel>
@@ -62,15 +79,21 @@ export function CreateVoiceForm({ ownerId, className }: { ownerId: string; class
         id={`${id}-language`}
         value={sourceLanguage}
         disabled={create.isPending}
+        aria-describedby={sourceLanguageHintId}
         onChange={(event) => setSourceLanguage(event.target.value as ContentLanguage)}
         className="mt-1"
       >
         <option value="ko">{t('contentLanguage.ko', { ns: 'common' })}</option>
         <option value="en">{t('contentLanguage.en', { ns: 'common' })}</option>
       </Select>
-      <p className="text-content-tertiary mt-2 text-xs leading-relaxed">
+      <Typography
+        variant="body"
+        as="p"
+        id={sourceLanguageHintId}
+        className="text-content-secondary mt-2"
+      >
         {t('create.sourceLanguageHelp')}
-      </p>
+      </Typography>
       {create.isError && (
         <FieldMessage id={errorId} className="mt-2">
           {create.errorMessage}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   canSaveGuideline,
@@ -8,7 +8,15 @@ import {
   useCreateGuidelineCall,
   type GuidelineScope,
 } from '@/entities/guideline'
-import { Button, Dialog, FieldLabel, FieldMessage, SegmentedControl, Textarea } from '@/shared/ui'
+import {
+  Button,
+  Dialog,
+  FieldLabel,
+  FieldMessage,
+  SegmentedControl,
+  Textarea,
+  Typography,
+} from '@/shared/ui'
 
 /** Turns a revision instruction into a saved guideline, beside the pre-flight `규칙으로 저장`.
  *
@@ -32,6 +40,10 @@ export function SaveAsGuidelineButton({
   disabled?: boolean
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
+  const id = useId()
+  const fieldId = `${id}-text`
+  const countId = `${id}-count`
+  const errorId = `${id}-error`
   const [open, setOpen] = useState(false)
   const [text, setText] = useState(instruction)
   const [scope, setScope] = useState<GuidelineScope>(globalScope)
@@ -49,6 +61,8 @@ export function SaveAsGuidelineButton({
   }
 
   const left = remainingGuidelineChars(text)
+  const exceeded = left < 0
+  const showCreateError = create.isError && !isDuplicateGuideline(create.error)
   const blocked = !canSaveGuideline(text, scope) || create.isPending
 
   const confirm = async () => {
@@ -75,11 +89,11 @@ export function SaveAsGuidelineButton({
         {t('capture.action', { ns: 'guidelines' })}
       </Button>
       {saved && !open && (
-        <p role="status" className="text-content-secondary text-sm">
+        <Typography variant="body" role="status" className="text-content-secondary">
           {isDuplicateGuideline(create.error)
             ? t('capture.duplicate', { ns: 'guidelines' })
             : t('capture.saved', { ns: 'guidelines' })}
-        </p>
+        </Typography>
       )}
       <Dialog
         open={open}
@@ -89,36 +103,38 @@ export function SaveAsGuidelineButton({
         onClose={() => setOpen(false)}
         onConfirm={() => void confirm()}
       >
-        <p className="text-content-secondary text-sm leading-relaxed">
+        <Typography variant="body" className="text-content-secondary">
           {t('capture.description', { ns: 'guidelines' })}
-        </p>
-        <FieldLabel htmlFor="guideline-capture-text" className="mt-4 block">
+        </Typography>
+        <FieldLabel htmlFor={fieldId} className="mt-4 block">
           {t('create.text', { ns: 'guidelines' })}
         </FieldLabel>
         <Textarea
-          id="guideline-capture-text"
+          id={fieldId}
           value={text}
           onChange={(event) => setText(event.target.value)}
           rows={3}
           autoGrow
+          aria-invalid={exceeded || showCreateError || undefined}
+          aria-describedby={`${countId}${showCreateError ? ` ${errorId}` : ''}`}
           className="mt-1"
         />
-        <p
-          className={
-            left < 0 ? 'text-field-error mt-2 text-xs' : 'text-content-tertiary mt-2 text-xs'
-          }
-        >
-          {left < 0
-            ? t('count.exceeded', { ns: 'common', count: -left })
-            : t('count.remaining', { ns: 'common', count: left })}
-        </p>
+        {exceeded ? (
+          <FieldMessage id={countId} role="status" className="mt-2">
+            {t('count.exceeded', { ns: 'common', count: -left })}
+          </FieldMessage>
+        ) : (
+          <Typography variant="meta" as="p" id={countId} className="mt-2">
+            {t('count.remaining', { ns: 'common', count: left })}
+          </Typography>
+        )}
         {/* Only two options and only when the post has a purpose — the whole directory belongs on
             /guidelines, not in a dialog opened mid-revision. */}
         {purpose && (
           <>
-            <p className="text-content-tertiary mt-4 text-xs font-medium">
+            <Typography variant="label" as="p" className="mt-4">
               {t('scope.label', { ns: 'guidelines' })}
-            </p>
+            </Typography>
             <SegmentedControl
               value={scope.kind}
               options={[
@@ -136,8 +152,10 @@ export function SaveAsGuidelineButton({
             />
           </>
         )}
-        {create.isError && !isDuplicateGuideline(create.error) && (
-          <FieldMessage className="mt-3">{create.errorMessage}</FieldMessage>
+        {showCreateError && (
+          <FieldMessage id={errorId} className="mt-3">
+            {create.errorMessage}
+          </FieldMessage>
         )}
       </Dialog>
     </>

@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePurposes } from '@/entities/purpose/@x/guideline'
-import { Checkbox, FieldLabel, SegmentedControl } from '@/shared/ui'
+import { Checkbox, FieldLabel, SegmentedControl, Typography } from '@/shared/ui'
 import type { GuidelineScope, GuidelineScopeKind } from '../model/types'
 
 /** The scope editor, shared by the create form and the whole-scope edit.
@@ -44,7 +44,9 @@ export function GuidelineScopeField({
 
   return (
     <div className={className}>
-      <p className="text-content-tertiary text-xs font-medium">{t('scope.label')}</p>
+      <Typography variant="label" as="p">
+        {t('scope.label')}
+      </Typography>
       <SegmentedControl
         value={value.kind}
         options={[
@@ -55,15 +57,17 @@ export function GuidelineScopeField({
         ariaLabel={t('scope.label')}
         className="mt-2"
       />
-      <p className="text-content-tertiary mt-2 text-xs">
+      <Typography variant="body" as="p" className="text-content-secondary mt-2">
         {value.kind === 'global' ? t('scope.globalHelp') : t('scope.purposesHelp')}
-      </p>
+      </Typography>
 
       {value.kind === 'purposes' && (
         <fieldset className="mt-3" disabled={disabled}>
           <legend className="sr-only">{t('scope.pick')}</legend>
           {purposes.length === 0 ? (
-            <p className="text-content-tertiary text-xs">{t('scope.purposesEmpty')}</p>
+            <Typography variant="body" as="p" className="text-content-tertiary">
+              {t('scope.purposesEmpty')}
+            </Typography>
           ) : (
             <ul className="space-y-1">
               {purposes.map((purpose) => (
@@ -73,9 +77,7 @@ export function GuidelineScopeField({
                     checked={value.purposeIds.includes(purpose.id)}
                     onChange={() => toggle(purpose.id)}
                   />
-                  <FieldLabel htmlFor={`${id}-${purpose.id}`} className="text-sm font-normal">
-                    {purpose.name}
-                  </FieldLabel>
+                  <FieldLabel htmlFor={`${id}-${purpose.id}`}>{purpose.name}</FieldLabel>
                 </li>
               ))}
             </ul>

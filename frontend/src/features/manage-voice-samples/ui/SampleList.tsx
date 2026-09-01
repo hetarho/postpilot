@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type VoiceSample, useDeleteVoiceSample } from '@/entities/voice'
 import { formatNumber, formatRelativeTime } from '@/shared/lib'
-import { Button, Dialog, FieldMessage } from '@/shared/ui'
+import { Button, Dialog, FieldMessage, Typography } from '@/shared/ui'
 
 export function SampleList({
   ownerId,
@@ -39,25 +39,29 @@ export function SampleList({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold tracking-tight">
+      <Typography variant="title" as="h3">
         {t('samples.title', { ns: 'voices' })}
-      </h2>
+      </Typography>
       {samples.length === 0 ? (
-        <p className="text-content-tertiary mt-4 text-sm">{t('samples.empty', { ns: 'voices' })}</p>
+        <Typography variant="body" className="text-content-tertiary mt-4">
+          {t('samples.empty', { ns: 'voices' })}
+        </Typography>
       ) : (
         <ul className="divide-divider mt-3 divide-y">
           {samples.map((sample) => (
             <li key={sample.id} className="flex min-h-14 items-center gap-3 py-2">
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm">{sample.label}</span>
-                <span className="text-content-tertiary mt-1 block text-xs">
+                <Typography variant="body" as="span" className="block truncate">
+                  {sample.label}
+                </Typography>
+                <Typography variant="meta" className="mt-1 block">
                   {t('samples.meta', {
                     ns: 'voices',
                     count: sample.chars,
                     characters: formatNumber(sample.chars),
                     time: formatRelativeTime(sample.createdAt),
                   })}
-                </span>
+                </Typography>
               </span>
               <Button
                 variant="danger"

@@ -2,12 +2,16 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type { LeaderboardEntry } from '@/entities/model-experiment'
 import { formatNumber } from '@/shared/lib'
-import { Badge } from '@/shared/ui'
+import { Badge, Typography } from '@/shared/ui'
 
 export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
   const { t } = useTranslation('models')
   if (entries.length === 0)
-    return <p className="text-content-tertiary text-sm">{t('leaderboard.empty')}</p>
+    return (
+      <Typography variant="body" className="text-content-tertiary">
+        {t('leaderboard.empty')}
+      </Typography>
+    )
   return (
     <ol className="divide-divider divide-y">
       {entries.map((entry) => (
@@ -19,22 +23,24 @@ export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
           // 'Elo 1516' cost ~90px together, which leaves the label and its badges room to wrap.
           className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-3 py-4"
         >
-          <span className="text-content-tertiary text-sm">#{entry.rank}</span>
+          <Typography variant="label" className="text-content-tertiary">
+            #{entry.rank}
+          </Typography>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               {/* `min-w-0`: without it a flex item's automatic minimum size is its min-content
                   width, and `truncate` sets `white-space: nowrap` — so min-content is the ENTIRE
                   label and the ellipsis can never fire. A model registered without a label falls
                   back to its id, which overflows the page into horizontal scroll (§8.5). */}
-              <span className="min-w-0 truncate text-sm font-medium">
+              <Typography variant="label" className="text-content-primary min-w-0 truncate">
                 {entry.modelLabel || t('unavailable')}
-              </span>
+              </Typography>
               {entry.provisional && <Badge>{t('leaderboard.collecting')}</Badge>}
               {entry.active && <Badge tone="success">{t('leaderboard.active')}</Badge>}
               {entry.recommended && <Badge tone="info">{t('leaderboard.recommended')}</Badge>}
               {entry.disappeared && <Badge tone="warning">{t('leaderboard.disappeared')}</Badge>}
             </div>
-            <p className="text-content-tertiary mt-1 text-xs">
+            <Typography variant="meta" as="p" className="mt-1">
               {t('leaderboard.record', {
                 matches: entry.matches,
                 wins: entry.wins,
@@ -43,10 +49,10 @@ export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
                   maximumFractionDigits: 0,
                 }),
               })}
-            </p>
+            </Typography>
             {/* The accounting detail is the desktop's; on a phone the record and the rating are
                 what the board is read for, and this second line doubled the height of every row. */}
-            <p className="text-content-tertiary mt-1 hidden text-xs sm:block">
+            <Typography variant="meta" as="p" className="mt-1 hidden sm:block">
               {t('leaderboard.metrics', {
                 calls: formatNumber(entry.successfulCalls),
                 latency: formatNumber(entry.averageLatencyMs),
@@ -54,9 +60,11 @@ export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
                 completion: formatNumber(entry.completionTokens),
                 cost: costLabel(entry, t),
               })}
-            </p>
+            </Typography>
           </div>
-          <strong className="text-sm whitespace-nowrap">Elo {entry.rating}</strong>
+          <Typography variant="label" as="span" className="text-content-primary whitespace-nowrap">
+            Elo {entry.rating}
+          </Typography>
         </li>
       ))}
     </ol>

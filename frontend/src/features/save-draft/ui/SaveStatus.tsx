@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Notice } from '@/shared/ui'
+import { Notice, Typography } from '@/shared/ui'
 import type { SaveState } from '../model/draft-queue'
 
 /** Nothing at all while the editor is untouched: a "저장됨" on a post nobody has edited
@@ -26,13 +26,13 @@ export function SaveStatus({ state }: { state: SaveState }) {
         // (PRD F-2), so it takes the §2.6 notice contract rather than 12px of bare red text.
         <Notice tone="danger">{label}</Notice>
       ) : (
-        <p
-          className={
-            state === 'saved' ? 'text-notice-success-fg text-xs' : 'text-content-tertiary text-xs'
-          }
+        <Typography
+          variant="body"
+          as="p"
+          className={state === 'saved' ? 'text-notice-success-fg' : 'text-content-tertiary'}
         >
           {label}
-        </p>
+        </Typography>
       )}
     </div>
   )

@@ -36,6 +36,8 @@ import {
   FieldMessage,
   SegmentedControl,
   Select,
+  Typography,
+  typographyStyles,
 } from '@/shared/ui'
 import { ModelLeaderboard } from '@/widgets/model-leaderboard'
 
@@ -102,30 +104,30 @@ export function AIModelsPage() {
   }
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('title', { ns: 'models' })}</h1>
-      <p className="text-content-secondary max-w-measure mt-2 text-sm leading-relaxed">
+      <Typography variant="display">{t('title', { ns: 'models' })}</Typography>
+      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'models' })}
-      </p>
+      </Typography>
 
       <section className="mt-10" aria-labelledby="recommendation-heading">
-        <h2 id="recommendation-heading" className="text-lg font-semibold tracking-tight">
+        <Typography variant="title" id="recommendation-heading">
           {t('page.recommendation', { ns: 'models' })}
-        </h2>
+        </Typography>
         <div className="mt-4">
           {setup.recommendations[0] ? (
             <ApplyRecommendation recommendation={setup.recommendations[0]} />
           ) : (
-            <p className="text-content-tertiary text-sm">
+            <Typography variant="body" className="text-content-tertiary">
               {t('page.recommendationLoading', { ns: 'models' })}
-            </p>
+            </Typography>
           )}
         </div>
       </section>
 
       <section className="mt-12" aria-labelledby="settings-heading">
-        <h2 id="settings-heading" className="text-lg font-semibold tracking-tight">
+        <Typography variant="title" id="settings-heading">
           {t('page.settings', { ns: 'models' })}
-        </h2>
+        </Typography>
         {/* The switch drives four sections, the last of them ~1,000px below it, so it follows the
             scroll instead of existing only at the top of the section: otherwise comparing two
             stages' leaderboards is a ~1,000px round trip each way (§4.3). It carries the page's own
@@ -160,9 +162,9 @@ export function AIModelsPage() {
                 </option>
               ))}
             </Select>
-            <p className="text-content-secondary mt-2 text-sm">
+            <Typography variant="label" as="p" className="mt-2">
               {t('page.voiceHelp', { ns: 'models' })}
-            </p>
+            </Typography>
           </div>
         )}
         {stage !== 'analyze' && (
@@ -214,27 +216,27 @@ export function AIModelsPage() {
               {t('page.start', { ns: 'models' })}
             </Button>
             {startHint && (
-              <p id={startHintId} className="text-content-secondary mt-2 text-sm">
+              <Typography variant="label" as="p" id={startHintId} className="mt-2">
                 {startHint}
-              </p>
+              </Typography>
             )}
             {start.failure && (
-              <div role="alert" className="text-field-error mt-2 text-sm">
+              <Typography variant="body" as="div" role="alert" className="text-field-error mt-2">
                 <AppFailureMessage failure={start.failure} />
-              </div>
+              </Typography>
             )}
           </div>
         )}
       </section>
 
       <section className="mt-12" aria-labelledby="recent-heading">
-        <h2 id="recent-heading" className="text-lg font-semibold tracking-tight">
+        <Typography variant="title" id="recent-heading">
           {t('page.recent', { ns: 'models', stage: stageLabel(stage) })}
-        </h2>
+        </Typography>
         {experiments.length === 0 ? (
-          <p className="text-content-tertiary mt-4 text-sm">
+          <Typography variant="body" className="text-content-tertiary mt-4">
             {t('page.noComparison', { ns: 'models' })}
-          </p>
+          </Typography>
         ) : (
           // Full-bleed rows: the negative gutter puts the row's text edge on the same line as the
           // section headings and lets its pressed plane run to the screen edge (§4.2).
@@ -244,7 +246,11 @@ export function AIModelsPage() {
                 <Link
                   to="/ai-models/experiments/$id"
                   params={{ id: item.id }}
-                  className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center justify-between gap-3 px-4 py-3 text-sm sm:px-6"
+                  className={typographyStyles({
+                    variant: 'label',
+                    className:
+                      'text-content-primary hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center justify-between gap-3 px-4 py-3 sm:px-6',
+                  })}
                 >
                   {/* `min-w-0` is what makes `truncate` work: a slug is `YYYYMMDD-` plus up to 60
                       runes of the title, so a spaceless Korean one is ~420px of max-content in a
@@ -263,9 +269,9 @@ export function AIModelsPage() {
         )}
       </section>
       <section className="mt-12" aria-labelledby="leaderboard-heading">
-        <h2 id="leaderboard-heading" className="text-lg font-semibold tracking-tight">
+        <Typography variant="title" id="leaderboard-heading">
           {t('page.myLeaderboard', { ns: 'models', stage: stageLabel(stage) })}
-        </h2>
+        </Typography>
         <div className="mt-4">
           <ModelLeaderboard entries={entries} />
         </div>
@@ -293,9 +299,9 @@ function WriteComparisonStart({
         <Button variant="cta" className="w-full sm:w-auto" aria-disabled aria-describedby={hintId}>
           {t('page.start')}
         </Button>
-        <p id={hintId} className="text-content-secondary mt-2 text-sm">
+        <Typography variant="label" as="p" id={hintId} className="mt-2">
           {t('page.choosePostHelp')}
-        </p>
+        </Typography>
       </div>
     )
   }
@@ -395,9 +401,9 @@ function SelectedPostWriteComparison({
       >
         {t('page.start')}
       </Button>
-      <p id={hintId} role="status" className="text-content-secondary mt-2 text-sm empty:hidden">
+      <Typography variant="label" as="p" id={hintId} role="status" className="mt-2 empty:hidden">
         {reason}
-      </p>
+      </Typography>
       {start.isError && (
         <FieldMessage className="mt-2">{start.errorMessage || t('page.startRetry')}</FieldMessage>
       )}

@@ -29,14 +29,14 @@ a server before the moment passes (PRD F-2). Everything visual serves that:
 "On a phone" is a measurable claim, not a mood. Every surface is designed and reviewed against
 this contract, and a change that has only been looked at in a desktop browser is not reviewed:
 
-| Constraint            | Value                                                                          |
-| --------------------- | ------------------------------------------------------------------------------ |
-| Design width          | **360 CSS px** — the realistic small-Android floor. 390 and 430 are also checked |
-| Conformance floor     | **320 CSS px** with no horizontal page scroll (WCAG 1.4.10 Reflow, AA)          |
-| Grip                  | One hand. On a 430×932 phone the top ~40% of the glass is out of thumb reach    |
-| Software keyboard     | Covers roughly the **bottom 40%** of the screen whenever a field has focus      |
-| Script                | Korean. A Hangul syllable advances a full em — Korean text is ~1.8× wider per character than the same count of Latin ones, and it breaks between syllables unless told not to |
-| Network               | Cellular. Every RPC can be slow, and every RPC can fail                         |
+| Constraint        | Value                                                                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design width      | **360 CSS px** — the realistic small-Android floor. 390 and 430 are also checked                                                                                              |
+| Conformance floor | **320 CSS px** with no horizontal page scroll (WCAG 1.4.10 Reflow, AA)                                                                                                        |
+| Grip              | One hand. On a 430×932 phone the top ~40% of the glass is out of thumb reach                                                                                                  |
+| Software keyboard | Covers roughly the **bottom 40%** of the screen whenever a field has focus                                                                                                    |
+| Script            | Korean. A Hangul syllable advances a full em — Korean text is ~1.8× wider per character than the same count of Latin ones, and it breaks between syllables unless told not to |
+| Network           | Cellular. Every RPC can be slow, and every RPC can fail                                                                                                                       |
 
 Two consequences follow that are easy to forget on a 27-inch monitor. A Korean label is much
 wider than its character count suggests, so any row that survives an English mock can still
@@ -91,10 +91,10 @@ Forbidden, with no exceptions in `frontend/src`:
   TS/TSX/CSS. Same gate.
 - **Arbitrary sizes** off the scale (`p-[13px]`, `rounded-[7px]`, `text-[15px]`, `max-h-[65vh]`).
   Density is chosen by picking a step. If two steps are both wrong, the scale is wrong — change
-  the scale in `index.css`, not the call site. (The one tolerated arbitrary is a tiny label size
-  such as `text-[10px]` for a metadata chip; do not spread it.) Note that `pnpm lint:style` gates
-  _colour_ escapes only — an arbitrary **size** passes the scanner and is caught at review, so it
-  is on the author, not the tool.
+  the scale in `index.css`, not the call site. The sole 10px recipe is the `eyebrow` category chip
+  owned by `Typography`; do not spread it. `pnpm lint:style` catches arbitrary text sizes and
+  weights in slice `.tsx` alongside colour escapes. Non-type geometry escapes, and arbitrary type
+  inside exempt `shared/ui` primitives, remain review responsibilities.
 
 A line that is genuinely not UI colour — a canvas compositing fill, a test fixture — carries an
 inline `// style-escape: <why>` pragma. The reason is mandatory.
@@ -113,7 +113,7 @@ allowed only where a plane change _cannot_ do the job:
 - the **outlined** button variant (a rim _is_ its identity),
 - a hairline `divide-divider` between list rows that have no background of their own,
 - a table rule,
-- a spinner's ring, where the border *is* the shape being drawn.
+- a spinner's ring, where the border _is_ the shape being drawn.
 
 Not allowed: a border around a card, a panel, an input at rest, a header, a section. If you reach
 for `border` to "separate" two things, step one of them to a different surface or add space.
@@ -187,18 +187,18 @@ box with a purple button on it. Never use a true-grey or a different-hue neutral
 The five surfaces form an ordered depth scale. Use the smallest step that makes the relationship
 clear; jumping several levels makes ordinary chrome look detached from the page.
 
-| Foundation                                                  | Meaning                                                                    |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `surface-lowest`                                            | The furthest-back plane; deep wells and deliberately sunken regions        |
-| `surface-recessed`                                          | Inputs and regions pressed one step into the current plane                 |
-| `surface-base`                                              | The normal page canvas                                                     |
-| `surface-raised`                                            | Rows on interaction, compact controls, cards, and resting floating content |
+| Foundation                                                  | Meaning                                                                                 |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `surface-lowest`                                            | The furthest-back plane; deep wells and deliberately sunken regions                     |
+| `surface-recessed`                                          | Inputs and regions pressed one step into the current plane                              |
+| `surface-base`                                              | The normal page canvas                                                                  |
+| `surface-raised`                                            | Rows on interaction, compact controls, cards, and resting floating content              |
 | `surface-highest`                                           | The frontmost floating plane: menus, sheets, dialogs, popovers, and a docked action bar |
-| `content-primary` · `secondary` · `tertiary` · `disabled`   | Main copy → supporting copy → metadata → non-interactive copy              |
-| `stroke-subtle` · `strong`                                  | Rare structural hairlines; never a substitute for a surface step           |
-| `intent-accent` · `danger` · `success` · `warning` · `info` | Meaning before it is assigned to a component                               |
-| `interaction-focus`                                         | The one keyboard-focus colour                                              |
-| `physical-scrim` · `physical-on-scrim` · `physical-shadow`  | Physical light/occlusion, not product meaning                              |
+| `content-primary` · `secondary` · `tertiary` · `disabled`   | Main copy → supporting copy → metadata → non-interactive copy                           |
+| `stroke-subtle` · `strong`                                  | Rare structural hairlines; never a substitute for a surface step                        |
+| `intent-accent` · `danger` · `success` · `warning` · `info` | Meaning before it is assigned to a component                                            |
+| `interaction-focus`                                         | The one keyboard-focus colour                                                           |
+| `physical-scrim` · `physical-on-scrim` · `physical-shadow`  | Physical light/occlusion, not product meaning                                           |
 
 Primary, secondary, and tertiary content meet WCAG AA against all five surfaces in both themes.
 Disabled content is intentionally exempt because it is not an available action; never use it for
@@ -286,22 +286,41 @@ once. Weight carries emphasis (`font-medium`, `font-semibold`); colour carries i
 (`content-primary` → `content-secondary` → `content-tertiary`); size carries hierarchy. Never use colour _and_ weight
 _and_ size to say the same thing.
 
-| Role    | Classes                                                                 | Used for                             |
-| ------- | ----------------------------------------------------------------------- | ------------------------------------ |
-| display | `text-2xl font-semibold tracking-tight`                                 | the page's one title, the post title |
-| title   | `text-lg font-semibold tracking-tight`                                  | a section heading, a dialog title    |
-| body    | `text-sm leading-relaxed`                                               | prose the user reads                 |
-| input   | `text-base sm:text-sm`                                                  | **anything the user types into** — see §3.1 |
-| label   | `text-sm text-content-secondary`                                        | a generic label or secondary line    |
-| meta    | `text-xs text-content-tertiary`                                         | timestamps, counts, status lines     |
-| eyebrow | `text-[10px] font-medium uppercase tracking-wide text-content-tertiary` | a category chip above a group        |
+**The roles are code, not conventions.** `shared/ui/typography` owns the recipes:
+`<Typography variant="…">` renders slice text (headings, prose, labels, metadata), and
+`typographyStyles({ variant })` hands the same recipe to an element that must keep its own
+component — a router `Link`, a `dt`, a field's `className`. A slice **never composes a raw type
+utility** (`text-<size>`, `font-<weight>`, `font-mono`, `tracking-*`, `leading-*`);
+`pnpm lint:style` fails on one in a non-test slice `.tsx` outside `shared/ui`, and the rare line
+that genuinely is not a §3 role carries an inline `// style-escape: <why>` pragma the reviewer
+reads. Primitives in `shared/ui` keep composing their own internals from the raw utilities — that
+is where recipes live. Owner decision, 2026-09-01 (change 11): per-element type CSS is hierarchy
+drift by construction, so the roles became a component.
 
+| Role    | Variant · default element                                 | Recipe (owned by the primitive)                                         | When it is used                                                                                   |
+| ------- | --------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| display | `variant="display"` · `h1`                                | `text-2xl font-semibold tracking-tight`                                 | the screen's ONE logical top title; the editor's sr-only `h1` mirrors its visible editable display and is not a second title |
+| title   | `variant="title"` · `h2` (`as="h3"` for deeper levels)    | `text-lg font-semibold tracking-tight`                                  | every section heading and dialog title; one look per heading level per screen                     |
+| body    | `variant="body"` · `p`                                    | `text-sm leading-relaxed`                                               | prose the user reads; loading/empty/status lines take `className="text-content-tertiary"` over it |
+| input   | field primitives only                                     | `text-base sm:text-sm`                                                  | **anything the user types into** — see §3.1; never exposed as a `Typography` variant              |
+| label   | `variant="label"` · `span` (`as="p"`/`as="h3"` as needed) | `text-sm text-content-secondary`                                        | a control caption, a secondary line, a pseudo-heading — with **no ad-hoc weight added**           |
+| meta    | `variant="meta"` · `span`                                 | `text-xs text-content-tertiary`                                         | timestamps, counts, status chips' neighbours; `mono` for verbatim values (ids, slugs, model ids)  |
+| eyebrow | `variant="eyebrow"` · `span`                              | `text-[10px] font-medium uppercase tracking-wide text-content-tertiary` | a category chip above a group                                                                     |
+
+- A colour in the caller's `className` deliberately wins over the recipe's (the merge resolves
+  toward the caller), so `body` + `text-content-tertiary` is the empty-state line and `label` +
+  `text-link-fg` is a nav link — the SIZE stays the role's.
 - Prose columns are capped: `max-w-measure` (`--container-measure`, 40rem).
 - Field labels and placeholders use `text-field-label` and `text-field-placeholder`; a field
   primitive, not its caller, owns those choices.
-- An eyebrow is not a heading; a heading is a real `<h*>`.
+- An eyebrow is not a heading; a heading is a real `<h*>` — `as` decouples the outline level from
+  the visual role, so a third-level heading can still look like `title`.
 - `text-xs` (12px) is the floor, and it is for metadata only. Explanatory copy the user is meant
   to act on is never 12px — if a sentence matters enough to render, it is `text-sm`.
+- The sanctioned pragma case is a nav control's **active-state emphasis** (`font-medium` on
+  `aria-current="page"` — a control state the roles do not model). Bare editor fields use the
+  role builder or their field primitive and need no escape. Anything else asking for a pragma is
+  a missing role — raise it here first.
 
 ### 3.1 The 16px input floor
 
@@ -350,11 +369,11 @@ The global rule protects the layout; the local class protects the box.
 
 ### 4.1 Touch targets
 
-| Rule                                                                    | Source                             |
-| ----------------------------------------------------------------------- | ---------------------------------- |
-| **44 × 44 CSS px** is the house minimum for anything the thumb presses  | Apple HIG; WCAG 2.5.5 (AAA)        |
-| **24 × 24 CSS px** is the absolute conformance floor, never gone below  | WCAG 2.5.8 Target Size (AA)        |
-| **≥ 8 px of clear space** between two adjacent targets                  | Material / Lighthouse tap-targets  |
+| Rule                                                                   | Source                            |
+| ---------------------------------------------------------------------- | --------------------------------- |
+| **44 × 44 CSS px** is the house minimum for anything the thumb presses | Apple HIG; WCAG 2.5.5 (AAA)       |
+| **24 × 24 CSS px** is the absolute conformance floor, never gone below | WCAG 2.5.8 Target Size (AA)       |
+| **≥ 8 px of clear space** between two adjacent targets                 | Material / Lighthouse tap-targets |
 
 Both dimensions count. `min-h-11` on a bare text link sets the height and leaves the **width** to
 the label — and a two-syllable Korean label like `말투` is ~28px wide, so the target is 28 × 44
@@ -368,7 +387,7 @@ one target, not a row with a small button inside it.
 
 **`min-h-11` is a touch-target floor, not a padding value.** This is the single most common
 density bug: a control sets `px-3 py-2 min-h-11`, the 44px floor overrides the computed height,
-and the *effective* vertical padding becomes 12px against 12px of horizontal — a 1 : 1 box.
+and the _effective_ vertical padding becomes 12px against 12px of horizontal — a 1 : 1 box.
 Because text is far wider than it is tall, a 1 : 1 control always reads squat and bloated, and a
 screen full of them reads clumsy no matter how good the type and colour are.
 
@@ -376,14 +395,14 @@ The rule: **a control's horizontal padding is roughly twice its effective vertic
 Author the horizontal padding for the height the control will actually have, not for the padding
 you wrote.
 
-| Element                        | Padding                | Effective ratio        |
-| ------------------------------ | ---------------------- | ---------------------- |
-| Button, field, select (44px)   | `px-4` (`px-5` for a CTA) | ≈ 2 : 1 against the 12px the floor produces |
-| Icon-only button               | `size-11`, no padding  | square by definition   |
-| List row (44px, full-bleed)    | `px-4 py-3`            | equal to the page gutter it sits in |
-| Badge / chip                   | `px-2 py-0.5`          | ≈ 3 : 1 — small boxes need proportionally more |
-| Inline notice                  | `px-4 py-3`            | ≈ 1.3 : 1 — a text block, not a control |
-| Card / panel                   | `p-4` (`p-5` for a sheet) | uniform               |
+| Element                      | Padding                   | Effective ratio                                |
+| ---------------------------- | ------------------------- | ---------------------------------------------- |
+| Button, field, select (44px) | `px-4` (`px-5` for a CTA) | ≈ 2 : 1 against the 12px the floor produces    |
+| Icon-only button             | `size-11`, no padding     | square by definition                           |
+| List row (44px, full-bleed)  | `px-4 py-3`               | equal to the page gutter it sits in            |
+| Badge / chip                 | `px-2 py-0.5`             | ≈ 3 : 1 — small boxes need proportionally more |
+| Inline notice                | `px-4 py-3`               | ≈ 1.3 : 1 — a text block, not a control        |
+| Card / panel                 | `p-4` (`p-5` for a sheet) | uniform                                        |
 
 Two corollaries. A **row** is never inset less than the gutter rhythm it sits in — `px-2` inside a
 `px-4` page reads as a mistake, not as a nested step. And a control and the panel it sits in never
@@ -410,7 +429,7 @@ is a re-grip, not a tap.
   rendered inside a page that already docks puts its action in flow instead.
 - **Feedback renders where the user is looking.** A success message 1,000px below the button that
   caused it has not been shown. A validation message under a keyboard has not been shown. A live
-  region that is *inserted* with its text already in it announces nothing: mount it before its
+  region that is _inserted_ with its text already in it announces nothing: mount it before its
   content changes and swap the text inside.
 
 ### 4.4 One scroller per screen
@@ -428,9 +447,9 @@ row) does not compete with the page's vertical scroll. A **sheet's** own body sc
 sheet is a separate surface with its own bounds. And a **field inside a form** is capped at
 `max-h-field` and scrolls past it — an uncapped `autoGrow` field holding a long generated value
 would put the control that commits it thousands of pixels from the caret, which §4.3 forbids, and
-between the two rules reach wins. The editor's bare fields are *not* capped: there the page is the
-paper. All three set `overscroll-behavior: contain` so a scroll that reaches the end does not chain
-to the page.
+between the two rules reach wins. The editor's title and memo are _not_ capped: the title stays
+bare, the memo uses a visible field well, and both grow with the page. All three set
+`overscroll-behavior: contain` so a scroll that reaches the end does not chain to the page.
 
 ## 5. Elevation and shape
 
@@ -489,23 +508,35 @@ to the page.
 - **Every field states its keyboard.** `type`, and `inputMode` where type is not enough, plus
   `autoComplete`, `autoCapitalize`, `autoCorrect` and `enterKeyHint`. An id field that
   auto-capitalises its first character is a login failure the user cannot explain.
-- **The editor is bare.** Title and body are `bg-transparent` fields with no well at all — the
-  page _is_ the paper. This is the one place a field has no surface. It is not an exception to
-  §3.1: the caller sets `text-base` itself.
+- **The editor title is bare; the memo is a well.** The title is a `bg-transparent` field because
+  the page is its paper. The memo uses the standard recessed field background so the writing
+  surface remains visibly editable. Both auto-grow with the page, and the field primitive owns
+  the memo's §3.1 input size while the bare title takes the `display` role from its caller.
 - **Menu / Select — no new native `<select>`.** The OS draws a native select's open option list,
   so it cannot wear the app's surfaces or tokens and it visibly breaks the design system the
-  moment it opens (owner decision, 2026-08-31). A bounded choice with a few fixed options
-  (roughly 2–5: a switch, a preference, a mode) is a `SegmentedControl`, which keeps every state
-  app-drawn. A longer bounded list belongs in an app-drawn listbox inside a popover — build that
-  shared primitive when the first surface needs it rather than reaching for `<select>`. The
-  legacy `Select` primitive (a styled native select) still serves the existing form surfaces
-  (model pickers, voice/purpose selects, publish settings, …) and is slated for migration to the
-  app-drawn listbox; do not mount it in any new surface. An option's text is the choice, not the
-  explanation — a reason or a capability goes in the message slot under the field.
-- **TabLinks** — a tab row whose tabs are ADDRESSES: a horizontally scrolling row of links, marking the current one
+  moment it opens (owner decision, 2026-08-31). A bounded choice with a few fixed options is
+  either an inline `SegmentedControl` (every option visible, e.g. the editor steps) or the
+  app-drawn **`Menu`** — a WAI-APG menu button: an icon-capable 44px trigger
+  (`aria-haspopup="menu"`), a `surface-highest` panel opening below-right, `menuitemradio` rows
+  with a check on the active option, arrow/Home/End roving focus, Escape/outside-press closing
+  with focus returned. The header's theme and locale controls are `Menu`s whose trigger icon
+  shows the current value (the theme trigger wears monitor/sun/moon for the stored preference),
+  so the closed control still reports its state. The legacy `Select` primitive (a styled native
+  select) still serves the existing form surfaces (model pickers, voice/purpose selects, publish
+  settings, …) and is slated for migration to an app-drawn listbox; do not mount it in any new
+  surface. An option's text is the choice, not the explanation — a reason or a capability goes in
+  the message slot under the field.
+- **TabLinks** — a tab row whose tabs are ADDRESSES: a row of links marking the current one
   `aria-current="page"`. It is `SegmentedControl`'s shape without its `onChange`, and it is a `nav` rather than
   `role="tablist"`, because announcing a navigation as tab selection would tell a screen reader the page stayed put.
   Reach for it when the panels are routes; reach for `SegmentedControl` when they are state.
+  A text-only row scrolls horizontally rather than crushing its labels. When **every** item also
+  carries an `icon` (and usually a `shortLabel`), the row instead reshapes with its own width
+  (`@container`): below the named `@tabs` token (38rem) each tab stacks its icon over a compact caption and all tabs share
+  the row evenly — nothing scrolls off a 320px screen — while the full label stays the link's one
+  accessible name; from `@tabs` up it is the text row again. The wide row uses `px-1` so the five
+  full English labels still fit inside VoiceLayout's 39rem maximum content width. Icon-only tabs are not an option:
+  an icon alone is a guess (the voice tabs are the shipped example).
 - **Editable** — read first, edit on request: a value renders as text until its pencil (always `aria-label`led with
   the field it edits) is pressed, then the caller's edit view replaces it. The primitive owns only the toggle and the
   affordance; the caller supplies both views and every action, so leaving edit mode stays the caller's decision — a
@@ -558,7 +589,10 @@ Everything in this section is a platform behaviour, not a taste. The owner is
 The one correct viewport meta:
 
 ```html
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1, viewport-fit=cover"
+/>
 ```
 
 `user-scalable=no`, `maximum-scale`, and `minimum-scale` are never added — they are a WCAG 1.4.4
@@ -658,7 +692,8 @@ Run this over any FE diff before calling a job done (it is the design half of th
 - [ ] Every `border-*` is one of the §1.3 exceptions.
 - [ ] Every card passes the §1.4 test (belong together _and_ separate from neighbours).
 - [ ] Exactly one CTA per view, using the `button-cta-*` contract.
-- [ ] Type roles from §3 only; no ad-hoc size/weight/colour combinations.
+- [ ] Slice text renders through `Typography` / `typographyStyles` (§3); the `pnpm lint:style`
+      type gate passes, and every `// style-escape:` pragma carries a reason a reviewer accepts.
 
 **The phone** — checked at 360 px, not just at desktop width
 
