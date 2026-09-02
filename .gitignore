@@ -9,6 +9,9 @@ backend/bin/
 backend/tmp/
 backend/data/
 *.exe
+# Container-mounted Go caches (docker compose build/test)
+.gocache/
+.gomod/
 
 # Editor
 .vscode/
