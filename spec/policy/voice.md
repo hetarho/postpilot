@@ -47,6 +47,13 @@ language, bilingual analysis, portable projection, and language-safe learning ar
   supported immutable `source_language` (`InvalidArgument` otherwise), refuses an active-name collision
   (`AlreadyExists`), and creates an empty isolated profile. It never copies the default profile. Existing/bootstrap
   voices are Korean; no RPC changes source language after creation. There is no voice-count limit.
+- `CreateVoice` also takes an OPTIONAL trimmed `description` of at most `VoiceDescriptionMaxChars` (500) Unicode
+  scalar values (`VOICE_DESCRIPTION_TOO_LONG`, `InvalidArgument`) plus the account's current analyze-stage `ModelRef`.
+  With one, it creates the voice and enqueues exactly one `seed_voice` job that writes the voice's first profile from
+  that description, and answers with the job id; without one it behaves exactly as before and answers with an empty
+  job id, requiring no model. The description length and the analyze model are both checked BEFORE the insert, so a
+  refusal leaves no voice behind. The reverse is deliberate and documented: creation and seeding are separable
+  outcomes, so a seed the queue refuses to start (a plan quota, say) still leaves a real, usable, listed voice.
 - `RenameVoice` changes the display name of an active or deleted owned voice with the same validation; it rewrites
   no post row and no immutable snapshot. `SetDefaultVoice` accepts only an active owned voice and atomically clears the
   previous default; it answers with the whole directory.
@@ -61,7 +68,26 @@ language, bilingual analysis, portable projection, and language-safe learning ar
   mutation (samples, updates, overrides, restore, analysis, learning, feedback, comparison, validation, experiment
   application) is refused with `FailedPrecondition` before any enqueue or provider call.
 - Directory reads, lifecycle mutations, page load, polling, copy and export make no provider call and enqueue no work
-  ([I5]).
+  ([I5]). A described creation is the one exception, and it is an explicit user action: it enqueues, it never calls a
+  provider in the request.
+
+### Seeding a voice from a description
+
+- The `seed_voice` job is voice-owned like every other personalization kind: it serializes against that voice's other
+  work, is refused for a deleted voice, blocks that voice's deletion while queued or running, and fails before the
+  boot worker drain.
+- The handler makes exactly ONE completion against the account's analyze-stage selection — the same stage that writes
+  every other voice profile — in the voice's declared `source_language`, in the same nine-section shape the analysis
+  produces, and publishes it as profile version 1 with origin `seed`.
+- A description is an instruction, never evidence. It becomes no `voice_samples` row, no source count, no few-shot
+  entry, no embedding, and no `corpus_version` bump, and `can_validate` is unchanged. The published version carries
+  the styleguide as an `analyzed` lexical description and leaves every measured quantity and axis unset; the prompt
+  projection renders an unset measurement as `unknown`, never as `0`.
+- A seed never overwrites real work. It publishes only while the profile is still empty and unversioned, and only
+  while the corpus version it read still holds; a seed that resolves after a sample analysis or a finalization has
+  published completes successfully without writing.
+- Seeding happens once, at creation. There is no re-seed RPC: a failed or superseded seed leaves an ordinary empty
+  voice whose `말투` tab shows the failure, and the recovery path is the existing 기존 글 가져오기.
 
 ## Samples and analysis
 
@@ -116,16 +142,28 @@ language, bilingual analysis, portable projection, and language-safe learning ar
 
 ## Frontend behavior
 
-- 말투 is the directory `/voices`: active voices first (the default badged `기본`, each name a link into its profile,
-  a pencil to rename in place, `기본으로 설정` and `삭제` on every non-default voice), a `새 말투` form (name field with
-  a `n / 50자` count and the page's one CTA `말투 만들기`), and a `삭제된 말투` section (`삭제됨` badge, rename, `복원`).
+- 말투 is the directory `/voices`, and it is a LIST. Each active voice is ONE row and one target: a stretched link
+  into that voice (no underline — the row is the link, and nothing interactive is nested inside the anchor), its
+  `기본`/language badges, and, for a non-default voice, `기본으로 설정` and `삭제` on that same row, layered above the
+  link so pressing one acts without navigating. Tombstones live in a `삭제된 말투 N개` disclosure that is rendered only
+  when one exists and is closed on load; its rows keep `복원`. The page's one CTA is a docked `새 말투 만들기`.
+  Renaming is NOT on the directory: the row leads to the voice, and the name is edited there.
+- `새 말투 만들기` opens the shared `Sheet` (a bottom sheet below `md:`) carrying the name field with its `n / 50자`
+  count, the source-language listbox, and an OPTIONAL `말투 설명` textarea with its own count. Its commit action sits
+  in flow after the last field rather than in the sheet's pinned footer, because the panel is anchored to the layout
+  viewport the software keyboard does not resize (design-language §8.3). With no usable analyze selection the
+  description's message slot says so and creating without a description still works. A successful create closes the
+  sheet and navigates to the new voice, where a seeding run reports its progress and its failure through the same
+  surface the analysis uses.
   Deletion is confirmed through the sheet, which says what stays; the default offers no delete at all. Server
-  refusals are shown under the control in the user's words (duplicate name, deleted default, busy voice, restore
-  conflict).
+  refusals are shown under the control in the user's words (duplicate name, over-long description, deleted default,
+  busy voice, restore conflict).
 - One voice is `/voices/$voiceId` and its five sibling tabs sharing one tab row: the profile (`프로필`),
   `/versions`, `/import` (analyze-stage model selector, paste form, sample list, analysis progress, legacy manual
   guidance), `/rules`, and `/validations`. The layout names the voice (`h1`), badges default/deleted, and for a
-  tombstone shows a notice with `복원`; the import form is blocked for a deleted voice with the reason. An id the
+  tombstone shows a notice with `복원`; the import form is blocked for a deleted voice with the reason. That `h1` is
+  where the voice is renamed, read-first behind a pencil named for the voice, and a tombstone stays renameable so a
+  restore conflict can be resolved. An id the
   account does not own reads `없는 말투예요.`. The tab row is links, not a state control; the tab matching the address
   carries `aria-current="page"`. The top-level destinations stay 글 / 말투 / AI 모델.
 - The legacy addresses `/voice` and `/voice/<tab>` redirect to the same tab of the account's default voice, read from
@@ -162,6 +200,7 @@ language, bilingual analysis, portable projection, and language-safe learning ar
 |---|---|---:|
 | `DefaultVoiceName` | BE `internal/voice`; FE renders the server value | `기본 말투` |
 | `VoiceNameMaxChars` / `VOICE_NAME_MAX_CHARS` | BE `internal/voice` authoritative; FE `shared/config` mirror | 50 |
+| `VoiceDescriptionMaxChars` / `VOICE_DESCRIPTION_MAX_CHARS` | BE `internal/voice` authoritative; FE `shared/config` mirror | 500 |
 | `SampleMinChars` | BE `internal/voice` | 200 |
 | `ExcerptCount` | BE `internal/voice` | 3 |
 | `ExcerptChars` | BE `internal/voice` | 1500 |
@@ -218,6 +257,7 @@ language, bilingual analysis, portable projection, and language-safe learning ar
   requires three finalized sources of that voice, and calls a judge only when the user explicitly enables it. Neither
   writes model Elo.
 - Page load, copy/export, polling, time, and boot never enqueue or call a personalization model. Queued
-  personalization rows fail before boot worker drain and require explicit retry.
+  personalization rows — `learn_voice`, `compare_voice_rule`, `validate_voice_profile` and `seed_voice` — fail before
+  boot worker drain and require explicit retry, or, for a seed, leave an ordinary empty voice.
 
 Full details: [voice personalization tech](../tech/voice-personalization-learning.md).

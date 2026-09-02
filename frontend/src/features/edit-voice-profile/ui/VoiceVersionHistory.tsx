@@ -102,6 +102,8 @@ const originLabel = (origin: string) => {
   switch (origin) {
     case 'analysis':
       return i18next.t('versions.reason.analysis', { ns: 'voices' })
+    case 'seed':
+      return i18next.t('versions.reason.seed', { ns: 'voices' })
     case 'manual':
       return i18next.t('versions.reason.manual', { ns: 'voices' })
     case 'restore':

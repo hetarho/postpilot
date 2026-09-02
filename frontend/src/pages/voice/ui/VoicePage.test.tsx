@@ -364,6 +364,89 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(await screen.findByLabelText('문체 규칙')).toHaveValue('수정한 규칙')
   })
 
+  // Change 14 A7: the tab a described create lands on reports the seeding run.
+  it('shows the seeding run started by a described creation', async () => {
+    const calls: string[] = []
+    renderAppAt(DEFAULT, {
+      user: { id: 'alice' },
+      calls,
+      voice: { activeJobId: 'seed-job' },
+      jobs: {
+        jobs: [
+          {
+            id: 'seed-job',
+            kind: 'seed_voice',
+            status: 'running',
+            stage: 'seed',
+            progressDone: 0,
+            progressTotal: 1,
+          },
+        ],
+      },
+    })
+
+    await screen.findByRole('heading', { level: 2, name: '프로필' })
+    await waitFor(() => expect(calls).toContain('GetGeneration'))
+    expect(screen.getByRole('region', { name: '문체 분석 상태' })).toBeInTheDocument()
+  })
+
+  // Change 14 A11: a failed seed leaves a usable voice and says why, on that same tab.
+  it('reports a failed seed without losing the voice', async () => {
+    renderAppAt(DEFAULT, {
+      user: { id: 'alice' },
+      voice: { activeJobId: 'seed-job' },
+      jobs: {
+        jobs: [
+          {
+            id: 'seed-job',
+            kind: 'seed_voice',
+            status: 'failed',
+            failureReason: 'PROVIDER_DISABLED',
+          },
+        ],
+      },
+    })
+
+    expect(await screen.findByRole('heading', { level: 1, name: '기본 말투' })).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    // The profile is simply empty; nothing partial was written.
+    expect(screen.getByText('현재 말투 프로필')).toBeInTheDocument()
+  })
+
+  // Change 14 A5: renaming lives on the voice, not on the directory row that leads here.
+  it('renames the voice from its own screen', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt(DEFAULT, { user: { id: 'alice' }, calls })
+
+    await screen.findByRole('heading', { level: 1, name: '기본 말투' })
+    await user.click(screen.getByRole('button', { name: '기본 말투 이름 바꾸기' }))
+    const field = screen.getByLabelText('말투 이름')
+    expect(field).toHaveValue('기본 말투')
+    await user.clear(field)
+    await user.type(field, '일상 말투')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(calls).toContain('RenameVoice'))
+    expect(await screen.findByRole('heading', { level: 1, name: '일상 말투' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
+  })
+
+  // Change 14 A5: a tombstone stays renameable, which is how a restore conflict is resolved.
+  it('keeps a deleted voice renameable', async () => {
+    renderAppAt('/voices/voice-old', {
+      user: { id: 'alice' },
+      voice: {
+        voices: [
+          { id: 'voice-default', name: '기본 말투', isDefault: true },
+          { id: 'voice-old', name: '옛 말투', deleted: true },
+        ],
+      },
+    })
+
+    expect(await screen.findByRole('button', { name: '옛 말투 이름 바꾸기' })).toBeInTheDocument()
+  })
+
   // Plan 10 A5/A7: a tombstone is readable, and the import is refused before the paste.
   it('shows a deleted voice as a tombstone and blocks importing into it', async () => {
     renderAppAt('/voices/voice-old/import', {

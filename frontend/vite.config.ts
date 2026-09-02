@@ -70,6 +70,11 @@ export default defineConfig(({ mode }) => {
       // on CI. Pinning the runner to the product's home zone makes those assertions mean one
       // thing everywhere; a test that cares about another zone still sets its own.
       env: { TZ: 'Asia/Seoul' },
+      // Not an assertion budget: almost every test here mounts the REAL route tree against a
+      // fake transport, so a run is CPU-bound and vitest's 5s default starts expiring on a busy
+      // machine — in whichever files happen to be scheduled together, not in a failing one. The
+      // waits inside the tests are `findBy`/`waitFor`, which resolve as soon as the app does.
+      testTimeout: 20_000,
     },
   }
 })

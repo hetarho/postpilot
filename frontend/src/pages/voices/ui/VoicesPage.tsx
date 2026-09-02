@@ -2,15 +2,15 @@ import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoices, type Voice } from '@/entities/voice'
-import { CreateVoiceForm } from '@/features/create-voice'
+import { CreateVoiceSheet } from '@/features/create-voice'
 import { DeleteVoiceButton } from '@/features/delete-voice'
-import { RenameVoiceField } from '@/features/rename-voice'
 import { RestoreVoiceButton } from '@/features/restore-voice'
 import { SetDefaultVoiceButton } from '@/features/set-default-voice'
-import { Badge, Button, Notice, Typography, typographyStyles } from '@/shared/ui'
+import { ActionBar, Badge, Button, Notice, Typography, typographyStyles } from '@/shared/ui'
 
-/** The account's voices (PRD §3.4): the active ones first, then the tombstones. Composition only —
- *  every action is its own feature, and the rows are links into one voice's profile. */
+/** The account's voices (PRD §3.4): a list, and the one action that adds to it. Composition only —
+ *  every action is its own feature, and a row is a way into one voice. Renaming lives on the
+ *  voice's own screen, so the directory carries nothing but the list. */
 export function VoicesPage() {
   const { t } = useTranslation(['voices', 'common'])
   const { user } = useSession()
@@ -18,7 +18,7 @@ export function VoicesPage() {
   const { active, deleted, isPending, isError, isFetching, refetch } = useVoices(ownerId)
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-8 sm:px-6">
       <Typography variant="display">{t('title', { ns: 'voices' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'voices' })}
@@ -49,98 +49,84 @@ export function VoicesPage() {
             <Typography variant="title" id="active-voices-heading">
               {t('page.active', { ns: 'voices' })}
             </Typography>
-            <ul className="divide-divider mt-3 divide-y">
+            {/* Rows are full-bleed against the page gutter, so the list cancels it (§4.2). */}
+            <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6">
               {active.map((voice) => (
                 <VoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
               ))}
             </ul>
           </section>
 
-          <section aria-labelledby="create-voice-heading" className="mt-10">
-            <Typography variant="title" id="create-voice-heading">
-              {t('page.new', { ns: 'voices' })}
-            </Typography>
-            <CreateVoiceForm ownerId={ownerId} className="mt-3" />
-          </section>
-
           {deleted.length > 0 && (
-            <section aria-labelledby="deleted-voices-heading" className="mt-12">
-              <Typography variant="title" id="deleted-voices-heading">
-                {t('page.deleted', { ns: 'voices' })}
-              </Typography>
-              <Typography variant="body" className="text-content-secondary mt-2">
+            // Closed by default: a tombstone is history, and the list the user came for is the
+            // active one. It exists at all so a restore stays reachable.
+            <details className="mt-10">
+              <summary
+                className={typographyStyles({
+                  variant: 'label',
+                  className:
+                    'active:bg-row-bg-active text-content-secondary min-h-11 cursor-pointer rounded-md px-4 py-3 select-none',
+                })}
+              >
+                {t('page.deleted', { ns: 'voices', count: deleted.length })}
+              </summary>
+              <Typography variant="body" className="text-content-secondary mt-2 px-4">
                 {t('page.deletedHelp', { ns: 'voices' })}
               </Typography>
-              <ul className="divide-divider mt-3 divide-y">
+              <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6">
                 {deleted.map((voice) => (
-                  <DeletedVoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
+                  <VoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
                 ))}
               </ul>
-            </section>
+            </details>
           )}
+
+          {/* One dock at every width, not a phone bar plus a desktop copy: the trigger owns the
+              sheet's open state, and two instances of it would be two overlays waiting to be
+              opened. `mt-auto` puts it below a short list; `sticky` keeps it there once the list
+              is long enough to scroll (§4.3). */}
+          <ActionBar ariaLabel={t('create.dockAria', { ns: 'voices' })} className="mt-auto">
+            <CreateVoiceSheet ownerId={ownerId} className="w-full sm:w-auto" />
+          </ActionBar>
         </>
       )}
     </main>
   )
 }
 
-/** The name is the link into the voice; the pencil beside it renames in place. The actions sit on
- *  their own row so the phone gets three full-height targets instead of a crushed strip (§4.1). */
+/** One voice, one target. The link stretches over the whole row through its `::after`, so the
+ *  padding, the badges and the empty space all navigate, while the lifecycle controls paint above
+ *  that layer and act without navigating — a row is one target, not a row with buttons inside it
+ *  (§4.1), and nothing interactive is nested inside the anchor. */
 function VoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
   const { t } = useTranslation('common')
   return (
-    <li className="py-3">
-      <RenameVoiceField ownerId={ownerId} voice={voice}>
-        <div className="flex min-h-11 flex-wrap items-center gap-2">
-          <Link
-            to="/voices/$voiceId"
-            params={{ voiceId: voice.id }}
-            className={typographyStyles({
-              variant: 'label',
-              className:
-                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center underline',
-            })}
-          >
-            <span className="truncate">{voice.name}</span>
-          </Link>
-          {voice.isDefault && <Badge tone="accent">{t('state.default')}</Badge>}
-          <Badge>{t(`contentLanguage.${voice.sourceLanguage}`)}</Badge>
-        </div>
-      </RenameVoiceField>
-      {!voice.isDefault && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          <SetDefaultVoiceButton ownerId={ownerId} voiceId={voice.id} />
-          <DeleteVoiceButton ownerId={ownerId} voice={voice} />
+    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-11 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
+      <Link
+        to="/voices/$voiceId"
+        params={{ voiceId: voice.id }}
+        className={typographyStyles({
+          variant: 'label',
+          className: 'min-w-0 truncate after:absolute after:inset-0',
+        })}
+      >
+        {voice.name}
+      </Link>
+      {voice.isDefault && <Badge tone="accent">{t('state.default')}</Badge>}
+      {voice.deleted && <Badge tone="warning">{t('state.deleted')}</Badge>}
+      <Badge>{t(`contentLanguage.${voice.sourceLanguage}`)}</Badge>
+      {(voice.deleted || !voice.isDefault) && (
+        <div className="relative ml-auto flex shrink-0 flex-wrap items-center gap-2">
+          {voice.deleted ? (
+            <RestoreVoiceButton ownerId={ownerId} voiceId={voice.id} />
+          ) : (
+            <>
+              <SetDefaultVoiceButton ownerId={ownerId} voiceId={voice.id} />
+              <DeleteVoiceButton ownerId={ownerId} voice={voice} />
+            </>
+          )}
         </div>
       )}
-    </li>
-  )
-}
-
-function DeletedVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
-  const { t } = useTranslation('common')
-  return (
-    <li className="py-3">
-      <RenameVoiceField ownerId={ownerId} voice={voice}>
-        <div className="flex min-h-11 flex-wrap items-center gap-2">
-          <Link
-            to="/voices/$voiceId"
-            params={{ voiceId: voice.id }}
-            className={typographyStyles({
-              variant: 'label',
-              className:
-                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center underline',
-            })}
-          >
-            <span className="truncate">{voice.name}</span>
-          </Link>
-          <Badge tone="warning">{t('state.deleted')}</Badge>
-          <Badge>{t(`contentLanguage.${voice.sourceLanguage}`)}</Badge>
-        </div>
-      </RenameVoiceField>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <RestoreVoiceButton ownerId={ownerId} voiceId={voice.id} />
-      </div>
     </li>
   )
 }

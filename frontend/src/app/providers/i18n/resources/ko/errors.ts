@@ -21,6 +21,7 @@ export const errors = {
   VOICE_DELETED: '삭제된 말투예요. 먼저 복원해 주세요.',
   VOICE_NAME_REQUIRED: '말투 이름을 입력해 주세요.',
   VOICE_NAME_TOO_LONG: '말투 이름은 {{max}}자 이하로 입력해 주세요. 현재 {{actual}}자예요.',
+  VOICE_DESCRIPTION_TOO_LONG: '말투 설명은 {{max}}자 이하로 입력해 주세요. 현재 {{actual}}자예요.',
   VOICE_NAME_TAKEN: '같은 이름의 말투가 이미 있어요.',
   VOICE_DEFAULT_DELETE_FORBIDDEN: '기본 말투는 삭제할 수 없어요.',
   VOICE_BUSY: '이 말투에서 작업이 진행 중이에요.',

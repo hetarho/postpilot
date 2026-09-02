@@ -6,16 +6,18 @@ import { Button, Editable, FieldLabel, FieldMessage, TextField, Typography } fro
 import { useRenameVoice } from '../api/useRenameVoice'
 
 /** Read first, rename on request (the `Editable` shape the profile fields use). The caller supplies
- *  the read view — the name is also a link on the directory — and this owns the edit view. Works
- *  for a deleted voice too: renaming a tombstone is how a restore conflict is resolved. */
+ *  the read view — the voice's heading and its badges — and this owns the edit view. Works for a
+ *  deleted voice too: renaming a tombstone is how a restore conflict is resolved. */
 export function RenameVoiceField({
   ownerId,
   voice,
   children,
+  className,
 }: {
   ownerId: string
   voice: Pick<Voice, 'id' | 'name'>
   children: ReactNode
+  className?: string
 }) {
   const { t } = useTranslation('voices')
   const rename = useRenameVoice(ownerId)
@@ -30,6 +32,7 @@ export function RenameVoiceField({
   }
   return (
     <Editable
+      className={className}
       editLabel={t('rename.aria', { name: voice.name })}
       edit={(exit) => (
         <RenameEditor

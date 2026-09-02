@@ -97,12 +97,21 @@ export interface FakeVoiceOptions {
   listFails?: boolean
   /** Sentence feedback the fake received, for tests that assert *which* sentence was sent. */
   sentenceFeedback?: Array<{ sentenceRef: string; authoredText: string }>
-  /** Voice creates, including the concrete language that must never be inferred server-side. */
-  creates?: Array<{ name: string; sourceLanguage: ContentLanguage }>
+  /** Voice creates, including the concrete language that must never be inferred server-side and
+   *  the optional description with the analyze ref that must travel with it. */
+  creates?: Array<{
+    name: string
+    sourceLanguage: ContentLanguage
+    description: string
+    analyzeModel: string
+  }>
+  /** The seeding job a described create answers with. */
+  createJobId?: string
 }
 
 const NOW = '2026-08-29T12:00:00Z'
 const NAME_MAX_CHARS = 50
+const DESCRIPTION_MAX_CHARS = 500
 
 interface VoiceRow {
   id: string
@@ -227,7 +236,25 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const sourceLanguage = contentLanguageFromProto(request.sourceLanguage ?? 0)
     if (!sourceLanguage)
       throw connectAppError('VOICE_SOURCE_LANGUAGE_REQUIRED', Code.InvalidArgument)
-    options.creates?.push({ name, sourceLanguage })
+    const description = request.description.trim()
+    const describedChars = Array.from(description).length
+    if (describedChars > DESCRIPTION_MAX_CHARS) {
+      throw connectAppError('VOICE_DESCRIPTION_TOO_LONG', Code.InvalidArgument, {
+        actual: String(describedChars),
+        max: String(DESCRIPTION_MAX_CHARS),
+      })
+    }
+    // Every reason to refuse is checked before the row exists, as on the server.
+    const analyzeModel = request.analyzeModel
+    if (description && (!analyzeModel?.providerId || !analyzeModel.modelId)) {
+      throw connectAppError('VOICE_ANALYZE_MODEL_REQUIRED', Code.FailedPrecondition)
+    }
+    options.creates?.push({
+      name,
+      sourceLanguage,
+      description,
+      analyzeModel: description ? `${analyzeModel!.providerId}/${analyzeModel!.modelId}` : '',
+    })
     voiceSequence += 1
     const row: VoiceRow = {
       id: `voice-${voiceSequence}`,
@@ -237,7 +264,11 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       sourceLanguage,
     }
     voices.set(row.id, row)
-    return create(CreateVoiceResponseSchema, { voice: toProtoVoice(row) })
+    // Only a described create enqueues, and the new voice's profile carries that run so the
+    // screen it lands on can show it.
+    const jobId = description ? (options.createJobId ?? 'seed-job') : ''
+    if (jobId) profiles.set(row.id, create(VoiceProfileSchema, { activeJobId: jobId }))
+    return create(CreateVoiceResponseSchema, { voice: toProtoVoice(row), jobId })
   })
 
   rpc(VoiceService.method.renameVoice, (request) => {

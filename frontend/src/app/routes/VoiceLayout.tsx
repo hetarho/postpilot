@@ -3,6 +3,7 @@ import { ClipboardCheck, FolderInput, History, IdCard, Scale } from 'lucide-reac
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
+import { RenameVoiceField } from '@/features/rename-voice'
 import { RestoreVoiceButton } from '@/features/restore-voice'
 import {
   Badge,
@@ -73,14 +74,22 @@ export function VoiceLayout() {
         </Typography>
       ) : (
         <>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Typography variant="display" className="min-w-0 break-words">
-              {voice.name}
-            </Typography>
-            {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}
-            {voice.deleted && <Badge tone="warning">{t('state.deleted', { ns: 'common' })}</Badge>}
-            <Badge>{t(`contentLanguage.${voice.sourceLanguage}`, { ns: 'common' })}</Badge>
-          </div>
+          {/* The name is edited where the voice is, not on the directory: a row there is one
+              target that leads here, and this is the screen that shows what it is being named. */}
+          <RenameVoiceField ownerId={ownerId} voice={voice} className="mt-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Typography variant="display" className="min-w-0 break-words">
+                {voice.name}
+              </Typography>
+              {voice.isDefault && (
+                <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>
+              )}
+              {voice.deleted && (
+                <Badge tone="warning">{t('state.deleted', { ns: 'common' })}</Badge>
+              )}
+              <Badge>{t(`contentLanguage.${voice.sourceLanguage}`, { ns: 'common' })}</Badge>
+            </div>
+          </RenameVoiceField>
           {voice.deleted && (
             <Notice tone="warning" role="status" className="mt-4">
               <span className="w-full min-w-0">{t('deletedWarning', { ns: 'voices' })}</span>

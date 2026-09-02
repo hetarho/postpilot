@@ -3,7 +3,8 @@ import { chooseOption } from '@/test/listbox'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
-import { renderAppAt } from '@/test/app'
+import { Stage } from '@/shared/api'
+import { renderAppAt, type RenderAppOptions } from '@/test/app'
 import type { FakeVoiceOptions, FakeVoiceRow } from '@/test/voice'
 
 const USER = { id: 'alice' }
@@ -19,16 +20,41 @@ const VOICES: FakeVoiceRow[] = [
   { id: 'voice-old', name: '옛 말투', deleted: true },
 ]
 
-function renderDirectory(voice: FakeVoiceOptions = {}, calls: string[] = []) {
-  return renderAppAt('/voices', { user: USER, calls, voice: { voices: VOICES, ...voice } })
+const ANALYZE_MODEL = { providerId: 'stub', modelId: 'analyze' }
+
+/** An account that has chosen an analyze model, which is what a described create needs. */
+const WITH_ANALYZE_MODEL: RenderAppOptions['providers'] = {
+  models: [{ ...ANALYZE_MODEL, label: 'Analyze' }],
+  selections: [{ stage: Stage.ANALYZE, ...ANALYZE_MODEL }],
+}
+
+function renderDirectory(
+  voice: FakeVoiceOptions = {},
+  calls: string[] = [],
+  providers: RenderAppOptions['providers'] = WITH_ANALYZE_MODEL,
+) {
+  return renderAppAt('/voices', {
+    user: USER,
+    calls,
+    providers,
+    voice: { voices: VOICES, ...voice },
+  })
 }
 
 /** A section exists only once the directory has answered, so every lookup waits for it. */
 const section = async (name: string) => within(await screen.findByRole('region', { name }))
+const deletedGroup = async () =>
+  within((await screen.findByText(/삭제된 말투 \d+개/)).closest('details')!)
+
+/** The sheet is mounted only while open, so every creation flow starts by opening it. */
+async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '새 말투 만들기' }))
+  return within(await screen.findByRole('dialog'))
+}
 
 describe('the voice directory', () => {
-  // Plan 10 A16: active voices first (the default leading), the tombstones apart.
-  it('lists active voices first, then the deleted ones, and links each to its profile', async () => {
+  // Plan 10 A16 + change 14 A1–A3: a list of rows, tombstones folded away, no form on the page.
+  it('lists the active voices as one-target rows and folds the tombstones away', async () => {
     const calls: string[] = []
     renderDirectory({}, calls)
 
@@ -36,30 +62,106 @@ describe('the voice directory', () => {
     const active = (await section('사용 중')).getAllByRole('link')
     expect(active.map((link) => link.textContent)).toEqual(['기본 말투', '리뷰'])
     expect(active[0]).toHaveAttribute('href', '/voices/voice-default')
+    // The row IS the link, so the name carries no underline of its own.
+    expect(active[0]).not.toHaveClass('underline')
+    // Nothing interactive is nested inside the anchor that covers the row.
+    expect(within(active[0]!).queryByRole('button')).not.toBeInTheDocument()
     expect((await section('사용 중')).getByText('기본')).toBeInTheDocument()
 
-    const deleted = (await section('삭제된 말투')).getAllByRole('link')
-    expect(deleted.map((link) => link.textContent)).toEqual(['옛 말투'])
-    expect((await section('삭제된 말투')).getByText('삭제됨')).toBeInTheDocument()
+    // No creation form on the page — one docked action opens it instead.
+    expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '새 말투 만들기' })).toBeInTheDocument()
+
+    const deleted = await deletedGroup()
+    expect(deleted.getByRole('link', { name: '옛 말투' })).toBeInTheDocument()
+    expect(deleted.getByText('삭제됨')).toBeInTheDocument()
+    expect(screen.getByText('삭제된 말투 1개').closest('details')).not.toHaveAttribute('open')
 
     // Looking at the directory changes nothing and asks no model anything ([I5]).
-    expect(calls.filter((call) => call !== 'GetMe' && call !== 'ListVoices')).toEqual([])
+    expect(
+      calls.filter(
+        (call) => !['GetMe', 'ListVoices', 'ListModels', 'GetSelections'].includes(call),
+      ),
+    ).toEqual([])
   })
 
-  it('creates a voice from the form and shows it without a reload', async () => {
+  it('renders no tombstone group at all when nothing is deleted', async () => {
+    renderDirectory({ voices: VOICES.filter((row) => !row.deleted) })
+
+    await screen.findByRole('heading', { level: 1, name: '말투' })
+    expect(screen.queryByText(/삭제된 말투/)).not.toBeInTheDocument()
+  })
+
+  it('offers no rename on the directory — the name is edited on the voice', async () => {
+    renderDirectory()
+
+    await screen.findByRole('heading', { level: 1, name: '말투' })
+    expect(screen.queryByRole('button', { name: '리뷰 이름 바꾸기' })).not.toBeInTheDocument()
+  })
+
+  // Change 14 A6: the sheet creates exactly as before when no description is given.
+  it('creates a voice from the sheet, starts no job, and lands on the new voice', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    renderDirectory({}, calls)
+    const creates: NonNullable<FakeVoiceOptions['creates']> = []
+    const { router } = renderDirectory({ creates }, calls)
 
-    const name = await screen.findByLabelText('새 말투 이름')
-    await user.type(name, '  제품 리뷰  ')
-    await user.click(screen.getByRole('button', { name: '말투 만들기' }))
+    const sheet = await openCreateSheet(user)
+    await user.type(sheet.getByLabelText('말투 이름'), '  제품 리뷰  ')
+    await user.click(sheet.getByRole('button', { name: '말투 만들기' }))
 
     await waitFor(() => expect(calls).toContain('CreateVoice'))
-    expect(
-      await (await section('사용 중')).findByRole('link', { name: '제품 리뷰' }),
-    ).toBeInTheDocument()
-    expect(name).toHaveValue('')
+    expect(creates).toEqual([
+      { name: '제품 리뷰', sourceLanguage: 'ko', description: '', analyzeModel: '' },
+    ])
+    await waitFor(() => expect(router.state.location.pathname).toBe('/voices/voice-4'))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  // Change 14 A7: a described create carries the description and the analyze ref, and the run
+  // it starts is visible on the voice it lands on.
+  it('sends the description with the analyze model and shows the seeding run', async () => {
+    const user = userEvent.setup()
+    const creates: NonNullable<FakeVoiceOptions['creates']> = []
+    const { router } = renderDirectory({ creates, createJobId: 'seed-job' }, [], WITH_ANALYZE_MODEL)
+
+    const sheet = await openCreateSheet(user)
+    await user.type(sheet.getByLabelText('말투 이름'), '요리')
+    await user.type(
+      sheet.getByLabelText('말투 설명 (선택)'),
+      '단순하고 차분하지 않은, 농담조의 요리 말투',
+    )
+    await user.click(sheet.getByRole('button', { name: '말투 만들기' }))
+
+    await waitFor(() =>
+      expect(creates).toEqual([
+        {
+          name: '요리',
+          sourceLanguage: 'ko',
+          description: '단순하고 차분하지 않은, 농담조의 요리 말투',
+          analyzeModel: 'stub/analyze',
+        },
+      ]),
+    )
+    await waitFor(() => expect(router.state.location.pathname).toBe('/voices/voice-4'))
+    expect(await screen.findByRole('heading', { level: 1, name: '요리' })).toBeInTheDocument()
+  })
+
+  it('says a description needs an analyze model and still creates without one', async () => {
+    const user = userEvent.setup()
+    const creates: NonNullable<FakeVoiceOptions['creates']> = []
+    renderDirectory({ creates }, [], { models: [], selections: [] })
+
+    const sheet = await openCreateSheet(user)
+    await user.type(sheet.getByLabelText('말투 이름'), '요리')
+    await user.type(sheet.getByLabelText('말투 설명 (선택)'), '농담조')
+    expect(sheet.getByText(/말투 분석에 쓸 AI 모델을 먼저 골라야/)).toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: '말투 만들기' })).toBeDisabled()
+
+    await user.clear(sheet.getByLabelText('말투 설명 (선택)'))
+    await user.click(sheet.getByRole('button', { name: '말투 만들기' }))
+    await waitFor(() => expect(creates).toHaveLength(1))
+    expect(creates[0]?.description).toBe('')
   })
 
   it('defaults a create to the current UI locale and sends it explicitly', async () => {
@@ -68,13 +170,17 @@ describe('the voice directory', () => {
     const user = userEvent.setup()
     renderDirectory({ creates })
 
-    const language = await screen.findByRole('combobox', { name: /Sample language/ })
+    await user.click(await screen.findByRole('button', { name: 'New voice' }))
+    const sheet = within(await screen.findByRole('dialog'))
+    const language = sheet.getByRole('combobox', { name: /Sample language/ })
     expect(language).toHaveTextContent('English')
-    await user.type(screen.getByLabelText('New voice name'), 'English samples')
-    await user.click(screen.getByRole('button', { name: 'Create voice' }))
+    await user.type(sheet.getByLabelText('Voice name'), 'English samples')
+    await user.click(sheet.getByRole('button', { name: 'Create voice' }))
 
     await waitFor(() =>
-      expect(creates).toEqual([{ name: 'English samples', sourceLanguage: 'en' }]),
+      expect(creates).toEqual([
+        { name: 'English samples', sourceLanguage: 'en', description: '', analyzeModel: '' },
+      ]),
     )
   })
 
@@ -83,9 +189,10 @@ describe('the voice directory', () => {
     const user = userEvent.setup()
     renderDirectory({ creates })
 
-    await chooseOption(user, await screen.findByRole('combobox', { name: /샘플 언어/ }), '영어')
-    await user.type(screen.getByLabelText('새 말투 이름'), '영어 말투')
-    await user.click(screen.getByRole('button', { name: '말투 만들기' }))
+    const sheet = await openCreateSheet(user)
+    await chooseOption(user, sheet.getByRole('combobox', { name: /샘플 언어/ }), '영어')
+    await user.type(sheet.getByLabelText('말투 이름'), '영어 말투')
+    await user.click(sheet.getByRole('button', { name: '말투 만들기' }))
     await waitFor(() => expect(creates[0]?.sourceLanguage).toBe('en'))
 
     cleanup()
@@ -100,48 +207,32 @@ describe('the voice directory', () => {
     expect(within(reloaded!).getByText('영어')).toBeInTheDocument()
   })
 
-  it('reports a duplicate name under the field and keeps it', async () => {
+  it('reports a duplicate name inside the sheet and keeps the typed value', async () => {
     const user = userEvent.setup()
     renderDirectory()
 
-    const name = await screen.findByLabelText('새 말투 이름')
+    const sheet = await openCreateSheet(user)
+    const name = sheet.getByLabelText('말투 이름')
     await user.type(name, '리뷰')
-    await user.click(screen.getByRole('button', { name: '말투 만들기' }))
+    await user.click(sheet.getByRole('button', { name: '말투 만들기' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('같은 이름의 말투가 이미 있어요.')
+    expect(await sheet.findByRole('alert')).toHaveTextContent('같은 이름의 말투가 이미 있어요.')
     expect(name).toHaveValue('리뷰')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
-  // Plan 10 A3: rename changes the display name only.
-  it('renames in place', async () => {
+  // Plan 10 A4 + change 14 A4: one default at a time, switched from the row itself.
+  it('moves the default badge when another voice is set as default from its row', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    renderDirectory({}, calls)
-
-    await user.click(await screen.findByRole('button', { name: '리뷰 이름 바꾸기' }))
-    const field = screen.getByLabelText('말투 이름')
-    expect(field).toHaveValue('리뷰')
-    await user.clear(field)
-    await user.type(field, '제품 리뷰')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-
-    await waitFor(() => expect(calls).toContain('RenameVoice'))
-    expect(
-      await (await section('사용 중')).findByRole('link', { name: '제품 리뷰' }),
-    ).toBeInTheDocument()
-    expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
-  })
-
-  // Plan 10 A4: one default at a time, switched atomically.
-  it('moves the default badge when another voice is set as default', async () => {
-    const user = userEvent.setup()
-    const calls: string[] = []
-    renderDirectory({}, calls)
+    const { router } = renderDirectory({}, calls)
 
     await screen.findByRole('heading', { level: 1, name: '말투' })
     await user.click((await section('사용 중')).getByRole('button', { name: '기본으로 설정' }))
 
     await waitFor(() => expect(calls).toContain('SetDefaultVoice'))
+    // A control on the row acts; it does not navigate into the row's voice.
+    expect(router.state.location.pathname).toBe('/voices')
     await waitFor(async () => {
       const links = (await section('사용 중')).getAllByRole('link')
       expect(links.map((link) => link.textContent)).toEqual(['리뷰', '기본 말투'])
@@ -157,7 +248,7 @@ describe('the voice directory', () => {
   })
 
   // Plan 10 A5: a soft delete after confirmation; the default offers no delete at all.
-  it('soft-deletes after confirmation and keeps the voice in the deleted section', async () => {
+  it('soft-deletes after confirmation and keeps the voice in the tombstone group', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     renderDirectory({}, calls)
@@ -172,9 +263,9 @@ describe('the voice directory', () => {
     await user.click(within(dialog).getByRole('button', { name: '삭제' }))
 
     await waitFor(() => expect(calls).toContain('DeleteVoice'))
-    expect(
-      await (await section('삭제된 말투')).findByRole('link', { name: '리뷰' }),
-    ).toBeInTheDocument()
+    await waitFor(async () =>
+      expect((await deletedGroup()).getByRole('link', { name: '리뷰' })).toBeInTheDocument(),
+    )
     expect((await section('사용 중')).queryByRole('link', { name: '리뷰' })).not.toBeInTheDocument()
   })
 
@@ -199,7 +290,7 @@ describe('the voice directory', () => {
     renderDirectory({}, calls)
 
     await screen.findByRole('heading', { level: 1, name: '말투' })
-    await user.click((await section('삭제된 말투')).getByRole('button', { name: '복원' }))
+    await user.click((await deletedGroup()).getByRole('button', { name: '복원' }))
 
     await waitFor(() => expect(calls).toContain('RestoreVoice'))
     await waitFor(async () =>
@@ -207,11 +298,11 @@ describe('the voice directory', () => {
         (await section('사용 중')).getAllByRole('link').map((link) => link.textContent),
       ).toEqual(['기본 말투', '리뷰', '옛 말투']),
     )
-    expect(screen.queryByRole('region', { name: '삭제된 말투' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/삭제된 말투/)).not.toBeInTheDocument()
     expect((await section('사용 중')).getAllByText('기본')).toHaveLength(1)
   })
 
-  it('blocks a restore whose name is taken until the tombstone is renamed', async () => {
+  it('refuses a restore whose name is taken and says how to resolve it', async () => {
     const user = userEvent.setup()
     renderDirectory({
       voices: [
@@ -222,23 +313,15 @@ describe('the voice directory', () => {
     })
 
     await screen.findByRole('heading', { level: 1, name: '말투' })
-    await user.click((await section('삭제된 말투')).getByRole('button', { name: '복원' }))
+    await user.click((await deletedGroup()).getByRole('button', { name: '복원' }))
+
     expect(await screen.findByRole('alert')).toHaveTextContent('이름을 바꾼 뒤 복원해 주세요')
     expect(screen.getByRole('alert')).toHaveTextContent('같은 이름의 말투가 이미 있어요.')
-
-    await user.click(
-      (await section('삭제된 말투')).getByRole('button', { name: '리뷰 이름 바꾸기' }),
+    // The way out is the voice's own screen, which the row leads to.
+    expect((await deletedGroup()).getByRole('link', { name: '리뷰' })).toHaveAttribute(
+      'href',
+      '/voices/voice-old',
     )
-    const field = screen.getByLabelText('말투 이름')
-    await user.clear(field)
-    await user.type(field, '옛 리뷰')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-    await (await section('삭제된 말투')).findByRole('link', { name: '옛 리뷰' })
-
-    await user.click((await section('삭제된 말투')).getByRole('button', { name: '복원' }))
-    expect(
-      await (await section('사용 중')).findByRole('link', { name: '옛 리뷰' }),
-    ).toBeInTheDocument()
   })
 
   it('says so and offers a retry when the directory cannot be loaded', async () => {

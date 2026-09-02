@@ -4,8 +4,9 @@ export const voices = {
     description:
       'Each voice keeps its own profile and learning history. New posts start with the default, and you can choose a different voice for each post.',
     active: 'Active',
-    new: 'New voice',
-    deleted: 'Deleted voices',
+    deleted: '{{count}} deleted voices',
+    deleted_one: '{{count}} deleted voice',
+    deleted_other: '{{count}} deleted voices',
     deletedHelp:
       'Posts and learning history remain intact. Restore a voice to use it again; if its name is already in use, rename the other voice first.',
   },
@@ -16,7 +17,10 @@ export const voices = {
   deletedRef: 'Deleted voice · {{name}}',
   deletedAiReason: 'This voice has been deleted. Restore it or choose another voice.',
   create: {
-    title: 'New voice name',
+    open: 'New voice',
+    dockAria: 'Add a voice',
+    title: 'New voice',
+    name: 'Voice name',
     placeholder: 'For example: Product reviews',
     submit: 'Create voice',
     count: '{{count}} / {{max}} characters',
@@ -26,6 +30,15 @@ export const voices = {
     sourceLanguage: 'Sample language',
     sourceLanguageHelp:
       'This is the language the voice learns from. It cannot be changed after creation.',
+    description: 'Describe the voice (optional)',
+    descriptionPlaceholder: 'For example: a plain, restless, joking voice for cooking posts',
+    descriptionCount: '{{count}} / {{max}} characters',
+    descriptionCount_one: '{{count}} / {{max}} character',
+    descriptionCount_other: '{{count}} / {{max}} characters',
+    descriptionHelp:
+      'Describe the register you want and the AI writes the first profile from it. Leave it empty to start with an empty profile.',
+    descriptionNeedsModel:
+      'Choose an analysis model first to create a voice from a description. You can still create one now by leaving the description empty.',
   },
   delete: {
     aria: 'Delete {{name}}',
@@ -229,6 +242,7 @@ export const voices = {
     restoredFrom: ' (restored from v{{version}})',
     reason: {
       analysis: 'Analysis',
+      seed: 'From a description',
       manual: 'Manual edit',
       restore: 'Restore',
       rule: 'Rule applied',

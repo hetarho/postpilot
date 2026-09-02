@@ -23,6 +23,8 @@ export const errors = {
   VOICE_NAME_REQUIRED: 'Enter a voice name.',
   VOICE_NAME_TOO_LONG:
     'The voice name must be no more than {{max}} characters. It is currently {{actual}} characters.',
+  VOICE_DESCRIPTION_TOO_LONG:
+    'Keep the voice description to {{max}} characters or fewer. It is currently {{actual}}.',
   VOICE_NAME_TAKEN: 'A voice with that name already exists.',
   VOICE_DEFAULT_DELETE_FORBIDDEN: 'The default voice cannot be deleted.',
   VOICE_BUSY: 'A job is already running for this voice.',

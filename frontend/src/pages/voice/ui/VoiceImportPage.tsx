@@ -1,13 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTransport } from '@connectrpc/connect-query'
-import { FailureNotice, ProgressLine, isTerminal, useJob } from '@/entities/generation-job'
-import { voiceProfileQueryKey } from '@/entities/voice'
 import { RulesEditor, StyleguideEditor } from '@/features/edit-voice-profile'
 import { LearnVoiceForm } from '@/features/learn-voice'
 import { SampleList } from '@/features/manage-voice-samples'
 import { StageModelSelect } from '@/features/select-model'
 import { Typography } from '@/shared/ui'
+import { VoiceRunStatus } from './VoiceRunStatus'
 import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
 
 export function VoiceImportPage() {
@@ -21,16 +19,9 @@ export function VoiceImportPage() {
 
 function ImportPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext) {
   const { t } = useTranslation('voices')
-  const transport = useTransport()
-  // This screen is the only one that starts an analysis, so the progress line has exactly one
-  // place to be.
+  // The id the just-started analysis returned outruns the profile refetch that will carry it,
+  // so this screen holds it until the query catches up.
   const [startedJobId, setStartedJobId] = useState('')
-  const jobId = startedJobId || profile.activeJobId
-  const invalidateOnDone = useMemo(
-    () => [voiceProfileQueryKey(transport, ownerId, voiceId)],
-    [ownerId, transport, voiceId],
-  )
-  const jobState = useJob(jobId, invalidateOnDone)
   const blocked = voice.deleted ? t('screens.importBlocked') : ''
 
   return (
@@ -43,17 +34,11 @@ function ImportPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext) {
         onStarted={setStartedJobId}
         blocked={blocked}
       />
-      {jobId && (
-        <section className="mt-6" aria-label={t('screens.analysisStatus')}>
-          {jobState.isError ? (
-            <FailureNotice message={t('screens.analysisStatusFailed')} onRetry={jobState.refetch} />
-          ) : jobState.job?.status === 'failed' ? (
-            <FailureNotice failure={jobState.job.failure} />
-          ) : jobState.job && !isTerminal(jobState.job) ? (
-            <ProgressLine job={jobState.job} />
-          ) : null}
-        </section>
-      )}
+      <VoiceRunStatus
+        ownerId={ownerId}
+        voiceId={voiceId}
+        jobId={startedJobId || profile.activeJobId}
+      />
       <div className="mt-8">
         <SampleList
           ownerId={ownerId}

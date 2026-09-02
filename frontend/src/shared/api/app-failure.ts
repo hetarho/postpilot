@@ -33,6 +33,7 @@ export const appFailureSpecs = {
   VOICE_DELETED: {},
   VOICE_NAME_REQUIRED: {},
   VOICE_NAME_TOO_LONG: { required: ['actual', 'max'] },
+  VOICE_DESCRIPTION_TOO_LONG: { required: ['actual', 'max'] },
   VOICE_NAME_TAKEN: {},
   VOICE_DEFAULT_DELETE_FORBIDDEN: {},
   VOICE_BUSY: {},

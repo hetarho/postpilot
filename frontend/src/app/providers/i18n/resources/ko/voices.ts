@@ -4,8 +4,9 @@ export const voices = {
     description:
       '말투마다 프로필과 학습 기록이 따로 쌓여요. 새 글은 기본 말투로 시작하고, 글마다 다른 말투를 고를 수 있어요.',
     active: '사용 중',
-    new: '새 말투',
-    deleted: '삭제된 말투',
+    deleted: '삭제된 말투 {{count}}개',
+    deleted_one: '삭제된 말투 {{count}}개',
+    deleted_other: '삭제된 말투 {{count}}개',
     deletedHelp:
       '글과 학습 기록은 그대로 남아 있어요. 복원하면 다시 고를 수 있고, 같은 이름의 말투가 이미 있으면 먼저 이름을 바꿔 주세요.',
   },
@@ -16,7 +17,10 @@ export const voices = {
   deletedRef: '삭제된 말투 · {{name}}',
   deletedAiReason: '삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.',
   create: {
-    title: '새 말투 이름',
+    open: '새 말투 만들기',
+    dockAria: '말투 추가',
+    title: '새 말투',
+    name: '말투 이름',
     placeholder: '예: 제품 리뷰',
     submit: '말투 만들기',
     count: '{{count}} / {{max}}자',
@@ -25,6 +29,15 @@ export const voices = {
     emptyHelp: '새 말투는 빈 프로필로 시작하고, 다른 말투와 아무것도 공유하지 않아요.',
     sourceLanguage: '샘플 언어',
     sourceLanguageHelp: '이 말투가 배울 글의 언어예요. 만든 뒤에는 바꿀 수 없어요.',
+    description: '말투 설명 (선택)',
+    descriptionPlaceholder: '예: 단순하고 차분하지 않은, 농담조의 요리 말투',
+    descriptionCount: '{{count}} / {{max}}자',
+    descriptionCount_one: '{{count}} / {{max}}자',
+    descriptionCount_other: '{{count}} / {{max}}자',
+    descriptionHelp:
+      '원하는 말투를 문장으로 적으면 AI가 첫 프로필을 만들어 줘요. 비워 두면 빈 프로필로 시작해요.',
+    descriptionNeedsModel:
+      '말투 분석에 쓸 AI 모델을 먼저 골라야 설명으로 만들 수 있어요. 설명을 비우면 지금 바로 만들 수 있어요.',
   },
   delete: {
     aria: '{{name}} 삭제',
@@ -220,6 +233,7 @@ export const voices = {
     restoredFrom: ' (v{{version}}에서 복원)',
     reason: {
       analysis: '분석',
+      seed: '설명으로 생성',
       manual: '직접 수정',
       restore: '복원',
       rule: '규칙 반영',
