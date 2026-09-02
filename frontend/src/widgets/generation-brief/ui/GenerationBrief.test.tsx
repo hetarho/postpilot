@@ -53,9 +53,12 @@ function renderBrief(
     user: { id: 'alice' },
     providers: {
       calls,
+      // Three, not two: with each field hiding what the other holds, a two-model catalog cannot
+      // show the difference between "excluded" and "the only one left".
       models: [
         { providerId: 'openrouter', modelId: 'writer', label: 'Writer', vision: true },
         { providerId: 'openrouter', modelId: 'rival', label: 'Rival', vision: true },
+        { providerId: 'openrouter', modelId: 'third', label: 'Third', vision: true },
       ],
       selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
       comparisonPairs: savedPair
@@ -140,17 +143,21 @@ describe('GenerationBrief', () => {
     await waitFor(() => expect(calls).toContain('SaveComparisonPair'))
   })
 
-  // The backend refuses two identical candidates, so the field says so instead of sending it.
-  it('refuses to save a pair of the same model twice', async () => {
+  // The backend refuses two identical candidates, so neither field lists what the other holds and
+  // the pair cannot be made duplicate in the first place.
+  it('drops the model one candidate holds from the other candidate\u2019s list', async () => {
     const user = userEvent.setup()
-    const { calls } = renderBrief()
+    renderBrief()
 
     await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
     await chooseOption(user, await screen.findByRole('combobox', { name: /후보 A/ }), 'Writer')
-    await chooseOption(user, await screen.findByRole('combobox', { name: /후보 B/ }), 'Writer')
 
-    expect(await screen.findByText('서로 다른 모델을 선택해 주세요.')).toBeInTheDocument()
-    expect(calls).not.toContain('SaveComparisonPair')
+    await user.click(await screen.findByRole('combobox', { name: /후보 B/ }))
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Rival',
+      'Third',
+    ])
+    expect(screen.queryByRole('option', { name: 'Writer' })).not.toBeInTheDocument()
   })
 
   // A blanked candidate is not a state the pair can be IN: `SaveComparisonPair` refuses an empty
@@ -168,9 +175,10 @@ describe('GenerationBrief', () => {
     // actually carry out.
     await user.click(candidateA)
     expect(screen.queryByRole('option', { name: '모델을 선택하세요' })).not.toBeInTheDocument()
+    // Its own model, plus the one nobody holds. Rival is 후보 B's and is therefore not offered.
     expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
       'Writer',
-      'Rival',
+      'Third',
     ])
   })
 

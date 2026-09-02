@@ -12,14 +12,7 @@ import {
   useSaveComparisonPair,
 } from '@/entities/model-catalog'
 import { planLabel } from '@/entities/plan'
-import {
-  AppFailureMessage,
-  FieldLabel,
-  FieldMessage,
-  Listbox,
-  Typography,
-  type ListboxOption,
-} from '@/shared/ui'
+import { AppFailureMessage, FieldLabel, Listbox, Typography, type ListboxOption } from '@/shared/ui'
 
 /** The A/B pair for one stage, as TWO dropdowns side by side, saved the moment both name a
  *  different model.
@@ -89,6 +82,9 @@ function CandidatePairFields({
   const commit = (nextA: string, nextB: string) => {
     setA(nextA)
     setB(nextB)
+    // Half a pair is nothing to store. The duplicate arm cannot fire from these fields — neither
+    // one lists what the other holds — and is kept as the cheap guard on a contract the server
+    // enforces anyway.
     if (!nextA || !nextB || nextA === nextB) return
     const left = find(nextA)
     const right = find(nextB)
@@ -98,19 +94,35 @@ function CandidatePairFields({
     })
   }
 
-  // NO blank entry, unlike the same fields on the AI 모델 page. A pair is two distinct registered
-  // models or it has never been set — `SaveComparisonPair` refuses an empty ref and there is no
-  // RPC that clears one — so choosing 모델을 선택하세요 here could only empty the FIELD. The saved
-  // pair would stay exactly as it was, and 글 생성's A/B 비교 would go on running the candidate the
-  // user had just watched disappear. The page's copy of this form can afford the entry because its
-  // 저장 button visibly disables and says the choice is not in effect; a surface whose fields save
-  // themselves has nowhere to say it, so it does not offer the choice at all. Not-yet-set is the
-  // placeholder on an empty value, which matches no option.
-  const options: ListboxOption<string>[] = suitable.map((model) => ({
-    value: refKey(model.ref),
-    label: optionLabel(model),
-    disabled: model.disabled || model.locked,
-  }))
+  // Every row this surface offers is a choice it can actually carry out, which rules out two
+  // entries the AI 모델 page's copy of the same form can afford.
+  //
+  // NO BLANK. A pair is two distinct registered models or it has never been set —
+  // `SaveComparisonPair` refuses an empty ref and there is no RPC that clears one — so choosing
+  // 모델을 선택하세요 could only empty the FIELD. The saved pair would stay exactly as it was, and
+  // 글 생성's A/B 비교 would go on running the candidate the user had just watched disappear.
+  // Not-yet-set is the placeholder on an empty value, which matches no option.
+  //
+  // NO DUPLICATE. Each field also drops whatever its NEIGHBOUR holds, so the pair can never be
+  // one model twice — the other state the server refuses and this surface therefore cannot show.
+  // That leaves the two fields unable to swap A for B, which costs nothing: the experiment shows
+  // its candidates blind and its sides are fixed once it starts, so A/B and B/A are the same run.
+  // The page's form keeps both entries because its 저장 button visibly disables and says the
+  // choice is not in effect; a surface whose fields save themselves has nowhere to say it.
+  //
+  // A field always keeps its OWN current value, so a pair that somehow arrived duplicated still
+  // renders as what it is rather than as an empty field.
+  const optionsExcept = (own: string, other: string): ListboxOption<string>[] =>
+    suitable
+      .filter((model) => {
+        const key = refKey(model.ref)
+        return key === own || key !== other
+      })
+      .map((model) => ({
+        value: refKey(model.ref),
+        label: optionLabel(model),
+        disabled: model.disabled || model.locked,
+      }))
 
   return (
     <div className={className}>
@@ -121,7 +133,7 @@ function CandidatePairFields({
         <CandidateField
           label={t('candidateA')}
           value={a}
-          options={options}
+          options={optionsExcept(a, b)}
           placeholder={t('select')}
           disabled={disabled || savePair.isPending}
           onChange={(next) => commit(next, b)}
@@ -129,13 +141,12 @@ function CandidatePairFields({
         <CandidateField
           label={t('candidateB')}
           value={b}
-          options={options}
+          options={optionsExcept(b, a)}
           placeholder={t('select')}
           disabled={disabled || savePair.isPending}
           onChange={(next) => commit(a, next)}
         />
       </div>
-      {a && a === b && <FieldMessage className="mt-1">{t('differentModels')}</FieldMessage>}
       {/* Mounted while idle so it announces when it fills, and out of the layout until it does. */}
       <Typography
         variant="body"

@@ -126,7 +126,15 @@ from [plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
   linked to the AI 모델 page: it is two dropdowns, and following a link out of a docked bar mid-draft cost the user
   their place for them. Relocating a control changes the screen, never what is sent: every model choice stays
   explicit and is never auto-applied ([I3]), and a pair is saved only once both candidates name a different model,
-  because the server refuses anything else.
+  because the server refuses anything else. Those two fields offer **only rows this surface can carry out**: no
+  blank entry, since `SaveComparisonPair` refuses an empty ref and no RPC clears a pair, and neither field lists
+  the model its neighbour holds, since a pair of one model twice is the other state the server refuses. Either
+  entry would have emptied or duplicated the FIELD while the saved pair went on running underneath it. Excluding
+  the neighbour leaves the two unable to swap A for B, which costs nothing: the experiment shows its candidates
+  blind and fixes their sides once it starts, so A/B and B/A are the same run. A field always keeps its own
+  current value, so nothing renders as empty because of the exclusion. The AI 모델 page's copy of the same form
+  keeps both entries — its explicit 저장 button disables and says the choice is not in effect, which a surface
+  whose fields save themselves has nowhere to say.
 - The editor exposes separate `생성` and `A/B 비교` actions with independent model blockers and pending states.
   Both await the latest title/memo save and refuse concurrent post work. A missing pair blocks only A/B; a missing
   active writer blocks only ordinary generation. A zero-photo post does not require observe. A deleted voice blocks
