@@ -27,6 +27,13 @@ export const AUTOSAVE_DEBOUNCE_MS = 1_000
 export const AUTOSAVE_RETRY_BASE_MS = 1_000
 export const AUTOSAVE_RETRY_MAX_MS = 30_000
 
+/** How long 저장됨 stays on the editor's status line after a completed save before the line goes
+ *  quiet. The queue's own `saved` is a STANDING state — it holds for the life of a queue that has
+ *  ever saved — so without a settle the line permanently claims a save the user made minutes ago,
+ *  and the post's status can never reach the one line that reports it. Long enough to be read as
+ *  the answer to the keystroke that caused it, short enough that a draft left alone says nothing. */
+export const SAVE_STATUS_SETTLED_MS = 2_000
+
 /** How long the editor's cross-route handoff may sit unread
  *  (`pages/editor/model/editor-handoff.ts`). It is meant to be picked up a tick later by
  *  the editor the mint navigation mounts; anything older belongs to a navigation that

@@ -11,6 +11,7 @@ describe('Typography', () => {
       <>
         <Typography variant="display">Page title</Typography>
         <Typography variant="title">Section</Typography>
+        <Typography variant="fieldTitle">Field</Typography>
         <Typography variant="body">Prose</Typography>
         <Typography variant="label">Label</Typography>
         <Typography variant="meta">Meta</Typography>
@@ -21,6 +22,9 @@ describe('Typography', () => {
     expect(display).toHaveClass('text-2xl', 'font-semibold', 'tracking-tight')
     const title = screen.getByRole('heading', { level: 2, name: 'Section' })
     expect(title).toHaveClass('text-lg', 'font-semibold', 'tracking-tight')
+    // Smaller than the step title it stands beside, heavier than a caption (A9).
+    const fieldTitle = screen.getByRole('heading', { level: 3, name: 'Field' })
+    expect(fieldTitle).toHaveClass('text-base', 'font-bold', 'tracking-tight')
     const body = screen.getByText('Prose')
     expect(body.tagName).toBe('P')
     expect(body).toHaveClass('text-sm', 'leading-relaxed')

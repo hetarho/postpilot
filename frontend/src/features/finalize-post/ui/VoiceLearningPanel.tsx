@@ -42,12 +42,11 @@ export function VoiceLearningPanel({
           <ProgressLine job={learning.job} />
         </div>
       ) : learning.learned ? (
+        /* The one outcome this panel still announces: a completed learning run is the result of an
+           action the user took on THIS screen. Being 확정 is not — it is a standing state the
+           page-top status line reports, and nothing ever took the notice for it down (change 15). */
         <Notice tone="success" role="status" className="mt-3">
           {t('learning.learned')}
-        </Notice>
-      ) : finalized ? (
-        <Notice tone="success" role="status" className="mt-3">
-          {t('finalize.success')}
         </Notice>
       ) : null}
       {learning.errorMessage && (

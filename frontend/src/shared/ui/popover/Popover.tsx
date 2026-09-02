@@ -136,6 +136,10 @@ export const Popover = forwardRef<
       // portalled to the body, so closing here would unmount the control that opened it and take
       // the dialog down with it mid-confirmation.
       if (target?.closest?.('[aria-modal="true"]')) return
+      // Nor is a press on a LISTBOX opened from inside this panel: `shared/ui/listbox` portals
+      // its open option list to the body so no scroller can clip it, which puts the option the
+      // user is choosing outside this root. Closing here would unmount the field mid-choice.
+      if (target?.closest?.('[role="listbox"]')) return
       if (!rootRef.current?.contains(target)) close()
     }
     const onKeyDown = (event: KeyboardEvent) => {
@@ -235,6 +239,9 @@ export const Popover = forwardRef<
           role="dialog"
           tabIndex={-1}
           aria-label={label}
+          // The panel is its own scroller, so it owes the focus ring the same clear space the
+          // sheet's body does (§9). Its `p-4` already exceeds the ring's 4px on every side, so
+          // the gutter is satisfied by the padding it has and nothing is reserved on top of it.
           className={`bg-surface-highest max-w-popover absolute z-30 w-72 rounded-lg p-4 shadow-lg ${
             align === 'start' ? 'left-0' : 'right-0'
           } ${

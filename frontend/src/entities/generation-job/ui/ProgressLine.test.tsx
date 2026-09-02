@@ -21,9 +21,17 @@ const JOB: GenerationJob = {
   targetLanguage: 'ko',
 }
 
-it('renders the stage-specific progress copy as a live status', () => {
+it('names the running stage as a live status, with no counts in the prose', () => {
   render(<ProgressLine job={JOB} />)
-  expect(screen.getByRole('status')).toHaveTextContent('사진 3/8 관찰됨')
+  expect(screen.getByRole('status')).toHaveTextContent('사진 관찰 중')
+  expect(screen.getByRole('status')).not.toHaveTextContent('3/8')
+})
+
+// The voice screen's seed run reports a stage nothing here knows, and it used to render the
+// literal sentence 작업 준비 중 for the whole run.
+it('reports an unrecognized stage as a running job rather than as a job not yet started', () => {
+  render(<ProgressLine job={{ ...JOB, stage: 'seed' }} />)
+  expect(screen.getByRole('status')).toHaveTextContent('생성 중')
 })
 
 it('shows the stable failure and delegates retry to its caller', async () => {

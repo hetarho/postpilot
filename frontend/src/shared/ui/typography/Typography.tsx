@@ -8,6 +8,7 @@ import { typographyStyles, type TypographyVariant } from './typographyStyles'
 const DEFAULT_ELEMENT: Record<TypographyVariant, ElementType> = {
   display: 'h1',
   title: 'h2',
+  fieldTitle: 'h3',
   body: 'p',
   label: 'span',
   meta: 'span',

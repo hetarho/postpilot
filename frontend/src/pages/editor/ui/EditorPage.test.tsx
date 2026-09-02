@@ -444,7 +444,13 @@ describe('opening a post', () => {
       },
     })
 
-    expect(await screen.findByText('사진 2/4 관찰됨')).toBeInTheDocument()
+    // The stage is NAMED on the page-top status line and its numbers are the bar's value —
+    // never spelled out as prose in the dock (change 15).
+    expect(await screen.findByText('사진 관찰 중')).toBeInTheDocument()
+    const bar = screen.getByRole('progressbar', { name: '작업 진행률' })
+    expect(bar).toHaveAttribute('aria-valuenow', '2')
+    expect(bar).toHaveAttribute('aria-valuemax', '4')
+    expect(screen.queryByText(/사진 2\/4/)).not.toBeInTheDocument()
     expect(calls).toContain('GetGeneration')
   })
 
@@ -640,10 +646,7 @@ describe('opening a post', () => {
     const user = userEvent.setup()
     expect(await screen.findByText(/문체 프로필이 비어 있어요/)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
-    expect(screen.getByLabelText('저장 상태와 글 작업').previousElementSibling).toHaveClass(
-      'mt-auto',
-      'h-6',
-    )
+    expect(screen.getByLabelText('글 작업').previousElementSibling).toHaveClass('mt-auto', 'h-6')
 
     const brief = await openBrief(user)
     expect(within(brief).getByText('사진이 없어 관찰 모델은 필요하지 않아요.')).toBeInTheDocument()
@@ -1608,8 +1611,8 @@ describe('the editor lifecycle steps', () => {
       },
     })
 
-    const dock = await screen.findByLabelText('저장 상태와 글 작업')
-    expect(screen.getAllByLabelText('저장 상태와 글 작업')).toHaveLength(1)
+    const dock = await screen.findByLabelText('글 작업')
+    expect(screen.getAllByLabelText('글 작업')).toHaveLength(1)
     // ONE surface: the revision instruction with its icon send button, and 확정하기 in its
     // heading. Neither section is rendered in the panel any more.
     expect(within(dock).getByLabelText('수정 요청을 입력하세요')).toBeInTheDocument()
@@ -1617,15 +1620,15 @@ describe('the editor lifecycle steps', () => {
     expect(within(dock).getByRole('button', { name: '확정하기' })).toBeInTheDocument()
 
     await openStep(user, '글 생성')
-    const generateDock = await screen.findByLabelText('저장 상태와 글 작업')
-    expect(screen.getAllByLabelText('저장 상태와 글 작업')).toHaveLength(1)
+    const generateDock = await screen.findByLabelText('글 작업')
+    expect(screen.getAllByLabelText('글 작업')).toHaveLength(1)
     expect(within(generateDock).getByRole('button', { name: '생성' })).toBeInTheDocument()
     expect(within(generateDock).getByRole('button', { name: /옵션/ })).toBeInTheDocument()
     expect(within(generateDock).queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
 
     await openStep(user, '글 완성')
     expect(await screen.findByRole('button', { name: '말투 학습' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('저장 상태와 글 작업')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('글 작업')).not.toBeInTheDocument()
   })
 
   // A step that cannot start anything offers the way to set it up, not two dead buttons.
@@ -1636,11 +1639,12 @@ describe('the editor lifecycle steps', () => {
       posts: { posts: [{ ...reviewPost, status: 'draft', images: [] }] },
     })
 
-    const dock = await screen.findByLabelText('저장 상태와 글 작업')
-    expect(await within(dock).findByText('생성: 활성 작성 모델을 선택하세요.')).toBeInTheDocument()
-    expect(
-      within(dock).getByText('A/B 비교: 작성 A/B 모델 두 개를 선택하세요.'),
-    ).toBeInTheDocument()
+    const dock = await screen.findByLabelText('글 작업')
+    // ONE statement of what is missing, over the ONE control that answers it. Two sentences in two
+    // grammars above a single button is what change 15 removed.
+    expect(await within(dock).findByText('활성 작성 모델을 선택하세요.')).toBeInTheDocument()
+    expect(within(dock).queryByText(/^생성:/)).not.toBeInTheDocument()
+    expect(within(dock).queryByText(/^A\/B 비교:/)).not.toBeInTheDocument()
     expect(within(dock).queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
     expect(within(dock).queryByRole('button', { name: 'A/B 비교' })).not.toBeInTheDocument()
 
@@ -2067,11 +2071,13 @@ describe('the post voice', () => {
     expect(await screen.findAllByText('삭제된 말투 · 옛 말투')).toHaveLength(2)
     const picker = await voiceField(user)
     expect(picker).toHaveTextContent('삭제된 말투 · 옛 말투')
-    // The reason settles once the model catalog has answered; until then it reports the wait.
+    // The refusal is said ONCE, by the surface that carries the way out: 글 생성's tombstone
+    // warning offers 복원, so the dock only disables the action rather than re-writing the reason
+    // under it (change 15).
+    await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeDisabled())
     expect(
-      await screen.findByText('생성: 삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+      screen.queryByText('생성: 삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
+    ).not.toBeInTheDocument()
     // The manual side of the post is untouched: its content and export are still there.
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
@@ -2387,5 +2393,93 @@ describe('the post purpose', () => {
     expect(
       await screen.findByText(/진행 중인 AI 작업은 시작할 때의 용도로 끝나요/),
     ).toBeInTheDocument()
+  })
+})
+
+// Change 15: everything the editor has to SAY about its own state is one 2px bar plus one line at
+// the top of the page, and the dock below it holds only controls and the reason one is refused.
+describe('the editor status region', () => {
+  const statusLine = () => screen.getByRole('status', { name: '글 상태' })
+
+  it('reports the post status on the line when nothing else is happening', async () => {
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-final',
+            status: 'finalized',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            finalizedRevision: 1n,
+            canFinalize: true,
+          },
+        ],
+      },
+    })
+
+    // A7: the status IS the report. The 이 revision을 확정했어요 notice that used to stand on
+    // 글 완성 said the same thing as an event that nothing ever took down.
+    await waitFor(() => expect(statusLine()).toHaveTextContent('확정'))
+    expect(screen.queryByText('이 revision을 확정했어요.')).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+  })
+
+  // A2: 작업 준비 중 is not a stage and is never shown; a job with no reportable ratio is the same
+  // 2px track without a value.
+  it('renders the top bar indeterminate for a stage that reports no ratio', async () => {
+    const active = { id: 'job-1', kind: 'generate', status: 'running', stage: 'write' }
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ slug: '20260820-jeju', activeJob: active }] },
+      jobs: { jobs: [active] },
+    })
+
+    const bar = await screen.findByRole('progressbar', { name: '작업 진행률' })
+    expect(bar).not.toHaveAttribute('aria-valuenow')
+    await waitFor(() => expect(statusLine()).toHaveTextContent('작성 중'))
+    expect(screen.queryByText('작업 준비 중')).not.toBeInTheDocument()
+  })
+
+  // A4: the line goes quiet on its own, so the status can get back onto it.
+  it('shows 저장됨 for the settle interval and then returns the line to the status', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ slug: '20260820-jeju', status: 'draft', title: '제주' }] },
+    })
+
+    await user.type(await screen.findByLabelText('제목'), ' 여행')
+    await waitFor(() => expect(statusLine()).toHaveTextContent('저장됨'), { timeout: 5_000 })
+    await waitFor(() => expect(statusLine()).toHaveTextContent('초안'), { timeout: 5_000 })
+    expect(statusLine()).not.toHaveTextContent('저장됨')
+  })
+
+  // A5: one statement of what to do, and it is the control that resolves it.
+  it('leaves the A/B way out as the only word on a pending comparison', async () => {
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            status: 'draft',
+            images: [],
+            pendingExperimentId: 'experiment-pending',
+          },
+        ],
+      },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    expect(await screen.findByRole('link', { name: 'A/B 결과 확인' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeDisabled())
+    expect(screen.getByRole('button', { name: 'A/B 비교' })).toBeDisabled()
+    expect(screen.queryByText('먼저 대기 중인 A/B 결과를 확인해 주세요.')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^생성:/)).not.toBeInTheDocument()
   })
 })

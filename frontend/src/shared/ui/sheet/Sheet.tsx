@@ -186,8 +186,16 @@ export function Sheet({
         )}
       >
         {header}
+        {/* `p-focus-gutter -m-focus-gutter`: the body is the sheet's one scroller, and a scroll
+            container resolves BOTH axes away from `visible` — so a `w-full` field flush against
+            this scrollport had the left and right edges of its focus ring cut away the moment it
+            took focus (§9). The padding reserves the ring's 4px and the equal negative margin
+            gives it back to the layout, so every control inside sits exactly where it did. */}
         <div
-          className={twMerge('min-h-0 flex-1 overflow-y-auto overscroll-contain', bodyClassName)}
+          className={twMerge(
+            'p-focus-gutter -m-focus-gutter min-h-0 flex-1 overflow-y-auto overscroll-contain',
+            bodyClassName,
+          )}
         >
           {children}
         </div>

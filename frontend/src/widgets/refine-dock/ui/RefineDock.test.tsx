@@ -72,6 +72,12 @@ describe('RefineDock', () => {
     const field = screen.getByLabelText('수정 요청을 입력하세요')
     const send = screen.getByRole('button', { name: '수정' })
 
+    // The label is the field's own name at the `fieldTitle` role — smaller and heavier than the
+    // step title it used to borrow — and 확정하기 fills what is left of the row (A9).
+    expect(heading.tagName).toBe('LABEL')
+    expect(heading).toHaveClass('text-base', 'font-bold')
+    expect(open.parentElement).toHaveClass('flex-1')
+
     expect(heading.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(open.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(field.compareDocumentPosition(send) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

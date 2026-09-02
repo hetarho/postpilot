@@ -158,14 +158,24 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         void start()
       }}
     >
-      {/* The row's own heading, with the step's way out beside it. The label is VISIBLE and takes
-          the `title` role: it used to be `sr-only`, which left the field's prompt to a placeholder
-          — `meta`-sized, `content-tertiary`, and gone the moment a character was typed — so the
-          one bar holding both the revision loop and the actions that end it named neither of them
-          (owner decision 2026-09-02). It is still the field's own `<label>`, so the accessible
-          name is the text the user can read. */}
+      {/* The row's own heading, with the step's way out beside it. The label is VISIBLE: it used
+          to be `sr-only`, which left the field's prompt to a placeholder — `meta`-sized,
+          `content-tertiary`, and gone the moment a character was typed — so the one bar holding
+          both the revision loop and the actions that end it named neither of them (owner decision
+          2026-09-02). It is still the field's own `<label>`, so the accessible name is the text
+          the user can read.
+          `fieldTitle`, not `title`: this is a field's name standing beside the step's way out, not
+          a second step heading, so it is smaller than the step title and heavier than a caption
+          (§3). The action slot takes the ROW'S whole remaining width — 확정하기 is two words, and
+          at its natural size it read as an afterthought next to the label instead of as the
+          thing that ends the step. */}
       <div className="flex items-center justify-between gap-3">
-        <Typography variant="title" as="label" htmlFor="revision-instruction" className="min-w-0">
+        <Typography
+          variant="fieldTitle"
+          as="label"
+          htmlFor="revision-instruction"
+          className="min-w-0"
+        >
           {t('revision.instruction')}
         </Typography>
         {action}

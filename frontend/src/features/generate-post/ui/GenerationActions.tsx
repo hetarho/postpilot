@@ -152,16 +152,6 @@ export const GenerationActions = forwardRef<
     [start],
   )
 
-  const sharedReason = pendingExperiment
-    ? t('generation.pendingExperiment')
-    : jobPending
-      ? t('generation.jobChecking')
-      : selectionSaving
-        ? t('generation.selectionSaving')
-        : modelPending
-          ? t('generation.selectionChecking')
-          : ''
-
   // Nothing this step can start yet, and the only reason is that the models have never been
   // chosen. Two dead buttons are not an empty state (§7): the bar drops them and offers the way to
   // the surface every missing piece is chosen on, which is now the brief for all of them — the
@@ -176,29 +166,49 @@ export const GenerationActions = forwardRef<
     isSetupBlocker(ordinary.blocker) &&
     isSetupBlocker(ab.blocker)
 
-  // One line per action, in the action's own words. Rendered ABOVE the controls in the setup
-  // state, where it is the message and the buttons are the answer to it, and below them otherwise,
-  // where it explains a control the user can already see.
+  // A refusal is written ONLY when it names something the user has to CHOOSE. The purely temporal
+  // ones — a job in flight, a selection still saving or loading — are not written here at all:
+  // the page-top status line already says a job or a save is running, and repeating it under the
+  // buttons said the same thing twice in two grammars (change 15). Nor is a pending A/B result:
+  // both buttons are disabled through `sharedDisabled` and the A/B 결과 확인 link below IS the way
+  // out, so a sentence above it would only be a second copy of the link's own instruction.
+  //
+  // `!modelPending` is load-bearing: `useStageSelection` reports `selected: null` for the whole
+  // fetch, so without it every visit to 글 생성 asserts that no model is chosen before the
+  // catalog has answered — a refusal that is not true yet.
+  const generateSetup = !modelPending && isSetupBlocker(ordinary.blocker) ? ordinary.reason : ''
+  const compareSetup = !modelPending && isSetupBlocker(ab.blocker) ? ab.reason : ''
+
+  // One line per action, in the action's own words — collapsed to ONE bare line when both are
+  // refused for the same reason, because the prefixes only exist to tell two reasons apart.
   const reasons = (className?: string) => (
     <div className={clsx('grid gap-1 empty:hidden', className)}>
-      {(sharedReason || !ordinary.ok) && (
+      {generateSetup && generateSetup === compareSetup ? (
         <Typography variant="label" as="p" role="status">
-          {t('generation.generateReason', {
-            reason: sharedReason || ordinary.reason,
-            interpolation: { escapeValue: false },
-          })}
+          {generateSetup}
         </Typography>
-      )}
-      {(sharedReason || !ab.ok) && (
-        <Typography variant="label" as="p" role="status">
-          {t('generation.compareReason', {
-            reason: sharedReason || ab.reason,
-            // This value is another catalog sentence, never user or model data. Avoid
-            // double-escaping its slash into visible `&#x2F;` while global interpolation
-            // escaping remains enabled for untrusted values.
-            interpolation: { escapeValue: false },
-          })}
-        </Typography>
+      ) : (
+        <>
+          {generateSetup && (
+            <Typography variant="label" as="p" role="status">
+              {t('generation.generateReason', {
+                reason: generateSetup,
+                interpolation: { escapeValue: false },
+              })}
+            </Typography>
+          )}
+          {compareSetup && (
+            <Typography variant="label" as="p" role="status">
+              {t('generation.compareReason', {
+                reason: compareSetup,
+                // This value is another catalog sentence, never user or model data. Avoid
+                // double-escaping its slash into visible `&#x2F;` while global interpolation
+                // escaping remains enabled for untrusted values.
+                interpolation: { escapeValue: false },
+              })}
+            </Typography>
+          )}
+        </>
       )}
     </div>
   )
@@ -206,7 +216,14 @@ export const GenerationActions = forwardRef<
   if (needsBrief) {
     return (
       <div className="grid gap-3">
-        {reasons()}
+        {/* ONE statement of what is missing, above the ONE control that answers it. Both actions
+            are refused for a setup reason here by construction (`needsBrief`), and two sentences
+            over a single button is the duplication this surface exists to avoid. */}
+        {(generateSetup || compareSetup) && (
+          <Typography variant="label" as="p" role="status">
+            {generateSetup || compareSetup}
+          </Typography>
+        )}
         <div className="grid gap-3 sm:flex sm:flex-wrap sm:justify-end">
           <Button variant="secondary" onClick={onOpenBrief}>
             {t('generation.setup.brief')}

@@ -88,7 +88,7 @@ export function FinalizeActions({
   // followed it; this step only has to offer the road there.
   if (finalized) {
     return (
-      <Button variant="secondary" className="shrink-0" onClick={() => onFinalized(post.title)}>
+      <Button variant="secondary" className="flex-1" onClick={() => onFinalized(post.title)}>
         {t('finalize.goFinish')}
       </Button>
     )
@@ -106,7 +106,10 @@ export function FinalizeActions({
       placement="above"
       align="end"
       phone="sheet"
-      className="shrink-0"
+      // It FILLS the heading row's remaining width rather than shrinking to its two words: this is
+      // the step's way out, and the row exists to hold it beside the field's name (§4.2).
+      className="flex-1"
+      triggerClassName="w-full"
     >
       {(close) => (
         <div className="grid gap-4">

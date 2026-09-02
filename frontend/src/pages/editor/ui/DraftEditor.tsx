@@ -1,24 +1,8 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
-import { FailureNotice, ProgressLine, isTerminal, useJob } from '@/entities/generation-job'
-import {
-  getPostQueryKey,
-  hasContent,
-  listPostsQueryKey,
-  postStatusLabel,
-  type PostDraft,
-} from '@/entities/post'
+import { FailureNotice, isTerminal } from '@/entities/generation-job'
+import { hasContent, type PostDraft } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import {
   useVoiceProfile,
@@ -38,18 +22,11 @@ import { DeletePostButton } from '@/features/delete-post'
 import { VoiceLearningPanel, useVoiceLearning } from '@/features/finalize-post'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
-import {
-  SaveStatus,
-  discardDraftQueue,
-  peekPendingDraft,
-  useAutosave,
-  type SaveState,
-} from '@/features/save-draft'
+import { discardDraftQueue, peekPendingDraft, useAutosave } from '@/features/save-draft'
 import { PostPurposeSelect } from '@/features/select-post-purpose'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import {
   ActionBar,
-  Badge,
   Button,
   FieldLabel,
   Notice,
@@ -68,7 +45,9 @@ import { DeletedVoiceWarning, VoiceWarning } from '@/widgets/voice-warning'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
 import { activeLocale } from '@/shared/lib'
 import { editorStepLabel, editorSteps, stepForStatus, type EditorStep } from '../model/steps'
+import { useEditorJob, type EditorJobView } from '../model/useEditorJob'
 import { EditorPhotos } from './EditorPhotos'
+import { EditorProgressBar, EditorStatusLine } from './EditorStatus'
 
 const STEP_PANEL_ID = 'editor-step-panel'
 
@@ -158,6 +137,10 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       void navigate({ to: '/posts/$slug', params: { slug }, replace: true })
     },
   })
+
+  // The durable job is watched HERE, not inside the step panels: the page-top status region
+  // reports it and the panels act on it, and one poll has to serve both ([I5]).
+  const jobView = useEditorJob(post)
 
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
@@ -274,6 +257,10 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   // down, so without it a new draft renders its dock mid-page with dead space beneath.
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6 sm:px-6">
+      {/* First child of the flow on purpose: a sticky box can only be pinned by the box it sits
+          in, and this one has to hold the page's top edge while a draft thousands of pixels tall
+          scrolls past it. It adds no layout height. */}
+      <EditorProgressBar job={jobView.job} />
       {/* `flex-wrap` so the delete refusal, which asks for the full width, drops to its own line
           rather than crushing the way out beside it (§8.5). The Korean refusal copy is over 40
           characters, which is more than a 360px row can hold beside anything. */}
@@ -291,13 +278,21 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         >
           {t('editor.backToList')}
         </Link>
-        {post && (
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-            <Badge>{postStatusLabel(post.status)}</Badge>
-            {/* A queue outlives its editor, so a retry left running would keep saving a slug the
-                server no longer has and report that failure for a post the user destroyed on
-                purpose (tech/draft-autosave.md). Discarded before the navigation unmounts the
-                editor, and only for this slug. */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+          {/* The editor's ONE state indicator. It replaced the status badge that stood here: the
+              row may not carry two of them (change 15). Mounted for `/posts/new` as well, which
+              has no status of its own but does have an autosave that can fail — and no save
+              button anywhere to fall back on (PRD F-2). */}
+          <EditorStatusLine
+            job={jobView.job}
+            saveState={autosave.state}
+            status={post?.status ?? ''}
+          />
+          {post && (
+            /* A queue outlives its editor, so a retry left running would keep saving a slug the
+               server no longer has and report that failure for a post the user destroyed on
+               purpose (tech/draft-autosave.md). Discarded before the navigation unmounts the
+               editor, and only for this slug. */
             <DeletePostButton
               post={post}
               onDeleted={() => {
@@ -305,8 +300,8 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
                 discardContentQueue(post.slug)
               }}
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* A post with a lifecycle navigates it first. `/posts/new` has none, so it shows no bar. */}
@@ -335,7 +330,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           onTitleFinalized={setTitle}
           beforeStart={autosave.flush}
           ensureSlug={autosave.ensureSlug}
-          saveState={autosave.state}
+          jobView={jobView}
         />
       ) : (
         <>
@@ -346,7 +341,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           <EditorVoiceWarning ownerId={ownerId} voice={voice} />
           {/* A draft with no post yet has no committing action, but its 말투 and the rest of the
               brief still have to be reachable before the first word is typed. */}
-          <EditorDock saveState={autosave.state} header={dockHeader} />
+          <EditorDock header={dockHeader} />
         </>
       )}
     </main>
@@ -479,30 +474,28 @@ function EmptyProfileWarning({ ownerId, voiceId }: { ownerId: string; voiceId: s
   return <div className="mt-6 empty:hidden">{warning}</div>
 }
 
-/** The editor's docked bar. Both of the things a phone could not reach live here: the one
- *  committing action, which sat in normal flow roughly 1,000px down a 4,000px page, and the save
- *  state, which was only ever visible in the top 3% of that scroll — on a screen that has no save
- *  button, so a failing autosave was silent everywhere else (§4.3).
+/** The editor's docked bar. It holds the one thing a phone could not otherwise reach — the step's
+ *  committing action, which sat in normal flow roughly 1,000px down a 4,000px page (§4.3) — the
+ *  brief and the assignments that decide what that action does, and the reason the action is
+ *  refused. Nothing that is merely TRUE: the save state, the job's progress and the post's status
+ *  all moved to the page-top status region (`EditorStatus`, change 15).
  *
  *  It is mounted as the LAST child of `main` on purpose: a `sticky bottom-*` box is only pinned
  *  while its containing block still extends below it, so anywhere earlier in the flow it would
  *  scroll away with the section it sat in. */
 function EditorDock({
-  saveState,
   header,
   children,
 }: {
-  saveState: SaveState
   /** The bar's first row: 글 생성 puts 말투 and the writing brief's glyph here, above whatever the
    *  step's own actions are. */
   header?: ReactNode
   children?: ReactNode
 }) {
   const { t } = useTranslation('posts')
-  // A bar with nothing to say is not chrome (§0). `idle` is SaveStatus's deliberately empty state,
-  // so a dock holding neither a save line nor a control is not rendered at all. Every step that
-  // carries an action passes one, which is why 글 다듬기's dock is now always present.
-  if (saveState === 'idle' && !children && !header) return null
+  // A bar holding neither a control nor a refusal is not chrome (§0). Now that no status line
+  // lives here, that is the whole test.
+  if (!children && !header) return null
   return (
     <>
       {/* `mt-auto` alone can resolve to zero when the page is taller than the viewport. Keep a
@@ -510,12 +503,6 @@ function EditorDock({
       <div aria-hidden className="mt-auto h-6 shrink-0" />
       <ActionBar ariaLabel={t('editor.actionAria')} className="mt-0">
         <div className="flex flex-col gap-2">
-          {/* At `idle` the live region renders an EMPTY paragraph: no height, but a flex `gap`
-              still spends its 8px on it, which is what made the bar read as 20px of padding on
-              top against 12px underneath. `sr-only` is `position: absolute`, so the region stops
-              being a flex item and the gap goes with it — while staying MOUNTED, because a live
-              region inserted with its text already inside announces nothing (§4.3). */}
-          <SaveStatus state={saveState} className={saveState === 'idle' ? 'sr-only' : undefined} />
           {header}
           {children}
         </div>
@@ -561,7 +548,7 @@ function LifecycleSteps({
   onTitleFinalized,
   beforeStart,
   ensureSlug,
-  saveState,
+  jobView,
 }: {
   post: PostDraft
   ownerId: string
@@ -576,19 +563,14 @@ function LifecycleSteps({
   onTitleFinalized: (title: string) => void
   beforeStart: () => Promise<void>
   ensureSlug: () => Promise<string>
-  saveState: SaveState
+  /** The durable job, resolved by the page so the status region and these panels read one poll. */
+  jobView: EditorJobView
 }) {
   const { t } = useTranslation('posts')
   const navigate = useNavigate()
-  const transport = useTransport()
-  const queryClient = useQueryClient()
   const generateRef = useRef<GenerationActionsHandle>(null)
   const reviseRef = useRef<ReviseFormHandle>(null)
   const contentEditorRef = useRef<BlockEditorHandle>(null)
-  // The step is recorded with the job because the retry lives there: `generateRef` is mounted only
-  // on 글 생성 and `reviseRef` only on 글 다듬기, so reporting a failure on the other step would
-  // offer a retry that reaches nothing.
-  const [started, setStarted] = useState<{ id: string; step: EditorStep } | null>(null)
   // Above both panels on purpose: 확정하고 말투 학습 lives at the end of 글 다듬기 and every
   // learning outcome is reported on 글 완성, so the run has to outlive the step change that the
   // finalize itself causes.
@@ -598,12 +580,7 @@ function LifecycleSteps({
     post.contentLanguage,
     post.voice.sourceLanguage,
   )
-  const jobId = started?.id || post.activeJob?.id || ''
-  const postKey = useMemo(() => getPostQueryKey(transport, post.slug), [post.slug, transport])
-  const postsKey = useMemo(() => listPostsQueryKey(transport), [transport])
-  const invalidateOnDone = useMemo(() => [postKey, postsKey], [postKey, postsKey])
-  const jobState = useJob(jobId, invalidateOnDone)
-  const job = jobState.job ?? (post.activeJob?.id === jobId ? post.activeJob : undefined)
+  const { job, jobId, jobStep } = jobView
   const result = hasContent(post) ? post.content : undefined
   // What export renders. The block editor's unsaved edits are newer than the server's copy, but only
   // until the server's revision moves past them — a completed revision or a landed save makes the
@@ -617,22 +594,6 @@ function LifecycleSteps({
     (content: PostContent) => setEdited({ revision: post.contentRevision, content }),
     [post.contentRevision],
   )
-  // A resumed job has no recorded step, so its kind says which one owns it.
-  const jobStep: EditorStep =
-    started?.id === jobId ? started.step : job?.kind === 'revise' ? 'refine' : 'generate'
-
-  // Observations are persisted batch-by-batch on the post, not on the job. Refresh that
-  // read model whenever observe progress changes so the contact sheet fills while the
-  // durable job is still running.
-  const refreshedSnapshot = useRef('')
-  useEffect(() => {
-    if (!job || isTerminal(job)) return
-    const snapshot = `${job.id}:${job.updatedAt}:${job.progressDone}:${job.progressTotal}`
-    if (refreshedSnapshot.current === snapshot) return
-    refreshedSnapshot.current = snapshot
-    void queryClient.invalidateQueries({ queryKey: postKey })
-  }, [job, postKey, queryClient])
-
   // 제목 · 메모 · 사진 · the voice caveat · the contact sheet. Everything that DESCRIBES the next
   // AI run left this panel for the one brief surface in the dock, so what is left is the post's
   // own material (change 12).
@@ -737,19 +698,20 @@ function LifecycleSteps({
     </EmptyStep>
   )
 
-  // What the dock has to say about the durable job, if anything. Computed up here because it is
-  // also what decides whether the bar exists at all: a job's progress and its failure must reach
-  // the user on every step, while a bar holding nothing is chrome with nothing to say (§0).
+  // A FAILURE, and only a failure. It stays in the dock while the job's progress moved to the
+  // page-top bar, because a failure carries a retry: something the user can act on is a control,
+  // not a status (change 15). It is computed up here because it is also what decides whether the
+  // bar exists at all on 글 완성 — a bar holding nothing is chrome with nothing to say (§0).
   //
   // The RETRY is offered only on the step that owns the job, because that is where the control it
   // calls is mounted.
-  const jobNotice = !jobId ? null : jobState.isError ? (
-    <FailureNotice message={t('editor.jobLoadFailed')} onRetry={jobState.refetch} />
+  const jobNotice = !jobId ? null : jobView.isError ? (
+    <FailureNotice message={t('editor.jobLoadFailed')} onRetry={jobView.refetch} />
   ) : job?.status === 'failed' ? (
     <FailureNotice
       failure={job.failure}
       onRetry={
-        step !== jobStep || (job.kind === 'revise' && started?.id !== job.id)
+        step !== jobStep || (job.kind === 'revise' && jobView.startedStep === undefined)
           ? undefined
           : () =>
               job.kind === 'revise'
@@ -764,8 +726,6 @@ function LifecycleSteps({
                   : generateRef.current?.startGeneration()
       }
     />
-  ) : job && !isTerminal(job) ? (
-    <ProgressLine job={job} />
   ) : null
 
   return (
@@ -794,12 +754,8 @@ function LifecycleSteps({
           draft between them is routinely thousands of pixels tall (§4.3). ③ still docks only when
           the job has something to report. There is exactly ONE ActionBar in this scroller either
           way — the revision and finalize sections no longer exist in the panel. */}
-      {(step === 'generate' ||
-        (step === 'refine' && Boolean(result)) ||
-        jobNotice ||
-        saveState === 'saving' ||
-        saveState === 'error') && (
-        <EditorDock saveState={saveState} header={step === 'generate' ? dockHeader : undefined}>
+      {(step === 'generate' || (step === 'refine' && Boolean(result)) || jobNotice) && (
+        <EditorDock header={step === 'generate' ? dockHeader : undefined}>
           {jobNotice}
           {step === 'generate' && (
             <GenerationActions
@@ -807,8 +763,8 @@ function LifecycleSteps({
               post={post}
               targetLength={targetLength}
               activeJob={job}
-              jobPending={Boolean(jobId) && !job}
-              onStarted={(id) => setStarted({ id, step: 'generate' })}
+              jobPending={jobView.isPending}
+              onStarted={(id) => jobView.onStarted(id, 'generate')}
               beforeStart={beforeStart}
               onOpenBrief={onOpenBrief}
             />
@@ -821,8 +777,8 @@ function LifecycleSteps({
               ruleLanguageMismatch={languageMismatch}
               learning={learning}
               activeJob={job}
-              jobPending={Boolean(jobId) && !job}
-              onRevisionStarted={(id) => setStarted({ id, step: 'refine' })}
+              jobPending={jobView.isPending}
+              onRevisionStarted={(id) => jobView.onStarted(id, 'refine')}
               // The block editor is mounted in the panel above, so the flush is a live ref; the
               // queue's fallback covers the beat between a step change and its unmount. A finalize
               // may never name a revision that omits an edit the user has already made.

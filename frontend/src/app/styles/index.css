@@ -130,6 +130,18 @@
   --surface-base: var(--palette-mauve-900);
   --surface-raised: var(--palette-mauve-850);
   --surface-highest: var(--palette-mauve-800);
+  /* For a panel that opens OVER another surface: a listbox opened from inside a sheet wore the
+     sheet's own `highest`, and the two planes met with only a shadow between them. It is the only
+     surface that exists to be distinguished from ANOTHER surface, which is why it is a sixth step
+     rather than a reuse of one of the five — it has to differ from `highest` (a sheet, a popover),
+     from `base` (the page) and from `raised` at once.
+     It is a step DOWN from those, plus its own `shadow-lg`, in both themes. Up is not available:
+     `highest` is already white in `day`, and a plane lighter than `highest` in `night` drops
+     `content-secondary` — the colour of an unselected option row — below AA on it. Down is also
+     where the step is largest against the plane a listbox actually opens over most of the time:
+     `highest` is worn by `ActionBar`, `Sheet` and `Popover` alike. It reuses a palette step that
+     another surface also maps to, which is fine — the roles are what must not collide. */
+  --surface-overlay: var(--palette-mauve-925);
 
   /* content — the first three meet AA on every surface; disabled content is exempt */
   --content-primary: var(--palette-mauve-50);
@@ -179,6 +191,9 @@
   --surface-base: var(--palette-mauve-50);
   --surface-raised: var(--palette-mauve-25);
   --surface-highest: var(--palette-white);
+  /* Same step down, and here it is the only direction there is. `mauve-50` would have been
+     `surface-base` exactly, which is the plane a listbox on an ordinary page opens over. */
+  --surface-overlay: var(--palette-mauve-100);
 
   --content-primary: var(--palette-mauve-950);
   --content-secondary: var(--palette-mauve-700);
@@ -350,6 +365,17 @@
      the page is the paper. */
   --spacing-field: 20rem;
 
+  /* The focus ring's own footprint: `outline: 2px` at `outline-offset: 2px` (see :focus-visible
+     below), so a control needs this much clear space on every side to show one. A scroll container
+     resolves BOTH axes away from `visible`, so an overlay body that puts a `w-full` field flush
+     against its scrollport clips the ring's left and right edges — the scroller reserves this and
+     cancels it with an equal negative margin, so nothing moves and the ring has room. */
+  --spacing-focus-gutter: 0.25rem;
+
+  /* A page-top progress bar's track. Deliberately hairline: it reports a running job at the edge
+     of the screen without taking a row from the content (§4.3). */
+  --spacing-progress-bar: 0.125rem;
+
   /* A bottom sheet's ceiling. `dvh`, not `vh`: only the dynamic unit tracks the mobile URL bar,
      so a `vh`-sized sheet is clipped on every phone — design-language §8.1. */
   --spacing-sheet: 85dvh;
@@ -378,6 +404,11 @@
   --animate-sheet-out: sheet-out var(--duration-slow) var(--ease-standard) forwards;
   --animate-dialog-in: dialog-in var(--duration-base) var(--ease-emphasized);
   --animate-dialog-out: dialog-out var(--duration-base) var(--ease-standard) forwards;
+  /* An indeterminate progress bar: the SAME 2px track as the determinate one, with the fill
+     sweeping across it, because a stage that reports no ratio is still the same job at the same
+     place on the screen. The period is its own value rather than a `--duration-*` token — those
+     three are interaction feedback, and a loop this slow would read as a stall at any of them. */
+  --animate-progress-sweep: progress-sweep 1.4s var(--ease-standard) infinite;
 
   @keyframes scrim-in {
     from {
@@ -413,6 +444,23 @@
       transform: scale(0.96);
     }
   }
+  @keyframes progress-sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(400%);
+    }
+  }
+}
+
+/* An overlay panel that is PORTALLED to the document body — `shared/ui/listbox`'s open option
+   list — has no stacking ancestor to inherit from, so it carries its level itself. It must outrank
+   `Sheet`'s scrim (`z-50`): a listbox opened from inside a sheet is otherwise painted under the
+   sheet it was opened from. Registered here rather than written at the call site so the one
+   relationship that matters — this is above the overlays — is stated where the overlays are. */
+@utility z-overlay-panel {
+  z-index: 60;
 }
 
 @theme inline {
@@ -422,6 +470,7 @@
   --color-surface-base: var(--surface-base);
   --color-surface-raised: var(--surface-raised);
   --color-surface-highest: var(--surface-highest);
+  --color-surface-overlay: var(--surface-overlay);
   --color-content-primary: var(--content-primary);
   --color-content-secondary: var(--content-secondary);
   --color-content-tertiary: var(--content-tertiary);

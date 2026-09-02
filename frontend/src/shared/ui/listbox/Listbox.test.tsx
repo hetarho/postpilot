@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FieldLabel } from '../field/FieldLabel'
+import { Sheet } from '../sheet/Sheet'
 import { Listbox } from './Listbox'
 
 type Fruit = 'apple' | 'pear' | 'plum'
@@ -56,7 +57,10 @@ describe('Listbox', () => {
     await user.click(screen.getByRole('combobox', { name: '과일 배' }))
 
     const panel = screen.getByRole('listbox', { name: '과일' })
-    expect(panel).toHaveClass('bg-surface-highest')
+    // Its own surface, not the one every overlay wears: an open panel inside a sheet used to be
+    // exactly the colour of the sheet behind it.
+    expect(panel).toHaveClass('bg-surface-overlay', 'z-overlay-panel', 'fixed')
+    expect(panel).not.toHaveClass('bg-surface-highest')
     expect(panel).not.toHaveClass('border')
     expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
       '사과',
@@ -167,7 +171,10 @@ describe('Listbox', () => {
 
     await user.click(trigger)
     const panel = screen.getByRole('listbox')
-    expect(panel).toHaveClass('top-full', 'overflow-y-auto', 'overscroll-contain')
+    expect(panel).toHaveClass('overflow-y-auto', 'overscroll-contain')
+    expect(panel).toHaveAttribute('data-drop', 'down')
+    // 544px + the 4px gap: the panel hangs off the trigger's own bottom edge.
+    expect(panel.style.top).toBe('548px')
     expect(panel.style.maxHeight).toBe('204px')
   })
 
@@ -191,9 +198,80 @@ describe('Listbox', () => {
 
     await user.click(trigger)
     const panel = screen.getByRole('listbox')
-    expect(panel).toHaveClass('bottom-full')
-    expect(panel).not.toHaveClass('top-full')
+    expect(panel).toHaveAttribute('data-drop', 'up')
+    // Pinned to the viewport's BOTTOM edge instead: 768 - 700 + the 4px gap.
+    expect(panel.style.bottom).toBe('72px')
+    expect(panel.style.top).toBe('')
     expect(panel.style.maxHeight).toBe('384px')
+  })
+
+  // The bug the portal replaced: as an `absolute` sibling of its trigger the panel was clipped by
+  // every scrolling ancestor, and a sheet's body is one — worst for a field near the bottom, whose
+  // panel flips upward and out of that scroller entirely.
+  describe('inside a sheet', () => {
+    function SheetHarness({ onClose = () => undefined }: { onClose?: () => void }) {
+      return (
+        <Sheet open label="새 말투" onClose={onClose}>
+          <Harness />
+          <button>시트 안 다음 컨트롤</button>
+        </Sheet>
+      )
+    }
+
+    it('renders its panel outside the sheet, with every option reachable', async () => {
+      const user = userEvent.setup()
+      render(<SheetHarness />)
+
+      await user.click(screen.getByRole('combobox', { name: '과일 배' }))
+
+      const panel = screen.getByRole('listbox', { name: '과일' })
+      expect(panel.parentElement).toBe(document.body)
+      expect(panel.closest('[role="dialog"]')).toBeNull()
+      expect(screen.getAllByRole('option')).toHaveLength(3)
+    })
+
+    it('lets one Escape dismiss the listbox and leave the sheet open', async () => {
+      const user = userEvent.setup()
+      const onClose = vi.fn()
+      render(<SheetHarness onClose={onClose} />)
+
+      const trigger = screen.getByRole('combobox', { name: '과일 배' })
+      await user.click(trigger)
+      await user.keyboard('{Escape}')
+
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+      expect(onClose).not.toHaveBeenCalled()
+      expect(trigger).toHaveFocus()
+      expect(screen.getByRole('dialog', { name: '새 말투' })).toBeInTheDocument()
+    })
+
+    it('hands Tab back to the field, so the traversal continues inside the sheet', async () => {
+      const user = userEvent.setup()
+      render(<SheetHarness />)
+
+      await user.click(screen.getByRole('combobox', { name: '과일 배' }))
+      await user.keyboard('{Tab}')
+
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '시트 안 다음 컨트롤' })).toHaveFocus()
+    })
+  })
+
+  it('closes rather than detaching once a scroll carries its trigger off screen', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const trigger = screen.getByRole('combobox', { name: '과일 배' })
+    trigger.getBoundingClientRect = () => rectAt(300)
+    await user.click(trigger)
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+
+    trigger.getBoundingClientRect = () => rectAt(-80)
+    window.dispatchEvent(new Event('scroll'))
+
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
+    // Focus was on an option that has just been unmounted. It goes back to the trigger rather
+    // than to the document — losing it would let the next Tab escape a sheet's focus trap.
+    await waitFor(() => expect(trigger).toHaveFocus())
   })
 
   it('does not open while disabled', async () => {

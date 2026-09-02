@@ -151,6 +151,33 @@ Photo upload has its own document: [uploads.md](uploads.md).
   holds until the next transition.
 - The step bar is the first thing on the screen, above the post's 가제: the lifecycle is what you navigate before
   you read anything else.
+- **The editor reports its own state in exactly one place: a status region at the top of the page.** A 2px progress
+  bar is pinned along the page's top edge while a job runs — determinate where the stage reports a ratio, the same
+  track in an indeterminate state where it does not, absent when nothing runs, and occupying no layout height in any
+  of the three. Beneath it, on the row that already holds 목록 and 삭제, ONE `meta` line carries at most one thing, in
+  this precedence: a **failing save**, then the **running job's stage**, then the **save state**, then the post's own
+  **status**. A failing autosave outranks the job because a generation runs for minutes and this screen has no save
+  button to fall back on. That line replaced the status badge that used to stand there — the row does not carry two
+  state indicators — and it is present on `/posts/new` too, which has no status but does have an autosave that can
+  fail. The job's words name only the stage (사진 관찰 중 · 작성 중 · 문체 분석 중 and their A/B forms); its numbers
+  are the bar's value and are never also spelled out as prose. A stage the editor does not recognize is a running
+  job like any other and says 생성 중 — never that a job has not started yet. 저장됨 appears on a completed save and
+  the line then goes quiet after a configured interval, so the status can get back onto it; the autosave queue's own
+  state machine is unchanged by that settle ([tech/draft-autosave.md](../tech/draft-autosave.md)).
+- **The docked bar holds controls and the reason a control is refused, and nothing else.** No save line, no progress
+  notice, no status badge. A job's `FailureNotice` stays there with its retry, because a failure the user can act on
+  is a control rather than a status, and so do the conditions that carry a way out — the empty-profile warning, the
+  deleted-voice warning, the content/source language mismatch. A bar left holding neither a control nor a refusal is
+  not rendered at all.
+- **A refusal is said once, by the surface that can resolve it.** A pending A/B result disables 생성 and A/B 비교 and
+  leaves the A/B 결과 확인 link as the single statement of what to do. The purely temporal reasons — a job in flight,
+  a model selection saving or loading — are not written under the buttons, because the status line already says a job
+  or a save is running. What is written is a **setup** refusal that names something the user must choose, and only
+  once the model catalog has actually answered; when both actions are refused for the same reason it is one line, not
+  two. None of this changes what is ALLOWED: every precondition and every server refusal is untouched.
+- **A standing state is never presented as an event.** 확정 is reported on the status line, not by a success notice
+  that nothing takes down. A completed learning run is the exception and stays a notice on ③, because it is the
+  outcome of an action the user took on that screen.
 - **The 가제 belongs to ① alone.** It is rendered only there; from ② on the one title on screen is
   `content.title`, edited through the block editor's header. Its value and its autosave still live above the
   panels, so unmounting the field on another step cannot strand a queued save.
@@ -194,9 +221,10 @@ Photo upload has its own document: [uploads.md](uploads.md).
   gate, since confirming would not unblock it.
 - **① and ② always dock; ③ docks only when it has something to say.** ①'s dock carries the brief trigger,
   A/B 비교 and 생성. ②'s dock carries ONE surface: the AI revision instruction with an icon-only send button,
-  under a heading that both names the field — `수정 요청을 입력하세요`, at the `title` role, and it IS the
-  field's `<label>`, so the accessible name is the text on screen — and carries the step's way out at its
-  right. That way out is `확정하기`, the step's CTA, and it opens `확정` and `확정하고 말투 학습` in a popover,
+  under a heading that both names the field — `수정 요청을 입력하세요`, at the `fieldTitle` role (smaller than
+  the step title it used to borrow, heavier than a caption), and it IS the field's `<label>`, so the
+  accessible name is the text on screen — and carries the step's way out at its right, filling the whole
+  remaining width of that row. That way out is `확정하기`, the step's CTA, and it opens `확정` and `확정하고 말투 학습` in a popover,
   or in a bottom sheet below `sm:`. The two used to stand as a second row of full-width buttons under the
   field, which put two competing interfaces in one small bar — the conversation with the AI, and the pair
   that ends the step — while the field's own prompt was left to a placeholder that vanished on the first
@@ -205,17 +233,19 @@ Photo upload has its own document: [uploads.md](uploads.md).
   save in any case. Inside the panel `확정` leads, because it is available whenever the draft can be
   finalized where 확정하고 말투 학습 additionally needs an analyze model and a baseline to learn from. On a
   post that is ALREADY `finalized`, the trigger is replaced by the road onward
-  (`글 완성으로 가기`) and nothing else: the status badge at the top of the editor already says 확정, `finalized`
+  (`글 완성으로 가기`, filling the row the same way) and nothing else: the status line at the top of the editor
+  already says 확정, `finalized`
   is a standing STATE with nothing to take a banner down, and the first changed content save returns the post to
   `review` and brings the pair back on its own. ③ is where a finalize and the learning run that may have
   followed it are reported. Neither the revision nor the finalize section
   is rendered in ②'s panel any more — a draft there is routinely thousands of pixels tall, so an action at the
   end of the flow is an action off the screen. ③ keeps its in-flow `말투 학습`, and its dock exists only for a
-  running or failed job or a save in flight, never as an empty card. There is exactly **one** docked bar in the
+  running or failed job, never as an empty card — a save in flight is reported on the status line now, not here. There is exactly **one** docked bar in the
   page's scroller on every step. Every blocker, validation message and failure renders **above** the control it
   explains, because the software keyboard may hide a control but never the reason it is disabled.
-- **A job's PROGRESS and its FAILURE are reported on every step; its completion is not.** A failure the user
-  cannot see is the bug the dock exists to prevent, and the retry is offered only on the step that owns the job.
+- **A job's PROGRESS and its FAILURE are reported on every step; its completion is not.** Progress is the page-top
+  bar and status line, which are outside the panels and therefore the same on all three. The FAILURE is the dock's,
+  because it carries a retry — and that retry is offered only on the step that owns the job.
   A finished job is different: `done` is a standing STATE rather than an event, so a visible success banner had
   nothing to take it down and stood on every step for as long as the post's last job was that one, over the
   draft it was announcing. It is also redundant — the status transition already carries the user to ②, with the

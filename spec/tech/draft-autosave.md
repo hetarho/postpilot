@@ -5,8 +5,8 @@ honest. Landed by [job 04](../jobs/archive/04.post-list-and-editor-autosave.md) 
 [plan 02](../plan/02.post-drafting-and-list.md). Product basis: PRD F-2 — "폰에서 앱을
 닫아도 안 날아간다".
 
-Owner in code: `frontend/src/features/save-draft/model/draft-queue.ts` (the queue) and
-`model/useAutosave.ts` (its React end).
+Owner in code: `frontend/src/features/save-draft/model/draft-queue.ts` (the queue),
+`model/useAutosave.ts` (its React end) and `model/useSaveStatus.ts` (how the state is SHOWN).
 
 ## The shape
 
@@ -57,6 +57,14 @@ assignment chosen.*
 - **A draft with no slug yet gets a key of its own** (`new:<n>`), not a shared one. Two
   "새 글" editors are two different drafts. The key becomes the slug when the first save
   mints one.
+- **`saved` settles in the PRESENTATION, never in the queue.** `stateOf` resolves to `saved` for
+  the whole life of a queue that has ever saved, which is correct as a fact and wrong as a message:
+  저장됨 never came down, so the editor's one status line could never get round to the post's own
+  status. `useSaveStatus` therefore returns `saved` for `SAVE_STATUS_SETTLED_MS` after a completed
+  save and `quiet` after that, re-arming on every state change. It is a hook in this feature's
+  `model`, beside `useAutosave` — the queue's state machine is what autosave CORRECTNESS is tested
+  against, and how long a word stays on screen is not part of it. Anything reading `SaveState`
+  directly still sees the unsettled truth.
 - **Compare against the request in flight, not against the last saved text.** A request
   cannot be recalled, so an undo made while one is out has to be sent as its own save.
 - **A 200 with no post is not a confirmation.** Trusting it would mark text saved, and for

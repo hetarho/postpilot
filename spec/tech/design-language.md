@@ -185,7 +185,8 @@ box with a purple button on it. Never use a true-grey or a different-hue neutral
 ### 2.3 Semantic foundations
 
 The five surfaces form an ordered depth scale. Use the smallest step that makes the relationship
-clear; jumping several levels makes ordinary chrome look detached from the page.
+clear; jumping several levels makes ordinary chrome look detached from the page. `surface-overlay`
+is a sixth, and it is not part of that scale: it exists to be told APART from another surface.
 
 | Foundation                                                  | Meaning                                                                                 |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -194,6 +195,7 @@ clear; jumping several levels makes ordinary chrome look detached from the page.
 | `surface-base`                                              | The normal page canvas                                                                  |
 | `surface-raised`                                            | Rows on interaction, compact controls, cards, and resting floating content              |
 | `surface-highest`                                           | The frontmost floating plane: menus, sheets, dialogs, popovers, and a docked action bar |
+| `surface-overlay`                                           | A panel that opens OVER one of the above — a portalled listbox panel. It must differ from `highest`, `base` and `raised` at once, so it is a step DOWN from them plus its own `shadow-lg`: up is unavailable (`highest` is already white in `day`, and a plane lighter than `highest` in `night` drops `content-secondary` below AA). Never used for a surface that is not opening over another one |
 | `content-primary` · `secondary` · `tertiary` · `disabled`   | Main copy → supporting copy → metadata → non-interactive copy                           |
 | `stroke-subtle` · `strong`                                  | Rare structural hairlines; never a substitute for a surface step                        |
 | `intent-accent` · `danger` · `success` · `warning` · `info` | Meaning before it is assigned to a component                                            |
@@ -301,6 +303,7 @@ drift by construction, so the roles became a component.
 | ------- | --------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | display | `variant="display"` · `h1`                                | `text-2xl font-semibold tracking-tight`                                 | the screen's ONE logical top title; the editor's sr-only `h1` mirrors its visible editable display and is not a second title |
 | title   | `variant="title"` · `h2` (`as="h3"` for deeper levels)    | `text-lg font-semibold tracking-tight`                                  | every section heading and dialog title; one look per heading level per screen                     |
+| fieldTitle | `variant="fieldTitle"` · `h3` (`as="label"` for a field) | `text-base font-bold tracking-tight`                                 | a FIELD's own name where it stands beside a step's action rather than under a heading — smaller than the step title so the outline is unchanged, heavier so it still reads as the name of a control (글 다듬기's 수정 요청을 입력하세요) |
 | body    | `variant="body"` · `p`                                    | `text-sm leading-relaxed`                                               | prose the user reads; loading/empty/status lines take `className="text-content-tertiary"` over it |
 | input   | field primitives only                                     | `text-base sm:text-sm`                                                  | **anything the user types into** — see §3.1; never exposed as a `Typography` variant              |
 | label   | `variant="label"` · `span` (`as="p"`/`as="h3"` as needed) | `text-sm text-content-secondary`                                        | a control caption, a secondary line, a pseudo-heading — with **no ad-hoc weight added**           |
@@ -436,6 +439,26 @@ is a re-grip, not a tap.
   caused it has not been shown. A validation message under a keyboard has not been shown. A live
   region that is _inserted_ with its text already in it announces nothing: mount it before its
   content changes and swap the text inside.
+- **A dock holds controls and refusals. What is merely TRUE goes to the page top.** A screen's own
+  state — a running job, a save, a lifecycle status — is reported in ONE region at the top of the
+  page: a `ProgressBar` pinned to the top edge while something runs, plus ONE `meta` line carrying
+  at most one thing in a stated precedence. A state repeated in a second place is a second thing to
+  keep in sync and a second thing to read; a state boxed in a `Notice` borrows a container built for
+  a warning. The dock below it keeps the controls and the reason a control is refused — and a
+  FAILURE with a retry, because something the user can act on is a control, not a status. A bar left
+  holding neither is not rendered (§0). Owner decision 2026-09-02 (change 15); the editor is the
+  reference implementation (`pages/editor/ui/EditorStatus.tsx`).
+  - The bar is `sticky`, not `fixed`, so it holds the top edge through a page thousands of pixels
+    tall — which means it must be in the page's normal flow, and it must add **no layout height** or
+    its arrival pushes the content down mid-read. Its offset is per-header-shape: `top-0` where the
+    shell header is not sticky (the phone), `sm:top-16` where it is.
+  - A state that the user has to ACT on outranks one they only have to know: a failing autosave
+    beats a running job's stage, because a job runs for minutes and there is no save button to fall
+    back on (PRD F-2).
+  - Numbers belong to the bar, not to the prose. The line names the stage; `x/y` in a sentence
+    beside a bar carrying the same ratio is the same fact twice, in two grammars.
+  - A state that STANDS does not get an event's presentation. A success notice nothing takes down
+    is a status; report it on the line and delete the notice.
 
 ### 4.4 One scroller per screen
 
@@ -536,8 +559,10 @@ bare, the memo uses a visible field well, and both grow with the page. All three
   Three shapes replace it, chosen per surface:
   - **`Listbox`** is the labelled FORM FIELD: a 44px trigger wearing the `field-bg` well with the
     current option's label and a chevron, `role="combobox"` + `aria-haspopup="listbox"` (the role a
-    native select exposed), and an app-drawn `surface-highest` panel of `role="option"` rows with a
-    check on the current one. The trigger is the only tab stop; arrow/Home/End move programmatic
+    native select exposed), and an app-drawn `surface-overlay` panel of `role="option"` rows with a
+    check on the current one — `surface-overlay` and not `surface-highest`, which is the token
+    `Sheet`, `Popover` and `ActionBar` all wear, so an open list used to be exactly the colour of
+    the plane behind it (§2.3). The trigger is the only tab stop; arrow/Home/End move programmatic
     focus, Enter/Space select, Escape and an outside press close and return focus. Its name is
     `"<label> <current value>"` — the WAI-APG select-only combobox shape — so the closed control
     still reports its value. It is generic over the option value, so a numeric enum round-trips
@@ -548,6 +573,9 @@ bare, the memo uses a visible field well, and both grow with the page. All three
     its trigger, flips above it when that room is too small and the room overhead is larger, and
     scrolls inside whichever it took — capped at `LISTBOX_MAX_VIEWPORT_RATIO` of the viewport
     where there is more room than a list needs, and floored at `LISTBOX_MIN_PANEL_PX`.
+    Its panel is **portalled to the document body** and positioned `fixed` from the same measured
+    rect, stacked above every overlay (`z-overlay-panel`, registered above `Sheet`'s `z-50`). See
+    the portalled-panel rule below.
   - **`SegmentedControl`** where the choice is a bounded 2–5 and every option is worth showing at
     once — the editor steps, the admin plan ladder.
   - **`Menu`** where the trigger is an icon and the list is a short preference set — a WAI-APG menu
@@ -557,6 +585,29 @@ bare, the memo uses a visible field well, and both grow with the page. All three
 
   An option's text is the choice, not the explanation — a reason or a capability goes in the
   message slot under the field, where the trigger's truncation cannot cut it off.
+- **A panel anchored to a trigger is portalled, or it is clipped.** An `absolute` panel is bounded
+  by every scrolling ancestor it has, and this app has several by design — `Sheet`'s body is the
+  sheet's one scroller (§4.4), and a field near its bottom is exactly the field whose panel flips
+  UPWARD, straight out of that scroller. So a panel that opens from an arbitrary trigger renders
+  through a portal at the document body, `position: fixed` from the trigger's measured rect. The
+  portal is not free, and what it costs is stated here so the next one pays it too:
+  - It must TRACK the trigger — re-measure on `scroll` (captured, since `scroll` does not bubble)
+    and on `resize` — and **close** once the trigger leaves the viewport on either axis, rather
+    than floating on, anchored to nothing.
+  - Closing that way must still hand focus back to the trigger (with `preventScroll`, so returning
+    it does not undo the scroll that caused it). The focused option is about to be unmounted, and
+    focus landing on `document.body` is focus outside a sheet's trap.
+  - Every "is this press outside me?" test in an ANCESTOR overlay now sees the panel as outside
+    itself, and must be taught otherwise — `Popover` exempts a press inside `[role="listbox"]` the
+    same way it already exempts one inside `[aria-modal="true"]`.
+  - `Escape` still has to dismiss exactly the innermost overlay. React dispatches portalled events
+    through the component tree and attaches its listener at the portal container, so the panel's own
+    handler calling `stopPropagation()` does stop the native event before it reaches the
+    document-level handlers `Sheet` and `Popover` install. That is the mechanism the contract rests
+    on; do not replace it with a capture-phase listener without re-checking it.
+  - Its position and size are measured values on `style`, not utilities. Keep the measured numbers
+    in state by VALUE — callers pass their `options` inline, so the measuring effect re-runs on
+    every render of the field's parent, and a fresh object each time is a render loop.
 - **TabLinks** — a tab row whose tabs are ADDRESSES: a row of links marking the current one
   `aria-current="page"`. It is `SegmentedControl`'s shape without its `onChange`, and it is a `nav` rather than
   `role="tablist"`, because announcing a navigation as tab selection would tell a screen reader the page stayed put.
@@ -742,6 +793,13 @@ Non-negotiable, enforced at review:
 - Every control has a visible label or an `aria-label`; icon-only buttons always `aria-label`.
 - Focus is always visible (`:focus-visible` ring, never `outline-none` without a replacement).
   One global indicator — a primitive does not add a second ring of its own.
+- **A scrolling container reserves room for that ring.** The global indicator is `outline: 2px` at
+  `outline-offset: 2px`, so a control needs 4px of clear space on every side to show one — and CSS
+  resolves a scroll container's cross axis away from `visible`, which cuts the left and right edges
+  of a `w-full` field's ring the moment it takes focus. A scroller whose contents can be focused
+  therefore carries `p-focus-gutter -m-focus-gutter`: the padding reserves the space, the equal
+  negative margin gives it back to the layout, and nothing inside moves. A scroller that already
+  has padding ≥ the gutter on every side needs nothing.
 - Live regions (`role="status"` / `role="alert"`) for save state, upload progress, and errors —
   and the region renders where the user is looking (§4.3), not merely somewhere in the DOM.
 - The current navigation destination is marked `aria-current="page"` and shown, not just implied
@@ -766,6 +824,11 @@ Run this over any FE diff before calling a job done (it is the design half of th
 - [ ] Exactly one CTA per view, using the `button-cta-*` contract.
 - [ ] Slice text renders through `Typography` / `typographyStyles` (§3); the `pnpm lint:style`
       type gate passes, and every `// style-escape:` pragma carries a reason a reviewer accepts.
+- [ ] State is reported ONCE, in the page-top status region — not also in the dock, and not in a
+      `Notice` when nothing takes it down (§4.3).
+- [ ] Any scroller whose contents take focus reserves the focus-ring gutter (§9).
+- [ ] Any panel anchored to a trigger inside a scroller is portalled, and pays the portal's four
+      costs: tracking, focus return, ancestor outside-press tests, and `Escape` (§7).
 
 **The phone** — checked at 360 px, not just at desktop width
 
