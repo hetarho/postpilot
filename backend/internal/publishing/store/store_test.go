@@ -83,6 +83,85 @@ func withLanguages(job publishing.Job) publishing.Job {
 	return job
 }
 
+// TestHasLivePublishJobForPost pins the blocking set post deletion consults: exactly the
+// three statuses Job.Terminal() excludes, and exactly this post incarnation.
+func TestHasLivePublishJobForPost(t *testing.T) {
+	store, handle := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 30, 12, 0, 0, 0, time.UTC)
+	stamp := formatTime(now)
+	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash',?)`, stamp); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO publishing_agents(id,user_id,token_hash,label,platform,created_at,updated_at) VALUES('agent','alice','hash','Mac','naver_blog',?,?)`,
+		stamp, stamp); err != nil {
+		t.Fatal(err)
+	}
+	insertJob := func(t *testing.T, id, slug, status, createdAt string) {
+		t.Helper()
+		if _, err := handle.Writer.Exec(`INSERT INTO publish_job_ids(id,user_id,created_at) VALUES(?,'alice',?)`, id, stamp); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := handle.Writer.Exec(
+			`INSERT INTO publish_jobs(id,user_id,post_slug,post_created_at,agent_id,platform,status,stage,content_revision,settings_json,created_at,updated_at)
+			 VALUES(?,'alice',?,?,'agent','naver_blog',?,'queued',1,'{}',?,?)`,
+			id, slug, createdAt, status, stamp, stamp); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	statuses := []struct {
+		status string
+		live   bool
+	}{
+		{"queued", true},
+		{"running", true},
+		{"needs_attention", true},
+		{"published", false},
+		{"failed", false},
+		{"outcome_unknown", false},
+		{"canceled", false},
+	}
+	for _, test := range statuses {
+		t.Run(test.status, func(t *testing.T) {
+			// One slug per status: publish_jobs_one_live_or_success_idx forbids two
+			// occupying rows on the same post.
+			slug := "post-" + test.status
+			insertJob(t, "job-"+test.status, slug, test.status, stamp)
+			live, err := store.HasLivePublishJobForPost(ctx, "alice", slug, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if live != test.live {
+				t.Fatalf("HasLivePublishJobForPost(%s) = %v, want %v", test.status, live, test.live)
+			}
+		})
+	}
+
+	t.Run("another incarnation of the same slug", func(t *testing.T) {
+		reused := now.Add(24 * time.Hour)
+		insertJob(t, "job-reused", "post-reused", "running", stamp)
+		live, err := store.HasLivePublishJobForPost(ctx, "alice", "post-reused", reused)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if live {
+			t.Fatal("a later post reusing the slug inherited the previous incarnation's publication")
+		}
+	})
+
+	t.Run("no publication at all", func(t *testing.T) {
+		live, err := store.HasLivePublishJobForPost(ctx, "alice", "post-never-published", now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if live {
+			t.Fatal("a post with no publish job reported one")
+		}
+	})
+}
+
 func TestCreateJobRejectsMissingCanonicalLanguagesBeforeWriting(t *testing.T) {
 	store, _ := testStore(t)
 	err := store.CreateJob(context.Background(), publishing.Job{}, nil, allowPublishStart)

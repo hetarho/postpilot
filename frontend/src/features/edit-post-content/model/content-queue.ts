@@ -218,10 +218,21 @@ export function attachContentQueue(options: {
 }
 
 export function discardContentQueues(): void {
-  for (const queue of queues.values()) {
-    queue.discarded = true
-    clearTimers(queue)
-    rejectWaiters(queue, new Error('session ended'))
-  }
+  for (const queue of queues.values()) discardQueue(queue, 'session ended')
   queues.clear()
+}
+
+/** Drops one post's content queue. The delete path's counterpart to discardDraftQueue:
+ *  the same slug's two queues end together, and no other slug is affected. */
+export function discardContentQueue(slug: string): void {
+  const queue = queues.get(slug)
+  if (!queue) return
+  discardQueue(queue, 'post deleted')
+  queues.delete(slug)
+}
+
+function discardQueue(queue: Queue, reason: string): void {
+  queue.discarded = true
+  clearTimers(queue)
+  rejectWaiters(queue, new Error(reason))
 }

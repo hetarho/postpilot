@@ -382,6 +382,15 @@ func (s *Service) GetJob(ctx context.Context, userID, postSlug, jobID string) (J
 	return s.store.LatestJobForPost(ctx, userID, postSlug, postCreatedAt)
 }
 
+// HasLiveJobForPost reports whether this post incarnation still has a publication in
+// flight — queued, running, or needs_attention, the three states Terminal() excludes.
+// It is the published behavior the post context consults before deleting a post, so a
+// paired agent can never be left driving a browser for a post that no longer exists.
+// It is a query: it takes no lease and mutates nothing.
+func (s *Service) HasLiveJobForPost(ctx context.Context, userID, postSlug string, postCreatedAt time.Time) (bool, error) {
+	return s.store.HasLivePublishJobForPost(ctx, userID, postSlug, postCreatedAt)
+}
+
 func (s *Service) ListRetryable(ctx context.Context, userID string) ([]Job, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, ErrForbidden

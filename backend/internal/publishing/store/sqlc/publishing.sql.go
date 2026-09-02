@@ -612,6 +612,30 @@ func (q *Queries) GetOwnedPublishJob(ctx context.Context, arg GetOwnedPublishJob
 	return i, err
 }
 
+const hasLivePublishJobForPost = `-- name: HasLivePublishJobForPost :one
+SELECT EXISTS (
+  SELECT 1 FROM publish_jobs
+  WHERE user_id=? AND post_slug=? AND post_created_at=?
+    AND status IN ('queued','running','needs_attention')
+)
+`
+
+type HasLivePublishJobForPostParams struct {
+	UserID        string
+	PostSlug      string
+	PostCreatedAt string
+}
+
+// The three statuses Job.Terminal() excludes. Keyed on post_created_at as well as the
+// slug so a later post that reused a freed slug is never blocked by the previous
+// incarnation's publication.
+func (q *Queries) HasLivePublishJobForPost(ctx context.Context, arg HasLivePublishJobForPostParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, hasLivePublishJobForPost, arg.UserID, arg.PostSlug, arg.PostCreatedAt)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listAgentsByUser = `-- name: ListAgentsByUser :many
 SELECT id, user_id, token_hash, label, platform, platform_account_id, platform_account_label, browser_label, categories_json, default_category_id, default_visibility, compatibility_ready, hermes_version, last_seen_at, revoked_at, created_at, updated_at, executor_version FROM publishing_agents WHERE user_id = ? ORDER BY created_at DESC,id DESC
 `

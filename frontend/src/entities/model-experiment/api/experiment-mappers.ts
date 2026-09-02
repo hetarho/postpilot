@@ -121,6 +121,16 @@ export function experimentsQueryKey(transport: Transport, stage?: number) {
   })
 }
 
+/** Matches every cached ListExperiments, whatever its stage filter — for a change that can
+ *  reach any of them at once, such as a post deletion detaching its experiments. */
+export function experimentListQueriesKey(transport: Transport) {
+  return createConnectQueryKey({
+    schema: ModelExperimentService.method.listExperiments,
+    transport,
+    cardinality: 'finite',
+  })
+}
+
 export function leaderboardQueryKey(transport: Transport, stage: number) {
   return createConnectQueryKey({
     schema: ModelExperimentService.method.getLeaderboard,

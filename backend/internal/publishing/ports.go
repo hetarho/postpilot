@@ -53,6 +53,9 @@ type Store interface {
 	OwnedJob(ctx context.Context, userID, jobID string) (Job, error)
 	LatestJobForPost(ctx context.Context, userID, postSlug string, postCreatedAt time.Time) (Job, error)
 	LatestJobForDeletedPost(ctx context.Context, userID, postSlug string) (Job, error)
+	// HasLivePublishJobForPost reports a non-terminal job for exactly this post incarnation.
+	// The post context consults it before a destructive operation.
+	HasLivePublishJobForPost(ctx context.Context, userID, postSlug string, postCreatedAt time.Time) (bool, error)
 	ClaimJob(ctx context.Context, agent Agent, leaseHash string, expiresAt, now time.Time) (Job, error)
 	RenewLease(ctx context.Context, agent Agent, jobID, leaseHash string, expiresAt, now time.Time) error
 	UpdateProgress(ctx context.Context, agent Agent, jobID, leaseHash string, currentStage Stage, currentSeq int64, nextStage Stage, nextSeq int64, now time.Time) (Job, error)

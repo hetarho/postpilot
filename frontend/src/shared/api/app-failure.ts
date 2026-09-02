@@ -17,6 +17,7 @@ export const appFailureSpecs = {
   POST_NOT_FOUND: {},
   POST_FORBIDDEN: {},
   POST_BUSY: { optional: ['active_job_id'] },
+  POST_PUBLISHING: {},
   POST_CONTENT_STALE: {},
   POST_CONTENT_INVALID: {},
   POST_NOT_FINALIZED: {},

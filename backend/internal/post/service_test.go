@@ -50,6 +50,7 @@ func newTestService(t *testing.T) (*Service, *fakeStore, *fakeBlobs) {
 	svc := NewService(store, blobs, 10*time.Minute, 5*time.Minute, testMaxBytes)
 	svc.now = func() time.Time { return testNow }
 	svc.SetVoiceDirectory(testVoices())
+	svc.SetLivePublishFinder(&fakeLivePublish{})
 
 	n := 0
 	svc.newID = func() string {
@@ -532,6 +533,83 @@ func TestDeletePostStopsBeforeDeleteWhenExperimentPurgeFails(t *testing.T) {
 	}
 	if _, err := store.GetPost(context.Background(), found.Slug); err != nil {
 		t.Fatalf("post was deleted after purge failure: %v", err)
+	}
+}
+
+// TestDeletePostRefusesWhileAPublicationIsLive is job 40 A6: the refusal lands before the
+// purge, so a post whose publication is still running loses nothing at all.
+func TestDeletePostRefusesWhileAPublicationIsLive(t *testing.T) {
+	svc, store, blobs := newTestService(t)
+	ctx := context.Background()
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, found.Slug, "IMG_1.jpg")
+	blobs.put(upload.Key, 100, testNow)
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+		t.Fatal(err)
+	}
+	purger := &recordingContentPurger{}
+	svc.SetExperimentContentPurger(purger)
+	live := &fakeLivePublish{live: true}
+	svc.SetLivePublishFinder(live)
+
+	if err := svc.DeletePost(ctx, alice, found.Slug); !errors.Is(err, ErrPostPublishing) {
+		t.Fatalf("DeletePost = %v, want ErrPostPublishing", err)
+	}
+	if len(purger.calls) != 0 {
+		t.Fatalf("experiment content was purged despite the refusal: %v", purger.calls)
+	}
+	if _, err := store.GetPost(ctx, found.Slug); err != nil {
+		t.Fatalf("post was deleted despite the refusal: %v", err)
+	}
+	images, _ := store.ListImages(ctx, found.Slug)
+	if len(images) != 1 {
+		t.Fatalf("images = %d, want the photo to survive", len(images))
+	}
+	if !blobs.has(upload.Key) {
+		t.Fatal("post image object was deleted despite the refusal")
+	}
+	// The query must name this incarnation, not just the slug: a later post reusing a
+	// freed slug must not inherit the previous post's publication.
+	if len(live.createdAt) != 1 || !live.createdAt[0].Equal(found.CreatedAt) {
+		t.Fatalf("createdAt passed to the port = %v, want %v", live.createdAt, found.CreatedAt)
+	}
+}
+
+// TestDeletePostProceedsWithTerminalPublishHistory is job 40 A7: only a non-terminal job
+// blocks, so a post that was already published deletes normally.
+func TestDeletePostProceedsWithTerminalPublishHistory(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	ctx := context.Background()
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	svc.SetExperimentContentPurger(&recordingContentPurger{})
+	svc.SetLivePublishFinder(&fakeLivePublish{live: false})
+
+	if err := svc.DeletePost(ctx, alice, found.Slug); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetPost(ctx, found.Slug); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("post survived delete: %v", err)
+	}
+}
+
+// TestDeletePostRefusesWithoutALivePublishFinder pins the fail-closed default: a server
+// that cannot ask whether a publication is live must not destroy the post.
+func TestDeletePostRefusesWithoutALivePublishFinder(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	ctx := context.Background()
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	purger := &recordingContentPurger{}
+	svc.SetExperimentContentPurger(purger)
+	svc.SetLivePublishFinder(nil)
+
+	if err := svc.DeletePost(ctx, alice, found.Slug); err == nil {
+		t.Fatal("delete succeeded with no live publish finder wired")
+	}
+	if len(purger.calls) != 0 {
+		t.Fatalf("experiment content was purged despite the refusal: %v", purger.calls)
+	}
+	if _, err := store.GetPost(ctx, found.Slug); err != nil {
+		t.Fatalf("post was deleted despite the refusal: %v", err)
 	}
 }
 

@@ -78,6 +78,8 @@ type fakeStore struct {
 	latestErr        error
 	deletedLatest    Job
 	deletedLatestErr error
+	hasLive          bool
+	hasLiveErr       error
 	created          Job
 	createdAssets    []Asset
 	retried          string
@@ -189,6 +191,9 @@ func (f *fakeStore) LatestJobForPost(context.Context, string, string, time.Time)
 }
 func (f *fakeStore) LatestJobForDeletedPost(context.Context, string, string) (Job, error) {
 	return f.deletedLatest, f.deletedLatestErr
+}
+func (f *fakeStore) HasLivePublishJobForPost(context.Context, string, string, time.Time) (bool, error) {
+	return f.hasLive, f.hasLiveErr
 }
 func (f *fakeStore) ClaimJob(context.Context, Agent, string, time.Time, time.Time) (Job, error) {
 	return f.latest, f.latestErr

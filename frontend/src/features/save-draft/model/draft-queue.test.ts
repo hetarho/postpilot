@@ -7,6 +7,7 @@ import {
   type SendDraft,
   attachDraftQueue,
   peekPendingDraft,
+  discardDraftQueue,
   discardDraftQueues,
 } from './draft-queue'
 
@@ -636,5 +637,45 @@ describe('the post purpose', () => {
       voiceId: undefined,
       purposeId: undefined,
     })
+  })
+})
+
+describe('the per-slug discard', () => {
+  // The exception to "a queue outlives its editor, never its session" (tech/draft-autosave.md):
+  // an intentional delete ends one slug's queue and nobody else's.
+  it('stops the deleted slug retrying and leaves every other slug alone', async () => {
+    // Never succeeds, so a queue that is still alive still holds its pending text.
+    const api = backend({ failures: 100 })
+    const deleted = attach(api.send, { slug: 'gone', saved: draft('제주') })
+    const kept = attach(api.send, { slug: 'stays', saved: draft('부산') })
+
+    deleted.handle.queue(draft('제주 3일'))
+    kept.handle.queue(draft('부산 2일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.sent).toHaveLength(2)
+
+    discardDraftQueue('gone')
+    await advance(AUTOSAVE_RETRY_BASE_MS * 8)
+
+    expect(api.sent.filter((call) => call.slug === 'gone')).toHaveLength(1)
+    expect(api.sent.filter((call) => call.slug === 'stays').length).toBeGreaterThan(1)
+    expect(peekPendingDraft('gone')).toBeUndefined()
+    expect(peekPendingDraft('stays')).toEqual(draft('부산 2일'))
+  })
+
+  it("rejects the discarded queue's waiters with the delete reason", async () => {
+    const api = backend({ holds: 1, failures: 1 })
+    const { handle } = attach(api.send, { slug: 'gone', saved: draft('제주') })
+
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    const flushed = handle.flush()
+    discardDraftQueue('gone')
+
+    await expect(flushed).rejects.toThrow('post deleted')
+  })
+
+  it('is a no-op for a slug with no queue', () => {
+    expect(() => discardDraftQueue('never-attached')).not.toThrow()
   })
 })

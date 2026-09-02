@@ -424,6 +424,21 @@ func (f *fakeStore) AllReferencedKeys(_ context.Context) (map[string]struct{}, e
 	return keys, nil
 }
 
+// fakeLivePublish is the publishing-context port. DeletePost fails closed without one, so
+// newTestService always wires a permissive default and a test that cares overrides it.
+type fakeLivePublish struct {
+	live      bool
+	err       error
+	calls     []string
+	createdAt []time.Time
+}
+
+func (f *fakeLivePublish) LiveForPost(_ context.Context, userID, slug string, createdAt time.Time) (bool, error) {
+	f.calls = append(f.calls, userID+"/"+slug)
+	f.createdAt = append(f.createdAt, createdAt)
+	return f.live, f.err
+}
+
 // fakeBlobs is an in-memory ObjectStore. It records deletes so a test can assert that
 // storage was reached, which is the half of DeleteImage a database cannot show.
 type fakeBlobs struct {

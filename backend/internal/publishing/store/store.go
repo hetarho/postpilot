@@ -296,6 +296,10 @@ func (s *Store) LatestJobForDeletedPost(ctx context.Context, userID, postSlug st
 	return toJob(row)
 }
 
+func (s *Store) HasLivePublishJobForPost(ctx context.Context, userID, postSlug string, postCreatedAt time.Time) (bool, error) {
+	return s.read.HasLivePublishJobForPost(ctx, sqlc.HasLivePublishJobForPostParams{UserID: userID, PostSlug: postSlug, PostCreatedAt: formatTime(postCreatedAt)})
+}
+
 func (s *Store) ClaimJob(ctx context.Context, agent publishing.Agent, leaseHash string, expiresAt, now time.Time) (publishing.Job, error) {
 	stamp := formatTime(now)
 	row, err := s.write.ClaimQueuedPublishJob(ctx, sqlc.ClaimQueuedPublishJobParams{LeaseTokenHash: nullableString(leaseHash), LeaseExpiresAt: nullableString(formatTime(expiresAt)), ClaimedAt: nullableString(stamp), UpdatedAt: stamp, ID: agent.ID, UserID: agent.UserID})

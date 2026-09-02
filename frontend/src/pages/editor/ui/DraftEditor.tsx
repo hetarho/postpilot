@@ -30,13 +30,22 @@ import type { ContentLanguage, PostContent } from '@/shared/api'
 import { GenerationActions, type GenerationActionsHandle } from '@/features/generate-post'
 import {
   BlockEditor,
+  discardContentQueue,
   flushContentQueue,
   type BlockEditorHandle,
 } from '@/features/edit-post-content'
+import { DeletePostButton } from '@/features/delete-post'
 import { VoiceLearningPanel, useVoiceLearning } from '@/features/finalize-post'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
-import { SaveStatus, peekPendingDraft, useAutosave, type SaveState } from '@/features/save-draft'
+import {
+  SaveStatus,
+  discardDraftQueue,
+  peekPendingDraft,
+  useAutosave,
+  type SaveState,
+} from '@/features/save-draft'
+import { PostPurposeSelect } from '@/features/select-post-purpose'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import {
   ActionBar,
@@ -197,12 +206,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   // nothing to press in the bar, and this surface is the answer.
   const brief = (
     <GenerationBrief
-      ownerId={ownerId}
       ref={briefRef}
-      purposeId={purposeId}
-      currentPurpose={post?.purpose}
-      jobRunning={Boolean(post?.activeJob && !isTerminal(post.activeJob))}
-      onPurposeSelect={post ? autosave.assignPurpose : setNewPurposeId}
       targetLanguage={targetLanguage}
       contentLanguage={post?.contentLanguage}
       frozenLanguage={
@@ -225,9 +229,11 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     />
   )
 
-  // The 말투 rides the dock's own surface beside the brief's glyph, not inside it: a wrong voice
-  // silently ruins a draft, so it is the one part of the brief that must be readable — and
-  // changeable — without opening anything (policy/posts.md).
+  // The 말투 and the 용도 ride the dock's own surface beside the brief's glyph, not inside it:
+  // both are chosen per draft and both silently change what comes out of a run, so they are the
+  // parts of the brief that must be readable — and changeable — without opening anything
+  // (policy/posts.md). Neither shows a caption; each trigger reads its own value, and the labels
+  // stay `sr-only` inside the two features.
   const voiceSelect = (
     <PostVoiceSelect
       ownerId={ownerId}
@@ -240,12 +246,25 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     />
   )
 
-  // `items-start` so the glyph stays level with the listbox when the field grows a hint or an
-  // error underneath it; `min-w-0` on the field so a long voice name truncates inside the trigger
-  // instead of pushing the glyph off a 320px screen (§8.5).
+  const purposeSelect = (
+    <PostPurposeSelect
+      ownerId={ownerId}
+      value={purposeId}
+      current={post?.purpose}
+      jobRunning={Boolean(post?.activeJob && !isTerminal(post.activeJob))}
+      onSelect={post ? autosave.assignPurpose : setNewPurposeId}
+      className="min-w-0 flex-1"
+    />
+  )
+
+  // `items-start` so the glyph stays level with the two listboxes when either field grows a hint
+  // or an error underneath it; `min-w-0` on both so a long voice or purpose name truncates inside
+  // its own trigger instead of pushing the glyph off a 320px screen (§8.5). The two fields share
+  // the row evenly, which is also what took the voice trigger down from full width.
   const dockHeader = (
     <div className="flex items-start gap-2">
       {voiceSelect}
+      {purposeSelect}
       {brief}
     </div>
   )
@@ -255,7 +274,10 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   // down, so without it a new draft renders its dock mid-page with dead space beneath.
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6 sm:px-6">
-      <div className="flex items-center justify-between gap-3">
+      {/* `flex-wrap` so the delete refusal, which asks for the full width, drops to its own line
+          rather than crushing the way out beside it (§8.5). The Korean refusal copy is over 40
+          characters, which is more than a 360px row can hold beside anything. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         {/* Underlined: `link-fg` resolves to `content-secondary`, so at rest this was pixel-identical
             to ordinary copy and the only thing marking it as the way out was a `hover:` colour no
             touchscreen ever matches (§6). */}
@@ -269,7 +291,22 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         >
           {t('editor.backToList')}
         </Link>
-        {post && <Badge>{postStatusLabel(post.status)}</Badge>}
+        {post && (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+            <Badge>{postStatusLabel(post.status)}</Badge>
+            {/* A queue outlives its editor, so a retry left running would keep saving a slug the
+                server no longer has and report that failure for a post the user destroyed on
+                purpose (tech/draft-autosave.md). Discarded before the navigation unmounts the
+                editor, and only for this slug. */}
+            <DeletePostButton
+              post={post}
+              onDeleted={() => {
+                discardDraftQueue(post.slug)
+                discardContentQueue(post.slug)
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* A post with a lifecycle navigates it first. `/posts/new` has none, so it shows no bar. */}
@@ -729,19 +766,6 @@ function LifecycleSteps({
     />
   ) : job && !isTerminal(job) ? (
     <ProgressLine job={job} />
-  ) : job?.status === 'done' ? (
-    <Notice tone="success" role="status">
-      <span className="min-w-0">{t('editor.generationComplete')}</span>
-      {result && (
-        <Button
-          variant="ghost"
-          onClick={() => onStepChange('refine')}
-          className="text-notice-success-fg shrink-0 underline"
-        >
-          {t('editor.viewResult')}
-        </Button>
-      )}
-    </Notice>
   ) : null
 
   return (
@@ -749,6 +773,22 @@ function LifecycleSteps({
       <div id={STEP_PANEL_ID} role="tabpanel" aria-label={editorStepLabel(step)}>
         {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
       </div>
+
+      {/* A finished job announces itself and takes no space. The visible success banner this
+          replaced stood on EVERY step, on the bar the draft is read past, and nothing ever took
+          it down: `done` is a standing STATE, not an event, so it came back on the next render
+          for as long as the post's last job was that one, and its 결과 보기 only changed the step
+          it was already sitting on (owner decision 2026-09-02). What it announced is not lost —
+          the status change carries the user to 글 다듬기 with the draft in front of them — so what
+          is kept is the part a screen reader has no other way to get.
+
+          Mounted at all times and outside the dock's own existence test, so a bar with nothing
+          visible to say is still not rendered (§0). A live region inserted with its text already
+          inside announces nothing, which is exactly right: this speaks on the transition to
+          `done` and stays silent for a job that was already finished when the editor mounted. */}
+      <p className="sr-only" role="status">
+        {job?.status === 'done' ? t('editor.generationComplete') : ''}
+      </p>
 
       {/* ① and ② both always dock: 생성 ends the first step and 확정 ends the second, and the
           draft between them is routinely thousands of pixels tall (§4.3). ③ still docks only when

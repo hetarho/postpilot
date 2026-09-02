@@ -62,6 +62,7 @@ export {
   ConfirmUploadResponseSchema,
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
+  DeletePostResponseSchema,
   GetPostResponseSchema,
   GetGenerationResponseSchema,
   GenerationJobSchema,
@@ -179,6 +180,7 @@ export {
   CandidateStatus,
   ExperimentOutcome,
   CostSource,
+  ListExperimentsResponseSchema,
   StartExperimentResponseSchema,
 } from './gen/postpilot/v1/model_experiment_pb'
 export {

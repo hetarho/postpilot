@@ -44,6 +44,16 @@ assignment chosen.*
   (`app/providers/auth-redirect.ts`). A retry firing after someone else signs in on the
   same device would send the previous account's text under the new account's cookie, and
   the server would file it there.
+- **The one exception is an intentional delete.** `discardDraftQueue(slug)` and
+  `discardContentQueue(slug)` end the queues for that slug alone, and the editor calls both on a
+  successful `DeletePost` before it navigates away. Without them a failing save would keep
+  retrying against a slug the server no longer has, and the user would be shown a save failure
+  for a post they destroyed on purpose. Their waiters reject with `post deleted` rather than
+  `session ended`, so a stray rejection says which discard cancelled it. Every other slug's queue
+  is untouched, and the session-wide `discardDraftQueues()` / `discardContentQueues()` keep their
+  signatures and their call sites. Like the session-wide discards, it stops the timers and the
+  waiters but cannot recall a request already in flight; the queue is marked discarded, so that
+  response changes no local state.
 - **A draft with no slug yet gets a key of its own** (`new:<n>`), not a shared one. Two
   "새 글" editors are two different drafts. The key becomes the slug when the first save
   mints one.

@@ -211,6 +211,9 @@ func main() {
 	} else if requeued > 0 || unknown > 0 {
 		slog.Info("publishing jobs recovered", "requeued", requeued, "outcome_unknown", unknown)
 	}
+	// The post context refuses to delete a post whose publication is still in flight; it
+	// learns that only through this adapter, never by importing internal/publishing.
+	postSvc.SetLivePublishFinder(postPublications{service: publishSvc})
 
 	purposeSvc := purpose.NewService(
 		purposestore.New(handle.Writer, handle.Reader),
@@ -675,6 +678,14 @@ func (a experimentVoices) ActiveVoice(ctx context.Context, userID, voiceID strin
 
 type postJobFinder struct {
 	queue *job.Queue
+}
+
+// postPublications adapts the publishing context's in-flight query for the post context,
+// which speaks only in primitives across this boundary.
+type postPublications struct{ service *publishing.Service }
+
+func (a postPublications) LiveForPost(ctx context.Context, userID, slug string, createdAt time.Time) (bool, error) {
+	return a.service.HasLiveJobForPost(ctx, userID, slug, createdAt)
 }
 
 type voicePosts struct{ service *post.Service }

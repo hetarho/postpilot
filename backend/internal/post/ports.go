@@ -43,6 +43,14 @@ type ActiveJobFinder interface {
 	ActiveForPost(ctx context.Context, slug string) (*ActiveJob, error)
 }
 
+// LivePublishFinder answers one question for DeletePost: is a publication of this exact
+// post incarnation still in flight? The post context must not import internal/publishing,
+// so the port speaks only in primitives and the composition root adapts it. createdAt
+// distinguishes this post from an earlier one that held the same slug.
+type LivePublishFinder interface {
+	LiveForPost(ctx context.Context, userID, slug string, createdAt time.Time) (bool, error)
+}
+
 type PendingExperimentFinder interface {
 	PendingForPost(ctx context.Context, userID, slug string) (string, error)
 }

@@ -658,19 +658,36 @@ export function peekPendingDraft(slug: string): Draft | undefined {
  *  account's draft under the new account's cookie, and the server would file it there.
  *  Called by the app layer on logout and on a session that died mid-use. */
 export function discardDraftQueues(): void {
-  for (const queue of queues.values()) {
-    queue.discarded = true
-    clearTimers(queue)
-    for (const waiter of queue.mintWaiters) waiter.reject(new Error('session ended'))
-    queue.mintWaiters = []
-    for (const waiter of queue.flushWaiters) waiter.reject(new Error('session ended'))
-    queue.flushWaiters = []
-    for (const waiter of queue.voiceWaiters) waiter.reject(new Error('session ended'))
-    queue.voiceWaiters = []
-    for (const waiter of queue.purposeWaiters) waiter.reject(new Error('session ended'))
-    queue.purposeWaiters = []
-    for (const waiter of queue.targetLanguageWaiters) waiter.reject(new Error('session ended'))
-    queue.targetLanguageWaiters = []
-  }
+  for (const queue of queues.values()) discardQueue(queue, 'session ended')
   queues.clear()
+}
+
+/** Drops one post's queue, cancelling whatever it was still going to save.
+ *
+ *  The one exception to "a queue outlives its editor, never its session": an intentional
+ *  delete also ends a queue, for that slug alone. Without it a failing save would keep
+ *  retrying against a slug the server no longer knows, and the user would be told their
+ *  save failed for a post they destroyed on purpose. Other slugs are untouched. */
+export function discardDraftQueue(slug: string): void {
+  const queue = queues.get(slug)
+  if (!queue) return
+  discardQueue(queue, 'post deleted')
+  queues.delete(slug)
+}
+
+/** The reason is carried into every rejection so a stray rejected promise says which of
+ *  the two discards cancelled it. */
+function discardQueue(queue: Queue, reason: string): void {
+  queue.discarded = true
+  clearTimers(queue)
+  for (const waiter of queue.mintWaiters) waiter.reject(new Error(reason))
+  queue.mintWaiters = []
+  for (const waiter of queue.flushWaiters) waiter.reject(new Error(reason))
+  queue.flushWaiters = []
+  for (const waiter of queue.voiceWaiters) waiter.reject(new Error(reason))
+  queue.voiceWaiters = []
+  for (const waiter of queue.purposeWaiters) waiter.reject(new Error(reason))
+  queue.purposeWaiters = []
+  for (const waiter of queue.targetLanguageWaiters) waiter.reject(new Error(reason))
+  queue.targetLanguageWaiters = []
 }

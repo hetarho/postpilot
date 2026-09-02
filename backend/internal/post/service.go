@@ -23,6 +23,7 @@ type Service struct {
 	jobs          ActiveJobFinder
 	experiments   PendingExperimentFinder
 	contentPurger ExperimentContentPurger
+	livePublish   LivePublishFinder
 	voices        VoiceDirectory
 	purposes      PurposeDirectory
 
@@ -39,6 +40,12 @@ func (s *Service) SetPendingExperimentFinder(finder PendingExperimentFinder) {
 
 func (s *Service) SetExperimentContentPurger(purger ExperimentContentPurger) {
 	s.contentPurger = purger
+}
+
+// SetLivePublishFinder wires the publishing context's in-flight query, which only exists
+// once both services have been constructed.
+func (s *Service) SetLivePublishFinder(finder LivePublishFinder) {
+	s.livePublish = finder
 }
 
 // SetVoiceDirectory wires the voice context's published directory. Without it no post can
@@ -441,6 +448,27 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 		if active != nil {
 			return ErrPostBusy
 		}
+	}
+	// Both remaining preconditions must clear BEFORE the purge: past this point the
+	// deletion is destructive and cannot be undone. Unlike the generation-job port
+	// above, this one is deliberately not nil-tolerant — a server that cannot ask
+	// whether a publication is live must not delete a post out from under an agent.
+	//
+	// It is a read, not a lock, so a publication started between this answer and the row
+	// delete is not prevented. That end state is one the publishing schema was already
+	// built for: the frozen manifest and the staged assets are the job's own, under
+	// publish_assets.staged_key rather than the post's prefix, and LatestJobForDeletedPost
+	// exists to serve exactly a publication whose post is gone. Closing the window would
+	// take a transactional gate spanning both contexts.
+	if s.livePublish == nil {
+		return errors.New("live publish finder is not configured")
+	}
+	live, err := s.livePublish.LiveForPost(ctx, userID, found.Slug, found.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("check live publish job before post delete: %w", err)
+	}
+	if live {
+		return ErrPostPublishing
 	}
 	if s.contentPurger == nil {
 		return errors.New("experiment content purger is not configured")

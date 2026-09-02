@@ -182,6 +182,31 @@ compatibility has been proven against a real account.
   session is `FailedPrecondition`, not `Unauthenticated`, and therefore never logs out the human user.
   The in-app panel is the only completion/status channel in this version.
 
+## Source post deletion
+
+- A **non-terminal** publish job — `queued`, `running`, or `needs_attention`, the three statuses `Job.Terminal()`
+  excludes — **blocks deletion of its source post**. `DeletePost` refuses with `FailedPrecondition` and reason
+  `POST_PUBLISHING` and destroys nothing, so a paired agent is never left driving a browser against the frozen
+  manifest of a post that no longer exists. The block is temporary by construction: a pre-commit job can be canceled,
+  and a job past the commit fence reaches a terminal state through the agent's outcome report or the lease-expiry
+  sweep.
+- **Terminal publication history deliberately outlives its source post.** Deleting a post writes no `publish_jobs`,
+  `publish_job_ids`, or `publish_assets` row, and there is no foreign key between them and `posts`. A publication
+  belonging to a deleted post stays distinguishable from one belonging to a later post that reused the slug because
+  `publish_jobs.post_created_at` is stored alongside the slug; `publish_jobs_deleted_post_history_idx` indexes that
+  lookup and `Store.LatestJobForDeletedPost` reads it, which is what keeps a retained `needs_attention` job
+  explicitly retryable after its post is gone.
+- The blocking check is a query the publishing context publishes (`Service.HasLiveJobForPost`, keyed on user, slug
+  **and** `post_created_at`), consumed by the post context through a port wired in the composition root. It takes no
+  lease and mutates nothing. Deleting a post therefore never starts, retries, resumes, or retracts a publication
+  ([I1]). The post-side rule lives in [posts](posts.md).
+- **The block is a read, not a lock.** A publication started between the delete's check and its row delete is not
+  prevented, so a live job can end up owning a post that no longer exists. That is a state the schema already
+  tolerates by design — the manifest is frozen, the staged assets are the job's own under `publish_assets.staged_key`
+  rather than the post's `posts/` prefix, and `LatestJobForDeletedPost` exists to serve it — so the publication still
+  completes correctly. Closing the window would need a transactional gate spanning both contexts, which no plan has
+  asked for.
+
 ## Configuration
 
 | Value | Owner | Default |

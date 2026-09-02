@@ -5,6 +5,8 @@ export const errors = {
   POST_NOT_FOUND: 'Could not find the post.',
   POST_FORBIDDEN: 'You do not have access to this post.',
   POST_BUSY: 'Another job is already running for this post.',
+  POST_PUBLISHING:
+    'This post is being published. Cancel or finish the publication first, then delete it.',
   POST_CONTENT_STALE: 'This post changed in another screen. Load the latest version and try again.',
   POST_CONTENT_INVALID: 'Check the post content and try again.',
   POST_NOT_FINALIZED: 'Finalize the post first.',

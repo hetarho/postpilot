@@ -5,6 +5,7 @@ export const errors = {
   POST_NOT_FOUND: '글을 찾을 수 없어요.',
   POST_FORBIDDEN: '이 글에 접근할 수 없어요.',
   POST_BUSY: '이 글에서 다른 작업이 진행 중이에요.',
+  POST_PUBLISHING: '이 글은 발행이 진행 중이에요. 발행을 취소하거나 끝낸 뒤에 삭제해 주세요.',
   POST_CONTENT_STALE: '다른 화면에서 글이 바뀌었어요. 최신 글을 불러온 뒤 다시 시도해 주세요.',
   POST_CONTENT_INVALID: '글 내용을 확인해 주세요.',
   POST_NOT_FINALIZED: '먼저 글을 확정해 주세요.',

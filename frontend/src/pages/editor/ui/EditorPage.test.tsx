@@ -32,9 +32,9 @@ async function openStep(user: ReturnType<typeof userEvent.setup>, label: string)
   await user.click(await screen.findByRole('tab', { name: label }))
 }
 
-/** The whole writing brief — 관찰/작성 모델, 말투, 용도, 목표 언어, 목표 분량 and the A/B link — lives
- *  behind ONE trigger in the dock now (change 12), so a test that drives any of them opens it
- *  first. The trigger names the post's current voice, hence the pattern rather than a fixed name. */
+/** The writing brief — 관찰/작성 모델, 작성 A/B 후보, 목표 언어, 목표 분량 — lives behind ONE trigger
+ *  in the dock (change 12), so a test that drives any of them opens it first. 말투 and 용도 are the
+ *  exceptions and ride the dock's own row; see `dockField` below. */
 const BRIEF_TRIGGER = /^(글쓰기 옵션|Writing options)$/
 const GENERATE_STEP = /^(글 생성|Generate)$/
 const generateTab = () =>
@@ -59,18 +59,21 @@ async function briefField(user: ReturnType<typeof userEvent.setup>, label: strin
   return screen.findByRole('combobox', { name: new RegExp(label) })
 }
 
-/** 말투 is the one part of the brief that is NOT behind the trigger: it rides the dock's own row
- *  beside the glyph, so a wrong voice is visible without opening anything. */
-async function voiceField(user: ReturnType<typeof userEvent.setup>) {
+/** 말투 and 용도 are the two parts of the brief that are NOT behind the trigger: both ride the
+ *  dock's own row beside the glyph, so a wrong voice or purpose is visible without opening
+ *  anything. */
+async function dockField(user: ReturnType<typeof userEvent.setup>, label: RegExp) {
   // Same wait as `openBrief`: the lifecycle bar exists only once the editor has its post, and the
-  // dock row the field rides belongs to that bar's first step.
+  // dock row these fields ride belongs to that bar's first step.
   await waitFor(() =>
-    expect(screen.queryByRole('combobox', { name: /말투/ }) ?? generateTab()).toBeDefined(),
+    expect(screen.queryByRole('combobox', { name: label }) ?? generateTab()).toBeDefined(),
   )
   const generate = generateTab()
   if (generate && generate.getAttribute('aria-selected') !== 'true') await user.click(generate)
-  return screen.findByRole('combobox', { name: /말투/ })
+  return screen.findByRole('combobox', { name: label })
 }
+const voiceField = (user: ReturnType<typeof userEvent.setup>) => dockField(user, /말투/)
+const purposeField = (user: ReturnType<typeof userEvent.setup>) => dockField(user, /용도/)
 
 afterEach(() => {
   cleanup()
@@ -682,16 +685,18 @@ describe('opening a post', () => {
 
     const user = userEvent.setup()
     const generate = await screen.findByRole('button', { name: '생성' })
-    const compare = screen.getByRole('button', { name: 'A/B 비교 생성' })
+    const compare = screen.getByRole('button', { name: 'A/B 비교' })
     await waitFor(() => expect(generate).toBeEnabled())
     expect(compare).toBeDisabled()
     expect(screen.getByText(/A\/B 비교: 작성 A\/B 모델 두 개를 선택하세요/)).toBeInTheDocument()
 
+    // The pair the button is waiting on is set in the brief itself now, so the fix is two
+    // dropdowns away rather than a page away.
     const brief = await openBrief(user)
-    expect(within(brief).getByRole('link', { name: 'AI 모델에서 두 후보 설정' })).toHaveAttribute(
-      'href',
-      '/ai-models',
-    )
+    expect(within(brief).queryByRole('link')).not.toBeInTheDocument()
+    for (const label of [/후보 A/, /후보 B/]) {
+      expect(await screen.findByRole('combobox', { name: label })).toBeInTheDocument()
+    }
   })
 
   it('sends the active writer only for ordinary generation', async () => {
@@ -769,10 +774,12 @@ describe('opening a post', () => {
     })
     const brief = await openBrief(user)
     await user.click(within(brief).getByRole('checkbox'))
+    // The box arrives with the default already in it, so this is a replacement, not an entry.
+    await user.clear(within(brief).getByLabelText('목표 글자 수'))
     await user.type(within(brief).getByLabelText('목표 글자 수'), '750')
     await user.click(within(brief).getByRole('button', { name: '저장' }))
     await waitFor(() => expect(calls).toContain('SavePostGenerationOptions'))
-    const compare = screen.getByRole('button', { name: 'A/B 비교 생성' })
+    const compare = screen.getByRole('button', { name: 'A/B 비교' })
     await waitFor(() => expect(compare).toBeEnabled())
     await user.click(compare)
     await waitFor(() => expect(calls).toContain('StartWriteExperiment'))
@@ -786,6 +793,32 @@ describe('opening a post', () => {
       },
     ])
     expect(calls).not.toContain('StartGeneration')
+  })
+
+  // A ticked checkbox over a blank number field is an invalid form nobody asked for: the range
+  // error renders under a control the user has not touched yet.
+  it('fills 목표 글자 수 with a usable default the moment the box is ticked', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-memo', {
+      user: USER,
+      posts: { posts: [{ slug: '20260820-memo' }] },
+    })
+
+    const brief = await openBrief(user)
+    expect(within(brief).queryByLabelText('목표 글자 수')).not.toBeInTheDocument()
+
+    await user.click(within(brief).getByRole('checkbox'))
+    const field = within(brief).getByLabelText('목표 글자 수')
+    expect(field).toHaveValue(1000)
+    expect(field).not.toHaveAttribute('aria-invalid')
+    expect(within(brief).getByRole('button', { name: '저장' })).toBeEnabled()
+
+    // What the user typed outranks the default, so unticking and reticking never loses it.
+    await user.clear(field)
+    await user.type(field, '2400')
+    await user.click(within(brief).getByRole('checkbox'))
+    await user.click(within(brief).getByRole('checkbox'))
+    expect(within(brief).getByLabelText('목표 글자 수')).toHaveValue(2400)
   })
 
   it('restores and explicitly clears a stored target length without starting generation', async () => {
@@ -1305,6 +1338,26 @@ describe('opening a post', () => {
 // @testing-library's async helpers look for jest's fake-timer API, so vitest's is
 // invisible to them and every `waitFor` would spin on a clock nothing advances. The
 // debounce window itself is covered by features/save-draft's own tests.
+describe('the delete control', () => {
+  // Job 40 A1: an existing post can be deleted from its own editor.
+  it('offers the delete trigger on a saved post', async () => {
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ slug: '20260820-jeju', title: '제주 3일' }] },
+    })
+
+    expect(await screen.findByRole('button', { name: '글 삭제하기' })).toBeInTheDocument()
+  })
+
+  // A draft with no slug has nothing to delete, so the control is absent rather than disabled.
+  it('offers nothing on /posts/new', async () => {
+    renderAppAt('/posts/new', { user: USER })
+
+    expect(await screen.findByLabelText('제목')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '글 삭제하기' })).not.toBeInTheDocument()
+  })
+})
+
 describe('a new draft', () => {
   /** The debounce plus room for the create round trip. */
   const AUTOSAVED = { timeout: 4_000 }
@@ -1464,9 +1517,7 @@ describe('the editor lifecycle steps', () => {
     expect(screen.queryByLabelText('수정 요청')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
     const brief = await openBrief(user)
-    expect(
-      within(brief).getByRole('link', { name: 'AI 모델에서 두 후보 설정' }),
-    ).toBeInTheDocument()
+    expect(within(brief).getByRole('combobox', { name: /후보 A/ })).toBeInTheDocument()
     await user.keyboard('{Escape}')
 
     await openStep(user, '글 완성')
@@ -1571,7 +1622,7 @@ describe('the editor lifecycle steps', () => {
   })
 
   // A step that cannot start anything offers the way to set it up, not two dead buttons.
-  it('replaces ①’s actions with the routes to model setup when nothing is chosen', async () => {
+  it('replaces ①’s actions with the route to model setup when nothing is chosen', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
@@ -1584,14 +1635,11 @@ describe('the editor lifecycle steps', () => {
       within(dock).getByText('A/B 비교: 작성 A/B 모델 두 개를 선택하세요.'),
     ).toBeInTheDocument()
     expect(within(dock).queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
-    expect(within(dock).queryByRole('button', { name: 'A/B 비교 생성' })).not.toBeInTheDocument()
+    expect(within(dock).queryByRole('button', { name: 'A/B 비교' })).not.toBeInTheDocument()
 
-    // The A/B pair is set on the models page; the active 작성 모델 is set in the brief, which this
-    // button opens rather than sending the user somewhere that cannot change it.
-    expect(within(dock).getByRole('link', { name: 'AI 모델에서 후보 설정' })).toHaveAttribute(
-      'href',
-      '/ai-models',
-    )
+    // ONE way out, because there is one surface: the active 작성 모델 and the A/B pair are both
+    // set in the brief now, so the bar no longer offers a second route to the AI 모델 page.
+    expect(within(dock).queryByRole('link')).not.toBeInTheDocument()
     await user.click(within(dock).getByRole('button', { name: '글쓰기 옵션에서 모델 선택' }))
     expect(await screen.findByRole('dialog', { name: '글쓰기 옵션' })).toBeInTheDocument()
   })
@@ -2184,7 +2232,7 @@ describe('the post purpose', () => {
   ]
 
   async function pickPurpose(user: ReturnType<typeof userEvent.setup>, name: string) {
-    const picker = await briefField(user, '용도')
+    const picker = await purposeField(user)
     await waitFor(() => expect(picker).toBeEnabled())
     await user.click(picker)
     await user.click(await screen.findByRole('option', { name }))
@@ -2200,7 +2248,7 @@ describe('the post purpose', () => {
     })
 
     const user = userEvent.setup()
-    const picker = await briefField(user, '용도')
+    const picker = await purposeField(user)
     expect(picker).toHaveTextContent('없음')
     await user.click(picker)
     expect(screen.getByRole('option', { name: '없음', selected: true })).toBeInTheDocument()
@@ -2214,7 +2262,7 @@ describe('the post purpose', () => {
     expect(draftSaves[0].purposeId).toBeUndefined()
   })
 
-  it('carries a chosen purpose into the create and links to the management screen', async () => {
+  it('carries a chosen purpose into the create', async () => {
     const user = userEvent.setup()
     const draftSaves: FakeDraftSave[] = []
     renderAppAt('/posts/new', {
@@ -2226,10 +2274,11 @@ describe('the post purpose', () => {
     await pickPurpose(user, '정보성 식당 리뷰')
     // Choosing is not typing: nothing is saved until there is something to save.
     expect(draftSaves).toHaveLength(0)
-    expect(screen.getByText('협찬 방문 리뷰')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '용도 관리' })).toHaveAttribute('href', '/purposes')
+    // The dock row is three controls wide on a 360px screen, so the chosen 용도's own brief and
+    // the way to the 용도 page are not on it: both belong to the directory that owns them.
+    expect(screen.queryByText('협찬 방문 리뷰')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '용도 관리' })).not.toBeInTheDocument()
 
-    await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText('제목'), '리뷰 글')
     await waitFor(
       () => expect(draftSaves[0]).toMatchObject({ slug: '', purposeId: 'purpose-review' }),
@@ -2299,7 +2348,7 @@ describe('the post purpose', () => {
     })
 
     const user = userEvent.setup()
-    const picker = await briefField(user, '용도')
+    const picker = await purposeField(user)
     expect(await screen.findByText(/용도 목록을 불러오지 못했어요/)).toBeInTheDocument()
     expect(picker).toBeDisabled()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
@@ -2324,7 +2373,7 @@ describe('the post purpose', () => {
     })
 
     const user = userEvent.setup()
-    const picker = await briefField(user, '용도')
+    const picker = await purposeField(user)
     await waitFor(() => expect(picker).toHaveTextContent('정보성 식당 리뷰'))
     expect(picker).toBeEnabled()
     expect(

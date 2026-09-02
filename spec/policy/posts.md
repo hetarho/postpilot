@@ -55,8 +55,36 @@ Photo upload has its own document: [uploads.md](uploads.md).
 - `observations` and `content` are owned by the post aggregate but may be changed by generation only through the
   post context's ownership-checked `SetObservations` and `SetGeneratedContent` behaviors. `GetPost` returns both;
   no other context reads or writes the `posts` table directly.
-- **There is no post deletion.** The PRD defines photo deletion but not post deletion; flagged as a PRD gap, not an
-  oversight.
+
+## Deletion
+
+- The **owner deletes a post from that post's editor** (`/posts/$slug`), through a danger-toned `글 삭제하기` button in
+  the editor's top row and a confirmation dialog behind it. `/posts/new` offers nothing: a draft with no slug has
+  nothing to delete. The post list is not a delete surface — its rows stay whole-row links.
+- The delete is **hard and unrecoverable**. There is no `deleted_at` column on `posts`, no trash state, no
+  `RestorePost`, and no retention window; the confirmation dialog is the whole protection, so it names the post and
+  states plainly what is destroyed.
+- It removes the post row, its photos and their R2 objects, and every post-scoped row the schema cascades
+  (`images`, `uploads`, `generation_jobs`, and the `voice_*` learning tables). `model_experiments.post_slug` is
+  `ON DELETE SET NULL`, so durable experiment metadata survives detached — and the post context calls the required
+  `ExperimentContentPurger.PurgePost` hook first, so the experiment's *content* is gone before the FK detaches it.
+- It is **refused, destroying nothing**, in two cases. A generation job active for the post is `FailedPrecondition`
+  with reason `POST_BUSY`. A **non-terminal** publish job for this post incarnation — `queued`, `running`, or
+  `needs_attention` — is `FailedPrecondition` with reason `POST_PUBLISHING`. The two reasons are deliberately
+  distinct because the remedies differ: the user waits out a generation, but cancels or finishes a publication. Both
+  checks run before the purge, so a refusal leaves the post, its photos, its objects and its experiment content
+  untouched.
+- **Terminal publication history neither blocks a deletion nor is deleted by one.** A post whose publish jobs are all
+  `published`, `failed`, `outcome_unknown`, or `canceled` deletes normally, and every `publish_jobs` and
+  `publish_assets` row survives — see [publishing](publishing.md).
+- The publish check is a consumer-declared port on the post context (`LivePublishFinder` in `post/ports.go`), wired
+  in the composition root. `internal/post` imports nothing from `internal/publishing` and the post store never reads
+  `publish_jobs`.
+- Ownership is unchanged by any of this: another user's slug is `PermissionDenied` (`POST_FORBIDDEN`) and an unknown
+  slug is `NotFound` (`POST_NOT_FOUND`); neither destroys anything.
+- A successful delete also ends that slug's autosave — see [draft-autosave](../tech/draft-autosave.md).
+
+**Account deletion is still absent** — no RPC exists for it — and it is a separate gap from this one.
 
 ## Voice assignment
 
@@ -126,19 +154,29 @@ Photo upload has its own document: [uploads.md](uploads.md).
 - **The 가제 belongs to ① alone.** It is rendered only there; from ② on the one title on screen is
   `content.title`, edited through the block editor's header. Its value and its autosave still live above the
   panels, so unmounting the field on another step cannot strand a queued save.
-- **One options surface holds the writing brief, and 말투 stays outside it.** 관찰 모델 · 작성 모델 · 용도 · 목표 언어 ·
-  목표 분량 and the A/B 후보 설정 link live behind a single trigger in ①'s dock, and nowhere else in the editor. The
-  trigger is a **settings glyph at the right end of the dock's first row**. **말투 is the exception**: it sits on that
-  same row as its own dropdown, on the dock's own surface, because a wrong voice silently ruins a draft and is the one
-  thing that must be readable — and changeable — without opening anything. Every control keeps the semantics it had: a voice reassignment still confirms and
-  is still blocked while a job runs, the 용도 select stays usable during a job and says the running one keeps its
-  enqueued brief, the language select still shows its frozen note, and every assignment still rides the draft
-  autosave queue. On a phone the surface is a bottom sheet; from `sm:` up it is a right-aligned popover.
+- **One options surface holds the run's SETTINGS, and the two per-draft choices stay outside it.** 관찰 모델 ·
+  작성 모델 · 작성 A/B 후보 · 목표 언어 · 목표 분량 live behind a single trigger in ①'s dock, and nowhere else in the
+  editor. The trigger is a **settings glyph at the right end of the dock's first row**. **말투 and 용도 are the
+  exceptions**: both sit on that same row as their own dropdowns, on the dock's own surface, because both are chosen
+  per draft and both silently change what comes out of a run, so they must be readable — and changeable — without
+  opening anything. Neither carries a visible caption there: three controls across a 360px screen leaves each about
+  140px, and each trigger already reads its own value, so the labels are `sr-only` and the comboboxes are still
+  announced as `말투 <값>` and `용도 <값>`. 목표 언어 stays behind the trigger — it is set once and then followed by
+  every run, and a third dropdown on that row would leave none of them readable. Every control keeps the semantics it
+  had: a voice reassignment still confirms and is still blocked while a job runs, the 용도 select stays usable during
+  a job and says the running one keeps its enqueued brief, the language select still shows its frozen note, and every
+  assignment still rides the draft autosave queue. On a phone the surface is a bottom sheet; from `sm:` up it is a
+  right-aligned popover.
 - **A step that cannot start anything offers the way to set it up, not a dead button.** When the only thing standing
   between ① and a run is that the models have never been chosen, the bar drops 생성 and A/B 비교 entirely and renders
-  the per-action reason plus the route to the surface each missing piece is chosen on — the writing brief for the
-  active 관찰/작성 모델, the AI 모델 page for the A/B pair. Any other blocker (a job already running, a deleted voice, a
-  selection still loading) keeps the ordinary disabled buttons, because waiting is the answer to it.
+  the per-action reason plus ONE route — the writing brief, which is where the active 관찰/작성 모델 and the A/B pair
+  are both chosen. Any other blocker (a job already running, a deleted voice, a selection still loading) keeps the
+  ordinary disabled buttons, because waiting is the answer to it.
+- **The two actions split ①'s dock row 3 : 7, 생성 on the right.** An ordinary generation is what the step is FOR and
+  an A/B comparison is the occasional second opinion, so the emphasis is in the width as well as in the variant, and
+  the committing action takes the side a right-handed one-handed grip reaches first. From `sm:` up the pair
+  right-aligns at its natural width instead, where a stretched CTA would only be a wide box with a two-character
+  label in the middle.
 - Each step renders only its own panel: ① the 가제, the memo, photos, the empty-profile warning and the contact
   sheet; ② the draft as prose; ③ `말투 학습`, export and publishing. The memo is the post's own words and the input
   글 생성 works from, so it belongs to that step. Any step is selectable at any time — a step with no work yet
@@ -155,15 +193,29 @@ Photo upload has its own document: [uploads.md](uploads.md).
   the finalized one, or while a voice gate refuses learning; the voice gate is named ahead of the finalize
   gate, since confirming would not unblock it.
 - **① and ② always dock; ③ docks only when it has something to say.** ①'s dock carries the brief trigger,
-  A/B 비교 생성 and 생성. ②'s dock carries the step in two rows: **row 1** the AI revision instruction with an
-  icon-only send button, **row 2** `확정` beside `확정하고 말투 학습`. Neither the revision nor the finalize section
+  A/B 비교 and 생성. ②'s dock carries the step in two rows: **row 1** the AI revision instruction with an
+  icon-only send button, **row 2** `확정하고 말투 학습` beside `확정`, which is the CTA and therefore on the right.
+  확정 takes that side because it is what ENDS the step and is available whenever the draft can be finalized,
+  where 확정하고 말투 학습 additionally needs an analyze model and a baseline to learn from. That row splits
+  evenly rather than 3 : 7 like ①'s: 확정하고 말투 학습 is four words of Korean and a third of a 360px row would
+  break it across three lines. On a post that is ALREADY `finalized`, that row is replaced by the road onward
+  (`글 완성으로 가기`) and nothing else: the status badge at the top of the editor already says 확정, `finalized`
+  is a standing STATE with nothing to take a banner down, and the first changed content save returns the post to
+  `review` and brings the pair back on its own. ③ is where a finalize and the learning run that may have
+  followed it are reported. Neither the revision nor the finalize section
   is rendered in ②'s panel any more — a draft there is routinely thousands of pixels tall, so an action at the
   end of the flow is an action off the screen. ③ keeps its in-flow `말투 학습`, and its dock exists only for a
   running or failed job or a save in flight, never as an empty card. There is exactly **one** docked bar in the
   page's scroller on every step. Every blocker, validation message and failure renders **above** the control it
-  explains, because the software keyboard may hide a control but never the reason it is disabled. A job is
-  reported on every step, because a failure the user cannot see is the bug the dock exists to prevent; its
-  retry is offered only on the step that owns the job.
+  explains, because the software keyboard may hide a control but never the reason it is disabled.
+- **A job's PROGRESS and its FAILURE are reported on every step; its completion is not.** A failure the user
+  cannot see is the bug the dock exists to prevent, and the retry is offered only on the step that owns the job.
+  A finished job is different: `done` is a standing STATE rather than an event, so a visible success banner had
+  nothing to take it down and stood on every step for as long as the post's last job was that one, over the
+  draft it was announcing. It is also redundant — the status transition already carries the user to ②, with the
+  result in front of them. What remains is an `sr-only` live region, mounted at all times and outside the dock's
+  own existence test, that speaks on the transition to `done` and stays silent for a job already finished when
+  the editor mounted.
 - ②'s revision row collapses its secondary controls — the character counter, `규칙으로 저장` and the post-revision
   `지침으로 저장` — while the instruction field is empty and unfocused, and shows them while it is focused, holds
   text, or a revision is running or failed. `규칙으로 저장` itself is unchanged in every other respect.
@@ -216,3 +268,8 @@ Photo upload has its own document: [uploads.md](uploads.md).
   means natural length and remains absent in prompts and snapshots; a positive value is frozen by generation,
   revision, and write comparisons. Option changes do not advance `content_revision`, demote finalization, or start
   provider work.
+- **Ticking 목표 글자 수 사용 reveals the field with `POST_TARGET_LENGTH_DEFAULT` (1,000) already in it**, unless the
+  user has typed a value in this session, which always outranks it. A revealed EMPTY number field renders its range
+  error under a control nobody has touched and asks for a character count the user has no reason to have invented
+  yet. It is a starting point, not a floor: the field stays free across the whole valid range, and nothing is sent
+  until 저장.

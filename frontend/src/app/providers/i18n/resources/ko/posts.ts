@@ -56,8 +56,6 @@ export const posts = {
     memoPlaceholder: '무슨 일이 있었는지 편하게 적어 주세요',
     actionAria: '저장 상태와 글 작업',
     noPhotoModel: '사진이 없어 관찰 모델은 필요하지 않아요.',
-    writeCandidates: '작성 A/B 후보',
-    configureCandidates: 'AI 모델에서 두 후보 설정',
     reviewAiResult: 'AI 결과 확인 →',
     goGenerate: '글 생성으로 가기',
     refineEmpty:
@@ -66,7 +64,6 @@ export const posts = {
       '아직 완성할 글이 없어요. 초안을 만들고 글 다듬기에서 확정하면 여기에서 내보낼 수 있습니다.',
     jobLoadFailed: '작업 상태를 확인하지 못했어요.',
     generationComplete: '글 생성을 마쳤어요.',
-    viewResult: '결과 보기',
     voiceListFailed: '말투 목록을 불러오지 못했어요.',
     noDefaultVoice: '기본 말투가 없어요. 말투 목록에서 하나를 기본으로 설정해 주세요.',
     goVoices: '말투 목록으로',
@@ -74,6 +71,15 @@ export const posts = {
     notFound: '없는 글이에요.',
     unavailable: '글을 불러오지 못했어요.',
     createForPhotosFailed: '사진을 붙일 글을 만들지 못했어요. 다시 시도해 주세요.',
+    delete: {
+      trigger: '글 삭제하기',
+      title: '이 글을 삭제할까요?',
+      description:
+        '‘{{title}}’과 이 글에 붙인 사진, 그리고 생성·수정 기록이 모두 영구히 지워져요. 삭제한 뒤에는 되돌릴 수 없습니다.',
+      publishing:
+        '이 글은 발행이 진행 중이에요. 발행 화면에서 발행을 취소하거나 끝낸 뒤에 삭제해 주세요.',
+      busy: '이 글에서 AI 작업이 진행 중이에요. 작업이 끝난 뒤에 다시 시도해 주세요.',
+    },
     language: {
       label: '글 언어',
       help: '다음 전체 글 생성이나 작성 A/B 비교에 사용해요. AI 수정은 현재 본문의 언어를 유지합니다.',
@@ -113,11 +119,10 @@ export const posts = {
     jobChecking: '작업 상태를 확인하는 중이에요.',
     selectionSaving: '모델 선택을 저장하는 중이에요.',
     selectionChecking: '모델 선택을 확인하는 중이에요.',
-    compare: 'A/B 비교 생성',
+    compare: 'A/B 비교',
     generate: '생성',
     setup: {
       brief: '글쓰기 옵션에서 모델 선택',
-      pair: 'AI 모델에서 후보 설정',
     },
     generateReason: '생성: {{reason}}',
     compareReason: 'A/B 비교: {{reason}}',

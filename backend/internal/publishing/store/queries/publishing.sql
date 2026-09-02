@@ -113,6 +113,16 @@ ORDER BY created_at DESC,id DESC LIMIT 1;
 SELECT * FROM publish_jobs WHERE post_slug=? AND user_id=?
 ORDER BY created_at DESC,id DESC LIMIT 1;
 
+-- name: HasLivePublishJobForPost :one
+-- The three statuses Job.Terminal() excludes. Keyed on post_created_at as well as the
+-- slug so a later post that reused a freed slug is never blocked by the previous
+-- incarnation's publication.
+SELECT EXISTS (
+  SELECT 1 FROM publish_jobs
+  WHERE user_id=? AND post_slug=? AND post_created_at=?
+    AND status IN ('queued','running','needs_attention')
+);
+
 -- name: ListPublishAssets :many
 SELECT * FROM publish_assets WHERE job_id=? ORDER BY ordinal;
 

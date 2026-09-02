@@ -45,7 +45,11 @@ var (
 	ErrObjectMissing = errors.New("uploaded object not found in storage")
 	// ErrPostBusy prevents deleting a source while a handler could still write new
 	// experiment output after the privacy purge.
-	ErrPostBusy             = errors.New("post has an active job")
+	ErrPostBusy = errors.New("post has an active job")
+	// ErrPostPublishing prevents deleting a post whose publication is still in flight.
+	// It is deliberately distinct from ErrPostBusy because the remedy differs: the user
+	// cancels or finishes a publication, they do not wait for a generation to end.
+	ErrPostPublishing       = errors.New("post has a live publish job")
 	ErrStaleContentRevision = errors.New("post content revision is stale")
 	ErrInvalidContent       = errors.New("invalid post content")
 	ErrNoMachineBaseline    = errors.New("post has no machine baseline to finalize")

@@ -61,8 +61,6 @@ export const posts = {
     memoPlaceholder: 'Write down what happened in your own words',
     actionAria: 'Save status and post actions',
     noPhotoModel: 'A photo-observation model is not needed because this post has no photos.',
-    writeCandidates: 'Writing A/B candidates',
-    configureCandidates: 'Configure two candidates in AI models',
     reviewAiResult: 'Review AI result →',
     goGenerate: 'Go to Generate',
     refineEmpty:
@@ -71,7 +69,6 @@ export const posts = {
       'There is no post to finish yet. Generate a draft and finalize it in Refine before exporting here.',
     jobLoadFailed: 'Could not check job status.',
     generationComplete: 'Post generation is complete.',
-    viewResult: 'View result',
     voiceListFailed: 'Could not load the voice list.',
     noDefaultVoice: 'There is no default voice. Set one from the Voices page.',
     goVoices: 'Go to voices',
@@ -79,6 +76,15 @@ export const posts = {
     notFound: 'This post does not exist.',
     unavailable: 'Could not load the post.',
     createForPhotosFailed: 'Could not create a post for these photos. Please try again.',
+    delete: {
+      trigger: 'Delete post',
+      title: 'Delete this post?',
+      description:
+        '“{{title}}”, the photos attached to it, and its generation and revision history are all removed permanently. This cannot be undone.',
+      publishing:
+        'This post is being published. Cancel or finish the publication on the publish panel first, then delete it.',
+      busy: 'An AI job is running for this post. Try again once it finishes.',
+    },
     language: {
       label: 'Post language',
       help: 'Used for the next full generation or writing A/B comparison. AI revision preserves the current content language.',
@@ -118,11 +124,10 @@ export const posts = {
     jobChecking: 'Checking job status…',
     selectionSaving: 'Saving the model selection…',
     selectionChecking: 'Checking model selections…',
-    compare: 'Generate A/B comparison',
+    compare: 'A/B compare',
     generate: 'Generate',
     setup: {
       brief: 'Choose models in writing options',
-      pair: 'Set the candidates on AI models',
     },
     generateReason: 'Generate: {{reason}}',
     compareReason: 'A/B comparison: {{reason}}',

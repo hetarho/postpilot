@@ -31,6 +31,7 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"object", "confirm upload", post.ErrObjectMissing, connect.CodeFailedPrecondition, "UPLOAD_OBJECT_MISSING"},
 		{"image", "confirm upload", post.ErrInvalidImage, connect.CodeInvalidArgument, "UPLOAD_INVALID"},
 		{"busy", "save draft", post.ErrPostBusy, connect.CodeFailedPrecondition, "POST_BUSY"},
+		{"publishing", "delete post", post.ErrPostPublishing, connect.CodeFailedPrecondition, "POST_PUBLISHING"},
 		{"stale", "save post content", post.ErrStaleContentRevision, connect.CodeAborted, "POST_CONTENT_STALE"},
 		{"baseline", "finalize post", post.ErrNoMachineBaseline, connect.CodeFailedPrecondition, "POST_MACHINE_BASELINE_REQUIRED"},
 		{"not finalized", "publish", post.ErrPostNotFinalized, connect.CodeFailedPrecondition, "POST_NOT_FINALIZED"},

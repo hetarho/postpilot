@@ -3,7 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ContentRevisionConflictError } from '@/entities/post'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_RETRY_BASE_MS } from '@/shared/config'
-import { attachContentQueue, discardContentQueues, type ContentSnapshot } from './content-queue'
+import {
+  attachContentQueue,
+  discardContentQueue,
+  discardContentQueues,
+  type ContentSnapshot,
+} from './content-queue'
 
 function snapshot(title: string): ContentSnapshot {
   return {
@@ -74,6 +79,57 @@ describe('content save queue', () => {
     discardContentQueues()
     await vi.advanceTimersByTimeAsync(AUTOSAVE_RETRY_BASE_MS * 2)
     expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  // The delete path's counterpart to the session-wide discard: one slug's queue ends, and
+  // the other slugs keep retrying (tech/draft-autosave.md).
+  it('discards one slug and leaves every other slug retrying', async () => {
+    vi.useFakeTimers()
+    const send = vi.fn().mockRejectedValue(new Error('offline'))
+    const other = vi.fn().mockRejectedValue(new Error('offline'))
+    const deleted = attachContentQueue({
+      slug: 'gone',
+      revision: 1n,
+      saved: snapshot('A'),
+      send,
+      onState: vi.fn(),
+    })
+    const kept = attachContentQueue({
+      slug: 'stays',
+      revision: 1n,
+      saved: snapshot('A'),
+      send: other,
+      onState: vi.fn(),
+    })
+    deleted.queue(snapshot('B'))
+    kept.queue(snapshot('C'))
+
+    await expect(deleted.flush()).rejects.toThrow('offline')
+    await expect(kept.flush()).rejects.toThrow('offline')
+    expect(send).toHaveBeenCalledTimes(1)
+
+    discardContentQueue('gone')
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_RETRY_BASE_MS * 8)
+
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(other.mock.calls.length).toBeGreaterThan(1)
+  })
+
+  it("rejects the discarded queue's pending flush with the delete reason", async () => {
+    vi.useFakeTimers()
+    const send = vi.fn(() => new Promise<bigint>(() => {}))
+    const handle = attachContentQueue({
+      slug: 'gone',
+      revision: 1n,
+      saved: snapshot('A'),
+      send,
+      onState: vi.fn(),
+    })
+    handle.queue(snapshot('B'))
+    const flushed = handle.flush()
+    discardContentQueue('gone')
+
+    await expect(flushed).rejects.toThrow('post deleted')
   })
 
   it('surfaces an optimistic revision conflict without retrying it', async () => {
