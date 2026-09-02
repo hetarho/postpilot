@@ -162,8 +162,18 @@ message Voice {
 
 message ListVoicesRequest {}
 message ListVoicesResponse { repeated Voice voices = 1; }
-message CreateVoiceRequest { string name = 1; optional ContentLanguage source_language = 2; }
-message CreateVoiceResponse { Voice voice = 1; }
+message CreateVoiceRequest {
+  string name = 1;
+  optional ContentLanguage source_language = 2;
+  // Optional. A free-text description of the wanted register. It is an instruction, never
+  // evidence: it is not stored as a sample, not counted as a source, and not measured. When
+  // present the server also enqueues one seeding job that writes the voice's first profile,
+  // and analyze_model must be the account's saved analyze-stage selection.
+  string description = 3;
+  ModelRef analyze_model = 4;
+}
+// job_id is the seeding job, and is empty whenever no description was submitted.
+message CreateVoiceResponse { Voice voice = 1; string job_id = 2; }
 message RenameVoiceRequest { string voice_id = 1; string name = 2; }
 message RenameVoiceResponse { Voice voice = 1; }
 message SetDefaultVoiceRequest { string voice_id = 1; }

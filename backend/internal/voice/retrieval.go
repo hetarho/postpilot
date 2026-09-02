@@ -88,6 +88,23 @@ func excerptAroundTarget(body string, target, limit int) string {
 	return strings.TrimSpace(string(runes[:end]))
 }
 
+// A measurement only a corpus can produce, rendered the way an unmeasured axis is. Zero is
+// never a real average sentence length or paragraph size, and a seeded profile (written from a
+// description, with nothing measured) would otherwise state "0.00 chars" as a fact.
+func renderChars(value float64) string {
+	if value <= 0 {
+		return "unknown"
+	}
+	return fmt.Sprintf("%.2f chars", value)
+}
+
+func renderParagraphSentences(min, max int) string {
+	if min <= 0 && max <= 0 {
+		return "unknown"
+	}
+	return fmt.Sprintf("%d-%d", min, max)
+}
+
 func renderValue(value VoiceValue) string {
 	if value.Unknown || strings.TrimSpace(value.Value) == "" {
 		return "unknown"
@@ -117,7 +134,7 @@ func renderStructuredProfile(p StructuredProfile) string {
 	for _, ratio := range p.Endings.Distribution {
 		fmt.Fprintf(&b, " %s=%.2f", ratio.Ending, ratio.Ratio)
 	}
-	fmt.Fprintf(&b, "\n[Syntax]\naverage sentence: %.2f chars\nconnectives: %s\n[Structure]\nintro: %s\nclosing: %s\n[Axes]\n%s", p.Syntax.AverageSentenceChars, renderValue(p.Syntax.ConnectiveStyle), renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern), renderAxes(p.Axes))
+	fmt.Fprintf(&b, "\n[Syntax]\naverage sentence: %s\nconnectives: %s\n[Structure]\nintro: %s\nclosing: %s\n[Axes]\n%s", renderChars(p.Syntax.AverageSentenceChars), renderValue(p.Syntax.ConnectiveStyle), renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern), renderAxes(p.Axes))
 	if len(p.Lexical.BannedWords) > 0 {
 		b.WriteString("\n[Banned words]")
 		for _, item := range p.Lexical.BannedWords {
@@ -144,7 +161,7 @@ func renderStructuredProfileForLanguage(p StructuredProfile, language Language) 
 		return ""
 	}
 	averageWords := "unknown"
-	if p.Syntax.AverageSentenceWords != nil {
+	if p.Syntax.AverageSentenceWords != nil && *p.Syntax.AverageSentenceWords > 0 {
 		averageWords = fmt.Sprintf("%.2f", *p.Syntax.AverageSentenceWords)
 	}
 	var b strings.Builder
@@ -152,8 +169,8 @@ func renderStructuredProfileForLanguage(p StructuredProfile, language Language) 
 	for _, ratio := range p.Endings.Distribution {
 		fmt.Fprintf(&b, " %s=%.2f", ratio.Ending, ratio.Ratio)
 	}
-	fmt.Fprintf(&b, "\n[Syntax]\naverage sentence: %.2f chars / %s words\nconnectives: %s\npreferred connectives: %s\npassive: %s\nnominalization: %s", p.Syntax.AverageSentenceChars, averageWords, renderValue(p.Syntax.ConnectiveStyle), strings.Join(p.Syntax.PreferredConnectives, ", "), renderValue(p.Syntax.PassiveTendency), renderValue(p.Syntax.Nominalization))
-	fmt.Fprintf(&b, "\n[Structure]\nintro: %s\nclosing: %s\nparagraph sentences: %d-%d\nheadings: %s\nlists: %s\nemojis: %s\n[Axes]\n%s", renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern), p.Structure.ParagraphSentencesMin, p.Structure.ParagraphSentencesMax, renderValue(p.Structure.HeadingHabit), renderValue(p.Structure.ListHabit), renderValue(p.Structure.EmojiUse), renderAxes(p.Axes))
+	fmt.Fprintf(&b, "\n[Syntax]\naverage sentence: %s / %s words\nconnectives: %s\npreferred connectives: %s\npassive: %s\nnominalization: %s", renderChars(p.Syntax.AverageSentenceChars), averageWords, renderValue(p.Syntax.ConnectiveStyle), strings.Join(p.Syntax.PreferredConnectives, ", "), renderValue(p.Syntax.PassiveTendency), renderValue(p.Syntax.Nominalization))
+	fmt.Fprintf(&b, "\n[Structure]\nintro: %s\nclosing: %s\nparagraph sentences: %s\nheadings: %s\nlists: %s\nemojis: %s\n[Axes]\n%s", renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern), renderParagraphSentences(p.Structure.ParagraphSentencesMin, p.Structure.ParagraphSentencesMax), renderValue(p.Structure.HeadingHabit), renderValue(p.Structure.ListHabit), renderValue(p.Structure.EmojiUse), renderAxes(p.Axes))
 	return b.String()
 }
 
@@ -167,7 +184,7 @@ func renderPortableProfile(p StructuredProfile) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "[Portable voice structure v%d]\n", p.Version)
 	fmt.Fprintf(&b, "intro: %s\nclosing: %s\n", renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern))
-	fmt.Fprintf(&b, "paragraph sentences: %d-%d\n", p.Structure.ParagraphSentencesMin, p.Structure.ParagraphSentencesMax)
+	fmt.Fprintf(&b, "paragraph sentences: %s\n", renderParagraphSentences(p.Structure.ParagraphSentencesMin, p.Structure.ParagraphSentencesMax))
 	fmt.Fprintf(&b, "headings: %s\nlists: %s\nemojis: %s\n", renderValue(p.Structure.HeadingHabit), renderValue(p.Structure.ListHabit), renderValue(p.Structure.EmojiUse))
 	fmt.Fprintf(&b, "[Portable axes]\n%s", renderAxes(p.Axes))
 	return b.String()

@@ -261,6 +261,11 @@ func main() {
 	jobQueue.Register(job.KindValidateVoiceProfile, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.ValidateProfile(ctx, found.UserID, strings.TrimSpace(string(found.Payload)), voice.Progress(progress))
 	}))
+	jobQueue.Register(job.KindSeedVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return voiceSvc.Seed(ctx, voice.SeedJob{
+			UserID: found.UserID, VoiceID: found.VoiceID, Description: string(found.Payload), WriteModel: found.WriteModel,
+		}, voice.Progress(progress))
+	}))
 	generationSvc := generation.NewService(
 		generationPosts{service: postSvc},
 		generationProfiles{service: voiceSvc},

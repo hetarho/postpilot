@@ -58,7 +58,7 @@ UPDATE generation_jobs
 SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
     finished_at = ?, updated_at = ?
 WHERE status = 'queued'
-  AND kind IN ('learn_voice', 'compare_voice_rule', 'validate_voice_profile');
+  AND kind IN ('learn_voice', 'compare_voice_rule', 'validate_voice_profile', 'seed_voice');
 
 -- name: ActiveForPost :one
 SELECT * FROM generation_jobs

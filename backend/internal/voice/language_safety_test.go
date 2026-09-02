@@ -73,7 +73,7 @@ func TestPostLearningLanguageMismatchIsSymmetricAndSideEffectFree(t *testing.T) 
 			ctx := context.Background()
 			voiceID := h.voice("alice")
 			if test.source == voice.LanguageEnglish {
-				created, err := h.svc.CreateVoice(ctx, "alice", "English", voice.LanguageEnglish)
+				created, _, err := h.svc.CreateVoice(ctx, "alice", "English", voice.LanguageEnglish, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -151,7 +151,7 @@ func TestRuleComparisonAndValidationExcludeMixedLanguageSourcesBeforeWrites(t *t
 func TestEnglishLearningSelectsEnglishCorpusPromptSchemaAndMeasurements(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	english, err := h.svc.CreateVoice(ctx, "alice", "English", voice.LanguageEnglish)
+	english, _, err := h.svc.CreateVoice(ctx, "alice", "English", voice.LanguageEnglish, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -17,6 +17,7 @@ const (
 	KindLearnVoice           = "learn_voice"
 	KindCompareVoiceRule     = "compare_voice_rule"
 	KindValidateVoiceProfile = "validate_voice_profile"
+	KindSeedVoice            = "seed_voice"
 
 	StatusQueued  = "queued"
 	StatusRunning = "running"
@@ -28,7 +29,7 @@ const (
 // even when the job also points at the post or source that caused the work.
 func voiceOwnedKind(kind string) bool {
 	switch kind {
-	case KindAnalyzeVoice, KindLearnVoice, KindCompareVoiceRule, KindValidateVoiceProfile:
+	case KindAnalyzeVoice, KindLearnVoice, KindCompareVoiceRule, KindValidateVoiceProfile, KindSeedVoice:
 		return true
 	default:
 		return false

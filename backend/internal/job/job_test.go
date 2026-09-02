@@ -453,8 +453,8 @@ func TestSweepAndOwnership(t *testing.T) {
 func TestBootSweepHoldsQueuedPersonalizationOnly(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
-	ids := make([]string, 0, 3)
-	for _, kind := range []string{job.KindLearnVoice, job.KindCompareVoiceRule, job.KindValidateVoiceProfile} {
+	ids := make([]string, 0, 4)
+	for _, kind := range []string{job.KindLearnVoice, job.KindCompareVoiceRule, job.KindValidateVoiceProfile, job.KindSeedVoice} {
 		id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: kind, UserID: "alice"})
 		if err != nil {
 			t.Fatal(err)
@@ -465,7 +465,7 @@ func TestBootSweepHoldsQueuedPersonalizationOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n, err := h.queue.SweepQueuedPersonalization(ctx); err != nil || n != 3 {
+	if n, err := h.queue.SweepQueuedPersonalization(ctx); err != nil || n != 4 {
 		t.Fatalf("sweep queued personalization = %d, %v", n, err)
 	}
 	for _, id := range ids {

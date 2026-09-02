@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"connectrpc.com/connect"
 
@@ -48,11 +49,22 @@ func (h *Handler) CreateVoice(ctx context.Context, req *connect.Request[postpilo
 	if err != nil {
 		return nil, toConnectError("create voice", err)
 	}
-	created, err := h.service.CreateVoice(ctx, userID, req.Msg.GetName(), sourceLanguage)
+	// A seed is attached only when the client actually described a register; an absent
+	// description must not drag the analyze-model requirement into plain creation.
+	var seed *voice.VoiceSeed
+	if strings.TrimSpace(req.Msg.GetDescription()) != "" {
+		seed = &voice.VoiceSeed{
+			Description: req.Msg.GetDescription(),
+			AnalyzeModel: llm.ModelRef{
+				ProviderID: req.Msg.GetAnalyzeModel().GetProviderId(), ModelID: req.Msg.GetAnalyzeModel().GetModelId(),
+			},
+		}
+	}
+	created, jobID, err := h.service.CreateVoice(ctx, userID, req.Msg.GetName(), sourceLanguage, seed)
 	if err != nil {
 		return nil, toConnectError("create voice", err)
 	}
-	return connect.NewResponse(&postpilotv1.CreateVoiceResponse{Voice: toProtoVoice(created)}), nil
+	return connect.NewResponse(&postpilotv1.CreateVoiceResponse{Voice: toProtoVoice(created), JobId: jobID}), nil
 }
 
 func (h *Handler) RenameVoice(ctx context.Context, req *connect.Request[postpilotv1.RenameVoiceRequest]) (*connect.Response[postpilotv1.RenameVoiceResponse], error) {
@@ -234,6 +246,7 @@ func toConnectError(op string, err error) error {
 	}
 	var tooShort *voice.SampleTooShortError
 	var badName *voice.VoiceNameError
+	var longDescription *voice.VoiceDescriptionTooLongError
 	var mismatch *voice.ContentLanguageMismatchError
 	switch {
 	case errors.As(err, &tooShort):
@@ -243,6 +256,8 @@ func toConnectError(op string, err error) error {
 			return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is required", "VOICE_NAME_REQUIRED", nil)
 		}
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is too long", "VOICE_NAME_TOO_LONG", map[string]string{"actual": fmt.Sprint(badName.Chars), "max": fmt.Sprint(voice.VoiceNameMaxChars)})
+	case errors.As(err, &longDescription):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice description is too long", "VOICE_DESCRIPTION_TOO_LONG", map[string]string{"actual": fmt.Sprint(longDescription.Chars), "max": fmt.Sprint(voice.VoiceDescriptionMaxChars)})
 	case errors.Is(err, voice.ErrVoiceRequired):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice is required", "VOICE_REQUIRED", nil)
 	case errors.Is(err, voice.ErrLanguageRequired):

@@ -3,8 +3,8 @@
 Canonical rules that are **currently true** in the code. Source: [plan/05](../plan/05.generation-job-queue.md),
 built by job 07; per-voice ownership from [plan/10](../plan/10.independent-voice-profiles-and-post-assi.md), job 18.
 The concrete `analyze_voice`, `generate`, `revise`, and `model_experiment` handlers are registered by their owning
-feature jobs; job 32 adds frozen target and structured failure fields; job 37 adds the plan gate at enqueue. This
-document owns the shared record, worker, query, and polling contract.
+feature jobs; job 32 adds frozen target and structured failure fields; job 37 adds the plan gate at enqueue; job 41
+adds the voice-owned `seed_voice` kind. This document owns the shared record, worker, query, and polling contract.
 
 ## Record and lifecycle
 
@@ -60,9 +60,14 @@ document owns the shared record, worker, query, and polling contract.
 
 ### Personalization restart exception
 
-- `learn_voice`, `compare_voice_rule`, and `validate_voice_profile` come only from explicit authenticated actions
-  carrying model refs. At boot, queued rows of these kinds are marked `failed` before the worker starts; boot cannot
-  turn old user intent into a new provider call. Running rows use the ordinary restart sweep.
+- `learn_voice`, `compare_voice_rule`, `validate_voice_profile`, and `seed_voice` come only from explicit
+  authenticated actions carrying model refs. At boot, queued rows of these kinds are marked `failed` before the
+  worker starts; boot cannot turn old user intent into a new provider call. Running rows use the ordinary restart
+  sweep.
+- Their owning aggregate exposes failure and explicit retry, except `seed_voice`: a voice is seeded once, at
+  creation, and a swept or failed seed simply leaves an ordinary empty voice whose `말투` tab shows the failure. That
+  is the deliberate trade — losing a one-shot convenience is cheaper than letting boot spend a provider call on
+  intent the user is no longer present for.
 - Their owning aggregate exposes failure and explicit retry. A failed aggregate/job link can compensate by failing
   that id for that owner only while it is queued. If the worker already owns it, compensation cannot cancel it and
   the original durable ids remain the recovery path.

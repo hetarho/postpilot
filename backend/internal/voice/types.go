@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 const AnalysisJobKind = "analyze_voice"
@@ -14,6 +16,7 @@ const (
 	LearnJobKind           = "learn_voice"
 	CompareRuleJobKind     = "compare_voice_rule"
 	ValidateProfileJobKind = "validate_voice_profile"
+	SeedJobKind            = "seed_voice"
 )
 
 // DefaultVoiceName is the name of an account's first voice — created by migration 0009 for
@@ -24,6 +27,11 @@ const DefaultVoiceName = "기본 말투"
 // VoiceNameMaxChars bounds a display name in Unicode scalar values; the frontend mirrors it
 // in shared/config for early feedback, but this is the authoritative check.
 const VoiceNameMaxChars = 50
+
+// VoiceDescriptionMaxChars bounds the optional creation-time description in Unicode scalar
+// values, mirrored in shared/config the same way. It is deliberately far below a sample's
+// length: a description states a wanted register, it does not demonstrate one.
+const VoiceDescriptionMaxChars = 500
 
 var (
 	ErrAnalyzeModelRequired = errors.New("an enabled analyze model is required")
@@ -111,6 +119,21 @@ func (e *VoiceNameError) Error() string {
 		return "voice name is required"
 	}
 	return fmt.Sprintf("voice name has %d characters; at most %d are allowed", e.Chars, VoiceNameMaxChars)
+}
+
+// VoiceSeed is CreateVoice's optional described-voice request. A nil seed is the plain
+// creation the product always had: an empty isolated profile and no provider work at all.
+type VoiceSeed struct {
+	Description  string
+	AnalyzeModel llm.ModelRef
+}
+
+// VoiceDescriptionTooLongError is an over-long creation-time description. An empty one is
+// not an error: the description is optional and its absence simply skips seeding.
+type VoiceDescriptionTooLongError struct{ Chars int }
+
+func (e *VoiceDescriptionTooLongError) Error() string {
+	return fmt.Sprintf("voice description has %d characters; at most %d are allowed", e.Chars, VoiceDescriptionMaxChars)
 }
 
 // Voice is the aggregate root the directory manages. DeletedAt is a tombstone: the voice

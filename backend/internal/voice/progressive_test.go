@@ -175,7 +175,7 @@ func TestZeroHistoryFinalizeLearnsOneSourceOnlyAfterExplicitJob(t *testing.T) {
 		t.Fatalf("prompt excerpts=%v empty=%v err=%v", excerpts, empty, err)
 	}
 	// The source, version and excerpt belong to the learned voice alone.
-	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean)
+	other, _, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean, nil)
 	if otherProfile, err := h.svc.Get(context.Background(), "alice", other.ID); err != nil || otherProfile.SourceCount != 0 || otherProfile.Structured.Version != 0 {
 		t.Fatalf("learning leaked into another voice: %+v err=%v", otherProfile, err)
 	}
@@ -262,7 +262,7 @@ func TestManualOverrideClearAndRestorePublishImmutableWholeVersions(t *testing.T
 		t.Fatalf("versions=%+v err=%v", versions, err)
 	}
 	// Version numbers count per voice: a sibling voice starts at v1 and sees none of these.
-	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean)
+	other, _, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean, nil)
 	if otherVersions, err := h.svc.ListVersions(context.Background(), "alice", other.ID); err != nil || len(otherVersions) != 0 {
 		t.Fatalf("other voice versions=%+v err=%v", otherVersions, err)
 	}
@@ -305,7 +305,7 @@ func TestIndependentLearningEventsPromoteRuleAtConfiguredEvidenceCount(t *testin
 		t.Fatalf("active projection=%q err=%v", projected, err)
 	}
 	// The same statement in a sibling voice is a different rule with its own evidence.
-	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean)
+	other, _, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean, nil)
 	if _, _, projectedOther, _, err := h.svc.ProfileForPrompt(context.Background(), "alice", other.ID); err != nil || projectedOther != "" {
 		t.Fatalf("active rule leaked into another voice: %q err=%v", projectedOther, err)
 	}
@@ -366,7 +366,7 @@ func TestExplicitRuleComparisonAndValidationStayOutsideModelExperiments(t *testi
 		}
 	}
 	// A source from another voice of the same account is not comparison material for this rule.
-	other, _ := svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean)
+	other, _, _ := svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean, nil)
 	if _, err := h.db.Writer.Exec("INSERT INTO voice_authored_sources(id,user_id,voice_id,title,tags,body,excerpt,created_at) VALUES('source-other','alice',?,'다른','[]','다른 말투의 원문입니다.','다른',?)", other.ID, now); err != nil {
 		t.Fatal(err)
 	}
@@ -539,7 +539,7 @@ func TestLearnPublishesUnansweredAxesAsUnknownAndRejectsOutOfRange(t *testing.T)
 func TestFinalizeLearnRequiresMatchingLiveVoiceAndRetryFollowsTheEvent(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	formal, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean)
+	formal, _, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean, nil)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	insertPost(t, h, "moved", "alice", formal.ID, "옮긴 글", now)
 	raw := `{"title":"옮긴 글","summary":"","tags":[],"blocks":[{"type":"TEXT","content":"본문입니다."}]}`
@@ -602,7 +602,7 @@ func (p *mutableLearningPosts) LearningSnapshot(context.Context, string, string)
 func TestRuleStatusChangesStayInsideTheRulesVoice(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	formal, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean)
+	formal, _, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean, nil)
 	nowTime := time.Now().UTC()
 	now := nowTime.Format(time.RFC3339Nano)
 	for _, v := range []string{alice, formal.ID} {

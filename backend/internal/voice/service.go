@@ -141,13 +141,37 @@ func (s *Service) EnsureDefaultVoice(ctx context.Context, userID string, sourceL
 	return created, true, nil
 }
 
-func (s *Service) CreateVoice(ctx context.Context, userID, name string, sourceLanguage Language) (Voice, error) {
+// CreateVoice makes an empty isolated voice and, when the caller described the register they
+// want, ONE seeding job that writes its first profile. The returned job id is empty whenever
+// no description was submitted.
+//
+// Every reason to refuse is checked BEFORE the insert — including the analyze model, which a
+// description needs — so a refusal never leaves a voice behind. The reverse is also true and
+// deliberate: once the row exists the voice is real even if the seed cannot be scheduled,
+// because this product has no hard delete to undo it with.
+func (s *Service) CreateVoice(ctx context.Context, userID, name string, sourceLanguage Language, seed *VoiceSeed) (Voice, string, error) {
 	if !sourceLanguage.Valid() {
-		return Voice{}, ErrLanguageRequired
+		return Voice{}, "", ErrLanguageRequired
 	}
 	name, err := normalizeVoiceName(name)
 	if err != nil {
-		return Voice{}, err
+		return Voice{}, "", err
+	}
+	description, model := "", llm.ModelRef{}
+	if seed != nil {
+		if description, err = normalizeVoiceDescription(seed.Description); err != nil {
+			return Voice{}, "", err
+		}
+		if description != "" {
+			// Checked before the insert, with the model: seeding is the one part of creation
+			// that needs the personalization wiring, and a refusal must not leave a voice.
+			if s.personalizationJobs == nil {
+				return Voice{}, "", errors.New("voice: personalization jobs are not configured")
+			}
+			if model, err = s.resolveAnalyzeModel(ctx, userID, seed.AnalyzeModel); err != nil {
+				return Voice{}, "", err
+			}
+		}
 	}
 	s.directoryMu.Lock()
 	defer s.directoryMu.Unlock()
@@ -155,11 +179,20 @@ func (s *Service) CreateVoice(ctx context.Context, userID, name string, sourceLa
 	created := Voice{ID: s.newID(), UserID: userID, Name: name, SourceLanguage: sourceLanguage, CreatedAt: now, UpdatedAt: now}
 	if err := s.store.InsertVoice(ctx, created); err != nil {
 		if errors.Is(err, ErrVoiceNameTaken) {
-			return Voice{}, err
+			return Voice{}, "", err
 		}
-		return Voice{}, fmt.Errorf("create voice: %w", err)
+		return Voice{}, "", fmt.Errorf("create voice: %w", err)
 	}
-	return created, nil
+	if description == "" {
+		return created, "", nil
+	}
+	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{
+		Kind: SeedJobKind, UserID: userID, VoiceID: created.ID, Model: model.String(), Payload: description,
+	})
+	if err != nil {
+		return created, "", fmt.Errorf("말투는 만들었지만 첫 말투 생성을 시작하지 못했어요: %w", err)
+	}
+	return created, jobID, nil
 }
 
 // RenameVoice changes only the display name — post rows and immutable snapshots never
@@ -281,6 +314,16 @@ func (s *Service) RestoreVoice(ctx context.Context, userID, voiceID string) (Voi
 	return s.ownedVoice(ctx, userID, voiceID)
 }
 
+// normalizeVoiceDescription accepts an absent description: it is optional, and an empty one
+// simply means the voice starts blank the way it always has.
+func normalizeVoiceDescription(description string) (string, error) {
+	description = strings.TrimSpace(description)
+	if chars := utf8.RuneCountInString(description); chars > VoiceDescriptionMaxChars {
+		return "", &VoiceDescriptionTooLongError{Chars: chars}
+	}
+	return description, nil
+}
+
 func normalizeVoiceName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	chars := utf8.RuneCountInString(name)
@@ -337,6 +380,14 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	active, err := s.jobs.ActiveForVoiceKind(ctx, voiceID, AnalysisJobKind)
 	if err != nil {
 		return Profile{}, fmt.Errorf("get active analysis: %w", err)
+	}
+	// A seeding run is the other job that writes this profile, and it is the only work a
+	// just-created voice can have. Without it the detail screen would show no progress and no
+	// failure for the run the creation sheet just started.
+	if active == nil {
+		if active, err = s.jobs.ActiveForVoiceKind(ctx, voiceID, SeedJobKind); err != nil {
+			return Profile{}, fmt.Errorf("get active seeding: %w", err)
+		}
 	}
 	profile.UserID, profile.VoiceID, profile.Voice = userID, voiceID, found
 	profile.Samples = samples

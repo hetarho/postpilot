@@ -94,6 +94,26 @@ so a concurrent source, manual override, or rule version cannot be overwritten b
 Legacy `voice_profiles.styleguide` and `rules` are retained byte-for-byte by migration 0007 and remain prompt input
 as manual guidance until the account changes them.
 
+### The seeded first version
+
+A voice created from a written description of the wanted register publishes a `seed`-origin version 1 (migration 0016
+widens the `origin` check). It is the one version whose input was never written by the author, so it is bounded three
+ways.
+
+It is not evidence. The description is carried on the durable job row, consumed once, and stored nowhere else: no
+sample, no authored source, no few-shot entry, no embedding, no `corpus_version` bump, no effect on validation
+eligibility. Everything that counts as evidence still counts zero.
+
+It carries no measurements. The published snapshot sets only the lexical description, as `analyzed`, and leaves every
+measured quantity and every axis unset. `MeasuredProfileForLanguage` is deliberately NOT called: measuring the
+request's own prose would report the user's prompt style as though it were their writing. Because a real measurement
+is never zero, the prompt projection renders an unset average sentence length or paragraph range as `unknown` rather
+than as `0.00 chars` / `0-0` — the same rule an unanswered axis already follows.
+
+It loses every race. The publish is conditional on the profile head still being 0 and on the corpus generation the
+job read, so a sample analysis or a finalization that lands first wins and the seed completes without writing. There
+is no re-seed: a voice is seeded once, at creation.
+
 ## Measurement, diff, and lifecycle
 
 The deterministic segmenter recognizes Korean/Latin terminal punctuation and newlines. It counts Unicode code
@@ -154,8 +174,10 @@ already owns it, the durable ids are returned and the worker completes the exist
 
 ## Boot and provider-call safety
 
-At boot, queued personalization jobs are marked failed before the worker starts, and running jobs use the ordinary
-restart sweep. Boot never drains old personalization rows into provider calls. Read RPCs, polling, profile age,
+At boot, queued personalization jobs — `learn_voice`, `compare_voice_rule`, `validate_voice_profile`, `seed_voice` —
+are marked failed before the worker starts, and running jobs use the ordinary restart sweep. Boot never drains old
+personalization rows into provider calls; for a seed this means a voice created just before a restart stays empty
+rather than being written hours later without its author present. Read RPCs, polling, profile age,
 copy/export, and UI mount do not enqueue. A failed job remains visible/retryable and the last valid canonical post and
 profile head remain unchanged.
 
