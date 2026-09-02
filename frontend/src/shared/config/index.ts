@@ -27,6 +27,12 @@ export const AUTOSAVE_DEBOUNCE_MS = 1_000
 export const AUTOSAVE_RETRY_BASE_MS = 1_000
 export const AUTOSAVE_RETRY_MAX_MS = 30_000
 
+/** How much of a voice profile version's generation snapshot the version preview shows before
+ *  the reader asks for the rest. A snapshot is a whole post, and the version list is a list: the
+ *  point of the preview is to recognize a voice's register in a few sentences, which is roughly
+ *  a phone screen's worth of text. */
+export const VOICE_VERSION_PREVIEW_CHARS = 400
+
 /** How long 저장됨 stays on the editor's status line after a completed save before the line goes
  *  quiet. The queue's own `saved` is a STANDING state — it holds for the life of a queue that has
  *  ever saved — so without a settle the line permanently claims a save the user made minutes ago,

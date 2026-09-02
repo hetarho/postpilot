@@ -12,10 +12,10 @@ describe('VoiceWarning', () => {
     )
   })
 
-  it('does not render after a styleguide exists', async () => {
+  it('does not render once a profile version exists', async () => {
     renderAppAt('/posts/new', {
       user: { id: 'alice' },
-      voice: { styleguide: '# 종결어미' },
+      voice: { structured: { meta: { version: 1n }, empty: false } },
     })
     await screen.findByLabelText('제목')
     expect(screen.queryByText(/문체 프로필이 비어 있어요/)).not.toBeInTheDocument()

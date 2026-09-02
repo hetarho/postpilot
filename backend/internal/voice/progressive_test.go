@@ -55,7 +55,7 @@ func TestPromptProfileProjectionKeepsSourceSpecificEvidenceOutOfCrossLanguagePro
 	if _, err := h.store.PublishProfileVersion(ctx, "alice", voiceID, structured, "analysis", 0, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.svc.Update(ctx, "alice", voiceID, "FREEFORM_STYLE_SECRET", "MANUAL_RULE_SECRET"); err != nil {
+	if err := h.svc.AppendRule(ctx, "alice", voiceID, "MANUAL_RULE_SECRET"); err != nil {
 		t.Fatal(err)
 	}
 	h.addSample(t, "alice", voiceID, "portable-sample", "sample", strings.Repeat("EXCERPT_SECRET ", 80), time.Now().UTC())
@@ -74,7 +74,7 @@ func TestPromptProfileProjectionKeepsSourceSpecificEvidenceOutOfCrossLanguagePro
 	if full.Portable || full.SourceLanguage != voice.LanguageKorean || full.TargetLanguage != voice.LanguageKorean {
 		t.Fatalf("full tags = %+v", full)
 	}
-	for _, required := range []string{"LEXICAL_SECRET", "ENDING_REGISTER_SECRET", "SYNTAX_SECRET", "FREEFORM_STYLE_SECRET", "MANUAL_RULE_SECRET", "ACTIVE_RULE_SECRET"} {
+	for _, required := range []string{"LEXICAL_SECRET", "ENDING_REGISTER_SECRET", "SYNTAX_SECRET", "MANUAL_RULE_SECRET", "ACTIVE_RULE_SECRET"} {
 		if !strings.Contains(full.Styleguide+full.ManualRules+full.ActiveRules, required) {
 			t.Errorf("full projection missing %q: %+v", required, full)
 		}
@@ -95,7 +95,7 @@ func TestPromptProfileProjectionKeepsSourceSpecificEvidenceOutOfCrossLanguagePro
 			t.Errorf("portable projection missing %q: %s", required, portable.Styleguide)
 		}
 	}
-	for _, forbidden := range []string{"LEXICAL_SECRET", "BANNED_WORD_SECRET", "ENDING_REGISTER_SECRET", "ENDING_SECRET", "BANNED_ENDING_SECRET", "SYNTAX_SECRET", "FREEFORM_STYLE_SECRET", "MANUAL_RULE_SECRET", "ACTIVE_RULE_SECRET", "EXCERPT_SECRET"} {
+	for _, forbidden := range []string{"LEXICAL_SECRET", "BANNED_WORD_SECRET", "ENDING_REGISTER_SECRET", "ENDING_SECRET", "BANNED_ENDING_SECRET", "SYNTAX_SECRET", "MANUAL_RULE_SECRET", "ACTIVE_RULE_SECRET", "EXCERPT_SECRET"} {
 		if strings.Contains(portable.Styleguide, forbidden) {
 			t.Errorf("portable projection leaked %q: %s", forbidden, portable.Styleguide)
 		}

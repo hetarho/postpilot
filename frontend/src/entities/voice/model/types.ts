@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import type { ContentLanguage } from '@/shared/api'
+import type { ContentLanguage, PostContent } from '@/shared/api'
 
 export interface VoiceSample {
   id: string
@@ -132,9 +132,6 @@ export interface VoiceRef {
 
 export interface VoiceProfile {
   voice: Voice
-  styleguide: string
-  rules: string
-  legacyManualGuidance: string
   updatedAt: string
   samples: VoiceSample[]
   activeJobId: string
@@ -147,6 +144,16 @@ export interface VoiceVersion {
   profile: StructuredVoiceProfile
   origin: string
   restoredFromVersion: bigint
+  createdAt: string
+  /** Whether this version carries a generation snapshot that can be previewed. Presence only —
+   *  the snapshot is fetched per version, when the row is opened (change 16). */
+  hasSample: boolean
+}
+
+/** A copy of the raw AI output of the last post one profile version produced. It is what makes
+ *  a version readable BEFORE it is adopted; a version that never produced a post has none. */
+export interface VoiceVersionSample {
+  content: PostContent
   createdAt: string
 }
 
@@ -208,14 +215,13 @@ export function emptyStructuredVoiceProfile(): StructuredVoiceProfile {
   }
 }
 
+// An empty profile is now exactly "nothing to learn from and nothing published": the free-text
+// styleguide that used to count as content is gone (change 16).
 export function isEmptyProfile(
-  profile: Pick<VoiceProfile, 'structured' | 'styleguide' | 'samples' | 'finalizedSourceCount'>,
+  profile: Pick<VoiceProfile, 'structured' | 'samples' | 'finalizedSourceCount'>,
 ): boolean {
   return (
-    profile.structured.empty &&
-    profile.styleguide.trim() === '' &&
-    profile.samples.length === 0 &&
-    profile.finalizedSourceCount === 0
+    profile.structured.empty && profile.samples.length === 0 && profile.finalizedSourceCount === 0
   )
 }
 

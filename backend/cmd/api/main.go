@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/auth/provision"
@@ -28,6 +29,7 @@ import (
 	"github.com/postpilot/backend/internal/experiment"
 	experimentrpc "github.com/postpilot/backend/internal/experiment/rpc"
 	experimentstore "github.com/postpilot/backend/internal/experiment/store"
+	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/generation"
 	generationrpc "github.com/postpilot/backend/internal/generation/rpc"
@@ -282,6 +284,10 @@ func main() {
 	// Likewise for the 지침: read once at enqueue, to freeze. The guideline context never
 	// learns that generation exists.
 	generationSvc.SetGuidelines(generationGuidelines{service: guidelineSvc})
+	// The per-version generation snapshot (change 16). Generation is the only context that
+	// depends on both post and voice, so it is the only one that may join a machine baseline
+	// to the profile version that produced it.
+	generationSvc.SetVersionSamples(generationVersionSamples{service: voiceSvc})
 	experimentStore := experimentstore.New(handle.Writer, handle.Reader)
 	experimentSvc := experiment.NewService(
 		experimentStore,
@@ -769,6 +775,35 @@ func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID, voiceI
 func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target generation.Language, topic string, tags []string) (generation.Profile, error) {
 	profile, err := a.service.PromptProfileForTopicAndLanguage(ctx, userID, voiceID, voice.Language(target), topic, tags)
 	return generation.Profile{Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: profile.Excerpts, Rules: profile.ManualRules, EndingMaxConsecutive: a.service.EndingMaxConsecutive(), SourceLanguage: generation.Language(profile.SourceLanguage), TargetLanguage: generation.Language(profile.TargetLanguage), Portable: profile.Portable}, generationVoiceError(err)
+}
+
+// generationVersionSamples adapts at the boundary the way generationProfiles does. The wire
+// format is the PostContent message's own protojson, so the voice context can keep the value as
+// opaque text and the voice RPC edge can hand the client back exactly the message it already
+// decodes -- one schema, defined in the proto, rather than a second JSON shape maintained here.
+type generationVersionSamples struct{ service *voice.Service }
+
+func (a generationVersionSamples) RecordVersionSample(ctx context.Context, userID, voiceID string, content generation.PostContent) error {
+	encoded, err := protojson.Marshal(generationContentProto(content))
+	if err != nil {
+		return fmt.Errorf("encode voice version sample: %w", err)
+	}
+	return generationVoiceError(a.service.RecordVersionSample(ctx, userID, voiceID, string(encoded)))
+}
+
+func generationContentProto(content generation.PostContent) *postpilotv1.PostContent {
+	out := &postpilotv1.PostContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags}
+	for _, block := range content.Blocks {
+		out.Blocks = append(out.Blocks, &postpilotv1.Block{
+			// The domain's block type strings ARE the proto enum's value names, so the
+			// generated name table is the mapping. An unknown name yields UNSPECIFIED, which
+			// is the same thing every other mapper in the tree does with one.
+			Type:    postpilotv1.BlockType(postpilotv1.BlockType_value[string(block.Type)]),
+			Content: block.Content, Level: block.Level,
+			File:    block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+		})
+	}
+	return out
 }
 
 type generationRules struct{ service *voice.Service }

@@ -173,7 +173,11 @@ func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string,
 	if !frozenLanguage.Valid() {
 		return ErrLanguageRequired
 	}
-	return s.posts.SetGeneratedContent(ctx, userID, postSlug, content, frozenLanguage)
+	if err := s.posts.SetGeneratedContent(ctx, userID, postSlug, content, frozenLanguage); err != nil {
+		return err
+	}
+	s.recordVersionSample(ctx, userID, frozenVoiceID, content)
+	return nil
 }
 
 // SnapshotVoice reports the voice a frozen write snapshot was taken for, so the experiment

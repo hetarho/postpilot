@@ -59,7 +59,10 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		if !hasRequiredAnalysisShapeForLanguage(styleguide, active.SourceLanguage) {
 			return fmt.Errorf("문체 분석 결과에 종결어미 또는 never uses 섹션이 없어요. 다시 시도해 주세요")
 		}
-		stored, err := s.store.SetStyleguideIfCorpusVersion(ctx, found.UserID, found.VoiceID, styleguide, corpusVersion, s.now())
+		// The guard, and only the guard: it used to be a write of `styleguide` that happened
+		// to be conditional. False means a sample changed while the provider was working, so
+		// this analysis describes a corpus the voice has already moved past (change 16).
+		stored, err := s.store.ClaimCorpusVersion(ctx, found.UserID, found.VoiceID, corpusVersion, s.now())
 		if err != nil {
 			return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)
 		}
@@ -98,7 +101,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 			return nil
 		}
 		// A sample changed while the provider was running. Keep the same durable job and
-		// analyze the newest full snapshot instead of publishing a stale styleguide.
+		// analyze the newest full snapshot instead of publishing a stale analysis.
 		if err := ctx.Err(); err != nil {
 			return err
 		}

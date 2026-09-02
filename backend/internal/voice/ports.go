@@ -27,9 +27,13 @@ type Store interface {
 	CountUndecidedVoiceWork(ctx context.Context, voiceID string) (int, error)
 
 	GetProfile(ctx context.Context, userID, voiceID string) (Profile, error)
-	UpsertProfile(ctx context.Context, profile Profile) error
-	SetStyleguideIfCorpusVersion(ctx context.Context, userID, voiceID, styleguide string, version int64, now time.Time) (bool, error)
-	SetStyleguide(ctx context.Context, userID, voiceID, styleguide string, now time.Time) error
+	// ClaimCorpusVersion is the concurrency guard a finished analysis has to win before it may
+	// publish. False means a sample changed while the provider was working, so the analysis
+	// describes a corpus the voice has already moved past. It writes no text: change 16
+	// removed the styleguide column the guard used to piggyback on.
+	ClaimCorpusVersion(ctx context.Context, userID, voiceID string, version int64, now time.Time) (bool, error)
+	// SetRules is reachable only from AppendRule, which is the refine step's "save as rule"
+	// checkbox. There is no editor and no RPC for this value any more (change 16).
 	SetRules(ctx context.Context, userID, voiceID, rules string, now time.Time) error
 	InsertSample(ctx context.Context, sample Sample) error
 	ListSamples(ctx context.Context, userID, voiceID string) ([]Sample, error)
@@ -38,6 +42,12 @@ type Store interface {
 	CorpusSnapshot(ctx context.Context, userID, voiceID string) ([]Sample, int64, error)
 	DeleteSample(ctx context.Context, userID, voiceID, sampleID string, now time.Time) (bool, error)
 	CountSamples(ctx context.Context, userID, voiceID string) (int, error)
+
+	// The per-version generation snapshot (change 16). `content` is OPAQUE TEXT to this
+	// context: voice records what a profile version produced without learning the shape of a
+	// post's content. One row per (voice, version) — a later generation replaces it.
+	UpsertVersionSample(ctx context.Context, sample VersionSample) error
+	GetVersionSample(ctx context.Context, userID, voiceID string, version int64) (VersionSample, error)
 }
 
 // PersonalizationStore owns the versioned learning aggregates. Rows that hang off an owned

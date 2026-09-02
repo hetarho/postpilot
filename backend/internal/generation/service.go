@@ -3,6 +3,7 @@ package generation
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"unicode/utf8"
 
@@ -19,6 +20,7 @@ type Service struct {
 	experiments PendingExperiments
 	purposes    PurposeBriefs
 	guidelines  GuidelinesForPrompt
+	samples     VersionSampleWriter
 	batchSize   int
 	reasoning   ReasoningPolicy
 }
@@ -46,6 +48,25 @@ func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {
 // prompt simply carries no brief, so a partially wired process keeps the no-purpose
 // behavior rather than failing.
 func (s *Service) SetPurposeBriefs(briefs PurposeBriefs) { s.purposes = briefs }
+
+// SetVersionSamples wires the voice context's per-version snapshot recorder. Without it a
+// generation simply records nothing, which is the same outcome a failed recording has: the
+// post is the product and the snapshot is a record of it.
+func (s *Service) SetVersionSamples(writer VersionSampleWriter) { s.samples = writer }
+
+// recordVersionSample copies what a run produced into the voice's current head version. It is
+// called AFTER the machine baseline is written, and its failure is swallowed on purpose: a
+// snapshot is a record of a post, and losing the record must never lose the post ([I1] is about
+// history outliving its subject, not the other way round). The voice id is the one the run was
+// frozen against, so a reassignment mid-run cannot file the snapshot under the wrong profile.
+func (s *Service) recordVersionSample(ctx context.Context, userID, voiceID string, content PostContent) {
+	if s.samples == nil || voiceID == "" {
+		return
+	}
+	if err := s.samples.RecordVersionSample(ctx, userID, voiceID, content); err != nil {
+		slog.WarnContext(ctx, "record voice version sample failed", "error", err, "voice_id", voiceID)
+	}
+}
 
 // SetGuidelines wires the guideline context's published resolution. Without it the prompt
 // simply carries no 지침, so a partially wired process keeps the no-guideline behavior

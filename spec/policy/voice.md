@@ -33,9 +33,11 @@ language, bilingual analysis, portable projection, and language-safe learning ar
 - The same holds for a 작문 지침: writing guidelines are not voice data, never enter `ProfileForPrompt`, and leave the
   profile's bytes unchanged (see [guidelines](guidelines.md)). Register stays voice-owned — a guideline's precedence
   sentence says so explicitly — and `규칙으로 저장` remains the only revision path that writes voice state.
-- `styleguide` is machine-generated but user-editable. `rules` is user-owned; analysis never changes it.
-  `UpdateVoiceProfile` uses optional field presence and atomically updates only supplied columns, so a rules save
-  cannot write a stale styleguide over a completed analysis.
+- The profile is the **structured profile**, its earned rules and its sample excerpts. There is no user-editable
+  free-text styleguide: migration 0017 dropped the column (change 16). `rules` survives as the 규칙으로 저장 text
+  alone — no editor, no RPC, and analysis never changes it. A voice whose analysis existed ONLY as that free text and
+  had never published a structured version is rescued by 0017 itself, which publishes it as that voice's version 1
+  with the text as an `analyzed` lexical description.
 - A sample body is private server-side source material. RPCs return only id, label, Unicode character count, and
   creation time; they never return the body.
 
@@ -81,7 +83,7 @@ language, bilingual analysis, portable projection, and language-safe learning ar
   produces, and publishes it as profile version 1 with origin `seed`.
 - A description is an instruction, never evidence. It becomes no `voice_samples` row, no source count, no few-shot
   entry, no embedding, and no `corpus_version` bump, and `can_validate` is unchanged. The published version carries
-  the styleguide as an `analyzed` lexical description and leaves every measured quantity and axis unset; the prompt
+  the analysis as an `analyzed` lexical description and leaves every measured quantity and axis unset; the prompt
   projection renders an unset measurement as `unknown`, never as `0`.
 - A seed never overwrites real work. It publishes only while the profile is still empty and unversioned, and only
   while the corpus version it read still holds; a seed that resolves after a sample analysis or a finalization has
@@ -99,7 +101,7 @@ language, bilingual analysis, portable projection, and language-safe learning ar
 - Adding a sample stores it under its voice and enqueues `analyze_voice` frozen to that voice. If that **voice**
   already has an active analysis, the sample remains stored and the existing durable job id is returned; two voices
   of one account analyze independently. Deleting a sample re-enqueues while samples remain; deleting the last sample
-  leaves the existing styleguide untouched.
+  leaves the existing published profile untouched.
 - Sample insertion/deletion advances the voice's `corpus_version` in the same SQLite transaction. Analysis saves only
   when that version still matches; if the corpus changed during a provider call, the same job repeats against the
   newest full snapshot of that voice. Deleting the last sample during a call makes the job finish without publishing
@@ -112,36 +114,74 @@ language, bilingual analysis, portable projection, and language-safe learning ar
   deterministic ending distribution. English measures word length, register/contractions, connectives, passive and
   nominal tendencies, terminal cadence, structure, lexical habits, and the same six axes without projecting those
   values into Korean ending categories. Each corpus contains only evidence declared for that immutable source.
-- Successful analysis replaces that voice's `styleguide` wholesale and preserves `rules`. Provider failures flow
+- Successful analysis publishes a new structured profile version whose lexical description IS the analysis, and
+  preserves the 규칙으로 저장 text. The `corpus_version` guard it has to win first no longer writes any text — its
+  whole job is to say whether this analysis still describes the newest corpus (change 16). Provider failures flow
   through the job queue's normal user-facing error policy.
 
 ## Published behavior
 
 - `PromptProfileForTopic(userID, voiceID, retrievalText, tags, targetLanguage)` publishes one voice's language-aware
-  projection. Equal source/target languages contain the complete typed descriptors, legacy/manual guidance, ranked
-  active rules and up to `ExcerptCount` (3) excerpts; cross-language projection contains only the exact portable
+  projection. Equal source/target languages contain the complete typed descriptors — injected **once**, with no
+  legacy free-text guidance beside them (change 16) — ranked active rules, the 규칙으로 저장 lines, and up to
+  `ExcerptCount` (3) excerpts; cross-language projection contains only the exact portable
   structure/axes allowlist from [languages](languages.md). It never translates or leaks excluded fields, falls back
   to another voice, or consults another language's evidence.
-- Its `empty` value means there is neither a styleguide nor a sample nor a finalized source for that voice. Rules
-  alone do not make the learned voice profile non-empty.
-- `AppendRule(userID, voiceID, line)` trims one line, de-duplicates an exact existing line, appends with a newline,
-  and never changes the styleguide. Profile writes and rule appends are serialized in the single API process so
-  concurrent revision flows cannot lose a line.
+- Its `empty` value means there is neither a published profile version nor a sample nor a finalized source for that
+  voice. Rules alone do not make the learned voice profile non-empty. The free-text styleguide that used to count as
+  content no longer exists (change 16).
+- `AppendRule(userID, voiceID, line)` trims one line, de-duplicates an exact existing line, and appends with a
+  newline. It is the only writer of that text, and it has no editor and no RPC. Rule appends are serialized in the
+  single API process so concurrent revision flows cannot lose a line.
+- **Every profile version may carry one generation snapshot** — a copy of the raw AI output of the last post
+  generated under it — and `GetVoiceProfileVersionSample(voiceID, version)` returns it. Both the voice and the
+  account are named, so no cross-voice or cross-account read is expressible; a soft-deleted voice's snapshots stay
+  readable with the rest of its profile and are never reachable from another voice ([I4]). A version that never
+  produced a post answers with no sample, which is an ordinary state rather than a failure. A later generation under
+  the same head REPLACES the snapshot. Because it is a copy, deleting, regenerating, editing or reassigning the
+  source post leaves it unchanged.
+- **`UpdateVoiceProfile` no longer exists.** No RPC accepts or returns a free-text styleguide or rules string; the
+  profile is changed by an analysis, a seed, a manual override, an adopted version, or an earned rule.
 - `GetVoiceProfile.active_job_id` exposes the voice's queued/running analysis so clients can resume polling after
   navigation or reload.
 
 ## Analyze model experiments
 
+- **Applying a winner publishes a structured profile version**, origin `analysis`, whose lexical description is the
+  winning analysis and whose measured half is measured from the voice's current corpus exactly as an analysis run
+  measures it, with the account's manual overrides and earned rules carried onto it (change 16). It still requires
+  its confirmation. It publishes only while it is still the head: an analysis or a rule that published while the
+  operator was confirming is newer evidence, so a lost race is reported as a failure to apply rather than recorded
+  as a success.
 - An analyze experiment names one explicit active owned `voice_id`; the server never substitutes the default. The
   model lab freezes that voice's complete current corpus once and runs two explicit analyze refs through the same
   nine-section prompt and validator. Candidate completion changes neither profile nor rules.
-- A verdict reveals model identities. Applying the winner requires overwrite confirmation, replaces only that same
-  still-active voice's `styleguide`, preserves `rules`, and is value-idempotent; a voice deleted or a head moved since
-  the freeze refuses the application. Adopting the winner as the account's active analyze model is separate. Model
+- A verdict reveals model identities. Applying the winner requires overwrite confirmation, affects only that same
+  still-active voice, and preserves its 규칙으로 저장 text; a voice deleted or a head moved since the freeze refuses
+  the application. Adopting the winner as the account's active analyze model is separate. Model
   Elo and stage selections remain account-scoped.
 
 ## Frontend behavior
 
+- **버전 기록 is a list of OPENABLE rows.** A row names the version's number, origin and whether it was restored
+  from another; opening it shows that version's date and its **generation snapshot** — the title and body of the last
+  post it wrote — and carries `이 버전으로 변경`. The preview IS the confirmation, so there is no separate confirm
+  dialog: adopting still publishes a new head and destroys no history. A version that never produced a post says so
+  plainly and shows no empty preview. The current head is openable and offers no way to adopt itself, and a deleted
+  voice's versions are read-only. The preview shows the snapshot bounded by `VOICE_VERSION_PREVIEW_CHARS` with a way
+  to read the rest; a snapshot is read as text rather than re-rendered as an article, because it has no image rows
+  behind its file references.
+- **기존 글 가져오기's first field is 제목 (선택).** It is the imported piece's name, it is still optional, and a
+  blank one still takes the server's body-derived fallback. `SampleMinChars` is unchanged at 200.
+- **The 이전 수동 안내 section is gone**, with both of its editors. No voice screen offers a free-text styleguide or
+  rules field (change 16).
+- **문장 의견 is offered on 글 완성, and only for a post whose voice-learning run has completed** — the exact
+  condition the server enforces. It is not rendered on 글 다듬기, where a post is in `review` and the server refused
+  it every time. Its surface states its PURPOSE: this teaches the voice and does not change this post, with AI 수정
+  named as the way to change the post. The sentence is chosen from a vertical `radiogroup` of full-width rows that
+  wrap — the whole-sentence `Listbox` trigger was `whitespace-nowrap`, which gave the sheet a horizontal scroll —
+  keeping select-one semantics and one tab stop. The four reasons, the single retry-idempotent record and the
+  absence of any free-text field are unchanged.
 - 말투 is the directory `/voices`, and it is a LIST. Each active voice is ONE row and one target: a stretched link
   into that voice (no underline — the row is the link, and nothing interactive is nested inside the anchor), its
   `기본`/language badges, and, for a non-default voice, `기본으로 설정` and `삭제` on that same row, layered above the
@@ -179,10 +219,10 @@ language, bilingual analysis, portable projection, and language-safe learning ar
   the draft; a rejected save keeps edit mode and the draft, and its message does not survive into the next edit.
 - The learn action is disabled below 200 trimmed Unicode characters or without a usable analyze selection; an RPC
   rejection is rendered from stable `AppFailure` reason/params in the active locale, never raw transport prose. When
-  a non-empty styleguide exists, adding a sample
-  requires confirmation that re-analysis will overwrite the current styleguide.
+  the voice has already published a profile version, adding a sample requires confirmation that re-analysis will
+  replace the current analysis.
 - `active_job_id` resumes polling after navigation or reload. A successful job refreshes that voice's profile query
-  so the new styleguide appears automatically; deletion does the same and shows re-analysis progress while samples
+  so the new analysis appears automatically; deletion does the same and shows re-analysis progress while samples
   remain.
 - Every voice query cache is partitioned by `(account, voice)` — `voices`, `voice-profile`, `voice-versions`,
   `voice-confirmations`, `voice-validations` — so two voices of one account and two accounts on one device never
@@ -233,8 +273,8 @@ language, bilingual analysis, portable projection, and language-safe learning ar
   알 수 없음 — never as 0 — and an answered value outside `-3..3` still fails the job. Snapshots already storing
   explicit zeros are immutable and keep showing them until the next learn.
 - Typed whole-profile snapshots contain lexical, endings, syntax, structure, bounded axes, explicit unknown/source
-  values, rules, sources, and feedback. Manual overrides and restore publish new heads while old snapshots remain.
-  Legacy styleguide/rules remain byte-preserved manual guidance.
+  values, rules, sources, and feedback. Manual overrides and adopting an older version publish new heads while old
+  snapshots remain.
 - Imported-sample analysis includes the voice's finalized authored sources. Source writes advance `corpus_version`,
   and typed publication also compares the profile head, so stale output cannot overwrite a concurrent source,
   override, rule update, or restore.

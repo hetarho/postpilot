@@ -36,6 +36,9 @@ const VoiceDescriptionMaxChars = 500
 var (
 	ErrAnalyzeModelRequired = errors.New("an enabled analyze model is required")
 	ErrSampleNotFound       = errors.New("voice sample not found")
+	// ErrVersionSampleNotFound means this version never produced a post, which is an ordinary
+	// state for a version rather than a failure.
+	ErrVersionSampleNotFound = errors.New("voice version sample not found")
 	ErrSampleMutation       = errors.New("voice sample change could not schedule analysis")
 	ErrLearningNotFound     = errors.New("voice learning event not found")
 	ErrRuleNotFound         = errors.New("voice rule not found")
@@ -162,10 +165,12 @@ type Sample struct {
 }
 
 type Profile struct {
-	UserID      string
-	VoiceID     string
-	Voice       Voice
-	Styleguide  string
+	UserID  string
+	VoiceID string
+	Voice   Voice
+	// Rules is the refine step's "save as rule" text. It is no longer editable and no longer
+	// reaches any RPC (change 16); the only writer is AppendRule and the only reader is the
+	// prompt projection.
 	Rules       string
 	UpdatedAt   time.Time
 	Samples     []Sample
@@ -302,6 +307,25 @@ type ProfileVersion struct {
 	Origin              string
 	RestoredFromVersion int64
 	CreatedAt           time.Time
+	// HasSample says whether this version can be PREVIEWED, without the list carrying every
+	// post body the voice ever produced (change 16). The snapshot itself is fetched per
+	// version, on open.
+	HasSample bool
+}
+
+// VersionSample is a copy of the raw AI output of the last post generated under one profile
+// version — the material that lets a version be read before it is adopted (change 16).
+//
+// Content is OPAQUE TEXT here and everywhere inside this context. Voice records what a profile
+// version produced; it does not learn the shape of a post's content, so nothing in this package
+// parses this string (ARCHITECTURE section 2, the anti-corruption boundary). It is a COPY, not a
+// reference: deleting the source post, regenerating it, editing it by hand or reassigning it to
+// another voice leaves the snapshot alone.
+type VersionSample struct {
+	UserID, VoiceID string
+	Version         int64
+	Content         string
+	CreatedAt       time.Time
 }
 type ManualOverride struct {
 	UserID, VoiceID string

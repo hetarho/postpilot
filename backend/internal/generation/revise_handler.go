@@ -78,6 +78,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage); err != nil {
 		return fmt.Errorf("persist revised content: %w", err)
 	}
+	s.recordVersionSample(ctx, current.UserID, voiceID, filtered)
 	progress("write", 1, 1)
 	return nil
 }

@@ -17,12 +17,15 @@ func (s *Service) ProfileForPromptForTopic(ctx context.Context, userID, voiceID,
 	if err != nil {
 		return "", nil, "", false, err
 	}
-	rules := projection.ManualRules
-	if projection.ActiveRules != "" {
+	// Earned rules FIRST now: the free-text position ahead of them is gone with the section
+	// that owned it (change 16), and what remains of ManualRules is the refine step's
+	// "save as rule" text.
+	rules := projection.ActiveRules
+	if projection.ManualRules != "" {
 		if rules != "" {
 			rules += "\n"
 		}
-		rules += projection.ActiveRules
+		rules += projection.ManualRules
 	}
 	return projection.Styleguide, projection.Excerpts, rules, projection.Empty, nil
 }
@@ -123,18 +126,13 @@ func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID str
 			active = append(active, rule.Statement)
 		}
 	}
+	// ONE representation, injected ONCE. The analysis text reaches the model through the
+	// structured profile's lexical description and nowhere else; the `[Legacy manual guidance]`
+	// append that repeated the very same text under its own header is gone (change 16).
 	style := renderStructuredProfileForLanguage(profile.Structured, voice.SourceLanguage)
-	if profile.Styleguide != "" {
-		if !s.personalizationReady {
-			style = profile.Styleguide
-		} else {
-			if style != "" {
-				style += "\n\n"
-			}
-			style += "[Legacy manual guidance]\n" + profile.Styleguide
-		}
-	}
-	empty := profile.Styleguide == "" && len(samples) == 0 && len(sources) == 0 && profile.Structured.Version == 0
+	// An empty voice is now exactly "nothing to learn from and nothing published": no samples,
+	// no authored sources, no structured version.
+	empty := len(samples) == 0 && len(sources) == 0 && profile.Structured.Version == 0
 	return PromptProfile{Styleguide: style, ActiveRules: strings.Join(active, "\n"), ManualRules: strings.TrimSpace(profile.Rules), Excerpts: excerpts, Empty: empty, SourceLanguage: voice.SourceLanguage, TargetLanguage: target}, nil
 }
 

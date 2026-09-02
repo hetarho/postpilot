@@ -66,11 +66,13 @@ export function LearnVoiceForm({
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (disabled || !selected) return
-    // Re-analysis rewrites a styleguide the user may have edited by hand, so it is confirmed —
+    // Re-analysis replaces an analysis the voice already published, so it is confirmed —
     // through the sheet, never `window.confirm`: a mobile browser offers to suppress that dialog
     // after a repeat, and from then on it returns false and 학습 is a silent no-op (§7). The sheet
     // also renders inside the page, so the keyboard does not slam shut and reflow the viewport.
-    if (profile.styleguide.trim() !== '') {
+    // The gate is the PUBLISHED VERSION now: the free-text styleguide it used to read is gone
+    // (change 16), and a voice with a version is exactly a voice with an analysis to replace.
+    if (profile.structured.version > 0n) {
       setConfirmOverwrite(true)
       return
     }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -129,27 +130,46 @@ func (h *Handler) GetVoiceProfile(ctx context.Context, req *connect.Request[post
 	return connect.NewResponse(&postpilotv1.GetVoiceProfileResponse{Profile: toProtoProfile(profile)}), nil
 }
 
-func (h *Handler) UpdateVoiceProfile(ctx context.Context, req *connect.Request[postpilotv1.UpdateVoiceProfileRequest]) (*connect.Response[postpilotv1.UpdateVoiceProfileResponse], error) {
+// GetVoiceProfileVersionSample returns one version's generation snapshot -- the raw AI output
+// of the last post that version produced -- so the version can be READ before it is adopted.
+//
+// Both the voice and the acting account are named on the way down, so no cross-voice or
+// cross-account read is expressible ([I4]). A version that never produced a post answers with
+// an unset `sample` rather than an error: having produced nothing is an ordinary state for a
+// version.
+//
+// This handler is where the snapshot stops being opaque text. The voice context stores and
+// returns it verbatim without ever parsing it; the anti-corruption mapping into the post
+// content the client already decodes happens here, at the transport edge.
+func (h *Handler) GetVoiceProfileVersionSample(ctx context.Context, req *connect.Request[postpilotv1.GetVoiceProfileVersionSampleRequest]) (*connect.Response[postpilotv1.GetVoiceProfileVersionSampleResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	voiceID := req.Msg.GetVoiceId()
-	var profile voice.Profile
-	switch {
-	case req.Msg.Styleguide != nil && req.Msg.Rules != nil:
-		profile, err = h.service.Update(ctx, userID, voiceID, req.Msg.GetStyleguide(), req.Msg.GetRules())
-	case req.Msg.Styleguide != nil:
-		profile, err = h.service.UpdateStyleguide(ctx, userID, voiceID, req.Msg.GetStyleguide())
-	case req.Msg.Rules != nil:
-		profile, err = h.service.UpdateRules(ctx, userID, voiceID, req.Msg.GetRules())
-	default:
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "at least one profile field is required", "VOICE_PROFILE_FIELD_REQUIRED", nil)
+	sample, err := h.service.VersionSample(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetVersion())
+	if errors.Is(err, voice.ErrVersionSampleNotFound) {
+		return connect.NewResponse(&postpilotv1.GetVoiceProfileVersionSampleResponse{}), nil
 	}
 	if err != nil {
-		return nil, toConnectError("update voice profile", err)
+		return nil, toConnectError("get voice profile version sample", err)
 	}
-	return connect.NewResponse(&postpilotv1.UpdateVoiceProfileResponse{Profile: toProtoProfile(profile)}), nil
+	content := &postpilotv1.PostContent{}
+	if unmarshalErr := protojson.Unmarshal([]byte(sample.Content), content); unmarshalErr != nil {
+		// A snapshot that cannot be decoded is a record we can no longer read, not a reason to
+		// fail opening the version — so the client is told "no preview", the same as for a
+		// version that never produced a post. It is LOGGED, because the list said this version
+		// had a sample: an operator has to be able to tell an absent snapshot from a corrupt one.
+		slog.WarnContext(ctx, "voice version sample could not be decoded",
+			"error", unmarshalErr, "voice_id", req.Msg.GetVoiceId(), "version", req.Msg.GetVersion())
+		return connect.NewResponse(&postpilotv1.GetVoiceProfileVersionSampleResponse{}), nil
+	}
+	created := ""
+	if !sample.CreatedAt.IsZero() {
+		created = sample.CreatedAt.UTC().Format(timeLayout)
+	}
+	return connect.NewResponse(&postpilotv1.GetVoiceProfileVersionSampleResponse{
+		Sample: content, CreatedAt: created,
+	}), nil
 }
 
 func (h *Handler) AddVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.AddVoiceSampleRequest]) (*connect.Response[postpilotv1.AddVoiceSampleResponse], error) {
@@ -371,22 +391,11 @@ func toProtoProfile(profile voice.Profile) *postpilotv1.VoiceProfile {
 		updated = profile.UpdatedAt.UTC().Format(timeLayout)
 	}
 	return &postpilotv1.VoiceProfile{
-		Voice:      toProtoVoice(profile.Voice),
-		Styleguide: profile.Styleguide, Rules: profile.Rules, UpdatedAt: updated,
-		Samples: samples, ActiveJobId: profile.ActiveJobID,
-		Structured: toProtoStructured(profile.Structured), LegacyManualGuidance: legacyGuidance(profile),
+		Voice:   toProtoVoice(profile.Voice),
+		Samples: samples, UpdatedAt: updated, ActiveJobId: profile.ActiveJobID,
+		Structured:           toProtoStructured(profile.Structured),
 		FinalizedSourceCount: int32(profile.SourceCount), CanValidate: profile.CanValidate,
 	}
-}
-
-func legacyGuidance(profile voice.Profile) string {
-	if profile.Styleguide == "" {
-		return profile.Rules
-	}
-	if profile.Rules == "" {
-		return profile.Styleguide
-	}
-	return profile.Styleguide + "\n" + profile.Rules
 }
 
 func toProtoStructured(p voice.StructuredProfile) *postpilotv1.StructuredVoiceProfile {
@@ -495,7 +504,7 @@ func toProtoRule(v voice.ContrastRule) *postpilotv1.VoiceContrastRule {
 	return &postpilotv1.VoiceContrastRule{Id: v.ID, Statement: v.Statement, Layer: toProtoLayer(v.Layer), EvidenceCount: int32(v.EvidenceCount), Status: status, Origin: v.Origin, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), LastEvidenceAt: v.LastEvidenceAt.UTC().Format(timeLayout)}
 }
 func toProtoVersion(v voice.ProfileVersion) *postpilotv1.VoiceProfileVersion {
-	return &postpilotv1.VoiceProfileVersion{Version: v.Version, Profile: toProtoStructured(v.Profile), Origin: v.Origin, RestoredFromVersion: v.RestoredFromVersion, CreatedAt: v.CreatedAt.UTC().Format(timeLayout)}
+	return &postpilotv1.VoiceProfileVersion{Version: v.Version, Profile: toProtoStructured(v.Profile), Origin: v.Origin, RestoredFromVersion: v.RestoredFromVersion, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), HasSample: v.HasSample}
 }
 
 const timeLayout = "2006-01-02T15:04:05.000000000Z07:00"

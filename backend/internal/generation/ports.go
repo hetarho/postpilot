@@ -30,6 +30,20 @@ type RuleWriter interface {
 	AppendRule(ctx context.Context, userID, voiceID, line string) error
 }
 
+// VersionSampleWriter records what a voice profile version PRODUCED, so a version can be read
+// before it is adopted (change 16).
+//
+// It is declared here, and called from here, because of the direction of the dependency: the
+// machine baseline belongs to the post context and the profile version belongs to the voice
+// context, and neither may know about the other. Generation already depends on both, so it is
+// the only context allowed to join them.
+//
+// The content crosses as opaque text: the voice context records a copy of what it produced
+// without learning the shape of a post's content.
+type VersionSampleWriter interface {
+	RecordVersionSample(ctx context.Context, userID, voiceID string, content PostContent) error
+}
+
 type LLM interface {
 	Resolve(ref llm.ModelRef) (llm.ModelInfo, bool)
 	Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error)

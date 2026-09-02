@@ -4,6 +4,10 @@ package postpilot.v1;
 
 import "postpilot/v1/provider.proto";
 import "postpilot/v1/language.proto";
+// A version's generation snapshot IS a post content -- the raw AI output of the post that
+// version produced -- so it is typed as the message the client already decodes rather than as
+// a second, voice-flavoured copy of the same shape.
+import "postpilot/v1/post.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
@@ -19,10 +23,14 @@ service VoiceService {
   rpc RestoreVoice(RestoreVoiceRequest) returns (RestoreVoiceResponse) {}
 
   rpc GetVoiceProfile(GetVoiceProfileRequest) returns (GetVoiceProfileResponse) {}
-  rpc UpdateVoiceProfile(UpdateVoiceProfileRequest) returns (UpdateVoiceProfileResponse) {}
   rpc AddVoiceSample(AddVoiceSampleRequest) returns (AddVoiceSampleResponse) {}
   rpc DeleteVoiceSample(DeleteVoiceSampleRequest) returns (DeleteVoiceSampleResponse) {}
   rpc ListVoiceProfileVersions(ListVoiceProfileVersionsRequest) returns (ListVoiceProfileVersionsResponse) {}
+  // One version's generation snapshot, fetched when that version is OPENED. It is not part of
+  // the list: a list carrying every post body a voice ever produced would grow without bound
+  // for a reading nobody asked for. `has_sample` on the row says whether this call is worth
+  // making.
+  rpc GetVoiceProfileVersionSample(GetVoiceProfileVersionSampleRequest) returns (GetVoiceProfileVersionSampleResponse) {}
   rpc UpdateVoiceOverride(UpdateVoiceOverrideRequest) returns (UpdateVoiceOverrideResponse) {}
   rpc RestoreVoiceProfile(RestoreVoiceProfileRequest) returns (RestoreVoiceProfileResponse) {}
 }
@@ -124,13 +132,14 @@ message VoiceProfile {
   // The owning voice travels with the profile so a cache entry and a deleted-state screen
   // can never become detached from the voice they describe.
   Voice voice = 10;
-  string styleguide = 1;
-  string rules = 2;
+  // 1, 2 and 7 were the free-text styleguide, the free-text rules, and the two of them joined
+  // for display. Change 16 removed that whole path: the profile is the structured profile, its
+  // earned rules and its sample excerpts, injected once. Reserved, never reused.
+  reserved 1, 2, 7;
   string updated_at = 3;
   repeated VoiceSample samples = 4;
   string active_job_id = 5;
   StructuredVoiceProfile structured = 6;
-  string legacy_manual_guidance = 7;
   int32 finalized_source_count = 8;
   bool can_validate = 9;
 }
@@ -138,6 +147,9 @@ message VoiceProfile {
 message VoiceProfileVersion {
   int64 version = 1; StructuredVoiceProfile profile = 2; string origin = 3;
   int64 restored_from_version = 4; string created_at = 5;
+  // Whether this version carries a generation snapshot that can be previewed. Presence only --
+  // the snapshot is fetched per version through GetVoiceProfileVersionSample.
+  bool has_sample = 6;
 }
 
 message VoiceSample {
@@ -186,15 +198,6 @@ message RestoreVoiceResponse { Voice voice = 1; }
 message GetVoiceProfileRequest { string voice_id = 1; }
 message GetVoiceProfileResponse { VoiceProfile profile = 1; }
 
-message UpdateVoiceProfileRequest {
-  string voice_id = 3;
-  // Presence is significant: each editor patches only the field it owns so a rules
-  // save cannot write an analysis result back to an older styleguide (or vice versa).
-  optional string styleguide = 1;
-  optional string rules = 2;
-}
-message UpdateVoiceProfileResponse { VoiceProfile profile = 1; }
-
 message AddVoiceSampleRequest {
   string voice_id = 4;
   string label = 1;
@@ -213,6 +216,14 @@ message DeleteVoiceSampleResponse { string job_id = 1; }
 
 message ListVoiceProfileVersionsRequest { string voice_id = 1; }
 message ListVoiceProfileVersionsResponse { repeated VoiceProfileVersion versions = 1; }
+
+message GetVoiceProfileVersionSampleRequest { string voice_id = 1; int64 version = 2; }
+// `sample` is unset for a version that never produced a post, which is an ordinary state for a
+// version rather than a failure: the client says so instead of showing an empty preview.
+message GetVoiceProfileVersionSampleResponse {
+  PostContent sample = 1;
+  string created_at = 2;
+}
 message UpdateVoiceOverrideRequest { string voice_id = 4; VoiceLayer layer = 1; string field = 2; optional string value = 3; }
 message UpdateVoiceOverrideResponse { VoiceProfile profile = 1; }
 message RestoreVoiceProfileRequest { string voice_id = 2; int64 version = 1; }

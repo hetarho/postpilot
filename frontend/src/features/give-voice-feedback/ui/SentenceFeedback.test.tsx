@@ -45,11 +45,9 @@ describe('SentenceFeedback', () => {
   it('keeps an explicitly chosen sentence while the text still contains it', async () => {
     const { sentenceFeedback, view } = renderFeedback(`${FIRST} ${SECOND}`)
     await userEvent.click(screen.getByRole('button', { name: '문장 의견' }))
-    await chooseOption(
-      userEvent.setup(),
-      await screen.findByRole('combobox', { name: /문장/ }),
-      SECOND,
-    )
+    // The sentence is chosen from a vertical list of full-width rows, not a `Listbox`: with a
+    // whole sentence as a trigger label the sheet gained a horizontal scroll (change 16).
+    await userEvent.click(await screen.findByRole('radio', { name: SECOND, checked: false }))
 
     // A later edit appends a sentence but leaves the chosen one in place.
     view.rerender(

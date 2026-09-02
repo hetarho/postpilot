@@ -11,8 +11,8 @@ import (
 )
 
 const bumpCorpusVersion = `-- name: BumpCorpusVersion :exec
-INSERT INTO voice_profiles (voice_id, user_id, styleguide, rules, corpus_version, updated_at)
-VALUES (?, ?, '', '', 1, ?)
+INSERT INTO voice_profiles (voice_id, user_id, rules, corpus_version, updated_at)
+VALUES (?, ?, '', 1, ?)
 ON CONFLICT(voice_id) DO UPDATE SET
     corpus_version = voice_profiles.corpus_version + 1,
     updated_at = excluded.updated_at
@@ -27,6 +27,36 @@ type BumpCorpusVersionParams struct {
 func (q *Queries) BumpCorpusVersion(ctx context.Context, arg BumpCorpusVersionParams) error {
 	_, err := q.db.ExecContext(ctx, bumpCorpusVersion, arg.VoiceID, arg.UserID, arg.UpdatedAt)
 	return err
+}
+
+const claimCorpusVersion = `-- name: ClaimCorpusVersion :execrows
+UPDATE voice_profiles
+SET updated_at = ?
+WHERE voice_id = ? AND user_id = ? AND corpus_version = ?
+`
+
+type ClaimCorpusVersionParams struct {
+	UpdatedAt     string
+	VoiceID       string
+	UserID        string
+	CorpusVersion int64
+}
+
+// The concurrency guard, and nothing else. It used to write the analysis text into a
+// `styleguide` column; that column is gone (change 16) and the analysis text now reaches the
+// profile only through the structured version this claim gates. Zero rows means the corpus
+// moved while the provider was working, so the finished analysis is stale and must not publish.
+func (q *Queries) ClaimCorpusVersion(ctx context.Context, arg ClaimCorpusVersionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, claimCorpusVersion,
+		arg.UpdatedAt,
+		arg.VoiceID,
+		arg.UserID,
+		arg.CorpusVersion,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const clearDefaultVoice = `-- name: ClearDefaultVoice :exec
@@ -458,7 +488,7 @@ func (q *Queries) GetLearningEventByInput(ctx context.Context, arg GetLearningEv
 }
 
 const getProfile = `-- name: GetProfile :one
-SELECT voice_id, user_id, styleguide, rules, current_version, corpus_version, updated_at
+SELECT voice_id, user_id, rules, current_version, corpus_version, updated_at
 FROM voice_profiles
 WHERE voice_id = ? AND user_id = ?
 `
@@ -471,7 +501,6 @@ type GetProfileParams struct {
 type GetProfileRow struct {
 	VoiceID        string
 	UserID         string
-	Styleguide     string
 	Rules          string
 	CurrentVersion int64
 	CorpusVersion  int64
@@ -484,7 +513,6 @@ func (q *Queries) GetProfile(ctx context.Context, arg GetProfileParams) (GetProf
 	err := row.Scan(
 		&i.VoiceID,
 		&i.UserID,
-		&i.Styleguide,
 		&i.Rules,
 		&i.CurrentVersion,
 		&i.CorpusVersion,
@@ -640,6 +668,31 @@ func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (G
 	return i, err
 }
 
+const getVersionSample = `-- name: GetVersionSample :one
+SELECT voice_id, user_id, version, content, created_at
+FROM voice_version_samples
+WHERE voice_id = ? AND user_id = ? AND version = ?
+`
+
+type GetVersionSampleParams struct {
+	VoiceID string
+	UserID  string
+	Version int64
+}
+
+func (q *Queries) GetVersionSample(ctx context.Context, arg GetVersionSampleParams) (VoiceVersionSample, error) {
+	row := q.db.QueryRowContext(ctx, getVersionSample, arg.VoiceID, arg.UserID, arg.Version)
+	var i VoiceVersionSample
+	err := row.Scan(
+		&i.VoiceID,
+		&i.UserID,
+		&i.Version,
+		&i.Content,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getVoice = `-- name: GetVoice :one
 SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at, source_language FROM voices WHERE id = ? AND user_id = ?
 `
@@ -736,6 +789,25 @@ func (q *Queries) InsertContrastRule(ctx context.Context, arg InsertContrastRule
 		arg.CreatedAt,
 		arg.LastEvidenceAt,
 	)
+	return err
+}
+
+const insertEmptyProfile = `-- name: InsertEmptyProfile :exec
+INSERT INTO voice_profiles (voice_id, user_id, updated_at)
+VALUES (?, ?, ?)
+ON CONFLICT(voice_id) DO UPDATE SET updated_at = excluded.updated_at
+`
+
+type InsertEmptyProfileParams struct {
+	VoiceID   string
+	UserID    string
+	UpdatedAt string
+}
+
+// Written with the directory row so a read never has to create a profile. It is the ONLY
+// insert path for this table now that both free-text editors are gone.
+func (q *Queries) InsertEmptyProfile(ctx context.Context, arg InsertEmptyProfileParams) error {
+	_, err := q.db.ExecContext(ctx, insertEmptyProfile, arg.VoiceID, arg.UserID, arg.UpdatedAt)
 	return err
 }
 
@@ -1335,7 +1407,12 @@ func (q *Queries) ListProfileValidations(ctx context.Context, arg ListProfileVal
 }
 
 const listProfileVersions = `-- name: ListProfileVersions :many
-SELECT id, user_id, voice_id, version, snapshot, origin, restored_from_version, created_at FROM voice_profile_versions WHERE voice_id=? AND user_id=? ORDER BY version DESC
+SELECT v.id, v.user_id, v.voice_id, v.version, v.snapshot, v.origin, v.restored_from_version, v.created_at,
+       s.version AS sample_version
+FROM voice_profile_versions v
+LEFT JOIN voice_version_samples s
+       ON s.voice_id = v.voice_id AND s.user_id = v.user_id AND s.version = v.version
+WHERE v.voice_id=? AND v.user_id=? ORDER BY v.version DESC
 `
 
 type ListProfileVersionsParams struct {
@@ -1343,15 +1420,29 @@ type ListProfileVersionsParams struct {
 	UserID  string
 }
 
-func (q *Queries) ListProfileVersions(ctx context.Context, arg ListProfileVersionsParams) ([]VoiceProfileVersion, error) {
+type ListProfileVersionsRow struct {
+	ID                  string
+	UserID              string
+	VoiceID             string
+	Version             int64
+	Snapshot            string
+	Origin              string
+	RestoredFromVersion sql.NullInt64
+	CreatedAt           string
+	SampleVersion       sql.NullInt64
+}
+
+// `has_sample` rather than the snapshot itself: the list must be able to say whether a version
+// can be previewed without carrying every post body it ever produced (change 16).
+func (q *Queries) ListProfileVersions(ctx context.Context, arg ListProfileVersionsParams) ([]ListProfileVersionsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listProfileVersions, arg.VoiceID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []VoiceProfileVersion
+	var items []ListProfileVersionsRow
 	for rows.Next() {
-		var i VoiceProfileVersion
+		var i ListProfileVersionsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -1361,6 +1452,7 @@ func (q *Queries) ListProfileVersions(ctx context.Context, arg ListProfileVersio
 			&i.Origin,
 			&i.RestoredFromVersion,
 			&i.CreatedAt,
+			&i.SampleVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -1805,8 +1897,8 @@ func (q *Queries) SetLearningEventStatus(ctx context.Context, arg SetLearningEve
 }
 
 const setProfileHead = `-- name: SetProfileHead :exec
-INSERT INTO voice_profiles(voice_id, user_id, styleguide, rules, corpus_version, current_version, updated_at)
-VALUES (?, ?, '', '', 0, ?, ?)
+INSERT INTO voice_profiles(voice_id, user_id, rules, corpus_version, current_version, updated_at)
+VALUES (?, ?, '', 0, ?, ?)
 ON CONFLICT(voice_id) DO UPDATE SET current_version=excluded.current_version, updated_at=excluded.updated_at
 `
 
@@ -1858,8 +1950,8 @@ func (q *Queries) SetRuleComparisonJob(ctx context.Context, arg SetRuleCompariso
 }
 
 const setRules = `-- name: SetRules :exec
-INSERT INTO voice_profiles (voice_id, user_id, styleguide, rules, updated_at)
-VALUES (?, ?, '', ?, ?)
+INSERT INTO voice_profiles (voice_id, user_id, rules, updated_at)
+VALUES (?, ?, ?, ?)
 ON CONFLICT(voice_id) DO UPDATE SET
     rules = excluded.rules,
     updated_at = excluded.updated_at
@@ -1872,6 +1964,10 @@ type SetRulesParams struct {
 	UpdatedAt string
 }
 
+// Reachable only from the "save as rule" checkbox on the refine step
+// (voice.Service.AppendRule). There is no editor and no RPC for this column any more.
+// NOTE: keep this file ASCII. sqlc's SELECT * rewriting uses byte offsets where it means
+// rune offsets, so one multibyte character here corrupts every later expansion.
 func (q *Queries) SetRules(ctx context.Context, arg SetRulesParams) error {
 	_, err := q.db.ExecContext(ctx, setRules,
 		arg.VoiceID,
@@ -1880,59 +1976,6 @@ func (q *Queries) SetRules(ctx context.Context, arg SetRulesParams) error {
 		arg.UpdatedAt,
 	)
 	return err
-}
-
-const setStyleguide = `-- name: SetStyleguide :exec
-INSERT INTO voice_profiles (voice_id, user_id, styleguide, rules, updated_at)
-VALUES (?, ?, ?, '', ?)
-ON CONFLICT(voice_id) DO UPDATE SET
-    styleguide = excluded.styleguide,
-    updated_at = excluded.updated_at
-`
-
-type SetStyleguideParams struct {
-	VoiceID    string
-	UserID     string
-	Styleguide string
-	UpdatedAt  string
-}
-
-func (q *Queries) SetStyleguide(ctx context.Context, arg SetStyleguideParams) error {
-	_, err := q.db.ExecContext(ctx, setStyleguide,
-		arg.VoiceID,
-		arg.UserID,
-		arg.Styleguide,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
-const setStyleguideIfCorpusVersion = `-- name: SetStyleguideIfCorpusVersion :execrows
-UPDATE voice_profiles
-SET styleguide = ?, updated_at = ?
-WHERE voice_id = ? AND user_id = ? AND corpus_version = ?
-`
-
-type SetStyleguideIfCorpusVersionParams struct {
-	Styleguide    string
-	UpdatedAt     string
-	VoiceID       string
-	UserID        string
-	CorpusVersion int64
-}
-
-func (q *Queries) SetStyleguideIfCorpusVersion(ctx context.Context, arg SetStyleguideIfCorpusVersionParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, setStyleguideIfCorpusVersion,
-		arg.Styleguide,
-		arg.UpdatedAt,
-		arg.VoiceID,
-		arg.UserID,
-		arg.CorpusVersion,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
 }
 
 const softDeleteVoice = `-- name: SoftDeleteVoice :execrows
@@ -2117,30 +2160,30 @@ func (q *Queries) UpsertManualOverride(ctx context.Context, arg UpsertManualOver
 	return err
 }
 
-const upsertProfile = `-- name: UpsertProfile :exec
-INSERT INTO voice_profiles (voice_id, user_id, styleguide, rules, updated_at)
+const upsertVersionSample = `-- name: UpsertVersionSample :exec
+INSERT INTO voice_version_samples (voice_id, user_id, version, content, created_at)
 VALUES (?, ?, ?, ?, ?)
-ON CONFLICT(voice_id) DO UPDATE SET
-    styleguide = excluded.styleguide,
-    rules = excluded.rules,
-    updated_at = excluded.updated_at
+ON CONFLICT(voice_id, version) DO UPDATE SET
+    content = excluded.content,
+    created_at = excluded.created_at
 `
 
-type UpsertProfileParams struct {
-	VoiceID    string
-	UserID     string
-	Styleguide string
-	Rules      string
-	UpdatedAt  string
+type UpsertVersionSampleParams struct {
+	VoiceID   string
+	UserID    string
+	Version   int64
+	Content   string
+	CreatedAt string
 }
 
-func (q *Queries) UpsertProfile(ctx context.Context, arg UpsertProfileParams) error {
-	_, err := q.db.ExecContext(ctx, upsertProfile,
+// One snapshot per version: a later generation under the same head REPLACES it.
+func (q *Queries) UpsertVersionSample(ctx context.Context, arg UpsertVersionSampleParams) error {
+	_, err := q.db.ExecContext(ctx, upsertVersionSample,
 		arg.VoiceID,
 		arg.UserID,
-		arg.Styleguide,
-		arg.Rules,
-		arg.UpdatedAt,
+		arg.Version,
+		arg.Content,
+		arg.CreatedAt,
 	)
 	return err
 }

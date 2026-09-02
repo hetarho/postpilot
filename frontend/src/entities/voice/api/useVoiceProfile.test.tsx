@@ -13,18 +13,18 @@ describe('useVoiceProfile', () => {
     const transport = createFakeAuthTransport({
       calls,
       user: { id: 'bob' },
-      voice: { styleguide: 'bob style' },
+      voice: { activeJobId: 'bob-job' },
     })
     const queryClient = createTestQueryClient()
     const seeded = [
-      [voiceProfileQueryKey(transport, 'alice', DEFAULT_FAKE_VOICE.id), 'alice style'],
-      [voiceProfileQueryKey(transport, 'bob', 'voice-review'), 'bob review style'],
+      [voiceProfileQueryKey(transport, 'alice', DEFAULT_FAKE_VOICE.id), 'alice-job'],
+      [voiceProfileQueryKey(transport, 'bob', 'voice-review'), 'bob-review-job'],
     ] as const
-    for (const [key, styleguide] of seeded) {
+    for (const [key, activeJobId] of seeded) {
       queryClient.setQueryData(
         key,
         create(GetVoiceProfileResponseSchema, {
-          profile: create(VoiceProfileSchema, { styleguide }),
+          profile: create(VoiceProfileSchema, { activeJobId }),
         }),
       )
     }
@@ -33,12 +33,12 @@ describe('useVoiceProfile', () => {
       wrapper: withProviders(transport, queryClient),
     })
 
-    await waitFor(() => expect(result.current.profile?.styleguide).toBe('bob style'))
+    await waitFor(() => expect(result.current.profile?.activeJobId).toBe('bob-job'))
     expect(result.current.profile?.voice.id).toBe(DEFAULT_FAKE_VOICE.id)
     expect(calls).toContain('GetVoiceProfile')
     // Neither the other account's entry nor the same account's other voice was touched.
-    for (const [key, styleguide] of seeded) {
-      expect(queryClient.getQueryData(key)).toMatchObject({ profile: { styleguide } })
+    for (const [key, activeJobId] of seeded) {
+      expect(queryClient.getQueryData(key)).toMatchObject({ profile: { activeJobId } })
     }
   })
 })

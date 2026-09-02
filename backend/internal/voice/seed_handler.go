@@ -46,7 +46,7 @@ func (s *Service) Seed(ctx context.Context, found SeedJob, progress Progress) er
 	// A seed is a starting point, never a correction. If real evidence has already published
 	// while this job waited, the run is finished — succeeding, so the user sees a completed
 	// job rather than a failure they cannot act on.
-	if head.Structured.Version > 0 || strings.TrimSpace(head.Styleguide) != "" {
+	if head.Structured.Version > 0 {
 		progress("seed", 1, 1)
 		return nil
 	}
@@ -68,7 +68,7 @@ func (s *Service) Seed(ctx context.Context, found SeedJob, progress Progress) er
 	}
 	// The same optimistic guard the analysis uses: a sample added while the provider ran bumps
 	// the corpus version, and its own analysis is the authority from then on.
-	stored, err := s.store.SetStyleguideIfCorpusVersion(ctx, found.UserID, found.VoiceID, styleguide, corpusVersion, s.now())
+	stored, err := s.store.ClaimCorpusVersion(ctx, found.UserID, found.VoiceID, corpusVersion, s.now())
 	if err != nil {
 		return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)
 	}
@@ -90,7 +90,7 @@ func (s *Service) Seed(ctx context.Context, found SeedJob, progress Progress) er
 	if _, published, err := s.personalization.PublishProfileVersionIfHead(ctx, found.UserID, found.VoiceID, seeded, "seed", 0, s.now()); err != nil {
 		return fmt.Errorf("publish seeded voice profile: %w", err)
 	} else if !published {
-		// Real evidence won the race between the styleguide write and this publish. Unlike
+		// Real evidence won the race between the corpus claim and this publish. Unlike
 		// Analyze there is nothing to recompute, so the seed simply stands down.
 		progress("seed", 1, 1)
 		return nil

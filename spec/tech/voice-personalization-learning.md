@@ -147,7 +147,10 @@ rule.
 
 Generation and revision receive, in order:
 
-1. typed structured descriptors and legacy manual guidance;
+1. the typed structured descriptors — **once**. The free-text `styleguide` column and the
+   `[Legacy manual guidance]` append that repeated the same analysis text under its own header are
+   gone (change 16). The analysis reaches the model only as the structured profile's lexical
+   description, which is where the analyze handler has written it since change 02;
 2. evidence-ranked active rules, bans, and ending constraints;
 3. up to three unique authored/import excerpts, with topic/tag matches first and stable recent fallback so one
    finalized source is still useful for an unrelated next topic;
@@ -155,6 +158,38 @@ Generation and revision receive, in order:
 
 The prompt tells the model not to copy source phrases or facts, follows the measured ending distribution, and
 forbids a third consecutive identical ending. Candidate/retired rules are excluded. Zero excerpts is valid.
+
+The one remaining free-text position is `[사용자 규칙]`, after the excerpts, and its only writer is
+`AppendRule` — the refine step's 규칙으로 저장. It has no editor and reaches no RPC. Change 16
+removed the free-text 추가 규칙 SURFACE and the column's second position ahead of the earned rules;
+retiring the 규칙으로 저장 path itself is an open product decision (job 43's build notes).
+
+### The per-version generation snapshot (change 16)
+
+Every published profile version may carry **at most one** generation snapshot: a copy of the raw AI
+output of the last post generated under it, so a version can be READ before it is adopted.
+
+- It is written by `generation` — the only context that depends on both `post` and `voice` — right
+  after each machine-baseline write, through the consumer-declared `VersionSampleWriter` port. A
+  failure to record never fails the generation: the post is the product and the snapshot is a
+  record of it.
+- The version is the head **at completion**, which is what change 16 asks for. A profile published
+  during the provider call moves the head, and that run's output is then filed under the newer
+  version; the window is one provider call, and closing it would mean freezing the profile version
+  into the generation payload.
+- The content crosses the boundary as **opaque text**: `internal/voice` stores and returns it
+  without ever parsing it, so the voice domain never learns the shape of a post's content. The wire
+  format is `PostContent`'s own protojson — one schema, defined in the proto — encoded in the
+  composition root and decoded at the voice RPC edge.
+- `(voice_id, version)` is the primary key, so a later generation REPLACES the snapshot rather than
+  accumulating a second. It is a copy, so deleting, regenerating, editing or reassigning the source
+  post leaves it alone.
+- It joins the per-voice partition ([multi-voice-partitioning](multi-voice-partitioning.md)): the
+  `(voice_id, user_id)` foreign key makes no cross-voice or cross-account read expressible, and a
+  soft-deleted voice's snapshots go with the voice ([I4]).
+- The version LIST carries presence only (`has_sample`). The snapshot itself is fetched per version
+  through `GetVoiceProfileVersionSample`, on open, so a list never carries every body a voice ever
+  produced.
 
 ## On-demand comparison and validation
 

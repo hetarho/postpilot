@@ -13,7 +13,8 @@ import {
   RestoreVoiceResponseSchema,
   RetryVoiceLearningResponseSchema,
   SetDefaultVoiceResponseSchema,
-  UpdateVoiceProfileResponseSchema,
+  GetVoiceProfileVersionSampleResponseSchema,
+  RestoreVoiceProfileResponseSchema,
   VoiceProfileSchema,
   VoiceLearningEventSchema,
   VoiceLearningService,
@@ -24,6 +25,8 @@ import {
   ListVoiceProfileVersionsResponseSchema,
   ListRuleConfirmationsResponseSchema,
   ListVoiceProfileValidationsResponseSchema,
+  PostContentSchema,
+  VoiceValueSource,
   StructuredVoiceProfileSchema,
   UpdateVoiceOverrideResponseSchema,
   type ProtoVoiceProfile,
@@ -59,24 +62,26 @@ export const DEFAULT_FAKE_VOICE: FakeVoiceRow = {
 }
 
 export interface FakeVoiceOptions {
-  styleguide?: string
-  rules?: string
   updatedAt?: string
   activeJobId?: string
   /** Returned from the second profile read, simulating a completed analysis. */
-  styleguideAfterAnalysis?: string
+  /** The analysis the profile publishes on the read AFTER the first one — the shape a resumed
+   *  analysis has when its job is already done. It lands in the structured profile's lexical
+   *  description, which is where an analysis lives now (change 16). */
+  analysisAfterAnalysis?: string
   samples?: FakeVoiceSampleRow[]
   addJobId?: string
   deleteJobId?: string
   addError?: string
-  updateFails?: boolean
   deleteFails?: boolean
-  updateGate?: Promise<void>
   addGate?: Promise<void>
   calls?: string[]
   learningFails?: boolean
   learningJobId?: string
-  versions?: Array<{ version: bigint; origin: string }>
+  versions?: Array<{ version: bigint; origin: string; hasSample?: boolean }>
+  /** One version's generation snapshot, keyed by version number as a string. A version absent
+   *  from this map produced no post, which is what the RPC reports with an unset sample. */
+  versionSamples?: Record<string, MessageInitShape<typeof PostContentSchema>>
   validations?: Array<{
     id: string
     voiceId: string
@@ -194,8 +199,6 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   profiles.set(
     defaultId,
     create(VoiceProfileSchema, {
-      styleguide: options.styleguide ?? '',
-      rules: options.rules ?? '',
       updatedAt: options.updatedAt ?? '',
       activeJobId: options.activeJobId ?? '',
       samples: (options.samples ?? []).map((sample) =>
@@ -322,10 +325,19 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     options.calls?.push('GetVoiceProfile')
     let profile = profileOf(request.voiceId)
     if (request.voiceId === defaultId) {
-      if (profileReads > 0 && options.styleguideAfterAnalysis) {
+      if (profileReads > 0 && options.analysisAfterAnalysis) {
         profile = create(VoiceProfileSchema, {
           ...profile,
-          styleguide: options.styleguideAfterAnalysis,
+          structured: create(StructuredVoiceProfileSchema, {
+            meta: { version: 1n },
+            empty: false,
+            lexical: {
+              description: {
+                value: options.analysisAfterAnalysis,
+                source: VoiceValueSource.ANALYZED,
+              },
+            },
+          }),
           activeJobId: '',
           updatedAt: NOW,
         })
@@ -336,21 +348,23 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     return create(GetVoiceProfileResponseSchema, { profile: withVoice(request.voiceId, profile) })
   })
 
-  rpc(VoiceService.method.updateVoiceProfile, async (request) => {
-    options.calls?.push('UpdateVoiceProfile')
-    const profile = profileOf(request.voiceId)
-    active(request.voiceId)
-    if (options.updateGate) await options.updateGate
-    if (options.updateFails)
-      throw connectAppError('VOICE_INVALID_LIFECYCLE', Code.FailedPrecondition)
-    const next = create(VoiceProfileSchema, {
-      ...profile,
-      styleguide: request.styleguide ?? profile.styleguide,
-      rules: request.rules ?? profile.rules,
-      updatedAt: NOW,
+  rpc(VoiceService.method.restoreVoiceProfile, (request) => {
+    options.calls?.push('RestoreVoiceProfile')
+    owned(request.voiceId)
+    // Adopting a version publishes a NEW head and destroys nothing, so the fake answers with
+    // the profile it already holds rather than pretending to rewrite history.
+    return create(RestoreVoiceProfileResponseSchema, {
+      profile: withVoice(request.voiceId, profileOf(request.voiceId)),
     })
-    setProfile(request.voiceId, next)
-    return create(UpdateVoiceProfileResponseSchema, { profile: withVoice(request.voiceId, next) })
+  })
+
+  rpc(VoiceService.method.getVoiceProfileVersionSample, (request) => {
+    options.calls?.push('GetVoiceProfileVersionSample')
+    const sample = options.versionSamples?.[request.version.toString()]
+    return create(GetVoiceProfileVersionSampleResponseSchema, {
+      sample: sample ? create(PostContentSchema, sample) : undefined,
+      createdAt: sample ? NOW : '',
+    })
   })
 
   rpc(VoiceService.method.updateVoiceOverride, (request) => {

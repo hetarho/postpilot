@@ -119,13 +119,8 @@ func TestSeedPublishesAFirstProfileWithNoMeasurements(t *testing.T) {
 		t.Fatalf("seed progress = %+v", stages)
 	}
 
-	profile, err := h.store.GetProfile(ctx, "alice", created.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if profile.Styleguide != seededStyleguide {
-		t.Fatalf("styleguide = %q", profile.Styleguide)
-	}
+	// The analysis text reaches the profile through the published structured version and
+	// nowhere else now (change 16): there is no free-text column left to write it into.
 	versions, err := h.store.ListProfileVersions(ctx, "alice", created.ID)
 	if err != nil || len(versions) != 1 {
 		t.Fatalf("versions = %+v err=%v", versions, err)
@@ -244,7 +239,7 @@ func TestSeedRefusesADeletedVoiceAndKeepsFailuresOffTheProfile(t *testing.T) {
 		t.Fatalf("bad shape = %v", err)
 	}
 	profile, _ := h.store.GetProfile(ctx, "alice", created.ID)
-	if profile.Styleguide != "" || profile.Structured.Version != 0 {
+	if profile.Structured.Version != 0 {
 		t.Fatalf("a failed seed wrote a partial profile: %+v", profile)
 	}
 

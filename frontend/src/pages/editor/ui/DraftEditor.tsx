@@ -10,7 +10,7 @@ import {
   voiceContentLanguageMismatchReason,
   type VoiceRef,
 } from '@/entities/voice'
-import type { ContentLanguage, PostContent } from '@/shared/api'
+import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import { GenerationActions, type GenerationActionsHandle } from '@/features/generate-post'
 import {
   BlockEditor,
@@ -348,6 +348,25 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   )
 }
 
+/** The finalized text 문장 의견 chooses a sentence from.
+ *
+ *  It mirrors the server's own body projection (`parseAuthoredContent`) block type for block
+ *  type: TEXT/HEADING/QUOTE contribute their content and LIST contributes its items, while an
+ *  image block has no sentence in it at all. A projection that omitted list items would make the
+ *  control disappear on a list-only post and, worse, offer a sentence the server cannot find. */
+function sentenceSource(content: PostContent): string {
+  return content.blocks
+    .flatMap((block) =>
+      block.type === BlockType.LIST
+        ? block.items
+        : block.type === BlockType.IMAGE
+          ? []
+          : [block.content],
+    )
+    .filter((value) => value.trim() !== '')
+    .join('\n')
+}
+
 /** The 가제 belongs to 글 생성 alone (policy/posts.md). From 글 다듬기 on there is exactly one
  *  title on the screen and it is `content.title`, edited through the block editor's header — two
  *  title fields side by side is a question the user cannot answer.
@@ -631,24 +650,15 @@ function LifecycleSteps({
           {voiceContentLanguageMismatchReason()}
         </Notice>
       )}
+      {/* 문장 의견 is NOT here. The server requires a completed voice-learning event for the
+          post before it will accept feedback, and a post on this step is in `review` — never
+          finalized, never learned — so the control failed on the ordinary path every time. It
+          lives on 글 완성 now, behind the same condition the server enforces (change 16). */}
       <BlockEditor
         key={`${post.slug}:${post.machineBaselineRevision}`}
         ref={contentEditorRef}
         post={post}
         onContentChange={reportEdited}
-        // Feedback is evidence for the voice, and a deleted voice cannot take any; the server
-        // refuses it, so the control is not offered rather than offered to fail.
-        renderSentenceAction={
-          post.voice.deleted || languageMismatch
-            ? undefined
-            : (text, flush) => (
-                <SentenceFeedback
-                  postSlug={post.slug}
-                  text={text}
-                  beforeSubmit={() => flush().then(() => undefined)}
-                />
-              )
-        }
       />
     </>
   ) : (
@@ -661,6 +671,22 @@ function LifecycleSteps({
     <>
       {ownerId && (
         <VoiceLearningPanel learning={learning} onBackToRefine={() => onStepChange('refine')} />
+      )}
+      {/* Offered exactly where it works: `learning.learned` is "this post's learning run
+          completed", which is the precondition the server checks. Feedback is evidence for the
+          voice, and a deleted voice cannot take any, nor can a post whose language differs from
+          the voice's source — both are server refusals, so the control is not offered rather
+          than offered to fail. The text is the FINALIZED text the user is looking at, and the
+          flush goes through the slug's content queue because the block editor that owned the
+          live ref is mounted on the previous step. */}
+      {learning.learned && !post.voice.deleted && !languageMismatch && (
+        <SentenceFeedback
+          postSlug={post.slug}
+          text={sentenceSource(liveContent ?? result)}
+          beforeSubmit={() =>
+            (flushContentQueue(post.slug) ?? Promise.resolve(0n)).then(() => undefined)
+          }
+        />
       )}
       {post.contentLanguage ? (
         <ExportPanel

@@ -176,9 +176,6 @@ export function toStructured(p: ProtoStructured | undefined): StructuredVoicePro
 export function toVoiceProfile(profile: ProtoVoiceProfile | undefined): VoiceProfile {
   return {
     voice: toVoice(profile?.voice),
-    styleguide: profile?.styleguide ?? '',
-    rules: profile?.rules ?? '',
-    legacyManualGuidance: profile?.legacyManualGuidance ?? '',
     updatedAt: profile?.updatedAt ?? '',
     samples: profile?.samples.map(toVoiceSample) ?? [],
     activeJobId: profile?.activeJobId ?? '',
@@ -194,7 +191,17 @@ export function toVoiceVersion(version: ProtoVersion): VoiceVersion {
     origin: version.origin,
     restoredFromVersion: version.restoredFromVersion,
     createdAt: version.createdAt,
+    hasSample: version.hasSample,
   }
+}
+
+export function voiceVersionSampleQueryKey(
+  transport: Transport,
+  ownerId: string,
+  voiceId: string,
+  version: bigint,
+) {
+  return ['voice-version-sample', transport, ownerId, voiceId, version.toString()] as const
 }
 
 // Every key carries the account AND the voice (tech/multi-voice-partitioning.md): two voices of one

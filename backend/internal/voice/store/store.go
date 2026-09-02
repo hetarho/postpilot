@@ -55,8 +55,8 @@ func (s *Store) InsertVoice(ctx context.Context, v voice.Voice) error {
 		}
 		return fmt.Errorf("insert voice: %w", err)
 	}
-	if err := q.UpsertProfile(ctx, sqlc.UpsertProfileParams{
-		VoiceID: v.ID, UserID: v.UserID, Styleguide: "", Rules: "", UpdatedAt: formatTime(v.CreatedAt),
+	if err := q.InsertEmptyProfile(ctx, sqlc.InsertEmptyProfileParams{
+		VoiceID: v.ID, UserID: v.UserID, UpdatedAt: formatTime(v.CreatedAt),
 	}); err != nil {
 		return fmt.Errorf("insert voice profile: %w", err)
 	}
@@ -230,37 +230,48 @@ func (s *Store) GetProfile(ctx context.Context, userID, voiceID string) (voice.P
 		}
 		structured = version.Profile
 	}
-	return voice.Profile{UserID: row.UserID, VoiceID: row.VoiceID, Styleguide: row.Styleguide, Rules: row.Rules,
+	return voice.Profile{UserID: row.UserID, VoiceID: row.VoiceID, Rules: row.Rules,
 		UpdatedAt: updated, Structured: structured}, nil
 }
 
-func (s *Store) UpsertProfile(ctx context.Context, profile voice.Profile) error {
-	if err := s.write.UpsertProfile(ctx, sqlc.UpsertProfileParams{
-		VoiceID: profile.VoiceID, UserID: profile.UserID, Styleguide: profile.Styleguide, Rules: profile.Rules,
-		UpdatedAt: formatTime(profile.UpdatedAt),
-	}); err != nil {
-		return fmt.Errorf("upsert profile: %w", err)
-	}
-	return nil
-}
-
-func (s *Store) SetStyleguideIfCorpusVersion(ctx context.Context, userID, voiceID, styleguide string, version int64, now time.Time) (bool, error) {
-	n, err := s.write.SetStyleguideIfCorpusVersion(ctx, sqlc.SetStyleguideIfCorpusVersionParams{
-		Styleguide: styleguide, UpdatedAt: formatTime(now), VoiceID: voiceID, UserID: userID, CorpusVersion: version,
+func (s *Store) ClaimCorpusVersion(ctx context.Context, userID, voiceID string, version int64, now time.Time) (bool, error) {
+	n, err := s.write.ClaimCorpusVersion(ctx, sqlc.ClaimCorpusVersionParams{
+		UpdatedAt: formatTime(now), VoiceID: voiceID, UserID: userID, CorpusVersion: version,
 	})
 	if err != nil {
-		return false, fmt.Errorf("set styleguide for corpus version: %w", err)
+		return false, fmt.Errorf("claim corpus version: %w", err)
 	}
 	return n > 0, nil
 }
 
-func (s *Store) SetStyleguide(ctx context.Context, userID, voiceID, styleguide string, now time.Time) error {
-	if err := s.write.SetStyleguide(ctx, sqlc.SetStyleguideParams{
-		VoiceID: voiceID, UserID: userID, Styleguide: styleguide, UpdatedAt: formatTime(now),
+func (s *Store) UpsertVersionSample(ctx context.Context, sample voice.VersionSample) error {
+	if err := s.write.UpsertVersionSample(ctx, sqlc.UpsertVersionSampleParams{
+		VoiceID: sample.VoiceID, UserID: sample.UserID, Version: sample.Version,
+		Content: sample.Content, CreatedAt: formatTime(sample.CreatedAt),
 	}); err != nil {
-		return fmt.Errorf("set styleguide: %w", err)
+		return fmt.Errorf("upsert version sample: %w", err)
 	}
 	return nil
+}
+
+func (s *Store) GetVersionSample(ctx context.Context, userID, voiceID string, version int64) (voice.VersionSample, error) {
+	row, err := s.read.GetVersionSample(ctx, sqlc.GetVersionSampleParams{
+		VoiceID: voiceID, UserID: userID, Version: version,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return voice.VersionSample{}, voice.ErrVersionSampleNotFound
+	}
+	if err != nil {
+		return voice.VersionSample{}, fmt.Errorf("select version sample: %w", err)
+	}
+	created, err := parseTime(row.CreatedAt)
+	if err != nil {
+		return voice.VersionSample{}, err
+	}
+	return voice.VersionSample{
+		UserID: row.UserID, VoiceID: row.VoiceID, Version: row.Version,
+		Content: row.Content, CreatedAt: created,
+	}, nil
 }
 
 func (s *Store) SetRules(ctx context.Context, userID, voiceID, rules string, now time.Time) error {

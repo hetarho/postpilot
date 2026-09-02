@@ -98,3 +98,12 @@ The migration fails rather than guessing if a row cannot map to exactly one acco
 asserts no unassigned rows before the swap). It runs through the embedded boot migration path and the single SQLite
 writer required by [I7]; its Down collapses only an untouched one-voice-per-account database and refuses to lose
 multi-voice data.
+
+## The per-version generation snapshot (change 16)
+
+`voice_version_samples` joins the partition on the same terms as every other private learning row: a `user_id`
+column and `FOREIGN KEY (voice_id, user_id) REFERENCES voices(id, user_id)`, so a crafted voice id from another
+account resolves to nothing rather than to that account's data, and a soft-deleted voice's snapshots go with the
+voice ([I4]). Its primary key is `(voice_id, version)` — one snapshot per profile version, replaced rather than
+accumulated — and every read names both the voice and the account. Frontend caching follows the same rule: the
+snapshot query key is `(account, voice, version)`.

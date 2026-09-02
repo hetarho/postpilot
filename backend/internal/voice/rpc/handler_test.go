@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -36,6 +37,28 @@ func (jobs) ActiveForVoiceKind(context.Context, string, string) (*voice.ActiveJo
 }
 func (jobs) HasActiveForVoice(context.Context, string) (bool, error) { return false, nil }
 
+// openVoiceTestDB opens a migrated database with both accounts already provisioned.
+func openVoiceTestDB(t *testing.T) *db.DB {
+	t.Helper()
+	handle, err := db.Open(filepath.Join(t.TempDir(), "voice-rpc.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { handle.Close() })
+	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	for _, userID := range []string{"alice", "bob"} {
+		if _, err := handle.Writer.Exec(
+			"INSERT INTO users (id, password_hash, created_at) VALUES (?, 'hash', ?)", userID, now,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return handle
+}
+
 func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "voice-rpc.db"))
 	if err != nil {
@@ -62,10 +85,8 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 		}
 		voices[userID] = created.ID
 	}
-	for _, row := range []struct{ user, style, rules string }{
-		{"alice", "alice style", "alice rules"}, {"bob", "bob style", "bob rules"},
-	} {
-		if _, err := service.Update(context.Background(), row.user, voices[row.user], row.style, row.rules); err != nil {
+	for _, userID := range []string{"alice", "bob"} {
+		if err := service.AppendRule(context.Background(), userID, voices[userID], userID+" rules"); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -78,7 +99,9 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := response.Msg.GetProfile(); got.GetStyleguide() != userID+" style" || got.GetRules() != userID+" rules" || got.GetVoice().GetId() != voices[userID] || !got.GetVoice().GetIsDefault() {
+		// The profile no longer carries a styleguide or a rules string at all (change 16, A9):
+		// what it reports is the structured profile, its samples and its voice.
+		if got := response.Msg.GetProfile(); got.GetVoice().GetId() != voices[userID] || !got.GetVoice().GetIsDefault() {
 			t.Fatalf("%s received foreign profile: %+v", userID, got)
 		}
 	}
@@ -96,25 +119,6 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 	)
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("missing voice id code = %v", err)
-	}
-
-	newRules := "alice rules updated while analysis completes"
-	updated, err := handler.UpdateVoiceProfile(
-		auth.WithUser(context.Background(), "alice"),
-		connect.NewRequest(&postpilotv1.UpdateVoiceProfileRequest{VoiceId: voices["alice"], Rules: &newRules}),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := updated.Msg.GetProfile(); got.GetStyleguide() != "alice style" || got.GetRules() != newRules {
-		t.Fatalf("rules-only patch overwrote styleguide: %+v", got)
-	}
-	_, err = handler.UpdateVoiceProfile(
-		auth.WithUser(context.Background(), "alice"),
-		connect.NewRequest(&postpilotv1.UpdateVoiceProfileRequest{VoiceId: voices["alice"]}),
-	)
-	if connect.CodeOf(err) != connect.CodeInvalidArgument {
-		t.Fatalf("empty profile patch error = %v", err)
 	}
 
 	_, err = handler.AddVoiceSample(
@@ -200,7 +204,7 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	if err != nil || !deleted.Msg.GetVoice().GetDeleted() || deleted.Msg.GetVoice().GetDeletedAt() == "" {
 		t.Fatalf("delete = %+v err=%v", deleted, err)
 	}
-	if _, err := handler.UpdateVoiceProfile(alice, connect.NewRequest(&postpilotv1.UpdateVoiceProfileRequest{VoiceId: defaultVoice.ID, Rules: &[]string{"x"}[0]})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+	if _, err := handler.AddVoiceSample(alice, connect.NewRequest(&postpilotv1.AddVoiceSampleRequest{VoiceId: defaultVoice.ID, Body: strings.Repeat("가", 200), Model: &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "analyze"}})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("mutate deleted code = %v", err)
 	}
 	listed, err := handler.ListVoices(alice, connect.NewRequest(&postpilotv1.ListVoicesRequest{}))
@@ -237,5 +241,68 @@ func TestLearningAndValidationRPCsRequireAuthenticatedContextBeforeServiceAccess
 	_, err = voicerpc.NewValidationHandler(nil).GetVoiceRuleComparison(context.Background(), connect.NewRequest(&postpilotv1.GetVoiceRuleComparisonRequest{ComparisonId: "comparison"}))
 	if connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("validation code=%v err=%v", connect.CodeOf(err), err)
+	}
+}
+
+// The version preview's RPC: it is where the stored snapshot stops being opaque text and
+// becomes the post content the client already decodes.
+func TestGetVoiceProfileVersionSampleIsOwnedAndOptional(t *testing.T) {
+	handle := openVoiceTestDB(t)
+	service := voice.NewService(voicestore.New(handle.Writer, handle.Reader), models{}, jobs{})
+	ctx := context.Background()
+	voices := map[string]string{}
+	for _, userID := range []string{"alice", "bob"} {
+		created, _, err := service.EnsureDefaultVoice(ctx, userID, voice.LanguageKorean)
+		if err != nil {
+			t.Fatal(err)
+		}
+		voices[userID] = created.ID
+	}
+	store := voicestore.New(handle.Writer, handle.Reader)
+	head, err := store.PublishProfileVersion(ctx, "alice", voices["alice"], voice.StructuredProfile{Empty: false}, "analysis", 0, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := protojson.Marshal(&postpilotv1.PostContent{
+		Title: "제주 여행기", Blocks: []*postpilotv1.Block{{Type: postpilotv1.BlockType_TEXT, Content: "비가 왔다"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.RecordVersionSample(ctx, "alice", voices["alice"], string(encoded)); err != nil {
+		t.Fatal(err)
+	}
+	handler := voicerpc.NewHandler(service)
+
+	got, err := handler.GetVoiceProfileVersionSample(
+		auth.WithUser(ctx, "alice"),
+		connect.NewRequest(&postpilotv1.GetVoiceProfileVersionSampleRequest{VoiceId: voices["alice"], Version: head.Version}),
+	)
+	if err != nil || got.Msg.GetSample().GetTitle() != "제주 여행기" || len(got.Msg.GetSample().GetBlocks()) != 1 {
+		t.Fatalf("own snapshot = %+v err=%v", got.Msg, err)
+	}
+	if got.Msg.GetCreatedAt() == "" {
+		t.Fatalf("snapshot carried no timestamp: %+v", got.Msg)
+	}
+	// A version that never produced a post answers with no sample rather than an error.
+	absent, err := handler.GetVoiceProfileVersionSample(
+		auth.WithUser(ctx, "alice"),
+		connect.NewRequest(&postpilotv1.GetVoiceProfileVersionSampleRequest{VoiceId: voices["alice"], Version: head.Version + 5}),
+	)
+	if err != nil || absent.Msg.GetSample() != nil {
+		t.Fatalf("absent snapshot = %+v err=%v", absent.Msg, err)
+	}
+	// A crafted voice id from another account is NotFound, never that account's snapshot.
+	if _, err := handler.GetVoiceProfileVersionSample(
+		auth.WithUser(ctx, "bob"),
+		connect.NewRequest(&postpilotv1.GetVoiceProfileVersionSampleRequest{VoiceId: voices["alice"], Version: head.Version}),
+	); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("cross-account snapshot code = %v", err)
+	}
+	if _, err := handler.GetVoiceProfileVersionSample(
+		ctx,
+		connect.NewRequest(&postpilotv1.GetVoiceProfileVersionSampleRequest{VoiceId: voices["alice"], Version: head.Version}),
+	); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("unauthenticated snapshot code = %v", err)
 	}
 }

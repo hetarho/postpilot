@@ -70,6 +70,7 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, content, job.TargetLanguage); err != nil {
 		return fmt.Errorf("persist generated content: %w", err)
 	}
+	s.recordVersionSample(ctx, post.UserID, post.Voice.ID, content)
 	progress("write", 1, 1)
 	return nil
 }

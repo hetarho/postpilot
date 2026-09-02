@@ -420,46 +420,55 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	return profile, nil
 }
 
-func (s *Service) Update(ctx context.Context, userID, voiceID, styleguide, rules string) (Profile, error) {
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
-		return Profile{}, err
+// RecordVersionSample copies the raw AI output of a post into the voice's CURRENT head
+// version, so that version can be read before it is adopted (change 16). It is called by the
+// generation context after a machine baseline is written — the only context that depends on
+// both post and voice, and therefore the only one allowed to join them.
+//
+// Idempotent per (voice, version): a later generation under the same head REPLACES the
+// snapshot rather than adding a second one. A voice with no published version yet records
+// nothing instead of inventing version 0, and a deleted voice records nothing at all.
+//
+// The version is the head AT COMPLETION, which is what change 16 A1 asks for and not the same
+// thing as the version the prompt was built from: a profile published while the provider was
+// working moves the head, and this output is then filed under that newer version. The window is
+// the length of one provider call. Closing it would mean freezing the profile version into the
+// generation payload and carrying it back out through the write path, which is a contract this
+// change did not open.
+//
+// `content` is opaque text. Nothing here parses it.
+func (s *Service) RecordVersionSample(ctx context.Context, userID, voiceID, content string) error {
+	if content == "" {
+		return nil
 	}
-	s.profileMu.Lock()
-	defer s.profileMu.Unlock()
-	if err := s.store.UpsertProfile(ctx, Profile{
-		UserID: userID, VoiceID: voiceID, Styleguide: styleguide, Rules: rules, UpdatedAt: s.now(),
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return err
+	}
+	profile, err := s.store.GetProfile(ctx, userID, voiceID)
+	if err != nil {
+		return fmt.Errorf("get profile for version sample: %w", err)
+	}
+	head := profile.Structured.Version
+	if head <= 0 {
+		return nil
+	}
+	if err := s.store.UpsertVersionSample(ctx, VersionSample{
+		UserID: userID, VoiceID: voiceID, Version: head, Content: content, CreatedAt: s.now(),
 	}); err != nil {
-		return Profile{}, fmt.Errorf("update profile: %w", err)
+		return fmt.Errorf("record version sample: %w", err)
 	}
-	return s.Get(ctx, userID, voiceID)
+	return nil
 }
 
-// UpdateStyleguide changes only the generated/hand-edited guide. The SQL operation is
-// deliberately field-scoped so a concurrent rules edit cannot be lost.
-func (s *Service) UpdateStyleguide(ctx context.Context, userID, voiceID, styleguide string) (Profile, error) {
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
-		return Profile{}, err
+// VersionSample returns one version's snapshot. Both the voice and the account are named, so
+// no cross-voice or cross-account read is expressible ([I4]). A version that never produced a
+// post is ErrVersionSampleNotFound, which callers present as "no preview" rather than as a
+// failure. A deleted voice's samples stay READABLE, like the rest of its profile.
+func (s *Service) VersionSample(ctx context.Context, userID, voiceID string, version int64) (VersionSample, error) {
+	if _, err := s.store.GetVoice(ctx, userID, voiceID); err != nil {
+		return VersionSample{}, err
 	}
-	s.profileMu.Lock()
-	defer s.profileMu.Unlock()
-	if err := s.store.SetStyleguide(ctx, userID, voiceID, styleguide, s.now()); err != nil {
-		return Profile{}, fmt.Errorf("update styleguide: %w", err)
-	}
-	return s.Get(ctx, userID, voiceID)
-}
-
-// UpdateRules changes only user-owned rules. In particular, it never writes the
-// styleguide value observed by a client while an analysis may be completing.
-func (s *Service) UpdateRules(ctx context.Context, userID, voiceID, rules string) (Profile, error) {
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
-		return Profile{}, err
-	}
-	s.profileMu.Lock()
-	defer s.profileMu.Unlock()
-	if err := s.store.SetRules(ctx, userID, voiceID, rules, s.now()); err != nil {
-		return Profile{}, fmt.Errorf("update rules: %w", err)
-	}
-	return s.Get(ctx, userID, voiceID)
+	return s.store.GetVersionSample(ctx, userID, voiceID, version)
 }
 
 func (s *Service) AddSample(ctx context.Context, userID, voiceID, label, body string, requested llm.ModelRef) (Sample, string, error) {

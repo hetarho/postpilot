@@ -2483,3 +2483,69 @@ describe('the editor status region', () => {
     expect(screen.queryByText(/^생성:/)).not.toBeInTheDocument()
   })
 })
+
+// Change 16 A14: the server requires a COMPLETED voice-learning event before it accepts sentence
+// feedback, and a post on 글 다듬기 is in `review` — never finalized, never learned. The control
+// therefore moved to 글 완성 and is gated on the same condition the server enforces.
+describe('sentence feedback', () => {
+  const learnedPost = {
+    slug: '20260820-final',
+    status: 'finalized',
+    content: POST_CONTENT_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+    canFinalize: true,
+    finalizedRevision: 1n,
+    finalizedAt: '2026-08-20T12:00:00Z',
+  }
+
+  it('is absent on 글 다듬기 and present on 글 완성 once the learning run has completed', async () => {
+    const user = userEvent.setup()
+    const key = 'postpilot:voice-learning:alice:20260820-final'
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (name: string) => stored.get(name) ?? null,
+      setItem: (name: string, value: string) => stored.set(name, value),
+      removeItem: (name: string) => stored.delete(name),
+    })
+    localStorage.setItem(
+      key,
+      JSON.stringify({ eventId: 'event-1', jobId: 'learn-1', contentRevision: '1' }),
+    )
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      posts: { posts: [learnedPost] },
+      jobs: { jobs: [{ id: 'learn-1', kind: 'voice_learn', status: 'done' }] },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
+        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
+      },
+    })
+
+    expect(await screen.findByText('이 글에서 말투를 배웠어요.')).toBeInTheDocument()
+    const feedback = screen.getByRole('button', { name: '문장 의견' })
+
+    // What it SAYS: it teaches the voice, it does not change the post, and it names the thing
+    // that does change the post.
+    await user.click(feedback)
+    const dialog = await screen.findByRole('dialog', { name: '어떤 점을 바꾸고 싶나요?' })
+    expect(dialog).toHaveTextContent('이 의견은 말투를 가르칩니다. 이 글은 바뀌지 않아요.')
+    expect(dialog).toHaveTextContent('AI 수정')
+    expect(dialog).not.toHaveTextContent('이 반응만으로 새 규칙이 생기거나 활성화되지는 않습니다.')
+
+    await user.click(within(dialog).getByRole('button', { name: '취소' }))
+    await openStep(user, '글 다듬기')
+    await screen.findByRole('button', { name: '제목과 요약, 태그 수정' })
+    expect(screen.queryByRole('button', { name: '문장 의견' })).not.toBeInTheDocument()
+    localStorage.removeItem(key)
+  })
+
+  it('is not offered on 글 완성 for a post whose learning run has not completed', async () => {
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      posts: { posts: [learnedPost] },
+    })
+    await screen.findByRole('button', { name: '말투 학습' })
+    expect(screen.queryByRole('button', { name: '문장 의견' })).not.toBeInTheDocument()
+  })
+})

@@ -2,8 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
-import { VoiceLayer, VoiceRuleStatus, VoiceValueSource } from '@/shared/api'
-import { voiceProfileQueryKey } from '@/entities/voice'
+import { BlockType, VoiceLayer, VoiceRuleStatus, VoiceValueSource } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
 /** A learned profile whose axes are partly unanswered — the state the analysis produces once it
@@ -312,11 +311,11 @@ describe('the 기존 글 가져오기 tab', () => {
   })
 
   it('refreshes the profile when the resumed analysis is already done', async () => {
-    renderAppAt(`${DEFAULT}/import`, {
+    renderAppAt(DEFAULT, {
       user: { id: 'alice' },
       voice: {
         activeJobId: 'voice-job',
-        styleguideAfterAnalysis: '# 종결어미\n~다를 자주 사용',
+        analysisAfterAnalysis: '# 종결어미\n~다를 자주 사용',
       },
       jobs: {
         jobs: [
@@ -332,36 +331,69 @@ describe('the 기존 글 가져오기 tab', () => {
       },
     })
 
-    await waitFor(() =>
-      expect(screen.getByLabelText('문체 규칙')).toHaveValue('# 종결어미\n~다를 자주 사용'),
-    )
+    // The analysis lands in the structured profile's lexical description now — there is no
+    // free-text styleguide field left for it to appear in (change 16).
+    await waitFor(() => expect(screen.getByText(/~다를 자주 사용/)).toBeInTheDocument())
   })
 
-  it('persists an edited styleguide across leaving and reopening the route', async () => {
+  // Change 16 A9: the 이전 수동 안내 section and both of its editors are gone from every tab.
+  it('offers no free-text guidance editors anywhere on the voice screens', async () => {
+    renderAppAt(`${DEFAULT}/import`, { user: { id: 'alice' } })
+    await screen.findByLabelText('내가 쓴 글')
+    expect(screen.queryByText('이전 수동 안내')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('문체 규칙')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('추가 규칙')).not.toBeInTheDocument()
+  })
+
+  // Change 16 A7: the paste form's first field says what it is.
+  it('labels the imported piece 제목 and keeps it optional', async () => {
+    renderAppAt(`${DEFAULT}/import`, { user: { id: 'alice' } })
+    expect(await screen.findByLabelText('제목 (선택)')).toBeInTheDocument()
+    expect(screen.queryByLabelText('라벨 (선택)')).not.toBeInTheDocument()
+  })
+
+  // Change 16 A4/A5/A6: a version is READ before it is taken, and the preview is the confirmation.
+  it('opens a version, previews what it wrote, and adopts it without a dialog', async () => {
     const calls: string[] = []
-    const app = renderAppAt(`${DEFAULT}/import`, {
+    renderAppAt(`${DEFAULT}/versions`, {
       user: { id: 'alice' },
       calls,
-      voice: { styleguide: '기존 규칙' },
+      voice: {
+        structured: { meta: { version: 3n }, empty: false },
+        versions: [
+          { version: 3n, origin: 'analysis', hasSample: true },
+          { version: 2n, origin: 'manual', hasSample: true },
+          { version: 1n, origin: 'analysis', hasSample: false },
+        ],
+        versionSamples: {
+          '2': {
+            title: '비 오는 제주',
+            blocks: [{ type: BlockType.TEXT, content: '우산을 두고 나왔다.' }],
+          },
+        },
+      },
     })
     const user = userEvent.setup()
-    const editor = await screen.findByLabelText('문체 규칙')
-    await user.clear(editor)
-    await user.type(editor, '수정한 규칙')
-    await user.click(within(editor.closest('section')!).getByRole('button', { name: '저장' }))
-    await waitFor(() => expect(calls).toContain('UpdateVoiceProfile'))
 
-    await app.router.navigate({ to: '/posts' })
-    await screen.findByRole('heading', { name: '내 글' })
-    app.queryClient.removeQueries({
-      queryKey: voiceProfileQueryKey(app.transport, 'alice', 'voice-default'),
-    })
-    await app.router.navigate({
-      to: '/voices/$voiceId/import',
-      params: { voiceId: 'voice-default' },
-    })
+    // The list itself carries no post bodies — presence only.
+    await screen.findByRole('button', { name: /v3 · 분석/ })
+    expect(calls).not.toContain('GetVoiceProfileVersionSample')
 
-    expect(await screen.findByLabelText('문체 규칙')).toHaveValue('수정한 규칙')
+    // The head is openable and offers no way to adopt itself.
+    await user.click(screen.getByRole('button', { name: /v3 · 분석/ }))
+    expect(screen.queryByRole('button', { name: '이 버전으로 변경' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /v2 · 직접 수정/ }))
+    expect(await screen.findByText('비 오는 제주')).toBeInTheDocument()
+    expect(screen.getByText('우산을 두고 나왔다.')).toBeInTheDocument()
+
+    // No confirmation dialog stands between the preview and the change: the preview IS it.
+    await user.click(screen.getByRole('button', { name: '이 버전으로 변경' }))
+    await waitFor(() => expect(calls).toContain('RestoreVoiceProfile'))
+
+    // A version that never produced a post says so, with no empty preview box.
+    await user.click(screen.getByRole('button', { name: /v1 · 분석/ }))
+    expect(await screen.findByText('이 버전으로 쓴 글이 아직 없어요.')).toBeInTheDocument()
   })
 
   // Change 14 A7: the tab a described create lands on reports the seeding run.

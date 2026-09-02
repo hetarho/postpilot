@@ -1283,13 +1283,10 @@ type VoiceProfile struct {
 	// The owning voice travels with the profile so a cache entry and a deleted-state screen
 	// can never become detached from the voice they describe.
 	Voice                *Voice                  `protobuf:"bytes,10,opt,name=voice,proto3" json:"voice,omitempty"`
-	Styleguide           string                  `protobuf:"bytes,1,opt,name=styleguide,proto3" json:"styleguide,omitempty"`
-	Rules                string                  `protobuf:"bytes,2,opt,name=rules,proto3" json:"rules,omitempty"`
 	UpdatedAt            string                  `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Samples              []*VoiceSample          `protobuf:"bytes,4,rep,name=samples,proto3" json:"samples,omitempty"`
 	ActiveJobId          string                  `protobuf:"bytes,5,opt,name=active_job_id,json=activeJobId,proto3" json:"active_job_id,omitempty"`
 	Structured           *StructuredVoiceProfile `protobuf:"bytes,6,opt,name=structured,proto3" json:"structured,omitempty"`
-	LegacyManualGuidance string                  `protobuf:"bytes,7,opt,name=legacy_manual_guidance,json=legacyManualGuidance,proto3" json:"legacy_manual_guidance,omitempty"`
 	FinalizedSourceCount int32                   `protobuf:"varint,8,opt,name=finalized_source_count,json=finalizedSourceCount,proto3" json:"finalized_source_count,omitempty"`
 	CanValidate          bool                    `protobuf:"varint,9,opt,name=can_validate,json=canValidate,proto3" json:"can_validate,omitempty"`
 	unknownFields        protoimpl.UnknownFields
@@ -1333,20 +1330,6 @@ func (x *VoiceProfile) GetVoice() *Voice {
 	return nil
 }
 
-func (x *VoiceProfile) GetStyleguide() string {
-	if x != nil {
-		return x.Styleguide
-	}
-	return ""
-}
-
-func (x *VoiceProfile) GetRules() string {
-	if x != nil {
-		return x.Rules
-	}
-	return ""
-}
-
 func (x *VoiceProfile) GetUpdatedAt() string {
 	if x != nil {
 		return x.UpdatedAt
@@ -1375,13 +1358,6 @@ func (x *VoiceProfile) GetStructured() *StructuredVoiceProfile {
 	return nil
 }
 
-func (x *VoiceProfile) GetLegacyManualGuidance() string {
-	if x != nil {
-		return x.LegacyManualGuidance
-	}
-	return ""
-}
-
 func (x *VoiceProfile) GetFinalizedSourceCount() int32 {
 	if x != nil {
 		return x.FinalizedSourceCount
@@ -1403,8 +1379,11 @@ type VoiceProfileVersion struct {
 	Origin              string                  `protobuf:"bytes,3,opt,name=origin,proto3" json:"origin,omitempty"`
 	RestoredFromVersion int64                   `protobuf:"varint,4,opt,name=restored_from_version,json=restoredFromVersion,proto3" json:"restored_from_version,omitempty"`
 	CreatedAt           string                  `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Whether this version carries a generation snapshot that can be previewed. Presence only --
+	// the snapshot is fetched per version through GetVoiceProfileVersionSample.
+	HasSample     bool `protobuf:"varint,6,opt,name=has_sample,json=hasSample,proto3" json:"has_sample,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *VoiceProfileVersion) Reset() {
@@ -1470,6 +1449,13 @@ func (x *VoiceProfileVersion) GetCreatedAt() string {
 		return x.CreatedAt
 	}
 	return ""
+}
+
+func (x *VoiceProfileVersion) GetHasSample() bool {
+	if x != nil {
+		return x.HasSample
+	}
+	return false
 }
 
 type VoiceSample struct {
@@ -2295,112 +2281,6 @@ func (x *GetVoiceProfileResponse) GetProfile() *VoiceProfile {
 	return nil
 }
 
-type UpdateVoiceProfileRequest struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	VoiceId string                 `protobuf:"bytes,3,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
-	// Presence is significant: each editor patches only the field it owns so a rules
-	// save cannot write an analysis result back to an older styleguide (or vice versa).
-	Styleguide    *string `protobuf:"bytes,1,opt,name=styleguide,proto3,oneof" json:"styleguide,omitempty"`
-	Rules         *string `protobuf:"bytes,2,opt,name=rules,proto3,oneof" json:"rules,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateVoiceProfileRequest) Reset() {
-	*x = UpdateVoiceProfileRequest{}
-	mi := &file_postpilot_v1_voice_proto_msgTypes[32]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateVoiceProfileRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateVoiceProfileRequest) ProtoMessage() {}
-
-func (x *UpdateVoiceProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_voice_proto_msgTypes[32]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateVoiceProfileRequest.ProtoReflect.Descriptor instead.
-func (*UpdateVoiceProfileRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{32}
-}
-
-func (x *UpdateVoiceProfileRequest) GetVoiceId() string {
-	if x != nil {
-		return x.VoiceId
-	}
-	return ""
-}
-
-func (x *UpdateVoiceProfileRequest) GetStyleguide() string {
-	if x != nil && x.Styleguide != nil {
-		return *x.Styleguide
-	}
-	return ""
-}
-
-func (x *UpdateVoiceProfileRequest) GetRules() string {
-	if x != nil && x.Rules != nil {
-		return *x.Rules
-	}
-	return ""
-}
-
-type UpdateVoiceProfileResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Profile       *VoiceProfile          `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateVoiceProfileResponse) Reset() {
-	*x = UpdateVoiceProfileResponse{}
-	mi := &file_postpilot_v1_voice_proto_msgTypes[33]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateVoiceProfileResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateVoiceProfileResponse) ProtoMessage() {}
-
-func (x *UpdateVoiceProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_voice_proto_msgTypes[33]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateVoiceProfileResponse.ProtoReflect.Descriptor instead.
-func (*UpdateVoiceProfileResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{33}
-}
-
-func (x *UpdateVoiceProfileResponse) GetProfile() *VoiceProfile {
-	if x != nil {
-		return x.Profile
-	}
-	return nil
-}
-
 type AddVoiceSampleRequest struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	VoiceId string                 `protobuf:"bytes,4,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
@@ -2415,7 +2295,7 @@ type AddVoiceSampleRequest struct {
 
 func (x *AddVoiceSampleRequest) Reset() {
 	*x = AddVoiceSampleRequest{}
-	mi := &file_postpilot_v1_voice_proto_msgTypes[34]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2427,7 +2307,7 @@ func (x *AddVoiceSampleRequest) String() string {
 func (*AddVoiceSampleRequest) ProtoMessage() {}
 
 func (x *AddVoiceSampleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_voice_proto_msgTypes[34]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2440,7 +2320,7 @@ func (x *AddVoiceSampleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddVoiceSampleRequest.ProtoReflect.Descriptor instead.
 func (*AddVoiceSampleRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{34}
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *AddVoiceSampleRequest) GetVoiceId() string {
@@ -2481,7 +2361,7 @@ type AddVoiceSampleResponse struct {
 
 func (x *AddVoiceSampleResponse) Reset() {
 	*x = AddVoiceSampleResponse{}
-	mi := &file_postpilot_v1_voice_proto_msgTypes[35]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2493,7 +2373,7 @@ func (x *AddVoiceSampleResponse) String() string {
 func (*AddVoiceSampleResponse) ProtoMessage() {}
 
 func (x *AddVoiceSampleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_voice_proto_msgTypes[35]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2506,7 +2386,7 @@ func (x *AddVoiceSampleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddVoiceSampleResponse.ProtoReflect.Descriptor instead.
 func (*AddVoiceSampleResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{35}
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *AddVoiceSampleResponse) GetSample() *VoiceSample {
@@ -2533,7 +2413,7 @@ type DeleteVoiceSampleRequest struct {
 
 func (x *DeleteVoiceSampleRequest) Reset() {
 	*x = DeleteVoiceSampleRequest{}
-	mi := &file_postpilot_v1_voice_proto_msgTypes[36]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2545,7 +2425,7 @@ func (x *DeleteVoiceSampleRequest) String() string {
 func (*DeleteVoiceSampleRequest) ProtoMessage() {}
 
 func (x *DeleteVoiceSampleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_voice_proto_msgTypes[36]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2558,7 +2438,7 @@ func (x *DeleteVoiceSampleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteVoiceSampleRequest.ProtoReflect.Descriptor instead.
 func (*DeleteVoiceSampleRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{36}
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *DeleteVoiceSampleRequest) GetVoiceId() string {
@@ -2584,7 +2464,7 @@ type DeleteVoiceSampleResponse struct {
 
 func (x *DeleteVoiceSampleResponse) Reset() {
 	*x = DeleteVoiceSampleResponse{}
-	mi := &file_postpilot_v1_voice_proto_msgTypes[37]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2596,7 +2476,7 @@ func (x *DeleteVoiceSampleResponse) String() string {
 func (*DeleteVoiceSampleResponse) ProtoMessage() {}
 
 func (x *DeleteVoiceSampleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_voice_proto_msgTypes[37]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2609,7 +2489,7 @@ func (x *DeleteVoiceSampleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteVoiceSampleResponse.ProtoReflect.Descriptor instead.
 func (*DeleteVoiceSampleResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{37}
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *DeleteVoiceSampleResponse) GetJobId() string {
@@ -2628,7 +2508,7 @@ type ListVoiceProfileVersionsRequest struct {
 
 func (x *ListVoiceProfileVersionsRequest) Reset() {
 	*x = ListVoiceProfileVersionsRequest{}
-	mi := &file_postpilot_v1_voice_proto_msgTypes[38]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2640,7 +2520,7 @@ func (x *ListVoiceProfileVersionsRequest) String() string {
 func (*ListVoiceProfileVersionsRequest) ProtoMessage() {}
 
 func (x *ListVoiceProfileVersionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_voice_proto_msgTypes[38]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2653,7 +2533,7 @@ func (x *ListVoiceProfileVersionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListVoiceProfileVersionsRequest.ProtoReflect.Descriptor instead.
 func (*ListVoiceProfileVersionsRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{38}
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListVoiceProfileVersionsRequest) GetVoiceId() string {
@@ -2672,7 +2552,7 @@ type ListVoiceProfileVersionsResponse struct {
 
 func (x *ListVoiceProfileVersionsResponse) Reset() {
 	*x = ListVoiceProfileVersionsResponse{}
-	mi := &file_postpilot_v1_voice_proto_msgTypes[39]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2684,7 +2564,7 @@ func (x *ListVoiceProfileVersionsResponse) String() string {
 func (*ListVoiceProfileVersionsResponse) ProtoMessage() {}
 
 func (x *ListVoiceProfileVersionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_voice_proto_msgTypes[39]
+	mi := &file_postpilot_v1_voice_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2697,7 +2577,7 @@ func (x *ListVoiceProfileVersionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListVoiceProfileVersionsResponse.ProtoReflect.Descriptor instead.
 func (*ListVoiceProfileVersionsResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{39}
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListVoiceProfileVersionsResponse) GetVersions() []*VoiceProfileVersion {
@@ -2705,6 +2585,112 @@ func (x *ListVoiceProfileVersionsResponse) GetVersions() []*VoiceProfileVersion 
 		return x.Versions
 	}
 	return nil
+}
+
+type GetVoiceProfileVersionSampleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	VoiceId       string                 `protobuf:"bytes,1,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
+	Version       int64                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetVoiceProfileVersionSampleRequest) Reset() {
+	*x = GetVoiceProfileVersionSampleRequest{}
+	mi := &file_postpilot_v1_voice_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetVoiceProfileVersionSampleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVoiceProfileVersionSampleRequest) ProtoMessage() {}
+
+func (x *GetVoiceProfileVersionSampleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_voice_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetVoiceProfileVersionSampleRequest.ProtoReflect.Descriptor instead.
+func (*GetVoiceProfileVersionSampleRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *GetVoiceProfileVersionSampleRequest) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
+	}
+	return ""
+}
+
+func (x *GetVoiceProfileVersionSampleRequest) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+// `sample` is unset for a version that never produced a post, which is an ordinary state for a
+// version rather than a failure: the client says so instead of showing an empty preview.
+type GetVoiceProfileVersionSampleResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sample        *PostContent           `protobuf:"bytes,1,opt,name=sample,proto3" json:"sample,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetVoiceProfileVersionSampleResponse) Reset() {
+	*x = GetVoiceProfileVersionSampleResponse{}
+	mi := &file_postpilot_v1_voice_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetVoiceProfileVersionSampleResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVoiceProfileVersionSampleResponse) ProtoMessage() {}
+
+func (x *GetVoiceProfileVersionSampleResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_voice_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetVoiceProfileVersionSampleResponse.ProtoReflect.Descriptor instead.
+func (*GetVoiceProfileVersionSampleResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *GetVoiceProfileVersionSampleResponse) GetSample() *PostContent {
+	if x != nil {
+		return x.Sample
+	}
+	return nil
+}
+
+func (x *GetVoiceProfileVersionSampleResponse) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
 }
 
 type UpdateVoiceOverrideRequest struct {
@@ -2919,7 +2905,7 @@ var File_postpilot_v1_voice_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\n" +
-	"\x18postpilot/v1/voice.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x1bpostpilot/v1/language.proto\"t\n" +
+	"\x18postpilot/v1/voice.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x1bpostpilot/v1/language.proto\x1a\x17postpilot/v1/post.proto\"t\n" +
 	"\n" +
 	"VoiceValue\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x126\n" +
@@ -3021,14 +3007,10 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\rfew_shot_bank\x18\b \x03(\v2\x19.postpilot.v1.VoiceSourceR\vfewShotBank\x12A\n" +
 	"\ffeedback_log\x18\t \x03(\v2\x1e.postpilot.v1.VoiceFeedbackRefR\vfeedbackLog\x12\x14\n" +
 	"\x05empty\x18\n" +
-	" \x01(\bR\x05empty\"\xbc\x03\n" +
+	" \x01(\bR\x05empty\"\xe2\x02\n" +
 	"\fVoiceProfile\x12)\n" +
 	"\x05voice\x18\n" +
-	" \x01(\v2\x13.postpilot.v1.VoiceR\x05voice\x12\x1e\n" +
-	"\n" +
-	"styleguide\x18\x01 \x01(\tR\n" +
-	"styleguide\x12\x14\n" +
-	"\x05rules\x18\x02 \x01(\tR\x05rules\x12\x1d\n" +
+	" \x01(\v2\x13.postpilot.v1.VoiceR\x05voice\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\x03 \x01(\tR\tupdatedAt\x123\n" +
 	"\asamples\x18\x04 \x03(\v2\x19.postpilot.v1.VoiceSampleR\asamples\x12\"\n" +
@@ -3036,16 +3018,17 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\n" +
 	"structured\x18\x06 \x01(\v2$.postpilot.v1.StructuredVoiceProfileR\n" +
 	"structured\x124\n" +
-	"\x16legacy_manual_guidance\x18\a \x01(\tR\x14legacyManualGuidance\x124\n" +
 	"\x16finalized_source_count\x18\b \x01(\x05R\x14finalizedSourceCount\x12!\n" +
-	"\fcan_validate\x18\t \x01(\bR\vcanValidate\"\xda\x01\n" +
+	"\fcan_validate\x18\t \x01(\bR\vcanValidateJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\a\x10\b\"\xf9\x01\n" +
 	"\x13VoiceProfileVersion\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x03R\aversion\x12>\n" +
 	"\aprofile\x18\x02 \x01(\v2$.postpilot.v1.StructuredVoiceProfileR\aprofile\x12\x16\n" +
 	"\x06origin\x18\x03 \x01(\tR\x06origin\x122\n" +
 	"\x15restored_from_version\x18\x04 \x01(\x03R\x13restoredFromVersion\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\tR\tcreatedAt\"h\n" +
+	"created_at\x18\x05 \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"has_sample\x18\x06 \x01(\bR\thasSample\"h\n" +
 	"\vVoiceSample\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x14\n" +
@@ -3097,16 +3080,6 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x16GetVoiceProfileRequest\x12\x19\n" +
 	"\bvoice_id\x18\x01 \x01(\tR\avoiceId\"O\n" +
 	"\x17GetVoiceProfileResponse\x124\n" +
-	"\aprofile\x18\x01 \x01(\v2\x1a.postpilot.v1.VoiceProfileR\aprofile\"\x8f\x01\n" +
-	"\x19UpdateVoiceProfileRequest\x12\x19\n" +
-	"\bvoice_id\x18\x03 \x01(\tR\avoiceId\x12#\n" +
-	"\n" +
-	"styleguide\x18\x01 \x01(\tH\x00R\n" +
-	"styleguide\x88\x01\x01\x12\x19\n" +
-	"\x05rules\x18\x02 \x01(\tH\x01R\x05rules\x88\x01\x01B\r\n" +
-	"\v_styleguideB\b\n" +
-	"\x06_rules\"R\n" +
-	"\x1aUpdateVoiceProfileResponse\x124\n" +
 	"\aprofile\x18\x01 \x01(\v2\x1a.postpilot.v1.VoiceProfileR\aprofile\"\x8a\x01\n" +
 	"\x15AddVoiceSampleRequest\x12\x19\n" +
 	"\bvoice_id\x18\x04 \x01(\tR\avoiceId\x12\x14\n" +
@@ -3124,7 +3097,14 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x1fListVoiceProfileVersionsRequest\x12\x19\n" +
 	"\bvoice_id\x18\x01 \x01(\tR\avoiceId\"a\n" +
 	" ListVoiceProfileVersionsResponse\x12=\n" +
-	"\bversions\x18\x01 \x03(\v2!.postpilot.v1.VoiceProfileVersionR\bversions\"\xa2\x01\n" +
+	"\bversions\x18\x01 \x03(\v2!.postpilot.v1.VoiceProfileVersionR\bversions\"Z\n" +
+	"#GetVoiceProfileVersionSampleRequest\x12\x19\n" +
+	"\bvoice_id\x18\x01 \x01(\tR\avoiceId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x03R\aversion\"x\n" +
+	"$GetVoiceProfileVersionSampleResponse\x121\n" +
+	"\x06sample\x18\x01 \x01(\v2\x19.postpilot.v1.PostContentR\x06sample\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x02 \x01(\tR\tcreatedAt\"\xa2\x01\n" +
 	"\x1aUpdateVoiceOverrideRequest\x12\x19\n" +
 	"\bvoice_id\x18\x04 \x01(\tR\avoiceId\x12.\n" +
 	"\x05layer\x18\x01 \x01(\x0e2\x18.postpilot.v1.VoiceLayerR\x05layer\x12\x14\n" +
@@ -3157,7 +3137,7 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x13VOICE_LAYER_ENDINGS\x10\x02\x12\x16\n" +
 	"\x12VOICE_LAYER_SYNTAX\x10\x03\x12\x19\n" +
 	"\x15VOICE_LAYER_STRUCTURE\x10\x04\x12\x14\n" +
-	"\x10VOICE_LAYER_AXES\x10\x052\x8b\n" +
+	"\x10VOICE_LAYER_AXES\x10\x052\xaa\n" +
 	"\n" +
 	"\fVoiceService\x12Q\n" +
 	"\n" +
@@ -3167,11 +3147,11 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x0fSetDefaultVoice\x12$.postpilot.v1.SetDefaultVoiceRequest\x1a%.postpilot.v1.SetDefaultVoiceResponse\"\x00\x12T\n" +
 	"\vDeleteVoice\x12 .postpilot.v1.DeleteVoiceRequest\x1a!.postpilot.v1.DeleteVoiceResponse\"\x00\x12W\n" +
 	"\fRestoreVoice\x12!.postpilot.v1.RestoreVoiceRequest\x1a\".postpilot.v1.RestoreVoiceResponse\"\x00\x12`\n" +
-	"\x0fGetVoiceProfile\x12$.postpilot.v1.GetVoiceProfileRequest\x1a%.postpilot.v1.GetVoiceProfileResponse\"\x00\x12i\n" +
-	"\x12UpdateVoiceProfile\x12'.postpilot.v1.UpdateVoiceProfileRequest\x1a(.postpilot.v1.UpdateVoiceProfileResponse\"\x00\x12]\n" +
+	"\x0fGetVoiceProfile\x12$.postpilot.v1.GetVoiceProfileRequest\x1a%.postpilot.v1.GetVoiceProfileResponse\"\x00\x12]\n" +
 	"\x0eAddVoiceSample\x12#.postpilot.v1.AddVoiceSampleRequest\x1a$.postpilot.v1.AddVoiceSampleResponse\"\x00\x12f\n" +
 	"\x11DeleteVoiceSample\x12&.postpilot.v1.DeleteVoiceSampleRequest\x1a'.postpilot.v1.DeleteVoiceSampleResponse\"\x00\x12{\n" +
-	"\x18ListVoiceProfileVersions\x12-.postpilot.v1.ListVoiceProfileVersionsRequest\x1a..postpilot.v1.ListVoiceProfileVersionsResponse\"\x00\x12l\n" +
+	"\x18ListVoiceProfileVersions\x12-.postpilot.v1.ListVoiceProfileVersionsRequest\x1a..postpilot.v1.ListVoiceProfileVersionsResponse\"\x00\x12\x87\x01\n" +
+	"\x1cGetVoiceProfileVersionSample\x121.postpilot.v1.GetVoiceProfileVersionSampleRequest\x1a2.postpilot.v1.GetVoiceProfileVersionSampleResponse\"\x00\x12l\n" +
 	"\x13UpdateVoiceOverride\x12(.postpilot.v1.UpdateVoiceOverrideRequest\x1a).postpilot.v1.UpdateVoiceOverrideResponse\"\x00\x12l\n" +
 	"\x13RestoreVoiceProfile\x12(.postpilot.v1.RestoreVoiceProfileRequest\x1a).postpilot.v1.RestoreVoiceProfileResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
@@ -3190,55 +3170,56 @@ func file_postpilot_v1_voice_proto_rawDescGZIP() []byte {
 var file_postpilot_v1_voice_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_postpilot_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
 var file_postpilot_v1_voice_proto_goTypes = []any{
-	(VoiceValueSource)(0),                    // 0: postpilot.v1.VoiceValueSource
-	(VoiceRuleStatus)(0),                     // 1: postpilot.v1.VoiceRuleStatus
-	(VoiceLayer)(0),                          // 2: postpilot.v1.VoiceLayer
-	(*VoiceValue)(nil),                       // 3: postpilot.v1.VoiceValue
-	(*WeightedWord)(nil),                     // 4: postpilot.v1.WeightedWord
-	(*BannedItem)(nil),                       // 5: postpilot.v1.BannedItem
-	(*EndingRatio)(nil),                      // 6: postpilot.v1.EndingRatio
-	(*VoiceLexical)(nil),                     // 7: postpilot.v1.VoiceLexical
-	(*VoiceEndings)(nil),                     // 8: postpilot.v1.VoiceEndings
-	(*VoiceSyntax)(nil),                      // 9: postpilot.v1.VoiceSyntax
-	(*VoiceStructure)(nil),                   // 10: postpilot.v1.VoiceStructure
-	(*VoiceAxes)(nil),                        // 11: postpilot.v1.VoiceAxes
-	(*VoiceContrastRule)(nil),                // 12: postpilot.v1.VoiceContrastRule
-	(*VoiceSource)(nil),                      // 13: postpilot.v1.VoiceSource
-	(*VoiceFeedbackRef)(nil),                 // 14: postpilot.v1.VoiceFeedbackRef
-	(*VoiceProfileMeta)(nil),                 // 15: postpilot.v1.VoiceProfileMeta
-	(*StructuredVoiceProfile)(nil),           // 16: postpilot.v1.StructuredVoiceProfile
-	(*VoiceProfile)(nil),                     // 17: postpilot.v1.VoiceProfile
-	(*VoiceProfileVersion)(nil),              // 18: postpilot.v1.VoiceProfileVersion
-	(*VoiceSample)(nil),                      // 19: postpilot.v1.VoiceSample
-	(*Voice)(nil),                            // 20: postpilot.v1.Voice
-	(*ListVoicesRequest)(nil),                // 21: postpilot.v1.ListVoicesRequest
-	(*ListVoicesResponse)(nil),               // 22: postpilot.v1.ListVoicesResponse
-	(*CreateVoiceRequest)(nil),               // 23: postpilot.v1.CreateVoiceRequest
-	(*CreateVoiceResponse)(nil),              // 24: postpilot.v1.CreateVoiceResponse
-	(*RenameVoiceRequest)(nil),               // 25: postpilot.v1.RenameVoiceRequest
-	(*RenameVoiceResponse)(nil),              // 26: postpilot.v1.RenameVoiceResponse
-	(*SetDefaultVoiceRequest)(nil),           // 27: postpilot.v1.SetDefaultVoiceRequest
-	(*SetDefaultVoiceResponse)(nil),          // 28: postpilot.v1.SetDefaultVoiceResponse
-	(*DeleteVoiceRequest)(nil),               // 29: postpilot.v1.DeleteVoiceRequest
-	(*DeleteVoiceResponse)(nil),              // 30: postpilot.v1.DeleteVoiceResponse
-	(*RestoreVoiceRequest)(nil),              // 31: postpilot.v1.RestoreVoiceRequest
-	(*RestoreVoiceResponse)(nil),             // 32: postpilot.v1.RestoreVoiceResponse
-	(*GetVoiceProfileRequest)(nil),           // 33: postpilot.v1.GetVoiceProfileRequest
-	(*GetVoiceProfileResponse)(nil),          // 34: postpilot.v1.GetVoiceProfileResponse
-	(*UpdateVoiceProfileRequest)(nil),        // 35: postpilot.v1.UpdateVoiceProfileRequest
-	(*UpdateVoiceProfileResponse)(nil),       // 36: postpilot.v1.UpdateVoiceProfileResponse
-	(*AddVoiceSampleRequest)(nil),            // 37: postpilot.v1.AddVoiceSampleRequest
-	(*AddVoiceSampleResponse)(nil),           // 38: postpilot.v1.AddVoiceSampleResponse
-	(*DeleteVoiceSampleRequest)(nil),         // 39: postpilot.v1.DeleteVoiceSampleRequest
-	(*DeleteVoiceSampleResponse)(nil),        // 40: postpilot.v1.DeleteVoiceSampleResponse
-	(*ListVoiceProfileVersionsRequest)(nil),  // 41: postpilot.v1.ListVoiceProfileVersionsRequest
-	(*ListVoiceProfileVersionsResponse)(nil), // 42: postpilot.v1.ListVoiceProfileVersionsResponse
-	(*UpdateVoiceOverrideRequest)(nil),       // 43: postpilot.v1.UpdateVoiceOverrideRequest
-	(*UpdateVoiceOverrideResponse)(nil),      // 44: postpilot.v1.UpdateVoiceOverrideResponse
-	(*RestoreVoiceProfileRequest)(nil),       // 45: postpilot.v1.RestoreVoiceProfileRequest
-	(*RestoreVoiceProfileResponse)(nil),      // 46: postpilot.v1.RestoreVoiceProfileResponse
-	(ContentLanguage)(0),                     // 47: postpilot.v1.ContentLanguage
-	(*ModelRef)(nil),                         // 48: postpilot.v1.ModelRef
+	(VoiceValueSource)(0),                        // 0: postpilot.v1.VoiceValueSource
+	(VoiceRuleStatus)(0),                         // 1: postpilot.v1.VoiceRuleStatus
+	(VoiceLayer)(0),                              // 2: postpilot.v1.VoiceLayer
+	(*VoiceValue)(nil),                           // 3: postpilot.v1.VoiceValue
+	(*WeightedWord)(nil),                         // 4: postpilot.v1.WeightedWord
+	(*BannedItem)(nil),                           // 5: postpilot.v1.BannedItem
+	(*EndingRatio)(nil),                          // 6: postpilot.v1.EndingRatio
+	(*VoiceLexical)(nil),                         // 7: postpilot.v1.VoiceLexical
+	(*VoiceEndings)(nil),                         // 8: postpilot.v1.VoiceEndings
+	(*VoiceSyntax)(nil),                          // 9: postpilot.v1.VoiceSyntax
+	(*VoiceStructure)(nil),                       // 10: postpilot.v1.VoiceStructure
+	(*VoiceAxes)(nil),                            // 11: postpilot.v1.VoiceAxes
+	(*VoiceContrastRule)(nil),                    // 12: postpilot.v1.VoiceContrastRule
+	(*VoiceSource)(nil),                          // 13: postpilot.v1.VoiceSource
+	(*VoiceFeedbackRef)(nil),                     // 14: postpilot.v1.VoiceFeedbackRef
+	(*VoiceProfileMeta)(nil),                     // 15: postpilot.v1.VoiceProfileMeta
+	(*StructuredVoiceProfile)(nil),               // 16: postpilot.v1.StructuredVoiceProfile
+	(*VoiceProfile)(nil),                         // 17: postpilot.v1.VoiceProfile
+	(*VoiceProfileVersion)(nil),                  // 18: postpilot.v1.VoiceProfileVersion
+	(*VoiceSample)(nil),                          // 19: postpilot.v1.VoiceSample
+	(*Voice)(nil),                                // 20: postpilot.v1.Voice
+	(*ListVoicesRequest)(nil),                    // 21: postpilot.v1.ListVoicesRequest
+	(*ListVoicesResponse)(nil),                   // 22: postpilot.v1.ListVoicesResponse
+	(*CreateVoiceRequest)(nil),                   // 23: postpilot.v1.CreateVoiceRequest
+	(*CreateVoiceResponse)(nil),                  // 24: postpilot.v1.CreateVoiceResponse
+	(*RenameVoiceRequest)(nil),                   // 25: postpilot.v1.RenameVoiceRequest
+	(*RenameVoiceResponse)(nil),                  // 26: postpilot.v1.RenameVoiceResponse
+	(*SetDefaultVoiceRequest)(nil),               // 27: postpilot.v1.SetDefaultVoiceRequest
+	(*SetDefaultVoiceResponse)(nil),              // 28: postpilot.v1.SetDefaultVoiceResponse
+	(*DeleteVoiceRequest)(nil),                   // 29: postpilot.v1.DeleteVoiceRequest
+	(*DeleteVoiceResponse)(nil),                  // 30: postpilot.v1.DeleteVoiceResponse
+	(*RestoreVoiceRequest)(nil),                  // 31: postpilot.v1.RestoreVoiceRequest
+	(*RestoreVoiceResponse)(nil),                 // 32: postpilot.v1.RestoreVoiceResponse
+	(*GetVoiceProfileRequest)(nil),               // 33: postpilot.v1.GetVoiceProfileRequest
+	(*GetVoiceProfileResponse)(nil),              // 34: postpilot.v1.GetVoiceProfileResponse
+	(*AddVoiceSampleRequest)(nil),                // 35: postpilot.v1.AddVoiceSampleRequest
+	(*AddVoiceSampleResponse)(nil),               // 36: postpilot.v1.AddVoiceSampleResponse
+	(*DeleteVoiceSampleRequest)(nil),             // 37: postpilot.v1.DeleteVoiceSampleRequest
+	(*DeleteVoiceSampleResponse)(nil),            // 38: postpilot.v1.DeleteVoiceSampleResponse
+	(*ListVoiceProfileVersionsRequest)(nil),      // 39: postpilot.v1.ListVoiceProfileVersionsRequest
+	(*ListVoiceProfileVersionsResponse)(nil),     // 40: postpilot.v1.ListVoiceProfileVersionsResponse
+	(*GetVoiceProfileVersionSampleRequest)(nil),  // 41: postpilot.v1.GetVoiceProfileVersionSampleRequest
+	(*GetVoiceProfileVersionSampleResponse)(nil), // 42: postpilot.v1.GetVoiceProfileVersionSampleResponse
+	(*UpdateVoiceOverrideRequest)(nil),           // 43: postpilot.v1.UpdateVoiceOverrideRequest
+	(*UpdateVoiceOverrideResponse)(nil),          // 44: postpilot.v1.UpdateVoiceOverrideResponse
+	(*RestoreVoiceProfileRequest)(nil),           // 45: postpilot.v1.RestoreVoiceProfileRequest
+	(*RestoreVoiceProfileResponse)(nil),          // 46: postpilot.v1.RestoreVoiceProfileResponse
+	(ContentLanguage)(0),                         // 47: postpilot.v1.ContentLanguage
+	(*ModelRef)(nil),                             // 48: postpilot.v1.ModelRef
+	(*PostContent)(nil),                          // 49: postpilot.v1.PostContent
 }
 var file_postpilot_v1_voice_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.VoiceValue.source:type_name -> postpilot.v1.VoiceValueSource
@@ -3283,10 +3264,10 @@ var file_postpilot_v1_voice_proto_depIdxs = []int32{
 	20, // 39: postpilot.v1.DeleteVoiceResponse.voice:type_name -> postpilot.v1.Voice
 	20, // 40: postpilot.v1.RestoreVoiceResponse.voice:type_name -> postpilot.v1.Voice
 	17, // 41: postpilot.v1.GetVoiceProfileResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	17, // 42: postpilot.v1.UpdateVoiceProfileResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	48, // 43: postpilot.v1.AddVoiceSampleRequest.model:type_name -> postpilot.v1.ModelRef
-	19, // 44: postpilot.v1.AddVoiceSampleResponse.sample:type_name -> postpilot.v1.VoiceSample
-	18, // 45: postpilot.v1.ListVoiceProfileVersionsResponse.versions:type_name -> postpilot.v1.VoiceProfileVersion
+	48, // 42: postpilot.v1.AddVoiceSampleRequest.model:type_name -> postpilot.v1.ModelRef
+	19, // 43: postpilot.v1.AddVoiceSampleResponse.sample:type_name -> postpilot.v1.VoiceSample
+	18, // 44: postpilot.v1.ListVoiceProfileVersionsResponse.versions:type_name -> postpilot.v1.VoiceProfileVersion
+	49, // 45: postpilot.v1.GetVoiceProfileVersionSampleResponse.sample:type_name -> postpilot.v1.PostContent
 	2,  // 46: postpilot.v1.UpdateVoiceOverrideRequest.layer:type_name -> postpilot.v1.VoiceLayer
 	17, // 47: postpilot.v1.UpdateVoiceOverrideResponse.profile:type_name -> postpilot.v1.VoiceProfile
 	17, // 48: postpilot.v1.RestoreVoiceProfileResponse.profile:type_name -> postpilot.v1.VoiceProfile
@@ -3297,10 +3278,10 @@ var file_postpilot_v1_voice_proto_depIdxs = []int32{
 	29, // 53: postpilot.v1.VoiceService.DeleteVoice:input_type -> postpilot.v1.DeleteVoiceRequest
 	31, // 54: postpilot.v1.VoiceService.RestoreVoice:input_type -> postpilot.v1.RestoreVoiceRequest
 	33, // 55: postpilot.v1.VoiceService.GetVoiceProfile:input_type -> postpilot.v1.GetVoiceProfileRequest
-	35, // 56: postpilot.v1.VoiceService.UpdateVoiceProfile:input_type -> postpilot.v1.UpdateVoiceProfileRequest
-	37, // 57: postpilot.v1.VoiceService.AddVoiceSample:input_type -> postpilot.v1.AddVoiceSampleRequest
-	39, // 58: postpilot.v1.VoiceService.DeleteVoiceSample:input_type -> postpilot.v1.DeleteVoiceSampleRequest
-	41, // 59: postpilot.v1.VoiceService.ListVoiceProfileVersions:input_type -> postpilot.v1.ListVoiceProfileVersionsRequest
+	35, // 56: postpilot.v1.VoiceService.AddVoiceSample:input_type -> postpilot.v1.AddVoiceSampleRequest
+	37, // 57: postpilot.v1.VoiceService.DeleteVoiceSample:input_type -> postpilot.v1.DeleteVoiceSampleRequest
+	39, // 58: postpilot.v1.VoiceService.ListVoiceProfileVersions:input_type -> postpilot.v1.ListVoiceProfileVersionsRequest
+	41, // 59: postpilot.v1.VoiceService.GetVoiceProfileVersionSample:input_type -> postpilot.v1.GetVoiceProfileVersionSampleRequest
 	43, // 60: postpilot.v1.VoiceService.UpdateVoiceOverride:input_type -> postpilot.v1.UpdateVoiceOverrideRequest
 	45, // 61: postpilot.v1.VoiceService.RestoreVoiceProfile:input_type -> postpilot.v1.RestoreVoiceProfileRequest
 	22, // 62: postpilot.v1.VoiceService.ListVoices:output_type -> postpilot.v1.ListVoicesResponse
@@ -3310,10 +3291,10 @@ var file_postpilot_v1_voice_proto_depIdxs = []int32{
 	30, // 66: postpilot.v1.VoiceService.DeleteVoice:output_type -> postpilot.v1.DeleteVoiceResponse
 	32, // 67: postpilot.v1.VoiceService.RestoreVoice:output_type -> postpilot.v1.RestoreVoiceResponse
 	34, // 68: postpilot.v1.VoiceService.GetVoiceProfile:output_type -> postpilot.v1.GetVoiceProfileResponse
-	36, // 69: postpilot.v1.VoiceService.UpdateVoiceProfile:output_type -> postpilot.v1.UpdateVoiceProfileResponse
-	38, // 70: postpilot.v1.VoiceService.AddVoiceSample:output_type -> postpilot.v1.AddVoiceSampleResponse
-	40, // 71: postpilot.v1.VoiceService.DeleteVoiceSample:output_type -> postpilot.v1.DeleteVoiceSampleResponse
-	42, // 72: postpilot.v1.VoiceService.ListVoiceProfileVersions:output_type -> postpilot.v1.ListVoiceProfileVersionsResponse
+	36, // 69: postpilot.v1.VoiceService.AddVoiceSample:output_type -> postpilot.v1.AddVoiceSampleResponse
+	38, // 70: postpilot.v1.VoiceService.DeleteVoiceSample:output_type -> postpilot.v1.DeleteVoiceSampleResponse
+	40, // 71: postpilot.v1.VoiceService.ListVoiceProfileVersions:output_type -> postpilot.v1.ListVoiceProfileVersionsResponse
+	42, // 72: postpilot.v1.VoiceService.GetVoiceProfileVersionSample:output_type -> postpilot.v1.GetVoiceProfileVersionSampleResponse
 	44, // 73: postpilot.v1.VoiceService.UpdateVoiceOverride:output_type -> postpilot.v1.UpdateVoiceOverrideResponse
 	46, // 74: postpilot.v1.VoiceService.RestoreVoiceProfile:output_type -> postpilot.v1.RestoreVoiceProfileResponse
 	62, // [62:75] is the sub-list for method output_type
@@ -3330,10 +3311,10 @@ func file_postpilot_v1_voice_proto_init() {
 	}
 	file_postpilot_v1_provider_proto_init()
 	file_postpilot_v1_language_proto_init()
+	file_postpilot_v1_post_proto_init()
 	file_postpilot_v1_voice_proto_msgTypes[6].OneofWrappers = []any{}
 	file_postpilot_v1_voice_proto_msgTypes[8].OneofWrappers = []any{}
 	file_postpilot_v1_voice_proto_msgTypes[20].OneofWrappers = []any{}
-	file_postpilot_v1_voice_proto_msgTypes[32].OneofWrappers = []any{}
 	file_postpilot_v1_voice_proto_msgTypes[40].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

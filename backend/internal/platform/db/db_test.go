@@ -463,9 +463,17 @@ func TestMigration0007PreservesLegacyVoiceAndRollsBack(t *testing.T) {
 	if err := Migrate(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
-	var gotStyle, gotRules string
-	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&gotStyle, &gotRules); err != nil || gotStyle != style || gotRules != rules {
-		t.Fatalf("legacy guidance changed: %q / %q err=%v", gotStyle, gotRules, err)
+	// 0017 dropped `styleguide` and kept `rules`. What 0007 has to preserve is therefore only
+	// the rules text — the analysis text a live voice depends on lives in its structured
+	// profile's lexical description from change 16 onward, and no migration preserves the
+	// column it used to sit in.
+	var gotRules string
+	if err := handle.Reader.QueryRow(`SELECT rules FROM voice_profiles WHERE user_id='alice'`).Scan(&gotRules); err != nil || gotRules != rules {
+		t.Fatalf("legacy rules changed: %q err=%v", gotRules, err)
+	}
+	var styleguideColumns int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('voice_profiles') WHERE name='styleguide'`).Scan(&styleguideColumns); err != nil || styleguideColumns != 0 {
+		t.Fatalf("styleguide column survived 0017: count=%d err=%v", styleguideColumns, err)
 	}
 	for _, table := range []string{"voice_profile_versions", "voice_learning_events", "voice_contrast_rules", "voice_profile_validations"} {
 		var count int
@@ -488,8 +496,11 @@ func TestMigration0007PreservesLegacyVoiceAndRollsBack(t *testing.T) {
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('voice_profiles') WHERE name='current_version'`).Scan(&currentVersionColumns); err != nil || currentVersionColumns != 0 {
 		t.Fatalf("down retained current_version: %d err=%v", currentVersionColumns, err)
 	}
-	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&gotStyle, &gotRules); err != nil || gotStyle != style || gotRules != rules {
-		t.Fatalf("down lost legacy guidance: %q / %q err=%v", gotStyle, gotRules, err)
+	// Rolling back past 0017 brings the styleguide column back EMPTY, by design: change 16
+	// decided that no migration preserves that text. The rules text still round-trips.
+	var downStyle string
+	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&downStyle, &gotRules); err != nil || downStyle != "" || gotRules != rules {
+		t.Fatalf("down lost legacy rules: %q / %q err=%v", downStyle, gotRules, err)
 	}
 }
 
@@ -711,14 +722,15 @@ func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
 		}
 	}
 
-	// The legacy guidance, the snapshot and the revisions are byte-identical.
-	var gotStyle, gotRules, gotSnapshot string
+	// The rules text, the snapshot and the revisions are byte-identical. `styleguide` is not
+	// checked because 0017 drops it (change 16).
+	var gotRules, gotSnapshot string
 	var corpus, current int
-	if err := handle.Reader.QueryRow(`SELECT styleguide,rules,corpus_version,current_version FROM voice_profiles WHERE voice_id=?`, aliceVoice).Scan(&gotStyle, &gotRules, &corpus, &current); err != nil {
+	if err := handle.Reader.QueryRow(`SELECT rules,corpus_version,current_version FROM voice_profiles WHERE voice_id=?`, aliceVoice).Scan(&gotRules, &corpus, &current); err != nil {
 		t.Fatal(err)
 	}
-	if gotStyle != style || gotRules != rules || corpus != 2 || current != 5 {
-		t.Fatalf("profile changed: %q %q %d %d", gotStyle, gotRules, corpus, current)
+	if gotRules != rules || corpus != 2 || current != 5 {
+		t.Fatalf("profile changed: %q %d %d", gotRules, corpus, current)
 	}
 	if err := handle.Reader.QueryRow(`SELECT snapshot FROM voice_profile_versions WHERE id='ver1'`).Scan(&gotSnapshot); err != nil || gotSnapshot != snapshot {
 		t.Fatalf("snapshot changed: %q err=%v", gotSnapshot, err)
@@ -727,7 +739,7 @@ func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
 	// An account that never had a profile still gets exactly one empty one — a read must
 	// never be the thing that creates domain rows.
 	var bobProfiles int
-	if err := handle.Reader.QueryRow(`SELECT count(*) FROM voice_profiles p JOIN voices v ON v.id=p.voice_id WHERE v.user_id='bob' AND p.styleguide='' AND p.current_version=0`).Scan(&bobProfiles); err != nil || bobProfiles != 1 {
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM voice_profiles p JOIN voices v ON v.id=p.voice_id WHERE v.user_id='bob' AND p.rules='' AND p.current_version=0`).Scan(&bobProfiles); err != nil || bobProfiles != 1 {
 		t.Fatalf("bob profiles=%d err=%v", bobProfiles, err)
 	}
 
@@ -808,8 +820,11 @@ func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
 	if _, err := provider.Down(ctx); err != nil {
 		t.Fatalf("rollback of a single-voice database failed: %v", err)
 	}
-	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&gotStyle, &gotRules); err != nil || gotStyle != style || gotRules != rules {
-		t.Fatalf("rollback lost legacy guidance: %q / %q err=%v", gotStyle, gotRules, err)
+	// Same as 0007's rollback: the styleguide column comes back empty on purpose (change 16),
+	// while the rules text round-trips through every rebuild.
+	var rolledStyle string
+	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&rolledStyle, &gotRules); err != nil || rolledStyle != "" || gotRules != rules {
+		t.Fatalf("rollback lost legacy rules: %q / %q err=%v", rolledStyle, gotRules, err)
 	}
 	var voiceTables int
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='voices'`).Scan(&voiceTables); err != nil || voiceTables != 0 {

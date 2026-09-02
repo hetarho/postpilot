@@ -9,7 +9,16 @@ import {
   VoiceLearningService,
 } from '@/shared/api'
 import { LONG_PRESS_MS } from '@/shared/config'
-import { AppFailureMessage, Button, Dialog, FieldLabel, Listbox, Notice } from '@/shared/ui'
+import { clsx } from 'clsx'
+import {
+  AppFailureMessage,
+  Button,
+  Dialog,
+  FieldLabel,
+  Listbox,
+  Notice,
+  Typography,
+} from '@/shared/ui'
 
 export function SentenceFeedback({
   postSlug,
@@ -21,10 +30,17 @@ export function SentenceFeedback({
   beforeSubmit: () => Promise<void>
 }) {
   const { t } = useTranslation('voices')
-  const sentences = text
-    .split(/(?<=[.!?])\s+|\n+/)
-    .map((value) => value.trim())
-    .filter(Boolean)
+  // Deduplicated: the source is the whole finalized post now, so a repeated sentence would
+  // otherwise be two rows carrying the same choice — and the server stores one record per
+  // sentence text either way.
+  const sentences = [
+    ...new Set(
+      text
+        .split(/(?<=[.!?])\s+|\n+/)
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ]
   const [open, setOpen] = useState(false)
   // The user's *choice*, not the sentence in play: `text` is live editable block content, so
   // a stored resolved value would name a sentence the post no longer contains and the server
@@ -87,18 +103,59 @@ export function SentenceFeedback({
         onConfirm={() => void submit()}
       >
         <div className="grid gap-4">
-          <div>
-            <FieldLabel id="feedback-sentence-label" htmlFor="feedback-sentence">
-              {t('feedback.sentence')}
-            </FieldLabel>
-            <Listbox
-              id="feedback-sentence"
-              aria-labelledby="feedback-sentence-label"
-              value={selected}
-              options={sentences.map((value) => ({ value, label: value }))}
-              onChange={setSentence}
-              className="mt-1"
-            />
+          {/* `min-w-0` on the group, and rows that WRAP. The sentence used to be chosen from a
+              `Listbox`, whose trigger is `whitespace-nowrap`: with a whole sentence as its label
+              the grid item's automatic minimum resolved to that sentence's full width and the
+              sheet gained a long horizontal scroll. A vertical list of full-width rows is the
+              actual fix, and `min-w-0` keeps any future long child from doing it again.
+              It is a RADIOGROUP, not a pile of toggles: the control it replaced was a combobox,
+              so the select-one semantics and the single tab stop have to survive the shape
+              change. Only the chosen row is tabbable and the arrows move between them — the
+              WAI-APG radio-group pattern, where focus follows selection. */}
+          <div
+            role="radiogroup"
+            aria-labelledby="feedback-sentence-label"
+            className="min-w-0"
+            onKeyDown={(event) => {
+              const step =
+                event.key === 'ArrowDown' || event.key === 'ArrowRight'
+                  ? 1
+                  : event.key === 'ArrowUp' || event.key === 'ArrowLeft'
+                    ? -1
+                    : 0
+              if (step === 0) return
+              event.preventDefault()
+              const at = sentences.indexOf(selected)
+              const next = (at + step + sentences.length) % sentences.length
+              setSentence(sentences[next])
+              event.currentTarget
+                .querySelectorAll<HTMLButtonElement>('[role="radio"]')
+                [next]?.focus()
+            }}
+          >
+            <FieldLabel id="feedback-sentence-label">{t('feedback.sentence')}</FieldLabel>
+            <div className="mt-1 grid min-w-0 gap-1">
+              {sentences.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={value === selected}
+                  tabIndex={value === selected ? 0 : -1}
+                  onClick={() => setSentence(value)}
+                  className={clsx(
+                    'flex min-h-11 w-full min-w-0 items-center rounded-md px-3 py-2 text-left transition-colors',
+                    value === selected
+                      ? 'bg-row-bg-active text-content-primary'
+                      : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',
+                  )}
+                >
+                  <Typography variant="body" as="span" className="min-w-0 break-words">
+                    {value}
+                  </Typography>
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <FieldLabel id="feedback-reason-label" htmlFor="feedback-reason">
@@ -118,7 +175,17 @@ export function SentenceFeedback({
               className="mt-1"
             />
           </div>
-          <p>{t('feedback.help')}</p>
+          {/* What this DOES, where a statement of what it does not do used to stand. Leaving
+              feedback teaches the voice and changes nothing about the post in front of the user,
+              so the surface says so and names the thing that does change the post. */}
+          <div className="grid gap-1">
+            <Typography variant="body" as="p">
+              {t('feedback.purpose')}
+            </Typography>
+            <Typography variant="body" as="p" className="text-content-secondary">
+              {t('feedback.changePost')}
+            </Typography>
+          </div>
           {mutation.error && (
             <Notice tone="danger" role="alert">
               <AppFailureMessage failure={appFailureFromConnect(mutation.error)} />

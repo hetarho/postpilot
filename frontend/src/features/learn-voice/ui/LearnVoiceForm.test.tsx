@@ -9,12 +9,9 @@ import { LearnVoiceForm } from './LearnVoiceForm'
 
 const EMPTY_PROFILE: VoiceProfile = {
   voice: { ...emptyVoice(), id: 'voice-default', name: '기본 말투', isDefault: true },
-  styleguide: '',
-  rules: '',
   updatedAt: '',
   samples: [],
   activeJobId: '',
-  legacyManualGuidance: '',
   structured: emptyStructuredVoiceProfile(),
   finalizedSourceCount: 0,
   canValidate: false,
@@ -85,8 +82,14 @@ describe('LearnVoiceForm', () => {
     expect(screen.getByRole('button', { name: '학습' })).toBeDisabled()
   })
 
-  it('asks before replacing an existing styleguide', async () => {
-    const { calls } = renderForm({ profile: { ...EMPTY_PROFILE, styleguide: '# 종결어미' } })
+  // The gate is a PUBLISHED profile version now, not a free-text column (change 16).
+  it('asks before replacing an existing analysis', async () => {
+    const { calls } = renderForm({
+      profile: {
+        ...EMPTY_PROFILE,
+        structured: { ...emptyStructuredVoiceProfile(), version: 3n, empty: false },
+      },
+    })
     fireEvent.change(screen.getByLabelText('내가 쓴 글'), {
       target: { value: '가'.repeat(200) },
     })

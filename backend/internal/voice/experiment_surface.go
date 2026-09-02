@@ -72,19 +72,81 @@ func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.M
 	return styleguide, usage, nil
 }
 
-// ApplyStyleguideWinner writes the winner only into the voice the experiment froze, and
-// only while that voice is still active.
+// ApplyStyleguideWinner applies the winner only to the voice the experiment froze, and only
+// while that voice is still active.
+//
+// It keeps its NAME and SIGNATURE: the experiment context's ApplyWinner port, the
+// confirmStyleguide confirmation and the ApplyWinnerOutput RPC all still call exactly this.
+// What changed is where the winning analysis lands. It used to be written into a free-text
+// `styleguide` column; that column is gone (change 16), so the winner is applied the way an
+// analysis run applies its own result — as a published structured profile version whose
+// lexical description IS the winning analysis, with the account's manual overrides and its
+// earned rules carried onto it, mirroring analyze_handler.
+//
+// Publishing IF HEAD rather than unconditionally: an analysis or a rule change that published
+// while the operator was confirming this winner is newer evidence, and a stale winner must not
+// overwrite it. Losing that race is not an error — the confirmation simply stands down.
 func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, styleguide string) error {
 	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
 		return err
 	}
-	profile, err := s.store.GetProfile(ctx, userID, voiceID)
+	if strings.TrimSpace(styleguide) == "" {
+		return nil
+	}
+	if s.personalization == nil {
+		return nil
+	}
+	head, err := s.store.GetProfile(ctx, userID, voiceID)
 	if err != nil {
 		return err
 	}
-	if profile.Styleguide == styleguide {
-		return nil
+	active, err := s.activeVoice(ctx, userID, voiceID)
+	if err != nil {
+		return err
 	}
-	_, err = s.UpdateStyleguide(ctx, userID, voiceID, styleguide)
-	return err
+	samples, _, err := s.store.CorpusSnapshot(ctx, userID, voiceID)
+	if err != nil {
+		return fmt.Errorf("corpus for analyze winner: %w", err)
+	}
+	var sources []AuthoredSource
+	if sources, err = s.personalization.ListAuthoredSources(ctx, userID, voiceID); err != nil {
+		return fmt.Errorf("authored sources for analyze winner: %w", err)
+	}
+	// The measured half is MEASURED, not inherited: cloning the current head would carry its
+	// ending distribution and sentence metrics onto a version the winner never described, and a
+	// voice with no head at all would publish a v1 with every metric unset. This is exactly what
+	// analyze_handler does with its own result — only the description differs.
+	corpus := personalizationCorpus(samples, sources)
+	profile := MeasuredProfileForLanguage(corpus, active.SourceLanguage, s.now)
+	profile.Lexical.Description = VoiceValue{Value: styleguide, Source: SourceAnalyzed}
+	profile.SourceCount = len(samples) + len(sources)
+	profile.Sources = sources
+	profile.Empty = false
+	overrides, err := s.personalization.ListManualOverrides(ctx, userID, voiceID)
+	if err != nil {
+		return fmt.Errorf("manual voice overrides: %w", err)
+	}
+	for _, override := range overrides {
+		if err := applyOverride(&profile, override.Layer, override.Field, override.Value); err != nil {
+			return err
+		}
+	}
+	if profile.Rules, err = s.personalization.ListRules(ctx, userID, voiceID); err != nil {
+		return fmt.Errorf("voice rules: %w", err)
+	}
+	// origin "analysis": an analyze-stage winner IS an analysis result, and the version
+	// history's origin vocabulary already names that. A separate origin would need a
+	// migration to widen the CHECK for a distinction the history does not make.
+	_, ok, err := s.personalization.PublishProfileVersionIfHead(ctx, userID, voiceID, profile, "analysis", head.Structured.Version, s.now())
+	if err != nil {
+		return fmt.Errorf("publish analyze winner profile: %w", err)
+	}
+	// Losing the head race is NOT success. The caller records the winner as applied on a nil
+	// error, so swallowing this would leave the experiment claiming an effect the voice never
+	// received. An analysis or a rule published while the operator was confirming is newer
+	// evidence; the honest answer is to say the apply did not land so it can be retried.
+	if !ok {
+		return fmt.Errorf("문체 프로필이 그 사이에 갱신되었어요. 다시 적용해 주세요")
+	}
+	return nil
 }

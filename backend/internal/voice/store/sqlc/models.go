@@ -164,3 +164,11 @@ type VoiceSentenceFeedback struct {
 	ProcessingState string
 	CreatedAt       string
 }
+
+type VoiceVersionSample struct {
+	VoiceID   string
+	UserID    string
+	Version   int64
+	Content   string
+	CreatedAt string
+}

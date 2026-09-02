@@ -48,9 +48,8 @@ export const BlockEditor = forwardRef<
   {
     post: PostDraft
     onContentChange?: (content: PostContent) => void
-    renderSentenceAction?: (text: string, flush: () => Promise<bigint>) => ReactNode
   }
->(function BlockEditor({ post, onContentChange, renderSentenceAction }, ref) {
+>(function BlockEditor({ post, onContentChange }, ref) {
   const { t } = useTranslation('posts')
   const [content, setContent] = useState(() => clone(PostContentSchema, post.content!))
   const valid = useMemo(
@@ -129,8 +128,6 @@ export const BlockEditor = forwardRef<
             onRemove={() => removeBlock(index)}
           >
             {rendered}
-            {(block.type === BlockType.TEXT || block.type === BlockType.QUOTE) &&
-              renderSentenceAction?.(block.content, autosave.flush)}
           </BlockEditRow>
         )}
       />

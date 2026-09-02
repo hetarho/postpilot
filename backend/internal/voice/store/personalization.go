@@ -42,10 +42,17 @@ func (s *Store) ListProfileVersions(ctx context.Context, userID, voiceID string)
 	}
 	out := make([]voice.ProfileVersion, 0, len(rows))
 	for _, row := range rows {
-		item, err := profileVersion(row)
+		item, err := profileVersion(sqlc.VoiceProfileVersion{
+			ID: row.ID, UserID: row.UserID, VoiceID: row.VoiceID, Version: row.Version,
+			Snapshot: row.Snapshot, Origin: row.Origin,
+			RestoredFromVersion: row.RestoredFromVersion, CreatedAt: row.CreatedAt,
+		})
 		if err != nil {
 			return nil, err
 		}
+		// The LEFT JOIN carries presence only: the list says whether a version CAN be
+		// previewed, and the snapshot itself is fetched per version on open (change 16).
+		item.HasSample = row.SampleVersion.Valid
 		out = append(out, item)
 	}
 	return out, nil

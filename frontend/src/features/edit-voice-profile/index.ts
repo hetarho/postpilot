@@ -1,4 +1,2 @@
-export { StyleguideEditor } from './ui/StyleguideEditor'
-export { RulesEditor } from './ui/RulesEditor'
 export { StructuredProfileEditor } from './ui/StructuredProfileEditor'
 export { VoiceVersionHistory } from './ui/VoiceVersionHistory'
