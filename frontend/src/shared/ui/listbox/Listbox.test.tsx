@@ -34,6 +34,11 @@ function Harness({ onChanged }: { onChanged?: (value: Fruit) => void }) {
 
 afterEach(cleanup)
 
+/** A 44px-tall trigger whose top edge sits `top` pixels down jsdom's 768px viewport. */
+function rectAt(top: number): DOMRect {
+  return { top, bottom: top + 44, left: 0, right: 200, width: 200, height: 44 } as DOMRect
+}
+
 describe('Listbox', () => {
   it('names itself with its label and its current option, and wears the field well', () => {
     render(<Harness />)
@@ -147,6 +152,48 @@ describe('Listbox', () => {
     await user.click(screen.getByRole('combobox', { name: '제목 단계' }))
     await user.click(screen.getByRole('option', { name: 'H3' }))
     expect(onChange).toHaveBeenCalledWith(3)
+  })
+
+  // The bug this measurement replaced: a `dvh` ceiling is the same number wherever the trigger
+  // sits, so a field in the editor's docked bar opened a panel half the screen tall into the
+  // ~0px of room beneath it, and every option was past the bottom edge.
+  it('bounds the open panel to the room below the trigger', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const trigger = screen.getByRole('combobox', { name: '과일 배' })
+    // jsdom has no layout engine, so the anchor is stated rather than measured. 500px down a
+    // 768px viewport leaves 224px under the trigger, less the 4px gap and the 16px gutter.
+    trigger.getBoundingClientRect = () => rectAt(500)
+
+    await user.click(trigger)
+    const panel = screen.getByRole('listbox')
+    expect(panel).toHaveClass('top-full', 'overflow-y-auto', 'overscroll-contain')
+    expect(panel.style.maxHeight).toBe('204px')
+  })
+
+  it('stops at half the viewport where there is more room than a list needs', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const trigger = screen.getByRole('combobox', { name: '과일 배' })
+    trigger.getBoundingClientRect = () => rectAt(120)
+
+    await user.click(trigger)
+    // 604px are free, but a forty-model catalog opening that tall buries the field it belongs to.
+    expect(screen.getByRole('listbox').style.maxHeight).toBe('384px')
+  })
+
+  it('flips above a trigger with no room under it, and scrolls inside what is there', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const trigger = screen.getByRole('combobox', { name: '과일 배' })
+    // A docked bar's field: 24px of viewport under it, 700px over it.
+    trigger.getBoundingClientRect = () => rectAt(700)
+
+    await user.click(trigger)
+    const panel = screen.getByRole('listbox')
+    expect(panel).toHaveClass('bottom-full')
+    expect(panel).not.toHaveClass('top-full')
+    expect(panel.style.maxHeight).toBe('384px')
   })
 
   it('does not open while disabled', async () => {

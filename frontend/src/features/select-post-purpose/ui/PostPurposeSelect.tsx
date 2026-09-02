@@ -1,6 +1,5 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from '@tanstack/react-router'
 import { NO_PURPOSE_VALUE, noPurposeLabel, usePurposes, type PurposeRef } from '@/entities/purpose'
 import {
   Button,
@@ -8,7 +7,6 @@ import {
   FieldMessage,
   Listbox,
   Typography,
-  typographyStyles,
   type ListboxOption,
 } from '@/shared/ui'
 import { runningJobNote, assignmentFailureMessage } from '../model/assignment'
@@ -29,7 +27,13 @@ interface PostPurposeSelectProps {
 }
 
 /** The optional 용도 of a post: an app-drawn listbox wearing the field well (design-language §7),
- *  defaulting to 없음, beside the required voice select. */
+ *  defaulting to 없음, beside the required voice select on the editor dock's own row.
+ *
+ *  Like its neighbour it carries no VISIBLE label — three columns on a 360px screen have no width
+ *  for one — and its `sr-only` label keeps the control announced as '용도 <값>'. It also offers no
+ *  way to the 용도 page: this is the row a post is written from, the directory is a tab of its own
+ *  in the app's navigation, and a link out of a docked bar mid-draft is an invitation to lose the
+ *  draft (owner decision 2026-09-02). */
 export function PostPurposeSelect({
   ownerId,
   value,
@@ -53,7 +57,6 @@ export function PostPurposeSelect({
     current && current.id && !purposes.some((purpose) => purpose.id === current.id)
       ? current
       : undefined
-  const selected = purposes.find((purpose) => purpose.id === value)
   const describedBy = [jobRunning ? hintId : '', error || isError ? errorId : '']
     .filter(Boolean)
     .join(' ')
@@ -85,8 +88,8 @@ export function PostPurposeSelect({
 
   return (
     <div className={className}>
-      <div className="flex items-center gap-3">
-        <FieldLabel id={labelId} htmlFor={id} className="shrink-0">
+      <div className="flex items-center gap-2">
+        <FieldLabel id={labelId} htmlFor={id} className="sr-only">
           {t('title', { ns: 'purposes' })}
         </FieldLabel>
         <span className="min-w-0 flex-1">
@@ -102,11 +105,6 @@ export function PostPurposeSelect({
           />
         </span>
       </div>
-      {selected?.description && (
-        <Typography variant="label" as="p" className="mt-2 break-words">
-          {selected.description}
-        </Typography>
-      )}
       {jobRunning && (
         <Typography variant="label" as="p" id={hintId} role="status" className="mt-2">
           {runningJobNote()}
@@ -133,17 +131,6 @@ export function PostPurposeSelect({
           {error}
         </FieldMessage>
       )}
-      <p className="mt-2">
-        <Link
-          to="/purposes"
-          className={typographyStyles({
-            variant: 'label',
-            className: 'underline underline-offset-2',
-          })}
-        >
-          {t('assignment.manage', { ns: 'purposes' })}
-        </Link>
-      </p>
     </div>
   )
 }

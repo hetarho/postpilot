@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TransportProvider } from '@connectrpc/connect-query'
@@ -12,13 +12,14 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { Stage } from '@/shared/api'
+import { chooseOption } from '@/test/listbox'
 import { createFakeAuthTransport, createTestQueryClient } from '@/test/session'
 import { GenerationBrief } from './GenerationBrief'
 
 afterEach(cleanup)
 
-/** The brief holds real router links (`/ai-models`, `/purposes`), so it needs a router — but not
- *  the app's: a two-route memory tree keeps the test about the widget. */
+/** The brief composes features that may still route (the AI 모델 page owns the same pair), so it
+ *  needs a router — but not the app's: a two-route memory tree keeps the test about the widget. */
 function renderInRouter(
   ui: React.ReactNode,
   transport: ReturnType<typeof createFakeAuthTransport>,
@@ -43,21 +44,35 @@ function renderInRouter(
   )
 }
 
-function renderBrief(overrides: Partial<Parameters<typeof GenerationBrief>[0]> = {}) {
+function renderBrief(
+  overrides: Partial<Parameters<typeof GenerationBrief>[0]> = {},
+  { savedPair = false }: { savedPair?: boolean } = {},
+) {
+  const calls: string[] = []
   const transport = createFakeAuthTransport({
     user: { id: 'alice' },
     providers: {
-      models: [{ providerId: 'openrouter', modelId: 'writer', label: 'Writer', vision: true }],
+      calls,
+      models: [
+        { providerId: 'openrouter', modelId: 'writer', label: 'Writer', vision: true },
+        { providerId: 'openrouter', modelId: 'rival', label: 'Rival', vision: true },
+      ],
       selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      comparisonPairs: savedPair
+        ? [
+            {
+              stage: Stage.WRITE,
+              candidateA: { providerId: 'openrouter', modelId: 'writer' },
+              candidateB: { providerId: 'openrouter', modelId: 'rival' },
+            },
+          ]
+        : [],
     },
     voice: { voices: [{ id: 'voice-a', name: '일상 말투', isDefault: true }] },
     purposes: { purposes: [{ id: 'purpose-a', name: '일기' }] },
   })
   renderInRouter(
     <GenerationBrief
-      ownerId="alice"
-      purposeId=""
-      onPurposeSelect={vi.fn()}
       targetLanguage="ko"
       onTargetLanguageSelect={vi.fn()}
       photoCount={0}
@@ -71,6 +86,7 @@ function renderBrief(overrides: Partial<Parameters<typeof GenerationBrief>[0]> =
     />,
     transport,
   )
+  return { calls }
 }
 
 describe('GenerationBrief', () => {
@@ -81,23 +97,92 @@ describe('GenerationBrief', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  // A1: ONE surface holds the whole brief, in the order the run consumes it — 말투 excepted, which
-  // rides the dock's own row beside this trigger so a wrong voice is visible without opening it.
-  it('holds the whole writing brief in one panel, without 말투', async () => {
+  // A1, narrowed: ONE surface holds every SETTING the run consumes, in the order it consumes them.
+  // 말투 and 용도 are excepted — both are per-draft choices and both ride the dock's own row beside
+  // this trigger, so getting either wrong is visible without opening anything.
+  it('holds the run settings in one panel, without 말투 and 용도', async () => {
     const user = userEvent.setup()
     renderBrief()
 
     await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
     const panel = screen.getByRole('dialog', { name: '글쓰기 옵션' })
 
-    for (const label of ['관찰 모델', '작성 모델', '용도', '글 언어']) {
+    for (const label of ['관찰 모델', '작성 모델', '후보 A', '후보 B', '글 언어']) {
       await waitFor(() =>
         expect(screen.getByRole('combobox', { name: new RegExp(label) })).toBeInTheDocument(),
       )
     }
-    expect(screen.queryByRole('combobox', { name: /말투/ })).not.toBeInTheDocument()
+    for (const absent of [/말투/, /용도/]) {
+      expect(screen.queryByRole('combobox', { name: absent })).not.toBeInTheDocument()
+    }
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeInTheDocument()
-    expect(panel.textContent).toContain('AI 모델에서 두 후보 설정')
+    // The A/B pair is chosen HERE now, so the way out to the AI 모델 page that stood in for it is
+    // gone — following it mid-draft cost the user their place.
+    expect(panel.textContent).not.toContain('AI 모델에서 두 후보 설정')
+    expect(within(panel).queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  // The pair has no 저장 button here, unlike the same fields on the AI 모델 page: the brief is a
+  // surface of self-saving fields, so the save rides the second choice.
+  it('saves the A/B pair as soon as both candidates name different models', async () => {
+    const user = userEvent.setup()
+    const { calls } = renderBrief()
+
+    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
+    const candidateA = await screen.findByRole('combobox', { name: /후보 A/ })
+    const candidateB = await screen.findByRole('combobox', { name: /후보 B/ })
+
+    // One candidate is not a pair, and the backend has nothing to store for half of one.
+    await chooseOption(user, candidateA, 'Writer')
+    expect(calls).not.toContain('SaveComparisonPair')
+
+    await chooseOption(user, candidateB, 'Rival')
+    await waitFor(() => expect(calls).toContain('SaveComparisonPair'))
+  })
+
+  // The backend refuses two identical candidates, so the field says so instead of sending it.
+  it('refuses to save a pair of the same model twice', async () => {
+    const user = userEvent.setup()
+    const { calls } = renderBrief()
+
+    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
+    await chooseOption(user, await screen.findByRole('combobox', { name: /후보 A/ }), 'Writer')
+    await chooseOption(user, await screen.findByRole('combobox', { name: /후보 B/ }), 'Writer')
+
+    expect(await screen.findByText('서로 다른 모델을 선택해 주세요.')).toBeInTheDocument()
+    expect(calls).not.toContain('SaveComparisonPair')
+  })
+
+  // A blanked candidate is not a state the pair can be IN: `SaveComparisonPair` refuses an empty
+  // ref and no RPC clears one. Offering the choice anyway emptied the field, sent nothing, and
+  // left 글 생성's A/B 비교 running the candidate the user had just watched disappear.
+  it('offers no way to blank a candidate the server could not clear', async () => {
+    const user = userEvent.setup()
+    renderBrief({}, { savedPair: true })
+
+    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
+    const candidateA = await screen.findByRole('combobox', { name: /후보 A/ })
+    await waitFor(() => expect(candidateA).toHaveTextContent('Writer'))
+
+    // The panel lists models and nothing else: every row it offers is a choice this surface can
+    // actually carry out.
+    await user.click(candidateA)
+    expect(screen.queryByRole('option', { name: '모델을 선택하세요' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Writer',
+      'Rival',
+    ])
+  })
+
+  // Never set is the field's EMPTY STATE rather than a listed choice, so it still reads as empty
+  // before either candidate has been chosen.
+  it('reads as unset while no pair has been saved', async () => {
+    const user = userEvent.setup()
+    renderBrief()
+
+    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
+    const candidateA = await screen.findByRole('combobox', { name: /후보 A/ })
+    expect(candidateA).toHaveTextContent('모델을 선택하세요')
   })
 
   // A1: a draft with no post yet has no slug to save a target length against, so that one field
@@ -108,6 +193,6 @@ describe('GenerationBrief', () => {
 
     await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
     expect(screen.queryByLabelText('목표 글자 수 사용')).not.toBeInTheDocument()
-    expect(await screen.findByRole('combobox', { name: /용도/ })).toBeInTheDocument()
+    expect(await screen.findByRole('combobox', { name: /작성 모델/ })).toBeInTheDocument()
   })
 })

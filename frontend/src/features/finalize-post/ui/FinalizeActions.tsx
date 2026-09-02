@@ -90,14 +90,15 @@ export function FinalizeActions({
         </Notice>
       )}
       {finalized ? (
-        <>
-          <Notice tone="success" role="status">
-            {t('finalize.success')}
-          </Notice>
-          <Button variant="secondary" onClick={() => onFinalized(post.title)}>
-            {t('finalize.goFinish')}
-          </Button>
-        </>
+        // The way onward, and nothing else. The success banner that stood here said what the
+        // status badge at the top of the editor already says, on a bar the draft is read past,
+        // and `finalized` is a standing STATE rather than an event — so nothing took it down, and
+        // the first changed content save returns the post to `review` and brings the pair below
+        // back on its own (owner decision 2026-09-02). 글 완성 reports the finalize and the
+        // learning run that may have followed it; this step only has to offer the road there.
+        <Button variant="secondary" onClick={() => onFinalized(post.title)}>
+          {t('finalize.goFinish')}
+        </Button>
       ) : (
         <>
           {learning.blocked ? (
@@ -111,25 +112,28 @@ export function FinalizeActions({
               </Typography>
             )
           )}
-          {/* Both actions share the row and its width: neither is the obvious default — 확정 ends
-              the post, 확정하고 말투 학습 also teaches the voice — and a phone row of two Korean
-              labels only fits when each takes half (§4.2). */}
+          {/* 확정 is the CTA and takes the right — it is what ENDS the step, it is available
+              whenever the draft can be finalized, and 확정하고 말투 학습 additionally needs an
+              analyze model and a baseline to learn from, so the always-available action is the
+              one the thumb of a one-handed grip reaches first (owner decision 2026-09-02). The
+              row still splits evenly rather than 3 : 7 like 글 생성's: 확정하고 말투 학습 is four
+              words of Korean and a third of a 360px row would break it across three lines. */}
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="secondary"
-              disabled={!post.canFinalize || learning.active}
-              pending={preparing === 'finalize'}
-              onClick={() => setConfirming('finalize')}
-            >
-              {t('finalize.action')}
-            </Button>
-            <Button
-              variant="cta"
               disabled={!post.canFinalize || !learning.canLearn}
               pending={preparing === 'learn'}
               onClick={() => setConfirming('learn')}
             >
               {t('finalize.actionLearn')}
+            </Button>
+            <Button
+              variant="cta"
+              disabled={!post.canFinalize || learning.active}
+              pending={preparing === 'finalize'}
+              onClick={() => setConfirming('finalize')}
+            >
+              {t('finalize.action')}
             </Button>
           </div>
         </>

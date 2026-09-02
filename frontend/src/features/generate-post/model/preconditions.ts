@@ -16,8 +16,8 @@ export type GenerationBlocker =
   'voiceDeleted' | 'activeJob' | 'observe' | 'vision' | 'write' | 'pair' | 'different'
 
 /** The blockers a route out of this screen can fix. `observe` · `vision` · `write` are the active
- *  selections, set in the writing brief; `pair` · `different` are the A/B candidates, set on the
- *  AI 모델 page. Everything else resolves on its own or belongs to another surface. */
+ *  selections and `pair` · `different` are the A/B candidates; all five are set in the writing
+ *  brief. Everything else resolves on its own or belongs to another surface. */
 const SETUP_BLOCKERS = new Set<GenerationBlocker>([
   'observe',
   'vision',
@@ -30,13 +30,11 @@ export function isSetupBlocker(blocker: GenerationBlocker | undefined): boolean 
   return blocker !== undefined && SETUP_BLOCKERS.has(blocker)
 }
 
-/** Where the user has to go to clear a setup blocker. */
-export function setupBlockerTarget(
-  blocker: GenerationBlocker | undefined,
-): 'brief' | 'models' | undefined {
-  if (blocker === 'observe' || blocker === 'vision' || blocker === 'write') return 'brief'
-  if (blocker === 'pair' || blocker === 'different') return 'models'
-  return undefined
+/** Where the user has to go to clear a setup blocker. One destination since the A/B candidates
+ *  joined the brief: sending someone off to the AI 모델 page for a pair they can now set two taps
+ *  away, without leaving the draft, is a longer road to the same two dropdowns. */
+export function setupBlockerTarget(blocker: GenerationBlocker | undefined): 'brief' | undefined {
+  return isSetupBlocker(blocker) ? 'brief' : undefined
 }
 
 export type GenerationPreconditions =

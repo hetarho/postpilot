@@ -141,7 +141,7 @@ it('opens as a bottom sheet below sm: when phone="sheet", with a visible way out
 
   await user.click(screen.getByRole('button', { name: '글쓰기 옵션' }))
   const sheet = screen.getByRole('dialog', { name: '글쓰기 옵션' })
-  expect(sheet).toHaveClass('rounded-t-xl', 'pb-safe-b')
+  expect(sheet).toHaveClass('rounded-t-xl', 'pb-sheet-b')
   expect(document.body.style.overflow).toBe('hidden')
 
   await user.click(screen.getByRole('button', { name: '닫기' }))

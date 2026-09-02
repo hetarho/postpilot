@@ -40,7 +40,6 @@ export const purposes = {
     notFound: '고른 용도를 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요.',
     notFoundDetail: '고른 용도를 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요. {{error}}',
     failed: '용도를 바꾸지 못했어요. 다시 시도해 주세요.',
-    manage: '용도 관리',
   },
   postCount: '글 {{count}}개',
   postCount_one: '글 {{count}}개',

@@ -45,9 +45,11 @@ HTTP backend is installed.
 
 ## Post language transitions
 
-The 목표 언어 picker lives in the editor's writing brief, beside the models, the voice, the 용도 and
-the target length ([posts.md](posts.md) *Editor presentation*); its frozen-job note and its
-mismatch note are unchanged by that placement.
+The 목표 언어 picker lives in the editor's writing brief, beside the models, the A/B candidates and
+the target length ([posts.md](posts.md) *Editor presentation*). It stays BEHIND that trigger while
+말투 and 용도 sit on the dock's own row: a target language is set once and then followed by every
+run, where those two are chosen per draft. Its frozen-job note and its mismatch note are unchanged
+by the placement.
 
 `SavePostDraft` requires a concrete target on create. On update, an absent target preserves the
 stored value and a present valid target replaces it through the same newest-wins queue as title and

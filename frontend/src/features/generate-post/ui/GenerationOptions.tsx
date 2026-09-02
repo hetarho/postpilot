@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appFailureFromConnect } from '@/shared/api'
-import { POST_TARGET_LENGTH_MAX, POST_TARGET_LENGTH_MIN } from '@/shared/config'
+import {
+  POST_TARGET_LENGTH_DEFAULT,
+  POST_TARGET_LENGTH_MAX,
+  POST_TARGET_LENGTH_MIN,
+} from '@/shared/config'
 import {
   AppFailureMessage,
   Button,
@@ -69,7 +73,14 @@ export function GenerationOptions({
         <Checkbox
           checked={enabled}
           disabled={disabled}
-          onChange={(event) => setEnabled(event.target.checked)}
+          // Ticking the box reveals the field with a usable number ALREADY in it. Revealing an
+          // empty one puts a range error under a control nobody has touched yet, and asks the
+          // user to invent a character count before they have any reason to have one. A value
+          // they typed earlier outranks the default, so unticking and reticking never loses it.
+          onChange={(event) => {
+            setEnabled(event.target.checked)
+            if (event.target.checked && !value) setValue(String(POST_TARGET_LENGTH_DEFAULT))
+          }}
         />
         {t('generation.options.useTarget', { ns: 'posts' })}
       </label>

@@ -1,7 +1,6 @@
 import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
-import { Link } from '@tanstack/react-router'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
 import {
@@ -25,7 +24,6 @@ import {
   comparisonGenerationPreconditions,
   isSetupBlocker,
   ordinaryGenerationPreconditions,
-  setupBlockerTarget,
   type GenerationModelSelection,
 } from '../model/preconditions'
 
@@ -166,23 +164,17 @@ export const GenerationActions = forwardRef<
 
   // Nothing this step can start yet, and the only reason is that the models have never been
   // chosen. Two dead buttons are not an empty state (§7): the bar drops them and offers the way to
-  // the surface each missing piece is actually chosen on — the brief for the active selections,
-  // the AI 모델 page for the A/B pair. Any other blocker (a job in flight, a deleted voice, a
-  // selection still loading) keeps the ordinary disabled buttons, because waiting IS the answer.
-  const blockedOnSetup =
+  // the surface every missing piece is chosen on, which is now the brief for all of them — the
+  // active selections and the A/B pair alike. Any other blocker (a job in flight, a deleted voice,
+  // a selection still loading) keeps the ordinary disabled buttons, because waiting IS the answer,
+  // and so does a caller that gave no way to open the brief.
+  const needsBrief =
     !modelPending &&
     !busy &&
     !pendingExperiment &&
+    Boolean(onOpenBrief) &&
     isSetupBlocker(ordinary.blocker) &&
     isSetupBlocker(ab.blocker)
-  const needsBrief =
-    blockedOnSetup &&
-    Boolean(onOpenBrief) &&
-    (setupBlockerTarget(ordinary.blocker) === 'brief' || setupBlockerTarget(ab.blocker) === 'brief')
-  const needsPair =
-    blockedOnSetup &&
-    (setupBlockerTarget(ordinary.blocker) === 'models' ||
-      setupBlockerTarget(ab.blocker) === 'models')
 
   // One line per action, in the action's own words. Rendered ABOVE the controls in the setup
   // state, where it is the message and the buttons are the answer to it, and below them otherwise,
@@ -211,21 +203,14 @@ export const GenerationActions = forwardRef<
     </div>
   )
 
-  if (blockedOnSetup) {
+  if (needsBrief) {
     return (
       <div className="grid gap-3">
         {reasons()}
         <div className="grid gap-3 sm:flex sm:flex-wrap sm:justify-end">
-          {needsBrief && (
-            <Button variant="secondary" onClick={onOpenBrief}>
-              {t('generation.setup.brief')}
-            </Button>
-          )}
-          {needsPair && (
-            <Link to="/ai-models" className={buttonStyles({ variant: 'secondary' })}>
-              {t('generation.setup.pair')}
-            </Link>
-          )}
+          <Button variant="secondary" onClick={onOpenBrief}>
+            {t('generation.setup.brief')}
+          </Button>
         </div>
       </div>
     )
@@ -233,12 +218,15 @@ export const GenerationActions = forwardRef<
 
   return (
     <div>
-      {/* ONE row on a phone, halves: A/B 비교 left, 생성 — the committing action — right, which is
+      {/* ONE row on a phone, 3 : 7: A/B 비교 left, 생성 — the committing action — right, which is
           both the §4 emphasis order and the side the thumb of a right-handed one-handed grip
-          reaches first. The writing brief no longer shares this row; it is the dock's top-right
-          glyph, so the two things the step actually starts are the only full-size targets here.
-          From `sm:` up the pair right-aligns at its natural width. */}
-      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+          reaches first. Not halves: an ordinary generation is what this step is FOR and an A/B
+          comparison is the occasional second opinion, so the emphasis is in the width as well as
+          in the variant (owner decision 2026-09-02). The writing brief no longer shares this row;
+          it is the dock's top-right glyph, so the two things the step actually starts are the only
+          full-size targets here. From `sm:` up the pair right-aligns at its natural width, where a
+          stretched CTA would only be a wide box with a two-character label in the middle. */}
+      <div className="grid grid-cols-[3fr_7fr] gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
         <Button
           variant="secondary"
           disabled={sharedDisabled || !ab.ok}

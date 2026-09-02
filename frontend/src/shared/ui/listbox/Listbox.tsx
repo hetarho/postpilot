@@ -1,7 +1,13 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { Check, ChevronDown } from 'lucide-react'
+import {
+  LISTBOX_MAX_VIEWPORT_RATIO,
+  LISTBOX_MIN_PANEL_PX,
+  LISTBOX_TRIGGER_GAP_PX,
+  LISTBOX_VIEWPORT_GUTTER_PX,
+} from '@/shared/config'
 
 export interface ListboxOption<T> {
   value: T
@@ -60,6 +66,7 @@ export function Listbox<T>({
   const panelId = `${generatedId}-panel`
   const valueId = `${generatedId}-value`
   const [open, setOpen] = useState(false)
+  const [drop, setDrop] = useState<'down' | 'up'>('down')
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -79,6 +86,27 @@ export function Listbox<T>({
     close(true)
     if (option.value !== value) onChange(option.value)
   }
+
+  // A trigger can sit anywhere in the viewport, and nothing in CSS knows where — a `dvh` ceiling
+  // is the same number for a field at the top of the page and for one in the docked bar, where a
+  // panel half the screen tall opens entirely past the bottom edge. So the room is MEASURED: the
+  // panel opens downward into the gap it actually has, flips above the trigger when that gap is
+  // too small and the one overhead is larger, and scrolls inside whichever it took. The ratio
+  // caps it where there is more room than a list needs; the floor keeps it usable rather than
+  // squeezing it to a sliver for a trigger pinned against an edge.
+  useLayoutEffect(() => {
+    const panel = panelRef.current
+    const trigger = triggerRef.current
+    if (!open || !panel || !trigger) return
+    const anchor = trigger.getBoundingClientRect()
+    const gap = LISTBOX_TRIGGER_GAP_PX + LISTBOX_VIEWPORT_GUTTER_PX
+    const below = window.innerHeight - anchor.bottom - gap
+    const above = anchor.top - gap
+    const flip = below < LISTBOX_MIN_PANEL_PX && above > below
+    const room = Math.min(flip ? above : below, window.innerHeight * LISTBOX_MAX_VIEWPORT_RATIO)
+    setDrop(flip ? 'up' : 'down')
+    panel.style.maxHeight = `${Math.max(room, LISTBOX_MIN_PANEL_PX)}px`
+  }, [open, options])
 
   useEffect(() => {
     if (!open) return
@@ -180,8 +208,11 @@ export function Listbox<T>({
           onKeyDown={onPanelKeyDown}
           // An overlay with its own bounds is §4.4's dropdown/sheet exception, so this one nested
           // scroller is allowed: a forty-model catalog otherwise pushes the page past the field it
-          // belongs to.
-          className="bg-surface-highest max-h-listbox absolute top-full right-0 left-0 z-30 mt-1 overflow-y-auto overscroll-contain rounded-lg p-1 shadow-lg select-none"
+          // belongs to. Its ceiling is the measured one set above, not a token — see that effect.
+          className={clsx(
+            'bg-surface-highest absolute right-0 left-0 z-30 overflow-y-auto overscroll-contain rounded-lg p-1 shadow-lg select-none',
+            drop === 'up' ? 'bottom-full mb-1' : 'top-full mt-1',
+          )}
         >
           {options.map((option) => {
             const current = option.value === value

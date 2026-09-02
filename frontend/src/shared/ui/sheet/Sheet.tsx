@@ -1,5 +1,6 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 /** Sheets stack: a confirmation opened from inside a sheet sits on top of it. Escape must dismiss
@@ -38,6 +39,18 @@ interface SheetProps {
  *  rounded on the free side only, safe-area padded, with its own body as the one thing that
  *  scrolls so a pinned footer stays reachable.
  *
+ *  It also RISES from that bottom edge and sinks back into it (§6, owner decision 2026-09-02).
+ *  The arrival is free — the panel animates as it mounts — but the departure is not: React would
+ *  unmount the node the instant `open` went false, and CSS cannot animate something that is gone.
+ *  So the panel outlives `open` by exactly one animation, and `animationend` unmounts it.
+ *  Everything the overlay OWES the page is still surrendered the moment `open` goes false: the
+ *  body scroll comes back, focus returns to the opener, and Escape stops reaching this sheet, so
+ *  the departure is only ever a picture of one.
+ *
+ *  Where nothing actually animates — jsdom, an environment with animations off — no
+ *  `animationstart` ever arrives, `animates` stays false, and the close is immediate rather than
+ *  waiting on an event that will never come.
+ *
  *  `Dialog` is this primitive with a confirm/cancel shape fixed on top of it. */
 export function Sheet({
   open,
@@ -52,6 +65,12 @@ export function Sheet({
   const panel = useRef<HTMLDivElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const identity = useRef({})
+  // Mounted while the exit animation plays. It starts at `open` so a sheet rendered open on its
+  // first paint (a route that lands with one up) is present immediately.
+  const [present, setPresent] = useState(open)
+  const animates = useRef(false)
+  const closing = present && !open
+  if (open && !present) setPresent(true)
   // TWO effects, deliberately. The focus and scroll setup depends on `open` ALONE: callers pass
   // an inline `onClose`, so a new identity arrives on every render of the sheet's parent, and
   // with `onClose` in these deps the effect re-ran on each of them and called `panel.focus()` —
@@ -75,6 +94,34 @@ export function Sheet({
       returnFocus.current?.focus()
     }
   }, [open])
+  // NATIVE listeners, not React's `onAnimationStart` / `onAnimationEnd` props: jsdom has no
+  // `AnimationEvent` constructor, so the synthetic system never delivers either one and the
+  // departure — the half of this that needs a test — could not have one.
+  useEffect(() => {
+    const node = panel.current
+    if (!node) return
+    // The one signal that this environment animates at all. Where it never arrives, the effect
+    // below takes the panel down at once instead of waiting on an end that will never come.
+    const onStart = () => {
+      animates.current = true
+    }
+    // `closing` is in the deps rather than read through a ref: without it the listener would
+    // hold the first render's value and take the sheet down on its own ENTRANCE.
+    const onEnd = (event: Event) => {
+      if (event.target === node && closing) setPresent(false)
+    }
+    node.addEventListener('animationstart', onStart)
+    node.addEventListener('animationend', onEnd)
+    return () => {
+      node.removeEventListener('animationstart', onStart)
+      node.removeEventListener('animationend', onEnd)
+    }
+  }, [closing, present])
+
+  useEffect(() => {
+    if (!open && !animates.current) setPresent(false)
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const onKeyDown = (event: KeyboardEvent) => {
@@ -104,10 +151,13 @@ export function Sheet({
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [onClose, open])
-  if (!open) return null
+  if (!present) return null
   return createPortal(
     <div
-      className="bg-media-scrim-bg/60 fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-4"
+      className={clsx(
+        'bg-media-scrim-bg/60 fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-4',
+        closing ? 'animate-scrim-out pointer-events-none' : 'animate-scrim-in',
+      )}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
@@ -119,9 +169,21 @@ export function Sheet({
         aria-label={labelledBy ? undefined : label}
         aria-labelledby={labelledBy}
         tabIndex={-1}
+        // A departing sheet is a picture, not a surface: it has already given focus back, so
+        // nothing inside it may be pressed or tabbed into on the way out.
+        inert={closing || undefined}
         // `max-h-sheet` in token terms: dvh tracks the mobile URL bar where vh does not. The
         // body is the only scroller inside the sheet, so a pinned footer stays put.
-        className="bg-surface-highest max-h-sheet pb-safe-b flex w-full flex-col rounded-t-xl p-5 shadow-lg md:max-w-md md:rounded-xl md:p-6 md:pb-6"
+        //
+        // `pb-sheet-b`, not `pb-safe-b`: two padding utilities on the same side collide, and the
+        // bare inset won — 0 in every desktop browser — which left the sheet's last control flush
+        // against its bottom edge. The token ADDS the inset to `p-5`'s own 20px.
+        className={clsx(
+          'bg-surface-highest max-h-sheet pb-sheet-b flex w-full flex-col rounded-t-xl p-5 shadow-lg md:max-w-md md:rounded-xl md:p-6 md:pb-6',
+          closing
+            ? 'animate-sheet-out md:animate-dialog-out'
+            : 'animate-sheet-in md:animate-dialog-in',
+        )}
       >
         {header}
         <div

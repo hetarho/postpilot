@@ -114,13 +114,15 @@ describe('setup blockers', () => {
     expect(isSetupBlocker(missingWrite.blocker)).toBe(true)
     expect(setupBlockerTarget(missingWrite.blocker)).toBe('brief')
 
+    // The A/B candidates moved into the brief with the active selections, so every fixable
+    // blocker now names the one surface — nobody is sent to the AI 모델 page mid-draft.
     const missingPair = comparisonGenerationPreconditions([], undefined, text, undefined, undefined)
-    expect(setupBlockerTarget(missingPair.blocker)).toBe('models')
+    expect(setupBlockerTarget(missingPair.blocker)).toBe('brief')
     expect(
       setupBlockerTarget(
         comparisonGenerationPreconditions([], undefined, text, text, undefined).blocker,
       ),
-    ).toBe('models')
+    ).toBe('brief')
 
     const missingObserve = ordinaryGenerationPreconditions([image], undefined, text, undefined)
     expect(setupBlockerTarget(missingObserve.blocker)).toBe('brief')
@@ -128,6 +130,7 @@ describe('setup blockers', () => {
     const running = ordinaryGenerationPreconditions([], undefined, text, { status: 'running' })
     expect(running.blocker).toBe('activeJob')
     expect(isSetupBlocker(running.blocker)).toBe(false)
+    expect(setupBlockerTarget(running.blocker)).toBeUndefined()
     expect(
       isSetupBlocker(
         ordinaryGenerationPreconditions([], undefined, text, undefined, { deleted: true }).blocker,

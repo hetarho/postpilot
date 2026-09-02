@@ -29,7 +29,13 @@ interface PostVoiceSelectProps {
 }
 
 /** The required voice of a post: an app-drawn listbox wearing the field well (design-language §7),
- *  listing only the voices a post may be assigned to. */
+ *  listing only the voices a post may be assigned to.
+ *
+ *  It rides the editor dock's own row, sharing it with the 용도 field and the writing brief's
+ *  glyph, so it carries NO visible label: three columns across a 360px screen leaves each field
+ *  about 140px, and a '말투' caption would spend a third of that saying what the trigger's own
+ *  value already says. The label element stays, `sr-only`, so the control is still announced as
+ *  '말투 <값>'. */
 export function PostVoiceSelect({
   ownerId,
   value,
@@ -88,8 +94,8 @@ export function PostVoiceSelect({
 
   return (
     <div className={className}>
-      <div className="flex items-center gap-3">
-        <FieldLabel id={labelId} htmlFor={id} className="shrink-0">
+      <div className="flex items-center gap-2">
+        <FieldLabel id={labelId} htmlFor={id} className="sr-only">
           {t('title')}
         </FieldLabel>
         <span className="min-w-0 flex-1">
@@ -104,8 +110,14 @@ export function PostVoiceSelect({
             aria-describedby={describedBy || undefined}
           />
         </span>
+        {/* Provenance, not a decision the row is for, and it costs a third of the trigger's width
+            on a phone. A voice written in the wrong language is called out by `VoiceWarning` and
+            by the 글 언어 field's own mismatch line, neither of which this chip is standing in
+            for, so it appears only where there is room for it. */}
         {selectedVoice?.sourceLanguage && (
-          <Badge>{t(`contentLanguage.${selectedVoice.sourceLanguage}`, { ns: 'common' })}</Badge>
+          <Badge className="hidden sm:inline-flex">
+            {t(`contentLanguage.${selectedVoice.sourceLanguage}`, { ns: 'common' })}
+          </Badge>
         )}
       </div>
       {blocked && (

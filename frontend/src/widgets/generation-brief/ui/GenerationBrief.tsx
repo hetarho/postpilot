@@ -1,21 +1,14 @@
 import { forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from '@tanstack/react-router'
 import { Settings } from 'lucide-react'
-import type { PurposeRef } from '@/entities/purpose'
 import type { ContentLanguage } from '@/shared/api'
+import { CandidatePairSelect } from '@/features/configure-model-pair'
 import { GenerationOptions } from '@/features/generate-post'
 import { StageModelSelect } from '@/features/select-model'
 import { PostLanguageSelect } from '@/features/select-post-language'
-import { PostPurposeSelect } from '@/features/select-post-purpose'
-import { Popover, Typography, typographyStyles, type PopoverHandle } from '@/shared/ui'
+import { Popover, Typography, type PopoverHandle } from '@/shared/ui'
 
 interface GenerationBriefProps {
-  ownerId: string
-  purposeId: string
-  currentPurpose?: PurposeRef
-  jobRunning?: boolean
-  onPurposeSelect: (purposeId: string) => Promise<void> | void
   targetLanguage: ContentLanguage
   contentLanguage?: ContentLanguage
   frozenLanguage?: ContentLanguage
@@ -31,25 +24,22 @@ interface GenerationBriefProps {
   }
 }
 
-/** Everything the next AI run is given, in one surface: 관찰 모델 · 작성 모델 · 용도 · 목표 언어 ·
- *  목표 분량, plus the way to the A/B candidate pair.
+/** Everything the next AI run is given that is a SETTING rather than a per-draft decision:
+ *  관찰 모델 · 작성 모델 · 작성 A/B 후보 · 글 언어 · 목표 분량.
  *
  *  It is a WIDGET because it composes four different `features/*` slices and a feature may not
  *  import a sibling feature (ARCHITECTURE §3). Every callback is supplied by `pages/editor`, so
  *  each assignment still rides the draft autosave queue that lives above the step panels: an
  *  assignment made here cannot be lost to a step change any more than a title edit can.
  *
- *  The 말투 is NOT in here. A wrong voice silently ruins a draft, so it is the one field of the
- *  brief that stays on the dock's own surface, beside this trigger — visible without opening
- *  anything. Everything else is a setting you check once and forget. */
+ *  The 말투 and the 용도 are NOT in here. Both are chosen per draft and both silently change what
+ *  comes out of a run, so they ride the dock's own surface beside this trigger — visible without
+ *  opening anything. The 글 언어 stays behind it: it is set once and then followed by every run,
+ *  and a third dropdown on the dock row would leave none of them readable (owner decision
+ *  2026-09-02). */
 export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
   function GenerationBrief(
     {
-      ownerId,
-      purposeId,
-      currentPurpose,
-      jobRunning = false,
-      onPurposeSelect,
       targetLanguage,
       contentLanguage,
       frozenLanguage,
@@ -68,9 +58,9 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
         label={label}
         // A 44px glyph pinned to the dock's top-right instead of a full-width labelled bar: the
         // brief is what you set BEFORE writing, and on the phone it was standing over the draft it
-        // exists to produce (owner decision, 2026-09-01). The 말투 it used to name now sits beside
-        // this glyph as its own dropdown, so the expensive-to-get-wrong field is visible WITHOUT
-        // opening anything, which is what naming it in the trigger was for.
+        // exists to produce (owner decision, 2026-09-01). The 말투 and 용도 it used to name now sit
+        // beside this glyph as their own dropdowns, so the two expensive-to-get-wrong fields are
+        // visible WITHOUT opening anything, which is what naming them in the trigger was for.
         triggerSize="icon"
         triggerLabel={<Settings aria-hidden="true" className="size-5" />}
         align="end"
@@ -88,13 +78,10 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
               )}
             </div>
             <StageModelSelect stage="write" />
-            <PostPurposeSelect
-              ownerId={ownerId}
-              value={purposeId}
-              current={currentPurpose}
-              jobRunning={jobRunning}
-              onSelect={onPurposeSelect}
-            />
+            {/* Directly under the model the ordinary run uses, because that is the comparison the
+                A/B pair is: the same step, run twice. The link to the AI 모델 page this replaced
+                asked the user to leave the draft to make a two-dropdown choice. */}
+            <CandidatePairSelect stage="write" />
             <PostLanguageSelect
               value={targetLanguage}
               contentLanguage={contentLanguage}
@@ -116,21 +103,6 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
                 />
               </div>
             )}
-            <div>
-              <Typography variant="label" as="p">
-                {t('editor.writeCandidates', { ns: 'posts' })}
-              </Typography>
-              <Link
-                to="/ai-models"
-                className={typographyStyles({
-                  variant: 'label',
-                  className:
-                    'text-link-fg hover:text-link-fg-hover mt-1 inline-flex min-h-11 items-center underline',
-                })}
-              >
-                {t('editor.configureCandidates', { ns: 'posts' })}
-              </Link>
-            </div>
           </div>
         )}
       </Popover>

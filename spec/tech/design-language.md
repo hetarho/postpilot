@@ -541,8 +541,13 @@ bare, the memo uses a visible field well, and both grow with the page. All three
     focus, Enter/Space select, Escape and an outside press close and return focus. Its name is
     `"<label> <current value>"` — the WAI-APG select-only combobox shape — so the closed control
     still reports its value. It is generic over the option value, so a numeric enum round-trips
-    without a stringly-typed cast. Its panel is a bounded scroller (`max-h-listbox`), which is the
-    §4.4 overlay exception.
+    without a stringly-typed cast. Its panel is a bounded scroller, which is the §4.4 overlay
+    exception, and its bound is MEASURED the way `Popover`'s is: a `dvh` token is the same number
+    for a field at the top of the page and for one in a docked bar, where a panel half the screen
+    tall opens entirely past the bottom edge. So the panel takes the room actually free beneath
+    its trigger, flips above it when that room is too small and the room overhead is larger, and
+    scrolls inside whichever it took — capped at `LISTBOX_MAX_VIEWPORT_RATIO` of the viewport
+    where there is more room than a list needs, and floored at `LISTBOX_MIN_PANEL_PX`.
   - **`SegmentedControl`** where the choice is a bounded 2–5 and every option is worth showing at
     once — the editor steps, the admin plan ladder.
   - **`Menu`** where the trigger is an icon and the list is a short preference set — a WAI-APG menu
@@ -597,9 +602,22 @@ bare, the memo uses a visible field well, and both grow with the page. All three
   return focus where they found it, all `Escape` closes, all lock the body scroll while open.
   **On a phone a dialog is a bottom sheet**: full-bleed to the bottom edge, `rounded-t-xl`, safe-area
   padded, its body the one thing that scrolls, dismissible by the scrim and a visible control —
-  becoming a centred `rounded-xl` dialog from `md:` up. Those mechanics belong to **`Sheet`**, which
-  takes arbitrary content; **`Dialog`** is `Sheet` with the confirm shape (one title, one
-  explanation, cancel and confirm) fixed on top. A destructive action is confirmed through `Dialog`,
+  becoming a centred `rounded-xl` dialog from `md:` up. A sheet also RISES from the edge it is
+  docked to and sinks back into it (`duration-slow`, `ease-emphasized` in, `ease-standard` out),
+  because arriving from below is the one thing that says it came from somewhere rather than
+  appearing over the page; the centred dialog only fades and settles, since a slide from the
+  bottom edge would be a lie about where it lives. The departure costs mounted time React does not
+  give away — the node would be gone before a frame of it played — so the panel outlives `open` by
+  exactly one animation and `animationend` unmounts it, while everything the overlay OWES the page
+  (the body scroll, the returned focus, its claim on `Escape`) is surrendered the moment `open`
+  goes false. What is left is a picture, and it is `inert`. Where nothing actually animates, no
+  `animationstart` arrives and the close is immediate instead. Those mechanics belong to
+  **`Sheet`**, which takes arbitrary content; **`Dialog`** is `Sheet` with the confirm shape (one
+  title, one explanation, cancel and confirm) fixed on top. Its pair is ONE row split 3 : 7 on a
+  phone, cancel left and the CTA right — confirming is what the sheet was opened to do, and 취소
+  needs only its two syllables — collapsing to the right-aligned desktop row from `md:` up.
+  Stacking them full-width spends two 44px rows and a gap on a decision with one obvious answer,
+  on the shape with the least room for it. A destructive action is confirmed through `Dialog`,
   never through `window.confirm`, which mobile browsers let the user suppress permanently.
   **`Popover`** anchors a panel to a trigger: `align` picks the pinned edge, and BOTH of the
   panel's bounds are measured against where that trigger actually sits, because nothing in CSS
@@ -649,6 +667,14 @@ non-zero and therefore **mandatory** on anything anchored to an edge. Because §
 arbitrary values at the call site, the insets are registered once as spacing tokens in `@theme`
 and consumed as ordinary utilities (`pb-safe-b`). Backgrounds and scrolling content run to the
 edge; only _controls_ are inset.
+
+**The inset ADDS to the design padding; it never replaces it.** Two padding utilities on the same
+side collide and the longhand wins, so `p-4 pb-safe-b` resolves padding-bottom to the bare inset —
+zero in every desktop browser and on every phone without a home indicator — and the box's last
+control ends up flush against its own rounded corner. This has bitten the docked bar and the
+bottom sheet, and both are fixed the same way: a token that sums the two
+(`--spacing-dock-b`, `--spacing-sheet-b`), or a `mb-safe-b` MARGIN where the padding must stay
+untouched (the about page's footer).
 
 Height is `dvh` / `svh`, never `vh` — `100vh` is the tall-viewport height, so a `100vh` element is
 clipped by the URL bar on every phone.

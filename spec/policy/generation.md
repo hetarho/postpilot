@@ -120,11 +120,14 @@ from [plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
 - The generated reading view renders the canonical `PostContent` block array directly. It shows title, summary,
   tags, every canonical block type, and resolves IMAGE blocks against attached filenames; it does not store or
   render canonical HTML.
-- Everything the next run is GIVEN — 관찰 모델, 작성 모델, 말투, 용도, 목표 언어, 목표 분량 and the A/B 후보 설정 link —
-  is set in one options surface behind a single trigger in 글 생성's dock, and is rendered nowhere else in the editor
-  ([posts.md](posts.md) *Editor presentation*). Relocating a control changes the screen, never what is sent: every
-  model choice stays explicit and is never auto-applied ([I3]).
-- The editor exposes separate `생성` and `A/B 비교 생성` actions with independent model blockers and pending states.
+- Everything the next run is GIVEN is set in 글 생성's dock and rendered nowhere else in the editor
+  ([posts.md](posts.md) *Editor presentation*): 관찰 모델, 작성 모델, 작성 A/B 후보, 목표 언어 and 목표 분량 behind a
+  single options trigger, and 말투 and 용도 on the dock's own row beside it. The A/B pair is set THERE rather than
+  linked to the AI 모델 page: it is two dropdowns, and following a link out of a docked bar mid-draft cost the user
+  their place for them. Relocating a control changes the screen, never what is sent: every model choice stays
+  explicit and is never auto-applied ([I3]), and a pair is saved only once both candidates name a different model,
+  because the server refuses anything else.
+- The editor exposes separate `생성` and `A/B 비교` actions with independent model blockers and pending states.
   Both await the latest title/memo save and refuse concurrent post work. A missing pair blocks only A/B; a missing
   active writer blocks only ordinary generation. A zero-photo post does not require observe. A deleted voice blocks
   both, before every other reason, with the shared deleted-voice message; the model lab's write comparison applies

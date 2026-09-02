@@ -40,7 +40,6 @@ export const purposes = {
     notFoundDetail:
       'The selected purpose could not be found. Refresh the list and try again. {{error}}',
     failed: 'Could not change the purpose. Try again.',
-    manage: 'Manage purposes',
   },
   postCount: '{{count}} posts',
   postCount_one: '{{count}} post',

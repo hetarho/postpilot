@@ -91,6 +91,25 @@ export const POPOVER_TRIGGER_GAP_PX = 8
  *  little, and a trigger that close to the edge is a layout bug to fix at the call site. */
 export const POPOVER_MIN_PANEL_PX = 160
 
+/** The clear space an open listbox panel keeps from the top or bottom edge of the viewport. It
+ *  matches the popover's gutter for the same reason: a bounded overlay should stop where the
+ *  content column stops rather than run to the glass. */
+export const LISTBOX_VIEWPORT_GUTTER_PX = 16
+
+/** The `mt-1` an open listbox panel keeps between itself and its trigger, as a number, so the
+ *  height measurement can subtract the gap the CSS is about to add. */
+export const LISTBOX_TRIGGER_GAP_PX = 4
+
+/** The shortest an open listbox panel is squeezed to before it stops honouring the room it
+ *  measured — roughly three option rows. A trigger closer than this to BOTH edges is a layout
+ *  bug at the call site, and overhanging is the better failure there. */
+export const LISTBOX_MIN_PANEL_PX = 132
+
+/** How much of the viewport an open listbox may take when there is more room than it needs. A
+ *  forty-model catalog would otherwise open a panel as tall as the screen from a field near the
+ *  top of a desktop page, which buries the field it belongs to. */
+export const LISTBOX_MAX_VIEWPORT_RATIO = 0.5
+
 /** How long successful clipboard feedback remains visible. */
 export const COPY_FEEDBACK_MS = 1_500
 
@@ -118,6 +137,14 @@ export const VOICE_FEW_SHOT_EXCERPT_MAX_CHARS = 800
 export const VOICE_VALIDATION_POST_COUNT = 3
 export const POST_TARGET_LENGTH_MIN = 100
 export const POST_TARGET_LENGTH_MAX = 10_000
+
+/** What 목표 글자 수 사용 fills the empty field with. A ticked checkbox over a blank number input is
+ *  an invalid form the user did not ask for — the field renders its range error before anyone has
+ *  typed a character — so the box arrives with a usable value already in it, roughly the length of
+ *  an ordinary blog post. It is a STARTING POINT, not a floor: the field stays free between
+ *  POST_TARGET_LENGTH_MIN and POST_TARGET_LENGTH_MAX, and a value already typed is never
+ *  overwritten by it. */
+export const POST_TARGET_LENGTH_DEFAULT = 1_000
 
 /** How long the HEIC decoder worker stays alive after its last file. Its WASM heap does
  *  not shrink after a 12 MP decode, so it is not kept for a whole session; the chunk is

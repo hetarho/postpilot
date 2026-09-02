@@ -339,6 +339,11 @@
      inset (0 on every desktop browser), which leaves the bar's contents flush against its own
      rounded corner. */
   --spacing-dock-b: calc(1rem + env(safe-area-inset-bottom, 0px));
+  /* A bottom sheet's bottom padding, and the same trap one size up: the phone panel is `p-5`, so
+     a bare `pb-safe-b` beside it resolved padding-bottom to the inset alone — 0 in every desktop
+     browser and on every phone without a home indicator — and the sheet's last control sat
+     flush against its own bottom edge. The inset is ADDED to the design padding here. */
+  --spacing-sheet-b: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   /* How tall an autoGrow field in a FORM may get before it becomes its own bounded scroller.
      Roughly half a small phone's viewport: past this the control that commits the field would be
      off-screen from the caret, which §4.3 forbids. The editor's bare fields are not capped — there
@@ -349,15 +354,65 @@
      so a `vh`-sized sheet is clipped on every phone — design-language §8.1. */
   --spacing-sheet: 85dvh;
 
-  /* An open listbox panel's ceiling. It is an OVERLAY with its own bounds, which is the §4.4
-     exception a dropdown shares with a sheet; half the viewport keeps a 40-model list scrollable
-     without covering the field it belongs to. */
-  --spacing-listbox: 50dvh;
+  /* An open listbox panel has NO token ceiling: a dropdown anchored to a docked bar and one
+     anchored to a field at the top of the page have completely different room, and a single
+     `dvh` number opens the first one straight off the bottom edge. `shared/ui/listbox` measures
+     the gap it actually has (LISTBOX_* in shared/config) — the §4.4 dropdown exception, bounded
+     by the viewport rather than by a guess. */
 
   /* A carousel card's share of the strip. Under 100% ON PURPOSE: the visible sliver of the next
      card is what tells the user the strip scrolls sideways at all, since a phone has no hover and
      no scrollbar to say so (§4.4, §8.4). */
   --spacing-carousel-card: 85%;
+
+  /* Overlay motion (§6). A bottom sheet ARRIVES from the edge it is docked to, which is the one
+     thing that says it came from below rather than appearing over the page, so it rides
+     `ease-emphasized` at `duration-slow`; it leaves on the standard ease, because a dismissal
+     should not draw attention to itself. From `md:` up the same overlay is a centred dialog and
+     a slide from the bottom edge would be a lie about where it lives, so it only fades and
+     settles. Only `opacity` and `transform` are animated, and both exits are `forwards` so the
+     panel holds its final frame for the beat before React unmounts it. */
+  --animate-scrim-in: scrim-in var(--duration-base) var(--ease-standard);
+  --animate-scrim-out: scrim-out var(--duration-base) var(--ease-standard) forwards;
+  --animate-sheet-in: sheet-in var(--duration-slow) var(--ease-emphasized);
+  --animate-sheet-out: sheet-out var(--duration-slow) var(--ease-standard) forwards;
+  --animate-dialog-in: dialog-in var(--duration-base) var(--ease-emphasized);
+  --animate-dialog-out: dialog-out var(--duration-base) var(--ease-standard) forwards;
+
+  @keyframes scrim-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes scrim-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+  @keyframes sheet-out {
+    to {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+  @keyframes dialog-out {
+    to {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
 }
 
 @theme inline {
