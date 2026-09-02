@@ -13,10 +13,13 @@ interface ThumbnailProps {
   /** Rendered over the image — a status, a button row. */
   children?: ReactNode
   dimmed?: boolean
+  /** The image failed to load. A presigned view URL expires, and a caller that offers an action
+   *  ON those pixels has to be able to stop offering it. */
+  onError?: () => void
 }
 
 /** One square tile of the photo strip. */
-export function Thumbnail({ src, alt, width, height, children, dimmed }: ThumbnailProps) {
+export function Thumbnail({ src, alt, width, height, children, dimmed, onError }: ThumbnailProps) {
   return (
     <figure className="bg-surface-recessed relative size-32 shrink-0 overflow-hidden rounded-lg">
       {src && (
@@ -31,6 +34,7 @@ export function Thumbnail({ src, alt, width, height, children, dimmed }: Thumbna
           // on (design-language §8.6).
           loading="lazy"
           decoding="async"
+          onError={onError}
           className={clsx('h-full w-full object-cover', dimmed && 'opacity-40')}
         />
       )}

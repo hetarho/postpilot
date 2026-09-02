@@ -259,6 +259,16 @@ export const posts = {
     copyTitle: '제목 복사',
     titleCopied: '제목이 복사됐어요',
     manualCopy: '자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요',
+    photos: '사진',
+    photosHelp: '본문을 붙여넣은 뒤, 각 사진을 복사해서 [사진 …] 자리에 붙여넣어 주세요.',
+    photoCopy: '사진 복사',
+    photoCopyAria: '{{file}} 사진 복사',
+    photoCopied: '{{file}} 사진이 복사됐어요',
+    photoUnsupported:
+      '이 브라우저는 사진 복사를 지원하지 않아요. 본문만 붙여넣고 사진은 직접 올려 주세요.',
+    photoRefused: '사진 복사가 막혔어요. 다시 시도해 주세요.',
+    photoUnreadable: '사진을 읽지 못했어요. 글을 다시 불러오면 사진 주소가 새로 발급돼요.',
+    photoMissing: '이 표시에 해당하는 사진을 찾지 못했어요.',
     languageMissing: '글의 내용 언어 정보가 없어 내보낼 수 없어요. 글을 다시 불러와 주세요.',
     formatLabel: {
       naver: '네이버 블로그',
@@ -267,7 +277,8 @@ export const posts = {
       markdown: '마크다운',
     },
     guidance: {
-      naver: '붙여넣고 표시된 자리에 사진을 드래그하세요',
+      naver: '본문을 그대로 붙여넣으세요',
+      naverPhotos: '본문을 붙여넣고, 아래에서 사진을 하나씩 복사해 [사진 …] 자리에 붙여넣으세요',
       tistory: 'HTML 모드에 붙여넣고 사진 업로드 후 src를 교체하세요',
       site: '그대로 .html로 저장하고 사진 파일을 옆에 두세요',
       markdown: 'Hugo · Jekyll · Obsidian에 맞는 형식이에요. 사진 파일을 같은 폴더에 두세요',

@@ -270,6 +270,16 @@ export const posts = {
     copyTitle: 'Copy title',
     titleCopied: 'Title copied',
     manualCopy: 'Automatic copying is blocked. Press and hold the selected text to copy it',
+    photos: 'Photos',
+    photosHelp: 'Paste the text first, then copy each photo and paste it at its [Photo …] marker.',
+    photoCopy: 'Copy photo',
+    photoCopyAria: 'Copy the photo {{file}}',
+    photoCopied: 'Copied the photo {{file}}',
+    photoUnsupported:
+      'This browser cannot copy images. Paste the text and add the photos yourself.',
+    photoRefused: 'The photo copy was blocked. Try again.',
+    photoUnreadable: 'Could not read the photo. Reload the post to mint a fresh photo URL.',
+    photoMissing: 'No photo matches this marker.',
     languageMissing:
       'This post has no content-language provenance, so it cannot be exported. Reload the post and try again.',
     formatLabel: {
@@ -279,7 +289,9 @@ export const posts = {
       markdown: 'Markdown',
     },
     guidance: {
-      naver: 'Paste it, then drag photos to the marked locations',
+      naver: 'Paste the text as it is',
+      naverPhotos:
+        'Paste the text, then copy each photo below and paste it at its [Photo …] marker',
       tistory: 'Paste in HTML mode, upload the photos, then replace each src',
       site: 'Save it as an .html file and place the photo files beside it',
       markdown: 'For Hugo · Jekyll · Obsidian. Place the photo files in the same folder',

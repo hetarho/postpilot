@@ -37,8 +37,25 @@ export async function resizeToJpeg(
   context.fillStyle = '#fff' // style-escape: canvas flatten colour for JPEG export, not a UI colour
   context.fillRect(0, 0, width, height)
   context.drawImage(bitmap, 0, 0, width, height)
-  const blob = await toBlob(canvas, quality)
+  const blob = await toBlob(canvas, 'image/jpeg', quality)
   return { blob, width, height }
+}
+
+/** Re-encodes a bitmap as PNG at its own dimensions.
+ *
+ *  No resize and no flatten, unlike `resizeToJpeg`: the caller's bitmap is a photo already
+ *  bounded by `IMAGE_MAX_LONG_EDGE_PX` on the way in ([I6]), and PNG keeps its alpha, so there is
+ *  no transparent-onto-black problem to paint around.
+ *
+ *  It exists because the system clipboard takes PNG and not JPEG — see `shared/lib/clipboard`.
+ *  The caller owns `bitmap` and closes it. */
+export async function encodePng(bitmap: ImageBitmap): Promise<Blob> {
+  const canvas = createCanvas(bitmap.width, bitmap.height)
+  const context = canvas.getContext('2d') as
+    OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null
+  if (!context) throw new Error('2d canvas unavailable')
+  context.drawImage(bitmap, 0, 0)
+  return toBlob(canvas, 'image/png')
 }
 
 type AnyCanvas = OffscreenCanvas | HTMLCanvasElement
@@ -51,12 +68,16 @@ function createCanvas(width: number, height: number): AnyCanvas {
   return canvas
 }
 
-function toBlob(canvas: AnyCanvas, quality: number): Promise<Blob> {
-  if ('convertToBlob' in canvas) return canvas.convertToBlob({ type: 'image/jpeg', quality })
+function toBlob(
+  canvas: AnyCanvas,
+  type: 'image/jpeg' | 'image/png',
+  quality?: number,
+): Promise<Blob> {
+  if ('convertToBlob' in canvas) return canvas.convertToBlob({ type, quality })
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('JPEG encode failed'))),
-      'image/jpeg',
+      (blob) => (blob ? resolve(blob) : reject(new Error(`${type} encode failed`))),
+      type,
       quality,
     )
   })

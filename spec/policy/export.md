@@ -21,7 +21,9 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
 ## Format contracts
 
 - Naver output is plain text without the title. Blocks are separated by one blank line; image-marker labels follow
-  content provenance: `[사진 …]` for Korean and `[Photo …]` for English. The title has its own copy field.
+  content provenance: `[사진 …]` for Korean and `[Photo …]` for English. The title has its own copy field. The
+  markers are unresolvable by SmartEditor ONE on their own, so the panel also renders a **photo strip** beside the
+  text — see below.
 - Tistory output is an HTML fragment without document wrappers. It begins with the summary, leaves every image `src`
   empty, stores the exact filename in `data-file`, and places a Korean or English replacement instruction comment
   immediately after the image according to content provenance. Comment-closing sequences in unusual accepted
@@ -40,12 +42,29 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
   focused and fully selected and the manual-copy hint is shown.
 - Copy operations are serialized. A tab/content change or newer copy invalidates stale feedback and fallback
   selection, so delayed browser permission results cannot act on a different preview.
+- **The Naver format also copies photos, one at a time.** Beneath the text output the panel renders one entry per
+  `IMAGE` block, in the same order as the `[사진 …]` markers in that text and derived from the same block array, each
+  naming its marker filename so a photo on screen and a marker in the pasted text are matched by eye. The other
+  three formats render no strip: they resolve their own images.
+- **The clipboard payload for a photo is exactly one `ClipboardItem` carrying `image/png` and nothing else.** It is
+  measured, not chosen (owner, 2026-08-31, SmartEditor ONE on macOS Chrome): a `text/html` flavor beside it makes the
+  editor prefer the HTML and render a broken image, a second `ClipboardItem` is silently ignored, and a page cannot
+  write files to the system clipboard at all. There is therefore **no text fallback** for a photo copy — the text
+  output beside it is the fallback the plan already promises.
+- The PNG is handed to the `ClipboardItem` as a **promise**, and the write is issued before the bytes arrive:
+  awaiting the fetch first spends the user activation WebKit requires, which would make every iOS copy fail.
+- The stored photo is a JPEG ([I6] converts every upload in the browser), so it is re-encoded to PNG on demand, for
+  the one photo pressed, from the presigned view URL. Nothing encoded here is uploaded, published or persisted.
+- A photo failure is stated **on that photo**, and told apart by kind: the browser has no image clipboard, the write
+  was refused, the bytes could not be read (an expired view URL — reloading the post remints it), or no photo in the
+  post matches that marker. A photo that cannot be read offers no copy control at all rather than one that would
+  write an empty image; the same holds for a photo still carrying its local upload preview.
 
 ## Configuration
 
 | Value | Owner | Value |
 |---|---|---:|
-| `COPY_FEEDBACK_MS` | FE `shared/config` | `1500` |
+| `COPY_FEEDBACK_MS` | FE `shared/config` | `1500` — shared by the text copies and the per-photo copy |
 | site CSS and document shell | FE `features/export-site/config` | fixed code constant |
 | format guidance | FE i18n `posts` catalog | Korean/English keys |
 

@@ -21,9 +21,9 @@ export {
   walkBlocks,
   yamlString,
 } from './blocks'
-export { copyText } from './clipboard'
+export { copyImage, copyText } from './clipboard'
 export type { BlockVisitor } from './blocks'
-export type { CopyFallbackElement } from './clipboard'
+export type { CopyFallbackElement, CopyImageResult } from './clipboard'
 export {
   EFFECTIVE_THEMES,
   PREFERS_DARK_MEDIA_QUERY,
