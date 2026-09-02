@@ -86,7 +86,7 @@ it('requires an instruction and the explicit write selection', async () => {
     await screen.findByText('글 생성 단계의 글쓰기 옵션에서 작성 모델을 선택하세요.'),
   ).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '수정' })).toBeDisabled()
-  expect(screen.getByLabelText('수정 요청')).toHaveAttribute(
+  expect(screen.getByLabelText('수정 요청을 입력하세요')).toHaveAttribute(
     'maxlength',
     String(REVISION_INSTRUCTION_MAX_CHARS),
   )
@@ -98,7 +98,7 @@ it('preserves a structured failure from the prerequisite content save', async ()
       Promise.reject(connectAppError('POST_CONTENT_INVALID', Code.InvalidArgument)),
   })
   const user = userEvent.setup()
-  await user.type(await screen.findByLabelText('수정 요청'), '존댓말로')
+  await user.type(await screen.findByLabelText('수정 요청을 입력하세요'), '존댓말로')
   await user.click(screen.getByRole('button', { name: '수정' }))
 
   expect(await screen.findByRole('alert')).toHaveTextContent('글 내용을 확인해 주세요.')
@@ -108,7 +108,7 @@ it('preserves a structured failure from the prerequisite content save', async ()
 it('keeps a content revision conflict as contextual recovery guidance', async () => {
   renderForm({ beforeStart: () => Promise.reject(new ContentRevisionConflictError()) })
   const user = userEvent.setup()
-  await user.type(await screen.findByLabelText('수정 요청'), '존댓말로')
+  await user.type(await screen.findByLabelText('수정 요청을 입력하세요'), '존댓말로')
   await user.click(screen.getByRole('button', { name: '수정' }))
 
   expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -131,7 +131,7 @@ it('starts a revision with its instruction, rule flag, and selected write model'
   queryClient.setQueryData(ownProfile, { profile: 'own' })
   queryClient.setQueryData(siblingProfile, { profile: 'sibling' })
   const user = userEvent.setup()
-  await user.type(await screen.findByLabelText('수정 요청'), '  존댓말로  ')
+  await user.type(await screen.findByLabelText('수정 요청을 입력하세요'), '  존댓말로  ')
   await user.click(screen.getByRole('checkbox', { name: '이 요청을 규칙으로 저장' }))
   const button = screen.getByRole('button', { name: '수정' })
   await waitFor(() => expect(button).toBeEnabled())
@@ -153,7 +153,7 @@ it('starts a revision with its instruction, rule flag, and selected write model'
 
 it('does not offer it after a completed generate job', async () => {
   renderForm({ active: { ...doneJob, kind: 'generate' } })
-  await screen.findByLabelText('수정 요청')
+  await screen.findByLabelText('수정 요청을 입력하세요')
   expect(screen.queryByRole('button', { name: '지침으로 저장' })).not.toBeInTheDocument()
 })
 
@@ -162,14 +162,17 @@ it('does not offer it after a completed generate job', async () => {
 it('offers 지침으로 저장 only after a completed revision', async () => {
   const user = userEvent.setup()
   renderForm()
-  await user.type(screen.getByLabelText('수정 요청'), '무인 매장이니까 주인 얘기 빼줘')
+  await user.type(screen.getByLabelText('수정 요청을 입력하세요'), '무인 매장이니까 주인 얘기 빼줘')
   expect(screen.queryByRole('button', { name: '지침으로 저장' })).not.toBeInTheDocument()
 
   cleanup()
   renderForm({ active: doneJob })
   // The secondary row collapses while the field is empty and unfocused, so the instruction the
   // revision actually ran with is what puts the capture on screen.
-  await user.type(await screen.findByLabelText('수정 요청'), '무인 매장이니까 주인 얘기 빼줘')
+  await user.type(
+    await screen.findByLabelText('수정 요청을 입력하세요'),
+    '무인 매장이니까 주인 얘기 빼줘',
+  )
   await waitFor(() =>
     expect(screen.getByRole('button', { name: '지침으로 저장' })).toBeInTheDocument(),
   )
@@ -181,7 +184,7 @@ it('collapses its secondary controls while the instruction is empty and unfocuse
   const user = userEvent.setup()
   renderForm()
 
-  const field = await screen.findByLabelText('수정 요청')
+  const field = await screen.findByLabelText('수정 요청을 입력하세요')
   const counter = () => screen.queryByText(`0/${REVISION_INSTRUCTION_MAX_CHARS}`)
   const ruleCheckbox = () => screen.queryByRole('checkbox', { name: '이 요청을 규칙으로 저장' })
   expect(counter()).not.toBeInTheDocument()
@@ -211,7 +214,7 @@ it('keeps the secondary controls open while a revision is running', async () => 
 
 it('does not offer it after a failed revision', async () => {
   renderForm({ active: { ...activeJob, status: 'failed' } })
-  await screen.findByLabelText('수정 요청')
+  await screen.findByLabelText('수정 요청을 입력하세요')
   expect(screen.queryByRole('button', { name: '지침으로 저장' })).not.toBeInTheDocument()
 })
 
@@ -227,7 +230,7 @@ it('seeds the dialog with the instruction and saves it scoped to the post purpos
     guidelines: { creates },
     calls,
   })
-  await user.type(screen.getByLabelText('수정 요청'), '무인 매장이니까 주인 얘기 빼줘')
+  await user.type(screen.getByLabelText('수정 요청을 입력하세요'), '무인 매장이니까 주인 얘기 빼줘')
   await user.click(screen.getByRole('button', { name: '지침으로 저장' }))
 
   const dialog = await screen.findByRole('dialog')
@@ -258,7 +261,7 @@ it('offers no purpose scope when the post has none', async () => {
   const user = userEvent.setup()
   const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
   renderForm({ active: doneJob, guidelines: { creates } })
-  await user.type(screen.getByLabelText('수정 요청'), '문장을 짧게 해줘')
+  await user.type(screen.getByLabelText('수정 요청을 입력하세요'), '문장을 짧게 해줘')
   await user.click(screen.getByRole('button', { name: '지침으로 저장' }))
 
   const dialog = await screen.findByRole('dialog')
@@ -277,7 +280,7 @@ it('offers no purpose scope when the post has none', async () => {
 it('reports an exact duplicate as already saved rather than as a failure', async () => {
   const user = userEvent.setup()
   renderForm({ active: doneJob, guidelines: { createDuplicates: true } })
-  await user.type(screen.getByLabelText('수정 요청'), '주인 얘기 빼줘')
+  await user.type(screen.getByLabelText('수정 요청을 입력하세요'), '주인 얘기 빼줘')
   await user.click(screen.getByRole('button', { name: '지침으로 저장' }))
 
   const dialog = await screen.findByRole('dialog')

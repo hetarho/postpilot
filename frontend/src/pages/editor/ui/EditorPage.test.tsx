@@ -32,6 +32,20 @@ async function openStep(user: ReturnType<typeof userEvent.setup>, label: string)
   await user.click(await screen.findByRole('tab', { name: label }))
 }
 
+/** 글 다듬기's two ways out — 확정 and 확정하고 말투 학습 — live behind ONE 확정하기 trigger at the
+ *  top-right of the revision row, in a popover that is a bottom sheet on a phone. The panel IS the
+ *  confirmation, so a test presses the trigger and then the action it wants. */
+async function openFinalize(user: ReturnType<typeof userEvent.setup>) {
+  const trigger = await screen.findByRole('button', { name: '확정하기' })
+  if (trigger.getAttribute('aria-expanded') !== 'true') await user.click(trigger)
+  return screen.findByRole('dialog', { name: '확정하기' })
+}
+
+async function finalize(user: ReturnType<typeof userEvent.setup>, action = '확정') {
+  const panel = await openFinalize(user)
+  await user.click(within(panel).getByRole('button', { name: action }))
+}
+
 /** The writing brief — 관찰/작성 모델, 작성 A/B 후보, 목표 언어, 목표 분량 — lives behind ONE trigger
  *  in the dock (change 12), so a test that drives any of them opens it first. 말투 and 용도 are the
  *  exceptions and ride the dock's own row; see `dockField` below. */
@@ -474,7 +488,7 @@ describe('opening a post', () => {
 
     expect(await screen.findByRole('heading', { name: '비 온 뒤의 제주' })).toBeInTheDocument()
     expect(screen.getByText('작성 중')).toBeInTheDocument()
-    expect(screen.getByLabelText('수정 요청')).toBeDisabled()
+    expect(screen.getByLabelText('수정 요청을 입력하세요')).toBeDisabled()
   })
 
   it('does not offer a no-op retry when a resumed revision fails', async () => {
@@ -519,7 +533,7 @@ describe('opening a post', () => {
 
     expect(await screen.findByText('AI 모델을 잠시 사용할 수 없어요.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('수정 요청')).toBeEnabled()
+    expect(screen.getByLabelText('수정 요청을 입력하세요')).toBeEnabled()
   })
 
   it('routes a failed A/B job to its existing recovery screen', async () => {
@@ -872,13 +886,7 @@ describe('opening a post', () => {
       },
     })
 
-    await user.click(await screen.findByRole('button', { name: '확정' }))
-    await user.click(
-      within(await screen.findByRole('dialog', { name: '이 revision을 확정할까요?' })).getByRole(
-        'button',
-        { name: '확정' },
-      ),
-    )
+    await finalize(user)
 
     await waitFor(() => expect(calls).toContain('FinalizePost'))
     await openStep(user, '글 생성')
@@ -916,12 +924,12 @@ describe('opening a post', () => {
         ],
       },
     })
-    // 확정 ends 글 다듬기, where the post opens.
-    const finalize = await screen.findByRole('button', { name: '확정' })
-    expect(finalize).toBeEnabled()
-    expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
-    await user.click(finalize)
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확정' }))
+    // 확정하기 ends 글 다듬기, where the post opens, and offers both ways out.
+    const panel = await openFinalize(user)
+    const only = within(panel).getByRole('button', { name: '확정' })
+    expect(only).toBeEnabled()
+    expect(within(panel).getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
+    await user.click(only)
     await waitFor(() => expect(calls).toContain('FinalizePost'))
     expect(calls).not.toContain('LearnFromFinalizedPost')
     // Confirming carries the user to 글 완성, whose own action is learning — and this account has
@@ -957,12 +965,10 @@ describe('opening a post', () => {
         selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
       },
     })
-    const combined = await screen.findByRole('button', { name: '확정하고 말투 학습' })
+    const panel = await openFinalize(user)
+    const combined = within(panel).getByRole('button', { name: '확정하고 말투 학습' })
     await waitFor(() => expect(combined).toBeEnabled())
     await user.click(combined)
-    await user.click(
-      within(screen.getByRole('dialog')).getByRole('button', { name: '확정하고 학습' }),
-    )
     await waitFor(() =>
       expect(calls).toEqual(expect.arrayContaining(['FinalizePost', 'LearnFromFinalizedPost'])),
     )
@@ -1014,11 +1020,11 @@ describe('opening a post', () => {
         'true',
       ),
     )
-    expect(await screen.findByRole('button', { name: '확정' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '확정하기' })).toBeInTheDocument()
 
     await openStep(user, '글 완성')
     expect(await screen.findByRole('button', { name: '말투 학습' })).toBeDisabled()
-    expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
   })
 
   it('keeps a failed learning handoff across reloads so only learning can be retried', async () => {
@@ -1069,7 +1075,7 @@ describe('opening a post', () => {
 
     expect(await screen.findByText('AI 모델을 잠시 사용할 수 없어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled()
-    expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
     expect(localStorage.getItem(key)).not.toBeNull()
     localStorage.removeItem(key)
   })
@@ -1507,15 +1513,17 @@ describe('the editor lifecycle steps', () => {
     expect(screen.queryByRole('button', { name: /옵션/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('수정 요청')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '확정' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeInTheDocument()
+    expect(screen.getByLabelText('수정 요청을 입력하세요')).toBeInTheDocument()
+    const ways = await openFinalize(user)
+    expect(within(ways).getByRole('button', { name: '확정' })).toBeInTheDocument()
+    expect(within(ways).getByRole('button', { name: '확정하고 말투 학습' })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
 
     await openStep(user, '글 생성')
     expect(await screen.findByLabelText('제목')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '글 다듬기' })).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('수정 요청')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('수정 요청을 입력하세요')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
     const brief = await openBrief(user)
     expect(within(brief).getByRole('combobox', { name: /후보 A/ })).toBeInTheDocument()
     await user.keyboard('{Escape}')
@@ -1523,7 +1531,7 @@ describe('the editor lifecycle steps', () => {
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '말투 학습' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('제목')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
   })
@@ -1602,19 +1610,18 @@ describe('the editor lifecycle steps', () => {
 
     const dock = await screen.findByLabelText('저장 상태와 글 작업')
     expect(screen.getAllByLabelText('저장 상태와 글 작업')).toHaveLength(1)
-    // Row 1 is the revision instruction with its icon send button; row 2 is the pair that ends
-    // the step. Neither section is rendered in the panel any more.
-    expect(within(dock).getByLabelText('수정 요청')).toBeInTheDocument()
+    // ONE surface: the revision instruction with its icon send button, and 확정하기 in its
+    // heading. Neither section is rendered in the panel any more.
+    expect(within(dock).getByLabelText('수정 요청을 입력하세요')).toBeInTheDocument()
     expect(within(dock).getByRole('button', { name: '수정' })).toBeInTheDocument()
-    expect(within(dock).getByRole('button', { name: '확정' })).toBeInTheDocument()
-    expect(within(dock).getByRole('button', { name: '확정하고 말투 학습' })).toBeInTheDocument()
+    expect(within(dock).getByRole('button', { name: '확정하기' })).toBeInTheDocument()
 
     await openStep(user, '글 생성')
     const generateDock = await screen.findByLabelText('저장 상태와 글 작업')
     expect(screen.getAllByLabelText('저장 상태와 글 작업')).toHaveLength(1)
     expect(within(generateDock).getByRole('button', { name: '생성' })).toBeInTheDocument()
     expect(within(generateDock).getByRole('button', { name: /옵션/ })).toBeInTheDocument()
-    expect(within(generateDock).queryByRole('button', { name: '확정' })).not.toBeInTheDocument()
+    expect(within(generateDock).queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
 
     await openStep(user, '글 완성')
     expect(await screen.findByRole('button', { name: '말투 학습' })).toBeInTheDocument()
@@ -1769,8 +1776,7 @@ describe('the step split and the content save', () => {
     await user.type(field, '확정 직전에 고친 문단')
     await user.click(screen.getByRole('button', { name: '저장' }))
 
-    await user.click(await screen.findByRole('button', { name: '확정' }))
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확정' }))
+    await finalize(user)
 
     await waitFor(() => expect(calls).toContain('FinalizePost'))
     // The content save is ahead of the finalize, so the finalized revision includes the edit.
@@ -1932,8 +1938,10 @@ describe('the post voice', () => {
     // The canonical content survived; learning needs a new machine result first. Both live in
     // 글 다듬기's dock, so the step has to be the one that owns them.
     await openStep(user, '글 다듬기')
-    expect(await screen.findByRole('button', { name: '확정' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
+    const ways = await openFinalize(user)
+    expect(within(ways).getByRole('button', { name: '확정' })).toBeEnabled()
+    expect(within(ways).getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
+    await user.keyboard('{Escape}')
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
   })

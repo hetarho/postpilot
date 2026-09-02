@@ -193,12 +193,18 @@ Photo upload has its own document: [uploads.md](uploads.md).
   the finalized one, or while a voice gate refuses learning; the voice gate is named ahead of the finalize
   gate, since confirming would not unblock it.
 - **① and ② always dock; ③ docks only when it has something to say.** ①'s dock carries the brief trigger,
-  A/B 비교 and 생성. ②'s dock carries the step in two rows: **row 1** the AI revision instruction with an
-  icon-only send button, **row 2** `확정하고 말투 학습` beside `확정`, which is the CTA and therefore on the right.
-  확정 takes that side because it is what ENDS the step and is available whenever the draft can be finalized,
-  where 확정하고 말투 학습 additionally needs an analyze model and a baseline to learn from. That row splits
-  evenly rather than 3 : 7 like ①'s: 확정하고 말투 학습 is four words of Korean and a third of a 360px row would
-  break it across three lines. On a post that is ALREADY `finalized`, that row is replaced by the road onward
+  A/B 비교 and 생성. ②'s dock carries ONE surface: the AI revision instruction with an icon-only send button,
+  under a heading that both names the field — `수정 요청을 입력하세요`, at the `title` role, and it IS the
+  field's `<label>`, so the accessible name is the text on screen — and carries the step's way out at its
+  right. That way out is `확정하기`, the step's CTA, and it opens `확정` and `확정하고 말투 학습` in a popover,
+  or in a bottom sheet below `sm:`. The two used to stand as a second row of full-width buttons under the
+  field, which put two competing interfaces in one small bar — the conversation with the AI, and the pair
+  that ends the step — while the field's own prompt was left to a placeholder that vanished on the first
+  keystroke. The panel IS the confirmation: each action carries the sentence saying what it does, so no
+  modal stands between the press and the run, and a finalize is returned to `review` by the next content
+  save in any case. Inside the panel `확정` leads, because it is available whenever the draft can be
+  finalized where 확정하고 말투 학습 additionally needs an analyze model and a baseline to learn from. On a
+  post that is ALREADY `finalized`, the trigger is replaced by the road onward
   (`글 완성으로 가기`) and nothing else: the status badge at the top of the editor already says 확정, `finalized`
   is a standing STATE with nothing to take a banner down, and the first changed content save returns the post to
   `review` and brings the pair back on its own. ③ is where a finalize and the learning run that may have
@@ -218,7 +224,9 @@ Photo upload has its own document: [uploads.md](uploads.md).
   the editor mounted.
 - ②'s revision row collapses its secondary controls — the character counter, `규칙으로 저장` and the post-revision
   `지침으로 저장` — while the instruction field is empty and unfocused, and shows them while it is focused, holds
-  text, or a revision is running or failed. `규칙으로 저장` itself is unchanged in every other respect.
+  text, or a revision is running or failed. `규칙으로 저장` itself is unchanged in every other respect. The focus
+  that opens them is the focus on the CONTROLS, not on the row: pressing `확정하기` in the heading must not
+  expand a group belonging to the field it never touched.
 - Step ② opens as **prose**: `entities/post`'s `BlockList` renders title, summary, tags and every block
   read-only, and each block plus the header carries one edit control built on the shared `Editable` primitive.
   Opening one block does not close another. Edits write through to the content, so autosave keeps running on

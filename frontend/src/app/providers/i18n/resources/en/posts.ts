@@ -146,7 +146,7 @@ export const posts = {
   },
   revision: {
     title: 'Revise with AI',
-    instruction: 'Revision request',
+    instruction: 'Enter a revision request',
     placeholder:
       'What should change? For example: make it shorter, use a formal tone, or expand the cafe section',
     saveAsRule: 'Save this request as a rule',
@@ -159,7 +159,6 @@ export const posts = {
       activeJob: 'Another job is in progress.',
       modelChecking: 'Checking the writing model…',
       model: 'Choose a writing model in the writing options on the Generate step.',
-      instruction: 'Enter a revision request.',
     },
   },
   finalize: {
@@ -171,14 +170,13 @@ export const posts = {
     goFinish: 'Go to Finish',
     analyzeHelp:
       'Select an analysis model to learn the voice. Finalizing alone does not require one.',
+    open: 'Finalize…',
     action: 'Finalize',
     actionLearn: 'Finalize and learn voice',
-    confirmTitle: 'Finalize this revision?',
-    confirmLearn: 'Finalize and learn',
-    confirmLearnDescription:
-      'Your current edits will be saved first, then that exact revision will be finalized before continuing to Finish. Voice learning starts only after that.',
-    confirmOnlyDescription:
-      'Your current edits will be saved first, then that exact revision will be finalized before continuing to Finish. No model call or voice learning will run.',
+    optionOnlyHint:
+      'Saves your current edits, finalizes that revision, and continues to Finish. No model call or voice learning will run.',
+    optionLearnHint:
+      'Finalizes first, then starts voice learning from this post. The outcome is reported on Finish.',
   },
   learning: {
     title: 'Voice learning',

@@ -141,7 +141,7 @@ export const posts = {
   },
   revision: {
     title: 'AI로 수정',
-    instruction: '수정 요청',
+    instruction: '수정 요청을 입력하세요',
     placeholder: '어떻게 고칠까요? 예: 더 짧게 · 존댓말로 · 카페 얘기 늘려줘',
     saveAsRule: '이 요청을 규칙으로 저장',
     ruleLanguageMismatch:
@@ -153,7 +153,6 @@ export const posts = {
       activeJob: '다른 작업이 진행 중이에요.',
       modelChecking: '작성 모델을 확인하는 중이에요.',
       model: '글 생성 단계의 글쓰기 옵션에서 작성 모델을 선택하세요.',
-      instruction: '수정 요청을 입력하세요.',
     },
   },
   finalize: {
@@ -165,14 +164,13 @@ export const posts = {
     goFinish: '글 완성으로 가기',
     analyzeHelp:
       '말투 학습을 하려면 분석 모델을 선택해 주세요. 확정만 하는 데에는 필요하지 않아요.',
+    open: '확정하기',
     action: '확정',
     actionLearn: '확정하고 말투 학습',
-    confirmTitle: '이 revision을 확정할까요?',
-    confirmLearn: '확정하고 학습',
-    confirmLearnDescription:
-      '현재 편집 내용을 먼저 저장한 뒤 정확한 revision을 확정하고 글 완성으로 넘어갑니다. 그 다음에만 말투 학습을 시작합니다.',
-    confirmOnlyDescription:
-      '현재 편집 내용을 먼저 저장한 뒤 정확한 revision을 확정하고 글 완성으로 넘어갑니다. 모델 호출이나 말투 학습은 하지 않습니다.',
+    optionOnlyHint:
+      '지금 편집 내용을 저장하고 그 revision을 확정한 뒤 글 완성으로 넘어갑니다. 모델 호출이나 말투 학습은 하지 않아요.',
+    optionLearnHint:
+      '확정한 다음, 이 글로 말투 학습까지 시작합니다. 결과는 글 완성에서 알려드려요.',
   },
   learning: {
     title: '말투 학습',

@@ -17,7 +17,7 @@ import {
   POPOVER_TRIGGER_GAP_PX,
 } from '@/shared/config'
 import { Button } from '../button/Button'
-import type { ButtonSize } from '../button/buttonStyles'
+import type { ButtonSize, ButtonVariant } from '../button/buttonStyles'
 import { Sheet } from '../sheet/Sheet'
 import { SM_MEDIA_QUERY, useMediaQuery } from './useMediaQuery'
 
@@ -39,6 +39,9 @@ export const Popover = forwardRef<
     /** `icon` for a glyph-only trigger. `label` is already the button's `aria-label`, so the
      *  control keeps its name — and the panel keeps its heading — with no visible text. */
     triggerSize?: ButtonSize
+    /** The trigger's emphasis. `secondary` unless the surface it opens IS the step's committing
+     *  choice — 확정하기 opens the pair that ends 글 다듬기, so it carries the CTA fill. */
+    triggerVariant?: ButtonVariant
     triggerClassName?: string
     children: (close: () => void) => ReactNode
     disabled?: boolean
@@ -59,6 +62,7 @@ export const Popover = forwardRef<
     label,
     triggerLabel,
     triggerSize,
+    triggerVariant = 'secondary',
     triggerClassName,
     children,
     disabled = false,
@@ -177,7 +181,7 @@ export const Popover = forwardRef<
   const trigger = (
     <Button
       ref={triggerRef}
-      variant="secondary"
+      variant={triggerVariant}
       size={triggerSize}
       aria-label={label}
       aria-haspopup="dialog"
