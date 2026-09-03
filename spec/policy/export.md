@@ -22,8 +22,8 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
 
 - Naver output is plain text without the title. Blocks are separated by one blank line; image-marker labels follow
   content provenance: `[사진 …]` for Korean and `[Photo …]` for English. The title has its own copy field. The
-  markers are unresolvable by SmartEditor ONE on their own, so the panel also renders a **photo strip** beside the
-  text — see below.
+  markers are unresolvable by SmartEditor ONE on their own, so the panel presents the Naver output as the **rendered
+  post with per-photo copy** — see below.
 - Tistory output is an HTML fragment without document wrappers. It begins with the summary, leaves every image `src`
   empty, stores the exact filename in `data-file`, and places a Korean or English replacement instruction comment
   immediately after the image according to content provenance. Comment-closing sequences in unusual accepted
@@ -37,15 +37,21 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
 ## Clipboard and UI
 
 - The export panel exists for canonical content in both `review` and `finalized` workflows and shows localized
-  format-specific guidance. Its preview is read-only and is the exact string passed to the clipboard.
+  format-specific guidance. Tistory, site, and Markdown show the exact string passed to the clipboard in a read-only
+  field. **The Naver tab shows the rendered post instead** (job 45): the block array as the reading view renders it,
+  body only, photos inline in marker order — the `[사진 …]` markers exist only in the copied text, which is
+  byte-identical to what the raw field showed before.
 - A successful clipboard write shows “복사됨” for `1500ms`. If the API is absent or rejects, the relevant field is
-  focused and fully selected and the manual-copy hint is shown.
+  focused and fully selected and the manual-copy hint is shown; on the Naver tab the raw text field is first
+  **revealed** for that fallback, and a later copy, tab switch, or content change returns the tab to the rendered
+  preview (focus is handed back to the copy button when the dismissal unmounts the focused field).
 - Copy operations are serialized. A tab/content change or newer copy invalidates stale feedback and fallback
-  selection, so delayed browser permission results cannot act on a different preview.
-- **The Naver format also copies photos, one at a time.** Beneath the text output the panel renders one entry per
-  `IMAGE` block, in the same order as the `[사진 …]` markers in that text and derived from the same block array, each
-  naming its marker filename so a photo on screen and a marker in the pasted text are matched by eye. The other
-  three formats render no strip: they resolve their own images.
+  selection — feedback carries the value (and content identity) it described, so a delayed browser permission result
+  or a re-materialized output string cannot act on or label a different preview.
+- **The Naver format also copies photos, one at a time.** Each inline photo carries an icon copy control overlaid at
+  its top-right, named by its marker filename, in the same order as the `[사진 …]` markers and derived from the same
+  block array. A marker whose photo is missing holds its inline position as a filename placeholder, so later photos
+  cannot shift against their markers. The other three formats render no photo copies: they resolve their own images.
 - **The clipboard payload for a photo is exactly one `ClipboardItem` carrying `image/png` and nothing else.** It is
   measured, not chosen (owner, 2026-08-31, SmartEditor ONE on macOS Chrome): a `text/html` flavor beside it makes the
   editor prefer the HTML and render a broken image, a second `ClipboardItem` is silently ignored, and a page cannot

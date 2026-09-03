@@ -1,11 +1,13 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Thumbnail, type PostImage } from '@/entities/image'
+import { Copy } from 'lucide-react'
+import { type PostImage } from '@/entities/image'
+import { BlockList, imageByFile } from '@/entities/post'
 import { toMarkdown } from '@/features/export-markdown'
-import { naverPhotoOrder, toNaver } from '@/features/export-naver'
+import { toNaver } from '@/features/export-naver'
 import { toSite } from '@/features/export-site'
 import { toTistory } from '@/features/export-tistory'
-import type { ContentLanguage, PostContent } from '@/shared/api'
+import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import { COPY_FEEDBACK_MS } from '@/shared/config'
 import { copyImage, copyText, type CopyFallbackElement, type CopyImageResult } from '@/shared/lib'
 import { Button, FieldLabel, SegmentedControl, Textarea, TextField, Typography } from '@/shared/ui'
@@ -31,16 +33,30 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
   const { t } = useTranslation('posts')
   const [format, setFormat] = useState<ExportFormat>('naver')
   // A photo target names the marker it belongs to, so two markers for one file still report
-  // separately and the confirmation lands on the entry that was pressed.
-  const [copiedTarget, setCopiedTarget] = useState<CopyTarget>()
+  // separately and the confirmation lands on the entry that was pressed. A TEXT copy stores the
+  // value that reached the clipboard beside it: the Naver tab's copy carries no fallback element
+  // whose value `isCurrent` could compare, so without this a copy racing a content change could
+  // announce 복사됨 for a body the post no longer contains — the value comparison in the status
+  // derivations below is what drops that stale confirmation.
+  const [copied, setCopied] = useState<{ target: CopyTarget; value?: string }>()
   // Which control's copy fell back to manual selection, so its hint renders beside that control
-  // rather than somewhere the user is not looking (§4.3).
-  const [manualCopyTarget, setManualCopyTarget] = useState<CopyTarget>()
-  // Per-photo failure kind, keyed the same way. It is separate from `manualCopyTarget` because a
+  // rather than somewhere the user is not looking (§4.3). On the Naver tab this also REVEALS the
+  // raw marker text: its default view is the rendered post, and a selection needs a text field.
+  // The VALUE that fell back is stored with it, so the fallback dissolves by derivation the moment
+  // the content no longer matches what was selected — no effect resetting state over a prop. The
+  // CONTENT IDENTITY rides along because the value alone would resurrect a dismissed fallback when
+  // an edit is undone (the output string comes back; the failed copy does not).
+  const [manualCopy, setManualCopy] = useState<{
+    target: 'output' | 'title'
+    value: string
+    source: PostContent
+  }>()
+  // Per-photo failure kind, keyed the same way. It is separate from `manualCopy` because a
   // photo has no manual fallback at all — there is nothing to select and hold (see `copyImage`).
   const [photoFailure, setPhotoFailure] = useState<{ target: CopyTarget; kind: FailedCopyKind }>()
   const outputRef = useRef<HTMLTextAreaElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
+  const copyButtonRef = useRef<HTMLButtonElement>(null)
   const feedbackTimer = useRef<number | undefined>(undefined)
   const copyGeneration = useRef(0)
   const copyQueue = useRef<Promise<void>>(Promise.resolve())
@@ -55,23 +71,30 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
     [content, contentLanguage, createdAt, images],
   )
   const output = outputs[format]
-  // The strip's order is the MARKER order, derived from the same block array the text is, so a
-  // photo on screen and a marker in the pasted text cannot drift apart.
-  const photoEntries = useMemo(() => {
-    if (format !== 'naver') return []
-    const byFilename = new Map(images.map((image) => [image.filename, image]))
-    return naverPhotoOrder(content).map((file, index) => ({
-      // The marker's POSITION is part of the identity: one file can carry two markers, and each
-      // one is its own copy control with its own confirmation.
-      target: `photo:${index}:${file}` as const,
-      file,
-      image: byFilename.get(file),
-    }))
-  }, [content, format, images])
+  // Marker index per block index, from the SAME canonical block array `toNaver` walks, so a photo
+  // in the preview and a `[사진 …]` marker in the copied text cannot drift apart: they match by
+  // position. The marker index — not the block index — is the copy target's identity, unchanged
+  // from the strip this preview replaces.
+  const markerIndexByBlock = useMemo(() => {
+    const map = new Map<number, number>()
+    content.blocks.forEach((block, index) => {
+      if (block.type === BlockType.IMAGE) map.set(index, map.size)
+    })
+    return map
+  }, [content])
+  const hasPhotos = markerIndexByBlock.size > 0
+  const imagesByFilename = useMemo(() => imageByFile(images), [images])
   const formatOptions = EXPORT_FORMATS.map((value) => ({
     value,
     label: t(`export.formatLabel.${value}`),
   }))
+  // The Naver tab shows the rendered post; the raw marker text exists only on the clipboard —
+  // except while a refused copy needs a visible selection to fall back to. The other three
+  // formats are markup meant to be read as source, so they keep the raw field always. The value
+  // comparison is what dismisses the fallback when the content changes under it.
+  const outputFellBack =
+    manualCopy?.target === 'output' && manualCopy.value === output && manualCopy.source === content
+  const rawFieldVisible = format !== 'naver' || outputFellBack
 
   useEffect(() => {
     mounted.current = true
@@ -84,11 +107,31 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
 
   function invalidateCopyFeedback() {
     copyGeneration.current += 1
-    setCopiedTarget(undefined)
-    setManualCopyTarget(undefined)
+    setCopied(undefined)
+    setManualCopy(undefined)
     setPhotoFailure(undefined)
     if (feedbackTimer.current !== undefined) window.clearTimeout(feedbackTimer.current)
   }
+
+  // The manual fallback must be SEEN to be used: on the Naver tab the raw field mounts only after
+  // the copy has fallen back, so `copyText` was handed no element and the selection happens here,
+  // once the field exists. The dismissal side is the same effect's business: a content change
+  // dissolves the fallback by derivation and UNMOUNTS the focused field, which would drop the
+  // keyboard onto <body> — the focus is handed back to the copy button instead. A dismissal by
+  // tab switch or by pressing another control leaves focus where the user put it.
+  const fallbackWasRevealed = useRef(false)
+  useEffect(() => {
+    if (format === 'naver' && outputFellBack) {
+      fallbackWasRevealed.current = true
+      outputRef.current?.focus()
+      outputRef.current?.select()
+      return
+    }
+    if (fallbackWasRevealed.current) {
+      fallbackWasRevealed.current = false
+      if (document.activeElement === document.body) copyButtonRef.current?.focus()
+    }
+  }, [format, outputFellBack])
 
   /** The image copy, on the SAME discipline as the text copy above: one generation counter so a
    *  stale async result cannot land, one queue so two presses do not race for the clipboard, the
@@ -97,8 +140,8 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
   async function copyPhoto(target: CopyTarget, url: string) {
     const generation = ++copyGeneration.current
     const isCurrent = () => mounted.current && copyGeneration.current === generation
-    setCopiedTarget(undefined)
-    setManualCopyTarget(undefined)
+    setCopied(undefined)
+    setManualCopy(undefined)
     setPhotoFailure(undefined)
     if (feedbackTimer.current !== undefined) window.clearTimeout(feedbackTimer.current)
 
@@ -112,13 +155,15 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
     const result = await operation
     if (!isCurrent()) return
     if (result.kind === 'copied') {
-      setCopiedTarget(target)
-      feedbackTimer.current = window.setTimeout(() => setCopiedTarget(undefined), COPY_FEEDBACK_MS)
+      setCopied({ target })
+      feedbackTimer.current = window.setTimeout(() => setCopied(undefined), COPY_FEEDBACK_MS)
       return
     }
     setPhotoFailure({ target, kind: result.kind })
   }
 
+  /** `fallback` is null when the manual field is not mounted yet (the Naver preview): the copy is
+   *  still attempted, and a refusal reveals the field — the effect above then selects it. */
   async function copy(
     target: 'output' | 'title',
     value: string,
@@ -128,11 +173,13 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
     const isCurrent = () =>
       mounted.current &&
       copyGeneration.current === generation &&
-      fallback !== null &&
-      fallback.value === value &&
-      (target === 'output' ? outputRef.current === fallback : titleRef.current === fallback)
-    setCopiedTarget(undefined)
-    setManualCopyTarget(undefined)
+      (fallback === null ||
+        (fallback.value === value &&
+          (target === 'output' ? outputRef.current === fallback : titleRef.current === fallback)))
+    setCopied(undefined)
+    // `manualCopy` is NOT cleared up front the way the other feedback is: on the Naver tab it is
+    // what keeps the revealed fallback field mounted, and clearing it here would unmount the field
+    // the user is retrying from for the whole in-flight wait. The outcome below overwrites it.
     setPhotoFailure(undefined)
     if (feedbackTimer.current !== undefined) window.clearTimeout(feedbackTimer.current)
 
@@ -147,12 +194,12 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
     copyQueue.current = operation
     await operation
     if (!isCurrent()) return
-    setManualCopyTarget(result.copied ? undefined : target)
-    setCopiedTarget(result.copied ? target : undefined)
+    setManualCopy(result.copied ? undefined : { target, value, source: content })
+    setCopied(result.copied ? { target, value } : undefined)
     if (feedbackTimer.current !== undefined) window.clearTimeout(feedbackTimer.current)
     if (result.copied) {
       feedbackTimer.current = window.setTimeout(() => {
-        setCopiedTarget(undefined)
+        setCopied(undefined)
       }, COPY_FEEDBACK_MS)
     }
   }
@@ -161,15 +208,17 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
   // exist BEFORE its text changes or a screen reader announces nothing, and the sole confirmation
   // used to be a 1.5s label swap on the button under the thumb that hid it.
   const titleStatus =
-    copiedTarget === 'title'
+    copied?.target === 'title' && copied.value === content.title
       ? t('export.titleCopied')
-      : manualCopyTarget === 'title'
+      : manualCopy?.target === 'title' &&
+          manualCopy.value === content.title &&
+          manualCopy.source === content
         ? t('export.manualCopy')
         : ''
   const outputStatus =
-    copiedTarget === 'output'
+    copied?.target === 'output' && copied.value === output
       ? t('action.copied', { ns: 'common' })
-      : manualCopyTarget === 'output'
+      : outputFellBack
         ? t('export.manualCopy')
         : ''
 
@@ -195,9 +244,9 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
 
       <div id="export-output-panel" role="tabpanel" className="mt-4">
         {/* The Naver guidance describes the photo flow only when there ARE photos: a post with
-            none would otherwise be told to copy each photo from a strip that is not rendered. */}
+            none would otherwise be told to copy photos from a preview that renders none. */}
         <Typography variant="label" as="p">
-          {format === 'naver' && photoEntries.length > 0
+          {format === 'naver' && hasPhotos
             ? t('export.guidance.naverPhotos')
             : t(`export.guidance.${format}`)}
         </Typography>
@@ -234,9 +283,6 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
           </div>
         )}
 
-        <FieldLabel htmlFor="export-output" className="sr-only">
-          {t('export.result')}
-        </FieldLabel>
         {/* The copy action sits ABOVE the output, not after it. This panel renders inside the
             editor, which already docks its own bar, and two docked bars in one scroller stick to
             the same offset and paint over each other — so §4.3's other option applies: put the
@@ -246,7 +292,10 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
         <div className="mt-4 flex flex-col gap-2 sm:flex-row-reverse sm:items-center sm:justify-end sm:gap-3">
           {/* The label stays 복사: a swap to 복사됨 resizes the target under the thumb that just
               pressed it, and it was also the only signal that anything had happened (§6). */}
+          {/* `outputRef.current` is naturally null while the Naver tab shows the preview and the
+              live field on every other state — including a Naver retry from the revealed field. */}
           <Button
+            ref={copyButtonRef}
             variant="cta"
             className="w-full sm:w-auto"
             onClick={() => void copy('output', output, outputRef.current)}
@@ -259,68 +308,92 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
             {outputStatus}
           </Typography>
         </div>
-        {/* A Korean post runs to ~58 lines at this width. A fixed 18-row box scrolled internally,
-            so every vertical swipe that landed on it moved the output instead of the page and the
-            only place left to scroll was the 16px gutter (§4.4) — it grows instead. No mono face:
-            Tailwind's stock mono stack carries no Hangul, so every glyph fell back (§3). */}
-        <Textarea
-          id="export-output"
-          ref={outputRef}
-          value={output}
-          readOnly
-          spellCheck={false}
-          rows={8}
-          autoGrow
-          className="mt-3"
-        />
 
-        {/* The photo strip, for Naver alone. The text carries `[사진 …]` markers that SmartEditor
-            ONE cannot resolve on its own, so each photo is copied and pasted at its marker; the
-            other three formats resolve their own images and get no strip. */}
-        {photoEntries.length > 0 && (
-          <section aria-labelledby="export-photos-heading" className="mt-8">
-            <Typography variant="fieldTitle" id="export-photos-heading">
-              {t('export.photos')}
-            </Typography>
-            <Typography variant="label" as="p" className="mt-1">
-              {t('export.photosHelp')}
-            </Typography>
-            {/* One horizontal snap carousel, like every other photo strip in the app (§4.4,
-                §8.4): the entries are square tiles and a 360px screen holds about two and a
-                half of them. */}
-            <ul className="-mx-4 mt-3 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0">
-              {photoEntries.map((entry) => (
-                <li key={entry.target} className="w-32 shrink-0 snap-start">
-                  <PhotoEntry
-                    file={entry.file}
-                    image={entry.image}
-                    copied={copiedTarget === entry.target}
-                    failure={photoFailure?.target === entry.target ? photoFailure.kind : undefined}
-                    onCopy={(url) => void copyPhoto(entry.target, url)}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
+        {rawFieldVisible ? (
+          <>
+            <FieldLabel htmlFor="export-output" className="sr-only">
+              {t('export.result')}
+            </FieldLabel>
+            {/* A Korean post runs to ~58 lines at this width. A fixed 18-row box scrolled
+                internally, so every vertical swipe that landed on it moved the output instead of
+                the page and the only place left to scroll was the 16px gutter (§4.4) — it grows
+                instead. No mono face: Tailwind's stock mono stack carries no Hangul, so every
+                glyph fell back (§3). */}
+            <Textarea
+              id="export-output"
+              ref={outputRef}
+              value={output}
+              readOnly
+              spellCheck={false}
+              rows={8}
+              autoGrow
+              className="mt-3"
+            />
+          </>
+        ) : (
+          /* The Naver preview IS the post (change 18): what SmartEditor gets is plain text with
+             `[사진 …]` markers, but what the human reads here is the rendering they are about to
+             publish — photos inline at their marker positions, each carrying its own copy. The
+             header is suppressed because the body copy does not paste it; the title has its own
+             field above. */
+          <BlockList
+            content={content}
+            images={images}
+            label={t('export.preview')}
+            className="mt-3 pb-0"
+            renderHeader={() => null}
+            renderBlock={(block, index, rendered) => {
+              if (block.type !== BlockType.IMAGE) return rendered
+              const target: CopyTarget = `photo:${markerIndexByBlock.get(index) ?? 0}:${block.file}`
+              return (
+                <PreviewPhoto
+                  file={block.file}
+                  alt={block.alt}
+                  caption={block.caption}
+                  image={imagesByFilename.get(block.file)}
+                  copied={copied?.target === target}
+                  failure={photoFailure?.target === target ? photoFailure.kind : undefined}
+                  onCopy={(url) => void copyPhoto(target, url)}
+                />
+              )
+            }}
+            // A marker whose photo is missing keeps its POSITION: dropping it would shift every
+            // later photo against its marker — the one thing marker order exists to prevent.
+            renderMissingImage={(block) => (
+              <PreviewPhoto
+                file={block.file}
+                alt=""
+                caption={block.caption}
+                image={undefined}
+                copied={false}
+                failure={undefined}
+                onCopy={() => undefined}
+              />
+            )}
+          />
         )}
       </div>
     </section>
   )
 }
 
-/** One photo of the strip: the pixels, the marker filename that matches it to the pasted text,
- *  and its own copy control.
+/** One inline photo of the Naver preview: the pixels at their natural width, the copy control
+ *  overlaid at the top-right, and that photo's own status line.
  *
- *  It reports its own state on its own tile rather than in one shared line, because "which photo
- *  failed" is the only useful part of the message (§4.3). */
-function PhotoEntry({
+ *  It reports its own state under its own photo rather than in one shared line, because "which
+ *  photo failed" is the only useful part of the message (§4.3). */
+function PreviewPhoto({
   file,
+  alt,
+  caption,
   image,
   copied,
   failure,
   onCopy,
 }: {
   file: string
+  alt: string
+  caption: string
   image: PostImage | undefined
   copied: boolean
   failure: FailedCopyKind | undefined
@@ -330,7 +403,8 @@ function PhotoEntry({
   const statusId = useId()
   // A just-confirmed upload can still be carrying its local blob preview in the post cache. Those
   // bytes are not the stored photo, so the copy is not offered for them — the same rule the
-  // contact sheet applies to a server-read surface.
+  // contact sheet applies to a server-read surface. The pixels still render: they are the photo
+  // the reader will see.
   const url = image && !image.viewUrl.startsWith('blob:') ? image.viewUrl : ''
   // A presigned view URL expires. Keyed BY URL rather than as a bare boolean, so a reload that
   // remints it clears the failure without any reset plumbing.
@@ -348,40 +422,68 @@ function PhotoEntry({
             ? t('export.photoUnreadable')
             : ''
   return (
-    <div className="grid gap-2">
-      <Thumbnail
-        src={url || undefined}
-        alt={file}
-        width={image?.width}
-        height={image?.height}
-        onError={() => setFailedUrl(url)}
-      />
-      {/* The marker filename, not a caption: it is what the user matches against the pasted text,
-          so it wraps rather than truncating away the part that differs. A `figcaption` would have
-          to be its figure's first or last child, and `Thumbnail` brings its own figure. */}
-      <Typography variant="meta" as="p" className="break-words">
-        {file}
-      </Typography>
-      {/* Beside the photo, not laid over it: a control over arbitrary photo pixels needs its own
-          plane to stay legible against both a bright and a dark image, and at the 44px floor that
-          plane covers a quarter of a 128px tile — which hides the thing the user is identifying.
-          The `secondary` fill is the plane, and the tile above it stays unobscured (§4.1, §6,
-          §8.4). Full size, not `compact`: §7 reserves that one sub-44px step for a low-emphasis
-          way out sharing a dock, and this is the feature's own repeated action. */}
-      <Button
-        variant="secondary"
-        className="w-full"
-        aria-label={t('export.photoCopyAria', { file })}
-        aria-describedby={reason ? statusId : undefined}
-        disabled={unreachable}
-        onClick={() => onCopy(url)}
-      >
-        {t('export.photoCopy')}
-      </Button>
+    <div className="py-2">
+      {image ? (
+        <div className="relative">
+          {image.viewUrl ? (
+            <img
+              src={image.viewUrl}
+              alt={alt || file}
+              width={image.width}
+              height={image.height}
+              loading="lazy"
+              decoding="async"
+              onError={() => setFailedUrl(url)}
+              className="bg-surface-recessed h-auto w-full rounded-lg"
+            />
+          ) : (
+            // The view URL is minted per GetPost; until one arrives the box is still held open so
+            // the text below it does not jump when the photo paints.
+            <div className="bg-surface-recessed aspect-square w-full rounded-lg" />
+          )}
+          {/* Over the photo, at its top-right — job 44 kept the control BESIDE the strip's 128px
+              tile because 44px covered a quarter of it; an inline photo fills the column, so the
+              same control covers a corner. The scrim is its own plane so it stays legible against
+              both a bright and a dark photo (§4.1), on every state: `hover:`/`active:` would
+              otherwise swap in the secondary fill and drop the white glyph on it. */}
+          <Button
+            variant="secondary"
+            size="icon"
+            disabled={unreachable}
+            aria-label={t('export.photoCopyAria', { file })}
+            aria-describedby={reason ? statusId : undefined}
+            onClick={() => onCopy(url)}
+            className="bg-media-scrim-bg text-media-scrim-fg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-2 right-2"
+          >
+            <Copy aria-hidden="true" className="size-5" />
+          </Button>
+        </div>
+      ) : (
+        // No photo behind this marker: the copied text still carries `[사진 <file>]`, so the
+        // preview says which file the reader is expected to place there.
+        <Typography
+          variant="meta"
+          as="p"
+          className="bg-surface-recessed rounded-lg px-4 py-3 break-words"
+        >
+          {file}
+        </Typography>
+      )}
+      {caption && (
+        <Typography variant="label" as="p" className="mt-2 break-words">
+          {caption}
+        </Typography>
+      )}
       {/* Always mounted: a live region inserted with its text already inside announces nothing.
           It is also the disabled control's reason, which is why the control points at it — a
           disabled button is skipped by the keyboard and would otherwise carry no explanation. */}
-      <Typography variant="meta" as="p" id={statusId} role="status" className="min-h-4 break-words">
+      <Typography
+        variant="meta"
+        as="p"
+        id={statusId}
+        role="status"
+        className="mt-1 min-h-4 break-words"
+      >
         {copied ? t('export.photoCopied', { file }) : reason}
       </Typography>
     </div>

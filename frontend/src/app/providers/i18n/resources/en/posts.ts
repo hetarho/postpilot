@@ -270,9 +270,7 @@ export const posts = {
     copyTitle: 'Copy title',
     titleCopied: 'Title copied',
     manualCopy: 'Automatic copying is blocked. Press and hold the selected text to copy it',
-    photos: 'Photos',
-    photosHelp: 'Paste the text first, then copy each photo and paste it at its [Photo …] marker.',
-    photoCopy: 'Copy photo',
+    preview: 'Naver preview',
     photoCopyAria: 'Copy the photo {{file}}',
     photoCopied: 'Copied the photo {{file}}',
     photoUnsupported:
@@ -291,7 +289,7 @@ export const posts = {
     guidance: {
       naver: 'Paste the text as it is',
       naverPhotos:
-        'Paste the text, then copy each photo below and paste it at its [Photo …] marker',
+        'Paste the text, then copy each photo from the preview and paste it at its [Photo …] marker',
       tistory: 'Paste in HTML mode, upload the photos, then replace each src',
       site: 'Save it as an .html file and place the photo files beside it',
       markdown: 'For Hugo · Jekyll · Obsidian. Place the photo files in the same folder',

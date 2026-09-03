@@ -259,9 +259,7 @@ export const posts = {
     copyTitle: '제목 복사',
     titleCopied: '제목이 복사됐어요',
     manualCopy: '자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요',
-    photos: '사진',
-    photosHelp: '본문을 붙여넣은 뒤, 각 사진을 복사해서 [사진 …] 자리에 붙여넣어 주세요.',
-    photoCopy: '사진 복사',
+    preview: '네이버 미리보기',
     photoCopyAria: '{{file}} 사진 복사',
     photoCopied: '{{file}} 사진이 복사됐어요',
     photoUnsupported:
@@ -278,7 +276,7 @@ export const posts = {
     },
     guidance: {
       naver: '본문을 그대로 붙여넣으세요',
-      naverPhotos: '본문을 붙여넣고, 아래에서 사진을 하나씩 복사해 [사진 …] 자리에 붙여넣으세요',
+      naverPhotos: '본문을 붙여넣은 뒤, 미리보기의 사진을 복사해 [사진 …] 자리에 붙여넣으세요',
       tistory: 'HTML 모드에 붙여넣고 사진 업로드 후 src를 교체하세요',
       site: '그대로 .html로 저장하고 사진 파일을 옆에 두세요',
       markdown: 'Hugo · Jekyll · Obsidian에 맞는 형식이에요. 사진 파일을 같은 폴더에 두세요',

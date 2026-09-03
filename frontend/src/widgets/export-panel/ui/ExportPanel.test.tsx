@@ -36,7 +36,7 @@ it('switches four synchronous outputs with their guidance and keeps the Naver ti
 
   expect(screen.getByLabelText('네이버 제목')).toHaveValue(POST_CONTENT_FIXTURE.title)
   expect(
-    screen.getByText('본문을 붙여넣고, 아래에서 사진을 하나씩 복사해 [사진 …] 자리에 붙여넣으세요'),
+    screen.getByText('본문을 붙여넣은 뒤, 미리보기의 사진을 복사해 [사진 …] 자리에 붙여넣으세요'),
   ).toBeInTheDocument()
 
   await user.click(screen.getByRole('tab', { name: '티스토리' }))
@@ -56,6 +56,63 @@ it('switches four synchronous outputs with their guidance and keeps the Naver ti
   expect(fetchSpy).not.toHaveBeenCalled()
 })
 
+// ── The rendered Naver preview (change 18) ────────────────────────────────────────────────────
+//
+// The Naver tab shows the POST, not the wire text: the `[사진 …]` markers exist only in what the
+// copy button puts on the clipboard, and each photo renders inline at its marker position with
+// its own copy control.
+
+it('renders the Naver tab as the post — no marker text, no raw field, photos inline in marker order', async () => {
+  const user = userEvent.setup()
+  renderPanel()
+
+  const preview = screen.getByRole('article', { name: '네이버 미리보기' })
+  // The markers are the copied text's business, not the preview's.
+  expect(preview.textContent).not.toContain('[사진')
+  expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
+  // The body renders as the reading view does, header excluded: the body copy does not paste the
+  // title/summary/tags, and the title has its own field above.
+  expect(within(preview).getByText('비가 그치기를 기다렸다.')).toBeInTheDocument()
+  expect(within(preview).getByRole('heading', { name: '바닷가로' })).toBeInTheDocument()
+  expect(within(preview).queryByText(POST_CONTENT_FIXTURE.summary)).not.toBeInTheDocument()
+
+  // One copy control per `[사진 …]` marker, in marker order — asserted through the controls'
+  // accessible names, which bind each control to the marker it copies for.
+  const markers = [
+    ...toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko').matchAll(/\[사진 ([^\]:]+)/g),
+  ].map((match) => match[1])
+  expect(markers.length).toBeGreaterThan(1)
+  expect(
+    within(preview)
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label')),
+  ).toEqual(markers.map((file) => `${file} 사진 복사`))
+  expect(within(preview).getAllByRole('img')).toHaveLength(markers.length)
+
+  // The other three formats are source to be read, not a post to be seen.
+  for (const format of ['티스토리', '자체 사이트', '마크다운']) {
+    await user.click(screen.getByRole('tab', { name: format }))
+    expect(screen.queryByRole('article', { name: '네이버 미리보기' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('내보내기 결과')).toBeInTheDocument()
+  }
+})
+
+it('renders no photo controls, and no photo guidance, for a post with no photos', () => {
+  render(
+    <ExportPanel
+      content={{
+        ...POST_CONTENT_FIXTURE,
+        blocks: POST_CONTENT_FIXTURE.blocks.filter((block) => block.type !== BlockType.IMAGE),
+      }}
+      images={[]}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+  expect(screen.queryByRole('button', { name: /사진 복사$/ })).not.toBeInTheDocument()
+  expect(screen.getByText('본문을 그대로 붙여넣으세요')).toBeInTheDocument()
+})
+
 it('copies the exact rendered output and shows transient success', async () => {
   const user = userEvent.setup()
   const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
@@ -70,9 +127,11 @@ it('copies the exact rendered output and shows transient success', async () => {
   // its size and its name under the thumb that pressed it.
   expect(await screen.findByText('복사됨')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '복사' })).toBeInTheDocument()
+  // A successful copy leaves the preview in place.
+  expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
 })
 
-it('selects the preview and explains manual copy when the Clipboard API is unavailable', async () => {
+it('reveals, selects and explains the raw text when the Clipboard API is unavailable', async () => {
   const user = userEvent.setup()
   setClipboard(undefined)
   const select = vi.spyOn(HTMLTextAreaElement.prototype, 'select')
@@ -80,11 +139,61 @@ it('selects the preview and explains manual copy when the Clipboard API is unava
 
   await user.click(screen.getByRole('button', { name: '복사' }))
 
+  // The raw marker text mounts only for the fallback: a selection must be SEEN to be long-pressed.
   await waitFor(() => expect(select).toHaveBeenCalledOnce())
-  expect(screen.getByLabelText('내보내기 결과')).toHaveFocus()
+  const raw = screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과')
+  expect(raw).toHaveFocus()
+  expect(raw.value).toBe(toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko'))
   expect(
     screen.getByText('자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요'),
   ).toBeInTheDocument()
+  expect(screen.queryByRole('article', { name: '네이버 미리보기' })).not.toBeInTheDocument()
+
+  // Leaving and returning dismisses the fallback back to the preview.
+  await user.click(screen.getByRole('tab', { name: '티스토리' }))
+  await user.click(screen.getByRole('tab', { name: '네이버 블로그' }))
+  expect(screen.getByRole('article', { name: '네이버 미리보기' })).toBeInTheDocument()
+  expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
+
+  // A copy that succeeds afterwards also returns to the preview.
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  await user.click(screen.getByRole('button', { name: '복사' }))
+  await waitFor(() => screen.getByLabelText('내보내기 결과'))
+  setClipboard({ writeText })
+  await user.click(screen.getByRole('button', { name: '복사' }))
+  await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
+  expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
+})
+
+it('dismisses the revealed fallback when the content changes under it', async () => {
+  const user = userEvent.setup()
+  setClipboard(undefined)
+  const view = render(
+    <ExportPanel
+      content={POST_CONTENT_FIXTURE}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+  await user.click(screen.getByRole('button', { name: '복사' }))
+  await waitFor(() => screen.getByLabelText('내보내기 결과'))
+
+  // The selection described the previous text; keeping it selected would hand SmartEditor a body
+  // the post no longer contains.
+  view.rerender(
+    <ExportPanel
+      content={{
+        ...POST_CONTENT_FIXTURE,
+        blocks: POST_CONTENT_FIXTURE.blocks.filter((block) => block.type !== BlockType.QUOTE),
+      }}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+  expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
+  expect(screen.getByRole('article', { name: '네이버 미리보기' })).toBeInTheDocument()
 })
 
 it('ignores a stale clipboard rejection after the format changes', async () => {
@@ -118,7 +227,7 @@ it('ignores a stale clipboard rejection after the format changes', async () => {
   expect(screen.queryByText('복사됨')).not.toBeInTheDocument()
 })
 
-// ── The photo strip (change 17) ───────────────────────────────────────────────────────────────
+// ── The photo copy (change 17, presentation moved inline by change 18) ─────────────────────────
 //
 // The clipboard PAYLOAD SHAPE is the part that must never regress: SmartEditor ONE accepts
 // exactly one `ClipboardItem` carrying `image/png` and nothing else. jsdom has neither
@@ -172,45 +281,6 @@ function stubImageClipboard({ write }: { write?: () => Promise<void> } = {}): St
   setClipboard({ writeText: vi.fn(), write: spy } as unknown as Clipboard)
   return { write: spy, items }
 }
-
-it('lists one photo per Naver marker, in marker order, and only for Naver', async () => {
-  const user = userEvent.setup()
-  renderPanel()
-
-  const markers = [
-    ...toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko').matchAll(/\[사진 ([^\]:]+)/g),
-  ].map((match) => match[1])
-  expect(markers.length).toBeGreaterThan(1)
-  const strip = screen.getByRole('region', { name: '사진' })
-  // Asserted through the COPY CONTROLS' accessible names: each one names the photo it copies, so
-  // this proves both the marker order and that a control is bound to the marker beside it.
-  expect(
-    within(strip)
-      .getAllByRole('button')
-      .map((button) => button.getAttribute('aria-label')),
-  ).toEqual(markers.map((file) => `${file} 사진 복사`))
-
-  for (const format of ['티스토리', '자체 사이트', '마크다운']) {
-    await user.click(screen.getByRole('tab', { name: format }))
-    expect(screen.queryByRole('region', { name: '사진' })).not.toBeInTheDocument()
-  }
-})
-
-it('renders no strip, and no photo guidance, for a post with no photos', () => {
-  render(
-    <ExportPanel
-      content={{
-        ...POST_CONTENT_FIXTURE,
-        blocks: POST_CONTENT_FIXTURE.blocks.filter((block) => block.type !== BlockType.IMAGE),
-      }}
-      images={[]}
-      createdAt="2026-08-29T03:04:05Z"
-      contentLanguage="ko"
-    />,
-  )
-  expect(screen.queryByRole('region', { name: '사진' })).not.toBeInTheDocument()
-  expect(screen.getByText('본문을 그대로 붙여넣으세요')).toBeInTheDocument()
-})
 
 it('writes exactly one ClipboardItem carrying image/png and nothing else', async () => {
   const user = userEvent.setup()
@@ -275,7 +345,7 @@ it('says so when the browser has no image clipboard at all', async () => {
   ).toBeInTheDocument()
 })
 
-it('refuses to copy a photo that is still a local upload preview', () => {
+it('refuses to copy a photo that is still a local upload preview, but keeps its pixels inline', () => {
   render(
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
@@ -284,16 +354,21 @@ it('refuses to copy a photo that is still a local upload preview', () => {
       contentLanguage="ko"
     />,
   )
-  for (const button of screen.getAllByRole('button', { name: /사진 복사$/ })) {
+  const buttons = screen.getAllByRole('button', { name: /사진 복사$/ })
+  expect(buttons.length).toBeGreaterThan(0)
+  for (const button of buttons) {
     expect(button).toBeDisabled()
   }
+  // The preview still shows the photo the reader will see; only the copy is refused.
+  const preview = screen.getByRole('article', { name: '네이버 미리보기' })
+  expect(within(preview).getAllByRole('img').length).toBeGreaterThan(0)
   expect(
     screen.getAllByText('사진을 읽지 못했어요. 글을 다시 불러오면 사진 주소가 새로 발급돼요.')
       .length,
   ).toBeGreaterThan(0)
 })
 
-it('survives a marker whose photo is missing from the post', () => {
+it('holds the marker position of a photo missing from the post', () => {
   render(
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
@@ -302,5 +377,9 @@ it('survives a marker whose photo is missing from the post', () => {
       contentLanguage="ko"
     />,
   )
+  // The filename says which file belongs at the marker the copied text still carries; a dropped
+  // entry would shift every later photo against its marker.
+  const preview = screen.getByRole('article', { name: '네이버 미리보기' })
+  expect(within(preview).getByText('IMG_1.jpg')).toBeInTheDocument()
   expect(screen.getAllByText('이 표시에 해당하는 사진을 찾지 못했어요.').length).toBeGreaterThan(0)
 })

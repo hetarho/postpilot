@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { twMerge } from 'tailwind-merge'
 import { BlockType, type PostContent } from '@/shared/api'
 import { Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'
@@ -8,6 +9,11 @@ import { blockKey, imageByFile } from '../model/content'
 interface BlockListProps {
   content: PostContent
   images: readonly PostImage[]
+  /** The article's accessible name. The editor's reading view keeps the default; a second
+   *  rendering on the same page (the Naver export preview) names itself apart so the two articles
+   *  stay distinguishable to a screen reader. */
+  label?: string
+  className?: string
   /** Wraps one rendered block, so a consumer can put its own affordance around the reading view
    *  without this entity gaining one. The entities layer may not depend on features, so the edit
    *  control has to arrive from the outside — the same render-prop seam `BlockEditor` already uses
@@ -19,10 +25,23 @@ interface BlockListProps {
   ) => ReactNode
   /** Wraps the title/summary/tags header for the same reason. */
   renderHeader?: (rendered: ReactNode) => ReactNode
+  /** Rendered in place of an IMAGE block whose file has no matching image. The default (nothing)
+   *  is right for the reading and editing views; the export preview holds the marker's position
+   *  with its own placeholder, because a dropped position would shift every later photo against
+   *  its `[사진 …]` marker. */
+  renderMissingImage?: (block: PostContent['blocks'][number], index: number) => ReactNode
 }
 
 /** The canonical block array rendered as a read-only draft. */
-export function BlockList({ content, images, renderBlock, renderHeader }: BlockListProps) {
+export function BlockList({
+  content,
+  images,
+  label,
+  className,
+  renderBlock,
+  renderHeader,
+  renderMissingImage,
+}: BlockListProps) {
   const { t } = useTranslation('posts')
   const imagesByFile = imageByFile(images)
   // The key stays on this wrapper rather than on whatever the consumer returns — and it is the
@@ -32,7 +51,10 @@ export function BlockList({ content, images, renderBlock, renderHeader }: BlockL
     renderBlock ? <Fragment key={index}>{renderBlock(block, index, rendered)}</Fragment> : rendered
 
   return (
-    <article aria-label={t('generatedContent')} className="mt-12 pb-12">
+    <article
+      aria-label={label ?? t('generatedContent')}
+      className={twMerge('mt-12 pb-12', className)}
+    >
       {(renderHeader ?? ((rendered: ReactNode) => rendered))(
         <header>
           <Typography variant="eyebrow" as="p">
@@ -97,7 +119,10 @@ export function BlockList({ content, images, renderBlock, renderHeader }: BlockL
               )
             case BlockType.IMAGE: {
               const image = imagesByFile.get(block.file)
-              if (!image) return null
+              if (!image)
+                return renderMissingImage ? (
+                  <Fragment key={key}>{renderMissingImage(block, index)}</Fragment>
+                ) : null
               return wrap(
                 block,
                 index,
