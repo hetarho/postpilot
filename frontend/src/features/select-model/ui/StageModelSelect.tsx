@@ -1,7 +1,6 @@
 import i18next from 'i18next'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { planLabel } from '@/entities/plan'
 import {
   type CatalogModel,
   type StageName,
@@ -66,7 +65,7 @@ export function StageModelSelect({
     ...models.map((model) => ({
       value: refKey(model.ref),
       label: optionLabel(model),
-      disabled: model.disabled || model.locked,
+      disabled: model.disabled || !model.affordable,
     })),
   ]
 
@@ -88,7 +87,7 @@ export function StageModelSelect({
         aria-describedby={describedBy || undefined}
         onChange={(next) => {
           const chosen = models.find((model) => refKey(model.ref) === next)
-          if (chosen && !chosen.disabled && !chosen.locked) save.save(stage, chosen.ref)
+          if (chosen && !chosen.disabled && chosen.affordable) save.save(stage, chosen.ref)
         }}
         className="mt-1"
       />
@@ -151,8 +150,8 @@ function optionLabel(model: CatalogModel): string {
   // a key is the more immediate obstacle, so that reason wins when both apply.
   const reason = model.disabled
     ? ` (${model.disabledReason})`
-    : model.locked
-      ? ` (${i18next.t('selectField.locked', { ns: 'models', plan: planLabel(model.minPlan) })})`
+    : !model.affordable
+      ? ` (${i18next.t('selectField.unaffordable', { ns: 'models', credits: model.requiredCredits })})`
       : ''
   return `${model.label}${badges ? ` ${badges}` : ''}${reason}`
 }

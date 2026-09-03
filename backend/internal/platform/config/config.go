@@ -39,10 +39,27 @@ const orphanMinAge = time.Hour
 // use however it likes, and the browser's own cap cannot be trusted on the server side.
 const maxImageBytes int64 = 10 << 20 // 10 MiB
 
+// maxPhotosPerPost caps how many photos one post may hold.
+//
+// It exists for the credit hold, not for storage: observation batches photos, so the
+// number of model calls a generate job makes — and therefore the credits it must reserve
+// before it starts — grows with the photo count. Without a ceiling the worst case a hold
+// has to price is unbounded.
+const maxPhotosPerPost = 30
+
 // llmStageTimeout bounds one provider call. Generation takes 30 s – 2 min and a long
 // draft can take longer on a slow model (PRD §6.6); the API is a long-lived container,
 // so the bound exists to fail a hung call, not to fit a platform limit.
 const llmStageTimeout = 5 * time.Minute
+
+// catalogTTL is how long the provider's own model list is trusted in memory. The list
+// changes when the provider publishes a model, so minutes are the right unit; an operator
+// who cannot wait presses 새로고침, which bypasses it.
+const catalogTTL = 5 * time.Minute
+
+// catalogFetchTimeout bounds the catalog read. It is one static JSON document over the
+// public internet, so a read that has not finished in this long is not going to.
+const catalogFetchTimeout = 15 * time.Second
 
 // llmMaxTokensDefault is the completion cap sent when a caller does not set one. Large
 // enough for a full blog draft; a caller with a smaller output (an observation, a style
@@ -145,10 +162,20 @@ type Config struct {
 	OrphanMinAge time.Duration
 	// MaxImageBytes is the largest object recorded as a photo.
 	MaxImageBytes int64
+	// MaxPhotosPerPost caps how many photos one post may hold.
+	MaxPhotosPerPost int
 
-	// ProvidersConfig is the path of providers.yaml — the model registry (PRD §6.4). The
-	// file names the env vars the API keys are read from; it never holds a key itself.
+	// ProvidersConfig is the path of providers.yaml — the provider connection (PRD §6.4).
+	// The file names the env var the API key is read from; it never holds a key itself, and
+	// it no longer lists models (those are curated rows, plan 18).
 	ProvidersConfig string
+	// CatalogTTL is how long one read of the provider's own model list is served from
+	// memory. Only the operator's curation screen reaches that list at all.
+	CatalogTTL time.Duration
+	// CatalogFetchTimeout bounds that read. It is much shorter than a model call: this is
+	// one static JSON document, and the screen degrades to curated rows when it does not
+	// arrive.
+	CatalogFetchTimeout time.Duration
 	// LLMStageTimeout bounds one provider call.
 	LLMStageTimeout time.Duration
 	// LLMMaxTokensDefault is the completion cap when a caller sets none.
@@ -221,15 +248,18 @@ func Load() (*Config, error) {
 		R2SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
 		R2Bucket:          os.Getenv("R2_BUCKET"),
 
-		PresignPutTTL: presignPutTTL,
-		PresignGetTTL: presignGetTTL,
-		OrphanMinAge:  orphanMinAge,
-		MaxImageBytes: maxImageBytes,
+		PresignPutTTL:    presignPutTTL,
+		PresignGetTTL:    presignGetTTL,
+		OrphanMinAge:     orphanMinAge,
+		MaxImageBytes:    maxImageBytes,
+		MaxPhotosPerPost: maxPhotosPerPost,
 
 		// Relative to the working directory, like DB_PATH: `backend/config/providers.yaml`
 		// for a host run and `/app/config/providers.yaml` in the dev container. The
 		// production image sets an absolute path (Dockerfile).
 		ProvidersConfig:      getenv("PROVIDERS_CONFIG", "config/providers.yaml"),
+		CatalogTTL:           catalogTTL,
+		CatalogFetchTimeout:  catalogFetchTimeout,
 		LLMStageTimeout:      llmStageTimeout,
 		LLMMaxTokensDefault:  llmMaxTokensDefault,
 		LLMReasoning:         defaultLLMReasoningPolicy(),

@@ -3,6 +3,7 @@ export {
   authClient,
   healthClient,
   providerClient,
+  modelCatalogClient,
   generationClient,
   publishingClient,
   publishingClientFor,
@@ -50,8 +51,8 @@ export {
 } from './gen/postpilot/v1/plan_pb'
 export type {
   GetMyPlanResponse,
-  PlanLimits as ProtoPlanLimits,
-  PlanUsage as ProtoPlanUsage,
+  CreditBalance as ProtoCreditBalance,
+  CreditLot as ProtoCreditLot,
   PlanUser as ProtoPlanUser,
 } from './gen/postpilot/v1/plan_pb'
 export type { PingResponse } from './gen/postpilot/v1/health_pb'
@@ -99,6 +100,17 @@ export type {
   StartRevisionResponse,
   SavePostContentResponse,
 } from './gen/postpilot/v1/post_pb'
+export { ModelCatalogService } from './gen/postpilot/v1/model_catalog_pb'
+export {
+  CatalogEntrySchema,
+  EnableModelResponseSchema,
+  ListCatalogResponseSchema,
+  UpdateModelResponseSchema,
+} from './gen/postpilot/v1/model_catalog_pb'
+export type {
+  CatalogEntry as ProtoCatalogEntry,
+  ListCatalogResponse as ProtoListCatalogResponse,
+} from './gen/postpilot/v1/model_catalog_pb'
 export { ProviderService, Stage, SelectionSlot } from './gen/postpilot/v1/provider_pb'
 export {
   GetSelectionsResponseSchema,

@@ -788,15 +788,18 @@ func TestStoreRejectsFailureThatDoesNotMatchTerminalStatus(t *testing.T) {
 	}
 }
 
-// recordingAdmitter stands in for the plan gate. The queue is deliberately ignorant of what
-// a refusal means, so the fake only has to answer yes or no and remember what it was asked.
+// recordingAdmitter stands in for the credit gate. The queue is deliberately ignorant of
+// what a refusal means, so the fake only has to answer yes or no and remember what it was
+// asked.
 type recordingAdmitter struct {
 	starts   []job.Start
 	released []string
+	settled  []string
+	open     []string
 	refuse   error
 }
 
-func (a *recordingAdmitter) Admit(_ context.Context, start job.Start) error {
+func (a *recordingAdmitter) Hold(_ context.Context, start job.Start) error {
 	if a.refuse != nil {
 		return a.refuse
 	}
@@ -806,6 +809,81 @@ func (a *recordingAdmitter) Admit(_ context.Context, start job.Start) error {
 
 func (a *recordingAdmitter) Release(_ context.Context, jobID string) {
 	a.released = append(a.released, jobID)
+}
+
+func (a *recordingAdmitter) Settle(_ context.Context, jobID string) {
+	a.settled = append(a.settled, jobID)
+}
+
+func (a *recordingAdmitter) OpenHolds(context.Context) ([]string, error) {
+	return a.open, nil
+}
+
+// callSummary renders the priced calls compactly: the ref and how many times it runs, in
+// the order the queue collected them.
+func callSummary(calls []job.PlannedCall) string {
+	parts := make([]string, 0, len(calls))
+	for _, call := range calls {
+		parts = append(parts, fmt.Sprintf("%s x%d", call.Ref, call.Count))
+	}
+	return strings.Join(parts, ",")
+}
+
+// One model chosen for both stages is one priced entry, not two. Pricing it per slot would
+// hold twice what the work will spend, which the account never gets back as a refusal it
+// did not deserve.
+func TestOneRefAcrossTwoStagesIsPricedOnce(t *testing.T) {
+	h := newHarness(t)
+	admitter := &recordingAdmitter{}
+	h.queue.Admit(admitter)
+
+	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		ObserveModel: "openrouter/one", WriteModel: "openrouter/one", TargetLanguage: "ko",
+	}); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/one x2"; got != want {
+		t.Errorf("priced calls = %q, want %q — one entry carrying both stages", got, want)
+	}
+}
+
+// A stated count is how many times the MODEL runs across the whole job, so it is not
+// multiplied again by the number of slots that name it.
+func TestAStatedCountIsNotMultipliedPerSlot(t *testing.T) {
+	h := newHarness(t)
+	admitter := &recordingAdmitter{}
+	h.queue.Admit(admitter)
+
+	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		ObserveModel: "openrouter/one", WriteModel: "openrouter/one", TargetLanguage: "ko",
+		CallCounts: map[string]int{"openrouter/one": 6},
+	}); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/one x6"; got != want {
+		t.Errorf("priced calls = %q, want %q", got, want)
+	}
+}
+
+// A count above one is the whole reason the gate is given calls rather than refs: a
+// generate job over many photos observes several times, and the hold has to price each.
+func TestStatedCallCountsReachTheGate(t *testing.T) {
+	h := newHarness(t)
+	admitter := &recordingAdmitter{}
+	h.queue.Admit(admitter)
+
+	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		ObserveModel: "openrouter/vision", WriteModel: "openrouter/writer", TargetLanguage: "ko",
+		CallCounts: map[string]int{"openrouter/vision": 8},
+	}); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/vision x8,openrouter/writer x1"; got != want {
+		t.Errorf("priced calls = %q, want %q", got, want)
+	}
 }
 
 // A2/A3: a refused start creates no job row at all — the client is told to try later, not
@@ -856,8 +934,8 @@ func TestOneComparisonIsOneAdmissionOverBothCandidates(t *testing.T) {
 	if start.JobID != id || start.UserID != "alice" || start.Kind != job.KindModelExperiment {
 		t.Errorf("start = %+v", start)
 	}
-	if got, want := strings.Join(start.Models, ","), "openrouter/a,openrouter/b"; got != want {
-		t.Errorf("gated models = %q, want %q", got, want)
+	if got, want := callSummary(start.Calls), "openrouter/a x1,openrouter/b x1"; got != want {
+		t.Errorf("priced calls = %q, want %q", got, want)
 	}
 }
 
@@ -873,8 +951,8 @@ func TestAdmissionGatesBothStageModels(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
-	if got, want := strings.Join(admitter.starts[0].Models, ","), "openrouter/vision,openrouter/writer"; got != want {
-		t.Fatalf("gated models = %q, want %q", got, want)
+	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/vision x1,openrouter/writer x1"; got != want {
+		t.Fatalf("priced calls = %q, want %q", got, want)
 	}
 
 	// A second start on the same post is refused by the existing active-job guard, which runs

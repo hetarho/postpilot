@@ -216,6 +216,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", "POST_FORBIDDEN", nil)
 	case errors.Is(err, post.ErrDuplicateFilename):
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "photo filename already exists", "POST_FILENAME_TAKEN", nil)
+	case errors.Is(err, post.ErrTooManyPhotos):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post already holds the maximum number of photos", "POST_PHOTO_LIMIT", nil)
 	case errors.Is(err, post.ErrInvalidImage):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid uploaded image", "UPLOAD_INVALID", nil)
 	case errors.Is(err, post.ErrObjectMissing):

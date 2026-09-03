@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Code } from '@connectrpc/connect'
-import { ProtoPlan, Stage } from '@/shared/api'
+import { Stage } from '@/shared/api'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { type FakeProvidersOptions, createFakeProviderTransport } from '@/test/providers'
 import { StageModelSelect } from './StageModelSelect'
@@ -178,7 +178,7 @@ describe('StageModelSelect', () => {
 describe('a model above the account tier', () => {
   // A6: it stays listed as upsell, disabled and labelled with the tier that unlocks it —
   // vanishing would teach the user nothing about why the model is not there.
-  it('is listed, disabled, and says which plan it needs', async () => {
+  it('is listed, disabled, and says what it would cost', async () => {
     renderSelect('write', {
       models: [
         { providerId: 'openrouter', modelId: 'writer', label: 'Writer' },
@@ -186,8 +186,8 @@ describe('a model above the account tier', () => {
           providerId: 'openrouter',
           modelId: 'anthropic/claude-opus-5',
           label: 'Claude Opus 5',
-          minPlan: ProtoPlan.MAX,
-          locked: true,
+          requiredCredits: 79,
+          affordable: false,
         },
       ],
     })
@@ -195,15 +195,14 @@ describe('a model above the account tier', () => {
     const user = userEvent.setup()
     await openPanel(user, /작성 모델/)
 
-    const locked = screen.getByRole('option', { name: 'Claude Opus 5 (Max 플랜부터)' })
-    expect(locked).toHaveAttribute('aria-disabled', 'true')
+    const unaffordable = screen.getByRole('option', { name: 'Claude Opus 5 (크레딧 79 필요)' })
+    expect(unaffordable).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('option', { name: 'Writer' })).not.toHaveAttribute('aria-disabled')
   })
 
-  // A saved choice the tier can no longer run is kept by the server, so the field says which
-  // plan restores it rather than "no longer registered" — which would send the user off to
-  // pick a replacement they do not need.
-  it('explains a saved choice that a downgrade locked, without calling it vanished', async () => {
+  // A balance is temporary state the next top-up clears, so an unaffordable saved choice is
+  // never reported as vanished — and its row is never touched.
+  it('keeps a saved choice the balance cannot currently cover', async () => {
     renderSelect('write', {
       models: [
         { providerId: 'openrouter', modelId: 'writer', label: 'Writer' },
@@ -211,15 +210,16 @@ describe('a model above the account tier', () => {
           providerId: 'openrouter',
           modelId: 'premium',
           label: 'Premium',
-          minPlan: ProtoPlan.MAX,
-          locked: true,
+          requiredCredits: 79,
+          affordable: false,
         },
       ],
       selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'premium' }],
-      lockedSelections: true,
     })
 
-    expect(await screen.findByText('Max 플랜부터')).toBeInTheDocument()
+    // The saved choice is still the field's value, carrying what it would cost rather than
+    // being reported as gone.
+    expect(await screen.findByText('Premium (크레딧 79 필요)')).toBeInTheDocument()
     expect(screen.queryByText('더 이상 등록되지 않은 모델이에요.')).not.toBeInTheDocument()
   })
 
@@ -230,15 +230,21 @@ describe('a model above the account tier', () => {
     renderSelect('write', {
       models: [
         { providerId: 'openrouter', modelId: 'writer', label: 'Writer' },
-        { providerId: 'openrouter', modelId: 'premium', label: 'Premium', locked: true },
+        {
+          providerId: 'openrouter',
+          modelId: 'premium',
+          label: 'Premium',
+          requiredCredits: 79,
+          affordable: false,
+        },
       ],
       saveFailure: {
-        reason: 'MODEL_LOCKED',
-        code: Code.PermissionDenied,
+        reason: 'INSUFFICIENT_CREDITS',
+        code: Code.ResourceExhausted,
         params: {
-          model: 'openrouter/premium',
-          models: 'openrouter/premium',
-          required_plan: 'max',
+          required: '79',
+          balance: '12',
+          renews_at: '2026-10-01T00:00:00Z',
         },
       },
     })
@@ -246,8 +252,6 @@ describe('a model above the account tier', () => {
     await openPanel(user, /작성 모델/)
     await user.click(screen.getByRole('option', { name: 'Writer' }))
 
-    expect(
-      await screen.findByText('openrouter/premium 모델은 Max 플랜부터 쓸 수 있어요.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeInTheDocument()
   })
 })

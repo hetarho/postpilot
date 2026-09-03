@@ -16,6 +16,7 @@ import { API_URL } from '@/shared/config'
 import { emitUnauthenticated } from './auth-events'
 import { AuthService } from './gen/postpilot/v1/auth_pb'
 import { HealthService } from './gen/postpilot/v1/health_pb'
+import { ModelCatalogService } from './gen/postpilot/v1/model_catalog_pb'
 import { ModelExperimentService } from './gen/postpilot/v1/model_experiment_pb'
 import { GenerationService } from './gen/postpilot/v1/post_pb'
 import { ProviderService } from './gen/postpilot/v1/provider_pb'
@@ -73,6 +74,9 @@ export const healthClient = createClient(HealthService, transport)
 
 /** Typed client for postpilot.v1.ProviderService. */
 export const providerClient = createClient(ProviderService, transport)
+
+/** The operator's catalog curation. Master-only on the server. */
+export const modelCatalogClient = createClient(ModelCatalogService, transport)
 
 /** Typed client for starting and reading durable generation jobs. */
 export const generationClient = createClient(GenerationService, transport)

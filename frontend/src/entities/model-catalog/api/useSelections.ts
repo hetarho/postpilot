@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@connectrpc/connect-query'
 import { useTranslation } from 'react-i18next'
-import { planLabel } from '@/entities/plan/@x/model-catalog'
 import { ProviderService } from '@/shared/api'
 import {
   type CatalogModel,
@@ -16,9 +15,12 @@ import { useModels } from './useModels'
 
 export type SelectionsByStage = Partial<Record<StageName, StageSelection>>
 
-/** The acting user's saved choice per stage, as the server reports it. */
+/** The acting user's saved choice per stage, as the server reports it, plus what one post
+ *  would cost with that pair. The estimate rides this query rather than a second one
+ *  because it is a property of the very selection being read. */
 export function useSelections(): {
   selections: SelectionsByStage
+  estimatedPostCredits: number
   isPending: boolean
   isError: boolean
 } {
@@ -31,7 +33,12 @@ export function useSelections(): {
     }
     return byStage
   }, [data])
-  return { selections, isPending, isError }
+  return {
+    selections,
+    estimatedPostCredits: data?.estimatedPostCredits ?? 0,
+    isPending,
+    isError,
+  }
 }
 
 /** Why a saved choice cannot be used right now, for the dropdown to say so. */
@@ -74,21 +81,14 @@ export function useStageSelection(stage: StageName): StageSelectionState {
     const base = { models, isError, isPending: catalogPending || selectionsPending }
     if (!saved) return { ...base, selected: null, unavailable: undefined }
     if (saved.missing) {
-      // The server reports a plan-locked choice as missing too — but its row is kept, and an
-      // upgrade restores it. Saying "no longer registered" there would send the user off to
-      // pick a replacement they do not need, so the catalog's own `locked` decides the reason.
-      const locked = catalog.find(
-        (candidate) => sameRef(candidate.ref, saved.ref) && candidate.locked,
-      )
+      // `missing` now means one thing only: the model is gone or unusable for the stage, and
+      // the server has already cleared the row. A model the balance cannot cover is never
+      // reported here — that is temporary state the next top-up clears, so it invalidates
+      // nothing.
       return {
         ...base,
         selected: null,
-        unavailable: {
-          ref: saved.ref,
-          reason: locked
-            ? t('selectField.locked', { plan: planLabel(locked.minPlan) })
-            : t('vanished'),
-        },
+        unavailable: { ref: saved.ref, reason: t('vanished') },
       }
     }
     if (catalogPending || isError) return { ...base, selected: null, unavailable: undefined }

@@ -221,6 +221,7 @@ export const posts = {
     skip: {
       extension: 'Not a supported photo file (only {{extensions}} are allowed)',
       tooLarge: 'Larger than {{max}}MB',
+      tooMany: 'A post holds at most {{max}} photos',
       unreadable: 'Could not read this photo',
       heifUnsupported: 'This device cannot convert HEIC files',
     },

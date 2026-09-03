@@ -75,6 +75,15 @@ export const appFailureSpecs = {
   MODEL_UNSUITABLE: {},
   MODEL_CANDIDATES_DUPLICATE: {},
   MODEL_RECOMMENDATION_NOT_FOUND: {},
+  // A recommendation set names nine refs, so its refusal names every one that blocks it —
+  // grouped by cause, because "retired" and "unusable here" are different problems.
+  MODEL_SET_UNAVAILABLE: {
+    required: ['models'],
+    optional: ['unregistered', 'disabled', 'unsuitable'],
+  },
+  MODEL_NOT_FOUND: {},
+  MODEL_ID_REQUIRED: {},
+  MODEL_REASONING_INVALID: {},
   GENERATION_WRITE_MODEL_REQUIRED: {},
   GENERATION_OBSERVE_MODEL_REQUIRED: {},
   GENERATION_TARGET_LENGTH_INVALID: {},
@@ -131,15 +140,12 @@ export const appFailureSpecs = {
   // Plan enforcement (plan 17). The two budget axes carry micro-USD integers and the count
   // axis carries a plain count; both are rendered through the catalogs' formatters, so the
   // server never has to guess the reader's currency or timezone.
-  DAILY_COUNT: { required: ['limit', 'used', 'resets_at'] },
-  DAILY_COST: { required: ['limit', 'used', 'resets_at'] },
-  MONTHLY_COST: { required: ['limit', 'used', 'resets_at'] },
-  MODEL_LOCKED: { required: ['required_plan'], optional: ['model', 'models'] },
+  INSUFFICIENT_CREDITS: { required: ['required', 'balance', 'renews_at'] },
+  PLAN_REQUIRED: {},
   MASTER_ONLY: {},
   LAST_MASTER: {},
   USER_NOT_FOUND: {},
   USER_ID_REQUIRED: {},
-  PLAN_REQUIRED: {},
 } as const satisfies Readonly<Record<string, FailureParamSpec>>
 
 export type AppFailureReason = keyof typeof appFailureSpecs

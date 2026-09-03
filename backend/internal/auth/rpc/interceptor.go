@@ -69,6 +69,13 @@ var masterProcedures = map[string]bool{
 
 	postpilotv1connect.AdminServiceListUsersProcedure:   true,
 	postpilotv1connect.AdminServiceSetUserPlanProcedure: true,
+
+	// Curating the model catalog decides what every account may spend money on, so it sits
+	// with the tier assignment rather than with the per-account model choice ProviderService
+	// serves.
+	postpilotv1connect.ModelCatalogServiceListCatalogProcedure: true,
+	postpilotv1connect.ModelCatalogServiceEnableModelProcedure: true,
+	postpilotv1connect.ModelCatalogServiceUpdateModelProcedure: true,
 }
 
 // masterOnlyMessage is what a non-master caller sees. It names no account and no tier

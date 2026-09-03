@@ -7,8 +7,11 @@ backend built by job 03, the browser half of the pipeline by job 05.
 
 The browser is the only place a photo is ever decoded ([I6]). Before a byte is sent:
 
-- **Selection gate.** Extension ∈ `jpg jpeg png webp heic heif` (case-insensitive) and size ≤ `UPLOAD_MAX_FILE_MB`
-  (25) at selection, before conversion. Anything else is listed under "건너뜀" with the reason and is never read,
+- **Selection gate.** Extension ∈ `jpg jpeg png webp heic heif` (case-insensitive), size ≤ `UPLOAD_MAX_FILE_MB`
+  (25), and the post's photo count below `UPLOAD_MAX_PHOTOS_PER_POST` (30) — all at selection, before conversion.
+  The ceiling exists for the credit hold rather than for storage: observation batches photos, so the calls a
+  generate job makes grow with the photo count ([plans.md](plans.md)). The server refuses the crossing upload too;
+  this copy is what lets the browser say so before a file is decoded. Anything else is listed under "건너뜀" with the reason and is never read,
   converted or sent. A pick made only of skipped files does not create a post.
 - **Decode.** JPEG/PNG/WebP through the browser's own decoder with EXIF orientation applied. HEIC/HEIF through
   `libheif-js` (Emscripten libheif) running in a Web Worker that is loaded on the first HEIC and torn down after

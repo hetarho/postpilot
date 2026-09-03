@@ -29,8 +29,9 @@ Every sentence on the page must be true of **shipped** behavior, as recorded in 
 - No guarantee the product does not own: no "matches your voice perfectly", no "never stores your data", no "fully
   automatic publishing", no availability, security or performance superlative.
 - No testimonial, usage metric, case study or fabricated social proof.
-- The **plans section mirrors the code-owned limits table** in `backend/internal/plan` ([plans](plans.md)): daily job
-  starts, daily and monthly budgets, and model access, for `free` / `basic` / `max`. It is static localized copy, not
+- The **plans section mirrors the code-owned grant table** in `backend/internal/plan` ([plans](plans.md)): the
+  monthly credit grant and the intended monthly price, for `free` / `basic` / `pro` / `max`. Model access is the
+  same for every tier and is stated as such. It is static localized copy, not
   a `GetMyPlan` read — a visitor with no account has no plan to read. Changing the ladder means changing this copy in
   the same change; a divergence is a copy bug.
 - `master` appears only as prose describing the operator tier (unlimited, owns publishing and administration) and is

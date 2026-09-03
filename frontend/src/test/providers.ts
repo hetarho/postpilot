@@ -15,7 +15,6 @@ import {
   ListModelsResponseSchema,
   ModelInfoSchema,
   ModelRefSchema,
-  ProtoPlan,
   ProviderService,
   SaveComparisonPairResponseSchema,
   SaveSelectionResponseSchema,
@@ -37,9 +36,9 @@ export interface FakeModel {
   disabledReason?: string
   /** The tier the model requires. Defaults to `free`, so a test that says nothing about
    *  plans gets a registry every account can run. */
-  minPlan?: ProtoPlan
+  requiredCredits?: number
   /** What the server computed for THIS caller — the model's floor is above their tier. */
-  locked?: boolean
+  affordable?: boolean
 }
 
 export interface FakeSelection {
@@ -74,7 +73,7 @@ export interface FakeProvidersOptions {
   calls?: string[]
   /** Report saved selections whose model is `locked` as missing WITHOUT clearing them, the
    *  way the server treats a plan-locked choice: a downgrade is reversible state. */
-  lockedSelections?: boolean
+  unaffordableSelections?: boolean
   comparisonPairs?: Array<{
     stage: Stage
     candidateA: { providerId: string; modelId: string }
@@ -104,15 +103,18 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
           structuredOutput: model.structuredOutput ?? false,
           disabled: model.disabledReason !== undefined,
           disabledReason: model.disabledReason ?? '',
-          minPlan: model.minPlan ?? ProtoPlan.FREE,
-          locked: model.locked ?? false,
+          requiredCredits: model.requiredCredits ?? 5,
+          affordable: model.affordable ?? true,
         }),
       ),
     })
   })
 
-  const lockedFor = (selection: FakeSelection) =>
-    Boolean(options.lockedSelections && registered(selection.providerId, selection.modelId)?.locked)
+  const unaffordableFor = (selection: FakeSelection) =>
+    Boolean(
+      options.unaffordableSelections &&
+      registered(selection.providerId, selection.modelId)?.affordable === false,
+    )
 
   rpc(ProviderService.method.getSelections, () => {
     calls?.push('GetSelections')
@@ -120,13 +122,14 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
       create(SelectionSchema, {
         stage: selection.stage,
         ref: { providerId: selection.providerId, modelId: selection.modelId },
-        missing: !registered(selection.providerId, selection.modelId) || lockedFor(selection),
+        missing: !registered(selection.providerId, selection.modelId) || unaffordableFor(selection),
       }),
     )
     // Like the server: a vanished choice is told once, then it is gone — but a plan-locked one
     // is kept, because an upgrade must restore it with no re-selection.
     selections = selections.filter(
-      (selection) => registered(selection.providerId, selection.modelId) || lockedFor(selection),
+      (selection) =>
+        registered(selection.providerId, selection.modelId) || unaffordableFor(selection),
     )
     return create(GetSelectionsResponseSchema, { selections: answer })
   })
@@ -145,11 +148,11 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
       throw connectAppError('MODEL_DISABLED', Code.FailedPrecondition)
     }
     // Like the server: the client's rendering is never the gate.
-    if (model.locked) {
-      throw connectAppError('MODEL_LOCKED', Code.PermissionDenied, {
-        model: `${ref.providerId}/${ref.modelId}`,
-        models: `${ref.providerId}/${ref.modelId}`,
-        required_plan: 'max',
+    if (model.affordable === false) {
+      throw connectAppError('INSUFFICIENT_CREDITS', Code.ResourceExhausted, {
+        required: '79',
+        balance: '12',
+        renews_at: '2026-10-01T00:00:00Z',
       })
     }
     selections = [

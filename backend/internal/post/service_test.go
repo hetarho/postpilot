@@ -47,7 +47,7 @@ func newTestService(t *testing.T) (*Service, *fakeStore, *fakeBlobs) {
 
 	store := newFakeStore()
 	blobs := newFakeBlobs()
-	svc := NewService(store, blobs, 10*time.Minute, 5*time.Minute, testMaxBytes)
+	svc := NewService(store, blobs, 10*time.Minute, 5*time.Minute, testMaxBytes, 30)
 	svc.now = func() time.Time { return testNow }
 	svc.SetVoiceDirectory(testVoices())
 	svc.SetLivePublishFinder(&fakeLivePublish{})

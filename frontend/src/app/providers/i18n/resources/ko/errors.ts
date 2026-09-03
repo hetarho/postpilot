@@ -64,6 +64,11 @@ export const errors = {
   MODEL_UNSUITABLE: '이 단계에서 쓸 수 없는 모델이에요.',
   MODEL_CANDIDATES_DUPLICATE: '서로 다른 모델을 선택해 주세요.',
   MODEL_RECOMMENDATION_NOT_FOUND: '모델 추천 조합을 찾을 수 없어요.',
+  MODEL_SET_UNAVAILABLE:
+    '이 추천 조합에 들어 있는 {{models}} 모델을 지금은 쓸 수 없어서 적용하지 못했어요. 단계별로 직접 선택해 주세요.',
+  MODEL_NOT_FOUND: '그 모델을 찾을 수 없어요.',
+  MODEL_ID_REQUIRED: '모델을 선택해 주세요.',
+  MODEL_REASONING_INVALID: '지원하지 않는 추론 강도예요.',
   GENERATION_WRITE_MODEL_REQUIRED: '작성 모델을 선택해 주세요.',
   GENERATION_OBSERVE_MODEL_REQUIRED: '사진 관찰 모델을 선택해 주세요.',
   GENERATION_TARGET_LENGTH_INVALID: '목표 글자 수를 확인해 주세요.',
@@ -116,17 +121,12 @@ export const errors = {
   PUBLISH_AGENT_UNAVAILABLE: '발행할 Mac을 사용할 수 없어요.',
   PUBLISH_NEEDS_ATTENTION: 'Mac의 전용 브라우저에서 로그인 상태를 확인해 주세요.',
   PUBLISH_OUTCOME_UNKNOWN: '발행 완료 여부를 확인할 수 없어요. 블로그에서 직접 확인해 주세요.',
-  DAILY_COUNT:
-    '오늘 시작할 수 있는 AI 작업 {{limit}}회를 모두 썼어요. {{resets_at, instant}}에 다시 열려요.',
-  DAILY_COST:
-    '오늘 사용할 수 있는 금액 {{limit, microusd}}를 모두 썼어요. {{resets_at, instant}}에 다시 열려요.',
-  MONTHLY_COST:
-    '이번 달 사용할 수 있는 금액 {{limit, microusd}}를 모두 썼어요. {{resets_at, instant}}에 다시 열려요.',
-  MODEL_LOCKED: '{{models}} 모델은 {{required_plan, plan}} 플랜부터 쓸 수 있어요.',
+  INSUFFICIENT_CREDITS:
+    '크레딧이 {{required}} 필요한데 {{balance}}만 남았어요. {{renews_at, instant}}에 충전돼요.',
+  PLAN_REQUIRED: '플랜을 선택해 주세요.',
   LAST_MASTER: '마지막 운영자 계정은 다른 플랜으로 바꿀 수 없어요.',
   USER_NOT_FOUND: '계정을 찾을 수 없어요.',
   USER_ID_REQUIRED: '계정을 선택해 주세요.',
-  PLAN_REQUIRED: '플랜을 선택해 주세요.',
   MASTER_ONLY: '운영자 계정만 쓸 수 있는 기능이에요.',
   NETWORK_UNAVAILABLE: '네트워크에 연결할 수 없어요.',
 } as const

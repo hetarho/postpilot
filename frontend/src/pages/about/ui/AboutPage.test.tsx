@@ -53,9 +53,10 @@ const COPY = {
  *  spec/policy/plans.md. A divergence between this table and the page is a copy bug — the whole
  *  point of A17 — so the test states the numbers rather than reading them from the catalog. */
 const PLANS = [
-  { name: 'free', starts: '10', daily: '$0.10', monthly: '$2.00' },
-  { name: 'basic', starts: '30', daily: '$0.50', monthly: '$12.00' },
-  { name: 'max', starts: '100', daily: '$1.00', monthly: '$25.00' },
+  { name: 'free', credits: '50', price: /무료|Free/ },
+  { name: 'basic', credits: '200', price: '$2' },
+  { name: 'pro', credits: '500', price: '$5' },
+  { name: 'max', credits: '1,000', price: '$10' },
 ] as const
 
 afterEach(() => {
@@ -120,9 +121,8 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     for (const tier of PLANS) {
       const row = plans.getByRole('row', { name: new RegExp(`^${tier.name}\\b`) })
       const cells = within(row).getAllByRole('cell')
-      expect(cells[0]).toHaveTextContent(tier.starts)
-      expect(cells[1]).toHaveTextContent(tier.daily)
-      expect(cells[2]).toHaveTextContent(tier.monthly)
+      expect(cells[0]).toHaveTextContent(tier.credits)
+      expect(cells[1]).toHaveTextContent(tier.price)
     }
     // master appears only as prose about the operator tier — never as a fourth obtainable row.
     expect(plans.getAllByRole('row')).toHaveLength(PLANS.length + 1)

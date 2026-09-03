@@ -1,8 +1,10 @@
 import i18next from 'i18next'
 
-/** The authorization ladder, in order. Every gate in the app asks the same question of it:
- *  is the acting tier at least this floor? */
-export const PLANS = ['free', 'basic', 'max', 'master'] as const
+/** The ladder, in order. A tier decides two things and no more: how many credits it is
+ *  granted each month, and — for `master` alone — access to the operator-only surfaces.
+ *  Which models an account may run is not one of them; that is decided by what it can
+ *  afford. */
+export const PLANS = ['free', 'basic', 'pro', 'max', 'master'] as const
 
 export type PlanName = (typeof PLANS)[number]
 
@@ -16,33 +18,55 @@ export function planLabel(plan: PlanName | undefined): string {
   return i18next.t(`tier.${plan ?? 'unknown'}`, { ns: 'plans' })
 }
 
-/** Whether an acting tier satisfies a floor. Display only — the server refuses on its own,
- *  whatever the client rendered. */
-export function planAllows(acting: PlanName | undefined, floor: PlanName | undefined): boolean {
-  if (!acting || !floor) return false
-  return PLANS.indexOf(acting) >= PLANS.indexOf(floor)
+/** The tiers a plan comparison screen lists. `master` is absent on purpose: it is the
+ *  operator tier, not something anyone is offered. */
+export const OFFERED_PLANS = ['free', 'basic', 'pro', 'max'] as const
+
+/** One grant of credits. Consumption walks lots by expiry ascending with the non-expiring
+ *  ones last, which is the order they are rendered in. */
+export interface CreditLot {
+  kind: 'monthly' | 'bonus'
+  granted: number
+  remaining: number
+  /** RFC3339, or empty for a grant that does not expire. */
+  expiresAt: string
 }
 
-/** Zero on any axis means unlimited (the operator tier), never a zero allowance. */
-export interface PlanLimits {
-  dailyJobStarts: number
-  dailyBudgetMicrousd: number
-  monthlyBudgetMicrousd: number
+/** What the account may spend. Credits are the product's own unit, so there is no currency
+ *  here to format — only integers. */
+export interface CreditBalance {
+  credits: number
+  /** The operator tier, which is never refused for balance: it shows no meter. */
+  unlimited: boolean
+  lots: CreditLot[]
+  /** RFC3339; the instant the next monthly grant opens, computed by the server. */
+  renewsAt: string
+  /** What this tier is granted each month, so a meter has something to fill against. */
+  monthlyGrant: number
 }
 
-export interface PlanUsage {
-  jobsStartedToday: number
-  costTodayMicrousd: number
-  costMonthMicrousd: number
-  /** RFC3339; the instant each calendar window reopens, computed by the server. */
-  dayResetsAt: string
-  monthResetsAt: string
+/** One rung as the comparison screen lists it. Both figures come from the server: the grant
+ *  and the price it was sized against are one product decision, and a client that carried
+ *  its own copy of either would eventually disagree with the ladder it is describing. */
+export interface PlanOffer {
+  plan: PlanName | undefined
+  monthlyCredits: number
+  /** Whole US cents; zero for the free tier. Nothing here charges anyone. */
+  priceUsdCents: number
 }
 
 export interface MyPlan {
   plan: PlanName | undefined
-  limits: PlanLimits
-  usage: PlanUsage
+  balance: CreditBalance
+  offers: PlanOffer[]
+}
+
+/** How many posts a balance covers at a given per-post estimate. It is deliberately a
+ *  floor: telling someone they have "about 3" when the third would be refused is worse
+ *  than telling them 2. */
+export function postsAffordable(credits: number, perPost: number): number {
+  if (perPost <= 0) return 0
+  return Math.floor(credits / perPost)
 }
 
 /** One account as the operator screen sees it. */

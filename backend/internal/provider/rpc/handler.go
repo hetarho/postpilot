@@ -15,7 +15,6 @@ import (
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
-	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/provider"
 )
@@ -31,11 +30,14 @@ func NewHandler(svc *provider.Service) *Handler {
 }
 
 func (h *Handler) ListModels(ctx context.Context, _ *connect.Request[postpilotv1.ListModelsRequest]) (*connect.Response[postpilotv1.ListModelsResponse], error) {
-	_, actingPlan, err := acting(ctx)
+	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	models := h.svc.ListModels(actingPlan)
+	models, err := h.svc.ListModels(ctx, userID)
+	if err != nil {
+		return nil, toConnectError("list models", err)
+	}
 	out := make([]*postpilotv1.ModelInfo, 0, len(models))
 	for _, m := range models {
 		out = append(out, toProtoModel(m))
@@ -44,23 +46,36 @@ func (h *Handler) ListModels(ctx context.Context, _ *connect.Request[postpilotv1
 }
 
 func (h *Handler) GetSelections(ctx context.Context, _ *connect.Request[postpilotv1.GetSelectionsRequest]) (*connect.Response[postpilotv1.GetSelectionsResponse], error) {
-	userID, actingPlan, err := acting(ctx)
+	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	selections, err := h.svc.GetSelections(ctx, userID, actingPlan)
+	selections, err := h.svc.GetSelections(ctx, userID)
 	if err != nil {
 		return nil, toConnectError("get selections", err)
 	}
 	out := make([]*postpilotv1.Selection, 0, len(selections))
+	var observe, write llm.ModelRef
 	for _, s := range selections {
 		out = append(out, toProtoSelection(s))
+		if s.Missing || s.Slot != provider.SlotActive {
+			continue
+		}
+		switch s.Stage {
+		case provider.StageObserve:
+			observe = s.Ref
+		case provider.StageWrite:
+			write = s.Ref
+		}
 	}
-	return connect.NewResponse(&postpilotv1.GetSelectionsResponse{Selections: out}), nil
+	return connect.NewResponse(&postpilotv1.GetSelectionsResponse{
+		Selections:           out,
+		EstimatedPostCredits: int32(h.svc.EstimatePostCredits(observe, write)),
+	}), nil
 }
 
 func (h *Handler) SaveSelection(ctx context.Context, req *connect.Request[postpilotv1.SaveSelectionRequest]) (*connect.Response[postpilotv1.SaveSelectionResponse], error) {
-	userID, actingPlan, err := acting(ctx)
+	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +88,7 @@ func (h *Handler) SaveSelection(ctx context.Context, req *connect.Request[postpi
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, fmt.Sprintf("unknown stage: %s", req.Msg.GetStage()), "MODEL_STAGE_INVALID", nil)
 	}
 	ref := llm.ModelRef{ProviderID: req.Msg.GetRef().GetProviderId(), ModelID: req.Msg.GetRef().GetModelId()}
-	saved, err := h.svc.SaveSelection(ctx, userID, actingPlan, stage, ref)
+	saved, err := h.svc.SaveSelection(ctx, userID, stage, ref)
 	if err != nil {
 		return nil, toConnectError("save selection", err)
 	}
@@ -81,11 +96,11 @@ func (h *Handler) SaveSelection(ctx context.Context, req *connect.Request[postpi
 }
 
 func (h *Handler) GetComparisonPairs(ctx context.Context, _ *connect.Request[postpilotv1.GetComparisonPairsRequest]) (*connect.Response[postpilotv1.GetComparisonPairsResponse], error) {
-	userID, actingPlan, err := acting(ctx)
+	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	pairs, err := h.svc.GetComparisonPairs(ctx, userID, actingPlan)
+	pairs, err := h.svc.GetComparisonPairs(ctx, userID)
 	if err != nil {
 		return nil, toConnectError("get comparison pairs", err)
 	}
@@ -97,7 +112,7 @@ func (h *Handler) GetComparisonPairs(ctx context.Context, _ *connect.Request[pos
 }
 
 func (h *Handler) SaveComparisonPair(ctx context.Context, req *connect.Request[postpilotv1.SaveComparisonPairRequest]) (*connect.Response[postpilotv1.SaveComparisonPairResponse], error) {
-	userID, actingPlan, err := acting(ctx)
+	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +126,7 @@ func (h *Handler) SaveComparisonPair(ctx context.Context, req *connect.Request[p
 		}
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, message, reason, nil)
 	}
-	pair, err := h.svc.SaveComparisonPair(ctx, userID, actingPlan, stage, fromProtoRef(req.Msg.GetCandidateA()), fromProtoRef(req.Msg.GetCandidateB()))
+	pair, err := h.svc.SaveComparisonPair(ctx, userID, stage, fromProtoRef(req.Msg.GetCandidateA()), fromProtoRef(req.Msg.GetCandidateB()))
 	if err != nil {
 		return nil, toConnectError("save comparison pair", err)
 	}
@@ -119,7 +134,7 @@ func (h *Handler) SaveComparisonPair(ctx context.Context, req *connect.Request[p
 }
 
 func (h *Handler) ListRecommendationSets(ctx context.Context, _ *connect.Request[postpilotv1.ListRecommendationSetsRequest]) (*connect.Response[postpilotv1.ListRecommendationSetsResponse], error) {
-	if _, _, err := acting(ctx); err != nil {
+	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
 	sets := h.svc.RecommendationSets()
@@ -131,11 +146,11 @@ func (h *Handler) ListRecommendationSets(ctx context.Context, _ *connect.Request
 }
 
 func (h *Handler) ApplyRecommendationSet(ctx context.Context, req *connect.Request[postpilotv1.ApplyRecommendationSetRequest]) (*connect.Response[postpilotv1.ApplyRecommendationSetResponse], error) {
-	userID, actingPlan, err := acting(ctx)
+	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	set, selections, pairs, err := h.svc.ApplyRecommendationSet(ctx, userID, actingPlan, req.Msg.GetId())
+	set, selections, pairs, err := h.svc.ApplyRecommendationSet(ctx, userID, req.Msg.GetId())
 	if err != nil {
 		return nil, toConnectError("apply recommendation set", err)
 	}
@@ -152,25 +167,27 @@ func (h *Handler) ApplyRecommendationSet(ctx context.Context, req *connect.Reque
 	}), nil
 }
 
-// acting resolves both halves of the caller's identity. Every procedure here needs the
-// plan as well as the id: which models are listed, kept, or refused is a property of the
-// tier, not of the account.
-func acting(ctx context.Context) (string, plan.Plan, error) {
+// actingUser resolves the caller. The tier is no longer part of it: what a model costs
+// and whether it is affordable is a property of the account's balance, which the service
+// reads for itself.
+func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
-	actingPlan, ok := auth.PlanFromContext(ctx)
-	if !ok {
-		return "", "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
-	}
-	return userID, actingPlan, nil
+	return userID, nil
 }
 
 func toConnectError(op string, err error) error {
-	var locked *plan.ModelLockedError
-	if errors.As(err, &locked) {
-		return rpcserver.AppErrorFrom(connect.CodePermissionDenied, locked)
+	var credits *plan.InsufficientCreditsError
+	if errors.As(err, &credits) {
+		return rpcserver.AppErrorFrom(connect.CodeResourceExhausted, credits)
+	}
+	// Checked before the sentinel switch: the grouped refusal wraps those same sentinels, so
+	// the switch would match it and drop the list of refs it exists to carry.
+	var refusal *provider.SetRefusal
+	if errors.As(err, &refusal) {
+		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, refusal)
 	}
 	switch {
 	case errors.Is(err, provider.ErrUnknownStage):
@@ -218,8 +235,8 @@ func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
 		InputUsdPerMillion:  m.Info.InputUSDPerMillion,
 		OutputUsdPerMillion: m.Info.OutputUSDPerMillion,
 		PricingCheckedAt:    m.Info.PricingCheckedAt,
-		MinPlan:             planrpc.ToProto(m.Info.MinPlan),
-		Locked:              m.Locked,
+		RequiredCredits:     int32(m.RequiredCredits),
+		Affordable:          m.Affordable,
 	}
 }
 

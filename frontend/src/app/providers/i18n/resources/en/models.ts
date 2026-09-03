@@ -61,7 +61,7 @@ export const models = {
   stage: { observe: 'Observe', write: 'Write', analyze: 'Analyze voice' },
   select: 'Select a model',
   selectField: {
-    locked: 'requires {{plan}}',
+    unaffordable: 'needs {{credits}} credits',
     stage: { observe: 'Observe', write: 'Write', analyze: 'Analyze voice' },
     label: '{{stage}} model{{optional}}',
     optional: ' (optional)',
@@ -79,7 +79,7 @@ export const models = {
   unsuitable: 'Cannot be used for this stage',
   unavailable: 'Unregistered model',
   recommendation: {
-    locked: 'This set includes {{models}}, so it needs the {{plan}} plan.',
+    unaffordable: 'Your credits do not cover {{models}}.',
     description: 'Saves the active models and nine A/B pairs across all three stages at once.',
     apply: 'Apply recommendation',
     applied: 'Applied the active models and A/B pairs for all three stages.',
@@ -127,5 +127,41 @@ export const models = {
       '{{calls}} successful calls · {{latency}}ms average · tokens {{prompt}} / {{completion}} · {{cost}}',
     costUnavailable: 'Cost unavailable',
     partlyEstimated: 'partly ≈ ',
+  },
+  catalog: {
+    title: 'Model catalog',
+    description:
+      'Choose which of the models OpenRouter offers this installation will use. Only the models you check appear in anyone’s per-stage picker.',
+    disableWarning:
+      'Unchecking a model also clears it from the selections of everyone who had chosen it, and they must pick again.',
+    search: 'Search',
+    searchPlaceholder: 'Model name or id',
+    provider: 'Provider',
+    allProviders: 'All providers',
+    filterVision: 'Accepts images',
+    filterStructured: 'Structured output',
+    filterEnabled: 'In use only',
+    refresh: 'Refresh list',
+    fetchedLive: 'Read from the provider at {{at, instant}}.',
+    fetchedCached: 'Read at {{at, instant}}, served from cache.',
+    fetchFailed:
+      'The provider’s model list could not be read, so only models already registered are shown. Try refreshing in a moment.',
+    loading: 'Loading the model list…',
+    loadFailed: 'Could not load the model list.',
+    empty: 'No models registered, and none read from the provider yet.',
+    noMatches: 'No model matches these filters.',
+    count: 'Showing {{shown}} of {{total}}.',
+    use: 'Use',
+    vision: 'Images',
+    structured: 'Structured',
+    delisted: 'Withdrawn',
+    delistedBanner_one:
+      '{{count}} registered model is no longer offered by the provider. Users see it as unavailable — review it and uncheck it.',
+    delistedBanner_other:
+      '{{count}} registered models are no longer offered by the provider. Users see them as unavailable — review them and uncheck them.',
+    context: '{{tokens}} token context',
+    price: '${{in}} in · ${{out}} out per 1M tokens',
+    reasoning: 'Reasoning effort',
+    reasoningDefault: 'Stage default',
   },
 } as const

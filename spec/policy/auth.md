@@ -10,11 +10,17 @@ built by jobs 01 and 02; the account's plan and the master-only procedure set co
 - **There is no registration surface.** No `Signup` RPC, no signup screen, no invite flow. The API exposes exactly
   three auth procedures: `Login`, `Logout`, `GetMe` (PRD F-1).
 - Accounts are created **only** by the operator, from a shell on the box:
-  `api adduser <login_id> [--plan=<free|basic|max|master>]` (the deployed image dispatches the subcommand through its
+  `api adduser <login_id> [--plan=<free|basic|pro|max|master>]` (the deployed image dispatches the subcommand through its
   unchanged `ENTRYPOINT ["/api"]`) or `go run ./cmd/adduser <login_id>` on a host. Both read the password twice from
   stdin, require the two to match, and refuse an existing id with a non-zero exit.
 - **Every account carries a plan**, defaulting to `free`, and only `master` changes it — `api setplan <id> <tier>`
-  or the master-only admin RPC. The ladder, its limits, and the last-master guard are in [plans.md](plans.md).
+  or the master-only admin RPC. The ladder, its credit grants, and the last-master guard are in
+  [plans.md](plans.md).
+- **Provisioning also grants credits.** `adduser` opens the tier's first monthly lot and, for a `free` account, an
+  additional non-expiring 50-credit signup bonus — in the account-creating transaction, and idempotently, so a
+  rerun that repairs an account cannot mint a second bonus. `api grantcredits <id> <amount> [--expires=<RFC3339>]`
+  opens a bonus lot on an existing account; it is the only path by which an account gets credits beyond its
+  monthly grant, because there is no signup and no checkout.
 - A duplicate login id is rejected at the database (primary key) and reported as `auth.ErrDuplicateUser`.
 - There is **no password change or reset flow.** The operator recreates the account. This is a known PRD gap, not an
   oversight — see plan 01 Non-goals.

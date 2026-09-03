@@ -11,7 +11,6 @@ import {
   useModelSetup,
   useSaveComparisonPair,
 } from '@/entities/model-catalog'
-import { planLabel } from '@/entities/plan'
 import { AppFailureMessage, FieldLabel, Listbox, Typography, type ListboxOption } from '@/shared/ui'
 
 /** The A/B pair for one stage, as TWO dropdowns side by side, saved the moment both name a
@@ -94,8 +93,7 @@ function CandidatePairFields({
     })
   }
 
-  // Every row this surface offers is a choice it can actually carry out, which rules out two
-  // entries the AI 모델 page's copy of the same form can afford.
+  // Every row this surface offers is a choice it can actually carry out.
   //
   // NO BLANK. A pair is two distinct registered models or it has never been set —
   // `SaveComparisonPair` refuses an empty ref and there is no RPC that clears one — so choosing
@@ -121,7 +119,7 @@ function CandidatePairFields({
       .map((model) => ({
         value: refKey(model.ref),
         label: optionLabel(model),
-        disabled: model.disabled || model.locked,
+        disabled: model.disabled || !model.affordable,
       }))
 
   return (
@@ -210,13 +208,13 @@ function CandidateField({
 
 /** The reason a model cannot be chosen, appended to its name. Only ever read inside the OPEN
  *  panel: `onChange` refuses a disabled row, so it can never become the trigger's value. A
- *  provider without a key is the more immediate obstacle, so that reason wins over the plan. */
+ *  provider without a key is the more immediate obstacle, so that reason wins over cost. */
 function optionLabel(model: CatalogModel): string {
   if (model.disabled) return `${model.label} (${model.disabledReason})`
-  if (model.locked) {
-    const reason = i18next.t('selectField.locked', {
+  if (!model.affordable) {
+    const reason = i18next.t('selectField.unaffordable', {
       ns: 'models',
-      plan: planLabel(model.minPlan),
+      credits: model.requiredCredits,
     })
     return `${model.label} (${reason})`
   }

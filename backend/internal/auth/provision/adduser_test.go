@@ -221,9 +221,18 @@ func TestRunDefaultsToFreeAndAcceptsAnExplicitTier(t *testing.T) {
 
 func TestRunRejectsAnUnknownTier(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "postpilot.db")
-	err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "alice", "--plan=pro")
+	err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "alice", "--plan=premium")
 	if err == nil || !strings.Contains(err.Error(), "unknown plan") {
 		t.Fatalf("error = %v, want an unknown-plan refusal", err)
+	}
+}
+
+// `pro` joined the ladder with credit metering; provisioning onto it must work like any
+// other rung.
+func TestRunProvisionsOntoPro(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "postpilot.db")
+	if err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "alice", "--plan=pro"); err != nil {
+		t.Fatalf("adduser --plan=pro = %v, want nil", err)
 	}
 }
 

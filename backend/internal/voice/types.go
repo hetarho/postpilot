@@ -437,9 +437,13 @@ type AnalysisJobRequest struct {
 type PersonalizationJobRequest struct {
 	Kind, UserID, VoiceID, PostSlug, Model, Payload string
 	// ExtraModels are refs the job will run besides Model — profile validation also runs an
-	// analyze model. The plan gate sees every ref the work will actually spend on, not just
-	// the one the job row records.
+	// analyze model. The gate sees every ref the work will actually spend on, not just the
+	// one the job row records.
 	ExtraModels []string
+	// CallCounts is how many times a ref runs, for the refs that run more than once. A
+	// profile validation repeats its stages once per sampled post, so pricing it at one
+	// call each would hold a fraction of what it spends.
+	CallCounts map[string]int
 }
 
 type ActiveJob struct{ ID string }

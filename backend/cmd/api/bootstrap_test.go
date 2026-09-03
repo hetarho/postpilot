@@ -96,7 +96,7 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
 	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
 
 	if _, err := voiceSvc.DefaultVoice(ctx, "alice"); !errors.Is(err, voice.ErrVoiceNotFound) {
@@ -144,7 +144,7 @@ func TestGenerationAdapterCarriesThePostPurposeThroughToTheFrozenBrief(t *testin
 	}
 
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
 	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
 	purposeSvc := purpose.NewService(
 		purposestore.New(handle.Writer, handle.Reader),
@@ -226,7 +226,7 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 	models := &trackingVoiceModels{}
 	jobs := &trackingVoiceJobs{}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), models, jobs)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
 	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
 
 	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
@@ -306,7 +306,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
 	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
 	purposeSvc := purpose.NewService(
 		purposestore.New(handle.Writer, handle.Reader),

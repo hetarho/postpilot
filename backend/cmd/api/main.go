@@ -41,6 +41,10 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/llm/openaicompat"
+	"github.com/postpilot/backend/internal/modelcatalog"
+	"github.com/postpilot/backend/internal/modelcatalog/openrouter"
+	modelcatalogrpc "github.com/postpilot/backend/internal/modelcatalog/rpc"
+	modelcatalogstore "github.com/postpilot/backend/internal/modelcatalog/store"
 	"github.com/postpilot/backend/internal/plan"
 	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/config"
@@ -82,8 +86,15 @@ func main() {
 	// so `docker compose run --rm api adduser <id>` works against the deployed image
 	// with nothing added to it.
 	if len(os.Args) > 1 && os.Args[1] == "adduser" {
-		if err := provision.Run(context.Background(), os.Args[2:], defaultVoiceBootstrap); err != nil {
+		if err := provision.Run(context.Background(), os.Args[2:], defaultVoiceBootstrap, creditBootstrap); err != nil {
 			slog.Error("adduser failed", "err", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "grantcredits" {
+		if err := provision.GrantCredits(context.Background(), os.Args[2:], grantCreditsTo); err != nil {
+			slog.Error("grantcredits failed", "err", err)
 			os.Exit(1)
 		}
 		return
@@ -102,24 +113,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Same posture as a migration: a registry that does not validate must not serve.
-	// A missing API key is NOT that — the provider's models come up disabled instead.
-	// Checked before the database is touched: it is pure configuration, and a typo in
-	// the yaml should not leave a half-started process behind.
-	registry, err := llm.Load(cfg.ProvidersConfig, os.Getenv, adapters, llm.Options{
-		Timeout:   cfg.LLMStageTimeout,
-		MaxTokens: cfg.LLMMaxTokensDefault,
-	})
-	if err != nil {
-		slog.Error("providers config invalid", "err", err)
-		os.Exit(1)
-	}
-	for _, m := range registry.Models() {
-		if m.Disabled {
-			slog.Warn("model disabled", "model", m.Ref.String(), "reason", m.DisabledReason)
-		}
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -136,6 +129,37 @@ func main() {
 	if err := db.Migrate(ctx, handle.Writer); err != nil {
 		slog.Error("migration failed", "err", err)
 		os.Exit(1)
+	}
+
+	// The registry is loaded after the database because its models are curated rows now,
+	// not yaml entries (plan 18). What the yaml still decides — how to reach the provider —
+	// keeps the same posture as a migration: a file that does not validate must not serve,
+	// and this still runs before the listener exists, so the deploy's /health gate rolls
+	// back. A missing API key is NOT that: the models come up disabled instead.
+	//
+	// An empty catalog is a valid state. A fresh install has curated nothing, and the right
+	// answer is an empty dropdown and a trip to /admin/models, not a refused boot.
+	catalogSvc := modelcatalog.NewService(modelcatalogstore.New(handle.Writer, handle.Reader))
+	if err := catalogSvc.Reload(ctx); err != nil {
+		slog.Error("model catalog load failed", "err", err)
+		os.Exit(1)
+	}
+	registry, err := llm.Load(cfg.ProvidersConfig, os.Getenv, adapters, catalogSvc, llm.Options{
+		Timeout:   cfg.LLMStageTimeout,
+		MaxTokens: cfg.LLMMaxTokensDefault,
+	})
+	if err != nil {
+		slog.Error("providers config invalid", "err", err)
+		os.Exit(1)
+	}
+	// The upstream catalog lives at the registered endpoint, so its address is configured in
+	// exactly one place. Attached after Load because that is where the address comes from;
+	// boot itself never calls it.
+	catalogSvc.SetUpstream(openrouter.New(registry.BaseURL(), cfg.CatalogFetchTimeout, cfg.CatalogTTL))
+	for _, m := range registry.Models() {
+		if m.Disabled {
+			slog.Warn("model disabled", "model", m.Ref.String(), "reason", m.DisabledReason)
+		}
 	}
 
 	jobQueue := job.New(jobstore.New(handle.Writer, handle.Reader), config.WorkerPollInterval)
@@ -164,9 +188,21 @@ func main() {
 	// The ledger is built before any context that can spend: `metered` is the registry
 	// every context is given from here on, so a call made anywhere lands on the ledger
 	// without that context knowing the ledger exists.
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), registry)
+	ledger := usage.NewService(
+		usagestore.New(handle.Writer, handle.Reader), registry,
+		int64(cfg.LLMMaxTokensDefault),
+	)
 	meteredModels := meteredRegistry{Registry: registry, ledger: ledger}
 	jobQueue.Admit(jobAdmission{ledger: ledger, registry: registry, plans: authSvc})
+
+	// After the admitter is attached, not with the other boot sweeps: an open hold can only
+	// be settled through it, and a sweep that ran first would silently find nothing.
+	if n, err := jobQueue.SweepOpenHolds(ctx); err != nil {
+		slog.Error("open credit hold sweep failed", "err", err)
+		os.Exit(1)
+	} else if n > 0 {
+		slog.Info("settled holds left open by an interrupted finish", "count", n)
+	}
 
 	// Checked here rather than in config.Load: `api adduser` must work on a fresh box
 	// before a bucket exists. This still runs before the listener, so a missing value
@@ -195,6 +231,7 @@ func main() {
 		cfg.PresignPutTTL,
 		cfg.PresignGetTTL,
 		cfg.MaxImageBytes,
+		cfg.MaxPhotosPerPost,
 		postJobFinder{queue: jobQueue},
 	)
 	publishSvc := publishing.NewService(
@@ -234,7 +271,10 @@ func main() {
 	// a SQL join: the guideline context asks the purpose context, through this adapter only.
 	guidelineSvc.SetPurposeDirectory(guidelinePurposes{service: purposeSvc})
 
-	providerSvc := provider.NewService(providerstore.New(handle.Writer, handle.Reader), meteredModels)
+	providerSvc := provider.NewService(
+		providerstore.New(handle.Writer, handle.Reader), meteredModels,
+		providerCredits{ledger: ledger, plans: authSvc},
+	)
 	voiceSvc := voice.NewService(
 		voicestore.New(handle.Writer, handle.Reader),
 		voiceModels{selections: providerSvc, registry: meteredModels, plans: authSvc},
@@ -362,6 +402,9 @@ func main() {
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewProviderServiceHandler(providerrpc.NewHandler(providerSvc), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewModelCatalogServiceHandler(modelcatalogrpc.NewHandler(catalogSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewPurposeServiceHandler(purposerpc.NewHandler(purposeSvc), opts...)
@@ -496,11 +539,7 @@ func (a publishingPosts) PublishingSnapshot(ctx context.Context, userID, postSlu
 var _ publishing.PostSnapshots = publishingPosts{}
 
 func (a voiceModels) AnalyzeModel(ctx context.Context, userID string) (llm.ModelRef, bool, error) {
-	acting, err := a.plans.PlanOf(ctx, userID)
-	if err != nil {
-		return llm.ModelRef{}, false, err
-	}
-	selections, err := a.selections.GetSelections(ctx, userID, acting)
+	selections, err := a.selections.GetSelections(ctx, userID)
 	if err != nil {
 		return llm.ModelRef{}, false, err
 	}
@@ -553,6 +592,7 @@ func (a voiceJobs) EnqueuePersonalization(ctx context.Context, request voice.Per
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: request.Kind, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID,
 		WriteModel: request.Model, ExtraModels: request.ExtraModels, Payload: []byte(request.Payload),
+		CallCounts: request.CallCounts,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -800,7 +840,7 @@ func generationContentProto(content generation.PostContent) *postpilotv1.PostCon
 			// is the same thing every other mapper in the tree does with one.
 			Type:    postpilotv1.BlockType(postpilotv1.BlockType_value[string(block.Type)]),
 			Content: block.Content, Level: block.Level,
-			File:    block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
 		})
 	}
 	return out
@@ -908,10 +948,15 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 	if err != nil {
 		return "", err
 	}
+	calls := map[string]int{}
+	if request.ObserveModel != "" && request.ObserveCalls > 1 {
+		calls[request.ObserveModel] = request.ObserveCalls
+	}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
 		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
 		TargetLanguage: request.TargetLanguage.String(), Payload: payload,
+		CallCounts: calls,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -1075,20 +1120,12 @@ func (a experimentCatalog) Resolve(ref experiment.ModelRef) (experiment.Model, b
 }
 
 func (a experimentCatalog) Adopt(ctx context.Context, userID string, stage experiment.Stage, ref experiment.ModelRef) error {
-	acting, err := a.plans.PlanOf(ctx, userID)
-	if err != nil {
-		return err
-	}
-	_, err = a.selections.SaveSelection(ctx, userID, acting, provider.Stage(stage), llmRef(ref))
+	_, err := a.selections.SaveSelection(ctx, userID, provider.Stage(stage), llmRef(ref))
 	return err
 }
 
 func (a experimentCatalog) Active(ctx context.Context, userID string, stage experiment.Stage) (experiment.ModelRef, bool, error) {
-	acting, err := a.plans.PlanOf(ctx, userID)
-	if err != nil {
-		return experiment.ModelRef{}, false, err
-	}
-	selections, err := a.selections.GetSelections(ctx, userID, acting)
+	selections, err := a.selections.GetSelections(ctx, userID)
 	if err != nil {
 		return experiment.ModelRef{}, false, err
 	}
@@ -1303,6 +1340,41 @@ func experimentVoiceError(err error) error {
 	}
 }
 
+// creditBootstrap gives a freshly provisioned account the credits its tier is granted,
+// so it can spend from its first request rather than from whichever one happens to renew
+// it. It is idempotent for the same reason the voice bootstrap is: `adduser` may be rerun
+// to repair an account, and a repair must not mint a second signup bonus.
+func creditBootstrap(ctx context.Context, handle *db.DB, userID string) error {
+	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour)
+	acting, err := authSvc.PlanOf(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("resolve provisioned plan: %w", err)
+	}
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
+	if err := ledger.EnsureMonthlyLot(ctx, userID, acting); err != nil {
+		return fmt.Errorf("open monthly grant: %w", err)
+	}
+	if acting == plan.Free {
+		if err := ledger.GrantSignupBonus(ctx, userID, plan.SignupBonusCredits); err != nil {
+			return fmt.Errorf("grant signup bonus: %w", err)
+		}
+	}
+	return nil
+}
+
+// grantCreditsTo opens a bonus lot from the operator's shell.
+func grantCreditsTo(ctx context.Context, handle *db.DB, userID string, credits int, expiresAt *time.Time) error {
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
+	return ledger.Grant(ctx, userID, credits, expiresAt)
+}
+
+// emptyModels satisfies the ledger's registry port for the provisioning paths, which only
+// grant credits and never price a call. Building the real registry there would make
+// account creation depend on a reachable provider catalog.
+type emptyModels struct{}
+
+func (emptyModels) Lookup(llm.ModelRef) (llm.ModelInfo, bool) { return llm.ModelInfo{}, false }
+
 // defaultVoiceBootstrap gives a freshly provisioned account its `기본 말투` before it can
 // create a post. It is idempotent, so `adduser` may be rerun to repair an account that was
 // left without a voice; a failure exits non-zero because the invariant is not established.
@@ -1343,7 +1415,7 @@ type jobAdmission struct {
 	plans    *auth.Service
 }
 
-func (a jobAdmission) Admit(ctx context.Context, start job.Start) error {
+func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
 	// The request's own tier is preferred so one request is judged against one tier
 	// throughout; a start made from a worker context has no session to read, and falls back
 	// to the stored row, which is the same authority the interceptor resolved from.
@@ -1351,30 +1423,64 @@ func (a jobAdmission) Admit(ctx context.Context, start job.Start) error {
 	if !ok {
 		stored, err := a.plans.PlanOf(ctx, start.UserID)
 		if err != nil {
-			return fmt.Errorf("admit %s: resolve acting plan: %w", start.Kind, err)
+			return fmt.Errorf("hold %s: resolve acting plan: %w", start.Kind, err)
 		}
 		acting = stored
 	}
-	floors := make([]plan.ModelFloor, 0, len(start.Models))
-	for _, ref := range start.Models {
-		info, found := a.registry.Lookup(parseRegistryRef(ref))
-		if !found {
-			// An unregistered ref is the enqueuing service's own failure to report, not a
-			// plan refusal; it has already been validated there.
-			continue
-		}
-		floors = append(floors, plan.ModelFloor{Ref: ref, MinPlan: info.MinPlan})
+	calls := make([]usage.PlannedCall, 0, len(start.Calls))
+	for _, call := range start.Calls {
+		calls = append(calls, usage.PlannedCall{Ref: parseRegistryRef(call.Ref), Count: call.Count})
 	}
-	return a.ledger.Admit(ctx, usage.Start{
-		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Models: floors,
+	return a.ledger.Hold(ctx, usage.Start{
+		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: calls,
 	})
 }
 
 func (a jobAdmission) Release(ctx context.Context, jobID string) {
 	if err := a.ledger.Release(ctx, jobID); err != nil {
-		slog.Error("release admission failed", "job", jobID, "err", err)
+		slog.Error("release hold failed", "job", jobID, "err", err)
 	}
 }
+
+func (a jobAdmission) Settle(ctx context.Context, jobID string) {
+	if err := a.ledger.Settle(ctx, jobID); err != nil {
+		slog.Error("settle hold failed", "job", jobID, "err", err)
+	}
+}
+
+func (a jobAdmission) OpenHolds(ctx context.Context) ([]string, error) {
+	return a.ledger.OpenHolds(ctx)
+}
+
+// providerCredits lets the model picker price a choice with the same estimator the gate
+// applies when the work starts, so what a user is shown and what they are charged cannot
+// be computed two different ways.
+type providerCredits struct {
+	ledger *usage.Service
+	plans  *auth.Service
+}
+
+func (a providerCredits) ForCalls(calls []provider.PlannedCall) int {
+	priced := make([]usage.PlannedCall, 0, len(calls))
+	for _, call := range calls {
+		priced = append(priced, usage.PlannedCall{Ref: call.Ref, Count: call.Count})
+	}
+	return a.ledger.CreditsFor(priced)
+}
+
+func (a providerCredits) Balance(ctx context.Context, userID string) (int, bool, error) {
+	acting, ok := auth.PlanFromContext(ctx)
+	if !ok {
+		stored, err := a.plans.PlanOf(ctx, userID)
+		if err != nil {
+			return 0, false, fmt.Errorf("resolve acting plan: %w", err)
+		}
+		acting = stored
+	}
+	return a.ledger.SpendableCredits(ctx, userID, acting)
+}
+
+var _ provider.Credits = providerCredits{}
 
 // parseRegistryRef splits the stored "provider/model" form a job records. The model id may
 // itself contain slashes (`anthropic/claude-opus-5` under the `openrouter` provider), so

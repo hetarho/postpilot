@@ -11,10 +11,14 @@ adds the voice-owned `seed_voice` kind. This document owns the shared record, wo
 - Long model work is represented by a durable `generation_jobs` row. Enqueue writes `queued` and returns its id
   without running the handler in the request; the API process's worker later moves it through
   `queued → running → done | failed` ([I5]). Terminal rows are never reopened; retrying creates a new row.
-- **Enqueue is the one plan gate.** Every kind here consumes LLM calls, so a start passes the model floors and the
-  three quota axes before any row exists; a refusal creates no job ([plans.md](plans.md)). The queue itself stays
-  plan-ignorant — it hands the refs the job will run to an injected admitter and returns its refusal unwrapped, so
-  each rpc edge maps one typed error rather than seven.
+- **Enqueue is the one credit gate.** Every kind here consumes LLM calls, so a start holds what the work could cost
+  against the account's balance before any row exists; a refusal creates no job ([plans.md](plans.md)). Reaching a
+  terminal state settles that hold against what the ledger recorded, and a hold whose row then failed to insert is
+  released. The queue itself stays credit-ignorant — it hands the injected admitter the calls the job will make,
+  with how many times each, and returns its refusal unwrapped, so each rpc edge maps one typed error.
+- **The call count is the enqueuing service's to state.** Only it knows that observation batches four photos per
+  call, or that a profile validation repeats its stages once per sampled post. A kind that understates it does not
+  break the balance floor — the lots refuse to go negative — but the difference it spends past its hold is ours.
 - The worker stamps the job's owner, kind, id, and stage model refs onto the handler's context, which is how every
   provider call the handler makes lands on the account's usage ledger without the handler knowing it exists.
 - The row records its owner, optional post target, kind, stage, exact progress, optional frozen target language,

@@ -110,6 +110,10 @@ type StartRequest struct {
 	Purpose *PurposeBrief
 	// Guidelines is resolved the same way, from the same purpose id, and frozen alongside.
 	Guidelines []string
+	// ObserveCalls is how many observation calls the photos will take, resolved at Start
+	// where the post is already in hand. Observation batches photos, so this is not the
+	// photo count — and the credit hold has to price every call, not every photo.
+	ObserveCalls int
 }
 
 type GenerateJob struct {

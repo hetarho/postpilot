@@ -215,6 +215,7 @@ export const posts = {
     skip: {
       extension: '사진 파일이 아니에요 ({{extensions}}만 올릴 수 있어요)',
       tooLarge: '{{max}}MB를 넘어요',
+      tooMany: '한 글에 사진은 {{max}}장까지예요',
       unreadable: '사진을 읽을 수 없어요',
       heifUnsupported: '이 기기에서는 HEIC를 변환할 수 없어요',
     },

@@ -78,6 +78,13 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	if err := q.store.Finish(finishCtx, found.ID, status, failure, q.now()); err != nil {
 		slog.Error("finish job failed", "job", found.ID, "status", status, "err", err)
 	}
+	// Settling after the terminal write, on the same detached context: the job's ledger
+	// rows are all written by now, so this is the first moment the hold can be reconciled
+	// against what the work actually cost. A failure here strands credits until the boot
+	// sweep, which is why it must not also fail the job.
+	if q.admitter != nil {
+		q.admitter.Settle(finishCtx, found.ID)
+	}
 }
 
 func callHandler(ctx context.Context, handler Handler, found Job, progress Progress) (err error) {

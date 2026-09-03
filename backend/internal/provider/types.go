@@ -9,6 +9,7 @@ package provider
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -44,12 +45,17 @@ func ParseStage(s string) (Stage, error) {
 	return "", fmt.Errorf("%w: %q", ErrUnknownStage, s)
 }
 
-// CatalogModel is a registry entry as ONE caller sees it: the model's own facts plus
-// whether that caller's plan may run it. Locked lives here rather than on llm.ModelInfo
-// because it is a fact about the pair, not about the model.
+// CatalogModel is a registry entry as ONE caller sees it: the model's own facts plus what
+// it would cost that caller and whether they can afford it. Both live here rather than on
+// llm.ModelInfo because they are facts about the pair, not about the model.
+//
+// Affordable is display only, and unlike the plan floor it replaces it is temporary — the
+// same model becomes affordable again at the next renewal — which is why nothing
+// downstream treats an unaffordable selection as invalidated.
 type CatalogModel struct {
-	Info   llm.ModelInfo
-	Locked bool
+	Info            llm.ModelInfo
+	RequiredCredits int
+	Affordable      bool
 }
 
 // Selection is the acting user's choice for one stage.
@@ -93,6 +99,80 @@ var (
 	ErrDuplicateCandidates    = errors.New("comparison candidates must differ")
 	ErrRecommendationNotFound = errors.New("recommendation set not found")
 )
+
+// ReasonSetUnavailable is the wire reason for a recommendation set naming refs the catalog
+// cannot currently serve.
+const ReasonSetUnavailable = "MODEL_SET_UNAVAILABLE"
+
+// SetRefusal names every ref of a recommendation set that blocks applying it.
+//
+// A set is applied whole, and the models it names are curated data that changes while the
+// process runs, so a refusal that stopped at the first bad ref would make the user discover
+// the rest one attempt at a time — with no way to tell "one model was retired" from "this
+// set is stale".
+type SetRefusal struct {
+	Unregistered []string
+	Disabled     []string
+	Unsuitable   []string
+}
+
+func (e *SetRefusal) Error() string {
+	parts := make([]string, 0, 3)
+	for _, group := range []struct {
+		what string
+		refs []string
+	}{
+		{"not in the catalog", e.Unregistered},
+		{"disabled", e.Disabled},
+		{"unusable for their stage", e.Unsuitable},
+	} {
+		if len(group.refs) > 0 {
+			parts = append(parts, fmt.Sprintf("%s: %s", group.what, strings.Join(group.refs, ", ")))
+		}
+	}
+	return "recommendation set cannot be applied — " + strings.Join(parts, "; ")
+}
+
+func (e *SetRefusal) Reason() string { return ReasonSetUnavailable }
+
+// Params carry every offending ref, grouped by cause, so one refusal explains the whole
+// set. `models` is the flat list for copy that only needs to name them.
+func (e *SetRefusal) Params() map[string]string {
+	return map[string]string{
+		"models":       strings.Join(e.All(), ", "),
+		"unregistered": strings.Join(e.Unregistered, ", "),
+		"disabled":     strings.Join(e.Disabled, ", "),
+		"unsuitable":   strings.Join(e.Unsuitable, ", "),
+	}
+}
+
+// Unwrap keeps errors.Is matching the sentinels a single-ref refusal raises, so a caller
+// that already handles "model not registered" is not broken by the grouped form.
+func (e *SetRefusal) Unwrap() []error {
+	out := make([]error, 0, 3)
+	if len(e.Unregistered) > 0 {
+		out = append(out, ErrModelNotRegistered)
+	}
+	if len(e.Disabled) > 0 {
+		out = append(out, ErrModelDisabled)
+	}
+	if len(e.Unsuitable) > 0 {
+		out = append(out, ErrModelUnsuitable)
+	}
+	return out
+}
+
+// All is every offending ref in report order.
+func (e *SetRefusal) All() []string {
+	out := make([]string, 0, len(e.Unregistered)+len(e.Disabled)+len(e.Unsuitable))
+	out = append(out, e.Unregistered...)
+	out = append(out, e.Disabled...)
+	out = append(out, e.Unsuitable...)
+	return out
+}
+
+// Empty reports whether the set passed.
+func (e *SetRefusal) Empty() bool { return len(e.All()) == 0 }
 
 // Suitable reports whether a model can serve a stage: observation looks at photos, so
 // it needs a vision model (PRD §6.4); the other stages take any model.

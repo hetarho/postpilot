@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import { PLANS, planLabel, type PlanName } from '@/entities/plan'
 import type { CatalogModel, ModelRef, RecommendationSet } from '@/entities/model-catalog'
 import { refKey, sameRef, useApplyRecommendation, useModels } from '@/entities/model-catalog'
 import { AppFailureMessage, Button, Notice, Typography } from '@/shared/ui'
@@ -10,7 +9,7 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
   const { models } = useModels()
   // A set is applied whole: the server refuses all nine refs if any one is above the tier, so
   // offering the button would only produce a refusal the user cannot act on from here.
-  const blocked = lockedRefs(recommendation, models)
+  const blocked = unaffordableRefs(recommendation, models)
   return (
     // No card: this is the whole content of a page section, and §1.4 excludes a section from the
     // card contract. On a 360px phone its padding cost 32px of a 328px column in the one region
@@ -41,9 +40,8 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
       </Button>
       {blocked.length > 0 && (
         <Notice tone="info" role="status" className="mt-2">
-          {t('recommendation.locked', {
+          {t('recommendation.unaffordable', {
             models: blocked.map(refKey).join(', '),
-            plan: planLabel(highestFloor(blocked, models)),
           })}
         </Notice>
       )}
@@ -66,7 +64,7 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
 }
 
 /** Every ref in the set the calling account may not run, in set order and without repeats. */
-function lockedRefs(
+function unaffordableRefs(
   recommendation: RecommendationSet,
   models: readonly CatalogModel[],
 ): ModelRef[] {
@@ -74,28 +72,10 @@ function lockedRefs(
   for (const selection of recommendation.selections) {
     for (const ref of [selection.active, selection.candidateA, selection.candidateB]) {
       const model = models.find((candidate) => sameRef(candidate.ref, ref))
-      if (!model?.locked) continue
+      if (!model || model.affordable) continue
       if (locked.some((existing) => sameRef(existing, ref))) continue
       locked.push(ref)
     }
   }
   return locked
-}
-
-/** The one upgrade that unlocks the whole set — the highest floor among what it blocked.
- *  Ranked through PLANS so a tier added to the ladder is ordered without editing this. */
-function highestFloor(
-  locked: readonly ModelRef[],
-  models: readonly CatalogModel[],
-): PlanName | undefined {
-  return locked
-    .flatMap((ref) => {
-      const model = models.find((candidate) => sameRef(candidate.ref, ref))
-      return model?.minPlan ? [model.minPlan] : []
-    })
-    .reduce<PlanName | undefined>(
-      (highest, floor) =>
-        highest === undefined || PLANS.indexOf(floor) > PLANS.indexOf(highest) ? floor : highest,
-      undefined,
-    )
 }

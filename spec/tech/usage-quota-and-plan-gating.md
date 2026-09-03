@@ -1,27 +1,127 @@
-# Tech — Usage quotas and plan gating
+# Tech — Credit metering and the balance gate
 
-Why plan limits are enforced at **job admission** against a persisted **usage ledger**, and why model access is a
-declared floor in the registry rather than a list kept beside the user. Decision record for
-[plan 17](../plan/17.plan-based-authorization-and-usage-quota.md), **as built by job 37**. The currently-true rules
+Why LLM work is metered in **credits held at job start and settled against a persisted ledger**, and why model
+access is decided by what an account can afford rather than by a floor declared per model. Decision record for
+[plan 17](../plan/17.plan-based-authorization-and-usage-quota.md), **as built by job 37 and re-denominated by
+[change 19](../changes/archive/19.credit-metering-and-open-model-access.md) (job 47)**. The currently-true rules
 are in [policy/plans.md](../policy/plans.md); this document keeps the reasoning behind them.
 
-Owner in code: `backend/internal/plan` (the ladder + limits table + windows + typed refusals),
-`backend/internal/usage` (ledger + admission + the metering seam), `backend/internal/auth` (plan on the
+Owner in code: `backend/internal/plan` (the ladder + grant table + charge formula + windows + typed refusals),
+`backend/internal/usage` (lots + hold/settle + ledger + the metering seam), `backend/internal/auth` (plan on the
 user/session, master-only procedure set).
+
+## Why credits rather than USD axes
+
+The three USD axes job 37 shipped (daily starts, daily budget, monthly budget) measured **our provider cost** and
+showed it to the user as money. That conflates two different numbers. What we pay a provider moves with model
+prices, provider fees and the exchange rate; what a user is entitled to should not. A credit is a product-fixed
+$0.01 of list value, and the charge formula is what maps one onto the other:
+
+```
+credits = ChargeBase + ceil(actual_cost_usd × 100 × ChargeMultiplier)
+```
+
+`ChargeBase` (2) recovers the per-request infrastructure a pure cost multiple cannot see — storage, database,
+worker — and is also what keeps a near-free model from being effectively unmetered: without it, a model priced at
+$0.045 per million input tokens costs a fraction of a credit per call, and the account is bounded by nothing.
+`ChargeMultiplier` (3) covers the provider top-up fee, card fees, VAT and gross margin. Both are single named
+constants in code rather than env config, for the same reason the grant table is: two deploys must never disagree
+about what a request costs.
+
+The arithmetic is integer-only. A credit is exactly 10 000 micro-USD, the unit the ledger already stores, so no
+float ever enters the money path — and the division rounds up, so a call too cheap to reach one credit still costs
+`ChargeBase + 1` rather than disappearing.
+
+Collapsing three axes into one also removed the thing that made refusals hard to explain. A user who hit the daily
+budget had to be told which of three limits filled and when that particular window reopened. A user out of credits
+is told one number and one date.
+
+## Why a hold rather than admission-and-overshoot
+
+Cost is only knowable **after** a call completes, so any scheme that charges afterwards can be surprised. Job 37
+accepted that as *bounded overshoot*: a window could exceed its budget by the cost of the jobs in flight when it
+filled. That bound turned out to be unbounded in a direction the plan had not modelled — nothing capped how many
+photos a post could hold, and observation batches four per call, so a single forty-photo generate job on the most
+expensive model could overshoot by nearly three dollars.
+
+The hold closes it. At the enqueue seam the gate prices every call the work will make at its worst case — an
+assumed large prompt at the model's input price, plus the completion cap at its output price — and deducts that
+many credits before the job row exists. The check and the deduction are one `BEGIN IMMEDIATE` transaction, so two
+concurrent starts reading the same balance cannot both pass it.
+
+Settlement is what makes a worst-case hold acceptable to a user. When the job reaches a terminal state the hold is
+reconciled against what `usage_events` actually recorded for it, and the remainder is returned within the minute.
+An eight-photo Opus post reserves far more than it spends and gets the difference back; the worker is
+single-consumer, so holds cannot pile up while that happens.
+
+The refund goes back to **the lots the hold came from**, recorded per hold in `credit_hold_lots`, rather than to
+whatever the consumption order is at settle time. By the time a job ends a lot may have expired or a new one may
+have opened, and refunding into the wrong lot would quietly move credits between expiry dates — turning a bonus
+that was about to lapse into one that does not, or the reverse.
+
+**A balance can never go negative.** That is the guarantee the change exists for, and it does not rest on one
+layer: the Go path refuses a hold it cannot cover, and `credit_lots` carries `CHECK (remaining >= 0 AND remaining
+<= granted)` with both the spend and the refund statements guarded by the amount available. A job whose real cost
+exceeds its own hold takes what the lots can still give and stops — the difference is ours, never a debt the
+account carries into next month.
+
+An **exempt tier** (`master`) is held, recorded and settled like everyone else but spends no lot. The recorded
+hold is the point: unlimited spend is exactly the account whose spend the operator most wants to be able to read.
+
+## Why lots rather than a counter
+
+A balance could have been two integers on the user row — one monthly, one bonus. Lots are one row per grant, and
+they buy three things a pair of counters cannot.
+
+First, **expiry becomes data rather than a rule**. A lot carries the instant it lapses (or `NULL`), a balance is
+the sum over the unexpired ones, and no scheduled job has to run for that sum to be correct at a boundary.
+
+Second, **the consumption order falls out of one comparison**. Lots are walked by `expires_at` ascending with
+`NULL` last. A monthly lot always carries the earlier expiry, so "spend the monthly grant before the bonus" is not
+a second rule anyone has to remember — and a promotional grant with its own deadline needs no new mechanism at
+all.
+
+Third, **the grant history stays readable**. A lapsed lot is not deleted; it simply stops counting.
+
+Monthly renewal is computed **on access** rather than by a ticker. The first request after the boundary closes the
+stale lot and opens the next inside the same write transaction. A server that was down at midnight, and accounts
+whose renewal instants differ, are both correct without a sweeper that has to have run.
+
+## Why the model floor was redundant
+
+`min_plan` declared, per model, the lowest tier allowed to run it — and it was enforced on every ref-accepting RPC
+across roughly fifty sites. Once charge is proportional to true cost, it answers a question the balance already
+answers, and answers it worse. A `free` account cannot run Opus because 79 credits do not fit in 50; it does not
+need a table to say so.
+
+The distinction that mattered for the code around it: a floor refusal was **permanent until upgrade**, which is
+why a downgrade-locked selection had to be preserved-not-deleted and reported as missing-but-restorable. A balance
+refusal is **temporary until renewal**, so a saved selection is never invalidated by one and needs no preservation
+rule at all. Removing the floor removed that whole branch rather than reimplementing it in a new currency.
+
+What replaces it is the hold itself, surfaced for display: `ListModels` reports per model what one call would
+require and whether the balance covers it, so a picker can disable and label. That is display only — the server
+refuses at the gate whatever the client rendered — and it is computed by the **same estimator** the gate applies,
+so what a user is shown and what they are charged cannot be derived two different ways.
 
 ## The shape
 
 ```
 StartGeneration / revise / analyze / A-B          worker goroutine
         │                                              │  ctx carries usage.Work{user, kind, job}
-   job.Enqueue ─▶ usage.Admit(user, plan, kind, refs)  ├─▶ metered registry ─▶ llm call
+   job.Enqueue ─▶ usage.Hold(user, plan, kind, calls)  ├─▶ metered registry ─▶ llm call
         │            │ BEGIN IMMEDIATE                 │            │
-        │            │ model floors first              │      usage.RecordCall(ctx, ref, usage)
-        │            │ count axis: usage_admissions    │            │
-        │            │ cost axes:  Σ usage_events      └──────────▶ usage_events row
-        │            ▼
-        │     ok → admission row, then the job row (release on insert failure)
-        │     no → resource_exhausted{reason, limit, used, resets_at}, no job row
+        │            │ renew the monthly lot           │      usage.RecordCall(ctx, ref, usage)
+        │            │ price every planned call        │            │
+        │            │ spend lots in expiry order      └──────────▶ usage_events row
+        │            ▼                                              │
+        │     ok → admission + credit_hold_lots, then the job row   │
+        │     no → resource_exhausted{INSUFFICIENT_CREDITS}         ▼
+        │          required, balance, renews_at — no job row   terminal state
+        │                                                           │
+        └───────────────────────── usage.Settle(job) ◀──────────────┘
+                    Σ usage_events for the job → Charge → refund the remainder
+                    to the SAME lots; idempotent on settled_at IS NULL
 ```
 
 ## Why admission-time, not mid-flight

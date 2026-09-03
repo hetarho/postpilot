@@ -4,7 +4,6 @@ package postpilot.v1;
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
-import "postpilot/v1/plan.proto";
 
 // provider.proto is the model catalog: what is registered in providers.yaml, what each
 // model can do, and the acting user's last choice per stage (PRD §3.3, §6.4, F-4).
@@ -61,11 +60,14 @@ message ModelInfo {
   string input_usd_per_million = 8;
   string output_usd_per_million = 9;
   string pricing_checked_at = 10;
-  // The lowest plan allowed to run this model, declared per model in providers.yaml.
-  Plan min_plan = 11;
-  // min_plan exceeds the CALLING account's plan. Display only — the server refuses a
-  // locked ref on every RPC that accepts one, whatever the client rendered.
-  bool locked = 12;
+  reserved 11, 12;  // min_plan, locked — model access is decided by the balance now.
+  // What one job using this model would hold, for the CALLING account. It is an estimate
+  // over a default job shape, so a picker can price a choice before anything is started.
+  int32 required_credits = 13;
+  // The caller's balance covers required_credits. Display only — the server refuses an
+  // unaffordable start whatever the client rendered — and unlike the plan floor it
+  // replaces, it is temporary: the same model is affordable again after a renewal.
+  bool affordable = 14;
 }
 
 message Selection {
@@ -106,6 +108,11 @@ message GetSelectionsRequest {}
 
 message GetSelectionsResponse {
   repeated Selection selections = 1;
+  // What one generated post would hold with the CALLER's current observe+write pair. It is
+  // the number a "your credits cover about N posts" estimate divides into, computed here
+  // because the charge formula — its per-request base especially — is a server-owned rule
+  // the client must never re-implement. Zero when no pair is selected yet.
+  int32 estimated_post_credits = 2;
 }
 
 message SaveSelectionRequest {

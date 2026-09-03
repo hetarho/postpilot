@@ -1078,8 +1078,9 @@ func TestMigration0013BackfillsExistingAccountsToMasterAndRollsBack(t *testing.T
 		t.Fatalf("new account plan = %q, want the free default", plan)
 	}
 
-	// The CHECK is what keeps a hand-edited row off the ladder.
-	if _, err := handle.Writer.Exec(`UPDATE users SET plan='pro' WHERE id='newcomer'`); err == nil {
+	// The CHECK is what keeps a hand-edited row off the ladder. `pro` joined it in 0019, so
+	// the off-ladder value here has to be one no migration has ever admitted.
+	if _, err := handle.Writer.Exec(`UPDATE users SET plan='premium' WHERE id='newcomer'`); err == nil {
 		t.Fatal("an off-ladder plan was accepted")
 	}
 
@@ -1343,5 +1344,77 @@ func TestDeterministicPublisherMigrationFencesLegacyExecutorAndRollback(t *testi
 	}
 	if _, err := handle.Reader.Exec(`SELECT executor_version FROM publishing_agents`); err == nil {
 		t.Fatal("rollback retained executor_version")
+	}
+}
+
+// A16: 0019 widens the ladder, creates the credit tables, and drops the catalog's tier
+// column — and the users rebuild it needs must not take the FK children with it.
+func TestMigration0019CreatesCreditLotsAndWidensTheLadder(t *testing.T) {
+	handle := openTemp(t)
+	if err := Migrate(context.Background(), handle.Writer); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO users(id,password_hash,plan,created_at) VALUES('alice','hash','pro','2026-09-01T00:00:00Z')`,
+	); err != nil {
+		t.Fatalf("pro was refused by the widened CHECK: %v", err)
+	}
+
+	// A lot cannot be written past its own bounds, in either direction. This guard is the
+	// database's half of the no-negative-balance guarantee.
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO credit_lots(id,user_id,kind,granted,remaining,expires_at,created_at)
+		 VALUES('lot','alice','monthly',500,500,'2026-10-01T00:00:00.000000000Z','2026-09-01T00:00:00.000000000Z')`,
+	); err != nil {
+		t.Fatalf("insert lot: %v", err)
+	}
+	if _, err := handle.Writer.Exec(`UPDATE credit_lots SET remaining = -1 WHERE id='lot'`); err == nil {
+		t.Fatal("a negative remaining was accepted")
+	}
+	if _, err := handle.Writer.Exec(`UPDATE credit_lots SET remaining = 501 WHERE id='lot'`); err == nil {
+		t.Fatal("a lot was inflated past its grant")
+	}
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO credit_lots(id,user_id,kind,granted,remaining,created_at)
+		 VALUES('bad','alice','quarterly',1,1,'2026-09-01T00:00:00.000000000Z')`,
+	); err == nil {
+		t.Fatal("an unknown lot kind was accepted")
+	}
+
+	// The hold columns joined the admission row rather than a second table.
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO usage_admissions(user_id,kind,job_id,hold_credits,created_at)
+		 VALUES('alice','generate','job',12,'2026-09-01T00:00:00.000000000Z')`,
+	); err != nil {
+		t.Fatalf("insert admission with a hold: %v", err)
+	}
+	var settledAt sql.NullString
+	if err := handle.Reader.QueryRow(
+		`SELECT settled_at FROM usage_admissions WHERE job_id='job'`).Scan(&settledAt); err != nil {
+		t.Fatalf("read settled_at: %v", err)
+	}
+	if settledAt.Valid {
+		t.Error("a fresh hold was already marked settled")
+	}
+
+	// The curated catalog no longer carries a tier.
+	if _, err := handle.Reader.Query(`SELECT min_plan FROM catalog_models`); err == nil {
+		t.Error("catalog_models still has a min_plan column")
+	}
+
+	// The users rebuild must not have cascaded its children away.
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO sessions(token,user_id,expires_at,created_at)
+		 VALUES('tok','alice','2026-10-01T00:00:00Z','2026-09-01T00:00:00Z')`,
+	); err != nil {
+		t.Fatalf("the users rebuild broke the sessions foreign key: %v", err)
+	}
+	var violations int
+	if err := handle.Reader.QueryRow(`SELECT COUNT(*) FROM pragma_foreign_key_check`).Scan(&violations); err != nil {
+		t.Fatalf("foreign_key_check: %v", err)
+	}
+	if violations != 0 {
+		t.Errorf("foreign-key violations = %d, want none", violations)
 	}
 }

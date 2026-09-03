@@ -14,3 +14,14 @@ configure({ asyncUtilTimeout: 5_000 })
 // jsdom has no layout engine, so every router navigation would otherwise log
 // "Not implemented: Window's scrollTo()" and bury the real test output.
 window.scrollTo = () => {}
+
+// jsdom implements no ResizeObserver, and the virtualized catalog list measures each mounted row
+// with one. A no-op is the honest stand-in rather than a fake measurement: with no layout engine
+// every element is 0×0, so the virtualizer keeps its estimated sizes and still renders the rows
+// a test asserts on — which is what those tests are about, not pixel geometry.
+class NoopResizeObserver implements ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver ??= NoopResizeObserver

@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/term"
 
@@ -27,7 +29,7 @@ import (
 // usable yet.
 type Bootstrap func(ctx context.Context, handle *db.DB, userID string) error
 
-// Run executes `adduser <login_id> [--plan=<free|basic|max|master>]`, returning an error
+// Run executes `adduser <login_id> [--plan=<free|basic|pro|max|master>]`, returning an error
 // the caller turns into a non-zero exit.
 //
 // It opens the database and runs migrations itself rather than assuming the api has
@@ -118,7 +120,7 @@ func parseAddUserArgs(args []string) (string, plan.Plan, error) {
 // administration out.
 func SetPlan(ctx context.Context, args []string) error {
 	if len(args) != 2 || strings.TrimSpace(args[0]) == "" {
-		return errors.New("usage: setplan <login_id> <free|basic|max|master>")
+		return errors.New("usage: setplan <login_id> <free|basic|pro|max|master>")
 	}
 	loginID := strings.TrimSpace(args[0])
 	target, err := plan.Parse(args[1])
@@ -149,6 +151,80 @@ func SetPlan(ctx context.Context, args []string) error {
 
 	fmt.Fprintf(os.Stdout, "account %q is now on the %s plan\n", loginID, target)
 	return nil
+}
+
+// CreditGrant opens a bonus lot on an existing account. The composition root supplies it
+// so this package stays inside the auth context: credits belong to the usage context, and
+// provisioning only needs to be able to ask for them.
+type CreditGrant func(ctx context.Context, handle *db.DB, userID string, credits int, expiresAt *time.Time) error
+
+// GrantCredits executes `grantcredits <login_id> <amount> [--expires=<RFC3339>]`.
+//
+// It exists because there is no signup and no checkout: every credit an account holds
+// beyond its monthly grant is put there by the operator, from a shell on the box.
+func GrantCredits(ctx context.Context, args []string, grant CreditGrant) error {
+	loginID, credits, expiresAt, err := parseGrantArgs(args)
+	if err != nil {
+		return err
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	handle, err := db.Open(cfg.DBPath)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		return err
+	}
+
+	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
+	if _, err := svc.PlanOf(ctx, loginID); err != nil {
+		if errors.Is(err, auth.ErrUserNotFound) {
+			return fmt.Errorf("account %q does not exist", loginID)
+		}
+		return err
+	}
+
+	if err := grant(ctx, handle, loginID, credits, expiresAt); err != nil {
+		return err
+	}
+
+	if expiresAt == nil {
+		fmt.Fprintf(os.Stdout, "granted %d credits to %q, no expiry\n", credits, loginID)
+	} else {
+		fmt.Fprintf(os.Stdout, "granted %d credits to %q, expiring %s\n",
+			credits, loginID, expiresAt.UTC().Format(time.RFC3339))
+	}
+	return nil
+}
+
+func parseGrantArgs(args []string) (string, int, *time.Time, error) {
+	const usage = "usage: grantcredits <login_id> <amount> [--expires=<RFC3339>]"
+	var positional []string
+	var expiresAt *time.Time
+	for _, arg := range args {
+		if value, ok := strings.CutPrefix(arg, "--expires="); ok {
+			parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(value))
+			if err != nil {
+				return "", 0, nil, fmt.Errorf("%s (--expires must be RFC3339): %w", usage, err)
+			}
+			expiresAt = &parsed
+			continue
+		}
+		positional = append(positional, strings.TrimSpace(arg))
+	}
+	if len(positional) != 2 || positional[0] == "" {
+		return "", 0, nil, errors.New(usage)
+	}
+	credits, err := strconv.Atoi(positional[1])
+	if err != nil || credits <= 0 {
+		return "", 0, nil, fmt.Errorf("%s (amount must be a positive whole number)", usage)
+	}
+	return positional[0], credits, expiresAt, nil
 }
 
 func runBootstraps(ctx context.Context, handle *db.DB, userID string, bootstraps []Bootstrap) error {

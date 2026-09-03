@@ -40,12 +40,12 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 		Payload:        append([]byte(nil), input.Payload...), CreatedAt: now, UpdatedAt: now,
 	}
 
-	// Admission precedes the insert so a refused start leaves no job row at all. The
-	// error is returned unwrapped: the plan refusals it carries are matched by type at
-	// every rpc edge above, and wrapping them here would say nothing a caller needs.
+	// The hold precedes the insert so a refused start leaves no job row at all. The error
+	// is returned unwrapped: the credit refusal it carries is matched by type at every rpc
+	// edge above, and wrapping it here would say nothing a caller needs.
 	if q.admitter != nil {
-		if err := q.admitter.Admit(ctx, Start{
-			UserID: input.UserID, Kind: input.Kind, JobID: found.ID, Models: input.models(),
+		if err := q.admitter.Hold(ctx, Start{
+			UserID: input.UserID, Kind: input.Kind, JobID: found.ID, Calls: input.plannedCalls(),
 		}); err != nil {
 			return "", err
 		}
@@ -69,7 +69,7 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	return found.ID, nil
 }
 
-// releaseAdmission compensates an admission whose job row was never created.
+// releaseAdmission returns a hold whose job row was never created.
 //
 // It deliberately drops the caller's cancellation: the most likely reason the insert failed
 // is that the request went away, and releasing on that same dead context would leave the

@@ -233,8 +233,10 @@ export function uploadBatch(slug: string, deps: UploadBatchDeps): UploadBatchHan
         if (item.status !== 'skipped') names.add(item.filename)
       }
       const added: UploadItem[] = []
+      // `names` already holds every filename the post keeps plus every one this pick has
+      // claimed, so its size is exactly what the ceiling has to be measured against.
       for (const file of files) {
-        const verdict = filterFile(file)
+        const verdict = filterFile(file, names.size)
         if (verdict.kind === 'skipped') {
           added.push(skippedItem(file, verdict.reason))
           continue
@@ -291,7 +293,9 @@ export function partitionFiles(files: File[]): { accepted: File[]; skipped: Uplo
   const accepted: File[] = []
   const skipped: UploadItem[] = []
   for (const file of files) {
-    const verdict = filterFile(file)
+    // There is no post yet, so the only photos that count toward the ceiling are the ones
+    // this same pick has already accepted.
+    const verdict = filterFile(file, accepted.length)
     if (verdict.kind === 'skipped') skipped.push(skippedItem(file, verdict.reason))
     else accepted.push(file)
   }

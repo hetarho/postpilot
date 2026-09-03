@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router'
 import { UserRound } from 'lucide-react'
 import { useMyPlan, planLabel } from '@/entities/plan'
 import { useLogout, useSession } from '@/entities/session'
-import { formatMicroUsd } from '@/shared/lib'
 import {
   AppFailureMessage,
   Badge,
@@ -83,10 +82,11 @@ export function AccountMenu({ onLoggedOut }: { onLoggedOut: () => void }) {
 
 /** The plan badge and the three usage meters.
  *
- *  Every number comes from GetMyPlan: the limits are a server-owned product rule, so a figure
- *  hardcoded here would be a second source of truth that silently goes stale after a tier change.
- *  The panel mounts only while the popover is open, which is what makes "refreshed when opened"
- *  fall out of the query rather than out of a timer. */
+ *  Every number comes from GetMyPlan: the grant table and the charge formula are server-owned
+ *  product rules, so a figure hardcoded here would be a second source of truth that silently
+ *  goes stale. The panel mounts only while the popover is open, which is what makes
+ *  "refreshed when opened" fall out of the query rather than out of a timer — and reading a
+ *  balance is also what renews it, so opening this at a month boundary shows the new grant. */
 function PlanPanel({ close }: { close: () => void }) {
   const { t } = useTranslation('plans')
   const { myPlan, isPending, isError } = useMyPlan()
@@ -94,67 +94,78 @@ function PlanPanel({ close }: { close: () => void }) {
   if (isPending)
     return (
       <Typography variant="body" className="text-content-tertiary">
-        {t('usage.loading')}
+        {t('balance.loading')}
       </Typography>
     )
   if (isError || !myPlan)
     return (
       <Typography variant="body" role="status" className="text-content-tertiary">
-        {t('usage.loadFailed')}
+        {t('balance.loadFailed')}
       </Typography>
     )
 
-  const { limits, usage } = myPlan
+  const { balance } = myPlan
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between gap-2">
         <Badge tone="accent">{planLabel(myPlan.plan)}</Badge>
-        <Typography variant="meta">{t('usage.assignedByOperator')}</Typography>
+        <Typography variant="meta">{t('balance.assignedByOperator')}</Typography>
       </div>
       <section className="grid gap-3">
         <Typography variant="title" as="h2">
-          {t('usage.heading')}
+          {t('balance.heading')}
         </Typography>
-        <Meter
-          label={t('usage.dailyStarts')}
-          value={usage.jobsStartedToday}
-          max={limits.dailyJobStarts}
-          valueText={
-            limits.dailyJobStarts > 0
-              ? t('usage.ofLimit', { used: usage.jobsStartedToday, limit: limits.dailyJobStarts })
-              : t('usage.unlimited', { used: usage.jobsStartedToday })
-          }
-          note={usage.dayResetsAt ? t('usage.dayResets', { at: usage.dayResetsAt }) : undefined}
-        />
-        <Meter
-          label={t('usage.dailyBudget')}
-          value={usage.costTodayMicrousd}
-          max={limits.dailyBudgetMicrousd}
-          valueText={
-            limits.dailyBudgetMicrousd > 0
-              ? t('usage.ofLimit', {
-                  used: formatMicroUsd(usage.costTodayMicrousd),
-                  limit: formatMicroUsd(limits.dailyBudgetMicrousd),
-                })
-              : t('usage.unlimited', { used: formatMicroUsd(usage.costTodayMicrousd) })
-          }
-        />
-        <Meter
-          label={t('usage.monthlyBudget')}
-          value={usage.costMonthMicrousd}
-          max={limits.monthlyBudgetMicrousd}
-          valueText={
-            limits.monthlyBudgetMicrousd > 0
-              ? t('usage.ofLimit', {
-                  used: formatMicroUsd(usage.costMonthMicrousd),
-                  limit: formatMicroUsd(limits.monthlyBudgetMicrousd),
-                })
-              : t('usage.unlimited', { used: formatMicroUsd(usage.costMonthMicrousd) })
-          }
-          note={
-            usage.monthResetsAt ? t('usage.monthResets', { at: usage.monthResetsAt }) : undefined
-          }
-        />
+        {balance.unlimited ? (
+          <Typography variant="body">{t('balance.unlimited')}</Typography>
+        ) : (
+          <>
+            {/* The meter fills against everything the account was GRANTED, not against the
+                monthly figure alone: a signup bonus makes the balance larger than one
+                month's grant, and a bar that read 100/50 would be nonsense. */}
+            <Meter
+              label={t('balance.heading')}
+              value={balance.credits}
+              max={
+                balance.lots.reduce((total, lot) => total + lot.granted, 0) || balance.monthlyGrant
+              }
+              valueText={t('balance.credits', { count: balance.credits })}
+              note={balance.renewsAt ? t('balance.renews', { at: balance.renewsAt }) : undefined}
+            />
+            {/* The lots behind the total, in the order they will be spent. A single number
+                cannot say that half the balance lapses at the month boundary and half does
+                not, which is the one thing a bonus holder needs to know. */}
+            <ul className="grid gap-1">
+              {balance.lots.map((lot, index) => (
+                <li
+                  key={`${lot.kind}-${index}`}
+                  className="flex items-baseline justify-between gap-2"
+                >
+                  <Typography variant="meta">
+                    {lot.kind === 'monthly' ? t('balance.lotMonthly') : t('balance.lotBonus')}
+                    {' · '}
+                    {lot.expiresAt
+                      ? t('balance.lotExpires', { at: lot.expiresAt })
+                      : t('balance.lotNoExpiry')}
+                  </Typography>
+                  <Typography variant="meta">
+                    {t('balance.ofGrant', { remaining: lot.remaining, granted: lot.granted })}
+                  </Typography>
+                </li>
+              ))}
+            </ul>
+            <Link
+              to="/plans"
+              onClick={close}
+              className={typographyStyles({
+                variant: 'label',
+                className:
+                  'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2',
+              })}
+            >
+              {t('balance.viewPlans')}
+            </Link>
+          </>
+        )}
       </section>
       {myPlan.plan === 'master' && (
         <Link

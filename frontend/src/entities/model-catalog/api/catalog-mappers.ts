@@ -2,6 +2,8 @@
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
 import {
+  type ProtoCatalogEntry,
+  type ProtoListCatalogResponse,
   type ProtoModelInfo,
   type ProtoModelRef,
   type ProtoSelection,
@@ -11,8 +13,9 @@ import {
   type ProtoComparisonPair,
   type ProtoRecommendationSet,
 } from '@/shared/api'
-import { planFromProto } from '@/entities/plan/@x/model-catalog'
 import type {
+  AdminCatalogEntry,
+  CatalogBrowse,
   CatalogModel,
   ComparisonPair,
   ModelRef,
@@ -21,6 +24,7 @@ import type {
   StageName,
   StageSelection,
 } from '../model/types'
+import { isReasoningEffort } from '../model/types'
 
 const STAGE_TO_PROTO: Record<StageName, Stage> = {
   observe: Stage.OBSERVE,
@@ -55,8 +59,38 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
     inputUsdPerMillion: info.inputUsdPerMillion,
     outputUsdPerMillion: info.outputUsdPerMillion,
     pricingCheckedAt: info.pricingCheckedAt,
-    minPlan: planFromProto(info.minPlan),
-    locked: info.locked,
+    requiredCredits: info.requiredCredits,
+    affordable: info.affordable,
+  }
+}
+
+export function toAdminCatalogEntry(entry: ProtoCatalogEntry): AdminCatalogEntry {
+  return {
+    modelId: entry.modelId,
+    providerSlug: entry.providerSlug,
+    label: entry.label,
+    description: entry.description,
+    vision: entry.vision,
+    structuredOutput: entry.structuredOutput,
+    contextTokens: entry.contextTokens,
+    inputUsdPerMillion: entry.inputUsdPerMillion,
+    outputUsdPerMillion: entry.outputUsdPerMillion,
+    curated: entry.curated,
+    enabled: entry.enabled,
+    listed: entry.listed,
+    // A server newer than this build could name an effort this one has no control for.
+    // Falling back to "no override" is the honest render: it is what the stage policy does.
+    reasoningEffort: isReasoningEffort(entry.reasoningEffort) ? entry.reasoningEffort : '',
+    sourceCreatedAt: entry.sourceCreatedAt,
+  }
+}
+
+export function toCatalogBrowse(response: ProtoListCatalogResponse): CatalogBrowse {
+  return {
+    entries: response.entries.map(toAdminCatalogEntry),
+    fetchedAt: response.fetchedAt,
+    fromCache: response.fromCache,
+    fetchError: response.fetchError,
   }
 }
 

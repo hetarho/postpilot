@@ -1,15 +1,32 @@
 export type {
+  AdminCatalogEntry,
+  CatalogBrowse,
   CatalogModel,
   ComparisonPair,
   ModelRef,
+  ReasoningEffortName,
   RecommendationSet,
   RecommendationStageSelection,
   SelectionSlotName,
   StageName,
   StageSelection,
 } from './model/types'
-export { STAGES, filterForStage, refKey, sameRef, stageLabel } from './model/types'
+export {
+  REASONING_EFFORTS,
+  STAGES,
+  filterForStage,
+  isReasoningEffort,
+  refKey,
+  sameRef,
+  stageLabel,
+} from './model/types'
 export { useModels } from './api/useModels'
+export {
+  useAdminCatalog,
+  useEnableModel,
+  useRefreshCatalog,
+  useUpdateModel,
+} from './api/useAdminCatalog'
 export type {
   SelectionsByStage,
   StageSelectionState,

@@ -60,7 +60,7 @@ export const models = {
   stage: { observe: '관찰', write: '글 작성', analyze: '문체 분석' },
   select: '모델을 선택하세요',
   selectField: {
-    locked: '{{plan}} 플랜부터',
+    unaffordable: '크레딧 {{credits}} 필요',
     stage: { observe: '관찰', write: '작성', analyze: '문체 분석' },
     label: '{{stage}} 모델{{optional}}',
     optional: ' (선택)',
@@ -78,7 +78,7 @@ export const models = {
   unsuitable: '이 단계에서는 쓸 수 없는 모델이에요',
   unavailable: '등록 해제된 모델',
   recommendation: {
-    locked: '{{models}} 모델이 포함돼 있어 {{plan}} 플랜부터 적용할 수 있어요.',
+    unaffordable: '{{models}} 모델을 쓰려면 크레딧이 부족해요.',
     description: '활성 모델과 세 단계 A/B 쌍 9개를 한 번에 저장합니다.',
     apply: '추천 조합 적용',
     applied: '세 단계의 활성 모델과 A/B 조합을 적용했어요.',
@@ -126,5 +126,41 @@ export const models = {
       '성공 호출 {{calls}} · 평균 {{latency}}ms · 토큰 {{prompt}} / {{completion}} · {{cost}}',
     costUnavailable: '비용 미제공',
     partlyEstimated: '일부 ≈ ',
+  },
+  catalog: {
+    title: '모델 관리',
+    description:
+      'OpenRouter가 제공하는 모델 목록에서, 이 서비스에서 사용할 모델을 직접 골라 둡니다. 체크한 모델만 사용자의 단계별 선택 목록에 나타납니다.',
+    disableWarning:
+      '체크를 해제하면 그 모델을 선택해 둔 사용자의 선택도 함께 초기화되고, 사용자는 모델을 다시 골라야 합니다.',
+    search: '검색',
+    searchPlaceholder: '모델 이름이나 아이디',
+    provider: '제공사',
+    allProviders: '전체 제공사',
+    filterVision: '이미지 입력 가능',
+    filterStructured: '구조화 출력 가능',
+    filterEnabled: '사용 중인 모델만',
+    refresh: '목록 새로고침',
+    fetchedLive: '{{at, instant}}에 제공사 목록을 읽었어요.',
+    fetchedCached: '{{at, instant}}에 읽어 둔 목록이에요.',
+    fetchFailed:
+      '제공사의 모델 목록을 읽지 못해서, 이미 등록해 둔 모델만 보여 주고 있어요. 잠시 뒤에 다시 새로고침해 주세요.',
+    loading: '모델 목록을 불러오는 중…',
+    loadFailed: '모델 목록을 불러오지 못했어요.',
+    empty: '아직 등록된 모델도, 제공사에서 읽어 온 모델도 없어요.',
+    noMatches: '조건에 맞는 모델이 없어요.',
+    count: '{{total}}개 중 {{shown}}개를 보여 주고 있어요.',
+    use: '사용',
+    vision: '이미지',
+    structured: '구조화 출력',
+    delisted: '제공 종료',
+    delistedBanner_one:
+      '등록해 둔 모델 {{count}}개를 제공사가 더 이상 제공하지 않아요. 사용자에게는 사용할 수 없는 모델로 표시되니, 확인한 뒤에 체크를 해제해 주세요.',
+    delistedBanner_other:
+      '등록해 둔 모델 {{count}}개를 제공사가 더 이상 제공하지 않아요. 사용자에게는 사용할 수 없는 모델로 표시되니, 확인한 뒤에 체크를 해제해 주세요.',
+    context: '컨텍스트 {{tokens}} 토큰',
+    price: '100만 토큰당 입력 ${{in}} · 출력 ${{out}}',
+    reasoning: '추론 강도',
+    reasoningDefault: '단계 기본값',
   },
 } as const

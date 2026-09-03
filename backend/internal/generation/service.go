@@ -190,11 +190,22 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", err
 	}
 	request.Guidelines = texts
+	request.ObserveCalls = s.observeCalls(len(post.Images))
 	id, err := s.jobs.EnqueueGeneration(ctx, request)
 	if err != nil {
 		return "", fmt.Errorf("enqueue generation: %w", err)
 	}
 	return id, nil
+}
+
+// observeCalls is how many observation calls a photo count takes at the configured batch
+// size. It mirrors the loop in observe.go: the hold and the work must agree on how many
+// calls there will be, or the hold prices the wrong job.
+func (s *Service) observeCalls(photos int) int {
+	if photos <= 0 || s.batchSize <= 0 {
+		return 0
+	}
+	return (photos + s.batchSize - 1) / s.batchSize
 }
 
 // freezePurpose resolves the post's CURRENT purpose once, at enqueue, so the text the

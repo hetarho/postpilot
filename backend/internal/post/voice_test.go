@@ -42,7 +42,7 @@ func TestCreateRequiresAnOwnedActiveVoice(t *testing.T) {
 		t.Fatalf("a rejected create minted a post: %+v", store.posts)
 	}
 	// Without a wired directory the create fails closed rather than trusting the id.
-	bare := NewService(newFakeStore(), newFakeBlobs(), time.Minute, time.Minute, testMaxBytes)
+	bare := NewService(newFakeStore(), newFakeBlobs(), time.Minute, time.Minute, testMaxBytes, 30)
 	voiceID := aliceVoice
 	if _, err := bare.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, nil, &language); err == nil {
 		t.Fatal("create succeeded without a voice directory")

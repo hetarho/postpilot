@@ -1,9 +1,9 @@
 # Policy — Model providers and the model catalog
 
 Canonical rules that are **currently true** in the code. Source: [plan/04](../plan/04.model-provider-registry.md),
-extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md) and by
-[plan/17](../plan/17.plan-based-authorization-and-usage-quota.md)'s per-model plan floor; built by jobs 06, 15, 23,
-and 37. The floor's own rules are owned by [plans.md](plans.md).
+extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md) and
+[plan/18](../plan/18.openrouter-model-catalog-and-admin-model.md); built by jobs 06, 15, 23, 37, 46 and 47.
+What an account may afford to run is owned by [plans.md](plans.md).
 
 ## The port is a boundary
 
@@ -48,28 +48,58 @@ and 37. The floor's own rules are owned by [plans.md](plans.md).
 - `reasoning.exclude` is forbidden: excluding the returned trace does not stop generation or billing of reasoning
   tokens. Reasoning and visible output share the same 8,192-token completion cap.
 
-## The registry is a file, the keys are env
+## The connection is a file, the models are rows
 
-- Providers and models are declared **only** in `backend/config/providers.yaml`. Adding one is an edit plus a
-  restart. The file ships inside the image at `/config/providers.yaml` (`PROVIDERS_CONFIG`); a stack may mount its
-  own over it.
-- The file is validated at boot with unknown fields rejected. Any problem — unknown adapter, duplicate provider or
-  model id, missing `api_key_env`, an adapter's own check (`openai_compatible` needs an http(s) `base_url`), no
-  models — **stops the process**, the same posture as a failed migration, so the deploy's health gate rolls back.
+Plan 18 split what used to be one file. **How to reach the provider** is configuration, read once at boot; **which
+models this installation offers** is curated data, read live.
+
+- `backend/config/providers.yaml` declares the provider connection (`id`, `adapter`, `base_url`, `api_key_env`,
+  `reasoning_format`) and the versioned `recommendation_sets`. It ships inside the image at
+  `/config/providers.yaml` (`PROVIDERS_CONFIG`); a stack may mount its own over it.
+- **Exactly one provider may be declared.** The curated catalog carries no provider dimension — every row is served
+  by the registered endpoint — so a second entry would attribute models to a vendor nobody chose. Adding a
+  genuinely different vendor is a design change with its own plan, not a yaml edit.
+- The file is validated at boot with unknown fields rejected. Any problem — unknown adapter, a missing or malformed
+  id, an adapter's own check (`openai_compatible` needs an http(s) `base_url`), more or fewer than one provider —
+  **stops the process**, the same posture as a failed migration, so the deploy's health gate rolls back. A leftover
+  per-provider `models:` list is rejected by the strict parser rather than ignored, so a stack still mounting the
+  old shape hears about it instead of quietly serving an empty catalog.
 - `api_key_env` names an environment variable; the key is read from the process environment at boot and never
-  written to the file. **An unset key is not a boot failure**: every model of that provider is listed `disabled` with
-  the reason `API key not configured` and cannot be selected (`SaveSelection` refuses it too). The entry is still
-  validated, so a bad `base_url` cannot hide behind a missing key. `api_key_env` is **optional**: an entry without
-  one is a keyless endpoint (a local Ollama, vLLM, LM Studio) — enabled as is, and the adapter sends no
-  `Authorization` header.
-- `vision` and `structured_output` are declared per model. The observe stage lists vision models only.
-- `min_plan` is **required** per model (`free|basic|max`) and validated at boot like every other field — a missing or
-  unknown value stops the process. The registry carries the floor and nothing else about accounts: the comparison
-  happens in callers that already know the acting plan ([plans.md](plans.md)).
-- `reasoning_effort` is optional per model and is validated even when that provider's key is missing.
+  written to the file. **An unset key is not a boot failure**: every model is listed `disabled` with the reason
+  `API key not configured` and cannot be selected (`SaveSelection` refuses it too). The entry is still validated, so
+  a bad `base_url` cannot hide behind a missing key. `api_key_env` is **optional**: an entry without one is a
+  keyless endpoint (a local Ollama, vLLM, LM Studio) — enabled as is, and the adapter sends no `Authorization`
+  header.
+- The registry reads its models through an injected `llm.ModelSource` rather than from the parsed file, and it reads
+  it on **every** request: curating a model takes effect for the next call, not the next deploy. An **empty catalog
+  is a valid state** — a fresh install has curated nothing, and the right answer is an empty picker and a trip to
+  `/admin/models`, not a refused boot. Boot never contacts the provider's catalog.
+- `vision` and `structured_output` are per-model row values snapshotted from the provider's catalog. The observe
+  stage lists vision models only.
+- `reasoning_effort` is an optional per-model row value, curated by the operator and validated on write.
 - Structured output is requested whenever the model declares it (`response_format: json_schema`, without `strict` —
   the schemas belong to the callers). Callers keep a parser fallback for models that do not.
-- Free-model advice (a router entry such as `openrouter/free`; observe on free, write on paid — PRD §6.5) is yaml
+
+## The catalog is curated rows
+
+`catalog_models` is the usable-model list. It is global rather than per-account: what an installation offers is an
+operator decision. Only the master tier may read or change it (`ModelCatalogService`, in the interceptor's
+master-only set).
+
+- **Candidates** come live from the provider's own public catalog — `GET {base_url}/models`, unauthenticated, read
+  server-side and cached for `OPENROUTER_CATALOG_TTL` ([tech/openrouter-catalog](../tech/openrouter-catalog.md)).
+  Only the operator path ever triggers that read, so a provider outage cannot change what users see.
+- **Usable models** are the enabled rows, and nothing else feeds `ListModels`, `SaveSelection`, or
+  `Registry.Complete`. A row survives being disabled, so the reasoning override an operator set comes back intact
+  when the model is re-enabled.
+- Enabling never selects ([I3]): a curated model appears in the pickers, and every user still chooses their own.
+- Availability bookkeeping (`listed`, `last_seen_at`, and the label/context/pricing snapshot) is written **only by a
+  successful** live read. A failed one writes nothing and is reported to the operator instead — treating an outage
+  as evidence would retire the whole catalog the first time the network hiccuped.
+- A model the provider has stopped offering is **flagged, never retired automatically**: `listed = 0` badges it 제공
+  종료 on the operator screen and serves it to users as disabled with a reason, which routes it through the existing
+  vanished-selection machinery. Removing it stays an operator decision.
+- Free-model advice (a router entry such as `openrouter/free`; observe on free, write on paid — PRD §6.5) is catalog
   content, not UI logic.
 
 ## Selection memory
@@ -87,30 +117,35 @@ and 37. The floor's own rules are owned by [plans.md](plans.md).
   likewise unusable: greyed with the key reason, `selected = null`. While the catalog is loading or failed to load,
   nothing is judged — a valid choice is never called vanished because its list is not here.
 - `SaveSelection` accepts only a known stage and a registered, enabled model that suits the stage (observe needs
-  `vision`) **and that the caller's plan may run** — the same rules the dropdown shows, enforced where they can be
-  trusted (`InvalidArgument` / `NotFound` / `FailedPrecondition` / `PermissionDenied` with `MODEL_LOCKED`).
-- A saved selection the caller's plan may **not** run is reported `missing` but its **row is kept**: a downgrade is
-  reversible state, so an upgrade restores the choice with no re-selection. The picker greys it with the tier that
-  unlocks it rather than with the vanished reason.
+  `vision`) — the same rules the dropdown shows, enforced where they can be trusted (`InvalidArgument` /
+  `NotFound` / `FailedPrecondition`). **No tier is consulted**: any account may save any registered model.
+- A model the caller cannot currently **afford** is never reported `missing` and its row is never touched. A
+  balance is temporary state the next renewal clears, so it invalidates nothing; the picker greys the entry with
+  what it would cost ([plans.md](plans.md)).
 - A pair must contain two distinct enabled stage-suitable refs. `ApplyRecommendationSet` validates the complete
   three-stage, nine-slot set before one transaction; no partial rows survive rejection. A recommendation is never
-  applied on mount, login, or account creation. The plan floor is checked over all nine refs first, so a refusal
-  names every offending selection at once with the one tier that clears them.
+  applied on mount, login, or account creation.
 
 ## Catalog metadata and recommendations
 
-- Models may declare context tokens, dated input/output USD-per-million snapshots, and labels. Unknown/bad metadata
-  or a broken recommendation ref stops boot. Prices are display/estimate metadata only; reported provider cost wins.
+- Models carry context tokens, dated input/output USD-per-million snapshots, and labels, refreshed from the
+  provider's catalog on an operator refresh. Prices are display/estimate metadata only; reported provider cost wins.
+- Recommendation-set refs are validated **at apply time**, against the catalog as it is then. Boot can no longer
+  settle whether a referenced model exists — the catalog is curated data that changes while the process runs — so
+  boot keeps shape validation only (three distinct stages, complete refs, candidates that differ).
+- A refused set names **every** offending ref at once, grouped by cause (unregistered · disabled · unsuitable for
+  its stage), because a set is applied whole and discovering its problems one attempt at a time is nine round trips.
 - The shipped opt-in `balanced-2026-08` set pins six model ids and one active/A-B selection per stage. Removed models
-  stay readable from experiment snapshots but cannot be newly selected. It names `min_plan: max` models, so it is
-  refused below the `max` tier and the frontend disables its action with that reason.
+  stay readable from experiment snapshots but cannot be newly selected. Any tier may apply it: a set is refused only
+  when a ref it names is unregistered, disabled, or unsuitable for its stage — never for the tier applying it. A CI
+  test asserts every shipped ref names a model the catalog's seed migration inserts, which is what replaced the
+  boot-time existence check.
 
 ## What crosses to the browser
 
-Ids, labels and flags (`ModelInfo`, including `min_plan` and the per-caller `locked`), and per-stage `Selection`s.
-`locked` is display only — the server refuses a locked ref on every RPC that accepts one, whatever the client
-rendered. No key, no SDK payload, no base URL — the proto
-has no field for them (plan 04 AC6).
+Ids, labels, capability flags, and display metadata. No key, no SDK payload, no base URL — the proto has no field
+for them (plan 04 AC6), and that holds for the operator's catalog surface too, which adds only public catalog data
+(descriptions and prices) on top.
 
 ## Configuration
 
@@ -122,6 +157,19 @@ has no field for them (plan 04 AC6).
 | `LLM_MAX_TOKENS_DEFAULT` | constant | 8192 — shared completion cap for reasoning plus visible output |
 | stage reasoning policy | typed constants | observe `low` · write/revise `low` · analyze has **no field**: a request with no stage value already sends nothing |
 | `reasoning_format` | `config/providers.yaml` | optional provider dialect; shipped OpenRouter entry opts in |
-| `reasoning_effort` | `config/providers.yaml` | optional strict model override; `unset` omits the wire key |
-| `MODEL_CATALOG_STALE_MS` | FE `shared/config` | 5 min — how long the catalog is trusted before a refetch |
-| recommendation/model price metadata | `config/providers.yaml` | strict, dated catalog content; no automatic apply |
+| `reasoning_effort` | `catalog_models` row | optional strict model override, curated per model; `unset` omits the wire key |
+| `OPENROUTER_CATALOG_TTL` | BE constant | 5 min — how long one live read of the provider's catalog is served from memory |
+| `OPENROUTER_CATALOG_FETCH_TIMEOUT` | BE constant | 15 s — the catalog read's own timeout; the screen degrades past it |
+| `MODEL_CATALOG_STALE_MS` | FE `shared/config` | 5 min — how long the user-facing catalog is trusted before a refetch |
+| `FEATURED_MODEL_PROVIDERS` | FE `shared/config` | ordered vendor slugs lifted to the top of the operator's list; display only |
+| `CATALOG_ROW_ESTIMATE_PX` · `CATALOG_ROW_OVERSCAN` | FE `shared/config` | the virtualized operator list's unmeasured-row height and its overscan |
+| the usable-model list | `catalog_models` rows | curated through `ModelCatalogService`; the seed migration carries the twelve models the yaml used to declare |
+| recommendation sets | `config/providers.yaml` | shape-validated at boot, ref-validated at apply time; no automatic apply |
+
+## Model access is not a registry concern
+
+`min_plan` was removed by [change 19](../changes/archive/19.credit-metering-and-open-model-access.md). A model
+carries no tier: every account may select and run every registered model, and the only thing that can refuse one
+is whether the account's credit balance covers what the work would hold ([plans.md](plans.md)). The registry
+therefore stays entirely user-ignorant — it publishes prices, and the pricing of a caller's choice happens in the
+contexts that know the caller.

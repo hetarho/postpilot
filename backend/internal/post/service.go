@@ -20,6 +20,7 @@ type Service struct {
 	putTTL        time.Duration
 	getTTL        time.Duration
 	maxBytes      int64
+	maxPhotos     int
 	jobs          ActiveJobFinder
 	experiments   PendingExperimentFinder
 	contentPurger ExperimentContentPurger
@@ -63,15 +64,16 @@ func (s *Service) SetPurposeDirectory(directory PurposeDirectory) {
 
 // NewService wires the context with its store, its object storage, the presigned URL
 // lifetimes, and the largest object it will accept as a photo.
-func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, maxBytes int64, jobs ...ActiveJobFinder) *Service {
+func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, maxBytes int64, maxPhotos int, jobs ...ActiveJobFinder) *Service {
 	svc := &Service{
-		store:    store,
-		blobs:    blobs,
-		putTTL:   putTTL,
-		getTTL:   getTTL,
-		maxBytes: maxBytes,
-		now:      time.Now,
-		newID:    newObjectID,
+		store:     store,
+		blobs:     blobs,
+		putTTL:    putTTL,
+		getTTL:    getTTL,
+		maxBytes:  maxBytes,
+		maxPhotos: maxPhotos,
+		now:       time.Now,
+		newID:     newObjectID,
 	}
 	if len(jobs) > 0 {
 		svc.jobs = jobs[0]
@@ -774,6 +776,20 @@ func (s *Service) CreateUpload(ctx context.Context, userID, postSlug, filename s
 	}
 	if _, err := s.ownedPost(ctx, userID, postSlug); err != nil {
 		return Upload{}, "", "", err
+	}
+
+	// The ceiling is checked against confirmed photos only, and outside the insert. It
+	// bounds what a generate job's credit hold has to price, which a concurrent pair of
+	// uploads landing on the same last slot does not meaningfully change; paying for that
+	// with a lock on every upload would not be worth it.
+	if s.maxPhotos > 0 {
+		existing, err := s.store.ListImages(ctx, postSlug)
+		if err != nil {
+			return Upload{}, "", "", fmt.Errorf("count photos: %w", err)
+		}
+		if len(existing) >= s.maxPhotos {
+			return Upload{}, "", "", ErrTooManyPhotos
+		}
 	}
 
 	// A CONFIRMED photo with this name is a real conflict — the filename is how the

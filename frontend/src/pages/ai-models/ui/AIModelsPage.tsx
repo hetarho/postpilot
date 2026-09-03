@@ -26,6 +26,7 @@ import {
   type GenerationModelSelection,
   useStartWriteExperiment,
 } from '@/features/generate-post'
+import { PostCreditEstimate } from '@/features/select-model'
 import { useStartModelExperiment } from '@/features/start-model-experiment'
 import {
   Badge,
@@ -108,6 +109,10 @@ export function AIModelsPage() {
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'models' })}
       </Typography>
+
+      {/* Placed with the model choice rather than in the header: what a pair costs is the
+          consequence of the decision this page exists to make. */}
+      <PostCreditEstimate className="mt-6" />
 
       <section className="mt-10" aria-labelledby="recommendation-heading">
         <Typography variant="title" id="recommendation-heading">

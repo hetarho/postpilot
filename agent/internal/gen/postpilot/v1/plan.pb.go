@@ -21,8 +21,13 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// The ordered ladder. `free < basic < max < master`: every gate in the product asks the
-// one question "is the acting plan at least this model's / procedure's floor?".
+// The ladder. A tier decides two things and no more: how many credits it is granted each
+// month, and — for master alone — access to the operator-only procedures. Which models an
+// account may run is not one of them; that is decided by what it can afford.
+//
+// PLAN_PRO is numbered after the original four rather than between them: enum numbers are
+// wire identity, and renumbering PLAN_MAX would silently change the tier of every account
+// a stale client reads.
 type Plan int32
 
 const (
@@ -31,6 +36,7 @@ const (
 	Plan_PLAN_BASIC       Plan = 2
 	Plan_PLAN_MAX         Plan = 3
 	Plan_PLAN_MASTER      Plan = 4
+	Plan_PLAN_PRO         Plan = 5
 )
 
 // Enum value maps for Plan.
@@ -41,6 +47,7 @@ var (
 		2: "PLAN_BASIC",
 		3: "PLAN_MAX",
 		4: "PLAN_MASTER",
+		5: "PLAN_PRO",
 	}
 	Plan_value = map[string]int32{
 		"PLAN_UNSPECIFIED": 0,
@@ -48,6 +55,7 @@ var (
 		"PLAN_BASIC":       2,
 		"PLAN_MAX":         3,
 		"PLAN_MASTER":      4,
+		"PLAN_PRO":         5,
 	}
 )
 
@@ -78,30 +86,35 @@ func (Plan) EnumDescriptor() ([]byte, []int) {
 	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{0}
 }
 
-// Zero on any field means unlimited (the master tier), not "none".
-type PlanLimits struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	DailyJobStarts        int32                  `protobuf:"varint,1,opt,name=daily_job_starts,json=dailyJobStarts,proto3" json:"daily_job_starts,omitempty"`
-	DailyBudgetMicrousd   int64                  `protobuf:"varint,2,opt,name=daily_budget_microusd,json=dailyBudgetMicrousd,proto3" json:"daily_budget_microusd,omitempty"`
-	MonthlyBudgetMicrousd int64                  `protobuf:"varint,3,opt,name=monthly_budget_microusd,json=monthlyBudgetMicrousd,proto3" json:"monthly_budget_microusd,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+// One grant of credits. Consumption walks lots by expiry ascending with the non-expiring
+// ones last, which is why a client can render the order it will be spent in without
+// knowing the rule.
+type CreditLot struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// "monthly" or "bonus". A display distinction: the balance itself does not care.
+	Kind      string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Granted   int32  `protobuf:"varint,2,opt,name=granted,proto3" json:"granted,omitempty"`
+	Remaining int32  `protobuf:"varint,3,opt,name=remaining,proto3" json:"remaining,omitempty"`
+	// RFC3339, or empty for a grant that does not expire.
+	ExpiresAt     string `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PlanLimits) Reset() {
-	*x = PlanLimits{}
+func (x *CreditLot) Reset() {
+	*x = CreditLot{}
 	mi := &file_postpilot_v1_plan_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PlanLimits) String() string {
+func (x *CreditLot) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PlanLimits) ProtoMessage() {}
+func (*CreditLot) ProtoMessage() {}
 
-func (x *PlanLimits) ProtoReflect() protoreflect.Message {
+func (x *CreditLot) ProtoReflect() protoreflect.Message {
 	mi := &file_postpilot_v1_plan_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -113,59 +126,70 @@ func (x *PlanLimits) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PlanLimits.ProtoReflect.Descriptor instead.
-func (*PlanLimits) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreditLot.ProtoReflect.Descriptor instead.
+func (*CreditLot) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *PlanLimits) GetDailyJobStarts() int32 {
+func (x *CreditLot) GetKind() string {
 	if x != nil {
-		return x.DailyJobStarts
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *CreditLot) GetGranted() int32 {
+	if x != nil {
+		return x.Granted
 	}
 	return 0
 }
 
-func (x *PlanLimits) GetDailyBudgetMicrousd() int64 {
+func (x *CreditLot) GetRemaining() int32 {
 	if x != nil {
-		return x.DailyBudgetMicrousd
+		return x.Remaining
 	}
 	return 0
 }
 
-func (x *PlanLimits) GetMonthlyBudgetMicrousd() int64 {
+func (x *CreditLot) GetExpiresAt() string {
 	if x != nil {
-		return x.MonthlyBudgetMicrousd
+		return x.ExpiresAt
 	}
-	return 0
+	return ""
 }
 
-// Usage is measured over calendar windows in the product's home timezone, so a refusal
-// can always name the instant it lifts. Both reset fields are RFC3339.
-type PlanUsage struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	JobsStartedToday  int32                  `protobuf:"varint,1,opt,name=jobs_started_today,json=jobsStartedToday,proto3" json:"jobs_started_today,omitempty"`
-	CostTodayMicrousd int64                  `protobuf:"varint,2,opt,name=cost_today_microusd,json=costTodayMicrousd,proto3" json:"cost_today_microusd,omitempty"`
-	CostMonthMicrousd int64                  `protobuf:"varint,3,opt,name=cost_month_microusd,json=costMonthMicrousd,proto3" json:"cost_month_microusd,omitempty"`
-	DayResetsAt       string                 `protobuf:"bytes,4,opt,name=day_resets_at,json=dayResetsAt,proto3" json:"day_resets_at,omitempty"`
-	MonthResetsAt     string                 `protobuf:"bytes,5,opt,name=month_resets_at,json=monthResetsAt,proto3" json:"month_resets_at,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+// The account's spendable position. Credits are integers — the server never sends a
+// currency, because the credit IS the unit the product prices in.
+type CreditBalance struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Credits int32                  `protobuf:"varint,1,opt,name=credits,proto3" json:"credits,omitempty"`
+	// True for the operator tier, which is never refused for balance. `credits` is then
+	// meaningless and the client shows no meter.
+	Unlimited bool         `protobuf:"varint,2,opt,name=unlimited,proto3" json:"unlimited,omitempty"`
+	Lots      []*CreditLot `protobuf:"bytes,3,rep,name=lots,proto3" json:"lots,omitempty"`
+	// RFC3339 instant the next monthly grant opens — the date every refusal names.
+	RenewsAt string `protobuf:"bytes,4,opt,name=renews_at,json=renewsAt,proto3" json:"renews_at,omitempty"`
+	// What this tier is granted each month, so the client can show a meter against it.
+	MonthlyGrant  int32 `protobuf:"varint,5,opt,name=monthly_grant,json=monthlyGrant,proto3" json:"monthly_grant,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PlanUsage) Reset() {
-	*x = PlanUsage{}
+func (x *CreditBalance) Reset() {
+	*x = CreditBalance{}
 	mi := &file_postpilot_v1_plan_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PlanUsage) String() string {
+func (x *CreditBalance) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PlanUsage) ProtoMessage() {}
+func (*CreditBalance) ProtoMessage() {}
 
-func (x *PlanUsage) ProtoReflect() protoreflect.Message {
+func (x *CreditBalance) ProtoReflect() protoreflect.Message {
 	mi := &file_postpilot_v1_plan_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -177,44 +201,108 @@ func (x *PlanUsage) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PlanUsage.ProtoReflect.Descriptor instead.
-func (*PlanUsage) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreditBalance.ProtoReflect.Descriptor instead.
+func (*CreditBalance) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *PlanUsage) GetJobsStartedToday() int32 {
+func (x *CreditBalance) GetCredits() int32 {
 	if x != nil {
-		return x.JobsStartedToday
+		return x.Credits
 	}
 	return 0
 }
 
-func (x *PlanUsage) GetCostTodayMicrousd() int64 {
+func (x *CreditBalance) GetUnlimited() bool {
 	if x != nil {
-		return x.CostTodayMicrousd
+		return x.Unlimited
 	}
-	return 0
+	return false
 }
 
-func (x *PlanUsage) GetCostMonthMicrousd() int64 {
+func (x *CreditBalance) GetLots() []*CreditLot {
 	if x != nil {
-		return x.CostMonthMicrousd
+		return x.Lots
 	}
-	return 0
+	return nil
 }
 
-func (x *PlanUsage) GetDayResetsAt() string {
+func (x *CreditBalance) GetRenewsAt() string {
 	if x != nil {
-		return x.DayResetsAt
+		return x.RenewsAt
 	}
 	return ""
 }
 
-func (x *PlanUsage) GetMonthResetsAt() string {
+func (x *CreditBalance) GetMonthlyGrant() int32 {
 	if x != nil {
-		return x.MonthResetsAt
+		return x.MonthlyGrant
 	}
-	return ""
+	return 0
+}
+
+// One rung as a plan comparison screen lists it.
+type PlanOffer struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Plan           Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
+	MonthlyCredits int32                  `protobuf:"varint,2,opt,name=monthly_credits,json=monthlyCredits,proto3" json:"monthly_credits,omitempty"`
+	// The intended monthly price, in whole US cents; zero for the free tier. No money moves
+	// (PRD §9) — this is the figure the grant was sized against, published so the client
+	// never hardcodes a price that could drift from the grant beside it.
+	PriceUsdCents int32 `protobuf:"varint,3,opt,name=price_usd_cents,json=priceUsdCents,proto3" json:"price_usd_cents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlanOffer) Reset() {
+	*x = PlanOffer{}
+	mi := &file_postpilot_v1_plan_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlanOffer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlanOffer) ProtoMessage() {}
+
+func (x *PlanOffer) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_plan_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlanOffer.ProtoReflect.Descriptor instead.
+func (*PlanOffer) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PlanOffer) GetPlan() Plan {
+	if x != nil {
+		return x.Plan
+	}
+	return Plan_PLAN_UNSPECIFIED
+}
+
+func (x *PlanOffer) GetMonthlyCredits() int32 {
+	if x != nil {
+		return x.MonthlyCredits
+	}
+	return 0
+}
+
+func (x *PlanOffer) GetPriceUsdCents() int32 {
+	if x != nil {
+		return x.PriceUsdCents
+	}
+	return 0
 }
 
 type GetMyPlanRequest struct {
@@ -225,7 +313,7 @@ type GetMyPlanRequest struct {
 
 func (x *GetMyPlanRequest) Reset() {
 	*x = GetMyPlanRequest{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[2]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -237,7 +325,7 @@ func (x *GetMyPlanRequest) String() string {
 func (*GetMyPlanRequest) ProtoMessage() {}
 
 func (x *GetMyPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[2]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -250,21 +338,23 @@ func (x *GetMyPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMyPlanRequest.ProtoReflect.Descriptor instead.
 func (*GetMyPlanRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{2}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{3}
 }
 
 type GetMyPlanResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Plan          Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
-	Limits        *PlanLimits            `protobuf:"bytes,2,opt,name=limits,proto3" json:"limits,omitempty"`
-	Usage         *PlanUsage             `protobuf:"bytes,3,opt,name=usage,proto3" json:"usage,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Plan    Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
+	Balance *CreditBalance         `protobuf:"bytes,2,opt,name=balance,proto3" json:"balance,omitempty"`
+	// Every rung on offer, so the comparison screen renders no number of its own. `master`
+	// is absent: it is the operator tier, not something anyone is offered.
+	Offers        []*PlanOffer `protobuf:"bytes,3,rep,name=offers,proto3" json:"offers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetMyPlanResponse) Reset() {
 	*x = GetMyPlanResponse{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[3]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -276,7 +366,7 @@ func (x *GetMyPlanResponse) String() string {
 func (*GetMyPlanResponse) ProtoMessage() {}
 
 func (x *GetMyPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[3]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -289,7 +379,7 @@ func (x *GetMyPlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMyPlanResponse.ProtoReflect.Descriptor instead.
 func (*GetMyPlanResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{3}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetMyPlanResponse) GetPlan() Plan {
@@ -299,16 +389,16 @@ func (x *GetMyPlanResponse) GetPlan() Plan {
 	return Plan_PLAN_UNSPECIFIED
 }
 
-func (x *GetMyPlanResponse) GetLimits() *PlanLimits {
+func (x *GetMyPlanResponse) GetBalance() *CreditBalance {
 	if x != nil {
-		return x.Limits
+		return x.Balance
 	}
 	return nil
 }
 
-func (x *GetMyPlanResponse) GetUsage() *PlanUsage {
+func (x *GetMyPlanResponse) GetOffers() []*PlanOffer {
 	if x != nil {
-		return x.Usage
+		return x.Offers
 	}
 	return nil
 }
@@ -321,7 +411,7 @@ type ListUsersRequest struct {
 
 func (x *ListUsersRequest) Reset() {
 	*x = ListUsersRequest{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[4]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -333,7 +423,7 @@ func (x *ListUsersRequest) String() string {
 func (*ListUsersRequest) ProtoMessage() {}
 
 func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[4]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -346,7 +436,7 @@ func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListUsersRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{4}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{5}
 }
 
 type ListUsersResponse struct {
@@ -358,7 +448,7 @@ type ListUsersResponse struct {
 
 func (x *ListUsersResponse) Reset() {
 	*x = ListUsersResponse{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[5]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -370,7 +460,7 @@ func (x *ListUsersResponse) String() string {
 func (*ListUsersResponse) ProtoMessage() {}
 
 func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[5]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -383,7 +473,7 @@ func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
 func (*ListUsersResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{5}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListUsersResponse) GetUsers() []*PlanUser {
@@ -406,7 +496,7 @@ type PlanUser struct {
 
 func (x *PlanUser) Reset() {
 	*x = PlanUser{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[6]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -418,7 +508,7 @@ func (x *PlanUser) String() string {
 func (*PlanUser) ProtoMessage() {}
 
 func (x *PlanUser) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[6]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -431,7 +521,7 @@ func (x *PlanUser) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlanUser.ProtoReflect.Descriptor instead.
 func (*PlanUser) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PlanUser) GetId() string {
@@ -465,7 +555,7 @@ type SetUserPlanRequest struct {
 
 func (x *SetUserPlanRequest) Reset() {
 	*x = SetUserPlanRequest{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[7]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -477,7 +567,7 @@ func (x *SetUserPlanRequest) String() string {
 func (*SetUserPlanRequest) ProtoMessage() {}
 
 func (x *SetUserPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[7]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -490,7 +580,7 @@ func (x *SetUserPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetUserPlanRequest.ProtoReflect.Descriptor instead.
 func (*SetUserPlanRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SetUserPlanRequest) GetUserId() string {
@@ -516,7 +606,7 @@ type SetUserPlanResponse struct {
 
 func (x *SetUserPlanResponse) Reset() {
 	*x = SetUserPlanResponse{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[8]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -528,7 +618,7 @@ func (x *SetUserPlanResponse) String() string {
 func (*SetUserPlanResponse) ProtoMessage() {}
 
 func (x *SetUserPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[8]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -541,7 +631,7 @@ func (x *SetUserPlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetUserPlanResponse.ProtoReflect.Descriptor instead.
 func (*SetUserPlanResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{8}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SetUserPlanResponse) GetUser() *PlanUser {
@@ -555,23 +645,28 @@ var File_postpilot_v1_plan_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\n" +
-	"\x17postpilot/v1/plan.proto\x12\fpostpilot.v1\"\xa2\x01\n" +
+	"\x17postpilot/v1/plan.proto\x12\fpostpilot.v1\"v\n" +
+	"\tCreditLot\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x18\n" +
+	"\agranted\x18\x02 \x01(\x05R\agranted\x12\x1c\n" +
+	"\tremaining\x18\x03 \x01(\x05R\tremaining\x12\x1d\n" +
 	"\n" +
-	"PlanLimits\x12(\n" +
-	"\x10daily_job_starts\x18\x01 \x01(\x05R\x0edailyJobStarts\x122\n" +
-	"\x15daily_budget_microusd\x18\x02 \x01(\x03R\x13dailyBudgetMicrousd\x126\n" +
-	"\x17monthly_budget_microusd\x18\x03 \x01(\x03R\x15monthlyBudgetMicrousd\"\xe5\x01\n" +
-	"\tPlanUsage\x12,\n" +
-	"\x12jobs_started_today\x18\x01 \x01(\x05R\x10jobsStartedToday\x12.\n" +
-	"\x13cost_today_microusd\x18\x02 \x01(\x03R\x11costTodayMicrousd\x12.\n" +
-	"\x13cost_month_microusd\x18\x03 \x01(\x03R\x11costMonthMicrousd\x12\"\n" +
-	"\rday_resets_at\x18\x04 \x01(\tR\vdayResetsAt\x12&\n" +
-	"\x0fmonth_resets_at\x18\x05 \x01(\tR\rmonthResetsAt\"\x12\n" +
-	"\x10GetMyPlanRequest\"\x9c\x01\n" +
+	"expires_at\x18\x04 \x01(\tR\texpiresAt\"\xb6\x01\n" +
+	"\rCreditBalance\x12\x18\n" +
+	"\acredits\x18\x01 \x01(\x05R\acredits\x12\x1c\n" +
+	"\tunlimited\x18\x02 \x01(\bR\tunlimited\x12+\n" +
+	"\x04lots\x18\x03 \x03(\v2\x17.postpilot.v1.CreditLotR\x04lots\x12\x1b\n" +
+	"\trenews_at\x18\x04 \x01(\tR\brenewsAt\x12#\n" +
+	"\rmonthly_grant\x18\x05 \x01(\x05R\fmonthlyGrant\"\x84\x01\n" +
+	"\tPlanOffer\x12&\n" +
+	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12'\n" +
+	"\x0fmonthly_credits\x18\x02 \x01(\x05R\x0emonthlyCredits\x12&\n" +
+	"\x0fprice_usd_cents\x18\x03 \x01(\x05R\rpriceUsdCents\"\x12\n" +
+	"\x10GetMyPlanRequest\"\xa3\x01\n" +
 	"\x11GetMyPlanResponse\x12&\n" +
-	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x120\n" +
-	"\x06limits\x18\x02 \x01(\v2\x18.postpilot.v1.PlanLimitsR\x06limits\x12-\n" +
-	"\x05usage\x18\x03 \x01(\v2\x17.postpilot.v1.PlanUsageR\x05usage\"\x12\n" +
+	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x125\n" +
+	"\abalance\x18\x02 \x01(\v2\x1b.postpilot.v1.CreditBalanceR\abalance\x12/\n" +
+	"\x06offers\x18\x03 \x03(\v2\x17.postpilot.v1.PlanOfferR\x06offers\"\x12\n" +
 	"\x10ListUsersRequest\"A\n" +
 	"\x11ListUsersResponse\x12,\n" +
 	"\x05users\x18\x01 \x03(\v2\x16.postpilot.v1.PlanUserR\x05users\"a\n" +
@@ -584,14 +679,15 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12&\n" +
 	"\x04plan\x18\x02 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\"A\n" +
 	"\x13SetUserPlanResponse\x12*\n" +
-	"\x04user\x18\x01 \x01(\v2\x16.postpilot.v1.PlanUserR\x04user*Z\n" +
+	"\x04user\x18\x01 \x01(\v2\x16.postpilot.v1.PlanUserR\x04user*h\n" +
 	"\x04Plan\x12\x14\n" +
 	"\x10PLAN_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tPLAN_FREE\x10\x01\x12\x0e\n" +
 	"\n" +
 	"PLAN_BASIC\x10\x02\x12\f\n" +
 	"\bPLAN_MAX\x10\x03\x12\x0f\n" +
-	"\vPLAN_MASTER\x10\x042]\n" +
+	"\vPLAN_MASTER\x10\x04\x12\f\n" +
+	"\bPLAN_PRO\x10\x052]\n" +
 	"\vPlanService\x12N\n" +
 	"\tGetMyPlan\x12\x1e.postpilot.v1.GetMyPlanRequest\x1a\x1f.postpilot.v1.GetMyPlanResponse\"\x002\xb4\x01\n" +
 	"\fAdminService\x12N\n" +
@@ -611,38 +707,41 @@ func file_postpilot_v1_plan_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_plan_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_postpilot_v1_plan_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_postpilot_v1_plan_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_postpilot_v1_plan_proto_goTypes = []any{
 	(Plan)(0),                   // 0: postpilot.v1.Plan
-	(*PlanLimits)(nil),          // 1: postpilot.v1.PlanLimits
-	(*PlanUsage)(nil),           // 2: postpilot.v1.PlanUsage
-	(*GetMyPlanRequest)(nil),    // 3: postpilot.v1.GetMyPlanRequest
-	(*GetMyPlanResponse)(nil),   // 4: postpilot.v1.GetMyPlanResponse
-	(*ListUsersRequest)(nil),    // 5: postpilot.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),   // 6: postpilot.v1.ListUsersResponse
-	(*PlanUser)(nil),            // 7: postpilot.v1.PlanUser
-	(*SetUserPlanRequest)(nil),  // 8: postpilot.v1.SetUserPlanRequest
-	(*SetUserPlanResponse)(nil), // 9: postpilot.v1.SetUserPlanResponse
+	(*CreditLot)(nil),           // 1: postpilot.v1.CreditLot
+	(*CreditBalance)(nil),       // 2: postpilot.v1.CreditBalance
+	(*PlanOffer)(nil),           // 3: postpilot.v1.PlanOffer
+	(*GetMyPlanRequest)(nil),    // 4: postpilot.v1.GetMyPlanRequest
+	(*GetMyPlanResponse)(nil),   // 5: postpilot.v1.GetMyPlanResponse
+	(*ListUsersRequest)(nil),    // 6: postpilot.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),   // 7: postpilot.v1.ListUsersResponse
+	(*PlanUser)(nil),            // 8: postpilot.v1.PlanUser
+	(*SetUserPlanRequest)(nil),  // 9: postpilot.v1.SetUserPlanRequest
+	(*SetUserPlanResponse)(nil), // 10: postpilot.v1.SetUserPlanResponse
 }
 var file_postpilot_v1_plan_proto_depIdxs = []int32{
-	0,  // 0: postpilot.v1.GetMyPlanResponse.plan:type_name -> postpilot.v1.Plan
-	1,  // 1: postpilot.v1.GetMyPlanResponse.limits:type_name -> postpilot.v1.PlanLimits
-	2,  // 2: postpilot.v1.GetMyPlanResponse.usage:type_name -> postpilot.v1.PlanUsage
-	7,  // 3: postpilot.v1.ListUsersResponse.users:type_name -> postpilot.v1.PlanUser
-	0,  // 4: postpilot.v1.PlanUser.plan:type_name -> postpilot.v1.Plan
-	0,  // 5: postpilot.v1.SetUserPlanRequest.plan:type_name -> postpilot.v1.Plan
-	7,  // 6: postpilot.v1.SetUserPlanResponse.user:type_name -> postpilot.v1.PlanUser
-	3,  // 7: postpilot.v1.PlanService.GetMyPlan:input_type -> postpilot.v1.GetMyPlanRequest
-	5,  // 8: postpilot.v1.AdminService.ListUsers:input_type -> postpilot.v1.ListUsersRequest
-	8,  // 9: postpilot.v1.AdminService.SetUserPlan:input_type -> postpilot.v1.SetUserPlanRequest
-	4,  // 10: postpilot.v1.PlanService.GetMyPlan:output_type -> postpilot.v1.GetMyPlanResponse
-	6,  // 11: postpilot.v1.AdminService.ListUsers:output_type -> postpilot.v1.ListUsersResponse
-	9,  // 12: postpilot.v1.AdminService.SetUserPlan:output_type -> postpilot.v1.SetUserPlanResponse
-	10, // [10:13] is the sub-list for method output_type
-	7,  // [7:10] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	1,  // 0: postpilot.v1.CreditBalance.lots:type_name -> postpilot.v1.CreditLot
+	0,  // 1: postpilot.v1.PlanOffer.plan:type_name -> postpilot.v1.Plan
+	0,  // 2: postpilot.v1.GetMyPlanResponse.plan:type_name -> postpilot.v1.Plan
+	2,  // 3: postpilot.v1.GetMyPlanResponse.balance:type_name -> postpilot.v1.CreditBalance
+	3,  // 4: postpilot.v1.GetMyPlanResponse.offers:type_name -> postpilot.v1.PlanOffer
+	8,  // 5: postpilot.v1.ListUsersResponse.users:type_name -> postpilot.v1.PlanUser
+	0,  // 6: postpilot.v1.PlanUser.plan:type_name -> postpilot.v1.Plan
+	0,  // 7: postpilot.v1.SetUserPlanRequest.plan:type_name -> postpilot.v1.Plan
+	8,  // 8: postpilot.v1.SetUserPlanResponse.user:type_name -> postpilot.v1.PlanUser
+	4,  // 9: postpilot.v1.PlanService.GetMyPlan:input_type -> postpilot.v1.GetMyPlanRequest
+	6,  // 10: postpilot.v1.AdminService.ListUsers:input_type -> postpilot.v1.ListUsersRequest
+	9,  // 11: postpilot.v1.AdminService.SetUserPlan:input_type -> postpilot.v1.SetUserPlanRequest
+	5,  // 12: postpilot.v1.PlanService.GetMyPlan:output_type -> postpilot.v1.GetMyPlanResponse
+	7,  // 13: postpilot.v1.AdminService.ListUsers:output_type -> postpilot.v1.ListUsersResponse
+	10, // 14: postpilot.v1.AdminService.SetUserPlan:output_type -> postpilot.v1.SetUserPlanResponse
+	12, // [12:15] is the sub-list for method output_type
+	9,  // [9:12] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_plan_proto_init() }
@@ -656,7 +755,7 @@ func file_postpilot_v1_plan_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_plan_proto_rawDesc), len(file_postpilot_v1_plan_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

@@ -3,6 +3,7 @@ package usage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,35 +11,150 @@ import (
 	"github.com/postpilot/backend/internal/plan"
 )
 
-// fakeStore is an in-memory usage.Store. These tests are about the admission rules and the
-// window arithmetic, not about SQL, so the windows are applied here exactly as the real
-// store's half-open BETWEEN does.
+// fakeStore is an in-memory usage.Store. These tests are about the hold rules, the
+// consumption order and the settlement arithmetic, not about SQL — but the two guards the
+// real statements carry (a lot never drops below zero, never rises above its grant) are
+// reproduced here, because those are the invariant rather than an implementation detail.
 type fakeStore struct {
-	admissions []Admission
-	events     []Event
-	countErr   error
+	lots        []Lot
+	admissions  []Admission
+	holdDebits  map[string][]LotDebit
+	settled     map[string]int
+	events      []Event
+	lotSeq      int
+	spendCalls  int
+	failOnSpend error
+}
+
+func newFakeStore() *fakeStore {
+	return &fakeStore{holdDebits: map[string][]LotDebit{}, settled: map[string]int{}}
 }
 
 // InWriteTx is a pass-through here: these tests assert the rules, and the real store's
-// transaction is what makes them hold under concurrency.
+// BEGIN IMMEDIATE is what makes them hold under concurrency.
 func (f *fakeStore) InWriteTx(_ context.Context, fn func(Store) error) error { return fn(f) }
 
-func (f *fakeStore) CountAdmissions(_ context.Context, userID string, from, to time.Time) (int64, error) {
-	if f.countErr != nil {
-		return 0, f.countErr
+func (f *fakeStore) LotsInConsumptionOrder(_ context.Context, userID string, now time.Time) ([]Lot, error) {
+	var out []Lot
+	for _, lot := range f.lots {
+		if lot.UserID != userID || lot.Remaining <= 0 || lot.Expired(now) {
+			continue
+		}
+		out = append(out, lot)
 	}
-	var n int64
-	for _, admission := range f.admissions {
-		if admission.UserID == userID && !admission.CreatedAt.Before(from) && admission.CreatedAt.Before(to) {
-			n++
+	// expiry ascending, NULLs last, then creation — the ORDER BY the query spells out.
+	for i := 1; i < len(out); i++ {
+		for j := i; j > 0 && lotBefore(out[j], out[j-1]); j-- {
+			out[j], out[j-1] = out[j-1], out[j]
 		}
 	}
-	return n, nil
+	return out, nil
+}
+
+func lotBefore(a, b Lot) bool {
+	switch {
+	case a.ExpiresAt == nil && b.ExpiresAt == nil:
+		return a.CreatedAt.Before(b.CreatedAt)
+	case a.ExpiresAt == nil:
+		return false
+	case b.ExpiresAt == nil:
+		return true
+	case a.ExpiresAt.Equal(*b.ExpiresAt):
+		return a.CreatedAt.Before(b.CreatedAt)
+	default:
+		return a.ExpiresAt.Before(*b.ExpiresAt)
+	}
+}
+
+func (f *fakeStore) ActiveMonthlyLot(_ context.Context, userID string, now time.Time) (Lot, bool, error) {
+	for _, lot := range f.lots {
+		if lot.UserID == userID && lot.Kind == LotMonthly && !lot.Expired(now) {
+			return lot, true, nil
+		}
+	}
+	return Lot{}, false, nil
+}
+
+func (f *fakeStore) InsertLot(_ context.Context, lot Lot) error {
+	f.lotSeq++
+	if lot.ID == "" {
+		lot.ID = fmt.Sprintf("lot-%d", f.lotSeq)
+	}
+	f.lots = append(f.lots, lot)
+	return nil
+}
+
+func (f *fakeStore) InsertLotIfAbsent(ctx context.Context, lot Lot) error {
+	for _, existing := range f.lots {
+		if existing.ID == lot.ID {
+			return nil
+		}
+	}
+	return f.InsertLot(ctx, lot)
+}
+
+func (f *fakeStore) SpendFromLot(_ context.Context, lotID string, credits int) error {
+	f.spendCalls++
+	if f.failOnSpend != nil {
+		return f.failOnSpend
+	}
+	for i := range f.lots {
+		// The `remaining >= ?` guard the statement carries: a stale caller cannot drive a
+		// lot negative.
+		if f.lots[i].ID == lotID && f.lots[i].Remaining >= credits {
+			f.lots[i].Remaining -= credits
+		}
+	}
+	return nil
+}
+
+func (f *fakeStore) RefundToLot(_ context.Context, lotID string, credits int) error {
+	for i := range f.lots {
+		if f.lots[i].ID == lotID && f.lots[i].Remaining+credits <= f.lots[i].Granted {
+			f.lots[i].Remaining += credits
+		}
+	}
+	return nil
 }
 
 func (f *fakeStore) InsertAdmission(_ context.Context, admission Admission) error {
 	f.admissions = append(f.admissions, admission)
 	return nil
+}
+
+func (f *fakeStore) InsertHoldDebits(_ context.Context, jobID string, debits []LotDebit) error {
+	if len(debits) > 0 {
+		f.holdDebits[jobID] = append(f.holdDebits[jobID], debits...)
+	}
+	return nil
+}
+
+func (f *fakeStore) HoldForJob(_ context.Context, jobID string) (Admission, []LotDebit, bool, error) {
+	for _, admission := range f.admissions {
+		if admission.JobID != jobID {
+			continue
+		}
+		if _, done := f.settled[jobID]; done {
+			return Admission{}, nil, false, nil
+		}
+		return admission, f.holdDebits[jobID], true, nil
+	}
+	return Admission{}, nil, false, nil
+}
+
+func (f *fakeStore) MarkSettled(_ context.Context, jobID string, credits int, _ time.Time) error {
+	f.settled[jobID] = credits
+	return nil
+}
+
+func (f *fakeStore) UnsettledHoldJobs(_ context.Context) ([]string, error) {
+	var out []string
+	for _, admission := range f.admissions {
+		if _, done := f.settled[admission.JobID]; !done {
+			out = append(out, admission.JobID)
+		}
+	}
+	return out, nil
 }
 
 func (f *fakeStore) DeleteAdmissionForJob(_ context.Context, jobID string) error {
@@ -49,22 +165,33 @@ func (f *fakeStore) DeleteAdmissionForJob(_ context.Context, jobID string) error
 		}
 	}
 	f.admissions = kept
+	delete(f.holdDebits, jobID)
 	return nil
 }
 
-func (f *fakeStore) SumCost(_ context.Context, userID string, from, to time.Time) (int64, error) {
+func (f *fakeStore) InsertEvent(_ context.Context, event Event) error {
+	f.events = append(f.events, event)
+	return nil
+}
+
+func (f *fakeStore) SumCostForJob(_ context.Context, jobID string) (int64, error) {
 	var total int64
 	for _, event := range f.events {
-		if event.UserID == userID && !event.CreatedAt.Before(from) && event.CreatedAt.Before(to) {
+		if event.JobID == jobID {
 			total += event.CostMicrousd
 		}
 	}
 	return total, nil
 }
 
-func (f *fakeStore) InsertEvent(_ context.Context, event Event) error {
-	f.events = append(f.events, event)
-	return nil
+func (f *fakeStore) balance(userID string, now time.Time) int {
+	total := 0
+	for _, lot := range f.lots {
+		if lot.UserID == userID && !lot.Expired(now) {
+			total += lot.Remaining
+		}
+	}
+	return total
 }
 
 type fakeModels map[llm.ModelRef]llm.ModelInfo
@@ -74,155 +201,376 @@ func (m fakeModels) Lookup(ref llm.ModelRef) (llm.ModelInfo, bool) {
 	return info, ok
 }
 
-// seoulNoon is a fixed instant inside one Asia/Seoul day, far from either boundary — and
-// mid-month, so a test can place a row in the same month but on a different day.
+// seoulNoon is a fixed instant inside one Asia/Seoul month, far from either boundary.
 var seoulNoon = time.Date(2026, 9, 15, 3, 0, 0, 0, time.UTC) // 15 Sep, 12:00 KST
 
-// earlierSameMonth is 2 Sep 03:00 KST: the same Seoul month as seoulNoon, a different day.
-var earlierSameMonth = time.Date(2026, 9, 1, 18, 0, 0, 0, time.UTC)
+// cheap costs 2300 micro-USD at the hold's assumed shape, which charges 3 credits.
+var cheapRef = llm.ModelRef{ProviderID: "openrouter", ModelID: "cheap"}
+
+// The hold prices 30 000 prompt tokens plus the completion cap; these rates make that
+// exactly 10 000 micro-USD, i.e. one credit of cost and so 5 credits charged at 3x.
+var pricedModels = fakeModels{
+	cheapRef: {Ref: cheapRef, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.7"},
+}
+
+const maxCompletion = 10_000
 
 func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 	t.Helper()
-	store := &fakeStore{}
-	svc := NewService(store, fakeModels{})
+	store := newFakeStore()
+	svc := NewService(store, pricedModels, maxCompletion)
 	svc.now = func() time.Time { return now }
+	seq := 0
+	svc.newID = func() string { seq++; return fmt.Sprintf("lot-new-%d", seq) }
 	return svc, store
 }
 
-func start(userID string, tier plan.Plan, jobID string) Start {
-	return Start{UserID: userID, Plan: tier, Kind: "generate", JobID: jobID}
+// openMonthly is a monthly lot already open for the current month, so a test about the
+// hold itself does not also trigger the renewal that a first access performs.
+func openMonthly(userID string, remaining int) Lot {
+	end := plan.NextRenewal(seoulNoon)
+	return Lot{
+		ID: "monthly-open", UserID: userID, Kind: LotMonthly,
+		Granted: remaining, Remaining: remaining, ExpiresAt: &end,
+	}
 }
 
-func TestAdmitRefusesAtTheDailyStartCount(t *testing.T) {
+func holdStart(userID string, tier plan.Plan, jobID string, calls ...PlannedCall) Start {
+	return Start{UserID: userID, Plan: tier, Kind: "generate", JobID: jobID, Calls: calls}
+}
+
+// The hold's assumed shape prices one cheap call at 10 000 micro-USD, so Charge gives
+// 2 + 3 = 5 credits.
+const oneCallHold = 5
+
+func TestHoldChargesTheWorstCaseAndRecordsIt(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
-	for i := range 10 {
-		if err := svc.Admit(context.Background(), start("alice", plan.Free, string(rune('a'+i)))); err != nil {
-			t.Fatalf("admission %d: %v", i, err)
+	store.lots = []Lot{
+		openMonthly("alice", 0),
+		{ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 100, Remaining: 100},
+	}
+
+	if err := svc.Hold(context.Background(), holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 1})); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := store.admissions[0].HoldCredits; got != oneCallHold {
+		t.Errorf("hold = %d, want %d", got, oneCallHold)
+	}
+	if got, want := store.balance("alice", seoulNoon), 100-oneCallHold; got != want {
+		t.Errorf("balance = %d, want %d", got, want)
+	}
+	if got := store.holdDebits["job-1"]; len(got) != 1 || got[0].LotID != "bonus" || got[0].Credits != oneCallHold {
+		t.Errorf("hold debits = %+v", got)
+	}
+}
+
+// The count is what separates a job that observes once from one that observes eight
+// times; pricing the ref instead of the calls would hold a fraction of the real cost.
+func TestHoldPricesEveryPlannedCall(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 500, Remaining: 500}}
+
+	if err := svc.Hold(context.Background(), holdStart("alice", plan.Max, "job-1", PlannedCall{Ref: cheapRef, Count: 4})); err != nil {
+		t.Fatal(err)
+	}
+	// Four calls of cost, one per-request base: 2 + 4*3.
+	if got, want := store.admissions[0].HoldCredits, 14; got != want {
+		t.Errorf("hold = %d, want %d", got, want)
+	}
+}
+
+func TestHoldRefusesWhatTheBalanceCannotCoverAndWritesNothing(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 3, Remaining: 3}}
+
+	err := svc.Hold(context.Background(), holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 1}))
+
+	var refusal *plan.InsufficientCreditsError
+	if !errors.As(err, &refusal) {
+		t.Fatalf("err = %v, want an insufficient-credits refusal", err)
+	}
+	if refusal.Required != oneCallHold || refusal.Balance != 3 {
+		t.Errorf("refusal = %+v, want required %d and balance 3", refusal, oneCallHold)
+	}
+	if refusal.RenewsAt.IsZero() {
+		t.Error("the refusal did not name when it lifts")
+	}
+	if len(store.admissions) != 0 {
+		t.Errorf("admissions = %+v, want none after a refusal", store.admissions)
+	}
+	if got := store.balance("alice", seoulNoon); got != 3 {
+		t.Errorf("balance = %d, want the untouched 3", got)
+	}
+}
+
+// The monthly grant always carries the earlier expiry, so "spend it before the bonus"
+// needs no rule of its own — it falls out of the one ordering.
+func TestConsumptionSpendsTheSoonestExpiryFirst(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	monthEnd := plan.NextRenewal(seoulNoon)
+	later := monthEnd.AddDate(0, 2, 0)
+	store.lots = []Lot{
+		{ID: "no-expiry", UserID: "alice", Kind: LotBonus, Granted: 100, Remaining: 100},
+		{ID: "later-bonus", UserID: "alice", Kind: LotBonus, Granted: 100, Remaining: 100, ExpiresAt: &later},
+		{ID: "monthly", UserID: "alice", Kind: LotMonthly, Granted: 4, Remaining: 4, ExpiresAt: &monthEnd},
+	}
+
+	if err := svc.Hold(context.Background(), holdStart("alice", plan.Basic, "job-1", PlannedCall{Ref: cheapRef, Count: 1})); err != nil {
+		t.Fatal(err)
+	}
+
+	debits := store.holdDebits["job-1"]
+	if len(debits) != 2 {
+		t.Fatalf("debits = %+v, want the monthly lot drained then the next expiry", debits)
+	}
+	if debits[0].LotID != "monthly" || debits[0].Credits != 4 {
+		t.Errorf("first debit = %+v, want the whole monthly lot", debits[0])
+	}
+	if debits[1].LotID != "later-bonus" || debits[1].Credits != 1 {
+		t.Errorf("second debit = %+v, want the expiring bonus before the permanent one", debits[1])
+	}
+}
+
+func TestExpiredLotsAreNotSpendable(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	lapsed := seoulNoon.Add(-time.Hour)
+	store.lots = []Lot{
+		openMonthly("alice", 0),
+		{ID: "lapsed", UserID: "alice", Kind: LotBonus, Granted: 100, Remaining: 100, ExpiresAt: &lapsed},
+	}
+
+	err := svc.Hold(context.Background(), holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 1}))
+
+	var refusal *plan.InsufficientCreditsError
+	if !errors.As(err, &refusal) {
+		t.Fatalf("err = %v, want a refusal: an expired lot is not a balance", err)
+	}
+}
+
+func TestRenewalOpensTheMonthlyGrantOnAccess(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+
+	balance, err := svc.BalanceFor(context.Background(), "alice", plan.Basic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance.Credits != plan.MonthlyCredits(plan.Basic) {
+		t.Errorf("credits = %d, want the basic grant %d", balance.Credits, plan.MonthlyCredits(plan.Basic))
+	}
+	if !balance.RenewsAt.Equal(plan.NextRenewal(seoulNoon)) {
+		t.Errorf("renews at %s, want the month boundary %s", balance.RenewsAt, plan.NextRenewal(seoulNoon))
+	}
+	if len(store.lots) != 1 {
+		t.Fatalf("lots = %+v, want exactly one opened", store.lots)
+	}
+
+	// A second read must not mint a second grant.
+	if _, err := svc.BalanceFor(context.Background(), "alice", plan.Basic); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.lots) != 1 {
+		t.Errorf("lots = %+v, want the same one", store.lots)
+	}
+}
+
+func TestRenewalAfterTheBoundaryOpensTheNextGrant(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	lapsed := seoulNoon.Add(-time.Hour)
+	store.lots = []Lot{{ID: "old", UserID: "alice", Kind: LotMonthly, Granted: 200, Remaining: 8, ExpiresAt: &lapsed}}
+
+	balance, err := svc.BalanceFor(context.Background(), "alice", plan.Basic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The lapsed lot's 8 remaining credits do not carry over.
+	if balance.Credits != plan.MonthlyCredits(plan.Basic) {
+		t.Errorf("credits = %d, want a fresh grant with nothing carried over", balance.Credits)
+	}
+	if len(store.lots) != 2 {
+		t.Errorf("lots = %d, want the lapsed one kept and a new one opened", len(store.lots))
+	}
+}
+
+func TestMasterIsNeverRefusedButIsStillHeldAndRecorded(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+
+	// No lots at all: an account that would be refused on any other tier.
+	if err := svc.Hold(context.Background(), holdStart("root", plan.Master, "job-1", PlannedCall{Ref: cheapRef, Count: 3})); err != nil {
+		t.Fatalf("master was refused: %v", err)
+	}
+	if len(store.admissions) != 1 {
+		t.Fatalf("admissions = %+v, want the start recorded", store.admissions)
+	}
+	if store.admissions[0].HoldCredits == 0 {
+		t.Error("master's hold was recorded as zero; its spend must stay readable")
+	}
+	if len(store.holdDebits["job-1"]) != 0 {
+		t.Errorf("debits = %+v, want none: master spends no lot", store.holdDebits["job-1"])
+	}
+	if len(store.lots) != 0 {
+		t.Errorf("lots = %+v, want none minted for an unlimited tier", store.lots)
+	}
+}
+
+// An exempt tier holds nothing, so settlement must charge it nothing either — including
+// when its work overran the estimate. A bonus lot granted to the operator is not a balance
+// the gate ever consulted, and settlement must not become the path that drains it.
+func TestSettleLeavesAnExemptTiersLotsAlone(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	store.lots = []Lot{{ID: "bonus", UserID: "root", Kind: LotBonus, Granted: 100, Remaining: 100}}
+	ctx := context.Background()
+
+	if err := svc.Hold(ctx, holdStart("root", plan.Master, "job-1", PlannedCall{Ref: cheapRef, Count: 1})); err != nil {
+		t.Fatal(err)
+	}
+	// Far more than the recorded hold priced.
+	store.events = append(store.events, Event{UserID: "root", JobID: "job-1", CostMicrousd: 5_000_000})
+
+	if err := svc.Settle(ctx, "job-1"); err != nil {
+		t.Fatal(err)
+	}
+	if got := store.balance("root", seoulNoon); got != 100 {
+		t.Errorf("balance = %d, want the operator's lot untouched at 100", got)
+	}
+}
+
+func TestSettleRefundsTheUnusedRemainderToTheSameLots(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 100, Remaining: 100}}
+	ctx := context.Background()
+
+	if err := svc.Hold(ctx, holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 4})); err != nil {
+		t.Fatal(err)
+	}
+	held := store.admissions[0].HoldCredits
+
+	// The work actually cost one credit of provider spend: 2 + 3 = 5 charged.
+	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 10_000})
+
+	if err := svc.Settle(ctx, "job-1"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := store.settled["job-1"], 5; got != want {
+		t.Errorf("settled = %d, want %d", got, want)
+	}
+	if got, want := store.balance("alice", seoulNoon), 100-5; got != want {
+		t.Errorf("balance = %d, want %d (held %d, then refunded the difference)", got, want, held)
+	}
+}
+
+func TestSettleIsIdempotent(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 100, Remaining: 100}}
+	ctx := context.Background()
+
+	if err := svc.Hold(ctx, holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 4})); err != nil {
+		t.Fatal(err)
+	}
+	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 10_000})
+
+	if err := svc.Settle(ctx, "job-1"); err != nil {
+		t.Fatal(err)
+	}
+	after := store.balance("alice", seoulNoon)
+	if err := svc.Settle(ctx, "job-1"); err != nil {
+		t.Fatal(err)
+	}
+	if got := store.balance("alice", seoulNoon); got != after {
+		t.Errorf("balance = %d after a second settle, want the unchanged %d", got, after)
+	}
+}
+
+// The guarantee this whole change exists for: an estimate that came in low costs us the
+// difference, never the account.
+func TestSettleAboveTheHoldNeverDrivesTheBalanceNegative(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 6, Remaining: 6}}
+	ctx := context.Background()
+
+	if err := svc.Hold(ctx, holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 1})); err != nil {
+		t.Fatal(err)
+	}
+	// Far more than the hold priced.
+	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 5_000_000})
+
+	if err := svc.Settle(ctx, "job-1"); err != nil {
+		t.Fatal(err)
+	}
+	if got := store.balance("alice", seoulNoon); got < 0 {
+		t.Fatalf("balance = %d, want never below zero", got)
+	}
+	if got := store.balance("alice", seoulNoon); got != 0 {
+		t.Errorf("balance = %d, want the lots drained to exactly zero", got)
+	}
+}
+
+func TestTwoConcurrentHoldsCannotBothPassOneBalance(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	// Enough for exactly one hold.
+	store.lots = []Lot{
+		openMonthly("alice", 0),
+		{ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: oneCallHold, Remaining: oneCallHold},
+	}
+	ctx := context.Background()
+
+	first := svc.Hold(ctx, holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 1}))
+	second := svc.Hold(ctx, holdStart("alice", plan.Free, "job-2", PlannedCall{Ref: cheapRef, Count: 1}))
+
+	if first != nil {
+		t.Fatalf("the first hold was refused: %v", first)
+	}
+	var refusal *plan.InsufficientCreditsError
+	if !errors.As(second, &refusal) {
+		t.Fatalf("the second hold = %v, want a refusal", second)
+	}
+	if got := store.balance("alice", seoulNoon); got != 0 {
+		t.Errorf("balance = %d, want zero rather than negative", got)
+	}
+}
+
+func TestReleaseReturnsTheWholeHold(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 100, Remaining: 100}}
+	ctx := context.Background()
+
+	if err := svc.Hold(ctx, holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 4})); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Release(ctx, "job-1"); err != nil {
+		t.Fatal(err)
+	}
+	if got := store.balance("alice", seoulNoon); got != 100 {
+		t.Errorf("balance = %d, want the full 100 back", got)
+	}
+	if len(store.admissions) != 0 {
+		t.Errorf("admissions = %+v, want the start removed", store.admissions)
+	}
+}
+
+func TestSignupBonusIsGrantedOnce(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	ctx := context.Background()
+
+	for range 3 {
+		if err := svc.GrantSignupBonus(ctx, "alice", plan.SignupBonusCredits); err != nil {
+			t.Fatal(err)
 		}
 	}
-
-	err := svc.Admit(context.Background(), start("alice", plan.Free, "eleventh"))
-	var quota *plan.QuotaError
-	if !errors.As(err, &quota) {
-		t.Fatalf("error = %v, want a QuotaError", err)
+	if len(store.lots) != 1 {
+		t.Fatalf("lots = %d, want one bonus however many times provisioning is rerun", len(store.lots))
 	}
-	if quota.Axis != plan.AxisDailyCount || quota.Limit != 10 || quota.Used != 10 {
-		t.Errorf("quota = %+v", quota)
-	}
-	// The refusal must leave no trace: the count axis counts admissions, so a refused start
-	// that recorded one would consume the allowance it was just denied.
-	if got, want := len(store.admissions), 10; got != want {
-		t.Errorf("admissions = %d, want %d", got, want)
-	}
-	if _, resets := plan.DayWindow(seoulNoon); !quota.ResetsAt.Equal(resets) {
-		t.Errorf("resets_at = %v, want the next Seoul midnight %v", quota.ResetsAt, resets)
-	}
-}
-
-func TestAdmitCountsOnlyTheCurrentSeoulDay(t *testing.T) {
-	svc, store := newTestService(t, seoulNoon)
-	// 14 Sep 23:30 KST — the previous Seoul day, but the same UTC day as `seoulNoon` by only
-	// nine hours' difference in the other direction: counting in UTC would slide these rows
-	// into a different window than the one the user experiences.
-	yesterday := time.Date(2026, 9, 14, 14, 30, 0, 0, time.UTC)
-	for i := range 10 {
-		store.admissions = append(store.admissions, Admission{
-			UserID: "alice", Kind: "generate", JobID: string(rune('a' + i)), CreatedAt: yesterday,
-		})
-	}
-
-	if err := svc.Admit(context.Background(), start("alice", plan.Free, "today")); err != nil {
-		t.Fatalf("yesterday's starts must not count against today: %v", err)
-	}
-}
-
-func TestAdmitRefusesOnBothBudgetAxes(t *testing.T) {
-	for name, tc := range map[string]struct {
-		spentAt time.Time
-		cost    int64
-		axis    plan.Axis
-	}{
-		"daily":   {seoulNoon, 100_000, plan.AxisDailyCost},
-		"monthly": {earlierSameMonth, 2_000_000, plan.AxisMonthlyCost},
-	} {
-		t.Run(name, func(t *testing.T) {
-			svc, store := newTestService(t, seoulNoon)
-			store.events = append(store.events, Event{
-				UserID: "alice", CostMicrousd: tc.cost, CreatedAt: tc.spentAt,
-			})
-
-			err := svc.Admit(context.Background(), start("alice", plan.Free, "next"))
-			var quota *plan.QuotaError
-			if !errors.As(err, &quota) || quota.Axis != tc.axis {
-				t.Fatalf("error = %v, want a %s refusal", err, tc.axis)
-			}
-			if quota.Used != tc.cost {
-				t.Errorf("used = %d, want %d", quota.Used, tc.cost)
-			}
-		})
-	}
-}
-
-func TestMasterIsNeverRefusedButIsStillRecorded(t *testing.T) {
-	svc, store := newTestService(t, seoulNoon)
-	store.events = append(store.events, Event{UserID: "root", CostMicrousd: 900_000_000, CreatedAt: seoulNoon})
-	for i := range 200 {
-		store.admissions = append(store.admissions, Admission{
-			UserID: "root", JobID: string(rune(i)), CreatedAt: seoulNoon,
-		})
-	}
-
-	if err := svc.Admit(context.Background(), start("root", plan.Master, "next")); err != nil {
-		t.Fatalf("master admission = %v, want nil", err)
-	}
-	if got, want := len(store.admissions), 201; got != want {
-		t.Fatalf("admissions = %d, want %d — master skips the checks, not the ledger", got, want)
-	}
-}
-
-func TestAdmitRefusesAModelAboveTheTier(t *testing.T) {
-	svc, store := newTestService(t, seoulNoon)
-	request := start("alice", plan.Free, "job")
-	request.Models = []plan.ModelFloor{
-		{Ref: "openrouter/free", MinPlan: plan.Free},
-		{Ref: "openrouter/anthropic/claude-opus-5", MinPlan: plan.Max},
-	}
-
-	err := svc.Admit(context.Background(), request)
-	var locked *plan.ModelLockedError
-	if !errors.As(err, &locked) {
-		t.Fatalf("error = %v, want a ModelLockedError", err)
-	}
-	if len(locked.Models) != 1 || locked.Models[0] != "openrouter/anthropic/claude-opus-5" {
-		t.Errorf("locked models = %v", locked.Models)
-	}
-	if locked.Required != plan.Max {
-		t.Errorf("required = %q, want max", locked.Required)
-	}
-	if len(store.admissions) != 0 {
-		t.Error("a model refusal must not consume a start")
-	}
-}
-
-func TestReleaseUndoesAnAdmission(t *testing.T) {
-	svc, store := newTestService(t, seoulNoon)
-	if err := svc.Admit(context.Background(), start("alice", plan.Free, "job")); err != nil {
-		t.Fatal(err)
-	}
-	if err := svc.Release(context.Background(), "job"); err != nil {
-		t.Fatal(err)
-	}
-	if len(store.admissions) != 0 {
-		t.Fatalf("admissions = %+v, want the released row gone", store.admissions)
+	if store.lots[0].Granted != plan.SignupBonusCredits || store.lots[0].ExpiresAt != nil {
+		t.Errorf("bonus lot = %+v, want %d credits with no expiry", store.lots[0], plan.SignupBonusCredits)
 	}
 }
 
 func TestRecordCallPricesAndAttributesFromContext(t *testing.T) {
 	ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "z-ai/glm-5.3-flash"}
-	store := &fakeStore{}
+	store := newFakeStore()
 	svc := NewService(store, fakeModels{ref: {
 		Ref: ref, InputUSDPerMillion: "0.075", OutputUSDPerMillion: "0.25",
-	}})
+	}}, maxCompletion)
 	svc.now = func() time.Time { return seoulNoon }
 	ctx := WithWork(context.Background(), Work{
 		UserID: "alice", Kind: "generate", JobID: "job", ObserveModel: "openrouter/observer",
@@ -289,26 +637,30 @@ func TestStageMarksTheObserveCallOnly(t *testing.T) {
 	}
 }
 
-func TestSummaryReportsBothWindowsAndTheirResets(t *testing.T) {
+func TestBalanceReportsItsLotsAndUnlimitedForMaster(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
-	store.admissions = append(store.admissions, Admission{UserID: "alice", CreatedAt: seoulNoon})
-	store.events = append(store.events,
-		Event{UserID: "alice", CostMicrousd: 30, CreatedAt: seoulNoon},
-		// Earlier in the same Seoul month but a different day.
-		Event{UserID: "alice", CostMicrousd: 70, CreatedAt: earlierSameMonth},
-	)
+	store.lots = []Lot{{ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 50, Remaining: 40}}
 
-	summary, err := svc.Summary(context.Background(), "alice")
+	balance, err := svc.BalanceFor(context.Background(), "alice", plan.Free)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if summary.JobsStartedToday != 1 || summary.CostTodayMicrousd != 30 || summary.CostMonthMicrousd != 100 {
-		t.Fatalf("summary = %+v", summary)
+	if balance.Unlimited {
+		t.Error("a free account reported unlimited")
 	}
-	_, dayEnd := plan.DayWindow(seoulNoon)
-	_, monthEnd := plan.MonthWindow(seoulNoon)
-	if !summary.DayResetsAt.Equal(dayEnd) || !summary.MonthResetsAt.Equal(monthEnd) {
-		t.Errorf("resets = %v / %v, want %v / %v",
-			summary.DayResetsAt, summary.MonthResetsAt, dayEnd, monthEnd)
+	// The bonus plus the monthly grant renewal opened on this very read.
+	if balance.Credits != 40+plan.MonthlyCredits(plan.Free) {
+		t.Errorf("credits = %d", balance.Credits)
+	}
+	if len(balance.Lots) != 2 {
+		t.Errorf("lots = %+v, want the bonus and the fresh monthly grant", balance.Lots)
+	}
+
+	master, err := svc.BalanceFor(context.Background(), "root", plan.Master)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !master.Unlimited || len(master.Lots) != 0 {
+		t.Errorf("master balance = %+v, want unlimited with no lots", master)
 	}
 }

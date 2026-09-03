@@ -130,13 +130,10 @@ export function AboutPage() {
                     {t('plans.columns.plan')}
                   </th>
                   <th scope="col" className="py-2 pr-4">
-                    {t('plans.columns.dailyStarts')}
+                    {t('plans.columns.monthlyCredits')}
                   </th>
                   <th scope="col" className="py-2 pr-4">
-                    {t('plans.columns.dailyBudget')}
-                  </th>
-                  <th scope="col" className="py-2 pr-4">
-                    {t('plans.columns.monthlyBudget')}
+                    {t('plans.columns.price')}
                   </th>
                   <th scope="col" className="py-2">
                     {t('plans.columns.models')}
@@ -144,7 +141,7 @@ export function AboutPage() {
                 </tr>
               </thead>
               <tbody className="divide-divider divide-y">
-                {(['free', 'basic', 'max'] as const).map((tier) => (
+                {(['free', 'basic', 'pro', 'max'] as const).map((tier) => (
                   <tr key={tier}>
                     <th
                       scope="row"
@@ -157,13 +154,10 @@ export function AboutPage() {
                       {t(`plans.${tier}.name`)}
                     </th>
                     <td className="text-content-secondary py-3 pr-4 whitespace-nowrap">
-                      {t(`plans.${tier}.dailyStarts`)}
+                      {t(`plans.${tier}.monthlyCredits`)}
                     </td>
                     <td className="text-content-secondary py-3 pr-4 whitespace-nowrap">
-                      {t(`plans.${tier}.dailyBudget`)}
-                    </td>
-                    <td className="text-content-secondary py-3 pr-4 whitespace-nowrap">
-                      {t(`plans.${tier}.monthlyBudget`)}
+                      {t(`plans.${tier}.price`)}
                     </td>
                     <td className="text-content-secondary py-3">{t(`plans.${tier}.models`)}</td>
                   </tr>

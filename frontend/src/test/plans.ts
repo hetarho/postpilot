@@ -1,7 +1,7 @@
 // Shared fake PlanService / AdminService for tests.
 //
 // It models the two server rules the frontend depends on: every displayed number comes from
-// GetMyPlan (so a test can change a limit without touching the client), and the last master
+// GetMyPlan (so a test can change a grant without touching the client), and the last master
 // cannot be demoted (so the admin screen must render the server's refusal rather than predict
 // it).
 import { Code, createRouterTransport } from '@connectrpc/connect'
@@ -18,20 +18,28 @@ import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
-export interface FakePlanUsage {
-  jobsStartedToday?: number
-  costTodayMicrousd?: bigint
-  costMonthMicrousd?: bigint
-  dayResetsAt?: string
-  monthResetsAt?: string
+export interface FakeCreditLot {
+  kind?: string
+  granted?: number
+  remaining?: number
+  expiresAt?: string
+}
+
+export interface FakeCreditBalance {
+  credits?: number
+  unlimited?: boolean
+  lots?: FakeCreditLot[]
+  renewsAt?: string
+  monthlyGrant?: number
 }
 
 export interface FakePlansOptions {
   /** The caller's own tier. Defaults to `master`, matching the session fake. */
   plan?: ProtoPlan
-  /** The three limits, in the server's units. Zero means unlimited. */
-  limits?: { dailyJobStarts?: number; dailyBudgetMicrousd?: bigint; monthlyBudgetMicrousd?: bigint }
-  usage?: FakePlanUsage
+  /** What the account may spend. `unlimited` is the operator tier's shape. */
+  balance?: FakeCreditBalance
+  /** The rungs the comparison screen lists. */
+  offers?: Array<{ plan: ProtoPlan; monthlyCredits: number; priceUsdCents: number }>
   /** Make GetMyPlan fail. */
   planFails?: boolean
   /** The accounts the admin screen lists. */
@@ -52,18 +60,25 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
     if (options.planFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(GetMyPlanResponseSchema, {
       plan: options.plan ?? ProtoPlan.MASTER,
-      limits: {
-        dailyJobStarts: options.limits?.dailyJobStarts ?? 0,
-        dailyBudgetMicrousd: options.limits?.dailyBudgetMicrousd ?? 0n,
-        monthlyBudgetMicrousd: options.limits?.monthlyBudgetMicrousd ?? 0n,
+      balance: {
+        credits: options.balance?.credits ?? 0,
+        // The session fake signs in as master, whose balance is not a number at all.
+        unlimited: options.balance?.unlimited ?? true,
+        lots: (options.balance?.lots ?? []).map((lot) => ({
+          kind: lot.kind ?? 'monthly',
+          granted: lot.granted ?? 0,
+          remaining: lot.remaining ?? 0,
+          expiresAt: lot.expiresAt ?? '',
+        })),
+        renewsAt: options.balance?.renewsAt ?? '',
+        monthlyGrant: options.balance?.monthlyGrant ?? 0,
       },
-      usage: {
-        jobsStartedToday: options.usage?.jobsStartedToday ?? 0,
-        costTodayMicrousd: options.usage?.costTodayMicrousd ?? 0n,
-        costMonthMicrousd: options.usage?.costMonthMicrousd ?? 0n,
-        dayResetsAt: options.usage?.dayResetsAt ?? '',
-        monthResetsAt: options.usage?.monthResetsAt ?? '',
-      },
+      offers: options.offers ?? [
+        { plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0 },
+        { plan: ProtoPlan.BASIC, monthlyCredits: 200, priceUsdCents: 200 },
+        { plan: ProtoPlan.PRO, monthlyCredits: 500, priceUsdCents: 500 },
+        { plan: ProtoPlan.MAX, monthlyCredits: 1000, priceUsdCents: 1000 },
+      ],
     })
   })
 

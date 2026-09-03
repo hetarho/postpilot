@@ -23,6 +23,7 @@ import { type FakeExperimentsOptions, registerExperimentService } from './experi
 import { type FakePublishingOptions, registerPublishingService } from './publishing'
 import { type FakeGuidelinesOptions, registerGuidelineService } from './guidelines'
 import { type FakePurposesOptions, registerPurposeService } from './purposes'
+import { type FakeModelCatalogOptions, registerModelCatalogService } from './model-catalog'
 import { type FakePlansOptions, registerPlanServices } from './plans'
 import { connectAppError } from './app-error'
 
@@ -61,6 +62,10 @@ export interface FakeAuthOptions {
   guidelines?: FakeGuidelinesOptions
   /** The plan ladder: the caller's own tier and usage, and the operator's account list. */
   plans?: FakePlansOptions
+  /** The operator's model catalog. Present by default with nothing curated and nothing
+   *  offered, so a routing test that lands on /admin/models reads an empty catalog rather
+   *  than an "unimplemented" error. */
+  modelCatalog?: FakeModelCatalogOptions
 }
 
 /** A fake backend plus the controls a test needs over it. */
@@ -109,6 +114,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerPurposeService(router, { calls, ...options.purposes })
     registerGuidelineService(router, { calls, ...options.guidelines })
     registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
+    registerModelCatalogService(router, { calls, ...options.modelCatalog })
   })
 
   return {

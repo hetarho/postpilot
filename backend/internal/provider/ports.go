@@ -25,3 +25,24 @@ type Catalog interface {
 	Lookup(ref llm.ModelRef) (llm.ModelInfo, bool)
 	RecommendationSets() []llm.RecommendationSet
 }
+
+// PlannedCall is one model some work would run, and how many times. It is this context's
+// own shape rather than the ledger's: a port is declared by its consumer, and the
+// composition root maps between the two.
+type PlannedCall struct {
+	Ref   llm.ModelRef
+	Count int
+}
+
+// Credits prices work for the calling account.
+//
+// The picker asks the SAME estimator the gate will apply when the work actually starts,
+// so what a user is shown and what they are charged can never be computed two different
+// ways. Affordability is the only access rule this context has left: there is no plan
+// floor to compare against any more.
+type Credits interface {
+	ForCalls(calls []PlannedCall) int
+	// Balance reports what the account may spend, and whether it is exempt from the
+	// balance entirely (the operator tier).
+	Balance(ctx context.Context, userID string) (credits int, unlimited bool, err error)
+}

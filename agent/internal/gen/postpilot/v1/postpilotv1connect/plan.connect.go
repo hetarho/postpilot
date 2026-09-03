@@ -46,8 +46,8 @@ const (
 
 // PlanServiceClient is a client for the postpilot.v1.PlanService service.
 type PlanServiceClient interface {
-	// The caller's own tier, limits and live usage. Every number the client displays comes
-	// from here; the frontend never hardcodes a limit.
+	// The caller's own tier, credit balance and the lots behind it. Every number the client
+	// displays comes from here; the frontend never hardcodes a grant or a price.
 	GetMyPlan(context.Context, *connect.Request[v1.GetMyPlanRequest]) (*connect.Response[v1.GetMyPlanResponse], error)
 }
 
@@ -83,8 +83,8 @@ func (c *planServiceClient) GetMyPlan(ctx context.Context, req *connect.Request[
 
 // PlanServiceHandler is an implementation of the postpilot.v1.PlanService service.
 type PlanServiceHandler interface {
-	// The caller's own tier, limits and live usage. Every number the client displays comes
-	// from here; the frontend never hardcodes a limit.
+	// The caller's own tier, credit balance and the lots behind it. Every number the client
+	// displays comes from here; the frontend never hardcodes a grant or a price.
 	GetMyPlan(context.Context, *connect.Request[v1.GetMyPlanRequest]) (*connect.Response[v1.GetMyPlanResponse], error)
 }
 

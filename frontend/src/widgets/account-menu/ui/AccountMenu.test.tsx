@@ -30,9 +30,9 @@ describe('AccountMenu', () => {
     expect(within(panel).getByRole('button', { name: '로그아웃' })).toBeInTheDocument()
   })
 
-  // Plan 17 A9: the shell shows the tier, and every number behind it comes from GetMyPlan —
-  // nothing about a limit is known to the client until the server says it.
-  it('fetches the tier and the three meters only when the popover opens', async () => {
+  // Change 19 A10: the shell shows the tier, and every number behind it comes from
+  // GetMyPlan — nothing about a grant is known to the client until the server says it.
+  it('fetches the balance and its lots only when the popover opens', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     renderAppAt('/posts', {
@@ -40,17 +40,15 @@ describe('AccountMenu', () => {
       calls,
       plans: {
         plan: ProtoPlan.FREE,
-        limits: {
-          dailyJobStarts: 10,
-          dailyBudgetMicrousd: 100_000n,
-          monthlyBudgetMicrousd: 2_000_000n,
-        },
-        usage: {
-          jobsStartedToday: 4,
-          costTodayMicrousd: 70_000n,
-          costMonthMicrousd: 350_000n,
-          dayResetsAt: '2026-09-01T15:00:00Z',
-          monthResetsAt: '2026-09-30T15:00:00Z',
+        balance: {
+          credits: 62,
+          unlimited: false,
+          monthlyGrant: 50,
+          renewsAt: '2026-09-30T15:00:00Z',
+          lots: [
+            { kind: 'monthly', granted: 50, remaining: 12, expiresAt: '2026-09-30T15:00:00Z' },
+            { kind: 'bonus', granted: 50, remaining: 50 },
+          ],
         },
       },
     })
@@ -63,34 +61,31 @@ describe('AccountMenu', () => {
     expect(calls).toContain('GetMyPlan')
     expect(within(panel).getByText('Free')).toBeInTheDocument()
 
-    // Micro-USD is the wire unit; the reader sees money.
-    expect(await within(panel).findByText('US$0.07 / US$0.10')).toBeInTheDocument()
-    expect(within(panel).getByText('4 / 10')).toBeInTheDocument()
-    expect(within(panel).getByText('US$0.35 / US$2.00')).toBeInTheDocument()
+    expect(await within(panel).findByText('62 크레딧')).toBeInTheDocument()
+    // The lots behind the total: one lapses at the boundary, one does not, and a single
+    // number cannot say that.
+    expect(within(panel).getByText('12 / 50 크레딧')).toBeInTheDocument()
+    expect(within(panel).getByText('50 / 50 크레딧')).toBeInTheDocument()
     expect(within(panel).getByText('플랜은 운영자가 지정해요.')).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()
 
-    // The meter is never the only signal: each one carries its own figures as text.
-    const meters = within(panel).getAllByRole('meter')
-    expect(meters).toHaveLength(3)
-    expect(meters[0]).toHaveAttribute('aria-valuetext', '4 / 10')
+    // The meter is never the only signal: it carries its own figure as text.
+    const meter = within(panel).getByRole('meter')
+    expect(meter).toHaveAttribute('aria-valuetext', '62 크레딧')
   })
 
-  // Plan 17 A9: an unlimited axis is stated, not drawn as an empty bar that reads as "none left".
+  // An unlimited account is stated, not drawn as an empty bar that reads as "none left".
   it('states unlimited for the operator tier and links the admin screen', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts', {
       user: { ...USER, plan: ProtoPlan.MASTER },
-      plans: {
-        plan: ProtoPlan.MASTER,
-        usage: { jobsStartedToday: 12, costTodayMicrousd: 4_120_000n },
-      },
+      plans: { plan: ProtoPlan.MASTER, balance: { unlimited: true } },
     })
 
     const panel = await openAccountPopover(user)
-    expect(await within(panel).findByText('12 · 제한 없음')).toBeInTheDocument()
-    expect(within(panel).getByText('US$4.12 · 제한 없음')).toBeInTheDocument()
+    expect(await within(panel).findByText('제한 없음')).toBeInTheDocument()
     expect(within(panel).queryAllByRole('meter')).toHaveLength(0)
-    expect(within(panel).getByRole('link', { name: '계정 관리' })).toHaveClass('min-h-11')
+    expect(within(panel).getByRole('link', { name: '운영 관리' })).toHaveClass('min-h-11')
   })
 
   it('does not offer the admin screen to a tier that cannot use it', async () => {
@@ -101,11 +96,11 @@ describe('AccountMenu', () => {
     })
 
     const panel = await openAccountPopover(user)
-    await within(panel).findByText('오늘 사용량')
-    expect(within(panel).queryByRole('link', { name: '계정 관리' })).not.toBeInTheDocument()
+    await within(panel).findByText('남은 크레딧')
+    expect(within(panel).queryByRole('link', { name: '운영 관리' })).not.toBeInTheDocument()
   })
 
-  it('says so when the usage cannot be read', async () => {
+  it('says so when the balance cannot be read', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts', {
       user: { ...USER, plan: ProtoPlan.FREE },
@@ -113,6 +108,6 @@ describe('AccountMenu', () => {
     })
 
     await openAccountPopover(user)
-    expect(await screen.findByText('사용량을 불러오지 못했어요.')).toBeInTheDocument()
+    expect(await screen.findByText('크레딧을 불러오지 못했어요.')).toBeInTheDocument()
   })
 })

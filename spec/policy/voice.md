@@ -55,7 +55,7 @@ language, bilingual analysis, portable projection, and language-safe learning ar
   that description, and answers with the job id; without one it behaves exactly as before and answers with an empty
   job id, requiring no model. The description length and the analyze model are both checked BEFORE the insert, so a
   refusal leaves no voice behind. The reverse is deliberate and documented: creation and seeding are separable
-  outcomes, so a seed the queue refuses to start (a plan quota, say) still leaves a real, usable, listed voice.
+  outcomes, so a seed the queue refuses to start (too few credits, say) still leaves a real, usable, listed voice.
 - `RenameVoice` changes the display name of an active or deleted owned voice with the same validation; it rewrites
   no post row and no immutable snapshot. `SetDefaultVoice` accepts only an active owned voice and atomically clears the
   previous default; it answers with the whole directory.

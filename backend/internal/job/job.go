@@ -71,21 +71,45 @@ type NewJob struct {
 	TargetLanguage string
 	Payload        []byte
 	// ExtraModels are refs the job will run that no stage column records — the two
-	// candidates of an A/B comparison. They exist for the admission gate and are not
-	// persisted: the experiment aggregate is where they are durable.
+	// candidates of an A/B comparison. They exist for the gate and are not persisted: the
+	// experiment aggregate is where they are durable.
 	ExtraModels []string
+	// CallCounts scales a ref that runs more than once. A ref absent from the map runs
+	// once, which is what every kind but photo observation and profile validation does.
+	//
+	// It exists because the credit hold prices every call the work will make: a job that
+	// says one call and makes nine starts on credits the account turns out not to have,
+	// and never pays the difference back.
+	CallCounts map[string]int
 }
 
-// models are the refs this job will actually run, for the admission gate. Both stage
-// choices are explicit inputs ([I3]); an empty one means the kind does not use that stage.
-func (n NewJob) models() []string {
-	refs := make([]string, 0, 2+len(n.ExtraModels))
+// plannedCalls are the refs this job will actually run, with how many times each, for the
+// credit hold. Both stage choices are explicit inputs ([I3]); an empty one means the kind
+// does not use that stage.
+func (n NewJob) plannedCalls() []PlannedCall {
+	calls := make([]PlannedCall, 0, 2+len(n.ExtraModels))
+	seen := make(map[string]int, 2+len(n.ExtraModels))
 	for _, ref := range append([]string{n.ObserveModel, n.WriteModel}, n.ExtraModels...) {
-		if ref != "" {
-			refs = append(refs, ref)
+		if ref == "" {
+			continue
 		}
+		count := 1
+		if stated, ok := n.CallCounts[ref]; ok && stated > 1 {
+			count = stated
+		}
+		// One ref chosen for two stages is one entry, not two: a stated count is how many
+		// times that MODEL runs across the whole job, so applying it per slot would price
+		// the same calls twice. An unstated ref still adds a call per slot it fills.
+		if index, ok := seen[ref]; ok {
+			if stated, given := n.CallCounts[ref]; !given || stated <= 1 {
+				calls[index].Count++
+			}
+			continue
+		}
+		seen[ref] = len(calls)
+		calls = append(calls, PlannedCall{Ref: ref, Count: count})
 	}
-	return refs
+	return calls
 }
 
 // Job is the worker-facing record, including the kind-specific payload.

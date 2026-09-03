@@ -54,6 +54,13 @@ export const EDITOR_HANDOFF_TTL_MS = 5_000
  *  boundary — the server enforces its own cap on what actually lands. */
 export const UPLOAD_MAX_FILE_MB = 25
 
+/** The most photos one post may hold. It exists for the credit hold, not for storage:
+ *  observation batches photos, so the model calls a generate job makes — and therefore the
+ *  credits it reserves before starting — grow with the photo count. The server enforces the
+ *  same ceiling; this copy is what lets the selection gate say so before a file is
+ *  converted. */
+export const UPLOAD_MAX_PHOTOS_PER_POST = 30
+
 /** Compared case-insensitively against the extension of the selected file. Anything else
  *  is listed as skipped, never uploaded. */
 export const UPLOAD_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'] as const
@@ -69,11 +76,44 @@ export const IMAGE_JPEG_QUALITY = 0.85
  *  swapping; one at a time leaves the browser's own parallel JPEG decoder idle. */
 export const UPLOAD_CONVERT_CONCURRENCY = 2
 
-/** How long the model catalog is trusted before it is re-asked. The registry only
- *  changes when the API restarts with an edited providers.yaml, so refetching it on
- *  every mount buys nothing; a few minutes means a new model shows up without a reload
- *  while the dropdowns stay instant. */
+/** How long the model catalog is trusted before it is re-asked. The usable-model list only
+ *  changes when an operator curates it, so refetching it on every mount buys nothing; a few
+ *  minutes means a newly enabled model shows up without a reload while the dropdowns stay
+ *  instant. */
 export const MODEL_CATALOG_STALE_MS = 5 * 60_000
+
+/** The provider slugs the operator's catalog screen lifts to the top, in this order; every
+ *  other vendor follows alphabetically.
+ *
+ *  The provider's catalog is ~420 models across ~40 vendors, so an alphabetical list buries
+ *  the handful anyone actually reaches for behind two screens of scrolling. The order is
+ *  editorial — the vendors whose models are worth exposing on quality or price — and it is a
+ *  display preference only: nothing here grants access, and the search and filters reach
+ *  every vendor either way. */
+export const FEATURED_MODEL_PROVIDERS: readonly string[] = [
+  'openai',
+  'anthropic',
+  'google',
+  'deepseek',
+  'z-ai',
+  'minimax',
+  'meta-llama',
+  'meta',
+  'x-ai',
+  'qwen',
+  'moonshotai',
+  'mistralai',
+]
+
+/** The height the operator's catalog list assumes for a row it has not measured yet. Only the
+ *  scrollbar depends on it: every mounted row reports its real height, which differs a lot
+ *  between a plain candidate and an enabled model carrying two controls. */
+export const CATALOG_ROW_ESTIMATE_PX = 132
+
+/** How many catalog rows are mounted beyond the viewport. Enough that a fast flick does not
+ *  reach blank space before the next row renders, few enough that the mounted subtree stays
+ *  small — which is the whole point of virtualizing a several-hundred-row list. */
+export const CATALOG_ROW_OVERSCAN = 6
 
 /** A leaderboard entry remains provisional until this many pairwise verdicts. */
 export const LEADERBOARD_MIN_MATCHES = 3

@@ -14,8 +14,15 @@ import (
 // nothing when it refuses, and Release undoes an admission whose job row then failed to
 // insert.
 type Admitter interface {
-	Admit(ctx context.Context, start Start) error
+	Hold(ctx context.Context, start Start) error
 	Release(ctx context.Context, jobID string)
+	// Settle reconciles a finished job's hold against what it actually spent. It takes no
+	// error: a hold that cannot be settled must not turn a finished job into a failed one,
+	// so the adapter logs and the boot sweep retries.
+	Settle(ctx context.Context, jobID string)
+	// OpenHolds lists jobs whose hold has not been reconciled yet. The queue matches them
+	// against its own rows, so the ledger never has to read the job table.
+	OpenHolds(ctx context.Context) ([]string, error)
 }
 
 // Start is what the gate needs to know about a job about to be created.
@@ -23,7 +30,15 @@ type Start struct {
 	UserID string
 	Kind   string
 	JobID  string
-	Models []string
+	Calls  []PlannedCall
+}
+
+// PlannedCall is one model the job will run, and how many times. The count is the queue's
+// to state because only the enqueuing service knows it: photo observation batches four
+// photos per call, and a validation repeats its stages per sampled post.
+type PlannedCall struct {
+	Ref   string
+	Count int
 }
 
 // Store is the persistence behavior the queue needs. SQL rows stop in store/.

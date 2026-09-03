@@ -7,24 +7,35 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
-const countAdmissionsInWindow = `-- name: CountAdmissionsInWindow :one
-SELECT COUNT(*) FROM usage_admissions
-WHERE user_id = ? AND created_at >= ? AND created_at < ?
+const activeMonthlyLot = `-- name: ActiveMonthlyLot :one
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+FROM credit_lots
+WHERE user_id = ? AND kind = 'monthly' AND expires_at IS NOT NULL AND expires_at > ?
+ORDER BY expires_at DESC
+LIMIT 1
 `
 
-type CountAdmissionsInWindowParams struct {
-	UserID      string
-	CreatedAt   string
-	CreatedAt_2 string
+type ActiveMonthlyLotParams struct {
+	UserID    string
+	ExpiresAt sql.NullString
 }
 
-func (q *Queries) CountAdmissionsInWindow(ctx context.Context, arg CountAdmissionsInWindowParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAdmissionsInWindow, arg.UserID, arg.CreatedAt, arg.CreatedAt_2)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+func (q *Queries) ActiveMonthlyLot(ctx context.Context, arg ActiveMonthlyLotParams) (CreditLot, error) {
+	row := q.db.QueryRowContext(ctx, activeMonthlyLot, arg.UserID, arg.ExpiresAt)
+	var i CreditLot
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Kind,
+		&i.Granted,
+		&i.Remaining,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const deleteAdmissionForJob = `-- name: DeleteAdmissionForJob :exec
@@ -36,28 +47,57 @@ func (q *Queries) DeleteAdmissionForJob(ctx context.Context, jobID string) error
 	return err
 }
 
-const insertAdmission = `-- name: InsertAdmission :exec
+const holdDebitsForJob = `-- name: HoldDebitsForJob :many
+SELECT lot_id, credits FROM credit_hold_lots WHERE job_id = ? ORDER BY rowid
+`
 
-INSERT INTO usage_admissions (user_id, kind, job_id, created_at) VALUES (?, ?, ?, ?)
+type HoldDebitsForJobRow struct {
+	LotID   string
+	Credits int64
+}
+
+func (q *Queries) HoldDebitsForJob(ctx context.Context, jobID string) ([]HoldDebitsForJobRow, error) {
+	rows, err := q.db.QueryContext(ctx, holdDebitsForJob, jobID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []HoldDebitsForJobRow
+	for rows.Next() {
+		var i HoldDebitsForJobRow
+		if err := rows.Scan(&i.LotID, &i.Credits); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const insertAdmission = `-- name: InsertAdmission :exec
+INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at)
+VALUES (?, ?, ?, ?, ?)
 `
 
 type InsertAdmissionParams struct {
-	UserID    string
-	Kind      string
-	JobID     string
-	CreatedAt string
+	UserID      string
+	Kind        string
+	JobID       string
+	HoldCredits int64
+	CreatedAt   string
 }
 
-// Queries for the usage context. sqlc compiles these into internal/usage/store/sqlc;
-// internal/usage/store maps the generated rows to domain types.
-//
-// Every window is a half-open [start, end) range so a boundary instant belongs to
-// exactly one day and one month, whichever way the clock is read.
 func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams) error {
 	_, err := q.db.ExecContext(ctx, insertAdmission,
 		arg.UserID,
 		arg.Kind,
 		arg.JobID,
+		arg.HoldCredits,
 		arg.CreatedAt,
 	)
 	return err
@@ -99,22 +139,247 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 	return err
 }
 
-const sumCostInWindow = `-- name: SumCostInWindow :one
-SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) FROM usage_events
-WHERE user_id = ? AND created_at >= ? AND created_at < ?
+const insertHoldDebit = `-- name: InsertHoldDebit :exec
+INSERT INTO credit_hold_lots (job_id, lot_id, credits) VALUES (?, ?, ?)
 `
 
-type SumCostInWindowParams struct {
-	UserID      string
-	CreatedAt   string
-	CreatedAt_2 string
+type InsertHoldDebitParams struct {
+	JobID   string
+	LotID   string
+	Credits int64
 }
 
-// COALESCE keeps the empty window a 0 rather than a NULL the row mapper would have to
-// special-case; the CAST is what makes sqlc type the result int64 instead of interface{}.
-func (q *Queries) SumCostInWindow(ctx context.Context, arg SumCostInWindowParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, sumCostInWindow, arg.UserID, arg.CreatedAt, arg.CreatedAt_2)
+func (q *Queries) InsertHoldDebit(ctx context.Context, arg InsertHoldDebitParams) error {
+	_, err := q.db.ExecContext(ctx, insertHoldDebit, arg.JobID, arg.LotID, arg.Credits)
+	return err
+}
+
+const insertLot = `-- name: InsertLot :exec
+INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+`
+
+type InsertLotParams struct {
+	ID        string
+	UserID    string
+	Kind      string
+	Granted   int64
+	Remaining int64
+	ExpiresAt sql.NullString
+	CreatedAt string
+}
+
+func (q *Queries) InsertLot(ctx context.Context, arg InsertLotParams) error {
+	_, err := q.db.ExecContext(ctx, insertLot,
+		arg.ID,
+		arg.UserID,
+		arg.Kind,
+		arg.Granted,
+		arg.Remaining,
+		arg.ExpiresAt,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const insertLotIfAbsent = `-- name: InsertLotIfAbsent :exec
+INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO NOTHING
+`
+
+type InsertLotIfAbsentParams struct {
+	ID        string
+	UserID    string
+	Kind      string
+	Granted   int64
+	Remaining int64
+	ExpiresAt sql.NullString
+	CreatedAt string
+}
+
+// For a grant whose id is derived from what it is FOR rather than randomly: the signup
+// bonus. `adduser` is rerunnable to repair an account, and a repair must not mint a
+// second bonus.
+func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentParams) error {
+	_, err := q.db.ExecContext(ctx, insertLotIfAbsent,
+		arg.ID,
+		arg.UserID,
+		arg.Kind,
+		arg.Granted,
+		arg.Remaining,
+		arg.ExpiresAt,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const lotsInConsumptionOrder = `-- name: LotsInConsumptionOrder :many
+
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+FROM credit_lots
+WHERE user_id = ?
+  AND remaining > 0
+  AND (expires_at IS NULL OR expires_at > ?)
+ORDER BY expires_at IS NULL, expires_at, created_at, id
+`
+
+type LotsInConsumptionOrderParams struct {
+	UserID    string
+	ExpiresAt sql.NullString
+}
+
+// Queries for the usage context. sqlc compiles these into internal/usage/store/sqlc;
+// internal/usage/store maps the generated rows to domain types.
+// The one ordering the balance is ever read in: soonest expiry first, non-expiring last.
+// `expires_at IS NULL` sorts 0 before 1, which is what puts a bonus behind the monthly
+// grant that would otherwise lapse unspent.
+func (q *Queries) LotsInConsumptionOrder(ctx context.Context, arg LotsInConsumptionOrderParams) ([]CreditLot, error) {
+	rows, err := q.db.QueryContext(ctx, lotsInConsumptionOrder, arg.UserID, arg.ExpiresAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CreditLot
+	for rows.Next() {
+		var i CreditLot
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Kind,
+			&i.Granted,
+			&i.Remaining,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markAdmissionSettled = `-- name: MarkAdmissionSettled :exec
+UPDATE usage_admissions SET settled_credits = ?, settled_at = ?
+WHERE job_id = ? AND settled_at IS NULL
+`
+
+type MarkAdmissionSettledParams struct {
+	SettledCredits sql.NullInt64
+	SettledAt      sql.NullString
+	JobID          string
+}
+
+func (q *Queries) MarkAdmissionSettled(ctx context.Context, arg MarkAdmissionSettledParams) error {
+	_, err := q.db.ExecContext(ctx, markAdmissionSettled, arg.SettledCredits, arg.SettledAt, arg.JobID)
+	return err
+}
+
+const openAdmissionForJob = `-- name: OpenAdmissionForJob :one
+SELECT user_id, kind, job_id, hold_credits, created_at
+FROM usage_admissions
+WHERE job_id = ? AND settled_at IS NULL
+`
+
+type OpenAdmissionForJobRow struct {
+	UserID      string
+	Kind        string
+	JobID       string
+	HoldCredits int64
+	CreatedAt   string
+}
+
+// Only an unsettled admission is returned, which is what makes settlement idempotent: a
+// terminal transition that runs twice finds nothing the second time.
+func (q *Queries) OpenAdmissionForJob(ctx context.Context, jobID string) (OpenAdmissionForJobRow, error) {
+	row := q.db.QueryRowContext(ctx, openAdmissionForJob, jobID)
+	var i OpenAdmissionForJobRow
+	err := row.Scan(
+		&i.UserID,
+		&i.Kind,
+		&i.JobID,
+		&i.HoldCredits,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const refundToLot = `-- name: RefundToLot :exec
+UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted
+`
+
+type RefundToLotParams struct {
+	Remaining   int64
+	ID          string
+	Remaining_2 int64
+}
+
+// Bounded by the grant for the same reason: a double settle cannot inflate a lot past
+// what it was ever given.
+func (q *Queries) RefundToLot(ctx context.Context, arg RefundToLotParams) error {
+	_, err := q.db.ExecContext(ctx, refundToLot, arg.Remaining, arg.ID, arg.Remaining_2)
+	return err
+}
+
+const spendFromLot = `-- name: SpendFromLot :exec
+UPDATE credit_lots SET remaining = remaining - ? WHERE id = ? AND remaining >= ?
+`
+
+type SpendFromLotParams struct {
+	Remaining   int64
+	ID          string
+	Remaining_2 int64
+}
+
+// The `remaining >= ?` guard is in the statement rather than in a read before it: two
+// writers that each read the same lot must not both pass their own arithmetic.
+func (q *Queries) SpendFromLot(ctx context.Context, arg SpendFromLotParams) error {
+	_, err := q.db.ExecContext(ctx, spendFromLot, arg.Remaining, arg.ID, arg.Remaining_2)
+	return err
+}
+
+const sumCostForJob = `-- name: SumCostForJob :one
+SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) FROM usage_events WHERE job_id = ?
+`
+
+// COALESCE keeps a job with no recorded call a 0 rather than a NULL the row mapper would
+// have to special-case; the CAST is what makes sqlc type the result int64.
+func (q *Queries) SumCostForJob(ctx context.Context, jobID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, sumCostForJob, jobID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const unsettledHoldJobs = `-- name: UnsettledHoldJobs :many
+SELECT job_id FROM usage_admissions WHERE settled_at IS NULL ORDER BY created_at
+`
+
+func (q *Queries) UnsettledHoldJobs(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, unsettledHoldJobs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var job_id string
+		if err := rows.Scan(&job_id); err != nil {
+			return nil, err
+		}
+		items = append(items, job_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

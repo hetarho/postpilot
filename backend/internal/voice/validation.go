@@ -384,9 +384,17 @@ func (s *Service) StartValidation(ctx context.Context, userID, voiceID string, a
 	if err = s.personalization.InsertProfileValidation(ctx, validation); err != nil {
 		return "", "", err
 	}
+	// Each sampled post runs the write model once and the analyze model twice (a neutral
+	// summary, then a judgement), so the hold must price the whole fan-out rather than one
+	// call of each.
+	items := len(validation.Items)
 	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{
 		Kind: ValidateProfileJobKind, UserID: userID, VoiceID: voiceID, Model: write.String(),
 		ExtraModels: []string{selected.String()}, Payload: id,
+		CallCounts: map[string]int{
+			write.String():    items,
+			selected.String(): items * 2,
+		},
 	})
 	if err != nil {
 		validation.Status = "failed"

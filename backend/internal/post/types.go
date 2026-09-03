@@ -36,6 +36,8 @@ var (
 	ErrForbidden = errors.New("forbidden")
 	// ErrDuplicateFilename is a filename already attached to the post.
 	ErrDuplicateFilename = errors.New("filename already used in this post")
+	// ErrTooManyPhotos is an upload that would take the post past its photo ceiling.
+	ErrTooManyPhotos = errors.New("post already holds the maximum number of photos")
 	// ErrDuplicateSlug is a slug another post already holds. Only the store raises it,
 	// and only createPost sees it — as the signal to mint the next candidate.
 	ErrDuplicateSlug = errors.New("slug already used")

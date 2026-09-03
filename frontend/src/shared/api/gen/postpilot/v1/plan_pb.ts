@@ -10,76 +10,127 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/plan.proto.
  */
 export const file_postpilot_v1_plan: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb3N0cGlsb3QvdjEvcGxhbi5wcm90bxIMcG9zdHBpbG90LnYxImYKClBsYW5MaW1pdHMSGAoQZGFpbHlfam9iX3N0YXJ0cxgBIAEoBRIdChVkYWlseV9idWRnZXRfbWljcm91c2QYAiABKAMSHwoXbW9udGhseV9idWRnZXRfbWljcm91c2QYAyABKAMikQEKCVBsYW5Vc2FnZRIaChJqb2JzX3N0YXJ0ZWRfdG9kYXkYASABKAUSGwoTY29zdF90b2RheV9taWNyb3VzZBgCIAEoAxIbChNjb3N0X21vbnRoX21pY3JvdXNkGAMgASgDEhUKDWRheV9yZXNldHNfYXQYBCABKAkSFwoPbW9udGhfcmVzZXRzX2F0GAUgASgJIhIKEEdldE15UGxhblJlcXVlc3QihwEKEUdldE15UGxhblJlc3BvbnNlEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIoCgZsaW1pdHMYAiABKAsyGC5wb3N0cGlsb3QudjEuUGxhbkxpbWl0cxImCgV1c2FnZRgDIAEoCzIXLnBvc3RwaWxvdC52MS5QbGFuVXNhZ2UiEgoQTGlzdFVzZXJzUmVxdWVzdCI6ChFMaXN0VXNlcnNSZXNwb25zZRIlCgV1c2VycxgBIAMoCzIWLnBvc3RwaWxvdC52MS5QbGFuVXNlciJMCghQbGFuVXNlchIKCgJpZBgBIAEoCRIgCgRwbGFuGAIgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SEgoKY3JlYXRlZF9hdBgDIAEoCSJHChJTZXRVc2VyUGxhblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIgCgRwbGFuGAIgASgOMhIucG9zdHBpbG90LnYxLlBsYW4iOwoTU2V0VXNlclBsYW5SZXNwb25zZRIkCgR1c2VyGAEgASgLMhYucG9zdHBpbG90LnYxLlBsYW5Vc2VyKloKBFBsYW4SFAoQUExBTl9VTlNQRUNJRklFRBAAEg0KCVBMQU5fRlJFRRABEg4KClBMQU5fQkFTSUMQAhIMCghQTEFOX01BWBADEg8KC1BMQU5fTUFTVEVSEAQyXQoLUGxhblNlcnZpY2USTgoJR2V0TXlQbGFuEh4ucG9zdHBpbG90LnYxLkdldE15UGxhblJlcXVlc3QaHy5wb3N0cGlsb3QudjEuR2V0TXlQbGFuUmVzcG9uc2UiADK0AQoMQWRtaW5TZXJ2aWNlEk4KCUxpc3RVc2VycxIeLnBvc3RwaWxvdC52MS5MaXN0VXNlcnNSZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLkxpc3RVc2Vyc1Jlc3BvbnNlIgASVAoLU2V0VXNlclBsYW4SIC5wb3N0cGlsb3QudjEuU2V0VXNlclBsYW5SZXF1ZXN0GiEucG9zdHBpbG90LnYxLlNldFVzZXJQbGFuUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
+  fileDesc("Chdwb3N0cGlsb3QvdjEvcGxhbi5wcm90bxIMcG9zdHBpbG90LnYxIlEKCUNyZWRpdExvdBIMCgRraW5kGAEgASgJEg8KB2dyYW50ZWQYAiABKAUSEQoJcmVtYWluaW5nGAMgASgFEhIKCmV4cGlyZXNfYXQYBCABKAkihAEKDUNyZWRpdEJhbGFuY2USDwoHY3JlZGl0cxgBIAEoBRIRCgl1bmxpbWl0ZWQYAiABKAgSJQoEbG90cxgDIAMoCzIXLnBvc3RwaWxvdC52MS5DcmVkaXRMb3QSEQoJcmVuZXdzX2F0GAQgASgJEhUKDW1vbnRobHlfZ3JhbnQYBSABKAUiXwoJUGxhbk9mZmVyEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIXCg9tb250aGx5X2NyZWRpdHMYAiABKAUSFwoPcHJpY2VfdXNkX2NlbnRzGAMgASgFIhIKEEdldE15UGxhblJlcXVlc3QijAEKEUdldE15UGxhblJlc3BvbnNlEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIsCgdiYWxhbmNlGAIgASgLMhsucG9zdHBpbG90LnYxLkNyZWRpdEJhbGFuY2USJwoGb2ZmZXJzGAMgAygLMhcucG9zdHBpbG90LnYxLlBsYW5PZmZlciISChBMaXN0VXNlcnNSZXF1ZXN0IjoKEUxpc3RVc2Vyc1Jlc3BvbnNlEiUKBXVzZXJzGAEgAygLMhYucG9zdHBpbG90LnYxLlBsYW5Vc2VyIkwKCFBsYW5Vc2VyEgoKAmlkGAEgASgJEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhISCgpjcmVhdGVkX2F0GAMgASgJIkcKElNldFVzZXJQbGFuUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbiI7ChNTZXRVc2VyUGxhblJlc3BvbnNlEiQKBHVzZXIYASABKAsyFi5wb3N0cGlsb3QudjEuUGxhblVzZXIqaAoEUGxhbhIUChBQTEFOX1VOU1BFQ0lGSUVEEAASDQoJUExBTl9GUkVFEAESDgoKUExBTl9CQVNJQxACEgwKCFBMQU5fTUFYEAMSDwoLUExBTl9NQVNURVIQBBIMCghQTEFOX1BSTxAFMl0KC1BsYW5TZXJ2aWNlEk4KCUdldE15UGxhbhIeLnBvc3RwaWxvdC52MS5HZXRNeVBsYW5SZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLkdldE15UGxhblJlc3BvbnNlIgAytAEKDEFkbWluU2VydmljZRJOCglMaXN0VXNlcnMSHi5wb3N0cGlsb3QudjEuTGlzdFVzZXJzUmVxdWVzdBofLnBvc3RwaWxvdC52MS5MaXN0VXNlcnNSZXNwb25zZSIAElQKC1NldFVzZXJQbGFuEiAucG9zdHBpbG90LnYxLlNldFVzZXJQbGFuUmVxdWVzdBohLnBvc3RwaWxvdC52MS5TZXRVc2VyUGxhblJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
 
 /**
- * Zero on any field means unlimited (the master tier), not "none".
+ * One grant of credits. Consumption walks lots by expiry ascending with the non-expiring
+ * ones last, which is why a client can render the order it will be spent in without
+ * knowing the rule.
  *
- * @generated from message postpilot.v1.PlanLimits
+ * @generated from message postpilot.v1.CreditLot
  */
-export type PlanLimits = Message<"postpilot.v1.PlanLimits"> & {
+export type CreditLot = Message<"postpilot.v1.CreditLot"> & {
   /**
-   * @generated from field: int32 daily_job_starts = 1;
+   * "monthly" or "bonus". A display distinction: the balance itself does not care.
+   *
+   * @generated from field: string kind = 1;
    */
-  dailyJobStarts: number;
+  kind: string;
 
   /**
-   * @generated from field: int64 daily_budget_microusd = 2;
+   * @generated from field: int32 granted = 2;
    */
-  dailyBudgetMicrousd: bigint;
+  granted: number;
 
   /**
-   * @generated from field: int64 monthly_budget_microusd = 3;
+   * @generated from field: int32 remaining = 3;
    */
-  monthlyBudgetMicrousd: bigint;
+  remaining: number;
+
+  /**
+   * RFC3339, or empty for a grant that does not expire.
+   *
+   * @generated from field: string expires_at = 4;
+   */
+  expiresAt: string;
 };
 
 /**
- * Describes the message postpilot.v1.PlanLimits.
- * Use `create(PlanLimitsSchema)` to create a new message.
+ * Describes the message postpilot.v1.CreditLot.
+ * Use `create(CreditLotSchema)` to create a new message.
  */
-export const PlanLimitsSchema: GenMessage<PlanLimits> = /*@__PURE__*/
+export const CreditLotSchema: GenMessage<CreditLot> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_plan, 0);
 
 /**
- * Usage is measured over calendar windows in the product's home timezone, so a refusal
- * can always name the instant it lifts. Both reset fields are RFC3339.
+ * The account's spendable position. Credits are integers — the server never sends a
+ * currency, because the credit IS the unit the product prices in.
  *
- * @generated from message postpilot.v1.PlanUsage
+ * @generated from message postpilot.v1.CreditBalance
  */
-export type PlanUsage = Message<"postpilot.v1.PlanUsage"> & {
+export type CreditBalance = Message<"postpilot.v1.CreditBalance"> & {
   /**
-   * @generated from field: int32 jobs_started_today = 1;
+   * @generated from field: int32 credits = 1;
    */
-  jobsStartedToday: number;
+  credits: number;
 
   /**
-   * @generated from field: int64 cost_today_microusd = 2;
+   * True for the operator tier, which is never refused for balance. `credits` is then
+   * meaningless and the client shows no meter.
+   *
+   * @generated from field: bool unlimited = 2;
    */
-  costTodayMicrousd: bigint;
+  unlimited: boolean;
 
   /**
-   * @generated from field: int64 cost_month_microusd = 3;
+   * @generated from field: repeated postpilot.v1.CreditLot lots = 3;
    */
-  costMonthMicrousd: bigint;
+  lots: CreditLot[];
 
   /**
-   * @generated from field: string day_resets_at = 4;
+   * RFC3339 instant the next monthly grant opens — the date every refusal names.
+   *
+   * @generated from field: string renews_at = 4;
    */
-  dayResetsAt: string;
+  renewsAt: string;
 
   /**
-   * @generated from field: string month_resets_at = 5;
+   * What this tier is granted each month, so the client can show a meter against it.
+   *
+   * @generated from field: int32 monthly_grant = 5;
    */
-  monthResetsAt: string;
+  monthlyGrant: number;
 };
 
 /**
- * Describes the message postpilot.v1.PlanUsage.
- * Use `create(PlanUsageSchema)` to create a new message.
+ * Describes the message postpilot.v1.CreditBalance.
+ * Use `create(CreditBalanceSchema)` to create a new message.
  */
-export const PlanUsageSchema: GenMessage<PlanUsage> = /*@__PURE__*/
+export const CreditBalanceSchema: GenMessage<CreditBalance> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_plan, 1);
+
+/**
+ * One rung as a plan comparison screen lists it.
+ *
+ * @generated from message postpilot.v1.PlanOffer
+ */
+export type PlanOffer = Message<"postpilot.v1.PlanOffer"> & {
+  /**
+   * @generated from field: postpilot.v1.Plan plan = 1;
+   */
+  plan: Plan;
+
+  /**
+   * @generated from field: int32 monthly_credits = 2;
+   */
+  monthlyCredits: number;
+
+  /**
+   * The intended monthly price, in whole US cents; zero for the free tier. No money moves
+   * (PRD §9) — this is the figure the grant was sized against, published so the client
+   * never hardcodes a price that could drift from the grant beside it.
+   *
+   * @generated from field: int32 price_usd_cents = 3;
+   */
+  priceUsdCents: number;
+};
+
+/**
+ * Describes the message postpilot.v1.PlanOffer.
+ * Use `create(PlanOfferSchema)` to create a new message.
+ */
+export const PlanOfferSchema: GenMessage<PlanOffer> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_plan, 2);
 
 /**
  * @generated from message postpilot.v1.GetMyPlanRequest
@@ -92,7 +143,7 @@ export type GetMyPlanRequest = Message<"postpilot.v1.GetMyPlanRequest"> & {
  * Use `create(GetMyPlanRequestSchema)` to create a new message.
  */
 export const GetMyPlanRequestSchema: GenMessage<GetMyPlanRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 2);
+  messageDesc(file_postpilot_v1_plan, 3);
 
 /**
  * @generated from message postpilot.v1.GetMyPlanResponse
@@ -104,14 +155,17 @@ export type GetMyPlanResponse = Message<"postpilot.v1.GetMyPlanResponse"> & {
   plan: Plan;
 
   /**
-   * @generated from field: postpilot.v1.PlanLimits limits = 2;
+   * @generated from field: postpilot.v1.CreditBalance balance = 2;
    */
-  limits?: PlanLimits | undefined;
+  balance?: CreditBalance | undefined;
 
   /**
-   * @generated from field: postpilot.v1.PlanUsage usage = 3;
+   * Every rung on offer, so the comparison screen renders no number of its own. `master`
+   * is absent: it is the operator tier, not something anyone is offered.
+   *
+   * @generated from field: repeated postpilot.v1.PlanOffer offers = 3;
    */
-  usage?: PlanUsage | undefined;
+  offers: PlanOffer[];
 };
 
 /**
@@ -119,7 +173,7 @@ export type GetMyPlanResponse = Message<"postpilot.v1.GetMyPlanResponse"> & {
  * Use `create(GetMyPlanResponseSchema)` to create a new message.
  */
 export const GetMyPlanResponseSchema: GenMessage<GetMyPlanResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 3);
+  messageDesc(file_postpilot_v1_plan, 4);
 
 /**
  * @generated from message postpilot.v1.ListUsersRequest
@@ -132,7 +186,7 @@ export type ListUsersRequest = Message<"postpilot.v1.ListUsersRequest"> & {
  * Use `create(ListUsersRequestSchema)` to create a new message.
  */
 export const ListUsersRequestSchema: GenMessage<ListUsersRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 4);
+  messageDesc(file_postpilot_v1_plan, 5);
 
 /**
  * @generated from message postpilot.v1.ListUsersResponse
@@ -149,7 +203,7 @@ export type ListUsersResponse = Message<"postpilot.v1.ListUsersResponse"> & {
  * Use `create(ListUsersResponseSchema)` to create a new message.
  */
 export const ListUsersResponseSchema: GenMessage<ListUsersResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 5);
+  messageDesc(file_postpilot_v1_plan, 6);
 
 /**
  * PlanUser is an account as the admin screen sees it. There is still no display name or
@@ -179,7 +233,7 @@ export type PlanUser = Message<"postpilot.v1.PlanUser"> & {
  * Use `create(PlanUserSchema)` to create a new message.
  */
 export const PlanUserSchema: GenMessage<PlanUser> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 6);
+  messageDesc(file_postpilot_v1_plan, 7);
 
 /**
  * @generated from message postpilot.v1.SetUserPlanRequest
@@ -201,7 +255,7 @@ export type SetUserPlanRequest = Message<"postpilot.v1.SetUserPlanRequest"> & {
  * Use `create(SetUserPlanRequestSchema)` to create a new message.
  */
 export const SetUserPlanRequestSchema: GenMessage<SetUserPlanRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 7);
+  messageDesc(file_postpilot_v1_plan, 8);
 
 /**
  * @generated from message postpilot.v1.SetUserPlanResponse
@@ -218,11 +272,16 @@ export type SetUserPlanResponse = Message<"postpilot.v1.SetUserPlanResponse"> & 
  * Use `create(SetUserPlanResponseSchema)` to create a new message.
  */
 export const SetUserPlanResponseSchema: GenMessage<SetUserPlanResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 8);
+  messageDesc(file_postpilot_v1_plan, 9);
 
 /**
- * The ordered ladder. `free < basic < max < master`: every gate in the product asks the
- * one question "is the acting plan at least this model's / procedure's floor?".
+ * The ladder. A tier decides two things and no more: how many credits it is granted each
+ * month, and — for master alone — access to the operator-only procedures. Which models an
+ * account may run is not one of them; that is decided by what it can afford.
+ *
+ * PLAN_PRO is numbered after the original four rather than between them: enum numbers are
+ * wire identity, and renumbering PLAN_MAX would silently change the tier of every account
+ * a stale client reads.
  *
  * @generated from enum postpilot.v1.Plan
  */
@@ -251,6 +310,11 @@ export enum Plan {
    * @generated from enum value: PLAN_MASTER = 4;
    */
   MASTER = 4,
+
+  /**
+   * @generated from enum value: PLAN_PRO = 5;
+   */
+  PRO = 5,
 }
 
 /**
@@ -261,7 +325,7 @@ export const PlanSchema: GenEnum<Plan> = /*@__PURE__*/
 
 /**
  * plan.proto is the authorization slice of the contract: which tier an account is on,
- * what that tier is allowed to spend, and the operator surface that changes it.
+ * what it has left to spend, and the operator surface that changes it.
  *
  * Nothing here moves money (PRD §9). The ladder is shaped like a subscription ladder,
  * but plans are assigned by the operator — there is no signup, upgrade, or checkout RPC.
@@ -270,8 +334,8 @@ export const PlanSchema: GenEnum<Plan> = /*@__PURE__*/
  */
 export const PlanService: GenService<{
   /**
-   * The caller's own tier, limits and live usage. Every number the client displays comes
-   * from here; the frontend never hardcodes a limit.
+   * The caller's own tier, credit balance and the lots behind it. Every number the client
+   * displays comes from here; the frontend never hardcodes a grant or a price.
    *
    * @generated from rpc postpilot.v1.PlanService.GetMyPlan
    */

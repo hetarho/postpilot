@@ -3,14 +3,21 @@ import {
   type GetMyPlanResponse,
   ProtoPlan,
   type ProtoPlanUser,
-  type ProtoPlanLimits,
-  type ProtoPlanUsage,
+  type ProtoCreditBalance,
 } from '@/shared/api'
-import type { MyPlan, PlanAccount, PlanLimits, PlanName, PlanUsage } from '../model/types'
+import type {
+  CreditBalance,
+  CreditLot,
+  MyPlan,
+  PlanAccount,
+  PlanName,
+  PlanOffer,
+} from '../model/types'
 
 const PLAN_TO_PROTO: Record<PlanName, ProtoPlan> = {
   free: ProtoPlan.FREE,
   basic: ProtoPlan.BASIC,
+  pro: ProtoPlan.PRO,
   max: ProtoPlan.MAX,
   master: ProtoPlan.MASTER,
 }
@@ -28,21 +35,36 @@ export function planFromProto(plan: ProtoPlan): PlanName | undefined {
   return undefined
 }
 
-function toLimits(limits: ProtoPlanLimits | undefined): PlanLimits {
+/** An unknown lot kind is read as a bonus: the distinction is a label, and a grant that
+ *  cannot be named is still a grant the account holds. */
+function toLot(kind: string): CreditLot['kind'] {
+  return kind === 'monthly' ? 'monthly' : 'bonus'
+}
+
+function toBalance(balance: ProtoCreditBalance | undefined): CreditBalance {
   return {
-    dailyJobStarts: limits?.dailyJobStarts ?? 0,
-    dailyBudgetMicrousd: Number(limits?.dailyBudgetMicrousd ?? 0n),
-    monthlyBudgetMicrousd: Number(limits?.monthlyBudgetMicrousd ?? 0n),
+    credits: balance?.credits ?? 0,
+    unlimited: balance?.unlimited ?? false,
+    lots: (balance?.lots ?? []).map((lot) => ({
+      kind: toLot(lot.kind),
+      granted: lot.granted,
+      remaining: lot.remaining,
+      expiresAt: lot.expiresAt,
+    })),
+    renewsAt: balance?.renewsAt ?? '',
+    monthlyGrant: balance?.monthlyGrant ?? 0,
   }
 }
 
-function toUsage(usage: ProtoPlanUsage | undefined): PlanUsage {
+function toOffer(offer: {
+  plan: ProtoPlan
+  monthlyCredits: number
+  priceUsdCents: number
+}): PlanOffer {
   return {
-    jobsStartedToday: usage?.jobsStartedToday ?? 0,
-    costTodayMicrousd: Number(usage?.costTodayMicrousd ?? 0n),
-    costMonthMicrousd: Number(usage?.costMonthMicrousd ?? 0n),
-    dayResetsAt: usage?.dayResetsAt ?? '',
-    monthResetsAt: usage?.monthResetsAt ?? '',
+    plan: planFromProto(offer.plan),
+    monthlyCredits: offer.monthlyCredits,
+    priceUsdCents: offer.priceUsdCents,
   }
 }
 
@@ -50,8 +72,10 @@ export function toMyPlan(response: GetMyPlanResponse | undefined): MyPlan | unde
   if (!response) return undefined
   return {
     plan: planFromProto(response.plan),
-    limits: toLimits(response.limits),
-    usage: toUsage(response.usage),
+    balance: toBalance(response.balance),
+    // A tier this build cannot name is dropped rather than rendered as unknown: an offer
+    // nobody can identify is not something to put a price next to.
+    offers: (response.offers ?? []).map(toOffer).filter((offer) => offer.plan !== undefined),
   }
 }
 

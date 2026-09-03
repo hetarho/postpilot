@@ -4,20 +4,23 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"math/big"
 	"os"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/goccy/go-yaml"
-
-	"github.com/postpilot/backend/internal/plan"
 )
 
 // DisabledReasonNoKey is the reason shown for every model of a provider whose
 // `api_key_env` is unset. The frontend displays it as is.
 const DisabledReasonNoKey = "API key not configured"
+
+// DisabledReasonDelisted is the reason shown for a curated model the upstream catalog no
+// longer offers. The row is kept and served disabled rather than dropped, so a user whose
+// saved choice it was is told why instead of finding the entry silently gone, and an
+// operator decides when to retire it.
+const DisabledReasonDelisted = "the provider no longer lists this model"
 
 // ModelRef names one model of one provider. It is what a job records and what the
 // dropdowns save.
@@ -40,11 +43,37 @@ type ModelInfo struct {
 	PricingCheckedAt    string
 	Disabled            bool
 	DisabledReason      string
-	// MinPlan is the lowest plan allowed to run this model — a property of the model's
-	// price class, declared once in providers.yaml. The registry only carries the floor:
-	// it never learns who is asking, so the comparison happens in callers that already
-	// know the acting plan.
-	MinPlan plan.Plan
+}
+
+// SourceModel is one curated model as the catalog source holds it: the model's own facts,
+// with nothing yet said about whether its provider can be reached.
+type SourceModel struct {
+	ModelID             string
+	Label               string
+	Vision              bool
+	StructuredOutput    bool
+	ContextTokens       int64
+	InputUSDPerMillion  string
+	OutputUSDPerMillion string
+	PricingCheckedAt    string
+	// Reasoning is the strict per-model override. Empty defers to the stage policy; Unset
+	// deliberately omits the wire key.
+	Reasoning ReasoningEffort
+	// Delisted marks a model the upstream catalog no longer offered at the last successful
+	// refresh.
+	Delisted bool
+}
+
+// ModelSource is where the registry's usable models come from — declared here by its
+// consumer (ARCHITECTURE §2.2) and injected by the composition root.
+//
+// It is read on every catalog request rather than snapshotted at boot: curating a model
+// must take effect for the next request, not the next deploy. Implementations are shared
+// across request goroutines and must be safe for concurrent use.
+type ModelSource interface {
+	// Models returns every usable model, in the order the catalog should show them.
+	Models() []SourceModel
+	Lookup(modelID string) (SourceModel, bool)
 }
 
 // RecommendationSelection is the registry-owned, versioned selection for one stage.
@@ -73,32 +102,19 @@ type Options struct {
 }
 
 // The yaml shape. Field names are the contract documented in providers.yaml; unknown
-// fields are an error so a typo (`vison: true`) cannot silently disable a capability.
+// fields are an error, which is also what retires the old per-provider `models:` list: a
+// stack still mounting one is told at boot rather than quietly serving an empty catalog.
 type registryFile struct {
 	Providers          []providerEntry          `yaml:"providers"`
 	RecommendationSets []recommendationSetEntry `yaml:"recommendation_sets"`
 }
 
 type providerEntry struct {
-	ID              string       `yaml:"id"`
-	Adapter         string       `yaml:"adapter"`
-	BaseURL         string       `yaml:"base_url"`
-	APIKeyEnv       string       `yaml:"api_key_env"`
-	ReasoningFormat string       `yaml:"reasoning_format"`
-	Models          []modelEntry `yaml:"models"`
-}
-
-type modelEntry struct {
-	ID                  string          `yaml:"id"`
-	Label               string          `yaml:"label"`
-	Vision              bool            `yaml:"vision"`
-	StructuredOutput    bool            `yaml:"structured_output"`
-	ReasoningEffort     ReasoningEffort `yaml:"reasoning_effort"`
-	ContextTokens       int64           `yaml:"context_tokens"`
-	InputUSDPerMillion  string          `yaml:"input_usd_per_million"`
-	OutputUSDPerMillion string          `yaml:"output_usd_per_million"`
-	PricingCheckedAt    string          `yaml:"pricing_checked_at"`
-	MinPlan             string          `yaml:"min_plan"`
+	ID              string `yaml:"id"`
+	Adapter         string `yaml:"adapter"`
+	BaseURL         string `yaml:"base_url"`
+	APIKeyEnv       string `yaml:"api_key_env"`
+	ReasoningFormat string `yaml:"reasoning_format"`
 }
 
 type recommendationSetEntry struct {
@@ -119,18 +135,18 @@ type modelRefEntry struct {
 	ModelID    string `yaml:"model_id"`
 }
 
-type entry struct {
-	info      ModelInfo
-	provider  Provider
-	reasoning ReasoningEffort
-}
-
-// Registry is the loaded providers.yaml: every model with its flags, and the provider
-// that serves it. Read-only after Load, so it is safe to share across goroutines.
+// Registry joins the two halves of "which model can I call": the connection, which is
+// configuration read once at boot, and the usable-model list, which is curated data read
+// live from the source.
 type Registry struct {
-	entries map[ModelRef]*entry
-	// order is the yaml order — the order the dropdowns show.
-	order           []ModelRef
+	providerID string
+	provider   Provider
+	// disabled/disabledReason describe the provider, not one model: an unset key takes the
+	// whole endpoint out at once.
+	disabled        bool
+	disabledReason  string
+	baseURL         string
+	source          ModelSource
 	recommendations []RecommendationSet
 	opts            Options
 }
@@ -139,14 +155,15 @@ type Registry struct {
 // composition root turns into a refused boot: a broken registry must be loud, like a
 // broken migration.
 //
-// `getenv` resolves each provider's `api_key_env`; `adapters` maps adapter names to the
-// factories the composition root chose to ship (the only place that imports them).
-func Load(path string, getenv func(string) string, adapters map[string]AdapterFactory, opts Options) (*Registry, error) {
+// `getenv` resolves the provider's `api_key_env`; `adapters` maps adapter names to the
+// factories the composition root chose to ship (the only place that imports them);
+// `source` supplies the curated models.
+func Load(path string, getenv func(string) string, adapters map[string]AdapterFactory, source ModelSource, opts Options) (*Registry, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read providers config %s: %w", path, err)
 	}
-	reg, err := Parse(data, getenv, adapters, opts)
+	reg, err := Parse(data, getenv, adapters, source, opts)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
@@ -154,109 +171,68 @@ func Load(path string, getenv func(string) string, adapters map[string]AdapterFa
 }
 
 // Parse is Load without the file — the testable core.
-func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterFactory, opts Options) (*Registry, error) {
+func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterFactory, source ModelSource, opts Options) (*Registry, error) {
 	if opts.Timeout <= 0 {
 		return nil, fmt.Errorf("registry options: timeout must be positive")
 	}
 	if opts.MaxTokens <= 0 {
 		return nil, fmt.Errorf("registry options: max tokens must be positive")
 	}
+	if source == nil {
+		return nil, fmt.Errorf("registry options: a model source is required")
+	}
 
 	var file registryFile
 	if err := yaml.UnmarshalWithOptions(data, &file, yaml.Strict()); err != nil {
 		return nil, fmt.Errorf("invalid yaml: %s", yaml.FormatError(err, false, true))
 	}
-	if len(file.Providers) == 0 {
-		return nil, fmt.Errorf("no providers declared")
+	// Exactly one, not at least one: the curated catalog has no provider dimension — every
+	// row is served by the registered endpoint — so a second entry would have models
+	// attributed to it that nobody chose. Adding a genuinely different vendor is a design
+	// change (plan 18 non-goals), and this is where it announces itself.
+	if len(file.Providers) != 1 {
+		return nil, fmt.Errorf("exactly one provider must be declared, found %d", len(file.Providers))
 	}
 
-	reg := &Registry{entries: map[ModelRef]*entry{}, opts: opts}
-	seenProviders := map[string]bool{}
-	for i, p := range file.Providers {
-		where := fmt.Sprintf("providers[%d]", i)
-		if p.ID != "" {
-			where = fmt.Sprintf("provider %q", p.ID)
-		}
-		if strings.TrimSpace(p.ID) == "" {
-			return nil, fmt.Errorf("%s: id is required", where)
-		}
-		if seenProviders[p.ID] {
-			return nil, fmt.Errorf("%s: duplicate id", where)
-		}
-		seenProviders[p.ID] = true
+	p := file.Providers[0]
+	where := "providers[0]"
+	if p.ID != "" {
+		where = fmt.Sprintf("provider %q", p.ID)
+	}
+	if strings.TrimSpace(p.ID) == "" {
+		return nil, fmt.Errorf("%s: id is required", where)
+	}
+	factory, ok := adapters[p.Adapter]
+	if !ok {
+		return nil, fmt.Errorf("%s: unknown adapter %q (known: %s)", where, p.Adapter, strings.Join(slices.Sorted(maps.Keys(adapters)), ", "))
+	}
 
-		factory, ok := adapters[p.Adapter]
-		if !ok {
-			return nil, fmt.Errorf("%s: unknown adapter %q (known: %s)", where, p.Adapter, strings.Join(slices.Sorted(maps.Keys(adapters)), ", "))
-		}
-		if len(p.Models) == 0 {
-			return nil, fmt.Errorf("%s: at least one model is required", where)
-		}
+	// No `api_key_env` means the endpoint takes no key (a local Ollama, vLLM, LM
+	// Studio); with one, the key is read from the environment and its absence is what
+	// disables the provider — never a boot failure.
+	key := ""
+	if env := strings.TrimSpace(p.APIKeyEnv); env != "" {
+		key = getenv(env)
+	}
+	// Built even without a key so the entry is validated either way; a bad base_url
+	// must not hide behind a missing key until the day the key is set.
+	provider, err := factory(AdapterConfig{
+		ProviderID: p.ID, BaseURL: p.BaseURL, APIKey: key, ReasoningFormat: p.ReasoningFormat,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", where, err)
+	}
 
-		// No `api_key_env` means the endpoint takes no key (a local Ollama, vLLM, LM
-		// Studio); with one, the key is read from the environment and its absence is what
-		// disables the provider — never a boot failure.
-		key := ""
-		if env := strings.TrimSpace(p.APIKeyEnv); env != "" {
-			key = getenv(env)
-		}
-		// Built even without a key so the entry is validated either way; a bad base_url
-		// must not hide behind a missing key until the day the key is set.
-		provider, err := factory(AdapterConfig{
-			ProviderID: p.ID, BaseURL: p.BaseURL, APIKey: key, ReasoningFormat: p.ReasoningFormat,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", where, err)
-		}
-		disabled := p.APIKeyEnv != "" && key == ""
-		reason := ""
-		if disabled {
-			reason = DisabledReasonNoKey
-		}
-
-		seenModels := map[string]bool{}
-		for j, m := range p.Models {
-			if strings.TrimSpace(m.ID) == "" {
-				return nil, fmt.Errorf("%s: models[%d]: id is required", where, j)
-			}
-			if seenModels[m.ID] {
-				return nil, fmt.Errorf("%s: duplicate model id %q", where, m.ID)
-			}
-			seenModels[m.ID] = true
-			label := m.Label
-			if label == "" {
-				label = m.ID
-			}
-			ref := ModelRef{ProviderID: p.ID, ModelID: m.ID}
-			if err := validateModelMetadata(m); err != nil {
-				return nil, fmt.Errorf("%s: model %q: %w", where, m.ID, err)
-			}
-			minPlan, err := plan.Parse(m.MinPlan)
-			if err != nil {
-				return nil, fmt.Errorf("%s: model %q: min_plan: %w", where, m.ID, err)
-			}
-			if !m.ReasoningEffort.Valid() {
-				return nil, fmt.Errorf("%s: model %q: reasoning_effort %q is invalid (want unset, none, minimal, low, medium, high, xhigh, or max)", where, m.ID, m.ReasoningEffort)
-			}
-			reg.entries[ref] = &entry{
-				info: ModelInfo{
-					Ref:                 ref,
-					Label:               label,
-					Vision:              m.Vision,
-					StructuredOutput:    m.StructuredOutput,
-					ContextTokens:       m.ContextTokens,
-					InputUSDPerMillion:  m.InputUSDPerMillion,
-					OutputUSDPerMillion: m.OutputUSDPerMillion,
-					PricingCheckedAt:    m.PricingCheckedAt,
-					Disabled:            disabled,
-					DisabledReason:      reason,
-					MinPlan:             minPlan,
-				},
-				provider:  provider,
-				reasoning: m.ReasoningEffort,
-			}
-			reg.order = append(reg.order, ref)
-		}
+	reg := &Registry{
+		providerID: p.ID,
+		provider:   provider,
+		baseURL:    p.BaseURL,
+		source:     source,
+		opts:       opts,
+	}
+	if p.APIKeyEnv != "" && key == "" {
+		reg.disabled = true
+		reg.disabledReason = DisabledReasonNoKey
 	}
 	if err := reg.loadRecommendations(file.RecommendationSets); err != nil {
 		return nil, err
@@ -264,30 +240,17 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 	return reg, nil
 }
 
-func validateModelMetadata(m modelEntry) error {
-	values := []string{m.InputUSDPerMillion, m.OutputUSDPerMillion, m.PricingCheckedAt}
-	provided := m.ContextTokens != 0 || slices.ContainsFunc(values, func(value string) bool { return value != "" })
-	if !provided {
-		return nil
-	}
-	if m.ContextTokens <= 0 {
-		return fmt.Errorf("context_tokens must be positive when pricing metadata is supplied")
-	}
-	for name, value := range map[string]string{
-		"input_usd_per_million":  m.InputUSDPerMillion,
-		"output_usd_per_million": m.OutputUSDPerMillion,
-	} {
-		parsed, ok := new(big.Rat).SetString(value)
-		if !ok || parsed.Sign() < 0 {
-			return fmt.Errorf("%s must be a non-negative decimal", name)
-		}
-	}
-	if _, err := time.Parse(time.DateOnly, m.PricingCheckedAt); err != nil {
-		return fmt.Errorf("pricing_checked_at must be YYYY-MM-DD")
-	}
-	return nil
-}
+// ProviderID is the id every ModelRef the registry serves carries.
+func (r *Registry) ProviderID() string { return r.providerID }
 
+// BaseURL is the registered endpoint. The catalog client derives the upstream model list
+// from it, so the address is configured in one place; it never crosses to a client.
+func (r *Registry) BaseURL() string { return r.baseURL }
+
+// loadRecommendations validates SHAPE only. Whether a referenced model is usable can no
+// longer be settled at boot — the catalog is curated data that changes while the process
+// runs — so existence, capability and plan are checked where the set is applied, against
+// the registry as it is at that moment.
 func (r *Registry) loadRecommendations(entries []recommendationSetEntry) error {
 	seenSets := map[string]bool{}
 	for i, item := range entries {
@@ -317,17 +280,13 @@ func (r *Registry) loadRecommendations(entries []recommendationSetEntry) error {
 				CandidateA: toModelRef(selection.CandidateA),
 				CandidateB: toModelRef(selection.CandidateB),
 			}
+			for _, ref := range []ModelRef{converted.Active, converted.CandidateA, converted.CandidateB} {
+				if ref.ProviderID == "" || ref.ModelID == "" {
+					return fmt.Errorf("recommendation set %q stage %q: every ref needs a provider_id and a model_id", item.ID, selection.Stage)
+				}
+			}
 			if converted.CandidateA == converted.CandidateB {
 				return fmt.Errorf("recommendation set %q stage %q: candidates must differ", item.ID, selection.Stage)
-			}
-			for _, ref := range []ModelRef{converted.Active, converted.CandidateA, converted.CandidateB} {
-				info, ok := r.Lookup(ref)
-				if !ok {
-					return fmt.Errorf("recommendation set %q stage %q: model %s is not registered", item.ID, selection.Stage, ref)
-				}
-				if selection.Stage == "observe" && !info.Vision {
-					return fmt.Errorf("recommendation set %q stage observe: model %s has no vision", item.ID, ref)
-				}
 			}
 			set.Selections = append(set.Selections, converted)
 		}
@@ -340,11 +299,13 @@ func toModelRef(ref modelRefEntry) ModelRef {
 	return ModelRef{ProviderID: strings.TrimSpace(ref.ProviderID), ModelID: strings.TrimSpace(ref.ModelID)}
 }
 
-// Models is the catalog in yaml order.
+// Models is the curated catalog in source order. An empty catalog is a valid state — a
+// fresh install has nothing curated yet — and renders as an empty dropdown, not a failure.
 func (r *Registry) Models() []ModelInfo {
-	out := make([]ModelInfo, 0, len(r.order))
-	for _, ref := range r.order {
-		out = append(out, r.entries[ref].info)
+	models := r.source.Models()
+	out := make([]ModelInfo, 0, len(models))
+	for _, m := range models {
+		out = append(out, r.describe(m))
 	}
 	return out
 }
@@ -359,36 +320,69 @@ func (r *Registry) RecommendationSets() []RecommendationSet {
 	return out
 }
 
-// Lookup returns the entry for a ref, if registered.
+// Lookup returns the entry for a ref, if the catalog currently offers it.
 func (r *Registry) Lookup(ref ModelRef) (ModelInfo, bool) {
-	e, ok := r.entries[ref]
+	if ref.ProviderID != r.providerID {
+		return ModelInfo{}, false
+	}
+	found, ok := r.source.Lookup(ref.ModelID)
 	if !ok {
 		return ModelInfo{}, false
 	}
-	return e.info, true
+	return r.describe(found), true
 }
 
-// resolve finds the provider for a ref and checks that the model can take what the
-// request asks of it — before any network call, so a caller learns "this model cannot
-// see images" in microseconds rather than after a round trip.
+// describe joins a curated model with what the process knows about reaching it. The two
+// disabling reasons are ordered by what the reader can act on: a missing key takes out
+// every model at once and is the operator's first move, so it wins over a delisting that
+// concerns this row alone.
+func (r *Registry) describe(m SourceModel) ModelInfo {
+	info := ModelInfo{
+		Ref:                 ModelRef{ProviderID: r.providerID, ModelID: m.ModelID},
+		Label:               m.Label,
+		Vision:              m.Vision,
+		StructuredOutput:    m.StructuredOutput,
+		ContextTokens:       m.ContextTokens,
+		InputUSDPerMillion:  m.InputUSDPerMillion,
+		OutputUSDPerMillion: m.OutputUSDPerMillion,
+		PricingCheckedAt:    m.PricingCheckedAt,
+	}
+	switch {
+	case r.disabled:
+		info.Disabled, info.DisabledReason = true, r.disabledReason
+	case m.Delisted:
+		info.Disabled, info.DisabledReason = true, DisabledReasonDelisted
+	}
+	return info
+}
+
+// resolve finds the model for a ref and checks that it can take what the request asks of
+// it — before any network call, so a caller learns "this model cannot see images" in
+// microseconds rather than after a round trip.
 //
 // Unexported on purpose: handing the Provider out would let a caller skip the timeout
 // and the defaults that Complete applies. Callers that need the flags use Lookup.
-func (r *Registry) resolve(ref ModelRef, req Request) (*entry, error) {
-	e, ok := r.entries[ref]
+func (r *Registry) resolve(ref ModelRef, req Request) (SourceModel, error) {
+	if ref.ProviderID != r.providerID {
+		return SourceModel{}, fmt.Errorf("%w: %s is not registered", ErrModelUnavailable, ref)
+	}
+	found, ok := r.source.Lookup(ref.ModelID)
 	if !ok {
-		return nil, fmt.Errorf("%w: %s is not registered", ErrModelUnavailable, ref)
+		return SourceModel{}, fmt.Errorf("%w: %s is not registered", ErrModelUnavailable, ref)
 	}
-	if e.info.Disabled {
-		return nil, fmt.Errorf("%w: %s", ErrProviderDisabled, ref)
+	if r.disabled {
+		return SourceModel{}, fmt.Errorf("%w: %s", ErrProviderDisabled, ref)
 	}
-	if req.HasImages() && !e.info.Vision {
-		return nil, fmt.Errorf("%w: %s does not take images", ErrUnsupported, ref)
+	if found.Delisted {
+		return SourceModel{}, fmt.Errorf("%w: %s is no longer offered", ErrModelUnavailable, ref)
 	}
-	if req.JSONSchema != nil && !e.info.StructuredOutput {
-		return nil, fmt.Errorf("%w: %s does not support structured output", ErrUnsupported, ref)
+	if req.HasImages() && !found.Vision {
+		return SourceModel{}, fmt.Errorf("%w: %s does not take images", ErrUnsupported, ref)
 	}
-	return e, nil
+	if req.JSONSchema != nil && !found.StructuredOutput {
+		return SourceModel{}, fmt.Errorf("%w: %s does not support structured output", ErrUnsupported, ref)
+	}
+	return found, nil
 }
 
 // Complete resolves the ref, fills in the model and the default cap, and runs the call
@@ -399,8 +393,8 @@ func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Res
 		return Response{}, err
 	}
 	req.Model = ref.ModelID
-	if resolved.reasoning != ReasoningUnspecified {
-		req.Reasoning = resolved.reasoning
+	if resolved.Reasoning != ReasoningUnspecified {
+		req.Reasoning = resolved.Reasoning
 	}
 	if !req.Reasoning.Valid() {
 		return Response{}, fmt.Errorf("invalid reasoning effort %q", req.Reasoning)
@@ -412,5 +406,5 @@ func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Res
 	}
 	ctx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
 	defer cancel()
-	return resolved.provider.Complete(ctx, req)
+	return r.provider.Complete(ctx, req)
 }
