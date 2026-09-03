@@ -23,7 +23,13 @@ describe('the admin screen', () => {
       },
     })
 
-    expect(await screen.findByRole('heading', { name: '계정 관리' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '운영 관리' })).toBeInTheDocument()
+    // The two operator surfaces are tabs with their own addresses, so the row is navigation
+    // rather than tab selection and the current one is marked as the current page.
+    expect(await screen.findByRole('link', { name: '계정 관리' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
     // A bounded switch of tiers, so every rung is on screen at once and the current one is the
     // selected tab rather than a closed control's value.
     const alice = await screen.findByRole('tablist', { name: 'alice 계정의 플랜' })
@@ -68,6 +74,20 @@ describe('the admin screen', () => {
     })
 
     expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '계정 관리' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '운영 관리' })).not.toBeInTheDocument()
+  })
+
+  // A1 (plan 18): the model catalog is the second tab of the same frame, reached from the row
+  // rather than from a second entry point in the header.
+  it('moves to the model tab from the tab row', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin', {
+      user: MASTER,
+      plans: { plan: ProtoPlan.MASTER, accounts: [{ id: 'root', plan: ProtoPlan.MASTER }] },
+    })
+
+    await user.click(await screen.findByRole('link', { name: '모델 관리' }))
+    expect(await screen.findByRole('heading', { name: '모델 관리' })).toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: 'root 계정의 플랜' })).not.toBeInTheDocument()
   })
 })

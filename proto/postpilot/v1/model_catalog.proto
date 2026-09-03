@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+
+// model_catalog.proto is the OPERATOR's half of the model story (plan 18): which of the
+// provider's models this installation offers, and at which plan tier. ProviderService is
+// the user's half — what is offered, and what they last picked.
+//
+// Every procedure here is master-only, enforced by the auth interceptor rather than by the
+// client. Nothing carries an API key or the provider's base URL: the wire has no field for
+// either, the same posture as ProviderService.
+service ModelCatalogService {
+  // The provider's live catalog merged with what has been curated, plus every curated model
+  // the provider has stopped offering. A live read that fails degrades to curated rows and
+  // says so in `fetch_error` rather than answering with an empty catalog.
+  rpc ListCatalog(ListCatalogRequest) returns (ListCatalogResponse) {}
+  // Make a model selectable. The plan floor is required, never defaulted by the server:
+  // enabling a model at the wrong tier is worse than leaving it disabled.
+  rpc EnableModel(EnableModelRequest) returns (EnableModelResponse) {}
+  // Change one curated model. Absent fields are not edits, so two operators changing
+  // different properties of one model do not overwrite each other.
+  rpc UpdateModel(UpdateModelRequest) returns (UpdateModelResponse) {}
+}
+
+// CatalogEntry is one row of the operator's browse list.
+message CatalogEntry {
+  string model_id = 1;
+  // The vendor segment of the id ("openai" in "openai/gpt-5.6-sol"). It groups and filters
+  // the list; the registry's provider id is the same for every entry and is not sent.
+  string provider_slug = 2;
+  string label = 3;
+  string description = 4;
+  bool vision = 5;
+  bool structured_output = 6;
+  int64 context_tokens = 7;
+  // Dated display metadata in the same USD-per-million convention ModelInfo uses. Reported
+  // provider cost remains authoritative for spending.
+  string input_usd_per_million = 8;
+  string output_usd_per_million = 9;
+  // curated: a catalog row exists, so enabling and reasoning_effort are decisions somebody
+  // made rather than the defaults an un-curated candidate is shown with.
+  bool curated = 10;
+  bool enabled = 11;
+  reserved 12;  // min_plan — a model is no longer gated by tier.
+  // The provider still offered this model at the last successful read. A false value is a
+  // flag for the operator, not an action: the model is served disabled-with-reason to users
+  // and is never retired automatically.
+  bool listed = 13;
+  // The strict per-model reasoning override, or "" for none. "unset" deliberately omits the
+  // wire key and keeps the provider's own behavior.
+  string reasoning_effort = 14;
+  // Upstream publication time in epoch seconds; orders a vendor's models newest-first.
+  int64 source_created_at = 15;
+}
+
+message ListCatalogRequest {
+  // Bypass the server's catalog cache and read the provider again.
+  bool refresh = 1;
+}
+
+message ListCatalogResponse {
+  repeated CatalogEntry entries = 1;
+  // RFC 3339 instant of the live read the entries were merged against; empty when the read
+  // failed.
+  string fetched_at = 2;
+  bool from_cache = 3;
+  // Set when the live read failed. Entries then carry curated rows only, and no
+  // availability bookkeeping was written.
+  string fetch_error = 4;
+}
+
+message EnableModelRequest {
+  string model_id = 1;
+  reserved 2;  // min_plan
+}
+
+message EnableModelResponse {
+  CatalogEntry entry = 1;
+}
+
+message UpdateModelRequest {
+  string model_id = 1;
+  optional bool enabled = 2;
+  reserved 3;  // min_plan
+  // "" clears the override and returns the model to the stage reasoning policy.
+  optional string reasoning_effort = 4;
+}
+
+message UpdateModelResponse {
+  CatalogEntry entry = 1;
+}

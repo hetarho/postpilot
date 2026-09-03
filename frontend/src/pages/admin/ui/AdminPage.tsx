@@ -4,17 +4,17 @@ import { UserPlanSelect } from '@/features/manage-users'
 import { formatDate } from '@/shared/lib'
 import { Notice, Typography } from '@/shared/ui'
 
-/** The operator's account list (plan 17). Composition only: the tier control is its own feature,
- *  and every refusal is the server's — this screen is reachable only for `master`, but the two
- *  admin procedures are refused there too, so a direct visit by anyone else simply cannot read. */
+/** The operator's account list (plan 17), now the 계정 관리 tab of `/admin`. Composition only:
+ *  the tier control is its own feature, and every refusal is the server's — this tab is reachable
+ *  only for `master`, but the two admin procedures are refused there too, so a direct visit by
+ *  anyone else simply cannot read. The page title and the tab row belong to `AdminLayout`. */
 export function AdminPage() {
   const { t } = useTranslation('plans')
   const { accounts, isPending, isError } = useAccounts()
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <Typography variant="display">{t('admin.title')}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+    <section className="mt-8">
+      <Typography variant="body" className="text-content-secondary max-w-measure">
         {t('admin.description')}
       </Typography>
 
@@ -53,6 +53,6 @@ export function AdminPage() {
           ))}
         </ul>
       )}
-    </main>
+    </section>
   )
 }
