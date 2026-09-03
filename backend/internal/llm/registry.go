@@ -76,9 +76,15 @@ type SourceModel struct {
 	InputUSDPerMillion  string
 	OutputUSDPerMillion string
 	PricingCheckedAt    string
-	// Reasoning is the strict per-model override. Empty defers to the stage policy; Unset
-	// deliberately omits the wire key.
-	Reasoning ReasoningEffort
+	// Reasoning is the strict operator override PER STAGE, keyed by the stable stage names
+	// StageNameObserve/Write/Analyze. A stage absent from the map, or present as
+	// Unspecified, defers to the stage policy the caller set; Unset deliberately omits the
+	// wire key.
+	//
+	// Per stage rather than per model because the policy it overrides is per stage: one
+	// value for the whole model erased that distinction, so lowering the effort for writing
+	// silently changed photo observation (change 24).
+	Reasoning map[string]ReasoningEffort
 	// Stages this model is registered to serve, in the same stable string form
 	// RecommendationSelection.Stage uses ("observe"/"write"/"analyze"). The strings are the
 	// source's to define — the registry passes them through without interpreting them, the
@@ -420,8 +426,10 @@ func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Res
 		return Response{}, err
 	}
 	req.Model = ref.ModelID
-	if resolved.Reasoning != ReasoningUnspecified {
-		req.Reasoning = resolved.Reasoning
+	// This stage's override → the stage value the caller set → nothing sent. The order is
+	// unchanged in shape; the override half is what gained the stage dimension.
+	if override, ok := resolved.Reasoning[req.Stage]; ok && override != ReasoningUnspecified {
+		req.Reasoning = override
 	}
 	if !req.Reasoning.Valid() {
 		return Response{}, fmt.Errorf("invalid reasoning effort %q", req.Reasoning)

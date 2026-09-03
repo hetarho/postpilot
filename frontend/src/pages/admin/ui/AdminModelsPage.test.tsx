@@ -190,9 +190,9 @@ describe('the model catalog tab', () => {
     expect(calls.filter((call) => call.startsWith('ListCatalog')).length).toBe(before)
   })
 
-  // A11 (plan 18): the per-model reasoning override round-trips through the same edit, and
-  // "stage default" is a real choice rather than an absent one. It is shared across the
-  // model's purposes, so it appears once the model is registered anywhere.
+  // A11 (plan 18) + A1/A3 (change 24): the override round-trips through the same edit, "stage
+  // default" is a real choice rather than an absent one, and the edit names the PURPOSE it
+  // applies to.
   it('sets and clears the reasoning override on a registered model', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -214,10 +214,151 @@ describe('the model catalog tab', () => {
 
     const reasoning = await screen.findByRole('combobox', { name: /추론 강도 단계 기본값/ })
     await chooseOption(user, reasoning, 'unset')
-    expect(calls).toContain('UpdateModel')
+    expect(calls).toContain('UpdateModel:photo-analysis:unset')
     await waitFor(() =>
       expect(screen.getByRole('combobox', { name: /추론 강도 unset/ })).toBeInTheDocument(),
     )
+    // Cleared back to the stage policy, which is a real value on the wire.
+    await chooseOption(
+      user,
+      screen.getByRole('combobox', { name: /추론 강도 unset/ }),
+      '단계 기본값',
+    )
+    expect(calls).toContain('UpdateModel:photo-analysis:')
+  })
+
+  // A2 — the 2026-09-03 regression, from the operator's side: each purpose tab shows and edits
+  // ITS OWN effort. Lowering the effort on 글 작성 must not touch 사진 해석, which is a
+  // different task with a different code-owned policy.
+  it("shows and edits only the active tab's reasoning effort", async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      calls,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'anthropic/claude-x',
+            label: 'Claude X',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis', 'writing'],
+            reasoningEffort: { 'photo-analysis': 'high', writing: 'low' },
+          },
+        ],
+      },
+    })
+
+    // The photo tab shows the photo effort.
+    expect(await screen.findByRole('combobox', { name: /추론 강도 high/ })).toBeInTheDocument()
+
+    // The writing tab shows its own, not the photo tab's.
+    await user.click(screen.getByRole('tab', { name: '글 작성' }))
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: /추론 강도 low/ })).toBeInTheDocument(),
+    )
+    await chooseOption(user, screen.getByRole('combobox', { name: /추론 강도 low/ }), 'minimal')
+    expect(calls).toContain('UpdateModel:writing:minimal')
+
+    // Back on the photo tab, its effort is exactly where it was.
+    await user.click(screen.getByRole('tab', { name: '사진 해석' }))
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: /추론 강도 high/ })).toBeInTheDocument(),
+    )
+  })
+
+  // A11: an operator can see, per purpose, that a model is spending its budget on reasoning —
+  // without reading the database and without waiting for somebody's job to fail.
+  it('shows the recent reasoning spend beside the control it argues about', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'anthropic/reasoner',
+            label: 'Reasoner',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis', 'writing'],
+            reasoningSpend: {
+              'photo-analysis': { calls: 2n, reasoningTokens: 40n, completionTokens: 1_300n },
+              writing: { calls: 3n, reasoningTokens: 24_000n, completionTokens: 24_300n },
+            },
+          },
+        ],
+      },
+    })
+
+    // The observation stage is fine, and says so without the warning.
+    expect(
+      await screen.findByText('완성 토큰의 3%가 추론에 쓰였어요 (2회 기준)'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/설정한 강도를 이 모델이 따르지 않을 수 있어요/),
+    ).not.toBeInTheDocument()
+
+    // The writing stage is the 09-03 shape, and the tone is reinforced by words (§2.6).
+    await user.click(screen.getByRole('tab', { name: '글 작성' }))
+    expect(
+      await screen.findByText('완성 토큰의 99%가 추론에 쓰였어요 (3회 기준)'),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/설정한 강도를 이 모델이 따르지 않을 수 있어요/)).toBeInTheDocument()
+  })
+
+  // A model with no recorded call renders NOTHING: zero out of zero is the absence of a
+  // measurement, and showing it as one is how an operator comes to trust a number nothing
+  // stands behind.
+  it('renders no spend signal for a model with no recorded calls', async () => {
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'anthropic/fresh',
+            label: 'Fresh',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis'],
+          },
+        ],
+      },
+    })
+
+    await screen.findByRole('combobox', { name: /추론 강도/ })
+    expect(screen.queryByText('최근 추론 사용')).not.toBeInTheDocument()
+  })
+
+  // The effort belongs to a REGISTRATION, so the control is absent on a tab the model does
+  // not serve — and the server refuses one for such a purpose whatever a client renders.
+  it('offers no reasoning control on a purpose the model is not registered to', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'anthropic/claude-x',
+            label: 'Claude X',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis'],
+            reasoningEffort: { 'photo-analysis': 'high' },
+          },
+        ],
+      },
+    })
+
+    expect(await screen.findByRole('combobox', { name: /추론 강도 high/ })).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: '글 작성' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('combobox', { name: /추론 강도/ })).not.toBeInTheDocument(),
+    )
+    // The cross-purpose registration is still visible without switching tabs — read off the
+    // row itself, not off the tab strip that also carries the purpose's name.
+    const row = screen.getByRole('listitem')
+    expect(within(row).getByText(/사진 해석/)).toBeInTheDocument()
   })
 
   // A6 (plan 18): a curated model the provider no longer offers is badged and counted, and
@@ -280,7 +421,9 @@ describe('the model catalog tab', () => {
     renderAppAt('/admin/models', { user: MASTER, calls, modelCatalog: { entries: CATALOG } })
 
     await user.click(await screen.findByRole('button', { name: '목록 새로고침' }))
-    await waitFor(() => expect(calls).toContain('ListCatalog:refresh'))
+    // The refresh is scoped to the tab it was pressed on: the listing carries that purpose's
+    // effort and that stage's spend signal.
+    await waitFor(() => expect(calls).toContain('ListCatalog:refresh:photo-analysis'))
   })
 
   // A1 (plan 17): the tab is master-only, redirected rather than refused — the account has a

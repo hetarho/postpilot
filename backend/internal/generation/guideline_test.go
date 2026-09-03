@@ -33,7 +33,7 @@ func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, purposeID *strin
 
 func guidelineAwareService(t *testing.T, guidelines *fakeGuidelines, briefs *fakePurposeBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
 	t.Helper()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 	if briefs != nil {
 		svc.SetPurposeBriefs(briefs)
 	}
@@ -330,7 +330,7 @@ func TestAnUnwiredResolverPromptsWithoutGuidelines(t *testing.T) {
 	ctx := context.Background()
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 
 	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)

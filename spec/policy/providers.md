@@ -21,7 +21,14 @@ What an account may afford to run is owned by [plans.md](plans.md).
   by jobs and model experiments (`MODEL_UNAVAILABLE`, `MODEL_RATE_LIMITED`, `MODEL_UNSUPPORTED`,
   `MODEL_OUTPUT_INVALID`, `MODEL_OUTPUT_TRUNCATED`, or `UNKNOWN_FAILURE`). Provider text is never primary UI copy or
   an interpolated param. Output ending with `finish_reason: length` that has no usable content, including non-empty
-  partial JSON rejected by a caller parser, maps to the truncated-output reason.
+  partial JSON rejected by a caller parser, maps to the truncated-output reason. When the provider reported a
+  reasoning token count, the technical detail **names the reasoning/visible split**, because the two causes have
+  opposite remedies: a body that filled its budget wants a larger one, while a body the model never wrote because
+  it reasoned through the budget wants a lower effort for that purpose, or another model. A provider that reported
+  no split keeps the message it always had, and no user-facing string changes.
+- `ErrRateLimited` means the provider refused for **rate** reasons — the caller's quota, the account's, or the
+  gateway's own upstream pool. It attributes nothing to a tier, and it may arrive as an HTTP 429 or as an upstream
+  `code: 429` inside an HTTP 200.
 - Capability checks run **before any network call**: an image part on a model without `vision`, or a JSON schema on
   a model without `structured_output`, is `ErrUnsupported` immediately. A caller that wants a plain-text fallback
   checks the model's flag first and omits the schema.
@@ -36,7 +43,11 @@ What an account may afford to run is owned by [plans.md](plans.md).
 
 - `ReasoningEffort` accepts `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`. An empty value means no
   decision has been made; `unset` is an internal/yaml sentinel that deliberately omits the whole wire key.
-- Resolution is strict per-model `reasoning_effort` override → request/stage value → nothing sent. Unknown yaml
+- Resolution is the operator's `reasoning_effort` override **for the purpose the call is being made for** →
+  request/stage value → nothing sent. The override is a property of a REGISTRATION, not of a model: the policy it
+  overrides is per stage, so one value for the whole model erased that distinction and lowering the effort for
+  writing silently changed photo observation (change 24). One model may therefore observe at one strength and write
+  at another within a single run, and each purpose tab in 모델 관리 shows and edits only its own value. Unknown yaml
   values stop boot. `anthropic/claude-sonnet-5` ships with `unset`, so the generation stage's `low` default does not
   replace that model's provider-controlled adaptive behavior.
 - The nested `reasoning: {effort}` wire object is an OpenRouter dialect, enabled only when a provider declares
@@ -76,7 +87,10 @@ models this installation offers, and for which purposes** is curated data, read 
   `/admin/models`, not a refused boot. Boot never contacts the provider's catalog.
 - `vision`, `structured_output`, `image_output` and `video_output` are per-model row values snapshotted from the
   provider's catalog. They gate what a model may be REGISTERED for; the stage-side check is pure membership.
-- `reasoning_effort` is an optional per-model row value, curated by the operator and validated on write.
+- `reasoning_effort` is an optional value on a **purpose registration** (`catalog_model_purposes`), curated by the
+  operator and validated on write. Setting one for a purpose the model is not registered to is refused server-side,
+  not merely hidden by the UI. Migration 0021 moved the column off `catalog_models` and **cleared** every existing
+  value rather than copying it into five purposes, so all curated models resolve to the code-owned stage policy.
 - Structured output is requested whenever the model declares it (`response_format: json_schema`, without `strict` —
   the schemas belong to the callers). Callers keep a parser fallback for models that do not.
 
@@ -96,7 +110,7 @@ master-only set).
   `image-generation`/`video-generation` require the matching `image_output`/`video_output`; the text purposes take
   any model. The admin tab force-filters its candidate list to the same gate, so the checkbox never offers what
   the server would refuse (`MODEL_PURPOSE_INELIGIBLE`).
-- A row with **zero registrations** is the state `enabled = 0` used to be: kept — the reasoning override survives —
+- A row with **zero registrations** is the state `enabled = 0` used to be: kept —
   but served to nobody, absent from `ListModels` and unavailable to `Registry.Complete`. A model registered only
   to a generation purpose is likewise never sent over the user-facing wire.
 - **Capability drift stops the stage, not the registration.** A refresh re-snapshots the capability flags; a
@@ -119,7 +133,7 @@ master-only set).
   half the image ones. Only the operator path ever triggers that read, so a provider outage cannot change what
   users see.
 - **Usable models** are the rows with at least one registration, and nothing else feeds `ListModels`,
-  `SaveSelection`, or `Registry.Complete`. A row survives full deregistration, so the reasoning override an
+  `SaveSelection`, or `Registry.Complete`. A row survives full deregistration, so the curation an
   operator set comes back intact when the model is re-registered.
 - Registering never selects ([I3]): a registered model appears in its purpose's picker, and every user still
   chooses their own.
@@ -190,10 +204,12 @@ for them (plan 04 AC6), and that holds for the operator's catalog surface too, w
 | `PROVIDERS_CONFIG` | env | default `config/providers.yaml` (relative to the working directory); the image sets `/config/providers.yaml` |
 | `<api_key_env>` per provider (`OPENROUTER_API_KEY` in the shipped file) | env, named by the yaml | unset ⇒ that provider's models are disabled with the reason |
 | `LLM_STAGE_TIMEOUT` | constant | 5 min per provider call (PRD §6.6) |
-| `LLM_MAX_TOKENS_DEFAULT` | constant | 8192 — shared completion cap for reasoning plus visible output |
+| `LLM_MAX_TOKENS_DEFAULT` | env, default 8192 | the registry's fallback when a caller sets no budget, the writing stage's floor, and the base of its ceiling; reasoning and visible output share it |
+| per-stage completion budget | typed constants | each stage asks for what its work needs instead of sharing one cap: observation scales with `OBSERVE_BATCH_SIZE` (one structured entry per photo in the call), writing derives from the post's requested length, and a revision from the larger of that and the content it must re-emit — floored at the fallback so nothing regresses, capped at a multiple of it so a mistyped target cannot ask for an unbounded completion |
+| reasoning spend | recorded, not configured | `usage_events.reasoning_tokens` holds the provider-reported split; the curation surface shows it per model and per purpose, because `supported_parameters` says a model ACCEPTS `reasoning_effort` and never which values it honors — an unhonored effort behaves like sending none and reasoning runs to the cap |
 | stage reasoning policy | typed constants | observe `low` · write/revise `low` · analyze has **no field**: a request with no stage value already sends nothing |
 | `reasoning_format` | `config/providers.yaml` | optional provider dialect; shipped OpenRouter entry opts in |
-| `reasoning_effort` | `catalog_models` row | optional strict model override, curated per model; `unset` omits the wire key |
+| `reasoning_effort` | `catalog_model_purposes` row | optional override for one (model, purpose), curated by the operator; `unset` omits the wire key |
 | `OPENROUTER_CATALOG_TTL` | BE constant | 5 min — how long one live read of the provider's catalog is served from memory |
 | `OPENROUTER_CATALOG_FETCH_TIMEOUT` | BE constant | 15 s — the catalog read's own timeout; the screen degrades past it |
 | `MODEL_CATALOG_STALE_MS` | FE `shared/config` | 5 min — how long the user-facing catalog is trusted before a refetch |

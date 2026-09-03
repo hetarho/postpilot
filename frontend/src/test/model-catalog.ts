@@ -30,7 +30,15 @@ export interface FakeCatalogEntry {
   videoOutput?: boolean
   minPlan?: ProtoPlan
   listed?: boolean
-  reasoningEffort?: string
+  /** The effort PER PURPOSE, keyed by purpose slug — the server stores it on the
+   *  registration, and each purpose tab shows and edits only its own (change 24). */
+  reasoningEffort?: Record<string, string>
+  /** Recent reasoning spend per purpose slug, as the ledger's aggregate reports it for that
+   *  purpose's stage. A purpose absent from the map has no recorded call. */
+  reasoningSpend?: Record<
+    string,
+    { calls: bigint; reasoningTokens: bigint; completionTokens: bigint }
+  >
   sourceCreatedAt?: bigint
 }
 
@@ -55,7 +63,9 @@ export function registerModelCatalogService(
   const { calls } = options
   let entries = [...(options.entries ?? [])]
 
-  const answer = () =>
+  // The listing is per purpose: it reports each entry's effort for THAT purpose and attaches
+  // that stage's spend signal, so a test can prove a tab shows its own value and not another's.
+  const answer = (purpose: string) =>
     create(ListCatalogResponseSchema, {
       entries: entries.map((entry) => ({
         modelId: entry.modelId,
@@ -72,7 +82,8 @@ export function registerModelCatalogService(
         imageOutput: entry.imageOutput ?? false,
         videoOutput: entry.videoOutput ?? false,
         listed: entry.listed ?? true,
-        reasoningEffort: entry.reasoningEffort ?? '',
+        reasoningEffort: entry.reasoningEffort?.[purpose] ?? '',
+        reasoningSpend: entry.reasoningSpend?.[purpose],
         sourceCreatedAt: entry.sourceCreatedAt ?? 0n,
       })),
       fetchedAt: options.fetchFails ? '' : (options.fetchedAt ?? '2026-09-03T09:00:00Z'),
@@ -81,9 +92,11 @@ export function registerModelCatalogService(
     })
 
   rpc(ModelCatalogService.method.listCatalog, (req) => {
-    calls?.push(req.refresh ? 'ListCatalog:refresh' : 'ListCatalog')
+    calls?.push(
+      `${req.refresh ? 'ListCatalog:refresh' : 'ListCatalog'}${req.purpose ? `:${req.purpose}` : ''}`,
+    )
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
-    return answer()
+    return answer(req.purpose)
   })
 
   rpc(ModelCatalogService.method.setModelPurpose, (req) => {
@@ -112,13 +125,25 @@ export function registerModelCatalogService(
   })
 
   rpc(ModelCatalogService.method.updateModel, (req) => {
-    calls?.push('UpdateModel')
+    calls?.push(`UpdateModel:${req.purpose}:${req.reasoningEffort ?? ''}`)
     if (options.writeFails) throw connectAppError('MODEL_NOT_FOUND', Code.NotFound)
+    // The server refuses an effort for a purpose the model does not serve; the fake holds the
+    // same rule so a test cannot pass against a looser server than the real one. The reason
+    // is generic on purpose: like MODEL_PURPOSE_INELIGIBLE, this refusal is unreachable
+    // through the operator UI — the control appears only once registered — so change 24 left
+    // the normalized reason set alone rather than adding copy for it.
+    const target = entries.find((entry) => entry.modelId === req.modelId)
+    if (!target || !(target.purposes ?? []).includes(req.purpose)) {
+      throw connectAppError('UNKNOWN_FAILURE', Code.FailedPrecondition)
+    }
     entries = entries.map((entry) =>
       entry.modelId === req.modelId
         ? {
             ...entry,
-            reasoningEffort: req.reasoningEffort ?? entry.reasoningEffort,
+            reasoningEffort: {
+              ...entry.reasoningEffort,
+              [req.purpose]: req.reasoningEffort ?? entry.reasoningEffort?.[req.purpose] ?? '',
+            },
           }
         : entry,
     )
@@ -128,7 +153,7 @@ export function registerModelCatalogService(
         modelId: req.modelId,
         curated: true,
         purposes: written?.purposes ?? [],
-        reasoningEffort: req.reasoningEffort ?? written?.reasoningEffort ?? '',
+        reasoningEffort: written?.reasoningEffort?.[req.purpose] ?? '',
       },
     })
   })

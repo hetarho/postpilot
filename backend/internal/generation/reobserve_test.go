@@ -87,7 +87,7 @@ func TestReuseEverythingMakesNoObservationCallAndLeavesTheSnapshotUntouched(t *t
 	images, stored := storedSnapshot(15, "old/observer")
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images}}
 	models := observingModels(t)
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget)
 
 	var progress []string
 	err := svc.Generate(context.Background(), GenerateJob{
@@ -126,7 +126,7 @@ func TestReuseEverythingWritesFromTheStoredObservations(t *testing.T) {
 		writePrompt = request.Messages[0].Parts[0].Text
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget)
 	if err := svc.Generate(context.Background(), GenerateJob{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
 		ObserveFiles: stringPointer(), Observations: stored,
@@ -146,7 +146,7 @@ func TestPartialReobservationReplacesOnlyTheSelectedEntries(t *testing.T) {
 	images, stored := storedSnapshot(15, "old/observer")
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images}}
 	models := observingModels(t)
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget)
 
 	selected := filenames(2, 5, 7, 11, 14)
 	var progress []string
@@ -201,7 +201,7 @@ func TestStartForcesPhotosWithNothingToReuse(t *testing.T) {
 	images = append(images, Image{Filename: "IMG_4.jpg", Key: "key-4"})
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images, Observations: stored}}
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy, testBudget)
 
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
@@ -239,7 +239,7 @@ func TestStartPricesTheHoldOverTheFrozenSet(t *testing.T) {
 	images, stored := storedSnapshot(15, "old/observer")
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images, Observations: stored}}
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy, testBudget)
 
 	for _, test := range []struct {
 		name      string
@@ -272,7 +272,7 @@ func TestPostEditsAfterEnqueueCannotChangeWhatTheRunObserves(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images, Observations: stored}}
 	jobs := &fakeJobs{id: "job"}
 	models := observingModels(t)
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy, testBudget)
 
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
@@ -318,7 +318,7 @@ func TestAbsentFrozenSetObservesEveryPhoto(t *testing.T) {
 	images, _ := storedSnapshot(9, "old/observer")
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images}}
 	models := observingModels(t)
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget)
 
 	var progress []string
 	if err := svc.Generate(context.Background(), GenerateJob{
@@ -346,7 +346,7 @@ func TestZeroPhotoPathStillClearsTheSnapshot(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
 	models := observingModels(t)
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy, testBudget)
 
 	// Even a client that sends a picker answer for a photoless post freezes nothing.
 	if _, err := svc.Start(context.Background(), StartRequest{
@@ -433,7 +433,7 @@ func TestWriteComparisonHonorsTheSameReuse(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images, Observations: stored}}
 			models := observingModels(t)
-			svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy)
+			svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget)
 
 			raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil, test.requested)
 			if err != nil {
@@ -481,7 +481,7 @@ func TestAPhotoAttachedAfterEnqueueNeverReachesTheWritePrompt(t *testing.T) {
 		writePrompt = request.Messages[0].Parts[0].Text
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy, testBudget)
 
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),

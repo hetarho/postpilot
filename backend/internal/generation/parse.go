@@ -18,11 +18,22 @@ func (e *ErrBadOutput) Unwrap() error { return llm.ErrBadOutput }
 // responseParseError preserves the provider's completion-budget signal when a
 // non-empty response was cut off mid-JSON. A syntactically invalid full response is
 // still ErrBadOutput; a length-limited partial response has an actionable remedy.
+//
+// When the provider reported where the budget went, the failure carries the split so the
+// remedy follows from the message: a body that filled its budget wants a larger one, while
+// one the model never wrote because it reasoned through the budget wants a lower effort for
+// this purpose. A provider that reported nothing keeps the bare sentinel.
 func responseParseError(response llm.Response, err error) error {
-	if err != nil && response.FinishReason == "length" {
-		return llm.ErrOutputTruncated
+	if err == nil || response.FinishReason != "length" {
+		return err
 	}
-	return err
+	if response.Usage.ReasoningTokens > 0 {
+		return &llm.TruncatedError{
+			ReasoningTokens:  response.Usage.ReasoningTokens,
+			CompletionTokens: response.Usage.CompletionTokens,
+		}
+	}
+	return llm.ErrOutputTruncated
 }
 
 type blockJSON struct {

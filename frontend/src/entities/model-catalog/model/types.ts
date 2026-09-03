@@ -69,8 +69,9 @@ export interface RecommendationSet {
   selections: RecommendationStageSelection[]
 }
 
-/** The strict per-model reasoning override an operator may set. `''` defers to the stage
- *  policy; `unset` deliberately omits the wire key and keeps the provider's own behavior. */
+/** The reasoning override an operator may set for ONE (model, purpose). `''` defers to the
+ *  stage policy; `unset` deliberately omits the wire key and keeps the provider's own
+ *  behavior. */
 export type ReasoningEffortName =
   '' | 'unset' | 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
@@ -117,9 +118,32 @@ export interface AdminCatalogEntry {
   /** The provider still offered this model at the last successful read. False is a flag for
    *  the operator, never an action: the model is served disabled-with-reason to users. */
   listed: boolean
+  /** The override for the PURPOSE this listing was read for, not for the model. The same
+   *  model shows its own value on every tab (change 24). */
   reasoningEffort: ReasoningEffortName
+  /** What this model recently spent its completion budget on at the listed purpose's stage,
+   *  or undefined when nothing has been recorded — which renders as nothing rather than as a
+   *  zero that would read as a measurement. */
+  reasoningSpend?: ReasoningSpend
   /** Upstream publication time in epoch seconds; orders a vendor's models newest-first. */
   sourceCreatedAt: bigint
+}
+
+/** A recent window of one model's completion budget at one stage. It is the only reliable
+ *  check that a model honors its effort: the provider says a model ACCEPTS
+ *  `reasoning_effort`, never which values it honors, and an unhonored effort behaves like
+ *  sending none — reasoning then runs to the cap. */
+export interface ReasoningSpend {
+  calls: bigint
+  reasoningTokens: bigint
+  completionTokens: bigint
+}
+
+/** The share of the completion budget spent on reasoning, 0–1. Zero completion tokens
+ *  reports 0 rather than dividing. */
+export function reasoningShare(spend: ReasoningSpend): number {
+  if (spend.completionTokens <= 0n) return 0
+  return Number(spend.reasoningTokens) / Number(spend.completionTokens)
 }
 
 /** One read of the operator's catalog, with everything the screen has to say about where it

@@ -254,7 +254,9 @@ func (s *Service) CompareRule(ctx context.Context, userID, comparisonID, modelRe
 			if comparison.SourceLanguage == LanguageEnglish {
 				userInstruction = "Return only the article body."
 			}
-			response, e := s.models.Complete(ctx, model, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(userInstruction)}}}})
+			// A rule comparison writes two post bodies, and the job carries the WRITE model
+			// (main.go passes found.WriteModel), so this is the writing stage.
+			response, e := s.models.Complete(ctx, model, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(userInstruction)}}}, Stage: llm.StageNameWrite})
 			results <- result{i: index, output: response.Text, err: e}
 		}(i)
 	}
@@ -577,7 +579,7 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 			continue
 		}
 		if item.NeutralSummary == "" {
-			summaryResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: validationSummaryPrompt(validation.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.Original)}}}})
+			summaryResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: validationSummaryPrompt(validation.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.Original)}}}, Stage: llm.StageNameAnalyze})
 			if e != nil {
 				setValidationItemFailure(item, e)
 				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
@@ -609,7 +611,7 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 			}
 		}
 		if item.Regenerated == "" {
-			writeResponse, e := s.models.Complete(ctx, write, llm.Request{System: validationWritePrompt(validation.SourceLanguage, version.Profile, s.config.EndingMaxConsecutive), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.NeutralSummary)}}}})
+			writeResponse, e := s.models.Complete(ctx, write, llm.Request{System: validationWritePrompt(validation.SourceLanguage, version.Profile, s.config.EndingMaxConsecutive), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(item.NeutralSummary)}}}, Stage: llm.StageNameWrite})
 			if e != nil {
 				setValidationItemFailure(item, e)
 				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {
@@ -625,7 +627,7 @@ func (s *Service) ValidateProfile(ctx context.Context, userID, validationID stri
 			}
 		}
 		if validation.JudgeEnabled && item.ScoresJSON == "" {
-			judgeResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: validationJudgePrompt(validation.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart("original:\n" + item.Original + "\nregenerated:\n" + item.Regenerated)}}}})
+			judgeResponse, e := s.models.Complete(ctx, analyze, llm.Request{System: validationJudgePrompt(validation.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart("original:\n" + item.Original + "\nregenerated:\n" + item.Regenerated)}}}, Stage: llm.StageNameAnalyze})
 			if e != nil {
 				setValidationItemFailure(item, e)
 				if persistErr := s.personalization.UpdateProfileValidation(ctx, validation); persistErr != nil {

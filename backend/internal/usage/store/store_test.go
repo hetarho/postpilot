@@ -161,7 +161,7 @@ func TestSettleRefundsAgainstTheRecordedLedger(t *testing.T) {
 
 	// One recorded call that cost a tenth of what the hold assumed.
 	work := usage.WithWork(ctx, usage.Work{UserID: "alice", Kind: "generate", JobID: "job"})
-	if err := svc.RecordCall(work, pricedRef, llm.Usage{
+	if err := svc.RecordCall(work, pricedRef, "", llm.Usage{
 		PromptTokens: 3_000, CompletionTokens: 1_000,
 	}, false); err != nil {
 		t.Fatal(err)

@@ -266,6 +266,7 @@ func (s *Store) InsertEvent(ctx context.Context, event usage.Event) error {
 		Model:            event.Model,
 		PromptTokens:     event.PromptTokens,
 		CompletionTokens: event.CompletionTokens,
+		ReasoningTokens:  event.ReasoningTokens,
 		CostMicrousd:     event.CostMicrousd,
 		CostSource:       string(event.CostSource),
 		CreatedAt:        formatTime(event.CreatedAt),
@@ -296,6 +297,25 @@ func toLot(row sqlc.CreditLot) (usage.Lot, error) {
 		lot.ExpiresAt = &expires
 	}
 	return lot, nil
+}
+
+// ReasoningSpend reads through the READ pool: it is a diagnostic aggregate over a window of
+// rows, not part of any write path, so it must not queue behind the single writer.
+func (s *Store) ReasoningSpend(ctx context.Context, stage string, since time.Time) ([]usage.ReasoningSpend, error) {
+	rows, err := s.read.ReasoningSpendByStage(ctx, sqlc.ReasoningSpendByStageParams{
+		Stage: stage, CreatedAt: formatTime(since),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("aggregate reasoning spend: %w", err)
+	}
+	out := make([]usage.ReasoningSpend, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, usage.ReasoningSpend{
+			Model: row.Model, Stage: stage, Calls: row.Calls,
+			ReasoningTokens: row.ReasoningTokens, CompletionTokens: row.CompletionTokens,
+		})
+	}
+	return out, nil
 }
 
 func parseTime(value string) (time.Time, error) {

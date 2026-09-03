@@ -2,23 +2,31 @@ import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   REASONING_EFFORTS,
+  reasoningShare,
   useSetModelPurpose,
   useUpdateModel,
   type AdminCatalogEntry,
   type ReasoningEffortName,
+  type ReasoningSpend,
 } from '@/entities/model-catalog'
 import type { ModelPurpose } from '@/shared/config'
 import { AppFailureMessage, Badge, Checkbox, FieldLabel, Listbox, Typography } from '@/shared/ui'
 
 /** One model of the operator's catalog, seen from ONE purpose tab: what it is, whether this
- *  purpose uses it, and the shared per-model reasoning override.
+ *  purpose uses it, and the reasoning effort it runs at FOR THIS PURPOSE.
  *
- *  The checkbox acts on the active tab's purpose only — the same model shows its own state on
- *  every tab, and the purposes it is registered to elsewhere are listed so a cross-purpose
- *  registration is visible without switching tabs. A card, because these controls act on one
- *  object and must read apart from the next model's (design-language §1.4). The reasoning
- *  Listbox appears once the model is registered anywhere: an override on a model nobody may
- *  select is a setting for nothing. */
+ *  Both controls act on the active tab's purpose only — the same model shows its own state
+ *  and its own effort on every tab, and the purposes it is registered to elsewhere are listed
+ *  so a cross-purpose registration is visible without switching tabs. A card, because these
+ *  controls act on one object and must read apart from the next model's (design-language
+ *  §1.4).
+ *
+ *  The reasoning Listbox appears once the model is registered to THIS purpose: the effort is
+ *  a property of the registration, and the server refuses one for a purpose the model does
+ *  not serve. Beside it sits what the model actually spent at this stage, because the
+ *  provider's `supported_parameters` says a model accepts `reasoning_effort` and never which
+ *  VALUES it honors — an unhonored effort behaves like sending none, and reasoning runs to
+ *  the cap. Measurement is the only check there is (change 24). */
 export function CatalogModelRow({
   entry,
   purpose,
@@ -84,36 +92,40 @@ export function CatalogModelRow({
       </div>
 
       {entry.purposes.length > 0 && (
-        <>
-          <Typography variant="meta" className="mt-2 block">
-            {t('catalog.registeredPurposes', {
-              purposes: entry.purposes.map((p) => t(`catalog.purposeTab.${p}`)).join(' · '),
-            })}
-          </Typography>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div className="min-w-0">
-              <FieldLabel id={reasoningLabelId} htmlFor={`${rowId}-reasoning-control`}>
-                {t('catalog.reasoning')}
-              </FieldLabel>
-              <Listbox<ReasoningEffortName>
-                id={`${rowId}-reasoning-control`}
-                value={entry.reasoningEffort}
-                options={REASONING_EFFORTS.map((effort) => ({
-                  value: effort,
-                  label: effort === '' ? t('catalog.reasoningDefault') : effort,
-                }))}
-                disabled={pending}
-                aria-labelledby={reasoningLabelId}
-                onChange={(next) => {
-                  if (next !== entry.reasoningEffort) {
-                    update.update(entry.modelId, { reasoningEffort: next })
-                  }
-                }}
-                className="mt-1"
-              />
-            </div>
+        <Typography variant="meta" className="mt-2 block">
+          {t('catalog.registeredPurposes', {
+            purposes: entry.purposes.map((p) => t(`catalog.purposeTab.${p}`)).join(' · '),
+          })}
+        </Typography>
+      )}
+
+      {registeredHere && (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="min-w-0">
+            <FieldLabel id={reasoningLabelId} htmlFor={`${rowId}-reasoning-control`}>
+              {t('catalog.reasoning')}
+            </FieldLabel>
+            <Listbox<ReasoningEffortName>
+              id={`${rowId}-reasoning-control`}
+              value={entry.reasoningEffort}
+              options={REASONING_EFFORTS.map((effort) => ({
+                value: effort,
+                label: effort === '' ? t('catalog.reasoningDefault') : effort,
+              }))}
+              disabled={pending}
+              aria-labelledby={reasoningLabelId}
+              onChange={(next) => {
+                if (next !== entry.reasoningEffort) {
+                  update.update(entry.modelId, purpose, { reasoningEffort: next })
+                }
+              }}
+              className="mt-1"
+            />
           </div>
-        </>
+          {/* Beside the control it acts on, not in a panel of its own (§4.3): the number and
+              the decision it argues for have to be readable in one glance. */}
+          <ReasoningSpendSignal spend={entry.reasoningSpend} />
+        </div>
       )}
 
       {failure && (
@@ -124,6 +136,42 @@ export function CatalogModelRow({
           className="text-field-error mt-2 break-words"
         >
           <AppFailureMessage failure={failure} />
+        </Typography>
+      )}
+    </div>
+  )
+}
+
+/** What this model recently spent its completion budget on at this purpose's stage.
+ *
+ *  A model with no recorded call for this stage renders NOTHING rather than a zero: zero
+ *  reasoning out of zero tokens is the absence of a measurement, and showing it as one is how
+ *  an operator would come to trust a number nothing stands behind. */
+function ReasoningSpendSignal({ spend }: { spend: ReasoningSpend | undefined }) {
+  const { t } = useTranslation('models')
+  if (!spend || spend.calls <= 0n) return null
+  const share = reasoningShare(spend)
+  // The tone reinforces the words, never replaces them (§2.6): the sentence names the share
+  // and the call count either way.
+  const heavy = share >= 0.5
+  return (
+    <div className="min-w-0">
+      <Typography variant="label" as="p" className="text-content-secondary">
+        {t('catalog.reasoningSpend')}
+      </Typography>
+      <Typography
+        variant="meta"
+        as="p"
+        className={heavy ? 'text-notice-warning-fg mt-1' : 'text-content-tertiary mt-1'}
+      >
+        {t('catalog.reasoningSpendValue', {
+          percent: Math.round(share * 100),
+          calls: Number(spend.calls),
+        })}
+      </Typography>
+      {heavy && (
+        <Typography variant="meta" as="p" className="text-content-tertiary mt-1">
+          {t('catalog.reasoningSpendHeavy')}
         </Typography>
       )}
     </div>

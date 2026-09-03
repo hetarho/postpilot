@@ -228,7 +228,7 @@ func (s *Service) extractStyleRulesForLanguage(ctx context.Context, ref llm.Mode
 	if language == LanguageEnglish {
 		prompt = englishDiffRulePrompt
 	}
-	response, err := s.models.Complete(ctx, ref, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(payload))}}}})
+	response, err := s.models.Complete(ctx, ref, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(payload))}}}, Stage: llm.StageNameAnalyze})
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +368,7 @@ func (s *Service) classifyRuleRelationsForLanguage(ctx context.Context, ref llm.
 		if language == LanguageEnglish {
 			prompt = englishSemanticRulePrompt
 		}
-		response, err := s.models.Complete(ctx, ref, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(payload))}}}})
+		response, err := s.models.Complete(ctx, ref, llm.Request{System: prompt, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(payload))}}}, Stage: llm.StageNameAnalyze})
 		if err != nil {
 			return nil, err
 		}

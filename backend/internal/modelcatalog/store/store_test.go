@@ -56,10 +56,12 @@ func TestMigration_SeedsTheShippedCatalog(t *testing.T) {
 	if !ok {
 		t.Fatal("claude-sonnet-5 is not seeded")
 	}
-	// A11: the one shipped override. Losing it would replace the model's provider-controlled
-	// adaptive thinking with the write stage's `low`.
-	if sonnet.Reasoning != llm.ReasoningUnset {
-		t.Errorf("sonnet reasoning = %q, want unset", sonnet.Reasoning)
+	// Change 24's A4: migration 0021 CLEARS every override rather than copying it onto the
+	// five registrations, so even the one shipped `unset` is gone and the model resolves to
+	// the code-owned stage policy. Carrying today's values forward would have propagated a
+	// blanket `minimal` — the setting measured breaking observation on 2026-09-03.
+	if len(sonnet.Reasoning) != 0 {
+		t.Errorf("sonnet reasoning = %v, want every override cleared by the migration", sonnet.Reasoning)
 	}
 	if sonnet.ProviderSlug != "anthropic" || !sonnet.Vision || !sonnet.StructuredOutput {
 		t.Errorf("sonnet = %+v", sonnet)
@@ -76,10 +78,10 @@ func TestMigration_SeedsTheShippedCatalog(t *testing.T) {
 	if byID["deepseek/deepseek-v4-flash-0731"].Vision {
 		t.Error("a text-only model was seeded with vision")
 	}
-	// Every other model defers to the stage policy.
+	// Every model defers to the stage policy after the migration.
 	for id, row := range byID {
-		if id != "anthropic/claude-sonnet-5" && row.Reasoning != llm.ReasoningUnspecified {
-			t.Errorf("%s carries an unexpected reasoning override %q", id, row.Reasoning)
+		if len(row.Reasoning) != 0 {
+			t.Errorf("%s carries an unexpected reasoning override %v", id, row.Reasoning)
 		}
 	}
 }
@@ -90,7 +92,7 @@ func TestUpsertAndGet_RoundTrip(t *testing.T) {
 	model := modelcatalog.Model{
 		ModelID: "acme/new-1", ProviderSlug: "acme", Label: "New 1",
 		Vision: true, StructuredOutput: true, ContextTokens: 4096,
-		InputUSDPerMillion: "1.25", OutputUSDPerMillion: "4.25", PricingCheckedAt: "2026-09-01", Reasoning: llm.ReasoningHigh, ImageOutput: true, Listed: true,
+		InputUSDPerMillion: "1.25", OutputUSDPerMillion: "4.25", PricingCheckedAt: "2026-09-01", ImageOutput: true, Listed: true,
 		LastSeenAt: testNow, CreatedAt: testNow, UpdatedAt: testNow,
 	}
 	if err := s.Upsert(ctx, model); err != nil {
@@ -100,7 +102,9 @@ func TestUpsertAndGet_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Label != "New 1" || got.Reasoning != llm.ReasoningHigh ||
+	// The effort is no longer a catalog_models column: an Upsert carries only the snapshot
+	// and availability halves, and a registration carries the curation (change 24).
+	if got.Label != "New 1" || len(got.Reasoning) != 0 ||
 		got.ContextTokens != 4096 || got.InputUSDPerMillion != "1.25" || !got.ImageOutput || got.VideoOutput || !got.Listed {
 		t.Fatalf("round trip = %+v", got)
 	}
@@ -149,21 +153,35 @@ func TestPatch_WritesOnlyWhatItNames(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// An empty effort is a real value: it clears the override back to the stage policy.
-	cleared := llm.ReasoningUnspecified
-	updated, err := s.Patch(ctx, id, modelcatalog.Patch{Reasoning: &cleared}, testNow)
+	// The effort lands on the REGISTRATION, so a patch names the purpose it applies to.
+	high := llm.ReasoningHigh
+	updated, err := s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposeWriting, Reasoning: &high}, testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.Reasoning != llm.ReasoningUnspecified {
-		t.Errorf("reasoning = %q, want cleared", updated.Reasoning)
+	if updated.Reasoning[modelcatalog.PurposeWriting] != llm.ReasoningHigh {
+		t.Errorf("reasoning = %v, want high on writing", updated.Reasoning)
 	}
 	if len(updated.Purposes) != 1 || updated.Purposes[0] != modelcatalog.PurposeWriting {
 		t.Errorf("purposes = %v, a patch must not touch registrations", updated.Purposes)
 	}
+	// An empty effort is a real value: it clears the override back to the stage policy.
+	cleared := llm.ReasoningUnspecified
+	updated, err = s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposeWriting, Reasoning: &cleared}, testNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(updated.Reasoning) != 0 {
+		t.Errorf("reasoning = %v, want cleared", updated.Reasoning)
+	}
 
-	if _, err := s.Patch(ctx, "nobody/has-this", modelcatalog.Patch{Reasoning: &cleared}, testNow); !errors.Is(err, modelcatalog.ErrNotFound) {
+	if _, err := s.Patch(ctx, "nobody/has-this", modelcatalog.Patch{Purpose: modelcatalog.PurposeWriting, Reasoning: &cleared}, testNow); !errors.Is(err, modelcatalog.ErrNotFound) {
 		t.Fatalf("patching an unknown model = %v, want ErrNotFound", err)
+	}
+	// An effort on a purpose the model does not serve has nowhere to be read from, so the
+	// UPDATE matching no join row IS the refusal.
+	if _, err := s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposeStyleAnalysis, Reasoning: &high}, testNow); !errors.Is(err, modelcatalog.ErrPurposeNotRegistered) {
+		t.Fatalf("patching an unregistered purpose = %v, want ErrPurposeNotRegistered", err)
 	}
 }
 
@@ -264,8 +282,9 @@ func TestRefreshAvailability_MarksSeenAndUnlistsTheRest(t *testing.T) {
 			if row.PricingCheckedAt != at.UTC().Format(time.DateOnly) {
 				t.Errorf("pricing_checked_at = %q, want the fetch date", row.PricingCheckedAt)
 			}
-			// The curation the operator owns is untouched by a refresh.
-			if row.Reasoning != llm.ReasoningUnset {
+			// The curation the operator owns is untouched by a refresh — and after the
+			// migration there is none to change, which is A4.
+			if len(row.Reasoning) != 0 {
 				t.Errorf("a refresh changed curation: %+v", row)
 			}
 			if !row.ImageOutput {

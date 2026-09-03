@@ -52,8 +52,12 @@ message CatalogEntry {
   // flag for the operator, not an action: the model is served disabled-with-reason to users
   // and is never retired automatically.
   bool listed = 13;
-  // The strict per-model reasoning override, or "" for none. "unset" deliberately omits the
-  // wire key and keeps the provider's own behavior.
+  // The reasoning override for the PURPOSE this listing was for, or "" for none. "unset"
+  // deliberately omits the wire key and keeps the provider's own behavior.
+  //
+  // Purpose-scoped since change 24: it used to be one value for the whole model while the
+  // code-owned policy it overrides is per stage, so lowering the effort for writing silently
+  // changed photo observation.
   string reasoning_effort = 14;
   // Upstream publication time in epoch seconds; orders a vendor's models newest-first.
   int64 source_created_at = 15;
@@ -64,11 +68,30 @@ message CatalogEntry {
   // image/video generation purposes gate on, as `vision` gates photo-analysis.
   bool image_output = 17;
   bool video_output = 18;
+  // What this model recently SPENT its completion budget on at the listed purpose's stage.
+  // Absent when nothing has been recorded for it, which renders as nothing rather than as a
+  // zero that would read as a measurement.
+  //
+  // It is the only reliable check that a model honors its effort: the provider's
+  // `supported_parameters` says a model accepts `reasoning_effort`, never which VALUES it
+  // honors, and an unhonored effort behaves like sending none — reasoning runs to the cap.
+  optional ReasoningSpend reasoning_spend = 19;
+}
+
+// ReasoningSpend is a recent window of one model's completion budget at one stage.
+message ReasoningSpend {
+  int64 calls = 1;
+  int64 reasoning_tokens = 2;
+  int64 completion_tokens = 3;
 }
 
 message ListCatalogRequest {
   // Bypass the server's catalog cache and read the provider again.
   bool refresh = 1;
+  // The purpose tab being listed. It selects which effort each entry reports and which
+  // stage's spend signal is attached, so the control and the evidence beside it belong to
+  // the tab the operator is looking at. Empty reports neither.
+  string purpose = 2;
 }
 
 message ListCatalogResponse {
@@ -99,8 +122,17 @@ message UpdateModelRequest {
   string model_id = 1;
   reserved 2;  // enabled — visibility is per-purpose registration now (change 20).
   reserved 3;  // min_plan
-  // "" clears the override and returns the model to the stage reasoning policy.
+  // "" clears the override and returns this purpose to the stage reasoning policy.
   optional string reasoning_effort = 4;
+  // Which registration the edit applies to. Required: the effort is a property of "this
+  // model doing this task", and the server refuses a purpose the model is not registered to
+  // — the control only appears once registered, and that is now a server rule rather than a
+  // UI convention.
+  //
+  // Carried here rather than on SetModelPurposeRequest because registering and setting an
+  // effort are separate decisions: an operator changes the effort on a model that is already
+  // registered, and folding the two would make every effort edit re-assert a registration.
+  string purpose = 5;
 }
 
 message UpdateModelResponse {

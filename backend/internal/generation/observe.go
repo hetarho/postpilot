@@ -39,6 +39,11 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 			System:    ObservePrompt,
 			Messages:  []llm.Message{{Role: llm.RoleUser, Parts: parts}},
 			Reasoning: s.reasoning.Observe,
+			// The stage this call is FOR, which is what lets the registry resolve the
+			// operator's override for photo analysis rather than for writing — one run
+			// observes at one effort and writes at another (change 24).
+			Stage:     llm.StageNameObserve,
+			MaxTokens: s.budget.Observation(),
 		}
 		if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
 			request.JSONSchema = ObservationsSchema()

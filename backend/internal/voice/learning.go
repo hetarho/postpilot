@@ -333,7 +333,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 		return s.failLearning(ctx, *event, err)
 	}
 	progress("learn", 0, 1)
-	request := llm.Request{System: structuredAnalysisPromptForLanguage(event.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus.String())}}}}
+	request := llm.Request{System: structuredAnalysisPromptForLanguage(event.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus.String())}}}, Stage: llm.StageNameAnalyze}
 	if info, ok := s.models.Resolve(ref); ok && info.StructuredOutput {
 		request.JSONSchema = VoiceAnalysisSchemaForLanguage(event.SourceLanguage)
 	}

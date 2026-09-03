@@ -31,7 +31,7 @@ func (q *Queries) AddCatalogModelPurpose(ctx context.Context, arg AddCatalogMode
 const getCatalogModel = `-- name: GetCatalogModel :one
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
-       reasoning_effort, listed, last_seen_at, created_at, updated_at
+       listed, last_seen_at, created_at, updated_at
 FROM catalog_models
 WHERE model_id = ?
 `
@@ -48,7 +48,6 @@ type GetCatalogModelRow struct {
 	InputUsdPerMillion  sql.NullString
 	OutputUsdPerMillion sql.NullString
 	PricingCheckedAt    sql.NullString
-	ReasoningEffort     sql.NullString
 	Listed              int64
 	LastSeenAt          sql.NullString
 	CreatedAt           string
@@ -70,7 +69,6 @@ func (q *Queries) GetCatalogModel(ctx context.Context, modelID string) (GetCatal
 		&i.InputUsdPerMillion,
 		&i.OutputUsdPerMillion,
 		&i.PricingCheckedAt,
-		&i.ReasoningEffort,
 		&i.Listed,
 		&i.LastSeenAt,
 		&i.CreatedAt,
@@ -80,25 +78,30 @@ func (q *Queries) GetCatalogModel(ctx context.Context, modelID string) (GetCatal
 }
 
 const getCatalogModelPurposes = `-- name: GetCatalogModelPurposes :many
-SELECT purpose
+SELECT purpose, reasoning_effort
 FROM catalog_model_purposes
 WHERE model_id = ?
 ORDER BY purpose
 `
 
-func (q *Queries) GetCatalogModelPurposes(ctx context.Context, modelID string) ([]string, error) {
+type GetCatalogModelPurposesRow struct {
+	Purpose         string
+	ReasoningEffort sql.NullString
+}
+
+func (q *Queries) GetCatalogModelPurposes(ctx context.Context, modelID string) ([]GetCatalogModelPurposesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getCatalogModelPurposes, modelID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []GetCatalogModelPurposesRow
 	for rows.Next() {
-		var purpose string
-		if err := rows.Scan(&purpose); err != nil {
+		var i GetCatalogModelPurposesRow
+		if err := rows.Scan(&i.Purpose, &i.ReasoningEffort); err != nil {
 			return nil, err
 		}
-		items = append(items, purpose)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -110,14 +113,15 @@ func (q *Queries) GetCatalogModelPurposes(ctx context.Context, modelID string) (
 }
 
 const listCatalogModelPurposes = `-- name: ListCatalogModelPurposes :many
-SELECT model_id, purpose
+SELECT model_id, purpose, reasoning_effort
 FROM catalog_model_purposes
 ORDER BY model_id, purpose
 `
 
 type ListCatalogModelPurposesRow struct {
-	ModelID string
-	Purpose string
+	ModelID         string
+	Purpose         string
+	ReasoningEffort sql.NullString
 }
 
 func (q *Queries) ListCatalogModelPurposes(ctx context.Context) ([]ListCatalogModelPurposesRow, error) {
@@ -129,7 +133,7 @@ func (q *Queries) ListCatalogModelPurposes(ctx context.Context) ([]ListCatalogMo
 	var items []ListCatalogModelPurposesRow
 	for rows.Next() {
 		var i ListCatalogModelPurposesRow
-		if err := rows.Scan(&i.ModelID, &i.Purpose); err != nil {
+		if err := rows.Scan(&i.ModelID, &i.Purpose, &i.ReasoningEffort); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -147,7 +151,7 @@ const listCatalogModels = `-- name: ListCatalogModels :many
 
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
-       reasoning_effort, listed, last_seen_at, created_at, updated_at
+       listed, last_seen_at, created_at, updated_at
 FROM catalog_models
 ORDER BY provider_slug, model_id
 `
@@ -164,7 +168,6 @@ type ListCatalogModelsRow struct {
 	InputUsdPerMillion  sql.NullString
 	OutputUsdPerMillion sql.NullString
 	PricingCheckedAt    sql.NullString
-	ReasoningEffort     sql.NullString
 	Listed              int64
 	LastSeenAt          sql.NullString
 	CreatedAt           string
@@ -177,8 +180,9 @@ type ListCatalogModelsRow struct {
 // The curated model catalog. The table is global, not per-account: what an installation
 // offers is an operator decision.
 //
-// Two groups of columns with different owners. The curation columns (reasoning_effort, and
-// the catalog_model_purposes rows) are only ever written by an operator edit. The snapshot
+// Two groups of columns with different owners. The curation values (the
+// catalog_model_purposes rows and their reasoning_effort) are only ever written by an
+// operator edit. The snapshot
 // columns (label, flags, context, pricing) and the availability columns (listed,
 // last_seen_at) are only ever written from a successful upstream read. updated_at tracks
 // the first group alone, so a refresh does not make every row look freshly curated.
@@ -203,7 +207,6 @@ func (q *Queries) ListCatalogModels(ctx context.Context) ([]ListCatalogModelsRow
 			&i.InputUsdPerMillion,
 			&i.OutputUsdPerMillion,
 			&i.PricingCheckedAt,
-			&i.ReasoningEffort,
 			&i.Listed,
 			&i.LastSeenAt,
 			&i.CreatedAt,
@@ -309,23 +312,25 @@ func (q *Queries) UnlistAllCatalogModels(ctx context.Context) error {
 	return err
 }
 
-const updateCatalogModelCuration = `-- name: UpdateCatalogModelCuration :execrows
+const updateCatalogModelPurposeReasoning = `-- name: UpdateCatalogModelPurposeReasoning :execrows
 
-UPDATE catalog_models
-SET reasoning_effort = ?, updated_at = ?
-WHERE model_id = ?
+UPDATE catalog_model_purposes
+SET reasoning_effort = ?
+WHERE model_id = ? AND purpose = ?
 `
 
-type UpdateCatalogModelCurationParams struct {
+type UpdateCatalogModelPurposeReasoningParams struct {
 	ReasoningEffort sql.NullString
-	UpdatedAt       string
 	ModelID         string
+	Purpose         string
 }
 
 // created_at is absent from the DO UPDATE list on purpose: the row keeps the moment it
 // entered the catalog, so only the insert may set it.
-func (q *Queries) UpdateCatalogModelCuration(ctx context.Context, arg UpdateCatalogModelCurationParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, updateCatalogModelCuration, arg.ReasoningEffort, arg.UpdatedAt, arg.ModelID)
+// The effort is a property of the REGISTRATION, so it is written on the join row and only
+// for a purpose the model actually serves: the WHERE matching zero rows IS the refusal.
+func (q *Queries) UpdateCatalogModelPurposeReasoning(ctx context.Context, arg UpdateCatalogModelPurposeReasoningParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateCatalogModelPurposeReasoning, arg.ReasoningEffort, arg.ModelID, arg.Purpose)
 	if err != nil {
 		return 0, err
 	}
@@ -336,8 +341,8 @@ const upsertCatalogModel = `-- name: UpsertCatalogModel :exec
 INSERT INTO catalog_models (
     model_id, provider_slug, label, vision, structured_output, image_output, video_output,
     context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
-    reasoning_effort, listed, last_seen_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    listed, last_seen_at, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(model_id) DO UPDATE SET
     provider_slug = excluded.provider_slug,
     label = excluded.label,
@@ -349,7 +354,6 @@ ON CONFLICT(model_id) DO UPDATE SET
     input_usd_per_million = excluded.input_usd_per_million,
     output_usd_per_million = excluded.output_usd_per_million,
     pricing_checked_at = excluded.pricing_checked_at,
-    reasoning_effort = excluded.reasoning_effort,
     listed = excluded.listed,
     last_seen_at = excluded.last_seen_at,
     updated_at = excluded.updated_at
@@ -367,7 +371,6 @@ type UpsertCatalogModelParams struct {
 	InputUsdPerMillion  sql.NullString
 	OutputUsdPerMillion sql.NullString
 	PricingCheckedAt    sql.NullString
-	ReasoningEffort     sql.NullString
 	Listed              int64
 	LastSeenAt          sql.NullString
 	CreatedAt           string
@@ -387,7 +390,6 @@ func (q *Queries) UpsertCatalogModel(ctx context.Context, arg UpsertCatalogModel
 		arg.InputUsdPerMillion,
 		arg.OutputUsdPerMillion,
 		arg.PricingCheckedAt,
-		arg.ReasoningEffort,
 		arg.Listed,
 		arg.LastSeenAt,
 		arg.CreatedAt,

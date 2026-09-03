@@ -193,6 +193,10 @@ func main() {
 		int64(cfg.LLMMaxTokensDefault),
 	)
 	meteredModels := meteredRegistry{Registry: registry, ledger: ledger}
+	// The curation surface's evidence, joined HERE rather than by a query inside the catalog:
+	// usage_events belongs to the ledger, and a context reading another's tables is the one
+	// rule ARCHITECTURE §2.2 exists to hold.
+	catalogSvc.SetReasoningSpend(catalogReasoningSpend{ledger: ledger, providerID: registry.ProviderID()})
 	jobQueue.Admit(jobAdmission{ledger: ledger, registry: registry, plans: authSvc})
 
 	// After the admitter is attached, not with the other boot sweeps: an open hold can only
@@ -317,6 +321,9 @@ func main() {
 		generationJobs{queue: jobQueue},
 		cfg.ObserveBatchSize,
 		generation.ReasoningPolicy{Observe: cfg.LLMReasoning.Observe, Write: cfg.LLMReasoning.Write},
+		// The budget policy is passed whole rather than as numbers: the stages ask their
+		// owner what their work needs, and this context holds no cap of its own.
+		cfg.LLMCompletionBudget,
 	)
 	// Generation reads a brief only at enqueue, to freeze it; the purpose context never
 	// learns that generation exists.
@@ -948,6 +955,50 @@ func generationPostError(err error) error {
 	}
 }
 
+// catalogReasoningSpend adapts the ledger's aggregate to the catalog's own port shape, so
+// neither context names the other's type.
+//
+// It also translates the KEY, which is the whole reason this adapter is not a one-liner: the
+// ledger records a model as the registry ref (`openrouter/z-ai/glm-5.3-flash`), while a
+// catalog row is the provider-local id (`z-ai/glm-5.3-flash`). Without stripping the
+// registry's provider segment here, every spend signal would silently fail to join and the
+// curation surface would show nothing however many calls had been recorded.
+type catalogReasoningSpend struct {
+	ledger     *usage.Service
+	providerID string
+}
+
+func (a catalogReasoningSpend) ReasoningSpendByModel(ctx context.Context, stage string) ([]modelcatalog.SpendRow, error) {
+	rows, err := a.ledger.ReasoningSpendByModel(ctx, stage)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]modelcatalog.SpendRow, 0, len(rows))
+	for _, row := range rows {
+		modelID, ok := catalogModelID(row.Model, a.providerID)
+		if !ok {
+			// A row recorded under another provider's ref has no catalog model to join to.
+			continue
+		}
+		out = append(out, modelcatalog.SpendRow{
+			Model: modelID, Calls: row.Calls,
+			ReasoningTokens: row.ReasoningTokens, CompletionTokens: row.CompletionTokens,
+		})
+	}
+	return out, nil
+}
+
+// catalogModelID strips the registry's provider segment from a recorded ref. A provider-local
+// id itself contains slashes ("z-ai/glm-5.3-flash"), so only the FIRST segment is removed and
+// only when it is this registry's own.
+func catalogModelID(recorded, providerID string) (string, bool) {
+	prefix := providerID + "/"
+	if providerID == "" || !strings.HasPrefix(recorded, prefix) {
+		return "", false
+	}
+	return strings.TrimPrefix(recorded, prefix), true
+}
+
 type generationJobs struct{ queue *job.Queue }
 
 func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest) (string, error) {
@@ -1423,7 +1474,10 @@ func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm
 	response, err := m.Registry.Complete(ctx, ref, req)
 	// A ledger failure never fails the user's work: the tokens are already spent, and the
 	// budget it protects is a soft cap enforced at the NEXT admission.
-	if recordErr := m.ledger.RecordCall(ctx, ref, response.Usage, err != nil); recordErr != nil {
+	// req.Stage is what the CALL said it was for, so the ledger records the stage as a fact
+	// instead of inferring it from the ref — which is what made a write call whose model also
+	// served observation indistinguishable from an observation call.
+	if recordErr := m.ledger.RecordCall(ctx, ref, req.Stage, response.Usage, err != nil); recordErr != nil {
 		slog.Error("usage ledger write failed", "model", ref.String(), "err", recordErr)
 	}
 	return response, err

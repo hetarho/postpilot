@@ -106,8 +106,8 @@ func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams
 const insertEvent = `-- name: InsertEvent :exec
 INSERT INTO usage_events (
     user_id, kind, job_id, stage, model,
-    prompt_tokens, completion_tokens, cost_microusd, cost_source, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    prompt_tokens, completion_tokens, reasoning_tokens, cost_microusd, cost_source, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertEventParams struct {
@@ -118,6 +118,7 @@ type InsertEventParams struct {
 	Model            string
 	PromptTokens     int64
 	CompletionTokens int64
+	ReasoningTokens  int64
 	CostMicrousd     int64
 	CostSource       string
 	CreatedAt        string
@@ -132,6 +133,7 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 		arg.Model,
 		arg.PromptTokens,
 		arg.CompletionTokens,
+		arg.ReasoningTokens,
 		arg.CostMicrousd,
 		arg.CostSource,
 		arg.CreatedAt,
@@ -308,6 +310,64 @@ func (q *Queries) OpenAdmissionForJob(ctx context.Context, jobID string) (OpenAd
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const reasoningSpendByStage = `-- name: ReasoningSpendByStage :many
+SELECT model,
+       CAST(COUNT(*) AS INTEGER) AS calls,
+       CAST(COALESCE(SUM(reasoning_tokens), 0) AS INTEGER) AS reasoning_tokens,
+       CAST(COALESCE(SUM(completion_tokens), 0) AS INTEGER) AS completion_tokens
+FROM usage_events
+WHERE stage = ? AND created_at >= ?
+GROUP BY model
+`
+
+type ReasoningSpendByStageParams struct {
+	Stage     string
+	CreatedAt string
+}
+
+type ReasoningSpendByStageRow struct {
+	Model            string
+	Calls            int64
+	ReasoningTokens  int64
+	CompletionTokens int64
+}
+
+// Where one model's completion budget went at one stage, over a recent window. It is the
+// evidence an operator needs to see that a model is ignoring its reasoning effort BEFORE it
+// fails somebody's generation: `supported_parameters` says a model accepts reasoning_effort,
+// never which values it honors, so only measurement can tell.
+//
+// Per (model, stage) because the effort is per (model, purpose): an aggregate over the model
+// alone would average an observation stage that is fine together with a writing stage that
+// is not.
+func (q *Queries) ReasoningSpendByStage(ctx context.Context, arg ReasoningSpendByStageParams) ([]ReasoningSpendByStageRow, error) {
+	rows, err := q.db.QueryContext(ctx, reasoningSpendByStage, arg.Stage, arg.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReasoningSpendByStageRow
+	for rows.Next() {
+		var i ReasoningSpendByStageRow
+		if err := rows.Scan(
+			&i.Model,
+			&i.Calls,
+			&i.ReasoningTokens,
+			&i.CompletionTokens,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const refundToLot = `-- name: RefundToLot :exec

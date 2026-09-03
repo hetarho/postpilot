@@ -29,6 +29,8 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
 		Reasoning: s.reasoning.Write,
+		Stage:     llm.StageNameWrite,
+		MaxTokens: s.budget.Write(post.TargetLength),
 	}
 	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
 		request.JSONSchema = PostContentSchema()

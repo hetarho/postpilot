@@ -14,14 +14,20 @@ const EMPTY: CatalogBrowse = { entries: [], fetchedAt: '', fromCache: false, fet
  *
  *  The query always asks with `refresh: false`; bypassing the server's cache is the separate
  *  `refresh` action below, because a cache-busting read is something the operator DOES, not a
- *  property of the screen being open. */
-export function useAdminCatalog(): {
+ *  property of the screen being open.
+ *
+ *  `purpose` is the tab being read: the server reports each entry's effort for THAT purpose
+ *  and attaches that stage's spend signal, so the control and the evidence beside it belong
+ *  to the tab the operator is looking at (change 24). It is part of the query key, so
+ *  switching tabs is a different read rather than a re-render of the previous tab's answer. */
+export function useAdminCatalog(purpose: ModelPurpose): {
   catalog: CatalogBrowse
   isPending: boolean
   isError: boolean
 } {
   const { data, isPending, isError } = useQuery(ModelCatalogService.method.listCatalog, {
     refresh: false,
+    purpose,
   })
   return { catalog: data ? toCatalogBrowse(data) : EMPTY, isPending, isError }
 }
@@ -29,18 +35,18 @@ export function useAdminCatalog(): {
 /** Re-reads the provider's own catalog, past every cache. The answer replaces the browse
  *  query's data instead of invalidating it: the response IS the fresh list, so refetching
  *  after it would spend a second round trip to be told the same thing. */
-export function useRefreshCatalog() {
+export function useRefreshCatalog(purpose: ModelPurpose) {
   const queryClient = useQueryClient()
   const transport = useTransport()
   const mutation = useMutation(ModelCatalogService.method.listCatalog, {
     onSuccess: (data) => {
-      queryClient.setQueryData(browseQueryKey(transport), data)
+      queryClient.setQueryData(browseQueryKey(transport, purpose), data)
     },
   })
   return {
     ...mutation,
     failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
-    refresh: () => mutation.mutate({ refresh: true }),
+    refresh: () => mutation.mutate({ refresh: true, purpose }),
   }
 }
 
@@ -72,9 +78,16 @@ export function useUpdateModel() {
   return {
     ...mutation,
     failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
-    update: (modelId: string, patch: { reasoningEffort?: ReasoningEffortName }) =>
+    // The purpose is required: the effort belongs to a REGISTRATION, and the server refuses
+    // one the model does not serve.
+    update: (
+      modelId: string,
+      purpose: ModelPurpose,
+      patch: { reasoningEffort?: ReasoningEffortName },
+    ) =>
       mutation.mutate({
         modelId,
+        purpose,
         reasoningEffort: patch.reasoningEffort,
       }),
   }
@@ -84,7 +97,15 @@ export function useUpdateModel() {
  *  invalidated beside the operator's own list — otherwise the model picker keeps serving a
  *  five-minute-stale list to the very operator who just changed it. */
 function invalidateCatalogs(queryClient: QueryClient, transport: Transport) {
-  void queryClient.invalidateQueries({ queryKey: browseQueryKey(transport) })
+  // Every purpose's listing, not just the active tab's: a registration write changes which
+  // tabs show the model, and its effort listing changes with it.
+  void queryClient.invalidateQueries({
+    queryKey: createConnectQueryKey({
+      schema: ModelCatalogService.method.listCatalog,
+      transport,
+      cardinality: 'finite',
+    }),
+  })
   void queryClient.invalidateQueries({
     queryKey: createConnectQueryKey({
       schema: ProviderService.method.listModels,
@@ -95,10 +116,10 @@ function invalidateCatalogs(queryClient: QueryClient, transport: Transport) {
   })
 }
 
-function browseQueryKey(transport: Transport) {
+function browseQueryKey(transport: Transport, purpose: ModelPurpose) {
   return createConnectQueryKey({
     schema: ModelCatalogService.method.listCatalog,
-    input: { refresh: false },
+    input: { refresh: false, purpose },
     transport,
     cardinality: 'finite',
   })

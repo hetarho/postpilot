@@ -196,7 +196,7 @@ func (f *fakePurposeBriefs) BriefFor(_ context.Context, _, purposeID string) (Pu
 
 func purposeAwareService(t *testing.T, briefs *fakePurposeBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
 	t.Helper()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 	svc.SetPurposeBriefs(briefs)
 	return svc
 }

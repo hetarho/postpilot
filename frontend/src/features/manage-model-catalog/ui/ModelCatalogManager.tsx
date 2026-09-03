@@ -42,9 +42,11 @@ function emptyMessageKey(catalogCount: number, tabCount: number) {
 
 export function ModelCatalogManager() {
   const { t } = useTranslation('models')
-  const { catalog, isPending, isError } = useAdminCatalog()
-  const refresh = useRefreshCatalog()
+  // The tab is declared before the reads that depend on it: the listing is per purpose now,
+  // because the effort and the spend signal each row shows belong to the tab being looked at.
   const [purpose, setPurpose] = useState<ModelPurpose>(MODEL_PURPOSES[0])
+  const { catalog, isPending, isError } = useAdminCatalog(purpose)
+  const refresh = useRefreshCatalog(purpose)
   const [filters, setFilters] = useState<CatalogFilters>(NO_FILTERS)
   const controlsId = useId()
   const searchId = `${controlsId}-search`

@@ -78,7 +78,15 @@ type Request struct {
 	JSONSchema []byte
 	// MaxTokens caps the completion. Zero means the registry's default.
 	MaxTokens int
+	// Reasoning is the STAGE policy's intent. The registry replaces it with the operator's
+	// override for Stage when the catalog holds one.
 	Reasoning ReasoningEffort
+	// Stage names the user-facing stage this call is for, in the stable form
+	// StageNameObserve/Write/Analyze carry. It is what makes the override resolvable: the
+	// operator curates an effort per (model, purpose), and one model may observe at one
+	// strength and write at another in a single run. Empty means "no stage in particular",
+	// which resolves to no override and keeps whatever Reasoning the caller set.
+	Stage string
 }
 
 // HasImages reports whether any message carries an image part.
@@ -97,6 +105,11 @@ func (r Request) HasImages() bool {
 type Usage struct {
 	PromptTokens     int
 	CompletionTokens int
+	// ReasoningTokens is the part of CompletionTokens the provider attributes to reasoning.
+	// Without it "wrote 8,192 tokens of post" and "spent 8,192 tokens thinking and wrote
+	// nothing" are the same row — the 2026-09-03 failures had to be inferred from an empty
+	// body. Zero means not reported, like the other fields.
+	ReasoningTokens int
 	// CostMicrousd is the provider-reported charged amount in millionths of one USD.
 	// CostReported distinguishes a real zero charge from a provider that omitted cost.
 	CostMicrousd int64

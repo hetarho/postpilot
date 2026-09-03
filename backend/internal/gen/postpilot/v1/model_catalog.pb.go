@@ -44,8 +44,12 @@ type CatalogEntry struct {
 	// flag for the operator, not an action: the model is served disabled-with-reason to users
 	// and is never retired automatically.
 	Listed bool `protobuf:"varint,13,opt,name=listed,proto3" json:"listed,omitempty"`
-	// The strict per-model reasoning override, or "" for none. "unset" deliberately omits the
-	// wire key and keeps the provider's own behavior.
+	// The reasoning override for the PURPOSE this listing was for, or "" for none. "unset"
+	// deliberately omits the wire key and keeps the provider's own behavior.
+	//
+	// Purpose-scoped since change 24: it used to be one value for the whole model while the
+	// code-owned policy it overrides is per stage, so lowering the effort for writing silently
+	// changed photo observation.
 	ReasoningEffort string `protobuf:"bytes,14,opt,name=reasoning_effort,json=reasoningEffort,proto3" json:"reasoning_effort,omitempty"`
 	// Upstream publication time in epoch seconds; orders a vendor's models newest-first.
 	SourceCreatedAt int64 `protobuf:"varint,15,opt,name=source_created_at,json=sourceCreatedAt,proto3" json:"source_created_at,omitempty"`
@@ -54,10 +58,18 @@ type CatalogEntry struct {
 	Purposes []string `protobuf:"bytes,16,rep,name=purposes,proto3" json:"purposes,omitempty"`
 	// What the model can produce (architecture.output_modalities) — the flags the
 	// image/video generation purposes gate on, as `vision` gates photo-analysis.
-	ImageOutput   bool `protobuf:"varint,17,opt,name=image_output,json=imageOutput,proto3" json:"image_output,omitempty"`
-	VideoOutput   bool `protobuf:"varint,18,opt,name=video_output,json=videoOutput,proto3" json:"video_output,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ImageOutput bool `protobuf:"varint,17,opt,name=image_output,json=imageOutput,proto3" json:"image_output,omitempty"`
+	VideoOutput bool `protobuf:"varint,18,opt,name=video_output,json=videoOutput,proto3" json:"video_output,omitempty"`
+	// What this model recently SPENT its completion budget on at the listed purpose's stage.
+	// Absent when nothing has been recorded for it, which renders as nothing rather than as a
+	// zero that would read as a measurement.
+	//
+	// It is the only reliable check that a model honors its effort: the provider's
+	// `supported_parameters` says a model accepts `reasoning_effort`, never which VALUES it
+	// honors, and an unhonored effort behaves like sending none — reasoning runs to the cap.
+	ReasoningSpend *ReasoningSpend `protobuf:"bytes,19,opt,name=reasoning_spend,json=reasoningSpend,proto3,oneof" json:"reasoning_spend,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CatalogEntry) Reset() {
@@ -202,17 +214,89 @@ func (x *CatalogEntry) GetVideoOutput() bool {
 	return false
 }
 
+func (x *CatalogEntry) GetReasoningSpend() *ReasoningSpend {
+	if x != nil {
+		return x.ReasoningSpend
+	}
+	return nil
+}
+
+// ReasoningSpend is a recent window of one model's completion budget at one stage.
+type ReasoningSpend struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Calls            int64                  `protobuf:"varint,1,opt,name=calls,proto3" json:"calls,omitempty"`
+	ReasoningTokens  int64                  `protobuf:"varint,2,opt,name=reasoning_tokens,json=reasoningTokens,proto3" json:"reasoning_tokens,omitempty"`
+	CompletionTokens int64                  `protobuf:"varint,3,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ReasoningSpend) Reset() {
+	*x = ReasoningSpend{}
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReasoningSpend) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReasoningSpend) ProtoMessage() {}
+
+func (x *ReasoningSpend) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReasoningSpend.ProtoReflect.Descriptor instead.
+func (*ReasoningSpend) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ReasoningSpend) GetCalls() int64 {
+	if x != nil {
+		return x.Calls
+	}
+	return 0
+}
+
+func (x *ReasoningSpend) GetReasoningTokens() int64 {
+	if x != nil {
+		return x.ReasoningTokens
+	}
+	return 0
+}
+
+func (x *ReasoningSpend) GetCompletionTokens() int64 {
+	if x != nil {
+		return x.CompletionTokens
+	}
+	return 0
+}
+
 type ListCatalogRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Bypass the server's catalog cache and read the provider again.
-	Refresh       bool `protobuf:"varint,1,opt,name=refresh,proto3" json:"refresh,omitempty"`
+	Refresh bool `protobuf:"varint,1,opt,name=refresh,proto3" json:"refresh,omitempty"`
+	// The purpose tab being listed. It selects which effort each entry reports and which
+	// stage's spend signal is attached, so the control and the evidence beside it belong to
+	// the tab the operator is looking at. Empty reports neither.
+	Purpose       string `protobuf:"bytes,2,opt,name=purpose,proto3" json:"purpose,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListCatalogRequest) Reset() {
 	*x = ListCatalogRequest{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[1]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -224,7 +308,7 @@ func (x *ListCatalogRequest) String() string {
 func (*ListCatalogRequest) ProtoMessage() {}
 
 func (x *ListCatalogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[1]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -237,7 +321,7 @@ func (x *ListCatalogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCatalogRequest.ProtoReflect.Descriptor instead.
 func (*ListCatalogRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{1}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ListCatalogRequest) GetRefresh() bool {
@@ -245,6 +329,13 @@ func (x *ListCatalogRequest) GetRefresh() bool {
 		return x.Refresh
 	}
 	return false
+}
+
+func (x *ListCatalogRequest) GetPurpose() string {
+	if x != nil {
+		return x.Purpose
+	}
+	return ""
 }
 
 type ListCatalogResponse struct {
@@ -263,7 +354,7 @@ type ListCatalogResponse struct {
 
 func (x *ListCatalogResponse) Reset() {
 	*x = ListCatalogResponse{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[2]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -275,7 +366,7 @@ func (x *ListCatalogResponse) String() string {
 func (*ListCatalogResponse) ProtoMessage() {}
 
 func (x *ListCatalogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[2]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -288,7 +379,7 @@ func (x *ListCatalogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCatalogResponse.ProtoReflect.Descriptor instead.
 func (*ListCatalogResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{2}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListCatalogResponse) GetEntries() []*CatalogEntry {
@@ -333,7 +424,7 @@ type SetModelPurposeRequest struct {
 
 func (x *SetModelPurposeRequest) Reset() {
 	*x = SetModelPurposeRequest{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -345,7 +436,7 @@ func (x *SetModelPurposeRequest) String() string {
 func (*SetModelPurposeRequest) ProtoMessage() {}
 
 func (x *SetModelPurposeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -358,7 +449,7 @@ func (x *SetModelPurposeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetModelPurposeRequest.ProtoReflect.Descriptor instead.
 func (*SetModelPurposeRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{3}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SetModelPurposeRequest) GetModelId() string {
@@ -391,7 +482,7 @@ type SetModelPurposeResponse struct {
 
 func (x *SetModelPurposeResponse) Reset() {
 	*x = SetModelPurposeResponse{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -403,7 +494,7 @@ func (x *SetModelPurposeResponse) String() string {
 func (*SetModelPurposeResponse) ProtoMessage() {}
 
 func (x *SetModelPurposeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -416,7 +507,7 @@ func (x *SetModelPurposeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetModelPurposeResponse.ProtoReflect.Descriptor instead.
 func (*SetModelPurposeResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{4}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SetModelPurposeResponse) GetEntry() *CatalogEntry {
@@ -429,15 +520,24 @@ func (x *SetModelPurposeResponse) GetEntry() *CatalogEntry {
 type UpdateModelRequest struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	ModelId string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
-	// "" clears the override and returns the model to the stage reasoning policy.
+	// "" clears the override and returns this purpose to the stage reasoning policy.
 	ReasoningEffort *string `protobuf:"bytes,4,opt,name=reasoning_effort,json=reasoningEffort,proto3,oneof" json:"reasoning_effort,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Which registration the edit applies to. Required: the effort is a property of "this
+	// model doing this task", and the server refuses a purpose the model is not registered to
+	// — the control only appears once registered, and that is now a server rule rather than a
+	// UI convention.
+	//
+	// Carried here rather than on SetModelPurposeRequest because registering and setting an
+	// effort are separate decisions: an operator changes the effort on a model that is already
+	// registered, and folding the two would make every effort edit re-assert a registration.
+	Purpose       string `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateModelRequest) Reset() {
 	*x = UpdateModelRequest{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[5]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -449,7 +549,7 @@ func (x *UpdateModelRequest) String() string {
 func (*UpdateModelRequest) ProtoMessage() {}
 
 func (x *UpdateModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[5]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -462,7 +562,7 @@ func (x *UpdateModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateModelRequest.ProtoReflect.Descriptor instead.
 func (*UpdateModelRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{5}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UpdateModelRequest) GetModelId() string {
@@ -479,6 +579,13 @@ func (x *UpdateModelRequest) GetReasoningEffort() string {
 	return ""
 }
 
+func (x *UpdateModelRequest) GetPurpose() string {
+	if x != nil {
+		return x.Purpose
+	}
+	return ""
+}
+
 type UpdateModelResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Entry         *CatalogEntry          `protobuf:"bytes,1,opt,name=entry,proto3" json:"entry,omitempty"`
@@ -488,7 +595,7 @@ type UpdateModelResponse struct {
 
 func (x *UpdateModelResponse) Reset() {
 	*x = UpdateModelResponse{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[6]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -500,7 +607,7 @@ func (x *UpdateModelResponse) String() string {
 func (*UpdateModelResponse) ProtoMessage() {}
 
 func (x *UpdateModelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[6]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -513,7 +620,7 @@ func (x *UpdateModelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateModelResponse.ProtoReflect.Descriptor instead.
 func (*UpdateModelResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateModelResponse) GetEntry() *CatalogEntry {
@@ -527,7 +634,7 @@ var File_postpilot_v1_model_catalog_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\n" +
-	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"\xd1\x04\n" +
+	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"\xb1\x05\n" +
 	"\fCatalogEntry\x12\x19\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12#\n" +
 	"\rprovider_slug\x18\x02 \x01(\tR\fproviderSlug\x12\x14\n" +
@@ -545,9 +652,16 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\x11source_created_at\x18\x0f \x01(\x03R\x0fsourceCreatedAt\x12\x1a\n" +
 	"\bpurposes\x18\x10 \x03(\tR\bpurposes\x12!\n" +
 	"\fimage_output\x18\x11 \x01(\bR\vimageOutput\x12!\n" +
-	"\fvideo_output\x18\x12 \x01(\bR\vvideoOutputJ\x04\b\v\x10\fJ\x04\b\f\x10\r\".\n" +
+	"\fvideo_output\x18\x12 \x01(\bR\vvideoOutput\x12J\n" +
+	"\x0freasoning_spend\x18\x13 \x01(\v2\x1c.postpilot.v1.ReasoningSpendH\x00R\x0ereasoningSpend\x88\x01\x01B\x12\n" +
+	"\x10_reasoning_spendJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"~\n" +
+	"\x0eReasoningSpend\x12\x14\n" +
+	"\x05calls\x18\x01 \x01(\x03R\x05calls\x12)\n" +
+	"\x10reasoning_tokens\x18\x02 \x01(\x03R\x0freasoningTokens\x12+\n" +
+	"\x11completion_tokens\x18\x03 \x01(\x03R\x10completionTokens\"H\n" +
 	"\x12ListCatalogRequest\x12\x18\n" +
-	"\arefresh\x18\x01 \x01(\bR\arefresh\"\xaa\x01\n" +
+	"\arefresh\x18\x01 \x01(\bR\arefresh\x12\x18\n" +
+	"\apurpose\x18\x02 \x01(\tR\apurpose\"\xaa\x01\n" +
 	"\x13ListCatalogResponse\x124\n" +
 	"\aentries\x18\x01 \x03(\v2\x1a.postpilot.v1.CatalogEntryR\aentries\x12\x1d\n" +
 	"\n" +
@@ -563,10 +677,11 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"registered\x18\x03 \x01(\bR\n" +
 	"registered\"K\n" +
 	"\x17SetModelPurposeResponse\x120\n" +
-	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry\"\x80\x01\n" +
+	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry\"\x9a\x01\n" +
 	"\x12UpdateModelRequest\x12\x19\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12.\n" +
-	"\x10reasoning_effort\x18\x04 \x01(\tH\x00R\x0freasoningEffort\x88\x01\x01B\x13\n" +
+	"\x10reasoning_effort\x18\x04 \x01(\tH\x00R\x0freasoningEffort\x88\x01\x01\x12\x18\n" +
+	"\apurpose\x18\x05 \x01(\tR\apurposeB\x13\n" +
 	"\x11_reasoning_effortJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04\"G\n" +
 	"\x13UpdateModelResponse\x120\n" +
 	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry2\xa3\x02\n" +
@@ -587,31 +702,33 @@ func file_postpilot_v1_model_catalog_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_model_catalog_proto_rawDescData
 }
 
-var file_postpilot_v1_model_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_postpilot_v1_model_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_postpilot_v1_model_catalog_proto_goTypes = []any{
 	(*CatalogEntry)(nil),            // 0: postpilot.v1.CatalogEntry
-	(*ListCatalogRequest)(nil),      // 1: postpilot.v1.ListCatalogRequest
-	(*ListCatalogResponse)(nil),     // 2: postpilot.v1.ListCatalogResponse
-	(*SetModelPurposeRequest)(nil),  // 3: postpilot.v1.SetModelPurposeRequest
-	(*SetModelPurposeResponse)(nil), // 4: postpilot.v1.SetModelPurposeResponse
-	(*UpdateModelRequest)(nil),      // 5: postpilot.v1.UpdateModelRequest
-	(*UpdateModelResponse)(nil),     // 6: postpilot.v1.UpdateModelResponse
+	(*ReasoningSpend)(nil),          // 1: postpilot.v1.ReasoningSpend
+	(*ListCatalogRequest)(nil),      // 2: postpilot.v1.ListCatalogRequest
+	(*ListCatalogResponse)(nil),     // 3: postpilot.v1.ListCatalogResponse
+	(*SetModelPurposeRequest)(nil),  // 4: postpilot.v1.SetModelPurposeRequest
+	(*SetModelPurposeResponse)(nil), // 5: postpilot.v1.SetModelPurposeResponse
+	(*UpdateModelRequest)(nil),      // 6: postpilot.v1.UpdateModelRequest
+	(*UpdateModelResponse)(nil),     // 7: postpilot.v1.UpdateModelResponse
 }
 var file_postpilot_v1_model_catalog_proto_depIdxs = []int32{
-	0, // 0: postpilot.v1.ListCatalogResponse.entries:type_name -> postpilot.v1.CatalogEntry
-	0, // 1: postpilot.v1.SetModelPurposeResponse.entry:type_name -> postpilot.v1.CatalogEntry
-	0, // 2: postpilot.v1.UpdateModelResponse.entry:type_name -> postpilot.v1.CatalogEntry
-	1, // 3: postpilot.v1.ModelCatalogService.ListCatalog:input_type -> postpilot.v1.ListCatalogRequest
-	3, // 4: postpilot.v1.ModelCatalogService.SetModelPurpose:input_type -> postpilot.v1.SetModelPurposeRequest
-	5, // 5: postpilot.v1.ModelCatalogService.UpdateModel:input_type -> postpilot.v1.UpdateModelRequest
-	2, // 6: postpilot.v1.ModelCatalogService.ListCatalog:output_type -> postpilot.v1.ListCatalogResponse
-	4, // 7: postpilot.v1.ModelCatalogService.SetModelPurpose:output_type -> postpilot.v1.SetModelPurposeResponse
-	6, // 8: postpilot.v1.ModelCatalogService.UpdateModel:output_type -> postpilot.v1.UpdateModelResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	1, // 0: postpilot.v1.CatalogEntry.reasoning_spend:type_name -> postpilot.v1.ReasoningSpend
+	0, // 1: postpilot.v1.ListCatalogResponse.entries:type_name -> postpilot.v1.CatalogEntry
+	0, // 2: postpilot.v1.SetModelPurposeResponse.entry:type_name -> postpilot.v1.CatalogEntry
+	0, // 3: postpilot.v1.UpdateModelResponse.entry:type_name -> postpilot.v1.CatalogEntry
+	2, // 4: postpilot.v1.ModelCatalogService.ListCatalog:input_type -> postpilot.v1.ListCatalogRequest
+	4, // 5: postpilot.v1.ModelCatalogService.SetModelPurpose:input_type -> postpilot.v1.SetModelPurposeRequest
+	6, // 6: postpilot.v1.ModelCatalogService.UpdateModel:input_type -> postpilot.v1.UpdateModelRequest
+	3, // 7: postpilot.v1.ModelCatalogService.ListCatalog:output_type -> postpilot.v1.ListCatalogResponse
+	5, // 8: postpilot.v1.ModelCatalogService.SetModelPurpose:output_type -> postpilot.v1.SetModelPurposeResponse
+	7, // 9: postpilot.v1.ModelCatalogService.UpdateModel:output_type -> postpilot.v1.UpdateModelResponse
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_model_catalog_proto_init() }
@@ -619,14 +736,15 @@ func file_postpilot_v1_model_catalog_proto_init() {
 	if File_postpilot_v1_model_catalog_proto != nil {
 		return
 	}
-	file_postpilot_v1_model_catalog_proto_msgTypes[5].OneofWrappers = []any{}
+	file_postpilot_v1_model_catalog_proto_msgTypes[0].OneofWrappers = []any{}
+	file_postpilot_v1_model_catalog_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_model_catalog_proto_rawDesc), len(file_postpilot_v1_model_catalog_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

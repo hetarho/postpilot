@@ -23,6 +23,7 @@ type Service struct {
 	samples     VersionSampleWriter
 	batchSize   int
 	reasoning   ReasoningPolicy
+	budget      CompletionBudget
 }
 
 type ReasoningPolicy struct {
@@ -30,14 +31,30 @@ type ReasoningPolicy struct {
 	Write   llm.ReasoningEffort
 }
 
-func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, images ImageReader, jobs Jobs, batchSize int, reasoning ReasoningPolicy) *Service {
+// CompletionBudget is the per-stage completion cap policy, received from its owner
+// (internal/platform/config) rather than computed here: this context asks for the budget its
+// work needs and holds no number of its own.
+type CompletionBudget interface {
+	// Write is the writing stage's cap for a post's requested target length.
+	Write(targetLength *int) int
+	// Revise is a revision's cap. A revision re-emits the whole PostContent, so its budget
+	// has to fit what already exists and not only what was asked for.
+	Revise(contentChars int, targetLength *int) int
+	// Observation is one observation batch's cap, independent of the writer's.
+	Observation() int
+}
+
+func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, images ImageReader, jobs Jobs, batchSize int, reasoning ReasoningPolicy, budget CompletionBudget) *Service {
 	if batchSize <= 0 {
 		panic("generation: batch size must be positive")
 	}
 	if !reasoning.Observe.Valid() || !reasoning.Write.Valid() {
 		panic("generation: reasoning policy is invalid")
 	}
-	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning}
+	if budget == nil {
+		panic("generation: a completion budget policy is required")
+	}
+	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget}
 }
 
 func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {

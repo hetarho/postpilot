@@ -39,16 +39,16 @@ var (
 	// ErrVersionSampleNotFound means this version never produced a post, which is an ordinary
 	// state for a version rather than a failure.
 	ErrVersionSampleNotFound = errors.New("voice version sample not found")
-	ErrSampleMutation       = errors.New("voice sample change could not schedule analysis")
-	ErrLearningNotFound     = errors.New("voice learning event not found")
-	ErrRuleNotFound         = errors.New("voice rule not found")
-	ErrConfirmationNotFound = errors.New("voice rule confirmation not found")
-	ErrComparisonNotFound   = errors.New("voice rule comparison not found")
-	ErrValidationNotFound   = errors.New("voice profile validation not found")
-	ErrInsufficientSources  = errors.New("at least three finalized authored posts are required")
-	ErrInvalidLifecycle     = errors.New("invalid voice lifecycle transition")
-	ErrPostNotFound         = errors.New("post not found")
-	ErrForbidden            = errors.New("forbidden")
+	ErrSampleMutation        = errors.New("voice sample change could not schedule analysis")
+	ErrLearningNotFound      = errors.New("voice learning event not found")
+	ErrRuleNotFound          = errors.New("voice rule not found")
+	ErrConfirmationNotFound  = errors.New("voice rule confirmation not found")
+	ErrComparisonNotFound    = errors.New("voice rule comparison not found")
+	ErrValidationNotFound    = errors.New("voice profile validation not found")
+	ErrInsufficientSources   = errors.New("at least three finalized authored posts are required")
+	ErrInvalidLifecycle      = errors.New("invalid voice lifecycle transition")
+	ErrPostNotFound          = errors.New("post not found")
+	ErrForbidden             = errors.New("forbidden")
 
 	ErrVoiceRequired = errors.New("a voice is required")
 	// ErrVoiceNotFound covers unknown AND foreign ids on purpose: a voice that belongs to

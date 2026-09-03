@@ -181,7 +181,11 @@ export const models = {
     context: '컨텍스트 {{tokens}} 토큰',
     price: '100만 토큰당 입력 ${{in}} · 출력 ${{out}}',
     priceUnpublished: '토큰 단가 미공개',
-    reasoning: '추론 강도',
+    reasoning: '이 용도의 추론 강도',
     reasoningDefault: '단계 기본값',
+    reasoningSpend: '최근 추론 사용',
+    reasoningSpendValue: '완성 토큰의 {{percent}}%가 추론에 쓰였어요 ({{calls}}회 기준)',
+    reasoningSpendHeavy:
+      '설정한 강도를 이 모델이 따르지 않을 수 있어요. 강도를 낮추거나 다른 모델을 고려하세요',
   },
 } as const

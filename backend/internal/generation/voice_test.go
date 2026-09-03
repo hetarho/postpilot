@@ -23,7 +23,7 @@ func TestStartsRefuseADeletedVoiceBeforeEnqueue(t *testing.T) {
 	jobs := &fakeJobs{id: "never"}
 	rules := &fakeRules{}
 	models := newFakeModels()
-	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 
 	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); !errors.Is(err, ErrVoiceDeleted) {
 		t.Fatalf("generation start = %v", err)
@@ -48,7 +48,7 @@ func TestStartsFreezeThePostVoiceIntoTheJob(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body")}}
 	jobs := &fakeJobs{id: "job"}
 	rules := &fakeRules{}
-	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestHandlersRecheckTheFrozenVoiceBeforeProviderCalls(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: tc.voice, Content: revisionContent("body")}}
-			svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
+			svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
 			calls := len(models.calls)
 			err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: tc.job, WriteModel: writeRef.String()}, func(string, int, int) {})
 			if !errors.Is(err, tc.want) {
@@ -112,7 +112,7 @@ func TestRevisionDropsOutputWhenThePostMovesMidCall(t *testing.T) {
 		posts.input.Voice = VoiceRef{ID: "voice-other", Name: "리뷰"}
 		return okContent(), nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
 	err := svc.Revise(context.Background(), RevisionJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "더 짧게", false)}, func(string, int, int) {})
 	if !errors.Is(err, ErrVoiceMismatch) || len(posts.contents) != 0 {
 		t.Fatalf("mid-call reassignment: err=%v contents=%d", err, len(posts.contents))
@@ -136,7 +136,7 @@ func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {
 			other = casual
 		}
 		posts := &fakePosts{input: PostInput{Slug: "post-" + voice.ID, UserID: "alice", Voice: voice, Content: revisionContent("body")}}
-		svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
+		svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
 		if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: posts.input.Slug, VoiceID: voice.ID, WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
 			t.Fatal(err)
 		}
@@ -166,7 +166,7 @@ func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {
 func TestApplyWriteWinnerRequiresTheFrozenVoice(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Memo: "memo"}}
 	models := newFakeModels()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)

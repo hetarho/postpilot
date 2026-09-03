@@ -22,6 +22,7 @@ import (
 type Service struct {
 	store    Store
 	upstream Upstream
+	spend    ReasoningSpendReader
 	now      func() time.Time
 
 	mu     sync.RWMutex
@@ -38,6 +39,10 @@ func NewService(store Store) *Service {
 // SetUpstream attaches the provider's own catalog. Called once at boot; without it the
 // operator screen can still read and edit curated rows, it just cannot discover new ones.
 func (s *Service) SetUpstream(u Upstream) { s.upstream = u }
+
+// SetReasoningSpend wires the ledger's aggregate. Without it the curation surface simply
+// carries no spend signal, which is the same outcome an account with no recorded calls has.
+func (s *Service) SetReasoningSpend(r ReasoningSpendReader) { s.spend = r }
 
 // Reload refreshes the in-memory view the registry reads. Called at boot and after every
 // curation write.
@@ -68,7 +73,7 @@ func (s *Service) setCache(rows []Model) {
 			InputUSDPerMillion:  row.InputUSDPerMillion,
 			OutputUSDPerMillion: row.OutputUSDPerMillion,
 			PricingCheckedAt:    row.PricingCheckedAt,
-			Reasoning:           row.Reasoning,
+			Reasoning:           stageReasoningOf(row),
 			Stages:              stagesOf(row),
 			Delisted:            !row.Listed,
 		}
@@ -103,7 +108,10 @@ func (s *Service) Lookup(modelID string) (llm.SourceModel, bool) {
 // availability flags. A FAILED one changes nothing and is reported instead: bookkeeping
 // that treated an outage as evidence would retire the whole catalog the first time the
 // network hiccuped.
-func (s *Service) Browse(ctx context.Context, refresh bool) (Browse, error) {
+// `purpose` is the tab being listed: it selects which effort each entry reports and which
+// stage's spend signal is attached, so the evidence and the control the operator sees belong
+// to the tab they are looking at (change 24). An empty purpose reports neither.
+func (s *Service) Browse(ctx context.Context, refresh bool, purpose Purpose) (Browse, error) {
 	var (
 		snapshot   Snapshot
 		fetchError string
@@ -139,14 +147,17 @@ func (s *Service) Browse(ctx context.Context, refresh bool) (Browse, error) {
 		curated[row.ModelID] = row
 	}
 
+	spend := s.reasoningSpend(ctx, purpose)
+
 	entries := make([]Entry, 0, len(snapshot.Candidates)+len(rows))
 	for _, candidate := range snapshot.Candidates {
 		entry := Entry{Candidate: candidate, Listed: true}
 		if row, ok := curated[candidate.ModelID]; ok {
 			entry.Curated, entry.Purposes = true, row.Purposes
-			entry.Reasoning = row.Reasoning
+			entry.Reasoning = row.Reasoning[purpose]
 			delete(curated, candidate.ModelID)
 		}
+		entry.ReasoningSpend = spend[entry.ModelID]
 		entries = append(entries, entry)
 	}
 	// What is left is curated but unoffered. It keeps the snapshot taken when it was last
@@ -155,7 +166,9 @@ func (s *Service) Browse(ctx context.Context, refresh bool) (Browse, error) {
 		if _, still := curated[row.ModelID]; !still {
 			continue
 		}
-		entries = append(entries, EntryOf(row))
+		entry := EntryOf(row, purpose)
+		entry.ReasoningSpend = spend[row.ModelID]
+		entries = append(entries, entry)
 	}
 
 	slices.SortFunc(entries, func(a, b Entry) int {
@@ -271,6 +284,29 @@ func (s *Service) SetPurpose(ctx context.Context, modelID string, purpose Purpos
 	return row, nil
 }
 
+// stageReasoningOf projects the per-purpose overrides onto the stage keys the llm boundary
+// carries. Only a REGISTERED purpose contributes: an effort on a purpose the model no
+// longer serves must not reach a stage. A purpose that feeds no stage (the generation
+// purposes) contributes nothing, which is why nothing outside the operator screen reads it.
+func stageReasoningOf(row Model) map[string]llm.ReasoningEffort {
+	if len(row.Reasoning) == 0 {
+		return nil
+	}
+	out := make(map[string]llm.ReasoningEffort, len(row.Reasoning))
+	for _, purpose := range row.Purposes {
+		stage := purpose.Stage()
+		effort := row.Reasoning[purpose]
+		if stage == "" || effort == llm.ReasoningUnspecified {
+			continue
+		}
+		out[stage] = effort
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // stagesOf projects purpose registrations onto the user-facing stages the llm boundary
 // carries as opaque strings. Generation purposes map to no stage yet, so a model
 // registered only to them is invisible to every picker.
@@ -291,21 +327,56 @@ func stagesOf(row Model) []string {
 	return stages
 }
 
-// Update applies a partial curation edit — today that is the per-model reasoning
-// override; registration has its own write (SetPurpose).
+// Update applies a partial curation edit for ONE (model, purpose) — today that is the
+// reasoning override; registration has its own write (SetPurpose).
+//
+// The purpose is required and must be one the model is REGISTERED to: an effort on a purpose
+// the model serves to nobody would be a stored decision with no effect, and the control only
+// appears once registered. That was a UI rule; it is a server rule now (change 24).
 func (s *Service) Update(ctx context.Context, modelID string, patch Patch) (Model, error) {
+	if _, err := ParsePurpose(string(patch.Purpose)); err != nil {
+		return Model{}, err
+	}
 	if patch.Reasoning != nil && !patch.Reasoning.Valid() {
 		return Model{}, fmt.Errorf("%w: %q", ErrInvalidReasoning, *patch.Reasoning)
 	}
 	updated, err := s.store.Patch(ctx, modelID, patch, s.now())
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
+		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrPurposeNotRegistered) {
 			return Model{}, err
 		}
 		return Model{}, fmt.Errorf("update model: %w", err)
 	}
 	s.invalidate(ctx)
 	return updated, nil
+}
+
+// reasoningSpend reads the ledger's aggregate for the purpose's stage through the port, and
+// answers with an empty map on any problem: the signal is evidence beside a control, so its
+// absence must never be what stops an operator from curating.
+func (s *Service) reasoningSpend(ctx context.Context, purpose Purpose) map[string]*ReasoningSpend {
+	stage := purpose.Stage()
+	if s.spend == nil || stage == "" {
+		return nil
+	}
+	rows, err := s.spend.ReasoningSpendByModel(ctx, stage)
+	if err != nil {
+		slog.Warn("reasoning spend read failed", "stage", stage, "err", err)
+		return nil
+	}
+	out := make(map[string]*ReasoningSpend, len(rows))
+	for _, row := range rows {
+		// A model with no recorded call for this stage is absent from the map, so the row
+		// renders nothing rather than a zero that reads as a measurement.
+		if row.Calls == 0 {
+			continue
+		}
+		out[row.Model] = &ReasoningSpend{
+			Calls: row.Calls, ReasoningTokens: row.ReasoningTokens,
+			CompletionTokens: row.CompletionTokens,
+		}
+	}
+	return out
 }
 
 // candidate looks the model up in the live catalog without forcing a refresh. A failure is

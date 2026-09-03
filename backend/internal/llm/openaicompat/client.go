@@ -115,6 +115,15 @@ func (c *Client) Complete(ctx context.Context, req llm.Request) (llm.Response, e
 		return out, err
 	}
 	if strings.TrimSpace(out.Text) == "" {
+		// The 2026-09-03 failure shape: a model that reasoned through its whole budget and
+		// wrote nothing. The usage is in hand right here, so the split is attached here — the
+		// mid-JSON path in generation/parse.go attaches it for a non-empty body.
+		if out.FinishReason == "length" && out.Usage.ReasoningTokens > 0 {
+			return out, &llm.TruncatedError{
+				ReasoningTokens:  out.Usage.ReasoningTokens,
+				CompletionTokens: out.Usage.CompletionTokens,
+			}
+		}
 		kind := llm.ErrBadOutput
 		if out.FinishReason == "length" {
 			kind = llm.ErrOutputTruncated
@@ -243,6 +252,11 @@ type chatChunk struct {
 		PromptTokens     int             `json:"prompt_tokens"`
 		CompletionTokens int             `json:"completion_tokens"`
 		Cost             json.RawMessage `json:"cost"`
+		// Where the completion budget went. Absent for a provider that does not report it,
+		// which leaves the count zero — "not reported", like every other usage field.
+		CompletionTokensDetails *struct {
+			ReasoningTokens int `json:"reasoning_tokens"`
+		} `json:"completion_tokens_details"`
 	} `json:"usage"`
 	Error *apiError `json:"error"`
 }
@@ -321,6 +335,11 @@ func (c *Client) apply(chunk chatChunk, text *strings.Builder, out *llm.Response
 	if chunk.Usage != nil {
 		out.Usage.PromptTokens = chunk.Usage.PromptTokens
 		out.Usage.CompletionTokens = chunk.Usage.CompletionTokens
+		// One place for both response shapes: `apply` folds a stream's usage chunk and the
+		// whole document a provider that ignores `stream: true` returns.
+		if details := chunk.Usage.CompletionTokensDetails; details != nil {
+			out.Usage.ReasoningTokens = details.ReasoningTokens
+		}
 		if len(chunk.Usage.Cost) > 0 && !bytes.Equal(bytes.TrimSpace(chunk.Usage.Cost), []byte("null")) {
 			cost, err := decimalUSDTomicrousd(chunk.Usage.Cost)
 			if err != nil {

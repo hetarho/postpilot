@@ -51,6 +51,10 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		response, err := s.models.Complete(ctx, ref, llm.Request{
 			System:   analysisPromptForLanguage(active.SourceLanguage),
 			Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus)}}},
+			// Named so the registry can resolve the operator's style-analysis override. No
+			// Reasoning is set: analysis sends no `reasoning` key by default, which is the
+			// model's own adaptive behavior and the most permissive setting — not "off".
+			Stage: llm.StageNameAnalyze,
 		})
 		if err != nil {
 			return err

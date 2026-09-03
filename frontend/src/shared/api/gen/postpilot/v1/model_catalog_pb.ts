@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/model_catalog.proto.
  */
 export const file_postpilot_v1_model_catalog: GenFile = /*@__PURE__*/
-  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIv0CCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgISgQICxAMSgQIDBANIiUKEkxpc3RDYXRhbG9nUmVxdWVzdBIPCgdyZWZyZXNoGAEgASgIIn8KE0xpc3RDYXRhbG9nUmVzcG9uc2USKwoHZW50cmllcxgBIAMoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkSEgoKZmV0Y2hlZF9hdBgCIAEoCRISCgpmcm9tX2NhY2hlGAMgASgIEhMKC2ZldGNoX2Vycm9yGAQgASgJIk8KFlNldE1vZGVsUHVycG9zZVJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSDwoHcHVycG9zZRgCIAEoCRISCgpyZWdpc3RlcmVkGAMgASgIIkQKF1NldE1vZGVsUHVycG9zZVJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeSJmChJVcGRhdGVNb2RlbFJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSHQoQcmVhc29uaW5nX2VmZm9ydBgEIAEoCUgAiAEBQhMKEV9yZWFzb25pbmdfZWZmb3J0SgQIAhADSgQIAxAEIkAKE1VwZGF0ZU1vZGVsUmVzcG9uc2USKQoFZW50cnkYASABKAsyGi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0VudHJ5MqMCChNNb2RlbENhdGFsb2dTZXJ2aWNlElQKC0xpc3RDYXRhbG9nEiAucG9zdHBpbG90LnYxLkxpc3RDYXRhbG9nUmVxdWVzdBohLnBvc3RwaWxvdC52MS5MaXN0Q2F0YWxvZ1Jlc3BvbnNlIgASYAoPU2V0TW9kZWxQdXJwb3NlEiQucG9zdHBpbG90LnYxLlNldE1vZGVsUHVycG9zZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuU2V0TW9kZWxQdXJwb3NlUmVzcG9uc2UiABJUCgtVcGRhdGVNb2RlbBIgLnBvc3RwaWxvdC52MS5VcGRhdGVNb2RlbFJlcXVlc3QaIS5wb3N0cGlsb3QudjEuVXBkYXRlTW9kZWxSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
+  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIs0DCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgIEjoKD3JlYXNvbmluZ19zcGVuZBgTIAEoCzIcLnBvc3RwaWxvdC52MS5SZWFzb25pbmdTcGVuZEgAiAEBQhIKEF9yZWFzb25pbmdfc3BlbmRKBAgLEAxKBAgMEA0iVAoOUmVhc29uaW5nU3BlbmQSDQoFY2FsbHMYASABKAMSGAoQcmVhc29uaW5nX3Rva2VucxgCIAEoAxIZChFjb21wbGV0aW9uX3Rva2VucxgDIAEoAyI2ChJMaXN0Q2F0YWxvZ1JlcXVlc3QSDwoHcmVmcmVzaBgBIAEoCBIPCgdwdXJwb3NlGAIgASgJIn8KE0xpc3RDYXRhbG9nUmVzcG9uc2USKwoHZW50cmllcxgBIAMoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkSEgoKZmV0Y2hlZF9hdBgCIAEoCRISCgpmcm9tX2NhY2hlGAMgASgIEhMKC2ZldGNoX2Vycm9yGAQgASgJIk8KFlNldE1vZGVsUHVycG9zZVJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSDwoHcHVycG9zZRgCIAEoCRISCgpyZWdpc3RlcmVkGAMgASgIIkQKF1NldE1vZGVsUHVycG9zZVJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeSJ3ChJVcGRhdGVNb2RlbFJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSHQoQcmVhc29uaW5nX2VmZm9ydBgEIAEoCUgAiAEBEg8KB3B1cnBvc2UYBSABKAlCEwoRX3JlYXNvbmluZ19lZmZvcnRKBAgCEANKBAgDEAQiQAoTVXBkYXRlTW9kZWxSZXNwb25zZRIpCgVlbnRyeRgBIAEoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkyowIKE01vZGVsQ2F0YWxvZ1NlcnZpY2USVAoLTGlzdENhdGFsb2cSIC5wb3N0cGlsb3QudjEuTGlzdENhdGFsb2dSZXF1ZXN0GiEucG9zdHBpbG90LnYxLkxpc3RDYXRhbG9nUmVzcG9uc2UiABJgCg9TZXRNb2RlbFB1cnBvc2USJC5wb3N0cGlsb3QudjEuU2V0TW9kZWxQdXJwb3NlUmVxdWVzdBolLnBvc3RwaWxvdC52MS5TZXRNb2RlbFB1cnBvc2VSZXNwb25zZSIAElQKC1VwZGF0ZU1vZGVsEiAucG9zdHBpbG90LnYxLlVwZGF0ZU1vZGVsUmVxdWVzdBohLnBvc3RwaWxvdC52MS5VcGRhdGVNb2RlbFJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
 
 /**
  * CatalogEntry is one row of the operator's browse list.
@@ -87,8 +87,12 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
   listed: boolean;
 
   /**
-   * The strict per-model reasoning override, or "" for none. "unset" deliberately omits the
-   * wire key and keeps the provider's own behavior.
+   * The reasoning override for the PURPOSE this listing was for, or "" for none. "unset"
+   * deliberately omits the wire key and keeps the provider's own behavior.
+   *
+   * Purpose-scoped since change 24: it used to be one value for the whole model while the
+   * code-owned policy it overrides is per stage, so lowering the effort for writing silently
+   * changed photo observation.
    *
    * @generated from field: string reasoning_effort = 14;
    */
@@ -121,6 +125,19 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
    * @generated from field: bool video_output = 18;
    */
   videoOutput: boolean;
+
+  /**
+   * What this model recently SPENT its completion budget on at the listed purpose's stage.
+   * Absent when nothing has been recorded for it, which renders as nothing rather than as a
+   * zero that would read as a measurement.
+   *
+   * It is the only reliable check that a model honors its effort: the provider's
+   * `supported_parameters` says a model accepts `reasoning_effort`, never which VALUES it
+   * honors, and an unhonored effort behaves like sending none — reasoning runs to the cap.
+   *
+   * @generated from field: optional postpilot.v1.ReasoningSpend reasoning_spend = 19;
+   */
+  reasoningSpend?: ReasoningSpend | undefined;
 };
 
 /**
@@ -129,6 +146,35 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
  */
 export const CatalogEntrySchema: GenMessage<CatalogEntry> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_model_catalog, 0);
+
+/**
+ * ReasoningSpend is a recent window of one model's completion budget at one stage.
+ *
+ * @generated from message postpilot.v1.ReasoningSpend
+ */
+export type ReasoningSpend = Message<"postpilot.v1.ReasoningSpend"> & {
+  /**
+   * @generated from field: int64 calls = 1;
+   */
+  calls: bigint;
+
+  /**
+   * @generated from field: int64 reasoning_tokens = 2;
+   */
+  reasoningTokens: bigint;
+
+  /**
+   * @generated from field: int64 completion_tokens = 3;
+   */
+  completionTokens: bigint;
+};
+
+/**
+ * Describes the message postpilot.v1.ReasoningSpend.
+ * Use `create(ReasoningSpendSchema)` to create a new message.
+ */
+export const ReasoningSpendSchema: GenMessage<ReasoningSpend> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 1);
 
 /**
  * @generated from message postpilot.v1.ListCatalogRequest
@@ -140,6 +186,15 @@ export type ListCatalogRequest = Message<"postpilot.v1.ListCatalogRequest"> & {
    * @generated from field: bool refresh = 1;
    */
   refresh: boolean;
+
+  /**
+   * The purpose tab being listed. It selects which effort each entry reports and which
+   * stage's spend signal is attached, so the control and the evidence beside it belong to
+   * the tab the operator is looking at. Empty reports neither.
+   *
+   * @generated from field: string purpose = 2;
+   */
+  purpose: string;
 };
 
 /**
@@ -147,7 +202,7 @@ export type ListCatalogRequest = Message<"postpilot.v1.ListCatalogRequest"> & {
  * Use `create(ListCatalogRequestSchema)` to create a new message.
  */
 export const ListCatalogRequestSchema: GenMessage<ListCatalogRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 1);
+  messageDesc(file_postpilot_v1_model_catalog, 2);
 
 /**
  * @generated from message postpilot.v1.ListCatalogResponse
@@ -185,7 +240,7 @@ export type ListCatalogResponse = Message<"postpilot.v1.ListCatalogResponse"> & 
  * Use `create(ListCatalogResponseSchema)` to create a new message.
  */
 export const ListCatalogResponseSchema: GenMessage<ListCatalogResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 2);
+  messageDesc(file_postpilot_v1_model_catalog, 3);
 
 /**
  * @generated from message postpilot.v1.SetModelPurposeRequest
@@ -217,7 +272,7 @@ export type SetModelPurposeRequest = Message<"postpilot.v1.SetModelPurposeReques
  * Use `create(SetModelPurposeRequestSchema)` to create a new message.
  */
 export const SetModelPurposeRequestSchema: GenMessage<SetModelPurposeRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 3);
+  messageDesc(file_postpilot_v1_model_catalog, 4);
 
 /**
  * @generated from message postpilot.v1.SetModelPurposeResponse
@@ -234,7 +289,7 @@ export type SetModelPurposeResponse = Message<"postpilot.v1.SetModelPurposeRespo
  * Use `create(SetModelPurposeResponseSchema)` to create a new message.
  */
 export const SetModelPurposeResponseSchema: GenMessage<SetModelPurposeResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 4);
+  messageDesc(file_postpilot_v1_model_catalog, 5);
 
 /**
  * @generated from message postpilot.v1.UpdateModelRequest
@@ -246,11 +301,25 @@ export type UpdateModelRequest = Message<"postpilot.v1.UpdateModelRequest"> & {
   modelId: string;
 
   /**
-   * "" clears the override and returns the model to the stage reasoning policy.
+   * "" clears the override and returns this purpose to the stage reasoning policy.
    *
    * @generated from field: optional string reasoning_effort = 4;
    */
   reasoningEffort?: string | undefined;
+
+  /**
+   * Which registration the edit applies to. Required: the effort is a property of "this
+   * model doing this task", and the server refuses a purpose the model is not registered to
+   * — the control only appears once registered, and that is now a server rule rather than a
+   * UI convention.
+   *
+   * Carried here rather than on SetModelPurposeRequest because registering and setting an
+   * effort are separate decisions: an operator changes the effort on a model that is already
+   * registered, and folding the two would make every effort edit re-assert a registration.
+   *
+   * @generated from field: string purpose = 5;
+   */
+  purpose: string;
 };
 
 /**
@@ -258,7 +327,7 @@ export type UpdateModelRequest = Message<"postpilot.v1.UpdateModelRequest"> & {
  * Use `create(UpdateModelRequestSchema)` to create a new message.
  */
 export const UpdateModelRequestSchema: GenMessage<UpdateModelRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 5);
+  messageDesc(file_postpilot_v1_model_catalog, 6);
 
 /**
  * @generated from message postpilot.v1.UpdateModelResponse
@@ -275,7 +344,7 @@ export type UpdateModelResponse = Message<"postpilot.v1.UpdateModelResponse"> & 
  * Use `create(UpdateModelResponseSchema)` to create a new message.
  */
 export const UpdateModelResponseSchema: GenMessage<UpdateModelResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 6);
+  messageDesc(file_postpilot_v1_model_catalog, 7);
 
 /**
  * model_catalog.proto is the OPERATOR's half of the model story (plan 18, change 20):

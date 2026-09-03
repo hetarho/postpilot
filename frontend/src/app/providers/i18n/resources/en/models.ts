@@ -182,7 +182,12 @@ export const models = {
     context: '{{tokens}} token context',
     price: '${{in}} in · ${{out}} out per 1M tokens',
     priceUnpublished: 'No published token price',
-    reasoning: 'Reasoning effort',
+    reasoning: 'Reasoning effort for this purpose',
     reasoningDefault: 'Stage default',
+    reasoningSpend: 'Recent reasoning spend',
+    reasoningSpendValue:
+      '{{percent}}% of completion tokens went to reasoning (over {{calls}} calls)',
+    reasoningSpendHeavy:
+      'This model may not be honoring the effort you set. Lower it, or consider another model',
   },
 } as const

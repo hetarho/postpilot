@@ -3,6 +3,7 @@ package generation
 import (
 	"context"
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/llm"
 )
@@ -44,6 +45,11 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
 		Reasoning: s.reasoning.Write,
+		// A revision emits a whole PostContent, so it is the writing stage in every respect
+		// the port cares about: the writing override, and the writer's budget — sized by the
+		// content it has to re-emit, not only by what was asked for.
+		Stage:     llm.StageNameWrite,
+		MaxTokens: s.budget.Revise(contentChars(post.Content), post.TargetLength),
 	}
 	if info, found := s.models.Resolve(model); found && info.StructuredOutput {
 		request.JSONSchema = PostContentSchema()
@@ -81,4 +87,21 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	s.recordVersionSample(ctx, current.UserID, voiceID, filtered)
 	progress("write", 1, 1)
 	return nil
+}
+
+// contentChars is roughly how long the content a revision must re-emit is. It counts the
+// prose a model actually rewrites — a title, a summary and block text — rather than the JSON
+// envelope, which the budget's per-character ratio already allows for.
+func contentChars(content *PostContent) int {
+	if content == nil {
+		return 0
+	}
+	chars := utf8.RuneCountInString(content.Title) + utf8.RuneCountInString(content.Summary)
+	for _, block := range content.Blocks {
+		chars += utf8.RuneCountInString(block.Content) + utf8.RuneCountInString(block.Caption)
+		for _, item := range block.Items {
+			chars += utf8.RuneCountInString(item)
+		}
+	}
+	return chars
 }

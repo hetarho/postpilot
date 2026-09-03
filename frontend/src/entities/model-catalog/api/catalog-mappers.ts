@@ -91,6 +91,13 @@ export function toAdminCatalogEntry(entry: ProtoCatalogEntry): AdminCatalogEntry
     // A server newer than this build could name an effort this one has no control for.
     // Falling back to "no override" is the honest render: it is what the stage policy does.
     reasoningEffort: isReasoningEffort(entry.reasoningEffort) ? entry.reasoningEffort : '',
+    reasoningSpend: entry.reasoningSpend
+      ? {
+          calls: entry.reasoningSpend.calls,
+          reasoningTokens: entry.reasoningSpend.reasoningTokens,
+          completionTokens: entry.reasoningSpend.completionTokens,
+        }
+      : undefined,
     sourceCreatedAt: entry.sourceCreatedAt,
   }
 }

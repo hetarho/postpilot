@@ -61,10 +61,37 @@ const catalogTTL = 5 * time.Minute
 // public internet, so a read that has not finished in this long is not going to.
 const catalogFetchTimeout = 15 * time.Second
 
-// llmMaxTokensDefault is the completion cap sent when a caller does not set one. Large
-// enough for a full blog draft; a caller with a smaller output (an observation, a style
-// analysis) may pass its own.
-const llmMaxTokensDefault = 8192
+// llmMaxTokensDefaultFallback is the completion cap sent when a caller expresses no need of
+// its own. Large enough for a full blog draft; a caller with a smaller output (an
+// observation, a style analysis) passes its own through LLMCompletionBudget.
+//
+// It is only the DEFAULT: `LLM_MAX_TOKENS_DEFAULT` resolves it, so an installation that has
+// measured its own models can move it without a code edit (change 24).
+const llmMaxTokensDefaultFallback = "8192"
+
+// The per-stage completion budget policy. Reasoning and visible output share one budget, so
+// a stage given the writer's headroom that does not need it hands a reasoning model room to
+// fill (the 2026-09-03 observation failure: 647-733 tokens became 8,192, the cap).
+//
+// Every number lives here. The generation context receives the policy and never a literal.
+const (
+	// observeBudgetPerPhoto is one photo's structured entry — scene, mood, visible text and a
+	// short object list — with room for the JSON envelope. The observation budget scales with
+	// OBSERVE_BATCH_SIZE because that is how many entries one call returns; a fixed number
+	// would truncate the moment an operator raised the batch.
+	observeBudgetPerPhoto = 512
+	// observeBudgetFloor keeps a batch of one from being squeezed below a usable entry.
+	observeBudgetFloor = 1024
+	// writeBudgetPerChar is completion tokens per requested character of Korean prose. A
+	// Korean character is roughly one token in these tokenizers; the JSON envelope, headings,
+	// tags and the reasoning that SHARES this budget are why the ratio is well above 1.
+	writeBudgetPerChar = 4
+	// writeBudgetCeilingFactor bounds a derived budget at this multiple of the configured
+	// fallback. It exists so a mistyped target length cannot ask a provider for an
+	// effectively unbounded completion, and it is a multiple rather than its own number so
+	// one env value still moves the whole policy.
+	writeBudgetCeilingFactor = 4
+)
 
 // The queue is deliberately single-consumer at this scale: SQLite has one writer and
 // parallel provider calls would only make rate limits and ordering less predictable.
@@ -108,6 +135,67 @@ func defaultLLMReasoningPolicy() LLMReasoningPolicy {
 	return LLMReasoningPolicy{
 		Observe: llm.ReasoningLow,
 		Write:   llm.ReasoningLow,
+	}
+}
+
+// LLMCompletionBudget is what each stage asks the provider for, so the stages stop sharing
+// one constant. It is code-owned for the same reason the reasoning policy is: a stage's
+// budget is a property of the work, not of the deployment. What the deployment owns is the
+// FALLBACK (LLMMaxTokensDefault), which is both the writer's floor and the base of its
+// ceiling.
+type LLMCompletionBudget struct {
+	// Observe is one observation batch's cap, derived from the batch size.
+	Observe int
+	// WriteFloor is the smallest writing budget — the configured fallback, so a post that
+	// requested no length is sent exactly what every call was sent before this policy
+	// existed. Job 23 raised that to 8,192 to stop write-stage truncation, and this must
+	// never quietly walk it back.
+	WriteFloor int
+	// WritePerChar scales the writing budget by the post's requested character count.
+	WritePerChar int
+	// Ceiling bounds a derived budget from above.
+	Ceiling int
+}
+
+// Write is the writing stage's budget for a post's requested target length. No target keeps
+// the floor; a longer requested draft is given more room, bounded by the ceiling so a
+// mistyped target cannot ask a provider for an unbounded completion.
+func (b LLMCompletionBudget) Write(targetLength *int) int {
+	return b.forChars(charsOf(targetLength))
+}
+
+// Revise is a revision's budget. A revision re-emits the WHOLE PostContent, so what it must
+// fit is the larger of the existing content and any requested length — a long post with no
+// target would otherwise be handed the floor and truncate deterministically.
+func (b LLMCompletionBudget) Revise(contentChars int, targetLength *int) int {
+	return b.forChars(max(contentChars, charsOf(targetLength)))
+}
+
+// Observation is one observation batch's budget, independent of the writer's.
+func (b LLMCompletionBudget) Observation() int { return b.Observe }
+
+func (b LLMCompletionBudget) forChars(chars int) int {
+	budget := b.WriteFloor
+	if derived := chars * b.WritePerChar; derived > budget {
+		budget = derived
+	}
+	return min(budget, b.Ceiling)
+}
+
+func charsOf(targetLength *int) int {
+	if targetLength == nil || *targetLength <= 0 {
+		return 0
+	}
+	return *targetLength
+}
+
+func defaultLLMCompletionBudget(fallback, observeBatchSize int) LLMCompletionBudget {
+	observe := observeBatchSize * observeBudgetPerPhoto
+	return LLMCompletionBudget{
+		Observe:      max(observe, observeBudgetFloor),
+		WriteFloor:   fallback,
+		WritePerChar: writeBudgetPerChar,
+		Ceiling:      fallback * writeBudgetCeilingFactor,
 	}
 }
 
@@ -178,10 +266,13 @@ type Config struct {
 	CatalogFetchTimeout time.Duration
 	// LLMStageTimeout bounds one provider call.
 	LLMStageTimeout time.Duration
-	// LLMMaxTokensDefault is the completion cap when a caller sets none.
+	// LLMMaxTokensDefault is the completion cap when a caller sets none, and the ceiling
+	// every derived per-stage budget is bounded by.
 	LLMMaxTokensDefault int
-	// LLMReasoning supplies stage defaults; model registry overrides take precedence.
+	// LLMReasoning supplies stage defaults; a per-(model, purpose) override takes precedence.
 	LLMReasoning LLMReasoningPolicy
+	// LLMCompletionBudget is the per-stage budget policy the generation context asks for.
+	LLMCompletionBudget LLMCompletionBudget
 	// ObserveBatchSize is the number of photos sent to one observation call.
 	ObserveBatchSize int
 	// ExperimentContentRetention starts after a verdict/dismissal and bounds how long
@@ -261,7 +352,6 @@ func Load() (*Config, error) {
 		CatalogTTL:           catalogTTL,
 		CatalogFetchTimeout:  catalogFetchTimeout,
 		LLMStageTimeout:      llmStageTimeout,
-		LLMMaxTokensDefault:  llmMaxTokensDefault,
 		LLMReasoning:         defaultLLMReasoningPolicy(),
 		VoicePersonalization: defaultVoicePersonalizationConfig(),
 	}
@@ -285,6 +375,13 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("OBSERVE_BATCH_SIZE: must be a positive integer")
 	}
 	cfg.ObserveBatchSize = batchSize
+
+	maxTokens, err := strconv.Atoi(getenv("LLM_MAX_TOKENS_DEFAULT", llmMaxTokensDefaultFallback))
+	if err != nil || maxTokens <= 0 {
+		return nil, fmt.Errorf("LLM_MAX_TOKENS_DEFAULT: must be a positive integer")
+	}
+	cfg.LLMMaxTokensDefault = maxTokens
+	cfg.LLMCompletionBudget = defaultLLMCompletionBudget(maxTokens, batchSize)
 
 	retention, err := positiveDuration("EXPERIMENT_CONTENT_RETENTION", "720h")
 	if err != nil {

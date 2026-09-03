@@ -49,6 +49,8 @@ type Store interface {
 	DeleteAdmissionForJob(ctx context.Context, jobID string) error
 
 	InsertEvent(ctx context.Context, event Event) error
+	// ReasoningSpend aggregates recorded calls at one stage since `since`, per model.
+	ReasoningSpend(ctx context.Context, stage string, since time.Time) ([]ReasoningSpend, error)
 	// SumCostForJob is what the job actually spent, the figure settlement charges.
 	SumCostForJob(ctx context.Context, jobID string) (int64, error)
 }

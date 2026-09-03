@@ -29,7 +29,17 @@ type Handler struct {
 func NewHandler(svc *modelcatalog.Service) *Handler { return &Handler{svc: svc} }
 
 func (h *Handler) ListCatalog(ctx context.Context, req *connect.Request[postpilotv1.ListCatalogRequest]) (*connect.Response[postpilotv1.ListCatalogResponse], error) {
-	browse, err := h.svc.Browse(ctx, req.Msg.GetRefresh())
+	// An unknown purpose is refused rather than silently listed with no effort: a tab that
+	// asked for the wrong slug would otherwise show every override as cleared.
+	purpose := modelcatalog.Purpose("")
+	if raw := req.Msg.GetPurpose(); raw != "" {
+		parsed, err := modelcatalog.ParsePurpose(raw)
+		if err != nil {
+			return nil, toConnectError("list catalog", err)
+		}
+		purpose = parsed
+	}
+	browse, err := h.svc.Browse(ctx, req.Msg.GetRefresh(), purpose)
 	if err != nil {
 		return nil, toConnectError("list catalog", err)
 	}
@@ -52,11 +62,14 @@ func (h *Handler) SetModelPurpose(ctx context.Context, req *connect.Request[post
 	if modelID == "" {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a model id is required", "MODEL_ID_REQUIRED", nil)
 	}
-	model, err := h.svc.SetPurpose(ctx, modelID, modelcatalog.Purpose(req.Msg.GetPurpose()), req.Msg.GetRegistered())
+	purpose := modelcatalog.Purpose(req.Msg.GetPurpose())
+	model, err := h.svc.SetPurpose(ctx, modelID, purpose, req.Msg.GetRegistered())
 	if err != nil {
 		return nil, toConnectError("set model purpose", err)
 	}
-	return connect.NewResponse(&postpilotv1.SetModelPurposeResponse{Entry: toProtoEntry(modelcatalog.EntryOf(model))}), nil
+	// The answer is projected for the purpose that was written, so the row the client
+	// re-renders carries that tab's effort and not another's.
+	return connect.NewResponse(&postpilotv1.SetModelPurposeResponse{Entry: toProtoEntry(modelcatalog.EntryOf(model, purpose))}), nil
 }
 
 func (h *Handler) UpdateModel(ctx context.Context, req *connect.Request[postpilotv1.UpdateModelRequest]) (*connect.Response[postpilotv1.UpdateModelResponse], error) {
@@ -64,7 +77,7 @@ func (h *Handler) UpdateModel(ctx context.Context, req *connect.Request[postpilo
 	if modelID == "" {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a model id is required", "MODEL_ID_REQUIRED", nil)
 	}
-	patch := modelcatalog.Patch{}
+	patch := modelcatalog.Patch{Purpose: modelcatalog.Purpose(req.Msg.GetPurpose())}
 	if req.Msg.ReasoningEffort != nil {
 		effort := llm.ReasoningEffort(req.Msg.GetReasoningEffort())
 		patch.Reasoning = &effort
@@ -73,7 +86,7 @@ func (h *Handler) UpdateModel(ctx context.Context, req *connect.Request[postpilo
 	if err != nil {
 		return nil, toConnectError("update model", err)
 	}
-	return connect.NewResponse(&postpilotv1.UpdateModelResponse{Entry: toProtoEntry(modelcatalog.EntryOf(model))}), nil
+	return connect.NewResponse(&postpilotv1.UpdateModelResponse{Entry: toProtoEntry(modelcatalog.EntryOf(model, patch.Purpose))}), nil
 }
 
 func toProtoEntry(e modelcatalog.Entry) *postpilotv1.CatalogEntry {
@@ -98,6 +111,17 @@ func toProtoEntry(e modelcatalog.Entry) *postpilotv1.CatalogEntry {
 		Listed:              e.Listed,
 		ReasoningEffort:     string(e.Reasoning),
 		SourceCreatedAt:     e.SourceCreatedAt,
+		ReasoningSpend:      toProtoReasoningSpend(e.ReasoningSpend),
+	}
+}
+
+func toProtoReasoningSpend(spend *modelcatalog.ReasoningSpend) *postpilotv1.ReasoningSpend {
+	if spend == nil {
+		return nil
+	}
+	return &postpilotv1.ReasoningSpend{
+		Calls: spend.Calls, ReasoningTokens: spend.ReasoningTokens,
+		CompletionTokens: spend.CompletionTokens,
 	}
 }
 
@@ -111,6 +135,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown purpose", "MODEL_PURPOSE_INVALID", nil)
 	case errors.Is(err, modelcatalog.ErrPurposeIneligible):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model not capable of this purpose", "MODEL_PURPOSE_INELIGIBLE", nil)
+	case errors.Is(err, modelcatalog.ErrPurposeNotRegistered):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model is not registered to this purpose", "MODEL_PURPOSE_NOT_REGISTERED", nil)
 	default:
 		slog.Error(op+" failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)

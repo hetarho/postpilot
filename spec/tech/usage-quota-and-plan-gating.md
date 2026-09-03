@@ -157,8 +157,16 @@ Two tables, two axes, deliberately:
   job's identity on the handler's context, so "every server-side LLM call is on the ledger" is a structural fact
   instead of a rule twelve call sites have to keep remembering — and a new call site is metered the day it is
   written. Failed calls whose usage the provider reported are included (job 23 preserves those). The budget axes sum
-  these. The cost of that seam is that `stage` can only be as specific as the refs distinguish: it is the job kind,
-  except for a generate job's observation call, and not even then when both stages ran the same model.
+  these. The row also records the provider-reported **reasoning token count** (0 means not reported, like the other
+  usage fields), so "wrote 8,192 tokens of post" and "spent 8,192 tokens thinking and wrote nothing" stop being the
+  same row — the 2026-09-03 failures had to be inferred from an empty body. It is recorded for diagnosis and is
+  deliberately not re-priced.
+- `stage` is now the stage the CALL named for itself, in the llm boundary's stable form
+  (`observe`/`write`/`analyze`), falling back to the old ref-comparison inference for a call that names none. It used
+  to be as specific as the refs distinguished — the job kind, except for a generate job's observation call, and not
+  even then when both stages ran the same model — which is exactly the ambiguity a per-(model, stage) aggregate
+  cannot tolerate. Nothing read the column back before, so widening its meaning changed no reader. That aggregate
+  is what tells an operator a model is ignoring its reasoning effort, per purpose, before it fails a user's job.
 
 Cost resolution reuses the experiment precedence: provider-**reported** cost wins; otherwise **estimated** from
 the registry's per-million prices; otherwise **unavailable** (recorded as 0 cost — today only `openrouter/free`

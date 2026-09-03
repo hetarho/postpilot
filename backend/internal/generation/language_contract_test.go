@@ -66,7 +66,7 @@ func TestOrdinaryGenerationUsesFrozenTargetAndWritesMatchingProvenance(t *testin
 		}
 		return llm.Response{Text: `{"title":"English title","summary":"Summary","tags":["one","two","three"],"blocks":[{"type":"TEXT","content":"Body"}]}`}, nil
 	}
-	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy)
+	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
@@ -101,13 +101,13 @@ func TestObservationInputsAreByteIdenticalAcrossTargets(t *testing.T) {
 		Images: []Image{{Filename: "IMG.jpg", Key: "key"}},
 	}
 	base.TargetLanguage = LanguageKorean
-	koRaw, err := NewService(&fakePosts{input: base}, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy).
+	koRaw, err := NewService(&fakePosts{input: base}, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget).
 		SnapshotObserveInput(context.Background(), "alice", "post")
 	if err != nil {
 		t.Fatal(err)
 	}
 	base.TargetLanguage = LanguageEnglish
-	enRaw, err := NewService(&fakePosts{input: base}, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy).
+	enRaw, err := NewService(&fakePosts{input: base}, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget).
 		SnapshotObserveInput(context.Background(), "alice", "post")
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +125,7 @@ func TestObservationInputsAreByteIdenticalAcrossTargets(t *testing.T) {
 	models.complete = func(_ llm.ModelRef, _ llm.Request) (llm.Response, error) {
 		return llm.Response{Text: `{"observations":[{"file":"IMG.jpg","scene":"same","mood":"","visible_text":"","objects":[],"people_present":false}]}`}, nil
 	}
-	svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
+	svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
 	for _, target := range []Language{LanguageKorean, LanguageEnglish} {
 		post := base
 		post.TargetLanguage = target
@@ -172,7 +172,7 @@ func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 		return llm.Response{Text: `{"title":"` + ref.ModelID + `","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"body"}]}`}, nil
 	}
 	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", SourceLanguage: LanguageKorean, Portable: true}}
-	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
+	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -224,7 +224,7 @@ func TestRevisionFreezesContentLanguageAcrossTargetChangeAndFivePasses(t *testin
 		}
 		return llm.Response{Text: `{"title":"title","summary":"summary","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"next"}]}`}, nil
 	}
-	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy)
+	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 	_, err := svc.StartRevision(context.Background(), StartRevisionRequest{
 		UserID: "alice", PostSlug: "post", Instruction: "Translate to Korean and shorten it", WriteModel: writeRef.String(),
 	})
@@ -264,7 +264,7 @@ func TestRevisionRejectsMissingProvenanceBeforeMutationOrProvider(t *testing.T) 
 	jobs := &fakeJobs{id: "must-not-enqueue"}
 	rules := &fakeRules{}
 	models := newFakeModels()
-	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 	_, err := svc.StartRevision(context.Background(), StartRevisionRequest{
 		UserID: "alice", PostSlug: "post", Instruction: "shorten", SaveAsRule: true, WriteModel: writeRef.String(),
 	})
@@ -284,7 +284,7 @@ func TestRevisionSaveAsRuleRejectsCrossLanguageContentBeforeRuleQueueOrProvider(
 	jobs := &fakeJobs{id: "must-not-enqueue"}
 	rules := &fakeRules{}
 	models := newFakeModels()
-	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy)
+	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 	_, err := svc.StartRevision(context.Background(), StartRevisionRequest{
 		UserID: "alice", PostSlug: "post", Instruction: "make this my rule", SaveAsRule: true, WriteModel: writeRef.String(),
 	})

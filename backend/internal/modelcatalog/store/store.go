@@ -36,13 +36,11 @@ func (s *Store) List(ctx context.Context) ([]modelcatalog.Model, error) {
 	if err != nil {
 		return nil, fmt.Errorf("select catalog model purposes: %w", err)
 	}
-	byModel := map[string][]modelcatalog.Purpose{}
-	for _, registration := range registrations {
-		purposes, err := parsePurposes(registration.ModelID, []string{registration.Purpose})
-		if err != nil {
-			return nil, err
-		}
-		byModel[registration.ModelID] = append(byModel[registration.ModelID], purposes...)
+	byModel := map[string][]registration{}
+	for _, row := range registrations {
+		byModel[row.ModelID] = append(byModel[row.ModelID], registration{
+			Purpose: row.Purpose, ReasoningEffort: row.ReasoningEffort,
+		})
 	}
 	out := make([]modelcatalog.Model, 0, len(rows))
 	for _, row := range rows {
@@ -53,6 +51,13 @@ func (s *Store) List(ctx context.Context) ([]modelcatalog.Model, error) {
 		out = append(out, model)
 	}
 	return out, nil
+}
+
+// registration is one join row as both read paths carry it: the purpose and the effort the
+// operator set for THAT purpose.
+type registration struct {
+	Purpose         string
+	ReasoningEffort sql.NullString
 }
 
 func (s *Store) Get(ctx context.Context, modelID string) (modelcatalog.Model, error) {
@@ -71,11 +76,13 @@ func get(ctx context.Context, q *sqlc.Queries, modelID string) (modelcatalog.Mod
 	if err != nil {
 		return modelcatalog.Model{}, fmt.Errorf("select catalog model purposes: %w", err)
 	}
-	purposes, err := parsePurposes(modelID, stored)
-	if err != nil {
-		return modelcatalog.Model{}, err
+	registrations := make([]registration, 0, len(stored))
+	for _, item := range stored {
+		registrations = append(registrations, registration{
+			Purpose: item.Purpose, ReasoningEffort: item.ReasoningEffort,
+		})
 	}
-	return toModel(row, purposes)
+	return toModel(row, registrations)
 }
 
 func (s *Store) Upsert(ctx context.Context, m modelcatalog.Model) error {
@@ -95,7 +102,6 @@ func upsert(ctx context.Context, q *sqlc.Queries, m modelcatalog.Model) error {
 		InputUsdPerMillion:  nullString(m.InputUSDPerMillion),
 		OutputUsdPerMillion: nullString(m.OutputUSDPerMillion),
 		PricingCheckedAt:    nullString(m.PricingCheckedAt),
-		ReasoningEffort:     nullString(string(m.Reasoning)),
 		Listed:              boolToInt(m.Listed),
 		LastSeenAt:          nullTime(m.LastSeenAt),
 		CreatedAt:           formatTime(m.CreatedAt),
@@ -123,20 +129,38 @@ func (s *Store) Patch(ctx context.Context, modelID string, patch modelcatalog.Pa
 		return modelcatalog.Model{}, err
 	}
 	if patch.Reasoning != nil {
-		current.Reasoning = *patch.Reasoning
+		// An empty effort CLEARS the override rather than storing one: the column goes NULL
+		// and the map loses the key, so "no override" is one state in memory and on disk
+		// instead of two that read the same only by accident.
+		if *patch.Reasoning == llm.ReasoningUnspecified {
+			delete(current.Reasoning, patch.Purpose)
+		} else {
+			if current.Reasoning == nil {
+				current.Reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{}
+			}
+			current.Reasoning[patch.Purpose] = *patch.Reasoning
+		}
 	}
 	current.UpdatedAt = updatedAt
 
-	n, err := q.UpdateCatalogModelCuration(ctx, sqlc.UpdateCatalogModelCurationParams{
-		ReasoningEffort: nullString(string(current.Reasoning)),
-		UpdatedAt:       formatTime(current.UpdatedAt),
+	// The UPDATE matching zero rows is the refusal: the join row exists only for a purpose
+	// this model is registered to, so an effort cannot be stored where it would never be read.
+	n, err := q.UpdateCatalogModelPurposeReasoning(ctx, sqlc.UpdateCatalogModelPurposeReasoningParams{
+		ReasoningEffort: nullString(string(current.Reasoning[patch.Purpose])),
 		ModelID:         modelID,
+		Purpose:         string(patch.Purpose),
 	})
 	if err != nil {
-		return modelcatalog.Model{}, fmt.Errorf("update catalog model: %w", err)
+		return modelcatalog.Model{}, fmt.Errorf("update catalog model purpose reasoning: %w", err)
 	}
 	if n == 0 {
-		return modelcatalog.Model{}, modelcatalog.ErrNotFound
+		return modelcatalog.Model{}, fmt.Errorf("%w: %s for %s", modelcatalog.ErrPurposeNotRegistered, modelID, patch.Purpose)
+	}
+	// A curation edit stamps the row, the same way a (de)registration does.
+	if err := q.TouchCatalogModelCuration(ctx, sqlc.TouchCatalogModelCurationParams{
+		UpdatedAt: formatTime(current.UpdatedAt), ModelID: modelID,
+	}); err != nil {
+		return modelcatalog.Model{}, fmt.Errorf("touch catalog model: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
 		return modelcatalog.Model{}, fmt.Errorf("commit patch catalog model: %w", err)
@@ -241,7 +265,7 @@ func (s *Store) RefreshAvailability(ctx context.Context, seen []modelcatalog.Can
 	return nil
 }
 
-func toModel(row sqlc.GetCatalogModelRow, purposes []modelcatalog.Purpose) (modelcatalog.Model, error) {
+func toModel(row sqlc.GetCatalogModelRow, registrations []registration) (modelcatalog.Model, error) {
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
 		return modelcatalog.Model{}, fmt.Errorf("parse catalog model created_at: %w", err)
@@ -257,17 +281,10 @@ func toModel(row sqlc.GetCatalogModelRow, purposes []modelcatalog.Purpose) (mode
 			return modelcatalog.Model{}, fmt.Errorf("parse catalog model last_seen_at: %w", err)
 		}
 	}
-	// The column CHECK already refuses anything else, so a failure here means the row was
-	// written by something other than this code.
-	reasoning := llm.ReasoningEffort(row.ReasoningEffort.String)
-	if !row.ReasoningEffort.Valid {
-		reasoning = llm.ReasoningUnspecified
+	purposes, reasoning, err := parseRegistrations(row.ModelID, registrations)
+	if err != nil {
+		return modelcatalog.Model{}, err
 	}
-	if !reasoning.Valid() {
-		return modelcatalog.Model{}, fmt.Errorf("catalog model %s: unknown reasoning_effort %q", row.ModelID, row.ReasoningEffort.String)
-	}
-	// The join rows arrive in column order; the domain order is the display order.
-	modelcatalog.SortPurposes(purposes)
 	return modelcatalog.Model{
 		ModelID:             row.ModelID,
 		ProviderSlug:        row.ProviderSlug,
@@ -289,18 +306,33 @@ func toModel(row sqlc.GetCatalogModelRow, purposes []modelcatalog.Purpose) (mode
 	}, nil
 }
 
-// parsePurposes maps stored purpose slugs into the domain type. The column CHECK refuses
-// anything else, so a failure means the row was written by something other than this code.
-func parsePurposes(modelID string, values []string) ([]modelcatalog.Purpose, error) {
-	purposes := make([]modelcatalog.Purpose, 0, len(values))
-	for _, value := range values {
-		purpose, err := modelcatalog.ParsePurpose(value)
+// parseRegistrations maps the join rows into the domain's two halves: which purposes the
+// model serves, and the effort the operator set for each. Both column CHECKs refuse anything
+// else, so a failure means the row was written by something other than this code.
+func parseRegistrations(modelID string, rows []registration) ([]modelcatalog.Purpose, map[modelcatalog.Purpose]llm.ReasoningEffort, error) {
+	purposes := make([]modelcatalog.Purpose, 0, len(rows))
+	var reasoning map[modelcatalog.Purpose]llm.ReasoningEffort
+	for _, row := range rows {
+		purpose, err := modelcatalog.ParsePurpose(row.Purpose)
 		if err != nil {
-			return nil, fmt.Errorf("catalog model %s: %w", modelID, err)
+			return nil, nil, fmt.Errorf("catalog model %s: %w", modelID, err)
 		}
 		purposes = append(purposes, purpose)
+		if !row.ReasoningEffort.Valid {
+			continue
+		}
+		effort := llm.ReasoningEffort(row.ReasoningEffort.String)
+		if !effort.Valid() {
+			return nil, nil, fmt.Errorf("catalog model %s %s: unknown reasoning_effort %q", modelID, purpose, row.ReasoningEffort.String)
+		}
+		if reasoning == nil {
+			reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{}
+		}
+		reasoning[purpose] = effort
 	}
-	return purposes, nil
+	// The join rows arrive in column order; the domain order is the display order.
+	modelcatalog.SortPurposes(purposes)
+	return purposes, reasoning, nil
 }
 
 func boolToInt(value bool) int64 {

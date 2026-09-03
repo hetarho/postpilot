@@ -82,6 +82,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("CORS_ORIGIN", "")
 	t.Setenv("DB_PATH", "")
 	t.Setenv("OBSERVE_BATCH_SIZE", "")
+	t.Setenv("LLM_MAX_TOKENS_DEFAULT", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -98,13 +99,139 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.ObserveBatchSize != 4 {
 		t.Errorf("ObserveBatchSize = %d, want 4", cfg.ObserveBatchSize)
 	}
-	if cfg.LLMMaxTokensDefault != 8192 || llmMaxTokensDefault != 8192 {
-		t.Errorf("LLMMaxTokensDefault = %d / %d, want 8192", cfg.LLMMaxTokensDefault, llmMaxTokensDefault)
+	// A8: the cap is deployment-resolvable, with 8192 as its default.
+	if cfg.LLMMaxTokensDefault != 8192 {
+		t.Errorf("LLMMaxTokensDefault = %d, want 8192", cfg.LLMMaxTokensDefault)
 	}
 	if cfg.LLMReasoning.Observe != llm.ReasoningLow || cfg.LLMReasoning.Write != llm.ReasoningLow {
 		t.Errorf("LLMReasoning = %+v", cfg.LLMReasoning)
 	}
+	// A7: the observation budget is derived from the batch size, not from the writer's.
+	if got, want := cfg.LLMCompletionBudget.Observation(), 4*observeBudgetPerPhoto; got != want {
+		t.Errorf("observation budget = %d, want %d for a batch of 4", got, want)
+	}
+	// Job 23 raised the effective write budget to 8,192 to stop write-stage truncation. A
+	// post that requests no length must still be sent exactly that.
+	if got := cfg.LLMCompletionBudget.Write(nil); got != 8192 {
+		t.Errorf("no-target write budget = %d, want the configured fallback 8192", got)
+	}
 }
+
+// The observation budget follows OBSERVE_BATCH_SIZE, because that is how many structured
+// entries one call returns — a fixed number truncates the moment an operator raises the batch.
+func TestObservationBudgetFollowsTheBatchSize(t *testing.T) {
+	t.Setenv("LLM_MAX_TOKENS_DEFAULT", "")
+	t.Setenv("OBSERVE_BATCH_SIZE", "12")
+	big, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("OBSERVE_BATCH_SIZE", "1")
+	small, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if big.LLMCompletionBudget.Observation() <= small.LLMCompletionBudget.Observation() {
+		t.Errorf("a batch of 12 got %d, not more than a batch of 1's %d",
+			big.LLMCompletionBudget.Observation(), small.LLMCompletionBudget.Observation())
+	}
+	// A batch of one is still floored to a usable entry.
+	if small.LLMCompletionBudget.Observation() != observeBudgetFloor {
+		t.Errorf("a batch of 1 got %d, want the floor %d",
+			small.LLMCompletionBudget.Observation(), observeBudgetFloor)
+	}
+}
+
+// A revision re-emits the WHOLE PostContent, so its budget has to fit what already exists —
+// a long post with no requested length would otherwise get the floor and truncate every time.
+func TestRevisionBudgetFitsTheContentItReEmits(t *testing.T) {
+	t.Setenv("LLM_MAX_TOKENS_DEFAULT", "")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	budget := cfg.LLMCompletionBudget
+
+	if got := budget.Revise(0, nil); got != budget.Write(nil) {
+		t.Errorf("an empty revision = %d, want the writer's floor %d", got, budget.Write(nil))
+	}
+	long := budget.Revise(6000, nil)
+	if long <= budget.Write(nil) {
+		t.Errorf("a 6,000-character post to re-emit got %d, no more than the floor %d", long, budget.Write(nil))
+	}
+	// The larger of the two wins, in both directions.
+	if got := budget.Revise(6000, intPointer(500)); got != long {
+		t.Errorf("a short target shrank a long revision to %d, want %d", got, long)
+	}
+	if got := budget.Revise(100, intPointer(6000)); got != long {
+		t.Errorf("a long target on short content gave %d, want %d", got, long)
+	}
+	if got := budget.Revise(10_000_000, nil); got != budget.Ceiling {
+		t.Errorf("an enormous post = %d, want the ceiling %d", got, budget.Ceiling)
+	}
+}
+
+// A6: the writing budget follows the post's requested length, floored so a post with no
+// target is never squeezed and capped so a mistyped target cannot ask for an unbounded
+// completion. A unit test over the derivation, not a provider call.
+func TestWritingBudgetFollowsTheRequestedLength(t *testing.T) {
+	t.Setenv("LLM_MAX_TOKENS_DEFAULT", "")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	budget := cfg.LLMCompletionBudget
+
+	if got := budget.Write(nil); got != 8192 {
+		t.Errorf("no target = %d, want the configured fallback 8192", got)
+	}
+	if got := budget.Write(intPointer(500)); got != 8192 {
+		t.Errorf("a short target = %d, want the fallback floor 8192", got)
+	}
+	// A6: a longer requested draft is sent a larger budget. The comparison is made where the
+	// derivation is above the floor, which is what "a longer draft raises the ceiling instead
+	// of meeting the same wall" means.
+	short, long := budget.Write(intPointer(3000)), budget.Write(intPointer(6000))
+	if long <= short {
+		t.Errorf("a longer requested draft got %d, not more than the shorter one's %d", long, short)
+	}
+	if short <= budget.Write(nil) {
+		t.Errorf("a 3,000-character target got %d, no more than the no-target floor", short)
+	}
+	if got := budget.Write(intPointer(1_000_000)); got != budget.Ceiling {
+		t.Errorf("an absurd target = %d, want the ceiling %d", got, budget.Ceiling)
+	}
+	// The observation stage is independent of the writer's, which is the whole point of the
+	// split: a stage given headroom it does not need hands a reasoning model room to fill.
+	if budget.Observation() >= budget.Write(nil) {
+		t.Errorf("observation %d is not smaller than the writer's floor %d", budget.Observation(), budget.Write(nil))
+	}
+}
+
+// A8: an invalid cap is refused at boot, the way OBSERVE_BATCH_SIZE is.
+func TestInvalidCompletionCapIsRefused(t *testing.T) {
+	for _, value := range []string{"0", "-1", "lots"} {
+		t.Setenv("LLM_MAX_TOKENS_DEFAULT", value)
+		if _, err := Load(); err == nil {
+			t.Errorf("LLM_MAX_TOKENS_DEFAULT=%q was accepted", value)
+		}
+	}
+	t.Setenv("LLM_MAX_TOKENS_DEFAULT", "16384")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The resolved value is the registry's fallback AND the writer's floor, and the ceiling is
+	// a bounded multiple of it — so one env value moves the whole policy.
+	if cfg.LLMMaxTokensDefault != 16384 || cfg.LLMCompletionBudget.Write(nil) != 16384 {
+		t.Errorf("a resolved cap did not reach the budget: %d / %d", cfg.LLMMaxTokensDefault, cfg.LLMCompletionBudget.Write(nil))
+	}
+	if cfg.LLMCompletionBudget.Ceiling != 16384*writeBudgetCeilingFactor {
+		t.Errorf("ceiling = %d, want %d", cfg.LLMCompletionBudget.Ceiling, 16384*writeBudgetCeilingFactor)
+	}
+}
+
+func intPointer(value int) *int { return &value }
 
 func TestLoadObserveBatchSize(t *testing.T) {
 	t.Setenv("CORS_ORIGIN", "http://localhost:2564")

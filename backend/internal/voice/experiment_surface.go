@@ -60,6 +60,9 @@ func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.M
 	response, err := s.models.Complete(ctx, ref, llm.Request{
 		System:   analysisPromptForLanguage(snapshot.SourceLanguage),
 		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(snapshot.Corpus)}}},
+		// The candidate path resolves the purpose of the stage it is COMPARING, so an
+		// analyze A/B measures both models under the effort each would really run at.
+		Stage: llm.StageNameAnalyze,
 	})
 	usage := CandidateUsage{PromptTokens: int64(response.Usage.PromptTokens), CompletionTokens: int64(response.Usage.CompletionTokens), CostMicrousd: response.Usage.CostMicrousd, CostReported: response.Usage.CostReported}
 	if err != nil {

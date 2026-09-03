@@ -10,11 +10,14 @@ import (
 // to localized recovery guidance at the transport edge.
 var (
 	// ErrModelUnavailable: the ref is not in the registry, or the provider says the model
-	// does not exist (a free model that vanished — PRD §6.5).
+	// does not exist — a curated row the provider stopped offering (PRD §6.5).
 	ErrModelUnavailable = errors.New("model unavailable")
 	// ErrProviderDisabled: the provider's API key is not configured.
 	ErrProviderDisabled = errors.New("provider disabled: API key not configured")
-	// ErrRateLimited: the provider answered 429 (the free-tier daily limit case).
+	// ErrRateLimited: the provider refused for rate reasons — the caller's quota, the
+	// account's, or the gateway's own upstream pool. It says nothing about a tier: the
+	// 2026-09-03 case arrived as an upstream `code: 429` inside an HTTP 200 on a catalog row
+	// priced at $0.75/$3.75 per million, with nothing free anywhere in the path.
 	ErrRateLimited = errors.New("rate limited")
 	// ErrUnsupported: an image part or a JSON schema was requested on a model that does
 	// not declare the capability. Raised before any network call.
@@ -67,8 +70,40 @@ func NormalizeFailure(err error) Failure {
 		// copy it into Params or make it the stable reason.
 		failure.TechnicalDetail = strings.TrimSpace(providerErr.Message)
 	}
+	var truncated *TruncatedError
+	if errors.As(err, &truncated) {
+		failure.TechnicalDetail = truncated.Error()
+	}
 	return failure
 }
+
+// TruncatedError is ErrOutputTruncated carrying the provider's own account of where the
+// completion budget went. It exists because the two causes have opposite remedies and were
+// indistinguishable from the message: a body that filled the budget wants a larger budget,
+// while a body the model never wrote because it spent the budget reasoning wants a lower
+// effort for this purpose, or another model. Only a provider that reports the split can be
+// told apart, so one that reports none keeps the bare sentinel and today's message.
+//
+// It wraps the sentinel, so every `errors.Is(err, ErrOutputTruncated)` check and the
+// MODEL_OUTPUT_TRUNCATED reason are unaffected, and no user-facing string changes — this
+// text is TechnicalDetail, the field reserved for external prose.
+type TruncatedError struct {
+	ReasoningTokens  int
+	CompletionTokens int
+}
+
+func (e *TruncatedError) Error() string {
+	visible := e.CompletionTokens - e.ReasoningTokens
+	if visible < 0 {
+		visible = 0
+	}
+	return fmt.Sprintf(
+		"completion budget exhausted: %d of %d completion tokens went to reasoning, %d to visible output",
+		e.ReasoningTokens, e.CompletionTokens, visible,
+	)
+}
+
+func (e *TruncatedError) Unwrap() error { return ErrOutputTruncated }
 
 func failureReason(err error) string {
 	switch {

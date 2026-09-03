@@ -27,6 +27,9 @@ var (
 	// ErrPurposeIneligible: the model lacks the capability the purpose requires
 	// (photo-analysis needs vision; a generation purpose needs the matching output).
 	ErrPurposeIneligible = errors.New("model not capable of purpose")
+	// ErrPurposeNotRegistered: an effort was set for a purpose this model does not serve.
+	// The control only appears once registered, and the server holds the same rule.
+	ErrPurposeNotRegistered = errors.New("model is not registered to purpose")
 )
 
 // Purpose is one use the product puts a model to. Registration is per purpose (change 20):
@@ -117,11 +120,16 @@ type Model struct {
 	InputUSDPerMillion  string
 	OutputUSDPerMillion string
 	PricingCheckedAt    string
-	Reasoning           llm.ReasoningEffort
 	// Purposes this model is registered to. Zero purposes is the kept-but-served-to-nobody
-	// state the old `enabled = 0` used to be: the reasoning override survives, users see
-	// nothing.
+	// state the old `enabled = 0` used to be: the row survives, users see nothing.
 	Purposes []Purpose
+	// Reasoning is the operator's override PER REGISTRATION, keyed by purpose. It is a
+	// property of "this model doing this task", not of the model: the code-owned policy it
+	// overrides is per stage, and the right effort is a measurement of a model against a
+	// task (change 24). A purpose absent from the map, or present as Unspecified, defers to
+	// the stage policy. An unregistered purpose has no effort to carry, which is consistent
+	// — a model serves it to nobody.
+	Reasoning map[Purpose]llm.ReasoningEffort
 	// Listed: the upstream catalog still offered this model at the last successful refresh.
 	Listed     bool
 	LastSeenAt time.Time
@@ -162,16 +170,44 @@ type Entry struct {
 	Candidate
 	// Curated: a catalog_models row exists, so Reasoning and Purposes are decisions somebody
 	// made rather than defaults.
-	Curated   bool
-	Purposes  []Purpose
+	Curated  bool
+	Purposes []Purpose
+	// Reasoning is the effort for the PURPOSE being listed, not the model's. The browse list
+	// is read one purpose tab at a time, so the evidence and the control shown on a tab
+	// belong to that tab (change 24).
 	Reasoning llm.ReasoningEffort
 	Listed    bool
+	// ReasoningSpend is the recent reasoning-vs-completion split for this model at the
+	// purpose being listed, or nil when nothing has been recorded for it. It is what makes a
+	// model ignoring its effort visible BEFORE it fails a user's job — the only reliable
+	// check, since `supported_parameters` says a model accepts `reasoning_effort` but never
+	// which values it honors.
+	ReasoningSpend *ReasoningSpend
+}
+
+// ReasoningSpend is a recent window of one model's completion budget at one purpose.
+type ReasoningSpend struct {
+	Calls            int64
+	ReasoningTokens  int64
+	CompletionTokens int64
+}
+
+// ReasoningShare is the fraction of the completion budget spent on reasoning, 0-1. Zero
+// completion tokens reports 0 rather than dividing.
+func (s ReasoningSpend) ReasoningShare() float64 {
+	if s.CompletionTokens <= 0 {
+		return 0
+	}
+	return float64(s.ReasoningTokens) / float64(s.CompletionTokens)
 }
 
 // EntryOf presents a curated row in the browse-list shape — the one projection both the
 // merge and a curation write's answer use, so the two can never carry different fields.
 // The upstream description is absent: it lives only in the live candidate list.
-func EntryOf(m Model) Entry {
+//
+// `purpose` is the tab being listed, and it is what selects the effort to report. An empty
+// purpose reports none, which is what a caller with no tab in hand should show.
+func EntryOf(m Model, purpose Purpose) Entry {
 	return Entry{
 		Candidate: Candidate{
 			ModelID: m.ModelID, ProviderSlug: m.ProviderSlug, Label: m.Label,
@@ -181,7 +217,7 @@ func EntryOf(m Model) Entry {
 			InputUSDPerMillion: m.InputUSDPerMillion, OutputUSDPerMillion: m.OutputUSDPerMillion,
 		},
 		Curated: true, Purposes: m.Purposes,
-		Reasoning: m.Reasoning, Listed: m.Listed,
+		Reasoning: m.Reasoning[purpose], Listed: m.Listed,
 	}
 }
 
@@ -196,10 +232,13 @@ type Browse struct {
 	FetchError string
 }
 
-// Patch is a partial curation edit. A nil member is not being changed, which is what lets
-// two operators edit different fields of one model without overwriting each other.
-// Purpose registration is not a patch — it has its own write (SetPurpose).
+// Patch is a partial curation edit for ONE (model, purpose). A nil member is not being
+// changed, which is what lets two operators edit different fields of one model without
+// overwriting each other. Purpose registration is not a patch — it has its own write
+// (SetPurpose) — and an effort may only be set for a purpose the model is registered to,
+// which is a server rule rather than a UI convention (change 24).
 type Patch struct {
+	Purpose   Purpose
 	Reasoning *llm.ReasoningEffort
 }
 

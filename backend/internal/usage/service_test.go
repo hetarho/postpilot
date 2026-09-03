@@ -174,6 +174,28 @@ func (f *fakeStore) InsertEvent(_ context.Context, event Event) error {
 	return nil
 }
 
+func (f *fakeStore) ReasoningSpend(_ context.Context, stage string, since time.Time) ([]ReasoningSpend, error) {
+	byModel := map[string]*ReasoningSpend{}
+	for _, event := range f.events {
+		if event.Stage != stage || event.CreatedAt.Before(since) {
+			continue
+		}
+		row, ok := byModel[event.Model]
+		if !ok {
+			row = &ReasoningSpend{Model: event.Model, Stage: stage}
+			byModel[event.Model] = row
+		}
+		row.Calls++
+		row.ReasoningTokens += event.ReasoningTokens
+		row.CompletionTokens += event.CompletionTokens
+	}
+	out := make([]ReasoningSpend, 0, len(byModel))
+	for _, row := range byModel {
+		out = append(out, *row)
+	}
+	return out, nil
+}
+
 func (f *fakeStore) SumCostForJob(_ context.Context, jobID string) (int64, error) {
 	var total int64
 	for _, event := range f.events {
@@ -576,7 +598,7 @@ func TestRecordCallPricesAndAttributesFromContext(t *testing.T) {
 		UserID: "alice", Kind: "generate", JobID: "job", ObserveModel: "openrouter/observer",
 	})
 
-	if err := svc.RecordCall(ctx, ref, llm.Usage{PromptTokens: 1_000_000, CompletionTokens: 0}, false); err != nil {
+	if err := svc.RecordCall(ctx, ref, "", llm.Usage{PromptTokens: 1_000_000, CompletionTokens: 0}, false); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := len(store.events), 1; got != want {
@@ -597,7 +619,7 @@ func TestRecordCallKeepsFailedCallsWithReportedUsage(t *testing.T) {
 	ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "gone"}
 
 	// A failure that never reached a model has nothing to account for.
-	if err := svc.RecordCall(ctx, ref, llm.Usage{}, true); err != nil {
+	if err := svc.RecordCall(ctx, ref, "", llm.Usage{}, true); err != nil {
 		t.Fatal(err)
 	}
 	if len(store.events) != 0 {
@@ -605,7 +627,7 @@ func TestRecordCallKeepsFailedCallsWithReportedUsage(t *testing.T) {
 	}
 
 	// A failure the provider still billed is the case job 23 preserves usage for.
-	if err := svc.RecordCall(ctx, ref, llm.Usage{PromptTokens: 12, CostMicrousd: 4, CostReported: true}, true); err != nil {
+	if err := svc.RecordCall(ctx, ref, "", llm.Usage{PromptTokens: 12, CostMicrousd: 4, CostReported: true}, true); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := len(store.events), 1; got != want {
@@ -616,9 +638,90 @@ func TestRecordCallKeepsFailedCallsWithReportedUsage(t *testing.T) {
 	}
 }
 
+// A10: the reasoning token count reaches the ledger row alongside the tokens and cost it
+// already recorded, so "wrote 8,192 tokens of post" and "spent 8,192 tokens thinking and
+// wrote nothing" stop being the same row.
+func TestRecordCallStoresTheReasoningTokenCount(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	ctx := WithWork(context.Background(), Work{UserID: "alice", Kind: "generate", JobID: "job-1"})
+	ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "writer"}
+
+	if err := svc.RecordCall(ctx, ref, llm.StageNameWrite, llm.Usage{
+		PromptTokens: 4304, CompletionTokens: 8192, ReasoningTokens: 8100,
+	}, true); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.events) != 1 {
+		t.Fatalf("events = %d", len(store.events))
+	}
+	got := store.events[0]
+	if got.ReasoningTokens != 8100 || got.CompletionTokens != 8192 || got.PromptTokens != 4304 {
+		t.Fatalf("event = %+v", got)
+	}
+	// The stage the CALL named, not an inference from the ref.
+	if got.Stage != llm.StageNameWrite {
+		t.Errorf("stage = %q, want the stage the call named", got.Stage)
+	}
+	// A provider that reports no split leaves it zero, like every other usage field.
+	if err := svc.RecordCall(ctx, ref, llm.StageNameWrite, llm.Usage{CompletionTokens: 40}, false); err != nil {
+		t.Fatal(err)
+	}
+	if store.events[1].ReasoningTokens != 0 {
+		t.Errorf("an unreported split = %d, want 0", store.events[1].ReasoningTokens)
+	}
+}
+
+// A11: the aggregate an operator reads is per model AND per stage, because the effort is per
+// (model, purpose) — one averaged over the model would hide a writing stage that is spending
+// its whole budget thinking behind an observation stage that is fine.
+func TestReasoningSpendAggregatesPerModelAndStage(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	ctx := WithWork(context.Background(), Work{UserID: "alice", Kind: "generate", JobID: "job-1"})
+	shared := llm.ModelRef{ProviderID: "openrouter", ModelID: "both-stages"}
+
+	for _, call := range []struct {
+		stage string
+		usage llm.Usage
+	}{
+		{llm.StageNameObserve, llm.Usage{CompletionTokens: 700, ReasoningTokens: 20}},
+		{llm.StageNameObserve, llm.Usage{CompletionTokens: 660, ReasoningTokens: 30}},
+		{llm.StageNameWrite, llm.Usage{CompletionTokens: 8192, ReasoningTokens: 8100}},
+	} {
+		if err := svc.RecordCall(ctx, shared, call.stage, call.usage, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	observe, err := svc.ReasoningSpendByModel(context.Background(), llm.StageNameObserve)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(observe) != 1 || observe[0].Calls != 2 || observe[0].ReasoningTokens != 50 || observe[0].CompletionTokens != 1360 {
+		t.Fatalf("observe spend = %+v", observe)
+	}
+	write, err := svc.ReasoningSpendByModel(context.Background(), llm.StageNameWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(write) != 1 || write[0].Calls != 1 || write[0].ReasoningTokens != 8100 {
+		t.Fatalf("write spend = %+v", write)
+	}
+	// The same model, the same window, opposite verdicts — which is the whole reason the
+	// aggregate carries a stage.
+	if float64(observe[0].ReasoningTokens)/float64(observe[0].CompletionTokens) >= 0.5 {
+		t.Error("the observation stage reads as reasoning-heavy")
+	}
+	if float64(write[0].ReasoningTokens)/float64(write[0].CompletionTokens) <= 0.5 {
+		t.Error("the writing stage does not read as reasoning-heavy")
+	}
+	if len(store.events) != 3 {
+		t.Errorf("events = %d", len(store.events))
+	}
+}
+
 func TestRecordCallDropsAnUnattributableCall(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
-	err := svc.RecordCall(context.Background(), llm.ModelRef{ProviderID: "p", ModelID: "m"}, llm.Usage{PromptTokens: 5}, false)
+	err := svc.RecordCall(context.Background(), llm.ModelRef{ProviderID: "p", ModelID: "m"}, "", llm.Usage{PromptTokens: 5}, false)
 	if err != nil {
 		t.Fatal(err)
 	}

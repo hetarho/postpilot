@@ -368,17 +368,19 @@ func TestComplete_FillsModelDefaultCapAndTimeout(t *testing.T) {
 	}
 }
 
-// A11: the curated per-model override wins over the stage value, `unset` still means "send
-// nothing", and an empty override defers to the stage.
+// A3: the curated override for THIS STAGE wins over the stage value, `unset` still means
+// "send nothing", and an absent or empty override defers to the stage.
 func TestComplete_CuratedReasoningOverrideWins(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
-		override llm.ReasoningEffort
+		override map[string]llm.ReasoningEffort
 		want     llm.ReasoningEffort
 	}{
-		{name: "no override defers to the stage", override: llm.ReasoningUnspecified, want: llm.ReasoningLow},
-		{name: "unset beats stage low", override: llm.ReasoningUnset, want: llm.ReasoningUnset},
-		{name: "high beats stage low", override: llm.ReasoningHigh, want: llm.ReasoningHigh},
+		{name: "no override at all defers to the stage", want: llm.ReasoningLow},
+		{name: "an empty override defers to the stage", override: map[string]llm.ReasoningEffort{llm.StageNameWrite: llm.ReasoningUnspecified}, want: llm.ReasoningLow},
+		{name: "another stage's override does not apply", override: map[string]llm.ReasoningEffort{llm.StageNameObserve: llm.ReasoningHigh}, want: llm.ReasoningLow},
+		{name: "unset beats stage low", override: map[string]llm.ReasoningEffort{llm.StageNameWrite: llm.ReasoningUnset}, want: llm.ReasoningUnset},
+		{name: "high beats stage low", override: map[string]llm.ReasoningEffort{llm.StageNameWrite: llm.ReasoningHigh}, want: llm.ReasoningHigh},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			source := fakeSource{models: []llm.SourceModel{
@@ -390,13 +392,45 @@ func TestComplete_CuratedReasoningOverrideWins(t *testing.T) {
 				t.Fatal(err)
 			}
 			ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "text-only"}
-			if _, err := registry.Complete(context.Background(), ref, llm.Request{Reasoning: llm.ReasoningLow}); err != nil {
+			if _, err := registry.Complete(context.Background(), ref, llm.Request{
+				Reasoning: llm.ReasoningLow, Stage: llm.StageNameWrite,
+			}); err != nil {
 				t.Fatal(err)
 			}
 			if provider.last.Reasoning != tc.want {
 				t.Fatalf("Reasoning = %q, want %q", provider.last.Reasoning, tc.want)
 			}
 		})
+	}
+}
+
+// A1: the same model registered to two purposes holds two independent efforts, and each
+// stage's call sends its own — one generation observes at one strength and writes at another.
+func TestComplete_ResolvesEachStagesOwnOverride(t *testing.T) {
+	source := fakeSource{models: []llm.SourceModel{{ModelID: "text-only", Reasoning: map[string]llm.ReasoningEffort{
+		llm.StageNameObserve: llm.ReasoningHigh,
+		llm.StageNameWrite:   llm.ReasoningMinimal,
+	}}}}
+	provider := &fakeProvider{}
+	registry, err := llm.Parse([]byte(goodYAML), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(provider), source, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "text-only"}
+	for stage, want := range map[string]llm.ReasoningEffort{
+		llm.StageNameObserve: llm.ReasoningHigh,
+		llm.StageNameWrite:   llm.ReasoningMinimal,
+		// A stage with no override of its own keeps what the caller asked for.
+		llm.StageNameAnalyze: llm.ReasoningLow,
+	} {
+		if _, err := registry.Complete(context.Background(), ref, llm.Request{
+			Reasoning: llm.ReasoningLow, Stage: stage,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if provider.last.Reasoning != want {
+			t.Errorf("%s reasoning = %q, want %q", stage, provider.last.Reasoning, want)
+		}
 	}
 }
 

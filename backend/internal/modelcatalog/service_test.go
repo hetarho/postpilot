@@ -66,7 +66,17 @@ func (s *fakeStore) Patch(_ context.Context, modelID string, patch modelcatalog.
 		return modelcatalog.Model{}, modelcatalog.ErrNotFound
 	}
 	if patch.Reasoning != nil {
-		row.Reasoning = *patch.Reasoning
+		if !slices.Contains(row.Purposes, patch.Purpose) {
+			return modelcatalog.Model{}, modelcatalog.ErrPurposeNotRegistered
+		}
+		if *patch.Reasoning == llm.ReasoningUnspecified {
+			delete(row.Reasoning, patch.Purpose)
+		} else {
+			if row.Reasoning == nil {
+				row.Reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{}
+			}
+			row.Reasoning[patch.Purpose] = *patch.Reasoning
+		}
 	}
 	row.UpdatedAt = updatedAt
 	s.rows[modelID] = row
@@ -171,7 +181,7 @@ func TestBrowse_MergesLiveCatalogWithCuratedRows(t *testing.T) {
 	}}
 	svc := newService(t, store, upstream)
 
-	browse, err := svc.Browse(context.Background(), false)
+	browse, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +223,7 @@ func TestBrowse_DegradesWithoutWritingBookkeeping(t *testing.T) {
 	store := newFakeStore(curated("openai/gpt-x", modelcatalog.PurposeWriting))
 	svc := newService(t, store, &fakeUpstream{err: errors.New("network down")})
 
-	browse, err := svc.Browse(context.Background(), true)
+	browse, err := svc.Browse(context.Background(), true, modelcatalog.PurposeWriting)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +248,7 @@ func TestBrowse_CachedSnapshotWritesNoBookkeeping(t *testing.T) {
 	upstream := &fakeUpstream{candidates: []modelcatalog.Candidate{candidate("openai/gpt-x", 1)}, fromCache: true}
 	svc := newService(t, store, upstream)
 
-	if _, err := svc.Browse(context.Background(), false); err != nil {
+	if _, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting); err != nil {
 		t.Fatal(err)
 	}
 	if store.refreshes != 0 {
@@ -362,7 +372,7 @@ func TestBrowse_CapabilityDriftStopsTheStageButKeepsTheRegistration(t *testing.T
 	sightless.Vision = false
 	svc := newService(t, store, &fakeUpstream{candidates: []modelcatalog.Candidate{sightless}})
 
-	browse, err := svc.Browse(context.Background(), false)
+	browse, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -382,7 +392,8 @@ func TestBrowse_CapabilityDriftStopsTheStageButKeepsTheRegistration(t *testing.T
 // operator undoing a deregistration must not have to wait for the provider to be reachable.
 func TestSetPurpose_ReRegistersFromTheStoredRowWhenUpstreamIsDown(t *testing.T) {
 	row := curated("retired/model")
-	row.Reasoning = llm.ReasoningHigh
+	row.Purposes = []modelcatalog.Purpose{modelcatalog.PurposeWriting}
+	row.Reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{modelcatalog.PurposeWriting: llm.ReasoningHigh}
 	row.Listed = false
 	store := newFakeStore(row)
 	svc := newService(t, store, &fakeUpstream{err: errors.New("network down")})
@@ -395,7 +406,7 @@ func TestSetPurpose_ReRegistersFromTheStoredRowWhenUpstreamIsDown(t *testing.T) 
 		t.Fatalf("re-registered model = %+v", model)
 	}
 	// Curation the operator made earlier survives; so does the fact that it is unoffered.
-	if model.Reasoning != llm.ReasoningHigh || model.Listed {
+	if model.Reasoning[modelcatalog.PurposeWriting] != llm.ReasoningHigh || model.Listed {
 		t.Errorf("re-registration overwrote stored state: %+v", model)
 	}
 	source, ok := svc.Lookup("retired/model")
@@ -418,18 +429,52 @@ func TestSetPurpose_RefusesUnknownModelsAndPurposes(t *testing.T) {
 	}
 }
 
-// A7/A11: the reasoning override still round-trips through an edit, shared across the
-// model's purposes, and the registry view follows at once.
+// A7/A11: the override round-trips through an edit for the purpose it was made on, and the
+// registry view follows at once — projected onto that purpose's STAGE.
 func TestUpdate_AppliesCurationToTheRegistryView(t *testing.T) {
 	store := newFakeStore(curated("openai/gpt-x", modelcatalog.PurposeWriting))
 	svc := newService(t, store, nil)
 
 	high := llm.ReasoningHigh
-	if _, err := svc.Update(context.Background(), "openai/gpt-x", modelcatalog.Patch{Reasoning: &high}); err != nil {
+	if _, err := svc.Update(context.Background(), "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Reasoning: &high,
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if source, _ := svc.Lookup("openai/gpt-x"); source.Reasoning != llm.ReasoningHigh {
-		t.Errorf("reasoning = %q, want high", source.Reasoning)
+	source, _ := svc.Lookup("openai/gpt-x")
+	if source.Reasoning[llm.StageNameWrite] != llm.ReasoningHigh {
+		t.Errorf("write reasoning = %q, want high", source.Reasoning[llm.StageNameWrite])
+	}
+}
+
+// A1/A2 — the 2026-09-03 regression, asserted directly: two purposes of one model hold two
+// independent efforts, and editing one leaves the other exactly as it was.
+func TestUpdate_KeepsEveryOtherPurposeUnchanged(t *testing.T) {
+	store := newFakeStore(curated("openai/gpt-x",
+		modelcatalog.PurposePhotoAnalysis, modelcatalog.PurposeWriting, modelcatalog.PurposeStyleAnalysis))
+	svc := newService(t, store, nil)
+
+	minimal, high := llm.ReasoningMinimal, llm.ReasoningHigh
+	if _, err := svc.Update(context.Background(), "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposePhotoAnalysis, Reasoning: &high,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Update(context.Background(), "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Reasoning: &minimal,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	source, _ := svc.Lookup("openai/gpt-x")
+	if got := source.Reasoning[llm.StageNameObserve]; got != llm.ReasoningHigh {
+		t.Errorf("observe reasoning = %q, want high — the writing edit reached it", got)
+	}
+	if got := source.Reasoning[llm.StageNameWrite]; got != llm.ReasoningMinimal {
+		t.Errorf("write reasoning = %q, want minimal", got)
+	}
+	// A3/A5: an untouched purpose sends NO key — it falls through to the stage policy.
+	if got, ok := source.Reasoning[llm.StageNameAnalyze]; ok {
+		t.Errorf("analyze reasoning = %q, want no override at all", got)
 	}
 }
 
@@ -437,13 +482,111 @@ func TestUpdate_RefusesUnknownModelAndBadValues(t *testing.T) {
 	svc := newService(t, newFakeStore(curated("openai/gpt-x", modelcatalog.PurposeWriting)), nil)
 
 	none := llm.ReasoningNone
-	if _, err := svc.Update(context.Background(), "nobody/has-this", modelcatalog.Patch{Reasoning: &none}); !errors.Is(err, modelcatalog.ErrNotFound) {
+	if _, err := svc.Update(context.Background(), "nobody/has-this", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Reasoning: &none,
+	}); !errors.Is(err, modelcatalog.ErrNotFound) {
 		t.Errorf("unknown model = %v, want ErrNotFound", err)
 	}
 	nonsense := llm.ReasoningEffort("enormous")
-	if _, err := svc.Update(context.Background(), "openai/gpt-x", modelcatalog.Patch{Reasoning: &nonsense}); !errors.Is(err, modelcatalog.ErrInvalidReasoning) {
+	if _, err := svc.Update(context.Background(), "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Reasoning: &nonsense,
+	}); !errors.Is(err, modelcatalog.ErrInvalidReasoning) {
 		t.Errorf("bad effort = %v, want ErrInvalidReasoning", err)
 	}
+	if _, err := svc.Update(context.Background(), "openai/gpt-x", modelcatalog.Patch{Reasoning: &none}); !errors.Is(err, modelcatalog.ErrUnknownPurpose) {
+		t.Errorf("absent purpose = %v, want ErrUnknownPurpose", err)
+	}
+	// The control appears only once registered, and the server holds the same rule.
+	if _, err := svc.Update(context.Background(), "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposePhotoAnalysis, Reasoning: &none,
+	}); !errors.Is(err, modelcatalog.ErrPurposeNotRegistered) {
+		t.Errorf("unregistered purpose = %v, want ErrPurposeNotRegistered", err)
+	}
+}
+
+// A11: the operator sees, per purpose, that a model is spending its budget on reasoning —
+// without reading the database and without waiting for a user's job to fail. The evidence
+// comes from the ledger through this context's own port; the catalog never reads usage_events.
+func TestBrowse_AttachesTheReasoningSpendForTheListedPurpose(t *testing.T) {
+	store := newFakeStore(
+		curated("openai/reasoner", modelcatalog.PurposePhotoAnalysis, modelcatalog.PurposeWriting),
+		curated("openai/quiet", modelcatalog.PurposeWriting),
+		curated("openai/unmeasured", modelcatalog.PurposeWriting),
+	)
+	svc := newService(t, store, &fakeUpstream{})
+	svc.SetReasoningSpend(fakeSpend{rows: map[string][]modelcatalog.SpendRow{
+		llm.StageNameWrite: {
+			{Model: "openai/reasoner", Calls: 3, ReasoningTokens: 24_000, CompletionTokens: 24_300},
+			{Model: "openai/quiet", Calls: 5, ReasoningTokens: 120, CompletionTokens: 6_000},
+			// A model with no recorded call renders nothing rather than a zero that would
+			// read as a measurement.
+			{Model: "openai/unmeasured", Calls: 0},
+		},
+		llm.StageNameObserve: {
+			{Model: "openai/reasoner", Calls: 2, ReasoningTokens: 40, CompletionTokens: 1_300},
+		},
+	}})
+
+	writing, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byID := map[string]modelcatalog.Entry{}
+	for _, entry := range writing.Entries {
+		byID[entry.ModelID] = entry
+	}
+	if spend := byID["openai/reasoner"].ReasoningSpend; spend == nil || spend.ReasoningShare() < 0.9 {
+		t.Fatalf("reasoner writing spend = %+v, want a reasoning-heavy share", spend)
+	}
+	if spend := byID["openai/quiet"].ReasoningSpend; spend == nil || spend.ReasoningShare() > 0.1 {
+		t.Fatalf("quiet writing spend = %+v", spend)
+	}
+	if spend := byID["openai/unmeasured"].ReasoningSpend; spend != nil {
+		t.Fatalf("a model with no recorded call carried %+v", spend)
+	}
+
+	// The SAME model on another tab reports that tab's stage — the evidence matches the tab.
+	observing, err := svc.Browse(context.Background(), false, modelcatalog.PurposePhotoAnalysis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range observing.Entries {
+		if entry.ModelID != "openai/reasoner" {
+			continue
+		}
+		if entry.ReasoningSpend == nil || entry.ReasoningSpend.ReasoningShare() > 0.1 {
+			t.Fatalf("reasoner observe spend = %+v, want the observation stage's own numbers", entry.ReasoningSpend)
+		}
+	}
+}
+
+// The signal is evidence beside a control, so a ledger that cannot answer must never be what
+// stops an operator from curating.
+func TestBrowse_SurvivesAFailingSpendRead(t *testing.T) {
+	svc := newService(t, newFakeStore(curated("openai/gpt-x", modelcatalog.PurposeWriting)), &fakeUpstream{})
+	svc.SetReasoningSpend(fakeSpend{err: errors.New("ledger unavailable")})
+
+	browse, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)
+	if err != nil {
+		t.Fatalf("a failing spend read broke the whole screen: %v", err)
+	}
+	for _, entry := range browse.Entries {
+		if entry.ReasoningSpend != nil {
+			t.Errorf("%s carried a spend signal from a failed read", entry.ModelID)
+		}
+	}
+}
+
+type fakeSpend struct {
+	rows map[string][]modelcatalog.SpendRow
+	err  error
+}
+
+func (f fakeSpend) ReasoningSpendByModel(_ context.Context, stage string) ([]modelcatalog.SpendRow, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.rows[stage], nil
 }
 
 // A4: the registry's view is memory, so the user-facing catalog never touches the network —
@@ -458,7 +601,7 @@ func TestModelSource_ServesWithoutAnUpstream(t *testing.T) {
 	if len(models) != 1 || models[0].ModelID != "openai/gpt-x" {
 		t.Fatalf("models = %+v, want only the registered one", models)
 	}
-	browse, err := svc.Browse(context.Background(), true)
+	browse, err := svc.Browse(context.Background(), true, modelcatalog.PurposeWriting)
 	if err != nil {
 		t.Fatal(err)
 	}

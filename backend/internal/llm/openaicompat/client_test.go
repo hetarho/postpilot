@@ -466,3 +466,151 @@ func TestComplete_HonoursTheContextDeadline(t *testing.T) {
 		t.Fatalf("err = %v, want context.Canceled", err)
 	}
 }
+
+// A9: the reasoning token count is parsed on BOTH response shapes — the SSE usage chunk and
+// the whole document a provider that ignores `stream: true` returns — and a provider that
+// omits it leaves the count zero without disturbing any other usage field.
+func TestReasoningTokensParseOnBothShapes(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		contentType   string
+		body          string
+		wantReasoning int
+	}{
+		{
+			name: "stream reports the split", contentType: "text/event-stream",
+			body:          "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: {\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":40,\"completion_tokens_details\":{\"reasoning_tokens\":33}}}\n\ndata: [DONE]\n\n",
+			wantReasoning: 33,
+		},
+		{
+			name: "whole document reports the split", contentType: "application/json",
+			body:          `{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":10,"completion_tokens":40,"completion_tokens_details":{"reasoning_tokens":33}}}`,
+			wantReasoning: 33,
+		},
+		{
+			name: "stream omits the details", contentType: "text/event-stream",
+			body:          "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: {\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":40}}\n\ndata: [DONE]\n\n",
+			wantReasoning: 0,
+		},
+		{
+			name: "whole document omits the details", contentType: "application/json",
+			body:          `{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":10,"completion_tokens":40}}`,
+			wantReasoning: 0,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			client, _ := newClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", test.contentType)
+				io.WriteString(w, test.body)
+			})
+
+			response, err := client.Complete(context.Background(), llm.Request{Model: "m"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if response.Usage.ReasoningTokens != test.wantReasoning {
+				t.Errorf("reasoning tokens = %d, want %d", response.Usage.ReasoningTokens, test.wantReasoning)
+			}
+			// No other usage field moved.
+			if response.Usage.PromptTokens != 10 || response.Usage.CompletionTokens != 40 || response.Usage.CostReported {
+				t.Errorf("usage = %+v", response.Usage)
+			}
+			if response.Text != "ok" {
+				t.Errorf("text = %q", response.Text)
+			}
+		})
+	}
+}
+
+// A15 regression: the request body's reasoning object carries an effort and NOTHING else —
+// `reasoning.exclude` has never been sent and must stay unsent (it would suppress the
+// provider's own reasoning report, which is the signal change 24 exists to record) — and the
+// nested object still appears only for a provider that opted into the dialect.
+func TestReasoningBodyCarriesOnlyAnEffortAndOnlyWithTheFormat(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		format        string
+		effort        llm.ReasoningEffort
+		wantReasoning bool
+	}{
+		{name: "openrouter format sends the object", format: "openrouter", effort: llm.ReasoningLow, wantReasoning: true},
+		{name: "no format sends nothing", format: "", effort: llm.ReasoningLow},
+		{name: "unset sends nothing", format: "openrouter", effort: llm.ReasoningUnset},
+		{name: "unspecified sends nothing", format: "openrouter", effort: llm.ReasoningUnspecified},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var body map[string]any
+			client, _ := newClientWithReasoningFormat(t, test.format, func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				w.Header().Set("Content-Type", "application/json")
+				io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
+			})
+			if _, err := client.Complete(context.Background(), llm.Request{Model: "m", Reasoning: test.effort}); err != nil {
+				t.Fatal(err)
+			}
+			raw, present := body["reasoning"]
+			if present != test.wantReasoning {
+				t.Fatalf("reasoning present = %v, want %v (body %v)", present, test.wantReasoning, body)
+			}
+			if !present {
+				return
+			}
+			object, ok := raw.(map[string]any)
+			if !ok {
+				t.Fatalf("reasoning = %v, want an object", raw)
+			}
+			if _, banned := object["exclude"]; banned {
+				t.Error("reasoning.exclude was sent")
+			}
+			if len(object) != 1 || object["effort"] != string(test.effort) {
+				t.Fatalf("reasoning object = %v, want only the effort", object)
+			}
+		})
+	}
+}
+
+// A12 where it actually matters: the 2026-09-03 shape was an EMPTY completion after the model
+// reasoned through its whole budget, not a body cut off mid-JSON. The adapter has the usage in
+// hand at that point, so the split is attached there — and a provider that reported no split
+// keeps the message it always had.
+func TestEmptyTruncatedCompletionNamesTheReasoningSplit(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		usage      string
+		wantDetail string
+	}{
+		{
+			name:       "reported",
+			usage:      `,"usage":{"prompt_tokens":4304,"completion_tokens":8192,"completion_tokens_details":{"reasoning_tokens":8192}}`,
+			wantDetail: "completion budget exhausted: 8192 of 8192 completion tokens went to reasoning, 0 to visible output",
+		},
+		{name: "not reported", usage: `,"usage":{"prompt_tokens":4304,"completion_tokens":8192}`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			body := `{"choices":[{"message":{"content":""},"finish_reason":"length"}]` + test.usage + `}`
+			client, _ := newClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				io.WriteString(w, body)
+			})
+
+			_, err := client.Complete(context.Background(), llm.Request{Model: "m"})
+			if !errors.Is(err, llm.ErrOutputTruncated) || errors.Is(err, llm.ErrBadOutput) {
+				t.Fatalf("err = %v, want only ErrOutputTruncated", err)
+			}
+			failure := llm.NormalizeFailure(err)
+			if failure.Reason != llm.FailureReasonOutputTruncated {
+				t.Fatalf("reason = %q", failure.Reason)
+			}
+			if test.wantDetail == "" {
+				// Today's message, unchanged: the provider named no split to report.
+				if !strings.Contains(failure.TechnicalDetail, "empty completion") && failure.TechnicalDetail != "" {
+					t.Fatalf("technical detail = %q, want no invented split", failure.TechnicalDetail)
+				}
+				return
+			}
+			if failure.TechnicalDetail != test.wantDetail {
+				t.Fatalf("technical detail = %q, want %q", failure.TechnicalDetail, test.wantDetail)
+			}
+		})
+	}
+}

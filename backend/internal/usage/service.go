@@ -344,6 +344,7 @@ func (s *Service) Record(ctx context.Context, call Call) error {
 		Model:            call.Model.String(),
 		PromptTokens:     int64(call.Usage.PromptTokens),
 		CompletionTokens: int64(call.Usage.CompletionTokens),
+		ReasoningTokens:  int64(call.Usage.ReasoningTokens),
 		CostMicrousd:     cost.Microusd,
 		CostSource:       cost.Source,
 		CreatedAt:        s.now(),
@@ -357,7 +358,11 @@ func (s *Service) Record(ctx context.Context, call Call) error {
 // is the evidence the call happened. A FAILED call is recorded only when it reported
 // usage — job 23 preserves that, and those tokens were bought — because a call that never
 // reached a model has nothing to account for.
-func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, u llm.Usage, failed bool) error {
+// `stage` is the stage the CALL named for itself, in the llm boundary's stable form. It is
+// preferred over StageFor because it is a fact rather than an inference: StageFor could only
+// tell observe from write by comparing refs, and gave up when one model served both. A call
+// that names none still falls back to it.
+func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, stage string, u llm.Usage, failed bool) error {
 	work, ok := WorkFromContext(ctx)
 	if !ok {
 		return nil
@@ -365,10 +370,20 @@ func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, u llm.Usage,
 	if failed && u.PromptTokens == 0 && u.CompletionTokens == 0 && !u.CostReported {
 		return nil
 	}
+	if stage == "" {
+		stage = work.StageFor(ref)
+	}
 	return s.Record(ctx, Call{
 		UserID: work.UserID, Kind: work.Kind, JobID: work.JobID,
-		Stage: work.StageFor(ref), Model: ref, Usage: u,
+		Stage: stage, Model: ref, Usage: u,
 	})
+}
+
+// ReasoningSpendByModel is the recent reasoning-vs-completion split per model for one
+// stage. It is the ledger's published answer to "is this model honoring its effort", read
+// by the curation surface through its own port — the catalog never touches usage_events.
+func (s *Service) ReasoningSpendByModel(ctx context.Context, stage string) ([]ReasoningSpend, error) {
+	return s.store.ReasoningSpend(ctx, stage, s.now().Add(-ReasoningSpendWindow))
 }
 
 // BalanceFor reports what the account may spend, renewing the monthly grant first so a

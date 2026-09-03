@@ -35,3 +35,23 @@ type Store interface {
 type Upstream interface {
 	Fetch(ctx context.Context, refresh bool) (Snapshot, error)
 }
+
+// ReasoningSpendReader is the usage ledger's published per-model aggregate for one stage,
+// declared here by its consumer and wired in the composition root. It exists because this
+// context must NOT read usage_events — that table belongs to the ledger (ARCHITECTURE §2.2)
+// — and because the only reliable way to tell whether a model honors its reasoning effort
+// is to measure what it spent.
+//
+// The returned rows are keyed by model ref string, the same form the ledger records.
+type ReasoningSpendReader interface {
+	ReasoningSpendByModel(ctx context.Context, stage string) ([]SpendRow, error)
+}
+
+// SpendRow is one model's recorded split at the stage that was asked for. It is this
+// context's own shape, so the ledger's type never crosses inward.
+type SpendRow struct {
+	Model            string
+	Calls            int64
+	ReasoningTokens  int64
+	CompletionTokens int64
+}

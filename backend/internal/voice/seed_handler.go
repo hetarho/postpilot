@@ -58,6 +58,7 @@ func (s *Service) Seed(ctx context.Context, found SeedJob, progress Progress) er
 	response, err := s.models.Complete(ctx, ref, llm.Request{
 		System:   seedPromptForLanguage(active.SourceLanguage),
 		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(description)}}},
+		Stage:    llm.StageNameAnalyze,
 	})
 	if err != nil {
 		return err

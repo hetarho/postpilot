@@ -107,9 +107,29 @@ type Event struct {
 	Model            string
 	PromptTokens     int64
 	CompletionTokens int64
-	CostMicrousd     int64
-	CostSource       llm.CostSource
-	CreatedAt        time.Time
+	// ReasoningTokens is the part of CompletionTokens the provider attributed to reasoning,
+	// or 0 when it reported none. It is recorded for DIAGNOSIS — a model spending its whole
+	// budget thinking and writing nothing was previously indistinguishable from one writing
+	// a long post — and is deliberately not re-priced.
+	ReasoningTokens int64
+	CostMicrousd    int64
+	CostSource      llm.CostSource
+	CreatedAt       time.Time
+}
+
+// ReasoningSpendWindow is how far back the reasoning-spend signal looks. Long enough that a
+// model curated last week still has evidence, short enough that a fixed effort shows its
+// effect rather than being averaged away by the weeks before it.
+const ReasoningSpendWindow = 14 * 24 * time.Hour
+
+// ReasoningSpend is one model's recent completion-budget split at one stage, over the
+// window the store defines. It is the published aggregate the curation surface reads.
+type ReasoningSpend struct {
+	Model            string
+	Stage            string
+	Calls            int64
+	ReasoningTokens  int64
+	CompletionTokens int64
 }
 
 // Balance is the account's spendable position. GetMyPlan returns it verbatim, so a client
