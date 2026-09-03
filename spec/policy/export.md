@@ -62,9 +62,16 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
 - The stored photo is a JPEG ([I6] converts every upload in the browser), so it is re-encoded to PNG on demand, for
   the one photo pressed, from the presigned view URL. Nothing encoded here is uploaded, published or persisted.
 - A photo failure is stated **on that photo**, and told apart by kind: the browser has no image clipboard, the write
-  was refused, the bytes could not be read (an expired view URL — reloading the post remints it), or no photo in the
-  post matches that marker. A photo that cannot be read offers no copy control at all rather than one that would
-  write an empty image; the same holds for a photo still carrying its local upload preview.
+  was refused, the bytes were **blocked** (not served to this origin — the fallback is the text output beside the
+  photo, and reloading changes nothing), the bytes were **unreadable** (an expired view URL — reloading the post
+  remints it), or no photo in the post matches that marker. A photo that cannot be read offers no copy control at
+  all rather than one that would write an empty image; the same holds for a photo still carrying its local upload
+  preview.
+- **Blocked and unreadable are separated by the URL, not by the response.** An object store may answer an expired
+  read with an error that carries no CORS headers — R2 does — which the browser withholds, so the fetch rejects
+  exactly as it does when the bucket allows this origin no `GET`. The lifetime a presigned URL states in its own
+  query is therefore what decides, and the bucket's browser-`GET` allow is asserted at deploy time rather than
+  discovered by a user whose photo displays but will not copy (DEPLOY.md §5).
 
 ## Configuration
 
