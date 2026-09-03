@@ -54,7 +54,9 @@ func (s *Service) setCache(rows []Model) {
 	models := make([]llm.SourceModel, 0, len(rows))
 	byID := make(map[string]llm.SourceModel, len(rows))
 	for _, row := range rows {
-		if !row.Enabled {
+		// Zero registrations is the kept-but-served-to-nobody state: the row (and its
+		// reasoning override) survives, but the registry never sees it.
+		if len(row.Purposes) == 0 {
 			continue
 		}
 		model := llm.SourceModel{
@@ -67,6 +69,7 @@ func (s *Service) setCache(rows []Model) {
 			OutputUSDPerMillion: row.OutputUSDPerMillion,
 			PricingCheckedAt:    row.PricingCheckedAt,
 			Reasoning:           row.Reasoning,
+			Stages:              stagesOf(row),
 			Delisted:            !row.Listed,
 		}
 		models = append(models, model)
@@ -140,7 +143,7 @@ func (s *Service) Browse(ctx context.Context, refresh bool) (Browse, error) {
 	for _, candidate := range snapshot.Candidates {
 		entry := Entry{Candidate: candidate, Listed: true}
 		if row, ok := curated[candidate.ModelID]; ok {
-			entry.Curated, entry.Enabled = true, row.Enabled
+			entry.Curated, entry.Purposes = true, row.Purposes
 			entry.Reasoning = row.Reasoning
 			delete(curated, candidate.ModelID)
 		}
@@ -152,16 +155,7 @@ func (s *Service) Browse(ctx context.Context, refresh bool) (Browse, error) {
 		if _, still := curated[row.ModelID]; !still {
 			continue
 		}
-		entries = append(entries, Entry{
-			Candidate: Candidate{
-				ModelID: row.ModelID, ProviderSlug: row.ProviderSlug, Label: row.Label,
-				Vision: row.Vision, StructuredOutput: row.StructuredOutput,
-				ContextTokens:      row.ContextTokens,
-				InputUSDPerMillion: row.InputUSDPerMillion, OutputUSDPerMillion: row.OutputUSDPerMillion,
-			},
-			Curated: true, Enabled: row.Enabled,
-			Reasoning: row.Reasoning, Listed: row.Listed,
-		})
+		entries = append(entries, EntryOf(row))
 	}
 
 	slices.SortFunc(entries, func(a, b Entry) int {
@@ -187,24 +181,61 @@ func (s *Service) Browse(ctx context.Context, refresh bool) (Browse, error) {
 	}, nil
 }
 
-// Enable makes a model selectable.
+// SetPurpose registers or deregisters a model for one purpose — the write that decides
+// what users can pick ([I3]: registering never selects anything for anyone).
 //
-// A model still offered upstream is snapshotted from the live entry. One that is not, but
-// already has a row, is re-enabled from what is stored — so an operator can undo a disable
-// without waiting for the provider's catalog to be reachable.
-func (s *Service) Enable(ctx context.Context, modelID string) (Model, error) {
+// Registering a model still offered upstream snapshots the live entry; one that is not,
+// but already has a row, is re-registered from what is stored — so an operator can undo a
+// deregistration without waiting for the provider's catalog to be reachable. The purpose's
+// capability gate runs here, server-side, so a tab that hid an ineligible model is a
+// convenience rather than the enforcement.
+func (s *Service) SetPurpose(ctx context.Context, modelID string, purpose Purpose, registered bool) (Model, error) {
+	if _, err := ParsePurpose(string(purpose)); err != nil {
+		return Model{}, err
+	}
 	existing, err := s.store.Get(ctx, modelID)
 	hasRow := err == nil
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return Model{}, fmt.Errorf("read curated model: %w", err)
 	}
 
+	now := s.now()
+	if !registered {
+		// Deregistering something that was never curated is answered honestly rather than
+		// invented as a no-op row.
+		if !hasRow {
+			return Model{}, fmt.Errorf("%w: %s", ErrNotFound, modelID)
+		}
+		if !slices.Contains(existing.Purposes, purpose) {
+			return existing, nil
+		}
+		if err := s.store.DeregisterPurpose(ctx, modelID, purpose, now); err != nil {
+			return Model{}, fmt.Errorf("deregister model purpose: %w", err)
+		}
+		// A fresh slice rather than an in-place delete: the read row may share its backing
+		// array with the store's own state.
+		remaining := make([]Purpose, 0, len(existing.Purposes))
+		for _, p := range existing.Purposes {
+			if p != purpose {
+				remaining = append(remaining, p)
+			}
+		}
+		existing.Purposes = remaining
+		existing.UpdatedAt = now
+		s.invalidate(ctx)
+		return existing, nil
+	}
+
 	candidate, offered := s.candidate(ctx, modelID)
 	if !offered && !hasRow {
 		return Model{}, fmt.Errorf("%w: %s", ErrNotFound, modelID)
 	}
+	// Re-checking an already-checked box with no fresh snapshot to write changes nothing —
+	// answering from what is stored skips a row rewrite and a full cache rebuild.
+	if !offered && slices.Contains(existing.Purposes, purpose) {
+		return existing, nil
+	}
 
-	now := s.now()
 	row := existing
 	row.ModelID = modelID
 	if offered {
@@ -212,6 +243,8 @@ func (s *Service) Enable(ctx context.Context, modelID string) (Model, error) {
 		row.Label = candidate.Label
 		row.Vision = candidate.Vision
 		row.StructuredOutput = candidate.StructuredOutput
+		row.ImageOutput = candidate.ImageOutput
+		row.VideoOutput = candidate.VideoOutput
 		row.ContextTokens = candidate.ContextTokens
 		row.InputUSDPerMillion = candidate.InputUSDPerMillion
 		row.OutputUSDPerMillion = candidate.OutputUSDPerMillion
@@ -219,21 +252,47 @@ func (s *Service) Enable(ctx context.Context, modelID string) (Model, error) {
 		row.Listed = true
 		row.LastSeenAt = now
 	}
-	row.Enabled = true
+	if !purpose.EligibleFor(row) {
+		return Model{}, fmt.Errorf("%w: %s for %s", ErrPurposeIneligible, modelID, purpose)
+	}
 	row.UpdatedAt = now
 	if !hasRow {
 		row.CreatedAt = now
 	}
 
-	if err := s.store.Upsert(ctx, row); err != nil {
-		return Model{}, fmt.Errorf("enable model: %w", err)
+	if err := s.store.RegisterPurpose(ctx, row, purpose); err != nil {
+		return Model{}, fmt.Errorf("register model purpose: %w", err)
+	}
+	if !slices.Contains(row.Purposes, purpose) {
+		row.Purposes = append(append([]Purpose(nil), row.Purposes...), purpose)
+		SortPurposes(row.Purposes)
 	}
 	s.invalidate(ctx)
 	return row, nil
 }
 
-// Update applies a partial curation edit: enable/disable, or the per-model reasoning
-// override.
+// stagesOf projects purpose registrations onto the user-facing stages the llm boundary
+// carries as opaque strings. Generation purposes map to no stage yet, so a model
+// registered only to them is invisible to every picker.
+//
+// The capability gate is re-checked here, not only at registration: an operator refresh
+// re-snapshots the flags from the source, and a model that LOST the capability its
+// registration was gated on (a vision model that stopped taking images) must stop serving
+// that stage at once. The registration row itself is kept — flagging, never auto-retiring,
+// is the operator's contract — so the admin tab still shows it to be unchecked.
+func stagesOf(row Model) []string {
+	stages := make([]string, 0, len(row.Purposes))
+	for _, purpose := range row.Purposes {
+		stage := purpose.Stage()
+		if stage != "" && purpose.EligibleFor(row) && !slices.Contains(stages, stage) {
+			stages = append(stages, stage)
+		}
+	}
+	return stages
+}
+
+// Update applies a partial curation edit — today that is the per-model reasoning
+// override; registration has its own write (SetPurpose).
 func (s *Service) Update(ctx context.Context, modelID string, patch Patch) (Model, error) {
 	if patch.Reasoning != nil && !patch.Reasoning.Valid() {
 		return Model{}, fmt.Errorf("%w: %q", ErrInvalidReasoning, *patch.Reasoning)

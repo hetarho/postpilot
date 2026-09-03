@@ -44,7 +44,7 @@ func (f fakeSource) Lookup(modelID string) (llm.SourceModel, bool) {
 // paid floor, and one plain text model on free.
 func twoModels() fakeSource {
 	return fakeSource{models: []llm.SourceModel{
-		{ModelID: "vision-json", Label: "Vision JSON", Vision: true, StructuredOutput: true},
+		{ModelID: "vision-json", Label: "Vision JSON", Vision: true, StructuredOutput: true, Stages: []string{"observe", "write"}},
 		{ModelID: "text-only", Label: "text-only"},
 	}}
 }

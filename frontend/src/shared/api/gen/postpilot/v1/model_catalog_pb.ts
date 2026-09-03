@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/model_catalog.proto.
  */
 export const file_postpilot_v1_model_catalog: GenFile = /*@__PURE__*/
-  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIsoCCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIPCgdlbmFibGVkGAsgASgIEg4KBmxpc3RlZBgNIAEoCBIYChByZWFzb25pbmdfZWZmb3J0GA4gASgJEhkKEXNvdXJjZV9jcmVhdGVkX2F0GA8gASgDSgQIDBANIiUKEkxpc3RDYXRhbG9nUmVxdWVzdBIPCgdyZWZyZXNoGAEgASgIIn8KE0xpc3RDYXRhbG9nUmVzcG9uc2USKwoHZW50cmllcxgBIAMoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkSEgoKZmV0Y2hlZF9hdBgCIAEoCRISCgpmcm9tX2NhY2hlGAMgASgIEhMKC2ZldGNoX2Vycm9yGAQgASgJIiwKEkVuYWJsZU1vZGVsUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCUoECAIQAyJAChNFbmFibGVNb2RlbFJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeSKCAQoSVXBkYXRlTW9kZWxSZXF1ZXN0EhAKCG1vZGVsX2lkGAEgASgJEhQKB2VuYWJsZWQYAiABKAhIAIgBARIdChByZWFzb25pbmdfZWZmb3J0GAQgASgJSAGIAQFCCgoIX2VuYWJsZWRCEwoRX3JlYXNvbmluZ19lZmZvcnRKBAgDEAQiQAoTVXBkYXRlTW9kZWxSZXNwb25zZRIpCgVlbnRyeRgBIAEoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkylwIKE01vZGVsQ2F0YWxvZ1NlcnZpY2USVAoLTGlzdENhdGFsb2cSIC5wb3N0cGlsb3QudjEuTGlzdENhdGFsb2dSZXF1ZXN0GiEucG9zdHBpbG90LnYxLkxpc3RDYXRhbG9nUmVzcG9uc2UiABJUCgtFbmFibGVNb2RlbBIgLnBvc3RwaWxvdC52MS5FbmFibGVNb2RlbFJlcXVlc3QaIS5wb3N0cGlsb3QudjEuRW5hYmxlTW9kZWxSZXNwb25zZSIAElQKC1VwZGF0ZU1vZGVsEiAucG9zdHBpbG90LnYxLlVwZGF0ZU1vZGVsUmVxdWVzdBohLnBvc3RwaWxvdC52MS5VcGRhdGVNb2RlbFJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
+  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIv0CCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgISgQICxAMSgQIDBANIiUKEkxpc3RDYXRhbG9nUmVxdWVzdBIPCgdyZWZyZXNoGAEgASgIIn8KE0xpc3RDYXRhbG9nUmVzcG9uc2USKwoHZW50cmllcxgBIAMoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkSEgoKZmV0Y2hlZF9hdBgCIAEoCRISCgpmcm9tX2NhY2hlGAMgASgIEhMKC2ZldGNoX2Vycm9yGAQgASgJIk8KFlNldE1vZGVsUHVycG9zZVJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSDwoHcHVycG9zZRgCIAEoCRISCgpyZWdpc3RlcmVkGAMgASgIIkQKF1NldE1vZGVsUHVycG9zZVJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeSJmChJVcGRhdGVNb2RlbFJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSHQoQcmVhc29uaW5nX2VmZm9ydBgEIAEoCUgAiAEBQhMKEV9yZWFzb25pbmdfZWZmb3J0SgQIAhADSgQIAxAEIkAKE1VwZGF0ZU1vZGVsUmVzcG9uc2USKQoFZW50cnkYASABKAsyGi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0VudHJ5MqMCChNNb2RlbENhdGFsb2dTZXJ2aWNlElQKC0xpc3RDYXRhbG9nEiAucG9zdHBpbG90LnYxLkxpc3RDYXRhbG9nUmVxdWVzdBohLnBvc3RwaWxvdC52MS5MaXN0Q2F0YWxvZ1Jlc3BvbnNlIgASYAoPU2V0TW9kZWxQdXJwb3NlEiQucG9zdHBpbG90LnYxLlNldE1vZGVsUHVycG9zZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuU2V0TW9kZWxQdXJwb3NlUmVzcG9uc2UiABJUCgtVcGRhdGVNb2RlbBIgLnBvc3RwaWxvdC52MS5VcGRhdGVNb2RlbFJlcXVlc3QaIS5wb3N0cGlsb3QudjEuVXBkYXRlTW9kZWxSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
 
 /**
  * CatalogEntry is one row of the operator's browse list.
@@ -70,17 +70,12 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
   outputUsdPerMillion: string;
 
   /**
-   * curated: a catalog row exists, so enabling and reasoning_effort are decisions somebody
+   * curated: a catalog row exists, so purposes and reasoning_effort are decisions somebody
    * made rather than the defaults an un-curated candidate is shown with.
    *
    * @generated from field: bool curated = 10;
    */
   curated: boolean;
-
-  /**
-   * @generated from field: bool enabled = 11;
-   */
-  enabled: boolean;
 
   /**
    * The provider still offered this model at the last successful read. A false value is a
@@ -105,6 +100,27 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
    * @generated from field: int64 source_created_at = 15;
    */
   sourceCreatedAt: bigint;
+
+  /**
+   * The purposes this model is registered to, as their stable slugs
+   * ("photo-analysis" | "style-analysis" | "writing" | "image-generation" | "video-generation").
+   *
+   * @generated from field: repeated string purposes = 16;
+   */
+  purposes: string[];
+
+  /**
+   * What the model can produce (architecture.output_modalities) — the flags the
+   * image/video generation purposes gate on, as `vision` gates photo-analysis.
+   *
+   * @generated from field: bool image_output = 17;
+   */
+  imageOutput: boolean;
+
+  /**
+   * @generated from field: bool video_output = 18;
+   */
+  videoOutput: boolean;
 };
 
 /**
@@ -172,26 +188,41 @@ export const ListCatalogResponseSchema: GenMessage<ListCatalogResponse> = /*@__P
   messageDesc(file_postpilot_v1_model_catalog, 2);
 
 /**
- * @generated from message postpilot.v1.EnableModelRequest
+ * @generated from message postpilot.v1.SetModelPurposeRequest
  */
-export type EnableModelRequest = Message<"postpilot.v1.EnableModelRequest"> & {
+export type SetModelPurposeRequest = Message<"postpilot.v1.SetModelPurposeRequest"> & {
   /**
    * @generated from field: string model_id = 1;
    */
   modelId: string;
+
+  /**
+   * One of the purpose slugs CatalogEntry.purposes uses.
+   *
+   * @generated from field: string purpose = 2;
+   */
+  purpose: string;
+
+  /**
+   * true registers, false deregisters. Deregistering keeps the curated row (and its
+   * reasoning override); it only stops serving the model to that purpose.
+   *
+   * @generated from field: bool registered = 3;
+   */
+  registered: boolean;
 };
 
 /**
- * Describes the message postpilot.v1.EnableModelRequest.
- * Use `create(EnableModelRequestSchema)` to create a new message.
+ * Describes the message postpilot.v1.SetModelPurposeRequest.
+ * Use `create(SetModelPurposeRequestSchema)` to create a new message.
  */
-export const EnableModelRequestSchema: GenMessage<EnableModelRequest> = /*@__PURE__*/
+export const SetModelPurposeRequestSchema: GenMessage<SetModelPurposeRequest> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_model_catalog, 3);
 
 /**
- * @generated from message postpilot.v1.EnableModelResponse
+ * @generated from message postpilot.v1.SetModelPurposeResponse
  */
-export type EnableModelResponse = Message<"postpilot.v1.EnableModelResponse"> & {
+export type SetModelPurposeResponse = Message<"postpilot.v1.SetModelPurposeResponse"> & {
   /**
    * @generated from field: postpilot.v1.CatalogEntry entry = 1;
    */
@@ -199,10 +230,10 @@ export type EnableModelResponse = Message<"postpilot.v1.EnableModelResponse"> & 
 };
 
 /**
- * Describes the message postpilot.v1.EnableModelResponse.
- * Use `create(EnableModelResponseSchema)` to create a new message.
+ * Describes the message postpilot.v1.SetModelPurposeResponse.
+ * Use `create(SetModelPurposeResponseSchema)` to create a new message.
  */
-export const EnableModelResponseSchema: GenMessage<EnableModelResponse> = /*@__PURE__*/
+export const SetModelPurposeResponseSchema: GenMessage<SetModelPurposeResponse> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_model_catalog, 4);
 
 /**
@@ -213,11 +244,6 @@ export type UpdateModelRequest = Message<"postpilot.v1.UpdateModelRequest"> & {
    * @generated from field: string model_id = 1;
    */
   modelId: string;
-
-  /**
-   * @generated from field: optional bool enabled = 2;
-   */
-  enabled?: boolean | undefined;
 
   /**
    * "" clears the override and returns the model to the stage reasoning policy.
@@ -252,9 +278,10 @@ export const UpdateModelResponseSchema: GenMessage<UpdateModelResponse> = /*@__P
   messageDesc(file_postpilot_v1_model_catalog, 6);
 
 /**
- * model_catalog.proto is the OPERATOR's half of the model story (plan 18): which of the
- * provider's models this installation offers, and at which plan tier. ProviderService is
- * the user's half — what is offered, and what they last picked.
+ * model_catalog.proto is the OPERATOR's half of the model story (plan 18, change 20):
+ * which of the provider's models this installation offers, and FOR WHICH PURPOSES —
+ * photo-analysis, style-analysis, writing, image-generation, video-generation.
+ * ProviderService is the user's half — what each stage may pick, and what they last picked.
  *
  * Every procedure here is master-only, enforced by the auth interceptor rather than by the
  * client. Nothing carries an API key or the provider's base URL: the wire has no field for
@@ -276,15 +303,17 @@ export const ModelCatalogService: GenService<{
     output: typeof ListCatalogResponseSchema;
   },
   /**
-   * Make a model selectable. The plan floor is required, never defaulted by the server:
-   * enabling a model at the wrong tier is worse than leaving it disabled.
+   * Register or deregister a model for ONE purpose. Registration is what makes a model
+   * visible to the matching user-facing stage (the generation purposes feed no stage yet);
+   * the server enforces the purpose's capability gate, so an ineligible model is refused
+   * whatever the client rendered. Registering never selects anything for anyone.
    *
-   * @generated from rpc postpilot.v1.ModelCatalogService.EnableModel
+   * @generated from rpc postpilot.v1.ModelCatalogService.SetModelPurpose
    */
-  enableModel: {
+  setModelPurpose: {
     methodKind: "unary";
-    input: typeof EnableModelRequestSchema;
-    output: typeof EnableModelResponseSchema;
+    input: typeof SetModelPurposeRequestSchema;
+    output: typeof SetModelPurposeResponseSchema;
   },
   /**
    * Change one curated model. Absent fields are not edits, so two operators changing

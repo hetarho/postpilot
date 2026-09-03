@@ -95,7 +95,8 @@ type modelDocument struct {
 	Created      int64  `json:"created"`
 	ContextLen   int64  `json:"context_length"`
 	Architecture struct {
-		InputModalities []string `json:"input_modalities"`
+		InputModalities  []string `json:"input_modalities"`
+		OutputModalities []string `json:"output_modalities"`
 	} `json:"architecture"`
 	Pricing struct {
 		Prompt     string `json:"prompt"`
@@ -159,10 +160,12 @@ func toCandidate(item modelDocument) (modelcatalog.Candidate, bool) {
 		ProviderSlug: modelcatalog.ProviderSlugOf(id),
 		Label:        name,
 		Description:  strings.TrimSpace(item.Description),
-		// Only the input side matters: the product consumes text, and an image PART is what
-		// the observe stage needs the model to accept.
+		// An image PART on the input side is what the observe stage needs the model to
+		// accept; the output side is what the image/video GENERATION purposes gate on.
 		Vision:              contains(item.Architecture.InputModalities, "image"),
 		StructuredOutput:    contains(item.SupportedParameters, "structured_outputs"),
+		ImageOutput:         contains(item.Architecture.OutputModalities, "image"),
+		VideoOutput:         contains(item.Architecture.OutputModalities, "video"),
 		ContextTokens:       max(item.ContextLen, 0),
 		InputUSDPerMillion:  perMillion(item.Pricing.Prompt),
 		OutputUSDPerMillion: perMillion(item.Pricing.Completion),

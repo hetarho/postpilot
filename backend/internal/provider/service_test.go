@@ -93,11 +93,18 @@ var (
 
 func newService(store *fakeStore) *provider.Service {
 	return provider.NewService(store, fakeCatalog{
-		live:     {Ref: live},
-		seeing:   {Ref: seeing, Vision: true},
-		disabled: {Ref: disabled, Disabled: true, DisabledReason: llm.DisabledReasonNoKey},
+		live:     {Ref: live, Stages: textStages},
+		seeing:   {Ref: seeing, Vision: true, Stages: allStages},
+		disabled: {Ref: disabled, Disabled: true, DisabledReason: llm.DisabledReasonNoKey, Stages: allStages},
 	}, fakeCredits{})
 }
+
+// Stage membership comes from purpose registration (change 20): a text model is registered
+// to writing/style-analysis, a vision model to photo-analysis as well.
+var (
+	allStages  = []string{"observe", "write", "analyze"}
+	textStages = []string{"write", "analyze"}
+)
 
 // fakeCredits prices every model the same and always affords it: these tests are about
 // which models are listed, kept and refused for reasons OTHER than money.
@@ -107,9 +114,9 @@ func (fakeCredits) ForCalls(calls []provider.PlannedCall) int { return 5 * len(c
 
 func (fakeCredits) Balance(context.Context, string) (int, bool, error) { return 1000, false, nil }
 
-// A text-only model saved for observe (its `vision` flag was dropped in the yaml) is as
-// gone as a deleted one: reported missing, cleared, and refused on save.
-func TestObserveNeedsAVisionModel(t *testing.T) {
+// A model not registered to observe's purpose (photo-analysis) is as gone for observe as a
+// deleted one: reported missing, cleared, and refused on save.
+func TestObserveNeedsARegisteredModel(t *testing.T) {
 	ctx := context.Background()
 	store := &fakeStore{rows: map[string]provider.Selection{
 		"observe": {Stage: provider.StageObserve, Ref: live},
@@ -121,10 +128,10 @@ func TestObserveNeedsAVisionModel(t *testing.T) {
 		t.Fatalf("selections = %+v deleted = %v", got, store.deleted)
 	}
 	if _, err := svc.SaveSelection(ctx, "alice", provider.StageObserve, live); !errors.Is(err, provider.ErrModelUnsuitable) {
-		t.Errorf("text-only for observe = %v", err)
+		t.Errorf("unregistered for observe = %v", err)
 	}
 	if _, err := svc.SaveSelection(ctx, "alice", provider.StageObserve, seeing); err != nil {
-		t.Errorf("vision for observe = %v", err)
+		t.Errorf("registered for observe = %v", err)
 	}
 	if _, err := svc.SaveSelection(ctx, "alice", provider.StageWrite, live); err != nil {
 		t.Errorf("text-only for write = %v", err)
@@ -202,7 +209,7 @@ func TestComparisonPairValidation(t *testing.T) {
 		t.Fatalf("duplicate pair = %v", err)
 	}
 	if _, err := svc.SaveComparisonPair(ctx, "alice", provider.StageObserve, seeing, live); !errors.Is(err, provider.ErrModelUnsuitable) {
-		t.Fatalf("text-only observe candidate = %v", err)
+		t.Fatalf("unregistered observe candidate = %v", err)
 	}
 	pair, err := svc.SaveComparisonPair(ctx, "alice", provider.StageWrite, live, seeing)
 	if err != nil || pair.CandidateA.Slot != provider.SlotCandidateA || pair.CandidateB.Slot != provider.SlotCandidateB || len(store.lastBatch) != 2 {
@@ -214,8 +221,8 @@ func TestRecommendationValidatesAllNineBeforeOneBatch(t *testing.T) {
 	store := &fakeStore{rows: map[string]provider.Selection{}}
 	catalog := recommendationCatalog{
 		fakeCatalog: fakeCatalog{
-			live:   {Ref: live},
-			seeing: {Ref: seeing, Vision: true},
+			live:   {Ref: live, Stages: textStages},
+			seeing: {Ref: seeing, Vision: true, Stages: allStages},
 		},
 		sets: []llm.RecommendationSet{{
 			ID: "balanced", Label: "Balanced",
@@ -236,7 +243,7 @@ func TestRecommendationValidatesAllNineBeforeOneBatch(t *testing.T) {
 
 	catalog.sets[0].Selections[0].CandidateB = llm.ModelRef{ProviderID: "p", ModelID: "vision-two"}
 	visionTwo := catalog.sets[0].Selections[0].CandidateB
-	catalog.fakeCatalog[visionTwo] = llm.ModelInfo{Ref: visionTwo, Vision: true}
+	catalog.fakeCatalog[visionTwo] = llm.ModelInfo{Ref: visionTwo, Vision: true, Stages: allStages}
 	svc = provider.NewService(store, catalog, fakeCredits{})
 	_, active, pairs, err := svc.ApplyRecommendationSet(context.Background(), "alice", "balanced")
 	if err != nil || len(active) != 3 || len(pairs) != 3 || len(store.lastBatch) != 9 {
@@ -252,15 +259,16 @@ func TestRecommendationRefusalNamesEveryOffendingRef(t *testing.T) {
 	retired := llm.ModelRef{ProviderID: "openrouter", ModelID: "retired"}
 	catalog := recommendationCatalog{
 		fakeCatalog: fakeCatalog{
-			live:     {Ref: live},
-			seeing:   {Ref: seeing, Vision: true},
-			disabled: {Ref: disabled, Disabled: true, DisabledReason: llm.DisabledReasonDelisted},
+			live:     {Ref: live, Stages: textStages},
+			seeing:   {Ref: seeing, Vision: true, Stages: allStages},
+			disabled: {Ref: disabled, Disabled: true, DisabledReason: llm.DisabledReasonDelisted, Stages: allStages},
 		},
 		sets: []llm.RecommendationSet{{
 			ID: "balanced", Label: "Balanced",
 			Selections: []llm.RecommendationSelection{
-				// `live` has no vision, so it is unusable for observe; `retired` is gone from
-				// the catalog entirely; `disabled` is curated but delisted.
+				// `live` is not registered to photo-analysis, so it is unusable for observe;
+				// `retired` is gone from the catalog entirely; `disabled` is curated but
+				// delisted.
 				{Stage: "observe", Active: seeing, CandidateA: seeing, CandidateB: live},
 				{Stage: "analyze", Active: retired, CandidateA: live, CandidateB: seeing},
 				{Stage: "write", Active: disabled, CandidateA: live, CandidateB: seeing},
@@ -332,8 +340,8 @@ func TestAnyTierMaySelectAndKeepAnyModel(t *testing.T) {
 func TestListModelsPricesPerCaller(t *testing.T) {
 	ctx := context.Background()
 	svc := provider.NewService(&fakeStore{rows: map[string]provider.Selection{}}, fakeCatalog{
-		live:    {Ref: live},
-		premium: {Ref: premium},
+		live:    {Ref: live, Stages: textStages},
+		premium: {Ref: premium, Stages: textStages},
 	}, poorCredits{})
 
 	models, err := svc.ListModels(ctx, "alice")
@@ -363,7 +371,7 @@ func (poorCredits) Balance(context.Context, string) (int, bool, error) { return 
 // An unlimited account affords everything without a balance being consulted at all.
 func TestListModelsAffordsEverythingForAnUnlimitedAccount(t *testing.T) {
 	svc := provider.NewService(&fakeStore{rows: map[string]provider.Selection{}}, fakeCatalog{
-		premium: {Ref: premium},
+		premium: {Ref: premium, Stages: textStages},
 	}, unlimitedCredits{})
 
 	models, err := svc.ListModels(context.Background(), "root")
@@ -388,8 +396,8 @@ var premium = llm.ModelRef{ProviderID: "openrouter", ModelID: "premium"}
 // newTieredService is newService plus one expensive model.
 func newTieredService(store *fakeStore) *provider.Service {
 	return provider.NewService(store, fakeCatalog{
-		live:    {Ref: live},
-		seeing:  {Ref: seeing, Vision: true},
-		premium: {Ref: premium},
+		live:    {Ref: live, Stages: textStages},
+		seeing:  {Ref: seeing, Vision: true, Stages: allStages},
+		premium: {Ref: premium, Stages: textStages},
 	}, fakeCredits{})
 }

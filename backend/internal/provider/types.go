@@ -94,7 +94,7 @@ var (
 	// ErrModelDisabled: the model exists but its provider has no key — it cannot be
 	// selected, the same rule the dropdown enforces.
 	ErrModelDisabled = errors.New("model disabled")
-	// ErrModelUnsuitable: the model lacks what the stage needs (observe needs vision).
+	// ErrModelUnsuitable: the model is not registered to this stage's purpose (change 20).
 	ErrModelUnsuitable        = errors.New("model unsuitable for stage")
 	ErrDuplicateCandidates    = errors.New("comparison candidates must differ")
 	ErrRecommendationNotFound = errors.New("recommendation set not found")
@@ -174,8 +174,9 @@ func (e *SetRefusal) All() []string {
 // Empty reports whether the set passed.
 func (e *SetRefusal) Empty() bool { return len(e.All()) == 0 }
 
-// Suitable reports whether a model can serve a stage: observation looks at photos, so
-// it needs a vision model (PRD §6.4); the other stages take any model.
+// Suitable reports whether a model can serve a stage: pure membership in the stages the
+// catalog registered it for (change 20). Capability fitness — observe needing vision — is
+// enforced upstream at registration, so no flag is re-derived here.
 func Suitable(stage Stage, info llm.ModelInfo) bool {
-	return stage != StageObserve || info.Vision
+	return info.ServesStage(string(stage))
 }

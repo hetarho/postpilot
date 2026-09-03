@@ -77,8 +77,7 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 		return nil, fmt.Errorf("load voice profile: %w", err)
 	}
 	if len(post.Images) > 0 {
-		info, ok := s.models.Resolve(observeModel)
-		if !ok || info.Disabled || !info.Vision {
+		if !modelEnabled(s.models, observeModel, llm.StageNameObserve) {
 			return nil, ErrObserveModelRequired
 		}
 	}

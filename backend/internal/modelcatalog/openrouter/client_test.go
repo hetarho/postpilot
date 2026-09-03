@@ -22,7 +22,7 @@ const catalogDocument = `{"data":[
    "supported_parameters":["structured_outputs","tools","reasoning"]},
   {"id":"deepseek/text-only","name":"DeepSeek: Text","created":1788000000,
    "context_length":131072,
-   "architecture":{"input_modalities":["text"],"output_modalities":["text"]},
+   "architecture":{"input_modalities":["text"],"output_modalities":["text","image","video"]},
    "pricing":{"prompt":"0","completion":"0"},
    "supported_parameters":["tools"]},
   {"id":"","name":"Nameless id","created":1},
@@ -69,6 +69,9 @@ func TestFetch_MapsUpstreamFieldsAndSkipsUnusableEntries(t *testing.T) {
 	if !first.StructuredOutput {
 		t.Error("structured_outputs did not become the structured-output flag")
 	}
+	if first.ImageOutput || first.VideoOutput {
+		t.Errorf("text-output model carries output flags: %+v", first)
+	}
 	if first.ContextTokens != 1048576 || first.SourceCreatedAt != 1788362056 {
 		t.Errorf("context/created = %d / %d", first.ContextTokens, first.SourceCreatedAt)
 	}
@@ -81,6 +84,9 @@ func TestFetch_MapsUpstreamFieldsAndSkipsUnusableEntries(t *testing.T) {
 	second := snapshot.Candidates[1]
 	if second.Vision || second.StructuredOutput {
 		t.Errorf("a text-only model got capabilities: %+v", second)
+	}
+	if !second.ImageOutput || !second.VideoOutput {
+		t.Errorf("output modalities did not become the generation flags: %+v", second)
 	}
 	// A genuine zero price is a price, not a missing one.
 	if second.InputUSDPerMillion != "0" {

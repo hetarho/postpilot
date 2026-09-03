@@ -10,29 +10,67 @@ import (
 	"database/sql"
 )
 
+const addCatalogModelPurpose = `-- name: AddCatalogModelPurpose :exec
+INSERT OR IGNORE INTO catalog_model_purposes (model_id, purpose, created_at)
+VALUES (?, ?, ?)
+`
+
+type AddCatalogModelPurposeParams struct {
+	ModelID   string
+	Purpose   string
+	CreatedAt string
+}
+
+// Registration is idempotent per (model, purpose): re-checking an already-checked box is
+// not an error, and the join row keeps its own created_at.
+func (q *Queries) AddCatalogModelPurpose(ctx context.Context, arg AddCatalogModelPurposeParams) error {
+	_, err := q.db.ExecContext(ctx, addCatalogModelPurpose, arg.ModelID, arg.Purpose, arg.CreatedAt)
+	return err
+}
+
 const getCatalogModel = `-- name: GetCatalogModel :one
-SELECT model_id, provider_slug, label, vision, structured_output,
+SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
-       reasoning_effort, enabled, listed, last_seen_at, created_at, updated_at
+       reasoning_effort, listed, last_seen_at, created_at, updated_at
 FROM catalog_models
 WHERE model_id = ?
 `
 
-func (q *Queries) GetCatalogModel(ctx context.Context, modelID string) (CatalogModel, error) {
+type GetCatalogModelRow struct {
+	ModelID             string
+	ProviderSlug        string
+	Label               string
+	Vision              int64
+	StructuredOutput    int64
+	ImageOutput         int64
+	VideoOutput         int64
+	ContextTokens       sql.NullInt64
+	InputUsdPerMillion  sql.NullString
+	OutputUsdPerMillion sql.NullString
+	PricingCheckedAt    sql.NullString
+	ReasoningEffort     sql.NullString
+	Listed              int64
+	LastSeenAt          sql.NullString
+	CreatedAt           string
+	UpdatedAt           string
+}
+
+func (q *Queries) GetCatalogModel(ctx context.Context, modelID string) (GetCatalogModelRow, error) {
 	row := q.db.QueryRowContext(ctx, getCatalogModel, modelID)
-	var i CatalogModel
+	var i GetCatalogModelRow
 	err := row.Scan(
 		&i.ModelID,
 		&i.ProviderSlug,
 		&i.Label,
 		&i.Vision,
 		&i.StructuredOutput,
+		&i.ImageOutput,
+		&i.VideoOutput,
 		&i.ContextTokens,
 		&i.InputUsdPerMillion,
 		&i.OutputUsdPerMillion,
 		&i.PricingCheckedAt,
 		&i.ReasoningEffort,
-		&i.Enabled,
 		&i.Listed,
 		&i.LastSeenAt,
 		&i.CreatedAt,
@@ -41,14 +79,97 @@ func (q *Queries) GetCatalogModel(ctx context.Context, modelID string) (CatalogM
 	return i, err
 }
 
+const getCatalogModelPurposes = `-- name: GetCatalogModelPurposes :many
+SELECT purpose
+FROM catalog_model_purposes
+WHERE model_id = ?
+ORDER BY purpose
+`
+
+func (q *Queries) GetCatalogModelPurposes(ctx context.Context, modelID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getCatalogModelPurposes, modelID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var purpose string
+		if err := rows.Scan(&purpose); err != nil {
+			return nil, err
+		}
+		items = append(items, purpose)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCatalogModelPurposes = `-- name: ListCatalogModelPurposes :many
+SELECT model_id, purpose
+FROM catalog_model_purposes
+ORDER BY model_id, purpose
+`
+
+type ListCatalogModelPurposesRow struct {
+	ModelID string
+	Purpose string
+}
+
+func (q *Queries) ListCatalogModelPurposes(ctx context.Context) ([]ListCatalogModelPurposesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCatalogModelPurposes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCatalogModelPurposesRow
+	for rows.Next() {
+		var i ListCatalogModelPurposesRow
+		if err := rows.Scan(&i.ModelID, &i.Purpose); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCatalogModels = `-- name: ListCatalogModels :many
 
-SELECT model_id, provider_slug, label, vision, structured_output,
+SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
-       reasoning_effort, enabled, listed, last_seen_at, created_at, updated_at
+       reasoning_effort, listed, last_seen_at, created_at, updated_at
 FROM catalog_models
 ORDER BY provider_slug, model_id
 `
+
+type ListCatalogModelsRow struct {
+	ModelID             string
+	ProviderSlug        string
+	Label               string
+	Vision              int64
+	StructuredOutput    int64
+	ImageOutput         int64
+	VideoOutput         int64
+	ContextTokens       sql.NullInt64
+	InputUsdPerMillion  sql.NullString
+	OutputUsdPerMillion sql.NullString
+	PricingCheckedAt    sql.NullString
+	ReasoningEffort     sql.NullString
+	Listed              int64
+	LastSeenAt          sql.NullString
+	CreatedAt           string
+	UpdatedAt           string
+}
 
 // ASCII only: sqlc slices these statements by byte offset but counts in runes, so a
 // multi-byte character anywhere above rotates every generated query text.
@@ -56,32 +177,33 @@ ORDER BY provider_slug, model_id
 // The curated model catalog. The table is global, not per-account: what an installation
 // offers is an operator decision.
 //
-// Two groups of columns with different owners. The curation columns (reasoning_effort,
-// enabled) are only ever written by an operator edit. The snapshot
+// Two groups of columns with different owners. The curation columns (reasoning_effort, and
+// the catalog_model_purposes rows) are only ever written by an operator edit. The snapshot
 // columns (label, flags, context, pricing) and the availability columns (listed,
 // last_seen_at) are only ever written from a successful upstream read. updated_at tracks
 // the first group alone, so a refresh does not make every row look freshly curated.
-func (q *Queries) ListCatalogModels(ctx context.Context) ([]CatalogModel, error) {
+func (q *Queries) ListCatalogModels(ctx context.Context) ([]ListCatalogModelsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listCatalogModels)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CatalogModel
+	var items []ListCatalogModelsRow
 	for rows.Next() {
-		var i CatalogModel
+		var i ListCatalogModelsRow
 		if err := rows.Scan(
 			&i.ModelID,
 			&i.ProviderSlug,
 			&i.Label,
 			&i.Vision,
 			&i.StructuredOutput,
+			&i.ImageOutput,
+			&i.VideoOutput,
 			&i.ContextTokens,
 			&i.InputUsdPerMillion,
 			&i.OutputUsdPerMillion,
 			&i.PricingCheckedAt,
 			&i.ReasoningEffort,
-			&i.Enabled,
 			&i.Listed,
 			&i.LastSeenAt,
 			&i.CreatedAt,
@@ -103,6 +225,7 @@ func (q *Queries) ListCatalogModels(ctx context.Context) ([]CatalogModel, error)
 const markCatalogModelSeen = `-- name: MarkCatalogModelSeen :exec
 UPDATE catalog_models
 SET provider_slug = ?, label = ?, vision = ?, structured_output = ?,
+    image_output = ?, video_output = ?,
     context_tokens = ?, input_usd_per_million = ?, output_usd_per_million = ?,
     pricing_checked_at = ?, listed = 1, last_seen_at = ?
 WHERE model_id = ?
@@ -113,6 +236,8 @@ type MarkCatalogModelSeenParams struct {
 	Label               string
 	Vision              int64
 	StructuredOutput    int64
+	ImageOutput         int64
+	VideoOutput         int64
 	ContextTokens       sql.NullInt64
 	InputUsdPerMillion  sql.NullString
 	OutputUsdPerMillion sql.NullString
@@ -127,6 +252,8 @@ func (q *Queries) MarkCatalogModelSeen(ctx context.Context, arg MarkCatalogModel
 		arg.Label,
 		arg.Vision,
 		arg.StructuredOutput,
+		arg.ImageOutput,
+		arg.VideoOutput,
 		arg.ContextTokens,
 		arg.InputUsdPerMillion,
 		arg.OutputUsdPerMillion,
@@ -134,6 +261,39 @@ func (q *Queries) MarkCatalogModelSeen(ctx context.Context, arg MarkCatalogModel
 		arg.LastSeenAt,
 		arg.ModelID,
 	)
+	return err
+}
+
+const removeCatalogModelPurpose = `-- name: RemoveCatalogModelPurpose :exec
+DELETE FROM catalog_model_purposes
+WHERE model_id = ? AND purpose = ?
+`
+
+type RemoveCatalogModelPurposeParams struct {
+	ModelID string
+	Purpose string
+}
+
+func (q *Queries) RemoveCatalogModelPurpose(ctx context.Context, arg RemoveCatalogModelPurposeParams) error {
+	_, err := q.db.ExecContext(ctx, removeCatalogModelPurpose, arg.ModelID, arg.Purpose)
+	return err
+}
+
+const touchCatalogModelCuration = `-- name: TouchCatalogModelCuration :exec
+UPDATE catalog_models
+SET updated_at = ?
+WHERE model_id = ?
+`
+
+type TouchCatalogModelCurationParams struct {
+	UpdatedAt string
+	ModelID   string
+}
+
+// A deregistration is a curation edit, so it stamps updated_at without touching the
+// curation values themselves.
+func (q *Queries) TouchCatalogModelCuration(ctx context.Context, arg TouchCatalogModelCurationParams) error {
+	_, err := q.db.ExecContext(ctx, touchCatalogModelCuration, arg.UpdatedAt, arg.ModelID)
 	return err
 }
 
@@ -152,12 +312,11 @@ func (q *Queries) UnlistAllCatalogModels(ctx context.Context) error {
 const updateCatalogModelCuration = `-- name: UpdateCatalogModelCuration :execrows
 
 UPDATE catalog_models
-SET enabled = ?, reasoning_effort = ?, updated_at = ?
+SET reasoning_effort = ?, updated_at = ?
 WHERE model_id = ?
 `
 
 type UpdateCatalogModelCurationParams struct {
-	Enabled         int64
 	ReasoningEffort sql.NullString
 	UpdatedAt       string
 	ModelID         string
@@ -166,12 +325,7 @@ type UpdateCatalogModelCurationParams struct {
 // created_at is absent from the DO UPDATE list on purpose: the row keeps the moment it
 // entered the catalog, so only the insert may set it.
 func (q *Queries) UpdateCatalogModelCuration(ctx context.Context, arg UpdateCatalogModelCurationParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, updateCatalogModelCuration,
-		arg.Enabled,
-		arg.ReasoningEffort,
-		arg.UpdatedAt,
-		arg.ModelID,
-	)
+	result, err := q.db.ExecContext(ctx, updateCatalogModelCuration, arg.ReasoningEffort, arg.UpdatedAt, arg.ModelID)
 	if err != nil {
 		return 0, err
 	}
@@ -180,21 +334,22 @@ func (q *Queries) UpdateCatalogModelCuration(ctx context.Context, arg UpdateCata
 
 const upsertCatalogModel = `-- name: UpsertCatalogModel :exec
 INSERT INTO catalog_models (
-    model_id, provider_slug, label, vision, structured_output,
+    model_id, provider_slug, label, vision, structured_output, image_output, video_output,
     context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
-    reasoning_effort, enabled, listed, last_seen_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    reasoning_effort, listed, last_seen_at, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(model_id) DO UPDATE SET
     provider_slug = excluded.provider_slug,
     label = excluded.label,
     vision = excluded.vision,
     structured_output = excluded.structured_output,
+    image_output = excluded.image_output,
+    video_output = excluded.video_output,
     context_tokens = excluded.context_tokens,
     input_usd_per_million = excluded.input_usd_per_million,
     output_usd_per_million = excluded.output_usd_per_million,
     pricing_checked_at = excluded.pricing_checked_at,
     reasoning_effort = excluded.reasoning_effort,
-    enabled = excluded.enabled,
     listed = excluded.listed,
     last_seen_at = excluded.last_seen_at,
     updated_at = excluded.updated_at
@@ -206,12 +361,13 @@ type UpsertCatalogModelParams struct {
 	Label               string
 	Vision              int64
 	StructuredOutput    int64
+	ImageOutput         int64
+	VideoOutput         int64
 	ContextTokens       sql.NullInt64
 	InputUsdPerMillion  sql.NullString
 	OutputUsdPerMillion sql.NullString
 	PricingCheckedAt    sql.NullString
 	ReasoningEffort     sql.NullString
-	Enabled             int64
 	Listed              int64
 	LastSeenAt          sql.NullString
 	CreatedAt           string
@@ -225,12 +381,13 @@ func (q *Queries) UpsertCatalogModel(ctx context.Context, arg UpsertCatalogModel
 		arg.Label,
 		arg.Vision,
 		arg.StructuredOutput,
+		arg.ImageOutput,
+		arg.VideoOutput,
 		arg.ContextTokens,
 		arg.InputUsdPerMillion,
 		arg.OutputUsdPerMillion,
 		arg.PricingCheckedAt,
 		arg.ReasoningEffort,
-		arg.Enabled,
 		arg.Listed,
 		arg.LastSeenAt,
 		arg.CreatedAt,

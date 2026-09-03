@@ -34,6 +34,10 @@ export interface FakeModel {
   structuredOutput?: boolean
   /** The reason the model is disabled; undefined means enabled. */
   disabledReason?: string
+  /** The stages the model is registered to serve (change 20). Defaults to what the old
+   *  global enablement produced — write/analyze for everyone, observe when `vision` — so a
+   *  test that says nothing about purposes keeps its registry. */
+  stages?: Stage[]
   /** The tier the model requires. Defaults to `free`, so a test that says nothing about
    *  plans gets a registry every account can run. */
   requiredCredits?: number
@@ -105,6 +109,11 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
           disabledReason: model.disabledReason ?? '',
           requiredCredits: model.requiredCredits ?? 5,
           affordable: model.affordable ?? true,
+          stages:
+            model.stages ??
+            (model.vision
+              ? [Stage.OBSERVE, Stage.WRITE, Stage.ANALYZE]
+              : [Stage.WRITE, Stage.ANALYZE]),
         }),
       ),
     })

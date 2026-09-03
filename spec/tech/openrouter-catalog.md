@@ -47,7 +47,9 @@ One model object (fields we ignore elided):
 | `created` | `source_created_at` | epoch seconds; drives "newest first" within a provider group |
 | `description` | admin display only | not persisted |
 | `context_length` | `context_tokens` | verbatim; nullable when absent |
-| `"image" ∈ architecture.input_modalities` | `vision` | the observe stage's gate; output modalities are ignored (we only consume text) |
+| `"image" ∈ architecture.input_modalities` | `vision` | gates photo-analysis registration (observe consumes images as input) |
+| `"image" ∈ architecture.output_modalities` | `image_output` | gates image-generation registration (change 20); no feature consumes it yet |
+| `"video" ∈ architecture.output_modalities` | `video_output` | gates video-generation registration (change 20); OpenRouter lists few or no such models today, so the tab may be empty |
 | `"structured_outputs" ∈ supported_parameters` | `structured_output` | whether the adapter may send `response_format: json_schema` |
 | `pricing.prompt` / `pricing.completion` | `input_usd_per_million` / `output_usd_per_million` | decimal **strings in USD per token**; multiply by 10⁶ with decimal string arithmetic (no float round-trip) to match plan 09's $/1M display convention; `pricing_checked_at` := fetch time |
 

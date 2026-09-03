@@ -131,16 +131,35 @@ export const models = {
   catalog: {
     title: 'Model catalog',
     description:
-      'Choose which of the models OpenRouter offers this installation will use. Only the models you check appear in anyone’s per-stage picker.',
+      'Choose which of the models OpenRouter offers this installation will use, per purpose. Only the models you check on a tab appear in that purpose’s picker; image and video generation are settings only for now.',
     disableWarning:
-      'Unchecking a model also clears it from the selections of everyone who had chosen it, and they must pick again.',
+      'Unchecking a model also clears it from the selections of everyone who had chosen it for that purpose, and they must pick again.',
+    purposeAria: 'Model purpose',
+    purposeTab: {
+      'photo-analysis': 'Photo analysis',
+      'style-analysis': 'Style analysis',
+      writing: 'Writing',
+      'image-generation': 'Image generation',
+      'video-generation': 'Video generation',
+    },
+    purposeRequirement: {
+      'photo-analysis':
+        'Only models that accept image input (multimodal) can be registered here, so only they are listed.',
+      'image-generation':
+        'Only models that can output images can be registered here, so only they are listed.',
+      'video-generation':
+        'Only models that can output video can be registered here, so only they are listed.',
+    },
+    emptyForPurpose: 'No model meets this purpose’s requirements yet.',
+    emptyForVideo:
+      'OpenRouter offers almost no video-output models yet, so this tab may stay empty. Once the catalog lists one, you can register it here.',
     search: 'Search',
     searchPlaceholder: 'Model name or id',
     provider: 'Provider',
     allProviders: 'All providers',
     filterVision: 'Accepts images',
     filterStructured: 'Structured output',
-    filterEnabled: 'In use only',
+    filterEnabled: 'Registered for this purpose only',
     refresh: 'Refresh list',
     fetchedLive: 'Read from the provider at {{at, instant}}.',
     fetchedCached: 'Read at {{at, instant}}, served from cache.',
@@ -151,9 +170,12 @@ export const models = {
     empty: 'No models registered, and none read from the provider yet.',
     noMatches: 'No model matches these filters.',
     count: 'Showing {{shown}} of {{total}}.',
-    use: 'Use',
-    vision: 'Images',
+    use: 'Use for this purpose',
+    vision: 'Image input',
     structured: 'Structured',
+    imageOutput: 'Image output',
+    videoOutput: 'Video output',
+    registeredPurposes: 'Registered purposes: {{purposes}}',
     delisted: 'Withdrawn',
     delistedBanner_one:
       '{{count}} registered model is no longer offered by the provider. Users see it as unavailable — review it and uncheck it.',

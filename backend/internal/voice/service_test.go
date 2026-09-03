@@ -74,7 +74,7 @@ func (f *fakeModels) Complete(_ context.Context, _ llm.ModelRef, request llm.Req
 	return llm.Response{Text: f.response}, f.err
 }
 
-func (f *fakeModels) ModelEnabled(ref llm.ModelRef) bool {
+func (f *fakeModels) ModelEnabled(ref llm.ModelRef, _ string) bool {
 	return ref.ProviderID != "" && ref.ModelID != ""
 }
 

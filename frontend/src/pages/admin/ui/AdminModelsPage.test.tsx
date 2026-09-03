@@ -35,12 +35,14 @@ function modelNames() {
 }
 
 describe('the model catalog tab', () => {
-  // A2: featured vendors first in the configured order, then the rest alphabetically, newest
-  // model first inside a vendor.
+  // A2 (plan 18) + change 20: featured vendors first in the configured order, then the rest
+  // alphabetically, newest model first inside a vendor — on a tab whose gate admits them all.
   it('orders featured providers first and the newest model first within one', async () => {
+    const user = userEvent.setup()
     renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: CATALOG } })
 
     await screen.findByRole('heading', { name: '모델 관리' })
+    await user.click(await screen.findByRole('tab', { name: '글 작성' }))
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(4))
     expect(modelNames()).toEqual([
       'openai/gpt-new',
@@ -48,6 +50,72 @@ describe('the model catalog tab', () => {
       'anthropic/claude-x',
       'nobody/plain-1',
     ])
+  })
+
+  // Change 20 A1/A2: the five purpose tabs are one screen; the photo tab is capability-forced
+  // to vision models, and a registration made on one tab does not check the box on another.
+  it('force-filters each purpose tab and keeps registrations per purpose', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/admin/models', { user: MASTER, calls, modelCatalog: { entries: CATALOG } })
+
+    // The photo-analysis tab is first: only the two vision models are even listed.
+    await screen.findByRole('heading', { name: '모델 관리' })
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2))
+    expect(modelNames()).toEqual(['openai/gpt-old', 'anthropic/claude-x'])
+
+    const row = screen.getAllByRole('listitem')[0]
+    await user.click(within(row).getByRole('checkbox', { name: '이 용도에 사용' }))
+    expect(calls).toContain('SetModelPurpose:photo-analysis:register:openai/gpt-old')
+
+    // The same model on the writing tab: listed (no gate), but the box reflects THAT purpose,
+    // which was never registered.
+    await user.click(screen.getByRole('tab', { name: '글 작성' }))
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(4))
+    const writingRow = screen
+      .getAllByRole('listitem')
+      .find((item) => within(item).queryByText('openai/gpt-old'))
+    expect(writingRow).toBeDefined()
+    await waitFor(() =>
+      expect(
+        within(writingRow!).getByRole('checkbox', { name: '이 용도에 사용' }),
+      ).not.toBeChecked(),
+    )
+  })
+
+  // A registered model that later lost the gated capability must stay visible on its tab —
+  // that checkbox is the only control that can deregister it.
+  it('keeps a registered-but-no-longer-eligible model visible on its tab', async () => {
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'openai/lost-vision',
+            label: 'Lost Vision',
+            vision: false,
+            curated: true,
+            purposes: ['photo-analysis'],
+          },
+        ],
+      },
+    })
+
+    // The photo-analysis tab is first; the entry fails its gate but is registered to it.
+    const row = await screen.findByRole('listitem')
+    expect(within(row).getByRole('checkbox', { name: '이 용도에 사용' })).toBeChecked()
+  })
+
+  // Change 20 A2: a tab whose gate admits nothing explains itself instead of erroring — and the
+  // video tab names the honest upstream reason.
+  it('explains an empty video tab instead of erroring', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: CATALOG } })
+
+    await screen.findByRole('heading', { name: '모델 관리' })
+    await user.click(await screen.findByRole('tab', { name: '비디오 생성' }))
+    expect(await screen.findByText(/비디오 출력 모델이 거의 없어서/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   // The provider offers several hundred models, and mounting every row made the screen lag on
@@ -63,6 +131,7 @@ describe('the model catalog tab', () => {
     renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: many } })
 
     await screen.findByRole('heading', { name: '모델 관리' })
+    await user.click(await screen.findByRole('tab', { name: '글 작성' }))
     // The count line reports the whole catalog, so the list is complete even though the DOM
     // holds a fraction of it.
     expect(await screen.findByText('400개 중 400개를 보여 주고 있어요.')).toBeInTheDocument()
@@ -81,6 +150,8 @@ describe('the model catalog tab', () => {
     const calls: string[] = []
     renderAppAt('/admin/models', { user: MASTER, calls, modelCatalog: { entries: CATALOG } })
 
+    await screen.findByRole('heading', { name: '모델 관리' })
+    await user.click(await screen.findByRole('tab', { name: '글 작성' }))
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(4))
     const before = calls.filter((call) => call.startsWith('ListCatalog')).length
 
@@ -94,27 +165,10 @@ describe('the model catalog tab', () => {
     expect(calls.filter((call) => call.startsWith('ListCatalog')).length).toBe(before)
   })
 
-  // A3: checking a model enables it. Change 19 removed the tier that used to be part of that
-  // decision — a model is no longer gated by plan, so enabling it is the whole choice.
-  it('enables a model, with no tier to choose', async () => {
-    const user = userEvent.setup()
-    const calls: string[] = []
-    renderAppAt('/admin/models', {
-      user: MASTER,
-      calls,
-      modelCatalog: { entries: [{ modelId: 'openai/gpt-new', label: 'GPT New' }] },
-    })
-
-    const row = await screen.findByRole('listitem')
-    await user.click(within(row).getByRole('checkbox', { name: '사용' }))
-    expect(calls).toContain('EnableModel')
-
-    expect(screen.queryByRole('combobox', { name: /필요한 플랜/ })).not.toBeInTheDocument()
-  })
-
-  // A11: the per-model reasoning override round-trips through the same edit, and "stage default"
-  // is a real choice rather than an absent one.
-  it('sets and clears the reasoning override on an enabled model', async () => {
+  // A11 (plan 18): the per-model reasoning override round-trips through the same edit, and
+  // "stage default" is a real choice rather than an absent one. It is shared across the
+  // model's purposes, so it appears once the model is registered anywhere.
+  it('sets and clears the reasoning override on a registered model', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     renderAppAt('/admin/models', {
@@ -125,9 +179,9 @@ describe('the model catalog tab', () => {
           {
             modelId: 'anthropic/claude-x',
             label: 'Claude X',
+            vision: true,
             curated: true,
-            enabled: true,
-            minPlan: ProtoPlan.MAX,
+            purposes: ['photo-analysis'],
           },
         ],
       },
@@ -141,8 +195,8 @@ describe('the model catalog tab', () => {
     )
   })
 
-  // A6: a curated model the provider no longer offers is badged and counted, and nothing is
-  // disabled on its behalf.
+  // A6 (plan 18): a curated model the provider no longer offers is badged and counted, and
+  // nothing is deregistered on its behalf.
   it('flags a withdrawn model for the operator instead of retiring it', async () => {
     renderAppAt('/admin/models', {
       user: MASTER,
@@ -151,8 +205,9 @@ describe('the model catalog tab', () => {
           {
             modelId: 'anthropic/claude-gone',
             label: 'Claude Gone',
+            vision: true,
             curated: true,
-            enabled: true,
+            purposes: ['photo-analysis'],
             listed: false,
           },
         ],
@@ -161,21 +216,29 @@ describe('the model catalog tab', () => {
 
     const row = await screen.findByRole('listitem')
     expect(within(row).getByText('제공 종료')).toBeInTheDocument()
-    // Still in use: retiring it is the operator's decision, not the screen's.
-    expect(within(row).getByRole('checkbox', { name: '사용' })).toBeChecked()
+    // Still registered: retiring it is the operator's decision, not the screen's.
+    expect(within(row).getByRole('checkbox', { name: '이 용도에 사용' })).toBeChecked()
     expect(
       await screen.findByText(/모델 1개를 제공사가 더 이상 제공하지 않아요/),
     ).toBeInTheDocument()
   })
 
-  // A7: an unreadable provider catalog degrades to curated rows and says so, rather than looking
-  // like an empty catalog.
+  // A7 (plan 18): an unreadable provider catalog degrades to curated rows and says so, rather
+  // than looking like an empty catalog.
   it('degrades to curated rows when the provider catalog cannot be read', async () => {
     renderAppAt('/admin/models', {
       user: MASTER,
       modelCatalog: {
         fetchFails: true,
-        entries: [{ modelId: 'openai/gpt-new', label: 'GPT New', curated: true, enabled: true }],
+        entries: [
+          {
+            modelId: 'openai/gpt-new',
+            label: 'GPT New',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis'],
+          },
+        ],
       },
     })
 
@@ -195,7 +258,8 @@ describe('the model catalog tab', () => {
     await waitFor(() => expect(calls).toContain('ListCatalog:refresh'))
   })
 
-  // A1: the tab is master-only, redirected rather than refused — the account has a session.
+  // A1 (plan 17): the tab is master-only, redirected rather than refused — the account has a
+  // session.
   it('sends a non-operator back to the app', async () => {
     renderAppAt('/admin/models', {
       user: { id: 'alice', plan: ProtoPlan.MAX },

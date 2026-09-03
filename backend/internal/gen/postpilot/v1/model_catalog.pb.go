@@ -37,10 +37,9 @@ type CatalogEntry struct {
 	// provider cost remains authoritative for spending.
 	InputUsdPerMillion  string `protobuf:"bytes,8,opt,name=input_usd_per_million,json=inputUsdPerMillion,proto3" json:"input_usd_per_million,omitempty"`
 	OutputUsdPerMillion string `protobuf:"bytes,9,opt,name=output_usd_per_million,json=outputUsdPerMillion,proto3" json:"output_usd_per_million,omitempty"`
-	// curated: a catalog row exists, so enabling and reasoning_effort are decisions somebody
+	// curated: a catalog row exists, so purposes and reasoning_effort are decisions somebody
 	// made rather than the defaults an un-curated candidate is shown with.
 	Curated bool `protobuf:"varint,10,opt,name=curated,proto3" json:"curated,omitempty"`
-	Enabled bool `protobuf:"varint,11,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	// The provider still offered this model at the last successful read. A false value is a
 	// flag for the operator, not an action: the model is served disabled-with-reason to users
 	// and is never retired automatically.
@@ -50,8 +49,15 @@ type CatalogEntry struct {
 	ReasoningEffort string `protobuf:"bytes,14,opt,name=reasoning_effort,json=reasoningEffort,proto3" json:"reasoning_effort,omitempty"`
 	// Upstream publication time in epoch seconds; orders a vendor's models newest-first.
 	SourceCreatedAt int64 `protobuf:"varint,15,opt,name=source_created_at,json=sourceCreatedAt,proto3" json:"source_created_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The purposes this model is registered to, as their stable slugs
+	// ("photo-analysis" | "style-analysis" | "writing" | "image-generation" | "video-generation").
+	Purposes []string `protobuf:"bytes,16,rep,name=purposes,proto3" json:"purposes,omitempty"`
+	// What the model can produce (architecture.output_modalities) — the flags the
+	// image/video generation purposes gate on, as `vision` gates photo-analysis.
+	ImageOutput   bool `protobuf:"varint,17,opt,name=image_output,json=imageOutput,proto3" json:"image_output,omitempty"`
+	VideoOutput   bool `protobuf:"varint,18,opt,name=video_output,json=videoOutput,proto3" json:"video_output,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CatalogEntry) Reset() {
@@ -154,13 +160,6 @@ func (x *CatalogEntry) GetCurated() bool {
 	return false
 }
 
-func (x *CatalogEntry) GetEnabled() bool {
-	if x != nil {
-		return x.Enabled
-	}
-	return false
-}
-
 func (x *CatalogEntry) GetListed() bool {
 	if x != nil {
 		return x.Listed
@@ -180,6 +179,27 @@ func (x *CatalogEntry) GetSourceCreatedAt() int64 {
 		return x.SourceCreatedAt
 	}
 	return 0
+}
+
+func (x *CatalogEntry) GetPurposes() []string {
+	if x != nil {
+		return x.Purposes
+	}
+	return nil
+}
+
+func (x *CatalogEntry) GetImageOutput() bool {
+	if x != nil {
+		return x.ImageOutput
+	}
+	return false
+}
+
+func (x *CatalogEntry) GetVideoOutput() bool {
+	if x != nil {
+		return x.VideoOutput
+	}
+	return false
 }
 
 type ListCatalogRequest struct {
@@ -299,27 +319,32 @@ func (x *ListCatalogResponse) GetFetchError() string {
 	return ""
 }
 
-type EnableModelRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModelId       string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+type SetModelPurposeRequest struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	ModelId string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	// One of the purpose slugs CatalogEntry.purposes uses.
+	Purpose string `protobuf:"bytes,2,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	// true registers, false deregisters. Deregistering keeps the curated row (and its
+	// reasoning override); it only stops serving the model to that purpose.
+	Registered    bool `protobuf:"varint,3,opt,name=registered,proto3" json:"registered,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *EnableModelRequest) Reset() {
-	*x = EnableModelRequest{}
+func (x *SetModelPurposeRequest) Reset() {
+	*x = SetModelPurposeRequest{}
 	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *EnableModelRequest) String() string {
+func (x *SetModelPurposeRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EnableModelRequest) ProtoMessage() {}
+func (*SetModelPurposeRequest) ProtoMessage() {}
 
-func (x *EnableModelRequest) ProtoReflect() protoreflect.Message {
+func (x *SetModelPurposeRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -331,39 +356,53 @@ func (x *EnableModelRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EnableModelRequest.ProtoReflect.Descriptor instead.
-func (*EnableModelRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SetModelPurposeRequest.ProtoReflect.Descriptor instead.
+func (*SetModelPurposeRequest) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *EnableModelRequest) GetModelId() string {
+func (x *SetModelPurposeRequest) GetModelId() string {
 	if x != nil {
 		return x.ModelId
 	}
 	return ""
 }
 
-type EnableModelResponse struct {
+func (x *SetModelPurposeRequest) GetPurpose() string {
+	if x != nil {
+		return x.Purpose
+	}
+	return ""
+}
+
+func (x *SetModelPurposeRequest) GetRegistered() bool {
+	if x != nil {
+		return x.Registered
+	}
+	return false
+}
+
+type SetModelPurposeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Entry         *CatalogEntry          `protobuf:"bytes,1,opt,name=entry,proto3" json:"entry,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *EnableModelResponse) Reset() {
-	*x = EnableModelResponse{}
+func (x *SetModelPurposeResponse) Reset() {
+	*x = SetModelPurposeResponse{}
 	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *EnableModelResponse) String() string {
+func (x *SetModelPurposeResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EnableModelResponse) ProtoMessage() {}
+func (*SetModelPurposeResponse) ProtoMessage() {}
 
-func (x *EnableModelResponse) ProtoReflect() protoreflect.Message {
+func (x *SetModelPurposeResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -375,12 +414,12 @@ func (x *EnableModelResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EnableModelResponse.ProtoReflect.Descriptor instead.
-func (*EnableModelResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use SetModelPurposeResponse.ProtoReflect.Descriptor instead.
+func (*SetModelPurposeResponse) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *EnableModelResponse) GetEntry() *CatalogEntry {
+func (x *SetModelPurposeResponse) GetEntry() *CatalogEntry {
 	if x != nil {
 		return x.Entry
 	}
@@ -390,7 +429,6 @@ func (x *EnableModelResponse) GetEntry() *CatalogEntry {
 type UpdateModelRequest struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	ModelId string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
-	Enabled *bool                  `protobuf:"varint,2,opt,name=enabled,proto3,oneof" json:"enabled,omitempty"`
 	// "" clears the override and returns the model to the stage reasoning policy.
 	ReasoningEffort *string `protobuf:"bytes,4,opt,name=reasoning_effort,json=reasoningEffort,proto3,oneof" json:"reasoning_effort,omitempty"`
 	unknownFields   protoimpl.UnknownFields
@@ -432,13 +470,6 @@ func (x *UpdateModelRequest) GetModelId() string {
 		return x.ModelId
 	}
 	return ""
-}
-
-func (x *UpdateModelRequest) GetEnabled() bool {
-	if x != nil && x.Enabled != nil {
-		return *x.Enabled
-	}
-	return false
 }
 
 func (x *UpdateModelRequest) GetReasoningEffort() string {
@@ -496,7 +527,7 @@ var File_postpilot_v1_model_catalog_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\n" +
-	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"\x83\x04\n" +
+	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"\xd1\x04\n" +
 	"\fCatalogEntry\x12\x19\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12#\n" +
 	"\rprovider_slug\x18\x02 \x01(\tR\fproviderSlug\x12\x14\n" +
@@ -508,11 +539,13 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\x15input_usd_per_million\x18\b \x01(\tR\x12inputUsdPerMillion\x123\n" +
 	"\x16output_usd_per_million\x18\t \x01(\tR\x13outputUsdPerMillion\x12\x18\n" +
 	"\acurated\x18\n" +
-	" \x01(\bR\acurated\x12\x18\n" +
-	"\aenabled\x18\v \x01(\bR\aenabled\x12\x16\n" +
+	" \x01(\bR\acurated\x12\x16\n" +
 	"\x06listed\x18\r \x01(\bR\x06listed\x12)\n" +
 	"\x10reasoning_effort\x18\x0e \x01(\tR\x0freasoningEffort\x12*\n" +
-	"\x11source_created_at\x18\x0f \x01(\x03R\x0fsourceCreatedAtJ\x04\b\f\x10\r\".\n" +
+	"\x11source_created_at\x18\x0f \x01(\x03R\x0fsourceCreatedAt\x12\x1a\n" +
+	"\bpurposes\x18\x10 \x03(\tR\bpurposes\x12!\n" +
+	"\fimage_output\x18\x11 \x01(\bR\vimageOutput\x12!\n" +
+	"\fvideo_output\x18\x12 \x01(\bR\vvideoOutputJ\x04\b\v\x10\fJ\x04\b\f\x10\r\".\n" +
 	"\x12ListCatalogRequest\x12\x18\n" +
 	"\arefresh\x18\x01 \x01(\bR\arefresh\"\xaa\x01\n" +
 	"\x13ListCatalogResponse\x124\n" +
@@ -522,23 +555,24 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\n" +
 	"from_cache\x18\x03 \x01(\bR\tfromCache\x12\x1f\n" +
 	"\vfetch_error\x18\x04 \x01(\tR\n" +
-	"fetchError\"5\n" +
-	"\x12EnableModelRequest\x12\x19\n" +
-	"\bmodel_id\x18\x01 \x01(\tR\amodelIdJ\x04\b\x02\x10\x03\"G\n" +
-	"\x13EnableModelResponse\x120\n" +
-	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry\"\xa5\x01\n" +
-	"\x12UpdateModelRequest\x12\x19\n" +
-	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12\x1d\n" +
-	"\aenabled\x18\x02 \x01(\bH\x00R\aenabled\x88\x01\x01\x12.\n" +
-	"\x10reasoning_effort\x18\x04 \x01(\tH\x01R\x0freasoningEffort\x88\x01\x01B\n" +
+	"fetchError\"m\n" +
+	"\x16SetModelPurposeRequest\x12\x19\n" +
+	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12\x18\n" +
+	"\apurpose\x18\x02 \x01(\tR\apurpose\x12\x1e\n" +
 	"\n" +
-	"\b_enabledB\x13\n" +
-	"\x11_reasoning_effortJ\x04\b\x03\x10\x04\"G\n" +
+	"registered\x18\x03 \x01(\bR\n" +
+	"registered\"K\n" +
+	"\x17SetModelPurposeResponse\x120\n" +
+	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry\"\x80\x01\n" +
+	"\x12UpdateModelRequest\x12\x19\n" +
+	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12.\n" +
+	"\x10reasoning_effort\x18\x04 \x01(\tH\x00R\x0freasoningEffort\x88\x01\x01B\x13\n" +
+	"\x11_reasoning_effortJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04\"G\n" +
 	"\x13UpdateModelResponse\x120\n" +
-	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry2\x97\x02\n" +
+	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry2\xa3\x02\n" +
 	"\x13ModelCatalogService\x12T\n" +
-	"\vListCatalog\x12 .postpilot.v1.ListCatalogRequest\x1a!.postpilot.v1.ListCatalogResponse\"\x00\x12T\n" +
-	"\vEnableModel\x12 .postpilot.v1.EnableModelRequest\x1a!.postpilot.v1.EnableModelResponse\"\x00\x12T\n" +
+	"\vListCatalog\x12 .postpilot.v1.ListCatalogRequest\x1a!.postpilot.v1.ListCatalogResponse\"\x00\x12`\n" +
+	"\x0fSetModelPurpose\x12$.postpilot.v1.SetModelPurposeRequest\x1a%.postpilot.v1.SetModelPurposeResponse\"\x00\x12T\n" +
 	"\vUpdateModel\x12 .postpilot.v1.UpdateModelRequest\x1a!.postpilot.v1.UpdateModelResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
@@ -555,23 +589,23 @@ func file_postpilot_v1_model_catalog_proto_rawDescGZIP() []byte {
 
 var file_postpilot_v1_model_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_postpilot_v1_model_catalog_proto_goTypes = []any{
-	(*CatalogEntry)(nil),        // 0: postpilot.v1.CatalogEntry
-	(*ListCatalogRequest)(nil),  // 1: postpilot.v1.ListCatalogRequest
-	(*ListCatalogResponse)(nil), // 2: postpilot.v1.ListCatalogResponse
-	(*EnableModelRequest)(nil),  // 3: postpilot.v1.EnableModelRequest
-	(*EnableModelResponse)(nil), // 4: postpilot.v1.EnableModelResponse
-	(*UpdateModelRequest)(nil),  // 5: postpilot.v1.UpdateModelRequest
-	(*UpdateModelResponse)(nil), // 6: postpilot.v1.UpdateModelResponse
+	(*CatalogEntry)(nil),            // 0: postpilot.v1.CatalogEntry
+	(*ListCatalogRequest)(nil),      // 1: postpilot.v1.ListCatalogRequest
+	(*ListCatalogResponse)(nil),     // 2: postpilot.v1.ListCatalogResponse
+	(*SetModelPurposeRequest)(nil),  // 3: postpilot.v1.SetModelPurposeRequest
+	(*SetModelPurposeResponse)(nil), // 4: postpilot.v1.SetModelPurposeResponse
+	(*UpdateModelRequest)(nil),      // 5: postpilot.v1.UpdateModelRequest
+	(*UpdateModelResponse)(nil),     // 6: postpilot.v1.UpdateModelResponse
 }
 var file_postpilot_v1_model_catalog_proto_depIdxs = []int32{
 	0, // 0: postpilot.v1.ListCatalogResponse.entries:type_name -> postpilot.v1.CatalogEntry
-	0, // 1: postpilot.v1.EnableModelResponse.entry:type_name -> postpilot.v1.CatalogEntry
+	0, // 1: postpilot.v1.SetModelPurposeResponse.entry:type_name -> postpilot.v1.CatalogEntry
 	0, // 2: postpilot.v1.UpdateModelResponse.entry:type_name -> postpilot.v1.CatalogEntry
 	1, // 3: postpilot.v1.ModelCatalogService.ListCatalog:input_type -> postpilot.v1.ListCatalogRequest
-	3, // 4: postpilot.v1.ModelCatalogService.EnableModel:input_type -> postpilot.v1.EnableModelRequest
+	3, // 4: postpilot.v1.ModelCatalogService.SetModelPurpose:input_type -> postpilot.v1.SetModelPurposeRequest
 	5, // 5: postpilot.v1.ModelCatalogService.UpdateModel:input_type -> postpilot.v1.UpdateModelRequest
 	2, // 6: postpilot.v1.ModelCatalogService.ListCatalog:output_type -> postpilot.v1.ListCatalogResponse
-	4, // 7: postpilot.v1.ModelCatalogService.EnableModel:output_type -> postpilot.v1.EnableModelResponse
+	4, // 7: postpilot.v1.ModelCatalogService.SetModelPurpose:output_type -> postpilot.v1.SetModelPurposeResponse
 	6, // 8: postpilot.v1.ModelCatalogService.UpdateModel:output_type -> postpilot.v1.UpdateModelResponse
 	6, // [6:9] is the sub-list for method output_type
 	3, // [3:6] is the sub-list for method input_type

@@ -1,15 +1,15 @@
 import type { AdminCatalogEntry } from '@/entities/model-catalog'
-import { FEATURED_MODEL_PROVIDERS } from '@/shared/config'
+import { FEATURED_MODEL_PROVIDERS, type ModelPurpose } from '@/shared/config'
 
 /** What the operator has narrowed the catalog to. Every field is a widening default, so the
- *  initial state shows everything. */
+ *  initial state shows everything the active tab may show. */
 export interface CatalogFilters {
   search: string
   /** '' means every vendor. */
   providerSlug: string
   visionOnly: boolean
   structuredOnly: boolean
-  enabledOnly: boolean
+  registeredOnly: boolean
 }
 
 export const NO_FILTERS: CatalogFilters = {
@@ -17,7 +17,41 @@ export const NO_FILTERS: CatalogFilters = {
   providerSlug: '',
   visionOnly: false,
   structuredOnly: false,
-  enabledOnly: false,
+  registeredOnly: false,
+}
+
+/** The purposes whose tab forces a capability gate — the single list the gate, the
+ *  requirement note, and any future per-purpose copy key off, so they cannot drift apart. */
+export const GATED_PURPOSES = ['photo-analysis', 'image-generation', 'video-generation'] as const
+
+export type GatedPurpose = (typeof GATED_PURPOSES)[number]
+
+export function isGatedPurpose(purpose: ModelPurpose): purpose is GatedPurpose {
+  return (GATED_PURPOSES as readonly string[]).includes(purpose)
+}
+
+/** The capability gate a purpose tab forces on its candidate list, mirroring the server's
+ *  registration gate: an entry the gate refuses is not even listed, so the tab never offers
+ *  a checkbox the server would refuse. The style/writing tabs take any text model. */
+export function eligibleForPurpose(entry: AdminCatalogEntry, purpose: ModelPurpose): boolean {
+  switch (purpose) {
+    case 'photo-analysis':
+      return entry.vision
+    case 'image-generation':
+      return entry.imageOutput
+    case 'video-generation':
+      return entry.videoOutput
+    default:
+      return true
+  }
+}
+
+/** What a purpose tab may show at all: everything its gate admits, PLUS anything already
+ *  registered to it. A registered model that later LOST the gated capability (a refresh
+ *  re-snapshots the flags) must stay visible — this tab's checkbox is the only control that
+ *  can deregister it, and hiding it would make the stale registration permanent. */
+export function visibleInTab(entry: AdminCatalogEntry, purpose: ModelPurpose): boolean {
+  return eligibleForPurpose(entry, purpose) || entry.purposes.includes(purpose)
 }
 
 /** Vendors present in this catalog, featured ones first. Derived from the entries rather than
@@ -42,16 +76,20 @@ export function sortEntries(entries: readonly AdminCatalogEntry[]): AdminCatalog
   })
 }
 
+/** The operator's own narrowing, applied over a tab's `visibleInTab` slice — the forced
+ *  gate has already run, so nothing an operator types can resurface a model the purpose
+ *  cannot take. */
 export function filterEntries(
   entries: readonly AdminCatalogEntry[],
   filters: CatalogFilters,
+  purpose: ModelPurpose,
 ): AdminCatalogEntry[] {
   const needle = filters.search.trim().toLowerCase()
   return entries.filter((entry) => {
     if (filters.providerSlug && entry.providerSlug !== filters.providerSlug) return false
     if (filters.visionOnly && !entry.vision) return false
     if (filters.structuredOnly && !entry.structuredOutput) return false
-    if (filters.enabledOnly && !entry.enabled) return false
+    if (filters.registeredOnly && !entry.purposes.includes(purpose)) return false
     if (!needle) return true
     // Both the id and the label, because an operator arrives with either: a model id copied
     // from a provider's page, or the name they read in a comparison.

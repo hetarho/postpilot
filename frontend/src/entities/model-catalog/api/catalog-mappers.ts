@@ -24,7 +24,7 @@ import type {
   StageName,
   StageSelection,
 } from '../model/types'
-import { isReasoningEffort } from '../model/types'
+import { isModelPurpose, isReasoningEffort } from '../model/types'
 
 const STAGE_TO_PROTO: Record<StageName, Stage> = {
   observe: Stage.OBSERVE,
@@ -53,6 +53,12 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
     label: info.label,
     vision: info.vision,
     structuredOutput: info.structuredOutput,
+    // A stage this build does not know is skipped rather than invented, like everywhere
+    // else the enum crosses.
+    stages: info.stages.flatMap((stage) => {
+      const name = stageFromProto(stage)
+      return name ? [name] : []
+    }),
     disabled: info.disabled,
     disabledReason: info.disabledReason,
     contextTokens: info.contextTokens,
@@ -76,7 +82,11 @@ export function toAdminCatalogEntry(entry: ProtoCatalogEntry): AdminCatalogEntry
     inputUsdPerMillion: entry.inputUsdPerMillion,
     outputUsdPerMillion: entry.outputUsdPerMillion,
     curated: entry.curated,
-    enabled: entry.enabled,
+    // Same posture as the reasoning fallback below: a purpose slug a newer server sends
+    // that this build has no tab for is dropped rather than rendered blank.
+    purposes: entry.purposes.filter(isModelPurpose),
+    imageOutput: entry.imageOutput,
+    videoOutput: entry.videoOutput,
     listed: entry.listed,
     // A server newer than this build could name an effort this one has no control for.
     // Falling back to "no override" is the honest render: it is what the stage policy does.

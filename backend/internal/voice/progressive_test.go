@@ -118,7 +118,7 @@ type scriptedPersonalizationModels struct {
 func (m *scriptedPersonalizationModels) AnalyzeModel(context.Context, string) (llm.ModelRef, bool, error) {
 	return analyzeRef, true, nil
 }
-func (m *scriptedPersonalizationModels) ModelEnabled(ref llm.ModelRef) bool {
+func (m *scriptedPersonalizationModels) ModelEnabled(ref llm.ModelRef, _ string) bool {
 	return ref.ProviderID != "" && ref.ModelID != ""
 }
 func (m *scriptedPersonalizationModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) {

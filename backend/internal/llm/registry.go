@@ -22,6 +22,16 @@ const DisabledReasonNoKey = "API key not configured"
 // operator decides when to retire it.
 const DisabledReasonDelisted = "the provider no longer lists this model"
 
+// The user-facing stage names, as the stable strings that cross this boundary in
+// RecommendationSelection.Stage and SourceModel.Stages. Owned here so the contexts on
+// either side of the port spell them identically — the strings are a cross-package
+// contract a typo would break with no compile error.
+const (
+	StageNameObserve = "observe"
+	StageNameWrite   = "write"
+	StageNameAnalyze = "analyze"
+)
+
 // ModelRef names one model of one provider. It is what a job records and what the
 // dropdowns save.
 type ModelRef struct {
@@ -41,8 +51,18 @@ type ModelInfo struct {
 	InputUSDPerMillion  string
 	OutputUSDPerMillion string
 	PricingCheckedAt    string
-	Disabled            bool
-	DisabledReason      string
+	// Stages this model may serve, passed through from the source verbatim (see
+	// SourceModel.Stages). Empty means no user-facing stage lists it.
+	Stages         []string
+	Disabled       bool
+	DisabledReason string
+}
+
+// ServesStage reports whether the catalog registered this model for a stage. It is the
+// membership test every execution boundary uses, so a purpose deregistration is enforced
+// wherever a client-supplied ref arrives — not only in the picker.
+func (m ModelInfo) ServesStage(stage string) bool {
+	return slices.Contains(m.Stages, stage)
 }
 
 // SourceModel is one curated model as the catalog source holds it: the model's own facts,
@@ -59,6 +79,12 @@ type SourceModel struct {
 	// Reasoning is the strict per-model override. Empty defers to the stage policy; Unset
 	// deliberately omits the wire key.
 	Reasoning ReasoningEffort
+	// Stages this model is registered to serve, in the same stable string form
+	// RecommendationSelection.Stage uses ("observe"/"write"/"analyze"). The strings are the
+	// source's to define — the registry passes them through without interpreting them, the
+	// same posture it takes to labels. An empty set is a model curated for a purpose no
+	// stage consumes yet (image/video generation).
+	Stages []string
 	// Delisted marks a model the upstream catalog no longer offered at the last successful
 	// refresh.
 	Delisted bool
@@ -267,7 +293,7 @@ func (r *Registry) loadRecommendations(entries []recommendationSetEntry) error {
 		set := RecommendationSet{ID: item.ID, Label: item.Label}
 		seenStages := map[string]bool{}
 		for _, selection := range item.Selections {
-			if selection.Stage != "observe" && selection.Stage != "write" && selection.Stage != "analyze" {
+			if selection.Stage != StageNameObserve && selection.Stage != StageNameWrite && selection.Stage != StageNameAnalyze {
 				return fmt.Errorf("recommendation set %q: unknown stage %q", item.ID, selection.Stage)
 			}
 			if seenStages[selection.Stage] {
@@ -346,6 +372,7 @@ func (r *Registry) describe(m SourceModel) ModelInfo {
 		InputUSDPerMillion:  m.InputUSDPerMillion,
 		OutputUSDPerMillion: m.OutputUSDPerMillion,
 		PricingCheckedAt:    m.PricingCheckedAt,
+		Stages:              append([]string(nil), m.Stages...),
 	}
 	switch {
 	case r.disabled:

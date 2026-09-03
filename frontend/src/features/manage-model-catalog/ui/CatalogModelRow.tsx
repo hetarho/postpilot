@@ -2,36 +2,39 @@ import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   REASONING_EFFORTS,
-  useEnableModel,
+  useSetModelPurpose,
   useUpdateModel,
   type AdminCatalogEntry,
   type ReasoningEffortName,
 } from '@/entities/model-catalog'
+import type { ModelPurpose } from '@/shared/config'
 import { AppFailureMessage, Badge, Checkbox, FieldLabel, Listbox, Typography } from '@/shared/ui'
 
-/** One model of the operator's catalog: what it is, and the three decisions that can be made
- *  about it — whether it may be used at all, from which tier, and with which reasoning effort.
+/** One model of the operator's catalog, seen from ONE purpose tab: what it is, whether this
+ *  purpose uses it, and the shared per-model reasoning override.
  *
- *  A card, because those controls act on one object and must read apart from the next model's
- *  (design-language §1.4). The two Listboxes appear only once the model is in use: a floor and
- *  an override on a model nobody may select are settings for nothing. */
-export function CatalogModelRow({ entry }: { entry: AdminCatalogEntry }) {
+ *  The checkbox acts on the active tab's purpose only — the same model shows its own state on
+ *  every tab, and the purposes it is registered to elsewhere are listed so a cross-purpose
+ *  registration is visible without switching tabs. A card, because these controls act on one
+ *  object and must read apart from the next model's (design-language §1.4). The reasoning
+ *  Listbox appears once the model is registered anywhere: an override on a model nobody may
+ *  select is a setting for nothing. */
+export function CatalogModelRow({
+  entry,
+  purpose,
+}: {
+  entry: AdminCatalogEntry
+  purpose: ModelPurpose
+}) {
   const { t } = useTranslation(['models', 'plans'])
-  const enable = useEnableModel()
+  const setPurpose = useSetModelPurpose()
   const update = useUpdateModel()
   const rowId = useId()
   const reasoningLabelId = `${rowId}-reasoning`
 
-  const pending = enable.isPending || update.isPending
-  const failure = enable.failure ?? update.failure
-
-  function toggle(next: boolean) {
-    if (next && !entry.curated) {
-      enable.enable(entry.modelId)
-      return
-    }
-    update.update(entry.modelId, { enabled: next })
-  }
+  const pending = setPurpose.isPending || update.isPending
+  const failure = setPurpose.failure ?? update.failure
+  const registeredHere = entry.purposes.includes(purpose)
 
   return (
     // A div rather than the list item itself: the virtualized list owns the `li`, because that is
@@ -49,9 +52,9 @@ export function CatalogModelRow({ entry }: { entry: AdminCatalogEntry }) {
         {/* The label wraps the box, so the words are part of the same target the thumb finds. */}
         <label className="flex shrink-0 items-center gap-2">
           <Checkbox
-            checked={entry.enabled}
+            checked={registeredHere}
             disabled={pending}
-            onChange={(e) => toggle(e.target.checked)}
+            onChange={(e) => setPurpose.setPurpose(entry.modelId, purpose, e.target.checked)}
           />
           <Typography variant="label">{t('catalog.use')}</Typography>
         </label>
@@ -60,6 +63,8 @@ export function CatalogModelRow({ entry }: { entry: AdminCatalogEntry }) {
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {entry.vision && <Badge>{t('catalog.vision')}</Badge>}
         {entry.structuredOutput && <Badge>{t('catalog.structured')}</Badge>}
+        {entry.imageOutput && <Badge>{t('catalog.imageOutput')}</Badge>}
+        {entry.videoOutput && <Badge>{t('catalog.videoOutput')}</Badge>}
         {entry.curated && !entry.listed && <Badge tone="warning">{t('catalog.delisted')}</Badge>}
         {entry.contextTokens > 0n && (
           <Typography variant="meta">
@@ -73,30 +78,37 @@ export function CatalogModelRow({ entry }: { entry: AdminCatalogEntry }) {
         )}
       </div>
 
-      {entry.enabled && (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="min-w-0">
-            <FieldLabel id={reasoningLabelId} htmlFor={`${rowId}-reasoning-control`}>
-              {t('catalog.reasoning')}
-            </FieldLabel>
-            <Listbox<ReasoningEffortName>
-              id={`${rowId}-reasoning-control`}
-              value={entry.reasoningEffort}
-              options={REASONING_EFFORTS.map((effort) => ({
-                value: effort,
-                label: effort === '' ? t('catalog.reasoningDefault') : effort,
-              }))}
-              disabled={pending}
-              aria-labelledby={reasoningLabelId}
-              onChange={(next) => {
-                if (next !== entry.reasoningEffort) {
-                  update.update(entry.modelId, { reasoningEffort: next })
-                }
-              }}
-              className="mt-1"
-            />
+      {entry.purposes.length > 0 && (
+        <>
+          <Typography variant="meta" className="mt-2 block">
+            {t('catalog.registeredPurposes', {
+              purposes: entry.purposes.map((p) => t(`catalog.purposeTab.${p}`)).join(' · '),
+            })}
+          </Typography>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
+              <FieldLabel id={reasoningLabelId} htmlFor={`${rowId}-reasoning-control`}>
+                {t('catalog.reasoning')}
+              </FieldLabel>
+              <Listbox<ReasoningEffortName>
+                id={`${rowId}-reasoning-control`}
+                value={entry.reasoningEffort}
+                options={REASONING_EFFORTS.map((effort) => ({
+                  value: effort,
+                  label: effort === '' ? t('catalog.reasoningDefault') : effort,
+                }))}
+                disabled={pending}
+                aria-labelledby={reasoningLabelId}
+                onChange={(next) => {
+                  if (next !== entry.reasoningEffort) {
+                    update.update(entry.modelId, { reasoningEffort: next })
+                  }
+                }}
+                className="mt-1"
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {failure && (

@@ -19,8 +19,9 @@ import {
 
 /** The per-stage model dropdown (PRD §3.3, §6.4, F-4).
  *
- *  Lists what the registry offers for the stage — vision models only for `observe` —
- *  with a disabled model greyed and its reason shown, a vanished saved choice greyed
+ *  Lists the models registered to the stage's purpose (change 20; observe's vision
+ *  requirement is enforced at registration), with a disabled model greyed and its reason
+ *  shown, a vanished saved choice greyed
  *  and its reason given under the field, and no pre-selection: until the user picks, the stage is
  *  empty and `useStageSelection(stage).selected` is null, which is what the generation and
  *  analysis actions block on ([I3]). Pages mount it; features never import it. */

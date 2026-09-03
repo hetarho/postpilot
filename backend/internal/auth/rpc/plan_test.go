@@ -120,9 +120,9 @@ func TestModelCatalogIsMasterOnly(t *testing.T) {
 			_, err := catalog.ListCatalog(context.Background(), withCookie(&postpilotv1.ListCatalogRequest{}, cookie))
 			return err
 		},
-		"EnableModel": func(cookie string) error {
-			_, err := catalog.EnableModel(context.Background(), withCookie(&postpilotv1.EnableModelRequest{
-				ModelId: "openai/gpt-x",
+		"SetModelPurpose": func(cookie string) error {
+			_, err := catalog.SetModelPurpose(context.Background(), withCookie(&postpilotv1.SetModelPurposeRequest{
+				ModelId: "openai/gpt-x", Purpose: "writing", Registered: true,
 			}, cookie))
 			return err
 		},

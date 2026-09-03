@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 )
@@ -505,7 +506,10 @@ func (s *Service) resolveForStage(stage Stage, ref ModelRef) (Model, error) {
 		return Model{}, ErrModelRequired
 	}
 	model, ok := s.catalog.Resolve(ref)
-	if !ok || !model.Enabled || (stage == StageObserve && !model.Vision) {
+	// Membership in the stage's purpose (change 20) replaced the observe-needs-vision check:
+	// the registration gate already required vision, and a deregistered model must be as
+	// unusable for an experiment as it is in the picker.
+	if !ok || !model.Enabled || !slices.Contains(model.Stages, string(stage)) {
 		return Model{}, fmt.Errorf("%w: %s", ErrModelRequired, ref)
 	}
 	return model, nil

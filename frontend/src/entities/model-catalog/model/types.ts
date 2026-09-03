@@ -1,4 +1,5 @@
 import i18next from 'i18next'
+import { MODEL_PURPOSES, type ModelPurpose } from '@/shared/config'
 
 /** The three places a model is chosen ([I3]); the app never fills one in. */
 export type StageName = 'observe' | 'write' | 'analyze'
@@ -21,6 +22,9 @@ export interface CatalogModel {
   label: string
   vision: boolean
   structuredOutput: boolean
+  /** The stages this model is registered to serve (change 20). Each stage's picker lists
+   *  exactly its members — fitness is never re-derived from capability flags here. */
+  stages: readonly StageName[]
   disabled: boolean
   disabledReason: string
   contextTokens: bigint
@@ -101,10 +105,15 @@ export interface AdminCatalogEntry {
   contextTokens: bigint
   inputUsdPerMillion: string
   outputUsdPerMillion: string
-  /** A catalog row exists, so `minPlan` and `reasoningEffort` are decisions somebody made
+  /** A catalog row exists, so `purposes` and `reasoningEffort` are decisions somebody made
    *  rather than the values an un-curated candidate is shown with. */
   curated: boolean
-  enabled: boolean
+  /** The purposes this model is registered to — the admin tabs' checkbox state. */
+  purposes: readonly ModelPurpose[]
+  /** What the model can produce; the image/video generation tabs gate on these the way
+   *  photo-analysis gates on `vision`. */
+  imageOutput: boolean
+  videoOutput: boolean
   /** The provider still offered this model at the last successful read. False is a flag for
    *  the operator, never an action: the model is served disabled-with-reason to users. */
   listed: boolean
@@ -130,9 +139,14 @@ export function sameRef(a: ModelRef, b: ModelRef): boolean {
   return a.providerId === b.providerId && a.modelId === b.modelId
 }
 
-/** The observe stage looks at photos, so it lists vision models only (PRD §6.4); the
- *  other stages list everything. Disabled models stay in the list — greyed, with the
- *  reason — rather than vanishing, so the user learns why a model is unavailable. */
+export function isModelPurpose(value: string): value is ModelPurpose {
+  return (MODEL_PURPOSES as readonly string[]).includes(value)
+}
+
+/** A stage lists exactly the models registered to its purpose (change 20) — observe's old
+ *  vision-only rule is subsumed, because photo-analysis registration already requires
+ *  vision. Disabled models stay in the list — greyed, with the reason — rather than
+ *  vanishing, so the user learns why a model is unavailable. */
 export function filterForStage(models: readonly CatalogModel[], stage: StageName): CatalogModel[] {
-  return stage === 'observe' ? models.filter((model) => model.vision) : [...models]
+  return models.filter((model) => model.stages.includes(stage))
 }

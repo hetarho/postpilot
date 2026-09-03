@@ -37,6 +37,9 @@ func TestShippedProvidersConfigLoads(t *testing.T) {
 // the catalog is curated data by then. This is the replacement, and it runs where staleness
 // is actually a mistake: every shipped ref must name a model the seed migration inserts, so
 // a set that has drifted is caught in CI rather than by the first operator who applies it.
+// Note the seed carries NO purpose registrations (change 20): after a fresh cutover, apply
+// refuses these very refs until the operator registers them per purpose — that gate lives
+// in provider.ApplyRecommendationSet and is tested there.
 func TestShippedRecommendationRefsAreSeeded(t *testing.T) {
 	seed, err := os.ReadFile("../../internal/platform/db/migrations/0018_catalog_models.sql")
 	if err != nil {

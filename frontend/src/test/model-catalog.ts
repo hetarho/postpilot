@@ -6,10 +6,10 @@
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
-  EnableModelResponseSchema,
   ListCatalogResponseSchema,
   ModelCatalogService,
   ProtoPlan,
+  SetModelPurposeResponseSchema,
   UpdateModelResponseSchema,
 } from '@/shared/api'
 import { connectAppError } from './app-error'
@@ -25,7 +25,9 @@ export interface FakeCatalogEntry {
   inputUsdPerMillion?: string
   outputUsdPerMillion?: string
   curated?: boolean
-  enabled?: boolean
+  purposes?: string[]
+  imageOutput?: boolean
+  videoOutput?: boolean
   minPlan?: ProtoPlan
   listed?: boolean
   reasoningEffort?: string
@@ -66,7 +68,9 @@ export function registerModelCatalogService(
         inputUsdPerMillion: entry.inputUsdPerMillion ?? '',
         outputUsdPerMillion: entry.outputUsdPerMillion ?? '',
         curated: entry.curated ?? false,
-        enabled: entry.enabled ?? false,
+        purposes: entry.purposes ?? [],
+        imageOutput: entry.imageOutput ?? false,
+        videoOutput: entry.videoOutput ?? false,
         listed: entry.listed ?? true,
         reasoningEffort: entry.reasoningEffort ?? '',
         sourceCreatedAt: entry.sourceCreatedAt ?? 0n,
@@ -82,18 +86,26 @@ export function registerModelCatalogService(
     return answer()
   })
 
-  rpc(ModelCatalogService.method.enableModel, (req) => {
-    calls?.push('EnableModel')
-    if (options.writeFails) throw connectAppError('MODEL_NOT_FOUND', Code.NotFound)
-    entries = entries.map((entry) =>
-      entry.modelId === req.modelId ? { ...entry, curated: true, enabled: true } : entry,
+  rpc(ModelCatalogService.method.setModelPurpose, (req) => {
+    calls?.push(
+      `SetModelPurpose:${req.purpose}:${req.registered ? 'register' : 'deregister'}:${req.modelId}`,
     )
+    if (options.writeFails) throw connectAppError('MODEL_NOT_FOUND', Code.NotFound)
+    entries = entries.map((entry) => {
+      if (entry.modelId !== req.modelId) return entry
+      const others = (entry.purposes ?? []).filter((purpose) => purpose !== req.purpose)
+      return {
+        ...entry,
+        curated: true,
+        purposes: req.registered ? [...others, req.purpose] : others,
+      }
+    })
     const written = entries.find((entry) => entry.modelId === req.modelId)
-    return create(EnableModelResponseSchema, {
+    return create(SetModelPurposeResponseSchema, {
       entry: {
         modelId: req.modelId,
         curated: true,
-        enabled: true,
+        purposes: written?.purposes ?? [],
         listed: written?.listed ?? true,
       },
     })
@@ -106,13 +118,18 @@ export function registerModelCatalogService(
       entry.modelId === req.modelId
         ? {
             ...entry,
-            enabled: req.enabled ?? entry.enabled,
             reasoningEffort: req.reasoningEffort ?? entry.reasoningEffort,
           }
         : entry,
     )
+    const written = entries.find((entry) => entry.modelId === req.modelId)
     return create(UpdateModelResponseSchema, {
-      entry: { modelId: req.modelId, curated: true, enabled: req.enabled ?? true },
+      entry: {
+        modelId: req.modelId,
+        curated: true,
+        purposes: written?.purposes ?? [],
+        reasoningEffort: req.reasoningEffort ?? written?.reasoningEffort ?? '',
+      },
     })
   })
 }

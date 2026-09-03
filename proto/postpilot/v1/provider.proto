@@ -50,8 +50,7 @@ message ModelRef {
 message ModelInfo {
   ModelRef ref = 1;
   string label = 2;
-  // Declared per model in providers.yaml — the registry cannot probe them. The observe
-  // stage lists vision models only.
+  // Snapshotted from the source catalog — the registry cannot probe them.
   bool vision = 3;
   bool structured_output = 4;
   bool disabled = 5;
@@ -68,6 +67,9 @@ message ModelInfo {
   // unaffordable start whatever the client rendered — and unlike the plan floor it
   // replaces, it is temporary: the same model is affordable again after a renewal.
   bool affordable = 14;
+  // The stages this model is registered to serve (change 20): each stage's picker lists
+  // exactly its members — the client never re-derives stage fitness from capability flags.
+  repeated Stage stages = 15;
 }
 
 message Selection {

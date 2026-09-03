@@ -15,6 +15,7 @@ export {
   REASONING_EFFORTS,
   STAGES,
   filterForStage,
+  isModelPurpose,
   isReasoningEffort,
   refKey,
   sameRef,
@@ -23,8 +24,8 @@ export {
 export { useModels } from './api/useModels'
 export {
   useAdminCatalog,
-  useEnableModel,
   useRefreshCatalog,
+  useSetModelPurpose,
   useUpdateModel,
 } from './api/useAdminCatalog'
 export type {

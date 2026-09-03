@@ -562,9 +562,9 @@ func (a voiceModels) Complete(ctx context.Context, ref llm.ModelRef, request llm
 	return a.registry.Complete(ctx, ref, request)
 }
 
-func (a voiceModels) ModelEnabled(ref llm.ModelRef) bool {
+func (a voiceModels) ModelEnabled(ref llm.ModelRef, stage string) bool {
 	info, ok := a.registry.Lookup(ref)
-	return ok && !info.Disabled
+	return ok && !info.Disabled && info.ServesStage(stage)
 }
 
 type voiceJobs struct{ queue *job.Queue }
@@ -1115,6 +1115,7 @@ func (a experimentCatalog) Resolve(ref experiment.ModelRef) (experiment.Model, b
 	}
 	return experiment.Model{
 		Ref: ref, Label: info.Label, Vision: info.Vision, Enabled: !info.Disabled,
+		Stages:             info.Stages,
 		InputUSDPerMillion: info.InputUSDPerMillion, OutputUSDPerMillion: info.OutputUSDPerMillion,
 	}, true
 }

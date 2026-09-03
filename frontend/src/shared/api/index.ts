@@ -103,8 +103,8 @@ export type {
 export { ModelCatalogService } from './gen/postpilot/v1/model_catalog_pb'
 export {
   CatalogEntrySchema,
-  EnableModelResponseSchema,
   ListCatalogResponseSchema,
+  SetModelPurposeResponseSchema,
   UpdateModelResponseSchema,
 } from './gen/postpilot/v1/model_catalog_pb'
 export type {

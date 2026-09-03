@@ -47,16 +47,16 @@ func (h *Handler) ListCatalog(ctx context.Context, req *connect.Request[postpilo
 	}), nil
 }
 
-func (h *Handler) EnableModel(ctx context.Context, req *connect.Request[postpilotv1.EnableModelRequest]) (*connect.Response[postpilotv1.EnableModelResponse], error) {
+func (h *Handler) SetModelPurpose(ctx context.Context, req *connect.Request[postpilotv1.SetModelPurposeRequest]) (*connect.Response[postpilotv1.SetModelPurposeResponse], error) {
 	modelID := req.Msg.GetModelId()
 	if modelID == "" {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a model id is required", "MODEL_ID_REQUIRED", nil)
 	}
-	model, err := h.svc.Enable(ctx, modelID)
+	model, err := h.svc.SetPurpose(ctx, modelID, modelcatalog.Purpose(req.Msg.GetPurpose()), req.Msg.GetRegistered())
 	if err != nil {
-		return nil, toConnectError("enable model", err)
+		return nil, toConnectError("set model purpose", err)
 	}
-	return connect.NewResponse(&postpilotv1.EnableModelResponse{Entry: toProtoEntry(entryOf(model))}), nil
+	return connect.NewResponse(&postpilotv1.SetModelPurposeResponse{Entry: toProtoEntry(modelcatalog.EntryOf(model))}), nil
 }
 
 func (h *Handler) UpdateModel(ctx context.Context, req *connect.Request[postpilotv1.UpdateModelRequest]) (*connect.Response[postpilotv1.UpdateModelResponse], error) {
@@ -65,10 +65,6 @@ func (h *Handler) UpdateModel(ctx context.Context, req *connect.Request[postpilo
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a model id is required", "MODEL_ID_REQUIRED", nil)
 	}
 	patch := modelcatalog.Patch{}
-	if req.Msg.Enabled != nil {
-		enabled := req.Msg.GetEnabled()
-		patch.Enabled = &enabled
-	}
 	if req.Msg.ReasoningEffort != nil {
 		effort := llm.ReasoningEffort(req.Msg.GetReasoningEffort())
 		patch.Reasoning = &effort
@@ -77,26 +73,14 @@ func (h *Handler) UpdateModel(ctx context.Context, req *connect.Request[postpilo
 	if err != nil {
 		return nil, toConnectError("update model", err)
 	}
-	return connect.NewResponse(&postpilotv1.UpdateModelResponse{Entry: toProtoEntry(entryOf(model))}), nil
-}
-
-// entryOf presents a written row in the same shape the browse list uses, so the client
-// patches its cache from the answer instead of refetching the whole catalog. The upstream
-// description is absent because a write does not read the provider.
-func entryOf(m modelcatalog.Model) modelcatalog.Entry {
-	return modelcatalog.Entry{
-		Candidate: modelcatalog.Candidate{
-			ModelID: m.ModelID, ProviderSlug: m.ProviderSlug, Label: m.Label,
-			Vision: m.Vision, StructuredOutput: m.StructuredOutput,
-			ContextTokens:      m.ContextTokens,
-			InputUSDPerMillion: m.InputUSDPerMillion, OutputUSDPerMillion: m.OutputUSDPerMillion,
-		},
-		Curated: true, Enabled: m.Enabled,
-		Reasoning: m.Reasoning, Listed: m.Listed,
-	}
+	return connect.NewResponse(&postpilotv1.UpdateModelResponse{Entry: toProtoEntry(modelcatalog.EntryOf(model))}), nil
 }
 
 func toProtoEntry(e modelcatalog.Entry) *postpilotv1.CatalogEntry {
+	purposes := make([]string, 0, len(e.Purposes))
+	for _, purpose := range e.Purposes {
+		purposes = append(purposes, string(purpose))
+	}
 	return &postpilotv1.CatalogEntry{
 		ModelId:             e.ModelID,
 		ProviderSlug:        e.ProviderSlug,
@@ -104,11 +88,13 @@ func toProtoEntry(e modelcatalog.Entry) *postpilotv1.CatalogEntry {
 		Description:         e.Description,
 		Vision:              e.Vision,
 		StructuredOutput:    e.StructuredOutput,
+		ImageOutput:         e.ImageOutput,
+		VideoOutput:         e.VideoOutput,
 		ContextTokens:       e.ContextTokens,
 		InputUsdPerMillion:  e.InputUSDPerMillion,
 		OutputUsdPerMillion: e.OutputUSDPerMillion,
 		Curated:             e.Curated,
-		Enabled:             e.Enabled,
+		Purposes:            purposes,
 		Listed:              e.Listed,
 		ReasoningEffort:     string(e.Reasoning),
 		SourceCreatedAt:     e.SourceCreatedAt,
@@ -121,6 +107,10 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "model not found", "MODEL_NOT_FOUND", nil)
 	case errors.Is(err, modelcatalog.ErrInvalidReasoning):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown reasoning effort", "MODEL_REASONING_INVALID", nil)
+	case errors.Is(err, modelcatalog.ErrUnknownPurpose):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown purpose", "MODEL_PURPOSE_INVALID", nil)
+	case errors.Is(err, modelcatalog.ErrPurposeIneligible):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model not capable of this purpose", "MODEL_PURPOSE_INELIGIBLE", nil)
 	default:
 		slog.Error(op+" failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)

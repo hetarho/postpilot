@@ -64,8 +64,8 @@ export interface StageSelectionState {
  *  `selected` is null until the user picks a usable model — the callers of the
  *  generation and analysis actions block on exactly that (plan 04 AC7: no default
  *  pairing, [I3]). A saved choice that has vanished from the registry, whose provider
- *  lost its key, or that the stage can no longer use (observe needs vision) is not
- *  usable: it comes back as `unavailable` with the reason, for the dropdown to grey out.
+ *  lost its key, or that was deregistered from the stage's purpose is not usable: it
+ *  comes back as `unavailable` with the reason, for the dropdown to grey out.
  *
  *  While the catalog is still loading or failed to load, nothing is judged: a valid
  *  choice must not be called "vanished" because the list it would be found in is not

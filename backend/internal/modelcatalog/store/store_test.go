@@ -42,8 +42,13 @@ func TestMigration_SeedsTheShippedCatalog(t *testing.T) {
 	byID := map[string]modelcatalog.Model{}
 	for _, row := range rows {
 		byID[row.ModelID] = row
-		if !row.Enabled || !row.Listed {
-			t.Errorf("%s: enabled=%v listed=%v, want both", row.ModelID, row.Enabled, row.Listed)
+		if !row.Listed {
+			t.Errorf("%s: listed=%v, want listed", row.ModelID, row.Listed)
+		}
+		// Change 20's interview decision: every purpose starts EMPTY. No seeded model is
+		// registered anywhere until an operator checks it on a purpose tab.
+		if len(row.Purposes) != 0 {
+			t.Errorf("%s is seeded with purposes %v, want none", row.ModelID, row.Purposes)
 		}
 	}
 
@@ -67,7 +72,7 @@ func TestMigration_SeedsTheShippedCatalog(t *testing.T) {
 	if free.StructuredOutput || !free.Vision {
 		t.Errorf("router entry = %+v", free)
 	}
-	// The text-only models must stay text-only: observe filters on this flag.
+	// The text-only models must stay text-only: photo-analysis registration gates on this.
 	if byID["deepseek/deepseek-v4-flash-0731"].Vision {
 		t.Error("a text-only model was seeded with vision")
 	}
@@ -85,7 +90,7 @@ func TestUpsertAndGet_RoundTrip(t *testing.T) {
 	model := modelcatalog.Model{
 		ModelID: "acme/new-1", ProviderSlug: "acme", Label: "New 1",
 		Vision: true, StructuredOutput: true, ContextTokens: 4096,
-		InputUSDPerMillion: "1.25", OutputUSDPerMillion: "4.25", PricingCheckedAt: "2026-09-01", Reasoning: llm.ReasoningHigh, Enabled: true, Listed: true,
+		InputUSDPerMillion: "1.25", OutputUSDPerMillion: "4.25", PricingCheckedAt: "2026-09-01", Reasoning: llm.ReasoningHigh, ImageOutput: true, Listed: true,
 		LastSeenAt: testNow, CreatedAt: testNow, UpdatedAt: testNow,
 	}
 	if err := s.Upsert(ctx, model); err != nil {
@@ -96,7 +101,7 @@ func TestUpsertAndGet_RoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Label != "New 1" || got.Reasoning != llm.ReasoningHigh ||
-		got.ContextTokens != 4096 || got.InputUSDPerMillion != "1.25" || !got.Enabled || !got.Listed {
+		got.ContextTokens != 4096 || got.InputUSDPerMillion != "1.25" || !got.ImageOutput || got.VideoOutput || !got.Listed {
 		t.Fatalf("round trip = %+v", got)
 	}
 	if !got.LastSeenAt.Equal(testNow) || !got.CreatedAt.Equal(testNow) {
@@ -129,40 +134,95 @@ func TestGet_UnknownModel(t *testing.T) {
 }
 
 // A patch writes only what it names, so two operators editing different properties of one
-// model do not overwrite each other.
+// model do not overwrite each other — and purpose registrations are separate storage a
+// patch can never touch.
 func TestPatch_WritesOnlyWhatItNames(t *testing.T) {
 	s := newStore(t)
 	ctx := context.Background()
 	id := "anthropic/claude-sonnet-5"
 
-	disabled := false
-	updated, err := s.Patch(ctx, id, modelcatalog.Patch{Enabled: &disabled}, testNow)
+	row, err := s.Get(ctx, id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.Enabled {
-		t.Error("the model is still enabled")
-	}
-	// The floor and the override were not named, so they must survive.
-	if updated.Reasoning != llm.ReasoningUnset {
-		t.Errorf("untouched curation changed: %+v", updated)
+	if err := s.RegisterPurpose(ctx, row, modelcatalog.PurposeWriting); err != nil {
+		t.Fatal(err)
 	}
 
 	// An empty effort is a real value: it clears the override back to the stage policy.
 	cleared := llm.ReasoningUnspecified
-	updated, err = s.Patch(ctx, id, modelcatalog.Patch{Reasoning: &cleared}, testNow)
+	updated, err := s.Patch(ctx, id, modelcatalog.Patch{Reasoning: &cleared}, testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if updated.Reasoning != llm.ReasoningUnspecified {
 		t.Errorf("reasoning = %q, want cleared", updated.Reasoning)
 	}
-	if updated.Enabled {
-		t.Error("the earlier disable was reverted by a later patch")
+	if len(updated.Purposes) != 1 || updated.Purposes[0] != modelcatalog.PurposeWriting {
+		t.Errorf("purposes = %v, a patch must not touch registrations", updated.Purposes)
 	}
 
-	if _, err := s.Patch(ctx, "nobody/has-this", modelcatalog.Patch{Enabled: &disabled}, testNow); !errors.Is(err, modelcatalog.ErrNotFound) {
+	if _, err := s.Patch(ctx, "nobody/has-this", modelcatalog.Patch{Reasoning: &cleared}, testNow); !errors.Is(err, modelcatalog.ErrNotFound) {
 		t.Fatalf("patching an unknown model = %v, want ErrNotFound", err)
+	}
+}
+
+// A1/A4: registrations round-trip per purpose, are idempotent, come back in display order,
+// and removing one leaves the row and the other purposes standing.
+func TestPurposes_RoundTripIndependently(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	id := "anthropic/claude-sonnet-5"
+
+	row, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, purpose := range []modelcatalog.Purpose{
+		modelcatalog.PurposeWriting, modelcatalog.PurposePhotoAnalysis, modelcatalog.PurposeWriting,
+	} {
+		if err := s.RegisterPurpose(ctx, row, purpose); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []modelcatalog.Purpose{modelcatalog.PurposePhotoAnalysis, modelcatalog.PurposeWriting}
+	if len(got.Purposes) != 2 || got.Purposes[0] != want[0] || got.Purposes[1] != want[1] {
+		t.Fatalf("purposes = %v, want %v in display order", got.Purposes, want)
+	}
+
+	stamp := testNow.Add(24 * time.Hour)
+	if err := s.DeregisterPurpose(ctx, id, modelcatalog.PurposePhotoAnalysis, stamp); err != nil {
+		t.Fatal(err)
+	}
+	got, err = s.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Purposes) != 1 || got.Purposes[0] != modelcatalog.PurposeWriting {
+		t.Fatalf("purposes after remove = %v", got.Purposes)
+	}
+	// A deregistration is a curation edit: the row's updated_at moves with it.
+	if !got.UpdatedAt.Equal(stamp) {
+		t.Errorf("updated_at = %v, want the deregistration stamp %v", got.UpdatedAt, stamp)
+	}
+
+	// List assembles the same registrations across all rows.
+	rows, err := s.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if row.ModelID == id {
+			if len(row.Purposes) != 1 || row.Purposes[0] != modelcatalog.PurposeWriting {
+				t.Fatalf("listed purposes = %v", row.Purposes)
+			}
+		} else if len(row.Purposes) != 0 {
+			t.Errorf("%s has purposes %v, want none", row.ModelID, row.Purposes)
+		}
 	}
 }
 
@@ -175,7 +235,7 @@ func TestRefreshAvailability_MarksSeenAndUnlistsTheRest(t *testing.T) {
 
 	seen := []modelcatalog.Candidate{{
 		ModelID: "anthropic/claude-sonnet-5", ProviderSlug: "anthropic", Label: "Claude Sonnet 5.1",
-		Vision: true, StructuredOutput: true, ContextTokens: 2_000_000,
+		Vision: true, StructuredOutput: true, ImageOutput: true, ContextTokens: 2_000_000,
 		InputUSDPerMillion: "3", OutputUSDPerMillion: "15",
 	}, {
 		// Not curated: a candidate with no row must not create one.
@@ -205,15 +265,15 @@ func TestRefreshAvailability_MarksSeenAndUnlistsTheRest(t *testing.T) {
 				t.Errorf("pricing_checked_at = %q, want the fetch date", row.PricingCheckedAt)
 			}
 			// The curation the operator owns is untouched by a refresh.
-			if row.Reasoning != llm.ReasoningUnset || !row.Enabled {
+			if row.Reasoning != llm.ReasoningUnset {
 				t.Errorf("a refresh changed curation: %+v", row)
+			}
+			if !row.ImageOutput {
+				t.Errorf("output modalities were not refreshed: %+v", row)
 			}
 		default:
 			if row.Listed {
 				t.Errorf("%s was not unlisted", row.ModelID)
-			}
-			if !row.Enabled {
-				t.Errorf("%s was disabled by a refresh — that is an operator decision", row.ModelID)
 			}
 		}
 	}

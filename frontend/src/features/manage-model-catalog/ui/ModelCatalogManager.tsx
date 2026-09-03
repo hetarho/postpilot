@@ -1,34 +1,70 @@
 import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAdminCatalog, useRefreshCatalog } from '@/entities/model-catalog'
-import { Button, Checkbox, FieldLabel, Listbox, Notice, TextField, Typography } from '@/shared/ui'
+import { MODEL_PURPOSES, type ModelPurpose } from '@/shared/config'
+import {
+  Button,
+  Checkbox,
+  FieldLabel,
+  Listbox,
+  Notice,
+  SegmentedControl,
+  TextField,
+  Typography,
+} from '@/shared/ui'
 import {
   NO_FILTERS,
   delistedCount,
   filterEntries,
+  isGatedPurpose,
   providerSlugs,
   sortEntries,
+  visibleInTab,
   type CatalogFilters,
 } from '../model/catalog-view'
 import { CatalogModelList } from './CatalogModelList'
 
 /** The operator's model curation surface: browse what the provider offers, narrow it, and check
- *  the models this installation will let its accounts use.
+ *  the models this installation will let its accounts use — PER PURPOSE (change 20). Each tab
+ *  registers models for one purpose only, and force-filters its candidates to what that
+ *  purpose's capability gate would accept, so the checkbox never offers what the server
+ *  refuses.
  *
  *  Every narrowing happens in the browser over the one response. The catalog is a few hundred
  *  rows that arrive together, so a round trip per keystroke would buy latency and nothing else. */
+/** Why a tab shows nothing: an empty catalog, an empty forced gate (the video tab names
+ *  the honest upstream reason — A2 wants an explanation, not an error), or the operator's
+ *  own narrowing. */
+function emptyMessageKey(catalogCount: number, tabCount: number, purpose: ModelPurpose) {
+  if (catalogCount === 0) return 'catalog.empty' as const
+  if (tabCount > 0) return 'catalog.noMatches' as const
+  if (purpose === 'video-generation') return 'catalog.emptyForVideo' as const
+  return 'catalog.emptyForPurpose' as const
+}
+
 export function ModelCatalogManager() {
   const { t } = useTranslation('models')
   const { catalog, isPending, isError } = useAdminCatalog()
   const refresh = useRefreshCatalog()
+  const [purpose, setPurpose] = useState<ModelPurpose>(MODEL_PURPOSES[0])
   const [filters, setFilters] = useState<CatalogFilters>(NO_FILTERS)
   const controlsId = useId()
   const searchId = `${controlsId}-search`
   const providerId = `${controlsId}-provider`
   const providerLabelId = `${providerId}-label`
+  const panelId = `${controlsId}-purpose-panel`
 
   const sorted = useMemo(() => sortEntries(catalog.entries), [catalog.entries])
-  const visible = useMemo(() => filterEntries(sorted, filters), [sorted, filters])
+  // The tab's forced gate runs once per (catalog, purpose); the operator's filters then
+  // narrow only this slice, so a keystroke never re-evaluates the gate.
+  const tabEntries = useMemo(
+    () => sorted.filter((entry) => visibleInTab(entry, purpose)),
+    [sorted, purpose],
+  )
+  const visible = useMemo(
+    () => filterEntries(tabEntries, filters, purpose),
+    [tabEntries, filters, purpose],
+  )
   const vendors = useMemo(() => providerSlugs(catalog.entries), [catalog.entries])
   const delisted = useMemo(() => delistedCount(catalog.entries), [catalog.entries])
 
@@ -47,7 +83,24 @@ export function ModelCatalogManager() {
         {t('catalog.disableWarning')}
       </Typography>
 
-      <div className="mt-6 grid gap-3">
+      <SegmentedControl<ModelPurpose>
+        value={purpose}
+        options={MODEL_PURPOSES.map((value) => ({
+          value,
+          label: t(`catalog.purposeTab.${value}`),
+        }))}
+        onChange={setPurpose}
+        ariaLabel={t('catalog.purposeAria')}
+        controls={panelId}
+        className="mt-6"
+      />
+      {isGatedPurpose(purpose) && (
+        <Typography variant="body" className="text-content-tertiary max-w-measure mt-2">
+          {t(`catalog.purposeRequirement.${purpose}`)}
+        </Typography>
+      )}
+
+      <div id={panelId} role="tabpanel" className="mt-6 grid gap-3">
         <div>
           <FieldLabel htmlFor={searchId}>{t('catalog.search')}</FieldLabel>
           <TextField
@@ -83,7 +136,7 @@ export function ModelCatalogManager() {
             [
               ['visionOnly', t('catalog.filterVision')],
               ['structuredOnly', t('catalog.filterStructured')],
-              ['enabledOnly', t('catalog.filterEnabled')],
+              ['registeredOnly', t('catalog.filterEnabled')],
             ] as const
           ).map(([key, label]) => (
             <label key={key} className="flex items-center gap-2">
@@ -133,15 +186,15 @@ export function ModelCatalogManager() {
       )}
       {!isError && !isPending && visible.length === 0 && (
         <Typography variant="body" className="text-content-tertiary mt-6">
-          {t(catalog.entries.length === 0 ? 'catalog.empty' : 'catalog.noMatches')}
+          {t(emptyMessageKey(catalog.entries.length, tabEntries.length, purpose))}
         </Typography>
       )}
       {visible.length > 0 && (
         <>
           <Typography variant="meta" className="mt-6 block">
-            {t('catalog.count', { shown: visible.length, total: catalog.entries.length })}
+            {t('catalog.count', { shown: visible.length, total: tabEntries.length })}
           </Typography>
-          <CatalogModelList entries={visible} />
+          <CatalogModelList entries={visible} purpose={purpose} />
         </>
       )}
     </section>

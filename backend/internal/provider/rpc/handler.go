@@ -224,6 +224,14 @@ func fromProtoStage(s postpilotv1.Stage) (provider.Stage, bool) {
 }
 
 func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
+	stages := make([]postpilotv1.Stage, 0, len(m.Info.Stages))
+	for _, value := range m.Info.Stages {
+		// A stage string this build does not know is skipped rather than sent as
+		// UNSPECIFIED: the client could not list the model under it anyway.
+		if stage, err := provider.ParseStage(value); err == nil {
+			stages = append(stages, stageToProto[stage])
+		}
+	}
 	return &postpilotv1.ModelInfo{
 		Ref:                 &postpilotv1.ModelRef{ProviderId: m.Info.Ref.ProviderID, ModelId: m.Info.Ref.ModelID},
 		Label:               m.Info.Label,
@@ -237,6 +245,7 @@ func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
 		PricingCheckedAt:    m.Info.PricingCheckedAt,
 		RequiredCredits:     int32(m.RequiredCredits),
 		Affordable:          m.Affordable,
+		Stages:              stages,
 	}
 }
 

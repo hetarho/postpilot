@@ -143,10 +143,12 @@ func (e Experiment) Winner() *Candidate {
 }
 
 type Model struct {
-	Ref                 ModelRef
-	Label               string
-	Vision              bool
-	Enabled             bool
+	Ref     ModelRef
+	Label   string
+	Vision  bool
+	Enabled bool
+	// Stages this model is registered to serve (change 20), in the same strings Stage uses.
+	Stages              []string
 	InputUSDPerMillion  string
 	OutputUSDPerMillion string
 }

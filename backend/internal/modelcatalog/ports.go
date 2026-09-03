@@ -6,8 +6,8 @@ import (
 )
 
 // Store is the persistence this context needs. catalog_models is global rather than
-// per-account: what an installation offers is an operator decision, and plan 17's per-model
-// floor is what differentiates who may run it.
+// per-account: what an installation offers is an operator decision; affordability against
+// a balance is what differentiates who may run it (plan 17).
 type Store interface {
 	List(ctx context.Context) ([]Model, error)
 	Get(ctx context.Context, modelID string) (Model, error)
@@ -17,6 +17,13 @@ type Store interface {
 	// Patch applies a partial curation edit and returns the row as stored. A missing row is
 	// ErrNotFound.
 	Patch(ctx context.Context, modelID string, patch Patch, updatedAt time.Time) (Model, error)
+	// RegisterPurpose writes the row snapshot and the purpose registration in ONE
+	// transaction, so a failure can never leave a curated row whose checkbox silently did
+	// not stick. Idempotent per (model, purpose).
+	RegisterPurpose(ctx context.Context, m Model, purpose Purpose) error
+	// DeregisterPurpose removes one registration and stamps the row's updated_at — a
+	// deregistration is a curation edit. The catalog row itself always survives.
+	DeregisterPurpose(ctx context.Context, modelID string, purpose Purpose, at time.Time) error
 	// RefreshAvailability records what a SUCCESSFUL upstream read saw: the seen models get
 	// a fresh snapshot and last_seen_at, everything else is marked unlisted. It is one
 	// transaction so the catalog is never half-refreshed.

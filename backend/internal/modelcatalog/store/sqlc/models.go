@@ -3,25 +3,3 @@
 //   sqlc v1.31.1
 
 package sqlc
-
-import (
-	"database/sql"
-)
-
-type CatalogModel struct {
-	ModelID             string
-	ProviderSlug        string
-	Label               string
-	Vision              int64
-	StructuredOutput    int64
-	ContextTokens       sql.NullInt64
-	InputUsdPerMillion  sql.NullString
-	OutputUsdPerMillion sql.NullString
-	PricingCheckedAt    sql.NullString
-	ReasoningEffort     sql.NullString
-	Enabled             int64
-	Listed              int64
-	LastSeenAt          sql.NullString
-	CreatedAt           string
-	UpdatedAt           string
-}

@@ -382,7 +382,9 @@ func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
 		"observe required with photos": {func(r *StartRequest, _ *fakePosts, _ *fakeModels) { r.ObserveModel = "" }, ErrObserveModelRequired},
 		"observe must see": {func(_ *StartRequest, _ *fakePosts, m *fakeModels) {
 			info := m.infos[observeRef]
-			info.Vision = false
+			// Losing vision reaches this boundary as lost observe membership: the catalog
+			// drops the stage the moment the capability its registration was gated on goes.
+			info.Stages = []string{llm.StageNameWrite, llm.StageNameAnalyze}
 			m.infos[observeRef] = info
 		}, ErrObserveModelRequired},
 		"target must be positive": {func(r *StartRequest, _ *fakePosts, _ *fakeModels) {
@@ -618,8 +620,8 @@ type fakeModels struct {
 
 func newFakeModels() *fakeModels {
 	return &fakeModels{infos: map[llm.ModelRef]llm.ModelInfo{
-		observeRef: {Ref: observeRef, Vision: true, StructuredOutput: true},
-		writeRef:   {Ref: writeRef, StructuredOutput: true},
+		observeRef: {Ref: observeRef, Vision: true, StructuredOutput: true, Stages: []string{llm.StageNameObserve, llm.StageNameWrite, llm.StageNameAnalyze}},
+		writeRef:   {Ref: writeRef, StructuredOutput: true, Stages: []string{llm.StageNameWrite, llm.StageNameAnalyze}},
 	}}
 }
 func (f *fakeModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {

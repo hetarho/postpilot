@@ -105,6 +105,20 @@ export const FEATURED_MODEL_PROVIDERS: readonly string[] = [
   'mistralai',
 ]
 
+/** The five purposes a model can be registered to, in the order the operator's tabs show
+ *  them. The slugs are the wire/DB contract (change 20); the first three feed the user-facing
+ *  observe/analyze/write stages, the two generation purposes are settings for features that
+ *  do not exist yet. Labels live in the i18n resources under `models:catalog.purposeTab`. */
+export const MODEL_PURPOSES = [
+  'photo-analysis',
+  'style-analysis',
+  'writing',
+  'image-generation',
+  'video-generation',
+] as const
+
+export type ModelPurpose = (typeof MODEL_PURPOSES)[number]
+
 /** The height the operator's catalog list assumes for a row it has not measured yet. Only the
  *  scrollbar depends on it: every mounted row reports its real height, which differs a lot
  *  between a plain candidate and an enabled model carrying two controls. */

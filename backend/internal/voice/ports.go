@@ -107,7 +107,12 @@ type Models interface {
 	Resolve(ref llm.ModelRef) (llm.ModelInfo, bool)
 	Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error)
 }
-type PersonalizationModels interface{ ModelEnabled(ref llm.ModelRef) bool }
+
+// PersonalizationModels answers whether a client-supplied ref may run for a stage — the
+// same per-purpose membership the pickers enforce (change 20).
+type PersonalizationModels interface {
+	ModelEnabled(ref llm.ModelRef, stage string) bool
+}
 
 // Jobs is the shared queue behavior this context consumes. Its types are defined here;
 // the composition root adapts the job context without coupling sibling domains. Voice-owned

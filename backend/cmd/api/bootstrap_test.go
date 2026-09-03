@@ -48,7 +48,7 @@ func (m *trackingVoiceModels) Complete(context.Context, llm.ModelRef, llm.Reques
 	m.calls++
 	return llm.Response{}, nil
 }
-func (m *trackingVoiceModels) ModelEnabled(llm.ModelRef) bool {
+func (m *trackingVoiceModels) ModelEnabled(llm.ModelRef, string) bool {
 	m.calls++
 	return false
 }

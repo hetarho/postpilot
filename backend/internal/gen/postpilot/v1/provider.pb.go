@@ -185,8 +185,7 @@ type ModelInfo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Ref   *ModelRef              `protobuf:"bytes,1,opt,name=ref,proto3" json:"ref,omitempty"`
 	Label string                 `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
-	// Declared per model in providers.yaml — the registry cannot probe them. The observe
-	// stage lists vision models only.
+	// Snapshotted from the source catalog — the registry cannot probe them.
 	Vision              bool   `protobuf:"varint,3,opt,name=vision,proto3" json:"vision,omitempty"`
 	StructuredOutput    bool   `protobuf:"varint,4,opt,name=structured_output,json=structuredOutput,proto3" json:"structured_output,omitempty"`
 	Disabled            bool   `protobuf:"varint,5,opt,name=disabled,proto3" json:"disabled,omitempty"`
@@ -201,7 +200,10 @@ type ModelInfo struct {
 	// The caller's balance covers required_credits. Display only — the server refuses an
 	// unaffordable start whatever the client rendered — and unlike the plan floor it
 	// replaces, it is temporary: the same model is affordable again after a renewal.
-	Affordable    bool `protobuf:"varint,14,opt,name=affordable,proto3" json:"affordable,omitempty"`
+	Affordable bool `protobuf:"varint,14,opt,name=affordable,proto3" json:"affordable,omitempty"`
+	// The stages this model is registered to serve (change 20): each stage's picker lists
+	// exactly its members — the client never re-derives stage fitness from capability flags.
+	Stages        []Stage `protobuf:"varint,15,rep,packed,name=stages,proto3,enum=postpilot.v1.Stage" json:"stages,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -318,6 +320,13 @@ func (x *ModelInfo) GetAffordable() bool {
 		return x.Affordable
 	}
 	return false
+}
+
+func (x *ModelInfo) GetStages() []Stage {
+	if x != nil {
+		return x.Stages
+	}
+	return nil
 }
 
 type Selection struct {
@@ -1222,7 +1231,7 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\bModelRef\x12\x1f\n" +
 	"\vprovider_id\x18\x01 \x01(\tR\n" +
 	"providerId\x12\x19\n" +
-	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\xe9\x03\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\x96\x04\n" +
 	"\tModelInfo\x12(\n" +
 	"\x03ref\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x16\n" +
@@ -1238,7 +1247,8 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\x10required_credits\x18\r \x01(\x05R\x0frequiredCredits\x12\x1e\n" +
 	"\n" +
 	"affordable\x18\x0e \x01(\bR\n" +
-	"affordableJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"\xab\x01\n" +
+	"affordable\x12+\n" +
+	"\x06stages\x18\x0f \x03(\x0e2\x13.postpilot.v1.StageR\x06stagesJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"\xab\x01\n" +
 	"\tSelection\x12)\n" +
 	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x12(\n" +
 	"\x03ref\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\x12\x18\n" +
@@ -1359,50 +1369,51 @@ var file_postpilot_v1_provider_proto_goTypes = []any{
 }
 var file_postpilot_v1_provider_proto_depIdxs = []int32{
 	2,  // 0: postpilot.v1.ModelInfo.ref:type_name -> postpilot.v1.ModelRef
-	0,  // 1: postpilot.v1.Selection.stage:type_name -> postpilot.v1.Stage
-	2,  // 2: postpilot.v1.Selection.ref:type_name -> postpilot.v1.ModelRef
-	1,  // 3: postpilot.v1.Selection.slot:type_name -> postpilot.v1.SelectionSlot
-	0,  // 4: postpilot.v1.ComparisonPair.stage:type_name -> postpilot.v1.Stage
-	4,  // 5: postpilot.v1.ComparisonPair.candidate_a:type_name -> postpilot.v1.Selection
-	4,  // 6: postpilot.v1.ComparisonPair.candidate_b:type_name -> postpilot.v1.Selection
-	0,  // 7: postpilot.v1.RecommendationStageSelection.stage:type_name -> postpilot.v1.Stage
-	2,  // 8: postpilot.v1.RecommendationStageSelection.active:type_name -> postpilot.v1.ModelRef
-	2,  // 9: postpilot.v1.RecommendationStageSelection.candidate_a:type_name -> postpilot.v1.ModelRef
-	2,  // 10: postpilot.v1.RecommendationStageSelection.candidate_b:type_name -> postpilot.v1.ModelRef
-	6,  // 11: postpilot.v1.RecommendationSet.selections:type_name -> postpilot.v1.RecommendationStageSelection
-	3,  // 12: postpilot.v1.ListModelsResponse.models:type_name -> postpilot.v1.ModelInfo
-	4,  // 13: postpilot.v1.GetSelectionsResponse.selections:type_name -> postpilot.v1.Selection
-	0,  // 14: postpilot.v1.SaveSelectionRequest.stage:type_name -> postpilot.v1.Stage
-	2,  // 15: postpilot.v1.SaveSelectionRequest.ref:type_name -> postpilot.v1.ModelRef
-	4,  // 16: postpilot.v1.SaveSelectionResponse.selection:type_name -> postpilot.v1.Selection
-	5,  // 17: postpilot.v1.GetComparisonPairsResponse.pairs:type_name -> postpilot.v1.ComparisonPair
-	0,  // 18: postpilot.v1.SaveComparisonPairRequest.stage:type_name -> postpilot.v1.Stage
-	2,  // 19: postpilot.v1.SaveComparisonPairRequest.candidate_a:type_name -> postpilot.v1.ModelRef
-	2,  // 20: postpilot.v1.SaveComparisonPairRequest.candidate_b:type_name -> postpilot.v1.ModelRef
-	5,  // 21: postpilot.v1.SaveComparisonPairResponse.pair:type_name -> postpilot.v1.ComparisonPair
-	7,  // 22: postpilot.v1.ListRecommendationSetsResponse.sets:type_name -> postpilot.v1.RecommendationSet
-	7,  // 23: postpilot.v1.ApplyRecommendationSetResponse.set:type_name -> postpilot.v1.RecommendationSet
-	4,  // 24: postpilot.v1.ApplyRecommendationSetResponse.selections:type_name -> postpilot.v1.Selection
-	5,  // 25: postpilot.v1.ApplyRecommendationSetResponse.pairs:type_name -> postpilot.v1.ComparisonPair
-	8,  // 26: postpilot.v1.ProviderService.ListModels:input_type -> postpilot.v1.ListModelsRequest
-	10, // 27: postpilot.v1.ProviderService.GetSelections:input_type -> postpilot.v1.GetSelectionsRequest
-	12, // 28: postpilot.v1.ProviderService.SaveSelection:input_type -> postpilot.v1.SaveSelectionRequest
-	14, // 29: postpilot.v1.ProviderService.GetComparisonPairs:input_type -> postpilot.v1.GetComparisonPairsRequest
-	16, // 30: postpilot.v1.ProviderService.SaveComparisonPair:input_type -> postpilot.v1.SaveComparisonPairRequest
-	18, // 31: postpilot.v1.ProviderService.ListRecommendationSets:input_type -> postpilot.v1.ListRecommendationSetsRequest
-	20, // 32: postpilot.v1.ProviderService.ApplyRecommendationSet:input_type -> postpilot.v1.ApplyRecommendationSetRequest
-	9,  // 33: postpilot.v1.ProviderService.ListModels:output_type -> postpilot.v1.ListModelsResponse
-	11, // 34: postpilot.v1.ProviderService.GetSelections:output_type -> postpilot.v1.GetSelectionsResponse
-	13, // 35: postpilot.v1.ProviderService.SaveSelection:output_type -> postpilot.v1.SaveSelectionResponse
-	15, // 36: postpilot.v1.ProviderService.GetComparisonPairs:output_type -> postpilot.v1.GetComparisonPairsResponse
-	17, // 37: postpilot.v1.ProviderService.SaveComparisonPair:output_type -> postpilot.v1.SaveComparisonPairResponse
-	19, // 38: postpilot.v1.ProviderService.ListRecommendationSets:output_type -> postpilot.v1.ListRecommendationSetsResponse
-	21, // 39: postpilot.v1.ProviderService.ApplyRecommendationSet:output_type -> postpilot.v1.ApplyRecommendationSetResponse
-	33, // [33:40] is the sub-list for method output_type
-	26, // [26:33] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	0,  // 1: postpilot.v1.ModelInfo.stages:type_name -> postpilot.v1.Stage
+	0,  // 2: postpilot.v1.Selection.stage:type_name -> postpilot.v1.Stage
+	2,  // 3: postpilot.v1.Selection.ref:type_name -> postpilot.v1.ModelRef
+	1,  // 4: postpilot.v1.Selection.slot:type_name -> postpilot.v1.SelectionSlot
+	0,  // 5: postpilot.v1.ComparisonPair.stage:type_name -> postpilot.v1.Stage
+	4,  // 6: postpilot.v1.ComparisonPair.candidate_a:type_name -> postpilot.v1.Selection
+	4,  // 7: postpilot.v1.ComparisonPair.candidate_b:type_name -> postpilot.v1.Selection
+	0,  // 8: postpilot.v1.RecommendationStageSelection.stage:type_name -> postpilot.v1.Stage
+	2,  // 9: postpilot.v1.RecommendationStageSelection.active:type_name -> postpilot.v1.ModelRef
+	2,  // 10: postpilot.v1.RecommendationStageSelection.candidate_a:type_name -> postpilot.v1.ModelRef
+	2,  // 11: postpilot.v1.RecommendationStageSelection.candidate_b:type_name -> postpilot.v1.ModelRef
+	6,  // 12: postpilot.v1.RecommendationSet.selections:type_name -> postpilot.v1.RecommendationStageSelection
+	3,  // 13: postpilot.v1.ListModelsResponse.models:type_name -> postpilot.v1.ModelInfo
+	4,  // 14: postpilot.v1.GetSelectionsResponse.selections:type_name -> postpilot.v1.Selection
+	0,  // 15: postpilot.v1.SaveSelectionRequest.stage:type_name -> postpilot.v1.Stage
+	2,  // 16: postpilot.v1.SaveSelectionRequest.ref:type_name -> postpilot.v1.ModelRef
+	4,  // 17: postpilot.v1.SaveSelectionResponse.selection:type_name -> postpilot.v1.Selection
+	5,  // 18: postpilot.v1.GetComparisonPairsResponse.pairs:type_name -> postpilot.v1.ComparisonPair
+	0,  // 19: postpilot.v1.SaveComparisonPairRequest.stage:type_name -> postpilot.v1.Stage
+	2,  // 20: postpilot.v1.SaveComparisonPairRequest.candidate_a:type_name -> postpilot.v1.ModelRef
+	2,  // 21: postpilot.v1.SaveComparisonPairRequest.candidate_b:type_name -> postpilot.v1.ModelRef
+	5,  // 22: postpilot.v1.SaveComparisonPairResponse.pair:type_name -> postpilot.v1.ComparisonPair
+	7,  // 23: postpilot.v1.ListRecommendationSetsResponse.sets:type_name -> postpilot.v1.RecommendationSet
+	7,  // 24: postpilot.v1.ApplyRecommendationSetResponse.set:type_name -> postpilot.v1.RecommendationSet
+	4,  // 25: postpilot.v1.ApplyRecommendationSetResponse.selections:type_name -> postpilot.v1.Selection
+	5,  // 26: postpilot.v1.ApplyRecommendationSetResponse.pairs:type_name -> postpilot.v1.ComparisonPair
+	8,  // 27: postpilot.v1.ProviderService.ListModels:input_type -> postpilot.v1.ListModelsRequest
+	10, // 28: postpilot.v1.ProviderService.GetSelections:input_type -> postpilot.v1.GetSelectionsRequest
+	12, // 29: postpilot.v1.ProviderService.SaveSelection:input_type -> postpilot.v1.SaveSelectionRequest
+	14, // 30: postpilot.v1.ProviderService.GetComparisonPairs:input_type -> postpilot.v1.GetComparisonPairsRequest
+	16, // 31: postpilot.v1.ProviderService.SaveComparisonPair:input_type -> postpilot.v1.SaveComparisonPairRequest
+	18, // 32: postpilot.v1.ProviderService.ListRecommendationSets:input_type -> postpilot.v1.ListRecommendationSetsRequest
+	20, // 33: postpilot.v1.ProviderService.ApplyRecommendationSet:input_type -> postpilot.v1.ApplyRecommendationSetRequest
+	9,  // 34: postpilot.v1.ProviderService.ListModels:output_type -> postpilot.v1.ListModelsResponse
+	11, // 35: postpilot.v1.ProviderService.GetSelections:output_type -> postpilot.v1.GetSelectionsResponse
+	13, // 36: postpilot.v1.ProviderService.SaveSelection:output_type -> postpilot.v1.SaveSelectionResponse
+	15, // 37: postpilot.v1.ProviderService.GetComparisonPairs:output_type -> postpilot.v1.GetComparisonPairsResponse
+	17, // 38: postpilot.v1.ProviderService.SaveComparisonPair:output_type -> postpilot.v1.SaveComparisonPairResponse
+	19, // 39: postpilot.v1.ProviderService.ListRecommendationSets:output_type -> postpilot.v1.ListRecommendationSetsResponse
+	21, // 40: postpilot.v1.ProviderService.ApplyRecommendationSet:output_type -> postpilot.v1.ApplyRecommendationSetResponse
+	34, // [34:41] is the sub-list for method output_type
+	27, // [27:34] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_provider_proto_init() }

@@ -130,16 +130,35 @@ export const models = {
   catalog: {
     title: '모델 관리',
     description:
-      'OpenRouter가 제공하는 모델 목록에서, 이 서비스에서 사용할 모델을 직접 골라 둡니다. 체크한 모델만 사용자의 단계별 선택 목록에 나타납니다.',
+      'OpenRouter가 제공하는 모델 목록에서, 용도별로 사용할 모델을 직접 골라 둡니다. 각 탭에서 체크한 모델만 해당 용도의 선택 목록에 나타나고, 이미지 생성과 비디오 생성은 아직 설정만 저장됩니다.',
     disableWarning:
-      '체크를 해제하면 그 모델을 선택해 둔 사용자의 선택도 함께 초기화되고, 사용자는 모델을 다시 골라야 합니다.',
+      '체크를 해제하면 그 용도에 이 모델을 선택해 둔 사용자의 선택도 함께 초기화되고, 사용자는 모델을 다시 골라야 합니다.',
+    purposeAria: '모델 용도',
+    purposeTab: {
+      'photo-analysis': '사진 해석',
+      'style-analysis': '문체 분석',
+      writing: '글 작성',
+      'image-generation': '이미지 생성',
+      'video-generation': '비디오 생성',
+    },
+    purposeRequirement: {
+      'photo-analysis':
+        '이미지 입력(멀티모달)이 가능한 모델만 이 용도에 등록할 수 있어서, 그 모델들만 보여 줍니다.',
+      'image-generation':
+        '이미지를 출력할 수 있는 모델만 이 용도에 등록할 수 있어서, 그 모델들만 보여 줍니다.',
+      'video-generation':
+        '비디오를 출력할 수 있는 모델만 이 용도에 등록할 수 있어서, 그 모델들만 보여 줍니다.',
+    },
+    emptyForPurpose: '이 용도의 조건을 만족하는 모델이 아직 없어요.',
+    emptyForVideo:
+      'OpenRouter에 아직 비디오 출력 모델이 거의 없어서 이 탭은 비어 있을 수 있어요. 목록이 갱신되면 여기에서 등록할 수 있습니다.',
     search: '검색',
     searchPlaceholder: '모델 이름이나 아이디',
     provider: '제공사',
     allProviders: '전체 제공사',
     filterVision: '이미지 입력 가능',
     filterStructured: '구조화 출력 가능',
-    filterEnabled: '사용 중인 모델만',
+    filterEnabled: '이 용도에 등록된 모델만',
     refresh: '목록 새로고침',
     fetchedLive: '{{at, instant}}에 제공사 목록을 읽었어요.',
     fetchedCached: '{{at, instant}}에 읽어 둔 목록이에요.',
@@ -150,9 +169,12 @@ export const models = {
     empty: '아직 등록된 모델도, 제공사에서 읽어 온 모델도 없어요.',
     noMatches: '조건에 맞는 모델이 없어요.',
     count: '{{total}}개 중 {{shown}}개를 보여 주고 있어요.',
-    use: '사용',
-    vision: '이미지',
+    use: '이 용도에 사용',
+    vision: '이미지 입력',
     structured: '구조화 출력',
+    imageOutput: '이미지 생성',
+    videoOutput: '비디오 생성',
+    registeredPurposes: '등록된 용도: {{purposes}}',
     delisted: '제공 종료',
     delistedBanner_one:
       '등록해 둔 모델 {{count}}개를 제공사가 더 이상 제공하지 않아요. 사용자에게는 사용할 수 없는 모델로 표시되니, 확인한 뒤에 체크를 해제해 주세요.',

@@ -569,7 +569,7 @@ func newTestService() (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRun
 	a := ModelRef{ProviderID: "p", ModelID: "a"}
 	b := ModelRef{ProviderID: "p", ModelID: "b"}
 	store := newMemoryStore()
-	catalog := &fakeCatalog{models: map[ModelRef]Model{a: {Ref: a, Label: "A", Enabled: true, Vision: true, InputUSDPerMillion: "1", OutputUSDPerMillion: "2"}, b: {Ref: b, Label: "B", Enabled: true, Vision: true, InputUSDPerMillion: "1", OutputUSDPerMillion: "2"}}}
+	catalog := &fakeCatalog{models: map[ModelRef]Model{a: {Ref: a, Label: "A", Enabled: true, Vision: true, Stages: allStages, InputUSDPerMillion: "1", OutputUSDPerMillion: "2"}, b: {Ref: b, Label: "B", Enabled: true, Vision: true, Stages: allStages, InputUSDPerMillion: "1", OutputUSDPerMillion: "2"}}}
 	jobs := &fakeJobs{runnable: map[string]bool{}}
 	runner := &fakeRunner{fail: map[string]error{}, results: map[string]CandidateResult{}}
 	svc := NewService(store, catalog, jobs, runner, 30*24*time.Hour)
@@ -578,6 +578,8 @@ func newTestService() (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRun
 	svc.now = func() time.Time { return time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC) }
 	return svc, store, catalog, jobs, runner
 }
+
+var allStages = []string{"observe", "write", "analyze"}
 
 func TestStartHandleChooseWriteExperiment(t *testing.T) {
 	svc, store, _, jobs, runner := newTestService()

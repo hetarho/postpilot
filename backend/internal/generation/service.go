@@ -118,7 +118,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	write, ok := parseModelRef(request.WriteModel)
-	if !ok || !modelEnabled(s.models, write) {
+	if !ok || !modelEnabled(s.models, write, llm.StageNameWrite) {
 		return "", ErrWriteModelRequired
 	}
 	if request.SaveAsRule {
@@ -165,15 +165,14 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", err
 	}
 	write, ok := parseModelRef(request.WriteModel)
-	if !ok || !modelEnabled(s.models, write) {
+	if !ok || !modelEnabled(s.models, write, llm.StageNameWrite) {
 		return "", ErrWriteModelRequired
 	}
 	if len(post.Images) == 0 {
 		request.ObserveModel = ""
 	} else {
 		observe, valid := parseModelRef(request.ObserveModel)
-		info, found := s.models.Resolve(observe)
-		if !valid || !found || info.Disabled || !info.Vision {
+		if !valid || !modelEnabled(s.models, observe, llm.StageNameObserve) {
 			return "", ErrObserveModelRequired
 		}
 	}
@@ -276,9 +275,12 @@ func frozenVoice(post PostInput, jobVoiceID string) (string, error) {
 	return voiceID, nil
 }
 
-func modelEnabled(models LLM, ref llm.ModelRef) bool {
+// modelEnabled requires stage membership, not mere registry presence: a ref arrives here
+// straight from the client, so the per-purpose registration (change 20) is enforced at
+// this boundary too, not only in the picker.
+func modelEnabled(models LLM, ref llm.ModelRef, stage string) bool {
 	info, ok := models.Resolve(ref)
-	return ok && !info.Disabled
+	return ok && !info.Disabled && info.ServesStage(stage)
 }
 
 func parseModelRef(value string) (llm.ModelRef, bool) {

@@ -3,6 +3,7 @@ import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import type { Transport } from '@connectrpc/connect'
 import { ModelCatalogService, ProviderService, appFailureFromConnect } from '@/shared/api'
+import type { ModelPurpose } from '@/shared/config'
 import type { CatalogBrowse, ReasoningEffortName } from '../model/types'
 import { toCatalogBrowse } from './catalog-mappers'
 
@@ -43,17 +44,20 @@ export function useRefreshCatalog() {
   }
 }
 
-/** Makes a model selectable at an explicitly chosen floor. */
-export function useEnableModel() {
+/** Registers or deregisters a model for ONE purpose — the active tab's checkbox. The server
+ *  enforces the purpose's capability gate, so the hidden-ineligible-rows rendering is a
+ *  convenience, not the enforcement. */
+export function useSetModelPurpose() {
   const queryClient = useQueryClient()
   const transport = useTransport()
-  const mutation = useMutation(ModelCatalogService.method.enableModel, {
+  const mutation = useMutation(ModelCatalogService.method.setModelPurpose, {
     onSettled: () => invalidateCatalogs(queryClient, transport),
   })
   return {
     ...mutation,
     failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
-    enable: (modelId: string) => mutation.mutate({ modelId }),
+    setPurpose: (modelId: string, purpose: ModelPurpose, registered: boolean) =>
+      mutation.mutate({ modelId, purpose, registered }),
   }
 }
 
@@ -68,13 +72,9 @@ export function useUpdateModel() {
   return {
     ...mutation,
     failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
-    update: (
-      modelId: string,
-      patch: { enabled?: boolean; reasoningEffort?: ReasoningEffortName },
-    ) =>
+    update: (modelId: string, patch: { reasoningEffort?: ReasoningEffortName }) =>
       mutation.mutate({
         modelId,
-        enabled: patch.enabled,
         reasoningEffort: patch.reasoningEffort,
       }),
   }

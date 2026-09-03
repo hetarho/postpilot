@@ -2,7 +2,7 @@
 
 Canonical rules that are **currently true** in the code. Source: [plan/04](../plan/04.model-provider-registry.md),
 extended by [plan/09](../plan/09.stage-model-experiments-and-leaderboards.md) and
-[plan/18](../plan/18.openrouter-model-catalog-and-admin-model.md); built by jobs 06, 15, 23, 37, 46 and 47.
+[plan/18](../plan/18.openrouter-model-catalog-and-admin-model.md); built by jobs 06, 15, 23, 37, 46, 47 and 48.
 What an account may afford to run is owned by [plans.md](plans.md).
 
 ## The port is a boundary
@@ -48,10 +48,10 @@ What an account may afford to run is owned by [plans.md](plans.md).
 - `reasoning.exclude` is forbidden: excluding the returned trace does not stop generation or billing of reasoning
   tokens. Reasoning and visible output share the same 8,192-token completion cap.
 
-## The connection is a file, the models are rows
+## The connection is a file, the models are rows registered per purpose
 
 Plan 18 split what used to be one file. **How to reach the provider** is configuration, read once at boot; **which
-models this installation offers** is curated data, read live.
+models this installation offers, and for which purposes** is curated data, read live (change 20 → job 48).
 
 - `backend/config/providers.yaml` declares the provider connection (`id`, `adapter`, `base_url`, `api_key_env`,
   `reasoning_format`) and the versioned `recommendation_sets`. It ships inside the image at
@@ -74,25 +74,52 @@ models this installation offers** is curated data, read live.
   it on **every** request: curating a model takes effect for the next call, not the next deploy. An **empty catalog
   is a valid state** — a fresh install has curated nothing, and the right answer is an empty picker and a trip to
   `/admin/models`, not a refused boot. Boot never contacts the provider's catalog.
-- `vision` and `structured_output` are per-model row values snapshotted from the provider's catalog. The observe
-  stage lists vision models only.
+- `vision`, `structured_output`, `image_output` and `video_output` are per-model row values snapshotted from the
+  provider's catalog. They gate what a model may be REGISTERED for; the stage-side check is pure membership.
 - `reasoning_effort` is an optional per-model row value, curated by the operator and validated on write.
 - Structured output is requested whenever the model declares it (`response_format: json_schema`, without `strict` —
   the schemas belong to the callers). Callers keep a parser fallback for models that do not.
 
-## The catalog is curated rows
+## The catalog is curated rows, registered per purpose
 
-`catalog_models` is the usable-model list. It is global rather than per-account: what an installation offers is an
-operator decision. Only the master tier may read or change it (`ModelCatalogService`, in the interceptor's
+`catalog_models` is the curated-model list and `catalog_model_purposes` holds its registrations across five
+purposes — `photo-analysis` · `style-analysis` · `writing` · `image-generation` · `video-generation` — curated on
+the five tabs of the 모델 관리 screen. Both are global rather than per-account: what an installation offers is an
+operator decision. Only the master tier may read or change them (`ModelCatalogService`, in the interceptor's
 master-only set).
+
+- **Registration replaced the global `enabled` flag** (migration `0020` dropped the column). A model is visible to
+  a user-facing stage exactly when it is registered to that stage's purpose: `photo-analysis` → observe,
+  `style-analysis` → analyze, `writing` → write. The generation purposes feed **no stage yet** — they persist and
+  round-trip in admin, and nothing else reads them (future plans attach the features).
+- **Each purpose enforces a capability gate at registration, server-side**: `photo-analysis` requires `vision`;
+  `image-generation`/`video-generation` require the matching `image_output`/`video_output`; the text purposes take
+  any model. The admin tab force-filters its candidate list to the same gate, so the checkbox never offers what
+  the server would refuse (`MODEL_PURPOSE_INELIGIBLE`).
+- A row with **zero registrations** is the state `enabled = 0` used to be: kept — the reasoning override survives —
+  but served to nobody, absent from `ListModels` and unavailable to `Registry.Complete`. A model registered only
+  to a generation purpose is likewise never sent over the user-facing wire.
+- **Capability drift stops the stage, not the registration.** A refresh re-snapshots the capability flags; a
+  registered model that LOST the capability its purpose was gated on stops being served to that stage at once
+  (`stagesOf` re-checks the gate), while the registration row is kept and stays visible on its admin tab — flagged
+  for the operator to uncheck, never auto-retired.
+- **Stage membership is enforced at every execution boundary**, not only in the picker: `SaveSelection`/pairs
+  (provider), `StartGeneration`/`StartRevision` (generation), experiment starts and winner adoption (experiment),
+  and the voice validation/rule-comparison model checks all refuse a client-supplied ref that is not registered to
+  the stage they run it for (`llm.ModelInfo.ServesStage`).
+- The cutover **seeded no registrations** (the interview decision recorded in
+  [change 20](../changes/archive/20.purpose-scoped-model-enablement-with-adm.md)): after migration `0020`, every
+  purpose tab and every stage dropdown starts empty, and pre-cutover saved selections flow through the existing
+  vanished-selection machinery on their next read.
 
 - **Candidates** come live from the provider's own public catalog — `GET {base_url}/models`, unauthenticated, read
   server-side and cached for `OPENROUTER_CATALOG_TTL` ([tech/openrouter-catalog](../tech/openrouter-catalog.md)).
   Only the operator path ever triggers that read, so a provider outage cannot change what users see.
-- **Usable models** are the enabled rows, and nothing else feeds `ListModels`, `SaveSelection`, or
-  `Registry.Complete`. A row survives being disabled, so the reasoning override an operator set comes back intact
-  when the model is re-enabled.
-- Enabling never selects ([I3]): a curated model appears in the pickers, and every user still chooses their own.
+- **Usable models** are the rows with at least one registration, and nothing else feeds `ListModels`,
+  `SaveSelection`, or `Registry.Complete`. A row survives full deregistration, so the reasoning override an
+  operator set comes back intact when the model is re-registered.
+- Registering never selects ([I3]): a registered model appears in its purpose's picker, and every user still
+  chooses their own.
 - Availability bookkeeping (`listed`, `last_seen_at`, and the label/context/pricing snapshot) is written **only by a
   successful** live read. A failed one writes nothing and is reported to the operator instead — treating an outage
   as evidence would retire the whole catalog the first time the network hiccuped.
@@ -109,20 +136,20 @@ master-only set).
   atomic. Start RPCs still receive refs explicitly and never infer them from this table.
 - The app writes **no default**. A fresh account has no rows; every stage renders "모델을 선택하세요" and reports
   `selected = null`, which is what the generation and analysis actions block on ([I3]).
-- `GetSelections` reports a saved ref that is no longer registered — or that the stage can no longer use (a model
-  saved for observe that lost `vision`) — as `missing` and **clears the row in the same call** (PRD §7: 마지막 선택
-  초기화). The clear is conditional on the row still holding that ref, so a choice the user makes between the read
+- `GetSelections` reports a saved ref that is no longer registered — or that was deregistered from the stage's
+  purpose — as `missing` and **clears the row in the same call** (PRD §7: 마지막 선택 초기화). The clear is conditional on the row still holding that ref, so a choice the user makes between the read
   and the clear survives. The client shows the old entry greyed with "등록된 모델 목록에서 사라졌어요" once; the next
   answer no longer has it, and the user must choose again. A saved ref whose provider has since lost its key is
   likewise unusable: greyed with the key reason, `selected = null`. While the catalog is loading or failed to load,
   nothing is judged — a valid choice is never called vanished because its list is not here.
-- `SaveSelection` accepts only a known stage and a registered, enabled model that suits the stage (observe needs
-  `vision`) — the same rules the dropdown shows, enforced where they can be trusted (`InvalidArgument` /
-  `NotFound` / `FailedPrecondition`). **No tier is consulted**: any account may save any registered model.
+- `SaveSelection` accepts only a known stage and a model registered to that stage's purpose whose provider is not
+  disabled — the same rules the dropdown shows, enforced where they can be trusted (`InvalidArgument` /
+  `NotFound` / `FailedPrecondition`). Observe's vision requirement is subsumed: the photo-analysis gate already
+  refused a text model at registration. **No tier is consulted**: any account may save any registered model.
 - A model the caller cannot currently **afford** is never reported `missing` and its row is never touched. A
   balance is temporary state the next renewal clears, so it invalidates nothing; the picker greys the entry with
   what it would cost ([plans.md](plans.md)).
-- A pair must contain two distinct enabled stage-suitable refs. `ApplyRecommendationSet` validates the complete
+- A pair must contain two distinct refs registered to the stage's purpose. `ApplyRecommendationSet` validates the complete
   three-stage, nine-slot set before one transaction; no partial rows survive rejection. A recommendation is never
   applied on mount, login, or account creation.
 
@@ -133,8 +160,10 @@ master-only set).
 - Recommendation-set refs are validated **at apply time**, against the catalog as it is then. Boot can no longer
   settle whether a referenced model exists — the catalog is curated data that changes while the process runs — so
   boot keeps shape validation only (three distinct stages, complete refs, candidates that differ).
-- A refused set names **every** offending ref at once, grouped by cause (unregistered · disabled · unsuitable for
-  its stage), because a set is applied whole and discovering its problems one attempt at a time is nine round trips.
+- A refused set names **every** offending ref at once, grouped by cause (unregistered · disabled · not registered
+  to its stage's purpose), because a set is applied whole and discovering its problems one attempt at a time is
+  nine round trips. With the purposes starting empty after the cutover, the shipped set refuses cleanly until the
+  operator registers its models.
 - The shipped opt-in `balanced-2026-08` set pins six model ids and one active/A-B selection per stage. Removed models
   stay readable from experiment snapshots but cannot be newly selected. Any tier may apply it: a set is refused only
   when a ref it names is unregistered, disabled, or unsuitable for its stage — never for the tier applying it. A CI
@@ -163,7 +192,8 @@ for them (plan 04 AC6), and that holds for the operator's catalog surface too, w
 | `MODEL_CATALOG_STALE_MS` | FE `shared/config` | 5 min — how long the user-facing catalog is trusted before a refetch |
 | `FEATURED_MODEL_PROVIDERS` | FE `shared/config` | ordered vendor slugs lifted to the top of the operator's list; display only |
 | `CATALOG_ROW_ESTIMATE_PX` · `CATALOG_ROW_OVERSCAN` | FE `shared/config` | the virtualized operator list's unmeasured-row height and its overscan |
-| the usable-model list | `catalog_models` rows | curated through `ModelCatalogService`; the seed migration carries the twelve models the yaml used to declare |
+| the usable-model list | `catalog_models` + `catalog_model_purposes` rows | curated per purpose through `ModelCatalogService`; the 0018 seed carries the twelve ex-yaml models, the 0020 migration seeds **no** registrations |
+| `MODEL_PURPOSES` | FE `shared/config` | the five purpose slugs in tab order; labels live in the i18n resources |
 | recommendation sets | `config/providers.yaml` | shape-validated at boot, ref-validated at apply time; no automatic apply |
 
 ## Model access is not a registry concern

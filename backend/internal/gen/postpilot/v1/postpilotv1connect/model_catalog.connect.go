@@ -36,9 +36,9 @@ const (
 	// ModelCatalogServiceListCatalogProcedure is the fully-qualified name of the ModelCatalogService's
 	// ListCatalog RPC.
 	ModelCatalogServiceListCatalogProcedure = "/postpilot.v1.ModelCatalogService/ListCatalog"
-	// ModelCatalogServiceEnableModelProcedure is the fully-qualified name of the ModelCatalogService's
-	// EnableModel RPC.
-	ModelCatalogServiceEnableModelProcedure = "/postpilot.v1.ModelCatalogService/EnableModel"
+	// ModelCatalogServiceSetModelPurposeProcedure is the fully-qualified name of the
+	// ModelCatalogService's SetModelPurpose RPC.
+	ModelCatalogServiceSetModelPurposeProcedure = "/postpilot.v1.ModelCatalogService/SetModelPurpose"
 	// ModelCatalogServiceUpdateModelProcedure is the fully-qualified name of the ModelCatalogService's
 	// UpdateModel RPC.
 	ModelCatalogServiceUpdateModelProcedure = "/postpilot.v1.ModelCatalogService/UpdateModel"
@@ -50,9 +50,11 @@ type ModelCatalogServiceClient interface {
 	// the provider has stopped offering. A live read that fails degrades to curated rows and
 	// says so in `fetch_error` rather than answering with an empty catalog.
 	ListCatalog(context.Context, *connect.Request[v1.ListCatalogRequest]) (*connect.Response[v1.ListCatalogResponse], error)
-	// Make a model selectable. The plan floor is required, never defaulted by the server:
-	// enabling a model at the wrong tier is worse than leaving it disabled.
-	EnableModel(context.Context, *connect.Request[v1.EnableModelRequest]) (*connect.Response[v1.EnableModelResponse], error)
+	// Register or deregister a model for ONE purpose. Registration is what makes a model
+	// visible to the matching user-facing stage (the generation purposes feed no stage yet);
+	// the server enforces the purpose's capability gate, so an ineligible model is refused
+	// whatever the client rendered. Registering never selects anything for anyone.
+	SetModelPurpose(context.Context, *connect.Request[v1.SetModelPurposeRequest]) (*connect.Response[v1.SetModelPurposeResponse], error)
 	// Change one curated model. Absent fields are not edits, so two operators changing
 	// different properties of one model do not overwrite each other.
 	UpdateModel(context.Context, *connect.Request[v1.UpdateModelRequest]) (*connect.Response[v1.UpdateModelResponse], error)
@@ -75,10 +77,10 @@ func NewModelCatalogServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(modelCatalogServiceMethods.ByName("ListCatalog")),
 			connect.WithClientOptions(opts...),
 		),
-		enableModel: connect.NewClient[v1.EnableModelRequest, v1.EnableModelResponse](
+		setModelPurpose: connect.NewClient[v1.SetModelPurposeRequest, v1.SetModelPurposeResponse](
 			httpClient,
-			baseURL+ModelCatalogServiceEnableModelProcedure,
-			connect.WithSchema(modelCatalogServiceMethods.ByName("EnableModel")),
+			baseURL+ModelCatalogServiceSetModelPurposeProcedure,
+			connect.WithSchema(modelCatalogServiceMethods.ByName("SetModelPurpose")),
 			connect.WithClientOptions(opts...),
 		),
 		updateModel: connect.NewClient[v1.UpdateModelRequest, v1.UpdateModelResponse](
@@ -92,9 +94,9 @@ func NewModelCatalogServiceClient(httpClient connect.HTTPClient, baseURL string,
 
 // modelCatalogServiceClient implements ModelCatalogServiceClient.
 type modelCatalogServiceClient struct {
-	listCatalog *connect.Client[v1.ListCatalogRequest, v1.ListCatalogResponse]
-	enableModel *connect.Client[v1.EnableModelRequest, v1.EnableModelResponse]
-	updateModel *connect.Client[v1.UpdateModelRequest, v1.UpdateModelResponse]
+	listCatalog     *connect.Client[v1.ListCatalogRequest, v1.ListCatalogResponse]
+	setModelPurpose *connect.Client[v1.SetModelPurposeRequest, v1.SetModelPurposeResponse]
+	updateModel     *connect.Client[v1.UpdateModelRequest, v1.UpdateModelResponse]
 }
 
 // ListCatalog calls postpilot.v1.ModelCatalogService.ListCatalog.
@@ -102,9 +104,9 @@ func (c *modelCatalogServiceClient) ListCatalog(ctx context.Context, req *connec
 	return c.listCatalog.CallUnary(ctx, req)
 }
 
-// EnableModel calls postpilot.v1.ModelCatalogService.EnableModel.
-func (c *modelCatalogServiceClient) EnableModel(ctx context.Context, req *connect.Request[v1.EnableModelRequest]) (*connect.Response[v1.EnableModelResponse], error) {
-	return c.enableModel.CallUnary(ctx, req)
+// SetModelPurpose calls postpilot.v1.ModelCatalogService.SetModelPurpose.
+func (c *modelCatalogServiceClient) SetModelPurpose(ctx context.Context, req *connect.Request[v1.SetModelPurposeRequest]) (*connect.Response[v1.SetModelPurposeResponse], error) {
+	return c.setModelPurpose.CallUnary(ctx, req)
 }
 
 // UpdateModel calls postpilot.v1.ModelCatalogService.UpdateModel.
@@ -118,9 +120,11 @@ type ModelCatalogServiceHandler interface {
 	// the provider has stopped offering. A live read that fails degrades to curated rows and
 	// says so in `fetch_error` rather than answering with an empty catalog.
 	ListCatalog(context.Context, *connect.Request[v1.ListCatalogRequest]) (*connect.Response[v1.ListCatalogResponse], error)
-	// Make a model selectable. The plan floor is required, never defaulted by the server:
-	// enabling a model at the wrong tier is worse than leaving it disabled.
-	EnableModel(context.Context, *connect.Request[v1.EnableModelRequest]) (*connect.Response[v1.EnableModelResponse], error)
+	// Register or deregister a model for ONE purpose. Registration is what makes a model
+	// visible to the matching user-facing stage (the generation purposes feed no stage yet);
+	// the server enforces the purpose's capability gate, so an ineligible model is refused
+	// whatever the client rendered. Registering never selects anything for anyone.
+	SetModelPurpose(context.Context, *connect.Request[v1.SetModelPurposeRequest]) (*connect.Response[v1.SetModelPurposeResponse], error)
 	// Change one curated model. Absent fields are not edits, so two operators changing
 	// different properties of one model do not overwrite each other.
 	UpdateModel(context.Context, *connect.Request[v1.UpdateModelRequest]) (*connect.Response[v1.UpdateModelResponse], error)
@@ -139,10 +143,10 @@ func NewModelCatalogServiceHandler(svc ModelCatalogServiceHandler, opts ...conne
 		connect.WithSchema(modelCatalogServiceMethods.ByName("ListCatalog")),
 		connect.WithHandlerOptions(opts...),
 	)
-	modelCatalogServiceEnableModelHandler := connect.NewUnaryHandler(
-		ModelCatalogServiceEnableModelProcedure,
-		svc.EnableModel,
-		connect.WithSchema(modelCatalogServiceMethods.ByName("EnableModel")),
+	modelCatalogServiceSetModelPurposeHandler := connect.NewUnaryHandler(
+		ModelCatalogServiceSetModelPurposeProcedure,
+		svc.SetModelPurpose,
+		connect.WithSchema(modelCatalogServiceMethods.ByName("SetModelPurpose")),
 		connect.WithHandlerOptions(opts...),
 	)
 	modelCatalogServiceUpdateModelHandler := connect.NewUnaryHandler(
@@ -155,8 +159,8 @@ func NewModelCatalogServiceHandler(svc ModelCatalogServiceHandler, opts ...conne
 		switch r.URL.Path {
 		case ModelCatalogServiceListCatalogProcedure:
 			modelCatalogServiceListCatalogHandler.ServeHTTP(w, r)
-		case ModelCatalogServiceEnableModelProcedure:
-			modelCatalogServiceEnableModelHandler.ServeHTTP(w, r)
+		case ModelCatalogServiceSetModelPurposeProcedure:
+			modelCatalogServiceSetModelPurposeHandler.ServeHTTP(w, r)
 		case ModelCatalogServiceUpdateModelProcedure:
 			modelCatalogServiceUpdateModelHandler.ServeHTTP(w, r)
 		default:
@@ -172,8 +176,8 @@ func (UnimplementedModelCatalogServiceHandler) ListCatalog(context.Context, *con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelCatalogService.ListCatalog is not implemented"))
 }
 
-func (UnimplementedModelCatalogServiceHandler) EnableModel(context.Context, *connect.Request[v1.EnableModelRequest]) (*connect.Response[v1.EnableModelResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelCatalogService.EnableModel is not implemented"))
+func (UnimplementedModelCatalogServiceHandler) SetModelPurpose(context.Context, *connect.Request[v1.SetModelPurposeRequest]) (*connect.Response[v1.SetModelPurposeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelCatalogService.SetModelPurpose is not implemented"))
 }
 
 func (UnimplementedModelCatalogServiceHandler) UpdateModel(context.Context, *connect.Request[v1.UpdateModelRequest]) (*connect.Response[v1.UpdateModelResponse], error) {

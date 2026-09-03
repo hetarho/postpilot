@@ -42,7 +42,9 @@ func (s *Service) StartRuleComparison(ctx context.Context, userID, ruleID, sourc
 	if err = requireSourceLanguageMatch(source, active); err != nil {
 		return "", "", err
 	}
-	if !s.personalizationModels.ModelEnabled(model) {
+	// The rule comparison runs the WRITE model (the wire field is write_model): membership
+	// is checked against the write purpose, whatever the historical error name says.
+	if !s.personalizationModels.ModelEnabled(model, llm.StageNameWrite) {
 		return "", "", ErrAnalyzeModelRequired
 	}
 	if err := s.retireStaleRules(ctx, userID, voiceID); err != nil {
@@ -368,7 +370,7 @@ func (s *Service) StartValidation(ctx context.Context, userID, voiceID string, a
 	if err != nil {
 		return "", "", err
 	}
-	if !s.personalizationModels.ModelEnabled(write) {
+	if !s.personalizationModels.ModelEnabled(write, llm.StageNameWrite) {
 		return "", "", ErrAnalyzeModelRequired
 	}
 	profile, err := s.Get(ctx, userID, voiceID)

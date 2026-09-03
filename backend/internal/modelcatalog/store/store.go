@@ -32,9 +32,21 @@ func (s *Store) List(ctx context.Context) ([]modelcatalog.Model, error) {
 	if err != nil {
 		return nil, fmt.Errorf("select catalog models: %w", err)
 	}
+	registrations, err := s.read.ListCatalogModelPurposes(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("select catalog model purposes: %w", err)
+	}
+	byModel := map[string][]modelcatalog.Purpose{}
+	for _, registration := range registrations {
+		purposes, err := parsePurposes(registration.ModelID, []string{registration.Purpose})
+		if err != nil {
+			return nil, err
+		}
+		byModel[registration.ModelID] = append(byModel[registration.ModelID], purposes...)
+	}
 	out := make([]modelcatalog.Model, 0, len(rows))
 	for _, row := range rows {
-		model, err := toModel(row)
+		model, err := toModel(sqlc.GetCatalogModelRow(row), byModel[row.ModelID])
 		if err != nil {
 			return nil, err
 		}
@@ -55,22 +67,35 @@ func get(ctx context.Context, q *sqlc.Queries, modelID string) (modelcatalog.Mod
 	if err != nil {
 		return modelcatalog.Model{}, fmt.Errorf("select catalog model: %w", err)
 	}
-	return toModel(row)
+	stored, err := q.GetCatalogModelPurposes(ctx, modelID)
+	if err != nil {
+		return modelcatalog.Model{}, fmt.Errorf("select catalog model purposes: %w", err)
+	}
+	purposes, err := parsePurposes(modelID, stored)
+	if err != nil {
+		return modelcatalog.Model{}, err
+	}
+	return toModel(row, purposes)
 }
 
 func (s *Store) Upsert(ctx context.Context, m modelcatalog.Model) error {
-	err := s.write.UpsertCatalogModel(ctx, sqlc.UpsertCatalogModelParams{
+	return upsert(ctx, s.write, m)
+}
+
+func upsert(ctx context.Context, q *sqlc.Queries, m modelcatalog.Model) error {
+	err := q.UpsertCatalogModel(ctx, sqlc.UpsertCatalogModelParams{
 		ModelID:             m.ModelID,
 		ProviderSlug:        m.ProviderSlug,
 		Label:               m.Label,
 		Vision:              boolToInt(m.Vision),
 		StructuredOutput:    boolToInt(m.StructuredOutput),
+		ImageOutput:         boolToInt(m.ImageOutput),
+		VideoOutput:         boolToInt(m.VideoOutput),
 		ContextTokens:       nullInt(m.ContextTokens),
 		InputUsdPerMillion:  nullString(m.InputUSDPerMillion),
 		OutputUsdPerMillion: nullString(m.OutputUSDPerMillion),
 		PricingCheckedAt:    nullString(m.PricingCheckedAt),
 		ReasoningEffort:     nullString(string(m.Reasoning)),
-		Enabled:             boolToInt(m.Enabled),
 		Listed:              boolToInt(m.Listed),
 		LastSeenAt:          nullTime(m.LastSeenAt),
 		CreatedAt:           formatTime(m.CreatedAt),
@@ -97,16 +122,12 @@ func (s *Store) Patch(ctx context.Context, modelID string, patch modelcatalog.Pa
 	if err != nil {
 		return modelcatalog.Model{}, err
 	}
-	if patch.Enabled != nil {
-		current.Enabled = *patch.Enabled
-	}
 	if patch.Reasoning != nil {
 		current.Reasoning = *patch.Reasoning
 	}
 	current.UpdatedAt = updatedAt
 
 	n, err := q.UpdateCatalogModelCuration(ctx, sqlc.UpdateCatalogModelCurationParams{
-		Enabled:         boolToInt(current.Enabled),
 		ReasoningEffort: nullString(string(current.Reasoning)),
 		UpdatedAt:       formatTime(current.UpdatedAt),
 		ModelID:         modelID,
@@ -121,6 +142,59 @@ func (s *Store) Patch(ctx context.Context, modelID string, patch modelcatalog.Pa
 		return modelcatalog.Model{}, fmt.Errorf("commit patch catalog model: %w", err)
 	}
 	return current, nil
+}
+
+// RegisterPurpose writes the row snapshot and the registration together. One transaction,
+// so an error between the two writes cannot leave a curated row whose registration
+// silently did not stick. Idempotent: re-checking an already-checked box only refreshes
+// the snapshot, and the original registration keeps its created_at.
+func (s *Store) RegisterPurpose(ctx context.Context, m modelcatalog.Model, purpose modelcatalog.Purpose) error {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin register model purpose: %w", err)
+	}
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	if err := upsert(ctx, q, m); err != nil {
+		return err
+	}
+	err = q.AddCatalogModelPurpose(ctx, sqlc.AddCatalogModelPurposeParams{
+		ModelID: m.ModelID, Purpose: string(purpose), CreatedAt: formatTime(m.UpdatedAt),
+	})
+	if err != nil {
+		return fmt.Errorf("add catalog model purpose: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit register model purpose: %w", err)
+	}
+	return nil
+}
+
+// DeregisterPurpose removes one registration and stamps updated_at in the same
+// transaction — a deregistration is a curation edit. The catalog row itself stays, so the
+// reasoning override survives a full deregistration the way it survived `enabled = 0`.
+func (s *Store) DeregisterPurpose(ctx context.Context, modelID string, purpose modelcatalog.Purpose, at time.Time) error {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin deregister model purpose: %w", err)
+	}
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	err = q.RemoveCatalogModelPurpose(ctx, sqlc.RemoveCatalogModelPurposeParams{
+		ModelID: modelID, Purpose: string(purpose),
+	})
+	if err != nil {
+		return fmt.Errorf("remove catalog model purpose: %w", err)
+	}
+	if err := q.TouchCatalogModelCuration(ctx, sqlc.TouchCatalogModelCurationParams{
+		UpdatedAt: formatTime(at), ModelID: modelID,
+	}); err != nil {
+		return fmt.Errorf("stamp catalog model curation: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit deregister model purpose: %w", err)
+	}
+	return nil
 }
 
 // RefreshAvailability records what one successful upstream read saw.
@@ -148,6 +222,8 @@ func (s *Store) RefreshAvailability(ctx context.Context, seen []modelcatalog.Can
 			Label:               candidate.Label,
 			Vision:              boolToInt(candidate.Vision),
 			StructuredOutput:    boolToInt(candidate.StructuredOutput),
+			ImageOutput:         boolToInt(candidate.ImageOutput),
+			VideoOutput:         boolToInt(candidate.VideoOutput),
 			ContextTokens:       nullInt(candidate.ContextTokens),
 			InputUsdPerMillion:  nullString(candidate.InputUSDPerMillion),
 			OutputUsdPerMillion: nullString(candidate.OutputUSDPerMillion),
@@ -165,7 +241,7 @@ func (s *Store) RefreshAvailability(ctx context.Context, seen []modelcatalog.Can
 	return nil
 }
 
-func toModel(row sqlc.CatalogModel) (modelcatalog.Model, error) {
+func toModel(row sqlc.GetCatalogModelRow, purposes []modelcatalog.Purpose) (modelcatalog.Model, error) {
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
 		return modelcatalog.Model{}, fmt.Errorf("parse catalog model created_at: %w", err)
@@ -190,23 +266,41 @@ func toModel(row sqlc.CatalogModel) (modelcatalog.Model, error) {
 	if !reasoning.Valid() {
 		return modelcatalog.Model{}, fmt.Errorf("catalog model %s: unknown reasoning_effort %q", row.ModelID, row.ReasoningEffort.String)
 	}
+	// The join rows arrive in column order; the domain order is the display order.
+	modelcatalog.SortPurposes(purposes)
 	return modelcatalog.Model{
 		ModelID:             row.ModelID,
 		ProviderSlug:        row.ProviderSlug,
 		Label:               row.Label,
 		Vision:              row.Vision == 1,
 		StructuredOutput:    row.StructuredOutput == 1,
+		ImageOutput:         row.ImageOutput == 1,
+		VideoOutput:         row.VideoOutput == 1,
 		ContextTokens:       row.ContextTokens.Int64,
 		InputUSDPerMillion:  row.InputUsdPerMillion.String,
 		OutputUSDPerMillion: row.OutputUsdPerMillion.String,
 		PricingCheckedAt:    row.PricingCheckedAt.String,
 		Reasoning:           reasoning,
-		Enabled:             row.Enabled == 1,
+		Purposes:            purposes,
 		Listed:              row.Listed == 1,
 		LastSeenAt:          lastSeen,
 		CreatedAt:           created,
 		UpdatedAt:           updated,
 	}, nil
+}
+
+// parsePurposes maps stored purpose slugs into the domain type. The column CHECK refuses
+// anything else, so a failure means the row was written by something other than this code.
+func parsePurposes(modelID string, values []string) ([]modelcatalog.Purpose, error) {
+	purposes := make([]modelcatalog.Purpose, 0, len(values))
+	for _, value := range values {
+		purpose, err := modelcatalog.ParsePurpose(value)
+		if err != nil {
+			return nil, fmt.Errorf("catalog model %s: %w", modelID, err)
+		}
+		purposes = append(purposes, purpose)
+	}
+	return purposes, nil
 }
 
 func boolToInt(value bool) int64 {

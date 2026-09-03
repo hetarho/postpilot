@@ -37,6 +37,12 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 	models := s.catalog.Models()
 	out := make([]CatalogModel, 0, len(models))
 	for _, info := range models {
+		// A model registered only to a purpose no stage consumes yet (image/video
+		// generation) is an operator setting, not a user-facing catalog entry — it never
+		// crosses this wire.
+		if len(info.Stages) == 0 {
+			continue
+		}
 		required := s.credits.ForCalls([]PlannedCall{{Ref: info.Ref, Count: 1}})
 		out = append(out, CatalogModel{
 			Info: info, RequiredCredits: required,
@@ -82,8 +88,10 @@ func (s *Service) GetSelections(ctx context.Context, userID string) ([]Selection
 			selections[i].Slot = SlotActive
 		}
 		info, ok := s.catalog.Lookup(selections[i].Ref)
-		// A model that lost `vision` in the yaml is as gone for observe as one deleted:
-		// the dropdown no longer lists it, so the choice is cleared the same way.
+		// A model deregistered from this stage's purpose is as gone as one deleted: the
+		// dropdown no longer lists it, so the choice is cleared the same way. This is also
+		// the machinery that absorbs change 20's empty cutover — every pre-cutover
+		// selection lands here on its next read, with no bespoke migration clearing.
 		if ok && Suitable(selections[i].Stage, info) {
 			continue
 		}
@@ -239,7 +247,7 @@ func (s *Service) validateRef(stage Stage, ref llm.ModelRef) error {
 		return fmt.Errorf("%w: %s (%s)", ErrModelDisabled, ref, info.DisabledReason)
 	}
 	if !Suitable(stage, info) {
-		return fmt.Errorf("%w: %s has no vision, %s needs it", ErrModelUnsuitable, ref, stage)
+		return fmt.Errorf("%w: %s is not registered for %s", ErrModelUnsuitable, ref, stage)
 	}
 	return nil
 }

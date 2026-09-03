@@ -5,9 +5,10 @@ package postpilot.v1;
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 
-// model_catalog.proto is the OPERATOR's half of the model story (plan 18): which of the
-// provider's models this installation offers, and at which plan tier. ProviderService is
-// the user's half — what is offered, and what they last picked.
+// model_catalog.proto is the OPERATOR's half of the model story (plan 18, change 20):
+// which of the provider's models this installation offers, and FOR WHICH PURPOSES —
+// photo-analysis, style-analysis, writing, image-generation, video-generation.
+// ProviderService is the user's half — what each stage may pick, and what they last picked.
 //
 // Every procedure here is master-only, enforced by the auth interceptor rather than by the
 // client. Nothing carries an API key or the provider's base URL: the wire has no field for
@@ -17,9 +18,11 @@ service ModelCatalogService {
   // the provider has stopped offering. A live read that fails degrades to curated rows and
   // says so in `fetch_error` rather than answering with an empty catalog.
   rpc ListCatalog(ListCatalogRequest) returns (ListCatalogResponse) {}
-  // Make a model selectable. The plan floor is required, never defaulted by the server:
-  // enabling a model at the wrong tier is worse than leaving it disabled.
-  rpc EnableModel(EnableModelRequest) returns (EnableModelResponse) {}
+  // Register or deregister a model for ONE purpose. Registration is what makes a model
+  // visible to the matching user-facing stage (the generation purposes feed no stage yet);
+  // the server enforces the purpose's capability gate, so an ineligible model is refused
+  // whatever the client rendered. Registering never selects anything for anyone.
+  rpc SetModelPurpose(SetModelPurposeRequest) returns (SetModelPurposeResponse) {}
   // Change one curated model. Absent fields are not edits, so two operators changing
   // different properties of one model do not overwrite each other.
   rpc UpdateModel(UpdateModelRequest) returns (UpdateModelResponse) {}
@@ -40,10 +43,10 @@ message CatalogEntry {
   // provider cost remains authoritative for spending.
   string input_usd_per_million = 8;
   string output_usd_per_million = 9;
-  // curated: a catalog row exists, so enabling and reasoning_effort are decisions somebody
+  // curated: a catalog row exists, so purposes and reasoning_effort are decisions somebody
   // made rather than the defaults an un-curated candidate is shown with.
   bool curated = 10;
-  bool enabled = 11;
+  reserved 11;  // enabled — visibility is per-purpose registration now (change 20).
   reserved 12;  // min_plan — a model is no longer gated by tier.
   // The provider still offered this model at the last successful read. A false value is a
   // flag for the operator, not an action: the model is served disabled-with-reason to users
@@ -54,6 +57,13 @@ message CatalogEntry {
   string reasoning_effort = 14;
   // Upstream publication time in epoch seconds; orders a vendor's models newest-first.
   int64 source_created_at = 15;
+  // The purposes this model is registered to, as their stable slugs
+  // ("photo-analysis" | "style-analysis" | "writing" | "image-generation" | "video-generation").
+  repeated string purposes = 16;
+  // What the model can produce (architecture.output_modalities) — the flags the
+  // image/video generation purposes gate on, as `vision` gates photo-analysis.
+  bool image_output = 17;
+  bool video_output = 18;
 }
 
 message ListCatalogRequest {
@@ -72,18 +82,22 @@ message ListCatalogResponse {
   string fetch_error = 4;
 }
 
-message EnableModelRequest {
+message SetModelPurposeRequest {
   string model_id = 1;
-  reserved 2;  // min_plan
+  // One of the purpose slugs CatalogEntry.purposes uses.
+  string purpose = 2;
+  // true registers, false deregisters. Deregistering keeps the curated row (and its
+  // reasoning override); it only stops serving the model to that purpose.
+  bool registered = 3;
 }
 
-message EnableModelResponse {
+message SetModelPurposeResponse {
   CatalogEntry entry = 1;
 }
 
 message UpdateModelRequest {
   string model_id = 1;
-  optional bool enabled = 2;
+  reserved 2;  // enabled — visibility is per-purpose registration now (change 20).
   reserved 3;  // min_plan
   // "" clears the override and returns the model to the stage reasoning policy.
   optional string reasoning_effort = 4;

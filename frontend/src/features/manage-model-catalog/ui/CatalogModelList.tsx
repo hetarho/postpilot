@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import type { AdminCatalogEntry } from '@/entities/model-catalog'
-import { CATALOG_ROW_ESTIMATE_PX, CATALOG_ROW_OVERSCAN } from '@/shared/config'
+import { CATALOG_ROW_ESTIMATE_PX, CATALOG_ROW_OVERSCAN, type ModelPurpose } from '@/shared/config'
 import { CatalogModelRow } from './CatalogModelRow'
 
 /** The catalog list, virtualized.
@@ -20,7 +20,13 @@ import { CatalogModelRow } from './CatalogModelRow'
  *  Row heights are measured rather than assumed — an enabled row is much taller than a plain
  *  one, and a long Korean label wraps — so `estimateSize` only positions the scrollbar until the
  *  real height is known. */
-export function CatalogModelList({ entries }: { entries: readonly AdminCatalogEntry[] }) {
+export function CatalogModelList({
+  entries,
+  purpose,
+}: {
+  entries: readonly AdminCatalogEntry[]
+  purpose: ModelPurpose
+}) {
   const listRef = useRef<HTMLUListElement>(null)
   const [listOffset, setListOffset] = useState(0)
 
@@ -39,9 +45,10 @@ export function CatalogModelList({ entries }: { entries: readonly AdminCatalogEn
     estimateSize: () => CATALOG_ROW_ESTIMATE_PX,
     overscan: CATALOG_ROW_OVERSCAN,
     scrollMargin: listOffset,
-    // Keyed by model id, so measured heights follow their row when a filter changes the order
-    // instead of being reused by whatever now sits at that index.
-    getItemKey: (index) => entries[index]?.modelId ?? index,
+    // Keyed by purpose + model id: heights still follow their row across filter changes,
+    // and a tab switch remounts the row, so mutation state from one purpose (a failure
+    // message, an in-flight registration) is never shown under another.
+    getItemKey: (index) => `${purpose}:${entries[index]?.modelId ?? index}`,
     measureElement: (element) => {
       // A visible row is never really zero pixels tall, so a zero here means it has not been
       // laid out yet. Believing it collapses the list's height to nothing, which makes the
@@ -68,7 +75,7 @@ export function CatalogModelList({ entries }: { entries: readonly AdminCatalogEn
             className="absolute top-0 left-0 w-full pb-3"
             style={{ transform: `translateY(${item.start - virtualizer.options.scrollMargin}px)` }}
           >
-            <CatalogModelRow entry={entry} />
+            <CatalogModelRow entry={entry} purpose={purpose} />
           </li>
         )
       })}
