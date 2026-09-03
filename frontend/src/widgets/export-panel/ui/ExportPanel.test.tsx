@@ -56,6 +56,160 @@ it('switches four synchronous outputs with their guidance and keeps the Naver ti
   expect(fetchSpy).not.toHaveBeenCalled()
 })
 
+// ── The tag copy field (change 22) ────────────────────────────────────────────────────────────
+//
+// Plan 08 omits tags from the Naver and Tistory bodies because those platforms have their own tag
+// box, and then showed them nowhere at all. The field is the surface, not a format change: all
+// four outputs stay byte-identical, which the converter assertions above and below still hold.
+
+it('offers the tags as a ready-to-paste string on every format tab', async () => {
+  const user = userEvent.setup()
+  renderPanel()
+
+  for (const tab of ['네이버 블로그', '티스토리', '자체 사이트', '마크다운']) {
+    await user.click(screen.getByRole('tab', { name: tab }))
+    expect(screen.getByLabelText('태그')).toHaveValue('#제주 #산책 #여행')
+    expect(screen.getByRole('button', { name: '태그 복사' })).toBeInTheDocument()
+  }
+})
+
+it('puts the hashtag string on the clipboard and confirms it', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  setClipboard({ writeText })
+  renderPanel()
+
+  await user.click(screen.getByRole('button', { name: '태그 복사' }))
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith('#제주 #산책 #여행'))
+  expect(await screen.findByText('태그가 복사됐어요')).toBeInTheDocument()
+})
+
+it('copies an already-#-prefixed tag with exactly one #', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  setClipboard({ writeText })
+  render(
+    <ExportPanel
+      content={{ ...POST_CONTENT_FIXTURE, tags: ['#제주', '산책'] }}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '태그 복사' }))
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith('#제주 #산책'))
+})
+
+it('renders neither field nor label for a post with no tags', () => {
+  render(
+    <ExportPanel
+      content={{ ...POST_CONTENT_FIXTURE, tags: [] }}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+
+  expect(screen.queryByLabelText('태그')).not.toBeInTheDocument()
+  expect(screen.queryByText('태그')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '태그 복사' })).not.toBeInTheDocument()
+  // The Naver title field is untouched by the tags being absent.
+  expect(screen.getByLabelText('네이버 제목')).toHaveValue(POST_CONTENT_FIXTURE.title)
+})
+
+it('falls back to manual selection beside the tag field when the clipboard refuses', async () => {
+  const user = userEvent.setup()
+  setClipboard(undefined)
+  const select = vi.spyOn(HTMLInputElement.prototype, 'select')
+  renderPanel()
+
+  await user.click(screen.getByRole('button', { name: '태그 복사' }))
+
+  // The field is always mounted, so `copyText` selects it itself — no reveal step.
+  await waitFor(() => expect(select).toHaveBeenCalled())
+  expect(
+    screen.getByText('자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요'),
+  ).toBeInTheDocument()
+  // On the Naver tab the BODY fallback is what reveals the raw field; a tags fallback must not.
+  expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
+  expect(screen.getByRole('article', { name: '네이버 미리보기' })).toBeInTheDocument()
+})
+
+it('drops a tag confirmation when the content changes to a different tag list', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  setClipboard({ writeText })
+  const view = render(
+    <ExportPanel
+      content={POST_CONTENT_FIXTURE}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '태그 복사' }))
+  expect(await screen.findByText('태그가 복사됐어요')).toBeInTheDocument()
+
+  view.rerender(
+    <ExportPanel
+      content={{ ...POST_CONTENT_FIXTURE, tags: ['제주', '산책'] }}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+  expect(screen.queryByText('태그가 복사됐어요')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('태그')).toHaveValue('#제주 #산책')
+})
+
+// The tag field is conditionally mounted, so a clipboard result that settles after the tags are
+// gone must be treated as stale rather than compared against a detached input.
+it('drops a tag copy whose field unmounted before the result settled', async () => {
+  const user = userEvent.setup()
+  let resolveWrite: () => void = () => undefined
+  const writeText = vi.fn(() => new Promise<void>((resolve) => (resolveWrite = resolve)))
+  setClipboard({ writeText })
+  const view = render(
+    <ExportPanel
+      content={POST_CONTENT_FIXTURE}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '태그 복사' }))
+  await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
+  view.rerender(
+    <ExportPanel
+      content={{ ...POST_CONTENT_FIXTURE, tags: [] }}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+  resolveWrite()
+  await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+  expect(screen.queryByLabelText('태그')).not.toBeInTheDocument()
+  expect(screen.queryByText('태그가 복사됐어요')).not.toBeInTheDocument()
+})
+
+// A third text target must not be able to report a stale copy as current by comparing against
+// another field's element — the reason the per-target ref lookup replaced a two-way ternary.
+it('does not confirm a tag copy against the title field', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  setClipboard({ writeText })
+  renderPanel()
+
+  await user.click(screen.getByRole('button', { name: '태그 복사' }))
+  expect(await screen.findByText('태그가 복사됐어요')).toBeInTheDocument()
+  expect(screen.queryByText('제목이 복사됐어요')).not.toBeInTheDocument()
+})
+
 // ── The rendered Naver preview (change 18) ────────────────────────────────────────────────────
 //
 // The Naver tab shows the POST, not the wire text: the `[사진 …]` markers exist only in what the

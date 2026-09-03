@@ -67,6 +67,17 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
   remints it), or no photo in the post matches that marker. A photo that cannot be read offers no copy control at
   all rather than one that would write an empty image; the same holds for a photo still carrying its local upload
   preview.
+- **The generated tags get a field of their own, on every format tab.** Plan 08 omits tags from the
+  Naver and Tistory bodies because those platforms have their own tag box, and the site HTML and
+  Markdown front matter embed theirs as markup — so the panel showed them nowhere usable. A
+  read-only field beside its own copy button carries them as one ready-to-paste string:
+  `#tag1 #tag2 #tag3`, each tag prefixed exactly once (a tag the model already wrote with a `#` is
+  not double-prefixed), single-space separated, no trailing separator. It is offered on all four
+  tabs, because what a tab embeds and what a tag box wants are different artifacts. A post whose
+  tag list is empty renders no field and no label — an empty tag list is not an empty control. The
+  copy behaves as the title's does: same confirmation, same feedback dwell, same manual-selection
+  fallback beside the field, and the same staleness rule. **The four derived outputs are
+  unchanged** — this adds a surface, not a format.
 - **Blocked and unreadable are separated by the URL, not by the response.** An object store may answer an expired
   read with an error that carries no CORS headers — R2 does — which the browser withholds, so the fetch rejects
   exactly as it does when the bucket allows this origin no `GET`. The lifetime a presigned URL states in its own

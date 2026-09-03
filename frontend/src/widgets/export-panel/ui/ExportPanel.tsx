@@ -12,11 +12,16 @@ import { COPY_FEEDBACK_MS } from '@/shared/config'
 import { copyImage, copyText, type CopyFallbackElement, type CopyImageResult } from '@/shared/lib'
 import { Button, FieldLabel, SegmentedControl, Textarea, TextField, Typography } from '@/shared/ui'
 import { EXPORT_FORMATS, type ExportFormat } from '../config/guidance'
+import { toHashtags } from '../lib/hashtags'
 
-/** `output` and `title` are the two text copies; a photo target names the marker it belongs to,
- *  so one file carrying two markers is still two independent copies. It is a template literal
- *  rather than a bare `string`, which would collapse the union and take the checking with it. */
-type CopyTarget = 'output' | 'title' | `photo:${number}:${string}`
+/** `output`, `title` and `tags` are the three text copies; a photo target names the marker it
+ *  belongs to, so one file carrying two markers is still two independent copies. It is a template
+ *  literal rather than a bare `string`, which would collapse the union and take the checking with
+ *  it. */
+type CopyTarget = TextCopyTarget | `photo:${number}:${string}`
+
+/** The copies that have a field to select as their manual fallback. */
+type TextCopyTarget = 'output' | 'title' | 'tags'
 
 /** Every way a photo copy can fail, from `copyImage`. `copied` is not one of them. */
 type FailedCopyKind = Exclude<CopyImageResult['kind'], 'copied'>
@@ -47,7 +52,7 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
   // CONTENT IDENTITY rides along because the value alone would resurrect a dismissed fallback when
   // an edit is undone (the output string comes back; the failed copy does not).
   const [manualCopy, setManualCopy] = useState<{
-    target: 'output' | 'title'
+    target: TextCopyTarget
     value: string
     source: PostContent
   }>()
@@ -56,6 +61,7 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
   const [photoFailure, setPhotoFailure] = useState<{ target: CopyTarget; kind: FailedCopyKind }>()
   const outputRef = useRef<HTMLTextAreaElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
+  const tagsRef = useRef<HTMLInputElement>(null)
   const copyButtonRef = useRef<HTMLButtonElement>(null)
   const feedbackTimer = useRef<number | undefined>(undefined)
   const copyGeneration = useRef(0)
@@ -71,6 +77,9 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
     [content, contentLanguage, createdAt, images],
   )
   const output = outputs[format]
+  // Empty for a post with no usable tags, which is what keeps the field off the screen entirely
+  // rather than mounting an empty control (§7).
+  const hashtags = toHashtags(content.tags)
   // Marker index per block index, from the SAME canonical block array `toNaver` walks, so a photo
   // in the preview and a `[사진 …]` marker in the copied text cannot drift apart: they match by
   // position. The marker index — not the block index — is the copy target's identity, unchanged
@@ -164,18 +173,22 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
 
   /** `fallback` is null when the manual field is not mounted yet (the Naver preview): the copy is
    *  still attempted, and a refusal reveals the field — the effect above then selects it. */
-  async function copy(
-    target: 'output' | 'title',
-    value: string,
-    fallback: CopyFallbackElement | null,
-  ) {
+  async function copy(target: TextCopyTarget, value: string, fallback: CopyFallbackElement | null) {
     const generation = ++copyGeneration.current
+    // Looked up per target, not chosen by a two-way ternary: with three text copies a ternary
+    // would compare a tags copy against the TITLE field's element and report a stale copy as
+    // current. Read through the REF, not snapshotted from it here: the tags field is
+    // conditionally mounted, so a result settling after it unmounted has to compare against the
+    // ref as it stands now — a snapshot would keep matching a detached input.
+    const fieldOf: Record<TextCopyTarget, () => CopyFallbackElement | null> = {
+      output: () => outputRef.current,
+      title: () => titleRef.current,
+      tags: () => tagsRef.current,
+    }
     const isCurrent = () =>
       mounted.current &&
       copyGeneration.current === generation &&
-      (fallback === null ||
-        (fallback.value === value &&
-          (target === 'output' ? outputRef.current === fallback : titleRef.current === fallback)))
+      (fallback === null || (fallback.value === value && fieldOf[target]() === fallback))
     setCopied(undefined)
     // `manualCopy` is NOT cleared up front the way the other feedback is: on the Naver tab it is
     // what keeps the revealed fallback field mounted, and clearing it here would unmount the field
@@ -219,6 +232,17 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
     copied?.target === 'output' && copied.value === output
       ? t('action.copied', { ns: 'common' })
       : outputFellBack
+        ? t('export.manualCopy')
+        : ''
+  // Both comparisons are what make the staleness rule hold by DERIVATION: a confirmation shown
+  // for one tag list cannot survive a content change to a different one, and the content-identity
+  // check stops a dismissed fallback resurrecting when an edit is undone.
+  const tagsStatus =
+    copied?.target === 'tags' && copied.value === hashtags
+      ? t('export.tagsCopied')
+      : manualCopy?.target === 'tags' &&
+          manualCopy.value === hashtags &&
+          manualCopy.source === content
         ? t('export.manualCopy')
         : ''
 
@@ -279,6 +303,44 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
               className="text-content-tertiary mt-1 min-h-5"
             >
               {titleStatus}
+            </Typography>
+          </div>
+        )}
+
+        {/* Outside the `naver` branch on purpose: the site HTML and the Markdown front matter
+            embed their tags as markup, and a ready-to-paste string is a different artifact worth
+            having on every tab. Mounted only when there is something to paste — an empty tag list
+            gets no field and no label (§7). Field order reads title → tags → output. */}
+        {hashtags && (
+          <div className="mt-4">
+            <FieldLabel htmlFor="export-tags">{t('export.tags')}</FieldLabel>
+            <div className="mt-2 flex items-center gap-2">
+              {/* `min-w-0` on the field, `shrink-0` on the button, exactly as the title above:
+                  the tags are model output and must be the thing that gives way (§8.5). */}
+              <TextField
+                id="export-tags"
+                ref={tagsRef}
+                value={hashtags}
+                readOnly
+                className="min-w-0 flex-1"
+              />
+              <Button
+                variant="secondary"
+                className="shrink-0"
+                // The field is always mounted when this renders, so `copyText` gets a real
+                // fallback element and selects it itself — no reveal effect, unlike the Naver body.
+                onClick={() => void copy('tags', hashtags, tagsRef.current)}
+              >
+                {t('export.copyTags')}
+              </Button>
+            </div>
+            <Typography
+              variant="body"
+              as="p"
+              role="status"
+              className="text-content-tertiary mt-1 min-h-5"
+            >
+              {tagsStatus}
             </Typography>
           </div>
         )}
