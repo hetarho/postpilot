@@ -150,8 +150,6 @@ export const models = {
         '비디오를 출력할 수 있는 모델만 이 용도에 등록할 수 있어서, 그 모델들만 보여 줍니다.',
     },
     emptyForPurpose: '이 용도의 조건을 만족하는 모델이 아직 없어요.',
-    emptyForVideo:
-      'OpenRouter에 아직 비디오 출력 모델이 거의 없어서 이 탭은 비어 있을 수 있어요. 목록이 갱신되면 여기에서 등록할 수 있습니다.',
     search: '검색',
     searchPlaceholder: '모델 이름이나 아이디',
     provider: '제공사',
@@ -182,6 +180,7 @@ export const models = {
       '등록해 둔 모델 {{count}}개를 제공사가 더 이상 제공하지 않아요. 사용자에게는 사용할 수 없는 모델로 표시되니, 확인한 뒤에 체크를 해제해 주세요.',
     context: '컨텍스트 {{tokens}} 토큰',
     price: '100만 토큰당 입력 ${{in}} · 출력 ${{out}}',
+    priceUnpublished: '토큰 단가 미공개',
     reasoning: '추론 강도',
     reasoningDefault: '단계 기본값',
   },

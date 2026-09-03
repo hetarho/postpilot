@@ -71,10 +71,15 @@ export function CatalogModelRow({
             {t('catalog.context', { tokens: Number(entry.contextTokens).toLocaleString() })}
           </Typography>
         )}
-        {entry.inputUsdPerMillion !== '' && (
+        {/* A video model publishes no token price at all, and a zero there is the absence of
+            one rather than "free" — so the row says which of the two it is instead of
+            rendering $0 or nothing. */}
+        {entry.inputUsdPerMillion !== '' || entry.outputUsdPerMillion !== '' ? (
           <Typography variant="meta">
             {t('catalog.price', { in: entry.inputUsdPerMillion, out: entry.outputUsdPerMillion })}
           </Typography>
+        ) : (
+          <Typography variant="meta">{t('catalog.priceUnpublished')}</Typography>
         )}
       </div>
 

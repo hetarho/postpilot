@@ -2,19 +2,30 @@
 
 How the app learns which models exist: the endpoint, the fields we consume, the mapping into our own
 `catalog_models` shape, and the cache/availability semantics. Owned by
-[plan 18](../plan/18.openrouter-model-catalog-and-admin-model.md) and built by job 46. The OpenRouter response
-facts below were verified against the live API on 2026-09-03.
+[plan 18](../plan/18.openrouter-model-catalog-and-admin-model.md) and built by jobs 46 and 48. The OpenRouter
+response facts below were verified against the live API and its published OpenAPI spec on 2026-09-03.
 
 Owner in code: `backend/internal/modelcatalog/openrouter` (the HTTP client + TTL cache) and
 `backend/internal/modelcatalog` (mapping + availability bookkeeping).
 
 ## The endpoint
 
-- `GET {base_url}/models` — with the shipped provider entry that is `https://openrouter.ai/api/v1/models`.
-  The URL is derived from the provider's existing `base_url`; no separate catalog URL is configured.
+- `GET {base_url}/models?output_modalities=text,image,video` — with the shipped provider entry that is
+  `https://openrouter.ai/api/v1/models`. The URL is derived from the provider's existing `base_url`; no separate
+  catalog URL is configured.
+- **The query is mandatory, not a filter for convenience.** OpenRouter's spec for this parameter reads: "Accepts a
+  comma-separated list of modalities (text, image, embeddings, audio, video, rerank, speech, transcription) or
+  `all` to include all models. **Defaults to `text`.**" A request without it therefore returns *text-output models
+  only*: 424 of the 572 models the catalog actually holds, with **zero** video models and only the 11 image models
+  that also answer in text. The three requested values are exactly what the five curated purposes need — `text` for
+  photo analysis, style analysis and writing; `image` and `video` for the two generation purposes. `all` is
+  deliberately not requested: embeddings, rerank, speech and transcription models serve no purpose this product
+  curates.
+- Measured on 2026-09-03: `text` 424 · `image` 50 (39 image-only + 11 image+text) · `video` 28 · `all` 572.
 - **No authentication is required** for the list; the client sends no `Authorization` header, so a missing
   `OPENROUTER_API_KEY` disables model *calls* (plan 04 rule) but never blocks *browsing* the catalog.
-- The response is one JSON document, `{"data": [<model>, …]}`, ~420 entries (~1.5 MB). OpenRouter serves it
+- The response is one JSON document, `{"data": [<model>, …]}`, ~490 entries for the three requested modalities
+  (~1.7 MB). OpenRouter serves it
   edge-cached; optional `offset`/`limit` pagination exists but a single unpaginated fetch is the contract here —
   the merge needs the whole list anyway to judge availability.
 - Plain `net/http` under `CatalogFetchTimeout`; no SDK, keeping the `internal/llm` boundary test's
@@ -34,7 +45,8 @@ One model object (fields we ignore elided):
   "description": "…",
   "context_length": 1048576,
   "architecture": { "input_modalities": ["text", "image"], "output_modalities": ["text"] },
-  "pricing": { "prompt": "0.00000125", "completion": "0.00000425" },
+  "pricing": { "prompt": "0.00000125", "completion": "0.00000425",
+               "image_token": "0.0000024", "image_output": "0.00003" },
   "supported_parameters": ["structured_outputs", "tools", "reasoning", "…"]
 }
 ```
@@ -48,10 +60,33 @@ One model object (fields we ignore elided):
 | `description` | admin display only | not persisted |
 | `context_length` | `context_tokens` | verbatim; nullable when absent |
 | `"image" ∈ architecture.input_modalities` | `vision` | gates photo-analysis registration (observe consumes images as input) |
-| `"image" ∈ architecture.output_modalities` | `image_output` | gates image-generation registration (change 20); no feature consumes it yet |
-| `"video" ∈ architecture.output_modalities` | `video_output` | gates video-generation registration (change 20); OpenRouter lists few or no such models today, so the tab may be empty |
+| `"image" ∈ architecture.output_modalities` | `image_output` | gates image-generation registration (change 20); no feature consumes the registration yet |
+| `"video" ∈ architecture.output_modalities` | `video_output` | gates video-generation registration (change 20); 28 such models exist, reachable only through the `output_modalities` query above |
 | `"structured_outputs" ∈ supported_parameters` | `structured_output` | whether the adapter may send `response_format: json_schema` |
-| `pricing.prompt` / `pricing.completion` | `input_usd_per_million` / `output_usd_per_million` | decimal **strings in USD per token**; multiply by 10⁶ with decimal string arithmetic (no float round-trip) to match plan 09's $/1M display convention; `pricing_checked_at` := fetch time |
+| `pricing.*` | `input_usd_per_million` / `output_usd_per_million` | decimal **strings in USD per token**, multiplied by 10⁶ with decimal string arithmetic (no float round-trip) to match plan 09's $/1M display convention; `pricing_checked_at` := fetch time. Which keys apply depends on the output modality — see below |
+
+### Which pricing keys apply (change 20)
+
+The source publishes several price axes and a model is billed on only some of them, so the pair we store is chosen
+by what the model answers in:
+
+| Model answers in | `input_usd_per_million` | `output_usd_per_million` |
+|---|---|---|
+| text (incl. image+text) | `pricing.prompt` — **a zero is a real price** (a free model) | `pricing.completion` — likewise |
+| image only | `pricing.prompt` if non-zero, else `pricing.image_token` | `pricing.completion` if non-zero, else `pricing.image_output` |
+| video | unknown (empty) | unknown (empty) |
+
+- A model that answers only in images is **not billed on text tokens at all**, so a zero `prompt`/`completion`
+  there is the *absence* of a price rather than "free", and the image-token pair is what it charges.
+- Every one of the 28 video models reports `prompt` and `completion` as `"0"` and publishes no other price key.
+  That is an absence, not free, so both columns stay empty and the operator screen says 토큰 단가 미공개. The
+  per-second prices shown on OpenRouter's own model pages (for example Veo 3.1 Fast at $0.10/s) are **not in this
+  API response** and are therefore not something the product can display or verify.
+- ⚠️ **`image_output`'s documented wording is wrong.** The spec calls it "Price in USD per output image", but the
+  values are per output image **token**: ×10⁶ reproduces the vendors' own published $/1M figures exactly — Gemini
+  2.5 Flash Image `0.00003` → $30, Gemini 3 Pro Image `0.00012` → $120, GPT-5 Image `0.00004` → $40. It therefore
+  shares the $/1M column with the text prices instead of needing a unit of its own. (`pricing.image`, by contrast,
+  really is per *input* image and is not consumed.)
 
 Unknown fields are ignored (the reverse of the yaml's strict parsing: this document is OpenRouter's schema, not
 ours, and it grows without notice). A model entry missing `id` or `name` is skipped with a warning, never a boot

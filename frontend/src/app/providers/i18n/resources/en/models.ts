@@ -151,8 +151,6 @@ export const models = {
         'Only models that can output video can be registered here, so only they are listed.',
     },
     emptyForPurpose: 'No model meets this purpose’s requirements yet.',
-    emptyForVideo:
-      'OpenRouter offers almost no video-output models yet, so this tab may stay empty. Once the catalog lists one, you can register it here.',
     search: 'Search',
     searchPlaceholder: 'Model name or id',
     provider: 'Provider',
@@ -183,6 +181,7 @@ export const models = {
       '{{count}} registered models are no longer offered by the provider. Users see them as unavailable — review them and uncheck them.',
     context: '{{tokens}} token context',
     price: '${{in}} in · ${{out}} out per 1M tokens',
+    priceUnpublished: 'No published token price',
     reasoning: 'Reasoning effort',
     reasoningDefault: 'Stage default',
   },

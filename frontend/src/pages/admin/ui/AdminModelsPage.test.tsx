@@ -106,16 +106,41 @@ describe('the model catalog tab', () => {
     expect(within(row).getByRole('checkbox', { name: '이 용도에 사용' })).toBeChecked()
   })
 
-  // Change 20 A2: a tab whose gate admits nothing explains itself instead of erroring — and the
-  // video tab names the honest upstream reason.
-  it('explains an empty video tab instead of erroring', async () => {
+  // Change 20 A2: a tab whose gate admits nothing explains itself instead of erroring.
+  it('explains an empty purpose tab instead of erroring', async () => {
     const user = userEvent.setup()
     renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: CATALOG } })
 
     await screen.findByRole('heading', { name: '모델 관리' })
     await user.click(await screen.findByRole('tab', { name: '비디오 생성' }))
-    expect(await screen.findByText(/비디오 출력 모델이 거의 없어서/)).toBeInTheDocument()
+    expect(
+      await screen.findByText('이 용도의 조건을 만족하는 모델이 아직 없어요.'),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  // The generation tabs are only reachable at all because the catalog is now read with an
+  // explicit output_modalities query — the endpoint serves text-output models by default.
+  it('lists a video-output model on the video tab and says its price is unpublished', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          ...CATALOG,
+          { modelId: 'google/veo-x', label: 'Veo X', videoOutput: true, sourceCreatedAt: 700n },
+        ],
+      },
+    })
+
+    await screen.findByRole('heading', { name: '모델 관리' })
+    await user.click(await screen.findByRole('tab', { name: '비디오 생성' }))
+    const row = await screen.findByRole('listitem')
+    expect(within(row).getByText('google/veo-x')).toBeInTheDocument()
+    expect(within(row).getByText('비디오 생성')).toBeInTheDocument()
+    // No token price is published for a video model, and $0 would read as free.
+    expect(within(row).getByText('토큰 단가 미공개')).toBeInTheDocument()
+    expect(within(row).queryByText(/100만 토큰당/)).not.toBeInTheDocument()
   })
 
   // The provider offers several hundred models, and mounting every row made the screen lag on

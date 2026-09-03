@@ -112,9 +112,12 @@ master-only set).
   purpose tab and every stage dropdown starts empty, and pre-cutover saved selections flow through the existing
   vanished-selection machinery on their next read.
 
-- **Candidates** come live from the provider's own public catalog — `GET {base_url}/models`, unauthenticated, read
-  server-side and cached for `OPENROUTER_CATALOG_TTL` ([tech/openrouter-catalog](../tech/openrouter-catalog.md)).
-  Only the operator path ever triggers that read, so a provider outage cannot change what users see.
+- **Candidates** come live from the provider's own public catalog —
+  `GET {base_url}/models?output_modalities=text,image,video`, unauthenticated, read server-side and cached for
+  `OPENROUTER_CATALOG_TTL` ([tech/openrouter-catalog](../tech/openrouter-catalog.md)). The modality query is
+  **mandatory**: the endpoint serves text-output models only by default, so omitting it hides every video model and
+  half the image ones. Only the operator path ever triggers that read, so a provider outage cannot change what
+  users see.
 - **Usable models** are the rows with at least one registration, and nothing else feeds `ListModels`,
   `SaveSelection`, or `Registry.Complete`. A row survives full deregistration, so the reasoning override an
   operator set comes back intact when the model is re-registered.
@@ -157,6 +160,10 @@ master-only set).
 
 - Models carry context tokens, dated input/output USD-per-million snapshots, and labels, refreshed from the
   provider's catalog on an operator refresh. Prices are display/estimate metadata only; reported provider cost wins.
+- **Which price axis applies depends on the output modality.** A model answering in text keeps the text token pair,
+  where a zero is a genuine price (a free model). One answering only in images is not billed on text tokens, so its
+  zeros are the absence of a price and the image-token pair is stored instead. A video model publishes no token
+  price at all — both columns stay empty and the screen says 토큰 단가 미공개 rather than showing $0.
 - Recommendation-set refs are validated **at apply time**, against the catalog as it is then. Boot can no longer
   settle whether a referenced model exists — the catalog is curated data that changes while the process runs — so
   boot keeps shape validation only (three distinct stages, complete refs, candidates that differ).

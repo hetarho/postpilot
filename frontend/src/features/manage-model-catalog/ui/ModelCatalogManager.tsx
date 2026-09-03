@@ -32,13 +32,11 @@ import { CatalogModelList } from './CatalogModelList'
  *
  *  Every narrowing happens in the browser over the one response. The catalog is a few hundred
  *  rows that arrive together, so a round trip per keystroke would buy latency and nothing else. */
-/** Why a tab shows nothing: an empty catalog, an empty forced gate (the video tab names
- *  the honest upstream reason — A2 wants an explanation, not an error), or the operator's
- *  own narrowing. */
-function emptyMessageKey(catalogCount: number, tabCount: number, purpose: ModelPurpose) {
+/** Why a tab shows nothing: an empty catalog, an empty forced gate, or the operator's own
+ *  narrowing. A2 wants an explanation rather than an error in every one of the three. */
+function emptyMessageKey(catalogCount: number, tabCount: number) {
   if (catalogCount === 0) return 'catalog.empty' as const
   if (tabCount > 0) return 'catalog.noMatches' as const
-  if (purpose === 'video-generation') return 'catalog.emptyForVideo' as const
   return 'catalog.emptyForPurpose' as const
 }
 
@@ -186,7 +184,7 @@ export function ModelCatalogManager() {
       )}
       {!isError && !isPending && visible.length === 0 && (
         <Typography variant="body" className="text-content-tertiary mt-6">
-          {t(emptyMessageKey(catalog.entries.length, tabEntries.length, purpose))}
+          {t(emptyMessageKey(catalog.entries.length, tabEntries.length))}
         </Typography>
       )}
       {visible.length > 0 && (

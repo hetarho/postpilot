@@ -26,6 +26,13 @@ import (
 // the cap exists so a wrong base_url pointing at something enormous cannot exhaust memory.
 const maxBodyBytes int64 = 32 << 20
 
+// requestedOutputModalities is the one query the catalog is read with, and it is not
+// optional: the endpoint DEFAULTS TO TEXT-OUTPUT MODELS ONLY, so a request without it
+// cannot see a single video model and sees only the image models that also answer in text.
+// The three values are exactly what the five curated purposes need — text for photo
+// analysis, style analysis and writing; image and video for the two generation purposes.
+const requestedOutputModalities = "text,image,video"
+
 // Client fetches and caches the upstream catalog.
 //
 // The cache is what keeps the admin screen off the network for every keystroke of a
@@ -101,15 +108,19 @@ type modelDocument struct {
 	Pricing struct {
 		Prompt     string `json:"prompt"`
 		Completion string `json:"completion"`
+		// The image-token prices, which are what a model answering in images charges
+		// instead of the text pair above.
+		ImageToken  string `json:"image_token"`
+		ImageOutput string `json:"image_output"`
 	} `json:"pricing"`
 	SupportedParameters []string `json:"supported_parameters"`
 }
 
 func (c *Client) get(ctx context.Context) ([]modelcatalog.Candidate, error) {
-	url := c.baseURL + "/models"
+	endpoint := c.baseURL + "/models?output_modalities=" + requestedOutputModalities
 	// No Authorization header: the list is public, so browsing the catalog keeps working on
 	// a box whose API key is not configured yet — the models simply come up disabled.
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build catalog request: %w", err)
 	}
@@ -155,6 +166,8 @@ func toCandidate(item modelDocument) (modelcatalog.Candidate, bool) {
 	if id == "" || name == "" {
 		return modelcatalog.Candidate{}, false
 	}
+	imageOutput := contains(item.Architecture.OutputModalities, "image")
+	input, output := tokenPrices(item, contains(item.Architecture.OutputModalities, "text"), imageOutput)
 	return modelcatalog.Candidate{
 		ModelID:      id,
 		ProviderSlug: modelcatalog.ProviderSlugOf(id),
@@ -164,13 +177,51 @@ func toCandidate(item modelDocument) (modelcatalog.Candidate, bool) {
 		// accept; the output side is what the image/video GENERATION purposes gate on.
 		Vision:              contains(item.Architecture.InputModalities, "image"),
 		StructuredOutput:    contains(item.SupportedParameters, "structured_outputs"),
-		ImageOutput:         contains(item.Architecture.OutputModalities, "image"),
+		ImageOutput:         imageOutput,
 		VideoOutput:         contains(item.Architecture.OutputModalities, "video"),
 		ContextTokens:       max(item.ContextLen, 0),
-		InputUSDPerMillion:  perMillion(item.Pricing.Prompt),
-		OutputUSDPerMillion: perMillion(item.Pricing.Completion),
+		InputUSDPerMillion:  input,
+		OutputUSDPerMillion: output,
 		SourceCreatedAt:     item.Created,
 	}, true
+}
+
+// tokenPrices picks the per-token prices that actually apply to a model, in the
+// USD-per-million convention the product displays.
+//
+// A model that answers in text keeps the text pair, where a zero is a real price (a free
+// model). One that answers only in images is not billed on text tokens at all, so a zero
+// there means "not published" and the image pair is what it charges. A model that answers
+// in video publishes neither: every one of them reports `prompt` and `completion` as "0",
+// which is the ABSENCE of a price — rendering it as free would be a lie, so it comes back
+// unknown and the screen says so.
+//
+// `image_output` is documented as "per output image" but is per output image TOKEN in
+// practice: ×10⁶ reproduces the vendors' own published $/1M figures exactly (Gemini 2.5
+// Flash Image $30, Gemini 3 Pro Image $120, GPT-5 Image $40). It therefore shares the
+// column with the text prices rather than needing a unit of its own.
+func tokenPrices(item modelDocument, textOutput, imageOutput bool) (input, output string) {
+	switch {
+	case textOutput:
+		return perMillion(item.Pricing.Prompt), perMillion(item.Pricing.Completion)
+	case imageOutput:
+		return firstPriced(item.Pricing.Prompt, item.Pricing.ImageToken),
+			firstPriced(item.Pricing.Completion, item.Pricing.ImageOutput)
+	default:
+		return "", ""
+	}
+}
+
+// firstPriced returns the first value naming an actual price. A zero is skipped rather
+// than reported, the caller having already established that this model is not billed on
+// that axis.
+func firstPriced(values ...string) string {
+	for _, value := range values {
+		if converted := perMillion(value); converted != "" && converted != "0" {
+			return converted
+		}
+	}
+	return ""
 }
 
 func contains(values []string, want string) bool {
