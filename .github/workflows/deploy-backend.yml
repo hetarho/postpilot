@@ -228,3 +228,77 @@ jobs:
               "access-control-allow-origin: ${WEB_ORIGIN}" "$headers_file"
             grep --fixed-strings --ignore-case \
               'access-control-allow-credentials: true' "$headers_file"
+
+      # The bucket half of the same question, and the same reasoning: a CORS rule is not a bad
+      # image, so this fails loudly instead of rolling the image back. Without a browser `GET`
+      # allow, uploads still work and photos still render — an `<img>` needs no CORS allow — and
+      # only the per-photo clipboard copy breaks, which is the kind of failure nothing else
+      # reports (plan 08, DEPLOY.md §5). The rule itself lives in `deploy/r2-cors.json`.
+      - name: Verify the R2 bucket allows a browser GET
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: WEB_ORIGIN,ENV_NAME
+          script: |
+            set -eu
+            if [ -z "${WEB_ORIGIN:-}" ]; then
+              echo "repo variable WEB_ORIGIN is required" >&2
+              exit 1
+            fi
+
+            # The bucket is named by the stack .env, not by a repo variable — the endpoint and
+            # bucket already live there for the API, and this check must assert what the running
+            # stack actually signs URLs against.
+            cd "/srv/postpilot-${ENV_NAME}"
+            resolved_runtime_env="$(docker compose -f docker-compose.prod.yml config --environment)"
+            runtime_env_value() {
+              printf '%s\n' "$resolved_runtime_env" | sed -n "s/^$1=//p" | tail -n 1
+            }
+            # Mirrors `storage.New`: presigned URLs are signed against R2_PUBLIC_ENDPOINT when it
+            # is set and R2_ENDPOINT otherwise. The presigned host is the one the BROWSER fetches,
+            # so it is the host whose CORS rule decides whether a copy works — probing the API's
+            # own endpoint would green-light a split-network stack whose browser-facing host has
+            # no rule at all.
+            endpoint="$(runtime_env_value R2_PUBLIC_ENDPOINT)"
+            if [ -z "$endpoint" ]; then
+              endpoint="$(runtime_env_value R2_ENDPOINT)"
+            fi
+            bucket="$(runtime_env_value R2_BUCKET)"
+            if [ -z "$endpoint" ] || [ -z "$bucket" ]; then
+              echo "R2_ENDPOINT (or R2_PUBLIC_ENDPOINT) and R2_BUCKET must be set in the stack .env" >&2
+              exit 1
+            fi
+            endpoint="${endpoint%/}"
+
+            headers_file="$(mktemp)"
+            trap 'rm -f "$headers_file"' EXIT
+            # A preflight is answered from the bucket's CORS rules alone, so this needs no
+            # signature, no presigned URL and no session — and the probe key need not exist.
+            # Deliberately WITHOUT `--fail`: the assertion is the two headers below, and a status
+            # code for a key that is not there would otherwise fail a correctly configured bucket.
+            # A connection-level failure still fails the step through `set -e`.
+            curl --silent --show-error \
+              --dump-header "$headers_file" --output /dev/null \
+              --request OPTIONS \
+              --header "Origin: ${WEB_ORIGIN}" \
+              --header 'Access-Control-Request-Method: GET' \
+              "${endpoint}/${bucket}/cors-preflight-probe"
+
+            # A rule may name this origin or allow every origin; R2 echoes whichever it holds.
+            if ! grep --fixed-strings --ignore-case \
+                 "access-control-allow-origin: ${WEB_ORIGIN}" "$headers_file" \
+               && ! grep --fixed-strings --ignore-case \
+                 'access-control-allow-origin: *' "$headers_file"; then
+              echo "bucket ${bucket} does not allow ${WEB_ORIGIN}: apply deploy/r2-cors.json (DEPLOY.md §5)" >&2
+              cat "$headers_file" >&2
+              exit 1
+            fi
+            if ! grep --ignore-case '^access-control-allow-methods:.*GET' "$headers_file"; then
+              echo "bucket ${bucket} allows ${WEB_ORIGIN} but not GET: the per-photo copy will fail while uploads and thumbnails keep working (DEPLOY.md §5)" >&2
+              cat "$headers_file" >&2
+              exit 1
+            fi

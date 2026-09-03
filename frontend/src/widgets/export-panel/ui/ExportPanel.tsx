@@ -410,17 +410,24 @@ function PreviewPhoto({
   // remints it clears the failure without any reset plumbing.
   const [failedUrl, setFailedUrl] = useState('')
   const unreachable = url === '' || failedUrl === url
+  // Keyed by kind rather than chained, so a kind added to `CopyImageResult` is a type error here
+  // instead of a photo that fails silently — which is how `blocked` and `unreadable` came to share
+  // one message and send users to reload a post over a rule that reloading cannot change.
+  const failureMessage: Record<FailedCopyKind, string> = {
+    unsupported: t('export.photoUnsupported'),
+    refused: t('export.photoRefused'),
+    blocked: t('export.photoBlocked'),
+    unreadable: t('export.photoUnreadable'),
+  }
   const reason = !image
     ? t('export.photoMissing')
-    : unreachable
+    : // An `<img>` that never painted, or a `blob:` preview: both are recovered by the reload that
+      // remints the URL, and neither offers a copy control to fail in the first place.
+      unreachable
       ? t('export.photoUnreadable')
-      : failure === 'unsupported'
-        ? t('export.photoUnsupported')
-        : failure === 'refused'
-          ? t('export.photoRefused')
-          : failure === 'unreadable'
-            ? t('export.photoUnreadable')
-            : ''
+      : failure
+        ? failureMessage[failure]
+        : ''
   return (
     <div className="py-2">
       {image ? (

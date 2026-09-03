@@ -330,6 +330,28 @@ it('says so and offers no copy when the photo cannot be read', async () => {
   ).toBeInTheDocument()
 })
 
+// The bucket-CORS case. An `<img>` needs no CORS allow, so the photo renders while its bytes are
+// unreachable from this origin — and the reload that remints an expired URL mints one blocked in
+// exactly the same way. Telling the user to reload here is a loop with no exit, so the assertion
+// that matters is the NEGATIVE one.
+it('does not tell the user to reload when the photo bytes never arrive', async () => {
+  const user = userEvent.setup()
+  stubImageClipboard()
+  vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+  renderPanel()
+
+  await user.click(screen.getAllByRole('button', { name: /사진 복사$/ })[0])
+
+  expect(
+    await screen.findByText(
+      '지금은 사진을 복사할 수 없어요. 본문만 붙여넣고 사진은 직접 올려 주세요.',
+    ),
+  ).toBeInTheDocument()
+  expect(
+    screen.queryByText('사진을 읽지 못했어요. 글을 다시 불러오면 사진 주소가 새로 발급돼요.'),
+  ).not.toBeInTheDocument()
+})
+
 it('says so when the browser has no image clipboard at all', async () => {
   const user = userEvent.setup()
   vi.stubGlobal('ClipboardItem', undefined)

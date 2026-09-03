@@ -41,7 +41,8 @@ rollout  compose 파일을 VPS로 동기화
          → pull (실패해도 다운타임 없음)
          → up -d  (SQLite는 단일 라이터라 컨테이너를 교체한다)
          → /health 게이트 (재시도 15회)  ✗ 이면 이전 IMAGE_TAG로 되돌리고 실패
-verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
+verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함)
+         → 같은 origin으로 R2 버킷의 GET preflight 확인 (사진 복사가 여기 달려 있다)
 ```
 
 - **마이그레이션 스텝이 따로 없는 건 의도다.** DB가 이 스택 볼륨 안의 SQLite 파일이라
@@ -52,6 +53,11 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
   `.env` 문제라 되돌려도 안 고쳐진다. 시끄럽게 실패해야 한다. 세션 쿠키가 정확한
   origin + credentials 허용에 의존하므로(PRD F-1), 이게 "로그인이 조용히 안 되는" 사고를
   잡는 검사다.
+- **CORS 검증이 두 개인 것도 의도다.** API 쪽은 스택 `.env`의 `CORS_ORIGIN`, 버킷 쪽은
+  R2 버킷의 CORS 규칙 — 서로 다른 곳에 있고 각각 다른 기능을 조용히 죽인다. 버킷에 `GET`
+  허용이 없으면 업로드도 되고 사진도 화면에 보이는데 **사진 복사만** 실패한다(§5). 버킷
+  검사는 presigned URL이 실제로 서명되는 호스트(`R2_PUBLIC_ENDPOINT`가 있으면 그것,
+  없으면 `R2_ENDPOINT`)를 때린다 — 브라우저가 가는 곳이 거기라서다.
 - 수동 재배포: Actions 탭 → Deploy backend → **Run workflow**.
 
 `DEPLOY_ENABLED` variable이 없으면 **Compose 검증 + 이미지 빌드까지만** 하고 push·rollout을
@@ -198,19 +204,27 @@ verify   브라우저 origin으로 CORS preflight 확인 (credentials 포함)
    **버킷은 공개하지 않는다** — 사진은 API가 소유자를 확인한 뒤 발급하는 presigned URL로만
    읽힌다(PRD F-5).
 
-   **CORS 규칙을 반드시 넣는다.** 브라우저가 R2로 직접 PUT 하기 때문에, 빠뜨리면
-   서버 쪽 단계는 전부 성공했다고 보고하는데 업로드만 조용히 실패한다(PRD F-2):
-   ```json
-   [{ "AllowedOrigins": ["https://postpilot.<도메인>"],
-      "AllowedMethods": ["PUT", "GET", "HEAD"],
-      "AllowedHeaders": ["content-type"],
-      "ExposeHeaders": ["etag"],
-      "MaxAgeSeconds": 3600 }]
+   **CORS 규칙을 반드시 넣는다.** 규칙은 이 리포의 [`deploy/r2-cors.json`](deploy/r2-cors.json)이
+   소유한다 — 대시보드에 손으로 붙여넣지 말고 그 파일을 적용한다:
+   ```bash
+   # origins의 https://postpilot.<domain> 자리를 실제 web origin(= repo variable WEB_ORIGIN)으로
+   # 바꾼 뒤 (환경이 여러 개면 배열에 전부 나열한다), 버킷마다 적용한다.
+   npx wrangler r2 bucket cors set postpilot-prod --file deploy/r2-cors.json
+   npx wrangler r2 bucket cors list postpilot-prod   # 적용된 규칙 되읽기
    ```
-   `AllowedMethods`는 브라우저가 실제로 쓰는 세 가지다 — `PUT`(업로드), `GET`(썸네일),
-   `HEAD`(preflight 뒤 확인). (로컬 개발은 R2가 아니라 compose의 MinIO를 쓴다 —
-   `docker-compose.yml`. MinIO는 기본으로 모든 origin을 허용하므로 개발 origin
-   `http://localhost:2564`에 대한 별도 CORS 규칙은 필요 없다.)
+   `methods`는 브라우저가 실제로 쓰는 세 가지다 — `PUT`(업로드), `GET`(사진 읽기·복사),
+   `HEAD`(preflight 뒤 확인). **셋 중 하나만 빠져도 조용히 깨진다**: 규칙이 아예 없으면
+   서버 쪽 단계는 전부 성공했다고 보고하는데 업로드만 실패하고(PRD F-2), `GET`만 빠지면
+   업로드도 되고 사진도 화면에 보이는데 **사진 복사만** 실패한다 — `<img>`는 CORS가 필요
+   없지만 복사용 `fetch`는 필요하기 때문이다(plan 08). 배포 마지막 단계가 `GET` preflight를
+   검증하므로 `GET`이 빠진 버킷은 배포가 실패한다(§2).
+   > `wrangler r2 bucket cors set --file`이 받는 JSON은 대시보드가 쓰는
+   > `[{"AllowedOrigins": …}]` 배열이 아니라 `{"rules":[{"allowed":{…}}]}` 형태다.
+   > `deploy/r2-cors.json`이 그 형태로 들어 있다.
+
+   (로컬 개발은 R2가 아니라 compose의 MinIO를 쓴다 — `docker-compose.yml`. MinIO는 기본으로
+   모든 origin을 허용하므로 개발 origin `http://localhost:2564`에 대한 별도 CORS 규칙은
+   필요 없다.)
 6. **GHCR 로그인**(VPS에서, **sudo 없이**): `echo '<PAT>' | docker login ghcr.io -u <계정> --password-stdin`
 7. **배포 키**: `ssh-keygen -t ed25519 -f ~/.ssh/postpilot-deploy -N "" -C postpilot-github-actions-deploy`
    → 공개키를 VPS `~/.ssh/authorized_keys`에 추가.

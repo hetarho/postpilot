@@ -277,6 +277,8 @@ export const posts = {
     photoUnsupported:
       'This browser cannot copy images. Paste the text and add the photos yourself.',
     photoRefused: 'The photo copy was blocked. Try again.',
+    photoBlocked:
+      'The photo cannot be copied right now. Paste the text and add the photos yourself.',
     photoUnreadable: 'Could not read the photo. Reload the post to mint a fresh photo URL.',
     photoMissing: 'No photo matches this marker.',
     languageMissing:

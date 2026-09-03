@@ -266,6 +266,7 @@ export const posts = {
     photoUnsupported:
       '이 브라우저는 사진 복사를 지원하지 않아요. 본문만 붙여넣고 사진은 직접 올려 주세요.',
     photoRefused: '사진 복사가 막혔어요. 다시 시도해 주세요.',
+    photoBlocked: '지금은 사진을 복사할 수 없어요. 본문만 붙여넣고 사진은 직접 올려 주세요.',
     photoUnreadable: '사진을 읽지 못했어요. 글을 다시 불러오면 사진 주소가 새로 발급돼요.',
     photoMissing: '이 표시에 해당하는 사진을 찾지 못했어요.',
     languageMissing: '글의 내용 언어 정보가 없어 내보낼 수 없어요. 글을 다시 불러와 주세요.',

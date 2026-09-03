@@ -55,6 +55,16 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+/** A view URL the way the API mints it: SigV4 states the lifetime in the query, which is what
+ *  tells an expired read apart from a bucket that allows this origin no `GET`. */
+function presigned(signedAt: Date, lifetimeSeconds: number) {
+  const stamp = signedAt
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '')
+  return `https://bucket.test/IMG_1.jpg?X-Amz-Date=${stamp}&X-Amz-Expires=${lifetimeSeconds}`
+}
+
 describe('copyImage', () => {
   it('writes one ClipboardItem whose only flavor is image/png', async () => {
     const clipboard = stub()
@@ -108,9 +118,34 @@ describe('copyImage', () => {
     expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'refused' })
   })
 
-  // An expired presigned URL is the ordinary case here, and it must not reach the clipboard as an
-  // empty image: reloading the post remints the URL, which is the recovery the panel names.
-  it('reports `unreadable` for a failed fetch, a failed decode, and a failed encode', async () => {
+  // The two read failures lead to OPPOSITE advice — reload the post vs. do not bother, the bytes
+  // are unreachable from this origin — so a test that only covered "the load failed" is what let
+  // them share one message. Both arrive as a REJECTED fetch, so the URL's own lifetime is what
+  // separates them, and these two cases pin that down from either side.
+  it('reports `blocked` when the fetch rejects on a URL that had not expired', async () => {
+    stub()
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+    expect(await copyImage(presigned(new Date(), 600))).toEqual({ kind: 'blocked' })
+    // A URL carrying no SigV4 lifetime cannot be claimed to have expired.
+    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'blocked' })
+  })
+
+  // R2 answers an expired read with a 403 carrying NO CORS headers, so the browser withholds it
+  // and the fetch rejects — the same way it does for a missing `GET` allow. The two are therefore
+  // separated by the URL's own lifetime, and this is the case that would otherwise be told to
+  // "paste the text and add the photos yourself" when a reload is all it needed.
+  it('reports `unreadable` when the fetch rejects on a URL that had already expired', async () => {
+    stub()
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+    expect(await copyImage(presigned(new Date(Date.now() - 3_600_000), 600))).toEqual({
+      kind: 'unreadable',
+    })
+  })
+
+  // Bytes that never became an image must not reach the clipboard as an empty one. A non-2xx the
+  // browser DID expose lands here too — R2 hides its expired-URL 403, but a store that does not,
+  // MinIO in local dev included, reaches this path instead of the rejection above.
+  it('reports `unreadable` for a readable non-2xx, a failed decode, and a failed encode', async () => {
     stub()
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 403 }))
     expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'unreadable' })
@@ -129,6 +164,27 @@ describe('copyImage', () => {
       },
     )
     expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'unreadable' })
+  })
+
+  // `presigned()` above builds the shape this parser reads, so on its own it could agree with a
+  // parser that is wrong about the real thing. This URL is the shape aws-sdk-go-v2's
+  // `PresignGetObject` actually emits (`backend/internal/storage/r2.go`), pinned as a literal.
+  it('reads the lifetime out of a real presigned view URL', async () => {
+    const real =
+      'https://acct.r2.cloudflarestorage.com/postpilot-prod/u/1/IMG_1.jpg' +
+      '?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=key%2F20260904%2Fauto%2Fs3%2Faws4_request' +
+      '&X-Amz-Date=20260904T010203Z&X-Amz-Expires=600&X-Amz-SignedHeaders=host&X-Amz-Signature=abc'
+    stub()
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-09-04T02:00:00Z'))
+      expect(await copyImage(real)).toEqual({ kind: 'unreadable' })
+      vi.setSystemTime(new Date('2026-09-04T01:05:00Z'))
+      expect(await copyImage(real)).toEqual({ kind: 'blocked' })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('never writes a text flavor beside the image', async () => {
