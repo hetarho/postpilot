@@ -189,6 +189,11 @@ type StartRequest struct {
 	ModelA       ModelRef
 	ModelB       ModelRef
 	TargetLength *int
+	// ObserveFiles is the re-observation picker's answer for a write comparison, passed
+	// straight through to the generation context's snapshot, which owns the reuse rule.
+	// Presence is the contract: nil observes every attached photo, non-nil-but-empty
+	// observes none. Ignored for observe and analyze comparisons.
+	ObserveFiles *[]string
 }
 
 type StartResult struct {

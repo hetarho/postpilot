@@ -14,13 +14,20 @@ const (
 )
 
 type experimentSnapshot struct {
-	Kind           string        `json:"kind"`
-	Prepared       bool          `json:"prepared"`
-	TargetLanguage Language      `json:"target_language,omitempty"`
-	ObserveModel   string        `json:"observe_model,omitempty"`
-	Post           PostInput     `json:"post"`
-	Profile        Profile       `json:"profile,omitempty"`
-	Observations   []Observation `json:"observations,omitempty"`
+	Kind           string   `json:"kind"`
+	Prepared       bool     `json:"prepared"`
+	TargetLanguage Language `json:"target_language,omitempty"`
+	ObserveModel   string   `json:"observe_model,omitempty"`
+	// ObserveFiles is the frozen re-observation set, with the same presence contract as the
+	// generate payload's: absent is a snapshot taken before the picker existed and observes
+	// every attached photo, present-and-empty observes nothing.
+	ObserveFiles *[]string `json:"observe_files,omitempty"`
+	Post         PostInput `json:"post"`
+	Profile      Profile   `json:"profile,omitempty"`
+	// Observations is pre-seeded at snapshot time with what the run carries over, and
+	// PrepareWriteInput merges what it observes into it. Both candidates then read one
+	// complete set, which is what makes the frozen input the experiment's identity.
+	Observations []Observation `json:"observations,omitempty"`
 }
 
 // observeExperimentSnapshot is intentionally narrower than PostInput. Target/content
@@ -44,7 +51,7 @@ type CandidateUsage struct {
 	CostReported     bool
 }
 
-func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug string, observeModel llm.ModelRef, targetLength *int) ([]byte, error) {
+func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug string, observeModel llm.ModelRef, targetLength *int, observeFiles *[]string) ([]byte, error) {
 	post, err := s.posts.AttachedImages(ctx, userID, postSlug)
 	if err != nil {
 		return nil, err
@@ -81,9 +88,23 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 			return nil, ErrObserveModelRequired
 		}
 	}
+	// The same freeze the ordinary enqueue performs, for the same reason and through the
+	// same helper: the comparison must not re-pay for eyesight it already has, and it must
+	// not write from a photo nothing has looked at.
+	var frozen *[]string
+	var known []Observation
+	if len(post.Images) > 0 {
+		files, snapshot := freezeObserveSelection(post.Images, post.Observations, observeFiles)
+		frozen = &files
+		known = snapshot
+	}
+	// The post's own copy is dropped: the snapshot's Observations field is the ONE the
+	// candidates read, and two copies of the same fact in one frozen input could disagree.
+	post.Observations = nil
 	return json.Marshal(experimentSnapshot{
 		Kind: "write", TargetLanguage: post.TargetLanguage,
-		ObserveModel: observeModel.String(), Post: post, Profile: profile,
+		ObserveModel: observeModel.String(), ObserveFiles: frozen,
+		Post: post, Profile: profile, Observations: known,
 	})
 }
 
@@ -119,11 +140,17 @@ func (s *Service) PrepareWriteInput(ctx context.Context, raw []byte, progress Pr
 		if !ok {
 			return nil, ErrObserveModelRequired
 		}
-		observations, _, err := s.observeCandidate(ctx, snapshot.Post, model, progress, true)
-		if err != nil {
-			return nil, err
+		targets, seed := frozenObserveSelection(snapshot.Post.Images, snapshot.ObserveFiles, snapshot.Observations)
+		if len(targets) == 0 {
+			progress("observe", 0, 0)
+			snapshot.Observations = mergeObservations(snapshot.Post.Images, seed, nil)
+		} else {
+			observations, _, err := s.observeCandidate(ctx, snapshot.Post, targets, seed, model, progress, true)
+			if err != nil {
+				return nil, err
+			}
+			snapshot.Observations = observations
 		}
-		snapshot.Observations = observations
 	}
 	snapshot.Prepared = true
 	return json.Marshal(snapshot)
@@ -147,7 +174,9 @@ func (s *Service) RunObserveCandidate(ctx context.Context, raw []byte, model llm
 		return nil, CandidateUsage{}, err
 	}
 	post := PostInput{Slug: snapshot.Post.Slug, UserID: snapshot.Post.UserID, Images: append([]Image(nil), snapshot.Post.Images...)}
-	observations, usage, err := s.observeCandidate(ctx, post, model, progress, false)
+	// Every photo, no seed: the observe-stage A/B compares observation MODELS, so reusing an
+	// observation would be comparing one model against the other's stored work.
+	observations, usage, err := s.observeCandidate(ctx, post, post.Images, nil, model, progress, false)
 	return observations, candidateUsage(usage), err
 }
 

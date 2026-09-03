@@ -33,6 +33,9 @@ type observationJSON struct {
 	VisibleText   string   `json:"visibleText,omitempty"`
 	Objects       []string `json:"objects,omitempty"`
 	PeoplePresent bool     `json:"peoplePresent,omitempty"`
+	// A row written before provenance existed decodes with this empty — unknown, not an
+	// error. No migration: the column is a JSON document the post context owns.
+	Model string `json:"model,omitempty"`
 }
 
 func marshalContent(content post.PostContent) (string, error) {
@@ -71,7 +74,7 @@ func marshalObservations(observations []post.Observation) (string, error) {
 		wire = append(wire, observationJSON{
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
-			PeoplePresent: observation.PeoplePresent,
+			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 		})
 	}
 	data, err := json.Marshal(wire)
@@ -91,7 +94,7 @@ func unmarshalObservations(data string) ([]post.Observation, error) {
 		out = append(out, post.Observation{
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
-			PeoplePresent: observation.PeoplePresent,
+			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 		})
 	}
 	return out, nil

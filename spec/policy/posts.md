@@ -55,6 +55,11 @@ Photo upload has its own document: [uploads.md](uploads.md).
 - `observations` and `content` are owned by the post aggregate but may be changed by generation only through the
   post context's ownership-checked `SetObservations` and `SetGeneratedContent` behaviors. `GetPost` returns both;
   no other context reads or writes the `posts` table directly.
+- **Deleting a photo deletes its observation.** Observations are paired to photos by filename alone, and a filename
+  is only taken while its photo is attached — so a leftover entry would become reusable eyesight for whatever
+  different photo is uploaded under that name next. It was harmless while every run re-observed unconditionally;
+  a run may now reuse a stored entry instead ([generation.md](generation.md)), so `DeleteImage` drops that photo's
+  entry and leaves the rest of the snapshot as it was.
 
 ## Deletion
 

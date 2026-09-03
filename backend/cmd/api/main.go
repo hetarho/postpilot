@@ -369,7 +369,7 @@ func main() {
 			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID,
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, Purpose: options.Purpose,
-			Guidelines: options.Guidelines,
+			Guidelines: options.Guidelines, ObserveFiles: options.ObserveFiles, Observations: options.Observations,
 		}, generation.Progress(progress))
 	}))
 	jobQueue.Register(job.KindRevise, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -880,6 +880,10 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		PurposeID:    found.PurposeID,
 		TargetLength: found.TargetLength,
 		Images:       make([]generation.Image, 0, len(found.Images)),
+		// The stored contact sheet, read here so the ENQUEUE can decide what to reuse. It
+		// was write-only from this context's point of view before change 21, which is why
+		// every retry re-paid for eyesight the post already had.
+		Observations: make([]generation.Observation, 0, len(found.Observations)),
 	}
 	if found.ContentLanguage != nil {
 		contentLanguage := generation.Language(*found.ContentLanguage)
@@ -900,6 +904,13 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	for _, image := range found.Images {
 		input.Images = append(input.Images, generation.Image{Filename: image.Filename, Key: image.Key})
 	}
+	for _, observation := range found.Observations {
+		input.Observations = append(input.Observations, generation.Observation{
+			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
+			VisibleText: observation.VisibleText, Objects: observation.Objects,
+			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
+		})
+	}
 	return input, nil
 }
 
@@ -909,7 +920,7 @@ func (a generationPosts) SetObservations(ctx context.Context, userID, slug strin
 		values = append(values, post.Observation{
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
-			PeoplePresent: observation.PeoplePresent,
+			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 		})
 	}
 	return generationPostError(a.service.SetObservations(ctx, userID, slug, values))
@@ -943,14 +954,22 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 	slug := request.PostSlug
 	payload, err := generation.EncodeGenerationPayload(generation.GenerationOptions{
 		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, Purpose: request.Purpose,
-		Guidelines: request.Guidelines,
+		Guidelines: request.Guidelines, ObserveFiles: request.ObserveFiles, Observations: request.Observations,
 	})
 	if err != nil {
 		return "", err
 	}
 	calls := map[string]int{}
-	if request.ObserveModel != "" && request.ObserveCalls > 1 {
-		calls[request.ObserveModel] = request.ObserveCalls
+	if request.ObserveModel != "" {
+		// Stated even when it is ZERO: a run that reuses every stored observation makes no
+		// observation call, and a hold for one can refuse a user who can afford the write-only
+		// retry the picker exists to make cheap. The count is per MODEL across the whole job
+		// (internal/job), so a model serving both stages states the write call too.
+		total := request.ObserveCalls
+		if request.ObserveModel == request.WriteModel {
+			total++
+		}
+		calls[request.ObserveModel] = total
 	}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
@@ -1161,7 +1180,7 @@ type experimentRunner struct {
 func (a experimentRunner) Snapshot(ctx context.Context, request experiment.StartRequest) (experiment.Snapshot, error) {
 	switch request.Stage {
 	case experiment.StageWrite:
-		content, err := a.generation.SnapshotWriteInput(ctx, request.UserID, request.PostSlug, llmRef(request.ObserveModel), request.TargetLength)
+		content, err := a.generation.SnapshotWriteInput(ctx, request.UserID, request.PostSlug, llmRef(request.ObserveModel), request.TargetLength, request.ObserveFiles)
 		targetLanguage := experiment.Language(generation.SnapshotTargetLanguage(content))
 		var frozenTarget *experiment.Language
 		if targetLanguage.Valid() {
@@ -1276,6 +1295,10 @@ type outputObservation struct {
 	VisibleText   string   `json:"visible_text"`
 	Objects       []string `json:"objects"`
 	PeoplePresent bool     `json:"people_present"`
+	// Carried so applying an observation A/B winner does not blank the provenance of the
+	// snapshot it replaces — which would make the next picker report every photo as observed
+	// by an unrecorded model.
+	Model string `json:"model,omitempty"`
 }
 
 func toOutputPost(content generation.PostContent) outputPost {
@@ -1295,14 +1318,14 @@ func fromOutputPost(value outputPost) generation.PostContent {
 func toOutputObservations(values []generation.Observation) []outputObservation {
 	out := make([]outputObservation, 0, len(values))
 	for _, value := range values {
-		out = append(out, outputObservation{File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText, Objects: value.Objects, PeoplePresent: value.PeoplePresent})
+		out = append(out, outputObservation{File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText, Objects: value.Objects, PeoplePresent: value.PeoplePresent, Model: value.Model})
 	}
 	return out
 }
 func fromOutputObservations(values []outputObservation) []generation.Observation {
 	out := make([]generation.Observation, 0, len(values))
 	for _, value := range values {
-		out = append(out, generation.Observation{File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText, Objects: value.Objects, PeoplePresent: value.PeoplePresent})
+		out = append(out, generation.Observation{File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText, Objects: value.Objects, PeoplePresent: value.PeoplePresent, Model: value.Model})
 	}
 	return out
 }

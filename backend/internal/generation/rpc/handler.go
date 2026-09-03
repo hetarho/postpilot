@@ -33,11 +33,26 @@ func (h *Handler) StartGeneration(ctx context.Context, req *connect.Request[post
 		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
 		WriteModel:   modelRefValue(req.Msg.GetWriteModel()),
 		TargetLength: optionalTargetLength(req.Msg.TargetLength),
+		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
 	})
 	if err != nil {
 		return nil, toConnectError("start generation", err)
 	}
 	return connect.NewResponse(&postpilotv1.StartGenerationResponse{JobId: id}), nil
+}
+
+// reobserveFiles maps the picker's answer to the presence-carrying domain value: a nil
+// message is a caller that expressed no reuse decision, and a present one — empty list
+// included — is a frozen decision.
+func reobserveFiles(selection *postpilotv1.ReobserveSelection) *[]string {
+	if selection == nil {
+		return nil
+	}
+	files := selection.GetFiles()
+	if files == nil {
+		files = []string{}
+	}
+	return &files
 }
 
 func optionalTargetLength(value *int32) *int {

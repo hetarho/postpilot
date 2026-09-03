@@ -12,6 +12,8 @@ export interface FakeWriteExperimentStart {
   modelA?: ModelRef
   modelB?: ModelRef
   targetLength?: number
+  /** The re-observation picker's answer, presence preserved as in FakeGenerationStart. */
+  reobserveFiles?: string[]
 }
 
 export interface FakeAnalyzeExperimentStart {
@@ -48,6 +50,7 @@ export function registerExperimentService(
         ? { providerId: request.modelB.providerId, modelId: request.modelB.modelId }
         : undefined,
       targetLength: request.targetLength,
+      reobserveFiles: request.reobserve ? request.reobserve.files : undefined,
     })
     return create(StartExperimentResponseSchema, {
       jobId: options.jobId ?? 'experiment-job',

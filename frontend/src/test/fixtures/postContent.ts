@@ -55,4 +55,17 @@ export const OBSERVATION_FIXTURE = create(ObservationSchema, {
   mood: '차분함',
   visibleText: 'JEJU',
   objects: ['우산', '파도'],
+  model: 'openrouter/observer',
 })
+
+/** A complete snapshot over POST_IMAGES_FIXTURE — what a post that has already been observed
+ *  once looks like, so a start on it goes through the re-observation picker. */
+export const OBSERVATIONS_FIXTURE = [
+  OBSERVATION_FIXTURE,
+  create(ObservationSchema, {
+    file: 'IMG_2.jpg',
+    scene: '구름 사이 햇빛',
+    mood: '맑음',
+    model: 'openrouter/observer',
+  }),
+]

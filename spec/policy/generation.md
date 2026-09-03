@@ -31,9 +31,38 @@ from [plan/13](../plan/13.multilingual-interface-and-target-langua.md), job 32.
   private object storage as the already-normalized JPEGs, and sent in configurable batches. The server does not
   decode images and the upload path remains browser-to-storage. Reads are capped again at `MaxImageBytes`, both by
   response length and by the actual stream, because a presigned PUT may remain valid briefly after confirmation.
+- **A run observes only the photos it was frozen to observe, and reuses the rest.** Starting generation on a post
+  that has photos and at least one reusable stored observation goes through a re-observation picker first; a post
+  with no photos, or with nothing reusable, starts directly. Every checkbox in that picker starts CLEAR, so
+  confirming it untouched reuses every stored observation and skips the observation stage outright — the common
+  case is a writing stage that failed on photos that did not change. A photo with nothing to reuse (no stored
+  entry, or one with no scene, mood, visible text, objects or people) is checked, cannot be cleared, and is forced
+  into the selection **server-side** whatever the client asked for: a run must not write from a photo it has never
+  looked at. A changed observation model warns and names both models; it does not compel, because mixing one
+  model's observations with another's is the user's call.
+- **The selection is frozen at enqueue, with presence.** The start carries a `ReobserveSelection` message whose
+  absence means "observe every attached photo" (what a client predating the picker sends) and whose presence with
+  an empty file list means "observe nothing". The server intersects it with the attached photos, drops unknown
+  names, forces the photos with nothing to reuse, and freezes the resolved filenames together with the whole
+  reusable snapshot into the durable payload — the same discipline the payload already applies to language, target
+  length, purpose and guidelines. Editing photos or switching models afterwards cannot change what a queued run
+  observes. The A/B write comparison shares the picker and the same contract, from both of its entry points.
 - Each observation batch is matched back by exact filename. Results for unknown filenames are discarded; a missing
-  result becomes an empty observation for that attached filename. The merged array is persisted after every batch,
-  before its durable progress update, so the count always converges to the attached photo count.
+  result becomes an empty observation for that attached filename. Every entry records the model ref that produced
+  it, per entry rather than per snapshot, because re-observing a subset is what lets one snapshot hold two models'
+  work; an entry written before that was recorded reads as unknown.
+- **Every persist is the merged snapshot and it never shrinks.** What was known at the freeze is the seed, and this
+  run's fresh entries are laid over it, so a partial re-observation is complete from the first persist and a photo
+  awaiting its batch keeps the entry it had. A photo neither half covers is left out rather than given an empty
+  entry, so a full unseeded run's persist sequence is unchanged. An empty frozen set makes no provider call and no
+  snapshot write at all, leaving the stored snapshot byte-identical. Observation progress totals the frozen set,
+  not the attached count, so a reuse-everything run reports `observe 0/0` and proceeds to writing at once.
+- **The writing stage is shown only the photos the run has eyesight for.** Attachments are read live at dequeue, so
+  a photo confirmed between the enqueue and the dequeue is outside the frozen decision: it is neither observed nor
+  named in the write prompt, and it belongs to the next run.
+- **A deleted photo's observation is deleted with it.** Observations pair to photos by filename alone and a
+  filename is free to be taken again once its photo is gone, so a leftover entry would become reusable eyesight for
+  a different photo (see [posts](posts.md)).
 - With no photos, observation makes no provider call, reports `observe 0/0`, clears stale observations, and tells
   the writing model to use the memo without images.
 - The writing prompt's stable prefix is static task/format rules → target-specific baseline when applicable → voice

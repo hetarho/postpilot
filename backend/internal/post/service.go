@@ -961,7 +961,8 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 		}
 		return fmt.Errorf("load image: %w", err)
 	}
-	if _, err := s.ownedPost(ctx, userID, image.PostSlug); err != nil {
+	found, err := s.ownedPost(ctx, userID, image.PostSlug)
+	if err != nil {
 		return err
 	}
 
@@ -970,6 +971,31 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 	}
 	if err := s.store.DeleteImage(ctx, imageID); err != nil {
 		return fmt.Errorf("delete image row: %w", err)
+	}
+	// The observation goes with the photo. Observations are paired to photos by FILENAME
+	// alone, and a filename is only taken while its photo is attached — so a leftover entry
+	// would become reusable eyesight for whatever different photo is uploaded under that name
+	// next. Nothing shows a stale entry today; a generation would silently write from it.
+	if err := s.dropObservation(ctx, found, image.Filename); err != nil {
+		return err
+	}
+	return nil
+}
+
+// dropObservation removes one photo's entry from the post's snapshot, leaving the rest as it
+// was. A post with no snapshot has nothing to drop, which is the ordinary case.
+func (s *Service) dropObservation(ctx context.Context, found Post, filename string) error {
+	kept := make([]Observation, 0, len(found.Observations))
+	for _, observation := range found.Observations {
+		if observation.File != filename {
+			kept = append(kept, observation)
+		}
+	}
+	if len(kept) == len(found.Observations) {
+		return nil
+	}
+	if _, err := s.store.UpdateObservations(ctx, found.Slug, found.UserID, kept, s.now()); err != nil {
+		return fmt.Errorf("drop observation for deleted photo: %w", err)
 	}
 	return nil
 }

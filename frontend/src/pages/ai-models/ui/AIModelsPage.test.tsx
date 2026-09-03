@@ -1,7 +1,8 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
-import { Stage } from '@/shared/api'
+import { create } from '@bufbuild/protobuf'
+import { ObservationSchema, Stage } from '@/shared/api'
 import type { FakeAnalyzeExperimentStart, FakeWriteExperimentStart } from '@/test/experiments'
 import { chooseOption } from '@/test/listbox'
 import { renderAppAt } from '@/test/app'
@@ -90,6 +91,63 @@ it('requires and sends the explicit active observe model for a post with photos'
       modelId: 'vision',
     }),
   )
+})
+
+// A8 (model-lab half): the write comparison's second entry point (change 06) goes through the
+// same re-observation picker with the same reuse contract as the editor's.
+it('routes a model-lab comparison through the re-observation picker', async () => {
+  const user = userEvent.setup()
+  const starts: FakeWriteExperimentStart[] = []
+  renderAppAt('/ai-models', {
+    user: { id: 'owner-1' },
+    posts: {
+      posts: [
+        {
+          slug: 'photo-post',
+          title: '사진 글',
+          images: [
+            { id: 'image-1', filename: 'photo.jpg' },
+            { id: 'image-2', filename: 'other.jpg' },
+          ],
+          observations: [
+            create(ObservationSchema, {
+              file: 'photo.jpg',
+              scene: '이미 본 장면',
+              model: 'openrouter/vision',
+            }),
+            create(ObservationSchema, {
+              file: 'other.jpg',
+              scene: '또 다른 장면',
+              model: 'openrouter/vision',
+            }),
+          ],
+        },
+      ],
+    },
+    providers: {
+      models: [
+        ...writeModels,
+        { providerId: 'openrouter', modelId: 'vision', label: 'Vision', vision: true },
+      ],
+      selections: [{ stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'vision' }],
+      comparisonPairs: [writePair],
+    },
+    experiments: { starts },
+  })
+
+  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '사진 글')
+  const start = screen.getByRole('button', { name: '비교 시작' })
+  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
+  await user.click(start)
+
+  const picker = await screen.findByRole('dialog', { name: '다시 관찰할 사진 선택' })
+  expect(starts).toHaveLength(0)
+  await user.click(within(picker).getByRole('checkbox', { name: 'photo.jpg 다시 관찰' }))
+  await user.click(within(picker).getByRole('button', { name: '이대로 시작' }))
+
+  await waitFor(() => expect(starts).toHaveLength(1))
+  expect(starts[0].reobserveFiles).toEqual(['photo.jpg'])
 })
 
 it('keeps photo-backed writing blocked without an active observe model and reports start errors', async () => {

@@ -20,12 +20,14 @@ import {
 } from '@/shared/ui'
 import { useStartGeneration } from '../api/useStartGeneration'
 import { useStartWriteExperiment } from '../api/useStartWriteExperiment'
+import { needsPicker } from '../model/reobserve'
 import {
   comparisonGenerationPreconditions,
   isSetupBlocker,
   ordinaryGenerationPreconditions,
   type GenerationModelSelection,
 } from '../model/preconditions'
+import { ReobservePicker } from './ReobservePicker'
 
 export interface GenerationActionsHandle {
   startGeneration: () => void
@@ -35,7 +37,7 @@ export interface GenerationActionsHandle {
 export const GenerationActions = forwardRef<
   GenerationActionsHandle,
   {
-    post: Pick<PostDraft, 'slug' | 'images' | 'pendingExperimentId' | 'voice'>
+    post: Pick<PostDraft, 'slug' | 'images' | 'observations' | 'pendingExperimentId' | 'voice'>
     /** Owned by the editor, not by this action: the writing brief sets it from another layer
      *  (`widgets/generation-brief`) and the two must agree on what the next run is given. */
     targetLength?: number
@@ -61,6 +63,9 @@ export const GenerationActions = forwardRef<
   const comparison = useStartWriteExperiment()
   const [preparing, setPreparing] = useState<'generation' | 'comparison' | ''>('')
   const [prepareFailure, setPrepareFailure] = useState<AppFailure>()
+  // The mode a confirmed picker will start. Non-empty IS the picker's open state: there is one
+  // picker for both actions, and the answer only means something together with the action.
+  const [picking, setPicking] = useState<'generation' | 'comparison' | ''>('')
 
   const observeSelection = resolveSelection(observe.models, observe.selected)
   const writeSelection = resolveSelection(write.models, write.selected)
@@ -87,14 +92,20 @@ export const GenerationActions = forwardRef<
   const busy = jobPending || Boolean(preparing) || generation.isPending || comparison.isPending
   const sharedDisabled = modelPending || busy || pendingExperiment
 
-  const start = useCallback(
-    async (mode: 'generation' | 'comparison') => {
-      const precondition = mode === 'generation' ? ordinary : ab
-      if (sharedDisabled || !precondition.ok) return
+  // `reobserveFiles` undefined is a start with no re-observation decision (no picker was
+  // shown), which observes every attached photo. An empty array is the picker's answer to reuse
+  // everything, and the two must not collapse into one.
+  const enqueue = useCallback(
+    async (mode: 'generation' | 'comparison', reobserveFiles?: readonly string[]) => {
+      // Re-checked here, not only in `start`: the picker can sit open while the catalog
+      // refetches and invalidates a selection, and this is the last point before the RPC that
+      // still has somewhere to report a refusal.
       if (mode === 'generation' && !writeSelection) return
       if (mode === 'comparison' && (!writeA || !writeB)) return
       setPreparing(mode)
       setPrepareFailure(undefined)
+      // Deliberately here and not before the picker: a cancelled picker must not have forced a
+      // draft save, so the save sits immediately before the RPC that consumes it.
       try {
         await beforeStart?.()
       } catch (cause) {
@@ -110,6 +121,7 @@ export const GenerationActions = forwardRef<
                 post.images.length ? observeSelection?.ref : undefined,
                 writeSelection!.ref,
                 targetLength,
+                reobserveFiles,
               )
             : await comparison.start(
                 post.slug,
@@ -117,6 +129,7 @@ export const GenerationActions = forwardRef<
                 writeA!.ref,
                 writeB!.ref,
                 targetLength,
+                reobserveFiles,
               )
         onStarted(response.jobId)
       } catch {
@@ -126,17 +139,41 @@ export const GenerationActions = forwardRef<
       }
     },
     [
-      ab,
       beforeStart,
       comparison,
       generation,
       observeSelection,
       onStarted,
-      ordinary,
       post.images.length,
       post.slug,
-      sharedDisabled,
       targetLength,
+      writeA,
+      writeB,
+      writeSelection,
+    ],
+  )
+
+  const start = useCallback(
+    async (mode: 'generation' | 'comparison') => {
+      const precondition = mode === 'generation' ? ordinary : ab
+      if (sharedDisabled || !precondition.ok) return
+      if (mode === 'generation' && !writeSelection) return
+      if (mode === 'comparison' && (!writeA || !writeB)) return
+      // A post with observations worth reusing decides what to re-observe first; one with
+      // nothing to reuse would observe everything either way, so it starts directly.
+      if (needsPicker(post.images, post.observations)) {
+        setPicking(mode)
+        return
+      }
+      await enqueue(mode)
+    },
+    [
+      ab,
+      enqueue,
+      ordinary,
+      post.images,
+      post.observations,
+      sharedDisabled,
       writeA,
       writeB,
       writeSelection,
@@ -280,6 +317,20 @@ export const GenerationActions = forwardRef<
           <AppFailureMessage failure={prepareFailure} />
         </Notice>
       )}
+      <ReobservePicker
+        open={Boolean(picking)}
+        images={post.images}
+        observations={post.observations}
+        observeModel={observeSelection?.ref}
+        pending={Boolean(preparing)}
+        onConfirm={(files) => {
+          const mode = picking
+          setPicking('')
+          if (mode) void enqueue(mode, files)
+        }}
+        // Cancel enqueues nothing and saves nothing — the draft save lives on the confirm path.
+        onCancel={() => setPicking('')}
+      />
     </div>
   )
 })

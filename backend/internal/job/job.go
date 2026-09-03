@@ -74,12 +74,17 @@ type NewJob struct {
 	// candidates of an A/B comparison. They exist for the gate and are not persisted: the
 	// experiment aggregate is where they are durable.
 	ExtraModels []string
-	// CallCounts scales a ref that runs more than once. A ref absent from the map runs
-	// once, which is what every kind but photo observation and profile validation does.
+	// CallCounts states how many times a ref runs across the whole job. A ref absent from
+	// the map runs once per slot it fills, which is what every kind but photo observation
+	// and profile validation does. ZERO is a real answer, not a missing one: a generation
+	// that reuses every stored observation makes no observation call. A caller stating a
+	// count for a ref that fills more than one slot states the TOTAL, since the count is per
+	// model rather than per slot.
 	//
 	// It exists because the credit hold prices every call the work will make: a job that
 	// says one call and makes nine starts on credits the account turns out not to have,
-	// and never pays the difference back.
+	// and never pays the difference back — and one that says one call and makes none can
+	// refuse an account that could have afforded the work.
 	CallCounts map[string]int
 }
 
@@ -93,15 +98,23 @@ func (n NewJob) plannedCalls() []PlannedCall {
 		if ref == "" {
 			continue
 		}
+		stated, given := n.CallCounts[ref]
 		count := 1
-		if stated, ok := n.CallCounts[ref]; ok && stated > 1 {
-			count = stated
+		if given {
+			count = max(stated, 0)
+		}
+		// Zero is a real answer, not a missing one: a generation that reuses every stored
+		// observation makes no observation call, and holding for one would refuse a user who
+		// can afford the work the job will actually do. A caller that states zero for a ref
+		// filling more than one slot must state the TOTAL, for the reason below.
+		if count == 0 {
+			continue
 		}
 		// One ref chosen for two stages is one entry, not two: a stated count is how many
 		// times that MODEL runs across the whole job, so applying it per slot would price
 		// the same calls twice. An unstated ref still adds a call per slot it fills.
 		if index, ok := seen[ref]; ok {
-			if stated, given := n.CallCounts[ref]; !given || stated <= 1 {
+			if !given {
 				calls[index].Count++
 			}
 			continue

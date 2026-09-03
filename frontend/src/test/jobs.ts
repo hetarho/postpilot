@@ -44,6 +44,9 @@ export interface FakeGenerationStart {
   observeModel?: { providerId: string; modelId: string }
   writeModel?: { providerId: string; modelId: string }
   targetLength?: number
+  /** The re-observation picker's answer, with its presence preserved: `undefined` is a start
+   *  that expressed no decision, and an empty array is the decision to observe nothing. */
+  reobserveFiles?: string[]
 }
 
 export interface FakeRevisionStart {
@@ -88,6 +91,7 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
         ? { providerId: req.writeModel.providerId, modelId: req.writeModel.modelId }
         : undefined,
       targetLength: req.targetLength,
+      reobserveFiles: req.reobserve ? req.reobserve.files : undefined,
     })
     return create(StartGenerationResponseSchema, { jobId: options.startJobId ?? 'job-started' })
   })

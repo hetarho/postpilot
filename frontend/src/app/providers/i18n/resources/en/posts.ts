@@ -127,6 +127,23 @@ export const posts = {
       title: 'Writing options',
       length: 'Target length',
     },
+    reobserve: {
+      title: 'Choose photos to observe again',
+      purpose:
+        'Photos already observed are reused as they are. Pick only the ones worth another look \u2014 with nothing selected, the observation stage is skipped and writing starts right away.',
+      observeAgain: 'Observe {{filename}} again',
+      forcedReason: 'No observation to reuse, so this photo is always observed',
+      nothingStored: 'No stored observation',
+      selectAll: 'Select all',
+      clearAll: 'Clear all',
+      storedModel: 'Stored observations by {{models}}',
+      storedModelUnknown: 'an unrecorded model',
+      modelChanged:
+        'The observation model you have selected ({{selected}}) differs from the one that produced the stored observations ({{stored}}). Leaving them reused mixes two models\u2019 observations.',
+      selectedCount: '{{count}} photo(s) to observe again',
+      selectedNone: 'No photo will be observed again',
+      confirm: 'Start with this',
+    },
     options: {
       useTarget: 'Use a target length',
       target: 'Target length',

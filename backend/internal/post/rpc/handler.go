@@ -431,7 +431,7 @@ func toProtoBlockType(value post.BlockType) postpilotv1.BlockType {
 func toProtoObservation(value post.Observation) *postpilotv1.Observation {
 	return &postpilotv1.Observation{
 		File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText,
-		Objects: value.Objects, PeoplePresent: value.PeoplePresent,
+		Objects: value.Objects, PeoplePresent: value.PeoplePresent, Model: value.Model,
 	}
 }
 

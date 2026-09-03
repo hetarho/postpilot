@@ -71,6 +71,10 @@ message Observation {
   string visible_text = 4;
   repeated string objects = 5;
   bool people_present = 6;
+  // The model ref that produced THIS entry. Per-entry rather than per-snapshot because
+  // re-observing a subset of the photos is what makes a mixed-model snapshot possible.
+  // Empty on an entry written before the field existed, which reads as unknown.
+  string model = 7;
 }
 
 // The voice a post is written in, as the post screens need it. Transport-only: a deleted
@@ -168,11 +172,26 @@ message GetGenerationResponse {
   GenerationJob job = 1;
 }
 
+// The re-observation picker's answer. It is a MESSAGE rather than a bare `repeated string`
+// because presence is the contract and proto3 gives a repeated field none: absent and empty
+// arrive identically. Absent means no picker was involved and every attached photo is
+// observed, which is what a client predating the picker sends and what the pre-picker
+// behavior was; present with an empty `files` is the frozen decision to observe nothing at
+// all — reuse every stored observation.
+//
+// Only the SET of filenames travels. The observations being carried over are resolved
+// server-side from the post's own snapshot at enqueue, so a client never sends observation
+// text and both halves of the decision freeze in one place.
+message ReobserveSelection {
+  repeated string files = 1;
+}
+
 message StartGenerationRequest {
   string post_slug = 1;
   ModelRef observe_model = 2;
   ModelRef write_model = 3;
   optional int32 target_length = 4;
+  ReobserveSelection reobserve = 5;
 }
 
 message StartGenerationResponse { string job_id = 1; }

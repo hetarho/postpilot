@@ -222,6 +222,10 @@ type Observation struct {
 	VisibleText   string
 	Objects       []string
 	PeoplePresent bool
+	// Model is the ref that produced this entry. Per-entry rather than per-snapshot: a run
+	// may re-observe only some photos, so one snapshot can hold two models' work. Empty on
+	// an entry written before this field existed, which reads as unknown.
+	Model string
 }
 
 // Summary is a row of the post list.

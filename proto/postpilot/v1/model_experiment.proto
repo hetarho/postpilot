@@ -140,6 +140,9 @@ message StartWriteExperimentRequest {
   ModelRef model_a = 3;
   ModelRef model_b = 4;
   optional int32 target_length = 5;
+  // Same ReobserveSelection contract as StartGenerationRequest: the A/B write comparison
+  // shares the observation stage, so it shares the reuse decision.
+  ReobserveSelection reobserve = 6;
 }
 message StartExperimentResponse { string experiment_id = 1; string job_id = 2; }
 

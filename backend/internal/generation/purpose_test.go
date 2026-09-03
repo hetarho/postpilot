@@ -295,7 +295,7 @@ func TestWriteExperimentGivesBothCandidatesTheSameBriefAndChangesTheSnapshot(t *
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
 	svc := purposeAwareService(t, briefs, posts, &fakeJobs{id: "job"}, models)
 
-	snapshot, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil)
+	snapshot, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,7 +327,7 @@ func TestWriteExperimentGivesBothCandidatesTheSameBriefAndChangesTheSnapshot(t *
 	// The experiment's input hash is taken over these bytes, so a different brief is a
 	// different comparison rather than a rerun of the same one.
 	briefs.deleted = true
-	without, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil)
+	without, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

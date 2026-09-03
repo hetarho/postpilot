@@ -31,7 +31,7 @@ func TestStartsRefuseADeletedVoiceBeforeEnqueue(t *testing.T) {
 	if _, err := svc.StartRevision(context.Background(), StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "더 짧게", SaveAsRule: true, WriteModel: writeRef.String()}); !errors.Is(err, ErrVoiceDeleted) {
 		t.Fatalf("revision start = %v", err)
 	}
-	if _, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil); !errors.Is(err, ErrVoiceDeleted) {
+	if _, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil); !errors.Is(err, ErrVoiceDeleted) {
 		t.Fatalf("write experiment snapshot = %v", err)
 	}
 	if jobs.enqueues != 0 || len(rules.lines) != 0 || len(models.calls) != 0 {
@@ -167,7 +167,7 @@ func TestApplyWriteWinnerRequiresTheFrozenVoice(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Memo: "memo"}}
 	models := newFakeModels()
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
-	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

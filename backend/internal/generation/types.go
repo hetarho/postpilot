@@ -39,6 +39,9 @@ type Observation struct {
 	VisibleText   string
 	Objects       []string
 	PeoplePresent bool
+	// Model is the ref that observed this photo, stamped where the batch ran. It is what
+	// lets the picker say whose eyesight it is offering to reuse; empty means unknown.
+	Model string
 }
 
 type Image struct {
@@ -74,10 +77,14 @@ type PostInput struct {
 	Purpose   *PurposeBrief
 	// Guidelines is the frozen 작문 지침 material in injection order, filled at enqueue from
 	// PurposeID like Purpose is. Handlers never resolve guidelines live either.
-	Guidelines      []string
-	Title           string
-	Memo            string
-	Images          []Image
+	Guidelines []string
+	Title      string
+	Memo       string
+	Images     []Image
+	// Observations is the post's stored observation snapshot, read only at enqueue so the
+	// selection and what it carries over can both be frozen there. No handler reads a live
+	// snapshot: it reads the payload, which is what makes the frozen decision hold.
+	Observations    []Observation
 	Content         *PostContent
 	TargetLanguage  Language
 	ContentLanguage *Language
@@ -114,6 +121,14 @@ type StartRequest struct {
 	// where the post is already in hand. Observation batches photos, so this is not the
 	// photo count — and the credit hold has to price every call, not every photo.
 	ObserveCalls int
+	// ObserveFiles is the re-observation picker's answer on the way in, and the RESOLVED
+	// frozen set on the way out of Start: unknown names dropped, photos with nothing to
+	// reuse forced in. Nil is a client that sent no picker answer, which observes everything.
+	ObserveFiles *[]string
+	// Observations is the reusable snapshot as it stood at Start, frozen into the payload
+	// beside ObserveFiles. Which of its entries survive the run is decided by ObserveFiles
+	// alone, so a photo waiting for its batch can keep the entry it already had.
+	Observations []Observation
 }
 
 type GenerateJob struct {
@@ -126,6 +141,14 @@ type GenerateJob struct {
 	TargetLength   *int
 	Purpose        *PurposeBrief
 	Guidelines     []string
+	// ObserveFiles carries PRESENCE, not just emptiness. Nil is a job queued before this
+	// contract existed and keeps the observe-everything behavior; non-nil but empty is the
+	// frozen decision to observe nothing at all.
+	ObserveFiles *[]string
+	// Observations is the reusable snapshot frozen at enqueue, beside ObserveFiles and from
+	// the same read. It is the run's ONLY view of what was already known — no handler reads
+	// a live snapshot.
+	Observations []Observation
 }
 
 type StartRevisionRequest struct {

@@ -73,6 +73,7 @@ export {
   PostContentSchema,
   PostSchema,
   PostSummarySchema,
+  ReobserveSelectionSchema,
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,

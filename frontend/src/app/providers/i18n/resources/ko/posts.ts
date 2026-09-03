@@ -122,6 +122,23 @@ export const posts = {
       title: '글쓰기 옵션',
       length: '목표 분량',
     },
+    reobserve: {
+      title: '다시 관찰할 사진 선택',
+      purpose:
+        '이미 관찰한 사진은 그대로 씁니다. 다시 보고 싶은 사진만 선택하세요. 아무것도 선택하지 않으면 관찰을 건너뛰고 바로 글을 씁니다.',
+      observeAgain: '{{filename}} 다시 관찰',
+      forcedReason: '관찰 결과가 없어 반드시 관찰합니다',
+      nothingStored: '저장된 관찰 결과 없음',
+      selectAll: '전체 선택',
+      clearAll: '전체 해제',
+      storedModel: '저장된 관찰: {{models}}',
+      storedModelUnknown: '기록되지 않은 모델',
+      modelChanged:
+        '지금 선택한 관찰 모델({{selected}})은 저장된 관찰을 만든 모델({{stored}})과 달라요. 그대로 두면 두 모델의 관찰이 섞입니다.',
+      selectedCount: '{{count}}장 다시 관찰',
+      selectedNone: '다시 관찰할 사진 없음',
+      confirm: '이대로 시작',
+    },
     options: {
       useTarget: '목표 글자 수 사용',
       target: '목표 글자 수',

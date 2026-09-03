@@ -129,7 +129,7 @@ func TestObservationInputsAreByteIdenticalAcrossTargets(t *testing.T) {
 	for _, target := range []Language{LanguageKorean, LanguageEnglish} {
 		post := base
 		post.TargetLanguage = target
-		if _, _, err := svc.observeCandidate(context.Background(), post, observeRef, func(string, int, int) {}, false); err != nil {
+		if _, _, err := svc.observeCandidate(context.Background(), post, post.Images, nil, observeRef, func(string, int, int) {}, false); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -173,7 +173,7 @@ func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 	}
 	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", SourceLanguage: LanguageKorean, Portable: true}}
 	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
-	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

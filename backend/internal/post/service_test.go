@@ -443,6 +443,59 @@ func TestDeleteImage(t *testing.T) {
 	}
 }
 
+// Change 21 made a stale observation dangerous: a run may now REUSE a stored entry instead of
+// re-observing, entries are paired to photos by filename alone, and a filename is free to be
+// taken again once its photo is gone. So the entry goes with the photo.
+func TestDeleteImageDropsItsObservationAndKeepsTheRest(t *testing.T) {
+	svc, _, blobs := newTestService(t)
+	ctx := context.Background()
+	p := mustCreatePost(t, svc, alice, "Jeju")
+
+	ids := make([]string, 0, 2)
+	for _, filename := range []string{"IMG_1.jpg", "IMG_2.jpg"} {
+		upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, filename)
+		blobs.put(upload.Key, 100, testNow)
+		if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+			t.Fatalf("ConfirmUpload %s: %v", filename, err)
+		}
+		ids = append(ids, upload.ID)
+	}
+	if err := svc.SetObservations(ctx, alice, p.Slug, []Observation{
+		{File: "IMG_1.jpg", Scene: "바다", Model: "openrouter/vision"},
+		{File: "IMG_2.jpg", Scene: "골목", Model: "openrouter/vision"},
+	}); err != nil {
+		t.Fatalf("SetObservations: %v", err)
+	}
+
+	if err := svc.DeleteImage(ctx, alice, ids[0]); err != nil {
+		t.Fatalf("DeleteImage: %v", err)
+	}
+	after, err := svc.Get(ctx, alice, p.Slug)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if len(after.Observations) != 1 || after.Observations[0].File != "IMG_2.jpg" ||
+		after.Observations[0].Scene != "골목" {
+		t.Fatalf("observations after delete = %+v", after.Observations)
+	}
+
+	// The freed filename may be taken again, and the new photo must start with nothing to reuse.
+	retaken, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	blobs.put(retaken.Key, 100, testNow)
+	if _, err := svc.ConfirmUpload(ctx, alice, retaken.ID, 1, 1); err != nil {
+		t.Fatalf("re-taking the freed filename: %v", err)
+	}
+	reread, err := svc.Get(ctx, alice, p.Slug)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	for _, observation := range reread.Observations {
+		if observation.File == "IMG_1.jpg" {
+			t.Fatalf("a different photo inherited the deleted one's observation: %+v", observation)
+		}
+	}
+}
+
 func TestDeleteImageOwnership(t *testing.T) {
 	svc, _, blobs := newTestService(t)
 	ctx := context.Background()

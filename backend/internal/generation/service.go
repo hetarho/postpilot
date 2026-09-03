@@ -170,6 +170,10 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	}
 	if len(post.Images) == 0 {
 		request.ObserveModel = ""
+		// A zero-photo post has no reuse decision to make, so nothing about the picker is
+		// frozen for it: the run observes nothing and clears the snapshot, as it always has.
+		request.ObserveFiles = nil
+		request.Observations = nil
 	} else {
 		observe, valid := parseModelRef(request.ObserveModel)
 		if !valid || !modelEnabled(s.models, observe, llm.StageNameObserve) {
@@ -189,7 +193,17 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", err
 	}
 	request.Guidelines = texts
-	request.ObserveCalls = s.observeCalls(len(post.Images))
+	if len(post.Images) > 0 {
+		// Both halves of the reuse decision are resolved HERE, from one read of the post,
+		// and frozen into the payload by the enqueue. Attaching a photo, deleting one or
+		// switching the observation model afterwards cannot reach the queued run.
+		files, carried := freezeObserveSelection(post.Images, post.Observations, request.ObserveFiles)
+		request.ObserveFiles = &files
+		request.Observations = carried
+	}
+	// Priced over the FROZEN set, never over the attached count: a run that reuses every
+	// observation makes no observation call and must not be held for fifteen of them.
+	request.ObserveCalls = s.observeCalls(observeTargetCount(post.Images, request.ObserveFiles))
 	id, err := s.jobs.EnqueueGeneration(ctx, request)
 	if err != nil {
 		return "", fmt.Errorf("enqueue generation: %w", err)
@@ -205,6 +219,15 @@ func (s *Service) observeCalls(photos int) int {
 		return 0
 	}
 	return (photos + s.batchSize - 1) / s.batchSize
+}
+
+// observeTargetCount is how many photos the frozen decision actually observes. Nil is the
+// no-picker case, which observes every attached photo.
+func observeTargetCount(images []Image, observeFiles *[]string) int {
+	if observeFiles == nil {
+		return len(images)
+	}
+	return len(*observeFiles)
 }
 
 // freezePurpose resolves the post's CURRENT purpose once, at enqueue, so the text the

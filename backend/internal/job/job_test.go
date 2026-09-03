@@ -886,6 +886,45 @@ func TestStatedCallCountsReachTheGate(t *testing.T) {
 	}
 }
 
+// Change 21: a generation that reuses every stored observation makes ZERO observation calls,
+// so the hold must not price one. The observe model stays on the job — the handler needs it to
+// tell a reuse-everything run apart from a zero-photo one — which is why the count says so.
+func TestAZeroStatedCountHoldsNoCallForThatModel(t *testing.T) {
+	h := newHarness(t)
+	admitter := &recordingAdmitter{}
+	h.queue.Admit(admitter)
+
+	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		ObserveModel: "openrouter/vision", WriteModel: "openrouter/writer", TargetLanguage: "ko",
+		CallCounts: map[string]int{"openrouter/vision": 0},
+	}); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/writer x1"; got != want {
+		t.Errorf("priced calls = %q, want %q — no hold for a stage that runs zero times", got, want)
+	}
+}
+
+// The same run with ONE model serving both stages: the total the caller states is the whole
+// job, so the write call it still makes has to be inside that total.
+func TestAZeroObserveCountKeepsTheWriteCallOfASharedModel(t *testing.T) {
+	h := newHarness(t)
+	admitter := &recordingAdmitter{}
+	h.queue.Admit(admitter)
+
+	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		ObserveModel: "openrouter/one", WriteModel: "openrouter/one", TargetLanguage: "ko",
+		CallCounts: map[string]int{"openrouter/one": 1},
+	}); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/one x1"; got != want {
+		t.Errorf("priced calls = %q, want %q", got, want)
+	}
+}
+
 // A2/A3: a refused start creates no job row at all — the client is told to try later, not
 // handed a job that will never run.
 func TestRefusedAdmissionCreatesNoJob(t *testing.T) {

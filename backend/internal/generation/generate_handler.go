@@ -53,10 +53,27 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 		if !ok {
 			return ErrObserveModelRequired
 		}
-		observations, err = s.observe(ctx, post, observeModel, progress)
-		if err != nil {
-			return err
+		// The payload's frozen decision, never a live snapshot: what this run observes was
+		// settled at enqueue and a photo attached since then belongs to the next generation.
+		targets, seed := frozenObserveSelection(post.Images, job.ObserveFiles, job.Observations)
+		if len(targets) == 0 {
+			// Every observation is being reused, so there is nothing to call a provider for
+			// and nothing to write: making no SetObservations call at all is what leaves the
+			// stored snapshot byte-identical. The stage is complete the moment it starts.
+			progress("observe", 0, 0)
+			observations = mergeObservations(post.Images, seed, nil)
+		} else {
+			observations, err = s.observe(ctx, post, targets, seed, observeModel, progress)
+			if err != nil {
+				return err
+			}
 		}
+		// The write stage is shown ONLY the photos this run has eyesight for. post.Images is
+		// read live at dequeue, so a photo confirmed between the enqueue and here is outside
+		// the frozen decision: it is not observed, and it must not reach the write prompt
+		// either — a filename with no observation is exactly the "write from a photo nothing
+		// has looked at" case this change exists to prevent. It belongs to the next run.
+		post.Images = observedImages(post.Images, observations)
 	}
 	writeModel, ok := parseModelRef(job.WriteModel)
 	if !ok {

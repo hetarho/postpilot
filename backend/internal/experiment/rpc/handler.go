@@ -62,6 +62,7 @@ func (h *Handler) StartWriteExperiment(ctx context.Context, req *connect.Request
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Stage: experiment.StageWrite,
 		ObserveModel: fromProtoRef(req.Msg.GetObserveModel()), ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
 		TargetLength: optionalTargetLength(req.Msg.TargetLength),
+		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
 	})
 	if err != nil {
 		return nil, toConnectError("start write experiment", err)
@@ -314,6 +315,19 @@ func toProtoLanguage(value *experiment.Language) postpilotv1.ContentLanguage {
 	default:
 		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
 	}
+}
+
+// reobserveFiles maps the picker's answer to the presence-carrying value, exactly as the
+// generation RPC does: nil is no decision, present-and-empty is "observe nothing".
+func reobserveFiles(selection *postpilotv1.ReobserveSelection) *[]string {
+	if selection == nil {
+		return nil
+	}
+	files := selection.GetFiles()
+	if files == nil {
+		files = []string{}
+	}
+	return &files
 }
 
 func optionalTargetLength(value *int32) *int {

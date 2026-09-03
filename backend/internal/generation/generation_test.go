@@ -163,7 +163,7 @@ func TestObserveBatchesIncrementallyAndMatchesFilenames(t *testing.T) {
 	}
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
 	var progress []string
-	got, err := svc.observe(context.Background(), post, observeRef, func(stage string, done, total int) {
+	got, err := svc.observe(context.Background(), post, post.Images, nil, observeRef, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
 	})
 	if err != nil {
@@ -201,9 +201,8 @@ func TestReasoningPolicyAndFailedUsageReachExperimentCandidates(t *testing.T) {
 	}
 	svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
 	_, writeUsage, writeErr := svc.writeCandidate(context.Background(), PostInput{}, Profile{}, nil, writeRef)
-	_, observeUsage, observeErr := svc.observeCandidate(context.Background(), PostInput{
-		Images: []Image{{Filename: "IMG.jpg", Key: "key"}},
-	}, observeRef, func(string, int, int) {}, false)
+	observePost := PostInput{Images: []Image{{Filename: "IMG.jpg", Key: "key"}}}
+	_, observeUsage, observeErr := svc.observeCandidate(context.Background(), observePost, observePost.Images, nil, observeRef, func(string, int, int) {}, false)
 	if writeErr == nil || writeUsage.PromptTokens != 11 || writeUsage.CompletionTokens != 7 || !writeUsage.CostReported {
 		t.Fatalf("write usage/error = %+v / %v", writeUsage, writeErr)
 	}
@@ -231,9 +230,8 @@ func TestLengthLimitedPartialJSONIsOutputTruncated(t *testing.T) {
 		{
 			name: "observe",
 			run: func(svc *Service) error {
-				_, _, err := svc.observeCandidate(context.Background(), PostInput{
-					Images: []Image{{Filename: "IMG.jpg", Key: "key"}},
-				}, observeRef, func(string, int, int) {}, false)
+				post := PostInput{Images: []Image{{Filename: "IMG.jpg", Key: "key"}}}
+				_, _, err := svc.observeCandidate(context.Background(), post, post.Images, nil, observeRef, func(string, int, int) {}, false)
 				return err
 			},
 		},
@@ -439,7 +437,7 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 		}, nil
 	}
 	svc := NewService(posts, fakeProfiles{profile: Profile{Styleguide: "말투"}}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
-	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -514,7 +512,7 @@ func TestWriteExperimentObservesPhotosExactlyOnceBeforeTwoWriters(t *testing.T) 
 		return llm.Response{Text: `{"title":"글","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`}, nil
 	}
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy)
-	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

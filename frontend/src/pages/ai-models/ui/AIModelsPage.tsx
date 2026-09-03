@@ -23,6 +23,8 @@ import { ApplyRecommendation } from '@/features/apply-model-recommendation'
 import { ModelPairForm } from '@/features/configure-model-pair'
 import {
   comparisonGenerationPreconditions,
+  needsPicker,
+  ReobservePicker,
   type GenerationModelSelection,
   useStartWriteExperiment,
 } from '@/features/generate-post'
@@ -378,7 +380,11 @@ function SelectedPostWriteComparison({
                 : ''
   const canStart = Boolean(post) && !reason && !start.isPending
 
-  const startComparison = async () => {
+  // The model lab is the write comparison's second entry point (change 06), so it goes through
+  // the same picker with the same reuse contract. `usePost` already holds the observations.
+  const [picking, setPicking] = useState(false)
+
+  const enqueue = async (reobserveFiles?: readonly string[]) => {
     if (!canStart || !post || !writeA || !writeB) return
     try {
       const response = await start.start(
@@ -387,11 +393,21 @@ function SelectedPostWriteComparison({
         writeA.ref,
         writeB.ref,
         post.targetLength,
+        reobserveFiles,
       )
       void navigate({ to: '/ai-models/experiments/$id', params: { id: response.experimentId } })
     } catch {
       // The mutation's transport error is rendered beside the action.
     }
+  }
+
+  const startComparison = async () => {
+    if (!canStart || !post || !writeA || !writeB) return
+    if (needsPicker(post.images, post.observations)) {
+      setPicking(true)
+      return
+    }
+    await enqueue()
   }
 
   return (
@@ -411,6 +427,20 @@ function SelectedPostWriteComparison({
       </Typography>
       {start.isError && (
         <FieldMessage className="mt-2">{start.errorMessage || t('page.startRetry')}</FieldMessage>
+      )}
+      {post && (
+        <ReobservePicker
+          open={picking}
+          images={post.images}
+          observations={post.observations}
+          observeModel={observeSelection?.ref}
+          pending={start.isPending}
+          onConfirm={(files) => {
+            setPicking(false)
+            void enqueue(files)
+          }}
+          onCancel={() => setPicking(false)}
+        />
       )}
     </div>
   )

@@ -11,6 +11,16 @@ type purposePayload struct {
 	Instructions string `json:"instructions"`
 }
 
+type observationPayload struct {
+	File          string   `json:"file"`
+	Scene         string   `json:"scene,omitempty"`
+	Mood          string   `json:"mood,omitempty"`
+	VisibleText   string   `json:"visible_text,omitempty"`
+	Objects       []string `json:"objects,omitempty"`
+	PeoplePresent bool     `json:"people_present,omitempty"`
+	Model         string   `json:"model,omitempty"`
+}
+
 type generationPayload struct {
 	TargetLanguage string          `json:"target_language"`
 	TargetLength   *int            `json:"target_length,omitempty"`
@@ -18,6 +28,15 @@ type generationPayload struct {
 	// The applicable guideline texts in injection order, frozen exactly as Purpose is. A
 	// payload written before guidelines existed decodes with this absent, which is "none".
 	Guidelines []string `json:"guidelines,omitempty"`
+	// The photos this run observes, frozen at enqueue. A POINTER, and deliberately without
+	// `omitempty`: the three states are absent (a job queued before this contract — observe
+	// everything), present-and-empty (observe nothing), and present-with-names. A plain
+	// []string with omitempty would encode "reuse everything" as absent and decode it back
+	// as "re-observe everything" — the exact silent double-spend this contract prevents.
+	ObserveFiles *[]string `json:"observe_files"`
+	// The reusable snapshot as it stood at enqueue, from the same read the selection came
+	// from. ObserveFiles alone decides which of these entries the run replaces.
+	Observations []observationPayload `json:"observations,omitempty"`
 }
 
 // GenerationOptions is what a durable generate job froze at enqueue. Every field is an
@@ -28,6 +47,10 @@ type GenerationOptions struct {
 	TargetLength   *int
 	Purpose        *PurposeBrief
 	Guidelines     []string
+	// ObserveFiles carries presence: nil observes every attached photo, non-nil-but-empty
+	// observes nothing. See generationPayload.ObserveFiles for why the distinction matters.
+	ObserveFiles *[]string
+	Observations []Observation
 }
 
 // EncodeGenerationPayload freezes generation-only options in the durable job.
@@ -40,6 +63,8 @@ func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
 		TargetLength:   cloneOptionalInt(options.TargetLength),
 		Purpose:        encodePurpose(options.Purpose),
 		Guidelines:     cloneTexts(options.Guidelines),
+		ObserveFiles:   cloneOptionalTexts(options.ObserveFiles),
+		Observations:   encodeObservations(options.Observations),
 	})
 }
 
@@ -72,7 +97,50 @@ func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 		TargetLength:   cloneOptionalInt(payload.TargetLength),
 		Purpose:        decodePurpose(payload.Purpose),
 		Guidelines:     cloneTexts(payload.Guidelines),
+		ObserveFiles:   cloneOptionalTexts(payload.ObserveFiles),
+		Observations:   decodeObservations(payload.Observations),
 	}, nil
+}
+
+// cloneOptionalTexts keeps the frozen set frozen while PRESERVING presence: a non-nil empty
+// slice must stay non-nil and empty through both the encode and the decode, because that is
+// the whole "observe nothing" state.
+func cloneOptionalTexts(values *[]string) *[]string {
+	if values == nil {
+		return nil
+	}
+	copied := append([]string{}, *values...)
+	return &copied
+}
+
+func encodeObservations(observations []Observation) []observationPayload {
+	if len(observations) == 0 {
+		return nil
+	}
+	wire := make([]observationPayload, 0, len(observations))
+	for _, observation := range observations {
+		wire = append(wire, observationPayload{
+			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
+			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
+			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
+		})
+	}
+	return wire
+}
+
+func decodeObservations(wire []observationPayload) []Observation {
+	if len(wire) == 0 {
+		return nil
+	}
+	out := make([]Observation, 0, len(wire))
+	for _, observation := range wire {
+		out = append(out, Observation{
+			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
+			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
+			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
+		})
+	}
+	return out
 }
 
 // cloneTexts keeps a frozen slice frozen: the payload and the job must not share backing

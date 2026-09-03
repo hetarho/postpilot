@@ -9,7 +9,8 @@ import { useCallback, useSyncExternalStore } from 'react'
  *
  *  It lives beside its one caller rather than in `shared/lib`, which is a react-free layer by
  *  construction (the ESLint boundaries rule). Move it to its own `shared/ui` directory when a
- *  second primitive needs it. */
+ *  second primitive needs it — note that a dialog-or-sheet surface is NOT one: `Sheet` already
+ *  is a bottom sheet on a phone and a centred dialog from `md:` up, in CSS, on one mount. */
 export const SM_MEDIA_QUERY = '(min-width: 40rem)'
 
 /** Subscribes to a media query, re-rendering when it starts or stops matching. Reports `false`

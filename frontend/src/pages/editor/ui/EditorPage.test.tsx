@@ -15,8 +15,11 @@ import { renderAppAt } from '@/test/app'
 import {
   OBSERVATION_FIXTURE,
   POST_CONTENT_FIXTURE,
+  OBSERVATIONS_FIXTURE,
   POST_IMAGES_FIXTURE,
 } from '@/test/fixtures/postContent'
+import type { FakeWriteExperimentStart } from '@/test/experiments'
+import type { FakeGenerationStart } from '@/test/jobs'
 import { FAKE_STORAGE_ORIGIN, type FakeDraftSave } from '@/test/posts'
 import { clearCaret } from '../model/editor-handoff'
 
@@ -757,6 +760,176 @@ describe('opening a post', () => {
       },
     ])
     expect(calls).not.toContain('StartWriteExperiment')
+  })
+
+  // Change 21: a post that has already been observed decides what to re-observe BEFORE the
+  // enqueue, and confirming the picker untouched reuses everything.
+  it('routes generation through the re-observation picker and freezes the confirmed set', async () => {
+    const starts: FakeGenerationStart[] = []
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      jobs: { starts },
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            images: POST_IMAGES_FIXTURE,
+            observations: OBSERVATIONS_FIXTURE,
+          },
+        ],
+      },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'observer', vision: true },
+          { providerId: 'openrouter', modelId: 'writer' },
+        ],
+        selections: [
+          { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'observer' },
+          { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+        ],
+      },
+    })
+
+    const generate = await screen.findByRole('button', { name: '생성' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    // An unsaved edit, so the draft flush on the start path is a real request whose ORDER
+    // against the picker is observable.
+    await user.type(screen.getByLabelText('메모'), ' + 최신 내용')
+    await user.click(generate)
+
+    // The picker opens instead of enqueueing, and `beforeStart` has NOT run: a cancelled picker
+    // must not have forced a draft save.
+    const picker = await screen.findByRole('dialog', { name: '다시 관찰할 사진 선택' })
+    expect(calls).not.toContain('StartGeneration')
+    expect(calls).not.toContain('SavePostDraft')
+    await user.click(within(picker).getByRole('button', { name: '취소' }))
+    expect(screen.queryByRole('dialog', { name: '다시 관찰할 사진 선택' })).not.toBeInTheDocument()
+    expect(calls).not.toContain('StartGeneration')
+
+    // Reopened, one photo checked, confirmed: the frozen set is exactly that photo, and the
+    // draft save now sits on the confirm path, before the RPC that consumes it.
+    await user.click(screen.getByRole('button', { name: '생성' }))
+    await user.click(await screen.findByRole('checkbox', { name: 'IMG_2.jpg 다시 관찰' }))
+    await user.click(screen.getByRole('button', { name: '이대로 시작' }))
+    await waitFor(() => expect(calls).toContain('StartGeneration'))
+    expect(starts).toHaveLength(1)
+    expect(starts[0].reobserveFiles).toEqual(['IMG_2.jpg'])
+    expect(calls.indexOf('SavePostDraft')).toBeGreaterThanOrEqual(0)
+    expect(calls.indexOf('SavePostDraft')).toBeLessThan(calls.indexOf('StartGeneration'))
+  })
+
+  it('sends an EMPTY frozen set when the picker is confirmed untouched', async () => {
+    const starts: FakeGenerationStart[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      jobs: { starts },
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            images: POST_IMAGES_FIXTURE,
+            observations: OBSERVATIONS_FIXTURE,
+          },
+        ],
+      },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'observer', vision: true },
+          { providerId: 'openrouter', modelId: 'writer' },
+        ],
+        selections: [
+          { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'observer' },
+          { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+        ],
+      },
+    })
+
+    const generate = await screen.findByRole('button', { name: '생성' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    await user.click(generate)
+    await user.click(await screen.findByRole('button', { name: '이대로 시작' }))
+
+    await waitFor(() => expect(starts).toHaveLength(1))
+    // EMPTY, not absent: absent would mean "observe everything" on the wire.
+    expect(starts[0].reobserveFiles).toEqual([])
+  })
+
+  // A8 (editor half): the A/B comparison shares the picker and the same reuse contract.
+  it('routes the A/B comparison through the same picker', async () => {
+    const starts: FakeWriteExperimentStart[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      experiments: { starts },
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            images: POST_IMAGES_FIXTURE,
+            observations: OBSERVATIONS_FIXTURE,
+          },
+        ],
+      },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'observer', vision: true },
+          { providerId: 'openrouter', modelId: 'candidate-a' },
+          { providerId: 'openrouter', modelId: 'candidate-b' },
+        ],
+        selections: [
+          { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'observer' },
+          { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'candidate-a' },
+        ],
+        comparisonPairs: [
+          {
+            stage: Stage.WRITE,
+            candidateA: { providerId: 'openrouter', modelId: 'candidate-a' },
+            candidateB: { providerId: 'openrouter', modelId: 'candidate-b' },
+          },
+        ],
+      },
+    })
+
+    const compare = await screen.findByRole('button', { name: 'A/B 비교' })
+    await waitFor(() => expect(compare).toBeEnabled())
+    await user.click(compare)
+    await user.click(await screen.findByRole('button', { name: '이대로 시작' }))
+
+    await waitFor(() => expect(starts).toHaveLength(1))
+    expect(starts[0].reobserveFiles).toEqual([])
+  })
+
+  // A1/A10 regression: nothing to reuse means no picker, exactly as before change 21.
+  it('starts directly when the post has photos but no stored observation', async () => {
+    const starts: FakeGenerationStart[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      jobs: { starts },
+      posts: { posts: [{ slug: '20260820-jeju', images: POST_IMAGES_FIXTURE }] },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'observer', vision: true },
+          { providerId: 'openrouter', modelId: 'writer' },
+        ],
+        selections: [
+          { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'observer' },
+          { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+        ],
+      },
+    })
+
+    const generate = await screen.findByRole('button', { name: '생성' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    await user.click(generate)
+
+    await waitFor(() => expect(starts).toHaveLength(1))
+    expect(screen.queryByRole('dialog', { name: '다시 관찰할 사진 선택' })).not.toBeInTheDocument()
+    expect(starts[0].reobserveFiles).toBeUndefined()
   })
 
   it('starts an explicit A/B comparison with the configured pair and optional target', async () => {
