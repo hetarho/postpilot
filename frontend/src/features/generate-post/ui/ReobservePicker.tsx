@@ -53,6 +53,14 @@ export function ReobservePicker({
   }
 
   const forced = defaultSelection(rows)
+  // The ONE answer the checkboxes, the count and the confirm all read. A forced row belongs to
+  // the selection whether or not `selected` has caught up with it — an upload confirming while
+  // the picker is open adds a forced row the seeded state has never seen — and deriving it here
+  // is what stops the dialog from showing a checked row that its own count and confirmed set
+  // leave out.
+  const effective = rows
+    .filter((row) => row.forced || selected.includes(row.filename))
+    .map((row) => row.filename)
   const storedModels = storedObservationModels(rows)
   const selectedRef = observeModel ? refKey(observeModel) : ''
   // Only a KNOWN provenance can differ. An entry written before the model was recorded says
@@ -73,8 +81,7 @@ export function ReobservePicker({
 
   // Confirm sends the checked names in POST order, so the frozen set reads the way the picker
   // looked. The server re-derives the forced photos regardless of what arrives here.
-  const confirm = () =>
-    onConfirm(rows.filter((row) => selected.includes(row.filename)).map((row) => row.filename))
+  const confirm = () => onConfirm(effective)
 
   const modelNames = (refs: readonly string[]) =>
     refs.map((ref) => ref || t('generation.reobserve.storedModelUnknown')).join(', ')
@@ -119,9 +126,9 @@ export function ReobservePicker({
           {t('generation.reobserve.clearAll')}
         </Button>
         <Typography variant="label" as="p" role="status" className="text-content-tertiary min-w-0">
-          {selected.length === 0
+          {effective.length === 0
             ? t('generation.reobserve.selectedNone')
-            : t('generation.reobserve.selectedCount', { count: selected.length })}
+            : t('generation.reobserve.selectedCount', { count: effective.length })}
         </Typography>
       </div>
 
@@ -132,7 +139,7 @@ export function ReobservePicker({
           <PhotoRow
             key={row.filename}
             row={row}
-            checked={row.forced || selected.includes(row.filename)}
+            checked={effective.includes(row.filename)}
             disabled={pending}
             onChange={(checked) => toggle(row.filename, checked)}
           />

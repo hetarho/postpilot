@@ -97,9 +97,12 @@ export const GenerationActions = forwardRef<
   // everything, and the two must not collapse into one.
   const enqueue = useCallback(
     async (mode: 'generation' | 'comparison', reobserveFiles?: readonly string[]) => {
-      // Re-checked here, not only in `start`: the picker can sit open while the catalog
-      // refetches and invalidates a selection, and this is the last point before the RPC that
-      // still has somewhere to report a refusal.
+      // The WHOLE guard, re-checked here and not only in `start`: the picker can sit open long
+      // enough for a catalog refetch to disable the observe model, for a job or an A/B result to
+      // appear, or for the voice to be deleted. Confirming a dialog that went stale must not
+      // force a draft save and fire an RPC the server is going to refuse.
+      const precondition = mode === 'generation' ? ordinary : ab
+      if (sharedDisabled || !precondition.ok) return
       if (mode === 'generation' && !writeSelection) return
       if (mode === 'comparison' && (!writeA || !writeB)) return
       setPreparing(mode)
@@ -139,13 +142,16 @@ export const GenerationActions = forwardRef<
       }
     },
     [
+      ab,
       beforeStart,
       comparison,
       generation,
       observeSelection,
       onStarted,
+      ordinary,
       post.images.length,
       post.slug,
+      sharedDisabled,
       targetLength,
       writeA,
       writeB,

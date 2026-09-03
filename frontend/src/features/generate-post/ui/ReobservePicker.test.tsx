@@ -186,6 +186,39 @@ describe('ReobservePicker', () => {
     expect(screen.getByRole('checkbox', { name: 'IMG_1.jpg 다시 관찰' })).not.toBeChecked()
   })
 
+  // The checkboxes, the count and the confirmed set are one answer. A forced row that appears
+  // while the picker is open — an upload confirming behind it — must not render checked while the
+  // count and the confirm leave it out.
+  it('keeps a forced row that appears while it is open inside the count and the confirmed set', async () => {
+    const onConfirm = vi.fn()
+    const view = render(
+      <ReobservePicker
+        open
+        images={[IMAGES[0]]}
+        observations={[OBSERVATIONS[0]]}
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('다시 관찰할 사진 없음')
+
+    view.rerender(
+      <ReobservePicker
+        open
+        images={[IMAGES[0], image('LATE.jpg')]}
+        observations={[OBSERVATIONS[0]]}
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    )
+    const late = screen.getByRole('checkbox', { name: 'LATE.jpg 다시 관찰' })
+    expect(late).toBeChecked()
+    expect(late).toBeDisabled()
+    expect(screen.getByRole('status')).toHaveTextContent('1장 다시 관찰')
+    await userEvent.click(screen.getByRole('button', { name: '이대로 시작' }))
+    expect(onConfirm).toHaveBeenCalledWith(['LATE.jpg'])
+  })
+
   it('reports how many photos will be observed again', async () => {
     renderPicker()
     expect(screen.getByRole('status')).toHaveTextContent('다시 관찰할 사진 없음')

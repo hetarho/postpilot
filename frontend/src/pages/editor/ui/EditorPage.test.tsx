@@ -903,6 +903,48 @@ describe('opening a post', () => {
     expect(starts[0].reobserveFiles).toEqual([])
   })
 
+  // The picker can sit open long enough for the post to become unstartable. Confirming a stale
+  // dialog must not force a draft save or fire an RPC the server is going to refuse.
+  it('enqueues nothing when a confirmed picker has gone stale', async () => {
+    const starts: FakeGenerationStart[] = []
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      calls,
+      jobs: { starts },
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            images: POST_IMAGES_FIXTURE,
+            observations: OBSERVATIONS_FIXTURE,
+            pendingExperimentId: 'experiment-1',
+          },
+        ],
+      },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'observer', vision: true },
+          { providerId: 'openrouter', modelId: 'writer' },
+        ],
+        selections: [
+          { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'observer' },
+          { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+        ],
+      },
+    })
+
+    // A pending A/B result disables both actions, so the picker never opens and nothing enqueues.
+    const generate = await screen.findByRole('button', { name: '생성' })
+    await waitFor(() => expect(generate).toBeDisabled())
+    await user.click(generate)
+    expect(screen.queryByRole('dialog', { name: '다시 관찰할 사진 선택' })).not.toBeInTheDocument()
+    expect(calls).not.toContain('StartGeneration')
+    expect(calls).not.toContain('SavePostDraft')
+    expect(starts).toHaveLength(0)
+  })
+
   // A1/A10 regression: nothing to reuse means no picker, exactly as before change 21.
   it('starts directly when the post has photos but no stored observation', async () => {
     const starts: FakeGenerationStart[] = []
