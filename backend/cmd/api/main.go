@@ -59,10 +59,10 @@ import (
 	"github.com/postpilot/backend/internal/publishing"
 	publishingrpc "github.com/postpilot/backend/internal/publishing/rpc"
 	publishingstore "github.com/postpilot/backend/internal/publishing/store"
-	"github.com/postpilot/backend/internal/purpose"
-	purposerpc "github.com/postpilot/backend/internal/purpose/rpc"
-	purposestore "github.com/postpilot/backend/internal/purpose/store"
 	"github.com/postpilot/backend/internal/storage"
+	"github.com/postpilot/backend/internal/template"
+	templaterpc "github.com/postpilot/backend/internal/template/rpc"
+	templatestore "github.com/postpilot/backend/internal/template/store"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 	"github.com/postpilot/backend/internal/voice"
@@ -258,22 +258,23 @@ func main() {
 	// learns that only through this adapter, never by importing internal/publishing.
 	postSvc.SetLivePublishFinder(postPublications{service: publishSvc})
 
-	purposeSvc := purpose.NewService(
-		purposestore.New(handle.Writer, handle.Reader),
-		purpose.Limits{
-			NameMaxChars: cfg.PurposeNameMaxChars, DescriptionMaxChars: cfg.PurposeDescriptionMaxChars,
-			InstructionsMaxChars: cfg.PurposeInstructionsMaxChars,
+	templateSvc := template.NewService(
+		templatestore.New(handle.Writer, handle.Reader),
+		template.Limits{
+			NameMaxChars: cfg.TemplateNameMaxChars, DescriptionMaxChars: cfg.TemplateDescriptionMaxChars,
+			BodyMaxChars: cfg.TemplateBodyMaxChars, MaxPerAccount: cfg.TemplateMaxPerAccount,
+			MaxRepeatExpansion: cfg.TemplateMaxRepeatExpansion,
 		},
 	)
-	postSvc.SetPurposeDirectory(postPurposes{service: purposeSvc})
+	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
 	guidelineSvc := guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
 		guideline.Limits{TextMaxChars: cfg.GuidelineTextMaxChars, MaxPerAccount: cfg.GuidelineMaxPerAccount},
 	)
-	// Purpose names are a live projection and owned-id validation, never a stored column or
-	// a SQL join: the guideline context asks the purpose context, through this adapter only.
-	guidelineSvc.SetPurposeDirectory(guidelinePurposes{service: purposeSvc})
+	// Template names are a live projection and owned-id validation, never a stored column or
+	// a SQL join: the guideline context asks the template context, through this adapter only.
+	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 
 	providerSvc := provider.NewService(
 		providerstore.New(handle.Writer, handle.Reader), meteredModels,
@@ -325,9 +326,9 @@ func main() {
 		// owner what their work needs, and this context holds no cap of its own.
 		cfg.LLMCompletionBudget,
 	)
-	// Generation reads a brief only at enqueue, to freeze it; the purpose context never
+	// Generation reads a brief only at enqueue, to freeze it; the template context never
 	// learns that generation exists.
-	generationSvc.SetPurposeBriefs(generationPurposes{service: purposeSvc})
+	generationSvc.SetTemplateBriefs(generationTemplates{service: templateSvc})
 	// Likewise for the 지침: read once at enqueue, to freeze. The guideline context never
 	// learns that generation exists.
 	generationSvc.SetGuidelines(generationGuidelines{service: guidelineSvc})
@@ -375,7 +376,7 @@ func main() {
 		return generationSvc.Generate(ctx, generation.GenerateJob{
 			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID,
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
-			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, Purpose: options.Purpose,
+			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, Template: options.Template,
 			Guidelines: options.Guidelines, ObserveFiles: options.ObserveFiles, Observations: options.Observations,
 		}, generation.Progress(progress))
 	}))
@@ -414,7 +415,7 @@ func main() {
 				return postpilotv1connect.NewModelCatalogServiceHandler(modelcatalogrpc.NewHandler(catalogSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
-				return postpilotv1connect.NewPurposeServiceHandler(purposerpc.NewHandler(purposeSvc), opts...)
+				return postpilotv1connect.NewTemplateServiceHandler(templaterpc.NewHandler(templateSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewGuidelineServiceHandler(guidelinerpc.NewHandler(guidelineSvc), opts...)
@@ -664,39 +665,39 @@ func (a postVoices) Voices(ctx context.Context, userID string) ([]post.VoiceRef,
 	return out, nil
 }
 
-// postPurposes adapts the purpose directory for the post context. Unlike voices there are no
-// tombstones: a deleted purpose simply stops being listed, and the composite foreign key has
+// postTemplates adapts the template directory for the post context. Unlike voices there are no
+// tombstones: a deleted template simply stops being listed, and the composite foreign key has
 // already cleared the assignments that named it.
-type postPurposes struct{ service *purpose.Service }
+type postTemplates struct{ service *template.Service }
 
-func (a postPurposes) Purposes(ctx context.Context, userID string) ([]post.PurposeRef, error) {
-	purposes, err := a.service.List(ctx, userID)
+func (a postTemplates) Templates(ctx context.Context, userID string) ([]post.TemplateRef, error) {
+	templates, err := a.service.List(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]post.PurposeRef, 0, len(purposes))
-	for _, p := range purposes {
-		out = append(out, post.PurposeRef{ID: p.ID, Name: p.Name})
+	out := make([]post.TemplateRef, 0, len(templates))
+	for _, p := range templates {
+		out = append(out, post.TemplateRef{ID: p.ID, Name: p.Name})
 	}
 	return out, nil
 }
 
-// generationPurposes hands the generation context the frozen text of one owned purpose. It is
+// generationTemplates hands the generation context the frozen text of one owned template. It is
 // consulted once per enqueue; no handler ever calls it.
-type generationPurposes struct{ service *purpose.Service }
+type generationTemplates struct{ service *template.Service }
 
-// guidelinePurposes hands the guideline context the account's purpose directory: the ids it
+// guidelineTemplates hands the guideline context the account's template directory: the ids it
 // must prove are owned before saving a scope, and the names it projects when listing.
-type guidelinePurposes struct{ service *purpose.Service }
+type guidelineTemplates struct{ service *template.Service }
 
-func (a guidelinePurposes) Purposes(ctx context.Context, userID string) ([]guideline.PurposeRef, error) {
-	purposes, err := a.service.List(ctx, userID)
+func (a guidelineTemplates) Templates(ctx context.Context, userID string) ([]guideline.TemplateRef, error) {
+	templates, err := a.service.List(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]guideline.PurposeRef, 0, len(purposes))
-	for _, p := range purposes {
-		out = append(out, guideline.PurposeRef{ID: p.ID, Name: p.Name})
+	out := make([]guideline.TemplateRef, 0, len(templates))
+	for _, p := range templates {
+		out = append(out, guideline.TemplateRef{ID: p.ID, Name: p.Name})
 	}
 	return out, nil
 }
@@ -705,16 +706,26 @@ func (a guidelinePurposes) Purposes(ctx context.Context, userID string) ([]guide
 // post. It is consumed only at enqueue, to freeze them into the durable payload.
 type generationGuidelines struct{ service *guideline.Service }
 
-func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, purposeID *string) ([]string, error) {
-	return a.service.ForPrompt(ctx, userID, purposeID)
+func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error) {
+	return a.service.ForPrompt(ctx, userID, templateID)
 }
 
-func (a generationPurposes) BriefFor(ctx context.Context, userID, purposeID string) (generation.PurposeBrief, bool, error) {
-	brief, ok, err := a.service.BriefFor(ctx, userID, purposeID)
+// RenderedFor is the whole seam between the two contexts: generation hands over the account,
+// the template id and the frozen attachment order, and receives prompt text. It never learns
+// the grammar, and the template context never learns what a job is.
+//
+// The expansion bound is enforced on the other side, so an error here is a real refusal that
+// must stop the start rather than fall back to "no template".
+func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID string, filenames []string) (generation.TemplateBrief, bool, error) {
+	rendered, ok, err := a.service.RenderedFor(ctx, userID, templateID, filenames)
 	if err != nil || !ok {
-		return generation.PurposeBrief{}, false, err
+		return generation.TemplateBrief{}, false, err
 	}
-	return generation.PurposeBrief{Name: brief.Name, Description: brief.Description, Instructions: brief.Instructions}, true, nil
+	slots := make([]generation.TemplateSlot, 0, len(rendered.Slots))
+	for _, slot := range rendered.Slots {
+		slots = append(slots, generation.TemplateSlot{Kind: string(slot.Kind), Label: slot.Label})
+	}
+	return generation.TemplateBrief{Name: rendered.Name, Body: rendered.Body, Slots: slots}, true, nil
 }
 
 // experimentVoices adapts the directory for the experiment context: only an owned, active
@@ -881,10 +892,10 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
 		Voice:          generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted, SourceLanguage: generation.Language(found.Voice.SourceLanguage)},
 		TargetLanguage: generation.Language(found.TargetLanguage),
-		// The id, never the brief: only the enqueue resolves it, and only through the purpose
+		// The id, never the brief: only the enqueue resolves it, and only through the template
 		// context's own port. Dropping it here is what would make the whole feature a silent
-		// no-op — every prompt would be built as if no post ever had a 용도.
-		PurposeID:    found.PurposeID,
+		// no-op — every prompt would be built as if no post ever had a 템플릿.
+		TemplateID:   found.TemplateID,
 		TargetLength: found.TargetLength,
 		Images:       make([]generation.Image, 0, len(found.Images)),
 		// The stored contact sheet, read here so the ENQUEUE can decide what to reuse. It
@@ -1004,7 +1015,7 @@ type generationJobs struct{ queue *job.Queue }
 func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest) (string, error) {
 	slug := request.PostSlug
 	payload, err := generation.EncodeGenerationPayload(generation.GenerationOptions{
-		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, Purpose: request.Purpose,
+		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, Template: request.Template,
 		Guidelines: request.Guidelines, ObserveFiles: request.ObserveFiles, Observations: request.Observations,
 	})
 	if err != nil {
@@ -1239,7 +1250,7 @@ func (a experimentRunner) Snapshot(ctx context.Context, request experiment.Start
 		}
 		return experiment.Snapshot{
 			Content: content, PromptVersion: generation.WriteExperimentPromptVersion,
-			VoiceID: generation.SnapshotVoice(content), PurposeName: generation.SnapshotPurposeName(content), TargetLanguage: frozenTarget,
+			VoiceID: generation.SnapshotVoice(content), TemplateName: generation.SnapshotTemplateName(content), TargetLanguage: frozenTarget,
 		}, mapSnapshotError(err)
 	case experiment.StageObserve:
 		content, err := a.generation.SnapshotObserveInput(ctx, request.UserID, request.PostSlug)
@@ -1254,7 +1265,7 @@ func (a experimentRunner) Snapshot(ctx context.Context, request experiment.Start
 
 func (a experimentRunner) PrepareWrite(ctx context.Context, found experiment.Experiment, progress experiment.Progress) (experiment.Snapshot, error) {
 	content, err := a.generation.PrepareWriteInput(ctx, found.InputSnapshot, generation.Progress(progress))
-	return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion, VoiceID: found.VoiceID, PurposeName: found.PurposeName, TargetLanguage: cloneExperimentLanguage(found.TargetLanguage)}, mapSnapshotError(err)
+	return experiment.Snapshot{Content: content, PromptVersion: generation.WriteExperimentPromptVersion, VoiceID: found.VoiceID, TemplateName: found.TemplateName, TargetLanguage: cloneExperimentLanguage(found.TargetLanguage)}, mapSnapshotError(err)
 }
 
 func cloneExperimentLanguage(value *experiment.Language) *experiment.Language {

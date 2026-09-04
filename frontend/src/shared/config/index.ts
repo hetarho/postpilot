@@ -228,26 +228,30 @@ export const VOICE_NAME_MAX_CHARS = 50
  *  does not demonstrate it. */
 export const VOICE_DESCRIPTION_MAX_CHARS = 500
 
-/** Purpose (용도) brief ceilings, mirrored from `PURPOSE_*_MAX_CHARS` on the backend so the
+/** Template (템플릿) field ceilings, mirrored from `TEMPLATE_*_MAX_CHARS` on the backend so the
  *  create/edit fields can count down before the round trip; the server stays authoritative.
  *  Counted in Unicode scalar values, like the backend, so a Hangul syllable is one character.
  *  A malformed or non-positive override falls back to the default rather than disabling the
- *  counter — a build-time typo must not silently remove the client-side bound. */
+ *  counter — a build-time typo must not silently remove the client-side bound.
+ *
+ *  The per-account cap and the repeat-expansion bound are deliberately NOT mirrored: both are
+ *  server-owned guards, and the second depends on the post's photo count rather than on the
+ *  template being edited. */
 const positiveIntEnv = (raw: string | undefined, fallback: number): number => {
   const value = Number(raw)
   return Number.isInteger(value) && value > 0 ? value : fallback
 }
-export const PURPOSE_NAME_MAX_CHARS = positiveIntEnv(
-  import.meta.env.VITE_PURPOSE_NAME_MAX_CHARS,
+export const TEMPLATE_NAME_MAX_CHARS = positiveIntEnv(
+  import.meta.env.VITE_TEMPLATE_NAME_MAX_CHARS,
   40,
 )
-export const PURPOSE_DESCRIPTION_MAX_CHARS = positiveIntEnv(
-  import.meta.env.VITE_PURPOSE_DESCRIPTION_MAX_CHARS,
+export const TEMPLATE_DESCRIPTION_MAX_CHARS = positiveIntEnv(
+  import.meta.env.VITE_TEMPLATE_DESCRIPTION_MAX_CHARS,
   200,
 )
-export const PURPOSE_INSTRUCTIONS_MAX_CHARS = positiveIntEnv(
-  import.meta.env.VITE_PURPOSE_INSTRUCTIONS_MAX_CHARS,
-  2000,
+export const TEMPLATE_BODY_MAX_CHARS = positiveIntEnv(
+  import.meta.env.VITE_TEMPLATE_BODY_MAX_CHARS,
+  4000,
 )
 
 /** Writing-guideline (작문 지침) text ceiling, mirrored from `GUIDELINE_TEXT_MAX_CHARS` for the

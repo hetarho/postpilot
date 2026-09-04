@@ -46,7 +46,7 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		}
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post target language", reason, nil)
 	}
-	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(), req.Msg.VoiceId, req.Msg.PurposeId, targetLanguage)
+	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(), req.Msg.VoiceId, req.Msg.TemplateId, targetLanguage)
 	if err != nil {
 		return nil, toConnectError("save draft", err)
 	}
@@ -127,7 +127,7 @@ func (h *Handler) ListPosts(ctx context.Context, _ *connect.Request[postpilotv1.
 			ActiveJob:           toProtoActiveJob(s.ActiveJob),
 			PendingExperimentId: s.PendingExperimentID,
 			Voice:               toProtoVoiceRef(s.Voice),
-			Purpose:             toProtoPurposeRef(s.Purpose),
+			Template:            toProtoTemplateRef(s.Template),
 			TargetLanguage:      languageToProto(s.TargetLanguage),
 			ContentLanguage:     optionalLanguageToProto(s.ContentLanguage),
 		})
@@ -242,8 +242,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "post target language is required", "POST_TARGET_LANGUAGE_REQUIRED", nil)
 	case errors.Is(err, post.ErrVoiceNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", "VOICE_NOT_FOUND", nil)
-	case errors.Is(err, post.ErrPurposeNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "purpose not found", "PURPOSE_NOT_FOUND", nil)
+	case errors.Is(err, post.ErrTemplateNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", "PURPOSE_NOT_FOUND", nil)
 	case errors.Is(err, post.ErrVoiceDeleted):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", "VOICE_DELETED", nil)
 	default:
@@ -281,19 +281,19 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		FinalizedAt:             formatOptionalTime(p.FinalizedAt),
 		Voice:                   toProtoVoiceRef(p.Voice),
 		MachineBaselineVoiceId:  p.MachineBaselineVoiceID,
-		Purpose:                 toProtoPurposeRef(p.Purpose),
+		Template:                toProtoTemplateRef(p.Template),
 		TargetLanguage:          languageToProto(p.TargetLanguage),
 		ContentLanguage:         optionalLanguageToProto(p.ContentLanguage),
 	}
 }
 
-// toProtoPurposeRef leaves the field unset when the post has no purpose: 없음 is the
+// toProtoTemplateRef leaves the field unset when the post has no template: 없음 is the
 // default and the client reads absence, not an empty object, as "none".
-func toProtoPurposeRef(ref post.PurposeRef) *postpilotv1.PurposeRef {
+func toProtoTemplateRef(ref post.TemplateRef) *postpilotv1.TemplateRef {
 	if ref.ID == "" {
 		return nil
 	}
-	return &postpilotv1.PurposeRef{Id: ref.ID, Name: ref.Name}
+	return &postpilotv1.TemplateRef{Id: ref.ID, Name: ref.Name}
 }
 
 func toProtoVoiceRef(ref post.VoiceRef) *postpilotv1.VoiceRef {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObjec
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { FailureNotice, isTerminal } from '@/entities/generation-job'
-import { hasContent, type PostDraft } from '@/entities/post'
+import { hasContent, useRefreshPostImages, type PostDraft } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import {
   useVoiceProfile,
@@ -23,7 +23,7 @@ import { VoiceLearningPanel, useVoiceLearning } from '@/features/finalize-post'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { discardDraftQueue, peekPendingDraft, useAutosave } from '@/features/save-draft'
-import { PostPurposeSelect } from '@/features/select-post-purpose'
+import { PostTemplateSelect } from '@/features/select-post-template'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import {
   ActionBar,
@@ -103,9 +103,9 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     sourceLanguage: undefined,
   }
 
-  // The same shape for the 용도, with 없음 ('') as the default the server never overrides.
-  const [newPurposeId, setNewPurposeId] = useState('')
-  const purposeId = post ? post.purpose.id : newPurposeId
+  // The same shape for the 템플릿, with 없음 ('') as the default the server never overrides.
+  const [newTemplateId, setNewTemplateId] = useState('')
+  const templateId = post ? post.template.id : newTemplateId
   // Snapshot once when /posts/new opens. Later interface-locale switches are presentation-only;
   // the explicit selector is the sole way this draft's target changes.
   const [newTargetLanguage, setNewTargetLanguage] = useState<ContentLanguage>(() => activeLocale())
@@ -116,7 +116,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     title,
     memo,
     voiceId,
-    purposeId,
+    templateId,
     targetLanguage,
     onMinted: (slug) => {
       // Read off the live DOM, so this is the caret as it is now rather than as it was
@@ -213,7 +213,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     />
   )
 
-  // The 말투 and the 용도 ride the dock's own surface beside the brief's glyph, not inside it:
+  // The 말투 and the 템플릿 ride the dock's own surface beside the brief's glyph, not inside it:
   // both are chosen per draft and both silently change what comes out of a run, so they are the
   // parts of the brief that must be readable — and changeable — without opening anything
   // (policy/posts.md). Neither shows a caption; each trigger reads its own value, and the labels
@@ -230,25 +230,25 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     />
   )
 
-  const purposeSelect = (
-    <PostPurposeSelect
+  const templateSelect = (
+    <PostTemplateSelect
       ownerId={ownerId}
-      value={purposeId}
-      current={post?.purpose}
+      value={templateId}
+      current={post?.template}
       jobRunning={Boolean(post?.activeJob && !isTerminal(post.activeJob))}
-      onSelect={post ? autosave.assignPurpose : setNewPurposeId}
+      onSelect={post ? autosave.assignTemplate : setNewTemplateId}
       className="min-w-0 flex-1"
     />
   )
 
   // `items-start` so the glyph stays level with the two listboxes when either field grows a hint
-  // or an error underneath it; `min-w-0` on both so a long voice or purpose name truncates inside
+  // or an error underneath it; `min-w-0` on both so a long voice or template name truncates inside
   // its own trigger instead of pushing the glyph off a 320px screen (§8.5). The two fields share
   // the row evenly, which is also what took the voice trigger down from full width.
   const dockHeader = (
     <div className="flex items-start gap-2">
       {voiceSelect}
-      {purposeSelect}
+      {templateSelect}
       {brief}
     </div>
   )
@@ -258,7 +258,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   // down, so without it a new draft renders its dock mid-page with dead space beneath.
   return (
     <main className={pageStyles({ className: 'flex flex-1 flex-col' })}>
-      {/* First child of the flow on purpose: a sticky box can only be pinned by the box it sits
+      {/* First child of the flow on template: a sticky box can only be pinned by the box it sits
           in, and this one has to hold the page's top edge while a draft thousands of pixels tall
           scrolls past it. It adds no layout height. */}
       <EditorProgressBar job={jobView.job} />
@@ -292,7 +292,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           {post && (
             /* A queue outlives its editor, so a retry left running would keep saving a slug the
                server no longer has and report that failure for a post the user destroyed on
-               purpose (tech/draft-autosave.md). Discarded before the navigation unmounts the
+               template (tech/draft-autosave.md). Discarded before the navigation unmounts the
                editor, and only for this slug. */
             <DeletePostButton
               post={post}
@@ -500,7 +500,7 @@ function EmptyProfileWarning({ ownerId, voiceId }: { ownerId: string; voiceId: s
  *  refused. Nothing that is merely TRUE: the save state, the job's progress and the post's status
  *  all moved to the page-top status region (`EditorStatus`, change 15).
  *
- *  It is mounted as the LAST child of `main` on purpose: a `sticky bottom-*` box is only pinned
+ *  It is mounted as the LAST child of `main` on template: a `sticky bottom-*` box is only pinned
  *  while its containing block still extends below it, so anywhere earlier in the flow it would
  *  scroll away with the section it sat in. */
 function EditorDock({
@@ -591,7 +591,13 @@ function LifecycleSteps({
   const generateRef = useRef<GenerationActionsHandle>(null)
   const reviseRef = useRef<ReviseFormHandle>(null)
   const contentEditorRef = useRef<BlockEditorHandle>(null)
-  // Above both panels on purpose: 확정하고 말투 학습 lives at the end of 글 다듬기 and every
+  // A view URL is presigned and short-lived, and this screen outlives one: the post query is
+  // refetched on mount and never again while the editor sits open, and a draft save deliberately
+  // patches the cached image list in place rather than invalidating it. The export panel asks for
+  // a fresh set when one of its photos fails to load — the only moment a dead URL costs anything,
+  // because a photo that HAS painted is copied from its own pixels.
+  const refreshPhotoUrls = useRefreshPostImages(post.slug)
+  // Above both panels on template: 확정하고 말투 학습 lives at the end of 글 다듬기 and every
   // learning outcome is reported on 글 완성, so the run has to outlive the step change that the
   // finalize itself causes.
   const learning = useVoiceLearning(ownerId, post)
@@ -695,6 +701,7 @@ function LifecycleSteps({
           images={post.images}
           createdAt={post.createdAt}
           contentLanguage={post.contentLanguage}
+          onPhotoUrlsStale={refreshPhotoUrls}
         />
       ) : (
         <Notice tone="danger" role="alert" className="mt-10">

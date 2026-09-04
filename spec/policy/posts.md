@@ -124,29 +124,29 @@ Photo upload has its own document: [uploads.md](uploads.md).
   which offers `복원` beside the picker's reassignment. Every AI control on such a post is disabled with one fixed
   reason (`삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.`); the server enforces the rule regardless.
 
-## Purpose assignment
+## Template assignment
 
-- A post has **zero or one** purpose of the same account (`posts.purpose_id`, nullable, composite FK to
-  `purposes(id, user_id)`). 없음 is the default and a real answer: the server never picks one. The full rules live in
-  [purposes](purposes.md); what the post context owns is below.
-- `purpose_id` on a draft save is **presence-aware with three meanings**: absent preserves (ordinary autosaves omit
+- A post has **zero or one** template of the same account (`posts.template_id`, nullable, composite FK to
+  `templates(id, user_id)`). 없음 is the default and a real answer: the server never picks one. The full rules live in
+  [templates](templates.md); what the post context owns is below.
+- `template_id` on a draft save is **presence-aware with three meanings**: absent preserves (ordinary autosaves omit
   it), a present empty string clears it, and a present non-empty value assigns it. An unknown or foreign id is
   `NotFound` — and it is validated before anything else in the request is applied, so such a save changes no title, no
   memo, and mints no post.
 - Assignment is allowed in **every** status, including `finalized`, and while a job or an undecided experiment is
-  outstanding. It writes `purpose_id` and `updated_at` and nothing else: no content, revision, machine baseline,
+  outstanding. It writes `template_id` and `updated_at` and nothing else: no content, revision, machine baseline,
   finalization field or learn eligibility moves. This is the deliberate contrast with a voice reassignment — nothing is
-  ever learned from a purpose, so assigning one costs the post nothing and needs no confirmation.
-- Deleting a purpose detaches it from every post that named it, in that delete's own transaction, and returns the
+  ever learned from a template, so assigning one costs the post nothing and needs no confirmation.
+- Deleting a template detaches it from every post that named it, in that delete's own transaction, and returns the
   count. No post or content is removed.
-- `Post.purpose` and `PostSummary.purpose` are a transport-only `PurposeRef {id, name}`, unset when there is none,
-  resolved through the purpose context's published directory — the post context stores only the id and never joins the
-  `purposes` table.
-- Frontend: the editor and `/posts/new` render a `용도` select beside the `말투` picker, defaulting to 없음, with the
-  chosen purpose's description under it and a link to `/purposes`. The assignment travels through the draft queue
+- `Post.template` and `PostSummary.template` are a transport-only `TemplateRef {id, name}`, unset when there is none,
+  resolved through the template context's published directory — the post context stores only the id and never joins the
+  `templates` table.
+- Frontend: the editor and `/posts/new` render a `템플릿` select beside the `말투` picker, defaulting to 없음, with the
+  chosen template's description under it and a link to `/templates`. The assignment travels through the draft queue
   ([draft-autosave](../tech/draft-autosave.md)), so a title save in flight cannot revert it; on a create 없음 sends no
-  field at all. The select stays enabled while a job runs and says the running job keeps its original purpose. The list
-  row names an assigned post's purpose beside its voice and shows nothing for an unassigned one.
+  field at all. The select stays enabled while a job runs and says the running job keeps its original template. The list
+  row names an assigned post's template beside its voice and shows nothing for an unassigned one.
 
 ## Editor presentation
 
@@ -188,14 +188,14 @@ Photo upload has its own document: [uploads.md](uploads.md).
   panels, so unmounting the field on another step cannot strand a queued save.
 - **One options surface holds the run's SETTINGS, and the two per-draft choices stay outside it.** 관찰 모델 ·
   작성 모델 · 작성 A/B 후보 · 목표 언어 · 목표 분량 live behind a single trigger in ①'s dock, and nowhere else in the
-  editor. The trigger is a **settings glyph at the right end of the dock's first row**. **말투 and 용도 are the
+  editor. The trigger is a **settings glyph at the right end of the dock's first row**. **말투 and 템플릿 are the
   exceptions**: both sit on that same row as their own dropdowns, on the dock's own surface, because both are chosen
   per draft and both silently change what comes out of a run, so they must be readable — and changeable — without
   opening anything. Neither carries a visible caption there: three controls across a 360px screen leaves each about
   140px, and each trigger already reads its own value, so the labels are `sr-only` and the comboboxes are still
-  announced as `말투 <값>` and `용도 <값>`. 목표 언어 stays behind the trigger — it is set once and then followed by
+  announced as `말투 <값>` and `템플릿 <값>`. 목표 언어 stays behind the trigger — it is set once and then followed by
   every run, and a third dropdown on that row would leave none of them readable. Every control keeps the semantics it
-  had: a voice reassignment still confirms and is still blocked while a job runs, the 용도 select stays usable during
+  had: a voice reassignment still confirms and is still blocked while a job runs, the 템플릿 select stays usable during
   a job and says the running one keeps its enqueued brief, the language select still shows its frozen note, and every
   assignment still rides the draft autosave queue. On a phone the surface is a bottom sheet; from `sm:` up it is a
   right-aligned popover.

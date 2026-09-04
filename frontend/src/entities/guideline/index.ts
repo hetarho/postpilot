@@ -1,6 +1,6 @@
 export type {
   Guideline,
-  GuidelinePurposeRef,
+  GuidelineTemplateRef,
   GuidelineScope,
   GuidelineScopeKind,
 } from './model/types'

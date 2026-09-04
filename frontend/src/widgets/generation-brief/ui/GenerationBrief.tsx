@@ -32,7 +32,7 @@ interface GenerationBriefProps {
  *  each assignment still rides the draft autosave queue that lives above the step panels: an
  *  assignment made here cannot be lost to a step change any more than a title edit can.
  *
- *  The 말투 and the 용도 are NOT in here. Both are chosen per draft and both silently change what
+ *  The 말투 and the 템플릿 are NOT in here. Both are chosen per draft and both silently change what
  *  comes out of a run, so they ride the dock's own surface beside this trigger — visible without
  *  opening anything. The 글 언어 stays behind it: it is set once and then followed by every run,
  *  and a third dropdown on the dock row would leave none of them readable (owner decision
@@ -58,7 +58,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
         label={label}
         // A 44px glyph pinned to the dock's top-right instead of a full-width labelled bar: the
         // brief is what you set BEFORE writing, and on the phone it was standing over the draft it
-        // exists to produce (owner decision, 2026-09-01). The 말투 and 용도 it used to name now sit
+        // exists to produce (owner decision, 2026-09-01). The 말투 and 템플릿 it used to name now sit
         // beside this glyph as their own dropdowns, so the two expensive-to-get-wrong fields are
         // visible WITHOUT opening anything, which is what naming them in the trigger was for.
         triggerSize="icon"

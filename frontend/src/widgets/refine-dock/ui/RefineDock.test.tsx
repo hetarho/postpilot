@@ -15,7 +15,7 @@ const POST = {
   memo: '',
   status: 'review',
   voice: { id: 'voice-a', name: '일상 말투', deleted: false, sourceLanguage: 'ko' },
-  purpose: { id: '', name: '' },
+  template: { id: '', name: '' },
   images: [],
   observations: [],
   content: POST_CONTENT_FIXTURE,

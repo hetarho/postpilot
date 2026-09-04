@@ -65,7 +65,7 @@ func TestNaturalnessBaselineIsSharedByWriteAndRevise(t *testing.T) {
 		}
 	}
 	if !strings.HasPrefix(write, WritePrompt+"\ntitle, 한 줄 summary, 3–6개의 tags, blocks를 반환하세요."+
-		"\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 용도, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요."+section) {
+		"\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요."+section) {
 		t.Fatal("write baseline moved outside the static task/format prefix")
 	}
 	if !strings.HasPrefix(revise, RevisePrompt+
@@ -77,13 +77,17 @@ func TestNaturalnessBaselineIsSharedByWriteAndRevise(t *testing.T) {
 // The pre-naturalness goldens are the pre-change baseline both fixed-text additions are
 // stated against: job 36's stylistic section and job 35's grounding line. Removing exactly
 // those two leaves the legacy bytes, which is what keeps "one deliberate delta each" checkable.
+//
+// Change 25 renamed the concept the fixed output-language line names (용도 → 템플릿) in BOTH
+// the current and the legacy goldens, so this check still sees exactly two additions rather
+// than reading a rename as a third one.
 func TestFixedTextAdditionsAreTheOnlyGoldenDelta(t *testing.T) {
 	for _, pair := range []struct {
 		current string
 		legacy  string
 	}{
-		{current: "write_prompt_no_purpose.golden", legacy: "write_prompt_pre_naturalness.golden"},
-		{current: "revise_prompt_no_purpose.golden", legacy: "revise_prompt_pre_naturalness.golden"},
+		{current: "write_prompt_no_template.golden", legacy: "write_prompt_pre_naturalness.golden"},
+		{current: "revise_prompt_no_template.golden", legacy: "revise_prompt_pre_naturalness.golden"},
 	} {
 		currentSystem, currentUser := loadGolden(t, pair.current)
 		legacySystem, legacyUser := loadGolden(t, pair.legacy)
@@ -103,9 +107,9 @@ func TestFixedTextAdditionsAreTheOnlyGoldenDelta(t *testing.T) {
 func TestWriteSystemPrefixIsStableAcrossPostMaterial(t *testing.T) {
 	target := 900
 	profile := goldenProfile()
-	purpose := testBrief()
-	first, firstUser := BuildWritePrompt(profile, goldenObservations(), "first memo", "first title", []string{"one.jpg"}, &target, purpose, nil)
-	second, secondUser := BuildWritePrompt(profile, []Observation{{File: "two.jpg"}}, "second memo", "second title", []string{"two.jpg"}, &target, purpose, nil)
+	template := testBrief()
+	first, firstUser := BuildWritePrompt(profile, goldenObservations(), "first memo", "first title", []string{"one.jpg"}, &target, template, nil)
+	second, secondUser := BuildWritePrompt(profile, []Observation{{File: "two.jpg"}}, "second memo", "second title", []string{"two.jpg"}, &target, template, nil)
 
 	if first != second {
 		t.Fatal("per-post material changed the byte-stable system prefix")

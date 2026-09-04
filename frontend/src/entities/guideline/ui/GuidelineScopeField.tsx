@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { usePurposes } from '@/entities/purpose/@x/guideline'
+import { useTemplates } from '@/entities/template/@x/guideline'
 import { Checkbox, FieldLabel, SegmentedControl, Typography } from '@/shared/ui'
 import type { GuidelineScope, GuidelineScopeKind } from '../model/types'
 
@@ -11,7 +11,7 @@ import type { GuidelineScope, GuidelineScopeKind } from '../model/types'
  *  mutation of its own — each caller owns the save.
  *
  *  Switching to 전역 clears the set instead of remembering it: the two contradictory shapes the
- *  server refuses are `global` with ids and `purposes` with none, so the control can never hold
+ *  server refuses are `global` with ids and `templates` with none, so the control can never hold
  *  one. The picker is a checkbox list rather than a native multi-select — a multiple-choice
  *  select needs ctrl-click on a desktop and is close to unusable on a phone (design-language §1.1).
  */
@@ -30,16 +30,18 @@ export function GuidelineScopeField({
 }) {
   const { t } = useTranslation('guidelines')
   const id = useId()
-  const { purposes } = usePurposes(ownerId)
+  const { templates } = useTemplates(ownerId)
 
   const setKind = (kind: GuidelineScopeKind) => {
-    onChange(kind === 'global' ? { kind, purposeIds: [] } : { kind, purposeIds: value.purposeIds })
+    onChange(
+      kind === 'global' ? { kind, templateIds: [] } : { kind, templateIds: value.templateIds },
+    )
   }
-  const toggle = (purposeId: string) => {
-    const next = value.purposeIds.includes(purposeId)
-      ? value.purposeIds.filter((current) => current !== purposeId)
-      : [...value.purposeIds, purposeId]
-    onChange({ kind: 'purposes', purposeIds: next })
+  const toggle = (templateId: string) => {
+    const next = value.templateIds.includes(templateId)
+      ? value.templateIds.filter((current) => current !== templateId)
+      : [...value.templateIds, templateId]
+    onChange({ kind: 'templates', templateIds: next })
   }
 
   return (
@@ -51,33 +53,33 @@ export function GuidelineScopeField({
         value={value.kind}
         options={[
           { value: 'global', label: t('scope.global') },
-          { value: 'purposes', label: t('scope.purposes') },
+          { value: 'templates', label: t('scope.templates') },
         ]}
         onChange={setKind}
         ariaLabel={t('scope.label')}
         className="mt-2"
       />
       <Typography variant="body" as="p" className="text-content-secondary mt-2">
-        {value.kind === 'global' ? t('scope.globalHelp') : t('scope.purposesHelp')}
+        {value.kind === 'global' ? t('scope.globalHelp') : t('scope.templatesHelp')}
       </Typography>
 
-      {value.kind === 'purposes' && (
+      {value.kind === 'templates' && (
         <fieldset className="mt-3" disabled={disabled}>
           <legend className="sr-only">{t('scope.pick')}</legend>
-          {purposes.length === 0 ? (
+          {templates.length === 0 ? (
             <Typography variant="body" as="p" className="text-content-tertiary">
-              {t('scope.purposesEmpty')}
+              {t('scope.templatesEmpty')}
             </Typography>
           ) : (
             <ul className="space-y-1">
-              {purposes.map((purpose) => (
-                <li key={purpose.id} className="flex items-center gap-3">
+              {templates.map((template) => (
+                <li key={template.id} className="flex items-center gap-3">
                   <Checkbox
-                    id={`${id}-${purpose.id}`}
-                    checked={value.purposeIds.includes(purpose.id)}
-                    onChange={() => toggle(purpose.id)}
+                    id={`${id}-${template.id}`}
+                    checked={value.templateIds.includes(template.id)}
+                    onChange={() => toggle(template.id)}
                   />
-                  <FieldLabel htmlFor={`${id}-${purpose.id}`}>{purpose.name}</FieldLabel>
+                  <FieldLabel htmlFor={`${id}-${template.id}`}>{template.name}</FieldLabel>
                 </li>
               ))}
             </ul>

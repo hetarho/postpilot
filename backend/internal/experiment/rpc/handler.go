@@ -291,7 +291,7 @@ func toProtoExperiment(found experiment.Experiment) *postpilotv1.ModelExperiment
 	}
 	return &postpilotv1.ModelExperiment{
 		Id: found.ID, Stage: toProtoStage(found.Stage), Status: toProtoStatus(found.Status), PostSlug: found.PostSlug,
-		VoiceId: found.VoiceID, PurposeName: found.PurposeName, JobId: found.JobID, Candidates: candidates, WinnerCandidateId: found.WinnerCandidateID,
+		VoiceId: found.VoiceID, TemplateName: found.TemplateName, JobId: found.JobID, Candidates: candidates, WinnerCandidateId: found.WinnerCandidateID,
 		TargetLanguage: toProtoLanguage(found.TargetLanguage),
 		Outcome:        toProtoOutcome(found.Outcome), CreatedAt: formatTime(found.CreatedAt),
 		FinishedAt: formatOptional(found.FinishedAt), DecidedAt: formatOptional(found.DecidedAt), Revealed: found.Revealed(),

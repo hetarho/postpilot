@@ -111,20 +111,20 @@ func (f *fakeStore) ReassignVoice(_ context.Context, slug, userID, voiceID strin
 	return true, nil
 }
 
-// AssignPurpose mirrors the real single UPDATE: only the assignment and updated_at move.
+// AssignTemplate mirrors the real single UPDATE: only the assignment and updated_at move.
 // Everything the voice reassignment above withdraws is deliberately left alone here — a
-// purpose is never learned from, so assigning one may not cost a post its learn eligibility.
-func (f *fakeStore) AssignPurpose(_ context.Context, slug, userID string, purposeID *string, updatedAt time.Time) (bool, error) {
+// template is never learned from, so assigning one may not cost a post its learn eligibility.
+func (f *fakeStore) AssignTemplate(_ context.Context, slug, userID string, templateID *string, updatedAt time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
 	if !ok || existing.UserID != userID {
 		return false, nil
 	}
-	if purposeID == nil {
-		existing.PurposeID = ""
+	if templateID == nil {
+		existing.TemplateID = ""
 	} else {
-		existing.PurposeID = *purposeID
+		existing.TemplateID = *templateID
 	}
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
@@ -238,7 +238,7 @@ func (f *fakeStore) ListPosts(_ context.Context, userID string) ([]Summary, erro
 		if strings.TrimSpace(title) == "" && p.Content != nil {
 			title = p.Content.Title
 		}
-		out = append(out, Summary{Slug: p.Slug, VoiceID: p.VoiceID, PurposeID: p.PurposeID, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt, TargetLanguage: p.TargetLanguage, ContentLanguage: p.ContentLanguage})
+		out = append(out, Summary{Slug: p.Slug, VoiceID: p.VoiceID, TemplateID: p.TemplateID, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt, TargetLanguage: p.TargetLanguage, ContentLanguage: p.ContentLanguage})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].UpdatedAt.After(out[j].UpdatedAt) })
 	return out, nil

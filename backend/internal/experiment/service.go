@@ -99,7 +99,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	}
 	found := Experiment{
 		ID: s.newID(), UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: frozen.VoiceID,
-		PurposeName: frozen.PurposeName, TargetLanguage: cloneLanguage(frozen.TargetLanguage), Stage: request.Stage,
+		TemplateName: frozen.TemplateName, TargetLanguage: cloneLanguage(frozen.TargetLanguage), Stage: request.Stage,
 		Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
 		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
 	}
@@ -506,7 +506,7 @@ func (s *Service) resolveForStage(stage Stage, ref ModelRef) (Model, error) {
 		return Model{}, ErrModelRequired
 	}
 	model, ok := s.catalog.Resolve(ref)
-	// Membership in the stage's purpose (change 20) replaced the observe-needs-vision check:
+	// Membership in the stage's template (change 20) replaced the observe-needs-vision check:
 	// the registration gate already required vision, and a deregistered model must be as
 	// unusable for an experiment as it is in the picker.
 	if !ok || !model.Enabled || !slices.Contains(model.Stages, string(stage)) {

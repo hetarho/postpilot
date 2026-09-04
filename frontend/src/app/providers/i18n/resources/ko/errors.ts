@@ -42,19 +42,23 @@ export const errors = {
   VOICE_VALIDATION_NOT_FOUND: '말투 검증을 찾을 수 없어요.',
   VOICE_INSUFFICIENT_SOURCES: '말투를 배우려면 최소 {{min}}개의 자료가 필요해요.',
   VOICE_INVALID_LIFECYCLE: '현재 말투 상태에서는 이 작업을 할 수 없어요.',
-  PURPOSE_NOT_FOUND: '용도를 찾을 수 없어요.',
-  PURPOSE_NAME_REQUIRED: '용도 이름을 입력해 주세요.',
-  PURPOSE_INSTRUCTIONS_REQUIRED: '작성 지침을 입력해 주세요.',
-  PURPOSE_NAME_TAKEN: '같은 이름의 용도가 이미 있어요.',
-  PURPOSE_FIELD_TOO_LONG: '입력값은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
+  TEMPLATE_NOT_FOUND: '템플릿을 찾을 수 없어요.',
+  TEMPLATE_NAME_REQUIRED: '템플릿 이름을 입력해 주세요.',
+  TEMPLATE_BODY_REQUIRED: '템플릿 내용을 입력해 주세요.',
+  TEMPLATE_NAME_TAKEN: '같은 이름의 템플릿이 이미 있어요.',
+  TEMPLATE_FIELD_TOO_LONG: '입력값은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
+  TEMPLATE_PARSE_FAILED:
+    '{{line}}번째 줄을 읽을 수 없어요 ({{reason}}). 원문 모드에서 고쳐 주세요.',
+  TEMPLATE_LIMIT_REACHED:
+    '템플릿을 더 만들 수 없어요. 쓰지 않는 템플릿을 지운 뒤 다시 시도해 주세요.',
   GUIDELINE_NOT_FOUND: '지침을 찾을 수 없어요.',
   GUIDELINE_TEXT_REQUIRED: '지침 내용을 입력해 주세요.',
   GUIDELINE_TEXT_TOO_LONG: '지침은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
   GUIDELINE_TEXT_TAKEN: '이미 같은 지침이 있어요.',
   GUIDELINE_SCOPE_INVALID:
-    '적용 범위를 다시 골라 주세요. 전역이면 용도를 비우고, 특정 용도면 하나 이상 골라야 해요.',
-  GUIDELINE_PURPOSE_NOT_FOUND:
-    '고른 용도를 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요.',
+    '적용 범위를 다시 골라 주세요. 전역이면 템플릿을 비우고, 특정 템플릿이면 하나 이상 골라야 해요.',
+  GUIDELINE_TEMPLATE_NOT_FOUND:
+    '고른 템플릿을 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요.',
   GUIDELINE_LIMIT_REACHED:
     '지침은 최대 {{max}}개까지 저장할 수 있어요. 쓰지 않는 지침을 지운 뒤 다시 시도해 주세요.',
   MODEL_STAGE_REQUIRED: 'AI 단계를 선택해 주세요.',

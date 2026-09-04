@@ -34,7 +34,7 @@ appears on login, the authenticated shell, and the public `/about` header throug
 preferences widget rather than being forked per shell.
 
 Resources are bundled TypeScript catalogs with no runtime fetch or translation service. Their exact
-namespace topology is `common`, `auth`, `nav`, `posts`, `voices`, `purposes`, `guidelines`, `models`,
+namespace topology is `common`, `auth`, `nav`, `posts`, `voices`, `templates`, `guidelines`, `models`,
 `publishing`, `errors`, `plans`, and `marketing`. The `marketing` namespace carries every visible
 label, accessible name and metadata string of the public `/about` page at full ko/en parity, and
 that page's locale changes never alter its URL — there is no locale prefix and no automatic locale
@@ -47,7 +47,7 @@ HTTP backend is installed.
 
 The 목표 언어 picker lives in the editor's writing brief, beside the models, the A/B candidates and
 the target length ([posts.md](posts.md) *Editor presentation*). It stays BEHIND that trigger while
-말투 and 용도 sit on the dock's own row: a target language is set once and then followed by every
+말투 and 템플릿 sit on the dock's own row: a target language is set once and then followed by every
 run, where those two are chosen per draft. Its frozen-job note and its mismatch note are unchanged
 by the placement.
 
@@ -55,7 +55,7 @@ by the placement.
 stored value and a present valid target replaces it through the same newest-wins queue as title and
 memo. The draft request carries the latest complete title/memo snapshot; target presence does not
 turn it into a sparse text patch. A target selection preserves content, observations, revisions,
-machine baseline, status, finalization, voice/purpose assignment, and content language.
+machine baseline, status, finalization, voice/template assignment, and content language.
 
 Ordinary generation and write A/B freeze the current target before provider work. Successful full
 generation or winner application atomically writes canonical content, its machine baseline, and the

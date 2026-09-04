@@ -24,13 +24,13 @@ enum GuidelineScope {
   GUIDELINE_SCOPE_UNSPECIFIED = 0;
   // Applies to every post of the account.
   GUIDELINE_SCOPE_GLOBAL = 1;
-  // Applies only to posts whose selected purpose is in the guideline's purpose set.
-  GUIDELINE_SCOPE_PURPOSES = 2;
+  // Applies only to posts whose selected template is in the guideline's template set.
+  GUIDELINE_SCOPE_TEMPLATES = 2;
 }
 
-// A purpose a guideline is scoped to, projected by name for the management screen. It is a
-// read projection through the purpose directory, never a stored column on the guideline.
-message GuidelinePurposeRef {
+// A template a guideline is scoped to, projected by name for the management screen. It is a
+// read projection through the template directory, never a stored column on the guideline.
+message GuidelineTemplateRef {
   string id = 1;
   string name = 2;
 }
@@ -40,9 +40,9 @@ message Guideline {
   // The authored rule, injected verbatim as one line of the 작문 지침 section.
   string text = 2;
   GuidelineScope scope = 3;
-  // Empty for GLOBAL. May also be empty for PURPOSES after every scoped purpose was
+  // Empty for GLOBAL. May also be empty for TEMPLATES after every scoped template was
   // deleted — such a guideline applies nowhere until it is rescoped.
-  repeated GuidelinePurposeRef purposes = 4;
+  repeated GuidelineTemplateRef templates = 4;
   string created_at = 5;
   string updated_at = 6;
 }
@@ -57,8 +57,8 @@ message ListGuidelinesResponse {
 message CreateGuidelineRequest {
   string text = 1;
   GuidelineScope scope = 2;
-  // Required (>= 1 owned purpose) for PURPOSES, and must be empty for GLOBAL.
-  repeated string purpose_ids = 3;
+  // Required (>= 1 owned template) for TEMPLATES, and must be empty for GLOBAL.
+  repeated string template_ids = 3;
 }
 message CreateGuidelineResponse { Guideline guideline = 1; }
 
@@ -67,7 +67,7 @@ message CreateGuidelineResponse { Guideline guideline = 1; }
 // so the two are only meaningful together and are replaced atomically.
 message GuidelineScopePatch {
   GuidelineScope scope = 1;
-  repeated string purpose_ids = 2;
+  repeated string template_ids = 2;
 }
 
 message UpdateGuidelineRequest {

@@ -82,10 +82,10 @@ export function ModelExperimentPage() {
       )}
       {/* Read straight off the frozen snapshot's projection rather than looked up: the brief
           both candidates were given is a property of this comparison, not of whatever the
-          purpose says today. */}
-      {experiment.purposeName && (
+          template says today. */}
+      {experiment.templateName && (
         <Typography variant="label" as="p" className="mt-2 break-words">
-          {t('experiment.purpose', { ns: 'models', name: experiment.purposeName })}
+          {t('experiment.template', { ns: 'models', name: experiment.templateName })}
         </Typography>
       )}
       <div className="mt-6 sm:mt-8">

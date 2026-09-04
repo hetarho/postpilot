@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import type { PostImage } from '@/entities/image/@x/post'
 import type { GenerationJob } from '@/entities/generation-job/@x/post'
-import type { PurposeRef } from '@/entities/purpose/@x/post'
+import type { TemplateRef } from '@/entities/template/@x/post'
 import type { VoiceRef } from '@/entities/voice/@x/post'
 import type { ContentLanguage, Observation, PostContent } from '@/shared/api'
 
@@ -22,9 +22,9 @@ export interface PostDraft {
   /** The voice the post is written in. Always present — a post cannot exist without one — and
    *  still named after the voice is deleted (spec/policy/posts.md). */
   voice: VoiceRef
-  /** The 용도 the post is written for, or an empty ref for 없음. Optional by design: unlike the
-   *  voice, the server never picks one (spec/policy/purposes.md). */
-  purpose: PurposeRef
+  /** The 템플릿 the post is written for, or an empty ref for 없음. Optional by design: unlike the
+   *  voice, the server never picks one (spec/policy/templates.md). */
+  template: TemplateRef
   images: PostImage[]
   activeJob: GenerationJob | undefined
   content: PostContent | undefined
@@ -50,7 +50,7 @@ export interface PostListItem {
   status: PostStatus
   updatedAt: string
   voice: VoiceRef
-  purpose: PurposeRef
+  template: TemplateRef
   activeJob: GenerationJob | undefined
   pendingExperimentId: string
   targetLanguage: ContentLanguage

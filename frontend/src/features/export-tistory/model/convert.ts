@@ -1,6 +1,12 @@
 import type { PostImage } from '@/entities/image'
 import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
-import { escapeHtml, escapeHtmlComment, headingTag, walkBlocks } from '@/shared/lib'
+import {
+  blockSlotPlaceholder,
+  escapeHtml,
+  escapeHtmlComment,
+  headingTag,
+  walkBlocks,
+} from '@/shared/lib'
 
 /** HTML fragment for Tistory's HTML editor; photo URLs are deliberately left blank. */
 export function toTistory(
@@ -12,8 +18,10 @@ export function toTistory(
   void images
   const blocks = walkBlocks(content, (block) => {
     switch (block.type) {
-      case BlockType.TEXT:
-        return `<p>${escapeHtml(block.content)}</p>`
+      case BlockType.TEXT: {
+        const slot = blockSlotPlaceholder(block)
+        return `<p>${escapeHtml(slot ?? block.content)}</p>`
+      }
       case BlockType.HEADING: {
         const tag = headingTag(block.level)
         return `<${tag}>${escapeHtml(block.content)}</${tag}>`

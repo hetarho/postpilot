@@ -24,7 +24,7 @@ adds the voice-owned `seed_voice` kind. This document owns the shared record, wo
 - The row records its owner, optional post target, kind, stage, exact progress, optional frozen target language,
   structured `reason + params + technical_detail` failure, selected observe and write models, kind-specific JSON
   payload, and created/updated/started/finished timestamps. Deprecated raw error text is read only for legacy rows.
-- A `generate` payload freezes the target language, the optional target length, the optional purpose brief, the
+- A `generate` payload freezes the target language, the optional target length, the optional template brief, the
   applicable guideline texts, **and the run's re-observation decision: the exact filenames to observe plus the
   reusable observation snapshot as it stood at enqueue** (see [generation.md](generation.md)). The filename list
   carries PRESENCE, not just emptiness — absent is a job queued before the contract existed and observes every

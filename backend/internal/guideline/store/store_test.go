@@ -18,7 +18,7 @@ import (
 var testNow = time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 
 // newStore opens a throwaway SQLite database with the embedded migrations applied and seeds
-// two accounts with two purposes each — scope links are about real purposes, and the account
+// two accounts with two templates each — scope links are about real templates, and the account
 // boundary is only provable with a second account present.
 func newStore(t *testing.T) (*store.Store, *db.DB) {
 	t.Helper()
@@ -38,18 +38,18 @@ func newStore(t *testing.T) (*store.Store, *db.DB) {
 		}
 		for _, suffix := range []string{"p1", "p2"} {
 			if _, err := handle.Writer.Exec(
-				"INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES(?,?,?,'','지침',?,?)",
+				"INSERT INTO templates(id,user_id,name,description,body,created_at,updated_at) VALUES(?,?,?,'','<write>본문</write>',?,?)",
 				id+"-"+suffix, id, suffix, stamp, stamp); err != nil {
-				t.Fatalf("seed purpose: %v", err)
+				t.Fatalf("seed template: %v", err)
 			}
 		}
 	}
 	return store.New(handle.Writer, handle.Reader), handle
 }
 
-func newGuideline(id, userID, text string, scope guideline.Scope, at time.Time, purposeIDs ...string) guideline.Guideline {
+func newGuideline(id, userID, text string, scope guideline.Scope, at time.Time, templateIDs ...string) guideline.Guideline {
 	return guideline.Guideline{
-		ID: id, UserID: userID, Text: text, Scope: scope, PurposeIDs: purposeIDs,
+		ID: id, UserID: userID, Text: text, Scope: scope, TemplateIDs: templateIDs,
 		CreatedAt: at, UpdatedAt: at,
 	}
 }
@@ -97,12 +97,12 @@ func TestInsertRefusesPastTheAccountCap(t *testing.T) {
 	}
 }
 
-// A2: the composite foreign key, not a service check, is what stops a foreign purpose link.
-func TestInsertRefusesAForeignPurposeLink(t *testing.T) {
+// A2: the composite foreign key, not a service check, is what stops a foreign template link.
+func TestInsertRefusesAForeignTemplateLink(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
-	err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopePurposes, testNow, "bob-p1"), 10)
-	if !errors.Is(err, guideline.ErrPurposeNotFound) {
+	err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "bob-p1"), 10)
+	if !errors.Is(err, guideline.ErrTemplateNotFound) {
 		t.Fatalf("foreign link err = %v", err)
 	}
 	if _, err := s.Get(ctx, "alice", "g1"); !errors.Is(err, guideline.ErrNotFound) {
@@ -116,9 +116,9 @@ func TestListReturnsInjectionOrder(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
 	for _, g := range []guideline.Guideline{
-		newGuideline("s2", "alice", "scoped later", guideline.ScopePurposes, testNow.Add(4*time.Minute), "alice-p1"),
+		newGuideline("s2", "alice", "scoped later", guideline.ScopeTemplates, testNow.Add(4*time.Minute), "alice-p1"),
 		newGuideline("g2", "alice", "global later", guideline.ScopeGlobal, testNow.Add(3*time.Minute)),
-		newGuideline("s1", "alice", "scoped early", guideline.ScopePurposes, testNow.Add(2*time.Minute), "alice-p2"),
+		newGuideline("s1", "alice", "scoped early", guideline.ScopeTemplates, testNow.Add(2*time.Minute), "alice-p2"),
 		newGuideline("g1", "alice", "global early", guideline.ScopeGlobal, testNow.Add(time.Minute)),
 	} {
 		if err := s.Insert(ctx, g, 10); err != nil {
@@ -138,11 +138,11 @@ func TestListReturnsInjectionOrder(t *testing.T) {
 			t.Fatalf("order = %v at %d, want %v", listed[i].ID, i, want)
 		}
 	}
-	if got := listed[2].PurposeIDs; len(got) != 1 || got[0] != "alice-p2" {
+	if got := listed[2].TemplateIDs; len(got) != 1 || got[0] != "alice-p2" {
 		t.Fatalf("scope links = %v", got)
 	}
-	if len(listed[0].PurposeIDs) != 0 {
-		t.Fatalf("a global guideline carried links: %v", listed[0].PurposeIDs)
+	if len(listed[0].TemplateIDs) != 0 {
+		t.Fatalf("a global guideline carried links: %v", listed[0].TemplateIDs)
 	}
 }
 
@@ -155,7 +155,7 @@ func TestUpdateTextLeavesAConcurrentScopeEditIntact(t *testing.T) {
 	}
 	// Another tab rescopes it while the text edit is being typed.
 	if _, err := s.Update(ctx, "alice", "g1", guideline.Patch{
-		Scope: &guideline.ScopePatch{Scope: guideline.ScopePurposes, PurposeIDs: []string{"alice-p1"}},
+		Scope: &guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{"alice-p1"}},
 	}, testNow.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestUpdateTextLeavesAConcurrentScopeEditIntact(t *testing.T) {
 	if updated.Text != "new" {
 		t.Fatalf("text = %q", updated.Text)
 	}
-	if updated.Scope != guideline.ScopePurposes || len(updated.PurposeIDs) != 1 || updated.PurposeIDs[0] != "alice-p1" {
+	if updated.Scope != guideline.ScopeTemplates || len(updated.TemplateIDs) != 1 || updated.TemplateIDs[0] != "alice-p1" {
 		t.Fatalf("the text edit disturbed the scope: %+v", updated)
 	}
 }
@@ -177,30 +177,30 @@ func TestUpdateTextLeavesAConcurrentScopeEditIntact(t *testing.T) {
 func TestUpdateScopeReplacesAtomically(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
-	if err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopePurposes, testNow, "alice-p1", "alice-p2"), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "alice-p1", "alice-p2"), 10); err != nil {
 		t.Fatal(err)
 	}
 	updated, err := s.Update(ctx, "alice", "g1", guideline.Patch{
-		Scope: &guideline.ScopePatch{Scope: guideline.ScopePurposes, PurposeIDs: []string{"alice-p2"}},
+		Scope: &guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{"alice-p2"}},
 	}, testNow.Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(updated.PurposeIDs) != 1 || updated.PurposeIDs[0] != "alice-p2" {
-		t.Fatalf("scope was not replaced: %v", updated.PurposeIDs)
+	if len(updated.TemplateIDs) != 1 || updated.TemplateIDs[0] != "alice-p2" {
+		t.Fatalf("scope was not replaced: %v", updated.TemplateIDs)
 	}
 
 	if _, err := s.Update(ctx, "alice", "g1", guideline.Patch{
-		Scope: &guideline.ScopePatch{Scope: guideline.ScopePurposes, PurposeIDs: []string{"alice-p1", "bob-p1"}},
-	}, testNow.Add(2*time.Minute)); !errors.Is(err, guideline.ErrPurposeNotFound) {
+		Scope: &guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{"alice-p1", "bob-p1"}},
+	}, testNow.Add(2*time.Minute)); !errors.Is(err, guideline.ErrTemplateNotFound) {
 		t.Fatalf("foreign link in a replacement err = %v", err)
 	}
 	rolled, err := s.Get(ctx, "alice", "g1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rolled.PurposeIDs) != 1 || rolled.PurposeIDs[0] != "alice-p2" {
-		t.Fatalf("a refused replacement left a partial scope: %v", rolled.PurposeIDs)
+	if len(rolled.TemplateIDs) != 1 || rolled.TemplateIDs[0] != "alice-p2" {
+		t.Fatalf("a refused replacement left a partial scope: %v", rolled.TemplateIDs)
 	}
 
 	// Going global clears the whole set in the same transaction.
@@ -210,7 +210,7 @@ func TestUpdateScopeReplacesAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if global.Scope != guideline.ScopeGlobal || len(global.PurposeIDs) != 0 {
+	if global.Scope != guideline.ScopeGlobal || len(global.TemplateIDs) != 0 {
 		t.Fatalf("global scope kept links: %+v", global)
 	}
 }
@@ -233,15 +233,15 @@ func TestUpdateAndDeleteTreatForeignIdsAsUnknown(t *testing.T) {
 	}
 }
 
-// A5/A12: scope resolution is exact, and a purpose deletion leaves an orphaned scoped
+// A5/A12: scope resolution is exact, and a template deletion leaves an orphaned scoped
 // guideline that reaches no prompt at all until it is rescoped.
 func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 	ctx := context.Background()
 	s, handle := newStore(t)
 	for _, g := range []guideline.Guideline{
 		newGuideline("g1", "alice", "전역", guideline.ScopeGlobal, testNow.Add(time.Minute)),
-		newGuideline("s1", "alice", "p1 전용", guideline.ScopePurposes, testNow.Add(2*time.Minute), "alice-p1"),
-		newGuideline("s2", "alice", "p2 전용", guideline.ScopePurposes, testNow.Add(3*time.Minute), "alice-p2"),
+		newGuideline("s1", "alice", "p1 전용", guideline.ScopeTemplates, testNow.Add(2*time.Minute), "alice-p1"),
+		newGuideline("s2", "alice", "p2 전용", guideline.ScopeTemplates, testNow.Add(3*time.Minute), "alice-p2"),
 		newGuideline("gb", "bob", "밥의 전역", guideline.ScopeGlobal, testNow),
 	} {
 		if err := s.Insert(ctx, g, 10); err != nil {
@@ -250,16 +250,16 @@ func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 	}
 
 	for name, tc := range map[string]struct {
-		purposeID string
-		want      []string
+		templateID string
+		want       []string
 	}{
-		"with p1":    {purposeID: "alice-p1", want: []string{"전역", "p1 전용"}},
-		"with p2":    {purposeID: "alice-p2", want: []string{"전역", "p2 전용"}},
-		"no purpose": {purposeID: "", want: []string{"전역"}},
-		// A purpose id that is not the account's reaches no link row.
-		"foreign purpose": {purposeID: "bob-p1", want: []string{"전역"}},
+		"with p1":     {templateID: "alice-p1", want: []string{"전역", "p1 전용"}},
+		"with p2":     {templateID: "alice-p2", want: []string{"전역", "p2 전용"}},
+		"no template": {templateID: "", want: []string{"전역"}},
+		// A template id that is not the account's reaches no link row.
+		"foreign template": {templateID: "bob-p1", want: []string{"전역"}},
 	} {
-		got, err := s.ApplicableTexts(ctx, "alice", tc.purposeID)
+		got, err := s.ApplicableTexts(ctx, "alice", tc.templateID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -273,8 +273,8 @@ func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 		}
 	}
 
-	// Deleting the purpose orphans s1: the row survives and applies nowhere.
-	if _, err := handle.Writer.Exec("DELETE FROM purposes WHERE id='alice-p1'"); err != nil {
+	// Deleting the template orphans s1: the row survives and applies nowhere.
+	if _, err := handle.Writer.Exec("DELETE FROM templates WHERE id='alice-p1'"); err != nil {
 		t.Fatal(err)
 	}
 	got, err := s.ApplicableTexts(ctx, "alice", "alice-p2")
@@ -282,14 +282,14 @@ func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(got) != 2 || got[0] != "전역" || got[1] != "p2 전용" {
-		t.Fatalf("after the purpose delete texts = %v", got)
+		t.Fatalf("after the template delete texts = %v", got)
 	}
 	orphan, err := s.Get(ctx, "alice", "s1")
 	if err != nil {
 		t.Fatalf("the orphaned guideline was deleted: %v", err)
 	}
-	if orphan.Scope != guideline.ScopePurposes || len(orphan.PurposeIDs) != 0 {
-		t.Fatalf("orphan = %+v, want a purposes scope with no links", orphan)
+	if orphan.Scope != guideline.ScopeTemplates || len(orphan.TemplateIDs) != 0 {
+		t.Fatalf("orphan = %+v, want a templates scope with no links", orphan)
 	}
 }
 
@@ -297,23 +297,23 @@ func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 func TestDeleteRemovesOnlyItsOwnLinks(t *testing.T) {
 	ctx := context.Background()
 	s, handle := newStore(t)
-	if err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopePurposes, testNow, "alice-p1"), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "alice-p1"), 10); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Insert(ctx, newGuideline("g2", "alice", "b", guideline.ScopePurposes, testNow.Add(time.Minute), "alice-p1"), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g2", "alice", "b", guideline.ScopeTemplates, testNow.Add(time.Minute), "alice-p1"), 10); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Delete(ctx, "alice", "g1"); err != nil {
 		t.Fatal(err)
 	}
-	var links, purposes int
-	if err := handle.Reader.QueryRow("SELECT count(*) FROM guideline_purposes WHERE user_id='alice'").Scan(&links); err != nil {
+	var links, templates int
+	if err := handle.Reader.QueryRow("SELECT count(*) FROM guideline_templates WHERE user_id='alice'").Scan(&links); err != nil {
 		t.Fatal(err)
 	}
-	if err := handle.Reader.QueryRow("SELECT count(*) FROM purposes WHERE user_id='alice'").Scan(&purposes); err != nil {
+	if err := handle.Reader.QueryRow("SELECT count(*) FROM templates WHERE user_id='alice'").Scan(&templates); err != nil {
 		t.Fatal(err)
 	}
-	if links != 1 || purposes != 2 {
-		t.Fatalf("delete cascaded wrong: links=%d purposes=%d", links, purposes)
+	if links != 1 || templates != 2 {
+		t.Fatalf("delete cascaded wrong: links=%d templates=%d", links, templates)
 	}
 }

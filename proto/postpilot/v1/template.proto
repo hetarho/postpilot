@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// template.proto is the 템플릿 slice: reusable account-owned documents that decide the SHAPE
+// of a post — its sections, its literal text, the positions it reserves, and what repeats per
+// photo. The voice decides how sentences sound and a guideline decides what to avoid; a
+// template decides the skeleton.
+//
+// A template is authored text only. Nothing here is learned, inferred, or written by a model,
+// and no procedure enqueues work or calls a provider.
+//
+// Every procedure is scoped to the acting user from the session — no request carries a
+// user id, because a user id in a message is a claim by the caller, not a fact.
+service TemplateService {
+  rpc ListTemplates(ListTemplatesRequest) returns (ListTemplatesResponse) {}
+  rpc CreateTemplate(CreateTemplateRequest) returns (CreateTemplateResponse) {}
+  rpc UpdateTemplate(UpdateTemplateRequest) returns (UpdateTemplateResponse) {}
+  rpc DeleteTemplate(DeleteTemplateRequest) returns (DeleteTemplateResponse) {}
+}
+
+message Template {
+  string id = 1;
+  string name = 2;
+  // What posts of this kind are for. May be empty; it is management copy and never reaches
+  // a prompt.
+  string description = 3;
+  // The template body in the grammar of spec/tech/post-template-grammar.md. This string is
+  // the single source of truth: the builder parses and re-serializes it byte-for-byte, and
+  // the write/revise prompts receive it after repeat expansion.
+  string body = 4;
+  // Posts currently referencing it. Shown before a delete, which detaches rather than
+  // cascading — it is a projection, so it is never accepted on a write.
+  int32 post_count = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+// The template a post is written from, as the post screens need it. Transport-only, and
+// unset when the post has none: 없음 is a real answer, not a missing one.
+message TemplateRef {
+  string id = 1;
+  string name = 2;
+}
+
+message ListTemplatesRequest {}
+message ListTemplatesResponse {
+  // By name, then id.
+  repeated Template templates = 1;
+}
+
+message CreateTemplateRequest {
+  string name = 1;
+  string description = 2;
+  string body = 3;
+}
+message CreateTemplateResponse { Template template = 1; }
+
+// Field presence is the edit unit, as it is for UpdateVoiceProfile: only the supplied
+// fields change, so two fields edited from two tabs cannot overwrite each other.
+message UpdateTemplateRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string body = 4;
+}
+message UpdateTemplateResponse { Template template = 1; }
+
+message DeleteTemplateRequest { string id = 1; }
+message DeleteTemplateResponse {
+  // Posts whose assignment was cleared by this delete, in the same transaction. No post
+  // or content is deleted, and frozen job/experiment payloads keep the template's text.
+  int32 detached_posts = 1;
+}

@@ -18,7 +18,7 @@ const base: ModelExperiment = {
   status: 'review',
   postSlug: 'post',
   voiceId: '',
-  purposeName: '',
+  templateName: '',
   jobId: 'job',
   winnerCandidateId: '',
   outcome: '',

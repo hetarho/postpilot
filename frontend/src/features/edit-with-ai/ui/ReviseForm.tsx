@@ -27,9 +27,9 @@ interface ReviseFormProps {
   voice: Pick<VoiceRef, 'id' | 'deleted'>
   /** The revision itself stays available; only publishing its sentence as a voice rule is unsafe. */
   ruleLanguageMismatch?: boolean
-  /** The post's current purpose, read from the already-loaded post so the guideline capture can
+  /** The post's current template, read from the already-loaded post so the guideline capture can
    *  offer it as a scope without issuing a query. Empty id means the post has none. */
-  purpose?: { id: string; name: string }
+  template?: { id: string; name: string }
   activeJob?: GenerationJob
   jobPending?: boolean
   onStarted: (jobId: string) => void
@@ -63,7 +63,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
     postSlug,
     voice,
     ruleLanguageMismatch = false,
-    purpose,
+    template,
     activeJob,
     jobPending = false,
     onStarted,
@@ -281,7 +281,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
                 <SaveAsGuidelineButton
                   ownerId={ownerId}
                   instruction={trimmed}
-                  purpose={purpose?.id ? purpose : undefined}
+                  template={template?.id ? template : undefined}
                   disabled={trimmed === '' || startRevision.isPending}
                 />
               </div>

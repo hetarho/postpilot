@@ -38,9 +38,9 @@ export interface ModelExperiment {
   postSlug: string
   /** The frozen voice for analyze/write work; observe compares the image snapshot only. */
   voiceId: string
-  /** The 용도 the frozen write input carried, by name. Empty when the post had none; it keeps
-   *  the name the snapshot froze even after that purpose is renamed or deleted. */
-  purposeName: string
+  /** The 템플릿 the frozen write input carried, by name. Empty when the post had none; it keeps
+   *  the name the snapshot froze even after that template is renamed or deleted. */
+  templateName: string
   jobId: string
   candidates: ExperimentCandidate[]
   winnerCandidateId: string

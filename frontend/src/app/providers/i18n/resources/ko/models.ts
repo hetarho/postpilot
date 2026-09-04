@@ -42,7 +42,7 @@ export const models = {
     title: '블라인드 비교',
     description:
       '선택하기 전에는 모델 이름과 비용을 숨깁니다. 좌우 후보는 다시 열어도 바뀌지 않습니다.',
-    purpose: '용도 · {{name}}',
+    template: '템플릿 · {{name}}',
     voice: '말투 · {{name}}',
     language: '고정된 글 언어',
     actionAria: '후보 전환과 결정',

@@ -24,19 +24,19 @@ import {
  *  instruction and the user edits it before saving (a raw "무인 매장이니까 주인 얘기 빼줘" is
  *  usually generalized first), and no model or job can reach this path (plan 16 non-goals).
  *
- *  The purpose option comes from the ALREADY-LOADED post, so opening this dialog issues no query
+ *  The template option comes from the ALREADY-LOADED post, so opening this dialog issues no query
  *  and starts nothing ([I5]). */
 export function SaveAsGuidelineButton({
   ownerId,
   instruction,
-  purpose,
+  template,
   disabled = false,
 }: {
   ownerId: string
   /** The instruction the completed revision ran with; it seeds the dialog. */
   instruction: string
-  /** The post's current purpose, or undefined when it has none — then only 전역 is offered. */
-  purpose?: { id: string; name: string }
+  /** The post's current template, or undefined when it has none — then only 전역 is offered. */
+  template?: { id: string; name: string }
   disabled?: boolean
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
@@ -128,9 +128,9 @@ export function SaveAsGuidelineButton({
             {t('count.remaining', { ns: 'common', count: left })}
           </Typography>
         )}
-        {/* Only two options and only when the post has a purpose — the whole directory belongs on
+        {/* Only two options and only when the post has a template — the whole directory belongs on
             /guidelines, not in a dialog opened mid-revision. */}
-        {purpose && (
+        {template && (
           <>
             <Typography variant="label" as="p" className="mt-4">
               {t('scope.label', { ns: 'guidelines' })}
@@ -140,12 +140,12 @@ export function SaveAsGuidelineButton({
               options={[
                 { value: 'global', label: t('capture.scopeGlobal', { ns: 'guidelines' }) },
                 {
-                  value: 'purposes',
-                  label: t('capture.scopePurpose', { ns: 'guidelines', name: purpose.name }),
+                  value: 'templates',
+                  label: t('capture.scopeTemplate', { ns: 'guidelines', name: template.name }),
                 },
               ]}
               onChange={(kind) =>
-                setScope(kind === 'global' ? globalScope() : { kind, purposeIds: [purpose.id] })
+                setScope(kind === 'global' ? globalScope() : { kind, templateIds: [template.id] })
               }
               ariaLabel={t('scope.label', { ns: 'guidelines' })}
               className="mt-2"

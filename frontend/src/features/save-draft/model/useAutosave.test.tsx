@@ -29,14 +29,14 @@ function setup(
   const transport = createFakePostsTransport({ calls, draftSaves, ...backend })
   const view = renderHook(
     ({ title, memo }: Typed) =>
-      // These cases are about the text pipeline, so every post here is 없음. The 용도 half of
+      // These cases are about the text pipeline, so every post here is 없음. The 템플릿 half of
       // the queue has its own file.
       useAutosave({
-        post: post && { ...post, purpose: { id: '' } },
+        post: post && { ...post, template: { id: '' } },
         title,
         memo,
         voiceId: post?.voice.id ?? 'voice-default',
-        purposeId: '',
+        templateId: '',
         targetLanguage: post?.targetLanguage ?? initialTarget,
       }),
     {
@@ -161,7 +161,7 @@ describe('useAutosave', () => {
       {
         slug: EXISTING.slug,
         voiceId: 'voice-review',
-        purposeId: undefined,
+        templateId: undefined,
         targetLanguage: undefined,
       },
     ])
@@ -171,7 +171,7 @@ describe('useAutosave', () => {
     expect(draftSaves[1]).toEqual({
       slug: EXISTING.slug,
       voiceId: undefined,
-      purposeId: undefined,
+      templateId: undefined,
       targetLanguage: undefined,
     })
   })

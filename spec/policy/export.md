@@ -20,6 +20,12 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
 
 ## Format contracts
 
+- An unfilled template slot renders in **all four** formats as a bracketed placeholder — the template author's label,
+  falling back to the slot's kind — in marker order, never as its copy token. It stays distinguishable from the Naver
+  photo markers, which carry a filename after the label. The export panel states how many positions remain and says
+  to fill them in the platform's editor after pasting; nothing about a slot blocks a copy or a finalization
+  ([templates](templates.md) *Slots in the canonical post*). All four outputs are byte-identical for a post with no
+  slots.
 - Naver output is plain text without the title. Blocks are separated by one blank line; image-marker labels follow
   content provenance: `[사진 …]` for Korean and `[Photo …]` for English. The title has its own copy field. The
   markers are unresolvable by SmartEditor ONE on their own, so the panel presents the Naver output as the **rendered
@@ -48,9 +54,10 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
 - Copy operations are serialized. A tab/content change or newer copy invalidates stale feedback and fallback
   selection — feedback carries the value (and content identity) it described, so a delayed browser permission result
   or a re-materialized output string cannot act on or label a different preview.
-- **The Naver format also copies photos, one at a time.** Each inline photo carries an icon copy control overlaid at
-  its top-right, named by its marker filename, in the same order as the `[사진 …]` markers and derived from the same
-  block array. A marker whose photo is missing holds its inline position as a filename placeholder, so later photos
+- **The Naver format also copies photos, one at a time.** Each inline photo **is** its own copy control — the photo
+  is the button, named by its marker filename, in the same order as the `[사진 …]` markers and derived from the same
+  block array. The `<img>` sits inside that button rather than under an overlay, so the browser's own image-copy
+  command stays available on it. A marker whose photo is missing holds its inline position as a filename placeholder, so later photos
   cannot shift against their markers. The other three formats render no photo copies: they resolve their own images.
 - **The clipboard payload for a photo is exactly one `ClipboardItem` carrying `image/png` and nothing else.** It is
   measured, not chosen (owner, 2026-08-31, SmartEditor ONE on macOS Chrome): a `text/html` flavor beside it makes the
@@ -58,13 +65,23 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
   write files to the system clipboard at all. There is therefore **no text fallback** for a photo copy — the text
   output beside it is the fallback the plan already promises.
 - The PNG is handed to the `ClipboardItem` as a **promise**, and the write is issued before the bytes arrive:
-  awaiting the fetch first spends the user activation WebKit requires, which would make every iOS copy fail.
-- The stored photo is a JPEG ([I6] converts every upload in the browser), so it is re-encoded to PNG on demand, for
-  the one photo pressed, from the presigned view URL. Nothing encoded here is uploaded, published or persisted.
+  awaiting the encode first spends the user activation WebKit requires, which would make every iOS copy fail.
+- **A photo is copied from the pixels already on screen, never re-requested.** The stored photo is a JPEG ([I6]
+  converts every upload in the browser), so it is re-encoded to PNG on demand, for the one photo pressed, out of the
+  rendered element. A presigned view URL is short-lived and this panel outlives one; a copy that downloaded the
+  photo again failed on a photo the user could see, while the browser's own image-copy on the same photo worked.
+  Nothing encoded here is uploaded, published or persisted.
+- **Reading those pixels requires the photo to be CORS-loaded**, so the preview's photos are `crossOrigin` and are
+  not lazy — a photo has to have painted to be copyable. This is the one surface where the bucket's browser-`GET`
+  allow decides whether a photo DISPLAYS; every other screen's photos are plain `<img>` and are unaffected.
 - A photo failure is stated **on that photo**, and told apart by kind: the browser has no image clipboard, the write
-  was refused, the bytes were **blocked** (not served to this origin — the fallback is the text output beside the
-  photo, and reloading changes nothing), the bytes were **unreadable** (an expired view URL — reloading the post
-  remints it), or no photo in the post matches that marker. A photo that cannot be read offers no copy control at
+  was refused, the pixels were **blocked** (this origin may not read them — the fallback is the text output beside
+  the photo, and reloading changes nothing), the photo was **unreadable** (it never painted; reloading the post
+  remints its URL), or no photo in the post matches that marker.
+- **A photo that fails to LOAD asks for a fresh set of view URLs, once.** Nothing else refetches the post while the
+  editor sits open, so a panel opened past the presigned lifetime holds URLs that no longer resolve — one refetch
+  away from fixed. It is bounded per photo because every refresh mints a new URL, and it is not a poll: a photo that
+  has painted is never re-requested, so a timer would re-download the panel to repair URLs nothing will use. A photo that cannot be read offers no copy control at
   all rather than one that would write an empty image; the same holds for a photo still carrying its local upload
   preview.
 - **The generated tags get a field of their own, on every format tab.** Plan 08 omits tags from the
@@ -79,10 +96,11 @@ the API, and the export surface itself never publishes. The separate paired-Mac 
   fallback beside the field, and the same staleness rule. **The four derived outputs are
   unchanged** — this adds a surface, not a format.
 - **Blocked and unreadable are separated by the URL, not by the response.** An object store may answer an expired
-  read with an error that carries no CORS headers — R2 does — which the browser withholds, so the fetch rejects
+  read with an error that carries no CORS headers — R2 does — which the browser withholds, so a photo fails to load
   exactly as it does when the bucket allows this origin no `GET`. The lifetime a presigned URL states in its own
-  query is therefore what decides, and the bucket's browser-`GET` allow is asserted at deploy time rather than
-  discovered by a user whose photo displays but will not copy (DEPLOY.md §5).
+  query is therefore what decides which of the two a photo that never painted was, and the bucket's browser-`GET`
+  allow is asserted at deploy time rather than discovered by a user (DEPLOY.md §5). On the copy itself the browser
+  says which it is — an origin-unclean read raises `SecurityError` — so only the load path has to infer it.
 
 ## Configuration
 

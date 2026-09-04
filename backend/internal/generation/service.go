@@ -18,7 +18,7 @@ type Service struct {
 	images      ImageReader
 	jobs        Jobs
 	experiments PendingExperiments
-	purposes    PurposeBriefs
+	templates   TemplateBriefs
 	guidelines  GuidelinesForPrompt
 	samples     VersionSampleWriter
 	batchSize   int
@@ -61,10 +61,10 @@ func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {
 	s.experiments = finder
 }
 
-// SetPurposeBriefs wires the purpose context's published brief lookup. Without it the
-// prompt simply carries no brief, so a partially wired process keeps the no-purpose
+// SetTemplateBriefs wires the template context's published brief lookup. Without it the
+// prompt simply carries no brief, so a partially wired process keeps the no-template
 // behavior rather than failing.
-func (s *Service) SetPurposeBriefs(briefs PurposeBriefs) { s.purposes = briefs }
+func (s *Service) SetTemplateBriefs(briefs TemplateBriefs) { s.templates = briefs }
 
 // SetVersionSamples wires the voice context's per-version snapshot recorder. Without it a
 // generation simply records nothing, which is the same outcome a failed recording has: the
@@ -72,7 +72,7 @@ func (s *Service) SetPurposeBriefs(briefs PurposeBriefs) { s.purposes = briefs }
 func (s *Service) SetVersionSamples(writer VersionSampleWriter) { s.samples = writer }
 
 // recordVersionSample copies what a run produced into the voice's current head version. It is
-// called AFTER the machine baseline is written, and its failure is swallowed on purpose: a
+// called AFTER the machine baseline is written, and its failure is swallowed on template: a
 // snapshot is a record of a post, and losing the record must never lose the post ([I1] is about
 // history outliving its subject, not the other way round). The voice id is the one the run was
 // frozen against, so a reassignment mid-run cannot file the snapshot under the wrong profile.
@@ -143,11 +143,11 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 			return "", fmt.Errorf("save revision rule: %w", err)
 		}
 	}
-	brief, err := s.freezePurpose(ctx, post)
+	brief, err := s.freezeTemplate(ctx, post)
 	if err != nil {
 		return "", err
 	}
-	request.Purpose = brief
+	request.Template = brief
 	texts, err := s.freezeGuidelines(ctx, post)
 	if err != nil {
 		return "", err
@@ -200,11 +200,11 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if request.TargetLength != nil && *request.TargetLength <= 0 {
 		return "", ErrInvalidTargetLength
 	}
-	brief, err := s.freezePurpose(ctx, post)
+	brief, err := s.freezeTemplate(ctx, post)
 	if err != nil {
 		return "", err
 	}
-	request.Purpose = brief
+	request.Template = brief
 	texts, err := s.freezeGuidelines(ctx, post)
 	if err != nil {
 		return "", err
@@ -247,16 +247,21 @@ func observeTargetCount(images []Image, observeFiles *[]string) int {
 	return len(*observeFiles)
 }
 
-// freezePurpose resolves the post's CURRENT purpose once, at enqueue, so the text the
-// worker prompts with is decided here and never re-read. A purpose deleted between the save
-// and the start is simply absent — that is a post with no purpose, not a failure.
-func (s *Service) freezePurpose(ctx context.Context, post PostInput) (*PurposeBrief, error) {
-	if s.purposes == nil || post.PurposeID == "" {
+// freezeTemplate resolves the post's CURRENT template once, at enqueue, expanded for the
+// post's CURRENT attachments, so the text the worker prompts with is decided here and never
+// re-read. A template deleted between the save and the start is simply absent — that is a
+// post with no template, not a failure.
+//
+// Expansion happens inside the freeze rather than at prompt time on purpose: it is what
+// makes "attaching a photo after the start cannot change the run" true, and it is the only
+// place the expansion bound can refuse before a provider is called.
+func (s *Service) freezeTemplate(ctx context.Context, post PostInput) (*TemplateBrief, error) {
+	if s.templates == nil || post.TemplateID == "" {
 		return nil, nil
 	}
-	brief, ok, err := s.purposes.BriefFor(ctx, post.UserID, post.PurposeID)
+	brief, ok, err := s.templates.RenderedFor(ctx, post.UserID, post.TemplateID, postFilenames(post))
 	if err != nil {
-		return nil, fmt.Errorf("load purpose brief: %w", err)
+		return nil, fmt.Errorf("render template: %w", err)
 	}
 	if !ok {
 		return nil, nil
@@ -265,7 +270,16 @@ func (s *Service) freezePurpose(ctx context.Context, post PostInput) (*PurposeBr
 	return &frozen, nil
 }
 
-// freezeGuidelines resolves the applicable 지침 once, at enqueue, from the SAME purpose id
+// postFilenames is the attachment order every stage refers to a photo by.
+func postFilenames(post PostInput) []string {
+	names := make([]string, 0, len(post.Images))
+	for _, image := range post.Images {
+		names = append(names, image.Filename)
+	}
+	return names
+}
+
+// freezeGuidelines resolves the applicable 지침 once, at enqueue, from the SAME template id
 // the brief was resolved from — one read, one consistent view. Editing, rescoping or
 // deleting a guideline afterwards cannot reach the queued work, including across a
 // restart-resume or an explicit retry, because the handlers read only the payload.
@@ -273,12 +287,12 @@ func (s *Service) freezeGuidelines(ctx context.Context, post PostInput) ([]strin
 	if s.guidelines == nil {
 		return nil, nil
 	}
-	var purposeID *string
-	if post.PurposeID != "" {
-		id := post.PurposeID
-		purposeID = &id
+	var templateID *string
+	if post.TemplateID != "" {
+		id := post.TemplateID
+		templateID = &id
 	}
-	texts, err := s.guidelines.ForPrompt(ctx, post.UserID, purposeID)
+	texts, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID)
 	if err != nil {
 		return nil, fmt.Errorf("load applicable guidelines: %w", err)
 	}
@@ -316,7 +330,7 @@ func frozenVoice(post PostInput, jobVoiceID string) (string, error) {
 }
 
 // modelEnabled requires stage membership, not mere registry presence: a ref arrives here
-// straight from the client, so the per-purpose registration (change 20) is enforced at
+// straight from the client, so the per-template registration (change 20) is enforced at
 // this boundary too, not only in the picker.
 func modelEnabled(models LLM, ref llm.ModelRef, stage string) bool {
 	info, ok := models.Resolve(ref)

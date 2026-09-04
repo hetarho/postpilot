@@ -26,7 +26,7 @@ type Service struct {
 	contentPurger ExperimentContentPurger
 	livePublish   LivePublishFinder
 	voices        VoiceDirectory
-	purposes      PurposeDirectory
+	templates     TemplateDirectory
 
 	// now and newID are seams for tests in this package, not configuration.
 	now   func() time.Time
@@ -55,11 +55,11 @@ func (s *Service) SetVoiceDirectory(directory VoiceDirectory) {
 	s.voices = directory
 }
 
-// SetPurposeDirectory wires the purpose context's published directory. Unlike the voice
-// directory its absence is survivable: a post needs no purpose, so without it assignment is
+// SetTemplateDirectory wires the template context's published directory. Unlike the voice
+// directory its absence is survivable: a post needs no template, so without it assignment is
 // simply refused and read models project the stored id with no name.
-func (s *Service) SetPurposeDirectory(directory PurposeDirectory) {
-	s.purposes = directory
+func (s *Service) SetTemplateDirectory(directory TemplateDirectory) {
+	s.templates = directory
 }
 
 // NewService wires the context with its store, its object storage, the presigned URL
@@ -90,16 +90,16 @@ func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, ma
 // required on create, nil preserves the current assignment, and a different present value
 // asks for a reassignment. An empty string is never valid — the server substitutes no default.
 //
-// purposeID is presence-aware too, with one more case, because a post may legitimately have
+// templateID is presence-aware too, with one more case, because a post may legitimately have
 // none: nil preserves, a present empty string clears, and a present non-empty value assigns.
 // It is validated before anything else is written, so a bad id applies nothing at all.
-func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID, purposeID *string, targetLanguage *Language) (Post, error) {
+func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID, templateID *string, targetLanguage *Language) (Post, error) {
 	if targetLanguage != nil && !targetLanguage.Valid() {
 		return Post{}, ErrLanguageRequired
 	}
 	// Ahead of every write, including the create: a request naming an unknown or foreign
-	// purpose must leave the post exactly as it was, title and memo included.
-	targetPurpose, err := s.assignablePurpose(ctx, userID, purposeID)
+	// template must leave the post exactly as it was, title and memo included.
+	targetTemplate, err := s.assignableTemplate(ctx, userID, templateID)
 	if err != nil {
 		return Post{}, err
 	}
@@ -115,7 +115,7 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 		if err != nil {
 			return Post{}, err
 		}
-		return s.createPost(ctx, userID, title, memo, target.ID, targetPurpose, *targetLanguage)
+		return s.createPost(ctx, userID, title, memo, target.ID, targetTemplate, *targetLanguage)
 	}
 
 	found, err := s.ownedPost(ctx, userID, slug)
@@ -127,9 +127,9 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 			return Post{}, err
 		}
 	}
-	if purposeID != nil && targetPurpose != found.PurposeID {
-		if _, err := s.store.AssignPurpose(ctx, slug, userID, &targetPurpose, s.now()); err != nil {
-			return Post{}, fmt.Errorf("assign purpose: %w", err)
+	if templateID != nil && targetTemplate != found.TemplateID {
+		if _, err := s.store.AssignTemplate(ctx, slug, userID, &targetTemplate, s.now()); err != nil {
+			return Post{}, fmt.Errorf("assign template: %w", err)
 		}
 	}
 
@@ -234,54 +234,54 @@ func (s *Service) voiceRefs(ctx context.Context, userID string) (map[string]Voic
 	return out, nil
 }
 
-// assignablePurpose resolves the presence-aware field to the id that should end up on the
-// post: "" for absent-or-cleared, otherwise an owned purpose's id. An unknown or foreign id
+// assignableTemplate resolves the presence-aware field to the id that should end up on the
+// post: "" for absent-or-cleared, otherwise an owned template's id. An unknown or foreign id
 // is refused here, before any other part of the request is applied.
-func (s *Service) assignablePurpose(ctx context.Context, userID string, purposeID *string) (string, error) {
-	if purposeID == nil || strings.TrimSpace(*purposeID) == "" {
+func (s *Service) assignableTemplate(ctx context.Context, userID string, templateID *string) (string, error) {
+	if templateID == nil || strings.TrimSpace(*templateID) == "" {
 		return "", nil
 	}
-	wanted := strings.TrimSpace(*purposeID)
-	if s.purposes == nil {
-		return "", errors.New("purpose directory is not configured")
+	wanted := strings.TrimSpace(*templateID)
+	if s.templates == nil {
+		return "", errors.New("template directory is not configured")
 	}
-	purposes, err := s.purposes.Purposes(ctx, userID)
+	templates, err := s.templates.Templates(ctx, userID)
 	if err != nil {
-		return "", fmt.Errorf("list purposes: %w", err)
+		return "", fmt.Errorf("list templates: %w", err)
 	}
-	for _, p := range purposes {
+	for _, p := range templates {
 		if p.ID == wanted {
 			return p.ID, nil
 		}
 	}
-	return "", ErrPurposeNotFound
+	return "", ErrTemplateNotFound
 }
 
-// purposeRefs names every purpose the account owns so a read model can label an assignment.
+// templateRefs names every template the account owns so a read model can label an assignment.
 // Without a directory the stored id alone is projected, exactly as voiceRefs does.
-func (s *Service) purposeRefs(ctx context.Context, userID string) (map[string]PurposeRef, error) {
-	if s.purposes == nil {
+func (s *Service) templateRefs(ctx context.Context, userID string) (map[string]TemplateRef, error) {
+	if s.templates == nil {
 		return nil, nil
 	}
-	purposes, err := s.purposes.Purposes(ctx, userID)
+	templates, err := s.templates.Templates(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("list purposes: %w", err)
+		return nil, fmt.Errorf("list templates: %w", err)
 	}
-	out := make(map[string]PurposeRef, len(purposes))
-	for _, p := range purposes {
+	out := make(map[string]TemplateRef, len(templates))
+	for _, p := range templates {
 		out[p.ID] = p
 	}
 	return out, nil
 }
 
-func projectPurpose(refs map[string]PurposeRef, purposeID string) PurposeRef {
-	if purposeID == "" {
-		return PurposeRef{}
+func projectTemplate(refs map[string]TemplateRef, templateID string) TemplateRef {
+	if templateID == "" {
+		return TemplateRef{}
 	}
-	if ref, ok := refs[purposeID]; ok {
+	if ref, ok := refs[templateID]; ok {
 		return ref
 	}
-	return PurposeRef{ID: purposeID}
+	return TemplateRef{ID: templateID}
 }
 
 func projectVoice(refs map[string]VoiceRef, voiceID string) VoiceRef {
@@ -296,7 +296,7 @@ func projectVoice(refs map[string]VoiceRef, voiceID string) VoiceRef {
 // and each attempt sees one more taken slug, so it converges immediately.
 const slugAttempts = 5
 
-func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, purposeID string, targetLanguage Language) (Post, error) {
+func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, templateID string, targetLanguage Language) (Post, error) {
 	now := s.now()
 
 	// Mint-then-insert is a check-then-act, so the insert is what actually decides:
@@ -324,7 +324,7 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, 
 			Slug:           slug,
 			UserID:         userID,
 			VoiceID:        voiceID,
-			PurposeID:      purposeID,
+			TemplateID:     templateID,
 			Title:          title,
 			Memo:           memo,
 			Status:         StatusDraft,
@@ -386,11 +386,11 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 		return Post{}, err
 	}
 	found.Voice = projectVoice(refs, found.VoiceID)
-	purposeRefs, err := s.purposeRefs(ctx, userID)
+	templateRefs, err := s.templateRefs(ctx, userID)
 	if err != nil {
 		return Post{}, err
 	}
-	found.Purpose = projectPurpose(purposeRefs, found.PurposeID)
+	found.Template = projectTemplate(templateRefs, found.TemplateID)
 	return found, nil
 }
 
@@ -420,13 +420,13 @@ func (s *Service) List(ctx context.Context, userID string) ([]Summary, error) {
 	if err != nil {
 		return nil, err
 	}
-	purposeRefs, err := s.purposeRefs(ctx, userID)
+	templateRefs, err := s.templateRefs(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	for i := range summaries {
 		summaries[i].Voice = projectVoice(refs, summaries[i].VoiceID)
-		summaries[i].Purpose = projectPurpose(purposeRefs, summaries[i].PurposeID)
+		summaries[i].Template = projectTemplate(templateRefs, summaries[i].TemplateID)
 	}
 	return summaries, nil
 }
@@ -1002,7 +1002,7 @@ func (s *Service) dropObservation(ctx context.Context, found Post, filename stri
 
 // ownedPost resolves a slug to the caller's post, or says why not.
 //
-// Unknown and foreign are distinguished on purpose (PRD §7 specifies 403 for a foreign
+// Unknown and foreign are distinguished on template (PRD §7 specifies 403 for a foreign
 // slug). At two users there is nothing to enumerate.
 func (s *Service) ownedPost(ctx context.Context, userID, slug string) (Post, error) {
 	found, err := s.store.GetPost(ctx, slug)

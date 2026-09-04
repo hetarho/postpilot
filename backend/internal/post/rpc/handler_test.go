@@ -38,7 +38,7 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"invalid content", "save post content", &post.InvalidContentError{Reason: "private authored content"}, connect.CodeInvalidArgument, "POST_CONTENT_INVALID"},
 		{"voice required", "save draft", post.ErrVoiceRequired, connect.CodeInvalidArgument, "VOICE_REQUIRED"},
 		{"voice missing", "save draft", post.ErrVoiceNotFound, connect.CodeNotFound, "VOICE_NOT_FOUND"},
-		{"purpose missing", "save draft", post.ErrPurposeNotFound, connect.CodeNotFound, "PURPOSE_NOT_FOUND"},
+		{"template missing", "save draft", post.ErrTemplateNotFound, connect.CodeNotFound, "PURPOSE_NOT_FOUND"},
 		{"voice deleted", "save draft", post.ErrVoiceDeleted, connect.CodeFailedPrecondition, "VOICE_DELETED"},
 		{"language", "save draft", post.ErrLanguageRequired, connect.CodeInvalidArgument, "POST_TARGET_LANGUAGE_REQUIRED"},
 	}

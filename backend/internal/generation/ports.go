@@ -61,18 +61,25 @@ type PendingExperiments interface {
 	PendingForPost(ctx context.Context, userID, postSlug string) (string, error)
 }
 
-// PurposeBriefs is the purpose context's published brief lookup, consumed only at enqueue
-// time. `ok` false means the post has no purpose or it was deleted between the save and the
-// start — an ordinary case, not an error, because a prompt without a brief is a valid one.
-type PurposeBriefs interface {
-	BriefFor(ctx context.Context, userID, purposeID string) (PurposeBrief, bool, error)
+// TemplateBriefs is the template context's published render, consumed only at enqueue time.
+// `ok` false means the post has no template or it was deleted between the save and the start
+// — an ordinary case, not an error, because a prompt without a template is a valid one.
+//
+// The filenames are passed IN rather than looked up on the other side: expansion has to see
+// exactly the attachment set this enqueue froze, and a lookup there could observe a photo
+// added in between.
+//
+// An error is a real failure and stops the start — the expansion bound is enforced here, so
+// a template that would grow past it never reaches a provider.
+type TemplateBriefs interface {
+	RenderedFor(ctx context.Context, userID, templateID string, filenames []string) (TemplateBrief, bool, error)
 }
 
 // GuidelinesForPrompt is the guideline context's published resolution, consumed only at
-// enqueue time. purposeID is nil for a post with no purpose, which yields the account's
+// enqueue time. templateID is nil for a post with no template, which yields the account's
 // global guidelines alone — an empty result is the ordinary case, not an error.
 type GuidelinesForPrompt interface {
-	ForPrompt(ctx context.Context, userID string, purposeID *string) ([]string, error)
+	ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error)
 }
 
 type Progress func(stage string, done, total int)

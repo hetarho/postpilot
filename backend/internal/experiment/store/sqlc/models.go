@@ -30,7 +30,7 @@ type ModelExperiment struct {
 	AdoptionError           sql.NullString
 	AdoptedAt               sql.NullString
 	AdoptionRequested       int64
-	PurposeName             string
+	TemplateName            string
 	TargetLanguage          sql.NullString
 	ApplyErrorReason        sql.NullString
 	ApplyErrorParams        sql.NullString

@@ -1,6 +1,6 @@
 import type { PostImage } from '@/entities/image'
 import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
-import { walkBlocks } from '@/shared/lib'
+import { blockSlotPlaceholder, walkBlocks } from '@/shared/lib'
 
 /** The `IMAGE` blocks' filenames in the exact order their `[사진 …]` markers appear in
  *  `toNaver`'s output — one entry per marker, always.
@@ -32,6 +32,11 @@ export function toNaver(
   // only canonical block filenames, including for an unknown-but-already-validated file.
   void images
   return walkBlocks(content, (block) => {
+    // An unfilled template slot exports as the position it reserves, never as its copy
+    // token: the token is machinery for the model, and what a person needs in the pasted
+    // body is a place to fill.
+    const slot = blockSlotPlaceholder(block)
+    if (slot) return slot
     switch (block.type) {
       case BlockType.TEXT:
       case BlockType.HEADING:

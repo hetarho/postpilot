@@ -29,7 +29,7 @@ function renderInRouter(
   const routeTree = rootRoute.addChildren([
     createRoute({ getParentRoute: () => rootRoute, path: '/', component: () => ui }),
     createRoute({ getParentRoute: () => rootRoute, path: '/ai-models', component: () => null }),
-    createRoute({ getParentRoute: () => rootRoute, path: '/purposes', component: () => null }),
+    createRoute({ getParentRoute: () => rootRoute, path: '/templates', component: () => null }),
   ])
   const router = createRouter({
     routeTree,
@@ -72,7 +72,7 @@ function renderBrief(
         : [],
     },
     voice: { voices: [{ id: 'voice-a', name: '일상 말투', isDefault: true }] },
-    purposes: { purposes: [{ id: 'purpose-a', name: '일기' }] },
+    templates: { templates: [{ id: 'template-a', name: '일기' }] },
   })
   renderInRouter(
     <GenerationBrief
@@ -101,9 +101,9 @@ describe('GenerationBrief', () => {
   })
 
   // A1, narrowed: ONE surface holds every SETTING the run consumes, in the order it consumes them.
-  // 말투 and 용도 are excepted — both are per-draft choices and both ride the dock's own row beside
+  // 말투 and 템플릿 are excepted — both are per-draft choices and both ride the dock's own row beside
   // this trigger, so getting either wrong is visible without opening anything.
-  it('holds the run settings in one panel, without 말투 and 용도', async () => {
+  it('holds the run settings in one panel, without 말투 and 템플릿', async () => {
     const user = userEvent.setup()
     renderBrief()
 
@@ -115,7 +115,7 @@ describe('GenerationBrief', () => {
         expect(screen.getByRole('combobox', { name: new RegExp(label) })).toBeInTheDocument(),
       )
     }
-    for (const absent of [/말투/, /용도/]) {
+    for (const absent of [/말투/, /템플릿/]) {
       expect(screen.queryByRole('combobox', { name: absent })).not.toBeInTheDocument()
     }
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeInTheDocument()

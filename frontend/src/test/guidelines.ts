@@ -16,9 +16,9 @@ type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 export interface FakeGuidelineRow {
   id: string
   text: string
-  /** Omitted means 전역. A `purposes` scope with an empty array is the orphaned state. */
-  purposeRefs?: Array<{ id: string; name: string }>
-  scope?: 'global' | 'purposes'
+  /** Omitted means 전역. A `templates` scope with an empty array is the orphaned state. */
+  templateRefs?: Array<{ id: string; name: string }>
+  scope?: 'global' | 'templates'
 }
 
 export interface FakeGuidelinesOptions {
@@ -34,10 +34,10 @@ export interface FakeGuidelinesOptions {
   updates?: Array<{
     id: string
     text: string | undefined
-    scope: { scope: ProtoGuidelineScope; purposeIds: string[] } | undefined
+    scope: { scope: ProtoGuidelineScope; templateIds: string[] } | undefined
   }>
   /** Records every CreateGuideline, including the ones the capture dialog sends. */
-  creates?: Array<{ text: string; scope: ProtoGuidelineScope; purposeIds: string[] }>
+  creates?: Array<{ text: string; scope: ProtoGuidelineScope; templateIds: string[] }>
 }
 
 const DEFAULT_AT = '2026-09-01T12:00:00Z'
@@ -45,8 +45,8 @@ const DEFAULT_AT = '2026-09-01T12:00:00Z'
 interface Row {
   id: string
   text: string
-  scope: 'global' | 'purposes'
-  purposes: Array<{ id: string; name: string }>
+  scope: 'global' | 'templates'
+  templates: Array<{ id: string; name: string }>
 }
 
 export function registerGuidelineService(
@@ -62,8 +62,8 @@ export function registerGuidelineService(
     rows.set(row.id, {
       id: row.id,
       text: row.text,
-      scope: row.scope ?? (row.purposeRefs ? 'purposes' : 'global'),
-      purposes: row.purposeRefs ?? [],
+      scope: row.scope ?? (row.templateRefs ? 'templates' : 'global'),
+      templates: row.templateRefs ?? [],
     })
     order.push(row.id)
   }
@@ -72,8 +72,8 @@ export function registerGuidelineService(
     create(GuidelineSchema, {
       id: row.id,
       text: row.text,
-      scope: row.scope === 'global' ? ProtoGuidelineScope.GLOBAL : ProtoGuidelineScope.PURPOSES,
-      purposes: row.purposes,
+      scope: row.scope === 'global' ? ProtoGuidelineScope.GLOBAL : ProtoGuidelineScope.TEMPLATES,
+      templates: row.templates,
       createdAt: DEFAULT_AT,
       updatedAt: DEFAULT_AT,
     })
@@ -96,22 +96,22 @@ export function registerGuidelineService(
 
   rpc(GuidelineService.method.createGuideline, (req) => {
     calls?.push('CreateGuideline')
-    options.creates?.push({ text: req.text, scope: req.scope, purposeIds: [...req.purposeIds] })
+    options.creates?.push({ text: req.text, scope: req.scope, templateIds: [...req.templateIds] })
     const text = req.text.trim()
     if (!text) throw connectAppError('GUIDELINE_TEXT_REQUIRED', Code.InvalidArgument)
     if (options.createDuplicates || [...rows.values()].some((row) => row.text === text)) {
       throw connectAppError('GUIDELINE_TEXT_TAKEN', Code.AlreadyExists)
     }
-    const scoped = req.scope === ProtoGuidelineScope.PURPOSES
-    if (scoped === (req.purposeIds.length === 0)) {
+    const scoped = req.scope === ProtoGuidelineScope.TEMPLATES
+    if (scoped === (req.templateIds.length === 0)) {
       throw connectAppError('GUIDELINE_SCOPE_INVALID', Code.InvalidArgument)
     }
     sequence += 1
     const row: Row = {
       id: `guideline-${sequence}`,
       text,
-      scope: scoped ? 'purposes' : 'global',
-      purposes: req.purposeIds.map((id) => ({ id, name: id })),
+      scope: scoped ? 'templates' : 'global',
+      templates: req.templateIds.map((id) => ({ id, name: id })),
     }
     rows.set(row.id, row)
     order.push(row.id)
@@ -124,7 +124,7 @@ export function registerGuidelineService(
       id: req.id,
       text: req.text,
       scope: req.scope
-        ? { scope: req.scope.scope, purposeIds: [...req.scope.purposeIds] }
+        ? { scope: req.scope.scope, templateIds: [...req.scope.templateIds] }
         : undefined,
     })
     const row = rows.get(req.id)
@@ -136,12 +136,12 @@ export function registerGuidelineService(
       row.text = text
     }
     if (req.scope !== undefined) {
-      const scoped = req.scope.scope === ProtoGuidelineScope.PURPOSES
-      if (scoped === (req.scope.purposeIds.length === 0)) {
+      const scoped = req.scope.scope === ProtoGuidelineScope.TEMPLATES
+      if (scoped === (req.scope.templateIds.length === 0)) {
         throw connectAppError('GUIDELINE_SCOPE_INVALID', Code.InvalidArgument)
       }
-      row.scope = scoped ? 'purposes' : 'global'
-      row.purposes = req.scope.purposeIds.map((id) => ({ id, name: id }))
+      row.scope = scoped ? 'templates' : 'global'
+      row.templates = req.scope.templateIds.map((id) => ({ id, name: id }))
     }
     return create(UpdateGuidelineResponseSchema, { guideline: toProto(row) })
   })

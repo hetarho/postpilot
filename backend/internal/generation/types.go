@@ -23,6 +23,20 @@ type Block struct {
 	Alt     string
 	Caption string
 	Items   []string
+	// Slot is set only on an unfilled template slot. It rides on a TEXT block rather than
+	// being a sixth BlockType so every existing switch — reading view, block editor, the
+	// four export mappings, revision, the validator — stays correct without changing; only
+	// the surfaces that render a slot specially need to know it exists. [I2] holds either
+	// way: the canonical post is still a block array.
+	Slot *BlockSlot
+}
+
+// BlockSlot is a position a template reserved for content the app cannot invent. Kind is one
+// of the grammar's slot kinds; Label is the template author's own words, shown to the person
+// who has to fill it and never an instruction to a model.
+type BlockSlot struct {
+	Kind  string
+	Label string
 }
 
 type PostContent struct {
@@ -58,25 +72,41 @@ type VoiceRef struct {
 	SourceLanguage Language
 }
 
-// PurposeBrief is the post's 용도 as the writer needs it: three authored strings and no id.
-// It carries no id on purpose — once frozen into a job payload or an experiment snapshot it
-// must stay readable after the purpose it came from is renamed or deleted.
-type PurposeBrief struct {
-	Name         string
-	Description  string
-	Instructions string
+// TemplateBrief is the post's 템플릿 as the writer needs it: the name, the body ALREADY
+// expanded for this post's photos and rendered into prompt text, and the slots that body
+// declared in document order.
+//
+// It carries no id. Once frozen into a job payload or an experiment snapshot it must stay
+// readable after the template it came from is renamed or deleted, and re-resolving an id
+// would defeat the freeze.
+//
+// The body is expanded rather than raw so that attaching a photo after the start cannot
+// change what the model was asked for — the expansion is part of what gets frozen.
+type TemplateBrief struct {
+	Name string
+	Body string
+	// Slots are the unfilled kinds (place · link) in the order the body's {{slot:n}} tokens
+	// number them, so the post-processing pass can resolve a token back to its kind and label.
+	Slots []TemplateSlot
+}
+
+// TemplateSlot is one position the app cannot fill by itself. It stays honest rather than
+// filled: the model is told not to write prose there, and a person fills it after export.
+type TemplateSlot struct {
+	Kind  string
+	Label string
 }
 
 type PostInput struct {
 	Slug   string
 	UserID string
 	Voice  VoiceRef
-	// PurposeID is what the post currently points at, read only at enqueue time. Handlers
-	// never resolve it: they use Purpose, which the job payload froze.
-	PurposeID string
-	Purpose   *PurposeBrief
+	// TemplateID is what the post currently points at, read only at enqueue time. Handlers
+	// never resolve it: they use Template, which the job payload froze.
+	TemplateID string
+	Template   *TemplateBrief
 	// Guidelines is the frozen 작문 지침 material in injection order, filled at enqueue from
-	// PurposeID like Purpose is. Handlers never resolve guidelines live either.
+	// TemplateID like Template is. Handlers never resolve guidelines live either.
 	Guidelines []string
 	Title      string
 	Memo       string
@@ -112,10 +142,10 @@ type StartRequest struct {
 	WriteModel     string
 	TargetLanguage Language
 	TargetLength   *int
-	// Purpose is resolved from the post server-side at Start and frozen into the payload;
+	// Template is resolved from the post server-side at Start and frozen into the payload;
 	// the request never carries one. Nil means the post had none, or it was deleted first.
-	Purpose *PurposeBrief
-	// Guidelines is resolved the same way, from the same purpose id, and frozen alongside.
+	Template *TemplateBrief
+	// Guidelines is resolved the same way, from the same template id, and frozen alongside.
 	Guidelines []string
 	// ObserveCalls is how many observation calls the photos will take, resolved at Start
 	// where the post is already in hand. Observation batches photos, so this is not the
@@ -139,7 +169,7 @@ type GenerateJob struct {
 	WriteModel     string
 	TargetLanguage Language
 	TargetLength   *int
-	Purpose        *PurposeBrief
+	Template       *TemplateBrief
 	Guidelines     []string
 	// ObserveFiles carries PRESENCE, not just emptiness. Nil is a job queued before this
 	// contract existed and keeps the observe-everything behavior; non-nil but empty is the
@@ -159,7 +189,7 @@ type StartRevisionRequest struct {
 	SaveAsRule      bool
 	WriteModel      string
 	ContentLanguage Language
-	Purpose         *PurposeBrief
+	Template        *TemplateBrief
 	Guidelines      []string
 }
 

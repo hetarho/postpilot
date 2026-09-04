@@ -50,7 +50,7 @@ async function finalize(user: ReturnType<typeof userEvent.setup>, action = '확�
 }
 
 /** The writing brief — 관찰/작성 모델, 작성 A/B 후보, 목표 언어, 목표 분량 — lives behind ONE trigger
- *  in the dock (change 12), so a test that drives any of them opens it first. 말투 and 용도 are the
+ *  in the dock (change 12), so a test that drives any of them opens it first. 말투 and 템플릿 are the
  *  exceptions and ride the dock's own row; see `dockField` below. */
 const BRIEF_TRIGGER = /^(글쓰기 옵션|Writing options)$/
 const GENERATE_STEP = /^(글 생성|Generate)$/
@@ -76,8 +76,8 @@ async function briefField(user: ReturnType<typeof userEvent.setup>, label: strin
   return screen.findByRole('combobox', { name: new RegExp(label) })
 }
 
-/** 말투 and 용도 are the two parts of the brief that are NOT behind the trigger: both ride the
- *  dock's own row beside the glyph, so a wrong voice or purpose is visible without opening
+/** 말투 and 템플릿 are the two parts of the brief that are NOT behind the trigger: both ride the
+ *  dock's own row beside the glyph, so a wrong voice or template is visible without opening
  *  anything. */
 async function dockField(user: ReturnType<typeof userEvent.setup>, label: RegExp) {
   // Same wait as `openBrief`: the lifecycle bar exists only once the editor has its post, and the
@@ -90,7 +90,7 @@ async function dockField(user: ReturnType<typeof userEvent.setup>, label: RegExp
   return screen.findByRole('combobox', { name: label })
 }
 const voiceField = (user: ReturnType<typeof userEvent.setup>) => dockField(user, /말투/)
-const purposeField = (user: ReturnType<typeof userEvent.setup>) => dockField(user, /용도/)
+const templateField = (user: ReturnType<typeof userEvent.setup>) => dockField(user, /템플릿/)
 
 afterEach(() => {
   cleanup()
@@ -1558,7 +1558,7 @@ describe('opening a post', () => {
   })
 })
 
-// Real timers on purpose: these walk the whole flow through the router, and
+// Real timers on template: these walk the whole flow through the router, and
 // @testing-library's async helpers look for jest's fake-timer API, so vitest's is
 // invisible to them and every `waitFor` would spin on a clock nothing advances. The
 // debounce window itself is covered by features/save-draft's own tests.
@@ -2087,7 +2087,7 @@ describe('the post voice', () => {
     expect(draftSaves[0]).toEqual({
       slug: '',
       voiceId: 'voice-default',
-      purposeId: undefined,
+      templateId: undefined,
       targetLanguage: 'ko',
     })
     // The editor the mint mounted shows the same voice, and later saves leave it alone.
@@ -2097,7 +2097,7 @@ describe('the post voice', () => {
     expect(draftSaves[1]).toEqual({
       slug: '20260828-제주',
       voiceId: undefined,
-      purposeId: undefined,
+      templateId: undefined,
       targetLanguage: undefined,
     })
   })
@@ -2121,7 +2121,7 @@ describe('the post voice', () => {
         expect(draftSaves[0]).toEqual({
           slug: '',
           voiceId: 'voice-review',
-          purposeId: undefined,
+          templateId: undefined,
           targetLanguage: 'ko',
         }),
       AUTOSAVED,
@@ -2280,7 +2280,7 @@ describe('the post voice', () => {
       },
     })
 
-    // Named twice on purpose, and both are on the page from the first paint now that the picker
+    // Named twice on template, and both are on the page from the first paint now that the picker
     // rides the dock: the picker's closed trigger (the disabled current option) and 글 생성's own
     // warning.
     expect(await screen.findAllByText('삭제된 말투 · 옛 말투')).toHaveLength(2)
@@ -2448,36 +2448,36 @@ describe('the post language', () => {
   })
 })
 
-// Plan 11 A12: 용도 is optional, defaults to 없음, and rides the same draft queue as the text.
-describe('the post purpose', () => {
+// Plan 11 A12: 템플릿 is optional, defaults to 없음, and rides the same draft queue as the text.
+describe('the post template', () => {
   const AUTOSAVED = { timeout: 4_000 }
   const PURPOSES = [
-    { id: 'purpose-review', name: '정보성 식당 리뷰', description: '협찬 방문 리뷰' },
-    { id: 'purpose-diary', name: '일기' },
+    { id: 'template-review', name: '정보성 식당 리뷰', description: '협찬 방문 리뷰' },
+    { id: 'template-diary', name: '일기' },
   ]
   const POST_PURPOSES = [
-    { id: 'purpose-review', name: '정보성 식당 리뷰' },
-    { id: 'purpose-diary', name: '일기' },
+    { id: 'template-review', name: '정보성 식당 리뷰' },
+    { id: 'template-diary', name: '일기' },
   ]
 
-  async function pickPurpose(user: ReturnType<typeof userEvent.setup>, name: string) {
-    const picker = await purposeField(user)
+  async function pickTemplate(user: ReturnType<typeof userEvent.setup>, name: string) {
+    const picker = await templateField(user)
     await waitFor(() => expect(picker).toBeEnabled())
     await user.click(picker)
     await user.click(await screen.findByRole('option', { name }))
     return picker
   }
 
-  it('defaults a new draft to 없음 and sends no purpose with the create', async () => {
+  it('defaults a new draft to 없음 and sends no template with the create', async () => {
     const draftSaves: FakeDraftSave[] = []
     renderAppAt('/posts/new', {
       user: USER,
       posts: { draftSaves },
-      purposes: { purposes: PURPOSES },
+      templates: { templates: PURPOSES },
     })
 
     const user = userEvent.setup()
-    const picker = await purposeField(user)
+    const picker = await templateField(user)
     expect(picker).toHaveTextContent('없음')
     await user.click(picker)
     expect(screen.getByRole('option', { name: '없음', selected: true })).toBeInTheDocument()
@@ -2487,30 +2487,30 @@ describe('the post purpose', () => {
     await user.type(screen.getByLabelText('제목'), '제주')
     await waitFor(() => expect(draftSaves).toHaveLength(1), AUTOSAVED)
     // Omitted, not '': the create has no assignment to clear, so the request is byte-for-byte
-    // what it was before purposes existed.
-    expect(draftSaves[0].purposeId).toBeUndefined()
+    // what it was before templates existed.
+    expect(draftSaves[0].templateId).toBeUndefined()
   })
 
-  it('carries a chosen purpose into the create', async () => {
+  it('carries a chosen template into the create', async () => {
     const user = userEvent.setup()
     const draftSaves: FakeDraftSave[] = []
     renderAppAt('/posts/new', {
       user: USER,
-      posts: { draftSaves, purposes: POST_PURPOSES },
-      purposes: { purposes: PURPOSES },
+      posts: { draftSaves, templates: POST_PURPOSES },
+      templates: { templates: PURPOSES },
     })
 
-    await pickPurpose(user, '정보성 식당 리뷰')
+    await pickTemplate(user, '정보성 식당 리뷰')
     // Choosing is not typing: nothing is saved until there is something to save.
     expect(draftSaves).toHaveLength(0)
-    // The dock row is three controls wide on a 360px screen, so the chosen 용도's own brief and
-    // the way to the 용도 page are not on it: both belong to the directory that owns them.
+    // The dock row is three controls wide on a 360px screen, so the chosen 템플릿's own brief and
+    // the way to the 템플릿 page are not on it: both belong to the directory that owns them.
     expect(screen.queryByText('협찬 방문 리뷰')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: '용도 관리' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '템플릿 관리' })).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('제목'), '리뷰 글')
     await waitFor(
-      () => expect(draftSaves[0]).toMatchObject({ slug: '', purposeId: 'purpose-review' }),
+      () => expect(draftSaves[0]).toMatchObject({ slug: '', templateId: 'template-review' }),
       AUTOSAVED,
     )
   })
@@ -2523,22 +2523,22 @@ describe('the post purpose', () => {
       posts: {
         posts: [{ slug: '20260820-jeju', title: '제주' }],
         draftSaves,
-        purposes: POST_PURPOSES,
+        templates: POST_PURPOSES,
       },
-      purposes: { purposes: PURPOSES },
+      templates: { templates: PURPOSES },
     })
 
-    const picker = await pickPurpose(user, '일기')
-    // No confirmation sheet: nothing is learned from a purpose, so there is nothing to warn about.
+    const picker = await pickTemplate(user, '일기')
+    // No confirmation sheet: nothing is learned from a template, so there is nothing to warn about.
     expect(screen.queryByRole('dialog', { name: '말투를 바꿀까요?' })).not.toBeInTheDocument()
     await waitFor(() =>
-      expect(draftSaves[0]).toMatchObject({ slug: '20260820-jeju', purposeId: 'purpose-diary' }),
+      expect(draftSaves[0]).toMatchObject({ slug: '20260820-jeju', templateId: 'template-diary' }),
     )
     await waitFor(() => expect(picker).toHaveTextContent('일기'))
 
-    await pickPurpose(user, '없음')
+    await pickTemplate(user, '없음')
     // A present empty string, which is what clears it — distinct from omitting the field.
-    await waitFor(() => expect(draftSaves[1]).toMatchObject({ purposeId: '' }))
+    await waitFor(() => expect(draftSaves[1]).toMatchObject({ templateId: '' }))
     await waitFor(() => expect(picker).toHaveTextContent('없음'))
   })
 
@@ -2552,33 +2552,33 @@ describe('the post purpose', () => {
       posts: {
         posts: [{ slug: '20260820-jeju', title: '제주' }],
         draftSaves,
-        purposes: POST_PURPOSES,
+        templates: POST_PURPOSES,
       },
-      purposes: { purposes: PURPOSES },
+      templates: { templates: PURPOSES },
     })
 
     await user.type(await screen.findByLabelText('제목'), ' 여행')
-    const picker = await pickPurpose(user, '일기')
+    const picker = await pickTemplate(user, '일기')
 
     await waitFor(() => expect(draftSaves.length).toBeGreaterThan(0), AUTOSAVED)
     // Whatever order the requests went out in, the last word on the assignment is the choice.
-    const assignments = draftSaves.map((save) => save.purposeId).filter((id) => id !== undefined)
-    expect(assignments.at(-1)).toBe('purpose-diary')
+    const assignments = draftSaves.map((save) => save.templateId).filter((id) => id !== undefined)
+    expect(assignments.at(-1)).toBe('template-diary')
     await waitFor(() => expect(picker).toHaveTextContent('일기'))
   })
 
-  // A failed directory read must not be indistinguishable from "you have no 용도" — the select
+  // A failed directory read must not be indistinguishable from "you have no 템플릿" — the select
   // would be enabled with 없음 alone, and clearing would be the only thing left to do.
   it('says so and offers a retry when the directory cannot be read', async () => {
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
       posts: { posts: [{ slug: '20260820-jeju', title: '제주' }] },
-      purposes: { listFails: true },
+      templates: { listFails: true },
     })
 
     const user = userEvent.setup()
-    const picker = await purposeField(user)
-    expect(await screen.findByText(/용도 목록을 불러오지 못했어요/)).toBeInTheDocument()
+    const picker = await templateField(user)
+    expect(await screen.findByText(/템플릿 목록을 불러오지 못했어요/)).toBeInTheDocument()
     expect(picker).toBeDisabled()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
@@ -2591,22 +2591,22 @@ describe('the post purpose', () => {
           {
             slug: '20260820-jeju',
             title: '제주',
-            purpose: { id: 'purpose-review', name: '정보성 식당 리뷰' },
+            template: { id: 'template-review', name: '정보성 식당 리뷰' },
             activeJob: { id: 'job-1', kind: 'generate', status: 'running' },
           },
         ],
-        purposes: POST_PURPOSES,
+        templates: POST_PURPOSES,
       },
-      purposes: { purposes: PURPOSES },
+      templates: { templates: PURPOSES },
       jobs: { jobs: [{ id: 'job-1', kind: 'generate', status: 'running' }] },
     })
 
     const user = userEvent.setup()
-    const picker = await purposeField(user)
+    const picker = await templateField(user)
     await waitFor(() => expect(picker).toHaveTextContent('정보성 식당 리뷰'))
     expect(picker).toBeEnabled()
     expect(
-      await screen.findByText(/진행 중인 AI 작업은 시작할 때의 용도로 끝나요/),
+      await screen.findByText(/진행 중인 AI 작업은 시작할 때의 템플릿으로 끝나요/),
     ).toBeInTheDocument()
   })
 })

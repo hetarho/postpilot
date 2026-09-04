@@ -47,16 +47,16 @@ update + field present and valid: replace target
 ```
 
 The request still carries the latest complete title/memo snapshot; presence awareness does not make those scalar
-fields a sparse patch. The draft queue gives target selection the same newest-wins protection as voice/purpose
+fields a sparse patch. The draft queue gives target selection the same newest-wins protection as voice/template
 assignment. A delayed title/memo request cannot carry an old target back over a newer choice. Target updates do not change content JSON,
-observations, status, revisions, machine baseline, voice/purpose assignment, or finalization.
+observations, status, revisions, machine baseline, voice/template assignment, or finalization.
 
 `content_language` changes only when canonical machine content changes:
 
 | Operation                           | Target                       | Content language                         |
 | ----------------------------------- | ---------------------------- | ---------------------------------------- |
 | target select                       | replace                      | preserve                                 |
-| title/memo/photo/voice/purpose edit | preserve                     | preserve                                 |
+| title/memo/photo/voice/template edit | preserve                     | preserve                                 |
 | ordinary generation success         | preserve current post target | set to job's frozen target               |
 | apply write A/B winner              | preserve current post target | set to experiment's frozen target        |
 | manual block edit                   | preserve                     | preserve                                 |
@@ -128,13 +128,13 @@ are authored in one language and may encode language-specific wording. Only the 
 the boundary. Axes cross as numeric values.
 
 The returned projection records `source_language`, `target_language`, and `portable=true|false` for prompt assembly
-and tests. Prompt assembly labels a portable section and states that target language wins over purpose/profile language
-conflicts. Purpose and memo remain verbatim user inputs; they do not join the voice profile.
+and tests. Prompt assembly labels a portable section and states that target language wins over template/profile language
+conflicts. Template and memo remain verbatim user inputs; they do not join the voice profile.
 
 ## 5. Generation and durable freezing
 
 `StartGeneration` reads the owned post after draft flush and validates a target. It freezes target into the generation
-payload beside target length and purpose. The handler uses only payload target even if the post changes while queued.
+payload beside target length and template. The handler uses only payload target even if the post changes while queued.
 Legacy queued payloads without language decode as Korean during the compatibility migration; newly encoded payloads
 may not omit it.
 
@@ -165,7 +165,7 @@ the observation sub-input is invariant.
 
 ## 6. Write experiments and revision
 
-A write A/B snapshot freezes post, voice id/source, target, portable/full projection, purpose, target length, images,
+A write A/B snapshot freezes post, voice id/source, target, portable/full projection, template, target length, images,
 and observations once. Candidate prompts differ only by explicit model. Retry reads the same snapshot. Experiment
 detail records target; applying a winner passes target to the post context with the chosen content.
 
@@ -178,7 +178,7 @@ experiment metadata and input hash for reproducibility but does not partition th
 Revision uses `content_language`, never `target_language`:
 
 1. resolve owned content and require non-absent provenance;
-2. freeze content language, voice, purpose, instruction, content, and attachments into the durable revision payload;
+2. freeze content language, voice, template, instruction, content, and attachments into the durable revision payload;
 3. request the same-language or portable profile relative to content language;
 4. explicitly instruct the writer to preserve that language and make only the requested local edit; and
 5. persist revised content/baseline with the same content language.

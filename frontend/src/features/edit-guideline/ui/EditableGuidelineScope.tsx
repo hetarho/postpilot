@@ -11,8 +11,8 @@ import { Badge, Button, Editable, FieldMessage, Typography } from '@/shared/ui'
 
 /** A guideline's whole scope, read first and replaced as one patch on save.
  *
- *  The read view is the badge row the list shows anyway: `전역`, the purpose-name chips, or
- *  `적용 대상 없음` for a scope whose every purpose was deleted. */
+ *  The read view is the badge row the list shows anyway: `전역`, the template-name chips, or
+ *  `적용 대상 없음` for a scope whose every template was deleted. */
 export function EditableGuidelineScope({
   ownerId,
   guideline,
@@ -22,7 +22,7 @@ export function EditableGuidelineScope({
   className,
 }: {
   ownerId: string
-  guideline: Pick<Guideline, 'scope' | 'purposes'>
+  guideline: Pick<Guideline, 'scope' | 'templates'>
   save: (next: GuidelineScope) => Promise<unknown>
   errorMessage: string
   pending: boolean
@@ -57,7 +57,7 @@ export function EditableGuidelineScope({
 export function GuidelineScopeBadges({
   guideline,
 }: {
-  guideline: Pick<Guideline, 'scope' | 'purposes'>
+  guideline: Pick<Guideline, 'scope' | 'templates'>
 }) {
   const { t } = useTranslation('guidelines')
   if (isOrphanedScope(guideline)) {
@@ -75,9 +75,9 @@ export function GuidelineScopeBadges({
   }
   return (
     <div className="flex flex-wrap gap-1">
-      {guideline.purposes.map((purpose) => (
-        <Badge key={purpose.id} tone="neutral">
-          {purpose.name}
+      {guideline.templates.map((template) => (
+        <Badge key={template.id} tone="neutral">
+          {template.name}
         </Badge>
       ))}
     </div>
@@ -93,7 +93,7 @@ function ScopeEditor({
   exit,
 }: {
   ownerId: string
-  guideline: Pick<Guideline, 'scope' | 'purposes'>
+  guideline: Pick<Guideline, 'scope' | 'templates'>
   save: (next: GuidelineScope) => Promise<unknown>
   errorMessage: string
   pending: boolean
@@ -104,7 +104,7 @@ function ScopeEditor({
   // afterwards — the same rule the text editor follows.
   const [draft, setDraft] = useState<GuidelineScope>({
     kind: guideline.scope,
-    purposeIds: guideline.purposes.map((purpose) => purpose.id),
+    templateIds: guideline.templates.map((template) => template.id),
   })
   const [failed, setFailed] = useState(false)
 

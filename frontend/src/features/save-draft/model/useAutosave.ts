@@ -12,7 +12,7 @@ export interface UseAutosaveArgs {
         title: string
         memo: string
         voice: { id: string }
-        purpose: { id: string }
+        template: { id: string }
         targetLanguage: ContentLanguage
       }
     | undefined
@@ -23,9 +23,9 @@ export interface UseAutosaveArgs {
    *  assignment changes only through `reassign` — never by this value moving — so a stale
    *  server value re-rendering the editor cannot undo a choice still in flight. */
   voiceId: string
-  /** The 용도 a draft with no post yet will be created with, '' for 없음. Same rule as
-   *  `voiceId`: once the post exists its assignment changes only through `assignPurpose`. */
-  purposeId: string
+  /** The 템플릿 a draft with no post yet will be created with, '' for 없음. Same rule as
+   *  `voiceId`: once the post exists its assignment changes only through `assignTemplate`. */
+  templateId: string
   /** The next full-write language; local-only until an unsaved draft is first created. */
   targetLanguage: ContentLanguage
   /** Called with the slug the first save minted. */
@@ -36,13 +36,13 @@ export interface UseAutosaveArgs {
  *
  *  The hook is only the React end of it: the debounce, the retries and the in-flight
  *  bookkeeping live in the per-post queue (`draft-queue.ts`), which outlives this
- *  component on purpose. */
+ *  component on template. */
 export function useAutosave({
   post,
   title,
   memo,
   voiceId,
-  purposeId,
+  templateId,
   targetLanguage,
   onMinted,
 }: UseAutosaveArgs): {
@@ -56,9 +56,9 @@ export function useAutosave({
    *  title save still in flight cannot carry the old assignment over it. Resolves when the
    *  server holds the new voice; rejects with the server's answer when it refuses. */
   reassign: (voiceId: string) => Promise<void>
-  /** Assigns or clears ('') an existing post's 용도 through the same queue as the text, so a
+  /** Assigns or clears ('') an existing post's 템플릿 through the same queue as the text, so a
    *  title save still in flight cannot carry the old assignment over a newer selection. */
-  assignPurpose: (purposeId: string) => Promise<void>
+  assignTemplate: (templateId: string) => Promise<void>
   assignTargetLanguage: (language: ContentLanguage) => Promise<void>
 } {
   const slug = post?.slug
@@ -69,7 +69,7 @@ export function useAutosave({
   const onMintedRef = useRef(onMinted)
   const postRef = useRef(post)
   const voiceRef = useRef(voiceId)
-  const purposeRef = useRef(purposeId)
+  const templateRef = useRef(templateId)
   const targetLanguageRef = useRef(targetLanguage)
 
   // Layout effects throughout, not passive ones. A passive effect runs after paint and can
@@ -80,7 +80,7 @@ export function useAutosave({
     onMintedRef.current = onMinted
     postRef.current = post
     voiceRef.current = voiceId
-    purposeRef.current = purposeId
+    templateRef.current = templateId
     targetLanguageRef.current = targetLanguage
   })
 
@@ -94,15 +94,15 @@ export function useAutosave({
       slug: opened?.slug,
       saved: { title: opened?.title ?? '', memo: opened?.memo ?? '' },
       voiceId: opened?.voice.id ?? voiceRef.current,
-      purposeId: opened?.purpose.id ?? purposeRef.current,
+      templateId: opened?.template.id ?? templateRef.current,
       targetLanguage: opened?.targetLanguage ?? targetLanguageRef.current,
-      send: async (slug, draft, voiceId, purposeId, targetLanguage) => {
+      send: async (slug, draft, voiceId, templateId, targetLanguage) => {
         const response = await sendRef.current({
           slug,
           title: draft.title,
           memo: draft.memo,
           voiceId,
-          purposeId,
+          templateId,
           targetLanguage:
             targetLanguage === undefined ? undefined : contentLanguageToProto(targetLanguage),
         })
@@ -139,8 +139,8 @@ export function useAutosave({
   }, [voiceId])
 
   useLayoutEffect(() => {
-    if (!postRef.current) void queueRef.current?.assignPurpose(purposeId)
-  }, [purposeId])
+    if (!postRef.current) void queueRef.current?.assignTemplate(templateId)
+  }, [templateId])
 
   useLayoutEffect(() => {
     if (!postRef.current) void queueRef.current?.assignTargetLanguage(targetLanguage)
@@ -172,8 +172,8 @@ export function useAutosave({
     reassign: (voiceId) =>
       queueRef.current?.assignVoice(voiceId) ??
       Promise.reject(new Error('editor is not attached to a draft')),
-    assignPurpose: (purposeId) =>
-      queueRef.current?.assignPurpose(purposeId) ??
+    assignTemplate: (templateId) =>
+      queueRef.current?.assignTemplate(templateId) ??
       Promise.reject(new Error('editor is not attached to a draft')),
     assignTargetLanguage: (language) =>
       queueRef.current?.assignTargetLanguage(language) ??

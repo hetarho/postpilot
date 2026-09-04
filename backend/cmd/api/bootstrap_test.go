@@ -18,8 +18,8 @@ import (
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
-	"github.com/postpilot/backend/internal/purpose"
-	purposestore "github.com/postpilot/backend/internal/purpose/store"
+	"github.com/postpilot/backend/internal/template"
+	templatestore "github.com/postpilot/backend/internal/template/store"
 	"github.com/postpilot/backend/internal/voice"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
@@ -122,12 +122,12 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	}
 }
 
-// Plan 11 A4/A7: the composition root is the ONLY place the post's purpose id crosses into
+// Plan 11 A4/A7: the composition root is the ONLY place the post's template id crosses into
 // generation, and every prompt hangs off it. This walks the real adapters end to end — a post
-// saved with a 용도, read back through generationPosts, resolved through generationPurposes —
+// saved with a 템플릿, read back through generationPosts, resolved through generationTemplates —
 // because both contexts' own tests inject the id into a fake and so cannot see it dropped here.
-func TestGenerationAdapterCarriesThePostPurposeThroughToTheFrozenBrief(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "purpose.db"))
+func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "template.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,13 +146,17 @@ func TestGenerationAdapterCarriesThePostPurposeThroughToTheFrozenBrief(t *testin
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
 	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
-	purposeSvc := purpose.NewService(
-		purposestore.New(handle.Writer, handle.Reader),
-		purpose.Limits{NameMaxChars: 40, DescriptionMaxChars: 200, InstructionsMaxChars: 2000},
+	templateSvc := template.NewService(
+		templatestore.New(handle.Writer, handle.Reader),
+		template.Limits{
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
+			MaxPerAccount: 50, MaxRepeatExpansion: 40,
+		},
 	)
-	postSvc.SetPurposeDirectory(postPurposes{service: purposeSvc})
+	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
-	created, err := purposeSvc.Create(ctx, "alice", "정보성 식당 리뷰", "협찬 방문 리뷰", "사진마다 설명하세요")
+	created, err := templateSvc.Create(ctx, "alice", "정보성 식당 리뷰", "협찬 방문 리뷰",
+		"<write>인트로</write>\n<slot kind=\"place\" label=\"네이버 지도\"/>\n<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n<write>사진 설명</write>\n</repeat>")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,26 +174,37 @@ func TestGenerationAdapterCarriesThePostPurposeThroughToTheFrozenBrief(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if input.PurposeID != created.ID {
-		t.Fatalf("the adapter dropped the purpose: PurposeID=%q, want %q", input.PurposeID, created.ID)
+	if input.TemplateID != created.ID {
+		t.Fatalf("the adapter dropped the template: TemplateID=%q, want %q", input.TemplateID, created.ID)
 	}
 
-	brief, ok, err := (generationPurposes{service: purposeSvc}).BriefFor(ctx, "alice", input.PurposeID)
+	// The render is where the two contexts actually meet: generation hands over the frozen
+	// attachment order and receives prompt text plus the slots that text declared.
+	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, []string{"IMG_1.jpg", "IMG_2.jpg"})
 	if err != nil || !ok {
-		t.Fatalf("brief lookup: ok=%v err=%v", ok, err)
+		t.Fatalf("render: ok=%v err=%v", ok, err)
 	}
-	want := generation.PurposeBrief{Name: "정보성 식당 리뷰", Description: "협찬 방문 리뷰", Instructions: "사진마다 설명하세요"}
-	if brief != want {
-		t.Fatalf("brief = %+v, want %+v", brief, want)
+	if brief.Name != "정보성 식당 리뷰" {
+		t.Fatalf("brief = %+v", brief)
 	}
-	// And the prompt that brief produces actually carries it.
+	if len(brief.Slots) != 1 || brief.Slots[0].Kind != "place" || brief.Slots[0].Label != "네이버 지도" {
+		t.Fatalf("slots = %+v", brief.Slots)
+	}
+	// Two photos, so the repeat expanded twice and each iteration is bound to its own file.
+	if !strings.Contains(brief.Body, "{{photo:IMG_1.jpg}}") || !strings.Contains(brief.Body, "{{photo:IMG_2.jpg}}") {
+		t.Fatalf("the repeat did not expand per attachment:\n%s", brief.Body)
+	}
+	if got := strings.Count(brief.Body, "<write>사진 설명</write>"); got != 2 {
+		t.Fatalf("per-photo write rendered %d times, want 2", got)
+	}
+	// And the prompt that render produces actually carries it.
 	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, &brief, nil)
-	if !strings.Contains(system, "[글의 용도: 정보성 식당 리뷰]") {
-		t.Fatalf("the frozen brief did not reach the prompt:\n%s", system)
+	if !strings.Contains(system, "[글 템플릿: 정보성 식당 리뷰]") {
+		t.Fatalf("the frozen template did not reach the prompt:\n%s", system)
 	}
 
-	// A post left on 없음 resolves to no brief, so the prompt is the pre-purpose one.
-	plain, err := postSvc.SaveDraft(ctx, "alice", "", "용도 없는 글", "", &defaultVoice.ID, nil, &language)
+	// A post left on 없음 resolves to no brief, so the prompt is the pre-template one.
+	plain, err := postSvc.SaveDraft(ctx, "alice", "", "템플릿 없는 글", "", &defaultVoice.ID, nil, &language)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,8 +212,8 @@ func TestGenerationAdapterCarriesThePostPurposeThroughToTheFrozenBrief(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bare.PurposeID != "" {
-		t.Fatalf("a post with no purpose reported %q", bare.PurposeID)
+	if bare.TemplateID != "" {
+		t.Fatalf("a post with no template reported %q", bare.TemplateID)
 	}
 }
 
@@ -282,10 +297,10 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 	}
 }
 
-// Plan 16 A4/A8: the composition root is the ONLY place a post's purpose id reaches the
+// Plan 16 A4/A8: the composition root is the ONLY place a post's template id reaches the
 // guideline context, and the whole prompt section hangs off it. This walks the real adapters
-// end to end — a purpose and two guidelines created through their own services, a post saved
-// with that 용도, read back through generationPosts, resolved through generationGuidelines,
+// end to end — a template and two guidelines created through their own services, a post saved
+// with that 템플릿, read back through generationPosts, resolved through generationGuidelines,
 // rendered by the real prompt builder. The job 22 review caught this seam silently dropping a
 // field, and only a real-wiring test prevents a repeat.
 func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.T) {
@@ -308,33 +323,36 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
 	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
-	purposeSvc := purpose.NewService(
-		purposestore.New(handle.Writer, handle.Reader),
-		purpose.Limits{NameMaxChars: 40, DescriptionMaxChars: 200, InstructionsMaxChars: 2000},
+	templateSvc := template.NewService(
+		templatestore.New(handle.Writer, handle.Reader),
+		template.Limits{
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
+			MaxPerAccount: 50, MaxRepeatExpansion: 40,
+		},
 	)
-	postSvc.SetPurposeDirectory(postPurposes{service: purposeSvc})
+	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 	guidelineSvc := guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
 		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
 	)
-	guidelineSvc.SetPurposeDirectory(guidelinePurposes{service: purposeSvc})
+	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 
-	review, err := purposeSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요")
+	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요")
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := purposeSvc.Create(ctx, "alice", "협찬 리뷰", "", "협찬을 밝히세요")
+	other, err := templateSvc.Create(ctx, "alice", "협찬 리뷰", "", "협찬을 밝히세요")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := guidelineSvc.Create(ctx, "alice", "없는 사실을 쓰지 않기", guideline.ScopeGlobal, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", "CCTV를 언급하지 않기", guideline.ScopePurposes, []string{review.ID}); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", "CCTV를 언급하지 않기", guideline.ScopeTemplates, []string{review.ID}); err != nil {
 		t.Fatal(err)
 	}
-	// Scoped to the OTHER purpose, so it must never reach this post's prompt.
-	if _, err := guidelineSvc.Create(ctx, "alice", "협찬 표기를 빠뜨리지 않기", guideline.ScopePurposes, []string{other.ID}); err != nil {
+	// Scoped to the OTHER template, so it must never reach this post's prompt.
+	if _, err := guidelineSvc.Create(ctx, "alice", "협찬 표기를 빠뜨리지 않기", guideline.ScopeTemplates, []string{other.ID}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -353,7 +371,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 
 	adapter := generationGuidelines{service: guidelineSvc}
-	texts, err := adapter.ForPrompt(ctx, "alice", &input.PurposeID)
+	texts, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,11 +389,11 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 		t.Fatalf("the frozen guidelines did not reach the prompt:\n%s", system)
 	}
 	if strings.Contains(system, "협찬 표기") {
-		t.Fatalf("a guideline scoped to another purpose reached the prompt:\n%s", system)
+		t.Fatalf("a guideline scoped to another template reached the prompt:\n%s", system)
 	}
 
 	// A post left on 없음 receives the global group alone.
-	plain, err := postSvc.SaveDraft(ctx, "alice", "", "용도 없는 글", "", &defaultVoice.ID, nil, &language)
+	plain, err := postSvc.SaveDraft(ctx, "alice", "", "템플릿 없는 글", "", &defaultVoice.ID, nil, &language)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -387,7 +405,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bare.PurposeID != "" || len(global) != 1 || global[0] != "없는 사실을 쓰지 않기" {
-		t.Fatalf("a post with no purpose resolved %v (purpose id %q)", global, bare.PurposeID)
+	if bare.TemplateID != "" || len(global) != 1 || global[0] != "없는 사실을 쓰지 않기" {
+		t.Fatalf("a post with no template resolved %v (template id %q)", global, bare.TemplateID)
 	}
 }

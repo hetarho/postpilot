@@ -10,14 +10,14 @@ func experimentLanguagePointer(value Language) *Language { return &value }
 func TestFreezeSnapshotIncludesTargetLanguageInHashAndDetail(t *testing.T) {
 	raw := []byte(`{"same":true}`)
 	ko, koHash, err := FreezeSnapshot(Snapshot{
-		Content: raw, PromptVersion: "write-v3", VoiceID: "voice", PurposeName: "purpose",
+		Content: raw, PromptVersion: "write-v3", VoiceID: "voice", TemplateName: "template",
 		TargetLanguage: experimentLanguagePointer(LanguageKorean),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	en, enHash, err := FreezeSnapshot(Snapshot{
-		Content: raw, PromptVersion: "write-v3", VoiceID: "voice", PurposeName: "purpose",
+		Content: raw, PromptVersion: "write-v3", VoiceID: "voice", TemplateName: "template",
 		TargetLanguage: experimentLanguagePointer(LanguageEnglish),
 	})
 	if err != nil {
@@ -29,7 +29,7 @@ func TestFreezeSnapshotIncludesTargetLanguageInHashAndDetail(t *testing.T) {
 	if ko.TargetLanguage == nil || *ko.TargetLanguage != LanguageKorean || en.TargetLanguage == nil || *en.TargetLanguage != LanguageEnglish {
 		t.Fatalf("frozen targets = %v / %v", ko.TargetLanguage, en.TargetLanguage)
 	}
-	if ko.VoiceID != "voice" || ko.PurposeName != "purpose" {
+	if ko.VoiceID != "voice" || ko.TemplateName != "template" {
 		t.Fatalf("snapshot detail was dropped: %+v", ko)
 	}
 	*ko.TargetLanguage = LanguageEnglish

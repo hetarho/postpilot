@@ -3,7 +3,7 @@ export const nav = {
   home: 'Postpilot home',
   posts: 'Posts',
   voices: 'Voices',
-  purposes: 'Purposes',
+  templates: 'Templates',
   guidelines: 'Guidelines',
   models: 'AI models',
   publishingAgents: 'Publishing Mac',

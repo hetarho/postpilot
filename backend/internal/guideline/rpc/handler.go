@@ -46,7 +46,7 @@ func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[post
 	if err != nil {
 		return nil, toConnectError("create guideline", err)
 	}
-	created, err := h.service.Create(ctx, userID, req.Msg.GetText(), scope, req.Msg.GetPurposeIds())
+	created, err := h.service.Create(ctx, userID, req.Msg.GetText(), scope, req.Msg.GetTemplateIds())
 	if err != nil {
 		return nil, toConnectError("create guideline", err)
 	}
@@ -69,7 +69,7 @@ func (h *Handler) UpdateGuideline(ctx context.Context, req *connect.Request[post
 		if err != nil {
 			return nil, toConnectError("update guideline", err)
 		}
-		patch.Scope = &guideline.ScopePatch{Scope: scope, PurposeIDs: sent.GetPurposeIds()}
+		patch.Scope = &guideline.ScopePatch{Scope: scope, TemplateIDs: sent.GetTemplateIds()}
 	}
 	updated, err := h.service.Update(ctx, userID, req.Msg.GetId(), patch)
 	if err != nil {
@@ -103,15 +103,15 @@ func fromProtoScope(scope postpilotv1.GuidelineScope) (guideline.Scope, error) {
 	switch scope {
 	case postpilotv1.GuidelineScope_GUIDELINE_SCOPE_GLOBAL:
 		return guideline.ScopeGlobal, nil
-	case postpilotv1.GuidelineScope_GUIDELINE_SCOPE_PURPOSES:
-		return guideline.ScopePurposes, nil
+	case postpilotv1.GuidelineScope_GUIDELINE_SCOPE_TEMPLATES:
+		return guideline.ScopeTemplates, nil
 	default:
 		return "", guideline.ErrScopeShape
 	}
 }
 
 // toConnectError maps the context's sentinels to wire codes. A foreign guideline is NotFound
-// like an unknown one — the two must not be distinguishable — and so is a foreign purpose.
+// like an unknown one — the two must not be distinguishable — and so is a foreign template.
 func toConnectError(op string, err error) error {
 	var tooLong *guideline.TextTooLongError
 	var atCap *guideline.AccountCapError
@@ -130,8 +130,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guideline scope is invalid", "GUIDELINE_SCOPE_INVALID", nil)
 	case errors.Is(err, guideline.ErrDuplicateText):
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "guideline text already exists", "GUIDELINE_TEXT_TAKEN", nil)
-	case errors.Is(err, guideline.ErrPurposeNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "scoped purpose not found", "GUIDELINE_PURPOSE_NOT_FOUND", nil)
+	case errors.Is(err, guideline.ErrTemplateNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "scoped template not found", "GUIDELINE_TEMPLATE_NOT_FOUND", nil)
 	case errors.Is(err, guideline.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "guideline not found", "GUIDELINE_NOT_FOUND", nil)
 	default:
@@ -144,16 +144,16 @@ func toProtoGuideline(g guideline.Guideline) *postpilotv1.Guideline {
 	if g.ID == "" {
 		return nil
 	}
-	purposes := make([]*postpilotv1.GuidelinePurposeRef, 0, len(g.Purposes))
-	for _, ref := range g.Purposes {
-		purposes = append(purposes, &postpilotv1.GuidelinePurposeRef{Id: ref.ID, Name: ref.Name})
+	templates := make([]*postpilotv1.GuidelineTemplateRef, 0, len(g.Templates))
+	for _, ref := range g.Templates {
+		templates = append(templates, &postpilotv1.GuidelineTemplateRef{Id: ref.ID, Name: ref.Name})
 	}
 	scope := postpilotv1.GuidelineScope_GUIDELINE_SCOPE_GLOBAL
-	if g.Scope == guideline.ScopePurposes {
-		scope = postpilotv1.GuidelineScope_GUIDELINE_SCOPE_PURPOSES
+	if g.Scope == guideline.ScopeTemplates {
+		scope = postpilotv1.GuidelineScope_GUIDELINE_SCOPE_TEMPLATES
 	}
 	return &postpilotv1.Guideline{
-		Id: g.ID, Text: g.Text, Scope: scope, Purposes: purposes,
+		Id: g.ID, Text: g.Text, Scope: scope, Templates: templates,
 		CreatedAt: g.CreatedAt.UTC().Format(timeLayout), UpdatedAt: g.UpdatedAt.UTC().Format(timeLayout),
 	}
 }

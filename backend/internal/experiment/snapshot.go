@@ -21,6 +21,6 @@ func FreezeSnapshot(snapshot Snapshot) (Snapshot, string, error) {
 	}
 	return Snapshot{
 		Content: append([]byte(nil), snapshot.Content...), PromptVersion: snapshot.PromptVersion,
-		VoiceID: snapshot.VoiceID, PurposeName: snapshot.PurposeName, TargetLanguage: cloneLanguage(snapshot.TargetLanguage),
+		VoiceID: snapshot.VoiceID, TemplateName: snapshot.TemplateName, TargetLanguage: cloneLanguage(snapshot.TargetLanguage),
 	}, hex.EncodeToString(hasher.Sum(nil)), nil
 }

@@ -10,15 +10,15 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/guideline.proto.
  */
 export const file_postpilot_v1_guideline: GenFile = /*@__PURE__*/
-  fileDesc("Chxwb3N0cGlsb3QvdjEvZ3VpZGVsaW5lLnByb3RvEgxwb3N0cGlsb3QudjEiLwoTR3VpZGVsaW5lUHVycG9zZVJlZhIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJIq8BCglHdWlkZWxpbmUSCgoCaWQYASABKAkSDAoEdGV4dBgCIAEoCRIrCgVzY29wZRgDIAEoDjIcLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVTY29wZRIzCghwdXJwb3NlcxgEIAMoCzIhLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVQdXJwb3NlUmVmEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCSIXChVMaXN0R3VpZGVsaW5lc1JlcXVlc3QiRQoWTGlzdEd1aWRlbGluZXNSZXNwb25zZRIrCgpndWlkZWxpbmVzGAEgAygLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZSJoChZDcmVhdGVHdWlkZWxpbmVSZXF1ZXN0EgwKBHRleHQYASABKAkSKwoFc2NvcGUYAiABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSEwoLcHVycG9zZV9pZHMYAyADKAkiRQoXQ3JlYXRlR3VpZGVsaW5lUmVzcG9uc2USKgoJZ3VpZGVsaW5lGAEgASgLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZSJXChNHdWlkZWxpbmVTY29wZVBhdGNoEisKBXNjb3BlGAEgASgOMhwucG9zdHBpbG90LnYxLkd1aWRlbGluZVNjb3BlEhMKC3B1cnBvc2VfaWRzGAIgAygJInIKFlVwZGF0ZUd1aWRlbGluZVJlcXVlc3QSCgoCaWQYASABKAkSEQoEdGV4dBgCIAEoCUgAiAEBEjAKBXNjb3BlGAMgASgLMiEucG9zdHBpbG90LnYxLkd1aWRlbGluZVNjb3BlUGF0Y2hCBwoFX3RleHQiRQoXVXBkYXRlR3VpZGVsaW5lUmVzcG9uc2USKgoJZ3VpZGVsaW5lGAEgASgLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZSIkChZEZWxldGVHdWlkZWxpbmVSZXF1ZXN0EgoKAmlkGAEgASgJIhkKF0RlbGV0ZUd1aWRlbGluZVJlc3BvbnNlKmsKDkd1aWRlbGluZVNjb3BlEh8KG0dVSURFTElORV9TQ09QRV9VTlNQRUNJRklFRBAAEhoKFkdVSURFTElORV9TQ09QRV9HTE9CQUwQARIcChhHVUlERUxJTkVfU0NPUEVfUFVSUE9TRVMQAjKXAwoQR3VpZGVsaW5lU2VydmljZRJdCg5MaXN0R3VpZGVsaW5lcxIjLnBvc3RwaWxvdC52MS5MaXN0R3VpZGVsaW5lc1JlcXVlc3QaJC5wb3N0cGlsb3QudjEuTGlzdEd1aWRlbGluZXNSZXNwb25zZSIAEmAKD0NyZWF0ZUd1aWRlbGluZRIkLnBvc3RwaWxvdC52MS5DcmVhdGVHdWlkZWxpbmVSZXF1ZXN0GiUucG9zdHBpbG90LnYxLkNyZWF0ZUd1aWRlbGluZVJlc3BvbnNlIgASYAoPVXBkYXRlR3VpZGVsaW5lEiQucG9zdHBpbG90LnYxLlVwZGF0ZUd1aWRlbGluZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuVXBkYXRlR3VpZGVsaW5lUmVzcG9uc2UiABJgCg9EZWxldGVHdWlkZWxpbmUSJC5wb3N0cGlsb3QudjEuRGVsZXRlR3VpZGVsaW5lUmVxdWVzdBolLnBvc3RwaWxvdC52MS5EZWxldGVHdWlkZWxpbmVSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
+  fileDesc("Chxwb3N0cGlsb3QvdjEvZ3VpZGVsaW5lLnByb3RvEgxwb3N0cGlsb3QudjEiMAoUR3VpZGVsaW5lVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSKxAQoJR3VpZGVsaW5lEgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSKwoFc2NvcGUYAyABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSNQoJdGVtcGxhdGVzGAQgAygLMiIucG9zdHBpbG90LnYxLkd1aWRlbGluZVRlbXBsYXRlUmVmEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCSIXChVMaXN0R3VpZGVsaW5lc1JlcXVlc3QiRQoWTGlzdEd1aWRlbGluZXNSZXNwb25zZRIrCgpndWlkZWxpbmVzGAEgAygLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZSJpChZDcmVhdGVHdWlkZWxpbmVSZXF1ZXN0EgwKBHRleHQYASABKAkSKwoFc2NvcGUYAiABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSFAoMdGVtcGxhdGVfaWRzGAMgAygJIkUKF0NyZWF0ZUd1aWRlbGluZVJlc3BvbnNlEioKCWd1aWRlbGluZRgBIAEoCzIXLnBvc3RwaWxvdC52MS5HdWlkZWxpbmUiWAoTR3VpZGVsaW5lU2NvcGVQYXRjaBIrCgVzY29wZRgBIAEoDjIcLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVTY29wZRIUCgx0ZW1wbGF0ZV9pZHMYAiADKAkicgoWVXBkYXRlR3VpZGVsaW5lUmVxdWVzdBIKCgJpZBgBIAEoCRIRCgR0ZXh0GAIgASgJSACIAQESMAoFc2NvcGUYAyABKAsyIS5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGVQYXRjaEIHCgVfdGV4dCJFChdVcGRhdGVHdWlkZWxpbmVSZXNwb25zZRIqCglndWlkZWxpbmUYASABKAsyFy5wb3N0cGlsb3QudjEuR3VpZGVsaW5lIiQKFkRlbGV0ZUd1aWRlbGluZVJlcXVlc3QSCgoCaWQYASABKAkiGQoXRGVsZXRlR3VpZGVsaW5lUmVzcG9uc2UqbAoOR3VpZGVsaW5lU2NvcGUSHwobR1VJREVMSU5FX1NDT1BFX1VOU1BFQ0lGSUVEEAASGgoWR1VJREVMSU5FX1NDT1BFX0dMT0JBTBABEh0KGUdVSURFTElORV9TQ09QRV9URU1QTEFURVMQAjKXAwoQR3VpZGVsaW5lU2VydmljZRJdCg5MaXN0R3VpZGVsaW5lcxIjLnBvc3RwaWxvdC52MS5MaXN0R3VpZGVsaW5lc1JlcXVlc3QaJC5wb3N0cGlsb3QudjEuTGlzdEd1aWRlbGluZXNSZXNwb25zZSIAEmAKD0NyZWF0ZUd1aWRlbGluZRIkLnBvc3RwaWxvdC52MS5DcmVhdGVHdWlkZWxpbmVSZXF1ZXN0GiUucG9zdHBpbG90LnYxLkNyZWF0ZUd1aWRlbGluZVJlc3BvbnNlIgASYAoPVXBkYXRlR3VpZGVsaW5lEiQucG9zdHBpbG90LnYxLlVwZGF0ZUd1aWRlbGluZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuVXBkYXRlR3VpZGVsaW5lUmVzcG9uc2UiABJgCg9EZWxldGVHdWlkZWxpbmUSJC5wb3N0cGlsb3QudjEuRGVsZXRlR3VpZGVsaW5lUmVxdWVzdBolLnBvc3RwaWxvdC52MS5EZWxldGVHdWlkZWxpbmVSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
 
 /**
- * A purpose a guideline is scoped to, projected by name for the management screen. It is a
- * read projection through the purpose directory, never a stored column on the guideline.
+ * A template a guideline is scoped to, projected by name for the management screen. It is a
+ * read projection through the template directory, never a stored column on the guideline.
  *
- * @generated from message postpilot.v1.GuidelinePurposeRef
+ * @generated from message postpilot.v1.GuidelineTemplateRef
  */
-export type GuidelinePurposeRef = Message<"postpilot.v1.GuidelinePurposeRef"> & {
+export type GuidelineTemplateRef = Message<"postpilot.v1.GuidelineTemplateRef"> & {
   /**
    * @generated from field: string id = 1;
    */
@@ -31,10 +31,10 @@ export type GuidelinePurposeRef = Message<"postpilot.v1.GuidelinePurposeRef"> & 
 };
 
 /**
- * Describes the message postpilot.v1.GuidelinePurposeRef.
- * Use `create(GuidelinePurposeRefSchema)` to create a new message.
+ * Describes the message postpilot.v1.GuidelineTemplateRef.
+ * Use `create(GuidelineTemplateRefSchema)` to create a new message.
  */
-export const GuidelinePurposeRefSchema: GenMessage<GuidelinePurposeRef> = /*@__PURE__*/
+export const GuidelineTemplateRefSchema: GenMessage<GuidelineTemplateRef> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_guideline, 0);
 
 /**
@@ -59,12 +59,12 @@ export type Guideline = Message<"postpilot.v1.Guideline"> & {
   scope: GuidelineScope;
 
   /**
-   * Empty for GLOBAL. May also be empty for PURPOSES after every scoped purpose was
+   * Empty for GLOBAL. May also be empty for TEMPLATES after every scoped template was
    * deleted — such a guideline applies nowhere until it is rescoped.
    *
-   * @generated from field: repeated postpilot.v1.GuidelinePurposeRef purposes = 4;
+   * @generated from field: repeated postpilot.v1.GuidelineTemplateRef templates = 4;
    */
-  purposes: GuidelinePurposeRef[];
+  templates: GuidelineTemplateRef[];
 
   /**
    * @generated from field: string created_at = 5;
@@ -132,11 +132,11 @@ export type CreateGuidelineRequest = Message<"postpilot.v1.CreateGuidelineReques
   scope: GuidelineScope;
 
   /**
-   * Required (>= 1 owned purpose) for PURPOSES, and must be empty for GLOBAL.
+   * Required (>= 1 owned template) for TEMPLATES, and must be empty for GLOBAL.
    *
-   * @generated from field: repeated string purpose_ids = 3;
+   * @generated from field: repeated string template_ids = 3;
    */
-  purposeIds: string[];
+  templateIds: string[];
 };
 
 /**
@@ -177,9 +177,9 @@ export type GuidelineScopePatch = Message<"postpilot.v1.GuidelineScopePatch"> & 
   scope: GuidelineScope;
 
   /**
-   * @generated from field: repeated string purpose_ids = 2;
+   * @generated from field: repeated string template_ids = 2;
    */
-  purposeIds: string[];
+  templateIds: string[];
 };
 
 /**
@@ -283,11 +283,11 @@ export enum GuidelineScope {
   GLOBAL = 1,
 
   /**
-   * Applies only to posts whose selected purpose is in the guideline's purpose set.
+   * Applies only to posts whose selected template is in the guideline's template set.
    *
-   * @generated from enum value: GUIDELINE_SCOPE_PURPOSES = 2;
+   * @generated from enum value: GUIDELINE_SCOPE_TEMPLATES = 2;
    */
-  PURPOSES = 2,
+  TEMPLATES = 2,
 }
 
 /**

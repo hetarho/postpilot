@@ -78,11 +78,11 @@ sql:
         omit_unused_structs: true
   - engine: "sqlite"
     schema: "internal/platform/db/migrations"
-    queries: "internal/purpose/store/queries"
+    queries: "internal/template/store/queries"
     gen:
       go:
         package: "sqlc"
-        out: "internal/purpose/store/sqlc"
+        out: "internal/template/store/sqlc"
         omit_unused_structs: true
   - engine: "sqlite"
     schema: "internal/platform/db/migrations"

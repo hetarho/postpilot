@@ -29,7 +29,7 @@ type DeleteGuidelineParams struct {
 	UserID string
 }
 
-// The schema cascades this guideline's own scope links. No purpose row is ever touched.
+// The schema cascades this guideline's own scope links. No template row is ever touched.
 func (q *Queries) DeleteGuideline(ctx context.Context, arg DeleteGuidelineParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteGuideline, arg.ID, arg.UserID)
 	if err != nil {
@@ -39,7 +39,7 @@ func (q *Queries) DeleteGuideline(ctx context.Context, arg DeleteGuidelineParams
 }
 
 const deleteGuidelineScope = `-- name: DeleteGuidelineScope :exec
-DELETE FROM guideline_purposes WHERE guideline_id = ? AND user_id = ?
+DELETE FROM guideline_templates WHERE guideline_id = ? AND user_id = ?
 `
 
 type DeleteGuidelineScopeParams struct {
@@ -98,8 +98,8 @@ type InsertGuidelineParams struct {
 // Writing guidelines. The account owns them; every statement names user_id, so a
 // same-shaped id from another account reaches nothing rather than someone else's rule.
 //
-// purposes is another context's table and is never joined here: the scope links carry only
-// ids, and the names shown on screen are projected through the purpose directory port
+// templates is another context's table and is never joined here: the scope links carry only
+// ids, and the names shown on screen are projected through the template directory port
 // (ARCHITECTURE section 2.2). The ordering below is the INJECTION order: the global group
 // first, then the scoped group, each by creation time. So the list, the prompt, and the
 // experiment snapshot cannot disagree about what the writer sees first.
@@ -116,17 +116,17 @@ func (q *Queries) InsertGuideline(ctx context.Context, arg InsertGuidelineParams
 }
 
 const insertGuidelineScopeLink = `-- name: InsertGuidelineScopeLink :exec
-INSERT INTO guideline_purposes (guideline_id, purpose_id, user_id) VALUES (?, ?, ?)
+INSERT INTO guideline_templates (guideline_id, template_id, user_id) VALUES (?, ?, ?)
 `
 
 type InsertGuidelineScopeLinkParams struct {
 	GuidelineID string
-	PurposeID   string
+	TemplateID  string
 	UserID      string
 }
 
 func (q *Queries) InsertGuidelineScopeLink(ctx context.Context, arg InsertGuidelineScopeLinkParams) error {
-	_, err := q.db.ExecContext(ctx, insertGuidelineScopeLink, arg.GuidelineID, arg.PurposeID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, insertGuidelineScopeLink, arg.GuidelineID, arg.TemplateID, arg.UserID)
 	return err
 }
 
@@ -137,22 +137,22 @@ WHERE g.user_id = ?
   AND (
     g.scope = 'global'
     OR EXISTS (
-      SELECT 1 FROM guideline_purposes gp
-      WHERE gp.guideline_id = g.id AND gp.user_id = g.user_id AND gp.purpose_id = ?
+      SELECT 1 FROM guideline_templates gt
+      WHERE gt.guideline_id = g.id AND gt.user_id = g.user_id AND gt.template_id = ?
     )
   )
 ORDER BY CASE g.scope WHEN 'global' THEN 0 ELSE 1 END, g.created_at, g.id
 `
 
 type ListApplicableGuidelineTextsParams struct {
-	UserID    string
-	PurposeID string
+	UserID     string
+	TemplateID string
 }
 
-// The texts that apply to one post, in injection order. An empty purpose id is a post with
-// no purpose: it matches no link row, so the result is the global group alone.
+// The texts that apply to one post, in injection order. An empty template id is a post with
+// no template: it matches no link row, so the result is the global group alone.
 func (q *Queries) ListApplicableGuidelineTexts(ctx context.Context, arg ListApplicableGuidelineTextsParams) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, listApplicableGuidelineTexts, arg.UserID, arg.PurposeID)
+	rows, err := q.db.QueryContext(ctx, listApplicableGuidelineTexts, arg.UserID, arg.TemplateID)
 	if err != nil {
 		return nil, err
 	}
@@ -174,46 +174,11 @@ func (q *Queries) ListApplicableGuidelineTexts(ctx context.Context, arg ListAppl
 	return items, nil
 }
 
-const listGuidelinePurposeLinks = `-- name: ListGuidelinePurposeLinks :many
-SELECT guideline_id, purpose_id
-FROM guideline_purposes
-WHERE user_id = ?
-ORDER BY guideline_id, purpose_id
-`
-
-type ListGuidelinePurposeLinksRow struct {
-	GuidelineID string
-	PurposeID   string
-}
-
-func (q *Queries) ListGuidelinePurposeLinks(ctx context.Context, userID string) ([]ListGuidelinePurposeLinksRow, error) {
-	rows, err := q.db.QueryContext(ctx, listGuidelinePurposeLinks, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListGuidelinePurposeLinksRow
-	for rows.Next() {
-		var i ListGuidelinePurposeLinksRow
-		if err := rows.Scan(&i.GuidelineID, &i.PurposeID); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listGuidelineScope = `-- name: ListGuidelineScope :many
-SELECT purpose_id
-FROM guideline_purposes
+SELECT template_id
+FROM guideline_templates
 WHERE guideline_id = ? AND user_id = ?
-ORDER BY purpose_id
+ORDER BY template_id
 `
 
 type ListGuidelineScopeParams struct {
@@ -229,11 +194,46 @@ func (q *Queries) ListGuidelineScope(ctx context.Context, arg ListGuidelineScope
 	defer rows.Close()
 	var items []string
 	for rows.Next() {
-		var purpose_id string
-		if err := rows.Scan(&purpose_id); err != nil {
+		var template_id string
+		if err := rows.Scan(&template_id); err != nil {
 			return nil, err
 		}
-		items = append(items, purpose_id)
+		items = append(items, template_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuidelineTemplateLinks = `-- name: ListGuidelineTemplateLinks :many
+SELECT guideline_id, template_id
+FROM guideline_templates
+WHERE user_id = ?
+ORDER BY guideline_id, template_id
+`
+
+type ListGuidelineTemplateLinksRow struct {
+	GuidelineID string
+	TemplateID  string
+}
+
+func (q *Queries) ListGuidelineTemplateLinks(ctx context.Context, userID string) ([]ListGuidelineTemplateLinksRow, error) {
+	rows, err := q.db.QueryContext(ctx, listGuidelineTemplateLinks, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGuidelineTemplateLinksRow
+	for rows.Next() {
+		var i ListGuidelineTemplateLinksRow
+		if err := rows.Scan(&i.GuidelineID, &i.TemplateID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

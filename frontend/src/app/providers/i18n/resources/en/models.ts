@@ -43,7 +43,7 @@ export const models = {
     title: 'Blind comparison',
     description:
       'Model names and costs stay hidden until you choose. The left and right candidates remain stable when reopened.',
-    purpose: 'Purpose · {{name}}',
+    template: 'Template · {{name}}',
     voice: 'Voice · {{name}}',
     language: 'Frozen post language',
     actionAria: 'Switch and decide candidates',

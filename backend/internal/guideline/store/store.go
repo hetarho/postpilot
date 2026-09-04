@@ -54,7 +54,7 @@ func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount
 		}
 		return fmt.Errorf("insert guideline: %w", err)
 	}
-	if err := insertScope(ctx, q, g.UserID, g.ID, g.PurposeIDs); err != nil {
+	if err := insertScope(ctx, q, g.UserID, g.ID, g.TemplateIDs); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
@@ -70,13 +70,13 @@ func (s *Store) List(ctx context.Context, userID string) ([]guideline.Guideline,
 	}
 	// One link read for the whole account rather than one per guideline: the list is a
 	// screen, and N+1 reads of a two-column join table buy nothing.
-	links, err := s.read.ListGuidelinePurposeLinks(ctx, userID)
+	links, err := s.read.ListGuidelineTemplateLinks(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("select guideline scope links: %w", err)
 	}
 	scoped := make(map[string][]string, len(links))
 	for _, link := range links {
-		scoped[link.GuidelineID] = append(scoped[link.GuidelineID], link.PurposeID)
+		scoped[link.GuidelineID] = append(scoped[link.GuidelineID], link.TemplateID)
 	}
 	out := make([]guideline.Guideline, 0, len(rows))
 	for _, row := range rows {
@@ -84,7 +84,7 @@ func (s *Store) List(ctx context.Context, userID string) ([]guideline.Guideline,
 		if err != nil {
 			return nil, err
 		}
-		value.PurposeIDs = scoped[row.ID]
+		value.TemplateIDs = scoped[row.ID]
 		out = append(out, value)
 	}
 	return out, nil
@@ -110,7 +110,7 @@ func (s *Store) get(ctx context.Context, q *sqlc.Queries, userID, id string) (gu
 	if err != nil {
 		return guideline.Guideline{}, fmt.Errorf("select guideline scope: %w", err)
 	}
-	value.PurposeIDs = ids
+	value.TemplateIDs = ids
 	return value, nil
 }
 
@@ -155,7 +155,7 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch guideline.P
 		if err := q.DeleteGuidelineScope(ctx, sqlc.DeleteGuidelineScopeParams{GuidelineID: id, UserID: userID}); err != nil {
 			return guideline.Guideline{}, fmt.Errorf("clear guideline scope: %w", err)
 		}
-		if err := insertScope(ctx, q, userID, id, patch.Scope.PurposeIDs); err != nil {
+		if err := insertScope(ctx, q, userID, id, patch.Scope.TemplateIDs); err != nil {
 			return guideline.Guideline{}, err
 		}
 		touched = true
@@ -187,24 +187,24 @@ func (s *Store) Delete(ctx context.Context, userID, id string) error {
 	return nil
 }
 
-func (s *Store) ApplicableTexts(ctx context.Context, userID, purposeID string) ([]string, error) {
-	texts, err := s.read.ListApplicableGuidelineTexts(ctx, sqlc.ListApplicableGuidelineTextsParams{UserID: userID, PurposeID: purposeID})
+func (s *Store) ApplicableTexts(ctx context.Context, userID, templateID string) ([]string, error) {
+	texts, err := s.read.ListApplicableGuidelineTexts(ctx, sqlc.ListApplicableGuidelineTextsParams{UserID: userID, TemplateID: templateID})
 	if err != nil {
 		return nil, fmt.Errorf("select applicable guidelines: %w", err)
 	}
 	return texts, nil
 }
 
-// insertScope writes the link rows. A foreign purpose id is refused by the composite foreign
+// insertScope writes the link rows. A foreign template id is refused by the composite foreign
 // key, not by a check here, so the account boundary holds even if a service check is bypassed.
-func insertScope(ctx context.Context, q *sqlc.Queries, userID, guidelineID string, purposeIDs []string) error {
-	for _, purposeID := range purposeIDs {
+func insertScope(ctx context.Context, q *sqlc.Queries, userID, guidelineID string, templateIDs []string) error {
+	for _, templateID := range templateIDs {
 		err := q.InsertGuidelineScopeLink(ctx, sqlc.InsertGuidelineScopeLinkParams{
-			GuidelineID: guidelineID, PurposeID: purposeID, UserID: userID,
+			GuidelineID: guidelineID, TemplateID: templateID, UserID: userID,
 		})
 		if err != nil {
 			if isForeignKeyViolation(err) {
-				return guideline.ErrPurposeNotFound
+				return guideline.ErrTemplateNotFound
 			}
 			return fmt.Errorf("insert guideline scope link: %w", err)
 		}

@@ -136,8 +136,8 @@ func TestGenerationPayloadPreservesOptionalTargetPresence(t *testing.T) {
 		if err != nil || (target == nil) != (decoded.TargetLength == nil) || target != nil && *target != *decoded.TargetLength {
 			t.Fatalf("target=%v raw=%s decoded=%v err=%v", target, raw, decoded.TargetLength, err)
 		}
-		if decoded.Purpose != nil {
-			t.Fatalf("absent purpose decoded as %+v", decoded.Purpose)
+		if decoded.Template != nil {
+			t.Fatalf("absent template decoded as %+v", decoded.Template)
 		}
 	}
 }

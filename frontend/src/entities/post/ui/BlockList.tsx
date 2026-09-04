@@ -96,6 +96,11 @@ export function BlockList({
           const key = blockKey(block, index)
           switch (block.type) {
             case BlockType.TEXT:
+              // An unfilled template slot rides on a TEXT block (spec/tech/post-template-grammar
+              // §7). It renders as the position it reserves rather than as its own content —
+              // the content is the copy token, which is machinery and not prose.
+              if (block.slot)
+                return wrap(block, index, <SlotRow key={key} label={block.slot.label} />)
               return wrap(
                 block,
                 index,
@@ -189,5 +194,24 @@ export function BlockList({
         })}
       </div>
     </article>
+  )
+}
+
+/** One position a template reserved and nobody has filled yet. A stepped surface rather than a
+ *  border or a card: it is one line inside a flowing article, and §1.3/§1.4 both point away from
+ *  drawing a box around it. The label is the template author's own words. */
+function SlotRow({ label }: { label: string }) {
+  const { t } = useTranslation(['templates', 'posts'])
+  return (
+    <div className="bg-surface-recessed rounded-md px-3 py-2">
+      <Typography variant="eyebrow" as="p">
+        {t('slot.unfilled', { ns: 'templates' })}
+      </Typography>
+      {label && (
+        <Typography variant="body" className="text-content-secondary mt-0.5 break-words">
+          {label}
+        </Typography>
+      )}
+    </div>
   )
 }

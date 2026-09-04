@@ -15,7 +15,7 @@ type Store interface {
 	// max-1 and both win.
 	Insert(ctx context.Context, g Guideline, maxPerAccount int) error
 	// List returns the account's guidelines in injection order — the global group first,
-	// then the scoped group, each by created_at then id — with PurposeIDs populated.
+	// then the scoped group, each by created_at then id — with TemplateIDs populated.
 	List(ctx context.Context, userID string) ([]Guideline, error)
 	Get(ctx context.Context, userID, id string) (Guideline, error)
 	// Update applies only the present parts of the patch in one transaction. A present scope
@@ -24,15 +24,15 @@ type Store interface {
 	Update(ctx context.Context, userID, id string, patch Patch, updatedAt time.Time) (Guideline, error)
 	Delete(ctx context.Context, userID, id string) error
 	// ApplicableTexts returns the texts that apply to one post, in injection order: the
-	// account's global guidelines plus those linked to purposeID. An empty purposeID is a
-	// post with no purpose and matches no link, so it yields the global group alone.
-	ApplicableTexts(ctx context.Context, userID, purposeID string) ([]string, error)
+	// account's global guidelines plus those linked to templateID. An empty templateID is a
+	// post with no template and matches no link, so it yields the global group alone.
+	ApplicableTexts(ctx context.Context, userID, templateID string) ([]string, error)
 }
 
-// PurposeDirectory is the purpose context's published directory, consumed here for two
+// TemplateDirectory is the template context's published directory, consumed here for two
 // things and nothing else: proving a scoped id is owned by the account at write time, and
-// projecting names on read. It is a port rather than a join because purposes are another
+// projecting names on read. It is a port rather than a join because templates are another
 // context's table (ARCHITECTURE §2.2).
-type PurposeDirectory interface {
-	Purposes(ctx context.Context, userID string) ([]PurposeRef, error)
+type TemplateDirectory interface {
+	Templates(ctx context.Context, userID string) ([]TemplateRef, error)
 }

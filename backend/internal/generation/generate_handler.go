@@ -30,10 +30,10 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	// Generation options are frozen when the job is enqueued. A later options edit
 	// must not change the prompt of work that is already waiting in the queue.
 	post.TargetLength = cloneOptionalInt(job.TargetLength)
-	// Deliberately the payload's brief and never post.PurposeID: editing or deleting the
-	// purpose after the enqueue — including across a restart-resume or an explicit retry —
+	// Deliberately the payload's brief and never post.TemplateID: editing or deleting the
+	// template after the enqueue — including across a restart-resume or an explicit retry —
 	// must not change the prompt this run builds.
-	post.Purpose = clonePurpose(job.Purpose)
+	post.Template = cloneTemplate(job.Template)
 	// Same rule for the 지침: the frozen texts, never a fresh resolution.
 	post.Guidelines = cloneTexts(job.Guidelines)
 	// An empty observe model records that StartGeneration accepted a zero-photo input.
@@ -92,11 +92,16 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	return nil
 }
 
-func clonePurpose(value *PurposeBrief) *PurposeBrief {
+// cloneTemplate deep-copies the slot slice too: a frozen brief must not share backing
+// storage with whatever the caller does next to its own slice.
+func cloneTemplate(value *TemplateBrief) *TemplateBrief {
 	if value == nil {
 		return nil
 	}
 	copied := *value
+	if len(value.Slots) > 0 {
+		copied.Slots = append([]TemplateSlot(nil), value.Slots...)
+	}
 	return &copied
 }
 

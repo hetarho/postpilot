@@ -27,8 +27,8 @@ const (
 	GuidelineScope_GUIDELINE_SCOPE_UNSPECIFIED GuidelineScope = 0
 	// Applies to every post of the account.
 	GuidelineScope_GUIDELINE_SCOPE_GLOBAL GuidelineScope = 1
-	// Applies only to posts whose selected purpose is in the guideline's purpose set.
-	GuidelineScope_GUIDELINE_SCOPE_PURPOSES GuidelineScope = 2
+	// Applies only to posts whose selected template is in the guideline's template set.
+	GuidelineScope_GUIDELINE_SCOPE_TEMPLATES GuidelineScope = 2
 )
 
 // Enum value maps for GuidelineScope.
@@ -36,12 +36,12 @@ var (
 	GuidelineScope_name = map[int32]string{
 		0: "GUIDELINE_SCOPE_UNSPECIFIED",
 		1: "GUIDELINE_SCOPE_GLOBAL",
-		2: "GUIDELINE_SCOPE_PURPOSES",
+		2: "GUIDELINE_SCOPE_TEMPLATES",
 	}
 	GuidelineScope_value = map[string]int32{
 		"GUIDELINE_SCOPE_UNSPECIFIED": 0,
 		"GUIDELINE_SCOPE_GLOBAL":      1,
-		"GUIDELINE_SCOPE_PURPOSES":    2,
+		"GUIDELINE_SCOPE_TEMPLATES":   2,
 	}
 )
 
@@ -72,9 +72,9 @@ func (GuidelineScope) EnumDescriptor() ([]byte, []int) {
 	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{0}
 }
 
-// A purpose a guideline is scoped to, projected by name for the management screen. It is a
-// read projection through the purpose directory, never a stored column on the guideline.
-type GuidelinePurposeRef struct {
+// A template a guideline is scoped to, projected by name for the management screen. It is a
+// read projection through the template directory, never a stored column on the guideline.
+type GuidelineTemplateRef struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
@@ -82,20 +82,20 @@ type GuidelinePurposeRef struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GuidelinePurposeRef) Reset() {
-	*x = GuidelinePurposeRef{}
+func (x *GuidelineTemplateRef) Reset() {
+	*x = GuidelineTemplateRef{}
 	mi := &file_postpilot_v1_guideline_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GuidelinePurposeRef) String() string {
+func (x *GuidelineTemplateRef) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GuidelinePurposeRef) ProtoMessage() {}
+func (*GuidelineTemplateRef) ProtoMessage() {}
 
-func (x *GuidelinePurposeRef) ProtoReflect() protoreflect.Message {
+func (x *GuidelineTemplateRef) ProtoReflect() protoreflect.Message {
 	mi := &file_postpilot_v1_guideline_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -107,19 +107,19 @@ func (x *GuidelinePurposeRef) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GuidelinePurposeRef.ProtoReflect.Descriptor instead.
-func (*GuidelinePurposeRef) Descriptor() ([]byte, []int) {
+// Deprecated: Use GuidelineTemplateRef.ProtoReflect.Descriptor instead.
+func (*GuidelineTemplateRef) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GuidelinePurposeRef) GetId() string {
+func (x *GuidelineTemplateRef) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *GuidelinePurposeRef) GetName() string {
+func (x *GuidelineTemplateRef) GetName() string {
 	if x != nil {
 		return x.Name
 	}
@@ -132,11 +132,11 @@ type Guideline struct {
 	// The authored rule, injected verbatim as one line of the 작문 지침 section.
 	Text  string         `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
 	Scope GuidelineScope `protobuf:"varint,3,opt,name=scope,proto3,enum=postpilot.v1.GuidelineScope" json:"scope,omitempty"`
-	// Empty for GLOBAL. May also be empty for PURPOSES after every scoped purpose was
+	// Empty for GLOBAL. May also be empty for TEMPLATES after every scoped template was
 	// deleted — such a guideline applies nowhere until it is rescoped.
-	Purposes      []*GuidelinePurposeRef `protobuf:"bytes,4,rep,name=purposes,proto3" json:"purposes,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Templates     []*GuidelineTemplateRef `protobuf:"bytes,4,rep,name=templates,proto3" json:"templates,omitempty"`
+	CreatedAt     string                  `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     string                  `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -192,9 +192,9 @@ func (x *Guideline) GetScope() GuidelineScope {
 	return GuidelineScope_GUIDELINE_SCOPE_UNSPECIFIED
 }
 
-func (x *Guideline) GetPurposes() []*GuidelinePurposeRef {
+func (x *Guideline) GetTemplates() []*GuidelineTemplateRef {
 	if x != nil {
-		return x.Purposes
+		return x.Templates
 	}
 	return nil
 }
@@ -299,8 +299,8 @@ type CreateGuidelineRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Text  string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
 	Scope GuidelineScope         `protobuf:"varint,2,opt,name=scope,proto3,enum=postpilot.v1.GuidelineScope" json:"scope,omitempty"`
-	// Required (>= 1 owned purpose) for PURPOSES, and must be empty for GLOBAL.
-	PurposeIds    []string `protobuf:"bytes,3,rep,name=purpose_ids,json=purposeIds,proto3" json:"purpose_ids,omitempty"`
+	// Required (>= 1 owned template) for TEMPLATES, and must be empty for GLOBAL.
+	TemplateIds   []string `protobuf:"bytes,3,rep,name=template_ids,json=templateIds,proto3" json:"template_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -349,9 +349,9 @@ func (x *CreateGuidelineRequest) GetScope() GuidelineScope {
 	return GuidelineScope_GUIDELINE_SCOPE_UNSPECIFIED
 }
 
-func (x *CreateGuidelineRequest) GetPurposeIds() []string {
+func (x *CreateGuidelineRequest) GetTemplateIds() []string {
 	if x != nil {
-		return x.PurposeIds
+		return x.TemplateIds
 	}
 	return nil
 }
@@ -406,7 +406,7 @@ func (x *CreateGuidelineResponse) GetGuideline() *Guideline {
 type GuidelineScopePatch struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Scope         GuidelineScope         `protobuf:"varint,1,opt,name=scope,proto3,enum=postpilot.v1.GuidelineScope" json:"scope,omitempty"`
-	PurposeIds    []string               `protobuf:"bytes,2,rep,name=purpose_ids,json=purposeIds,proto3" json:"purpose_ids,omitempty"`
+	TemplateIds   []string               `protobuf:"bytes,2,rep,name=template_ids,json=templateIds,proto3" json:"template_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -448,9 +448,9 @@ func (x *GuidelineScopePatch) GetScope() GuidelineScope {
 	return GuidelineScope_GUIDELINE_SCOPE_UNSPECIFIED
 }
 
-func (x *GuidelineScopePatch) GetPurposeIds() []string {
+func (x *GuidelineScopePatch) GetTemplateIds() []string {
 	if x != nil {
-		return x.PurposeIds
+		return x.TemplateIds
 	}
 	return nil
 }
@@ -645,15 +645,15 @@ var File_postpilot_v1_guideline_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\n" +
-	"\x1cpostpilot/v1/guideline.proto\x12\fpostpilot.v1\"9\n" +
-	"\x13GuidelinePurposeRef\x12\x0e\n" +
+	"\x1cpostpilot/v1/guideline.proto\x12\fpostpilot.v1\":\n" +
+	"\x14GuidelineTemplateRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xe0\x01\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\xe3\x01\n" +
 	"\tGuideline\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x122\n" +
-	"\x05scope\x18\x03 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12=\n" +
-	"\bpurposes\x18\x04 \x03(\v2!.postpilot.v1.GuidelinePurposeRefR\bpurposes\x12\x1d\n" +
+	"\x05scope\x18\x03 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12@\n" +
+	"\ttemplates\x18\x04 \x03(\v2\".postpilot.v1.GuidelineTemplateRefR\ttemplates\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
@@ -662,18 +662,16 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\x16ListGuidelinesResponse\x127\n" +
 	"\n" +
 	"guidelines\x18\x01 \x03(\v2\x17.postpilot.v1.GuidelineR\n" +
-	"guidelines\"\x81\x01\n" +
+	"guidelines\"\x83\x01\n" +
 	"\x16CreateGuidelineRequest\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x122\n" +
-	"\x05scope\x18\x02 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12\x1f\n" +
-	"\vpurpose_ids\x18\x03 \x03(\tR\n" +
-	"purposeIds\"P\n" +
+	"\x05scope\x18\x02 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12!\n" +
+	"\ftemplate_ids\x18\x03 \x03(\tR\vtemplateIds\"P\n" +
 	"\x17CreateGuidelineResponse\x125\n" +
-	"\tguideline\x18\x01 \x01(\v2\x17.postpilot.v1.GuidelineR\tguideline\"j\n" +
+	"\tguideline\x18\x01 \x01(\v2\x17.postpilot.v1.GuidelineR\tguideline\"l\n" +
 	"\x13GuidelineScopePatch\x122\n" +
-	"\x05scope\x18\x01 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12\x1f\n" +
-	"\vpurpose_ids\x18\x02 \x03(\tR\n" +
-	"purposeIds\"\x83\x01\n" +
+	"\x05scope\x18\x01 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12!\n" +
+	"\ftemplate_ids\x18\x02 \x03(\tR\vtemplateIds\"\x83\x01\n" +
 	"\x16UpdateGuidelineRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04text\x18\x02 \x01(\tH\x00R\x04text\x88\x01\x01\x127\n" +
@@ -683,11 +681,11 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\tguideline\x18\x01 \x01(\v2\x17.postpilot.v1.GuidelineR\tguideline\"(\n" +
 	"\x16DeleteGuidelineRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x19\n" +
-	"\x17DeleteGuidelineResponse*k\n" +
+	"\x17DeleteGuidelineResponse*l\n" +
 	"\x0eGuidelineScope\x12\x1f\n" +
 	"\x1bGUIDELINE_SCOPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
-	"\x16GUIDELINE_SCOPE_GLOBAL\x10\x01\x12\x1c\n" +
-	"\x18GUIDELINE_SCOPE_PURPOSES\x10\x022\x97\x03\n" +
+	"\x16GUIDELINE_SCOPE_GLOBAL\x10\x01\x12\x1d\n" +
+	"\x19GUIDELINE_SCOPE_TEMPLATES\x10\x022\x97\x03\n" +
 	"\x10GuidelineService\x12]\n" +
 	"\x0eListGuidelines\x12#.postpilot.v1.ListGuidelinesRequest\x1a$.postpilot.v1.ListGuidelinesResponse\"\x00\x12`\n" +
 	"\x0fCreateGuideline\x12$.postpilot.v1.CreateGuidelineRequest\x1a%.postpilot.v1.CreateGuidelineResponse\"\x00\x12`\n" +
@@ -710,7 +708,7 @@ var file_postpilot_v1_guideline_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_postpilot_v1_guideline_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_postpilot_v1_guideline_proto_goTypes = []any{
 	(GuidelineScope)(0),             // 0: postpilot.v1.GuidelineScope
-	(*GuidelinePurposeRef)(nil),     // 1: postpilot.v1.GuidelinePurposeRef
+	(*GuidelineTemplateRef)(nil),    // 1: postpilot.v1.GuidelineTemplateRef
 	(*Guideline)(nil),               // 2: postpilot.v1.Guideline
 	(*ListGuidelinesRequest)(nil),   // 3: postpilot.v1.ListGuidelinesRequest
 	(*ListGuidelinesResponse)(nil),  // 4: postpilot.v1.ListGuidelinesResponse
@@ -724,7 +722,7 @@ var file_postpilot_v1_guideline_proto_goTypes = []any{
 }
 var file_postpilot_v1_guideline_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.Guideline.scope:type_name -> postpilot.v1.GuidelineScope
-	1,  // 1: postpilot.v1.Guideline.purposes:type_name -> postpilot.v1.GuidelinePurposeRef
+	1,  // 1: postpilot.v1.Guideline.templates:type_name -> postpilot.v1.GuidelineTemplateRef
 	2,  // 2: postpilot.v1.ListGuidelinesResponse.guidelines:type_name -> postpilot.v1.Guideline
 	0,  // 3: postpilot.v1.CreateGuidelineRequest.scope:type_name -> postpilot.v1.GuidelineScope
 	2,  // 4: postpilot.v1.CreateGuidelineResponse.guideline:type_name -> postpilot.v1.Guideline

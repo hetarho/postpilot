@@ -411,9 +411,12 @@ func TestLoadPublishingDefaultsAndValidation(t *testing.T) {
 	}
 }
 
-func TestLoadPurposeLimitDefaultsAndValidation(t *testing.T) {
+func TestLoadTemplateLimitDefaultsAndValidation(t *testing.T) {
 	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
-	names := []string{"PURPOSE_NAME_MAX_CHARS", "PURPOSE_DESCRIPTION_MAX_CHARS", "PURPOSE_INSTRUCTIONS_MAX_CHARS"}
+	names := []string{
+		"TEMPLATE_NAME_MAX_CHARS", "TEMPLATE_DESCRIPTION_MAX_CHARS", "TEMPLATE_BODY_MAX_CHARS",
+		"TEMPLATE_MAX_PER_ACCOUNT", "TEMPLATE_MAX_REPEAT_EXPANSION",
+	}
 	for _, name := range names {
 		t.Setenv(name, "")
 	}
@@ -421,8 +424,9 @@ func TestLoadPurposeLimitDefaultsAndValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.PurposeNameMaxChars != 40 || cfg.PurposeDescriptionMaxChars != 200 || cfg.PurposeInstructionsMaxChars != 2000 {
-		t.Fatalf("purpose limit defaults = %+v", cfg)
+	if cfg.TemplateNameMaxChars != 40 || cfg.TemplateDescriptionMaxChars != 200 || cfg.TemplateBodyMaxChars != 4000 ||
+		cfg.TemplateMaxPerAccount != 50 || cfg.TemplateMaxRepeatExpansion != 40 {
+		t.Fatalf("template limit defaults = %+v", cfg)
 	}
 
 	for _, name := range names {

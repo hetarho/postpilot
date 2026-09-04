@@ -61,8 +61,8 @@ describe('bundled locale resources', () => {
       expect(i18next.t('count.remaining', { ns: 'common', count: 2 })).toBe(
         '2 characters remaining',
       )
-      expect(i18next.t('postCount', { ns: 'purposes', count: 1 })).toBe('1 post')
-      expect(i18next.t('postCount', { ns: 'purposes', count: 2 })).toBe('2 posts')
+      expect(i18next.t('postCount', { ns: 'templates', count: 1 })).toBe('1 post')
+      expect(i18next.t('postCount', { ns: 'templates', count: 2 })).toBe('2 posts')
       expect(i18next.t('upload.failedCount', { ns: 'posts', count: 1 })).toBe(
         '1 photo could not be uploaded',
       )

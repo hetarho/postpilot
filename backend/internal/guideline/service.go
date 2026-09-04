@@ -12,11 +12,11 @@ import (
 )
 
 type Service struct {
-	store    Store
-	purposes PurposeDirectory
-	limits   Limits
-	now      func() time.Time
-	newID    func() string
+	store     Store
+	templates TemplateDirectory
+	limits    Limits
+	now       func() time.Time
+	newID     func() string
 }
 
 func NewService(store Store, limits Limits) *Service {
@@ -26,13 +26,13 @@ func NewService(store Store, limits Limits) *Service {
 	return &Service{store: store, limits: limits, now: time.Now, newID: newID}
 }
 
-// SetPurposeDirectory wires the purpose context's directory. Without it a scoped guideline
+// SetTemplateDirectory wires the template context's directory. Without it a scoped guideline
 // cannot be validated or named, so scope writes are refused rather than accepted blind.
-func (s *Service) SetPurposeDirectory(directory PurposeDirectory) { s.purposes = directory }
+func (s *Service) SetTemplateDirectory(directory TemplateDirectory) { s.templates = directory }
 
 func (s *Service) Limits() Limits { return s.limits }
 
-// List returns the account's guidelines in injection order with purpose names projected, so
+// List returns the account's guidelines in injection order with template names projected, so
 // the management screen shows exactly what the writer will be given, in that order.
 func (s *Service) List(ctx context.Context, userID string) ([]Guideline, error) {
 	guidelines, err := s.store.List(ctx, userID)
@@ -45,18 +45,18 @@ func (s *Service) List(ctx context.Context, userID string) ([]Guideline, error) 
 	return guidelines, nil
 }
 
-func (s *Service) Create(ctx context.Context, userID, text string, scope Scope, purposeIDs []string) (Guideline, error) {
+func (s *Service) Create(ctx context.Context, userID, text string, scope Scope, templateIDs []string) (Guideline, error) {
 	text, err := s.validText(text)
 	if err != nil {
 		return Guideline{}, err
 	}
-	ids, err := s.validScope(ctx, userID, scope, purposeIDs)
+	ids, err := s.validScope(ctx, userID, scope, templateIDs)
 	if err != nil {
 		return Guideline{}, err
 	}
 	now := s.now()
 	created := Guideline{
-		ID: s.newID(), UserID: userID, Text: text, Scope: scope, PurposeIDs: ids,
+		ID: s.newID(), UserID: userID, Text: text, Scope: scope, TemplateIDs: ids,
 		CreatedAt: now, UpdatedAt: now,
 	}
 	if err := s.store.Insert(ctx, created, s.limits.MaxPerAccount); err != nil {
@@ -86,11 +86,11 @@ func (s *Service) Update(ctx context.Context, userID, id string, patch Patch) (G
 		patch.Text = &text
 	}
 	if patch.Scope != nil {
-		ids, err := s.validScope(ctx, userID, patch.Scope.Scope, patch.Scope.PurposeIDs)
+		ids, err := s.validScope(ctx, userID, patch.Scope.Scope, patch.Scope.TemplateIDs)
 		if err != nil {
 			return Guideline{}, err
 		}
-		patch.Scope = &ScopePatch{Scope: patch.Scope.Scope, PurposeIDs: ids}
+		patch.Scope = &ScopePatch{Scope: patch.Scope.Scope, TemplateIDs: ids}
 	}
 	updated, err := s.store.Update(ctx, userID, id, patch, s.now())
 	if err != nil {
@@ -107,15 +107,15 @@ func (s *Service) Delete(ctx context.Context, userID, id string) error {
 }
 
 // ForPrompt is this context's published behavior for prompt builders: the ordered texts that
-// apply to one post, resolved from the post's CURRENT purpose. Absence is not an error — a
+// apply to one post, resolved from the post's CURRENT template. Absence is not an error — a
 // prompt with no guidelines is a valid prompt — so the caller gets an empty slice.
 //
-// purposeID is a pointer because "the post has no purpose" and "the post has purpose X" are
+// templateID is a pointer because "the post has no template" and "the post has template X" are
 // different questions, and the first must not be spelled as the empty-string id of the second.
-func (s *Service) ForPrompt(ctx context.Context, userID string, purposeID *string) ([]string, error) {
+func (s *Service) ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error) {
 	scoped := ""
-	if purposeID != nil {
-		scoped = strings.TrimSpace(*purposeID)
+	if templateID != nil {
+		scoped = strings.TrimSpace(*templateID)
 	}
 	texts, err := s.store.ApplicableTexts(ctx, userID, scoped)
 	if err != nil {
@@ -132,13 +132,13 @@ func (s *Service) projectOne(ctx context.Context, userID string, g Guideline) (G
 	return one[0], nil
 }
 
-// project fills the purpose-name projection for the given guidelines. A scoped id with no
-// directory entry is dropped rather than shown as a blank chip: it means the purpose was
+// project fills the template-name projection for the given guidelines. A scoped id with no
+// directory entry is dropped rather than shown as a blank chip: it means the template was
 // deleted between the link read and this read, which is the orphaned-scope state.
 func (s *Service) project(ctx context.Context, userID string, guidelines []Guideline) error {
 	needed := false
 	for _, g := range guidelines {
-		if len(g.PurposeIDs) > 0 {
+		if len(g.TemplateIDs) > 0 {
 			needed = true
 			break
 		}
@@ -151,10 +151,10 @@ func (s *Service) project(ctx context.Context, userID string, guidelines []Guide
 		return err
 	}
 	for i := range guidelines {
-		refs := make([]PurposeRef, 0, len(guidelines[i].PurposeIDs))
-		for _, id := range guidelines[i].PurposeIDs {
+		refs := make([]TemplateRef, 0, len(guidelines[i].TemplateIDs))
+		for _, id := range guidelines[i].TemplateIDs {
 			if name, ok := names[id]; ok {
-				refs = append(refs, PurposeRef{ID: id, Name: name})
+				refs = append(refs, TemplateRef{ID: id, Name: name})
 			}
 		}
 		// By name, so the chips of one guideline read in a stable order the user can predict.
@@ -164,21 +164,21 @@ func (s *Service) project(ctx context.Context, userID string, guidelines []Guide
 			}
 			return refs[a].Name < refs[b].Name
 		})
-		guidelines[i].Purposes = refs
+		guidelines[i].Templates = refs
 	}
 	return nil
 }
 
 func (s *Service) directory(ctx context.Context, userID string) (map[string]string, error) {
-	if s.purposes == nil {
-		return nil, fmt.Errorf("guideline: purpose directory is not wired")
+	if s.templates == nil {
+		return nil, fmt.Errorf("guideline: template directory is not wired")
 	}
-	purposes, err := s.purposes.Purposes(ctx, userID)
+	templates, err := s.templates.Templates(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("load purpose directory: %w", err)
+		return nil, fmt.Errorf("load template directory: %w", err)
 	}
-	names := make(map[string]string, len(purposes))
-	for _, p := range purposes {
+	names := make(map[string]string, len(templates))
+	for _, p := range templates {
 		names[p.ID] = p.Name
 	}
 	return names, nil
@@ -195,19 +195,19 @@ func (s *Service) validText(value string) (string, error) {
 	return trimmed, nil
 }
 
-// validScope collapses duplicate ids and proves every remaining one is an owned purpose. A
-// `purposes` scope must name at least one at creation and on every scope update: only a
-// purpose deletion may leave the set empty (plan 16 invariant 2).
-func (s *Service) validScope(ctx context.Context, userID string, scope Scope, purposeIDs []string) ([]string, error) {
+// validScope collapses duplicate ids and proves every remaining one is an owned template. A
+// `templates` scope must name at least one at creation and on every scope update: only a
+// template deletion may leave the set empty (plan 16 invariant 2).
+func (s *Service) validScope(ctx context.Context, userID string, scope Scope, templateIDs []string) ([]string, error) {
 	if !scope.Valid() {
 		return nil, ErrScopeShape
 	}
-	unique := make([]string, 0, len(purposeIDs))
-	seen := make(map[string]struct{}, len(purposeIDs))
-	for _, raw := range purposeIDs {
+	unique := make([]string, 0, len(templateIDs))
+	seen := make(map[string]struct{}, len(templateIDs))
+	for _, raw := range templateIDs {
 		id := strings.TrimSpace(raw)
 		if id == "" {
-			return nil, ErrPurposeNotFound
+			return nil, ErrTemplateNotFound
 		}
 		if _, duplicate := seen[id]; duplicate {
 			continue
@@ -230,7 +230,7 @@ func (s *Service) validScope(ctx context.Context, userID string, scope Scope, pu
 	}
 	for _, id := range unique {
 		if _, ok := names[id]; !ok {
-			return nil, ErrPurposeNotFound
+			return nil, ErrTemplateNotFound
 		}
 	}
 	return unique, nil

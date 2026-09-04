@@ -217,18 +217,18 @@ describe('logout', () => {
 })
 
 // Plan 11 A11/A12: 용도 is a top-level destination beside 말투, reachable from the nav.
-describe('the purpose management route', () => {
-  it('mounts /purposes and offers it in the navigation after 말투', async () => {
-    renderAppAt('/purposes', { user: { id: 'alice' } })
+describe('the template management route', () => {
+  it('mounts /templates and offers it in the navigation after 말투', async () => {
+    renderAppAt('/templates', { user: { id: 'alice' } })
 
-    expect(await screen.findByRole('heading', { level: 1, name: '용도' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '템플릿' })).toBeInTheDocument()
     // One list, so the phone tab bar and the desktop header cannot disagree; the entry sits
     // after 말투 in it.
     const labels = screen
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'))
       .filter((href): href is string => href !== null)
-    expect(labels.indexOf('/purposes')).toBeGreaterThan(labels.indexOf('/voices'))
+    expect(labels.indexOf('/templates')).toBeGreaterThan(labels.indexOf('/voices'))
   })
 })
 
@@ -368,7 +368,7 @@ describe('the guideline management route', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: '지침' })).toBeInTheDocument()
     const labels = hrefs()
-    expect(labels.indexOf('/guidelines')).toBeGreaterThan(labels.indexOf('/purposes'))
+    expect(labels.indexOf('/guidelines')).toBeGreaterThan(labels.indexOf('/templates'))
   })
 })
 
@@ -380,7 +380,7 @@ describe('lazily loaded routes', () => {
   it.each([
     ['/publishing-agents', '발행 Mac'],
     ['/voices', '말투'],
-    ['/purposes', '용도'],
+    ['/templates', '템플릿'],
     ['/guidelines', '지침'],
     ['/about', '사진과 메모를 내 말투의 블로그 초안으로'],
     ['/ai-models', 'AI 모델'],
@@ -625,7 +625,7 @@ describe('localized registered-route smoke', () => {
       posts: '내 글',
       publishing: '발행 Mac',
       voices: '말투',
-      purposes: '용도',
+      templates: '템플릿',
       guidelines: '지침',
       about: '사진과 메모를 내 말투의 블로그 초안으로',
       profile: '프로필',
@@ -642,7 +642,7 @@ describe('localized registered-route smoke', () => {
       posts: 'My posts',
       publishing: 'Publishing Macs',
       voices: 'Voices',
-      purposes: 'Purposes',
+      templates: 'Templates',
       guidelines: 'Guidelines',
       about: 'Photos and rough notes into a blog draft in your own voice',
       profile: 'Profile',
@@ -687,7 +687,7 @@ describe('localized registered-route smoke', () => {
           signedIn: true,
         },
         { path: '/voices', role: 'heading', name: text.voices, signedIn: true },
-        { path: '/purposes', role: 'heading', name: text.purposes, signedIn: true },
+        { path: '/templates', role: 'heading', name: text.templates, signedIn: true },
         { path: '/guidelines', role: 'heading', name: text.guidelines, signedIn: true },
         {
           path: '/voices/voice-default',
@@ -856,7 +856,7 @@ describe('plan-gated navigation', () => {
   it('keeps the other five destinations for every tier', async () => {
     renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
     await screen.findByRole('heading', { level: 1, name: '내 글' })
-    for (const destination of ['/posts', '/voices', '/purposes', '/guidelines', '/ai-models']) {
+    for (const destination of ['/posts', '/voices', '/templates', '/guidelines', '/ai-models']) {
       expect(hrefs()).toContain(destination)
     }
   })

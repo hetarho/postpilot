@@ -605,10 +605,10 @@ type ModelExperiment struct {
 	// The frozen voice for analyze/write work and the only voice its result may affect.
 	// Observe compares the post's image snapshot only and leaves this empty.
 	VoiceId string `protobuf:"bytes,18,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
-	// The purpose brief frozen into a write comparison's snapshot, named so the detail can
-	// say which brief both candidates were given. Empty when the post had none, and it keeps
-	// the name the snapshot froze even after the purpose is renamed or deleted.
-	PurposeName     string          `protobuf:"bytes,19,opt,name=purpose_name,json=purposeName,proto3" json:"purpose_name,omitempty"`
+	// The template frozen into a write comparison's snapshot, named so the detail can say
+	// which shape both candidates were given. Empty when the post had none, and it keeps the
+	// name the snapshot froze even after the template is renamed or deleted.
+	TemplateName    string          `protobuf:"bytes,19,opt,name=template_name,json=templateName,proto3" json:"template_name,omitempty"`
 	TargetLanguage  ContentLanguage `protobuf:"varint,20,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
 	ApplyFailure    *Failure        `protobuf:"bytes,21,opt,name=apply_failure,json=applyFailure,proto3" json:"apply_failure,omitempty"`
 	AdoptionFailure *Failure        `protobuf:"bytes,22,opt,name=adoption_failure,json=adoptionFailure,proto3" json:"adoption_failure,omitempty"`
@@ -774,9 +774,9 @@ func (x *ModelExperiment) GetVoiceId() string {
 	return ""
 }
 
-func (x *ModelExperiment) GetPurposeName() string {
+func (x *ModelExperiment) GetTemplateName() string {
 	if x != nil {
-		return x.PurposeName
+		return x.TemplateName
 	}
 	return ""
 }
@@ -2113,7 +2113,7 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x05usage\x18\n" +
 	" \x01(\v2\x1c.postpilot.v1.CandidateUsageR\x05usage\x12/\n" +
 	"\afailure\x18\v \x01(\v2\x15.postpilot.v1.FailureR\afailureB\b\n" +
-	"\x06output\"\xa2\a\n" +
+	"\x06output\"\xa4\a\n" +
 	"\x0fModelExperiment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
 	"\x05stage\x18\x02 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x126\n" +
@@ -2141,8 +2141,8 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\n" +
 	"adopted_at\x18\x10 \x01(\tR\tadoptedAt\x12-\n" +
 	"\x12adoption_requested\x18\x11 \x01(\bR\x11adoptionRequested\x12\x19\n" +
-	"\bvoice_id\x18\x12 \x01(\tR\avoiceId\x12!\n" +
-	"\fpurpose_name\x18\x13 \x01(\tR\vpurposeName\x12F\n" +
+	"\bvoice_id\x18\x12 \x01(\tR\avoiceId\x12#\n" +
+	"\rtemplate_name\x18\x13 \x01(\tR\ftemplateName\x12F\n" +
 	"\x0ftarget_language\x18\x14 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12:\n" +
 	"\rapply_failure\x18\x15 \x01(\v2\x15.postpilot.v1.FailureR\fapplyFailure\x12@\n" +
 	"\x10adoption_failure\x18\x16 \x01(\v2\x15.postpilot.v1.FailureR\x0fadoptionFailure\"\x9e\x01\n" +

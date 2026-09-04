@@ -107,7 +107,7 @@ type Experiment struct {
 	UserID            string
 	PostSlug          string
 	VoiceID           string
-	PurposeName       string
+	TemplateName      string
 	TargetLanguage    *Language
 	Stage             Stage
 	Status            Status
@@ -170,10 +170,10 @@ type Snapshot struct {
 	PromptVersion string
 	// VoiceID is the voice the runner froze the input for; the aggregate records it.
 	VoiceID string
-	// PurposeName is the 용도 the same frozen input carries, by name. Empty when the post had
+	// TemplateName is the 템플릿 the same frozen input carries, by name. Empty when the post had
 	// none. It is a name rather than an id so the detail keeps reading correctly after the
-	// purpose is renamed or deleted.
-	PurposeName string
+	// template is renamed or deleted.
+	TemplateName string
 	// TargetLanguage is required for write snapshots and absent for observe/analyze.
 	TargetLanguage *Language
 }

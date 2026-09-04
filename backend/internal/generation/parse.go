@@ -44,6 +44,15 @@ type blockJSON struct {
 	Alt     string   `json:"alt"`
 	Caption string   `json:"caption"`
 	Items   []string `json:"items"`
+	// Present only on an unfilled template slot. A revision receives the current content and
+	// must hand untouched blocks back byte for byte, so the marker has to survive that round
+	// trip — otherwise every revision would quietly turn a reserved position into prose.
+	Slot *blockSlotJSON `json:"slot,omitempty"`
+}
+
+type blockSlotJSON struct {
+	Kind  string `json:"kind"`
+	Label string `json:"label,omitempty"`
 }
 
 type contentJSON struct {
@@ -87,6 +96,7 @@ func ParseContent(raw string) (*PostContent, error) {
 		content.Blocks = append(content.Blocks, Block{
 			Type: BlockType(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			Slot: fromSlotJSON(block.Slot),
 		})
 	}
 	return content, nil
@@ -201,4 +211,11 @@ func marshalPromptJSON(value any) string {
 		return fmt.Sprintf("%v", value)
 	}
 	return string(data)
+}
+
+func fromSlotJSON(slot *blockSlotJSON) *BlockSlot {
+	if slot == nil || strings.TrimSpace(slot.Kind) == "" {
+		return nil
+	}
+	return &BlockSlot{Kind: slot.Kind, Label: slot.Label}
 }

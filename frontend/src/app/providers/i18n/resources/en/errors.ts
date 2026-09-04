@@ -47,20 +47,23 @@ export const errors = {
   VOICE_VALIDATION_NOT_FOUND: 'Could not find the voice validation.',
   VOICE_INSUFFICIENT_SOURCES: 'At least {{min}} sources are required to learn this voice.',
   VOICE_INVALID_LIFECYCLE: "This action is not available in the voice's current state.",
-  PURPOSE_NOT_FOUND: 'Could not find the purpose.',
-  PURPOSE_NAME_REQUIRED: 'Enter a purpose name.',
-  PURPOSE_INSTRUCTIONS_REQUIRED: 'Enter writing instructions.',
-  PURPOSE_NAME_TAKEN: 'A purpose with that name already exists.',
-  PURPOSE_FIELD_TOO_LONG:
+  TEMPLATE_NOT_FOUND: 'Could not find the template.',
+  TEMPLATE_NAME_REQUIRED: 'Enter a template name.',
+  TEMPLATE_BODY_REQUIRED: 'Enter the template content.',
+  TEMPLATE_NAME_TAKEN: 'A template with that name already exists.',
+  TEMPLATE_FIELD_TOO_LONG:
     'The value must be no more than {{max}} characters. It is currently {{actual}}.',
+  TEMPLATE_PARSE_FAILED: 'Line {{line}} could not be read ({{reason}}). Fix it in the source view.',
+  TEMPLATE_LIMIT_REACHED:
+    'You cannot add another template. Delete one you no longer use and try again.',
   GUIDELINE_NOT_FOUND: 'Could not find the guideline.',
   GUIDELINE_TEXT_REQUIRED: 'Enter the guideline text.',
   GUIDELINE_TEXT_TOO_LONG:
     'A guideline must be no more than {{max}} characters. It is currently {{actual}}.',
   GUIDELINE_TEXT_TAKEN: 'You already have the same guideline.',
   GUIDELINE_SCOPE_INVALID:
-    'Pick the scope again: leave purposes empty for everything, or pick at least one for specific purposes.',
-  GUIDELINE_PURPOSE_NOT_FOUND:
+    'Pick the scope again: leave templates empty for everything, or pick at least one for specific templates.',
+  GUIDELINE_TEMPLATE_NOT_FOUND:
     'Could not find the purpose you picked. Refresh the list and try again.',
   GUIDELINE_LIMIT_REACHED:
     'You can save at most {{max}} guidelines. Delete one you no longer use and try again.',

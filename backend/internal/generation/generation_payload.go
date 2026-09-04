@@ -5,10 +5,17 @@ import (
 	"fmt"
 )
 
-type purposePayload struct {
-	Name         string `json:"name"`
-	Description  string `json:"description,omitempty"`
-	Instructions string `json:"instructions"`
+type templatePayload struct {
+	Name string `json:"name"`
+	// The expanded, rendered body — not the authored source. What the worker prompts with
+	// must be exactly what enqueue decided.
+	Body  string             `json:"body"`
+	Slots []templateSlotJSON `json:"slots,omitempty"`
+}
+
+type templateSlotJSON struct {
+	Kind  string `json:"kind"`
+	Label string `json:"label,omitempty"`
 }
 
 type observationPayload struct {
@@ -22,10 +29,10 @@ type observationPayload struct {
 }
 
 type generationPayload struct {
-	TargetLanguage string          `json:"target_language"`
-	TargetLength   *int            `json:"target_length,omitempty"`
-	Purpose        *purposePayload `json:"purpose,omitempty"`
-	// The applicable guideline texts in injection order, frozen exactly as Purpose is. A
+	TargetLanguage string           `json:"target_language"`
+	TargetLength   *int             `json:"target_length,omitempty"`
+	Template       *templatePayload `json:"template,omitempty"`
+	// The applicable guideline texts in injection order, frozen exactly as Template is. A
 	// payload written before guidelines existed decodes with this absent, which is "none".
 	Guidelines []string `json:"guidelines,omitempty"`
 	// The photos this run observes, frozen at enqueue. A POINTER, and deliberately without
@@ -40,12 +47,12 @@ type generationPayload struct {
 }
 
 // GenerationOptions is what a durable generate job froze at enqueue. Every field is an
-// option of that one run: a later edit of the post's target length, of the purpose row, or
+// option of that one run: a later edit of the post's target length, of the template row, or
 // of any guideline must not change the prompt of work already waiting in the queue.
 type GenerationOptions struct {
 	TargetLanguage Language
 	TargetLength   *int
-	Purpose        *PurposeBrief
+	Template       *TemplateBrief
 	Guidelines     []string
 	// ObserveFiles carries presence: nil observes every attached photo, non-nil-but-empty
 	// observes nothing. See generationPayload.ObserveFiles for why the distinction matters.
@@ -61,7 +68,7 @@ func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
 	return json.Marshal(generationPayload{
 		TargetLanguage: options.TargetLanguage.String(),
 		TargetLength:   cloneOptionalInt(options.TargetLength),
-		Purpose:        encodePurpose(options.Purpose),
+		Template:       encodeTemplate(options.Template),
 		Guidelines:     cloneTexts(options.Guidelines),
 		ObserveFiles:   cloneOptionalTexts(options.ObserveFiles),
 		Observations:   encodeObservations(options.Observations),
@@ -69,8 +76,8 @@ func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
 }
 
 // DecodeGenerationPayload accepts an empty payload for jobs queued before this
-// contract existed; those jobs intentionally carry no target length and no purpose.
-// A payload written before purposes existed simply decodes with the field absent.
+// contract existed; those jobs intentionally carry no target length and no template.
+// A payload written before templates existed simply decodes with the field absent.
 func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 	if len(raw) == 0 {
 		return GenerationOptions{TargetLanguage: LanguageKorean}, nil
@@ -95,7 +102,7 @@ func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 	return GenerationOptions{
 		TargetLanguage: language,
 		TargetLength:   cloneOptionalInt(payload.TargetLength),
-		Purpose:        decodePurpose(payload.Purpose),
+		Template:       decodeTemplate(payload.Template),
 		Guidelines:     cloneTexts(payload.Guidelines),
 		ObserveFiles:   cloneOptionalTexts(payload.ObserveFiles),
 		Observations:   decodeObservations(payload.Observations),
@@ -152,16 +159,26 @@ func cloneTexts(values []string) []string {
 	return append([]string(nil), values...)
 }
 
-func encodePurpose(brief *PurposeBrief) *purposePayload {
+func encodeTemplate(brief *TemplateBrief) *templatePayload {
 	if brief == nil {
 		return nil
 	}
-	return &purposePayload{Name: brief.Name, Description: brief.Description, Instructions: brief.Instructions}
+	slots := make([]templateSlotJSON, 0, len(brief.Slots))
+	for _, slot := range brief.Slots {
+		slots = append(slots, templateSlotJSON{Kind: slot.Kind, Label: slot.Label})
+	}
+	return &templatePayload{Name: brief.Name, Body: brief.Body, Slots: slots}
 }
 
-func decodePurpose(payload *purposePayload) *PurposeBrief {
+// decodeTemplate reads a payload written before templates existed as "no template" rather
+// than failing: a resumable job must not become unresumable because the contract moved.
+func decodeTemplate(payload *templatePayload) *TemplateBrief {
 	if payload == nil {
 		return nil
 	}
-	return &PurposeBrief{Name: payload.Name, Description: payload.Description, Instructions: payload.Instructions}
+	slots := make([]TemplateSlot, 0, len(payload.Slots))
+	for _, slot := range payload.Slots {
+		slots = append(slots, TemplateSlot{Kind: slot.Kind, Label: slot.Label})
+	}
+	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Slots: slots}
 }

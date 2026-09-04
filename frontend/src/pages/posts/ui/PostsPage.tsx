@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { displayTitle, postStatusLabel, usePosts, type PostListItem } from '@/entities/post'
 import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
-import { PurposeRefLabel } from '@/entities/purpose'
+import { TemplateRefLabel } from '@/entities/template'
 import { VoiceRefLabel } from '@/entities/voice'
 import { formatRelativeTime } from '@/shared/lib'
 import {
@@ -117,9 +117,9 @@ export function PostsPage() {
                   className={typographyStyles({ variant: 'meta' })}
                 />
                 {/* Only for an assigned post, and after the voice: the voice is on every row and
-                    the 용도 is not, so it reads as an addition rather than a second column. */}
-                <PurposeRefLabel
-                  purpose={post.purpose}
+                    the 템플릿 is not, so it reads as an addition rather than a second column. */}
+                <TemplateRefLabel
+                  template={post.template}
                   className={typographyStyles({ variant: 'meta' })}
                 />
                 <time

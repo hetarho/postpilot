@@ -4,30 +4,30 @@ Canonical backend and frontend rules. Source: [plan/16](../plan/16.writing-guide
 
 A **guideline** is a reusable, account-owned rule about what a post must avoid or watch out for. It is the third
 authored layer beside the two that existed: the voice decides how sentences sound
-([policy/voice](voice.md)), the purpose decides genre and required content ([policy/purposes](purposes.md)), and a
-guideline is a prohibition or a caution that outranks the purpose on content while leaving register to the voice.
+([policy/voice](voice.md)), the template decides genre and required content ([policy/templates](templates.md)), and a
+guideline is a prohibition or a caution that outranks the template on content while leaving register to the voice.
 
 ## Ownership and persistence
 
 - An account owns zero or more guidelines (`guidelines`), the user-facing noun 지침. A guideline has exactly one
   authored field — `text` — plus a scope and its timestamps. Nothing else belongs to it.
 - Every store query and RPC is scoped by the authenticated user. No request carries a user id. A foreign guideline id
-  is indistinguishable from an unknown one (`NotFound`), and so is a foreign purpose id named in a scope.
+  is indistinguishable from an unknown one (`NotFound`), and so is a foreign template id named in a scope.
 - **Nothing references a guideline.** Posts, jobs and experiments carry frozen *texts*, never ids, so deleting one
   detaches nothing and leaves every enqueued run readable.
-- Migration `0014_writing_guidelines.sql` creates `guidelines` and `guideline_purposes`. It seeds no rows and
+- Migration `0014_writing_guidelines.sql` creates `guidelines` and `guideline_templates`. It seeds no rows and
   backfills nothing: existing accounts start with zero guidelines, which is what keeps every prompt built before it
   byte-identical to one built after it, apart from the grounding line below.
 - `guidelines(user_id, text)` is unique, so an exact duplicate after trim is refused by the database rather than by a
   service check that two concurrent creates could both pass. `guidelines(id, user_id)` is the composite target
-  `guideline_purposes` points at, so a link can never cross accounts even if a service check is bypassed.
+  `guideline_templates` points at, so a link can never cross accounts even if a service check is bypassed.
 
 ## Field rules
 
 | Field | Rule |
 |---|---|
 | `text` | trimmed, non-empty, at most `GUIDELINE_TEXT_MAX_CHARS` Unicode scalar values (default 300), unique within the account after trim (`AlreadyExists`) |
-| `scope` | `global` (must carry no purpose ids) or `purposes` (must carry ≥ 1 distinct owned purpose id; an unknown or foreign id is `NotFound` and nothing is applied; duplicates in one request collapse to one link) |
+| `scope` | `global` (must carry no template ids) or `templates` (must carry ≥ 1 distinct owned template id; an unknown or foreign id is `NotFound` and nothing is applied; duplicates in one request collapse to one link) |
 | account cap | creating beyond `GUIDELINE_MAX_PER_ACCOUNT` (default 100) is refused with `FailedPrecondition` naming the cap. The cap is checked inside the insert transaction, so two concurrent creates cannot both pass it |
 
 An unset scope on the wire is refused, never defaulted: the one shape that must not be guessed is the one that would
@@ -39,19 +39,19 @@ both halves at once.
 
 ## Scope resolution and injection
 
-- A post with purpose P receives the account's `global` guidelines plus those linked to P. A post with no purpose
-  receives the global ones only. A `purposes` guideline whose every purpose was deleted (**적용 대상 없음**) reaches
+- A post with template P receives the account's `global` guidelines plus those linked to P. A post with no template
+  receives the global ones only. A `templates` guideline whose every template was deleted (**적용 대상 없음**) reaches
   no prompt at all until it is rescoped.
 - Injection order is the global group first, then the scoped group, each by `created_at, id` ascending. The
   management screen lists them in exactly that order, so what the user sees is what the writer is given.
-- The write and revise prompts render **one** `[작문 지침]` section at **one** position: after the `[글의 용도]`
-  section when the post has a purpose, otherwise directly after the voice profile's `[종결어미 제약]`, and always
+- The write and revise prompts render **one** `[작문 지침]` section at **one** position: after the `[글 템플릿]`
+  section when the post has a template, otherwise directly after the voice profile's `[종결어미 제약]`, and always
   before `[이번 글]`. The texts are hyphen-bulleted lines, verbatim, closed by a fixed precedence sentence.
-- The section heading and the precedence sentence stay Korean for every target language, as the purpose section's do:
+- The section heading and the precedence sentence stay Korean for every target language, as the template section's do:
   they frame user-authored text and are not part of the output-language contract. Plan 13's rule stands — the target
   language outranks a conflicting language instruction inside a guideline's text.
 - With no applicable guidelines there is no section at all, and the prompt is byte-identical to the baseline. The
-  voice profile prefix and the purpose section are byte-identical with and without guidelines, so the cache-stable
+  voice profile prefix and the template section are byte-identical with and without guidelines, so the cache-stable
   prefix of PRD §5 and plan 11's acceptance criteria both keep holding.
 
 ## The built-in grounding constraint
@@ -75,9 +75,9 @@ is stated relative to that new baseline.
 
 ## Freezing
 
-- `StartGeneration` and `StartRevision` resolve the post's **current** `purpose_id` once — the same value the purpose
+- `StartGeneration` and `StartRevision` resolve the post's **current** `template_id` once — the same value the template
   brief is resolved from, so both come from one consistent view — and write the applicable ordered texts into the job
-  payload beside `target_length` and `purpose`.
+  payload beside `target_length` and `template`.
 - `StartWriteExperiment` freezes the same texts into the shared prepared snapshot. Both candidates therefore receive
   byte-identical system prompts, and because the texts are part of the snapshot, a different applicable set produces
   a different input hash: a different rule set is a different experiment.
@@ -99,16 +99,16 @@ is stated relative to that new baseline.
 
 ## Frontend
 
-- `/guidelines` (nav 지침, after 용도, lazily split like its siblings) lists the account's guidelines in injection
-  order with a scope badge — `전역`, the purpose-name chips, or `적용 대상 없음` — a read-first text edit, a
+- `/guidelines` (nav 지침, after 템플릿, lazily split like its siblings) lists the account's guidelines in injection
+  order with a scope badge — `전역`, the template-name chips, or `적용 대상 없음` — a read-first text edit, a
   whole-scope edit, and a delete whose confirmation states that already-enqueued work keeps its frozen text and
   nothing else is affected.
 - The create form is a textarea with a live remaining-character count from `shared/config` plus the scope control:
-  a 전역 / 특정 용도 switch and, for the second, a checkbox list of the account's purposes.
-- Purpose names on every chip are a projection, so the list query is keyed `(accountId, 'guidelines')` with
-  `staleTime: 0` and `refetchOnMount: 'always'`. Renaming or deleting a purpose additionally marks it stale.
+  a 전역 / 특정 템플릿 switch and, for the second, a checkbox list of the account's templates.
+- Template names on every chip are a projection, so the list query is keyed `(accountId, 'guidelines')` with
+  `staleTime: 0` and `refetchOnMount: 'always'`. Renaming or deleting a template additionally marks it stale.
 - After a **completed** revision, `지침으로 저장` sits beside `규칙으로 저장` and opens a dialog seeded with the
-  revision instruction, editable before saving, offering 전역 (default) and the post's current purpose when it has one
+  revision instruction, editable before saving, offering 전역 (default) and the post's current template when it has one
   (read from the already-loaded post; no new query). It calls the standard create RPC. `AlreadyExists` renders as
   already-saved information, not a failure. `규칙으로 저장` stays a pre-flight checkbox because the voice learns from
   the run itself; a guideline is a plain create, so it can wait for the result.

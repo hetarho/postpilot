@@ -63,10 +63,10 @@ var (
 	// distinguishable from a nonexistent one.
 	ErrVoiceNotFound = errors.New("voice not found")
 	ErrVoiceDeleted  = errors.New("voice is deleted")
-	// ErrPurposeNotFound covers unknown and foreign purposes alike, like ErrVoiceNotFound.
-	// There is deliberately no ErrPurposeRequired: a post may have none, and clearing the
+	// ErrTemplateNotFound covers unknown and foreign templates alike, like ErrVoiceNotFound.
+	// There is deliberately no ErrTemplateRequired: a post may have none, and clearing the
 	// assignment is a valid save rather than a missing value.
-	ErrPurposeNotFound = errors.New("purpose not found")
+	ErrTemplateNotFound = errors.New("template not found")
 	// ErrLanguageRequired is returned at create/machine-write boundaries when the
 	// caller supplies no concrete supported language.
 	ErrLanguageRequired = errors.New("a content language is required")
@@ -108,10 +108,10 @@ type VoiceRef struct {
 	SourceLanguage Language
 }
 
-// PurposeRef is the purpose a post is written for, as the post context needs it: the id it
-// stores plus the name the purpose context publishes. An empty ID is the ordinary case —
-// a post without a purpose — not a missing value.
-type PurposeRef struct {
+// TemplateRef is the template a post is written for, as the post context needs it: the id it
+// stores plus the name the template context publishes. An empty ID is the ordinary case —
+// a post without a template — not a missing value.
+type TemplateRef struct {
 	ID   string
 	Name string
 }
@@ -124,10 +124,10 @@ type Post struct {
 	UserID  string
 	VoiceID string
 	Voice   VoiceRef
-	// PurposeID is empty when the post has no purpose. Like VoiceID the post stores only
-	// the id; Purpose is enriched on read through the PurposeDirectory port.
-	PurposeID               string
-	Purpose                 PurposeRef
+	// TemplateID is empty when the post has no template. Like VoiceID the post stores only
+	// the id; Template is enriched on read through the TemplateDirectory port.
+	TemplateID              string
+	Template                TemplateRef
 	TargetLanguage          Language
 	ContentLanguage         *Language
 	Title                   string
@@ -233,8 +233,8 @@ type Summary struct {
 	Slug                string
 	VoiceID             string
 	Voice               VoiceRef
-	PurposeID           string
-	Purpose             PurposeRef
+	TemplateID          string
+	Template            TemplateRef
 	Title               string
 	Status              string
 	UpdatedAt           time.Time

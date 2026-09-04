@@ -36,14 +36,14 @@ export interface Draft {
  *  what the server holds, so an ordinary title save can never carry a stale voice over a
  *  newer one.
  *
- *  `purposeId` is the same mechanism with one more state, because a post may have none:
+ *  `templateId` is the same mechanism with one more state, because a post may have none:
  *  undefined leaves the assignment alone, '' clears it, and an id assigns it. On a create it
  *  is sent only when one was chosen — 없음 is the default and the server never picks. */
 export type SendDraft = (
   slug: string,
   draft: Draft,
   voiceId: string | undefined,
-  purposeId: string | undefined,
+  templateId: string | undefined,
   targetLanguage: ContentLanguage | undefined,
 ) => Promise<string>
 
@@ -64,10 +64,10 @@ export interface DraftQueueHandle {
    *  autosave has fired. Resolves once the create lands, however many retries that
    *  takes; rejects only if the session ends first. */
   mint: () => Promise<string>
-  /** Records the 용도 this draft is written for, '' for 없음. Same shape as `assignVoice`:
+  /** Records the 템플릿 this draft is written for, '' for 없음. Same shape as `assignVoice`:
    *  before the post exists the choice rides along with the create, and afterwards it is sent
    *  at once so a delayed title save cannot revert a newer selection. */
-  assignPurpose: (purposeId: string) => Promise<void>
+  assignTemplate: (templateId: string) => Promise<void>
   /** Records the voice this draft is written in. For a draft with no post yet that is all
    *  it does — the create carries it. For an existing post it is a reassignment: sent at
    *  once, and the promise reports that one save's outcome. A refused reassignment is taken
@@ -93,8 +93,8 @@ interface VoiceWaiter extends FlushWaiter {
   voiceId: string
 }
 
-interface PurposeWaiter extends FlushWaiter {
-  purposeId: string
+interface TemplateWaiter extends FlushWaiter {
+  templateId: string
 }
 
 interface TargetLanguageWaiter extends FlushWaiter {
@@ -117,11 +117,11 @@ interface Queue {
   voiceId: string
   /** The voice the server is known to hold; empty until the post exists. */
   savedVoiceId: string
-  /** The 용도 the editor wants, '' for 없음. */
-  purposeId: string
-  /** The 용도 the server is known to hold. Empty means 없음 — which is also the value a post
+  /** The 템플릿 the editor wants, '' for 없음. */
+  templateId: string
+  /** The 템플릿 the server is known to hold. Empty means 없음 — which is also the value a post
    *  starts at, so unlike the voice there is no "not known yet" state to distinguish. */
-  savedPurposeId: string
+  savedTemplateId: string
   /** The target the editor wants and the target the server is known to hold. */
   targetLanguage: ContentLanguage
   savedTargetLanguage: ContentLanguage | undefined
@@ -148,7 +148,7 @@ interface Queue {
   flushWaiters: FlushWaiter[]
   /** Callers of `assignVoice` waiting for their reassignment to land. */
   voiceWaiters: VoiceWaiter[]
-  purposeWaiters: PurposeWaiter[]
+  templateWaiters: TemplateWaiter[]
   targetLanguageWaiters: TargetLanguageWaiter[]
 }
 
@@ -195,19 +195,19 @@ function voiceToSend(queue: Queue): string | undefined {
   return voiceDirty(queue) ? queue.voiceId : undefined
 }
 
-/** True while the editor's 용도 differs from what the server holds. */
-function purposeDirty(queue: Queue): boolean {
-  return Boolean(queue.slug) && queue.purposeId !== queue.savedPurposeId
+/** True while the editor's 템플릿 differs from what the server holds. */
+function templateDirty(queue: Queue): boolean {
+  return Boolean(queue.slug) && queue.templateId !== queue.savedTemplateId
 }
 
-/** What a request carries for the 용도 — see `SendDraft`.
+/** What a request carries for the 템플릿 — see `SendDraft`.
  *
  *  On a create, 없음 sends nothing rather than an empty string: the create has no assignment
- *  to clear, and omitting it keeps the request identical to what it was before purposes
+ *  to clear, and omitting it keeps the request identical to what it was before templates
  *  existed. On an existing post a dirty '' IS sent, because there it means "clear". */
-function purposeToSend(queue: Queue): string | undefined {
-  if (!queue.slug) return queue.purposeId || undefined
-  return purposeDirty(queue) ? queue.purposeId : undefined
+function templateToSend(queue: Queue): string | undefined {
+  if (!queue.slug) return queue.templateId || undefined
+  return templateDirty(queue) ? queue.templateId : undefined
 }
 
 function targetLanguageDirty(queue: Queue): boolean {
@@ -247,21 +247,21 @@ function rejectFlushes(queue: Queue, cause: unknown): void {
 /** Answers the reassignments that have landed. One still differing from what the server
  *  holds keeps waiting for the save that carries it — unless the editor has since chosen a
  *  third voice, in which case it will never land and says so. */
-function settlePurposeWaiters(queue: Queue): void {
-  const waiting: PurposeWaiter[] = []
-  for (const waiter of queue.purposeWaiters) {
-    if (waiter.purposeId === queue.savedPurposeId) waiter.resolve()
-    else if (waiter.purposeId !== queue.purposeId)
-      waiter.reject(new Error('purpose assignment superseded'))
+function settleTemplateWaiters(queue: Queue): void {
+  const waiting: TemplateWaiter[] = []
+  for (const waiter of queue.templateWaiters) {
+    if (waiter.templateId === queue.savedTemplateId) waiter.resolve()
+    else if (waiter.templateId !== queue.templateId)
+      waiter.reject(new Error('template assignment superseded'))
     else waiting.push(waiter)
   }
-  queue.purposeWaiters = waiting
+  queue.templateWaiters = waiting
 }
 
-function rejectPurposeWaiters(queue: Queue, cause: unknown): void {
-  const error = cause instanceof Error ? cause : new Error('purpose assignment failed')
-  const waiters = queue.purposeWaiters
-  queue.purposeWaiters = []
+function rejectTemplateWaiters(queue: Queue, cause: unknown): void {
+  const error = cause instanceof Error ? cause : new Error('template assignment failed')
+  const waiters = queue.templateWaiters
+  queue.templateWaiters = []
   for (const waiter of waiters) waiter.reject(error)
 }
 
@@ -346,14 +346,14 @@ async function run(queue: Queue): Promise<void> {
 
   const sent = queue.pending
   const sentVoice = voiceToSend(queue)
-  const sentPurpose = purposeToSend(queue)
+  const sentTemplate = templateToSend(queue)
   const sentTargetLanguage = targetLanguageToSend(queue)
   queue.inFlight = true
   queue.sending = sent
   publish(queue)
 
   try {
-    const slug = await queue.send(queue.slug, sent, sentVoice, sentPurpose, sentTargetLanguage)
+    const slug = await queue.send(queue.slug, sent, sentVoice, sentTemplate, sentTargetLanguage)
     if (queue.discarded) return
     queue.inFlight = false
     queue.sending = undefined
@@ -361,7 +361,7 @@ async function run(queue: Queue): Promise<void> {
     queue.failed = false
     queue.saved = sent
     if (sentVoice !== undefined) queue.savedVoiceId = sentVoice
-    if (sentPurpose !== undefined) queue.savedPurposeId = sentPurpose
+    if (sentTemplate !== undefined) queue.savedTemplateId = sentTemplate
     if (sentTargetLanguage !== undefined) queue.savedTargetLanguage = sentTargetLanguage
     queue.everSaved = true
     const minted = !queue.slug && Boolean(slug)
@@ -372,11 +372,11 @@ async function run(queue: Queue): Promise<void> {
       queue.pending &&
       sameDraft(queue.pending, sent) &&
       !voiceDirty(queue) &&
-      !purposeDirty(queue) &&
+      !templateDirty(queue) &&
       !targetLanguageDirty(queue)
     ) {
       queue.pending = undefined
-    } else if (voiceDirty(queue) || purposeDirty(queue) || targetLanguageDirty(queue)) {
+    } else if (voiceDirty(queue) || templateDirty(queue) || targetLanguageDirty(queue)) {
       // An assignment does not wait for a debounce: it is an action, not a keystroke.
       queue.pending ??= { ...sent }
       queue.urgent = true
@@ -398,7 +398,7 @@ async function run(queue: Queue): Promise<void> {
     queue.urgent = false
     settleFlushes(queue)
     settleVoiceWaiters(queue)
-    settlePurposeWaiters(queue)
+    settleTemplateWaiters(queue)
     settleTargetLanguageWaiters(queue)
   } catch (cause) {
     // Swallowed rather than rethrown: every caller is a timer or a teardown handler with
@@ -415,12 +415,12 @@ async function run(queue: Queue): Promise<void> {
       rejectVoiceWaiters(queue, cause)
     }
 
-    if (sentPurpose !== undefined && queue.slug) {
+    if (sentTemplate !== undefined && queue.slug) {
       // Taken back for the same reason a refused reassignment is: the refusal is an answer
-      // (a purpose deleted meanwhile, a foreign id), and retrying it with every save would
+      // (a template deleted meanwhile, a foreign id), and retrying it with every save would
       // keep the title from ever landing again.
-      queue.purposeId = queue.savedPurposeId
-      rejectPurposeWaiters(queue, cause)
+      queue.templateId = queue.savedTemplateId
+      rejectTemplateWaiters(queue, cause)
     }
 
     if (sentTargetLanguage !== undefined && queue.slug) {
@@ -433,7 +433,7 @@ async function run(queue: Queue): Promise<void> {
       sameDraft(queue.pending, queue.saved) &&
       !wantsPost(queue) &&
       !voiceDirty(queue) &&
-      !purposeDirty(queue) &&
+      !templateDirty(queue) &&
       !targetLanguageDirty(queue)
     ) {
       // Typed back to what the server holds while this attempt was out — there is nothing
@@ -473,8 +473,8 @@ export function attachDraftQueue(options: {
   /** The voice the post is written in as this editor was told — or, for a draft with no
    *  post yet, the one it will be created in. Same caveat as `saved`. */
   voiceId: string
-  /** The 용도 the post is assigned to as this editor was told, '' for 없음. */
-  purposeId: string
+  /** The 템플릿 the post is assigned to as this editor was told, '' for 없음. */
+  templateId: string
   /** Concrete on both new and existing editors; a new draft sends it only when it is created. */
   targetLanguage: ContentLanguage
   send: SendDraft
@@ -493,10 +493,10 @@ export function attachDraftQueue(options: {
       pending: undefined,
       voiceId: options.voiceId,
       savedVoiceId: options.slug ? options.voiceId : '',
-      purposeId: options.purposeId,
-      // '' either way: an existing post with no purpose and a draft with no post both hold
+      templateId: options.templateId,
+      // '' either way: an existing post with no template and a draft with no post both hold
       // 없음, so the create's "send only when chosen" rule needs no extra state.
-      savedPurposeId: options.slug ? options.purposeId : '',
+      savedTemplateId: options.slug ? options.templateId : '',
       targetLanguage: options.targetLanguage,
       savedTargetLanguage: options.slug ? options.targetLanguage : undefined,
       everSaved: false,
@@ -513,7 +513,7 @@ export function attachDraftQueue(options: {
       mintWaiters: [],
       flushWaiters: [],
       voiceWaiters: [],
-      purposeWaiters: [],
+      templateWaiters: [],
       targetLanguageWaiters: [],
     }
     queues.set(key, queue)
@@ -538,7 +538,7 @@ export function attachDraftQueue(options: {
         sameDraft(draft, attached.sending ?? attached.saved) &&
         !wantsPost(attached) &&
         !voiceDirty(attached) &&
-        !purposeDirty(attached) &&
+        !templateDirty(attached) &&
         !targetLanguageDirty(attached)
       ) {
         // Typed back to what the server holds. Leaving "저장 대기 중" or "다시 시도 중" on
@@ -590,19 +590,19 @@ export function attachDraftQueue(options: {
       })
     },
 
-    assignPurpose: (purposeId) => {
+    assignTemplate: (templateId) => {
       if (attached.discarded) return Promise.reject(new Error('session ended'))
-      attached.purposeId = purposeId
+      attached.templateId = templateId
       // Before the post exists the choice rides along with the create — including a create
       // already in flight, which `run` follows up the moment it lands.
-      if (!attached.slug || purposeId === attached.savedPurposeId) return Promise.resolve()
+      if (!attached.slug || templateId === attached.savedTemplateId) return Promise.resolve()
       // Nothing typed since the last save: the assignment still needs a request to ride on,
       // so the newest known text is re-sent with it. This is what makes a delayed title save
       // unable to revert a newer selection — the selection goes out on its own request.
       attached.pending ??= { ...(attached.sending ?? attached.saved) }
       publish(attached)
       return new Promise<void>((resolve, reject) => {
-        attached.purposeWaiters.push({ purposeId, resolve, reject })
+        attached.templateWaiters.push({ templateId, resolve, reject })
         sendNow(attached)
       })
     },
@@ -653,7 +653,7 @@ export function peekPendingDraft(slug: string): Draft | undefined {
 
 /** Drops every queue, cancelling whatever they were still going to send.
  *
- *  A queue outlives its editor on purpose, but it must never outlive its session: a retry
+ *  A queue outlives its editor on template, but it must never outlive its session: a retry
  *  that fires after someone else has signed in on the same device would send the previous
  *  account's draft under the new account's cookie, and the server would file it there.
  *  Called by the app layer on logout and on a session that died mid-use. */
@@ -667,7 +667,7 @@ export function discardDraftQueues(): void {
  *  The one exception to "a queue outlives its editor, never its session": an intentional
  *  delete also ends a queue, for that slug alone. Without it a failing save would keep
  *  retrying against a slug the server no longer knows, and the user would be told their
- *  save failed for a post they destroyed on purpose. Other slugs are untouched. */
+ *  save failed for a post they destroyed on template. Other slugs are untouched. */
 export function discardDraftQueue(slug: string): void {
   const queue = queues.get(slug)
   if (!queue) return
@@ -686,8 +686,8 @@ function discardQueue(queue: Queue, reason: string): void {
   queue.flushWaiters = []
   for (const waiter of queue.voiceWaiters) waiter.reject(new Error(reason))
   queue.voiceWaiters = []
-  for (const waiter of queue.purposeWaiters) waiter.reject(new Error(reason))
-  queue.purposeWaiters = []
+  for (const waiter of queue.templateWaiters) waiter.reject(new Error(reason))
+  queue.templateWaiters = []
   for (const waiter of queue.targetLanguageWaiters) waiter.reject(new Error(reason))
   queue.targetLanguageWaiters = []
 }

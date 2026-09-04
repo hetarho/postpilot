@@ -2,6 +2,7 @@ export { isInAppPath, SIGNED_IN_HOME } from './redirect'
 export { applyDocumentMetadata } from './document-metadata'
 export type { DocumentMetadata } from './document-metadata'
 export { formatRelativeTime } from './datetime'
+export { presignExpired } from './presign'
 export {
   formatDate,
   formatDateTime,
@@ -13,11 +14,13 @@ export { formatAppFailure } from './localization'
 export { activeLocale } from './localization'
 export type { Locale } from './localization'
 export {
+  blockSlotPlaceholder,
   escapeHtml,
   escapeHtmlComment,
   escapeMarkdownLabel,
   headingTag,
   relativeFileUrl,
+  unfilledSlotCount,
   walkBlocks,
   yamlString,
 } from './blocks'

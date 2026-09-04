@@ -3,7 +3,7 @@ export const nav = {
   home: 'Postpilot 홈',
   posts: '글',
   voices: '말투',
-  purposes: '용도',
+  templates: '템플릿',
   guidelines: '지침',
   models: 'AI 모델',
   publishingAgents: '발행 Mac',

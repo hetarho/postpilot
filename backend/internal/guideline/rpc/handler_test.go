@@ -24,7 +24,7 @@ func TestConnectCodesAndStableReasons(t *testing.T) {
 	}{
 		"duplicate text":     {guideline.ErrDuplicateText, connect.CodeAlreadyExists, "GUIDELINE_TEXT_TAKEN"},
 		"unknown or foreign": {guideline.ErrNotFound, connect.CodeNotFound, "GUIDELINE_NOT_FOUND"},
-		"foreign purpose":    {guideline.ErrPurposeNotFound, connect.CodeNotFound, "GUIDELINE_PURPOSE_NOT_FOUND"},
+		"foreign template":   {guideline.ErrTemplateNotFound, connect.CodeNotFound, "GUIDELINE_TEMPLATE_NOT_FOUND"},
 		"blank text":         {guideline.ErrInvalidText, connect.CodeInvalidArgument, "GUIDELINE_TEXT_REQUIRED"},
 		"scope shape":        {guideline.ErrScopeShape, connect.CodeInvalidArgument, "GUIDELINE_SCOPE_INVALID"},
 		"text too long":      {&guideline.TextTooLongError{Chars: 301, Max: 300}, connect.CodeInvalidArgument, "GUIDELINE_TEXT_TOO_LONG"},
@@ -122,8 +122,8 @@ func TestUnspecifiedScopeIsRefused(t *testing.T) {
 		t.Fatalf("unspecified scope err = %v", err)
 	}
 	for wire, want := range map[postpilotv1.GuidelineScope]guideline.Scope{
-		postpilotv1.GuidelineScope_GUIDELINE_SCOPE_GLOBAL:   guideline.ScopeGlobal,
-		postpilotv1.GuidelineScope_GUIDELINE_SCOPE_PURPOSES: guideline.ScopePurposes,
+		postpilotv1.GuidelineScope_GUIDELINE_SCOPE_GLOBAL:    guideline.ScopeGlobal,
+		postpilotv1.GuidelineScope_GUIDELINE_SCOPE_TEMPLATES: guideline.ScopeTemplates,
 	} {
 		got, err := fromProtoScope(wire)
 		if err != nil || got != want {
@@ -136,22 +136,22 @@ func TestUnspecifiedScopeIsRefused(t *testing.T) {
 func TestGuidelineProjectionCarriesTextScopeAndProjectedNames(t *testing.T) {
 	at := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 	projected := toProtoGuideline(guideline.Guideline{
-		ID: "g1", Text: "CCTV 언급 금지", Scope: guideline.ScopePurposes,
-		PurposeIDs: []string{"p1"}, Purposes: []guideline.PurposeRef{{ID: "p1", Name: "리뷰"}},
+		ID: "g1", Text: "CCTV 언급 금지", Scope: guideline.ScopeTemplates,
+		TemplateIDs: []string{"p1"}, Templates: []guideline.TemplateRef{{ID: "p1", Name: "리뷰"}},
 		CreatedAt: at, UpdatedAt: at,
 	})
 	if projected.GetId() != "g1" || projected.GetText() != "CCTV 언급 금지" {
 		t.Fatalf("projection = %+v", projected)
 	}
-	if projected.GetScope() != postpilotv1.GuidelineScope_GUIDELINE_SCOPE_PURPOSES {
+	if projected.GetScope() != postpilotv1.GuidelineScope_GUIDELINE_SCOPE_TEMPLATES {
 		t.Fatalf("scope = %v", projected.GetScope())
 	}
-	if len(projected.GetPurposes()) != 1 || projected.GetPurposes()[0].GetName() != "리뷰" {
-		t.Fatalf("purposes = %+v", projected.GetPurposes())
+	if len(projected.GetTemplates()) != 1 || projected.GetTemplates()[0].GetName() != "리뷰" {
+		t.Fatalf("templates = %+v", projected.GetTemplates())
 	}
-	// An orphaned scoped guideline is a real state: purposes empty, scope still PURPOSES.
-	orphan := toProtoGuideline(guideline.Guideline{ID: "g2", Scope: guideline.ScopePurposes, CreatedAt: at, UpdatedAt: at})
-	if orphan.GetScope() != postpilotv1.GuidelineScope_GUIDELINE_SCOPE_PURPOSES || len(orphan.GetPurposes()) != 0 {
+	// An orphaned scoped guideline is a real state: templates empty, scope still PURPOSES.
+	orphan := toProtoGuideline(guideline.Guideline{ID: "g2", Scope: guideline.ScopeTemplates, CreatedAt: at, UpdatedAt: at})
+	if orphan.GetScope() != postpilotv1.GuidelineScope_GUIDELINE_SCOPE_TEMPLATES || len(orphan.GetTemplates()) != 0 {
 		t.Fatalf("orphan projection = %+v", orphan)
 	}
 	if toProtoGuideline(guideline.Guideline{}) != nil {

@@ -25,13 +25,13 @@ function backend(options: { failures?: number; mint?: string; holds?: number } =
     slug: string
     draft: Draft
     voiceId: string | undefined
-    purposeId: string | undefined
+    templateId: string | undefined
   }> = []
   const held: Array<() => void> = []
   const targets: Array<ContentLanguage | undefined> = []
 
-  const send: SendDraft = async (slug, value, voiceId, purposeId, targetLanguage) => {
-    sent.push({ slug, draft: { ...value }, voiceId, purposeId })
+  const send: SendDraft = async (slug, value, voiceId, templateId, targetLanguage) => {
+    sent.push({ slug, draft: { ...value }, voiceId, templateId })
     targets.push(targetLanguage)
     if (holds > 0) {
       holds -= 1
@@ -49,7 +49,7 @@ function backend(options: { failures?: number; mint?: string; holds?: number } =
     sent,
     titles: () => sent.map((call) => call.draft.title),
     voices: () => sent.map((call) => call.voiceId),
-    purposes: () => sent.map((call) => call.purposeId),
+    templates: () => sent.map((call) => call.templateId),
     targets: () => targets,
     /** Lets the oldest held request finish. */
     open: () => held.shift()?.(),
@@ -62,7 +62,7 @@ function attach(
     slug?: string
     saved?: Draft
     voiceId?: string
-    purposeId?: string
+    templateId?: string
     targetLanguage?: ContentLanguage
   } = {},
 ) {
@@ -72,7 +72,7 @@ function attach(
     slug: options.slug,
     saved: options.saved ?? EMPTY,
     voiceId: options.voiceId ?? 'voice-a',
-    purposeId: options.purposeId ?? '',
+    templateId: options.templateId ?? '',
     targetLanguage: options.targetLanguage ?? 'ko',
     send,
     onState: (state) => states.push(state),
@@ -549,66 +549,70 @@ describe('the voice assignment', () => {
   })
 })
 
-// Plan 11 A12: the 용도 rides the same queue as the text, with one more state than the voice —
+// Plan 11 A12: the 템플릿 rides the same queue as the text, with one more state than the voice —
 // a post may have none, so '' is a real value meaning "clear".
-describe('the post purpose', () => {
+describe('the post template', () => {
   it('sends nothing on a create that stayed on 없음', async () => {
     const api = backend()
-    const { handle } = attach(api.send, { purposeId: '' })
+    const { handle } = attach(api.send, { templateId: '' })
 
     handle.queue(draft('제주'))
     await advance(AUTOSAVE_DEBOUNCE_MS)
 
     // Omitted, not '': a create has no assignment to clear, so the request is exactly what it
-    // was before purposes existed.
-    expect(api.purposes()).toEqual([undefined])
+    // was before templates existed.
+    expect(api.templates()).toEqual([undefined])
   })
 
-  it('carries a purpose chosen before the post exists into the create', async () => {
+  it('carries a template chosen before the post exists into the create', async () => {
     const api = backend()
-    const { handle } = attach(api.send, { purposeId: '' })
+    const { handle } = attach(api.send, { templateId: '' })
 
-    await expect(handle.assignPurpose('purpose-a')).resolves.toBeUndefined()
+    await expect(handle.assignTemplate('template-a')).resolves.toBeUndefined()
     await advance(10_000)
     expect(api.sent).toHaveLength(0)
 
     handle.queue(draft('제주'))
     await advance(AUTOSAVE_DEBOUNCE_MS)
-    expect(api.purposes()).toEqual(['purpose-a'])
+    expect(api.templates()).toEqual(['template-a'])
   })
 
   it('assigns an existing post at once, then leaves later saves alone', async () => {
     const api = backend()
-    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), purposeId: '' })
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), templateId: '' })
 
-    const done = handle.assignPurpose('purpose-a')
+    const done = handle.assignTemplate('template-a')
     await advance(0)
     await expect(done).resolves.toBeUndefined()
-    expect(api.purposes()).toEqual(['purpose-a'])
+    expect(api.templates()).toEqual(['template-a'])
 
     handle.queue(draft('제주 3일'))
     await advance(AUTOSAVE_DEBOUNCE_MS)
-    expect(api.purposes()).toEqual(['purpose-a', undefined])
+    expect(api.templates()).toEqual(['template-a', undefined])
   })
 
   it('sends an empty string to clear an assignment', async () => {
     const api = backend()
-    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), purposeId: 'purpose-a' })
+    const { handle } = attach(api.send, {
+      slug: 'p',
+      saved: draft('제주'),
+      templateId: 'template-a',
+    })
 
-    await handle.assignPurpose('')
+    await handle.assignTemplate('')
     await advance(0)
 
     // Present-and-empty, which is what the server reads as 없음 — distinct from omitting it.
-    expect(api.purposes()).toEqual([''])
+    expect(api.templates()).toEqual([''])
   })
 
   // The bug this shares with the voice: a title save that left before the selection must not
   // carry the old assignment back over it.
   it('does not let text typed during an assignment revert it', async () => {
     const api = backend({ holds: 1 })
-    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), purposeId: '' })
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), templateId: '' })
 
-    const done = handle.assignPurpose('purpose-a')
+    const done = handle.assignTemplate('template-a')
     await advance(0)
     handle.queue(draft('제주 3일'))
     api.open()
@@ -616,16 +620,16 @@ describe('the post purpose', () => {
     await advance(AUTOSAVE_DEBOUNCE_MS)
 
     expect(api.sent).toEqual([
-      { slug: 'p', draft: draft('제주'), voiceId: undefined, purposeId: 'purpose-a' },
-      { slug: 'p', draft: draft('제주 3일'), voiceId: undefined, purposeId: undefined },
+      { slug: 'p', draft: draft('제주'), voiceId: undefined, templateId: 'template-a' },
+      { slug: 'p', draft: draft('제주 3일'), voiceId: undefined, templateId: undefined },
     ])
   })
 
   it('takes a refused assignment back so the next save carries text only', async () => {
     const api = backend({ failures: 1 })
-    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), purposeId: '' })
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), templateId: '' })
 
-    await expect(handle.assignPurpose('purpose-a')).rejects.toThrow('offline')
+    await expect(handle.assignTemplate('template-a')).rejects.toThrow('offline')
     await advance(AUTOSAVE_RETRY_BASE_MS * 4)
     expect(api.sent).toHaveLength(1)
 
@@ -635,7 +639,7 @@ describe('the post purpose', () => {
       slug: 'p',
       draft: draft('제주 3일'),
       voiceId: undefined,
-      purposeId: undefined,
+      templateId: undefined,
     })
   })
 })

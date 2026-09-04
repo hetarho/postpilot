@@ -19,7 +19,7 @@ type fakeStore struct {
 	rows          map[string]Guideline
 	patched       Patch
 	texts         []string
-	askedPurpose  string
+	askedTemplate string
 	askedAccount  string
 	applicableErr error
 }
@@ -65,7 +65,7 @@ func (f *fakeStore) Update(_ context.Context, userID, id string, patch Patch, _ 
 	}
 	if patch.Scope != nil {
 		g.Scope = patch.Scope.Scope
-		g.PurposeIDs = patch.Scope.PurposeIDs
+		g.TemplateIDs = patch.Scope.TemplateIDs
 	}
 	f.rows[id] = g
 	return g, nil
@@ -80,20 +80,20 @@ func (f *fakeStore) Delete(_ context.Context, userID, id string) error {
 	return nil
 }
 
-func (f *fakeStore) ApplicableTexts(_ context.Context, userID, purposeID string) ([]string, error) {
-	f.askedAccount, f.askedPurpose = userID, purposeID
+func (f *fakeStore) ApplicableTexts(_ context.Context, userID, templateID string) ([]string, error) {
+	f.askedAccount, f.askedTemplate = userID, templateID
 	return f.texts, f.applicableErr
 }
 
 type fakeDirectory struct {
-	purposes []PurposeRef
-	err      error
-	calls    int
+	templates []TemplateRef
+	err       error
+	calls     int
 }
 
-func (f *fakeDirectory) Purposes(_ context.Context, _ string) ([]PurposeRef, error) {
+func (f *fakeDirectory) Templates(_ context.Context, _ string) ([]TemplateRef, error) {
 	f.calls++
-	return f.purposes, f.err
+	return f.templates, f.err
 }
 
 func newTestService(t *testing.T, directory *fakeDirectory) (*Service, *fakeStore) {
@@ -104,7 +104,7 @@ func newTestService(t *testing.T, directory *fakeDirectory) (*Service, *fakeStor
 	ids := 0
 	svc.newID = func() string { ids++; return "g" + string(rune('0'+ids)) }
 	if directory != nil {
-		svc.SetPurposeDirectory(directory)
+		svc.SetTemplateDirectory(directory)
 	}
 	return svc, store
 }
@@ -139,50 +139,50 @@ func TestCreateTrimsBoundsAndPassesTheCap(t *testing.T) {
 
 // A2: the two contradictory scope shapes are refused rather than repaired.
 func TestCreateRefusesContradictoryScopeShapes(t *testing.T) {
-	directory := &fakeDirectory{purposes: []PurposeRef{{ID: "p1", Name: "리뷰"}}}
+	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}}}
 	svc, _ := newTestService(t, directory)
 	if _, err := svc.Create(context.Background(), "alice", "a", ScopeGlobal, []string{"p1"}); !errors.Is(err, ErrScopeShape) {
 		t.Fatalf("global with ids err = %v", err)
 	}
-	if _, err := svc.Create(context.Background(), "alice", "a", ScopePurposes, nil); !errors.Is(err, ErrScopeShape) {
-		t.Fatalf("purposes with no ids err = %v", err)
+	if _, err := svc.Create(context.Background(), "alice", "a", ScopeTemplates, nil); !errors.Is(err, ErrScopeShape) {
+		t.Fatalf("templates with no ids err = %v", err)
 	}
 	if _, err := svc.Create(context.Background(), "alice", "a", Scope("voice"), nil); !errors.Is(err, ErrScopeShape) {
 		t.Fatalf("unknown scope err = %v", err)
 	}
 }
 
-// A2: an unknown or foreign purpose id is not-found and nothing is applied; duplicates in one
+// A2: an unknown or foreign template id is not-found and nothing is applied; duplicates in one
 // request collapse to one link.
-func TestCreateValidatesScopedPurposesAndCollapsesDuplicates(t *testing.T) {
-	directory := &fakeDirectory{purposes: []PurposeRef{{ID: "p1", Name: "리뷰"}, {ID: "p2", Name: "후기"}}}
+func TestCreateValidatesScopedTemplatesAndCollapsesDuplicates(t *testing.T) {
+	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}, {ID: "p2", Name: "후기"}}}
 	svc, store := newTestService(t, directory)
 
-	if _, err := svc.Create(context.Background(), "alice", "a", ScopePurposes, []string{"p1", "nope"}); !errors.Is(err, ErrPurposeNotFound) {
-		t.Fatalf("unknown purpose err = %v", err)
+	if _, err := svc.Create(context.Background(), "alice", "a", ScopeTemplates, []string{"p1", "nope"}); !errors.Is(err, ErrTemplateNotFound) {
+		t.Fatalf("unknown template err = %v", err)
 	}
 	if len(store.inserted) != 0 {
 		t.Fatal("a refused scope still wrote a row")
 	}
-	created, err := svc.Create(context.Background(), "alice", "a", ScopePurposes, []string{"p2", "p1", "p2"})
+	created, err := svc.Create(context.Background(), "alice", "a", ScopeTemplates, []string{"p2", "p1", "p2"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := created.PurposeIDs; len(got) != 2 || got[0] != "p2" || got[1] != "p1" {
-		t.Fatalf("purpose ids = %v, want the request order with the duplicate collapsed", got)
+	if got := created.TemplateIDs; len(got) != 2 || got[0] != "p2" || got[1] != "p1" {
+		t.Fatalf("template ids = %v, want the request order with the duplicate collapsed", got)
 	}
 	// The projection is by name, not by request order, so chips read predictably.
-	if len(created.Purposes) != 2 || created.Purposes[0].Name != "리뷰" || created.Purposes[1].Name != "후기" {
-		t.Fatalf("projected purposes = %+v", created.Purposes)
+	if len(created.Templates) != 2 || created.Templates[0].Name != "리뷰" || created.Templates[1].Name != "후기" {
+		t.Fatalf("projected templates = %+v", created.Templates)
 	}
 }
 
 // A3: presence is the edit unit. A text-only patch must carry no scope at all, so nothing can
 // overwrite a scope saved from elsewhere.
 func TestUpdateCarriesOnlyWhatTheRequestSent(t *testing.T) {
-	directory := &fakeDirectory{purposes: []PurposeRef{{ID: "p1", Name: "리뷰"}}}
+	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}}}
 	svc, store := newTestService(t, directory)
-	store.rows["g1"] = Guideline{ID: "g1", UserID: "alice", Text: "old", Scope: ScopePurposes, PurposeIDs: []string{"p1"}}
+	store.rows["g1"] = Guideline{ID: "g1", UserID: "alice", Text: "old", Scope: ScopeTemplates, TemplateIDs: []string{"p1"}}
 
 	text := "  new  "
 	if _, err := svc.Update(context.Background(), "alice", "g1", Patch{Text: &text}); err != nil {
@@ -201,8 +201,8 @@ func TestUpdateCarriesOnlyWhatTheRequestSent(t *testing.T) {
 	if store.patched.Text != nil {
 		t.Fatal("a scope-only edit named the text")
 	}
-	if _, err := svc.Update(context.Background(), "alice", "g1", Patch{Scope: &ScopePatch{Scope: ScopePurposes, PurposeIDs: []string{"gone"}}}); !errors.Is(err, ErrPurposeNotFound) {
-		t.Fatalf("foreign purpose in a scope patch err = %v", err)
+	if _, err := svc.Update(context.Background(), "alice", "g1", Patch{Scope: &ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"gone"}}}); !errors.Is(err, ErrTemplateNotFound) {
+		t.Fatalf("foreign template in a scope patch err = %v", err)
 	}
 }
 
@@ -222,18 +222,18 @@ func TestForeignIdsReadAsUnknown(t *testing.T) {
 	}
 }
 
-// A5: a post with a purpose asks for that purpose; a post without one asks for no purpose, and
+// A5: a post with a template asks for that template; a post without one asks for no template, and
 // the two must not be spelled the same way.
-func TestForPromptDistinguishesNoPurposeFromAPurpose(t *testing.T) {
+func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	svc, store := newTestService(t, nil)
-	store.texts = []string{"전역 1", "용도 1"}
+	store.texts = []string{"전역 1", "템플릿 1"}
 
 	texts, err := svc.ForPrompt(context.Background(), "alice", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if store.askedPurpose != "" || store.askedAccount != "alice" {
-		t.Fatalf("no-purpose resolution asked for %q / %q", store.askedAccount, store.askedPurpose)
+	if store.askedTemplate != "" || store.askedAccount != "alice" {
+		t.Fatalf("no-template resolution asked for %q / %q", store.askedAccount, store.askedTemplate)
 	}
 	if len(texts) != 2 {
 		t.Fatalf("texts = %v", texts)
@@ -242,18 +242,18 @@ func TestForPromptDistinguishesNoPurposeFromAPurpose(t *testing.T) {
 	if _, err := svc.ForPrompt(context.Background(), "alice", &id); err != nil {
 		t.Fatal(err)
 	}
-	if store.askedPurpose != "p1" {
-		t.Fatalf("purpose asked = %q, want the trimmed id", store.askedPurpose)
+	if store.askedTemplate != "p1" {
+		t.Fatalf("template asked = %q, want the trimmed id", store.askedTemplate)
 	}
 }
 
 // A2: names come from the directory. A scoped id the directory no longer knows is dropped
 // rather than shown as a blank chip — that is the orphaned-scope state.
-func TestProjectionDropsUnknownPurposeIdsAndReadsTheDirectoryOnce(t *testing.T) {
-	directory := &fakeDirectory{purposes: []PurposeRef{{ID: "p1", Name: "리뷰"}}}
+func TestProjectionDropsUnknownTemplateIdsAndReadsTheDirectoryOnce(t *testing.T) {
+	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}}}
 	svc, store := newTestService(t, directory)
-	store.rows["g1"] = Guideline{ID: "g1", UserID: "alice", Scope: ScopePurposes, PurposeIDs: []string{"p1", "deleted"}}
-	store.rows["g2"] = Guideline{ID: "g2", UserID: "alice", Scope: ScopePurposes, PurposeIDs: []string{"p1"}}
+	store.rows["g1"] = Guideline{ID: "g1", UserID: "alice", Scope: ScopeTemplates, TemplateIDs: []string{"p1", "deleted"}}
+	store.rows["g2"] = Guideline{ID: "g2", UserID: "alice", Scope: ScopeTemplates, TemplateIDs: []string{"p1"}}
 
 	listed, err := svc.List(context.Background(), "alice")
 	if err != nil {
@@ -263,9 +263,9 @@ func TestProjectionDropsUnknownPurposeIdsAndReadsTheDirectoryOnce(t *testing.T) 
 		t.Fatalf("directory read %d times for one list", directory.calls)
 	}
 	for _, g := range listed {
-		for _, ref := range g.Purposes {
+		for _, ref := range g.Templates {
 			if ref.ID != "p1" {
-				t.Fatalf("%s projected an unknown purpose %+v", g.ID, ref)
+				t.Fatalf("%s projected an unknown template %+v", g.ID, ref)
 			}
 		}
 	}
@@ -283,8 +283,8 @@ func TestListSkipsTheDirectoryWhenNothingIsScoped(t *testing.T) {
 // A scope write with no directory wired must fail closed rather than save an unvalidated set.
 func TestScopedWriteWithoutADirectoryFails(t *testing.T) {
 	svc, _ := newTestService(t, nil)
-	if _, err := svc.Create(context.Background(), "alice", "a", ScopePurposes, []string{"p1"}); err == nil {
-		t.Fatal("a scoped create was accepted with no purpose directory")
+	if _, err := svc.Create(context.Background(), "alice", "a", ScopeTemplates, []string{"p1"}); err == nil {
+		t.Fatal("a scoped create was accepted with no template directory")
 	}
 }
 

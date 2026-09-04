@@ -20,8 +20,8 @@ import {
   PostService,
   PostSummarySchema,
   type ProtoGenerationJob,
-  type ProtoPurposeRef,
-  PurposeRefSchema,
+  type ProtoTemplateRef,
+  TemplateRefSchema,
   type Observation,
   type PostContent,
   SavePostDraftResponseSchema,
@@ -63,20 +63,20 @@ export const DEFAULT_POST_VOICE: FakePostVoice = {
   sourceLanguage: 'ko',
 }
 
-/** A 용도 as the post fake knows it: just enough to answer a post's `purpose` projection and to
- *  accept or refuse an assignment. The purpose fake owns the full directory. */
-export interface FakePostPurpose {
+/** A 템플릿 as the post fake knows it: just enough to answer a post's `template` projection and to
+ *  accept or refuse an assignment. The template fake owns the full directory. */
+export interface FakePostTemplate {
   id: string
   name: string
 }
 
 /** One SavePostDraft as the server saw its assignments: present on a create or a change,
- *  absent on an ordinary edit (spec/policy/posts.md, spec/policy/purposes.md). An empty
- *  `purposeId` is a real value — it clears the assignment. */
+ *  absent on an ordinary edit (spec/policy/posts.md, spec/policy/templates.md). An empty
+ *  `templateId` is a real value — it clears the assignment. */
 export interface FakeDraftSave {
   slug: string
   voiceId: string | undefined
-  purposeId: string | undefined
+  templateId: string | undefined
   targetLanguage: ContentLanguage | undefined
 }
 
@@ -88,7 +88,7 @@ export interface FakePostRow {
   createdAt?: string
   updatedAt?: string
   voice?: FakePostVoice
-  purpose?: FakePostPurpose
+  template?: FakePostTemplate
   machineBaselineVoiceId?: string
   images?: FakeImageRow[]
   activeJob?: FakeGenerationJobRow
@@ -130,8 +130,8 @@ export interface FakePostsOptions {
   generationOptionSaves?: Array<number | undefined>
   /** The voices a post may be assigned to. Omitted, only `DEFAULT_POST_VOICE` exists. */
   voices?: FakePostVoice[]
-  /** The 용도 a post may be assigned to. Omitted, the account has none. */
-  purposes?: FakePostPurpose[]
+  /** The 템플릿 a post may be assigned to. Omitted, the account has none. */
+  templates?: FakePostTemplate[]
   /** Records every SavePostDraft's slug and assignment presence. */
   draftSaves?: FakeDraftSave[]
   /** Holds SavePostContent in flight until a test releases it. */
@@ -151,7 +151,7 @@ type Row = {
   createdAt: string
   updatedAt: string
   voice: ProtoVoiceRef
-  purpose?: ProtoPurposeRef
+  template?: ProtoTemplateRef
   images: Image[]
   activeJob?: ProtoGenerationJob
   content?: PostContent
@@ -176,17 +176,17 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   let getSequenceIndex = 0
   const pending = new Map<string, { slug: string; filename: string }>()
   const voices = options.voices ?? [DEFAULT_POST_VOICE]
-  const purposes = options.purposes ?? []
+  const templates = options.templates ?? []
 
-  const toPurposeRef = (purpose: FakePostPurpose) =>
-    create(PurposeRefSchema, { id: purpose.id, name: purpose.name })
+  const toTemplateRef = (template: FakePostTemplate) =>
+    create(TemplateRefSchema, { id: template.id, name: template.name })
 
   /** Like the server: an unknown or foreign id is 404 and is never substituted with 없음. */
-  function assignablePurpose(purposeId: string): ProtoPurposeRef | undefined {
-    if (purposeId === '') return undefined
-    const purpose = purposes.find((candidate) => candidate.id === purposeId)
-    if (!purpose) throw connectAppError('PURPOSE_NOT_FOUND', Code.NotFound)
-    return toPurposeRef(purpose)
+  function assignableTemplate(templateId: string): ProtoTemplateRef | undefined {
+    if (templateId === '') return undefined
+    const template = templates.find((candidate) => candidate.id === templateId)
+    if (!template) throw connectAppError('TEMPLATE_NOT_FOUND', Code.NotFound)
+    return toTemplateRef(template)
   }
 
   const toVoiceRef = (voice: FakePostVoice) =>
@@ -215,7 +215,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       createdAt: row.createdAt ?? DEFAULT_UPDATED_AT,
       updatedAt: row.updatedAt ?? DEFAULT_UPDATED_AT,
       voice: toVoiceRef(voice),
-      purpose: row.purpose ? toPurposeRef(row.purpose) : undefined,
+      template: row.template ? toTemplateRef(row.template) : undefined,
       machineBaselineVoiceId:
         row.machineBaselineVoiceId ?? ((row.machineBaselineRevision ?? 0n) > 0n ? voice.id : ''),
       images: (row.images ?? []).map((image) =>
@@ -306,7 +306,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     options.draftSaves?.push({
       slug: req.slug,
       voiceId: req.voiceId,
-      purposeId: req.purposeId,
+      templateId: req.templateId,
       targetLanguage:
         req.targetLanguage === undefined ? undefined : contentLanguageFromProto(req.targetLanguage),
     })
@@ -328,10 +328,10 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     // The server's assignment rules (spec/policy/posts.md): a create names its voice, an edit
     // that omits it preserves it, and a different present value reassigns — refused while a job
     // or an undecided A/B result could still write a baseline for the old voice.
-    // Validated before anything else is applied, like the server: a bad 용도 must leave the
+    // Validated before anything else is applied, like the server: a bad 템플릿 must leave the
     // title and memo exactly as they were.
-    let purpose = existing?.purpose
-    if (req.purposeId !== undefined) purpose = assignablePurpose(req.purposeId)
+    let template = existing?.template
+    if (req.templateId !== undefined) template = assignableTemplate(req.templateId)
     let voice = existing?.voice ?? toVoiceRef(DEFAULT_POST_VOICE)
     let reassigned = false
     if (!req.slug) {
@@ -357,7 +357,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       createdAt: existing?.createdAt ?? DEFAULT_UPDATED_AT,
       updatedAt: DEFAULT_UPDATED_AT,
       voice,
-      purpose,
+      template,
       images: existing?.images ?? [],
       activeJob: existing?.activeJob,
       content: existing?.content,

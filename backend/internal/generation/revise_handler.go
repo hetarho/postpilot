@@ -40,7 +40,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	}
 	// The brief and the 지침 come from the frozen payload, never from the live rows, exactly
 	// as the generate handler does it.
-	system, user := BuildRevisePromptForLanguage(payload.ContentLanguage, profile, *post.Content, filenames, payload.Instruction, post.TargetLength, decodePurpose(payload.Purpose), payload.Guidelines)
+	system, user := BuildRevisePromptForLanguage(payload.ContentLanguage, profile, *post.Content, filenames, payload.Instruction, post.TargetLength, decodeTemplate(payload.Template), payload.Guidelines)
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
@@ -80,7 +80,9 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	for _, image := range current.Images {
 		currentFilenames = append(currentFilenames, image.Filename)
 	}
-	filtered := FilterAttachments(*content, currentFilenames)
+	// The frozen template's slots are re-applied: a revision that dropped a reserved position
+	// gets it back, in the same place, without the request having mentioned it.
+	filtered := ApplyTemplateSlots(FilterAttachments(*content, currentFilenames), decodeTemplate(payload.Template))
 	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage); err != nil {
 		return fmt.Errorf("persist revised content: %w", err)
 	}

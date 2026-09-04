@@ -34,7 +34,7 @@ function renderForm({
   active,
   revisions = [],
   beforeStart,
-  purpose,
+  template,
   guidelines,
   calls,
 }: {
@@ -42,7 +42,7 @@ function renderForm({
   active?: GenerationJob
   revisions?: FakeRevisionStart[]
   beforeStart?: () => Promise<void>
-  purpose?: { id: string; name: string }
+  template?: { id: string; name: string }
   guidelines?: FakeGuidelinesOptions
   calls?: string[]
 } = {}) {
@@ -66,7 +66,7 @@ function renderForm({
       postSlug="post"
       voice={{ id: 'voice-a', deleted: false }}
       activeJob={active}
-      purpose={purpose}
+      template={template}
       onStarted={onStarted}
       beforeStart={beforeStart}
     />,
@@ -219,14 +219,14 @@ it('does not offer it after a failed revision', async () => {
 })
 
 // Plan 16 A11: the dialog is seeded with the instruction, editable before saving, and offers 전역
-// by default plus the post's purpose when it has one.
-it('seeds the dialog with the instruction and saves it scoped to the post purpose', async () => {
+// by default plus the post's template when it has one.
+it('seeds the dialog with the instruction and saves it scoped to the post template', async () => {
   const user = userEvent.setup()
   const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
   const calls: string[] = []
   renderForm({
     active: doneJob,
-    purpose: { id: 'purpose-review', name: '무인가게 리뷰' },
+    template: { id: 'template-review', name: '무인가게 리뷰' },
     guidelines: { creates },
     calls,
   })
@@ -236,7 +236,7 @@ it('seeds the dialog with the instruction and saves it scoped to the post purpos
   const dialog = await screen.findByRole('dialog')
   const field = within(dialog).getByLabelText('지침')
   expect(field).toHaveValue('무인 매장이니까 주인 얘기 빼줘')
-  // 전역 is the default; the post's purpose is offered beside it, by name.
+  // 전역 is the default; the post's template is offered beside it, by name.
   expect(within(dialog).getByRole('tab', { name: '전역', selected: true })).toBeInTheDocument()
 
   // Generalized before saving, which is the whole point of letting the user edit it.
@@ -248,16 +248,16 @@ it('seeds the dialog with the instruction and saves it scoped to the post purpos
   await waitFor(() => expect(creates).toHaveLength(1))
   expect(creates[0]).toEqual({
     text: '무인 매장 글에서 주인 이야기를 쓰지 않기',
-    scope: ProtoGuidelineScope.PURPOSES,
-    purposeIds: ['purpose-review'],
+    scope: ProtoGuidelineScope.TEMPLATES,
+    templateIds: ['template-review'],
   })
   expect(await screen.findByText('지침으로 저장했어요.')).toBeInTheDocument()
   // A15: the capture is a plain create — it starts nothing and calls no provider ([I5]).
   expect(calls.filter((call) => call === 'StartRevision')).toEqual([])
 })
 
-// A post with no purpose gets no scope choice at all: 전역 is the only shape available.
-it('offers no purpose scope when the post has none', async () => {
+// A post with no template gets no scope choice at all: 전역 is the only shape available.
+it('offers no template scope when the post has none', async () => {
   const user = userEvent.setup()
   const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
   renderForm({ active: doneJob, guidelines: { creates } })
@@ -272,7 +272,7 @@ it('offers no purpose scope when the post has none', async () => {
   expect(creates[0]).toEqual({
     text: '문장을 짧게 해줘',
     scope: ProtoGuidelineScope.GLOBAL,
-    purposeIds: [],
+    templateIds: [],
   })
 })
 

@@ -75,7 +75,7 @@ frontend/src/app/providers/i18n/
     en/
 ```
 
-Namespaces follow product surfaces rather than FSD slices: `common`, `auth`, `nav`, `posts`, `voices`, `purposes`,
+Namespaces follow product surfaces rather than FSD slices: `common`, `auth`, `nav`, `posts`, `voices`, `templates`,
 `models`, `publishing`, `errors`, and `marketing`. Keeping them in the app provider gives one complete audit surface
 and avoids making lower slices export configuration back upward. Lower layers import `useTranslation` from the
 third-party package; they do not import `app/providers`.
@@ -187,13 +187,13 @@ a labelled technical-detail disclosure.
 Migration keeps legacy raw error columns long enough to read old rows. Old non-empty failures map to
 `UNKNOWN_FAILURE` plus their existing text as technical detail. New writes populate structured fields. Once every
 reader is structured, deprecated raw wire fields are no longer rendered and may be removed by a later explicit
-change rather than silently repurposed.
+change rather than silently retemplated.
 
 The failure owner decides the reason:
 
 - `internal/llm` normalizes provider classes; job/experiment maps them to product reasons.
 - job owns interruption/panic/missing-handler reasons.
-- post/voice/purpose own validation and lifecycle reasons.
+- post/voice/template own validation and lifecycle reasons.
 - publishing owns agent/lease/ambiguous-commit reasons.
 
 Cross-context code does not parse another context's prose.

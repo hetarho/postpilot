@@ -8,7 +8,7 @@ import { nav as enNav } from './en/nav'
 import { plans as enPlans } from './en/plans'
 import { posts as enPosts } from './en/posts'
 import { publishing as enPublishing } from './en/publishing'
-import { purposes as enPurposes } from './en/purposes'
+import { templates as enTemplates } from './en/templates'
 import { voices as enVoices } from './en/voices'
 import { auth as koAuth } from './ko/auth'
 import { common as koCommon } from './ko/common'
@@ -20,7 +20,7 @@ import { nav as koNav } from './ko/nav'
 import { plans as koPlans } from './ko/plans'
 import { posts as koPosts } from './ko/posts'
 import { publishing as koPublishing } from './ko/publishing'
-import { purposes as koPurposes } from './ko/purposes'
+import { templates as koTemplates } from './ko/templates'
 import { voices as koVoices } from './ko/voices'
 
 export const defaultNS = 'common' as const
@@ -31,7 +31,7 @@ export const RESOURCE_NAMESPACES = [
   'nav',
   'posts',
   'voices',
-  'purposes',
+  'templates',
   'guidelines',
   'models',
   'publishing',
@@ -47,7 +47,7 @@ export const resources = {
     nav: koNav,
     posts: koPosts,
     voices: koVoices,
-    purposes: koPurposes,
+    templates: koTemplates,
     guidelines: koGuidelines,
     models: koModels,
     publishing: koPublishing,
@@ -61,7 +61,7 @@ export const resources = {
     nav: enNav,
     posts: enPosts,
     voices: enVoices,
-    purposes: enPurposes,
+    templates: enTemplates,
     guidelines: enGuidelines,
     models: enModels,
     publishing: enPublishing,

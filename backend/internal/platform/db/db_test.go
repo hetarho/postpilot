@@ -953,51 +953,91 @@ func TestMigration0009SerializesVoiceDeletionAgainstNewWork(t *testing.T) {
 	}
 }
 
-// A purpose is optional, account-scoped, and detachable: a post may have none, may never
-// name another account's, and outlives the purpose it pointed at.
-func TestMigration0011AddsOptionalAccountScopedPurposes(t *testing.T) {
+// A template is optional, account-scoped, and detachable: a post may have none, may never
+// name another account's, and outlives the template it pointed at. Migration 0022 also
+// RETIRES purposes outright, so this asserts both halves — the new shape, and that nothing
+// of the old one is left behind.
+func TestMigration0022ReplacesPurposesWithTemplates(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()
 	if err := Migrate(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
+
+	// Nothing of the retired aggregate survives the migration.
+	for _, name := range []string{"purposes", "guideline_purposes"} {
+		var tables int
+		if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?`, name).Scan(&tables); err != nil || tables != 0 {
+			t.Fatalf("%s survived migration 0022: count=%d err=%v", name, tables, err)
+		}
+	}
+	var oldColumn, newColumn int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('posts') WHERE name='purpose_id'`).Scan(&oldColumn); err != nil || oldColumn != 0 {
+		t.Fatalf("posts.purpose_id survived: count=%d err=%v", oldColumn, err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('posts') WHERE name='template_id'`).Scan(&newColumn); err != nil || newColumn != 1 {
+		t.Fatalf("posts.template_id missing: count=%d err=%v", newColumn, err)
+	}
+	// The frozen comparison record is RENAMED rather than cleared: it says what both
+	// candidates were given, and that has to keep reading after the aggregate is gone.
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('model_experiments') WHERE name='template_name'`).Scan(&newColumn); err != nil || newColumn != 1 {
+		t.Fatalf("model_experiments.template_name missing: count=%d err=%v", newColumn, err)
+	}
+
 	const at = "2026-08-30T00:00:00.000000000Z"
 	for _, statement := range []string{
 		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + at + `')`,
 		`INSERT INTO users(id,password_hash,created_at) VALUES('bob','hash','` + at + `')`,
 		`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('av','alice','a',1,'` + at + `','` + at + `')`,
 		`INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('bv','bob','b',1,'` + at + `','` + at + `')`,
-		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('ap','alice','리뷰','','지침','` + at + `','` + at + `')`,
-		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('bp','bob','리뷰','','지침','` + at + `','` + at + `')`,
-		// A post with no purpose is the ordinary case, and the only one an existing row can be.
+		`INSERT INTO templates(id,user_id,name,description,body,created_at,updated_at) VALUES('at','alice','리뷰','','<write>본문</write>','` + at + `','` + at + `')`,
+		`INSERT INTO templates(id,user_id,name,description,body,created_at,updated_at) VALUES('bt','bob','리뷰','','<write>본문</write>','` + at + `','` + at + `')`,
+		// A post with no template is the ordinary case, and the only one an existing row can be.
 		`INSERT INTO posts(slug,user_id,voice_id,status,created_at,updated_at) VALUES('none','alice','av','draft','` + at + `','` + at + `')`,
-		`INSERT INTO posts(slug,user_id,voice_id,purpose_id,status,created_at,updated_at) VALUES('with','alice','av','ap','draft','` + at + `','` + at + `')`,
+		`INSERT INTO posts(slug,user_id,voice_id,template_id,status,created_at,updated_at) VALUES('with','alice','av','at','draft','` + at + `','` + at + `')`,
+		// A guideline scoped to that template, to prove the link cascades and the rule does not.
+		`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('g1','alice','광고 문구 금지','templates','` + at + `','` + at + `')`,
+		`INSERT INTO guideline_templates(guideline_id,template_id,user_id) VALUES('g1','at','alice')`,
 	} {
 		if _, err := handle.Writer.Exec(statement); err != nil {
 			t.Fatalf("statement failed: %v\n%s", err, statement)
 		}
 	}
 
-	if _, err := handle.Writer.Exec(`INSERT INTO posts(slug,user_id,voice_id,purpose_id,status,created_at,updated_at) VALUES('foreign','alice','av','bp','draft',?,?)`, at, at); err == nil {
-		t.Fatal("a post named another account's purpose")
+	if _, err := handle.Writer.Exec(`INSERT INTO posts(slug,user_id,voice_id,template_id,status,created_at,updated_at) VALUES('foreign','alice','av','bt','draft',?,?)`, at, at); err == nil {
+		t.Fatal("a post named another account's template")
 	}
-	if _, err := handle.Writer.Exec(`UPDATE posts SET purpose_id='bp' WHERE slug='none'`); err == nil {
-		t.Fatal("a post was reassigned to another account's purpose")
+	if _, err := handle.Writer.Exec(`UPDATE posts SET template_id='bt' WHERE slug='none'`); err == nil {
+		t.Fatal("a post was reassigned to another account's template")
 	}
-	if _, err := handle.Writer.Exec(`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('dup','alice','리뷰','','지침',?,?)`, at, at); err == nil {
+	if _, err := handle.Writer.Exec(`INSERT INTO templates(id,user_id,name,description,body,created_at,updated_at) VALUES('dup','alice','리뷰','','<write>x</write>',?,?)`, at, at); err == nil {
 		t.Fatal("a duplicate name within one account was accepted")
 	}
+	if _, err := handle.Writer.Exec(`INSERT INTO guideline_templates(guideline_id,template_id,user_id) VALUES('g1','bt','alice')`); err == nil {
+		t.Fatal("a guideline linked another account's template")
+	}
+	// The scope kind is constrained to the new vocabulary.
+	if _, err := handle.Writer.Exec(`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('g2','alice','x','purposes',?,?)`, at, at); err == nil {
+		t.Fatal("the retired scope kind was still accepted")
+	}
 
-	// Deleting the purpose detaches, and deletes no post and no content.
-	if _, err := handle.Writer.Exec(`DELETE FROM purposes WHERE id='ap'`); err != nil {
+	// Deleting the template detaches its posts and unlinks its scopes, and deletes no post,
+	// no content and no guideline.
+	if _, err := handle.Writer.Exec(`DELETE FROM templates WHERE id='at'`); err != nil {
 		t.Fatalf("delete refused: %v", err)
 	}
-	var posts, assigned int
-	if err := handle.Reader.QueryRow(`SELECT count(*), count(purpose_id) FROM posts WHERE user_id='alice'`).Scan(&posts, &assigned); err != nil {
+	var posts, assigned, links, rules int
+	if err := handle.Reader.QueryRow(`SELECT count(*), count(template_id) FROM posts WHERE user_id='alice'`).Scan(&posts, &assigned); err != nil {
 		t.Fatal(err)
 	}
 	if posts != 2 || assigned != 0 {
 		t.Fatalf("detach removed posts or left assignments: posts=%d assigned=%d", posts, assigned)
+	}
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guideline_templates`).Scan(&links); err != nil || links != 0 {
+		t.Fatalf("scope links survived the template delete: count=%d err=%v", links, err)
+	}
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guidelines WHERE user_id='alice'`).Scan(&rules); err != nil || rules != 1 {
+		t.Fatalf("the guideline itself was deleted: count=%d err=%v", rules, err)
 	}
 
 	sub, err := fs.Sub(migrationsFS, "migrations")
@@ -1008,22 +1048,63 @@ func TestMigration0011AddsOptionalAccountScopedPurposes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := provider.DownTo(ctx, 10); err != nil {
+	if _, err := provider.DownTo(ctx, 21); err != nil {
 		t.Fatal(err)
 	}
-	var purposeTables, purposeColumns, experimentColumns int
-	if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='purposes'`).Scan(&purposeTables); err != nil || purposeTables != 0 {
-		t.Fatalf("rollback kept purposes: count=%d err=%v", purposeTables, err)
+	// The rollback restores the SHAPE, never the data: it exists so a bad deploy can be
+	// reverted, not so the templates come back.
+	var templateTables, restored int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='templates'`).Scan(&templateTables); err != nil || templateTables != 0 {
+		t.Fatalf("rollback kept templates: count=%d err=%v", templateTables, err)
 	}
-	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('posts') WHERE name='purpose_id'`).Scan(&purposeColumns); err != nil || purposeColumns != 0 {
-		t.Fatalf("rollback kept posts.purpose_id: count=%d err=%v", purposeColumns, err)
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('posts') WHERE name='purpose_id'`).Scan(&restored); err != nil || restored != 1 {
+		t.Fatalf("rollback did not restore posts.purpose_id: count=%d err=%v", restored, err)
 	}
-	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('model_experiments') WHERE name='purpose_name'`).Scan(&experimentColumns); err != nil || experimentColumns != 0 {
-		t.Fatalf("rollback kept model_experiments.purpose_name: count=%d err=%v", experimentColumns, err)
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('model_experiments') WHERE name='purpose_name'`).Scan(&restored); err != nil || restored != 1 {
+		t.Fatalf("rollback did not restore model_experiments.purpose_name: count=%d err=%v", restored, err)
 	}
-	// The rollback is about purposes only: the posts it detached are still there.
+	// The rollback is about the aggregate only: the posts it detached are still there.
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM posts WHERE user_id='alice'`).Scan(&posts); err != nil || posts != 2 {
 		t.Fatalf("rollback lost posts: count=%d err=%v", posts, err)
+	}
+}
+
+// A14: the MODEL-STAGE purposes are a different concept from the retired post purpose — the
+// five registration targets of plans 04/18 and changes 20/24. Job 53 renames a great many
+// things spelled "purpose", so this pins the ones that must NOT move. A find-and-replace that
+// went one directory too far fails here rather than in production.
+func TestMigration0022LeavesTheModelCatalogPurposesAlone(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	for _, column := range []string{"model_id", "purpose", "reasoning_effort"} {
+		var found int
+		if err := handle.Reader.QueryRow(
+			`SELECT count(*) FROM pragma_table_info('catalog_model_purposes') WHERE name = ?`, column,
+		).Scan(&found); err != nil || found != 1 {
+			t.Fatalf("catalog_model_purposes.%s missing after 0022: count=%d err=%v", column, found, err)
+		}
+	}
+	// A stage purpose is still accepted by its CHECK, and a post-template name is not one.
+	const at = "2026-09-04T00:00:00.000000000Z"
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO catalog_models(model_id, provider_slug, label, vision, structured_output, created_at, updated_at)
+		 VALUES('vendor/model','vendor','Model',1,1,?,?)`, at, at); err != nil {
+		t.Fatalf("seed catalog model: %v", err)
+	}
+	for _, purpose := range []string{"photo-analysis", "style-analysis", "writing", "image-generation", "video-generation"} {
+		if _, err := handle.Writer.Exec(
+			`INSERT INTO catalog_model_purposes(model_id, purpose, created_at) VALUES('vendor/model',?,?)`, purpose, at,
+		); err != nil {
+			t.Fatalf("purpose %q was refused: %v", purpose, err)
+		}
+	}
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO catalog_model_purposes(model_id, purpose, created_at) VALUES('vendor/model','templates',?)`, at,
+	); err == nil {
+		t.Fatal("the catalog accepted a purpose that is not one of its five stages")
 	}
 }
 
@@ -1141,13 +1222,13 @@ func TestMigration0014AddsAccountScopedGuidelinesAndCascadesLinks(t *testing.T) 
 	for _, statement := range []string{
 		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + at + `')`,
 		`INSERT INTO users(id,password_hash,created_at) VALUES('bob','hash','` + at + `')`,
-		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('ap','alice','리뷰','','지침','` + at + `','` + at + `')`,
-		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('ap2','alice','후기','','지침','` + at + `','` + at + `')`,
-		`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('bp','bob','리뷰','','지침','` + at + `','` + at + `')`,
-		`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('ag','alice','CCTV 언급 금지','purposes','` + at + `','` + at + `')`,
+		`INSERT INTO templates(id,user_id,name,description,body,created_at,updated_at) VALUES('at','alice','리뷰','','<write>본문</write>','` + at + `','` + at + `')`,
+		`INSERT INTO templates(id,user_id,name,description,body,created_at,updated_at) VALUES('at2','alice','후기','','<write>본문</write>','` + at + `','` + at + `')`,
+		`INSERT INTO templates(id,user_id,name,description,body,created_at,updated_at) VALUES('bt','bob','리뷰','','<write>본문</write>','` + at + `','` + at + `')`,
+		`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('ag','alice','CCTV 언급 금지','templates','` + at + `','` + at + `')`,
 		`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('agg','alice','없는 사실 쓰지 않기','global','` + at + `','` + at + `')`,
-		`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','ap','alice')`,
-		`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','ap2','alice')`,
+		`INSERT INTO guideline_templates(guideline_id,template_id,user_id) VALUES('ag','at','alice')`,
+		`INSERT INTO guideline_templates(guideline_id,template_id,user_id) VALUES('ag','at2','alice')`,
 	} {
 		if _, err := handle.Writer.Exec(statement); err != nil {
 			t.Fatalf("statement failed: %v\n%s", err, statement)
@@ -1160,10 +1241,10 @@ func TestMigration0014AddsAccountScopedGuidelinesAndCascadesLinks(t *testing.T) 
 		t.Fatalf("migration seeded guidelines: count=%d err=%v", seeded, err)
 	}
 
-	if _, err := handle.Writer.Exec(`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','bp','alice')`); err == nil {
-		t.Fatal("a guideline linked another account's purpose")
+	if _, err := handle.Writer.Exec(`INSERT INTO guideline_templates(guideline_id,template_id,user_id) VALUES('ag','bt','alice')`); err == nil {
+		t.Fatal("a guideline linked another account's template")
 	}
-	if _, err := handle.Writer.Exec(`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','bp','bob')`); err == nil {
+	if _, err := handle.Writer.Exec(`INSERT INTO guideline_templates(guideline_id,template_id,user_id) VALUES('ag','bt','bob')`); err == nil {
 		t.Fatal("a link named a guideline from another account")
 	}
 	if _, err := handle.Writer.Exec(`INSERT INTO guidelines(id,user_id,text,scope,created_at,updated_at) VALUES('dup','alice','CCTV 언급 금지','global',?,?)`, at, at); err == nil {
@@ -1173,22 +1254,22 @@ func TestMigration0014AddsAccountScopedGuidelinesAndCascadesLinks(t *testing.T) 
 		t.Fatal("an unknown scope was accepted")
 	}
 
-	// Deleting a purpose unlinks it and keeps every guideline row.
-	if _, err := handle.Writer.Exec(`DELETE FROM purposes WHERE id='ap'`); err != nil {
+	// Deleting a template unlinks it and keeps every guideline row.
+	if _, err := handle.Writer.Exec(`DELETE FROM templates WHERE id='at'`); err != nil {
 		t.Fatalf("delete refused: %v", err)
 	}
 	var links, rows int
-	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guideline_purposes WHERE user_id='alice'`).Scan(&links); err != nil {
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guideline_templates WHERE user_id='alice'`).Scan(&links); err != nil {
 		t.Fatal(err)
 	}
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guidelines WHERE user_id='alice'`).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 	if links != 1 || rows != 2 {
-		t.Fatalf("purpose delete cascaded wrong: links=%d guidelines=%d", links, rows)
+		t.Fatalf("template delete cascaded wrong: links=%d guidelines=%d", links, rows)
 	}
-	// The remaining link vanishing leaves an orphaned 'purposes' guideline, not a deletion.
-	if _, err := handle.Writer.Exec(`DELETE FROM purposes WHERE id='ap2'`); err != nil {
+	// The remaining link vanishing leaves an orphaned 'templates' guideline, not a deletion.
+	if _, err := handle.Writer.Exec(`DELETE FROM templates WHERE id='at2'`); err != nil {
 		t.Fatal(err)
 	}
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guidelines WHERE id='ag'`).Scan(&rows); err != nil || rows != 1 {
@@ -1196,20 +1277,20 @@ func TestMigration0014AddsAccountScopedGuidelinesAndCascadesLinks(t *testing.T) 
 	}
 
 	// Deleting a guideline cascades only its own links.
-	if _, err := handle.Writer.Exec(`INSERT INTO purposes(id,user_id,name,description,instructions,created_at,updated_at) VALUES('ap3','alice','재개','','지침',?,?)`, at, at); err != nil {
+	if _, err := handle.Writer.Exec(`INSERT INTO templates(id,user_id,name,description,body,created_at,updated_at) VALUES('at3','alice','재개','','<write>본문</write>',?,?)`, at, at); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := handle.Writer.Exec(`INSERT INTO guideline_purposes(guideline_id,purpose_id,user_id) VALUES('ag','ap3','alice')`); err != nil {
+	if _, err := handle.Writer.Exec(`INSERT INTO guideline_templates(guideline_id,template_id,user_id) VALUES('ag','at3','alice')`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := handle.Writer.Exec(`DELETE FROM guidelines WHERE id='ag'`); err != nil {
 		t.Fatal(err)
 	}
-	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guideline_purposes`).Scan(&links); err != nil || links != 0 {
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guideline_templates`).Scan(&links); err != nil || links != 0 {
 		t.Fatalf("guideline delete left links: count=%d err=%v", links, err)
 	}
-	if err := handle.Reader.QueryRow(`SELECT count(*) FROM purposes WHERE id='ap3'`).Scan(&rows); err != nil || rows != 1 {
-		t.Fatalf("guideline delete removed a purpose: count=%d err=%v", rows, err)
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM templates WHERE id='at3'`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("guideline delete removed a template: count=%d err=%v", rows, err)
 	}
 
 	sub, err := fs.Sub(migrationsFS, "migrations")
@@ -1229,9 +1310,15 @@ func TestMigration0014AddsAccountScopedGuidelinesAndCascadesLinks(t *testing.T) 
 			t.Fatalf("rollback kept %s: count=%d err=%v", table, remaining, err)
 		}
 	}
-	// The rollback is about guidelines only: the purposes they were scoped to remain.
-	if err := handle.Reader.QueryRow(`SELECT count(*) FROM purposes WHERE user_id='alice'`).Scan(&rows); err != nil || rows != 1 {
-		t.Fatalf("rollback lost purposes: count=%d err=%v", rows, err)
+	// Rolling down past 14 also unwinds 0022, whose down restores the retired aggregate's
+	// SHAPE and not its rows (change 25 chose a destructive migration). So the assertion here
+	// is that the scope target still EXISTS to be scoped to, not that the data came back.
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='purposes'`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("rollback left no scope target table: count=%d err=%v", rows, err)
+	}
+	// And the posts those guidelines applied to are untouched by either rollback.
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='posts'`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("rollback lost posts: count=%d err=%v", rows, err)
 	}
 }
 

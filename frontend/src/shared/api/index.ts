@@ -7,7 +7,7 @@ export {
   generationClient,
   publishingClient,
   publishingClientFor,
-  purposeClient,
+  templateClient,
   voiceClient,
   voiceLearningClient,
   voiceValidationClient,
@@ -222,7 +222,7 @@ export type {
 export {
   GuidelineService,
   GuidelineSchema,
-  GuidelinePurposeRefSchema,
+  GuidelineTemplateRefSchema,
   GuidelineScope as ProtoGuidelineScope,
   ListGuidelinesResponseSchema,
   CreateGuidelineResponseSchema,
@@ -231,21 +231,21 @@ export {
 } from './gen/postpilot/v1/guideline_pb'
 export type {
   Guideline as ProtoGuideline,
-  GuidelinePurposeRef as ProtoGuidelinePurposeRef,
+  GuidelineTemplateRef as ProtoGuidelineTemplateRef,
 } from './gen/postpilot/v1/guideline_pb'
 export {
-  PurposeService,
-  PurposeSchema,
-  PurposeRefSchema,
-  ListPurposesResponseSchema,
-  CreatePurposeResponseSchema,
-  UpdatePurposeResponseSchema,
-  DeletePurposeResponseSchema,
-} from './gen/postpilot/v1/purpose_pb'
+  TemplateService,
+  TemplateSchema,
+  TemplateRefSchema,
+  ListTemplatesResponseSchema,
+  CreateTemplateResponseSchema,
+  UpdateTemplateResponseSchema,
+  DeleteTemplateResponseSchema,
+} from './gen/postpilot/v1/template_pb'
 export type {
-  Purpose as ProtoPurpose,
-  PurposeRef as ProtoPurposeRef,
-} from './gen/postpilot/v1/purpose_pb'
+  Template as ProtoTemplate,
+  TemplateRef as ProtoTemplateRef,
+} from './gen/postpilot/v1/template_pb'
 export type {
   ModelExperiment as ProtoModelExperiment,
   ExperimentCandidate as ProtoExperimentCandidate,

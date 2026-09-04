@@ -15,27 +15,27 @@ func testGuidelines() []string {
 // fakeGuidelines is the guideline context's published resolution. Changing `texts` after an
 // enqueue is how a test edits, rescopes or deletes rows between enqueue and drain.
 type fakeGuidelines struct {
-	texts        []string
-	calls        int
-	askedPurpose *string
+	texts         []string
+	calls         int
+	askedTemplate *string
 }
 
-func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, purposeID *string) ([]string, error) {
+func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID *string) ([]string, error) {
 	f.calls++
-	if purposeID == nil {
-		f.askedPurpose = nil
+	if templateID == nil {
+		f.askedTemplate = nil
 	} else {
-		id := *purposeID
-		f.askedPurpose = &id
+		id := *templateID
+		f.askedTemplate = &id
 	}
 	return f.texts, nil
 }
 
-func guidelineAwareService(t *testing.T, guidelines *fakeGuidelines, briefs *fakePurposeBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
+func guidelineAwareService(t *testing.T, guidelines *fakeGuidelines, briefs *fakeTemplateBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
 	t.Helper()
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 	if briefs != nil {
-		svc.SetPurposeBriefs(briefs)
+		svc.SetTemplateBriefs(briefs)
 	}
 	svc.SetGuidelines(guidelines)
 	return svc
@@ -44,7 +44,7 @@ func guidelineAwareService(t *testing.T, guidelines *fakeGuidelines, briefs *fak
 // A4: exactly one section, its texts verbatim as list lines in the given order, closed by the
 // fixed precedence sentence, sitting after the complete voice profile and before [이번 글].
 func TestWritePromptAppendsOneGuidelineSectionAfterTheProfile(t *testing.T) {
-	baseline, baselineUser := loadGolden(t, "write_prompt_no_purpose.golden")
+	baseline, baselineUser := loadGolden(t, "write_prompt_no_template.golden")
 	system, user := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, testGuidelines())
 
 	if !strings.HasPrefix(system, baseline) {
@@ -62,22 +62,22 @@ func TestWritePromptAppendsOneGuidelineSectionAfterTheProfile(t *testing.T) {
 	}
 }
 
-// A4: with a purpose the one section sits AFTER the purpose section, still before [이번 글].
-func TestGuidelinesFollowThePurposeSectionWhenThePostHasOne(t *testing.T) {
-	withPurpose, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg"}, nil, testBrief(), nil)
+// A4: with a template the one section sits AFTER the template section, still before [이번 글].
+func TestGuidelinesFollowTheTemplateSectionWhenThePostHasOne(t *testing.T) {
+	withTemplate, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg"}, nil, testBrief(), nil)
 	both, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg"}, nil, testBrief(), testGuidelines())
 
-	if !strings.HasPrefix(both, withPurpose) {
-		t.Fatalf("the guideline section moved the purpose section:\n%s", both)
+	if !strings.HasPrefix(both, withTemplate) {
+		t.Fatalf("the guideline section moved the template section:\n%s", both)
 	}
-	purposeAt := strings.Index(both, "[글의 용도:")
+	templateAt := strings.Index(both, "[글 템플릿:")
 	guidelineAt := strings.Index(both, "[작문 지침]")
-	if purposeAt < 0 || guidelineAt < purposeAt {
-		t.Fatalf("guideline section at %d, purpose section at %d", guidelineAt, purposeAt)
+	if templateAt < 0 || guidelineAt < templateAt {
+		t.Fatalf("guideline section at %d, template section at %d", guidelineAt, templateAt)
 	}
-	// A6: the purpose section's bytes are identical with and without guidelines, so plan 11's
+	// A6: the template section's bytes are identical with and without guidelines, so plan 11's
 	// acceptance criteria keep holding.
-	if got := strings.TrimPrefix(both, withPurpose); !strings.HasPrefix(got, "\n\n[작문 지침]") {
+	if got := strings.TrimPrefix(both, withTemplate); !strings.HasPrefix(got, "\n\n[작문 지침]") {
 		t.Fatalf("appended section = %q", got)
 	}
 }
@@ -85,7 +85,7 @@ func TestGuidelinesFollowThePurposeSectionWhenThePostHasOne(t *testing.T) {
 // A6: with no applicable guidelines the prompt is byte-identical to the baseline, and the
 // voice profile prefix is untouched by their presence.
 func TestNoGuidelinesLeavesThePromptAtTheBaseline(t *testing.T) {
-	baseline, baselineUser := loadGolden(t, "write_prompt_no_purpose.golden")
+	baseline, baselineUser := loadGolden(t, "write_prompt_no_template.golden")
 	for name, empty := range map[string][]string{"nil": nil, "empty": {}} {
 		system, user := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, empty)
 		if system != baseline || user != baselineUser {
@@ -106,8 +106,8 @@ func TestNoGuidelinesLeavesThePromptAtTheBaseline(t *testing.T) {
 // A10: revision injects the same section at the same relative position, and a revision
 // without guidelines is unchanged from its baseline.
 func TestRevisePromptInjectsTheSameGuidelineSectionAtTheSamePosition(t *testing.T) {
-	reviseBaseline, reviseBaselineUser := loadGolden(t, "revise_prompt_no_purpose.golden")
-	writeBaseline, _ := loadGolden(t, "write_prompt_no_purpose.golden")
+	reviseBaseline, reviseBaselineUser := loadGolden(t, "revise_prompt_no_template.golden")
+	writeBaseline, _ := loadGolden(t, "write_prompt_no_template.golden")
 
 	unchanged, unchangedUser := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, nil, nil)
 	if unchanged != reviseBaseline || unchangedUser != reviseBaselineUser {
@@ -125,11 +125,11 @@ func TestRevisePromptInjectsTheSameGuidelineSectionAtTheSamePosition(t *testing.
 }
 
 // A7: the grounding constraint is in the fixed text of every write and revise prompt, with or
-// without guidelines and with or without a purpose, in both languages — and never in observe.
+// without guidelines and with or without a template, in both languages — and never in observe.
 func TestGroundingConstraintIsInEveryWriteAndRevisePrompt(t *testing.T) {
 	for name, prompt := range map[string]string{
 		"write bare":            firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, nil, nil)),
-		"write with purpose":    firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, testBrief(), nil)),
+		"write with template":   firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, testBrief(), nil)),
 		"write with guidelines": firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, testBrief(), testGuidelines())),
 		"revise bare":           firstOf(BuildRevisePrompt(goldenProfile(), goldenContent(), nil, "고쳐줘", nil, nil, nil)),
 		"revise with both":      firstOf(BuildRevisePrompt(goldenProfile(), goldenContent(), nil, "고쳐줘", nil, testBrief(), testGuidelines())),
@@ -169,22 +169,22 @@ func TestGroundingConstraintIsInEveryWriteAndRevisePrompt(t *testing.T) {
 
 func firstOf(system, _ string) string { return system }
 
-// A8: the texts are resolved ONCE at the enqueue, from the post's current purpose, and the
+// A8: the texts are resolved ONCE at the enqueue, from the post's current template, and the
 // drain prompts with what was frozen even though every row changed since.
 func TestGenerationFreezesGuidelinesAtEnqueueAndTheDrainIgnoresLiveRows(t *testing.T) {
 	ctx := context.Background()
 	guidelines := &fakeGuidelines{texts: testGuidelines()}
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, PurposeID: "purpose-review"}}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "template-review"}}
 	jobs := &fakeJobs{id: "job"}
 	models := newFakeModels()
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
-	svc := guidelineAwareService(t, guidelines, &fakePurposeBriefs{brief: *testBrief()}, posts, jobs, models)
+	svc := guidelineAwareService(t, guidelines, &fakeTemplateBriefs{brief: *testBrief()}, posts, jobs, models)
 
 	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
-	if guidelines.askedPurpose == nil || *guidelines.askedPurpose != "purpose-review" {
-		t.Fatalf("resolution asked for %v, want the post's current purpose", guidelines.askedPurpose)
+	if guidelines.askedTemplate == nil || *guidelines.askedTemplate != "template-review" {
+		t.Fatalf("resolution asked for %v, want the post's current template", guidelines.askedTemplate)
 	}
 	frozen := jobs.generations[0].Guidelines
 	if len(frozen) != 2 {
@@ -257,10 +257,10 @@ func TestRevisionFreezesGuidelinesIntoItsPayload(t *testing.T) {
 	if _, err := svc.StartRevision(ctx, StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "더 짧게", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
-	// A post with no purpose resolves the global group alone, and must not be asked for a
-	// purpose it does not have.
-	if guidelines.askedPurpose != nil {
-		t.Fatalf("a post with no purpose asked for %q", *guidelines.askedPurpose)
+	// A post with no template resolves the global group alone, and must not be asked for a
+	// template it does not have.
+	if guidelines.askedTemplate != nil {
+		t.Fatalf("a post with no template asked for %q", *guidelines.askedTemplate)
 	}
 	payload := jobs.payloads[0]
 	guidelines.texts = nil
@@ -285,10 +285,10 @@ func TestRevisionFreezesGuidelinesIntoItsPayload(t *testing.T) {
 func TestWriteExperimentFreezesTheSameGuidelinesForBothCandidates(t *testing.T) {
 	ctx := context.Background()
 	guidelines := &fakeGuidelines{texts: testGuidelines()}
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, PurposeID: "purpose-review"}}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "template-review"}}
 	models := newFakeModels()
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
-	svc := guidelineAwareService(t, guidelines, &fakePurposeBriefs{brief: *testBrief()}, posts, &fakeJobs{id: "job"}, models)
+	svc := guidelineAwareService(t, guidelines, &fakeTemplateBriefs{brief: *testBrief()}, posts, &fakeJobs{id: "job"}, models)
 
 	snapshot, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil)
 	if err != nil {

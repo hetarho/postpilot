@@ -27,23 +27,23 @@ type revisionPayloadJSON struct {
 	SaveAsRule      bool     `json:"save_as_rule"`
 	ContentLanguage Language `json:"content_language,omitempty"`
 	// Frozen at enqueue exactly as the generate payload freezes it. A payload written
-	// before purposes existed decodes with this absent, which is "no purpose".
-	Purpose *purposePayload `json:"purpose,omitempty"`
+	// before templates existed decodes with this absent, which is "no template".
+	Template *templatePayload `json:"template,omitempty"`
 	// Likewise for the applicable guideline texts, in injection order.
 	Guidelines []string `json:"guidelines,omitempty"`
 }
 
-func encodeRevisionPayload(instruction string, saveAsRule bool, purpose *PurposeBrief, guidelines []string) ([]byte, error) {
-	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, purpose, guidelines)
+func encodeRevisionPayload(instruction string, saveAsRule bool, template *TemplateBrief, guidelines []string) ([]byte, error) {
+	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, guidelines)
 }
 
-func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, purpose *PurposeBrief, guidelines []string) ([]byte, error) {
+func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, template *TemplateBrief, guidelines []string) ([]byte, error) {
 	if !language.Valid() {
 		return nil, ErrContentLanguageRequired
 	}
 	return json.Marshal(revisionPayloadJSON{
 		Instruction: instruction, SaveAsRule: saveAsRule, ContentLanguage: language,
-		Purpose: encodePurpose(purpose), Guidelines: cloneTexts(guidelines),
+		Template: encodeTemplate(template), Guidelines: cloneTexts(guidelines),
 	})
 }
 
@@ -67,11 +67,11 @@ func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
 	return value, nil
 }
 
-func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, purpose *PurposeBrief, guidelines []string) (string, string) {
-	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, purpose, guidelines)
+func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
+	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, template, guidelines)
 }
 
-func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, purpose *PurposeBrief, guidelines []string) (string, string) {
+func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
@@ -85,8 +85,8 @@ func BuildRevisePromptForLanguage(language Language, profile Profile, content Po
 	}
 	writeProfileSection(&stable, language, profile, targetLength)
 	// The same section, at the same relative position, as the write prompt: a revision of a
-	// post with a purpose must not be given a different brief than the pass that wrote it.
-	writePurposeSection(&stable, purpose)
+	// post with a template must not be given a different brief than the pass that wrote it.
+	writeTemplateSection(&stable, template)
 	// The same section, at the same relative position, for the same reason.
 	writeGuidelinesSection(&stable, guidelines)
 
@@ -107,7 +107,15 @@ func contentForPrompt(content PostContent) contentJSON {
 		wire.Blocks = append(wire.Blocks, blockJSON{
 			Type: string(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			Slot: toSlotJSON(block.Slot),
 		})
 	}
 	return wire
+}
+
+func toSlotJSON(slot *BlockSlot) *blockSlotJSON {
+	if slot == nil {
+		return nil
+	}
+	return &blockSlotJSON{Kind: slot.Kind, Label: slot.Label}
 }

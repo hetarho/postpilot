@@ -21,7 +21,7 @@ import { ModelExperimentService } from './gen/postpilot/v1/model_experiment_pb'
 import { GenerationService } from './gen/postpilot/v1/post_pb'
 import { ProviderService } from './gen/postpilot/v1/provider_pb'
 import { PublishingService } from './gen/postpilot/v1/publishing_pb'
-import { PurposeService } from './gen/postpilot/v1/purpose_pb'
+import { TemplateService } from './gen/postpilot/v1/template_pb'
 import { VoiceService } from './gen/postpilot/v1/voice_pb'
 import { VoiceLearningService } from './gen/postpilot/v1/voice_learning_pb'
 import { VoiceValidationService } from './gen/postpilot/v1/voice_validation_pb'
@@ -87,7 +87,7 @@ export const publishingClientFor = (clientTransport: Transport) =>
   createClient(PublishingService, clientTransport)
 
 /** Typed client for the acting account's reusable 용도 briefs. */
-export const purposeClient = createClient(PurposeService, transport)
+export const templateClient = createClient(TemplateService, transport)
 
 /** Typed client for the acting account's voice profile. */
 export const voiceClient = createClient(VoiceService, transport)

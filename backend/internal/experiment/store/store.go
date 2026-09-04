@@ -39,7 +39,7 @@ func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
 	queries := sqlc.New(tx)
 	err = queries.InsertExperiment(ctx, sqlc.InsertExperimentParams{
 		ID: found.ID, UserID: found.UserID, PostSlug: nullString(found.PostSlug), VoiceID: nullString(found.VoiceID),
-		PurposeName: found.PurposeName, TargetLanguage: targetLanguage,
+		TemplateName: found.TemplateName, TargetLanguage: targetLanguage,
 		Stage: string(found.Stage), Status: string(found.Status), JobID: nullString(found.JobID),
 		InputSnapshot: nullBytes(found.InputSnapshot), InputHash: found.InputHash,
 		PromptVersion: found.PromptVersion, CreatedAt: formatTime(found.CreatedAt),
@@ -435,7 +435,7 @@ func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 	}
 	return experiment.Experiment{
 		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, VoiceID: row.VoiceID.String,
-		PurposeName: row.PurposeName, TargetLanguage: targetLanguage, Stage: experiment.Stage(row.Stage),
+		TemplateName: row.TemplateName, TargetLanguage: targetLanguage, Stage: experiment.Stage(row.Stage),
 		Status: experiment.Status(row.Status), JobID: row.JobID.String, InputSnapshot: []byte(row.InputSnapshot.String),
 		InputHash: row.InputHash, PromptVersion: row.PromptVersion, WinnerCandidateID: row.WinnerCandidateID.String,
 		Outcome: experiment.Outcome(row.Outcome.String), ApplyFailure: applyFailure, CreatedAt: created,

@@ -1,6 +1,6 @@
 -- name: InsertExperiment :exec
 INSERT INTO model_experiments (
-  id, user_id, post_slug, voice_id, purpose_name, target_language, stage, status, job_id, input_snapshot, input_hash,
+  id, user_id, post_slug, voice_id, template_name, target_language, stage, status, job_id, input_snapshot, input_hash,
   prompt_version, created_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 

@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { ProtoGuidelineScope } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import type { FakeGuidelineRow, FakeGuidelinesOptions } from '@/test/guidelines'
-import type { FakePurposeRow } from '@/test/purposes'
+import type { FakeTemplateRow } from '@/test/templates'
 
 const USER = { id: 'alice' }
 
-const PURPOSES: FakePurposeRow[] = [
-  { id: 'purpose-review', name: '무인가게 리뷰' },
-  { id: 'purpose-sponsored', name: '협찬 리뷰' },
+const PURPOSES: FakeTemplateRow[] = [
+  { id: 'template-review', name: '무인가게 리뷰' },
+  { id: 'template-sponsored', name: '협찬 리뷰' },
 ]
 
 const GUIDELINES: FakeGuidelineRow[] = [
@@ -18,17 +18,17 @@ const GUIDELINES: FakeGuidelineRow[] = [
   {
     id: 'guideline-scoped',
     text: 'CCTV를 언급하지 않기',
-    purposeRefs: [{ id: 'purpose-review', name: '무인가게 리뷰' }],
+    templateRefs: [{ id: 'template-review', name: '무인가게 리뷰' }],
   },
-  // Every purpose it named was deleted: a real state, not a missing value.
-  { id: 'guideline-orphan', text: '주인 이야기를 쓰지 않기', scope: 'purposes', purposeRefs: [] },
+  // Every template it named was deleted: a real state, not a missing value.
+  { id: 'guideline-orphan', text: '주인 이야기를 쓰지 않기', scope: 'templates', templateRefs: [] },
 ]
 
 function renderGuidelines(guidelines: FakeGuidelinesOptions = {}, calls: string[] = []) {
   return renderAppAt('/guidelines', {
     user: USER,
     calls,
-    purposes: { purposes: PURPOSES },
+    templates: { templates: PURPOSES },
     guidelines: { guidelines: GUIDELINES, ...guidelines },
   })
 }
@@ -65,7 +65,7 @@ describe('the guideline list', () => {
     expect(within(items[2]).getByText('적용 대상 없음')).toBeInTheDocument()
 
     // A15: mounting the screen starts no job and calls no provider ([I5]).
-    const allowed = ['GetMe', 'ListGuidelines', 'ListPurposes']
+    const allowed = ['GetMe', 'ListGuidelines', 'ListTemplates']
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 
@@ -94,11 +94,11 @@ describe('the guideline list', () => {
     await user.click(form.getByRole('button', { name: '지침 만들기' }))
 
     await waitFor(() => expect(creates).toHaveLength(1))
-    // 전역 is the default, and a global scope carries no purpose ids.
+    // 전역 is the default, and a global scope carries no template ids.
     expect(creates[0]).toEqual({
       text: '가격을 지어내지 않기',
       scope: ProtoGuidelineScope.GLOBAL,
-      purposeIds: [],
+      templateIds: [],
     })
     const list = await section('저장된 지침')
     await waitFor(() => expect(list.getByText('가격을 지어내지 않기')).toBeInTheDocument())
@@ -106,16 +106,16 @@ describe('the guideline list', () => {
     expect(form.getByLabelText('지침')).toHaveValue('')
   })
 
-  // A2/A14: a scoped create must name at least one owned purpose, picked from the directory.
-  it('creates a purpose-scoped guideline from the scope control', async () => {
+  // A2/A14: a scoped create must name at least one owned template, picked from the directory.
+  it('creates a template-scoped guideline from the scope control', async () => {
     const user = userEvent.setup()
     const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
     renderGuidelines({ guidelines: [], creates })
     const form = await section('새 지침')
 
     await user.type(form.getByLabelText('지침'), '협찬 표기를 빠뜨리지 않기')
-    await user.click(form.getByRole('tab', { name: '특정 용도' }))
-    // The submit is unreachable until a purpose is picked: `purposes` with no ids is the shape
+    await user.click(form.getByRole('tab', { name: '특정 템플릿' }))
+    // The submit is unreachable until a template is picked: `templates` with no ids is the shape
     // the server refuses.
     expect(form.getByRole('button', { name: '지침 만들기' })).toBeDisabled()
     await user.click(form.getByLabelText('협찬 리뷰'))
@@ -124,8 +124,8 @@ describe('the guideline list', () => {
     await waitFor(() => expect(creates).toHaveLength(1))
     expect(creates[0]).toEqual({
       text: '협찬 표기를 빠뜨리지 않기',
-      scope: ProtoGuidelineScope.PURPOSES,
-      purposeIds: ['purpose-sponsored'],
+      scope: ProtoGuidelineScope.TEMPLATES,
+      templateIds: ['template-sponsored'],
     })
   })
 
@@ -174,7 +174,7 @@ describe('the guideline list', () => {
 
     const global = await row('없는 사실을 쓰지 않기')
     await user.click(global.getByRole('button', { name: '적용 범위 수정' }))
-    await user.click(global.getByRole('tab', { name: '특정 용도' }))
+    await user.click(global.getByRole('tab', { name: '특정 템플릿' }))
     await user.click(global.getByLabelText('무인가게 리뷰'))
     await user.click(global.getByRole('button', { name: '저장' }))
 
@@ -182,7 +182,7 @@ describe('the guideline list', () => {
     expect(updates[0]).toEqual({
       id: 'guideline-global',
       text: undefined,
-      scope: { scope: ProtoGuidelineScope.PURPOSES, purposeIds: ['purpose-review'] },
+      scope: { scope: ProtoGuidelineScope.TEMPLATES, templateIds: ['template-review'] },
     })
   })
 
@@ -199,7 +199,7 @@ describe('the guideline list', () => {
     await user.click(orphan.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(updates).toHaveLength(1))
-    expect(updates[0]?.scope).toEqual({ scope: ProtoGuidelineScope.GLOBAL, purposeIds: [] })
+    expect(updates[0]?.scope).toEqual({ scope: ProtoGuidelineScope.GLOBAL, templateIds: [] })
   })
 
   it('keeps the draft and the editor open when a save is refused', async () => {
@@ -234,7 +234,7 @@ describe('the guideline list', () => {
     await waitFor(() => expect(screen.queryByText('없는 사실을 쓰지 않기')).not.toBeInTheDocument())
   })
 
-  // The purpose names on each chip are a PROJECTION, so the list is re-read on every mount
+  // The template names on each chip are a PROJECTION, so the list is re-read on every mount
   // rather than served from a merely-fresh cache entry.
   it('re-reads the list on mount rather than trusting a fresh cache entry', async () => {
     const calls: string[] = []

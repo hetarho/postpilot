@@ -7,7 +7,7 @@ import {
   type Post,
   PostSchema,
   PostService,
-  PurposeRefSchema,
+  TemplateRefSchema,
   VoiceRefSchema,
 } from '@/shared/api'
 import { getPostQueryKey, listPostsQueryKey } from './post-queries'
@@ -37,10 +37,10 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
     }
     post.voice = clone(VoiceRefSchema, saved.voice)
   }
-  // Unconditional, unlike the voice: the response always reports the current 용도, and an
-  // unset one is a real answer (없음). A `if (saved.purpose)` guard would make a clear
+  // Unconditional, unlike the voice: the response always reports the current 템플릿, and an
+  // unset one is a real answer (없음). A `if (saved.template)` guard would make a clear
   // invisible until the next GetPost.
-  post.purpose = saved.purpose ? clone(PurposeRefSchema, saved.purpose) : undefined
+  post.template = saved.template ? clone(TemplateRefSchema, saved.template) : undefined
   return post
 }
 

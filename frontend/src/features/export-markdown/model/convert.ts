@@ -1,6 +1,7 @@
 import type { PostImage } from '@/entities/image'
 import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import {
+  blockSlotPlaceholder,
   escapeHtml,
   escapeMarkdownLabel,
   relativeFileUrl,
@@ -27,8 +28,10 @@ export function toMarkdown(
   ].join('\n')
   const body = walkBlocks(content, (block) => {
     switch (block.type) {
-      case BlockType.TEXT:
-        return escapeHtml(block.content)
+      case BlockType.TEXT: {
+        const slot = blockSlotPlaceholder(block)
+        return escapeHtml(slot ?? block.content)
+      }
       case BlockType.HEADING:
         return `${block.level === 3 ? '###' : '##'} ${escapeHtml(block.content)}`
       case BlockType.IMAGE:

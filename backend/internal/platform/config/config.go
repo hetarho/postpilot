@@ -301,12 +301,19 @@ type Config struct {
 	// connects them.
 	PublishAgentHeartbeatInterval time.Duration
 
-	// Purpose brief field ceilings, counted in Unicode scalar values like the voice
-	// sample minimum. They are env-owned rather than constants because a brief that is
-	// too short to be useful is a per-account editorial judgement, not a product rule.
-	PurposeNameMaxChars         int
-	PurposeDescriptionMaxChars  int
-	PurposeInstructionsMaxChars int
+	// Template field ceilings, counted in Unicode scalar values like the voice sample
+	// minimum. They are env-owned rather than constants because a template that is too
+	// short to be useful is a per-account editorial judgement, not a product rule.
+	//
+	// TemplateMaxPerAccount and TemplateMaxRepeatExpansion stay server-side: the first is
+	// a storage guard, and the second bounds how large one expanded template may grow
+	// before it reaches a provider, which the frontend cannot know because it depends on
+	// how many photos the post carries.
+	TemplateNameMaxChars        int
+	TemplateDescriptionMaxChars int
+	TemplateBodyMaxChars        int
+	TemplateMaxPerAccount       int
+	TemplateMaxRepeatExpansion  int
 
 	// Writing-guideline ceilings. GuidelineTextMaxChars bounds one authored rule;
 	// GuidelineMaxPerAccount bounds how many an account may hold, because every applicable
@@ -430,21 +437,31 @@ func Load() (*Config, error) {
 	}
 	cfg.PublishAgentHeartbeatInterval = agentHeartbeat
 
-	purposeName, err := positiveInt("PURPOSE_NAME_MAX_CHARS", "40")
+	templateName, err := positiveInt("TEMPLATE_NAME_MAX_CHARS", "40")
 	if err != nil {
 		return nil, err
 	}
-	cfg.PurposeNameMaxChars = purposeName
-	purposeDescription, err := positiveInt("PURPOSE_DESCRIPTION_MAX_CHARS", "200")
+	cfg.TemplateNameMaxChars = templateName
+	templateDescription, err := positiveInt("TEMPLATE_DESCRIPTION_MAX_CHARS", "200")
 	if err != nil {
 		return nil, err
 	}
-	cfg.PurposeDescriptionMaxChars = purposeDescription
-	purposeInstructions, err := positiveInt("PURPOSE_INSTRUCTIONS_MAX_CHARS", "2000")
+	cfg.TemplateDescriptionMaxChars = templateDescription
+	templateBody, err := positiveInt("TEMPLATE_BODY_MAX_CHARS", "4000")
 	if err != nil {
 		return nil, err
 	}
-	cfg.PurposeInstructionsMaxChars = purposeInstructions
+	cfg.TemplateBodyMaxChars = templateBody
+	templateCap, err := positiveInt("TEMPLATE_MAX_PER_ACCOUNT", "50")
+	if err != nil {
+		return nil, err
+	}
+	cfg.TemplateMaxPerAccount = templateCap
+	templateExpansion, err := positiveInt("TEMPLATE_MAX_REPEAT_EXPANSION", "40")
+	if err != nil {
+		return nil, err
+	}
+	cfg.TemplateMaxRepeatExpansion = templateExpansion
 
 	guidelineText, err := positiveInt("GUIDELINE_TEXT_MAX_CHARS", "300")
 	if err != nil {

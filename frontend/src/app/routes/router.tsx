@@ -179,10 +179,10 @@ const voicesRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/voices'), 'VoicesPage'),
 })
 
-const purposesRoute = createRoute({
+const templatesRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  path: '/purposes',
-  component: lazyRouteComponent(() => import('@/pages/purposes'), 'PurposesPage'),
+  path: '/templates',
+  component: lazyRouteComponent(() => import('@/pages/templates'), 'TemplatesPage'),
 })
 
 const plansRoute = createRoute({
@@ -336,7 +336,7 @@ export const routeTree = rootRoute.addChildren([
     publishingAgentsRoute,
     adminRoute.addChildren([adminAccountsRoute, adminModelsRoute]),
     voicesRoute,
-    purposesRoute,
+    templatesRoute,
     guidelinesRoute,
     plansRoute,
     voiceLayoutRoute.addChildren([

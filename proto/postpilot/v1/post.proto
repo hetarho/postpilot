@@ -3,7 +3,7 @@ syntax = "proto3";
 package postpilot.v1;
 
 import "postpilot/v1/provider.proto";
-import "postpilot/v1/purpose.proto";
+import "postpilot/v1/template.proto";
 import "postpilot/v1/error.proto";
 import "postpilot/v1/language.proto";
 
@@ -47,6 +47,19 @@ enum BlockType {
   LIST = 5;
 }
 
+// A position a template reserved for content the app cannot invent — a place link, an
+// external URL. It rides on a TEXT block rather than becoming a sixth BlockType: a new enum
+// member would force every existing switch (reading view, block editor, the four export
+// mappings, revision, the validator) to change merely to stay correct, while an optional
+// field on a type they already handle means only the surfaces that render a slot specially
+// need to know it exists. [I2] holds either way — the canonical post is still a block array.
+message BlockSlot {
+  // photo | place | link (spec/tech/post-template-grammar.md §2).
+  string kind = 1;
+  // The template author's label, shown to the user. Never an instruction to the model.
+  string label = 2;
+}
+
 message Block {
   BlockType type = 1;
   string content = 2;
@@ -55,6 +68,9 @@ message Block {
   string alt = 5;
   string caption = 6;
   repeated string items = 7;
+  // Set only on an unfilled template slot. A block carrying one holds its position through
+  // generation, revision, finalization and export until a person fills it.
+  BlockSlot slot = 8;
 }
 
 message PostContent {
@@ -112,9 +128,9 @@ message Post {
   // The voice the latest machine baseline was written under. Finalization learning refuses
   // unless it still equals `voice`, so a reassigned post cannot publish to the wrong voice.
   string machine_baseline_voice_id = 19;
-  // Unset when the post has no purpose. Unlike `voice` it is optional by design: the
+  // Unset when the post has no template. Unlike `voice` it is optional by design: the
   // server never picks one and 없음 is the default.
-  PurposeRef purpose = 20;
+  TemplateRef template = 20;
   ContentLanguage target_language = 21;
   // UNSPECIFIED until canonical machine content establishes provenance.
   ContentLanguage content_language = 22;
@@ -142,7 +158,7 @@ message PostSummary {
   GenerationJob active_job = 5;
   string pending_experiment_id = 6;
   VoiceRef voice = 7;
-  PurposeRef purpose = 8;
+  TemplateRef template = 8;
   ContentLanguage target_language = 9;
   ContentLanguage content_language = 10;
 }
@@ -218,9 +234,9 @@ message SavePostDraftRequest {
   optional string voice_id = 4;
   // Presence decides the meaning here too, but with one more case than voice_id, because a
   // post may legitimately have none: absent preserves the current assignment (what ordinary
-  // autosave sends), an empty string clears it, and a non-empty value assigns that purpose.
+  // autosave sends), an empty string clears it, and a non-empty value assigns that template.
   // An unknown or foreign id is refused and nothing else in the request is applied.
-  optional string purpose_id = 5;
+  optional string template_id = 5;
   // Required on create; absent preserves the stored target on an update.
   optional ContentLanguage target_language = 6;
 }

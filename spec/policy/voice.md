@@ -27,8 +27,8 @@ language, bilingual analysis, portable projection, and language-safe learning ar
   and legacy styleguide/rules bytes. `adduser` establishes the same default voice through the voice context's
   idempotent bootstrap immediately after creating the account and exits nonzero if it cannot; a rerun repairs a user
   left without a voice without duplicating data. Reads never create a voice or a profile.
-- A voice profile is never modified by, and never contains, purpose text: a 용도 is a separate account-owned aggregate
-  and is not part of `ProfileForPrompt` (see [purposes](purposes.md)). The prompt appends it after the complete
+- A voice profile is never modified by, and never contains, template text: a 템플릿 is a separate account-owned aggregate
+  and is not part of `ProfileForPrompt` (see [templates](templates.md)). The prompt appends it after the complete
   profile, so the profile's own bytes are identical with and without one.
 - The same holds for a 작문 지침: writing guidelines are not voice data, never enter `ProfileForPrompt`, and leave the
   profile's bytes unchanged (see [guidelines](guidelines.md)). Register stays voice-owned — a guideline's precedence

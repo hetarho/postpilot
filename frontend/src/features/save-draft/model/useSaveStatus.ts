@@ -12,7 +12,7 @@ export type SaveStatusState = 'quiet' | 'dirty' | 'saving' | 'saved' | 'error'
  *  The queue resolves to `saved` for the whole life of a queue that has ever saved
  *  (`draft-queue.ts`'s `stateOf`), which is correct as a fact and wrong as a message: 저장됨 never
  *  came down, so the one status line could never get round to the post's own status. The settle
- *  lives HERE rather than in the queue on purpose — the queue's state machine is what autosave
+ *  lives HERE rather than in the queue on template — the queue's state machine is what autosave
  *  correctness is tested against, and "how long a word stays on screen" is not part of it
  *  (tech/draft-autosave.md).
  *

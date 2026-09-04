@@ -58,44 +58,66 @@ const NaturalnessBaseline = `[한국어 자연 문체 기준선]
 - 메모가 요구하지 않은 수사·경구를 덧붙이지 마세요.
 말투 프로필, 활성 대조 규칙, 사용자 규칙이 이 기준선과 충돌하면 해당 프로필과 규칙을 우선하세요.`
 
-// purposePrecedence keeps the brief from quietly overriding the voice. A brief like
-// "정보성 리뷰, 담담하게" reads as a style instruction to the model unless the split is stated:
-// the purpose owns genre, the voice owns register. It is prompt text, so it lives in code
-// beside the section it belongs to rather than in configuration (ARCHITECTURE §4).
-const purposePrecedence = "용도는 글의 내용·구성·포함할 정보를 정하고, 문체·종결어미·어휘는 위의 말투 프로필을 따릅니다. 지침이 문체와 충돌하면 말투 프로필을 우선하세요."
-
-// writePurposeSection appends the frozen brief AFTER the complete voice profile and before
-// the per-post material. That position is load-bearing twice over: the profile prefix stays
-// byte-identical across posts of different purposes (PRD §5's caching note), and the brief
-// stays in the stable half, so every revision of one post re-injects the identical block.
+// templateLegend explains the grammar the rendered body uses. It ships with the section
+// rather than living in the template text because it is OUR contract with the model, not the
+// author's: a user editing a template must not be able to change what {{slot:n}} means.
 //
-// A nil brief writes nothing at all, preserving the fixed no-purpose prompt byte for byte.
-func writePurposeSection(out *strings.Builder, purpose *PurposeBrief) {
-	if purpose == nil {
+// The tokens are deliberately short. The model is asked to copy a slot's token verbatim, and
+// copying twelve characters exactly is something a model does reliably while reproducing a
+// label or a sentence is not (spec/tech/post-template-grammar.md §5).
+const templateLegend = `표기는 다음과 같습니다.
+- 일반 텍스트: 그 위치에 그대로 출력하세요.
+- <write>…</write>: 그 자리에 지시대로 글을 쓰고, 태그와 지시문 자체는 출력하지 마세요.
+- {{photo:파일명}}: 그 자리에 해당 파일명의 IMAGE 블록을 놓으세요.
+- {{slot:번호}}: 앱이 나중에 채우는 자리입니다. 그 토큰만 담은 TEXT 블록 하나를 그대로 출력하고, 그 자리에 어떤 문장도 새로 쓰지 마세요.
+- <note>…</note>: 글을 쓸 때 참고할 요구 사항입니다. 출력하지 마세요.`
+
+// templatePrecedence keeps the shape from quietly overriding the voice, the way the retired
+// purpose section's sentence did: the template owns structure, the voice owns register.
+//
+// It deliberately does NOT contain the word 지침. The retired section rendered its own field
+// as `작성 지침:` and then said "지침이 문체와 충돌하면…", one section above [작문 지침]'s
+// "지침이 용도의 요구와 충돌하면 지침을 우선하고…" — the word named two different things in
+// one prompt, and the guideline-beats-brief rule could be read as pointing at the brief
+// itself. After this change 지침 names exactly one thing in the prompt, and that is the
+// property to preserve when editing this text.
+const templatePrecedence = "템플릿은 글의 구성·순서·포함할 내용을 정하고, 문체·종결어미·어휘는 위의 말투 프로필을 따릅니다."
+
+// writeTemplateSection appends the frozen template AFTER the complete voice profile and
+// before the per-post material. That position is load-bearing twice over, exactly as the
+// purpose section's was: the profile prefix stays byte-identical across posts of different
+// templates (PRD §5's caching note), and the template stays in the stable half, so every
+// revision of one post re-injects the identical block.
+//
+// The body arrives already expanded and rendered by the template context, frozen at enqueue.
+// Nothing here parses, expands or re-renders: a photo attached after the start must not be
+// able to change what the model was asked for.
+//
+// A nil template writes nothing at all, so a post without one adds no template bytes.
+func writeTemplateSection(out *strings.Builder, brief *TemplateBrief) {
+	if brief == nil {
 		return
 	}
-	fmt.Fprintf(out, "\n\n[글의 용도: %s]", purpose.Name)
-	if purpose.Description != "" {
-		fmt.Fprintf(out, "\n이 글의 용도: %s", purpose.Description)
-	}
-	fmt.Fprintf(out, "\n작성 지침:\n%s", purpose.Instructions)
-	fmt.Fprintf(out, "\n%s", purposePrecedence)
+	fmt.Fprintf(out, "\n\n[글 템플릿: %s]", brief.Name)
+	fmt.Fprintf(out, "\n아래 템플릿의 구성을 그대로 따르세요. %s", templateLegend)
+	fmt.Fprintf(out, "\n---\n%s\n---", brief.Body)
+	fmt.Fprintf(out, "\n%s", templatePrecedence)
 }
 
 // guidelinePrecedence states the split the user needs guaranteed. A guideline is typically a
 // prohibition the user added precisely because the default output was wrong, so it must beat
-// the purpose's general content instruction — while register stays with the voice profile,
-// consistent with purposePrecedence. Fixed prompt text, so it lives in code (ARCHITECTURE §4).
-const guidelinePrecedence = "지침은 이 글에서 지켜야 할 주의 사항과 피해야 할 내용·표현을 정합니다. 지침이 용도의 요구와 충돌하면 지침을 우선하고, 문체·종결어미·어휘는 위의 말투 프로필을 따르세요."
+// the template's content instruction — while register stays with the voice profile,
+// consistent with templatePrecedence. Fixed prompt text, so it lives in code (ARCHITECTURE §4).
+const guidelinePrecedence = "지침은 이 글에서 지켜야 할 주의 사항과 피해야 할 내용·표현을 정합니다. 지침이 템플릿의 요구와 충돌하면 지침을 우선하고, 문체·종결어미·어휘는 위의 말투 프로필을 따르세요."
 
 // writeGuidelinesSection appends the frozen guideline texts as ONE section at ONE position:
-// after the purpose section when the post has one, otherwise directly after the complete
+// after the template section when the post has one, otherwise directly after the complete
 // voice profile, and always before the per-post material. Both halves of that matter — the
 // voice prefix stays byte-identical across posts (PRD §5's caching note), and prohibitions
 // sit closest to the task material they constrain.
 //
 // The heading and the precedence sentence stay Korean for every target language, exactly as
-// writePurposeSection does: the section frames user-authored text, and its framing is not
+// writeTemplateSection does: the section frames user-authored text, and its framing is not
 // part of the output-language contract.
 //
 // An empty slice writes nothing at all, preserving the fixed no-guideline prompt byte for byte.
@@ -113,28 +135,28 @@ func writeGuidelinesSection(out *strings.Builder, guidelines []string) {
 // BuildWritePrompt preserves the legacy Korean call surface for prompt goldens and
 // consumers that explicitly request the established Korean contract. Runtime work uses
 // BuildWritePromptForLanguage with its frozen language.
-func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, purpose *PurposeBrief, guidelines []string) (string, string) {
-	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, targetLength, purpose, guidelines)
+func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
+	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, targetLength, template, guidelines)
 }
 
-func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, purpose *PurposeBrief, guidelines []string) (string, string) {
+func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
 		stable.WriteString(WritePrompt)
 		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, %d–%d개의 tags, blocks를 반환하세요.", TagsMin, TagsMax)
-		stable.WriteString("\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 용도, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
+		stable.WriteString("\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
 	case LanguageEnglish:
 		stable.WriteString(englishWritePrompt)
 		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, %d–%d tags, and blocks.", TagsMin, TagsMax)
-		stable.WriteString("\nThe output language is English. Write the title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, purpose, memo, or title hint.")
+		stable.WriteString("\nThe output language is English. Write the title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
 	default:
 		// Callers validate before prompt construction. Keeping this branch explicit makes
 		// direct prompt use fail closed instead of silently defaulting to Korean.
 		stable.WriteString("Unsupported output language; do not generate content.")
 	}
 	writeProfileSection(&stable, language, profile, targetLength)
-	writePurposeSection(&stable, purpose)
+	writeTemplateSection(&stable, template)
 	writeGuidelinesSection(&stable, guidelines)
 
 	photoMaterial := "첨부 사진이 없습니다. 이미지 없이 메모만으로 작성하세요."

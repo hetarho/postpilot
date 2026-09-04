@@ -16,7 +16,7 @@ import { endSession } from '../model/end-session'
  *  have to displace one of these rather than be squeezed in beside them. */
 const DESTINATIONS: ReadonlyArray<{
   to: string
-  labelKey: 'posts' | 'voices' | 'purposes' | 'guidelines' | 'models' | 'publishingAgents'
+  labelKey: 'posts' | 'voices' | 'templates' | 'guidelines' | 'models' | 'publishingAgents'
   icon: ComponentType<{ className?: string }>
   /** The tier this destination requires. Publishing runs through OUR paired agent and OUR
    *  infrastructure ([I1]), so it is the operator's surface — and the server refuses every one
@@ -25,7 +25,7 @@ const DESTINATIONS: ReadonlyArray<{
 }> = [
   { to: '/posts', labelKey: 'posts', icon: FileText },
   { to: '/voices', labelKey: 'voices', icon: Quote },
-  { to: '/purposes', labelKey: 'purposes', icon: Target },
+  { to: '/templates', labelKey: 'templates', icon: Target },
   { to: '/guidelines', labelKey: 'guidelines', icon: ListChecks },
   { to: '/ai-models', labelKey: 'models', icon: Bot },
   { to: '/publishing-agents', labelKey: 'publishingAgents', icon: Send, masterOnly: true },

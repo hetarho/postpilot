@@ -1,0 +1,445 @@
+{
+  "_comment": [
+    "The ONE grammar fixture. Both parsers read this file: Go (internal/template/grammar_test.go)",
+    "and TypeScript (frontend/src/entities/template/lib/grammar.test.ts). A new grammar rule lands",
+    "here first — this file is the only mechanism that keeps two implementations of one grammar",
+    "honest. Node shapes: literal{raw} · write{text} · slot{kind,label} · note{text} ·",
+    "repeat{each,children}. Every ok case is also asserted to serialize back to `body` byte-exactly.",
+    "See spec/tech/post-template-grammar.md."
+  ],
+  "cases": [
+    {
+      "name": "empty body",
+      "body": "",
+      "nodes": []
+    },
+    {
+      "name": "literal only keeps its exact bytes",
+      "body": "=========================\n별 다섯 개\n",
+      "nodes": [
+        {
+          "t": "literal",
+          "raw": "=========================\n별 다섯 개\n"
+        }
+      ]
+    },
+    {
+      "name": "write node",
+      "body": "<write>인트로를 작성합니다.</write>",
+      "nodes": [
+        {
+          "t": "write",
+          "text": "인트로를 작성합니다."
+        }
+      ]
+    },
+    {
+      "name": "literal and write interleave, whitespace preserved",
+      "body": "별 <write>별점을 별 기호로</write>\n\n끝",
+      "nodes": [
+        {
+          "t": "literal",
+          "raw": "별 "
+        },
+        {
+          "t": "write",
+          "text": "별점을 별 기호로"
+        },
+        {
+          "t": "literal",
+          "raw": "\n\n끝"
+        }
+      ]
+    },
+    {
+      "name": "slot with label",
+      "body": "<slot kind=\"place\" label=\"네이버 지도\"/>",
+      "nodes": [
+        {
+          "t": "slot",
+          "kind": "place",
+          "label": "네이버 지도"
+        }
+      ]
+    },
+    {
+      "name": "slot without label, single quotes and loose spacing",
+      "body": "<slot   kind='link' />",
+      "nodes": [
+        {
+          "t": "slot",
+          "kind": "link",
+          "label": ""
+        }
+      ]
+    },
+    {
+      "name": "note node",
+      "body": "<note>존댓말을 유지하세요</note>",
+      "nodes": [
+        {
+          "t": "note",
+          "text": "존댓말을 유지하세요"
+        }
+      ]
+    },
+    {
+      "name": "repeat over photos with children",
+      "body": "<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n<write>이 사진에 대한 설명</write>\n</repeat>",
+      "nodes": [
+        {
+          "t": "repeat",
+          "each": "photo",
+          "children": [
+            {
+              "t": "literal",
+              "raw": "\n"
+            },
+            {
+              "t": "slot",
+              "kind": "photo",
+              "label": ""
+            },
+            {
+              "t": "literal",
+              "raw": "\n"
+            },
+            {
+              "t": "write",
+              "text": "이 사진에 대한 설명"
+            },
+            {
+              "t": "literal",
+              "raw": "\n"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "the interview example end to end",
+      "body": "<write>인트로를 작성합니다.</write>\n\n=========================\n별 <write>별점을 별 기호로</write>\n\n<slot kind=\"place\" label=\"네이버 지도\"/>\n\n=========================\n<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n<write>이 사진에 대한 설명</write>\n</repeat>\n\n<write>총평 및 재방문 의사</write>",
+      "nodes": [
+        {
+          "t": "write",
+          "text": "인트로를 작성합니다."
+        },
+        {
+          "t": "literal",
+          "raw": "\n\n=========================\n별 "
+        },
+        {
+          "t": "write",
+          "text": "별점을 별 기호로"
+        },
+        {
+          "t": "literal",
+          "raw": "\n\n"
+        },
+        {
+          "t": "slot",
+          "kind": "place",
+          "label": "네이버 지도"
+        },
+        {
+          "t": "literal",
+          "raw": "\n\n=========================\n"
+        },
+        {
+          "t": "repeat",
+          "each": "photo",
+          "children": [
+            {
+              "t": "literal",
+              "raw": "\n"
+            },
+            {
+              "t": "slot",
+              "kind": "photo",
+              "label": ""
+            },
+            {
+              "t": "literal",
+              "raw": "\n"
+            },
+            {
+              "t": "write",
+              "text": "이 사진에 대한 설명"
+            },
+            {
+              "t": "literal",
+              "raw": "\n"
+            }
+          ]
+        },
+        {
+          "t": "literal",
+          "raw": "\n\n"
+        },
+        {
+          "t": "write",
+          "text": "총평 및 재방문 의사"
+        }
+      ]
+    },
+    {
+      "name": "a bare < followed by whitespace or punctuation is literal prose",
+      "body": "3 < 5 이고 <-- 화살표도 그대로",
+      "nodes": [
+        {
+          "t": "literal",
+          "raw": "3 < 5 이고 <-- 화살표도 그대로"
+        }
+      ]
+    },
+    {
+      "name": "an escaped identifier tag is literal, an unescaped one is a typo",
+      "body": "a &lt;b&gt; c",
+      "nodes": [
+        {
+          "t": "literal",
+          "raw": "a &lt;b&gt; c"
+        }
+      ]
+    },
+    {
+      "name": "escaped angle bracket stays escaped in the stored slice",
+      "body": "&lt;write&gt; 라고 쓰고 싶을 때",
+      "nodes": [
+        {
+          "t": "literal",
+          "raw": "&lt;write&gt; 라고 쓰고 싶을 때"
+        }
+      ]
+    },
+    {
+      "name": "a bare ampersand is literal and round-trips",
+      "body": "A & B <write>둘을 비교</write>",
+      "nodes": [
+        {
+          "t": "literal",
+          "raw": "A & B "
+        },
+        {
+          "t": "write",
+          "text": "둘을 비교"
+        }
+      ]
+    },
+    {
+      "name": "escapes inside a write instruction survive to its decoded text",
+      "body": "<write>&lt;b&gt; 태그를 설명</write>",
+      "nodes": [
+        {
+          "t": "write",
+          "text": "<b> 태그를 설명"
+        }
+      ]
+    },
+    {
+      "name": "a quote in a slot label round-trips through its escape",
+      "body": "<slot kind=\"place\" label=\"네이버 &quot;지도&quot;\"/>",
+      "nodes": [
+        {
+          "t": "slot",
+          "kind": "place",
+          "label": "네이버 \"지도\""
+        }
+      ]
+    },
+    {
+      "name": "a zero-width space beside real text is not blank",
+      "body": "<write>​인트로</write>",
+      "nodes": [
+        {
+          "t": "write",
+          "text": "​인트로"
+        }
+      ]
+    },
+    {
+      "name": "unknown tag",
+      "body": "<section>x</section>",
+      "error": {
+        "line": 1,
+        "reason": "unknown_tag"
+      }
+    },
+    {
+      "name": "a mistyped tag name is caught, not printed",
+      "body": "<repaet each=\"photo\">\n<write>a</write>\n</repaet>",
+      "error": {
+        "line": 1,
+        "reason": "unknown_tag"
+      }
+    },
+    {
+      "name": "a known name plus stray letters is unknown",
+      "body": "<writer>a</writer>",
+      "error": {
+        "line": 1,
+        "reason": "unknown_tag"
+      }
+    },
+    {
+      "name": "unknown tag on a later line",
+      "body": "<write>a</write>\n\n<heading>b</heading>",
+      "error": {
+        "line": 3,
+        "reason": "unknown_tag"
+      }
+    },
+    {
+      "name": "unclosed write",
+      "body": "<write>인트로",
+      "error": {
+        "line": 1,
+        "reason": "unclosed_tag"
+      }
+    },
+    {
+      "name": "unclosed repeat",
+      "body": "<repeat each=\"photo\">\n<slot kind=\"photo\"/>",
+      "error": {
+        "line": 1,
+        "reason": "unclosed_tag"
+      }
+    },
+    {
+      "name": "unexpected close",
+      "body": "인트로</write>",
+      "error": {
+        "line": 1,
+        "reason": "unexpected_close"
+      }
+    },
+    {
+      "name": "mismatched close",
+      "body": "<write>a</note>",
+      "error": {
+        "line": 1,
+        "reason": "unexpected_close"
+      }
+    },
+    {
+      "name": "slot written with a closing tag",
+      "body": "<slot kind=\"photo\"></slot>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "unparsable attribute list",
+      "body": "<slot kind=photo/>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "slot without kind",
+      "body": "<slot label=\"지도\"/>",
+      "error": {
+        "line": 1,
+        "reason": "missing_attribute"
+      }
+    },
+    {
+      "name": "repeat without each",
+      "body": "<repeat>\n<write>a</write>\n</repeat>",
+      "error": {
+        "line": 1,
+        "reason": "missing_attribute"
+      }
+    },
+    {
+      "name": "unknown slot kind",
+      "body": "<slot kind=\"video\"/>",
+      "error": {
+        "line": 1,
+        "reason": "unknown_slot_kind"
+      }
+    },
+    {
+      "name": "unknown repeat iterator",
+      "body": "<repeat each=\"tag\">\n<write>a</write>\n</repeat>",
+      "error": {
+        "line": 1,
+        "reason": "unknown_repeat_each"
+      }
+    },
+    {
+      "name": "nested repeat",
+      "body": "<repeat each=\"photo\">\n<repeat each=\"photo\">\n<write>a</write>\n</repeat>\n</repeat>",
+      "error": {
+        "line": 2,
+        "reason": "nested_repeat"
+      }
+    },
+    {
+      "name": "empty write",
+      "body": "<write></write>",
+      "error": {
+        "line": 1,
+        "reason": "empty_write"
+      }
+    },
+    {
+      "name": "whitespace-only write",
+      "body": "<write>   </write>",
+      "error": {
+        "line": 1,
+        "reason": "empty_write"
+      }
+    },
+    {
+      "name": "empty note",
+      "body": "<note> </note>",
+      "error": {
+        "line": 1,
+        "reason": "empty_note"
+      }
+    },
+    {
+      "name": "nested write is not allowed",
+      "body": "<write>a <write>b</write></write>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "a zero-width space alone is an empty write on both sides",
+      "body": "<write>​</write>",
+      "error": {
+        "line": 1,
+        "reason": "empty_write"
+      }
+    },
+    {
+      "name": "a byte order mark alone is an empty write on both sides",
+      "body": "<write>﻿</write>",
+      "error": {
+        "line": 1,
+        "reason": "empty_write"
+      }
+    },
+    {
+      "name": "a next-line character alone is an empty write on both sides",
+      "body": "<write></write>",
+      "error": {
+        "line": 1,
+        "reason": "empty_write"
+      }
+    },
+    {
+      "name": "an ideographic space alone is an empty note on both sides",
+      "body": "<note>　</note>",
+      "error": {
+        "line": 1,
+        "reason": "empty_note"
+      }
+    }
+  ]
+}

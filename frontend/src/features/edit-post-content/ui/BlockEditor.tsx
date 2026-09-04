@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
+import { unfilledSlotCount } from '@/shared/lib'
 import { BlockList, type PostDraft } from '@/entities/post'
 import {
   BlockSchema,
@@ -51,7 +52,9 @@ export const BlockEditor = forwardRef<
   }
 >(function BlockEditor({ post, onContentChange }, ref) {
   const { t } = useTranslation('posts')
+  const { t: tTemplates } = useTranslation('templates')
   const [content, setContent] = useState(() => clone(PostContentSchema, post.content!))
+  const unfilled = unfilledSlotCount(content)
   const valid = useMemo(
     () =>
       validContent(
@@ -105,6 +108,13 @@ export const BlockEditor = forwardRef<
         <FieldMessage className="mt-2">{t('edit.conflict')}</FieldMessage>
       )}
       {!valid && <FieldMessage className="mt-2">{t('edit.emptyBlock')}</FieldMessage>}
+      {/* Unfilled template positions are stated here and never gate: the app cannot invent a
+          map link, and the reading view below shows WHERE each one is (change 25 AC9). */}
+      {unfilled > 0 && (
+        <Typography variant="body" role="status" className="text-content-secondary mt-2">
+          {tTemplates('slot.pending', { count: unfilled })}
+        </Typography>
+      )}
 
       <BlockList
         content={content}

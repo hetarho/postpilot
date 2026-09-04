@@ -49,7 +49,7 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 		Slug:           p.Slug,
 		UserID:         p.UserID,
 		VoiceID:        p.VoiceID,
-		PurposeID:      optionalText(p.PurposeID),
+		TemplateID:     optionalText(p.TemplateID),
 		Title:          p.Title,
 		Memo:           p.Memo,
 		TargetLanguage: string(p.TargetLanguage),
@@ -63,8 +63,8 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 		if isVoiceOwnershipViolation(err) {
 			return post.ErrVoiceNotFound
 		}
-		if isPurposeOwnershipViolation(err) {
-			return post.ErrPurposeNotFound
+		if isTemplateOwnershipViolation(err) {
+			return post.ErrTemplateNotFound
 		}
 		return fmt.Errorf("insert post: %w", err)
 	}
@@ -102,36 +102,36 @@ func (s *Store) ReassignVoice(ctx context.Context, slug, userID, voiceID string,
 	return n == 1, nil
 }
 
-// AssignPurpose is the only writer of posts.purpose_id besides the create and the foreign
+// AssignTemplate is the only writer of posts.template_id besides the create and the foreign
 // key's ON DELETE SET NULL. A foreign or unknown id is refused by the composite FK even if a
-// service check were bypassed, and that refusal is reported as a missing purpose.
-func (s *Store) AssignPurpose(ctx context.Context, slug, userID string, purposeID *string, updatedAt time.Time) (bool, error) {
+// service check were bypassed, and that refusal is reported as a missing template.
+func (s *Store) AssignTemplate(ctx context.Context, slug, userID string, templateID *string, updatedAt time.Time) (bool, error) {
 	value := sql.NullString{}
-	if purposeID != nil && *purposeID != "" {
-		value = sql.NullString{String: *purposeID, Valid: true}
+	if templateID != nil && *templateID != "" {
+		value = sql.NullString{String: *templateID, Valid: true}
 	}
-	n, err := s.write.AssignPostPurpose(ctx, sqlc.AssignPostPurposeParams{
-		PurposeID: value, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+	n, err := s.write.AssignPostTemplate(ctx, sqlc.AssignPostTemplateParams{
+		TemplateID: value, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
-		if isPurposeOwnershipViolation(err) {
-			return false, post.ErrPurposeNotFound
+		if isTemplateOwnershipViolation(err) {
+			return false, post.ErrTemplateNotFound
 		}
-		return false, fmt.Errorf("assign post purpose: %w", err)
+		return false, fmt.Errorf("assign post template: %w", err)
 	}
 	return n == 1, nil
 }
 
 // SQLite reports every composite-FK refusal with the same generic message, so which
-// reference was violated is decided by which write raised it: only a purpose write asks
-// isPurposeOwnershipViolation, and only a voice write asks isVoiceOwnershipViolation. The
+// reference was violated is decided by which write raised it: only a template write asks
+// isTemplateOwnershipViolation, and only a voice write asks isVoiceOwnershipViolation. The
 // create writes both references, and prefers the voice reading because a create carries a
-// required voice and an optional purpose.
+// required voice and an optional template.
 func isForeignKeyViolation(err error) bool {
 	return strings.Contains(strings.ToUpper(err.Error()), "FOREIGN KEY CONSTRAINT FAILED")
 }
 
-func isPurposeOwnershipViolation(err error) bool { return isForeignKeyViolation(err) }
+func isTemplateOwnershipViolation(err error) bool { return isForeignKeyViolation(err) }
 
 func isVoiceOwnershipViolation(err error) bool {
 	return isForeignKeyViolation(err) ||
@@ -296,8 +296,8 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 			Slug:            row.Slug,
 			VoiceID:         row.VoiceID,
 			Voice:           post.VoiceRef{ID: row.VoiceID},
-			PurposeID:       row.PurposeID.String,
-			Purpose:         post.PurposeRef{ID: row.PurposeID.String},
+			TemplateID:      row.TemplateID.String,
+			Template:        post.TemplateRef{ID: row.TemplateID.String},
 			Title:           title,
 			Status:          row.Status,
 			UpdatedAt:       updatedAt,
@@ -577,8 +577,8 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		UserID:                  row.UserID,
 		VoiceID:                 row.VoiceID,
 		Voice:                   post.VoiceRef{ID: row.VoiceID},
-		PurposeID:               row.PurposeID.String,
-		Purpose:                 post.PurposeRef{ID: row.PurposeID.String},
+		TemplateID:              row.TemplateID.String,
+		Template:                post.TemplateRef{ID: row.TemplateID.String},
 		TargetLanguage:          targetLanguage,
 		ContentLanguage:         contentLanguage,
 		Title:                   row.Title,

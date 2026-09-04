@@ -22,7 +22,7 @@ import { type FakeVoiceOptions, registerVoiceService } from './voice'
 import { type FakeExperimentsOptions, registerExperimentService } from './experiments'
 import { type FakePublishingOptions, registerPublishingService } from './publishing'
 import { type FakeGuidelinesOptions, registerGuidelineService } from './guidelines'
-import { type FakePurposesOptions, registerPurposeService } from './purposes'
+import { type FakeTemplatesOptions, registerTemplateService } from './templates'
 import { type FakeModelCatalogOptions, registerModelCatalogService } from './model-catalog'
 import { type FakePlansOptions, registerPlanServices } from './plans'
 import { connectAppError } from './app-error'
@@ -54,9 +54,9 @@ export interface FakeAuthOptions {
   voice?: FakeVoiceOptions
   experiments?: FakeExperimentsOptions
   publishing?: FakePublishingOptions
-  /** The acting account's 용도 briefs. Present by default with none, so every screen that
+  /** The acting account's 템플릿 briefs. Present by default with none, so every screen that
    *  mounts the selector reads an empty directory rather than an "unimplemented" error. */
-  purposes?: FakePurposesOptions
+  templates?: FakeTemplatesOptions
   /** The acting account's 작문 지침. Present by default with none, so a screen that mounts the
    *  list reads an empty one rather than an "unimplemented" error. */
   guidelines?: FakeGuidelinesOptions
@@ -111,7 +111,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerVoiceService(router, { calls, ...options.voice })
     registerExperimentService(router, { calls, ...options.experiments })
     registerPublishingService(router, { calls, ...options.publishing })
-    registerPurposeService(router, { calls, ...options.purposes })
+    registerTemplateService(router, { calls, ...options.templates })
     registerGuidelineService(router, { calls, ...options.guidelines })
     registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
     registerModelCatalogService(router, { calls, ...options.modelCatalog })

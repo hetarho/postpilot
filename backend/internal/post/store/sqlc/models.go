@@ -37,7 +37,7 @@ type Post struct {
 	TargetLength            sql.NullInt64
 	FinalizedRevision       sql.NullInt64
 	FinalizedAt             sql.NullString
-	PurposeID               sql.NullString
+	TemplateID              sql.NullString
 	TargetLanguage          string
 	ContentLanguage         sql.NullString
 }
