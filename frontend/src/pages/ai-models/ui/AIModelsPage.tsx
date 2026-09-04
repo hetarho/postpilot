@@ -41,6 +41,7 @@ import {
   Listbox,
   Typography,
   typographyStyles,
+  pageStyles,
 } from '@/shared/ui'
 import { ModelLeaderboard } from '@/widgets/model-leaderboard'
 
@@ -106,7 +107,7 @@ export function AIModelsPage() {
     void navigate({ to: '/ai-models/experiments/$id', params: { id: response.experimentId } })
   }
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
+    <main className={pageStyles({ width: 'board' })}>
       <Typography variant="display">{t('title', { ns: 'models' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'models' })}
@@ -140,7 +141,7 @@ export function AIModelsPage() {
             stages' leaderboards is a ~1,000px round trip each way (§4.3). It carries the page's own
             plane out to the gutters so the content scrolling underneath is covered, and clears the
             desktop header, which is sticky and 64px tall from `sm:` up. */}
-        <div className="bg-surface-base sticky top-0 z-10 -mx-4 mt-4 px-4 py-2 sm:top-16 sm:-mx-6 sm:px-6">
+        <div className="bg-surface-base sm:top-header sticky top-0 z-10 -mx-4 mt-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <SegmentedControl
             value={stage}
             options={stageOptions}
@@ -247,7 +248,7 @@ export function AIModelsPage() {
         ) : (
           // Full-bleed rows: the negative gutter puts the row's text edge on the same line as the
           // section headings and lets its pressed plane run to the screen edge (§4.2).
-          <ul className="divide-divider -mx-4 mt-4 divide-y sm:-mx-6">
+          <ul className="divide-divider -mx-4 mt-4 divide-y sm:-mx-6 lg:-mx-8">
             {experiments.slice(0, 8).map((item) => (
               <li key={item.id}>
                 <Link
@@ -256,7 +257,7 @@ export function AIModelsPage() {
                   className={typographyStyles({
                     variant: 'label',
                     className:
-                      'text-content-primary hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center justify-between gap-3 px-4 py-3 sm:px-6',
+                      'text-content-primary hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8',
                   })}
                 >
                   {/* `min-w-0` is what makes `truncate` work: a slug is `YYYYMMDD-` plus up to 60

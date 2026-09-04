@@ -34,7 +34,7 @@ export function EditorProgressBar({ job }: { job: GenerationJob | undefined }) {
   if (!job || isTerminal(job)) return null
   const ratio = progressRatio(job)
   return (
-    <div className="sticky top-0 z-10 -mx-4 sm:top-16 sm:-mx-6">
+    <div className="sm:top-header sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8">
       <ProgressBar label={t('generation.progressAria')} done={ratio?.done} total={ratio?.total} />
     </div>
   )

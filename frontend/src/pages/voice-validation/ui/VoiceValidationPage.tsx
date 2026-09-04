@@ -10,7 +10,15 @@ import { voiceValidationQueryKey, voiceValidationState } from '@/entities/voice'
 import { appFailureFromConnect, appFailureFromProto, VoiceValidationService } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import { formatNumber, formatPercent } from '@/shared/lib'
-import { AppFailureMessage, Badge, Button, Notice, Typography, typographyStyles } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Badge,
+  Button,
+  Notice,
+  Typography,
+  typographyStyles,
+  pageStyles,
+} from '@/shared/ui'
 
 export function VoiceValidationPage() {
   const { t } = useTranslation(['voices', 'common'])
@@ -64,7 +72,7 @@ export function VoiceValidationPage() {
     }
   }
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+    <main className={pageStyles({ width: 'board' })}>
       <Link
         to="/voices/$voiceId/validations"
         params={{ voiceId }}
@@ -163,7 +171,7 @@ function Placeholder({ children }: { children: ReactNode }) {
     <main
       className={typographyStyles({
         variant: 'body',
-        className: 'text-content-tertiary mx-auto w-full max-w-2xl px-4 py-10 sm:px-6',
+        className: pageStyles({ className: 'text-content-tertiary py-10' }),
       })}
     >
       {children}

@@ -4,7 +4,7 @@ import { useSession } from '@/entities/session'
 import { CreateGuidelineForm } from '@/features/create-guideline'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
 import { EditableGuidelineScope, EditableGuidelineText } from '@/features/edit-guideline'
-import { Button, Notice, Typography } from '@/shared/ui'
+import { Button, Notice, Typography, pageStyles } from '@/shared/ui'
 
 /** The account's 작문 지침 (plan 16). Composition only — every action is its own feature.
  *
@@ -18,7 +18,7 @@ export function GuidelinesPage() {
   const { guidelines, isPending, isError, isFetching, refetch } = useGuidelines(ownerId)
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+    <main className={pageStyles({ width: 'wide' })}>
       <Typography variant="display">{t('title', { ns: 'guidelines' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'guidelines' })}

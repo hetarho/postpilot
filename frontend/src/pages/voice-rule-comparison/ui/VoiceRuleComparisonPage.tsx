@@ -22,6 +22,7 @@ import {
   SegmentedControl,
   Typography,
   typographyStyles,
+  pageStyles,
 } from '@/shared/ui'
 import { TextCandidateComparison } from '@/widgets/candidate-comparison'
 
@@ -118,7 +119,7 @@ export function VoiceRuleComparisonPage() {
     }
   }
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+    <main className={pageStyles({ width: 'board' })}>
       <Link
         to="/voices/$voiceId/rules"
         params={{ voiceId }}
@@ -194,7 +195,7 @@ function Placeholder({ children }: { children: ReactNode }) {
     <main
       className={typographyStyles({
         variant: 'body',
-        className: 'text-content-tertiary mx-auto w-full max-w-2xl px-4 py-10 sm:px-6',
+        className: pageStyles({ className: 'text-content-tertiary py-10' }),
       })}
     >
       {children}

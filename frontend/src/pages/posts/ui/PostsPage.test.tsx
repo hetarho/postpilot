@@ -132,13 +132,14 @@ describe('PostsPage', () => {
     const user = userEvent.setup()
     const { router } = renderList()
 
-    // The CTA has two breakpoint slots — the heading row from `sm:` up, and a bar docked in the
-    // thumb's band on a phone — and CSS shows exactly one. jsdom applies no CSS, so both are in
-    // the tree here; assert on both and drive the phone one, which is the shape that matters.
-    const [wide, phone] = await screen.findAllByRole('link', { name: '새 글' })
-    expect(wide).toHaveAttribute('href', '/posts/new')
+    // ONE 새 글 in the tree, not one per breakpoint: the bar under the list is the same element
+    // at every width — a dock in the thumb's band on a phone, the list's last row above it. A
+    // second copy beside the heading would be a second link to the same route, so `getByRole`
+    // (which throws on more than one match) is the assertion.
+    const cta = await screen.findByRole('link', { name: '새 글' })
+    expect(cta).toHaveAttribute('href', '/posts/new')
 
-    await user.click(phone)
+    await user.click(cta)
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/new'))
   })

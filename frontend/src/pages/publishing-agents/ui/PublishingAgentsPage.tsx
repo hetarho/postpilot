@@ -7,7 +7,7 @@ import { usePublishingAgents } from '@/entities/publishing-agent'
 import { useRetryablePublishJobs } from '@/entities/publish-job'
 import { RetryPublishJobButton } from '@/features/retry-publish'
 import { useSession } from '@/entities/session'
-import { AppFailureMessage, Badge, Button, Notice, Typography } from '@/shared/ui'
+import { AppFailureMessage, Badge, Button, Notice, Typography, pageStyles } from '@/shared/ui'
 import { formatDateTime } from '@/shared/lib'
 
 export function PublishingAgentsPage() {
@@ -17,7 +17,7 @@ export function PublishingAgentsPage() {
   const agents = usePublishingAgents(ownerId)
   const retryable = useRetryablePublishJobs(ownerId)
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
+    <main className={pageStyles({ className: 'py-10' })}>
       <Typography variant="display">{t('agents.title', { ns: 'publishing' })}</Typography>
       <Typography variant="body" className="text-content-secondary mt-3">
         {t('agents.description', { ns: 'publishing' })}

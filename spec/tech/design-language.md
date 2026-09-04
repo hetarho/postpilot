@@ -141,13 +141,18 @@ finished screen.** A component whose only layout is `sm:grid-cols-2` has no phon
 a desktop design and a fallback. A table, a side-by-side pane, or a multi-column grid with no
 unprefixed alternative is not responsive; it is a desktop layout that happens to reflow.
 
-Two breakpoints carry meaning, and no others are introduced without a reason written down:
+Three breakpoints carry meaning, and no others are introduced without a reason written down:
 
-| Prefix | Width  | What changes                                                                  |
-| ------ | ------ | ----------------------------------------------------------------------------- |
-| _none_ | ≥ 0    | The phone. Single column, one scroller, thumb-reachable actions               |
-| `sm:`  | 640 px | **Density** — tighter type, restored horizontal padding, a second grid column |
-| `md:`  | 768 px | **Shape** — the pointer is assumed fine: side-by-side panes, dialog-not-sheet |
+| Prefix | Width   | What changes                                                                    |
+| ------ | ------- | ------------------------------------------------------------------------------- |
+| _none_ | ≥ 0     | The phone. Single column, one scroller, thumb-reachable actions                 |
+| `sm:`  | 640 px  | **Density** — tighter type, restored horizontal padding, a second grid column   |
+| `md:`  | 768 px  | **Shape** — the pointer is assumed fine: side-by-side panes, dialog-not-sheet   |
+| `lg:`  | 1024 px | **The desk** — the shell grows a sidebar and the content column widens (§4.5)   |
+
+`lg:` is the newest and the narrowest in scope: it changes the SHELL and the width of the content
+column, and nothing else. A component does not reach for it to rearrange itself — that is still
+`md:`'s job, or a `@container` query. Owner decision 2026-09-05.
 
 A breakpoint is chosen because the _content_ breaks there, not because a device is that wide.
 When a component's shape depends on its container rather than the window, use a `@container`
@@ -403,6 +408,7 @@ you wrote.
 | Button, field, select (44px) | `px-4` (`px-5` for a CTA) | ≈ 2 : 1 against the 12px the floor produces    |
 | Icon-only button             | `size-11`, no padding     | square by definition                           |
 | List row (44px, full-bleed)  | `px-4 py-3`               | equal to the page gutter it sits in            |
+| List row holding a control   | `px-4 py-2`, `min-h-16`   | the 44px control sits INSIDE the row's height  |
 | Badge / chip                 | `px-2 py-0.5`             | ≈ 3 : 1 — small boxes need proportionally more |
 | Inline notice                | `px-4 py-3`               | ≈ 1.3 : 1 — a text block, not a control        |
 | Card / panel                 | `p-4` (`p-5` for a sheet) | uniform                                        |
@@ -410,6 +416,14 @@ you wrote.
 Two corollaries. A **row** is never inset less than the gutter rhythm it sits in — `px-2` inside a
 `px-4` page reads as a mistake, not as a nested step. And a control and the panel it sits in never
 share a padding step for the same reason they never share a radius (§5).
+
+And one rule about the row that holds a control: **its height floor is set by the tallest thing any
+row in that list can hold, not by the rows that hold nothing.** A control keeps the 44px floor
+(§4.1) wherever it sits, so a row that carries one is 44px plus its padding while its neighbours
+that carry none stay at 44px total — and a list where one row is short and the rest are tall reads
+as broken rather than as varied. Set the floor once, at the tall shape, and the control sits inside
+the row instead of stretching it. The 말투 directory is the case: only the default voice offers
+neither 기본으로 설정 nor 삭제, because the server refuses both for it.
 
 ### 4.3 Reach and placement
 
@@ -427,6 +441,14 @@ is a re-grip, not a tap.
 - **A control and the thing it commits stay on one screen.** A 저장 button in a section header
   above a 335px textarea is off-screen exactly when the user is typing into that field. The
   committing action goes _after_ the field, or it docks.
+- **A dock for a list's add action is a PHONE dock.** `새 글`, `새 말투 만들기` — the reach argument
+  is the only thing holding that bar up, and it evaporates with the thumb (`ActionBar`'s
+  `dock="phone"`). Above the phone the card dissolves and the bar becomes the list's last row, with
+  its action spanning the column: a floating, shadowed card carrying one left-aligned button over a
+  half-empty page reads as debris. What does NOT dissolve is a dock whose reason is the distance
+  between the content and the control that commits it — the editor's, an experiment's — because
+  that distance is there at every width. And the bar stays ONE element either way: a phone dock
+  plus a desktop copy of the same trigger is two overlays waiting to be opened.
 - **One docked bar per scroller.** Two sticky bars in the same scroll container pin to the same
   offset, and the later one in DOM order paints over the earlier — both are opaque. A section
   rendered inside a page that already docks puts its action in flow instead.
@@ -481,6 +503,51 @@ would put the control that commits it thousands of pixels from the caret, which 
 between the two rules reach wins. The editor's title and memo are _not_ capped: the title stays
 bare, the memo uses a visible field well, and both grow with the page. All three set
 `overscroll-behavior: contain` so a scroll that reaches the end does not chain to the page.
+
+### 4.5 The desk
+
+Past ~1024px the window stops being a constraint and starts being a room. The app was authored
+phone-first and stayed that way all the way up, so on a 1440px display it rendered a 672px column
+centred under a full-width bar — roughly 380px of empty gutter on either side of what still read
+as a phone screen. Emptiness is not restraint; it is space the layout declined to have an opinion
+about.
+
+Two things change at `lg:`, and only these two.
+
+- **The destinations move into a persistent left sidebar.** Five links in a horizontal strip leave
+  the whole navigation huddled in the top-left corner of a wide bar, and every extra destination
+  makes the strip longer rather than the list clearer. A vertical rail scans top-to-bottom, which
+  is measurably faster to target than a horizontal row, holds an active state as a plane instead of
+  a colour on four characters, and has room for a seventh destination that the phone bar does not.
+  The top bar STAYS: the brand, the theme, the locale and the account exist exactly once in the
+  tree, and folding them into the rail would mean two of each fighting over which one is visible.
+  The rail hangs from the bar's bottom edge (`top-header`, `h-sidebar`) and sticks there.
+- **The content column widens, by kind rather than by page.** `shared/ui/page`'s `pageStyles`
+  gives every screen one of three widths — `prose` for something authored or read, bounded by the
+  eye at ~75 characters and not by the window; `wide` for a directory of rows, where the extra
+  room goes into the row's own metadata columns; `board` for a screen that is genuinely
+  two-dimensional, which is the only kind that earns the whole desk. A page picks its kind once,
+  so widening the shell later is one edit rather than fifteen `max-w-*` in fifteen files.
+
+**Three planes, not two.** The rail and the top bar are both chrome and they meet at a corner, so
+painting both `surface-raised` fuses them into one L-shaped slab and the eye reads no structure at
+all. The scale is there to be walked: the rail sits on `surface-recessed`, one step BEHIND the
+page; the content is `surface-base`; the bar is `surface-raised` and floats over both. A row in the
+rail then walks the same three steps — `recessed` at rest, `base` under the pointer, `raised` for
+the current destination, which is the bar's own plane and so the brightest thing in the column.
+
+This is also why the rail cannot borrow `row-bg-hover` / `row-bg-active`: that pair is calibrated
+for a row sitting on `surface-base` (hover lifts to `raised`, a press sinks to `recessed`), and on a
+recessed rail the press plane IS the rail and the hover plane is the bar. A row on a plane other
+than `base` states its own two steps.
+
+What does NOT change at `lg:`: the number of scrollers (§4.4 still holds — the rail is not a second
+one), where a committing action lives (§4.3), and the phone's shape, which is reached by deleting
+every prefixed class and must still be a finished screen (§1.5).
+
+A row that runs edge to edge inside a `pageStyles` column cancels all three gutters, not two:
+`-mx-4 sm:-mx-6 lg:-mx-8`. A page-level sticky bar offsets past the header with `sm:top-header`,
+never a repeated `16`.
 
 ## 5. Elevation and shape
 

@@ -4,7 +4,7 @@ import { PURPOSE_LIMITS, usePurposes, type Purpose } from '@/entities/purpose'
 import { CreatePurposeForm } from '@/features/create-purpose'
 import { DeletePurposeButton } from '@/features/delete-purpose'
 import { EditablePurposeField, useUpdatePurpose } from '@/features/edit-purpose'
-import { Badge, Button, Notice, Typography, typographyStyles } from '@/shared/ui'
+import { Badge, Button, Notice, Typography, typographyStyles, pageStyles } from '@/shared/ui'
 
 /** The account's 용도 briefs (plan 11). Composition only — every action is its own feature.
  *
@@ -17,7 +17,7 @@ export function PurposesPage() {
   const { purposes, isPending, isError, isFetching, refetch } = usePurposes(ownerId)
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+    <main className={pageStyles({ width: 'wide' })}>
       <Typography variant="display">{t('title', { ns: 'purposes' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'purposes' })}

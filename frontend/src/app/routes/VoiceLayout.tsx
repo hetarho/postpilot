@@ -13,6 +13,7 @@ import {
   Typography,
   typographyStyles,
   type TabLink,
+  pageStyles,
 } from '@/shared/ui'
 
 /** The five tabs of one voice, in one list so the row and the routes cannot drift — the same
@@ -41,7 +42,7 @@ export function VoiceLayout() {
   const voice = voices.find((candidate) => candidate.id === voiceId)
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+    <div className={pageStyles({ width: 'wide' })}>
       <Link
         to="/voices"
         className={typographyStyles({

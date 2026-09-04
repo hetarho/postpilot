@@ -17,6 +17,7 @@ import {
   SegmentedControl,
   Typography,
   typographyStyles,
+  pageStyles,
 } from '@/shared/ui'
 
 export function ModelExperimentPage() {
@@ -37,7 +38,7 @@ export function ModelExperimentPage() {
   const sides = candidateSides(experiment.candidates)
   const activeId = activeSideId(sides, activeCandidateId)
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+    <main className={pageStyles({ width: 'board' })}>
       {/* A comparison started from a post is a detour from that post, so "back" returns there —
           not to the AI 모델 page the user never visited. Only a post-less (analyze) experiment
           belongs to AI 모델. */}
@@ -137,7 +138,7 @@ function activeSideId(sides: CandidateSide[], selected: string): string {
 
 function Placeholder({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
+    <main className={pageStyles({ className: 'py-10' })}>
       {/* One live region for both the loading and the failed copy: the two branches swap the text
           inside this same node, so the failure is announced as a change instead of silently
           replacing the pending state, which was never announced at all (§9). `py-10` keeps the

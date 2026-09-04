@@ -4,7 +4,7 @@ import { Link, useParams } from '@tanstack/react-router'
 import { usePost } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
-import { AppFailureMessage, Button, typographyStyles } from '@/shared/ui'
+import { AppFailureMessage, Button, typographyStyles, pageStyles } from '@/shared/ui'
 import { DraftEditor } from './DraftEditor'
 
 /** `/posts/new` — a draft that does not exist yet. The first autosave creates it and
@@ -118,8 +118,9 @@ function EditorPlaceholder({ children }: { children: ReactNode }) {
     <main
       className={typographyStyles({
         variant: 'body',
-        className:
-          'text-content-tertiary mx-auto flex w-full max-w-2xl flex-col items-start px-4 py-16 sm:px-6',
+        className: pageStyles({
+          className: 'text-content-tertiary flex flex-col items-start py-16',
+        }),
       })}
     >
       {children}

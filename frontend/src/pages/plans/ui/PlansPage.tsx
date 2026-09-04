@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useMyPlan, planLabel, type PlanOffer } from '@/entities/plan'
-import { Badge, Button, Notice, Typography } from '@/shared/ui'
+import { Badge, Button, Notice, Typography, pageStyles } from '@/shared/ui'
 
 /** The plan comparison (change 19). Composition only: it reads the ladder the server
  *  publishes and renders it.
@@ -19,7 +19,7 @@ export function PlansPage() {
   const empty = myPlan !== undefined && !myPlan.balance.unlimited && myPlan.balance.credits <= 0
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+    <main className={pageStyles()}>
       <Typography variant="display">{t('compare.title', { ns: 'plans' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('compare.description', { ns: 'plans' })}

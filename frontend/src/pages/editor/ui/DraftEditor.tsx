@@ -35,6 +35,7 @@ import {
   Typography,
   typographyStyles,
   type PopoverHandle,
+  pageStyles,
 } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { ExportPanel } from '@/widgets/export-panel'
@@ -256,7 +257,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   // short draft: `sticky` can only pull an element up toward the scrollport edge, never push one
   // down, so without it a new draft renders its dock mid-page with dead space beneath.
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6 sm:px-6">
+    <main className={pageStyles({ className: 'flex flex-1 flex-col' })}>
       {/* First child of the flow on purpose: a sticky box can only be pinned by the box it sits
           in, and this one has to hold the page's top edge while a draft thousands of pixels tall
           scrolls past it. It adds no layout height. */}

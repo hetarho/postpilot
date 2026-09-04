@@ -336,6 +336,12 @@
      ordinary utilities (`pb-safe-b`, `bottom-nav`) instead of the arbitrary values §1.2 forbids.
      env() resolves at use time and is 0 until index.html sets viewport-fit=cover — design-language
      §8.1. --spacing-nav is the phone tab bar's full height so content and docked bars can clear it. */
+  /* The sticky top bar's height from `sm:` up (`min-h-16`), and the desk sidebar that hangs from
+     its bottom edge. Three files offset past that bar — the sidebar, the editor's status bar, the
+     models page's stage switch — and a `16` repeated in three places is a number that drifts.
+     `dvh`, not `vh`, for the same reason the sheet uses it (§8.1). */
+  --spacing-header: 4rem;
+  --spacing-sidebar: calc(100dvh - var(--spacing-header));
   --spacing-safe-t: env(safe-area-inset-top, 0px);
   --spacing-safe-b: env(safe-area-inset-bottom, 0px);
   --spacing-nav: calc(3.5rem + env(safe-area-inset-bottom, 0px));

@@ -15,6 +15,7 @@ import {
   buttonStyles,
   typographyStyles,
   type BadgeTone,
+  pageStyles,
 } from '@/shared/ui'
 
 /** The one status chip a row carries. Colour never travels alone (design-language §2.6): the tone
@@ -52,20 +53,11 @@ export function PostsPage() {
     // The page gutter lives on each block rather than on `main`, so the list rows can run edge to
     // edge: a pressed row that stops 16px short of the screen edge reads as a card, and a row inset
     // deeper than the page's own rhythm reads as a mistake (design-language §4.2).
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col py-6">
-      {/* The CTA sits in TWO places because the two breakpoints want different shapes, and only
-          one is ever rendered (the other is `display:none`, so it is absent from the a11y tree
-          too). From `sm:` up the pointer is a mouse, §4.3's reach argument evaporates, and a bar
-          docked to the bottom of a half-empty page reads as debris — so the action goes back
-          beside the heading where a desktop user looks for it. */}
-      <div className="flex items-center justify-between gap-3 px-4 sm:px-6">
+    <main
+      className={pageStyles({ width: 'wide', gutters: false, className: 'flex flex-1 flex-col' })}
+    >
+      <div className="px-4 sm:px-6 lg:px-8">
         <Typography variant="display">{t('list.mine', { ns: 'posts' })}</Typography>
-        <Link
-          to="/posts/new"
-          className={buttonStyles({ variant: 'cta', className: 'hidden sm:inline-flex' })}
-        >
-          {t('new', { ns: 'posts' })}
-        </Link>
       </div>
 
       {isError && (
@@ -91,7 +83,7 @@ export function PostsPage() {
         <Typography
           variant="body"
           role="status"
-          className="text-content-tertiary mt-8 px-4 sm:px-6"
+          className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
         >
           {isPending ? t('state.loading', { ns: 'common' }) : t('list.empty', { ns: 'posts' })}
         </Typography>
@@ -104,18 +96,21 @@ export function PostsPage() {
             post.pendingExperimentId ? byId.get(post.pendingExperimentId) : undefined,
             t,
           )
-          // Two lines, not three items competing on one. At 360px a single row left the title
-          // ~146px — about ten Hangul — and because the badge label swings from 초안 to AI 결과 확인
-          // the cut point moved row to row, so the list read as a ragged column of half-titles.
-          // The voice sits between the status and the time as metadata: which voice a post is in
+          // On a phone: two lines, not three items competing on one. At 360px a single row left
+          // the title ~146px — about ten Hangul — and because the badge label swings from 초안 to
+          // AI 결과 확인 the cut point moved row to row, so the list read as a ragged column of
+          // half-titles. The voice sits between the status and the time as metadata: which voice a post is in
           // is the one thing this list newly has to say, and a tombstone must say so on the row
           // itself (spec/policy/posts.md) — the name gives way before the badge or the time do.
           const content = (
             <>
-              <Typography variant="label" className="text-content-primary w-full truncate">
+              <Typography
+                variant="label"
+                className="text-content-primary w-full truncate lg:w-auto lg:min-w-0 lg:flex-1"
+              >
                 {displayTitle(post)}
               </Typography>
-              <span className="flex w-full min-w-0 items-center gap-2">
+              <span className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
                 <Badge tone={status.tone}>{status.label}</Badge>
                 <VoiceRefLabel
                   voice={post.voice}
@@ -136,8 +131,14 @@ export function PostsPage() {
               </span>
             </>
           )
+          // Two stacked lines on a phone, one line on the desk. At 360px a single row left the
+          // title ~146px, so the metadata gets its own line there; from `lg:` up the column is
+          // ~1,000px wide and the same two lines read as a ragged double-height list with the
+          // right two thirds of every row empty — which is the whole complaint about a phone
+          // layout centred on a desk. The title takes the free space and the metadata settles
+          // against the right edge, so status, voice and time line up down the list.
           const rowClass =
-            'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6'
+            'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8'
           return (
             <li key={post.slug}>
               {post.pendingExperimentId && !post.activeJob ? (
@@ -158,14 +159,19 @@ export function PostsPage() {
         })}
       </ul>
 
-      {/* The phone shape: the product's entry action docked in the thumb's band. In the top-right
-          corner it was ~820px above the bottom edge of a 430x932 phone — a re-grip away from the
-          one action this screen exists for (§4.3), and above the empty state that points at it.
-          `mt-auto` is what puts it at the bottom of a SHORT list; `sticky` then keeps it there
-          once the list is long enough to scroll. */}
+      {/* ONE 새 글, in the same place the voice directory puts its own add action. It used to be
+          two — a docked bar on the phone and a second copy beside the heading from `sm:` up — which
+          is two links to the same route in the DOM and two things to keep in step for a button
+          that is never ambiguous about what it does. On the phone it docks in the thumb's band: in
+          the top-right corner it was ~820px above the bottom edge of a 430x932 phone, a re-grip
+          away from the one action this screen exists for (§4.3), and above the empty state that
+          points at it. `mt-auto` puts it at the bottom of a SHORT list; `sticky` keeps it there
+          once the list is long enough to scroll. From `sm:` up it is the list's last row, spanning
+          the column. */}
       <ActionBar
+        dock="phone"
         ariaLabel={t('list.writingAria', { ns: 'posts' })}
-        className="mx-4 mt-auto sm:hidden"
+        className="mx-4 mt-auto sm:mx-6 lg:mx-8"
       >
         <Link to="/posts/new" className={buttonStyles({ variant: 'cta', className: 'w-full' })}>
           {t('new', { ns: 'posts' })}

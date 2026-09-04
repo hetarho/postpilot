@@ -6,7 +6,15 @@ import { CreateVoiceSheet } from '@/features/create-voice'
 import { DeleteVoiceButton } from '@/features/delete-voice'
 import { RestoreVoiceButton } from '@/features/restore-voice'
 import { SetDefaultVoiceButton } from '@/features/set-default-voice'
-import { ActionBar, Badge, Button, Notice, Typography, typographyStyles } from '@/shared/ui'
+import {
+  ActionBar,
+  Badge,
+  Button,
+  Notice,
+  Typography,
+  typographyStyles,
+  pageStyles,
+} from '@/shared/ui'
 
 /** The account's voices (PRD §3.4): a list, and the one action that adds to it. Composition only —
  *  every action is its own feature, and a row is a way into one voice. Renaming lives on the
@@ -18,7 +26,7 @@ export function VoicesPage() {
   const { active, deleted, isPending, isError, isFetching, refetch } = useVoices(ownerId)
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-8 sm:px-6">
+    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
       <Typography variant="display">{t('title', { ns: 'voices' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'voices' })}
@@ -50,7 +58,7 @@ export function VoicesPage() {
               {t('page.active', { ns: 'voices' })}
             </Typography>
             {/* Rows are full-bleed against the page gutter, so the list cancels it (§4.2). */}
-            <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6">
+            <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
               {active.map((voice) => (
                 <VoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
               ))}
@@ -81,12 +89,19 @@ export function VoicesPage() {
             </details>
           )}
 
-          {/* One dock at every width, not a phone bar plus a desktop copy: the trigger owns the
-              sheet's open state, and two instances of it would be two overlays waiting to be
-              opened. `mt-auto` puts it below a short list; `sticky` keeps it there once the list
-              is long enough to scroll (§4.3). */}
-          <ActionBar ariaLabel={t('create.dockAria', { ns: 'voices' })} className="mt-auto">
-            <CreateVoiceSheet ownerId={ownerId} className="w-full sm:w-auto" />
+          {/* One instance at every width, not a phone bar plus a desktop copy: the trigger owns
+              the sheet's open state, and two of them would be two overlays waiting to be opened.
+              On the phone it docks — `mt-auto` puts it below a short list, `sticky` keeps it there
+              once the list is long enough to scroll (§4.3). From `sm:` up the card dissolves and
+              it is simply the list's last row. The action spans the column at every width: a lone
+              button left-aligned inside a full-width bar reads as a stray control rather than as
+              the one thing this screen adds. */}
+          <ActionBar
+            dock="phone"
+            ariaLabel={t('create.dockAria', { ns: 'voices' })}
+            className="mt-auto"
+          >
+            <CreateVoiceSheet ownerId={ownerId} className="w-full" />
           </ActionBar>
         </>
       )}
@@ -101,7 +116,13 @@ export function VoicesPage() {
 function VoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
   const { t } = useTranslation('common')
   return (
-    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-11 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
+    // `min-h-16`, not the list row's usual `min-h-11`, and `py-2` rather than `py-3`: the
+    // lifecycle controls keep the 44px touch floor (§4.1), so a row that carries them is 44 + its
+    // padding tall while the default voice — the one row that offers neither, since the server
+    // refuses both for it — stayed at 44. The list was one short row among tall ones. The floor is
+    // now set by the tallest thing a row can hold, so every row is 64px and the controls sit
+    // inside it instead of stretching it (§4.2).
+    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
       <Link
         to="/voices/$voiceId"
         params={{ voiceId: voice.id }}

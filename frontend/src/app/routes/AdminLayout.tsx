@@ -1,7 +1,7 @@
 import { Outlet } from '@tanstack/react-router'
 import { KeyRound, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { TabLinks, Typography, type TabLink } from '@/shared/ui'
+import { TabLinks, Typography, type TabLink, pageStyles } from '@/shared/ui'
 
 /** The two operator surfaces, in one list so the row and the routes cannot drift — the same
  *  reason `VoiceLayout` keeps one `VOICE_TABS`. Both carry an icon and a short caption so the
@@ -23,7 +23,7 @@ export function AdminLayout() {
   const { t } = useTranslation('plans')
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+    <main className={pageStyles()}>
       <Typography variant="display">{t('admin.title')}</Typography>
       <TabLinks
         items={ADMIN_TABS.map(({ labelKey, ...tab }) => ({

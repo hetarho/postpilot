@@ -817,9 +817,14 @@ describe('localized registered-route smoke', () => {
       const shell = main.closest('.pb-nav')
       expect(shell).toHaveClass('flex', 'flex-1', 'flex-col', 'sm:pb-0')
       expect(shell?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
-      expect(screen.getAllByRole('navigation', { name: '주요' })).toHaveLength(2)
+      // Three shapes of the SAME destination list, one per pointer: the phone tab bar, the laptop
+      // header row, and the desk sidebar. Only one is ever displayed, so only one is ever in the
+      // a11y tree — but all three are in the DOM, and this is what catches a fourth copy, or a
+      // breakpoint that leaves two of them visible at once.
+      expect(screen.getAllByRole('navigation', { name: '주요' })).toHaveLength(3)
       expect(document.querySelector('nav.sm\\:hidden')).toBeInTheDocument()
-      expect(document.querySelector('nav.hidden.sm\\:flex')).toBeInTheDocument()
+      expect(document.querySelector('nav.hidden.sm\\:flex.lg\\:hidden')).toBeInTheDocument()
+      expect(document.querySelector('aside.lg\\:sticky nav')).toBeInTheDocument()
     },
   )
 })
