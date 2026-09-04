@@ -1,6 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy } from 'lucide-react'
 import { type PostImage } from '@/entities/image'
 import { BlockList, imageByFile } from '@/entities/post'
 import { toMarkdown } from '@/features/export-markdown'
@@ -9,8 +8,23 @@ import { toSite } from '@/features/export-site'
 import { toTistory } from '@/features/export-tistory'
 import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import { COPY_FEEDBACK_MS } from '@/shared/config'
-import { copyImage, copyText, type CopyFallbackElement, type CopyImageResult } from '@/shared/lib'
-import { Button, FieldLabel, SegmentedControl, Textarea, TextField, Typography } from '@/shared/ui'
+import {
+  copyImage,
+  copyText,
+  presignExpired,
+  unfilledSlotCount,
+  type CopyFallbackElement,
+  type CopyImageResult,
+} from '@/shared/lib'
+import {
+  Button,
+  FieldLabel,
+  Notice,
+  SegmentedControl,
+  Textarea,
+  TextField,
+  Typography,
+} from '@/shared/ui'
 import { EXPORT_FORMATS, type ExportFormat } from '../config/guidance'
 import { toHashtags } from '../lib/hashtags'
 
@@ -31,11 +45,23 @@ interface ExportPanelProps {
   images: readonly PostImage[]
   createdAt: string
   contentLanguage: ContentLanguage
+  /** Asks the owner of the post query for fresh photo URLs. Called when a preview photo fails to
+   *  load, which — the panel outliving a presigned URL being the ordinary way that happens — is
+   *  usually one refetch away from fixed. Optional so the panel stays renderable from a test or a
+   *  surface that holds no query. */
+  onPhotoUrlsStale?: () => void
 }
 
 /** Four synchronous browser-only derivations of the canonical block array. */
-export function ExportPanel({ content, images, createdAt, contentLanguage }: ExportPanelProps) {
+export function ExportPanel({
+  content,
+  images,
+  createdAt,
+  contentLanguage,
+  onPhotoUrlsStale,
+}: ExportPanelProps) {
   const { t } = useTranslation('posts')
+  const { t: tTemplates } = useTranslation('templates')
   const [format, setFormat] = useState<ExportFormat>('naver')
   // A photo target names the marker it belongs to, so two markers for one file still report
   // separately and the confirmation lands on the entry that was pressed. A TEXT copy stores the
@@ -80,6 +106,7 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
   // Empty for a post with no usable tags, which is what keeps the field off the screen entirely
   // rather than mounting an empty control (§7).
   const hashtags = toHashtags(content.tags)
+  const unfilled = unfilledSlotCount(content)
   // Marker index per block index, from the SAME canonical block array `toNaver` walks, so a photo
   // in the preview and a `[사진 …]` marker in the copied text cannot drift apart: they match by
   // position. The marker index — not the block index — is the copy target's identity, unchanged
@@ -146,7 +173,7 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
    *  stale async result cannot land, one queue so two presses do not race for the clipboard, the
    *  same `COPY_FEEDBACK_MS` dwell, and the same always-mounted live region. It reports the
    *  failure KIND instead of a manual-selection hint, because an image has no manual fallback. */
-  async function copyPhoto(target: CopyTarget, url: string) {
+  async function copyPhoto(target: CopyTarget, image: HTMLImageElement) {
     const generation = ++copyGeneration.current
     const isCurrent = () => mounted.current && copyGeneration.current === generation
     setCopied(undefined)
@@ -158,7 +185,7 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
     // variable the way the text copy does: an image copy answers with a kind, and a `let` holding
     // one narrows to the literal it was initialized with.
     const operation = copyQueue.current
-      .then(() => copyImage(url))
+      .then(() => copyImage(image))
       .catch((): CopyImageResult => ({ kind: 'unreadable' }))
     copyQueue.current = operation.then(() => undefined)
     const result = await operation
@@ -251,6 +278,15 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
       <Typography variant="title" id="export-heading">
         {t('export.title')}
       </Typography>
+      {/* Unfilled template positions WARN, they do not gate: the app cannot invent a map link,
+          and blocking the copy over one would leave the user with no way out (change 25 AC9). */}
+      {unfilled > 0 && (
+        <Notice tone="info" role="status" className="mt-3">
+          <span>
+            {tTemplates('slot.pending', { count: unfilled })} {tTemplates('slot.exportHint')}
+          </span>
+        </Notice>
+      )}
       {/* The four Korean format names measure ~380px in one row against 328px of content at 360px,
           which cut 마크다운 in half with no scrollbar to say so. Two columns at the base
           breakpoint fit all four; the strip comes back where the width exists. */}
@@ -415,7 +451,8 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
                   image={imagesByFilename.get(block.file)}
                   copied={copied?.target === target}
                   failure={photoFailure?.target === target ? photoFailure.kind : undefined}
-                  onCopy={(url) => void copyPhoto(target, url)}
+                  onCopy={(element) => void copyPhoto(target, element)}
+                  onStale={onPhotoUrlsStale}
                 />
               )
             }}
@@ -430,6 +467,7 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
                 copied={false}
                 failure={undefined}
                 onCopy={() => undefined}
+                onStale={onPhotoUrlsStale}
               />
             )}
           />
@@ -439,8 +477,8 @@ export function ExportPanel({ content, images, createdAt, contentLanguage }: Exp
   )
 }
 
-/** One inline photo of the Naver preview: the pixels at their natural width, the copy control
- *  overlaid at the top-right, and that photo's own status line.
+/** One inline photo of the Naver preview: the pixels at their natural width, the photo ITSELF as
+ *  the copy control, and that photo's own status line.
  *
  *  It reports its own state under its own photo rather than in one shared line, because "which
  *  photo failed" is the only useful part of the message (§4.3). */
@@ -452,6 +490,7 @@ function PreviewPhoto({
   copied,
   failure,
   onCopy,
+  onStale,
 }: {
   file: string
   alt: string
@@ -459,7 +498,8 @@ function PreviewPhoto({
   image: PostImage | undefined
   copied: boolean
   failure: FailedCopyKind | undefined
-  onCopy: (url: string) => void
+  onCopy: (element: HTMLImageElement) => void
+  onStale: (() => void) | undefined
 }) {
   const { t } = useTranslation('posts')
   const statusId = useId()
@@ -468,10 +508,17 @@ function PreviewPhoto({
   // contact sheet applies to a server-read surface. The pixels still render: they are the photo
   // the reader will see.
   const url = image && !image.viewUrl.startsWith('blob:') ? image.viewUrl : ''
-  // A presigned view URL expires. Keyed BY URL rather than as a bare boolean, so a reload that
-  // remints it clears the failure without any reset plumbing.
-  const [failedUrl, setFailedUrl] = useState('')
-  const unreachable = url === '' || failedUrl === url
+  const imageRef = useRef<HTMLImageElement>(null)
+  // A presigned view URL expires. Keyed BY URL rather than as a bare boolean, so a refresh that
+  // remints it clears the failure without any reset plumbing. The KIND rides along because a
+  // photo that never painted and a photo this origin may not read are the same event here and
+  // opposite advice — see `classifyLoadFailure`.
+  const [loadFailure, setLoadFailure] = useState<{ url: string; kind: FailedCopyKind }>()
+  // One refresh per photo per mount, counted rather than keyed by url: every refresh mints a NEW
+  // url, so a per-url guard would let a bucket that refuses this origin drive an unbounded
+  // refetch loop — fail, remint, fail, remint. A ref, not state; nothing renders from it.
+  const refreshesAsked = useRef(0)
+  const unreachable = url === '' || loadFailure?.url === url
   // Keyed by kind rather than chained, so a kind added to `CopyImageResult` is a type error here
   // instead of a photo that fails silently — which is how `blocked` and `unreadable` came to share
   // one message and send users to reload a post over a rule that reloading cannot change.
@@ -483,50 +530,79 @@ function PreviewPhoto({
   }
   const reason = !image
     ? t('export.photoMissing')
-    : // An `<img>` that never painted, or a `blob:` preview: both are recovered by the reload that
-      // remints the URL, and neither offers a copy control to fail in the first place.
-      unreachable
-      ? t('export.photoUnreadable')
-      : failure
-        ? failureMessage[failure]
-        : ''
+    : url === ''
+      ? // A `blob:` preview: recovered by the reload that replaces it with the stored photo, and
+        // it offers no copy to fail in the first place.
+        t('export.photoUnreadable')
+      : loadFailure?.url === url
+        ? failureMessage[loadFailure.kind]
+        : failure
+          ? failureMessage[failure]
+          : ''
+
+  /** A photo that did not paint, split into the two things it can mean.
+   *
+   *  The element is CORS-loaded, so this fires for a URL whose lifetime ran out AND for a bucket
+   *  that allows this origin no `GET` — R2 answers both without CORS headers and the browser
+   *  reports neither. The URL's own lifetime is what separates them (`presignExpired`), and they
+   *  lead to opposite advice: the first is refreshed away below, the second cannot be, so it says
+   *  to place the photo by hand instead of starting a reload loop with no exit. */
+  function classifyLoadFailure(failed: string) {
+    setLoadFailure({
+      url: failed,
+      kind: presignExpired(failed, Date.now()) ? 'unreadable' : 'blocked',
+    })
+    // Asked for even on the `blocked` reading: a transient network fault looks exactly like it
+    // from here, and one refetch is what tells them apart — a fresh URL that paints was never a
+    // bucket rule. Concurrent asks from the other photos collapse into one refetch, and the
+    // message above clears by itself the moment a url that paints replaces this one.
+    if (refreshesAsked.current === 0) {
+      refreshesAsked.current = 1
+      onStale?.()
+    }
+  }
+
   return (
     <div className="py-2">
       {image ? (
-        <div className="relative">
-          {image.viewUrl ? (
+        image.viewUrl ? (
+          /* The PHOTO is the control (no overlaid button): a 44px target in the corner of a photo
+             that fills the column was a quarter of the reach it needed, and the corner was also
+             where the thumb rests while scrolling. The `<img>` stays a real `<img>` INSIDE the
+             button rather than under an invisible overlay, so the browser's own 이미지 복사 stays
+             on the right-click menu — the workaround that carried this before the copy read
+             pixels. Focus takes the app-wide `:focus-visible` outline; the press treatment is on
+             the photo itself because a fill behind it would never be seen. */
+          <button
+            type="button"
+            disabled={unreachable}
+            aria-label={t('export.photoCopyAria', { file })}
+            aria-describedby={reason ? statusId : undefined}
+            onClick={() => imageRef.current && onCopy(imageRef.current)}
+            className="block w-full cursor-pointer rounded-lg active:brightness-90 disabled:cursor-default disabled:active:brightness-100"
+          >
             <img
+              ref={imageRef}
               src={image.viewUrl}
               alt={alt || file}
               width={image.width}
               height={image.height}
-              loading="lazy"
+              // NOT lazy, and CORS-loaded. The copy reads the pixels this element already holds,
+              // so a photo has to have PAINTED to be copyable — deferring the load until it is
+              // scrolled to would defer it past the URL's lifetime on exactly the panel that is
+              // left open. `crossOrigin` is what keeps the canvas origin-clean; without it the
+              // encode is refused for a photo that is plainly on screen (DEPLOY.md §5).
+              crossOrigin="anonymous"
               decoding="async"
-              onError={() => setFailedUrl(url)}
+              onError={() => classifyLoadFailure(url || image.viewUrl)}
               className="bg-surface-recessed h-auto w-full rounded-lg"
             />
-          ) : (
-            // The view URL is minted per GetPost; until one arrives the box is still held open so
-            // the text below it does not jump when the photo paints.
-            <div className="bg-surface-recessed aspect-square w-full rounded-lg" />
-          )}
-          {/* Over the photo, at its top-right — job 44 kept the control BESIDE the strip's 128px
-              tile because 44px covered a quarter of it; an inline photo fills the column, so the
-              same control covers a corner. The scrim is its own plane so it stays legible against
-              both a bright and a dark photo (§4.1), on every state: `hover:`/`active:` would
-              otherwise swap in the secondary fill and drop the white glyph on it. */}
-          <Button
-            variant="secondary"
-            size="icon"
-            disabled={unreachable}
-            aria-label={t('export.photoCopyAria', { file })}
-            aria-describedby={reason ? statusId : undefined}
-            onClick={() => onCopy(url)}
-            className="bg-media-scrim-bg text-media-scrim-fg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-2 right-2"
-          >
-            <Copy aria-hidden="true" className="size-5" />
-          </Button>
-        </div>
+          </button>
+        ) : (
+          // The view URL is minted per GetPost; until one arrives the box is still held open so
+          // the text below it does not jump when the photo paints.
+          <div className="bg-surface-recessed aspect-square w-full rounded-lg" />
+        )
       ) : (
         // No photo behind this marker: the copied text still carries `[사진 <file>]`, so the
         // preview says which file the reader is expected to place there.

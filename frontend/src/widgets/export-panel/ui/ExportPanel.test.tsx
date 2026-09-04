@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toNaver } from '@/features/export-naver'
 import { BlockType } from '@/shared/api'
@@ -18,14 +18,30 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-function renderPanel() {
+function renderPanel({ onPhotoUrlsStale }: { onPhotoUrlsStale?: () => void } = {}) {
   render(
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
       images={POST_IMAGES_FIXTURE}
       createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
+      onPhotoUrlsStale={onPhotoUrlsStale}
     />,
+  )
+}
+
+/** The photo the first copy control carries. The control IS the photo, so this is also the
+ *  assertion that the two have not drifted apart into a control beside an image again. */
+function firstPreviewPhoto(): HTMLImageElement {
+  const control = screen.getAllByRole('button', { name: /사진 복사$/ })[0]
+  return within(control).getByRole('img')
+}
+
+/** A view URL the way the API mints it, with a lifetime that has already run out. */
+function expiredUrl() {
+  return (
+    'https://bucket.r2.cloudflarestorage.com/private/IMG_1.jpg' +
+    '?X-Amz-Date=20260829T030405Z&X-Amz-Expires=600&X-Amz-Signature=abc'
   )
 }
 
@@ -409,9 +425,6 @@ function stubImageClipboard({ write }: { write?: () => Promise<void> } = {}): St
     'createImageBitmap',
     vi.fn().mockResolvedValue({ width: 4, height: 3, close: vi.fn() }),
   )
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' })),
-  )
   // The canvas is the other thing jsdom does not have. Only the encode's OUTPUT matters here.
   vi.stubGlobal(
     'OffscreenCanvas',
@@ -474,7 +487,7 @@ it('names the failure on the photo that failed, with no text flavor substituted'
 it('says so and offers no copy when the photo cannot be read', async () => {
   const user = userEvent.setup()
   stubImageClipboard()
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 403 }))
+  vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('not loaded')))
   renderPanel()
 
   await user.click(screen.getAllByRole('button', { name: /사진 복사$/ })[0])
@@ -484,14 +497,17 @@ it('says so and offers no copy when the photo cannot be read', async () => {
   ).toBeInTheDocument()
 })
 
-// The bucket-CORS case. An `<img>` needs no CORS allow, so the photo renders while its bytes are
-// unreachable from this origin — and the reload that remints an expired URL mints one blocked in
-// exactly the same way. Telling the user to reload here is a loop with no exit, so the assertion
-// that matters is the NEGATIVE one.
-it('does not tell the user to reload when the photo bytes never arrive', async () => {
+// The bucket-CORS case. The photo is painted from a response this origin may not read, so it is
+// on screen and its pixels are still refused — and the reload that remints an expired URL mints
+// one refused in exactly the same way. Telling the user to reload here is a loop with no exit, so
+// the assertion that matters is the NEGATIVE one.
+it('does not tell the user to reload when this origin may not read the pixels', async () => {
   const user = userEvent.setup()
   stubImageClipboard()
-  vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+  vi.stubGlobal(
+    'createImageBitmap',
+    vi.fn().mockRejectedValue(new DOMException('tainted', 'SecurityError')),
+  )
   renderPanel()
 
   await user.click(screen.getAllByRole('button', { name: /사진 복사$/ })[0])
@@ -504,6 +520,93 @@ it('does not tell the user to reload when the photo bytes never arrive', async (
   expect(
     screen.queryByText('사진을 읽지 못했어요. 글을 다시 불러오면 사진 주소가 새로 발급돼요.'),
   ).not.toBeInTheDocument()
+})
+
+// ── The photo IS the control, and it is copied from its own pixels ────────────────────────────
+//
+// A 44px target in the corner of a photo that fills the column was a quarter of the reach it
+// needed, and the corner is also where the thumb rests while scrolling. The `<img>` stays a real
+// `<img>` INSIDE the button rather than under an invisible overlay, so the browser's own
+// 이미지 복사 stays on the right-click menu.
+
+it('makes the photo itself the copy control, CORS-loaded so its pixels can be read', () => {
+  renderPanel()
+
+  const photo = firstPreviewPhoto()
+  // Without this the canvas the encode draws on is tainted and the browser refuses the bytes for
+  // a photo that is plainly on screen — the copy would fail with nothing on screen to explain it.
+  expect(photo).toHaveAttribute('crossorigin', 'anonymous')
+  // NOT lazy: the copy reads the pixels the element already holds, so a photo below the fold has
+  // to have painted before it is scrolled to — deferring the load defers it past the URL's
+  // lifetime on exactly the panel that is left open.
+  expect(photo).not.toHaveAttribute('loading', 'lazy')
+})
+
+it('copies the photo the user pressed, off that element, without requesting it again', async () => {
+  const user = userEvent.setup()
+  const clipboard = stubImageClipboard()
+  const fetchSpy = vi.spyOn(globalThis, 'fetch')
+  renderPanel()
+
+  const photo = firstPreviewPhoto()
+  await user.click(photo)
+
+  await waitFor(() => expect(clipboard.write).toHaveBeenCalledOnce())
+  expect(createImageBitmap).toHaveBeenCalledWith(photo)
+  expect(fetchSpy).not.toHaveBeenCalled()
+})
+
+// ── A photo that never painted ────────────────────────────────────────────────────────────────
+//
+// Nothing else on the editor refetches the post while it sits open, so a panel outliving the
+// presigned lifetime holds URLs that no longer resolve. That is one refetch away from fixed, and
+// the panel is the only surface that knows a photo failed — so it is the one that asks.
+
+it('asks for fresh photo URLs when a photo fails to load, at most once', () => {
+  const onPhotoUrlsStale = vi.fn()
+  renderPanel({ onPhotoUrlsStale })
+
+  fireEvent.error(firstPreviewPhoto())
+  expect(onPhotoUrlsStale).toHaveBeenCalledOnce()
+
+  // Bounded on purpose: every refresh mints a NEW url, so a bucket that refuses this origin would
+  // otherwise drive an unbounded fail-remint-fail loop.
+  fireEvent.error(firstPreviewPhoto())
+  expect(onPhotoUrlsStale).toHaveBeenCalledOnce()
+})
+
+// The load failure carries the same two opposite readings the copy does, and the URL's own
+// lifetime is the only thing that separates them: R2 answers an expired read and a forbidden one
+// alike, with a 403 carrying no CORS headers that the browser never exposes.
+it('tells an expired photo URL apart from one this origin may not read', () => {
+  render(
+    <ExportPanel
+      content={POST_CONTENT_FIXTURE}
+      images={POST_IMAGES_FIXTURE.map((image) => ({ ...image, viewUrl: expiredUrl() }))}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+
+  fireEvent.error(firstPreviewPhoto())
+
+  // Reloading remints it, so the message that says so is the right one.
+  expect(
+    screen.getAllByText('사진을 읽지 못했어요. 글을 다시 불러오면 사진 주소가 새로 발급돼요.')
+      .length,
+  ).toBeGreaterThan(0)
+})
+
+it('does not promise a reload for a photo whose URL had not expired', () => {
+  renderPanel()
+
+  // The fixture's URLs state no SigV4 lifetime, so nothing here can be claimed to have expired —
+  // and a reload would mint a URL refused in exactly the same way.
+  fireEvent.error(firstPreviewPhoto())
+
+  expect(
+    screen.getByText('지금은 사진을 복사할 수 없어요. 본문만 붙여넣고 사진은 직접 올려 주세요.'),
+  ).toBeInTheDocument()
 })
 
 it('says so when the browser has no image clipboard at all', async () => {

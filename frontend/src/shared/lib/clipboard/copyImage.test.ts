@@ -15,7 +15,8 @@ function stub({ write }: { write?: () => Promise<void> } = {}) {
     },
   )
   const close = vi.fn()
-  vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 4, height: 3, close }))
+  const createBitmap = vi.fn().mockResolvedValue({ width: 4, height: 3, close })
+  vi.stubGlobal('createImageBitmap', createBitmap)
   vi.stubGlobal(
     'OffscreenCanvas',
     class {
@@ -31,12 +32,9 @@ function stub({ write }: { write?: () => Promise<void> } = {}) {
       }
     },
   )
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(new Blob([new Uint8Array([1])], { type: 'image/jpeg' })),
-  )
   // The stub AWAITS the item's promises, the way the real `clipboard.write` does: the payload is
   // handed over before the bytes exist, so a stub that resolved regardless would report a failed
-  // decode as a successful copy.
+  // read as a successful copy.
   const spy = vi.fn(async (given: unknown[]) => {
     for (const item of given as Array<{ types: Record<string, Promise<Blob>> }>) {
       await Promise.all(Object.values(item.types))
@@ -47,7 +45,22 @@ function stub({ write }: { write?: () => Promise<void> } = {}) {
     configurable: true,
     value: { write: spy, writeText: vi.fn() },
   })
-  return { items, write: spy, close }
+  return { items, write: spy, close, createBitmap }
+}
+
+/** The photo as it stands on the panel: an element that has already painted. What is copied is
+ *  read out of THIS, never re-requested — that is the whole contract of the function. */
+function painted(): HTMLImageElement {
+  const element = document.createElement('img')
+  element.src = 'https://bucket.test/IMG_1.jpg'
+  return element
+}
+
+/** The browser's refusal to hand back pixels it considers unreadable by this origin. `DOMException`
+ *  is used because that is what a real `createImageBitmap` rejects with; only the NAME is matched,
+ *  so the encode path's own throw is recognised the same way. */
+function securityError() {
+  return new DOMException('tainted', 'SecurityError')
 }
 
 afterEach(() => {
@@ -55,50 +68,47 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-/** A view URL the way the API mints it: SigV4 states the lifetime in the query, which is what
- *  tells an expired read apart from a bucket that allows this origin no `GET`. */
-function presigned(signedAt: Date, lifetimeSeconds: number) {
-  const stamp = signedAt
-    .toISOString()
-    .replace(/[-:]/g, '')
-    .replace(/\.\d{3}/, '')
-  return `https://bucket.test/IMG_1.jpg?X-Amz-Date=${stamp}&X-Amz-Expires=${lifetimeSeconds}`
-}
-
 describe('copyImage', () => {
   it('writes one ClipboardItem whose only flavor is image/png', async () => {
     const clipboard = stub()
 
-    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'copied' })
+    expect(await copyImage(painted())).toEqual({ kind: 'copied' })
 
     expect(clipboard.write).toHaveBeenCalledOnce()
     expect(clipboard.write.mock.calls[0][0]).toHaveLength(1)
     expect(clipboard.items).toHaveLength(1)
     expect(Object.keys(clipboard.items[0])).toEqual(['image/png'])
-    // The value is a PROMISE, and `write` is called before it settles: awaiting the fetch first
+    // The value is a PROMISE, and `write` is called before it settles: awaiting the encode first
     // spends the user activation WebKit requires, which made every iOS copy fail as `refused`.
     expect(await clipboard.items[0]['image/png']).toBeInstanceOf(Blob)
     expect((await clipboard.items[0]['image/png']).type).toBe('image/png')
   })
 
-  it('closes the bitmap it decoded', async () => {
+  // The bug this function was rewritten for: a presigned view URL outlives nothing, the panel
+  // outlives it, and a copy that re-downloaded the photo failed on a photo still on screen —
+  // while the browser's own 이미지 복사 on the same photo worked. It reads the ELEMENT now, so
+  // there is no request to fail, no URL to expire and no CORS answer to wait for.
+  it('reads the pixels off the element and makes no request at all', async () => {
     const clipboard = stub()
-    await copyImage('https://bucket.test/IMG_1.jpg')
-    expect(clipboard.close).toHaveBeenCalledOnce()
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    const element = painted()
+
+    expect(await copyImage(element)).toEqual({ kind: 'copied' })
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(clipboard.createBitmap).toHaveBeenCalledWith(element)
   })
 
-  // The payload is handed over BEFORE the bytes exist. A failure inside that promise therefore
-  // has to come back out through the write, and be told apart from a policy refusal.
-  it('reports a load failure as unreadable even though the write is what rejects', async () => {
-    stub()
-    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('bad image')))
-    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'unreadable' })
+  it('closes the bitmap it decoded', async () => {
+    const clipboard = stub()
+    await copyImage(painted())
+    expect(clipboard.close).toHaveBeenCalledOnce()
   })
 
   it('reports `unsupported` when the browser has no image clipboard', async () => {
     stub()
     vi.stubGlobal('ClipboardItem', undefined)
-    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'unsupported' })
+    expect(await copyImage(painted())).toEqual({ kind: 'unsupported' })
 
     vi.stubGlobal(
       'ClipboardItem',
@@ -110,49 +120,52 @@ describe('copyImage', () => {
       configurable: true,
       value: { writeText: vi.fn() },
     })
-    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'unsupported' })
+    expect(await copyImage(painted())).toEqual({ kind: 'unsupported' })
   })
 
   it('reports `refused` when the write itself is rejected', async () => {
     stub({ write: () => Promise.reject(new DOMException('blocked', 'NotAllowedError')) })
-    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'refused' })
+    expect(await copyImage(painted())).toEqual({ kind: 'refused' })
   })
 
-  // The two read failures lead to OPPOSITE advice — reload the post vs. do not bother, the bytes
-  // are unreachable from this origin — so a test that only covered "the load failed" is what let
-  // them share one message. Both arrive as a REJECTED fetch, so the URL's own lifetime is what
-  // separates them, and these two cases pin that down from either side.
-  it('reports `blocked` when the fetch rejects on a URL that had not expired', async () => {
+  // The payload is handed over BEFORE the bytes exist. A failure inside that promise therefore
+  // has to come back out through the write, and be told apart from a policy refusal.
+  it('reports a read failure as such even though the write is what rejects', async () => {
     stub()
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
-    expect(await copyImage(presigned(new Date(), 600))).toEqual({ kind: 'blocked' })
-    // A URL carrying no SigV4 lifetime cannot be claimed to have expired.
-    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'blocked' })
+    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('not loaded')))
+    expect(await copyImage(painted())).toEqual({ kind: 'unreadable' })
   })
 
-  // R2 answers an expired read with a 403 carrying NO CORS headers, so the browser withholds it
-  // and the fetch rejects — the same way it does for a missing `GET` allow. The two are therefore
-  // separated by the URL's own lifetime, and this is the case that would otherwise be told to
-  // "paste the text and add the photos yourself" when a reload is all it needed.
-  it('reports `unreadable` when the fetch rejects on a URL that had already expired', async () => {
+  // The two read failures lead to OPPOSITE advice — reload the post vs. do not bother, this origin
+  // may not read these pixels — so a test that only covered "the read failed" is what let them
+  // share one message. `SecurityError` is the browser's own word for the second, and both ends of
+  // the read raise it, so both ends are pinned.
+  it('reports `blocked` when the pixels are refused to this origin', async () => {
     stub()
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
-    expect(await copyImage(presigned(new Date(Date.now() - 3_600_000), 600))).toEqual({
-      kind: 'unreadable',
-    })
+    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(securityError()))
+    expect(await copyImage(painted())).toEqual({ kind: 'blocked' })
+
+    // The same fact raised by the encode instead: a canvas tainted by an origin-unclean draw.
+    stub()
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        getContext() {
+          return {
+            drawImage: () => {
+              throw securityError()
+            },
+          }
+        }
+      },
+    )
+    expect(await copyImage(painted())).toEqual({ kind: 'blocked' })
   })
 
-  // Bytes that never became an image must not reach the clipboard as an empty one. A non-2xx the
-  // browser DID expose lands here too — R2 hides its expired-URL 403, but a store that does not,
-  // MinIO in local dev included, reaches this path instead of the rejection above.
-  it('reports `unreadable` for a readable non-2xx, a failed decode, and a failed encode', async () => {
-    stub()
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 403 }))
-    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'unreadable' })
-
+  it('reports `unreadable` for a failed decode and a failed encode', async () => {
     stub()
     vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('bad image')))
-    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'unreadable' })
+    expect(await copyImage(painted())).toEqual({ kind: 'unreadable' })
 
     stub()
     vi.stubGlobal(
@@ -163,33 +176,12 @@ describe('copyImage', () => {
         }
       },
     )
-    expect(await copyImage('https://bucket.test/IMG_1.jpg')).toEqual({ kind: 'unreadable' })
-  })
-
-  // `presigned()` above builds the shape this parser reads, so on its own it could agree with a
-  // parser that is wrong about the real thing. This URL is the shape aws-sdk-go-v2's
-  // `PresignGetObject` actually emits (`backend/internal/storage/r2.go`), pinned as a literal.
-  it('reads the lifetime out of a real presigned view URL', async () => {
-    const real =
-      'https://acct.r2.cloudflarestorage.com/postpilot-prod/u/1/IMG_1.jpg' +
-      '?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=key%2F20260904%2Fauto%2Fs3%2Faws4_request' +
-      '&X-Amz-Date=20260904T010203Z&X-Amz-Expires=600&X-Amz-SignedHeaders=host&X-Amz-Signature=abc'
-    stub()
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
-    vi.useFakeTimers()
-    try {
-      vi.setSystemTime(new Date('2026-09-04T02:00:00Z'))
-      expect(await copyImage(real)).toEqual({ kind: 'unreadable' })
-      vi.setSystemTime(new Date('2026-09-04T01:05:00Z'))
-      expect(await copyImage(real)).toEqual({ kind: 'blocked' })
-    } finally {
-      vi.useRealTimers()
-    }
+    expect(await copyImage(painted())).toEqual({ kind: 'unreadable' })
   })
 
   it('never writes a text flavor beside the image', async () => {
     const clipboard = stub()
-    await copyImage('https://bucket.test/IMG_1.jpg')
+    await copyImage(painted())
     for (const item of clipboard.items) {
       expect(Object.keys(item)).not.toContain('text/html')
       expect(Object.keys(item)).not.toContain('text/plain')
