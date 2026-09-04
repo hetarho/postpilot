@@ -1,3 +1,14 @@
+# buf v2 codegen template for the Mac companion. Invoked from the repo root as
+#   buf generate --template agent/buf.gen.yaml proto
+# so every `out:` is repo-root-relative (scripts/gen.mjs runs it right after the
+# backend template).
+#
+# The agent is a separate Go module, so each proto file's go_package (which points
+# at backend/internal/gen) is remapped here with `M<file>=<agent import path>`.
+# EVERY proto/postpilot/v1/*.proto NEEDS A LINE IN BOTH PLUGINS: an unmapped file
+# keeps the backend path, and any mapped file that imports it then imports a module
+# the agent does not require — `go vet ./...` fails with "no required module
+# provides package github.com/postpilot/backend/internal/gen/postpilot/v1".
 version: v2
 plugins:
   - remote: buf.build/protocolbuffers/go:v1.36.11
@@ -15,7 +26,7 @@ plugins:
       - Mpostpilot/v1/post.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/provider.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/publishing.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
-      - Mpostpilot/v1/purpose.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/template.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/voice.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/voice_learning.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/voice_validation.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
@@ -34,7 +45,7 @@ plugins:
       - Mpostpilot/v1/post.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/provider.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/publishing.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
-      - Mpostpilot/v1/purpose.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/template.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/voice.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/voice_learning.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/voice_validation.proto=github.com/postpilot/agent/internal/gen/postpilot/v1

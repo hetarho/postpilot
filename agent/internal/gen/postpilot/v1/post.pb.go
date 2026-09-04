@@ -7,7 +7,6 @@
 package postpilotv1
 
 import (
-	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -504,7 +503,7 @@ type Post struct {
 	MachineBaselineVoiceId string `protobuf:"bytes,19,opt,name=machine_baseline_voice_id,json=machineBaselineVoiceId,proto3" json:"machine_baseline_voice_id,omitempty"`
 	// Unset when the post has no template. Unlike `voice` it is optional by design: the
 	// server never picks one and 없음 is the default.
-	Template       *v1.TemplateRef `protobuf:"bytes,20,opt,name=template,proto3" json:"template,omitempty"`
+	Template       *TemplateRef    `protobuf:"bytes,20,opt,name=template,proto3" json:"template,omitempty"`
 	TargetLanguage ContentLanguage `protobuf:"varint,21,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
 	// UNSPECIFIED until canonical machine content establishes provenance.
 	ContentLanguage ContentLanguage `protobuf:"varint,22,opt,name=content_language,json=contentLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"content_language,omitempty"`
@@ -675,7 +674,7 @@ func (x *Post) GetMachineBaselineVoiceId() string {
 	return ""
 }
 
-func (x *Post) GetTemplate() *v1.TemplateRef {
+func (x *Post) GetTemplate() *TemplateRef {
 	if x != nil {
 		return x.Template
 	}
@@ -794,7 +793,7 @@ type PostSummary struct {
 	ActiveJob           *GenerationJob         `protobuf:"bytes,5,opt,name=active_job,json=activeJob,proto3" json:"active_job,omitempty"`
 	PendingExperimentId string                 `protobuf:"bytes,6,opt,name=pending_experiment_id,json=pendingExperimentId,proto3" json:"pending_experiment_id,omitempty"`
 	Voice               *VoiceRef              `protobuf:"bytes,7,opt,name=voice,proto3" json:"voice,omitempty"`
-	Template            *v1.TemplateRef        `protobuf:"bytes,8,opt,name=template,proto3" json:"template,omitempty"`
+	Template            *TemplateRef           `protobuf:"bytes,8,opt,name=template,proto3" json:"template,omitempty"`
 	TargetLanguage      ContentLanguage        `protobuf:"varint,9,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
 	ContentLanguage     ContentLanguage        `protobuf:"varint,10,opt,name=content_language,json=contentLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"content_language,omitempty"`
 	unknownFields       protoimpl.UnknownFields
@@ -880,7 +879,7 @@ func (x *PostSummary) GetVoice() *VoiceRef {
 	return nil
 }
 
-func (x *PostSummary) GetTemplate() *v1.TemplateRef {
+func (x *PostSummary) GetTemplate() *TemplateRef {
 	if x != nil {
 		return x.Template
 	}
@@ -2677,7 +2676,7 @@ var file_postpilot_v1_post_proto_goTypes = []any{
 	(*DeleteImageRequest)(nil),                // 35: postpilot.v1.DeleteImageRequest
 	(*DeleteImageResponse)(nil),               // 36: postpilot.v1.DeleteImageResponse
 	(ContentLanguage)(0),                      // 37: postpilot.v1.ContentLanguage
-	(*v1.TemplateRef)(nil),                    // 38: postpilot.v1.TemplateRef
+	(*TemplateRef)(nil),                       // 38: postpilot.v1.TemplateRef
 	(*ModelRef)(nil),                          // 39: postpilot.v1.ModelRef
 	(*Failure)(nil),                           // 40: postpilot.v1.Failure
 }
@@ -2756,6 +2755,7 @@ func file_postpilot_v1_post_proto_init() {
 		return
 	}
 	file_postpilot_v1_provider_proto_init()
+	file_postpilot_v1_template_proto_init()
 	file_postpilot_v1_error_proto_init()
 	file_postpilot_v1_language_proto_init()
 	file_postpilot_v1_post_proto_msgTypes[5].OneofWrappers = []any{}
