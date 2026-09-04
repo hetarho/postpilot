@@ -242,7 +242,14 @@ export const Popover = forwardRef<
           // The panel is its own scroller, so it owes the focus ring the same clear space the
           // sheet's body does (§9). Its `p-4` already exceeds the ring's 4px on every side, so
           // the gutter is satisfied by the padding it has and nothing is reserved on top of it.
-          className={`bg-surface-highest max-w-popover absolute z-30 w-72 rounded-lg p-4 shadow-lg ${
+          //
+          // `overflow-x-hidden` is not decoration. A scroll container resolves BOTH axes away
+          // from `visible`, so `overflow-y-auto` alone silently made the panel scrollable
+          // SIDEWAYS as well — and a 288px surface whose content is a column of full-width fields
+          // has nothing to reach out there. Anything that did stick out was a field failing to
+          // shrink, which is fixed where the field is, not by letting the panel scroll. Clipping
+          // happens at the padding box, so the 4px ring inside `p-4` is untouched.
+          className={`bg-surface-highest max-w-popover absolute z-30 w-72 overflow-x-hidden rounded-lg p-4 shadow-lg ${
             align === 'start' ? 'left-0' : 'right-0'
           } ${
             placement === 'below'

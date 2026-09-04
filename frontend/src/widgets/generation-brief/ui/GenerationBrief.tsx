@@ -68,7 +68,13 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
         className="shrink-0"
       >
         {(close) => (
-          <div className="grid gap-4">
+          // `grid-cols-1` and not a bare `grid`: an IMPLICIT column is `auto`, which is floored at
+          // the widest child's min-content and therefore grows the brief past the 288px panel it
+          // opens in — that is what put a horizontal scrollbar under the surface. An explicit
+          // `minmax(0, 1fr)` track plus `min-w-0` on each row lets every field shrink to the panel
+          // instead, which is what the fields are already built to do: each one truncates or wraps
+          // inside its own well.
+          <div className="grid grid-cols-1 gap-4 *:min-w-0">
             <div>
               <StageModelSelect stage="observe" optional={photoCount === 0} />
               {photoCount === 0 && (
