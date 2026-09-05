@@ -28,7 +28,8 @@
     "infra:down": "docker compose down"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "haeram-spec-creator": "^0.1.1"
   },
   "packageManager": "pnpm@10.30.3",
   "engines": {

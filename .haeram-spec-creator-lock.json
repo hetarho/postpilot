@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "packageName": "haeram-spec-creator",
+  "packageVersion": "0.1.1",
+  "installedAt": "2026-09-05T07:47:16.787Z",
+  "agents": [
+    "claude",
+    "codex"
+  ],
+  "files": {
+    ".claude/skills/create-architecture/assets/FORMAT.md": {
+      "sha256": "8a85c3f6d9c68fe49d938f44c505097d23f3c904df110a118dcda903b6f78e32"
+    },
+    ".claude/skills/create-architecture/assets/STATE.md": {
+      "sha256": "fadbfa755f9cd5520ec75cd16ee0f85a459046fe69d764f05679a3f1f652d2d1"
+    },
+    ".claude/skills/create-architecture/SKILL.md": {
+      "sha256": "dc5773ba3b6bd53c69ae7e44efb96fd152a85ac6ab725e9171788cc5c1ed4081"
+    },
+    ".claude/skills/create-narrative/references/korean-style.md": {
+      "sha256": "4769f33b8bf82058947d029e38f6226bcc1fb614460611bc18eb975cf6dafbca"
+    },
+    ".claude/skills/create-narrative/SKILL.md": {
+      "sha256": "6bc3e3b1b85351c16166468c460af3dbfb9d523b7ad99981a5f43268d47a47cc"
+    },
+    ".claude/skills/create-ssot/SKILL.md": {
+      "sha256": "73999b5b1405d4b7159208650f1df1e303e51fd90141b70d92bb277fb034cecf"
+    },
+    ".claude/skills/create-task/SKILL.md": {
+      "sha256": "4fdabf7f122e5c811b6ea02b79ed36ec263bfc20e5c60247dd9d030b97abf9c1"
+    },
+    ".claude/skills/implement-task/SKILL.md": {
+      "sha256": "3c1f02a880fdcf7fa4649ae51e8a8d3ca7ac415dd3308a54d641b1adeea0edf3"
+    },
+    ".claude/skills/update-ssot/SKILL.md": {
+      "sha256": "fc813401df5ebb679152ad61230a001c3d24e3820608cb7c0d7bf71a6c97187f"
+    },
+    ".codex/skills/create-architecture/agents/openai.yaml": {
+      "sha256": "e54fb97860eb279322fab4733af4eef5da1119e0f4a86f57bd1449dbbc19a3d3"
+    },
+    ".codex/skills/create-architecture/assets/FORMAT.md": {
+      "sha256": "8a85c3f6d9c68fe49d938f44c505097d23f3c904df110a118dcda903b6f78e32"
+    },
+    ".codex/skills/create-architecture/assets/STATE.md": {
+      "sha256": "fadbfa755f9cd5520ec75cd16ee0f85a459046fe69d764f05679a3f1f652d2d1"
+    },
+    ".codex/skills/create-architecture/SKILL.md": {
+      "sha256": "dc5773ba3b6bd53c69ae7e44efb96fd152a85ac6ab725e9171788cc5c1ed4081"
+    },
+    ".codex/skills/create-narrative/agents/openai.yaml": {
+      "sha256": "c11d27ac8a7b045cf12719d9d82fcb0e0c1fd3e3ca1c397de4d14a390b69762a"
+    },
+    ".codex/skills/create-narrative/references/korean-style.md": {
+      "sha256": "4769f33b8bf82058947d029e38f6226bcc1fb614460611bc18eb975cf6dafbca"
+    },
+    ".codex/skills/create-narrative/SKILL.md": {
+      "sha256": "6bc3e3b1b85351c16166468c460af3dbfb9d523b7ad99981a5f43268d47a47cc"
+    },
+    ".codex/skills/create-ssot/agents/openai.yaml": {
+      "sha256": "2bf7e613b7579318013aa1ba93ac1e2d34eb52df4665064a6aa7df27525ae477"
+    },
+    ".codex/skills/create-ssot/SKILL.md": {
+      "sha256": "73999b5b1405d4b7159208650f1df1e303e51fd90141b70d92bb277fb034cecf"
+    },
+    ".codex/skills/create-task/agents/openai.yaml": {
+      "sha256": "390ba7f645ecf5ada98ffa9bace994de158d10f4a26b522e7916d5103ccc52e5"
+    },
+    ".codex/skills/create-task/SKILL.md": {
+      "sha256": "4fdabf7f122e5c811b6ea02b79ed36ec263bfc20e5c60247dd9d030b97abf9c1"
+    },
+    ".codex/skills/implement-task/agents/openai.yaml": {
+      "sha256": "ef55da54c86e474e55172ff454b7bdba25bf38c18dc3144d06dd66a361990a80"
+    },
+    ".codex/skills/implement-task/SKILL.md": {
+      "sha256": "3c1f02a880fdcf7fa4649ae51e8a8d3ca7ac415dd3308a54d641b1adeea0edf3"
+    },
+    ".codex/skills/update-ssot/agents/openai.yaml": {
+      "sha256": "704e25b36beb15c806ac20cfaefadc946e9591024723fbdd06034e39d1d17fb4"
+    },
+    ".codex/skills/update-ssot/SKILL.md": {
+      "sha256": "fc813401df5ebb679152ad61230a001c3d24e3820608cb7c0d7bf71a6c97187f"
+    }
+  }
+}
