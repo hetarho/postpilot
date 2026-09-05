@@ -20,15 +20,26 @@ import (
 var manifestJSON []byte
 
 type CompatibilityManifest struct {
-	SchemaVersion    int      `json:"schema_version"`
-	DriverVersion    string   `json:"driver_version"`
-	SignatureID      string   `json:"signature_id"`
-	ProtocolVersion  string   `json:"protocol_version"`
-	ChromiumMinMajor int      `json:"chromium_min_major"`
-	ChromiumMaxMajor int      `json:"chromium_max_major"`
-	RequiredDomains  []string `json:"required_domains"`
-	RequiredAXRoles  []string `json:"required_ax_roles"`
-	Capabilities     []string `json:"capabilities"`
+	SchemaVersion               int                        `json:"schema_version"`
+	DriverVersion               string                     `json:"driver_version"`
+	SignatureID                 string                     `json:"signature_id"`
+	ProtocolVersion             string                     `json:"protocol_version"`
+	ChromiumMinMajor            int                        `json:"chromium_min_major"`
+	ChromiumMaxMajor            int                        `json:"chromium_max_major"`
+	RequiredDomains             []string                   `json:"required_domains"`
+	RequiredAXRoles             []string                   `json:"required_ax_roles"`
+	Capabilities                []string                   `json:"capabilities"`
+	SemanticLocators            map[string]SemanticLocator `json:"semantic_locators"`
+	FinalControlAccessibleNames []string                   `json:"final_control_accessible_names"`
+}
+
+// SemanticLocator is signed local release data, never supplied by the server. CSS finds
+// the versioned editor node while AXRole/StateAttribute require matching accessibility
+// semantics before it can be used.
+type SemanticLocator struct {
+	CSS            string `json:"css"`
+	AXRole         string `json:"ax_role"`
+	StateAttribute string `json:"state_attribute,omitempty"`
 }
 
 type Result struct {
@@ -47,8 +58,14 @@ func Manifest() (CompatibilityManifest, error) {
 	}
 	if manifest.SchemaVersion != 1 || manifest.DriverVersion == "" || manifest.SignatureID == "" ||
 		manifest.ProtocolVersion == "" || manifest.ChromiumMinMajor <= 0 || manifest.ChromiumMaxMajor < manifest.ChromiumMinMajor ||
-		len(manifest.RequiredDomains) == 0 || len(manifest.RequiredAXRoles) == 0 || len(manifest.Capabilities) == 0 {
+		len(manifest.RequiredDomains) == 0 || len(manifest.RequiredAXRoles) == 0 || len(manifest.Capabilities) == 0 || len(manifest.FinalControlAccessibleNames) == 0 {
 		return CompatibilityManifest{}, errors.New("Naver compatibility manifest is incomplete")
+	}
+	for _, kind := range []MutationKind{MutationTitle, MutationText, MutationHeading, MutationQuote, MutationList, MutationImagePlaceholder, MutationUploadImage, MutationImageCaption, MutationTags, MutationCategory, MutationVisibility} {
+		locator := manifest.SemanticLocators[string(kind)]
+		if strings.TrimSpace(locator.CSS) == "" || strings.TrimSpace(locator.AXRole) == "" {
+			return CompatibilityManifest{}, fmt.Errorf("Naver compatibility manifest has no complete %s locator", kind)
+		}
 	}
 	return manifest, nil
 }

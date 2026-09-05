@@ -15,5 +15,19 @@
     "publish-settings-category-visibility-tags",
     "unique-final-control",
     "readback-url-and-accessibility"
-  ]
+  ],
+  "semantic_locators": {
+    "title": {"css": ".se-component.se-documentTitle .se-title-text", "ax_role": "textbox"},
+    "text": {"css": ".se-body.__se-body", "ax_role": "textbox"},
+    "heading": {"css": ".se-body.__se-body", "ax_role": "textbox"},
+    "quote": {"css": ".se-body.__se-body", "ax_role": "textbox"},
+    "list": {"css": ".se-body.__se-body", "ax_role": "textbox"},
+    "image_placeholder": {"css": "button.se-image-toolbar-button", "ax_role": "button"},
+    "upload_image": {"css": "input[type=file][accept*=image]", "ax_role": "button"},
+    "image_caption": {"css": ".se-component.se-image .se-caption", "ax_role": "textbox"},
+    "tags": {"css": "div[class^=layer_popup__][class*=is_show__] input", "ax_role": "textbox"},
+    "category": {"css": "button[aria-label='카테고리 목록 버튼']", "ax_role": "button", "state_attribute": "aria-expanded"},
+    "visibility": {"css": "div[class^=layer_popup__][class*=is_show__] [role=radio]", "ax_role": "radio", "state_attribute": "aria-checked"}
+  },
+  "final_control_accessible_names": ["발행"]
 }
