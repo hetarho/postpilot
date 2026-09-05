@@ -178,6 +178,7 @@ export interface ReasoningSpend {
   calls: bigint
   reasoningTokens: bigint
   completionTokens: bigint
+  reasoningTruncations: bigint
 }
 
 /** The share of the completion budget spent on reasoning, 0–1. Zero completion tokens

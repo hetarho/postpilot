@@ -316,12 +316,13 @@ func (x *CatalogEntry) GetReasoningKnown() bool {
 
 // ReasoningSpend is a recent window of one model's completion budget at one stage.
 type ReasoningSpend struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Calls            int64                  `protobuf:"varint,1,opt,name=calls,proto3" json:"calls,omitempty"`
-	ReasoningTokens  int64                  `protobuf:"varint,2,opt,name=reasoning_tokens,json=reasoningTokens,proto3" json:"reasoning_tokens,omitempty"`
-	CompletionTokens int64                  `protobuf:"varint,3,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Calls                int64                  `protobuf:"varint,1,opt,name=calls,proto3" json:"calls,omitempty"`
+	ReasoningTokens      int64                  `protobuf:"varint,2,opt,name=reasoning_tokens,json=reasoningTokens,proto3" json:"reasoning_tokens,omitempty"`
+	CompletionTokens     int64                  `protobuf:"varint,3,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
+	ReasoningTruncations int64                  `protobuf:"varint,4,opt,name=reasoning_truncations,json=reasoningTruncations,proto3" json:"reasoning_truncations,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ReasoningSpend) Reset() {
@@ -371,6 +372,13 @@ func (x *ReasoningSpend) GetReasoningTokens() int64 {
 func (x *ReasoningSpend) GetCompletionTokens() int64 {
 	if x != nil {
 		return x.CompletionTokens
+	}
+	return 0
+}
+
+func (x *ReasoningSpend) GetReasoningTruncations() int64 {
+	if x != nil {
+		return x.ReasoningTruncations
 	}
 	return 0
 }
@@ -759,11 +767,12 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\x14reasoning_max_tokens\x18\x19 \x01(\bR\x12reasoningMaxTokens\x12+\n" +
 	"\x11reasoning_drifted\x18\x1a \x01(\bR\x10reasoningDrifted\x12'\n" +
 	"\x0freasoning_known\x18\x1b \x01(\bR\x0ereasoningKnownB\x12\n" +
-	"\x10_reasoning_spendJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"~\n" +
+	"\x10_reasoning_spendJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"\xb3\x01\n" +
 	"\x0eReasoningSpend\x12\x14\n" +
 	"\x05calls\x18\x01 \x01(\x03R\x05calls\x12)\n" +
 	"\x10reasoning_tokens\x18\x02 \x01(\x03R\x0freasoningTokens\x12+\n" +
-	"\x11completion_tokens\x18\x03 \x01(\x03R\x10completionTokens\"H\n" +
+	"\x11completion_tokens\x18\x03 \x01(\x03R\x10completionTokens\x123\n" +
+	"\x15reasoning_truncations\x18\x04 \x01(\x03R\x14reasoningTruncations\"H\n" +
 	"\x12ListCatalogRequest\x12\x18\n" +
 	"\arefresh\x18\x01 \x01(\bR\arefresh\x12\x18\n" +
 	"\apurpose\x18\x02 \x01(\tR\apurpose\"\xaa\x01\n" +

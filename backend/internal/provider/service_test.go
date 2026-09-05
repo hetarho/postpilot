@@ -130,7 +130,7 @@ func (*recordingCredits) Balance(context.Context, string) (int, bool, error) {
 func TestCatalogAndPostEstimateNameTheStageTheyQuote(t *testing.T) {
 	credits := &recordingCredits{}
 	svc := provider.NewService(&fakeStore{rows: map[string]provider.Selection{}}, fakeCatalog{
-		live:   {Ref: live, Stages: textStages},
+		live:   {Ref: live, Stages: textStages, ReasoningNativeEffort: true},
 		seeing: {Ref: seeing, Stages: allStages},
 	}, credits)
 
@@ -146,6 +146,11 @@ func TestCatalogAndPostEstimateNameTheStageTheyQuote(t *testing.T) {
 	if quoted[live] != provider.StageWrite || quoted[seeing] != provider.StageObserve {
 		t.Fatalf("catalog quote stages = %v, want live=write and seeing=observe", quoted)
 	}
+	for _, calls := range credits.calls {
+		if len(calls) == 1 && calls[0].Ref == live && !calls[0].NativeEffort {
+			t.Fatal("catalog quote dropped native-effort pricing")
+		}
+	}
 
 	credits.calls = nil
 	if got := svc.EstimatePostCredits(seeing, live); got != 5 {
@@ -154,6 +159,9 @@ func TestCatalogAndPostEstimateNameTheStageTheyQuote(t *testing.T) {
 	if len(credits.calls) != 1 || len(credits.calls[0]) != 2 ||
 		credits.calls[0][0].Stage != provider.StageObserve || credits.calls[0][1].Stage != provider.StageWrite {
 		t.Fatalf("post estimate calls = %+v", credits.calls)
+	}
+	if !credits.calls[0][1].NativeEffort {
+		t.Fatal("post estimate dropped the writer's native-effort pricing")
 	}
 }
 

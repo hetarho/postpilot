@@ -43,14 +43,15 @@ func (r ModelRef) String() string { return r.ProviderID + "/" + r.ModelID }
 
 // ModelInfo is a registry entry as the catalog exposes it — ids, label and flags only.
 type ModelInfo struct {
-	Ref                 ModelRef
-	Label               string
-	Vision              bool
-	StructuredOutput    bool
-	ContextTokens       int64
-	InputUSDPerMillion  string
-	OutputUSDPerMillion string
-	PricingCheckedAt    string
+	Ref                   ModelRef
+	Label                 string
+	Vision                bool
+	StructuredOutput      bool
+	ContextTokens         int64
+	InputUSDPerMillion    string
+	OutputUSDPerMillion   string
+	PricingCheckedAt      string
+	ReasoningNativeEffort bool
 	// Stages this model may serve, passed through from the source verbatim (see
 	// SourceModel.Stages). Empty means no user-facing stage lists it.
 	Stages         []string
@@ -85,6 +86,11 @@ type SourceModel struct {
 	// value for the whole model erased that distinction, so lowering the effort for writing
 	// silently changed photo observation (change 24).
 	Reasoning map[string]ReasoningEffort
+	// ReasoningEfforts is the model's recorded native vocabulary. NativeEffort distinguishes
+	// models whose provider consumes the effort string directly and therefore need completion
+	// headroom for writing and revision.
+	ReasoningEfforts      []ReasoningEffort
+	ReasoningNativeEffort bool
 	// Stages this model is registered to serve, in the same stable string form
 	// RecommendationSelection.Stage uses ("observe"/"write"/"analyze"). The strings are the
 	// source's to define — the registry passes them through without interpreting them, the
@@ -370,15 +376,16 @@ func (r *Registry) Lookup(ref ModelRef) (ModelInfo, bool) {
 // concerns this row alone.
 func (r *Registry) describe(m SourceModel) ModelInfo {
 	info := ModelInfo{
-		Ref:                 ModelRef{ProviderID: r.providerID, ModelID: m.ModelID},
-		Label:               m.Label,
-		Vision:              m.Vision,
-		StructuredOutput:    m.StructuredOutput,
-		ContextTokens:       m.ContextTokens,
-		InputUSDPerMillion:  m.InputUSDPerMillion,
-		OutputUSDPerMillion: m.OutputUSDPerMillion,
-		PricingCheckedAt:    m.PricingCheckedAt,
-		Stages:              append([]string(nil), m.Stages...),
+		Ref:                   ModelRef{ProviderID: r.providerID, ModelID: m.ModelID},
+		Label:                 m.Label,
+		Vision:                m.Vision,
+		StructuredOutput:      m.StructuredOutput,
+		ContextTokens:         m.ContextTokens,
+		InputUSDPerMillion:    m.InputUSDPerMillion,
+		OutputUSDPerMillion:   m.OutputUSDPerMillion,
+		PricingCheckedAt:      m.PricingCheckedAt,
+		ReasoningNativeEffort: m.ReasoningNativeEffort,
+		Stages:                append([]string(nil), m.Stages...),
 	}
 	switch {
 	case r.disabled:
@@ -434,6 +441,7 @@ func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Res
 	if !req.Reasoning.Valid() {
 		return Response{}, fmt.Errorf("invalid reasoning effort %q", req.Reasoning)
 	}
+	req.DisableReasoning = req.Reasoning == ReasoningNone && !slices.Contains(resolved.ReasoningEfforts, ReasoningNone)
 	// Zero and negative both mean "no cap of my own": a caller computing a budget must
 	// not send a negative number to the provider and learn about it as a 400.
 	if req.MaxTokens <= 0 {

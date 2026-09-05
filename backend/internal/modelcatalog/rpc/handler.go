@@ -130,7 +130,8 @@ func toProtoReasoningSpend(spend *modelcatalog.ReasoningSpend) *postpilotv1.Reas
 	}
 	return &postpilotv1.ReasoningSpend{
 		Calls: spend.Calls, ReasoningTokens: spend.ReasoningTokens,
-		CompletionTokens: spend.CompletionTokens,
+		CompletionTokens:     spend.CompletionTokens,
+		ReasoningTruncations: spend.ReasoningTruncations,
 	}
 }
 

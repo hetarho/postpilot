@@ -189,6 +189,9 @@ function ReasoningSpendSignal({ spend }: { spend: ReasoningSpend | undefined }) 
           calls: Number(spend.calls),
         })}
       </Typography>
+      <Typography variant="meta" as="p" className="text-content-tertiary mt-1">
+        {t('catalog.reasoningTruncations', { count: Number(spend.reasoningTruncations) })}
+      </Typography>
       {heavy && (
         <Typography variant="meta" as="p" className="text-content-tertiary mt-1">
           {t('catalog.reasoningSpendHeavy')}

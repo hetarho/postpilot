@@ -37,7 +37,12 @@ export interface FakeCatalogEntry {
    *  purpose's stage. A purpose absent from the map has no recorded call. */
   reasoningSpend?: Record<
     string,
-    { calls: bigint; reasoningTokens: bigint; completionTokens: bigint }
+    {
+      calls: bigint
+      reasoningTokens: bigint
+      completionTokens: bigint
+      reasoningTruncations?: bigint
+    }
   >
   sourceCreatedAt?: bigint
   /** What the source publishes about this model's reasoning (change 27). Omitted means a
@@ -95,7 +100,12 @@ export function registerModelCatalogService(
         videoOutput: entry.videoOutput ?? false,
         listed: entry.listed ?? true,
         reasoningEffort: entry.reasoningEffort?.[purpose] ?? '',
-        reasoningSpend: entry.reasoningSpend?.[purpose],
+        reasoningSpend: entry.reasoningSpend?.[purpose]
+          ? {
+              ...entry.reasoningSpend[purpose],
+              reasoningTruncations: entry.reasoningSpend[purpose]?.reasoningTruncations ?? 0n,
+            }
+          : undefined,
         reasons: entry.reasoning?.reasons ?? true,
         reasoningEfforts: entry.reasoning?.efforts ?? [],
         reasoningDefaultEffort: entry.reasoning?.defaultEffort ?? '',

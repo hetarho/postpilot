@@ -188,6 +188,9 @@ func (f *fakeStore) ReasoningSpend(_ context.Context, stage string, since time.T
 		row.Calls++
 		row.ReasoningTokens += event.ReasoningTokens
 		row.CompletionTokens += event.CompletionTokens
+		if event.ReasoningTruncated {
+			row.ReasoningTruncations++
+		}
 	}
 	out := make([]ReasoningSpend, 0, len(byModel))
 	for _, row := range byModel {
@@ -627,7 +630,7 @@ func TestRecordCallPricesAndAttributesFromContext(t *testing.T) {
 		UserID: "alice", Kind: "generate", JobID: "job", ObserveModel: "openrouter/observer",
 	})
 
-	if err := svc.RecordCall(ctx, ref, "", llm.Usage{PromptTokens: 1_000_000, CompletionTokens: 0}, false); err != nil {
+	if err := svc.RecordCall(ctx, ref, "", llm.Usage{PromptTokens: 1_000_000, CompletionTokens: 0}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := len(store.events), 1; got != want {
@@ -648,7 +651,7 @@ func TestRecordCallKeepsFailedCallsWithReportedUsage(t *testing.T) {
 	ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "gone"}
 
 	// A failure that never reached a model has nothing to account for.
-	if err := svc.RecordCall(ctx, ref, "", llm.Usage{}, true); err != nil {
+	if err := svc.RecordCall(ctx, ref, "", llm.Usage{}, errors.New("provider failed")); err != nil {
 		t.Fatal(err)
 	}
 	if len(store.events) != 0 {
@@ -656,7 +659,7 @@ func TestRecordCallKeepsFailedCallsWithReportedUsage(t *testing.T) {
 	}
 
 	// A failure the provider still billed is the case job 23 preserves usage for.
-	if err := svc.RecordCall(ctx, ref, "", llm.Usage{PromptTokens: 12, CostMicrousd: 4, CostReported: true}, true); err != nil {
+	if err := svc.RecordCall(ctx, ref, "", llm.Usage{PromptTokens: 12, CostMicrousd: 4, CostReported: true}, errors.New("provider failed")); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := len(store.events), 1; got != want {
@@ -677,7 +680,7 @@ func TestRecordCallStoresTheReasoningTokenCount(t *testing.T) {
 
 	if err := svc.RecordCall(ctx, ref, llm.StageNameWrite, llm.Usage{
 		PromptTokens: 4304, CompletionTokens: 8192, ReasoningTokens: 8100,
-	}, true); err != nil {
+	}, &llm.TruncatedError{ReasoningTokens: 8100, CompletionTokens: 8192}); err != nil {
 		t.Fatal(err)
 	}
 	if len(store.events) != 1 {
@@ -687,12 +690,15 @@ func TestRecordCallStoresTheReasoningTokenCount(t *testing.T) {
 	if got.ReasoningTokens != 8100 || got.CompletionTokens != 8192 || got.PromptTokens != 4304 {
 		t.Fatalf("event = %+v", got)
 	}
+	if !got.ReasoningTruncated {
+		t.Fatal("reasoning-caused truncation was not recorded")
+	}
 	// The stage the CALL named, not an inference from the ref.
 	if got.Stage != llm.StageNameWrite {
 		t.Errorf("stage = %q, want the stage the call named", got.Stage)
 	}
 	// A provider that reports no split leaves it zero, like every other usage field.
-	if err := svc.RecordCall(ctx, ref, llm.StageNameWrite, llm.Usage{CompletionTokens: 40}, false); err != nil {
+	if err := svc.RecordCall(ctx, ref, llm.StageNameWrite, llm.Usage{CompletionTokens: 40}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if store.events[1].ReasoningTokens != 0 {
@@ -711,12 +717,13 @@ func TestReasoningSpendAggregatesPerModelAndStage(t *testing.T) {
 	for _, call := range []struct {
 		stage string
 		usage llm.Usage
+		err   error
 	}{
-		{llm.StageNameObserve, llm.Usage{CompletionTokens: 700, ReasoningTokens: 20}},
-		{llm.StageNameObserve, llm.Usage{CompletionTokens: 660, ReasoningTokens: 30}},
-		{llm.StageNameWrite, llm.Usage{CompletionTokens: 8192, ReasoningTokens: 8100}},
+		{llm.StageNameObserve, llm.Usage{CompletionTokens: 700, ReasoningTokens: 20}, nil},
+		{llm.StageNameObserve, llm.Usage{CompletionTokens: 660, ReasoningTokens: 30}, nil},
+		{llm.StageNameWrite, llm.Usage{CompletionTokens: 8192, ReasoningTokens: 8100}, &llm.TruncatedError{ReasoningTokens: 8100, CompletionTokens: 8192}},
 	} {
-		if err := svc.RecordCall(ctx, shared, call.stage, call.usage, false); err != nil {
+		if err := svc.RecordCall(ctx, shared, call.stage, call.usage, call.err); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -732,7 +739,7 @@ func TestReasoningSpendAggregatesPerModelAndStage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(write) != 1 || write[0].Calls != 1 || write[0].ReasoningTokens != 8100 {
+	if len(write) != 1 || write[0].Calls != 1 || write[0].ReasoningTokens != 8100 || write[0].ReasoningTruncations != 1 {
 		t.Fatalf("write spend = %+v", write)
 	}
 	// The same model, the same window, opposite verdicts — which is the whole reason the
@@ -750,7 +757,7 @@ func TestReasoningSpendAggregatesPerModelAndStage(t *testing.T) {
 
 func TestRecordCallDropsAnUnattributableCall(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
-	err := svc.RecordCall(context.Background(), llm.ModelRef{ProviderID: "p", ModelID: "m"}, "", llm.Usage{PromptTokens: 5}, false)
+	err := svc.RecordCall(context.Background(), llm.ModelRef{ProviderID: "p", ModelID: "m"}, "", llm.Usage{PromptTokens: 5}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

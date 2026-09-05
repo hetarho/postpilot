@@ -517,7 +517,7 @@ func TestBrowse_AttachesTheReasoningSpendForTheListedPurpose(t *testing.T) {
 	svc := newService(t, store, &fakeUpstream{})
 	svc.SetReasoningSpend(fakeSpend{rows: map[string][]modelcatalog.SpendRow{
 		llm.StageNameWrite: {
-			{Model: "openai/reasoner", Calls: 3, ReasoningTokens: 24_000, CompletionTokens: 24_300},
+			{Model: "openai/reasoner", Calls: 3, ReasoningTokens: 24_000, CompletionTokens: 24_300, ReasoningTruncations: 2},
 			{Model: "openai/quiet", Calls: 5, ReasoningTokens: 120, CompletionTokens: 6_000},
 			// A model with no recorded call renders nothing rather than a zero that would
 			// read as a measurement.
@@ -538,6 +538,8 @@ func TestBrowse_AttachesTheReasoningSpendForTheListedPurpose(t *testing.T) {
 	}
 	if spend := byID["openai/reasoner"].ReasoningSpend; spend == nil || spend.ReasoningShare() < 0.9 {
 		t.Fatalf("reasoner writing spend = %+v, want a reasoning-heavy share", spend)
+	} else if spend.ReasoningTruncations != 2 {
+		t.Fatalf("reasoner truncations = %d, want 2", spend.ReasoningTruncations)
 	}
 	if spend := byID["openai/quiet"].ReasoningSpend; spend == nil || spend.ReasoningShare() > 0.1 {
 		t.Fatalf("quiet writing spend = %+v", spend)
@@ -769,9 +771,9 @@ func TestSetPurpose_SnapshotsTheReasoningCapability(t *testing.T) {
 	}
 }
 
-// A9: the capability is curation metadata and reaches no generation path. What the registry
-// serves is unchanged by it, so the request body cannot be.
-func TestModelSource_CarriesNoReasoningCapability(t *testing.T) {
+// MODEL-46/47: the two capability facts execution needs cross the catalog boundary; the
+// remaining descriptive fields stay catalog-only.
+func TestModelSource_CarriesExecutionReasoningCapability(t *testing.T) {
 	plain := curated("openai/gpt-x", modelcatalog.PurposeWriting)
 	rich := curated("openai/gpt-x-rich", modelcatalog.PurposeWriting)
 	rich.ReasoningCapability = reasoningCapable([]string{"max", "high", "low"}, true)
@@ -782,12 +784,11 @@ func TestModelSource_CarriesNoReasoningCapability(t *testing.T) {
 	if !okA || !okB {
 		t.Fatal("a curated model left the registry")
 	}
-	// Everything the registry sees is identical apart from the id and label: the capability
-	// crosses no boundary into llm.SourceModel.
-	a.ModelID, a.Label = "", ""
-	b.ModelID, b.Label = "", ""
-	if !reflect.DeepEqual(a, b) {
-		t.Fatalf("the reasoning capability changed what the registry serves:\n%+v\n%+v", a, b)
+	if a.ReasoningNativeEffort || len(a.ReasoningEfforts) != 0 {
+		t.Fatalf("plain capability leaked values: %+v", a)
+	}
+	if !b.ReasoningNativeEffort || !reflect.DeepEqual(b.ReasoningEfforts, []llm.ReasoningEffort{llm.ReasoningMax, llm.ReasoningHigh, llm.ReasoningLow}) {
+		t.Fatalf("execution capability was not carried: %+v", b)
 	}
 }
 

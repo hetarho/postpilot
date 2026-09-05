@@ -29,7 +29,7 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T001 | Price credit holds from each call's own completion budget | QUOTA GEN | - | done@260905 |
-| T002 | Give the write budget reasoning headroom and let the adapter disable reasoning | MODEL GEN QUOTA | T001 | todo |
+| T002 | Give the write budget reasoning headroom and let the adapter disable reasoning | MODEL GEN QUOTA | T001 | done@260905 |
 | T003 | Persist the dedicated browser session across pairing retries | PUBLISH | - | todo |
 | T004 | Mac pairing, profile setup and the non-publishing compatibility probe | PUBLISH | T003 | todo |
 | T005 | The deterministic Naver publisher | PUBLISH EXPORT | T004 | todo |
@@ -39,9 +39,11 @@
 | T009 | Pointer affordances for clickable controls | THEME | - | done@260905 |
 
 ## next
-- implement-task T002 (or T003 — the two chains are independent)
+- implement-task T003
 
 ## log
+- 260905 T002 done (native-effort write headroom, explicit reasoning disable, and per-purpose truncation counts; every ARCH gate passes)
+- 260905 T002 claimed (cx)
 - 260905 T001 done (per-call completion budgets now price holds and quotes; ARCH-26 and ARCH-28 pass)
 - 260905 T001 claimed (cx)
 - 260905 T009 done (global pointer affordances; 988 FE tests and every ARCH frontend gate pass on Node 24.18.0)

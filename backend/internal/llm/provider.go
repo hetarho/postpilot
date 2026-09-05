@@ -81,6 +81,10 @@ type Request struct {
 	// Reasoning is the STAGE policy's intent. The registry replaces it with the operator's
 	// override for Stage when the catalog holds one.
 	Reasoning ReasoningEffort
+	// DisableReasoning tells OpenRouter to send reasoning.enabled=false instead of an effort.
+	// The registry derives it when `none` is requested for a model whose recorded effort
+	// vocabulary does not contain `none`; callers never set it.
+	DisableReasoning bool
 	// Stage names the user-facing stage this call is for, in the stable form
 	// StageNameObserve/Write/Analyze carry. It is what makes the override resolvable: the
 	// operator curates an effort per (model, purpose), and one model may observe at one

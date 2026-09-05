@@ -674,20 +674,20 @@ type fakeBudget struct {
 	observe, floor, perChar, ceiling int
 }
 
-func (b fakeBudget) Write(targetLength *int) int {
+func (b fakeBudget) Write(targetLength *int, nativeEffort bool) int {
 	chars := 0
 	if targetLength != nil && *targetLength > 0 {
 		chars = *targetLength
 	}
-	return b.forChars(chars)
+	return b.withHeadroom(b.forChars(chars), nativeEffort)
 }
 
-func (b fakeBudget) Revise(contentChars int, targetLength *int) int {
+func (b fakeBudget) Revise(contentChars int, targetLength *int, nativeEffort bool) int {
 	chars := contentChars
 	if targetLength != nil && *targetLength > chars {
 		chars = *targetLength
 	}
-	return b.forChars(chars)
+	return b.withHeadroom(b.forChars(chars), nativeEffort)
 }
 
 func (b fakeBudget) Observation() int { return b.observe }
@@ -698,4 +698,11 @@ func (b fakeBudget) forChars(chars int) int {
 		budget = derived
 	}
 	return min(budget, b.ceiling)
+}
+
+func (b fakeBudget) withHeadroom(value int, nativeEffort bool) int {
+	if !nativeEffort {
+		return value
+	}
+	return min(value*2, b.ceiling)
 }

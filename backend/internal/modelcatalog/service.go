@@ -64,18 +64,24 @@ func (s *Service) setCache(rows []Model) {
 		if len(row.Purposes) == 0 {
 			continue
 		}
+		efforts := make([]llm.ReasoningEffort, 0, len(row.Efforts))
+		for _, effort := range row.Efforts {
+			efforts = append(efforts, llm.ReasoningEffort(effort))
+		}
 		model := llm.SourceModel{
-			ModelID:             row.ModelID,
-			Label:               row.Label,
-			Vision:              row.Vision,
-			StructuredOutput:    row.StructuredOutput,
-			ContextTokens:       row.ContextTokens,
-			InputUSDPerMillion:  row.InputUSDPerMillion,
-			OutputUSDPerMillion: row.OutputUSDPerMillion,
-			PricingCheckedAt:    row.PricingCheckedAt,
-			Reasoning:           stageReasoningOf(row),
-			Stages:              stagesOf(row),
-			Delisted:            !row.Listed,
+			ModelID:               row.ModelID,
+			Label:                 row.Label,
+			Vision:                row.Vision,
+			StructuredOutput:      row.StructuredOutput,
+			ContextTokens:         row.ContextTokens,
+			InputUSDPerMillion:    row.InputUSDPerMillion,
+			OutputUSDPerMillion:   row.OutputUSDPerMillion,
+			PricingCheckedAt:      row.PricingCheckedAt,
+			Reasoning:             stageReasoningOf(row),
+			ReasoningEfforts:      efforts,
+			ReasoningNativeEffort: row.NativeEffort,
+			Stages:                stagesOf(row),
+			Delisted:              !row.Listed,
 		}
 		models = append(models, model)
 		byID[row.ModelID] = model
@@ -427,7 +433,8 @@ func (s *Service) reasoningSpend(ctx context.Context, purpose Purpose) map[strin
 		}
 		out[row.Model] = &ReasoningSpend{
 			Calls: row.Calls, ReasoningTokens: row.ReasoningTokens,
-			CompletionTokens: row.CompletionTokens,
+			CompletionTokens:     row.CompletionTokens,
+			ReasoningTruncations: row.ReasoningTruncations,
 		}
 	}
 	return out

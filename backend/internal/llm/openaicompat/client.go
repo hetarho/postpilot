@@ -167,7 +167,8 @@ type streamOptions struct {
 }
 
 type reasoning struct {
-	Effort llm.ReasoningEffort `json:"effort"`
+	Effort  llm.ReasoningEffort `json:"effort,omitempty"`
+	Enabled *bool               `json:"enabled,omitempty"`
 }
 
 type responseFormat struct {
@@ -203,7 +204,10 @@ func (c *Client) buildRequest(req llm.Request) chatRequest {
 			JSONSchema: jsonSchema{Name: "response", Schema: req.JSONSchema},
 		}
 	}
-	if c.reasoningFormat == "openrouter" && req.Reasoning != llm.ReasoningUnspecified && req.Reasoning != llm.ReasoningUnset {
+	if c.reasoningFormat == "openrouter" && req.DisableReasoning {
+		enabled := false
+		out.Reasoning = &reasoning{Enabled: &enabled}
+	} else if c.reasoningFormat == "openrouter" && req.Reasoning != llm.ReasoningUnspecified && req.Reasoning != llm.ReasoningUnset {
 		out.Reasoning = &reasoning{Effort: req.Reasoning}
 	}
 	return out

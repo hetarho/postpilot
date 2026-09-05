@@ -190,6 +190,7 @@ export const models = {
     reasoningSpend: 'Recent reasoning spend',
     reasoningSpendValue:
       '{{percent}}% of completion tokens went to reasoning (over {{calls}} calls)',
+    reasoningTruncations: 'Reasoning exhausted the output budget in {{count}} calls',
     reasoningSpendHeavy:
       'This model may not be honoring the effort you set. Lower it, or consider another model',
   },

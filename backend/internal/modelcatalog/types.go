@@ -286,9 +286,10 @@ type Entry struct {
 
 // ReasoningSpend is a recent window of one model's completion budget at one purpose.
 type ReasoningSpend struct {
-	Calls            int64
-	ReasoningTokens  int64
-	CompletionTokens int64
+	Calls                int64
+	ReasoningTokens      int64
+	CompletionTokens     int64
+	ReasoningTruncations int64
 }
 
 // ReasoningShare is the fraction of the completion budget spent on reasoning, 0-1. Zero

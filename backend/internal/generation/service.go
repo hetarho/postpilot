@@ -37,10 +37,10 @@ type ReasoningPolicy struct {
 // work needs and holds no number of its own.
 type CompletionBudget interface {
 	// Write is the writing stage's cap for a post's requested target length.
-	Write(targetLength *int) int
+	Write(targetLength *int, nativeEffort bool) int
 	// Revise is a revision's cap. A revision re-emits the whole PostContent, so its budget
 	// has to fit what already exists and not only what was asked for.
-	Revise(contentChars int, targetLength *int) int
+	Revise(contentChars int, targetLength *int, nativeEffort bool) int
 	// Observation is one observation batch's cap, independent of the writer's.
 	Observation() int
 }
@@ -157,9 +157,11 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	write, ok := parseModelRef(request.WriteModel)
-	if !ok || !modelEnabled(s.models, write, llm.StageNameWrite) {
+	writeInfo, found := s.models.Resolve(write)
+	if !ok || !found || writeInfo.Disabled || !writeInfo.ServesStage(llm.StageNameWrite) {
 		return "", ErrWriteModelRequired
 	}
+	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
 	if request.SaveAsRule {
 		if err := s.rules.AppendRule(ctx, request.UserID, voiceID, request.Instruction); err != nil {
 			return "", fmt.Errorf("save revision rule: %w", err)
@@ -175,7 +177,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Guidelines = texts
-	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, texts)
+	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, texts, request.WriteNativeEffort)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
 	}
@@ -204,9 +206,11 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", err
 	}
 	write, ok := parseModelRef(request.WriteModel)
-	if !ok || !modelEnabled(s.models, write, llm.StageNameWrite) {
+	writeInfo, found := s.models.Resolve(write)
+	if !ok || !found || writeInfo.Disabled || !writeInfo.ServesStage(llm.StageNameWrite) {
 		return "", ErrWriteModelRequired
 	}
+	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
 	if len(post.Images) == 0 {
 		request.ObserveModel = ""
 		// A zero-photo post has no reuse decision to make, so nothing about the picker is

@@ -188,6 +188,7 @@ export const models = {
       '이 모델이 더 이상 「{{effort}}」을 지원 목록에 두지 않아요. 값은 그대로 보내지만, 지원 목록은 {{supported}} 입니다.',
     reasoningSpend: '최근 추론 사용',
     reasoningSpendValue: '완성 토큰의 {{percent}}%가 추론에 쓰였어요 ({{calls}}회 기준)',
+    reasoningTruncations: '추론이 출력 예산을 소진한 호출 {{count}}회',
     reasoningSpendHeavy:
       '설정한 강도를 이 모델이 따르지 않을 수 있어요. 강도를 낮추거나 다른 모델을 고려하세요',
   },

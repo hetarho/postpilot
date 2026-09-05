@@ -163,7 +163,7 @@ func TestSettleRefundsAgainstTheRecordedLedger(t *testing.T) {
 	work := usage.WithWork(ctx, usage.Work{UserID: "alice", Kind: "generate", JobID: "job"})
 	if err := svc.RecordCall(work, pricedRef, "", llm.Usage{
 		PromptTokens: 3_000, CompletionTokens: 1_000,
-	}, false); err != nil {
+	}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := svc.Settle(ctx, "job"); err != nil {
@@ -190,6 +190,24 @@ func TestSettleRefundsAgainstTheRecordedLedger(t *testing.T) {
 	}
 	if again.Credits != after.Credits {
 		t.Fatalf("balance = %d after a second settle, want the unchanged %d", again.Credits, after.Credits)
+	}
+}
+
+func TestReasoningTruncationRoundTripsThroughTheLedgerAggregate(t *testing.T) {
+	svc := newService(t)
+	ctx := usage.WithWork(context.Background(), usage.Work{UserID: "alice", Kind: "generate", JobID: "truncated"})
+	err := svc.RecordCall(ctx, pricedRef, llm.StageNameWrite, llm.Usage{
+		CompletionTokens: 8192, ReasoningTokens: 8116,
+	}, &llm.TruncatedError{ReasoningTokens: 8116, CompletionTokens: 8192})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := svc.ReasoningSpendByModel(context.Background(), llm.StageNameWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].ReasoningTruncations != 1 {
+		t.Fatalf("reasoning spend = %+v, want one truncation", rows)
 	}
 }
 

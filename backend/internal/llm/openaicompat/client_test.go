@@ -531,12 +531,16 @@ func TestReasoningBodyCarriesOnlyAnEffortAndOnlyWithTheFormat(t *testing.T) {
 		name          string
 		format        string
 		effort        llm.ReasoningEffort
+		disable       bool
 		wantReasoning bool
+		wantEnabled   bool
 	}{
 		{name: "openrouter format sends the object", format: "openrouter", effort: llm.ReasoningLow, wantReasoning: true},
+		{name: "supported none stays an effort", format: "openrouter", effort: llm.ReasoningNone, wantReasoning: true},
 		{name: "no format sends nothing", format: "", effort: llm.ReasoningLow},
 		{name: "unset sends nothing", format: "openrouter", effort: llm.ReasoningUnset},
 		{name: "unspecified sends nothing", format: "openrouter", effort: llm.ReasoningUnspecified},
+		{name: "explicit disable sends enabled false", format: "openrouter", effort: llm.ReasoningNone, disable: true, wantReasoning: true, wantEnabled: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			var body map[string]any
@@ -545,7 +549,7 @@ func TestReasoningBodyCarriesOnlyAnEffortAndOnlyWithTheFormat(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
 			})
-			if _, err := client.Complete(context.Background(), llm.Request{Model: "m", Reasoning: test.effort}); err != nil {
+			if _, err := client.Complete(context.Background(), llm.Request{Model: "m", Reasoning: test.effort, DisableReasoning: test.disable}); err != nil {
 				t.Fatal(err)
 			}
 			raw, present := body["reasoning"]
@@ -562,7 +566,11 @@ func TestReasoningBodyCarriesOnlyAnEffortAndOnlyWithTheFormat(t *testing.T) {
 			if _, banned := object["exclude"]; banned {
 				t.Error("reasoning.exclude was sent")
 			}
-			if len(object) != 1 || object["effort"] != string(test.effort) {
+			if test.wantEnabled {
+				if len(object) != 1 || object["enabled"] != false {
+					t.Fatalf("reasoning object = %v, want only enabled=false", object)
+				}
+			} else if len(object) != 1 || object["effort"] != string(test.effort) {
 				t.Fatalf("reasoning object = %v, want only the effort", object)
 			}
 		})

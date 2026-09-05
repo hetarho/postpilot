@@ -43,7 +43,8 @@ type generationPayload struct {
 	ObserveFiles *[]string `json:"observe_files"`
 	// The reusable snapshot as it stood at enqueue, from the same read the selection came
 	// from. ObserveFiles alone decides which of these entries the run replaces.
-	Observations []observationPayload `json:"observations,omitempty"`
+	Observations      []observationPayload `json:"observations,omitempty"`
+	WriteNativeEffort bool                 `json:"write_native_effort,omitempty"`
 }
 
 // GenerationOptions is what a durable generate job froze at enqueue. Every field is an
@@ -56,8 +57,9 @@ type GenerationOptions struct {
 	Guidelines     []string
 	// ObserveFiles carries presence: nil observes every attached photo, non-nil-but-empty
 	// observes nothing. See generationPayload.ObserveFiles for why the distinction matters.
-	ObserveFiles *[]string
-	Observations []Observation
+	ObserveFiles      *[]string
+	Observations      []Observation
+	WriteNativeEffort bool
 }
 
 // EncodeGenerationPayload freezes generation-only options in the durable job.
@@ -66,12 +68,13 @@ func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
 		return nil, ErrLanguageRequired
 	}
 	return json.Marshal(generationPayload{
-		TargetLanguage: options.TargetLanguage.String(),
-		TargetLength:   cloneOptionalInt(options.TargetLength),
-		Template:       encodeTemplate(options.Template),
-		Guidelines:     cloneTexts(options.Guidelines),
-		ObserveFiles:   cloneOptionalTexts(options.ObserveFiles),
-		Observations:   encodeObservations(options.Observations),
+		TargetLanguage:    options.TargetLanguage.String(),
+		TargetLength:      cloneOptionalInt(options.TargetLength),
+		Template:          encodeTemplate(options.Template),
+		Guidelines:        cloneTexts(options.Guidelines),
+		ObserveFiles:      cloneOptionalTexts(options.ObserveFiles),
+		Observations:      encodeObservations(options.Observations),
+		WriteNativeEffort: options.WriteNativeEffort,
 	})
 }
 
@@ -100,12 +103,13 @@ func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 		}
 	}
 	return GenerationOptions{
-		TargetLanguage: language,
-		TargetLength:   cloneOptionalInt(payload.TargetLength),
-		Template:       decodeTemplate(payload.Template),
-		Guidelines:     cloneTexts(payload.Guidelines),
-		ObserveFiles:   cloneOptionalTexts(payload.ObserveFiles),
-		Observations:   decodeObservations(payload.Observations),
+		TargetLanguage:    language,
+		TargetLength:      cloneOptionalInt(payload.TargetLength),
+		Template:          decodeTemplate(payload.Template),
+		Guidelines:        cloneTexts(payload.Guidelines),
+		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),
+		Observations:      decodeObservations(payload.Observations),
+		WriteNativeEffort: payload.WriteNativeEffort,
 	}, nil
 }
 

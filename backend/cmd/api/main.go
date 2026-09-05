@@ -385,6 +385,7 @@ func main() {
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, Template: options.Template,
 			Guidelines: options.Guidelines, ObserveFiles: options.ObserveFiles, Observations: options.Observations,
+			WriteNativeEffort: options.WriteNativeEffort,
 		}, generation.Progress(progress))
 	}))
 	jobQueue.Register(job.KindRevise, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -1018,6 +1019,7 @@ func (a catalogReasoningSpend) ReasoningSpendByModel(ctx context.Context, stage 
 		out = append(out, modelcatalog.SpendRow{
 			Model: modelID, Calls: row.Calls,
 			ReasoningTokens: row.ReasoningTokens, CompletionTokens: row.CompletionTokens,
+			ReasoningTruncations: row.ReasoningTruncations,
 		})
 	}
 	return out, nil
@@ -1102,7 +1104,7 @@ func generationPricingCalls(request generation.StartRequest, budget config.LLMCo
 	}
 	if request.WriteModel != "" {
 		calls = append(calls, job.PlannedCall{
-			Ref: request.WriteModel, Count: 1, CompletionTokens: budget.Write(request.TargetLength),
+			Ref: request.WriteModel, Count: 1, CompletionTokens: budget.Write(request.TargetLength, request.WriteNativeEffort),
 		})
 	}
 	return calls
@@ -1114,7 +1116,7 @@ func revisionPricingCalls(request generation.StartRevisionRequest, budget config
 	}
 	return []job.PlannedCall{{
 		Ref: request.WriteModel, Count: 1,
-		CompletionTokens: budget.Revise(request.ContentChars, request.TargetLength),
+		CompletionTokens: budget.Revise(request.ContentChars, request.TargetLength, request.WriteNativeEffort),
 	}}
 }
 
@@ -1541,7 +1543,7 @@ func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm
 	// req.Stage is what the CALL said it was for, so the ledger records the stage as a fact
 	// instead of inferring it from the ref — which is what made a write call whose model also
 	// served observation indistinguishable from an observation call.
-	if recordErr := m.ledger.RecordCall(ctx, ref, req.Stage, response.Usage, err != nil); recordErr != nil {
+	if recordErr := m.ledger.RecordCall(ctx, ref, req.Stage, response.Usage, err); recordErr != nil {
 		slog.Error("usage ledger write failed", "model", ref.String(), "err", recordErr)
 	}
 	return response, err
@@ -1613,7 +1615,7 @@ func (a providerCredits) ForCalls(calls []provider.PlannedCall) int {
 		case provider.StageObserve:
 			completionTokens = a.budget.Observation()
 		case provider.StageWrite:
-			completionTokens = a.budget.Write(nil)
+			completionTokens = a.budget.Write(nil, call.NativeEffort)
 		}
 		priced = append(priced, usage.PlannedCall{
 			Ref: call.Ref, Count: call.Count, CompletionTokens: int64(completionTokens),

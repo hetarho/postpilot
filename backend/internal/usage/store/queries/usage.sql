@@ -71,8 +71,9 @@ SELECT job_id FROM usage_admissions WHERE settled_at IS NULL ORDER BY created_at
 -- name: InsertEvent :exec
 INSERT INTO usage_events (
     user_id, kind, job_id, stage, model,
-    prompt_tokens, completion_tokens, reasoning_tokens, cost_microusd, cost_source, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    prompt_tokens, completion_tokens, reasoning_tokens, reasoning_truncated,
+    cost_microusd, cost_source, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- Where one model's completion budget went at one stage, over a recent window. It is the
 -- evidence an operator needs to see that a model is ignoring its reasoning effort BEFORE it
@@ -86,7 +87,8 @@ INSERT INTO usage_events (
 SELECT model,
        CAST(COUNT(*) AS INTEGER) AS calls,
        CAST(COALESCE(SUM(reasoning_tokens), 0) AS INTEGER) AS reasoning_tokens,
-       CAST(COALESCE(SUM(completion_tokens), 0) AS INTEGER) AS completion_tokens
+       CAST(COALESCE(SUM(completion_tokens), 0) AS INTEGER) AS completion_tokens,
+       CAST(COALESCE(SUM(reasoning_truncated), 0) AS INTEGER) AS reasoning_truncations
 FROM usage_events
 WHERE stage = ? AND created_at >= ?
 GROUP BY model;

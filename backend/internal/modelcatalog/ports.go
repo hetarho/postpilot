@@ -50,8 +50,9 @@ type ReasoningSpendReader interface {
 // SpendRow is one model's recorded split at the stage that was asked for. It is this
 // context's own shape, so the ledger's type never crosses inward.
 type SpendRow struct {
-	Model            string
-	Calls            int64
-	ReasoningTokens  int64
-	CompletionTokens int64
+	Model                string
+	Calls                int64
+	ReasoningTokens      int64
+	CompletionTokens     int64
+	ReasoningTruncations int64
 }

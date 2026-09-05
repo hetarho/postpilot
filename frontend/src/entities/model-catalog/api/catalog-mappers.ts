@@ -111,6 +111,7 @@ export function toAdminCatalogEntry(entry: ProtoCatalogEntry): AdminCatalogEntry
           calls: entry.reasoningSpend.calls,
           reasoningTokens: entry.reasoningSpend.reasoningTokens,
           completionTokens: entry.reasoningSpend.completionTokens,
+          reasoningTruncations: entry.reasoningSpend.reasoningTruncations,
         }
       : undefined,
     sourceCreatedAt: entry.sourceCreatedAt,

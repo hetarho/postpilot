@@ -50,7 +50,7 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 		if err != nil {
 			continue
 		}
-		required := s.credits.ForCalls([]PlannedCall{{Ref: info.Ref, Count: 1, Stage: quotedStage}})
+		required := s.credits.ForCalls([]PlannedCall{{Ref: info.Ref, Count: 1, Stage: quotedStage, NativeEffort: info.ReasoningNativeEffort}})
 		out = append(out, CatalogModel{
 			Info: info, RequiredCredits: required,
 			Affordable: unlimited || balance >= required,
@@ -67,10 +67,12 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 func (s *Service) EstimatePostCredits(observe, write llm.ModelRef) int {
 	calls := make([]PlannedCall, 0, 2)
 	if observe != (llm.ModelRef{}) {
-		calls = append(calls, PlannedCall{Ref: observe, Count: 1, Stage: StageObserve})
+		observeInfo, _ := s.catalog.Lookup(observe)
+		calls = append(calls, PlannedCall{Ref: observe, Count: 1, Stage: StageObserve, NativeEffort: observeInfo.ReasoningNativeEffort})
 	}
 	if write != (llm.ModelRef{}) {
-		calls = append(calls, PlannedCall{Ref: write, Count: 1, Stage: StageWrite})
+		writeInfo, _ := s.catalog.Lookup(write)
+		calls = append(calls, PlannedCall{Ref: write, Count: 1, Stage: StageWrite, NativeEffort: writeInfo.ReasoningNativeEffort})
 	}
 	if len(calls) == 0 {
 		return 0

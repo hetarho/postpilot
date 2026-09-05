@@ -404,6 +404,33 @@ func TestComplete_CuratedReasoningOverrideWins(t *testing.T) {
 	}
 }
 
+func TestComplete_DisablesNoneWhenTheModelDoesNotRecordNone(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		efforts  []llm.ReasoningEffort
+		wantFlag bool
+	}{
+		{name: "none supported stays an effort", efforts: []llm.ReasoningEffort{llm.ReasoningHigh, llm.ReasoningNone}},
+		{name: "none absent uses enabled false", efforts: []llm.ReasoningEffort{llm.ReasoningHigh}, wantFlag: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			provider := &fakeProvider{}
+			source := fakeSource{models: []llm.SourceModel{{ModelID: "text-only", ReasoningEfforts: test.efforts}}}
+			registry, err := llm.Parse([]byte(goodYAML), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(provider), source, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "text-only"}
+			if _, err := registry.Complete(context.Background(), ref, llm.Request{Reasoning: llm.ReasoningNone}); err != nil {
+				t.Fatal(err)
+			}
+			if provider.last.DisableReasoning != test.wantFlag {
+				t.Fatalf("DisableReasoning = %v, want %v", provider.last.DisableReasoning, test.wantFlag)
+			}
+		})
+	}
+}
+
 // A1: the same model registered to two purposes holds two independent efforts, and each
 // stage's call sends its own — one generation observes at one strength and writes at another.
 func TestComplete_ResolvesEachStagesOwnOverride(t *testing.T) {

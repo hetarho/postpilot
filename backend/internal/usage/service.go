@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -341,17 +342,18 @@ func (s *Service) Record(ctx context.Context, call Call) error {
 	})
 
 	return s.store.InsertEvent(ctx, Event{
-		UserID:           call.UserID,
-		Kind:             call.Kind,
-		JobID:            call.JobID,
-		Stage:            call.Stage,
-		Model:            call.Model.String(),
-		PromptTokens:     int64(call.Usage.PromptTokens),
-		CompletionTokens: int64(call.Usage.CompletionTokens),
-		ReasoningTokens:  int64(call.Usage.ReasoningTokens),
-		CostMicrousd:     cost.Microusd,
-		CostSource:       cost.Source,
-		CreatedAt:        s.now(),
+		UserID:             call.UserID,
+		Kind:               call.Kind,
+		JobID:              call.JobID,
+		Stage:              call.Stage,
+		Model:              call.Model.String(),
+		PromptTokens:       int64(call.Usage.PromptTokens),
+		CompletionTokens:   int64(call.Usage.CompletionTokens),
+		ReasoningTokens:    int64(call.Usage.ReasoningTokens),
+		ReasoningTruncated: call.ReasoningTruncated,
+		CostMicrousd:       cost.Microusd,
+		CostSource:         cost.Source,
+		CreatedAt:          s.now(),
 	})
 }
 
@@ -366,12 +368,12 @@ func (s *Service) Record(ctx context.Context, call Call) error {
 // preferred over StageFor because it is a fact rather than an inference: StageFor could only
 // tell observe from write by comparing refs, and gave up when one model served both. A call
 // that names none still falls back to it.
-func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, stage string, u llm.Usage, failed bool) error {
+func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, stage string, u llm.Usage, callErr error) error {
 	work, ok := WorkFromContext(ctx)
 	if !ok {
 		return nil
 	}
-	if failed && u.PromptTokens == 0 && u.CompletionTokens == 0 && !u.CostReported {
+	if callErr != nil && u.PromptTokens == 0 && u.CompletionTokens == 0 && !u.CostReported {
 		return nil
 	}
 	if stage == "" {
@@ -380,6 +382,7 @@ func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, stage string
 	return s.Record(ctx, Call{
 		UserID: work.UserID, Kind: work.Kind, JobID: work.JobID,
 		Stage: stage, Model: ref, Usage: u,
+		ReasoningTruncated: errors.As(callErr, new(*llm.TruncatedError)),
 	})
 }
 

@@ -26,6 +26,12 @@ func TestGenerationPricingCallsUseTheBudgetsTheStagesWillSend(t *testing.T) {
 	if calls[1].Count != 1 || calls[1].CompletionTokens != 24000 {
 		t.Errorf("write call = %+v", calls[1])
 	}
+	native := generationPricingCalls(generation.StartRequest{
+		WriteModel: "openrouter/reasoner", WriteNativeEffort: true,
+	}, testCompletionBudget())
+	if len(native) != 1 || native[0].CompletionTokens != 16384 {
+		t.Fatalf("native-effort pricing calls = %+v, want frozen headroom", native)
+	}
 
 	reused := generationPricingCalls(generation.StartRequest{
 		ObserveModel: "openrouter/shared", WriteModel: "openrouter/shared", ObserveCalls: 0,

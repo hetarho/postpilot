@@ -121,6 +121,7 @@ message ReasoningSpend {
   int64 calls = 1;
   int64 reasoning_tokens = 2;
   int64 completion_tokens = 3;
+  int64 reasoning_truncations = 4;
 }
 
 message ListCatalogRequest {

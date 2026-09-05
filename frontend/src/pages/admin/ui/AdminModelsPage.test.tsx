@@ -284,7 +284,12 @@ describe('the model catalog tab', () => {
             purposes: ['photo-analysis', 'writing'],
             reasoningSpend: {
               'photo-analysis': { calls: 2n, reasoningTokens: 40n, completionTokens: 1_300n },
-              writing: { calls: 3n, reasoningTokens: 24_000n, completionTokens: 24_300n },
+              writing: {
+                calls: 3n,
+                reasoningTokens: 24_000n,
+                completionTokens: 24_300n,
+                reasoningTruncations: 2n,
+              },
             },
           },
         ],
@@ -305,6 +310,7 @@ describe('the model catalog tab', () => {
       await screen.findByText('완성 토큰의 99%가 추론에 쓰였어요 (3회 기준)'),
     ).toBeInTheDocument()
     expect(screen.getByText(/설정한 강도를 이 모델이 따르지 않을 수 있어요/)).toBeInTheDocument()
+    expect(screen.getByText('추론이 출력 예산을 소진한 호출 2회')).toBeInTheDocument()
   })
 
   // A model with no recorded call renders NOTHING: zero out of zero is the absence of a

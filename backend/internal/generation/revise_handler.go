@@ -49,7 +49,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 		// the port cares about: the writing override, and the writer's budget — sized by the
 		// content it has to re-emit, not only by what was asked for.
 		Stage:     llm.StageNameWrite,
-		MaxTokens: s.budget.Revise(contentChars(post.Content), post.TargetLength),
+		MaxTokens: s.budget.Revise(contentChars(post.Content), post.TargetLength, payload.WriteNativeEffort),
 	}
 	if info, found := s.models.Resolve(model); found && info.StructuredOutput {
 		request.JSONSchema = PostContentSchema()

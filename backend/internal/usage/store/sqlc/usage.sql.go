@@ -106,22 +106,24 @@ func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams
 const insertEvent = `-- name: InsertEvent :exec
 INSERT INTO usage_events (
     user_id, kind, job_id, stage, model,
-    prompt_tokens, completion_tokens, reasoning_tokens, cost_microusd, cost_source, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    prompt_tokens, completion_tokens, reasoning_tokens, reasoning_truncated,
+    cost_microusd, cost_source, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertEventParams struct {
-	UserID           string
-	Kind             string
-	JobID            string
-	Stage            string
-	Model            string
-	PromptTokens     int64
-	CompletionTokens int64
-	ReasoningTokens  int64
-	CostMicrousd     int64
-	CostSource       string
-	CreatedAt        string
+	UserID             string
+	Kind               string
+	JobID              string
+	Stage              string
+	Model              string
+	PromptTokens       int64
+	CompletionTokens   int64
+	ReasoningTokens    int64
+	ReasoningTruncated int64
+	CostMicrousd       int64
+	CostSource         string
+	CreatedAt          string
 }
 
 func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error {
@@ -134,6 +136,7 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 		arg.PromptTokens,
 		arg.CompletionTokens,
 		arg.ReasoningTokens,
+		arg.ReasoningTruncated,
 		arg.CostMicrousd,
 		arg.CostSource,
 		arg.CreatedAt,
@@ -316,7 +319,8 @@ const reasoningSpendByStage = `-- name: ReasoningSpendByStage :many
 SELECT model,
        CAST(COUNT(*) AS INTEGER) AS calls,
        CAST(COALESCE(SUM(reasoning_tokens), 0) AS INTEGER) AS reasoning_tokens,
-       CAST(COALESCE(SUM(completion_tokens), 0) AS INTEGER) AS completion_tokens
+       CAST(COALESCE(SUM(completion_tokens), 0) AS INTEGER) AS completion_tokens,
+       CAST(COALESCE(SUM(reasoning_truncated), 0) AS INTEGER) AS reasoning_truncations
 FROM usage_events
 WHERE stage = ? AND created_at >= ?
 GROUP BY model
@@ -328,10 +332,11 @@ type ReasoningSpendByStageParams struct {
 }
 
 type ReasoningSpendByStageRow struct {
-	Model            string
-	Calls            int64
-	ReasoningTokens  int64
-	CompletionTokens int64
+	Model                string
+	Calls                int64
+	ReasoningTokens      int64
+	CompletionTokens     int64
+	ReasoningTruncations int64
 }
 
 // Where one model's completion budget went at one stage, over a recent window. It is the
@@ -356,6 +361,7 @@ func (q *Queries) ReasoningSpendByStage(ctx context.Context, arg ReasoningSpendB
 			&i.Calls,
 			&i.ReasoningTokens,
 			&i.CompletionTokens,
+			&i.ReasoningTruncations,
 		); err != nil {
 			return nil, err
 		}

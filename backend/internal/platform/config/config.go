@@ -86,6 +86,10 @@ const (
 	// Korean character is roughly one token in these tokenizers; the JSON envelope, headings,
 	// tags and the reasoning that SHARES this budget are why the ratio is well above 1.
 	writeBudgetPerChar = 4
+	// Native-effort models spend reasoning tokens inside the same completion cap. Doubling
+	// only their writing budget leaves a full ordinary writing budget visible after an
+	// 8,116-token reasoning pass against the former 8,192 floor.
+	writeReasoningHeadroomFactor = 2
 	// writeBudgetCeilingFactor bounds a derived budget at this multiple of the configured
 	// fallback. It exists so a mistyped target length cannot ask a provider for an
 	// effectively unbounded completion, and it is a multiple rather than its own number so
@@ -160,15 +164,15 @@ type LLMCompletionBudget struct {
 // Write is the writing stage's budget for a post's requested target length. No target keeps
 // the floor; a longer requested draft is given more room, bounded by the ceiling so a
 // mistyped target cannot ask a provider for an unbounded completion.
-func (b LLMCompletionBudget) Write(targetLength *int) int {
-	return b.forChars(charsOf(targetLength))
+func (b LLMCompletionBudget) Write(targetLength *int, nativeEffort bool) int {
+	return b.withReasoningHeadroom(b.forChars(charsOf(targetLength)), nativeEffort)
 }
 
 // Revise is a revision's budget. A revision re-emits the WHOLE PostContent, so what it must
 // fit is the larger of the existing content and any requested length — a long post with no
 // target would otherwise be handed the floor and truncate deterministically.
-func (b LLMCompletionBudget) Revise(contentChars int, targetLength *int) int {
-	return b.forChars(max(contentChars, charsOf(targetLength)))
+func (b LLMCompletionBudget) Revise(contentChars int, targetLength *int, nativeEffort bool) int {
+	return b.withReasoningHeadroom(b.forChars(max(contentChars, charsOf(targetLength))), nativeEffort)
 }
 
 // Observation is one observation batch's budget, independent of the writer's.
@@ -180,6 +184,13 @@ func (b LLMCompletionBudget) forChars(chars int) int {
 		budget = derived
 	}
 	return min(budget, b.Ceiling)
+}
+
+func (b LLMCompletionBudget) withReasoningHeadroom(budget int, nativeEffort bool) int {
+	if !nativeEffort {
+		return budget
+	}
+	return min(budget*writeReasoningHeadroomFactor, b.Ceiling)
 }
 
 func charsOf(targetLength *int) int {

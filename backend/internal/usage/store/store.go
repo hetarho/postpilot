@@ -259,17 +259,18 @@ func (s *Store) SumCostForJob(ctx context.Context, jobID string) (int64, error) 
 
 func (s *Store) InsertEvent(ctx context.Context, event usage.Event) error {
 	err := s.write.InsertEvent(ctx, sqlc.InsertEventParams{
-		UserID:           event.UserID,
-		Kind:             event.Kind,
-		JobID:            event.JobID,
-		Stage:            event.Stage,
-		Model:            event.Model,
-		PromptTokens:     event.PromptTokens,
-		CompletionTokens: event.CompletionTokens,
-		ReasoningTokens:  event.ReasoningTokens,
-		CostMicrousd:     event.CostMicrousd,
-		CostSource:       string(event.CostSource),
-		CreatedAt:        formatTime(event.CreatedAt),
+		UserID:             event.UserID,
+		Kind:               event.Kind,
+		JobID:              event.JobID,
+		Stage:              event.Stage,
+		Model:              event.Model,
+		PromptTokens:       event.PromptTokens,
+		CompletionTokens:   event.CompletionTokens,
+		ReasoningTokens:    event.ReasoningTokens,
+		ReasoningTruncated: boolToInt64(event.ReasoningTruncated),
+		CostMicrousd:       event.CostMicrousd,
+		CostSource:         string(event.CostSource),
+		CreatedAt:          formatTime(event.CreatedAt),
 	})
 	if err != nil {
 		return fmt.Errorf("insert usage event: %w", err)
@@ -313,6 +314,7 @@ func (s *Store) ReasoningSpend(ctx context.Context, stage string, since time.Tim
 		out = append(out, usage.ReasoningSpend{
 			Model: row.Model, Stage: stage, Calls: row.Calls,
 			ReasoningTokens: row.ReasoningTokens, CompletionTokens: row.CompletionTokens,
+			ReasoningTruncations: row.ReasoningTruncations,
 		})
 	}
 	return out, nil
@@ -330,3 +332,10 @@ func parseTime(value string) (time.Time, error) {
 // regardless of the offset the caller's clock carried. The Asia/Seoul window boundaries
 // arrive here as ordinary instants and become their UTC equivalents.
 func formatTime(t time.Time) string { return t.UTC().Format(writeLayout) }
+
+func boolToInt64(value bool) int64 {
+	if value {
+		return 1
+	}
+	return 0
+}

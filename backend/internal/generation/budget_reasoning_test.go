@@ -57,7 +57,7 @@ func TestEachStageSendsItsOwnCompletionBudget(t *testing.T) {
 	if got, want := budgets[llm.StageNameObserve], testBudget.Observation(); got != want {
 		t.Errorf("observe budget = %d, want %d", got, want)
 	}
-	if got, want := budgets[llm.StageNameWrite], testBudget.Write(&target); got != want {
+	if got, want := budgets[llm.StageNameWrite], testBudget.Write(&target, false); got != want {
 		t.Errorf("write budget = %d, want %d", got, want)
 	}
 	// The point of the split: the writer's headroom is not handed to observation, whose
@@ -66,8 +66,31 @@ func TestEachStageSendsItsOwnCompletionBudget(t *testing.T) {
 		t.Errorf("observation was given the writer's headroom: %v", budgets)
 	}
 	// And the writer's own budget moves with what was asked for.
-	if testBudget.Write(&target) <= testBudget.Write(nil) {
+	if testBudget.Write(&target, false) <= testBudget.Write(nil, false) {
 		t.Errorf("a longer requested draft was not given more room")
+	}
+}
+
+func TestNativeEffortWritingGetsFrozenHeadroom(t *testing.T) {
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
+	models := observingModels(t)
+	info := models.infos[writeRef]
+	info.ReasoningNativeEffort = true
+	models.infos[writeRef] = info
+	jobs := &fakeJobs{id: "job"}
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
+
+	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs.generations) != 1 || !jobs.generations[0].WriteNativeEffort {
+		t.Fatalf("native effort was not frozen: %+v", jobs.generations)
+	}
+	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), WriteNativeEffort: true}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := models.calls[len(models.calls)-1].request.MaxTokens, testBudget.Write(nil, true); got != want {
+		t.Fatalf("native-effort write budget = %d, want %d", got, want)
 	}
 }
 

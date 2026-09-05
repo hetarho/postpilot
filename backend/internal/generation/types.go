@@ -119,6 +119,9 @@ type PostInput struct {
 	TargetLanguage  Language
 	ContentLanguage *Language
 	TargetLength    *int
+	// WriteNativeEffort is frozen from the selected catalog model at enqueue, so the hold
+	// and a delayed execution use the same completion budget even if curation changes.
+	WriteNativeEffort bool
 }
 
 type Profile struct {
@@ -158,7 +161,8 @@ type StartRequest struct {
 	// Observations is the reusable snapshot as it stood at Start, frozen into the payload
 	// beside ObserveFiles. Which of its entries survive the run is decided by ObserveFiles
 	// alone, so a photo waiting for its batch can keep the entry it already had.
-	Observations []Observation
+	Observations      []Observation
+	WriteNativeEffort bool
 }
 
 type GenerateJob struct {
@@ -178,7 +182,8 @@ type GenerateJob struct {
 	// Observations is the reusable snapshot frozen at enqueue, beside ObserveFiles and from
 	// the same read. It is the run's ONLY view of what was already known — no handler reads
 	// a live snapshot.
-	Observations []Observation
+	Observations      []Observation
+	WriteNativeEffort bool
 }
 
 type StartRevisionRequest struct {
@@ -193,8 +198,9 @@ type StartRevisionRequest struct {
 	Guidelines      []string
 	// The enqueue adapter uses the same frozen length facts as the revision handler to price
 	// the completion budget. Neither field is sent by the client or persisted independently.
-	TargetLength *int
-	ContentChars int
+	TargetLength      *int
+	ContentChars      int
+	WriteNativeEffort bool
 }
 
 type RevisionJob struct {

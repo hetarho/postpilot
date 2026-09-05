@@ -30,20 +30,22 @@ type revisionPayloadJSON struct {
 	// before templates existed decodes with this absent, which is "no template".
 	Template *templatePayload `json:"template,omitempty"`
 	// Likewise for the applicable guideline texts, in injection order.
-	Guidelines []string `json:"guidelines,omitempty"`
+	Guidelines        []string `json:"guidelines,omitempty"`
+	WriteNativeEffort bool     `json:"write_native_effort,omitempty"`
 }
 
 func encodeRevisionPayload(instruction string, saveAsRule bool, template *TemplateBrief, guidelines []string) ([]byte, error) {
-	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, guidelines)
+	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, guidelines, false)
 }
 
-func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, template *TemplateBrief, guidelines []string) ([]byte, error) {
+func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, template *TemplateBrief, guidelines []string, nativeEffort bool) ([]byte, error) {
 	if !language.Valid() {
 		return nil, ErrContentLanguageRequired
 	}
 	return json.Marshal(revisionPayloadJSON{
 		Instruction: instruction, SaveAsRule: saveAsRule, ContentLanguage: language,
 		Template: encodeTemplate(template), Guidelines: cloneTexts(guidelines),
+		WriteNativeEffort: nativeEffort,
 	})
 }
 

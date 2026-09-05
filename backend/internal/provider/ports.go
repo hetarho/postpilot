@@ -30,9 +30,10 @@ type Catalog interface {
 // own shape rather than the ledger's: a port is declared by its consumer, and the
 // composition root maps between the two.
 type PlannedCall struct {
-	Ref   llm.ModelRef
-	Count int
-	Stage Stage
+	Ref          llm.ModelRef
+	Count        int
+	Stage        Stage
+	NativeEffort bool
 }
 
 // Credits prices work for the calling account.
