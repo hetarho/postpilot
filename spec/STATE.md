@@ -38,10 +38,14 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 | todo |
 
 ## next
-- MIGRATION.md Phase 4: verify the six-skill workflow, generate NARRATIVE.md, and close the migration
+- update-ssot THEME for clickable affordances and cursor feedback, then create-task
 - implement-task T001 (or T003 — the two chains are independent)
 
 ## log
+- 260905 migration complete (six skills only; active references clean; narrative reviewed; all ARCH verification gates pass on Node 24.18.0)
+- 260905 create-narrative done (spec/NARRATIVE.md; SSOT conversion-loss read-through complete)
+- 260905 create-narrative start (audience: new team member; use: onboarding and current-status review)
+- 260905 migration Phase 4 start (six-skill, reference, workflow, and conversion-loss verification)
 - 260905 migration Phase 3 done (legacy tree archived; 10 legacy skills and spec scaffolding retired; active references swept; CI runs haeram-spec-creator check)
 - 260905 migration Phase 3 start (retire the legacy tree, legacy skills, and spec scaffolding)
 - 260905 create-task QUOTA MODEL PUBLISH → T001–T008; QUOTA MODEL PUBLISH tasked=2; code-review 01's findings were all closed by legacy jobs 26–31, nothing to carry
