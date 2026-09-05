@@ -1,0 +1,50 @@
+# AUTH accounts, passwords, sessions
+> r1 | Operator-provisioned accounts, id + password login, 30-day HttpOnly cookie sessions, and the single interceptor that turns a request into an acting user. Migrated from legacy policy/auth.md and plan/01.
+
+## decisions
+- AUTH-1 [o] no registration surface: no Signup RPC, screen, or invite flow; AuthService exposes exactly Login · Logout · GetMe ← a two-person tool gains nothing from open registration
+- AUTH-2 [o] accounts are created only by the operator: `api adduser <login_id> [--plan=<tier>]` against the deployed image, or `go run ./cmd/adduser <login_id>` on a host; the password is read twice from stdin (echo off on a TTY, line by line when piped) and must match; an existing id exits non-zero (`auth.ErrDuplicateUser`, enforced by the primary key)
+- AUTH-3 [o] every account carries a plan (default `free`); provisioning opens the tier's first monthly lot and, for `free`, a non-expiring 50-credit signup bonus, in the account-creating transaction and idempotently (lot id derived from the account) — ladder and grants in QUOTA
+- AUTH-4 [o] no password change or reset flow; the operator recreates the account ← a known product gap, deliberately left unfilled
+- AUTH-5 [x] roles, organizations, 3+ users, OAuth/social login, MFA, IP rate limiting, account lockout — out of scope at two-user scale; timing equalization (AUTH-9) is the defense
+- AUTH-6 [o] passwords are stored only as argon2id PHC strings (`$argon2id$v=19$m=65536,t=3,p=2$<salt>$<key>`): time 3, memory 64 MiB, parallelism 2, 16-byte random salt, 32-byte key; the parameters live inside each hash so raising them affects only new hashes, no schema change, no forced reset
+- AUTH-7 [o] verification is constant-time; a stored hash that will not parse (including out-of-range cost parameters that would panic inside `argon2.IDKey`) is logged and answered as an ordinary wrong password
+- AUTH-8 [o] every credential rejection is byte-identical: `CodeUnauthenticated`, message `invalid credentials`, stable reason `INVALID_CREDENTIALS`; unknown id, wrong password, and unusable hash are indistinguishable; a missing or expired session answers `AUTH_REQUIRED`; a login/logout infrastructure failure is `CodeInternal` with reason `UNKNOWN_FAILURE`, never collapsed into invalid credentials; a session-lookup infrastructure failure fails closed as `AUTH_REQUIRED`
+- AUTH-9 [o] an unknown id runs a real argon2id verification against a dummy hash derived at boot with the current cost parameters ← id existence must not leak by timing; a hardcoded dummy would drift cheaper when the parameters are raised, and a lazily built one would double-cost the first probe
+- AUTH-10 [o] session token = 32 bytes from `crypto/rand`, base64url, sent only in the cookie; the database stores `hex(sha256(raw_token))` — plain sha256, not a KDF ← 256 bits of uniform randomness leave nothing to brute-force
+- AUTH-11 [o] fixed 30-day lifetime, not sliding: `expires_at = login_time + 720h` (`SessionTTL`); the cookie `Max-Age` is derived from the same duration ← cookie and row can never disagree
+- AUTH-12 [o] the cookie is exactly `pp_session=<token>; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax` with no `Domain` (host-only) ← a Domain would hand the cookie to sibling projects on the same registered domain; Lax suffices because app and api are same-site
+- AUTH-13 [o] Logout deletes the session row (server-side revocation) and then clears the cookie with the same attributes and `Max-Age=0`; a Logout that fails is reported and the user stays signed in ← clearing the cookie alone would leave a stolen copy valid, and a "logged out" screen would promise safety the live cookie does not give
+- AUTH-14 [o] expired rows are deleted by the lookup that finds them and swept once at boot (a sweep failure is logged, not fatal); timestamps are fixed-width RFC3339 in UTC so `expires_at < ?` is a correct string comparison
+- AUTH-15 [o] one Connect interceptor in `internal/auth/rpc` is the only place a request becomes an acting user: it resolves the cookie, checks expiry, and puts the user id and the account's current plan (read from the row on every request) into the context; it is a full `connect.Interceptor` so streaming handlers are covered too
+- AUTH-16 [o] the interceptor fails closed: missing, forged, expired, and store-down all answer `CodeUnauthenticated` (HTTP 401) with message `unauthenticated`; a newly mounted service is protected the moment it exists
+- AUTH-17 [o] exactly three public procedures, listed in one map (`publicProcedures`): `AuthService/Login`, `AuthService/Logout`, `HealthService/Ping`; plain `/health` sits outside the Connect stack and is likewise open; the public `/about` route adds nothing on the wire ← Logout must always be able to clear an HttpOnly cookie, a 401 would strand it for its full 30 days
+- AUTH-18 [o] a second closed set `masterProcedures` (the nine human PublishingService procedures and the two AdminService procedures) is refused `permission_denied` with reason `MASTER_ONLY`; a new privileged procedure joins the set in the same change that adds it (tier rules in QUOTA)
+- AUTH-19 [o] GetMe and Login both report the acting tier so the app gates master-only surfaces on first paint without a second round-trip; the server still refuses on its own
+- AUTH-20 [o] authenticated handlers take the acting user from the context, never from a request payload — a user id in a message is a claim by the caller, not a fact
+- AUTH-21 [o] publishing-agent bearer tokens are device capabilities, not human sessions: agent procedures bypass the cookie interceptor and fail closed in their own; a cookie cannot claim or advance a job and a bearer token cannot list, start, or cancel a publication; the raw device token is returned once at pairing, stored only in macOS Keychain, and represented server-side by sha256 of 32 random bytes with revocation rechecked per request (lifecycle in PUBLISH)
+- AUTH-22 [o] the token never reaches JavaScript and no `Authorization` header exists anywhere; the SPA and the API are different origins in production, so every RPC opts into credentials through a fetch wrapper the transport is built with ← connect-web has no credentials option
+- AUTH-23 [o] a 401 on any procedure except Login means the session is gone and the app returns to `/login`; Login is exempt because its 401 means a wrong password, which the form reports itself
+- AUTH-24 [o] every protected screen is a child of one pathless guard route (`id: 'authenticated'`) — protected by placement, not by remembering; `/login` carries the reverse guard and, unlike the protected one, swallows an outage so the login form always renders
+- AUTH-25 [o] the guard trusts a resolved session for `SESSION_STALE_MS` (30 s) before re-checking ← a session revoked elsewhere must stop granting access without a full reload, without paying a round-trip per click
+- AUTH-26 [o] `loadSession` answers `active | signed-out` and throws only for failures that are not an answer; a 200 with no user is signed-out; an outage is not a logout and reaches the error boundary instead of a login form that cannot work
+- AUTH-27 [o] the post-login `redirect` param is followed only if resolving it against the origin stays in the app (`//host` and `/\host` both leave); anything else falls back to `/` ← the router does not check `to` against known routes
+- AUTH-28 [o] one cache entry is the session: `entities/session` owns the GetMe query, `useLogin` seeds it from the login response, `useLogout` removes it on success; the connect-query key takes the transport object the router carries ← a guard built on a different transport would silently read a different entry
+- AUTH-29 [o] logout lives in the header avatar popover (`widgets/account-menu`) beside the account id and plan material: pending state held in place, a failure stays in the open popover as a notice, only success drops the cache and navigates to `/login`
+- AUTH-30 [o] the login form composes `shared/ui` field primitives and a single CTA; a rejected login marks both fields invalid with the localized generic message for `INVALID_CREDENTIALS` and shows distinct localized `UNKNOWN_FAILURE` copy for an outage, never raw transport prose
+- AUTH-31 [o] CORS allows exactly one origin (`CORS_ORIGIN`) with credentials; any `*` anywhere in the value is rejected at boot ← `rs/cors` reads an embedded `*` as a pattern and would reflect sibling subdomains with credentials
+- AUTH-32 [o] the session token appears in no proto message, response body, log line, or URL; it travels only in `Set-Cookie` / `Cookie`
+
+## flow
+- login: id + password → lookup(present → verify | absent → dummy verify) → ok(set cookie → seed session cache → follow safe redirect) | reject(identical error) | infra failure(CodeInternal)
+- request: cookie → interceptor(public procedure → pass | hash → row → expiry → ctx{user, plan}) → master-set check → handler reads actor from ctx
+- logout: delete row → clear cookie → drop cache → `/login`; failure → stay signed in + notice
+
+## constraints
+- config: `CORS_ORIGIN` · `DB_PATH` (BE env) · `SessionTTL` 720h · cookie name `pp_session` · argon2id parameters · boot-derived dummy hash (BE constants) · `VITE_API_URL` (FE env) · `SESSION_STALE_MS` 30000 (FE constant)
+- schema (migration 0001, later plan column): `users(id PK, password_hash, created_at, plan)` · `sessions(token PK = sha256 hex, user_id FK cascade, expires_at, created_at)` with indexes on user_id and expires_at
+- placement: `backend/internal/auth` (types, service, store, rpc interceptor, provision) · `frontend/src/entities/session` · `pages/login` · `shared/api` (credentialed transport, 401 event bus) · `shared/lib` (redirect validation) · `app/routes` (guard) · `widgets/account-menu`
+- tests that pin it: dummy-path timing test (AUTH-9) · 401 on every non-public procedure · exact cookie attributes · replayed cookie after Logout is 401 · redirect validation · guard and reverse-guard behaviour
+
+## chg
+- r1 260905 initial (migrated from legacy policy/auth.md, plan/01; built by jobs 01 · 02, account menu by change 11)
