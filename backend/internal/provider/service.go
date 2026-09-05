@@ -43,7 +43,14 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 		if len(info.Stages) == 0 {
 			continue
 		}
-		required := s.credits.ForCalls([]PlannedCall{{Ref: info.Ref, Count: 1}})
+		// The catalog has no stage input, so its quote explicitly names the first stage the
+		// registry publishes for this model instead of silently falling back to one process-wide
+		// completion cap. Stage-specific pickers still filter this same entry by membership.
+		quotedStage, err := ParseStage(info.Stages[0])
+		if err != nil {
+			continue
+		}
+		required := s.credits.ForCalls([]PlannedCall{{Ref: info.Ref, Count: 1, Stage: quotedStage}})
 		out = append(out, CatalogModel{
 			Info: info, RequiredCredits: required,
 			Affordable: unlimited || balance >= required,
@@ -60,10 +67,10 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 func (s *Service) EstimatePostCredits(observe, write llm.ModelRef) int {
 	calls := make([]PlannedCall, 0, 2)
 	if observe != (llm.ModelRef{}) {
-		calls = append(calls, PlannedCall{Ref: observe, Count: 1})
+		calls = append(calls, PlannedCall{Ref: observe, Count: 1, Stage: StageObserve})
 	}
 	if write != (llm.ModelRef{}) {
-		calls = append(calls, PlannedCall{Ref: write, Count: 1})
+		calls = append(calls, PlannedCall{Ref: write, Count: 1, Stage: StageWrite})
 	}
 	if len(calls) == 0 {
 		return 0

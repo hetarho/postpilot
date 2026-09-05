@@ -114,6 +114,49 @@ func (fakeCredits) ForCalls(calls []provider.PlannedCall) int { return 5 * len(c
 
 func (fakeCredits) Balance(context.Context, string) (int, bool, error) { return 1000, false, nil }
 
+type recordingCredits struct {
+	calls [][]provider.PlannedCall
+}
+
+func (r *recordingCredits) ForCalls(calls []provider.PlannedCall) int {
+	r.calls = append(r.calls, append([]provider.PlannedCall(nil), calls...))
+	return 5
+}
+
+func (*recordingCredits) Balance(context.Context, string) (int, bool, error) {
+	return 1000, false, nil
+}
+
+func TestCatalogAndPostEstimateNameTheStageTheyQuote(t *testing.T) {
+	credits := &recordingCredits{}
+	svc := provider.NewService(&fakeStore{rows: map[string]provider.Selection{}}, fakeCatalog{
+		live:   {Ref: live, Stages: textStages},
+		seeing: {Ref: seeing, Stages: allStages},
+	}, credits)
+
+	if _, err := svc.ListModels(context.Background(), "alice"); err != nil {
+		t.Fatal(err)
+	}
+	quoted := map[llm.ModelRef]provider.Stage{}
+	for _, calls := range credits.calls {
+		if len(calls) == 1 {
+			quoted[calls[0].Ref] = calls[0].Stage
+		}
+	}
+	if quoted[live] != provider.StageWrite || quoted[seeing] != provider.StageObserve {
+		t.Fatalf("catalog quote stages = %v, want live=write and seeing=observe", quoted)
+	}
+
+	credits.calls = nil
+	if got := svc.EstimatePostCredits(seeing, live); got != 5 {
+		t.Fatalf("post estimate = %d", got)
+	}
+	if len(credits.calls) != 1 || len(credits.calls[0]) != 2 ||
+		credits.calls[0][0].Stage != provider.StageObserve || credits.calls[0][1].Stage != provider.StageWrite {
+		t.Fatalf("post estimate calls = %+v", credits.calls)
+	}
+}
+
 // A model not registered to observe's purpose (photo-analysis) is as gone for observe as a
 // deleted one: reported missing, cleared, and refused on save.
 func TestObserveNeedsARegisteredModel(t *testing.T) {

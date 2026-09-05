@@ -206,7 +206,9 @@ func TestStartRevisionSavesRuleBeforeEnqueueAndNewWritePromptSeesIt(t *testing.T
 	profile := Profile{Styleguide: "STYLE", Excerpts: []string{"EXCERPT"}, Rules: "OLD"}
 	rules := &linkedRules{profile: &profile}
 	jobs := &fakeJobs{id: "revision-job"}
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body")}}
+	target := 1200
+	content := revisionContent("body")
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: content, TargetLength: &target}}
 	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
 
 	id, err := svc.StartRevision(context.Background(), StartRevisionRequest{
@@ -218,6 +220,9 @@ func TestStartRevisionSavesRuleBeforeEnqueueAndNewWritePromptSeesIt(t *testing.T
 	}
 	if len(rules.lines) != 1 || rules.lines[0] != "존댓말로" || len(jobs.revisions) != 1 {
 		t.Fatalf("rules=%v revisions=%v", rules.lines, jobs.revisions)
+	}
+	if got := jobs.revisions[0]; got.TargetLength == nil || *got.TargetLength != target || got.ContentChars != contentChars(content) {
+		t.Fatalf("revision pricing shape = target %v chars %d", got.TargetLength, got.ContentChars)
 	}
 	payload, err := parseRevisionPayload(jobs.payloads[0])
 	if err != nil || payload.Instruction != "존댓말로" || !payload.SaveAsRule {

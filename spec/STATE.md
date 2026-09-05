@@ -28,7 +28,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T001 | Price credit holds from each call's own completion budget | QUOTA GEN | - | todo |
+| T001 | Price credit holds from each call's own completion budget | QUOTA GEN | - | done@260905 |
 | T002 | Give the write budget reasoning headroom and let the adapter disable reasoning | MODEL GEN QUOTA | T001 | todo |
 | T003 | Persist the dedicated browser session across pairing retries | PUBLISH | - | todo |
 | T004 | Mac pairing, profile setup and the non-publishing compatibility probe | PUBLISH | T003 | todo |
@@ -39,9 +39,11 @@
 | T009 | Pointer affordances for clickable controls | THEME | - | done@260905 |
 
 ## next
-- implement-task T001 (or T003 — the two chains are independent)
+- implement-task T002 (or T003 — the two chains are independent)
 
 ## log
+- 260905 T001 done (per-call completion budgets now price holds and quotes; ARCH-26 and ARCH-28 pass)
+- 260905 T001 claimed (cx)
 - 260905 T009 done (global pointer affordances; 988 FE tests and every ARCH frontend gate pass on Node 24.18.0)
 - 260905 T009 claimed (cx)
 - 260905 create-task THEME → T009; THEME tasked=2
@@ -60,8 +62,3 @@
 - 260905 create-ssot MODEL r1 (shipped) + r2 (legacy change 29) — pending for create-task, after QUOTA
 - 260905 create-ssot GEN r1 (shipped, no pending work)
 - 260905 create-ssot VOICE r1 (shipped; one open decision VOICE-7 on retiring 규칙으로 저장)
-- 260905 create-ssot POST r1 (shipped, no pending work)
-- 260905 create-ssot QUOTA r1 (shipped) + r2 (legacy change 28) — pending for create-task
-- 260905 create-ssot AUTH r1 (shipped, no pending work)
-- 260905 ARCH r1 no-op (documents the shipped architecture; no code impact)
-- 260905 create-architecture start (spec init; migrating from the legacy spec tree — see MIGRATION.md)

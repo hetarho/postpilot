@@ -24,8 +24,9 @@ import (
 // not break the balance floor — the lots refuse to go negative — but it does let work
 // start on credits the account turns out not to have, which the account never pays back.
 type PlannedCall struct {
-	Ref   llm.ModelRef
-	Count int
+	Ref              llm.ModelRef
+	Count            int
+	CompletionTokens int64
 }
 
 // Start is one request to begin LLM work.

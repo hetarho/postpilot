@@ -191,6 +191,10 @@ type StartRevisionRequest struct {
 	ContentLanguage Language
 	Template        *TemplateBrief
 	Guidelines      []string
+	// The enqueue adapter uses the same frozen length facts as the revision handler to price
+	// the completion budget. Neither field is sent by the client or persisted independently.
+	TargetLength *int
+	ContentChars int
 }
 
 type RevisionJob struct {

@@ -32,6 +32,7 @@ type Catalog interface {
 type PlannedCall struct {
 	Ref   llm.ModelRef
 	Count int
+	Stage Stage
 }
 
 // Credits prices work for the calling account.

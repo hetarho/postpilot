@@ -829,6 +829,36 @@ func callSummary(calls []job.PlannedCall) string {
 	return strings.Join(parts, ",")
 }
 
+func callBudgetSummary(calls []job.PlannedCall) string {
+	parts := make([]string, 0, len(calls))
+	for _, call := range calls {
+		parts = append(parts, fmt.Sprintf("%s x%d @%d", call.Ref, call.Count, call.CompletionTokens))
+	}
+	return strings.Join(parts, ",")
+}
+
+func TestExplicitPricingCallsCollapseOnlyWhenRefAndBudgetAgree(t *testing.T) {
+	h := newHarness(t)
+	admitter := &recordingAdmitter{}
+	h.queue.Admit(admitter)
+
+	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+		TargetLanguage: "ko",
+		PricingCalls: []job.PlannedCall{
+			{Ref: "openrouter/one", Count: 2, CompletionTokens: 1024},
+			{Ref: "openrouter/one", Count: 1, CompletionTokens: 8192},
+			{Ref: "openrouter/one", Count: 1, CompletionTokens: 1024},
+			{Ref: "openrouter/unused", Count: 0, CompletionTokens: 1024},
+		},
+	}); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if got, want := callBudgetSummary(admitter.starts[0].Calls), "openrouter/one x3 @1024,openrouter/one x1 @8192"; got != want {
+		t.Errorf("priced calls = %q, want %q", got, want)
+	}
+}
+
 // One model chosen for both stages is one priced entry, not two. Pricing it per slot would
 // hold twice what the work will spend, which the account never gets back as a refusal it
 // did not deserve.

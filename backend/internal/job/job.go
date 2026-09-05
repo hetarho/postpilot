@@ -86,12 +86,20 @@ type NewJob struct {
 	// and never pays the difference back — and one that says one call and makes none can
 	// refuse an account that could have afforded the work.
 	CallCounts map[string]int
+	// PricingCalls is the exact priced shape supplied by an enqueue adapter that knows its
+	// stages' completion budgets. Nil keeps the compatibility derivation above for work whose
+	// calls still use the registry default. Entries with the same ref and budget collapse;
+	// different budgets stay separate even when one model serves both stages.
+	PricingCalls []PlannedCall
 }
 
 // plannedCalls are the refs this job will actually run, with how many times each, for the
 // credit hold. Both stage choices are explicit inputs ([I3]); an empty one means the kind
 // does not use that stage.
 func (n NewJob) plannedCalls() []PlannedCall {
+	if n.PricingCalls != nil {
+		return normalizePlannedCalls(n.PricingCalls)
+	}
 	calls := make([]PlannedCall, 0, 2+len(n.ExtraModels))
 	seen := make(map[string]int, 2+len(n.ExtraModels))
 	for _, ref := range append([]string{n.ObserveModel, n.WriteModel}, n.ExtraModels...) {
@@ -121,6 +129,30 @@ func (n NewJob) plannedCalls() []PlannedCall {
 		}
 		seen[ref] = len(calls)
 		calls = append(calls, PlannedCall{Ref: ref, Count: count})
+	}
+	return calls
+}
+
+func normalizePlannedCalls(input []PlannedCall) []PlannedCall {
+	calls := make([]PlannedCall, 0, len(input))
+	seen := make(map[struct {
+		ref    string
+		budget int
+	}]int, len(input))
+	for _, call := range input {
+		if call.Ref == "" || call.Count <= 0 {
+			continue
+		}
+		key := struct {
+			ref    string
+			budget int
+		}{ref: call.Ref, budget: call.CompletionTokens}
+		if index, ok := seen[key]; ok {
+			calls[index].Count += call.Count
+			continue
+		}
+		seen[key] = len(calls)
+		calls = append(calls, call)
 	}
 	return calls
 }

@@ -33,12 +33,13 @@ type Start struct {
 	Calls  []PlannedCall
 }
 
-// PlannedCall is one model the job will run, and how many times. The count is the queue's
-// to state because only the enqueuing service knows it: photo observation batches four
-// photos per call, and a validation repeats its stages per sampled post.
+// PlannedCall is one model the job will run, how many times, and the completion budget each
+// call will actually be sent. A zero budget is the deliberate compatibility fallback for a
+// caller whose stage still uses the registry default.
 type PlannedCall struct {
-	Ref   string
-	Count int
+	Ref              string
+	Count            int
+	CompletionTokens int
 }
 
 // Store is the persistence behavior the queue needs. SQL rows stop in store/.

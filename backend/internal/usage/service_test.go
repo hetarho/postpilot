@@ -302,6 +302,35 @@ func TestHoldPricesEveryPlannedCall(t *testing.T) {
 	}
 }
 
+func TestHoldAndQuotePriceEachCallsOwnCompletionBudget(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 500, Remaining: 500}}
+	short := []PlannedCall{
+		{Ref: cheapRef, Count: 2, CompletionTokens: 1024},
+		{Ref: cheapRef, Count: 1, CompletionTokens: maxCompletion},
+	}
+	long := []PlannedCall{
+		{Ref: cheapRef, Count: 2, CompletionTokens: 1024},
+		{Ref: cheapRef, Count: 1, CompletionTokens: 30_000},
+	}
+	shortQuote := svc.CreditsFor(short)
+	longQuote := svc.CreditsFor(long)
+	if longQuote <= shortQuote {
+		t.Fatalf("long quote = %d, short quote = %d; the write budget did not change the hold", longQuote, shortQuote)
+	}
+	if err := svc.Hold(context.Background(), holdStart("alice", plan.Max, "job-1", short...)); err != nil {
+		t.Fatal(err)
+	}
+	if got := store.admissions[0].HoldCredits; got != shortQuote {
+		t.Errorf("hold = %d, CreditsFor = %d for identical planned work", got, shortQuote)
+	}
+	// A caller that has not adopted per-stage budgets yet still receives the registry
+	// default rather than accidentally pricing its completion at zero.
+	if got, want := svc.CreditsFor([]PlannedCall{{Ref: cheapRef, Count: 1}}), svc.CreditsFor([]PlannedCall{{Ref: cheapRef, Count: 1, CompletionTokens: maxCompletion}}); got != want {
+		t.Errorf("fallback quote = %d, explicit default quote = %d", got, want)
+	}
+}
+
 func TestHoldRefusesWhatTheBalanceCannotCoverAndWritesNothing(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
 	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 3, Remaining: 3}}

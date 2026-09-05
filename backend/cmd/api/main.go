@@ -279,7 +279,7 @@ func main() {
 
 	providerSvc := provider.NewService(
 		providerstore.New(handle.Writer, handle.Reader), meteredModels,
-		providerCredits{ledger: ledger, plans: authSvc},
+		providerCredits{ledger: ledger, plans: authSvc, budget: cfg.LLMCompletionBudget},
 	)
 	voiceSvc := voice.NewService(
 		voicestore.New(handle.Writer, handle.Reader),
@@ -320,7 +320,7 @@ func main() {
 		generationRules{service: voiceSvc},
 		generationModels{registry: meteredModels},
 		generationImages{bucket: bucket},
-		generationJobs{queue: jobQueue},
+		generationJobs{queue: jobQueue, budget: cfg.LLMCompletionBudget},
 		cfg.ObserveBatchSize,
 		generation.ReasoningPolicy{Observe: cfg.LLMReasoning.Observe, Write: cfg.LLMReasoning.Write},
 		// The budget policy is passed whole rather than as numbers: the stages ask their
@@ -1034,7 +1034,10 @@ func catalogModelID(recorded, providerID string) (string, bool) {
 	return strings.TrimPrefix(recorded, prefix), true
 }
 
-type generationJobs struct{ queue *job.Queue }
+type generationJobs struct {
+	queue  *job.Queue
+	budget config.LLMCompletionBudget
+}
 
 func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest) (string, error) {
 	slug := request.PostSlug
@@ -1061,7 +1064,7 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
 		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
 		TargetLanguage: request.TargetLanguage.String(), Payload: payload,
-		CallCounts: calls,
+		CallCounts: calls, PricingCalls: generationPricingCalls(request, a.budget),
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -1078,6 +1081,7 @@ func (a generationJobs) EnqueueRevision(ctx context.Context, request generation.
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindRevise, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
 		WriteModel: request.WriteModel, TargetLanguage: request.ContentLanguage.String(), Payload: payload,
+		PricingCalls: revisionPricingCalls(request, a.budget),
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -1087,6 +1091,31 @@ func (a generationJobs) EnqueueRevision(ctx context.Context, request generation.
 		return "", generation.ErrVoiceDeleted
 	}
 	return id, err
+}
+
+func generationPricingCalls(request generation.StartRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
+	calls := make([]job.PlannedCall, 0, 2)
+	if request.ObserveModel != "" && request.ObserveCalls > 0 {
+		calls = append(calls, job.PlannedCall{
+			Ref: request.ObserveModel, Count: request.ObserveCalls, CompletionTokens: budget.Observation(),
+		})
+	}
+	if request.WriteModel != "" {
+		calls = append(calls, job.PlannedCall{
+			Ref: request.WriteModel, Count: 1, CompletionTokens: budget.Write(request.TargetLength),
+		})
+	}
+	return calls
+}
+
+func revisionPricingCalls(request generation.StartRevisionRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
+	if request.WriteModel == "" {
+		return nil
+	}
+	return []job.PlannedCall{{
+		Ref: request.WriteModel, Count: 1,
+		CompletionTokens: budget.Revise(request.ContentChars, request.TargetLength),
+	}}
 }
 
 func (a generationJobs) GetGeneration(ctx context.Context, id, userID string) (*generation.JobSummary, error) {
@@ -1542,7 +1571,9 @@ func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
 	}
 	calls := make([]usage.PlannedCall, 0, len(start.Calls))
 	for _, call := range start.Calls {
-		calls = append(calls, usage.PlannedCall{Ref: parseRegistryRef(call.Ref), Count: call.Count})
+		calls = append(calls, usage.PlannedCall{
+			Ref: parseRegistryRef(call.Ref), Count: call.Count, CompletionTokens: int64(call.CompletionTokens),
+		})
 	}
 	return a.ledger.Hold(ctx, usage.Start{
 		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: calls,
@@ -1571,12 +1602,22 @@ func (a jobAdmission) OpenHolds(ctx context.Context) ([]string, error) {
 type providerCredits struct {
 	ledger *usage.Service
 	plans  *auth.Service
+	budget config.LLMCompletionBudget
 }
 
 func (a providerCredits) ForCalls(calls []provider.PlannedCall) int {
 	priced := make([]usage.PlannedCall, 0, len(calls))
 	for _, call := range calls {
-		priced = append(priced, usage.PlannedCall{Ref: call.Ref, Count: call.Count})
+		completionTokens := 0
+		switch call.Stage {
+		case provider.StageObserve:
+			completionTokens = a.budget.Observation()
+		case provider.StageWrite:
+			completionTokens = a.budget.Write(nil)
+		}
+		priced = append(priced, usage.PlannedCall{
+			Ref: call.Ref, Count: call.Count, CompletionTokens: int64(completionTokens),
+		})
 	}
 	return a.ledger.CreditsFor(priced)
 }

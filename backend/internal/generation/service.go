@@ -143,6 +143,8 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", ErrContentLanguageRequired
 	}
 	request.ContentLanguage = *post.ContentLanguage
+	request.TargetLength = cloneOptionalInt(post.TargetLength)
+	request.ContentChars = contentChars(post.Content)
 	voiceID, err := activeVoice(post)
 	if err != nil {
 		return "", err

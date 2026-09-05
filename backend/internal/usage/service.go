@@ -25,8 +25,8 @@ type Service struct {
 	store  Store
 	models Models
 
-	// maxCompletionTokens is the same cap the registry sends on a call that sets none, so
-	// the hold prices the largest completion the provider is actually allowed to return.
+	// maxCompletionTokens is the same cap the registry sends on a call that sets none. It is
+	// only a fallback for a planned call whose caller did not declare a stage budget.
 	maxCompletionTokens int64
 
 	// now and newID are seams for tests in this package, not configuration: every window
@@ -181,13 +181,17 @@ func (s *Service) worstCaseMicrousd(calls []PlannedCall) int64 {
 	var total int64
 	for _, call := range calls {
 		count := max(call.Count, 1)
+		completionTokens := call.CompletionTokens
+		if completionTokens <= 0 {
+			completionTokens = s.maxCompletionTokens
+		}
 		info, found := s.models.Lookup(call.Ref)
 		if !found {
 			continue
 		}
 		cost := llm.ResolveCost(llm.CostInput{
 			PromptTokens:        holdInputTokens,
-			CompletionTokens:    s.maxCompletionTokens,
+			CompletionTokens:    completionTokens,
 			InputUSDPerMillion:  info.InputUSDPerMillion,
 			OutputUSDPerMillion: info.OutputUSDPerMillion,
 		})
