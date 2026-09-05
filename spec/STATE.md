@@ -22,7 +22,7 @@
 | EXPORT | 1 | 1 | - | 0 |
 | PUBLISH | 2 | 2 | - | 0 |
 | LANG | 1 | 1 | - | 0 |
-| THEME | 1 | 1 | - | 0 |
+| THEME | 2 | 2 | - | 0 |
 | MARKETING | 1 | 1 | - | 0 |
 
 ## tasks
@@ -36,12 +36,18 @@
 | T006 | Agent execution, the commit fence, readback and cleanup | PUBLISH | T005 | todo |
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | todo |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 | todo |
+| T009 | Pointer affordances for clickable controls | THEME | - | done@260905 |
 
 ## next
-- update-ssot THEME for clickable affordances and cursor feedback, then create-task
 - implement-task T001 (or T003 — the two chains are independent)
 
 ## log
+- 260905 T009 done (global pointer affordances; 988 FE tests and every ARCH frontend gate pass on Node 24.18.0)
+- 260905 T009 claimed (cx)
+- 260905 create-task THEME → T009; THEME tasked=2
+- 260905 create-task THEME start
+- 260905 update-ssot THEME r2 done (THEME-36+ global pointer affordance; no doing-task impact)
+- 260905 update-ssot THEME start
 - 260905 migration complete (six skills only; active references clean; narrative reviewed; all ARCH verification gates pass on Node 24.18.0)
 - 260905 create-narrative done (spec/NARRATIVE.md; SSOT conversion-loss read-through complete)
 - 260905 create-narrative start (audience: new team member; use: onboarding and current-status review)

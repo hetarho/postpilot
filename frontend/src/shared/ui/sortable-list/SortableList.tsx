@@ -95,7 +95,7 @@ export function SortableList({
             // A compact row aligns its controls to the row's own FIRST LINE, which is a 44px
             // target — so they centre inside that line rather than on the whole item.
             className={twMerge(
-              'text-content-tertiary flex shrink-0 cursor-grab',
+              'text-content-tertiary flex shrink-0 cursor-grab active:cursor-grabbing',
               compact ? 'min-h-11 items-center' : 'mt-1',
             )}
             title={labels.drag}

@@ -20,7 +20,7 @@ export const Checkbox = forwardRef<
         type="checkbox"
         // `-inset-3` grows the invisible control 12px on every side — 20 + 24 = 44 — without
         // changing the 20px of layout the visual box occupies, so no caller's row re-flows.
-        className="peer absolute -inset-3 z-10 cursor-pointer opacity-0 disabled:cursor-default"
+        className="peer absolute -inset-3 z-10 opacity-0"
         {...props}
       />
       <span

@@ -14,9 +14,9 @@ const ACCEPT = [...UPLOAD_ALLOWED_EXTENSIONS.map((extension) => `.${extension}`)
 // sibling selector, so with two inputs in the row an unnamed peer would ring both labels from
 // either input — and Tailwind only emits a class it can read whole in the source.
 const GALLERY_FOCUS =
-  'cursor-pointer peer-focus-visible/gallery:outline-focus-ring peer-focus-visible/gallery:outline-2 peer-focus-visible/gallery:outline-offset-2'
+  'peer-focus-visible/gallery:outline-focus-ring peer-focus-visible/gallery:outline-2 peer-focus-visible/gallery:outline-offset-2'
 const CAMERA_FOCUS =
-  'cursor-pointer peer-focus-visible/camera:outline-focus-ring peer-focus-visible/camera:outline-2 peer-focus-visible/camera:outline-offset-2'
+  'peer-focus-visible/camera:outline-focus-ring peer-focus-visible/camera:outline-2 peer-focus-visible/camera:outline-offset-2'
 
 export function PhotoPicker({
   onFiles,

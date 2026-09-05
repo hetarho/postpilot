@@ -587,6 +587,68 @@ summary,
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Pointer affordance is an interaction default, not a feature decoration. `:where` keeps the
+   default at zero specificity so a truthful specialized cursor (`cursor-grab`, text editing,
+   resizing) wins without `!important`. ARIA-disabled controls stay in the event-owning feature's
+   tree for focus and explanation, but must not continue advertising an action. */
+:where(
+  a[href],
+  button:not(:disabled),
+  select:not(:disabled),
+  input:is(
+      [type='button'],
+      [type='submit'],
+      [type='reset'],
+      [type='checkbox'],
+      [type='radio'],
+      [type='file']
+    ):not(:disabled),
+  input[type='file']:not(:disabled) + label,
+  label:has(input:is([type='checkbox'], [type='radio']):not(:disabled)),
+  summary,
+  [role='link'],
+  [role='button'],
+  [role='tab'],
+  [role='menuitem'],
+  [role='menuitemradio'],
+  [role='option'],
+  [role='radio'],
+  [role='checkbox']
+):not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
+/* Browsers normally supply the I-beam themselves; spelling it out keeps the exception stable
+   beside the interaction default and makes the contract observable in the stylesheet test. */
+:where(
+    input:not([type]),
+    input:is(
+      [type='text'],
+      [type='email'],
+      [type='password'],
+      [type='search'],
+      [type='tel'],
+      [type='url'],
+      [type='number']
+    ),
+    textarea,
+    [contenteditable='true']
+  ):not(:disabled):not([aria-disabled='true']) {
+  cursor: text;
+}
+
+:where(
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  input[type='file']:disabled + label,
+  label:has(input:is([type='checkbox'], [type='radio']):disabled),
+  textarea:disabled,
+  [aria-disabled='true']
+) {
+  cursor: default;
+}
+
 /* One focus indicator for every control, drawn outside the element so it never fights a border. */
 :focus-visible {
   outline: 2px solid var(--color-focus-ring);
