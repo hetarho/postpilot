@@ -68,7 +68,7 @@ export function AIModelsPage() {
   const pair = setup.pairs.find((item) => item.stage === stage)
   // An analyze comparison freezes ONE voice's corpus, so the voice is chosen here and sent
   // explicitly — initialized to the default, never guessed by the server
-  // (spec/policy/model-experiments.md). A choice that has since been deleted falls back to the
+  // (spec/legacy/policy/model-experiments.md). A choice that has since been deleted falls back to the
   // default rather than to a request the server would refuse.
   const voiceId =
     (activeVoices.some((voice) => voice.id === chosenVoiceId) ? chosenVoiceId : '') ||

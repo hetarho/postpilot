@@ -35,7 +35,7 @@ export type Template = Message<"postpilot.v1.Template"> & {
   description: string;
 
   /**
-   * The template body in the grammar of spec/tech/post-template-grammar.md. This string is
+   * The template body in the grammar of spec/legacy/tech/post-template-grammar.md. This string is
    * the single source of truth: the builder parses and re-serializes it byte-for-byte, and
    * the write/revise prompts receive it after repeat expansion.
    *

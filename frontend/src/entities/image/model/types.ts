@@ -7,7 +7,7 @@ export interface PostImage {
   height: number
   bytes: number
   /** Where to load the pixels from. Normally the short-lived presigned GET minted per
-   *  `GetPost` (never persisted — spec/policy/uploads.md). For a photo this client just
+   *  `GetPost` (never persisted — spec/legacy/policy/uploads.md). For a photo this client just
    *  uploaded it is a local object URL of the converted copy, until the next `GetPost`
    *  replaces it — the confirm answer carries no URL, and the bytes are already here. */
   viewUrl: string

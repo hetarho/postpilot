@@ -2,8 +2,8 @@
 //
 // It models the server rules the frontend actually depends on: an empty slug mints one
 // (`YYYYMMDD-title`, serial suffix on collision), someone else's slug is 403 and a missing
-// one is 404 (spec/policy/posts.md); an upload is a CreateUpload → ConfirmUpload pair
-// and a confirmed filename is taken (spec/policy/uploads.md). Everything else is kept as
+// one is 404 (spec/legacy/policy/posts.md); an upload is a CreateUpload → ConfirmUpload pair
+// and a confirmed filename is taken (spec/legacy/policy/uploads.md). Everything else is kept as
 // thin as possible.
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
@@ -71,7 +71,7 @@ export interface FakePostTemplate {
 }
 
 /** One SavePostDraft as the server saw its assignments: present on a create or a change,
- *  absent on an ordinary edit (spec/policy/posts.md, spec/policy/templates.md). An empty
+ *  absent on an ordinary edit (spec/legacy/policy/posts.md, spec/legacy/policy/templates.md). An empty
  *  `templateId` is a real value — it clears the assignment. */
 export interface FakeDraftSave {
   slug: string
@@ -325,7 +325,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       throw connectAppError('POST_TARGET_LANGUAGE_REQUIRED', Code.InvalidArgument)
     if (req.targetLanguage !== undefined && !requestedTarget)
       throw connectAppError('POST_TARGET_LANGUAGE_UNSUPPORTED', Code.InvalidArgument)
-    // The server's assignment rules (spec/policy/posts.md): a create names its voice, an edit
+    // The server's assignment rules (spec/legacy/policy/posts.md): a create names its voice, an edit
     // that omits it preserves it, and a different present value reassigns — refused while a job
     // or an undecided A/B result could still write a baseline for the old voice.
     // Validated before anything else is applied, like the server: a bad 템플릿 must leave the
@@ -440,7 +440,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     row.finalizedRevision = row.contentRevision
     row.finalizedAt = DEFAULT_UPDATED_AT
     // Like the server: the confirmed content's title becomes the post's title, and an untitled
-    // generation leaves the working title in place (spec/policy/posts.md).
+    // generation leaves the working title in place (spec/legacy/policy/posts.md).
     row.title = row.content.title.trim() || row.title
     return create(FinalizePostResponseSchema, { post: toProto(row) })
   })

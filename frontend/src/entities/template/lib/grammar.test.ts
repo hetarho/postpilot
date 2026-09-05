@@ -9,7 +9,7 @@ import { decode, parse, serialize, type TemplateNode } from './grammar'
 // test-only need, and copying the fixture into the frontend would defeat the point of it.
 
 /** The SAME fixture file the Go parser's suite reads. Two implementations of one grammar stay
- *  honest only if a new rule has one place to land (spec/tech/post-template-grammar.md §4). */
+ *  honest only if a new rule has one place to land (spec/legacy/tech/post-template-grammar.md §4). */
 interface FixtureNode {
   t: string
   raw?: string

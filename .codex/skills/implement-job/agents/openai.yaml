@@ -1,4 +1,0 @@
-interface:
-  display_name: "Implement Job"
-  short_description: "Build and verify a spec job"
-  default_prompt: "Use $implement-job to implement a postpilot spec job end-to-end."

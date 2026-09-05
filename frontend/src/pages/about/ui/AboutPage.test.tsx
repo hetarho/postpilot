@@ -50,7 +50,7 @@ const COPY = {
 } as const
 
 /** The shipped ladder, copied from `backend/internal/plan`'s limits table by way of
- *  spec/policy/plans.md. A divergence between this table and the page is a copy bug — the whole
+ *  spec/legacy/policy/plans.md. A divergence between this table and the page is a copy bug — the whole
  *  point of A17 — so the test states the numbers rather than reading them from the catalog. */
 const PLANS = [
   { name: 'free', credits: '50', price: /무료|Free/ },

@@ -5,7 +5,7 @@ import { formatAppFailure } from '@/shared/lib'
 /** What the editor says beside the select while a job is running.
  *
  *  Not a blocker, unlike a voice reassignment: a template is never learned from, so changing
- *  it is allowed in every status and while a job is in flight (spec/policy/templates.md). The
+ *  it is allowed in every status and while a job is in flight (spec/legacy/policy/templates.md). The
  *  running job keeps the brief frozen at its enqueue, and the note is there so nobody expects
  *  the change to reach work already queued. */
 export function runningJobNote(): string {

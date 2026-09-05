@@ -80,7 +80,7 @@ describe('generationPreconditions', () => {
     expect(ordinaryGenerationPreconditions([], undefined, text, undefined).ok).toBe(true)
   })
 
-  // spec/policy/generation.md: a deleted voice refuses every machine result, whatever the models.
+  // spec/legacy/policy/generation.md: a deleted voice refuses every machine result, whatever the models.
   it('refuses a deleted voice before anything else', () => {
     const deleted = { deleted: true }
     expect(ordinaryGenerationPreconditions([], undefined, text, undefined, deleted)).toEqual({

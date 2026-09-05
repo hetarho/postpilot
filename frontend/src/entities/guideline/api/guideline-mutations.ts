@@ -45,7 +45,7 @@ export function useDismissGuidelineCandidateCall(ownerId: string) {
   }
 }
 
-/** Presence is the edit unit (spec/policy/guidelines.md): the text saver sends no scope and the
+/** Presence is the edit unit (spec/legacy/policy/guidelines.md): the text saver sends no scope and the
  *  scope saver sends no text, so the two edited from two tabs cannot overwrite each other. Sending
  *  both every time would be a read-modify-write and would put back whatever the other tab changed.
  *

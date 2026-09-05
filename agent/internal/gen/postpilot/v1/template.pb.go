@@ -28,7 +28,7 @@ type Template struct {
 	// What posts of this kind are for. May be empty; it is management copy and never reaches
 	// a prompt.
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	// The template body in the grammar of spec/tech/post-template-grammar.md. This string is
+	// The template body in the grammar of spec/legacy/tech/post-template-grammar.md. This string is
 	// the single source of truth: the builder parses and re-serializes it byte-for-byte, and
 	// the write/revise prompts receive it after repeat expansion.
 	Body string `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`

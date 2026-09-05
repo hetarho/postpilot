@@ -1,12 +1,12 @@
 /** The public `/about` surface (plan 15). Every visible label, accessible name and metadata
  *  string lives here so the page composes keys rather than one language.
  *
- *  Claim discipline (spec/policy/public-marketing.md): every sentence here must be true of
+ *  Claim discipline (spec/legacy/policy/public-marketing.md): every sentence here must be true of
  *  SHIPPED behavior. Two boundaries are load-bearing and must not be softened:
  *  - automated Naver publishing is an operator-tier surface AND still in live verification
  *    (plan 12 / job 25), so it is stated as such, never as a generally available feature;
  *  - the plan numbers below mirror the code-owned limits table in `backend/internal/plan`
- *    (spec/policy/plans.md). Changing the ladder means changing this copy in the same change. */
+ *    (spec/legacy/policy/plans.md). Changing the ladder means changing this copy in the same change. */
 export const marketing = {
   metadata: {
     title: 'Postpilot이란? | 사진과 메모로 블로그 글 초안 만들기',

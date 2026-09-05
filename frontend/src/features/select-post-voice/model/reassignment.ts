@@ -3,7 +3,7 @@ import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import { appFailureFromConnect } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
 
-/** Mirrors the server's reassignment gate (spec/policy/posts.md) so the picker can say why it is
+/** Mirrors the server's reassignment gate (spec/legacy/policy/posts.md) so the picker can say why it is
  *  disabled instead of letting the request fail: a job or an undecided A/B result could still
  *  establish a baseline for the old voice. Returns '' when reassignment is allowed. */
 export function reassignmentBlocker(post: {

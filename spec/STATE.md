@@ -38,10 +38,12 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 | todo |
 
 ## next
-- MIGRATION.md Phase 3: retire the legacy tree, the 10 legacy skills and the spec scaffolding, then Phase 4 verification
+- MIGRATION.md Phase 4: verify the six-skill workflow, generate NARRATIVE.md, and close the migration
 - implement-task T001 (or T003 — the two chains are independent)
 
 ## log
+- 260905 migration Phase 3 done (legacy tree archived; 10 legacy skills and spec scaffolding retired; active references swept; CI runs haeram-spec-creator check)
+- 260905 migration Phase 3 start (retire the legacy tree, legacy skills, and spec scaffolding)
 - 260905 create-task QUOTA MODEL PUBLISH → T001–T008; QUOTA MODEL PUBLISH tasked=2; code-review 01's findings were all closed by legacy jobs 26–31, nothing to carry
 - 260905 create-ssot PUBLISH r1 + r2 (legacy change 09), LANG, THEME, MARKETING r1 — all 14 domains migrated; MARKETING is shipped (job 34), the legacy overview row was stale
 - 260905 create-ssot TEMPLATE, GUIDE, EXPORT r1 (shipped, no pending work)

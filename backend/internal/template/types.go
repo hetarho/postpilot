@@ -7,7 +7,7 @@
 // enqueues work or calls a provider ([I5]). Voice decides how sentences sound and a
 // guideline decides what to avoid; a template decides the skeleton.
 //
-// The grammar this package parses is specified in spec/tech/post-template-grammar.md. Its
+// The grammar this package parses is specified in spec/legacy/tech/post-template-grammar.md. Its
 // Go parser and the frontend's TypeScript parser are tested against one shared fixture file
 // under testdata/grammar, which is what keeps two implementations of one grammar honest.
 package template

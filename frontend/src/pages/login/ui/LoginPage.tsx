@@ -15,7 +15,7 @@ import {
 import { InterfacePreferences } from '@/widgets/interface-preferences'
 
 /** Credential refusals use one stable INVALID_CREDENTIALS reason. The server already refuses to
- *  distinguish an unknown id from a wrong password (spec/policy/auth.md), and structured failure
+ *  distinguish an unknown id from a wrong password (spec/legacy/policy/auth.md), and structured failure
  *  parsing never falls back to backend prose that could reintroduce that enumeration signal. */
 export function LoginPage() {
   const { t } = useTranslation(['auth', 'marketing'])

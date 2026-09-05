@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// NodeKind is one of the grammar's five constructs (spec/tech/post-template-grammar.md §2).
+// NodeKind is one of the grammar's five constructs (spec/legacy/tech/post-template-grammar.md §2).
 type NodeKind string
 
 const (

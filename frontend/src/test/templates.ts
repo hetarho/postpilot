@@ -28,7 +28,7 @@ export interface FakeTemplatesOptions {
   /** Records every procedure the transport was asked for. */
   calls?: string[]
   /** Records every UpdateTemplate exactly as it arrived, so a test can prove that an edit of
-   *  one field carried ONLY that field (spec/policy/templates.md). */
+   *  one field carried ONLY that field (spec/legacy/policy/templates.md). */
   updates?: Array<{
     id: string
     name: string | undefined

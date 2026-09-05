@@ -8,7 +8,7 @@ import { TemplateService } from '@/shared/api'
 /** Presence is the edit unit. `saveAll` sends the three fields the template screen edits as one
  *  draft, which is one transaction on the server rather than a read-modify-write: the screen is
  *  the only place all three are edited, so there is no other tab's value for it to put back
- *  (spec/policy/templates.md). */
+ *  (spec/legacy/policy/templates.md). */
 export function useUpdateTemplate(ownerId: string, templateId: string) {
   const transport = useTransport()
   const queryClient = useQueryClient()

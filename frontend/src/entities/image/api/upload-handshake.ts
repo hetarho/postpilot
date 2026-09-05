@@ -13,11 +13,11 @@ export interface PresignedUpload {
   /** On the storage host — the API is never in the path of the bytes ([I6]). */
   putUrl: string
   /** Must be sent back exactly: it is part of the presigned signature
-   *  (spec/policy/uploads.md). */
+   *  (spec/legacy/policy/uploads.md). */
   contentType: string
 }
 
-/** The two RPCs around a direct PUT (spec/policy/uploads.md — the upload handshake).
+/** The two RPCs around a direct PUT (spec/legacy/policy/uploads.md — the upload handshake).
  *  Throws `UploadRejected` for a final answer, `UploadObjectMissing` when the confirm
  *  found nothing to confirm; anything else is a transport failure and retryable as is. */
 export function createUploadHandshake(transport: Transport): {

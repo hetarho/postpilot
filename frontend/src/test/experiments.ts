@@ -60,7 +60,7 @@ export function registerExperimentService(
   router.rpc(ModelExperimentService.method.startAnalyzeExperiment, (request) => {
     options.calls?.push('StartAnalyzeExperiment')
     if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
-    // The server never guesses a voice (spec/policy/model-experiments.md).
+    // The server never guesses a voice (spec/legacy/policy/model-experiments.md).
     if (!request.voiceId) throw connectAppError('EXPERIMENT_VOICE_REQUIRED', Code.InvalidArgument)
     options.analyzeStarts?.push({
       voiceId: request.voiceId,

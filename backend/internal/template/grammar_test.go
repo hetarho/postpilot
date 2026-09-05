@@ -8,7 +8,7 @@ import (
 )
 
 // The fixture shape is shared with the frontend parser. Both suites read the SAME file, so a
-// grammar rule cannot land on one side only (spec/tech/post-template-grammar.md §4).
+// grammar rule cannot land on one side only (spec/legacy/tech/post-template-grammar.md §4).
 type fixtureNode struct {
 	T        string        `json:"t"`
 	Raw      string        `json:"raw"`

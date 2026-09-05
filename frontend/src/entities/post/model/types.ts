@@ -20,10 +20,10 @@ export interface PostDraft {
   createdAt: string
   updatedAt: string
   /** The voice the post is written in. Always present — a post cannot exist without one — and
-   *  still named after the voice is deleted (spec/policy/posts.md). */
+   *  still named after the voice is deleted (spec/legacy/policy/posts.md). */
   voice: VoiceRef
   /** The 템플릿 the post is written for, or an empty ref for 없음. Optional by design: unlike the
-   *  voice, the server never picks one (spec/policy/templates.md). */
+   *  voice, the server never picks one (spec/legacy/policy/templates.md). */
   template: TemplateRef
   images: PostImage[]
   activeJob: GenerationJob | undefined
@@ -64,7 +64,7 @@ export function untitledTitle(): string {
 }
 
 /** `draft` and `review` are the statuses the drafting context knows
- *  (spec/policy/posts.md); generation is what moves a post to `review`. An unknown value
+ *  (spec/legacy/policy/posts.md); generation is what moves a post to `review`. An unknown value
  *  falls through to itself rather than being hidden, so a status a later plan adds shows
  *  up as something rather than as a blank badge. */
 export function postStatusLabel(status: string): string {

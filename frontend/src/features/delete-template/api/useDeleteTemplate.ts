@@ -6,7 +6,7 @@ import { invalidateTemplates, templateErrorMessage } from '@/entities/template'
 import { TemplateService } from '@/shared/api'
 
 /** Deleting a template detaches it from every post that named it and cascades its guideline scope
- *  links, in the same transaction (spec/policy/templates.md). Those posts are now cached with an
+ *  links, in the same transaction (spec/legacy/policy/templates.md). Those posts are now cached with an
  *  assignment the server no longer holds, and the guideline list's chips are cached from the name
  *  that is gone, so both are invalidated alongside the directory. */
 export function useDeleteTemplate(ownerId: string) {

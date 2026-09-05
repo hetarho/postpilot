@@ -31,8 +31,7 @@ jobs:
       - run: pnpm --filter ./frontend lint:fsd
       - run: pnpm lint:style:probe
       - run: pnpm lint:style
-      - run: pnpm lint:spec:probe
-      - run: pnpm lint:spec
+      - run: pnpm exec haeram-spec-creator check
       - run: pnpm --filter ./frontend test
       - run: pnpm --filter ./frontend build
 

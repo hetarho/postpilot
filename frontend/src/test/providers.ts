@@ -1,6 +1,6 @@
 // Shared fake ProviderService for tests.
 //
-// It models the server rules the frontend depends on (spec/policy/providers.md): a saved
+// It models the server rules the frontend depends on (spec/legacy/policy/providers.md): a saved
 // model that is not registered comes back `missing` once and is cleared, and a disabled
 // or unregistered model cannot be saved.
 import { Code, createRouterTransport } from '@connectrpc/connect'

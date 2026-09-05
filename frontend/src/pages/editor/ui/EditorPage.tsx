@@ -11,7 +11,7 @@ import { DraftEditor } from './DraftEditor'
  *  moves the URL to the minted slug (see DraftEditor's `onMinted`).
  *
  *  The directory is read first: a create must name its voice, and the picker is initialized to
- *  the account's default (spec/policy/posts.md), so the editor waits for that one answer rather
+ *  the account's default (spec/legacy/policy/posts.md), so the editor waits for that one answer rather
  *  than letting a first keystroke send a save with no voice for the server to refuse. */
 export function NewDraftPage() {
   const { t } = useTranslation(['posts', 'common'])

@@ -35,7 +35,7 @@ CREATE TABLE templates (
     user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name        TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
-    -- The template body in the grammar of spec/tech/post-template-grammar.md. Stored as the
+    -- The template body in the grammar of spec/legacy/tech/post-template-grammar.md. Stored as the
     -- author wrote it: the parser keeps every literal's raw slice so the builder can
     -- re-serialize this exact string back.
     body        TEXT NOT NULL,

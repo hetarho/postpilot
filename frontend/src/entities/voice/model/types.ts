@@ -107,7 +107,7 @@ export interface StructuredVoiceProfile {
   feedback: VoiceFeedback[]
 }
 
-/** One of an account's writing voices (spec/policy/voice.md). A voice owns exactly one profile and
+/** One of an account's writing voices (spec/legacy/policy/voice.md). A voice owns exactly one profile and
  *  every row that can change it. Deleting one leaves a tombstone rather than a hole: the posts
  *  written in it still name it, so `deleted` travels with the voice everywhere it is shown. */
 export interface Voice {

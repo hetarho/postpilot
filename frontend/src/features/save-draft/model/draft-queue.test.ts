@@ -429,7 +429,7 @@ describe('the first save of a new draft', () => {
 })
 
 describe('the voice assignment', () => {
-  // spec/policy/posts.md: a create always names its voice; an ordinary edit leaves it alone.
+  // spec/legacy/policy/posts.md: a create always names its voice; an ordinary edit leaves it alone.
   it('sends the voice with the create and not with an unchanged edit', async () => {
     const api = backend({ mint: '20260828-제주' })
     const { handle } = attach(api.send, { voiceId: 'voice-a' })

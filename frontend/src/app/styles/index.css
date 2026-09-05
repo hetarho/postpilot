@@ -2,7 +2,7 @@
 
 /*
  * The colour system has THREE LAYERS. The rules this file carries are written up in
- * spec/tech/design-language.md; this header only says how the layers fit together.
+ * spec/legacy/tech/design-language.md; this header only says how the layers fit together.
  *
  * TIER 1 — the palette (`--palette-*`). OKLCH ramps, one per hue family, on ONE shared lightness
  * scale (50 ≈ near white … 950 ≈ deep ground); mauve adds intermediate stops where five close

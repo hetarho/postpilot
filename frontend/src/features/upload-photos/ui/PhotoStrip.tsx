@@ -159,7 +159,7 @@ export function PhotoStrip({
         ))}
       </ul>
       {confirming && (
-        // Deleting a photo takes the object with it (spec/policy/uploads.md) and the converted
+        // Deleting a photo takes the object with it (spec/legacy/policy/uploads.md) and the converted
         // copy is already gone, so there is nothing to undo — §7 confirms exactly this through
         // the sheet. It also takes the failure out of the tile: a scrim on a 128px square has no
         // room for a way out, and the sheet already has 취소 beside the retry.

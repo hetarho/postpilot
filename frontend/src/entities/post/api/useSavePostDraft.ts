@@ -21,7 +21,7 @@ import { getPostQueryKey, listPostsQueryKey } from './post-queries'
  *  field remains owned by GetPost or its focused mutation patch.
  *
  *  A reassignment is the one save that also moves the machine baseline: the server clears
- *  it in the same write (spec/policy/posts.md), and it refuses to reassign while a job could
+ *  it in the same write (spec/legacy/policy/posts.md), and it refuses to reassign while a job could
  *  advance that baseline, so mirroring the cleared fields cannot roll a job's result back. */
 export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefined): Post {
   if (!cached?.post) return saved
@@ -45,7 +45,7 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
 }
 
 /** Create-or-update for a draft: an empty slug creates the post and returns the minted
- *  one (spec/policy/posts.md). This is the autosave endpoint, so it is called about once
+ *  one (spec/legacy/policy/posts.md). This is the autosave endpoint, so it is called about once
  *  a second while someone types. */
 export function useSavePostDraft() {
   const queryClient = useQueryClient()

@@ -5,7 +5,7 @@ import {
   TEMPLATE_NAME_MAX_CHARS,
 } from '@/shared/config'
 
-/** A reusable 템플릿 brief (spec/policy/templates.md): what a kind of post is for and how that
+/** A reusable 템플릿 brief (spec/legacy/policy/templates.md): what a kind of post is for and how that
  *  kind must be written. Authored text only — nothing here is learned or inferred, and the
  *  voice profile is untouched by it. */
 export interface Template {

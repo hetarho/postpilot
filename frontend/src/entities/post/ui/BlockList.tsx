@@ -96,7 +96,7 @@ export function BlockList({
           const key = blockKey(block, index)
           switch (block.type) {
             case BlockType.TEXT:
-              // An unfilled template slot rides on a TEXT block (spec/tech/post-template-grammar
+              // An unfilled template slot rides on a TEXT block (spec/legacy/tech/post-template-grammar
               // §7). It renders as the position it reserves rather than as its own content —
               // the content is the copy token, which is machinery and not prose.
               if (block.slot)

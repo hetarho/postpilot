@@ -64,7 +64,7 @@ const NaturalnessBaseline = `[한국어 자연 문체 기준선]
 //
 // The tokens are deliberately short. The model is asked to copy a slot's token verbatim, and
 // copying twelve characters exactly is something a model does reliably while reproducing a
-// label or a sentence is not (spec/tech/post-template-grammar.md §5).
+// label or a sentence is not (spec/legacy/tech/post-template-grammar.md §5).
 const templateLegend = `표기는 다음과 같습니다.
 - 일반 텍스트: 그 위치에 그대로 출력하세요.
 - <write>…</write>: 그 자리에 지시대로 글을 쓰고, 태그와 지시문 자체는 출력하지 마세요.

@@ -101,7 +101,7 @@ export function PostsPage() {
           // AI 결과 확인 the cut point moved row to row, so the list read as a ragged column of
           // half-titles. The voice sits between the status and the time as metadata: which voice a post is in
           // is the one thing this list newly has to say, and a tombstone must say so on the row
-          // itself (spec/policy/posts.md) — the name gives way before the badge or the time do.
+          // itself (spec/legacy/policy/posts.md) — the name gives way before the badge or the time do.
           const content = (
             <>
               <Typography

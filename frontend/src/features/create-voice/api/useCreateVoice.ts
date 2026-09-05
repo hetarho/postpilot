@@ -25,7 +25,7 @@ export function useCreateVoice(ownerId: string) {
   const queryClient = useQueryClient()
   const mutation = useMutation(VoiceService.method.createVoice, {
     onSuccess: (data) => {
-      // A new voice starts empty (spec/policy/voice.md), so nothing else is stale: only the
+      // A new voice starts empty (spec/legacy/policy/voice.md), so nothing else is stale: only the
       // directory gains a row. A seeded one is still empty right now — its profile is written
       // by the job the response names, and the voice screen reads that profile itself.
       if (data.voice) upsertCachedVoice(queryClient, transport, ownerId, data.voice)

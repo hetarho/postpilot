@@ -32,7 +32,7 @@ export const file_postpilot_v1_post: GenFile = /*@__PURE__*/
  */
 export type BlockSlot = Message<"postpilot.v1.BlockSlot"> & {
   /**
-   * photo | place | link (spec/tech/post-template-grammar.md §2).
+   * photo | place | link (spec/legacy/tech/post-template-grammar.md §2).
    *
    * @generated from field: string kind = 1;
    */

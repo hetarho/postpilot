@@ -43,7 +43,7 @@ export type GenerationPreconditions =
 
 /** Mirrors the server gate so an impossible generation never looks clickable. The voice comes
  *  first: a deleted voice refuses every machine result before any model is even asked about
- *  (spec/policy/generation.md). */
+ *  (spec/legacy/policy/generation.md). */
 function sharedPreconditions(
   images: readonly Pick<PostImage, 'id'>[],
   observeSelection: GenerationModelSelection | undefined,

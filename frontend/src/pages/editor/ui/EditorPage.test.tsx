@@ -1532,7 +1532,7 @@ describe('opening a post', () => {
     expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toBeInTheDocument()
   })
 
-  // A5. Someone else's slug is 403, not 404 (spec/policy/posts.md).
+  // A5. Someone else's slug is 403, not 404 (spec/legacy/policy/posts.md).
   it('reports a slug that belongs to someone else as theirs, not as missing', async () => {
     renderAppAt('/posts/20260101-hers', {
       user: USER,

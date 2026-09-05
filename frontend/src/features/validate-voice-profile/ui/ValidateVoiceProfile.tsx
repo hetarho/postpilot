@@ -18,7 +18,7 @@ import {
 } from '@/shared/ui'
 
 /** Starts a validation of ONE voice's profile against that voice's own finalized sources; the
- *  request names the voice explicitly (spec/policy/voice.md). */
+ *  request names the voice explicitly (spec/legacy/policy/voice.md). */
 export function ValidateVoiceProfile({
   voiceId,
   profile,

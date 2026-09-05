@@ -20,7 +20,7 @@ export function jpegFilename(originalName: string): string {
 
 /** `IMG_1.jpg` → `IMG_1 (2).jpg`, `IMG_1 (3).jpg`, … until it is not in `taken`.
  *
- *  A filename is unique within a post on the server (spec/policy/uploads.md); renaming
+ *  A filename is unique within a post on the server (spec/legacy/policy/uploads.md); renaming
  *  here, before asking, is what turns that constraint into a non-event for the user. */
 export function dedupeFilename(name: string, taken: Iterable<string>): string {
   const used = new Set(taken)

@@ -58,7 +58,7 @@ interface DraftEditorProps {
   post?: PostDraft
   /** The voice a draft with no post yet starts in — the account's default, resolved by the
    *  route before this mounts, so the first save always carries a concrete id
-   *  (spec/policy/posts.md). Ignored for an existing post, whose voice is its own. */
+   *  (spec/legacy/policy/posts.md). Ignored for an existing post, whose voice is its own. */
   defaultVoiceId?: string
 }
 

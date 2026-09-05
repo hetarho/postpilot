@@ -7,7 +7,7 @@ import (
 
 // Copy tokens. A slot becomes a short token the model is asked to reproduce verbatim rather
 // than a label or a sentence: copying twelve characters exactly is something a model does
-// reliably, while reproducing prose is not (spec/tech/post-template-grammar.md §5).
+// reliably, while reproducing prose is not (spec/legacy/tech/post-template-grammar.md §5).
 const (
 	slotTokenPrefix  = "{{slot:"
 	photoTokenPrefix = "{{photo:"

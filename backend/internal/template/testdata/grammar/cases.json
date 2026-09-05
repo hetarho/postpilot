@@ -5,7 +5,7 @@
     "here first — this file is the only mechanism that keeps two implementations of one grammar",
     "honest. Node shapes: literal{raw} · write{text} · slot{kind,label} · note{text} ·",
     "repeat{each,children}. Every ok case is also asserted to serialize back to `body` byte-exactly.",
-    "See spec/tech/post-template-grammar.md."
+    "See spec/legacy/tech/post-template-grammar.md."
   ],
   "cases": [
     {

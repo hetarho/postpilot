@@ -55,7 +55,7 @@ export interface FakeGuidelinesOptions {
   createDuplicates?: boolean
   calls?: string[]
   /** Records every UpdateGuideline exactly as it arrived, so a test can prove a text edit
-   *  carried no scope and a scope patch carried no text (spec/policy/guidelines.md). */
+   *  carried no scope and a scope patch carried no text (spec/legacy/policy/guidelines.md). */
   updates?: Array<{
     id: string
     text: string | undefined

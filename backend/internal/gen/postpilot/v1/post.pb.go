@@ -87,7 +87,7 @@ func (BlockType) EnumDescriptor() ([]byte, []int) {
 // need to know it exists. [I2] holds either way — the canonical post is still a block array.
 type BlockSlot struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// photo | place | link (spec/tech/post-template-grammar.md §2).
+	// photo | place | link (spec/legacy/tech/post-template-grammar.md §2).
 	Kind string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
 	// The template author's label, shown to the user. Never an instruction to the model.
 	Label         string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`

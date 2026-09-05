@@ -1,6 +1,6 @@
 import { GUIDELINE_TEXT_MAX_CHARS } from '@/shared/config'
 
-/** What a guideline applies to (spec/policy/guidelines.md). `templates` with an empty set is a
+/** What a guideline applies to (spec/legacy/policy/guidelines.md). `templates` with an empty set is a
  *  real state, not a missing value: every template it named was deleted, so it reaches no post
  *  until it is rescoped. */
 export type GuidelineScopeKind = 'global' | 'templates'

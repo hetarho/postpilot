@@ -1,4 +1,4 @@
-/** The template grammar, client side (spec/tech/post-template-grammar.md).
+/** The template grammar, client side (spec/legacy/tech/post-template-grammar.md).
  *
  *  This is a second implementation of one grammar — the authoritative parser is Go, in
  *  `backend/internal/template`. It exists because the builder has to parse and re-serialize

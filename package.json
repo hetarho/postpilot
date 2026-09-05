@@ -17,13 +17,7 @@
     "lint:fsd": "pnpm --filter ./frontend lint:fsd",
     "lint:style": "node scripts/lint-style-escapes.mjs",
     "lint:style:probe": "node scripts/lint-style-escapes.mjs --probe",
-    "lint:spec": "node scripts/check-spec-hygiene.mjs",
-    "lint:spec:probe": "node scripts/check-spec-hygiene.mjs --probe",
     "test": "pnpm --filter ./frontend test",
-    "spec:plan": "node scripts/new-plan.mjs",
-    "spec:change": "node scripts/new-change.mjs",
-    "spec:code-review": "node scripts/new-code-review.mjs",
-    "spec:job": "node scripts/new-job.mjs",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down"
   },

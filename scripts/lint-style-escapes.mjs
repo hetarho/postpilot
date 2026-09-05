@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fails when frontend code escapes the design tokens (spec/tech/design-language.md §2, §3).
+// Fails when frontend code escapes the design tokens (spec/legacy/tech/design-language.md §2, §3).
 //
 // Four escapes are caught:
 //   1. A Tailwind STOCK colour utility (`bg-gray-100`, `text-red-400`, `border-zinc-800/50`).
@@ -285,7 +285,7 @@ if (findings.length) {
   console.error(
     '\nUse a functional role (bg-button-cta-bg, text-notice-danger-fg) or a compositional',
     'foundation (bg-surface-base, text-content-secondary). Roles are defined in',
-    'frontend/src/app/styles/index.css; the rules are in spec/tech/design-language.md §2.',
+    'frontend/src/app/styles/index.css; the rules are in spec/legacy/tech/design-language.md §2.',
     '\nFor an ad-hoc type utility, render the text through shared/ui Typography (or',
     'typographyStyles for a self-semantic element) — the type roles are design-language §3.',
     '\nFor a native <select>, use shared/ui Listbox (or SegmentedControl for a bounded 2–5',
