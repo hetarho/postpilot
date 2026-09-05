@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 )
 
-// Cleanup removes only per-connection work directories beneath the configured
-// jobs root. It is run before polling so payloads left by a crash or power loss
-// do not survive the next agent start.
+// Cleanup removes only job directories beneath each per-connection directory. The stable
+// connection roots are also owned by resumable drafts, so startup preserves those paths
+// while ensuring payloads left by a crash or power loss do not survive.
 func Cleanup(root string) error {
 	if root == "" || !filepath.IsAbs(root) {
 		return errors.New("jobs root must be an absolute path")
@@ -21,7 +21,23 @@ func Cleanup(root string) error {
 		return err
 	}
 	for _, entry := range entries {
-		if err := os.RemoveAll(filepath.Join(root, entry.Name())); err != nil {
+		connectionDir := filepath.Join(root, entry.Name())
+		if !entry.IsDir() {
+			if err := os.Remove(connectionDir); err != nil {
+				return err
+			}
+			continue
+		}
+		jobs, err := os.ReadDir(connectionDir)
+		if err != nil {
+			return err
+		}
+		for _, job := range jobs {
+			if err := os.RemoveAll(filepath.Join(connectionDir, job.Name())); err != nil {
+				return err
+			}
+		}
+		if err := os.Chmod(connectionDir, 0o700); err != nil {
 			return err
 		}
 	}

@@ -40,10 +40,12 @@ Existing browser profiles, config, logs, and Keychain credentials are deliberate
 
 ## Pairing and recovery contract
 
-Local setup discovers an installed Chromium-family browser, opens a dedicated profile for Naver login, navigates that
-same sole page to Naver's generic writer, and reads the resolved blog identity and categories through local CDP. A
-per-run nonce plus exact Host/Origin checks protect the loopback form. The raw agent token is returned once and stored
-only in macOS Keychain.
+Local setup first creates an explicit Mac-owned connection draft with a random id and dedicated browser/work paths.
+The draft survives setup restarts and device-code replacement, so reopening it always uses the same Naver cookie jar.
+After login, setup navigates that same sole page to Naver's generic writer and reads the resolved blog identity and
+categories through local CDP. Successful enrollment binds the server agent id and Keychain token to the existing
+draft paths; the one-time device code never selects a profile. A per-run nonce plus exact Host/Origin checks protect
+the loopback form. The raw agent token is returned once and stored only in macOS Keychain.
 
 Each additional Postpilot account receives separate Keychain, browser-profile, and job directories. Reopening a
 connection for login, CAPTCHA, or two-factor repair must reuse the same stable browser profile without issuing a new

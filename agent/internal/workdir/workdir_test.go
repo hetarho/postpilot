@@ -20,12 +20,19 @@ func TestCleanupRemovesCrashLeftoversOnlyInsideJobsRoot(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "manifest.json"), []byte("private"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	draftDir := filepath.Join(root, "unfinished-draft")
+	if err := os.MkdirAll(draftDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	if err := Cleanup(root); err != nil {
 		t.Fatal(err)
 	}
-	entries, err := os.ReadDir(root)
+	entries, err := os.ReadDir(filepath.Join(root, "connection"))
 	if err != nil || len(entries) != 0 {
-		t.Fatalf("jobs root entries=%v err=%v", entries, err)
+		t.Fatalf("connection work dir entries=%v err=%v", entries, err)
+	}
+	if info, err := os.Stat(draftDir); err != nil || !info.IsDir() {
+		t.Fatalf("empty draft work dir was removed: %v", err)
 	}
 	if _, err := os.Stat(outside); err != nil {
 		t.Fatalf("cleanup escaped jobs root: %v", err)

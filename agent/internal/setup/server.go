@@ -3,7 +3,6 @@ package setup
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -12,7 +11,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,14 +24,29 @@ import (
 	"github.com/postpilot/agent/internal/postpilot"
 )
 
+var setupPage = template.Must(template.New("setup-v2").Parse(`<!doctype html>
+<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Postpilot Mac 연결</title>
+<style>body{font-family:-apple-system,sans-serif;max-width:640px;margin:auto;padding:32px 16px;background:#17151a;color:#f7f2f8}label{display:block;margin-top:16px}input,select,button{box-sizing:border-box;width:100%;min-height:44px;margin-top:6px;padding:10px 14px;border:0;border-radius:10px;font-size:16px}input,select{background:#29252d;color:#fff}button{background:#8b5cf6;color:#fff;font-weight:600}.secondary{background:#39333e}.message{padding:12px;margin:16px 0;border-radius:10px;background:#193a2b}.error{padding:12px;margin:16px 0;border-radius:10px;background:#48252b}.check{display:flex;gap:10px;align-items:flex-start}.check input{width:44px;margin:8px 0 0}.check span{padding-top:12px}.card{padding:14px;margin:10px 0;border-radius:10px;background:#29252d}.card p{margin:0 0 8px}</style>
+<body><h1>Postpilot Mac 연결</h1>
+<p>이 서버는 127.0.0.1에만 열려 있습니다. 네이버 비밀번호와 쿠키는 Mac 밖으로 나가지 않습니다.</p>
+{{if .Message}}<div class="message">{{.Message}}</div>{{end}}{{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+{{if .Drafts}}<section><h2>미완료 연결</h2><p>연결 코드가 만료되거나 Mac을 재시작해도 이 초안의 전용 브라우저 프로필은 그대로 유지됩니다.</p>
+{{range .Drafts}}<form class="card" method="post" action="/setup"><input type="hidden" name="nonce" value="{{$.Nonce}}"><input type="hidden" name="draft_id" value="{{.ID}}"><p><strong>{{.Label}}</strong> · {{.BrowserLabel}}</p><p>{{.APIURL}}</p><button class="secondary" name="action" value="login">같은 전용 네이버 로그인 열기</button><label>현재 연결 코드<input name="device_code" autocomplete="one-time-code"></label><label class="check"><input type="checkbox" name="identity_confirmed" value="yes"><span>이 전용 브라우저에서 네이버 로그인을 마쳤습니다.</span></label><button name="action" value="pair">이 초안으로 연결 완료</button></form>{{end}}</section>{{end}}
+{{if .Connections}}<section><h2>기존 연결 로그인 복구</h2><p>로그인 만료, CAPTCHA 또는 2단계 인증이 발생한 연결의 같은 전용 프로필을 다시 엽니다.</p>{{range .Connections}}<form class="card" method="post" action="/setup"><input type="hidden" name="nonce" value="{{$.Nonce}}"><input type="hidden" name="connection_id" value="{{.ID}}"><p><strong>{{.Label}}</strong> · {{.BrowserLabel}}</p><button class="secondary" name="action" value="repair">이 연결의 네이버 로그인 열기</button></form>{{end}}</section>{{end}}
+<h2>새 연결</h2><p>새 연결을 누를 때만 별도의 쿠키 저장소가 만들어집니다.</p><form method="post" action="/setup"><input type="hidden" name="nonce" value="{{.Nonce}}"><label>Postpilot API URL<input name="api_url" type="url" required value="{{.Values.APIURL}}"></label><label>연결 이름<input name="label" required value="{{.Values.Label}}"></label><label>전용 브라우저<select name="browser_binary" required>{{range .Browsers}}<option value="{{.Binary}}" {{if eq $.Values.BrowserBinary .Binary}}selected{{end}}>{{.Label}}</option>{{end}}</select></label><button name="action" value="new">새 연결 초안 만들기</button></form></body></html>`))
+
 type Server struct {
-	Paths          config.Paths
-	Keychain       credentials.Store
-	OpenLogin      func(binary, profileDir string) error
-	ProbePublisher func(context.Context, string) (string, error)
-	nonce          string
-	host           string
-	completed      chan struct{}
+	Paths            config.Paths
+	Keychain         credentials.Store
+	OpenLogin        func(binary, profileDir string) error
+	SupportedBrowser func(string) (browser.Installation, bool)
+	NewDraftID       func() (string, error)
+	Now              func() time.Time
+	ProbePublisher   func(context.Context, string) (string, error)
+	nonce            string
+	host             string
+	completed        chan struct{}
 }
 
 func (s Server) Run(ctx context.Context) error {
@@ -71,6 +87,7 @@ func (s Server) Run(ctx context.Context) error {
 type pageData struct {
 	Browsers    []browser.Installation
 	Connections []repairConnection
+	Drafts      []draftView
 	Values      formValues
 	Message     string
 	Error       string
@@ -79,6 +96,10 @@ type pageData struct {
 
 type repairConnection struct {
 	ID, Label, BrowserLabel string
+}
+
+type draftView struct {
+	ID, Label, BrowserLabel, APIURL string
 }
 
 type formValues struct {
@@ -102,7 +123,7 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	action := request.FormValue("action")
-	if action != "login" && action != "pair" && action != "repair" {
+	if action != "new" && action != "login" && action != "pair" && action != "repair" {
 		http.Error(writer, "invalid action", http.StatusBadRequest)
 		return
 	}
@@ -112,16 +133,25 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 	}
 	values := formValues{APIURL: request.FormValue("api_url"), DeviceCode: request.FormValue("device_code"), Label: request.FormValue("label"), BrowserBinary: request.FormValue("browser_binary")}
 	data := pageData{Browsers: browser.Discover(), Values: values}
-	if values.BrowserBinary == "" || values.DeviceCode == "" {
-		data.Error = "브라우저와 연결 코드를 입력해 주세요."
+	if action == "new" {
+		s.createDraft(writer, data)
+		return
+	}
+	cfg, err := config.Load(s.Paths)
+	if err != nil {
+		data.Error = "저장된 연결을 읽지 못했어요: " + err.Error()
 		s.render(writer, data)
 		return
 	}
-	if err := config.ValidateAPIURL(values.APIURL); err != nil {
+	draftID := strings.TrimSpace(request.FormValue("draft_id"))
+	draft, draftIndex, err := exactDraft(cfg, draftID)
+	if err != nil {
 		data.Error = err.Error()
 		s.render(writer, data)
 		return
 	}
+	values.APIURL, values.Label, values.BrowserBinary = draft.APIURL, draft.Label, draft.BrowserBinary
+	data.Values = values
 	// Pairing must not create a profile, open or mutate the editor, consume its
 	// one-time device code, or advertise ready until the deterministic driver can
 	// prove support. Login-only setup remains available for an existing profile.
@@ -130,25 +160,31 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		s.render(writer, data)
 		return
 	}
-	installation, supported := browser.Supported(values.BrowserBinary)
+	supportedBrowser := s.SupportedBrowser
+	if supportedBrowser == nil {
+		supportedBrowser = browser.Supported
+	}
+	installation, supported := supportedBrowser(values.BrowserBinary)
 	if !supported {
 		data.Error = "지원하는 전용 Chromium 브라우저를 선택해 주세요."
 		s.render(writer, data)
 		return
 	}
-	connectionID := localID(values.DeviceCode)
-	profileDir, err := browser.PrepareProfile(s.Paths.Profiles, connectionID)
-	if err != nil {
-		data.Error = err.Error()
-		s.render(writer, data)
-		return
-	}
 	if action == "login" {
-		if err := browser.OpenLogin(values.BrowserBinary, profileDir); err != nil {
+		openLogin := s.OpenLogin
+		if openLogin == nil {
+			openLogin = browser.OpenLogin
+		}
+		if err := openLogin(values.BrowserBinary, draft.ProfileDir); err != nil {
 			data.Error = err.Error()
 		} else {
 			data.Message = "전용 브라우저를 열었습니다. 네이버 로그인을 마친 뒤 이 화면에서 연결을 완료하세요. Postpilot이 내 블로그의 글쓰기 화면을 열고 계정과 카테고리를 검증합니다."
 		}
+		s.render(writer, data)
+		return
+	}
+	if strings.TrimSpace(values.DeviceCode) == "" {
+		data.Error = "연결 코드를 입력해 주세요."
 		s.render(writer, data)
 		return
 	}
@@ -157,7 +193,7 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		s.render(writer, data)
 		return
 	}
-	browserSession, err := browser.OpenEditor(values.BrowserBinary, profileDir)
+	browserSession, err := browser.OpenEditor(values.BrowserBinary, draft.ProfileDir)
 	if err != nil {
 		data.Error = "전용 브라우저에서 네이버 글쓰기 화면을 열지 못했어요: " + err.Error() + ". 로그인 또는 보안 확인이 필요한지 확인한 뒤 다시 시도하세요."
 		s.render(writer, data)
@@ -181,15 +217,9 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		categories = append(categories, &postpilotv1.PublishingCategory{Id: category.ID, Name: category.Name})
 	}
 	defaultCategoryID := identity.Categories[0].ID
-	cfg, err := config.Load(s.Paths)
-	if err != nil {
-		data.Error = err.Error()
-		s.render(writer, data)
-		return
-	}
 	pendingIndex := -1
 	for index, existing := range cfg.Connections {
-		if existing.ID != connectionID {
+		if existing.DraftID != draft.ID {
 			continue
 		}
 		if existing.Armed {
@@ -237,7 +267,7 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		// can expose it as ready. If SyncProfile commits but its response is lost, the
 		// same setup submission resumes with this Keychain token instead of consuming a
 		// second device code or leaving an unreachable ready agent.
-		pending := config.Connection{ID: connectionID, Label: strings.TrimSpace(values.Label), APIURL: strings.TrimRight(values.APIURL, "/"), AgentID: agentID, KeychainAccount: keyAccount, BrowserBinary: values.BrowserBinary, BrowserLabel: installation.Label, ProfileDir: profileDir, LeaseTTLSeconds: leaseTTLSeconds}
+		pending := config.Connection{ID: draft.ID, DraftID: draft.ID, Label: draft.Label, APIURL: draft.APIURL, AgentID: agentID, KeychainAccount: keyAccount, BrowserBinary: draft.BrowserBinary, BrowserLabel: draft.BrowserLabel, ProfileDir: draft.ProfileDir, WorkDir: draft.WorkDir, LeaseTTLSeconds: leaseTTLSeconds}
 		cfg, pendingIndex, err = persistPending(s.Paths, cfg, pending)
 		if err != nil {
 			_ = s.Keychain.Delete(request.Context(), keyAccount)
@@ -268,11 +298,12 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	connection := cfg.Connections[pendingIndex]
-	connection.Label = strings.TrimSpace(values.Label)
-	connection.BrowserBinary = values.BrowserBinary
+	connection.Label = draft.Label
+	connection.BrowserBinary = draft.BrowserBinary
 	connection.BrowserLabel = installation.Label
-	connection.ProfileDir = profileDir
-	if err := activatePending(s.Paths, cfg, pendingIndex, connection); err != nil {
+	connection.ProfileDir = draft.ProfileDir
+	connection.WorkDir = draft.WorkDir
+	if err := activatePending(s.Paths, cfg, pendingIndex, draftIndex, connection); err != nil {
 		data.Error = "서버 확인은 끝났지만 로컬 활성화 저장에 실패했어요. 미완료 연결과 토큰은 남아 있으니 같은 연결 코드로 다시 시도하세요: " + err.Error()
 		s.render(writer, data)
 		return
@@ -295,6 +326,11 @@ func (s Server) finish() {
 
 func persistPending(paths config.Paths, cfg config.File, connection config.Connection) (config.File, int, error) {
 	connection.Armed = false
+	for _, existing := range cfg.Connections {
+		if existing.ID == connection.ID || (connection.DraftID != "" && existing.DraftID == connection.DraftID) {
+			return cfg, -1, errors.New("connection draft is already bound")
+		}
+	}
 	cfg.Connections = append(cfg.Connections, connection)
 	index := len(cfg.Connections) - 1
 	if err := config.Save(paths, cfg); err != nil {
@@ -303,13 +339,136 @@ func persistPending(paths config.Paths, cfg config.File, connection config.Conne
 	return cfg, index, nil
 }
 
-func activatePending(paths config.Paths, cfg config.File, index int, connection config.Connection) error {
+func activatePending(paths config.Paths, cfg config.File, index, draftIndex int, connection config.Connection) error {
 	if index < 0 || index >= len(cfg.Connections) || cfg.Connections[index].ID != connection.ID {
 		return errors.New("pending connection changed before activation")
 	}
+	if draftIndex < 0 || draftIndex >= len(cfg.Drafts) || cfg.Drafts[draftIndex].ID != connection.DraftID {
+		return errors.New("connection draft changed before activation")
+	}
+	draft := cfg.Drafts[draftIndex]
+	if connection.ProfileDir != draft.ProfileDir || connection.WorkDir != draft.WorkDir {
+		return errors.New("pending connection paths conflict with its draft")
+	}
 	connection.Armed = true
+	connection.DraftID = ""
 	cfg.Connections[index] = connection
+	cfg.Drafts = append(cfg.Drafts[:draftIndex], cfg.Drafts[draftIndex+1:]...)
 	return config.Save(paths, cfg)
+}
+
+func (s Server) createDraft(writer http.ResponseWriter, data pageData) {
+	values := data.Values
+	if values.BrowserBinary == "" || strings.TrimSpace(values.Label) == "" {
+		data.Error = "브라우저와 연결 이름을 입력해 주세요."
+		s.render(writer, data)
+		return
+	}
+	if err := config.ValidateAPIURL(values.APIURL); err != nil {
+		data.Error = err.Error()
+		s.render(writer, data)
+		return
+	}
+	supportedBrowser := s.SupportedBrowser
+	if supportedBrowser == nil {
+		supportedBrowser = browser.Supported
+	}
+	installation, ok := supportedBrowser(values.BrowserBinary)
+	if !ok {
+		data.Error = "지원하는 전용 Chromium 브라우저를 선택해 주세요."
+		s.render(writer, data)
+		return
+	}
+	newID := s.NewDraftID
+	if newID == nil {
+		newID = randomDraftID
+	}
+	id, err := newID()
+	if err != nil || strings.TrimSpace(id) == "" {
+		data.Error = "새 연결의 로컬 식별자를 만들지 못했어요."
+		s.render(writer, data)
+		return
+	}
+	cfg, err := config.Load(s.Paths)
+	if err != nil {
+		data.Error = "저장된 연결을 읽지 못했어요: " + err.Error()
+		s.render(writer, data)
+		return
+	}
+	for _, draft := range cfg.Drafts {
+		if draft.ID == id {
+			data.Error = "새 연결 식별자가 기존 초안과 충돌했어요. 다시 시도해 주세요."
+			s.render(writer, data)
+			return
+		}
+	}
+	for _, connection := range cfg.Connections {
+		if connection.ID == id {
+			data.Error = "새 연결 식별자가 기존 연결과 충돌했어요. 다시 시도해 주세요."
+			s.render(writer, data)
+			return
+		}
+	}
+	profileDir, err := browser.PrepareProfile(s.Paths.Profiles, id)
+	if err != nil {
+		data.Error = "전용 브라우저 프로필을 준비하지 못했어요: " + err.Error()
+		s.render(writer, data)
+		return
+	}
+	workDir := filepath.Join(s.Paths.Jobs, id)
+	if err := os.MkdirAll(workDir, 0o700); err != nil {
+		data.Error = "로컬 작업 폴더를 준비하지 못했어요: " + err.Error()
+		s.render(writer, data)
+		return
+	}
+	now := s.Now
+	if now == nil {
+		now = time.Now
+	}
+	cfg.Drafts = append(cfg.Drafts, config.ConnectionDraft{
+		ID: id, Label: strings.TrimSpace(values.Label), APIURL: strings.TrimRight(values.APIURL, "/"),
+		BrowserBinary: values.BrowserBinary, BrowserLabel: installation.Label,
+		ProfileDir: profileDir, WorkDir: workDir, CreatedAt: now(),
+	})
+	if err := config.Save(s.Paths, cfg); err != nil {
+		data.Error = "연결 초안을 저장하지 못했어요: " + err.Error()
+		s.render(writer, data)
+		return
+	}
+	data.Message = "새 연결 초안을 만들었습니다. 아래 미완료 연결에서 같은 전용 브라우저를 열고, 준비되면 현재 연결 코드를 입력하세요."
+	s.render(writer, data)
+}
+
+func exactDraft(cfg config.File, id string) (config.ConnectionDraft, int, error) {
+	if id == "" {
+		return config.ConnectionDraft{}, -1, errors.New("재개할 연결 초안을 선택해 주세요.")
+	}
+	decoded, err := hex.DecodeString(id)
+	if err != nil || len(decoded) != 16 || id != strings.ToLower(id) {
+		return config.ConnectionDraft{}, -1, errors.New("연결 초안 식별자가 올바르지 않아 안전하게 열 수 없어요.")
+	}
+	index := -1
+	for i, draft := range cfg.Drafts {
+		if draft.ID != id {
+			continue
+		}
+		if index >= 0 {
+			return config.ConnectionDraft{}, -1, errors.New("같은 식별자의 연결 초안이 중복되어 안전하게 열 수 없어요.")
+		}
+		index = i
+	}
+	if index < 0 {
+		return config.ConnectionDraft{}, -1, errors.New("재개할 연결 초안을 찾지 못했어요.")
+	}
+	return cfg.Drafts[index], index, nil
+}
+
+func randomDraftID() (string, error) {
+	value := make([]byte, 16)
+	if _, err := rand.Read(value); err != nil {
+		return "", fmt.Errorf("create connection draft id: %w", err)
+	}
+	return hex.EncodeToString(value), nil
 }
 
 func (s Server) render(writer http.ResponseWriter, data pageData) {
@@ -322,6 +481,9 @@ func (s Server) render(writer http.ResponseWriter, data pageData) {
 	writer.Header().Set("Referrer-Policy", "same-origin")
 	writer.Header().Set("X-Content-Type-Options", "nosniff")
 	if cfg, err := config.Load(s.Paths); err == nil {
+		for _, draft := range cfg.Drafts {
+			data.Drafts = append(data.Drafts, draftView{ID: draft.ID, Label: draft.Label, BrowserLabel: draft.BrowserLabel, APIURL: draft.APIURL})
+		}
 		for _, connection := range cfg.Connections {
 			if connection.Armed {
 				data.Connections = append(data.Connections, repairConnection{
@@ -329,9 +491,11 @@ func (s Server) render(writer http.ResponseWriter, data pageData) {
 				})
 			}
 		}
+	} else if data.Error == "" {
+		data.Error = "저장된 연결 구성이 올바르지 않아 안전하게 열 수 없어요: " + err.Error()
 	}
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = page.Execute(writer, data)
+	_ = setupPage.Execute(writer, data)
 }
 
 func setupNonce() (string, error) {
@@ -387,10 +551,3 @@ func (s Server) repair(writer http.ResponseWriter, request *http.Request) {
 	data.Error = "복구할 활성 연결을 찾지 못했어요."
 	s.render(writer, data)
 }
-
-func localID(code string) string {
-	sum := sha256.Sum256([]byte(strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(code), "-", ""))))
-	return hex.EncodeToString(sum[:])[:12]
-}
-
-var page = template.Must(template.New("setup").Parse(`<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Postpilot Mac 연결</title><style>body{font-family:-apple-system,sans-serif;max-width:640px;margin:auto;padding:32px 16px;background:#17151a;color:#f7f2f8}label{display:block;margin-top:16px}input,select,button{box-sizing:border-box;width:100%;min-height:44px;margin-top:6px;padding:10px 14px;border:0;border-radius:10px;font-size:16px}input,select{background:#29252d;color:#fff}button{background:#8b5cf6;color:#fff;font-weight:600}.secondary{background:#39333e}.message{padding:12px;margin:16px 0;border-radius:10px;background:#193a2b}.error{padding:12px;margin:16px 0;border-radius:10px;background:#48252b}.check{display:flex;gap:10px;align-items:flex-start}.check input{width:44px;margin:8px 0 0}.check span{padding-top:12px}.repair{padding:14px;margin:10px 0;border-radius:10px;background:#29252d}.repair p{margin:0}</style><body><h1>Postpilot Mac 연결</h1><p>이 서버는 127.0.0.1에만 열려 있습니다. 네이버 비밀번호와 쿠키는 Mac 밖으로 나가지 않습니다.</p>{{if .Message}}<div class="message">{{.Message}}</div>{{end}}{{if .Error}}<div class="error">{{.Error}}</div>{{end}}{{if .Connections}}<section><h2>기존 연결 로그인 복구</h2><p>로그인 만료, CAPTCHA 또는 2단계 인증이 발생한 연결의 같은 전용 프로필을 다시 엽니다.</p>{{range .Connections}}<form class="repair" method="post" action="/setup"><input type="hidden" name="nonce" value="{{$.Nonce}}"><input type="hidden" name="connection_id" value="{{.ID}}"><p><strong>{{.Label}}</strong> · {{.BrowserLabel}}</p><button class="secondary" name="action" value="repair">이 연결의 네이버 로그인 열기</button></form>{{end}}</section>{{end}}<h2>새 연결</h2><form method="post" action="/setup"><input type="hidden" name="nonce" value="{{.Nonce}}"><label>Postpilot API URL<input name="api_url" type="url" required value="{{.Values.APIURL}}"></label><label>연결 코드<input name="device_code" autocomplete="one-time-code" required value="{{.Values.DeviceCode}}"></label><label>연결 이름<input name="label" required value="{{.Values.Label}}"></label><label>전용 브라우저<select name="browser_binary" required>{{range .Browsers}}<option value="{{.Binary}}" {{if eq $.Values.BrowserBinary .Binary}}selected{{end}}>{{.Label}}</option>{{end}}</select></label><button class="secondary" name="action" value="login">전용 네이버 로그인 열기</button><label class="check"><input type="checkbox" name="identity_confirmed" value="yes"><span>전용 브라우저에서 네이버 로그인을 마쳤습니다. 연결 시 로컬 CDP가 로그인 세션이 선택한 실제 블로그와 전체 카테고리를 읽고, 전용 편집기 구조까지 확인한 경우에만 활성화합니다.</span></label><button name="action" value="pair">연결 완료</button></form></body></html>`))
