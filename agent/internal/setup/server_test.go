@@ -1,6 +1,8 @@
 package setup
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,6 +14,8 @@ import (
 
 	"github.com/postpilot/agent/internal/browser"
 	"github.com/postpilot/agent/internal/config"
+	postpilotv1 "github.com/postpilot/agent/internal/gen/postpilot/v1"
+	"github.com/postpilot/agent/internal/naver"
 )
 
 func TestConnectionIsPersistedUnarmedBeforeActivation(t *testing.T) {
@@ -350,6 +354,146 @@ func TestPairingFailsClosedWithoutMutatingTheDraftProfileWhenPublisherProbeIsMis
 	}
 	if data, err := os.ReadFile(marker); err != nil || string(data) != "same-session" {
 		t.Fatalf("fail-closed pairing changed the draft profile: %q %v", data, err)
+	}
+}
+
+type memoryKeychain map[string]string
+
+func (store memoryKeychain) Put(_ context.Context, account, token string) error {
+	store[account] = token
+	return nil
+}
+
+func (store memoryKeychain) Get(_ context.Context, account string) (string, error) {
+	value := store[account]
+	if value == "" {
+		return "", errors.New("not found")
+	}
+	return value, nil
+}
+
+func (store memoryKeychain) Delete(_ context.Context, account string) error {
+	delete(store, account)
+	return nil
+}
+
+func TestExistingArmedConnectionReprobesWithoutANewDeviceCode(t *testing.T) {
+	root := t.TempDir()
+	paths := config.Paths{Root: root, ConfigFile: filepath.Join(root, "config.json"), Profiles: filepath.Join(root, "profiles"), Jobs: filepath.Join(root, "jobs"), Logs: filepath.Join(root, "logs")}
+	connection := config.Connection{ID: "existing", Label: "침실 Mac", APIURL: "https://api.example.com", AgentID: "agent-1", KeychainAccount: "agent-agent-1", BrowserBinary: "/browser", BrowserLabel: "Chrome", ProfileDir: "/isolated/alice", LeaseTTLSeconds: 45, Armed: true}
+	if err := config.Save(paths, config.File{Connections: []config.Connection{connection}}); err != nil {
+		t.Fatal(err)
+	}
+	keychain := memoryKeychain{connection.KeychainAccount: "secret-token"}
+	var openedProfile, sentToken string
+	var synced *postpilotv1.SyncAgentProfileRequest
+	server := Server{
+		Paths: paths, Keychain: keychain, nonce: "test-nonce", host: "127.0.0.1:43210",
+		OpenEditor: func(_, profile string) (*browser.Session, error) {
+			openedProfile = profile
+			return &browser.Session{CDPURL: "ws://127.0.0.1/fake"}, nil
+		},
+		ProbePublisher: func(context.Context, string) (naver.Result, error) {
+			return naver.Result{Identity: browser.NaverIdentity{BlogID: "alice", BlogLabel: "Alice", Categories: []browser.NaverCategory{{ID: "7", Name: "Travel"}}}, ExecutorVersion: "postpilot-naver/1.0.0-signature", BrowserVersion: "Chrome/152.0", SignatureID: "signature"}, nil
+		},
+		SyncProfile: func(_ context.Context, _, token string, request *postpilotv1.SyncAgentProfileRequest) (*postpilotv1.PublishingAgent, error) {
+			sentToken, synced = token, request
+			return &postpilotv1.PublishingAgent{Id: connection.AgentID, PlatformAccountId: "alice"}, nil
+		},
+	}
+	response := postSetup(t, server, url.Values{"action": {"reprobe"}, "connection_id": {connection.ID}})
+	if openedProfile != connection.ProfileDir || sentToken != "secret-token" || synced.GetPlatformAccountId() != "alice" || !synced.GetCompatibilityReady() || synced.GetExecutorVersion() == "" {
+		t.Fatalf("opened=%q token=%q sync=%+v", openedProfile, sentToken, synced)
+	}
+	if !strings.Contains(response.Body.String(), "호환성을 다시 확인") {
+		t.Fatalf("response=%s", response.Body.String())
+	}
+	stored, err := config.Load(paths)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := stored.Connections[0]
+	if !got.Armed || got.AgentID != connection.AgentID || got.ProfileDir != connection.ProfileDir || got.PlatformAccountID != "alice" || got.CompatibilitySignature != "signature" {
+		t.Fatalf("connection identity or probe result changed incorrectly: %+v", got)
+	}
+}
+
+func TestExistingConnectionReprobeRefusesANaverIdentityMismatch(t *testing.T) {
+	root := t.TempDir()
+	paths := config.Paths{Root: root, ConfigFile: filepath.Join(root, "config.json"), Profiles: filepath.Join(root, "profiles"), Jobs: filepath.Join(root, "jobs"), Logs: filepath.Join(root, "logs")}
+	connection := config.Connection{ID: "existing", Label: "Mac", APIURL: "https://api.example.com", AgentID: "agent-1", KeychainAccount: "key", BrowserBinary: "/browser", BrowserLabel: "Chrome", ProfileDir: "/isolated/alice", PlatformAccountID: "alice", LeaseTTLSeconds: 45, Armed: true}
+	if err := config.Save(paths, config.File{Connections: []config.Connection{connection}}); err != nil {
+		t.Fatal(err)
+	}
+	syncCalled := false
+	server := Server{Paths: paths, Keychain: memoryKeychain{"key": "secret"}, nonce: "test-nonce", host: "127.0.0.1:43210",
+		OpenEditor: func(string, string) (*browser.Session, error) {
+			return &browser.Session{CDPURL: "ws://127.0.0.1/fake"}, nil
+		},
+		ProbePublisher: func(context.Context, string) (naver.Result, error) {
+			return naver.Result{Identity: browser.NaverIdentity{BlogID: "mallory", Categories: []browser.NaverCategory{{ID: "7", Name: "Travel"}}}, ExecutorVersion: "postpilot-naver/1.0.0-signature"}, nil
+		},
+		SyncProfile: func(context.Context, string, string, *postpilotv1.SyncAgentProfileRequest) (*postpilotv1.PublishingAgent, error) {
+			syncCalled = true
+			return nil, nil
+		},
+	}
+	response := postSetup(t, server, url.Values{"action": {"reprobe"}, "connection_id": {connection.ID}})
+	if syncCalled || !strings.Contains(response.Body.String(), "다른 네이버 블로그") {
+		t.Fatalf("syncCalled=%t response=%s", syncCalled, response.Body.String())
+	}
+}
+
+func TestPairingArmsOnlyAfterTheVersionedProbeAndSafeProfileSync(t *testing.T) {
+	root := t.TempDir()
+	id := "00112233445566778899aabbccddeeff"
+	paths := config.Paths{Root: root, ConfigFile: filepath.Join(root, "config.json"), Profiles: filepath.Join(root, "profiles"), Jobs: filepath.Join(root, "jobs"), Logs: filepath.Join(root, "logs")}
+	draft := config.ConnectionDraft{ID: id, Label: "내 Mac", APIURL: "https://api.example.com", BrowserBinary: "/test/chromium", BrowserLabel: "Test Chromium", ProfileDir: filepath.Join(paths.Profiles, id), WorkDir: filepath.Join(paths.Jobs, id), CreatedAt: time.Now()}
+	if err := config.Save(paths, config.File{Drafts: []config.ConnectionDraft{draft}}); err != nil {
+		t.Fatal(err)
+	}
+	keychain := memoryKeychain{}
+	var synced *postpilotv1.SyncAgentProfileRequest
+	server := Server{Paths: paths, Keychain: keychain, nonce: "test-nonce", host: "127.0.0.1:43210",
+		SupportedBrowser: func(binary string) (browser.Installation, bool) {
+			return browser.Installation{Label: "Test Chromium", Binary: binary}, true
+		},
+		OpenEditor: func(_, profile string) (*browser.Session, error) {
+			if profile != draft.ProfileDir {
+				t.Fatalf("profile=%q", profile)
+			}
+			return &browser.Session{CDPURL: "ws://127.0.0.1/fake"}, nil
+		},
+		ProbePublisher: func(context.Context, string) (naver.Result, error) {
+			return naver.Result{Identity: browser.NaverIdentity{BlogID: "alice", BlogLabel: "Alice", Categories: []browser.NaverCategory{{ID: "7", Name: "Travel"}}}, ExecutorVersion: "postpilot-naver/1.0.0-signature", BrowserVersion: "Chrome/152.0", SignatureID: "signature"}, nil
+		},
+		Enroll: func(_ context.Context, apiURL, code, label string) (*postpilotv1.EnrollPublishingAgentResponse, error) {
+			if apiURL != draft.APIURL || code != "ABCD-EFGH" || label != "Test Chromium" {
+				t.Fatalf("unsafe enrollment inputs: %q %q %q", apiURL, code, label)
+			}
+			return &postpilotv1.EnrollPublishingAgentResponse{AgentId: "agent-1", AgentToken: "secret-token", LeaseTtlSeconds: 45}, nil
+		},
+		SyncProfile: func(_ context.Context, _, token string, request *postpilotv1.SyncAgentProfileRequest) (*postpilotv1.PublishingAgent, error) {
+			if token != "secret-token" {
+				t.Fatalf("token=%q", token)
+			}
+			synced = request
+			return &postpilotv1.PublishingAgent{Id: "agent-1", PlatformAccountId: "alice"}, nil
+		},
+	}
+	response := postSetup(t, server, url.Values{"action": {"pair"}, "draft_id": {id}, "device_code": {"ABCD-EFGH"}, "identity_confirmed": {"yes"}})
+	if !strings.Contains(response.Body.String(), "연결을 마쳤습니다") || synced == nil || synced.GetPlatformAccountId() != "alice" || synced.GetBrowserLabel() != "Test Chromium · Chrome/152.0" || synced.GetExecutorVersion() != "postpilot-naver/1.0.0-signature" || !synced.GetCompatibilityReady() {
+		t.Fatalf("response=%s sync=%+v", response.Body.String(), synced)
+	}
+	stored, err := config.Load(paths)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stored.Drafts) != 0 || len(stored.Connections) != 1 || !stored.Connections[0].Armed || stored.Connections[0].PlatformAccountID != "alice" || stored.Connections[0].ProfileDir != draft.ProfileDir || stored.Connections[0].WorkDir != draft.WorkDir {
+		t.Fatalf("stored=%+v", stored)
+	}
+	if keychain["agent-agent-1"] != "secret-token" {
+		t.Fatal("agent token did not use the isolated Keychain account")
 	}
 }
 

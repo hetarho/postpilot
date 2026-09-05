@@ -24,15 +24,19 @@ const (
 )
 
 type Connection struct {
-	ID              string `json:"id"`
-	Label           string `json:"label"`
-	APIURL          string `json:"api_url"`
-	AgentID         string `json:"agent_id"`
-	KeychainAccount string `json:"keychain_account"`
-	BrowserBinary   string `json:"browser_binary"`
-	BrowserLabel    string `json:"browser_label"`
-	ProfileDir      string `json:"profile_dir"`
-	WorkDir         string `json:"work_dir,omitempty"`
+	ID                     string `json:"id"`
+	Label                  string `json:"label"`
+	APIURL                 string `json:"api_url"`
+	AgentID                string `json:"agent_id"`
+	KeychainAccount        string `json:"keychain_account"`
+	BrowserBinary          string `json:"browser_binary"`
+	BrowserLabel           string `json:"browser_label"`
+	PlatformAccountID      string `json:"platform_account_id,omitempty"`
+	BrowserVersion         string `json:"browser_version,omitempty"`
+	CompatibilitySignature string `json:"compatibility_signature,omitempty"`
+	ExecutorVersion        string `json:"executor_version,omitempty"`
+	ProfileDir             string `json:"profile_dir"`
+	WorkDir                string `json:"work_dir,omitempty"`
 	// DraftID is present while enrollment/profile sync is incomplete. It is removed with
 	// the local draft only when activation succeeds; older armed connections decode empty.
 	DraftID         string `json:"draft_id,omitempty"`

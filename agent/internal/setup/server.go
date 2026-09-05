@@ -21,6 +21,7 @@ import (
 	"github.com/postpilot/agent/internal/config"
 	"github.com/postpilot/agent/internal/credentials"
 	postpilotv1 "github.com/postpilot/agent/internal/gen/postpilot/v1"
+	"github.com/postpilot/agent/internal/naver"
 	"github.com/postpilot/agent/internal/postpilot"
 )
 
@@ -33,17 +34,20 @@ var setupPage = template.Must(template.New("setup-v2").Parse(`<!doctype html>
 {{if .Message}}<div class="message">{{.Message}}</div>{{end}}{{if .Error}}<div class="error">{{.Error}}</div>{{end}}
 {{if .Drafts}}<section><h2>미완료 연결</h2><p>연결 코드가 만료되거나 Mac을 재시작해도 이 초안의 전용 브라우저 프로필은 그대로 유지됩니다.</p>
 {{range .Drafts}}<form class="card" method="post" action="/setup"><input type="hidden" name="nonce" value="{{$.Nonce}}"><input type="hidden" name="draft_id" value="{{.ID}}"><p><strong>{{.Label}}</strong> · {{.BrowserLabel}}</p><p>{{.APIURL}}</p><button class="secondary" name="action" value="login">같은 전용 네이버 로그인 열기</button><label>현재 연결 코드<input name="device_code" autocomplete="one-time-code"></label><label class="check"><input type="checkbox" name="identity_confirmed" value="yes"><span>이 전용 브라우저에서 네이버 로그인을 마쳤습니다.</span></label><button name="action" value="pair">이 초안으로 연결 완료</button></form>{{end}}</section>{{end}}
-{{if .Connections}}<section><h2>기존 연결 로그인 복구</h2><p>로그인 만료, CAPTCHA 또는 2단계 인증이 발생한 연결의 같은 전용 프로필을 다시 엽니다.</p>{{range .Connections}}<form class="card" method="post" action="/setup"><input type="hidden" name="nonce" value="{{$.Nonce}}"><input type="hidden" name="connection_id" value="{{.ID}}"><p><strong>{{.Label}}</strong> · {{.BrowserLabel}}</p><button class="secondary" name="action" value="repair">이 연결의 네이버 로그인 열기</button></form>{{end}}</section>{{end}}
+{{if .Connections}}<section><h2>기존 연결 로그인 복구</h2><p>로그인 만료, CAPTCHA 또는 2단계 인증이 발생한 연결의 같은 전용 프로필을 다시 엽니다.</p>{{range .Connections}}<form class="card" method="post" action="/setup"><input type="hidden" name="nonce" value="{{$.Nonce}}"><input type="hidden" name="connection_id" value="{{.ID}}"><p><strong>{{.Label}}</strong> · {{.BrowserLabel}}</p>{{if .Status}}<p>{{.Status}}</p>{{end}}<button class="secondary" name="action" value="repair">이 연결의 네이버 로그인 열기</button><button name="action" value="reprobe">로그인 후 호환성 다시 검사</button></form>{{end}}</section>{{end}}
 <h2>새 연결</h2><p>새 연결을 누를 때만 별도의 쿠키 저장소가 만들어집니다.</p><form method="post" action="/setup"><input type="hidden" name="nonce" value="{{.Nonce}}"><label>Postpilot API URL<input name="api_url" type="url" required value="{{.Values.APIURL}}"></label><label>연결 이름<input name="label" required value="{{.Values.Label}}"></label><label>전용 브라우저<select name="browser_binary" required>{{range .Browsers}}<option value="{{.Binary}}" {{if eq $.Values.BrowserBinary .Binary}}selected{{end}}>{{.Label}}</option>{{end}}</select></label><button name="action" value="new">새 연결 초안 만들기</button></form></body></html>`))
 
 type Server struct {
 	Paths            config.Paths
 	Keychain         credentials.Store
 	OpenLogin        func(binary, profileDir string) error
+	OpenEditor       func(binary, profileDir string) (*browser.Session, error)
 	SupportedBrowser func(string) (browser.Installation, bool)
 	NewDraftID       func() (string, error)
 	Now              func() time.Time
-	ProbePublisher   func(context.Context, string) (string, error)
+	ProbePublisher   func(context.Context, string) (naver.Result, error)
+	Enroll           func(context.Context, string, string, string) (*postpilotv1.EnrollPublishingAgentResponse, error)
+	SyncProfile      func(context.Context, string, string, *postpilotv1.SyncAgentProfileRequest) (*postpilotv1.PublishingAgent, error)
 	nonce            string
 	host             string
 	completed        chan struct{}
@@ -95,7 +99,7 @@ type pageData struct {
 }
 
 type repairConnection struct {
-	ID, Label, BrowserLabel string
+	ID, Label, BrowserLabel, Status string
 }
 
 type draftView struct {
@@ -123,12 +127,16 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	action := request.FormValue("action")
-	if action != "new" && action != "login" && action != "pair" && action != "repair" {
+	if action != "new" && action != "login" && action != "pair" && action != "repair" && action != "reprobe" {
 		http.Error(writer, "invalid action", http.StatusBadRequest)
 		return
 	}
 	if action == "repair" {
 		s.repair(writer, request)
+		return
+	}
+	if action == "reprobe" {
+		s.reprobe(writer, request)
 		return
 	}
 	values := formValues{APIURL: request.FormValue("api_url"), DeviceCode: request.FormValue("device_code"), Label: request.FormValue("label"), BrowserBinary: request.FormValue("browser_binary")}
@@ -193,25 +201,24 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		s.render(writer, data)
 		return
 	}
-	browserSession, err := browser.OpenEditor(values.BrowserBinary, draft.ProfileDir)
+	openEditor := s.OpenEditor
+	if openEditor == nil {
+		openEditor = browser.OpenEditor
+	}
+	browserSession, err := openEditor(values.BrowserBinary, draft.ProfileDir)
 	if err != nil {
 		data.Error = "전용 브라우저에서 네이버 글쓰기 화면을 열지 못했어요: " + err.Error() + ". 로그인 또는 보안 확인이 필요한지 확인한 뒤 다시 시도하세요."
 		s.render(writer, data)
 		return
 	}
 	defer browserSession.Close()
-	version, err := s.ProbePublisher(request.Context(), browserSession.CDPURL)
-	if err != nil || strings.TrimSpace(version) == "" {
-		data.Error = "Naver 퍼블리셔 호환성 검사를 통과하지 못해 연결을 활성화하지 않았어요."
+	probe, err := s.ProbePublisher(request.Context(), browserSession.CDPURL)
+	if err != nil || strings.TrimSpace(probe.ExecutorVersion) == "" || strings.TrimSpace(probe.Identity.BlogID) == "" {
+		data.Error = "Naver 퍼블리셔 호환성 검사를 통과하지 못해 연결을 활성화하지 않았어요: " + probeError(err)
 		s.render(writer, data)
 		return
 	}
-	identity, err := browser.ObserveNaverIdentity(request.Context(), browserSession.CDPURL)
-	if err != nil {
-		data.Error = "로그인한 네이버 블로그 정보를 자동으로 확인하지 못했어요: " + err.Error()
-		s.render(writer, data)
-		return
-	}
+	identity := probe.Identity
 	categories := make([]*postpilotv1.PublishingCategory, 0, len(identity.Categories))
 	for _, category := range identity.Categories {
 		categories = append(categories, &postpilotv1.PublishingCategory{Id: category.ID, Name: category.Name})
@@ -248,7 +255,11 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 	} else {
-		enrollment, enrollErr := postpilot.Enroll(request.Context(), values.APIURL, values.DeviceCode, installation.Label)
+		enroll := s.Enroll
+		if enroll == nil {
+			enroll = postpilot.Enroll
+		}
+		enrollment, enrollErr := enroll(request.Context(), values.APIURL, values.DeviceCode, installation.Label)
 		if enrollErr != nil {
 			data.Error = "연결 코드를 사용할 수 없어요: " + enrollErr.Error()
 			s.render(writer, data)
@@ -285,8 +296,7 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	client := postpilot.New(values.APIURL, agentToken)
-	agent, err := client.SyncProfile(request.Context(), &postpilotv1.SyncAgentProfileRequest{PlatformAccountId: identity.BlogID, PlatformAccountLabel: identity.BlogLabel, BrowserLabel: installation.Label, Categories: categories, DefaultCategoryId: defaultCategoryID, DefaultVisibility: postpilotv1.PublishVisibility_PUBLISH_VISIBILITY_PUBLIC, CompatibilityReady: true, ExecutorVersion: version})
+	agent, err := s.syncProfile(request.Context(), values.APIURL, agentToken, &postpilotv1.SyncAgentProfileRequest{PlatformAccountId: identity.BlogID, PlatformAccountLabel: identity.BlogLabel, BrowserLabel: installation.Label + " · " + probe.BrowserVersion, Categories: categories, DefaultCategoryId: defaultCategoryID, DefaultVisibility: postpilotv1.PublishVisibility_PUBLISH_VISIBILITY_PUBLIC, CompatibilityReady: true, ExecutorVersion: probe.ExecutorVersion})
 	if err != nil {
 		data.Error = "서버에 Mac 프로필을 확인하지 못했어요. 미완료 연결은 이 Mac에 안전하게 보관했으니 같은 연결 코드로 다시 시도하세요: " + err.Error()
 		s.render(writer, data)
@@ -301,6 +311,10 @@ func (s Server) submit(writer http.ResponseWriter, request *http.Request) {
 	connection.Label = draft.Label
 	connection.BrowserBinary = draft.BrowserBinary
 	connection.BrowserLabel = installation.Label
+	connection.PlatformAccountID = identity.BlogID
+	connection.BrowserVersion = probe.BrowserVersion
+	connection.CompatibilitySignature = probe.SignatureID
+	connection.ExecutorVersion = probe.ExecutorVersion
 	connection.ProfileDir = draft.ProfileDir
 	connection.WorkDir = draft.WorkDir
 	if err := activatePending(s.Paths, cfg, pendingIndex, draftIndex, connection); err != nil {
@@ -486,8 +500,12 @@ func (s Server) render(writer http.ResponseWriter, data pageData) {
 		}
 		for _, connection := range cfg.Connections {
 			if connection.Armed {
+				status := "호환성 재검사 필요"
+				if connection.BrowserVersion != "" && connection.CompatibilitySignature != "" {
+					status = connection.BrowserVersion + " · driver " + connection.CompatibilitySignature
+				}
 				data.Connections = append(data.Connections, repairConnection{
-					ID: connection.ID, Label: connection.Label, BrowserLabel: connection.BrowserLabel,
+					ID: connection.ID, Label: connection.Label, BrowserLabel: connection.BrowserLabel, Status: status,
 				})
 			}
 		}
@@ -550,4 +568,96 @@ func (s Server) repair(writer http.ResponseWriter, request *http.Request) {
 	}
 	data.Error = "복구할 활성 연결을 찾지 못했어요."
 	s.render(writer, data)
+}
+
+func (s Server) reprobe(writer http.ResponseWriter, request *http.Request) {
+	data := pageData{Browsers: browser.Discover(), Values: formValues{APIURL: config.DefaultAPIURL, Label: "내 Mac"}}
+	cfg, err := config.Load(s.Paths)
+	if err != nil {
+		data.Error = "저장된 연결을 읽지 못했어요: " + err.Error()
+		s.render(writer, data)
+		return
+	}
+	connectionID := strings.TrimSpace(request.FormValue("connection_id"))
+	for index := range cfg.Connections {
+		connection := &cfg.Connections[index]
+		if connection.ID != connectionID || !connection.Armed {
+			continue
+		}
+		if s.ProbePublisher == nil {
+			data.Error = "호환성 검사기가 없어 기존 연결을 준비 상태로 갱신하지 않았어요."
+			s.render(writer, data)
+			return
+		}
+		openEditor := s.OpenEditor
+		if openEditor == nil {
+			openEditor = browser.OpenEditor
+		}
+		session, openErr := openEditor(connection.BrowserBinary, connection.ProfileDir)
+		if openErr != nil {
+			data.Error = "기존 전용 프로필을 열지 못해 준비 상태를 갱신하지 않았어요: " + openErr.Error()
+			s.render(writer, data)
+			return
+		}
+		defer session.Close()
+		probe, probeErr := s.ProbePublisher(request.Context(), session.CDPURL)
+		if probeErr != nil {
+			data.Error = "호환성 재검사를 통과하지 못해 준비 상태를 갱신하지 않았어요: " + probeErr.Error()
+			s.render(writer, data)
+			return
+		}
+		if connection.PlatformAccountID != "" && connection.PlatformAccountID != probe.Identity.BlogID {
+			data.Error = "기존 연결과 다른 네이버 블로그가 선택되어 준비 상태를 갱신하지 않았어요. 같은 계정으로 다시 로그인해 주세요."
+			s.render(writer, data)
+			return
+		}
+		token, tokenErr := s.Keychain.Get(request.Context(), connection.KeychainAccount)
+		if tokenErr != nil {
+			data.Error = "기존 연결의 Keychain 토큰을 찾지 못해 준비 상태를 갱신하지 않았어요."
+			s.render(writer, data)
+			return
+		}
+		categories := make([]*postpilotv1.PublishingCategory, 0, len(probe.Identity.Categories))
+		for _, category := range probe.Identity.Categories {
+			categories = append(categories, &postpilotv1.PublishingCategory{Id: category.ID, Name: category.Name})
+		}
+		if len(categories) == 0 {
+			data.Error = "네이버 카테고리를 확인하지 못해 준비 상태를 갱신하지 않았어요."
+			s.render(writer, data)
+			return
+		}
+		agent, syncErr := s.syncProfile(request.Context(), connection.APIURL, token, &postpilotv1.SyncAgentProfileRequest{PlatformAccountId: probe.Identity.BlogID, PlatformAccountLabel: probe.Identity.BlogLabel, BrowserLabel: connection.BrowserLabel + " · " + probe.BrowserVersion, Categories: categories, DefaultCategoryId: categories[0].Id, DefaultVisibility: postpilotv1.PublishVisibility_PUBLISH_VISIBILITY_PUBLIC, CompatibilityReady: true, ExecutorVersion: probe.ExecutorVersion})
+		if syncErr != nil || agent.GetId() != connection.AgentID || (agent.GetPlatformAccountId() != "" && agent.GetPlatformAccountId() != probe.Identity.BlogID) {
+			data.Error = "서버가 기존 연결과 같은 에이전트·네이버 계정을 확인하지 않아 준비 상태를 갱신하지 않았어요."
+			s.render(writer, data)
+			return
+		}
+		connection.PlatformAccountID = probe.Identity.BlogID
+		connection.BrowserVersion = probe.BrowserVersion
+		connection.CompatibilitySignature = probe.SignatureID
+		connection.ExecutorVersion = probe.ExecutorVersion
+		if err := config.Save(s.Paths, cfg); err != nil {
+			data.Error = "재검사 결과를 안전하게 저장하지 못했어요: " + err.Error()
+		} else {
+			data.Message = connection.Label + " 연결의 계정·카테고리·브라우저·드라이버 호환성을 다시 확인했습니다."
+		}
+		s.render(writer, data)
+		return
+	}
+	data.Error = "재검사할 활성 연결을 찾지 못했어요."
+	s.render(writer, data)
+}
+
+func (s Server) syncProfile(ctx context.Context, apiURL, token string, request *postpilotv1.SyncAgentProfileRequest) (*postpilotv1.PublishingAgent, error) {
+	if s.SyncProfile != nil {
+		return s.SyncProfile(ctx, apiURL, token, request)
+	}
+	return postpilot.New(apiURL, token).SyncProfile(ctx, request)
+}
+
+func probeError(err error) string {
+	if err == nil {
+		return "검사 결과가 완전하지 않습니다"
+	}
+	return err.Error()
 }

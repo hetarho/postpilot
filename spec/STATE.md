@@ -31,7 +31,7 @@
 | T001 | Price credit holds from each call's own completion budget | QUOTA GEN | - | done@260905 |
 | T002 | Give the write budget reasoning headroom and let the adapter disable reasoning | MODEL GEN QUOTA | T001 | done@260905 |
 | T003 | Persist the dedicated browser session across pairing retries | PUBLISH | - | done@260905 |
-| T004 | Mac pairing, profile setup and the non-publishing compatibility probe | PUBLISH | T003 | todo |
+| T004 | Mac pairing, profile setup and the non-publishing compatibility probe | PUBLISH | T003 | done@260905 |
 | T005 | The deterministic Naver publisher | PUBLISH EXPORT | T004 | todo |
 | T006 | Agent execution, the commit fence, readback and cleanup | PUBLISH | T005 | todo |
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | todo |
@@ -39,9 +39,11 @@
 | T009 | Pointer affordances for clickable controls | THEME | - | done@260905 |
 
 ## next
-- implement-task T004
+- implement-task T005
 
 ## log
+- 260905 T004 done (versioned non-publishing Naver compatibility probe, safe pairing and existing-connection re-probe; ARCH-27 passes)
+- 260905 T004 claimed (cx)
 - 260905 T003 done (durable local drafts preserve isolated browser sessions across code replacement and restart; ARCH-27 passes)
 - 260905 T003 claimed (cx)
 - 260905 T002 done (native-effort write headroom, explicit reasoning disable, and per-purpose truncation counts; every ARCH gate passes)

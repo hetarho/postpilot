@@ -15,6 +15,7 @@ import (
 	"github.com/postpilot/agent/internal/config"
 	"github.com/postpilot/agent/internal/credentials"
 	"github.com/postpilot/agent/internal/launchd"
+	"github.com/postpilot/agent/internal/naver"
 	"github.com/postpilot/agent/internal/postpilot"
 	"github.com/postpilot/agent/internal/publishing"
 	"github.com/postpilot/agent/internal/setup"
@@ -45,7 +46,7 @@ func run() error {
 	case "setup":
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
-		return (setup.Server{Paths: paths, Keychain: credentials.Keychain{}}).Run(ctx)
+		return (setup.Server{Paths: paths, Keychain: credentials.Keychain{}, ProbePublisher: naver.Probe}).Run(ctx)
 	case "run":
 		return runAgents(paths, nil)
 	case "install":

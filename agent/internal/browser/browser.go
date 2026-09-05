@@ -107,6 +107,14 @@ func Start(binary, profileDir, initialURL string) (*Session, error) {
 		}
 		return existing, nil
 	}
+	// A Chromium process can hold the profile lock before its CDP endpoint becomes
+	// reachable (or after the endpoint file goes stale). Never launch a competing
+	// process against the same cookie store; leave recovery to the visible setup UI.
+	if _, err := os.Lstat(filepath.Join(profileDir, "SingletonLock")); err == nil {
+		return nil, errors.New("dedicated browser profile is locked but its verified CDP endpoint is unavailable; close that browser and retry")
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("inspect dedicated browser profile lock: %w", err)
+	}
 	if err := os.Remove(filepath.Join(profileDir, devToolsActivePort)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}

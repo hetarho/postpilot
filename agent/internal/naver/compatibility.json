@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "driver_version": "1.0.0",
+  "signature_id": "smarteditor-one-20260905-a1",
+  "protocol_version": "1.3",
+  "chromium_min_major": 136,
+  "chromium_max_major": 152,
+  "required_domains": ["Accessibility", "DOM", "Page", "Runtime", "Schema"],
+  "required_ax_roles": ["RootWebArea"],
+  "capabilities": [
+    "sole-bound-target",
+    "full-accessibility-tree",
+    "smarteditor-root",
+    "semantic-title-body-image-controls",
+    "publish-settings-category-visibility-tags",
+    "unique-final-control",
+    "readback-url-and-accessibility"
+  ]
+}
