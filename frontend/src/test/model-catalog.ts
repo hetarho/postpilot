@@ -40,6 +40,18 @@ export interface FakeCatalogEntry {
     { calls: bigint; reasoningTokens: bigint; completionTokens: bigint }
   >
   sourceCreatedAt?: bigint
+  /** What the source publishes about this model's reasoning (change 27). Omitted means a
+   *  model that reasons but whose accepted values the source does not list — the common
+   *  shape, and the one that keeps the control offering all eight values. */
+  reasoning?: {
+    reasons?: boolean
+    efforts?: string[]
+    defaultEffort?: string
+    mandatory?: boolean
+    nativeEffort?: boolean
+    maxTokens?: boolean
+    drifted?: boolean
+  }
 }
 
 export interface FakeModelCatalogOptions {
@@ -84,6 +96,21 @@ export function registerModelCatalogService(
         listed: entry.listed ?? true,
         reasoningEffort: entry.reasoningEffort?.[purpose] ?? '',
         reasoningSpend: entry.reasoningSpend?.[purpose],
+        reasons: entry.reasoning?.reasons ?? true,
+        reasoningEfforts: entry.reasoning?.efforts ?? [],
+        reasoningDefaultEffort: entry.reasoning?.defaultEffort ?? '',
+        reasoningMandatory: entry.reasoning?.mandatory ?? false,
+        reasoningNativeEffort: entry.reasoning?.nativeEffort ?? false,
+        reasoningMaxTokens: entry.reasoning?.maxTokens ?? false,
+        // The server derives drift from the stored override against the live list; the fake
+        // does the same so a test cannot set a flag the data contradicts.
+        reasoningDrifted: driftedFrom(
+          entry.reasoningEffort?.[purpose] ?? '',
+          entry.reasoning?.efforts ?? [],
+        ),
+        // Like the server: an entry read live from the source is known by construction, and a
+        // failed fetch serves stored rows whose capability may predate this data.
+        reasoningKnown: !options.fetchFails,
         sourceCreatedAt: entry.sourceCreatedAt ?? 0n,
       })),
       fetchedAt: options.fetchFails ? '' : (options.fetchedAt ?? '2026-09-03T09:00:00Z'),
@@ -154,7 +181,25 @@ export function registerModelCatalogService(
         curated: true,
         purposes: written?.purposes ?? [],
         reasoningEffort: written?.reasoningEffort?.[req.purpose] ?? '',
+        reasons: written?.reasoning?.reasons ?? true,
+        reasoningEfforts: written?.reasoning?.efforts ?? [],
+        reasoningDefaultEffort: written?.reasoning?.defaultEffort ?? '',
+        reasoningMandatory: written?.reasoning?.mandatory ?? false,
+        reasoningNativeEffort: written?.reasoning?.nativeEffort ?? false,
+        reasoningMaxTokens: written?.reasoning?.maxTokens ?? false,
+        reasoningDrifted: driftedFrom(
+          written?.reasoningEffort?.[req.purpose] ?? '',
+          written?.reasoning?.efforts ?? [],
+        ),
+        reasoningKnown: true,
       },
     })
   })
+}
+
+/** The server's own drift rule: an override the model's published list no longer contains.
+ *  An empty list is unknown, so nothing drifts from it. */
+function driftedFrom(effort: string, efforts: readonly string[]): boolean {
+  if (effort === '' || effort === 'unset' || efforts.length === 0) return false
+  return !efforts.includes(effort)
 }

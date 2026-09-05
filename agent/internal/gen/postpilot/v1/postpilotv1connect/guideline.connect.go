@@ -45,6 +45,12 @@ const (
 	// GuidelineServiceDeleteGuidelineProcedure is the fully-qualified name of the GuidelineService's
 	// DeleteGuideline RPC.
 	GuidelineServiceDeleteGuidelineProcedure = "/postpilot.v1.GuidelineService/DeleteGuideline"
+	// GuidelineServiceListGuidelineCandidatesProcedure is the fully-qualified name of the
+	// GuidelineService's ListGuidelineCandidates RPC.
+	GuidelineServiceListGuidelineCandidatesProcedure = "/postpilot.v1.GuidelineService/ListGuidelineCandidates"
+	// GuidelineServiceDismissGuidelineCandidateProcedure is the fully-qualified name of the
+	// GuidelineService's DismissGuidelineCandidate RPC.
+	GuidelineServiceDismissGuidelineCandidateProcedure = "/postpilot.v1.GuidelineService/DismissGuidelineCandidate"
 )
 
 // GuidelineServiceClient is a client for the postpilot.v1.GuidelineService service.
@@ -53,6 +59,12 @@ type GuidelineServiceClient interface {
 	CreateGuideline(context.Context, *connect.Request[v1.CreateGuidelineRequest]) (*connect.Response[v1.CreateGuidelineResponse], error)
 	UpdateGuideline(context.Context, *connect.Request[v1.UpdateGuidelineRequest]) (*connect.Response[v1.UpdateGuidelineResponse], error)
 	DeleteGuideline(context.Context, *connect.Request[v1.DeleteGuidelineRequest]) (*connect.Response[v1.DeleteGuidelineResponse], error)
+	// The candidate review surface. A candidate is a completed revision's instruction,
+	// recorded verbatim — never learned, never generalized, and never injected into a
+	// prompt. Approval is CreateGuideline with from_candidate_id, not a procedure of its
+	// own: the create already owns every field rule and every refusal an approval needs.
+	ListGuidelineCandidates(context.Context, *connect.Request[v1.ListGuidelineCandidatesRequest]) (*connect.Response[v1.ListGuidelineCandidatesResponse], error)
+	DismissGuidelineCandidate(context.Context, *connect.Request[v1.DismissGuidelineCandidateRequest]) (*connect.Response[v1.DismissGuidelineCandidateResponse], error)
 }
 
 // NewGuidelineServiceClient constructs a client for the postpilot.v1.GuidelineService service. By
@@ -90,15 +102,29 @@ func NewGuidelineServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(guidelineServiceMethods.ByName("DeleteGuideline")),
 			connect.WithClientOptions(opts...),
 		),
+		listGuidelineCandidates: connect.NewClient[v1.ListGuidelineCandidatesRequest, v1.ListGuidelineCandidatesResponse](
+			httpClient,
+			baseURL+GuidelineServiceListGuidelineCandidatesProcedure,
+			connect.WithSchema(guidelineServiceMethods.ByName("ListGuidelineCandidates")),
+			connect.WithClientOptions(opts...),
+		),
+		dismissGuidelineCandidate: connect.NewClient[v1.DismissGuidelineCandidateRequest, v1.DismissGuidelineCandidateResponse](
+			httpClient,
+			baseURL+GuidelineServiceDismissGuidelineCandidateProcedure,
+			connect.WithSchema(guidelineServiceMethods.ByName("DismissGuidelineCandidate")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // guidelineServiceClient implements GuidelineServiceClient.
 type guidelineServiceClient struct {
-	listGuidelines  *connect.Client[v1.ListGuidelinesRequest, v1.ListGuidelinesResponse]
-	createGuideline *connect.Client[v1.CreateGuidelineRequest, v1.CreateGuidelineResponse]
-	updateGuideline *connect.Client[v1.UpdateGuidelineRequest, v1.UpdateGuidelineResponse]
-	deleteGuideline *connect.Client[v1.DeleteGuidelineRequest, v1.DeleteGuidelineResponse]
+	listGuidelines            *connect.Client[v1.ListGuidelinesRequest, v1.ListGuidelinesResponse]
+	createGuideline           *connect.Client[v1.CreateGuidelineRequest, v1.CreateGuidelineResponse]
+	updateGuideline           *connect.Client[v1.UpdateGuidelineRequest, v1.UpdateGuidelineResponse]
+	deleteGuideline           *connect.Client[v1.DeleteGuidelineRequest, v1.DeleteGuidelineResponse]
+	listGuidelineCandidates   *connect.Client[v1.ListGuidelineCandidatesRequest, v1.ListGuidelineCandidatesResponse]
+	dismissGuidelineCandidate *connect.Client[v1.DismissGuidelineCandidateRequest, v1.DismissGuidelineCandidateResponse]
 }
 
 // ListGuidelines calls postpilot.v1.GuidelineService.ListGuidelines.
@@ -121,12 +147,28 @@ func (c *guidelineServiceClient) DeleteGuideline(ctx context.Context, req *conne
 	return c.deleteGuideline.CallUnary(ctx, req)
 }
 
+// ListGuidelineCandidates calls postpilot.v1.GuidelineService.ListGuidelineCandidates.
+func (c *guidelineServiceClient) ListGuidelineCandidates(ctx context.Context, req *connect.Request[v1.ListGuidelineCandidatesRequest]) (*connect.Response[v1.ListGuidelineCandidatesResponse], error) {
+	return c.listGuidelineCandidates.CallUnary(ctx, req)
+}
+
+// DismissGuidelineCandidate calls postpilot.v1.GuidelineService.DismissGuidelineCandidate.
+func (c *guidelineServiceClient) DismissGuidelineCandidate(ctx context.Context, req *connect.Request[v1.DismissGuidelineCandidateRequest]) (*connect.Response[v1.DismissGuidelineCandidateResponse], error) {
+	return c.dismissGuidelineCandidate.CallUnary(ctx, req)
+}
+
 // GuidelineServiceHandler is an implementation of the postpilot.v1.GuidelineService service.
 type GuidelineServiceHandler interface {
 	ListGuidelines(context.Context, *connect.Request[v1.ListGuidelinesRequest]) (*connect.Response[v1.ListGuidelinesResponse], error)
 	CreateGuideline(context.Context, *connect.Request[v1.CreateGuidelineRequest]) (*connect.Response[v1.CreateGuidelineResponse], error)
 	UpdateGuideline(context.Context, *connect.Request[v1.UpdateGuidelineRequest]) (*connect.Response[v1.UpdateGuidelineResponse], error)
 	DeleteGuideline(context.Context, *connect.Request[v1.DeleteGuidelineRequest]) (*connect.Response[v1.DeleteGuidelineResponse], error)
+	// The candidate review surface. A candidate is a completed revision's instruction,
+	// recorded verbatim — never learned, never generalized, and never injected into a
+	// prompt. Approval is CreateGuideline with from_candidate_id, not a procedure of its
+	// own: the create already owns every field rule and every refusal an approval needs.
+	ListGuidelineCandidates(context.Context, *connect.Request[v1.ListGuidelineCandidatesRequest]) (*connect.Response[v1.ListGuidelineCandidatesResponse], error)
+	DismissGuidelineCandidate(context.Context, *connect.Request[v1.DismissGuidelineCandidateRequest]) (*connect.Response[v1.DismissGuidelineCandidateResponse], error)
 }
 
 // NewGuidelineServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -160,6 +202,18 @@ func NewGuidelineServiceHandler(svc GuidelineServiceHandler, opts ...connect.Han
 		connect.WithSchema(guidelineServiceMethods.ByName("DeleteGuideline")),
 		connect.WithHandlerOptions(opts...),
 	)
+	guidelineServiceListGuidelineCandidatesHandler := connect.NewUnaryHandler(
+		GuidelineServiceListGuidelineCandidatesProcedure,
+		svc.ListGuidelineCandidates,
+		connect.WithSchema(guidelineServiceMethods.ByName("ListGuidelineCandidates")),
+		connect.WithHandlerOptions(opts...),
+	)
+	guidelineServiceDismissGuidelineCandidateHandler := connect.NewUnaryHandler(
+		GuidelineServiceDismissGuidelineCandidateProcedure,
+		svc.DismissGuidelineCandidate,
+		connect.WithSchema(guidelineServiceMethods.ByName("DismissGuidelineCandidate")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.GuidelineService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case GuidelineServiceListGuidelinesProcedure:
@@ -170,6 +224,10 @@ func NewGuidelineServiceHandler(svc GuidelineServiceHandler, opts ...connect.Han
 			guidelineServiceUpdateGuidelineHandler.ServeHTTP(w, r)
 		case GuidelineServiceDeleteGuidelineProcedure:
 			guidelineServiceDeleteGuidelineHandler.ServeHTTP(w, r)
+		case GuidelineServiceListGuidelineCandidatesProcedure:
+			guidelineServiceListGuidelineCandidatesHandler.ServeHTTP(w, r)
+		case GuidelineServiceDismissGuidelineCandidateProcedure:
+			guidelineServiceDismissGuidelineCandidateHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -193,4 +251,12 @@ func (UnimplementedGuidelineServiceHandler) UpdateGuideline(context.Context, *co
 
 func (UnimplementedGuidelineServiceHandler) DeleteGuideline(context.Context, *connect.Request[v1.DeleteGuidelineRequest]) (*connect.Response[v1.DeleteGuidelineResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.GuidelineService.DeleteGuideline is not implemented"))
+}
+
+func (UnimplementedGuidelineServiceHandler) ListGuidelineCandidates(context.Context, *connect.Request[v1.ListGuidelineCandidatesRequest]) (*connect.Response[v1.ListGuidelineCandidatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.GuidelineService.ListGuidelineCandidates is not implemented"))
+}
+
+func (UnimplementedGuidelineServiceHandler) DismissGuidelineCandidate(context.Context, *connect.Request[v1.DismissGuidelineCandidateRequest]) (*connect.Response[v1.DismissGuidelineCandidateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.GuidelineService.DismissGuidelineCandidate is not implemented"))
 }

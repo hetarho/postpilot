@@ -443,7 +443,7 @@ func TestLoadTemplateLimitDefaultsAndValidation(t *testing.T) {
 
 func TestLoadGuidelineLimitDefaultsAndValidation(t *testing.T) {
 	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
-	names := []string{"GUIDELINE_TEXT_MAX_CHARS", "GUIDELINE_MAX_PER_ACCOUNT"}
+	names := []string{"GUIDELINE_TEXT_MAX_CHARS", "GUIDELINE_MAX_PER_ACCOUNT", "GUIDELINE_CANDIDATE_MAX_PENDING"}
 	for _, name := range names {
 		t.Setenv(name, "")
 	}
@@ -451,7 +451,7 @@ func TestLoadGuidelineLimitDefaultsAndValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.GuidelineTextMaxChars != 300 || cfg.GuidelineMaxPerAccount != 100 {
+	if cfg.GuidelineTextMaxChars != 300 || cfg.GuidelineMaxPerAccount != 100 || cfg.GuidelineCandidateMaxPending != 50 {
 		t.Fatalf("guideline limit defaults = %+v", cfg)
 	}
 

@@ -52,6 +52,7 @@ export const errors = {
   TEMPLATE_LIMIT_REACHED:
     '템플릿을 더 만들 수 없어요. 쓰지 않는 템플릿을 지운 뒤 다시 시도해 주세요.',
   GUIDELINE_NOT_FOUND: '지침을 찾을 수 없어요.',
+  GUIDELINE_CANDIDATE_NOT_FOUND: '후보 지침을 찾을 수 없어요.',
   GUIDELINE_TEXT_REQUIRED: '지침 내용을 입력해 주세요.',
   GUIDELINE_TEXT_TOO_LONG: '지침은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
   GUIDELINE_TEXT_TAKEN: '이미 같은 지침이 있어요.',

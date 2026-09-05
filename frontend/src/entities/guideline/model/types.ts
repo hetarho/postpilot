@@ -24,6 +24,27 @@ export interface Guideline {
   updatedAt: string
 }
 
+/** A recorded revision instruction awaiting review (change 26). It is a receipt for something the
+ *  user typed — nothing rewrites, summarizes, generalizes or ranks it, and it reaches no prompt
+ *  until it is approved as a guideline.
+ *
+ *  It carries no scope: scope is a durable decision about every future post, so it is made at
+ *  approval time. That absence is what lets recording be automatic. */
+export interface GuidelineCandidate {
+  id: string
+  /** Stored at the REVISION bound (500), which is wider than a guideline's, so a long correction
+   *  is kept rather than refused. Approving one past the guideline bound is refused by the
+   *  server, which is why a candidate opens for editing with the live count. */
+  text: string
+  /** Empty when the source post was deleted: the text survives, the link does not. */
+  postSlug: string
+  /** How many completed revisions carried this exact text — the signal that a one-off correction
+   *  has become a standing rule. */
+  occurrences: number
+  firstSeenAt: string
+  lastSeenAt: string
+}
+
 /** The whole scope as one value, because a scope is a kind plus a set: an edit either leaves it
  *  alone or replaces both halves together. */
 export interface GuidelineScope {

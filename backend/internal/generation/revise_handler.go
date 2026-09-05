@@ -87,6 +87,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 		return fmt.Errorf("persist revised content: %w", err)
 	}
 	s.recordVersionSample(ctx, current.UserID, voiceID, filtered)
+	s.recordGuidelineCandidate(ctx, current.UserID, current.Slug, payload.Instruction)
 	progress("write", 1, 1)
 	return nil
 }

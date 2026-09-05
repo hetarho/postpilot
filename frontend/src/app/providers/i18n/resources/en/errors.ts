@@ -57,6 +57,7 @@ export const errors = {
   TEMPLATE_LIMIT_REACHED:
     'You cannot add another template. Delete one you no longer use and try again.',
   GUIDELINE_NOT_FOUND: 'Could not find the guideline.',
+  GUIDELINE_CANDIDATE_NOT_FOUND: 'Could not find the guideline candidate.',
   GUIDELINE_TEXT_REQUIRED: 'Enter the guideline text.',
   GUIDELINE_TEXT_TOO_LONG:
     'A guideline must be no more than {{max}} characters. It is currently {{actual}}.',

@@ -1505,3 +1505,160 @@ func TestMigration0019CreatesCreditLotsAndWidensTheLadder(t *testing.T) {
 		t.Errorf("foreign-key violations = %d, want none", violations)
 	}
 }
+
+// Job 54 A13: migration 0023 creates the candidate table and nothing else. It seeds nothing
+// and backfills nothing — there is no revision history to reconstruct — so an existing
+// account reads as having no candidates, and every guideline it holds is untouched.
+func TestMigration0023CreatesGuidelineCandidatesWithoutTouchingGuidelines(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	const at = "2026-09-05T00:00:00.000000000Z"
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO users(id, password_hash, plan, created_at) VALUES('alice','hash','free',?)`, at,
+	); err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO guidelines(id, user_id, text, scope, created_at, updated_at)
+		 VALUES('g1','alice','CCTV 언급 금지','global',?,?)`, at, at,
+	); err != nil {
+		t.Fatalf("seed guideline: %v", err)
+	}
+	var candidates int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guideline_candidates`).Scan(&candidates); err != nil || candidates != 0 {
+		t.Fatalf("0023 seeded rows: count=%d err=%v", candidates, err)
+	}
+	for _, column := range []string{"post_slug", "status", "occurrences", "first_seen_at", "last_seen_at"} {
+		var found int
+		if err := handle.Reader.QueryRow(
+			`SELECT count(*) FROM pragma_table_info('guideline_candidates') WHERE name = ?`, column,
+		).Scan(&found); err != nil || found != 1 {
+			t.Fatalf("guideline_candidates.%s missing: count=%d err=%v", column, found, err)
+		}
+	}
+	// post_slug carries no foreign key by design: deleting the post must leave the text.
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO guideline_candidates(id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at)
+		 VALUES('c1','alice','광고 같아','gone-post','pending',1,?,?)`, at, at,
+	); err != nil {
+		t.Fatalf("a candidate naming a nonexistent post was refused: %v", err)
+	}
+	// Exact-text dedup per account is a constraint, not a service check.
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO guideline_candidates(id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at)
+		 VALUES('c2','alice','광고 같아',NULL,'pending',1,?,?)`, at, at,
+	); err == nil {
+		t.Fatal("a duplicate candidate text was accepted within the account")
+	}
+	// The status CHECK is the aggregate's, not the caller's.
+	if _, err := handle.Writer.Exec(
+		`INSERT INTO guideline_candidates(id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at)
+		 VALUES('c3','alice','다른 지침',NULL,'maybe',1,?,?)`, at, at,
+	); err == nil {
+		t.Fatal("an unknown candidate status was accepted")
+	}
+	// The guideline the account already held is exactly as it was.
+	var text, scope string
+	if err := handle.Reader.QueryRow(`SELECT text, scope FROM guidelines WHERE id='g1'`).Scan(&text, &scope); err != nil {
+		t.Fatal(err)
+	}
+	if text != "CCTV 언급 금지" || scope != "global" {
+		t.Fatalf("0023 changed an existing guideline: %q/%q", text, scope)
+	}
+
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.DownTo(ctx, 22); err != nil {
+		t.Fatal(err)
+	}
+	var tables int
+	if err := handle.Reader.QueryRow(
+		`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='guideline_candidates'`,
+	).Scan(&tables); err != nil || tables != 0 {
+		t.Fatalf("the rollback kept guideline_candidates: count=%d err=%v", tables, err)
+	}
+	// The rollback is about the candidate table only: the guideline is still there.
+	var guidelines int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM guidelines WHERE user_id='alice'`).Scan(&guidelines); err != nil || guidelines != 1 {
+		t.Fatalf("the rollback lost guidelines: count=%d err=%v", guidelines, err)
+	}
+}
+
+// Job 55 A1: migration 0024 adds the six reasoning columns to catalog_models, and their
+// defaults make every existing row read as UNKNOWN — which is what it is until the next
+// refresh. Nothing is backfilled and no curation is disturbed.
+func TestMigration0024AddsCatalogReasoningColumnsAsUnknown(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	columns := []string{
+		"reasons", "reasoning_efforts", "reasoning_default_effort",
+		"reasoning_mandatory", "reasoning_native_effort", "reasoning_max_tokens",
+	}
+	for _, column := range columns {
+		var found int
+		if err := handle.Reader.QueryRow(
+			`SELECT count(*) FROM pragma_table_info('catalog_models') WHERE name = ?`, column,
+		).Scan(&found); err != nil || found != 1 {
+			t.Fatalf("catalog_models.%s missing: count=%d err=%v", column, found, err)
+		}
+	}
+	// The seeded rows (migration 0018) predate this data, so every one of them must read as
+	// unknown rather than as "supports nothing" — a zero here is the absence of an answer.
+	var reasoning, lists int
+	if err := handle.Reader.QueryRow(
+		`SELECT count(*) FROM catalog_models WHERE reasons = 1 OR reasoning_mandatory = 1
+		    OR reasoning_native_effort = 1 OR reasoning_max_tokens = 1`,
+	).Scan(&reasoning); err != nil || reasoning != 0 {
+		t.Fatalf("0024 backfilled a reasoning flag: count=%d err=%v", reasoning, err)
+	}
+	if err := handle.Reader.QueryRow(
+		`SELECT count(*) FROM catalog_models WHERE reasoning_efforts != '' OR reasoning_default_effort != ''`,
+	).Scan(&lists); err != nil || lists != 0 {
+		t.Fatalf("0024 backfilled an effort list: count=%d err=%v", lists, err)
+	}
+	// The per-purpose override column change 24 added is untouched: this change constrains
+	// the value, it does not move it.
+	var override int
+	if err := handle.Reader.QueryRow(
+		`SELECT count(*) FROM pragma_table_info('catalog_model_purposes') WHERE name='reasoning_effort'`,
+	).Scan(&override); err != nil || override != 1 {
+		t.Fatalf("catalog_model_purposes.reasoning_effort disturbed: count=%d err=%v", override, err)
+	}
+
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.DownTo(ctx, 23); err != nil {
+		t.Fatal(err)
+	}
+	for _, column := range columns {
+		var found int
+		if err := handle.Reader.QueryRow(
+			`SELECT count(*) FROM pragma_table_info('catalog_models') WHERE name = ?`, column,
+		).Scan(&found); err != nil || found != 0 {
+			t.Fatalf("the rollback kept catalog_models.%s: count=%d err=%v", column, found, err)
+		}
+	}
+	// The rollback is about the columns only: the catalog is still there.
+	var models int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM catalog_models`).Scan(&models); err != nil || models != 12 {
+		t.Fatalf("the rollback lost catalog rows: count=%d err=%v", models, err)
+	}
+}

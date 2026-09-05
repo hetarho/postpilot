@@ -46,7 +46,7 @@ func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[post
 	if err != nil {
 		return nil, toConnectError("create guideline", err)
 	}
-	created, err := h.service.Create(ctx, userID, req.Msg.GetText(), scope, req.Msg.GetTemplateIds())
+	created, err := h.service.Create(ctx, userID, req.Msg.GetText(), scope, req.Msg.GetTemplateIds(), req.Msg.GetFromCandidateId())
 	if err != nil {
 		return nil, toConnectError("create guideline", err)
 	}
@@ -87,6 +87,36 @@ func (h *Handler) DeleteGuideline(ctx context.Context, req *connect.Request[post
 		return nil, toConnectError("delete guideline", err)
 	}
 	return connect.NewResponse(&postpilotv1.DeleteGuidelineResponse{}), nil
+}
+
+// ListGuidelineCandidates serves the review list. queue_full comes from the server because
+// the pending bound is server-side: the client relays it rather than predicting it, exactly
+// as it does for the account guideline cap.
+func (h *Handler) ListGuidelineCandidates(ctx context.Context, _ *connect.Request[postpilotv1.ListGuidelineCandidatesRequest]) (*connect.Response[postpilotv1.ListGuidelineCandidatesResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	candidates, queueFull, err := h.service.ListCandidates(ctx, userID)
+	if err != nil {
+		return nil, toConnectError("list guideline candidates", err)
+	}
+	out := make([]*postpilotv1.GuidelineCandidate, 0, len(candidates))
+	for _, c := range candidates {
+		out = append(out, toProtoCandidate(c))
+	}
+	return connect.NewResponse(&postpilotv1.ListGuidelineCandidatesResponse{Candidates: out, QueueFull: queueFull}), nil
+}
+
+func (h *Handler) DismissGuidelineCandidate(ctx context.Context, req *connect.Request[postpilotv1.DismissGuidelineCandidateRequest]) (*connect.Response[postpilotv1.DismissGuidelineCandidateResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.service.DismissCandidate(ctx, userID, req.Msg.GetId()); err != nil {
+		return nil, toConnectError("dismiss guideline candidate", err)
+	}
+	return connect.NewResponse(&postpilotv1.DismissGuidelineCandidateResponse{}), nil
 }
 
 func actingUser(ctx context.Context) (string, error) {
@@ -134,6 +164,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "scoped template not found", "GUIDELINE_TEMPLATE_NOT_FOUND", nil)
 	case errors.Is(err, guideline.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "guideline not found", "GUIDELINE_NOT_FOUND", nil)
+	case errors.Is(err, guideline.ErrCandidateNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "guideline candidate not found", "GUIDELINE_CANDIDATE_NOT_FOUND", nil)
 	default:
 		slog.Error(op+" failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
@@ -155,5 +187,13 @@ func toProtoGuideline(g guideline.Guideline) *postpilotv1.Guideline {
 	return &postpilotv1.Guideline{
 		Id: g.ID, Text: g.Text, Scope: scope, Templates: templates,
 		CreatedAt: g.CreatedAt.UTC().Format(timeLayout), UpdatedAt: g.UpdatedAt.UTC().Format(timeLayout),
+	}
+}
+
+func toProtoCandidate(c guideline.Candidate) *postpilotv1.GuidelineCandidate {
+	return &postpilotv1.GuidelineCandidate{
+		Id: c.ID, Text: c.Text, PostSlug: c.PostSlug, Occurrences: int32(c.Occurrences),
+		FirstSeenAt: c.FirstSeenAt.UTC().Format(timeLayout),
+		LastSeenAt:  c.LastSeenAt.UTC().Format(timeLayout),
 	}
 }

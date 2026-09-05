@@ -91,6 +91,21 @@ export function toAdminCatalogEntry(entry: ProtoCatalogEntry): AdminCatalogEntry
     // A server newer than this build could name an effort this one has no control for.
     // Falling back to "no override" is the honest render: it is what the stage policy does.
     reasoningEffort: isReasoningEffort(entry.reasoningEffort) ? entry.reasoningEffort : '',
+    reasoning: {
+      reasons: entry.reasons,
+      // Same defensive posture as the fallback above: a value a newer server publishes that
+      // this build has no control for is dropped rather than offered as an unrenderable
+      // option. Order is preserved — it is the source's descending effort order.
+      efforts: entry.reasoningEfforts.filter(isReasoningEffort),
+      defaultEffort: isReasoningEffort(entry.reasoningDefaultEffort)
+        ? entry.reasoningDefaultEffort
+        : '',
+      mandatory: entry.reasoningMandatory,
+      nativeEffort: entry.reasoningNativeEffort,
+      maxTokens: entry.reasoningMaxTokens,
+      drifted: entry.reasoningDrifted,
+      known: entry.reasoningKnown,
+    },
     reasoningSpend: entry.reasoningSpend
       ? {
           calls: entry.reasoningSpend.calls,

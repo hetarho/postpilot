@@ -120,6 +120,7 @@ type Model struct {
 	InputUSDPerMillion  string
 	OutputUSDPerMillion string
 	PricingCheckedAt    string
+	ReasoningCapability
 	// Purposes this model is registered to. Zero purposes is the kept-but-served-to-nobody
 	// state the old `enabled = 0` used to be: the row survives, users see nothing.
 	Purposes []Purpose
@@ -151,9 +152,95 @@ type Candidate struct {
 	ContextTokens       int64
 	InputUSDPerMillion  string
 	OutputUSDPerMillion string
+	ReasoningCapability
 	// SourceCreatedAt is the upstream publication time in epoch seconds. It is what orders
 	// a provider's models newest-first.
 	SourceCreatedAt int64
+}
+
+// ReasoningCapability is what the source publishes about one model's reasoning (change 27).
+// It exists so the operator chooses an effort from what the model actually accepts, instead
+// of from the same eight values for every model.
+//
+// EVERY FIELD'S ZERO MEANS "UNKNOWN", NOT "SUPPORTS NOTHING" — the same rule the pricing
+// snapshot already follows. An empty Efforts list is a model whose accepted values the
+// source does not publish (only ~154 of 427 do), and the answer there is to offer all eight,
+// not none.
+type ReasoningCapability struct {
+	// Reasons: the source carries a `reasoning` object for this model at all.
+	Reasons bool
+	// Efforts: the accepted effort values, VERBATIM and in the source's descending order,
+	// because that order is the order a selector should offer them in.
+	Efforts []string
+	// DefaultEffort: what the model uses when reasoning is enabled and no effort is sent.
+	// It is what `unset` actually means, so the admin can see that leaving it alone means
+	// `high` rather than "off".
+	DefaultEffort string
+	// Mandatory: reasoning cannot be turned off, so `none` must never be offered or sent.
+	Mandatory bool
+	// NativeEffort: the provider receives the effort STRING itself, rather than a token
+	// budget OpenRouter derived from it. Nothing here consumes it; change 29 needs it to
+	// size a completion budget safely.
+	NativeEffort bool
+	// MaxTokens: the source offers a reasoning token budget for this model. Recorded and
+	// displayed only — this change surfaces no input for it.
+	MaxTokens bool
+}
+
+// Known reports whether this capability came from a read that actually looked. It is the one
+// thing the six fields cannot say about themselves: `Reasons: false, Efforts: nil` is BOTH
+// "the source published no reasoning object" and "nothing has ever asked" — migration 0024
+// leaves every existing row in exactly that shape.
+//
+// It is not stored. A capability read live from the source is known by construction; one
+// read back from a row is only known if it says something. Treating the ambiguous case as
+// unknown is the safe direction: it offers the operator more values than the model may take
+// (which the server still refuses on the way in), rather than silently removing a control
+// while the stored override keeps being sent.
+func (c ReasoningCapability) Known() bool {
+	return c.Reasons || len(c.Efforts) > 0 || c.DefaultEffort != "" || c.Mandatory || c.MaxTokens || c.NativeEffort
+}
+
+// AcceptsEffort answers whether one effort value may be stored for this model.
+//
+// A model the source CONFIRMS does not reason accepts no effort at all — there is nothing for
+// one to mean. An unknown capability accepts everything, and so does a known one that
+// publishes no list: the source not publishing a list is not the model refusing every value.
+// `none` is refused when reasoning is mandatory, and when a published list omits it.
+func (c ReasoningCapability) AcceptsEffort(effort llm.ReasoningEffort) bool {
+	// Clearing the override, and `unset` (send no effort key), are not claims about the
+	// model's vocabulary — they are always allowed.
+	if effort == llm.ReasoningUnspecified || effort == llm.ReasoningUnset {
+		return true
+	}
+	if c.Known() && !c.Reasons {
+		return false
+	}
+	if effort == llm.ReasoningNone && c.Mandatory {
+		return false
+	}
+	if len(c.Efforts) == 0 {
+		return true
+	}
+	return slices.Contains(c.Efforts, string(effort))
+}
+
+// DriftedFrom reports an override the source no longer lists — a revised model, a replaced
+// slug. It is derived at read time from the two fields rather than stored, because it must
+// follow the catalog; and it is a WARNING only. Plan 18's `listed = 0` precedent applies:
+// the source's list changing is not a mandate to rewrite an operator's decision, so the
+// value is kept and still sent.
+func (c ReasoningCapability) DriftedFrom(effort llm.ReasoningEffort) bool {
+	// Neither "no override" nor `unset` is a claim about what the model accepts, so neither
+	// can drift.
+	if effort == llm.ReasoningUnspecified || effort == llm.ReasoningUnset {
+		return false
+	}
+	// Drift is exactly "this stored value would be refused if it were written today", which
+	// is the rule above read backwards. Deriving it rather than repeating the list check
+	// catches the cases a list comparison alone misses: a model that became mandatory while
+	// the override is `none`, and one that stopped reasoning altogether.
+	return !c.AcceptsEffort(effort)
 }
 
 // Snapshot is one read of the upstream catalog.
@@ -183,6 +270,18 @@ type Entry struct {
 	// check, since `supported_parameters` says a model accepts `reasoning_effort` but never
 	// which values it honors.
 	ReasoningSpend *ReasoningSpend
+	// ReasoningDrifted: the stored override would be refused if it were written today — no
+	// longer in the model's published list, `none` on a model that became mandatory, an
+	// effort on a model that stopped reasoning. A warning for the row, never a correction:
+	// the value is kept and still sent.
+	ReasoningDrifted bool
+	// ReasoningKnown: the capability above came from a read that actually looked, so
+	// `reasons: false` means the source published no reasoning object rather than "nothing
+	// has asked yet". False for a row served from storage — after migration 0024 and before
+	// the first successful refresh, or whenever the provider catalog cannot be read — and the
+	// screen must then keep offering the full effort vocabulary rather than hiding a control
+	// whose stored value is still being sent.
+	ReasoningKnown bool
 }
 
 // ReasoningSpend is a recent window of one model's completion budget at one purpose.
@@ -215,9 +314,13 @@ func EntryOf(m Model, purpose Purpose) Entry {
 			ImageOutput: m.ImageOutput, VideoOutput: m.VideoOutput,
 			ContextTokens:      m.ContextTokens,
 			InputUSDPerMillion: m.InputUSDPerMillion, OutputUSDPerMillion: m.OutputUSDPerMillion,
+			ReasoningCapability: m.ReasoningCapability,
 		},
 		Curated: true, Purposes: m.Purposes,
 		Reasoning: m.Reasoning[purpose], Listed: m.Listed,
+		ReasoningDrifted: m.DriftedFrom(m.Reasoning[purpose]),
+		// A stored row can only be trusted about reasoning if it says something: see Known.
+		ReasoningKnown: m.Known(),
 	}
 }
 

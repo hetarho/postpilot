@@ -29,6 +29,7 @@ func TestConnectCodesAndStableReasons(t *testing.T) {
 		"scope shape":        {guideline.ErrScopeShape, connect.CodeInvalidArgument, "GUIDELINE_SCOPE_INVALID"},
 		"text too long":      {&guideline.TextTooLongError{Chars: 301, Max: 300}, connect.CodeInvalidArgument, "GUIDELINE_TEXT_TOO_LONG"},
 		"account cap":        {&guideline.AccountCapError{Max: 100}, connect.CodeFailedPrecondition, "GUIDELINE_LIMIT_REACHED"},
+		"unknown candidate":  {guideline.ErrCandidateNotFound, connect.CodeNotFound, "GUIDELINE_CANDIDATE_NOT_FOUND"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			mapped := toConnectError("op", tc.err)
@@ -85,7 +86,7 @@ func appErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
 // A1: the account comes from the session on every procedure, and the contract gives a caller
 // nowhere to claim one.
 func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) {
-	handler := NewHandler(guideline.NewService(nil, guideline.Limits{TextMaxChars: 1, MaxPerAccount: 1}))
+	handler := NewHandler(guideline.NewService(nil, guideline.Limits{TextMaxChars: 1, MaxPerAccount: 1}, 1))
 	anonymous := context.Background()
 
 	if _, err := handler.ListGuidelines(anonymous, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
@@ -100,10 +101,17 @@ func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) 
 	if _, err := handler.DeleteGuideline(anonymous, connect.NewRequest(&postpilotv1.DeleteGuidelineRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("delete = %v", err)
 	}
+	if _, err := handler.ListGuidelineCandidates(anonymous, connect.NewRequest(&postpilotv1.ListGuidelineCandidatesRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("list candidates = %v", err)
+	}
+	if _, err := handler.DismissGuidelineCandidate(anonymous, connect.NewRequest(&postpilotv1.DismissGuidelineCandidateRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("dismiss candidate = %v", err)
+	}
 
 	for _, message := range []proto.Message{
 		&postpilotv1.ListGuidelinesRequest{}, &postpilotv1.CreateGuidelineRequest{},
 		&postpilotv1.UpdateGuidelineRequest{}, &postpilotv1.DeleteGuidelineRequest{},
+		&postpilotv1.ListGuidelineCandidatesRequest{}, &postpilotv1.DismissGuidelineCandidateRequest{},
 	} {
 		fields := message.ProtoReflect().Descriptor().Fields()
 		for i := 0; i < fields.Len(); i++ {
@@ -156,5 +164,17 @@ func TestGuidelineProjectionCarriesTextScopeAndProjectedNames(t *testing.T) {
 	}
 	if toProtoGuideline(guideline.Guideline{}) != nil {
 		t.Fatal("an empty guideline projected as a message instead of unset")
+	}
+}
+
+// A candidate carries no scope on the wire, by design: scope is chosen at approval, so there is
+// no field a client could set that would apply a rule to every post without that choice.
+func TestGuidelineCandidateCarriesNoScope(t *testing.T) {
+	fields := (&postpilotv1.GuidelineCandidate{}).ProtoReflect().Descriptor().Fields()
+	for i := 0; i < fields.Len(); i++ {
+		switch name := string(fields.Get(i).Name()); name {
+		case "scope", "template_ids":
+			t.Fatalf("GuidelineCandidate carries %s", name)
+		}
 	}
 }

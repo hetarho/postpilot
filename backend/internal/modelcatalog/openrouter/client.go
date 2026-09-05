@@ -114,6 +114,19 @@ type modelDocument struct {
 		ImageOutput string `json:"image_output"`
 	} `json:"pricing"`
 	SupportedParameters []string `json:"supported_parameters"`
+	// A POINTER so "the object is absent" and "the object is present with everything false"
+	// stay distinguishable: absent means the model does not reason at all, while present
+	// with `mandatory: false` means it reasons and can be turned off. Only ~300 of 427
+	// entries carry it, and only ~154 of those publish supported_efforts.
+	Reasoning *struct {
+		Mandatory bool     `json:"mandatory"`
+		Supported []string `json:"supported_efforts"`
+		Default   string   `json:"default_effort"`
+		// DefaultEnabled is read but deliberately not persisted: it is display context
+		// change 27 does not scope.
+		DefaultEnabled  bool `json:"default_enabled"`
+		SupportsMaxToks bool `json:"supports_max_tokens"`
+	} `json:"reasoning"`
 }
 
 func (c *Client) get(ctx context.Context) ([]modelcatalog.Candidate, error) {
@@ -182,8 +195,38 @@ func toCandidate(item modelDocument) (modelcatalog.Candidate, bool) {
 		ContextTokens:       max(item.ContextLen, 0),
 		InputUSDPerMillion:  input,
 		OutputUSDPerMillion: output,
+		ReasoningCapability: reasoningCapability(item),
 		SourceCreatedAt:     item.Created,
 	}, true
+}
+
+// reasoningCapability reads the source's top-level `reasoning` object. An entry without one
+// is a model that does not reason — recorded as such rather than skipped or failed — and an
+// unknown extra key inside it stays ignored, which is the endpoint's own contract.
+//
+// The native-effort signal comes from a DIFFERENT field: `supported_parameters` says whether
+// the provider takes `reasoning_effort` itself, as opposed to OpenRouter converting the
+// effort into a token percentage on the way through.
+func reasoningCapability(item modelDocument) modelcatalog.ReasoningCapability {
+	capability := modelcatalog.ReasoningCapability{
+		NativeEffort: contains(item.SupportedParameters, "reasoning_effort"),
+	}
+	if item.Reasoning == nil {
+		return capability
+	}
+	capability.Reasons = true
+	capability.Mandatory = item.Reasoning.Mandatory
+	capability.MaxTokens = item.Reasoning.SupportsMaxToks
+	capability.DefaultEffort = strings.TrimSpace(item.Reasoning.Default)
+	// The source's DESCENDING order is preserved: it is the order a selector should offer
+	// the values in, so sorting or normalizing here would throw away meaning. Blanks are
+	// dropped because an empty option is not a value anyone can pick.
+	for _, effort := range item.Reasoning.Supported {
+		if trimmed := strings.TrimSpace(effort); trimmed != "" {
+			capability.Efforts = append(capability.Efforts, trimmed)
+		}
+	}
+	return capability
 }
 
 // tokenPrices picks the per-token prices that actually apply to a model, in the

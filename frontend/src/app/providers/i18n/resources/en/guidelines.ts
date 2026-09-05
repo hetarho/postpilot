@@ -41,6 +41,25 @@ export const guidelines = {
     description:
       'This removes the guideline. AI work already started finishes with the guidelines it started with, and your posts, templates and voices are untouched.',
   },
+  candidate: {
+    section: 'Candidates',
+    sectionHelp:
+      'What your finished AI revisions asked for, recorded word for word. Nothing here reaches a post while it sits in this list — approving one is where you choose what it applies to.',
+    occurrences: 'asked {{count}} times',
+    occurrences_one: 'asked {{count}} time',
+    occurrences_other: 'asked {{count}} times',
+    source: 'View the post',
+    sourceGone: 'That post was deleted',
+    queueFull:
+      'The candidate list is full, so new requests are no longer recorded. Approve or dismiss one to start recording again.',
+    approve: 'Approve',
+    dismiss: 'Dismiss',
+    approveTitle: 'Approve as a guideline',
+    approveSubmit: 'Save as a guideline',
+    approveDescription:
+      'Save this request as a guideline. You can reword it, and you choose what it applies to here.',
+    approveDuplicate: 'That guideline already exists. Reword it, or dismiss this candidate.',
+  },
   capture: {
     action: 'Save as guideline',
     title: 'Save as guideline',

@@ -199,3 +199,92 @@ func TestFetch_RejectsAnUnparseableBody(t *testing.T) {
 }
 
 var _ modelcatalog.Upstream = (*openrouter.Client)(nil)
+
+// The reasoning fixture uses the real shapes measured against the live endpoint on
+// 2026-09-05 (change 27): a model that publishes a list, one mandatory model, one that
+// reasons but publishes no list, and one carrying no `reasoning` object at all.
+const reasoningDocument = `{"data":[
+  {"id":"deepseek/deepseek-v4-pro-0813","name":"DeepSeek: V4 Pro","created":1788000001,
+   "architecture":{"input_modalities":["text"],"output_modalities":["text"]},
+   "pricing":{"prompt":"0.0000004","completion":"0.0000016"},
+   "supported_parameters":["reasoning","reasoning_effort","structured_outputs"],
+   "reasoning":{"mandatory":false,"supported_efforts":["max","high","low"],"default_effort":"high","default_enabled":true}},
+  {"id":"google/gemini-3.8-flash","name":"Google: Gemini 3.8 Flash","created":1788000002,
+   "architecture":{"input_modalities":["text","image"],"output_modalities":["text"]},
+   "pricing":{"prompt":"0.0000003","completion":"0.0000025"},
+   "supported_parameters":["reasoning","include_reasoning"],
+   "reasoning":{"mandatory":true,"supported_efforts":["high","medium","low"],"default_effort":"medium","supports_max_tokens":true}},
+  {"id":"vendor/no-list","name":"Vendor: No List","created":1788000003,
+   "architecture":{"input_modalities":["text"],"output_modalities":["text"]},
+   "pricing":{"prompt":"0","completion":"0"},
+   "supported_parameters":["reasoning","reasoning_effort"],
+   "reasoning":{"mandatory":false,"unknown_future_key":42}},
+  {"id":"vendor/no-reasoning","name":"Vendor: No Reasoning","created":1788000004,
+   "architecture":{"input_modalities":["text"],"output_modalities":["text"]},
+   "pricing":{"prompt":"0","completion":"0"},
+   "supported_parameters":["structured_outputs"]}
+]}`
+
+// A1/A2: all six fields, from the source's own shapes. The entry with no `reasoning` object
+// is recorded as not reasoning rather than skipped or failed.
+func TestFetch_MapsTheReasoningObject(t *testing.T) {
+	server, _ := serve(t, reasoningDocument, http.StatusOK)
+	defer server.Close()
+	client := openrouter.New(server.URL+"/v1", time.Second, time.Minute)
+	snapshot, err := client.Fetch(context.Background(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Candidates) != 4 {
+		t.Fatalf("mapped %d candidates, want all 4", len(snapshot.Candidates))
+	}
+	byID := map[string]modelcatalog.Candidate{}
+	for _, candidate := range snapshot.Candidates {
+		byID[candidate.ModelID] = candidate
+	}
+
+	// A2, against a real model: max·high·low, default high, not mandatory, native effort.
+	deepseek := byID["deepseek/deepseek-v4-pro-0813"].ReasoningCapability
+	if !deepseek.Reasons || deepseek.Mandatory || !deepseek.NativeEffort || deepseek.MaxTokens {
+		t.Fatalf("deepseek flags = %+v", deepseek)
+	}
+	if deepseek.DefaultEffort != "high" {
+		t.Fatalf("deepseek default effort = %q", deepseek.DefaultEffort)
+	}
+	// The source's DESCENDING order is preserved, not sorted or normalized.
+	want := []string{"max", "high", "low"}
+	if len(deepseek.Efforts) != len(want) {
+		t.Fatalf("deepseek efforts = %v", deepseek.Efforts)
+	}
+	for i := range want {
+		if deepseek.Efforts[i] != want[i] {
+			t.Fatalf("deepseek efforts = %v, want %v in that order", deepseek.Efforts, want)
+		}
+	}
+
+	// A mandatory model, whose `supports_max_tokens` is published true. `include_reasoning`
+	// is not `reasoning_effort`, so this one is not native.
+	gemini := byID["google/gemini-3.8-flash"].ReasoningCapability
+	if !gemini.Reasons || !gemini.Mandatory || !gemini.MaxTokens || gemini.NativeEffort {
+		t.Fatalf("gemini flags = %+v", gemini)
+	}
+
+	// Present-but-listless: it reasons, and an unknown future key inside the object is
+	// ignored rather than costing us the model.
+	listless := byID["vendor/no-list"].ReasoningCapability
+	if !listless.Reasons || len(listless.Efforts) != 0 || listless.DefaultEffort != "" {
+		t.Fatalf("listless = %+v", listless)
+	}
+	if !listless.NativeEffort {
+		t.Fatal("a listless model still declares reasoning_effort natively")
+	}
+
+	// A1: absent object is "does not reason", and the model is still mapped.
+	none := byID["vendor/no-reasoning"].ReasoningCapability
+	if none.Reasons || none.Mandatory || none.NativeEffort || len(none.Efforts) != 0 {
+		t.Fatalf("no-reasoning = %+v", none)
+	}
+	if byID["vendor/no-reasoning"].Label != "Vendor: No Reasoning" {
+		t.Fatal("the entry without a reasoning object was not mapped at all")
+	}
+}

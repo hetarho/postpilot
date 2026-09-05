@@ -25,7 +25,12 @@ import {
  *  usually generalized first), and no model or job can reach this path (plan 16 non-goals).
  *
  *  The template option comes from the ALREADY-LOADED post, so opening this dialog issues no query
- *  and starts nothing ([I5]). */
+ *  and starts nothing ([I5]).
+ *
+ *  Unchanged by change 26, and deliberately so: this stays the immediate path for a user who
+ *  already knows the rule. Saving here also approves the candidate the completed revision
+ *  recorded — the server matches it by text in the create's own transaction — which is why the
+ *  instruction saved from this dialog never afterwards appears in the 후보 section. */
 export function SaveAsGuidelineButton({
   ownerId,
   instruction,

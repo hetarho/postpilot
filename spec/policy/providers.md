@@ -91,6 +91,24 @@ models this installation offers, and for which purposes** is curated data, read 
   operator and validated on write. Setting one for a purpose the model is not registered to is refused server-side,
   not merely hidden by the UI. Migration 0021 moved the column off `catalog_models` and **cleared** every existing
   value rather than copying it into five purposes, so all curated models resolve to the code-owned stage policy.
+- **The operator's effort choice is bounded by what the model publishes** (change 27). The catalog snapshots the
+  source's reasoning capability per model — whether it reasons, its accepted efforts in the source's descending
+  order, its default effort, whether reasoning is mandatory, whether the provider takes the effort string natively,
+  and whether it offers a reasoning token budget — and `SetModelReasoning` refuses a value outside that list with
+  `ErrInvalidReasoning`. `none` is refused when reasoning is mandatory and when a published list omits it: the app's
+  own "turn it off" value was, for several production models, a value they do not take. A model whose accepted
+  values the source does not publish keeps accepting all eight — **absence is unknown, never "supports nothing"**,
+  the same rule an unpublished price follows — and a model the source *confirms* does not reason accepts none at
+  all. The screen's option filtering is an affordance; the server rule is the contract.
+  - `unset` is labelled with the model's own default effort, because `unset` omits the wire key and therefore means
+    *the model's default*, not "off". Every model registered in production reasons by default.
+  - **Drift is a flag, never an action.** An override the source would refuse today — it left the published list,
+    or the model became mandatory, or it stopped reasoning — is **kept and still sent**, with a warning on the
+    admin row. This is the same posture `listed = false` carries: the source's catalog changing is not a mandate to
+    rewrite an operator's decision. Nothing auto-corrects, clears, migrates or deregisters.
+  - Whether the capability is *known* is itself part of the answer, and is not stored: `reasons = 0` with no list is
+    both "publishes no reasoning object" and "nothing has asked yet". A live read is known by construction; a stored
+    row is known only if it says something. An unknown capability behaves exactly as it did before this change.
 - Structured output is requested whenever the model declares it (`response_format: json_schema`, without `strict` —
   the schemas belong to the callers). Callers keep a parser fallback for models that do not.
 
@@ -206,7 +224,8 @@ for them (plan 04 AC6), and that holds for the operator's catalog surface too, w
 | `LLM_STAGE_TIMEOUT` | constant | 5 min per provider call (PRD §6.6) |
 | `LLM_MAX_TOKENS_DEFAULT` | env, default 8192 | the registry's fallback when a caller sets no budget, the writing stage's floor, and the base of its ceiling; reasoning and visible output share it |
 | per-stage completion budget | typed constants | each stage asks for what its work needs instead of sharing one cap: observation scales with `OBSERVE_BATCH_SIZE` (one structured entry per photo in the call), writing derives from the post's requested length, and a revision from the larger of that and the content it must re-emit — floored at the fallback so nothing regresses, capped at a multiple of it so a mistyped target cannot ask for an unbounded completion |
-| reasoning spend | recorded, not configured | `usage_events.reasoning_tokens` holds the provider-reported split; the curation surface shows it per model and per purpose, because `supported_parameters` says a model ACCEPTS `reasoning_effort` and never which values it honors — an unhonored effort behaves like sending none and reasoning runs to the cap |
+| reasoning spend | recorded, not configured | `usage_events.reasoning_tokens` holds the provider-reported split; the curation surface shows it per model and per purpose. Since change 27 the source also DECLARES the values a model accepts, so the measurement is corroboration rather than the only signal — the declared list says what the model takes, and the spend says what it did with it |
+| reasoning capability | snapshotted from the source, not configured | `catalog_models.reasons` · `reasoning_efforts` (JSON array, the source's descending order) · `reasoning_default_effort` · `reasoning_mandatory` · `reasoning_native_effort` · `reasoning_max_tokens`, written by a successful refresh exactly as the pricing snapshot is. A falsy value is UNKNOWN. Migration 0024 backfills nothing |
 | stage reasoning policy | typed constants | observe `low` · write/revise `low` · analyze has **no field**: a request with no stage value already sends nothing |
 | `reasoning_format` | `config/providers.yaml` | optional provider dialect; shipped OpenRouter entry opts in |
 | `reasoning_effort` | `catalog_model_purposes` row | optional override for one (model, purpose), curated by the operator; `unset` omits the wire key |

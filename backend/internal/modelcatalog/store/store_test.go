@@ -297,3 +297,123 @@ func TestRefreshAvailability_MarksSeenAndUnlistsTheRest(t *testing.T) {
 		}
 	}
 }
+
+// A1/A2: the six capability fields survive a round trip, and the source's descending effort
+// order survives the comma-joined storage form.
+func TestReasoningCapability_RoundTrip(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	capability := modelcatalog.ReasoningCapability{
+		Reasons: true, Efforts: []string{"max", "high", "low"}, DefaultEffort: "high",
+		Mandatory: false, NativeEffort: true, MaxTokens: false,
+	}
+	err := s.Upsert(ctx, modelcatalog.Model{
+		ModelID: "deepseek/deepseek-v4-pro-0813", ProviderSlug: "deepseek", Label: "V4 Pro",
+		ReasoningCapability: capability, Listed: true, CreatedAt: testNow, UpdatedAt: testNow,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := s.Get(ctx, "deepseek/deepseek-v4-pro-0813")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !row.Reasons || row.Mandatory || !row.NativeEffort || row.MaxTokens {
+		t.Fatalf("flags = %+v", row.ReasoningCapability)
+	}
+	if row.DefaultEffort != "high" {
+		t.Fatalf("default effort = %q", row.DefaultEffort)
+	}
+	want := []string{"max", "high", "low"}
+	for i := range want {
+		if i >= len(row.Efforts) || row.Efforts[i] != want[i] {
+			t.Fatalf("efforts = %v, want %v in that order", row.Efforts, want)
+		}
+	}
+
+	// An empty list reads back as nil, not as one blank value: the storage form is a joined
+	// string, and "" must stay UNKNOWN rather than becoming a one-element list.
+	err = s.Upsert(ctx, modelcatalog.Model{
+		ModelID: "vendor/unknown-list", ProviderSlug: "vendor", Label: "Unknown",
+		Listed: true, CreatedAt: testNow, UpdatedAt: testNow,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	blank, err := s.Get(ctx, "vendor/unknown-list")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(blank.Efforts) != 0 || blank.Reasons {
+		t.Fatalf("unwritten capability = %+v", blank.ReasoningCapability)
+	}
+	if blank.Known() {
+		t.Fatal("a row nothing was written to claims a known capability")
+	}
+
+	// The column's whole claim is that it holds the source's values VERBATIM, so the storage
+	// form has to survive a value containing the delimiter a naive join would have used.
+	err = s.Upsert(ctx, modelcatalog.Model{
+		ModelID: "vendor/awkward", ProviderSlug: "vendor", Label: "Awkward",
+		ReasoningCapability: modelcatalog.ReasoningCapability{
+			Reasons: true, Efforts: []string{"very,high", "low"},
+		},
+		Listed: true, CreatedAt: testNow, UpdatedAt: testNow,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	awkward, err := s.Get(ctx, "vendor/awkward")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(awkward.Efforts) != 2 || awkward.Efforts[0] != "very,high" || awkward.Efforts[1] != "low" {
+		t.Fatalf("efforts = %v, want the source's two values intact", awkward.Efforts)
+	}
+}
+
+// A1: a successful refresh writes the capability exactly as it writes the label and pricing,
+// and A7: it does not touch the operator's override.
+func TestRefreshAvailability_RefreshesTheReasoningCapability(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	const modelID = "anthropic/claude-sonnet-5"
+	if err := s.RegisterPurpose(ctx, modelcatalog.Model{
+		ModelID: modelID, ProviderSlug: "anthropic", Label: "Claude", Listed: true,
+		CreatedAt: testNow, UpdatedAt: testNow,
+	}, modelcatalog.PurposeWriting); err != nil {
+		t.Fatal(err)
+	}
+	// An override the incoming list will NOT contain: it must survive the refresh unchanged.
+	effort := llm.ReasoningEffort("medium")
+	if _, err := s.Patch(ctx, modelID, modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Reasoning: &effort,
+	}, testNow); err != nil {
+		t.Fatal(err)
+	}
+
+	at := testNow.Add(24 * time.Hour)
+	err := s.RefreshAvailability(ctx, []modelcatalog.Candidate{{
+		ModelID: modelID, ProviderSlug: "anthropic", Label: "Claude Sonnet 5.1",
+		ReasoningCapability: modelcatalog.ReasoningCapability{
+			Reasons: true, Efforts: []string{"max", "high", "low"}, DefaultEffort: "high",
+			NativeEffort: true,
+		},
+	}}, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := s.Get(ctx, modelID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !row.Reasons || row.DefaultEffort != "high" || len(row.Efforts) != 3 || !row.NativeEffort {
+		t.Fatalf("the refresh did not write the capability: %+v", row.ReasoningCapability)
+	}
+	if row.Reasoning[modelcatalog.PurposeWriting] != "medium" {
+		t.Fatalf("the refresh rewrote the operator's override: %+v", row.Reasoning)
+	}
+	if !row.DriftedFrom(row.Reasoning[modelcatalog.PurposeWriting]) {
+		t.Fatal("an override outside the new list is not reported as drifted")
+	}
+}

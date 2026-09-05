@@ -64,10 +64,47 @@ type CatalogEntry struct {
 	// Absent when nothing has been recorded for it, which renders as nothing rather than as a
 	// zero that would read as a measurement.
 	//
-	// It is the only reliable check that a model honors its effort: the provider's
-	// `supported_parameters` says a model accepts `reasoning_effort`, never which VALUES it
-	// honors, and an unhonored effort behaves like sending none — reasoning runs to the cap.
+	// It is the measured check that a model honors its effort: an unhonored effort behaves
+	// like sending none, and reasoning runs to the cap. The source now also DECLARES the
+	// values it accepts (the fields below), so this is corroboration rather than the only
+	// signal — a declared list is what the model takes, and this is what it did.
 	ReasoningSpend *ReasoningSpend `protobuf:"bytes,19,opt,name=reasoning_spend,json=reasoningSpend,proto3,oneof" json:"reasoning_spend,omitempty"`
+	// What the source publishes about this model's reasoning (change 27). EVERY ZERO HERE
+	// MEANS "UNKNOWN", NOT "SUPPORTS NOTHING" — the same rule an unpublished price follows.
+	//
+	// reasons: the source carries a reasoning object for this model at all. False means the
+	// model does not reason, and the effort control is absent rather than empty.
+	Reasons bool `protobuf:"varint,20,opt,name=reasons,proto3" json:"reasons,omitempty"`
+	// The accepted effort values, verbatim and in the source's DESCENDING order, which is the
+	// order a selector should offer them in. Empty means the source does not publish a list
+	// for this model (only ~154 of 427 do) — the control then offers all eight values.
+	ReasoningEfforts []string `protobuf:"bytes,21,rep,name=reasoning_efforts,json=reasoningEfforts,proto3" json:"reasoning_efforts,omitempty"`
+	// What the model uses when reasoning is on and no effort is sent. It is what `unset`
+	// actually means, so the operator can see that leaving it alone means `high` rather than
+	// "off". Empty when the source does not publish one.
+	ReasoningDefaultEffort string `protobuf:"bytes,22,opt,name=reasoning_default_effort,json=reasoningDefaultEffort,proto3" json:"reasoning_default_effort,omitempty"`
+	// Reasoning cannot be turned off: `none` must never be offered or sent.
+	ReasoningMandatory bool `protobuf:"varint,23,opt,name=reasoning_mandatory,json=reasoningMandatory,proto3" json:"reasoning_mandatory,omitempty"`
+	// The provider receives the effort STRING itself, rather than a token budget OpenRouter
+	// derived from it. Nothing consumes it yet; change 29 needs it to size a budget safely.
+	ReasoningNativeEffort bool `protobuf:"varint,24,opt,name=reasoning_native_effort,json=reasoningNativeEffort,proto3" json:"reasoning_native_effort,omitempty"`
+	// The source offers a reasoning token budget for this model. Recorded and displayed only —
+	// this change surfaces no input for it.
+	ReasoningMaxTokens bool `protobuf:"varint,25,opt,name=reasoning_max_tokens,json=reasoningMaxTokens,proto3" json:"reasoning_max_tokens,omitempty"`
+	// reasoning_effort above is no longer in this model's published list — a revised model, a
+	// replaced slug. A WARNING for the row and nothing more: the value is kept and still sent,
+	// because the source's list changing is not a mandate to rewrite an operator's decision
+	// (the same reasoning `listed = false` carries). Derived at read time from the two fields
+	// rather than stored, so it follows the catalog.
+	ReasoningDrifted bool `protobuf:"varint,26,opt,name=reasoning_drifted,json=reasoningDrifted,proto3" json:"reasoning_drifted,omitempty"`
+	// The fields above came from a read that actually looked. It is the one thing they cannot
+	// say about themselves: `reasons: false` with no list is BOTH "the source publishes no
+	// reasoning object" and "nothing has asked yet" — migration 0024 leaves every existing row
+	// in exactly that shape. False for an entry served from storage (before the first
+	// successful refresh, or while the provider catalog cannot be read), where the screen must
+	// keep offering the full effort vocabulary rather than hide a control whose stored value is
+	// still being sent.
+	ReasoningKnown bool `protobuf:"varint,27,opt,name=reasoning_known,json=reasoningKnown,proto3" json:"reasoning_known,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -219,6 +256,62 @@ func (x *CatalogEntry) GetReasoningSpend() *ReasoningSpend {
 		return x.ReasoningSpend
 	}
 	return nil
+}
+
+func (x *CatalogEntry) GetReasons() bool {
+	if x != nil {
+		return x.Reasons
+	}
+	return false
+}
+
+func (x *CatalogEntry) GetReasoningEfforts() []string {
+	if x != nil {
+		return x.ReasoningEfforts
+	}
+	return nil
+}
+
+func (x *CatalogEntry) GetReasoningDefaultEffort() string {
+	if x != nil {
+		return x.ReasoningDefaultEffort
+	}
+	return ""
+}
+
+func (x *CatalogEntry) GetReasoningMandatory() bool {
+	if x != nil {
+		return x.ReasoningMandatory
+	}
+	return false
+}
+
+func (x *CatalogEntry) GetReasoningNativeEffort() bool {
+	if x != nil {
+		return x.ReasoningNativeEffort
+	}
+	return false
+}
+
+func (x *CatalogEntry) GetReasoningMaxTokens() bool {
+	if x != nil {
+		return x.ReasoningMaxTokens
+	}
+	return false
+}
+
+func (x *CatalogEntry) GetReasoningDrifted() bool {
+	if x != nil {
+		return x.ReasoningDrifted
+	}
+	return false
+}
+
+func (x *CatalogEntry) GetReasoningKnown() bool {
+	if x != nil {
+		return x.ReasoningKnown
+	}
+	return false
 }
 
 // ReasoningSpend is a recent window of one model's completion budget at one stage.
@@ -527,6 +620,10 @@ type UpdateModelRequest struct {
 	// — the control only appears once registered, and that is now a server rule rather than a
 	// UI convention.
 	//
+	// Refused when the model's published `reasoning_efforts` does not contain the value, and
+	// `none` is refused when `reasoning_mandatory` (change 27). A model whose list the source
+	// does not publish still accepts all eight — absence is unknown, not "supports nothing".
+	//
 	// Carried here rather than on SetModelPurposeRequest because registering and setting an
 	// effort are separate decisions: an operator changes the effort on a model that is already
 	// registered, and folding the two would make every effort edit re-assert a registration.
@@ -634,7 +731,7 @@ var File_postpilot_v1_model_catalog_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\n" +
-	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"\xb1\x05\n" +
+	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"\xa3\b\n" +
 	"\fCatalogEntry\x12\x19\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12#\n" +
 	"\rprovider_slug\x18\x02 \x01(\tR\fproviderSlug\x12\x14\n" +
@@ -653,7 +750,15 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\bpurposes\x18\x10 \x03(\tR\bpurposes\x12!\n" +
 	"\fimage_output\x18\x11 \x01(\bR\vimageOutput\x12!\n" +
 	"\fvideo_output\x18\x12 \x01(\bR\vvideoOutput\x12J\n" +
-	"\x0freasoning_spend\x18\x13 \x01(\v2\x1c.postpilot.v1.ReasoningSpendH\x00R\x0ereasoningSpend\x88\x01\x01B\x12\n" +
+	"\x0freasoning_spend\x18\x13 \x01(\v2\x1c.postpilot.v1.ReasoningSpendH\x00R\x0ereasoningSpend\x88\x01\x01\x12\x18\n" +
+	"\areasons\x18\x14 \x01(\bR\areasons\x12+\n" +
+	"\x11reasoning_efforts\x18\x15 \x03(\tR\x10reasoningEfforts\x128\n" +
+	"\x18reasoning_default_effort\x18\x16 \x01(\tR\x16reasoningDefaultEffort\x12/\n" +
+	"\x13reasoning_mandatory\x18\x17 \x01(\bR\x12reasoningMandatory\x126\n" +
+	"\x17reasoning_native_effort\x18\x18 \x01(\bR\x15reasoningNativeEffort\x120\n" +
+	"\x14reasoning_max_tokens\x18\x19 \x01(\bR\x12reasoningMaxTokens\x12+\n" +
+	"\x11reasoning_drifted\x18\x1a \x01(\bR\x10reasoningDrifted\x12'\n" +
+	"\x0freasoning_known\x18\x1b \x01(\bR\x0ereasoningKnownB\x12\n" +
 	"\x10_reasoning_spendJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"~\n" +
 	"\x0eReasoningSpend\x12\x14\n" +
 	"\x05calls\x18\x01 \x01(\x03R\x05calls\x12)\n" +

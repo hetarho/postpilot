@@ -40,6 +40,25 @@ export const guidelines = {
     description:
       '이 지침을 지웁니다. 이미 시작된 AI 작업은 시작할 때의 지침으로 끝나고, 글과 본문·템플릿·말투는 그대로예요.',
   },
+  candidate: {
+    section: '후보 지침',
+    sectionHelp:
+      'AI 수정을 끝낼 때 보낸 요청을 그대로 모아 둔 목록이에요. 여기 있는 동안에는 어떤 글에도 적용되지 않고, 승인할 때 적용 범위를 고르면 지침으로 저장돼요.',
+    occurrences: '{{count}}번 요청함',
+    occurrences_one: '{{count}}번 요청함',
+    occurrences_other: '{{count}}번 요청함',
+    source: '요청한 글 보기',
+    sourceGone: '요청한 글이 삭제됐어요',
+    queueFull:
+      '후보가 가득 차서 새로 들어온 요청은 기록되지 않아요. 하나를 승인하거나 무시하면 다시 기록돼요.',
+    approve: '승인',
+    dismiss: '무시',
+    approveTitle: '지침으로 승인',
+    approveSubmit: '지침으로 저장',
+    approveDescription:
+      '이 요청을 지침으로 저장해요. 문장을 다듬을 수 있고, 적용 범위는 여기서 고릅니다.',
+    approveDuplicate: '이미 같은 지침이 있어요. 문장을 바꾸거나 이 후보를 무시해 주세요.',
+  },
   capture: {
     action: '지침으로 저장',
     title: '지침으로 저장',

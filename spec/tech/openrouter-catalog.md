@@ -47,7 +47,10 @@ One model object (fields we ignore elided):
   "architecture": { "input_modalities": ["text", "image"], "output_modalities": ["text"] },
   "pricing": { "prompt": "0.00000125", "completion": "0.00000425",
                "image_token": "0.0000024", "image_output": "0.00003" },
-  "supported_parameters": ["structured_outputs", "tools", "reasoning", "…"]
+  "supported_parameters": ["structured_outputs", "tools", "reasoning", "reasoning_effort", "…"],
+  "reasoning": { "mandatory": false, "supported_efforts": ["max", "high", "low"],
+                 "default_effort": "high", "default_enabled": true,
+                 "supports_max_tokens": true }
 }
 ```
 
@@ -63,6 +66,13 @@ One model object (fields we ignore elided):
 | `"image" ∈ architecture.output_modalities` | `image_output` | gates image-generation registration (change 20); no feature consumes the registration yet |
 | `"video" ∈ architecture.output_modalities` | `video_output` | gates video-generation registration (change 20); 28 such models exist, reachable only through the `output_modalities` query above |
 | `"structured_outputs" ∈ supported_parameters` | `structured_output` | whether the adapter may send `response_format: json_schema` |
+| `reasoning` (the object is present) | `reasons` | the model reasons at all. 300 of 427 entries carry it (measured 2026-09-05); **absence is recorded, not skipped** — such a model gets no effort control |
+| `reasoning.supported_efforts` | `reasoning_efforts` | **verbatim and in the source's descending order**, which is the order a selector offers. 154 entries publish it. Stored as a JSON array in one column — the column's whole claim is verbatim, which a delimiter cannot back |
+| `reasoning.default_effort` | `reasoning_default_effort` | what the model uses when reasoning is on and no effort is sent. It is what our `unset` **means**, so the admin labels `unset` with it |
+| `reasoning.mandatory` | `reasoning_mandatory` | 97 entries are `true`. `none` is then never offered and never sent |
+| `reasoning.supports_max_tokens` | `reasoning_max_tokens` | 10 entries publish it, always `true`. Recorded and displayed; nothing consumes it |
+| `reasoning.default_enabled` | — | read but **not persisted**: display context change 27 does not scope |
+| `"reasoning_effort" ∈ supported_parameters` | `reasoning_native_effort` | whether the provider receives the effort **string** itself rather than a token budget OpenRouter derived from it. 157 entries. Nothing consumes it yet; [change 29](../changes/29.give-the-write-budget-reasoning-headroom.md) needs it to size a budget safely |
 | `pricing.*` | `input_usd_per_million` / `output_usd_per_million` | decimal **strings in USD per token**, multiplied by 10⁶ with decimal string arithmetic (no float round-trip) to match plan 09's $/1M display convention; `pricing_checked_at` := fetch time. Which keys apply depends on the output modality — see below |
 
 ### Which pricing keys apply (change 20)
@@ -88,9 +98,29 @@ by what the model answers in:
   shares the $/1M column with the text prices instead of needing a unit of its own. (`pricing.image`, by contrast,
   really is per *input* image and is not consumed.)
 
+### Reasoning capability, and why absence is not "no" (change 27)
+
+Until change 27 this document declared every field but `structured_outputs` ignored, and the reasoning override an
+operator set beside it was therefore chosen with **no knowledge of what the model accepts** — the admin offered the
+same eight values for every model. The correction is narrow: the response's top-level `reasoning` object names the
+accepted values exactly, and it was never in the table above. (Change 24's note that `supported_parameters` "never
+says which VALUES a model honors" was true of the field it was reading, and is superseded by these rows.)
+
+Every one of the six fields follows the same rule the pricing keys already follow: **a falsy value is UNKNOWN, not
+"supports nothing".** An empty `reasoning_efforts` is a model whose accepted values the source does not publish —
+273 of 427 — and the answer there is to offer all eight, never none.
+
+That rule leaves one thing the six fields cannot say about themselves: `reasons: false` with no list is *both* "the
+source publishes no reasoning object" and "nothing has ever asked". Migration `0024` leaves every existing row in
+exactly that shape, and so does any row served while the fetch is failing. So the browse response carries a seventh,
+**unstored** flag — `reasoning_known` — saying whether the capability in *this* response came from a read that
+actually looked. A live candidate is known by construction; a stored row is known only if it says something.
+Everything downstream keys off it: an unknown capability offers the full vocabulary and accepts any effort, while a
+*known* non-reasoning model offers no control and accepts none.
+
 Unknown fields are ignored (the reverse of the yaml's strict parsing: this document is OpenRouter's schema, not
-ours, and it grows without notice). A model entry missing `id` or `name` is skipped with a warning, never a boot
-or request failure.
+ours, and it grows without notice) — including an unknown key inside the `reasoning` object. A model entry missing
+`id` or `name` is skipped with a warning, never a boot or request failure.
 
 ## Cache and availability semantics
 

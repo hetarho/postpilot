@@ -51,6 +51,18 @@ rule behavior remain canonical in [voice](voice.md). Content-language preservati
   guideline RPC. It is an explicit user save of user-authored text: nothing about a guideline is learned, and no model
   or job can write one. `AlreadyExists` is surfaced as already-saved information, not a failure. This is beside — not
   instead of — `규칙으로 저장`, which stays a pre-flight checkbox because the voice learns from the run itself.
+  Saving here also approves the candidate this revision recorded (below), matched by text in the create's own
+  transaction, so the saved instruction never afterwards appears as a pending candidate. An **edited** save is a
+  different rule from the one recorded, and the original correction correctly stays a candidate.
+- **A completed revision records its instruction as a guideline candidate** (change 26). It happens inside this
+  job's own completion path, after the revised content is persisted and before the last progress tick, so a failed,
+  cancelled or still-running revision records nothing. It creates no job and calls no provider ([I5]), and a
+  **recording failure never fails the revision** — the result the user is looking at is authoritative, and a
+  bookkeeping error must not discard it. The instruction is stored verbatim at this contract's own 500-character
+  bound, never the guideline's 300. Everything else about a candidate — deduplication, the occurrence count, the
+  pending queue bound, and the fact that no candidate ever reaches a prompt — belongs to
+  [guidelines](guidelines.md). This change adds **no revision history**: a candidate is one recorded instruction,
+  not a log of what a revision did.
 - The user prompt contains the current full `PostContent`, the attached filenames, and the instruction. It requires
   the smallest requested change, verbatim preservation of unrelated sentences, unchanged title/summary/tags unless
   requested, immutable attached filenames, preservation of the frozen content language, no translation semantics,

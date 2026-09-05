@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/guideline.proto.
  */
 export const file_postpilot_v1_guideline: GenFile = /*@__PURE__*/
-  fileDesc("Chxwb3N0cGlsb3QvdjEvZ3VpZGVsaW5lLnByb3RvEgxwb3N0cGlsb3QudjEiMAoUR3VpZGVsaW5lVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSKxAQoJR3VpZGVsaW5lEgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSKwoFc2NvcGUYAyABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSNQoJdGVtcGxhdGVzGAQgAygLMiIucG9zdHBpbG90LnYxLkd1aWRlbGluZVRlbXBsYXRlUmVmEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCSIXChVMaXN0R3VpZGVsaW5lc1JlcXVlc3QiRQoWTGlzdEd1aWRlbGluZXNSZXNwb25zZRIrCgpndWlkZWxpbmVzGAEgAygLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZSJpChZDcmVhdGVHdWlkZWxpbmVSZXF1ZXN0EgwKBHRleHQYASABKAkSKwoFc2NvcGUYAiABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSFAoMdGVtcGxhdGVfaWRzGAMgAygJIkUKF0NyZWF0ZUd1aWRlbGluZVJlc3BvbnNlEioKCWd1aWRlbGluZRgBIAEoCzIXLnBvc3RwaWxvdC52MS5HdWlkZWxpbmUiWAoTR3VpZGVsaW5lU2NvcGVQYXRjaBIrCgVzY29wZRgBIAEoDjIcLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVTY29wZRIUCgx0ZW1wbGF0ZV9pZHMYAiADKAkicgoWVXBkYXRlR3VpZGVsaW5lUmVxdWVzdBIKCgJpZBgBIAEoCRIRCgR0ZXh0GAIgASgJSACIAQESMAoFc2NvcGUYAyABKAsyIS5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGVQYXRjaEIHCgVfdGV4dCJFChdVcGRhdGVHdWlkZWxpbmVSZXNwb25zZRIqCglndWlkZWxpbmUYASABKAsyFy5wb3N0cGlsb3QudjEuR3VpZGVsaW5lIiQKFkRlbGV0ZUd1aWRlbGluZVJlcXVlc3QSCgoCaWQYASABKAkiGQoXRGVsZXRlR3VpZGVsaW5lUmVzcG9uc2UqbAoOR3VpZGVsaW5lU2NvcGUSHwobR1VJREVMSU5FX1NDT1BFX1VOU1BFQ0lGSUVEEAASGgoWR1VJREVMSU5FX1NDT1BFX0dMT0JBTBABEh0KGUdVSURFTElORV9TQ09QRV9URU1QTEFURVMQAjKXAwoQR3VpZGVsaW5lU2VydmljZRJdCg5MaXN0R3VpZGVsaW5lcxIjLnBvc3RwaWxvdC52MS5MaXN0R3VpZGVsaW5lc1JlcXVlc3QaJC5wb3N0cGlsb3QudjEuTGlzdEd1aWRlbGluZXNSZXNwb25zZSIAEmAKD0NyZWF0ZUd1aWRlbGluZRIkLnBvc3RwaWxvdC52MS5DcmVhdGVHdWlkZWxpbmVSZXF1ZXN0GiUucG9zdHBpbG90LnYxLkNyZWF0ZUd1aWRlbGluZVJlc3BvbnNlIgASYAoPVXBkYXRlR3VpZGVsaW5lEiQucG9zdHBpbG90LnYxLlVwZGF0ZUd1aWRlbGluZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuVXBkYXRlR3VpZGVsaW5lUmVzcG9uc2UiABJgCg9EZWxldGVHdWlkZWxpbmUSJC5wb3N0cGlsb3QudjEuRGVsZXRlR3VpZGVsaW5lUmVxdWVzdBolLnBvc3RwaWxvdC52MS5EZWxldGVHdWlkZWxpbmVSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
+  fileDesc("Chxwb3N0cGlsb3QvdjEvZ3VpZGVsaW5lLnByb3RvEgxwb3N0cGlsb3QudjEiMAoUR3VpZGVsaW5lVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSKxAQoJR3VpZGVsaW5lEgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSKwoFc2NvcGUYAyABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSNQoJdGVtcGxhdGVzGAQgAygLMiIucG9zdHBpbG90LnYxLkd1aWRlbGluZVRlbXBsYXRlUmVmEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCSIXChVMaXN0R3VpZGVsaW5lc1JlcXVlc3QiRQoWTGlzdEd1aWRlbGluZXNSZXNwb25zZRIrCgpndWlkZWxpbmVzGAEgAygLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZSKfAQoWQ3JlYXRlR3VpZGVsaW5lUmVxdWVzdBIMCgR0ZXh0GAEgASgJEisKBXNjb3BlGAIgASgOMhwucG9zdHBpbG90LnYxLkd1aWRlbGluZVNjb3BlEhQKDHRlbXBsYXRlX2lkcxgDIAMoCRIeChFmcm9tX2NhbmRpZGF0ZV9pZBgEIAEoCUgAiAEBQhQKEl9mcm9tX2NhbmRpZGF0ZV9pZCJFChdDcmVhdGVHdWlkZWxpbmVSZXNwb25zZRIqCglndWlkZWxpbmUYASABKAsyFy5wb3N0cGlsb3QudjEuR3VpZGVsaW5lIlgKE0d1aWRlbGluZVNjb3BlUGF0Y2gSKwoFc2NvcGUYASABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSFAoMdGVtcGxhdGVfaWRzGAIgAygJInIKFlVwZGF0ZUd1aWRlbGluZVJlcXVlc3QSCgoCaWQYASABKAkSEQoEdGV4dBgCIAEoCUgAiAEBEjAKBXNjb3BlGAMgASgLMiEucG9zdHBpbG90LnYxLkd1aWRlbGluZVNjb3BlUGF0Y2hCBwoFX3RleHQiRQoXVXBkYXRlR3VpZGVsaW5lUmVzcG9uc2USKgoJZ3VpZGVsaW5lGAEgASgLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZSIkChZEZWxldGVHdWlkZWxpbmVSZXF1ZXN0EgoKAmlkGAEgASgJIhkKF0RlbGV0ZUd1aWRlbGluZVJlc3BvbnNlIoMBChJHdWlkZWxpbmVDYW5kaWRhdGUSCgoCaWQYASABKAkSDAoEdGV4dBgCIAEoCRIRCglwb3N0X3NsdWcYAyABKAkSEwoLb2NjdXJyZW5jZXMYBCABKAUSFQoNZmlyc3Rfc2Vlbl9hdBgFIAEoCRIUCgxsYXN0X3NlZW5fYXQYBiABKAkiIAoeTGlzdEd1aWRlbGluZUNhbmRpZGF0ZXNSZXF1ZXN0ImsKH0xpc3RHdWlkZWxpbmVDYW5kaWRhdGVzUmVzcG9uc2USNAoKY2FuZGlkYXRlcxgBIAMoCzIgLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVDYW5kaWRhdGUSEgoKcXVldWVfZnVsbBgCIAEoCCIuCiBEaXNtaXNzR3VpZGVsaW5lQ2FuZGlkYXRlUmVxdWVzdBIKCgJpZBgBIAEoCSIjCiFEaXNtaXNzR3VpZGVsaW5lQ2FuZGlkYXRlUmVzcG9uc2UqbAoOR3VpZGVsaW5lU2NvcGUSHwobR1VJREVMSU5FX1NDT1BFX1VOU1BFQ0lGSUVEEAASGgoWR1VJREVMSU5FX1NDT1BFX0dMT0JBTBABEh0KGUdVSURFTElORV9TQ09QRV9URU1QTEFURVMQAjKRBQoQR3VpZGVsaW5lU2VydmljZRJdCg5MaXN0R3VpZGVsaW5lcxIjLnBvc3RwaWxvdC52MS5MaXN0R3VpZGVsaW5lc1JlcXVlc3QaJC5wb3N0cGlsb3QudjEuTGlzdEd1aWRlbGluZXNSZXNwb25zZSIAEmAKD0NyZWF0ZUd1aWRlbGluZRIkLnBvc3RwaWxvdC52MS5DcmVhdGVHdWlkZWxpbmVSZXF1ZXN0GiUucG9zdHBpbG90LnYxLkNyZWF0ZUd1aWRlbGluZVJlc3BvbnNlIgASYAoPVXBkYXRlR3VpZGVsaW5lEiQucG9zdHBpbG90LnYxLlVwZGF0ZUd1aWRlbGluZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuVXBkYXRlR3VpZGVsaW5lUmVzcG9uc2UiABJgCg9EZWxldGVHdWlkZWxpbmUSJC5wb3N0cGlsb3QudjEuRGVsZXRlR3VpZGVsaW5lUmVxdWVzdBolLnBvc3RwaWxvdC52MS5EZWxldGVHdWlkZWxpbmVSZXNwb25zZSIAEngKF0xpc3RHdWlkZWxpbmVDYW5kaWRhdGVzEiwucG9zdHBpbG90LnYxLkxpc3RHdWlkZWxpbmVDYW5kaWRhdGVzUmVxdWVzdBotLnBvc3RwaWxvdC52MS5MaXN0R3VpZGVsaW5lQ2FuZGlkYXRlc1Jlc3BvbnNlIgASfgoZRGlzbWlzc0d1aWRlbGluZUNhbmRpZGF0ZRIuLnBvc3RwaWxvdC52MS5EaXNtaXNzR3VpZGVsaW5lQ2FuZGlkYXRlUmVxdWVzdBovLnBvc3RwaWxvdC52MS5EaXNtaXNzR3VpZGVsaW5lQ2FuZGlkYXRlUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
 
 /**
  * A template a guideline is scoped to, projected by name for the management screen. It is a
@@ -137,6 +137,15 @@ export type CreateGuidelineRequest = Message<"postpilot.v1.CreateGuidelineReques
    * @generated from field: repeated string template_ids = 3;
    */
   templateIds: string[];
+
+  /**
+   * Set when this create is the approval of a candidate. Needed only because an edited
+   * candidate's text no longer matches the row: an unedited approval, and the on-the-spot
+   * 지침으로 저장, are matched by text in the same transaction.
+   *
+   * @generated from field: optional string from_candidate_id = 4;
+   */
+  fromCandidateId?: string | undefined;
 };
 
 /**
@@ -267,6 +276,137 @@ export const DeleteGuidelineResponseSchema: GenMessage<DeleteGuidelineResponse> 
   messageDesc(file_postpilot_v1_guideline, 10);
 
 /**
+ * A recorded revision instruction awaiting review. It carries NO scope by design: scope is
+ * a durable decision about every future post, so it is made at approval time and never at
+ * recording time. That is what lets recording be automatic.
+ *
+ * @generated from message postpilot.v1.GuidelineCandidate
+ */
+export type GuidelineCandidate = Message<"postpilot.v1.GuidelineCandidate"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * The instruction exactly as the user typed it, at the REVISION bound (500), which is
+   * wider than a guideline's (300). Refusing a long instruction at recording time would
+   * lose the most specific corrections; the guideline bound is enforced at approval.
+   *
+   * @generated from field: string text = 2;
+   */
+  text: string;
+
+  /**
+   * The post the revision ran on. Empty when that post was deleted — the text survives,
+   * the link does not.
+   *
+   * @generated from field: string post_slug = 3;
+   */
+  postSlug: string;
+
+  /**
+   * How many completed revisions carried this exact text. The signal that a one-off
+   * correction has become a standing rule.
+   *
+   * @generated from field: int32 occurrences = 4;
+   */
+  occurrences: number;
+
+  /**
+   * @generated from field: string first_seen_at = 5;
+   */
+  firstSeenAt: string;
+
+  /**
+   * @generated from field: string last_seen_at = 6;
+   */
+  lastSeenAt: string;
+};
+
+/**
+ * Describes the message postpilot.v1.GuidelineCandidate.
+ * Use `create(GuidelineCandidateSchema)` to create a new message.
+ */
+export const GuidelineCandidateSchema: GenMessage<GuidelineCandidate> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_guideline, 11);
+
+/**
+ * @generated from message postpilot.v1.ListGuidelineCandidatesRequest
+ */
+export type ListGuidelineCandidatesRequest = Message<"postpilot.v1.ListGuidelineCandidatesRequest"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.ListGuidelineCandidatesRequest.
+ * Use `create(ListGuidelineCandidatesRequestSchema)` to create a new message.
+ */
+export const ListGuidelineCandidatesRequestSchema: GenMessage<ListGuidelineCandidatesRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_guideline, 12);
+
+/**
+ * @generated from message postpilot.v1.ListGuidelineCandidatesResponse
+ */
+export type ListGuidelineCandidatesResponse = Message<"postpilot.v1.ListGuidelineCandidatesResponse"> & {
+  /**
+   * The PENDING candidates only, in review order: occurrences descending, then last-seen
+   * descending, so the most-repeated correction is first.
+   *
+   * @generated from field: repeated postpilot.v1.GuidelineCandidate candidates = 1;
+   */
+  candidates: GuidelineCandidate[];
+
+  /**
+   * True when the pending queue is at its server-side bound and further revisions record
+   * nothing. The client cannot infer this from an empty list, and it owns no copy of the
+   * bound, so the server says it.
+   *
+   * @generated from field: bool queue_full = 2;
+   */
+  queueFull: boolean;
+};
+
+/**
+ * Describes the message postpilot.v1.ListGuidelineCandidatesResponse.
+ * Use `create(ListGuidelineCandidatesResponseSchema)` to create a new message.
+ */
+export const ListGuidelineCandidatesResponseSchema: GenMessage<ListGuidelineCandidatesResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_guideline, 13);
+
+/**
+ * @generated from message postpilot.v1.DismissGuidelineCandidateRequest
+ */
+export type DismissGuidelineCandidateRequest = Message<"postpilot.v1.DismissGuidelineCandidateRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message postpilot.v1.DismissGuidelineCandidateRequest.
+ * Use `create(DismissGuidelineCandidateRequestSchema)` to create a new message.
+ */
+export const DismissGuidelineCandidateRequestSchema: GenMessage<DismissGuidelineCandidateRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_guideline, 14);
+
+/**
+ * Empty: a dismissal marks the row rather than deleting it — the row is what keeps the
+ * same instruction from being recorded again — and nothing references a candidate.
+ *
+ * @generated from message postpilot.v1.DismissGuidelineCandidateResponse
+ */
+export type DismissGuidelineCandidateResponse = Message<"postpilot.v1.DismissGuidelineCandidateResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.DismissGuidelineCandidateResponse.
+ * Use `create(DismissGuidelineCandidateResponseSchema)` to create a new message.
+ */
+export const DismissGuidelineCandidateResponseSchema: GenMessage<DismissGuidelineCandidateResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_guideline, 15);
+
+/**
  * @generated from enum postpilot.v1.GuidelineScope
  */
 export enum GuidelineScope {
@@ -341,6 +481,27 @@ export const GuidelineService: GenService<{
     methodKind: "unary";
     input: typeof DeleteGuidelineRequestSchema;
     output: typeof DeleteGuidelineResponseSchema;
+  },
+  /**
+   * The candidate review surface. A candidate is a completed revision's instruction,
+   * recorded verbatim — never learned, never generalized, and never injected into a
+   * prompt. Approval is CreateGuideline with from_candidate_id, not a procedure of its
+   * own: the create already owns every field rule and every refusal an approval needs.
+   *
+   * @generated from rpc postpilot.v1.GuidelineService.ListGuidelineCandidates
+   */
+  listGuidelineCandidates: {
+    methodKind: "unary";
+    input: typeof ListGuidelineCandidatesRequestSchema;
+    output: typeof ListGuidelineCandidatesResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.GuidelineService.DismissGuidelineCandidate
+   */
+  dismissGuidelineCandidate: {
+    methodKind: "unary";
+    input: typeof DismissGuidelineCandidateRequestSchema;
+    output: typeof DismissGuidelineCandidateResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_guideline, 0);

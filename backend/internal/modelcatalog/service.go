@@ -151,10 +151,17 @@ func (s *Service) Browse(ctx context.Context, refresh bool, purpose Purpose) (Br
 
 	entries := make([]Entry, 0, len(snapshot.Candidates)+len(rows))
 	for _, candidate := range snapshot.Candidates {
-		entry := Entry{Candidate: candidate, Listed: true}
+		// Read live from the source this pass, so the capability is known by construction —
+		// including a `reasons: false` that really means "publishes no reasoning object".
+		entry := Entry{Candidate: candidate, Listed: true, ReasoningKnown: true}
 		if row, ok := curated[candidate.ModelID]; ok {
 			entry.Curated, entry.Purposes = true, row.Purposes
 			entry.Reasoning = row.Reasoning[purpose]
+			// Drift is derived from the LIVE capability, not the stored snapshot: the point of
+			// the warning is that the source's list moved away from what the operator chose.
+			// It is a flag only — the override is kept and still sent (change 27, and plan
+			// 18's own `listed = 0` precedent).
+			entry.ReasoningDrifted = candidate.DriftedFrom(entry.Reasoning)
 			delete(curated, candidate.ModelID)
 		}
 		entry.ReasoningSpend = spend[entry.ModelID]
@@ -261,6 +268,9 @@ func (s *Service) SetPurpose(ctx context.Context, modelID string, purpose Purpos
 		row.ContextTokens = candidate.ContextTokens
 		row.InputUSDPerMillion = candidate.InputUSDPerMillion
 		row.OutputUSDPerMillion = candidate.OutputUSDPerMillion
+		// The reasoning capability is part of the same upstream snapshot as the flags and the
+		// pricing above, so a register refreshes it exactly as it refreshes those (change 27).
+		row.ReasoningCapability = candidate.ReasoningCapability
 		row.PricingCheckedAt = now.UTC().Format(time.DateOnly)
 		row.Listed = true
 		row.LastSeenAt = now
@@ -337,8 +347,29 @@ func (s *Service) Update(ctx context.Context, modelID string, patch Patch) (Mode
 	if _, err := ParsePurpose(string(patch.Purpose)); err != nil {
 		return Model{}, err
 	}
+	// The enum check stays the FIRST gate: a value that is not an effort at all is refused
+	// before anything is read.
 	if patch.Reasoning != nil && !patch.Reasoning.Valid() {
 		return Model{}, fmt.Errorf("%w: %q", ErrInvalidReasoning, *patch.Reasoning)
+	}
+	// Then the model rule (change 27): an effort outside a model's published list, or `none`
+	// on a model that cannot turn reasoning off, is refused. A model whose list the source
+	// does not publish keeps accepting all eight — absence is unknown, not "supports
+	// nothing". The frontend's option filtering is an affordance; this is the contract.
+	//
+	// The capability is read before the patch, so a refresh landing in between could in
+	// principle accept a value the newest list no longer has. That is the same drift the
+	// warning exists for and is deliberately tolerated: a stored override is never rewritten
+	// by the source, so the alternative would be a transaction spanning a decision the
+	// operator already made.
+	if patch.Reasoning != nil {
+		capability, err := s.reasoningCapabilityOf(ctx, modelID)
+		if err != nil {
+			return Model{}, err
+		}
+		if !capability.AcceptsEffort(*patch.Reasoning) {
+			return Model{}, fmt.Errorf("%w: %s does not accept %q", ErrInvalidReasoning, modelID, *patch.Reasoning)
+		}
 	}
 	updated, err := s.store.Patch(ctx, modelID, patch, s.now())
 	if err != nil {
@@ -349,6 +380,29 @@ func (s *Service) Update(ctx context.Context, modelID string, patch Patch) (Mode
 	}
 	s.invalidate(ctx)
 	return updated, nil
+}
+
+// reasoningCapabilityOf answers what this model accepts, preferring the LIVE entry over the
+// stored snapshot. The live one is authoritative and always known; the stored one may be a
+// row written before this data existed, where "does not reason" and "nobody has looked" are
+// the same bytes (see ReasoningCapability.Known).
+//
+// The read is not held against the write: a refresh landing in between could accept a value
+// the newest list no longer has. That is the same drift the row's warning exists for, and it
+// is deliberately tolerated — a stored override is never rewritten by the source, so the
+// alternative would be a transaction spanning a decision the operator already made.
+func (s *Service) reasoningCapabilityOf(ctx context.Context, modelID string) (ReasoningCapability, error) {
+	if candidate, offered := s.candidate(ctx, modelID); offered {
+		return candidate.ReasoningCapability, nil
+	}
+	row, err := s.store.Get(ctx, modelID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return ReasoningCapability{}, err
+		}
+		return ReasoningCapability{}, fmt.Errorf("read model before reasoning update: %w", err)
+	}
+	return row.ReasoningCapability, nil
 }
 
 // reasoningSpend reads the ledger's aggregate for the purpose's stage through the port, and

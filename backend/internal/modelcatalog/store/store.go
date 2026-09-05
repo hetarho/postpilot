@@ -4,8 +4,11 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -91,21 +94,27 @@ func (s *Store) Upsert(ctx context.Context, m modelcatalog.Model) error {
 
 func upsert(ctx context.Context, q *sqlc.Queries, m modelcatalog.Model) error {
 	err := q.UpsertCatalogModel(ctx, sqlc.UpsertCatalogModelParams{
-		ModelID:             m.ModelID,
-		ProviderSlug:        m.ProviderSlug,
-		Label:               m.Label,
-		Vision:              boolToInt(m.Vision),
-		StructuredOutput:    boolToInt(m.StructuredOutput),
-		ImageOutput:         boolToInt(m.ImageOutput),
-		VideoOutput:         boolToInt(m.VideoOutput),
-		ContextTokens:       nullInt(m.ContextTokens),
-		InputUsdPerMillion:  nullString(m.InputUSDPerMillion),
-		OutputUsdPerMillion: nullString(m.OutputUSDPerMillion),
-		PricingCheckedAt:    nullString(m.PricingCheckedAt),
-		Listed:              boolToInt(m.Listed),
-		LastSeenAt:          nullTime(m.LastSeenAt),
-		CreatedAt:           formatTime(m.CreatedAt),
-		UpdatedAt:           formatTime(m.UpdatedAt),
+		ModelID:                m.ModelID,
+		ProviderSlug:           m.ProviderSlug,
+		Label:                  m.Label,
+		Vision:                 boolToInt(m.Vision),
+		StructuredOutput:       boolToInt(m.StructuredOutput),
+		ImageOutput:            boolToInt(m.ImageOutput),
+		VideoOutput:            boolToInt(m.VideoOutput),
+		Reasons:                boolToInt(m.Reasons),
+		ReasoningEfforts:       joinEfforts(m.Efforts),
+		ReasoningDefaultEffort: m.DefaultEffort,
+		ReasoningMandatory:     boolToInt(m.Mandatory),
+		ReasoningNativeEffort:  boolToInt(m.NativeEffort),
+		ReasoningMaxTokens:     boolToInt(m.MaxTokens),
+		ContextTokens:          nullInt(m.ContextTokens),
+		InputUsdPerMillion:     nullString(m.InputUSDPerMillion),
+		OutputUsdPerMillion:    nullString(m.OutputUSDPerMillion),
+		PricingCheckedAt:       nullString(m.PricingCheckedAt),
+		Listed:                 boolToInt(m.Listed),
+		LastSeenAt:             nullTime(m.LastSeenAt),
+		CreatedAt:              formatTime(m.CreatedAt),
+		UpdatedAt:              formatTime(m.UpdatedAt),
 	})
 	if err != nil {
 		return fmt.Errorf("upsert catalog model: %w", err)
@@ -242,18 +251,24 @@ func (s *Store) RefreshAvailability(ctx context.Context, seen []modelcatalog.Can
 	pricingDate := at.UTC().Format(time.DateOnly)
 	for _, candidate := range seen {
 		err := q.MarkCatalogModelSeen(ctx, sqlc.MarkCatalogModelSeenParams{
-			ProviderSlug:        candidate.ProviderSlug,
-			Label:               candidate.Label,
-			Vision:              boolToInt(candidate.Vision),
-			StructuredOutput:    boolToInt(candidate.StructuredOutput),
-			ImageOutput:         boolToInt(candidate.ImageOutput),
-			VideoOutput:         boolToInt(candidate.VideoOutput),
-			ContextTokens:       nullInt(candidate.ContextTokens),
-			InputUsdPerMillion:  nullString(candidate.InputUSDPerMillion),
-			OutputUsdPerMillion: nullString(candidate.OutputUSDPerMillion),
-			PricingCheckedAt:    nullString(pricingDate),
-			LastSeenAt:          nullString(stamp),
-			ModelID:             candidate.ModelID,
+			ProviderSlug:           candidate.ProviderSlug,
+			Label:                  candidate.Label,
+			Vision:                 boolToInt(candidate.Vision),
+			StructuredOutput:       boolToInt(candidate.StructuredOutput),
+			ImageOutput:            boolToInt(candidate.ImageOutput),
+			VideoOutput:            boolToInt(candidate.VideoOutput),
+			Reasons:                boolToInt(candidate.Reasons),
+			ReasoningEfforts:       joinEfforts(candidate.Efforts),
+			ReasoningDefaultEffort: candidate.DefaultEffort,
+			ReasoningMandatory:     boolToInt(candidate.Mandatory),
+			ReasoningNativeEffort:  boolToInt(candidate.NativeEffort),
+			ReasoningMaxTokens:     boolToInt(candidate.MaxTokens),
+			ContextTokens:          nullInt(candidate.ContextTokens),
+			InputUsdPerMillion:     nullString(candidate.InputUSDPerMillion),
+			OutputUsdPerMillion:    nullString(candidate.OutputUSDPerMillion),
+			PricingCheckedAt:       nullString(pricingDate),
+			LastSeenAt:             nullString(stamp),
+			ModelID:                candidate.ModelID,
 		})
 		if err != nil {
 			return fmt.Errorf("mark catalog model seen: %w", err)
@@ -286,13 +301,21 @@ func toModel(row sqlc.GetCatalogModelRow, registrations []registration) (modelca
 		return modelcatalog.Model{}, err
 	}
 	return modelcatalog.Model{
-		ModelID:             row.ModelID,
-		ProviderSlug:        row.ProviderSlug,
-		Label:               row.Label,
-		Vision:              row.Vision == 1,
-		StructuredOutput:    row.StructuredOutput == 1,
-		ImageOutput:         row.ImageOutput == 1,
-		VideoOutput:         row.VideoOutput == 1,
+		ModelID:          row.ModelID,
+		ProviderSlug:     row.ProviderSlug,
+		Label:            row.Label,
+		Vision:           row.Vision == 1,
+		StructuredOutput: row.StructuredOutput == 1,
+		ImageOutput:      row.ImageOutput == 1,
+		VideoOutput:      row.VideoOutput == 1,
+		ReasoningCapability: modelcatalog.ReasoningCapability{
+			Reasons:       row.Reasons == 1,
+			Efforts:       splitEfforts(row.ReasoningEfforts),
+			DefaultEffort: row.ReasoningDefaultEffort,
+			Mandatory:     row.ReasoningMandatory == 1,
+			NativeEffort:  row.ReasoningNativeEffort == 1,
+			MaxTokens:     row.ReasoningMaxTokens == 1,
+		},
 		ContextTokens:       row.ContextTokens.Int64,
 		InputUSDPerMillion:  row.InputUsdPerMillion.String,
 		OutputUSDPerMillion: row.OutputUsdPerMillion.String,
@@ -362,3 +385,40 @@ func formatTime(value time.Time) string { return value.UTC().Format(writeLayout)
 func parseTime(value string) (time.Time, error) { return time.Parse(time.RFC3339Nano, value) }
 
 var _ modelcatalog.Store = (*Store)(nil)
+
+// joinEfforts / splitEfforts are the whole storage form of the effort list: read whole,
+// written whole, never joined and never queried by element (see the query file's header).
+//
+// JSON rather than a delimiter, because the column's entire claim is that it holds what the
+// source published VERBATIM: a delimiter would silently split any future value containing it,
+// and the admin would then offer a value the source never listed. The order survives, because
+// that order is the order a selector offers the values in.
+//
+// An empty list is the empty string, not "[]", so the column's DEFAULT ” already reads as
+// UNKNOWN for every row written before this data existed.
+func joinEfforts(efforts []string) string {
+	if len(efforts) == 0 {
+		return ""
+	}
+	encoded, err := json.Marshal(efforts)
+	if err != nil {
+		// []string cannot fail to marshal; a failure here would be a corrupted heap.
+		slog.Error("encode reasoning efforts failed", "err", err)
+		return ""
+	}
+	return string(encoded)
+}
+
+// splitEfforts is deliberately forgiving: an unparseable value reads as UNKNOWN rather than
+// failing the whole catalog read, which would take the admin screen down over one column.
+func splitEfforts(value string) []string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	var efforts []string
+	if err := json.Unmarshal([]byte(value), &efforts); err != nil {
+		slog.Warn("unreadable reasoning efforts column", "value", value, "err", err)
+		return nil
+	}
+	return efforts
+}

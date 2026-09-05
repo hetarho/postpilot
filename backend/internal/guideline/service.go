@@ -12,18 +12,22 @@ import (
 )
 
 type Service struct {
-	store     Store
-	templates TemplateDirectory
-	limits    Limits
-	now       func() time.Time
-	newID     func() string
+	store      Store
+	templates  TemplateDirectory
+	limits     Limits
+	maxPending int
+	now        func() time.Time
+	newID      func() string
 }
 
-func NewService(store Store, limits Limits) *Service {
+func NewService(store Store, limits Limits, maxPendingCandidates int) *Service {
 	if !limits.valid() {
 		panic("guideline: limits must be positive")
 	}
-	return &Service{store: store, limits: limits, now: time.Now, newID: newID}
+	if maxPendingCandidates <= 0 {
+		panic("guideline: the pending candidate bound must be positive")
+	}
+	return &Service{store: store, limits: limits, maxPending: maxPendingCandidates, now: time.Now, newID: newID}
 }
 
 // SetTemplateDirectory wires the template context's directory. Without it a scoped guideline
@@ -45,7 +49,14 @@ func (s *Service) List(ctx context.Context, userID string) ([]Guideline, error) 
 	return guidelines, nil
 }
 
-func (s *Service) Create(ctx context.Context, userID, text string, scope Scope, templateIDs []string) (Guideline, error) {
+// Create is also the approval path for a candidate. There is deliberately no Approve
+// procedure: every field rule, the text bound and the account cap already live here, and a
+// second entry point would have to restate all of them to stay in agreement.
+//
+// fromCandidateID is set only when the user edited the candidate's text before approving,
+// so the row can no longer be found by text. The text match happens either way, which is
+// what marks the candidate an on-the-spot 지침으로 저장 recorded.
+func (s *Service) Create(ctx context.Context, userID, text string, scope Scope, templateIDs []string, fromCandidateID string) (Guideline, error) {
 	text, err := s.validText(text)
 	if err != nil {
 		return Guideline{}, err
@@ -59,10 +70,65 @@ func (s *Service) Create(ctx context.Context, userID, text string, scope Scope, 
 		ID: s.newID(), UserID: userID, Text: text, Scope: scope, TemplateIDs: ids,
 		CreatedAt: now, UpdatedAt: now,
 	}
-	if err := s.store.Insert(ctx, created, s.limits.MaxPerAccount); err != nil {
+	approval := CandidateApproval{ID: strings.TrimSpace(fromCandidateID), Text: text}
+	if err := s.store.Insert(ctx, created, s.limits.MaxPerAccount, approval); err != nil {
 		return Guideline{}, err
 	}
 	return s.projectOne(ctx, userID, created)
+}
+
+// RecordCandidate stores one completed revision's instruction verbatim, at the CANDIDATE
+// bound (500) rather than the guideline bound (300): the guideline bound is enforced at
+// approval, where the user can shorten the text. Nothing here rewrites, summarizes,
+// normalizes or generalizes the instruction, and no provider is called — a candidate is a
+// receipt for something the user wrote ([I4] stays entirely with voice).
+//
+// A skip is an ordinary outcome, not an error: the text is already a guideline, the user
+// already ruled on it, or the pending queue is full.
+func (s *Service) RecordCandidate(ctx context.Context, userID, postSlug, instruction string) error {
+	text, err := validCandidateText(instruction)
+	if err != nil {
+		return err
+	}
+	now := s.now()
+	candidate := Candidate{
+		ID: s.newID(), UserID: userID, Text: text, PostSlug: strings.TrimSpace(postSlug),
+		Status: CandidateStatusPending, Occurrences: 1, FirstSeenAt: now, LastSeenAt: now,
+	}
+	if _, err := s.store.RecordCandidate(ctx, candidate, s.maxPending); err != nil {
+		return fmt.Errorf("record guideline candidate: %w", err)
+	}
+	return nil
+}
+
+// ListCandidates returns the pending candidates in review order plus whether the queue is at
+// its bound. queueFull is derived here, from the same count recording compares, so the screen
+// and the recording path cannot disagree — and the client never owns a copy of the bound.
+func (s *Service) ListCandidates(ctx context.Context, userID string) (candidates []Candidate, queueFull bool, err error) {
+	candidates, pending, err := s.store.ListPendingCandidates(ctx, userID)
+	if err != nil {
+		return nil, false, fmt.Errorf("list guideline candidates: %w", err)
+	}
+	return candidates, pending >= s.maxPending, nil
+}
+
+// DismissCandidate marks the row rather than deleting it: the dismissed row is what keeps the
+// same instruction from being recorded again by a later revision.
+func (s *Service) DismissCandidate(ctx context.Context, userID, id string) error {
+	if strings.TrimSpace(id) == "" {
+		return ErrCandidateNotFound
+	}
+	return s.store.SetCandidateStatus(ctx, userID, id, CandidateStatusDismissed)
+}
+
+// DetachCandidatePost drops the post link from every candidate that named one post, called
+// when that post is deleted. The text is untouched: nothing references a candidate's origin,
+// so a candidate without a link is still exactly as reviewable as one with it.
+func (s *Service) DetachCandidatePost(ctx context.Context, userID, postSlug string) error {
+	if strings.TrimSpace(postSlug) == "" {
+		return nil
+	}
+	return s.store.DropCandidatePostSlug(ctx, userID, postSlug)
 }
 
 // Update applies only what the request carried. The validation runs per present part, so a

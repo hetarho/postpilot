@@ -75,6 +75,9 @@ export interface RecommendationSet {
 export type ReasoningEffortName =
   '' | 'unset' | 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
+/** The full effort vocabulary. Since change 27 it is the **fallback** for a model whose
+ *  accepted values the source does not publish — not the whole truth. A model that does
+ *  publish a list is offered exactly that list. */
 export const REASONING_EFFORTS: readonly ReasoningEffortName[] = [
   '',
   'unset',
@@ -125,8 +128,46 @@ export interface AdminCatalogEntry {
    *  or undefined when nothing has been recorded — which renders as nothing rather than as a
    *  zero that would read as a measurement. */
   reasoningSpend?: ReasoningSpend
+  /** What the source publishes about this model's reasoning (change 27). Every falsy value
+   *  here means **unknown**, never "supports nothing" — the same rule an unpublished price
+   *  follows. */
+  reasoning: ReasoningCapability
   /** Upstream publication time in epoch seconds; orders a vendor's models newest-first. */
   sourceCreatedAt: bigint
+}
+
+/** What the source says one model accepts for reasoning. It is what turns the effort control
+ *  from "the same eight values for every model" into the model's own list. */
+export interface ReasoningCapability {
+  /** The model reasons at all. False means the effort control is absent, not empty. */
+  reasons: boolean
+  /** The accepted values, verbatim and in the source's descending order — the order a
+   *  selector should offer them in. Empty means the source publishes no list for this model,
+   *  and `REASONING_EFFORTS` is what the control offers instead. */
+  efforts: readonly ReasoningEffortName[]
+  /** What the model uses when reasoning is on and no effort is sent, so `unset` can be
+   *  labelled with what it actually means. Empty when unpublished. */
+  defaultEffort: ReasoningEffortName | ''
+  /** Reasoning cannot be turned off: `none` is never offered. */
+  mandatory: boolean
+  /** The provider takes the effort string itself rather than a budget derived from it.
+   *  Nothing renders it yet; change 29 consumes it. */
+  nativeEffort: boolean
+  /** The source offers a reasoning token budget for this model. Recorded and displayed
+   *  only — this change surfaces no input for it. */
+  maxTokens: boolean
+  /** The stored override would be refused if it were written today — no longer in the
+   *  published list, `none` on a model that became mandatory, an effort on a model that
+   *  stopped reasoning. A warning for the row and nothing more: the value is kept and still
+   *  sent. */
+  drifted: boolean
+  /** The fields above came from a read that actually looked. It is the one thing they cannot
+   *  say about themselves: `reasons: false` with no list is both "the source publishes no
+   *  reasoning object" and "nothing has asked yet" — every row predating this data reads that
+   *  way. False for an entry served from storage (before the first successful refresh, or
+   *  while the provider catalog cannot be read), and the control must then keep offering the
+   *  full vocabulary rather than disappear while its stored value is still being sent. */
+  known: boolean
 }
 
 /** A recent window of one model's completion budget at one stage. It is the only reliable

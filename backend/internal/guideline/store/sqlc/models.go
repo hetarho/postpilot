@@ -4,6 +4,10 @@
 
 package sqlc
 
+import (
+	"database/sql"
+)
+
 type Guideline struct {
 	ID        string
 	UserID    string
@@ -11,4 +15,15 @@ type Guideline struct {
 	Scope     string
 	CreatedAt string
 	UpdatedAt string
+}
+
+type GuidelineCandidate struct {
+	ID          string
+	UserID      string
+	Text        string
+	PostSlug    sql.NullString
+	Status      string
+	Occurrences int64
+	FirstSeenAt string
+	LastSeenAt  string
 }

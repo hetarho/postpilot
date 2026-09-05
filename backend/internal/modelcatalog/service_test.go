@@ -3,6 +3,7 @@ package modelcatalog_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -623,5 +624,284 @@ func TestProviderSlugOf(t *testing.T) {
 		if got := modelcatalog.ProviderSlugOf(id); got != want {
 			t.Errorf("ProviderSlugOf(%q) = %q, want %q", id, got, want)
 		}
+	}
+}
+
+// --- reasoning capability (change 27) ---
+
+func reasoningCapable(efforts []string, mandatory bool) modelcatalog.ReasoningCapability {
+	return modelcatalog.ReasoningCapability{
+		Reasons: true, Efforts: efforts, DefaultEffort: "high",
+		Mandatory: mandatory, NativeEffort: true,
+	}
+}
+
+// A6: the override is bounded by what the model publishes. The enum check stays the first
+// gate, and a model with no published list keeps accepting all eight values.
+func TestUpdate_RefusesAnEffortTheModelDoesNotAccept(t *testing.T) {
+	bounded := curated("deepseek/deepseek-v4-pro-0813", modelcatalog.PurposeWriting)
+	bounded.ReasoningCapability = reasoningCapable([]string{"max", "high", "low"}, false)
+	mandatory := curated("google/gemini-3.8-flash", modelcatalog.PurposeWriting)
+	mandatory.ReasoningCapability = reasoningCapable([]string{"high", "medium", "low"}, true)
+	// No published list: absence is unknown, not "supports nothing".
+	listless := curated("vendor/no-list", modelcatalog.PurposeWriting)
+	listless.ReasoningCapability = modelcatalog.ReasoningCapability{Reasons: true}
+	svc := newService(t, newFakeStore(bounded, mandatory, listless), nil)
+
+	set := func(modelID string, effort llm.ReasoningEffort) error {
+		_, err := svc.Update(context.Background(), modelID, modelcatalog.Patch{
+			Purpose: modelcatalog.PurposeWriting, Reasoning: &effort,
+		})
+		return err
+	}
+	// A6, against a real model: `medium` is a valid effort and not one this model takes.
+	if err := set("deepseek/deepseek-v4-pro-0813", llm.ReasoningEffort("medium")); !errors.Is(err, modelcatalog.ErrInvalidReasoning) {
+		t.Errorf("medium on a max/high/low model = %v, want ErrInvalidReasoning", err)
+	}
+	// The same model is not mandatory yet lists no `none` — the shape that let the app's own
+	// "turn it off" control send a value the model does not take.
+	if err := set("deepseek/deepseek-v4-pro-0813", llm.ReasoningNone); !errors.Is(err, modelcatalog.ErrInvalidReasoning) {
+		t.Errorf("none on a model that does not list it = %v, want ErrInvalidReasoning", err)
+	}
+	if err := set("deepseek/deepseek-v4-pro-0813", llm.ReasoningEffort("high")); err != nil {
+		t.Errorf("a published value was refused: %v", err)
+	}
+	// Mandatory: `none` is refused even though the list is otherwise satisfied.
+	if err := set("google/gemini-3.8-flash", llm.ReasoningNone); !errors.Is(err, modelcatalog.ErrInvalidReasoning) {
+		t.Errorf("none on a mandatory model = %v, want ErrInvalidReasoning", err)
+	}
+	if err := set("google/gemini-3.8-flash", llm.ReasoningEffort("medium")); err != nil {
+		t.Errorf("a published value was refused on the mandatory model: %v", err)
+	}
+	// A6 second half: every value stays acceptable where the source publishes no list.
+	for _, effort := range []llm.ReasoningEffort{llm.ReasoningNone, "minimal", "low", "medium", "high", "xhigh", "max"} {
+		if err := set("vendor/no-list", effort); err != nil {
+			t.Errorf("%q was refused on a model with no published list: %v", effort, err)
+		}
+	}
+	// Clearing the override is always allowed: it is not a claim about the model.
+	if err := set("vendor/no-list", llm.ReasoningUnspecified); err != nil {
+		t.Errorf("clearing the override was refused: %v", err)
+	}
+}
+
+// A7: an override that is no longer in its model's list survives, is still projected onto the
+// stage keys, and is reported as drifted.
+func TestBrowse_ReportsDriftWithoutChangingWhatIsSent(t *testing.T) {
+	row := curated("deepseek/deepseek-v4-pro-0813", modelcatalog.PurposeWriting)
+	row.Reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{
+		modelcatalog.PurposeWriting: llm.ReasoningEffort("medium"),
+	}
+	store := newFakeStore(row)
+	live := candidate("deepseek/deepseek-v4-pro-0813", 1)
+	live.ReasoningCapability = reasoningCapable([]string{"max", "high", "low"}, false)
+	svc := newService(t, store, &fakeUpstream{candidates: []modelcatalog.Candidate{live}})
+
+	browse, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(browse.Entries) != 1 {
+		t.Fatalf("entries = %d", len(browse.Entries))
+	}
+	entry := browse.Entries[0]
+	if !entry.ReasoningDrifted {
+		t.Fatal("an override outside the live list is not reported as drifted")
+	}
+	// Kept, not rewritten: the source's list changing is not a mandate to change a decision.
+	if entry.Reasoning != "medium" {
+		t.Fatalf("the drifted override was rewritten to %q", entry.Reasoning)
+	}
+	// And it is still what the registry projects onto the stage, so the call still sends it.
+	info, ok := svc.Lookup("deepseek/deepseek-v4-pro-0813")
+	if !ok {
+		t.Fatal("the drifted model left the registry")
+	}
+	if info.Reasoning[llm.StageNameWrite] != "medium" {
+		t.Fatalf("stage reasoning = %+v, want the stored override still projected", info.Reasoning)
+	}
+}
+
+// A value the model still publishes is not drift, and neither is an absent list or an
+// unset override — drift is a positive answer, never a default.
+func TestBrowse_ReportsNoDriftWithoutAPositiveMismatch(t *testing.T) {
+	inList := curated("a/in-list", modelcatalog.PurposeWriting)
+	inList.Reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{modelcatalog.PurposeWriting: "high"}
+	noList := curated("b/no-list", modelcatalog.PurposeWriting)
+	noList.Reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{modelcatalog.PurposeWriting: "medium"}
+	noOverride := curated("c/no-override", modelcatalog.PurposeWriting)
+
+	withList := candidate("a/in-list", 3)
+	withList.ReasoningCapability = reasoningCapable([]string{"max", "high", "low"}, false)
+	without := candidate("b/no-list", 2)
+	without.ReasoningCapability = modelcatalog.ReasoningCapability{Reasons: true}
+	bare := candidate("c/no-override", 1)
+	bare.ReasoningCapability = reasoningCapable([]string{"max", "high", "low"}, false)
+
+	svc := newService(t, newFakeStore(inList, noList, noOverride), &fakeUpstream{
+		candidates: []modelcatalog.Candidate{withList, without, bare},
+	})
+	browse, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range browse.Entries {
+		if entry.ReasoningDrifted {
+			t.Errorf("%s reported drift: override=%q list=%v", entry.ModelID, entry.Reasoning, entry.Efforts)
+		}
+	}
+}
+
+// A1: a register refreshes the capability from the live entry, exactly as it refreshes the
+// label and the pricing.
+func TestSetPurpose_SnapshotsTheReasoningCapability(t *testing.T) {
+	store := newFakeStore()
+	live := candidate("deepseek/deepseek-v4-pro-0813", 1)
+	live.ReasoningCapability = reasoningCapable([]string{"max", "high", "low"}, false)
+	svc := newService(t, store, &fakeUpstream{candidates: []modelcatalog.Candidate{live}})
+
+	row, err := svc.SetPurpose(context.Background(), "deepseek/deepseek-v4-pro-0813", modelcatalog.PurposeWriting, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !row.Reasons || row.DefaultEffort != "high" || len(row.Efforts) != 3 || !row.NativeEffort {
+		t.Fatalf("the register did not snapshot the capability: %+v", row.ReasoningCapability)
+	}
+}
+
+// A9: the capability is curation metadata and reaches no generation path. What the registry
+// serves is unchanged by it, so the request body cannot be.
+func TestModelSource_CarriesNoReasoningCapability(t *testing.T) {
+	plain := curated("openai/gpt-x", modelcatalog.PurposeWriting)
+	rich := curated("openai/gpt-x-rich", modelcatalog.PurposeWriting)
+	rich.ReasoningCapability = reasoningCapable([]string{"max", "high", "low"}, true)
+	svc := newService(t, newFakeStore(plain, rich), nil)
+
+	a, okA := svc.Lookup("openai/gpt-x")
+	b, okB := svc.Lookup("openai/gpt-x-rich")
+	if !okA || !okB {
+		t.Fatal("a curated model left the registry")
+	}
+	// Everything the registry sees is identical apart from the id and label: the capability
+	// crosses no boundary into llm.SourceModel.
+	a.ModelID, a.Label = "", ""
+	b.ModelID, b.Label = "", ""
+	if !reflect.DeepEqual(a, b) {
+		t.Fatalf("the reasoning capability changed what the registry serves:\n%+v\n%+v", a, b)
+	}
+}
+
+// A8 server-side, and the ambiguity the six fields cannot resolve alone: a CONFIRMED
+// non-reasoning model accepts no effort, while a row that merely predates this data — the
+// shape migration 0024 leaves every existing row in — still accepts everything.
+func TestUpdate_RefusesAnEffortOnAConfirmedNonReasoningModel(t *testing.T) {
+	confirmed := curated("vendor/no-reasoning", modelcatalog.PurposeWriting)
+	unknown := curated("vendor/never-refreshed", modelcatalog.PurposeWriting)
+	store := newFakeStore(confirmed, unknown)
+	// Only the confirmed one is offered upstream, and its live entry says it does not reason
+	// while still declaring something (mandatory: false is not enough — the flags below are).
+	live := candidate("vendor/no-reasoning", 1)
+	live.ReasoningCapability = modelcatalog.ReasoningCapability{NativeEffort: true}
+	svc := newService(t, store, &fakeUpstream{candidates: []modelcatalog.Candidate{live}})
+
+	medium := llm.ReasoningEffort("medium")
+	if _, err := svc.Update(context.Background(), "vendor/no-reasoning", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Reasoning: &medium,
+	}); !errors.Is(err, modelcatalog.ErrInvalidReasoning) {
+		t.Errorf("an effort on a confirmed non-reasoning model = %v, want ErrInvalidReasoning", err)
+	}
+	// Clearing it is still allowed: that is not a claim about the model.
+	if _, err := svc.Update(context.Background(), "vendor/no-reasoning", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Reasoning: ptr(llm.ReasoningUnspecified),
+	}); err != nil {
+		t.Errorf("clearing the override on a non-reasoning model was refused: %v", err)
+	}
+	// The never-refreshed row says nothing at all, so nothing may be inferred from it.
+	if _, err := svc.Update(context.Background(), "vendor/never-refreshed", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Reasoning: &medium,
+	}); err != nil {
+		t.Errorf("a row with no capability data refused an effort: %v", err)
+	}
+}
+
+func ptr[T any](v T) *T { return &v }
+
+// Drift is "this value would be refused today", not "this value left a list" — which is what
+// catches a model that became mandatory, and one that stopped reasoning, with no list to
+// compare against at all.
+func TestDriftedFrom_CatchesEveryRefusalNotJustAMissingListEntry(t *testing.T) {
+	for name, tc := range map[string]struct {
+		capability modelcatalog.ReasoningCapability
+		effort     llm.ReasoningEffort
+		want       bool
+	}{
+		"left the published list": {
+			reasoningCapable([]string{"max", "high", "low"}, false), "medium", true,
+		},
+		"none on a model that became mandatory, with no list": {
+			modelcatalog.ReasoningCapability{Reasons: true, Mandatory: true}, llm.ReasoningNone, true,
+		},
+		"an effort on a model that stopped reasoning": {
+			modelcatalog.ReasoningCapability{NativeEffort: true}, "high", true,
+		},
+		"still in the list":    {reasoningCapable([]string{"max", "high", "low"}, false), "high", false},
+		"no list published":    {modelcatalog.ReasoningCapability{Reasons: true}, "medium", false},
+		"capability unknown":   {modelcatalog.ReasoningCapability{}, "medium", false},
+		"no override at all":   {reasoningCapable([]string{"max"}, false), llm.ReasoningUnspecified, false},
+		"unset is not a value": {reasoningCapable([]string{"max"}, false), llm.ReasoningUnset, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := tc.capability.DriftedFrom(tc.effort); got != tc.want {
+				t.Fatalf("DriftedFrom(%q) = %v, want %v", tc.effort, got, tc.want)
+			}
+		})
+	}
+}
+
+// The capability read from a row that never had one must not be mistaken for an answer.
+func TestReasoningCapability_KnownOnlyWhenSomethingWasRead(t *testing.T) {
+	if (modelcatalog.ReasoningCapability{}).Known() {
+		t.Fatal("an empty capability claims to be known")
+	}
+	// Any one field carrying something is a read that looked, including a bare native-effort
+	// signal on a model with no reasoning object.
+	for name, capability := range map[string]modelcatalog.ReasoningCapability{
+		"reasons":       {Reasons: true},
+		"a list":        {Efforts: []string{"high"}},
+		"a default":     {DefaultEffort: "high"},
+		"mandatory":     {Mandatory: true},
+		"native effort": {NativeEffort: true},
+		"max tokens":    {MaxTokens: true},
+	} {
+		if !capability.Known() {
+			t.Errorf("%s: Known() = false", name)
+		}
+	}
+}
+
+// A failed fetch serves stored rows, and they must NOT claim their capability is known:
+// the admin has to keep offering the full vocabulary rather than hide a control whose
+// stored value is still being sent.
+func TestBrowse_ReportsAStoredCapabilityAsUnknown(t *testing.T) {
+	row := curated("vendor/never-refreshed", modelcatalog.PurposeWriting)
+	svc := newService(t, newFakeStore(row), &fakeUpstream{err: errors.New("network down")})
+
+	browse, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(browse.Entries) != 1 || browse.Entries[0].ReasoningKnown {
+		t.Fatalf("a stored entry claimed a known capability: %+v", browse.Entries)
+	}
+	// And a live read is known by construction, including a `reasons: false` that means it.
+	live := candidate("vendor/never-refreshed", 1)
+	live.ReasoningCapability = modelcatalog.ReasoningCapability{NativeEffort: true}
+	svc = newService(t, newFakeStore(row), &fakeUpstream{candidates: []modelcatalog.Candidate{live}})
+	browse, err = svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(browse.Entries) != 1 || !browse.Entries[0].ReasoningKnown {
+		t.Fatalf("a live entry did not report a known capability: %+v", browse.Entries)
 	}
 }

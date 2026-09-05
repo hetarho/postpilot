@@ -334,6 +334,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	guidelineSvc := guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
 		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
+		50,
 	)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 
@@ -345,14 +346,14 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", "없는 사실을 쓰지 않기", guideline.ScopeGlobal, nil); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", "없는 사실을 쓰지 않기", guideline.ScopeGlobal, nil, ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", "CCTV를 언급하지 않기", guideline.ScopeTemplates, []string{review.ID}); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", "CCTV를 언급하지 않기", guideline.ScopeTemplates, []string{review.ID}, ""); err != nil {
 		t.Fatal(err)
 	}
 	// Scoped to the OTHER template, so it must never reach this post's prompt.
-	if _, err := guidelineSvc.Create(ctx, "alice", "협찬 표기를 빠뜨리지 않기", guideline.ScopeTemplates, []string{other.ID}); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", "협찬 표기를 빠뜨리지 않기", guideline.ScopeTemplates, []string{other.ID}, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -408,4 +409,206 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if bare.TemplateID != "" || len(global) != 1 || global[0] != "없는 사실을 쓰지 않기" {
 		t.Fatalf("a post with no template resolved %v (template id %q)", global, bare.TemplateID)
 	}
+}
+
+// Change 26 through the real adapters and the real store: recording rides the generation
+// context's port, review reads the guideline context, and approval is the create. This is the
+// only place the two contexts meet, so it is where the seam is worth proving.
+func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline-candidate.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+		t.Fatal(err)
+	}
+
+	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
+	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
+	templateSvc := template.NewService(
+		templatestore.New(handle.Writer, handle.Reader),
+		template.Limits{
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
+			MaxPerAccount: 50, MaxRepeatExpansion: 40,
+		},
+	)
+	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
+	// Two pending candidates allowed, so the bound is reachable in a test without 50 rows.
+	guidelineSvc := guideline.NewService(
+		guidelinestore.New(handle.Writer, handle.Reader),
+		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
+		2,
+	)
+	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
+	// The delete path's two required hooks, stubbed: this test is about the candidate link.
+	postSvc.SetExperimentContentPurger(noPurge{})
+	postSvc.SetLivePublishFinder(noLivePublish{})
+	postSvc.SetGuidelineCandidateDetacher(postCandidateLinks{service: guidelineSvc})
+
+	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	language := post.LanguageKorean
+	saved, err := postSvc.SaveDraft(ctx, "alice", "", "무인 떡집", "", &defaultVoice.ID, nil, &language)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A1: recording through the generation context's port, wired exactly as main wires it.
+	recorder := generationCandidates{service: guidelineSvc}
+	const instruction = "여기  너무 광고 같아!! (특히 마지막 문단)"
+	if err := recorder.Record(ctx, "alice", saved.Slug, "  "+instruction+"  "); err != nil {
+		t.Fatal(err)
+	}
+	candidates, full, err := guidelineSvc.ListCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 1 || full {
+		t.Fatalf("candidates=%d full=%v", len(candidates), full)
+	}
+	if candidates[0].Text != instruction || candidates[0].PostSlug != saved.Slug {
+		t.Fatalf("recorded %+v, want the instruction verbatim against the post", candidates[0])
+	}
+
+	// A2: a repeat counts up rather than creating a second row.
+	if err := recorder.Record(ctx, "alice", saved.Slug, instruction); err != nil {
+		t.Fatal(err)
+	}
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 1 || candidates[0].Occurrences != 2 {
+		t.Fatalf("after a repeat: %+v", candidates)
+	}
+
+	// A9: the queue stops rather than evicting, and the screen is told why.
+	if err := recorder.Record(ctx, "alice", saved.Slug, "존댓말로 써줘"); err != nil {
+		t.Fatal(err)
+	}
+	if err := recorder.Record(ctx, "alice", saved.Slug, "문단을 짧게"); err != nil {
+		t.Fatal(err)
+	}
+	candidates, full, err = guidelineSvc.ListCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 2 || !full {
+		t.Fatalf("at the bound: candidates=%d full=%v", len(candidates), full)
+	}
+
+	// A5: approval is the standard create, with the scope chosen here and nowhere earlier.
+	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요")
+	if err != nil {
+		t.Fatal(err)
+	}
+	created, err := guidelineSvc.Create(ctx, "alice", "광고처럼 읽히는 문장을 쓰지 않기", guideline.ScopeTemplates, []string{review.ID}, candidates[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Scope != guideline.ScopeTemplates || len(created.TemplateIDs) != 1 {
+		t.Fatalf("approved with scope %+v", created)
+	}
+	candidates, full, err = guidelineSvc.ListCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 1 || full {
+		t.Fatalf("after approval: candidates=%d full=%v", len(candidates), full)
+	}
+
+	// A3: the approved instruction is never recorded again, and neither is a saved guideline's
+	// text — recording resumed (the queue has room), so this proves the dedupe and not the cap.
+	if err := recorder.Record(ctx, "alice", saved.Slug, instruction); err != nil {
+		t.Fatal(err)
+	}
+	if err := recorder.Record(ctx, "alice", saved.Slug, "광고처럼 읽히는 문장을 쓰지 않기"); err != nil {
+		t.Fatal(err)
+	}
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 1 || candidates[0].Text != "존댓말로 써줘" {
+		t.Fatalf("a ruled-on instruction came back: %+v", candidates)
+	}
+
+	// A4: with candidates recorded and only the approved guideline saved, the prompt carries the
+	// guideline and nothing else — no candidate text reaches it.
+	texts, err := generationGuidelines{service: guidelineSvc}.ForPrompt(ctx, "alice", &review.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(texts) != 1 || texts[0] != "광고처럼 읽히는 문장을 쓰지 않기" {
+		t.Fatalf("prompt guidelines = %v", texts)
+	}
+	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, nil, texts)
+	for _, candidateText := range []string{instruction, "존댓말로 써줘", "문단을 짧게"} {
+		if strings.Contains(system, candidateText) {
+			t.Fatalf("candidate text %q reached the prompt:\n%s", candidateText, system)
+		}
+	}
+
+	// A11: deleting the source post leaves the candidate with its text and no link.
+	if err := postSvc.DeletePost(ctx, "alice", saved.Slug); err != nil {
+		t.Fatal(err)
+	}
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 1 || candidates[0].Text != "존댓말로 써줘" || candidates[0].PostSlug != "" {
+		t.Fatalf("after the post delete: %+v", candidates)
+	}
+
+	// A11 second half: deleting the guideline neither revives nor resets its approved candidate.
+	if err := guidelineSvc.Delete(ctx, "alice", created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := recorder.Record(ctx, "alice", saved.Slug, instruction); err != nil {
+		t.Fatal(err)
+	}
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 1 || candidates[0].Text != "존댓말로 써줘" {
+		t.Fatalf("deleting the guideline revived its candidate: %+v", candidates)
+	}
+
+	// A6: 무시 marks the row, and a later revision does not bring it back.
+	if err := guidelineSvc.DismissCandidate(ctx, "alice", candidates[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := recorder.Record(ctx, "alice", saved.Slug, "존댓말로 써줘"); err != nil {
+		t.Fatal(err)
+	}
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 0 {
+		t.Fatalf("a dismissed instruction reappeared: %+v", candidates)
+	}
+}
+
+type noPurge struct{}
+
+func (noPurge) PurgePost(context.Context, string, string) error { return nil }
+
+type noLivePublish struct{}
+
+func (noLivePublish) LiveForPost(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
 }

@@ -184,6 +184,9 @@ export const models = {
     priceUnpublished: 'No published token price',
     reasoning: 'Reasoning effort for this purpose',
     reasoningDefault: 'Stage default',
+    reasoningUnsetWithDefault: 'unset (model default {{effort}})',
+    reasoningDrifted:
+      'This model no longer lists “{{effort}}”. The value is still sent; its supported list is {{supported}}.',
     reasoningSpend: 'Recent reasoning spend',
     reasoningSpendValue:
       '{{percent}}% of completion tokens went to reasoning (over {{calls}} calls)',

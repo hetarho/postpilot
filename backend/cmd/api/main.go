@@ -271,6 +271,7 @@ func main() {
 	guidelineSvc := guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
 		guideline.Limits{TextMaxChars: cfg.GuidelineTextMaxChars, MaxPerAccount: cfg.GuidelineMaxPerAccount},
+		cfg.GuidelineCandidateMaxPending,
 	)
 	// Template names are a live projection and owned-id validation, never a stored column or
 	// a SQL join: the guideline context asks the template context, through this adapter only.
@@ -332,6 +333,12 @@ func main() {
 	// Likewise for the 지침: read once at enqueue, to freeze. The guideline context never
 	// learns that generation exists.
 	generationSvc.SetGuidelines(generationGuidelines{service: guidelineSvc})
+	// A completed revision records what the user asked for as a candidate (change 26). This
+	// adapter is the only place the two contexts meet in that direction, and nothing crosses
+	// it but the account, the post and the user's own sentence.
+	generationSvc.SetGuidelineCandidates(generationCandidates{service: guidelineSvc})
+	// Deleting a post drops the link its candidates named and nothing else.
+	postSvc.SetGuidelineCandidateDetacher(postCandidateLinks{service: guidelineSvc})
 	// The per-version generation snapshot (change 16). Generation is the only context that
 	// depends on both post and voice, so it is the only one that may join a machine baseline
 	// to the profile version that produced it.
@@ -708,6 +715,23 @@ type generationGuidelines struct{ service *guideline.Service }
 
 func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error) {
 	return a.service.ForPrompt(ctx, userID, templateID)
+}
+
+// generationCandidates hands the generation context the candidate recorder. The instruction
+// crosses as opaque text: the guideline context records the user's sentence without learning
+// what a revision job is, and nothing on either side reads it with a model.
+type generationCandidates struct{ service *guideline.Service }
+
+func (a generationCandidates) Record(ctx context.Context, userID, postSlug, instruction string) error {
+	return a.service.RecordCandidate(ctx, userID, postSlug, instruction)
+}
+
+// postCandidateLinks lets post deletion drop the link without the post context learning what
+// a guideline candidate is: it hands over the account and the slug, and nothing comes back.
+type postCandidateLinks struct{ service *guideline.Service }
+
+func (a postCandidateLinks) DetachPost(ctx context.Context, userID, postSlug string) error {
+	return a.service.DetachCandidatePost(ctx, userID, postSlug)
 }
 
 // RenderedFor is the whole seam between the two contexts: generation hands over the account,

@@ -550,6 +550,66 @@ func (p *recordingContentPurger) PurgePost(_ context.Context, userID, slug strin
 	return p.err
 }
 
+type recordingCandidateDetacher struct {
+	calls []string
+	err   error
+}
+
+func (d *recordingCandidateDetacher) DetachPost(_ context.Context, userID, slug string) error {
+	d.calls = append(d.calls, userID+"/"+slug)
+	return d.err
+}
+
+// Change 26: deleting a post drops the link its candidates named — after the row is gone, so a
+// post that survives a failure never reads as deleted from the candidate list.
+func TestDeletePostDetachesGuidelineCandidateLinks(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	ctx := context.Background()
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	svc.SetExperimentContentPurger(&recordingContentPurger{})
+	detacher := &recordingCandidateDetacher{}
+	svc.SetGuidelineCandidateDetacher(detacher)
+
+	if err := svc.DeletePost(ctx, alice, found.Slug); err != nil {
+		t.Fatal(err)
+	}
+	if len(detacher.calls) != 1 || detacher.calls[0] != alice+"/"+found.Slug {
+		t.Fatalf("detach calls = %v", detacher.calls)
+	}
+}
+
+// A detach failure is logged and swallowed: the post the user asked to remove is gone, and a
+// dead link is not worth reporting the delete as failed.
+func TestDeletePostSucceedsWhenTheDetachFails(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	svc.SetExperimentContentPurger(&recordingContentPurger{})
+	svc.SetGuidelineCandidateDetacher(&recordingCandidateDetacher{err: errors.New("database unavailable")})
+
+	if err := svc.DeletePost(context.Background(), alice, found.Slug); err != nil {
+		t.Fatalf("a detach failure failed the delete: %v", err)
+	}
+	if _, err := store.GetPost(context.Background(), found.Slug); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("post survived delete: %v", err)
+	}
+}
+
+func TestDeletePostDoesNotDetachWhenItIsRefused(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	svc.SetExperimentContentPurger(&recordingContentPurger{})
+	detacher := &recordingCandidateDetacher{}
+	svc.SetGuidelineCandidateDetacher(detacher)
+	svc.SetLivePublishFinder(&fakeLivePublish{live: true})
+
+	if err := svc.DeletePost(context.Background(), alice, found.Slug); !errors.Is(err, ErrPostPublishing) {
+		t.Fatalf("DeletePost = %v, want ErrPostPublishing", err)
+	}
+	if len(detacher.calls) != 0 {
+		t.Fatalf("a refused delete detached candidate links: %v", detacher.calls)
+	}
+}
+
 func TestDeletePostPurgesExperimentContentBeforeRemovingSource(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()

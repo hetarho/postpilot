@@ -79,6 +79,13 @@ type ExperimentContentPurger interface {
 	PurgePost(ctx context.Context, userID, postSlug string) error
 }
 
+// GuidelineCandidateDetacher drops the post link from any guideline candidate that named a
+// post being deleted (change 26). Only the link goes: a candidate is a receipt for something
+// the user wrote, and nothing references its origin, so the text stays reviewable without it.
+type GuidelineCandidateDetacher interface {
+	DetachPost(ctx context.Context, userID, postSlug string) error
+}
+
 // Store is the persistence this context needs.
 //
 // Ownership is a property of the query, not of a check the caller must remember: the

@@ -183,6 +183,9 @@ export const models = {
     priceUnpublished: '토큰 단가 미공개',
     reasoning: '이 용도의 추론 강도',
     reasoningDefault: '단계 기본값',
+    reasoningUnsetWithDefault: 'unset (모델 기본값 {{effort}})',
+    reasoningDrifted:
+      '이 모델이 더 이상 「{{effort}}」을 지원 목록에 두지 않아요. 값은 그대로 보내지만, 지원 목록은 {{supported}} 입니다.',
     reasoningSpend: '최근 추론 사용',
     reasoningSpendValue: '완성 토큰의 {{percent}}%가 추론에 쓰였어요 ({{calls}}회 기준)',
     reasoningSpendHeavy:

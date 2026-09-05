@@ -15,18 +15,19 @@ import (
 // Service is the drafting context's behavior. Every method takes the acting user id
 // from the caller (the interceptor put it in the context) and never from a payload.
 type Service struct {
-	store         Store
-	blobs         ObjectStore
-	putTTL        time.Duration
-	getTTL        time.Duration
-	maxBytes      int64
-	maxPhotos     int
-	jobs          ActiveJobFinder
-	experiments   PendingExperimentFinder
-	contentPurger ExperimentContentPurger
-	livePublish   LivePublishFinder
-	voices        VoiceDirectory
-	templates     TemplateDirectory
+	store          Store
+	blobs          ObjectStore
+	putTTL         time.Duration
+	getTTL         time.Duration
+	maxBytes       int64
+	maxPhotos      int
+	jobs           ActiveJobFinder
+	experiments    PendingExperimentFinder
+	contentPurger  ExperimentContentPurger
+	candidateLinks GuidelineCandidateDetacher
+	livePublish    LivePublishFinder
+	voices         VoiceDirectory
+	templates      TemplateDirectory
 
 	// now and newID are seams for tests in this package, not configuration.
 	now   func() time.Time
@@ -41,6 +42,12 @@ func (s *Service) SetPendingExperimentFinder(finder PendingExperimentFinder) {
 
 func (s *Service) SetExperimentContentPurger(purger ExperimentContentPurger) {
 	s.contentPurger = purger
+}
+
+// SetGuidelineCandidateDetacher wires the guideline context's post-link drop, which only
+// exists once both services have been constructed.
+func (s *Service) SetGuidelineCandidateDetacher(detacher GuidelineCandidateDetacher) {
+	s.candidateLinks = detacher
 }
 
 // SetLivePublishFinder wires the publishing context's in-flight query, which only exists
@@ -489,6 +496,17 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 	}
 	if !deleted {
 		return ErrNotFound
+	}
+	// AFTER the row is actually gone, and deliberately not before: an earlier failure — a blob
+	// delete, a concurrent delete — would otherwise leave a candidate saying its post is gone
+	// while the post is still there, and nothing ever re-links it (a repeat recording keeps the
+	// slug it was first seen with). It is nil-tolerant, unlike the purger above, and its failure
+	// does not fail the delete: a link that outlives its post is a dead link, not a privacy
+	// leak, and the post is what the user asked to remove.
+	if s.candidateLinks != nil {
+		if err := s.candidateLinks.DetachPost(ctx, userID, slug); err != nil {
+			slog.WarnContext(ctx, "detach guideline candidate post link failed", "error", err, "slug", slug)
+		}
 	}
 	return nil
 }

@@ -7,7 +7,61 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
+
+const bumpCandidate = `-- name: BumpCandidate :execrows
+UPDATE guideline_candidates
+SET occurrences = occurrences + 1, last_seen_at = ?
+WHERE id = ? AND user_id = ?
+`
+
+type BumpCandidateParams struct {
+	LastSeenAt string
+	ID         string
+	UserID     string
+}
+
+// A repeat. post_slug is deliberately NOT rewritten: the candidate names where it was first
+// seen, and rewriting it would make the link jump between posts on every repeat.
+func (q *Queries) BumpCandidate(ctx context.Context, arg BumpCandidateParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, bumpCandidate, arg.LastSeenAt, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const candidateByText = `-- name: CandidateByText :one
+
+SELECT id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at
+FROM guideline_candidates
+WHERE user_id = ? AND text = ?
+`
+
+type CandidateByTextParams struct {
+	UserID string
+	Text   string
+}
+
+// Guideline candidates (change 26). A candidate is one completed revision's instruction,
+// recorded verbatim. Rows in every state are kept: 'approved' and 'dismissed' rows are what
+// stop the same instruction from being recorded again, so nothing here deletes one.
+func (q *Queries) CandidateByText(ctx context.Context, arg CandidateByTextParams) (GuidelineCandidate, error) {
+	row := q.db.QueryRowContext(ctx, candidateByText, arg.UserID, arg.Text)
+	var i GuidelineCandidate
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Text,
+		&i.PostSlug,
+		&i.Status,
+		&i.Occurrences,
+		&i.FirstSeenAt,
+		&i.LastSeenAt,
+	)
+	return i, err
+}
 
 const countGuidelines = `-- name: CountGuidelines :one
 SELECT count(*) FROM guidelines WHERE user_id = ?
@@ -15,6 +69,17 @@ SELECT count(*) FROM guidelines WHERE user_id = ?
 
 func (q *Queries) CountGuidelines(ctx context.Context, userID string) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countGuidelines, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countPendingCandidates = `-- name: CountPendingCandidates :one
+SELECT count(*) FROM guideline_candidates WHERE user_id = ? AND status = 'pending'
+`
+
+func (q *Queries) CountPendingCandidates(ctx context.Context, userID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countPendingCandidates, userID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -52,6 +117,21 @@ func (q *Queries) DeleteGuidelineScope(ctx context.Context, arg DeleteGuidelineS
 	return err
 }
 
+const dropCandidatePostSlug = `-- name: DropCandidatePostSlug :exec
+UPDATE guideline_candidates SET post_slug = NULL WHERE user_id = ? AND post_slug = ?
+`
+
+type DropCandidatePostSlugParams struct {
+	UserID   string
+	PostSlug sql.NullString
+}
+
+// Post deletion drops the link and keeps the text: nothing references a candidate's origin.
+func (q *Queries) DropCandidatePostSlug(ctx context.Context, arg DropCandidatePostSlugParams) error {
+	_, err := q.db.ExecContext(ctx, dropCandidatePostSlug, arg.UserID, arg.PostSlug)
+	return err
+}
+
 const getGuideline = `-- name: GetGuideline :one
 SELECT id, user_id, text, scope, created_at, updated_at
 FROM guidelines
@@ -75,6 +155,50 @@ func (q *Queries) GetGuideline(ctx context.Context, arg GetGuidelineParams) (Gui
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const guidelineByText = `-- name: GuidelineByText :one
+SELECT id FROM guidelines WHERE user_id = ? AND text = ?
+`
+
+type GuidelineByTextParams struct {
+	UserID string
+	Text   string
+}
+
+func (q *Queries) GuidelineByText(ctx context.Context, arg GuidelineByTextParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, guidelineByText, arg.UserID, arg.Text)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertCandidate = `-- name: InsertCandidate :exec
+INSERT INTO guideline_candidates (id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at)
+VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+`
+
+type InsertCandidateParams struct {
+	ID          string
+	UserID      string
+	Text        string
+	PostSlug    sql.NullString
+	Status      string
+	FirstSeenAt string
+	LastSeenAt  string
+}
+
+func (q *Queries) InsertCandidate(ctx context.Context, arg InsertCandidateParams) error {
+	_, err := q.db.ExecContext(ctx, insertCandidate,
+		arg.ID,
+		arg.UserID,
+		arg.Text,
+		arg.PostSlug,
+		arg.Status,
+		arg.FirstSeenAt,
+		arg.LastSeenAt,
+	)
+	return err
 }
 
 const insertGuideline = `-- name: InsertGuideline :exec
@@ -279,6 +403,89 @@ func (q *Queries) ListGuidelines(ctx context.Context, userID string) ([]Guidelin
 		return nil, err
 	}
 	return items, nil
+}
+
+const listPendingCandidates = `-- name: ListPendingCandidates :many
+SELECT id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at
+FROM guideline_candidates
+WHERE user_id = ? AND status = 'pending'
+ORDER BY occurrences DESC, last_seen_at DESC, id
+`
+
+// Review order: the most-repeated correction first, then the most recent. Exactly the order
+// idx_guideline_candidates_review serves.
+func (q *Queries) ListPendingCandidates(ctx context.Context, userID string) ([]GuidelineCandidate, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingCandidates, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GuidelineCandidate
+	for rows.Next() {
+		var i GuidelineCandidate
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Text,
+			&i.PostSlug,
+			&i.Status,
+			&i.Occurrences,
+			&i.FirstSeenAt,
+			&i.LastSeenAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setCandidateStatus = `-- name: SetCandidateStatus :execrows
+UPDATE guideline_candidates
+SET status = ?
+WHERE id = ? AND user_id = ? AND status = 'pending'
+`
+
+type SetCandidateStatusParams struct {
+	Status string
+	ID     string
+	UserID string
+}
+
+// Only a PENDING row moves. A candidate the user already ruled on is terminal: without this
+// guard a stale tab could approve one twice, or dismiss one that was already approved.
+func (q *Queries) SetCandidateStatus(ctx context.Context, arg SetCandidateStatusParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setCandidateStatus, arg.Status, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setCandidateStatusByText = `-- name: SetCandidateStatusByText :exec
+UPDATE guideline_candidates
+SET status = ?
+WHERE user_id = ? AND text = ? AND status = 'pending'
+`
+
+type SetCandidateStatusByTextParams struct {
+	Status string
+	UserID string
+	Text   string
+}
+
+// Approval by text, which is what marks the candidate a just-completed revision recorded
+// without the client having to learn its id. Only a pending row is moved: an already
+// dismissed one stays dismissed.
+func (q *Queries) SetCandidateStatusByText(ctx context.Context, arg SetCandidateStatusByTextParams) error {
+	_, err := q.db.ExecContext(ctx, setCandidateStatusByText, arg.Status, arg.UserID, arg.Text)
+	return err
 }
 
 const updateGuidelineScope = `-- name: UpdateGuidelineScope :execrows

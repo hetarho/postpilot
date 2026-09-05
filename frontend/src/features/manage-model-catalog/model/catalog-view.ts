@@ -1,4 +1,8 @@
-import type { AdminCatalogEntry } from '@/entities/model-catalog'
+import {
+  REASONING_EFFORTS,
+  type AdminCatalogEntry,
+  type ReasoningEffortName,
+} from '@/entities/model-catalog'
 import { FEATURED_MODEL_PROVIDERS, type ModelPurpose } from '@/shared/config'
 
 /** What the operator has narrowed the catalog to. Every field is a widening default, so the
@@ -116,4 +120,46 @@ function compareProviders(a: string, b: string): number {
 function featuredRank(slug: string): number {
   const index = FEATURED_MODEL_PROVIDERS.indexOf(slug)
   return index === -1 ? FEATURED_MODEL_PROVIDERS.length : index
+}
+
+/** The effort values the control offers for one model (change 27).
+ *
+ *  The model's own published list when it has one, and the full eight otherwise — a source
+ *  that publishes no list is not a model that refuses every value, so the fallback is the
+ *  honest render. Order is the source's descending effort order, kept as published.
+ *
+ *  `''` (defer to the stage policy) and `unset` are always offered: neither is a claim about
+ *  what the model accepts. `none` IS such a claim, so it is withheld when reasoning is
+ *  mandatory and when a published list simply does not contain it — the same rule
+ *  `SetModelReasoning` enforces server-side.
+ *
+ *  A drifted override is added back so the control can still SHOW the value it is warning
+ *  about; a Listbox whose value is not among its options renders as empty, which would hide
+ *  exactly the thing the operator needs to see. */
+export function reasoningOptionsFor(entry: AdminCatalogEntry): ReasoningEffortName[] {
+  const published = entry.reasoning.efforts
+  const base: ReasoningEffortName[] =
+    published.length > 0 ? ['', 'unset', ...published] : [...REASONING_EFFORTS]
+  const offered = base.filter((effort) => effort !== 'none' || allowsNone(entry))
+  if (entry.reasoningEffort !== '' && !offered.includes(entry.reasoningEffort)) {
+    offered.push(entry.reasoningEffort)
+  }
+  return offered
+}
+
+function allowsNone(entry: AdminCatalogEntry): boolean {
+  if (entry.reasoning.mandatory) return false
+  const published = entry.reasoning.efforts
+  return published.length === 0 || published.includes('none')
+}
+
+/** Whether this model gets an effort control at all. A model the source says does not reason
+ *  has no effort to choose, so the control is absent rather than offered and ignored.
+ *
+ *  Withheld only on a POSITIVE answer — `known` and `reasons: false`. An entry served from
+ *  storage says `known: false`, which covers both a row written before this data existed and
+ *  every row on a screen whose provider fetch failed; hiding the control there would take away
+ *  an override that is still being sent on every call. */
+export function offersReasoningControl(entry: AdminCatalogEntry): boolean {
+  return !entry.reasoning.known || entry.reasoning.reasons
 }

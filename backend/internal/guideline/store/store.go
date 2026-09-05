@@ -29,7 +29,7 @@ func New(writer, reader *sql.DB) *Store {
 
 // Insert counts and writes in one transaction. The cap is checked here rather than in the
 // service because two concurrent creates would otherwise both read max-1 and both commit.
-func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount int) error {
+func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount int, approval guideline.CandidateApproval) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin insert guideline: %w", err)
@@ -57,8 +57,146 @@ func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount
 	if err := insertScope(ctx, q, g.UserID, g.ID, g.TemplateIDs); err != nil {
 		return err
 	}
+	if err := approve(ctx, q, g.UserID, approval); err != nil {
+		return err
+	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit insert guideline: %w", err)
+	}
+	return nil
+}
+
+// approve marks the candidate this create came from. Both halves run: an edited candidate is
+// named by id, and the text match is what catches the row a just-completed revision recorded
+// under the unedited text, which the client never learned the id of.
+func approve(ctx context.Context, q *sqlc.Queries, userID string, approval guideline.CandidateApproval) error {
+	if approval.ID != "" {
+		n, err := q.SetCandidateStatus(ctx, sqlc.SetCandidateStatusParams{
+			Status: string(guideline.CandidateStatusApproved), ID: approval.ID, UserID: userID,
+		})
+		if err != nil {
+			return fmt.Errorf("approve guideline candidate: %w", err)
+		}
+		// Zero rows is an unknown id, another account's, or one the user already ruled on. All
+		// three read the same and all three roll the create back: approving something that is
+		// not waiting for review is a request that did not happen.
+		if n == 0 {
+			return guideline.ErrCandidateNotFound
+		}
+	}
+	if approval.Text != "" {
+		err := q.SetCandidateStatusByText(ctx, sqlc.SetCandidateStatusByTextParams{
+			Status: string(guideline.CandidateStatusApproved), UserID: userID, Text: approval.Text,
+		})
+		if err != nil {
+			return fmt.Errorf("approve guideline candidate by text: %w", err)
+		}
+	}
+	return nil
+}
+
+// RecordCandidate is the whole recording rule in one transaction. The dedupe read, the
+// guideline check and the pending count all happen inside it, so two concurrent recordings
+// can neither both insert the same text nor both pass a full queue.
+func (s *Store) RecordCandidate(ctx context.Context, c guideline.Candidate, maxPending int) (bool, error) {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("begin record guideline candidate: %w", err)
+	}
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+
+	existing, err := q.CandidateByText(ctx, sqlc.CandidateByTextParams{UserID: c.UserID, Text: c.Text})
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return false, fmt.Errorf("select guideline candidate by text: %w", err)
+	}
+	found := err == nil
+
+	// Only asked when there is no candidate yet: an existing row already decides the outcome.
+	savedGuideline := false
+	if !found {
+		if _, err := q.GuidelineByText(ctx, sqlc.GuidelineByTextParams{UserID: c.UserID, Text: c.Text}); err == nil {
+			savedGuideline = true
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return false, fmt.Errorf("select guideline by text: %w", err)
+		}
+	}
+	pending := int64(0)
+	if !found && !savedGuideline {
+		if pending, err = q.CountPendingCandidates(ctx, c.UserID); err != nil {
+			return false, fmt.Errorf("count pending guideline candidates: %w", err)
+		}
+	}
+
+	status := guideline.CandidateStatus("")
+	if found {
+		status = guideline.CandidateStatus(existing.Status)
+	}
+	switch guideline.DecideRecording(status, savedGuideline, int(pending), maxPending) {
+	case guideline.RecordCandidateCount:
+		if _, err := q.BumpCandidate(ctx, sqlc.BumpCandidateParams{
+			LastSeenAt: formatTime(c.LastSeenAt), ID: existing.ID, UserID: c.UserID,
+		}); err != nil {
+			return false, fmt.Errorf("bump guideline candidate: %w", err)
+		}
+	case guideline.RecordCandidateInsert:
+		err := q.InsertCandidate(ctx, sqlc.InsertCandidateParams{
+			ID: c.ID, UserID: c.UserID, Text: c.Text, PostSlug: nullString(c.PostSlug),
+			Status:      string(guideline.CandidateStatusPending),
+			FirstSeenAt: formatTime(c.FirstSeenAt), LastSeenAt: formatTime(c.LastSeenAt),
+		})
+		if err != nil {
+			return false, fmt.Errorf("insert guideline candidate: %w", err)
+		}
+	default:
+		return false, nil
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit record guideline candidate: %w", err)
+	}
+	return true, nil
+}
+
+// ListPendingCandidates returns the review list and the pending count together. The count is
+// the length of the list rather than a second query: the two must describe the same read, or the
+// screen could say the queue is full while showing fewer rows than the bound.
+func (s *Store) ListPendingCandidates(ctx context.Context, userID string) ([]guideline.Candidate, int, error) {
+	rows, err := s.read.ListPendingCandidates(ctx, userID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("select pending guideline candidates: %w", err)
+	}
+	out := make([]guideline.Candidate, 0, len(rows))
+	for _, row := range rows {
+		value, err := toCandidate(row)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, value)
+	}
+	return out, len(out), nil
+}
+
+func (s *Store) SetCandidateStatus(ctx context.Context, userID, id string, status guideline.CandidateStatus) error {
+	n, err := s.write.SetCandidateStatus(ctx, sqlc.SetCandidateStatusParams{
+		Status: string(status), ID: id, UserID: userID,
+	})
+	if err != nil {
+		return fmt.Errorf("set guideline candidate status: %w", err)
+	}
+	if n == 0 {
+		return guideline.ErrCandidateNotFound
+	}
+	return nil
+}
+
+// DropCandidatePostSlug detaches every candidate that named a deleted post. The text stays:
+// nothing references a candidate's origin, so the row is still reviewable without its link.
+func (s *Store) DropCandidatePostSlug(ctx context.Context, userID, postSlug string) error {
+	err := s.write.DropCandidatePostSlug(ctx, sqlc.DropCandidatePostSlugParams{
+		UserID: userID, PostSlug: nullString(postSlug),
+	})
+	if err != nil {
+		return fmt.Errorf("drop guideline candidate post slug: %w", err)
 	}
 	return nil
 }
@@ -139,6 +277,13 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch guideline.P
 		}
 		if n == 0 {
 			return guideline.Guideline{}, guideline.ErrNotFound
+		}
+		// A text edit is another way for a text to become a saved guideline, so it approves a
+		// same-text candidate exactly as a create does. Without this, renaming a guideline onto
+		// a pending candidate's text would leave that candidate un-approvable forever — the
+		// create it needs would be refused as a duplicate — while its count kept rising.
+		if err := approve(ctx, q, userID, guideline.CandidateApproval{Text: *patch.Text}); err != nil {
+			return guideline.Guideline{}, err
 		}
 		touched = true
 	}
@@ -229,6 +374,31 @@ func toGuideline(row sqlc.Guideline) (guideline.Guideline, error) {
 		ID: row.ID, UserID: row.UserID, Text: row.Text, Scope: scope,
 		CreatedAt: created, UpdatedAt: updated,
 	}, nil
+}
+
+func toCandidate(row sqlc.GuidelineCandidate) (guideline.Candidate, error) {
+	first, err := parseTime(row.FirstSeenAt)
+	if err != nil {
+		return guideline.Candidate{}, fmt.Errorf("parse guideline candidate first_seen_at: %w", err)
+	}
+	last, err := parseTime(row.LastSeenAt)
+	if err != nil {
+		return guideline.Candidate{}, fmt.Errorf("parse guideline candidate last_seen_at: %w", err)
+	}
+	status := guideline.CandidateStatus(row.Status)
+	if !status.Valid() {
+		return guideline.Candidate{}, fmt.Errorf("unknown guideline candidate status %q", row.Status)
+	}
+	return guideline.Candidate{
+		ID: row.ID, UserID: row.UserID, Text: row.Text, PostSlug: row.PostSlug.String,
+		Status: status, Occurrences: int(row.Occurrences), FirstSeenAt: first, LastSeenAt: last,
+	}, nil
+}
+
+// nullString keeps "" and NULL the same thing for post_slug. A candidate whose post is gone
+// carries no link, and an empty string in the column would read as a post named "".
+func nullString(value string) sql.NullString {
+	return sql.NullString{String: value, Valid: value != ""}
 }
 
 func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }

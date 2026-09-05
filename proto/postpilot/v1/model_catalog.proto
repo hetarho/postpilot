@@ -72,10 +72,48 @@ message CatalogEntry {
   // Absent when nothing has been recorded for it, which renders as nothing rather than as a
   // zero that would read as a measurement.
   //
-  // It is the only reliable check that a model honors its effort: the provider's
-  // `supported_parameters` says a model accepts `reasoning_effort`, never which VALUES it
-  // honors, and an unhonored effort behaves like sending none — reasoning runs to the cap.
+  // It is the measured check that a model honors its effort: an unhonored effort behaves
+  // like sending none, and reasoning runs to the cap. The source now also DECLARES the
+  // values it accepts (the fields below), so this is corroboration rather than the only
+  // signal — a declared list is what the model takes, and this is what it did.
   optional ReasoningSpend reasoning_spend = 19;
+
+  // What the source publishes about this model's reasoning (change 27). EVERY ZERO HERE
+  // MEANS "UNKNOWN", NOT "SUPPORTS NOTHING" — the same rule an unpublished price follows.
+  //
+  // reasons: the source carries a reasoning object for this model at all. False means the
+  // model does not reason, and the effort control is absent rather than empty.
+  bool reasons = 20;
+  // The accepted effort values, verbatim and in the source's DESCENDING order, which is the
+  // order a selector should offer them in. Empty means the source does not publish a list
+  // for this model (only ~154 of 427 do) — the control then offers all eight values.
+  repeated string reasoning_efforts = 21;
+  // What the model uses when reasoning is on and no effort is sent. It is what `unset`
+  // actually means, so the operator can see that leaving it alone means `high` rather than
+  // "off". Empty when the source does not publish one.
+  string reasoning_default_effort = 22;
+  // Reasoning cannot be turned off: `none` must never be offered or sent.
+  bool reasoning_mandatory = 23;
+  // The provider receives the effort STRING itself, rather than a token budget OpenRouter
+  // derived from it. Nothing consumes it yet; change 29 needs it to size a budget safely.
+  bool reasoning_native_effort = 24;
+  // The source offers a reasoning token budget for this model. Recorded and displayed only —
+  // this change surfaces no input for it.
+  bool reasoning_max_tokens = 25;
+  // reasoning_effort above is no longer in this model's published list — a revised model, a
+  // replaced slug. A WARNING for the row and nothing more: the value is kept and still sent,
+  // because the source's list changing is not a mandate to rewrite an operator's decision
+  // (the same reasoning `listed = false` carries). Derived at read time from the two fields
+  // rather than stored, so it follows the catalog.
+  bool reasoning_drifted = 26;
+  // The fields above came from a read that actually looked. It is the one thing they cannot
+  // say about themselves: `reasons: false` with no list is BOTH "the source publishes no
+  // reasoning object" and "nothing has asked yet" — migration 0024 leaves every existing row
+  // in exactly that shape. False for an entry served from storage (before the first
+  // successful refresh, or while the provider catalog cannot be read), where the screen must
+  // keep offering the full effort vocabulary rather than hide a control whose stored value is
+  // still being sent.
+  bool reasoning_known = 27;
 }
 
 // ReasoningSpend is a recent window of one model's completion budget at one stage.
@@ -128,6 +166,10 @@ message UpdateModelRequest {
   // model doing this task", and the server refuses a purpose the model is not registered to
   // — the control only appears once registered, and that is now a server rule rather than a
   // UI convention.
+  //
+  // Refused when the model's published `reasoning_efforts` does not contain the value, and
+  // `none` is refused when `reasoning_mandatory` (change 27). A model whose list the source
+  // does not publish still accepts all eight — absence is unknown, not "supports nothing".
   //
   // Carried here rather than on SetModelPurposeRequest because registering and setting an
   // effort are separate decisions: an operator changes the effort on a model that is already

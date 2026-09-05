@@ -228,10 +228,14 @@ export {
   CreateGuidelineResponseSchema,
   UpdateGuidelineResponseSchema,
   DeleteGuidelineResponseSchema,
+  GuidelineCandidateSchema,
+  ListGuidelineCandidatesResponseSchema,
+  DismissGuidelineCandidateResponseSchema,
 } from './gen/postpilot/v1/guideline_pb'
 export type {
   Guideline as ProtoGuideline,
   GuidelineTemplateRef as ProtoGuidelineTemplateRef,
+  GuidelineCandidate as ProtoGuidelineCandidate,
 } from './gen/postpilot/v1/guideline_pb'
 export {
   TemplateService,

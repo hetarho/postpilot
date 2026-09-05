@@ -57,15 +57,15 @@ func newGuideline(id, userID, text string, scope guideline.Scope, at time.Time, 
 func TestInsertRefusesADuplicateTextWithinTheAccountOnly(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
-	if err := s.Insert(ctx, newGuideline("g1", "alice", "CCTV 언급 금지", guideline.ScopeGlobal, testNow), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "CCTV 언급 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{}); err != nil {
 		t.Fatal(err)
 	}
-	err := s.Insert(ctx, newGuideline("g2", "alice", "CCTV 언급 금지", guideline.ScopeGlobal, testNow), 10)
+	err := s.Insert(ctx, newGuideline("g2", "alice", "CCTV 언급 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{})
 	if !errors.Is(err, guideline.ErrDuplicateText) {
 		t.Fatalf("duplicate err = %v", err)
 	}
 	// The same text is another account's business entirely.
-	if err := s.Insert(ctx, newGuideline("g3", "bob", "CCTV 언급 금지", guideline.ScopeGlobal, testNow), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g3", "bob", "CCTV 언급 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{}); err != nil {
 		t.Fatalf("cross-account duplicate refused: %v", err)
 	}
 }
@@ -75,12 +75,12 @@ func TestInsertRefusesPastTheAccountCap(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
 	for i, text := range []string{"a", "b"} {
-		if err := s.Insert(ctx, newGuideline("g"+text, "alice", text, guideline.ScopeGlobal, testNow.Add(time.Duration(i)*time.Minute)), 2); err != nil {
+		if err := s.Insert(ctx, newGuideline("g"+text, "alice", text, guideline.ScopeGlobal, testNow.Add(time.Duration(i)*time.Minute)), 2, guideline.CandidateApproval{}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	var atCap *guideline.AccountCapError
-	err := s.Insert(ctx, newGuideline("gc", "alice", "c", guideline.ScopeGlobal, testNow), 2)
+	err := s.Insert(ctx, newGuideline("gc", "alice", "c", guideline.ScopeGlobal, testNow), 2, guideline.CandidateApproval{})
 	if !errors.As(err, &atCap) || atCap.Max != 2 {
 		t.Fatalf("cap err = %v", err)
 	}
@@ -92,7 +92,7 @@ func TestInsertRefusesPastTheAccountCap(t *testing.T) {
 		t.Fatalf("a refused insert changed the row count: %d", len(listed))
 	}
 	// The cap is per account, so the other account is unaffected by a full neighbour.
-	if err := s.Insert(ctx, newGuideline("bob-g1", "bob", "c", guideline.ScopeGlobal, testNow), 2); err != nil {
+	if err := s.Insert(ctx, newGuideline("bob-g1", "bob", "c", guideline.ScopeGlobal, testNow), 2, guideline.CandidateApproval{}); err != nil {
 		t.Fatalf("bob refused at alice's cap: %v", err)
 	}
 }
@@ -101,7 +101,7 @@ func TestInsertRefusesPastTheAccountCap(t *testing.T) {
 func TestInsertRefusesAForeignTemplateLink(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
-	err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "bob-p1"), 10)
+	err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "bob-p1"), 10, guideline.CandidateApproval{})
 	if !errors.Is(err, guideline.ErrTemplateNotFound) {
 		t.Fatalf("foreign link err = %v", err)
 	}
@@ -121,7 +121,7 @@ func TestListReturnsInjectionOrder(t *testing.T) {
 		newGuideline("s1", "alice", "scoped early", guideline.ScopeTemplates, testNow.Add(2*time.Minute), "alice-p2"),
 		newGuideline("g1", "alice", "global early", guideline.ScopeGlobal, testNow.Add(time.Minute)),
 	} {
-		if err := s.Insert(ctx, g, 10); err != nil {
+		if err := s.Insert(ctx, g, 10, guideline.CandidateApproval{}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -150,7 +150,7 @@ func TestListReturnsInjectionOrder(t *testing.T) {
 func TestUpdateTextLeavesAConcurrentScopeEditIntact(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
-	if err := s.Insert(ctx, newGuideline("g1", "alice", "old", guideline.ScopeGlobal, testNow), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "old", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{}); err != nil {
 		t.Fatal(err)
 	}
 	// Another tab rescopes it while the text edit is being typed.
@@ -177,7 +177,7 @@ func TestUpdateTextLeavesAConcurrentScopeEditIntact(t *testing.T) {
 func TestUpdateScopeReplacesAtomically(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
-	if err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "alice-p1", "alice-p2"), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "alice-p1", "alice-p2"), 10, guideline.CandidateApproval{}); err != nil {
 		t.Fatal(err)
 	}
 	updated, err := s.Update(ctx, "alice", "g1", guideline.Patch{
@@ -218,7 +218,7 @@ func TestUpdateScopeReplacesAtomically(t *testing.T) {
 func TestUpdateAndDeleteTreatForeignIdsAsUnknown(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
-	if err := s.Insert(ctx, newGuideline("g1", "bob", "a", guideline.ScopeGlobal, testNow), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g1", "bob", "a", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{}); err != nil {
 		t.Fatal(err)
 	}
 	text := "x"
@@ -244,7 +244,7 @@ func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 		newGuideline("s2", "alice", "p2 전용", guideline.ScopeTemplates, testNow.Add(3*time.Minute), "alice-p2"),
 		newGuideline("gb", "bob", "밥의 전역", guideline.ScopeGlobal, testNow),
 	} {
-		if err := s.Insert(ctx, g, 10); err != nil {
+		if err := s.Insert(ctx, g, 10, guideline.CandidateApproval{}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -297,10 +297,10 @@ func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 func TestDeleteRemovesOnlyItsOwnLinks(t *testing.T) {
 	ctx := context.Background()
 	s, handle := newStore(t)
-	if err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "alice-p1"), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "alice-p1"), 10, guideline.CandidateApproval{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Insert(ctx, newGuideline("g2", "alice", "b", guideline.ScopeTemplates, testNow.Add(time.Minute), "alice-p1"), 10); err != nil {
+	if err := s.Insert(ctx, newGuideline("g2", "alice", "b", guideline.ScopeTemplates, testNow.Add(time.Minute), "alice-p1"), 10, guideline.CandidateApproval{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Delete(ctx, "alice", "g1"); err != nil {
@@ -315,5 +315,272 @@ func TestDeleteRemovesOnlyItsOwnLinks(t *testing.T) {
 	}
 	if links != 1 || templates != 2 {
 		t.Fatalf("delete cascaded wrong: links=%d templates=%d", links, templates)
+	}
+}
+
+// --- candidates (change 26) ---
+
+func newCandidate(id, userID, text, postSlug string, at time.Time) guideline.Candidate {
+	return guideline.Candidate{
+		ID: id, UserID: userID, Text: text, PostSlug: postSlug,
+		Status: guideline.CandidateStatusPending, Occurrences: 1, FirstSeenAt: at, LastSeenAt: at,
+	}
+}
+
+func TestRecordCandidateCountsARepeatInsteadOfDuplicating(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	if recorded, err := s.RecordCandidate(ctx, newCandidate("c1", "alice", "광고 같아", "post-1", testNow), 10); err != nil || !recorded {
+		t.Fatalf("first recording = %v (err %v)", recorded, err)
+	}
+	later := testNow.Add(time.Hour)
+	if recorded, err := s.RecordCandidate(ctx, newCandidate("c2", "alice", "광고 같아", "post-2", later), 10); err != nil || !recorded {
+		t.Fatalf("repeat = %v (err %v)", recorded, err)
+	}
+	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("a repeat created %d rows", len(rows))
+	}
+	if rows[0].Occurrences != 2 || !rows[0].LastSeenAt.Equal(later) || !rows[0].FirstSeenAt.Equal(testNow) {
+		t.Fatalf("counted candidate = %+v", rows[0])
+	}
+	// The link names where the correction was FIRST seen; a repeat must not move it.
+	if rows[0].PostSlug != "post-1" {
+		t.Fatalf("post_slug moved to %q on a repeat", rows[0].PostSlug)
+	}
+	// The account boundary: the same text is a first sighting for another account.
+	if recorded, err := s.RecordCandidate(ctx, newCandidate("c3", "bob", "광고 같아", "post-9", testNow), 10); err != nil || !recorded {
+		t.Fatalf("bob's first recording = %v (err %v)", recorded, err)
+	}
+}
+
+func TestRecordCandidateSkipsWhatIsAlreadyKnown(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "광고 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{}); err != nil {
+		t.Fatal(err)
+	}
+	if recorded, err := s.RecordCandidate(ctx, newCandidate("c1", "alice", "광고 금지", "post-1", testNow), 10); err != nil || recorded {
+		t.Fatalf("a saved guideline was recorded again: %v (err %v)", recorded, err)
+	}
+	// A dismissed row keeps suppressing the same instruction, and is never revived.
+	if _, err := s.RecordCandidate(ctx, newCandidate("c2", "alice", "존댓말로", "post-1", testNow), 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetCandidateStatus(ctx, "alice", "c2", guideline.CandidateStatusDismissed); err != nil {
+		t.Fatal(err)
+	}
+	if recorded, err := s.RecordCandidate(ctx, newCandidate("c3", "alice", "존댓말로", "post-2", testNow.Add(time.Hour)), 10); err != nil || recorded {
+		t.Fatalf("a dismissed instruction was recorded again: %v (err %v)", recorded, err)
+	}
+	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("the dismissed candidate came back: %+v", rows)
+	}
+}
+
+// The cap lives inside the recording transaction, so it is read from the same snapshot the
+// insert commits against — two concurrent recordings cannot both pass a full queue.
+func TestRecordCandidateStopsAtThePendingBound(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	for _, text := range []string{"a", "b"} {
+		if recorded, err := s.RecordCandidate(ctx, newCandidate("c"+text, "alice", text, "post-1", testNow), 2); err != nil || !recorded {
+			t.Fatalf("recording %q = %v (err %v)", text, recorded, err)
+		}
+	}
+	if recorded, err := s.RecordCandidate(ctx, newCandidate("cc", "alice", "c", "post-1", testNow), 2); err != nil || recorded {
+		t.Fatalf("past the bound = %v (err %v)", recorded, err)
+	}
+	// Clearing one resumes recording. A repeat of an existing pending row still counts,
+	// because it adds no row.
+	if err := s.SetCandidateStatus(ctx, "alice", "ca", guideline.CandidateStatusApproved); err != nil {
+		t.Fatal(err)
+	}
+	if recorded, err := s.RecordCandidate(ctx, newCandidate("cc", "alice", "c", "post-1", testNow), 2); err != nil || !recorded {
+		t.Fatalf("after clearing one = %v (err %v)", recorded, err)
+	}
+}
+
+// Review order: most-repeated first, then most recent. Exactly what the index serves.
+func TestListPendingCandidatesReturnsReviewOrderAndTheHeldCount(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	for _, text := range []string{"once", "twice", "recent"} {
+		if _, err := s.RecordCandidate(ctx, newCandidate("c-"+text, "alice", text, "post-1", testNow), 10); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.RecordCandidate(ctx, newCandidate("dup", "alice", "twice", "post-2", testNow.Add(time.Minute)), 10); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.RecordCandidate(ctx, newCandidate("dup2", "alice", "recent", "post-3", testNow.Add(2*time.Hour)), 10); err != nil {
+		t.Fatal(err)
+	}
+	rows, held, err := s.ListPendingCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if held != 3 {
+		t.Fatalf("held = %d", held)
+	}
+	got := []string{rows[0].Text, rows[1].Text, rows[2].Text}
+	// "recent" and "twice" both hold two occurrences, so the later last-seen wins.
+	want := []string{"recent", "twice", "once"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("review order = %v, want %v", got, want)
+		}
+	}
+}
+
+// A deleted post leaves the text intact. There is no foreign key and no cascade: the row is
+// still reviewable, only without its link.
+func TestDropCandidatePostSlugKeepsTheText(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	if _, err := s.RecordCandidate(ctx, newCandidate("c1", "alice", "광고 같아", "post-1", testNow), 10); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.RecordCandidate(ctx, newCandidate("c2", "alice", "존댓말로", "post-2", testNow), 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DropCandidatePostSlug(ctx, "alice", "post-1"); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	links := map[string]string{}
+	for _, row := range rows {
+		links[row.Text] = row.PostSlug
+	}
+	if len(rows) != 2 || links["광고 같아"] != "" || links["존댓말로"] != "post-2" {
+		t.Fatalf("after the post delete: %+v", links)
+	}
+}
+
+// Approval rides the insert's own transaction: a create refused by the account cap must leave
+// the candidate pending, and a create that lands must move it out of the review list.
+func TestInsertApprovesTheCandidateInTheSameTransaction(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	if _, err := s.RecordCandidate(ctx, newCandidate("c1", "alice", "광고 금지", "post-1", testNow), 10); err != nil {
+		t.Fatal(err)
+	}
+	// Refused by the cap (zero allowed): nothing is approved.
+	err := s.Insert(ctx, newGuideline("g1", "alice", "광고 금지", guideline.ScopeGlobal, testNow), 0, guideline.CandidateApproval{Text: "광고 금지"})
+	var atCap *guideline.AccountCapError
+	if !errors.As(err, &atCap) {
+		t.Fatalf("capped insert err = %v", err)
+	}
+	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatal("a refused create moved the candidate out of the review list")
+	}
+	// By text: what an unedited approval and 지침으로 저장 both rely on.
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "광고 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{Text: "광고 금지"}); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err = s.ListPendingCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("the approved candidate stayed pending: %+v", rows)
+	}
+}
+
+// By id: the path for a candidate the user EDITED first, whose text no longer matches.
+func TestInsertApprovesAnEditedCandidateByID(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	if _, err := s.RecordCandidate(ctx, newCandidate("c1", "alice", "여기 너무 광고 같아 특히 마지막", "post-1", testNow), 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "광고 같은 문장 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{ID: "c1", Text: "광고 같은 문장 금지"}); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("the edited candidate stayed pending: %+v", rows)
+	}
+	// A named id that is not the account's is refused rather than silently ignored.
+	err = s.Insert(ctx, newGuideline("g2", "alice", "다른 지침", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{ID: "nope", Text: "다른 지침"})
+	if !errors.Is(err, guideline.ErrCandidateNotFound) {
+		t.Fatalf("unknown candidate id err = %v", err)
+	}
+}
+
+// Only a pending row moves. A candidate the user already ruled on is terminal, so a stale tab
+// can neither approve one twice nor dismiss one that was already approved.
+func TestARuledOnCandidateCannotBeMovedAgain(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	if _, err := s.RecordCandidate(ctx, newCandidate("c1", "alice", "광고 같아", "post-1", testNow), 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetCandidateStatus(ctx, "alice", "c1", guideline.CandidateStatusDismissed); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetCandidateStatus(ctx, "alice", "c1", guideline.CandidateStatusApproved); !errors.Is(err, guideline.ErrCandidateNotFound) {
+		t.Fatalf("a dismissed candidate was approved: %v", err)
+	}
+	// And the create rolls back rather than saving a guideline against a terminal candidate.
+	err := s.Insert(ctx, newGuideline("g1", "alice", "광고 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{ID: "c1", Text: "광고 금지"})
+	if !errors.Is(err, guideline.ErrCandidateNotFound) {
+		t.Fatalf("approving a dismissed candidate err = %v", err)
+	}
+	if _, err := s.Get(ctx, "alice", "g1"); !errors.Is(err, guideline.ErrNotFound) {
+		t.Fatalf("the refused create still saved a guideline: %v", err)
+	}
+}
+
+// A guideline text EDIT is another way for a text to become a saved guideline, so it approves a
+// same-text candidate exactly as a create does — otherwise that candidate could never be
+// approved (its create would be a duplicate) and would sit in the review list forever.
+func TestUpdateGuidelineTextApprovesASameTextCandidate(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	if _, err := s.RecordCandidate(ctx, newCandidate("c1", "alice", "존댓말로", "post-1", testNow), 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Insert(ctx, newGuideline("g1", "alice", "광고 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{}); err != nil {
+		t.Fatal(err)
+	}
+	renamed := "존댓말로"
+	if _, err := s.Update(ctx, "alice", "g1", guideline.Patch{Text: &renamed}, testNow); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("a renamed guideline left its candidate pending: %+v", rows)
+	}
+}
+
+func TestSetCandidateStatusRefusesAForeignID(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	if _, err := s.RecordCandidate(ctx, newCandidate("c1", "bob", "광고 같아", "post-1", testNow), 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetCandidateStatus(ctx, "alice", "c1", guideline.CandidateStatusDismissed); !errors.Is(err, guideline.ErrCandidateNotFound) {
+		t.Fatalf("foreign id err = %v", err)
 	}
 }

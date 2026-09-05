@@ -30,6 +30,8 @@ func (q *Queries) AddCatalogModelPurpose(ctx context.Context, arg AddCatalogMode
 
 const getCatalogModel = `-- name: GetCatalogModel :one
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
+       reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
+       reasoning_native_effort, reasoning_max_tokens,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
        listed, last_seen_at, created_at, updated_at
 FROM catalog_models
@@ -37,21 +39,27 @@ WHERE model_id = ?
 `
 
 type GetCatalogModelRow struct {
-	ModelID             string
-	ProviderSlug        string
-	Label               string
-	Vision              int64
-	StructuredOutput    int64
-	ImageOutput         int64
-	VideoOutput         int64
-	ContextTokens       sql.NullInt64
-	InputUsdPerMillion  sql.NullString
-	OutputUsdPerMillion sql.NullString
-	PricingCheckedAt    sql.NullString
-	Listed              int64
-	LastSeenAt          sql.NullString
-	CreatedAt           string
-	UpdatedAt           string
+	ModelID                string
+	ProviderSlug           string
+	Label                  string
+	Vision                 int64
+	StructuredOutput       int64
+	ImageOutput            int64
+	VideoOutput            int64
+	Reasons                int64
+	ReasoningEfforts       string
+	ReasoningDefaultEffort string
+	ReasoningMandatory     int64
+	ReasoningNativeEffort  int64
+	ReasoningMaxTokens     int64
+	ContextTokens          sql.NullInt64
+	InputUsdPerMillion     sql.NullString
+	OutputUsdPerMillion    sql.NullString
+	PricingCheckedAt       sql.NullString
+	Listed                 int64
+	LastSeenAt             sql.NullString
+	CreatedAt              string
+	UpdatedAt              string
 }
 
 func (q *Queries) GetCatalogModel(ctx context.Context, modelID string) (GetCatalogModelRow, error) {
@@ -65,6 +73,12 @@ func (q *Queries) GetCatalogModel(ctx context.Context, modelID string) (GetCatal
 		&i.StructuredOutput,
 		&i.ImageOutput,
 		&i.VideoOutput,
+		&i.Reasons,
+		&i.ReasoningEfforts,
+		&i.ReasoningDefaultEffort,
+		&i.ReasoningMandatory,
+		&i.ReasoningNativeEffort,
+		&i.ReasoningMaxTokens,
 		&i.ContextTokens,
 		&i.InputUsdPerMillion,
 		&i.OutputUsdPerMillion,
@@ -150,6 +164,8 @@ func (q *Queries) ListCatalogModelPurposes(ctx context.Context) ([]ListCatalogMo
 const listCatalogModels = `-- name: ListCatalogModels :many
 
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
+       reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
+       reasoning_native_effort, reasoning_max_tokens,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
        listed, last_seen_at, created_at, updated_at
 FROM catalog_models
@@ -157,21 +173,27 @@ ORDER BY provider_slug, model_id
 `
 
 type ListCatalogModelsRow struct {
-	ModelID             string
-	ProviderSlug        string
-	Label               string
-	Vision              int64
-	StructuredOutput    int64
-	ImageOutput         int64
-	VideoOutput         int64
-	ContextTokens       sql.NullInt64
-	InputUsdPerMillion  sql.NullString
-	OutputUsdPerMillion sql.NullString
-	PricingCheckedAt    sql.NullString
-	Listed              int64
-	LastSeenAt          sql.NullString
-	CreatedAt           string
-	UpdatedAt           string
+	ModelID                string
+	ProviderSlug           string
+	Label                  string
+	Vision                 int64
+	StructuredOutput       int64
+	ImageOutput            int64
+	VideoOutput            int64
+	Reasons                int64
+	ReasoningEfforts       string
+	ReasoningDefaultEffort string
+	ReasoningMandatory     int64
+	ReasoningNativeEffort  int64
+	ReasoningMaxTokens     int64
+	ContextTokens          sql.NullInt64
+	InputUsdPerMillion     sql.NullString
+	OutputUsdPerMillion    sql.NullString
+	PricingCheckedAt       sql.NullString
+	Listed                 int64
+	LastSeenAt             sql.NullString
+	CreatedAt              string
+	UpdatedAt              string
 }
 
 // ASCII only: sqlc slices these statements by byte offset but counts in runes, so a
@@ -186,6 +208,13 @@ type ListCatalogModelsRow struct {
 // columns (label, flags, context, pricing) and the availability columns (listed,
 // last_seen_at) are only ever written from a successful upstream read. updated_at tracks
 // the first group alone, so a refresh does not make every row look freshly curated.
+//
+// reasoning_efforts is a JSON array in one column rather than a child table (change 27). It
+// is read whole, written whole, never joined and never queried by element; and the source's
+// descending order is meaningful, which a set of rows would not preserve without an index
+// column. JSON rather than a delimiter because the column's whole claim is that it holds
+// what the source published verbatim. An empty string is UNKNOWN, not "supports nothing" -
+// the same rule an unpublished price already follows.
 func (q *Queries) ListCatalogModels(ctx context.Context) ([]ListCatalogModelsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listCatalogModels)
 	if err != nil {
@@ -203,6 +232,12 @@ func (q *Queries) ListCatalogModels(ctx context.Context) ([]ListCatalogModelsRow
 			&i.StructuredOutput,
 			&i.ImageOutput,
 			&i.VideoOutput,
+			&i.Reasons,
+			&i.ReasoningEfforts,
+			&i.ReasoningDefaultEffort,
+			&i.ReasoningMandatory,
+			&i.ReasoningNativeEffort,
+			&i.ReasoningMaxTokens,
 			&i.ContextTokens,
 			&i.InputUsdPerMillion,
 			&i.OutputUsdPerMillion,
@@ -229,24 +264,32 @@ const markCatalogModelSeen = `-- name: MarkCatalogModelSeen :exec
 UPDATE catalog_models
 SET provider_slug = ?, label = ?, vision = ?, structured_output = ?,
     image_output = ?, video_output = ?,
+    reasons = ?, reasoning_efforts = ?, reasoning_default_effort = ?,
+    reasoning_mandatory = ?, reasoning_native_effort = ?, reasoning_max_tokens = ?,
     context_tokens = ?, input_usd_per_million = ?, output_usd_per_million = ?,
     pricing_checked_at = ?, listed = 1, last_seen_at = ?
 WHERE model_id = ?
 `
 
 type MarkCatalogModelSeenParams struct {
-	ProviderSlug        string
-	Label               string
-	Vision              int64
-	StructuredOutput    int64
-	ImageOutput         int64
-	VideoOutput         int64
-	ContextTokens       sql.NullInt64
-	InputUsdPerMillion  sql.NullString
-	OutputUsdPerMillion sql.NullString
-	PricingCheckedAt    sql.NullString
-	LastSeenAt          sql.NullString
-	ModelID             string
+	ProviderSlug           string
+	Label                  string
+	Vision                 int64
+	StructuredOutput       int64
+	ImageOutput            int64
+	VideoOutput            int64
+	Reasons                int64
+	ReasoningEfforts       string
+	ReasoningDefaultEffort string
+	ReasoningMandatory     int64
+	ReasoningNativeEffort  int64
+	ReasoningMaxTokens     int64
+	ContextTokens          sql.NullInt64
+	InputUsdPerMillion     sql.NullString
+	OutputUsdPerMillion    sql.NullString
+	PricingCheckedAt       sql.NullString
+	LastSeenAt             sql.NullString
+	ModelID                string
 }
 
 func (q *Queries) MarkCatalogModelSeen(ctx context.Context, arg MarkCatalogModelSeenParams) error {
@@ -257,6 +300,12 @@ func (q *Queries) MarkCatalogModelSeen(ctx context.Context, arg MarkCatalogModel
 		arg.StructuredOutput,
 		arg.ImageOutput,
 		arg.VideoOutput,
+		arg.Reasons,
+		arg.ReasoningEfforts,
+		arg.ReasoningDefaultEffort,
+		arg.ReasoningMandatory,
+		arg.ReasoningNativeEffort,
+		arg.ReasoningMaxTokens,
 		arg.ContextTokens,
 		arg.InputUsdPerMillion,
 		arg.OutputUsdPerMillion,
@@ -340,9 +389,11 @@ func (q *Queries) UpdateCatalogModelPurposeReasoning(ctx context.Context, arg Up
 const upsertCatalogModel = `-- name: UpsertCatalogModel :exec
 INSERT INTO catalog_models (
     model_id, provider_slug, label, vision, structured_output, image_output, video_output,
+    reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
+    reasoning_native_effort, reasoning_max_tokens,
     context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
     listed, last_seen_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(model_id) DO UPDATE SET
     provider_slug = excluded.provider_slug,
     label = excluded.label,
@@ -350,6 +401,12 @@ ON CONFLICT(model_id) DO UPDATE SET
     structured_output = excluded.structured_output,
     image_output = excluded.image_output,
     video_output = excluded.video_output,
+    reasons = excluded.reasons,
+    reasoning_efforts = excluded.reasoning_efforts,
+    reasoning_default_effort = excluded.reasoning_default_effort,
+    reasoning_mandatory = excluded.reasoning_mandatory,
+    reasoning_native_effort = excluded.reasoning_native_effort,
+    reasoning_max_tokens = excluded.reasoning_max_tokens,
     context_tokens = excluded.context_tokens,
     input_usd_per_million = excluded.input_usd_per_million,
     output_usd_per_million = excluded.output_usd_per_million,
@@ -360,21 +417,27 @@ ON CONFLICT(model_id) DO UPDATE SET
 `
 
 type UpsertCatalogModelParams struct {
-	ModelID             string
-	ProviderSlug        string
-	Label               string
-	Vision              int64
-	StructuredOutput    int64
-	ImageOutput         int64
-	VideoOutput         int64
-	ContextTokens       sql.NullInt64
-	InputUsdPerMillion  sql.NullString
-	OutputUsdPerMillion sql.NullString
-	PricingCheckedAt    sql.NullString
-	Listed              int64
-	LastSeenAt          sql.NullString
-	CreatedAt           string
-	UpdatedAt           string
+	ModelID                string
+	ProviderSlug           string
+	Label                  string
+	Vision                 int64
+	StructuredOutput       int64
+	ImageOutput            int64
+	VideoOutput            int64
+	Reasons                int64
+	ReasoningEfforts       string
+	ReasoningDefaultEffort string
+	ReasoningMandatory     int64
+	ReasoningNativeEffort  int64
+	ReasoningMaxTokens     int64
+	ContextTokens          sql.NullInt64
+	InputUsdPerMillion     sql.NullString
+	OutputUsdPerMillion    sql.NullString
+	PricingCheckedAt       sql.NullString
+	Listed                 int64
+	LastSeenAt             sql.NullString
+	CreatedAt              string
+	UpdatedAt              string
 }
 
 func (q *Queries) UpsertCatalogModel(ctx context.Context, arg UpsertCatalogModelParams) error {
@@ -386,6 +449,12 @@ func (q *Queries) UpsertCatalogModel(ctx context.Context, arg UpsertCatalogModel
 		arg.StructuredOutput,
 		arg.ImageOutput,
 		arg.VideoOutput,
+		arg.Reasons,
+		arg.ReasoningEfforts,
+		arg.ReasoningDefaultEffort,
+		arg.ReasoningMandatory,
+		arg.ReasoningNativeEffort,
+		arg.ReasoningMaxTokens,
 		arg.ContextTokens,
 		arg.InputUsdPerMillion,
 		arg.OutputUsdPerMillion,

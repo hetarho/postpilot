@@ -1,10 +1,21 @@
 import { useTranslation } from 'react-i18next'
-import { useGuidelines, useUpdateGuidelineCall, type Guideline } from '@/entities/guideline'
+import { Link } from '@tanstack/react-router'
+import {
+  useGuidelineCandidates,
+  useGuidelines,
+  useUpdateGuidelineCall,
+  type Guideline,
+  type GuidelineCandidate,
+} from '@/entities/guideline'
 import { useSession } from '@/entities/session'
 import { CreateGuidelineForm } from '@/features/create-guideline'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
 import { EditableGuidelineScope, EditableGuidelineText } from '@/features/edit-guideline'
-import { Button, Notice, Typography, pageStyles } from '@/shared/ui'
+import {
+  ApproveGuidelineCandidateButton,
+  DismissGuidelineCandidateButton,
+} from '@/features/review-guideline-candidate'
+import { Badge, Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 /** The account's 작문 지침 (plan 16). Composition only — every action is its own feature.
  *
@@ -45,6 +56,7 @@ export function GuidelinesPage() {
 
       {!isError && !isPending && (
         <>
+          <CandidateSection ownerId={ownerId} />
           {guidelines.length === 0 ? (
             <EmptyState />
           ) : (
@@ -72,6 +84,91 @@ export function GuidelinesPage() {
         </>
       )}
     </main>
+  )
+}
+
+/** The 후보 section: what completed revisions recorded, waiting to be reviewed in a batch
+ *  (change 26). It sits ABOVE the saved list because it is the thing that has changed since the
+ *  user last looked, and the saved list is reference.
+ *
+ *  Nothing here is learned. Each row is one instruction the user typed, recorded verbatim, and it
+ *  reaches no prompt until it is approved with a scope. A load failure renders nothing rather than
+ *  a second error region: the saved list above already owns the page's error state, and the
+ *  candidates are an addition to this screen, not its subject. */
+function CandidateSection({ ownerId }: { ownerId: string }) {
+  const { t } = useTranslation('guidelines')
+  const { candidates, queueFull, isError } = useGuidelineCandidates(ownerId)
+
+  // Nothing waiting and room to record more is the ordinary state, and it needs no words.
+  if (isError || (candidates.length === 0 && !queueFull)) return null
+
+  return (
+    <section aria-labelledby="guideline-candidates-heading" className="mt-8">
+      <Typography variant="title" id="guideline-candidates-heading">
+        {t('candidate.section')}
+      </Typography>
+      <Typography variant="body" as="p" className="text-content-secondary max-w-measure mt-1">
+        {t('candidate.sectionHelp')}
+      </Typography>
+      {/* The one thing an empty result cannot tell the user: recording has stopped, and clearing
+          a row is what starts it again. The bound itself is the server's and is not mirrored. */}
+      {queueFull && (
+        <Notice tone="warning" role="status" className="mt-3">
+          {t('candidate.queueFull')}
+        </Notice>
+      )}
+      {candidates.length > 0 && (
+        <ul className="divide-divider mt-3 divide-y">
+          {candidates.map((candidate) => (
+            <CandidateRow key={candidate.id} ownerId={ownerId} candidate={candidate} />
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+/** One recorded instruction: its text, how often it was asked for, and where it came from.
+ *
+ *  The occurrence count is the signal the old on-the-spot button could not give — five identical
+ *  corrections read as a standing rule. The source post is a link only while it exists; a deleted
+ *  post leaves the text and drops the link, so the row stays reviewable either way. */
+function CandidateRow({ ownerId, candidate }: { ownerId: string; candidate: GuidelineCandidate }) {
+  const { t } = useTranslation('guidelines')
+  return (
+    <li className="py-4">
+      <Typography variant="body" className="text-content-primary whitespace-pre-wrap">
+        {candidate.text}
+      </Typography>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {candidate.occurrences > 1 && (
+          <Badge tone="accent">
+            {t('candidate.occurrences', { count: candidate.occurrences })}
+          </Badge>
+        )}
+        {candidate.postSlug ? (
+          <Link
+            to="/posts/$slug"
+            params={{ slug: candidate.postSlug }}
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center',
+            })}
+          >
+            {t('candidate.source')}
+          </Link>
+        ) : (
+          <Typography variant="meta" as="span" className="min-w-0 truncate">
+            {t('candidate.sourceGone')}
+          </Typography>
+        )}
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <ApproveGuidelineCandidateButton ownerId={ownerId} candidate={candidate} />
+        <DismissGuidelineCandidateButton ownerId={ownerId} candidateId={candidate.id} />
+      </div>
+    </li>
   )
 }
 

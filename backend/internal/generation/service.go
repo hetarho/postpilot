@@ -20,6 +20,7 @@ type Service struct {
 	experiments PendingExperiments
 	templates   TemplateBriefs
 	guidelines  GuidelinesForPrompt
+	candidates  GuidelineCandidates
 	samples     VersionSampleWriter
 	batchSize   int
 	reasoning   ReasoningPolicy
@@ -89,6 +90,25 @@ func (s *Service) recordVersionSample(ctx context.Context, userID, voiceID strin
 // simply carries no 지침, so a partially wired process keeps the no-guideline behavior
 // rather than failing.
 func (s *Service) SetGuidelines(resolver GuidelinesForPrompt) { s.guidelines = resolver }
+
+// SetGuidelineCandidates wires the guideline context's candidate recorder. Without it a
+// completed revision simply records nothing, which is the same outcome a failed recording
+// has — the revision is the product and the candidate is a receipt for it.
+func (s *Service) SetGuidelineCandidates(recorder GuidelineCandidates) { s.candidates = recorder }
+
+// recordGuidelineCandidate records what the user ASKED FOR, after the revised content is
+// already persisted. Its failure is swallowed for the same reason recordVersionSample's is:
+// the result the user is looking at is authoritative, and turning a bookkeeping error into a
+// failed job would throw that work away. Nothing is recorded for a failed, cancelled or
+// still-running revision, which follows from the call position alone.
+func (s *Service) recordGuidelineCandidate(ctx context.Context, userID, postSlug, instruction string) {
+	if s.candidates == nil {
+		return
+	}
+	if err := s.candidates.Record(ctx, userID, postSlug, instruction); err != nil {
+		slog.WarnContext(ctx, "record guideline candidate failed", "error", err, "post_slug", postSlug)
+	}
+}
 
 func (s *Service) refusePendingExperiment(ctx context.Context, userID, postSlug string) error {
 	if s.experiments == nil {

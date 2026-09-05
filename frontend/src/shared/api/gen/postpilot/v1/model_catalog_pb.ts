@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/model_catalog.proto.
  */
 export const file_postpilot_v1_model_catalog: GenFile = /*@__PURE__*/
-  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIs0DCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgIEjoKD3JlYXNvbmluZ19zcGVuZBgTIAEoCzIcLnBvc3RwaWxvdC52MS5SZWFzb25pbmdTcGVuZEgAiAEBQhIKEF9yZWFzb25pbmdfc3BlbmRKBAgLEAxKBAgMEA0iVAoOUmVhc29uaW5nU3BlbmQSDQoFY2FsbHMYASABKAMSGAoQcmVhc29uaW5nX3Rva2VucxgCIAEoAxIZChFjb21wbGV0aW9uX3Rva2VucxgDIAEoAyI2ChJMaXN0Q2F0YWxvZ1JlcXVlc3QSDwoHcmVmcmVzaBgBIAEoCBIPCgdwdXJwb3NlGAIgASgJIn8KE0xpc3RDYXRhbG9nUmVzcG9uc2USKwoHZW50cmllcxgBIAMoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkSEgoKZmV0Y2hlZF9hdBgCIAEoCRISCgpmcm9tX2NhY2hlGAMgASgIEhMKC2ZldGNoX2Vycm9yGAQgASgJIk8KFlNldE1vZGVsUHVycG9zZVJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSDwoHcHVycG9zZRgCIAEoCRISCgpyZWdpc3RlcmVkGAMgASgIIkQKF1NldE1vZGVsUHVycG9zZVJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeSJ3ChJVcGRhdGVNb2RlbFJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSHQoQcmVhc29uaW5nX2VmZm9ydBgEIAEoCUgAiAEBEg8KB3B1cnBvc2UYBSABKAlCEwoRX3JlYXNvbmluZ19lZmZvcnRKBAgCEANKBAgDEAQiQAoTVXBkYXRlTW9kZWxSZXNwb25zZRIpCgVlbnRyeRgBIAEoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkyowIKE01vZGVsQ2F0YWxvZ1NlcnZpY2USVAoLTGlzdENhdGFsb2cSIC5wb3N0cGlsb3QudjEuTGlzdENhdGFsb2dSZXF1ZXN0GiEucG9zdHBpbG90LnYxLkxpc3RDYXRhbG9nUmVzcG9uc2UiABJgCg9TZXRNb2RlbFB1cnBvc2USJC5wb3N0cGlsb3QudjEuU2V0TW9kZWxQdXJwb3NlUmVxdWVzdBolLnBvc3RwaWxvdC52MS5TZXRNb2RlbFB1cnBvc2VSZXNwb25zZSIAElQKC1VwZGF0ZU1vZGVsEiAucG9zdHBpbG90LnYxLlVwZGF0ZU1vZGVsUmVxdWVzdBohLnBvc3RwaWxvdC52MS5VcGRhdGVNb2RlbFJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
+  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIqsFCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgIEjoKD3JlYXNvbmluZ19zcGVuZBgTIAEoCzIcLnBvc3RwaWxvdC52MS5SZWFzb25pbmdTcGVuZEgAiAEBEg8KB3JlYXNvbnMYFCABKAgSGQoRcmVhc29uaW5nX2VmZm9ydHMYFSADKAkSIAoYcmVhc29uaW5nX2RlZmF1bHRfZWZmb3J0GBYgASgJEhsKE3JlYXNvbmluZ19tYW5kYXRvcnkYFyABKAgSHwoXcmVhc29uaW5nX25hdGl2ZV9lZmZvcnQYGCABKAgSHAoUcmVhc29uaW5nX21heF90b2tlbnMYGSABKAgSGQoRcmVhc29uaW5nX2RyaWZ0ZWQYGiABKAgSFwoPcmVhc29uaW5nX2tub3duGBsgASgIQhIKEF9yZWFzb25pbmdfc3BlbmRKBAgLEAxKBAgMEA0iVAoOUmVhc29uaW5nU3BlbmQSDQoFY2FsbHMYASABKAMSGAoQcmVhc29uaW5nX3Rva2VucxgCIAEoAxIZChFjb21wbGV0aW9uX3Rva2VucxgDIAEoAyI2ChJMaXN0Q2F0YWxvZ1JlcXVlc3QSDwoHcmVmcmVzaBgBIAEoCBIPCgdwdXJwb3NlGAIgASgJIn8KE0xpc3RDYXRhbG9nUmVzcG9uc2USKwoHZW50cmllcxgBIAMoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkSEgoKZmV0Y2hlZF9hdBgCIAEoCRISCgpmcm9tX2NhY2hlGAMgASgIEhMKC2ZldGNoX2Vycm9yGAQgASgJIk8KFlNldE1vZGVsUHVycG9zZVJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSDwoHcHVycG9zZRgCIAEoCRISCgpyZWdpc3RlcmVkGAMgASgIIkQKF1NldE1vZGVsUHVycG9zZVJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeSJ3ChJVcGRhdGVNb2RlbFJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSHQoQcmVhc29uaW5nX2VmZm9ydBgEIAEoCUgAiAEBEg8KB3B1cnBvc2UYBSABKAlCEwoRX3JlYXNvbmluZ19lZmZvcnRKBAgCEANKBAgDEAQiQAoTVXBkYXRlTW9kZWxSZXNwb25zZRIpCgVlbnRyeRgBIAEoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkyowIKE01vZGVsQ2F0YWxvZ1NlcnZpY2USVAoLTGlzdENhdGFsb2cSIC5wb3N0cGlsb3QudjEuTGlzdENhdGFsb2dSZXF1ZXN0GiEucG9zdHBpbG90LnYxLkxpc3RDYXRhbG9nUmVzcG9uc2UiABJgCg9TZXRNb2RlbFB1cnBvc2USJC5wb3N0cGlsb3QudjEuU2V0TW9kZWxQdXJwb3NlUmVxdWVzdBolLnBvc3RwaWxvdC52MS5TZXRNb2RlbFB1cnBvc2VSZXNwb25zZSIAElQKC1VwZGF0ZU1vZGVsEiAucG9zdHBpbG90LnYxLlVwZGF0ZU1vZGVsUmVxdWVzdBohLnBvc3RwaWxvdC52MS5VcGRhdGVNb2RlbFJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
 
 /**
  * CatalogEntry is one row of the operator's browse list.
@@ -131,13 +131,90 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
    * Absent when nothing has been recorded for it, which renders as nothing rather than as a
    * zero that would read as a measurement.
    *
-   * It is the only reliable check that a model honors its effort: the provider's
-   * `supported_parameters` says a model accepts `reasoning_effort`, never which VALUES it
-   * honors, and an unhonored effort behaves like sending none — reasoning runs to the cap.
+   * It is the measured check that a model honors its effort: an unhonored effort behaves
+   * like sending none, and reasoning runs to the cap. The source now also DECLARES the
+   * values it accepts (the fields below), so this is corroboration rather than the only
+   * signal — a declared list is what the model takes, and this is what it did.
    *
    * @generated from field: optional postpilot.v1.ReasoningSpend reasoning_spend = 19;
    */
   reasoningSpend?: ReasoningSpend | undefined;
+
+  /**
+   * What the source publishes about this model's reasoning (change 27). EVERY ZERO HERE
+   * MEANS "UNKNOWN", NOT "SUPPORTS NOTHING" — the same rule an unpublished price follows.
+   *
+   * reasons: the source carries a reasoning object for this model at all. False means the
+   * model does not reason, and the effort control is absent rather than empty.
+   *
+   * @generated from field: bool reasons = 20;
+   */
+  reasons: boolean;
+
+  /**
+   * The accepted effort values, verbatim and in the source's DESCENDING order, which is the
+   * order a selector should offer them in. Empty means the source does not publish a list
+   * for this model (only ~154 of 427 do) — the control then offers all eight values.
+   *
+   * @generated from field: repeated string reasoning_efforts = 21;
+   */
+  reasoningEfforts: string[];
+
+  /**
+   * What the model uses when reasoning is on and no effort is sent. It is what `unset`
+   * actually means, so the operator can see that leaving it alone means `high` rather than
+   * "off". Empty when the source does not publish one.
+   *
+   * @generated from field: string reasoning_default_effort = 22;
+   */
+  reasoningDefaultEffort: string;
+
+  /**
+   * Reasoning cannot be turned off: `none` must never be offered or sent.
+   *
+   * @generated from field: bool reasoning_mandatory = 23;
+   */
+  reasoningMandatory: boolean;
+
+  /**
+   * The provider receives the effort STRING itself, rather than a token budget OpenRouter
+   * derived from it. Nothing consumes it yet; change 29 needs it to size a budget safely.
+   *
+   * @generated from field: bool reasoning_native_effort = 24;
+   */
+  reasoningNativeEffort: boolean;
+
+  /**
+   * The source offers a reasoning token budget for this model. Recorded and displayed only —
+   * this change surfaces no input for it.
+   *
+   * @generated from field: bool reasoning_max_tokens = 25;
+   */
+  reasoningMaxTokens: boolean;
+
+  /**
+   * reasoning_effort above is no longer in this model's published list — a revised model, a
+   * replaced slug. A WARNING for the row and nothing more: the value is kept and still sent,
+   * because the source's list changing is not a mandate to rewrite an operator's decision
+   * (the same reasoning `listed = false` carries). Derived at read time from the two fields
+   * rather than stored, so it follows the catalog.
+   *
+   * @generated from field: bool reasoning_drifted = 26;
+   */
+  reasoningDrifted: boolean;
+
+  /**
+   * The fields above came from a read that actually looked. It is the one thing they cannot
+   * say about themselves: `reasons: false` with no list is BOTH "the source publishes no
+   * reasoning object" and "nothing has asked yet" — migration 0024 leaves every existing row
+   * in exactly that shape. False for an entry served from storage (before the first
+   * successful refresh, or while the provider catalog cannot be read), where the screen must
+   * keep offering the full effort vocabulary rather than hide a control whose stored value is
+   * still being sent.
+   *
+   * @generated from field: bool reasoning_known = 27;
+   */
+  reasoningKnown: boolean;
 };
 
 /**
@@ -312,6 +389,10 @@ export type UpdateModelRequest = Message<"postpilot.v1.UpdateModelRequest"> & {
    * model doing this task", and the server refuses a purpose the model is not registered to
    * — the control only appears once registered, and that is now a server rule rather than a
    * UI convention.
+   *
+   * Refused when the model's published `reasoning_efforts` does not contain the value, and
+   * `none` is refused when `reasoning_mandatory` (change 27). A model whose list the source
+   * does not publish still accepts all eight — absence is unknown, not "supports nothing".
    *
    * Carried here rather than on SetModelPurposeRequest because registering and setting an
    * effort are separate decisions: an operator changes the effort on a model that is already

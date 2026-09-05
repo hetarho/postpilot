@@ -1,7 +1,7 @@
 import { useId } from 'react'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import {
-  REASONING_EFFORTS,
   reasoningShare,
   useSetModelPurpose,
   useUpdateModel,
@@ -11,6 +11,7 @@ import {
 } from '@/entities/model-catalog'
 import type { ModelPurpose } from '@/shared/config'
 import { AppFailureMessage, Badge, Checkbox, FieldLabel, Listbox, Typography } from '@/shared/ui'
+import { offersReasoningControl, reasoningOptionsFor } from '../model/catalog-view'
 
 /** One model of the operator's catalog, seen from ONE purpose tab: what it is, whether this
  *  purpose uses it, and the reasoning effort it runs at FOR THIS PURPOSE.
@@ -21,12 +22,13 @@ import { AppFailureMessage, Badge, Checkbox, FieldLabel, Listbox, Typography } f
  *  controls act on one object and must read apart from the next model's (design-language
  *  §1.4).
  *
- *  The reasoning Listbox appears once the model is registered to THIS purpose: the effort is
- *  a property of the registration, and the server refuses one for a purpose the model does
- *  not serve. Beside it sits what the model actually spent at this stage, because the
- *  provider's `supported_parameters` says a model accepts `reasoning_effort` and never which
- *  VALUES it honors — an unhonored effort behaves like sending none, and reasoning runs to
- *  the cap. Measurement is the only check there is (change 24). */
+ *  The reasoning Listbox appears once the model is registered to THIS purpose AND the source
+ *  says the model reasons: the effort is a property of the registration, and the server
+ *  refuses one for a purpose the model does not serve. Its options are the model's own
+ *  published list where there is one (change 27), so the operator cannot pick a value the
+ *  model does not take. Beside it sits what the model actually spent at this stage — a
+ *  declared list says what the model accepts, and the measurement says what it did with it:
+ *  an unhonored effort behaves like sending none, and reasoning runs to the cap. */
 export function CatalogModelRow({
   entry,
   purpose,
@@ -43,6 +45,7 @@ export function CatalogModelRow({
   const pending = setPurpose.isPending || update.isPending
   const failure = setPurpose.failure ?? update.failure
   const registeredHere = entry.purposes.includes(purpose)
+  const showReasoning = offersReasoningControl(entry)
 
   return (
     // A div rather than the list item itself: the virtualized list owns the `li`, because that is
@@ -101,27 +104,44 @@ export function CatalogModelRow({
 
       {registeredHere && (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="min-w-0">
-            <FieldLabel id={reasoningLabelId} htmlFor={`${rowId}-reasoning-control`}>
-              {t('catalog.reasoning')}
-            </FieldLabel>
-            <Listbox<ReasoningEffortName>
-              id={`${rowId}-reasoning-control`}
-              value={entry.reasoningEffort}
-              options={REASONING_EFFORTS.map((effort) => ({
-                value: effort,
-                label: effort === '' ? t('catalog.reasoningDefault') : effort,
-              }))}
-              disabled={pending}
-              aria-labelledby={reasoningLabelId}
-              onChange={(next) => {
-                if (next !== entry.reasoningEffort) {
-                  update.update(entry.modelId, purpose, { reasoningEffort: next })
-                }
-              }}
-              className="mt-1"
-            />
-          </div>
+          {showReasoning && (
+            <div className="min-w-0">
+              <FieldLabel id={reasoningLabelId} htmlFor={`${rowId}-reasoning-control`}>
+                {t('catalog.reasoning')}
+              </FieldLabel>
+              <Listbox<ReasoningEffortName>
+                id={`${rowId}-reasoning-control`}
+                value={entry.reasoningEffort}
+                options={reasoningOptionsFor(entry).map((effort) => ({
+                  value: effort,
+                  label: reasoningOptionLabel(effort, entry, t),
+                }))}
+                disabled={pending}
+                aria-labelledby={reasoningLabelId}
+                onChange={(next) => {
+                  if (next !== entry.reasoningEffort) {
+                    update.update(entry.modelId, purpose, { reasoningEffort: next })
+                  }
+                }}
+                className="mt-1"
+              />
+              {/* A warning, never a correction: the override is kept and still sent, exactly
+                  as a delisted model is kept rather than retired. */}
+              {entry.reasoning.drifted && (
+                <Typography
+                  variant="meta"
+                  as="p"
+                  role="status"
+                  className="text-notice-warning-fg mt-1"
+                >
+                  {t('catalog.reasoningDrifted', {
+                    effort: entry.reasoningEffort,
+                    supported: entry.reasoning.efforts.join(' · '),
+                  })}
+                </Typography>
+              )}
+            </div>
+          )}
           {/* Beside the control it acts on, not in a panel of its own (§4.3): the number and
               the decision it argues for have to be readable in one glance. */}
           <ReasoningSpendSignal spend={entry.reasoningSpend} />
@@ -176,4 +196,19 @@ function ReasoningSpendSignal({ spend }: { spend: ReasoningSpend | undefined }) 
       )}
     </div>
   )
+}
+
+/** `''` is "defer to the stage policy". `unset` is "send no effort key", which means the
+ *  MODEL's own default — so it is labelled with that default where the source publishes one,
+ *  because an operator reading a bare "unset" reasonably assumes the model will not reason. */
+function reasoningOptionLabel(
+  effort: ReasoningEffortName,
+  entry: AdminCatalogEntry,
+  t: TFunction<['models', 'plans']>,
+): string {
+  if (effort === '') return t('catalog.reasoningDefault')
+  if (effort === 'unset' && entry.reasoning.defaultEffort !== '') {
+    return t('catalog.reasoningUnsetWithDefault', { effort: entry.reasoning.defaultEffort })
+  }
+  return effort
 }

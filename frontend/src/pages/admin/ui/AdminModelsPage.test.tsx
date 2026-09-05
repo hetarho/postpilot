@@ -426,6 +426,168 @@ describe('the model catalog tab', () => {
     await waitFor(() => expect(calls).toContain('ListCatalog:refresh:photo-analysis'))
   })
 
+  // --- the effort control is bounded by the source (change 27) ---
+
+  // A3, against a real model: deepseek/deepseek-v4-pro-0813 accepts max·high·low and not
+  // medium, and is disable-able yet lists no `none` — so the app's own "turn it off" value
+  // must not be offered for it either.
+  it("offers only the model's published efforts", async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'deepseek/deepseek-v4-pro-0813',
+            label: 'V4 Pro',
+            curated: true,
+            purposes: ['writing'],
+            reasoning: { efforts: ['max', 'high', 'low'], defaultEffort: 'high' },
+          },
+        ],
+      },
+    })
+
+    await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+    await user.click(await screen.findByRole('combobox', { name: /추론 강도/ }))
+    const options = screen.getAllByRole('option').map((option) => option.textContent ?? '')
+    // A5: `unset` is labelled with the model's own default, so it does not read as "off".
+    expect(options).toEqual(['단계 기본값', 'unset (모델 기본값 high)', 'max', 'high', 'low'])
+    for (const absent of ['medium', 'xhigh', 'minimal', 'none']) {
+      expect(options).not.toContain(absent)
+    }
+  })
+
+  // A4: a mandatory model offers no `none`, and a model with no published list still offers
+  // all eight — absence is unknown, not "supports nothing".
+  it('withholds none from a mandatory model and falls back for an unpublished list', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'google/gemini-3.8-flash',
+            label: 'Gemini Flash',
+            curated: true,
+            purposes: ['writing'],
+            reasoning: { efforts: ['high', 'medium', 'low'], mandatory: true },
+          },
+          {
+            modelId: 'vendor/no-list',
+            label: 'No List',
+            curated: true,
+            purposes: ['writing'],
+          },
+        ],
+      },
+    })
+
+    await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+    const rows = await screen.findAllByRole('listitem')
+    const mandatory = rows.find((row) => within(row).queryByText(/gemini/) !== null)
+    const listless = rows.find((row) => within(row).queryByText(/no-list/) !== null)
+    if (!mandatory || !listless) throw new Error('a row is missing')
+
+    await user.click(within(mandatory).getByRole('combobox', { name: /추론 강도/ }))
+    let options = screen.getAllByRole('option').map((option) => option.textContent ?? '')
+    expect(options).not.toContain('none')
+    expect(options).toContain('medium')
+    // `unset` has no default published, so it stays a bare label.
+    expect(options).toContain('unset')
+    await user.keyboard('{Escape}')
+
+    await user.click(within(listless).getByRole('combobox', { name: /추론 강도/ }))
+    options = screen.getAllByRole('option').map((option) => option.textContent ?? '')
+    expect(options).toContain('none')
+    expect(options).toContain('xhigh')
+    expect(options).toHaveLength(9)
+  })
+
+  // A7: a drifted override survives, is still shown in the control, and is warned about —
+  // never corrected. The same posture a delisted model gets.
+  it('warns about a drifted override without changing it', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      calls,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'deepseek/deepseek-v4-pro-0813',
+            label: 'V4 Pro',
+            curated: true,
+            purposes: ['writing'],
+            reasoningEffort: { writing: 'medium' },
+            reasoning: { efforts: ['max', 'high', 'low'], defaultEffort: 'high' },
+          },
+        ],
+      },
+    })
+
+    await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+    expect(await screen.findByRole('combobox', { name: /추론 강도 medium/ })).toBeInTheDocument()
+    expect(
+      await screen.findByText(/더 이상 「medium」을 지원 목록에 두지 않아요/),
+    ).toBeInTheDocument()
+    // Nothing was written: a warning is not a correction.
+    expect(calls.filter((call) => call.startsWith('UpdateModel'))).toEqual([])
+  })
+
+  // A8: a model the source says does not reason has no effort to choose, so the control is
+  // absent rather than offered and ignored. Its registration checkbox is untouched.
+  it('shows no effort control for a model that does not reason', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'vendor/no-reasoning',
+            label: 'No Reasoning',
+            curated: true,
+            purposes: ['writing'],
+            reasoning: { reasons: false },
+          },
+        ],
+      },
+    })
+
+    await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+    const row = within((await screen.findAllByRole('listitem'))[0])
+    expect(row.getByRole('checkbox', { name: '이 용도에 사용' })).toBeChecked()
+    expect(row.queryByRole('combobox', { name: /추론 강도/ })).not.toBeInTheDocument()
+  })
+
+  // The failure mode the capability data introduces: when the provider catalog cannot be read,
+  // every row is served from storage, whose `reasons` may predate this data entirely. Hiding
+  // the control there would take away an override that is still sent on every call.
+  it('keeps the effort control when the provider catalog cannot be read', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        fetchFails: true,
+        entries: [
+          {
+            modelId: 'vendor/never-refreshed',
+            label: 'Never Refreshed',
+            curated: true,
+            purposes: ['writing'],
+            reasoning: { reasons: false },
+          },
+        ],
+      },
+    })
+
+    await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+    const control = await screen.findByRole('combobox', { name: /추론 강도/ })
+    await user.click(control)
+    // The full vocabulary, because nothing is known about this model's reasoning.
+    expect(screen.getAllByRole('option')).toHaveLength(9)
+  })
+
   // A1 (plan 17): the tab is master-only, redirected rather than refused — the account has a
   // session.
   it('sends a non-operator back to the app', async () => {

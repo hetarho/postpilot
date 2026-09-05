@@ -1,5 +1,6 @@
 export type {
   Guideline,
+  GuidelineCandidate,
   GuidelineTemplateRef,
   GuidelineScope,
   GuidelineScopeKind,
@@ -13,11 +14,19 @@ export {
   remainingGuidelineChars,
 } from './model/types'
 export { guidelineListQuery, useGuidelines } from './api/useGuidelines'
-export { guidelinesQueryKey, toGuideline, toScopePatch } from './api/guideline-queries'
-export { invalidateGuidelines } from './api/guideline-cache'
+export { guidelineCandidateListQuery, useGuidelineCandidates } from './api/useGuidelineCandidates'
+export {
+  guidelineCandidatesQueryKey,
+  guidelinesQueryKey,
+  toGuideline,
+  toGuidelineCandidate,
+  toScopePatch,
+} from './api/guideline-queries'
+export { invalidateGuidelineCandidates, invalidateGuidelines } from './api/guideline-cache'
 export {
   useCreateGuidelineCall,
   useDeleteGuidelineCall,
+  useDismissGuidelineCandidateCall,
   useUpdateGuidelineCall,
 } from './api/guideline-mutations'
 export { guidelineErrorMessage, isDuplicateGuideline } from './api/guideline-errors'

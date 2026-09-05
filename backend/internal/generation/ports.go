@@ -82,4 +82,14 @@ type GuidelinesForPrompt interface {
 	ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error)
 }
 
+// GuidelineCandidates records a completed revision's instruction so the correction accrues
+// instead of vanishing with the tab (change 26). Declared here beside GuidelinesForPrompt
+// for the same reason: the generation context must not learn the guideline context's tables.
+//
+// A candidate is the user's own sentence, recorded verbatim — nothing on either side of this
+// port reads it with a model, and recording adds no queue and no provider call ([I5]).
+type GuidelineCandidates interface {
+	Record(ctx context.Context, userID, postSlug, instruction string) error
+}
+
 type Progress func(stage string, done, total int)

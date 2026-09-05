@@ -112,6 +112,15 @@ func toProtoEntry(e modelcatalog.Entry) *postpilotv1.CatalogEntry {
 		ReasoningEffort:     string(e.Reasoning),
 		SourceCreatedAt:     e.SourceCreatedAt,
 		ReasoningSpend:      toProtoReasoningSpend(e.ReasoningSpend),
+
+		Reasons:                e.Reasons,
+		ReasoningEfforts:       e.Efforts,
+		ReasoningDefaultEffort: e.DefaultEffort,
+		ReasoningMandatory:     e.Mandatory,
+		ReasoningNativeEffort:  e.NativeEffort,
+		ReasoningMaxTokens:     e.MaxTokens,
+		ReasoningDrifted:       e.ReasoningDrifted,
+		ReasoningKnown:         e.ReasoningKnown,
 	}
 }
 

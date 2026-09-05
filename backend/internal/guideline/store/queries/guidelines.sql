@@ -74,3 +74,56 @@ WHERE g.user_id = ?
     )
   )
 ORDER BY CASE g.scope WHEN 'global' THEN 0 ELSE 1 END, g.created_at, g.id;
+
+-- Guideline candidates (change 26). A candidate is one completed revision's instruction,
+-- recorded verbatim. Rows in every state are kept: 'approved' and 'dismissed' rows are what
+-- stop the same instruction from being recorded again, so nothing here deletes one.
+
+-- name: CandidateByText :one
+SELECT id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at
+FROM guideline_candidates
+WHERE user_id = ? AND text = ?;
+
+-- name: GuidelineByText :one
+SELECT id FROM guidelines WHERE user_id = ? AND text = ?;
+
+-- name: CountPendingCandidates :one
+SELECT count(*) FROM guideline_candidates WHERE user_id = ? AND status = 'pending';
+
+-- name: InsertCandidate :exec
+INSERT INTO guideline_candidates (id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at)
+VALUES (?, ?, ?, ?, ?, 1, ?, ?);
+
+-- name: BumpCandidate :execrows
+-- A repeat. post_slug is deliberately NOT rewritten: the candidate names where it was first
+-- seen, and rewriting it would make the link jump between posts on every repeat.
+UPDATE guideline_candidates
+SET occurrences = occurrences + 1, last_seen_at = ?
+WHERE id = ? AND user_id = ?;
+
+-- name: ListPendingCandidates :many
+-- Review order: the most-repeated correction first, then the most recent. Exactly the order
+-- idx_guideline_candidates_review serves.
+SELECT id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at
+FROM guideline_candidates
+WHERE user_id = ? AND status = 'pending'
+ORDER BY occurrences DESC, last_seen_at DESC, id;
+
+-- name: SetCandidateStatus :execrows
+-- Only a PENDING row moves. A candidate the user already ruled on is terminal: without this
+-- guard a stale tab could approve one twice, or dismiss one that was already approved.
+UPDATE guideline_candidates
+SET status = ?
+WHERE id = ? AND user_id = ? AND status = 'pending';
+
+-- name: SetCandidateStatusByText :exec
+-- Approval by text, which is what marks the candidate a just-completed revision recorded
+-- without the client having to learn its id. Only a pending row is moved: an already
+-- dismissed one stays dismissed.
+UPDATE guideline_candidates
+SET status = ?
+WHERE user_id = ? AND text = ? AND status = 'pending';
+
+-- name: DropCandidatePostSlug :exec
+-- Post deletion drops the link and keeps the text: nothing references a candidate's origin.
+UPDATE guideline_candidates SET post_slug = NULL WHERE user_id = ? AND post_slug = ?;

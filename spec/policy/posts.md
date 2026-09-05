@@ -88,6 +88,13 @@ Photo upload has its own document: [uploads.md](uploads.md).
 - Ownership is unchanged by any of this: another user's slug is `PermissionDenied` (`POST_FORBIDDEN`) and an unknown
   slug is `NotFound` (`POST_NOT_FOUND`); neither destroys anything.
 - A successful delete also ends that slug's autosave — see [draft-autosave](../tech/draft-autosave.md).
+- A successful delete also **drops the post link from any guideline candidate that named it, and nothing else**: the
+  candidate's text survives and the row is simply listed without a link
+  ([guidelines](guidelines.md)). It runs after the post row is gone — a delete that fails partway must never leave a
+  candidate claiming its post is deleted — and its own failure is logged rather than failing the delete, because a
+  dead link is not worth undoing what the user asked for. Like the publish check, it is a consumer-declared port on
+  the post context (`GuidelineCandidateDetacher` in `post/ports.go`) wired in the composition root: `internal/post`
+  imports nothing from `internal/guideline` and the post store never reads `guideline_candidates`.
 
 **Account deletion is still absent** — no RPC exists for it — and it is a separate gap from this one.
 

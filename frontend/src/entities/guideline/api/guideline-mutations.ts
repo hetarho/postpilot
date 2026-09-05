@@ -2,7 +2,7 @@ import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { GuidelineService } from '@/shared/api'
 import type { GuidelineScope } from '../model/types'
-import { invalidateGuidelines } from './guideline-cache'
+import { invalidateGuidelineCandidates, invalidateGuidelines } from './guideline-cache'
 import { guidelineErrorMessage } from './guideline-errors'
 import { toScopePatch } from './guideline-queries'
 
@@ -20,8 +20,28 @@ export function useCreateGuidelineCall(ownerId: string) {
   return {
     ...mutation,
     errorMessage: guidelineErrorMessage(mutation.error),
-    create: (text: string, scope: GuidelineScope) =>
-      mutation.mutateAsync({ text: text.trim(), ...toScopePatch(scope) }),
+    /** `fromCandidateId` is set only when approving a candidate whose text was EDITED first, so
+     *  the row can no longer be matched by text. The server marks it approved in the same
+     *  transaction as the insert, which is also what keeps an on-the-spot 지침으로 저장 from
+     *  reappearing as a candidate — that path matches by text and needs no id. */
+    create: (text: string, scope: GuidelineScope, fromCandidateId?: string) =>
+      mutation.mutateAsync({ text: text.trim(), ...toScopePatch(scope), fromCandidateId }),
+  }
+}
+
+/** 무시. It marks the row rather than deleting it — the dismissed row is what keeps the same
+ *  instruction from being recorded again — so nothing here is a delete and nothing is undoable
+ *  beyond writing the guideline by hand. */
+export function useDismissGuidelineCandidateCall(ownerId: string) {
+  const transport = useTransport()
+  const queryClient = useQueryClient()
+  const mutation = useMutation(GuidelineService.method.dismissGuidelineCandidate, {
+    onSuccess: () => invalidateGuidelineCandidates(queryClient, transport, ownerId),
+  })
+  return {
+    ...mutation,
+    errorMessage: guidelineErrorMessage(mutation.error),
+    dismiss: (id: string) => mutation.mutateAsync({ id }),
   }
 }
 

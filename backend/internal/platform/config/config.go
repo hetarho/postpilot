@@ -321,6 +321,11 @@ type Config struct {
 	// storage one, so it stays server-side and the frontend only relays the refusal.
 	GuidelineTextMaxChars  int
 	GuidelineMaxPerAccount int
+	// GuidelineCandidateMaxPending bounds how many pending candidates an account may hold.
+	// Recording stops at the bound rather than evicting the oldest, so nothing the user
+	// might still approve is discarded on their behalf. Server-side only: the frontend
+	// relays the refusal instead of predicting it, as it already does for the cap above.
+	GuidelineCandidateMaxPending int
 }
 
 // Load reads the environment, falling back to a repo-root .env when present so a
@@ -473,6 +478,11 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.GuidelineMaxPerAccount = guidelineCap
+	candidateQueue, err := positiveInt("GUIDELINE_CANDIDATE_MAX_PENDING", "50")
+	if err != nil {
+		return nil, err
+	}
+	cfg.GuidelineCandidateMaxPending = candidateQueue
 
 	return cfg, nil
 }

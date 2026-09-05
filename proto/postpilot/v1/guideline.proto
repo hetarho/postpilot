@@ -18,6 +18,12 @@ service GuidelineService {
   rpc CreateGuideline(CreateGuidelineRequest) returns (CreateGuidelineResponse) {}
   rpc UpdateGuideline(UpdateGuidelineRequest) returns (UpdateGuidelineResponse) {}
   rpc DeleteGuideline(DeleteGuidelineRequest) returns (DeleteGuidelineResponse) {}
+  // The candidate review surface. A candidate is a completed revision's instruction,
+  // recorded verbatim — never learned, never generalized, and never injected into a
+  // prompt. Approval is CreateGuideline with from_candidate_id, not a procedure of its
+  // own: the create already owns every field rule and every refusal an approval needs.
+  rpc ListGuidelineCandidates(ListGuidelineCandidatesRequest) returns (ListGuidelineCandidatesResponse) {}
+  rpc DismissGuidelineCandidate(DismissGuidelineCandidateRequest) returns (DismissGuidelineCandidateResponse) {}
 }
 
 enum GuidelineScope {
@@ -59,6 +65,10 @@ message CreateGuidelineRequest {
   GuidelineScope scope = 2;
   // Required (>= 1 owned template) for TEMPLATES, and must be empty for GLOBAL.
   repeated string template_ids = 3;
+  // Set when this create is the approval of a candidate. Needed only because an edited
+  // candidate's text no longer matches the row: an unedited approval, and the on-the-spot
+  // 지침으로 저장, are matched by text in the same transaction.
+  optional string from_candidate_id = 4;
 }
 message CreateGuidelineResponse { Guideline guideline = 1; }
 
@@ -81,3 +91,38 @@ message DeleteGuidelineRequest { string id = 1; }
 // Empty: nothing references a guideline, so a delete detaches nothing and has nothing to
 // report back.
 message DeleteGuidelineResponse {}
+
+// A recorded revision instruction awaiting review. It carries NO scope by design: scope is
+// a durable decision about every future post, so it is made at approval time and never at
+// recording time. That is what lets recording be automatic.
+message GuidelineCandidate {
+  string id = 1;
+  // The instruction exactly as the user typed it, at the REVISION bound (500), which is
+  // wider than a guideline's (300). Refusing a long instruction at recording time would
+  // lose the most specific corrections; the guideline bound is enforced at approval.
+  string text = 2;
+  // The post the revision ran on. Empty when that post was deleted — the text survives,
+  // the link does not.
+  string post_slug = 3;
+  // How many completed revisions carried this exact text. The signal that a one-off
+  // correction has become a standing rule.
+  int32 occurrences = 4;
+  string first_seen_at = 5;
+  string last_seen_at = 6;
+}
+
+message ListGuidelineCandidatesRequest {}
+message ListGuidelineCandidatesResponse {
+  // The PENDING candidates only, in review order: occurrences descending, then last-seen
+  // descending, so the most-repeated correction is first.
+  repeated GuidelineCandidate candidates = 1;
+  // True when the pending queue is at its server-side bound and further revisions record
+  // nothing. The client cannot infer this from an empty list, and it owns no copy of the
+  // bound, so the server says it.
+  bool queue_full = 2;
+}
+
+message DismissGuidelineCandidateRequest { string id = 1; }
+// Empty: a dismissal marks the row rather than deleting it — the row is what keeps the
+// same instruction from being recorded again — and nothing references a candidate.
+message DismissGuidelineCandidateResponse {}
