@@ -8,6 +8,14 @@ A template body is the **single source of truth**: it is what `templates.body` s
 (after expansion), and what the drag-and-drop builder round-trips. The builder is a parser plus a renderer over that
 text, never a second representation of it.
 
+**The grammar is internal.** It is the contract between the builder and the write prompt, and since
+[change 30](../changes/archive/30.rework-the-template-screen-into-a-list-a.md) it is **never rendered to the user**:
+there is no source view, no mode switch, and no worked example written in tag or brace syntax anywhere in the
+product. What a person authors is blocks; what they read back is each block's own text. A body the parser cannot
+read is therefore not repairable by hand — the screen says so and offers to start the composition over — which is
+the one behavior this document's audience has to know about, because it is the only case where a body is discarded
+rather than round-tripped.
+
 ## 1. Why tags
 
 The grammar is XML-tag delimited rather than brace/bracket/comment delimited, for four reasons that are all about the

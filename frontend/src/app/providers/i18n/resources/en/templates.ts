@@ -7,12 +7,9 @@ export const templates = {
     new: 'New template',
     empty: 'There are no saved templates yet',
     emptyHelp:
-      'If you write the same shape of post again and again, build that shape once. For example:',
+      'If you write the same shape of post again and again, build that shape once and pick it per post. Set the order — intro, a description per photo, a verdict — and AI follows it every time.',
     name: 'Name',
-    exampleName: 'Informational restaurant review',
-    exampleDescription: 'A hosted restaurant visit review',
-    exampleBody:
-      '{write} Write the intro\n=========================\n{slot} Map link\n{repeat} for each photo\n  {photo}\n  {write} Describe this photo\n{write} Verdict and whether I would return',
+    newDockAria: 'Create a new template',
   },
   loadFailed: 'Could not load the template list.',
   noTemplate: 'None',
@@ -26,14 +23,38 @@ export const templates = {
     submit: 'Create template',
   },
   emptyDescription: 'No description',
-  builder: {
-    mode: 'Editing mode',
-    visual: 'Structure',
-    source: 'Source',
-    sourceHelp:
-      'This is the source AI receives verbatim. You can paste a template from elsewhere here.',
-    empty: 'Add a block below to build the structure.',
+  screen: {
+    backToList: '← Templates',
+    newTitle: 'New template',
+    notFound: 'Could not find this template. Pick one from the list again.',
+    compositionHelp:
+      'Add blocks above to lay out the post. Tap a line to edit it, and drag to reorder.',
+    saved: 'Saved.',
+    saveDockAria: 'Save template',
+    leaveTitle: 'Leave without saving?',
+    leaveDescription: 'Your changes have not been saved yet. Leaving now discards them.',
+    leaveConfirm: 'Leave without saving',
+  },
+  composition: {
     add: 'Add block',
+    empty: 'Add blocks above to lay out the post.',
+    insertHere: 'Adds here',
+    repeatEmpty: 'Nothing inside this repeat yet.',
+    repeatHelp: 'The blocks inside repeat once per attached photo.',
+    unreadable:
+      'The structure of this template cannot be read — it may have been saved in an older format. Clear it and build it again.',
+    clearAndRestart: 'Clear and start over',
+    placeholder: {
+      write: 'Say what to write here',
+      text: 'Type the text that goes in',
+      note: 'Say something to AI only',
+      photo: 'An attached photo goes here',
+      place: 'Name this position',
+      link: 'Name this position',
+      repeat: 'Once per photo',
+    },
+  },
+  builder: {
     palette: {
       write: 'Write',
       writeHelp: 'AI writes prose here',
@@ -55,14 +76,11 @@ export const templates = {
       text: 'Text to include',
       label: 'Name for this position',
       note: 'Note for AI',
+      drag: 'Drag to move',
       moveUp: 'Move up',
       moveDown: 'Move down',
       remove: 'Remove',
-      addInside: 'Add inside',
-      repeatLabel: 'For each photo',
     },
-    parseFailed: 'Line {{line}} could not be read: {{reason}}',
-    parseFailedHint: 'Fix it in the source view and save again.',
     reasons: {
       unknown_tag: 'unknown notation',
       unclosed_tag: 'never closed',

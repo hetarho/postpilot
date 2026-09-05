@@ -24,4 +24,4 @@ export {
   type SlotKind,
   type TemplateNode,
 } from './lib/grammar'
-export { TemplateBodyEditor } from './ui/TemplateBodyEditor'
+export { TemplateComposition } from './ui/TemplateComposition'

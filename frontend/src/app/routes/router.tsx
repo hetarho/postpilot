@@ -185,6 +185,20 @@ const templatesRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/templates'), 'TemplatesPage'),
 })
 
+// `new` is declared before `$templateId` so the static path cannot be swallowed by the param,
+// exactly as `/posts/new` sits before `/posts/$slug` below.
+const newTemplateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/templates/new',
+  component: lazyRouteComponent(() => import('@/pages/template'), 'TemplatePage'),
+})
+
+const templateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/templates/$templateId',
+  component: lazyRouteComponent(() => import('@/pages/template'), 'TemplatePage'),
+})
+
 const plansRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/plans',
@@ -337,6 +351,8 @@ export const routeTree = rootRoute.addChildren([
     adminRoute.addChildren([adminAccountsRoute, adminModelsRoute]),
     voicesRoute,
     templatesRoute,
+    newTemplateRoute,
+    templateRoute,
     guidelinesRoute,
     plansRoute,
     voiceLayoutRoute.addChildren([

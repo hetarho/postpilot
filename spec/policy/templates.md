@@ -62,6 +62,12 @@ is trimmed; everything inside is the author's, down to the blank lines.
   store runs **one statement per present field** inside one transaction, so a field the request omitted is never
   named by any statement — two fields edited from two tabs cannot overwrite each other, and no read-modify-write can
   restore a stale value. A present empty `description` clears it; a present empty `name` or `body` is refused.
+- The template screen sends **all three fields in one call**, and that is not a read-modify-write: the three are one
+  draft edited in one place, so there is no other tab's value for the request to put back. The contract above is
+  unchanged and still what makes the single call safe.
+- **The `body` is never trimmed** on its way to the server. It is the canonical serialization of the composition, so
+  trimming it would rewrite a stored body carrying significant outer bytes — the name and the description are user
+  prose and are trimmed; the body is not.
 - A duplicate name is `AlreadyExists` with reason `TEMPLATE_NAME_TAKEN`; a bound violation is `InvalidArgument` with
   `TEMPLATE_FIELD_TOO_LONG` and allowlisted `field`, `max`, and `actual` params. The frontend renders these stable
   details in the active locale and never treats raw wire prose as translation input.
@@ -157,25 +163,57 @@ four export mappings, revision, the validator) to change merely to stay correct.
 
 ## Frontend
 
-- `/templates` is a top-level destination (템플릿, in 용도's position after 말투, lazily split like its siblings). It
-  lists the account's templates with their post counts, edits each field read-first and one at a time, and deletes
-  behind a confirmation that states the detach count. The empty state shows one worked example **as copy** and
-  creates no row.
-- The body is authored through one control in two modes over the same string: a **structure** view (a drag-and-drop
-  list of blocks with a visible palette) and a **원문** view (the body text). The structure view offers both pointer
-  drag and move buttons — HTML5 drag events do not fire on touch, and the base breakpoint is a 360px phone, so the
-  buttons are the only way the primary device can reorder at all.
-- The structure view holds its rows in local state and contributes **only complete blocks** to the body. A block
-  exists as a row the moment it is added, before anything is typed into it, and an empty `<write></write>` does not
-  parse — so without this the builder would produce a body its own parser refuses the instant a block is added. A
-  value that is not what the editor last emitted came from outside (the source view, a refetch) and only then are
-  the rows reseeded.
-- A body that does not parse **forces the source view**, where its error is named on the offending line, and the
-  structure tab is disabled: there is nothing for it to render, and guessing would drop the structure the author
-  asked for. Such a body cannot be saved.
-- Builder → body → builder is byte-identical for anything the builder produced. A hand-written body that parses
-  opens in the structure view too, but editing it there normalizes its spacing to the canonical form, which is why
-  the source view exists.
+`/templates` is a **list**, and a template is a **screen** — the same shape `/voices` has.
+
+### The list
+
+- `/templates` is a top-level destination (템플릿, after 말투, lazily split like its siblings). It lists the
+  account's templates as one-target rows: the name, the description and the post count, with the whole row linking
+  to that template and the delete painted above the link layer. One docked `+ 새 템플릿` is the only thing on this
+  screen that adds.
+- The empty state says what a template is **for**, in plain language. It shows no worked body and no marker syntax,
+  and it creates no row — there are still no shipped presets.
+
+### The screen
+
+- `/templates/$templateId` edits one template; `/templates/new` is the same component with nothing in it, and it is
+  where `+ 새 템플릿` goes. A `new` screen left without saving creates nothing.
+- The screen holds **one draft** — name, description and composition together — and **one 저장**, its only
+  committing action. 저장 is disabled while the draft equals what is stored, and in-app navigation away from a dirty
+  draft is warned about; a tab close warns through `beforeunload` only when there is something unsaved to lose.
+- The clean baseline is the **mutation's own response**, not the directory query: the query lags a save by a
+  refetch, and comparing against it would leave the screen dirty for that whole window — re-enabling 저장 and making
+  the guard warn about a template that was just written. On the create path the screen's own post-save redirect is
+  exempted from the guard through a ref, because the redirect runs in the same tick as the state update that clears
+  the dirty flag.
+
+### The composition
+
+- Authored through **one control and one mode**. There is no source view, no mode switch, and **no grammar syntax is
+  rendered to the user anywhere** — the grammar is the contract between the builder and the write prompt, not
+  something the user types.
+- **One row is one block**, collapsed to a kind badge and a one-line summary of the block's own text, so the list of
+  rows reads as the outline of the post. A `repeat`'s children are a nested list beneath it, always visible: they
+  are its content. At most one row is expanded at a time, and its fields — and its delete — edit in place.
+- An always-visible **add toolbar**, sticky to the top of the page, inserts at the **current position**: after the
+  row last touched, and inside a `repeat` when that is where the position is. The area **draws** that position
+  before the click, and an aim whose block is gone resolves to the end — where the marker is drawn too. Without the
+  visible marker a single toolbar would be worse than the two entry points it replaced.
+- Reordering offers both pointer drag and move buttons — HTML5 drag events do not fire on touch, and the base
+  breakpoint is a 360px phone, so the buttons are the only way the primary device can reorder at all. Both are
+  scoped to a sibling group: a `repeat`'s children are their own list, because the grammar cannot express a block
+  that left its repeat. Drag events are stopped from propagating for the same reason.
+- The editor holds its rows in local state and contributes **only complete blocks** to the body. A block exists as a
+  row the moment it is added, before anything is typed into it, and an empty `<write></write>` does not parse — so
+  without this the builder would produce a body its own parser refuses the instant a block is added. A value that is
+  not what the editor last emitted came from outside (a refetch, the clear below) and only then are the rows
+  reseeded. A row with nothing in it is also nothing to lose: it makes the draft no dirtier than it was.
+- Builder → body → builder is byte-identical for anything the builder produced, which is what lets a template saved
+  before this screen existed and one saved after carry the identical body.
+- A body the parser **cannot read** — a row from before the builder, or one edited outside the app — shows the
+  composition as unreadable and offers exactly one action: **비우고 다시 만들기**, which empties the composition in
+  the draft. The name and the description stay editable, and nothing is written until 저장. Inventing a structure
+  the author did not write would be worse than saying so, and there is no longer a source view to repair it in.
 - The directory query is re-read on every mount (`staleTime: 0`, `refetchOnMount: 'always'`). `post_count` is a
   projection over *posts*, so assigning a template in the editor changes it without touching any template and no
   template mutation can invalidate it — and it is the number the user confirms a destructive detach against.
@@ -192,8 +230,10 @@ four export mappings, revision, the validator) to change merely to stay correct.
   failed directory read is shown as a failure with a retry — never as an empty directory, which would leave clearing
   as the only available action.
 - The post list shows the template name beside the voice for an assigned post and nothing for an unassigned one.
-- The body editor lives in `entities/template/ui` rather than in a feature: it performs no mutation, both
-  `create-template` and `edit-template` need it, and two features importing each other is what FSD forbids.
+- The composition editor lives in `entities/template/ui` rather than in a feature or in the page: it performs no
+  mutation — it is a controlled input over one of the template's own fields — and the shape of a block is the
+  entity's business. `features/{create,edit}-template` keep their mutation hooks and nothing else; the page owns the
+  draft and composes the three.
 
 ## Configuration
 

@@ -1,13 +1,12 @@
 import { encode, parse, type ParseFailure, type SlotKind, type TemplateNode } from '../lib/grammar'
 
-/** What the structure editor manipulates: a flat list of blocks, with `repeat` the only one
+/** What the composition editor manipulates: a flat list of blocks, with `repeat` the only one
  *  that nests (the grammar forbids a repeat inside a repeat).
  *
  *  This is a VIEW over the body, not a second source of truth. `toBody` serializes it and the
  *  body is what gets saved; `fromBody` reads it back. The pair round-trips byte for byte for
- *  anything the builder produced, which is what change 25 AC8 asks for — a hand-written body
- *  that parses opens here too, but its own spacing is normalized the moment it is edited
- *  visually, which is why the source mode exists. */
+ *  anything the builder produced, which is what change 25 AC8 asks for — and it is the only
+ *  way a body is authored, since the grammar itself is never shown to anyone (change 30). */
 export type BuilderBlock =
   | { id: string; kind: 'write'; text: string }
   | { id: string; kind: 'text'; text: string }
@@ -176,4 +175,135 @@ export function toValidBody(blocks: readonly BuilderBlock[]): string {
           : block,
       ),
   )
+}
+
+/** What a person actually picks from the palette. `slot` is deliberately absent: the three slot
+ *  KINDS are the choices, and a bare "slot" would be a command with no meaning — which is also
+ *  why it is the one `BuilderBlockKind` with no copy of its own. */
+export type PaletteKind = 'write' | 'text' | 'photo' | 'place' | 'link' | 'note' | 'repeat'
+
+/** The kind key a row shows, in that same vocabulary — so one set of strings names the button
+ *  that creates a block and the badge that identifies it afterwards. */
+export function blockKindKey(block: BuilderBlock): PaletteKind {
+  return block.kind === 'slot' ? block.slotKind : block.kind
+}
+
+/** The one line a collapsed row shows for a block: the block's own text and nothing else.
+ *
+ *  Never the grammar. The composition is read as an outline of the post, so what a row shows is
+ *  what would end up on the page — a `<write>`'s instruction, a literal's prose, a slot's label —
+ *  and never the tags that carry them (change 30 A9).
+ *
+ *  Newlines collapse to spaces because the row is one line: a literal holding a paragraph break
+ *  would otherwise silently render as one line with a gap in it. A block with nothing typed yet
+ *  returns "", and the row says so in its own words rather than showing an empty line.
+ */
+export function blockSummary(block: BuilderBlock): string {
+  switch (block.kind) {
+    case 'write':
+    case 'note':
+    case 'text':
+      return block.text.replace(/\s+/g, ' ').trim()
+    case 'slot':
+      return block.label.replace(/\s+/g, ' ').trim()
+    case 'repeat':
+      // A repeat's content IS its children, and they are rows of their own directly beneath it.
+      return ''
+  }
+}
+
+/** One block, with everything needed to ADDRESS it: which group it belongs to and where in that
+ *  group it sits. */
+export interface OutlineRow {
+  block: BuilderBlock
+  /** 0 at the top level, 1 inside a repeat. The grammar allows no third level. */
+  depth: number
+  /** The repeat this row belongs to, or null at the top level. */
+  parentId: string | null
+  /** Its index among its siblings — what a reorder and an insertion address. */
+  index: number
+}
+
+/** Every block in reading order, parents before their children.
+ *
+ *  It is an addressing projection, not the render shape: the editor renders a repeat's children
+ *  as a nested list so a reorder cannot take a block out of its repeat. This exists so a lookup
+ *  by block id — "where is this, and what is next to it" — is one pass over the tree rather than
+ *  a recursive search repeated at every call site. */
+export function outline(blocks: readonly BuilderBlock[]): OutlineRow[] {
+  const rows: OutlineRow[] = []
+  blocks.forEach((block, index) => {
+    rows.push({ block, depth: 0, parentId: null, index })
+    if (block.kind === 'repeat') {
+      block.children.forEach((child, childIndex) => {
+        rows.push({ block: child, depth: 1, parentId: block.id, index: childIndex })
+      })
+    }
+  })
+  return rows
+}
+
+/** Where the next block goes. A null parent is the top level; a parent id is inside that repeat.
+ *  `index` is the position among that parent's children, so `children.length` is "at the end". */
+export interface Position {
+  parentId: string | null
+  index: number
+}
+
+export function endPosition(blocks: readonly BuilderBlock[]): Position {
+  return { parentId: null, index: blocks.length }
+}
+
+/** The position a row leaves behind once it is touched: directly after it, and INSIDE its repeat
+ *  when it is a child of one. This is what makes one toolbar unambiguous — the user's last action
+ *  is what says where the next block belongs (change 30 A7).
+ *
+ *  Touching the repeat's own row aims INSIDE it rather than after it: a repeat exists to hold
+ *  children, so the block that follows selecting one is almost always its first child. */
+export function positionAfter(blocks: readonly BuilderBlock[], blockId: string): Position | null {
+  const row = outline(blocks).find((candidate) => candidate.block.id === blockId)
+  if (!row) return null
+  if (row.block.kind === 'repeat')
+    return { parentId: row.block.id, index: row.block.children.length }
+  return { parentId: row.parentId, index: row.index + 1 }
+}
+
+/** Whether a kind may be inserted at a position. The grammar forbids a repeat inside a repeat, and
+ *  that rule lives HERE rather than in the palette: hiding the button is the affordance, and this
+ *  is the enforcement — so a position that drifts cannot produce a body the parser refuses. */
+export function canInsert(kind: BuilderBlockKind, position: Position): boolean {
+  return !(kind === 'repeat' && position.parentId !== null)
+}
+
+/** Inserts one new block at a position, returning the new list and the block itself so the caller
+ *  can move the insertion point past it and open it for editing.
+ *
+ *  A refused insertion (a repeat inside a repeat) or an unknown parent returns the list unchanged
+ *  and no block, rather than falling back to the end: silently putting a block somewhere other
+ *  than where the screen said it would go is the one failure a single toolbar cannot afford. */
+export function insertAt(
+  blocks: readonly BuilderBlock[],
+  position: Position,
+  kind: BuilderBlockKind,
+): { blocks: BuilderBlock[]; inserted: BuilderBlock | null } {
+  if (!canInsert(kind, position)) return { blocks: [...blocks], inserted: null }
+  const inserted = newBlock(kind)
+  if (position.parentId === null) {
+    const next = [...blocks]
+    next.splice(clampIndex(position.index, blocks.length), 0, inserted)
+    return { blocks: next, inserted }
+  }
+  let found = false
+  const next = blocks.map((block) => {
+    if (block.id !== position.parentId || block.kind !== 'repeat') return block
+    found = true
+    const children = [...block.children]
+    children.splice(clampIndex(position.index, block.children.length), 0, inserted)
+    return { ...block, children }
+  })
+  return found ? { blocks: next, inserted } : { blocks: [...blocks], inserted: null }
+}
+
+function clampIndex(index: number, length: number): number {
+  return Math.max(0, Math.min(length, index))
 }

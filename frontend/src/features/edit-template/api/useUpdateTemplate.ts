@@ -5,9 +5,10 @@ import { listPostsQueryKey, postDetailQueriesKey } from '@/entities/post'
 import { invalidateTemplates, templateErrorMessage } from '@/entities/template'
 import { TemplateService } from '@/shared/api'
 
-/** Presence is the edit unit: each saver sends exactly one field, so two fields edited from two
- *  tabs cannot overwrite each other (spec/policy/templates.md). Sending all three every time
- *  would be a read-modify-write and would put back whatever the other tab had just changed. */
+/** Presence is the edit unit. `saveAll` sends the three fields the template screen edits as one
+ *  draft, which is one transaction on the server rather than a read-modify-write: the screen is
+ *  the only place all three are edited, so there is no other tab's value for it to put back
+ *  (spec/policy/templates.md). */
 export function useUpdateTemplate(ownerId: string, templateId: string) {
   const transport = useTransport()
   const queryClient = useQueryClient()
@@ -29,9 +30,14 @@ export function useUpdateTemplate(ownerId: string, templateId: string) {
   return {
     ...mutation,
     errorMessage: templateErrorMessage(mutation.error),
-    saveName: (name: string) => mutation.mutateAsync({ id: templateId, name: name.trim() }),
-    saveDescription: (description: string) =>
-      mutation.mutateAsync({ id: templateId, description: description.trim() }),
-    saveBody: (body: string) => mutation.mutateAsync({ id: templateId, body: body.trim() }),
+    saveAll: (fields: { name: string; description: string; body: string }) =>
+      mutation.mutateAsync({
+        id: templateId,
+        name: fields.name.trim(),
+        description: fields.description.trim(),
+        // NOT trimmed: the body is the canonical serialization of the composition, and trimming
+        // it here would rewrite a stored body that carries significant outer bytes (change 30 A11).
+        body: fields.body,
+      }),
   }
 }

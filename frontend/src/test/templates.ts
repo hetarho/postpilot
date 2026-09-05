@@ -35,6 +35,9 @@ export interface FakeTemplatesOptions {
     description: string | undefined
     body: string | undefined
   }>
+  /** Records every CreateTemplate, so a test can prove the screen's one save carried all three
+   *  fields in one call. */
+  creates?: Array<{ name: string; description: string; body: string }>
 }
 
 const DEFAULT_AT = '2026-08-28T12:00:00Z'
@@ -85,6 +88,7 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
 
   rpc(TemplateService.method.createTemplate, (req) => {
     calls?.push('CreateTemplate')
+    options.creates?.push({ name: req.name, description: req.description, body: req.body })
     const name = req.name.trim()
     if (!name) throw connectAppError('TEMPLATE_NAME_REQUIRED', Code.InvalidArgument)
     if (!req.body.trim()) throw connectAppError('TEMPLATE_BODY_REQUIRED', Code.InvalidArgument)

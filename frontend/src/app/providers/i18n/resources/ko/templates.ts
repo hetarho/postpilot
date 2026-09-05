@@ -7,12 +7,9 @@ export const templates = {
     new: '새 템플릿',
     empty: '아직 저장된 템플릿이 없어요',
     emptyHelp:
-      '매번 같은 틀로 쓰는 글이 있다면 그 틀을 한 번만 만들어 두세요. 예를 들어 이런 식이에요.',
+      '매번 같은 틀로 쓰는 글이 있다면, 그 틀을 한 번만 만들어 두고 글마다 골라 쓰세요. 인트로·사진 설명·총평처럼 글의 순서를 정해 두면 AI가 매번 그 순서대로 씁니다.',
     name: '이름',
-    exampleName: '정보성 식당 리뷰',
-    exampleDescription: '식사를 제공받고 쓰는 방문 리뷰',
-    exampleBody:
-      '{작성} 인트로를 씁니다\n=========================\n{자리} 네이버 지도\n{반복} 사진마다\n  {사진}\n  {작성} 이 사진에 대한 설명\n{작성} 총평 및 재방문 의사',
+    newDockAria: '새 템플릿 만들기',
   },
   loadFailed: '템플릿 목록을 불러오지 못했어요.',
   noTemplate: '없음',
@@ -26,14 +23,38 @@ export const templates = {
     submit: '템플릿 만들기',
   },
   emptyDescription: '설명 없음',
-  builder: {
-    mode: '편집 방식',
-    visual: '구성 편집',
-    source: '원문',
-    sourceHelp:
-      'AI에게 그대로 전달되는 원문이에요. 다른 곳에서 쓰던 템플릿을 붙여 넣을 수도 있어요.',
-    empty: '아래에서 블록을 더해 구성을 만들어 주세요.',
+  screen: {
+    backToList: '← 템플릿 목록',
+    newTitle: '새 템플릿',
+    notFound: '이 템플릿을 찾을 수 없어요. 목록에서 다시 골라 주세요.',
+    compositionHelp:
+      '위에서 블록을 더해 글의 순서를 짜세요. 줄을 누르면 내용을 고칠 수 있고, 끌어서 순서를 바꿀 수 있어요.',
+    saved: '저장했어요.',
+    saveDockAria: '템플릿 저장',
+    leaveTitle: '저장하지 않고 나갈까요?',
+    leaveDescription: '고친 내용이 아직 저장되지 않았어요. 지금 나가면 사라집니다.',
+    leaveConfirm: '저장하지 않고 나가기',
+  },
+  composition: {
     add: '블록 추가',
+    empty: '위에서 블록을 더해 글의 순서를 짜 주세요.',
+    insertHere: '여기에 추가돼요',
+    repeatEmpty: '이 반복 안에 아직 아무것도 없어요.',
+    repeatHelp: '첨부한 사진 개수만큼 안쪽 블록이 되풀이돼요.',
+    unreadable:
+      '이 템플릿의 구성을 읽을 수 없어요. 예전 방식으로 저장된 템플릿일 수 있어요. 구성을 비우고 다시 만들어 주세요.',
+    clearAndRestart: '구성 비우고 다시 만들기',
+    placeholder: {
+      write: '무엇을 쓸지 적어 주세요',
+      text: '들어갈 문구를 적어 주세요',
+      note: 'AI에게 남길 말을 적어 주세요',
+      photo: '첨부한 사진이 들어갑니다',
+      place: '이 자리의 이름을 적어 주세요',
+      link: '이 자리의 이름을 적어 주세요',
+      repeat: '사진마다 되풀이',
+    },
+  },
+  builder: {
     palette: {
       write: '작성',
       writeHelp: 'AI가 이 자리에 글을 씁니다',
@@ -55,14 +76,11 @@ export const templates = {
       text: '들어갈 문구',
       label: '이 자리의 이름',
       note: 'AI에게 남길 말',
+      drag: '끌어서 옮기기',
       moveUp: '위로',
       moveDown: '아래로',
       remove: '삭제',
-      addInside: '안쪽에 추가',
-      repeatLabel: '사진마다 되풀이',
     },
-    parseFailed: '{{line}}번째 줄을 읽을 수 없어요: {{reason}}',
-    parseFailedHint: '원문 모드에서 고친 뒤 다시 저장해 주세요.',
     reasons: {
       unknown_tag: '모르는 표기예요',
       unclosed_tag: '닫히지 않았어요',
