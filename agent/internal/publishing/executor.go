@@ -222,13 +222,11 @@ func redactedLocalDetail(detail string) string {
 
 func downloadAssets(ctx context.Context, dir string, assets []*postpilotv1.StagedPublishAsset) error {
 	client := &http.Client{Timeout: 2 * time.Minute}
-	client.CheckRedirect = func(request *http.Request, via []*http.Request) error {
-		if len(via) == 0 || request.URL.Scheme != via[0].URL.Scheme || !strings.EqualFold(request.URL.Host, via[0].URL.Host) {
-			return errors.New("signed asset redirect changed origin")
-		}
-		return nil
+	client.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return errors.New("signed asset redirects are disabled")
 	}
 	seen := make(map[string]struct{}, len(assets))
+	storageOrigin := ""
 	for ordinal, asset := range assets {
 		if asset.GetBytes() <= 0 {
 			return errors.New("asset has invalid byte count")
@@ -251,6 +249,12 @@ func downloadAssets(ctx context.Context, dir string, assets []*postpilotv1.Stage
 		u, err := url.Parse(asset.GetDownloadUrl())
 		if err != nil || u.Host == "" || (u.Scheme != "https" && !(u.Scheme == "http" && isLoopback(u.Hostname()))) {
 			return errors.New("asset URL is not an allowed signed origin")
+		}
+		origin := strings.ToLower(u.Scheme + "://" + u.Host)
+		if storageOrigin == "" {
+			storageOrigin = origin
+		} else if origin != storageOrigin {
+			return errors.New("asset URLs do not share one signed storage origin")
 		}
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 		if err != nil {
@@ -357,6 +361,8 @@ func failureKind(value string) postpilotv1.PublishFailureKind {
 		return postpilotv1.PublishFailureKind_PUBLISH_FAILURE_EDITOR_CHANGED
 	case "asset_missing":
 		return postpilotv1.PublishFailureKind_PUBLISH_FAILURE_ASSET_MISSING
+	case "browser_lost":
+		return postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST
 	default:
 		return postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE
 	}

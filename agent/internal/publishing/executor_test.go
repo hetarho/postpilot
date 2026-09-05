@@ -197,7 +197,12 @@ func TestExecutorRejectsPublishedResultBeforeReadback(t *testing.T) {
 
 func TestDownloadAssetsVerifiesBytesAndRedirectOrigin(t *testing.T) {
 	payload := []byte("jpeg")
-	storage := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) { writer.Write(payload) }))
+	storage := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.Header.Get("Authorization") != "" {
+			t.Error("agent authorization was forwarded to storage")
+		}
+		writer.Write(payload)
+	}))
 	defer storage.Close()
 	dir := t.TempDir()
 	err := downloadAssets(context.Background(), dir, []*postpilotv1.StagedPublishAsset{{Filename: "0000.jpg", DownloadUrl: storage.URL + "/signed", Bytes: int64(len(payload))}})
@@ -224,6 +229,80 @@ func TestDownloadAssetsVerifiesBytesAndRedirectOrigin(t *testing.T) {
 	err = downloadAssets(context.Background(), t.TempDir(), []*postpilotv1.StagedPublishAsset{{Filename: "0000.png", DownloadUrl: storage.URL, Bytes: int64(len(payload))}})
 	if err == nil {
 		t.Fatal("non-JPEG staged asset was accepted")
+	}
+
+	sameOriginRedirect := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/redirect" {
+			http.Redirect(writer, request, "/asset", http.StatusFound)
+			return
+		}
+		writer.Write(payload)
+	}))
+	defer sameOriginRedirect.Close()
+	if err := downloadAssets(context.Background(), t.TempDir(), []*postpilotv1.StagedPublishAsset{{Filename: "0000.jpg", DownloadUrl: sameOriginRedirect.URL + "/redirect", Bytes: int64(len(payload))}}); err == nil {
+		t.Fatal("same-origin signed redirect was accepted")
+	}
+	if err := downloadAssets(context.Background(), t.TempDir(), []*postpilotv1.StagedPublishAsset{
+		{Ordinal: 0, Filename: "0000.jpg", DownloadUrl: storage.URL, Bytes: int64(len(payload))},
+		{Ordinal: 1, Filename: "0001.jpg", DownloadUrl: other.URL, Bytes: int64(len(payload))},
+	}); err == nil {
+		t.Fatal("mixed storage origins were accepted")
+	}
+}
+
+func TestExecutorClassifiesProcessLossOnEitherSideOfTheFence(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		stages      []Stage
+		wantFailure postpilotv1.PublishFailureKind
+	}{
+		{name: "before fence", stages: []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos}, wantFailure: postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE},
+		{name: "after fence", stages: []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageCommitting}, wantFailure: postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			api := &fakeAPI{}
+			claim := &postpilotv1.ClaimPublishJobResponse{Job: &postpilotv1.PublishJob{Id: "job", ProgressSequence: 1}, Manifest: &postpilotv1.PublishManifest{}, LeaseToken: "lease", LeaseTtlSeconds: 45}
+			executor := Executor{API: api, JobsRoot: t.TempDir(), ConnectionID: "connection", HeartbeatEvery: time.Second, Timeout: time.Second,
+				Publisher: publisherFunc(func(ctx context.Context, _ string, reporter Reporter) (Result, error) {
+					for _, stage := range test.stages {
+						if err := reporter.Advance(ctx, stage); err != nil {
+							return Result{}, err
+						}
+					}
+					return Result{}, errors.New("simulated process loss")
+				}),
+			}
+			if err := executor.Execute(context.Background(), claim); err != nil {
+				t.Fatal(err)
+			}
+			if len(api.failKinds) != 1 || api.failKinds[0] != test.wantFailure {
+				t.Fatalf("failure kinds=%v", api.failKinds)
+			}
+		})
+	}
+}
+
+func TestExecutorDeletesTheRandomJobDirectoryAfterEveryTerminalReturn(t *testing.T) {
+	jobsRoot := t.TempDir()
+	api := &fakeAPI{}
+	claim := &postpilotv1.ClaimPublishJobResponse{Job: &postpilotv1.PublishJob{Id: "job", ProgressSequence: 1}, Manifest: &postpilotv1.PublishManifest{}, LeaseToken: "lease", LeaseTtlSeconds: 45}
+	executor := Executor{API: api, JobsRoot: jobsRoot, ConnectionID: "connection", HeartbeatEvery: time.Second, Timeout: time.Second,
+		Publisher: publisherFunc(func(_ context.Context, dir string, _ Reporter) (Result, error) {
+			if filepath.Dir(dir) != filepath.Join(jobsRoot, "connection") {
+				t.Fatalf("job directory is not random beneath its connection: %q", dir)
+			}
+			if _, err := os.Stat(filepath.Join(dir, "manifest.json")); err != nil {
+				t.Fatal(err)
+			}
+			return Result{Status: "failed", FailureKind: "safe"}, nil
+		}),
+	}
+	if err := executor.Execute(context.Background(), claim); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(filepath.Join(jobsRoot, "connection"))
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("terminal job files remain: %v err=%v", entries, err)
 	}
 }
 

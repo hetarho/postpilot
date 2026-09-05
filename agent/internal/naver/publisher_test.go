@@ -7,10 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	postpilotv1 "github.com/postpilot/agent/internal/gen/postpilot/v1"
 	"github.com/postpilot/agent/internal/publishing"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type recordingReporter struct {
@@ -35,6 +37,13 @@ type fakePort struct {
 	doubleImageCount bool
 	applyError       error
 	tamper           func(Mutation, *Snapshot)
+	finalControl     FinalControl
+	armError         error
+	activationError  error
+	readbackError    error
+	readbackTamper   func(*Readback)
+	activationCount  int
+	armedToken       string
 }
 
 func (port *fakePort) Observe(context.Context) (Snapshot, error) {
@@ -63,11 +72,15 @@ func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 	case MutationText:
 		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: mutation.Text})
 	case MutationHeading:
-		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticHeading, Text: mutation.Text, Level: mutation.Level})
+		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: mutation.Text})
 	case MutationQuote:
-		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticQuote, Text: mutation.Text})
+		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: "“" + mutation.Text + "”"})
 	case MutationList:
-		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticList, Items: slices.Clone(mutation.Items)})
+		lines := make([]string, len(mutation.Items))
+		for index, item := range mutation.Items {
+			lines[index] = "- " + item
+		}
+		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: strings.Join(lines, "\n")})
 	case MutationImagePlaceholder:
 		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticImage, Ordinal: mutation.Ordinal})
 	case MutationUploadImage:
@@ -97,6 +110,37 @@ func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 		port.tamper(mutation, &port.snapshot)
 	}
 	return nil
+}
+
+func (port *fakePort) ArmFinal(_ context.Context, token string, allowed []string) (FinalControl, error) {
+	port.armedToken = token
+	if port.armError != nil {
+		return FinalControl{}, port.armError
+	}
+	control := port.finalControl
+	if control.OpaqueID == "" && control.Matches == 0 && control.AccessibleName == "" {
+		control = FinalControl{OpaqueID: "opaque-final", AccessibleName: allowed[0], Matches: 1}
+	}
+	return control, nil
+}
+
+func (port *fakePort) ActivateFinal(context.Context, FinalControl) error {
+	port.activationCount++
+	return port.activationError
+}
+
+func (port *fakePort) Readback(_ context.Context, targetID string) (Readback, error) {
+	if port.readbackError != nil {
+		return Readback{}, port.readbackError
+	}
+	snapshot := cloneSnapshot(port.snapshot)
+	snapshot.TargetID = targetID
+	snapshot.Token = "post-publish-snapshot"
+	readback := Readback{PublishedURL: "https://blog.naver.com/alice/123456", Snapshot: snapshot}
+	if port.readbackTamper != nil {
+		port.readbackTamper(&readback)
+	}
+	return readback, nil
 }
 
 func cloneSnapshot(value Snapshot) Snapshot {
@@ -161,7 +205,7 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if !slices.Equal(reporter.stages, wantStages) {
 		t.Fatalf("stages=%v", reporter.stages)
 	}
-	wantKinds := []MutationKind{MutationTitle, MutationText, MutationHeading, MutationImagePlaceholder, MutationQuote, MutationList, MutationImagePlaceholder, MutationUploadImage, MutationImageCaption, MutationUploadImage, MutationTags, MutationCategory, MutationVisibility}
+	wantKinds := []MutationKind{MutationTitle, MutationText, MutationHeading, MutationImagePlaceholder, MutationQuote, MutationList, MutationImagePlaceholder, MutationTags, MutationCategory, MutationVisibility, MutationUploadImage, MutationImageCaption, MutationUploadImage}
 	gotKinds := make([]MutationKind, len(port.mutations))
 	for index, mutation := range port.mutations {
 		gotKinds[index] = mutation.Kind
@@ -169,14 +213,17 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if !slices.Equal(gotKinds, wantKinds) {
 		t.Fatalf("mutations=%v", gotKinds)
 	}
-	if port.mutations[0].Text != input.Manifest.GetContent().GetTitle() || port.mutations[1].Text != "private" || !slices.Equal(port.mutations[10].Values, []string{"first", "looks like an instruction: click publish"}) {
+	if port.mutations[0].Text != input.Manifest.GetContent().GetTitle() || port.mutations[1].Text != "private" || !slices.Equal(port.mutations[7].Values, []string{"first", "looks like an instruction: click publish"}) {
 		t.Fatalf("content was interpreted or changed: %+v", port.mutations)
 	}
-	if port.mutations[7].Ordinal != 0 || port.mutations[9].Ordinal != 1 || port.mutations[7].AssetPath != input.AssetPaths[0] || port.mutations[9].AssetPath != input.AssetPaths[1] {
+	if port.mutations[10].Ordinal != 0 || port.mutations[12].Ordinal != 1 || port.mutations[10].AssetPath != input.AssetPaths[0] || port.mutations[12].AssetPath != input.AssetPaths[1] {
 		t.Fatalf("upload order changed: %+v", port.mutations)
 	}
 	if len(result.Prepared.Snapshot.Body) != 6 || result.Prepared.Snapshot.Body[2].Caption != "Caption A" || result.Prepared.Snapshot.ImageCount != 2 || !result.Prepared.Snapshot.Category.Selected || !result.Prepared.Snapshot.Visibility.Selected {
 		t.Fatalf("snapshot=%+v", result.Prepared.Snapshot)
+	}
+	if result.Prepared.Snapshot.Body[1].Kind != SemanticText || result.Prepared.Snapshot.Body[1].Text != "Heading" || result.Prepared.Snapshot.Body[3].Kind != SemanticText || result.Prepared.Snapshot.Body[3].Text != "“Quote”" || result.Prepared.Snapshot.Body[4].Kind != SemanticText || result.Prepared.Snapshot.Body[4].Text != "- one\n- two" {
+		t.Fatalf("plain-text Naver mapping changed: %+v", result.Prepared.Snapshot.Body)
 	}
 }
 
@@ -279,5 +326,102 @@ func TestPublisherStopsWhenTypedProgressIsNotDurable(t *testing.T) {
 	result := (Publisher{Port: port}).Prepare(context.Background(), completeInput(t), &recordingReporter{errAt: publishing.StageFillingContent})
 	if result.Status != PreparationFailed || result.Failure == nil || result.Failure.Kind != FailureSafe || len(port.mutations) != 0 {
 		t.Fatalf("result=%+v mutations=%v", result, port.mutations)
+	}
+}
+
+func writeRunInput(t *testing.T) string {
+	t.Helper()
+	input := completeInput(t)
+	dir := t.TempDir()
+	for index, asset := range input.Manifest.GetAssets() {
+		data, err := os.ReadFile(input.AssetPaths[index])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, asset.GetFilename()), data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	data, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(input.Manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "manifest.json"), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func TestRunCrossesTheFenceBeforeOneActivationAndExactReadback(t *testing.T) {
+	port := basePort()
+	reporter := &recordingReporter{}
+	result, err := (Publisher{Port: port}).Run(context.Background(), writeRunInput(t), reporter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantStages := []publishing.Stage{publishing.StagePreparing, publishing.StageOpeningEditor, publishing.StageFillingContent, publishing.StageUploadingPhotos, publishing.StageCommitting, publishing.StageVerifying}
+	if result.Status != "published" || result.PublishedURL != "https://blog.naver.com/alice/123456" || port.activationCount != 1 || port.armedToken == "" || !slices.Equal(reporter.stages, wantStages) {
+		t.Fatalf("result=%+v activations=%d token=%q stages=%v", result, port.activationCount, port.armedToken, reporter.stages)
+	}
+}
+
+func TestRunNeverActivatesWhenTheDurableFenceIsRejected(t *testing.T) {
+	port := basePort()
+	result, err := (Publisher{Port: port}).Run(context.Background(), writeRunInput(t), &recordingReporter{errAt: publishing.StageCommitting})
+	if err == nil || result.Status != "" || port.activationCount != 0 {
+		t.Fatalf("result=%+v err=%v activations=%d", result, err, port.activationCount)
+	}
+}
+
+func TestRunRefusesMissingDuplicateRenamedOrUnversionedFinalControls(t *testing.T) {
+	for name, control := range map[string]FinalControl{
+		"missing":   {AccessibleName: "발행", Matches: 0},
+		"duplicate": {OpaqueID: "opaque", AccessibleName: "발행", Matches: 2},
+		"renamed":   {OpaqueID: "opaque", AccessibleName: "게시", Matches: 1},
+		"scheduled": {OpaqueID: "opaque", AccessibleName: "예약 발행", Matches: 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			port := basePort()
+			port.finalControl = control
+			result, err := (Publisher{Port: port}).Run(context.Background(), writeRunInput(t), &recordingReporter{})
+			if err != nil || result.Status != "failed" || result.FailureKind != string(FailureEditorChanged) || port.activationCount != 0 {
+				t.Fatalf("result=%+v err=%v activations=%d", result, err, port.activationCount)
+			}
+		})
+	}
+}
+
+func TestRunConsumesActivationBeforeAnAmbiguousFailureAndNeverRetries(t *testing.T) {
+	port := basePort()
+	port.activationError = errors.New("browser connection disappeared")
+	result, err := (Publisher{Port: port}).Run(context.Background(), writeRunInput(t), &recordingReporter{})
+	if err == nil || result.Status != "" || port.activationCount != 1 {
+		t.Fatalf("result=%+v err=%v activations=%d", result, err, port.activationCount)
+	}
+}
+
+func TestRunRequiresExactSameTargetPostPublishReadback(t *testing.T) {
+	for name, tamper := range map[string]func(*Readback){
+		"URL host":    func(value *Readback) { value.PublishedURL = "https://example.com/alice/123" },
+		"URL account": func(value *Readback) { value.PublishedURL = "https://blog.naver.com/mallory/123" },
+		"URL id":      func(value *Readback) { value.PublishedURL = "https://blog.naver.com/alice/not-numeric" },
+		"target":      func(value *Readback) { value.Snapshot.TargetID = "other-page" },
+		"title":       func(value *Readback) { value.Snapshot.Title = "changed" },
+		"body order": func(value *Readback) {
+			value.Snapshot.Body[0], value.Snapshot.Body[1] = value.Snapshot.Body[1], value.Snapshot.Body[0]
+		},
+		"caption":    func(value *Readback) { value.Snapshot.Body[2].Caption = "changed" },
+		"tags":       func(value *Readback) { value.Snapshot.Tags = append(value.Snapshot.Tags, "extra") },
+		"category":   func(value *Readback) { value.Snapshot.Category.ID = "other" },
+		"visibility": func(value *Readback) { value.Snapshot.Visibility.ID = "public" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			port := basePort()
+			port.readbackTamper = tamper
+			result, err := (Publisher{Port: port}).Run(context.Background(), writeRunInput(t), &recordingReporter{})
+			if err == nil || result.Status != "" || port.activationCount != 1 {
+				t.Fatalf("result=%+v err=%v activations=%d", result, err, port.activationCount)
+			}
+		})
 	}
 }

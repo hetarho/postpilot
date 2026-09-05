@@ -33,15 +33,17 @@
 | T003 | Persist the dedicated browser session across pairing retries | PUBLISH | - | done@260905 |
 | T004 | Mac pairing, profile setup and the non-publishing compatibility probe | PUBLISH | T003 | done@260905 |
 | T005 | The deterministic Naver publisher | PUBLISH EXPORT | T004 | done@260905 |
-| T006 | Agent execution, the commit fence, readback and cleanup | PUBLISH | T005 | todo |
+| T006 | Agent execution, the commit fence, readback and cleanup | PUBLISH | T005 | done@260905 |
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | todo |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 | todo |
 | T009 | Pointer affordances for clickable controls | THEME | - | done@260905 |
 
 ## next
-- implement-task T006
+- implement-task T007
 
 ## log
+- 260905 T006 done (durable one-shot commit fence, exact same-target readback and terminal cleanup; ARCH-27 passes)
+- 260905 T006 claimed (cx)
 - 260905 T005 done (closed typed pre-fence publisher, exact semantic snapshots and ordinal JPEG verification; ARCH-27 passes)
 - 260905 T005 claimed (cx)
 - 260905 T004 done (versioned non-publishing Naver compatibility probe, safe pairing and existing-connection re-probe; ARCH-27 passes)

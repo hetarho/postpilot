@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
 	postpilotv1 "github.com/postpilot/agent/internal/gen/postpilot/v1"
 	"github.com/postpilot/agent/internal/publishing"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -149,8 +152,140 @@ type Port interface {
 	Apply(context.Context, Mutation) error
 }
 
+type FinalControl struct {
+	OpaqueID       string
+	AccessibleName string
+	Matches        int
+}
+
+type Readback struct {
+	PublishedURL string
+	Snapshot     Snapshot
+}
+
+// CommitPort is the only extension allowed after preparation. ArmFinal is an observation
+// bound to Prepared.SnapshotToken; ActivateFinal is one non-retrying low-level activation;
+// Readback observes the same target after navigation. There is no other activation method.
+type CommitPort interface {
+	Port
+	ArmFinal(context.Context, string, []string) (FinalControl, error)
+	ActivateFinal(context.Context, FinalControl) error
+	Readback(context.Context, string) (Readback, error)
+}
+
 type Publisher struct {
 	Port Port
+}
+
+var _ publishing.Publisher = Publisher{}
+
+var numericPostID = regexp.MustCompile(`^[1-9][0-9]*$`)
+
+// Run connects the deterministic preparation to publishing.Executor. It reads only the
+// owner-only local manifest and its enumerated files, crosses the synchronous durable fence,
+// consumes the one activation authorization before calling the port, and requires exact
+// same-target readback before returning the sole published terminal result.
+func (p Publisher) Run(ctx context.Context, dir string, reporter publishing.Reporter) (publishing.Result, error) {
+	input, failure := loadInput(dir)
+	if failure != "" {
+		return publishing.Result{Status: "failed", FailureKind: string(failure)}, nil
+	}
+	prepared := p.Prepare(ctx, input, reporter)
+	if prepared.Status != PreparationReady || prepared.Prepared == nil {
+		kind := FailureSafe
+		if prepared.Failure != nil {
+			kind = prepared.Failure.Kind
+		}
+		return publishing.Result{Status: "failed", FailureKind: string(kind)}, nil
+	}
+	port, ok := p.Port.(CommitPort)
+	if !ok {
+		return publishing.Result{Status: "failed", FailureKind: string(FailureSafe)}, nil
+	}
+	compatibility, err := Manifest()
+	if err != nil {
+		return publishing.Result{Status: "failed", FailureKind: string(FailureEditorChanged)}, nil
+	}
+	control, err := port.ArmFinal(ctx, prepared.Prepared.SnapshotToken, slices.Clone(compatibility.FinalControlAccessibleNames))
+	if err != nil {
+		return publishing.Result{Status: "failed", FailureKind: string(classifyPortError(err))}, nil
+	}
+	if control.OpaqueID == "" || control.Matches != 1 || !slices.Contains(compatibility.FinalControlAccessibleNames, control.AccessibleName) {
+		return publishing.Result{Status: "failed", FailureKind: string(FailureEditorChanged)}, nil
+	}
+	// The synchronous return is the authorization boundary. A timeout or refusal returns
+	// before any activation and leaves the durable stage pre-commit.
+	if err := reporter.Advance(ctx, publishing.StageCommitting); err != nil {
+		return publishing.Result{}, err
+	}
+	// Authorization is consumed before the call. No loop, retry, fallback or second
+	// activation exists on this path, including when the result is ambiguous.
+	if err := port.ActivateFinal(ctx, control); err != nil {
+		return publishing.Result{}, err
+	}
+	if err := reporter.Advance(ctx, publishing.StageVerifying); err != nil {
+		return publishing.Result{}, err
+	}
+	readback, err := port.Readback(ctx, prepared.Prepared.Snapshot.TargetID)
+	if err != nil {
+		return publishing.Result{}, err
+	}
+	if err := validateReadback(input.Manifest, prepared.Prepared.Snapshot, readback); err != nil {
+		return publishing.Result{}, err
+	}
+	return publishing.Result{Status: "published", PublishedURL: readback.PublishedURL}, nil
+}
+
+func loadInput(dir string) (Input, FailureKind) {
+	if !filepath.IsAbs(dir) {
+		return Input{}, FailureSafe
+	}
+	manifestPath := filepath.Join(dir, "manifest.json")
+	info, err := os.Lstat(manifestPath)
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0o077 != 0 || info.Size() > 1<<20 {
+		return Input{}, FailureSafe
+	}
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return Input{}, FailureSafe
+	}
+	manifest := &postpilotv1.PublishManifest{}
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(data, manifest); err != nil {
+		return Input{}, FailureSafe
+	}
+	paths := make([]string, 0, len(manifest.GetAssets()))
+	for _, asset := range manifest.GetAssets() {
+		if asset == nil || filepath.Base(asset.GetFilename()) != asset.GetFilename() {
+			return Input{}, FailureAssetMissing
+		}
+		path := filepath.Join(dir, asset.GetFilename())
+		relative, err := filepath.Rel(dir, path)
+		if err != nil || relative == ".." || filepath.IsAbs(relative) {
+			return Input{}, FailureAssetMissing
+		}
+		paths = append(paths, path)
+	}
+	return Input{Manifest: manifest, AssetPaths: paths}, ""
+}
+
+func validateReadback(manifest *postpilotv1.PublishManifest, prepared Snapshot, readback Readback) error {
+	parsed, err := url.Parse(readback.PublishedURL)
+	if err != nil || parsed.Scheme != "https" || !strings.EqualFold(parsed.Hostname(), "blog.naver.com") || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return errors.New("published URL is not an exact Naver post URL")
+	}
+	segments := strings.Split(strings.Trim(parsed.EscapedPath(), "/"), "/")
+	if len(segments) != 2 {
+		return errors.New("published URL does not belong to the expected Naver account")
+	}
+	account, err := url.PathUnescape(segments[0])
+	if err != nil || account != manifest.GetExpectedPlatformAccountId() || !numericPostID.MatchString(segments[1]) {
+		return errors.New("published URL does not belong to the expected Naver account")
+	}
+	snapshot := readback.Snapshot
+	if snapshot.TargetID != prepared.TargetID || snapshot.AccountID != prepared.AccountID || snapshot.Token == "" || snapshot.Token == prepared.Token || snapshot.Title != prepared.Title || snapshot.ImageCount != prepared.ImageCount || !equalBlocks(snapshot.Body, prepared.Body) || !slices.Equal(snapshot.Tags, prepared.Tags) || snapshot.Category != prepared.Category || snapshot.Visibility != prepared.Visibility {
+		return errors.New("published Naver readback does not match the frozen editor snapshot")
+	}
+	return nil
 }
 
 // Prepare deterministically fills and fully verifies the editor but cannot activate any
@@ -212,6 +347,24 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 		}
 		expected.Body = append(expected.Body, semantic)
 	}
+	tags := normalizeTags(manifestCopy.GetTags())
+	for _, setting := range []struct {
+		mutation Mutation
+		update   func(*Snapshot)
+	}{
+		{Mutation{Kind: MutationTags, Values: tags}, func(snapshot *Snapshot) { snapshot.Tags = slices.Clone(tags) }},
+		{Mutation{Kind: MutationCategory, ID: manifestCopy.GetCategoryId(), Name: manifestCopy.GetCategoryName()}, func(snapshot *Snapshot) {
+			snapshot.Category = SelectedSetting{ID: manifestCopy.GetCategoryId(), Name: manifestCopy.GetCategoryName(), Selected: true}
+		}},
+		{Mutation{Kind: MutationVisibility, ID: visibilityID(manifestCopy.GetVisibility())}, func(snapshot *Snapshot) {
+			snapshot.Visibility = SelectedSetting{ID: visibilityID(manifestCopy.GetVisibility()), Selected: true}
+		}},
+	} {
+		if failure = p.mutate(ctx, expected, setting.mutation, setting.update); failure != "" {
+			return fail(failure)
+		}
+		setting.update(&expected)
+	}
 	if err := reporter.Advance(ctx, publishing.StageUploadingPhotos); err != nil {
 		return fail(FailureSafe)
 	}
@@ -251,24 +404,6 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 		if expected.ImageCount != beforeImages+1 {
 			return fail(FailureEditorChanged)
 		}
-	}
-	tags := normalizeTags(manifestCopy.GetTags())
-	for _, setting := range []struct {
-		mutation Mutation
-		update   func(*Snapshot)
-	}{
-		{Mutation{Kind: MutationTags, Values: tags}, func(snapshot *Snapshot) { snapshot.Tags = slices.Clone(tags) }},
-		{Mutation{Kind: MutationCategory, ID: manifestCopy.GetCategoryId(), Name: manifestCopy.GetCategoryName()}, func(snapshot *Snapshot) {
-			snapshot.Category = SelectedSetting{ID: manifestCopy.GetCategoryId(), Name: manifestCopy.GetCategoryName(), Selected: true}
-		}},
-		{Mutation{Kind: MutationVisibility, ID: visibilityID(manifestCopy.GetVisibility())}, func(snapshot *Snapshot) {
-			snapshot.Visibility = SelectedSetting{ID: visibilityID(manifestCopy.GetVisibility()), Selected: true}
-		}},
-	} {
-		if failure = p.mutate(ctx, expected, setting.mutation, setting.update); failure != "" {
-			return fail(failure)
-		}
-		setting.update(&expected)
 	}
 	final, failure := p.observe(ctx, expected, false)
 	if failure != "" || final.Token == "" || !equalSnapshot(final, expected) {
@@ -395,17 +530,21 @@ func mapBlock(block *postpilotv1.Block, imageOrdinal int) (SemanticBlock, Mutati
 		if strings.TrimSpace(block.GetContent()) == "" || block.GetLevel() < 1 || block.GetLevel() > 3 {
 			return SemanticBlock{}, Mutation{}, errors.New("invalid heading")
 		}
-		return SemanticBlock{Kind: SemanticHeading, Text: block.GetContent(), Level: block.GetLevel()}, Mutation{Kind: MutationHeading, Text: block.GetContent(), Level: block.GetLevel()}, nil
+		return SemanticBlock{Kind: SemanticText, Text: block.GetContent()}, Mutation{Kind: MutationHeading, Text: block.GetContent(), Level: block.GetLevel()}, nil
 	case postpilotv1.BlockType_QUOTE:
 		if strings.TrimSpace(block.GetContent()) == "" {
 			return SemanticBlock{}, Mutation{}, errors.New("empty quote")
 		}
-		return SemanticBlock{Kind: SemanticQuote, Text: block.GetContent()}, Mutation{Kind: MutationQuote, Text: block.GetContent()}, nil
+		return SemanticBlock{Kind: SemanticText, Text: "“" + block.GetContent() + "”"}, Mutation{Kind: MutationQuote, Text: block.GetContent()}, nil
 	case postpilotv1.BlockType_LIST:
 		if len(block.GetItems()) == 0 || slices.ContainsFunc(block.GetItems(), func(value string) bool { return strings.TrimSpace(value) == "" }) {
 			return SemanticBlock{}, Mutation{}, errors.New("invalid list")
 		}
-		return SemanticBlock{Kind: SemanticList, Items: slices.Clone(block.GetItems())}, Mutation{Kind: MutationList, Items: slices.Clone(block.GetItems())}, nil
+		lines := make([]string, len(block.GetItems()))
+		for index, item := range block.GetItems() {
+			lines[index] = "- " + item
+		}
+		return SemanticBlock{Kind: SemanticText, Text: strings.Join(lines, "\n")}, Mutation{Kind: MutationList, Items: slices.Clone(block.GetItems())}, nil
 	case postpilotv1.BlockType_IMAGE:
 		if strings.TrimSpace(block.GetFile()) == "" {
 			return SemanticBlock{}, Mutation{}, errors.New("empty image")
