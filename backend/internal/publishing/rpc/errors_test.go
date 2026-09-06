@@ -35,6 +35,7 @@ func TestPublishingErrorsHaveDistinctStableReasons(t *testing.T) {
 		"not ready":          {publishing.ErrAgentNotReady, connect.CodeFailedPrecondition, "PUBLISH_AGENT_NOT_READY"},
 		"category":           {publishing.ErrCategoryNotFound, connect.CodeFailedPrecondition, "PUBLISH_CATEGORY_NOT_FOUND"},
 		"not finalized":      {publishing.ErrPostNotFinalized, connect.CodeFailedPrecondition, "PUBLISH_POST_NOT_FINALIZED"},
+		"video block":        {publishing.ErrVideoNotPublishable, connect.CodeFailedPrecondition, "VIDEO_NOT_PUBLISHABLE"},
 		"stale":              {publishing.ErrStaleRevision, connect.CodeAborted, "PUBLISH_STALE_REVISION"},
 		"lease":              {publishing.ErrLeaseInvalid, connect.CodeAborted, "PUBLISH_LEASE_INVALID"},
 		"transition":         {publishing.ErrTransition, connect.CodeAborted, "PUBLISH_TRANSITION_INVALID"},

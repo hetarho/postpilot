@@ -72,6 +72,7 @@ func (s *Service) setCache(rows []Model) {
 			ModelID:               row.ModelID,
 			Label:                 row.Label,
 			Vision:                row.Vision,
+			VideoInput:            row.VideoInput,
 			StructuredOutput:      row.StructuredOutput,
 			ContextTokens:         row.ContextTokens,
 			InputUSDPerMillion:    row.InputUSDPerMillion,
@@ -271,6 +272,7 @@ func (s *Service) SetPurpose(ctx context.Context, modelID string, purpose Purpos
 		row.StructuredOutput = candidate.StructuredOutput
 		row.ImageOutput = candidate.ImageOutput
 		row.VideoOutput = candidate.VideoOutput
+		row.VideoInput = candidate.VideoInput
 		row.ContextTokens = candidate.ContextTokens
 		row.InputUSDPerMillion = candidate.InputUSDPerMillion
 		row.OutputUSDPerMillion = candidate.OutputUSDPerMillion

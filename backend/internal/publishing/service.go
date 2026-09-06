@@ -272,6 +272,12 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 	if snapshot.ContentRevision != request.ExpectedContentRevision || snapshot.FinalizedRevision != snapshot.ContentRevision {
 		return Job{}, ErrStaleRevision
 	}
+	// Before the job id, before any staging copy, before the atomic gate: a refusal that
+	// left a reserved id or a staged asset behind would be a publication the user never
+	// started, waiting to be retried (VIDEO-16).
+	if holdsVideo(snapshot.Content) {
+		return Job{}, ErrVideoNotPublishable
+	}
 	ordered, err := orderedImages(snapshot.Content, snapshot.Images)
 	if err != nil {
 		return Job{}, err
@@ -654,6 +660,17 @@ func orderedImages(content Content, images []SnapshotImage) ([]SnapshotImage, er
 		ordered = append(ordered, image)
 	}
 	return ordered, nil
+}
+
+// holdsVideo reports whether the finalized content places a clip in the post. Attached
+// videos are irrelevant here — only a block puts one in what would be published.
+func holdsVideo(content Content) bool {
+	for _, block := range content.Blocks {
+		if block.Type == BlockVideo {
+			return true
+		}
+	}
+	return false
 }
 
 func validVisibility(value Visibility) bool {

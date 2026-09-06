@@ -114,8 +114,12 @@ type Model struct {
 	StructuredOutput bool
 	// ImageOutput/VideoOutput: what the model can produce, from the source's
 	// architecture.output_modalities — the generation purposes gate on them.
-	ImageOutput         bool
-	VideoOutput         bool
+	ImageOutput bool
+	VideoOutput bool
+	// VideoInput: the model takes a video PART, from architecture.input_modalities. No
+	// purpose gates on it (VIDEO-11) — it is checked per run, against the post's own
+	// attachments, so a video-blind model still serves every post without a clip.
+	VideoInput          bool
 	ContextTokens       int64
 	InputUSDPerMillion  string
 	OutputUSDPerMillion string
@@ -149,6 +153,7 @@ type Candidate struct {
 	StructuredOutput    bool
 	ImageOutput         bool
 	VideoOutput         bool
+	VideoInput          bool
 	ContextTokens       int64
 	InputUSDPerMillion  string
 	OutputUSDPerMillion string
@@ -312,7 +317,7 @@ func EntryOf(m Model, purpose Purpose) Entry {
 		Candidate: Candidate{
 			ModelID: m.ModelID, ProviderSlug: m.ProviderSlug, Label: m.Label,
 			Vision: m.Vision, StructuredOutput: m.StructuredOutput,
-			ImageOutput: m.ImageOutput, VideoOutput: m.VideoOutput,
+			ImageOutput: m.ImageOutput, VideoOutput: m.VideoOutput, VideoInput: m.VideoInput,
 			ContextTokens:      m.ContextTokens,
 			InputUSDPerMillion: m.InputUSDPerMillion, OutputUSDPerMillion: m.OutputUSDPerMillion,
 			ReasoningCapability: m.ReasoningCapability,

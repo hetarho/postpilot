@@ -119,6 +119,80 @@ func TestComplete_ShapesTheRequestAndJoinsTheStream(t *testing.T) {
 	}
 }
 
+// A video rides as a URL the provider fetches, never as bytes this process carries
+// (VIDEO-10). The part is `video_url` with the URL and nothing else, and the image part
+// beside it is encoded exactly as it always was.
+func TestComplete_SendsAVideoAsAURLPart(t *testing.T) {
+	var got map[string]any
+	client, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Error(err)
+		}
+		sse(w, `{"choices":[{"delta":{"content":"ok"}}]}`)
+	})
+
+	signed := "https://storage.example/posts/p/v1.mp4?X-Amz-Signature=abc"
+	if _, err := client.Complete(context.Background(), llm.Request{
+		Model: "vendor/model",
+		Messages: []llm.Message{{
+			Role:  llm.RoleUser,
+			Parts: []llm.Part{llm.TextPart("what happens here"), llm.VideoPart(signed, "video/mp4")},
+		}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	parts := got["messages"].([]any)[0].(map[string]any)["content"].([]any)
+	if len(parts) != 2 {
+		t.Fatalf("parts = %v, want the text and the video", parts)
+	}
+	if text := parts[0].(map[string]any); text["type"] != "text" || text["text"] != "what happens here" {
+		t.Errorf("text part = %v", text)
+	}
+	video := parts[1].(map[string]any)
+	if video["type"] != "video_url" {
+		t.Errorf("video part type = %v, want video_url", video["type"])
+	}
+	inner := video["video_url"].(map[string]any)
+	if inner["url"] != signed {
+		t.Errorf("video url = %v, want the signed URL verbatim", inner["url"])
+	}
+	if len(inner) != 1 {
+		t.Errorf("video_url = %v, want the url alone", inner)
+	}
+	// The bytes are not here, and neither is an image part.
+	if _, wrong := video["image_url"]; wrong {
+		t.Error("a video was encoded as an image part")
+	}
+}
+
+// A message that is one video is still a part LIST: only a lone text part collapses to a
+// bare string, and a video collapsed that way would lose the clip entirely.
+func TestComplete_ALoneVideoStaysAPartList(t *testing.T) {
+	var got map[string]any
+	client, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Error(err)
+		}
+		sse(w, `{"choices":[{"delta":{"content":"ok"}}]}`)
+	})
+
+	if _, err := client.Complete(context.Background(), llm.Request{
+		Model:    "vendor/model",
+		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.VideoPart("https://storage.example/clip.mp4", "video/mp4")}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	content := got["messages"].([]any)[0].(map[string]any)["content"]
+	parts, ok := content.([]any)
+	if !ok || len(parts) != 1 {
+		t.Fatalf("content = %v, want a one-element part list", content)
+	}
+	if parts[0].(map[string]any)["type"] != "video_url" {
+		t.Errorf("part = %v", parts[0])
+	}
+}
+
 func TestComplete_SendsOnlyResolvedReasoning(t *testing.T) {
 	for _, tc := range []struct {
 		name   string

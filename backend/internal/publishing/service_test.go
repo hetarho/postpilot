@@ -442,6 +442,43 @@ func TestStartRejectsStaleRevisionBeforeCopy(t *testing.T) {
 	}
 }
 
+// A finalized post that PLACES a clip in its body cannot be published by the agent yet
+// (VIDEO-16). The refusal has to land before anything durable exists: no reserved job id,
+// no staged asset, nothing to retry or compensate.
+func TestStartRefusesAPostHoldingAVideoBlockBeforeReservingAnything(t *testing.T) {
+	snapshot := startFixture()
+	snapshot.Content.Blocks = append(snapshot.Content.Blocks, Block{Type: BlockVideo, File: "clip.mp4", Caption: "파도"})
+	store := &fakeStore{agent: readyAgent(), latestErr: ErrNotFound}
+	staging := &fakeStaging{sizes: map[string]int64{"posts/a.jpg": 10, "posts/b.jpg": 20}}
+	service := newStartService(store, &fakePosts{snapshot: snapshot}, staging)
+
+	_, err := service.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", ExpectedContentRevision: 7, AgentID: "agent", CategoryID: "daily", Visibility: VisibilityPublic})
+	if !errors.Is(err, ErrVideoNotPublishable) {
+		t.Fatalf("error = %v, want ErrVideoNotPublishable", err)
+	}
+	if len(staging.copies) != 0 {
+		t.Errorf("a refused publish staged assets: %v", staging.copies)
+	}
+	if store.reserved != "" {
+		t.Errorf("a refused publish reserved job id %q", store.reserved)
+	}
+	if store.created.ID != "" {
+		t.Errorf("a refused publish created a job: %+v", store.created)
+	}
+}
+
+// Videos ATTACHED to the post are not what the refusal is about: only a block puts one in
+// what would be published, and a post with none publishes exactly as it did before.
+func TestStartAcceptsAPostWithNoVideoBlock(t *testing.T) {
+	store := &fakeStore{agent: readyAgent(), latestErr: ErrNotFound}
+	staging := &fakeStaging{sizes: map[string]int64{"posts/a.jpg": 10, "posts/b.jpg": 20}}
+	service := newStartService(store, &fakePosts{snapshot: startFixture()}, staging)
+
+	if _, err := service.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", ExpectedContentRevision: 7, AgentID: "agent", CategoryID: "daily", Visibility: VisibilityPublic}); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+}
+
 func TestStartRevalidatesPostAndCompensatesCopiesAtAtomicInsertGate(t *testing.T) {
 	store := &fakeStore{agent: readyAgent(), latestErr: ErrNotFound}
 	posts := &fakePosts{snapshot: startFixture()}

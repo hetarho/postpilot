@@ -188,7 +188,10 @@ func toCandidate(item modelDocument) (modelcatalog.Candidate, bool) {
 		Description:  strings.TrimSpace(item.Description),
 		// An image PART on the input side is what the observe stage needs the model to
 		// accept; the output side is what the image/video GENERATION purposes gate on.
-		Vision:              contains(item.Architecture.InputModalities, "image"),
+		Vision: contains(item.Architecture.InputModalities, "image"),
+		// A VIDEO part on the input side, which is a strictly narrower set of models than
+		// vision: the observe stage requires it only of a run that has a clip to watch.
+		VideoInput:          contains(item.Architecture.InputModalities, "video"),
 		StructuredOutput:    contains(item.SupportedParameters, "structured_outputs"),
 		ImageOutput:         imageOutput,
 		VideoOutput:         contains(item.Architecture.OutputModalities, "video"),

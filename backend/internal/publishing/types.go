@@ -93,6 +93,11 @@ var (
 	ErrCommitFence         = errors.New("publish job crossed the commit fence")
 	ErrPublishedURLInvalid = errors.New("published URL does not belong to the paired blog")
 	ErrLanguageRequired    = errors.New("canonical publishing languages are required")
+	// ErrVideoNotPublishable is a finalized post whose content holds a VIDEO block. The
+	// author's way through is the export tab, where the clip plays and the instruction says
+	// to attach the original by hand (VIDEO-15, VIDEO-16). A post with videos ATTACHED but
+	// no VIDEO block publishes normally — nothing about it reaches Naver.
+	ErrVideoNotPublishable = errors.New("post content holds a video block")
 )
 
 type Category struct {
@@ -163,6 +168,10 @@ const (
 	BlockImage   BlockType = "IMAGE"
 	BlockQuote   BlockType = "QUOTE"
 	BlockList    BlockType = "LIST"
+	// BlockVideo exists here so a post carrying one is REFUSED by name rather than
+	// silently read as an unknown block. Nothing downstream stages or renders it: the
+	// agent does not publish videos yet (VIDEO-16).
+	BlockVideo BlockType = "VIDEO"
 )
 
 type Block struct {

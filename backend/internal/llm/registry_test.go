@@ -46,6 +46,9 @@ func twoModels() fakeSource {
 	return fakeSource{models: []llm.SourceModel{
 		{ModelID: "vision-json", Label: "Vision JSON", Vision: true, StructuredOutput: true, Stages: []string{"observe", "write"}},
 		{ModelID: "text-only", Label: "text-only"},
+		// Watching a clip is a capability of its own: this model has both, and vision-json
+		// above deliberately has only the first.
+		{ModelID: "video-watcher", Label: "Video Watcher", Vision: true, VideoInput: true, Stages: []string{"observe"}},
 	}}
 }
 
@@ -121,8 +124,8 @@ func TestParse_ServesTheCuratedCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	models := reg.Models()
-	if len(models) != 2 {
-		t.Fatalf("models = %d, want 2", len(models))
+	if len(models) != 3 {
+		t.Fatalf("models = %d, want 3", len(models))
 	}
 	if models[0].Ref.ProviderID != "openrouter" {
 		t.Errorf("ref = %+v, want the registered provider attached", models[0].Ref)
@@ -132,6 +135,11 @@ func TestParse_ServesTheCuratedCatalog(t *testing.T) {
 	}
 	if models[1].Vision || models[1].StructuredOutput || models[1].Disabled {
 		t.Errorf("second model = %+v", models[1])
+	}
+	// The capability travels to the projection the pickers read, and only for the model
+	// that declares it.
+	if models[0].VideoInput || models[1].VideoInput || !models[2].VideoInput {
+		t.Errorf("video input flags = %v / %v / %v", models[0].VideoInput, models[1].VideoInput, models[2].VideoInput)
 	}
 	// The registry only carries the declared floor; comparing it to an account is the
 	// caller's job.
@@ -318,6 +326,17 @@ func TestResolve_RefusesUnsupportedBeforeCalling(t *testing.T) {
 	if _, err := reg.Complete(context.Background(), textOnly, withImage); !errors.Is(err, llm.ErrUnsupported) {
 		t.Errorf("image on text-only = %v, want ErrUnsupported", err)
 	}
+	// A video on a model that only sees photos is refused for the video, not the vision:
+	// a vision model is not a video model (VIDEO-11).
+	withVideo := llm.Request{Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.VideoPart("https://storage.example/clip.mp4?sig", "video/mp4")}}}}
+	vision := llm.ModelRef{ProviderID: "openrouter", ModelID: "vision-json"}
+	if _, err := reg.Complete(context.Background(), vision, withVideo); !errors.Is(err, llm.ErrUnsupported) {
+		t.Errorf("video on a vision-only model = %v, want ErrUnsupported", err)
+	}
+	if _, err := reg.Complete(context.Background(), textOnly, withVideo); !errors.Is(err, llm.ErrUnsupported) {
+		t.Errorf("video on text-only = %v, want ErrUnsupported", err)
+	}
+
 	withSchema := llm.Request{JSONSchema: []byte(`{"type":"object"}`)}
 	if _, err := reg.Complete(context.Background(), textOnly, withSchema); !errors.Is(err, llm.ErrUnsupported) {
 		t.Errorf("schema on text-only = %v, want ErrUnsupported", err)
@@ -327,6 +346,23 @@ func TestResolve_RefusesUnsupportedBeforeCalling(t *testing.T) {
 	}
 	if p.calls != 0 {
 		t.Fatalf("provider was called %d times for refused requests", p.calls)
+	}
+
+	// And the model that declares the capability takes the same request.
+	watcher := llm.ModelRef{ProviderID: "openrouter", ModelID: "video-watcher"}
+	if _, err := reg.Complete(context.Background(), watcher, withVideo); err != nil {
+		t.Errorf("video on a video-input model = %v, want it accepted", err)
+	}
+	if p.calls != 1 {
+		t.Fatalf("provider calls = %d, want the one accepted request", p.calls)
+	}
+	// A video part must not make a model look image-capable: the vision check reads
+	// HasImages, and the two questions have different answers.
+	if withVideo.HasImages() {
+		t.Error("a video part reported as an image")
+	}
+	if !withVideo.HasVideos() {
+		t.Error("HasVideos did not see the video part")
 	}
 }
 

@@ -42,13 +42,18 @@ const (
 	RoleAssistant Role = "assistant"
 )
 
-// Part is one piece of a message: text, or one image. Exactly one is set.
+// Part is one piece of a message: text, one image, or one video. Exactly one is set.
 type Part struct {
 	Text string
 	// Image is the encoded bytes of one image with its MIME type — the JPEG the browser
 	// pipeline produced, read back from object storage by the caller.
 	Image []byte
-	MIME  string
+	// VideoURL is a short-lived signed URL the PROVIDER fetches, never bytes this process
+	// carries: a clip is up to 200 MiB and the largest thing an RPC here ever holds stays a
+	// memo (VIDEO-10). The URL outlives the call by design — it lives the presign TTL — so a
+	// stale one fails the call rather than leaking a standing link.
+	VideoURL string
+	MIME     string
 }
 
 // TextPart returns a text part.
@@ -57,8 +62,14 @@ func TextPart(text string) Part { return Part{Text: text} }
 // ImagePart returns an image part.
 func ImagePart(image []byte, mime string) Part { return Part{Image: image, MIME: mime} }
 
+// VideoPart returns a video part addressed by URL.
+func VideoPart(url, mime string) Part { return Part{VideoURL: url, MIME: mime} }
+
 // IsImage reports whether the part carries an image.
 func (p Part) IsImage() bool { return len(p.Image) > 0 }
+
+// IsVideo reports whether the part carries a video.
+func (p Part) IsVideo() bool { return p.VideoURL != "" }
 
 // Message is one turn of the conversation.
 type Message struct {
@@ -93,11 +104,24 @@ type Request struct {
 	Stage string
 }
 
-// HasImages reports whether any message carries an image part.
+// HasImages reports whether any message carries an image part. It stays image-only: it is
+// what the vision check reads, and a video must not make a model look image-capable.
 func (r Request) HasImages() bool {
 	for _, m := range r.Messages {
 		for _, p := range m.Parts {
 			if p.IsImage() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// HasVideos reports whether any message carries a video part.
+func (r Request) HasVideos() bool {
+	for _, m := range r.Messages {
+		for _, p := range m.Parts {
+			if p.IsVideo() {
 				return true
 			}
 		}

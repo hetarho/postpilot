@@ -101,6 +101,7 @@ func upsert(ctx context.Context, q *sqlc.Queries, m modelcatalog.Model) error {
 		StructuredOutput:       boolToInt(m.StructuredOutput),
 		ImageOutput:            boolToInt(m.ImageOutput),
 		VideoOutput:            boolToInt(m.VideoOutput),
+		VideoInput:             boolToInt(m.VideoInput),
 		Reasons:                boolToInt(m.Reasons),
 		ReasoningEfforts:       joinEfforts(m.Efforts),
 		ReasoningDefaultEffort: m.DefaultEffort,
@@ -257,6 +258,7 @@ func (s *Store) RefreshAvailability(ctx context.Context, seen []modelcatalog.Can
 			StructuredOutput:       boolToInt(candidate.StructuredOutput),
 			ImageOutput:            boolToInt(candidate.ImageOutput),
 			VideoOutput:            boolToInt(candidate.VideoOutput),
+			VideoInput:             boolToInt(candidate.VideoInput),
 			Reasons:                boolToInt(candidate.Reasons),
 			ReasoningEfforts:       joinEfforts(candidate.Efforts),
 			ReasoningDefaultEffort: candidate.DefaultEffort,
@@ -308,6 +310,7 @@ func toModel(row sqlc.GetCatalogModelRow, registrations []registration) (modelca
 		StructuredOutput: row.StructuredOutput == 1,
 		ImageOutput:      row.ImageOutput == 1,
 		VideoOutput:      row.VideoOutput == 1,
+		VideoInput:       row.VideoInput == 1,
 		ReasoningCapability: modelcatalog.ReasoningCapability{
 			Reasons:       row.Reasons == 1,
 			Efforts:       splitEfforts(row.ReasoningEfforts),

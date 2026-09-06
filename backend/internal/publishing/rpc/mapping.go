@@ -86,6 +86,11 @@ func toProtoBlockType(value publishing.BlockType) postpilotv1.BlockType {
 		return postpilotv1.BlockType_QUOTE
 	case publishing.BlockList:
 		return postpilotv1.BlockType_LIST
+	case publishing.BlockVideo:
+		// Reachable only through a read model — Start refuses a post holding one — but it
+		// must project as itself rather than as UNSPECIFIED, which would read as a block
+		// this build does not know.
+		return postpilotv1.BlockType_VIDEO
 	default:
 		return postpilotv1.BlockType_BLOCK_TYPE_UNSPECIFIED
 	}

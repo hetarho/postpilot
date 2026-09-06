@@ -33,6 +33,11 @@ const catalogDocument = `{"data":[
    "architecture":{"input_modalities":["text","image"],"output_modalities":["video"]},
    "pricing":{"prompt":"0","completion":"0"},
    "supported_parameters":["seed"]},
+  {"id":"gemini/watcher","name":"Gemini: Watcher","created":1788300000,
+   "context_length":2097152,
+   "architecture":{"input_modalities":["text","image","video"],"output_modalities":["text"]},
+   "pricing":{"prompt":"0.0000005","completion":"0.000002"},
+   "supported_parameters":["structured_outputs"]},
   {"id":"","name":"Nameless id","created":1},
   {"id":"broken/no-name","created":1}
 ]}`
@@ -69,8 +74,8 @@ func TestFetch_MapsUpstreamFieldsAndSkipsUnusableEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(snapshot.Candidates) != 4 {
-		t.Fatalf("candidates = %d, want the four usable entries", len(snapshot.Candidates))
+	if len(snapshot.Candidates) != 5 {
+		t.Fatalf("candidates = %d, want the five usable entries", len(snapshot.Candidates))
 	}
 	first := snapshot.Candidates[0]
 	if first.ModelID != "openai/gpt-x" || first.ProviderSlug != "openai" || first.Label != "OpenAI: GPT X" {
@@ -78,6 +83,11 @@ func TestFetch_MapsUpstreamFieldsAndSkipsUnusableEntries(t *testing.T) {
 	}
 	if !first.Vision {
 		t.Error("an image input modality did not become vision")
+	}
+	// Seeing a photo is not watching a clip: `video` has to be in input_modalities on its
+	// own for the flag, or every vision model would be offered for a post with a video.
+	if first.VideoInput {
+		t.Error("an image-input model was recorded as taking video")
 	}
 	if !first.StructuredOutput {
 		t.Error("structured_outputs did not become the structured-output flag")
@@ -121,6 +131,13 @@ func TestFetch_MapsUpstreamFieldsAndSkipsUnusableEntries(t *testing.T) {
 	}
 	if image.InputUSDPerMillion != "2.4" || image.OutputUSDPerMillion != "30" {
 		t.Errorf("image-only pricing = %q / %q, want the image-token pair", image.InputUSDPerMillion, image.OutputUSDPerMillion)
+	}
+
+	// Video INPUT is its own modality, unrelated to the video OUTPUT the generation
+	// purposes gate on: this model watches clips and answers in text.
+	watcher := byID["gemini/watcher"]
+	if !watcher.VideoInput || !watcher.Vision || watcher.VideoOutput {
+		t.Errorf("video-input flags = %+v", watcher)
 	}
 
 	// A video model publishes no token price at all; reporting its zeros as "free" would

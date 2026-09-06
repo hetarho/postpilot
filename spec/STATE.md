@@ -33,7 +33,6 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 | todo |
 | T010 | Photo row count in the grammar and ordered photo expansion | TEMPLATE | - | todo |
 | T011 | Plain-language block names, fixed text instead of place/link, and the photo row stepper | TEMPLATE | T010 | todo |
-| T013 | `video_input` capability, the video content part and the publish refusal | VIDEO MODEL PUBLISH | T012 | doing@260906.vd |
 | T014 | Observe videos, write from them and validate VIDEO blocks | VIDEO GEN MODEL | T012 T013 T010 | todo |
 | T015 | Video upload in the browser, the attachment strip and the contact sheet | VIDEO POST GEN | T012 | todo |
 | T016 | The VIDEO block in the reading view, editor and exports, plus the capability badges and refusals | VIDEO EXPORT MODEL POST | T013 T015 | todo |
@@ -41,10 +40,12 @@
 
 ## next
 - implement-task T007 · then T010 → T011 → T017 (TEMPLATE r2+r3; T010/T011 ship together, T017 adds the `원문` mode on top of T011's screen)
-- implement-task T013 → T014 (after T010) → T015 → T016 (T012 done; T014 BEFORE T015 — T012's WARN: generation still reads a video as a photo)
+- implement-task T014 (needs T010 first) → T015 → T016; T014 BEFORE T015 — T012's WARN: generation still reads a video as a photo
 - update-ssot PUBLISH after T008 closes: photo-row transport (TEMPLATE-39) and agent video publishing (VIDEO-17); GEN EXPORT for TEMPLATE-39 at the same time
 
 ## log
+- 260906 WARN spec lint: TEMPLATE PUBLISH MARKETING exceed the new FORMAT's 6-char ssot id limit — all 44 violations trace to that one rename, spec-wide, not done inside a task
+- 260906 T013 done
 - 260906 spec migrated to haeram-spec-creator 0.2.3 FORMAT: tasks/done/ introduced (T001-T006 T009 T012 moved, their STATE rows dropped; T004 T005 T006 T012 file st doing->done per STATE)
 - 260906 T013 claimed (vd)
 - 260906 WARN T012 put videos inside generation.PostInput.Images; generation still batches that list as photos — T014 must land before T015 makes videos attachable

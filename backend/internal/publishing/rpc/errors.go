@@ -33,6 +33,8 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "publishing agent not ready", "PUBLISH_AGENT_NOT_READY", nil)
 	case errors.Is(err, publishing.ErrCategoryNotFound):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "publishing category not found", "PUBLISH_CATEGORY_NOT_FOUND", nil)
+	case errors.Is(err, publishing.ErrVideoNotPublishable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content holds a video block", "VIDEO_NOT_PUBLISHABLE", nil)
 	case errors.Is(err, publishing.ErrPostNotFinalized):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post not finalized", "PUBLISH_POST_NOT_FINALIZED", nil)
 	case errors.Is(err, publishing.ErrCommitFence):

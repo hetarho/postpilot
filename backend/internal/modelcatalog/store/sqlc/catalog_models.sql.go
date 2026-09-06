@@ -30,7 +30,7 @@ func (q *Queries) AddCatalogModelPurpose(ctx context.Context, arg AddCatalogMode
 
 const getCatalogModel = `-- name: GetCatalogModel :one
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
-       reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
+       video_input, reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
        reasoning_native_effort, reasoning_max_tokens,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
        listed, last_seen_at, created_at, updated_at
@@ -46,6 +46,7 @@ type GetCatalogModelRow struct {
 	StructuredOutput       int64
 	ImageOutput            int64
 	VideoOutput            int64
+	VideoInput             int64
 	Reasons                int64
 	ReasoningEfforts       string
 	ReasoningDefaultEffort string
@@ -73,6 +74,7 @@ func (q *Queries) GetCatalogModel(ctx context.Context, modelID string) (GetCatal
 		&i.StructuredOutput,
 		&i.ImageOutput,
 		&i.VideoOutput,
+		&i.VideoInput,
 		&i.Reasons,
 		&i.ReasoningEfforts,
 		&i.ReasoningDefaultEffort,
@@ -164,7 +166,7 @@ func (q *Queries) ListCatalogModelPurposes(ctx context.Context) ([]ListCatalogMo
 const listCatalogModels = `-- name: ListCatalogModels :many
 
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
-       reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
+       video_input, reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
        reasoning_native_effort, reasoning_max_tokens,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
        listed, last_seen_at, created_at, updated_at
@@ -180,6 +182,7 @@ type ListCatalogModelsRow struct {
 	StructuredOutput       int64
 	ImageOutput            int64
 	VideoOutput            int64
+	VideoInput             int64
 	Reasons                int64
 	ReasoningEfforts       string
 	ReasoningDefaultEffort string
@@ -232,6 +235,7 @@ func (q *Queries) ListCatalogModels(ctx context.Context) ([]ListCatalogModelsRow
 			&i.StructuredOutput,
 			&i.ImageOutput,
 			&i.VideoOutput,
+			&i.VideoInput,
 			&i.Reasons,
 			&i.ReasoningEfforts,
 			&i.ReasoningDefaultEffort,
@@ -263,7 +267,7 @@ func (q *Queries) ListCatalogModels(ctx context.Context) ([]ListCatalogModelsRow
 const markCatalogModelSeen = `-- name: MarkCatalogModelSeen :exec
 UPDATE catalog_models
 SET provider_slug = ?, label = ?, vision = ?, structured_output = ?,
-    image_output = ?, video_output = ?,
+    image_output = ?, video_output = ?, video_input = ?,
     reasons = ?, reasoning_efforts = ?, reasoning_default_effort = ?,
     reasoning_mandatory = ?, reasoning_native_effort = ?, reasoning_max_tokens = ?,
     context_tokens = ?, input_usd_per_million = ?, output_usd_per_million = ?,
@@ -278,6 +282,7 @@ type MarkCatalogModelSeenParams struct {
 	StructuredOutput       int64
 	ImageOutput            int64
 	VideoOutput            int64
+	VideoInput             int64
 	Reasons                int64
 	ReasoningEfforts       string
 	ReasoningDefaultEffort string
@@ -300,6 +305,7 @@ func (q *Queries) MarkCatalogModelSeen(ctx context.Context, arg MarkCatalogModel
 		arg.StructuredOutput,
 		arg.ImageOutput,
 		arg.VideoOutput,
+		arg.VideoInput,
 		arg.Reasons,
 		arg.ReasoningEfforts,
 		arg.ReasoningDefaultEffort,
@@ -389,11 +395,11 @@ func (q *Queries) UpdateCatalogModelPurposeReasoning(ctx context.Context, arg Up
 const upsertCatalogModel = `-- name: UpsertCatalogModel :exec
 INSERT INTO catalog_models (
     model_id, provider_slug, label, vision, structured_output, image_output, video_output,
-    reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
+    video_input, reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
     reasoning_native_effort, reasoning_max_tokens,
     context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
     listed, last_seen_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(model_id) DO UPDATE SET
     provider_slug = excluded.provider_slug,
     label = excluded.label,
@@ -401,6 +407,7 @@ ON CONFLICT(model_id) DO UPDATE SET
     structured_output = excluded.structured_output,
     image_output = excluded.image_output,
     video_output = excluded.video_output,
+    video_input = excluded.video_input,
     reasons = excluded.reasons,
     reasoning_efforts = excluded.reasoning_efforts,
     reasoning_default_effort = excluded.reasoning_default_effort,
@@ -424,6 +431,7 @@ type UpsertCatalogModelParams struct {
 	StructuredOutput       int64
 	ImageOutput            int64
 	VideoOutput            int64
+	VideoInput             int64
 	Reasons                int64
 	ReasoningEfforts       string
 	ReasoningDefaultEffort string
@@ -449,6 +457,7 @@ func (q *Queries) UpsertCatalogModel(ctx context.Context, arg UpsertCatalogModel
 		arg.StructuredOutput,
 		arg.ImageOutput,
 		arg.VideoOutput,
+		arg.VideoInput,
 		arg.Reasons,
 		arg.ReasoningEfforts,
 		arg.ReasoningDefaultEffort,

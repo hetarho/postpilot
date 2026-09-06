@@ -20,7 +20,7 @@
 
 -- name: ListCatalogModels :many
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
-       reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
+       video_input, reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
        reasoning_native_effort, reasoning_max_tokens,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
        listed, last_seen_at, created_at, updated_at
@@ -29,7 +29,7 @@ ORDER BY provider_slug, model_id;
 
 -- name: GetCatalogModel :one
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
-       reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
+       video_input, reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
        reasoning_native_effort, reasoning_max_tokens,
        context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
        listed, last_seen_at, created_at, updated_at
@@ -50,11 +50,11 @@ ORDER BY purpose;
 -- name: UpsertCatalogModel :exec
 INSERT INTO catalog_models (
     model_id, provider_slug, label, vision, structured_output, image_output, video_output,
-    reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
+    video_input, reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
     reasoning_native_effort, reasoning_max_tokens,
     context_tokens, input_usd_per_million, output_usd_per_million, pricing_checked_at,
     listed, last_seen_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(model_id) DO UPDATE SET
     provider_slug = excluded.provider_slug,
     label = excluded.label,
@@ -62,6 +62,7 @@ ON CONFLICT(model_id) DO UPDATE SET
     structured_output = excluded.structured_output,
     image_output = excluded.image_output,
     video_output = excluded.video_output,
+    video_input = excluded.video_input,
     reasons = excluded.reasons,
     reasoning_efforts = excluded.reasoning_efforts,
     reasoning_default_effort = excluded.reasoning_default_effort,
@@ -111,7 +112,7 @@ UPDATE catalog_models SET listed = 0;
 -- name: MarkCatalogModelSeen :exec
 UPDATE catalog_models
 SET provider_slug = ?, label = ?, vision = ?, structured_output = ?,
-    image_output = ?, video_output = ?,
+    image_output = ?, video_output = ?, video_input = ?,
     reasons = ?, reasoning_efforts = ?, reasoning_default_effort = ?,
     reasoning_mandatory = ?, reasoning_native_effort = ?, reasoning_max_tokens = ?,
     context_tokens = ?, input_usd_per_million = ?, output_usd_per_million = ?,

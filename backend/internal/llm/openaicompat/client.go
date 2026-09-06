@@ -156,9 +156,17 @@ type contentPart struct {
 	Type     string    `json:"type"`
 	Text     string    `json:"text,omitempty"`
 	ImageURL *imageURL `json:"image_url,omitempty"`
+	VideoURL *videoURL `json:"video_url,omitempty"`
 }
 
 type imageURL struct {
+	URL string `json:"url"`
+}
+
+// videoURL is the multimodal video part: a URL the provider fetches, never bytes. It
+// carries the URL and nothing else — no `processing` object — which is the shape
+// OpenRouter documents for video input (checked 2026-09-06).
+type videoURL struct {
 	URL string `json:"url"`
 }
 
@@ -219,7 +227,7 @@ func content(parts []llm.Part) any {
 	if len(parts) == 0 {
 		return ""
 	}
-	if len(parts) == 1 && !parts[0].IsImage() {
+	if len(parts) == 1 && !parts[0].IsImage() && !parts[0].IsVideo() {
 		return parts[0].Text
 	}
 	out := make([]contentPart, 0, len(parts))
@@ -233,6 +241,12 @@ func content(parts []llm.Part) any {
 				Type:     "image_url",
 				ImageURL: &imageURL{URL: "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(p.Image)},
 			})
+			continue
+		}
+		if p.IsVideo() {
+			// The URL goes as the caller minted it. Nothing is inlined and nothing is
+			// re-signed here: the bytes never enter this process (VIDEO-10).
+			out = append(out, contentPart{Type: "video_url", VideoURL: &videoURL{URL: p.VideoURL}})
 			continue
 		}
 		out = append(out, contentPart{Type: "text", Text: p.Text})

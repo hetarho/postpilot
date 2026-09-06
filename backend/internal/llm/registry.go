@@ -43,9 +43,12 @@ func (r ModelRef) String() string { return r.ProviderID + "/" + r.ModelID }
 
 // ModelInfo is a registry entry as the catalog exposes it — ids, label and flags only.
 type ModelInfo struct {
-	Ref                   ModelRef
-	Label                 string
-	Vision                bool
+	Ref    ModelRef
+	Label  string
+	Vision bool
+	// VideoInput: the model takes a video part. Narrower than Vision and checked per
+	// request, not per stage — a video-blind model still serves a post with no clip.
+	VideoInput            bool
 	StructuredOutput      bool
 	ContextTokens         int64
 	InputUSDPerMillion    string
@@ -72,6 +75,7 @@ type SourceModel struct {
 	ModelID             string
 	Label               string
 	Vision              bool
+	VideoInput          bool
 	StructuredOutput    bool
 	ContextTokens       int64
 	InputUSDPerMillion  string
@@ -379,6 +383,7 @@ func (r *Registry) describe(m SourceModel) ModelInfo {
 		Ref:                   ModelRef{ProviderID: r.providerID, ModelID: m.ModelID},
 		Label:                 m.Label,
 		Vision:                m.Vision,
+		VideoInput:            m.VideoInput,
 		StructuredOutput:      m.StructuredOutput,
 		ContextTokens:         m.ContextTokens,
 		InputUSDPerMillion:    m.InputUSDPerMillion,
@@ -418,6 +423,9 @@ func (r *Registry) resolve(ref ModelRef, req Request) (SourceModel, error) {
 	}
 	if req.HasImages() && !found.Vision {
 		return SourceModel{}, fmt.Errorf("%w: %s does not take images", ErrUnsupported, ref)
+	}
+	if req.HasVideos() && !found.VideoInput {
+		return SourceModel{}, fmt.Errorf("%w: %s does not take video", ErrUnsupported, ref)
 	}
 	if req.JSONSchema != nil && !found.StructuredOutput {
 		return SourceModel{}, fmt.Errorf("%w: %s does not support structured output", ErrUnsupported, ref)

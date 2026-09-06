@@ -103,6 +103,7 @@ func toProtoEntry(e modelcatalog.Entry) *postpilotv1.CatalogEntry {
 		StructuredOutput:    e.StructuredOutput,
 		ImageOutput:         e.ImageOutput,
 		VideoOutput:         e.VideoOutput,
+		VideoInput:          e.VideoInput,
 		ContextTokens:       e.ContextTokens,
 		InputUsdPerMillion:  e.InputUSDPerMillion,
 		OutputUsdPerMillion: e.OutputUSDPerMillion,
