@@ -32,15 +32,15 @@
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260905.cx |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
 | T017 | The `원문` source mode, paste import and the copyable format guide | TEMPLATE | T011 | todo |
-| T018 | The bound CDP session and the deterministic Naver observation port | PUBLISH | T005 | doing@260906.pt |
 | T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | todo |
 
 ## next
 - implement-task T017 (the `원문` source mode on top of T011's screen)
 - update-ssot PUBLISH after T008 closes: VIDEO-17 (agent video publishing) and TEMPLATE-39 (photo-row transport); VIDEO is otherwise shipped
-- implement-task T018 → T019 → T008 (the deterministic publisher's real CDP driver; nothing can publish until T019 wires it) · T007 in parallel (cx)
+- implement-task T019 NEXT (T018 done: the editor is observable; T019 adds the mutations, the commit port and the daemon wiring) → T008 · T007 in parallel (cx)
 
 ## log
+- 260907 T018 done (bound CDP page + live-verified observation port; 3 manifest locators were unmatched against the real editor, signature a1→a2)
 - 260906 T016 done — VIDEO is complete except VIDEO-17 (agent publishing), still open for update-ssot PUBLISH after T008
 - 260906 T016 claimed (vd)
 - 260906 T015 done — videos are attachable in the browser; only T016 (blocks, exports, badges) is left of VIDEO
@@ -60,4 +60,3 @@
 - 260906 spec migrated to haeram-spec-creator 0.2.3 FORMAT: tasks/done/ introduced (T001-T006 T009 T012 moved, their STATE rows dropped; T004 T005 T006 T012 file st doing->done per STATE)
 - 260906 T013 claimed (vd)
 - 260906 WARN T012 put videos inside generation.PostInput.Images; generation still batches that list as photos — T014 must land before T015 makes videos attachable
-- 260906 T012 done (videos as the post's second attachment kind: proto, migration 0026, kind-aware handshake, cascade, sweep, VIDEO block; ARCH-26 + ARCH-28 pass)
