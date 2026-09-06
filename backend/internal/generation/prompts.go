@@ -8,6 +8,28 @@ import (
 const ObservePrompt = `사진마다 파일명을 정확히 대응해 관찰 사실만 반환하세요. 추측하거나 이야기를 만들지 마세요.
 출력은 설명이나 마크다운 없이 {"observations":[{"file":"...","scene":"...","mood":"...","visible_text":"...","objects":[],"people_present":false}]} 형태의 JSON 객체 하나여야 합니다.`
 
+// videoWriteInstructions are appended to the fixed write prompt ONLY for a post that actually
+// has a clip. Two reasons, and both matter: a post without one keeps a byte-identical prompt —
+// which is what every golden pins and what the provider's prefix cache rests on — and a model
+// is never told about a block type the post has no file for, which is an invitation to invent
+// one (VIDEO-12).
+const videoWriteInstructions = "\nVIDEO 블록은 첨부 영상 파일명만 쓰고, 영상이 보여주는 내용이 글에서 언급되는 위치에 놓으세요." +
+	"\nblock의 type에는 VIDEO도 쓸 수 있습니다."
+
+const englishVideoWriteInstructions = "\nA VIDEO block may use only an attached video filename. Place it where the post mentions what the clip shows." +
+	"\nA block's type may also be VIDEO."
+
+// ObserveVideoPrompt is the photo prompt's facts-only rule for one clip. One video per call
+// (VIDEO-8), so the `files:` line names exactly one file and the answer is one entry.
+//
+// `events` and `speech` are what a still frame cannot carry and are the whole reason a clip is
+// observed at all; both are required, so a model that heard nothing says so with an empty
+// string rather than by omitting the field (VIDEO-9).
+const ObserveVideoPrompt = `영상에서 관찰한 사실만 파일명에 정확히 대응해 반환하세요. 추측하거나 이야기를 만들지 마세요.
+events는 일어난 일을 시간 순서대로 짧은 사실 문장으로 적으세요.
+speech는 들린 말의 요약입니다. 들리지 않거나 소리를 들을 수 없으면 빈 문자열로 두세요.
+출력은 설명이나 마크다운 없이 {"observations":[{"file":"...","scene":"...","mood":"...","visible_text":"...","objects":[],"people_present":false,"events":[],"speech":"..."}]} 형태의 JSON 객체 하나여야 합니다.`
+
 // koreanGrounding / englishGrounding are the built-in grounding constraint (plan 16): the
 // writer may state no concrete fact the memo and the photo observations do not carry. It
 // ships as fixed prompt text because the invented-fact failure — "주인분에게 건네받았다" for
@@ -146,20 +168,26 @@ func writeGuidelinesSection(out *strings.Builder, guidelines []string) {
 // consumers that explicitly request the established Korean contract. Runtime work uses
 // BuildWritePromptForLanguage with its frozen language.
 func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
-	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, targetLength, template, guidelines)
+	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, template, guidelines)
 }
 
-func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
+func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames, videoFilenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
 		stable.WriteString(WritePrompt)
 		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, %d–%d개의 tags, blocks를 반환하세요.", TagsMin, TagsMax)
 		stable.WriteString("\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
+		if len(videoFilenames) > 0 {
+			stable.WriteString(videoWriteInstructions)
+		}
 	case LanguageEnglish:
 		stable.WriteString(englishWritePrompt)
 		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, %d–%d tags, and blocks.", TagsMin, TagsMax)
 		stable.WriteString("\nThe output language is English. Write the title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
+		if len(videoFilenames) > 0 {
+			stable.WriteString(englishVideoWriteInstructions)
+		}
 	default:
 		// Callers validate before prompt construction. Keeping this branch explicit makes
 		// direct prompt use fail closed instead of silently defaulting to Korean.
@@ -169,11 +197,7 @@ func BuildWritePromptForLanguage(language Language, profile Profile, observation
 	writeTemplateSection(&stable, template)
 	writeGuidelinesSection(&stable, guidelines)
 
-	photoMaterial := "첨부 사진이 없습니다. 이미지 없이 메모만으로 작성하세요."
-	if len(filenames) > 0 {
-		photoMaterial = "첨부 파일명(정확히 일치해야 함): " + strings.Join(filenames, ", ") +
-			"\n사진 관찰: " + marshalPromptJSON(observationsForPrompt(observations))
-	}
+	photoMaterial := attachmentMaterial(filenames, videoFilenames, observations)
 	perPost := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s", title, memo, photoMaterial)
 	return stable.String(), perPost
 }
@@ -226,6 +250,65 @@ func writeGenericLength(stable *strings.Builder, language Language, targetLength
 		return
 	}
 	fmt.Fprintf(stable, "\n\n[길이]\n목표 길이: 약 %d자.", *targetLength)
+}
+
+// attachmentMaterial is the per-post half's attachment section: what is attached, and what
+// was observed about it.
+//
+// A post with no video produces BYTE-IDENTICAL text to before videos existed — one filename
+// line and one 사진 관찰 line — because that is what every golden pins and what every prompt
+// cache prefix depends on. The video lines exist only when the post actually has a clip.
+func attachmentMaterial(photos, videos []string, observations []Observation) string {
+	if len(photos) == 0 && len(videos) == 0 {
+		return "첨부 사진이 없습니다. 이미지 없이 메모만으로 작성하세요."
+	}
+	if len(videos) == 0 {
+		return "첨부 파일명(정확히 일치해야 함): " + strings.Join(photos, ", ") +
+			"\n사진 관찰: " + marshalPromptJSON(observationsForPrompt(observations))
+	}
+
+	// The two kinds are named on their own lines once a video exists: the writer has to place
+	// an IMAGE block and a VIDEO block from different lists, and one merged line would make
+	// naming the wrong kind the easy mistake (VIDEO-12).
+	videoNames := make(map[string]struct{}, len(videos))
+	for _, filename := range videos {
+		videoNames[filename] = struct{}{}
+	}
+	photoObservations := make([]Observation, 0, len(observations))
+	videoObservations := make([]Observation, 0, len(videos))
+	for _, observation := range observations {
+		if _, ok := videoNames[observation.File]; ok {
+			videoObservations = append(videoObservations, observation)
+			continue
+		}
+		photoObservations = append(photoObservations, observation)
+	}
+
+	var out strings.Builder
+	if len(photos) > 0 {
+		out.WriteString("첨부 사진 파일명(정확히 일치해야 함): " + strings.Join(photos, ", "))
+		out.WriteString("\n사진 관찰: " + marshalPromptJSON(observationsForPrompt(photoObservations)))
+		out.WriteString("\n")
+	}
+	out.WriteString("첨부 영상 파일명(정확히 일치해야 함): " + strings.Join(videos, ", "))
+	out.WriteString("\n영상 관찰: " + marshalPromptJSON(videoObservationsForPrompt(videoObservations)))
+	return out.String()
+}
+
+// videoObservationsForPrompt carries the two fields a photo entry has no use for. They are
+// what the clip was observed FOR — motion and sound are the whole reason it is not a photo —
+// so dropping them here would make a video's call worth nothing to the writer.
+func videoObservationsForPrompt(observations []Observation) []observationJSON {
+	wire := make([]observationJSON, 0, len(observations))
+	for _, observation := range observations {
+		wire = append(wire, observationJSON{
+			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
+			VisibleText: observation.VisibleText, Objects: observation.Objects,
+			PeoplePresent: observation.PeoplePresent,
+			Events:        observation.Events, Speech: observation.Speech,
+		})
+	}
+	return wire
 }
 
 func observationsForPrompt(observations []Observation) []observationJSON {

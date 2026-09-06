@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -23,6 +24,8 @@ type Service struct {
 	candidates  GuidelineCandidates
 	samples     VersionSampleWriter
 	batchSize   int
+	videos      VideoLinker
+	videoURLTTL time.Duration
 	reasoning   ReasoningPolicy
 	budget      CompletionBudget
 }
@@ -66,6 +69,14 @@ func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {
 // prompt simply carries no brief, so a partially wired process keeps the no-template
 // behavior rather than failing.
 func (s *Service) SetTemplateBriefs(briefs TemplateBriefs) { s.templates = briefs }
+
+// SetVideoLinker wires how a video reaches a model: a signed URL, minted per call, living
+// exactly as long as a view URL does. Without it a run with a video fails its observe call
+// rather than falling back to something — there is no other way to deliver a clip.
+func (s *Service) SetVideoLinker(linker VideoLinker, ttl time.Duration) {
+	s.videos = linker
+	s.videoURLTTL = ttl
+}
 
 // SetVersionSamples wires the voice context's per-version snapshot recorder. Without it a
 // generation simply records nothing, which is the same outcome a failed recording has: the
@@ -222,6 +233,9 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		if !valid || !modelEnabled(s.models, observe, llm.StageNameObserve) {
 			return "", ErrObserveModelRequired
 		}
+		if err := s.refuseVideoBlindObserveModel(post.Images, observe); err != nil {
+			return "", err
+		}
 	}
 	if request.TargetLength != nil && *request.TargetLength <= 0 {
 		return "", ErrInvalidTargetLength
@@ -246,7 +260,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	}
 	// Priced over the FROZEN set, never over the attached count: a run that reuses every
 	// observation makes no observation call and must not be held for fifteen of them.
-	request.ObserveCalls = s.observeCalls(observeTargetCount(post.Images, request.ObserveFiles))
+	request.ObserveCalls = s.observeCalls(observeTargets(post.Images, request.ObserveFiles))
 	id, err := s.jobs.EnqueueGeneration(ctx, request)
 	if err != nil {
 		return "", fmt.Errorf("enqueue generation: %w", err)
@@ -254,23 +268,54 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	return id, nil
 }
 
-// observeCalls is how many observation calls a photo count takes at the configured batch
-// size. It mirrors the loop in observe.go: the hold and the work must agree on how many
-// calls there will be, or the hold prices the wrong job.
-func (s *Service) observeCalls(photos int) int {
-	if photos <= 0 || s.batchSize <= 0 {
-		return 0
+// observeCalls is how many observation calls a frozen selection takes: the photo batches at
+// the configured batch size, plus ONE per video (VIDEO-8, VIDEO-13). It mirrors the loop in
+// observe.go — the hold and the work must agree on how many calls there will be, or the hold
+// prices the wrong job.
+func (s *Service) observeCalls(targets []Image) int {
+	photos := len(photosOf(targets))
+	calls := len(videosOf(targets))
+	if photos > 0 && s.batchSize > 0 {
+		calls += (photos + s.batchSize - 1) / s.batchSize
 	}
-	return (photos + s.batchSize - 1) / s.batchSize
+	return calls
 }
 
-// observeTargetCount is how many photos the frozen decision actually observes. Nil is the
-// no-picker case, which observes every attached photo.
-func observeTargetCount(images []Image, observeFiles *[]string) int {
-	if observeFiles == nil {
-		return len(images)
+// refuseVideoBlindObserveModel is the per-RUN video capability check (VIDEO-11): watching a
+// clip is not a purpose of its own, so a video-blind model still serves every post without
+// one — and is refused, by name, for a post with one.
+//
+// The missing-observe-model refusal runs first, so a post with videos and no model chosen
+// still hears the simpler thing it has to fix.
+func (s *Service) refuseVideoBlindObserveModel(images []Image, observe llm.ModelRef) error {
+	if len(videosOf(images)) == 0 {
+		return nil
 	}
-	return len(*observeFiles)
+	info, found := s.models.Resolve(observe)
+	if !found || !info.VideoInput {
+		return &VideoUnsupportedError{Model: observe.String()}
+	}
+	return nil
+}
+
+// observeTargets is what the frozen decision actually observes, as attachments rather than a
+// count: a photo and a video cost different numbers of calls, so the pricing has to know which
+// is which. Nil is the no-picker case, which observes every attachment.
+func observeTargets(images []Image, observeFiles *[]string) []Image {
+	if observeFiles == nil {
+		return images
+	}
+	selected := make(map[string]struct{}, len(*observeFiles))
+	for _, filename := range *observeFiles {
+		selected[filename] = struct{}{}
+	}
+	out := make([]Image, 0, len(images))
+	for _, image := range images {
+		if _, ok := selected[image.Filename]; ok {
+			out = append(out, image)
+		}
+	}
+	return out
 }
 
 // freezeTemplate resolves the post's CURRENT template once, at enqueue, expanded for the

@@ -69,6 +69,12 @@ type observationJSON struct {
 	VisibleText   string   `json:"visible_text"`
 	Objects       []string `json:"objects"`
 	PeoplePresent bool     `json:"people_present"`
+	// Video-only, and OPTIONAL on the way in: the photo answer has neither, and the required
+	// field list below is the photo one so a photo batch keeps parsing exactly as it did.
+	// The video schema requires them of the model; this struct only has to be able to hold
+	// what comes back.
+	Events []string `json:"events,omitempty"`
+	Speech string   `json:"speech,omitempty"`
 }
 
 type observationsJSON struct {
@@ -132,6 +138,7 @@ func parseObservations(raw string) ([]Observation, error) {
 		out = append(out, Observation{
 			File: item.File, Scene: item.Scene, Mood: item.Mood, VisibleText: item.VisibleText,
 			Objects: item.Objects, PeoplePresent: item.PeoplePresent,
+			Events: item.Events, Speech: item.Speech,
 		})
 	}
 	return out, nil

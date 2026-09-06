@@ -122,6 +122,16 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled write model is required", "GENERATION_WRITE_MODEL_REQUIRED", nil)
 	case errors.Is(err, generation.ErrObserveModelRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled photo observation model is required", "GENERATION_OBSERVE_MODEL_REQUIRED", nil)
+	case errors.Is(err, generation.ErrVideoUnsupported):
+		// The model is NAMED, because the fix is to pick another one and the user is looking
+		// at the picker (VIDEO-11).
+		params := map[string]string{}
+		var unsupported *generation.VideoUnsupportedError
+		if errors.As(err, &unsupported) {
+			params["model"] = unsupported.Model
+		}
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition,
+			"the selected observe model cannot watch video", "MODEL_VIDEO_UNSUPPORTED", params)
 	case errors.Is(err, generation.ErrLanguageRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", "POST_TARGET_LANGUAGE_REQUIRED", nil)
 	case errors.Is(err, generation.ErrContentLanguageRequired):

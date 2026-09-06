@@ -13,6 +13,10 @@ const (
 	BlockImage   BlockType = "IMAGE"
 	BlockQuote   BlockType = "QUOTE"
 	BlockList    BlockType = "LIST"
+	// BlockVideo carries the IMAGE fields and none of its own (VIDEO-2). Its File names an
+	// attached VIDEO: a filename is unique across the two kinds, so a mismatch is the wrong
+	// block type rather than an unknown file.
+	BlockVideo BlockType = "VIDEO"
 )
 
 type Block struct {
@@ -56,6 +60,10 @@ type Observation struct {
 	// Model is the ref that observed this photo, stamped where the batch ran. It is what
 	// lets the picker say whose eyesight it is offering to reuse; empty means unknown.
 	Model string
+	// Events and Speech are what a still frame cannot carry, so only a VIDEO entry has them:
+	// what happens in the clip in order, and what is said or heard, summarized (VIDEO-9).
+	Events []string
+	Speech string
 }
 
 // AttachmentKind is which kind of attachment an Image entry describes. The generation

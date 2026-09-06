@@ -80,7 +80,11 @@ func TestValidateBlocksStillDropsRealFieldConfusion(t *testing.T) {
 		"image content":      {block: Block{Type: BlockImage, File: "IMG.jpg", Content: "wrong", Level: 2}, field: "content"},
 		"image missing file": {block: Block{Type: BlockImage, Level: 2}, field: "file"},
 		"list empty item":    {block: Block{Type: BlockList, Items: []string{""}, Level: 2}, field: "items"},
-		"unknown type":       {block: Block{Type: "VIDEO", Content: "wrong", Level: 2}, field: "type"},
+		// VIDEO is a real type now, with the IMAGE field rules: prose in it is the same
+		// confusion as prose in an IMAGE.
+		"video content":      {block: Block{Type: BlockVideo, File: "clip.mp4", Content: "wrong", Level: 2}, field: "content"},
+		"video missing file": {block: Block{Type: BlockVideo, Level: 2}, field: "file"},
+		"unknown type":       {block: Block{Type: "AUDIO", Content: "wrong", Level: 2}, field: "type"},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

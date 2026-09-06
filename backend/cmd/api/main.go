@@ -329,6 +329,9 @@ func main() {
 		// owner what their work needs, and this context holds no cap of its own.
 		cfg.LLMCompletionBudget,
 	)
+	// A video reaches a model as a LINK, minted per call and living exactly as long as a
+	// browser view URL does — the bytes never enter this process (VIDEO-10).
+	generationSvc.SetVideoLinker(bucket, cfg.PresignGetTTL)
 	// Generation reads a brief only at enqueue, to freeze it; the template context never
 	// learns that generation exists.
 	generationSvc.SetTemplateBriefs(generationTemplates{service: templateSvc})
@@ -970,6 +973,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
+			Events: observation.Events, Speech: observation.Speech,
 		})
 	}
 	return input, nil
@@ -982,6 +986,7 @@ func (a generationPosts) SetObservations(ctx context.Context, userID, slug strin
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
+			Events: observation.Events, Speech: observation.Speech,
 		})
 	}
 	return generationPostError(a.service.SetObservations(ctx, userID, slug, values))

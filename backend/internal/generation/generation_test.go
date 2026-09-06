@@ -52,7 +52,7 @@ func TestFilterAttachmentsIsExact(t *testing.T) {
 		{Type: BlockImage, File: "img_1.jpg"},
 		{Type: BlockImage, File: "IMG_999.jpg"},
 	}}
-	got := FilterAttachments(content, []string{"IMG_1.jpg"})
+	got := FilterAttachments(content, []string{"IMG_1.jpg"}, nil)
 	if len(got.Blocks) != 2 || got.Blocks[1].File != "IMG_1.jpg" {
 		t.Fatalf("filtered blocks = %+v", got.Blocks)
 	}

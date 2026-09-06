@@ -41,7 +41,10 @@ func invalidField(block Block) string {
 			return "content"
 		}
 		return firstPopulated(block.File, block.Alt, block.Caption, hasItems)
-	case BlockImage:
+	case BlockImage, BlockVideo:
+		// A video block carries the IMAGE fields and none of its own (VIDEO-2), so the field
+		// rules are the same ones — only which attachment list its file must name differs,
+		// and that is the attachment filter's question, not this one's.
 		if strings.TrimSpace(block.File) == "" {
 			return "file"
 		}

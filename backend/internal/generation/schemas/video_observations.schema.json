@@ -1,0 +1,25 @@
+{
+  "type": "object",
+    "additionalProperties": false,
+    "required": ["observations"],
+    "properties": {
+      "observations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["file", "scene", "mood", "visible_text", "objects", "people_present", "events", "speech"],
+          "properties": {
+            "file": {"type": "string"},
+            "scene": {"type": "string"},
+            "mood": {"type": "string"},
+            "visible_text": {"type": "string"},
+            "objects": {"type": "array", "items": {"type": "string"}},
+            "people_present": {"type": "boolean"},
+            "events": {"type": "array", "items": {"type": "string"}},
+            "speech": {"type": "string"}
+          }
+        }
+      }
+    }
+}

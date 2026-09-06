@@ -20,11 +20,8 @@ func (s *Service) write(ctx context.Context, post PostInput, observations []Obse
 }
 
 func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Profile, observations []Observation, model llm.ModelRef) (PostContent, llm.Usage, error) {
-	filenames := make([]string, 0, len(post.Images))
-	for _, image := range post.Images {
-		filenames = append(filenames, image.Filename)
-	}
-	system, user := BuildWritePromptForLanguage(post.TargetLanguage, profile, observations, post.Memo, post.Title, filenames, post.TargetLength, post.Template, post.Guidelines)
+	photos, videos := AttachmentNames(post.Images)
+	system, user := BuildWritePromptForLanguage(post.TargetLanguage, profile, observations, post.Memo, post.Title, photos, videos, post.TargetLength, post.Template, post.Guidelines)
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
@@ -46,7 +43,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	content.Blocks = ValidateBlocks(content.Blocks)
 	// Slot resolution runs LAST, after the attachment filter: a slot block carries no file,
 	// so filtering first keeps that pass unaware of templates entirely.
-	return ApplyTemplateSlots(FilterAttachments(*content, filenames), post.Template), response.Usage, nil
+	return ApplyTemplateSlots(FilterAttachments(*content, photos, videos), post.Template), response.Usage, nil
 }
 
 func contentTags(content *PostContent) []string {

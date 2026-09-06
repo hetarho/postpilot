@@ -17,13 +17,52 @@ func (s *Service) observe(ctx context.Context, post PostInput, targets []Image, 
 	return observations, err
 }
 
+// photosOf and videosOf split one attachment list by kind. The list stays ONE list — every
+// selection, freeze and merge function addresses attachments by filename and would otherwise
+// have to reason about two — and these are used only where the two kinds are actually handled
+// differently: how they reach a model, and how many calls that takes.
+//
+// An empty Kind reads as a photo, which is what every entry built before videos existed is.
+func photosOf(images []Image) []Image {
+	out := make([]Image, 0, len(images))
+	for _, image := range images {
+		if image.Kind != AttachmentVideo {
+			out = append(out, image)
+		}
+	}
+	return out
+}
+
+func videosOf(images []Image) []Image {
+	out := make([]Image, 0, len(images))
+	for _, image := range images {
+		if image.Kind == AttachmentVideo {
+			out = append(out, image)
+		}
+	}
+	return out
+}
+
 func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets []Image, seed []Observation, model llm.ModelRef, progress Progress, persist bool) ([]Observation, llm.Usage, error) {
-	total := len(targets)
+	photos := photosOf(targets)
+	videos := videosOf(targets)
+	// One progress scale over both stages: the photo batches report the photos they finished,
+	// and each video reports itself, so the bar never jumps backwards when the kinds change.
+	total := len(photos) + len(videos)
 	fresh := make([]Observation, 0, total)
 	var usage llm.Usage
-	for start := 0; start < total; start += s.batchSize {
-		end := min(start+s.batchSize, total)
-		batch := targets[start:end]
+	persistMerged := func() error {
+		if !persist {
+			return nil
+		}
+		// The MERGED snapshot, not just what this run has observed so far: a partial
+		// re-observation has to leave one entry per attached attachment already after the
+		// FIRST batch, so the contact sheet only ever grows.
+		return s.posts.SetObservations(ctx, post.UserID, post.Slug, mergeObservations(post.Images, seed, fresh))
+	}
+	for start := 0; start < len(photos); start += s.batchSize {
+		end := min(start+s.batchSize, len(photos))
+		batch := photos[start:end]
 		parts := make([]llm.Part, 0, len(batch)+1)
 		filenames := make([]string, 0, len(batch))
 		for _, image := range batch {
@@ -63,17 +102,76 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 			return nil, usage, fmt.Errorf("parse observations: %w", responseParseError(response, err))
 		}
 		fresh = append(fresh, matchObservations(batch, returned, model.String())...)
-		if persist {
-			// The MERGED snapshot, not just what this run has observed so far: a partial
-			// re-observation has to leave one entry per attached photo already after the
-			// FIRST batch, so the contact sheet only ever grows.
-			if err := s.posts.SetObservations(ctx, post.UserID, post.Slug, mergeObservations(post.Images, seed, fresh)); err != nil {
-				return nil, usage, fmt.Errorf("persist observations: %w", err)
-			}
+		if err := persistMerged(); err != nil {
+			return nil, usage, fmt.Errorf("persist observations: %w", err)
 		}
 		progress("observe", end, total)
 	}
+
+	// One call per video, never batched and never mixed with photos (VIDEO-8): one clip is a
+	// photo batch's worth of tokens by itself, and it reaches the model as a URL rather than
+	// as bytes this process carries (VIDEO-10).
+	for index, video := range videos {
+		observed, callUsage, err := s.observeVideo(ctx, video, model)
+		usage.PromptTokens += callUsage.PromptTokens
+		usage.CompletionTokens += callUsage.CompletionTokens
+		if callUsage.CostReported {
+			usage.CostMicrousd += callUsage.CostMicrousd
+			usage.CostReported = true
+		}
+		if err != nil {
+			return nil, usage, err
+		}
+		fresh = append(fresh, observed...)
+		if err := persistMerged(); err != nil {
+			return nil, usage, fmt.Errorf("persist observations: %w", err)
+		}
+		progress("observe", len(photos)+index+1, total)
+	}
 	return mergeObservations(post.Images, seed, fresh), usage, nil
+}
+
+// observeVideo runs one clip's own call. The signed URL is minted right before the call so its
+// clock starts there: the call is bounded by the stage timeout and the URL by PRESIGN_GET_TTL,
+// so a stale URL fails the call rather than leaving a standing link behind.
+func (s *Service) observeVideo(ctx context.Context, video Image, model llm.ModelRef) ([]Observation, llm.Usage, error) {
+	var usage llm.Usage
+	if s.videos == nil {
+		return nil, usage, fmt.Errorf("observe video %s: no video linker is configured", video.Filename)
+	}
+	url, err := s.videos.PresignGet(ctx, video.Key, s.videoURLTTL)
+	if err != nil {
+		return nil, usage, fmt.Errorf("sign video %s: %w", video.Filename, err)
+	}
+	contentType := video.ContentType
+	if contentType == "" {
+		contentType = "video/mp4"
+	}
+	request := llm.Request{
+		System: ObserveVideoPrompt,
+		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{
+			llm.VideoPart(url, contentType),
+			llm.TextPart("files: " + video.Filename),
+		}}},
+		Reasoning: s.reasoning.Observe,
+		Stage:     llm.StageNameObserve,
+		// One full photo batch's budget: a video answer carries a timeline and is longer
+		// than one photo's (VIDEO-13).
+		MaxTokens: s.budget.Observation(),
+	}
+	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
+		request.JSONSchema = VideoObservationsSchema()
+	}
+	response, err := s.models.Complete(ctx, model, request)
+	usage = response.Usage
+	if err != nil {
+		return nil, usage, providerCallError("영상 관찰", err)
+	}
+	returned, err := parseObservations(response.Text)
+	if err != nil {
+		return nil, usage, fmt.Errorf("parse video observations: %w", responseParseError(response, err))
+	}
+	return matchObservations([]Image{video}, returned, model.String()), usage, nil
 }
 
 func matchObservations(images []Image, returned []Observation, model string) []Observation {
@@ -140,7 +238,10 @@ func mergeObservations(attached []Image, seed, fresh []Observation) []Observatio
 // the photo and Model names who looked, and neither is something the writer can write from.
 func observationEmpty(observation Observation) bool {
 	return observation.Scene == "" && observation.Mood == "" && observation.VisibleText == "" &&
-		len(observation.Objects) == 0 && !observation.PeoplePresent
+		len(observation.Objects) == 0 && !observation.PeoplePresent &&
+		// A video entry can be carried by what only a clip has: a model that saw motion and
+		// heard speech but named no objects still described it (VIDEO-9).
+		len(observation.Events) == 0 && observation.Speech == ""
 }
 
 // reusableObservations indexes the stored snapshot by filename, keeping only the entries a run

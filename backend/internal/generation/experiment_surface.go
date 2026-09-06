@@ -87,6 +87,11 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 		if !modelEnabled(s.models, observeModel, llm.StageNameObserve) {
 			return nil, ErrObserveModelRequired
 		}
+		// The same per-run video check the ordinary enqueue makes: a comparison that cannot
+		// observe the post's clips would compare two writers working from half the material.
+		if err := s.refuseVideoBlindObserveModel(post.Images, observeModel); err != nil {
+			return nil, err
+		}
 	}
 	// The same freeze the ordinary enqueue performs, for the same reason and through the
 	// same helper: the comparison must not re-pay for eyesight it already has, and it must

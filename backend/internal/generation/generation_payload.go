@@ -34,6 +34,10 @@ type observationPayload struct {
 	Objects       []string `json:"objects,omitempty"`
 	PeoplePresent bool     `json:"people_present,omitempty"`
 	Model         string   `json:"model,omitempty"`
+	// Video-only (VIDEO-9). Omitted when empty, so a payload frozen before videos existed
+	// decodes unchanged — and a resumable job never becomes unresumable.
+	Events []string `json:"events,omitempty"`
+	Speech string   `json:"speech,omitempty"`
 }
 
 type generationPayload struct {
@@ -142,6 +146,7 @@ func encodeObservations(observations []Observation) []observationPayload {
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
+			Events: cloneTexts(observation.Events), Speech: observation.Speech,
 		})
 	}
 	return wire
@@ -157,6 +162,7 @@ func decodeObservations(wire []observationPayload) []Observation {
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
+			Events: cloneTexts(observation.Events), Speech: observation.Speech,
 		})
 	}
 	return out

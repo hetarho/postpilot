@@ -13,7 +13,7 @@
           "additionalProperties": false,
           "required": ["type", "content", "level", "file", "alt", "caption", "items"],
           "properties": {
-            "type": {"type": "string", "enum": ["TEXT", "HEADING", "IMAGE", "QUOTE", "LIST"]},
+            "type": {"type": "string", "enum": ["TEXT", "HEADING", "IMAGE", "VIDEO", "QUOTE", "LIST"]},
             "content": {"type": "string"},
             "level": {"type": "integer"},
             "file": {"type": "string"},

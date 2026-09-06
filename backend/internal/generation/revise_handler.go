@@ -76,13 +76,12 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if _, err := frozenVoice(current, voiceID); err != nil {
 		return err
 	}
-	currentFilenames := make([]string, 0, len(current.Images))
-	for _, image := range current.Images {
-		currentFilenames = append(currentFilenames, image.Filename)
-	}
+	// The FRESH attachment snapshot, both kinds: a revision is filtered against what the post
+	// carries now, not against what it carried when the job was queued.
+	currentPhotos, currentVideos := AttachmentNames(current.Images)
 	// The frozen template's slots are re-applied: a revision that dropped a reserved position
 	// gets it back, in the same place, without the request having mentioned it.
-	filtered := ApplyTemplateSlots(FilterAttachments(*content, currentFilenames), decodeTemplate(payload.Template))
+	filtered := ApplyTemplateSlots(FilterAttachments(*content, currentPhotos, currentVideos), decodeTemplate(payload.Template))
 	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage); err != nil {
 		return fmt.Errorf("persist revised content: %w", err)
 	}

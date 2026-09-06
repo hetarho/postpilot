@@ -2,12 +2,20 @@ package generation
 
 import (
 	"context"
+	"time"
 
 	"github.com/postpilot/backend/internal/llm"
 )
 
 type ImageReader interface {
 	Read(ctx context.Context, key string) ([]byte, error)
+}
+
+// VideoLinker mints the short-lived URL a video reaches a model by. It is a LINK and never
+// bytes: a clip is up to 200 MiB, and the largest thing this process carries stays a memo
+// (VIDEO-10, POST-34). Declared here by its consumer and satisfied by the object store.
+type VideoLinker interface {
+	PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error)
 }
 
 type Posts interface {
