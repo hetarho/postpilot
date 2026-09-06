@@ -164,7 +164,19 @@ func (s *Service) touchAgent(ctx context.Context, agent Agent, now time.Time) er
 }
 
 func (s *Service) ListAgents(ctx context.Context, userID string) ([]Agent, error) {
-	return s.store.ListAgents(ctx, userID)
+	agents, err := s.store.ListAgents(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	// A revoked agent's token is already dead. Hide it from the user's connection list so
+	// disconnecting an agent removes it from view instead of leaving a lingering entry.
+	active := make([]Agent, 0, len(agents))
+	for _, agent := range agents {
+		if agent.RevokedAt == nil {
+			active = append(active, agent)
+		}
+	}
+	return active, nil
 }
 
 func (s *Service) UpdateAgent(ctx context.Context, userID, agentID, label, categoryID string, visibility Visibility) (Agent, error) {

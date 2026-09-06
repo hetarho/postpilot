@@ -106,6 +106,7 @@ type fakeStore struct {
 	commitFailure    Failure
 	syncUpdate       ProfileUpdate
 	syncCalls        int
+	listResult       []Agent
 }
 
 func (f *fakeStore) CreatePairing(_ context.Context, hash, _, _ string, _, _ time.Time, _ int) error {
@@ -136,6 +137,9 @@ func (f *fakeStore) writes() int {
 }
 func (f *fakeStore) OwnedAgent(context.Context, string, string) (Agent, error) { return f.agent, nil }
 func (f *fakeStore) ListAgents(context.Context, string) ([]Agent, error) {
+	if f.listResult != nil {
+		return f.listResult, nil
+	}
 	return []Agent{f.agent}, nil
 }
 func (f *fakeStore) UpdateAgent(context.Context, string, string, string, string, Visibility, time.Time) (Agent, error) {
@@ -245,6 +249,24 @@ func (f *fakeStore) LiveStagedKeys(context.Context) (map[string]struct{}, error)
 func (f *fakeStore) TerminalJobsWithAssets(context.Context) ([]string, error) {
 	f.terminalCalls++
 	return append([]string(nil), f.terminalJobIDs...), nil
+}
+
+func TestListAgentsHidesRevokedFromTheConnectionList(t *testing.T) {
+	revokedAt := time.Date(2026, 8, 30, 11, 0, 0, 0, time.UTC)
+	active := readyAgent()
+	active.ID = "active"
+	revoked := readyAgent()
+	revoked.ID = "revoked"
+	revoked.RevokedAt = &revokedAt
+	store := &fakeStore{listResult: []Agent{revoked, active}}
+	service := newStartService(store, &fakePosts{}, &fakeStaging{})
+	agents, err := service.ListAgents(context.Background(), "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(agents) != 1 || agents[0].ID != "active" {
+		t.Fatalf("revoked agent was not hidden from the connection list: %+v", agents)
+	}
 }
 
 func readyAgent() Agent {
