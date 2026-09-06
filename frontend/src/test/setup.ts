@@ -25,3 +25,41 @@ class NoopResizeObserver implements ResizeObserver {
   disconnect() {}
 }
 globalThis.ResizeObserver ??= NoopResizeObserver
+
+// Node 26 installs its own `localStorage` global whose getter returns undefined unless the
+// process was started with --localstorage-file, and in vitest's jsdom environment `globalThis`
+// IS the window, so that getter takes the place jsdom's storage would occupy — a bare
+// `localStorage` in app code reads undefined here while it works in a browser and on CI's
+// pinned Node 24. Installing a spec-shaped in-memory Storage makes every runner agree; jsdom's
+// own implementation is in-memory per origin too, so nothing about the tests changes.
+class MemoryStorage implements Storage {
+  #entries = new Map<string, string>()
+  get length() {
+    return this.#entries.size
+  }
+  key(index: number) {
+    return [...this.#entries.keys()][index] ?? null
+  }
+  getItem(key: string) {
+    return this.#entries.get(String(key)) ?? null
+  }
+  setItem(key: string, value: string) {
+    this.#entries.set(String(key), String(value))
+  }
+  removeItem(key: string) {
+    this.#entries.delete(String(key))
+  }
+  clear() {
+    this.#entries.clear()
+  }
+}
+
+for (const name of ['localStorage', 'sessionStorage'] as const) {
+  if (globalThis[name] === undefined) {
+    Object.defineProperty(globalThis, name, {
+      value: new MemoryStorage(),
+      configurable: true,
+      writable: true,
+    })
+  }
+}
