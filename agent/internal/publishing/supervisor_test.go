@@ -3,6 +3,7 @@ package publishing
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -57,6 +58,12 @@ func (f executorFunc) Execute(ctx context.Context, claim *postpilotv1.ClaimPubli
 	return f(ctx, claim)
 }
 
+type claimerFunc func(context.Context) (*postpilotv1.ClaimPublishJobResponse, error)
+
+func (function claimerFunc) Claim(ctx context.Context) (*postpilotv1.ClaimPublishJobResponse, error) {
+	return function(ctx)
+}
+
 func TestSupervisorClaimsAQueuedJobAfterAnOfflinePollWithoutRestart(t *testing.T) {
 	claim := &postpilotv1.ClaimPublishJobResponse{Job: &postpilotv1.PublishJob{Id: "queued-while-offline"}}
 	claimer := &delayedClaimer{claim: claim}
@@ -85,5 +92,31 @@ func TestSupervisorClaimsAQueuedJobAfterAnOfflinePollWithoutRestart(t *testing.T
 	}
 	if claimer.calls.Load() < 2 {
 		t.Fatalf("claim calls = %d", claimer.calls.Load())
+	}
+}
+
+func TestSupervisorStopsOnlyTheRevokedConnection(t *testing.T) {
+	permit := make(chan struct{}, 1)
+	permit <- struct{}{}
+	executed := false
+	supervisor := Supervisor{
+		Client: claimerFunc(func(context.Context) (*postpilotv1.ClaimPublishJobResponse, error) {
+			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("revoked"))
+		}),
+		Executor: executorFunc(func(context.Context, *postpilotv1.ClaimPublishJobResponse) error {
+			executed = true
+			return nil
+		}),
+		Permit: permit, PollInterval: time.Millisecond,
+	}
+	err := supervisor.Run(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "token was revoked") || executed {
+		t.Fatalf("error=%v executed=%t", err, executed)
+	}
+	select {
+	case <-permit:
+		permit <- struct{}{}
+	default:
+		t.Fatal("revoked connection did not release the cross-account permit")
 	}
 }

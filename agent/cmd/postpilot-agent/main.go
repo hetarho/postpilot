@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -50,7 +51,15 @@ func run() error {
 	case "run":
 		return runAgents(paths, nil)
 	case "install":
-		return installUnavailable()
+		binary, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		if err := launchd.Install(binary, paths.Logs); err != nil {
+			return err
+		}
+		fmt.Println("Postpilot publishing LaunchAgent installed. Browser profiles and Keychain credentials remain account-isolated.")
+		return nil
 	case "uninstall":
 		if err := launchd.Uninstall(); err != nil {
 			return err
@@ -64,11 +73,9 @@ func run() error {
 	}
 }
 
-func installUnavailable() error {
-	return errors.New("deterministic Naver publisher is not implemented; LaunchAgent installation is disabled until Job 25 passes its release gates")
-}
-
 type publisherFactory func(config.Connection) (publishing.Publisher, error)
+
+const connectionReloadInterval = 2 * time.Second
 
 func runAgents(paths config.Paths, newPublisher publisherFactory) error {
 	if newPublisher == nil {
@@ -127,24 +134,32 @@ func runAgents(paths config.Paths, newPublisher publisherFactory) error {
 	if running == 0 {
 		return errors.New("no armed publishing connection; run setup first")
 	}
-	reload := time.NewTicker(2 * time.Second)
+	reload := time.NewTicker(connectionReloadInterval)
 	defer reload.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-reload.C:
-			loaded, err := config.Load(paths)
+			connections, err := reloadArmedConnections(paths, launched)
 			if err != nil {
 				logger.Warn("publishing connection reload failed", "error", err)
 				continue
 			}
-			startNew(loaded)
+			startNew(config.File{Connections: connections})
 		case result := <-errCh:
 			running--
 			logger.Error("connection supervisor stopped", "connection_id", result.connectionID, "error", result.err)
 		}
 	}
+}
+
+func reloadArmedConnections(paths config.Paths, launched map[string]struct{}) ([]config.Connection, error) {
+	loaded, err := config.Load(paths)
+	if err != nil {
+		return nil, err
+	}
+	return unseenArmedConnections(loaded, launched), nil
 }
 
 func unseenArmedConnections(cfg config.File, launched map[string]struct{}) []config.Connection {
@@ -162,11 +177,14 @@ func unseenArmedConnections(cfg config.File, launched map[string]struct{}) []con
 }
 
 func diagnostics(paths config.Paths) error {
+	return diagnosticsWith(paths, credentials.Keychain{}, browser.Start, naver.Probe, os.Stdout)
+}
+
+func diagnosticsWith(paths config.Paths, keychain credentials.Store, start func(string, string, string) (*browser.Session, error), probe func(context.Context, string) (naver.Result, error), output io.Writer) error {
 	cfg, err := config.Load(paths)
 	if err != nil {
 		return err
 	}
-	keychain := credentials.Keychain{}
 	for _, connection := range cfg.Connections {
 		if err := config.ValidateConnection(connection); err != nil {
 			return fmt.Errorf("connection %s: %w", connection.ID, err)
@@ -174,15 +192,16 @@ func diagnostics(paths config.Paths) error {
 		if _, err := keychain.Get(context.Background(), connection.KeychainAccount); err != nil {
 			return fmt.Errorf("connection %s: Keychain credential unavailable", connection.ID)
 		}
-		if _, err := os.Stat(connection.BrowserBinary); err != nil {
-			return fmt.Errorf("connection %s: browser unavailable", connection.ID)
-		}
-		browserSession, err := browser.Start(connection.BrowserBinary, connection.ProfileDir, "")
+		browserSession, err := start(connection.BrowserBinary, connection.ProfileDir, "")
 		if err != nil {
 			return fmt.Errorf("connection %s: browser CDP unavailable: %w", connection.ID, err)
 		}
+		result, err := probe(context.Background(), browserSession.CDPURL)
 		_ = browserSession.Close()
-		fmt.Printf("%s: transport ready (token and browser present)\n", connection.Label)
+		if err != nil || result.Identity.BlogID != connection.PlatformAccountID {
+			return fmt.Errorf("connection %s: Naver compatibility probe failed", connection.ID)
+		}
+		fmt.Fprintf(output, "%s: ready (%s, driver %s)\n", connection.Label, result.BrowserVersion, result.SignatureID)
 	}
-	return errors.New("deterministic Naver publisher compatibility probe is not implemented; Job 25 remains unarmed")
+	return nil
 }

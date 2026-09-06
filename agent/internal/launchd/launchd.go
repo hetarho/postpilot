@@ -1,6 +1,7 @@
 package launchd
 
 import (
+	"errors"
 	"fmt"
 	"html"
 	"os"
@@ -20,6 +21,9 @@ func PlistPath() (string, error) {
 }
 
 func Install(binary, logDir string) error {
+	if !filepath.IsAbs(binary) || !filepath.IsAbs(logDir) {
+		return errors.New("LaunchAgent binary and log directory must be absolute")
+	}
 	path, err := PlistPath()
 	if err != nil {
 		return err
@@ -27,6 +31,21 @@ func Install(binary, logDir string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
+		return err
+	}
+	if err := os.Chmod(logDir, 0o700); err != nil {
+		return err
+	}
+	if err := writePlist(path, binary, logDir); err != nil {
+		return err
+	}
+	domain := "gui/" + strconv.Itoa(os.Getuid())
+	_ = exec.Command("/bin/launchctl", "bootout", domain+"/"+Label).Run()
+	return exec.Command("/bin/launchctl", "bootstrap", domain, path).Run()
+}
+
+func writePlist(path, binary, logDir string) error {
 	plist := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -39,12 +58,7 @@ func Install(binary, logDir string) error {
 <key>StandardErrorPath</key><string>%s</string>
 </dict></plist>
 `, Label, html.EscapeString(binary), html.EscapeString(filepath.Join(logDir, "agent.log")), html.EscapeString(filepath.Join(logDir, "agent-error.log")))
-	if err := os.WriteFile(path, []byte(plist), 0o600); err != nil {
-		return err
-	}
-	domain := "gui/" + strconv.Itoa(os.Getuid())
-	_ = exec.Command("/bin/launchctl", "bootout", domain+"/"+Label).Run()
-	return exec.Command("/bin/launchctl", "bootstrap", domain, path).Run()
+	return os.WriteFile(path, []byte(plist), 0o600)
 }
 
 func Uninstall() error {

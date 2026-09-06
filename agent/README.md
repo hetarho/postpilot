@@ -20,23 +20,18 @@ selectors, JavaScript, shell commands, arbitrary URLs, credentials, cookies, pro
 behavior ships as reviewed local code. A changed editor, ambiguous control, missing asset, login challenge, or failed
 readback must fail closed before commit or become `outcome_unknown` after the commit fence.
 
-## Transition status
+## Release status
 
-The previous local executor has been removed. Job 25 now tracks the deterministic Naver publisher and its fake-editor
-and authorized live-Naver verification. Until that implementation and compatibility probe are complete:
-
-- `postpilot-agent run` refuses to start before it can claim a queued job;
-- `postpilot-agent diagnostics` verifies stored credentials and the dedicated browser transport, then reports that the
-  publisher probe is unavailable;
-- `packaging/install.sh` builds the companion but does not install the LaunchAgent automatically.
-
-This fail-closed transition prevents an incomplete replacement from consuming or failing queued publication jobs.
+The previous model-driven executor has been removed. The replacement uses a closed typed state machine, versioned
+compatibility probe, durable commit fence and exact readback. `postpilot-agent diagnostics` runs the non-publishing
+probe and prints only the connection label plus reviewed browser/driver versions. `packaging/install.sh` builds the
+current source, installs the mode-0600 user LaunchAgent and loads it; no credential or browser profile is packaged.
 
 For a Mac that ran the retired package, deploy backend migration 0015 first. It disarms every legacy connection and
 terminates any old lease conservatively (`needs_attention` before the commit fence, `outcome_unknown` after it). Then
-run `./packaging/install.sh`: it boots out and removes the old KeepAlive LaunchAgent before replacing the binary. Do
-not run `postpilot-agent install` until Job 25's replacement-driver gates pass; the command is disabled in this build.
-Existing browser profiles, config, logs, and Keychain credentials are deliberately retained for account recovery.
+run `./packaging/install.sh`: it boots out and removes the old KeepAlive LaunchAgent before replacing the binary and
+loading the new per-user job. Existing browser profiles, config, logs, and Keychain credentials are deliberately
+retained for account recovery.
 
 ## Pairing and recovery contract
 
@@ -56,6 +51,7 @@ device code. Postpilot retains a pre-commit retry action; the driver never attem
 ```sh
 ./packaging/install.sh
 "$HOME/Library/Application Support/Postpilot Agent/bin/postpilot-agent" setup
+"$HOME/Library/Application Support/Postpilot Agent/bin/postpilot-agent" diagnostics
 
 go test ./...
 go vet ./...
