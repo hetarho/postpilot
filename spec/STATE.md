@@ -30,19 +30,24 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260905.cx |
-| T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 | todo |
-| T011 | Plain-language block names, fixed text instead of place/link, and the photo row stepper | TEMPLATE | T010 | todo |
+| T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
+| T011 | Plain-language block names, fixed text instead of place/link, and the photo row stepper | TEMPLATE | T010 | doing@260906.vd |
 | T014 | Observe videos, write from them and validate VIDEO blocks | VIDEO GEN MODEL | T012 T013 T010 | todo |
 | T015 | Video upload in the browser, the attachment strip and the contact sheet | VIDEO POST GEN | T012 | todo |
 | T016 | The VIDEO block in the reading view, editor and exports, plus the capability badges and refusals | VIDEO EXPORT MODEL POST | T013 T015 | todo |
 | T017 | The `원문` source mode, paste import and the copyable format guide | TEMPLATE | T011 | todo |
+| T018 | The bound CDP session and the deterministic Naver observation port | PUBLISH | T005 | todo |
+| T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | todo |
 
 ## next
 - implement-task T011 NEXT (T010 done; the shared fixture's count cases are red on the FE until T011) → T017
 - implement-task T014 (needs T010 first) → T015 → T016; T014 BEFORE T015 — T012's WARN: generation still reads a video as a photo
-- update-ssot PUBLISH after T008 closes: photo-row transport (TEMPLATE-39) and agent video publishing (VIDEO-17); GEN EXPORT for TEMPLATE-39 at the same time
+- implement-task T018 → T019 → T008 (the deterministic publisher's real CDP driver; nothing can publish until T019 wires it) · T007 in parallel (cx)
 
 ## log
+- 260906 create-task PUBLISH → T018 T019 (T005 shipped the publisher state machine but never its port; ssot row unchanged — unbuilt scope, not a delta); T008 dep T007→T007 T019
+- 260906 create-task PUBLISH start (gap: naver.Port/CommitPort has only test fakes — T005 done left the real CDP driver unbuilt, so `run` refuses and no job can ever be claimed)
+- 260906 T011 claimed (vd)
 - 260906 WARN T010 left the FE grammar fixture red on purpose (6 of 52, all count cases) — T011 makes it green; do not push before T011
 - 260906 T010 done
 - 260906 T010 claimed (vd)
@@ -62,4 +67,3 @@
 - 260906 update-ssot done: VIDEO r1 (new domain, owner interview: placed in post, ≤1 min · 200 MB · 3/post) + POST r2 GEN r2 MODEL r3 EXPORT r2 hooks
 - 260906 WARN VIDEO-16/17 change StartPublish (PUBLISH-9) without a PUBLISH rev — T007 doing, T008 todo; PUBLISH update-ssot after T008; LANG reason catalog needs MODEL_VIDEO_UNSUPPORTED VIDEO_NOT_PUBLISHABLE
 - 260906 update-ssot pivot: scope became a new domain → VIDEO SSOT created instead of spreading it over POST/MODEL/GEN alone
-- 260906 update-ssot POST MODEL GEN start (video attachments as observation material)
