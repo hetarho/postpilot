@@ -158,6 +158,134 @@ func (p *Page) AccessibilityRoles(ctx context.Context) ([]string, error) {
 	return roles, nil
 }
 
+// CallFunction invokes one reviewed function declaration from this signed agent release
+// against the page's document, passing manifest data as structured CDP arguments.
+//
+// Data never becomes code here: the declaration is a package-level constant and every value
+// crosses as a typed argument, so no manifest string is ever concatenated into an
+// expression, and the page cannot receive an instruction it was not shipped with.
+func (p *Page) CallFunction(ctx context.Context, declaration string, arguments []any, out any) error {
+	var document struct {
+		Result struct {
+			ObjectID string `json:"objectId"`
+		} `json:"result"`
+	}
+	if err := p.client.call(ctx, "Runtime.evaluate", map[string]any{"expression": "document"}, &document); err != nil {
+		return err
+	}
+	if document.Result.ObjectID == "" {
+		return errors.New("dedicated browser page exposed no document")
+	}
+	call := make([]map[string]any, 0, len(arguments))
+	for _, argument := range arguments {
+		call = append(call, map[string]any{"value": argument})
+	}
+	var evaluated struct {
+		Result struct {
+			Value json.RawMessage `json:"value"`
+		} `json:"result"`
+		ExceptionDetails json.RawMessage `json:"exceptionDetails"`
+	}
+	if err := p.client.call(ctx, "Runtime.callFunctionOn", map[string]any{
+		"functionDeclaration": declaration,
+		"objectId":            document.Result.ObjectID,
+		"arguments":           call,
+		"returnByValue":       true,
+		"awaitPromise":        true,
+	}, &evaluated); err != nil {
+		return err
+	}
+	if len(evaluated.ExceptionDetails) > 0 {
+		return errors.New("reviewed driver function failed on the dedicated page")
+	}
+	if out == nil {
+		return nil
+	}
+	if len(evaluated.Result.Value) == 0 {
+		return errors.New("reviewed driver function returned no value")
+	}
+	return json.Unmarshal(evaluated.Result.Value, out)
+}
+
+// ClickPoint presses and releases the primary button at one viewport point. The caller must
+// have just resolved that point from a versioned semantic locator's own live geometry and
+// must not retain it (PUBLISH-36).
+func (p *Page) ClickPoint(ctx context.Context, x, y float64) error {
+	for _, phase := range []string{"mousePressed", "mouseReleased"} {
+		if err := p.client.call(ctx, "Input.dispatchMouseEvent", map[string]any{
+			"type": phase, "x": x, "y": y, "button": "left", "clickCount": 1,
+		}, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// InsertText enters manifest text at the page's current caret. It is not a keystroke script:
+// the text crosses as data and no key sequence is synthesised from it.
+func (p *Page) InsertText(ctx context.Context, text string) error {
+	return p.client.call(ctx, "Input.insertText", map[string]any{"text": text}, nil)
+}
+
+// PressEnter sends the one editing key the SmartEditor block model needs to open the next
+// block. It is never used to submit: PUBLISH-21 fails closed on keyboard submission.
+func (p *Page) PressEnter(ctx context.Context) error {
+	for _, phase := range []string{"rawKeyDown", "keyUp"} {
+		if err := p.client.call(ctx, "Input.dispatchKeyEvent", map[string]any{
+			"type": phase, "windowsVirtualKeyCode": 13, "key": "Enter", "code": "Enter",
+		}, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// InterceptFileChooser keeps the browser from ever opening a native file dialog; the driver
+// supplies files through SetFileInputFiles instead (PUBLISH-21).
+func (p *Page) InterceptFileChooser(ctx context.Context) error {
+	return p.client.call(ctx, "Page.setInterceptFileChooserDialog", map[string]any{"enabled": true}, nil)
+}
+
+// SetFileInputFiles hands exactly the enumerated current-job paths to the resolved file
+// input. It is the only filesystem-touching operation the driver exposes.
+func (p *Page) SetFileInputFiles(ctx context.Context, selector string, files []string) error {
+	var document struct {
+		Root struct {
+			NodeID int `json:"nodeId"`
+		} `json:"root"`
+	}
+	if err := p.client.call(ctx, "DOM.getDocument", map[string]any{"depth": 0}, &document); err != nil {
+		return err
+	}
+	var found struct {
+		NodeID int `json:"nodeId"`
+	}
+	if err := p.client.call(ctx, "DOM.querySelector", map[string]any{"nodeId": document.Root.NodeID, "selector": selector}, &found); err != nil {
+		return err
+	}
+	if found.NodeID == 0 {
+		return errors.New("dedicated page exposed no upload control")
+	}
+	return p.client.call(ctx, "DOM.setFileInputFiles", map[string]any{"files": files, "nodeId": found.NodeID}, nil)
+}
+
+// Navigate moves the bound target to one approved Naver URL built by reviewed local code.
+func (p *Page) Navigate(ctx context.Context, destination string) error {
+	var navigation struct {
+		ErrorText string `json:"errorText"`
+	}
+	if err := p.client.call(ctx, "Page.enable", nil, nil); err != nil {
+		return err
+	}
+	if err := p.client.call(ctx, "Page.navigate", map[string]any{"url": destination}, &navigation); err != nil {
+		return err
+	}
+	if navigation.ErrorText != "" {
+		return errors.New("browser refused Naver navigation")
+	}
+	return nil
+}
+
 func (p *Page) Close() error {
 	if p == nil || p.conn == nil {
 		return nil

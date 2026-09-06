@@ -38,6 +38,7 @@
 - implement-task T019 NEXT (base PUBLISH@3) → T008 · T007 in parallel (cx)
 
 ## log
+- 260907 WARN T019: SmartEditor has no image placeholder (the photo button IS the file chooser), so Prepare's placeholder-then-upload phase cannot be observed — images must be inserted at their position during uploading_photos, keeping PUBLISH-13 stages monotonic
 - 260907 T019 claimed (mu)
 - 260907 create-task PUBLISH r3 → T019 updated in place (todo: base@2→@3, +PUBLISH-36, locator-derived pointer input in impl notes); no new task
 - 260907 create-task PUBLISH start (r3 delta into T019, todo)
@@ -57,4 +58,3 @@
 - 260906 T014 claimed (vd)
 - 260906 T011 done — the FE grammar fixture is green again (T010's WARN closed)
 - 260906 T018 claimed (pt)
-- 260906 create-task PUBLISH → T018 T019 (T005 shipped the publisher state machine but never its port; ssot row unchanged — unbuilt scope, not a delta); T008 dep T007→T007 T019
