@@ -392,16 +392,95 @@ func (s *Store) ImageKeyInUse(ctx context.Context, key string) (bool, error) {
 	return inUse, nil
 }
 
+// --- videos ---
+
+func (s *Store) CreateVideo(ctx context.Context, video post.Video) error {
+	if err := s.write.CreateVideo(ctx, createVideoParams(video)); err != nil {
+		if isUniqueViolation(err) {
+			return post.ErrDuplicateFilename
+		}
+		return fmt.Errorf("insert video: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) ListVideos(ctx context.Context, postSlug string) ([]post.Video, error) {
+	rows, err := s.read.ListVideosByPost(ctx, postSlug)
+	if err != nil {
+		return nil, fmt.Errorf("select videos: %w", err)
+	}
+
+	videos := make([]post.Video, 0, len(rows))
+	for _, row := range rows {
+		video, err := toVideo(row)
+		if err != nil {
+			return nil, err
+		}
+		videos = append(videos, video)
+	}
+	return videos, nil
+}
+
+func (s *Store) GetVideo(ctx context.Context, id string) (post.Video, error) {
+	row, err := s.read.GetVideo(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return post.Video{}, post.ErrNotFound
+		}
+		return post.Video{}, fmt.Errorf("select video: %w", err)
+	}
+	return toVideo(row)
+}
+
+func (s *Store) DeleteVideo(ctx context.Context, id string) error {
+	if err := s.write.DeleteVideo(ctx, id); err != nil {
+		return fmt.Errorf("delete video: %w", err)
+	}
+	return nil
+}
+
+// VideoFilenameTaken reports a CONFIRMED video with this name, the video half of the
+// post's single filename namespace.
+func (s *Store) VideoFilenameTaken(ctx context.Context, postSlug, filename string) (bool, error) {
+	taken, err := s.read.VideoFilenameTaken(ctx, sqlc.VideoFilenameTakenParams{
+		PostSlug: postSlug,
+		Filename: filename,
+	})
+	if err != nil {
+		return false, fmt.Errorf("check video filename: %w", err)
+	}
+	return taken, nil
+}
+
+func (s *Store) CountVideos(ctx context.Context, postSlug string) (int, error) {
+	count, err := s.read.CountVideosByPost(ctx, postSlug)
+	if err != nil {
+		return 0, fmt.Errorf("count videos: %w", err)
+	}
+	return int(count), nil
+}
+
+// VideoKeyInUse reports whether a video points at this object key.
+func (s *Store) VideoKeyInUse(ctx context.Context, key string) (bool, error) {
+	inUse, err := s.read.VideoKeyInUse(ctx, key)
+	if err != nil {
+		return false, fmt.Errorf("check video key: %w", err)
+	}
+	return inUse, nil
+}
+
 // --- uploads ---
 
 func (s *Store) CreateUpload(ctx context.Context, u post.Upload) error {
 	err := s.write.CreateUpload(ctx, sqlc.CreateUploadParams{
-		ID:        u.ID,
-		PostSlug:  u.PostSlug,
-		Filename:  u.Filename,
-		R2Key:     u.Key,
-		ExpiresAt: formatTime(u.ExpiresAt),
-		CreatedAt: formatTime(u.CreatedAt),
+		ID:          u.ID,
+		PostSlug:    u.PostSlug,
+		Filename:    u.Filename,
+		R2Key:       u.Key,
+		Kind:        string(u.Kind),
+		ContentType: u.ContentType,
+		ExpiresAt:   formatTime(u.ExpiresAt),
+		CreatedAt:   formatTime(u.CreatedAt),
 	})
 	if err != nil {
 		// The UNIQUE(post_slug, filename) constraint is what actually closes the race
@@ -504,7 +583,34 @@ func (s *Store) ConfirmUpload(ctx context.Context, img post.Image, uploadID stri
 	return nil
 }
 
-// AllReferencedKeys reads every key both tables point at, as ONE snapshot.
+// ConfirmVideoUpload writes the video and drops the upload row in one transaction, for
+// the same reason ConfirmUpload does: a key belongs to exactly one table, and the confirm
+// is the hand-off the sweep would otherwise undo.
+func (s *Store) ConfirmVideoUpload(ctx context.Context, video post.Video, uploadID string) error {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin video confirm: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op once committed
+
+	q := s.write.WithTx(tx)
+	if err := q.CreateVideo(ctx, createVideoParams(video)); err != nil {
+		if isUniqueViolation(err) {
+			return post.ErrDuplicateFilename
+		}
+		return fmt.Errorf("insert video: %w", err)
+	}
+	if err := q.DeleteUpload(ctx, uploadID); err != nil {
+		return fmt.Errorf("delete upload: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit video confirm: %w", err)
+	}
+	return nil
+}
+
+// AllReferencedKeys reads every key the three tables point at, as ONE snapshot.
 //
 // The read transaction is load-bearing, not tidiness. The sweep deletes objects missing
 // from this set, and a confirm moves a key from uploads to images: read separately, a
@@ -522,13 +628,20 @@ func (s *Store) AllReferencedKeys(ctx context.Context) (map[string]struct{}, err
 	if err != nil {
 		return nil, fmt.Errorf("select image keys: %w", err)
 	}
+	videoKeys, err := q.ListAllVideoKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("select video keys: %w", err)
+	}
 	uploadKeys, err := q.ListAllUploadKeys(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("select upload keys: %w", err)
 	}
 
-	keys := make(map[string]struct{}, len(imageKeys)+len(uploadKeys))
+	keys := make(map[string]struct{}, len(imageKeys)+len(videoKeys)+len(uploadKeys))
 	for _, key := range imageKeys {
+		keys[key] = struct{}{}
+	}
+	for _, key := range videoKeys {
 		keys[key] = struct{}{}
 	}
 	for _, key := range uploadKeys {
@@ -671,6 +784,40 @@ func toImage(row sqlc.Image) (post.Image, error) {
 	}, nil
 }
 
+func createVideoParams(video post.Video) sqlc.CreateVideoParams {
+	return sqlc.CreateVideoParams{
+		ID:          video.ID,
+		PostSlug:    video.PostSlug,
+		Filename:    video.Filename,
+		R2Key:       video.Key,
+		ContentType: video.ContentType,
+		Bytes:       video.Bytes,
+		DurationMs:  video.DurationMs,
+		Width:       int64(video.Width),
+		Height:      int64(video.Height),
+		CreatedAt:   formatTime(video.CreatedAt),
+	}
+}
+
+func toVideo(row sqlc.Video) (post.Video, error) {
+	createdAt, err := parseTime(row.CreatedAt)
+	if err != nil {
+		return post.Video{}, fmt.Errorf("video %s: %w", row.ID, err)
+	}
+	return post.Video{
+		ID:          row.ID,
+		PostSlug:    row.PostSlug,
+		Filename:    row.Filename,
+		Key:         row.R2Key,
+		ContentType: row.ContentType,
+		Bytes:       row.Bytes,
+		DurationMs:  row.DurationMs,
+		Width:       int32(row.Width),
+		Height:      int32(row.Height),
+		CreatedAt:   createdAt,
+	}, nil
+}
+
 func toUpload(row sqlc.Upload) (post.Upload, error) {
 	expiresAt, err := parseTime(row.ExpiresAt)
 	if err != nil {
@@ -681,12 +828,14 @@ func toUpload(row sqlc.Upload) (post.Upload, error) {
 		return post.Upload{}, fmt.Errorf("upload %s created_at: %w", row.ID, err)
 	}
 	return post.Upload{
-		ID:        row.ID,
-		PostSlug:  row.PostSlug,
-		Filename:  row.Filename,
-		Key:       row.R2Key,
-		ExpiresAt: expiresAt,
-		CreatedAt: createdAt,
+		ID:          row.ID,
+		PostSlug:    row.PostSlug,
+		Filename:    row.Filename,
+		Key:         row.R2Key,
+		Kind:        post.AttachmentKind(row.Kind),
+		ContentType: row.ContentType,
+		ExpiresAt:   expiresAt,
+		CreatedAt:   createdAt,
 	}, nil
 }
 

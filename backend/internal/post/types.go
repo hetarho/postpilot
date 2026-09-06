@@ -6,6 +6,7 @@ package post
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -22,10 +23,48 @@ const (
 // this header — a PUT with any other Content-Type is rejected as a signature mismatch.
 const uploadContentType = "image/jpeg"
 
-// maxImageDimension bounds the width and height a client may report. The browser
-// pipeline caps the long edge at 1024 px; this is generous enough to survive a change
-// there while still refusing a value that could only be a bug or an attack.
+// maxImageDimension bounds the width and height a client may report, for a photo and for
+// a video frame alike. The browser pipeline caps a photo's long edge at 1024 px and a clip
+// comes off a phone; this is generous enough to survive a change there while still refusing
+// a value that could only be a bug or an attack.
 const maxImageDimension = 20000
+
+// AttachmentKind is which kind of attachment an upload becomes. It is the post context's
+// own vocabulary — the proto enum and the `uploads.kind` column are converted at the edges.
+type AttachmentKind string
+
+const (
+	AttachmentPhoto AttachmentKind = "photo"
+	AttachmentVideo AttachmentKind = "video"
+)
+
+// Valid reports a kind this context can act on. The zero value is deliberately NOT valid:
+// a caller that means a photo says so, and the transport substitutes it for an unspecified
+// wire value so the defaulting happens in exactly one place.
+func (k AttachmentKind) Valid() bool { return k == AttachmentPhoto || k == AttachmentVideo }
+
+// VideoContentTypes maps an accepted container extension (lower case, no dot) to the
+// Content-Type the PUT is signed for and the row records. It is code rather than config
+// (VIDEO-4): adding a container changes what the browser gate, the player and the model
+// delivery all have to handle, which is a change to the product, not to a deployment.
+var VideoContentTypes = map[string]string{
+	"mp4":  "video/mp4",
+	"mov":  "video/quicktime",
+	"m4v":  "video/x-m4v",
+	"webm": "video/webm",
+}
+
+// VideoContentType resolves a filename's extension to its container type. The second
+// result is false for anything outside the four accepted containers.
+func VideoContentType(filename string) (extension, contentType string, ok bool) {
+	dot := strings.LastIndex(filename, ".")
+	if dot < 0 || dot == len(filename)-1 {
+		return "", "", false
+	}
+	extension = strings.ToLower(filename[dot+1:])
+	contentType, ok = VideoContentTypes[extension]
+	return extension, contentType, ok
+}
 
 var (
 	// ErrNotFound is a slug or id that does not exist.
@@ -38,11 +77,20 @@ var (
 	ErrDuplicateFilename = errors.New("filename already used in this post")
 	// ErrTooManyPhotos is an upload that would take the post past its photo ceiling.
 	ErrTooManyPhotos = errors.New("post already holds the maximum number of photos")
+	// ErrTooManyVideos is an upload that would take the post past its video ceiling. It is
+	// separate from ErrTooManyPhotos because the ceilings differ by an order of magnitude
+	// and the user is told which one they reached.
+	ErrTooManyVideos = errors.New("post already holds the maximum number of videos")
+	// ErrUnsupportedVideo is a filename whose extension is outside the accepted containers.
+	ErrUnsupportedVideo = errors.New("unsupported video container")
 	// ErrDuplicateSlug is a slug another post already holds. Only the store raises it,
 	// and only createPost sees it — as the signal to mint the next candidate.
 	ErrDuplicateSlug = errors.New("slug already used")
 	// ErrInvalidImage is a confirm whose dimensions or size cannot describe a photo.
 	ErrInvalidImage = errors.New("invalid image")
+	// ErrInvalidVideo is a confirm whose duration, dimensions, size or stored content type
+	// cannot describe one of this post's clips.
+	ErrInvalidVideo = errors.New("invalid video")
 	// ErrObjectMissing is a confirm for an object that never landed in storage.
 	ErrObjectMissing = errors.New("uploaded object not found in storage")
 	// ErrPostBusy prevents deleting a source while a handler could still write new
@@ -147,8 +195,9 @@ type Post struct {
 	FinalizedAt            *time.Time
 	Observations           []Observation
 
-	// Images is populated by Get, not by the store's post lookup.
+	// Images and Videos are populated by Get, not by the store's post lookup.
 	Images              []Image
+	Videos              []Video
 	ActiveJob           *ActiveJob
 	PendingExperimentID string
 }
@@ -196,6 +245,10 @@ const (
 	BlockImage   BlockType = "IMAGE"
 	BlockQuote   BlockType = "QUOTE"
 	BlockList    BlockType = "LIST"
+	// BlockVideo carries the IMAGE fields and none of its own (VIDEO-2). Its File names an
+	// attached VIDEO, never a photo — the two are one filename namespace, so a mismatch is
+	// the wrong block type rather than an unknown file.
+	BlockVideo BlockType = "VIDEO"
 )
 
 type Block struct {
@@ -226,6 +279,12 @@ type Observation struct {
 	// may re-observe only some photos, so one snapshot can hold two models' work. Empty on
 	// an entry written before this field existed, which reads as unknown.
 	Model string
+	// Events and Speech are what a still frame cannot carry, so only a video entry has them:
+	// what happens in the clip in order, and what is said or heard, summarized (VIDEO-9).
+	// They are omitted from the stored JSON when empty, so every row written before videos
+	// existed decodes unchanged.
+	Events []string
+	Speech string
 }
 
 // Summary is a row of the post list.
@@ -285,14 +344,52 @@ type Image struct {
 	ViewURL string
 }
 
+// Video is a clip attached to a post. Like an Image this is the record that names bytes
+// living in object storage — but the bytes are exactly what the user picked, because
+// nothing transcodes, downscales or thumbnails a video anywhere (VIDEO-4).
+type Video struct {
+	ID       string
+	PostSlug string
+	Filename string
+	Key      string
+	// ContentType is the container's type. It is part of the PUT signature, so it is also
+	// what the stored object must report back at confirm.
+	ContentType string
+	Bytes       int64
+	// DurationMs and the dimensions are client-reported: the server never opens a
+	// container. A forged confirm can only spend the forger's own credits (VIDEO-5).
+	DurationMs int64
+	Width      int32
+	Height     int32
+	CreatedAt  time.Time
+
+	// ViewURL is a short-lived presigned GET, minted per read and never stored.
+	ViewURL string
+}
+
+// Attachment is what one confirm produced: exactly one of Image or Video, named by Kind.
+// The kind comes from the UPLOAD row rather than from the confirming request, so a client
+// cannot turn a photo reservation into a video by asking.
+type Attachment struct {
+	Kind  AttachmentKind
+	Image Image
+	Video Video
+}
+
 // Upload is a presigned PUT that has not been confirmed yet.
 type Upload struct {
-	ID        string
-	PostSlug  string
-	Filename  string
-	Key       string
-	ExpiresAt time.Time
-	CreatedAt time.Time
+	ID       string
+	PostSlug string
+	Filename string
+	Key      string
+	// Kind decides which table the confirm writes to and which rules it applies. Rows
+	// written before videos existed read as photo, which is what they are.
+	Kind AttachmentKind
+	// ContentType is what the PUT was signed for: always image/jpeg for a photo, the
+	// container's own type for a video.
+	ContentType string
+	ExpiresAt   time.Time
+	CreatedAt   time.Time
 }
 
 // ObjectKey is the storage key for a photo (PRD §5). The image id is in the key rather
@@ -300,4 +397,11 @@ type Upload struct {
 // key is not attacker-influenced.
 func ObjectKey(postSlug, imageID string) string {
 	return "posts/" + postSlug + "/" + imageID + ".jpg"
+}
+
+// VideoObjectKey is the storage key for a video: the same prefix and the same
+// id-not-filename rule as a photo, with the container's own extension so the object is
+// what it says it is. Sharing the prefix is what lets the orphan sweep keep one listing.
+func VideoObjectKey(postSlug, videoID, extension string) string {
+	return "posts/" + postSlug + "/" + videoID + "." + extension
 }

@@ -27,6 +27,15 @@ var testNow = time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 
 const testMaxBytes int64 = 1 << 20
 
+// The video ceilings the tests run against: small enough to reach in a test, shaped like
+// the real ones (VIDEO-3).
+const (
+	testMaxVideos          = 3
+	testMaxVideoBytes      = 4 << 20
+	testMaxVideoSeconds    = 60
+	testMaxVideoDurationMs = testMaxVideoSeconds * 1000
+)
+
 // fakeVoices is the directory port: every owned voice, tombstones included.
 type fakeVoices map[string][]VoiceRef
 
@@ -48,6 +57,7 @@ func newTestService(t *testing.T) (*Service, *fakeStore, *fakeBlobs) {
 	store := newFakeStore()
 	blobs := newFakeBlobs()
 	svc := NewService(store, blobs, 10*time.Minute, 5*time.Minute, testMaxBytes, 30)
+	svc.SetVideoLimits(testMaxVideos, testMaxVideoBytes, testMaxVideoSeconds)
 	svc.now = func() time.Time { return testNow }
 	svc.SetVoiceDirectory(testVoices())
 	svc.SetLivePublishFinder(&fakeLivePublish{})
@@ -175,7 +185,7 @@ func TestOwnership(t *testing.T) {
 		if _, err := svc.SaveDraft(ctx, bob, mine.Slug, "x", "y", nil, nil, nil); !errors.Is(err, ErrForbidden) {
 			t.Errorf("SaveDraft = %v, want ErrForbidden", err)
 		}
-		if _, _, _, err := svc.CreateUpload(ctx, bob, mine.Slug, "a.jpg"); !errors.Is(err, ErrForbidden) {
+		if _, _, _, err := svc.CreateUpload(ctx, bob, mine.Slug, "a.jpg", AttachmentPhoto); !errors.Is(err, ErrForbidden) {
 			t.Errorf("CreateUpload = %v, want ErrForbidden", err)
 		}
 	})
@@ -250,7 +260,7 @@ func TestUploadHandshake(t *testing.T) {
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
 
-	upload, putURL, contentType, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	upload, putURL, contentType, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	if err != nil {
 		t.Fatalf("CreateUpload: %v", err)
 	}
@@ -275,10 +285,14 @@ func TestUploadHandshake(t *testing.T) {
 	// The browser PUTs; only then does confirm succeed.
 	blobs.put(upload.Key, 204_800, testNow)
 
-	image, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1024, 768)
+	confirmed, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1024, 768, 0)
 	if err != nil {
 		t.Fatalf("ConfirmUpload: %v", err)
 	}
+	if confirmed.Kind != AttachmentPhoto {
+		t.Errorf("kind = %q, want %q", confirmed.Kind, AttachmentPhoto)
+	}
+	image := confirmed.Image
 	if image.ID != upload.ID {
 		t.Errorf("image id = %q, want the upload id %q", image.ID, upload.ID)
 	}
@@ -306,12 +320,12 @@ func TestConfirmWithoutTheObject(t *testing.T) {
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
 
-	upload, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	upload, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	if err != nil {
 		t.Fatalf("CreateUpload: %v", err)
 	}
 
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1024, 768); !errors.Is(err, ErrObjectMissing) {
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1024, 768, 0); !errors.Is(err, ErrObjectMissing) {
 		t.Fatalf("ConfirmUpload = %v, want ErrObjectMissing", err)
 	}
 	if images, _ := store.ListImages(ctx, p.Slug); len(images) != 0 {
@@ -329,13 +343,13 @@ func TestConfirmSomeoneElsesUpload(t *testing.T) {
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
 
-	upload, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	upload, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	if err != nil {
 		t.Fatalf("CreateUpload: %v", err)
 	}
 	blobs.put(upload.Key, 100, testNow)
 
-	if _, err := svc.ConfirmUpload(ctx, bob, upload.ID, 1, 1); !errors.Is(err, ErrForbidden) {
+	if _, err := svc.ConfirmUpload(ctx, bob, upload.ID, 1, 1, 0); !errors.Is(err, ErrForbidden) {
 		t.Errorf("ConfirmUpload = %v, want ErrForbidden", err)
 	}
 }
@@ -347,7 +361,7 @@ func TestDuplicateFilename(t *testing.T) {
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
 
-	first, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	first, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	if err != nil {
 		t.Fatalf("CreateUpload: %v", err)
 	}
@@ -355,7 +369,7 @@ func TestDuplicateFilename(t *testing.T) {
 	// Still only in flight: that is the retry case, so the pending upload is REPLACED
 	// rather than refused — every photo has a retry button that restarts from here.
 	blobs.put(first.Key, 100, testNow)
-	retry, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	retry, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	if err != nil {
 		t.Fatalf("retry CreateUpload: %v", err)
 	}
@@ -368,16 +382,16 @@ func TestDuplicateFilename(t *testing.T) {
 
 	first = retry
 	blobs.put(first.Key, 100, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, first.ID, 1, 1); err != nil {
+	if _, err := svc.ConfirmUpload(ctx, alice, first.ID, 1, 1, 0); err != nil {
 		t.Fatalf("ConfirmUpload: %v", err)
 	}
-	if _, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg"); !errors.Is(err, ErrDuplicateFilename) {
+	if _, _, _, err := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto); !errors.Is(err, ErrDuplicateFilename) {
 		t.Errorf("after confirm = %v, want ErrDuplicateFilename", err)
 	}
 
 	// The same name under a DIFFERENT post is fine.
 	other := mustCreatePost(t, svc, alice, "Busan")
-	if _, _, _, err := svc.CreateUpload(ctx, alice, other.Slug, "IMG_1.jpg"); err != nil {
+	if _, _, _, err := svc.CreateUpload(ctx, alice, other.Slug, "IMG_1.jpg", AttachmentPhoto); err != nil {
 		t.Errorf("same filename on another post: %v", err)
 	}
 }
@@ -390,9 +404,9 @@ func TestGetMintsFreshViewURLs(t *testing.T) {
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
 
-	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	blobs.put(upload.Key, 100, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1, 0); err != nil {
 		t.Fatalf("ConfirmUpload: %v", err)
 	}
 
@@ -426,9 +440,9 @@ func TestDeleteImage(t *testing.T) {
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
 
-	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	blobs.put(upload.Key, 100, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1, 0); err != nil {
 		t.Fatalf("ConfirmUpload: %v", err)
 	}
 
@@ -453,9 +467,9 @@ func TestDeleteImageDropsItsObservationAndKeepsTheRest(t *testing.T) {
 
 	ids := make([]string, 0, 2)
 	for _, filename := range []string{"IMG_1.jpg", "IMG_2.jpg"} {
-		upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, filename)
+		upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, filename, AttachmentPhoto)
 		blobs.put(upload.Key, 100, testNow)
-		if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+		if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1, 0); err != nil {
 			t.Fatalf("ConfirmUpload %s: %v", filename, err)
 		}
 		ids = append(ids, upload.ID)
@@ -480,9 +494,9 @@ func TestDeleteImageDropsItsObservationAndKeepsTheRest(t *testing.T) {
 	}
 
 	// The freed filename may be taken again, and the new photo must start with nothing to reuse.
-	retaken, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	retaken, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	blobs.put(retaken.Key, 100, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, retaken.ID, 1, 1); err != nil {
+	if _, err := svc.ConfirmUpload(ctx, alice, retaken.ID, 1, 1, 0); err != nil {
 		t.Fatalf("re-taking the freed filename: %v", err)
 	}
 	reread, err := svc.Get(ctx, alice, p.Slug)
@@ -501,9 +515,9 @@ func TestDeleteImageOwnership(t *testing.T) {
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
 
-	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	blobs.put(upload.Key, 100, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1, 0); err != nil {
 		t.Fatalf("ConfirmUpload: %v", err)
 	}
 
@@ -525,9 +539,9 @@ func TestDeleteImageKeepsTheRowWhenStorageFails(t *testing.T) {
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
 
-	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	blobs.put(upload.Key, 100, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1, 0); err != nil {
 		t.Fatalf("ConfirmUpload: %v", err)
 	}
 
@@ -614,9 +628,9 @@ func TestDeletePostPurgesExperimentContentBeforeRemovingSource(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
 	found := mustCreatePost(t, svc, alice, "Jeju")
-	upload, _, _, _ := svc.CreateUpload(ctx, alice, found.Slug, "IMG_1.jpg")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, found.Slug, "IMG_1.jpg", AttachmentPhoto)
 	blobs.put(upload.Key, 100, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1, 0); err != nil {
 		t.Fatal(err)
 	}
 	purger := &recordingContentPurger{}
@@ -655,9 +669,9 @@ func TestDeletePostRefusesWhileAPublicationIsLive(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
 	found := mustCreatePost(t, svc, alice, "Jeju")
-	upload, _, _, _ := svc.CreateUpload(ctx, alice, found.Slug, "IMG_1.jpg")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, found.Slug, "IMG_1.jpg", AttachmentPhoto)
 	blobs.put(upload.Key, 100, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1); err != nil {
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1, 0); err != nil {
 		t.Fatal(err)
 	}
 	purger := &recordingContentPurger{}
@@ -762,12 +776,12 @@ func TestPublishingSnapshotIsExactFinalizedDetachedRead(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
 	post := mustCreatePost(t, svc, alice, "Jeju")
-	upload, _, _, err := svc.CreateUpload(ctx, alice, post.Slug, "photo.jpg")
+	upload, _, _, err := svc.CreateUpload(ctx, alice, post.Slug, "photo.jpg", AttachmentPhoto)
 	if err != nil {
 		t.Fatal(err)
 	}
 	blobs.put(upload.Key, 123, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1024, 768); err != nil {
+	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1024, 768, 0); err != nil {
 		t.Fatal(err)
 	}
 	content := PostContent{Title: "완성 글", Tags: []string{"여행"}, Blocks: []Block{
@@ -832,27 +846,27 @@ func TestConfirmUploadIsIdempotent(t *testing.T) {
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
 
-	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	blobs.put(upload.Key, 100, testNow)
 
-	first, err := svc.ConfirmUpload(ctx, alice, upload.ID, 10, 10)
+	first, err := svc.ConfirmUpload(ctx, alice, upload.ID, 10, 10, 0)
 	if err != nil {
 		t.Fatalf("first confirm: %v", err)
 	}
-	second, err := svc.ConfirmUpload(ctx, alice, upload.ID, 10, 10)
+	second, err := svc.ConfirmUpload(ctx, alice, upload.ID, 10, 10, 0)
 	if err != nil {
 		t.Fatalf("retry: %v", err)
 	}
-	if second.ID != first.ID || second.Filename != first.Filename {
+	if second.Kind != first.Kind || second.Image.ID != first.Image.ID || second.Image.Filename != first.Image.Filename {
 		t.Errorf("retry returned a different photo: %+v vs %+v", second, first)
 	}
 
 	// A genuinely unknown id is still not found, and another user's photo is not
 	// reachable through the retry path.
-	if _, err := svc.ConfirmUpload(ctx, alice, "never-existed", 10, 10); !errors.Is(err, ErrNotFound) {
+	if _, err := svc.ConfirmUpload(ctx, alice, "never-existed", 10, 10, 0); !errors.Is(err, ErrNotFound) {
 		t.Errorf("unknown id = %v, want ErrNotFound", err)
 	}
-	if _, err := svc.ConfirmUpload(ctx, bob, upload.ID, 10, 10); !errors.Is(err, ErrForbidden) {
+	if _, err := svc.ConfirmUpload(ctx, bob, upload.ID, 10, 10, 0); !errors.Is(err, ErrForbidden) {
 		t.Errorf("foreign retry = %v, want ErrForbidden", err)
 	}
 }
@@ -870,10 +884,10 @@ func TestConfirmUploadRejectsImplausibleObjects(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			svc, store, blobs := newTestService(t)
 			p := mustCreatePost(t, svc, alice, "Jeju")
-			upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+			upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 			blobs.put(upload.Key, size, testNow)
 
-			if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 10, 10); !errors.Is(err, ErrInvalidImage) {
+			if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 10, 10, 0); !errors.Is(err, ErrInvalidImage) {
 				t.Fatalf("err = %v, want ErrInvalidImage", err)
 			}
 			// The object is dropped rather than left for the sweep, which would keep
@@ -892,11 +906,11 @@ func TestConfirmUploadRejectsImplausibleDimensions(t *testing.T) {
 	svc, _, blobs := newTestService(t)
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
-	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg")
+	upload, _, _, _ := svc.CreateUpload(ctx, alice, p.Slug, "IMG_1.jpg", AttachmentPhoto)
 	blobs.put(upload.Key, 100, testNow)
 
 	for _, wh := range [][2]int32{{0, 10}, {10, 0}, {-1, 10}, {10, -1}, {maxImageDimension + 1, 10}} {
-		if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, wh[0], wh[1]); !errors.Is(err, ErrInvalidImage) {
+		if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, wh[0], wh[1], 0); !errors.Is(err, ErrInvalidImage) {
 			t.Errorf("%dx%d = %v, want ErrInvalidImage", wh[0], wh[1], err)
 		}
 	}

@@ -238,6 +238,7 @@ func main() {
 		cfg.MaxPhotosPerPost,
 		postJobFinder{queue: jobQueue},
 	)
+	postSvc.SetVideoLimits(cfg.MaxVideosPerPost, cfg.MaxVideoBytes, cfg.MaxVideoSeconds)
 	publishSvc := publishing.NewService(
 		publishingstore.New(handle.Writer, handle.Reader),
 		publishingPosts{service: postSvc},
@@ -922,7 +923,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		// no-op — every prompt would be built as if no post ever had a 템플릿.
 		TemplateID:   found.TemplateID,
 		TargetLength: found.TargetLength,
-		Images:       make([]generation.Image, 0, len(found.Images)),
+		Images:       make([]generation.Image, 0, len(found.Images)+len(found.Videos)),
 		// The stored contact sheet, read here so the ENQUEUE can decide what to reuse. It
 		// was write-only from this context's point of view before change 21, which is why
 		// every retry re-paid for eyesight the post already had.
@@ -944,8 +945,20 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		}
 		input.Content = &content
 	}
+	// Photos first, then videos, each already ordered by created_at: one list, because
+	// every selection, freeze and merge function iterates attachments by filename and a
+	// second slice would mean maintaining that reasoning twice.
 	for _, image := range found.Images {
-		input.Images = append(input.Images, generation.Image{Filename: image.Filename, Key: image.Key})
+		input.Images = append(input.Images, generation.Image{
+			Filename: image.Filename, Key: image.Key, Kind: generation.AttachmentPhoto,
+			ContentType: "image/jpeg",
+		})
+	}
+	for _, video := range found.Videos {
+		input.Images = append(input.Images, generation.Image{
+			Filename: video.Filename, Key: video.Key, Kind: generation.AttachmentVideo,
+			ContentType: video.ContentType, DurationMs: video.DurationMs,
+		})
 	}
 	for _, observation := range found.Observations {
 		input.Observations = append(input.Observations, generation.Observation{

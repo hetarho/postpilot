@@ -30,9 +30,11 @@ func (noBlobs) PresignPut(context.Context, string, string, time.Duration) (strin
 	return "", nil
 }
 func (noBlobs) PresignGet(context.Context, string, time.Duration) (string, error) { return "", nil }
-func (noBlobs) Head(context.Context, string) (int64, error)                       { return 0, post.ErrObjectNotFound }
-func (noBlobs) Delete(context.Context, string) error                              { return nil }
-func (noBlobs) List(context.Context, string) ([]post.Object, error)               { return nil, nil }
+func (noBlobs) Head(context.Context, string) (post.ObjectHead, error) {
+	return post.ObjectHead{}, post.ErrObjectNotFound
+}
+func (noBlobs) Delete(context.Context, string) error                { return nil }
+func (noBlobs) List(context.Context, string) ([]post.Object, error) { return nil, nil }
 
 type trackingVoiceModels struct{ calls int }
 

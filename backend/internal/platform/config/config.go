@@ -39,6 +39,13 @@ const orphanMinAge = time.Hour
 // use however it likes, and the browser's own cap cannot be trusted on the server side.
 const maxImageBytes int64 = 10 << 20 // 10 MiB
 
+// maxVideoBytes is the largest object accepted as a video.
+//
+// It is the ceiling the browser gate also enforces (VIDEO-3), repeated here for the same
+// reason maxImageBytes is: a presigned PUT is a URL an authenticated client can use however
+// it likes. Nothing is transcoded, so this is the size of the file the user picked.
+const maxVideoBytes int64 = 200 << 20 // 200 MiB
+
 // maxPhotosPerPost caps how many photos one post may hold.
 //
 // It exists for the credit hold, not for storage: observation batches photos, so the
@@ -263,6 +270,15 @@ type Config struct {
 	MaxImageBytes int64
 	// MaxPhotosPerPost caps how many photos one post may hold.
 	MaxPhotosPerPost int
+	// MaxVideoBytes is the largest object recorded as a video.
+	MaxVideoBytes int64
+	// MaxVideosPerPost and MaxVideoSeconds are the two halves of what keeps one observe
+	// call inside the credit hold's prompt assumption (QUOTA-14): video tokenizes by
+	// duration, so three clips of a minute is the worst case the hold prices. They are env
+	// rather than constants because the browser mirrors them through VITE_* and an
+	// installation that raises one has to raise both sides together.
+	MaxVideosPerPost int
+	MaxVideoSeconds  int
 
 	// ProvidersConfig is the path of providers.yaml — the provider connection (PRD §6.4).
 	// The file names the env var the API key is read from; it never holds a key itself, and
@@ -367,6 +383,7 @@ func Load() (*Config, error) {
 		OrphanMinAge:     orphanMinAge,
 		MaxImageBytes:    maxImageBytes,
 		MaxPhotosPerPost: maxPhotosPerPost,
+		MaxVideoBytes:    maxVideoBytes,
 
 		// Relative to the working directory, like DB_PATH: `backend/config/providers.yaml`
 		// for a host run and `/app/config/providers.yaml` in the dev container. The
@@ -494,6 +511,17 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.GuidelineCandidateMaxPending = candidateQueue
+
+	maxVideos, err := positiveInt("UPLOAD_MAX_VIDEOS_PER_POST", "3")
+	if err != nil {
+		return nil, err
+	}
+	cfg.MaxVideosPerPost = maxVideos
+	maxVideoSeconds, err := positiveInt("VIDEO_MAX_SECONDS", "60")
+	if err != nil {
+		return nil, err
+	}
+	cfg.MaxVideoSeconds = maxVideoSeconds
 
 	return cfg, nil
 }

@@ -10,6 +10,15 @@ import (
 // the store's job to translate whatever its SDK raises into this.
 var ErrObjectNotFound = errors.New("object not found")
 
+// ObjectHead is what a HEAD reports about a stored object. The content type is part of
+// it because a video's PUT was signed for its container type, so what the object reports
+// back is the one server-side check that the bytes are the kind of thing that was
+// reserved — a photo's type is fixed and cannot say anything.
+type ObjectHead struct {
+	Size        int64
+	ContentType string
+}
+
 // Object is one entry of a storage listing.
 type Object struct {
 	Key          string
@@ -29,8 +38,8 @@ type ObjectStore interface {
 	PresignPut(ctx context.Context, key, contentType string, ttl time.Duration) (string, error)
 	// PresignGet returns a short-lived read URL for a private object.
 	PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error)
-	// Head returns the stored size, or ErrObjectNotFound.
-	Head(ctx context.Context, key string) (int64, error)
+	// Head returns what storage knows about the object, or ErrObjectNotFound.
+	Head(ctx context.Context, key string) (ObjectHead, error)
 	// Delete removes the object. Deleting a key that is not there is not an error.
 	Delete(ctx context.Context, key string) error
 	// List returns every object under a prefix.
@@ -120,11 +129,27 @@ type Store interface {
 	// asks before deleting anything an uploads row named.
 	ImageKeyInUse(ctx context.Context, key string) (bool, error)
 
+	ListVideos(ctx context.Context, postSlug string) ([]Video, error)
+	GetVideo(ctx context.Context, id string) (Video, error)
+	DeleteVideo(ctx context.Context, id string) error
+	// VideoFilenameTaken reports a CONFIRMED video with this name. CreateUpload asks it
+	// alongside ImageFilenameTaken: one post has ONE filename namespace across both kinds.
+	VideoFilenameTaken(ctx context.Context, postSlug, filename string) (bool, error)
+	// CountVideos is the ceiling check. Unlike the photo one it counts in SQL: the row
+	// carries bytes and a duration nobody is reading here.
+	CountVideos(ctx context.Context, postSlug string) (int, error)
+	// VideoKeyInUse is ImageKeyInUse for the other table, asked for the same reason.
+	VideoKeyInUse(ctx context.Context, key string) (bool, error)
+
 	CreateUpload(ctx context.Context, u Upload) error
 	GetUpload(ctx context.Context, id string) (Upload, error)
 	GetUploadByFilename(ctx context.Context, postSlug, filename string) (Upload, error)
 	DeleteUpload(ctx context.Context, id string) error
 	ListUploadsExpiredBefore(ctx context.Context, t time.Time) ([]Upload, error)
+
+	// ConfirmVideoUpload records the video and drops the upload row ATOMICALLY, for the
+	// same reason ConfirmUpload does — see the note below.
+	ConfirmVideoUpload(ctx context.Context, video Video, uploadID string) error
 
 	// ConfirmUpload records the photo and drops the upload row ATOMICALLY.
 	//
@@ -134,8 +159,8 @@ type Store interface {
 	// in the database.
 	ConfirmUpload(ctx context.Context, img Image, uploadID string) error
 
-	// AllReferencedKeys is every object key the database still points at — images and
-	// in-flight uploads together, read as one consistent snapshot. The sweep deletes
+	// AllReferencedKeys is every object key the database still points at — images, videos
+	// and in-flight uploads together, read as one consistent snapshot. The sweep deletes
 	// what is missing from this set, so a key lost to a race here is a deleted photo.
 	AllReferencedKeys(ctx context.Context) (map[string]struct{}, error)
 }

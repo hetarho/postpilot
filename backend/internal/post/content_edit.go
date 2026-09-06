@@ -8,7 +8,10 @@ import (
 // ValidateContent is the pure canonical validator shared by manual and machine
 // persistence. Manual input is rejected as a whole; model callers may still pre-filter
 // malformed blocks before reaching this boundary.
-func ValidateContent(content PostContent, attached []Image) error {
+// Photos and videos arrive as separate lists because a block names one KIND of
+// attachment: a filename is unique across both, so an IMAGE block naming a video is the
+// wrong block type rather than an unknown file, and the message has to be able to say so.
+func ValidateContent(content PostContent, attached []Image, videos []Video) error {
 	if len(content.Blocks) == 0 {
 		return &InvalidContentError{Reason: "at least one block is required"}
 	}
@@ -26,6 +29,10 @@ func ValidateContent(content PostContent, attached []Image) error {
 	files := make(map[string]struct{}, len(attached))
 	for _, image := range attached {
 		files[image.Filename] = struct{}{}
+	}
+	clips := make(map[string]struct{}, len(videos))
+	for _, video := range videos {
+		clips[video.Filename] = struct{}{}
 	}
 	for i, block := range content.Blocks {
 		bad := func(reason string) error {
@@ -54,7 +61,23 @@ func ValidateContent(content PostContent, attached []Image) error {
 				return bad("image filename is required")
 			}
 			if _, ok := files[block.File]; !ok {
+				if _, isVideo := clips[block.File]; isVideo {
+					return bad("file is a video and belongs in a VIDEO block")
+				}
 				return bad("image is not attached to this post")
+			}
+			if block.Content != "" || block.Level != 0 || len(block.Items) != 0 {
+				return bad("contains fields for another block type")
+			}
+		case BlockVideo:
+			if strings.TrimSpace(block.File) == "" {
+				return bad("video filename is required")
+			}
+			if _, ok := clips[block.File]; !ok {
+				if _, isPhoto := files[block.File]; isPhoto {
+					return bad("file is a photo and belongs in an IMAGE block")
+				}
+				return bad("video is not attached to this post")
 			}
 			if block.Content != "" || block.Level != 0 || len(block.Items) != 0 {
 				return bad("contains fields for another block type")

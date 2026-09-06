@@ -30,6 +30,7 @@ service PostService {
   // Step 2: the server verifies the object landed, then records the photo.
   rpc ConfirmUpload(ConfirmUploadRequest) returns (ConfirmUploadResponse) {}
   rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse) {}
+  rpc DeleteVideo(DeleteVideoRequest) returns (DeleteVideoResponse) {}
 }
 
 service GenerationService {
@@ -45,6 +46,21 @@ enum BlockType {
   IMAGE = 3;
   QUOTE = 4;
   LIST = 5;
+  // A clip attached to the post, carrying the IMAGE fields and none of its own. It is a
+  // sixth member rather than a flag on IMAGE because every surface that renders one has to
+  // render a <video> instead of an <img>, and every export maps it to its own marker.
+  VIDEO = 6;
+}
+
+// Which attachment kind an upload handshake is for. UNSPECIFIED reads as PHOTO so every
+// client shipped before videos existed keeps uploading photos unchanged.
+//
+// The values carry the enum's own prefix because proto enum values are siblings of the
+// enum in the package scope: a bare `VIDEO` here would collide with BlockType.VIDEO.
+enum AttachmentKind {
+  ATTACHMENT_KIND_UNSPECIFIED = 0;
+  ATTACHMENT_KIND_PHOTO = 1;
+  ATTACHMENT_KIND_VIDEO = 2;
 }
 
 // A position a template reserved for content the app cannot invent — a place link, an
@@ -91,6 +107,11 @@ message Observation {
   // re-observing a subset of the photos is what makes a mixed-model snapshot possible.
   // Empty on an entry written before the field existed, which reads as unknown.
   string model = 7;
+  // Video-only, and empty for a photo: what happens in the clip, in order, as short
+  // factual lines, and what is said or heard, summarized. A video observation carries
+  // the photo fields too — these are what a still frame cannot show.
+  repeated string events = 8;
+  string speech = 9;
 }
 
 // The voice a post is written in, as the post screens need it. Transport-only: a deleted
@@ -134,6 +155,10 @@ message Post {
   ContentLanguage target_language = 21;
   // UNSPECIFIED until canonical machine content establishes provenance.
   ContentLanguage content_language = 22;
+  // The post's second attachment kind, ordered like images. Videos are separate from
+  // `images` rather than discriminated inside it so a client can tell the kinds apart
+  // without reading a field that older messages do not carry.
+  repeated Video videos = 23;
 }
 
 message Image {
@@ -148,6 +173,27 @@ message Image {
   // A short-lived presigned GET, minted fresh on every GetPost. The client must not
   // persist it; the bucket is private and this is the only way in.
   string view_url = 6;
+}
+
+// A video attached to a post. The bytes live in object storage exactly as the user
+// picked them — nothing here is transcoded, downscaled or thumbnailed.
+message Video {
+  string id = 1;
+  // The name the model and the exporters refer to this clip by. Unique within a post
+  // across photos AND videos: one filename namespace per post.
+  string filename = 2;
+  // Read in the browser from the container's metadata — the server never opens one.
+  int32 width = 3;
+  int32 height = 4;
+  // From the storage HEAD at confirm time, not from the client.
+  int64 bytes = 5;
+  // A short-lived presigned GET, minted fresh on every GetPost, like an image's.
+  string view_url = 6;
+  // Client-reported duration, bounded by VIDEO_MAX_SECONDS at confirm.
+  int64 duration_ms = 7;
+  // The container's type, e.g. "video/mp4". It is what the PUT was signed for and what
+  // the player needs.
+  string content_type = 8;
 }
 
 message PostSummary {
@@ -287,6 +333,8 @@ message DeletePostResponse {}
 message CreateUploadRequest {
   string post_slug = 1;
   string filename = 2;
+  // Unspecified is a photo, so a client that predates videos is unchanged.
+  AttachmentKind kind = 3;
 }
 
 message CreateUploadResponse {
@@ -303,10 +351,15 @@ message ConfirmUploadRequest {
   string upload_id = 1;
   int32 width = 2;
   int32 height = 3;
+  // Video uploads only, and required for one: the container's duration as the browser
+  // read it. A photo upload leaves it zero.
+  int64 duration_ms = 4;
 }
 
 message ConfirmUploadResponse {
+  // Exactly one is set, decided by the upload's own kind rather than by the request.
   Image image = 1;
+  Video video = 2;
 }
 
 message DeleteImageRequest {
@@ -314,3 +367,9 @@ message DeleteImageRequest {
 }
 
 message DeleteImageResponse {}
+
+message DeleteVideoRequest {
+  string video_id = 1;
+}
+
+message DeleteVideoResponse {}

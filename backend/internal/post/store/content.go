@@ -36,6 +36,10 @@ type observationJSON struct {
 	// A row written before provenance existed decodes with this empty — unknown, not an
 	// error. No migration: the column is a JSON document the post context owns.
 	Model string `json:"model,omitempty"`
+	// Video-only (VIDEO-9), and omitted when empty for the same reason Model is: every
+	// entry written before videos existed has to decode unchanged.
+	Events []string `json:"events,omitempty"`
+	Speech string   `json:"speech,omitempty"`
 }
 
 func marshalContent(content post.PostContent) (string, error) {
@@ -75,6 +79,7 @@ func marshalObservations(observations []post.Observation) (string, error) {
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
+			Events: observation.Events, Speech: observation.Speech,
 		})
 	}
 	data, err := json.Marshal(wire)
@@ -95,6 +100,7 @@ func unmarshalObservations(data string) ([]post.Observation, error) {
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
+			Events: observation.Events, Speech: observation.Speech,
 		})
 	}
 	return out, nil

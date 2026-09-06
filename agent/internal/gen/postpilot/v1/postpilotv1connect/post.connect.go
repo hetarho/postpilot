@@ -61,6 +61,8 @@ const (
 	PostServiceConfirmUploadProcedure = "/postpilot.v1.PostService/ConfirmUpload"
 	// PostServiceDeleteImageProcedure is the fully-qualified name of the PostService's DeleteImage RPC.
 	PostServiceDeleteImageProcedure = "/postpilot.v1.PostService/DeleteImage"
+	// PostServiceDeleteVideoProcedure is the fully-qualified name of the PostService's DeleteVideo RPC.
+	PostServiceDeleteVideoProcedure = "/postpilot.v1.PostService/DeleteVideo"
 	// GenerationServiceStartGenerationProcedure is the fully-qualified name of the GenerationService's
 	// StartGeneration RPC.
 	GenerationServiceStartGenerationProcedure = "/postpilot.v1.GenerationService/StartGeneration"
@@ -88,6 +90,7 @@ type PostServiceClient interface {
 	// Step 2: the server verifies the object landed, then records the photo.
 	ConfirmUpload(context.Context, *connect.Request[v1.ConfirmUploadRequest]) (*connect.Response[v1.ConfirmUploadResponse], error)
 	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
+	DeleteVideo(context.Context, *connect.Request[v1.DeleteVideoRequest]) (*connect.Response[v1.DeleteVideoResponse], error)
 }
 
 // NewPostServiceClient constructs a client for the postpilot.v1.PostService service. By default, it
@@ -161,6 +164,12 @@ func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(postServiceMethods.ByName("DeleteImage")),
 			connect.WithClientOptions(opts...),
 		),
+		deleteVideo: connect.NewClient[v1.DeleteVideoRequest, v1.DeleteVideoResponse](
+			httpClient,
+			baseURL+PostServiceDeleteVideoProcedure,
+			connect.WithSchema(postServiceMethods.ByName("DeleteVideo")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -176,6 +185,7 @@ type postServiceClient struct {
 	createUpload              *connect.Client[v1.CreateUploadRequest, v1.CreateUploadResponse]
 	confirmUpload             *connect.Client[v1.ConfirmUploadRequest, v1.ConfirmUploadResponse]
 	deleteImage               *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
+	deleteVideo               *connect.Client[v1.DeleteVideoRequest, v1.DeleteVideoResponse]
 }
 
 // SavePostDraft calls postpilot.v1.PostService.SavePostDraft.
@@ -228,6 +238,11 @@ func (c *postServiceClient) DeleteImage(ctx context.Context, req *connect.Reques
 	return c.deleteImage.CallUnary(ctx, req)
 }
 
+// DeleteVideo calls postpilot.v1.PostService.DeleteVideo.
+func (c *postServiceClient) DeleteVideo(ctx context.Context, req *connect.Request[v1.DeleteVideoRequest]) (*connect.Response[v1.DeleteVideoResponse], error) {
+	return c.deleteVideo.CallUnary(ctx, req)
+}
+
 // PostServiceHandler is an implementation of the postpilot.v1.PostService service.
 type PostServiceHandler interface {
 	// Create-or-update. An empty slug creates the post and returns the minted one.
@@ -244,6 +259,7 @@ type PostServiceHandler interface {
 	// Step 2: the server verifies the object landed, then records the photo.
 	ConfirmUpload(context.Context, *connect.Request[v1.ConfirmUploadRequest]) (*connect.Response[v1.ConfirmUploadResponse], error)
 	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
+	DeleteVideo(context.Context, *connect.Request[v1.DeleteVideoRequest]) (*connect.Response[v1.DeleteVideoResponse], error)
 }
 
 // NewPostServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -313,6 +329,12 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(postServiceMethods.ByName("DeleteImage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	postServiceDeleteVideoHandler := connect.NewUnaryHandler(
+		PostServiceDeleteVideoProcedure,
+		svc.DeleteVideo,
+		connect.WithSchema(postServiceMethods.ByName("DeleteVideo")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.PostService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PostServiceSavePostDraftProcedure:
@@ -335,6 +357,8 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 			postServiceConfirmUploadHandler.ServeHTTP(w, r)
 		case PostServiceDeleteImageProcedure:
 			postServiceDeleteImageHandler.ServeHTTP(w, r)
+		case PostServiceDeleteVideoProcedure:
+			postServiceDeleteVideoHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -382,6 +406,10 @@ func (UnimplementedPostServiceHandler) ConfirmUpload(context.Context, *connect.R
 
 func (UnimplementedPostServiceHandler) DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.DeleteImage is not implemented"))
+}
+
+func (UnimplementedPostServiceHandler) DeleteVideo(context.Context, *connect.Request[v1.DeleteVideoRequest]) (*connect.Response[v1.DeleteVideoResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.DeleteVideo is not implemented"))
 }
 
 // GenerationServiceClient is a client for the postpilot.v1.GenerationService service.

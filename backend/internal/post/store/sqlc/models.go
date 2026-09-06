@@ -43,10 +43,25 @@ type Post struct {
 }
 
 type Upload struct {
-	ID        string
-	PostSlug  string
-	Filename  string
-	R2Key     string
-	ExpiresAt string
-	CreatedAt string
+	ID          string
+	PostSlug    string
+	Filename    string
+	R2Key       string
+	ExpiresAt   string
+	CreatedAt   string
+	Kind        string
+	ContentType string
+}
+
+type Video struct {
+	ID          string
+	PostSlug    string
+	Filename    string
+	R2Key       string
+	ContentType string
+	Bytes       int64
+	DurationMs  int64
+	Width       int64
+	Height      int64
+	CreatedAt   string
 }

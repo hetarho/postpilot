@@ -178,3 +178,51 @@ func TestSweepNeverDeletesAConfirmedPhotosObject(t *testing.T) {
 		t.Error("the stale upload row survived")
 	}
 }
+
+// A video's object is referenced storage, and a video upload whose confirm never arrived
+// is an ordinary orphan. Both halves matter: the sweep sees one bucket prefix and has to
+// tell a live clip from an abandoned PUT.
+func TestSweepKeepsVideoKeysAndSweepsAbandonedVideoUploads(t *testing.T) {
+	ctx := context.Background()
+	store := newFakeStore()
+	blobs := newFakeBlobs()
+
+	live := Video{ID: "kept", PostSlug: "p", Filename: "a.mp4", Key: "posts/p/kept.mp4",
+		ContentType: "video/mp4", Bytes: 100, DurationMs: 1000, Width: 2, Height: 2, CreatedAt: testNow}
+	if err := store.ConfirmVideoUpload(ctx, live, "none"); err != nil {
+		t.Fatalf("seed video: %v", err)
+	}
+	blobs.putTyped(live.Key, 100, "video/mp4", testNow.Add(-24*time.Hour))
+
+	// An upload row whose key the confirm already moved into videos. Deleting the object
+	// here would destroy a live clip while its row went on looking healthy.
+	if err := store.CreateUpload(ctx, Upload{ID: "stale", PostSlug: "p", Filename: "a.mp4",
+		Key: live.Key, Kind: AttachmentVideo, ContentType: "video/mp4",
+		ExpiresAt: testNow.Add(-3 * time.Hour), CreatedAt: testNow.Add(-4 * time.Hour)}); err != nil {
+		t.Fatalf("CreateUpload: %v", err)
+	}
+
+	// A video upload nobody ever confirmed, past its window and its grace period.
+	abandoned := Upload{ID: "dead", PostSlug: "p", Filename: "b.mp4", Key: "posts/p/dead.mp4",
+		Kind: AttachmentVideo, ContentType: "video/mp4",
+		ExpiresAt: testNow.Add(-3 * time.Hour), CreatedAt: testNow.Add(-4 * time.Hour)}
+	if err := store.CreateUpload(ctx, abandoned); err != nil {
+		t.Fatalf("CreateUpload: %v", err)
+	}
+	blobs.putTyped(abandoned.Key, 100, "video/mp4", abandoned.CreatedAt)
+
+	newTestSweeper(store, blobs).SweepOnce(ctx)
+
+	if !blobs.has(live.Key) {
+		t.Error("the sweep deleted a live video's object")
+	}
+	if _, err := store.GetUpload(ctx, "stale"); err == nil {
+		t.Error("the stale upload row survived, so the next sweep asks the same question again")
+	}
+	if blobs.has(abandoned.Key) {
+		t.Error("the abandoned video upload's object survived")
+	}
+	if _, err := store.GetUpload(ctx, "dead"); err == nil {
+		t.Error("the abandoned video upload's row survived")
+	}
+}

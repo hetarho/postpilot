@@ -70,17 +70,27 @@ func (s *Sweeper) sweepExpiredUploads(ctx context.Context) int {
 
 	swept := 0
 	for _, upload := range uploads {
-		// A confirmed photo can point at this very key: confirm moves the key from
-		// uploads to images, and a row that outlived its move would otherwise name a
-		// live object. Deleting it would destroy the bytes while the photo row went on
-		// looking healthy, which is silent and permanent.
+		// A confirmed attachment can point at this very key: confirm moves the key from
+		// uploads to images or videos, and a row that outlived its move would otherwise
+		// name a live object. Deleting it would destroy the bytes while the attachment
+		// went on looking healthy, which is silent and permanent.
+		//
+		// Both tables are asked regardless of the row's own kind: what matters is whether
+		// ANY attachment owns the key now, not what the upload said it would become.
 		inUse, err := s.store.ImageKeyInUse(ctx, upload.Key)
 		if err != nil {
 			slog.Error("orphan sweep: check image key failed", "key", upload.Key, "err", err)
 			continue
 		}
+		if !inUse {
+			inUse, err = s.store.VideoKeyInUse(ctx, upload.Key)
+			if err != nil {
+				slog.Error("orphan sweep: check video key failed", "key", upload.Key, "err", err)
+				continue
+			}
+		}
 		if inUse {
-			// Drop the stale row only; the object belongs to the photo now.
+			// Drop the stale row only; the object belongs to the attachment now.
 			if err := s.store.DeleteUpload(ctx, upload.ID); err != nil {
 				slog.Error("orphan sweep: delete stale upload row failed", "upload_id", upload.ID, "err", err)
 			}

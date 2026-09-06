@@ -21,6 +21,9 @@ type Service struct {
 	getTTL         time.Duration
 	maxBytes       int64
 	maxPhotos      int
+	maxVideoBytes  int64
+	maxVideos      int
+	maxVideoMillis int64
 	jobs           ActiveJobFinder
 	experiments    PendingExperimentFinder
 	contentPurger  ExperimentContentPurger
@@ -67,6 +70,18 @@ func (s *Service) SetVoiceDirectory(directory VoiceDirectory) {
 // simply refused and read models project the stored id with no name.
 func (s *Service) SetTemplateDirectory(directory TemplateDirectory) {
 	s.templates = directory
+}
+
+// SetVideoLimits wires the video ceilings (VIDEO-3). They are a separate setter rather
+// than four more positional arguments on NewService: every existing caller means photos,
+// and a constructor nobody can read is how a limit ends up in the wrong slot.
+//
+// Zero for either ceiling refuses every video upload, which is the safe direction for a
+// server whose config did not supply them.
+func (s *Service) SetVideoLimits(maxVideos int, maxVideoBytes int64, maxSeconds int) {
+	s.maxVideos = maxVideos
+	s.maxVideoBytes = maxVideoBytes
+	s.maxVideoMillis = int64(maxSeconds) * 1000
 }
 
 // NewService wires the context with its store, its object storage, the presigned URL
@@ -375,7 +390,20 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 		images[i].ViewURL = url
 	}
 
+	videos, err := s.store.ListVideos(ctx, slug)
+	if err != nil {
+		return Post{}, fmt.Errorf("list videos: %w", err)
+	}
+	for i := range videos {
+		url, err := s.blobs.PresignGet(ctx, videos[i].Key, s.getTTL)
+		if err != nil {
+			return Post{}, fmt.Errorf("presign view url for %s: %w", videos[i].Filename, err)
+		}
+		videos[i].ViewURL = url
+	}
+
 	found.Images = images
+	found.Videos = videos
 	if s.jobs != nil {
 		found.ActiveJob, err = s.jobs.ActiveForPost(ctx, slug)
 		if err != nil {
@@ -449,6 +477,10 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 	if err != nil {
 		return fmt.Errorf("list images for post delete: %w", err)
 	}
+	videos, err := s.store.ListVideos(ctx, found.Slug)
+	if err != nil {
+		return fmt.Errorf("list videos for post delete: %w", err)
+	}
 	if s.jobs != nil {
 		active, err := s.jobs.ActiveForPost(ctx, slug)
 		if err != nil {
@@ -490,6 +522,13 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 			return fmt.Errorf("delete post image %s: %w", image.ID, err)
 		}
 	}
+	// The rows go with the post through the FK cascade; only the objects need naming,
+	// because storage has no foreign keys.
+	for _, video := range videos {
+		if err := s.blobs.Delete(ctx, video.Key); err != nil {
+			return fmt.Errorf("delete post video %s: %w", video.ID, err)
+		}
+	}
 	deleted, err := s.store.DeletePost(ctx, slug, userID)
 	if err != nil {
 		return fmt.Errorf("delete post: %w", err)
@@ -515,6 +554,9 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 // browser URLs. Object keys remain backend-only and are consumed by the generation
 // context's storage port. The voice is projected too, since a consumer must refuse to
 // write in a deleted voice before it calls a provider.
+//
+// Videos ride along: they are observation material and writable blocks like photos, and a
+// consumer that saw only half the attachments would write a post about half of them.
 func (s *Service) AttachedImages(ctx context.Context, userID, slug string) (Post, error) {
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
@@ -523,6 +565,10 @@ func (s *Service) AttachedImages(ctx context.Context, userID, slug string) (Post
 	found.Images, err = s.store.ListImages(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list attached images: %w", err)
+	}
+	found.Videos, err = s.store.ListVideos(ctx, slug)
+	if err != nil {
+		return Post{}, fmt.Errorf("list attached videos: %w", err)
 	}
 	refs, err := s.voiceRefs(ctx, userID)
 	if err != nil {
@@ -567,7 +613,11 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 	if err != nil {
 		return fmt.Errorf("list images for generated content: %w", err)
 	}
-	if err := ValidateContent(content, images); err != nil {
+	videos, err := s.store.ListVideos(ctx, slug)
+	if err != nil {
+		return fmt.Errorf("list videos for generated content: %w", err)
+	}
+	if err := ValidateContent(content, images, videos); err != nil {
 		return err
 	}
 	updated, err := s.store.UpdateGeneratedContent(ctx, slug, userID, content, language, s.now())
@@ -607,7 +657,11 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 	if err != nil {
 		return Post{}, fmt.Errorf("list images for content save: %w", err)
 	}
-	if err := ValidateContent(content, images); err != nil {
+	videos, err := s.store.ListVideos(ctx, slug)
+	if err != nil {
+		return Post{}, fmt.Errorf("list videos for content save: %w", err)
+	}
+	if err := ValidateContent(content, images, videos); err != nil {
 		return Post{}, err
 	}
 	contentStore, ok := s.store.(ContentStore)
@@ -729,13 +783,20 @@ func (s *Service) PublishingSnapshot(ctx context.Context, userID, slug string) (
 	if err != nil {
 		return PublishingSnapshot{}, fmt.Errorf("list publishing images: %w", err)
 	}
+	// Read for the revalidation below and deliberately NOT carried into the snapshot:
+	// publishing does not stage videos, and a validator that could not see them would
+	// reject a legitimately attached clip as an unknown file.
+	videos, err := s.store.ListVideos(ctx, found.Slug)
+	if err != nil {
+		return PublishingSnapshot{}, fmt.Errorf("list publishing videos: %w", err)
+	}
 	if strings.TrimSpace(found.Content.Title) == "" {
 		return PublishingSnapshot{}, ErrInvalidContent
 	}
 	// Revalidate at the publishing hand-off as well as at current write paths.
 	// Posts finalized before a validator was tightened must not bypass the frozen
 	// manifest boundary merely because no new save occurs after deployment.
-	if err := ValidateContent(*found.Content, images); err != nil {
+	if err := ValidateContent(*found.Content, images, videos); err != nil {
 		return PublishingSnapshot{}, err
 	}
 	if found.ContentLanguage == nil || !found.ContentLanguage.Valid() || !found.TargetLanguage.Valid() {
@@ -784,59 +845,68 @@ func equalOptionalInt(left, right *int) bool {
 
 // CreateUpload reserves a filename and hands back a presigned PUT.
 //
-// The image id is minted now, not at confirm time, because the object key contains it:
-// the browser has to PUT to the final key, and the server has to be able to find that
+// The attachment id is minted now, not at confirm time, because the object key contains
+// it: the browser has to PUT to the final key, and the server has to be able to find that
 // object again from an upload_id alone after a restart.
-func (s *Service) CreateUpload(ctx context.Context, userID, postSlug, filename string) (Upload, string, string, error) {
+//
+// The two kinds share everything except what they reserve — the ceiling they count
+// against, the key's extension and the Content-Type the signature covers.
+func (s *Service) CreateUpload(ctx context.Context, userID, postSlug, filename string, kind AttachmentKind) (Upload, string, string, error) {
 	filename = strings.TrimSpace(filename)
 	if filename == "" {
 		return Upload{}, "", "", fmt.Errorf("filename is required")
+	}
+	if !kind.Valid() {
+		return Upload{}, "", "", fmt.Errorf("unknown attachment kind %q", kind)
 	}
 	if _, err := s.ownedPost(ctx, userID, postSlug); err != nil {
 		return Upload{}, "", "", err
 	}
 
-	// The ceiling is checked against confirmed photos only, and outside the insert. It
-	// bounds what a generate job's credit hold has to price, which a concurrent pair of
-	// uploads landing on the same last slot does not meaningfully change; paying for that
-	// with a lock on every upload would not be worth it.
-	if s.maxPhotos > 0 {
-		existing, err := s.store.ListImages(ctx, postSlug)
-		if err != nil {
-			return Upload{}, "", "", fmt.Errorf("count photos: %w", err)
-		}
-		if len(existing) >= s.maxPhotos {
-			return Upload{}, "", "", ErrTooManyPhotos
-		}
+	uploadID := s.newID()
+	key, contentType, err := s.reserve(ctx, postSlug, filename, uploadID, kind)
+	if err != nil {
+		return Upload{}, "", "", err
 	}
 
-	// A CONFIRMED photo with this name is a real conflict — the filename is how the
-	// model and the exporters address a photo, so two cannot share one.
+	// A CONFIRMED attachment of EITHER kind with this name is a real conflict — the
+	// filename is how the model and the exporters address one, so a post has a single
+	// namespace and two attachments cannot share a name.
 	taken, err := s.store.ImageFilenameTaken(ctx, postSlug, filename)
 	if err != nil {
 		return Upload{}, "", "", fmt.Errorf("check filename: %w", err)
+	}
+	if !taken {
+		taken, err = s.store.VideoFilenameTaken(ctx, postSlug, filename)
+		if err != nil {
+			return Upload{}, "", "", fmt.Errorf("check video filename: %w", err)
+		}
 	}
 	if taken {
 		return Upload{}, "", "", ErrDuplicateFilename
 	}
 	// A PENDING upload with this name is not a conflict, it is a retry: the plan gives
-	// every photo a retry button that restarts from here with a fresh id. Refusing
-	// would strand the user until the sweep ran, up to an hour later.
+	// every attachment a retry button that restarts from here with a fresh id. Refusing
+	// would strand the user until the sweep ran, up to an hour later. It replaces a
+	// pending upload of the OTHER kind too — the name is what is being retried, and the
+	// abandoned object is named by the row about to go.
 	if err := s.replacePendingUpload(ctx, postSlug, filename); err != nil {
 		return Upload{}, "", "", err
 	}
 
 	now := s.now()
 	upload := Upload{
-		ID:        s.newID(),
-		PostSlug:  postSlug,
-		Filename:  filename,
-		ExpiresAt: now.Add(s.putTTL),
-		CreatedAt: now,
+		ID:          uploadID,
+		PostSlug:    postSlug,
+		Filename:    filename,
+		Key:         key,
+		Kind:        kind,
+		ContentType: contentType,
+		ExpiresAt:   now.Add(s.putTTL),
+		CreatedAt:   now,
 	}
-	upload.Key = ObjectKey(postSlug, upload.ID)
 
-	url, err := s.blobs.PresignPut(ctx, upload.Key, uploadContentType, s.putTTL)
+	url, err := s.blobs.PresignPut(ctx, upload.Key, upload.ContentType, s.putTTL)
 	if err != nil {
 		return Upload{}, "", "", fmt.Errorf("presign upload url: %w", err)
 	}
@@ -851,7 +921,42 @@ func (s *Service) CreateUpload(ctx context.Context, userID, postSlug, filename s
 		return Upload{}, "", "", fmt.Errorf("create upload: %w", err)
 	}
 
-	return upload, url, uploadContentType, nil
+	return upload, url, upload.ContentType, nil
+}
+
+// reserve is the per-kind half of CreateUpload: the ceiling this kind counts against, the
+// object key it will occupy, and the Content-Type its signature will cover.
+//
+// The ceilings are checked against CONFIRMED attachments only, and outside the insert.
+// They bound what a generate job's credit hold has to price, which a concurrent pair of
+// uploads landing on the same last slot does not meaningfully change; paying for that with
+// a lock on every upload would not be worth it.
+func (s *Service) reserve(ctx context.Context, postSlug, filename, uploadID string, kind AttachmentKind) (key, contentType string, err error) {
+	if kind == AttachmentVideo {
+		extension, containerType, ok := VideoContentType(filename)
+		if !ok {
+			return "", "", fmt.Errorf("%w: %s", ErrUnsupportedVideo, filename)
+		}
+		count, err := s.store.CountVideos(ctx, postSlug)
+		if err != nil {
+			return "", "", fmt.Errorf("count videos: %w", err)
+		}
+		if count >= s.maxVideos {
+			return "", "", ErrTooManyVideos
+		}
+		return VideoObjectKey(postSlug, uploadID, extension), containerType, nil
+	}
+
+	if s.maxPhotos > 0 {
+		existing, err := s.store.ListImages(ctx, postSlug)
+		if err != nil {
+			return "", "", fmt.Errorf("count photos: %w", err)
+		}
+		if len(existing) >= s.maxPhotos {
+			return "", "", ErrTooManyPhotos
+		}
+	}
+	return ObjectKey(postSlug, uploadID), uploadContentType, nil
 }
 
 // replacePendingUpload clears an unconfirmed upload holding this filename so a retry
@@ -878,17 +983,18 @@ func (s *Service) replacePendingUpload(ctx context.Context, postSlug, filename s
 	return nil
 }
 
-// ConfirmUpload turns a landed object into a photo.
+// ConfirmUpload turns a landed object into an attachment of the kind its upload reserved.
 //
-// The size comes from storage, never from the client: the browser reports width and
-// height because only it decoded the image ([I6]), but bytes is something the server
-// can check, so it does — and it refuses an object too large to be one of our photos.
+// The size comes from storage, never from the client: the browser reports the dimensions
+// (and a video's duration) because only it opened the file ([I6], VIDEO-4), but bytes is
+// something the server can check, so it does — and it refuses an object too large to be
+// one of ours.
 //
 // It is idempotent. A client that never saw the response retries, and a retry has to
-// return the photo rather than a primary-key failure.
-func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, width, height int32) (Image, error) {
+// return the attachment rather than a primary-key failure.
+func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, width, height int32, durationMs int64) (Attachment, error) {
 	if width <= 0 || height <= 0 || width > maxImageDimension || height > maxImageDimension {
-		return Image{}, fmt.Errorf("%w: dimensions %dx%d", ErrInvalidImage, width, height)
+		return Attachment{}, fmt.Errorf("%w: dimensions %dx%d", ErrInvalidImage, width, height)
 	}
 
 	upload, err := s.store.GetUpload(ctx, uploadID)
@@ -898,34 +1004,34 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 			// and the client is retrying.
 			return s.alreadyConfirmed(ctx, userID, uploadID)
 		}
-		return Image{}, fmt.Errorf("load upload: %w", err)
+		return Attachment{}, fmt.Errorf("load upload: %w", err)
 	}
 	if _, err := s.ownedPost(ctx, userID, upload.PostSlug); err != nil {
-		return Image{}, err
+		return Attachment{}, err
+	}
+	// The KIND comes from the reservation, never from this request: a client cannot turn a
+	// photo's slot into a video's by asking, and the object it PUT was signed for one of them.
+	if upload.Kind == AttachmentVideo {
+		return s.confirmVideo(ctx, upload, width, height, durationMs)
 	}
 
-	size, err := s.blobs.Head(ctx, upload.Key)
+	head, err := s.blobs.Head(ctx, upload.Key)
 	if err != nil {
 		if errors.Is(err, ErrObjectNotFound) {
 			// The PUT never landed, or landed elsewhere. Leaving the uploads row in
 			// place lets the client retry with the same id, and the sweep collects it
 			// if the client gives up.
-			return Image{}, ErrObjectMissing
+			return Attachment{}, ErrObjectMissing
 		}
-		return Image{}, fmt.Errorf("head uploaded object: %w", err)
+		return Attachment{}, fmt.Errorf("head uploaded object: %w", err)
 	}
 	// The browser caps size before uploading, but a presigned PUT is a URL an
 	// authenticated client can use however it likes — so the cap is enforced where it
 	// can actually be trusted. The object is dropped rather than left for the sweep,
 	// which would keep paying for it for an hour.
-	if size <= 0 || size > s.maxBytes {
-		if err := s.blobs.Delete(ctx, upload.Key); err != nil {
-			slog.Warn("could not delete a rejected upload's object", "key", upload.Key, "err", err)
-		}
-		if err := s.store.DeleteUpload(ctx, upload.ID); err != nil {
-			slog.Warn("could not delete a rejected upload row", "upload_id", upload.ID, "err", err)
-		}
-		return Image{}, fmt.Errorf("%w: %d bytes", ErrInvalidImage, size)
+	if head.Size <= 0 || head.Size > s.maxBytes {
+		s.dropRejectedUpload(ctx, upload)
+		return Attachment{}, fmt.Errorf("%w: %d bytes", ErrInvalidImage, head.Size)
 	}
 
 	image := Image{
@@ -935,35 +1041,106 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 		Key:       upload.Key,
 		Width:     width,
 		Height:    height,
-		Bytes:     size,
+		Bytes:     head.Size,
 		CreatedAt: s.now(),
 	}
 	// One transaction: see the note on Store.ConfirmUpload for why the two writes must
 	// not be separable.
 	if err := s.store.ConfirmUpload(ctx, image, upload.ID); err != nil {
 		if errors.Is(err, ErrDuplicateFilename) {
-			return Image{}, ErrDuplicateFilename
+			return Attachment{}, ErrDuplicateFilename
 		}
-		return Image{}, fmt.Errorf("confirm upload: %w", err)
+		return Attachment{}, fmt.Errorf("confirm upload: %w", err)
 	}
 
-	return image, nil
+	return Attachment{Kind: AttachmentPhoto, Image: image}, nil
+}
+
+// confirmVideo is the video half of the confirm. Its extra checks are the duration the
+// browser read and the Content-Type the object reports: the PUT was signed for the
+// container's type, so an object claiming another one is not what was reserved.
+func (s *Service) confirmVideo(ctx context.Context, upload Upload, width, height int32, durationMs int64) (Attachment, error) {
+	if durationMs <= 0 || durationMs > s.maxVideoMillis {
+		return Attachment{}, fmt.Errorf("%w: duration %d ms", ErrInvalidVideo, durationMs)
+	}
+
+	head, err := s.blobs.Head(ctx, upload.Key)
+	if err != nil {
+		if errors.Is(err, ErrObjectNotFound) {
+			return Attachment{}, ErrObjectMissing
+		}
+		return Attachment{}, fmt.Errorf("head uploaded object: %w", err)
+	}
+	if head.Size <= 0 || head.Size > s.maxVideoBytes {
+		s.dropRejectedUpload(ctx, upload)
+		return Attachment{}, fmt.Errorf("%w: %d bytes", ErrInvalidVideo, head.Size)
+	}
+	if head.ContentType != upload.ContentType {
+		s.dropRejectedUpload(ctx, upload)
+		return Attachment{}, fmt.Errorf("%w: stored as %q, reserved as %q", ErrInvalidVideo, head.ContentType, upload.ContentType)
+	}
+
+	video := Video{
+		ID:          upload.ID,
+		PostSlug:    upload.PostSlug,
+		Filename:    upload.Filename,
+		Key:         upload.Key,
+		ContentType: upload.ContentType,
+		Bytes:       head.Size,
+		DurationMs:  durationMs,
+		Width:       width,
+		Height:      height,
+		CreatedAt:   s.now(),
+	}
+	if err := s.store.ConfirmVideoUpload(ctx, video, upload.ID); err != nil {
+		if errors.Is(err, ErrDuplicateFilename) {
+			return Attachment{}, ErrDuplicateFilename
+		}
+		return Attachment{}, fmt.Errorf("confirm video upload: %w", err)
+	}
+	return Attachment{Kind: AttachmentVideo, Video: video}, nil
+}
+
+// dropRejectedUpload throws away an object the server just refused, and the row naming it.
+// Neither failure is worth failing the refusal over: what is left behind is unreferenced,
+// which is exactly what the sweep collects.
+func (s *Service) dropRejectedUpload(ctx context.Context, upload Upload) {
+	if err := s.blobs.Delete(ctx, upload.Key); err != nil {
+		slog.Warn("could not delete a rejected upload's object", "key", upload.Key, "err", err)
+	}
+	if err := s.store.DeleteUpload(ctx, upload.ID); err != nil {
+		slog.Warn("could not delete a rejected upload row", "upload_id", upload.ID, "err", err)
+	}
 }
 
 // alreadyConfirmed answers a retry whose upload row is gone because the first attempt
 // succeeded. Anything else is a genuinely unknown id.
-func (s *Service) alreadyConfirmed(ctx context.Context, userID, uploadID string) (Image, error) {
+//
+// Both tables are asked because the id alone no longer says which kind it became — the
+// row that knew is exactly the one the first attempt deleted.
+func (s *Service) alreadyConfirmed(ctx context.Context, userID, uploadID string) (Attachment, error) {
 	image, err := s.store.GetImage(ctx, uploadID)
+	if err == nil {
+		if _, err := s.ownedPost(ctx, userID, image.PostSlug); err != nil {
+			return Attachment{}, err
+		}
+		return Attachment{Kind: AttachmentPhoto, Image: image}, nil
+	}
+	if !errors.Is(err, ErrNotFound) {
+		return Attachment{}, fmt.Errorf("load image: %w", err)
+	}
+
+	video, err := s.store.GetVideo(ctx, uploadID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return Image{}, ErrNotFound
+			return Attachment{}, ErrNotFound
 		}
-		return Image{}, fmt.Errorf("load image: %w", err)
+		return Attachment{}, fmt.Errorf("load video: %w", err)
 	}
-	if _, err := s.ownedPost(ctx, userID, image.PostSlug); err != nil {
-		return Image{}, err
+	if _, err := s.ownedPost(ctx, userID, video.PostSlug); err != nil {
+		return Attachment{}, err
 	}
-	return image, nil
+	return Attachment{Kind: AttachmentVideo, Video: video}, nil
 }
 
 // DeleteImage removes the photo and its object.
@@ -1000,8 +1177,35 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 	return nil
 }
 
-// dropObservation removes one photo's entry from the post's snapshot, leaving the rest as it
-// was. A post with no snapshot has nothing to drop, which is the ordinary case.
+// DeleteVideo removes the video and its object, in the same order and for the same reason
+// DeleteImage does, and drops the observation entry the filename owned (VIDEO-12).
+func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error {
+	video, err := s.store.GetVideo(ctx, videoID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return ErrNotFound
+		}
+		return fmt.Errorf("load video: %w", err)
+	}
+	found, err := s.ownedPost(ctx, userID, video.PostSlug)
+	if err != nil {
+		return err
+	}
+
+	if err := s.blobs.Delete(ctx, video.Key); err != nil {
+		return fmt.Errorf("delete object: %w", err)
+	}
+	if err := s.store.DeleteVideo(ctx, videoID); err != nil {
+		return fmt.Errorf("delete video row: %w", err)
+	}
+	if err := s.dropObservation(ctx, found, video.Filename); err != nil {
+		return err
+	}
+	return nil
+}
+
+// dropObservation removes one attachment's entry from the post's snapshot, leaving the rest
+// as it was. A post with no snapshot has nothing to drop, which is the ordinary case.
 func (s *Service) dropObservation(ctx context.Context, found Post, filename string) error {
 	kept := make([]Observation, 0, len(found.Observations))
 	for _, observation := range found.Observations {

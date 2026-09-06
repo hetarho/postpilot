@@ -60,6 +60,10 @@ type CatalogEntry struct {
 	// image/video generation purposes gate on, as `vision` gates photo-analysis.
 	ImageOutput bool `protobuf:"varint,17,opt,name=image_output,json=imageOutput,proto3" json:"image_output,omitempty"`
 	VideoOutput bool `protobuf:"varint,18,opt,name=video_output,json=videoOutput,proto3" json:"video_output,omitempty"`
+	// The model takes VIDEO as input ("video" in architecture.input_modalities). It is a
+	// per-run check rather than a sixth purpose: a post with a video requires it of the
+	// observe model, and every other run is unaffected (VIDEO-11).
+	VideoInput bool `protobuf:"varint,28,opt,name=video_input,json=videoInput,proto3" json:"video_input,omitempty"`
 	// What this model recently SPENT its completion budget on at the listed purpose's stage.
 	// Absent when nothing has been recorded for it, which renders as nothing rather than as a
 	// zero that would read as a measurement.
@@ -247,6 +251,13 @@ func (x *CatalogEntry) GetImageOutput() bool {
 func (x *CatalogEntry) GetVideoOutput() bool {
 	if x != nil {
 		return x.VideoOutput
+	}
+	return false
+}
+
+func (x *CatalogEntry) GetVideoInput() bool {
+	if x != nil {
+		return x.VideoInput
 	}
 	return false
 }
@@ -739,7 +750,7 @@ var File_postpilot_v1_model_catalog_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\n" +
-	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"\xa3\b\n" +
+	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"\xc4\b\n" +
 	"\fCatalogEntry\x12\x19\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12#\n" +
 	"\rprovider_slug\x18\x02 \x01(\tR\fproviderSlug\x12\x14\n" +
@@ -757,7 +768,9 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\x11source_created_at\x18\x0f \x01(\x03R\x0fsourceCreatedAt\x12\x1a\n" +
 	"\bpurposes\x18\x10 \x03(\tR\bpurposes\x12!\n" +
 	"\fimage_output\x18\x11 \x01(\bR\vimageOutput\x12!\n" +
-	"\fvideo_output\x18\x12 \x01(\bR\vvideoOutput\x12J\n" +
+	"\fvideo_output\x18\x12 \x01(\bR\vvideoOutput\x12\x1f\n" +
+	"\vvideo_input\x18\x1c \x01(\bR\n" +
+	"videoInput\x12J\n" +
 	"\x0freasoning_spend\x18\x13 \x01(\v2\x1c.postpilot.v1.ReasoningSpendH\x00R\x0ereasoningSpend\x88\x01\x01\x12\x18\n" +
 	"\areasons\x18\x14 \x01(\bR\areasons\x12+\n" +
 	"\x11reasoning_efforts\x18\x15 \x03(\tR\x10reasoningEfforts\x128\n" +

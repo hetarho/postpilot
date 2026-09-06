@@ -58,9 +58,26 @@ type Observation struct {
 	Model string
 }
 
+// AttachmentKind is which kind of attachment an Image entry describes. The generation
+// context speaks of one attachment list — the selection, freezing and merge functions all
+// iterate it by filename — and this is what tells a clip from a photo inside it.
+type AttachmentKind string
+
+const (
+	AttachmentPhoto AttachmentKind = "photo"
+	AttachmentVideo AttachmentKind = "video"
+)
+
+// Image is one attached thing the post can be written from: a photo, or a video with the
+// three fields a photo has no use for. An empty Kind reads as a photo, which is what every
+// entry built before videos existed is.
 type Image struct {
 	Filename string
 	Key      string
+	Kind     AttachmentKind
+	// ContentType is the object's stored type; DurationMs is zero for a photo.
+	ContentType string
+	DurationMs  int64
 }
 
 // VoiceRef is the post's voice as the post context projects it. Deleted is what makes a

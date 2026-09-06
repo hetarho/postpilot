@@ -224,19 +224,25 @@ func readAtMost(reader io.Reader, limit int64) ([]byte, error) {
 	return data, nil
 }
 
-// Head returns the stored size, or post.ErrObjectNotFound.
-func (b *Bucket) Head(ctx context.Context, key string) (int64, error) {
+// Head returns what storage knows about the object, or post.ErrObjectNotFound.
+//
+// The content type is the one the PUT sent — both R2 and MinIO echo it back — which is
+// how a confirm can tell that the object is the kind of thing that was reserved.
+func (b *Bucket) Head(ctx context.Context, key string) (post.ObjectHead, error) {
 	out, err := b.ops.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	})
 	if err != nil {
 		if isNotFound(err) {
-			return 0, post.ErrObjectNotFound
+			return post.ObjectHead{}, post.ErrObjectNotFound
 		}
-		return 0, fmt.Errorf("head %s: %w", key, err)
+		return post.ObjectHead{}, fmt.Errorf("head %s: %w", key, err)
 	}
-	return aws.ToInt64(out.ContentLength), nil
+	return post.ObjectHead{
+		Size:        aws.ToInt64(out.ContentLength),
+		ContentType: aws.ToString(out.ContentType),
+	}, nil
 }
 
 // Delete removes the object. S3-compatible deletes are idempotent — a key that is not

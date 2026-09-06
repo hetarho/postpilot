@@ -11,17 +11,19 @@ import (
 
 const createUpload = `-- name: CreateUpload :exec
 
-INSERT INTO uploads (id, post_slug, filename, r2_key, expires_at, created_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO uploads (id, post_slug, filename, r2_key, kind, content_type, expires_at, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateUploadParams struct {
-	ID        string
-	PostSlug  string
-	Filename  string
-	R2Key     string
-	ExpiresAt string
-	CreatedAt string
+	ID          string
+	PostSlug    string
+	Filename    string
+	R2Key       string
+	Kind        string
+	ContentType string
+	ExpiresAt   string
+	CreatedAt   string
 }
 
 // Uploads presigned but not yet confirmed. A row dies on confirm or by the sweep.
@@ -31,6 +33,8 @@ func (q *Queries) CreateUpload(ctx context.Context, arg CreateUploadParams) erro
 		arg.PostSlug,
 		arg.Filename,
 		arg.R2Key,
+		arg.Kind,
+		arg.ContentType,
 		arg.ExpiresAt,
 		arg.CreatedAt,
 	)
@@ -47,7 +51,7 @@ func (q *Queries) DeleteUpload(ctx context.Context, id string) error {
 }
 
 const getUpload = `-- name: GetUpload :one
-SELECT id, post_slug, filename, r2_key, expires_at, created_at
+SELECT id, post_slug, filename, r2_key, expires_at, created_at, kind, content_type
 FROM uploads WHERE id = ?
 `
 
@@ -61,12 +65,14 @@ func (q *Queries) GetUpload(ctx context.Context, id string) (Upload, error) {
 		&i.R2Key,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.Kind,
+		&i.ContentType,
 	)
 	return i, err
 }
 
 const getUploadByFilename = `-- name: GetUploadByFilename :one
-SELECT id, post_slug, filename, r2_key, expires_at, created_at
+SELECT id, post_slug, filename, r2_key, expires_at, created_at, kind, content_type
 FROM uploads WHERE post_slug = ? AND filename = ?
 `
 
@@ -85,6 +91,8 @@ func (q *Queries) GetUploadByFilename(ctx context.Context, arg GetUploadByFilena
 		&i.R2Key,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.Kind,
+		&i.ContentType,
 	)
 	return i, err
 }
@@ -117,7 +125,7 @@ func (q *Queries) ListAllUploadKeys(ctx context.Context) ([]string, error) {
 }
 
 const listUploadsExpiredBefore = `-- name: ListUploadsExpiredBefore :many
-SELECT id, post_slug, filename, r2_key, expires_at, created_at
+SELECT id, post_slug, filename, r2_key, expires_at, created_at, kind, content_type
 FROM uploads WHERE expires_at < ?
 `
 
@@ -137,6 +145,8 @@ func (q *Queries) ListUploadsExpiredBefore(ctx context.Context, expiresAt string
 			&i.R2Key,
 			&i.ExpiresAt,
 			&i.CreatedAt,
+			&i.Kind,
+			&i.ContentType,
 		); err != nil {
 			return nil, err
 		}

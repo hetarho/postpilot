@@ -68,6 +68,10 @@ message CatalogEntry {
   // image/video generation purposes gate on, as `vision` gates photo-analysis.
   bool image_output = 17;
   bool video_output = 18;
+  // The model takes VIDEO as input ("video" in architecture.input_modalities). It is a
+  // per-run check rather than a sixth purpose: a post with a video requires it of the
+  // observe model, and every other run is unaffected (VIDEO-11).
+  bool video_input = 28;
   // What this model recently SPENT its completion budget on at the listed purpose's stage.
   // Absent when nothing has been recorded for it, which renders as nothing rather than as a
   // zero that would read as a measurement.

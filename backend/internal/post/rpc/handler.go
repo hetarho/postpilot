@@ -152,7 +152,7 @@ func (h *Handler) CreateUpload(ctx context.Context, req *connect.Request[postpil
 		return nil, err
 	}
 
-	upload, putURL, contentType, err := h.svc.CreateUpload(ctx, userID, req.Msg.GetPostSlug(), req.Msg.GetFilename())
+	upload, putURL, contentType, err := h.svc.CreateUpload(ctx, userID, req.Msg.GetPostSlug(), req.Msg.GetFilename(), attachmentKindFromProto(req.Msg.GetKind()))
 	if err != nil {
 		return nil, toConnectError("create upload", err)
 	}
@@ -170,13 +170,31 @@ func (h *Handler) ConfirmUpload(ctx context.Context, req *connect.Request[postpi
 		return nil, err
 	}
 
-	image, err := h.svc.ConfirmUpload(ctx, userID, req.Msg.GetUploadId(), req.Msg.GetWidth(), req.Msg.GetHeight())
+	attachment, err := h.svc.ConfirmUpload(ctx, userID, req.Msg.GetUploadId(), req.Msg.GetWidth(), req.Msg.GetHeight(), req.Msg.GetDurationMs())
 	if err != nil {
 		return nil, toConnectError("confirm upload", err)
 	}
 	// No view URL here: the client already holds the bytes it just uploaded, and the
 	// next GetPost mints a fresh one.
-	return connect.NewResponse(&postpilotv1.ConfirmUploadResponse{Image: toProtoImage(image)}), nil
+	//
+	// Which half is set is decided by the upload's own kind, so a client that asked for a
+	// photo can never be handed a video back.
+	response := &postpilotv1.ConfirmUploadResponse{}
+	if attachment.Kind == post.AttachmentVideo {
+		response.Video = toProtoVideo(attachment.Video)
+	} else {
+		response.Image = toProtoImage(attachment.Image)
+	}
+	return connect.NewResponse(response), nil
+}
+
+// attachmentKindFromProto reads UNSPECIFIED as a photo: every client shipped before videos
+// existed sends no kind and means the only kind there was.
+func attachmentKindFromProto(value postpilotv1.AttachmentKind) post.AttachmentKind {
+	if value == postpilotv1.AttachmentKind_ATTACHMENT_KIND_VIDEO {
+		return post.AttachmentVideo
+	}
+	return post.AttachmentPhoto
 }
 
 func (h *Handler) DeleteImage(ctx context.Context, req *connect.Request[postpilotv1.DeleteImageRequest]) (*connect.Response[postpilotv1.DeleteImageResponse], error) {
@@ -189,6 +207,18 @@ func (h *Handler) DeleteImage(ctx context.Context, req *connect.Request[postpilo
 		return nil, toConnectError("delete image", err)
 	}
 	return connect.NewResponse(&postpilotv1.DeleteImageResponse{}), nil
+}
+
+func (h *Handler) DeleteVideo(ctx context.Context, req *connect.Request[postpilotv1.DeleteVideoRequest]) (*connect.Response[postpilotv1.DeleteVideoResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.svc.DeleteVideo(ctx, userID, req.Msg.GetVideoId()); err != nil {
+		return nil, toConnectError("delete video", err)
+	}
+	return connect.NewResponse(&postpilotv1.DeleteVideoResponse{}), nil
 }
 
 // actingUser reads the user the interceptor authenticated. Reaching a handler without
@@ -215,11 +245,18 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, post.ErrForbidden):
 		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", "POST_FORBIDDEN", nil)
 	case errors.Is(err, post.ErrDuplicateFilename):
-		return rpcserver.NewAppError(connect.CodeAlreadyExists, "photo filename already exists", "POST_FILENAME_TAKEN", nil)
+		// One namespace across photos and videos, so the message names neither kind.
+		return rpcserver.NewAppError(connect.CodeAlreadyExists, "filename already exists in this post", "POST_FILENAME_TAKEN", nil)
 	case errors.Is(err, post.ErrTooManyPhotos):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post already holds the maximum number of photos", "POST_PHOTO_LIMIT", nil)
+	case errors.Is(err, post.ErrTooManyVideos):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post already holds the maximum number of videos", "POST_VIDEO_LIMIT", nil)
+	case errors.Is(err, post.ErrUnsupportedVideo):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unsupported video container", "UPLOAD_VIDEO_UNSUPPORTED", nil)
 	case errors.Is(err, post.ErrInvalidImage):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid uploaded image", "UPLOAD_INVALID", nil)
+	case errors.Is(err, post.ErrInvalidVideo):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid uploaded video", "UPLOAD_VIDEO_INVALID", nil)
 	case errors.Is(err, post.ErrObjectMissing):
 		// FailedPrecondition, not NotFound: the upload record is fine, the object just
 		// is not there yet — the client should retry the PUT, not give up.
@@ -257,6 +294,10 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 	for _, img := range p.Images {
 		images = append(images, toProtoImage(img))
 	}
+	videos := make([]*postpilotv1.Video, 0, len(p.Videos))
+	for _, video := range p.Videos {
+		videos = append(videos, toProtoVideo(video))
+	}
 	observations := make([]*postpilotv1.Observation, 0, len(p.Observations))
 	for _, observation := range p.Observations {
 		observations = append(observations, toProtoObservation(observation))
@@ -267,6 +308,7 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		Memo:                    p.Memo,
 		Status:                  p.Status,
 		Images:                  images,
+		Videos:                  videos,
 		CreatedAt:               p.CreatedAt.UTC().Format(timeLayout),
 		UpdatedAt:               p.UpdatedAt.UTC().Format(timeLayout),
 		ActiveJob:               toProtoActiveJob(p.ActiveJob),
@@ -392,6 +434,8 @@ func fromProtoBlockType(value postpilotv1.BlockType) post.BlockType {
 		return post.BlockQuote
 	case postpilotv1.BlockType_LIST:
 		return post.BlockList
+	case postpilotv1.BlockType_VIDEO:
+		return post.BlockVideo
 	default:
 		return ""
 	}
@@ -423,6 +467,8 @@ func toProtoBlockType(value post.BlockType) postpilotv1.BlockType {
 		return postpilotv1.BlockType_QUOTE
 	case post.BlockList:
 		return postpilotv1.BlockType_LIST
+	case post.BlockVideo:
+		return postpilotv1.BlockType_VIDEO
 	default:
 		return postpilotv1.BlockType_BLOCK_TYPE_UNSPECIFIED
 	}
@@ -432,6 +478,7 @@ func toProtoObservation(value post.Observation) *postpilotv1.Observation {
 	return &postpilotv1.Observation{
 		File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText,
 		Objects: value.Objects, PeoplePresent: value.PeoplePresent, Model: value.Model,
+		Events: value.Events, Speech: value.Speech,
 	}
 }
 
@@ -480,6 +527,19 @@ func toProtoImage(img post.Image) *postpilotv1.Image {
 		Height:   img.Height,
 		Bytes:    img.Bytes,
 		ViewUrl:  img.ViewURL,
+	}
+}
+
+func toProtoVideo(video post.Video) *postpilotv1.Video {
+	return &postpilotv1.Video{
+		Id:          video.ID,
+		Filename:    video.Filename,
+		Width:       video.Width,
+		Height:      video.Height,
+		Bytes:       video.Bytes,
+		ViewUrl:     video.ViewURL,
+		DurationMs:  video.DurationMs,
+		ContentType: video.ContentType,
 	}
 }
 

@@ -41,6 +41,9 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"template missing", "save draft", post.ErrTemplateNotFound, connect.CodeNotFound, "PURPOSE_NOT_FOUND"},
 		{"voice deleted", "save draft", post.ErrVoiceDeleted, connect.CodeFailedPrecondition, "VOICE_DELETED"},
 		{"language", "save draft", post.ErrLanguageRequired, connect.CodeInvalidArgument, "POST_TARGET_LANGUAGE_REQUIRED"},
+		{"video ceiling", "create upload", post.ErrTooManyVideos, connect.CodeFailedPrecondition, "POST_VIDEO_LIMIT"},
+		{"video container", "create upload", post.ErrUnsupportedVideo, connect.CodeInvalidArgument, "UPLOAD_VIDEO_UNSUPPORTED"},
+		{"video", "confirm upload", post.ErrInvalidVideo, connect.CodeInvalidArgument, "UPLOAD_VIDEO_INVALID"},
 	}
 
 	for _, test := range cases {
@@ -134,4 +137,54 @@ func postAppErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
 		t.Fatalf("detail type = %T", value)
 	}
 	return detail
+}
+
+// The wire enum is the only thing that decides the kind, and its zero value is a photo —
+// which is what every client shipped before videos existed sends.
+func TestAttachmentKindFromProto(t *testing.T) {
+	cases := map[postpilotv1.AttachmentKind]post.AttachmentKind{
+		postpilotv1.AttachmentKind_ATTACHMENT_KIND_UNSPECIFIED: post.AttachmentPhoto,
+		postpilotv1.AttachmentKind_ATTACHMENT_KIND_PHOTO:       post.AttachmentPhoto,
+		postpilotv1.AttachmentKind_ATTACHMENT_KIND_VIDEO:       post.AttachmentVideo,
+	}
+	for wire, want := range cases {
+		if got := attachmentKindFromProto(wire); got != want {
+			t.Errorf("attachmentKindFromProto(%v) = %q, want %q", wire, got, want)
+		}
+	}
+}
+
+// A VIDEO block has to survive the round trip through the wire enum, or a saved post
+// would come back as an unknown block type and fail its own validator.
+func TestVideoBlockTypeRoundTrips(t *testing.T) {
+	if got := toProtoBlockType(post.BlockVideo); got != postpilotv1.BlockType_VIDEO {
+		t.Fatalf("toProtoBlockType = %v, want VIDEO", got)
+	}
+	if got := fromProtoBlockType(postpilotv1.BlockType_VIDEO); got != post.BlockVideo {
+		t.Fatalf("fromProtoBlockType = %q, want %q", got, post.BlockVideo)
+	}
+}
+
+// A video observation carries what a still frame cannot, and the projection has to take
+// both fields along with it.
+func TestObservationProjectionCarriesEventsAndSpeech(t *testing.T) {
+	got := toProtoObservation(post.Observation{
+		File: "clip.mp4", Scene: "바다", Events: []string{"파도가 친다"}, Speech: "좋다",
+	})
+	if !reflect.DeepEqual(got.GetEvents(), []string{"파도가 친다"}) || got.GetSpeech() != "좋다" {
+		t.Errorf("observation = %+v", got)
+	}
+}
+
+// A video projects its container type and duration; a photo has neither, and its message
+// has no room for them.
+func TestVideoProjection(t *testing.T) {
+	got := toProtoVideo(post.Video{
+		ID: "v1", Filename: "clip.mp4", Width: 1920, Height: 1080, Bytes: 42,
+		ViewURL: "https://storage.example/clip", DurationMs: 5_000, ContentType: "video/mp4",
+	})
+	if got.GetId() != "v1" || got.GetFilename() != "clip.mp4" || got.GetDurationMs() != 5_000 ||
+		got.GetContentType() != "video/mp4" || got.GetViewUrl() != "https://storage.example/clip" {
+		t.Errorf("video = %+v", got)
+	}
 }

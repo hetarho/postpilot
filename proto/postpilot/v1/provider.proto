@@ -53,6 +53,9 @@ message ModelInfo {
   // Snapshotted from the source catalog — the registry cannot probe them.
   bool vision = 3;
   bool structured_output = 4;
+  // The model takes video input. `vision` says it can see a photo; this says it can watch
+  // a clip, which is a strictly narrower set of models (VIDEO-11).
+  bool video_input = 16;
   bool disabled = 5;
   string disabled_reason = 6;
   int64 context_tokens = 7;

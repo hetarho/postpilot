@@ -22,6 +22,15 @@ var testNow = time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 // seeds a user — posts reference users, so the foreign key needs one to exist.
 func newStore(t *testing.T) *store.Store {
 	t.Helper()
+	s, _ := newStoreWithHandle(t)
+	return s
+}
+
+// newStoreWithHandle also hands back the raw database, for the few tests that have to
+// write a row the store cannot express — a row shaped like one written before a column
+// existed, say.
+func newStoreWithHandle(t *testing.T) (*store.Store, *db.DB) {
+	t.Helper()
 
 	handle, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
@@ -47,7 +56,7 @@ func newStore(t *testing.T) *store.Store {
 		}
 	}
 
-	return store.New(handle.Writer, handle.Reader)
+	return store.New(handle.Writer, handle.Reader), handle
 }
 
 func voiceIDFor(userID string, index int) string {

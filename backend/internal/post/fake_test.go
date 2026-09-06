@@ -16,6 +16,7 @@ type fakeStore struct {
 	mu      sync.Mutex
 	posts   map[string]Post
 	images  map[string]Image
+	videos  map[string]Video
 	uploads map[string]Upload
 
 	// slugTaken lets a test simulate another request claiming a slug between the
@@ -27,6 +28,7 @@ func newFakeStore() *fakeStore {
 	return &fakeStore{
 		posts:   map[string]Post{},
 		images:  map[string]Image{},
+		videos:  map[string]Video{},
 		uploads: map[string]Upload{},
 	}
 }
@@ -264,6 +266,11 @@ func (f *fakeStore) DeletePost(_ context.Context, slug, userID string) (bool, er
 			delete(f.images, id)
 		}
 	}
+	for id, video := range f.videos {
+		if video.PostSlug == slug {
+			delete(f.videos, id)
+		}
+	}
 	for id, upload := range f.uploads {
 		if upload.PostSlug == slug {
 			delete(f.uploads, id)
@@ -357,6 +364,94 @@ func (f *fakeStore) ImageKeyInUse(_ context.Context, key string) (bool, error) {
 	return false, nil
 }
 
+// createVideoLocked mirrors the real schema's constraints, as createImageLocked does.
+func (f *fakeStore) createVideoLocked(video Video) error {
+	if _, exists := f.videos[video.ID]; exists {
+		return ErrDuplicateFilename
+	}
+	for _, existing := range f.videos {
+		if existing.PostSlug == video.PostSlug && existing.Filename == video.Filename {
+			return ErrDuplicateFilename
+		}
+	}
+	f.videos[video.ID] = video
+	return nil
+}
+
+func (f *fakeStore) ConfirmVideoUpload(_ context.Context, video Video, uploadID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.createVideoLocked(video); err != nil {
+		return err
+	}
+	delete(f.uploads, uploadID)
+	return nil
+}
+
+func (f *fakeStore) ListVideos(_ context.Context, postSlug string) ([]Video, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []Video
+	for _, video := range f.videos {
+		if video.PostSlug == postSlug {
+			out = append(out, video)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
+}
+
+func (f *fakeStore) GetVideo(_ context.Context, id string) (Video, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	video, ok := f.videos[id]
+	if !ok {
+		return Video{}, ErrNotFound
+	}
+	return video, nil
+}
+
+func (f *fakeStore) DeleteVideo(_ context.Context, id string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.videos, id)
+	return nil
+}
+
+func (f *fakeStore) VideoFilenameTaken(_ context.Context, postSlug, filename string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, video := range f.videos {
+		if video.PostSlug == postSlug && video.Filename == filename {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (f *fakeStore) CountVideos(_ context.Context, postSlug string) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	count := 0
+	for _, video := range f.videos {
+		if video.PostSlug == postSlug {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (f *fakeStore) VideoKeyInUse(_ context.Context, key string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, video := range f.videos {
+		if video.Key == key {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (f *fakeStore) CreateUpload(_ context.Context, u Upload) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -418,6 +513,9 @@ func (f *fakeStore) AllReferencedKeys(_ context.Context) (map[string]struct{}, e
 	for _, img := range f.images {
 		keys[img.Key] = struct{}{}
 	}
+	for _, video := range f.videos {
+		keys[video.Key] = struct{}{}
+	}
 	for _, u := range f.uploads {
 		keys[u.Key] = struct{}{}
 	}
@@ -454,6 +552,7 @@ type fakeBlobs struct {
 
 type fakeObject struct {
 	size         int64
+	contentType  string
 	lastModified time.Time
 }
 
@@ -464,7 +563,15 @@ func newFakeBlobs() *fakeBlobs {
 func (f *fakeBlobs) put(key string, size int64, at time.Time) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.objects[key] = fakeObject{size: size, lastModified: at}
+	f.objects[key] = fakeObject{size: size, contentType: uploadContentType, lastModified: at}
+}
+
+// putTyped is the video case: the object reports back the Content-Type its PUT was signed
+// for, which is what the confirm checks against the reservation.
+func (f *fakeBlobs) putTyped(key string, size int64, contentType string, at time.Time) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.objects[key] = fakeObject{size: size, contentType: contentType, lastModified: at}
 }
 
 func (f *fakeBlobs) has(key string) bool {
@@ -482,14 +589,14 @@ func (f *fakeBlobs) PresignGet(_ context.Context, key string, ttl time.Duration)
 	return fmt.Sprintf("https://storage.example/%s?get&ttl=%s", key, ttl), nil
 }
 
-func (f *fakeBlobs) Head(_ context.Context, key string) (int64, error) {
+func (f *fakeBlobs) Head(_ context.Context, key string) (ObjectHead, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	obj, ok := f.objects[key]
 	if !ok {
-		return 0, ErrObjectNotFound
+		return ObjectHead{}, ErrObjectNotFound
 	}
-	return obj.size, nil
+	return ObjectHead{Size: obj.size, ContentType: obj.contentType}, nil
 }
 
 func (f *fakeBlobs) Delete(_ context.Context, key string) error {

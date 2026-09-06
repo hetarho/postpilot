@@ -1,18 +1,18 @@
 -- Uploads presigned but not yet confirmed. A row dies on confirm or by the sweep.
 
 -- name: CreateUpload :exec
-INSERT INTO uploads (id, post_slug, filename, r2_key, expires_at, created_at)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT INTO uploads (id, post_slug, filename, r2_key, kind, content_type, expires_at, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetUpload :one
-SELECT id, post_slug, filename, r2_key, expires_at, created_at
+SELECT id, post_slug, filename, r2_key, expires_at, created_at, kind, content_type
 FROM uploads WHERE id = ?;
 
 -- name: DeleteUpload :exec
 DELETE FROM uploads WHERE id = ?;
 
 -- name: ListUploadsExpiredBefore :many
-SELECT id, post_slug, filename, r2_key, expires_at, created_at
+SELECT id, post_slug, filename, r2_key, expires_at, created_at, kind, content_type
 FROM uploads WHERE expires_at < ?;
 
 -- name: UploadFilenameTaken :one
@@ -22,5 +22,5 @@ SELECT EXISTS (SELECT 1 FROM uploads WHERE post_slug = ? AND filename = ?);
 SELECT r2_key FROM uploads;
 
 -- name: GetUploadByFilename :one
-SELECT id, post_slug, filename, r2_key, expires_at, created_at
+SELECT id, post_slug, filename, r2_key, expires_at, created_at, kind, content_type
 FROM uploads WHERE post_slug = ? AND filename = ?;

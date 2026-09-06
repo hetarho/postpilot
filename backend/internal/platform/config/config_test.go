@@ -117,6 +117,45 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+// The video ceilings are env, boot-fatal when they cannot describe a limit, and default to
+// what VIDEO-3 decided. Their size ceiling is a typed constant beside the photo one.
+func TestLoadVideoCeilings(t *testing.T) {
+	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
+	t.Setenv("UPLOAD_MAX_VIDEOS_PER_POST", "")
+	t.Setenv("VIDEO_MAX_SECONDS", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.MaxVideosPerPost != 3 || cfg.MaxVideoSeconds != 60 {
+		t.Errorf("video ceilings = %d clips / %d s, want 3 / 60", cfg.MaxVideosPerPost, cfg.MaxVideoSeconds)
+	}
+	if cfg.MaxVideoBytes != 200<<20 {
+		t.Errorf("MaxVideoBytes = %d, want 200 MiB", cfg.MaxVideoBytes)
+	}
+
+	t.Setenv("UPLOAD_MAX_VIDEOS_PER_POST", "5")
+	t.Setenv("VIDEO_MAX_SECONDS", "30")
+	tuned, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if tuned.MaxVideosPerPost != 5 || tuned.MaxVideoSeconds != 30 {
+		t.Errorf("tuned ceilings = %d / %d", tuned.MaxVideosPerPost, tuned.MaxVideoSeconds)
+	}
+
+	for _, name := range []string{"UPLOAD_MAX_VIDEOS_PER_POST", "VIDEO_MAX_SECONDS"} {
+		for _, bad := range []string{"nope", "0", "-1"} {
+			t.Setenv(name, bad)
+			if _, err := Load(); err == nil {
+				t.Errorf("%s=%q was accepted", name, bad)
+			}
+		}
+		t.Setenv(name, "")
+	}
+}
+
 // The observation budget follows OBSERVE_BATCH_SIZE, because that is how many structured
 // entries one call returns — a fixed number truncates the moment an operator raises the batch.
 func TestObservationBudgetFollowsTheBatchSize(t *testing.T) {
