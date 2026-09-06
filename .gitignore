@@ -6,6 +6,7 @@ dist/
 
 # Go
 backend/bin/
+agent/bin/
 backend/tmp/
 backend/data/
 *.exe
