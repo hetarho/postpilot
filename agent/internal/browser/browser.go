@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	devToolsActivePort = "DevToolsActivePort"
-	naverEditorURL     = "https://blog.naver.com/PostWriteForm.naver"
+	devToolsActivePort  = "DevToolsActivePort"
+	naverWriterEntryURL = "https://blog.naver.com/GoBlogWrite.naver"
 )
 
 var endpointTimeout = 10 * time.Second
@@ -84,10 +84,12 @@ func OpenLogin(binary, profileDir string) error {
 	return err
 }
 
-// OpenEditor starts or reuses the dedicated browser and navigates its sole page
-// to Naver's generic writer. Naver resolves the signed-in blog identity locally.
+// OpenEditor starts or reuses the dedicated browser and navigates its sole page to
+// Naver's "write on my blog" entry. Naver's signed-in session redirects that id-less
+// URL to the account's own blog; ObserveNaverIdentity then reads the blog id Naver
+// selected and opens that blog's writer. The id is never guessed or user-supplied.
 func OpenEditor(binary, profileDir string) (*Session, error) {
-	return Start(binary, profileDir, naverEditorURL)
+	return Start(binary, profileDir, naverWriterEntryURL)
 }
 
 // Start reuses a live CDP endpoint recorded by the dedicated profile or starts

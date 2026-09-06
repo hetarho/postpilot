@@ -21,10 +21,11 @@ func (Keychain) Put(ctx context.Context, account, token string) error {
 	if account == "" || token == "" {
 		return errors.New("empty keychain account or token")
 	}
-	// Apple's security CLI explicitly marks `-w <password>` as insecure because the
-	// secret appears in argv. A trailing -w prompts on stdin instead.
-	command := exec.CommandContext(ctx, "/usr/bin/security", "add-generic-password", "-a", account, "-s", service, "-U", "-w")
-	command.Stdin = strings.NewReader(token + "\n")
+	// security's interactive `-w` (no value) reads the password from the controlling
+	// TTY, not stdin, so a piped token is ignored and setup hangs on a prompt (and a
+	// TTY-less LaunchAgent could never store one). Pass the token as the -w value; it is
+	// briefly visible in this process's argv, an accepted tradeoff on a local single Mac.
+	command := exec.CommandContext(ctx, "/usr/bin/security", "add-generic-password", "-a", account, "-s", service, "-U", "-w", token)
 	return command.Run()
 }
 

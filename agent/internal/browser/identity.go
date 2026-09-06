@@ -193,6 +193,17 @@ func ObserveNaverIdentity(ctx context.Context, cdpURL string) (NaverIdentity, er
 		return NaverIdentity{}, err
 	}
 
+	// Follow Naver's own redirect from the id-less writer entry to the signed-in account's
+	// blog, read the blog id Naver selected, and open that blog's standalone writer. The id
+	// comes only from Naver's redirect, never a guess or user input.
+	resolvedBlogID, err := client.resolveAccountWriter(observationCtx)
+	if err != nil {
+		if ctx.Err() != nil {
+			return NaverIdentity{}, ctx.Err()
+		}
+		return NaverIdentity{}, err
+	}
+
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for {
@@ -205,6 +216,9 @@ func ObserveNaverIdentity(ctx context.Context, cdpURL string) (NaverIdentity, er
 			observation, observeErr := client.observe(observationCtx)
 			if observeErr == nil {
 				identity, validateErr := validateIdentityObservation(observation)
+				if validateErr == nil && identity.BlogID != resolvedBlogID {
+					validateErr = errors.New("Naver editor identity did not match the blog Naver selected")
+				}
 				if validateErr == nil {
 					confirmed, confirmErr := discoverSinglePage(observationCtx, cdpURL)
 					if confirmErr != nil || confirmed.ID != target.ID ||
@@ -229,6 +243,99 @@ func ObserveNaverIdentity(ctx context.Context, cdpURL string) (NaverIdentity, er
 				return NaverIdentity{}, ctx.Err()
 			}
 			return NaverIdentity{}, fmt.Errorf("Naver editor identity was not observable: %w", err)
+		case <-ticker.C:
+		}
+	}
+}
+
+const naverWriterURL = "https://blog.naver.com/PostWriteForm.naver"
+
+// writerResolutionScript reports, from the sole bound page, whether Naver has redirected the
+// id-less writer entry to the signed-in account's blog and, if so, the blog id Naver selected.
+// It reads that id only from Naver's own resolved location or embedded writer frame, never
+// from user input or free-form page prose.
+const writerResolutionScript = `(() => {
+  const loc = new URL(location.href);
+  const clean = (value) => String(value || '').trim();
+  if (loc.hostname === 'blog.naver.com' && loc.pathname === '/PostWriteForm.naver') {
+    return {stage: 'writer', blog_id: clean(loc.searchParams.get('blogId')), href: location.href};
+  }
+  if (loc.hostname === 'blog.naver.com') {
+    const frame = document.querySelector('#mainFrame');
+    if (frame && frame.src) {
+      try {
+        const framed = new URL(frame.src);
+        if (framed.pathname === '/PostWriteForm.naver') {
+          const id = clean(framed.searchParams.get('blogId'));
+          if (id) return {stage: 'resolved', blog_id: id, href: location.href};
+        }
+      } catch (_) {}
+    }
+    if (loc.searchParams.get('Redirect') === 'Write') {
+      const segment = loc.pathname.replace(/^\/+/, '').split('/')[0];
+      if (segment) return {stage: 'resolved', blog_id: segment, href: location.href};
+    }
+  }
+  return {stage: 'redirecting', blog_id: '', href: location.href};
+})()`
+
+type writerResolution struct {
+	Stage  string `json:"stage"`
+	BlogID string `json:"blog_id"`
+	Href   string `json:"href"`
+}
+
+func (c *cdpClient) observeWriterResolution(ctx context.Context) (writerResolution, error) {
+	var evaluated struct {
+		Result struct {
+			Value writerResolution `json:"value"`
+		} `json:"result"`
+	}
+	err := c.call(ctx, "Runtime.evaluate", map[string]any{
+		"expression":    writerResolutionScript,
+		"returnByValue": true,
+		"awaitPromise":  true,
+	}, &evaluated)
+	return evaluated.Result.Value, err
+}
+
+// resolveAccountWriter waits for Naver's signed-in session to redirect the id-less writer entry
+// to the account's own blog, then navigates the same bound page to that blog's standalone writer
+// and returns the blog id Naver selected. The id is validated before it is placed in a URL, so
+// page-supplied text can never steer navigation off the writer.
+func (c *cdpClient) resolveAccountWriter(ctx context.Context) (string, error) {
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	navigated := false
+	last := "waiting for Naver to open the signed-in blog"
+	for {
+		resolution, err := c.observeWriterResolution(ctx)
+		switch {
+		case err != nil:
+			last = err.Error()
+		case resolution.Stage == "writer" && naverBlogID.MatchString(resolution.BlogID):
+			return resolution.BlogID, nil
+		case resolution.Stage == "resolved" && naverBlogID.MatchString(resolution.BlogID):
+			if !navigated {
+				destination := naverWriterURL + "?blogId=" + url.QueryEscape(resolution.BlogID)
+				var navigation struct {
+					ErrorText string `json:"errorText"`
+				}
+				if callErr := c.call(ctx, "Page.navigate", map[string]any{"url": destination}, &navigation); callErr != nil {
+					return "", callErr
+				}
+				if navigation.ErrorText != "" {
+					return "", fmt.Errorf("browser refused Naver writer navigation: %s", navigation.ErrorText)
+				}
+				navigated = true
+			}
+			last = "opening the writer for " + resolution.BlogID
+		default:
+			last = "redirecting: " + resolution.Href
+		}
+		select {
+		case <-ctx.Done():
+			return "", fmt.Errorf("Naver did not open the signed-in blog writer (%s)", last)
 		case <-ticker.C:
 		}
 	}
@@ -351,7 +458,11 @@ func discoverDedicatedPages(ctx context.Context, cdpURL string) ([]pageTarget, e
 			continue
 		}
 		pageURL, err := url.Parse(target.URL)
-		if err != nil || (target.URL != "about:blank" && (pageURL.Scheme != "https" || !isNaverHost(pageURL.Hostname()))) {
+		// An empty URL is a page mid-navigation (old document gone, new not yet committed);
+		// treat it like about:blank so a probe running the instant a navigation starts does
+		// not misread the in-flight tab as a foreign host.
+		inFlight := target.URL == "" || target.URL == "about:blank"
+		if err != nil || (!inFlight && (pageURL.Scheme != "https" || !isNaverHost(pageURL.Hostname()))) {
 			return nil, errors.New("dedicated browser page is outside approved Naver hosts")
 		}
 		pageWS, err := url.Parse(target.WebSocketDebuggerURL)

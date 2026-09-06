@@ -253,7 +253,10 @@ func serverURL(request *http.Request) string {
 func TestObserveNaverIdentityUsesTargetBoundCDPEvidence(t *testing.T) {
 	var server *httptest.Server
 	var stateMu sync.Mutex
-	targetURL := "https://blog.naver.com/PostWriteForm.naver?blogId=alice"
+	navigated := false
+	// The tab begins on the account blog that Naver's id-less writer entry resolved to; the
+	// verifier reads the blog id Naver selected and opens that blog's standalone writer.
+	targetURL := "https://blog.naver.com/alice?Redirect=Write&"
 	server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
 		case "/json/list":
@@ -280,14 +283,27 @@ func TestObserveNaverIdentityUsesTargetBoundCDPEvidence(t *testing.T) {
 				case "Target.attachToTarget":
 					result = map[string]any{"sessionId": "session-page-1"}
 				case "Page.navigate":
-					t.Errorf("identity verifier must not drive Naver UI: %#v", call.Params)
+					stateMu.Lock()
+					navigated = true
+					targetURL = "https://blog.naver.com/PostWriteForm.naver?blogId=alice"
+					stateMu.Unlock()
 				case "Runtime.evaluate":
 					params, _ := call.Params.(map[string]any)
-					if params["expression"] == identityPreparationScript {
+					stateMu.Lock()
+					reached := navigated
+					stateMu.Unlock()
+					switch params["expression"] {
+					case writerResolutionScript:
+						value := map[string]any{"stage": "resolved", "blog_id": "alice", "href": "https://blog.naver.com/alice?Redirect=Write&"}
+						if reached {
+							value = map[string]any{"stage": "writer", "blog_id": "alice", "href": "https://blog.naver.com/PostWriteForm.naver?blogId=alice"}
+						}
+						result = map[string]any{"result": map[string]any{"type": "object", "value": value}}
+					case identityPreparationScript:
 						result = map[string]any{"result": map[string]any{"type": "object", "value": map[string]any{
 							"editor_ready": true, "ready": true, "stage": "categories_visible",
 						}}}
-					} else {
+					default:
 						result = map[string]any{"result": map[string]any{
 							"type": "object",
 							"value": map[string]any{
@@ -374,6 +390,7 @@ func TestObserveNaverIdentityRejectsSecondTargetAppearingDuringVerification(t *t
 	var stateMu sync.Mutex
 	targetURL := "about:blank"
 	verified := false
+	navigated := false
 	server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
 		case "/json/list":
@@ -405,16 +422,29 @@ func TestObserveNaverIdentityRejectsSecondTargetAppearingDuringVerification(t *t
 				}
 				if call.Method == "Page.navigate" {
 					stateMu.Lock()
+					navigated = true
 					targetURL = "https://blog.naver.com/PostWriteForm.naver?blogId=alice"
 					stateMu.Unlock()
 				}
 				if call.Method == "Runtime.evaluate" {
 					params, _ := call.Params.(map[string]any)
-					if params["expression"] == identityPreparationScript {
+					stateMu.Lock()
+					reached := navigated
+					stateMu.Unlock()
+					switch params["expression"] {
+					case writerResolutionScript:
+						stage := "resolved"
+						if reached {
+							stage = "writer"
+						}
+						result = map[string]any{"result": map[string]any{"type": "object", "value": map[string]any{
+							"stage": stage, "blog_id": "alice", "href": "https://blog.naver.com/PostWriteForm.naver?blogId=alice",
+						}}}
+					case identityPreparationScript:
 						result = map[string]any{"result": map[string]any{"type": "object", "value": map[string]any{
 							"editor_ready": true, "ready": true, "stage": "categories_visible",
 						}}}
-					} else {
+					default:
 						result = map[string]any{"result": map[string]any{"type": "object", "value": map[string]any{
 							"href": "https://blog.naver.com/PostWriteForm.naver?blogId=alice", "editor_ready": true,
 							"categories": []map[string]string{{"id": "7", "name": "Travel"}},

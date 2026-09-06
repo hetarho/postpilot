@@ -42,7 +42,11 @@ type EditorSurface struct {
 const compatibilityObservationScript = `(() => {
   const layer = document.querySelector('div[class^="layer_popup__"][class*="is_show__"]');
   const categories = layer ? layer.querySelectorAll('input[data-testid^="categoryBtn_"], [data-category-id], [data-category-no], [role="option"], [role="menuitemradio"]') : [];
-  const visibility = layer ? [...layer.querySelectorAll('input,button,[role="radio"]')].some((node) => /공개|이웃|비공개|visibility/i.test([node.getAttribute('aria-label'), node.textContent, node.name, node.id].join(' '))) : false;
+  const visibilityOptions = /^(전체공개|이웃공개|서로이웃공개|공개|비공개)$/;
+  const visibility = layer ? [...layer.querySelectorAll('label,input,button,[role="radio"]')].some((node) => {
+    const own = [...node.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\s+/g, ' ').trim();
+    return visibilityOptions.test(own) || /공개|이웃|비공개|visibility/i.test([node.getAttribute('aria-label'), node.name, node.id].join(' '));
+  }) : false;
   const tags = layer ? [...layer.querySelectorAll('input,textarea,[contenteditable="true"]')].some((node) => /태그|tag/i.test([node.getAttribute('aria-label'), node.placeholder, node.name, node.id].join(' '))) : false;
   return {
     editor_root: Boolean(document.querySelector('.blog_editor')),
