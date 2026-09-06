@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -473,6 +474,27 @@ func TestObserveNaverIdentityRejectsSecondTargetAppearingDuringVerification(t *t
 	_, err := ObserveNaverIdentity(ctx, "ws"+strings.TrimPrefix(server.URL, "http")+"/devtools/browser/one")
 	if err == nil || !strings.Contains(err.Error(), "recheck dedicated browser target") {
 		t.Fatalf("target switch error=%v", err)
+	}
+}
+
+func TestStartReclaimsALockLeftBehindByADeadBrowser(t *testing.T) {
+	// A browser that was killed leaves SingletonLock pointing at a pid that is gone.
+	finished := exec.Command("/bin/sh", "-c", "exit 0")
+	if err := finished.Run(); err != nil {
+		t.Fatal(err)
+	}
+	profile := t.TempDir()
+	if err := os.Symlink(fmt.Sprintf("testhost-%d", finished.Process.Pid), filepath.Join(profile, "SingletonLock")); err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "chromium")
+	if err := os.WriteFile(binary, []byte("#!/bin/sh\nexit 77\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	// Start must get past the lock and fail for a launch reason instead.
+	_, err := Start(binary, profile, "about:blank")
+	if err == nil || strings.Contains(err.Error(), "profile is locked") {
+		t.Fatalf("stale lock was not reclaimed: %v", err)
 	}
 }
 

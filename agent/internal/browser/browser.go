@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -110,12 +111,11 @@ func Start(binary, profileDir, initialURL string) (*Session, error) {
 		return existing, nil
 	}
 	// A Chromium process can hold the profile lock before its CDP endpoint becomes
-	// reachable (or after the endpoint file goes stale). Never launch a competing
-	// process against the same cookie store; leave recovery to the visible setup UI.
-	if _, err := os.Lstat(filepath.Join(profileDir, "SingletonLock")); err == nil {
-		return nil, errors.New("dedicated browser profile is locked but its verified CDP endpoint is unavailable; close that browser and retry")
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("inspect dedicated browser profile lock: %w", err)
+	// reachable, and a competing process must never be launched against the same cookie
+	// store. But a killed browser leaves the identical lock behind, and refusing on that
+	// strands the profile permanently with no action the user could take.
+	if err := inspectProfileLock(filepath.Join(profileDir, "SingletonLock")); err != nil {
+		return nil, err
 	}
 	if err := os.Remove(filepath.Join(profileDir, devToolsActivePort)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
@@ -160,6 +160,51 @@ func Start(binary, profileDir, initialURL string) (*Session, error) {
 	_ = command.Process.Kill()
 	<-done
 	return nil, fmt.Errorf("browser CDP did not become ready: %w", lastErr)
+}
+
+// inspectProfileLock refuses only while a live browser holds the dedicated profile.
+// Chromium records the owner as a "<hostname>-<pid>" symlink, so a lock whose owner is
+// gone is stale and is left in place for Chromium's own singleton recovery to reclaim
+// on startup. A lock that cannot be read stays a refusal, since staleness is unproven.
+func inspectProfileLock(path string) error {
+	owner, err := os.Readlink(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	held := errors.New("dedicated browser profile is locked but its verified CDP endpoint is unavailable; close that browser and retry")
+	if err != nil {
+		return held
+	}
+	pid, ok := singletonLockOwner(owner)
+	if !ok || processAlive(pid) {
+		return held
+	}
+	return nil
+}
+
+// singletonLockOwner reads the pid out of Chromium's lock target. The hostname itself
+// contains dashes, so only the final segment is the pid.
+func singletonLockOwner(target string) (int, bool) {
+	index := strings.LastIndex(target, "-")
+	if index < 0 {
+		return 0, false
+	}
+	pid, err := strconv.Atoi(target[index+1:])
+	if err != nil || pid <= 0 {
+		return 0, false
+	}
+	return pid, true
+}
+
+// processAlive treats a permission error as alive: the process exists, it is simply not
+// ours to signal.
+func processAlive(pid int) bool {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+	err = process.Signal(syscall.Signal(0))
+	return err == nil || errors.Is(err, os.ErrPermission)
 }
 
 // Connect verifies the profile's DevToolsActivePort file against Chrome's
