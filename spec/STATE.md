@@ -20,7 +20,7 @@
 | TEMPLATE | 3 | 3 | - | 1 |
 | GUIDE | 1 | 1 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
-| PUBLISH | 2 | 2 | - | 0 |
+| PUBLISH | 3 | 3 | - | 0 |
 | LANG | 1 | 1 | - | 0 |
 | THEME | 2 | 2 | - | 0 |
 | MARKETING | 1 | 1 | - | 0 |
@@ -35,9 +35,16 @@
 
 ## next
 - update-ssot PUBLISH after T008 closes: VIDEO-17 (agent video publishing) and TEMPLATE-39 (photo-row transport); VIDEO is otherwise shipped
-- implement-task T019 NEXT (T018 done: the editor is observable; T019 adds the mutations, the commit port and the daemon wiring) → T008 · T007 in parallel (cx)
+- implement-task T019 NEXT (base PUBLISH@3) → T008 · T007 in parallel (cx)
 
 ## log
+- 260907 create-task PUBLISH r3 → T019 updated in place (todo: base@2→@3, +PUBLISH-36, locator-derived pointer input in impl notes); no new task
+- 260907 create-task PUBLISH start (r3 delta into T019, todo)
+- 260907 update-ssot PUBLISH r3 done (PUBLISH-19✎ 20✎ 36+: recorded/replayed coordinates stay banned, a locator-derived pointer event does not)
+- 260907 WARN T007 doing (cx) is inside PUBLISH but its scope is tests+packaging — r3 changes no behaviour it covers; T019 todo must take the new base
+- 260907 update-ssot PUBLISH start (what "no screen coordinates" forbids)
+- 260907 T019 unclaimed: SmartEditor has no semantic caret placement (visible body is not contenteditable; DOM.focus on its 17px proxy is stolen back), so PUBLISH-19/20 forbid the only working input path — update-ssot first
+- 260907 T019 claimed (mu) — T007 still doing (cx) and holds uncommitted main.go; wiring edit kept minimal and last
 - 260907 T017 done — TEMPLATE r3 is shipped; the grammar is now visible in 원문 and nowhere else
 - 260907 T017 claimed (vd)
 - 260907 T018 done (bound CDP page + live-verified observation port; 3 manifest locators were unmatched against the real editor, signature a1→a2)
@@ -51,10 +58,3 @@
 - 260906 T018 claimed (pt)
 - 260906 create-task PUBLISH → T018 T019 (T005 shipped the publisher state machine but never its port; ssot row unchanged — unbuilt scope, not a delta); T008 dep T007→T007 T019
 - 260906 create-task PUBLISH start (gap: naver.Port/CommitPort has only test fakes — T005 done left the real CDP driver unbuilt, so `run` refuses and no job can ever be claimed)
-- 260906 T011 claimed (vd)
-- 260906 WARN T010 left the FE grammar fixture red on purpose (6 of 52, all count cases) — T011 makes it green; do not push before T011
-- 260906 T010 done
-- 260906 T010 claimed (vd)
-- 260906 WARN spec lint: TEMPLATE PUBLISH MARKETING exceed the new FORMAT's 6-char ssot id limit — all 44 violations trace to that one rename, spec-wide, not done inside a task
-- 260906 T013 done
-- 260906 spec migrated to haeram-spec-creator 0.2.3 FORMAT: tasks/done/ introduced (T001-T006 T009 T012 moved, their STATE rows dropped; T004 T005 T006 T012 file st doing->done per STATE)
