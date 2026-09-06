@@ -24,6 +24,13 @@ export const templates = {
   },
   emptyDescription: '설명 없음',
   screen: {
+    mode: {
+      aria: '구성 편집 방식',
+      builder: '블록',
+      source: '원문',
+    },
+    sourceHelp:
+      '템플릿을 저장 형식 그대로 보고 고쳐요. 형식 안내를 AI에게 건네 만든 템플릿을 여기에 붙여 넣을 수 있어요.',
     backToList: '← 템플릿 목록',
     newTitle: '새 템플릿',
     notFound: '이 템플릿을 찾을 수 없어요. 목록에서 다시 골라 주세요.',
@@ -36,6 +43,7 @@ export const templates = {
     leaveConfirm: '저장하지 않고 나가기',
   },
   composition: {
+    fixInSource: '원문에서 고치기',
     add: '블록 추가',
     empty: '위에서 블록을 더해 글의 순서를 짜 주세요.',
     insertHere: '여기에 추가돼요',
@@ -43,7 +51,7 @@ export const templates = {
     repeatHelp:
       '첨부한 사진 개수만큼 안쪽 블록이 되풀이돼요. 한 번 되풀이할 때 사진 {{count}}장을 씁니다.',
     unreadable:
-      '이 템플릿의 구성을 읽을 수 없어요. 예전 방식으로 저장된 템플릿일 수 있어요. 구성을 비우고 다시 만들어 주세요.',
+      '이 템플릿의 구성을 읽을 수 없어요. 원문에서 직접 고치거나, 구성을 비우고 다시 만들 수 있어요.',
     clearAndRestart: '구성 비우고 다시 만들기',
     summary: {
       photo: '사진 {{count}}장',
@@ -56,6 +64,43 @@ export const templates = {
       photo: '첨부한 사진이 들어갑니다',
       repeat: '사진마다 되풀이',
     },
+  },
+  // The one surface where this app's grammar is visible (TEMPLATE-26).
+  source: {
+    label: '원문',
+    copy: '원문 복사',
+    copyGuide: '형식 안내 복사',
+    copied: '복사했어요',
+    manualCopy: '복사가 막혀 있어요. 선택된 내용을 길게 눌러 복사해 주세요.',
+    showGuide: '형식 안내 보기',
+    error: '{{line}}번째 줄: {{reason}}',
+    guide: `아래 형식으로 블로그 글 템플릿의 본문을 하나 작성해 주세요.
+
+[템플릿이 하는 일]
+템플릿은 글의 뼈대입니다. 글의 순서와 어디에 무엇이 들어갈지를 정하고, 문체나 어휘는 정하지 않습니다.
+
+[쓸 수 있는 표기 다섯 가지]
+- 그냥 쓴 문장: 글에 그대로 나옵니다.
+- <write>무엇을 쓸지</write>: AI가 그 자리에 지시대로 글을 씁니다. 지시문 자체는 글에 나오지 않습니다.
+- <slot kind="photo"/>: 첨부한 사진이 한 장 들어갑니다. <slot kind="photo" count="2"/>처럼 count를 주면 그만큼 한 줄에 나란히 놓입니다.
+- <repeat each="photo">…</repeat>: 안쪽 내용이 사진 수만큼 되풀이됩니다.
+- <note>AI에게만 하는 말</note>: AI만 읽고 글에는 나오지 않습니다.
+
+[지켜야 할 규칙]
+- write, note, repeat는 반드시 닫아야 합니다.
+- slot은 <slot …/>처럼 스스로 닫고, kind는 photo만 쓸 수 있습니다.
+- count는 1에서 {{photoRowMax}} 사이의 정수입니다. 없으면 1장입니다.
+- repeat는 each="photo"만 받고, repeat 안에 repeat를 넣을 수 없습니다.
+- write와 note는 비워 둘 수 없습니다.
+- 위 다섯 가지 말고 다른 태그를 쓰면 저장되지 않습니다.
+- 문장 안에 <로 시작하는 글자를 그대로 쓰려면 &lt;로 적어 주세요.
+- 본문 전체는 {{bodyMax}}자를 넘을 수 없습니다.
+
+[예시]
+{{example}}
+
+[답변 방식]
+설명이나 코드 블록 없이 본문만 보내 주세요. 글은 제가 쓰는 언어로 써 주세요.`,
   },
   builder: {
     palette: {

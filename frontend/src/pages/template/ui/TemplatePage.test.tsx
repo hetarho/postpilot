@@ -246,4 +246,80 @@ describe('the template screen', () => {
     const allowed = ['GetMe', 'ListTemplates', 'UpdateTemplate']
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
+
+  // TEMPLATE-42: import IS pasting. What the AI wrote is what gets stored — byte for byte, outer
+  // whitespace and all — and the save carries the identical string.
+  it('saves a pasted body byte for byte', async () => {
+    const user = userEvent.setup()
+    const updates: FakeTemplatesOptions['updates'] = []
+    renderTemplate('/templates/template-review', { updates })
+
+    expect(await screen.findByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
+    await user.click(screen.getByRole('tab', { name: '원문' }))
+
+    const source = screen.getByLabelText('원문')
+    await user.clear(source)
+    await user.click(source)
+    await user.paste('  <write>붙여넣은 본문</write>\n')
+
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0].body).toBe('  <write>붙여넣은 본문</write>\n')
+  })
+
+  // TEMPLATE-30 / TEMPLATE-7: a body that does not parse cannot be saved from EITHER mode, and
+  // editing the name does not buy a way past it.
+  it('refuses to save an unparsable body even after the name is edited', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/template-broken', {
+      templates: [{ id: 'template-broken', name: '옛 템플릿', body: '<write>닫히지 않음' }],
+    })
+
+    const name = await screen.findByLabelText('이름')
+    await user.type(name, ' 고침')
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+
+    // And from the source mode, where the reason is finally visible.
+    await user.click(screen.getByRole('tab', { name: '원문' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('1번째 줄: 닫히지 않았어요')
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+
+    // Closing the tag is what opens the save.
+    await user.type(screen.getByLabelText('원문'), '</write>')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+  })
+
+  // TEMPLATE-30: the unreadable state now has a way to FIX rather than only a way to discard.
+  it('sends 원문에서 고치기 to the source with the caret in the text and the error shown', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/template-broken', {
+      templates: [{ id: 'template-broken', name: '옛 템플릿', body: '<write>닫히지 않음' }],
+    })
+
+    await screen.findByText(/구성을 읽을 수 없어요/)
+    await user.click(screen.getByRole('button', { name: '원문에서 고치기' }))
+
+    const source = screen.getByLabelText('원문')
+    expect(source).toHaveValue('<write>닫히지 않음')
+    expect(source).toHaveFocus()
+    expect(screen.getByRole('alert')).toHaveTextContent('1번째 줄')
+    // Nothing was written: the screen's 저장 is still the only write.
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+  })
+
+  // The two modes are two renderings of ONE field: what one writes is what the other shows.
+  it('round-trips builder → source → builder without changing the composition', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/template-review')
+
+    await screen.findByLabelText('이름')
+    await user.click(screen.getByRole('tab', { name: '원문' }))
+    expect(screen.getByLabelText('원문')).toHaveValue(REVIEW.body)
+
+    await user.click(screen.getByRole('tab', { name: '블록' }))
+    // The outline is seeded from the same body, retired position included (TEMPLATE-37).
+    expect(screen.getByText('네이버 지도')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+  })
 })

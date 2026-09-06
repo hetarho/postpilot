@@ -5,20 +5,25 @@ import { useSession } from '@/entities/session'
 import {
   TEMPLATE_LIMITS,
   TemplateComposition,
+  TemplateSource,
   canSaveTemplate,
+  parse,
   remainingChars,
   useTemplates,
   type Template,
 } from '@/entities/template'
+import { TEMPLATE_PHOTO_ROW_MAX } from '@/shared/config'
 import { useCreateTemplate } from '@/features/create-template'
 import { useUpdateTemplate } from '@/features/edit-template'
 import {
   ActionBar,
   Button,
   Dialog,
+  FieldCount,
   FieldLabel,
   FieldMessage,
   Notice,
+  SegmentedControl,
   TextField,
   Textarea,
   Typography,
@@ -110,6 +115,8 @@ function BackLink() {
   )
 }
 
+const COMPOSITION_PANEL_ID = 'template-composition-panel'
+
 interface Draft {
   name: string
   description: string
@@ -134,6 +141,13 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   // template that was just saved.
   const [savedBaseline, setSavedBaseline] = useState<Draft | null>(null)
   const [saved, setSaved] = useState(false)
+  // Which way the composition is being edited. Two renderings of ONE field, never both at once:
+  // the builder reseeds its rows from the body on mount, which is the same "value from outside"
+  // path a refetch takes (TEMPLATE-29), so switching needs no synchronisation of its own.
+  const [mode, setMode] = useState<'builder' | 'source'>('builder')
+  // Set only by 원문에서 고치기: arriving there by the user's own choice of the tab should not
+  // steal the caret, but arriving there to fix a parse error should put it in the text.
+  const [focusSource, setFocusSource] = useState(false)
   const create = useCreateTemplate(ownerId)
   const update = useUpdateTemplate(ownerId, stored?.id ?? '')
 
@@ -154,7 +168,12 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   const pending = create.isPending || update.isPending
   const errorMessage = create.errorMessage || update.errorMessage
   const failed = create.isError || update.isError
-  const blocked = !dirty || !canSaveTemplate(trimmed) || pending
+  // Parsed ONCE, here: the save gate and the error the source mode shows are the same answer, so
+  // they cannot disagree. The builder emits only bodies that parse, so this changes nothing for a
+  // builder-only flow — it is what makes "a body that does not parse cannot be saved from EITHER
+  // mode" true (TEMPLATE-30, TEMPLATE-7).
+  const parsed = parse(trimmed.body, { photoRowMax: TEMPLATE_PHOTO_ROW_MAX })
+  const blocked = !dirty || !canSaveTemplate(trimmed) || !parsed.ok || pending
 
   // A REF, not state: the post-save redirect below runs in the same tick as the state update
   // that would clear `dirty`, and the blocker reads its render-time closure — so without this the
@@ -232,14 +251,49 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
           {t('create.body', { ns: 'templates' })}
         </Typography>
         <Typography variant="body" as="p" className="text-content-secondary max-w-measure mt-1">
-          {t('screen.compositionHelp', { ns: 'templates' })}
+          {t(mode === 'source' ? 'screen.sourceHelp' : 'screen.compositionHelp', {
+            ns: 'templates',
+          })}
         </Typography>
-        <TemplateComposition
-          value={draft.body}
-          onChange={field('body')}
+        <SegmentedControl
+          value={mode}
+          options={[
+            { value: 'builder', label: t('screen.mode.builder', { ns: 'templates' }) },
+            { value: 'source', label: t('screen.mode.source', { ns: 'templates' }) },
+          ]}
+          onChange={(next) => {
+            setMode(next)
+            // Only the fix button asks for the caret; picking the tab does not.
+            if (next === 'builder') setFocusSource(false)
+          }}
+          ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
+          controls={COMPOSITION_PANEL_ID}
           disabled={pending}
           className="mt-3"
         />
+        <div id={COMPOSITION_PANEL_ID} role="tabpanel">
+          {mode === 'source' ? (
+            <TemplateSource
+              value={draft.body}
+              onChange={field('body')}
+              disabled={pending}
+              failure={parsed.ok ? null : parsed.failure}
+              autoFocus={focusSource}
+              className="mt-3"
+            />
+          ) : (
+            <TemplateComposition
+              value={draft.body}
+              onChange={field('body')}
+              disabled={pending}
+              onFixInSource={() => {
+                setFocusSource(true)
+                setMode('source')
+              }}
+              className="mt-3"
+            />
+          )}
+        </div>
       </section>
 
       {/* The state this screen has to report goes in one place, above the control that produced
@@ -305,7 +359,7 @@ function NameField({
         onChange={(event) => onChange(event.target.value)}
         className="mt-1"
       />
-      <Count left={left} />
+      <FieldCount left={left} />
     </div>
   )
 }
@@ -337,20 +391,7 @@ function DescriptionField({
         onChange={(event) => onChange(event.target.value)}
         className="mt-1"
       />
-      <Count left={left} />
+      <FieldCount left={left} />
     </div>
-  )
-}
-
-function Count({ left }: { left: number }) {
-  const { t } = useTranslation('common')
-  return left < 0 ? (
-    <FieldMessage role="status" className="mt-2">
-      {t('count.exceeded', { count: -left })}
-    </FieldMessage>
-  ) : (
-    <Typography variant="meta" as="p" className="mt-2">
-      {t('count.remaining', { count: left })}
-    </Typography>
   )
 }

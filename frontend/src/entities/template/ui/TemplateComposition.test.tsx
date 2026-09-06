@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TemplateComposition } from './TemplateComposition'
@@ -287,5 +287,34 @@ describe('the composition editor', () => {
     await user.click(screen.getByRole('button', { name: '구성 비우고 다시 만들기' }))
     expect(body()).toBe('')
     expect(screen.getByRole('group', { name: '블록 추가' })).toBeInTheDocument()
+  })
+
+  // TEMPLATE-30: an unreadable body now has a way to FIX as well as a way to discard, and the
+  // fix comes first — it keeps what the author wrote.
+  it('offers to fix an unreadable body in the source before offering to clear it', async () => {
+    const user = userEvent.setup()
+    const onFixInSource = vi.fn()
+    render(
+      <TemplateComposition
+        value="<write>닫히지 않음"
+        onChange={() => {}}
+        onFixInSource={onFixInSource}
+      />,
+    )
+
+    const actions = screen.getAllByRole('button')
+    expect(actions[0]).toHaveAccessibleName('원문에서 고치기')
+    expect(actions[1]).toHaveAccessibleName('구성 비우고 다시 만들기')
+
+    await user.click(actions[0])
+    expect(onFixInSource).toHaveBeenCalledTimes(1)
+  })
+
+  // Without a source mode to switch to, the clear action is the only one — and it must not be
+  // rendered as a dead button beside a missing one.
+  it('offers only the clear action when there is no source mode', () => {
+    render(<TemplateComposition value="<write>닫히지 않음" onChange={() => {}} />)
+    expect(screen.queryByRole('button', { name: '원문에서 고치기' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '구성 비우고 다시 만들기' })).toBeInTheDocument()
   })
 })

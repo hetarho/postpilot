@@ -56,6 +56,25 @@ export type ParseReason =
    *  rather than malformed_tag: the attribute parsed fine, it is the VALUE to go fix. */
   | 'invalid_count'
 
+/** Every reason a body can be refused, as a list.
+ *
+ *  It exists so a test can prove the copy catalog covers the whole union: a reason with no
+ *  `builder.reasons` entry renders its own key at the user, which is how a new rule ships
+ *  half-translated. */
+export const PARSE_REASONS: readonly ParseReason[] = [
+  'unknown_tag',
+  'unclosed_tag',
+  'unexpected_close',
+  'malformed_tag',
+  'missing_attribute',
+  'unknown_slot_kind',
+  'unknown_repeat_each',
+  'nested_repeat',
+  'empty_write',
+  'empty_note',
+  'invalid_count',
+]
+
 export interface ParseFailure {
   /** 1-based, so it matches what the source editor shows. */
   line: number

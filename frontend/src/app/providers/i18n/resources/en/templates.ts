@@ -24,6 +24,13 @@ export const templates = {
   },
   emptyDescription: 'No description',
   screen: {
+    mode: {
+      aria: 'How to edit',
+      builder: 'Blocks',
+      source: 'Source',
+    },
+    sourceHelp:
+      'See and edit the template in its stored format. Hand the format guide to an AI and paste what it writes here.',
     backToList: '← Templates',
     newTitle: 'New template',
     notFound: 'Could not find this template. Pick one from the list again.',
@@ -36,6 +43,7 @@ export const templates = {
     leaveConfirm: 'Leave without saving',
   },
   composition: {
+    fixInSource: 'Fix in source',
     add: 'Add block',
     empty: 'Add blocks above to lay out the post.',
     insertHere: 'Adds here',
@@ -43,7 +51,7 @@ export const templates = {
     repeatHelp:
       'The blocks inside repeat once per attached photo. Each repetition uses {{count}} photos.',
     unreadable:
-      'The structure of this template cannot be read — it may have been saved in an older format. Clear it and build it again.',
+      "This template's composition can't be read. Fix it in the source, or clear it and start over.",
     clearAndRestart: 'Clear and start over',
     summary: {
       // Only ever formatted with a count of one — photoSummaryKey sends anything above it to
@@ -58,6 +66,43 @@ export const templates = {
       photo: 'An attached photo goes here',
       repeat: 'Once per photo',
     },
+  },
+  // The one surface where this app's grammar is visible (TEMPLATE-26).
+  source: {
+    label: 'Source',
+    copy: 'Copy source',
+    copyGuide: 'Copy format guide',
+    copied: 'Copied',
+    manualCopy: 'Copying is blocked. Press and hold the selected text to copy it.',
+    showGuide: 'Show format guide',
+    error: 'Line {{line}}: {{reason}}',
+    guide: `Write the body of one blog post template in the format below.
+
+[What a template does]
+A template is the skeleton of a post. It decides the order and what goes where; it never decides tone or word choice.
+
+[The five things you can write]
+- Plain text: appears in the post exactly as written.
+- <write>what to write</write>: the AI writes here as instructed. The instruction itself never appears in the post.
+- <slot kind="photo"/>: one attached photo goes here. With a count, as in <slot kind="photo" count="2"/>, that many stand side by side in one row.
+- <repeat each="photo">…</repeat>: what is inside repeats once per group of photos.
+- <note>note to the AI</note>: only the AI reads it; it never appears in the post.
+
+[Rules that must hold]
+- write, note and repeat must be closed.
+- slot closes itself, as <slot …/>, and kind may only be photo.
+- count is a whole number from 1 to {{photoRowMax}}. Without it, one photo.
+- repeat takes only each="photo", and a repeat may not contain a repeat.
+- write and note may never be empty.
+- Any tag other than those five is refused.
+- To write a literal < in a sentence, write &lt; instead.
+- The whole body may not exceed {{bodyMax}} characters.
+
+[Example]
+{{example}}
+
+[How to answer]
+Send the body only — no explanation and no code fence. Write it in the language I am writing in.`,
   },
   builder: {
     palette: {

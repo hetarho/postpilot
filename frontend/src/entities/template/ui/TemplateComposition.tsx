@@ -54,40 +54,62 @@ export function TemplateComposition({
   onChange,
   disabled = false,
   className,
+  onFixInSource,
 }: {
   value: string
   onChange: (body: string) => void
   disabled?: boolean
   className?: string
+  /** Switches the screen to 원문 with the caret in the text. Absent when there is no source mode
+   *  to switch to, which is why the clear action can never be the only way out. */
+  onFixInSource?: () => void
 }) {
   const { t } = useTranslation('templates')
   return readBody(value, t).ok ? (
     <Composition value={value} onChange={onChange} disabled={disabled} className={className} />
   ) : (
-    <Unreadable disabled={disabled} onClear={() => onChange('')} className={className} />
+    <Unreadable
+      disabled={disabled}
+      onClear={() => onChange('')}
+      onFixInSource={onFixInSource}
+      className={className}
+    />
   )
 }
 
-/** A body from before the builder existed, or one edited outside the app. The composition cannot
- *  be shown, and inventing a structure the author did not write would be worse than saying so —
- *  so the only action is to start it over. It writes nothing: the screen's save is still the only
- *  write (change 30 A10). */
+/** A body from before the builder existed, one written by an outside AI, or one edited elsewhere.
+ *  The composition cannot be shown, and inventing a structure the author did not write would be
+ *  worse than saying so — so it says so and offers TWO ways out (TEMPLATE-30): fix the text where
+ *  the parse error actually is, or empty the composition and start again.
+ *
+ *  The order is deliberate. Fixing keeps what the author wrote and is what a pasted body usually
+ *  needs; clearing throws it away, so it is the second, destructive one. Neither writes anything:
+ *  the screen's 저장 is still the only write. */
 function Unreadable({
   disabled,
   onClear,
+  onFixInSource,
   className,
 }: {
   disabled: boolean
   onClear: () => void
+  onFixInSource?: () => void
   className?: string
 }) {
   const { t } = useTranslation('templates')
   return (
     <div className={className}>
       <FieldMessage role="alert">{t('composition.unreadable')}</FieldMessage>
-      <Button variant="danger" disabled={disabled} onClick={onClear} className="mt-3">
-        {t('composition.clearAndRestart')}
-      </Button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {onFixInSource && (
+          <Button variant="secondary" disabled={disabled} onClick={onFixInSource}>
+            {t('composition.fixInSource')}
+          </Button>
+        )}
+        <Button variant="danger" disabled={disabled} onClick={onClear}>
+          {t('composition.clearAndRestart')}
+        </Button>
+      </div>
     </div>
   )
 }

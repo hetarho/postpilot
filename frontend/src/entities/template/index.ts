@@ -19,9 +19,13 @@ export {
   encode,
   parse,
   serialize,
+  PARSE_REASONS,
   type ParseFailure,
+  type ParseOptions,
   type ParseReason,
   type SlotKind,
   type TemplateNode,
 } from './lib/grammar'
+export { GUIDE_EXAMPLE_BODY, formatGuide } from './model/guide'
 export { TemplateComposition } from './ui/TemplateComposition'
+export { TemplateSource } from './ui/TemplateSource'
