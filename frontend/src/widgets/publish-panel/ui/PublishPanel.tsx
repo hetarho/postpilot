@@ -12,6 +12,7 @@ export function PublishPanel({
   contentRevision,
   finalizedRevision,
   status,
+  hasVideoBlock = false,
   beforePublish,
 }: {
   ownerId: string
@@ -19,6 +20,9 @@ export function PublishPanel({
   contentRevision: bigint
   finalizedRevision: bigint
   status: string
+  /** The finalized content places a clip. Passed in rather than derived here: the panel does
+   *  not read the content, and the editor already holds it (VIDEO-16). */
+  hasVideoBlock?: boolean
   beforePublish: () => Promise<bigint>
 }) {
   const { t } = useTranslation('publishing')
@@ -118,6 +122,7 @@ export function PublishPanel({
             contentRevision={contentRevision}
             finalizedRevision={finalizedRevision}
             finalized={finalized}
+            hasVideoBlock={hasVideoBlock}
             beforePublish={beforePublish}
             agents={agents.agents}
             observedAt={agents.observedAt}

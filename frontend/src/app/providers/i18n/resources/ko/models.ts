@@ -1,4 +1,6 @@
 export const models = {
+  // Shown beside a model that takes VIDEO input — narrower than vision (VIDEO-11).
+  capability: { video: '영상' },
   title: 'AI 모델',
   page: {
     description:

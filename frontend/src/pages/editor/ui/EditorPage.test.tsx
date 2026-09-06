@@ -15,6 +15,7 @@ import { renderAppAt } from '@/test/app'
 import {
   OBSERVATION_FIXTURE,
   POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_VIDEO_FIXTURE,
   OBSERVATIONS_FIXTURE,
   POST_IMAGES_FIXTURE,
 } from '@/test/fixtures/postContent'
@@ -1968,6 +1969,37 @@ describe('the draft read-first', () => {
     await user.click(screen.getByRole('button', { name: '문단 추가' }))
     expect(await screen.findByText('새 문단')).toBeInTheDocument()
     await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
+  })
+
+  // VIDEO-2: a VIDEO block carries the IMAGE fields and none of its own, so the same three
+  // controls edit it — only the list it picks from differs, and it is offered only when the
+  // post actually has a clip.
+  it('edits a VIDEO block with the attached-video list, alt and caption', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-video', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-video',
+            status: 'review',
+            content: POST_CONTENT_WITH_VIDEO_FIXTURE,
+            images: POST_IMAGES_FIXTURE,
+            videos: [{ id: 'video-1', filename: 'clip.mp4' }],
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+          },
+        ],
+      },
+    })
+
+    const blockIndex = POST_CONTENT_WITH_VIDEO_FIXTURE.blocks.length - 1
+    await user.click(await screen.findByRole('button', { name: `${blockIndex + 1}번째 블록 수정` }))
+    expect(screen.getByText('첨부 영상')).toBeInTheDocument()
+    const caption = screen.getByPlaceholderText('캡션 (선택)')
+    await user.type(caption, '파도')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    expect(await screen.findByText('파도')).toBeInTheDocument()
   })
 })
 

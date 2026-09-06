@@ -6,6 +6,9 @@ import { deletedVoiceAIReason, type VoiceRef } from '@/entities/voice'
 export interface GenerationModelSelection {
   ref: ModelRef
   vision: boolean
+  /** The model takes VIDEO input. Checked only when the post actually carries a clip: watching
+   *  is not a purpose, it is a per-run requirement (VIDEO-11). */
+  videoInput?: boolean
 }
 
 /** Why an action cannot run, as a value the UI can branch on. String-matching a translated
@@ -13,7 +16,14 @@ export interface GenerationModelSelection {
  *  which it answers with a way to go and set them up — from "a job is already running", which it
  *  answers by waiting. */
 export type GenerationBlocker =
-  'voiceDeleted' | 'activeJob' | 'observe' | 'vision' | 'write' | 'pair' | 'different'
+  | 'voiceDeleted'
+  | 'activeJob'
+  | 'observe'
+  | 'vision'
+  | 'videoModel'
+  | 'write'
+  | 'pair'
+  | 'different'
 
 /** The blockers a route out of this screen can fix. `observe` · `vision` · `write` are the active
  *  selections and `pair` · `different` are the A/B candidates; all five are set in the writing
@@ -21,6 +31,7 @@ export type GenerationBlocker =
 const SETUP_BLOCKERS = new Set<GenerationBlocker>([
   'observe',
   'vision',
+  'videoModel',
   'write',
   'pair',
   'different',
@@ -49,6 +60,7 @@ function sharedPreconditions(
   observeSelection: GenerationModelSelection | undefined,
   activeJob: Pick<GenerationJob, 'status'> | undefined,
   voice: Pick<VoiceRef, 'deleted'> | undefined,
+  videos: readonly unknown[] = [],
 ): GenerationPreconditions {
   if (voice?.deleted) return { ok: false, reason: deletedVoiceAIReason(), blocker: 'voiceDeleted' }
   if (activeJob && activeJob.status !== 'done' && activeJob.status !== 'failed') {
@@ -58,18 +70,29 @@ function sharedPreconditions(
       blocker: 'activeJob',
     }
   }
-  if (images.length === 0) return { ok: true, reason: '' }
+  if (images.length === 0 && videos.length === 0) return { ok: true, reason: '' }
   if (!observeSelection)
     return {
       ok: false,
       reason: i18next.t('generation.blocked.observe', { ns: 'posts' }),
       blocker: 'observe',
     }
-  if (!observeSelection.vision) {
+  // Vision first: a model that cannot see a photo is the simpler thing to fix, and a post with
+  // both kinds needs both capabilities anyway.
+  if (images.length > 0 && !observeSelection.vision) {
     return {
       ok: false,
       reason: i18next.t('generation.blocked.vision', { ns: 'posts' }),
       blocker: 'vision',
+    }
+  }
+  // Only when the post actually carries a clip. The server refuses the same run before
+  // enqueue; this is what stops the button looking clickable (VIDEO-11).
+  if (videos.length > 0 && !observeSelection.videoInput) {
+    return {
+      ok: false,
+      reason: i18next.t('generation.blocked.videoModel', { ns: 'posts' }),
+      blocker: 'videoModel',
     }
   }
   return { ok: true, reason: '' }
@@ -81,8 +104,9 @@ export function ordinaryGenerationPreconditions(
   writeSelection: GenerationModelSelection | undefined,
   activeJob: Pick<GenerationJob, 'status'> | undefined,
   voice?: Pick<VoiceRef, 'deleted'>,
+  videos: readonly unknown[] = [],
 ): GenerationPreconditions {
-  const shared = sharedPreconditions(images, observeSelection, activeJob, voice)
+  const shared = sharedPreconditions(images, observeSelection, activeJob, voice, videos)
   if (!shared.ok) return shared
   if (!writeSelection)
     return {
@@ -100,8 +124,9 @@ export function comparisonGenerationPreconditions(
   writeSelectionB: GenerationModelSelection | undefined,
   activeJob: Pick<GenerationJob, 'status'> | undefined,
   voice?: Pick<VoiceRef, 'deleted'>,
+  videos: readonly unknown[] = [],
 ): GenerationPreconditions {
-  const shared = sharedPreconditions(images, observeSelection, activeJob, voice)
+  const shared = sharedPreconditions(images, observeSelection, activeJob, voice, videos)
   if (!shared.ok) return shared
   if (!writeSelectionA || !writeSelectionB)
     return {

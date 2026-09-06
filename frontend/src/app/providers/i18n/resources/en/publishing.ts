@@ -1,4 +1,9 @@
 export const publishing = {
+  // The agent cannot carry a clip yet (VIDEO-16).
+  blocked: {
+    videoBlock:
+      'A post with a video cannot be published yet. Paste it yourself from the export tab.',
+  },
   title: 'Publish',
   stage: {
     queued: 'Waiting for a Mac connection',

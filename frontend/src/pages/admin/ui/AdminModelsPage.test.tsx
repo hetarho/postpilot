@@ -94,6 +94,7 @@ describe('the model catalog tab', () => {
             modelId: 'openai/lost-vision',
             label: 'Lost Vision',
             vision: false,
+            videoInput: false,
             curated: true,
             purposes: ['photo-analysis'],
           },

@@ -1,7 +1,11 @@
 import { create } from '@bufbuild/protobuf'
 import { expect, it } from 'vitest'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
-import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import {
+  POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_VIDEO_FIXTURE,
+  POST_IMAGES_FIXTURE,
+} from '@/test/fixtures/postContent'
 import { toSite } from './convert'
 
 it('converts every block to one standalone fixed-template page', () => {
@@ -52,4 +56,14 @@ it('uses the concrete English content provenance in the document language', () =
 
   expect(output).toContain('<html lang="en">')
   expect(output).not.toContain('<html lang="ko">')
+})
+
+// The site export is the one format whose files sit next to the document, so its video has a
+// real relative source (VIDEO-14).
+it('writes a video as a figure with a relative source', () => {
+  const output = toSite(POST_CONTENT_WITH_VIDEO_FIXTURE, POST_IMAGES_FIXTURE, '2026-08-28', 'ko')
+
+  expect(output).toMatchSnapshot()
+  expect(output).toContain('<video controls src="clip.mp4"></video>')
+  expect(output).toContain('<figcaption>파도가 밀려온다</figcaption>')
 })

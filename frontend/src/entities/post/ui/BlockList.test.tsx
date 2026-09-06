@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/react'
-import { expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import { create } from '@bufbuild/protobuf'
+import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import { POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
 import { BlockList } from './BlockList'
 
@@ -51,4 +53,61 @@ it('hands an IMAGE block with no matching image to renderMissingImage, in place'
 it('lets a consumer name the article apart from the reading view', () => {
   render(<BlockList content={POST_CONTENT_FIXTURE} images={[]} label="네이버 미리보기" />)
   expect(screen.getByRole('article', { name: '네이버 미리보기' })).toBeInTheDocument()
+})
+
+describe('a VIDEO block', () => {
+  const clip = {
+    id: 'video-1',
+    filename: 'clip.mp4',
+    width: 1920,
+    height: 1080,
+    bytes: 12_000_000,
+    durationMs: 8_000,
+    contentType: 'video/mp4',
+    viewUrl: 'https://storage.test/clip.mp4?sig=read',
+  }
+  const content = create(PostContentSchema, {
+    title: '제목',
+    blocks: [
+      create(BlockSchema, { type: BlockType.VIDEO, file: 'clip.mp4', caption: '파도' }),
+      create(BlockSchema, { type: BlockType.VIDEO, file: 'gone.mp4' }),
+    ],
+  })
+
+  // VIDEO-14: played in place, on demand. No autoplay and metadata only, so opening a draft with
+  // three clips does not start pulling 600 MB.
+  it('plays the matching clip with its caption, and never autoplays', () => {
+    const { container } = render(<BlockList content={content} images={[]} videos={[clip]} />)
+
+    const video = container.querySelector('video')
+    expect(video).toHaveAttribute('src', clip.viewUrl)
+    expect(video).toHaveAttribute('preload', 'metadata')
+    expect(video).not.toHaveAttribute('autoplay')
+    expect(video).toHaveAttribute('controls')
+    expect(screen.getByText('파도')).toBeInTheDocument()
+  })
+
+  // The block still holds its position: a dropped one would shift everything after it against
+  // what the export markers say.
+  it('holds the position with the filename when no attached clip matches', () => {
+    render(<BlockList content={content} images={[]} videos={[clip]} />)
+    expect(screen.getByText('gone.mp4')).toBeInTheDocument()
+  })
+
+  it('lets a consumer wrap the rendered clip', () => {
+    render(
+      <BlockList
+        content={content}
+        images={[]}
+        videos={[clip]}
+        renderVideo={(_block, rendered) => (
+          <div>
+            {rendered}
+            <span>기기의 원본 영상을 첨부해 주세요</span>
+          </div>
+        )}
+      />,
+    )
+    expect(screen.getAllByText('기기의 원본 영상을 첨부해 주세요')).toHaveLength(2)
+  })
 })

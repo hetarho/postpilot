@@ -60,8 +60,9 @@ export const BlockEditor = forwardRef<
       validContent(
         content,
         post.images.map((image) => image.filename),
+        post.videos.map((video) => video.filename),
       ),
-    [content, post.images],
+    [content, post.images, post.videos],
   )
   const autosave = useContentAutosave({
     slug: post.slug,
@@ -119,6 +120,7 @@ export const BlockEditor = forwardRef<
       <BlockList
         content={content}
         images={post.images}
+        videos={post.videos}
         renderHeader={(rendered) => (
           <Editable
             editLabel={t('edit.titleSummaryTags')}
@@ -133,6 +135,7 @@ export const BlockEditor = forwardRef<
             index={index}
             blockCount={content.blocks.length}
             filenames={post.images.map((image) => image.filename)}
+            videoFilenames={post.videos.map((video) => video.filename)}
             onChange={(value) => updateBlock(index, value)}
             onMove={(direction) => moveBlock(index, direction)}
             onRemove={() => removeBlock(index)}
@@ -162,6 +165,7 @@ function BlockEditRow({
   index,
   blockCount,
   filenames,
+  videoFilenames,
   onChange,
   onMove,
   onRemove,
@@ -171,6 +175,7 @@ function BlockEditRow({
   index: number
   blockCount: number
   filenames: string[]
+  videoFilenames: string[]
   onChange: (block: Block) => void
   onMove: (direction: -1 | 1) => void
   onRemove: () => void
@@ -186,6 +191,7 @@ function BlockEditRow({
           index={index}
           blockCount={blockCount}
           filenames={filenames}
+          videoFilenames={videoFilenames}
           onChange={onChange}
           onMove={onMove}
           onRemove={onRemove}
@@ -203,6 +209,7 @@ function BlockControls({
   index,
   blockCount,
   filenames,
+  videoFilenames,
   onChange,
   onMove,
   onRemove,
@@ -212,6 +219,7 @@ function BlockControls({
   index: number
   blockCount: number
   filenames: string[]
+  videoFilenames: string[]
   onChange: (block: Block) => void
   onMove: (direction: -1 | 1) => void
   onRemove: () => void
@@ -251,8 +259,18 @@ function BlockControls({
                   },
                 ]
               : []),
+            // Offered only when the post actually has a clip: a VIDEO block names an attached
+            // video, and the save refuses one that names nothing (VIDEO-2).
+            ...(videoFilenames.length > 0
+              ? [
+                  {
+                    value: BlockType.VIDEO,
+                    label: t('edit.blockTypeOption.video', { ns: 'posts' }),
+                  },
+                ]
+              : []),
           ]}
-          onChange={(type) => onChange(freshBlock(type, filenames[0]))}
+          onChange={(type) => onChange(freshBlock(type, filenames[0], videoFilenames[0]))}
           className="w-auto min-w-32"
         />
         <span className="ml-auto flex gap-1">
@@ -295,7 +313,13 @@ function BlockControls({
           </Button>
         </span>
       </div>
-      <BlockFields block={block} index={index} filenames={filenames} onChange={onChange} />
+      <BlockFields
+        block={block}
+        index={index}
+        filenames={filenames}
+        videoFilenames={videoFilenames}
+        onChange={onChange}
+      />
       <div className="mt-3 flex flex-wrap gap-2">
         <Button variant="secondary" onClick={onDone}>
           {t('action.save', { ns: 'common' })}
@@ -395,25 +419,31 @@ function BlockFields({
   block,
   index,
   filenames,
+  videoFilenames,
   onChange,
 }: {
   block: Block
   index: number
   filenames: string[]
+  videoFilenames: string[]
   onChange: (block: Block) => void
 }) {
   const { t } = useTranslation('posts')
-  if (block.type === BlockType.IMAGE) {
+  if (block.type === BlockType.IMAGE || block.type === BlockType.VIDEO) {
+    // A VIDEO block carries the IMAGE fields and none of its own (VIDEO-2), so the same three
+    // controls edit it — only the list it picks from differs.
+    const isVideo = block.type === BlockType.VIDEO
+    const names = isVideo ? videoFilenames : filenames
     return (
       <div className="mt-3 grid gap-3">
         <FieldLabel id={`block-image-label-${index}`} htmlFor={`block-image-${index}`}>
-          {t('edit.attachedPhoto')}
+          {isVideo ? t('edit.attachedVideo') : t('edit.attachedPhoto')}
         </FieldLabel>
         <Listbox
           id={`block-image-${index}`}
           aria-labelledby={`block-image-label-${index}`}
           value={block.file}
-          options={filenames.map((filename) => ({ value: filename, label: filename }))}
+          options={names.map((filename) => ({ value: filename, label: filename }))}
           onChange={(file) => onChange(create(BlockSchema, { ...block, file }))}
         />
         <TextField
@@ -473,7 +503,7 @@ function BlockFields({
   )
 }
 
-function freshBlock(type: BlockType, firstImage?: string): Block {
+function freshBlock(type: BlockType, firstImage?: string, firstVideo?: string): Block {
   switch (type) {
     case BlockType.HEADING:
       return create(BlockSchema, {
@@ -493,6 +523,8 @@ function freshBlock(type: BlockType, firstImage?: string): Block {
       })
     case BlockType.IMAGE:
       return create(BlockSchema, { type, file: firstImage ?? '' })
+    case BlockType.VIDEO:
+      return create(BlockSchema, { type, file: firstVideo ?? '' })
     default:
       return create(BlockSchema, {
         type: BlockType.TEXT,
@@ -501,10 +533,17 @@ function freshBlock(type: BlockType, firstImage?: string): Block {
   }
 }
 
-function validContent(content: PostContent, filenames: string[]): boolean {
+function validContent(
+  content: PostContent,
+  filenames: string[],
+  videoFilenames: string[],
+): boolean {
   if (content.blocks.length === 0) return false
   return content.blocks.every((block) => {
     if (block.type === BlockType.IMAGE) return filenames.includes(block.file)
+    // A filename is unique across the two kinds, so a VIDEO block naming a photo is the wrong
+    // block type — refused here exactly as the server refuses it.
+    if (block.type === BlockType.VIDEO) return videoFilenames.includes(block.file)
     if (block.type === BlockType.LIST)
       return block.items.length > 0 && block.items.every((item) => item.trim() !== '')
     if (block.type === BlockType.HEADING)

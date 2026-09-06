@@ -1,8 +1,12 @@
 import { expect, it } from 'vitest'
-import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import {
+  POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_VIDEO_FIXTURE,
+  POST_IMAGES_FIXTURE,
+} from '@/test/fixtures/postContent'
 import { create } from '@bufbuild/protobuf'
 import { BlockSchema, BlockType } from '@/shared/api'
-import { naverPhotoOrder, toNaver } from './convert'
+import { naverPhotoOrder, naverVideoOrder, toNaver } from './convert'
 
 it('converts every block to the Naver plain-text contract', () => {
   const output = toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')
@@ -52,4 +56,22 @@ it('ignores every non-image block', () => {
       blocks: POST_CONTENT_FIXTURE.blocks.filter((block) => block.type !== BlockType.IMAGE),
     }),
   ).toEqual([])
+})
+
+// VIDEO-14/15: a marker, never a URL and never bytes — the clipboard cannot carry a video file
+// from a page, and the file the author filmed is on the device they are pasting from.
+it('writes a video marker with the caption after a dash, and reports the video order', () => {
+  const output = toNaver(POST_CONTENT_WITH_VIDEO_FIXTURE, POST_IMAGES_FIXTURE, 'ko')
+
+  expect(output).toMatchSnapshot()
+  expect(output).toContain('[동영상 clip.mp4 — 파도가 밀려온다]')
+  expect(output).toContain('[동영상 clip.mp4]')
+  expect(output).not.toContain('storage.example')
+  expect(naverVideoOrder(POST_CONTENT_WITH_VIDEO_FIXTURE)).toEqual(['clip.mp4', 'clip.mp4'])
+})
+
+it('uses the content provenance for the English video marker too', () => {
+  const output = toNaver(POST_CONTENT_WITH_VIDEO_FIXTURE, POST_IMAGES_FIXTURE, 'en')
+  expect(output).toContain('[Video clip.mp4 — 파도가 밀려온다]')
+  expect(output).not.toContain('[동영상')
 })

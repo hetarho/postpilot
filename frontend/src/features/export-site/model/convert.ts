@@ -31,6 +31,12 @@ export function toSite(
         const caption = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : ''
         return `<figure><img src="${escapeHtml(relativeFileUrl(block.file))}" alt="${escapeHtml(block.alt)}">${caption}</figure>`
       }
+      case BlockType.VIDEO: {
+        // A real element with a relative source, like the image beside it: the site export is
+        // the one format whose files sit next to the document.
+        const caption = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : ''
+        return `<figure><video controls src="${escapeHtml(relativeFileUrl(block.file))}"></video>${caption}</figure>`
+      }
       case BlockType.QUOTE:
         return `<blockquote><p>${escapeHtml(block.content)}</p></blockquote>`
       case BlockType.LIST:

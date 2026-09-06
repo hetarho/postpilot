@@ -31,17 +31,18 @@
 |---|---|---|---|---|
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260905.cx |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
-| T016 | The VIDEO block in the reading view, editor and exports, plus the capability badges and refusals | VIDEO EXPORT MODEL POST | T013 T015 | todo |
 | T017 | The `원문` source mode, paste import and the copyable format guide | TEMPLATE | T011 | todo |
 | T018 | The bound CDP session and the deterministic Naver observation port | PUBLISH | T005 | doing@260906.pt |
 | T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | todo |
 
 ## next
 - implement-task T017 (the `원문` source mode on top of T011's screen)
-- implement-task T016 (VIDEO blocks in the reading view, editor and the four exports, plus the badges and refusals)
+- update-ssot PUBLISH after T008 closes: VIDEO-17 (agent video publishing) and TEMPLATE-39 (photo-row transport); VIDEO is otherwise shipped
 - implement-task T018 → T019 → T008 (the deterministic publisher's real CDP driver; nothing can publish until T019 wires it) · T007 in parallel (cx)
 
 ## log
+- 260906 T016 done — VIDEO is complete except VIDEO-17 (agent publishing), still open for update-ssot PUBLISH after T008
+- 260906 T016 claimed (vd)
 - 260906 T015 done — videos are attachable in the browser; only T016 (blocks, exports, badges) is left of VIDEO
 - 260906 T015 claimed (vd)
 - 260906 T014 done — T012's WARN closed: generation tells a clip from a photo, so T015 may make videos attachable
@@ -60,5 +61,3 @@
 - 260906 T013 claimed (vd)
 - 260906 WARN T012 put videos inside generation.PostInput.Images; generation still batches that list as photos — T014 must land before T015 makes videos attachable
 - 260906 T012 done (videos as the post's second attachment kind: proto, migration 0026, kind-aware handshake, cascade, sweep, VIDEO block; ARCH-26 + ARCH-28 pass)
-- 260906 create-task TEMPLATE → T017 (dep T011; FE only, no server change); TEMPLATE tasked=3; T011 base → TEMPLATE@3 with a hand-off note
-- 260906 create-task TEMPLATE start (r3 delta: 26✎ 30✎ 34✎ 41+ 42+)

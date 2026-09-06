@@ -21,6 +21,9 @@ export interface CatalogModel {
   ref: ModelRef
   label: string
   vision: boolean
+  /** The model takes VIDEO input. Narrower than `vision` and checked per RUN, not per stage:
+   *  a video-blind model still serves every post without a clip (VIDEO-11). */
+  videoInput: boolean
   structuredOutput: boolean
   /** The stages this model is registered to serve (change 20). Each stage's picker lists
    *  exactly its members — fitness is never re-derived from capability flags here. */
@@ -105,6 +108,7 @@ export interface AdminCatalogEntry {
   label: string
   description: string
   vision: boolean
+  videoInput: boolean
   structuredOutput: boolean
   contextTokens: bigint
   inputUsdPerMillion: string

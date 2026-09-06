@@ -174,4 +174,32 @@ describe('PublishPostForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('다른 Mac으로 바꾸어 재시도하지 않았어요')
     expect(screen.getByRole('button', { name: '발행 취소' })).toBeInTheDocument()
   })
+
+  // VIDEO-16: the agent cannot carry a clip yet, so 발행하기 says so before it is pressed. The
+  // server refuses the same post on its own; this is what stops the button looking clickable.
+  it('refuses a post whose content places a clip, and says where to paste it instead', () => {
+    const transport = createFakeAuthTransport({ user: { id: 'alice' } })
+    const wrapper = withProviders(transport, createTestQueryClient())
+
+    render(
+      <PublishPostForm
+        ownerId="alice"
+        postSlug="post"
+        contentRevision={3n}
+        finalizedRevision={3n}
+        finalized
+        hasVideoBlock
+        beforePublish={vi.fn().mockResolvedValue(3n)}
+        agents={[agent('first', 'daily', 'Daily', PublishVisibility.PUBLIC)]}
+        observedAt={new Date('2026-08-30T12:00:01Z').getTime()}
+        job={undefined}
+      />,
+      { wrapper },
+    )
+
+    expect(
+      screen.getByText('영상이 들어간 글은 아직 발행할 수 없어요. 내보내기에서 직접 붙여 주세요.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '네이버에 발행' })).toBeDisabled()
+  })
 })

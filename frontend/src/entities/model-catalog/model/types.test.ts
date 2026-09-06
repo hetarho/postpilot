@@ -9,6 +9,7 @@ const model = (
   ref: { providerId: 'openrouter', modelId },
   label: modelId,
   vision: stages.includes('observe'),
+  videoInput: false,
   structuredOutput: false,
   stages,
   disabled,

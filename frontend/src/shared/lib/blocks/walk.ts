@@ -1,4 +1,4 @@
-import type { Block, PostContent } from '@/shared/api'
+import { BlockType, type Block, type PostContent } from '@/shared/api'
 
 export type BlockVisitor<Result> = (block: Block, index: number) => Result
 
@@ -30,6 +30,14 @@ export function blockSlotPlaceholder(block: {
   if (!block.slot) return null
   const label = block.slot.label.trim() || block.slot.kind
   return `[${label}]`
+}
+
+/** Whether the content PLACES a clip in the post. Attached videos are irrelevant: only a block
+ *  puts one in what would be published, which is exactly what the agent cannot carry yet
+ *  (VIDEO-16). The server refuses the same thing on its own; this is what lets the surface say
+ *  so before the button is pressed. */
+export function hasVideoBlock(content: { blocks: readonly { type: BlockType }[] }): boolean {
+  return content.blocks.some((block) => block.type === BlockType.VIDEO)
 }
 
 /** How many positions a rendered post still leaves for a person to fill. */

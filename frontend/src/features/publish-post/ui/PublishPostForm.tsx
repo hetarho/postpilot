@@ -19,6 +19,7 @@ export function PublishPostForm({
   contentRevision,
   finalizedRevision,
   finalized,
+  hasVideoBlock = false,
   beforePublish,
   agents,
   observedAt,
@@ -29,6 +30,9 @@ export function PublishPostForm({
   contentRevision: bigint
   finalizedRevision: bigint
   finalized: boolean
+  /** The finalized content places a clip in the post. The agent cannot carry one yet, so the
+   *  button says so before it is pressed — the server refuses the same thing (VIDEO-16). */
+  hasVideoBlock?: boolean
   beforePublish: () => Promise<bigint>
   agents: PublishingAgent[]
   observedAt: number
@@ -177,6 +181,11 @@ export function PublishPostForm({
             </div>
           </div>
         )}
+      {hasVideoBlock && (
+        <Notice tone="info" className="mt-4">
+          {t('blocked.videoBlock')}
+        </Notice>
+      )}
       <div className="mt-5 flex flex-wrap gap-2">
         {!running &&
           job?.status !== PublishStatus.PUBLISHED &&
@@ -184,7 +193,9 @@ export function PublishPostForm({
             <Button
               variant="cta"
               className="w-full sm:w-auto"
-              disabled={(!retry && !finalized) || !effectiveCategoryId || preparing}
+              disabled={
+                (!retry && !finalized) || hasVideoBlock || !effectiveCategoryId || preparing
+              }
               pending={preparing}
               onClick={async () => {
                 setPrepareError('')

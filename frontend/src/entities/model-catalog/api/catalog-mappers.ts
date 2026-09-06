@@ -52,6 +52,7 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
     ref: toModelRef(info.ref),
     label: info.label,
     vision: info.vision,
+    videoInput: info.videoInput,
     structuredOutput: info.structuredOutput,
     // A stage this build does not know is skipped rather than invented, like everywhere
     // else the enum crosses.
@@ -77,6 +78,7 @@ export function toAdminCatalogEntry(entry: ProtoCatalogEntry): AdminCatalogEntry
     label: entry.label,
     description: entry.description,
     vision: entry.vision,
+    videoInput: entry.videoInput,
     structuredOutput: entry.structuredOutput,
     contextTokens: entry.contextTokens,
     inputUsdPerMillion: entry.inputUsdPerMillion,

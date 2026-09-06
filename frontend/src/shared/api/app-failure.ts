@@ -89,6 +89,14 @@ export const appFailureSpecs = {
   MODEL_REASONING_INVALID: {},
   GENERATION_WRITE_MODEL_REQUIRED: {},
   GENERATION_OBSERVE_MODEL_REQUIRED: {},
+  // The chosen observe model cannot watch a clip. The ref is allowlisted because the fix is to
+  // pick another model and the message names the one that cannot (VIDEO-11).
+  MODEL_VIDEO_UNSUPPORTED: { optional: ['model'] },
+  // The finalized content places a clip, which the agent cannot carry yet (VIDEO-16).
+  VIDEO_NOT_PUBLISHABLE: {},
+  POST_VIDEO_LIMIT: {},
+  UPLOAD_VIDEO_UNSUPPORTED: {},
+  UPLOAD_VIDEO_INVALID: {},
   GENERATION_TARGET_LENGTH_INVALID: {},
   GENERATION_ALREADY_RUNNING: { optional: ['active_job_id'] },
   GENERATION_VOICE_MISMATCH: {},

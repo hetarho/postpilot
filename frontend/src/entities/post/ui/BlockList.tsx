@@ -4,11 +4,14 @@ import { twMerge } from 'tailwind-merge'
 import { BlockType, type PostContent } from '@/shared/api'
 import { Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'
+import type { PostVideo } from '@/entities/video/@x/post'
 import { blockKey, imageByFile } from '../model/content'
 
 interface BlockListProps {
   content: PostContent
   images: readonly PostImage[]
+  /** The post's clips, so a VIDEO block can find the one it names (VIDEO-14). */
+  videos?: readonly PostVideo[]
   /** The article's accessible name. The editor's reading view keeps the default; a second
    *  rendering on the same page (the Naver export preview) names itself apart so the two articles
    *  stay distinguishable to a screen reader. */
@@ -30,20 +33,26 @@ interface BlockListProps {
    *  with its own placeholder, because a dropped position would shift every later photo against
    *  its `[사진 …]` marker. */
   renderMissingImage?: (block: PostContent['blocks'][number], index: number) => ReactNode
+  /** Wraps a rendered VIDEO block. The export preview uses it to put its own hint beside the
+   *  clip; the reading and editing views take the default. */
+  renderVideo?: (block: PostContent['blocks'][number], rendered: ReactNode) => ReactNode
 }
 
 /** The canonical block array rendered as a read-only draft. */
 export function BlockList({
   content,
   images,
+  videos = [],
   label,
   className,
   renderBlock,
   renderHeader,
   renderMissingImage,
+  renderVideo,
 }: BlockListProps) {
   const { t } = useTranslation('posts')
   const imagesByFile = imageByFile(images)
+  const videosByFile = new Map(videos.map((video) => [video.filename, video]))
   // The key stays on this wrapper rather than on whatever the consumer returns — and it is the
   // block's POSITION, not `blockKey`'s content-derived string: a consumer that edits the block in
   // place would otherwise remount it on every keystroke and lose both the open editor and the caret.
@@ -159,6 +168,40 @@ export function BlockList({
                   )}
                 </div>,
               )
+            }
+            case BlockType.VIDEO: {
+              const video = videosByFile.get(block.file)
+              const rendered = (
+                <div key={key} className="py-2">
+                  {/* No autoplay and metadata only: a draft with three clips must not start
+                      pulling 600 MB the moment it is opened (VIDEO-14). */}
+                  {video?.viewUrl ? (
+                    <video
+                      src={video.viewUrl}
+                      controls
+                      preload="metadata"
+                      playsInline
+                      className="bg-surface-recessed h-auto w-full rounded-lg"
+                    />
+                  ) : (
+                    // The clip is attached but has no view URL yet, or its file is gone. The
+                    // filename is what the block actually says, so it holds the position.
+                    <Typography
+                      variant="body"
+                      as="div"
+                      className="bg-surface-recessed text-content-tertiary rounded-lg px-4 py-6 text-center break-words"
+                    >
+                      {block.file}
+                    </Typography>
+                  )}
+                  {block.caption && (
+                    <Typography variant="label" as="p" className="mt-2 break-words">
+                      {block.caption}
+                    </Typography>
+                  )}
+                </div>
+              )
+              return wrap(block, index, renderVideo ? renderVideo(block, rendered) : rendered)
             }
             case BlockType.QUOTE:
               return wrap(

@@ -143,3 +143,73 @@ describe('setup blockers', () => {
     ).toBe(false)
   })
 })
+
+// VIDEO-11: the video capability is checked per RUN, against the post's own clips — a
+// video-blind model still serves every post without one.
+describe('a post with a video', () => {
+  const videoBlind = {
+    ref: { providerId: 'p', modelId: 'observe' },
+    vision: true,
+    videoInput: false,
+  }
+  const watcher = { ref: { providerId: 'p', modelId: 'watcher' }, vision: true, videoInput: true }
+  const write = { ref: { providerId: 'p', modelId: 'write' }, vision: false }
+  const image = { id: 'image-1' }
+  const clip = { id: 'video-1' }
+
+  it('refuses a video-blind observe model, and accepts one that can watch', () => {
+    const blocked = ordinaryGenerationPreconditions(
+      [image],
+      videoBlind,
+      write,
+      undefined,
+      undefined,
+      [clip],
+    )
+    expect(blocked.ok).toBe(false)
+    expect(blocked.blocker).toBe('videoModel')
+
+    const allowed = ordinaryGenerationPreconditions([image], watcher, write, undefined, undefined, [
+      clip,
+    ])
+    expect(allowed.ok).toBe(true)
+  })
+
+  it('leaves a post with no clip alone', () => {
+    expect(
+      ordinaryGenerationPreconditions([image], videoBlind, write, undefined, undefined, []).ok,
+    ).toBe(true)
+  })
+
+  // The simpler thing to fix comes first: a model that cannot see a photo is refused for that.
+  it('reports the vision blocker first when the model can do neither', () => {
+    const neither = { ref: videoBlind.ref, vision: false, videoInput: false }
+    const result = ordinaryGenerationPreconditions([image], neither, write, undefined, undefined, [
+      clip,
+    ])
+    expect(result.blocker).toBe('vision')
+  })
+
+  // The A/B path makes the same check: a comparison that cannot observe the clips would compare
+  // two writers working from half the material.
+  it('refuses the comparison too', () => {
+    const result = comparisonGenerationPreconditions(
+      [image],
+      videoBlind,
+      write,
+      write,
+      undefined,
+      undefined,
+      [clip],
+    )
+    expect(result.blocker).toBe('videoModel')
+  })
+
+  // A clip alone is still material: the run needs an observe model even with no photo.
+  it('requires an observe model for a post that is only clips', () => {
+    const result = ordinaryGenerationPreconditions([], undefined, write, undefined, undefined, [
+      clip,
+    ])
+    expect(result.blocker).toBe('observe')
+  })
+})

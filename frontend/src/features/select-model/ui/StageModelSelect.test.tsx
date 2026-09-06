@@ -254,4 +254,26 @@ describe('a model above the account tier', () => {
 
     expect(await screen.findByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeInTheDocument()
   })
+
+  // VIDEO-11: watching a clip is a capability of its own, narrower than vision, and the picker
+  // says which models have it — a post with a video needs it of the observe model.
+  it('badges a model that takes video input', async () => {
+    const user = userEvent.setup()
+    renderSelect('observe', {
+      models: [
+        {
+          providerId: 'openrouter',
+          modelId: 'watcher',
+          label: 'Watcher',
+          vision: true,
+          videoInput: true,
+        },
+        { providerId: 'openrouter', modelId: 'blind', label: 'Blind', vision: true },
+      ],
+    })
+
+    await openPanel(user, /관찰 모델/)
+    expect(screen.getByRole('option', { name: /Watcher/ })).toHaveAccessibleName(/영상/)
+    expect(screen.getByRole('option', { name: /Blind/ })).not.toHaveAccessibleName(/영상/)
+  })
 })

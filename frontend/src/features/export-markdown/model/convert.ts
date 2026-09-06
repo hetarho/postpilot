@@ -41,6 +41,14 @@ export function toMarkdown(
         ]
           .filter(Boolean)
           .join('\n')
+      case BlockType.VIDEO:
+        // Markdown has no video syntax, and a link is what every renderer keeps (VIDEO-14).
+        return [
+          `[${contentLanguage === 'en' ? 'Video' : '동영상'}: ${escapeMarkdownLabel(block.file)}](${relativeFileUrl(block.file)})`,
+          block.caption ? `*${escapeHtml(block.caption)}*` : '',
+        ]
+          .filter(Boolean)
+          .join('\n')
       case BlockType.QUOTE:
         return `> ${escapeHtml(block.content)}`
       case BlockType.LIST:

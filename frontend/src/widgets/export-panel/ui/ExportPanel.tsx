@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type PostImage } from '@/entities/image'
+import { type PostVideo } from '@/entities/video'
 import { BlockList, imageByFile } from '@/entities/post'
 import { toMarkdown } from '@/features/export-markdown'
 import { toNaver } from '@/features/export-naver'
@@ -43,6 +44,8 @@ type FailedCopyKind = Exclude<CopyImageResult['kind'], 'copied'>
 interface ExportPanelProps {
   content: PostContent
   images: readonly PostImage[]
+  /** The post's clips, so the Naver preview can play one in marker order (VIDEO-15). */
+  videos?: readonly PostVideo[]
   createdAt: string
   contentLanguage: ContentLanguage
   /** Asks the owner of the post query for fresh photo URLs. Called when a preview photo fails to
@@ -56,6 +59,7 @@ interface ExportPanelProps {
 export function ExportPanel({
   content,
   images,
+  videos = [],
   createdAt,
   contentLanguage,
   onPhotoUrlsStale,
@@ -437,9 +441,21 @@ export function ExportPanel({
           <BlockList
             content={content}
             images={images}
+            videos={videos}
             label={t('export.preview')}
             className="mt-3 pb-0"
             renderHeader={() => null}
+            // A clip plays inline and offers NO copy control: the clipboard cannot carry a video
+            // file from a page, and the file the author filmed is on the device they are pasting
+            // from — so the hint says to attach the original there (VIDEO-15).
+            renderVideo={(_block, rendered) => (
+              <div>
+                {rendered}
+                <Typography variant="meta" as="p" className="text-content-secondary mt-1">
+                  {t('export.videoHint')}
+                </Typography>
+              </div>
+            )}
             renderBlock={(block, index, rendered) => {
               if (block.type !== BlockType.IMAGE) return rendered
               const target: CopyTarget = `photo:${markerIndexByBlock.get(index) ?? 0}:${block.file}`

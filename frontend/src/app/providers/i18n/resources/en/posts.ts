@@ -28,6 +28,7 @@ export const posts = {
     summary: 'Summary',
     tagPlaceholder: 'travel, cafe',
     attachedPhoto: 'Attached photo',
+    attachedVideo: 'Attached video',
     altText: 'Alt text',
     photoDescription: 'Photo description',
     caption: 'Photo caption',
@@ -42,6 +43,7 @@ export const posts = {
       quote: 'Quote',
       list: 'List',
       image: 'Photo',
+      video: 'Video',
     },
     newBlock: {
       text: 'New paragraph',
@@ -111,6 +113,7 @@ export const posts = {
       active: 'Generation is already in progress.',
       observe: 'Select an observation model.',
       vision: 'Select an observation model that can see photos.',
+      videoModel: 'The selected observation model cannot watch video. Choose one that supports it.',
       write: 'Select an active writing model.',
       pair: 'Select two writing models for A/B comparison.',
       different: 'Select two different writing models.',
@@ -293,6 +296,7 @@ export const posts = {
     none: 'None',
   },
   export: {
+    videoHint: 'Attach the original video from your device in the editor',
     title: 'Export',
     format: 'Export format',
     result: 'Export result',

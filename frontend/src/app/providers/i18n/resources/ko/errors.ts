@@ -76,6 +76,12 @@ export const errors = {
   MODEL_REASONING_INVALID: '지원하지 않는 추론 강도예요.',
   GENERATION_WRITE_MODEL_REQUIRED: '작성 모델을 선택해 주세요.',
   GENERATION_OBSERVE_MODEL_REQUIRED: '사진 관찰 모델을 선택해 주세요.',
+  MODEL_VIDEO_UNSUPPORTED:
+    '선택한 관찰 모델은 영상을 볼 수 없어요. 영상을 지원하는 모델을 골라 주세요.',
+  VIDEO_NOT_PUBLISHABLE: '영상이 들어간 글은 아직 발행할 수 없어요. 내보내기에서 직접 붙여 주세요.',
+  POST_VIDEO_LIMIT: '한 글에 넣을 수 있는 영상 수를 넘었어요.',
+  UPLOAD_VIDEO_UNSUPPORTED: '지원하지 않는 영상 형식이에요.',
+  UPLOAD_VIDEO_INVALID: '영상을 올리지 못했어요. 길이나 크기를 확인해 주세요.',
   GENERATION_TARGET_LENGTH_INVALID: '목표 글자 수를 확인해 주세요.',
   GENERATION_ALREADY_RUNNING: '이 글에서 AI 작업이 이미 진행 중이에요.',
   GENERATION_VOICE_MISMATCH: '글에 저장된 말투와 선택한 말투가 달라요.',

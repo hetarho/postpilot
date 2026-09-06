@@ -82,6 +82,13 @@ export const errors = {
   MODEL_REASONING_INVALID: 'That reasoning effort is not supported.',
   GENERATION_WRITE_MODEL_REQUIRED: 'Select a writing model.',
   GENERATION_OBSERVE_MODEL_REQUIRED: 'Select a photo-observation model.',
+  MODEL_VIDEO_UNSUPPORTED:
+    'The selected observation model cannot watch video. Choose one that supports it.',
+  VIDEO_NOT_PUBLISHABLE:
+    'A post with a video cannot be published yet. Paste it yourself from the export tab.',
+  POST_VIDEO_LIMIT: 'This post already holds the maximum number of videos.',
+  UPLOAD_VIDEO_UNSUPPORTED: 'That video format is not supported.',
+  UPLOAD_VIDEO_INVALID: 'The video could not be uploaded. Check its length and size.',
   GENERATION_TARGET_LENGTH_INVALID: 'Check the target length.',
   GENERATION_ALREADY_RUNNING: 'An AI job is already running for this post.',
   GENERATION_VOICE_MISMATCH: 'The selected voice differs from the voice saved on the post.',

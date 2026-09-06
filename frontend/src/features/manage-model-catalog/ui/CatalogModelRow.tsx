@@ -73,6 +73,9 @@ export function CatalogModelRow({
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {entry.vision && <Badge>{t('catalog.vision')}</Badge>}
+        {/* Watching a clip is narrower than seeing a photo, and the photo-analysis tab is where
+            an operator picks the observe models a post with a video will need (VIDEO-11). */}
+        {entry.videoInput && <Badge>{t('capability.video')}</Badge>}
         {entry.structuredOutput && <Badge>{t('catalog.structured')}</Badge>}
         {entry.imageOutput && <Badge>{t('catalog.imageOutput')}</Badge>}
         {entry.videoOutput && <Badge>{t('catalog.videoOutput')}</Badge>}

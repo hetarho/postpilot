@@ -1,7 +1,11 @@
 import { create } from '@bufbuild/protobuf'
 import { expect, it } from 'vitest'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
-import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import {
+  POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_VIDEO_FIXTURE,
+  POST_IMAGES_FIXTURE,
+} from '@/test/fixtures/postContent'
 import { toTistory } from './convert'
 
 it('converts every block to the Tistory fragment contract', () => {
@@ -41,4 +45,15 @@ it('uses the content provenance for app-owned English upload instructions', () =
 
   expect(output).toContain('replace src after uploading')
   expect(output).not.toContain('업로드 후 src 교체')
+})
+
+// The same empty-source-plus-instruction shape an image takes: the editor has no URL to put
+// here, and the author attaches the original by hand (VIDEO-14).
+it('writes a video as an empty element with the replacement instruction', () => {
+  const output = toTistory(POST_CONTENT_WITH_VIDEO_FIXTURE, POST_IMAGES_FIXTURE, 'ko')
+
+  expect(output).toMatchSnapshot()
+  expect(output).toContain('<video controls data-file="clip.mp4"></video>')
+  expect(output).toContain('<!-- clip.mp4 업로드 후 영상 첨부 -->')
+  expect(output).not.toContain('src="https')
 })

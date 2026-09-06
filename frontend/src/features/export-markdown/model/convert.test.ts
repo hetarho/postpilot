@@ -1,7 +1,11 @@
 import { create } from '@bufbuild/protobuf'
 import { expect, it } from 'vitest'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
-import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import {
+  POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_VIDEO_FIXTURE,
+  POST_IMAGES_FIXTURE,
+} from '@/test/fixtures/postContent'
 import { toMarkdown } from './convert'
 
 it('converts every block to Markdown with YAML front matter', () => {
@@ -37,4 +41,18 @@ it('writes the concrete English content provenance to front matter', () => {
   const output = toMarkdown(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, '2026-08-29', 'en')
 
   expect(output).toContain('\nlanguage: en\n')
+})
+
+// Markdown has no video syntax, and a link is what every renderer keeps (VIDEO-14).
+it('writes a video as a link line with its optional caption', () => {
+  const output = toMarkdown(
+    POST_CONTENT_WITH_VIDEO_FIXTURE,
+    POST_IMAGES_FIXTURE,
+    '2026-08-28',
+    'ko',
+  )
+
+  expect(output).toMatchSnapshot()
+  expect(output).toContain('[동영상: clip.mp4](clip.mp4)')
+  expect(output).toContain('*파도가 밀려온다*')
 })

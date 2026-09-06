@@ -9,6 +9,7 @@ function entry(over: Partial<AdminCatalogEntry> = {}): AdminCatalogEntry {
     label: 'Model',
     description: '',
     vision: false,
+    videoInput: false,
     structuredOutput: false,
     contextTokens: 0n,
     inputUsdPerMillion: '',

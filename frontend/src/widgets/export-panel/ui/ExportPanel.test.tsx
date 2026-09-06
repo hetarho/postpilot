@@ -3,7 +3,12 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { toNaver } from '@/features/export-naver'
 import { BlockType } from '@/shared/api'
-import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import {
+  POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_VIDEO_FIXTURE,
+  POST_IMAGES_FIXTURE,
+  POST_VIDEOS_FIXTURE,
+} from '@/test/fixtures/postContent'
 import { ExportPanel } from './ExportPanel'
 
 const originalClipboard = navigator.clipboard
@@ -661,4 +666,29 @@ it('holds the marker position of a photo missing from the post', () => {
   const preview = screen.getByRole('article', { name: '네이버 미리보기' })
   expect(within(preview).getByText('IMG_1.jpg')).toBeInTheDocument()
   expect(screen.getAllByText('이 표시에 해당하는 사진을 찾지 못했어요.').length).toBeGreaterThan(0)
+})
+
+// VIDEO-15: the clipboard cannot carry a video file from a page, and the file the author filmed
+// is on the device they are pasting from — so the clip plays and the hint says to attach it.
+it('plays a clip in the Naver preview with no copy control, and says why', () => {
+  const { container } = render(
+    <ExportPanel
+      content={POST_CONTENT_WITH_VIDEO_FIXTURE}
+      images={POST_IMAGES_FIXTURE}
+      videos={POST_VIDEOS_FIXTURE}
+      createdAt="2026-08-28T12:00:00Z"
+      contentLanguage="ko"
+    />,
+  )
+  const preview = screen.getByRole('article', { name: '네이버 미리보기' })
+  expect(
+    within(preview).getAllByText('기기의 원본 영상을 편집기에서 직접 첨부해 주세요'),
+  ).toHaveLength(2)
+  const video = container.querySelector('video')
+  expect(video).toHaveAttribute('src', POST_VIDEOS_FIXTURE[0].viewUrl)
+  // The photo copy controls are untouched; the clips add none of their own.
+  const copyButtons = within(preview).getAllByRole('button')
+  for (const button of copyButtons) {
+    expect(button).not.toHaveAccessibleName(/clip\.mp4/)
+  }
 })

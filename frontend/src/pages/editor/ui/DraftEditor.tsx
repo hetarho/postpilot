@@ -44,7 +44,7 @@ import { PublishPanel } from '@/widgets/publish-panel'
 import { RefineDock } from '@/widgets/refine-dock'
 import { DeletedVoiceWarning, VoiceWarning } from '@/widgets/voice-warning'
 import { clearCaret, peekCaret, stashCaret } from '../model/editor-handoff'
-import { activeLocale } from '@/shared/lib'
+import { activeLocale, hasVideoBlock } from '@/shared/lib'
 import { editorStepLabel, editorSteps, stepForStatus, type EditorStep } from '../model/steps'
 import { useEditorJob, type EditorJobView } from '../model/useEditorJob'
 import { EditorPhotos } from './EditorPhotos'
@@ -704,6 +704,7 @@ function LifecycleSteps({
       )}
       {post.contentLanguage ? (
         <ExportPanel
+          videos={post.videos}
           content={liveContent ?? result}
           images={post.images}
           createdAt={post.createdAt}
@@ -725,6 +726,7 @@ function LifecycleSteps({
           contentRevision={post.contentRevision}
           finalizedRevision={post.finalizedRevision}
           status={post.status}
+          hasVideoBlock={post.content ? hasVideoBlock(post.content) : false}
           beforePublish={() =>
             contentEditorRef.current?.flush() ??
             flushContentQueue(post.slug) ??

@@ -142,6 +142,9 @@ const UNAVAILABLE_VALUE = '__unavailable__'
 function optionLabel(model: CatalogModel): string {
   const badges = [
     model.vision && '👁',
+    // Watching a clip is a capability of its own, and a post with a video needs it of the
+    // observe model (VIDEO-11) — so the picker says which models have it.
+    model.videoInput && i18next.t('capability.video', { ns: 'models' }),
     model.structuredOutput && i18next.t('selectField.structuredOutput', { ns: 'models' }),
   ]
     .filter(Boolean)

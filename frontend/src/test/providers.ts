@@ -31,6 +31,8 @@ export interface FakeModel {
   modelId: string
   label?: string
   vision?: boolean
+  /** The model takes video input — checked per run against the post's own clips (VIDEO-11). */
+  videoInput?: boolean
   structuredOutput?: boolean
   /** The reason the model is disabled; undefined means enabled. */
   disabledReason?: string
@@ -104,6 +106,7 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
           ref: { providerId: model.providerId, modelId: model.modelId },
           label: model.label ?? model.modelId,
           vision: model.vision ?? false,
+          videoInput: model.videoInput ?? false,
           structuredOutput: model.structuredOutput ?? false,
           disabled: model.disabledReason !== undefined,
           disabledReason: model.disabledReason ?? '',

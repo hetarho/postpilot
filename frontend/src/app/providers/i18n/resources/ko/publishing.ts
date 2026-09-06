@@ -1,4 +1,8 @@
 export const publishing = {
+  // The agent cannot carry a clip yet (VIDEO-16).
+  blocked: {
+    videoBlock: '영상이 들어간 글은 아직 발행할 수 없어요. 내보내기에서 직접 붙여 주세요.',
+  },
   title: '발행하기',
   stage: {
     queued: 'Mac 연결을 기다리는 중',

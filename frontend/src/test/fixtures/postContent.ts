@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import type { PostImage } from '@/entities/image'
+import type { PostVideo } from '@/entities/video'
 import { BlockSchema, BlockType, ObservationSchema, PostContentSchema } from '@/shared/api'
 
 export const POST_IMAGES_FIXTURE: PostImage[] = [
@@ -46,6 +47,36 @@ export const POST_CONTENT_FIXTURE = create(PostContentSchema, {
     }),
     create(BlockSchema, { type: BlockType.QUOTE, content: '서두르지 않아도 괜찮다.' }),
     create(BlockSchema, { type: BlockType.LIST, items: ['우산', '따뜻한 차'] }),
+  ],
+})
+
+/** A post that PLACES a clip in its body. Separate from the fixture above on purpose: every
+ *  export snapshot pins the no-video output byte for byte, and a clip in the shared fixture
+ *  would rewrite all four of them (VIDEO-14). */
+export const POST_VIDEOS_FIXTURE: PostVideo[] = [
+  {
+    id: 'video-1',
+    filename: 'clip.mp4',
+    width: 1920,
+    height: 1080,
+    bytes: 12_000_000,
+    durationMs: 8_000,
+    contentType: 'video/mp4',
+    viewUrl: 'https://api.postpilot.test/private/clip.mp4?signature=temporary',
+  },
+]
+
+export const POST_CONTENT_WITH_VIDEO_FIXTURE = create(PostContentSchema, {
+  ...POST_CONTENT_FIXTURE,
+  blocks: [
+    ...POST_CONTENT_FIXTURE.blocks,
+    create(BlockSchema, {
+      type: BlockType.VIDEO,
+      file: 'clip.mp4',
+      alt: '파도',
+      caption: '파도가 밀려온다',
+    }),
+    create(BlockSchema, { type: BlockType.VIDEO, file: 'clip.mp4' }),
   ],
 })
 

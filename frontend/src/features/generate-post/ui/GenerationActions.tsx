@@ -81,6 +81,7 @@ export const GenerationActions = forwardRef<
     writeSelection,
     activeJob,
     post.voice,
+    post.videos,
   )
   const ab = comparisonGenerationPreconditions(
     post.images,
@@ -89,6 +90,7 @@ export const GenerationActions = forwardRef<
     writeB,
     activeJob,
     post.voice,
+    post.videos,
   )
   const pendingExperiment = Boolean(post.pendingExperimentId)
   const modelPending = observe.isPending || write.isPending || setup.isPending || selectionSaving
@@ -351,5 +353,5 @@ function resolveSelection(
 ): GenerationModelSelection | undefined {
   if (!selected) return undefined
   const model = models.find((candidate) => sameRef(candidate.ref, selected))
-  return model ? { ref: selected, vision: model.vision } : undefined
+  return model ? { ref: selected, vision: model.vision, videoInput: model.videoInput } : undefined
 }

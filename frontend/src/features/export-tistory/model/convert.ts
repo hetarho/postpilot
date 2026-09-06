@@ -34,6 +34,15 @@ export function toTistory(
           contentLanguage === 'en' ? 'replace src after uploading' : '업로드 후 src 교체'
         return `<figure><img src="" alt="${escapeHtml(block.alt)}" data-file="${file}"><!-- ${commentFile} ${instruction} -->${caption}</figure>`
       }
+      case BlockType.VIDEO: {
+        // The same empty-source-plus-instruction shape an image takes, for the same reason: the
+        // editor has no URL to put here, and the author attaches the original by hand.
+        const file = escapeHtml(block.file)
+        const commentFile = escapeHtmlComment(block.file)
+        const instruction =
+          contentLanguage === 'en' ? 'attach the video after uploading' : '업로드 후 영상 첨부'
+        return `<video controls data-file="${file}"></video><!-- ${commentFile} ${instruction} -->`
+      }
       case BlockType.QUOTE:
         return `<blockquote><p>${escapeHtml(block.content)}</p></blockquote>`
       case BlockType.LIST:

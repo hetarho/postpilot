@@ -20,6 +20,8 @@ export interface FakeCatalogEntry {
   modelId: string
   label?: string
   vision?: boolean
+  /** The model takes video input — narrower than vision, and checked per run (VIDEO-11). */
+  videoInput?: boolean
   structuredOutput?: boolean
   contextTokens?: bigint
   inputUsdPerMillion?: string
@@ -90,6 +92,7 @@ export function registerModelCatalogService(
         label: entry.label ?? entry.modelId,
         description: '',
         vision: entry.vision ?? false,
+        videoInput: entry.videoInput ?? false,
         structuredOutput: entry.structuredOutput ?? false,
         contextTokens: entry.contextTokens ?? 0n,
         inputUsdPerMillion: entry.inputUsdPerMillion ?? '',
