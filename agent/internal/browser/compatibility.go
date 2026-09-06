@@ -2,13 +2,10 @@ package browser
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
 	"time"
-
-	"github.com/coder/websocket"
 )
 
 // CompatibilityEvidence is the read-only browser evidence consumed by the versioned Naver
@@ -66,94 +63,39 @@ const compatibilityObservationScript = `(() => {
 // InspectCompatibility proves the fixed CDP capabilities and editor surface without typing,
 // uploading, publishing, reading cookies/storage, or accepting a caller-supplied script.
 func InspectCompatibility(ctx context.Context, cdpURL string) (CompatibilityEvidence, error) {
-	target, err := discoverSinglePage(ctx, cdpURL)
-	if err != nil {
-		return CompatibilityEvidence{}, err
-	}
 	probeCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	conn, _, err := websocket.Dial(probeCtx, cdpURL, &websocket.DialOptions{HTTPClient: noProxyHTTPClient(10 * time.Second)})
+	page, err := BindSinglePage(probeCtx, cdpURL)
 	if err != nil {
-		return CompatibilityEvidence{}, fmt.Errorf("connect dedicated browser: %w", err)
-	}
-	defer conn.CloseNow()
-	conn.SetReadLimit(1 << 20)
-	client := &cdpClient{conn: conn}
-	var version struct {
-		ProtocolVersion string `json:"protocolVersion"`
-		Product         string `json:"product"`
-	}
-	if err := client.call(probeCtx, "Browser.getVersion", nil, &version); err != nil {
 		return CompatibilityEvidence{}, err
 	}
-	var attached struct {
-		SessionID string `json:"sessionId"`
-	}
-	if err := client.call(probeCtx, "Target.attachToTarget", map[string]any{"targetId": target.ID, "flatten": true}, &attached); err != nil || attached.SessionID == "" {
-		if err == nil {
-			err = errors.New("attach returned no session")
-		}
-		return CompatibilityEvidence{}, fmt.Errorf("attach selected browser page: %w", err)
-	}
-	client.sessionID = attached.SessionID
-	var schema struct {
-		Domains []struct {
-			Name string `json:"name"`
-		} `json:"domains"`
-	}
-	if err := client.call(probeCtx, "Schema.getDomains", nil, &schema); err != nil {
+	defer page.Close()
+	domains, err := page.Domains(probeCtx)
+	if err != nil {
 		return CompatibilityEvidence{}, err
-	}
-	domains := make([]string, 0, len(schema.Domains))
-	for _, domain := range schema.Domains {
-		domains = append(domains, domain.Name)
 	}
 	sort.Strings(domains)
-	var document struct {
-		Root json.RawMessage `json:"root"`
-	}
-	if err := client.call(probeCtx, "DOM.getDocument", map[string]any{"depth": 0}, &document); err != nil || len(document.Root) == 0 {
-		if err == nil {
-			err = errors.New("DOM.getDocument returned no root")
-		}
+	if err := page.DocumentPresent(probeCtx); err != nil {
 		return CompatibilityEvidence{}, err
 	}
-	if err := client.call(probeCtx, "Accessibility.enable", nil, nil); err != nil {
+	roles, err := page.AccessibilityRoles(probeCtx)
+	if err != nil {
 		return CompatibilityEvidence{}, err
 	}
-	var tree struct {
-		Nodes []struct {
-			Role struct {
-				Value any `json:"value"`
-			} `json:"role"`
-		} `json:"nodes"`
-	}
-	if err := client.call(probeCtx, "Accessibility.getFullAXTree", nil, &tree); err != nil {
+	var surface EditorSurface
+	if err := page.Evaluate(probeCtx, compatibilityObservationScript, &surface); err != nil {
 		return CompatibilityEvidence{}, err
 	}
-	roles := make([]string, 0, len(tree.Nodes))
-	for _, node := range tree.Nodes {
-		if role, ok := node.Role.Value.(string); ok && role != "" {
-			roles = append(roles, role)
-		}
-	}
-	if len(roles) == 0 {
-		return CompatibilityEvidence{}, errors.New("browser returned an empty accessibility tree")
-	}
-	var evaluated struct {
-		Result struct {
-			Value EditorSurface `json:"value"`
-		} `json:"result"`
-	}
-	if err := client.call(probeCtx, "Runtime.evaluate", map[string]any{"expression": compatibilityObservationScript, "returnByValue": true, "awaitPromise": true}, &evaluated); err != nil {
-		return CompatibilityEvidence{}, err
-	}
-	confirmed, err := discoverSinglePage(probeCtx, cdpURL)
-	if err != nil || confirmed.ID != target.ID || confirmed.WebSocketDebuggerURL != target.WebSocketDebuggerURL || confirmed.URL != target.URL {
+	current, err := page.Recheck(probeCtx)
+	if err != nil || current != page.URL() {
 		if err == nil {
 			err = errors.New("dedicated browser target changed during compatibility probe")
 		}
 		return CompatibilityEvidence{}, fmt.Errorf("recheck dedicated browser target: %w", err)
 	}
-	return CompatibilityEvidence{BrowserProduct: version.Product, ProtocolVersion: version.ProtocolVersion, TargetID: target.ID, TargetURL: target.URL, Domains: domains, AXRoles: roles, Editor: evaluated.Result.Value}, nil
+	return CompatibilityEvidence{
+		BrowserProduct: page.BrowserProduct(), ProtocolVersion: page.ProtocolVersion(),
+		TargetID: page.TargetID(), TargetURL: page.URL(),
+		Domains: domains, AXRoles: roles, Editor: surface,
+	}, nil
 }

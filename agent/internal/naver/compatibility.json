@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "driver_version": "1.0.0",
-  "signature_id": "smarteditor-one-20260905-a1",
+  "signature_id": "smarteditor-one-20260906-a2",
   "protocol_version": "1.3",
   "chromium_min_major": 136,
   "chromium_max_major": 152,
@@ -23,11 +23,11 @@
     "quote": {"css": ".se-body.__se-body", "ax_role": "textbox"},
     "list": {"css": ".se-body.__se-body", "ax_role": "textbox"},
     "image_placeholder": {"css": "button.se-image-toolbar-button", "ax_role": "button"},
-    "upload_image": {"css": "input[type=file][accept*=image]", "ax_role": "button"},
-    "image_caption": {"css": ".se-component.se-image .se-caption", "ax_role": "textbox"},
-    "tags": {"css": "div[class^=layer_popup__][class*=is_show__] input", "ax_role": "textbox"},
-    "category": {"css": "button[aria-label='카테고리 목록 버튼']", "ax_role": "button", "state_attribute": "aria-expanded"},
-    "visibility": {"css": "div[class^=layer_popup__][class*=is_show__] [role=radio]", "ax_role": "radio", "state_attribute": "aria-checked"}
+    "upload_image": {"css": "input[type=file]#hidden-file", "ax_role": "button"},
+    "image_caption": {"css": ".se-component.se-image .se-module-text.se-caption", "ax_role": "textbox"},
+    "tags": {"css": "div[class^=layer_popup__][class*=is_show__] input[class^=tag_input__]", "ax_role": "combobox"},
+    "category": {"css": "div[class^=layer_popup__][class*=is_show__] input[type=radio][data-testid^=categoryBtn_]", "ax_role": "radio", "state_attribute": "checked"},
+    "visibility": {"css": "div[class^=layer_popup__][class*=is_show__] input[type=radio][data-testid^=openType_]", "ax_role": "radio", "state_attribute": "checked"}
   },
   "final_control_accessible_names": ["발행"]
 }

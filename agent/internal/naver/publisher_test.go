@@ -157,12 +157,22 @@ func cloneSnapshot(value Snapshot) Snapshot {
 	return value
 }
 
+// manifestSignature keeps the fake bound to the reviewed release rather than to a literal
+// that has to be edited every time the editor signature is bumped.
+func manifestSignature() string {
+	manifest, err := Manifest()
+	if err != nil {
+		panic(err)
+	}
+	return manifest.SignatureID
+}
+
 func basePort() *fakePort {
 	locators := map[MutationKind]int{}
 	for _, kind := range []MutationKind{MutationTitle, MutationText, MutationHeading, MutationQuote, MutationList, MutationImagePlaceholder, MutationUploadImage, MutationImageCaption, MutationTags, MutationCategory, MutationVisibility} {
 		locators[kind] = 1
 	}
-	return &fakePort{snapshot: Snapshot{Token: "initial", TargetID: "page-1", URL: "https://blog.naver.com/PostWriteForm.naver?blogId=alice", AccountID: "alice", SignatureID: "smarteditor-one-20260905-a1", Auth: AuthReady, LocatorMatches: locators}}
+	return &fakePort{snapshot: Snapshot{Token: "initial", TargetID: "page-1", URL: "https://blog.naver.com/PostWriteForm.naver?blogId=alice", AccountID: "alice", SignatureID: manifestSignature(), Auth: AuthReady, LocatorMatches: locators}}
 }
 
 func completeInput(t *testing.T) Input {
@@ -423,5 +433,35 @@ func TestRunRequiresExactSameTargetPostPublishReadback(t *testing.T) {
 				t.Fatalf("result=%+v err=%v activations=%d", result, err, port.activationCount)
 			}
 		})
+	}
+}
+
+func TestFakeNaverCoversEveryBlockTypeWithEightOrderedJPEGs(t *testing.T) {
+	input := completeInput(t)
+	dir := filepath.Dir(input.AssetPaths[0])
+	for ordinal := 2; ordinal < 8; ordinal++ {
+		filename := fmt.Sprintf("%04d.jpg", ordinal)
+		source := fmt.Sprintf("source-%d.jpg", ordinal)
+		path := filepath.Join(dir, filename)
+		if err := os.WriteFile(path, []byte("jpeg"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		input.AssetPaths = append(input.AssetPaths, path)
+		input.Manifest.Assets = append(input.Manifest.Assets, &postpilotv1.StagedPublishAsset{Ordinal: int32(ordinal), Filename: filename, SourceFilename: source, Bytes: 4})
+		input.Manifest.Content.Blocks = append(input.Manifest.Content.Blocks, &postpilotv1.Block{Type: postpilotv1.BlockType_IMAGE, File: source, Caption: fmt.Sprintf("caption %d", ordinal)})
+	}
+	port := basePort()
+	result := (Publisher{Port: port}).Prepare(context.Background(), input, &recordingReporter{})
+	if result.Status != PreparationReady || result.Prepared == nil || result.Prepared.Snapshot.ImageCount != 8 {
+		t.Fatalf("result=%+v", result)
+	}
+	ordinals := make([]int, 0, 8)
+	for _, mutation := range port.mutations {
+		if mutation.Kind == MutationUploadImage {
+			ordinals = append(ordinals, mutation.Ordinal)
+		}
+	}
+	if !slices.Equal(ordinals, []int{0, 1, 2, 3, 4, 5, 6, 7}) {
+		t.Fatalf("upload ordinals=%v", ordinals)
 	}
 }
