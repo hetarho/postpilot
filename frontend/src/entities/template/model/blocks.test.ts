@@ -9,14 +9,22 @@ import {
   insertAt,
   newBlock,
   outline,
+  photoSummaryKey,
   positionAfter,
+  repeatPhotoCount,
   reorder,
   toBody,
   type BuilderBlock,
 } from './blocks'
 
+// The ceiling the shared fixture declares, so this suite and the grammar suite agree.
+const options = { photoRowMax: 4 }
+// What an unlabelled legacy position falls back to. The real strings come from i18n; these
+// stand in for them, which is the whole point of passing them rather than looking them up.
+const legacy = { place: '지도', link: '링크' }
+
 const read = (body: string) => {
-  const result = fromBody(body, decode)
+  const result = fromBody(body, decode, options, legacy)
   if (!result.ok) throw new Error(`unexpected parse failure: ${JSON.stringify(result.failure)}`)
   return result.blocks
 }
@@ -26,16 +34,16 @@ describe('builder blocks', () => {
     const blocks: BuilderBlock[] = [
       { id: 'a', kind: 'write', text: '인트로를 작성합니다.' },
       { id: 'b', kind: 'text', text: '=========================' },
-      { id: 'c', kind: 'slot', slotKind: 'place', label: '네이버 지도' },
       {
         id: 'd',
         kind: 'repeat',
         children: [
-          { id: 'e', kind: 'slot', slotKind: 'photo', label: '' },
+          { id: 'e', kind: 'photo', count: 1 },
           { id: 'f', kind: 'write', text: '이 사진에 대한 설명' },
         ],
       },
-      { id: 'g', kind: 'write', text: '총평 및 재방문 의사' },
+      { id: 'g', kind: 'photo', count: 3 },
+      { id: 'h', kind: 'write', text: '총평 및 재방문 의사' },
     ]
 
     const body = toBody(blocks)
@@ -45,9 +53,42 @@ describe('builder blocks', () => {
     expect(read(body).map((block) => block.kind)).toEqual([
       'write',
       'text',
-      'slot',
       'repeat',
+      'photo',
       'write',
+    ])
+  })
+
+  // A count of one is written as ABSENCE: emitting count="1" would rewrite every stored body
+  // on its next save for no change in meaning.
+  it('writes a count only above one, and reads an absent one back as one', () => {
+    expect(toBody([{ id: 'a', kind: 'photo', count: 1 }])).toBe('<slot kind="photo"/>')
+    expect(toBody([{ id: 'a', kind: 'photo', count: 3 }])).toBe('<slot kind="photo" count="3"/>')
+    expect(read('<slot kind="photo"/>')[0]).toMatchObject({ kind: 'photo', count: 1 })
+    expect(read('<slot kind="photo" count="4"/>')[0]).toMatchObject({ kind: 'photo', count: 4 })
+    // Builder → body → builder holds for a count as it does for everything else.
+    const body = toBody([{ id: 'a', kind: 'photo', count: 2 }])
+    expect(toBody(read(body))).toBe(body)
+  })
+
+  // TEMPLATE-37: the position is retired, but a body that has one must not become unreadable.
+  // It opens as FIXED TEXT carrying its label, and the next save writes it back as literal text.
+  it('reads a stored place or link position as fixed text carrying its label', () => {
+    const blocks = read(
+      '<slot kind="place" label="네이버 지도"/>\n<slot kind="link" label="예약"/>',
+    )
+    expect(blocks).toMatchObject([
+      { kind: 'text', text: '네이버 지도' },
+      { kind: 'text', text: '예약' },
+    ])
+    // The save writes literal text: nothing of the retired position survives.
+    expect(toBody(blocks)).toBe('네이버 지도\n예약')
+  })
+
+  it('falls back to a name when a stored position carried no label', () => {
+    expect(read('<slot kind="place"/>\n<slot kind="link"/>')).toMatchObject([
+      { kind: 'text', text: '지도' },
+      { kind: 'text', text: '링크' },
     ])
   })
 
@@ -68,23 +109,8 @@ describe('builder blocks', () => {
     expect(blocks[0]).toMatchObject({ kind: 'text', text: '<write> 라고 씁니다' })
   })
 
-  it('keeps a quote in a slot label instead of emitting a body its own parser refuses', () => {
-    // The attribute value is quoted, so an unescaped `"` used to end it early: the builder
-    // produced `label="네이버 "지도"/>`, the parser said malformed_tag, and the editor fell into
-    // source mode on a valid keystroke.
-    const body = toBody([{ id: 'a', kind: 'slot', slotKind: 'place', label: '네이버 "지도"' }])
-    expect(body).toBe('<slot kind="place" label="네이버 &quot;지도&quot;"/>')
-    expect(read(body)[0]).toMatchObject({ kind: 'slot', label: '네이버 "지도"' })
-    expect(toBody(read(body))).toBe(body)
-  })
-
-  it('omits an empty slot label instead of writing an empty attribute', () => {
-    const body = toBody([{ id: 'a', kind: 'slot', slotKind: 'link', label: '  ' }])
-    expect(body).toBe('<slot kind="link"/>')
-  })
-
   it('reports a body that does not parse instead of guessing', () => {
-    const result = fromBody('<repaet each="photo">\n</repaet>', decode)
+    const result = fromBody('<repaet each="photo">\n</repaet>', decode, options, legacy)
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.failure).toEqual({ line: 1, reason: 'unknown_tag' })
   })
@@ -101,22 +127,35 @@ describe('builder blocks', () => {
     expect(newBlock('write').id).not.toBe(newBlock('write').id)
   })
 
-  it('maps a palette slot kind onto a slot block', () => {
-    expect(newBlock('photo')).toMatchObject({ kind: 'slot', slotKind: 'photo' })
-    expect(newBlock('place')).toMatchObject({ kind: 'slot', slotKind: 'place' })
-    expect(newBlock('link')).toMatchObject({ kind: 'slot', slotKind: 'link' })
+  it('starts a photo position at one photo', () => {
+    expect(newBlock('photo')).toMatchObject({ kind: 'photo', count: 1 })
+  })
+
+  it('reports how many photos one iteration of a repeat takes', () => {
+    expect(
+      repeatPhotoCount({
+        id: 'r',
+        kind: 'repeat',
+        children: [
+          { id: 'a', kind: 'photo', count: 2 },
+          { id: 'b', kind: 'write', text: '설명' },
+          { id: 'c', kind: 'photo', count: 1 },
+        ],
+      }),
+    ).toBe(3)
+    expect(repeatPhotoCount({ id: 'r', kind: 'repeat', children: [] })).toBe(0)
   })
 })
 
 describe('the collapsed outline', () => {
   const composition: BuilderBlock[] = [
     { id: 'a', kind: 'write', text: '인트로를 씁니다' },
-    { id: 'b', kind: 'slot', slotKind: 'place', label: '네이버 지도' },
+    { id: 'b', kind: 'text', text: '네이버 지도' },
     {
       id: 'c',
       kind: 'repeat',
       children: [
-        { id: 'd', kind: 'slot', slotKind: 'photo', label: '' },
+        { id: 'd', kind: 'photo', count: 1 },
         { id: 'e', kind: 'write', text: '이 사진에 대한 설명' },
       ],
     },
@@ -150,9 +189,16 @@ describe('the collapsed outline', () => {
     )
   })
 
-  it('names a slot by its kind, not by the word slot', () => {
-    expect(blockKindKey({ id: 'x', kind: 'slot', slotKind: 'photo', label: '' })).toBe('photo')
+  it('names a row by the same key as the button that creates it', () => {
+    expect(blockKindKey({ id: 'x', kind: 'photo', count: 1 })).toBe('photo')
     expect(blockKindKey({ id: 'y', kind: 'write', text: '' })).toBe('write')
+  })
+
+  // One photo reads as a photo; more than one has to say they stand side by side, which is the
+  // whole point of the count (TEMPLATE-38).
+  it('picks the summary key by whether the photos stand side by side', () => {
+    expect(photoSummaryKey(1)).toBe('composition.summary.photo')
+    expect(photoSummaryKey(2)).toBe('composition.summary.photoRow')
   })
 })
 
@@ -162,7 +208,7 @@ describe('insertion at a position', () => {
     {
       id: 'b',
       kind: 'repeat',
-      children: [{ id: 'c', kind: 'slot', slotKind: 'photo', label: '' }],
+      children: [{ id: 'c', kind: 'photo', count: 1 }],
     },
   ]
 
@@ -175,7 +221,7 @@ describe('insertion at a position', () => {
     const inside = insertAt(composition, { parentId: 'b', index: 1 }, 'write')
     const repeat = inside.blocks[1]
     if (repeat.kind !== 'repeat') throw new Error('the repeat moved')
-    expect(repeat.children.map((child) => child.kind)).toEqual(['slot', 'write'])
+    expect(repeat.children.map((child) => child.kind)).toEqual(['photo', 'write'])
     // The other blocks are untouched, so the insertion cannot disturb the outline around it.
     expect(inside.blocks[0]).toBe(composition[0])
   })
@@ -213,7 +259,7 @@ describe('the position a touched row leaves behind', () => {
     {
       id: 'b',
       kind: 'repeat',
-      children: [{ id: 'c', kind: 'slot', slotKind: 'photo', label: '' }],
+      children: [{ id: 'c', kind: 'photo', count: 1 }],
     },
   ]
 

@@ -1,4 +1,10 @@
-import { encode, parse, type ParseFailure, type SlotKind, type TemplateNode } from '../lib/grammar'
+import {
+  encode,
+  parse,
+  type ParseFailure,
+  type ParseOptions,
+  type TemplateNode,
+} from '../lib/grammar'
 
 /** What the composition editor manipulates: a flat list of blocks, with `repeat` the only one
  *  that nests (the grammar forbids a repeat inside a repeat).
@@ -10,11 +16,17 @@ import { encode, parse, type ParseFailure, type SlotKind, type TemplateNode } fr
 export type BuilderBlock =
   | { id: string; kind: 'write'; text: string }
   | { id: string; kind: 'text'; text: string }
-  | { id: string; kind: 'slot'; slotKind: SlotKind; label: string }
+  | { id: string; kind: 'photo'; count: number }
   | { id: string; kind: 'note'; text: string }
   | { id: string; kind: 'repeat'; children: BuilderBlock[] }
 
-export type BuilderBlockKind = BuilderBlock['kind'] | 'photo' | 'place' | 'link'
+/** What a person actually picks from the palette — and, since the retirement of the place and
+ *  link positions, the whole vocabulary of blocks there is. A thing the author fills in later
+ *  is written as fixed text in their own words (TEMPLATE-37), so the builder authors no slot
+ *  at all; a stored one is READ as fixed text on the way in. */
+export type PaletteKind = 'write' | 'text' | 'photo' | 'repeat' | 'note'
+
+export type BuilderBlockKind = PaletteKind
 
 let sequence = 0
 /** Local identity for React keys and for the reorder calls. It never reaches the body: two
@@ -36,11 +48,9 @@ export function newBlock(kind: BuilderBlockKind): BuilderBlock {
     case 'repeat':
       return { id, kind: 'repeat', children: [] }
     case 'photo':
-    case 'place':
-    case 'link':
-      return { id, kind: 'slot', slotKind: kind, label: '' }
-    case 'slot':
-      return { id, kind: 'slot', slotKind: 'place', label: '' }
+      // One photo is the position every body written before counts existed means, and the
+      // value the stepper starts from.
+      return { id, kind: 'photo', count: 1 }
   }
 }
 
@@ -56,15 +66,12 @@ function blockSource(block: BuilderBlock): string {
       // A literal is the one block whose text is NOT escaped as a tag body: it is the body's
       // own prose. Only a `<` that would start a tag needs hiding.
       return block.text.replaceAll('<', '&lt;')
-    case 'slot': {
-      // `encode` escapes the double quote too, which matters here and nowhere else: the value
-      // is quoted, and a label like `네이버 "지도"` is ordinary free text a person types. Without
-      // it the builder emitted a body its own parser refused, and the editor fell into source
-      // mode on a valid keystroke.
-      const label = block.label.trim()
-      const labelAttr = label === '' ? '' : ` label="${encode(label)}"`
-      return `<slot kind="${block.slotKind}"${labelAttr}/>`
-    }
+    case 'photo':
+      // A count of one is the DEFAULT, so it is written as absence: emitting count="1" would
+      // rewrite every stored body on its next save for no change in meaning.
+      return block.count > 1
+        ? `<slot kind="photo" count="${block.count}"/>`
+        : '<slot kind="photo"/>'
     case 'repeat':
       return `<repeat each="photo">\n${block.children.map(blockSource).join('\n')}\n</repeat>`
   }
@@ -86,9 +93,17 @@ function stripOneNewline(value: string): string {
   return out.trim() === '' ? '' : out
 }
 
+/** What an unlabelled legacy position is called once it becomes fixed text. They are passed
+ *  in rather than looked up so this module stays free of react and i18n. */
+export interface LegacyNames {
+  place: string
+  link: string
+}
+
 function fromNodes(
   nodes: readonly TemplateNode[],
   decodeText: (raw: string) => string,
+  legacyNames: LegacyNames,
 ): BuilderBlock[] {
   const blocks: BuilderBlock[] = []
   for (const node of nodes) {
@@ -107,19 +122,25 @@ function fromNodes(
       case 'note':
         blocks.push({ id: nextBlockId(), kind: 'note', text: decodeText(node.text ?? '') })
         break
-      case 'slot':
-        blocks.push({
-          id: nextBlockId(),
-          kind: 'slot',
-          slotKind: node.slotKind ?? 'place',
-          label: decodeText(node.label ?? ''),
-        })
+      case 'slot': {
+        if (node.slotKind === 'photo') {
+          blocks.push({ id: nextBlockId(), kind: 'photo', count: node.count ?? 1 })
+          break
+        }
+        // A stored place or link position becomes a FIXED TEXT row carrying its label
+        // (TEMPLATE-37): the position is retired, but a body that has one must not become
+        // unreadable, and the label is what the author already wrote there. The next save
+        // writes it back as literal text.
+        const fallback = node.slotKind === 'link' ? legacyNames.link : legacyNames.place
+        const label = decodeText(node.label ?? '').trim()
+        blocks.push({ id: nextBlockId(), kind: 'text', text: label === '' ? fallback : label })
         break
+      }
       case 'repeat':
         blocks.push({
           id: nextBlockId(),
           kind: 'repeat',
-          children: fromNodes(node.children ?? [], decodeText),
+          children: fromNodes(node.children ?? [], decodeText, legacyNames),
         })
         break
     }
@@ -129,10 +150,15 @@ function fromNodes(
 
 export type BodyRead = { ok: true; blocks: BuilderBlock[] } | { ok: false; failure: ParseFailure }
 
-export function fromBody(body: string, decodeText: (raw: string) => string): BodyRead {
-  const result = parse(body)
+export function fromBody(
+  body: string,
+  decodeText: (raw: string) => string,
+  options: ParseOptions,
+  legacyNames: LegacyNames,
+): BodyRead {
+  const result = parse(body, options)
   if (!result.ok) return { ok: false, failure: result.failure }
-  return { ok: true, blocks: fromNodes(result.nodes, decodeText) }
+  return { ok: true, blocks: fromNodes(result.nodes, decodeText, legacyNames) }
 }
 
 /** Moves `from` so that it sits at `to`, clamped. Splice-based rather than swap-based: a drag
@@ -158,7 +184,7 @@ export function isCompleteBlock(block: BuilderBlock): boolean {
     case 'note':
     case 'text':
       return block.text.trim() !== ''
-    case 'slot':
+    case 'photo':
     case 'repeat':
       return true
   }
@@ -177,15 +203,21 @@ export function toValidBody(blocks: readonly BuilderBlock[]): string {
   )
 }
 
-/** What a person actually picks from the palette. `slot` is deliberately absent: the three slot
- *  KINDS are the choices, and a bare "slot" would be a command with no meaning — which is also
- *  why it is the one `BuilderBlockKind` with no copy of its own. */
-export type PaletteKind = 'write' | 'text' | 'photo' | 'place' | 'link' | 'note' | 'repeat'
-
 /** The kind key a row shows, in that same vocabulary — so one set of strings names the button
  *  that creates a block and the badge that identifies it afterwards. */
 export function blockKindKey(block: BuilderBlock): PaletteKind {
-  return block.kind === 'slot' ? block.slotKind : block.kind
+  return block.kind
+}
+
+/** How many photos ONE iteration of a repeat takes: the sum of its photo positions' counts.
+ *  It is what the repeat's help line states, and it is the same arithmetic the server expands
+ *  with (TEMPLATE-21). */
+export function repeatPhotoCount(block: BuilderBlock): number {
+  if (block.kind !== 'repeat') return 0
+  return block.children.reduce(
+    (total, child) => total + (child.kind === 'photo' ? child.count : 0),
+    0,
+  )
 }
 
 /** The one line a collapsed row shows for a block: the block's own text and nothing else.
@@ -204,12 +236,22 @@ export function blockSummary(block: BuilderBlock): string {
     case 'note':
     case 'text':
       return block.text.replace(/\s+/g, ' ').trim()
-    case 'slot':
-      return block.label.replace(/\s+/g, ' ').trim()
+    case 'photo':
+      // A photo row's summary is a COUNT, not text the author typed, so it is the one summary
+      // the UI formats rather than reads — see photoSummaryKey.
+      return ''
     case 'repeat':
       // A repeat's content IS its children, and they are rows of their own directly beneath it.
       return ''
   }
+}
+
+/** Which i18n key a photo row's collapsed summary uses. One photo reads as a photo; more than
+ *  one has to say that they stand side by side, which is the whole point of the count. */
+export function photoSummaryKey(
+  count: number,
+): 'composition.summary.photo' | 'composition.summary.photoRow' {
+  return count > 1 ? 'composition.summary.photoRow' : 'composition.summary.photo'
 }
 
 /** One block, with everything needed to ADDRESS it: which group it belongs to and where in that

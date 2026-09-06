@@ -25,11 +25,23 @@ const rows = () => screen.getAllByRole('listitem')
  *  move controls come after the content. */
 const toggle = (index: number) => within(rows()[index]).getAllByRole('button')[0]
 const summaries = () => rows().map((_, index) => toggle(index).textContent ?? '')
+/** A palette button by its NAME, scoped to the toolbar: a row's badge carries the SAME name as
+ *  the button that creates it (which is the point), so an unscoped query matches both. The name
+ *  is matched by its first line because the accessible name now carries the visible help too. */
+const palette = () => within(screen.getByRole('group', { name: '블록 추가' }))
+const paletteButton = (name: string) =>
+  palette().getByRole('button', { name: new RegExp(`^${name}`) })
+const queryPaletteButton = (name: string) =>
+  palette().queryByRole('button', { name: new RegExp(`^${name}`) })
 
 const REVIEW =
-  '<write>인트로를 씁니다</write>\n<slot kind="place" label="네이버 지도"/>\n' +
+  '<write>인트로를 씁니다</write>\n지도는 아래에\n' +
   '<repeat each="photo">\n<slot kind="photo"/>\n<write>이 사진에 대한 설명</write>\n</repeat>\n' +
   '<write>총평 및 재방문 의사</write>'
+
+/** A body from before the place and link positions were retired (TEMPLATE-37). */
+const LEGACY =
+  '<write>인트로를 씁니다</write>\n<slot kind="place" label="네이버 지도"/>\n<slot kind="link"/>'
 
 describe('the composition editor', () => {
   // A5: the rows ARE the outline — one line per block, a repeat's children beneath it, and the
@@ -38,15 +50,15 @@ describe('the composition editor', () => {
     render(<Editor initial={REVIEW} />)
 
     expect(summaries()).toEqual([
-      '작성인트로를 씁니다',
-      '지도·장소네이버 지도',
-      '반복사진마다 되풀이',
-      '사진첨부한 사진이 들어갑니다',
-      '작성이 사진에 대한 설명',
-      '작성총평 및 재방문 의사',
+      'AI가 쓰는 글인트로를 씁니다',
+      '고정 문구지도는 아래에',
+      '사진마다 반복사진마다 되풀이',
+      '사진사진 1장',
+      'AI가 쓰는 글이 사진에 대한 설명',
+      'AI가 쓰는 글총평 및 재방문 의사',
     ])
     // A9: nothing of the grammar reaches the screen.
-    for (const syntax of ['<write', '<repeat', '<slot', '<note', 'each="photo"']) {
+    for (const syntax of ['<write', '<repeat', '<slot', '<note', 'each="photo"', 'count="']) {
       expect(
         screen.getByRole('group', { name: '블록 추가' }).closest('div')?.textContent,
       ).not.toContain(syntax)
@@ -72,11 +84,62 @@ describe('the composition editor', () => {
     await user.click(toggle(1))
     // The first row's field is gone: at most one is open.
     expect(screen.queryByLabelText('무엇을 쓸지')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('이 자리의 이름')).toHaveValue('네이버 지도')
+    expect(screen.getByLabelText('들어갈 문구')).toHaveValue('지도는 아래에')
 
-    await user.clear(screen.getByLabelText('이 자리의 이름'))
-    await user.type(screen.getByLabelText('이 자리의 이름'), '카카오맵')
-    expect(body()).toContain('<slot kind="place" label="카카오맵"/>')
+    await user.clear(screen.getByLabelText('들어갈 문구'))
+    await user.type(screen.getByLabelText('들어갈 문구'), '지도는 맨 아래')
+    expect(body()).toContain('지도는 맨 아래')
+  })
+
+  // TEMPLATE-38: a photo position carries how many photos stand side by side, edited with a
+  // stepper because the values are single digits inside a hard range.
+  it('edits a photo row count with a stepper bounded by the configured ceiling', async () => {
+    const user = userEvent.setup()
+    render(<Editor initial={REVIEW} />)
+
+    await user.click(toggle(3))
+    const value = screen.getByRole('spinbutton', { name: '가로로 놓을 사진 수' })
+    expect(value).toHaveAttribute('aria-valuenow', '1')
+    expect(value).toHaveAttribute('aria-valuemin', '1')
+    expect(value).toHaveAttribute('aria-valuemax', '4')
+    // At the floor there is nothing to take away.
+    expect(screen.getByRole('button', { name: '줄이기' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: '늘리기' }))
+    expect(body()).toContain('<slot kind="photo" count="2"/>')
+    // The collapsed summary says they stand side by side, which is the point of the count.
+    expect(summaries()[3]).toBe('사진사진 2장 가로로')
+    // And the repeat's help states what one iteration now takes.
+    await user.click(toggle(2))
+    expect(screen.getByText(/한 번 되풀이할 때 사진 2장을 씁니다/)).toBeInTheDocument()
+
+    await user.click(toggle(3))
+    await user.click(screen.getByRole('button', { name: '늘리기' }))
+    await user.click(screen.getByRole('button', { name: '늘리기' }))
+    expect(body()).toContain('<slot kind="photo" count="4"/>')
+    // The ceiling is the server's, so the control cannot offer a value the save would refuse.
+    expect(screen.getByRole('button', { name: '늘리기' })).toBeDisabled()
+  })
+
+  // TEMPLATE-37: the position is retired, but a stored one must not make the body unreadable.
+  // It opens as 고정 문구 carrying its label, and the save writes it back as literal text.
+  it('opens a stored place or link position as fixed text', async () => {
+    const user = userEvent.setup()
+    render(<Editor initial={LEGACY} />)
+
+    expect(summaries()).toEqual([
+      'AI가 쓰는 글인트로를 씁니다',
+      '고정 문구네이버 지도',
+      // An unlabelled one falls back to a name rather than opening empty.
+      '고정 문구링크',
+    ])
+    // Nothing is emitted until the user actually edits: the migration is not a save of its own.
+    expect(body()).toBe(LEGACY)
+
+    await user.click(toggle(1))
+    await user.type(screen.getByLabelText('들어갈 문구'), ' 참고')
+    expect(body()).toBe('<write>인트로를 씁니다</write>\n네이버 지도 참고\n링크')
+    expect(body()).not.toContain('<slot')
   })
 
   // A7: the toolbar lands where the screen said, and the aim is drawn BEFORE the click.
@@ -92,8 +155,8 @@ describe('the composition editor', () => {
     const marked = rows().findIndex((row) => within(row).queryByText('여기에 추가돼요') !== null)
     expect(marked).toBe(0)
 
-    await user.click(screen.getByRole('button', { name: '메모' }))
-    expect(summaries()[1]).toContain('메모')
+    await user.click(paletteButton('AI에게만 하는 말'))
+    expect(summaries()[1]).toContain('AI에게만 하는 말')
   })
 
   // A7 second half: the aim inside a repeat puts the block inside it.
@@ -103,7 +166,7 @@ describe('the composition editor', () => {
 
     // The repeat's first child.
     await user.click(toggle(3))
-    await user.click(screen.getByRole('button', { name: '정해진 문구' }))
+    await user.click(paletteButton('고정 문구'))
     await user.type(screen.getByLabelText('들어갈 문구'), '사진 아래 한 줄')
 
     expect(body()).toContain(
@@ -116,9 +179,9 @@ describe('the composition editor', () => {
     const user = userEvent.setup()
     render(<Editor initial={REVIEW} />)
 
-    expect(screen.getByRole('button', { name: '반복' })).toBeInTheDocument()
+    expect(paletteButton('사진마다 반복')).toBeInTheDocument()
     await user.click(toggle(4))
-    expect(screen.queryByRole('button', { name: '반복' })).not.toBeInTheDocument()
+    expect(queryPaletteButton('사진마다 반복')).not.toBeInTheDocument()
   })
 
   // A8, the other half: pointer drag reorders too. It is not a nicety — the move buttons exist
@@ -132,10 +195,10 @@ describe('the composition editor', () => {
     fireEvent.dragOver(items[1])
     fireEvent.drop(items[1])
 
-    expect(summaries()[0]).toContain('네이버 지도')
+    expect(summaries()[0]).toContain('지도는 아래에')
     expect(summaries()[1]).toContain('인트로를 씁니다')
     // The body follows, so a drag is a real edit and not just a rearranged view.
-    expect(body().startsWith('<slot kind="place" label="네이버 지도"/>')).toBe(true)
+    expect(body().startsWith('지도는 아래에')).toBe(true)
   })
 
   // A8: a drag cannot take a block out of its repeat — the grammar has no way to express one
@@ -161,7 +224,7 @@ describe('the composition editor', () => {
     render(<Editor initial={REVIEW} />)
 
     await user.click(within(rows()[1]).getByRole('button', { name: '위로' }))
-    expect(summaries()[0]).toContain('네이버 지도')
+    expect(summaries()[0]).toContain('지도는 아래에')
 
     // The repeat's last child cannot move down past the repeat: it is the last of ITS group.
     expect(within(rows()[4]).getByRole('button', { name: '아래로' })).toBeDisabled()
@@ -174,7 +237,7 @@ describe('the composition editor', () => {
     const user = userEvent.setup()
     render(<Editor />)
 
-    await user.click(screen.getByRole('button', { name: '작성' }))
+    await user.click(paletteButton('AI가 쓰는 글'))
     expect(rows()).toHaveLength(1)
     expect(body()).toBe('')
 
@@ -188,7 +251,7 @@ describe('the composition editor', () => {
 
     await user.click(toggle(0))
     await user.click(screen.getByRole('button', { name: '삭제' }))
-    expect(summaries()[0]).toContain('네이버 지도')
+    expect(summaries()[0]).toContain('지도는 아래에')
     expect(body()).not.toContain('인트로를 씁니다')
   })
 
@@ -208,8 +271,8 @@ describe('the composition editor', () => {
     expect(screen.getByText('여기에 추가돼요')).toBeInTheDocument()
     expect(rows().some((row) => within(row).queryByText('여기에 추가돼요') !== null)).toBe(false)
 
-    await user.click(screen.getByRole('button', { name: '메모' }))
-    expect(summaries()[summaries().length - 1]).toContain('메모')
+    await user.click(paletteButton('AI에게만 하는 말'))
+    expect(summaries()[summaries().length - 1]).toContain('AI에게만 하는 말')
   })
 
   // A10: a body the parser cannot read shows no grammar and offers one action.

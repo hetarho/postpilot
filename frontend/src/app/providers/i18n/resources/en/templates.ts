@@ -40,42 +40,51 @@ export const templates = {
     empty: 'Add blocks above to lay out the post.',
     insertHere: 'Adds here',
     repeatEmpty: 'Nothing inside this repeat yet.',
-    repeatHelp: 'The blocks inside repeat once per attached photo.',
+    repeatHelp:
+      'The blocks inside repeat once per attached photo. Each repetition uses {{count}} photos.',
     unreadable:
       'The structure of this template cannot be read — it may have been saved in an older format. Clear it and build it again.',
     clearAndRestart: 'Clear and start over',
+    summary: {
+      // Only ever formatted with a count of one — photoSummaryKey sends anything above it to
+      // photoRow — so no plural form is needed on either side.
+      photo: '{{count}} photo',
+      photoRow: '{{count}} photos side by side',
+    },
     placeholder: {
       write: 'Say what to write here',
       text: 'Type the text that goes in',
       note: 'Say something to AI only',
       photo: 'An attached photo goes here',
-      place: 'Name this position',
-      link: 'Name this position',
       repeat: 'Once per photo',
     },
   },
   builder: {
     palette: {
-      write: 'Write',
+      write: 'AI writes here',
       writeHelp: 'AI writes prose here',
       text: 'Fixed text',
       textHelp: 'Appears in the post exactly as typed',
       photo: 'Photo',
       photoHelp: 'An attached photo goes here',
-      place: 'Map or place',
-      placeHelp: 'A position you fill in later',
-      link: 'Link',
-      linkHelp: 'A position you fill in later',
-      repeat: 'Repeat',
+      repeat: 'Repeat per photos',
       repeatHelp: 'Repeats its contents once per photo',
-      note: 'Note',
+      note: 'Note to AI',
       noteHelp: 'Only AI reads it; it never appears in the post',
+    },
+    // What an unlabelled legacy position is called once it is read as fixed text (TEMPLATE-37).
+    legacy: {
+      place: 'Map',
+      link: 'Link',
     },
     block: {
       instruction: 'What to write',
       text: 'Text to include',
       label: 'Name for this position',
       note: 'Note for AI',
+      count: 'Photos side by side',
+      fewer: 'Fewer',
+      more: 'More',
       drag: 'Drag to move',
       moveUp: 'Move up',
       moveDown: 'Move down',
@@ -92,6 +101,7 @@ export const templates = {
       nested_repeat: 'a repeat cannot contain a repeat',
       empty_write: 'nothing to write',
       empty_note: 'the note is empty',
+      invalid_count: 'photos per row must be between 1 and {{max}}',
     },
   },
   slot: {

@@ -6,6 +6,13 @@ import type { FakeTemplateRow, FakeTemplatesOptions } from '@/test/templates'
 
 const USER = { id: 'alice' }
 
+/** A palette button by its name, scoped to the toolbar: a row's badge carries the same name as
+ *  the button that creates it, and the accessible name now includes the button's visible help. */
+const paletteButton = (name: string) =>
+  within(screen.getByRole('group', { name: '블록 추가' })).getByRole('button', {
+    name: new RegExp(`^${name}`),
+  })
+
 const REVIEW: FakeTemplateRow = {
   id: 'template-review',
   name: '정보성 식당 리뷰',
@@ -23,6 +30,25 @@ function renderTemplate(path: string, templates: FakeTemplatesOptions = {}, call
 }
 
 describe('the template screen', () => {
+  // TEMPLATE-37: a stored place or link position opens as 고정 문구 rather than making the
+  // composition unreadable — and reading it is NOT an edit. The editor emits nothing until the
+  // user changes something, so the body stays byte-identical and 저장 stays disabled; the
+  // migration to literal text rides the next real save.
+  it('opens a legacy position as fixed text without making the draft dirty', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/template-review')
+
+    expect(await screen.findByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
+    // The retired position reads as fixed text carrying its label.
+    expect(screen.getByText('네이버 지도')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+
+    // One real edit, and only then does the save open — writing the row back as literal text.
+    await user.click(paletteButton('고정 문구'))
+    await user.type(screen.getByLabelText('들어갈 문구'), '지도는 아래에')
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+  })
+
   // A3: a row's target loads the stored template into one draft.
   it('opens a stored template with its name, description and composition', async () => {
     renderTemplate('/templates/template-review')
@@ -102,7 +128,7 @@ describe('the template screen', () => {
 
     await user.type(await screen.findByLabelText('이름'), '카페 방문기')
     await user.type(screen.getByLabelText(/어떤 글인가요/), '동네 카페')
-    await user.click(screen.getByRole('button', { name: '작성' }))
+    await user.click(paletteButton('AI가 쓰는 글'))
     await user.type(screen.getByLabelText('무엇을 쓸지'), '첫인상을 씁니다')
 
     await user.click(screen.getByRole('button', { name: '저장' }))
@@ -142,7 +168,7 @@ describe('the template screen', () => {
     renderTemplate('/templates/new', { creates })
 
     await user.type(await screen.findByLabelText('이름'), '카페 방문기')
-    await user.click(screen.getByRole('button', { name: '작성' }))
+    await user.click(paletteButton('AI가 쓰는 글'))
     await user.type(screen.getByLabelText('무엇을 쓸지'), '첫인상을 씁니다')
     await user.click(screen.getByRole('button', { name: '저장' }))
 

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Trash2 } from 'lucide-react'
 import { decode } from '../lib/grammar'
 import {
@@ -10,19 +11,24 @@ import {
   fromBody,
   insertAt,
   positionAfter,
+  photoSummaryKey,
+  repeatPhotoCount,
   reorder,
   toValidBody,
+  type BodyRead,
   type BuilderBlock,
   type PaletteKind,
   type Position,
 } from '../model/blocks'
 import { remainingChars, TEMPLATE_LIMITS } from '../model/types'
+import { TEMPLATE_PHOTO_ROW_MAX } from '@/shared/config'
 import {
   Badge,
   Button,
   FieldLabel,
   FieldMessage,
   SortableList,
+  Stepper,
   TextField,
   Textarea,
   Typography,
@@ -54,7 +60,8 @@ export function TemplateComposition({
   disabled?: boolean
   className?: string
 }) {
-  return fromBody(value, decode).ok ? (
+  const { t } = useTranslation('templates')
+  return readBody(value, t).ok ? (
     <Composition value={value} onChange={onChange} disabled={disabled} className={className} />
   ) : (
     <Unreadable disabled={disabled} onClear={() => onChange('')} className={className} />
@@ -105,13 +112,13 @@ function Composition({
   //
   // `emitted` closes the loop: a value that is not what this editor last produced came from
   // outside (a refetch, the unreadable state's clear), and only then are the rows reseeded.
-  const [blocks, setBlocks] = useState<BuilderBlock[]>(() => readBlocks(value))
+  const [blocks, setBlocks] = useState<BuilderBlock[]>(() => readBlocks(value, t))
   const emitted = useRef(value)
   useEffect(() => {
     if (value === emitted.current) return
     emitted.current = value
-    setBlocks(readBlocks(value))
-  }, [value])
+    setBlocks(readBlocks(value, t))
+  }, [value, t])
   // The two pieces of view state, both keyed by BLOCK ID rather than by index so an insertion or
   // a reorder above them cannot silently move either.
   //
@@ -180,8 +187,22 @@ function Composition({
   )
 }
 
-function readBlocks(body: string): BuilderBlock[] {
-  const result = fromBody(body, decode)
+/** The one place the two things the model cannot look up are supplied: the configured row
+ *  ceiling, and what an unlabelled legacy position is called once it is read as fixed text. */
+function readBody(body: string, t: TFunction<'templates'>): BodyRead {
+  return fromBody(
+    body,
+    decode,
+    { photoRowMax: TEMPLATE_PHOTO_ROW_MAX },
+    {
+      place: t('builder.legacy.place'),
+      link: t('builder.legacy.link'),
+    },
+  )
+}
+
+function readBlocks(body: string, t: TFunction<'templates'>): BuilderBlock[] {
+  const result = readBody(body, t)
   return result.ok ? result.blocks : []
 }
 
@@ -254,7 +275,10 @@ function AddToolbar({
   onAdd: (kind: PaletteKind) => void
 }) {
   const { t } = useTranslation('templates')
-  const kinds: PaletteKind[] = ['write', 'text', 'photo', 'place', 'link', 'repeat', 'note']
+  // Five buttons, named for what the reader gets rather than for what the grammar calls it,
+  // in the order a post is usually built (TEMPLATE-36). The place and link positions are gone:
+  // a thing the author fills in later is fixed text in their own words (TEMPLATE-37).
+  const kinds: PaletteKind[] = ['write', 'text', 'photo', 'repeat', 'note']
   return (
     <div className="bg-surface-base sm:top-header sticky top-0 z-10 -mx-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
       <Typography variant="label" as="p" id={id}>
@@ -269,11 +293,21 @@ function AddToolbar({
             <Button
               key={kind}
               variant="secondary"
-              size="compact"
               disabled={disabled}
               onClick={() => onAdd(kind)}
+              // The help is VISIBLE text on the button, not a title: a tooltip is unreachable
+              // on the phone this is built for, and the help is what tells the five names apart.
+              className="h-auto flex-col items-start gap-0 py-2 text-left"
             >
-              {t(`builder.palette.${kind}`)}
+              <span>{t(`builder.palette.${kind}`)}</span>
+              <span
+                className={typographyStyles({
+                  variant: 'meta',
+                  className: 'text-content-tertiary',
+                })}
+              >
+                {t(`builder.palette.${kind}Help`)}
+              </span>
             </Button>
           ))}
       </div>
@@ -314,7 +348,12 @@ function BlockRow({
   const { t } = useTranslation('templates')
   const id = useId()
   const open = context.openId === block.id
-  const summary = blockSummary(block)
+  // A photo row's summary is the only one the UI FORMATS: it is a count, not text the author
+  // typed, and it has to say whether the photos stand side by side (TEMPLATE-38).
+  const summary =
+    block.kind === 'photo'
+      ? t(photoSummaryKey(block.count), { count: block.count })
+      : blockSummary(block)
 
   return (
     <div>
@@ -429,24 +468,25 @@ function BlockFields({
           onChange={(text) => onChange({ ...block, text })}
         />
       )
-    case 'slot':
-      return block.slotKind === 'photo' ? (
-        <Typography variant="meta" as="p">
-          {t('builder.palette.photoHelp')}
-        </Typography>
-      ) : (
-        <Field
-          id={id}
-          label={t('builder.block.label')}
-          value={block.label}
+    case 'photo':
+      return (
+        <Stepper
+          label={t('builder.block.count')}
+          value={block.count}
+          min={1}
+          max={TEMPLATE_PHOTO_ROW_MAX}
           disabled={disabled}
-          onChange={(label) => onChange({ ...block, label })}
+          decrementLabel={t('builder.block.fewer')}
+          incrementLabel={t('builder.block.more')}
+          onChange={(count) => onChange({ ...block, count })}
         />
       )
     case 'repeat':
       return (
         <Typography variant="meta" as="p">
-          {t('composition.repeatHelp')}
+          {/* How many photos ONE iteration takes is the thing a repeat's author has to know
+              once a position inside it can hold a row (TEMPLATE-38). */}
+          {t('composition.repeatHelp', { count: repeatPhotoCount(block) })}
         </Typography>
       )
   }

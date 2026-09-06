@@ -32,6 +32,10 @@ export interface TemplateNode {
   /** slot */
   slotKind?: SlotKind
   label?: string
+  /** How many photos a photo position holds side by side. 1 when the attribute is absent and
+   *  0 on every node that is not a photo slot, so a non-zero count always means "this position
+   *  binds this many photos". */
+  count?: number
   /** repeat */
   each?: string
   children?: TemplateNode[]
@@ -48,6 +52,9 @@ export type ParseReason =
   | 'nested_repeat'
   | 'empty_write'
   | 'empty_note'
+  /** A photo position's `count` that is not an integer in 1 … photoRowMax. Its own reason
+   *  rather than malformed_tag: the attribute parsed fine, it is the VALUE to go fix. */
+  | 'invalid_count'
 
 export interface ParseFailure {
   /** 1-based, so it matches what the source editor shows. */
@@ -56,6 +63,13 @@ export interface ParseFailure {
 }
 
 export type ParseResult = { ok: true; nodes: TemplateNode[] } | { ok: false; failure: ParseFailure }
+
+/** What the grammar cannot know by itself. The photo-row ceiling is configuration, and a
+ *  parser that read it from the environment would make the shared fixture depend on where the
+ *  test runs — the Go parser takes the same option for the same reason. */
+export interface ParseOptions {
+  photoRowMax: number
+}
 
 /** The ONE definition of "this text says nothing", shared with the Go parser.
  *
@@ -101,8 +115,8 @@ export function serialize(nodes: readonly TemplateNode[]): string {
   return nodes.map((node) => node.source).join('')
 }
 
-export function parse(body: string): ParseResult {
-  const scan = parseNodes(body, 0, false)
+export function parse(body: string, options: ParseOptions): ParseResult {
+  const scan = parseNodes(body, 0, false, options)
   if (!scan.ok) return scan
   if (scan.end !== body.length) {
     return { ok: false, failure: { line: lineAt(body, scan.end), reason: 'unexpected_close' } }
@@ -112,7 +126,7 @@ export function parse(body: string): ParseResult {
 
 type Scan = { ok: true; nodes: TemplateNode[]; end: number } | { ok: false; failure: ParseFailure }
 
-function parseNodes(body: string, from: number, inRepeat: boolean): Scan {
+function parseNodes(body: string, from: number, inRepeat: boolean, options: ParseOptions): Scan {
   const nodes: TemplateNode[] = []
   let literalStart = from
   let i = from
@@ -142,7 +156,7 @@ function parseNodes(body: string, from: number, inRepeat: boolean): Scan {
       return { ok: true, nodes, end: next }
     }
     flushLiteral(next)
-    const parsed = parseTag(body, next, tag.name, inRepeat)
+    const parsed = parseTag(body, next, tag.name, inRepeat, options)
     if (!parsed.ok) return parsed
     nodes.push(parsed.node)
     i = parsed.after
@@ -155,7 +169,13 @@ function parseNodes(body: string, from: number, inRepeat: boolean): Scan {
 type TagResult =
   { ok: true; node: TemplateNode; after: number } | { ok: false; failure: ParseFailure }
 
-function parseTag(body: string, at: number, name: string, inRepeat: boolean): TagResult {
+function parseTag(
+  body: string,
+  at: number,
+  name: string,
+  inRepeat: boolean,
+  options: ParseOptions,
+): TagResult {
   const line = lineAt(body, at)
   const head = parseTagHead(body, at, name)
   if (!head.ok) return head
@@ -174,6 +194,13 @@ function parseTag(body: string, at: number, name: string, inRepeat: boolean): Ta
     if (!SLOT_KINDS.includes(kind)) {
       return { ok: false, failure: { line, reason: 'unknown_slot_kind' } }
     }
+    const count = slotCount(head.attrs.get('count'), kind as SlotKind, options.photoRowMax)
+    if (count === null) {
+      return {
+        ok: false,
+        failure: { line, reason: kind === 'photo' ? 'invalid_count' : 'malformed_tag' },
+      }
+    }
     return {
       ok: true,
       node: {
@@ -182,6 +209,7 @@ function parseTag(body: string, at: number, name: string, inRepeat: boolean): Ta
         line,
         slotKind: kind as SlotKind,
         label: head.attrs.get('label') ?? '',
+        count,
       },
       after: head.after,
     }
@@ -213,7 +241,7 @@ function parseTag(body: string, at: number, name: string, inRepeat: boolean): Ta
   if (!EACH_VALUES.includes(each)) {
     return { ok: false, failure: { line, reason: 'unknown_repeat_each' } }
   }
-  const inner = parseNodes(body, head.after, true)
+  const inner = parseNodes(body, head.after, true, options)
   if (!inner.ok) return inner
   const close = consumeClose(body, inner.end, name, line)
   if (!close.ok) return close
@@ -228,6 +256,31 @@ function parseTag(body: string, at: number, name: string, inRepeat: boolean): Ta
     },
     after: close.after,
   }
+}
+
+/** Resolves a photo position's row size, or null when the value cannot describe one.
+ *
+ *  An absent attribute is one photo, which is what every body written before counts existed
+ *  means. The value must be plain ASCII digits after trimming the shared blank set: `+2` and
+ *  `2.0` are refused rather than coerced, because `Number()` and Go's `strconv.Atoi` disagree
+ *  about exactly those forms and the two parsers read the same bodies. */
+function slotCount(raw: string | undefined, kind: SlotKind, photoRowMax: number): number | null {
+  if (raw === undefined) return kind === 'photo' ? 1 : 0
+  // A count on a retired kind is not a bad number, it is an attribute that kind never had.
+  if (kind !== 'photo') return null
+  const value = trimBlank(decode(raw))
+  if (value === '' || !/^[0-9]+$/.test(value)) return null
+  const count = Number(value)
+  return count >= 1 && count <= photoRowMax ? count : null
+}
+
+function trimBlank(value: string): string {
+  const chars = [...value]
+  let start = 0
+  let end = chars.length
+  while (start < end && BLANK.has(chars[start].codePointAt(0) ?? 0)) start += 1
+  while (end > start && BLANK.has(chars[end - 1].codePointAt(0) ?? 0)) end -= 1
+  return chars.slice(start, end).join('')
 }
 
 type HeadResult =

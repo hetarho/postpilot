@@ -16,6 +16,7 @@ interface FixtureNode {
   text?: string
   kind?: string
   label?: string
+  count?: number
   each?: string
   children?: FixtureNode[]
 }
@@ -30,7 +31,11 @@ const fixturePath = resolve(
   import.meta.dirname,
   '../../../../../backend/internal/template/testdata/grammar/cases.json',
 )
-const cases: FixtureCase[] = JSON.parse(readFileSync(fixturePath, 'utf8')).cases
+const fixture = JSON.parse(readFileSync(fixturePath, 'utf8'))
+const cases: FixtureCase[] = fixture.cases
+/** The ceiling the FIXTURE declares, never this deployment's own: a `count` case has to mean
+ *  the same thing on both sides, which is exactly what this file exists to guarantee. */
+const options = { photoRowMax: fixture.photoRowMax as number }
 
 function expectNodes(got: readonly TemplateNode[], want: readonly FixtureNode[], path: string) {
   expect(
@@ -47,6 +52,7 @@ function expectNodes(got: readonly TemplateNode[], want: readonly FixtureNode[],
     if (expected.t === 'slot') {
       expect(actual.slotKind, at).toBe(expected.kind)
       expect(decode(actual.label ?? ''), at).toBe(expected.label)
+      expect(actual.count, at).toBe(expected.count)
     }
     if (expected.t === 'repeat') {
       expect(actual.each, at).toBe(expected.each)
@@ -56,6 +62,10 @@ function expectNodes(got: readonly TemplateNode[], want: readonly FixtureNode[],
 }
 
 describe('template grammar against the shared fixtures', () => {
+  it('runs the ceiling the fixture declares', () => {
+    expect(options.photoRowMax).toBeGreaterThan(0)
+  })
+
   it('reads at least one accepted and one refused case', () => {
     expect(cases.filter((c) => c.nodes).length).toBeGreaterThan(0)
     expect(cases.filter((c) => c.error).length).toBeGreaterThan(0)
@@ -63,7 +73,7 @@ describe('template grammar against the shared fixtures', () => {
 
   cases.forEach((testCase) => {
     it(testCase.name, () => {
-      const result = parse(testCase.body)
+      const result = parse(testCase.body, options)
       if (testCase.error) {
         expect(result.ok, 'expected a parse failure').toBe(false)
         if (result.ok) return
@@ -106,7 +116,7 @@ describe('the TypeScript parser agrees with the Go parser', () => {
   it('reaches the same verdict, line and reason on every corpus body', () => {
     const disagreements: string[] = []
     for (const testCase of corpus) {
-      const result = parse(testCase.body)
+      const result = parse(testCase.body, options)
       if (result.ok !== testCase.ok) {
         disagreements.push(
           `${JSON.stringify(testCase.body)}: go ${testCase.ok ? 'accepted' : 'refused'}, ts ${

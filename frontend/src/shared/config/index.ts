@@ -254,6 +254,12 @@ export const TEMPLATE_BODY_MAX_CHARS = positiveIntEnv(
   4000,
 )
 
+/** How many photos one photo position may place side by side, mirrored from
+ *  `TEMPLATE_PHOTO_ROW_MAX`. Unlike the ceilings above this one is not only a counter: the
+ *  builder's stepper cannot offer a value the server's parser would refuse on save, so the two
+ *  numbers have to be raised together. */
+export const TEMPLATE_PHOTO_ROW_MAX = positiveIntEnv(import.meta.env.VITE_TEMPLATE_PHOTO_ROW_MAX, 4)
+
 /** Writing-guideline (작문 지침) text ceiling, mirrored from `GUIDELINE_TEXT_MAX_CHARS` for the
  *  live counter; the server stays authoritative. The per-account cap is deliberately not
  *  mirrored — it is a prompt-size guard the backend owns, and the create form relays its

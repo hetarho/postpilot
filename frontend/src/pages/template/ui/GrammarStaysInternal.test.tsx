@@ -13,7 +13,7 @@ const EVERY_CONSTRUCT: FakeTemplateRow = {
   description: '모든 구성요소',
   body:
     '<write>인트로를 씁니다</write>\n머리말 그대로\n<slot kind="place" label="네이버 지도"/>\n' +
-    '<repeat each="photo">\n<slot kind="photo"/>\n<write>이 사진에 대한 설명</write>\n</repeat>\n' +
+    '<repeat each="photo">\n<slot kind="photo" count="3"/>\n<write>이 사진에 대한 설명</write>\n</repeat>\n' +
     '<slot kind="link" label="예약"/>\n<note>광고 티 내지 말 것</note>',
 }
 
@@ -31,6 +31,7 @@ const SYNTAX = [
   'kind="photo"',
   'kind="link"',
   'label=',
+  'count="',
   '{작성}',
   '{자리}',
   '{반복}',
