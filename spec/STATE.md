@@ -31,13 +31,14 @@
 |---|---|---|---|---|
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260905.cx |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
-| T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | todo |
+| T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | doing@260907.mu |
 
 ## next
 - update-ssot PUBLISH after T008 closes: VIDEO-17 (agent video publishing) and TEMPLATE-39 (photo-row transport); VIDEO is otherwise shipped
 - implement-task T019 NEXT (base PUBLISH@3) → T008 · T007 in parallel (cx)
 
 ## log
+- 260907 T019 claimed (mu)
 - 260907 create-task PUBLISH r3 → T019 updated in place (todo: base@2→@3, +PUBLISH-36, locator-derived pointer input in impl notes); no new task
 - 260907 create-task PUBLISH start (r3 delta into T019, todo)
 - 260907 update-ssot PUBLISH r3 done (PUBLISH-19✎ 20✎ 36+: recorded/replayed coordinates stay banned, a locator-derived pointer event does not)
@@ -57,4 +58,3 @@
 - 260906 T011 done — the FE grammar fixture is green again (T010's WARN closed)
 - 260906 T018 claimed (pt)
 - 260906 create-task PUBLISH → T018 T019 (T005 shipped the publisher state machine but never its port; ssot row unchanged — unbuilt scope, not a delta); T008 dep T007→T007 T019
-- 260906 create-task PUBLISH start (gap: naver.Port/CommitPort has only test fakes — T005 done left the real CDP driver unbuilt, so `run` refuses and no job can ever be claimed)
