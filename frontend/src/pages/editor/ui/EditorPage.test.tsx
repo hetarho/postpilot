@@ -1615,7 +1615,7 @@ describe('a new draft', () => {
     // A JPEG, so the stubbed native decoder is the path taken; the HEIC worker path is
     // covered by shared/lib/image's own tests (jsdom has no Worker).
     await user.upload(
-      await screen.findByLabelText('사진 추가'),
+      await screen.findByLabelText('사진·영상 추가'),
       new File(['jpeg'], 'IMG_1.JPG', { type: 'image/jpeg' }),
     )
 
@@ -1645,7 +1645,7 @@ describe('a new draft', () => {
     const user = userEvent.setup()
     renderAppAt('/posts/new', { user: USER, posts: { failSaves: 1 } })
 
-    await user.upload(await screen.findByLabelText('사진 추가'), new File(['x'], 'IMG_1.jpg'))
+    await user.upload(await screen.findByLabelText('사진·영상 추가'), new File(['x'], 'IMG_1.jpg'))
 
     expect(await screen.findByText('글을 만드는 중…')).toBeInTheDocument()
     // The retry lands after the backoff and the photo goes on to upload.
@@ -1663,7 +1663,7 @@ describe('a new draft', () => {
     const user = userEvent.setup({ applyAccept: false })
     const { router } = renderAppAt('/posts/new', { user: USER, posts: { calls } })
 
-    await user.upload(await screen.findByLabelText('사진 추가'), new File(['x'], 'setup.exe'))
+    await user.upload(await screen.findByLabelText('사진·영상 추가'), new File(['x'], 'setup.exe'))
 
     expect(await screen.findByRole('heading', { name: '건너뜀' })).toBeInTheDocument()
     expect(screen.getByText('setup.exe')).toBeInTheDocument()

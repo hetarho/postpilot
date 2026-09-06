@@ -33,6 +33,45 @@ export function createUploadPipeline(transport: Transport): UploadPipeline {
       if (!response.ok) throw new Error(`PUT failed: ${response.status}`)
     },
 
+    putWithProgress,
+
     confirm: handshake.confirmUpload,
   }
+}
+
+/** The same PUT, reported as it goes.
+ *
+ *  `XMLHttpRequest` rather than `fetch` for one reason: fetch exposes no upload progress at
+ *  all, and a 200 MB clip over mobile takes a minute — a card that only says 올리는 중 for that
+ *  long reads as stuck (VIDEO-7). The photo PUT above is left on fetch: it moves ~200 KB, and
+ *  a second transport for it would be two code paths for one thing.
+ */
+export function putWithProgress(
+  putUrl: string,
+  contentType: string,
+  blob: Blob,
+  onProgress: (percent: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest()
+    request.open('PUT', putUrl)
+    request.setRequestHeader('Content-Type', contentType)
+    request.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable || event.total <= 0) return
+      onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)))
+    })
+    request.addEventListener('load', () => {
+      if (request.status >= 200 && request.status < 300) {
+        // The last progress event can arrive before the response does; a card left at 98%
+        // beside a confirmed clip would read as a stall.
+        onProgress(100)
+        resolve()
+        return
+      }
+      reject(new Error(`PUT failed: ${request.status}`))
+    })
+    request.addEventListener('error', () => reject(new Error('PUT failed')))
+    request.addEventListener('abort', () => reject(new Error('PUT aborted')))
+    request.send(blob)
+  })
 }

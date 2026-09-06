@@ -19,12 +19,21 @@ interface EditorPhotosProps {
 export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
   const slug = post?.slug
   const images = post?.images ?? []
+  const videos = post?.videos ?? []
   const upload = useUploadPhotos({
     slug,
-    taken: images.map((image) => image.filename),
+    // ONE filename namespace across both kinds (VIDEO-5), so both lists are handed over.
+    taken: [...images.map((image) => image.filename), ...videos.map((video) => video.filename)],
+    held: { photos: images.length, videos: videos.length },
     ensureSlug,
   })
-  const { deletePhoto, deletingId, failedId, failure: deleteFailure } = useDeletePhoto(slug)
+  const {
+    deletePhoto,
+    deleteVideo,
+    deletingId,
+    failedId,
+    failure: deleteFailure,
+  } = useDeletePhoto(slug)
 
   return (
     <PhotoDropZone onFiles={(files) => void upload.addFiles(files)} disabled={upload.creatingPost}>
@@ -49,8 +58,10 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
         )}
         <PhotoStrip
           images={images}
+          videos={videos}
           items={upload.items}
           onDelete={deletePhoto}
+          onDeleteVideo={deleteVideo}
           deletingId={deletingId}
           deleteFailedId={failedId}
           deleteFailure={deleteFailure}

@@ -9,6 +9,7 @@ import {
 import { postStatusLabel } from '@/entities/post'
 import { useSaveStatus, type SaveState } from '@/features/save-draft'
 import { ProgressBar, Typography } from '@/shared/ui'
+import { observingVideo } from '../model/steps'
 
 /** The editor's ONE status surface: everything the page has to SAY about its own state, at the top
  *  of the page, and nowhere else (change 15). The docked bar below it holds controls and the reason
@@ -51,10 +52,15 @@ export function EditorStatusLine({
   job,
   saveState,
   status,
+  photoCount = 0,
+  videoCount = 0,
 }: {
   job: GenerationJob | undefined
   saveState: SaveState
   status: string
+  /** What the post carries, so the line can say WHICH observation is running (VIDEO-18). */
+  photoCount?: number
+  videoCount?: number
 }) {
   const { t } = useTranslation('posts')
   const save = useSaveStatus(saveState)
@@ -63,7 +69,13 @@ export function EditorStatusLine({
   // and it outranks the job's stage. A generation runs for minutes, and the precedence that put
   // the stage first would have hidden a save that is losing the user's text for all of them.
   const failing = save.state === 'error'
-  const running = !failing && job && !isTerminal(job) ? progressLabel(job) : ''
+  const stageLabel =
+    job && observingVideo(job, photoCount, videoCount)
+      ? t('generation.observingVideo')
+      : job
+        ? progressLabel(job)
+        : ''
+  const running = !failing && job && !isTerminal(job) ? stageLabel : ''
   return (
     <Typography
       variant="meta"

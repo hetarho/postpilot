@@ -13,8 +13,12 @@ import {
   DeleteImageResponseSchema,
   FinalizePostResponseSchema,
   GetPostResponseSchema,
+  AttachmentKind,
+  DeleteVideoResponseSchema,
   type Image,
   ImageSchema,
+  type Video,
+  VideoSchema,
   ListPostsResponseSchema,
   PostSchema,
   PostService,
@@ -80,6 +84,18 @@ export interface FakeDraftSave {
   targetLanguage: ContentLanguage | undefined
 }
 
+/** One clip on a fake post. Only the fields a test actually varies; the rest are filled with
+ *  the same defaults the server would produce. */
+export interface FakeVideoRow {
+  id: string
+  filename: string
+  width?: number
+  height?: number
+  durationMs?: bigint
+  contentType?: string
+  viewUrl?: string
+}
+
 export interface FakePostRow {
   slug: string
   title?: string
@@ -91,6 +107,7 @@ export interface FakePostRow {
   template?: FakePostTemplate
   machineBaselineVoiceId?: string
   images?: FakeImageRow[]
+  videos?: FakeVideoRow[]
   activeJob?: FakeGenerationJobRow
   content?: PostContent
   observations?: Observation[]
@@ -153,6 +170,7 @@ type Row = {
   voice: ProtoVoiceRef
   template?: ProtoTemplateRef
   images: Image[]
+  videos: Video[]
   activeJob?: ProtoGenerationJob
   content?: PostContent
   observations: Observation[]
@@ -174,7 +192,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   let failuresLeft = options.failSaves ?? 0
   let uploadSequence = 0
   let getSequenceIndex = 0
-  const pending = new Map<string, { slug: string; filename: string }>()
+  // `video` is the RESERVATION's kind: the confirm answers with the half the upload asked for,
+  // never with the half the request implies.
+  const pending = new Map<string, { slug: string; filename: string; video: boolean }>()
   const voices = options.voices ?? [DEFAULT_POST_VOICE]
   const templates = options.templates ?? []
 
@@ -229,6 +249,19 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
             image.viewUrl ?? `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=1`,
         }),
       ),
+      videos: (row.videos ?? []).map((video) =>
+        create(VideoSchema, {
+          id: video.id,
+          filename: video.filename,
+          width: video.width ?? 1920,
+          height: video.height ?? 1080,
+          bytes: 12_000_000n,
+          durationMs: video.durationMs ?? 8_000n,
+          contentType: video.contentType || 'video/mp4',
+          viewUrl:
+            video.viewUrl ?? `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${video.id}.mp4?sig=1`,
+        }),
+      ),
       activeJob: row.activeJob ? toFakeProto(row.activeJob) : undefined,
       content: row.content,
       observations: row.observations ?? [],
@@ -274,6 +307,13 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
           ...image,
           viewUrl:
             image.viewUrl || `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=get`,
+        }),
+      ),
+      videos: row.videos.map((video) =>
+        create(VideoSchema, {
+          ...video,
+          viewUrl:
+            video.viewUrl || `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${video.id}.mp4?sig=get`,
         }),
       ),
     })
@@ -359,6 +399,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       voice,
       template,
       images: existing?.images ?? [],
+      videos: existing?.videos ?? [],
       activeJob: existing?.activeJob,
       content: existing?.content,
       observations: existing?.observations ?? [],
@@ -385,18 +426,23 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     calls?.push('CreateUpload')
     const row = rows.get(req.postSlug)
     if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
-    if (row.images.some((image) => image.filename === req.filename)) {
+    // ONE filename namespace across both kinds, like the server's (VIDEO-5).
+    const taken =
+      row.images.some((image) => image.filename === req.filename) ||
+      row.videos.some((video) => video.filename === req.filename)
+    if (taken) {
       throw connectAppError('POST_FILENAME_TAKEN', Code.AlreadyExists, {
         filename: req.filename,
       })
     }
     uploadSequence += 1
     const uploadId = `upload-${uploadSequence}`
-    pending.set(uploadId, { slug: req.postSlug, filename: req.filename })
+    const isVideo = req.kind === AttachmentKind.VIDEO
+    pending.set(uploadId, { slug: req.postSlug, filename: req.filename, video: isVideo })
     return create(CreateUploadResponseSchema, {
       uploadId,
-      putUrl: `${FAKE_STORAGE_ORIGIN}/posts/${req.postSlug}/${uploadId}.jpg?sig=put`,
-      contentType: 'image/jpeg',
+      putUrl: `${FAKE_STORAGE_ORIGIN}/posts/${req.postSlug}/${uploadId}.${isVideo ? 'mp4' : 'jpg'}?sig=put`,
+      contentType: isVideo ? 'video/mp4' : 'image/jpeg',
       expiresAt: '2026-08-28T12:10:00Z',
     })
   })
@@ -450,6 +496,20 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     const upload = pending.get(req.uploadId)
     if (!upload) throw connectAppError('UPLOAD_NOT_FOUND', Code.NotFound)
     pending.delete(req.uploadId)
+    // Which half comes back is the UPLOAD's kind, never the request's.
+    if (upload.video) {
+      const video = create(VideoSchema, {
+        id: req.uploadId,
+        filename: upload.filename,
+        width: req.width,
+        height: req.height,
+        bytes: 12_000_000n,
+        durationMs: req.durationMs,
+        contentType: 'video/mp4',
+      })
+      rows.get(upload.slug)?.videos.push(video)
+      return create(ConfirmUploadResponseSchema, { video })
+    }
     const image = create(ImageSchema, {
       id: req.uploadId,
       filename: upload.filename,
@@ -459,6 +519,19 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     })
     rows.get(upload.slug)?.images.push(image)
     return create(ConfirmUploadResponseSchema, { image })
+  })
+
+  rpc(PostService.method.deleteVideo, (req) => {
+    calls?.push('DeleteVideo')
+    if (options.deleteFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    for (const row of rows.values()) {
+      const index = row.videos.findIndex((video) => video.id === req.videoId)
+      if (index !== -1) {
+        row.videos.splice(index, 1)
+        return create(DeleteVideoResponseSchema, {})
+      }
+    }
+    throw connectAppError('POST_NOT_FOUND', Code.NotFound)
   })
 
   rpc(PostService.method.deleteImage, (req) => {

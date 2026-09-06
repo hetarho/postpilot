@@ -58,6 +58,7 @@ export type {
 export type { PingResponse } from './gen/postpilot/v1/health_pb'
 export { GenerationService, PostService } from './gen/postpilot/v1/post_pb'
 export {
+  AttachmentKind,
   BlockSchema,
   BlockType,
   ConfirmUploadResponseSchema,
@@ -78,6 +79,8 @@ export {
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
   FinalizePostResponseSchema,
+  DeleteVideoResponseSchema,
+  VideoSchema,
   StartGenerationRequestSchema,
   StartGenerationResponseSchema,
   StartRevisionRequestSchema,
@@ -94,6 +97,7 @@ export type {
   Observation,
   Post,
   PostContent,
+  Video,
   PostSummary,
   StartGenerationRequest,
   StartGenerationResponse,

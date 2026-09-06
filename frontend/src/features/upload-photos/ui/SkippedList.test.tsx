@@ -12,6 +12,7 @@ describe('SkippedList', () => {
       id: 'skipped-1',
       name,
       filename: name,
+      attachment: 'photo' as const,
       status: 'skipped',
       reason: 'heif-unsupported',
     }

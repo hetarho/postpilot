@@ -3,6 +3,7 @@ import { clone } from '@bufbuild/protobuf'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { type PostImage, toProtoImage } from '@/entities/image/@x/post'
+import { type PostVideo, toProtoVideo } from '@/entities/video/@x/post'
 import { type GetPostResponse, GetPostResponseSchema, type Post } from '@/shared/api'
 import { getPostQueryKey } from './post-queries'
 
@@ -19,6 +20,8 @@ import { getPostQueryKey } from './post-queries'
 export function usePostImagesCache(): {
   append: (slug: string, image: PostImage) => void
   remove: (slug: string, imageId: string) => void
+  appendVideo: (slug: string, video: PostVideo) => void
+  removeVideo: (slug: string, videoId: string) => void
 } {
   const queryClient = useQueryClient()
   const transport = useTransport()
@@ -45,6 +48,17 @@ export function usePostImagesCache(): {
       remove: (slug: string, imageId: string) =>
         update(slug, (post) => {
           post.images = post.images.filter((existing) => existing.id !== imageId)
+        }),
+      // The clip half, patched for exactly the same reason: a refetch would re-mint a view
+      // URL for every attachment and pull them all again, mid-upload, on cellular.
+      appendVideo: (slug: string, video: PostVideo) =>
+        update(slug, (post) => {
+          if (post.videos.some((existing) => existing.id === video.id)) return
+          post.videos.push(toProtoVideo(video))
+        }),
+      removeVideo: (slug: string, videoId: string) =>
+        update(slug, (post) => {
+          post.videos = post.videos.filter((existing) => existing.id !== videoId)
         }),
     }
   }, [queryClient, transport])

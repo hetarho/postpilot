@@ -57,6 +57,12 @@ export type {
 } from './theme'
 export type { DecodeFailure, ResizedJpeg } from './image'
 export {
+  formatDuration,
+  readVideoMetadata,
+  VideoUnreadableError,
+  type VideoMetadata,
+} from './video'
+export {
   DecodeError,
   decodeImage,
   dedupeFilename,

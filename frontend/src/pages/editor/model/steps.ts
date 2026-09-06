@@ -30,3 +30,20 @@ const BY_STATUS: Record<PostStatus, EditorStep> = {
 export function stepForStatus(status: string): EditorStep {
   return BY_STATUS[status as PostStatus] ?? 'generate'
 }
+
+/** Which observation the running job is on right now.
+ *
+ *  The stage is one word for both halves — the photo batches and then one call per clip
+ *  (VIDEO-8) — so the SCREEN is what tells them apart, from two numbers it already has: how far
+ *  the stage has got, and how many photos the post carries. Once `done` has passed the photos,
+ *  every remaining call is a video's (VIDEO-18).
+ *
+ *  A post with no video always reads 사진 관찰 중, whatever the counts say. */
+export function observingVideo(
+  job: { stage: string; progressDone: number; progressTotal: number } | undefined,
+  photoCount: number,
+  videoCount: number,
+): boolean {
+  if (!job || job.stage !== 'observe' || videoCount === 0) return false
+  return job.progressDone >= photoCount
+}

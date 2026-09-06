@@ -31,7 +31,6 @@
 |---|---|---|---|---|
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260905.cx |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
-| T015 | Video upload in the browser, the attachment strip and the contact sheet | VIDEO POST GEN | T012 | todo |
 | T016 | The VIDEO block in the reading view, editor and exports, plus the capability badges and refusals | VIDEO EXPORT MODEL POST | T013 T015 | todo |
 | T017 | The `원문` source mode, paste import and the copyable format guide | TEMPLATE | T011 | todo |
 | T018 | The bound CDP session and the deterministic Naver observation port | PUBLISH | T005 | doing@260906.pt |
@@ -39,10 +38,12 @@
 
 ## next
 - implement-task T017 (the `원문` source mode on top of T011's screen)
-- implement-task T015 → T016 (the browser half of video attachments)
+- implement-task T016 (VIDEO blocks in the reading view, editor and the four exports, plus the badges and refusals)
 - implement-task T018 → T019 → T008 (the deterministic publisher's real CDP driver; nothing can publish until T019 wires it) · T007 in parallel (cx)
 
 ## log
+- 260906 T015 done — videos are attachable in the browser; only T016 (blocks, exports, badges) is left of VIDEO
+- 260906 T015 claimed (vd)
 - 260906 T014 done — T012's WARN closed: generation tells a clip from a photo, so T015 may make videos attachable
 - 260906 T014 claimed (vd)
 - 260906 T011 done — the FE grammar fixture is green again (T010's WARN closed)
@@ -61,5 +62,3 @@
 - 260906 T012 done (videos as the post's second attachment kind: proto, migration 0026, kind-aware handshake, cascade, sweep, VIDEO block; ARCH-26 + ARCH-28 pass)
 - 260906 create-task TEMPLATE → T017 (dep T011; FE only, no server change); TEMPLATE tasked=3; T011 base → TEMPLATE@3 with a hand-off note
 - 260906 create-task TEMPLATE start (r3 delta: 26✎ 30✎ 34✎ 41+ 42+)
-- 260906 T012 claimed (vd)
-- 260906 update-ssot TEMPLATE r3 done (TEMPLATE-26✎ 30✎ 34✎ 41+ 42+: `원문` mode back, paste import, copyable format guide; T010/T011 todo touch the same screen — no doing task affected)

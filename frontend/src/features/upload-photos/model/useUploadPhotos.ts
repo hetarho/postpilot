@@ -13,10 +13,14 @@ import {
 } from './upload-batch'
 
 export interface UseUploadPhotosArgs {
-  /** The post the photos attach to, or undefined for a draft with no slug yet. */
+  /** The post the attachments attach to, or undefined for a draft with no slug yet. */
   slug: string | undefined
-  /** Filenames the post already holds, for de-duplication. */
+  /** Filenames the post already holds, for de-duplication. ONE namespace across both kinds
+   *  (VIDEO-5), so photos and videos are passed together. */
   taken: readonly string[]
+  /** How many of each kind the post already holds. The two ceilings are separate, and the
+   *  batch cannot know either — its own items are only this session's picks. */
+  held?: { photos: number; videos: number }
   /** Produces the slug, creating the post first if needed — the editor's autosave owns
    *  that, so it is injected. */
   ensureSlug: () => Promise<string>
@@ -26,6 +30,7 @@ export interface UseUploadPhotosArgs {
 export function useUploadPhotos({
   slug,
   taken,
+  held = { photos: 0, videos: 0 },
   ensureSlug,
 }: UseUploadPhotosArgs): UploadBatchState & {
   addFiles: (files: File[]) => Promise<void>
@@ -40,8 +45,12 @@ export function useUploadPhotos({
   const transport = useTransport()
   const cache = usePostImagesCache()
   const deps = useMemo(
-    () => ({ pipeline: createUploadPipeline(transport), onConfirmed: cache.append }),
-    [transport, cache.append],
+    () => ({
+      pipeline: createUploadPipeline(transport),
+      onConfirmed: cache.append,
+      onVideoConfirmed: cache.appendVideo,
+    }),
+    [transport, cache.append, cache.appendVideo],
   )
   const [creatingPost, setCreatingPost] = useState(false)
   const [createFailure, setCreateFailure] = useState<AppFailure>()
@@ -69,7 +78,7 @@ export function useUploadPhotos({
     addFiles: async (files) => {
       if (files.length === 0 || creatingPost) return
       if (slug) {
-        uploadBatch(slug, deps).add(files, taken)
+        uploadBatch(slug, deps, held).add(files, taken)
         return
       }
       const { accepted, skipped } = partitionFiles(files)
@@ -84,7 +93,7 @@ export function useUploadPhotos({
       setCreateFailure(undefined)
       try {
         const target = await ensureSlug()
-        uploadBatch(target, deps).add(files, taken)
+        uploadBatch(target, deps, held).add(files, taken)
       } catch (cause) {
         setCreateFailure(appFailureFromConnect(cause))
       } finally {

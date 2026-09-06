@@ -1,12 +1,18 @@
 import type { PostImage } from '@/entities/image'
+import type { PostVideo } from '@/entities/video'
 import { observationByFile } from '@/entities/observation'
 import type { Observation } from '@/shared/api'
 
-/** One attached photo as the re-observation picker reasons about it. */
+/** Which kind a row is, carrying the attachment itself so the picker renders it without
+ *  re-pairing by filename. Videos are listed after photos and behave identically otherwise:
+ *  the picker's decision is about eyesight, and a clip has the same kind of it (VIDEO-18). */
+export type ReobserveAttachment =
+  { kind: 'photo'; image: PostImage } | { kind: 'video'; video: PostVideo }
+
+/** One attached photo or clip as the re-observation picker reasons about it. */
 export interface ReobserveRow {
   filename: string
-  /** The photo itself, so the picker renders a thumbnail without re-pairing by filename. */
-  image: PostImage
+  attachment: ReobserveAttachment
   /** The observation currently stored for this photo, or undefined when there is none. */
   stored?: Observation
   /** Nothing to reuse: no stored entry, or one a model produced without seeing anything.
@@ -25,25 +31,34 @@ function empty(observation: Observation): boolean {
     !observation.mood &&
     !observation.visibleText &&
     observation.objects.length === 0 &&
-    !observation.peoplePresent
+    !observation.peoplePresent &&
+    // A clip can be carried by what only a clip has: a model that saw motion and heard
+    // speech but named no objects still described it (VIDEO-9).
+    observation.events.length === 0 &&
+    !observation.speech
   )
 }
 
-/** One row per attached photo, in the post's own order. */
+/** One row per attachment, in the post's own order: photos first, then clips (VIDEO-18). */
 export function reobserveRows(
   images: readonly PostImage[],
   observations: readonly Observation[],
+  videos: readonly PostVideo[] = [],
 ): ReobserveRow[] {
   const byFile = observationByFile(observations)
-  return images.map((image) => {
-    const stored = byFile.get(image.filename)
+  const row = (filename: string, attachment: ReobserveAttachment): ReobserveRow => {
+    const stored = byFile.get(filename)
     return {
-      filename: image.filename,
-      image,
+      filename,
+      attachment,
       stored: stored && !empty(stored) ? stored : undefined,
       forced: !stored || empty(stored),
     }
-  })
+  }
+  return [
+    ...images.map((image) => row(image.filename, { kind: 'photo', image })),
+    ...videos.map((video) => row(video.filename, { kind: 'video', video })),
+  ]
 }
 
 /** What the picker opens with: the forced photos and nothing else. Every other checkbox
@@ -59,9 +74,10 @@ export function defaultSelection(rows: readonly ReobserveRow[]): string[] {
 export function needsPicker(
   images: readonly PostImage[],
   observations: readonly Observation[],
+  videos: readonly PostVideo[] = [],
 ): boolean {
-  if (images.length === 0) return false
-  return reobserveRows(images, observations).some((row) => !row.forced)
+  if (images.length === 0 && videos.length === 0) return false
+  return reobserveRows(images, observations, videos).some((row) => !row.forced)
 }
 
 /** The model refs behind the observations the picker is offering to reuse, deduplicated and

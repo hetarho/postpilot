@@ -1,5 +1,6 @@
 import { type Transport, createClient } from '@connectrpc/connect'
-import { appFailureFromConnect, PostService } from '@/shared/api'
+import { AttachmentKind, appFailureFromConnect, PostService } from '@/shared/api'
+import { type PostVideo, toPostVideo } from '@/entities/video/@x/image'
 import {
   type PostImage,
   UploadObjectMissing,
@@ -7,6 +8,24 @@ import {
   UploadRpcFailure,
 } from '../model/types'
 import { toPostImage } from './image-mappers'
+
+/** Which kind of attachment a handshake is for. It decides the ceiling the reservation counts
+ *  against, the extension of the object key and the Content-Type the PUT is signed for — all
+ *  of it server-side; this only says which. */
+export type UploadKind = 'photo' | 'video'
+
+/** What a confirm produced. Exactly one is set, decided by the UPLOAD's own kind rather than
+ *  by the request: a client that reserved a photo can never be handed a clip back. */
+export type ConfirmedAttachment =
+  { kind: 'photo'; image: PostImage } | { kind: 'video'; video: PostVideo }
+
+/** What the browser measured about the file. A photo reports the converted copy's dimensions;
+ *  a clip adds the duration its container declared, which the server bounds. */
+export interface ConfirmMeasurements {
+  width: number
+  height: number
+  durationMs?: number
+}
 
 export interface PresignedUpload {
   uploadId: string
@@ -21,15 +40,26 @@ export interface PresignedUpload {
  *  Throws `UploadRejected` for a final answer, `UploadObjectMissing` when the confirm
  *  found nothing to confirm; anything else is a transport failure and retryable as is. */
 export function createUploadHandshake(transport: Transport): {
-  createUpload: (slug: string, filename: string) => Promise<PresignedUpload>
-  confirmUpload: (uploadId: string, width: number, height: number) => Promise<PostImage>
+  createUpload: (slug: string, filename: string, kind?: UploadKind) => Promise<PresignedUpload>
+  confirmUpload: (
+    uploadId: string,
+    measurements: ConfirmMeasurements,
+  ) => Promise<ConfirmedAttachment>
 } {
   const client = createClient(PostService, transport)
 
   return {
-    async createUpload(slug, filename) {
+    async createUpload(slug, filename, kind = 'photo') {
       try {
-        const response = await client.createUpload({ postSlug: slug, filename })
+        const response = await client.createUpload({
+          postSlug: slug,
+          filename,
+          // UNSPECIFIED reads as a photo on the server, so the default keeps every existing
+          // call byte-identical on the wire.
+          // The generator strips the enum's own prefix, so these are the proto's
+          // ATTACHMENT_KIND_VIDEO / ATTACHMENT_KIND_PHOTO.
+          kind: kind === 'video' ? AttachmentKind.VIDEO : AttachmentKind.PHOTO,
+        })
         return {
           uploadId: response.uploadId,
           putUrl: response.putUrl,
@@ -40,11 +70,18 @@ export function createUploadHandshake(transport: Transport): {
       }
     },
 
-    async confirmUpload(uploadId, width, height) {
+    async confirmUpload(uploadId, { width, height, durationMs }) {
       try {
-        const response = await client.confirmUpload({ uploadId, width, height })
-        if (!response.image) throw new Error('ConfirmUpload returned no image')
-        return toPostImage(response.image)
+        const response = await client.confirmUpload({
+          uploadId,
+          width,
+          height,
+          durationMs: BigInt(durationMs ?? 0),
+        })
+        // Which half came back is the server's answer, not ours to assume.
+        if (response.video) return { kind: 'video', video: toPostVideo(response.video) }
+        if (response.image) return { kind: 'photo', image: toPostImage(response.image) }
+        throw new Error('ConfirmUpload returned no attachment')
       } catch (error) {
         throw classify(error)
       }

@@ -47,6 +47,17 @@ export const SAVE_STATUS_SETTLED_MS = 2_000
  *  moved on. */
 export const EDITOR_HANDOFF_TTL_MS = 5_000
 
+/** Reads a `VITE_*` mirror of a backend ceiling. A malformed or non-positive override falls
+ *  back to the default rather than disabling the bound — a build-time typo must not silently
+ *  remove a client-side check.
+ *
+ *  A function declaration, not a const arrow: the mirrors below are declared in the order the
+ *  file reads best, and several of them sit above this line. */
+function positiveIntEnv(raw: string | undefined, fallback: number): number {
+  const value = Number(raw)
+  return Number.isInteger(value) && value > 0 ? value : fallback
+}
+
 /** The photo pipeline (PRD F-2, §6.2). Every photo is decoded, downscaled and re-encoded
  *  in the browser before it is uploaded ([I6]); these are the knobs of that step. */
 
@@ -64,6 +75,25 @@ export const UPLOAD_MAX_PHOTOS_PER_POST = 30
 /** Compared case-insensitively against the extension of the selected file. Anything else
  *  is listed as skipped, never uploaded. */
 export const UPLOAD_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'] as const
+
+/** Videos (VIDEO-3). Unlike a photo, a clip is uploaded EXACTLY as picked — nothing here
+ *  decodes, downscales or transcodes it (VIDEO-4) — so these ceilings are the whole of what
+ *  the browser can do about size, and the server enforces the same three on confirm.
+ *
+ *  All three are mirrored from the backend's own values rather than chosen here: raising one
+ *  on this side alone would let the picker accept a file the save refuses. The three together
+ *  are what keeps one observation call inside the credit hold's prompt assumption (QUOTA-14).
+ */
+export const UPLOAD_MAX_VIDEOS_PER_POST = positiveIntEnv(
+  import.meta.env.VITE_UPLOAD_MAX_VIDEOS_PER_POST,
+  3,
+)
+export const UPLOAD_MAX_VIDEO_MB = positiveIntEnv(import.meta.env.VITE_UPLOAD_MAX_VIDEO_MB, 200)
+export const VIDEO_MAX_SECONDS = positiveIntEnv(import.meta.env.VITE_VIDEO_MAX_SECONDS, 60)
+
+/** The containers a clip may arrive in, compared case-insensitively against the extension.
+ *  They are the same four the server signs a PUT for; anything else is listed as skipped. */
+export const UPLOAD_VIDEO_EXTENSIONS = ['mp4', 'mov', 'm4v', 'webm'] as const
 
 /** The long edge a photo is downscaled to. Smaller images are never upscaled. */
 export const IMAGE_MAX_LONG_EDGE_PX = 1024
@@ -237,10 +267,6 @@ export const VOICE_DESCRIPTION_MAX_CHARS = 500
  *  The per-account cap and the repeat-expansion bound are deliberately NOT mirrored: both are
  *  server-owned guards, and the second depends on the post's photo count rather than on the
  *  template being edited. */
-const positiveIntEnv = (raw: string | undefined, fallback: number): number => {
-  const value = Number(raw)
-  return Number.isInteger(value) && value > 0 ? value : fallback
-}
 export const TEMPLATE_NAME_MAX_CHARS = positiveIntEnv(
   import.meta.env.VITE_TEMPLATE_NAME_MAX_CHARS,
   40,

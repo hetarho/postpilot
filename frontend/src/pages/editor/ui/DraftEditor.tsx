@@ -288,6 +288,8 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
             job={jobView.job}
             saveState={autosave.state}
             status={post?.status ?? ''}
+            photoCount={post?.images.length ?? 0}
+            videoCount={post?.videos.length ?? 0}
           />
           {post && (
             /* A queue outlives its editor, so a retry left running would keep saving a slug the
@@ -645,7 +647,12 @@ function LifecycleSteps({
       )}
 
       {post.images.length > 0 && (
-        <ContactSheet images={post.images} observations={post.observations} activeJob={job} />
+        <ContactSheet
+          images={post.images}
+          videos={post.videos}
+          observations={post.observations}
+          activeJob={job}
+        />
       )}
     </>
   )

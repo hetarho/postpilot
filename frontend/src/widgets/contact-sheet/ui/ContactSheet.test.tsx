@@ -1,5 +1,8 @@
 import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
+import { create } from '@bufbuild/protobuf'
+import { ObservationSchema } from '@/shared/api'
 import { OBSERVATION_FIXTURE } from '@/test/fixtures/postContent'
 import { ContactSheet } from './ContactSheet'
 
@@ -115,4 +118,69 @@ it('is a horizontal snap carousel that reports where the reader is', () => {
 it('shows no position indicator for a single photo', () => {
   render(<ContactSheet images={[images[0]!]} observations={[]} />)
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
+})
+
+const clip = {
+  id: 'video-1',
+  filename: 'clip.mp4',
+  width: 1920,
+  height: 1080,
+  bytes: 12_000_000,
+  durationMs: 65_400,
+  contentType: 'video/mp4',
+  viewUrl: 'https://storage.test/clip.mp4?signature=read',
+}
+
+// VIDEO-9: a clip is carded like a photo, plus the two things only a clip has — what happens,
+// in order, and what was heard.
+it('cards a clip with its duration, its events and its speech', () => {
+  render(
+    <ContactSheet
+      images={[]}
+      videos={[clip]}
+      observations={[
+        create(ObservationSchema, {
+          file: 'clip.mp4',
+          scene: '해변',
+          events: ['파도가 친다', '아이가 뛴다'],
+          speech: '좋다',
+        }),
+      ]}
+    />,
+  )
+
+  expect(screen.getByText('clip.mp4')).toBeInTheDocument()
+  expect(screen.getByText('1:05')).toBeInTheDocument()
+  // The order is the information, so the events are a list and not one joined line.
+  const events = screen.getByRole('list')
+  expect(events).toHaveTextContent('파도가 친다')
+  expect(events).toHaveTextContent('아이가 뛴다')
+  expect(screen.getByText('좋다')).toBeInTheDocument()
+})
+
+// A card that grew to fifteen lines would take the strip's other cards off the screen.
+it('holds a long timeline behind a disclosure', async () => {
+  const user = userEvent.setup()
+  render(
+    <ContactSheet
+      images={[]}
+      videos={[clip]}
+      observations={[
+        create(ObservationSchema, {
+          file: 'clip.mp4',
+          scene: '해변',
+          events: ['1', '2', '3', '4', '5', '6', '7', '8'],
+        }),
+      ]}
+    />,
+  )
+
+  expect(screen.queryByText('8')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /2/ }))
+  expect(screen.getByText('8')).toBeInTheDocument()
+})
+
+it('says a clip is waiting until an entry exists', () => {
+  render(<ContactSheet images={[]} videos={[clip]} observations={[]} />)
+  expect(screen.getByText('관찰 결과 없음')).toBeInTheDocument()
 })

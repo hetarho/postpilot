@@ -225,4 +225,29 @@ describe('ReobservePicker', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'IMG_1.jpg 다시 관찰' }))
     expect(screen.getByRole('status')).toHaveTextContent('1장 다시 관찰')
   })
+
+  // VIDEO-18: clips are listed AFTER the photos and decided the same way, with the duration
+  // badge that tells them apart.
+  it('lists clips after the photos with a duration badge', () => {
+    const clip = {
+      id: 'video-1',
+      filename: 'clip.mp4',
+      width: 1920,
+      height: 1080,
+      bytes: 12_000_000,
+      durationMs: 65_400,
+      contentType: 'video/mp4',
+      viewUrl: 'https://storage.test/clip.mp4?sig=1',
+    }
+    renderPicker({ videos: [clip] })
+
+    const rows = screen.getAllByRole('listitem')
+    expect(rows).toHaveLength(3)
+    expect(rows[2]).toHaveTextContent('clip.mp4')
+    expect(rows[2]).toHaveTextContent('1:05')
+    // Nothing stored for it, so it is checked and locked like an unobserved photo.
+    const boxes = screen.getAllByRole('checkbox')
+    expect(boxes[2]).toBeChecked()
+    expect(boxes[2]).toBeDisabled()
+  })
 })

@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { refKey, type ModelRef } from '@/entities/model-catalog'
 import type { PostImage } from '@/entities/image'
+import type { PostVideo } from '@/entities/video'
 import type { Observation } from '@/shared/api'
+import { formatDuration } from '@/shared/lib'
 import { Button, Checkbox, Dialog, Notice, Typography } from '@/shared/ui'
 import {
   defaultSelection,
@@ -14,6 +16,8 @@ import {
 interface ReobservePickerProps {
   open: boolean
   images: readonly PostImage[]
+  /** Listed after the photos, and decided the same way (VIDEO-18). */
+  videos?: readonly PostVideo[]
   observations: readonly Observation[]
   /** The observation model this run will use, for the changed-model notice. */
   observeModel?: ModelRef
@@ -33,6 +37,7 @@ interface ReobservePickerProps {
 export function ReobservePicker({
   open,
   images,
+  videos = [],
   observations,
   observeModel,
   pending = false,
@@ -40,7 +45,7 @@ export function ReobservePicker({
   onCancel,
 }: ReobservePickerProps) {
   const { t } = useTranslation('posts')
-  const rows = reobserveRows(images, observations)
+  const rows = reobserveRows(images, observations, videos)
   const [selected, setSelected] = useState<readonly string[]>(() => defaultSelection(rows))
   // The defaults are recomputed on OPENING, not on every render, so a photo attached or an
   // observation arriving while the picker is up cannot silently move the user's checkboxes.
@@ -164,26 +169,55 @@ function PhotoRow({
   // A `blob:` preview means the photo was attached since the last observation and has no
   // presigned view URL yet. Only the capability minted by `GetPost` may fetch an R2 thumbnail,
   // so the local URL is not used here — and such a photo is forced anyway.
-  const viewUrl = row.image.viewUrl.startsWith('blob:') ? '' : row.image.viewUrl
+  const attachment = row.attachment
+  const viewUrl =
+    attachment.kind === 'photo'
+      ? attachment.image.viewUrl.startsWith('blob:')
+        ? ''
+        : attachment.image.viewUrl
+      : attachment.video.viewUrl.startsWith('blob:')
+        ? ''
+        : attachment.video.viewUrl
   return (
     <li className="flex items-start gap-3 py-3">
-      {viewUrl ? (
+      {viewUrl && attachment.kind === 'photo' ? (
         <img
           src={viewUrl}
           alt={t('observation.imageAlt', { filename: row.filename })}
-          width={row.image.width}
-          height={row.image.height}
+          width={attachment.image.width}
+          height={attachment.image.height}
           loading="lazy"
           decoding="async"
+          className="size-14 shrink-0 rounded-md object-cover"
+        />
+      ) : viewUrl && attachment.kind === 'video' ? (
+        // Metadata only and no controls: this row is a CHOICE about the clip, not a player.
+        <video
+          src={viewUrl}
+          preload="metadata"
+          muted
+          playsInline
+          aria-hidden="true"
           className="size-14 shrink-0 rounded-md object-cover"
         />
       ) : (
         <span aria-hidden="true" className="bg-surface-recessed size-14 shrink-0 rounded-md" />
       )}
       <div className="min-w-0 flex-1">
-        <Typography variant="label" as="p" className="text-content-primary truncate">
-          {row.filename}
-        </Typography>
+        <div className="flex items-baseline gap-2">
+          <Typography variant="label" as="p" className="text-content-primary min-w-0 truncate">
+            {row.filename}
+          </Typography>
+          {attachment.kind === 'video' && (
+            <Typography
+              variant="meta"
+              as="span"
+              className="text-content-tertiary shrink-0 tabular-nums"
+            >
+              {formatDuration(attachment.video.durationMs)}
+            </Typography>
+          )}
+        </div>
         <Typography variant="body" as="p" className="text-content-secondary mt-1">
           {row.stored
             ? [row.stored.scene, row.stored.mood, row.stored.visibleText]

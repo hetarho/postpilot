@@ -17,11 +17,11 @@ describe('PhotoDropZone', () => {
     const zone = screen.getByText('child').parentElement!
 
     fireEvent.dragEnter(zone, fileTransfer())
-    expect(screen.getByText('여기에 놓으면 사진이 추가돼요')).toBeInTheDocument()
+    expect(screen.getByText('여기에 놓으면 사진과 영상이 추가돼요')).toBeInTheDocument()
 
     fireEvent.drop(zone, fileTransfer())
     expect(onFiles).toHaveBeenCalledWith([file])
-    expect(screen.queryByText('여기에 놓으면 사진이 추가돼요')).not.toBeInTheDocument()
+    expect(screen.queryByText('여기에 놓으면 사진과 영상이 추가돼요')).not.toBeInTheDocument()
   })
 
   it('keeps the cue while the pointer crosses children, and drops it on leaving the zone', () => {
@@ -36,10 +36,10 @@ describe('PhotoDropZone', () => {
     fireEvent.dragEnter(zone, fileTransfer())
     fireEvent.dragEnter(child, fileTransfer())
     fireEvent.dragLeave(child, fileTransfer())
-    expect(screen.getByText('여기에 놓으면 사진이 추가돼요')).toBeInTheDocument()
+    expect(screen.getByText('여기에 놓으면 사진과 영상이 추가돼요')).toBeInTheDocument()
 
     fireEvent.dragLeave(zone, fileTransfer())
-    expect(screen.queryByText('여기에 놓으면 사진이 추가돼요')).not.toBeInTheDocument()
+    expect(screen.queryByText('여기에 놓으면 사진과 영상이 추가돼요')).not.toBeInTheDocument()
   })
 
   it('ignores drags that carry no files', () => {
@@ -53,7 +53,7 @@ describe('PhotoDropZone', () => {
     const text = { dataTransfer: { types: ['text/plain'], files: [], dropEffect: 'none' } }
 
     fireEvent.dragEnter(zone, text)
-    expect(screen.queryByText('여기에 놓으면 사진이 추가돼요')).not.toBeInTheDocument()
+    expect(screen.queryByText('여기에 놓으면 사진과 영상이 추가돼요')).not.toBeInTheDocument()
     fireEvent.drop(zone, text)
     expect(onFiles).not.toHaveBeenCalled()
   })
@@ -68,7 +68,7 @@ describe('PhotoDropZone', () => {
     const zone = screen.getByText('child').parentElement!
 
     fireEvent.dragEnter(zone, fileTransfer())
-    expect(screen.queryByText('여기에 놓으면 사진이 추가돼요')).not.toBeInTheDocument()
+    expect(screen.queryByText('여기에 놓으면 사진과 영상이 추가돼요')).not.toBeInTheDocument()
     fireEvent.drop(zone, fileTransfer())
     expect(onFiles).not.toHaveBeenCalled()
   })

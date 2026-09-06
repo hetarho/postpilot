@@ -37,7 +37,10 @@ export interface GenerationActionsHandle {
 export const GenerationActions = forwardRef<
   GenerationActionsHandle,
   {
-    post: Pick<PostDraft, 'slug' | 'images' | 'observations' | 'pendingExperimentId' | 'voice'>
+    post: Pick<
+      PostDraft,
+      'slug' | 'images' | 'videos' | 'observations' | 'pendingExperimentId' | 'voice'
+    >
     /** Owned by the editor, not by this action: the writing brief sets it from another layer
      *  (`widgets/generation-brief`) and the two must agree on what the next run is given. */
     targetLength?: number
@@ -167,7 +170,7 @@ export const GenerationActions = forwardRef<
       if (mode === 'comparison' && (!writeA || !writeB)) return
       // A post with observations worth reusing decides what to re-observe first; one with
       // nothing to reuse would observe everything either way, so it starts directly.
-      if (needsPicker(post.images, post.observations)) {
+      if (needsPicker(post.images, post.observations, post.videos)) {
         setPicking(mode)
         return
       }
@@ -326,6 +329,7 @@ export const GenerationActions = forwardRef<
       <ReobservePicker
         open={Boolean(picking)}
         images={post.images}
+        videos={post.videos}
         observations={post.observations}
         observeModel={observeSelection?.ref}
         pending={Boolean(preparing)}

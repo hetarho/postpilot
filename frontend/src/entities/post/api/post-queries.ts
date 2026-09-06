@@ -2,6 +2,7 @@
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { toPostImage } from '@/entities/image/@x/post'
+import { toPostVideo } from '@/entities/video/@x/post'
 import { toGenerationJob } from '@/entities/generation-job/@x/post'
 import { toTemplateRef } from '@/entities/template/@x/post'
 import { toVoiceRef } from '@/entities/voice/@x/post'
@@ -25,6 +26,7 @@ export function toPostDraft(post: Post): PostDraft {
     voice: toVoiceRef(post.voice),
     template: toTemplateRef(post.template),
     images: post.images.map(toPostImage),
+    videos: post.videos.map(toPostVideo),
     activeJob: post.activeJob ? toGenerationJob(post.activeJob) : undefined,
     content: post.content,
     observations: post.observations,

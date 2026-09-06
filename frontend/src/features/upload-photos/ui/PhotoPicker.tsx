@@ -1,14 +1,17 @@
 import { useId, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { UPLOAD_ALLOWED_EXTENSIONS } from '@/shared/config'
+import { UPLOAD_ALLOWED_EXTENSIONS, UPLOAD_VIDEO_EXTENSIONS } from '@/shared/config'
 import { buttonStyles } from '@/shared/ui'
 
-// `image/*` alongside the extensions: a phone picker keys off MIME types and would
-// otherwise hide the camera roll on some devices; the extension gate runs afterwards
-// regardless (model/filter.ts).
-const ACCEPT = [...UPLOAD_ALLOWED_EXTENSIONS.map((extension) => `.${extension}`), 'image/*'].join(
-  ',',
-)
+// One picker takes both kinds (VIDEO-7); the extension gate sorts them afterwards
+// (model/filter.ts). `image/*` and `video/*` alongside the extensions: a phone picker keys off
+// MIME types and would otherwise hide the camera roll on some devices.
+const ACCEPT = [
+  ...UPLOAD_ALLOWED_EXTENSIONS.map((extension) => `.${extension}`),
+  ...UPLOAD_VIDEO_EXTENSIONS.map((extension) => `.${extension}`),
+  'image/*',
+  'video/*',
+].join(',')
 
 // Named peers (`peer/gallery`), spelled out rather than built: `peer-focus-visible:` is a general
 // sibling selector, so with two inputs in the row an unnamed peer would ring both labels from
@@ -54,7 +57,7 @@ export function PhotoPicker({
           className: disabled ? undefined : GALLERY_FOCUS,
         })}
       >
-        {t('upload.add')}
+        {t('upload.addPhotosOrVideos')}
       </label>
       {/* A second input, because `capture` belongs to the control and not to the pick: an
           image-only `accept` sends Android Chrome to the system photo picker, which offers no way

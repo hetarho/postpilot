@@ -1,5 +1,6 @@
 import i18next from 'i18next'
 import type { PostImage } from '@/entities/image/@x/post'
+import type { PostVideo } from '@/entities/video/@x/post'
 import type { GenerationJob } from '@/entities/generation-job/@x/post'
 import type { TemplateRef } from '@/entities/template/@x/post'
 import type { VoiceRef } from '@/entities/voice/@x/post'
@@ -26,6 +27,10 @@ export interface PostDraft {
    *  voice, the server never picks one (spec/legacy/policy/templates.md). */
   template: TemplateRef
   images: PostImage[]
+  /** The post's second attachment kind, ordered like the photos. Separate from `images`
+   *  rather than discriminated inside it: almost every surface renders the two differently,
+   *  and a client that had to read a flag to know which would get it wrong once (VIDEO-1). */
+  videos: PostVideo[]
   activeJob: GenerationJob | undefined
   content: PostContent | undefined
   observations: Observation[]

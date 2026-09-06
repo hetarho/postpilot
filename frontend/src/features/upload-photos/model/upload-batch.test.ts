@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { type PostImage, UploadObjectMissing, UploadRejected } from '@/entities/image'
+import { type ConfirmedAttachment, UploadObjectMissing, UploadRejected } from '@/entities/image'
 import { DecodeError } from '@/shared/lib'
+
+// A clip's only pre-upload step is reading what its container says about itself. The real
+// reader drives a `<video>`; here the test drives it, so the three outcomes are reachable
+// without shipping fixture clips.
+const readMetadata = vi.hoisted(() => vi.fn())
+vi.mock('@/shared/lib', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/shared/lib')>()),
+  readVideoMetadata: readMetadata,
+}))
 import {
   type UploadItem,
   type UploadPipeline,
@@ -38,14 +47,48 @@ function fakePipeline(options: { failPuts?: number; failConvert?: (file: File) =
         throw new TypeError('network')
       }
     }),
-    confirm: vi.fn(async (uploadId: string, width: number, height: number): Promise<PostImage> => ({
-      id: uploadId,
-      filename: `${uploadId}.jpg`,
-      width,
-      height,
-      bytes: 1,
-      viewUrl: '',
-    })),
+    putWithProgress: vi.fn(
+      async (
+        _url: string,
+        _contentType: string,
+        _blob: Blob,
+        onProgress: (percent: number) => void,
+      ) => {
+        onProgress(50)
+        onProgress(100)
+      },
+    ),
+    confirm: vi.fn(
+      async (
+        uploadId: string,
+        measurements: { width: number; height: number; durationMs?: number },
+      ): Promise<ConfirmedAttachment> =>
+        measurements.durationMs
+          ? {
+              kind: 'video',
+              video: {
+                id: uploadId,
+                filename: `${uploadId}.mp4`,
+                width: measurements.width,
+                height: measurements.height,
+                bytes: 1,
+                durationMs: measurements.durationMs,
+                contentType: 'video/mp4',
+                viewUrl: '',
+              },
+            }
+          : {
+              kind: 'photo',
+              image: {
+                id: uploadId,
+                filename: `${uploadId}.jpg`,
+                width: measurements.width,
+                height: measurements.height,
+                bytes: 1,
+                viewUrl: '',
+              },
+            },
+    ),
   }
   return pipeline
 }
@@ -67,6 +110,8 @@ beforeEach(() => {
   // jsdom's URL lacks these two.
   URL.createObjectURL = vi.fn(() => `blob:preview-${Math.random()}`)
   URL.revokeObjectURL = vi.fn()
+  readMetadata.mockReset()
+  readMetadata.mockResolvedValue({ durationMs: 8_000, width: 1920, height: 1080 })
 })
 
 afterEach(() => {
@@ -92,7 +137,7 @@ describe('an upload batch', () => {
       'image/jpeg',
       expect.any(Blob),
     )
-    expect(pipeline.confirm).toHaveBeenCalledWith('upload-1', 1024, 768)
+    expect(pipeline.confirm).toHaveBeenCalledWith('upload-1', { width: 1024, height: 768 })
     // The confirm answer has no view URL; the local copy stands in for it.
     expect(onConfirmed).toHaveBeenCalledWith(
       slug,
@@ -159,7 +204,7 @@ describe('an upload batch', () => {
     await vi.waitFor(() => expect(onConfirmed).toHaveBeenCalledTimes(2))
     // A third CreateUpload, i.e. a fresh upload_id — never the stale URL.
     expect(pipeline.createUpload).toHaveBeenCalledTimes(3)
-    expect(pipeline.confirm).toHaveBeenLastCalledWith('upload-3', 1024, 768)
+    expect(pipeline.confirm).toHaveBeenLastCalledWith('upload-3', { width: 1024, height: 768 })
     expect(peekUploadState(slug).items).toEqual([])
   })
 
@@ -171,12 +216,15 @@ describe('an upload batch', () => {
       .fn<UploadPipeline['confirm']>()
       .mockRejectedValueOnce(new TypeError('network'))
       .mockResolvedValueOnce({
-        id: 'upload-1',
-        filename: 'a.jpg',
-        width: 1024,
-        height: 768,
-        bytes: 1,
-        viewUrl: '',
+        kind: 'photo',
+        image: {
+          id: 'upload-1',
+          filename: 'a.jpg',
+          width: 1024,
+          height: 768,
+          bytes: 1,
+          viewUrl: '',
+        },
       })
     const onConfirmed = vi.fn()
     const batch = uploadBatch(slug, { pipeline, onConfirmed })
@@ -189,7 +237,7 @@ describe('an upload batch', () => {
     await vi.waitFor(() => expect(onConfirmed).toHaveBeenCalledTimes(1))
     expect(pipeline.createUpload).toHaveBeenCalledTimes(1)
     expect(pipeline.put).toHaveBeenCalledTimes(1)
-    expect(pipeline.confirm).toHaveBeenLastCalledWith('upload-1', 1024, 768)
+    expect(pipeline.confirm).toHaveBeenLastCalledWith('upload-1', { width: 1024, height: 768 })
   })
 
   it('starts over from CreateUpload when the server says the object never landed', async () => {
@@ -198,12 +246,15 @@ describe('an upload batch', () => {
       .fn<UploadPipeline['confirm']>()
       .mockRejectedValueOnce(new UploadObjectMissing())
       .mockResolvedValueOnce({
-        id: 'upload-2',
-        filename: 'a.jpg',
-        width: 1024,
-        height: 768,
-        bytes: 1,
-        viewUrl: '',
+        kind: 'photo',
+        image: {
+          id: 'upload-2',
+          filename: 'a.jpg',
+          width: 1024,
+          height: 768,
+          bytes: 1,
+          viewUrl: '',
+        },
       })
     const onConfirmed = vi.fn()
     const batch = uploadBatch(slug, { pipeline, onConfirmed })
@@ -217,7 +268,7 @@ describe('an upload batch', () => {
     await vi.waitFor(() => expect(onConfirmed).toHaveBeenCalledTimes(1))
     expect(pipeline.createUpload).toHaveBeenCalledTimes(2)
     expect(pipeline.put).toHaveBeenCalledTimes(2)
-    expect(pipeline.confirm).toHaveBeenLastCalledWith('upload-2', 1024, 768)
+    expect(pipeline.confirm).toHaveBeenLastCalledWith('upload-2', { width: 1024, height: 768 })
   })
 
   it("treats the server's own answer as final rather than retryable", async () => {
@@ -269,15 +320,18 @@ describe('an upload batch', () => {
     const pipeline = fakePipeline()
     pipeline.confirm = vi.fn(
       () =>
-        new Promise<PostImage>((resolve) => {
+        new Promise<ConfirmedAttachment>((resolve) => {
           releaseConfirm = () =>
             resolve({
-              id: 'late',
-              filename: 'late.jpg',
-              width: 1,
-              height: 1,
-              bytes: 1,
-              viewUrl: '',
+              kind: 'photo',
+              image: {
+                id: 'late',
+                filename: 'late.jpg',
+                width: 1,
+                height: 1,
+                bytes: 1,
+                viewUrl: '',
+              },
             })
         }),
     )
@@ -310,5 +364,74 @@ describe('an upload batch', () => {
 
     expect(listener).toHaveBeenCalled()
     expect(peekUploadState(slug).items).toEqual([])
+  })
+})
+
+describe('a video in the batch', () => {
+  // VIDEO-4: nothing converts a clip. The file that goes up is the file the user picked, and
+  // its metadata is read only to bound it and to report it at confirm.
+  it('uploads the original file with progress and confirms it with its duration', async () => {
+    const pipeline = fakePipeline()
+    const onVideoConfirmed = vi.fn()
+    const batch = uploadBatch(slug, { pipeline, onConfirmed: vi.fn(), onVideoConfirmed })
+
+    batch.add([file('clip.mp4')], [])
+    await vi.waitFor(() => expect(onVideoConfirmed).toHaveBeenCalledTimes(1))
+
+    // The conversion pipeline is never entered for a clip.
+    expect(pipeline.convert).not.toHaveBeenCalled()
+    expect(pipeline.put).not.toHaveBeenCalled()
+    expect(pipeline.createUpload).toHaveBeenCalledWith(slug, 'clip.mp4', 'video')
+    expect(pipeline.putWithProgress).toHaveBeenCalledTimes(1)
+    expect(pipeline.confirm).toHaveBeenLastCalledWith('upload-1', {
+      width: 1920,
+      height: 1080,
+      durationMs: 8_000,
+    })
+    // The confirmed clip carries the local file as its preview until the next GetPost.
+    expect(onVideoConfirmed.mock.calls[0][1]).toMatchObject({ durationMs: 8_000 })
+  })
+
+  // VIDEO-3: a clip the server would refuse must never reserve a filename or spend a minute of
+  // the user's data getting there.
+  it('skips a clip over the duration ceiling before reserving anything', async () => {
+    readMetadata.mockResolvedValueOnce({ durationMs: 90_000, width: 1920, height: 1080 })
+    const pipeline = fakePipeline()
+    const batch = uploadBatch(slug, { pipeline, onConfirmed: vi.fn(), onVideoConfirmed: vi.fn() })
+
+    batch.add([file('long.mp4')], [])
+    await vi.waitFor(() =>
+      expect(peekUploadState(slug).items[0]).toMatchObject({
+        status: 'skipped',
+        reason: 'video-too-long',
+      }),
+    )
+    expect(pipeline.createUpload).not.toHaveBeenCalled()
+  })
+
+  it('skips a container the device cannot read', async () => {
+    readMetadata.mockRejectedValueOnce(new Error('unreadable'))
+    const pipeline = fakePipeline()
+    const batch = uploadBatch(slug, { pipeline, onConfirmed: vi.fn(), onVideoConfirmed: vi.fn() })
+
+    batch.add([file('broken.mov')], [])
+    await vi.waitFor(() =>
+      expect(peekUploadState(slug).items[0]).toMatchObject({
+        status: 'skipped',
+        reason: 'video-unreadable',
+      }),
+    )
+    expect(pipeline.createUpload).not.toHaveBeenCalled()
+  })
+
+  // A clip keeps the name and the container the user picked; only a photo is renamed, because
+  // only a photo is re-encoded.
+  it('keeps the picked filename and extension', async () => {
+    const pipeline = fakePipeline()
+    const batch = uploadBatch(slug, { pipeline, onConfirmed: vi.fn(), onVideoConfirmed: vi.fn() })
+
+    batch.add([file('Clip.MOV')], [])
+    await vi.waitFor(() => expect(pipeline.createUpload).toHaveBeenCalled())
+    expect(pipeline.createUpload).toHaveBeenCalledWith(slug, 'Clip.MOV', 'video')
   })
 })

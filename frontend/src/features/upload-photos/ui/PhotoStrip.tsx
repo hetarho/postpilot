@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { type PostImage, Thumbnail } from '@/entities/image'
+import { type PostVideo, VideoTile } from '@/entities/video'
 import type { AppFailure } from '@/shared/api'
 import { AppFailureMessage, Button, Dialog, Notice, Typography } from '@/shared/ui'
 import type { UploadItem } from '../model/upload-batch'
@@ -9,9 +10,12 @@ import type { UploadItem } from '../model/upload-batch'
 interface PhotoStripProps {
   /** The post's photos — the server's, plus the ones this client has confirmed. */
   images: readonly PostImage[]
-  /** This session's uploads for the post that are not photos yet. */
+  /** The post's clips, shown after the photos (VIDEO-7). */
+  videos?: readonly PostVideo[]
+  /** This session's uploads for the post that are not attachments yet. */
   items: readonly UploadItem[]
   onDelete: (image: PostImage) => void
+  onDeleteVideo?: (video: PostVideo) => void
   deletingId?: string
   deleteFailedId?: string
   deleteFailure?: AppFailure
@@ -22,8 +26,10 @@ interface PhotoStripProps {
 /** Saved photos first, then the ones still on their way. */
 export function PhotoStrip({
   images,
+  videos = [],
   items,
   onDelete,
+  onDeleteVideo,
   deletingId,
   deleteFailedId,
   deleteFailure,
@@ -47,14 +53,16 @@ export function PhotoStrip({
   // The sheet closes itself when the photo leaves the post: a delete that lands drops it from
   // the cache, and there is nothing left to ask about.
   const confirming = images.find((image) => image.id === confirmingId)
-  const deleting = confirming !== undefined && deletingId === confirming.id
+  const confirmingVideo = videos.find((video) => video.id === confirmingId)
+  const confirmingName = confirming?.filename ?? confirmingVideo?.filename ?? ''
+  const deleting = confirmingId !== undefined && deletingId === confirmingId
   const deleteFailed =
-    attempted && confirming !== undefined && deleteFailedId === confirming.id && !deleting
+    attempted && confirmingId !== undefined && deleteFailedId === confirmingId && !deleting
 
   // An empty section reads as a bug on a phone, where there is no other chrome around it
   // (design-language §7): the slot says what photos are for instead of collapsing. The body
   // role, not the 12px of a status line — it is a sentence the user is meant to act on (§3).
-  if (images.length === 0 && inFlight.length === 0) {
+  if (images.length === 0 && videos.length === 0 && inFlight.length === 0) {
     return (
       <Typography variant="body" className="text-content-tertiary">
         {t('upload.empty', { ns: 'posts' })}
@@ -120,9 +128,33 @@ export function PhotoStrip({
             </Thumbnail>
           </li>
         ))}
+        {videos.map((video) => (
+          <li key={video.id} className="snap-start">
+            <VideoTile
+              src={video.viewUrl}
+              durationMs={video.durationMs}
+              contentType={video.contentType}
+              dimmed={deletingId === video.id}
+            >
+              <Button
+                variant="danger"
+                size="icon"
+                onClick={() => {
+                  setConfirmingId(video.id)
+                  setAttempted(false)
+                }}
+                disabled={deletingId === video.id}
+                aria-label={t('upload.deleteAria', { ns: 'posts', filename: video.filename })}
+                className="bg-media-scrim-bg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-1 right-1"
+              >
+                <X aria-hidden="true" className="size-5" />
+              </Button>
+            </VideoTile>
+          </li>
+        ))}
         {inFlight.map((item) => (
           <li key={item.id} className="snap-start">
-            <Thumbnail src={item.previewUrl} alt={item.filename} dimmed>
+            <AttachmentTile item={item}>
               {item.status === 'failed' ? (
                 <Overlay>
                   {item.appFailure ? (
@@ -150,15 +182,19 @@ export function PhotoStrip({
               ) : (
                 <Overlay>
                   <Typography variant="body" as="span">
-                    {t(`upload.status.${statusKey(item.status)}`, { ns: 'posts' })}
+                    {/* A 200 MB PUT over mobile takes a minute, and a card that only says
+                        올리는 중 for that long reads as stuck (VIDEO-7). */}
+                    {item.status === 'uploading' && item.progress !== undefined
+                      ? t('upload.progressPercent', { ns: 'posts', percent: item.progress })
+                      : t(`upload.status.${statusKey(item.status)}`, { ns: 'posts' })}
                   </Typography>
                 </Overlay>
               )}
-            </Thumbnail>
+            </AttachmentTile>
           </li>
         ))}
       </ul>
-      {confirming && (
+      {(confirming || confirmingVideo) && (
         // Deleting a photo takes the object with it (spec/legacy/policy/uploads.md) and the converted
         // copy is already gone, so there is nothing to undo — §7 confirms exactly this through
         // the sheet. It also takes the failure out of the tile: a scrim on a 128px square has no
@@ -170,13 +206,14 @@ export function PhotoStrip({
           pending={deleting}
           onConfirm={() => {
             setAttempted(true)
-            onDelete(confirming)
+            if (confirming) onDelete(confirming)
+            else if (confirmingVideo) onDeleteVideo?.(confirmingVideo)
           }}
           onClose={closeConfirm}
         >
           {/* The filename comes from the server, so it breaks inside the sheet rather than
               widening it (§3.2). */}
-          {t('upload.deleteDescription', { ns: 'posts', filename: confirming.filename })}
+          {t('upload.deleteDescription', { ns: 'posts', filename: confirmingName })}
           {deleteFailed && (
             <Notice tone="danger" role="alert" className="mt-3">
               {deleteFailure ? (
@@ -192,6 +229,23 @@ export function PhotoStrip({
         </Dialog>
       )}
     </div>
+  )
+}
+
+/** One in-flight item's tile. A clip's is a VideoTile so its duration badge is there from the
+ *  first frame the browser decodes — the strip must not change shape when the upload lands. */
+function AttachmentTile({ item, children }: { item: UploadItem; children: ReactNode }) {
+  if (item.attachment === 'video') {
+    return (
+      <VideoTile src={item.previewUrl} durationMs={0} dimmed>
+        {children}
+      </VideoTile>
+    )
+  }
+  return (
+    <Thumbnail src={item.previewUrl} alt={item.filename} dimmed>
+      {children}
+    </Thumbnail>
   )
 }
 

@@ -9,12 +9,12 @@ describe('PhotoPicker', () => {
 
     await user.tab()
 
-    expect(screen.getByLabelText('사진 추가')).toHaveFocus()
+    expect(screen.getByLabelText('사진·영상 추가')).toHaveFocus()
   })
 
   it('removes the disabled trigger from keyboard navigation', () => {
     render(<PhotoPicker onFiles={vi.fn()} disabled />)
 
-    expect(screen.getByLabelText('사진 추가')).toBeDisabled()
+    expect(screen.getByLabelText('사진·영상 추가')).toBeDisabled()
   })
 })
