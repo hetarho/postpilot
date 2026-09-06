@@ -265,6 +265,7 @@ func main() {
 			NameMaxChars: cfg.TemplateNameMaxChars, DescriptionMaxChars: cfg.TemplateDescriptionMaxChars,
 			BodyMaxChars: cfg.TemplateBodyMaxChars, MaxPerAccount: cfg.TemplateMaxPerAccount,
 			MaxRepeatExpansion: cfg.TemplateMaxRepeatExpansion,
+			PhotoRowMax:        cfg.TemplatePhotoRowMax,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
@@ -751,7 +752,11 @@ func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID
 	for _, slot := range rendered.Slots {
 		slots = append(slots, generation.TemplateSlot{Kind: string(slot.Kind), Label: slot.Label})
 	}
-	return generation.TemplateBrief{Name: rendered.Name, Body: rendered.Body, Slots: slots}, true, nil
+	rows := make([]generation.TemplatePhotoRow, 0, len(rendered.Rows))
+	for _, row := range rendered.Rows {
+		rows = append(rows, generation.TemplatePhotoRow{Count: row.Count, Filenames: row.Filenames})
+	}
+	return generation.TemplateBrief{Name: rendered.Name, Body: rendered.Body, Slots: slots, Rows: rows}, true, nil
 }
 
 // experimentVoices adapts the directory for the experiment context: only an owned, active

@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -45,8 +46,12 @@ type Node struct {
 	Text     string   // write · note
 	SlotKind SlotKind // slot
 	Label    string   // slot
-	Each     string   // repeat
-	Children []Node   // repeat
+	// Count is how many photos a photo position holds side by side (TEMPLATE-38). It is 1
+	// when the attribute is absent and 0 on every node that is not a photo slot, so a
+	// non-zero Count always means "this position binds this many photos".
+	Count    int
+	Each     string // repeat
+	Children []Node // repeat
 }
 
 // ParseError names a 1-based line and one reason, both of which the editor shows on the
@@ -71,7 +76,18 @@ const (
 	ReasonNestedRepeat     = "nested_repeat"
 	ReasonEmptyWrite       = "empty_write"
 	ReasonEmptyNote        = "empty_note"
+	// ReasonInvalidCount is a photo position's `count` that is not an integer in
+	// 1 … PhotoRowMax. It is its own reason rather than malformed_tag because the attribute
+	// parsed fine — it is the VALUE the author has to go fix.
+	ReasonInvalidCount = "invalid_count"
 )
+
+// ParseOptions carries what the grammar cannot know by itself. The photo-row ceiling is
+// configuration (TEMPLATE_PHOTO_ROW_MAX), and a parser that read it from the environment
+// would make the shared fixture depend on the environment it runs in.
+type ParseOptions struct {
+	PhotoRowMax int
+}
 
 var tagNames = map[string]NodeKind{
 	"write":  NodeWrite,
@@ -83,8 +99,8 @@ var tagNames = map[string]NodeKind{
 // Parse turns a body into an ordered node list. A body that does not parse cannot be saved:
 // there is no lenient fallback, because a template that half-parses would silently drop the
 // structure the author asked for.
-func Parse(body string) ([]Node, error) {
-	nodes, end, err := parseNodes(body, 0, false)
+func Parse(body string, opts ParseOptions) ([]Node, error) {
+	nodes, end, err := parseNodes(body, 0, false, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +164,7 @@ func Decode(raw string) string {
 // parseNodes reads nodes until the body ends or an unconsumed closing tag is reached. It
 // returns the offset it stopped at so a caller parsing a repeat's children can check which
 // closing tag stopped it.
-func parseNodes(body string, from int, inRepeat bool) ([]Node, int, error) {
+func parseNodes(body string, from int, inRepeat bool, opts ParseOptions) ([]Node, int, error) {
 	var nodes []Node
 	literalStart := from
 	i := from
@@ -185,7 +201,7 @@ func parseNodes(body string, from int, inRepeat bool) ([]Node, int, error) {
 			return nodes, at, nil
 		}
 		flushLiteral(at)
-		node, after, err := parseTag(body, at, name, inRepeat)
+		node, after, err := parseTag(body, at, name, inRepeat, opts)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -198,7 +214,7 @@ func parseNodes(body string, from int, inRepeat bool) ([]Node, int, error) {
 }
 
 // parseTag reads one opening tag and, for the container kinds, everything up to its close.
-func parseTag(body string, at int, name string, inRepeat bool) (Node, int, error) {
+func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions) (Node, int, error) {
 	line := lineAt(body, at)
 	attrs, selfClosing, afterOpen, err := parseTagHead(body, at, name)
 	if err != nil {
@@ -220,9 +236,13 @@ func parseTag(body string, at int, name string, inRepeat bool) (Node, int, error
 		if kind != SlotPhoto && kind != SlotPlace && kind != SlotLink {
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonUnknownSlotKind}
 		}
+		count, err := slotCount(attrs, kind, line, opts.PhotoRowMax)
+		if err != nil {
+			return Node{}, 0, err
+		}
 		return Node{
 			Kind: NodeSlot, Source: body[at:afterOpen], Line: line,
-			SlotKind: kind, Label: attrs["label"],
+			SlotKind: kind, Label: attrs["label"], Count: count,
 		}, afterOpen, nil
 
 	case NodeWrite, NodeNote:
@@ -259,7 +279,7 @@ func parseTag(body string, at int, name string, inRepeat bool) (Node, int, error
 		if each != EachPhoto {
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonUnknownEach}
 		}
-		children, stopped, err := parseNodes(body, afterOpen, true)
+		children, stopped, err := parseNodes(body, afterOpen, true, opts)
 		if err != nil {
 			return Node{}, 0, err
 		}
@@ -273,6 +293,45 @@ func parseTag(body string, at int, name string, inRepeat bool) (Node, int, error
 		}, afterClose, nil
 	}
 	return Node{}, 0, &ParseError{Line: line, Reason: ReasonUnknownTag}
+}
+
+// slotCount resolves a photo position's row size. An absent attribute is one photo, which
+// is what every body written before TEMPLATE-38 means.
+//
+// The value must be plain ASCII digits after trimming: `+2` and `2.0` are refused rather
+// than coerced, because the TypeScript parser reads the same bodies and the two languages'
+// number parsers disagree about exactly those forms.
+func slotCount(attrs map[string]string, kind SlotKind, line, photoRowMax int) (int, error) {
+	raw, present := attrs["count"]
+	if !present {
+		if kind == SlotPhoto {
+			return 1, nil
+		}
+		return 0, nil
+	}
+	// A count on a retired kind is not a bad number, it is an attribute that kind never
+	// had — the same class of mistake as any other unparsable attribute list.
+	if kind != SlotPhoto {
+		return 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
+	}
+	value := strings.TrimFunc(Decode(raw), func(r rune) bool { return blankRunes[r] })
+	if value == "" || !allDigits(value) {
+		return 0, &ParseError{Line: line, Reason: ReasonInvalidCount}
+	}
+	count, err := strconv.Atoi(value)
+	if err != nil || count < 1 || count > photoRowMax {
+		return 0, &ParseError{Line: line, Reason: ReasonInvalidCount}
+	}
+	return count, nil
+}
+
+func allDigits(value string) bool {
+	for i := 0; i < len(value); i++ {
+		if value[i] < '0' || value[i] > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // parseTagHead reads the attribute list of one opening tag. A bare `key=value` is refused:

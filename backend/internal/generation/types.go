@@ -105,6 +105,18 @@ type TemplateBrief struct {
 	// Slots are the unfilled kinds (place · link) in the order the body's {{slot:n}} tokens
 	// number them, so the post-processing pass can resolve a token back to its kind and label.
 	Slots []TemplateSlot
+	// Rows is what each photo position bound, in body order. Frozen with the body and read
+	// by nothing yet: the interim contract renders a row as consecutive single-photo IMAGE
+	// blocks (TEMPLATE-40), and this is where the author's row intent waits for whatever
+	// finally carries it downstream (→TEMPLATE-39).
+	Rows []TemplatePhotoRow
+}
+
+// TemplatePhotoRow is one photo position after binding: how many photos it asked to stand
+// side by side, and which ones it got.
+type TemplatePhotoRow struct {
+	Count     int
+	Filenames []string
 }
 
 // TemplateSlot is one position the app cannot fill by itself. It stays honest rather than

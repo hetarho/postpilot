@@ -69,8 +69,14 @@ const templateLegend = `표기는 다음과 같습니다.
 - 일반 텍스트: 그 위치에 그대로 출력하세요.
 - <write>…</write>: 그 자리에 지시대로 글을 쓰고, 태그와 지시문 자체는 출력하지 마세요.
 - {{photo:파일명}}: 그 자리에 해당 파일명의 IMAGE 블록을 놓으세요.
-- {{slot:번호}}: 앱이 나중에 채우는 자리입니다. 그 토큰만 담은 TEXT 블록 하나를 그대로 출력하고, 그 자리에 어떤 문장도 새로 쓰지 마세요.
+- 연속된 {{photo:…}} 토큰은 한 줄에 나란히 놓이는 사진들입니다. 각각 IMAGE 블록으로, 그 순서대로 이어서 출력하세요.
 - <note>…</note>: 글을 쓸 때 참고할 요구 사항입니다. 출력하지 마세요.`
+
+// templateSlotLegend is appended ONLY when the frozen brief actually declares a slot. No
+// body written since TEMPLATE-37 can produce one, so explaining {{slot:번호}} to every model
+// would be teaching a token the prompt does not contain — and a legend that names absent
+// tokens is an invitation to emit them.
+const templateSlotLegend = "\n- {{slot:번호}}: 앱이 나중에 채우는 자리입니다. 그 토큰만 담은 TEXT 블록 하나를 그대로 출력하고, 그 자리에 어떤 문장도 새로 쓰지 마세요."
 
 // templatePrecedence keeps the shape from quietly overriding the voice, the way the retired
 // purpose section's sentence did: the template owns structure, the voice owns register.
@@ -99,7 +105,11 @@ func writeTemplateSection(out *strings.Builder, brief *TemplateBrief) {
 		return
 	}
 	fmt.Fprintf(out, "\n\n[글 템플릿: %s]", brief.Name)
-	fmt.Fprintf(out, "\n아래 템플릿의 구성을 그대로 따르세요. %s", templateLegend)
+	legend := templateLegend
+	if len(brief.Slots) > 0 {
+		legend += templateSlotLegend
+	}
+	fmt.Fprintf(out, "\n아래 템플릿의 구성을 그대로 따르세요. %s", legend)
 	fmt.Fprintf(out, "\n---\n%s\n---", brief.Body)
 	fmt.Fprintf(out, "\n%s", templatePrecedence)
 }

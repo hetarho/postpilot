@@ -152,7 +152,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
 			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
-			MaxPerAccount: 50, MaxRepeatExpansion: 40,
+			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
@@ -195,6 +195,11 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	// Two photos, so the repeat expanded twice and each iteration is bound to its own file.
 	if !strings.Contains(brief.Body, "{{photo:IMG_1.jpg}}") || !strings.Contains(brief.Body, "{{photo:IMG_2.jpg}}") {
 		t.Fatalf("the repeat did not expand per attachment:\n%s", brief.Body)
+	}
+	// The row specs are frozen beside the body: one bare position per iteration, one photo each.
+	if len(brief.Rows) != 2 || brief.Rows[0].Count != 1 || brief.Rows[0].Filenames[0] != "IMG_1.jpg" ||
+		brief.Rows[1].Filenames[0] != "IMG_2.jpg" {
+		t.Fatalf("rows = %+v", brief.Rows)
 	}
 	if got := strings.Count(brief.Body, "<write>사진 설명</write>"); got != 2 {
 		t.Fatalf("per-photo write rendered %d times, want 2", got)
@@ -329,7 +334,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
 			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
-			MaxPerAccount: 50, MaxRepeatExpansion: 40,
+			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
@@ -440,7 +445,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
 			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
-			MaxPerAccount: 50, MaxRepeatExpansion: 40,
+			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})

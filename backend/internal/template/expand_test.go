@@ -23,7 +23,7 @@ const interviewBody = `<write>인트로를 작성합니다.</write>
 
 func renderInterview(t *testing.T, filenames []string) Rendered {
 	t.Helper()
-	nodes, err := Parse(interviewBody)
+	nodes, err := Parse(interviewBody, fixtureParseOptions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestRenderWithNoPhotosDropsTheWholeRepeat(t *testing.T) {
 }
 
 func TestRenderRefusesAnExpansionOverTheBound(t *testing.T) {
-	nodes, err := Parse(interviewBody)
+	nodes, err := Parse(interviewBody, fixtureParseOptions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestRenderRefusesAnExpansionOverTheBound(t *testing.T) {
 }
 
 func TestRenderNumbersSlotsInDocumentOrder(t *testing.T) {
-	nodes, err := Parse(`<slot kind="place" label="지도"/><write>a</write><slot kind="link" label="예약"/>`)
+	nodes, err := Parse(`<slot kind="place" label="지도"/><write>a</write><slot kind="link" label="예약"/>`, fixtureParseOptions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestRenderNumbersSlotsInDocumentOrder(t *testing.T) {
 }
 
 func TestRenderDecodesEscapesForThePrompt(t *testing.T) {
-	nodes, err := Parse(`&lt;b&gt; 그리고 A &amp; B<write>&lt;write&gt; 설명</write>`)
+	nodes, err := Parse(`&lt;b&gt; 그리고 A &amp; B<write>&lt;write&gt; 설명</write>`, fixtureParseOptions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,5 +126,140 @@ func TestRenderDecodesEscapesForThePrompt(t *testing.T) {
 	}
 	if want := "<b> 그리고 A & B<write><write> 설명</write>"; rendered.Body != want {
 		t.Fatalf("body = %q, want %q", rendered.Body, want)
+	}
+}
+
+// One position with a count takes that many photos and records the row it bound. The photos
+// it did not take stay unbound — a position asks for a row, not for everything left.
+func TestRenderBindsACountedPositionAsOneRow(t *testing.T) {
+	nodes, err := Parse(`<slot kind="photo" count="3"/>`, fixtureParseOptions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg"}, 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := PhotoToken("a.jpg") + "\n" + PhotoToken("b.jpg") + "\n" + PhotoToken("c.jpg")
+	if rendered.Body != want {
+		t.Fatalf("body = %q, want %q", rendered.Body, want)
+	}
+	assertRows(t, rendered.Rows, []PhotoRow{{Count: 3, Filenames: []string{"a.jpg", "b.jpg", "c.jpg"}}})
+}
+
+// A repeat runs ⌈photos ÷ group⌉ times, and the last group may be short.
+func TestRenderGroupsARepeatByItsPositionCount(t *testing.T) {
+	nodes, err := Parse(`<repeat each="photo"><slot kind="photo" count="2"/>|</repeat>`, fixtureParseOptions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg"}, 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Count(rendered.Body, "|"); got != 3 {
+		t.Fatalf("iterations = %d, want 3 for five photos in twos", got)
+	}
+	assertRows(t, rendered.Rows, []PhotoRow{
+		{Count: 2, Filenames: []string{"a.jpg", "b.jpg"}},
+		{Count: 2, Filenames: []string{"c.jpg", "d.jpg"}},
+		{Count: 2, Filenames: []string{"e.jpg"}},
+	})
+}
+
+// Two positions inside one repeat take three photos per iteration together, and the second
+// position of a short last iteration renders nothing at all rather than repeating a photo.
+func TestRenderShortensTheLastIterationInsteadOfRepeatingAPhoto(t *testing.T) {
+	nodes, err := Parse(`<repeat each="photo"><slot kind="photo"/>-<slot kind="photo" count="2"/>|</repeat>`, fixtureParseOptions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg", "c.jpg", "d.jpg"}, 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Count(rendered.Body, "|"); got != 2 {
+		t.Fatalf("iterations = %d, want 2 for four photos in groups of three", got)
+	}
+	assertRows(t, rendered.Rows, []PhotoRow{
+		{Count: 1, Filenames: []string{"a.jpg"}},
+		{Count: 2, Filenames: []string{"b.jpg", "c.jpg"}},
+		{Count: 1, Filenames: []string{"d.jpg"}},
+	})
+	// The last iteration's second position bound nothing, so it contributed no token and no
+	// row — but its literals are still there, which is what makes the iteration count visible.
+	if strings.Count(rendered.Body, "-") != 2 {
+		t.Fatalf("the short iteration lost its literals:\n%s", rendered.Body)
+	}
+}
+
+// Photos are consumed ONCE across the whole body: two bare positions are two different
+// photos, not the first photo twice.
+func TestRenderBindsEachPhotoOnlyOnce(t *testing.T) {
+	nodes, err := Parse(`<slot kind="photo"/>|<slot kind="photo"/>`, fixtureParseOptions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg"}, 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := PhotoToken("a.jpg") + "|" + PhotoToken("b.jpg"); rendered.Body != want {
+		t.Fatalf("body = %q, want %q", rendered.Body, want)
+	}
+}
+
+// A position with nothing left renders nothing, and a photoless post keeps no rows at all.
+func TestRenderRecordsNoRowForAPositionThatBoundNothing(t *testing.T) {
+	nodes, err := Parse(`<slot kind="photo" count="2"/>|<slot kind="photo"/>`, fixtureParseOptions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered, err := Render("x", nodes, []string{"a.jpg"}, 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := PhotoToken("a.jpg") + "|"; rendered.Body != want {
+		t.Fatalf("body = %q, want %q", rendered.Body, want)
+	}
+	assertRows(t, rendered.Rows, []PhotoRow{{Count: 2, Filenames: []string{"a.jpg"}}})
+
+	empty, err := Render("x", nodes, nil, 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(empty.Rows) != 0 {
+		t.Fatalf("a photoless post recorded rows: %+v", empty.Rows)
+	}
+}
+
+// The bound counts ITERATIONS, so a wide row divides the work: forty-one photos through a
+// count-2 position is 21 iterations, well inside a bound that forty single photos exceed.
+func TestRenderBoundsIterationsRatherThanPhotos(t *testing.T) {
+	nodes, err := Parse(`<repeat each="photo"><slot kind="photo" count="2"/></repeat>`, fixtureParseOptions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	filenames := make([]string, 41)
+	for i := range filenames {
+		filenames[i] = "p.jpg"
+	}
+	if _, err := Render("x", nodes, filenames, 21); err != nil {
+		t.Fatalf("21 iterations must be allowed: %v", err)
+	}
+	if _, err := Render("x", nodes, filenames, 20); !errors.Is(err, ErrExpansionTooLarge) {
+		t.Fatalf("error = %v, want ErrExpansionTooLarge", err)
+	}
+}
+
+func assertRows(t *testing.T, got, want []PhotoRow) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("rows = %+v, want %+v", got, want)
+	}
+	for i := range want {
+		if got[i].Count != want[i].Count || strings.Join(got[i].Filenames, ",") != strings.Join(want[i].Filenames, ",") {
+			t.Fatalf("row %d = %+v, want %+v", i, got[i], want[i])
+		}
 	}
 }

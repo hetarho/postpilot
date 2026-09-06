@@ -3,10 +3,17 @@
     "The ONE grammar fixture. Both parsers read this file: Go (internal/template/grammar_test.go)",
     "and TypeScript (frontend/src/entities/template/lib/grammar.test.ts). A new grammar rule lands",
     "here first — this file is the only mechanism that keeps two implementations of one grammar",
-    "honest. Node shapes: literal{raw} · write{text} · slot{kind,label} · note{text} ·",
+    "honest. Node shapes: literal{raw} · write{text} · slot{kind,label,count} · note{text} ·",
     "repeat{each,children}. Every ok case is also asserted to serialize back to `body` byte-exactly.",
+    "`photoRowMax` below is the ceiling BOTH harnesses must parse with — never the deployment's",
+    "own TEMPLATE_PHOTO_ROW_MAX, or a count case would mean different things on the two sides.",
+    "A photo slot's `count` is 1 when the attribute is absent and 0 on every non-photo slot. The",
+    "value must be plain ASCII digits after trimming the shared blank set: `+2` and `2.0` are",
+    "invalid_count in both parsers rather than coerced, because Go's and JavaScript's number",
+    "parsers disagree about exactly those forms.",
     "See spec/legacy/tech/post-template-grammar.md."
   ],
+  "photoRowMax": 4,
   "cases": [
     {
       "name": "empty body",
@@ -58,7 +65,8 @@
         {
           "t": "slot",
           "kind": "place",
-          "label": "네이버 지도"
+          "label": "네이버 지도",
+          "count": 0
         }
       ]
     },
@@ -69,7 +77,8 @@
         {
           "t": "slot",
           "kind": "link",
-          "label": ""
+          "label": "",
+          "count": 0
         }
       ]
     },
@@ -98,7 +107,8 @@
             {
               "t": "slot",
               "kind": "photo",
-              "label": ""
+              "label": "",
+              "count": 1
             },
             {
               "t": "literal",
@@ -139,7 +149,8 @@
         {
           "t": "slot",
           "kind": "place",
-          "label": "네이버 지도"
+          "label": "네이버 지도",
+          "count": 0
         },
         {
           "t": "literal",
@@ -156,7 +167,8 @@
             {
               "t": "slot",
               "kind": "photo",
-              "label": ""
+              "label": "",
+              "count": 1
             },
             {
               "t": "literal",
@@ -243,7 +255,8 @@
         {
           "t": "slot",
           "kind": "place",
-          "label": "네이버 \"지도\""
+          "label": "네이버 \"지도\"",
+          "count": 0
         }
       ]
     },
@@ -440,6 +453,134 @@
         "line": 1,
         "reason": "empty_note"
       }
+    },
+    {
+      "name": "photo slot with a count",
+      "body": "<slot kind=\"photo\" count=\"2\"/>",
+      "nodes": [
+        {
+          "t": "slot",
+          "kind": "photo",
+          "label": "",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "name": "photo slot at the row ceiling",
+      "body": "<slot kind=\"photo\" count=\"4\"/>",
+      "nodes": [
+        {
+          "t": "slot",
+          "kind": "photo",
+          "label": "",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "name": "photo slot without a count is one photo",
+      "body": "<slot kind=\"photo\"/>",
+      "nodes": [
+        {
+          "t": "slot",
+          "kind": "photo",
+          "label": "",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "count with surrounding whitespace",
+      "body": "<slot kind=\"photo\" count=\" 3 \"/>",
+      "nodes": [
+        {
+          "t": "slot",
+          "kind": "photo",
+          "label": "",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "name": "count of zero is refused",
+      "body": "<slot kind=\"photo\" count=\"0\"/>",
+      "error": {
+        "line": 1,
+        "reason": "invalid_count"
+      }
+    },
+    {
+      "name": "count above the ceiling is refused",
+      "body": "<slot kind=\"photo\" count=\"5\"/>",
+      "error": {
+        "line": 1,
+        "reason": "invalid_count"
+      }
+    },
+    {
+      "name": "count that is not a number is refused",
+      "body": "<slot kind=\"photo\" count=\"two\"/>",
+      "error": {
+        "line": 1,
+        "reason": "invalid_count"
+      }
+    },
+    {
+      "name": "empty count is refused",
+      "body": "<slot kind=\"photo\" count=\"\"/>",
+      "error": {
+        "line": 1,
+        "reason": "invalid_count"
+      }
+    },
+    {
+      "name": "count on a place slot is a malformed tag",
+      "body": "<slot kind=\"place\" label=\"지도\" count=\"2\"/>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "legacy place slot with a label still parses",
+      "body": "앞\n<slot kind=\"place\" label=\"네이버 지도\"/>",
+      "nodes": [
+        {
+          "t": "literal",
+          "raw": "앞\n"
+        },
+        {
+          "t": "slot",
+          "kind": "place",
+          "label": "네이버 지도",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "name": "counts inside a repeat",
+      "body": "<repeat each=\"photo\"><slot kind=\"photo\" count=\"2\"/><slot kind=\"photo\"/></repeat>",
+      "nodes": [
+        {
+          "t": "repeat",
+          "each": "photo",
+          "children": [
+            {
+              "t": "slot",
+              "kind": "photo",
+              "label": "",
+              "count": 2
+            },
+            {
+              "t": "slot",
+              "kind": "photo",
+              "label": "",
+              "count": 1
+            }
+          ]
+        }
+      ]
     }
   ]
 }

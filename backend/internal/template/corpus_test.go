@@ -27,6 +27,11 @@ func TestCorpusMatchesTheCommittedFile(t *testing.T) {
 		// The characters codex's review turned up as parser disagreements: an escaped quote in
 		// an attribute value, and the invisibles the two languages' trim functions disagree on.
 		"&quot;", "label=\"a&quot;b\"", "\u200b", "\ufeff", "\u0085", "\u3000",
+		// Photo-row counts: the bare attribute, and two whole slots — one count inside the
+		// ceiling and one above it. The bare pieces mostly land as loose text, so without the
+		// whole slots the corpus would never actually exercise invalid_count.
+		"count=\"2\"", "count=\"9\"", "count=\"x\"",
+		"<slot kind=\"photo\" count=\"2\"/>", "<slot kind=\"photo\" count=\"9\"/>",
 	}
 	type entry struct {
 		Body   string `json:"body"`
@@ -46,7 +51,7 @@ func TestCorpusMatchesTheCommittedFile(t *testing.T) {
 			continue
 		}
 		seen[body] = true
-		nodes, err := Parse(body)
+		nodes, err := Parse(body, fixtureParseOptions)
 		if err != nil {
 			parseErr := err.(*ParseError)
 			out = append(out, entry{Body: body, OK: false, Line: parseErr.Line, Reason: parseErr.Reason})

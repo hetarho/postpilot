@@ -59,11 +59,15 @@ type Limits struct {
 	BodyMaxChars        int
 	MaxPerAccount       int
 	MaxRepeatExpansion  int
+	// PhotoRowMax is the largest `count` a photo position may carry (TEMPLATE-38). It bounds
+	// a row's width rather than a total: four thumbnails is what still reads on a 360 px
+	// phone, and the browser mirrors the same number.
+	PhotoRowMax int
 }
 
 func (l Limits) valid() bool {
 	return l.NameMaxChars > 0 && l.DescriptionMaxChars > 0 && l.BodyMaxChars > 0 &&
-		l.MaxPerAccount > 0 && l.MaxRepeatExpansion > 0
+		l.MaxPerAccount > 0 && l.MaxRepeatExpansion > 0 && l.PhotoRowMax > 0
 }
 
 // Template is the aggregate. Body is the single source of truth for the template's shape:
@@ -109,6 +113,20 @@ type Rendered struct {
 	// them back. Photo slots are absent by design: they render as their bound filename and
 	// resolve through the attachment filter that already exists.
 	Slots []Slot
+	// Rows records what each photo position actually bound, in body order — one entry per
+	// position that bound at least one photo, iterations of a repeat included. It is frozen
+	// beside the body so the author's row intent survives to whatever finally carries a row
+	// downstream (→TEMPLATE-39); the rendered body itself stays n adjacent single-photo
+	// tokens in the meantime (TEMPLATE-40).
+	Rows []PhotoRow
+}
+
+// PhotoRow is one photo position after binding: how many photos it asked for and the ones
+// it got. A short last group makes len(Filenames) < Count, which is the row the author
+// asked for as far as the photos went.
+type PhotoRow struct {
+	Count     int
+	Filenames []string
 }
 
 // Slot is one reserved position the app cannot fill by itself. It stays honest rather than

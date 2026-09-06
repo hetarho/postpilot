@@ -341,6 +341,10 @@ type Config struct {
 	TemplateBodyMaxChars        int
 	TemplateMaxPerAccount       int
 	TemplateMaxRepeatExpansion  int
+	// TemplatePhotoRowMax is the largest `count` a photo position may carry — how many
+	// photos stand side by side in one row (TEMPLATE-38). It is env because the browser
+	// mirrors it as VITE_TEMPLATE_PHOTO_ROW_MAX and both sides have to move together.
+	TemplatePhotoRowMax int
 
 	// Writing-guideline ceilings. GuidelineTextMaxChars bounds one authored rule;
 	// GuidelineMaxPerAccount bounds how many an account may hold, because every applicable
@@ -495,6 +499,11 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.TemplateMaxRepeatExpansion = templateExpansion
+	templatePhotoRow, err := positiveInt("TEMPLATE_PHOTO_ROW_MAX", "4")
+	if err != nil {
+		return nil, err
+	}
+	cfg.TemplatePhotoRowMax = templatePhotoRow
 
 	guidelineText, err := positiveInt("GUIDELINE_TEXT_MAX_CHARS", "300")
 	if err != nil {

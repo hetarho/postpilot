@@ -31,7 +31,6 @@
 |---|---|---|---|---|
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260905.cx |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 | todo |
-| T010 | Photo row count in the grammar and ordered photo expansion | TEMPLATE | - | todo |
 | T011 | Plain-language block names, fixed text instead of place/link, and the photo row stepper | TEMPLATE | T010 | todo |
 | T014 | Observe videos, write from them and validate VIDEO blocks | VIDEO GEN MODEL | T012 T013 T010 | todo |
 | T015 | Video upload in the browser, the attachment strip and the contact sheet | VIDEO POST GEN | T012 | todo |
@@ -39,11 +38,14 @@
 | T017 | The `원문` source mode, paste import and the copyable format guide | TEMPLATE | T011 | todo |
 
 ## next
-- implement-task T007 · then T010 → T011 → T017 (TEMPLATE r2+r3; T010/T011 ship together, T017 adds the `원문` mode on top of T011's screen)
+- implement-task T011 NEXT (T010 done; the shared fixture's count cases are red on the FE until T011) → T017
 - implement-task T014 (needs T010 first) → T015 → T016; T014 BEFORE T015 — T012's WARN: generation still reads a video as a photo
 - update-ssot PUBLISH after T008 closes: photo-row transport (TEMPLATE-39) and agent video publishing (VIDEO-17); GEN EXPORT for TEMPLATE-39 at the same time
 
 ## log
+- 260906 WARN T010 left the FE grammar fixture red on purpose (6 of 52, all count cases) — T011 makes it green; do not push before T011
+- 260906 T010 done
+- 260906 T010 claimed (vd)
 - 260906 WARN spec lint: TEMPLATE PUBLISH MARKETING exceed the new FORMAT's 6-char ssot id limit — all 44 violations trace to that one rename, spec-wide, not done inside a task
 - 260906 T013 done
 - 260906 spec migrated to haeram-spec-creator 0.2.3 FORMAT: tasks/done/ introduced (T001-T006 T009 T012 moved, their STATE rows dropped; T004 T005 T006 T012 file st doing->done per STATE)
@@ -61,8 +63,3 @@
 - 260906 WARN VIDEO-16/17 change StartPublish (PUBLISH-9) without a PUBLISH rev — T007 doing, T008 todo; PUBLISH update-ssot after T008; LANG reason catalog needs MODEL_VIDEO_UNSUPPORTED VIDEO_NOT_PUBLISHABLE
 - 260906 update-ssot pivot: scope became a new domain → VIDEO SSOT created instead of spreading it over POST/MODEL/GEN alone
 - 260906 update-ssot POST MODEL GEN start (video attachments as observation material)
-- 260906 create-task TEMPLATE → T010 T011; TEMPLATE tasked=2 (TEMPLATE-39 stays open, TEMPLATE-22/23 no code change: legacy pass kept)
-- 260906 create-task TEMPLATE start
-- 260906 update-ssot TEMPLATE r2 done (TEMPLATE-36..40; TEMPLATE-39 open on photo-row transport)
-- 260906 WARN TEMPLATE-39 ripples into PUBLISH-21 (T007 doing, T008 todo) and GEN-1 / EXPORT-5; PUBLISH not bumped on purpose — decide after T008
-- 260906 update-ssot TEMPLATE start

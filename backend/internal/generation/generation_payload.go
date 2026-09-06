@@ -11,6 +11,14 @@ type templatePayload struct {
 	// must be exactly what enqueue decided.
 	Body  string             `json:"body"`
 	Slots []templateSlotJSON `json:"slots,omitempty"`
+	// Rows is omitempty so a payload written before photo rows existed decodes as a
+	// template with none, which is exactly what it is.
+	Rows []templateRowJSON `json:"rows,omitempty"`
+}
+
+type templateRowJSON struct {
+	Count     int      `json:"count"`
+	Filenames []string `json:"filenames,omitempty"`
 }
 
 type templateSlotJSON struct {
@@ -171,7 +179,11 @@ func encodeTemplate(brief *TemplateBrief) *templatePayload {
 	for _, slot := range brief.Slots {
 		slots = append(slots, templateSlotJSON{Kind: slot.Kind, Label: slot.Label})
 	}
-	return &templatePayload{Name: brief.Name, Body: brief.Body, Slots: slots}
+	rows := make([]templateRowJSON, 0, len(brief.Rows))
+	for _, row := range brief.Rows {
+		rows = append(rows, templateRowJSON{Count: row.Count, Filenames: row.Filenames})
+	}
+	return &templatePayload{Name: brief.Name, Body: brief.Body, Slots: slots, Rows: rows}
 }
 
 // decodeTemplate reads a payload written before templates existed as "no template" rather
@@ -184,5 +196,9 @@ func decodeTemplate(payload *templatePayload) *TemplateBrief {
 	for _, slot := range payload.Slots {
 		slots = append(slots, TemplateSlot{Kind: slot.Kind, Label: slot.Label})
 	}
-	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Slots: slots}
+	rows := make([]TemplatePhotoRow, 0, len(payload.Rows))
+	for _, row := range payload.Rows {
+		rows = append(rows, TemplatePhotoRow{Count: row.Count, Filenames: row.Filenames})
+	}
+	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Slots: slots, Rows: rows}
 }

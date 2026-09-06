@@ -15,9 +15,15 @@ type fixtureNode struct {
 	Text     string        `json:"text"`
 	Kind     string        `json:"kind"`
 	Label    string        `json:"label"`
+	Count    int           `json:"count"`
 	Each     string        `json:"each"`
 	Children []fixtureNode `json:"children"`
 }
+
+// fixtureParseOptions is the ceiling the SHARED fixture declares (`photoRowMax`), not the
+// one this deployment configured. A fixture that read the environment would pass or fail
+// depending on where it ran, and the TypeScript harness could not reproduce it at all.
+var fixtureParseOptions = ParseOptions{PhotoRowMax: 4}
 
 type fixtureCase struct {
 	Name  string        `json:"name"`
@@ -36,7 +42,8 @@ func loadFixtures(t *testing.T) []fixtureCase {
 		t.Fatal(err)
 	}
 	var file struct {
-		Cases []fixtureCase `json:"cases"`
+		PhotoRowMax int           `json:"photoRowMax"`
+		Cases       []fixtureCase `json:"cases"`
 	}
 	if err := json.Unmarshal(raw, &file); err != nil {
 		t.Fatal(err)
@@ -44,13 +51,18 @@ func loadFixtures(t *testing.T) []fixtureCase {
 	if len(file.Cases) == 0 {
 		t.Fatal("grammar fixtures are empty")
 	}
+	// The two harnesses must run the same ceiling or a `count` case means different things
+	// on the two sides, which is the exact drift this file exists to prevent.
+	if file.PhotoRowMax != fixtureParseOptions.PhotoRowMax {
+		t.Fatalf("fixture photoRowMax = %d, want %d", file.PhotoRowMax, fixtureParseOptions.PhotoRowMax)
+	}
 	return file.Cases
 }
 
 func TestParseAgainstSharedFixtures(t *testing.T) {
 	for _, tc := range loadFixtures(t) {
 		t.Run(tc.Name, func(t *testing.T) {
-			nodes, err := Parse(tc.Body)
+			nodes, err := Parse(tc.Body, fixtureParseOptions)
 			if tc.Error != nil {
 				var parseErr *ParseError
 				if err == nil {
@@ -104,6 +116,9 @@ func assertNodes(t *testing.T, got []Node, want []fixtureNode, path string) {
 			}
 			if Decode(got[i].Label) != want[i].Label {
 				t.Fatalf("%s: slot label %q, want %q", at, Decode(got[i].Label), want[i].Label)
+			}
+			if got[i].Count != want[i].Count {
+				t.Fatalf("%s: slot count %d, want %d", at, got[i].Count, want[i].Count)
 			}
 		case "repeat":
 			if got[i].Each != want[i].Each {

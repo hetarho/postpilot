@@ -83,6 +83,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("DB_PATH", "")
 	t.Setenv("OBSERVE_BATCH_SIZE", "")
 	t.Setenv("LLM_MAX_TOKENS_DEFAULT", "")
+	t.Setenv("TEMPLATE_PHOTO_ROW_MAX", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -99,6 +100,10 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.ObserveBatchSize != 4 {
 		t.Errorf("ObserveBatchSize = %d, want 4", cfg.ObserveBatchSize)
 	}
+	// Four photos side by side is the ceiling a 360 px phone can still show (TEMPLATE-38).
+	if cfg.TemplatePhotoRowMax != 4 {
+		t.Errorf("TemplatePhotoRowMax = %d, want 4", cfg.TemplatePhotoRowMax)
+	}
 	// A8: the cap is deployment-resolvable, with 8192 as its default.
 	if cfg.LLMMaxTokensDefault != 8192 {
 		t.Errorf("LLMMaxTokensDefault = %d, want 8192", cfg.LLMMaxTokensDefault)
@@ -114,6 +119,26 @@ func TestLoadDefaults(t *testing.T) {
 	// post that requests no length must still be sent exactly that.
 	if got := cfg.LLMCompletionBudget.Write(nil, false); got != 8192 {
 		t.Errorf("no-target write budget = %d, want the configured fallback 8192", got)
+	}
+}
+
+// The photo-row ceiling is env and boot-fatal when it cannot describe a row, because the
+// browser mirrors it and a body the builder writes must not be refused on save.
+func TestLoadTemplatePhotoRowMax(t *testing.T) {
+	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
+	t.Setenv("TEMPLATE_PHOTO_ROW_MAX", "6")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.TemplatePhotoRowMax != 6 {
+		t.Fatalf("TemplatePhotoRowMax = %d, want 6", cfg.TemplatePhotoRowMax)
+	}
+	for _, bad := range []string{"nope", "0", "-1", "2.5"} {
+		t.Setenv("TEMPLATE_PHOTO_ROW_MAX", bad)
+		if _, err := Load(); err == nil {
+			t.Errorf("TEMPLATE_PHOTO_ROW_MAX=%q was accepted", bad)
+		}
 	}
 }
 

@@ -78,8 +78,9 @@ func TestWritePromptAppendsOneTemplateSectionAfterTheCompleteVoiceProfile(t *tes
 	}
 
 	section := strings.TrimPrefix(system, baseline)
+	// This brief declares a slot, so the legend explains the slot token too.
 	want := "\n\n[글 템플릿: 정보성 식당 리뷰]" +
-		"\n아래 템플릿의 구성을 그대로 따르세요. " + templateLegend +
+		"\n아래 템플릿의 구성을 그대로 따르세요. " + templateLegend + templateSlotLegend +
 		"\n---\n" + brief.Body + "\n---" +
 		"\n" + templatePrecedence
 	if section != want {
@@ -87,6 +88,32 @@ func TestWritePromptAppendsOneTemplateSectionAfterTheCompleteVoiceProfile(t *tes
 	}
 	if strings.Count(system, "[글 템플릿:") != 1 {
 		t.Fatalf("the template was injected more than once:\n%s", system)
+	}
+}
+
+// The slot line is explained only when the frozen brief actually declares a slot. No body
+// authored since place/link were retired produces one, and a legend that names a token the
+// prompt does not contain is an invitation to emit it. The row line, by contrast, is
+// always there: adjacent photo tokens are what every counted position renders.
+func TestWritePromptExplainsSlotsOnlyWhenTheBriefHasThem(t *testing.T) {
+	baseline, _ := loadGolden(t, "write_prompt_no_template.golden")
+	brief := testBrief()
+	brief.Slots = nil
+	brief.Body = "{{photo:IMG_1.jpg}}\n{{photo:IMG_2.jpg}}"
+	brief.Rows = []TemplatePhotoRow{{Count: 2, Filenames: []string{"IMG_1.jpg", "IMG_2.jpg"}}}
+
+	system, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, brief, nil)
+	section := strings.TrimPrefix(system, baseline)
+	if strings.Contains(section, "{{slot:번호}}") {
+		t.Fatalf("the slot legend was sent for a brief with no slots:\n%s", section)
+	}
+	if !strings.Contains(section, "연속된 {{photo:…}} 토큰은 한 줄에 나란히 놓이는 사진들입니다.") {
+		t.Fatalf("the photo-row line is missing:\n%s", section)
+	}
+	// The rows are frozen material, not prompt bytes: the model is told about adjacency by
+	// the legend and by the body's own token layout, and nothing lists the specs.
+	if strings.Contains(section, "count") {
+		t.Fatalf("the frozen row specs leaked into the prompt:\n%s", section)
 	}
 }
 

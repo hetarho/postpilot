@@ -27,6 +27,13 @@ func NewService(store Store, limits Limits) *Service {
 
 func (s *Service) Limits() Limits { return s.limits }
 
+// parseOptions hands the parser the one configured value it needs. It lives here rather
+// than in the parser so the shared fixture can pin its own ceiling and never depend on the
+// environment the test runs in.
+func (s *Service) parseOptions() ParseOptions {
+	return ParseOptions{PhotoRowMax: s.limits.PhotoRowMax}
+}
+
 func (s *Service) List(ctx context.Context, userID string) ([]Template, error) {
 	templates, err := s.store.List(ctx, userID)
 	if err != nil {
@@ -126,7 +133,7 @@ func (s *Service) RenderedFor(ctx context.Context, userID, id string, filenames 
 		}
 		return Rendered{}, false, fmt.Errorf("load template: %w", err)
 	}
-	nodes, err := Parse(found.Body)
+	nodes, err := Parse(found.Body, s.parseOptions())
 	if err != nil {
 		return Rendered{}, false, nil
 	}
@@ -178,7 +185,7 @@ func (s *Service) validBody(value string) (string, error) {
 	if chars := utf8.RuneCountInString(trimmed); chars > s.limits.BodyMaxChars {
 		return "", &FieldTooLongError{Field: "body", Chars: chars, Max: s.limits.BodyMaxChars}
 	}
-	if _, err := Parse(trimmed); err != nil {
+	if _, err := Parse(trimmed, s.parseOptions()); err != nil {
 		return "", err
 	}
 	return trimmed, nil
