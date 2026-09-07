@@ -733,6 +733,38 @@ func (s *Service) SetUserPlan(ctx context.Context, userID string, target plan.Pl
 	return nil
 }
 
+// AssignTier is billing's plan write. Unlike the operator SetUserPlan path it grants no
+// credits: billing coordinates its own charge and usage lot, so a hidden top-up here would
+// duplicate that grant.
+func (s *Service) AssignTier(ctx context.Context, userID string, target plan.Plan) error {
+	if !target.Valid() {
+		return fmt.Errorf("unknown plan %q", target)
+	}
+	current, err := s.store.GetUserPlan(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if current == target {
+		return nil
+	}
+	return s.store.SetUserPlan(ctx, userID, target)
+}
+
+func (s *Service) TierOf(ctx context.Context, userID string) (plan.Plan, error) {
+	return s.store.GetUserPlan(ctx, userID)
+}
+
+// VerifiedEmail returns only an address that can receive billing notices. Operator-created
+// legacy accounts remain valid but answer ok=false until they register and verify one.
+func (s *Service) VerifiedEmail(ctx context.Context, userID string) (string, bool, error) {
+	user, err := s.store.GetUser(ctx, userID)
+	if err != nil {
+		return "", false, err
+	}
+	ok := user.Email != "" && user.EmailVerifiedAt != nil && user.EmailUnreachableAt == nil
+	return user.Email, ok, nil
+}
+
 // Logout revokes the session server-side. Clearing the cookie alone would leave a
 // stolen copy valid for the rest of its 30 days.
 //

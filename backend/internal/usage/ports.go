@@ -32,6 +32,8 @@ type Store interface {
 	// is the upgrade top-up (QUOTA-35) and the only write that edits a grant already
 	// given; a renewal opens a new lot instead.
 	RaiseLot(ctx context.Context, lotID string, credits int) error
+	VoidUntouchedLot(ctx context.Context, lotID string) (bool, error)
+	RestoreLot(ctx context.Context, lotID string, credits int) (bool, error)
 	// SpendFromLot and RefundToLot move credits within one lot. Both are guarded in SQL by
 	// the amount available, so a concurrent write cannot drive a lot past its own bounds
 	// even if a caller's arithmetic is stale.

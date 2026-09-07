@@ -33,6 +33,7 @@ import { type FakeGuidelinesOptions, registerGuidelineService } from './guidelin
 import { type FakeTemplatesOptions, registerTemplateService } from './templates'
 import { type FakeModelCatalogOptions, registerModelCatalogService } from './model-catalog'
 import { type FakePlansOptions, registerPlanServices } from './plans'
+import { type FakeBillingOptions, registerBillingService } from './billing'
 import { connectAppError } from './app-error'
 
 export interface FakeAuthOptions {
@@ -83,6 +84,7 @@ export interface FakeAuthOptions {
   guidelines?: FakeGuidelinesOptions
   /** The plan ladder: the caller's own tier and usage, and the operator's account list. */
   plans?: FakePlansOptions
+  billing?: FakeBillingOptions
   /** The operator's model catalog. Present by default with nothing curated and nothing
    *  offered, so a routing test that lands on /admin/models reads an empty catalog rather
    *  than an "unimplemented" error. */
@@ -259,6 +261,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerTemplateService(router, { calls, ...options.templates })
     registerGuidelineService(router, { calls, ...options.guidelines })
     registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
+    registerBillingService(router, { calls, ...options.billing })
     registerModelCatalogService(router, { calls, ...options.modelCatalog })
   })
 

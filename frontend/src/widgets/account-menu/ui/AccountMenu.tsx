@@ -25,7 +25,7 @@ import {
  *  the cookie valid, so the popover stays open and says so where the user is already looking
  *  (design-language §4.3) instead of pretending the session ended. */
 export function AccountMenu({ onLoggedOut }: { onLoggedOut: () => void }) {
-  const { t } = useTranslation(['auth', 'common'])
+  const { t } = useTranslation(['auth', 'billing', 'common'])
   const { user } = useSession()
   const logout = useLogout()
 
@@ -71,6 +71,17 @@ export function AccountMenu({ onLoggedOut }: { onLoggedOut: () => void }) {
             {t('accountSettings.heading', { ns: 'auth' })}
           </Link>
           <PlanPanel close={close} />
+          <Link
+            to="/billing"
+            onClick={close}
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2',
+            })}
+          >
+            {t('nav', { ns: 'billing' })}
+          </Link>
           <Button
             variant="secondary"
             className="w-full"

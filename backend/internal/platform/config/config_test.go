@@ -121,6 +121,32 @@ func TestLoadGoogleCredentialsArePaired(t *testing.T) {
 	})
 }
 
+func TestLoadBillingCredentialsAreAllOrNothing(t *testing.T) {
+	for _, name := range []string{"TOSS_SECRET_KEY", "TOSS_CLIENT_KEY", "EXIM_API_KEY"} {
+		t.Run(name+" only", func(t *testing.T) {
+			t.Setenv(name, "configured")
+			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "TOSS_SECRET_KEY") {
+				t.Fatalf("Load error=%v", err)
+			}
+		})
+	}
+	t.Run("disabled", func(t *testing.T) {
+		cfg, err := Load()
+		if err != nil || cfg.BillingEnabled {
+			t.Fatalf("cfg=%+v err=%v", cfg, err)
+		}
+	})
+	t.Run("enabled", func(t *testing.T) {
+		t.Setenv("TOSS_SECRET_KEY", "secret")
+		t.Setenv("TOSS_CLIENT_KEY", "client")
+		t.Setenv("EXIM_API_KEY", "rate")
+		cfg, err := Load()
+		if err != nil || !cfg.BillingEnabled {
+			t.Fatalf("cfg=%+v err=%v", cfg, err)
+		}
+	})
+}
+
 func TestLoadDefaults(t *testing.T) {
 	t.Setenv("PORT", "")
 	t.Setenv("CORS_ORIGIN", "")

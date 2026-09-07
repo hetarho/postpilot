@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+import "postpilot/v1/plan.proto";
+
+// BillingService is authenticated but not master-only. Every money figure displayed by
+// the client comes from this contract; the KRW quote moves with the published daily rate.
+service BillingService {
+  rpc GetMyBilling(GetMyBillingRequest) returns (GetMyBillingResponse) {}
+  rpc QuotePrice(QuotePriceRequest) returns (QuotePriceResponse) {}
+}
+
+enum Term {
+  TERM_UNSPECIFIED = 0;
+  TERM_MONTHLY = 1;
+  TERM_ANNUAL = 2;
+}
+
+message BillingSubscription {
+  Plan plan = 1;
+  Term term = 2;
+  string anchor_at = 3;
+  string term_start = 4;
+  string term_end = 5;
+  string next_grant_at = 6;
+  bool auto_renew = 7;
+  Plan scheduled_plan = 8;
+  Term scheduled_term = 9;
+  string status = 10;
+}
+
+// Only display-safe stored payment-method information crosses the wire. The billing key
+// remains server-side; GetMyBilling separately returns the expected opaque customer key
+// used by the hosted provider window.
+message BillingPaymentMethod {
+  string card_label = 1;
+  string registered_at = 2;
+}
+
+message BillingEvent {
+  int64 id = 1;
+  string kind = 2;
+  Plan plan = 3;
+  Term term = 4;
+  int32 credits = 5;
+  int32 usd_cents = 6;
+  int64 krw_per_usd_e4 = 7;
+  string rate_date = 8;
+  int64 krw = 9;
+  string provider_payment_key = 10;
+  string order_id = 11;
+  string note = 12;
+  string created_at = 13;
+}
+
+message BillingPurchase {
+  string id = 1;
+  string lot_id = 2;
+  int32 credits = 3;
+  int32 usd_cents = 4;
+  int64 krw = 5;
+  string provider_payment_key = 6;
+  string order_id = 7;
+  string charged_at = 8;
+  string refunded_at = 9;
+}
+
+message GetMyBillingRequest {}
+
+message GetMyBillingResponse {
+  // Absent while the account has no paid subscription.
+  BillingSubscription subscription = 1;
+  // Absent before the account registers a card.
+  BillingPaymentMethod payment_method = 2;
+  // Newest first and capped at 100 rows by the server.
+  repeated BillingEvent history = 3;
+  repeated BillingPurchase purchases = 4;
+  string customer_key = 5;
+}
+
+message QuotePriceRequest {
+  Plan plan = 1;
+  Term term = 2;
+}
+
+message QuotePriceResponse {
+  int32 usd_cents = 1;
+  int64 krw = 2;
+  int64 krw_per_usd_e4 = 3;
+  string rate_date = 4;
+}

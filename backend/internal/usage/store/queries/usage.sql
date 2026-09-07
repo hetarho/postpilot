@@ -39,6 +39,12 @@ VALUES (?, ?, ?, ?, ?, ?, ?);
 -- write that edits a lot the account was already given.
 UPDATE credit_lots SET granted = granted + ?, remaining = remaining + ? WHERE id = ?;
 
+-- name: VoidUntouchedLot :execrows
+UPDATE credit_lots SET remaining = 0 WHERE id = ? AND remaining = granted;
+
+-- name: RestoreLot :execrows
+UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted;
+
 -- name: SpendFromLot :exec
 -- The `remaining >= ?` guard is in the statement rather than in a read before it: two
 -- writers that each read the same lot must not both pass their own arithmetic.

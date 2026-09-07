@@ -1,4 +1,5 @@
 import { auth as enAuth } from './en/auth'
+import { billing as enBilling } from './en/billing'
 import { common as enCommon } from './en/common'
 import { errors as enErrors } from './en/errors'
 import { guidelines as enGuidelines } from './en/guidelines'
@@ -11,6 +12,7 @@ import { publishing as enPublishing } from './en/publishing'
 import { templates as enTemplates } from './en/templates'
 import { voices as enVoices } from './en/voices'
 import { auth as koAuth } from './ko/auth'
+import { billing as koBilling } from './ko/billing'
 import { common as koCommon } from './ko/common'
 import { errors as koErrors } from './ko/errors'
 import { guidelines as koGuidelines } from './ko/guidelines'
@@ -38,6 +40,7 @@ export const RESOURCE_NAMESPACES = [
   'errors',
   'marketing',
   'plans',
+  'billing',
 ] as const
 
 export const resources = {
@@ -54,6 +57,7 @@ export const resources = {
     errors: koErrors,
     marketing: koMarketing,
     plans: koPlans,
+    billing: koBilling,
   },
   en: {
     common: enCommon,
@@ -68,5 +72,6 @@ export const resources = {
     errors: enErrors,
     marketing: enMarketing,
     plans: enPlans,
+    billing: enBilling,
   },
 } as const

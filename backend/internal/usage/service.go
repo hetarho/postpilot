@@ -21,6 +21,9 @@ import (
 // minute. Erring high costs a user nothing; erring low costs us the difference.
 const holdInputTokens = 30_000
 
+var ErrLotTouched = errors.New("credit lot has already been touched")
+var ErrLotNotFound = errors.New("credit lot was not found")
+
 // Service is the credit gate and the ledger writer.
 type Service struct {
 	store   Store
@@ -56,6 +59,77 @@ func newID() string {
 		panic("usage: cannot read random bytes for an id: " + err.Error())
 	}
 	return hex.EncodeToString(buf)
+}
+
+// OpenMonthlyLot installs one explicit subscription window. Its deterministic id makes a
+// provider retry harmless while retaining every lapsed window for history.
+func (s *Service) OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error {
+	if userID == "" || !tier.Valid() || plan.Unlimited(tier) || !start.Before(end) {
+		return errors.New("open monthly lot: invalid user, tier, or window")
+	}
+	credits := plan.MonthlyCredits(tier)
+	return s.store.InsertLotIfAbsent(ctx, Lot{
+		ID: monthlyLotID(userID, start), UserID: userID, Kind: LotMonthly,
+		Granted: credits, Remaining: credits, ExpiresAt: &end, CreatedAt: s.now(),
+	})
+}
+
+func (s *Service) RaiseMonthlyLot(ctx context.Context, userID string, credits int) error {
+	if credits <= 0 {
+		return errors.New("raise monthly lot: credits must be positive")
+	}
+	lot, found, err := s.store.ActiveMonthlyLot(ctx, userID, s.now())
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrLotNotFound
+	}
+	return s.store.RaiseLot(ctx, lot.ID, credits)
+}
+
+func (s *Service) OpenPurchasedLot(ctx context.Context, userID string, credits int) (string, error) {
+	if userID == "" || credits <= 0 {
+		return "", errors.New("open purchased lot: user and positive credits are required")
+	}
+	id := "purchased:" + s.newID()
+	err := s.store.InsertLot(ctx, Lot{ID: id, UserID: userID, Kind: LotPurchased, Granted: credits, Remaining: credits, CreatedAt: s.now()})
+	if err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
+func (s *Service) VoidUntouchedLot(ctx context.Context, lotID string) error {
+	ok, err := s.store.VoidUntouchedLot(ctx, lotID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrLotTouched
+	}
+	return nil
+}
+
+func (s *Service) RestoreLot(ctx context.Context, lotID string, credits int) error {
+	if credits <= 0 {
+		return errors.New("restore lot: credits must be positive")
+	}
+	ok, err := s.store.RestoreLot(ctx, lotID, credits)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrLotNotFound
+	}
+	return nil
+}
+
+func (s *Service) GrantBonusOnce(ctx context.Context, id, userID string, credits int) error {
+	if id == "" || userID == "" || credits <= 0 {
+		return errors.New("grant bonus: id, user, and positive credits are required")
+	}
+	return s.store.InsertLotIfAbsent(ctx, Lot{ID: id, UserID: userID, Kind: LotBonus, Granted: credits, Remaining: credits, CreatedAt: s.now()})
 }
 
 // Hold reserves the credits one piece of LLM work could cost, and records the start.

@@ -21,7 +21,7 @@ function placeholders(value: string): string[] {
 }
 
 describe('bundled locale resources', () => {
-  it('registers exactly the ten product namespaces', () => {
+  it('registers exactly the product namespaces', () => {
     expect(Object.keys(resources.ko)).toEqual(RESOURCE_NAMESPACES)
     expect(Object.keys(resources.en)).toEqual(RESOURCE_NAMESPACES)
   })

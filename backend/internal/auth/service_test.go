@@ -327,6 +327,39 @@ func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 	return svc, store
 }
 
+func TestBillingAccountAdaptersAssignTierAndReturnOnlyReachableVerifiedEmail(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	svc, store := newTestService(t, now)
+	ctx := context.Background()
+
+	if err := svc.AssignTier(ctx, "alice", plan.Pro); err != nil {
+		t.Fatalf("AssignTier: %v", err)
+	}
+	if got, err := svc.TierOf(ctx, "alice"); err != nil || got != plan.Pro {
+		t.Fatalf("TierOf = %q, %v", got, err)
+	}
+	if err := svc.AssignTier(ctx, "alice", plan.Plan("unknown")); err == nil {
+		t.Fatal("AssignTier accepted an unknown tier")
+	}
+
+	user := store.users["alice"]
+	user.Email = "alice@example.com"
+	store.users["alice"] = user
+	if email, ok, err := svc.VerifiedEmail(ctx, "alice"); err != nil || ok || email != "alice@example.com" {
+		t.Fatalf("unverified email = %q, %v, %v", email, ok, err)
+	}
+	user.EmailVerifiedAt = &now
+	store.users["alice"] = user
+	if email, ok, err := svc.VerifiedEmail(ctx, "alice"); err != nil || !ok || email != "alice@example.com" {
+		t.Fatalf("verified email = %q, %v, %v", email, ok, err)
+	}
+	user.EmailUnreachableAt = &now
+	store.users["alice"] = user
+	if _, ok, err := svc.VerifiedEmail(ctx, "alice"); err != nil || ok {
+		t.Fatalf("unreachable email ok = %v, err = %v", ok, err)
+	}
+}
+
 func TestLoginSuccessIssuesSession(t *testing.T) {
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 	svc, store := newTestService(t, now)

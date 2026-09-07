@@ -46,6 +46,9 @@ type Options struct {
 	Interceptors []connect.Interceptor
 	// Handlers are the Connect services to mount.
 	Handlers []Registrar
+	// Routes are non-Connect HTTP handlers such as provider webhooks. They are mounted on
+	// the same mux but deliberately bypass Connect interceptors.
+	Routes map[string]http.Handler
 }
 
 // New builds the fully-wired HTTP server: the given Connect services plus a /health
@@ -61,6 +64,9 @@ func New(cfg *config.Config, version string, opts Options) *http.Server {
 	}
 	for _, register := range opts.Handlers {
 		mux.Handle(register(handlerOpts...))
+	}
+	for path, handler := range opts.Routes {
+		mux.Handle(path, handler)
 	}
 
 	// /health is mounted directly on the mux, so it bypasses the Connect stack — and

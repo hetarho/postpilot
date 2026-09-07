@@ -80,6 +80,10 @@ describe('AccountMenu', () => {
     expect(within(panel).getByText(/^구매 ·/)).toBeInTheDocument()
     expect(within(panel).getByText('플랜은 운영자가 지정해요.')).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: '결제 관리' })).toHaveAttribute(
+      'href',
+      '/billing',
+    )
 
     // The meter is never the only signal: it carries its own figure as text.
     const meter = within(panel).getByRole('meter')

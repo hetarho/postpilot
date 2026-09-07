@@ -26,9 +26,13 @@ import (
 	"github.com/postpilot/backend/internal/auth/provision"
 	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	authstore "github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/billing"
+	billingrpc "github.com/postpilot/backend/internal/billing/rpc"
+	billingstore "github.com/postpilot/backend/internal/billing/store"
 	"github.com/postpilot/backend/internal/experiment"
 	experimentrpc "github.com/postpilot/backend/internal/experiment/rpc"
 	experimentstore "github.com/postpilot/backend/internal/experiment/store"
+	"github.com/postpilot/backend/internal/fxrate"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/generation"
@@ -64,6 +68,7 @@ import (
 	"github.com/postpilot/backend/internal/template"
 	templaterpc "github.com/postpilot/backend/internal/template/rpc"
 	templatestore "github.com/postpilot/backend/internal/template/store"
+	"github.com/postpilot/backend/internal/tosspay"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 	"github.com/postpilot/backend/internal/voice"
@@ -206,6 +211,17 @@ func main() {
 		int64(cfg.LLMMaxTokensDefault),
 	)
 	ledger.SetAnchors(usageAnchors{auth: authSvc})
+	billingStore := billingstore.New(handle.Writer, handle.Reader)
+	var paymentProvider billing.Provider
+	var exchangeRates billing.Rates
+	if cfg.BillingEnabled {
+		paymentProvider = tosspay.New(cfg.TossSecretKey, http.DefaultClient)
+		exchangeRates = fxrate.NewEximbank(cfg.EximAPIKey, http.DefaultClient)
+	}
+	billingSvc := billing.NewService(
+		billingStore, paymentProvider, exchangeRates, ledger, authSvc, authSvc,
+		billingMailer{mailer: mailer},
+	)
 	authSvc.SetBootstraps(
 		func(ctx context.Context, userID string) error {
 			return defaultVoiceBootstrap(ctx, handle, userID)
@@ -446,6 +462,9 @@ func main() {
 				return postpilotv1connect.NewPlanServiceHandler(planrpc.NewHandler(ledger, estimatorCombos{catalog: catalogSvc}), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewBillingServiceHandler(billingrpc.NewHandler(billingSvc), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewAdminServiceHandler(authrpc.NewAdminHandler(authSvc, comboAssigner{catalog: catalogSvc}), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
@@ -484,6 +503,9 @@ func main() {
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewPublishingAgentServiceHandler(publishingrpc.NewAgentHandler(publishSvc), opts...)
 			},
+		},
+		Routes: map[string]http.Handler{
+			"/webhooks/toss": billingrpc.NewWebhookHandler(paymentProvider, billingStore),
 		},
 	})
 
@@ -548,6 +570,12 @@ type voiceModels struct {
 	selections *provider.Service
 	registry   meteredRegistry
 	plans      *auth.Service
+}
+
+type billingMailer struct{ mailer auth.Mailer }
+
+func (m billingMailer) Send(ctx context.Context, to, subject, text string) error {
+	return m.mailer.Send(ctx, auth.Mail{To: to, Subject: subject, Text: text})
 }
 
 type publishingPosts struct{ service *post.Service }

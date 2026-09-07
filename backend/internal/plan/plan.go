@@ -163,6 +163,11 @@ func MonthlyCredits(p Plan) int {
 	return found
 }
 
+// MonthlyPriceCents returns the USD-cent list price beside a rung's monthly grant.
+// Billing consumes this value so the amount charged and the ladder shown to the account
+// cannot drift into separate product rules.
+func MonthlyPriceCents(p Plan) int { return monthlyPriceUSDCents[p] }
+
 // Pricer prices one call's tokens in micro-USD. The llm package's cost resolver satisfies
 // it, which is how this stdlib-only package prices work without learning what a model is.
 type Pricer func(promptTokens, completionTokens int64) (int64, bool)

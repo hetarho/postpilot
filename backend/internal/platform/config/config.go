@@ -258,6 +258,12 @@ type Config struct {
 	// Google sign-in is optional, but a half-configured OAuth client is never useful.
 	GoogleClientID     string
 	GoogleClientSecret string
+	// Billing is disabled only when all three server credentials are empty. A partial
+	// configuration is boot-fatal because it can render prices that cannot be charged.
+	TossSecretKey  string
+	TossClientKey  string
+	EximAPIKey     string
+	BillingEnabled bool
 
 	// R2Endpoint is the S3-compatible endpoint the API itself calls (HEAD, DELETE, LIST).
 	R2Endpoint string
@@ -397,6 +403,9 @@ func Load() (*Config, error) {
 		MailFrom:           os.Getenv("MAIL_FROM"),
 		GoogleClientID:     strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
 		GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
+		TossSecretKey:      strings.TrimSpace(os.Getenv("TOSS_SECRET_KEY")),
+		TossClientKey:      strings.TrimSpace(os.Getenv("TOSS_CLIENT_KEY")),
+		EximAPIKey:         strings.TrimSpace(os.Getenv("EXIM_API_KEY")),
 
 		R2Endpoint:        os.Getenv("R2_ENDPOINT"),
 		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
@@ -439,6 +448,17 @@ func Load() (*Config, error) {
 	if (cfg.GoogleClientID == "") != (cfg.GoogleClientSecret == "") {
 		return nil, fmt.Errorf("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be set or both be empty")
 	}
+	billingValues := []string{cfg.TossSecretKey, cfg.TossClientKey, cfg.EximAPIKey}
+	configured := 0
+	for _, value := range billingValues {
+		if value != "" {
+			configured++
+		}
+	}
+	if configured != 0 && configured != len(billingValues) {
+		return nil, fmt.Errorf("TOSS_SECRET_KEY, TOSS_CLIENT_KEY, and EXIM_API_KEY must all be set or all be empty")
+	}
+	cfg.BillingEnabled = configured == len(billingValues)
 
 	if err := validateOrigin(cfg.CORSOrigin); err != nil {
 		return nil, fmt.Errorf("CORS_ORIGIN: %w", err)

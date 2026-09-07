@@ -156,6 +156,24 @@ func (s *Store) RaiseLot(ctx context.Context, lotID string, credits int) error {
 	return nil
 }
 
+func (s *Store) VoidUntouchedLot(ctx context.Context, lotID string) (bool, error) {
+	rows, err := s.write.VoidUntouchedLot(ctx, lotID)
+	if err != nil {
+		return false, fmt.Errorf("void untouched credit lot: %w", err)
+	}
+	return rows > 0, nil
+}
+
+func (s *Store) RestoreLot(ctx context.Context, lotID string, credits int) (bool, error) {
+	rows, err := s.write.RestoreLot(ctx, sqlc.RestoreLotParams{
+		Remaining: int64(credits), ID: lotID, Remaining_2: int64(credits),
+	})
+	if err != nil {
+		return false, fmt.Errorf("restore credit lot: %w", err)
+	}
+	return rows > 0, nil
+}
+
 func (s *Store) SpendFromLot(ctx context.Context, lotID string, credits int) error {
 	err := s.write.SpendFromLot(ctx, sqlc.SpendFromLotParams{
 		Remaining: int64(credits), ID: lotID, Remaining_2: int64(credits),

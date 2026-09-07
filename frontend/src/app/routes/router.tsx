@@ -274,6 +274,12 @@ const plansRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/plans'), 'PlansPage'),
 })
 
+const billingRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/billing',
+  component: lazyRouteComponent(() => import('@/pages/billing'), 'BillingPage'),
+})
+
 const accountRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/account',
@@ -435,6 +441,7 @@ export const routeTree = rootRoute.addChildren([
     templateRoute,
     guidelinesRoute,
     plansRoute,
+    billingRoute,
     accountRoute,
     voiceLayoutRoute.addChildren([
       voiceRoute,

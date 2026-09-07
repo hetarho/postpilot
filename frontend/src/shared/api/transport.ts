@@ -15,6 +15,7 @@ import { createConnectTransport } from '@connectrpc/connect-web'
 import { API_URL } from '@/shared/config'
 import { emitUnauthenticated } from './auth-events'
 import { AuthService } from './gen/postpilot/v1/auth_pb'
+import { BillingService } from './gen/postpilot/v1/billing_pb'
 import { HealthService } from './gen/postpilot/v1/health_pb'
 import { ModelCatalogService } from './gen/postpilot/v1/model_catalog_pb'
 import { ModelExperimentService } from './gen/postpilot/v1/model_experiment_pb'
@@ -71,6 +72,9 @@ export const authClient = createClient(AuthService, transport)
 
 /** Typed client for postpilot.v1.HealthService. */
 export const healthClient = createClient(HealthService, transport)
+
+/** The acting account's subscription, payment history, and daily KRW quotes. */
+export const billingClient = createClient(BillingService, transport)
 
 /** Typed client for postpilot.v1.ProviderService. */
 export const providerClient = createClient(ProviderService, transport)
