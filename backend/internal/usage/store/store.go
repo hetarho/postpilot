@@ -330,8 +330,12 @@ func (s *Store) ReasoningSpend(ctx context.Context, stage string, since time.Tim
 	return out, nil
 }
 
+// parseTime reads with RFC3339Nano rather than writeLayout, as the post and auth stores
+// do: it accepts any fraction width, so a row written by hand or by a test fixture with a
+// trimmed fraction still loads. Only the WRITE side pins the width, and that is what the
+// string ordering above depends on.
 func parseTime(value string) (time.Time, error) {
-	parsed, err := time.Parse(writeLayout, value)
+	parsed, err := time.Parse(time.RFC3339Nano, value)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parse stored instant %q: %w", value, err)
 	}
