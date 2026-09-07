@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,11 +21,32 @@ import (
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/template"
 	templatestore "github.com/postpilot/backend/internal/template/store"
+	"github.com/postpilot/backend/internal/usage"
+	usagestore "github.com/postpilot/backend/internal/usage/store"
 	"github.com/postpilot/backend/internal/voice"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
 
 type noBlobs struct{}
+
+type captureMailer struct{ sent []auth.Mail }
+
+func (m *captureMailer) Send(_ context.Context, message auth.Mail) error {
+	m.sent = append(m.sent, message)
+	return nil
+}
+
+func mailToken(t *testing.T, message auth.Mail) string {
+	t.Helper()
+	for _, line := range strings.Split(message.Text, "\n") {
+		parsed, err := url.Parse(line)
+		if err == nil && parsed.Query().Get("token") != "" {
+			return parsed.Query().Get("token")
+		}
+	}
+	t.Fatalf("mail has no token link: %s", message.Text)
+	return ""
+}
 
 func (noBlobs) PresignPut(context.Context, string, string, time.Duration) (string, error) {
 	return "", nil
@@ -113,6 +135,61 @@ func TestCreditBootstrapOpensOnlyOneMonthlyLotForAFreeAccount(t *testing.T) {
 	}
 	if count != 1 || kind != "monthly" {
 		t.Fatalf("lots = %d of kind %q, want exactly one monthly lot", count, kind)
+	}
+}
+
+func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "signup-repair.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+
+	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour)
+	mailer := &captureMailer{}
+	authSvc.SetMailer(mailer)
+	authSvc.SetWebOrigin("https://postpilot.example.com")
+	authSvc.SetBootstraps(func(context.Context, string) error { return errors.New("voice unavailable") })
+	if err := authSvc.Signup(ctx, "alice@example.com", "password1"); err == nil {
+		t.Fatal("signup with a failed bootstrap returned nil")
+	}
+
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
+	ledger.SetAnchors(usageAnchors{auth: authSvc})
+	authSvc.SetBootstraps(
+		func(ctx context.Context, userID string) error { return defaultVoiceBootstrap(ctx, handle, userID) },
+		func(ctx context.Context, userID string) error {
+			return ledger.EnsureMonthlyLot(ctx, userID, plan.Free)
+		},
+	)
+	if err := authSvc.ResendVerification(ctx, "alice@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if len(mailer.sent) != 1 {
+		t.Fatalf("verification mails = %d, want one", len(mailer.sent))
+	}
+	if err := authSvc.VerifyEmail(ctx, mailToken(t, mailer.sent[0])); err != nil {
+		t.Fatal(err)
+	}
+
+	for table, want := range map[string]int{"voices": 1, "credit_lots": 1} {
+		var count int
+		if err := handle.Reader.QueryRowContext(ctx,
+			"SELECT COUNT(*) FROM "+table+" WHERE user_id = ?", "alice@example.com",
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != want {
+			t.Errorf("%s rows = %d, want %d", table, count, want)
+		}
+	}
+	user, err := authSvc.Account(ctx, "alice@example.com")
+	if err != nil || user.EmailVerifiedAt == nil {
+		t.Fatalf("verified user = %+v, %v", user, err)
 	}
 }
 

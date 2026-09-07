@@ -14,6 +14,10 @@ import {
   ProtoPlan,
   LoginResponseSchema,
   LogoutResponseSchema,
+  RegisterEmailResponseSchema,
+  ResendVerificationResponseSchema,
+  SignupResponseSchema,
+  VerifyEmailResponseSchema,
 } from '@/shared/api'
 import { type FakePostsOptions, registerPostService } from './posts'
 import { type FakeProvidersOptions, registerProviderService } from './providers'
@@ -35,11 +39,14 @@ export interface FakeAuthOptions {
    *  accounts to it: every test written before the ladder existed assumed an account with
    *  full authority, and that is what those accounts became. A test about a gated surface
    *  sets a lower tier explicitly. */
-  user?: { id: string; plan?: ProtoPlan }
+  user?: { id: string; plan?: ProtoPlan; email?: string; emailVerified?: boolean }
   /** Makes Login answer 401, like wrong credentials. */
   loginFails?: boolean
   /** Makes Logout fail, like an API that went away mid-session. */
   logoutFails?: boolean
+  signupFails?: boolean
+  verificationFails?: boolean
+  registerEmailFails?: boolean
   /** Records every procedure the transport was asked for. */
   calls?: string[]
   /** The PostService the signed-in screens call. Present by default (with no posts) so a
@@ -77,7 +84,15 @@ export interface FakeAuthBackend {
 }
 
 export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBackend {
-  const { user, loginFails, logoutFails, calls } = options
+  const {
+    user,
+    loginFails,
+    logoutFails,
+    signupFails,
+    verificationFails,
+    registerEmailFails,
+    calls,
+  } = options
   let session = user
 
   const transport = createRouterTransport((router) => {
@@ -86,16 +101,29 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
       calls?.push('GetMe')
       if (!session) throw connectAppError('AUTH_REQUIRED', Code.Unauthenticated)
       return create(GetMeResponseSchema, {
-        user: { id: session.id },
+        user: {
+          id: session.id,
+          email: session.email ?? '',
+          emailVerified: session.emailVerified ?? false,
+        },
         plan: session.plan ?? ProtoPlan.MASTER,
       })
     })
     rpc(AuthService.method.login, (req) => {
       calls?.push('Login')
       if (loginFails) throw connectAppError('INVALID_CREDENTIALS', Code.Unauthenticated)
-      session = { id: req.loginId, plan: user?.plan }
+      session = {
+        id: req.loginId,
+        plan: user?.plan,
+        email: user?.email,
+        emailVerified: user?.emailVerified,
+      }
       return create(LoginResponseSchema, {
-        user: { id: session.id },
+        user: {
+          id: session.id,
+          email: session.email ?? '',
+          emailVerified: session.emailVerified ?? false,
+        },
         plan: session.plan ?? ProtoPlan.MASTER,
       })
     })
@@ -104,6 +132,30 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
       if (logoutFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
       session = undefined
       return create(LogoutResponseSchema, {})
+    })
+    rpc(AuthService.method.signup, () => {
+      calls?.push('Signup')
+      if (signupFails) throw connectAppError('UNKNOWN_FAILURE', Code.Internal)
+      return create(SignupResponseSchema, {})
+    })
+    rpc(AuthService.method.resendVerification, () => {
+      calls?.push('ResendVerification')
+      return create(ResendVerificationResponseSchema, {})
+    })
+    rpc(AuthService.method.verifyEmail, () => {
+      calls?.push('VerifyEmail')
+      if (verificationFails) {
+        throw connectAppError('VERIFICATION_LINK_INVALID', Code.FailedPrecondition)
+      }
+      return create(VerifyEmailResponseSchema, {})
+    })
+    rpc(AuthService.method.registerEmail, (request) => {
+      calls?.push('RegisterEmail')
+      if (registerEmailFails) {
+        throw connectAppError('EMAIL_ALREADY_VERIFIED', Code.FailedPrecondition)
+      }
+      if (session) session = { ...session, email: request.email, emailVerified: false }
+      return create(RegisterEmailResponseSchema, {})
     })
     registerPostService(router, { calls, ...options.posts })
     registerProviderService(router, { calls, ...options.providers })

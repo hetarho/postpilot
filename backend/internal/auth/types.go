@@ -1,6 +1,6 @@
-// Package auth is the identity context: accounts, password hashing, and the sessions
-// every other RPC is scoped to. Accounts are provisioned by the operator, never over
-// the wire (PRD F-1).
+// Package auth is the identity context: accounts, signup and verification, password
+// hashing, and the sessions every other RPC is scoped to. Accounts can be created by
+// self-signup or provisioned by the operator.
 //
 // The package is flat on purpose (ARCHITECTURE §2.1 — split only once it is noisy):
 // domain types and use-cases here, persistence in store/, transport in rpc/, operator
@@ -34,8 +34,15 @@ var ErrNoSession = errors.New("no session")
 // one result. A caller must not be able to discover which stored credential once existed.
 var ErrLinkInvalid = errors.New("auth link is invalid")
 
+var (
+	ErrInvalidEmail         = errors.New("invalid email")
+	ErrPasswordTooShort     = errors.New("password too short")
+	ErrPasswordTooLong      = errors.New("password too long")
+	ErrEmailAlreadyVerified = errors.New("email already verified")
+)
+
 // User is an account. The password hash never leaves this package's boundary: the
-// store loads it for verification and the rpc layer maps only the id outward.
+// store loads it for verification and the rpc layer maps only safe identity fields outward.
 type User struct {
 	ID                 string
 	PasswordHash       string

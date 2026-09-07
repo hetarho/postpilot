@@ -36,6 +36,27 @@ func NewHandler(svc *auth.Service, sessionTTL time.Duration) *Handler {
 	return &Handler{svc: svc, sessionTTL: sessionTTL}
 }
 
+func (h *Handler) Signup(ctx context.Context, req *connect.Request[postpilotv1.SignupRequest]) (*connect.Response[postpilotv1.SignupResponse], error) {
+	if err := h.svc.Signup(ctx, req.Msg.GetEmail(), req.Msg.GetPassword()); err != nil {
+		return nil, authMutationError("signup", err)
+	}
+	return connect.NewResponse(&postpilotv1.SignupResponse{}), nil
+}
+
+func (h *Handler) ResendVerification(ctx context.Context, req *connect.Request[postpilotv1.ResendVerificationRequest]) (*connect.Response[postpilotv1.ResendVerificationResponse], error) {
+	if err := h.svc.ResendVerification(ctx, req.Msg.GetEmail()); err != nil {
+		return nil, authMutationError("resend verification", err)
+	}
+	return connect.NewResponse(&postpilotv1.ResendVerificationResponse{}), nil
+}
+
+func (h *Handler) VerifyEmail(ctx context.Context, req *connect.Request[postpilotv1.VerifyEmailRequest]) (*connect.Response[postpilotv1.VerifyEmailResponse], error) {
+	if err := h.svc.VerifyEmail(ctx, req.Msg.GetToken()); err != nil {
+		return nil, authMutationError("verify email", err)
+	}
+	return connect.NewResponse(&postpilotv1.VerifyEmailResponse{}), nil
+}
+
 // Login authenticates and hands back a session cookie.
 func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.LoginRequest]) (*connect.Response[postpilotv1.LoginResponse], error) {
 	user, rawToken, err := h.svc.Login(ctx, req.Msg.GetLoginId(), req.Msg.GetPassword())
@@ -50,7 +71,7 @@ func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.Lo
 	}
 
 	res := connect.NewResponse(&postpilotv1.LoginResponse{
-		User: &postpilotv1.User{Id: user.ID},
+		User: userToProto(user),
 		Plan: planrpc.ToProto(user.Plan),
 	})
 	// The token leaves the process here and nowhere else: a Set-Cookie header, not a
@@ -87,10 +108,50 @@ func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetM
 		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 	}
 	acting, _ := auth.PlanFromContext(ctx)
+	user, err := h.svc.Account(ctx, userID)
+	if err != nil {
+		slog.Error("get account failed", "err", err)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "get account failed", "UNKNOWN_FAILURE", nil)
+	}
 	return connect.NewResponse(&postpilotv1.GetMeResponse{
-		User: &postpilotv1.User{Id: userID},
+		User: userToProto(user),
 		Plan: planrpc.ToProto(acting),
 	}), nil
+}
+
+func (h *Handler) RegisterEmail(ctx context.Context, req *connect.Request[postpilotv1.RegisterEmailRequest]) (*connect.Response[postpilotv1.RegisterEmailResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+	}
+	if err := h.svc.RegisterEmail(ctx, userID, req.Msg.GetEmail()); err != nil {
+		return nil, authMutationError("register email", err)
+	}
+	return connect.NewResponse(&postpilotv1.RegisterEmailResponse{}), nil
+}
+
+func userToProto(user auth.User) *postpilotv1.User {
+	return &postpilotv1.User{
+		Id: user.ID, Email: user.Email, EmailVerified: user.EmailVerifiedAt != nil,
+	}
+}
+
+func authMutationError(operation string, err error) error {
+	switch {
+	case errors.Is(err, auth.ErrInvalidEmail):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid email", "INVALID_EMAIL", nil)
+	case errors.Is(err, auth.ErrPasswordTooShort):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "password too short", "PASSWORD_TOO_SHORT", map[string]string{"min": "8"})
+	case errors.Is(err, auth.ErrPasswordTooLong):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "password too long", "PASSWORD_TOO_LONG", map[string]string{"max": "128"})
+	case errors.Is(err, auth.ErrLinkInvalid):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "verification link invalid", "VERIFICATION_LINK_INVALID", nil)
+	case errors.Is(err, auth.ErrEmailAlreadyVerified):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "email already verified", "EMAIL_ALREADY_VERIFIED", nil)
+	default:
+		slog.Error(operation+" failed", "err", err)
+		return rpcserver.NewAppError(connect.CodeInternal, operation+" failed", "UNKNOWN_FAILURE", nil)
+	}
 }
 
 func (h *Handler) sessionCookie(value string, maxAge int) *http.Cookie {

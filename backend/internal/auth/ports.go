@@ -13,6 +13,10 @@ import (
 // this context's table, the credits it grants do not.
 type MonthlyTopUp func(ctx context.Context, userID string, credits int) error
 
+// AccountBootstrap installs another context's idempotent defaults after an account row
+// exists. The auth context owns the lifecycle and the composition root supplies the work.
+type AccountBootstrap func(ctx context.Context, userID string) error
+
 // Mail is deliberately text-only: transactional messages need no product-generated HTML,
 // and every delivery adapter receives the same final bilingual body.
 type Mail struct {

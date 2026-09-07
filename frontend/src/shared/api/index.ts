@@ -40,6 +40,10 @@ export {
   GetMeResponseSchema,
   LoginResponseSchema,
   LogoutResponseSchema,
+  RegisterEmailResponseSchema,
+  ResendVerificationResponseSchema,
+  SignupResponseSchema,
+  VerifyEmailResponseSchema,
 } from './gen/postpilot/v1/auth_pb'
 export type { User, GetMeResponse } from './gen/postpilot/v1/auth_pb'
 export { HealthService, PingResponseSchema } from './gen/postpilot/v1/health_pb'

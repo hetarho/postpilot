@@ -20,6 +20,10 @@ import (
 
 const sessionTTL = 720 * time.Hour
 
+type discardMailer struct{}
+
+func (discardMailer) Send(context.Context, auth.Mail) error { return nil }
+
 // newServer wires the real handler and interceptor over a real SQLite store and
 // returns a client speaking to them across a real HTTP server.
 //
@@ -29,9 +33,16 @@ const sessionTTL = 720 * time.Hour
 func newServer(t *testing.T) (postpilotv1connect.AuthServiceClient, *httptest.Server) {
 	t.Helper()
 
-	svc := auth.NewService(newStore(t), sessionTTL)
+	store := newStore(t)
+	svc := auth.NewService(store, sessionTTL)
+	svc.SetMailer(discardMailer{})
+	svc.SetWebOrigin("https://postpilot.example.com")
 	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
 		t.Fatalf("seed user: %v", err)
+	}
+	verifiedAt := time.Now()
+	if err := store.SetEmail(context.Background(), "alice", "alice@example.com", &verifiedAt); err != nil {
+		t.Fatalf("seed email: %v", err)
 	}
 
 	mux := http.NewServeMux()
@@ -72,6 +83,12 @@ func TestLoginSetCookieAttributes(t *testing.T) {
 	// Plan 01 AC4 (server half): the token is in the header and nowhere else.
 	if res.Msg.GetUser().GetId() != "alice" {
 		t.Errorf("user id = %q, want alice", res.Msg.GetUser().GetId())
+	}
+	if got := res.Msg.GetUser().GetEmail(); got != "alice@example.com" {
+		t.Errorf("user email = %q, want alice@example.com", got)
+	}
+	if !res.Msg.GetUser().GetEmailVerified() {
+		t.Error("user email_verified = false, want true")
 	}
 	if strings.Contains(res.Msg.String(), token) {
 		t.Errorf("the session token leaked into the response body: %s", res.Msg.String())
@@ -123,6 +140,69 @@ func TestInterceptorGuardsEveryProcedure(t *testing.T) {
 	}
 	if res.Msg.GetUser().GetId() != "alice" {
 		t.Errorf("user id = %q, want alice", res.Msg.GetUser().GetId())
+	}
+	if got := res.Msg.GetUser().GetEmail(); got != "alice@example.com" {
+		t.Errorf("user email = %q, want alice@example.com", got)
+	}
+	if !res.Msg.GetUser().GetEmailVerified() {
+		t.Error("user email_verified = false, want true")
+	}
+}
+
+func TestInterceptorPublicSignupAndVerificationSetButProtectsRegisterEmail(t *testing.T) {
+	client, _ := newServer(t)
+	ctx := context.Background()
+
+	if _, err := client.Signup(ctx, connect.NewRequest(&postpilotv1.SignupRequest{
+		Email: "new@example.com", Password: "password1",
+	})); err != nil {
+		t.Fatalf("Signup without cookie: %v", err)
+	}
+	if _, err := client.ResendVerification(ctx, connect.NewRequest(&postpilotv1.ResendVerificationRequest{
+		Email: "new@example.com",
+	})); err != nil {
+		t.Fatalf("ResendVerification without cookie: %v", err)
+	}
+	if _, err := client.VerifyEmail(ctx, connect.NewRequest(&postpilotv1.VerifyEmailRequest{
+		Token: "not-a-token",
+	})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("VerifyEmail without cookie = %v, want its domain failure rather than 401", err)
+	}
+	if _, err := client.RegisterEmail(ctx, connect.NewRequest(&postpilotv1.RegisterEmailRequest{
+		Email: "alice@example.com",
+	})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("RegisterEmail without cookie = %v, want 401", err)
+	}
+}
+
+func TestUnverifiedCorrectPasswordIsWireIdenticalToWrongPassword(t *testing.T) {
+	store := newStore(t)
+	hash, err := auth.HashPassword("password1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateUser(context.Background(), auth.User{
+		ID: "waiting@example.com", Email: "waiting@example.com", PasswordHash: hash,
+		Plan: plan.Free, CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	svc := auth.NewService(store, sessionTTL)
+	svc.SetMailer(discardMailer{})
+	svc.SetWebOrigin("https://postpilot.example.com")
+	mux := http.NewServeMux()
+	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
+		authrpc.NewHandler(svc, sessionTTL),
+		connect.WithInterceptors(authrpc.NewInterceptor(svc)),
+	))
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	client := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+
+	wrong := loginError(t, client, "waiting@example.com", "wrong")
+	correct := loginError(t, client, "waiting@example.com", "password1")
+	if wrong.Error() != correct.Error() {
+		t.Fatalf("wrong and unverified responses differ:\nwrong: %s\ncorrect: %s", wrong, correct)
 	}
 }
 

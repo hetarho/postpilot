@@ -27,6 +27,10 @@ describe('AccountMenu', () => {
     const panel = await openAccountPopover(user)
     expect(within(panel).getByText('로그인한 계정')).toBeInTheDocument()
     expect(within(panel).getByText('alice')).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: '계정 설정' })).toHaveAttribute(
+      'href',
+      '/account',
+    )
     expect(within(panel).getByRole('button', { name: '로그아웃' })).toBeInTheDocument()
   })
 

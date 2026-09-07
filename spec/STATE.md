@@ -31,7 +31,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T046 | todo |
-| T030 | Self-signup, email verification before the first session, and the account's email surface | AUTH QUOTA ARCH | T029 T034 | todo |
 | T031 | Password reset by a 1-hour emailed link, and the signed-in password change | AUTH ARCH | T030 | todo |
 | T032 | Per-IP throttling of the public writes and the auto-releasing account lockout | AUTH ARCH | T031 | todo |
 | T033 | Google sign-in: SPA-initiated code + PKCE, exchanged by the backend into a session | AUTH ARCH | T032 | todo |
@@ -48,10 +47,12 @@
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
 
 ## next
-- implement-task T030 → T031 → T032 → T033 → T035 → T036 → T037 → T038 → T039 → T040
+- implement-task T031 → T032 → T033 → T035 → T036 → T037 → T038 → T039 → T040
 - T042 blocked on ONE live survey pass on a clean writer draft: does 문단 서식 변경 convert the caret's paragraph or its whole component when the component holds two or more paragraphs (same for 인용구), what does Enter from a converted block open, and how does the list toolbar behave there — the owner must discard the leftover dirty draft in the browser first, since navigating away from it raises a `beforeunload` dialog the driver surface cannot dismiss · T044 is claimable NOW (dep T042 is only for the shared plumbing, which has landed) · then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260908 T030 done
+- 260908 T030 claimed (cx)
 - 260908 T034 done
 - 260908 T034 claimed (cx)
 - 260908 T029 done
@@ -70,5 +71,3 @@
 - 260907 T028 claimed (pw)
 - 260907 T027 done — /plans answers "몇 편" from three sliders and a combo switch, with no request per change; free 4 · basic 19 · pro 52 · max 108 at the default case
 - 260907 T027 claimed (pw)
-- 260907 T026 done — the 모델 관리 tab assigns the two models behind each of the four estimator combos, drafted locally and sent as one complete pair
-- 260907 T026 claimed (pw)

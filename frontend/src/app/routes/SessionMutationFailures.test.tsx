@@ -13,14 +13,14 @@ describe('session mutation failures', () => {
   it.each([
     {
       locale: 'ko' as const,
-      loginId: '아이디',
+      loginId: '이메일 또는 아이디',
       password: '비밀번호',
       submit: '로그인',
       message: '아이디 또는 비밀번호가 맞지 않아요.',
     },
     {
       locale: 'en' as const,
-      loginId: 'Login ID',
+      loginId: 'Email or username',
       password: 'Password',
       submit: 'Log in',
       message: 'The login ID or password is incorrect.',

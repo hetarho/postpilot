@@ -19,6 +19,7 @@ import { AuthenticatedLayout } from './AuthenticatedLayout'
 import { RootLayout } from './RootLayout'
 import { RouteError } from './RouteError'
 import { RoutePending } from './RoutePending'
+import { hasActivePublicSession } from './publicGuard'
 
 // Everything outside the login → posts → editor path is fetched when its route is first
 // entered. A session's first paint is the post list or the editor, so those stay eager;
@@ -69,9 +70,7 @@ const loginRoute = createRoute({
     // Unlike the guard below, this route swallows an outage: the login form is what a
     // user reaches for when the app is misbehaving, so it must render even when the API
     // cannot answer at all. Submitting will then fail with a real message.
-    const signedIn = await loadSession(context.queryClient, context.transport)
-      .then((session) => session.status === 'active')
-      .catch(() => false)
+    const signedIn = await hasActivePublicSession(context)
 
     if (signedIn) {
       throw redirect({
@@ -81,6 +80,32 @@ const loginRoute = createRoute({
     }
   },
   component: LoginPage,
+})
+
+const signupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/signup',
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
+  beforeLoad: async ({ context, search }) => {
+    if (await hasActivePublicSession(context)) {
+      throw redirect({
+        to: isInAppPath(search.redirect) ? search.redirect : SIGNED_IN_HOME,
+        replace: true,
+      })
+    }
+  },
+  component: lazyRouteComponent(() => import('@/pages/signup'), 'SignupPage'),
+})
+
+const verifyEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/verify-email',
+  validateSearch: (search: Record<string, unknown>): { token?: string } => ({
+    token: typeof search.token === 'string' ? search.token : undefined,
+  }),
+  component: lazyRouteComponent(() => import('@/pages/verify-email'), 'VerifyEmailPage'),
 })
 
 // Public, and structurally so: a direct child of the root route, beside /login and NOT under the
@@ -203,6 +228,12 @@ const plansRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/plans',
   component: lazyRouteComponent(() => import('@/pages/plans'), 'PlansPage'),
+})
+
+const accountRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/account',
+  component: lazyRouteComponent(() => import('@/pages/account'), 'AccountPage'),
 })
 
 const guidelinesRoute = createRoute({
@@ -343,6 +374,8 @@ const postEditorRoute = createRoute({
 /** Exported so a test can mount the real tree against a fake transport. */
 export const routeTree = rootRoute.addChildren([
   loginRoute,
+  signupRoute,
+  verifyEmailRoute,
   aboutRoute,
   authenticatedRoute.addChildren([
     indexRoute,
@@ -355,6 +388,7 @@ export const routeTree = rootRoute.addChildren([
     templateRoute,
     guidelinesRoute,
     plansRoute,
+    accountRoute,
     voiceLayoutRoute.addChildren([
       voiceRoute,
       voiceVersionsRoute,

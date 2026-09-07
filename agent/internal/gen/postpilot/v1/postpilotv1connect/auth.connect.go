@@ -33,22 +33,41 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// AuthServiceSignupProcedure is the fully-qualified name of the AuthService's Signup RPC.
+	AuthServiceSignupProcedure = "/postpilot.v1.AuthService/Signup"
+	// AuthServiceResendVerificationProcedure is the fully-qualified name of the AuthService's
+	// ResendVerification RPC.
+	AuthServiceResendVerificationProcedure = "/postpilot.v1.AuthService/ResendVerification"
+	// AuthServiceVerifyEmailProcedure is the fully-qualified name of the AuthService's VerifyEmail RPC.
+	AuthServiceVerifyEmailProcedure = "/postpilot.v1.AuthService/VerifyEmail"
 	// AuthServiceLoginProcedure is the fully-qualified name of the AuthService's Login RPC.
 	AuthServiceLoginProcedure = "/postpilot.v1.AuthService/Login"
 	// AuthServiceLogoutProcedure is the fully-qualified name of the AuthService's Logout RPC.
 	AuthServiceLogoutProcedure = "/postpilot.v1.AuthService/Logout"
 	// AuthServiceGetMeProcedure is the fully-qualified name of the AuthService's GetMe RPC.
 	AuthServiceGetMeProcedure = "/postpilot.v1.AuthService/GetMe"
+	// AuthServiceRegisterEmailProcedure is the fully-qualified name of the AuthService's RegisterEmail
+	// RPC.
+	AuthServiceRegisterEmailProcedure = "/postpilot.v1.AuthService/RegisterEmail"
 )
 
 // AuthServiceClient is a client for the postpilot.v1.AuthService service.
 type AuthServiceClient interface {
+	// Creates an unverified free account and sends its verification mail. The empty
+	// response is identical when the address already belongs to an account.
+	Signup(context.Context, *connect.Request[v1.SignupRequest]) (*connect.Response[v1.SignupResponse], error)
+	// Sends a fresh verification link when the address names an unverified account.
+	ResendVerification(context.Context, *connect.Request[v1.ResendVerificationRequest]) (*connect.Response[v1.ResendVerificationResponse], error)
+	// Consumes a verification link. Verification never creates a session.
+	VerifyEmail(context.Context, *connect.Request[v1.VerifyEmailRequest]) (*connect.Response[v1.VerifyEmailResponse], error)
 	// Sets the session cookie on the HTTP response.
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	// Revokes the session row server-side and clears the cookie.
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Session probe for app boot; the interceptor answers 401 when there is no session.
 	GetMe(context.Context, *connect.Request[v1.GetMeRequest]) (*connect.Response[v1.GetMeResponse], error)
+	// Adds the first email address to an authenticated legacy account.
+	RegisterEmail(context.Context, *connect.Request[v1.RegisterEmailRequest]) (*connect.Response[v1.RegisterEmailResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the postpilot.v1.AuthService service. By default, it
@@ -62,6 +81,24 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	authServiceMethods := v1.File_postpilot_v1_auth_proto.Services().ByName("AuthService").Methods()
 	return &authServiceClient{
+		signup: connect.NewClient[v1.SignupRequest, v1.SignupResponse](
+			httpClient,
+			baseURL+AuthServiceSignupProcedure,
+			connect.WithSchema(authServiceMethods.ByName("Signup")),
+			connect.WithClientOptions(opts...),
+		),
+		resendVerification: connect.NewClient[v1.ResendVerificationRequest, v1.ResendVerificationResponse](
+			httpClient,
+			baseURL+AuthServiceResendVerificationProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ResendVerification")),
+			connect.WithClientOptions(opts...),
+		),
+		verifyEmail: connect.NewClient[v1.VerifyEmailRequest, v1.VerifyEmailResponse](
+			httpClient,
+			baseURL+AuthServiceVerifyEmailProcedure,
+			connect.WithSchema(authServiceMethods.ByName("VerifyEmail")),
+			connect.WithClientOptions(opts...),
+		),
 		login: connect.NewClient[v1.LoginRequest, v1.LoginResponse](
 			httpClient,
 			baseURL+AuthServiceLoginProcedure,
@@ -80,14 +117,39 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("GetMe")),
 			connect.WithClientOptions(opts...),
 		),
+		registerEmail: connect.NewClient[v1.RegisterEmailRequest, v1.RegisterEmailResponse](
+			httpClient,
+			baseURL+AuthServiceRegisterEmailProcedure,
+			connect.WithSchema(authServiceMethods.ByName("RegisterEmail")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	login  *connect.Client[v1.LoginRequest, v1.LoginResponse]
-	logout *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
-	getMe  *connect.Client[v1.GetMeRequest, v1.GetMeResponse]
+	signup             *connect.Client[v1.SignupRequest, v1.SignupResponse]
+	resendVerification *connect.Client[v1.ResendVerificationRequest, v1.ResendVerificationResponse]
+	verifyEmail        *connect.Client[v1.VerifyEmailRequest, v1.VerifyEmailResponse]
+	login              *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	logout             *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
+	getMe              *connect.Client[v1.GetMeRequest, v1.GetMeResponse]
+	registerEmail      *connect.Client[v1.RegisterEmailRequest, v1.RegisterEmailResponse]
+}
+
+// Signup calls postpilot.v1.AuthService.Signup.
+func (c *authServiceClient) Signup(ctx context.Context, req *connect.Request[v1.SignupRequest]) (*connect.Response[v1.SignupResponse], error) {
+	return c.signup.CallUnary(ctx, req)
+}
+
+// ResendVerification calls postpilot.v1.AuthService.ResendVerification.
+func (c *authServiceClient) ResendVerification(ctx context.Context, req *connect.Request[v1.ResendVerificationRequest]) (*connect.Response[v1.ResendVerificationResponse], error) {
+	return c.resendVerification.CallUnary(ctx, req)
+}
+
+// VerifyEmail calls postpilot.v1.AuthService.VerifyEmail.
+func (c *authServiceClient) VerifyEmail(ctx context.Context, req *connect.Request[v1.VerifyEmailRequest]) (*connect.Response[v1.VerifyEmailResponse], error) {
+	return c.verifyEmail.CallUnary(ctx, req)
 }
 
 // Login calls postpilot.v1.AuthService.Login.
@@ -105,14 +167,28 @@ func (c *authServiceClient) GetMe(ctx context.Context, req *connect.Request[v1.G
 	return c.getMe.CallUnary(ctx, req)
 }
 
+// RegisterEmail calls postpilot.v1.AuthService.RegisterEmail.
+func (c *authServiceClient) RegisterEmail(ctx context.Context, req *connect.Request[v1.RegisterEmailRequest]) (*connect.Response[v1.RegisterEmailResponse], error) {
+	return c.registerEmail.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the postpilot.v1.AuthService service.
 type AuthServiceHandler interface {
+	// Creates an unverified free account and sends its verification mail. The empty
+	// response is identical when the address already belongs to an account.
+	Signup(context.Context, *connect.Request[v1.SignupRequest]) (*connect.Response[v1.SignupResponse], error)
+	// Sends a fresh verification link when the address names an unverified account.
+	ResendVerification(context.Context, *connect.Request[v1.ResendVerificationRequest]) (*connect.Response[v1.ResendVerificationResponse], error)
+	// Consumes a verification link. Verification never creates a session.
+	VerifyEmail(context.Context, *connect.Request[v1.VerifyEmailRequest]) (*connect.Response[v1.VerifyEmailResponse], error)
 	// Sets the session cookie on the HTTP response.
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	// Revokes the session row server-side and clears the cookie.
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Session probe for app boot; the interceptor answers 401 when there is no session.
 	GetMe(context.Context, *connect.Request[v1.GetMeRequest]) (*connect.Response[v1.GetMeResponse], error)
+	// Adds the first email address to an authenticated legacy account.
+	RegisterEmail(context.Context, *connect.Request[v1.RegisterEmailRequest]) (*connect.Response[v1.RegisterEmailResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -122,6 +198,24 @@ type AuthServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	authServiceMethods := v1.File_postpilot_v1_auth_proto.Services().ByName("AuthService").Methods()
+	authServiceSignupHandler := connect.NewUnaryHandler(
+		AuthServiceSignupProcedure,
+		svc.Signup,
+		connect.WithSchema(authServiceMethods.ByName("Signup")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceResendVerificationHandler := connect.NewUnaryHandler(
+		AuthServiceResendVerificationProcedure,
+		svc.ResendVerification,
+		connect.WithSchema(authServiceMethods.ByName("ResendVerification")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceVerifyEmailHandler := connect.NewUnaryHandler(
+		AuthServiceVerifyEmailProcedure,
+		svc.VerifyEmail,
+		connect.WithSchema(authServiceMethods.ByName("VerifyEmail")),
+		connect.WithHandlerOptions(opts...),
+	)
 	authServiceLoginHandler := connect.NewUnaryHandler(
 		AuthServiceLoginProcedure,
 		svc.Login,
@@ -140,14 +234,28 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("GetMe")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceRegisterEmailHandler := connect.NewUnaryHandler(
+		AuthServiceRegisterEmailProcedure,
+		svc.RegisterEmail,
+		connect.WithSchema(authServiceMethods.ByName("RegisterEmail")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case AuthServiceSignupProcedure:
+			authServiceSignupHandler.ServeHTTP(w, r)
+		case AuthServiceResendVerificationProcedure:
+			authServiceResendVerificationHandler.ServeHTTP(w, r)
+		case AuthServiceVerifyEmailProcedure:
+			authServiceVerifyEmailHandler.ServeHTTP(w, r)
 		case AuthServiceLoginProcedure:
 			authServiceLoginHandler.ServeHTTP(w, r)
 		case AuthServiceLogoutProcedure:
 			authServiceLogoutHandler.ServeHTTP(w, r)
 		case AuthServiceGetMeProcedure:
 			authServiceGetMeHandler.ServeHTTP(w, r)
+		case AuthServiceRegisterEmailProcedure:
+			authServiceRegisterEmailHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -156,6 +264,18 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 
 // UnimplementedAuthServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAuthServiceHandler struct{}
+
+func (UnimplementedAuthServiceHandler) Signup(context.Context, *connect.Request[v1.SignupRequest]) (*connect.Response[v1.SignupResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.Signup is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ResendVerification(context.Context, *connect.Request[v1.ResendVerificationRequest]) (*connect.Response[v1.ResendVerificationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.ResendVerification is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) VerifyEmail(context.Context, *connect.Request[v1.VerifyEmailRequest]) (*connect.Response[v1.VerifyEmailResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.VerifyEmail is not implemented"))
+}
 
 func (UnimplementedAuthServiceHandler) Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.Login is not implemented"))
@@ -167,4 +287,8 @@ func (UnimplementedAuthServiceHandler) Logout(context.Context, *connect.Request[
 
 func (UnimplementedAuthServiceHandler) GetMe(context.Context, *connect.Request[v1.GetMeRequest]) (*connect.Response[v1.GetMeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.GetMe is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) RegisterEmail(context.Context, *connect.Request[v1.RegisterEmailRequest]) (*connect.Response[v1.RegisterEmailResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.RegisterEmail is not implemented"))
 }

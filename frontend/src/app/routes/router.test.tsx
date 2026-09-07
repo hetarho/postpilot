@@ -78,7 +78,7 @@ describe('login screen', () => {
     const { router } = renderAppAt('/posts/20260820-jeju', { posts })
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
 
-    await user.type(await screen.findByLabelText('아이디'), 'alice')
+    await user.type(await screen.findByLabelText('이메일 또는 아이디'), 'alice')
     await user.type(screen.getByLabelText('비밀번호'), 'pw')
     await user.click(screen.getByRole('button', { name: '로그인' }))
 
@@ -91,13 +91,15 @@ describe('login screen', () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/login', { loginFails: true })
 
-    await user.type(await screen.findByLabelText('아이디'), 'ghost')
+    expect(await screen.findByRole('link', { name: '회원가입' })).toHaveAttribute('href', '/signup')
+
+    await user.type(screen.getByLabelText('이메일 또는 아이디'), 'ghost')
     await user.type(screen.getByLabelText('비밀번호'), 'pw')
     await user.click(screen.getByRole('button', { name: '로그인' }))
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('아이디 또는 비밀번호가 맞지 않아요')
-    expect(screen.getByLabelText('아이디')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('이메일 또는 아이디')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByLabelText('비밀번호')).toHaveAccessibleDescription(
       '아이디 또는 비밀번호가 맞지 않아요.',
     )
@@ -116,7 +118,7 @@ describe('login screen', () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/login?redirect=' + encodeURIComponent(target))
 
-    await user.type(await screen.findByLabelText('아이디'), 'alice')
+    await user.type(await screen.findByLabelText('이메일 또는 아이디'), 'alice')
     await user.type(screen.getByLabelText('비밀번호'), 'pw')
     await user.click(screen.getByRole('button', { name: '로그인' }))
 
@@ -495,7 +497,7 @@ describe('theme preferences in the real route tree', () => {
       await screen.findByRole('menuitemradio', { name: '어둡게', checked: true }),
     ).toBeInTheDocument()
     await user.keyboard('{Escape}')
-    await user.type(screen.getByLabelText('아이디'), 'alice')
+    await user.type(screen.getByLabelText('이메일 또는 아이디'), 'alice')
     await user.type(screen.getByLabelText('비밀번호'), 'pw')
     await user.click(screen.getByRole('button', { name: '로그인' }))
     await waitFor(() => expect(first.router.state.location.pathname).toBe('/posts'))

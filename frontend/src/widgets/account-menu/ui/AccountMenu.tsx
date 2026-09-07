@@ -59,6 +59,17 @@ export function AccountMenu({ onLoggedOut }: { onLoggedOut: () => void }) {
               {user?.id}
             </Typography>
           </div>
+          <Link
+            to="/account"
+            onClick={close}
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2',
+            })}
+          >
+            {t('accountSettings.heading', { ns: 'auth' })}
+          </Link>
           <PlanPanel close={close} />
           <Button
             variant="secondary"

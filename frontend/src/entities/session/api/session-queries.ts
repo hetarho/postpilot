@@ -30,7 +30,12 @@ export function toSessionUser(
   response: Pick<GetMeResponse, 'user' | 'plan'> | undefined,
 ): SessionUser | undefined {
   if (!response?.user) return undefined
-  return { id: response.user.id, plan: planFromProto(response.plan) }
+  return {
+    id: response.user.id,
+    ...(response.user.email ? { email: response.user.email } : {}),
+    emailVerified: response.user.emailVerified,
+    plan: planFromProto(response.plan),
+  }
 }
 
 /** The exact key `useQuery(getMe, {})` registers under.

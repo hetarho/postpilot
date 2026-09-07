@@ -7,6 +7,8 @@ import type { PlanName } from '@/entities/plan/@x/session'
  *  api mapper instead of rippling into every screen. */
 export interface SessionUser {
   id: string
+  email?: string
+  emailVerified: boolean
   /** The account's tier, resolved with the session so master-only surfaces can be gated on
    *  boot without a second round-trip. Undefined when the server sent a tier this build does
    *  not know — which every gate must read as "not allowed", never as a default tier. */

@@ -199,6 +199,18 @@ func main() {
 		int64(cfg.LLMMaxTokensDefault),
 	)
 	ledger.SetAnchors(usageAnchors{auth: authSvc})
+	authSvc.SetBootstraps(
+		func(ctx context.Context, userID string) error {
+			return defaultVoiceBootstrap(ctx, handle, userID)
+		},
+		func(ctx context.Context, userID string) error {
+			acting, err := authSvc.PlanOf(ctx, userID)
+			if err != nil {
+				return err
+			}
+			return ledger.EnsureMonthlyLot(ctx, userID, acting)
+		},
+	)
 	// A tier upgrade owes credits for the cycle already running (QUOTA-35). The auth
 	// service is built before the ledger, so it takes the credit side here rather than as a
 	// constructor argument -- the same shape as the catalog's reasoning-spend reader below.

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/plan"
 )
@@ -15,13 +17,23 @@ import (
 // and the rpc handler sets it; nothing else in the process needs to know it.
 const SessionCookieName = "pp_session"
 
+const (
+	PasswordMinLen = 8
+	PasswordMaxLen = 128
+	ResendFloor    = 60 * time.Second
+)
+
 // Service is the auth context's behavior. It owns every rule about how a login
 // succeeds, how long a session lives, and what a failure is allowed to reveal.
 type Service struct {
-	store     Store
-	ttl       time.Duration
-	mailer    Mailer
-	webOrigin string
+	store      Store
+	ttl        time.Duration
+	mailer     Mailer
+	webOrigin  string
+	bootstraps []AccountBootstrap
+
+	resendMu   sync.Mutex
+	lastResend map[string]time.Time
 
 	// now and verify are seams for tests in this package, not configuration. Keeping
 	// them unexported means the production API has no test-only surface, while a
@@ -44,13 +56,22 @@ func NewService(store Store, ttl time.Duration) *Service {
 	// erase.
 	dummyHash()
 
-	return &Service{store: store, ttl: ttl, now: time.Now, verify: VerifyPassword}
+	return &Service{
+		store: store, ttl: ttl, now: time.Now, verify: VerifyPassword,
+		lastResend: make(map[string]time.Time),
+	}
 }
 
 // SetMonthlyTopUp gives the service the credit side of a tier upgrade. Without it an
 // upgrade that owes credits fails loudly rather than moving the tier and dropping the
 // grant on the floor.
 func (s *Service) SetMonthlyTopUp(topUp MonthlyTopUp) { s.topUp = topUp }
+
+// SetBootstraps replaces the idempotent account defaults. Replacement lets a repaired
+// dependency heal an account when its verification link is consumed later.
+func (s *Service) SetBootstraps(bootstraps ...AccountBootstrap) {
+	s.bootstraps = append([]AccountBootstrap(nil), bootstraps...)
+}
 
 // SetMailer attaches the delivery edge after the auth service is constructed. A caller that
 // reaches send without this wiring receives an error; transactional mail is never dropped.
@@ -82,6 +103,235 @@ func (s *Service) send(ctx context.Context, user User, mail Mail) error {
 	return nil
 }
 
+// Signup creates an unverified free account, or mails the owner of an address that is
+// already present. Both branches hash the submitted password before they decide so the
+// public response does not become an address-existence timing oracle.
+func (s *Service) Signup(ctx context.Context, rawEmail, password string) error {
+	email, err := normalizedEmail(rawEmail)
+	if err != nil {
+		return err
+	}
+	if err := validatePasswordLength(password); err != nil {
+		return err
+	}
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+
+	existing, found, err := s.accountForEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	if found {
+		return s.send(ctx, existing, existingAccountMail(email))
+	}
+
+	user := User{
+		ID: email, PasswordHash: hash, Email: email, Plan: plan.Free, CreatedAt: s.now(),
+	}
+	if err := s.store.CreateUser(ctx, user); err != nil {
+		if !errors.Is(err, ErrDuplicateUser) {
+			return fmt.Errorf("create signup account: %w", err)
+		}
+		// A concurrent request won the insert. Keep the same public success shape and mail
+		// the owner just like the ordinary taken-address branch.
+		existing, found, loadErr := s.accountForEmail(ctx, email)
+		if loadErr != nil {
+			return fmt.Errorf("resolve concurrently created account: %w", loadErr)
+		}
+		if !found {
+			return errors.New("resolve concurrently created account: duplicate account disappeared")
+		}
+		return s.send(ctx, existing, existingAccountMail(email))
+	}
+	if err := s.runBootstraps(ctx, user.ID); err != nil {
+		return fmt.Errorf("bootstrap signup account: %w", err)
+	}
+	return s.sendVerification(ctx, user)
+}
+
+// ResendVerification deliberately reports no account state. Only an unverified address
+// receives mail, and the per-process floor collapses a burst to one delivery.
+func (s *Service) ResendVerification(ctx context.Context, rawEmail string) error {
+	email, err := normalizedEmail(rawEmail)
+	if err != nil {
+		return err
+	}
+	user, found, err := s.accountForEmail(ctx, email)
+	if err != nil || !found {
+		return err
+	}
+	if user.EmailVerifiedAt != nil {
+		return nil
+	}
+	user.Email = email
+	return s.sendVerification(ctx, user)
+}
+
+// VerifyEmail consumes one verification credential, marks the address, and repairs every
+// idempotent account default. It never creates a session.
+func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
+	if rawToken == "" {
+		return ErrLinkInvalid
+	}
+	link, err := s.store.ConsumeLink(ctx, hashToken(rawToken), LinkPurposeVerifyEmail, s.now())
+	if err != nil {
+		if errors.Is(err, ErrLinkInvalid) {
+			return ErrLinkInvalid
+		}
+		return fmt.Errorf("consume verification link: %w", err)
+	}
+	if err := s.store.MarkEmailVerified(ctx, link.UserID, s.now()); err != nil {
+		return fmt.Errorf("mark email verified: %w", err)
+	}
+	if err := s.runBootstraps(ctx, link.UserID); err != nil {
+		return fmt.Errorf("bootstrap verified account: %w", err)
+	}
+	return nil
+}
+
+// RegisterEmail gives an authenticated emailless account its first address. A taken
+// address produces the same success response and moves the information into mail.
+func (s *Service) RegisterEmail(ctx context.Context, userID, rawEmail string) error {
+	user, err := s.store.GetUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user.EmailVerifiedAt != nil {
+		return ErrEmailAlreadyVerified
+	}
+	email, err := normalizedEmail(rawEmail)
+	if err != nil {
+		return err
+	}
+	existing, found, err := s.accountForEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	if found && existing.ID != user.ID {
+		return s.send(ctx, existing, existingAccountMail(email))
+	}
+	if err := s.store.SetEmail(ctx, user.ID, email, nil); err != nil {
+		if !errors.Is(err, ErrDuplicateUser) {
+			return err
+		}
+		existing, found, loadErr := s.accountForEmail(ctx, email)
+		if loadErr != nil {
+			return fmt.Errorf("resolve concurrently registered email: %w", loadErr)
+		}
+		if !found {
+			return errors.New("resolve concurrently registered email: duplicate account disappeared")
+		}
+		return s.send(ctx, existing, existingAccountMail(email))
+	}
+	user.Email = email
+	user.EmailVerifiedAt = nil
+	return s.sendVerification(ctx, user)
+}
+
+func normalizedEmail(raw string) (string, error) {
+	email, err := NormalizeEmail(raw)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrInvalidEmail, err)
+	}
+	return email, nil
+}
+
+func validatePasswordLength(password string) error {
+	length := utf8.RuneCountInString(password)
+	if length < PasswordMinLen {
+		return ErrPasswordTooShort
+	}
+	if length > PasswordMaxLen {
+		return ErrPasswordTooLong
+	}
+	return nil
+}
+
+func (s *Service) accountForEmail(ctx context.Context, email string) (User, bool, error) {
+	user, err := s.store.GetUser(ctx, email)
+	if err == nil {
+		return user, true, nil
+	}
+	if !errors.Is(err, ErrUserNotFound) {
+		return User{}, false, fmt.Errorf("look up account id: %w", err)
+	}
+	user, err = s.store.GetUserByEmail(ctx, email)
+	if err == nil {
+		return user, true, nil
+	}
+	if errors.Is(err, ErrUserNotFound) {
+		return User{}, false, nil
+	}
+	return User{}, false, fmt.Errorf("look up account email: %w", err)
+}
+
+func (s *Service) sendVerification(ctx context.Context, user User) error {
+	now := s.now()
+	if !s.reserveResend(user.Email, now) {
+		return nil
+	}
+	raw, tokenHash, err := NewLinkToken()
+	if err != nil {
+		s.releaseResend(user.Email, now)
+		return err
+	}
+	linkURL, err := s.verificationLink(raw)
+	if err != nil {
+		s.releaseResend(user.Email, now)
+		return err
+	}
+	if err := s.store.InvalidateLinks(ctx, user.ID, LinkPurposeVerifyEmail, now); err != nil {
+		s.releaseResend(user.Email, now)
+		return fmt.Errorf("invalidate verification links: %w", err)
+	}
+	if err := s.store.CreateLink(ctx, Link{
+		TokenHash: tokenHash, UserID: user.ID, Purpose: LinkPurposeVerifyEmail,
+		Email: user.Email, ExpiresAt: now.Add(VerifyLinkTTL), CreatedAt: now,
+	}); err != nil {
+		s.releaseResend(user.Email, now)
+		return fmt.Errorf("create verification link: %w", err)
+	}
+	if err := s.send(ctx, user, verificationMail(user.Email, linkURL)); err != nil {
+		s.releaseResend(user.Email, now)
+		return err
+	}
+	return nil
+}
+
+func (s *Service) reserveResend(email string, now time.Time) bool {
+	s.resendMu.Lock()
+	defer s.resendMu.Unlock()
+	for address, sentAt := range s.lastResend {
+		if !now.Before(sentAt.Add(ResendFloor)) {
+			delete(s.lastResend, address)
+		}
+	}
+	if sentAt, exists := s.lastResend[email]; exists && now.Before(sentAt.Add(ResendFloor)) {
+		return false
+	}
+	s.lastResend[email] = now
+	return true
+}
+
+func (s *Service) releaseResend(email string, reservedAt time.Time) {
+	s.resendMu.Lock()
+	defer s.resendMu.Unlock()
+	if s.lastResend[email].Equal(reservedAt) {
+		delete(s.lastResend, email)
+	}
+}
+
+func (s *Service) runBootstraps(ctx context.Context, userID string) error {
+	for _, bootstrap := range s.bootstraps {
+		if err := bootstrap(ctx, userID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Login verifies credentials and issues a session, returning the user and the RAW
 // token for the cookie. The raw token is returned exactly once, here; it is never
 // stored, logged, or placed in a response body.
@@ -91,6 +341,11 @@ func (s *Service) send(ctx context.Context, user User, mail Mail) error {
 // message nor the timing tells a caller whether an id exists.
 func (s *Service) Login(ctx context.Context, loginID, password string) (User, string, error) {
 	user, err := s.store.GetUser(ctx, loginID)
+	if errors.Is(err, ErrUserNotFound) {
+		if email, normalizeErr := NormalizeEmail(loginID); normalizeErr == nil {
+			user, err = s.store.GetUserByEmail(ctx, email)
+		}
+	}
 	switch {
 	case errors.Is(err, ErrUserNotFound):
 		// The equalizing derivation. Its result is meaningless — running it is the point.
@@ -100,6 +355,10 @@ func (s *Service) Login(ctx context.Context, loginID, password string) (User, st
 		return User{}, "", fmt.Errorf("load user: %w", err)
 	}
 
+	if user.PasswordHash == "" {
+		_, _ = s.verify(password, dummyHash())
+		return User{}, "", ErrInvalidCredentials
+	}
 	ok, err := s.verify(password, user.PasswordHash)
 	if err != nil {
 		// A stored hash that will not parse is an operator problem (a hand-edited row,
@@ -109,6 +368,12 @@ func (s *Service) Login(ctx context.Context, loginID, password string) (User, st
 		return User{}, "", ErrInvalidCredentials
 	}
 	if !ok {
+		return User{}, "", ErrInvalidCredentials
+	}
+	if user.Email != "" && user.EmailVerifiedAt == nil {
+		if err := s.sendVerification(ctx, user); err != nil {
+			slog.Error("could not resend verification after correct credentials", "user_id", user.ID, "err", err)
+		}
 		return User{}, "", ErrInvalidCredentials
 	}
 
@@ -191,6 +456,11 @@ func (s *Service) CreatedAt(ctx context.Context, userID string) (time.Time, erro
 	return s.store.GetUserCreatedAt(ctx, userID)
 }
 
+// Account returns the client-visible identity fields for an authenticated account.
+func (s *Service) Account(ctx context.Context, userID string) (User, error) {
+	return s.store.GetUser(ctx, userID)
+}
+
 // ListUsers returns every account for the operator screen, without password hashes.
 func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	users, err := s.store.ListUsers(ctx)
@@ -268,9 +538,8 @@ func (s *Service) SweepExpired(ctx context.Context) (int64, error) {
 	return n, nil
 }
 
-// CreateUser provisions an account on a tier. It is reachable only from the operator
-// command (auth/provision) — no RPC calls it, because postpilot has no signup (PRD F-1),
-// which is also why the tier is an operator argument and never a request field.
+// CreateUser provisions an account on a tier from the operator command. Unlike Signup,
+// the tier is an operator argument; it is never accepted from a public request.
 func (s *Service) CreateUser(ctx context.Context, loginID, password string, tier plan.Plan) error {
 	loginID = strings.TrimSpace(loginID)
 	if loginID == "" {

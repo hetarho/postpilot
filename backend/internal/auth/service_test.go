@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -206,6 +207,18 @@ func (m *fakeMailer) Send(_ context.Context, mail Mail) error {
 	return m.err
 }
 
+func verificationToken(t *testing.T, mail Mail) string {
+	t.Helper()
+	for _, line := range strings.Split(mail.Text, "\n") {
+		parsed, err := url.Parse(line)
+		if err == nil && parsed.Path == "/verify-email" && parsed.Query().Get("token") != "" {
+			return parsed.Query().Get("token")
+		}
+	}
+	t.Fatalf("verification mail has no token URL: %s", mail.Text)
+	return ""
+}
+
 // newTestService returns a service with a frozen clock and a seeded account.
 func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 	t.Helper()
@@ -372,6 +385,206 @@ func TestSendFailsWhenNoMailerIsWired(t *testing.T) {
 	user.Email = "alice@example.com"
 	if err := svc.send(context.Background(), user, existingAccountMail(user.Email)); err == nil {
 		t.Fatal("send silently dropped mail with no adapter")
+	}
+}
+
+func TestSignupCreatesUnverifiedFreeAccountAndTakenAddressLooksSuccessful(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	store := newFakeStore()
+	svc := NewService(store, time.Hour)
+	svc.now = func() time.Time { return now }
+	svc.SetWebOrigin("https://postpilot.example.com")
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+	bootstraps := 0
+	svc.SetBootstraps(func(_ context.Context, userID string) error {
+		if userID != "alice@example.com" {
+			t.Fatalf("bootstrap user = %q", userID)
+		}
+		bootstraps++
+		return nil
+	})
+
+	if err := svc.Signup(context.Background(), " Alice@Example.COM ", "password1"); err != nil {
+		t.Fatal(err)
+	}
+	created := store.users["alice@example.com"]
+	if created.ID != "alice@example.com" || created.Email != "alice@example.com" ||
+		created.EmailVerifiedAt != nil || created.Plan != plan.Free || created.PasswordHash == "" {
+		t.Fatalf("created user = %+v", created)
+	}
+	if bootstraps != 1 || len(mailer.sent) != 1 || !strings.Contains(mailer.sent[0].Subject, "Verify") {
+		t.Fatalf("bootstraps=%d mail=%+v", bootstraps, mailer.sent)
+	}
+
+	if err := svc.Signup(context.Background(), "ALICE@example.com", "different-password"); err != nil {
+		t.Fatalf("taken signup = %v, want the same nil response", err)
+	}
+	if len(store.users) != 1 || bootstraps != 1 {
+		t.Fatalf("taken signup wrote state: users=%d bootstraps=%d", len(store.users), bootstraps)
+	}
+	if len(mailer.sent) != 2 || !strings.Contains(mailer.sent[1].Subject, "Account notice") {
+		t.Fatalf("taken signup mail = %+v", mailer.sent)
+	}
+}
+
+func TestSignupValidatesPasswordLength(t *testing.T) {
+	svc := NewService(newFakeStore(), time.Hour)
+	for _, tc := range []struct {
+		password string
+		want     error
+	}{
+		{strings.Repeat("a", PasswordMinLen-1), ErrPasswordTooShort},
+		{strings.Repeat("a", PasswordMaxLen+1), ErrPasswordTooLong},
+	} {
+		if err := svc.Signup(context.Background(), "alice@example.com", tc.password); !errors.Is(err, tc.want) {
+			t.Errorf("password length %d: %v, want %v", len(tc.password), err, tc.want)
+		}
+	}
+}
+
+func TestVerifyEmailIsSingleUseExpiresAndRunsBootstrapsWithoutASession(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	store := newFakeStore()
+	svc := NewService(store, time.Hour)
+	svc.now = func() time.Time { return now }
+	svc.SetWebOrigin("https://postpilot.example.com")
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+	bootstraps := 0
+	svc.SetBootstraps(func(context.Context, string) error { bootstraps++; return nil })
+	if err := svc.Signup(context.Background(), "alice@example.com", "password1"); err != nil {
+		t.Fatal(err)
+	}
+	raw := verificationToken(t, mailer.sent[0])
+	if err := svc.VerifyEmail(context.Background(), raw); err != nil {
+		t.Fatal(err)
+	}
+	verified := store.users["alice@example.com"].EmailVerifiedAt
+	if verified == nil || !verified.Equal(now) || bootstraps != 2 || len(store.sessions) != 0 {
+		t.Fatalf("verified=%v bootstraps=%d sessions=%d", verified, bootstraps, len(store.sessions))
+	}
+	if err := svc.VerifyEmail(context.Background(), raw); !errors.Is(err, ErrLinkInvalid) {
+		t.Fatalf("replay = %v, want ErrLinkInvalid", err)
+	}
+
+	expiredRaw, expiredHash, err := NewLinkToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.links[expiredHash] = Link{
+		TokenHash: expiredHash, UserID: "alice@example.com", Purpose: LinkPurposeVerifyEmail,
+		Email: "alice@example.com", ExpiresAt: now, CreatedAt: now.Add(-VerifyLinkTTL),
+	}
+	if err := svc.VerifyEmail(context.Background(), expiredRaw); !errors.Is(err, ErrLinkInvalid) {
+		t.Fatalf("expired = %v, want ErrLinkInvalid", err)
+	}
+}
+
+func TestResendVerificationHidesAccountStateAndFloorsBursts(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	store := newFakeStore()
+	svc := NewService(store, time.Hour)
+	svc.now = func() time.Time { return now }
+	svc.SetWebOrigin("https://postpilot.example.com")
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+
+	if err := svc.ResendVerification(context.Background(), "unknown@example.com"); err != nil {
+		t.Fatalf("unknown = %v", err)
+	}
+	verifiedAt := now.Add(-time.Hour)
+	store.users["verified@example.com"] = User{
+		ID: "verified@example.com", Email: "verified@example.com", EmailVerifiedAt: &verifiedAt,
+	}
+	if err := svc.ResendVerification(context.Background(), "verified@example.com"); err != nil {
+		t.Fatalf("verified = %v", err)
+	}
+	store.users["waiting@example.com"] = User{ID: "waiting@example.com", Email: "waiting@example.com"}
+	for range 3 {
+		if err := svc.ResendVerification(context.Background(), "WAITING@example.com"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(mailer.sent) != 1 {
+		t.Fatalf("burst sent %d messages, want one", len(mailer.sent))
+	}
+	now = now.Add(ResendFloor)
+	if err := svc.ResendVerification(context.Background(), "waiting@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if len(mailer.sent) != 2 {
+		t.Fatalf("post-floor messages = %d, want two", len(mailer.sent))
+	}
+}
+
+func TestLoginByEmailAndUnverifiedOrGoogleOnlyCredentialsStayGeneric(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	svc, store := newTestService(t, now)
+	svc.SetWebOrigin("https://postpilot.example.com")
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+
+	verifiedAt := now
+	legacy := store.users["alice"]
+	legacy.Email = "alice@example.com"
+	legacy.EmailVerifiedAt = &verifiedAt
+	store.users["alice"] = legacy
+	if user, _, err := svc.Login(context.Background(), "ALICE@EXAMPLE.COM", "s3cret"); err != nil || user.ID != "alice" {
+		t.Fatalf("email login = %+v, %v", user, err)
+	}
+
+	waiting := legacy
+	waiting.ID = "waiting@example.com"
+	waiting.Email = waiting.ID
+	waiting.EmailVerifiedAt = nil
+	store.users[waiting.ID] = waiting
+	_, _, wrong := svc.Login(context.Background(), waiting.ID, "wrong")
+	_, _, correct := svc.Login(context.Background(), waiting.ID, "s3cret")
+	if !errors.Is(wrong, ErrInvalidCredentials) || wrong.Error() != correct.Error() || len(mailer.sent) != 1 {
+		t.Fatalf("wrong=%v correct=%v mail=%d", wrong, correct, len(mailer.sent))
+	}
+
+	store.users["google@example.com"] = User{
+		ID: "google@example.com", Email: "google@example.com", EmailVerifiedAt: &verifiedAt,
+	}
+	var verifiedHash string
+	svc.verify = func(_ string, encoded string) (bool, error) { verifiedHash = encoded; return false, nil }
+	if _, _, err := svc.Login(context.Background(), "google@example.com", "guess"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatal(err)
+	}
+	if verifiedHash != dummyHash() {
+		t.Errorf("Google-only account verified against %q, want dummy hash", verifiedHash)
+	}
+}
+
+func TestRegisterEmailHidesTakenAddressThenVerifiesTheHappyPath(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	svc, store := newTestService(t, now)
+	svc.SetWebOrigin("https://postpilot.example.com")
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+	store.users["bob"] = User{ID: "bob", Email: "taken@example.com", Plan: plan.Free}
+
+	if err := svc.RegisterEmail(context.Background(), "alice", "taken@example.com"); err != nil {
+		t.Fatalf("taken = %v, want nil", err)
+	}
+	if store.users["alice"].Email != "" || len(mailer.sent) != 1 || mailer.sent[0].To != "taken@example.com" {
+		t.Fatalf("alice=%+v mail=%+v", store.users["alice"], mailer.sent)
+	}
+
+	if err := svc.RegisterEmail(context.Background(), "alice", "alice@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	raw := verificationToken(t, mailer.sent[1])
+	if err := svc.VerifyEmail(context.Background(), raw); err != nil {
+		t.Fatal(err)
+	}
+	if store.users["alice"].EmailVerifiedAt == nil {
+		t.Fatal("registered email was not verified")
+	}
+	if err := svc.RegisterEmail(context.Background(), "alice", "other@example.com"); !errors.Is(err, ErrEmailAlreadyVerified) {
+		t.Fatalf("verified account register = %v, want ErrEmailAlreadyVerified", err)
 	}
 }
 

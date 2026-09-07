@@ -135,7 +135,21 @@ export function LoginPage() {
         {/* Below the credential action and OUTSIDE the form: a secondary link inside it would be
             one more tab stop between the password field and 로그인, and a link is not part of the
             submission. It changes nothing about the form's failure or redirect behavior. */}
-        <p className="mt-6 text-center">
+        <nav
+          className="mt-6 flex items-center justify-center gap-3"
+          aria-label={t('links.more', { ns: 'auth' })}
+        >
+          <Link
+            to="/signup"
+            search={isInAppPath(redirect) ? { redirect } : {}}
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline',
+            })}
+          >
+            {t('links.signup', { ns: 'auth' })}
+          </Link>
           <Link
             to="/about"
             // The blocked destination travels with the visitor: About hands it back to this page,
@@ -149,7 +163,7 @@ export function LoginPage() {
           >
             {t('about.link', { ns: 'marketing' })}
           </Link>
-        </p>
+        </nav>
       </div>
     </main>
   )

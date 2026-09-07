@@ -12,7 +12,102 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/auth.proto.
  */
 export const file_postpilot_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb3N0cGlsb3QvdjEvYXV0aC5wcm90bxIMcG9zdHBpbG90LnYxIjIKDExvZ2luUmVxdWVzdBIQCghsb2dpbl9pZBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSJTCg1Mb2dpblJlc3BvbnNlEiAKBHVzZXIYASABKAsyEi5wb3N0cGlsb3QudjEuVXNlchIgCgRwbGFuGAIgASgOMhIucG9zdHBpbG90LnYxLlBsYW4iDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiUwoNR2V0TWVSZXNwb25zZRIgCgR1c2VyGAEgASgLMhIucG9zdHBpbG90LnYxLlVzZXISIAoEcGxhbhgCIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuIhIKBFVzZXISCgoCaWQYASABKAky3AEKC0F1dGhTZXJ2aWNlEkIKBUxvZ2luEhoucG9zdHBpbG90LnYxLkxvZ2luUmVxdWVzdBobLnBvc3RwaWxvdC52MS5Mb2dpblJlc3BvbnNlIgASRQoGTG9nb3V0EhsucG9zdHBpbG90LnYxLkxvZ291dFJlcXVlc3QaHC5wb3N0cGlsb3QudjEuTG9nb3V0UmVzcG9uc2UiABJCCgVHZXRNZRIaLnBvc3RwaWxvdC52MS5HZXRNZVJlcXVlc3QaGy5wb3N0cGlsb3QudjEuR2V0TWVSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_plan]);
+  fileDesc("Chdwb3N0cGlsb3QvdjEvYXV0aC5wcm90bxIMcG9zdHBpbG90LnYxIjAKDVNpZ251cFJlcXVlc3QSDQoFZW1haWwYASABKAkSEAoIcGFzc3dvcmQYAiABKAkiEAoOU2lnbnVwUmVzcG9uc2UiKgoZUmVzZW5kVmVyaWZpY2F0aW9uUmVxdWVzdBINCgVlbWFpbBgBIAEoCSIcChpSZXNlbmRWZXJpZmljYXRpb25SZXNwb25zZSIjChJWZXJpZnlFbWFpbFJlcXVlc3QSDQoFdG9rZW4YASABKAkiFQoTVmVyaWZ5RW1haWxSZXNwb25zZSIyCgxMb2dpblJlcXVlc3QSEAoIbG9naW5faWQYASABKAkSEAoIcGFzc3dvcmQYAiABKAkiUwoNTG9naW5SZXNwb25zZRIgCgR1c2VyGAEgASgLMhIucG9zdHBpbG90LnYxLlVzZXISIAoEcGxhbhgCIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuIg8KDUxvZ291dFJlcXVlc3QiEAoOTG9nb3V0UmVzcG9uc2UiDgoMR2V0TWVSZXF1ZXN0IlMKDUdldE1lUmVzcG9uc2USIAoEdXNlchgBIAEoCzISLnBvc3RwaWxvdC52MS5Vc2VyEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbiIlChRSZWdpc3RlckVtYWlsUmVxdWVzdBINCgVlbWFpbBgBIAEoCSIXChVSZWdpc3RlckVtYWlsUmVzcG9uc2UiOQoEVXNlchIKCgJpZBgBIAEoCRINCgVlbWFpbBgCIAEoCRIWCg5lbWFpbF92ZXJpZmllZBgDIAEoCDLABAoLQXV0aFNlcnZpY2USRQoGU2lnbnVwEhsucG9zdHBpbG90LnYxLlNpZ251cFJlcXVlc3QaHC5wb3N0cGlsb3QudjEuU2lnbnVwUmVzcG9uc2UiABJpChJSZXNlbmRWZXJpZmljYXRpb24SJy5wb3N0cGlsb3QudjEuUmVzZW5kVmVyaWZpY2F0aW9uUmVxdWVzdBooLnBvc3RwaWxvdC52MS5SZXNlbmRWZXJpZmljYXRpb25SZXNwb25zZSIAElQKC1ZlcmlmeUVtYWlsEiAucG9zdHBpbG90LnYxLlZlcmlmeUVtYWlsUmVxdWVzdBohLnBvc3RwaWxvdC52MS5WZXJpZnlFbWFpbFJlc3BvbnNlIgASQgoFTG9naW4SGi5wb3N0cGlsb3QudjEuTG9naW5SZXF1ZXN0GhsucG9zdHBpbG90LnYxLkxvZ2luUmVzcG9uc2UiABJFCgZMb2dvdXQSGy5wb3N0cGlsb3QudjEuTG9nb3V0UmVxdWVzdBocLnBvc3RwaWxvdC52MS5Mb2dvdXRSZXNwb25zZSIAEkIKBUdldE1lEhoucG9zdHBpbG90LnYxLkdldE1lUmVxdWVzdBobLnBvc3RwaWxvdC52MS5HZXRNZVJlc3BvbnNlIgASWgoNUmVnaXN0ZXJFbWFpbBIiLnBvc3RwaWxvdC52MS5SZWdpc3RlckVtYWlsUmVxdWVzdBojLnBvc3RwaWxvdC52MS5SZWdpc3RlckVtYWlsUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_plan]);
+
+/**
+ * @generated from message postpilot.v1.SignupRequest
+ */
+export type SignupRequest = Message<"postpilot.v1.SignupRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+
+  /**
+   * @generated from field: string password = 2;
+   */
+  password: string;
+};
+
+/**
+ * Describes the message postpilot.v1.SignupRequest.
+ * Use `create(SignupRequestSchema)` to create a new message.
+ */
+export const SignupRequestSchema: GenMessage<SignupRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 0);
+
+/**
+ * @generated from message postpilot.v1.SignupResponse
+ */
+export type SignupResponse = Message<"postpilot.v1.SignupResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.SignupResponse.
+ * Use `create(SignupResponseSchema)` to create a new message.
+ */
+export const SignupResponseSchema: GenMessage<SignupResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 1);
+
+/**
+ * @generated from message postpilot.v1.ResendVerificationRequest
+ */
+export type ResendVerificationRequest = Message<"postpilot.v1.ResendVerificationRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ResendVerificationRequest.
+ * Use `create(ResendVerificationRequestSchema)` to create a new message.
+ */
+export const ResendVerificationRequestSchema: GenMessage<ResendVerificationRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 2);
+
+/**
+ * @generated from message postpilot.v1.ResendVerificationResponse
+ */
+export type ResendVerificationResponse = Message<"postpilot.v1.ResendVerificationResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.ResendVerificationResponse.
+ * Use `create(ResendVerificationResponseSchema)` to create a new message.
+ */
+export const ResendVerificationResponseSchema: GenMessage<ResendVerificationResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 3);
+
+/**
+ * @generated from message postpilot.v1.VerifyEmailRequest
+ */
+export type VerifyEmailRequest = Message<"postpilot.v1.VerifyEmailRequest"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+};
+
+/**
+ * Describes the message postpilot.v1.VerifyEmailRequest.
+ * Use `create(VerifyEmailRequestSchema)` to create a new message.
+ */
+export const VerifyEmailRequestSchema: GenMessage<VerifyEmailRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 4);
+
+/**
+ * @generated from message postpilot.v1.VerifyEmailResponse
+ */
+export type VerifyEmailResponse = Message<"postpilot.v1.VerifyEmailResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.VerifyEmailResponse.
+ * Use `create(VerifyEmailResponseSchema)` to create a new message.
+ */
+export const VerifyEmailResponseSchema: GenMessage<VerifyEmailResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 5);
 
 /**
  * @generated from message postpilot.v1.LoginRequest
@@ -34,7 +129,7 @@ export type LoginRequest = Message<"postpilot.v1.LoginRequest"> & {
  * Use `create(LoginRequestSchema)` to create a new message.
  */
 export const LoginRequestSchema: GenMessage<LoginRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 0);
+  messageDesc(file_postpilot_v1_auth, 6);
 
 /**
  * @generated from message postpilot.v1.LoginResponse
@@ -59,7 +154,7 @@ export type LoginResponse = Message<"postpilot.v1.LoginResponse"> & {
  * Use `create(LoginResponseSchema)` to create a new message.
  */
 export const LoginResponseSchema: GenMessage<LoginResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 1);
+  messageDesc(file_postpilot_v1_auth, 7);
 
 /**
  * @generated from message postpilot.v1.LogoutRequest
@@ -72,7 +167,7 @@ export type LogoutRequest = Message<"postpilot.v1.LogoutRequest"> & {
  * Use `create(LogoutRequestSchema)` to create a new message.
  */
 export const LogoutRequestSchema: GenMessage<LogoutRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 2);
+  messageDesc(file_postpilot_v1_auth, 8);
 
 /**
  * @generated from message postpilot.v1.LogoutResponse
@@ -85,7 +180,7 @@ export type LogoutResponse = Message<"postpilot.v1.LogoutResponse"> & {
  * Use `create(LogoutResponseSchema)` to create a new message.
  */
 export const LogoutResponseSchema: GenMessage<LogoutResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 3);
+  messageDesc(file_postpilot_v1_auth, 9);
 
 /**
  * @generated from message postpilot.v1.GetMeRequest
@@ -98,7 +193,7 @@ export type GetMeRequest = Message<"postpilot.v1.GetMeRequest"> & {
  * Use `create(GetMeRequestSchema)` to create a new message.
  */
 export const GetMeRequestSchema: GenMessage<GetMeRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 4);
+  messageDesc(file_postpilot_v1_auth, 10);
 
 /**
  * @generated from message postpilot.v1.GetMeResponse
@@ -123,11 +218,41 @@ export type GetMeResponse = Message<"postpilot.v1.GetMeResponse"> & {
  * Use `create(GetMeResponseSchema)` to create a new message.
  */
 export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 5);
+  messageDesc(file_postpilot_v1_auth, 11);
 
 /**
- * User is everything the client may know about an account. There is no display name,
- * email, or role — a two-person tool has no use for them (PRD §1).
+ * @generated from message postpilot.v1.RegisterEmailRequest
+ */
+export type RegisterEmailRequest = Message<"postpilot.v1.RegisterEmailRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+};
+
+/**
+ * Describes the message postpilot.v1.RegisterEmailRequest.
+ * Use `create(RegisterEmailRequestSchema)` to create a new message.
+ */
+export const RegisterEmailRequestSchema: GenMessage<RegisterEmailRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 12);
+
+/**
+ * @generated from message postpilot.v1.RegisterEmailResponse
+ */
+export type RegisterEmailResponse = Message<"postpilot.v1.RegisterEmailResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.RegisterEmailResponse.
+ * Use `create(RegisterEmailResponseSchema)` to create a new message.
+ */
+export const RegisterEmailResponseSchema: GenMessage<RegisterEmailResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 13);
+
+/**
+ * User is everything the client may know about an account. Password material never crosses
+ * this contract.
  *
  * @generated from message postpilot.v1.User
  */
@@ -136,6 +261,16 @@ export type User = Message<"postpilot.v1.User"> & {
    * @generated from field: string id = 1;
    */
   id: string;
+
+  /**
+   * @generated from field: string email = 2;
+   */
+  email: string;
+
+  /**
+   * @generated from field: bool email_verified = 3;
+   */
+  emailVerified: boolean;
 };
 
 /**
@@ -143,12 +278,11 @@ export type User = Message<"postpilot.v1.User"> & {
  * Use `create(UserSchema)` to create a new message.
  */
 export const UserSchema: GenMessage<User> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 6);
+  messageDesc(file_postpilot_v1_auth, 14);
 
 /**
- * auth.proto is the identity slice of the contract. Accounts are created by the
- * operator (`api adduser`), never over the wire — there is deliberately no Signup RPC
- * (PRD F-1).
+ * auth.proto is the identity slice of the contract. Accounts may be created by their
+ * owner over the public signup path or by the operator (`api adduser`).
  *
  * The session token appears in NO message on this page. It travels only in the
  * Set-Cookie / Cookie headers of the underlying HTTP exchange, which is what keeps it
@@ -157,6 +291,37 @@ export const UserSchema: GenMessage<User> = /*@__PURE__*/
  * @generated from service postpilot.v1.AuthService
  */
 export const AuthService: GenService<{
+  /**
+   * Creates an unverified free account and sends its verification mail. The empty
+   * response is identical when the address already belongs to an account.
+   *
+   * @generated from rpc postpilot.v1.AuthService.Signup
+   */
+  signup: {
+    methodKind: "unary";
+    input: typeof SignupRequestSchema;
+    output: typeof SignupResponseSchema;
+  },
+  /**
+   * Sends a fresh verification link when the address names an unverified account.
+   *
+   * @generated from rpc postpilot.v1.AuthService.ResendVerification
+   */
+  resendVerification: {
+    methodKind: "unary";
+    input: typeof ResendVerificationRequestSchema;
+    output: typeof ResendVerificationResponseSchema;
+  },
+  /**
+   * Consumes a verification link. Verification never creates a session.
+   *
+   * @generated from rpc postpilot.v1.AuthService.VerifyEmail
+   */
+  verifyEmail: {
+    methodKind: "unary";
+    input: typeof VerifyEmailRequestSchema;
+    output: typeof VerifyEmailResponseSchema;
+  },
   /**
    * Sets the session cookie on the HTTP response.
    *
@@ -186,6 +351,16 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof GetMeRequestSchema;
     output: typeof GetMeResponseSchema;
+  },
+  /**
+   * Adds the first email address to an authenticated legacy account.
+   *
+   * @generated from rpc postpilot.v1.AuthService.RegisterEmail
+   */
+  registerEmail: {
+    methodKind: "unary";
+    input: typeof RegisterEmailRequestSchema;
+    output: typeof RegisterEmailResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_auth, 0);

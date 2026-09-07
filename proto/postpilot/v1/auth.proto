@@ -6,21 +6,48 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 
 import "postpilot/v1/plan.proto";
 
-// auth.proto is the identity slice of the contract. Accounts are created by the
-// operator (`api adduser`), never over the wire — there is deliberately no Signup RPC
-// (PRD F-1).
+// auth.proto is the identity slice of the contract. Accounts may be created by their
+// owner over the public signup path or by the operator (`api adduser`).
 //
 // The session token appears in NO message on this page. It travels only in the
 // Set-Cookie / Cookie headers of the underlying HTTP exchange, which is what keeps it
 // out of response bodies, logs, and URLs — and out of reach of JavaScript.
 service AuthService {
+  // Creates an unverified free account and sends its verification mail. The empty
+  // response is identical when the address already belongs to an account.
+  rpc Signup(SignupRequest) returns (SignupResponse) {}
+  // Sends a fresh verification link when the address names an unverified account.
+  rpc ResendVerification(ResendVerificationRequest) returns (ResendVerificationResponse) {}
+  // Consumes a verification link. Verification never creates a session.
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse) {}
   // Sets the session cookie on the HTTP response.
   rpc Login(LoginRequest) returns (LoginResponse) {}
   // Revokes the session row server-side and clears the cookie.
   rpc Logout(LogoutRequest) returns (LogoutResponse) {}
   // Session probe for app boot; the interceptor answers 401 when there is no session.
   rpc GetMe(GetMeRequest) returns (GetMeResponse) {}
+  // Adds the first email address to an authenticated legacy account.
+  rpc RegisterEmail(RegisterEmailRequest) returns (RegisterEmailResponse) {}
 }
+
+message SignupRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message SignupResponse {}
+
+message ResendVerificationRequest {
+  string email = 1;
+}
+
+message ResendVerificationResponse {}
+
+message VerifyEmailRequest {
+  string token = 1;
+}
+
+message VerifyEmailResponse {}
 
 message LoginRequest {
   string login_id = 1;
@@ -47,8 +74,16 @@ message GetMeResponse {
   Plan plan = 2;
 }
 
-// User is everything the client may know about an account. There is no display name,
-// email, or role — a two-person tool has no use for them (PRD §1).
+message RegisterEmailRequest {
+  string email = 1;
+}
+
+message RegisterEmailResponse {}
+
+// User is everything the client may know about an account. Password material never crosses
+// this contract.
 message User {
   string id = 1;
+  string email = 2;
+  bool email_verified = 3;
 }
