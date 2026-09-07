@@ -57,13 +57,10 @@ func (s Supervisor) Run(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			backoff = interval
-		} else if connect.CodeOf(err) == connect.CodeUnauthenticated {
+		if connect.CodeOf(err) == connect.CodeUnauthenticated {
 			return errors.New("publishing token was revoked")
-		} else if backoff < time.Minute {
-			backoff *= 2
 		}
+		backoff = backoffAfter(backoff, interval, err)
 		jitter := time.Duration(rand.Int64N(int64(backoff / 4)))
 		select {
 		case <-ctx.Done():
@@ -71,6 +68,20 @@ func (s Supervisor) Run(ctx context.Context) error {
 		case <-time.After(backoff + jitter):
 		}
 	}
+}
+
+// backoffAfter applies PUBLISH-29's polling rule to one failed claim. An empty queue is
+// the ordinary answer and returns to the base interval, so a Mac that slept through a
+// quiet night resumes at full cadence; any other transient failure doubles the wait, and
+// the doubling stops once the wait has passed a minute.
+func backoffAfter(current, interval time.Duration, err error) time.Duration {
+	if connect.CodeOf(err) == connect.CodeNotFound {
+		return interval
+	}
+	if current < time.Minute {
+		return current * 2
+	}
+	return current
 }
 
 func (s Supervisor) acquire(ctx context.Context) bool {

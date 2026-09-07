@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/postpilot/agent/internal/browser"
 	postpilotv1 "github.com/postpilot/agent/internal/gen/postpilot/v1"
 	"github.com/postpilot/agent/internal/publishing"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -463,5 +466,119 @@ func TestFakeNaverCoversEveryBlockTypeWithEightOrderedJPEGs(t *testing.T) {
 	}
 	if !slices.Equal(ordinals, []int{0, 1, 2, 3, 4, 5, 6, 7}) {
 		t.Fatalf("upload ordinals=%v", ordinals)
+	}
+}
+
+// PUBLISH-19 lets the server send the typed manifest and settings but never executable
+// JavaScript, selectors, screen coordinates, keystroke scripts or a macro language. A
+// manifest carrying all of those in its text must reach the editor as inert text, and the
+// closed Mutation shape is what makes "the server cannot send an action" structural rather
+// than a matter of the driver being careful.
+func TestServerSuppliedSelectorsScriptsCoordinatesAndActionsStayInertText(t *testing.T) {
+	hostile := []string{
+		`button[class^="confirm_btn__"]`,
+		`<script>document.querySelector('button').click()</script>`,
+		`{"action":"click","selector":"#publish"}`,
+		`{"x":412,"y":877}`,
+		`Cmd+Enter then press 발행`,
+	}
+	input := completeInput(t)
+	content := input.Manifest.GetContent()
+	content.Title = hostile[0]
+	content.Blocks = []*postpilotv1.Block{
+		{Type: postpilotv1.BlockType_TEXT, Content: hostile[1]},
+		{Type: postpilotv1.BlockType_HEADING, Content: hostile[2], Level: 1},
+		{Type: postpilotv1.BlockType_QUOTE, Content: hostile[3]},
+		{Type: postpilotv1.BlockType_LIST, Items: []string{hostile[4]}},
+	}
+	input.Manifest.Tags = []string{hostile[0]}
+	input.Manifest.CategoryName = hostile[3]
+	input.Manifest.Assets = nil
+	input.AssetPaths = nil
+
+	port := basePort()
+	result := (Publisher{Port: port}).Prepare(context.Background(), input, &recordingReporter{})
+	if result.Status != PreparationReady || result.Prepared == nil {
+		t.Fatalf("result=%+v", result)
+	}
+	entered := []string{
+		port.mutations[0].Text, port.mutations[1].Text, port.mutations[2].Text,
+		port.mutations[3].Text, port.mutations[4].Items[0],
+	}
+	for index, want := range hostile {
+		if entered[index] != want {
+			t.Fatalf("mutation %d entered %q, want the manifest string verbatim %q", index, entered[index], want)
+		}
+	}
+	if !slices.Equal(port.mutations[5].Values, []string{hostile[0]}) || port.mutations[6].Name != hostile[3] {
+		t.Fatalf("settings were interpreted: %+v", port.mutations[5:7])
+	}
+	// A quote is the one block the Naver export wraps, and it is wrapped as text rather
+	// than parsed, so the selector inside it survives untouched.
+	body := result.Prepared.Snapshot.Body
+	if body[2].Text != "“"+hostile[3]+"”" {
+		t.Fatalf("quote body = %q", body[2].Text)
+	}
+	closed := map[MutationKind]struct{}{
+		MutationTitle: {}, MutationText: {}, MutationHeading: {}, MutationQuote: {}, MutationList: {},
+		MutationImagePlaceholder: {}, MutationUploadImage: {}, MutationImageCaption: {},
+		MutationTags: {}, MutationCategory: {}, MutationVisibility: {},
+	}
+	for _, mutation := range port.mutations {
+		if _, ok := closed[mutation.Kind]; !ok {
+			t.Fatalf("Prepare emitted %q, which is outside the eleven reviewed kinds", mutation.Kind)
+		}
+	}
+}
+
+// The driver can only be asked for what Mutation can express. Pinning the field set makes
+// a future selector, script, coordinate or action field a test failure rather than a
+// review oversight (PUBLISH-19, PUBLISH-20).
+func TestMutationCarriesNoFieldThatCouldHoldAnInstruction(t *testing.T) {
+	want := []string{"Kind", "Text", "Level", "Items", "Ordinal", "AssetPath", "Values", "ID", "Name"}
+	shape := reflect.TypeOf(Mutation{})
+	got := make([]string, shape.NumField())
+	for index := range got {
+		got[index] = shape.Field(index).Name
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("Mutation fields = %v, want the closed data-only set %v", got, want)
+	}
+	banned := regexp.MustCompile(`(?i)selector|script|expression|coordinate|keystroke|macro|action|javascript|css|xpath`)
+	for _, name := range got {
+		if banned.MatchString(name) {
+			t.Fatalf("Mutation field %q can carry an executable instruction", name)
+		}
+	}
+	manifest := (&postpilotv1.PublishManifest{}).ProtoReflect().Descriptor().Fields()
+	for index := range manifest.Len() {
+		if name := string(manifest.Get(index).Name()); banned.MatchString(name) {
+			t.Fatalf("PublishManifest field %q can carry an executable instruction", name)
+		}
+	}
+}
+
+// PUBLISH-19 r3 permits a pointer event at geometry a locator just resolved but forbids
+// any coordinate being recorded, stored, replayed or carried between runs. The behavioural
+// half belongs to the driver's own mutations; what is structural is that no reviewed type
+// on the path has anywhere to keep one, so a point cannot outlive the call that read it.
+func TestNoReviewedDriverTypeCanRetainACoordinate(t *testing.T) {
+	geometry := regexp.MustCompile(`(?i)^(x|y|point|coord|rect|box|offset|position|viewport|geometry|screen)`)
+	for _, shape := range []reflect.Type{reflect.TypeOf(CDPPort{}), reflect.TypeOf(browser.Page{}), reflect.TypeOf(Snapshot{}), reflect.TypeOf(FinalControl{})} {
+		for index := range shape.NumField() {
+			field := shape.Field(index)
+			if geometry.MatchString(field.Name) {
+				t.Fatalf("%s.%s can retain a coordinate between actions", shape.Name(), field.Name)
+			}
+			switch field.Type.Kind() {
+			case reflect.Float32, reflect.Float64:
+				t.Fatalf("%s.%s is a bare number of the shape a coordinate takes", shape.Name(), field.Name)
+			}
+		}
+	}
+	// driverPoint is the one coordinate-shaped value in the package. It exists only as a
+	// call-scoped result, so it must never be reachable from a field of the port.
+	if reflect.TypeOf(CDPPort{}).NumField() != 2 {
+		t.Fatalf("CDPPort grew a field; recheck that none of them retains resolved geometry")
 	}
 }

@@ -120,3 +120,69 @@ func TestSupervisorStopsOnlyTheRevokedConnection(t *testing.T) {
 		t.Fatal("revoked connection did not release the cross-account permit")
 	}
 }
+
+// PUBLISH-29 pins the polling cadence itself, so the rule is tested as a decision rather
+// than by waiting on a clock: an empty queue is the ordinary answer and must not be
+// treated as a fault, which is also what lets a Mac that slept resume at full cadence.
+func TestBackoffGrowsOnlyOnTransientFaultsAndAnEmptyQueueResumesFullCadence(t *testing.T) {
+	interval := 5 * time.Second
+	transient := connect.NewError(connect.CodeUnavailable, errors.New("VPS unreachable"))
+	emptyQueue := connect.NewError(connect.CodeNotFound, errors.New("no queued job"))
+	for name, testCase := range map[string]struct {
+		current time.Duration
+		err     error
+		want    time.Duration
+	}{
+		"empty queue holds the base interval":     {interval, emptyQueue, interval},
+		"empty queue after a long outage resets":  {80 * time.Second, emptyQueue, interval},
+		"first transient fault doubles":           {interval, transient, 10 * time.Second},
+		"repeated transient faults keep doubling": {20 * time.Second, transient, 40 * time.Second},
+		"doubling stops once past a minute":       {80 * time.Second, transient, 80 * time.Second},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := backoffAfter(testCase.current, interval, testCase.err); got != testCase.want {
+				t.Fatalf("backoffAfter(%s, %s) = %s, want %s", testCase.current, interval, got, testCase.want)
+			}
+		})
+	}
+}
+
+// The Mac sleeping through an outage must not need a restart: the supervisor keeps
+// polling, executes nothing while the VPS is unreachable, and runs the recovered job
+// exactly once when it answers.
+func TestAnOutageExecutesNothingAndTheRecoveredJobRunsOnceWithoutARestart(t *testing.T) {
+	var attempts, executions atomic.Int32
+	ctx, cancel := context.WithCancel(context.Background())
+	permit := make(chan struct{}, 1)
+	permit <- struct{}{}
+	supervisor := Supervisor{
+		PollInterval: time.Millisecond, Permit: permit,
+		Client: claimerFunc(func(context.Context) (*postpilotv1.ClaimPublishJobResponse, error) {
+			switch attempt := attempts.Add(1); {
+			case attempt <= 3:
+				return nil, connect.NewError(connect.CodeUnavailable, errors.New("VPS unreachable while the Mac slept"))
+			case attempt == 4:
+				return &postpilotv1.ClaimPublishJobResponse{Job: &postpilotv1.PublishJob{Id: "queued-during-the-outage"}}, nil
+			default:
+				return nil, connect.NewError(connect.CodeNotFound, errors.New("no queued job"))
+			}
+		}),
+		Executor: executorFunc(func(_ context.Context, claim *postpilotv1.ClaimPublishJobResponse) error {
+			if claim.GetJob().GetId() != "queued-during-the-outage" {
+				t.Errorf("claim = %+v", claim)
+			}
+			executions.Add(1)
+			cancel()
+			return nil
+		}),
+	}
+	if err := supervisor.Run(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("supervisor error = %v", err)
+	}
+	if executions.Load() != 1 {
+		t.Fatalf("executions = %d, want the recovered job run exactly once", executions.Load())
+	}
+	if attempts.Load() < 4 {
+		t.Fatalf("claim attempts = %d, want polling to have continued through the outage", attempts.Load())
+	}
+}

@@ -12,6 +12,14 @@ import (
 
 const Label = "com.postpilot.publishing-agent"
 
+// launchctlBootout unloads one agent. It is a package variable so a test can prove the
+// unload is requested without stopping a genuinely installed agent on the developer's Mac.
+var launchctlBootout = func(domainTarget string) {
+	_ = exec.Command("/bin/launchctl", "bootout", domainTarget).Run()
+}
+
+func domainTarget() string { return "gui/" + strconv.Itoa(os.Getuid()) + "/" + Label }
+
 func PlistPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -41,7 +49,7 @@ func Install(binary, logDir string) error {
 		return err
 	}
 	domain := "gui/" + strconv.Itoa(os.Getuid())
-	_ = exec.Command("/bin/launchctl", "bootout", domain+"/"+Label).Run()
+	launchctlBootout(domainTarget())
 	return exec.Command("/bin/launchctl", "bootstrap", domain, path).Run()
 }
 
@@ -66,8 +74,7 @@ func Uninstall() error {
 	if err != nil {
 		return err
 	}
-	domain := "gui/" + strconv.Itoa(os.Getuid())
-	_ = exec.Command("/bin/launchctl", "bootout", domain+"/"+Label).Run()
+	launchctlBootout(domainTarget())
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return err
 	}

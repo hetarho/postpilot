@@ -77,7 +77,43 @@ type publisherFactory func(config.Connection) (publishing.Publisher, error)
 
 const connectionReloadInterval = 2 * time.Second
 
+// daemonDeps are the adapters one paired account's supervisor is built from. They are
+// grouped so the wiring can be exercised with fakes instead of only through a live daemon.
+type daemonDeps struct {
+	paths        config.Paths
+	keychain     credentials.Store
+	newPublisher publisherFactory
+	permit       chan struct{}
+	logger       *slog.Logger
+}
+
+// buildSupervisor gives one paired account its own Keychain credential, API client,
+// publisher and job directory. Two accounts on the same Mac share only the cross-account
+// execution permit, so neither can see the other's jobs or publish through the other's
+// Naver identity (PUBLISH-23).
+func buildSupervisor(ctx context.Context, connection config.Connection, deps daemonDeps) (publishing.Supervisor, error) {
+	if err := config.ValidateConnection(connection); err != nil {
+		return publishing.Supervisor{}, fmt.Errorf("connection is not armed: %w", err)
+	}
+	token, err := deps.keychain.Get(ctx, connection.KeychainAccount)
+	if err != nil {
+		return publishing.Supervisor{}, errors.New("Keychain credential unavailable")
+	}
+	client := postpilot.New(connection.APIURL, token)
+	publisher, err := deps.newPublisher(connection)
+	if err != nil {
+		return publishing.Supervisor{}, fmt.Errorf("deterministic publisher unavailable: %w", err)
+	}
+	logger := deps.logger.With("connection_id", connection.ID)
+	executor := publishing.Executor{API: client, Publisher: publisher, JobsRoot: deps.paths.Jobs, ConnectionID: connection.ID, HeartbeatEvery: config.Heartbeat, Timeout: config.JobTimeout, Logger: logger}
+	return publishing.Supervisor{Client: client, Executor: executor, PollInterval: config.PollInterval, Logger: logger, Permit: deps.permit}, nil
+}
+
 func runAgents(paths config.Paths, newPublisher publisherFactory) error {
+	return runAgentsWith(paths, newPublisher, credentials.Keychain{})
+}
+
+func runAgentsWith(paths config.Paths, newPublisher publisherFactory, keychain credentials.Store) error {
 	if newPublisher == nil {
 		return errors.New("deterministic Naver publisher is not implemented; finish Job 25 before starting the LaunchAgent")
 	}
@@ -96,7 +132,6 @@ func runAgents(paths config.Paths, newPublisher publisherFactory) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	keychain := credentials.Keychain{}
 	type stopped struct {
 		connectionID string
 		err          error
@@ -106,25 +141,15 @@ func runAgents(paths config.Paths, newPublisher publisherFactory) error {
 	executionPermit <- struct{}{}
 	launched := make(map[string]struct{})
 	running := 0
+	deps := daemonDeps{paths: paths, keychain: keychain, newPublisher: newPublisher, permit: executionPermit, logger: logger}
 	startNew := func(loaded config.File) {
 		for _, connection := range unseenArmedConnections(loaded, launched) {
-			if err := config.ValidateConnection(connection); err != nil {
-				logger.Error("connection is not armed", "connection_id", connection.ID, "error", err)
-				continue
-			}
-			token, err := keychain.Get(ctx, connection.KeychainAccount)
+			supervisor, err := buildSupervisor(ctx, connection, deps)
 			if err != nil {
-				logger.Error("Keychain credential unavailable", "connection_id", connection.ID)
+				// One account failing to start must never stop the other's supervisor.
+				logger.Error("connection supervisor not started", "connection_id", connection.ID, "error", err)
 				continue
 			}
-			client := postpilot.New(connection.APIURL, token)
-			publisher, err := newPublisher(connection)
-			if err != nil {
-				logger.Error("deterministic publisher unavailable", "connection_id", connection.ID, "error", err)
-				continue
-			}
-			executor := publishing.Executor{API: client, Publisher: publisher, JobsRoot: paths.Jobs, ConnectionID: connection.ID, HeartbeatEvery: config.Heartbeat, Timeout: config.JobTimeout, Logger: logger.With("connection_id", connection.ID)}
-			supervisor := publishing.Supervisor{Client: client, Executor: executor, PollInterval: config.PollInterval, Logger: logger.With("connection_id", connection.ID), Permit: executionPermit}
 			launched[connection.ID] = struct{}{}
 			running++
 			go func(connectionID string) { errCh <- stopped{connectionID: connectionID, err: supervisor.Run(ctx)} }(connection.ID)
