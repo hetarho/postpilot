@@ -1,4 +1,27 @@
 export const plans = {
+  estimator: {
+    title: '내 글 기준으로 몇 편인지 보기',
+    description:
+      '쓰려는 글의 분량과 첨부 개수를 맞추면 요금제마다 매달 몇 편을 쓸 수 있는지 바로 계산해요.',
+    chars: '글자 수',
+    charsValue: '{{count}}자',
+    photos: '사진',
+    photosValue: '{{count}}장',
+    videos: '영상',
+    videosValue: '{{count}}개',
+    combo: '모델 조합',
+    combos: {
+      quality: '품질',
+      balanced: '균형',
+      value: '가성비',
+      cheapest: '최저가',
+    },
+    posts: '매달 약 {{count}}편',
+    tooSmall: '이 조건으로는 한 편도 어려워요',
+    caveat:
+      '실제 사용량은 사진 내용과 글 길이, 고른 모델에 따라 달라져요. 크레딧이 모자라면 작업을 시작할 때 알려드려요.',
+    unset: '아직 모델 조합이 지정되지 않아 편수를 계산할 수 없어요.',
+  },
   tier: {
     free: 'Free',
     basic: 'Basic',

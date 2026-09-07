@@ -296,6 +296,12 @@
   --meter-track: var(--surface-recessed);
   --meter-fill: var(--intent-accent);
 
+  /* a slider: a bounded number the reader operates. Its roles are separate from the meter's
+     because a meter REPORTS and a slider is OPERATED — sharing one would make either
+     component's change move the other. */
+  --slider-track: var(--surface-recessed);
+  --slider-thumb: var(--intent-accent);
+
   /* system interaction */
   --focus-ring: var(--interaction-focus);
   --selection-bg: var(--intent-accent);
@@ -527,6 +533,8 @@
   --color-badge-accent-fg: var(--badge-accent-fg);
   --color-meter-track: var(--meter-track);
   --color-meter-fill: var(--meter-fill);
+  --color-slider-track: var(--slider-track);
+  --color-slider-thumb: var(--slider-thumb);
   --color-notice-danger-bg: var(--notice-danger-bg);
   --color-notice-danger-fg: var(--notice-danger-fg);
   --color-notice-success-bg: var(--notice-success-bg);

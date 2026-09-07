@@ -33,14 +33,15 @@
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260907.ix |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
 | T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | blocked@260907 |
-| T027 | The estimate becomes a calculator on /plans | QUOTA THEME | T025 | todo |
 | T028 | The plan ladder earns its animated stroke | THEME QUOTA | T027 | todo |
 
 ## next
-- implement-task T027 → T028 (the estimator wave), then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
+- implement-task T028 (the animated promotional stroke) closes the estimator wave, then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
 - PUBLISH chain: T007 needs one ARCH-27 run on the Mac (and CI green) to close · T019 blocked on the live editor survey → update-ssot PUBLISH → create-task re-decomposes it · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260907 T027 done — /plans answers "몇 편" from three sliders and a combo switch, with no request per change; free 4 · basic 19 · pro 52 · max 108 at the default case
+- 260907 T027 claimed (pw)
 - 260907 T026 done — the 모델 관리 tab assigns the two models behind each of the four estimator combos, drafted locally and sent as one complete pair
 - 260907 T026 claimed (pw)
 - 260907 T025 done — four operator-assigned combos price a post by photo·video·1000 chars in milli-credits, published through GetMyPlan; the worst-case reference post is gone
@@ -59,5 +60,3 @@
 - 260907 T020 done — the ladder is 220/575/1200, and GetMyPlan now publishes each rung's post estimate (32 credits per reference post) and the recommended rung; WARN spec lint flags every domain id over 6 chars (TEMPLATE PUBLISH MARKETING, and now BILLING) against FORMAT
 - 260907 T020 claimed (pw), base QUOTA@3→@4 ARCH@1→@2: r4 (bonus, anchor window, term) and ARCH r2 (framing, billing context, auth mechanics) touch nothing this task implements
 - 260907 update-ssot AUTH r2 QUOTA r4 ARCH r2 MARKETING r3 BILLING r2 done (self-signup with email as the login id and verification before the first session, Google sign-in, IP throttling + auto-releasing lockout, anchor-day grant window, payment-method bonus, the public CTA becoming the way in)
-- 260907 WARN T020..T024 are todo against QUOTA@3 · MARKETING@2 · ARCH@1 — no behaviour they implement changed, but create-task must move their base; no doing task sits inside the five domains
-- 260907 update-ssot AUTH QUOTA ARCH start (BILLING prerequisites)

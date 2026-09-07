@@ -1,6 +1,16 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMyPlan, planLabel, type PlanOffer } from '@/entities/plan'
+import {
+  postsPerGrant,
+  useMyPlan,
+  planLabel,
+  type EstimatorCombo,
+  type EstimatorComboName,
+  type PlanOffer,
+} from '@/entities/plan'
 import { Badge, Button, Notice, Typography, pageStyles } from '@/shared/ui'
+import { firstCombo, useEstimateInput, type EstimateInput } from '../model/estimate-input'
+import { PlanEstimator } from './PlanEstimator'
 
 /** The plan comparison, and the place a subscription will start (QUOTA-28). Composition
  *  only: it reads the ladder the server publishes and renders it.
@@ -16,6 +26,15 @@ import { Badge, Button, Notice, Typography, pageStyles } from '@/shared/ui'
 export function PlansPage() {
   const { t } = useTranslation(['plans', 'common'])
   const { myPlan, isPending, isError } = useMyPlan()
+  const [input, setInput] = useEstimateInput()
+  const [chosen, setChosen] = useState<EstimatorComboName | undefined>(undefined)
+
+  const combos = myPlan?.estimatorCombos ?? []
+  // The reader's choice while it is still assigned, otherwise the first tier the server
+  // published: a combo the operator has since replaced must not leave the page with a
+  // selection nothing can price.
+  const combo = combos.some((assigned) => assigned.combo === chosen) ? chosen : firstCombo(combos)
+  const rates = combos.find((assigned) => assigned.combo === combo)
 
   const empty = myPlan !== undefined && !myPlan.balance.unlimited && myPlan.balance.credits <= 0
 
@@ -51,16 +70,35 @@ export function PlansPage() {
 
       {!isError && !isPending && myPlan && (
         <>
+          <PlanEstimator
+            combos={combos}
+            combo={combo}
+            input={input}
+            onComboChange={setChosen}
+            onInputChange={setInput}
+          />
           {/* Stacked on a phone and side by side upward: four rungs at `md:` leave ~180px a
               card, which wraps every figure onto its own ragged line, so the shape changes
               at `md:` in two columns and only reaches four on the desk (THEME-14). */}
-          <ul className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <ul className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {myPlan.offers.map((offer) => (
               <li key={offer.plan}>
-                <PlanCard offer={offer} current={offer.plan === myPlan.plan} />
+                <PlanCard
+                  offer={offer}
+                  current={offer.plan === myPlan.plan}
+                  rates={rates}
+                  input={input}
+                />
               </li>
             ))}
           </ul>
+          {rates && (
+            /* The assumption behind every count, once under the list rather than four times
+               inside it: repeated in every card it would read as fine print. */
+            <Typography variant="meta" className="text-content-tertiary mt-4 block">
+              {t('estimator.caveat', { ns: 'plans' })}
+            </Typography>
+          )}
           <Typography variant="meta" className="text-content-tertiary mt-6 block">
             {t('compare.notPurchasable', { ns: 'plans' })}
           </Typography>
@@ -79,8 +117,21 @@ export function PlansPage() {
  *  flag the server sends, so a second emphasised card is impossible by construction rather
  *  than by review. It gets no filled CTA — one CTA per view, and every rung's action is
  *  disabled until BILLING ships. */
-function PlanCard({ offer, current }: { offer: PlanOffer; current: boolean }) {
+function PlanCard({
+  offer,
+  current,
+  rates,
+  input,
+}: {
+  offer: PlanOffer
+  current: boolean
+  rates: EstimatorCombo | undefined
+  input: EstimateInput
+}) {
   const { t } = useTranslation('plans')
+  // The whole of this card's arithmetic: the server owns the charge formula and published the
+  // rates (QUOTA-40). `master` is not on offer, so no rung here is ever unlimited.
+  const posts = rates ? postsPerGrant(offer.monthlyCredits, rates, input) : undefined
 
   return (
     <div
@@ -97,6 +148,13 @@ function PlanCard({ offer, current }: { offer: PlanOffer; current: boolean }) {
         {current && <Badge tone="accent">{t('compare.current')}</Badge>}
         {!current && offer.recommended && <Badge tone="accent">{t('compare.recommended')}</Badge>}
       </div>
+      {/* The card's own headline figure once a case is set: `fieldTitle` is the role that
+          carries weight without competing with the tier's own heading (THEME-19). */}
+      {posts !== undefined && (
+        <Typography variant="fieldTitle" as="p" className="mt-2">
+          {posts > 0 ? t('estimator.posts', { count: posts }) : t('estimator.tooSmall')}
+        </Typography>
+      )}
       <Typography variant="body" className="text-content-secondary mt-2 block">
         {t('compare.monthlyCredits', { credits: offer.monthlyCredits })}
       </Typography>

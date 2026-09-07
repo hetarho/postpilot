@@ -1,4 +1,27 @@
 export const plans = {
+  estimator: {
+    title: 'See how many posts you get',
+    description:
+      'Set the length and the attachments you plan on, and every plan says how many posts a month that buys.',
+    chars: 'Characters',
+    charsValue: '{{count}} characters',
+    photos: 'Photos',
+    photosValue: '{{count}} photos',
+    videos: 'Videos',
+    videosValue: '{{count}} videos',
+    combo: 'Model combo',
+    combos: {
+      quality: 'Quality',
+      balanced: 'Balanced',
+      value: 'Value',
+      cheapest: 'Cheapest',
+    },
+    posts: 'About {{count}} posts a month',
+    tooSmall: 'Not enough for one post of that shape',
+    caveat:
+      'Real usage depends on what the photos hold, how long the draft runs and which models you pick. If credits run short, you are told when the work starts.',
+    unset: 'No model combo is assigned yet, so post counts cannot be calculated.',
+  },
   tier: {
     free: 'Free',
     basic: 'Basic',
