@@ -21,6 +21,7 @@ type fakeStore struct {
 	createSessionErr error
 	deleteCalls      []string
 	passwordOps      []string
+	failureRecords   []string
 }
 
 func newFakeStore() *fakeStore {
@@ -90,6 +91,38 @@ func (f *fakeStore) UpdatePasswordHash(_ context.Context, id, passwordHash strin
 	}
 	f.passwordOps = append(f.passwordOps, "update")
 	user.PasswordHash = passwordHash
+	f.users[id] = user
+	return nil
+}
+
+func (f *fakeStore) RecordLoginFailure(_ context.Context, id string, now time.Time) (int, error) {
+	f.failureRecords = append(f.failureRecords, id)
+	user, ok := f.users[id]
+	if !ok {
+		return 0, ErrUserNotFound
+	}
+	if user.LockedUntil != nil && now.Before(*user.LockedUntil) {
+		return 0, nil
+	}
+	count := user.FailedLogins + 1
+	if count >= LockThreshold {
+		user.FailedLogins = 0
+		lockedUntil := now.Add(LockDuration)
+		user.LockedUntil = &lockedUntil
+	} else {
+		user.FailedLogins = count
+	}
+	f.users[id] = user
+	return count, nil
+}
+
+func (f *fakeStore) ClearLoginFailures(_ context.Context, id string) error {
+	user, ok := f.users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+	user.FailedLogins = 0
+	user.LockedUntil = nil
 	f.users[id] = user
 	return nil
 }
@@ -354,6 +387,93 @@ func TestLoginUnusableStoredHashLooksLikeAWrongPassword(t *testing.T) {
 	_, _, err := svc.Login(context.Background(), "alice", "s3cret")
 	if !errors.Is(err, ErrInvalidCredentials) {
 		t.Errorf("error = %v, want ErrInvalidCredentials (an operator problem must not leak)", err)
+	}
+}
+
+func TestLoginFailuresLockNotifyOnceAndReleaseAtTheBoundary(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	svc, store := newTestService(t, now)
+	svc.now = func() time.Time { return now }
+	verifiedAt := now.Add(-time.Hour)
+	user := store.users["alice"]
+	user.Email = "alice@example.com"
+	user.EmailVerifiedAt = &verifiedAt
+	store.users[user.ID] = user
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+
+	for attempt := 1; attempt <= LockThreshold; attempt++ {
+		if _, _, err := svc.Login(context.Background(), "alice", "wrong"); !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("failure %d = %v", attempt, err)
+		}
+		stored := store.users["alice"]
+		if attempt < LockThreshold {
+			if stored.FailedLogins != attempt || stored.LockedUntil != nil || len(mailer.sent) != 0 {
+				t.Fatalf("failure %d stored=%+v mails=%d", attempt, stored, len(mailer.sent))
+			}
+		}
+	}
+	locked := store.users["alice"]
+	wantUntil := now.Add(LockDuration)
+	if locked.FailedLogins != 0 || locked.LockedUntil == nil || !locked.LockedUntil.Equal(wantUntil) {
+		t.Fatalf("locked user = %+v, want zero counter until %v", locked, wantUntil)
+	}
+	if len(mailer.sent) != 1 || mailer.sent[0].To != "alice@example.com" || !strings.Contains(mailer.sent[0].Text, wantUntil.Format(time.RFC3339)) {
+		t.Fatalf("lock mail = %+v", mailer.sent)
+	}
+
+	recordedAtLock := len(store.failureRecords)
+	now = wantUntil.Add(-time.Second)
+	realVerify := svc.verify
+	var lockedVerifications []string
+	svc.verify = func(password, encoded string) (bool, error) {
+		lockedVerifications = append(lockedVerifications, encoded)
+		return realVerify(password, encoded)
+	}
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("correct password at 14m59s = %v, want ErrInvalidCredentials", err)
+	}
+	if _, _, err := svc.Login(context.Background(), "alice", "wrong"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("wrong password while locked = %v, want ErrInvalidCredentials", err)
+	}
+	if len(store.failureRecords) != recordedAtLock || len(mailer.sent) != 1 {
+		t.Fatalf("locked login recorded or mailed again: records=%d mails=%d", len(store.failureRecords), len(mailer.sent))
+	}
+	if len(lockedVerifications) != 2 || lockedVerifications[0] != locked.PasswordHash || lockedVerifications[1] != locked.PasswordHash {
+		t.Fatalf("locked login verification hashes = %#v, want the real stored hash twice", lockedVerifications)
+	}
+
+	now = wantUntil
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
+		t.Fatalf("correct password at 15m = %v", err)
+	}
+	released := store.users["alice"]
+	if released.FailedLogins != 0 || released.LockedUntil != nil {
+		t.Fatalf("released user retained lock state: %+v", released)
+	}
+}
+
+func TestLoginSuccessClearsFailuresAndUnknownIDRecordsNothing(t *testing.T) {
+	svc, store := newTestService(t, time.Now())
+	if _, _, err := svc.Login(context.Background(), "alice", "wrong"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatal(err)
+	}
+	if store.users["alice"].FailedLogins != 1 {
+		t.Fatalf("failed logins = %d, want 1", store.users["alice"].FailedLogins)
+	}
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
+		t.Fatal(err)
+	}
+	if store.users["alice"].FailedLogins != 0 {
+		t.Fatalf("successful login left %d failures", store.users["alice"].FailedLogins)
+	}
+
+	before := len(store.failureRecords)
+	if _, _, err := svc.Login(context.Background(), "nobody", "wrong"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatal(err)
+	}
+	if len(store.failureRecords) != before {
+		t.Fatal("unknown id touched the account failure counter")
 	}
 }
 
@@ -672,18 +792,18 @@ func TestResetPasswordIsSingleUseExpiresRevokesSessionsAndPreservesLock(t *testi
 	svc.SetMailer(mailer)
 	verifiedAt := now.Add(-time.Hour)
 	lockedUntil := now.Add(15 * time.Minute)
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
+		t.Fatal(err)
+	}
 	user := store.users["alice"]
 	user.Email = "alice@example.com"
 	user.EmailVerifiedAt = &verifiedAt
 	user.FailedLogins = 4
 	user.LockedUntil = &lockedUntil
 	store.users[user.ID] = user
-	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
-		t.Fatal(err)
-	}
 	if err := svc.RequestPasswordReset(context.Background(), user.Email); err != nil {
 		t.Fatal(err)
 	}
@@ -705,8 +825,12 @@ func TestResetPasswordIsSingleUseExpiresRevokesSessionsAndPreservesLock(t *testi
 	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("old password login = %v, want ErrInvalidCredentials", err)
 	}
+	if _, _, err := svc.Login(context.Background(), "alice", "new-password"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("new password bypassed the preserved lock: %v", err)
+	}
+	svc.now = func() time.Time { return lockedUntil }
 	if _, _, err := svc.Login(context.Background(), "alice", "new-password"); err != nil {
-		t.Fatalf("new password login: %v", err)
+		t.Fatalf("new password after lock release: %v", err)
 	}
 	if err := svc.ResetPassword(context.Background(), raw, "another-password"); !errors.Is(err, ErrLinkInvalid) {
 		t.Fatalf("reset replay = %v, want ErrLinkInvalid", err)

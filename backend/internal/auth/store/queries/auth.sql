@@ -33,6 +33,28 @@ UPDATE users SET email_unreachable_at = ? WHERE id = ?;
 -- Deliberately changes no lockout columns: a mailed credential must not unlock an account.
 UPDATE users SET password_hash = ? WHERE id = ?;
 
+-- name: RecordLoginFailure :one
+-- The threshold transition is one write: the fifth failure returns five to the caller,
+-- stores a zero counter for the next window, and installs the self-expiring lock.
+UPDATE users
+SET failed_logins = CASE
+      WHEN failed_logins + 1 >= sqlc.arg(lock_threshold) THEN 0
+      ELSE failed_logins + 1
+    END,
+    locked_until = CASE
+      WHEN failed_logins + 1 >= sqlc.arg(lock_threshold) THEN sqlc.arg(new_locked_until)
+      ELSE locked_until
+    END
+WHERE id = sqlc.arg(id)
+  AND (locked_until IS NULL OR locked_until <= sqlc.arg(now))
+RETURNING CAST(CASE
+  WHEN failed_logins = 0 AND locked_until = sqlc.arg(new_locked_until) THEN sqlc.arg(lock_threshold)
+  ELSE failed_logins
+END AS INTEGER) AS failure_count;
+
+-- name: ClearLoginFailures :exec
+UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = ?;
+
 -- name: GetUserPlan :one
 SELECT plan FROM users WHERE id = ?;
 

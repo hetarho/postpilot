@@ -56,7 +56,7 @@ func newServer(t *testing.T) (postpilotv1connect.AuthServiceClient, *httptest.Se
 	mux := http.NewServeMux()
 	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
 		authrpc.NewHandler(svc, sessionTTL),
-		connect.WithInterceptors(authrpc.NewInterceptor(svc)),
+		connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), "")),
 	))
 
 	server := httptest.NewServer(mux)
@@ -129,6 +129,75 @@ func TestLoginFailureIsGenericAndSetsNoCookie(t *testing.T) {
 		if detail.GetReason() != "INVALID_CREDENTIALS" || len(detail.GetParams()) != 0 {
 			t.Errorf("credential detail = %#v", detail)
 		}
+	}
+}
+
+func TestLoginThrottleIsPerIPAndRunsBeforeAccountAccounting(t *testing.T) {
+	store := newStore(t)
+	svc := auth.NewService(store, sessionTTL)
+	svc.SetMailer(discardMailer{})
+	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
+		authrpc.NewHandler(svc, sessionTTL),
+		connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), "X-Forwarded-For")),
+	))
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	client := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+
+	request := func(ip, password string) error {
+		req := connect.NewRequest(&postpilotv1.LoginRequest{LoginId: "alice", Password: password})
+		req.Header().Set("X-Forwarded-For", "198.51.100.99, "+ip)
+		_, err := client.Login(context.Background(), req)
+		return err
+	}
+	for attempt := 1; attempt <= 10; attempt++ {
+		if err := request("203.0.113.10", "s3cret"); err != nil {
+			t.Fatalf("allowed login %d: %v", attempt, err)
+		}
+	}
+	refused := request("203.0.113.10", "s3cret")
+	if connect.CodeOf(refused) != connect.CodeResourceExhausted {
+		t.Fatalf("11th login = %v, want resource_exhausted", refused)
+	}
+	detail := authAppErrorDetail(t, refused)
+	if detail.GetReason() != "TOO_MANY_ATTEMPTS" || len(detail.GetParams()) != 1 {
+		t.Fatalf("throttle detail = %#v", detail)
+	}
+	retryAt, err := time.Parse(time.RFC3339, detail.GetParams()["retry_at"])
+	if err != nil || retryAt.Location() != time.UTC || !retryAt.After(time.Now()) {
+		t.Fatalf("retry_at = %q, %v", detail.GetParams()["retry_at"], err)
+	}
+	afterRefusal, err := store.GetUser(context.Background(), "alice")
+	if err != nil || afterRefusal.FailedLogins != 0 || afterRefusal.LockedUntil != nil {
+		t.Fatalf("throttle refusal changed account state = %+v, %v", afterRefusal, err)
+	}
+
+	otherPeerWrong := request("203.0.113.11", "wrong")
+	if connect.CodeOf(otherPeerWrong) != connect.CodeUnauthenticated || authAppErrorDetail(t, otherPeerWrong).GetReason() != "INVALID_CREDENTIALS" {
+		t.Fatalf("other peer wrong password = %v", otherPeerWrong)
+	}
+	if err := request("203.0.113.11", "s3cret"); err != nil {
+		t.Fatalf("other peer correct login: %v", err)
+	}
+	account, err := store.GetUser(context.Background(), "alice")
+	if err != nil || account.FailedLogins != 0 || account.LockedUntil != nil {
+		t.Fatalf("throttled account state = %+v, %v", account, err)
+	}
+}
+
+func TestLockedAccountIsWireIdenticalToWrongPassword(t *testing.T) {
+	client, _ := newServer(t)
+	firstWrong := loginError(t, client, "alice", "wrong")
+	for attempt := 2; attempt <= auth.LockThreshold; attempt++ {
+		_ = loginError(t, client, "alice", "wrong")
+	}
+	lockedCorrect := loginError(t, client, "alice", "s3cret")
+	if firstWrong.Error() != lockedCorrect.Error() {
+		t.Fatalf("wrong and locked responses differ:\nwrong: %s\nlocked: %s", firstWrong, lockedCorrect)
 	}
 }
 
@@ -222,7 +291,7 @@ func TestResetPasswordRevokesThePreResetCookie(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
 		authrpc.NewHandler(svc, sessionTTL),
-		connect.WithInterceptors(authrpc.NewInterceptor(svc)),
+		connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), "")),
 	))
 	server := httptest.NewServer(mux)
 	defer server.Close()
@@ -286,7 +355,7 @@ func TestChangePasswordFailureReasonsStayInsideTheLiveSession(t *testing.T) {
 		mux := http.NewServeMux()
 		mux.Handle(postpilotv1connect.NewAuthServiceHandler(
 			authrpc.NewHandler(svc, sessionTTL),
-			connect.WithInterceptors(authrpc.NewInterceptor(svc)),
+			connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), "")),
 		))
 		server := httptest.NewServer(mux)
 		defer server.Close()
@@ -326,7 +395,7 @@ func TestUnverifiedCorrectPasswordIsWireIdenticalToWrongPassword(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
 		authrpc.NewHandler(svc, sessionTTL),
-		connect.WithInterceptors(authrpc.NewInterceptor(svc)),
+		connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), "")),
 	))
 	server := httptest.NewServer(mux)
 	defer server.Close()
@@ -356,7 +425,7 @@ func TestInterceptorRejectsTamperedCookie(t *testing.T) {
 // later (the generation job queue, plan 05) would ship with no session check at all.
 func TestInterceptorCoversStreamingHandlers(t *testing.T) {
 	svc := auth.NewService(newStore(t), sessionTTL)
-	interceptor := authrpc.NewInterceptor(svc)
+	interceptor := authrpc.NewInterceptor(svc, auth.NewThrottle(), "")
 
 	reached := false
 	wrapped := interceptor.WrapStreamingHandler(func(context.Context, connect.StreamingHandlerConn) error {
@@ -372,6 +441,31 @@ func TestInterceptorCoversStreamingHandlers(t *testing.T) {
 	}
 	if reached {
 		t.Error("the streaming handler ran without a session")
+	}
+}
+
+func TestInterceptorThrottlesStreamingHandlersWithTheSamePeerKey(t *testing.T) {
+	svc := auth.NewService(newStore(t), sessionTTL)
+	interceptor := authrpc.NewInterceptor(svc, auth.NewThrottle(), "")
+	reached := 0
+	wrapped := interceptor.WrapStreamingHandler(func(context.Context, connect.StreamingHandlerConn) error {
+		reached++
+		return nil
+	})
+	conn := &fakeStreamConn{
+		spec: connect.Spec{Procedure: postpilotv1connect.AuthServiceLoginProcedure},
+		peer: connect.Peer{Addr: "192.0.2.8:4444"},
+	}
+	for attempt := 1; attempt <= 10; attempt++ {
+		if err := wrapped(context.Background(), conn); err != nil {
+			t.Fatalf("stream attempt %d: %v", attempt, err)
+		}
+	}
+	if err := wrapped(context.Background(), conn); connect.CodeOf(err) != connect.CodeResourceExhausted {
+		t.Fatalf("stream attempt 11 = %v, want resource_exhausted", err)
+	}
+	if reached != 10 {
+		t.Fatalf("stream handler reached %d times, want 10", reached)
 	}
 }
 
@@ -477,6 +571,7 @@ func resetTokenFromMail(t *testing.T, mail auth.Mail) string {
 type fakeStreamConn struct {
 	spec   connect.Spec
 	header http.Header
+	peer   connect.Peer
 }
 
 func (c *fakeStreamConn) Spec() connect.Spec { return c.spec }
@@ -486,7 +581,7 @@ func (c *fakeStreamConn) RequestHeader() http.Header {
 	}
 	return c.header
 }
-func (c *fakeStreamConn) Peer() connect.Peer           { return connect.Peer{} }
+func (c *fakeStreamConn) Peer() connect.Peer           { return c.peer }
 func (c *fakeStreamConn) Receive(any) error            { return nil }
 func (c *fakeStreamConn) Send(any) error               { return nil }
 func (c *fakeStreamConn) ResponseHeader() http.Header  { return http.Header{} }

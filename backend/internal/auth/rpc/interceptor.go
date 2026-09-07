@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -36,6 +37,17 @@ var publicProcedures = map[string]bool{
 	postpilotv1connect.AuthServiceLoginProcedure:                true,
 	postpilotv1connect.AuthServiceLogoutProcedure:               true,
 	postpilotv1connect.HealthServicePingProcedure:               true,
+}
+
+// throttledProcedures is the public write subset that consumes one per-IP attempt
+// before authorization or credential work. A newly added public auth write must make
+// an explicit decision here in the same change that opens it above.
+var throttledProcedures = map[string]string{
+	postpilotv1connect.AuthServiceLoginProcedure:                auth.ThrottleLogin,
+	postpilotv1connect.AuthServiceSignupProcedure:               auth.ThrottleSignup,
+	postpilotv1connect.AuthServiceResendVerificationProcedure:   auth.ThrottleResend,
+	postpilotv1connect.AuthServiceRequestPasswordResetProcedure: auth.ThrottleResetRequest,
+	postpilotv1connect.AuthServiceResetPasswordProcedure:        auth.ThrottleReset,
 }
 
 // Agent procedures are not authenticated by the human HttpOnly session. The
@@ -99,17 +111,22 @@ const masterOnlyMessage = "this procedure requires the master plan"
 // procedure added later (the generation job queue, plan 05) would ship unauthenticated
 // with nothing here to notice.
 type Interceptor struct {
-	svc *auth.Service
+	svc            *auth.Service
+	throttle       *auth.Throttle
+	clientIPHeader string
 }
 
 // NewInterceptor returns the authentication gate.
-func NewInterceptor(svc *auth.Service) *Interceptor {
-	return &Interceptor{svc: svc}
+func NewInterceptor(svc *auth.Service, throttle *auth.Throttle, clientIPHeader string) *Interceptor {
+	if throttle == nil {
+		throttle = auth.NewThrottle()
+	}
+	return &Interceptor{svc: svc, throttle: throttle, clientIPHeader: clientIPHeader}
 }
 
 func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		ctx, err := i.authorize(ctx, req.Spec().Procedure, req.Header())
+		ctx, err := i.authorize(ctx, req.Spec().Procedure, req.Header(), req.Peer().Addr)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +136,7 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 
 func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
-		ctx, err := i.authorize(ctx, conn.Spec().Procedure, conn.RequestHeader())
+		ctx, err := i.authorize(ctx, conn.Spec().Procedure, conn.RequestHeader(), conn.Peer().Addr)
 		if err != nil {
 			return err
 		}
@@ -135,7 +152,15 @@ func (i *Interceptor) WrapStreamingClient(next connect.StreamingClientFunc) conn
 
 // authorize returns the context downstream handlers should see, or an Unauthenticated
 // error. It fails closed: any path that does not explicitly succeed denies.
-func (i *Interceptor) authorize(ctx context.Context, procedure string, header http.Header) (context.Context, error) {
+func (i *Interceptor) authorize(ctx context.Context, procedure string, header http.Header, peerAddr string) (context.Context, error) {
+	if class, throttled := throttledProcedures[procedure]; throttled {
+		retryAt, allowed := i.throttle.Allow(class, auth.ClientIP(header, peerAddr, i.clientIPHeader), time.Now())
+		if !allowed {
+			return nil, rpcserver.NewAppError(connect.CodeResourceExhausted, "too many attempts", "TOO_MANY_ATTEMPTS", map[string]string{
+				"retry_at": retryAt.UTC().Format(time.RFC3339),
+			})
+		}
+	}
 	if publicProcedures[procedure] || agentProcedures[procedure] {
 		return ctx, nil
 	}

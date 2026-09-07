@@ -75,6 +75,7 @@ verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함
 | `DEPLOY_ENABLED=true` | GitHub repo **variable** | 배포 스위치 — 지우면 rollout이 건너뛰어짐(빌드 검증만) |
 | `API_ORIGIN` | GitHub repo **variable** | 배포 후 `/health` 게이트와 CORS 검증이 때리는 주소 (`https://api.postpilot.<도메인>`) |
 | `WEB_ORIGIN` | GitHub repo **variable** | CORS preflight가 흉내낼 브라우저 origin (`https://postpilot.<도메인>`) — 스택 `.env`의 `CORS_ORIGIN`과 같아야 한다 |
+| `CLIENT_IP_HEADER` | 스택 `.env` | 인증 요청 IP 기준. 로컬은 비워 direct peer를 쓰고, 유일한 ingress가 Caddy인 배포는 `X-Forwarded-For` |
 | `VITE_API_URL` | Cloudflare Worker → Settings → Build → Variables | 프론트 빌드 타임 주입(번들에 박히는 공개값) |
 | `postpilot build token` | Cloudflare가 자동 관리 (Worker → Settings → Build → API token) | Workers Builds 배포 인증. 빌드가 10001 인증 에러로 죽으면 여기서 재발급 |
 | 스택 `.env` | VPS `/srv/postpilot-{staging,prod}/.env` (`chmod 600`, 비추적) | 런타임 설정 — 키 목록은 `.env.production.example` |

@@ -130,6 +130,32 @@ func (s *Store) UpdatePasswordHash(ctx context.Context, id, passwordHash string)
 	return nil
 }
 
+func (s *Store) RecordLoginFailure(ctx context.Context, id string, now time.Time) (int, error) {
+	lockedUntil := now.Add(auth.LockDuration)
+	count, err := s.write.RecordLoginFailure(ctx, sqlc.RecordLoginFailureParams{
+		LockThreshold:  int64(auth.LockThreshold),
+		NewLockedUntil: nullableTime(&lockedUntil),
+		ID:             id,
+		Now:            nullableTime(&now),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// A concurrent fifth failure may have installed the lock after Login's read.
+			// Treat that as already accounted rather than incrementing through the lock.
+			return 0, nil
+		}
+		return 0, fmt.Errorf("record login failure: %w", err)
+	}
+	return int(count), nil
+}
+
+func (s *Store) ClearLoginFailures(ctx context.Context, id string) error {
+	if err := s.write.ClearLoginFailures(ctx, id); err != nil {
+		return fmt.Errorf("clear login failures: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) GetUserPlan(ctx context.Context, id string) (plan.Plan, error) {
 	value, err := s.read.GetUserPlan(ctx, id)
 	if err != nil {

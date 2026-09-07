@@ -21,6 +21,8 @@ const (
 	PasswordMinLen = 8
 	PasswordMaxLen = 128
 	ResendFloor    = 60 * time.Second
+	LockThreshold  = 5
+	LockDuration   = 15 * time.Minute
 )
 
 // Service is the auth context's behavior. It owns every rule about how a login
@@ -471,6 +473,7 @@ func (s *Service) Login(ctx context.Context, loginID, password string) (User, st
 		_, _ = s.verify(password, dummyHash())
 		return User{}, "", ErrInvalidCredentials
 	}
+	now := s.now()
 	ok, err := s.verify(password, user.PasswordHash)
 	if err != nil {
 		// A stored hash that will not parse is an operator problem (a hand-edited row,
@@ -479,8 +482,15 @@ func (s *Service) Login(ctx context.Context, loginID, password string) (User, st
 		slog.Error("stored password hash is unusable", "user_id", user.ID, "err", err)
 		return User{}, "", ErrInvalidCredentials
 	}
-	if !ok {
+	if user.LockedUntil != nil && now.Before(*user.LockedUntil) {
 		return User{}, "", ErrInvalidCredentials
+	}
+	if !ok {
+		s.recordLoginFailure(ctx, user, now)
+		return User{}, "", ErrInvalidCredentials
+	}
+	if err := s.store.ClearLoginFailures(ctx, user.ID); err != nil {
+		return User{}, "", fmt.Errorf("clear login failures: %w", err)
 	}
 	if user.Email != "" && user.EmailVerifiedAt == nil {
 		if err := s.sendVerification(ctx, user); err != nil {
@@ -494,7 +504,6 @@ func (s *Service) Login(ctx context.Context, loginID, password string) (User, st
 		return User{}, "", err
 	}
 
-	now := s.now()
 	session := Session{
 		Token:     hashed,
 		UserID:    user.ID,
@@ -506,6 +515,23 @@ func (s *Service) Login(ctx context.Context, loginID, password string) (User, st
 	}
 
 	return user, raw, nil
+}
+
+// recordLoginFailure preserves the generic credential response even if accounting or
+// notification fails. Returning a different wire error here would reveal that the id
+// reached an existing account, undoing the dummy-hash path's enumeration protection.
+func (s *Service) recordLoginFailure(ctx context.Context, user User, now time.Time) {
+	count, err := s.store.RecordLoginFailure(ctx, user.ID, now)
+	if err != nil {
+		slog.ErrorContext(ctx, "could not record login failure", "user_id", user.ID, "err", err)
+		return
+	}
+	if count < LockThreshold || user.Email == "" || user.EmailUnreachableAt != nil {
+		return
+	}
+	if err := s.send(ctx, user, lockNoticeMail(user.Email, now.Add(LockDuration))); err != nil {
+		slog.ErrorContext(ctx, "could not send login lock notice", "user_id", user.ID, "err", err)
+	}
 }
 
 // Authenticate resolves a raw cookie value to the acting caller.

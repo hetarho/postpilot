@@ -112,6 +112,19 @@ describe('login screen', () => {
     expect(router.state.location.pathname).toBe('/login')
   })
 
+  it('renders the throttled retry instant in the existing failure slot', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/login', { tooManyAttempts: 'login' })
+
+    await user.type(await screen.findByLabelText('이메일 또는 아이디'), 'alice')
+    await user.type(screen.getByLabelText('비밀번호'), 'pw')
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '요청이 너무 많아요. 2026. 10. 1. 오전 12:00 이후 다시 시도해 주세요.',
+    )
+  })
+
   it.each([
     ['protocol-relative', '//evil.example.com'],
     // The backslash form is the one a "starts with a single slash" check waves through;

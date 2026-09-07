@@ -48,6 +48,8 @@ type Store interface {
 	MarkEmailVerified(ctx context.Context, id string, at time.Time) error
 	MarkEmailUnreachable(ctx context.Context, id string, at time.Time) error
 	UpdatePasswordHash(ctx context.Context, id, passwordHash string) error
+	RecordLoginFailure(ctx context.Context, id string, now time.Time) (int, error)
+	ClearLoginFailures(ctx context.Context, id string) error
 	// GetUserPlan is deliberately narrower than GetUser: the interceptor resolves the
 	// acting plan on every authenticated request, and loading a password hash that often
 	// widens the blast radius of any log or dump for a value nothing on that path reads.

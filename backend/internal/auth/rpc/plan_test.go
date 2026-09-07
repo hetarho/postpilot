@@ -33,7 +33,7 @@ func newPlanServer(t *testing.T) (postpilotv1connect.AuthServiceClient, postpilo
 		}
 	}
 
-	interceptor := connect.WithInterceptors(authrpc.NewInterceptor(svc))
+	interceptor := connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), ""))
 	mux := http.NewServeMux()
 	mux.Handle(postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(svc, sessionTTL), interceptor))
 	mux.Handle(postpilotv1connect.NewAdminServiceHandler(

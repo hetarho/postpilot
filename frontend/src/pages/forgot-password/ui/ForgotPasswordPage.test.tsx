@@ -24,6 +24,18 @@ describe('ForgotPasswordPage', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
   })
 
+  it('shows a localized retry instant when reset requests are throttled', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/forgot-password', { tooManyAttempts: 'reset_request' })
+
+    await user.type(await screen.findByLabelText('이메일'), 'alice@example.com')
+    await user.click(screen.getByRole('button', { name: '재설정 메일 보내기' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '요청이 너무 많아요. 2026. 10. 1. 오전 12:00 이후 다시 시도해 주세요.',
+    )
+  })
+
   it('still renders when the reverse-guard session check is unavailable', async () => {
     const transport = createRouterTransport(({ rpc }) => {
       rpc(AuthService.method.getMe, () => {

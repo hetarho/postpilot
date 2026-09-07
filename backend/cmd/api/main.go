@@ -183,6 +183,7 @@ func main() {
 	}
 	authSvc.SetMailer(mailer)
 	authSvc.SetWebOrigin(cfg.CORSOrigin)
+	authThrottle := auth.NewThrottle()
 	if n, err := authSvc.SweepExpired(ctx); err != nil {
 		// Stale rows are harmless — they fail the expiry check on lookup anyway — so a
 		// sweep failure is not worth refusing to serve over.
@@ -427,7 +428,7 @@ func main() {
 	}))
 
 	server := rpcserver.New(cfg, version, rpcserver.Options{
-		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc), publishingrpc.NewAgentInterceptor(publishSvc)},
+		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(authSvc, authThrottle, cfg.ClientIPHeader), publishingrpc.NewAgentInterceptor(publishSvc)},
 		Handlers: []rpcserver.Registrar{
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewHealthServiceHandler(health.NewHandler(version), opts...)
@@ -491,6 +492,18 @@ func main() {
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
 	go experiment.NewSweeper(experimentStore).Run(ctx, cfg.ExperimentSweepInterval)
 	go publishing.NewSweeper(publishSvc, cfg.PublishOrphanMinAge, cfg.PublishLeaseTTL).Run(ctx, cfg.PublishOrphanSweepInterval)
+	go func() {
+		ticker := time.NewTicker(config.ThrottleSweepInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case now := <-ticker.C:
+				authThrottle.Sweep(now)
+			}
+		}
+	}()
 
 	workerCtx, cancelWorkers := context.WithCancel(ctx)
 	defer cancelWorkers()

@@ -144,6 +144,45 @@ func TestUpdatePasswordHashPreservesLockState(t *testing.T) {
 	}
 }
 
+func TestLoginFailureCountLocksAtomicallyAndClearReleases(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+
+	for want := 1; want <= auth.LockThreshold; want++ {
+		got, err := s.RecordLoginFailure(ctx, "alice", now)
+		if err != nil || got != want {
+			t.Fatalf("failure %d = %d, %v", want, got, err)
+		}
+	}
+	locked, err := s.GetUser(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantUntil := now.Add(auth.LockDuration)
+	if locked.FailedLogins != 0 || locked.LockedUntil == nil || !locked.LockedUntil.Equal(wantUntil) {
+		t.Fatalf("locked user = %+v, want zero counter until %v", locked, wantUntil)
+	}
+	if got, err := s.RecordLoginFailure(ctx, "alice", now.Add(time.Second)); err != nil || got != 0 {
+		t.Fatalf("failure during lock = %d, %v; want ignored", got, err)
+	}
+	stillLocked, err := s.GetUser(ctx, "alice")
+	if err != nil || stillLocked.FailedLogins != 0 || stillLocked.LockedUntil == nil || !stillLocked.LockedUntil.Equal(wantUntil) {
+		t.Fatalf("locked user changed after another failure = %+v, %v", stillLocked, err)
+	}
+
+	if err := s.ClearLoginFailures(ctx, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	cleared, err := s.GetUser(ctx, "alice")
+	if err != nil || cleared.FailedLogins != 0 || cleared.LockedUntil != nil {
+		t.Fatalf("cleared user = %+v, %v", cleared, err)
+	}
+}
+
 func TestGetUserUnknown(t *testing.T) {
 	if _, err := newStore(t).GetUser(context.Background(), "nobody"); !errors.Is(err, auth.ErrUserNotFound) {
 		t.Errorf("error = %v, want ErrUserNotFound (sql.ErrNoRows must not escape the store)", err)

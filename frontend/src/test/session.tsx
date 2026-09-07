@@ -58,6 +58,7 @@ export interface FakeAuthOptions {
   registerEmailFails?: boolean
   resetPasswordFails?: boolean
   changePasswordFails?: 'wrong-current' | 'not-set'
+  tooManyAttempts?: 'login' | 'signup' | 'resend' | 'reset_request' | 'reset'
   /** Records every procedure the transport was asked for. */
   calls?: string[]
   /** The PostService the signed-in screens call. Present by default (with no posts) so a
@@ -104,6 +105,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerEmailFails,
     resetPasswordFails,
     changePasswordFails,
+    tooManyAttempts,
     calls,
   } = options
   let session = user
@@ -125,6 +127,11 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     })
     rpc(AuthService.method.login, (req) => {
       calls?.push('Login')
+      if (tooManyAttempts === 'login') {
+        throw connectAppError('TOO_MANY_ATTEMPTS', Code.ResourceExhausted, {
+          retry_at: '2026-09-30T15:00:00Z',
+        })
+      }
       if (loginFails) throw connectAppError('INVALID_CREDENTIALS', Code.Unauthenticated)
       session = {
         id: req.loginId,
@@ -151,11 +158,21 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     })
     rpc(AuthService.method.signup, () => {
       calls?.push('Signup')
+      if (tooManyAttempts === 'signup') {
+        throw connectAppError('TOO_MANY_ATTEMPTS', Code.ResourceExhausted, {
+          retry_at: '2026-09-30T15:00:00Z',
+        })
+      }
       if (signupFails) throw connectAppError('UNKNOWN_FAILURE', Code.Internal)
       return create(SignupResponseSchema, {})
     })
     rpc(AuthService.method.resendVerification, () => {
       calls?.push('ResendVerification')
+      if (tooManyAttempts === 'resend') {
+        throw connectAppError('TOO_MANY_ATTEMPTS', Code.ResourceExhausted, {
+          retry_at: '2026-09-30T15:00:00Z',
+        })
+      }
       return create(ResendVerificationResponseSchema, {})
     })
     rpc(AuthService.method.verifyEmail, () => {
@@ -167,10 +184,20 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     })
     rpc(AuthService.method.requestPasswordReset, () => {
       calls?.push('RequestPasswordReset')
+      if (tooManyAttempts === 'reset_request') {
+        throw connectAppError('TOO_MANY_ATTEMPTS', Code.ResourceExhausted, {
+          retry_at: '2026-09-30T15:00:00Z',
+        })
+      }
       return create(RequestPasswordResetResponseSchema, {})
     })
     rpc(AuthService.method.resetPassword, () => {
       calls?.push('ResetPassword')
+      if (tooManyAttempts === 'reset') {
+        throw connectAppError('TOO_MANY_ATTEMPTS', Code.ResourceExhausted, {
+          retry_at: '2026-09-30T15:00:00Z',
+        })
+      }
       if (resetPasswordFails) {
         throw connectAppError('RESET_LINK_INVALID', Code.FailedPrecondition)
       }

@@ -14,6 +14,7 @@ export const appFailureSpecs = {
   UNKNOWN_FAILURE: {},
   AUTH_REQUIRED: {},
   INVALID_CREDENTIALS: {},
+  TOO_MANY_ATTEMPTS: { required: ['retry_at'] },
   INVALID_EMAIL: {},
   PASSWORD_TOO_SHORT: { required: ['min'] },
   PASSWORD_TOO_LONG: { required: ['max'] },

@@ -2,6 +2,7 @@ export const errors = {
   UNKNOWN_FAILURE: '요청을 마치지 못했어요. 다시 시도해 주세요.',
   AUTH_REQUIRED: '로그인이 필요해요.',
   INVALID_CREDENTIALS: '아이디 또는 비밀번호가 맞지 않아요.',
+  TOO_MANY_ATTEMPTS: '요청이 너무 많아요. {{retry_at, instant}} 이후 다시 시도해 주세요.',
   INVALID_EMAIL: '이메일 주소를 확인해 주세요.',
   PASSWORD_TOO_SHORT: '비밀번호는 {{min}}자 이상 입력해 주세요.',
   PASSWORD_TOO_LONG: '비밀번호는 {{max}}자 이하로 입력해 주세요.',

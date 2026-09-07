@@ -2,6 +2,7 @@ export const errors = {
   UNKNOWN_FAILURE: 'Could not complete the request. Please try again.',
   AUTH_REQUIRED: 'Log in to continue.',
   INVALID_CREDENTIALS: 'The login ID or password is incorrect.',
+  TOO_MANY_ATTEMPTS: 'Too many requests. Try again after {{retry_at, instant}}.',
   INVALID_EMAIL: 'Check the email address.',
   PASSWORD_TOO_SHORT: 'Enter at least {{min}} characters for the password.',
   PASSWORD_TOO_LONG: 'Keep the password to {{max}} characters or fewer.',

@@ -230,6 +230,10 @@ func defaultVoicePersonalizationConfig() VoicePersonalizationConfig {
 // WorkerPollInterval is the fallback for a missed in-process wake signal.
 const WorkerPollInterval = time.Second
 
+// ThrottleSweepInterval bounds how long expired per-IP windows remain in memory when
+// their key is never read again.
+const ThrottleSweepInterval = time.Minute
+
 // Config is the fully-resolved process configuration.
 type Config struct {
 	// Port the HTTP server listens on.
@@ -237,6 +241,9 @@ type Config struct {
 	// CORSOrigin is the single browser origin allowed to call the API. In production
 	// this is the frontend origin for THIS environment; locally it is the Vite dev server.
 	CORSOrigin string
+	// ClientIPHeader names the one ingress-owned address header the auth limiter may
+	// trust. Empty means the direct TCP peer and is the safe default without a proxy.
+	ClientIPHeader string
 	// DBPath is the SQLite file. Relative paths resolve against the process working
 	// directory: `/` in the production image (volume `./data:/data`) and `/app` in the
 	// dev container.
@@ -377,13 +384,14 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:         getenv("PORT", "8080"),
-		CORSOrigin:   getenv("CORS_ORIGIN", "http://localhost:2564"),
-		DBPath:       getenv("DB_PATH", "data/postpilot.db"),
-		SessionTTL:   sessionTTL,
-		MailDriver:   strings.ToLower(strings.TrimSpace(getenv("MAIL_DRIVER", "log"))),
-		ResendAPIKey: os.Getenv("RESEND_API_KEY"),
-		MailFrom:     os.Getenv("MAIL_FROM"),
+		Port:           getenv("PORT", "8080"),
+		CORSOrigin:     getenv("CORS_ORIGIN", "http://localhost:2564"),
+		ClientIPHeader: os.Getenv("CLIENT_IP_HEADER"),
+		DBPath:         getenv("DB_PATH", "data/postpilot.db"),
+		SessionTTL:     sessionTTL,
+		MailDriver:     strings.ToLower(strings.TrimSpace(getenv("MAIL_DRIVER", "log"))),
+		ResendAPIKey:   os.Getenv("RESEND_API_KEY"),
+		MailFrom:       os.Getenv("MAIL_FROM"),
 
 		R2Endpoint:        os.Getenv("R2_ENDPOINT"),
 		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
@@ -426,6 +434,9 @@ func Load() (*Config, error) {
 
 	if err := validateOrigin(cfg.CORSOrigin); err != nil {
 		return nil, fmt.Errorf("CORS_ORIGIN: %w", err)
+	}
+	if cfg.ClientIPHeader != "" && cfg.ClientIPHeader != "X-Forwarded-For" {
+		return nil, fmt.Errorf("CLIENT_IP_HEADER: must be empty or X-Forwarded-For, got %q", cfg.ClientIPHeader)
 	}
 
 	sweep, err := time.ParseDuration(getenv("ORPHAN_SWEEP_INTERVAL", "24h"))

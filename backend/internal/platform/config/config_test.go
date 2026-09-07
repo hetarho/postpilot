@@ -77,6 +77,27 @@ func TestLoadRejectsWildcardOrigin(t *testing.T) {
 	}
 }
 
+func TestLoadClientIPHeader(t *testing.T) {
+	t.Setenv("CLIENT_IP_HEADER", "")
+	cfg, err := Load()
+	if err != nil || cfg.ClientIPHeader != "" {
+		t.Fatalf("empty CLIENT_IP_HEADER = %q, %v", cfg.ClientIPHeader, err)
+	}
+
+	t.Setenv("CLIENT_IP_HEADER", "X-Forwarded-For")
+	cfg, err = Load()
+	if err != nil || cfg.ClientIPHeader != "X-Forwarded-For" {
+		t.Fatalf("trusted CLIENT_IP_HEADER = %q, %v", cfg.ClientIPHeader, err)
+	}
+
+	for _, invalid := range []string{"X-Real-IP", "x-forwarded-for", " X-Forwarded-For"} {
+		t.Setenv("CLIENT_IP_HEADER", invalid)
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "CLIENT_IP_HEADER") {
+			t.Errorf("CLIENT_IP_HEADER=%q error = %v", invalid, err)
+		}
+	}
+}
+
 func TestLoadDefaults(t *testing.T) {
 	t.Setenv("PORT", "")
 	t.Setenv("CORS_ORIGIN", "")

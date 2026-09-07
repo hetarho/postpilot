@@ -10,6 +10,15 @@ import (
 	"database/sql"
 )
 
+const clearLoginFailures = `-- name: ClearLoginFailures :exec
+UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = ?
+`
+
+func (q *Queries) ClearLoginFailures(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, clearLoginFailures, id)
+	return err
+}
+
 const consumeLink = `-- name: ConsumeLink :one
 UPDATE auth_links SET used_at = ?
 WHERE token_hash = ?
@@ -371,6 +380,45 @@ type MarkEmailVerifiedParams struct {
 func (q *Queries) MarkEmailVerified(ctx context.Context, arg MarkEmailVerifiedParams) error {
 	_, err := q.db.ExecContext(ctx, markEmailVerified, arg.EmailVerifiedAt, arg.ID)
 	return err
+}
+
+const recordLoginFailure = `-- name: RecordLoginFailure :one
+UPDATE users
+SET failed_logins = CASE
+      WHEN failed_logins + 1 >= ?1 THEN 0
+      ELSE failed_logins + 1
+    END,
+    locked_until = CASE
+      WHEN failed_logins + 1 >= ?1 THEN ?2
+      ELSE locked_until
+    END
+WHERE id = ?3
+  AND (locked_until IS NULL OR locked_until <= ?4)
+RETURNING CAST(CASE
+  WHEN failed_logins = 0 AND locked_until = ?2 THEN ?1
+  ELSE failed_logins
+END AS INTEGER) AS failure_count
+`
+
+type RecordLoginFailureParams struct {
+	LockThreshold  int64
+	NewLockedUntil sql.NullString
+	ID             string
+	Now            sql.NullString
+}
+
+// The threshold transition is one write: the fifth failure returns five to the caller,
+// stores a zero counter for the next window, and installs the self-expiring lock.
+func (q *Queries) RecordLoginFailure(ctx context.Context, arg RecordLoginFailureParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, recordLoginFailure,
+		arg.LockThreshold,
+		arg.NewLockedUntil,
+		arg.ID,
+		arg.Now,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const setEmail = `-- name: SetEmail :exec
