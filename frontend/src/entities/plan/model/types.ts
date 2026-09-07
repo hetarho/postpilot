@@ -51,8 +51,14 @@ export interface CreditBalance {
 export interface PlanOffer {
   plan: PlanName | undefined
   monthlyCredits: number
-  /** Whole US cents; zero for the free tier. Nothing here charges anyone. */
+  /** Whole US cents; zero for the free tier. What a card is charged is BILLING's. */
   priceUsdCents: number
+  /** How many posts the grant covers for the server's reference case. Display only, and
+   *  conservative by construction — the server prices it at the worst case the admission
+   *  gate holds against, so it never promises a post that would then be refused. */
+  estimatedPosts: number
+  /** The one rung the comparison screen marks. The server decides which. */
+  recommended: boolean
 }
 
 export interface MyPlan {

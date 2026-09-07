@@ -77,9 +77,9 @@ const SignupBonusCredits = 50
 // unlimited, not a zero allowance: only master carries it, and master is never refused.
 var monthlyCredits = map[Plan]int{
 	Free:   50,
-	Basic:  200,
-	Pro:    500,
-	Max:    1000,
+	Basic:  220,
+	Pro:    575,
+	Max:    1200,
 	Master: 0,
 }
 
@@ -87,8 +87,11 @@ var monthlyCredits = map[Plan]int{
 // sizes: the two are one product decision, and a price that drifted from its grant would be
 // a promise the ladder cannot keep.
 //
-// Nothing here moves money (PRD §9). These figures are published so a comparison screen can
-// name them, not charged.
+// A paid rung grants MORE than its price buys at the par purchase rate of one credit per
+// US cent: basic +10 %, pro +15 %, max +20 %. Subscribing must beat topping up, and more so
+// the higher the rung.
+//
+// Charging these figures is BILLING's, not this package's.
 var monthlyPriceUSDCents = map[Plan]int{
 	Free:  0,
 	Basic: 200,
@@ -96,11 +99,39 @@ var monthlyPriceUSDCents = map[Plan]int{
 	Max:   1000,
 }
 
+// The reference post a comparison screen quotes in product terms: ten photos observed in
+// batches of four, then one write. Every call is priced at the worst case the admission gate
+// itself holds against — holdInputTokens of prompt — so the figure can never promise a post
+// the gate would then refuse.
+//
+// These are constants rather than reads of internal/platform/config: OBSERVE_BATCH_SIZE and
+// LLM_MAX_TOKENS_DEFAULT are per-installation env values, and a comparison figure that moved
+// with an operator's environment would have two deploys quoting different post counts. They
+// mirror the shipped defaults (batch 4, 512 completion tokens per photo, an 8 192 fallback)
+// and must be revisited when those move.
+const (
+	referencePhotos                = 10
+	referenceObserveBatch          = 4
+	referenceObserveCompletion     = referenceObserveBatch * 512
+	referenceWriteCompletion       = 8_192
+	referenceInputTokensPerCall    = 30_000
+	referenceInputMicrousdPerMTok  = 300_000
+	referenceOutputMicrousdPerMTok = 2_500_000
+)
+
+// recommended is the rung the comparison screen marks. It lives beside the grants it
+// compares because which rung to recommend is a product decision, not a client's.
+const recommended = Pro
+
 // Offer is one rung as a comparison screen lists it.
 type Offer struct {
 	Plan           Plan
 	MonthlyCredits int
 	PriceUSDCents  int
+	// EstimatedPosts is how many reference posts the grant covers (→ReferencePostCredits).
+	EstimatedPosts int
+	// Recommended marks the one rung the screen highlights.
+	Recommended bool
 }
 
 // Offers are the rungs on offer, in ladder order. Master is absent: it is the operator
@@ -110,7 +141,11 @@ func Offers() []Offer {
 	offers := make([]Offer, 0, len(rungs))
 	for _, rung := range rungs {
 		offers = append(offers, Offer{
-			Plan: rung, MonthlyCredits: monthlyCredits[rung], PriceUSDCents: monthlyPriceUSDCents[rung],
+			Plan:           rung,
+			MonthlyCredits: monthlyCredits[rung],
+			PriceUSDCents:  monthlyPriceUSDCents[rung],
+			EstimatedPosts: EstimatedPosts(rung),
+			Recommended:    Recommended(rung),
 		})
 	}
 	return offers
@@ -126,6 +161,42 @@ func MonthlyCredits(p Plan) int {
 	}
 	return found
 }
+
+// ReferencePostCredits is what one reference post holds, in credits.
+//
+// It runs the reference case through Charge, the same rule every real hold pays, so the two
+// can never quote different arithmetic: three observe calls at 7 credits each plus one write
+// call at 11.
+func ReferencePostCredits() int {
+	observeCalls := (referencePhotos + referenceObserveBatch - 1) / referenceObserveBatch
+	perObserve := Charge(referenceCallMicrousd(referenceObserveCompletion))
+	perWrite := Charge(referenceCallMicrousd(referenceWriteCompletion))
+	return observeCalls*perObserve + perWrite
+}
+
+// referenceCallMicrousd prices one reference call: a worst-case prompt plus that call's own
+// completion budget.
+func referenceCallMicrousd(completionTokens int) int64 {
+	const perMTok = 1_000_000
+	input := int64(referenceInputTokensPerCall) * referenceInputMicrousdPerMTok / perMTok
+	output := int64(completionTokens) * referenceOutputMicrousdPerMTok / perMTok
+	return input + output
+}
+
+// EstimatedPosts is how many reference posts a tier's monthly grant covers.
+//
+// It floors: telling someone their grant covers three posts when the third would be refused
+// is worse than telling them two. Master is never asked — it is not on offer.
+func EstimatedPosts(p Plan) int {
+	perPost := ReferencePostCredits()
+	if perPost <= 0 {
+		return 0
+	}
+	return MonthlyCredits(p) / perPost
+}
+
+// Recommended reports whether this rung is the one a comparison screen marks.
+func Recommended(p Plan) bool { return p == recommended }
 
 // Unlimited reports whether this tier is exempt from the balance check. Its work is still
 // held, recorded and settled — unlimited spend is exactly the account whose spend the

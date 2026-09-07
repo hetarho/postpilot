@@ -39,7 +39,13 @@ export interface FakePlansOptions {
   /** What the account may spend. `unlimited` is the operator tier's shape. */
   balance?: FakeCreditBalance
   /** The rungs the comparison screen lists. */
-  offers?: Array<{ plan: ProtoPlan; monthlyCredits: number; priceUsdCents: number }>
+  offers?: Array<{
+    plan: ProtoPlan
+    monthlyCredits: number
+    priceUsdCents: number
+    estimatedPosts?: number
+    recommended?: boolean
+  }>
   /** Make GetMyPlan fail. */
   planFails?: boolean
   /** The accounts the admin screen lists. */
@@ -73,11 +79,19 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         renewsAt: options.balance?.renewsAt ?? '',
         monthlyGrant: options.balance?.monthlyGrant ?? 0,
       },
+      // The shipped ladder, estimates included, so a test that does not care about the
+      // figures still renders what the server would actually send.
       offers: options.offers ?? [
-        { plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0 },
-        { plan: ProtoPlan.BASIC, monthlyCredits: 200, priceUsdCents: 200 },
-        { plan: ProtoPlan.PRO, monthlyCredits: 500, priceUsdCents: 500 },
-        { plan: ProtoPlan.MAX, monthlyCredits: 1000, priceUsdCents: 1000 },
+        { plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0, estimatedPosts: 1 },
+        { plan: ProtoPlan.BASIC, monthlyCredits: 220, priceUsdCents: 200, estimatedPosts: 6 },
+        {
+          plan: ProtoPlan.PRO,
+          monthlyCredits: 575,
+          priceUsdCents: 500,
+          estimatedPosts: 17,
+          recommended: true,
+        },
+        { plan: ProtoPlan.MAX, monthlyCredits: 1200, priceUsdCents: 1000, estimatedPosts: 37 },
       ],
     })
   })

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/plan.proto.
  */
 export const file_postpilot_v1_plan: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb3N0cGlsb3QvdjEvcGxhbi5wcm90bxIMcG9zdHBpbG90LnYxIlEKCUNyZWRpdExvdBIMCgRraW5kGAEgASgJEg8KB2dyYW50ZWQYAiABKAUSEQoJcmVtYWluaW5nGAMgASgFEhIKCmV4cGlyZXNfYXQYBCABKAkihAEKDUNyZWRpdEJhbGFuY2USDwoHY3JlZGl0cxgBIAEoBRIRCgl1bmxpbWl0ZWQYAiABKAgSJQoEbG90cxgDIAMoCzIXLnBvc3RwaWxvdC52MS5DcmVkaXRMb3QSEQoJcmVuZXdzX2F0GAQgASgJEhUKDW1vbnRobHlfZ3JhbnQYBSABKAUiXwoJUGxhbk9mZmVyEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIXCg9tb250aGx5X2NyZWRpdHMYAiABKAUSFwoPcHJpY2VfdXNkX2NlbnRzGAMgASgFIhIKEEdldE15UGxhblJlcXVlc3QijAEKEUdldE15UGxhblJlc3BvbnNlEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIsCgdiYWxhbmNlGAIgASgLMhsucG9zdHBpbG90LnYxLkNyZWRpdEJhbGFuY2USJwoGb2ZmZXJzGAMgAygLMhcucG9zdHBpbG90LnYxLlBsYW5PZmZlciISChBMaXN0VXNlcnNSZXF1ZXN0IjoKEUxpc3RVc2Vyc1Jlc3BvbnNlEiUKBXVzZXJzGAEgAygLMhYucG9zdHBpbG90LnYxLlBsYW5Vc2VyIkwKCFBsYW5Vc2VyEgoKAmlkGAEgASgJEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhISCgpjcmVhdGVkX2F0GAMgASgJIkcKElNldFVzZXJQbGFuUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbiI7ChNTZXRVc2VyUGxhblJlc3BvbnNlEiQKBHVzZXIYASABKAsyFi5wb3N0cGlsb3QudjEuUGxhblVzZXIqaAoEUGxhbhIUChBQTEFOX1VOU1BFQ0lGSUVEEAASDQoJUExBTl9GUkVFEAESDgoKUExBTl9CQVNJQxACEgwKCFBMQU5fTUFYEAMSDwoLUExBTl9NQVNURVIQBBIMCghQTEFOX1BSTxAFMl0KC1BsYW5TZXJ2aWNlEk4KCUdldE15UGxhbhIeLnBvc3RwaWxvdC52MS5HZXRNeVBsYW5SZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLkdldE15UGxhblJlc3BvbnNlIgAytAEKDEFkbWluU2VydmljZRJOCglMaXN0VXNlcnMSHi5wb3N0cGlsb3QudjEuTGlzdFVzZXJzUmVxdWVzdBofLnBvc3RwaWxvdC52MS5MaXN0VXNlcnNSZXNwb25zZSIAElQKC1NldFVzZXJQbGFuEiAucG9zdHBpbG90LnYxLlNldFVzZXJQbGFuUmVxdWVzdBohLnBvc3RwaWxvdC52MS5TZXRVc2VyUGxhblJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
+  fileDesc("Chdwb3N0cGlsb3QvdjEvcGxhbi5wcm90bxIMcG9zdHBpbG90LnYxIlEKCUNyZWRpdExvdBIMCgRraW5kGAEgASgJEg8KB2dyYW50ZWQYAiABKAUSEQoJcmVtYWluaW5nGAMgASgFEhIKCmV4cGlyZXNfYXQYBCABKAkihAEKDUNyZWRpdEJhbGFuY2USDwoHY3JlZGl0cxgBIAEoBRIRCgl1bmxpbWl0ZWQYAiABKAgSJQoEbG90cxgDIAMoCzIXLnBvc3RwaWxvdC52MS5DcmVkaXRMb3QSEQoJcmVuZXdzX2F0GAQgASgJEhUKDW1vbnRobHlfZ3JhbnQYBSABKAUijQEKCVBsYW5PZmZlchIgCgRwbGFuGAEgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SFwoPbW9udGhseV9jcmVkaXRzGAIgASgFEhcKD3ByaWNlX3VzZF9jZW50cxgDIAEoBRIXCg9lc3RpbWF0ZWRfcG9zdHMYBCABKAUSEwoLcmVjb21tZW5kZWQYBSABKAgiEgoQR2V0TXlQbGFuUmVxdWVzdCKMAQoRR2V0TXlQbGFuUmVzcG9uc2USIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEiwKB2JhbGFuY2UYAiABKAsyGy5wb3N0cGlsb3QudjEuQ3JlZGl0QmFsYW5jZRInCgZvZmZlcnMYAyADKAsyFy5wb3N0cGlsb3QudjEuUGxhbk9mZmVyIhIKEExpc3RVc2Vyc1JlcXVlc3QiOgoRTGlzdFVzZXJzUmVzcG9uc2USJQoFdXNlcnMYASADKAsyFi5wb3N0cGlsb3QudjEuUGxhblVzZXIiTAoIUGxhblVzZXISCgoCaWQYASABKAkSIAoEcGxhbhgCIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEhIKCmNyZWF0ZWRfYXQYAyABKAkiRwoSU2V0VXNlclBsYW5SZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSIAoEcGxhbhgCIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuIjsKE1NldFVzZXJQbGFuUmVzcG9uc2USJAoEdXNlchgBIAEoCzIWLnBvc3RwaWxvdC52MS5QbGFuVXNlcipoCgRQbGFuEhQKEFBMQU5fVU5TUEVDSUZJRUQQABINCglQTEFOX0ZSRUUQARIOCgpQTEFOX0JBU0lDEAISDAoIUExBTl9NQVgQAxIPCgtQTEFOX01BU1RFUhAEEgwKCFBMQU5fUFJPEAUyXQoLUGxhblNlcnZpY2USTgoJR2V0TXlQbGFuEh4ucG9zdHBpbG90LnYxLkdldE15UGxhblJlcXVlc3QaHy5wb3N0cGlsb3QudjEuR2V0TXlQbGFuUmVzcG9uc2UiADK0AQoMQWRtaW5TZXJ2aWNlEk4KCUxpc3RVc2VycxIeLnBvc3RwaWxvdC52MS5MaXN0VXNlcnNSZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLkxpc3RVc2Vyc1Jlc3BvbnNlIgASVAoLU2V0VXNlclBsYW4SIC5wb3N0cGlsb3QudjEuU2V0VXNlclBsYW5SZXF1ZXN0GiEucG9zdHBpbG90LnYxLlNldFVzZXJQbGFuUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
 
 /**
  * One grant of credits. Consumption walks lots by expiry ascending with the non-expiring
@@ -116,13 +116,30 @@ export type PlanOffer = Message<"postpilot.v1.PlanOffer"> & {
   monthlyCredits: number;
 
   /**
-   * The intended monthly price, in whole US cents; zero for the free tier. No money moves
-   * (PRD §9) — this is the figure the grant was sized against, published so the client
-   * never hardcodes a price that could drift from the grant beside it.
+   * The intended monthly price, in whole US cents; zero for the free tier. It is the figure
+   * the grant was sized against, published so the client never hardcodes a price that could
+   * drift from the grant beside it. What a card is actually charged is BILLING's.
    *
    * @generated from field: int32 price_usd_cents = 3;
    */
   priceUsdCents: number;
+
+  /**
+   * How many posts the grant covers for one server-owned reference case, so a rung can say
+   * what it buys in product terms instead of in credits. Display only, and deliberately
+   * conservative: it prices every call at the worst case the admission gate holds against.
+   *
+   * @generated from field: int32 estimated_posts = 4;
+   */
+  estimatedPosts: number;
+
+  /**
+   * True for the one rung the comparison screen marks. Which rung that is belongs beside the
+   * grants it compares, not in the client.
+   *
+   * @generated from field: bool recommended = 5;
+   */
+  recommended: boolean;
 };
 
 /**
@@ -327,8 +344,9 @@ export const PlanSchema: GenEnum<Plan> = /*@__PURE__*/
  * plan.proto is the authorization slice of the contract: which tier an account is on,
  * what it has left to spend, and the operator surface that changes it.
  *
- * Nothing here moves money (PRD §9). The ladder is shaped like a subscription ladder,
- * but plans are assigned by the operator — there is no signup, upgrade, or checkout RPC.
+ * No procedure here moves money: charging a card, the subscription's own lifecycle and
+ * buying credits are BILLING's and live outside this contract. What this file publishes is
+ * the ladder a comparison screen reads and the operator surface that assigns a tier.
  *
  * @generated from service postpilot.v1.PlanService
  */

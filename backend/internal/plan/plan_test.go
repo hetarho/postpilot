@@ -26,14 +26,90 @@ func TestMonthlyGrantsAreTheShippedLadder(t *testing.T) {
 		want   int
 	}{
 		{plan.Free, 50},
-		{plan.Basic, 200},
-		{plan.Pro, 500},
-		{plan.Max, 1000},
+		{plan.Basic, 220},
+		{plan.Pro, 575},
+		{plan.Max, 1200},
 		{plan.Master, 0},
 	} {
 		if got := plan.MonthlyCredits(tc.acting); got != tc.want {
 			t.Errorf("MonthlyCredits(%s) = %d, want %d", tc.acting, got, tc.want)
 		}
+	}
+}
+
+// A paid rung must grant more than its price buys at the par purchase rate of one credit
+// per US cent, or there is no reason to subscribe rather than top up.
+func TestPaidRungsGrantABonusOverThePurchaseRate(t *testing.T) {
+	for _, tc := range []struct {
+		acting  plan.Plan
+		bonusPc int
+	}{
+		{plan.Basic, 10},
+		{plan.Pro, 15},
+		{plan.Max, 20},
+	} {
+		var offer plan.Offer
+		for _, candidate := range plan.Offers() {
+			if candidate.Plan == tc.acting {
+				offer = candidate
+			}
+		}
+		if offer.PriceUSDCents == 0 {
+			t.Fatalf("%s is not an offer with a price", tc.acting)
+		}
+		want := offer.PriceUSDCents + offer.PriceUSDCents*tc.bonusPc/100
+		if offer.MonthlyCredits != want {
+			t.Errorf("%s grants %d credits for %d cents, want %d (+%d%%)",
+				tc.acting, offer.MonthlyCredits, offer.PriceUSDCents, want, tc.bonusPc)
+		}
+	}
+}
+
+// The reference case is what a comparison screen quotes, so it is pinned with its own
+// arithmetic: three observe calls (10 photos in batches of 4) at 7 credits each plus one
+// write call at 11. Each call is priced at the worst case the admission gate holds against.
+func TestReferencePostCreditsPricesTheReferenceCase(t *testing.T) {
+	const perObserve = 7 // 2 + ceil((9_000 + 5_120) * 3 / 10_000)
+	const perWrite = 11  // 2 + ceil((9_000 + 20_480) * 3 / 10_000)
+	if got, want := plan.ReferencePostCredits(), 3*perObserve+perWrite; got != want {
+		t.Errorf("ReferencePostCredits() = %d, want %d", got, want)
+	}
+}
+
+func TestEstimatedPostsFloorsTheGrantAgainstTheReferencePost(t *testing.T) {
+	for _, tc := range []struct {
+		acting plan.Plan
+		want   int
+	}{
+		{plan.Free, 1},
+		{plan.Basic, 6},
+		{plan.Pro, 17},
+		{plan.Max, 37},
+	} {
+		if got := plan.EstimatedPosts(tc.acting); got != tc.want {
+			t.Errorf("EstimatedPosts(%s) = %d, want %d", tc.acting, got, tc.want)
+		}
+	}
+}
+
+// Exactly one rung is marked: two of them would make the mark meaningless, and none would
+// leave the comparison screen with nothing to lead with.
+func TestExactlyOneOfferIsRecommended(t *testing.T) {
+	marked := make([]plan.Plan, 0, 1)
+	for _, offer := range plan.Offers() {
+		if offer.Recommended {
+			marked = append(marked, offer.Plan)
+		}
+		if offer.EstimatedPosts != plan.EstimatedPosts(offer.Plan) {
+			t.Errorf("%s offers %d posts, want %d",
+				offer.Plan, offer.EstimatedPosts, plan.EstimatedPosts(offer.Plan))
+		}
+	}
+	if len(marked) != 1 || marked[0] != plan.Pro {
+		t.Errorf("recommended rungs = %v, want exactly [pro]", marked)
+	}
+	if plan.Recommended(plan.Master) {
+		t.Error("master reported recommended, but it is not on offer")
 	}
 }
 

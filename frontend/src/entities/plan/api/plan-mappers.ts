@@ -60,11 +60,17 @@ function toOffer(offer: {
   plan: ProtoPlan
   monthlyCredits: number
   priceUsdCents: number
+  estimatedPosts?: number
+  recommended?: boolean
 }): PlanOffer {
   return {
     plan: planFromProto(offer.plan),
     monthlyCredits: offer.monthlyCredits,
     priceUsdCents: offer.priceUsdCents,
+    // A server that says nothing about either is read as "no estimate, not marked" rather
+    // than as a rung to highlight: emphasis the ladder did not ask for is a claim.
+    estimatedPosts: offer.estimatedPosts ?? 0,
+    recommended: offer.recommended ?? false,
   }
 }
 

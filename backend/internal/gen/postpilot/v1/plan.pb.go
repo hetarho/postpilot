@@ -246,10 +246,17 @@ type PlanOffer struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Plan           Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
 	MonthlyCredits int32                  `protobuf:"varint,2,opt,name=monthly_credits,json=monthlyCredits,proto3" json:"monthly_credits,omitempty"`
-	// The intended monthly price, in whole US cents; zero for the free tier. No money moves
-	// (PRD §9) — this is the figure the grant was sized against, published so the client
-	// never hardcodes a price that could drift from the grant beside it.
+	// The intended monthly price, in whole US cents; zero for the free tier. It is the figure
+	// the grant was sized against, published so the client never hardcodes a price that could
+	// drift from the grant beside it. What a card is actually charged is BILLING's.
 	PriceUsdCents int32 `protobuf:"varint,3,opt,name=price_usd_cents,json=priceUsdCents,proto3" json:"price_usd_cents,omitempty"`
+	// How many posts the grant covers for one server-owned reference case, so a rung can say
+	// what it buys in product terms instead of in credits. Display only, and deliberately
+	// conservative: it prices every call at the worst case the admission gate holds against.
+	EstimatedPosts int32 `protobuf:"varint,4,opt,name=estimated_posts,json=estimatedPosts,proto3" json:"estimated_posts,omitempty"`
+	// True for the one rung the comparison screen marks. Which rung that is belongs beside the
+	// grants it compares, not in the client.
+	Recommended   bool `protobuf:"varint,5,opt,name=recommended,proto3" json:"recommended,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -303,6 +310,20 @@ func (x *PlanOffer) GetPriceUsdCents() int32 {
 		return x.PriceUsdCents
 	}
 	return 0
+}
+
+func (x *PlanOffer) GetEstimatedPosts() int32 {
+	if x != nil {
+		return x.EstimatedPosts
+	}
+	return 0
+}
+
+func (x *PlanOffer) GetRecommended() bool {
+	if x != nil {
+		return x.Recommended
+	}
+	return false
 }
 
 type GetMyPlanRequest struct {
@@ -657,11 +678,13 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\tunlimited\x18\x02 \x01(\bR\tunlimited\x12+\n" +
 	"\x04lots\x18\x03 \x03(\v2\x17.postpilot.v1.CreditLotR\x04lots\x12\x1b\n" +
 	"\trenews_at\x18\x04 \x01(\tR\brenewsAt\x12#\n" +
-	"\rmonthly_grant\x18\x05 \x01(\x05R\fmonthlyGrant\"\x84\x01\n" +
+	"\rmonthly_grant\x18\x05 \x01(\x05R\fmonthlyGrant\"\xcf\x01\n" +
 	"\tPlanOffer\x12&\n" +
 	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12'\n" +
 	"\x0fmonthly_credits\x18\x02 \x01(\x05R\x0emonthlyCredits\x12&\n" +
-	"\x0fprice_usd_cents\x18\x03 \x01(\x05R\rpriceUsdCents\"\x12\n" +
+	"\x0fprice_usd_cents\x18\x03 \x01(\x05R\rpriceUsdCents\x12'\n" +
+	"\x0festimated_posts\x18\x04 \x01(\x05R\x0eestimatedPosts\x12 \n" +
+	"\vrecommended\x18\x05 \x01(\bR\vrecommended\"\x12\n" +
 	"\x10GetMyPlanRequest\"\xa3\x01\n" +
 	"\x11GetMyPlanResponse\x12&\n" +
 	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x125\n" +

@@ -113,6 +113,8 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			Plan:           ToProto(offer.Plan),
 			MonthlyCredits: int32(offer.MonthlyCredits),
 			PriceUsdCents:  int32(offer.PriceUSDCents),
+			EstimatedPosts: int32(offer.EstimatedPosts),
+			Recommended:    offer.Recommended,
 		})
 	}
 

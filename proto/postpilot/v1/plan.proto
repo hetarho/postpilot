@@ -7,8 +7,9 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 // plan.proto is the authorization slice of the contract: which tier an account is on,
 // what it has left to spend, and the operator surface that changes it.
 //
-// Nothing here moves money (PRD §9). The ladder is shaped like a subscription ladder,
-// but plans are assigned by the operator — there is no signup, upgrade, or checkout RPC.
+// No procedure here moves money: charging a card, the subscription's own lifecycle and
+// buying credits are BILLING's and live outside this contract. What this file publishes is
+// the ladder a comparison screen reads and the operator surface that assigns a tier.
 service PlanService {
   // The caller's own tier, credit balance and the lots behind it. Every number the client
   // displays comes from here; the frontend never hardcodes a grant or a price.
@@ -68,10 +69,17 @@ message CreditBalance {
 message PlanOffer {
   Plan plan = 1;
   int32 monthly_credits = 2;
-  // The intended monthly price, in whole US cents; zero for the free tier. No money moves
-  // (PRD §9) — this is the figure the grant was sized against, published so the client
-  // never hardcodes a price that could drift from the grant beside it.
+  // The intended monthly price, in whole US cents; zero for the free tier. It is the figure
+  // the grant was sized against, published so the client never hardcodes a price that could
+  // drift from the grant beside it. What a card is actually charged is BILLING's.
   int32 price_usd_cents = 3;
+  // How many posts the grant covers for one server-owned reference case, so a rung can say
+  // what it buys in product terms instead of in credits. Display only, and deliberately
+  // conservative: it prices every call at the worst case the admission gate holds against.
+  int32 estimated_posts = 4;
+  // True for the one rung the comparison screen marks. Which rung that is belongs beside the
+  // grants it compares, not in the client.
+  bool recommended = 5;
 }
 
 message GetMyPlanRequest {}
