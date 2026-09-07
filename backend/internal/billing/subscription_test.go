@@ -3,6 +3,7 @@ package billing
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 func TestSubscribeRefusalsAndProviderFailure(t *testing.T) {
@@ -204,8 +206,10 @@ func TestRunDueContinuesAfterOneSubscriptionFails(t *testing.T) {
 
 type subscriptionStore struct {
 	subscriptions     map[string]Subscription
+	subscriptionReads int
 	methods           map[string]PaymentMethod
 	events            []Event
+	purchases         map[string]Purchase
 	credits           *subscriptionCredits
 	plans             *subscriptionPlans
 	mailer            *subscriptionMailer
@@ -215,6 +219,7 @@ type subscriptionStore struct {
 func newSubscriptionStore() *subscriptionStore {
 	return &subscriptionStore{
 		subscriptions: map[string]Subscription{},
+		purchases:     map[string]Purchase{},
 		methods:       map[string]PaymentMethod{"alice": testMethod("alice")},
 		credits:       &subscriptionCredits{},
 		plans:         &subscriptionPlans{tiers: map[string]plan.Plan{"alice": plan.Free}},
@@ -226,6 +231,7 @@ func (s *subscriptionStore) InWriteTx(ctx context.Context, fn func(Store, Credit
 	return fn(s, s.credits, s.plans)
 }
 func (s *subscriptionStore) Subscription(_ context.Context, userID string) (Subscription, bool, error) {
+	s.subscriptionReads++
 	value, ok := s.subscriptions[userID]
 	return value, ok, nil
 }
@@ -236,7 +242,19 @@ func (s *subscriptionStore) PaymentMethod(_ context.Context, userID string) (Pay
 func (s *subscriptionStore) Events(context.Context, string, int) ([]Event, error) {
 	return s.events, nil
 }
-func (*subscriptionStore) Purchases(context.Context, string) ([]Purchase, error) { return nil, nil }
+func (s *subscriptionStore) Purchases(_ context.Context, userID string) ([]Purchase, error) {
+	var result []Purchase
+	for _, purchase := range s.purchases {
+		if purchase.UserID == userID {
+			result = append(result, purchase)
+		}
+	}
+	return result, nil
+}
+func (s *subscriptionStore) Purchase(_ context.Context, userID, purchaseID string) (Purchase, bool, error) {
+	purchase, found := s.purchases[purchaseID]
+	return purchase, found && purchase.UserID == userID, nil
+}
 func (*subscriptionStore) InsertProviderNotification(context.Context, ProviderNotification) error {
 	return nil
 }
@@ -251,6 +269,19 @@ func (s *subscriptionStore) DeletePaymentMethod(_ context.Context, userID string
 func (s *subscriptionStore) InsertEvent(_ context.Context, event Event) error {
 	s.events = append(s.events, event)
 	return nil
+}
+func (s *subscriptionStore) InsertPurchase(_ context.Context, purchase Purchase) error {
+	s.purchases[purchase.ID] = purchase
+	return nil
+}
+func (s *subscriptionStore) MarkPurchaseRefunded(_ context.Context, userID, purchaseID string, at time.Time) (bool, error) {
+	purchase, found := s.purchases[purchaseID]
+	if !found || purchase.UserID != userID || purchase.RefundedAt != nil {
+		return false, nil
+	}
+	purchase.RefundedAt = &at
+	s.purchases[purchaseID] = purchase
+	return true, nil
 }
 func (s *subscriptionStore) UpsertSubscription(_ context.Context, subscription Subscription) error {
 	if subscription.UserID == s.upsertFailureUser {
@@ -278,7 +309,11 @@ type monthlyWindow struct {
 type subscriptionCredits struct {
 	windows []monthlyWindow
 	raises  []int
+	lots    map[string]*purchaseLot
+	lotSeq  int
 }
+
+type purchaseLot struct{ granted, remaining int }
 
 func (c *subscriptionCredits) OpenMonthlyLot(_ context.Context, userID string, tier plan.Plan, start, end time.Time) error {
 	c.windows = append(c.windows, monthlyWindow{userID: userID, tier: tier, start: start, end: end})
@@ -288,11 +323,35 @@ func (c *subscriptionCredits) RaiseMonthlyLot(_ context.Context, _ string, credi
 	c.raises = append(c.raises, credits)
 	return nil
 }
-func (*subscriptionCredits) OpenPurchasedLot(context.Context, string, int) (string, error) {
-	return "", nil
+func (c *subscriptionCredits) OpenPurchasedLot(_ context.Context, _ string, credits int) (string, error) {
+	if c.lots == nil {
+		c.lots = map[string]*purchaseLot{}
+	}
+	c.lotSeq++
+	id := fmt.Sprintf("purchased:lot-%d", c.lotSeq)
+	c.lots[id] = &purchaseLot{granted: credits, remaining: credits}
+	return id, nil
 }
-func (*subscriptionCredits) VoidUntouchedLot(context.Context, string) error { return nil }
-func (*subscriptionCredits) RestoreLot(context.Context, string, int) error  { return nil }
+func (c *subscriptionCredits) VoidUntouchedLot(_ context.Context, lotID string) error {
+	lot, found := c.lots[lotID]
+	if !found || lot.remaining != lot.granted {
+		return usage.ErrLotTouched
+	}
+	lot.remaining = 0
+	return nil
+}
+func (c *subscriptionCredits) LotUntouched(_ context.Context, lotID string) (bool, error) {
+	lot, found := c.lots[lotID]
+	return found && lot.granted > 0 && lot.remaining == lot.granted, nil
+}
+func (c *subscriptionCredits) RestoreLot(_ context.Context, lotID string, credits int) error {
+	lot, found := c.lots[lotID]
+	if !found || lot.remaining+credits > lot.granted {
+		return usage.ErrLotNotFound
+	}
+	lot.remaining += credits
+	return nil
+}
 func (*subscriptionCredits) GrantBonusOnce(context.Context, string, string, int) (bool, error) {
 	return false, nil
 }
@@ -312,6 +371,8 @@ type subscriptionProvider struct {
 	payments        map[string]Payment
 	chargeErr       error
 	failAfterCharge bool
+	refunds         []string
+	refundErr       error
 }
 
 func newSubscriptionProvider() *subscriptionProvider {
@@ -338,7 +399,10 @@ func (p *subscriptionProvider) PaymentByOrder(_ context.Context, orderID string)
 	payment, ok := p.payments[orderID]
 	return payment, ok, nil
 }
-func (*subscriptionProvider) Refund(context.Context, string, string) error { return nil }
+func (p *subscriptionProvider) Refund(_ context.Context, paymentKey, reason string) error {
+	p.refunds = append(p.refunds, paymentKey+":"+reason)
+	return p.refundErr
+}
 func (*subscriptionProvider) ParseNotification(*http.Request) (Notification, error) {
 	return Notification{}, nil
 }

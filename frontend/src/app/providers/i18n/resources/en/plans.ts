@@ -73,6 +73,7 @@ export const plans = {
     blockedHeading: 'Out of credits',
     blockedBody:
       'Starting AI work needs credits. Writing, editing and exporting keep working as they are.',
+    buyCredits: 'Buy credits',
   },
   admin: {
     title: 'Administration',

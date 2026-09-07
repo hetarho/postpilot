@@ -47,6 +47,36 @@ func CancellationMail(tier plan.Plan, term Term) MailMessage {
 	}
 }
 
+func PurchaseMail(purchase Purchase) MailMessage {
+	detail := purchaseDetail(purchase)
+	return MailMessage{
+		Subject: "Postpilot 크레딧 구매가 완료되었습니다 / Credit purchase complete",
+		Text: fmt.Sprintf(
+			"Postpilot 크레딧 %d개를 구매했습니다.\n결제: %s\n\nYou purchased %d Postpilot credits.\nCharge: %s",
+			purchase.Credits, detail, purchase.Credits, detail,
+		),
+	}
+}
+
+func RefundMail(purchase Purchase) MailMessage {
+	detail := purchaseDetail(purchase)
+	return MailMessage{
+		Subject: "Postpilot 크레딧 구매가 환불되었습니다 / Credit purchase refunded",
+		Text: fmt.Sprintf(
+			"Postpilot 크레딧 %d개 구매를 환불했습니다.\n환불: %s\n\nYour purchase of %d Postpilot credits was refunded.\nRefund: %s",
+			purchase.Credits, detail, purchase.Credits, detail,
+		),
+	}
+}
+
+func purchaseDetail(purchase Purchase) string {
+	return fmt.Sprintf(
+		"%d credits · $%d.%02d · %s원 · %s원/$ (%s)",
+		purchase.Credits, purchase.USDCents/100, purchase.USDCents%100,
+		comma(int64(purchase.KRW)), rateString(purchase.RatePerUSDE4), purchase.RateDate,
+	)
+}
+
 func chargeDetail(tier plan.Plan, term Term, quote Quote) string {
 	return fmt.Sprintf(
 		"%s %s · $%d.%02d · %s원 · %s원/$",

@@ -23,6 +23,7 @@ type Service struct {
 	accounts Accounts
 	mailer   Mailer
 	now      func() time.Time
+	newID    func() string
 
 	rateMu    sync.Mutex
 	rateCache map[string]int64
@@ -32,6 +33,7 @@ func NewService(store Store, provider Provider, rates Rates, credits Credits, pl
 	return &Service{
 		store: store, provider: provider, rates: rates, credits: credits,
 		plans: plans, accounts: accounts, mailer: mailer, now: time.Now,
+		newID:     newID,
 		rateCache: make(map[string]int64),
 	}
 }
@@ -54,6 +56,18 @@ func (s *Service) GetMyBilling(ctx context.Context, userID string) (AccountBilli
 	purchases, err := s.store.Purchases(ctx, userID)
 	if err != nil {
 		return AccountBilling{}, err
+	}
+	now := s.now()
+	for index := range purchases {
+		purchase := &purchases[index]
+		if purchase.RefundedAt != nil || !now.Before(purchase.ChargedAt.Add(refundWindow)) || s.credits == nil {
+			continue
+		}
+		untouched, err := s.credits.LotUntouched(ctx, purchase.LotID)
+		if err != nil {
+			return AccountBilling{}, err
+		}
+		purchase.Refundable = untouched
 	}
 	result := AccountBilling{History: history, Purchases: purchases, CustomerKey: CustomerKey(userID)}
 	if hasSubscription {

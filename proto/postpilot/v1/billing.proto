@@ -19,6 +19,9 @@ service BillingService {
   rpc ResumeSubscription(ResumeSubscriptionRequest) returns (ResumeSubscriptionResponse) {}
   rpc QuotePrice(QuotePriceRequest) returns (QuotePriceResponse) {}
   rpc QuoteChange(QuoteChangeRequest) returns (QuoteChangeResponse) {}
+  rpc QuotePurchase(QuotePurchaseRequest) returns (QuotePurchaseResponse) {}
+  rpc PurchaseCredits(PurchaseCreditsRequest) returns (PurchaseCreditsResponse) {}
+  rpc RefundPurchase(RefundPurchaseRequest) returns (RefundPurchaseResponse) {}
 }
 
 enum Term {
@@ -66,14 +69,16 @@ message BillingEvent {
 
 message BillingPurchase {
   string id = 1;
-  string lot_id = 2;
+  reserved 2;
+  reserved "lot_id";
   int32 credits = 3;
   int32 usd_cents = 4;
   int64 krw = 5;
-  string provider_payment_key = 6;
-  string order_id = 7;
+  reserved 6, 7;
+  reserved "provider_payment_key", "order_id";
   string charged_at = 8;
   string refunded_at = 9;
+  bool refundable = 10;
 }
 
 message GetMyBillingRequest {}
@@ -164,4 +169,31 @@ message QuoteChangeResponse {
   string rate_date = 4;
   bool applied_now = 5;
   string effective_at = 6;
+}
+
+message QuotePurchaseRequest {
+  int32 usd_cents = 1;
+}
+
+message QuotePurchaseResponse {
+  int32 credits = 1;
+  int64 krw = 2;
+  int64 krw_per_usd_e4 = 3;
+  string rate_date = 4;
+}
+
+message PurchaseCreditsRequest {
+  int32 usd_cents = 1;
+}
+
+message PurchaseCreditsResponse {
+  BillingPurchase purchase = 1;
+}
+
+message RefundPurchaseRequest {
+  string purchase_id = 1;
+}
+
+message RefundPurchaseResponse {
+  BillingPurchase purchase = 1;
 }

@@ -63,6 +63,15 @@ const (
 	// BillingServiceQuoteChangeProcedure is the fully-qualified name of the BillingService's
 	// QuoteChange RPC.
 	BillingServiceQuoteChangeProcedure = "/postpilot.v1.BillingService/QuoteChange"
+	// BillingServiceQuotePurchaseProcedure is the fully-qualified name of the BillingService's
+	// QuotePurchase RPC.
+	BillingServiceQuotePurchaseProcedure = "/postpilot.v1.BillingService/QuotePurchase"
+	// BillingServicePurchaseCreditsProcedure is the fully-qualified name of the BillingService's
+	// PurchaseCredits RPC.
+	BillingServicePurchaseCreditsProcedure = "/postpilot.v1.BillingService/PurchaseCredits"
+	// BillingServiceRefundPurchaseProcedure is the fully-qualified name of the BillingService's
+	// RefundPurchase RPC.
+	BillingServiceRefundPurchaseProcedure = "/postpilot.v1.BillingService/RefundPurchase"
 )
 
 // BillingServiceClient is a client for the postpilot.v1.BillingService service.
@@ -77,6 +86,9 @@ type BillingServiceClient interface {
 	ResumeSubscription(context.Context, *connect.Request[v1.ResumeSubscriptionRequest]) (*connect.Response[v1.ResumeSubscriptionResponse], error)
 	QuotePrice(context.Context, *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error)
 	QuoteChange(context.Context, *connect.Request[v1.QuoteChangeRequest]) (*connect.Response[v1.QuoteChangeResponse], error)
+	QuotePurchase(context.Context, *connect.Request[v1.QuotePurchaseRequest]) (*connect.Response[v1.QuotePurchaseResponse], error)
+	PurchaseCredits(context.Context, *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error)
+	RefundPurchase(context.Context, *connect.Request[v1.RefundPurchaseRequest]) (*connect.Response[v1.RefundPurchaseResponse], error)
 }
 
 // NewBillingServiceClient constructs a client for the postpilot.v1.BillingService service. By
@@ -150,6 +162,24 @@ func NewBillingServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(billingServiceMethods.ByName("QuoteChange")),
 			connect.WithClientOptions(opts...),
 		),
+		quotePurchase: connect.NewClient[v1.QuotePurchaseRequest, v1.QuotePurchaseResponse](
+			httpClient,
+			baseURL+BillingServiceQuotePurchaseProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("QuotePurchase")),
+			connect.WithClientOptions(opts...),
+		),
+		purchaseCredits: connect.NewClient[v1.PurchaseCreditsRequest, v1.PurchaseCreditsResponse](
+			httpClient,
+			baseURL+BillingServicePurchaseCreditsProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("PurchaseCredits")),
+			connect.WithClientOptions(opts...),
+		),
+		refundPurchase: connect.NewClient[v1.RefundPurchaseRequest, v1.RefundPurchaseResponse](
+			httpClient,
+			baseURL+BillingServiceRefundPurchaseProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("RefundPurchase")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -165,6 +195,9 @@ type billingServiceClient struct {
 	resumeSubscription    *connect.Client[v1.ResumeSubscriptionRequest, v1.ResumeSubscriptionResponse]
 	quotePrice            *connect.Client[v1.QuotePriceRequest, v1.QuotePriceResponse]
 	quoteChange           *connect.Client[v1.QuoteChangeRequest, v1.QuoteChangeResponse]
+	quotePurchase         *connect.Client[v1.QuotePurchaseRequest, v1.QuotePurchaseResponse]
+	purchaseCredits       *connect.Client[v1.PurchaseCreditsRequest, v1.PurchaseCreditsResponse]
+	refundPurchase        *connect.Client[v1.RefundPurchaseRequest, v1.RefundPurchaseResponse]
 }
 
 // GetMyBilling calls postpilot.v1.BillingService.GetMyBilling.
@@ -217,6 +250,21 @@ func (c *billingServiceClient) QuoteChange(ctx context.Context, req *connect.Req
 	return c.quoteChange.CallUnary(ctx, req)
 }
 
+// QuotePurchase calls postpilot.v1.BillingService.QuotePurchase.
+func (c *billingServiceClient) QuotePurchase(ctx context.Context, req *connect.Request[v1.QuotePurchaseRequest]) (*connect.Response[v1.QuotePurchaseResponse], error) {
+	return c.quotePurchase.CallUnary(ctx, req)
+}
+
+// PurchaseCredits calls postpilot.v1.BillingService.PurchaseCredits.
+func (c *billingServiceClient) PurchaseCredits(ctx context.Context, req *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error) {
+	return c.purchaseCredits.CallUnary(ctx, req)
+}
+
+// RefundPurchase calls postpilot.v1.BillingService.RefundPurchase.
+func (c *billingServiceClient) RefundPurchase(ctx context.Context, req *connect.Request[v1.RefundPurchaseRequest]) (*connect.Response[v1.RefundPurchaseResponse], error) {
+	return c.refundPurchase.CallUnary(ctx, req)
+}
+
 // BillingServiceHandler is an implementation of the postpilot.v1.BillingService service.
 type BillingServiceHandler interface {
 	GetMyBilling(context.Context, *connect.Request[v1.GetMyBillingRequest]) (*connect.Response[v1.GetMyBillingResponse], error)
@@ -229,6 +277,9 @@ type BillingServiceHandler interface {
 	ResumeSubscription(context.Context, *connect.Request[v1.ResumeSubscriptionRequest]) (*connect.Response[v1.ResumeSubscriptionResponse], error)
 	QuotePrice(context.Context, *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error)
 	QuoteChange(context.Context, *connect.Request[v1.QuoteChangeRequest]) (*connect.Response[v1.QuoteChangeResponse], error)
+	QuotePurchase(context.Context, *connect.Request[v1.QuotePurchaseRequest]) (*connect.Response[v1.QuotePurchaseResponse], error)
+	PurchaseCredits(context.Context, *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error)
+	RefundPurchase(context.Context, *connect.Request[v1.RefundPurchaseRequest]) (*connect.Response[v1.RefundPurchaseResponse], error)
 }
 
 // NewBillingServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -298,6 +349,24 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 		connect.WithSchema(billingServiceMethods.ByName("QuoteChange")),
 		connect.WithHandlerOptions(opts...),
 	)
+	billingServiceQuotePurchaseHandler := connect.NewUnaryHandler(
+		BillingServiceQuotePurchaseProcedure,
+		svc.QuotePurchase,
+		connect.WithSchema(billingServiceMethods.ByName("QuotePurchase")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServicePurchaseCreditsHandler := connect.NewUnaryHandler(
+		BillingServicePurchaseCreditsProcedure,
+		svc.PurchaseCredits,
+		connect.WithSchema(billingServiceMethods.ByName("PurchaseCredits")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceRefundPurchaseHandler := connect.NewUnaryHandler(
+		BillingServiceRefundPurchaseProcedure,
+		svc.RefundPurchase,
+		connect.WithSchema(billingServiceMethods.ByName("RefundPurchase")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.BillingService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BillingServiceGetMyBillingProcedure:
@@ -320,6 +389,12 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 			billingServiceQuotePriceHandler.ServeHTTP(w, r)
 		case BillingServiceQuoteChangeProcedure:
 			billingServiceQuoteChangeHandler.ServeHTTP(w, r)
+		case BillingServiceQuotePurchaseProcedure:
+			billingServiceQuotePurchaseHandler.ServeHTTP(w, r)
+		case BillingServicePurchaseCreditsProcedure:
+			billingServicePurchaseCreditsHandler.ServeHTTP(w, r)
+		case BillingServiceRefundPurchaseProcedure:
+			billingServiceRefundPurchaseHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -367,4 +442,16 @@ func (UnimplementedBillingServiceHandler) QuotePrice(context.Context, *connect.R
 
 func (UnimplementedBillingServiceHandler) QuoteChange(context.Context, *connect.Request[v1.QuoteChangeRequest]) (*connect.Response[v1.QuoteChangeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.QuoteChange is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) QuotePurchase(context.Context, *connect.Request[v1.QuotePurchaseRequest]) (*connect.Response[v1.QuotePurchaseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.QuotePurchase is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) PurchaseCredits(context.Context, *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.PurchaseCredits is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) RefundPurchase(context.Context, *connect.Request[v1.RefundPurchaseRequest]) (*connect.Response[v1.RefundPurchaseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.RefundPurchase is not implemented"))
 }

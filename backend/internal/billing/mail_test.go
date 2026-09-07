@@ -29,6 +29,20 @@ func TestBillingMailsAreKoreanFirstAndCarryChargeFacts(t *testing.T) {
 	}
 }
 
+func TestPurchaseAndRefundMailsCarryBilingualPurchaseFacts(t *testing.T) {
+	purchase := Purchase{Credits: 500, USDCents: 500, KRW: 6_963, RatePerUSDE4: 13_925_000, RateDate: "2026-09-07"}
+	for name, message := range map[string]MailMessage{"purchase": PurchaseMail(purchase), "refund": RefundMail(purchase)} {
+		if !strings.HasPrefix(message.Text, "Postpilot 크레딧 500개") {
+			t.Errorf("%s is not Korean first: %q", name, message.Text)
+		}
+		for _, fact := range []string{"500 credits", "$5.00", "6,963원", "1,392.50원/$", "2026-09-07"} {
+			if !strings.Contains(message.Text, fact) {
+				t.Errorf("%s missing %q: %s", name, fact, message.Text)
+			}
+		}
+	}
+}
+
 func TestBillingMailIsSkippedWithoutAVerifiedAddress(t *testing.T) {
 	store := newSubscriptionStore()
 	service := NewService(store, newSubscriptionProvider(), subscriptionRates{}, store.credits, store.plans, subscriptionAccounts{}, store.mailer)

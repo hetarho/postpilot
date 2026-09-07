@@ -38,14 +38,16 @@ export interface BillingEvent {
 
 export interface Purchase {
   id: string
-  lotId: string
   credits: number
   usdCents: number
   krw: bigint
-  providerPaymentKey: string
-  orderId: string
   chargedAt: string
   refundedAt: string
+  refundable: boolean
+}
+
+export interface PurchaseQuote extends Quote {
+  credits: number
 }
 
 export interface Quote {

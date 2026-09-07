@@ -31,7 +31,7 @@ describe('billing mappers', () => {
             krwPerUsdE4: 14000000n,
           },
         ],
-        purchases: [{ id: 'p1', lotId: 'lot1', credits: 100, usdCents: 100, krw: 1400n }],
+        purchases: [{ id: 'p1', credits: 100, usdCents: 100, krw: 1400n, refundable: true }],
       }),
     )
     expect(mapped).toMatchObject({
@@ -45,7 +45,7 @@ describe('billing mappers', () => {
       },
       paymentMethod: { cardLabel: '11 1234' },
       history: [{ id: 7n, krw: 70000n, krwPerUsdE4: 14000000n }],
-      purchases: [{ id: 'p1', credits: 100, krw: 1400n }],
+      purchases: [{ id: 'p1', credits: 100, krw: 1400n, refundable: true }],
     })
   })
 

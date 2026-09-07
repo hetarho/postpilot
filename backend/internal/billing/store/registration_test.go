@@ -136,6 +136,61 @@ func TestSubscribePersistsSubscriptionTierEventsAndMonthlyLotTogether(t *testing
 	}
 }
 
+func TestPurchaseAndRefundPersistOneMoneyLedgerAndOneCreditLot(t *testing.T) {
+	ctx := context.Background()
+	handle, err := db.Open(filepath.Join(t.TempDir(), "purchase.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = handle.Close() })
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	if _, err := handle.Writer.ExecContext(ctx,
+		"INSERT INTO users (id, password_hash, plan, email, email_verified_at, created_at) VALUES (?, 'hash', 'free', ?, ?, ?)",
+		"alice", "alice@example.com", now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano)); err != nil {
+		t.Fatal(err)
+	}
+
+	usageStore := usagestore.New(handle.Writer, handle.Reader)
+	ledger := usage.NewService(usageStore, nil, 0)
+	store := billingstore.New(handle.Writer, handle.Reader)
+	store.SetCreditsForTx(func(conn *sql.Conn) billing.Credits {
+		return usage.NewService(usagestore.NewTx(conn), nil, 0)
+	})
+	store.SetPlansForTx(func(*sql.Conn) billing.Plans { return registrationPlans{} })
+	if err := store.UpsertPaymentMethod(ctx, billing.PaymentMethod{
+		UserID: "alice", Provider: "toss", BillingKey: "billing-key",
+		CustomerKey: billing.CustomerKey("alice"), CardLabel: "11 1234", RegisteredAt: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	service := billing.NewService(store, &registrationProvider{}, registrationRates{}, ledger, nil, nil, nil)
+	purchase, err := service.PurchaseCredits(ctx, "alice", 500)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, err := service.GetMyBilling(ctx, "alice")
+	if err != nil || len(view.Purchases) != 1 || !view.Purchases[0].Refundable {
+		t.Fatalf("billing view=%+v err=%v", view, err)
+	}
+	refunded, err := service.RefundPurchase(ctx, "alice", purchase.ID)
+	if err != nil || refunded.RefundedAt == nil {
+		t.Fatalf("refund=%+v err=%v", refunded, err)
+	}
+	var remaining, events int
+	if err := handle.Reader.QueryRowContext(ctx, "SELECT remaining FROM credit_lots WHERE id = ?", purchase.LotID).Scan(&remaining); err != nil {
+		t.Fatal(err)
+	}
+	if err := handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM billing_events WHERE user_id = ? AND kind IN ('charge','refund')", "alice").Scan(&events); err != nil {
+		t.Fatal(err)
+	}
+	if remaining != 0 || events != 2 {
+		t.Fatalf("remaining=%d events=%d", remaining, events)
+	}
+}
+
 type registrationAccounts struct{}
 
 func (registrationAccounts) VerifiedEmail(context.Context, string) (string, bool, error) {

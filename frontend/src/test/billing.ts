@@ -10,6 +10,9 @@ import {
   ProtoTerm,
   QuoteChangeResponseSchema,
   QuotePriceResponseSchema,
+  QuotePurchaseResponseSchema,
+  PurchaseCreditsResponseSchema,
+  RefundPurchaseResponseSchema,
   RegisterPaymentMethodResponseSchema,
   RemovePaymentMethodResponseSchema,
   ResumeSubscriptionResponseSchema,
@@ -50,6 +53,10 @@ export interface FakeBillingOptions {
   registrationRequests?: Array<{ authKey: string; customerKey: string }>
   registerFailure?: 'EMAIL_VERIFICATION_REQUIRED' | 'CUSTOMER_KEY_MISMATCH' | 'BILLING_UNAVAILABLE'
   removeFailure?: 'SUBSCRIPTION_NEEDS_METHOD' | 'BILLING_UNAVAILABLE'
+  purchaseRequests?: number[]
+  refundRequests?: string[]
+  purchaseFailure?: 'CHARGE_FAILED' | 'PAYMENT_METHOD_REQUIRED' | 'PURCHASE_TOO_SMALL'
+  refundFailure?: 'PURCHASE_SPENT' | 'REFUND_WINDOW_CLOSED' | 'REFUND_FAILED' | 'PURCHASE_NOT_FOUND'
 }
 
 export function registerBillingService(router: ConnectRouter, options: FakeBillingOptions = {}) {
@@ -66,6 +73,10 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
     registrationRequests,
     registerFailure,
     removeFailure,
+    purchaseRequests,
+    refundRequests,
+    purchaseFailure,
+    refundFailure,
   } = options
   let subscribed = Boolean(populated || subscription)
   let hasPaymentMethod = Boolean(populated || paymentMethod)
@@ -74,6 +85,19 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
   let autoRenew = subscriptionState?.autoRenew ?? true
   let scheduledPlan = subscriptionState?.scheduledPlan ?? ProtoPlan.UNSPECIFIED
   let scheduledTerm = subscriptionState?.scheduledTerm ?? ProtoTerm.UNSPECIFIED
+  let purchases = populated
+    ? [
+        {
+          id: 'purchase-1',
+          credits: 100,
+          usdCents: 100,
+          krw: 1400n,
+          chargedAt: '2026-09-08T00:00:00Z',
+          refundedAt: '',
+          refundable: true,
+        },
+      ]
+    : []
   router.rpc(BillingService.method.getMyBilling, () => {
     calls?.push('GetMyBilling')
     return create(GetMyBillingResponseSchema, {
@@ -117,9 +141,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
             },
           ]
         : [],
-      purchases: populated
-        ? [{ id: 'purchase-1', lotId: 'lot-1', credits: 100, usdCents: 100, krw: 1400n }]
-        : [],
+      purchases,
     })
   })
   router.rpc(BillingService.method.quotePrice, (request) => {
@@ -151,6 +173,49 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
       appliedNow,
       effectiveAt: appliedNow ? '2026-09-08T00:00:00Z' : '2026-10-08T00:00:00Z',
     })
+  })
+  router.rpc(BillingService.method.quotePurchase, (request) => {
+    calls?.push('QuotePurchase')
+    return create(QuotePurchaseResponseSchema, {
+      credits: request.usdCents,
+      krw: BigInt(request.usdCents * 14),
+      krwPerUsdE4: 14000000n,
+      rateDate: '2026-09-07',
+    })
+  })
+  router.rpc(BillingService.method.purchaseCredits, (request) => {
+    calls?.push('PurchaseCredits')
+    purchaseRequests?.push(request.usdCents)
+    if (purchaseFailure) {
+      throw connectAppError(
+        purchaseFailure,
+        purchaseFailure === 'PURCHASE_TOO_SMALL' ? Code.InvalidArgument : Code.FailedPrecondition,
+      )
+    }
+    const purchase = {
+      id: `purchase-${purchases.length + 1}`,
+      credits: request.usdCents,
+      usdCents: request.usdCents,
+      krw: BigInt(request.usdCents * 14),
+      chargedAt: '2026-09-08T00:00:01Z',
+      refundedAt: '',
+      refundable: true,
+    }
+    purchases = [purchase, ...purchases]
+    return create(PurchaseCreditsResponseSchema, { purchase })
+  })
+  router.rpc(BillingService.method.refundPurchase, (request) => {
+    calls?.push('RefundPurchase')
+    refundRequests?.push(request.purchaseId)
+    if (refundFailure) throw connectAppError(refundFailure, Code.FailedPrecondition)
+    const found = purchases.find((purchase) => purchase.id === request.purchaseId)
+    const purchase = found
+      ? { ...found, refundable: false, refundedAt: '2026-09-08T00:00:02Z' }
+      : undefined
+    if (purchase) {
+      purchases = purchases.map((current) => (current.id === purchase.id ? purchase : current))
+    }
+    return create(RefundPurchaseResponseSchema, { purchase })
   })
   router.rpc(BillingService.method.registerPaymentMethod, (request) => {
     calls?.push('RegisterPaymentMethod')

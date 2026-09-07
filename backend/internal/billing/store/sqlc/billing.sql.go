@@ -19,6 +19,55 @@ func (q *Queries) DeletePaymentMethod(ctx context.Context, userID string) error 
 	return err
 }
 
+const getCreditPurchase = `-- name: GetCreditPurchase :one
+SELECT p.id, p.user_id, p.lot_id, p.credits, p.usd_cents, p.krw,
+       e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
+       p.charged_at, p.refunded_at
+FROM credit_purchases p
+JOIN billing_events e ON e.order_id = p.order_id AND e.kind = 'charge'
+WHERE p.user_id = ? AND p.id = ?
+`
+
+type GetCreditPurchaseParams struct {
+	UserID string
+	ID     string
+}
+
+type GetCreditPurchaseRow struct {
+	ID                 string
+	UserID             string
+	LotID              string
+	Credits            int64
+	UsdCents           int64
+	Krw                int64
+	KrwPerUsdE4        sql.NullInt64
+	RateDate           sql.NullString
+	ProviderPaymentKey string
+	OrderID            string
+	ChargedAt          string
+	RefundedAt         sql.NullString
+}
+
+func (q *Queries) GetCreditPurchase(ctx context.Context, arg GetCreditPurchaseParams) (GetCreditPurchaseRow, error) {
+	row := q.db.QueryRowContext(ctx, getCreditPurchase, arg.UserID, arg.ID)
+	var i GetCreditPurchaseRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.LotID,
+		&i.Credits,
+		&i.UsdCents,
+		&i.Krw,
+		&i.KrwPerUsdE4,
+		&i.RateDate,
+		&i.ProviderPaymentKey,
+		&i.OrderID,
+		&i.ChargedAt,
+		&i.RefundedAt,
+	)
+	return i, err
+}
+
 const getPaymentMethod = `-- name: GetPaymentMethod :one
 SELECT user_id, provider, billing_key, customer_key, card_label, registered_at
 FROM payment_methods WHERE user_id = ?
@@ -110,6 +159,40 @@ func (q *Queries) InsertBillingEvent(ctx context.Context, arg InsertBillingEvent
 	return err
 }
 
+const insertCreditPurchase = `-- name: InsertCreditPurchase :exec
+INSERT INTO credit_purchases (
+    id, user_id, lot_id, credits, usd_cents, krw, provider_payment_key, order_id,
+    charged_at, refunded_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+`
+
+type InsertCreditPurchaseParams struct {
+	ID                 string
+	UserID             string
+	LotID              string
+	Credits            int64
+	UsdCents           int64
+	Krw                int64
+	ProviderPaymentKey string
+	OrderID            string
+	ChargedAt          string
+}
+
+func (q *Queries) InsertCreditPurchase(ctx context.Context, arg InsertCreditPurchaseParams) error {
+	_, err := q.db.ExecContext(ctx, insertCreditPurchase,
+		arg.ID,
+		arg.UserID,
+		arg.LotID,
+		arg.Credits,
+		arg.UsdCents,
+		arg.Krw,
+		arg.ProviderPaymentKey,
+		arg.OrderID,
+		arg.ChargedAt,
+	)
+	return err
+}
+
 const insertProviderNotification = `-- name: InsertProviderNotification :exec
 INSERT INTO provider_notifications (
     provider, event_type, payment_key, order_id, status, payload, received_at
@@ -189,20 +272,38 @@ func (q *Queries) ListBillingEvents(ctx context.Context, arg ListBillingEventsPa
 }
 
 const listCreditPurchases = `-- name: ListCreditPurchases :many
-SELECT id, user_id, lot_id, credits, usd_cents, krw, provider_payment_key, order_id,
-       charged_at, refunded_at
-FROM credit_purchases WHERE user_id = ? ORDER BY charged_at DESC, id DESC
+SELECT p.id, p.user_id, p.lot_id, p.credits, p.usd_cents, p.krw,
+       e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
+       p.charged_at, p.refunded_at
+FROM credit_purchases p
+JOIN billing_events e ON e.order_id = p.order_id AND e.kind = 'charge'
+WHERE p.user_id = ? ORDER BY p.charged_at DESC, p.id DESC
 `
 
-func (q *Queries) ListCreditPurchases(ctx context.Context, userID string) ([]CreditPurchase, error) {
+type ListCreditPurchasesRow struct {
+	ID                 string
+	UserID             string
+	LotID              string
+	Credits            int64
+	UsdCents           int64
+	Krw                int64
+	KrwPerUsdE4        sql.NullInt64
+	RateDate           sql.NullString
+	ProviderPaymentKey string
+	OrderID            string
+	ChargedAt          string
+	RefundedAt         sql.NullString
+}
+
+func (q *Queries) ListCreditPurchases(ctx context.Context, userID string) ([]ListCreditPurchasesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listCreditPurchases, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CreditPurchase
+	var items []ListCreditPurchasesRow
 	for rows.Next() {
-		var i CreditPurchase
+		var i ListCreditPurchasesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -210,6 +311,8 @@ func (q *Queries) ListCreditPurchases(ctx context.Context, userID string) ([]Cre
 			&i.Credits,
 			&i.UsdCents,
 			&i.Krw,
+			&i.KrwPerUsdE4,
+			&i.RateDate,
 			&i.ProviderPaymentKey,
 			&i.OrderID,
 			&i.ChargedAt,
@@ -271,6 +374,25 @@ func (q *Queries) ListDueSubscriptions(ctx context.Context, nextGrantAt string) 
 		return nil, err
 	}
 	return items, nil
+}
+
+const markCreditPurchaseRefunded = `-- name: MarkCreditPurchaseRefunded :execrows
+UPDATE credit_purchases SET refunded_at = ?
+WHERE user_id = ? AND id = ? AND refunded_at IS NULL
+`
+
+type MarkCreditPurchaseRefundedParams struct {
+	RefundedAt sql.NullString
+	UserID     string
+	ID         string
+}
+
+func (q *Queries) MarkCreditPurchaseRefunded(ctx context.Context, arg MarkCreditPurchaseRefundedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, markCreditPurchaseRefunded, arg.RefundedAt, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const upsertPaymentMethod = `-- name: UpsertPaymentMethod :exec

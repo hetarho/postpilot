@@ -70,6 +70,9 @@ func (s *webhookStore) Events(context.Context, string, int) ([]billing.Event, er
 func (s *webhookStore) Purchases(context.Context, string) ([]billing.Purchase, error) {
 	return nil, nil
 }
+func (s *webhookStore) Purchase(context.Context, string, string) (billing.Purchase, bool, error) {
+	return billing.Purchase{}, false, nil
+}
 func (s *webhookStore) InsertProviderNotification(_ context.Context, notification billing.ProviderNotification) error {
 	s.notifications = append(s.notifications, notification)
 	return nil
@@ -77,6 +80,10 @@ func (s *webhookStore) InsertProviderNotification(_ context.Context, notificatio
 func (s *webhookStore) UpsertPaymentMethod(context.Context, billing.PaymentMethod) error { return nil }
 func (s *webhookStore) DeletePaymentMethod(context.Context, string) error                { return nil }
 func (s *webhookStore) InsertEvent(context.Context, billing.Event) error                 { return nil }
+func (s *webhookStore) InsertPurchase(context.Context, billing.Purchase) error           { return nil }
+func (s *webhookStore) MarkPurchaseRefunded(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
+}
 func (s *webhookStore) UpsertSubscription(context.Context, billing.Subscription) error {
 	return nil
 }

@@ -118,7 +118,7 @@ func TestAnnualUpgradeChargesOnlyRemainingWholeWindows(t *testing.T) {
 		{name: "seven full windows remain", user: "alice", now: time.Date(2026, 6, 14, 23, 0, 0, 0, seoul), wantCents: 2_100, wantCalls: 1},
 		{name: "final partial month is free", user: "bob", now: time.Date(2026, 12, 15, 1, 0, 0, 0, seoul), wantCents: 0, wantCalls: 0},
 	} {
-			t.Run(test.name, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			store := newSubscriptionStore()
 			if test.wantCalls > 0 {
 				store.methods[test.user] = testMethod(test.user)

@@ -222,6 +222,20 @@ func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentPa
 	return result.RowsAffected()
 }
 
+const lotUntouched = `-- name: LotUntouched :one
+SELECT EXISTS(
+    SELECT 1 FROM credit_lots
+    WHERE id = ? AND kind = 'purchased' AND granted > 0 AND remaining = granted
+)
+`
+
+func (q *Queries) LotUntouched(ctx context.Context, id string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, lotUntouched, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const lotsInConsumptionOrder = `-- name: LotsInConsumptionOrder :many
 
 SELECT id, user_id, kind, granted, remaining, expires_at, created_at

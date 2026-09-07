@@ -16,9 +16,30 @@ SELECT id, user_id, kind, tier, term, credits, usd_cents, krw_per_usd_e4, rate_d
 FROM billing_events WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?;
 
 -- name: ListCreditPurchases :many
-SELECT id, user_id, lot_id, credits, usd_cents, krw, provider_payment_key, order_id,
-       charged_at, refunded_at
-FROM credit_purchases WHERE user_id = ? ORDER BY charged_at DESC, id DESC;
+SELECT p.id, p.user_id, p.lot_id, p.credits, p.usd_cents, p.krw,
+       e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
+       p.charged_at, p.refunded_at
+FROM credit_purchases p
+JOIN billing_events e ON e.order_id = p.order_id AND e.kind = 'charge'
+WHERE p.user_id = ? ORDER BY p.charged_at DESC, p.id DESC;
+
+-- name: GetCreditPurchase :one
+SELECT p.id, p.user_id, p.lot_id, p.credits, p.usd_cents, p.krw,
+       e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
+       p.charged_at, p.refunded_at
+FROM credit_purchases p
+JOIN billing_events e ON e.order_id = p.order_id AND e.kind = 'charge'
+WHERE p.user_id = ? AND p.id = ?;
+
+-- name: InsertCreditPurchase :exec
+INSERT INTO credit_purchases (
+    id, user_id, lot_id, credits, usd_cents, krw, provider_payment_key, order_id,
+    charged_at, refunded_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL);
+
+-- name: MarkCreditPurchaseRefunded :execrows
+UPDATE credit_purchases SET refunded_at = ?
+WHERE user_id = ? AND id = ? AND refunded_at IS NULL;
 
 -- name: InsertProviderNotification :exec
 INSERT INTO provider_notifications (

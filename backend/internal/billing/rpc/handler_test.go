@@ -75,6 +75,28 @@ func TestSubscriptionChangeFailuresHaveStableCodesAndReasons(t *testing.T) {
 	}
 }
 
+func TestPurchaseFailuresHaveStableCodesAndReasons(t *testing.T) {
+	tests := []struct {
+		err    error
+		code   connect.Code
+		reason string
+	}{
+		{billing.ErrPurchaseTooSmall, connect.CodeInvalidArgument, "PURCHASE_TOO_SMALL"},
+		{billing.ErrPaymentMethodRequired, connect.CodeFailedPrecondition, "PAYMENT_METHOD_REQUIRED"},
+		{billing.ErrChargeFailed, connect.CodeFailedPrecondition, "CHARGE_FAILED"},
+		{billing.ErrPurchaseNotFound, connect.CodeNotFound, "PURCHASE_NOT_FOUND"},
+		{billing.ErrRefundWindowClosed, connect.CodeFailedPrecondition, "REFUND_WINDOW_CLOSED"},
+		{billing.ErrPurchaseSpent, connect.CodeFailedPrecondition, "PURCHASE_SPENT"},
+		{billing.ErrRefundFailed, connect.CodeFailedPrecondition, "REFUND_FAILED"},
+	}
+	for _, test := range tests {
+		err := purchaseError("alice", test.err)
+		if connect.CodeOf(err) != test.code || billingErrorDetail(t, err).GetReason() != test.reason {
+			t.Errorf("%s = %v", test.reason, err)
+		}
+	}
+}
+
 func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 	now := time.Date(2026, 9, 8, 1, 2, 3, 0, time.UTC)
 	tier, term, amount := plan.Pro, billing.TermMonthly, 500
@@ -82,13 +104,14 @@ func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 		subscription: &billing.Subscription{UserID: "alice", Tier: tier, Term: term, AnchorAt: now, TermStart: now, TermEnd: now.AddDate(0, 1, 0), NextGrantAt: now.AddDate(0, 1, 0), AutoRenew: true, Status: "active"},
 		method:       &billing.PaymentMethod{UserID: "alice", BillingKey: "must-not-cross-rpc", CustomerKey: "server-only", CardLabel: "11 1234", RegisteredAt: now},
 		events:       []billing.Event{{ID: 7, UserID: "alice", Kind: "charge", USDCents: &amount, CreatedAt: now}},
+		purchases:    []billing.Purchase{{ID: "purchase-1", Credits: 500, USDCents: 500, KRW: 7000, ChargedAt: now, Refundable: true}},
 	}
 	handler := NewHandler(billing.NewService(store, nil, nil, nil, nil, nil, nil))
 	response, err := handler.GetMyBilling(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&postpilotv1.GetMyBillingRequest{}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Msg.GetSubscription().GetPlan() != postpilotv1.Plan_PLAN_PRO || response.Msg.GetPaymentMethod().GetCardLabel() != "11 1234" || len(response.Msg.GetHistory()) != 1 || response.Msg.GetCustomerKey() != billing.CustomerKey("alice") {
+	if response.Msg.GetSubscription().GetPlan() != postpilotv1.Plan_PLAN_PRO || response.Msg.GetPaymentMethod().GetCardLabel() != "11 1234" || len(response.Msg.GetHistory()) != 1 || response.Msg.GetCustomerKey() != billing.CustomerKey("alice") || !response.Msg.GetPurchases()[0].GetRefundable() {
 		t.Fatalf("response = %+v", response.Msg)
 	}
 	if response.Msg.GetPaymentMethod().GetRegisteredAt() != now.Format(time.RFC3339) {
@@ -147,6 +170,7 @@ type handlerStore struct {
 	subscription *billing.Subscription
 	method       *billing.PaymentMethod
 	events       []billing.Event
+	purchases    []billing.Purchase
 }
 
 func (s handlerStore) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits, billing.Plans) error) error {
@@ -167,13 +191,22 @@ func (s handlerStore) PaymentMethod(context.Context, string) (billing.PaymentMet
 func (s handlerStore) Events(context.Context, string, int) ([]billing.Event, error) {
 	return s.events, nil
 }
-func (handlerStore) Purchases(context.Context, string) ([]billing.Purchase, error) { return nil, nil }
+func (s handlerStore) Purchases(context.Context, string) ([]billing.Purchase, error) {
+	return s.purchases, nil
+}
+func (handlerStore) Purchase(context.Context, string, string) (billing.Purchase, bool, error) {
+	return billing.Purchase{}, false, nil
+}
 func (handlerStore) InsertProviderNotification(context.Context, billing.ProviderNotification) error {
 	return nil
 }
 func (handlerStore) UpsertPaymentMethod(context.Context, billing.PaymentMethod) error { return nil }
 func (handlerStore) DeletePaymentMethod(context.Context, string) error                { return nil }
 func (handlerStore) InsertEvent(context.Context, billing.Event) error                 { return nil }
+func (handlerStore) InsertPurchase(context.Context, billing.Purchase) error           { return nil }
+func (handlerStore) MarkPurchaseRefunded(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
+}
 func (handlerStore) UpsertSubscription(context.Context, billing.Subscription) error {
 	return nil
 }

@@ -24,6 +24,11 @@ var (
 	ErrChangeUnsupported         = errors.New("changing tier and term together is unsupported")
 	ErrPaymentMethodRequired     = errors.New("payment method required")
 	ErrChargeFailed              = errors.New("charge failed")
+	ErrPurchaseTooSmall          = errors.New("purchase must be at least one dollar")
+	ErrPurchaseNotFound          = errors.New("purchase not found")
+	ErrRefundWindowClosed        = errors.New("refund window closed")
+	ErrPurchaseSpent             = errors.New("purchased credits were spent")
+	ErrRefundFailed              = errors.New("refund failed")
 )
 
 type Term string
@@ -84,10 +89,13 @@ type Purchase struct {
 	Credits            int
 	USDCents           int
 	KRW                int
+	RatePerUSDE4       int64
+	RateDate           string
 	ProviderPaymentKey string
 	OrderID            string
 	ChargedAt          time.Time
 	RefundedAt         *time.Time
+	Refundable         bool
 }
 
 type Quote struct {
@@ -101,6 +109,11 @@ type ChangeQuote struct {
 	Quote
 	AppliedNow  bool
 	EffectiveAt time.Time
+}
+
+type PurchaseQuote struct {
+	Quote
+	Credits int
 }
 
 type AccountBilling struct {

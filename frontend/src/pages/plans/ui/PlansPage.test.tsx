@@ -127,6 +127,7 @@ describe('the plan comparison', () => {
     expect(notice.closest('[role="status"]')).toHaveTextContent(
       '글을 쓰고 고치고 내보내는 건 그대로 할 수 있어요.',
     )
+    expect(screen.getByRole('link', { name: '크레딧 구매' })).toHaveAttribute('href', '/billing')
   })
 })
 

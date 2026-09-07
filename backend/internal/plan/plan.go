@@ -72,6 +72,8 @@ const (
 	// payment method (BILLING-10, QUOTA-9). The usage context persists it; billing decides
 	// when the account qualifies.
 	PaymentMethodBonusCredits = 100
+	// CreditsPerUSDCent is the at-par top-up rule: one dollar buys 100 credits.
+	CreditsPerUSDCent = 1
 )
 
 // monthlyCredits is the product rule for what a tier is granted each month. Zero means

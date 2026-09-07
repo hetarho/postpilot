@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/billing.proto.
  */
 export const file_postpilot_v1_billing: GenFile = /*@__PURE__*/
-  fileDesc("Chpwb3N0cGlsb3QvdjEvYmlsbGluZy5wcm90bxIMcG9zdHBpbG90LnYxIqUCChNCaWxsaW5nU3Vic2NyaXB0aW9uEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0SEQoJYW5jaG9yX2F0GAMgASgJEhIKCnRlcm1fc3RhcnQYBCABKAkSEAoIdGVybV9lbmQYBSABKAkSFQoNbmV4dF9ncmFudF9hdBgGIAEoCRISCgphdXRvX3JlbmV3GAcgASgIEioKDnNjaGVkdWxlZF9wbGFuGAggASgOMhIucG9zdHBpbG90LnYxLlBsYW4SKgoOc2NoZWR1bGVkX3Rlcm0YCSABKA4yEi5wb3N0cGlsb3QudjEuVGVybRIOCgZzdGF0dXMYCiABKAkiQQoUQmlsbGluZ1BheW1lbnRNZXRob2QSEgoKY2FyZF9sYWJlbBgBIAEoCRIVCg1yZWdpc3RlcmVkX2F0GAIgASgJIpoCCgxCaWxsaW5nRXZlbnQSCgoCaWQYASABKAMSDAoEa2luZBgCIAEoCRIgCgRwbGFuGAMgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgEIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtEg8KB2NyZWRpdHMYBSABKAUSEQoJdXNkX2NlbnRzGAYgASgFEhYKDmtyd19wZXJfdXNkX2U0GAcgASgDEhEKCXJhdGVfZGF0ZRgIIAEoCRILCgNrcncYCSABKAMSHAoUcHJvdmlkZXJfcGF5bWVudF9rZXkYCiABKAkSEAoIb3JkZXJfaWQYCyABKAkSDAoEbm90ZRgMIAEoCRISCgpjcmVhdGVkX2F0GA0gASgJIrcBCg9CaWxsaW5nUHVyY2hhc2USCgoCaWQYASABKAkSDgoGbG90X2lkGAIgASgJEg8KB2NyZWRpdHMYAyABKAUSEQoJdXNkX2NlbnRzGAQgASgFEgsKA2tydxgFIAEoAxIcChRwcm92aWRlcl9wYXltZW50X2tleRgGIAEoCRIQCghvcmRlcl9pZBgHIAEoCRISCgpjaGFyZ2VkX2F0GAggASgJEhMKC3JlZnVuZGVkX2F0GAkgASgJIhUKE0dldE15QmlsbGluZ1JlcXVlc3QigAIKFEdldE15QmlsbGluZ1Jlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uEjoKDnBheW1lbnRfbWV0aG9kGAIgASgLMiIucG9zdHBpbG90LnYxLkJpbGxpbmdQYXltZW50TWV0aG9kEisKB2hpc3RvcnkYAyADKAsyGi5wb3N0cGlsb3QudjEuQmlsbGluZ0V2ZW50EjAKCXB1cmNoYXNlcxgEIAMoCzIdLnBvc3RwaWxvdC52MS5CaWxsaW5nUHVyY2hhc2USFAoMY3VzdG9tZXJfa2V5GAUgASgJIkYKHFJlZ2lzdGVyUGF5bWVudE1ldGhvZFJlcXVlc3QSEAoIYXV0aF9rZXkYASABKAkSFAoMY3VzdG9tZXJfa2V5GAIgASgJInIKHVJlZ2lzdGVyUGF5bWVudE1ldGhvZFJlc3BvbnNlEjoKDnBheW1lbnRfbWV0aG9kGAEgASgLMiIucG9zdHBpbG90LnYxLkJpbGxpbmdQYXltZW50TWV0aG9kEhUKDWJvbnVzX2dyYW50ZWQYAiABKAgiHAoaUmVtb3ZlUGF5bWVudE1ldGhvZFJlcXVlc3QiHQobUmVtb3ZlUGF5bWVudE1ldGhvZFJlc3BvbnNlIlYKEFN1YnNjcmliZVJlcXVlc3QSIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEiAKBHRlcm0YAiABKA4yEi5wb3N0cGlsb3QudjEuVGVybSJMChFTdWJzY3JpYmVSZXNwb25zZRI3CgxzdWJzY3JpcHRpb24YASABKAsyIS5wb3N0cGlsb3QudjEuQmlsbGluZ1N1YnNjcmlwdGlvbiJfChlDaGFuZ2VTdWJzY3JpcHRpb25SZXF1ZXN0EiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0iagoaQ2hhbmdlU3Vic2NyaXB0aW9uUmVzcG9uc2USNwoMc3Vic2NyaXB0aW9uGAEgASgLMiEucG9zdHBpbG90LnYxLkJpbGxpbmdTdWJzY3JpcHRpb24SEwoLYXBwbGllZF9ub3cYAiABKAgiHgocQ2FuY2VsU2NoZWR1bGVkQ2hhbmdlUmVxdWVzdCJYCh1DYW5jZWxTY2hlZHVsZWRDaGFuZ2VSZXNwb25zZRI3CgxzdWJzY3JpcHRpb24YASABKAsyIS5wb3N0cGlsb3QudjEuQmlsbGluZ1N1YnNjcmlwdGlvbiIbChlDYW5jZWxTdWJzY3JpcHRpb25SZXF1ZXN0IlUKGkNhbmNlbFN1YnNjcmlwdGlvblJlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uIhsKGVJlc3VtZVN1YnNjcmlwdGlvblJlcXVlc3QiVQoaUmVzdW1lU3Vic2NyaXB0aW9uUmVzcG9uc2USNwoMc3Vic2NyaXB0aW9uGAEgASgLMiEucG9zdHBpbG90LnYxLkJpbGxpbmdTdWJzY3JpcHRpb24iVwoRUXVvdGVQcmljZVJlcXVlc3QSIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEiAKBHRlcm0YAiABKA4yEi5wb3N0cGlsb3QudjEuVGVybSJfChJRdW90ZVByaWNlUmVzcG9uc2USEQoJdXNkX2NlbnRzGAEgASgFEgsKA2tydxgCIAEoAxIWCg5rcndfcGVyX3VzZF9lNBgDIAEoAxIRCglyYXRlX2RhdGUYBCABKAkiWAoSUXVvdGVDaGFuZ2VSZXF1ZXN0EiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0iiwEKE1F1b3RlQ2hhbmdlUmVzcG9uc2USEQoJdXNkX2NlbnRzGAEgASgFEgsKA2tydxgCIAEoAxIWCg5rcndfcGVyX3VzZF9lNBgDIAEoAxIRCglyYXRlX2RhdGUYBCABKAkSEwoLYXBwbGllZF9ub3cYBSABKAgSFAoMZWZmZWN0aXZlX2F0GAYgASgJKj8KBFRlcm0SFAoQVEVSTV9VTlNQRUNJRklFRBAAEhAKDFRFUk1fTU9OVEhMWRABEg8KC1RFUk1fQU5OVUFMEAIy+QcKDkJpbGxpbmdTZXJ2aWNlElcKDEdldE15QmlsbGluZxIhLnBvc3RwaWxvdC52MS5HZXRNeUJpbGxpbmdSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkdldE15QmlsbGluZ1Jlc3BvbnNlIgAScgoVUmVnaXN0ZXJQYXltZW50TWV0aG9kEioucG9zdHBpbG90LnYxLlJlZ2lzdGVyUGF5bWVudE1ldGhvZFJlcXVlc3QaKy5wb3N0cGlsb3QudjEuUmVnaXN0ZXJQYXltZW50TWV0aG9kUmVzcG9uc2UiABJsChNSZW1vdmVQYXltZW50TWV0aG9kEigucG9zdHBpbG90LnYxLlJlbW92ZVBheW1lbnRNZXRob2RSZXF1ZXN0GikucG9zdHBpbG90LnYxLlJlbW92ZVBheW1lbnRNZXRob2RSZXNwb25zZSIAEk4KCVN1YnNjcmliZRIeLnBvc3RwaWxvdC52MS5TdWJzY3JpYmVSZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLlN1YnNjcmliZVJlc3BvbnNlIgASaQoSQ2hhbmdlU3Vic2NyaXB0aW9uEicucG9zdHBpbG90LnYxLkNoYW5nZVN1YnNjcmlwdGlvblJlcXVlc3QaKC5wb3N0cGlsb3QudjEuQ2hhbmdlU3Vic2NyaXB0aW9uUmVzcG9uc2UiABJyChVDYW5jZWxTY2hlZHVsZWRDaGFuZ2USKi5wb3N0cGlsb3QudjEuQ2FuY2VsU2NoZWR1bGVkQ2hhbmdlUmVxdWVzdBorLnBvc3RwaWxvdC52MS5DYW5jZWxTY2hlZHVsZWRDaGFuZ2VSZXNwb25zZSIAEmkKEkNhbmNlbFN1YnNjcmlwdGlvbhInLnBvc3RwaWxvdC52MS5DYW5jZWxTdWJzY3JpcHRpb25SZXF1ZXN0GigucG9zdHBpbG90LnYxLkNhbmNlbFN1YnNjcmlwdGlvblJlc3BvbnNlIgASaQoSUmVzdW1lU3Vic2NyaXB0aW9uEicucG9zdHBpbG90LnYxLlJlc3VtZVN1YnNjcmlwdGlvblJlcXVlc3QaKC5wb3N0cGlsb3QudjEuUmVzdW1lU3Vic2NyaXB0aW9uUmVzcG9uc2UiABJRCgpRdW90ZVByaWNlEh8ucG9zdHBpbG90LnYxLlF1b3RlUHJpY2VSZXF1ZXN0GiAucG9zdHBpbG90LnYxLlF1b3RlUHJpY2VSZXNwb25zZSIAElQKC1F1b3RlQ2hhbmdlEiAucG9zdHBpbG90LnYxLlF1b3RlQ2hhbmdlUmVxdWVzdBohLnBvc3RwaWxvdC52MS5RdW90ZUNoYW5nZVJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_plan]);
+  fileDesc("Chpwb3N0cGlsb3QvdjEvYmlsbGluZy5wcm90bxIMcG9zdHBpbG90LnYxIqUCChNCaWxsaW5nU3Vic2NyaXB0aW9uEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0SEQoJYW5jaG9yX2F0GAMgASgJEhIKCnRlcm1fc3RhcnQYBCABKAkSEAoIdGVybV9lbmQYBSABKAkSFQoNbmV4dF9ncmFudF9hdBgGIAEoCRISCgphdXRvX3JlbmV3GAcgASgIEioKDnNjaGVkdWxlZF9wbGFuGAggASgOMhIucG9zdHBpbG90LnYxLlBsYW4SKgoOc2NoZWR1bGVkX3Rlcm0YCSABKA4yEi5wb3N0cGlsb3QudjEuVGVybRIOCgZzdGF0dXMYCiABKAkiQQoUQmlsbGluZ1BheW1lbnRNZXRob2QSEgoKY2FyZF9sYWJlbBgBIAEoCRIVCg1yZWdpc3RlcmVkX2F0GAIgASgJIpoCCgxCaWxsaW5nRXZlbnQSCgoCaWQYASABKAMSDAoEa2luZBgCIAEoCRIgCgRwbGFuGAMgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgEIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtEg8KB2NyZWRpdHMYBSABKAUSEQoJdXNkX2NlbnRzGAYgASgFEhYKDmtyd19wZXJfdXNkX2U0GAcgASgDEhEKCXJhdGVfZGF0ZRgIIAEoCRILCgNrcncYCSABKAMSHAoUcHJvdmlkZXJfcGF5bWVudF9rZXkYCiABKAkSEAoIb3JkZXJfaWQYCyABKAkSDAoEbm90ZRgMIAEoCRISCgpjcmVhdGVkX2F0GA0gASgJIsUBCg9CaWxsaW5nUHVyY2hhc2USCgoCaWQYASABKAkSDwoHY3JlZGl0cxgDIAEoBRIRCgl1c2RfY2VudHMYBCABKAUSCwoDa3J3GAUgASgDEhIKCmNoYXJnZWRfYXQYCCABKAkSEwoLcmVmdW5kZWRfYXQYCSABKAkSEgoKcmVmdW5kYWJsZRgKIAEoCEoECAIQA0oECAYQB0oECAcQCFIGbG90X2lkUhRwcm92aWRlcl9wYXltZW50X2tleVIIb3JkZXJfaWQiFQoTR2V0TXlCaWxsaW5nUmVxdWVzdCKAAgoUR2V0TXlCaWxsaW5nUmVzcG9uc2USNwoMc3Vic2NyaXB0aW9uGAEgASgLMiEucG9zdHBpbG90LnYxLkJpbGxpbmdTdWJzY3JpcHRpb24SOgoOcGF5bWVudF9tZXRob2QYAiABKAsyIi5wb3N0cGlsb3QudjEuQmlsbGluZ1BheW1lbnRNZXRob2QSKwoHaGlzdG9yeRgDIAMoCzIaLnBvc3RwaWxvdC52MS5CaWxsaW5nRXZlbnQSMAoJcHVyY2hhc2VzGAQgAygLMh0ucG9zdHBpbG90LnYxLkJpbGxpbmdQdXJjaGFzZRIUCgxjdXN0b21lcl9rZXkYBSABKAkiRgocUmVnaXN0ZXJQYXltZW50TWV0aG9kUmVxdWVzdBIQCghhdXRoX2tleRgBIAEoCRIUCgxjdXN0b21lcl9rZXkYAiABKAkicgodUmVnaXN0ZXJQYXltZW50TWV0aG9kUmVzcG9uc2USOgoOcGF5bWVudF9tZXRob2QYASABKAsyIi5wb3N0cGlsb3QudjEuQmlsbGluZ1BheW1lbnRNZXRob2QSFQoNYm9udXNfZ3JhbnRlZBgCIAEoCCIcChpSZW1vdmVQYXltZW50TWV0aG9kUmVxdWVzdCIdChtSZW1vdmVQYXltZW50TWV0aG9kUmVzcG9uc2UiVgoQU3Vic2NyaWJlUmVxdWVzdBIgCgRwbGFuGAEgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgCIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtIkwKEVN1YnNjcmliZVJlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uIl8KGUNoYW5nZVN1YnNjcmlwdGlvblJlcXVlc3QSIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEiAKBHRlcm0YAiABKA4yEi5wb3N0cGlsb3QudjEuVGVybSJqChpDaGFuZ2VTdWJzY3JpcHRpb25SZXNwb25zZRI3CgxzdWJzY3JpcHRpb24YASABKAsyIS5wb3N0cGlsb3QudjEuQmlsbGluZ1N1YnNjcmlwdGlvbhITCgthcHBsaWVkX25vdxgCIAEoCCIeChxDYW5jZWxTY2hlZHVsZWRDaGFuZ2VSZXF1ZXN0IlgKHUNhbmNlbFNjaGVkdWxlZENoYW5nZVJlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uIhsKGUNhbmNlbFN1YnNjcmlwdGlvblJlcXVlc3QiVQoaQ2FuY2VsU3Vic2NyaXB0aW9uUmVzcG9uc2USNwoMc3Vic2NyaXB0aW9uGAEgASgLMiEucG9zdHBpbG90LnYxLkJpbGxpbmdTdWJzY3JpcHRpb24iGwoZUmVzdW1lU3Vic2NyaXB0aW9uUmVxdWVzdCJVChpSZXN1bWVTdWJzY3JpcHRpb25SZXNwb25zZRI3CgxzdWJzY3JpcHRpb24YASABKAsyIS5wb3N0cGlsb3QudjEuQmlsbGluZ1N1YnNjcmlwdGlvbiJXChFRdW90ZVByaWNlUmVxdWVzdBIgCgRwbGFuGAEgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgCIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtIl8KElF1b3RlUHJpY2VSZXNwb25zZRIRCgl1c2RfY2VudHMYASABKAUSCwoDa3J3GAIgASgDEhYKDmtyd19wZXJfdXNkX2U0GAMgASgDEhEKCXJhdGVfZGF0ZRgEIAEoCSJYChJRdW90ZUNoYW5nZVJlcXVlc3QSIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEiAKBHRlcm0YAiABKA4yEi5wb3N0cGlsb3QudjEuVGVybSKLAQoTUXVvdGVDaGFuZ2VSZXNwb25zZRIRCgl1c2RfY2VudHMYASABKAUSCwoDa3J3GAIgASgDEhYKDmtyd19wZXJfdXNkX2U0GAMgASgDEhEKCXJhdGVfZGF0ZRgEIAEoCRITCgthcHBsaWVkX25vdxgFIAEoCBIUCgxlZmZlY3RpdmVfYXQYBiABKAkiKQoUUXVvdGVQdXJjaGFzZVJlcXVlc3QSEQoJdXNkX2NlbnRzGAEgASgFImAKFVF1b3RlUHVyY2hhc2VSZXNwb25zZRIPCgdjcmVkaXRzGAEgASgFEgsKA2tydxgCIAEoAxIWCg5rcndfcGVyX3VzZF9lNBgDIAEoAxIRCglyYXRlX2RhdGUYBCABKAkiKwoWUHVyY2hhc2VDcmVkaXRzUmVxdWVzdBIRCgl1c2RfY2VudHMYASABKAUiSgoXUHVyY2hhc2VDcmVkaXRzUmVzcG9uc2USLwoIcHVyY2hhc2UYASABKAsyHS5wb3N0cGlsb3QudjEuQmlsbGluZ1B1cmNoYXNlIiwKFVJlZnVuZFB1cmNoYXNlUmVxdWVzdBITCgtwdXJjaGFzZV9pZBgBIAEoCSJJChZSZWZ1bmRQdXJjaGFzZVJlc3BvbnNlEi8KCHB1cmNoYXNlGAEgASgLMh0ucG9zdHBpbG90LnYxLkJpbGxpbmdQdXJjaGFzZSo/CgRUZXJtEhQKEFRFUk1fVU5TUEVDSUZJRUQQABIQCgxURVJNX01PTlRITFkQARIPCgtURVJNX0FOTlVBTBACMpYKCg5CaWxsaW5nU2VydmljZRJXCgxHZXRNeUJpbGxpbmcSIS5wb3N0cGlsb3QudjEuR2V0TXlCaWxsaW5nUmVxdWVzdBoiLnBvc3RwaWxvdC52MS5HZXRNeUJpbGxpbmdSZXNwb25zZSIAEnIKFVJlZ2lzdGVyUGF5bWVudE1ldGhvZBIqLnBvc3RwaWxvdC52MS5SZWdpc3RlclBheW1lbnRNZXRob2RSZXF1ZXN0GisucG9zdHBpbG90LnYxLlJlZ2lzdGVyUGF5bWVudE1ldGhvZFJlc3BvbnNlIgASbAoTUmVtb3ZlUGF5bWVudE1ldGhvZBIoLnBvc3RwaWxvdC52MS5SZW1vdmVQYXltZW50TWV0aG9kUmVxdWVzdBopLnBvc3RwaWxvdC52MS5SZW1vdmVQYXltZW50TWV0aG9kUmVzcG9uc2UiABJOCglTdWJzY3JpYmUSHi5wb3N0cGlsb3QudjEuU3Vic2NyaWJlUmVxdWVzdBofLnBvc3RwaWxvdC52MS5TdWJzY3JpYmVSZXNwb25zZSIAEmkKEkNoYW5nZVN1YnNjcmlwdGlvbhInLnBvc3RwaWxvdC52MS5DaGFuZ2VTdWJzY3JpcHRpb25SZXF1ZXN0GigucG9zdHBpbG90LnYxLkNoYW5nZVN1YnNjcmlwdGlvblJlc3BvbnNlIgAScgoVQ2FuY2VsU2NoZWR1bGVkQ2hhbmdlEioucG9zdHBpbG90LnYxLkNhbmNlbFNjaGVkdWxlZENoYW5nZVJlcXVlc3QaKy5wb3N0cGlsb3QudjEuQ2FuY2VsU2NoZWR1bGVkQ2hhbmdlUmVzcG9uc2UiABJpChJDYW5jZWxTdWJzY3JpcHRpb24SJy5wb3N0cGlsb3QudjEuQ2FuY2VsU3Vic2NyaXB0aW9uUmVxdWVzdBooLnBvc3RwaWxvdC52MS5DYW5jZWxTdWJzY3JpcHRpb25SZXNwb25zZSIAEmkKElJlc3VtZVN1YnNjcmlwdGlvbhInLnBvc3RwaWxvdC52MS5SZXN1bWVTdWJzY3JpcHRpb25SZXF1ZXN0GigucG9zdHBpbG90LnYxLlJlc3VtZVN1YnNjcmlwdGlvblJlc3BvbnNlIgASUQoKUXVvdGVQcmljZRIfLnBvc3RwaWxvdC52MS5RdW90ZVByaWNlUmVxdWVzdBogLnBvc3RwaWxvdC52MS5RdW90ZVByaWNlUmVzcG9uc2UiABJUCgtRdW90ZUNoYW5nZRIgLnBvc3RwaWxvdC52MS5RdW90ZUNoYW5nZVJlcXVlc3QaIS5wb3N0cGlsb3QudjEuUXVvdGVDaGFuZ2VSZXNwb25zZSIAEloKDVF1b3RlUHVyY2hhc2USIi5wb3N0cGlsb3QudjEuUXVvdGVQdXJjaGFzZVJlcXVlc3QaIy5wb3N0cGlsb3QudjEuUXVvdGVQdXJjaGFzZVJlc3BvbnNlIgASYAoPUHVyY2hhc2VDcmVkaXRzEiQucG9zdHBpbG90LnYxLlB1cmNoYXNlQ3JlZGl0c1JlcXVlc3QaJS5wb3N0cGlsb3QudjEuUHVyY2hhc2VDcmVkaXRzUmVzcG9uc2UiABJdCg5SZWZ1bmRQdXJjaGFzZRIjLnBvc3RwaWxvdC52MS5SZWZ1bmRQdXJjaGFzZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuUmVmdW5kUHVyY2hhc2VSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_plan]);
 
 /**
  * @generated from message postpilot.v1.BillingSubscription
@@ -189,11 +189,6 @@ export type BillingPurchase = Message<"postpilot.v1.BillingPurchase"> & {
   id: string;
 
   /**
-   * @generated from field: string lot_id = 2;
-   */
-  lotId: string;
-
-  /**
    * @generated from field: int32 credits = 3;
    */
   credits: number;
@@ -209,16 +204,6 @@ export type BillingPurchase = Message<"postpilot.v1.BillingPurchase"> & {
   krw: bigint;
 
   /**
-   * @generated from field: string provider_payment_key = 6;
-   */
-  providerPaymentKey: string;
-
-  /**
-   * @generated from field: string order_id = 7;
-   */
-  orderId: string;
-
-  /**
    * @generated from field: string charged_at = 8;
    */
   chargedAt: string;
@@ -227,6 +212,11 @@ export type BillingPurchase = Message<"postpilot.v1.BillingPurchase"> & {
    * @generated from field: string refunded_at = 9;
    */
   refundedAt: string;
+
+  /**
+   * @generated from field: bool refundable = 10;
+   */
+  refundable: boolean;
 };
 
 /**
@@ -654,6 +644,123 @@ export const QuoteChangeResponseSchema: GenMessage<QuoteChangeResponse> = /*@__P
   messageDesc(file_postpilot_v1_billing, 23);
 
 /**
+ * @generated from message postpilot.v1.QuotePurchaseRequest
+ */
+export type QuotePurchaseRequest = Message<"postpilot.v1.QuotePurchaseRequest"> & {
+  /**
+   * @generated from field: int32 usd_cents = 1;
+   */
+  usdCents: number;
+};
+
+/**
+ * Describes the message postpilot.v1.QuotePurchaseRequest.
+ * Use `create(QuotePurchaseRequestSchema)` to create a new message.
+ */
+export const QuotePurchaseRequestSchema: GenMessage<QuotePurchaseRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 24);
+
+/**
+ * @generated from message postpilot.v1.QuotePurchaseResponse
+ */
+export type QuotePurchaseResponse = Message<"postpilot.v1.QuotePurchaseResponse"> & {
+  /**
+   * @generated from field: int32 credits = 1;
+   */
+  credits: number;
+
+  /**
+   * @generated from field: int64 krw = 2;
+   */
+  krw: bigint;
+
+  /**
+   * @generated from field: int64 krw_per_usd_e4 = 3;
+   */
+  krwPerUsdE4: bigint;
+
+  /**
+   * @generated from field: string rate_date = 4;
+   */
+  rateDate: string;
+};
+
+/**
+ * Describes the message postpilot.v1.QuotePurchaseResponse.
+ * Use `create(QuotePurchaseResponseSchema)` to create a new message.
+ */
+export const QuotePurchaseResponseSchema: GenMessage<QuotePurchaseResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 25);
+
+/**
+ * @generated from message postpilot.v1.PurchaseCreditsRequest
+ */
+export type PurchaseCreditsRequest = Message<"postpilot.v1.PurchaseCreditsRequest"> & {
+  /**
+   * @generated from field: int32 usd_cents = 1;
+   */
+  usdCents: number;
+};
+
+/**
+ * Describes the message postpilot.v1.PurchaseCreditsRequest.
+ * Use `create(PurchaseCreditsRequestSchema)` to create a new message.
+ */
+export const PurchaseCreditsRequestSchema: GenMessage<PurchaseCreditsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 26);
+
+/**
+ * @generated from message postpilot.v1.PurchaseCreditsResponse
+ */
+export type PurchaseCreditsResponse = Message<"postpilot.v1.PurchaseCreditsResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.BillingPurchase purchase = 1;
+   */
+  purchase?: BillingPurchase | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.PurchaseCreditsResponse.
+ * Use `create(PurchaseCreditsResponseSchema)` to create a new message.
+ */
+export const PurchaseCreditsResponseSchema: GenMessage<PurchaseCreditsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 27);
+
+/**
+ * @generated from message postpilot.v1.RefundPurchaseRequest
+ */
+export type RefundPurchaseRequest = Message<"postpilot.v1.RefundPurchaseRequest"> & {
+  /**
+   * @generated from field: string purchase_id = 1;
+   */
+  purchaseId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.RefundPurchaseRequest.
+ * Use `create(RefundPurchaseRequestSchema)` to create a new message.
+ */
+export const RefundPurchaseRequestSchema: GenMessage<RefundPurchaseRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 28);
+
+/**
+ * @generated from message postpilot.v1.RefundPurchaseResponse
+ */
+export type RefundPurchaseResponse = Message<"postpilot.v1.RefundPurchaseResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.BillingPurchase purchase = 1;
+   */
+  purchase?: BillingPurchase | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.RefundPurchaseResponse.
+ * Use `create(RefundPurchaseResponseSchema)` to create a new message.
+ */
+export const RefundPurchaseResponseSchema: GenMessage<RefundPurchaseResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 29);
+
+/**
  * @generated from enum postpilot.v1.Term
  */
 export enum Term {
@@ -765,6 +872,30 @@ export const BillingService: GenService<{
     methodKind: "unary";
     input: typeof QuoteChangeRequestSchema;
     output: typeof QuoteChangeResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.BillingService.QuotePurchase
+   */
+  quotePurchase: {
+    methodKind: "unary";
+    input: typeof QuotePurchaseRequestSchema;
+    output: typeof QuotePurchaseResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.BillingService.PurchaseCredits
+   */
+  purchaseCredits: {
+    methodKind: "unary";
+    input: typeof PurchaseCreditsRequestSchema;
+    output: typeof PurchaseCreditsResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.BillingService.RefundPurchase
+   */
+  refundPurchase: {
+    methodKind: "unary";
+    input: typeof RefundPurchaseRequestSchema;
+    output: typeof RefundPurchaseResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_billing, 0);

@@ -184,6 +184,45 @@ func (h *Handler) QuoteChange(ctx context.Context, req *connect.Request[postpilo
 	}), nil
 }
 
+func (h *Handler) QuotePurchase(ctx context.Context, req *connect.Request[postpilotv1.QuotePurchaseRequest]) (*connect.Response[postpilotv1.QuotePurchaseResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	quote, err := h.service.QuotePurchase(ctx, int(req.Msg.GetUsdCents()))
+	if err != nil {
+		return nil, purchaseError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.QuotePurchaseResponse{
+		Credits: int32(quote.Credits), Krw: int64(quote.KRW),
+		KrwPerUsdE4: quote.RatePerUSDE4, RateDate: quote.RateDate,
+	}), nil
+}
+
+func (h *Handler) PurchaseCredits(ctx context.Context, req *connect.Request[postpilotv1.PurchaseCreditsRequest]) (*connect.Response[postpilotv1.PurchaseCreditsResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	purchase, err := h.service.PurchaseCredits(ctx, userID, int(req.Msg.GetUsdCents()))
+	if err != nil {
+		return nil, purchaseError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.PurchaseCreditsResponse{Purchase: toProtoPurchase(purchase)}), nil
+}
+
+func (h *Handler) RefundPurchase(ctx context.Context, req *connect.Request[postpilotv1.RefundPurchaseRequest]) (*connect.Response[postpilotv1.RefundPurchaseResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	purchase, err := h.service.RefundPurchase(ctx, userID, req.Msg.GetPurchaseId())
+	if err != nil {
+		return nil, purchaseError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.RefundPurchaseResponse{Purchase: toProtoPurchase(purchase)}), nil
+}
+
 func toProtoSubscription(value billing.Subscription) *postpilotv1.BillingSubscription {
 	result := &postpilotv1.BillingSubscription{
 		Plan: planrpc.ToProto(value.Tier), Term: termToProto(value.Term), AnchorAt: instant(value.AnchorAt),
@@ -235,11 +274,35 @@ func toProtoEvent(value billing.Event) *postpilotv1.BillingEvent {
 }
 
 func toProtoPurchase(value billing.Purchase) *postpilotv1.BillingPurchase {
-	result := &postpilotv1.BillingPurchase{Id: value.ID, LotId: value.LotID, Credits: int32(value.Credits), UsdCents: int32(value.USDCents), Krw: int64(value.KRW), ProviderPaymentKey: value.ProviderPaymentKey, OrderId: value.OrderID, ChargedAt: instant(value.ChargedAt)}
+	result := &postpilotv1.BillingPurchase{Id: value.ID, Credits: int32(value.Credits), UsdCents: int32(value.USDCents), Krw: int64(value.KRW), ChargedAt: instant(value.ChargedAt), Refundable: value.Refundable}
 	if value.RefundedAt != nil {
 		result.RefundedAt = instant(*value.RefundedAt)
 	}
 	return result
+}
+
+func purchaseError(userID string, err error) error {
+	switch {
+	case errors.Is(err, billing.ErrUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+	case errors.Is(err, billing.ErrPurchaseTooSmall):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "purchase must be at least one dollar", "PURCHASE_TOO_SMALL", nil)
+	case errors.Is(err, billing.ErrPaymentMethodRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", "PAYMENT_METHOD_REQUIRED", nil)
+	case errors.Is(err, billing.ErrPurchaseNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "purchase not found", "PURCHASE_NOT_FOUND", nil)
+	case errors.Is(err, billing.ErrRefundWindowClosed):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refund window closed", "REFUND_WINDOW_CLOSED", nil)
+	case errors.Is(err, billing.ErrPurchaseSpent):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "purchased credits were spent", "PURCHASE_SPENT", nil)
+	case errors.Is(err, billing.ErrRefundFailed):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refund failed", "REFUND_FAILED", nil)
+	case errors.Is(err, billing.ErrChargeFailed):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", "CHARGE_FAILED", nil)
+	default:
+		slog.Error("credit purchase operation failed", "user_id", userID, "err", err)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not complete credit purchase operation", "UNKNOWN_FAILURE", nil)
+	}
 }
 
 func termFromProto(value postpilotv1.Term) (billing.Term, bool) {

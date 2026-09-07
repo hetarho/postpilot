@@ -6,6 +6,7 @@ import { useMyBilling, useQuote, type BillingEvent } from '@/entities/subscripti
 import { RegisterPaymentMethodButton } from '@/features/register-payment-method'
 import { RemovePaymentMethodButton } from '@/features/remove-payment-method'
 import { BillingSubscriptionActions } from '@/features/manage-subscription'
+import { CreditPurchaseSection } from '@/features/purchase-credits'
 import { formatDate, formatDateTime, formatNumber } from '@/shared/lib'
 import { Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
@@ -142,16 +143,10 @@ export function BillingPage() {
             )}
             {myBilling.history.length > 0 && <BillingHistory events={myBilling.history} />}
           </section>
-          <section className="grid gap-2">
-            <Typography variant="title" as="h2">
-              {t('purchases.heading', { ns: 'billing' })}
-            </Typography>
-            {myBilling.purchases.length === 0 && (
-              <Typography variant="body" className="text-content-secondary">
-                {t('purchases.empty', { ns: 'billing' })}
-              </Typography>
-            )}
-          </section>
+          <CreditPurchaseSection
+            hasPaymentMethod={myBilling.paymentMethod !== undefined}
+            purchases={myBilling.purchases}
+          />
         </div>
       )}
     </main>

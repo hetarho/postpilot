@@ -5,6 +5,82 @@ import { ProtoPlan, ProtoTerm } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
 describe('BillingPage', () => {
+  it('quotes and confirms an at-par credit purchase, then refreshes billing and balance', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const purchaseRequests: number[] = []
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.FREE },
+      calls,
+      billing: { paymentMethod: true, purchaseRequests },
+    })
+
+    expect(await screen.findByText('500 크레딧 · 7,000원')).toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: '구매 금액' })).toHaveTextContent('$5')
+    await user.click(screen.getByRole('button', { name: '크레딧 구매' }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveTextContent('$5.00 · 500 크레딧 · 7,000원')
+    expect(dialog).toHaveTextContent('만료되지 않습니다')
+    expect(dialog).toHaveTextContent('마지막으로 차감됩니다')
+    await user.click(within(dialog).getByRole('button', { name: '크레딧 구매' }))
+
+    await waitFor(() => expect(purchaseRequests).toEqual([500]))
+    expect(await screen.findByText('500 크레딧을 구매했습니다.')).toBeInTheDocument()
+    expect(calls.filter((call) => call === 'GetMyBilling').length).toBeGreaterThan(1)
+    expect(calls.filter((call) => call === 'GetMyPlan').length).toBeGreaterThan(1)
+  })
+
+  it('shows the seven-day rule and refunds only server-marked purchases', async () => {
+    const user = userEvent.setup()
+    const refundRequests: string[] = []
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      billing: { populated: true, refundRequests },
+    })
+
+    await user.click(await screen.findByRole('button', { name: '환불' }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveTextContent('구매 후 7일 안에')
+    expect(dialog).toHaveTextContent('하나도 사용하지 않은 경우')
+    await user.click(within(dialog).getByRole('button', { name: '환불' }))
+
+    await waitFor(() => expect(refundRequests).toEqual(['purchase-1']))
+    expect(await screen.findByText('100 크레딧 구매를 환불했습니다.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '환불' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['PURCHASE_SPENT', '구매한 크레딧을 일부 사용해 환불할 수 없어요.'],
+    ['REFUND_WINDOW_CLOSED', '구매 후 7일이 지나 환불할 수 없어요.'],
+    ['REFUND_FAILED', '환불을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.'],
+  ] as const)('localizes %s in the refund dialog', async (failure, message) => {
+    const user = userEvent.setup()
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      billing: { populated: true, refundFailure: failure },
+    })
+
+    await user.click(await screen.findByRole('button', { name: '환불' }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '환불' }))
+    expect(await screen.findByText(message)).toBeInTheDocument()
+  })
+
+  it('localizes a failed purchase charge in its confirmation dialog', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.FREE },
+      billing: { paymentMethod: true, purchaseFailure: 'CHARGE_FAILED' },
+    })
+
+    await user.click(await screen.findByRole('button', { name: '크레딧 구매' }))
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: '크레딧 구매' }),
+    )
+    expect(
+      await screen.findByText('결제를 완료하지 못했어요. 결제 수단을 확인하고 다시 시도해 주세요.'),
+    ).toBeInTheDocument()
+  })
+
   it('shows and cancels a scheduled subscription change', async () => {
     const user = userEvent.setup()
     const calls: string[] = []

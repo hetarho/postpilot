@@ -203,7 +203,7 @@ func (s *Store) Purchases(ctx context.Context, userID string) ([]billing.Purchas
 		if err != nil {
 			return nil, err
 		}
-		purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, Credits: int(row.Credits), USDCents: int(row.UsdCents), KRW: int(row.Krw), ProviderPaymentKey: row.ProviderPaymentKey, OrderID: row.OrderID, ChargedAt: charged}
+		purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, Credits: int(row.Credits), USDCents: int(row.UsdCents), KRW: int(row.Krw), RatePerUSDE4: row.KrwPerUsdE4.Int64, RateDate: row.RateDate.String, ProviderPaymentKey: row.ProviderPaymentKey, OrderID: row.OrderID, ChargedAt: charged}
 		if row.RefundedAt.Valid {
 			refunded, err := parseTime(row.RefundedAt.String)
 			if err != nil {
@@ -214,6 +214,52 @@ func (s *Store) Purchases(ctx context.Context, userID string) ([]billing.Purchas
 		result = append(result, purchase)
 	}
 	return result, nil
+}
+
+func (s *Store) Purchase(ctx context.Context, userID, purchaseID string) (billing.Purchase, bool, error) {
+	row, err := s.read.GetCreditPurchase(ctx, sqlc.GetCreditPurchaseParams{UserID: userID, ID: purchaseID})
+	if errors.Is(err, sql.ErrNoRows) {
+		return billing.Purchase{}, false, nil
+	}
+	if err != nil {
+		return billing.Purchase{}, false, fmt.Errorf("read credit purchase: %w", err)
+	}
+	charged, err := parseTime(row.ChargedAt)
+	if err != nil {
+		return billing.Purchase{}, false, err
+	}
+	purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, Credits: int(row.Credits), USDCents: int(row.UsdCents), KRW: int(row.Krw), RatePerUSDE4: row.KrwPerUsdE4.Int64, RateDate: row.RateDate.String, ProviderPaymentKey: row.ProviderPaymentKey, OrderID: row.OrderID, ChargedAt: charged}
+	if row.RefundedAt.Valid {
+		refunded, err := parseTime(row.RefundedAt.String)
+		if err != nil {
+			return billing.Purchase{}, false, err
+		}
+		purchase.RefundedAt = &refunded
+	}
+	return purchase, true, nil
+}
+
+func (s *Store) InsertPurchase(ctx context.Context, purchase billing.Purchase) error {
+	err := s.write.InsertCreditPurchase(ctx, sqlc.InsertCreditPurchaseParams{
+		ID: purchase.ID, UserID: purchase.UserID, LotID: purchase.LotID,
+		Credits: int64(purchase.Credits), UsdCents: int64(purchase.USDCents), Krw: int64(purchase.KRW),
+		ProviderPaymentKey: purchase.ProviderPaymentKey, OrderID: purchase.OrderID,
+		ChargedAt: formatTime(purchase.ChargedAt),
+	})
+	if err != nil {
+		return fmt.Errorf("insert credit purchase: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) MarkPurchaseRefunded(ctx context.Context, userID, purchaseID string, at time.Time) (bool, error) {
+	rows, err := s.write.MarkCreditPurchaseRefunded(ctx, sqlc.MarkCreditPurchaseRefundedParams{
+		RefundedAt: sql.NullString{String: formatTime(at), Valid: true}, UserID: userID, ID: purchaseID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("mark credit purchase refunded: %w", err)
+	}
+	return rows == 1, nil
 }
 
 func (s *Store) InsertProviderNotification(ctx context.Context, n billing.ProviderNotification) error {

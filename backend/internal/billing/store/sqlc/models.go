@@ -25,19 +25,6 @@ type BillingEvent struct {
 	CreatedAt          string
 }
 
-type CreditPurchase struct {
-	ID                 string
-	UserID             string
-	LotID              string
-	Credits            int64
-	UsdCents           int64
-	Krw                int64
-	ProviderPaymentKey string
-	OrderID            string
-	ChargedAt          string
-	RefundedAt         sql.NullString
-}
-
 type PaymentMethod struct {
 	UserID       string
 	Provider     string

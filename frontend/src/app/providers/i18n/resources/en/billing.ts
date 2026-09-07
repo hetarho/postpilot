@@ -96,6 +96,29 @@ export const billing = {
   purchases: {
     heading: 'Credit purchases',
     empty: 'There are no credit purchases yet.',
+    amountLabel: 'Purchase amount',
+    decrement: 'Decrease purchase by one dollar',
+    increment: 'Increase purchase by one dollar',
+    dollars: '${{value}}',
+    quote: '{{credits}} credits · ₩{{krw}}',
+    rate: '{{date}} rate · ₩{{rate}} per USD',
+    quoteFailed: 'The purchase amount could not be loaded.',
+    paymentRequired: 'Register a card before purchasing credits.',
+    buy: 'Buy credits',
+    purchaseTitle: 'Buy these credits?',
+    purchaseDescription:
+      '${{usd}} · {{credits}} credits · ₩{{krw}} will be charged. Purchased credits never expire.',
+    consumption: 'Purchased credits are spent last, after monthly and bonus credits.',
+    row: '{{credits}} credits · ${{usd}} · ₩{{krw}}',
+    refund: 'Refund',
+    refundTitle: 'Refund this credit purchase?',
+    refundDescription:
+      'A full refund is available within seven days only if none of these purchased credits were used.',
+    refunded: 'Refunded {{date}}',
+    success: {
+      purchase: 'Purchased {{credits}} credits.',
+      refund: 'Refunded the purchase of {{credits}} credits.',
+    },
   },
   loadFailed: 'Billing information could not be loaded.',
 } as const

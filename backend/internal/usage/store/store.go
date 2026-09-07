@@ -94,6 +94,14 @@ func (s *Store) LotsInConsumptionOrder(
 	return lots, nil
 }
 
+func (s *Store) LotUntouched(ctx context.Context, lotID string) (bool, error) {
+	untouched, err := s.write.LotUntouched(ctx, lotID)
+	if err != nil {
+		return false, fmt.Errorf("read purchased credit lot: %w", err)
+	}
+	return untouched, nil
+}
+
 func (s *Store) ActiveMonthlyLot(
 	ctx context.Context, userID string, now time.Time,
 ) (usage.Lot, bool, error) {

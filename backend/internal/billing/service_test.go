@@ -134,6 +134,9 @@ func (s *registrationStore) Events(context.Context, string, int) ([]Event, error
 	return s.events, nil
 }
 func (*registrationStore) Purchases(context.Context, string) ([]Purchase, error) { return nil, nil }
+func (*registrationStore) Purchase(context.Context, string, string) (Purchase, bool, error) {
+	return Purchase{}, false, nil
+}
 func (*registrationStore) InsertProviderNotification(context.Context, ProviderNotification) error {
 	return nil
 }
@@ -148,6 +151,10 @@ func (s *registrationStore) DeletePaymentMethod(context.Context, string) error {
 func (s *registrationStore) InsertEvent(_ context.Context, event Event) error {
 	s.events = append(s.events, event)
 	return nil
+}
+func (*registrationStore) InsertPurchase(context.Context, Purchase) error { return nil }
+func (*registrationStore) MarkPurchaseRefunded(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
 }
 func (s *registrationStore) UpsertSubscription(_ context.Context, subscription Subscription) error {
 	s.subscription = &subscription
@@ -172,7 +179,10 @@ func (*registrationCredits) OpenPurchasedLot(context.Context, string, int) (stri
 	return "", nil
 }
 func (*registrationCredits) VoidUntouchedLot(context.Context, string) error { return nil }
-func (*registrationCredits) RestoreLot(context.Context, string, int) error  { return nil }
+func (*registrationCredits) LotUntouched(context.Context, string) (bool, error) {
+	return false, nil
+}
+func (*registrationCredits) RestoreLot(context.Context, string, int) error { return nil }
 func (c *registrationCredits) GrantBonusOnce(_ context.Context, id, _ string, _ int) (bool, error) {
 	if c.grants[id] {
 		return false, nil
@@ -271,13 +281,20 @@ func (emptyStore) Subscription(context.Context, string) (Subscription, bool, err
 func (emptyStore) PaymentMethod(context.Context, string) (PaymentMethod, bool, error) {
 	return PaymentMethod{}, false, nil
 }
-func (emptyStore) Events(context.Context, string, int) ([]Event, error)                   { return nil, nil }
-func (emptyStore) Purchases(context.Context, string) ([]Purchase, error)                  { return nil, nil }
+func (emptyStore) Events(context.Context, string, int) ([]Event, error)  { return nil, nil }
+func (emptyStore) Purchases(context.Context, string) ([]Purchase, error) { return nil, nil }
+func (emptyStore) Purchase(context.Context, string, string) (Purchase, bool, error) {
+	return Purchase{}, false, nil
+}
 func (emptyStore) InsertProviderNotification(context.Context, ProviderNotification) error { return nil }
 func (emptyStore) UpsertPaymentMethod(context.Context, PaymentMethod) error               { return nil }
 func (emptyStore) DeletePaymentMethod(context.Context, string) error                      { return nil }
 func (emptyStore) InsertEvent(context.Context, Event) error                               { return nil }
-func (emptyStore) UpsertSubscription(context.Context, Subscription) error                 { return nil }
+func (emptyStore) InsertPurchase(context.Context, Purchase) error                         { return nil }
+func (emptyStore) MarkPurchaseRefunded(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
+}
+func (emptyStore) UpsertSubscription(context.Context, Subscription) error { return nil }
 func (emptyStore) DueSubscriptions(context.Context, time.Time) ([]Subscription, error) {
 	return nil, nil
 }

@@ -14,10 +14,13 @@ type Store interface {
 	PaymentMethod(ctx context.Context, userID string) (PaymentMethod, bool, error)
 	Events(ctx context.Context, userID string, limit int) ([]Event, error)
 	Purchases(ctx context.Context, userID string) ([]Purchase, error)
+	Purchase(ctx context.Context, userID, purchaseID string) (Purchase, bool, error)
 	InsertProviderNotification(ctx context.Context, notification ProviderNotification) error
 	UpsertPaymentMethod(ctx context.Context, method PaymentMethod) error
 	DeletePaymentMethod(ctx context.Context, userID string) error
 	InsertEvent(ctx context.Context, event Event) error
+	InsertPurchase(ctx context.Context, purchase Purchase) error
+	MarkPurchaseRefunded(ctx context.Context, userID, purchaseID string, at time.Time) (bool, error)
 	UpsertSubscription(ctx context.Context, subscription Subscription) error
 	DueSubscriptions(ctx context.Context, at time.Time) ([]Subscription, error)
 }
@@ -39,6 +42,7 @@ type Credits interface {
 	RaiseMonthlyLot(ctx context.Context, userID string, credits int) error
 	OpenPurchasedLot(ctx context.Context, userID string, credits int) (lotID string, err error)
 	VoidUntouchedLot(ctx context.Context, lotID string) error
+	LotUntouched(ctx context.Context, lotID string) (bool, error)
 	RestoreLot(ctx context.Context, lotID string, credits int) error
 	GrantBonusOnce(ctx context.Context, id, userID string, credits int) (created bool, err error)
 }

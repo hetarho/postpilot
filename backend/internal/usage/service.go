@@ -112,6 +112,13 @@ func (s *Service) VoidUntouchedLot(ctx context.Context, lotID string) error {
 	return nil
 }
 
+func (s *Service) LotUntouched(ctx context.Context, lotID string) (bool, error) {
+	if lotID == "" {
+		return false, nil
+	}
+	return s.store.LotUntouched(ctx, lotID)
+}
+
 func (s *Service) RestoreLot(ctx context.Context, lotID string, credits int) error {
 	if credits <= 0 {
 		return errors.New("restore lot: credits must be positive")

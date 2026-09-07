@@ -42,6 +42,12 @@ UPDATE credit_lots SET granted = granted + ?, remaining = remaining + ? WHERE id
 -- name: VoidUntouchedLot :execrows
 UPDATE credit_lots SET remaining = 0 WHERE id = ? AND remaining = granted;
 
+-- name: LotUntouched :one
+SELECT EXISTS(
+    SELECT 1 FROM credit_lots
+    WHERE id = ? AND kind = 'purchased' AND granted > 0 AND remaining = granted
+);
+
 -- name: RestoreLot :execrows
 UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted;
 

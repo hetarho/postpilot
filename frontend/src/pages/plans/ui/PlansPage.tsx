@@ -12,7 +12,15 @@ import {
 } from '@/entities/plan'
 import { billablePlan, useMyBilling, type BillingTerm } from '@/entities/subscription'
 import { ScheduledChangeButton } from '@/features/manage-subscription'
-import { Badge, Notice, PromoFrame, Typography, buttonStyles, pageStyles } from '@/shared/ui'
+import {
+  Badge,
+  Notice,
+  PromoFrame,
+  Typography,
+  buttonStyles,
+  pageStyles,
+  typographyStyles,
+} from '@/shared/ui'
 import { firstCombo, useEstimateInput, type EstimateInput } from '../model/estimate-input'
 import { PlanEstimator } from './PlanEstimator'
 
@@ -52,11 +60,22 @@ export function PlansPage() {
       {/* The one thing a user arriving here from a refusal needs told: what still works. */}
       {empty && (
         <Notice tone="info" role="status" className="mt-6">
-          <span>
-            <Typography variant="label" as="span">
-              {t('compare.blockedHeading', { ns: 'plans' })}
-            </Typography>{' '}
-            {t('compare.blockedBody', { ns: 'plans' })}
+          <span className="grid gap-2">
+            <span>
+              <Typography variant="label" as="span">
+                {t('compare.blockedHeading', { ns: 'plans' })}
+              </Typography>{' '}
+              {t('compare.blockedBody', { ns: 'plans' })}
+            </span>
+            <Link
+              to="/billing"
+              className={typographyStyles({
+                variant: 'label',
+                className: 'text-link-fg hover:text-link-fg-hover w-fit underline',
+              })}
+            >
+              {t('compare.buyCredits', { ns: 'plans' })}
+            </Link>
           </span>
         </Notice>
       )}

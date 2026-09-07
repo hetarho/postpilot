@@ -382,18 +382,16 @@ func (x *BillingEvent) GetCreatedAt() string {
 }
 
 type BillingPurchase struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	LotId              string                 `protobuf:"bytes,2,opt,name=lot_id,json=lotId,proto3" json:"lot_id,omitempty"`
-	Credits            int32                  `protobuf:"varint,3,opt,name=credits,proto3" json:"credits,omitempty"`
-	UsdCents           int32                  `protobuf:"varint,4,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
-	Krw                int64                  `protobuf:"varint,5,opt,name=krw,proto3" json:"krw,omitempty"`
-	ProviderPaymentKey string                 `protobuf:"bytes,6,opt,name=provider_payment_key,json=providerPaymentKey,proto3" json:"provider_payment_key,omitempty"`
-	OrderId            string                 `protobuf:"bytes,7,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	ChargedAt          string                 `protobuf:"bytes,8,opt,name=charged_at,json=chargedAt,proto3" json:"charged_at,omitempty"`
-	RefundedAt         string                 `protobuf:"bytes,9,opt,name=refunded_at,json=refundedAt,proto3" json:"refunded_at,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Credits       int32                  `protobuf:"varint,3,opt,name=credits,proto3" json:"credits,omitempty"`
+	UsdCents      int32                  `protobuf:"varint,4,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
+	Krw           int64                  `protobuf:"varint,5,opt,name=krw,proto3" json:"krw,omitempty"`
+	ChargedAt     string                 `protobuf:"bytes,8,opt,name=charged_at,json=chargedAt,proto3" json:"charged_at,omitempty"`
+	RefundedAt    string                 `protobuf:"bytes,9,opt,name=refunded_at,json=refundedAt,proto3" json:"refunded_at,omitempty"`
+	Refundable    bool                   `protobuf:"varint,10,opt,name=refundable,proto3" json:"refundable,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BillingPurchase) Reset() {
@@ -433,13 +431,6 @@ func (x *BillingPurchase) GetId() string {
 	return ""
 }
 
-func (x *BillingPurchase) GetLotId() string {
-	if x != nil {
-		return x.LotId
-	}
-	return ""
-}
-
 func (x *BillingPurchase) GetCredits() int32 {
 	if x != nil {
 		return x.Credits
@@ -461,20 +452,6 @@ func (x *BillingPurchase) GetKrw() int64 {
 	return 0
 }
 
-func (x *BillingPurchase) GetProviderPaymentKey() string {
-	if x != nil {
-		return x.ProviderPaymentKey
-	}
-	return ""
-}
-
-func (x *BillingPurchase) GetOrderId() string {
-	if x != nil {
-		return x.OrderId
-	}
-	return ""
-}
-
 func (x *BillingPurchase) GetChargedAt() string {
 	if x != nil {
 		return x.ChargedAt
@@ -487,6 +464,13 @@ func (x *BillingPurchase) GetRefundedAt() string {
 		return x.RefundedAt
 	}
 	return ""
+}
+
+func (x *BillingPurchase) GetRefundable() bool {
+	if x != nil {
+		return x.Refundable
+	}
+	return false
 }
 
 type GetMyBillingRequest struct {
@@ -1476,6 +1460,294 @@ func (x *QuoteChangeResponse) GetEffectiveAt() string {
 	return ""
 }
 
+type QuotePurchaseRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UsdCents      int32                  `protobuf:"varint,1,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuotePurchaseRequest) Reset() {
+	*x = QuotePurchaseRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuotePurchaseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuotePurchaseRequest) ProtoMessage() {}
+
+func (x *QuotePurchaseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuotePurchaseRequest.ProtoReflect.Descriptor instead.
+func (*QuotePurchaseRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *QuotePurchaseRequest) GetUsdCents() int32 {
+	if x != nil {
+		return x.UsdCents
+	}
+	return 0
+}
+
+type QuotePurchaseResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Credits       int32                  `protobuf:"varint,1,opt,name=credits,proto3" json:"credits,omitempty"`
+	Krw           int64                  `protobuf:"varint,2,opt,name=krw,proto3" json:"krw,omitempty"`
+	KrwPerUsdE4   int64                  `protobuf:"varint,3,opt,name=krw_per_usd_e4,json=krwPerUsdE4,proto3" json:"krw_per_usd_e4,omitempty"`
+	RateDate      string                 `protobuf:"bytes,4,opt,name=rate_date,json=rateDate,proto3" json:"rate_date,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuotePurchaseResponse) Reset() {
+	*x = QuotePurchaseResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuotePurchaseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuotePurchaseResponse) ProtoMessage() {}
+
+func (x *QuotePurchaseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuotePurchaseResponse.ProtoReflect.Descriptor instead.
+func (*QuotePurchaseResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *QuotePurchaseResponse) GetCredits() int32 {
+	if x != nil {
+		return x.Credits
+	}
+	return 0
+}
+
+func (x *QuotePurchaseResponse) GetKrw() int64 {
+	if x != nil {
+		return x.Krw
+	}
+	return 0
+}
+
+func (x *QuotePurchaseResponse) GetKrwPerUsdE4() int64 {
+	if x != nil {
+		return x.KrwPerUsdE4
+	}
+	return 0
+}
+
+func (x *QuotePurchaseResponse) GetRateDate() string {
+	if x != nil {
+		return x.RateDate
+	}
+	return ""
+}
+
+type PurchaseCreditsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UsdCents      int32                  `protobuf:"varint,1,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurchaseCreditsRequest) Reset() {
+	*x = PurchaseCreditsRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurchaseCreditsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurchaseCreditsRequest) ProtoMessage() {}
+
+func (x *PurchaseCreditsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurchaseCreditsRequest.ProtoReflect.Descriptor instead.
+func (*PurchaseCreditsRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *PurchaseCreditsRequest) GetUsdCents() int32 {
+	if x != nil {
+		return x.UsdCents
+	}
+	return 0
+}
+
+type PurchaseCreditsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Purchase      *BillingPurchase       `protobuf:"bytes,1,opt,name=purchase,proto3" json:"purchase,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurchaseCreditsResponse) Reset() {
+	*x = PurchaseCreditsResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurchaseCreditsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurchaseCreditsResponse) ProtoMessage() {}
+
+func (x *PurchaseCreditsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurchaseCreditsResponse.ProtoReflect.Descriptor instead.
+func (*PurchaseCreditsResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *PurchaseCreditsResponse) GetPurchase() *BillingPurchase {
+	if x != nil {
+		return x.Purchase
+	}
+	return nil
+}
+
+type RefundPurchaseRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PurchaseId    string                 `protobuf:"bytes,1,opt,name=purchase_id,json=purchaseId,proto3" json:"purchase_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefundPurchaseRequest) Reset() {
+	*x = RefundPurchaseRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefundPurchaseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefundPurchaseRequest) ProtoMessage() {}
+
+func (x *RefundPurchaseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefundPurchaseRequest.ProtoReflect.Descriptor instead.
+func (*RefundPurchaseRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *RefundPurchaseRequest) GetPurchaseId() string {
+	if x != nil {
+		return x.PurchaseId
+	}
+	return ""
+}
+
+type RefundPurchaseResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Purchase      *BillingPurchase       `protobuf:"bytes,1,opt,name=purchase,proto3" json:"purchase,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefundPurchaseResponse) Reset() {
+	*x = RefundPurchaseResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefundPurchaseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefundPurchaseResponse) ProtoMessage() {}
+
+func (x *RefundPurchaseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefundPurchaseResponse.ProtoReflect.Descriptor instead.
+func (*RefundPurchaseResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *RefundPurchaseResponse) GetPurchase() *BillingPurchase {
+	if x != nil {
+		return x.Purchase
+	}
+	return nil
+}
+
 var File_postpilot_v1_billing_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_billing_proto_rawDesc = "" +
@@ -1514,19 +1786,20 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	"\border_id\x18\v \x01(\tR\aorderId\x12\x12\n" +
 	"\x04note\x18\f \x01(\tR\x04note\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\r \x01(\tR\tcreatedAt\"\x8e\x02\n" +
+	"created_at\x18\r \x01(\tR\tcreatedAt\"\x84\x02\n" +
 	"\x0fBillingPurchase\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
-	"\x06lot_id\x18\x02 \x01(\tR\x05lotId\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acredits\x18\x03 \x01(\x05R\acredits\x12\x1b\n" +
 	"\tusd_cents\x18\x04 \x01(\x05R\busdCents\x12\x10\n" +
-	"\x03krw\x18\x05 \x01(\x03R\x03krw\x120\n" +
-	"\x14provider_payment_key\x18\x06 \x01(\tR\x12providerPaymentKey\x12\x19\n" +
-	"\border_id\x18\a \x01(\tR\aorderId\x12\x1d\n" +
+	"\x03krw\x18\x05 \x01(\x03R\x03krw\x12\x1d\n" +
 	"\n" +
 	"charged_at\x18\b \x01(\tR\tchargedAt\x12\x1f\n" +
 	"\vrefunded_at\x18\t \x01(\tR\n" +
-	"refundedAt\"\x15\n" +
+	"refundedAt\x12\x1e\n" +
+	"\n" +
+	"refundable\x18\n" +
+	" \x01(\bR\n" +
+	"refundableJ\x04\b\x02\x10\x03J\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x06lot_idR\x14provider_payment_keyR\border_id\"\x15\n" +
 	"\x13GetMyBillingRequest\"\xbe\x02\n" +
 	"\x14GetMyBillingResponse\x12E\n" +
 	"\fsubscription\x18\x01 \x01(\v2!.postpilot.v1.BillingSubscriptionR\fsubscription\x12I\n" +
@@ -1581,11 +1854,28 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	"\trate_date\x18\x04 \x01(\tR\brateDate\x12\x1f\n" +
 	"\vapplied_now\x18\x05 \x01(\bR\n" +
 	"appliedNow\x12!\n" +
-	"\feffective_at\x18\x06 \x01(\tR\veffectiveAt*?\n" +
+	"\feffective_at\x18\x06 \x01(\tR\veffectiveAt\"3\n" +
+	"\x14QuotePurchaseRequest\x12\x1b\n" +
+	"\tusd_cents\x18\x01 \x01(\x05R\busdCents\"\x85\x01\n" +
+	"\x15QuotePurchaseResponse\x12\x18\n" +
+	"\acredits\x18\x01 \x01(\x05R\acredits\x12\x10\n" +
+	"\x03krw\x18\x02 \x01(\x03R\x03krw\x12#\n" +
+	"\x0ekrw_per_usd_e4\x18\x03 \x01(\x03R\vkrwPerUsdE4\x12\x1b\n" +
+	"\trate_date\x18\x04 \x01(\tR\brateDate\"5\n" +
+	"\x16PurchaseCreditsRequest\x12\x1b\n" +
+	"\tusd_cents\x18\x01 \x01(\x05R\busdCents\"T\n" +
+	"\x17PurchaseCreditsResponse\x129\n" +
+	"\bpurchase\x18\x01 \x01(\v2\x1d.postpilot.v1.BillingPurchaseR\bpurchase\"8\n" +
+	"\x15RefundPurchaseRequest\x12\x1f\n" +
+	"\vpurchase_id\x18\x01 \x01(\tR\n" +
+	"purchaseId\"S\n" +
+	"\x16RefundPurchaseResponse\x129\n" +
+	"\bpurchase\x18\x01 \x01(\v2\x1d.postpilot.v1.BillingPurchaseR\bpurchase*?\n" +
 	"\x04Term\x12\x14\n" +
 	"\x10TERM_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fTERM_MONTHLY\x10\x01\x12\x0f\n" +
-	"\vTERM_ANNUAL\x10\x022\xf9\a\n" +
+	"\vTERM_ANNUAL\x10\x022\x96\n" +
+	"\n" +
 	"\x0eBillingService\x12W\n" +
 	"\fGetMyBilling\x12!.postpilot.v1.GetMyBillingRequest\x1a\".postpilot.v1.GetMyBillingResponse\"\x00\x12r\n" +
 	"\x15RegisterPaymentMethod\x12*.postpilot.v1.RegisterPaymentMethodRequest\x1a+.postpilot.v1.RegisterPaymentMethodResponse\"\x00\x12l\n" +
@@ -1597,7 +1887,10 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	"\x12ResumeSubscription\x12'.postpilot.v1.ResumeSubscriptionRequest\x1a(.postpilot.v1.ResumeSubscriptionResponse\"\x00\x12Q\n" +
 	"\n" +
 	"QuotePrice\x12\x1f.postpilot.v1.QuotePriceRequest\x1a .postpilot.v1.QuotePriceResponse\"\x00\x12T\n" +
-	"\vQuoteChange\x12 .postpilot.v1.QuoteChangeRequest\x1a!.postpilot.v1.QuoteChangeResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\vQuoteChange\x12 .postpilot.v1.QuoteChangeRequest\x1a!.postpilot.v1.QuoteChangeResponse\"\x00\x12Z\n" +
+	"\rQuotePurchase\x12\".postpilot.v1.QuotePurchaseRequest\x1a#.postpilot.v1.QuotePurchaseResponse\"\x00\x12`\n" +
+	"\x0fPurchaseCredits\x12$.postpilot.v1.PurchaseCreditsRequest\x1a%.postpilot.v1.PurchaseCreditsResponse\"\x00\x12]\n" +
+	"\x0eRefundPurchase\x12#.postpilot.v1.RefundPurchaseRequest\x1a$.postpilot.v1.RefundPurchaseResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_billing_proto_rawDescOnce sync.Once
@@ -1612,7 +1905,7 @@ func file_postpilot_v1_billing_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_billing_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_postpilot_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_postpilot_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_postpilot_v1_billing_proto_goTypes = []any{
 	(Term)(0),                             // 0: postpilot.v1.Term
 	(*BillingSubscription)(nil),           // 1: postpilot.v1.BillingSubscription
@@ -1639,58 +1932,72 @@ var file_postpilot_v1_billing_proto_goTypes = []any{
 	(*QuotePriceResponse)(nil),            // 22: postpilot.v1.QuotePriceResponse
 	(*QuoteChangeRequest)(nil),            // 23: postpilot.v1.QuoteChangeRequest
 	(*QuoteChangeResponse)(nil),           // 24: postpilot.v1.QuoteChangeResponse
-	(Plan)(0),                             // 25: postpilot.v1.Plan
+	(*QuotePurchaseRequest)(nil),          // 25: postpilot.v1.QuotePurchaseRequest
+	(*QuotePurchaseResponse)(nil),         // 26: postpilot.v1.QuotePurchaseResponse
+	(*PurchaseCreditsRequest)(nil),        // 27: postpilot.v1.PurchaseCreditsRequest
+	(*PurchaseCreditsResponse)(nil),       // 28: postpilot.v1.PurchaseCreditsResponse
+	(*RefundPurchaseRequest)(nil),         // 29: postpilot.v1.RefundPurchaseRequest
+	(*RefundPurchaseResponse)(nil),        // 30: postpilot.v1.RefundPurchaseResponse
+	(Plan)(0),                             // 31: postpilot.v1.Plan
 }
 var file_postpilot_v1_billing_proto_depIdxs = []int32{
-	25, // 0: postpilot.v1.BillingSubscription.plan:type_name -> postpilot.v1.Plan
+	31, // 0: postpilot.v1.BillingSubscription.plan:type_name -> postpilot.v1.Plan
 	0,  // 1: postpilot.v1.BillingSubscription.term:type_name -> postpilot.v1.Term
-	25, // 2: postpilot.v1.BillingSubscription.scheduled_plan:type_name -> postpilot.v1.Plan
+	31, // 2: postpilot.v1.BillingSubscription.scheduled_plan:type_name -> postpilot.v1.Plan
 	0,  // 3: postpilot.v1.BillingSubscription.scheduled_term:type_name -> postpilot.v1.Term
-	25, // 4: postpilot.v1.BillingEvent.plan:type_name -> postpilot.v1.Plan
+	31, // 4: postpilot.v1.BillingEvent.plan:type_name -> postpilot.v1.Plan
 	0,  // 5: postpilot.v1.BillingEvent.term:type_name -> postpilot.v1.Term
 	1,  // 6: postpilot.v1.GetMyBillingResponse.subscription:type_name -> postpilot.v1.BillingSubscription
 	2,  // 7: postpilot.v1.GetMyBillingResponse.payment_method:type_name -> postpilot.v1.BillingPaymentMethod
 	3,  // 8: postpilot.v1.GetMyBillingResponse.history:type_name -> postpilot.v1.BillingEvent
 	4,  // 9: postpilot.v1.GetMyBillingResponse.purchases:type_name -> postpilot.v1.BillingPurchase
 	2,  // 10: postpilot.v1.RegisterPaymentMethodResponse.payment_method:type_name -> postpilot.v1.BillingPaymentMethod
-	25, // 11: postpilot.v1.SubscribeRequest.plan:type_name -> postpilot.v1.Plan
+	31, // 11: postpilot.v1.SubscribeRequest.plan:type_name -> postpilot.v1.Plan
 	0,  // 12: postpilot.v1.SubscribeRequest.term:type_name -> postpilot.v1.Term
 	1,  // 13: postpilot.v1.SubscribeResponse.subscription:type_name -> postpilot.v1.BillingSubscription
-	25, // 14: postpilot.v1.ChangeSubscriptionRequest.plan:type_name -> postpilot.v1.Plan
+	31, // 14: postpilot.v1.ChangeSubscriptionRequest.plan:type_name -> postpilot.v1.Plan
 	0,  // 15: postpilot.v1.ChangeSubscriptionRequest.term:type_name -> postpilot.v1.Term
 	1,  // 16: postpilot.v1.ChangeSubscriptionResponse.subscription:type_name -> postpilot.v1.BillingSubscription
 	1,  // 17: postpilot.v1.CancelScheduledChangeResponse.subscription:type_name -> postpilot.v1.BillingSubscription
 	1,  // 18: postpilot.v1.CancelSubscriptionResponse.subscription:type_name -> postpilot.v1.BillingSubscription
 	1,  // 19: postpilot.v1.ResumeSubscriptionResponse.subscription:type_name -> postpilot.v1.BillingSubscription
-	25, // 20: postpilot.v1.QuotePriceRequest.plan:type_name -> postpilot.v1.Plan
+	31, // 20: postpilot.v1.QuotePriceRequest.plan:type_name -> postpilot.v1.Plan
 	0,  // 21: postpilot.v1.QuotePriceRequest.term:type_name -> postpilot.v1.Term
-	25, // 22: postpilot.v1.QuoteChangeRequest.plan:type_name -> postpilot.v1.Plan
+	31, // 22: postpilot.v1.QuoteChangeRequest.plan:type_name -> postpilot.v1.Plan
 	0,  // 23: postpilot.v1.QuoteChangeRequest.term:type_name -> postpilot.v1.Term
-	5,  // 24: postpilot.v1.BillingService.GetMyBilling:input_type -> postpilot.v1.GetMyBillingRequest
-	7,  // 25: postpilot.v1.BillingService.RegisterPaymentMethod:input_type -> postpilot.v1.RegisterPaymentMethodRequest
-	9,  // 26: postpilot.v1.BillingService.RemovePaymentMethod:input_type -> postpilot.v1.RemovePaymentMethodRequest
-	11, // 27: postpilot.v1.BillingService.Subscribe:input_type -> postpilot.v1.SubscribeRequest
-	13, // 28: postpilot.v1.BillingService.ChangeSubscription:input_type -> postpilot.v1.ChangeSubscriptionRequest
-	15, // 29: postpilot.v1.BillingService.CancelScheduledChange:input_type -> postpilot.v1.CancelScheduledChangeRequest
-	17, // 30: postpilot.v1.BillingService.CancelSubscription:input_type -> postpilot.v1.CancelSubscriptionRequest
-	19, // 31: postpilot.v1.BillingService.ResumeSubscription:input_type -> postpilot.v1.ResumeSubscriptionRequest
-	21, // 32: postpilot.v1.BillingService.QuotePrice:input_type -> postpilot.v1.QuotePriceRequest
-	23, // 33: postpilot.v1.BillingService.QuoteChange:input_type -> postpilot.v1.QuoteChangeRequest
-	6,  // 34: postpilot.v1.BillingService.GetMyBilling:output_type -> postpilot.v1.GetMyBillingResponse
-	8,  // 35: postpilot.v1.BillingService.RegisterPaymentMethod:output_type -> postpilot.v1.RegisterPaymentMethodResponse
-	10, // 36: postpilot.v1.BillingService.RemovePaymentMethod:output_type -> postpilot.v1.RemovePaymentMethodResponse
-	12, // 37: postpilot.v1.BillingService.Subscribe:output_type -> postpilot.v1.SubscribeResponse
-	14, // 38: postpilot.v1.BillingService.ChangeSubscription:output_type -> postpilot.v1.ChangeSubscriptionResponse
-	16, // 39: postpilot.v1.BillingService.CancelScheduledChange:output_type -> postpilot.v1.CancelScheduledChangeResponse
-	18, // 40: postpilot.v1.BillingService.CancelSubscription:output_type -> postpilot.v1.CancelSubscriptionResponse
-	20, // 41: postpilot.v1.BillingService.ResumeSubscription:output_type -> postpilot.v1.ResumeSubscriptionResponse
-	22, // 42: postpilot.v1.BillingService.QuotePrice:output_type -> postpilot.v1.QuotePriceResponse
-	24, // 43: postpilot.v1.BillingService.QuoteChange:output_type -> postpilot.v1.QuoteChangeResponse
-	34, // [34:44] is the sub-list for method output_type
-	24, // [24:34] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	4,  // 24: postpilot.v1.PurchaseCreditsResponse.purchase:type_name -> postpilot.v1.BillingPurchase
+	4,  // 25: postpilot.v1.RefundPurchaseResponse.purchase:type_name -> postpilot.v1.BillingPurchase
+	5,  // 26: postpilot.v1.BillingService.GetMyBilling:input_type -> postpilot.v1.GetMyBillingRequest
+	7,  // 27: postpilot.v1.BillingService.RegisterPaymentMethod:input_type -> postpilot.v1.RegisterPaymentMethodRequest
+	9,  // 28: postpilot.v1.BillingService.RemovePaymentMethod:input_type -> postpilot.v1.RemovePaymentMethodRequest
+	11, // 29: postpilot.v1.BillingService.Subscribe:input_type -> postpilot.v1.SubscribeRequest
+	13, // 30: postpilot.v1.BillingService.ChangeSubscription:input_type -> postpilot.v1.ChangeSubscriptionRequest
+	15, // 31: postpilot.v1.BillingService.CancelScheduledChange:input_type -> postpilot.v1.CancelScheduledChangeRequest
+	17, // 32: postpilot.v1.BillingService.CancelSubscription:input_type -> postpilot.v1.CancelSubscriptionRequest
+	19, // 33: postpilot.v1.BillingService.ResumeSubscription:input_type -> postpilot.v1.ResumeSubscriptionRequest
+	21, // 34: postpilot.v1.BillingService.QuotePrice:input_type -> postpilot.v1.QuotePriceRequest
+	23, // 35: postpilot.v1.BillingService.QuoteChange:input_type -> postpilot.v1.QuoteChangeRequest
+	25, // 36: postpilot.v1.BillingService.QuotePurchase:input_type -> postpilot.v1.QuotePurchaseRequest
+	27, // 37: postpilot.v1.BillingService.PurchaseCredits:input_type -> postpilot.v1.PurchaseCreditsRequest
+	29, // 38: postpilot.v1.BillingService.RefundPurchase:input_type -> postpilot.v1.RefundPurchaseRequest
+	6,  // 39: postpilot.v1.BillingService.GetMyBilling:output_type -> postpilot.v1.GetMyBillingResponse
+	8,  // 40: postpilot.v1.BillingService.RegisterPaymentMethod:output_type -> postpilot.v1.RegisterPaymentMethodResponse
+	10, // 41: postpilot.v1.BillingService.RemovePaymentMethod:output_type -> postpilot.v1.RemovePaymentMethodResponse
+	12, // 42: postpilot.v1.BillingService.Subscribe:output_type -> postpilot.v1.SubscribeResponse
+	14, // 43: postpilot.v1.BillingService.ChangeSubscription:output_type -> postpilot.v1.ChangeSubscriptionResponse
+	16, // 44: postpilot.v1.BillingService.CancelScheduledChange:output_type -> postpilot.v1.CancelScheduledChangeResponse
+	18, // 45: postpilot.v1.BillingService.CancelSubscription:output_type -> postpilot.v1.CancelSubscriptionResponse
+	20, // 46: postpilot.v1.BillingService.ResumeSubscription:output_type -> postpilot.v1.ResumeSubscriptionResponse
+	22, // 47: postpilot.v1.BillingService.QuotePrice:output_type -> postpilot.v1.QuotePriceResponse
+	24, // 48: postpilot.v1.BillingService.QuoteChange:output_type -> postpilot.v1.QuoteChangeResponse
+	26, // 49: postpilot.v1.BillingService.QuotePurchase:output_type -> postpilot.v1.QuotePurchaseResponse
+	28, // 50: postpilot.v1.BillingService.PurchaseCredits:output_type -> postpilot.v1.PurchaseCreditsResponse
+	30, // 51: postpilot.v1.BillingService.RefundPurchase:output_type -> postpilot.v1.RefundPurchaseResponse
+	39, // [39:52] is the sub-list for method output_type
+	26, // [26:39] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_billing_proto_init() }
@@ -1705,7 +2012,7 @@ func file_postpilot_v1_billing_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_billing_proto_rawDesc), len(file_postpilot_v1_billing_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   24,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

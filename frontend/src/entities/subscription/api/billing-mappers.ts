@@ -7,6 +7,7 @@ import {
   type ProtoBillingSubscription,
   type QuoteChangeResponse,
   type QuotePriceResponse,
+  type QuotePurchaseResponse,
 } from '@/shared/api'
 import type {
   BillingEvent,
@@ -15,6 +16,7 @@ import type {
   MyBilling,
   Purchase,
   Quote,
+  PurchaseQuote,
   Subscription,
 } from '../model/types'
 
@@ -76,16 +78,30 @@ function toEvent(value: ProtoBillingEvent): BillingEvent {
 function toPurchase(value: ProtoBillingPurchase): Purchase {
   return {
     id: value.id,
-    lotId: value.lotId,
     credits: value.credits,
     usdCents: value.usdCents,
     krw: value.krw,
-    providerPaymentKey: value.providerPaymentKey,
-    orderId: value.orderId,
     chargedAt: value.chargedAt,
     refundedAt: value.refundedAt,
+    refundable: value.refundable,
   }
 }
+
+export function toPurchaseQuote(
+  response: QuotePurchaseResponse | undefined,
+  usdCents: number,
+): PurchaseQuote | undefined {
+  if (!response) return undefined
+  return {
+    usdCents,
+    credits: response.credits,
+    krw: response.krw,
+    ratePerUsdE4: response.krwPerUsdE4,
+    rateDate: response.rateDate,
+  }
+}
+
+export { toPurchase }
 
 export function toMyBilling(response: GetMyBillingResponse | undefined): MyBilling | undefined {
   if (!response) return undefined
