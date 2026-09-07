@@ -99,24 +99,32 @@ var monthlyPriceUSDCents = map[Plan]int{
 	Max:   1000,
 }
 
-// The reference post a comparison screen quotes in product terms: ten photos observed in
-// batches of four, then one write. Every call is priced at the worst case the admission gate
-// itself holds against — holdInputTokens of prompt — so the figure can never promise a post
-// the gate would then refuse.
+// What one unit of a post costs in TOKENS. A comparison screen's post count is proportional
+// to the work the reader says they will do (QUOTA-40), so the estimate is assembled from
+// these rather than from one fixed case.
 //
-// These are constants rather than reads of internal/platform/config: OBSERVE_BATCH_SIZE and
-// LLM_MAX_TOKENS_DEFAULT are per-installation env values, and a comparison figure that moved
-// with an operator's environment would have two deploys quoting different post counts. They
-// mirror the shipped defaults (batch 4, 512 completion tokens per photo, an 8 192 fallback)
-// and must be revisited when those move.
+// They are constants rather than reads of internal/platform/config: OBSERVE_BATCH_SIZE and
+// the completion budgets are per-installation env values, and a comparison figure that moved
+// with an operator's environment would have two deploys quoting different post counts
+// (QUOTA-8). They mirror the shipped defaults and must be revisited when those move.
 const (
-	referencePhotos                = 10
-	referenceObserveBatch          = 4
-	referenceObserveCompletion     = referenceObserveBatch * 512
-	referenceWriteCompletion       = 8_192
-	referenceInputTokensPerCall    = 30_000
-	referenceInputMicrousdPerMTok  = 300_000
-	referenceOutputMicrousdPerMTok = 2_500_000
+	// What one observation call and one write call carry before any attachment: the
+	// instructions, the template, the voice material and, for the write, the observations.
+	estimatorObservePromptTokens = 2_000
+	estimatorWritePromptTokens   = 6_000
+	// A photo reaches the model already converted to a 1024 px JPEG (ARCH-19).
+	estimatorTokensPerPhoto = 320
+	// A clip is priced at an assumed length rather than at VIDEO-3's 60 s ceiling: the
+	// ceiling is what a post may hold, not what one usually holds.
+	estimatorAssumedVideoSeconds = 15
+	estimatorTokensPerVideoSec   = 300
+	// One structured observation entry per attachment.
+	estimatorObserveOutputPerItem = 200
+	// Korean runs about 1.2 tokens per character on the tokenizers this product meets.
+	estimatorOutputTokensPer100Chars = 120
+	// Photos and clips are observed in batches, so one call's overhead is shared by the
+	// items in it.
+	estimatorObserveBatch = 4
 )
 
 // recommended is the rung the comparison screen marks. It lives beside the grants it
@@ -128,8 +136,6 @@ type Offer struct {
 	Plan           Plan
 	MonthlyCredits int
 	PriceUSDCents  int
-	// EstimatedPosts is how many reference posts the grant covers (→ReferencePostCredits).
-	EstimatedPosts int
 	// Recommended marks the one rung the screen highlights.
 	Recommended bool
 }
@@ -144,7 +150,6 @@ func Offers() []Offer {
 			Plan:           rung,
 			MonthlyCredits: monthlyCredits[rung],
 			PriceUSDCents:  monthlyPriceUSDCents[rung],
-			EstimatedPosts: EstimatedPosts(rung),
 			Recommended:    Recommended(rung),
 		})
 	}
@@ -162,37 +167,74 @@ func MonthlyCredits(p Plan) int {
 	return found
 }
 
-// ReferencePostCredits is what one reference post holds, in credits.
+// Pricer prices one call's tokens in micro-USD. The llm package's cost resolver satisfies
+// it, which is how this stdlib-only package prices work without learning what a model is.
+type Pricer func(promptTokens, completionTokens int64) (int64, bool)
+
+// Rates are one combo's unit costs in MILLI-credits, the shape a comparison screen
+// multiplies: a post costs
+// `PerPostBase + photos×PerPhoto + videos×PerVideo + ceil(chars/1000)×Per1000Chars`.
 //
-// It runs the reference case through Charge, the same rule every real hold pays, so the two
-// can never quote different arithmetic: three observe calls at 7 credits each plus one write
-// call at 11.
-func ReferencePostCredits() int {
-	observeCalls := (referencePhotos + referenceObserveBatch - 1) / referenceObserveBatch
-	perObserve := Charge(referenceCallMicrousd(referenceObserveCompletion))
-	perWrite := Charge(referenceCallMicrousd(referenceWriteCompletion))
-	return observeCalls*perObserve + perWrite
+// Milli rather than credits so a client stays in integers, and per unit rather than per post
+// so a slider needs no round trip (QUOTA-40).
+type Rates struct {
+	PerPhoto     int
+	PerVideo     int
+	Per1000Chars int
+	PerPostBase  int
 }
 
-// referenceCallMicrousd prices one reference call: a worst-case prompt plus that call's own
-// completion budget.
-func referenceCallMicrousd(completionTokens int) int64 {
-	const perMTok = 1_000_000
-	input := int64(referenceInputTokensPerCall) * referenceInputMicrousdPerMTok / perMTok
-	output := int64(completionTokens) * referenceOutputMicrousdPerMTok / perMTok
-	return input + output
-}
-
-// EstimatedPosts is how many reference posts a tier's monthly grant covers.
+// EstimatorRates derives one combo's unit rates from what its two models charge.
 //
-// It floors: telling someone their grant covers three posts when the third would be refused
-// is worse than telling them two. Master is never asked — it is not on offer.
-func EstimatedPosts(p Plan) int {
-	perPost := ReferencePostCredits()
-	if perPost <= 0 {
-		return 0
+// Each rate carries the call overhead it is responsible for. The write call belongs to every
+// post, so its ChargeBase and prompt sit in PerPostBase. An observation call is shared by the
+// batch it carries, so a photo or a clip carries one batch-share of that call's base and
+// prompt — amortized rather than counted with a ceiling, because the client is only allowed
+// to multiply. A partial batch therefore reads up to three quarters of one ChargeBase cheaper
+// than the gate will hold; the figure is labelled an estimate and the refusal stays
+// authoritative (QUOTA-36).
+//
+// False means a model published no usable price, and a combo that cannot be priced is not
+// published at all.
+func EstimatorRates(observe, write Pricer) (Rates, bool) {
+	observeShare, ok := observe(estimatorObservePromptTokens/estimatorObserveBatch, 0)
+	if !ok {
+		return Rates{}, false
 	}
-	return MonthlyCredits(p) / perPost
+	photoCost, ok := observe(estimatorTokensPerPhoto, estimatorObserveOutputPerItem)
+	if !ok {
+		return Rates{}, false
+	}
+	videoCost, ok := observe(estimatorAssumedVideoSeconds*estimatorTokensPerVideoSec, estimatorObserveOutputPerItem)
+	if !ok {
+		return Rates{}, false
+	}
+	writePrompt, ok := write(estimatorWritePromptTokens, 0)
+	if !ok {
+		return Rates{}, false
+	}
+	charsCost, ok := write(0, 10*estimatorOutputTokensPer100Chars)
+	if !ok {
+		return Rates{}, false
+	}
+
+	itemShare := milliCredits(observeShare) + chargeBaseMilli/estimatorObserveBatch
+	return Rates{
+		PerPhoto:     milliCredits(photoCost) + itemShare,
+		PerVideo:     milliCredits(videoCost) + itemShare,
+		Per1000Chars: milliCredits(charsCost),
+		PerPostBase:  milliCredits(writePrompt) + chargeBaseMilli,
+	}, true
+}
+
+// chargeBaseMilli is ChargeBase expressed in the same milli-credits the rates use.
+const chargeBaseMilli = ChargeBase * 1_000
+
+// milliCredits converts a provider cost into thousandths of a credit, applying the same
+// multiplier Charge does and truncating rather than rounding up — the per-call rounding is
+// gone with the per-call accounting, and an estimate must not accumulate a ceiling per unit.
+func milliCredits(costMicrousd int64) int {
+	return int(costMicrousd * ChargeMultiplier * 1_000 / microusdPerCredit)
 }
 
 // Recommended reports whether this rung is the one a comparison screen marks.

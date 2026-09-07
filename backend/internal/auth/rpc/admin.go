@@ -22,10 +22,30 @@ import (
 // there rather than here is what makes "which procedures are privileged" answerable by
 // reading one map.
 type AdminHandler struct {
-	svc *auth.Service
+	svc    *auth.Service
+	combos EstimatorAssigner
 }
 
-func NewAdminHandler(svc *auth.Service) *AdminHandler { return &AdminHandler{svc: svc} }
+// EstimatorAssigner points an estimator combo at two curated models. Declared here by its
+// consumer and implemented by the model catalog, which owns the assignment.
+//
+// It speaks in ids and in the two sentinels below rather than in the catalog's own types, so
+// the auth context imports nothing from it; the composition root translates.
+type EstimatorAssigner interface {
+	AssignCombo(ctx context.Context, combo, observeModelID, writeModelID string) error
+}
+
+var (
+	// ErrComboUnknown is a combo name off the four the product has.
+	ErrComboUnknown = errors.New("unknown estimator combo")
+	// ErrComboModelUnusable is a model that is not curated, or is curated but not
+	// registered to the purpose the combo needs it for.
+	ErrComboModelUnusable = errors.New("estimator combo model is not registered")
+)
+
+func NewAdminHandler(svc *auth.Service, combos EstimatorAssigner) *AdminHandler {
+	return &AdminHandler{svc: svc, combos: combos}
+}
 
 func (h *AdminHandler) ListUsers(ctx context.Context, _ *connect.Request[postpilotv1.ListUsersRequest]) (*connect.Response[postpilotv1.ListUsersResponse], error) {
 	users, err := h.svc.ListUsers(ctx)
@@ -78,3 +98,32 @@ func toProtoUser(user auth.User) *postpilotv1.PlanUser {
 }
 
 var _ postpilotv1connect.AdminServiceHandler = (*AdminHandler)(nil)
+
+// SetEstimatorCombo assigns the pair of models one combo is priced with (QUOTA-39).
+//
+// The refusals are the two the operator can act on: a combo name that is not one of the
+// four, and a model that is not registered to the purpose the combo needs it for. Both are
+// stated as reasons rather than as prose, so the client renders its own copy.
+func (h *AdminHandler) SetEstimatorCombo(ctx context.Context, req *connect.Request[postpilotv1.SetEstimatorComboRequest]) (*connect.Response[postpilotv1.SetEstimatorComboResponse], error) {
+	combo := req.Msg.GetCombo()
+	observe := req.Msg.GetObserveModelId()
+	write := req.Msg.GetWriteModelId()
+	if combo == "" || observe == "" || write == "" {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument,
+			"a combo and both models are required", "COMBO_INCOMPLETE", nil)
+	}
+
+	switch err := h.combos.AssignCombo(ctx, combo, observe, write); {
+	case errors.Is(err, ErrComboUnknown):
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument,
+			"unknown estimator combo", "COMBO_UNKNOWN", nil)
+	case errors.Is(err, ErrComboModelUnusable):
+		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition,
+			"the model is not registered for that stage", "MODEL_NOT_REGISTERED", nil)
+	case err != nil:
+		slog.Error("set estimator combo failed", "combo", combo, "err", err)
+		return nil, rpcserver.NewAppError(connect.CodeInternal,
+			"could not assign the combo", "UNKNOWN_FAILURE", nil)
+	}
+	return connect.NewResponse(&postpilotv1.SetEstimatorComboResponse{}), nil
+}

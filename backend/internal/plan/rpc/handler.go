@@ -62,12 +62,34 @@ type Ledger interface {
 	BalanceFor(ctx context.Context, userID string, acting plan.Plan) (usage.Balance, error)
 }
 
-// Handler implements postpilotv1connect.PlanServiceHandler.
-type Handler struct {
-	ledger Ledger
+// EstimatorCombo is one priced combo as this edge publishes it. It is declared here so the
+// context that owns the assignment never learns the wire shape, and the composition root
+// maps between the two.
+type EstimatorCombo struct {
+	Combo             string
+	ObserveLabel      string
+	WriteLabel        string
+	PerPhotoMilli     int
+	PerVideoMilli     int
+	Per1000CharsMilli int
+	PerPostBaseMilli  int
 }
 
-func NewHandler(ledger Ledger) *Handler { return &Handler{ledger: ledger} }
+// Estimator publishes the operator's priced combos (QUOTA-40). Declared here by its
+// consumer; the model catalog implements it, because the assignment is a curation decision.
+type Estimator interface {
+	ComboRates(ctx context.Context) ([]EstimatorCombo, error)
+}
+
+// Handler implements postpilotv1connect.PlanServiceHandler.
+type Handler struct {
+	ledger    Ledger
+	estimator Estimator
+}
+
+func NewHandler(ledger Ledger, estimator Estimator) *Handler {
+	return &Handler{ledger: ledger, estimator: estimator}
+}
 
 // GetMyPlan reports the caller's own tier and what it has left to spend.
 //
@@ -113,14 +135,34 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			Plan:           ToProto(offer.Plan),
 			MonthlyCredits: int32(offer.MonthlyCredits),
 			PriceUsdCents:  int32(offer.PriceUSDCents),
-			EstimatedPosts: int32(offer.EstimatedPosts),
 			Recommended:    offer.Recommended,
 		})
 	}
 
+	// A comparison with no priced combo shows grants and prices and no post estimate. That
+	// is a state the operator can fix, not a failure of this read, so a combo lookup that
+	// fails is logged and answered as "none assigned" rather than failing GetMyPlan.
+	var combos []*postpilotv1.EstimatorCombo
+	priced, comboErr := h.estimator.ComboRates(ctx)
+	if comboErr != nil {
+		slog.Error("estimator combo read failed", "user_id", userID, "err", comboErr)
+	}
+	for _, combo := range priced {
+		combos = append(combos, &postpilotv1.EstimatorCombo{
+			Combo:                 combo.Combo,
+			ObserveLabel:          combo.ObserveLabel,
+			WriteLabel:            combo.WriteLabel,
+			PerPhotoMilli:         int32(combo.PerPhotoMilli),
+			PerVideoMilli:         int32(combo.PerVideoMilli),
+			PerThousandCharsMilli: int32(combo.Per1000CharsMilli),
+			PerPostBaseMilli:      int32(combo.PerPostBaseMilli),
+		})
+	}
+
 	return connect.NewResponse(&postpilotv1.GetMyPlanResponse{
-		Plan:   ToProto(acting),
-		Offers: offers,
+		Plan:            ToProto(acting),
+		Offers:          offers,
+		EstimatorCombos: combos,
 		Balance: &postpilotv1.CreditBalance{
 			Credits:      int32(balance.Credits),
 			Unlimited:    balance.Unlimited,

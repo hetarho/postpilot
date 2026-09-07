@@ -65,30 +65,62 @@ func TestPaidRungsGrantABonusOverThePurchaseRate(t *testing.T) {
 	}
 }
 
-// The reference case is what a comparison screen quotes, so it is pinned with its own
-// arithmetic: three observe calls (10 photos in batches of 4) at 7 credits each plus one
-// write call at 11. Each call is priced at the worst case the admission gate holds against.
-func TestReferencePostCreditsPricesTheReferenceCase(t *testing.T) {
-	const perObserve = 7 // 2 + ceil((9_000 + 5_120) * 3 / 10_000)
-	const perWrite = 11  // 2 + ceil((9_000 + 20_480) * 3 / 10_000)
-	if got, want := plan.ReferencePostCredits(), 3*perObserve+perWrite; got != want {
-		t.Errorf("ReferencePostCredits() = %d, want %d", got, want)
+// The estimator's rates are what a comparison screen multiplies, so they are pinned with
+// their own arithmetic. The two models are priced differently on purpose: a photo must be
+// priced by the OBSERVE model and a character by the WRITE model, and one shared price pair
+// would hide a crossed wire.
+func TestEstimatorRatesPriceEachUnitWithTheModelThatServesIt(t *testing.T) {
+	// $0.30 / $2.50 per million observing, $1.00 / $10.00 writing. The pricer is the exact
+	// arithmetic the llm cost resolver performs: micro-USD = tokens x USD-per-million.
+	observe := func(prompt, completion int64) (int64, bool) {
+		return prompt*30/100 + completion*250/100, true
+	}
+	write := func(prompt, completion int64) (int64, bool) {
+		return prompt + completion*10, true
+	}
+
+	rates, ok := plan.EstimatorRates(observe, write)
+	if !ok {
+		t.Fatal("EstimatorRates refused two priced models")
+	}
+	for _, tc := range []struct {
+		name string
+		got  int
+		want int
+	}{
+		// 320 photo tokens + 200 observation tokens = 596 micro-USD -> 178 milli, plus one
+		// batch share of the observe call: 500 milli of ChargeBase + 45 milli of prompt.
+		{"per photo", rates.PerPhoto, 723},
+		// 15 s x 300 tokens + the same observation entry and batch share.
+		{"per video", rates.PerVideo, 1100},
+		// 1 000 characters at 120 output tokens per 100, priced by the write model.
+		{"per 1000 chars", rates.Per1000Chars, 3600},
+		// The write call: its ChargeBase in full plus its prompt.
+		{"per post base", rates.PerPostBase, 3800},
+	} {
+		if tc.got != tc.want {
+			t.Errorf("%s = %d milli-credits, want %d", tc.name, tc.got, tc.want)
+		}
+	}
+
+	// The shape a client multiplies: one 1 000-character post with five photos.
+	post := rates.PerPostBase + 5*rates.PerPhoto + rates.Per1000Chars
+	if posts := plan.MonthlyCredits(plan.Basic) * 1000 / post; posts != 19 {
+		t.Errorf("basic covers %d posts of that shape, want 19", posts)
 	}
 }
 
-func TestEstimatedPostsFloorsTheGrantAgainstTheReferencePost(t *testing.T) {
-	for _, tc := range []struct {
-		acting plan.Plan
-		want   int
-	}{
-		{plan.Free, 1},
-		{plan.Basic, 6},
-		{plan.Pro, 17},
-		{plan.Max, 37},
-	} {
-		if got := plan.EstimatedPosts(tc.acting); got != tc.want {
-			t.Errorf("EstimatedPosts(%s) = %d, want %d", tc.acting, got, tc.want)
-		}
+// A model with no published price cannot be quoted, and a combo that cannot be priced is
+// not published at all.
+func TestEstimatorRatesRefusesAnUnpricedModel(t *testing.T) {
+	priced := func(prompt, completion int64) (int64, bool) { return prompt + completion, true }
+	unpriced := func(int64, int64) (int64, bool) { return 0, false }
+
+	if _, ok := plan.EstimatorRates(unpriced, priced); ok {
+		t.Error("an unpriced observe model was accepted")
+	}
+	if _, ok := plan.EstimatorRates(priced, unpriced); ok {
+		t.Error("an unpriced write model was accepted")
 	}
 }
 
@@ -99,10 +131,6 @@ func TestExactlyOneOfferIsRecommended(t *testing.T) {
 	for _, offer := range plan.Offers() {
 		if offer.Recommended {
 			marked = append(marked, offer.Plan)
-		}
-		if offer.EstimatedPosts != plan.EstimatedPosts(offer.Plan) {
-			t.Errorf("%s offers %d posts, want %d",
-				offer.Plan, offer.EstimatedPosts, plan.EstimatedPosts(offer.Plan))
 		}
 	}
 	if len(marked) != 1 || marked[0] != plan.Pro {

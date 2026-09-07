@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/model_catalog.proto.
  */
 export const file_postpilot_v1_model_catalog: GenFile = /*@__PURE__*/
-  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIsAFCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgIEhMKC3ZpZGVvX2lucHV0GBwgASgIEjoKD3JlYXNvbmluZ19zcGVuZBgTIAEoCzIcLnBvc3RwaWxvdC52MS5SZWFzb25pbmdTcGVuZEgAiAEBEg8KB3JlYXNvbnMYFCABKAgSGQoRcmVhc29uaW5nX2VmZm9ydHMYFSADKAkSIAoYcmVhc29uaW5nX2RlZmF1bHRfZWZmb3J0GBYgASgJEhsKE3JlYXNvbmluZ19tYW5kYXRvcnkYFyABKAgSHwoXcmVhc29uaW5nX25hdGl2ZV9lZmZvcnQYGCABKAgSHAoUcmVhc29uaW5nX21heF90b2tlbnMYGSABKAgSGQoRcmVhc29uaW5nX2RyaWZ0ZWQYGiABKAgSFwoPcmVhc29uaW5nX2tub3duGBsgASgIQhIKEF9yZWFzb25pbmdfc3BlbmRKBAgLEAxKBAgMEA0icwoOUmVhc29uaW5nU3BlbmQSDQoFY2FsbHMYASABKAMSGAoQcmVhc29uaW5nX3Rva2VucxgCIAEoAxIZChFjb21wbGV0aW9uX3Rva2VucxgDIAEoAxIdChVyZWFzb25pbmdfdHJ1bmNhdGlvbnMYBCABKAMiNgoSTGlzdENhdGFsb2dSZXF1ZXN0Eg8KB3JlZnJlc2gYASABKAgSDwoHcHVycG9zZRgCIAEoCSJ/ChNMaXN0Q2F0YWxvZ1Jlc3BvbnNlEisKB2VudHJpZXMYASADKAsyGi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0VudHJ5EhIKCmZldGNoZWRfYXQYAiABKAkSEgoKZnJvbV9jYWNoZRgDIAEoCBITCgtmZXRjaF9lcnJvchgEIAEoCSJPChZTZXRNb2RlbFB1cnBvc2VSZXF1ZXN0EhAKCG1vZGVsX2lkGAEgASgJEg8KB3B1cnBvc2UYAiABKAkSEgoKcmVnaXN0ZXJlZBgDIAEoCCJEChdTZXRNb2RlbFB1cnBvc2VSZXNwb25zZRIpCgVlbnRyeRgBIAEoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkidwoSVXBkYXRlTW9kZWxSZXF1ZXN0EhAKCG1vZGVsX2lkGAEgASgJEh0KEHJlYXNvbmluZ19lZmZvcnQYBCABKAlIAIgBARIPCgdwdXJwb3NlGAUgASgJQhMKEV9yZWFzb25pbmdfZWZmb3J0SgQIAhADSgQIAxAEIkAKE1VwZGF0ZU1vZGVsUmVzcG9uc2USKQoFZW50cnkYASABKAsyGi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0VudHJ5MqMCChNNb2RlbENhdGFsb2dTZXJ2aWNlElQKC0xpc3RDYXRhbG9nEiAucG9zdHBpbG90LnYxLkxpc3RDYXRhbG9nUmVxdWVzdBohLnBvc3RwaWxvdC52MS5MaXN0Q2F0YWxvZ1Jlc3BvbnNlIgASYAoPU2V0TW9kZWxQdXJwb3NlEiQucG9zdHBpbG90LnYxLlNldE1vZGVsUHVycG9zZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuU2V0TW9kZWxQdXJwb3NlUmVzcG9uc2UiABJUCgtVcGRhdGVNb2RlbBIgLnBvc3RwaWxvdC52MS5VcGRhdGVNb2RlbFJlcXVlc3QaIS5wb3N0cGlsb3QudjEuVXBkYXRlTW9kZWxSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
+  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIsAFCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgIEhMKC3ZpZGVvX2lucHV0GBwgASgIEjoKD3JlYXNvbmluZ19zcGVuZBgTIAEoCzIcLnBvc3RwaWxvdC52MS5SZWFzb25pbmdTcGVuZEgAiAEBEg8KB3JlYXNvbnMYFCABKAgSGQoRcmVhc29uaW5nX2VmZm9ydHMYFSADKAkSIAoYcmVhc29uaW5nX2RlZmF1bHRfZWZmb3J0GBYgASgJEhsKE3JlYXNvbmluZ19tYW5kYXRvcnkYFyABKAgSHwoXcmVhc29uaW5nX25hdGl2ZV9lZmZvcnQYGCABKAgSHAoUcmVhc29uaW5nX21heF90b2tlbnMYGSABKAgSGQoRcmVhc29uaW5nX2RyaWZ0ZWQYGiABKAgSFwoPcmVhc29uaW5nX2tub3duGBsgASgIQhIKEF9yZWFzb25pbmdfc3BlbmRKBAgLEAxKBAgMEA0icwoOUmVhc29uaW5nU3BlbmQSDQoFY2FsbHMYASABKAMSGAoQcmVhc29uaW5nX3Rva2VucxgCIAEoAxIZChFjb21wbGV0aW9uX3Rva2VucxgDIAEoAxIdChVyZWFzb25pbmdfdHJ1bmNhdGlvbnMYBCABKAMiNgoSTGlzdENhdGFsb2dSZXF1ZXN0Eg8KB3JlZnJlc2gYASABKAgSDwoHcHVycG9zZRgCIAEoCSJbChhFc3RpbWF0b3JDb21ib0Fzc2lnbm1lbnQSDQoFY29tYm8YASABKAkSGAoQb2JzZXJ2ZV9tb2RlbF9pZBgCIAEoCRIWCg53cml0ZV9tb2RlbF9pZBgDIAEoCSLBAQoTTGlzdENhdGFsb2dSZXNwb25zZRIrCgdlbnRyaWVzGAEgAygLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeRISCgpmZXRjaGVkX2F0GAIgASgJEhIKCmZyb21fY2FjaGUYAyABKAgSEwoLZmV0Y2hfZXJyb3IYBCABKAkSQAoQZXN0aW1hdG9yX2NvbWJvcxgFIAMoCzImLnBvc3RwaWxvdC52MS5Fc3RpbWF0b3JDb21ib0Fzc2lnbm1lbnQiTwoWU2V0TW9kZWxQdXJwb3NlUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCRIPCgdwdXJwb3NlGAIgASgJEhIKCnJlZ2lzdGVyZWQYAyABKAgiRAoXU2V0TW9kZWxQdXJwb3NlUmVzcG9uc2USKQoFZW50cnkYASABKAsyGi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0VudHJ5IncKElVwZGF0ZU1vZGVsUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCRIdChByZWFzb25pbmdfZWZmb3J0GAQgASgJSACIAQESDwoHcHVycG9zZRgFIAEoCUITChFfcmVhc29uaW5nX2VmZm9ydEoECAIQA0oECAMQBCJAChNVcGRhdGVNb2RlbFJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeTKjAgoTTW9kZWxDYXRhbG9nU2VydmljZRJUCgtMaXN0Q2F0YWxvZxIgLnBvc3RwaWxvdC52MS5MaXN0Q2F0YWxvZ1JlcXVlc3QaIS5wb3N0cGlsb3QudjEuTGlzdENhdGFsb2dSZXNwb25zZSIAEmAKD1NldE1vZGVsUHVycG9zZRIkLnBvc3RwaWxvdC52MS5TZXRNb2RlbFB1cnBvc2VSZXF1ZXN0GiUucG9zdHBpbG90LnYxLlNldE1vZGVsUHVycG9zZVJlc3BvbnNlIgASVAoLVXBkYXRlTW9kZWwSIC5wb3N0cGlsb3QudjEuVXBkYXRlTW9kZWxSZXF1ZXN0GiEucG9zdHBpbG90LnYxLlVwZGF0ZU1vZGVsUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
 
 /**
  * CatalogEntry is one row of the operator's browse list.
@@ -296,6 +296,36 @@ export const ListCatalogRequestSchema: GenMessage<ListCatalogRequest> = /*@__PUR
   messageDesc(file_postpilot_v1_model_catalog, 2);
 
 /**
+ * One combo's current assignment, for the operator's own screen. Empty ids mean the combo
+ * has never been assigned, and a comparison screen therefore shows no estimate for it.
+ *
+ * @generated from message postpilot.v1.EstimatorComboAssignment
+ */
+export type EstimatorComboAssignment = Message<"postpilot.v1.EstimatorComboAssignment"> & {
+  /**
+   * @generated from field: string combo = 1;
+   */
+  combo: string;
+
+  /**
+   * @generated from field: string observe_model_id = 2;
+   */
+  observeModelId: string;
+
+  /**
+   * @generated from field: string write_model_id = 3;
+   */
+  writeModelId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.EstimatorComboAssignment.
+ * Use `create(EstimatorComboAssignmentSchema)` to create a new message.
+ */
+export const EstimatorComboAssignmentSchema: GenMessage<EstimatorComboAssignment> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 3);
+
+/**
  * @generated from message postpilot.v1.ListCatalogResponse
  */
 export type ListCatalogResponse = Message<"postpilot.v1.ListCatalogResponse"> & {
@@ -324,6 +354,14 @@ export type ListCatalogResponse = Message<"postpilot.v1.ListCatalogResponse"> & 
    * @generated from field: string fetch_error = 4;
    */
   fetchError: string;
+
+  /**
+   * All four estimator combos in ladder order, assigned or not, so the operator sees which
+   * price tier is still missing a model. The write is AdminService.SetEstimatorCombo.
+   *
+   * @generated from field: repeated postpilot.v1.EstimatorComboAssignment estimator_combos = 5;
+   */
+  estimatorCombos: EstimatorComboAssignment[];
 };
 
 /**
@@ -331,7 +369,7 @@ export type ListCatalogResponse = Message<"postpilot.v1.ListCatalogResponse"> & 
  * Use `create(ListCatalogResponseSchema)` to create a new message.
  */
 export const ListCatalogResponseSchema: GenMessage<ListCatalogResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 3);
+  messageDesc(file_postpilot_v1_model_catalog, 4);
 
 /**
  * @generated from message postpilot.v1.SetModelPurposeRequest
@@ -363,7 +401,7 @@ export type SetModelPurposeRequest = Message<"postpilot.v1.SetModelPurposeReques
  * Use `create(SetModelPurposeRequestSchema)` to create a new message.
  */
 export const SetModelPurposeRequestSchema: GenMessage<SetModelPurposeRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 4);
+  messageDesc(file_postpilot_v1_model_catalog, 5);
 
 /**
  * @generated from message postpilot.v1.SetModelPurposeResponse
@@ -380,7 +418,7 @@ export type SetModelPurposeResponse = Message<"postpilot.v1.SetModelPurposeRespo
  * Use `create(SetModelPurposeResponseSchema)` to create a new message.
  */
 export const SetModelPurposeResponseSchema: GenMessage<SetModelPurposeResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 5);
+  messageDesc(file_postpilot_v1_model_catalog, 6);
 
 /**
  * @generated from message postpilot.v1.UpdateModelRequest
@@ -422,7 +460,7 @@ export type UpdateModelRequest = Message<"postpilot.v1.UpdateModelRequest"> & {
  * Use `create(UpdateModelRequestSchema)` to create a new message.
  */
 export const UpdateModelRequestSchema: GenMessage<UpdateModelRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 6);
+  messageDesc(file_postpilot_v1_model_catalog, 7);
 
 /**
  * @generated from message postpilot.v1.UpdateModelResponse
@@ -439,7 +477,7 @@ export type UpdateModelResponse = Message<"postpilot.v1.UpdateModelResponse"> & 
  * Use `create(UpdateModelResponseSchema)` to create a new message.
  */
 export const UpdateModelResponseSchema: GenMessage<UpdateModelResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 7);
+  messageDesc(file_postpilot_v1_model_catalog, 8);
 
 /**
  * model_catalog.proto is the OPERATOR's half of the model story (plan 18, change 20):

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/plan.proto.
  */
 export const file_postpilot_v1_plan: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb3N0cGlsb3QvdjEvcGxhbi5wcm90bxIMcG9zdHBpbG90LnYxIlEKCUNyZWRpdExvdBIMCgRraW5kGAEgASgJEg8KB2dyYW50ZWQYAiABKAUSEQoJcmVtYWluaW5nGAMgASgFEhIKCmV4cGlyZXNfYXQYBCABKAkihAEKDUNyZWRpdEJhbGFuY2USDwoHY3JlZGl0cxgBIAEoBRIRCgl1bmxpbWl0ZWQYAiABKAgSJQoEbG90cxgDIAMoCzIXLnBvc3RwaWxvdC52MS5DcmVkaXRMb3QSEQoJcmVuZXdzX2F0GAQgASgJEhUKDW1vbnRobHlfZ3JhbnQYBSABKAUijQEKCVBsYW5PZmZlchIgCgRwbGFuGAEgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SFwoPbW9udGhseV9jcmVkaXRzGAIgASgFEhcKD3ByaWNlX3VzZF9jZW50cxgDIAEoBRIXCg9lc3RpbWF0ZWRfcG9zdHMYBCABKAUSEwoLcmVjb21tZW5kZWQYBSABKAgiEgoQR2V0TXlQbGFuUmVxdWVzdCKMAQoRR2V0TXlQbGFuUmVzcG9uc2USIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEiwKB2JhbGFuY2UYAiABKAsyGy5wb3N0cGlsb3QudjEuQ3JlZGl0QmFsYW5jZRInCgZvZmZlcnMYAyADKAsyFy5wb3N0cGlsb3QudjEuUGxhbk9mZmVyIhIKEExpc3RVc2Vyc1JlcXVlc3QiOgoRTGlzdFVzZXJzUmVzcG9uc2USJQoFdXNlcnMYASADKAsyFi5wb3N0cGlsb3QudjEuUGxhblVzZXIiTAoIUGxhblVzZXISCgoCaWQYASABKAkSIAoEcGxhbhgCIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEhIKCmNyZWF0ZWRfYXQYAyABKAkiRwoSU2V0VXNlclBsYW5SZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSIAoEcGxhbhgCIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuIjsKE1NldFVzZXJQbGFuUmVzcG9uc2USJAoEdXNlchgBIAEoCzIWLnBvc3RwaWxvdC52MS5QbGFuVXNlcipoCgRQbGFuEhQKEFBMQU5fVU5TUEVDSUZJRUQQABINCglQTEFOX0ZSRUUQARIOCgpQTEFOX0JBU0lDEAISDAoIUExBTl9NQVgQAxIPCgtQTEFOX01BU1RFUhAEEgwKCFBMQU5fUFJPEAUyXQoLUGxhblNlcnZpY2USTgoJR2V0TXlQbGFuEh4ucG9zdHBpbG90LnYxLkdldE15UGxhblJlcXVlc3QaHy5wb3N0cGlsb3QudjEuR2V0TXlQbGFuUmVzcG9uc2UiADK0AQoMQWRtaW5TZXJ2aWNlEk4KCUxpc3RVc2VycxIeLnBvc3RwaWxvdC52MS5MaXN0VXNlcnNSZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLkxpc3RVc2Vyc1Jlc3BvbnNlIgASVAoLU2V0VXNlclBsYW4SIC5wb3N0cGlsb3QudjEuU2V0VXNlclBsYW5SZXF1ZXN0GiEucG9zdHBpbG90LnYxLlNldFVzZXJQbGFuUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
+  fileDesc("Chdwb3N0cGlsb3QvdjEvcGxhbi5wcm90bxIMcG9zdHBpbG90LnYxIlEKCUNyZWRpdExvdBIMCgRraW5kGAEgASgJEg8KB2dyYW50ZWQYAiABKAUSEQoJcmVtYWluaW5nGAMgASgFEhIKCmV4cGlyZXNfYXQYBCABKAkihAEKDUNyZWRpdEJhbGFuY2USDwoHY3JlZGl0cxgBIAEoBRIRCgl1bmxpbWl0ZWQYAiABKAgSJQoEbG90cxgDIAMoCzIXLnBvc3RwaWxvdC52MS5DcmVkaXRMb3QSEQoJcmVuZXdzX2F0GAQgASgJEhUKDW1vbnRobHlfZ3JhbnQYBSABKAUiegoJUGxhbk9mZmVyEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIXCg9tb250aGx5X2NyZWRpdHMYAiABKAUSFwoPcHJpY2VfdXNkX2NlbnRzGAMgASgFEhMKC3JlY29tbWVuZGVkGAUgASgISgQIBBAFIrwBCg5Fc3RpbWF0b3JDb21ibxINCgVjb21ibxgBIAEoCRIVCg1vYnNlcnZlX2xhYmVsGAIgASgJEhMKC3dyaXRlX2xhYmVsGAMgASgJEhcKD3Blcl9waG90b19taWxsaRgEIAEoBRIXCg9wZXJfdmlkZW9fbWlsbGkYBSABKAUSIAoYcGVyX3Rob3VzYW5kX2NoYXJzX21pbGxpGAYgASgFEhsKE3Blcl9wb3N0X2Jhc2VfbWlsbGkYByABKAUiEgoQR2V0TXlQbGFuUmVxdWVzdCLEAQoRR2V0TXlQbGFuUmVzcG9uc2USIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEiwKB2JhbGFuY2UYAiABKAsyGy5wb3N0cGlsb3QudjEuQ3JlZGl0QmFsYW5jZRInCgZvZmZlcnMYAyADKAsyFy5wb3N0cGlsb3QudjEuUGxhbk9mZmVyEjYKEGVzdGltYXRvcl9jb21ib3MYBCADKAsyHC5wb3N0cGlsb3QudjEuRXN0aW1hdG9yQ29tYm8iWwoYU2V0RXN0aW1hdG9yQ29tYm9SZXF1ZXN0Eg0KBWNvbWJvGAEgASgJEhgKEG9ic2VydmVfbW9kZWxfaWQYAiABKAkSFgoOd3JpdGVfbW9kZWxfaWQYAyABKAkiGwoZU2V0RXN0aW1hdG9yQ29tYm9SZXNwb25zZSISChBMaXN0VXNlcnNSZXF1ZXN0IjoKEUxpc3RVc2Vyc1Jlc3BvbnNlEiUKBXVzZXJzGAEgAygLMhYucG9zdHBpbG90LnYxLlBsYW5Vc2VyIkwKCFBsYW5Vc2VyEgoKAmlkGAEgASgJEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhISCgpjcmVhdGVkX2F0GAMgASgJIkcKElNldFVzZXJQbGFuUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbiI7ChNTZXRVc2VyUGxhblJlc3BvbnNlEiQKBHVzZXIYASABKAsyFi5wb3N0cGlsb3QudjEuUGxhblVzZXIqaAoEUGxhbhIUChBQTEFOX1VOU1BFQ0lGSUVEEAASDQoJUExBTl9GUkVFEAESDgoKUExBTl9CQVNJQxACEgwKCFBMQU5fTUFYEAMSDwoLUExBTl9NQVNURVIQBBIMCghQTEFOX1BSTxAFMl0KC1BsYW5TZXJ2aWNlEk4KCUdldE15UGxhbhIeLnBvc3RwaWxvdC52MS5HZXRNeVBsYW5SZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLkdldE15UGxhblJlc3BvbnNlIgAynAIKDEFkbWluU2VydmljZRJOCglMaXN0VXNlcnMSHi5wb3N0cGlsb3QudjEuTGlzdFVzZXJzUmVxdWVzdBofLnBvc3RwaWxvdC52MS5MaXN0VXNlcnNSZXNwb25zZSIAElQKC1NldFVzZXJQbGFuEiAucG9zdHBpbG90LnYxLlNldFVzZXJQbGFuUmVxdWVzdBohLnBvc3RwaWxvdC52MS5TZXRVc2VyUGxhblJlc3BvbnNlIgASZgoRU2V0RXN0aW1hdG9yQ29tYm8SJi5wb3N0cGlsb3QudjEuU2V0RXN0aW1hdG9yQ29tYm9SZXF1ZXN0GicucG9zdHBpbG90LnYxLlNldEVzdGltYXRvckNvbWJvUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
 
 /**
  * One grant of credits. Consumption walks lots by expiry ascending with the non-expiring
@@ -125,15 +125,6 @@ export type PlanOffer = Message<"postpilot.v1.PlanOffer"> & {
   priceUsdCents: number;
 
   /**
-   * How many posts the grant covers for one server-owned reference case, so a rung can say
-   * what it buys in product terms instead of in credits. Display only, and deliberately
-   * conservative: it prices every call at the worst case the admission gate holds against.
-   *
-   * @generated from field: int32 estimated_posts = 4;
-   */
-  estimatedPosts: number;
-
-  /**
    * True for the one rung the comparison screen marks. Which rung that is belongs beside the
    * grants it compares, not in the client.
    *
@@ -150,6 +141,65 @@ export const PlanOfferSchema: GenMessage<PlanOffer> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_plan, 2);
 
 /**
+ * One estimator combo: a pair of models the operator assigned to a price tier, reduced to
+ * the unit rates a comparison screen multiplies (QUOTA-40).
+ *
+ * Rates are MILLI-credits, so a client stays in integers: a post costs
+ * `per_post_base + photos × per_photo + videos × per_video + ceil(chars/1000) × per_thousand_chars`
+ * milli-credits, and a grant covers `floor(credits × 1000 / that)` posts.
+ *
+ * The models behind a combo are named only for the operator's own screen; a comparison
+ * names the combo (QUOTA-39).
+ *
+ * @generated from message postpilot.v1.EstimatorCombo
+ */
+export type EstimatorCombo = Message<"postpilot.v1.EstimatorCombo"> & {
+  /**
+   * One of `quality` `balanced` `value` `cheapest`.
+   *
+   * @generated from field: string combo = 1;
+   */
+  combo: string;
+
+  /**
+   * @generated from field: string observe_label = 2;
+   */
+  observeLabel: string;
+
+  /**
+   * @generated from field: string write_label = 3;
+   */
+  writeLabel: string;
+
+  /**
+   * @generated from field: int32 per_photo_milli = 4;
+   */
+  perPhotoMilli: number;
+
+  /**
+   * @generated from field: int32 per_video_milli = 5;
+   */
+  perVideoMilli: number;
+
+  /**
+   * @generated from field: int32 per_thousand_chars_milli = 6;
+   */
+  perThousandCharsMilli: number;
+
+  /**
+   * @generated from field: int32 per_post_base_milli = 7;
+   */
+  perPostBaseMilli: number;
+};
+
+/**
+ * Describes the message postpilot.v1.EstimatorCombo.
+ * Use `create(EstimatorComboSchema)` to create a new message.
+ */
+export const EstimatorComboSchema: GenMessage<EstimatorCombo> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_plan, 3);
+
+/**
  * @generated from message postpilot.v1.GetMyPlanRequest
  */
 export type GetMyPlanRequest = Message<"postpilot.v1.GetMyPlanRequest"> & {
@@ -160,7 +210,7 @@ export type GetMyPlanRequest = Message<"postpilot.v1.GetMyPlanRequest"> & {
  * Use `create(GetMyPlanRequestSchema)` to create a new message.
  */
 export const GetMyPlanRequestSchema: GenMessage<GetMyPlanRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 3);
+  messageDesc(file_postpilot_v1_plan, 4);
 
 /**
  * @generated from message postpilot.v1.GetMyPlanResponse
@@ -183,6 +233,15 @@ export type GetMyPlanResponse = Message<"postpilot.v1.GetMyPlanResponse"> & {
    * @generated from field: repeated postpilot.v1.PlanOffer offers = 3;
    */
   offers: PlanOffer[];
+
+  /**
+   * The combos the operator has assigned, in ladder order. Empty when none is assigned or
+   * when the models behind them are no longer curated — a comparison then shows the grants
+   * with no post estimate rather than a figure nobody stands behind.
+   *
+   * @generated from field: repeated postpilot.v1.EstimatorCombo estimator_combos = 4;
+   */
+  estimatorCombos: EstimatorCombo[];
 };
 
 /**
@@ -190,7 +249,52 @@ export type GetMyPlanResponse = Message<"postpilot.v1.GetMyPlanResponse"> & {
  * Use `create(GetMyPlanResponseSchema)` to create a new message.
  */
 export const GetMyPlanResponseSchema: GenMessage<GetMyPlanResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 4);
+  messageDesc(file_postpilot_v1_plan, 5);
+
+/**
+ * @generated from message postpilot.v1.SetEstimatorComboRequest
+ */
+export type SetEstimatorComboRequest = Message<"postpilot.v1.SetEstimatorComboRequest"> & {
+  /**
+   * One of `quality` `balanced` `value` `cheapest`.
+   *
+   * @generated from field: string combo = 1;
+   */
+  combo: string;
+
+  /**
+   * Curated model ids. The observe model must be registered to `photo-analysis` and the
+   * write model to `writing`.
+   *
+   * @generated from field: string observe_model_id = 2;
+   */
+  observeModelId: string;
+
+  /**
+   * @generated from field: string write_model_id = 3;
+   */
+  writeModelId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.SetEstimatorComboRequest.
+ * Use `create(SetEstimatorComboRequestSchema)` to create a new message.
+ */
+export const SetEstimatorComboRequestSchema: GenMessage<SetEstimatorComboRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_plan, 6);
+
+/**
+ * @generated from message postpilot.v1.SetEstimatorComboResponse
+ */
+export type SetEstimatorComboResponse = Message<"postpilot.v1.SetEstimatorComboResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.SetEstimatorComboResponse.
+ * Use `create(SetEstimatorComboResponseSchema)` to create a new message.
+ */
+export const SetEstimatorComboResponseSchema: GenMessage<SetEstimatorComboResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_plan, 7);
 
 /**
  * @generated from message postpilot.v1.ListUsersRequest
@@ -203,7 +307,7 @@ export type ListUsersRequest = Message<"postpilot.v1.ListUsersRequest"> & {
  * Use `create(ListUsersRequestSchema)` to create a new message.
  */
 export const ListUsersRequestSchema: GenMessage<ListUsersRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 5);
+  messageDesc(file_postpilot_v1_plan, 8);
 
 /**
  * @generated from message postpilot.v1.ListUsersResponse
@@ -220,7 +324,7 @@ export type ListUsersResponse = Message<"postpilot.v1.ListUsersResponse"> & {
  * Use `create(ListUsersResponseSchema)` to create a new message.
  */
 export const ListUsersResponseSchema: GenMessage<ListUsersResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 6);
+  messageDesc(file_postpilot_v1_plan, 9);
 
 /**
  * PlanUser is an account as the admin screen sees it. There is still no display name or
@@ -250,7 +354,7 @@ export type PlanUser = Message<"postpilot.v1.PlanUser"> & {
  * Use `create(PlanUserSchema)` to create a new message.
  */
 export const PlanUserSchema: GenMessage<PlanUser> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 7);
+  messageDesc(file_postpilot_v1_plan, 10);
 
 /**
  * @generated from message postpilot.v1.SetUserPlanRequest
@@ -272,7 +376,7 @@ export type SetUserPlanRequest = Message<"postpilot.v1.SetUserPlanRequest"> & {
  * Use `create(SetUserPlanRequestSchema)` to create a new message.
  */
 export const SetUserPlanRequestSchema: GenMessage<SetUserPlanRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 8);
+  messageDesc(file_postpilot_v1_plan, 11);
 
 /**
  * @generated from message postpilot.v1.SetUserPlanResponse
@@ -289,7 +393,7 @@ export type SetUserPlanResponse = Message<"postpilot.v1.SetUserPlanResponse"> & 
  * Use `create(SetUserPlanResponseSchema)` to create a new message.
  */
 export const SetUserPlanResponseSchema: GenMessage<SetUserPlanResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 9);
+  messageDesc(file_postpilot_v1_plan, 12);
 
 /**
  * The ladder. A tier decides two things and no more: how many credits it is granted each
@@ -387,6 +491,18 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof SetUserPlanRequestSchema;
     output: typeof SetUserPlanResponseSchema;
+  },
+  /**
+   * Assign the two models one estimator combo prices with. Both are curated model ids and
+   * both must be registered to the purpose they serve; the assignment is what makes a combo
+   * appear in GetMyPlan at all.
+   *
+   * @generated from rpc postpilot.v1.AdminService.SetEstimatorCombo
+   */
+  setEstimatorCombo: {
+    methodKind: "unary";
+    input: typeof SetEstimatorComboRequestSchema;
+    output: typeof SetEstimatorComboResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_plan, 1);

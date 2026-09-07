@@ -39,10 +39,6 @@ export const plans = {
     description: '플랜마다 매달 받는 크레딧이 달라요. 쓸 수 있는 모델은 모든 플랜이 같아요.',
     nav: '플랜',
     monthlyCredits: '매달 {{credits}} 크레딧',
-    estimatedPosts: '매달 약 {{count}}편',
-    estimateNone: '한 편을 다 쓰기엔 모자라요',
-    estimateCaveat:
-      '편수는 사진 10장·표준 길이 글 하나를 넉넉하게 잡아 계산한 값이라, 실제로는 더 많이 쓸 수 있어요.',
     recommended: '가장 합리적',
     price: '월 ${{usd}}',
     priceFree: '무료',

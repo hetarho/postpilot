@@ -417,10 +417,10 @@ func main() {
 				return postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(authSvc, cfg.SessionTTL), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
-				return postpilotv1connect.NewPlanServiceHandler(planrpc.NewHandler(ledger), opts...)
+				return postpilotv1connect.NewPlanServiceHandler(planrpc.NewHandler(ledger, estimatorCombos{catalog: catalogSvc}), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
-				return postpilotv1connect.NewAdminServiceHandler(authrpc.NewAdminHandler(authSvc), opts...)
+				return postpilotv1connect.NewAdminServiceHandler(authrpc.NewAdminHandler(authSvc, comboAssigner{catalog: catalogSvc}), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewPostServiceHandler(postrpc.NewHandler(postSvc), opts...)
@@ -1542,6 +1542,46 @@ func topUpMonthlyLot(ctx context.Context, handle *db.DB, userID string, credits 
 func grantCreditsTo(ctx context.Context, handle *db.DB, userID string, credits int, expiresAt *time.Time) error {
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
 	return ledger.Grant(ctx, userID, credits, expiresAt)
+}
+
+// estimatorCombos hands the plan edge the priced combos the catalog owns, mapping the
+// catalog's shape onto the edge's own so neither imports the other (ARCHITECTURE §2.2).
+type estimatorCombos struct{ catalog *modelcatalog.Service }
+
+func (e estimatorCombos) ComboRates(ctx context.Context) ([]planrpc.EstimatorCombo, error) {
+	priced, err := e.catalog.ComboRates(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]planrpc.EstimatorCombo, 0, len(priced))
+	for _, combo := range priced {
+		out = append(out, planrpc.EstimatorCombo{
+			Combo:             string(combo.Combo),
+			ObserveLabel:      combo.ObserveLabel,
+			WriteLabel:        combo.WriteLabel,
+			PerPhotoMilli:     combo.Rates.PerPhoto,
+			PerVideoMilli:     combo.Rates.PerVideo,
+			Per1000CharsMilli: combo.Rates.Per1000Chars,
+			PerPostBaseMilli:  combo.Rates.PerPostBase,
+		})
+	}
+	return out, nil
+}
+
+// comboAssigner lets the admin edge assign a combo, translating the catalog's refusals into
+// the sentinels that edge declared. Without the translation the auth context would have to
+// import the catalog to recognise its own error cases.
+type comboAssigner struct{ catalog *modelcatalog.Service }
+
+func (c comboAssigner) AssignCombo(ctx context.Context, combo, observeModelID, writeModelID string) error {
+	err := c.catalog.AssignCombo(ctx, modelcatalog.Combo(combo), observeModelID, writeModelID)
+	switch {
+	case errors.Is(err, modelcatalog.ErrUnknownCombo):
+		return fmt.Errorf("%w: %s", authrpc.ErrComboUnknown, combo)
+	case errors.Is(err, modelcatalog.ErrComboModelUnusable):
+		return fmt.Errorf("%w: %v", authrpc.ErrComboModelUnusable, err)
+	}
+	return err
 }
 
 // emptyModels satisfies the ledger's registry port for the provisioning paths, which only

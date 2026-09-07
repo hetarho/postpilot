@@ -21,6 +21,10 @@ service PlanService {
 service AdminService {
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
   rpc SetUserPlan(SetUserPlanRequest) returns (SetUserPlanResponse) {}
+  // Assign the two models one estimator combo prices with. Both are curated model ids and
+  // both must be registered to the purpose they serve; the assignment is what makes a combo
+  // appear in GetMyPlan at all.
+  rpc SetEstimatorCombo(SetEstimatorComboRequest) returns (SetEstimatorComboResponse) {}
 }
 
 // The ladder. A tier decides two things and no more: how many credits it is granted each
@@ -73,13 +77,32 @@ message PlanOffer {
   // the grant was sized against, published so the client never hardcodes a price that could
   // drift from the grant beside it. What a card is actually charged is BILLING's.
   int32 price_usd_cents = 3;
-  // How many posts the grant covers for one server-owned reference case, so a rung can say
-  // what it buys in product terms instead of in credits. Display only, and deliberately
-  // conservative: it prices every call at the worst case the admission gate holds against.
-  int32 estimated_posts = 4;
+  // 4 held a fixed reference case's post count. The estimate is now proportional to what
+  // the reader says they will do, so it is computed from EstimatorCombo's rates instead.
+  reserved 4;
   // True for the one rung the comparison screen marks. Which rung that is belongs beside the
   // grants it compares, not in the client.
   bool recommended = 5;
+}
+
+// One estimator combo: a pair of models the operator assigned to a price tier, reduced to
+// the unit rates a comparison screen multiplies (QUOTA-40).
+//
+// Rates are MILLI-credits, so a client stays in integers: a post costs
+// `per_post_base + photos × per_photo + videos × per_video + ceil(chars/1000) × per_thousand_chars`
+// milli-credits, and a grant covers `floor(credits × 1000 / that)` posts.
+//
+// The models behind a combo are named only for the operator's own screen; a comparison
+// names the combo (QUOTA-39).
+message EstimatorCombo {
+  // One of `quality` `balanced` `value` `cheapest`.
+  string combo = 1;
+  string observe_label = 2;
+  string write_label = 3;
+  int32 per_photo_milli = 4;
+  int32 per_video_milli = 5;
+  int32 per_thousand_chars_milli = 6;
+  int32 per_post_base_milli = 7;
 }
 
 message GetMyPlanRequest {}
@@ -90,7 +113,22 @@ message GetMyPlanResponse {
   // Every rung on offer, so the comparison screen renders no number of its own. `master`
   // is absent: it is the operator tier, not something anyone is offered.
   repeated PlanOffer offers = 3;
+  // The combos the operator has assigned, in ladder order. Empty when none is assigned or
+  // when the models behind them are no longer curated — a comparison then shows the grants
+  // with no post estimate rather than a figure nobody stands behind.
+  repeated EstimatorCombo estimator_combos = 4;
 }
+
+message SetEstimatorComboRequest {
+  // One of `quality` `balanced` `value` `cheapest`.
+  string combo = 1;
+  // Curated model ids. The observe model must be registered to `photo-analysis` and the
+  // write model to `writing`.
+  string observe_model_id = 2;
+  string write_model_id = 3;
+}
+
+message SetEstimatorComboResponse {}
 
 message ListUsersRequest {}
 

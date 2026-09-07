@@ -53,18 +53,37 @@ export interface PlanOffer {
   monthlyCredits: number
   /** Whole US cents; zero for the free tier. What a card is charged is BILLING's. */
   priceUsdCents: number
-  /** How many posts the grant covers for the server's reference case. Display only, and
-   *  conservative by construction — the server prices it at the worst case the admission
-   *  gate holds against, so it never promises a post that would then be refused. */
-  estimatedPosts: number
   /** The one rung the comparison screen marks. The server decides which. */
   recommended: boolean
+}
+
+/** The four price tiers a post estimate can be quoted at. The operator assigns the models
+ *  behind each one; a screen names the tier (QUOTA-39). */
+export const ESTIMATOR_COMBOS = ['quality', 'balanced', 'value', 'cheapest'] as const
+
+export type EstimatorComboName = (typeof ESTIMATOR_COMBOS)[number]
+
+/** One combo's unit costs in MILLI-credits — thousandths, so the arithmetic stays in
+ *  integers. The server derives them from what its two models really charge (QUOTA-40) and
+ *  the client is only allowed to multiply. */
+export interface EstimatorCombo {
+  combo: EstimatorComboName
+  /** The models behind the tier, for the operator's own screen only. */
+  observeLabel: string
+  writeLabel: string
+  perPhotoMilli: number
+  perVideoMilli: number
+  perThousandCharsMilli: number
+  perPostBaseMilli: number
 }
 
 export interface MyPlan {
   plan: PlanName | undefined
   balance: CreditBalance
   offers: PlanOffer[]
+  /** The combos the operator has assigned and the server could price. Empty means a
+   *  comparison shows grants and prices with no post estimate. */
+  estimatorCombos: EstimatorCombo[]
 }
 
 /** How many posts a balance covers at a given per-post estimate. It is deliberately a
@@ -73,6 +92,37 @@ export interface MyPlan {
 export function postsAffordable(credits: number, perPost: number): number {
   if (perPost <= 0) return 0
   return Math.floor(credits / perPost)
+}
+
+/** What one post of the given shape costs, in MILLI-credits, at one combo's rates.
+ *
+ *  This is the whole of the client's arithmetic (QUOTA-40): the server owns the charge
+ *  formula and publishes rates, and the page multiplies. Characters round UP to the next
+ *  thousand — a partial thousand still costs a whole call's output ceiling — which also
+ *  keeps the figure monotonic as a slider moves. */
+export function postCostMilli(
+  rates: EstimatorCombo,
+  input: { chars: number; photos: number; videos: number },
+): number {
+  const thousands = Math.max(0, Math.ceil(input.chars / 1000))
+  return (
+    rates.perPostBaseMilli +
+    Math.max(0, input.photos) * rates.perPhotoMilli +
+    Math.max(0, input.videos) * rates.perVideoMilli +
+    thousands * rates.perThousandCharsMilli
+  )
+}
+
+/** How many posts of that shape a monthly grant covers. Zero means the grant does not cover
+ *  one, which a screen states rather than rendering as "about 0". */
+export function postsPerGrant(
+  monthlyCredits: number,
+  rates: EstimatorCombo,
+  input: { chars: number; photos: number; videos: number },
+): number {
+  const costMilli = postCostMilli(rates, input)
+  if (costMilli <= 0) return 0
+  return Math.floor((monthlyCredits * 1000) / costMilli)
 }
 
 /** One account as the operator screen sees it. */

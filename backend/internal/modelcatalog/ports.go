@@ -28,6 +28,12 @@ type Store interface {
 	// a fresh snapshot and last_seen_at, everything else is marked unlisted. It is one
 	// transaction so the catalog is never half-refreshed.
 	RefreshAvailability(ctx context.Context, seen []Candidate, at time.Time) error
+	// ListCombos returns every estimator assignment that exists, in combo order. A combo
+	// with no row is simply absent.
+	ListCombos(ctx context.Context) ([]ComboAssignment, error)
+	// AssignCombo replaces one combo's pair. The foreign keys mean an id that is not a
+	// curated model is refused by the database, not only by the service.
+	AssignCombo(ctx context.Context, a ComboAssignment, at time.Time) error
 }
 
 // Upstream is the provider's own catalog of models that exist — declared here by its

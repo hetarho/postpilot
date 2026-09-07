@@ -118,3 +118,19 @@ SET provider_slug = ?, label = ?, vision = ?, structured_output = ?,
     context_tokens = ?, input_usd_per_million = ?, output_usd_per_million = ?,
     pricing_checked_at = ?, listed = 1, last_seen_at = ?
 WHERE model_id = ?;
+
+-- Which two models each estimator combo is priced with (QUOTA-39). One row per combo, so an
+-- assignment replaces the previous one rather than accumulating.
+-- Keep every comment in this file ASCII: sqlc slices the emitted query text by byte offset.
+-- name: ListEstimatorCombos :many
+SELECT combo, observe_model_id, write_model_id
+FROM estimator_combos
+ORDER BY combo;
+
+-- name: AssignEstimatorCombo :exec
+INSERT INTO estimator_combos (combo, observe_model_id, write_model_id, updated_at)
+VALUES (?, ?, ?, ?)
+ON CONFLICT(combo) DO UPDATE SET
+    observe_model_id = excluded.observe_model_id,
+    write_model_id = excluded.write_model_id,
+    updated_at = excluded.updated_at;

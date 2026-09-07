@@ -43,8 +43,18 @@ export interface FakePlansOptions {
     plan: ProtoPlan
     monthlyCredits: number
     priceUsdCents: number
-    estimatedPosts?: number
     recommended?: boolean
+  }>
+  /** The priced combos the estimator publishes. Defaults to one assigned tier so a screen
+   *  test renders a post count; pass `[]` for the state an operator has not set up. */
+  estimatorCombos?: Array<{
+    combo: string
+    observeLabel?: string
+    writeLabel?: string
+    perPhotoMilli?: number
+    perVideoMilli?: number
+    perThousandCharsMilli?: number
+    perPostBaseMilli?: number
   }>
   /** Make GetMyPlan fail. */
   planFails?: boolean
@@ -79,20 +89,26 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         renewsAt: options.balance?.renewsAt ?? '',
         monthlyGrant: options.balance?.monthlyGrant ?? 0,
       },
-      // The shipped ladder, estimates included, so a test that does not care about the
-      // figures still renders what the server would actually send.
+      // The shipped ladder, so a test that does not care about the figures still renders
+      // what the server would actually send.
       offers: options.offers ?? [
-        { plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0, estimatedPosts: 1 },
-        { plan: ProtoPlan.BASIC, monthlyCredits: 220, priceUsdCents: 200, estimatedPosts: 6 },
-        {
-          plan: ProtoPlan.PRO,
-          monthlyCredits: 575,
-          priceUsdCents: 500,
-          estimatedPosts: 17,
-          recommended: true,
-        },
-        { plan: ProtoPlan.MAX, monthlyCredits: 1200, priceUsdCents: 1000, estimatedPosts: 37 },
+        { plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0 },
+        { plan: ProtoPlan.BASIC, monthlyCredits: 220, priceUsdCents: 200 },
+        { plan: ProtoPlan.PRO, monthlyCredits: 575, priceUsdCents: 500, recommended: true },
+        { plan: ProtoPlan.MAX, monthlyCredits: 1200, priceUsdCents: 1000 },
       ],
+      // The rates plan_test pins for a $0.30/$2.50 observer and a $1.00/$10.00 writer.
+      estimatorCombos: (
+        options.estimatorCombos ?? [{ combo: 'balanced' }, { combo: 'cheapest' }]
+      ).map((combo) => ({
+        combo: combo.combo,
+        observeLabel: combo.observeLabel ?? 'vendor/eyes',
+        writeLabel: combo.writeLabel ?? 'vendor/pen',
+        perPhotoMilli: combo.perPhotoMilli ?? 723,
+        perVideoMilli: combo.perVideoMilli ?? 1100,
+        perThousandCharsMilli: combo.perThousandCharsMilli ?? 3600,
+        perPostBaseMilli: combo.perPostBaseMilli ?? 3800,
+      })),
     })
   })
 

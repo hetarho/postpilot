@@ -30,14 +30,7 @@ describe('the plan comparison', () => {
 
     // Every figure is the server's, including how many posts the grant covers (QUOTA-36).
     expect(within(items[1]).getByText('매달 220 크레딧')).toBeInTheDocument()
-    expect(within(items[1]).getByText('매달 약 6편')).toBeInTheDocument()
     expect(within(items[1]).getByText('월 $2')).toBeInTheDocument()
-    expect(within(items[3]).getByText('매달 약 37편')).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        '편수는 사진 10장·표준 길이 글 하나를 넉넉하게 잡아 계산한 값이라, 실제로는 더 많이 쓸 수 있어요.',
-      ),
-    ).toBeInTheDocument()
 
     // The current rung is named and offers nothing to press; the rest carry the seam a
     // checkout will attach to, disabled with the operator path stated beside it.
@@ -70,21 +63,6 @@ describe('the plan comparison', () => {
       item.firstElementChild?.classList.contains('border-stroke-accent'),
     )
     expect(stroked).toHaveLength(1)
-  })
-
-  it('states a grant too small for one post rather than promising zero', async () => {
-    renderAppAt('/plans', {
-      user: { ...USER, plan: ProtoPlan.FREE },
-      plans: {
-        plan: ProtoPlan.FREE,
-        balance: { credits: 50, unlimited: false, monthlyGrant: 50 },
-        offers: [{ plan: ProtoPlan.FREE, monthlyCredits: 10, priceUsdCents: 0, estimatedPosts: 0 }],
-      },
-    })
-
-    await rungs()
-    expect(screen.getByText('한 편을 다 쓰기엔 모자라요')).toBeInTheDocument()
-    expect(screen.queryByText(/약 0편/)).not.toBeInTheDocument()
   })
 
   // QUOTA-29: an exhausted balance blocks AI work and nothing else, which is the one thing

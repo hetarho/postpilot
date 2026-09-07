@@ -36,7 +36,8 @@ func newPlanServer(t *testing.T) (postpilotv1connect.AuthServiceClient, postpilo
 	interceptor := connect.WithInterceptors(authrpc.NewInterceptor(svc))
 	mux := http.NewServeMux()
 	mux.Handle(postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(svc, sessionTTL), interceptor))
-	mux.Handle(postpilotv1connect.NewAdminServiceHandler(authrpc.NewAdminHandler(svc), interceptor))
+	mux.Handle(postpilotv1connect.NewAdminServiceHandler(
+		authrpc.NewAdminHandler(svc, &fakeComboAssigner{}), interceptor))
 	// Unimplemented on purpose: the gate is the interceptor, so a refusal must arrive without
 	// the handler ever running. Reaching the handler would answer `unimplemented` instead.
 	mux.Handle(postpilotv1connect.NewPublishingServiceHandler(
@@ -257,7 +258,7 @@ func TestSetUserPlanRunsTheUpgradeTopUp(t *testing.T) {
 		t.Fatalf("seed alice: %v", err)
 	}
 
-	admin := authrpc.NewAdminHandler(svc)
+	admin := authrpc.NewAdminHandler(svc, &fakeComboAssigner{})
 	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "root", Plan: plan.Master})
 
 	if _, err := admin.SetUserPlan(ctx, connect.NewRequest(&postpilotv1.SetUserPlanRequest{
@@ -278,5 +279,78 @@ func TestSetUserPlanRunsTheUpgradeTopUp(t *testing.T) {
 	}
 	if len(topUps) != 1 {
 		t.Errorf("top-ups after a downgrade = %v, want the upgrade's one", topUps)
+	}
+}
+
+// fakeComboAssigner records the assignment and can answer with either refusal the edge maps.
+type fakeComboAssigner struct {
+	calls []string
+	err   error
+}
+
+func (f *fakeComboAssigner) AssignCombo(_ context.Context, combo, observe, write string) error {
+	f.calls = append(f.calls, combo+":"+observe+"/"+write)
+	return f.err
+}
+
+// The estimator assignment is privileged like every other admin action, and its two refusals
+// reach the client as reasons it can render copy from (QUOTA-39).
+func TestSetEstimatorComboIsMasterOnlyAndMapsItsRefusals(t *testing.T) {
+	authClient, admin, _, _ := newPlanServer(t)
+
+	free := loginAs(t, authClient, "alice")
+	_, err := admin.SetEstimatorCombo(context.Background(), withCookie(&postpilotv1.SetEstimatorComboRequest{
+		Combo: "quality", ObserveModelId: "vendor/eyes", WriteModelId: "vendor/pen",
+	}, free))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("as free = %v, want permission_denied", err)
+	}
+
+	svc := auth.NewService(newStore(t), sessionTTL)
+	svc.SetMonthlyTopUp(func(context.Context, string, int) error { return nil })
+	assigner := &fakeComboAssigner{}
+	handler := authrpc.NewAdminHandler(svc, assigner)
+	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "root", Plan: plan.Master})
+
+	if _, err := handler.SetEstimatorCombo(ctx, connect.NewRequest(&postpilotv1.SetEstimatorComboRequest{
+		Combo: "quality", ObserveModelId: "vendor/eyes", WriteModelId: "vendor/pen",
+	})); err != nil {
+		t.Fatalf("SetEstimatorCombo: %v", err)
+	}
+	if len(assigner.calls) != 1 || assigner.calls[0] != "quality:vendor/eyes/vendor/pen" {
+		t.Errorf("assignments = %v", assigner.calls)
+	}
+
+	for _, tc := range []struct {
+		name   string
+		err    error
+		reason string
+		code   connect.Code
+	}{
+		{"unknown combo", authrpc.ErrComboUnknown, "COMBO_UNKNOWN", connect.CodeInvalidArgument},
+		{"unregistered model", authrpc.ErrComboModelUnusable, "MODEL_NOT_REGISTERED", connect.CodeFailedPrecondition},
+	} {
+		assigner.err = tc.err
+		_, err := handler.SetEstimatorCombo(ctx, connect.NewRequest(&postpilotv1.SetEstimatorComboRequest{
+			Combo: "quality", ObserveModelId: "vendor/eyes", WriteModelId: "vendor/pen",
+		}))
+		if connect.CodeOf(err) != tc.code {
+			t.Errorf("%s code = %v, want %v", tc.name, connect.CodeOf(err), tc.code)
+		}
+		if detail := authAppErrorDetail(t, err); detail.GetReason() != tc.reason {
+			t.Errorf("%s reason = %q, want %s", tc.name, detail.GetReason(), tc.reason)
+		}
+	}
+	assigner.err = nil
+
+	// An incomplete request never reaches the assigner.
+	before := len(assigner.calls)
+	if _, err := handler.SetEstimatorCombo(ctx, connect.NewRequest(&postpilotv1.SetEstimatorComboRequest{
+		Combo: "quality",
+	})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("incomplete request = %v, want invalid_argument", err)
+	}
+	if len(assigner.calls) != before {
+		t.Error("an incomplete request reached the assigner")
 	}
 }

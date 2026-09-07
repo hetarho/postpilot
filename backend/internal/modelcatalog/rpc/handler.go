@@ -51,8 +51,24 @@ func (h *Handler) ListCatalog(ctx context.Context, req *connect.Request[postpilo
 	if !browse.FetchedAt.IsZero() {
 		fetchedAt = browse.FetchedAt.UTC().Format(time.RFC3339)
 	}
+	// The estimator assignments ride this read so the operator's screen needs no second
+	// procedure (QUOTA-25 keeps the privileged set closed at three admin procedures). A
+	// failure here degrades the section to "unassigned" rather than the whole catalog.
+	combos := make([]*postpilotv1.EstimatorComboAssignment, 0, 4)
+	assigned, comboErr := h.svc.Combos(ctx)
+	if comboErr != nil {
+		slog.Error("estimator combo read failed", "err", comboErr)
+	}
+	for _, assignment := range assigned {
+		combos = append(combos, &postpilotv1.EstimatorComboAssignment{
+			Combo:          string(assignment.Combo),
+			ObserveModelId: assignment.ObserveModelID,
+			WriteModelId:   assignment.WriteModelID,
+		})
+	}
 	return connect.NewResponse(&postpilotv1.ListCatalogResponse{
-		Entries: entries, FetchedAt: fetchedAt,
+		EstimatorCombos: combos,
+		Entries:         entries, FetchedAt: fetchedAt,
 		FromCache: browse.FromCache, FetchError: browse.FetchError,
 	}), nil
 }

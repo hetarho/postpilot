@@ -425,3 +425,34 @@ func splitEfforts(value string) []string {
 	}
 	return efforts
 }
+
+// ListCombos reads the estimator assignments. The read runs on the writer for the same
+// reason the catalog's other curation reads do: an operator screen must see its own write.
+func (s *Store) ListCombos(ctx context.Context) ([]modelcatalog.ComboAssignment, error) {
+	rows, err := s.write.ListEstimatorCombos(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list estimator combos: %w", err)
+	}
+	out := make([]modelcatalog.ComboAssignment, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, modelcatalog.ComboAssignment{
+			Combo:          modelcatalog.Combo(row.Combo),
+			ObserveModelID: row.ObserveModelID,
+			WriteModelID:   row.WriteModelID,
+		})
+	}
+	return out, nil
+}
+
+func (s *Store) AssignCombo(ctx context.Context, a modelcatalog.ComboAssignment, at time.Time) error {
+	err := s.write.AssignEstimatorCombo(ctx, sqlc.AssignEstimatorComboParams{
+		Combo:          string(a.Combo),
+		ObserveModelID: a.ObserveModelID,
+		WriteModelID:   a.WriteModelID,
+		UpdatedAt:      formatTime(at),
+	})
+	if err != nil {
+		return fmt.Errorf("assign estimator combo: %w", err)
+	}
+	return nil
+}

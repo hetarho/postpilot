@@ -40,10 +40,6 @@ export const plans = {
       'Plans differ in the credits they grant each month. Every plan can run every model.',
     nav: 'Plans',
     monthlyCredits: '{{credits}} credits a month',
-    estimatedPosts: 'About {{count}} posts a month',
-    estimateNone: 'Not quite enough for a full post',
-    estimateCaveat:
-      'Post counts assume a generous 10-photo post at a standard length, so you will usually get more.',
     recommended: 'Best value',
     price: '${{usd}} a month',
     priceFree: 'Free',

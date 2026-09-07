@@ -28,6 +28,32 @@ func (q *Queries) AddCatalogModelPurpose(ctx context.Context, arg AddCatalogMode
 	return err
 }
 
+const assignEstimatorCombo = `-- name: AssignEstimatorCombo :exec
+INSERT INTO estimator_combos (combo, observe_model_id, write_model_id, updated_at)
+VALUES (?, ?, ?, ?)
+ON CONFLICT(combo) DO UPDATE SET
+    observe_model_id = excluded.observe_model_id,
+    write_model_id = excluded.write_model_id,
+    updated_at = excluded.updated_at
+`
+
+type AssignEstimatorComboParams struct {
+	Combo          string
+	ObserveModelID string
+	WriteModelID   string
+	UpdatedAt      string
+}
+
+func (q *Queries) AssignEstimatorCombo(ctx context.Context, arg AssignEstimatorComboParams) error {
+	_, err := q.db.ExecContext(ctx, assignEstimatorCombo,
+		arg.Combo,
+		arg.ObserveModelID,
+		arg.WriteModelID,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
 const getCatalogModel = `-- name: GetCatalogModel :one
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
        video_input, reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
@@ -251,6 +277,44 @@ func (q *Queries) ListCatalogModels(ctx context.Context) ([]ListCatalogModelsRow
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEstimatorCombos = `-- name: ListEstimatorCombos :many
+SELECT combo, observe_model_id, write_model_id
+FROM estimator_combos
+ORDER BY combo
+`
+
+type ListEstimatorCombosRow struct {
+	Combo          string
+	ObserveModelID string
+	WriteModelID   string
+}
+
+// Which two models each estimator combo is priced with (QUOTA-39). One row per combo, so an
+// assignment replaces the previous one rather than accumulating.
+// Keep every comment in this file ASCII: sqlc slices the emitted query text by byte offset.
+func (q *Queries) ListEstimatorCombos(ctx context.Context) ([]ListEstimatorCombosRow, error) {
+	rows, err := q.db.QueryContext(ctx, listEstimatorCombos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEstimatorCombosRow
+	for rows.Next() {
+		var i ListEstimatorCombosRow
+		if err := rows.Scan(&i.Combo, &i.ObserveModelID, &i.WriteModelID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

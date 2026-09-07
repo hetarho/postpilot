@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 var (
@@ -24,6 +25,11 @@ var (
 	ErrInvalidReasoning = errors.New("invalid reasoning effort")
 	// ErrUnknownPurpose: the requested purpose is not one of the five this catalog curates.
 	ErrUnknownPurpose = errors.New("unknown purpose")
+	// ErrUnknownCombo is a combo name off the four the product has.
+	ErrUnknownCombo = errors.New("unknown estimator combo")
+	// ErrComboModelUnusable is a model that is not curated, or is curated but not
+	// registered to the purpose the combo needs it for.
+	ErrComboModelUnusable = errors.New("estimator combo model is not registered")
 	// ErrPurposeIneligible: the model lacks the capability the purpose requires
 	// (photo-analysis needs vision; a generation purpose needs the matching output).
 	ErrPurposeIneligible = errors.New("model not capable of purpose")
@@ -360,4 +366,45 @@ func ProviderSlugOf(modelID string) string {
 		return modelID
 	}
 	return slug
+}
+
+// Combo is one estimator price tier: which model observes and which writes for it
+// (QUOTA-39). The four names are the product's, not the operator's, so a screen names the
+// tier while the operator names the models behind it.
+type Combo string
+
+const (
+	ComboQuality  Combo = "quality"
+	ComboBalanced Combo = "balanced"
+	ComboValue    Combo = "value"
+	ComboCheapest Combo = "cheapest"
+)
+
+// Combos are the four tiers in ladder order, richest first.
+func Combos() []Combo { return []Combo{ComboQuality, ComboBalanced, ComboValue, ComboCheapest} }
+
+// Valid reports whether a wire value is one of the four.
+func (c Combo) Valid() bool {
+	switch c {
+	case ComboQuality, ComboBalanced, ComboValue, ComboCheapest:
+		return true
+	}
+	return false
+}
+
+// ComboAssignment is what the operator chose for one tier. Empty ids mean it has never been
+// assigned, which is a state the operator's screen shows rather than an error.
+type ComboAssignment struct {
+	Combo          Combo
+	ObserveModelID string
+	WriteModelID   string
+}
+
+// ComboRates is one assigned tier priced for a comparison screen: the models' labels for the
+// operator, and the unit rates a client multiplies (QUOTA-40).
+type ComboRates struct {
+	Combo        Combo
+	ObserveLabel string
+	WriteLabel   string
+	Rates        plan.Rates
 }

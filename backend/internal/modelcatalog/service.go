@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 // Service is the catalog's use-cases and, at the same time, the llm registry's model
@@ -484,3 +485,134 @@ func cmpString(a, b string) int {
 }
 
 var _ llm.ModelSource = (*Service)(nil)
+
+// AssignCombo points one estimator combo at the two models that price it (QUOTA-39).
+//
+// Both must be curated AND registered to the purpose they serve: the estimate quotes what a
+// real run of that combo would cost, and a model no stage may run would be quoting a price
+// nothing can charge. The pair is written together, so a half-assigned combo is a client
+// state rather than a row.
+func (s *Service) AssignCombo(ctx context.Context, combo Combo, observeModelID, writeModelID string) error {
+	if !combo.Valid() {
+		return fmt.Errorf("%w: %s", ErrUnknownCombo, combo)
+	}
+	if err := s.requireRegistered(ctx, observeModelID, PurposePhotoAnalysis); err != nil {
+		return err
+	}
+	if err := s.requireRegistered(ctx, writeModelID, PurposeWriting); err != nil {
+		return err
+	}
+	assignment := ComboAssignment{Combo: combo, ObserveModelID: observeModelID, WriteModelID: writeModelID}
+	if err := s.store.AssignCombo(ctx, assignment, s.now()); err != nil {
+		return err
+	}
+	s.invalidate(ctx)
+	return nil
+}
+
+func (s *Service) requireRegistered(ctx context.Context, modelID string, purpose Purpose) error {
+	model, err := s.store.Get(ctx, modelID)
+	if errors.Is(err, ErrNotFound) {
+		return fmt.Errorf("%w: %s is not registered to %s", ErrComboModelUnusable, modelID, purpose)
+	}
+	if err != nil {
+		return fmt.Errorf("read curated model: %w", err)
+	}
+	if !slices.Contains(model.Purposes, purpose) {
+		return fmt.Errorf("%w: %s is not registered to %s", ErrComboModelUnusable, modelID, purpose)
+	}
+	return nil
+}
+
+// Combos reads the operator's assignments for their own screen, all four in ladder order
+// with the unassigned ones carrying empty ids.
+func (s *Service) Combos(ctx context.Context) ([]ComboAssignment, error) {
+	stored, err := s.store.ListCombos(ctx)
+	if err != nil {
+		return nil, err
+	}
+	byName := make(map[Combo]ComboAssignment, len(stored))
+	for _, assignment := range stored {
+		byName[assignment.Combo] = assignment
+	}
+	out := make([]ComboAssignment, 0, len(Combos()))
+	for _, combo := range Combos() {
+		if found, ok := byName[combo]; ok {
+			out = append(out, found)
+			continue
+		}
+		out = append(out, ComboAssignment{Combo: combo})
+	}
+	return out, nil
+}
+
+// ComboRates prices every ASSIGNED combo for a comparison screen.
+//
+// A combo whose model has since lost its registration, left the catalog or published no
+// price is left out rather than priced anyway (QUOTA-39): a comparison that quoted a tier
+// nobody can run would be worse than one that shows fewer tiers.
+func (s *Service) ComboRates(ctx context.Context) ([]ComboRates, error) {
+	assignments, err := s.store.ListCombos(ctx)
+	if err != nil {
+		return nil, err
+	}
+	byName := make(map[Combo]ComboAssignment, len(assignments))
+	for _, assignment := range assignments {
+		byName[assignment.Combo] = assignment
+	}
+
+	out := make([]ComboRates, 0, len(assignments))
+	for _, combo := range Combos() {
+		assignment, ok := byName[combo]
+		if !ok {
+			continue
+		}
+		observe, ok := s.priceable(ctx, assignment.ObserveModelID, PurposePhotoAnalysis)
+		if !ok {
+			continue
+		}
+		write, ok := s.priceable(ctx, assignment.WriteModelID, PurposeWriting)
+		if !ok {
+			continue
+		}
+		rates, ok := plan.EstimatorRates(pricerFor(observe), pricerFor(write))
+		if !ok {
+			continue
+		}
+		out = append(out, ComboRates{
+			Combo:        combo,
+			ObserveLabel: observe.Label,
+			WriteLabel:   write.Label,
+			Rates:        rates,
+		})
+	}
+	return out, nil
+}
+
+func (s *Service) priceable(ctx context.Context, modelID string, purpose Purpose) (Model, bool) {
+	model, err := s.store.Get(ctx, modelID)
+	if err != nil || !slices.Contains(model.Purposes, purpose) {
+		return Model{}, false
+	}
+	// A model the provider stopped offering, or one with no published price, cannot be
+	// quoted: `listed = 0` is the catalog's own way of saying the run would fail.
+	if !model.Listed || model.InputUSDPerMillion == "" || model.OutputUSDPerMillion == "" {
+		return Model{}, false
+	}
+	return model, true
+}
+
+// pricerFor turns a curated row's published prices into the pricing function the plan
+// package asks for, so the token assumptions stay in plan and the money arithmetic stays in
+// llm — neither learns the other's job.
+func pricerFor(m Model) plan.Pricer {
+	return func(promptTokens, completionTokens int64) (int64, bool) {
+		cost := llm.ResolveCost(llm.CostInput{
+			PromptTokens:        promptTokens,
+			CompletionTokens:    completionTokens,
+			InputUSDPerMillion:  m.InputUSDPerMillion,
+			OutputUSDPerMillion: m.OutputUSDPerMillion,
+		})
+		return cost.Microusd, cost.Source == llm.CostEstimated
+	}
+}

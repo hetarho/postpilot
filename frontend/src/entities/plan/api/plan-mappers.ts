@@ -5,13 +5,16 @@ import {
   type ProtoPlanUser,
   type ProtoCreditBalance,
 } from '@/shared/api'
-import type {
-  CreditBalance,
-  CreditLot,
-  MyPlan,
-  PlanAccount,
-  PlanName,
-  PlanOffer,
+import {
+  ESTIMATOR_COMBOS,
+  type CreditBalance,
+  type CreditLot,
+  type EstimatorCombo,
+  type EstimatorComboName,
+  type MyPlan,
+  type PlanAccount,
+  type PlanName,
+  type PlanOffer,
 } from '../model/types'
 
 const PLAN_TO_PROTO: Record<PlanName, ProtoPlan> = {
@@ -61,17 +64,38 @@ function toOffer(offer: {
   plan: ProtoPlan
   monthlyCredits: number
   priceUsdCents: number
-  estimatedPosts?: number
   recommended?: boolean
 }): PlanOffer {
   return {
     plan: planFromProto(offer.plan),
     monthlyCredits: offer.monthlyCredits,
     priceUsdCents: offer.priceUsdCents,
-    // A server that says nothing about either is read as "no estimate, not marked" rather
-    // than as a rung to highlight: emphasis the ladder did not ask for is a claim.
-    estimatedPosts: offer.estimatedPosts ?? 0,
+    // A server that says nothing is read as "not marked" rather than as a rung to
+    // highlight: emphasis the ladder did not ask for is a claim.
     recommended: offer.recommended ?? false,
+  }
+}
+
+/** A combo the client cannot name is dropped: the four are a closed set, and a tier whose
+ *  label this build does not know is nothing a screen can offer as a choice. */
+function toCombo(combo: {
+  combo: string
+  observeLabel: string
+  writeLabel: string
+  perPhotoMilli: number
+  perVideoMilli: number
+  perThousandCharsMilli: number
+  perPostBaseMilli: number
+}): EstimatorCombo | undefined {
+  if (!(ESTIMATOR_COMBOS as readonly string[]).includes(combo.combo)) return undefined
+  return {
+    combo: combo.combo as EstimatorComboName,
+    observeLabel: combo.observeLabel,
+    writeLabel: combo.writeLabel,
+    perPhotoMilli: combo.perPhotoMilli,
+    perVideoMilli: combo.perVideoMilli,
+    perThousandCharsMilli: combo.perThousandCharsMilli,
+    perPostBaseMilli: combo.perPostBaseMilli,
   }
 }
 
@@ -83,6 +107,9 @@ export function toMyPlan(response: GetMyPlanResponse | undefined): MyPlan | unde
     // A tier this build cannot name is dropped rather than rendered as unknown: an offer
     // nobody can identify is not something to put a price next to.
     offers: (response.offers ?? []).map(toOffer).filter((offer) => offer.plan !== undefined),
+    estimatorCombos: (response.estimatorCombos ?? [])
+      .map(toCombo)
+      .filter((combo): combo is EstimatorCombo => combo !== undefined),
   }
 }
 

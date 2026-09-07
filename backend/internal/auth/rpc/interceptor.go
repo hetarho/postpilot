@@ -67,8 +67,9 @@ var masterProcedures = map[string]bool{
 	postpilotv1connect.PublishingServiceRetryPublishProcedure:             true,
 	postpilotv1connect.PublishingServiceCancelPublishProcedure:            true,
 
-	postpilotv1connect.AdminServiceListUsersProcedure:   true,
-	postpilotv1connect.AdminServiceSetUserPlanProcedure: true,
+	postpilotv1connect.AdminServiceListUsersProcedure:         true,
+	postpilotv1connect.AdminServiceSetUserPlanProcedure:       true,
+	postpilotv1connect.AdminServiceSetEstimatorComboProcedure: true,
 
 	// Curating the model catalog decides what every account may spend money on, so it sits
 	// with the tier assignment rather than with the per-account model choice ProviderService

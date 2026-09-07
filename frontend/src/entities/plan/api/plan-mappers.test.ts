@@ -4,59 +4,68 @@ import { GetMyPlanResponseSchema, ProtoPlan } from '@/shared/api'
 import { toMyPlan } from './plan-mappers'
 
 describe('toMyPlan offers', () => {
-  it('carries the estimate and the recommended mark the server sent', () => {
+  it('carries the recommended mark the server sent', () => {
     const myPlan = toMyPlan(
       create(GetMyPlanResponseSchema, {
         plan: ProtoPlan.BASIC,
         offers: [
-          { plan: ProtoPlan.BASIC, monthlyCredits: 220, priceUsdCents: 200, estimatedPosts: 6 },
-          {
-            plan: ProtoPlan.PRO,
-            monthlyCredits: 575,
-            priceUsdCents: 500,
-            estimatedPosts: 17,
-            recommended: true,
-          },
+          { plan: ProtoPlan.BASIC, monthlyCredits: 220, priceUsdCents: 200 },
+          { plan: ProtoPlan.PRO, monthlyCredits: 575, priceUsdCents: 500, recommended: true },
         ],
       }),
     )
 
     expect(myPlan?.offers).toEqual([
+      { plan: 'basic', monthlyCredits: 220, priceUsdCents: 200, recommended: false },
+      { plan: 'pro', monthlyCredits: 575, priceUsdCents: 500, recommended: true },
+    ])
+  })
+})
+
+describe('toMyPlan estimator combos', () => {
+  it('carries every rate a client multiplies', () => {
+    const myPlan = toMyPlan(
+      create(GetMyPlanResponseSchema, {
+        plan: ProtoPlan.FREE,
+        estimatorCombos: [
+          {
+            combo: 'balanced',
+            observeLabel: 'vendor/eyes',
+            writeLabel: 'vendor/pen',
+            perPhotoMilli: 723,
+            perVideoMilli: 1100,
+            perThousandCharsMilli: 3600,
+            perPostBaseMilli: 3800,
+          },
+        ],
+      }),
+    )
+
+    expect(myPlan?.estimatorCombos).toEqual([
       {
-        plan: 'basic',
-        monthlyCredits: 220,
-        priceUsdCents: 200,
-        estimatedPosts: 6,
-        recommended: false,
-      },
-      {
-        plan: 'pro',
-        monthlyCredits: 575,
-        priceUsdCents: 500,
-        estimatedPosts: 17,
-        recommended: true,
+        combo: 'balanced',
+        observeLabel: 'vendor/eyes',
+        writeLabel: 'vendor/pen',
+        perPhotoMilli: 723,
+        perVideoMilli: 1100,
+        perThousandCharsMilli: 3600,
+        perPostBaseMilli: 3800,
       },
     ])
   })
 
-  // A server that says nothing about either must not produce a highlighted rung: emphasis
-  // the ladder did not ask for would be the client inventing a recommendation.
-  it('reads an offer that omits both as no estimate and not marked', () => {
-    const myPlan = toMyPlan(
+  // The four are a closed set. A tier this build cannot name is nothing a screen can offer
+  // as a choice, so it is dropped rather than rendered as an unknown option.
+  it('drops a combo it cannot name and tolerates none at all', () => {
+    const unknown = toMyPlan(
       create(GetMyPlanResponseSchema, {
         plan: ProtoPlan.FREE,
-        offers: [{ plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0 }],
+        estimatorCombos: [{ combo: 'premium', perPostBaseMilli: 10 }],
       }),
     )
+    expect(unknown?.estimatorCombos).toEqual([])
 
-    expect(myPlan?.offers).toEqual([
-      {
-        plan: 'free',
-        monthlyCredits: 50,
-        priceUsdCents: 0,
-        estimatedPosts: 0,
-        recommended: false,
-      },
-    ])
+    const none = toMyPlan(create(GetMyPlanResponseSchema, { plan: ProtoPlan.FREE }))
+    expect(none?.estimatorCombos).toEqual([])
   })
 })

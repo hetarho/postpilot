@@ -5,8 +5,8 @@ import { Badge, Button, Notice, Typography, pageStyles } from '@/shared/ui'
 /** The plan comparison, and the place a subscription will start (QUOTA-28). Composition
  *  only: it reads the ladder the server publishes and renders it.
  *
- *  Every figure — the grant, the price, how many posts it buys, which rung is recommended,
- *  which is current — comes from GetMyPlan. A price kept here would eventually disagree with
+ *  Every figure — the grant, the price, which rung is recommended, which is current — comes
+ *  from GetMyPlan. A price kept here would eventually disagree with
  *  the grant beside it, the grant is the half that is actually enforced, and a recommendation
  *  the client invented would be emphasis the ladder never asked for.
  *
@@ -61,12 +61,6 @@ export function PlansPage() {
               </li>
             ))}
           </ul>
-          {/* The assumption behind every estimate, once under the list rather than four times
-              inside it: repeated in every card it would read as fine print, and the list is
-              one comparison. */}
-          <Typography variant="meta" className="text-content-tertiary mt-4 block">
-            {t('compare.estimateCaveat', { ns: 'plans' })}
-          </Typography>
           <Typography variant="meta" className="text-content-tertiary mt-6 block">
             {t('compare.notPurchasable', { ns: 'plans' })}
           </Typography>
@@ -106,14 +100,7 @@ function PlanCard({ offer, current }: { offer: PlanOffer; current: boolean }) {
       <Typography variant="body" className="text-content-secondary mt-2 block">
         {t('compare.monthlyCredits', { credits: offer.monthlyCredits })}
       </Typography>
-      {/* What the grant buys, in product terms rather than in credits (QUOTA-36). The figure
-          is the server's; this page does no arithmetic on it. */}
-      <Typography variant="body" className="text-content-secondary mt-1 block">
-        {offer.estimatedPosts > 0
-          ? t('compare.estimatedPosts', { count: offer.estimatedPosts })
-          : t('compare.estimateNone')}
-      </Typography>
-      <Typography variant="body" className="mt-2 block">
+      <Typography variant="body" className="mt-1 block">
         {offer.priceUsdCents > 0
           ? t('compare.price', { usd: (offer.priceUsdCents / 100).toFixed(0) })
           : t('compare.priceFree')}

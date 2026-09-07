@@ -137,6 +137,14 @@ message ListCatalogRequest {
   string purpose = 2;
 }
 
+// One combo's current assignment, for the operator's own screen. Empty ids mean the combo
+// has never been assigned, and a comparison screen therefore shows no estimate for it.
+message EstimatorComboAssignment {
+  string combo = 1;
+  string observe_model_id = 2;
+  string write_model_id = 3;
+}
+
 message ListCatalogResponse {
   repeated CatalogEntry entries = 1;
   // RFC 3339 instant of the live read the entries were merged against; empty when the read
@@ -146,6 +154,9 @@ message ListCatalogResponse {
   // Set when the live read failed. Entries then carry curated rows only, and no
   // availability bookkeeping was written.
   string fetch_error = 4;
+  // All four estimator combos in ladder order, assigned or not, so the operator sees which
+  // price tier is still missing a model. The write is AdminService.SetEstimatorCombo.
+  repeated EstimatorComboAssignment estimator_combos = 5;
 }
 
 message SetModelPurposeRequest {
