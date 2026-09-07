@@ -6,8 +6,10 @@
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
+  AdminService,
   ListCatalogResponseSchema,
   ModelCatalogService,
+  SetEstimatorComboResponseSchema,
   ProtoPlan,
   SetModelPurposeResponseSchema,
   UpdateModelResponseSchema,
@@ -71,6 +73,10 @@ export interface FakeModelCatalogOptions {
   /** Refuse every curation write, the way an unknown model does. */
   writeFails?: boolean
   listFails?: boolean
+  /** The estimator assignments the operator has made. Absent combos read as unassigned. */
+  estimatorCombos?: Array<{ combo: string; observeModelId?: string; writeModelId?: string }>
+  /** Refuse SetEstimatorCombo the way an unregistered model does. */
+  comboWriteFails?: boolean
   calls?: string[]
 }
 
@@ -81,6 +87,7 @@ export function registerModelCatalogService(
   const { rpc } = router
   const { calls } = options
   let entries = [...(options.entries ?? [])]
+  let combos = [...(options.estimatorCombos ?? [])]
 
   // The listing is per purpose: it reports each entry's effort for THAT purpose and attaches
   // that stage's spend signal, so a test can prove a tab shows its own value and not another's.
@@ -129,6 +136,16 @@ export function registerModelCatalogService(
       fetchedAt: options.fetchFails ? '' : (options.fetchedAt ?? '2026-09-03T09:00:00Z'),
       fromCache: options.fromCache ?? false,
       fetchError: options.fetchFails ? 'the provider catalog could not be read' : '',
+      // All four in ladder order, the way the server answers, so an unassigned tier is a
+      // rendered state rather than a missing row.
+      estimatorCombos: ['quality', 'balanced', 'value', 'cheapest'].map((combo) => {
+        const assigned = combos.find((entry) => entry.combo === combo)
+        return {
+          combo,
+          observeModelId: assigned?.observeModelId ?? '',
+          writeModelId: assigned?.writeModelId ?? '',
+        }
+      }),
     })
 
   rpc(ModelCatalogService.method.listCatalog, (req) => {
@@ -137,6 +154,29 @@ export function registerModelCatalogService(
     )
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return answer(req.purpose)
+  })
+
+  // The assignment's write is an AdminService method but it lives here, with the read it
+  // changes: two fakes cannot share one piece of state, and the operator's screen reads the
+  // assignment back out of ListCatalog.
+  rpc(AdminService.method.setEstimatorCombo, (req) => {
+    calls?.push(`SetEstimatorCombo:${req.combo}:${req.observeModelId}/${req.writeModelId}`)
+    if (options.comboWriteFails) {
+      throw connectAppError('MODEL_NOT_REGISTERED', Code.FailedPrecondition)
+    }
+    const registered = (modelId: string, purpose: string) =>
+      (entries.find((entry) => entry.modelId === modelId)?.purposes ?? []).includes(purpose)
+    if (
+      !registered(req.observeModelId, 'photo-analysis') ||
+      !registered(req.writeModelId, 'writing')
+    ) {
+      throw connectAppError('MODEL_NOT_REGISTERED', Code.FailedPrecondition)
+    }
+    combos = [
+      ...combos.filter((entry) => entry.combo !== req.combo),
+      { combo: req.combo, observeModelId: req.observeModelId, writeModelId: req.writeModelId },
+    ]
+    return create(SetEstimatorComboResponseSchema, {})
   })
 
   rpc(ModelCatalogService.method.setModelPurpose, (req) => {

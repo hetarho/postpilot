@@ -33,15 +33,16 @@
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260907.ix |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
 | T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | blocked@260907 |
-| T026 | The operator assigns a model to each estimator combo | QUOTA | T025 | todo |
 | T027 | The estimate becomes a calculator on /plans | QUOTA THEME | T025 | todo |
 | T028 | The plan ladder earns its animated stroke | THEME QUOTA | T027 | todo |
 
 ## next
-- implement-task T026 → T027 → T028 (the estimator wave), then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
+- implement-task T027 → T028 (the estimator wave), then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
 - PUBLISH chain: T007 needs one ARCH-27 run on the Mac (and CI green) to close · T019 blocked on the live editor survey → update-ssot PUBLISH → create-task re-decomposes it · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260907 T026 done — the 모델 관리 tab assigns the two models behind each of the four estimator combos, drafted locally and sent as one complete pair
+- 260907 T026 claimed (pw)
 - 260907 T025 done — four operator-assigned combos price a post by photo·video·1000 chars in milli-credits, published through GetMyPlan; the worst-case reference post is gone
 - 260907 T025 claimed (pw)
 - 260907 create-task QUOTA THEME → T025..T028 (combos + published rates, the operator's assignment, the /plans calculator, the animated promotional stroke); T023's worst-case reference post and its copy are removed in T025/T027
@@ -60,5 +61,3 @@
 - 260907 update-ssot AUTH r2 QUOTA r4 ARCH r2 MARKETING r3 BILLING r2 done (self-signup with email as the login id and verification before the first session, Google sign-in, IP throttling + auto-releasing lockout, anchor-day grant window, payment-method bonus, the public CTA becoming the way in)
 - 260907 WARN T020..T024 are todo against QUOTA@3 · MARKETING@2 · ARCH@1 — no behaviour they implement changed, but create-task must move their base; no doing task sits inside the five domains
 - 260907 update-ssot AUTH QUOTA ARCH start (BILLING prerequisites)
-- 260907 create-task QUOTA MARKETING THEME → T020..T024 (BE ladder+offers, purchased kind+order+top-up, header credit control, /plans reshape, /about copy); the money-dependent halves of QUOTA-34 and QUOTA-35 (par-rate checkout, the charge behind an upgrade) stay for BILLING's own tasks
-- 260907 create-task QUOTA MARKETING THEME start

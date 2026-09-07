@@ -194,11 +194,22 @@ export function reasoningShare(spend: ReasoningSpend): number {
 
 /** One read of the operator's catalog, with everything the screen has to say about where it
  *  came from. `fetchError` set means the entries are curated rows only. */
+/** One estimator combo's current assignment, for the operator's screen. Empty ids are the
+ *  never-assigned state a comparison shows no estimate for (QUOTA-39). */
+export interface EstimatorComboAssignment {
+  combo: string
+  observeModelId: string
+  writeModelId: string
+}
+
 export interface CatalogBrowse {
   entries: readonly AdminCatalogEntry[]
   fetchedAt: string
   fromCache: boolean
   fetchError: string
+  /** All four combos in ladder order, assigned or not, so the operator sees which price
+   *  tier is still missing a model. */
+  estimatorCombos: readonly EstimatorComboAssignment[]
 }
 
 export function refKey(ref: ModelRef): string {

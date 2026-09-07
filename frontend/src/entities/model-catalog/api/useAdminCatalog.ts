@@ -7,7 +7,13 @@ import type { ModelPurpose } from '@/shared/config'
 import type { CatalogBrowse, ReasoningEffortName } from '../model/types'
 import { toCatalogBrowse } from './catalog-mappers'
 
-const EMPTY: CatalogBrowse = { entries: [], fetchedAt: '', fromCache: false, fetchError: '' }
+const EMPTY: CatalogBrowse = {
+  entries: [],
+  fetchedAt: '',
+  fromCache: false,
+  fetchError: '',
+  estimatorCombos: [],
+}
 
 /** The operator's catalog. Master-only on the server, so a non-master caller is refused here
  *  rather than shown an empty list — the screen that mounts this is itself gated.

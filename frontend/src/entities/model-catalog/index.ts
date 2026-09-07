@@ -1,6 +1,7 @@
 export type {
   AdminCatalogEntry,
   CatalogBrowse,
+  EstimatorComboAssignment,
   CatalogModel,
   ComparisonPair,
   ModelRef,

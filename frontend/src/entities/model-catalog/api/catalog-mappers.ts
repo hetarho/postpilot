@@ -126,6 +126,11 @@ export function toCatalogBrowse(response: ProtoListCatalogResponse): CatalogBrow
     fetchedAt: response.fetchedAt,
     fromCache: response.fromCache,
     fetchError: response.fetchError,
+    estimatorCombos: response.estimatorCombos.map((combo) => ({
+      combo: combo.combo,
+      observeModelId: combo.observeModelId,
+      writeModelId: combo.writeModelId,
+    })),
   }
 }
 

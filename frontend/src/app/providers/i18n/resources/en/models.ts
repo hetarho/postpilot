@@ -1,4 +1,21 @@
 export const models = {
+  combos: {
+    title: 'Post estimate combos',
+    description:
+      'The models the plan screen prices "about N posts a month" with. Choose both and the estimate uses that tier\'s real rates.',
+    name: {
+      quality: 'Quality',
+      balanced: 'Balanced',
+      value: 'Value',
+      cheapest: 'Cheapest',
+    },
+    observe: 'Photo analysis',
+    write: 'Writing',
+    none: 'Not chosen',
+    unassigned: 'Until both models are chosen, the plan screen shows no estimate for this tier.',
+    retired: '{{model}} · no longer registered',
+    loadFailed: 'Could not load the combos.',
+  },
   // Shown beside a model that takes VIDEO input — narrower than vision (VIDEO-11).
   capability: { video: 'Video' },
   title: 'AI models',

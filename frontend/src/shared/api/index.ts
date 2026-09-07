@@ -47,6 +47,7 @@ export { AdminService, Plan as ProtoPlan, PlanService } from './gen/postpilot/v1
 export {
   GetMyPlanResponseSchema,
   ListUsersResponseSchema,
+  SetEstimatorComboResponseSchema,
   SetUserPlanResponseSchema,
 } from './gen/postpilot/v1/plan_pb'
 export type {
