@@ -20,7 +20,7 @@
 | TEMPLATE | 3 | 3 | - | 1 |
 | GUIDE | 1 | 1 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
-| PUBLISH | 4 | 3 | PUBLISH-13✎ 20✎ 36✎ 37+ | 0 |
+| PUBLISH | 4 | 4 | - | 0 |
 | LANG | 1 | 1 | - | 0 |
 | THEME | 4 | 4 | - | 0 |
 | MARKETING | 3 | 2 | MARKETING-6✎ 11✎ 16+ | 0 |
@@ -30,14 +30,19 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
-| T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | blocked@260907 |
+| T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T046 | todo |
+| T042 | The r4 mutation vocabulary and the body mutations | PUBLISH | T018 | todo |
+| T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
+| T044 | The settings layer, and tags, category and visibility inside it | PUBLISH | T042 | todo |
+| T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUBLISH | T044 T043 | todo |
+| T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
 
 ## next
 - create-task AUTH QUOTA ARCH MARKETING BILLING is the next wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface); every base takes QUOTA@5 · THEME@4 · MARKETING@3 · ARCH@2 on claim, then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
-- create-task PUBLISH re-decomposes T019 against r4 (its `## survey` section holds the live mechanics the new tasks need); base takes PUBLISH@4 ARCH@2 on claim · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
+- implement-task T042 — the head of the PUBLISH chain T042 → (T043 · T044) → T045 → T046 → T008; every one of them must read T019's `## survey` section in tasks/done/ for the live SmartEditor mechanics, and T008's base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260908 create-task PUBLISH → T042..T046 (the r4 vocabulary and body mutations, caret-relative image insertion, the settings layer, the commit fence with the post-view readback, the daemon wiring); T019 is superseded and moved to done with every box unchecked because its acceptance was written against r3, and T008's dep moves T019→T046
 - 260907 update-ssot PUBLISH r4 done — a `filling_settings` stage joins the progress list, the settings layer is a versioned step that occludes the editor so body and photos precede it (PUBLISH-37), readback observes the post through the account's post-view URL while still reporting the permalink, and the locator-derived caret positions an inserted image; the frame-scoped driver addition r3 was expected to need is NOT required
 - 260907 T019 live survey done on the owner's Mac — all three blockers answered: an image inserts immediately after the caret's component (no placeholder, no pre-allocated ordinal), the settings layer takes TWO clicks and OCCLUDES the body so body mutations must come first, and `PostView.naver` serves a published post in its own document in the editor's own `.se-component` vocabulary, so readback needs no frame-scoped driver surface. Also found: `Enter` appends a paragraph INSIDE one `se-text` component, and the list control exists only while the caret is in a text block. WARN an unsaved scratch draft with one survey quote, paragraph and uploaded image is left in the writer — discard it, do not publish
 - 260907 T007 done — ARCH-27 passed on the owner's Mac and CI's macOS agent job is green; the red backend job on main was T021's fixed-width timestamp parse (one run in ten), fixed in 4a923a6 by reading with RFC3339Nano like the post and auth stores. T019 stays blocked on the live survey; T008 waits behind it
@@ -57,4 +62,3 @@
 - 260907 T023 done — /plans compares four rungs side by side from md:, each stating about how many posts its grant buys, with pro marked under THEME-37 by the new stroke-accent role
 - 260907 T023 claimed (pw), base QUOTA@3→@4 THEME@3 LANG@1 ARCH@1→@2: r4 changes the grant window and the bonus, neither of which the comparison table renders
 - 260907 T022 done — the header carries the balance as a link to /plans, the popover reaches the ladder from every tier, and one 30s-stale GetMyPlan entry serves both
-- 260907 T022 claimed (pw), base QUOTA@3→@4 THEME@3 ARCH@1→@2: r4 touches the grant window and the bonus, neither of which this header control reads
