@@ -48,6 +48,7 @@ describe('AccountMenu', () => {
           lots: [
             { kind: 'monthly', granted: 50, remaining: 12, expiresAt: '2026-09-30T15:00:00Z' },
             { kind: 'bonus', granted: 50, remaining: 50 },
+            { kind: 'purchased', granted: 100, remaining: 100 },
           ],
         },
       },
@@ -66,6 +67,11 @@ describe('AccountMenu', () => {
     // number cannot say that.
     expect(within(panel).getByText('12 / 50 크레딧')).toBeInTheDocument()
     expect(within(panel).getByText('50 / 50 크레딧')).toBeInTheDocument()
+    // Three kinds now (QUOTA-12), and a purchased lot must not be labelled as a bonus.
+    expect(within(panel).getByText('100 / 100 크레딧')).toBeInTheDocument()
+    expect(within(panel).getByText(/^월 정기 ·/)).toBeInTheDocument()
+    expect(within(panel).getByText(/^보너스 ·/)).toBeInTheDocument()
+    expect(within(panel).getByText(/^구매 ·/)).toBeInTheDocument()
     expect(within(panel).getByText('플랜은 운영자가 지정해요.')).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()
 

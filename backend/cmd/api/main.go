@@ -100,7 +100,7 @@ func main() {
 		return
 	}
 	if len(os.Args) > 1 && os.Args[1] == "setplan" {
-		if err := provision.SetPlan(context.Background(), os.Args[2:]); err != nil {
+		if err := provision.SetPlan(context.Background(), os.Args[2:], topUpMonthlyLot); err != nil {
 			slog.Error("setplan failed", "err", err)
 			os.Exit(1)
 		}
@@ -192,6 +192,10 @@ func main() {
 		usagestore.New(handle.Writer, handle.Reader), registry,
 		int64(cfg.LLMMaxTokensDefault),
 	)
+	// A tier upgrade owes credits for the cycle already running (QUOTA-35). The auth
+	// service is built before the ledger, so it takes the credit side here rather than as a
+	// constructor argument -- the same shape as the catalog's reasoning-spend reader below.
+	authSvc.SetMonthlyTopUp(ledger.TopUpMonthlyLot)
 	meteredModels := meteredRegistry{Registry: registry, ledger: ledger}
 	// The curation surface's evidence, joined HERE rather than by a query inside the catalog:
 	// usage_events belongs to the ledger, and a context reading another's tables is the one
@@ -1524,6 +1528,14 @@ func creditBootstrap(ctx context.Context, handle *db.DB, userID string) error {
 		}
 	}
 	return nil
+}
+
+// topUpMonthlyLot raises an account's current monthly grant, for the upgrade half of
+// `api setplan`. It is the same ledger call the RPC path gets, injected here because the
+// auth context must not learn about credit_lots.
+func topUpMonthlyLot(ctx context.Context, handle *db.DB, userID string, credits int) error {
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
+	return ledger.TopUpMonthlyLot(ctx, userID, credits)
 }
 
 // grantCreditsTo opens a bonus lot from the operator's shell.

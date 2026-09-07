@@ -80,6 +80,10 @@ export function AccountMenu({ onLoggedOut }: { onLoggedOut: () => void }) {
   )
 }
 
+/** Which label names a lot. A lookup rather than a ternary because there are three kinds
+ *  now (QUOTA-12) and a ternary would silently call a purchase a bonus. */
+const LOT_LABEL = { monthly: 'Monthly', bonus: 'Bonus', purchased: 'Purchased' } as const
+
 /** The plan badge and the three usage meters.
  *
  *  Every number comes from GetMyPlan: the grant table and the charge formula are server-owned
@@ -141,7 +145,7 @@ function PlanPanel({ close }: { close: () => void }) {
                   className="flex items-baseline justify-between gap-2"
                 >
                   <Typography variant="meta">
-                    {lot.kind === 'monthly' ? t('balance.lotMonthly') : t('balance.lotBonus')}
+                    {t(`balance.lot${LOT_LABEL[lot.kind]}`)}
                     {' · '}
                     {lot.expiresAt
                       ? t('balance.lotExpires', { at: lot.expiresAt })

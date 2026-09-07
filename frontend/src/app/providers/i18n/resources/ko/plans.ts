@@ -15,6 +15,7 @@ export const plans = {
     renews: '{{at, instant}}에 충전돼요',
     lotMonthly: '월 정기',
     lotBonus: '보너스',
+    lotPurchased: '구매',
     lotExpires: '{{at, instant}}까지',
     lotNoExpiry: '기한 없음',
     loading: '크레딧을 불러오는 중…',

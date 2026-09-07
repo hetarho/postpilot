@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/auth"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
 )
 
@@ -246,28 +247,68 @@ func TestSetPlanChangesAnAccountAndKeepsTheLastMaster(t *testing.T) {
 	t.Setenv("DB_PATH", dbPath)
 	ctx := context.Background()
 
-	if err := SetPlan(ctx, []string{"root", "basic"}); !errors.Is(err, auth.ErrLastMaster) {
+	// The credit side of an upgrade, recorded so the CLI path can be shown to run it.
+	type topUpCall struct {
+		userID  string
+		credits int
+	}
+	var topUps []topUpCall
+	recordTopUp := func(_ context.Context, _ *db.DB, userID string, credits int) error {
+		topUps = append(topUps, topUpCall{userID, credits})
+		return nil
+	}
+
+	if err := SetPlan(ctx, []string{"root", "basic"}, recordTopUp); !errors.Is(err, auth.ErrLastMaster) {
 		t.Fatalf("demoting the last master = %v, want ErrLastMaster", err)
 	}
 	if got := storedPlan(t, dbPath, "root"); got != "master" {
 		t.Fatalf("plan = %q, want the refused demotion to have changed nothing", got)
 	}
 
-	if err := SetPlan(ctx, []string{"ghost", "free"}); err == nil || !strings.Contains(err.Error(), "does not exist") {
+	if err := SetPlan(ctx, []string{"ghost", "free"}, recordTopUp); err == nil || !strings.Contains(err.Error(), "does not exist") {
 		t.Errorf("unknown account = %v, want a clear message", err)
 	}
-	if err := SetPlan(ctx, []string{"root", "pro"}); err == nil {
+	if err := SetPlan(ctx, []string{"root", "pro"}, recordTopUp); err == nil {
 		t.Error("an unknown tier was accepted")
 	}
 
 	if err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "alice"); err != nil {
 		t.Fatalf("seed alice: %v", err)
 	}
-	if err := SetPlan(ctx, []string{"alice", "max"}); err != nil {
+	if err := SetPlan(ctx, []string{"alice", "max"}, recordTopUp); err != nil {
 		t.Fatalf("SetPlan: %v", err)
 	}
 	if got := storedPlan(t, dbPath, "alice"); got != "max" {
 		t.Errorf("plan = %q, want max", got)
+	}
+	// QUOTA-35: the operator's path owes the cycle already running the difference between
+	// the two grants, exactly like the RPC path.
+	owed := plan.MonthlyCredits(plan.Max) - plan.MonthlyCredits(plan.Free)
+	if len(topUps) != 1 || topUps[0].userID != "alice" || topUps[0].credits != owed {
+		t.Errorf("top-ups = %v, want one of %d credits for alice", topUps, owed)
+	}
+	// Only the demotion and the two rejected calls came before it, and none of them owes
+	// credits.
+	if got := storedPlan(t, dbPath, "root"); got != "master" {
+		t.Errorf("root = %q, want master", got)
+	}
+}
+
+// An upgrade with no credit side wired must fail before the tier moves: an account left on
+// a tier it never got the credits for is worse than a refused command.
+func TestSetPlanRefusesAnUpgradeWithNoTopUpWired(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "postpilot.db")
+	if err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "bob"); err != nil {
+		t.Fatalf("seed bob: %v", err)
+	}
+	t.Setenv("DB_PATH", dbPath)
+
+	err := SetPlan(context.Background(), []string{"bob", "pro"}, nil)
+	if err == nil || !strings.Contains(err.Error(), "top-up") {
+		t.Fatalf("SetPlan with no top-up = %v, want a refusal naming it", err)
+	}
+	if got := storedPlan(t, dbPath, "bob"); got != "free" {
+		t.Errorf("plan = %q, want the refused upgrade to have changed nothing", got)
 	}
 }
 

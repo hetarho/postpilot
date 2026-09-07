@@ -23,6 +23,10 @@ func newPlanServer(t *testing.T) (postpilotv1connect.AuthServiceClient, postpilo
 	t.Helper()
 
 	svc := auth.NewService(newStore(t), sessionTTL)
+	// Production wires the ledger's top-up here (QUOTA-35). These cases are about the
+	// master-only gate, so the credit side is a no-op; that it actually RUNS on this path is
+	// pinned by TestSetUserPlanRunsTheUpgradeTopUp below.
+	svc.SetMonthlyTopUp(func(context.Context, string, int) error { return nil })
 	for id, tier := range map[string]plan.Plan{"alice": plan.Free, "root": plan.Master} {
 		if err := svc.CreateUser(context.Background(), id, "s3cret", tier); err != nil {
 			t.Fatalf("seed %s: %v", id, err)
@@ -232,5 +236,47 @@ func TestServiceRefusesTheLastMasterDemotion(t *testing.T) {
 	}
 	if err := svc.SetUserPlan(ctx, "ghost", plan.Free); !errors.Is(err, auth.ErrUserNotFound) {
 		t.Errorf("unknown account = %v, want ErrUserNotFound", err)
+	}
+}
+
+// QUOTA-35 on the RPC path: promoting an account owes the cycle already running the
+// difference between the two grants, and the handler must run that credit side rather than
+// leaving it to whoever remembers.
+func TestSetUserPlanRunsTheUpgradeTopUp(t *testing.T) {
+	svc := auth.NewService(newStore(t), sessionTTL)
+	type topUpCall struct {
+		userID  string
+		credits int
+	}
+	var topUps []topUpCall
+	svc.SetMonthlyTopUp(func(_ context.Context, userID string, credits int) error {
+		topUps = append(topUps, topUpCall{userID, credits})
+		return nil
+	})
+	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
+		t.Fatalf("seed alice: %v", err)
+	}
+
+	admin := authrpc.NewAdminHandler(svc)
+	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "root", Plan: plan.Master})
+
+	if _, err := admin.SetUserPlan(ctx, connect.NewRequest(&postpilotv1.SetUserPlanRequest{
+		UserId: "alice", Plan: postpilotv1.Plan_PLAN_PRO,
+	})); err != nil {
+		t.Fatalf("SetUserPlan: %v", err)
+	}
+	owed := plan.MonthlyCredits(plan.Pro) - plan.MonthlyCredits(plan.Free)
+	if len(topUps) != 1 || topUps[0].userID != "alice" || topUps[0].credits != owed {
+		t.Fatalf("top-ups = %v, want one of %d credits for alice", topUps, owed)
+	}
+
+	// A downgrade owes nothing: the cycle already granted stands untouched (QUOTA-35).
+	if _, err := admin.SetUserPlan(ctx, connect.NewRequest(&postpilotv1.SetUserPlanRequest{
+		UserId: "alice", Plan: postpilotv1.Plan_PLAN_BASIC,
+	})); err != nil {
+		t.Fatalf("downgrade: %v", err)
+	}
+	if len(topUps) != 1 {
+		t.Errorf("top-ups after a downgrade = %v, want the upgrade's one", topUps)
 	}
 }

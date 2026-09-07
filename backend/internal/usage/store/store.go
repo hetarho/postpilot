@@ -146,6 +146,16 @@ func (s *Store) InsertLotIfAbsent(ctx context.Context, lot usage.Lot) error {
 	return nil
 }
 
+func (s *Store) RaiseLot(ctx context.Context, lotID string, credits int) error {
+	err := s.write.RaiseLot(ctx, sqlc.RaiseLotParams{
+		Granted: int64(credits), Remaining: int64(credits), ID: lotID,
+	})
+	if err != nil {
+		return fmt.Errorf("raise credit lot: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) SpendFromLot(ctx context.Context, lotID string, credits int) error {
 	err := s.write.SpendFromLot(ctx, sqlc.SpendFromLotParams{
 		Remaining: int64(credits), ID: lotID, Remaining_2: int64(credits),

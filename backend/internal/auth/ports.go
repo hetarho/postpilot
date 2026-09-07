@@ -7,6 +7,11 @@ import (
 	"github.com/postpilot/backend/internal/plan"
 )
 
+// MonthlyTopUp raises an account's current monthly credit grant. Declared here by its
+// consumer and implemented by the usage context, which owns credit_lots: a tier lives in
+// this context's table, the credits it grants do not.
+type MonthlyTopUp func(ctx context.Context, userID string, credits int) error
+
 // Store is the persistence this context needs, declared here by its consumer
 // (ARCHITECTURE §2.2). The implementation lives in auth/store and is injected by
 // cmd/api; nothing here knows it is SQL.

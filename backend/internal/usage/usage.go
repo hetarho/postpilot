@@ -56,14 +56,18 @@ type LotDebit struct {
 	Credits int
 }
 
-// LotKind separates the monthly grant from a bonus. It is not an authorization
-// distinction — consumption orders by expiry, not by kind — but a display one, and the
-// thing that tells a renewal which lot it replaces.
+// LotKind separates the monthly grant from a bonus and from credits that were bought. It
+// is not an authorization distinction, but it IS the first key consumption orders by
+// (QUOTA-12) — monthly, then bonus, then purchased — and the thing that tells a renewal
+// which lot it replaces.
 type LotKind string
 
 const (
 	LotMonthly LotKind = "monthly"
 	LotBonus   LotKind = "bonus"
+	// LotPurchased is credits the account paid for. They never expire and they are the
+	// last kind spent: a paid credit must be the last to burn.
+	LotPurchased LotKind = "purchased"
 )
 
 // Lot is one grant of credits.
@@ -73,9 +77,8 @@ type Lot struct {
 	Kind      LotKind
 	Granted   int
 	Remaining int
-	// ExpiresAt is nil for a grant that does not expire. Consumption puts those last, so a
-	// non-expiring bonus is always spent after the monthly grant that would otherwise be
-	// lost.
+	// ExpiresAt is nil for a grant that does not expire. Within one kind, consumption puts
+	// those last, so a lot that would otherwise lapse is spent first.
 	ExpiresAt *time.Time
 	CreatedAt time.Time
 }

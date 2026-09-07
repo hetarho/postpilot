@@ -226,7 +226,8 @@ FROM credit_lots
 WHERE user_id = ?
   AND remaining > 0
   AND (expires_at IS NULL OR expires_at > ?)
-ORDER BY expires_at IS NULL, expires_at, created_at, id
+ORDER BY CASE kind WHEN 'monthly' THEN 0 WHEN 'bonus' THEN 1 ELSE 2 END,
+         expires_at IS NULL, expires_at, created_at, id
 `
 
 type LotsInConsumptionOrderParams struct {
@@ -236,9 +237,18 @@ type LotsInConsumptionOrderParams struct {
 
 // Queries for the usage context. sqlc compiles these into internal/usage/store/sqlc;
 // internal/usage/store maps the generated rows to domain types.
-// The one ordering the balance is ever read in: soonest expiry first, non-expiring last.
-// `expires_at IS NULL` sorts 0 before 1, which is what puts a bonus behind the monthly
-// grant that would otherwise lapse unspent.
+// The one ordering the balance is ever read in, and the only reader of the product rule
+// behind it (QUOTA-12): KIND first (monthly, then bonus, then purchased) and only then
+// soonest expiry, non-expiring last, oldest first.
+//
+// Kind leads because a purchased credit was paid for and must be the last to burn. Expiry
+// order alone used to produce that by accident, resting on the signup bonus happening to be
+// the older of two never-expiring lots; a lot bought before a bonus was granted would have
+// inverted it. The rank is spelled here rather than passed in from Go because this query is
+// the rule's only reader.
+//
+// Keep every comment in this file ASCII: sqlc slices the emitted query text by byte offset,
+// so one multi-byte character shifts it and generates SQL that will not parse.
 func (q *Queries) LotsInConsumptionOrder(ctx context.Context, arg LotsInConsumptionOrderParams) ([]CreditLot, error) {
 	rows, err := q.db.QueryContext(ctx, lotsInConsumptionOrder, arg.UserID, arg.ExpiresAt)
 	if err != nil {
@@ -313,6 +323,24 @@ func (q *Queries) OpenAdmissionForJob(ctx context.Context, jobID string) (OpenAd
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const raiseLot = `-- name: RaiseLot :exec
+UPDATE credit_lots SET granted = granted + ?, remaining = remaining + ? WHERE id = ?
+`
+
+type RaiseLotParams struct {
+	Granted   int64
+	Remaining int64
+	ID        string
+}
+
+// Grows a lot that already exists, on both sides at once so the granted/remaining CHECK
+// holds however much of it has been spent. It is the upgrade top-up (QUOTA-35): the one
+// write that edits a lot the account was already given.
+func (q *Queries) RaiseLot(ctx context.Context, arg RaiseLotParams) error {
+	_, err := q.db.ExecContext(ctx, raiseLot, arg.Granted, arg.Remaining, arg.ID)
+	return err
 }
 
 const reasoningSpendByStage = `-- name: ReasoningSpendByStage :many

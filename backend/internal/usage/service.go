@@ -479,6 +479,30 @@ func (s *Service) EnsureMonthlyLot(ctx context.Context, userID string, acting pl
 	})
 }
 
+// TopUpMonthlyLot raises the account's current monthly grant by `credits`.
+//
+// It is the credit half of a tier upgrade (QUOTA-35): someone who pays the difference this
+// minute must be able to spend it this minute, so the lot they already hold grows rather
+// than a second monthly lot opening beside it — ActiveMonthlyLot expects exactly one.
+//
+// An account with no current monthly lot is a no-op, not an error: its next request opens
+// one at the new tier's size anyway.
+func (s *Service) TopUpMonthlyLot(ctx context.Context, userID string, credits int) error {
+	if credits <= 0 {
+		return fmt.Errorf("top up: credits must be positive")
+	}
+	return s.store.InWriteTx(ctx, func(tx Store) error {
+		lot, found, err := tx.ActiveMonthlyLot(ctx, userID, s.now())
+		if err != nil {
+			return err
+		}
+		if !found {
+			return nil
+		}
+		return tx.RaiseLot(ctx, lot.ID, credits)
+	})
+}
+
 // Grant opens a bonus lot. expiresAt may be nil, for a grant that does not expire.
 func (s *Service) Grant(ctx context.Context, userID string, credits int, expiresAt *time.Time) error {
 	if credits <= 0 {

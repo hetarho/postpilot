@@ -27,6 +27,10 @@ type Service struct {
 	// the dummy path is required to perform.
 	now    func() time.Time
 	verify func(password, encoded string) (bool, error)
+	// topUp raises the current monthly grant when a tier moves up. Late-bound because the
+	// ledger that implements it is built after this service (the composition root wires it
+	// with SetMonthlyTopUp, the way the catalog gets its reasoning-spend reader).
+	topUp MonthlyTopUp
 }
 
 // NewService wires the context with its store and the session lifetime from config.
@@ -40,6 +44,11 @@ func NewService(store Store, ttl time.Duration) *Service {
 
 	return &Service{store: store, ttl: ttl, now: time.Now, verify: VerifyPassword}
 }
+
+// SetMonthlyTopUp gives the service the credit side of a tier upgrade. Without it an
+// upgrade that owes credits fails loudly rather than moving the tier and dropping the
+// grant on the floor.
+func (s *Service) SetMonthlyTopUp(topUp MonthlyTopUp) { s.topUp = topUp }
 
 // Login verifies credentials and issues a session, returning the user and the RAW
 // token for the cookie. The raw token is returned exactly once, here; it is never
@@ -173,7 +182,26 @@ func (s *Service) SetUserPlan(ctx context.Context, userID string, target plan.Pl
 	if current == target {
 		return nil
 	}
-	return s.store.SetUserPlan(ctx, userID, target)
+
+	// An upgrade owes the difference for the cycle already running (QUOTA-35). The tier is
+	// written first so a failure here leaves an account that is on the tier it paid for but
+	// short of the credits, which the error names; the reverse would hand out credits for a
+	// tier the account never reached. Money will make this seam BILLING's problem to close.
+	owed := plan.MonthlyCredits(target) - plan.MonthlyCredits(current)
+	tops := owed > 0 && !plan.Unlimited(target) && !plan.Unlimited(current)
+	if tops && s.topUp == nil {
+		return fmt.Errorf("set plan %s: no monthly top-up is wired", target)
+	}
+	if err := s.store.SetUserPlan(ctx, userID, target); err != nil {
+		return err
+	}
+	if !tops {
+		return nil
+	}
+	if err := s.topUp(ctx, userID, owed); err != nil {
+		return fmt.Errorf("account is on %s but its %d-credit top-up failed: %w", target, owed, err)
+	}
+	return nil
 }
 
 // Logout revokes the session server-side. Clearing the cookie alone would leave a

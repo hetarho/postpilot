@@ -23,6 +23,7 @@ type fakeStore struct {
 	events      []Event
 	lotSeq      int
 	spendCalls  int
+	raiseCalls  int
 	failOnSpend error
 }
 
@@ -91,6 +92,17 @@ func (f *fakeStore) InsertLotIfAbsent(ctx context.Context, lot Lot) error {
 		}
 	}
 	return f.InsertLot(ctx, lot)
+}
+
+func (f *fakeStore) RaiseLot(_ context.Context, lotID string, credits int) error {
+	f.raiseCalls++
+	for i := range f.lots {
+		if f.lots[i].ID == lotID {
+			f.lots[i].Granted += credits
+			f.lots[i].Remaining += credits
+		}
+	}
+	return nil
 }
 
 func (f *fakeStore) SpendFromLot(_ context.Context, lotID string, credits int) error {

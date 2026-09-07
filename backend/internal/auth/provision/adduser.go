@@ -118,7 +118,7 @@ func parseAddUserArgs(args []string) (string, plan.Plan, error) {
 // change the master-only RPC makes, for a deployment whose last master needs promoting
 // from a shell — and it enforces the same last-master guard, so neither path can lock
 // administration out.
-func SetPlan(ctx context.Context, args []string) error {
+func SetPlan(ctx context.Context, args []string, topUp CreditTopUp) error {
 	if len(args) != 2 || strings.TrimSpace(args[0]) == "" {
 		return errors.New("usage: setplan <login_id> <free|basic|pro|max|master>")
 	}
@@ -142,6 +142,11 @@ func SetPlan(ctx context.Context, args []string) error {
 	}
 
 	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
+	if topUp != nil {
+		svc.SetMonthlyTopUp(func(ctx context.Context, userID string, credits int) error {
+			return topUp(ctx, handle, userID, credits)
+		})
+	}
 	if err := svc.SetUserPlan(ctx, loginID, target); err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			return fmt.Errorf("account %q does not exist", loginID)
@@ -152,6 +157,11 @@ func SetPlan(ctx context.Context, args []string) error {
 	fmt.Fprintf(os.Stdout, "account %q is now on the %s plan\n", loginID, target)
 	return nil
 }
+
+// CreditTopUp raises an account's current monthly grant, for the upgrade half of a tier
+// change (QUOTA-35). Supplied by the composition root for the same reason CreditGrant is:
+// credits belong to the usage context.
+type CreditTopUp func(ctx context.Context, handle *db.DB, userID string, credits int) error
 
 // CreditGrant opens a bonus lot on an existing account. The composition root supplies it
 // so this package stays inside the auth context: credits belong to the usage context, and

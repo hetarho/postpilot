@@ -2,15 +2,25 @@
 -- internal/usage/store maps the generated rows to domain types.
 
 -- name: LotsInConsumptionOrder :many
--- The one ordering the balance is ever read in: soonest expiry first, non-expiring last.
--- `expires_at IS NULL` sorts 0 before 1, which is what puts a bonus behind the monthly
--- grant that would otherwise lapse unspent.
+-- The one ordering the balance is ever read in, and the only reader of the product rule
+-- behind it (QUOTA-12): KIND first (monthly, then bonus, then purchased) and only then
+-- soonest expiry, non-expiring last, oldest first.
+--
+-- Kind leads because a purchased credit was paid for and must be the last to burn. Expiry
+-- order alone used to produce that by accident, resting on the signup bonus happening to be
+-- the older of two never-expiring lots; a lot bought before a bonus was granted would have
+-- inverted it. The rank is spelled here rather than passed in from Go because this query is
+-- the rule's only reader.
+--
+-- Keep every comment in this file ASCII: sqlc slices the emitted query text by byte offset,
+-- so one multi-byte character shifts it and generates SQL that will not parse.
 SELECT id, user_id, kind, granted, remaining, expires_at, created_at
 FROM credit_lots
 WHERE user_id = ?
   AND remaining > 0
   AND (expires_at IS NULL OR expires_at > ?)
-ORDER BY expires_at IS NULL, expires_at, created_at, id;
+ORDER BY CASE kind WHEN 'monthly' THEN 0 WHEN 'bonus' THEN 1 ELSE 2 END,
+         expires_at IS NULL, expires_at, created_at, id;
 
 -- name: ActiveMonthlyLot :one
 SELECT id, user_id, kind, granted, remaining, expires_at, created_at
@@ -22,6 +32,12 @@ LIMIT 1;
 -- name: InsertLot :exec
 INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- name: RaiseLot :exec
+-- Grows a lot that already exists, on both sides at once so the granted/remaining CHECK
+-- holds however much of it has been spent. It is the upgrade top-up (QUOTA-35): the one
+-- write that edits a lot the account was already given.
+UPDATE credit_lots SET granted = granted + ?, remaining = remaining + ? WHERE id = ?;
 
 -- name: SpendFromLot :exec
 -- The `remaining >= ?` guard is in the statement rather than in a read before it: two

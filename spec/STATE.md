@@ -33,17 +33,18 @@
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260907.ix |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
 | T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | blocked@260907 |
-| T021 | The purchased lot kind, consumption by kind, and the upgrade top-up | QUOTA | T020 | todo |
 | T022 | The header credit control that leads to the ladder | QUOTA THEME | - | todo |
 | T023 | The plan comparison reshaped, with a recommended rung and post estimates | QUOTA THEME | T020 | todo |
 | T024 | The public plans copy tells the truth about what a plan decides | MARKETING QUOTA | T020 | todo |
 
 ## next
 - create-task AUTH QUOTA ARCH MARKETING BILLING next — every prerequisite is decided, so the whole payment surface is decomposable; T020..T024 (todo) must take QUOTA@4 · MARKETING@3 · ARCH@2 in that pass
-- implement-task T021 → T022 → T023 → T024 (pw, in that order); every base must move to QUOTA@4 · MARKETING@3 · ARCH@2 on claim
+- implement-task T022 → T023 → T024 (pw, in that order); every base must move to QUOTA@4 · MARKETING@3 · ARCH@2 on claim
 - PUBLISH chain: T007 needs one ARCH-27 run on the Mac (and CI green) to close · T019 blocked on the live editor survey → update-ssot PUBLISH → create-task re-decomposes it · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260907 T021 done — lots order by kind (monthly→bonus→purchased), a purchased kind exists for BILLING to fill, and an upgrade raises the running cycle on both tier-change paths. WARN sqlc slices emitted SQL by byte offset: a multi-byte character in a query comment silently generates unparseable SQL (pinned in usage.sql)
+- 260907 T021 claimed (pw), base QUOTA@3→@4 ARCH@1→@2: r4 moves the grant WINDOW (QUOTA-37) while this task moves the lot ORDER and the upgrade top-up — the anchor is its own task in the AUTH bundle
 - 260907 T020 done — the ladder is 220/575/1200, and GetMyPlan now publishes each rung's post estimate (32 credits per reference post) and the recommended rung; WARN spec lint flags every domain id over 6 chars (TEMPLATE PUBLISH MARKETING, and now BILLING) against FORMAT
 - 260907 T020 claimed (pw), base QUOTA@3→@4 ARCH@1→@2: r4 (bonus, anchor window, term) and ARCH r2 (framing, billing context, auth mechanics) touch nothing this task implements
 - 260907 update-ssot AUTH r2 QUOTA r4 ARCH r2 MARKETING r3 BILLING r2 done (self-signup with email as the login id and verification before the first session, Google sign-in, IP throttling + auto-releasing lockout, anchor-day grant window, payment-method bonus, the public CTA becoming the way in)
@@ -62,5 +63,3 @@
 - 260907 T019 blocked: Prepare's editor model contradicts the live SmartEditor in 3 places (no image placeholder, nothing opens the settings layer so tags/category/visibility never resolve, readback needs frame-scoped observation PUBLISH-20 does not enumerate); daemon wiring deliberately left unwired
 - 260907 T019 claimed (ix)
 - 260907 T019 (mu) and T007 (cx) reclaimed to todo on the owner's explicit instruction — both sessions ended with their work committed and the tree clean at 111bf53
-- 260907 WARN T019: SmartEditor has no image placeholder (the photo button IS the file chooser), so Prepare's placeholder-then-upload phase cannot be observed — images must be inserted at their position during uploading_photos, keeping PUBLISH-13 stages monotonic
-- 260907 T019 claimed (mu)

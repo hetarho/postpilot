@@ -28,6 +28,10 @@ type Store interface {
 	// InsertLotIfAbsent is the same write for a grant whose id identifies what it is for
 	// rather than being random, so re-running the thing that grants it is harmless.
 	InsertLotIfAbsent(ctx context.Context, lot Lot) error
+	// RaiseLot grows a lot the account already holds, granted and remaining together. It
+	// is the upgrade top-up (QUOTA-35) and the only write that edits a grant already
+	// given; a renewal opens a new lot instead.
+	RaiseLot(ctx context.Context, lotID string, credits int) error
 	// SpendFromLot and RefundToLot move credits within one lot. Both are guarded in SQL by
 	// the amount available, so a concurrent write cannot drive a lot past its own bounds
 	// even if a caller's arithmetic is stale.

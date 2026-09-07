@@ -15,6 +15,7 @@ export const plans = {
     renews: 'Tops up {{at, instant}}',
     lotMonthly: 'Monthly',
     lotBonus: 'Bonus',
+    lotPurchased: 'Purchased',
     lotExpires: 'Until {{at, instant}}',
     lotNoExpiry: 'No expiry',
     loading: 'Loading credits…',
