@@ -16,4 +16,5 @@ export {
 } from './api/billing-mappers'
 export { myBillingQueryKey, useMyBilling } from './api/useMyBilling'
 export { useQuote } from './api/useQuote'
+export { useSubscribe } from './api/useSubscribe'
 export { useRegisterPaymentMethod, useRemovePaymentMethod } from './api/usePaymentMethod'

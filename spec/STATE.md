@@ -31,7 +31,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T046 | todo |
-| T038 | Subscribe from a rung, renew on the anchor day, and drop to free the moment a renewal fails | BILLING QUOTA MARKETING AUTH ARCH | T037 | todo |
 | T039 | Upgrade at once, schedule downgrades and term shortening for the next anchor, cancel and resume | BILLING QUOTA ARCH | T038 | todo |
 | T040 | Buy credits at par at any time, and refund an untouched purchase within seven days | BILLING QUOTA ARCH | T037 | todo |
 | T042 | The r4 mutation vocabulary and the body mutations | PUBLISH | T018 | blocked@260908 |
@@ -41,10 +40,12 @@
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
 
 ## next
-- implement-task T038 → T039 → T040
+- implement-task T039 → T040
 - T042 blocked on ONE live survey pass on a clean writer draft: does 문단 서식 변경 convert the caret's paragraph or its whole component when the component holds two or more paragraphs (same for 인용구), what does Enter from a converted block open, and how does the list toolbar behave there — the owner must discard the leftover dirty draft in the browser first, since navigating away from it raises a `beforeunload` dialog the driver surface cannot dismiss · T044 is claimable NOW (dep T042 is only for the shared plumbing, which has landed) · then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260908 T038 done
+- 260908 T038 claimed (cx)
 - 260908 T037 done
 - 260908 T037 claimed (cx)
 - 260908 T036 done
@@ -63,5 +64,3 @@
 - 260908 T034 claimed (cx)
 - 260908 T029 done
 - 260908 T029 claimed (cx)
-- 260908 T041 done
-- 260908 STATE restored T029..T040 and the consumed AUTH ARCH MARKETING BILLING revisions after spec lint exposed their pre-existing omission

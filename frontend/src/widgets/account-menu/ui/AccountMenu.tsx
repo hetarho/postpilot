@@ -135,7 +135,6 @@ function PlanPanel({ close }: { close: () => void }) {
     <div className="grid gap-4">
       <div className="flex items-center justify-between gap-2">
         <Badge tone="accent">{planLabel(myPlan.plan)}</Badge>
-        <Typography variant="meta">{t('balance.assignedByOperator')}</Typography>
       </div>
       <section className="grid gap-3">
         <Typography variant="title" as="h2">

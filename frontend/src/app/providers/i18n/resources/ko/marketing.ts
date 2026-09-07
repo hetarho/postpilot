@@ -78,8 +78,7 @@ export const marketing = {
   plans: {
     title: '요금제',
     body: '요금제가 정하는 것은 매달 받는 크레딧뿐입니다. AI 작업은 크레딧으로 계산되고, 고를 수 있는 모델은 모든 요금제가 같습니다.',
-    assignment:
-      '요금제는 운영자가 계정에 지정합니다. 이 페이지에서 결제하거나 등급을 올릴 수는 없습니다.',
+    assignment: '구독자는 플랜 화면에서 원하는 등급을 고르고 결제해 구독을 시작할 수 있습니다.',
     columns: {
       plan: '요금제',
       monthlyCredits: '매달 받는 크레딧',

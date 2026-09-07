@@ -23,4 +23,32 @@ describe('openTossBillingAuth', () => {
       customerEmail: 'alice@example.com',
     })
   })
+
+  it('carries a safe in-app return destination through both provider callbacks', async () => {
+    const requestBillingAuth = vi.fn().mockResolvedValue(undefined)
+    const factory = vi.fn(() => ({ payment: () => ({ requestBillingAuth }) }))
+
+    await openTossBillingAuth(
+      {
+        clientKey: 'client-key',
+        customerKey: 'customer-key',
+        customerEmail: 'alice@example.com',
+        returnTo: '/billing/checkout?tier=pro',
+      },
+      {
+        load: vi.fn().mockResolvedValue(undefined),
+        origin: 'https://postpilot.test',
+        factory: () => factory,
+      },
+    )
+
+    expect(requestBillingAuth).toHaveBeenCalledWith(
+      expect.objectContaining({
+        successUrl:
+          'https://postpilot.test/billing/method/success?redirect=%2Fbilling%2Fcheckout%3Ftier%3Dpro',
+        failUrl:
+          'https://postpilot.test/billing/method/fail?redirect=%2Fbilling%2Fcheckout%3Ftier%3Dpro',
+      }),
+    )
+  })
 })

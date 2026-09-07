@@ -78,7 +78,6 @@ describe('AccountMenu', () => {
     expect(within(panel).getByText(/^월 정기 ·/)).toBeInTheDocument()
     expect(within(panel).getByText(/^보너스 ·/)).toBeInTheDocument()
     expect(within(panel).getByText(/^구매 ·/)).toBeInTheDocument()
-    expect(within(panel).getByText('플랜은 운영자가 지정해요.')).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: '결제 관리' })).toHaveAttribute(
       'href',

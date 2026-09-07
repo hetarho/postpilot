@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -8,11 +9,12 @@ import {
   type EstimatorComboName,
   type PlanOffer,
 } from '@/entities/plan'
-import { Badge, Button, Notice, PromoFrame, Typography, pageStyles } from '@/shared/ui'
+import { billablePlan } from '@/entities/subscription'
+import { Badge, Notice, PromoFrame, Typography, buttonStyles, pageStyles } from '@/shared/ui'
 import { firstCombo, useEstimateInput, type EstimateInput } from '../model/estimate-input'
 import { PlanEstimator } from './PlanEstimator'
 
-/** The plan comparison, and the place a subscription will start (QUOTA-28). Composition
+/** The plan comparison and the place a subscription starts (QUOTA-28). Composition
  *  only: it reads the ladder the server publishes and renders it.
  *
  *  Every figure — the grant, the price, which rung is recommended, which is current — comes
@@ -20,9 +22,8 @@ import { PlanEstimator } from './PlanEstimator'
  *  the grant beside it, the grant is the half that is actually enforced, and a recommendation
  *  the client invented would be emphasis the ladder never asked for.
  *
- *  This screen ends exactly where a checkout would begin. Nothing on it charges anyone: the
- *  action names the tier and then says plans are operator-assigned, which is the true state
- *  of the product until BILLING ships rather than a disabled button with no explanation. */
+ *  Nothing on this screen charges anyone: a paid rung only hands the selection to BILLING's
+ *  checkout, which owns the term, quote, payment method and committing action. */
 export function PlansPage() {
   const { t } = useTranslation(['plans', 'common'])
   const { myPlan, isPending, isError } = useMyPlan()
@@ -86,6 +87,7 @@ export function PlansPage() {
                 <PlanCard
                   offer={offer}
                   current={offer.plan === myPlan.plan}
+                  actions={myPlan.plan !== 'master'}
                   rates={rates}
                   input={input}
                 />
@@ -99,9 +101,6 @@ export function PlansPage() {
               {t('estimator.caveat', { ns: 'plans' })}
             </Typography>
           )}
-          <Typography variant="meta" className="text-content-tertiary mt-6 block">
-            {t('compare.notPurchasable', { ns: 'plans' })}
-          </Typography>
         </>
       )}
     </main>
@@ -115,15 +114,18 @@ export function PlansPage() {
  *  the exception THEME-37 opens for a surface whose job is to be chosen from. The badge, not
  *  the glow, is what says which rung is recommended, and the flag comes from the server so a
  *  second marked card is impossible by construction rather than by review. It gets no filled
- *  CTA — one CTA per view, and every rung's action is disabled until BILLING ships. */
+ *  CTA — one CTA per view. A paid rung links to checkout; free and the operator account have
+ *  no commercial action. */
 function PlanCard({
   offer,
   current,
+  actions,
   rates,
   input,
 }: {
   offer: PlanOffer
   current: boolean
+  actions: boolean
   rates: EstimatorCombo | undefined
   input: EstimateInput
 }) {
@@ -156,10 +158,14 @@ function PlanCard({
           ? t('compare.price', { usd: (offer.priceUsdCents / 100).toFixed(0) })
           : t('compare.priceFree')}
       </Typography>
-      {!current && (
-        <Button variant="secondary" disabled className="mt-3">
+      {!current && actions && billablePlan(offer.plan) && (
+        <Link
+          to="/billing/checkout"
+          search={{ tier: offer.plan }}
+          className={buttonStyles({ variant: 'secondary', className: 'mt-3' })}
+        >
           {t('compare.select')}
-        </Button>
+        </Link>
       )}
     </PromoFrame>
   )

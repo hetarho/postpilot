@@ -41,4 +41,23 @@ describe('BillingPage', () => {
       ),
     ).toBeInTheDocument()
   })
+
+  it('renders active subscription timing, a moving quote, and newest-first history', async () => {
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      billing: { populated: true },
+    })
+
+    expect(await screen.findByText('Pro')).toBeInTheDocument()
+    expect(screen.getByText('월간')).toBeInTheDocument()
+    expect(screen.getByText('매월 8일')).toBeInTheDocument()
+    expect(await screen.findByText(/오늘 기준 약 7,000원 · 변동/)).toBeInTheDocument()
+    const history = screen.getByRole('heading', { name: '결제 및 지급 기록' }).parentElement
+    const rows = within(history as HTMLElement).getAllByRole('listitem')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toHaveTextContent('플랜 변경')
+    expect(rows[1]).toHaveTextContent('결제')
+    expect(rows[1]).toHaveTextContent('$5.00 · 7,000원')
+    expect(rows[1]).toHaveTextContent('1달러당 1,400원')
+  })
 })

@@ -57,6 +57,7 @@ export {
   QuotePriceResponseSchema,
   RegisterPaymentMethodResponseSchema,
   RemovePaymentMethodResponseSchema,
+  SubscribeResponseSchema,
 } from './gen/postpilot/v1/billing_pb'
 export type {
   BillingSubscription as ProtoBillingSubscription,
@@ -66,6 +67,7 @@ export type {
   GetMyBillingResponse,
   QuotePriceResponse,
   RegisterPaymentMethodResponse,
+  SubscribeResponse,
 } from './gen/postpilot/v1/billing_pb'
 export { HealthService, PingResponseSchema } from './gen/postpilot/v1/health_pb'
 export { AdminService, Plan as ProtoPlan, PlanService } from './gen/postpilot/v1/plan_pb'

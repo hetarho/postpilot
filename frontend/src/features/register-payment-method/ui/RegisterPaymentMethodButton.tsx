@@ -9,10 +9,12 @@ export function RegisterPaymentMethodButton({
   customerKey,
   registered = false,
   clientKey = TOSS_CLIENT_KEY,
+  returnTo,
 }: {
   customerKey: string
   registered?: boolean
   clientKey?: string
+  returnTo?: string
 }) {
   const { t } = useTranslation('billing')
   const { user } = useSession()
@@ -26,7 +28,7 @@ export function RegisterPaymentMethodButton({
     setFailed(false)
     setPending(true)
     try {
-      await openTossBillingAuth({ clientKey, customerKey, customerEmail: user.email })
+      await openTossBillingAuth({ clientKey, customerKey, customerEmail: user.email, returnTo })
     } catch {
       setFailed(true)
     } finally {

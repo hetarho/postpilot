@@ -216,6 +216,9 @@ func main() {
 	billingStore.SetCreditsForTx(func(conn *sql.Conn) billing.Credits {
 		return usage.NewService(usagestore.NewTx(conn), nil, 0)
 	})
+	billingStore.SetPlansForTx(func(conn *sql.Conn) billing.Plans {
+		return auth.NewService(authstore.NewTx(conn), cfg.SessionTTL)
+	})
 	var paymentProvider billing.Provider
 	var exchangeRates billing.Rates
 	if cfg.BillingEnabled {
@@ -226,6 +229,12 @@ func main() {
 		billingStore, paymentProvider, exchangeRates, ledger, authSvc, authSvc,
 		billingMailer{mailer: mailer},
 	)
+	ledger.SetAnchors(usageAnchors{auth: authSvc, billing: billingSvc})
+	if cfg.BillingEnabled {
+		if err := billingSvc.RunDue(ctx, time.Now()); err != nil {
+			slog.Error("billing boot renewal pass failed", "err", err)
+		}
+	}
 	authSvc.SetBootstraps(
 		func(ctx context.Context, userID string) error {
 			return defaultVoiceBootstrap(ctx, handle, userID)
@@ -536,6 +545,9 @@ func main() {
 			}
 		}
 	}()
+	if cfg.BillingEnabled {
+		go runBillingWorker(ctx, billingSvc)
+	}
 
 	workerCtx, cancelWorkers := context.WithCancel(ctx)
 	defer cancelWorkers()
@@ -1615,13 +1627,42 @@ func grantCreditsTo(ctx context.Context, handle *db.DB, userID string, credits i
 	return ledger.Grant(ctx, userID, credits, expiresAt)
 }
 
-// usageAnchors is the composition seam between the credit ledger and account identity.
-// T038 can prefer a subscription start here without teaching either context about the
-// other's persistence.
-type usageAnchors struct{ auth *auth.Service }
+// usageAnchors is the composition seam between the credit ledger, subscriptions and
+// account identity. It prefers an active subscription without teaching either context
+// about the other's persistence.
+type usageAnchors struct {
+	auth    *auth.Service
+	billing interface {
+		AnchorFor(context.Context, string) (time.Time, bool, error)
+	}
+}
 
 func (a usageAnchors) AnchorFor(ctx context.Context, userID string) (time.Time, error) {
+	if a.billing != nil {
+		anchor, found, err := a.billing.AnchorFor(ctx, userID)
+		if err != nil {
+			return time.Time{}, err
+		}
+		if found {
+			return anchor, nil
+		}
+	}
 	return a.auth.CreatedAt(ctx, userID)
+}
+
+func runBillingWorker(ctx context.Context, service *billing.Service) {
+	ticker := time.NewTicker(config.BillingTickInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case now := <-ticker.C:
+			if err := service.RunDue(ctx, now); err != nil {
+				slog.Error("billing renewal pass failed", "err", err)
+			}
+		}
+	}
 }
 
 // estimatorCombos hands the plan edge the priced combos the catalog owns, mapping the

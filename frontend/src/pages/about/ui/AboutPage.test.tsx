@@ -22,7 +22,7 @@ const COPY = {
     ],
     formats: ['네이버 블로그용', '티스토리용', '개인 사이트용 HTML', '마크다운'],
     publishing: /실제 환경 검증이 진행 중/,
-    assignment: /요금제는 운영자가 계정에 지정합니다/,
+    assignment: /플랜 화면에서 원하는 등급을 고르고 결제해 구독을 시작할 수 있습니다/,
     master: /사용자가 받을 수 있는 등급이 아닙니다/,
     // Claims the product does not own (QUOTA-2, QUOTA-19): a plan decides the monthly grant
     // and nothing else — no daily job count, no spend allowance, no model range.
@@ -50,7 +50,7 @@ const COPY = {
     ],
     formats: ['Naver Blog', 'Tistory', 'HTML for your own site', 'Markdown'],
     publishing: /live verification is still in progress/,
-    assignment: /Plans are assigned to an account by the operator/,
+    assignment: /choose a tier on the Plans screen and pay there to start a subscription/,
     master: /not a tier a user can be given/,
     unownedPlanClaims: ['per day', 'daily', 'spend', 'range of'],
     facts: /Opening a screen never starts AI work/,
@@ -120,8 +120,8 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     expect(outputs.getByText(copy.publishing)).toBeInTheDocument()
   })
 
-  // A17: the tier values equal plan 17's shipped limits table, master is operator-only, plans are
-  // operator-assigned, and there is no commercial affordance anywhere.
+  // A17: the tier values equal plan 17's shipped limits table, master is operator-only, and the
+  // purchase path is named without adding a second commercial control to this public explainer.
   it('presents exactly the shipped plan ladder with no purchase affordance', async () => {
     render()
     const plans = within(await screen.findByRole('region', { name: copy.sections[3] }))

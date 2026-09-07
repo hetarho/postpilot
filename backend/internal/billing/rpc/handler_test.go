@@ -37,6 +37,25 @@ func TestPaymentMethodFailuresHaveStableCodesAndReasons(t *testing.T) {
 	}
 }
 
+func TestSubscriptionFailuresHaveStableCodesAndReasons(t *testing.T) {
+	tests := []struct {
+		err    error
+		code   connect.Code
+		reason string
+	}{
+		{billing.ErrTierNotSubscribable, connect.CodeInvalidArgument, "TIER_NOT_SUBSCRIBABLE"},
+		{billing.ErrSubscriptionExists, connect.CodeFailedPrecondition, "SUBSCRIPTION_EXISTS"},
+		{billing.ErrPaymentMethodRequired, connect.CodeFailedPrecondition, "PAYMENT_METHOD_REQUIRED"},
+		{billing.ErrChargeFailed, connect.CodeFailedPrecondition, "CHARGE_FAILED"},
+	}
+	for _, test := range tests {
+		err := subscriptionError("alice", test.err)
+		if connect.CodeOf(err) != test.code || billingErrorDetail(t, err).GetReason() != test.reason {
+			t.Errorf("%s = %v", test.reason, err)
+		}
+	}
+}
+
 func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 	now := time.Date(2026, 9, 8, 1, 2, 3, 0, time.UTC)
 	tier, term, amount := plan.Pro, billing.TermMonthly, 500
@@ -92,8 +111,8 @@ type handlerStore struct {
 	events       []billing.Event
 }
 
-func (s handlerStore) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits) error) error {
-	return fn(s, nil)
+func (s handlerStore) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits, billing.Plans) error) error {
+	return fn(s, nil, nil)
 }
 func (s handlerStore) Subscription(context.Context, string) (billing.Subscription, bool, error) {
 	if s.subscription == nil {
@@ -117,6 +136,12 @@ func (handlerStore) InsertProviderNotification(context.Context, billing.Provider
 func (handlerStore) UpsertPaymentMethod(context.Context, billing.PaymentMethod) error { return nil }
 func (handlerStore) DeletePaymentMethod(context.Context, string) error                { return nil }
 func (handlerStore) InsertEvent(context.Context, billing.Event) error                 { return nil }
+func (handlerStore) UpsertSubscription(context.Context, billing.Subscription) error {
+	return nil
+}
+func (handlerStore) DueSubscriptions(context.Context, time.Time) ([]billing.Subscription, error) {
+	return nil, nil
+}
 
 type handlerProvider struct{}
 

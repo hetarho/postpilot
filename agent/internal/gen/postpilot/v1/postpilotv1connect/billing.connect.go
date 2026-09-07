@@ -42,6 +42,9 @@ const (
 	// BillingServiceRemovePaymentMethodProcedure is the fully-qualified name of the BillingService's
 	// RemovePaymentMethod RPC.
 	BillingServiceRemovePaymentMethodProcedure = "/postpilot.v1.BillingService/RemovePaymentMethod"
+	// BillingServiceSubscribeProcedure is the fully-qualified name of the BillingService's Subscribe
+	// RPC.
+	BillingServiceSubscribeProcedure = "/postpilot.v1.BillingService/Subscribe"
 	// BillingServiceQuotePriceProcedure is the fully-qualified name of the BillingService's QuotePrice
 	// RPC.
 	BillingServiceQuotePriceProcedure = "/postpilot.v1.BillingService/QuotePrice"
@@ -52,6 +55,7 @@ type BillingServiceClient interface {
 	GetMyBilling(context.Context, *connect.Request[v1.GetMyBillingRequest]) (*connect.Response[v1.GetMyBillingResponse], error)
 	RegisterPaymentMethod(context.Context, *connect.Request[v1.RegisterPaymentMethodRequest]) (*connect.Response[v1.RegisterPaymentMethodResponse], error)
 	RemovePaymentMethod(context.Context, *connect.Request[v1.RemovePaymentMethodRequest]) (*connect.Response[v1.RemovePaymentMethodResponse], error)
+	Subscribe(context.Context, *connect.Request[v1.SubscribeRequest]) (*connect.Response[v1.SubscribeResponse], error)
 	QuotePrice(context.Context, *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error)
 }
 
@@ -84,6 +88,12 @@ func NewBillingServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(billingServiceMethods.ByName("RemovePaymentMethod")),
 			connect.WithClientOptions(opts...),
 		),
+		subscribe: connect.NewClient[v1.SubscribeRequest, v1.SubscribeResponse](
+			httpClient,
+			baseURL+BillingServiceSubscribeProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("Subscribe")),
+			connect.WithClientOptions(opts...),
+		),
 		quotePrice: connect.NewClient[v1.QuotePriceRequest, v1.QuotePriceResponse](
 			httpClient,
 			baseURL+BillingServiceQuotePriceProcedure,
@@ -98,6 +108,7 @@ type billingServiceClient struct {
 	getMyBilling          *connect.Client[v1.GetMyBillingRequest, v1.GetMyBillingResponse]
 	registerPaymentMethod *connect.Client[v1.RegisterPaymentMethodRequest, v1.RegisterPaymentMethodResponse]
 	removePaymentMethod   *connect.Client[v1.RemovePaymentMethodRequest, v1.RemovePaymentMethodResponse]
+	subscribe             *connect.Client[v1.SubscribeRequest, v1.SubscribeResponse]
 	quotePrice            *connect.Client[v1.QuotePriceRequest, v1.QuotePriceResponse]
 }
 
@@ -116,6 +127,11 @@ func (c *billingServiceClient) RemovePaymentMethod(ctx context.Context, req *con
 	return c.removePaymentMethod.CallUnary(ctx, req)
 }
 
+// Subscribe calls postpilot.v1.BillingService.Subscribe.
+func (c *billingServiceClient) Subscribe(ctx context.Context, req *connect.Request[v1.SubscribeRequest]) (*connect.Response[v1.SubscribeResponse], error) {
+	return c.subscribe.CallUnary(ctx, req)
+}
+
 // QuotePrice calls postpilot.v1.BillingService.QuotePrice.
 func (c *billingServiceClient) QuotePrice(ctx context.Context, req *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error) {
 	return c.quotePrice.CallUnary(ctx, req)
@@ -126,6 +142,7 @@ type BillingServiceHandler interface {
 	GetMyBilling(context.Context, *connect.Request[v1.GetMyBillingRequest]) (*connect.Response[v1.GetMyBillingResponse], error)
 	RegisterPaymentMethod(context.Context, *connect.Request[v1.RegisterPaymentMethodRequest]) (*connect.Response[v1.RegisterPaymentMethodResponse], error)
 	RemovePaymentMethod(context.Context, *connect.Request[v1.RemovePaymentMethodRequest]) (*connect.Response[v1.RemovePaymentMethodResponse], error)
+	Subscribe(context.Context, *connect.Request[v1.SubscribeRequest]) (*connect.Response[v1.SubscribeResponse], error)
 	QuotePrice(context.Context, *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error)
 }
 
@@ -154,6 +171,12 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 		connect.WithSchema(billingServiceMethods.ByName("RemovePaymentMethod")),
 		connect.WithHandlerOptions(opts...),
 	)
+	billingServiceSubscribeHandler := connect.NewUnaryHandler(
+		BillingServiceSubscribeProcedure,
+		svc.Subscribe,
+		connect.WithSchema(billingServiceMethods.ByName("Subscribe")),
+		connect.WithHandlerOptions(opts...),
+	)
 	billingServiceQuotePriceHandler := connect.NewUnaryHandler(
 		BillingServiceQuotePriceProcedure,
 		svc.QuotePrice,
@@ -168,6 +191,8 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 			billingServiceRegisterPaymentMethodHandler.ServeHTTP(w, r)
 		case BillingServiceRemovePaymentMethodProcedure:
 			billingServiceRemovePaymentMethodHandler.ServeHTTP(w, r)
+		case BillingServiceSubscribeProcedure:
+			billingServiceSubscribeHandler.ServeHTTP(w, r)
 		case BillingServiceQuotePriceProcedure:
 			billingServiceQuotePriceHandler.ServeHTTP(w, r)
 		default:
@@ -189,6 +214,10 @@ func (UnimplementedBillingServiceHandler) RegisterPaymentMethod(context.Context,
 
 func (UnimplementedBillingServiceHandler) RemovePaymentMethod(context.Context, *connect.Request[v1.RemovePaymentMethodRequest]) (*connect.Response[v1.RemovePaymentMethodResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.RemovePaymentMethod is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) Subscribe(context.Context, *connect.Request[v1.SubscribeRequest]) (*connect.Response[v1.SubscribeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.Subscribe is not implemented"))
 }
 
 func (UnimplementedBillingServiceHandler) QuotePrice(context.Context, *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error) {

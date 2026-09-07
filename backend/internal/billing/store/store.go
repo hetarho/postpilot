@@ -21,6 +21,8 @@ type Store struct {
 	read         *sqlc.Queries
 	credits      billing.Credits
 	creditsForTx func(*sql.Conn) billing.Credits
+	plans        billing.Plans
+	plansForTx   func(*sql.Conn) billing.Plans
 }
 
 func New(writer, reader *sql.DB) *Store {
@@ -34,15 +36,19 @@ func (s *Store) SetCreditsForTx(factory func(*sql.Conn) billing.Credits) {
 	s.creditsForTx = factory
 }
 
-func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits) error) error {
+func (s *Store) SetPlansForTx(factory func(*sql.Conn) billing.Plans) {
+	s.plansForTx = factory
+}
+
+func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits, billing.Plans) error) error {
 	if s.writer == nil {
-		if s.credits == nil {
-			return errors.New("billing transaction credits are not configured")
+		if s.credits == nil || s.plans == nil {
+			return errors.New("billing transaction adapters are not configured")
 		}
-		return fn(s, s.credits)
+		return fn(s, s.credits, s.plans)
 	}
-	if s.creditsForTx == nil {
-		return errors.New("billing transaction credit factory is not configured")
+	if s.creditsForTx == nil || s.plansForTx == nil {
+		return errors.New("billing transaction adapter factories are not configured")
 	}
 	conn, err := s.writer.Conn(ctx)
 	if err != nil {
@@ -53,12 +59,13 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Cr
 		return fmt.Errorf("begin billing transaction: %w", err)
 	}
 	credits := s.creditsForTx(conn)
-	if credits == nil {
+	plans := s.plansForTx(conn)
+	if credits == nil || plans == nil {
 		_ = rollback(ctx, conn)
-		return errors.New("billing transaction credit factory returned nil")
+		return errors.New("billing transaction adapter factory returned nil")
 	}
-	scoped := &Store{write: sqlc.New(conn), read: sqlc.New(conn), credits: credits}
-	if err := fn(scoped, credits); err != nil {
+	scoped := &Store{write: sqlc.New(conn), read: sqlc.New(conn), credits: credits, plans: plans}
+	if err := fn(scoped, credits, plans); err != nil {
 		if rollbackErr := rollback(ctx, conn); rollbackErr != nil {
 			return errors.Join(err, rollbackErr)
 		}
@@ -102,6 +109,37 @@ func (s *Store) InsertEvent(ctx context.Context, event billing.Event) error {
 		return fmt.Errorf("insert billing event: %w", err)
 	}
 	return nil
+}
+
+func (s *Store) UpsertSubscription(ctx context.Context, subscription billing.Subscription) error {
+	err := s.write.UpsertSubscription(ctx, sqlc.UpsertSubscriptionParams{
+		UserID: subscription.UserID, Tier: subscription.Tier.String(), Term: string(subscription.Term),
+		AnchorAt: formatTime(subscription.AnchorAt), TermStart: formatTime(subscription.TermStart),
+		TermEnd: formatTime(subscription.TermEnd), NextGrantAt: formatTime(subscription.NextGrantAt),
+		AutoRenew: boolInt(subscription.AutoRenew), ScheduledTier: planNull(subscription.ScheduledTier),
+		ScheduledTerm: termNull(subscription.ScheduledTerm), Status: subscription.Status,
+		CreatedAt: formatTime(subscription.CreatedAt), UpdatedAt: formatTime(subscription.UpdatedAt),
+	})
+	if err != nil {
+		return fmt.Errorf("upsert subscription: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) DueSubscriptions(ctx context.Context, at time.Time) ([]billing.Subscription, error) {
+	rows, err := s.read.ListDueSubscriptions(ctx, formatTime(at))
+	if err != nil {
+		return nil, fmt.Errorf("list due subscriptions: %w", err)
+	}
+	result := make([]billing.Subscription, 0, len(rows))
+	for _, row := range rows {
+		mapped, err := toSubscription(row)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, mapped)
+	}
+	return result, nil
 }
 
 func rollback(ctx context.Context, conn *sql.Conn) error {
@@ -299,6 +337,12 @@ func nullableInt64(value *int64) sql.NullInt64 {
 		return sql.NullInt64{}
 	}
 	return sql.NullInt64{Int64: *value, Valid: true}
+}
+func boolInt(value bool) int64 {
+	if value {
+		return 1
+	}
+	return 0
 }
 func planNull(value *plan.Plan) sql.NullString {
 	if value == nil {

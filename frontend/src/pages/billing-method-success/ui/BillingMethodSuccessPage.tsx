@@ -2,6 +2,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRegisterPaymentMethod } from '@/entities/subscription'
+import { isInAppPath } from '@/shared/lib'
 import { Notice, Spinner, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 export function BillingMethodSuccessPage() {
@@ -19,6 +20,10 @@ export function BillingMethodSuccessPage() {
       .register(search.authKey, search.customerKey)
       .then((response) => {
         if (!response.paymentMethod) return
+        if (isInAppPath(search.redirect)) {
+          void navigate({ to: search.redirect, replace: true })
+          return
+        }
         void navigate({
           to: '/billing',
           replace: true,
@@ -34,7 +39,7 @@ export function BillingMethodSuccessPage() {
       .catch(() => {
         // The mutation's catalog-backed message replaces the progress state.
       })
-  }, [navigate, registration, search.authKey, search.customerKey])
+  }, [navigate, registration, search.authKey, search.customerKey, search.redirect])
 
   return (
     <main className={pageStyles()}>

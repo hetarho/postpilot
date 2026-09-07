@@ -1,11 +1,13 @@
 import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { isInAppPath } from '@/shared/lib'
 import { Notice, TechnicalDetail, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 export function BillingMethodFailPage() {
   const { t } = useTranslation(['billing', 'common'])
   const search = useSearch({ from: '/authenticated/billing/method/fail' })
   const detail = [search.code, search.message].filter(Boolean).join(': ')
+  const back = isInAppPath(search.redirect) ? search.redirect : '/billing'
 
   return (
     <main className={pageStyles()}>
@@ -18,7 +20,7 @@ export function BillingMethodFailPage() {
         detail={detail || undefined}
       />
       <Link
-        to="/billing"
+        to={back}
         className={typographyStyles({
           variant: 'label',
           className:

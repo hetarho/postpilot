@@ -9,6 +9,12 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
+func TestBillingTickIntervalIsTenMinutes(t *testing.T) {
+	if BillingTickInterval != 10*time.Minute {
+		t.Fatalf("billing tick interval = %s", BillingTickInterval)
+	}
+}
+
 func TestVoicePersonalizationDefaultsContainNoScheduler(t *testing.T) {
 	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
 	cfg, err := Load()

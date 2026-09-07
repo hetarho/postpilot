@@ -43,7 +43,6 @@ export const plans = {
     lotNoExpiry: 'No expiry',
     loading: 'Loading credits…',
     loadFailed: 'Could not load credits.',
-    assignedByOperator: 'Plans are assigned by the operator.',
     empty: 'You are out of credits.',
     viewPlans: 'See plans',
   },
@@ -67,8 +66,7 @@ export const plans = {
     price: '${{usd}} a month',
     priceFree: 'Free',
     current: 'Your current plan',
-    select: 'Choose this plan',
-    notPurchasable: 'Checkout is not available yet. Ask the operator to change your plan.',
+    select: 'Subscribe',
     blockedHeading: 'Out of credits',
     blockedBody:
       'Starting AI work needs credits. Writing, editing and exporting keep working as they are.',

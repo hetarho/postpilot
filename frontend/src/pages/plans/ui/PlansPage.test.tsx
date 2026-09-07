@@ -40,14 +40,14 @@ describe('the plan comparison', () => {
     expect(within(items[1]).getByText('매달 220 크레딧')).toBeInTheDocument()
     expect(within(items[1]).getByText('월 $2')).toBeInTheDocument()
 
-    // The current rung is named and offers nothing to press; the rest carry the seam a
-    // checkout will attach to, disabled with the operator path stated beside it.
+    // The current and free rungs offer nothing to press; another paid rung enters checkout.
     expect(within(items[1]).getByText('지금 쓰는 플랜')).toBeInTheDocument()
-    expect(within(items[1]).queryByRole('button')).not.toBeInTheDocument()
-    expect(within(items[0]).getByRole('button', { name: '이 플랜 선택하기' })).toBeDisabled()
-    expect(
-      screen.getByText('결제는 아직 준비 중이에요. 플랜 변경은 운영자에게 문의해 주세요.'),
-    ).toBeInTheDocument()
+    expect(within(items[1]).queryByRole('link')).not.toBeInTheDocument()
+    expect(within(items[0]).queryByRole('link')).not.toBeInTheDocument()
+    expect(within(items[2]).getByRole('link', { name: '구독하기' })).toHaveAttribute(
+      'href',
+      '/billing/checkout?tier=pro',
+    )
   })
 
   // THEME-37 allows exactly one marked option per promotional surface, and it hangs off the
@@ -72,6 +72,16 @@ describe('the plan comparison', () => {
     expect(wide[0]).toHaveClass('p-0.5')
     expect(within(wide[0]).getByRole('heading', { name: 'Pro' })).toBeInTheDocument()
     expect(within(wide[0]).getByText('가장 합리적')).toBeInTheDocument()
+  })
+
+  it('offers no subscription actions to an operator account', async () => {
+    renderAppAt('/plans', {
+      user: { ...USER, plan: ProtoPlan.MASTER },
+      plans: { plan: ProtoPlan.MASTER, balance: { unlimited: true } },
+    })
+
+    await rungs()
+    expect(screen.queryByRole('link', { name: '구독하기' })).not.toBeInTheDocument()
   })
 
   // QUOTA-29: an exhausted balance blocks AI work and nothing else, which is the one thing

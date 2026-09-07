@@ -12,6 +12,7 @@ service BillingService {
   rpc GetMyBilling(GetMyBillingRequest) returns (GetMyBillingResponse) {}
   rpc RegisterPaymentMethod(RegisterPaymentMethodRequest) returns (RegisterPaymentMethodResponse) {}
   rpc RemovePaymentMethod(RemovePaymentMethodRequest) returns (RemovePaymentMethodResponse) {}
+  rpc Subscribe(SubscribeRequest) returns (SubscribeResponse) {}
   rpc QuotePrice(QuotePriceRequest) returns (QuotePriceResponse) {}
 }
 
@@ -96,6 +97,15 @@ message RegisterPaymentMethodResponse {
 message RemovePaymentMethodRequest {}
 
 message RemovePaymentMethodResponse {}
+
+message SubscribeRequest {
+  Plan plan = 1;
+  Term term = 2;
+}
+
+message SubscribeResponse {
+  BillingSubscription subscription = 1;
+}
 
 message QuotePriceRequest {
   Plan plan = 1;

@@ -280,14 +280,27 @@ const billingRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/billing'), 'BillingPage'),
 })
 
+const billingCheckoutRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/billing/checkout',
+  validateSearch: (search: Record<string, unknown>): { tier?: 'basic' | 'pro' | 'max' } => ({
+    tier:
+      search.tier === 'basic' || search.tier === 'pro' || search.tier === 'max'
+        ? search.tier
+        : undefined,
+  }),
+  component: lazyRouteComponent(() => import('@/pages/billing-checkout'), 'BillingCheckoutPage'),
+})
+
 const billingMethodSuccessRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/billing/method/success',
   validateSearch: (
     search: Record<string, unknown>,
-  ): { authKey?: string; customerKey?: string } => ({
+  ): { authKey?: string; customerKey?: string; redirect?: string } => ({
     authKey: typeof search.authKey === 'string' ? search.authKey : undefined,
     customerKey: typeof search.customerKey === 'string' ? search.customerKey : undefined,
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
   }),
   component: lazyRouteComponent(
     () => import('@/pages/billing-method-success'),
@@ -298,9 +311,12 @@ const billingMethodSuccessRoute = createRoute({
 const billingMethodFailRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/billing/method/fail',
-  validateSearch: (search: Record<string, unknown>): { code?: string; message?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { code?: string; message?: string; redirect?: string } => ({
     code: typeof search.code === 'string' ? search.code : undefined,
     message: typeof search.message === 'string' ? search.message : undefined,
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
   }),
   component: lazyRouteComponent(
     () => import('@/pages/billing-method-fail'),
@@ -470,6 +486,7 @@ export const routeTree = rootRoute.addChildren([
     guidelinesRoute,
     plansRoute,
     billingRoute,
+    billingCheckoutRoute,
     billingMethodSuccessRoute,
     billingMethodFailRoute,
     accountRoute,
@@ -505,5 +522,6 @@ declare module '@tanstack/react-router' {
   interface HistoryState {
     notice?: 'password-changed'
     billingRegistration?: { cardLabel: string; bonusGranted: boolean }
+    billingSubscription?: { tier: string }
   }
 }

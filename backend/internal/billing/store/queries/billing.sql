@@ -44,3 +44,28 @@ INSERT INTO billing_events (
     user_id, kind, tier, term, credits, usd_cents, krw_per_usd_e4, rate_date,
     krw, provider_payment_key, order_id, note, created_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- name: UpsertSubscription :exec
+INSERT INTO subscriptions (
+    user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
+    scheduled_tier, scheduled_term, status, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(user_id) DO UPDATE SET
+    tier = excluded.tier,
+    term = excluded.term,
+    anchor_at = excluded.anchor_at,
+    term_start = excluded.term_start,
+    term_end = excluded.term_end,
+    next_grant_at = excluded.next_grant_at,
+    auto_renew = excluded.auto_renew,
+    scheduled_tier = excluded.scheduled_tier,
+    scheduled_term = excluded.scheduled_term,
+    status = excluded.status,
+    updated_at = excluded.updated_at;
+
+-- name: ListDueSubscriptions :many
+SELECT user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
+       scheduled_tier, scheduled_term, status, created_at, updated_at
+FROM subscriptions
+WHERE status = 'active' AND next_grant_at <= ?
+ORDER BY next_grant_at, user_id;

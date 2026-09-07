@@ -114,9 +114,9 @@ type registrationStore struct {
 func newRegistrationStore() *registrationStore {
 	return &registrationStore{credits: &registrationCredits{grants: map[string]bool{}}}
 }
-func (s *registrationStore) InWriteTx(ctx context.Context, fn func(Store, Credits) error) error {
+func (s *registrationStore) InWriteTx(ctx context.Context, fn func(Store, Credits, Plans) error) error {
 	s.txCalls++
-	return fn(s, s.credits)
+	return fn(s, s.credits, registrationPlans{})
 }
 func (s *registrationStore) Subscription(context.Context, string) (Subscription, bool, error) {
 	if s.subscription == nil {
@@ -149,8 +149,20 @@ func (s *registrationStore) InsertEvent(_ context.Context, event Event) error {
 	s.events = append(s.events, event)
 	return nil
 }
+func (s *registrationStore) UpsertSubscription(_ context.Context, subscription Subscription) error {
+	s.subscription = &subscription
+	return nil
+}
+func (*registrationStore) DueSubscriptions(context.Context, time.Time) ([]Subscription, error) {
+	return nil, nil
+}
 
 type registrationCredits struct{ grants map[string]bool }
+
+type registrationPlans struct{}
+
+func (registrationPlans) AssignTier(context.Context, string, plan.Plan) error { return nil }
+func (registrationPlans) TierOf(context.Context, string) (plan.Plan, error)   { return plan.Free, nil }
 
 func (*registrationCredits) OpenMonthlyLot(context.Context, string, plan.Plan, time.Time, time.Time) error {
 	return nil
@@ -250,8 +262,8 @@ func TestDisabledServiceStillReadsButWillNotQuote(t *testing.T) {
 
 type emptyStore struct{}
 
-func (emptyStore) InWriteTx(ctx context.Context, fn func(Store, Credits) error) error {
-	return fn(emptyStore{}, nil)
+func (emptyStore) InWriteTx(ctx context.Context, fn func(Store, Credits, Plans) error) error {
+	return fn(emptyStore{}, nil, nil)
 }
 func (emptyStore) Subscription(context.Context, string) (Subscription, bool, error) {
 	return Subscription{}, false, nil
@@ -265,6 +277,10 @@ func (emptyStore) InsertProviderNotification(context.Context, ProviderNotificati
 func (emptyStore) UpsertPaymentMethod(context.Context, PaymentMethod) error               { return nil }
 func (emptyStore) DeletePaymentMethod(context.Context, string) error                      { return nil }
 func (emptyStore) InsertEvent(context.Context, Event) error                               { return nil }
+func (emptyStore) UpsertSubscription(context.Context, Subscription) error                 { return nil }
+func (emptyStore) DueSubscriptions(context.Context, time.Time) ([]Subscription, error) {
+	return nil, nil
+}
 
 type stubProvider struct{}
 

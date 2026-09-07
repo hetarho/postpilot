@@ -93,7 +93,7 @@ func (s *Service) RegisterPaymentMethod(ctx context.Context, userID, authKey, cu
 		CustomerKey: expectedKey, CardLabel: issued.CardLabel, RegisteredAt: now,
 	}
 	result := PaymentMethodRegistration{PaymentMethod: method}
-	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits) error {
+	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits, _ Plans) error {
 		if err := tx.UpsertPaymentMethod(ctx, method); err != nil {
 			return err
 		}
@@ -146,12 +146,7 @@ func (s *Service) QuotePrice(ctx context.Context, tier plan.Plan, term Term) (Qu
 	if !term.Valid() {
 		return Quote{}, fmt.Errorf("term %q is invalid", term)
 	}
-	rate, date, err := s.rateFor(ctx, s.now())
-	if err != nil {
-		return Quote{}, err
-	}
-	usd := PriceCents(tier, term)
-	return Quote{USDCents: usd, KRW: KRWFor(usd, rate), RatePerUSDE4: rate, RateDate: date}, nil
+	return s.quoteAt(ctx, tier, term, s.now())
 }
 
 // rateFor starts at the previous Seoul date because today's reference rate may not be final.

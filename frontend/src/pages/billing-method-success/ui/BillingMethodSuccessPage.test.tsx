@@ -28,4 +28,23 @@ describe('BillingMethodSuccessPage', () => {
       await screen.findByText('11 1234 카드가 등록되었고 100 크레딧 보너스가 지급되었습니다.'),
     ).toBeInTheDocument()
   })
+
+  it('returns a registered card to the checkout that requested it', async () => {
+    const { router } = renderAppAt(
+      '/billing/method/success?authKey=one-time-auth&customerKey=account-key&redirect=%2Fbilling%2Fcheckout%3Ftier%3Dpro',
+      {
+        user: {
+          id: 'alice',
+          plan: ProtoPlan.FREE,
+          email: 'alice@example.com',
+          emailVerified: true,
+        },
+        plans: { plan: ProtoPlan.FREE },
+      },
+    )
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/billing/checkout'))
+    expect(router.state.location.search).toEqual({ tier: 'pro' })
+    expect(await screen.findByText('11 1234')).toBeInTheDocument()
+  })
 })

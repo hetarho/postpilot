@@ -32,18 +32,22 @@ function browserEnvironment(): TossEnvironment {
 }
 
 export async function openTossBillingAuth(
-  input: { clientKey: string; customerKey: string; customerEmail: string },
+  input: { clientKey: string; customerKey: string; customerEmail: string; returnTo?: string },
   environment: TossEnvironment = browserEnvironment(),
 ) {
   await environment.load(TOSS_PAYMENTS_SDK)
   const factory = environment.factory()
   if (!factory) throw new Error('Toss Payments SDK is unavailable')
-  await factory(input.clientKey)
-    .payment({ customerKey: input.customerKey })
-    .requestBillingAuth({
-      method: 'CARD',
-      successUrl: `${environment.origin}/billing/method/success`,
-      failUrl: `${environment.origin}/billing/method/fail`,
-      customerEmail: input.customerEmail,
-    })
+  const successURL = new URL('/billing/method/success', environment.origin)
+  const failURL = new URL('/billing/method/fail', environment.origin)
+  if (input.returnTo) {
+    successURL.searchParams.set('redirect', input.returnTo)
+    failURL.searchParams.set('redirect', input.returnTo)
+  }
+  await factory(input.clientKey).payment({ customerKey: input.customerKey }).requestBillingAuth({
+    method: 'CARD',
+    successUrl: successURL.toString(),
+    failUrl: failURL.toString(),
+    customerEmail: input.customerEmail,
+  })
 }

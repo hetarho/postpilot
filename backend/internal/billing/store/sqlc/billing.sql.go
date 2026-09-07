@@ -228,6 +228,51 @@ func (q *Queries) ListCreditPurchases(ctx context.Context, userID string) ([]Cre
 	return items, nil
 }
 
+const listDueSubscriptions = `-- name: ListDueSubscriptions :many
+SELECT user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
+       scheduled_tier, scheduled_term, status, created_at, updated_at
+FROM subscriptions
+WHERE status = 'active' AND next_grant_at <= ?
+ORDER BY next_grant_at, user_id
+`
+
+func (q *Queries) ListDueSubscriptions(ctx context.Context, nextGrantAt string) ([]Subscription, error) {
+	rows, err := q.db.QueryContext(ctx, listDueSubscriptions, nextGrantAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Subscription
+	for rows.Next() {
+		var i Subscription
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Tier,
+			&i.Term,
+			&i.AnchorAt,
+			&i.TermStart,
+			&i.TermEnd,
+			&i.NextGrantAt,
+			&i.AutoRenew,
+			&i.ScheduledTier,
+			&i.ScheduledTerm,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertPaymentMethod = `-- name: UpsertPaymentMethod :exec
 INSERT INTO payment_methods (
     user_id, provider, billing_key, customer_key, card_label, registered_at
@@ -257,6 +302,60 @@ func (q *Queries) UpsertPaymentMethod(ctx context.Context, arg UpsertPaymentMeth
 		arg.CustomerKey,
 		arg.CardLabel,
 		arg.RegisteredAt,
+	)
+	return err
+}
+
+const upsertSubscription = `-- name: UpsertSubscription :exec
+INSERT INTO subscriptions (
+    user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
+    scheduled_tier, scheduled_term, status, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(user_id) DO UPDATE SET
+    tier = excluded.tier,
+    term = excluded.term,
+    anchor_at = excluded.anchor_at,
+    term_start = excluded.term_start,
+    term_end = excluded.term_end,
+    next_grant_at = excluded.next_grant_at,
+    auto_renew = excluded.auto_renew,
+    scheduled_tier = excluded.scheduled_tier,
+    scheduled_term = excluded.scheduled_term,
+    status = excluded.status,
+    updated_at = excluded.updated_at
+`
+
+type UpsertSubscriptionParams struct {
+	UserID        string
+	Tier          string
+	Term          string
+	AnchorAt      string
+	TermStart     string
+	TermEnd       string
+	NextGrantAt   string
+	AutoRenew     int64
+	ScheduledTier sql.NullString
+	ScheduledTerm sql.NullString
+	Status        string
+	CreatedAt     string
+	UpdatedAt     string
+}
+
+func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error {
+	_, err := q.db.ExecContext(ctx, upsertSubscription,
+		arg.UserID,
+		arg.Tier,
+		arg.Term,
+		arg.AnchorAt,
+		arg.TermStart,
+		arg.TermEnd,
+		arg.NextGrantAt,
+		arg.AutoRenew,
+		arg.ScheduledTier,
+		arg.ScheduledTerm,
+		arg.Status,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 	)
 	return err
 }

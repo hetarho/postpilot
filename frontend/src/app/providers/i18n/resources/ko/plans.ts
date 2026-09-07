@@ -43,7 +43,6 @@ export const plans = {
     lotNoExpiry: '기한 없음',
     loading: '크레딧을 불러오는 중…',
     loadFailed: '크레딧을 불러오지 못했어요.',
-    assignedByOperator: '플랜은 운영자가 지정해요.',
     empty: '크레딧을 다 썼어요.',
     viewPlans: '플랜 보기',
   },
@@ -66,8 +65,7 @@ export const plans = {
     price: '월 ${{usd}}',
     priceFree: '무료',
     current: '지금 쓰는 플랜',
-    select: '이 플랜 선택하기',
-    notPurchasable: '결제는 아직 준비 중이에요. 플랜 변경은 운영자에게 문의해 주세요.',
+    select: '구독하기',
     blockedHeading: '크레딧이 부족해요',
     blockedBody:
       'AI 작업을 시작하려면 크레딧이 필요해요. 글을 쓰고 고치고 내보내는 건 그대로 할 수 있어요.',

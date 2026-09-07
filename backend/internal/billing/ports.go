@@ -9,7 +9,7 @@ import (
 )
 
 type Store interface {
-	InWriteTx(ctx context.Context, fn func(Store, Credits) error) error
+	InWriteTx(ctx context.Context, fn func(Store, Credits, Plans) error) error
 	Subscription(ctx context.Context, userID string) (Subscription, bool, error)
 	PaymentMethod(ctx context.Context, userID string) (PaymentMethod, bool, error)
 	Events(ctx context.Context, userID string, limit int) ([]Event, error)
@@ -18,6 +18,8 @@ type Store interface {
 	UpsertPaymentMethod(ctx context.Context, method PaymentMethod) error
 	DeletePaymentMethod(ctx context.Context, userID string) error
 	InsertEvent(ctx context.Context, event Event) error
+	UpsertSubscription(ctx context.Context, subscription Subscription) error
+	DueSubscriptions(ctx context.Context, at time.Time) ([]Subscription, error)
 }
 
 type Provider interface {

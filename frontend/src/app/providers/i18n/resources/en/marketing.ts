@@ -72,7 +72,7 @@ export const marketing = {
     title: 'Plans',
     body: 'A plan decides one thing: how many credits you receive each month. AI work is counted in credits, and every plan can choose from the same models.',
     assignment:
-      'Plans are assigned to an account by the operator. There is no way to pay or upgrade from this page.',
+      'Subscribers choose a tier on the Plans screen and pay there to start a subscription.',
     columns: {
       plan: 'Plan',
       monthlyCredits: 'Credits a month',

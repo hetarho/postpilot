@@ -16,6 +16,10 @@ var (
 	ErrEmailVerificationRequired = errors.New("verified email required")
 	ErrCustomerKeyMismatch       = errors.New("customer key mismatch")
 	ErrSubscriptionNeedsMethod   = errors.New("active renewing subscription needs a payment method")
+	ErrTierNotSubscribable       = errors.New("tier is not subscribable")
+	ErrSubscriptionExists        = errors.New("active subscription already exists")
+	ErrPaymentMethodRequired     = errors.New("payment method required")
+	ErrChargeFailed              = errors.New("charge failed")
 )
 
 type Term string

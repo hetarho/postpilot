@@ -74,6 +74,23 @@ func (h *Handler) RemovePaymentMethod(ctx context.Context, _ *connect.Request[po
 	return connect.NewResponse(&postpilotv1.RemovePaymentMethodResponse{}), nil
 }
 
+func (h *Handler) Subscribe(ctx context.Context, req *connect.Request[postpilotv1.SubscribeRequest]) (*connect.Response[postpilotv1.SubscribeResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	tier, tierOK := planrpc.FromProto(req.Msg.GetPlan())
+	term, termOK := termFromProto(req.Msg.GetTerm())
+	if !tierOK || !termOK {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", "TIER_NOT_SUBSCRIBABLE", nil)
+	}
+	subscription, err := h.service.Subscribe(ctx, userID, tier, term)
+	if err != nil {
+		return nil, subscriptionError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.SubscribeResponse{Subscription: toProtoSubscription(subscription)}), nil
+}
+
 func (h *Handler) QuotePrice(ctx context.Context, req *connect.Request[postpilotv1.QuotePriceRequest]) (*connect.Response[postpilotv1.QuotePriceResponse], error) {
 	if _, ok := auth.UserFromContext(ctx); !ok {
 		return nil, authRequired()
@@ -196,6 +213,24 @@ func removalError(userID string, err error) error {
 	default:
 		slog.Error("payment method removal failed", "user_id", userID, "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, "could not remove payment method", "UNKNOWN_FAILURE", nil)
+	}
+}
+
+func subscriptionError(userID string, err error) error {
+	switch {
+	case errors.Is(err, billing.ErrUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+	case errors.Is(err, billing.ErrTierNotSubscribable):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tier is not subscribable", "TIER_NOT_SUBSCRIBABLE", nil)
+	case errors.Is(err, billing.ErrSubscriptionExists):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "subscription already exists", "SUBSCRIPTION_EXISTS", nil)
+	case errors.Is(err, billing.ErrPaymentMethodRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", "PAYMENT_METHOD_REQUIRED", nil)
+	case errors.Is(err, billing.ErrChargeFailed):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", "CHARGE_FAILED", nil)
+	default:
+		slog.Error("subscription start failed", "user_id", userID, "err", err)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not start subscription", "UNKNOWN_FAILURE", nil)
 	}
 }
 

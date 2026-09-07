@@ -234,6 +234,10 @@ const WorkerPollInterval = time.Second
 // their key is never read again.
 const ThrottleSweepInterval = time.Minute
 
+// BillingTickInterval bounds how late an in-process renewal can run after its anchor.
+// The durable next_grant_at column and the boot pass cover process restarts.
+const BillingTickInterval = 10 * time.Minute
+
 // Config is the fully-resolved process configuration.
 type Config struct {
 	// Port the HTTP server listens on.
