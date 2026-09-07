@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | ARCH | 2 | 1 | ARCH-1✎ 5✎ 23✎ | 0 |
 | AUTH | 2 | 1 | AUTH-1✎ 2✎ 3✎ 4✎ 5✎ 17✎ 30✎ 33+ 34+ 35+ 36+ 37+ 38+ 39+ 40+ 41+ | 0 |
-| QUOTA | 4 | 3 | QUOTA-9✎ 12✎ 37+ 38+ | 0 |
+| QUOTA | 5 | 5 | - | 0 |
 | POST | 2 | 2 | - | 0 |
 | VOICE | 1 | 1 | - | 1 |
 | GEN | 2 | 2 | - | 0 |
@@ -22,7 +22,7 @@
 | EXPORT | 2 | 2 | - | 0 |
 | PUBLISH | 3 | 3 | - | 0 |
 | LANG | 1 | 1 | - | 0 |
-| THEME | 3 | 3 | - | 0 |
+| THEME | 4 | 4 | - | 0 |
 | MARKETING | 3 | 2 | MARKETING-6✎ 11✎ 16+ | 0 |
 | VIDEO | 1 | 1 | - | 1 |
 | BILLING | 2 | 0 | all | 0 |
@@ -33,13 +33,20 @@
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260907.ix |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
 | T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | blocked@260907 |
+| T025 | The four estimator combos and the unit rates the client multiplies | QUOTA | - | doing@260907.pw |
+| T026 | The operator assigns a model to each estimator combo | QUOTA | T025 | todo |
+| T027 | The estimate becomes a calculator on /plans | QUOTA THEME | T025 | todo |
+| T028 | The plan ladder earns its animated stroke | THEME QUOTA | T027 | todo |
 
 ## next
-- create-task AUTH QUOTA ARCH MARKETING BILLING next — every prerequisite is decided, so the whole payment surface is decomposable; T020..T024 (todo) must take QUOTA@4 · MARKETING@3 · ARCH@2 in that pass
-- create-task AUTH QUOTA ARCH MARKETING BILLING is the next wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface); T020..T024 are done; every base must move to QUOTA@4 · MARKETING@3 · ARCH@2 on claim
+- implement-task T025 → T026 → T027 → T028 (the estimator wave), then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
 - PUBLISH chain: T007 needs one ARCH-27 run on the Mac (and CI green) to close · T019 blocked on the live editor survey → update-ssot PUBLISH → create-task re-decomposes it · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260907 T025 claimed (pw)
+- 260907 create-task QUOTA THEME → T025..T028 (combos + published rates, the operator's assignment, the /plans calculator, the animated promotional stroke); T023's worst-case reference post and its copy are removed in T025/T027
+- 260907 update-ssot QUOTA r5 THEME r4 done (the post estimate becomes proportional over adjustable characters·photos·videos across four operator-assigned combos, and a promotional surface may animate a gradient stroke on every option)
+- 260907 WARN T023 shipped the worst-case 32-credit reference post and its caveat copy — QUOTA-36 r5 replaces both, so create-task must plan the removal, not just an addition
 - 260907 T024 done — /about no longer claims a plan decides daily job counts or a model range, and its figures match the raised ladder; a claim-level assertion now guards the sentence
 - 260907 T024 claimed (pw), base MARKETING@2→@3 QUOTA@3→@4 LANG@1 ARCH@1→@2: MARKETING r3 binds the access sentence and the CTA to self-signup SHIPPING, which it has not, so this task still writes the operator path
 - 260907 T023 done — /plans compares four rungs side by side from md:, each stating about how many posts its grant buys, with pro marked under THEME-37 by the new stroke-accent role
@@ -57,6 +64,3 @@
 - 260907 create-task QUOTA MARKETING THEME start
 - 260907 create-ssot BILLING r1 done (17 decisions, 0 [?]): USD prices charged in KRW at the previous business day's rate, subscription-day anchor, monthly + annual (10 months for 12), immediate upgrade and scheduled downgrade, cancel as a scheduled stop, no retry on a failed charge, 7-day refund on untouched purchases, a 100-credit bonus for registering a card
 - 260907 WARN BILLING assumes self-signup, an account email and the anchor move — AUTH, QUOTA and ARCH all carry decisions it contradicts until they are reopened
-- 260907 create-ssot BILLING start
-- 260907 update-ssot QUOTA r3 MARKETING r2 THEME r3 done (grants +10/15/20 %, par-rate credit purchase, kind-ordered consumption, header credit entry to /plans, /plans reshaped with a recommended rung, one promotional border exception; the money side moved out to BILLING, which does not exist yet)
-- 260907 WARN T008 (todo) quotes MARKETING@1 and must take @2; no doing task sits inside QUOTA, MARKETING or THEME
