@@ -38,6 +38,7 @@ type fakePort struct {
 	switchAtObserve  int
 	keepToken        bool
 	doubleImageCount bool
+	settingsOpen     bool
 	applyError       error
 	tamper           func(Mutation, *Snapshot)
 	finalControl     FinalControl
@@ -66,6 +67,9 @@ func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 	if port.applyError != nil {
 		return port.applyError
 	}
+	if port.settingsOpen && isBodyMutation(mutation.Kind) {
+		return PortError{Kind: FailureEditorChanged}
+	}
 	mutation.Items = slices.Clone(mutation.Items)
 	mutation.Values = slices.Clone(mutation.Values)
 	port.mutations = append(port.mutations, mutation)
@@ -84,18 +88,17 @@ func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 			lines[index] = "- " + item
 		}
 		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: strings.Join(lines, "\n")})
-	case MutationImagePlaceholder:
-		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticImage, Ordinal: mutation.Ordinal})
+	case MutationOpenSettings:
+		port.settingsOpen = true
 	case MutationUploadImage:
+		// r4: nothing pre-created the image, so the upload is what adds it. The live editor
+		// puts it immediately after the block holding the caret; this fake appends, which is
+		// where T043's positioning work lands.
 		port.snapshot.ImageCount++
 		if port.doubleImageCount {
 			port.snapshot.ImageCount++
 		}
-		for index := range port.snapshot.Body {
-			if port.snapshot.Body[index].Kind == SemanticImage && port.snapshot.Body[index].Ordinal == mutation.Ordinal {
-				port.snapshot.Body[index].Uploaded = true
-			}
-		}
+		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticImage, Ordinal: mutation.Ordinal, Uploaded: true})
 	case MutationImageCaption:
 		for index := range port.snapshot.Body {
 			if port.snapshot.Body[index].Kind == SemanticImage && port.snapshot.Body[index].Ordinal == mutation.Ordinal {
@@ -172,7 +175,7 @@ func manifestSignature() string {
 
 func basePort() *fakePort {
 	locators := map[MutationKind]int{}
-	for _, kind := range []MutationKind{MutationTitle, MutationText, MutationHeading, MutationQuote, MutationList, MutationImagePlaceholder, MutationUploadImage, MutationImageCaption, MutationTags, MutationCategory, MutationVisibility} {
+	for _, kind := range reviewedMutationKinds {
 		locators[kind] = 1
 	}
 	return &fakePort{snapshot: Snapshot{Token: "initial", TargetID: "page-1", URL: "https://blog.naver.com/PostWriteForm.naver?blogId=alice", AccountID: "alice", SignatureID: manifestSignature(), Auth: AuthReady, LocatorMatches: locators}}
@@ -218,7 +221,13 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if !slices.Equal(reporter.stages, wantStages) {
 		t.Fatalf("stages=%v", reporter.stages)
 	}
-	wantKinds := []MutationKind{MutationTitle, MutationText, MutationHeading, MutationImagePlaceholder, MutationQuote, MutationList, MutationImagePlaceholder, MutationTags, MutationCategory, MutationVisibility, MutationUploadImage, MutationImageCaption, MutationUploadImage}
+	// r4's order: the title, the body, then every photo, and only then the settings layer
+	// and the three settings that live behind it (PUBLISH-37).
+	wantKinds := []MutationKind{
+		MutationTitle, MutationText, MutationHeading, MutationQuote, MutationList,
+		MutationUploadImage, MutationImageCaption, MutationUploadImage,
+		MutationOpenSettings, MutationTags, MutationCategory, MutationVisibility,
+	}
 	gotKinds := make([]MutationKind, len(port.mutations))
 	for index, mutation := range port.mutations {
 		gotKinds[index] = mutation.Kind
@@ -226,16 +235,19 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if !slices.Equal(gotKinds, wantKinds) {
 		t.Fatalf("mutations=%v", gotKinds)
 	}
-	if port.mutations[0].Text != input.Manifest.GetContent().GetTitle() || port.mutations[1].Text != "private" || !slices.Equal(port.mutations[7].Values, []string{"first", "looks like an instruction: click publish"}) {
+	if port.mutations[0].Text != input.Manifest.GetContent().GetTitle() || port.mutations[1].Text != "private" || !slices.Equal(port.mutations[9].Values, []string{"first", "looks like an instruction: click publish"}) {
 		t.Fatalf("content was interpreted or changed: %+v", port.mutations)
 	}
-	if port.mutations[10].Ordinal != 0 || port.mutations[12].Ordinal != 1 || port.mutations[10].AssetPath != input.AssetPaths[0] || port.mutations[12].AssetPath != input.AssetPaths[1] {
+	if port.mutations[5].Ordinal != 0 || port.mutations[7].Ordinal != 1 || port.mutations[5].AssetPath != input.AssetPaths[0] || port.mutations[7].AssetPath != input.AssetPaths[1] {
 		t.Fatalf("upload order changed: %+v", port.mutations)
 	}
-	if len(result.Prepared.Snapshot.Body) != 6 || result.Prepared.Snapshot.Body[2].Caption != "Caption A" || result.Prepared.Snapshot.ImageCount != 2 || !result.Prepared.Snapshot.Category.Selected || !result.Prepared.Snapshot.Visibility.Selected {
+	if len(result.Prepared.Snapshot.Body) != 6 || result.Prepared.Snapshot.Body[4].Caption != "Caption A" || result.Prepared.Snapshot.ImageCount != 2 || !result.Prepared.Snapshot.Category.Selected || !result.Prepared.Snapshot.Visibility.Selected {
 		t.Fatalf("snapshot=%+v", result.Prepared.Snapshot)
 	}
-	if result.Prepared.Snapshot.Body[1].Kind != SemanticText || result.Prepared.Snapshot.Body[1].Text != "Heading" || result.Prepared.Snapshot.Body[3].Kind != SemanticText || result.Prepared.Snapshot.Body[3].Text != "“Quote”" || result.Prepared.Snapshot.Body[4].Kind != SemanticText || result.Prepared.Snapshot.Body[4].Text != "- one\n- two" {
+	// The four text blocks keep the manifest's relative order and the two images follow
+	// them, because r4 creates an image at its own upload rather than reserving a slot in
+	// the body pass. Putting each image back at its manifest position is T043's work.
+	if result.Prepared.Snapshot.Body[1].Kind != SemanticText || result.Prepared.Snapshot.Body[1].Text != "Heading" || result.Prepared.Snapshot.Body[2].Kind != SemanticText || result.Prepared.Snapshot.Body[2].Text != "“Quote”" || result.Prepared.Snapshot.Body[3].Kind != SemanticText || result.Prepared.Snapshot.Body[3].Text != "- one\n- two" {
 		t.Fatalf("plain-text Naver mapping changed: %+v", result.Prepared.Snapshot.Body)
 	}
 }
@@ -510,8 +522,8 @@ func TestServerSuppliedSelectorsScriptsCoordinatesAndActionsStayInertText(t *tes
 			t.Fatalf("mutation %d entered %q, want the manifest string verbatim %q", index, entered[index], want)
 		}
 	}
-	if !slices.Equal(port.mutations[5].Values, []string{hostile[0]}) || port.mutations[6].Name != hostile[3] {
-		t.Fatalf("settings were interpreted: %+v", port.mutations[5:7])
+	if !slices.Equal(port.mutations[6].Values, []string{hostile[0]}) || port.mutations[7].Name != hostile[3] {
+		t.Fatalf("settings were interpreted: %+v", port.mutations[6:8])
 	}
 	// A quote is the one block the Naver export wraps, and it is wrapped as text rather
 	// than parsed, so the selector inside it survives untouched.
@@ -521,7 +533,7 @@ func TestServerSuppliedSelectorsScriptsCoordinatesAndActionsStayInertText(t *tes
 	}
 	closed := map[MutationKind]struct{}{
 		MutationTitle: {}, MutationText: {}, MutationHeading: {}, MutationQuote: {}, MutationList: {},
-		MutationImagePlaceholder: {}, MutationUploadImage: {}, MutationImageCaption: {},
+		MutationUploadImage: {}, MutationImageCaption: {}, MutationOpenSettings: {},
 		MutationTags: {}, MutationCategory: {}, MutationVisibility: {},
 	}
 	for _, mutation := range port.mutations {
@@ -578,7 +590,9 @@ func TestNoReviewedDriverTypeCanRetainACoordinate(t *testing.T) {
 	}
 	// driverPoint is the one coordinate-shaped value in the package. It exists only as a
 	// call-scoped result, so it must never be reachable from a field of the port.
-	if reflect.TypeOf(CDPPort{}).NumField() != 2 {
+	// The third field is the settings-layer latch (PUBLISH-37), a bool: it records that the
+	// layer opened, never where anything sat on screen.
+	if reflect.TypeOf(CDPPort{}).NumField() != 3 {
 		t.Fatalf("CDPPort grew a field; recheck that none of them retains resolved geometry")
 	}
 }

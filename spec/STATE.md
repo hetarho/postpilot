@@ -31,7 +31,7 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T046 | todo |
-| T042 | The r4 mutation vocabulary and the body mutations | PUBLISH | T018 | todo |
+| T042 | The r4 mutation vocabulary and the body mutations | PUBLISH | T018 | blocked@260908 |
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
 | T044 | The settings layer, and tags, category and visibility inside it | PUBLISH | T042 | todo |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUBLISH | T044 T043 | todo |
@@ -39,9 +39,11 @@
 
 ## next
 - create-task AUTH QUOTA ARCH MARKETING BILLING is the next wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface); every base takes QUOTA@5 · THEME@4 · MARKETING@3 · ARCH@2 on claim, then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
-- implement-task T042 — the head of the PUBLISH chain T042 → (T043 · T044) → T045 → T046 → T008; every one of them must read T019's `## survey` section in tasks/done/ for the live SmartEditor mechanics, and T008's base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
+- T042 blocked on ONE live survey pass on a clean writer draft: does 문단 서식 변경 convert the caret's paragraph or its whole component when the component holds two or more paragraphs (same for 인용구), what does Enter from a converted block open, and how does the list toolbar behave there — the owner must discard the leftover dirty draft in the browser first, since navigating away from it raises a `beforeunload` dialog the driver surface cannot dismiss · T044 is claimable NOW (dep T042 is only for the shared plumbing, which has landed) · then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260908 T042 blocked — the r4 vocabulary, the order-checked plan, `Apply` for title/text/open_settings and the occlusion latch are shipped and green; heading·quote·list wait on one unobserved fact (what 문단 서식 변경 converts when the caret's component holds two paragraphs). WARN fixed two real driver bugs on the way: `body_end` could put the caret in the document TITLE (it is a .se-component inside .se-body), and it aimed at each box's CENTRE, which lands mid-text on a paragraph that fills its line
+- 260908 T042 claimed (fb)
 - 260908 create-task PUBLISH → T042..T046 (the r4 vocabulary and body mutations, caret-relative image insertion, the settings layer, the commit fence with the post-view readback, the daemon wiring); T019 is superseded and moved to done with every box unchecked because its acceptance was written against r3, and T008's dep moves T019→T046
 - 260907 update-ssot PUBLISH r4 done — a `filling_settings` stage joins the progress list, the settings layer is a versioned step that occludes the editor so body and photos precede it (PUBLISH-37), readback observes the post through the account's post-view URL while still reporting the permalink, and the locator-derived caret positions an inserted image; the frame-scoped driver addition r3 was expected to need is NOT required
 - 260907 T019 live survey done on the owner's Mac — all three blockers answered: an image inserts immediately after the caret's component (no placeholder, no pre-allocated ordinal), the settings layer takes TWO clicks and OCCLUDES the body so body mutations must come first, and `PostView.naver` serves a published post in its own document in the editor's own `.se-component` vocabulary, so readback needs no frame-scoped driver surface. Also found: `Enter` appends a paragraph INSIDE one `se-text` component, and the list control exists only while the caret is in a text block. WARN an unsaved scratch draft with one survey quote, paragraph and uploaded image is left in the writer — discard it, do not publish
@@ -60,5 +62,3 @@
 - 260907 T024 done — /about no longer claims a plan decides daily job counts or a model range, and its figures match the raised ladder; a claim-level assertion now guards the sentence
 - 260907 T024 claimed (pw), base MARKETING@2→@3 QUOTA@3→@4 LANG@1 ARCH@1→@2: MARKETING r3 binds the access sentence and the CTA to self-signup SHIPPING, which it has not, so this task still writes the operator path
 - 260907 T023 done — /plans compares four rungs side by side from md:, each stating about how many posts its grant buys, with pro marked under THEME-37 by the new stroke-accent role
-- 260907 T023 claimed (pw), base QUOTA@3→@4 THEME@3 LANG@1 ARCH@1→@2: r4 changes the grant window and the bonus, neither of which the comparison table renders
-- 260907 T022 done — the header carries the balance as a link to /plans, the popover reaches the ladder from every tier, and one 30s-stale GetMyPlan entry serves both

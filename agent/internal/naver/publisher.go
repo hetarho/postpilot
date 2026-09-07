@@ -117,18 +117,73 @@ type Snapshot struct {
 type MutationKind string
 
 const (
-	MutationTitle            MutationKind = "title"
-	MutationText             MutationKind = "text"
-	MutationHeading          MutationKind = "heading"
-	MutationQuote            MutationKind = "quote"
-	MutationList             MutationKind = "list"
-	MutationImagePlaceholder MutationKind = "image_placeholder"
-	MutationUploadImage      MutationKind = "upload_image"
-	MutationImageCaption     MutationKind = "image_caption"
-	MutationTags             MutationKind = "tags"
-	MutationCategory         MutationKind = "category"
-	MutationVisibility       MutationKind = "visibility"
+	MutationTitle        MutationKind = "title"
+	MutationText         MutationKind = "text"
+	MutationHeading      MutationKind = "heading"
+	MutationQuote        MutationKind = "quote"
+	MutationList         MutationKind = "list"
+	MutationUploadImage  MutationKind = "upload_image"
+	MutationImageCaption MutationKind = "image_caption"
+	// MutationOpenSettings opens the layer the three settings live behind. It replaced
+	// image_placeholder in r4: an image needs no pre-allocated slot (PUBLISH-36) while the
+	// settings are unreachable, and the editor is occluded, until the layer is open
+	// (PUBLISH-37).
+	MutationOpenSettings MutationKind = "open_settings"
+	MutationTags         MutationKind = "tags"
+	MutationCategory     MutationKind = "category"
+	MutationVisibility   MutationKind = "visibility"
 )
+
+// reviewedMutationKinds is the closed vocabulary this signed driver release implements, in
+// the only order Prepare may plan them. It is the one source of truth: the manifest
+// locators, the observed locator counts and the probe all iterate it.
+var reviewedMutationKinds = []MutationKind{
+	MutationTitle, MutationText, MutationHeading, MutationQuote, MutationList,
+	MutationUploadImage, MutationImageCaption,
+	MutationOpenSettings, MutationTags, MutationCategory, MutationVisibility,
+}
+
+// bodyMutationKinds are the kinds that write into the editor document itself. None of them
+// may be planned or applied once the settings layer is open, because the layer covers the
+// editor and a click resolved from a body element's own geometry would land on the layer
+// (PUBLISH-37).
+var bodyMutationKinds = []MutationKind{
+	MutationTitle, MutationText, MutationHeading, MutationQuote, MutationList,
+	MutationUploadImage, MutationImageCaption,
+}
+
+func isBodyMutation(kind MutationKind) bool { return slices.Contains(bodyMutationKinds, kind) }
+
+// plannedMutation pairs one typed command with the projection change it is expected to
+// produce, so Prepare can assert the whole plan's order before touching the page.
+type plannedMutation struct {
+	mutation Mutation
+	update   func(*Snapshot)
+}
+
+// assertPlanOrder refuses a plan that writes to the document after the settings layer
+// opened, that opens the layer twice, or that names a kind outside the reviewed vocabulary.
+func assertPlanOrder(plan []plannedMutation) error {
+	settingsOpen := false
+	opened := 0
+	for _, step := range plan {
+		if !slices.Contains(reviewedMutationKinds, step.mutation.Kind) {
+			return fmt.Errorf("unreviewed mutation kind %q", step.mutation.Kind)
+		}
+		if step.mutation.Kind == MutationOpenSettings {
+			opened++
+			settingsOpen = true
+			continue
+		}
+		if settingsOpen && isBodyMutation(step.mutation.Kind) {
+			return fmt.Errorf("%s planned after the settings layer opened", step.mutation.Kind)
+		}
+	}
+	if opened != 1 {
+		return fmt.Errorf("the settings layer must be opened exactly once, planned %d", opened)
+	}
+	return nil
+}
 
 // Mutation is a closed data-only command. Text, list items and setting ids remain inert;
 // there is no selector, script, coordinate, key sequence or native-dialog operation.
@@ -327,10 +382,16 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 	if err := reporter.Advance(ctx, publishing.StageFillingContent); err != nil {
 		return fail(FailureSafe)
 	}
-	if failure = p.mutate(ctx, expected, Mutation{Kind: MutationTitle, Text: manifestCopy.GetContent().GetTitle()}, func(snapshot *Snapshot) { snapshot.Title = manifestCopy.GetContent().GetTitle() }); failure != "" {
-		return fail(failure)
-	}
-	expected.Title = manifestCopy.GetContent().GetTitle()
+
+	// The whole plan is built and order-checked before anything is typed, so
+	// PUBLISH-37's rule that no document write may follow the settings layer is a
+	// property of the plan rather than something each step has to remember.
+	title := manifestCopy.GetContent().GetTitle()
+	plan := []plannedMutation{{
+		mutation: Mutation{Kind: MutationTitle, Text: title},
+		update:   func(snapshot *Snapshot) { snapshot.Title = title },
+	}}
+
 	imageOrdinal := 0
 	imageCaptions := make([]string, 0, len(paths))
 	for _, block := range manifestCopy.GetContent().GetBlocks() {
@@ -341,70 +402,87 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 		if semantic.Kind == SemanticImage {
 			imageCaptions = append(imageCaptions, block.GetCaption())
 			imageOrdinal++
+			continue
 		}
-		if failure = p.mutate(ctx, expected, mutation, func(snapshot *Snapshot) { snapshot.Body = append(snapshot.Body, semantic) }); failure != "" {
-			return fail(failure)
-		}
-		expected.Body = append(expected.Body, semantic)
+		plan = append(plan, plannedMutation{
+			mutation: mutation,
+			update:   func(snapshot *Snapshot) { snapshot.Body = append(snapshot.Body, semantic) },
+		})
 	}
-	tags := normalizeTags(manifestCopy.GetTags())
-	for _, setting := range []struct {
-		mutation Mutation
-		update   func(*Snapshot)
-	}{
-		{Mutation{Kind: MutationTags, Values: tags}, func(snapshot *Snapshot) { snapshot.Tags = slices.Clone(tags) }},
-		{Mutation{Kind: MutationCategory, ID: manifestCopy.GetCategoryId(), Name: manifestCopy.GetCategoryName()}, func(snapshot *Snapshot) {
-			snapshot.Category = SelectedSetting{ID: manifestCopy.GetCategoryId(), Name: manifestCopy.GetCategoryName(), Selected: true}
-		}},
-		{Mutation{Kind: MutationVisibility, ID: visibilityID(manifestCopy.GetVisibility())}, func(snapshot *Snapshot) {
-			snapshot.Visibility = SelectedSetting{ID: visibilityID(manifestCopy.GetVisibility()), Selected: true}
-		}},
-	} {
-		if failure = p.mutate(ctx, expected, setting.mutation, setting.update); failure != "" {
-			return fail(failure)
-		}
-		setting.update(&expected)
-	}
-	if err := reporter.Advance(ctx, publishing.StageUploadingPhotos); err != nil {
+	if imageOrdinal != len(paths) {
 		return fail(FailureSafe)
 	}
+
 	for ordinal, path := range paths {
-		beforeImages := expected.ImageCount
-		mutation := Mutation{Kind: MutationUploadImage, Ordinal: ordinal, AssetPath: path}
-		failure = p.mutate(ctx, expected, mutation, func(snapshot *Snapshot) {
-			snapshot.ImageCount++
-			for index := range snapshot.Body {
-				if snapshot.Body[index].Kind == SemanticImage && snapshot.Body[index].Ordinal == ordinal {
-					snapshot.Body[index].Uploaded = true
-				}
-			}
+		ordinal, path := ordinal, path
+		plan = append(plan, plannedMutation{
+			mutation: Mutation{Kind: MutationUploadImage, Ordinal: ordinal, AssetPath: path},
+			update: func(snapshot *Snapshot) {
+				snapshot.ImageCount++
+				snapshot.Body = append(snapshot.Body, SemanticBlock{Kind: SemanticImage, Ordinal: ordinal, Uploaded: true})
+			},
 		})
-		if failure != "" {
+		caption := imageCaptions[ordinal]
+		if caption == "" {
+			continue
+		}
+		plan = append(plan, plannedMutation{
+			mutation: Mutation{Kind: MutationImageCaption, Ordinal: ordinal, Text: caption},
+			update: func(snapshot *Snapshot) {
+				for index := range snapshot.Body {
+					if snapshot.Body[index].Kind == SemanticImage && snapshot.Body[index].Ordinal == ordinal {
+						snapshot.Body[index].Caption = caption
+					}
+				}
+			},
+		})
+	}
+
+	tags := normalizeTags(manifestCopy.GetTags())
+	categoryID, categoryName := manifestCopy.GetCategoryId(), manifestCopy.GetCategoryName()
+	visibility := visibilityID(manifestCopy.GetVisibility())
+	plan = append(plan,
+		plannedMutation{
+			mutation: Mutation{Kind: MutationOpenSettings},
+			update:   func(*Snapshot) {},
+		},
+		plannedMutation{
+			mutation: Mutation{Kind: MutationTags, Values: tags},
+			update:   func(snapshot *Snapshot) { snapshot.Tags = slices.Clone(tags) },
+		},
+		plannedMutation{
+			mutation: Mutation{Kind: MutationCategory, ID: categoryID, Name: categoryName},
+			update: func(snapshot *Snapshot) {
+				snapshot.Category = SelectedSetting{ID: categoryID, Name: categoryName, Selected: true}
+			},
+		},
+		plannedMutation{
+			mutation: Mutation{Kind: MutationVisibility, ID: visibility},
+			update:   func(snapshot *Snapshot) { snapshot.Visibility = SelectedSetting{ID: visibility, Selected: true} },
+		},
+	)
+
+	if err := assertPlanOrder(plan); err != nil {
+		return fail(FailureSafe)
+	}
+
+	photosAnnounced := false
+	for _, step := range plan {
+		if !photosAnnounced && step.mutation.Kind == MutationUploadImage {
+			if err := reporter.Advance(ctx, publishing.StageUploadingPhotos); err != nil {
+				return fail(FailureSafe)
+			}
+			photosAnnounced = true
+		}
+		// PUBLISH-13 r4 adds a `filling_settings` stage here. It is a proto, backend and
+		// frontend contract change and belongs to T045 with the rest of the fence
+		// reporting; until then the settings run under `uploading_photos`.
+		if failure = p.mutate(ctx, expected, step.mutation, step.update); failure != "" {
 			return fail(failure)
 		}
-		expected.ImageCount++
-		for index := range expected.Body {
-			if expected.Body[index].Kind == SemanticImage && expected.Body[index].Ordinal == ordinal {
-				expected.Body[index].Uploaded = true
-				caption := imageCaptions[ordinal]
-				if caption != "" {
-					if failure = p.mutate(ctx, expected, Mutation{Kind: MutationImageCaption, Ordinal: ordinal, Text: caption}, func(snapshot *Snapshot) {
-						for bodyIndex := range snapshot.Body {
-							if snapshot.Body[bodyIndex].Kind == SemanticImage && snapshot.Body[bodyIndex].Ordinal == ordinal {
-								snapshot.Body[bodyIndex].Caption = caption
-							}
-						}
-					}); failure != "" {
-						return fail(failure)
-					}
-					expected.Body[index].Caption = caption
-				}
-			}
-		}
-		if expected.ImageCount != beforeImages+1 {
-			return fail(FailureEditorChanged)
-		}
+		step.update(&expected)
 	}
+
 	final, failure := p.observe(ctx, expected, false)
 	if failure != "" || final.Token == "" || !equalSnapshot(final, expected) {
 		if failure == "" {
@@ -549,7 +627,9 @@ func mapBlock(block *postpilotv1.Block, imageOrdinal int) (SemanticBlock, Mutati
 		if strings.TrimSpace(block.GetFile()) == "" {
 			return SemanticBlock{}, Mutation{}, errors.New("empty image")
 		}
-		return SemanticBlock{Kind: SemanticImage, Ordinal: imageOrdinal}, Mutation{Kind: MutationImagePlaceholder, Ordinal: imageOrdinal}, nil
+		// r4: an image is created by its own upload at the position the caret gives it, so
+		// the body pass plans nothing for it (PUBLISH-36).
+		return SemanticBlock{Kind: SemanticImage, Ordinal: imageOrdinal}, Mutation{}, nil
 	default:
 		return SemanticBlock{}, Mutation{}, fmt.Errorf("unsupported block type %s", block.GetType())
 	}

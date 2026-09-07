@@ -61,7 +61,7 @@ func Manifest() (CompatibilityManifest, error) {
 		len(manifest.RequiredDomains) == 0 || len(manifest.RequiredAXRoles) == 0 || len(manifest.Capabilities) == 0 || len(manifest.FinalControlAccessibleNames) == 0 {
 		return CompatibilityManifest{}, errors.New("Naver compatibility manifest is incomplete")
 	}
-	for _, kind := range []MutationKind{MutationTitle, MutationText, MutationHeading, MutationQuote, MutationList, MutationImagePlaceholder, MutationUploadImage, MutationImageCaption, MutationTags, MutationCategory, MutationVisibility} {
+	for _, kind := range reviewedMutationKinds {
 		locator := manifest.SemanticLocators[string(kind)]
 		if strings.TrimSpace(locator.CSS) == "" || strings.TrimSpace(locator.AXRole) == "" {
 			return CompatibilityManifest{}, fmt.Errorf("Naver compatibility manifest has no complete %s locator", kind)

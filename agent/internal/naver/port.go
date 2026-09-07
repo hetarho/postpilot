@@ -142,9 +142,11 @@ const editorObservationScript = `(() => {
       heading: count('.se-body.__se-body'),
       quote: count('.se-body.__se-body'),
       list: count('.se-body.__se-body'),
-      image_placeholder: count('button.se-image-toolbar-button'),
       upload_image: count('input[type=file]#hidden-file'),
       image_caption: captionsWellFormed ? 1 : 0,
+      // The opener stays countable once the layer is already open, so re-observing after
+      // open_settings does not report a vanished control.
+      open_settings: count('button[class^="publish_btn__"]'),
       tags: layer ? layer.querySelectorAll('input[class^="tag_input__"]').length : 0,
       category: categoryIDs.length > 0 && new Set(categoryIDs).size === categoryIDs.length ? 1 : categoryIDs.length,
       visibility: visibilityComplete ? 1 : visibilityRadios.length
@@ -192,6 +194,9 @@ var writerBlogID = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
 type CDPPort struct {
 	page     *browser.Page
 	manifest CompatibilityManifest
+	// settingsOpen latches when the publish settings layer opens. It never clears: the
+	// layer occludes the editor and no body write may follow it (PUBLISH-37).
+	settingsOpen bool
 }
 
 // NewCDPPort binds the sole dedicated page. It never navigates: the caller has already
@@ -260,6 +265,54 @@ func (p *CDPPort) Observe(ctx context.Context) (Snapshot, error) {
 
 // writerAccount reads the blog identity from the writer URL Naver itself resolved. It is
 // never taken from user input or page prose.
+// Apply executes one typed command. It is the only place the driver writes, and it writes
+// nothing the caller described: every step resolves a versioned locator of this signed
+// release, requires exactly one match, and uses the geometry it just read once.
+//
+// PUBLISH-37: once the settings layer is open it covers the editor, so a body write
+// resolved from a body element's own geometry would land on the layer. The latch below
+// refuses that in the port rather than trusting the plan.
+func (p *CDPPort) Apply(ctx context.Context, mutation Mutation) error {
+	if p.settingsOpen && isBodyMutation(mutation.Kind) {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	switch mutation.Kind {
+	case MutationTitle:
+		if err := p.resolveAndClick(ctx, "title", 0); err != nil {
+			return err
+		}
+		return p.typeText(ctx, mutation.Text)
+	case MutationText:
+		return p.appendParagraph(ctx, mutation.Text)
+	case MutationOpenSettings:
+		if err := p.activate(ctx, "settings_open", ""); err != nil {
+			return err
+		}
+		p.settingsOpen = true
+		return nil
+	default:
+		// Every remaining kind lands with its own task: the image path in T043, the three
+		// settings in T044. Refusing here keeps a half-built driver from typing into a
+		// live editor it cannot finish (PUBLISH-19).
+		return PortError{Kind: FailureSafe}
+	}
+}
+
+// appendParagraph opens the next paragraph at the end of the body and types into it.
+//
+// Enter appends a paragraph INSIDE the current text component rather than opening a new
+// component, which is why the projection counts paragraphs and not components. Verified
+// live 2026-09-07.
+func (p *CDPPort) appendParagraph(ctx context.Context, text string) error {
+	if err := p.resolveAndClick(ctx, "body_end", 0); err != nil {
+		return err
+	}
+	if err := p.page.PressEnter(ctx); err != nil {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	return p.typeText(ctx, text)
+}
+
 func writerAccount(current string) (string, error) {
 	parsed, err := url.Parse(current)
 	if err != nil || parsed.Scheme != "https" || parsed.Hostname() != "blog.naver.com" || parsed.EscapedPath() != "/PostWriteForm.naver" {
@@ -295,7 +348,7 @@ func semanticBlocks(observed []observedBlock) []SemanticBlock {
 
 func locatorMatches(observed map[string]int) map[MutationKind]int {
 	matches := make(map[MutationKind]int, len(observed))
-	for _, kind := range []MutationKind{MutationTitle, MutationText, MutationHeading, MutationQuote, MutationList, MutationImagePlaceholder, MutationUploadImage, MutationImageCaption, MutationTags, MutationCategory, MutationVisibility} {
+	for _, kind := range reviewedMutationKinds {
 		matches[kind] = observed[string(kind)]
 	}
 	return matches

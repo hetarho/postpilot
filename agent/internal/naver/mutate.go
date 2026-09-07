@@ -19,6 +19,16 @@ const driverPointFn = `function (target, ordinal) {
     if (box.width <= 0 || box.height <= 0) return {matches: 0, x: 0, y: 0};
     return {matches: 1, x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2)};
   };
+  // caretEnd aims at the paragraph's trailing edge rather than its centre. A box centre
+  // lands at the text's end only while the text stops short of it; on a paragraph that
+  // fills or wraps its line the centre lands mid-text and the next insertion would split
+  // it. Verified live 2026-09-07.
+  const caretEnd = (node) => {
+    if (!node) return {matches: 0, x: 0, y: 0};
+    const box = node.getBoundingClientRect();
+    if (box.width <= 0 || box.height <= 0) return {matches: 0, x: 0, y: 0};
+    return {matches: 1, x: Math.round(box.left + box.width * 0.98), y: Math.round(box.bottom - box.height * 0.25)};
+  };
   if (target === 'title') {
     const nodes = document.querySelectorAll('.se-component.se-documentTitle .se-title-text');
     return nodes.length === 1 ? point(nodes[0]) : {matches: nodes.length, x: 0, y: 0};
@@ -26,9 +36,12 @@ const driverPointFn = `function (target, ordinal) {
   if (target === 'body_end') {
     const body = document.querySelector('.se-body.__se-body');
     if (!body) return {matches: 0, x: 0, y: 0};
-    const paragraphs = body.querySelectorAll('.se-component .se-module-text.__se-unit p.se-text-paragraph');
+    // The document title is a .se-component INSIDE .se-body, and an image's caption is a
+    // paragraph too, so an unqualified descendant query can put the caret in the title or
+    // under a photo. Only a text component's own paragraphs are body text.
+    const paragraphs = [...body.querySelectorAll('.se-component.se-text .se-module-text.__se-unit p.se-text-paragraph')];
     if (paragraphs.length === 0) return {matches: 0, x: 0, y: 0};
-    return point(paragraphs[paragraphs.length - 1]);
+    return caretEnd(paragraphs[paragraphs.length - 1]);
   }
   if (target === 'image_caption') {
     const images = document.querySelectorAll('.se-body.__se-body .se-component.se-image');

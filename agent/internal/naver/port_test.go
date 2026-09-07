@@ -3,9 +3,11 @@ package naver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -31,7 +33,7 @@ func healthyObservation() map[string]any {
 		"category":    map[string]any{"id": "17", "name": "식당", "selected": true},
 		"visibility":  map[string]any{"id": "public", "name": "전체공개", "selected": true},
 		"locator_matches": map[string]int{
-			"title": 1, "text": 1, "heading": 1, "quote": 1, "list": 1, "image_placeholder": 1,
+			"title": 1, "text": 1, "heading": 1, "quote": 1, "list": 1, "open_settings": 1,
 			"upload_image": 1, "image_caption": 1, "tags": 1, "category": 1, "visibility": 1,
 		},
 		"final_controls": 1, "unversioned_publish_like": 0,
@@ -44,8 +46,25 @@ type fakeEditor struct {
 	evaluateErr bool
 	emptyAX     bool
 
-	mu    sync.Mutex
-	calls int
+	// The driver's two reviewed functions, scripted. A nil hook resolves one match.
+	point    func(target string, ordinal int) driverPoint
+	activate func(control, id string) driverActivation
+
+	mu     sync.Mutex
+	calls  int
+	inputs []string
+}
+
+func (editor *fakeEditor) record(entry string) {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	editor.inputs = append(editor.inputs, entry)
+}
+
+func (editor *fakeEditor) recorded() []string {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	return slices.Clone(editor.inputs)
 }
 
 func startFakeCDP(t *testing.T, editor *fakeEditor) string {
@@ -82,8 +101,9 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 			defer connection.CloseNow()
 			for {
 				var call struct {
-					ID     int    `json:"id"`
-					Method string `json:"method"`
+					ID     int            `json:"id"`
+					Method string         `json:"method"`
+					Params map[string]any `json:"params"`
 				}
 				if err := wsjson.Read(request.Context(), connection, &call); err != nil {
 					return
@@ -104,8 +124,44 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 				case "Runtime.evaluate":
 					if editor.evaluateErr {
 						response["error"] = map[string]any{"code": -32000, "message": "Execution context was destroyed"}
+					} else if expression, _ := call.Params["expression"].(string); expression == "document" {
+						// CallFunction resolves the document once before every reviewed call.
+						result = map[string]any{"result": map[string]any{"objectId": "document-1"}}
 					} else {
 						result = map[string]any{"result": map[string]any{"value": editor.observation}}
+					}
+				case "Runtime.callFunctionOn":
+					declaration, _ := call.Params["functionDeclaration"].(string)
+					first, second := callArgs(call.Params)
+					switch {
+					case strings.Contains(declaration, "'body_end'"):
+						resolved := driverPoint{Matches: 1, X: 10, Y: 20}
+						if editor.point != nil {
+							ordinal, _ := second.(float64)
+							target, _ := first.(string)
+							resolved = editor.point(target, int(ordinal))
+						}
+						editor.record("point:" + toString(first))
+						result = map[string]any{"result": map[string]any{"value": resolved}}
+					case strings.Contains(declaration, "'settings_open'"):
+						resolved := driverActivation{Matches: 1, Activated: true}
+						if editor.activate != nil {
+							control, _ := first.(string)
+							resolved = editor.activate(control, toString(second))
+						}
+						editor.record("activate:" + toString(first))
+						result = map[string]any{"result": map[string]any{"value": resolved}}
+					}
+				case "Input.dispatchMouseEvent":
+					if phase, _ := call.Params["type"].(string); phase == "mousePressed" {
+						editor.record("click")
+					}
+				case "Input.insertText":
+					text, _ := call.Params["text"].(string)
+					editor.record("text:" + text)
+				case "Input.dispatchKeyEvent":
+					if phase, _ := call.Params["type"].(string); phase == "rawKeyDown" {
+						editor.record("enter")
 					}
 				}
 				if _, failed := response["error"]; !failed {
@@ -355,4 +411,27 @@ func asPortError(err error, out *PortError) bool {
 		*out = portErr
 	}
 	return ok
+}
+
+// callArgs unwraps the {value: …} argument envelope Runtime.callFunctionOn takes.
+func callArgs(params map[string]any) (any, any) {
+	list, _ := params["arguments"].([]any)
+	value := func(index int) any {
+		if index >= len(list) {
+			return nil
+		}
+		entry, _ := list[index].(map[string]any)
+		return entry["value"]
+	}
+	return value(0), value(1)
+}
+
+func toString(value any) string {
+	if value == nil {
+		return ""
+	}
+	if text, ok := value.(string); ok {
+		return text
+	}
+	return fmt.Sprint(value)
 }

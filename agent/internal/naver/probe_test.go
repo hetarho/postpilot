@@ -21,7 +21,7 @@ func TestCompatibilityManifestPinsTheSignedReleaseContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if manifest.SchemaVersion != 1 || manifest.DriverVersion != "1.0.0" || manifest.SignatureID != "smarteditor-one-20260906-a2" || manifest.ProtocolVersion != "1.3" || manifest.ChromiumMinMajor != 136 || manifest.ChromiumMaxMajor != 152 || len(manifest.Capabilities) != 7 || len(manifest.SemanticLocators) != 11 || len(manifest.FinalControlAccessibleNames) != 1 {
+	if manifest.SchemaVersion != 1 || manifest.DriverVersion != "1.0.0" || manifest.SignatureID != "smarteditor-one-20260908-a3" || manifest.ProtocolVersion != "1.3" || manifest.ChromiumMinMajor != 136 || manifest.ChromiumMaxMajor != 152 || len(manifest.Capabilities) != 7 || len(manifest.SemanticLocators) != 11 || len(manifest.FinalControlAccessibleNames) != 1 {
 		t.Fatalf("manifest=%+v", manifest)
 	}
 	if err := validate(manifest, validEvidence()); err != nil {
