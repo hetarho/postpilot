@@ -283,6 +283,12 @@
   --notice-info-bg: var(--intent-info-subtle);
   --notice-info-fg: var(--intent-info);
 
+  /* the one stroke a promotional surface may draw around the option it recommends
+     (THEME-37). It borrows the accent because accent is action and identity — here, the
+     choice the product is pointing at — and it is a STROKE, never a fill, so accent still
+     never covers an area. Nothing else in the app is allowed a border around a card. */
+  --stroke-accent: var(--intent-accent);
+
   /* a usage meter: how much of a bounded allowance is spent. The track is a surface step so the
      bar reads as a recess rather than a bordered box, and the fill borrows the accent because a
      quota is the user's own progress through a window, not a warning. Colour is never the only
@@ -514,6 +520,7 @@
   --color-row-bg-hover: var(--row-bg-hover);
   --color-row-bg-active: var(--row-bg-active);
   --color-divider: var(--divider);
+  --color-stroke-accent: var(--stroke-accent);
   --color-badge-neutral-bg: var(--badge-neutral-bg);
   --color-badge-neutral-fg: var(--badge-neutral-fg);
   --color-badge-accent-bg: var(--badge-accent-bg);

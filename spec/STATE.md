@@ -33,15 +33,16 @@
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260907.ix |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
 | T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | blocked@260907 |
-| T023 | The plan comparison reshaped, with a recommended rung and post estimates | QUOTA THEME | T020 | todo |
 | T024 | The public plans copy tells the truth about what a plan decides | MARKETING QUOTA | T020 | todo |
 
 ## next
 - create-task AUTH QUOTA ARCH MARKETING BILLING next — every prerequisite is decided, so the whole payment surface is decomposable; T020..T024 (todo) must take QUOTA@4 · MARKETING@3 · ARCH@2 in that pass
-- implement-task T023 → T024 (pw, in that order); every base must move to QUOTA@4 · MARKETING@3 · ARCH@2 on claim
+- implement-task T024 (pw) closes this wave; every base must move to QUOTA@4 · MARKETING@3 · ARCH@2 on claim
 - PUBLISH chain: T007 needs one ARCH-27 run on the Mac (and CI green) to close · T019 blocked on the live editor survey → update-ssot PUBLISH → create-task re-decomposes it · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260907 T023 done — /plans compares four rungs side by side from md:, each stating about how many posts its grant buys, with pro marked under THEME-37 by the new stroke-accent role
+- 260907 T023 claimed (pw), base QUOTA@3→@4 THEME@3 LANG@1 ARCH@1→@2: r4 changes the grant window and the bonus, neither of which the comparison table renders
 - 260907 T022 done — the header carries the balance as a link to /plans, the popover reaches the ladder from every tier, and one 30s-stale GetMyPlan entry serves both
 - 260907 T022 claimed (pw), base QUOTA@3→@4 THEME@3 ARCH@1→@2: r4 touches the grant window and the bonus, neither of which this header control reads
 - 260907 T021 done — lots order by kind (monthly→bonus→purchased), a purchased kind exists for BILLING to fill, and an upgrade raises the running cycle on both tier-change paths. WARN sqlc slices emitted SQL by byte offset: a multi-byte character in a query comment silently generates unparseable SQL (pinned in usage.sql)
@@ -60,5 +61,3 @@
 - 260907 WARN T008 (todo) quotes MARKETING@1 and must take @2; no doing task sits inside QUOTA, MARKETING or THEME
 - 260907 T007 tests+packaging complete and green on linux; only the macOS ARCH-27 / CI half is unverified. WARN launchd.Uninstall used to bootout unconditionally, so `go test` on a Mac would have stopped a real agent — now behind a test seam
 - 260907 update-ssot QUOTA MARKETING start (pricing rework: grant bonus, always-on credit purchase, lot order, /plans entry + comparison, plans copy drift)
-- 260907 T007 claimed (ix), base PUBLISH@2→@3 per create-task's r3 ruling that its tests+packaging scope is unaffected
-- 260907 T019 blocked: Prepare's editor model contradicts the live SmartEditor in 3 places (no image placeholder, nothing opens the settings layer so tags/category/visibility never resolve, readback needs frame-scoped observation PUBLISH-20 does not enumerate); daemon wiring deliberately left unwired
