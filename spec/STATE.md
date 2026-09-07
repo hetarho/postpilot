@@ -20,7 +20,7 @@
 | TEMPLATE | 3 | 3 | - | 1 |
 | GUIDE | 1 | 1 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
-| PUBLISH | 3 | 3 | - | 0 |
+| PUBLISH | 4 | 3 | PUBLISH-13✎ 20✎ 36✎ 37+ | 0 |
 | LANG | 1 | 1 | - | 0 |
 | THEME | 4 | 4 | - | 0 |
 | MARKETING | 3 | 2 | MARKETING-6✎ 11✎ 16+ | 0 |
@@ -35,9 +35,10 @@
 
 ## next
 - create-task AUTH QUOTA ARCH MARKETING BILLING is the next wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface); every base takes QUOTA@5 · THEME@4 · MARKETING@3 · ARCH@2 on claim, then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
-- PUBLISH chain: T019's live survey is DONE (findings in its own ## survey section) and it now blocks only on the SSOT → update-ssot PUBLISH for the settings-layer opening step and its body-first ordering rule, caret-relative image insertion replacing the placeholder model, the `PostView.naver` readback observation and `se-imageStrip`, and the paragraph-vs-component block model; PUBLISH-20 needs NO frame-scoped addition → create-task re-decomposes T019 · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
+- create-task PUBLISH re-decomposes T019 against r4 (its `## survey` section holds the live mechanics the new tasks need); base takes PUBLISH@4 ARCH@2 on claim · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260907 update-ssot PUBLISH r4 done — a `filling_settings` stage joins the progress list, the settings layer is a versioned step that occludes the editor so body and photos precede it (PUBLISH-37), readback observes the post through the account's post-view URL while still reporting the permalink, and the locator-derived caret positions an inserted image; the frame-scoped driver addition r3 was expected to need is NOT required
 - 260907 T019 live survey done on the owner's Mac — all three blockers answered: an image inserts immediately after the caret's component (no placeholder, no pre-allocated ordinal), the settings layer takes TWO clicks and OCCLUDES the body so body mutations must come first, and `PostView.naver` serves a published post in its own document in the editor's own `.se-component` vocabulary, so readback needs no frame-scoped driver surface. Also found: `Enter` appends a paragraph INSIDE one `se-text` component, and the list control exists only while the caret is in a text block. WARN an unsaved scratch draft with one survey quote, paragraph and uploaded image is left in the writer — discard it, do not publish
 - 260907 T007 done — ARCH-27 passed on the owner's Mac and CI's macOS agent job is green; the red backend job on main was T021's fixed-width timestamp parse (one run in ten), fixed in 4a923a6 by reading with RFC3339Nano like the post and auth stores. T019 stays blocked on the live survey; T008 waits behind it
 - 260907 T028 done — the four rungs and the estimator wear a rotating accent-gradient stroke, transform-only and frozen still under reduced motion; the estimator wave is complete
@@ -57,4 +58,3 @@
 - 260907 T023 claimed (pw), base QUOTA@3→@4 THEME@3 LANG@1 ARCH@1→@2: r4 changes the grant window and the bonus, neither of which the comparison table renders
 - 260907 T022 done — the header carries the balance as a link to /plans, the popover reaches the ladder from every tier, and one 30s-stale GetMyPlan entry serves both
 - 260907 T022 claimed (pw), base QUOTA@3→@4 THEME@3 ARCH@1→@2: r4 touches the grant window and the bonus, neither of which this header control reads
-- 260907 T021 done — lots order by kind (monthly→bonus→purchased), a purchased kind exists for BILLING to fill, and an upgrade raises the running cycle on both tier-change paths. WARN sqlc slices emitted SQL by byte offset: a multi-byte character in a query comment silently generates unparseable SQL (pinned in usage.sql)
