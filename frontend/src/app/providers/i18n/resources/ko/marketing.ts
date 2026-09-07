@@ -76,7 +76,7 @@ export const marketing = {
   },
   plans: {
     title: '요금제',
-    body: '요금제는 AI 작업을 하루에 몇 번 시작할 수 있는지, 하루와 한 달에 쓸 수 있는 AI 사용 금액, 고를 수 있는 모델 범위를 정합니다.',
+    body: '요금제가 정하는 것은 매달 받는 크레딧뿐입니다. AI 작업은 크레딧으로 계산되고, 고를 수 있는 모델은 모든 요금제가 같습니다.',
     assignment:
       '요금제는 운영자가 계정에 지정합니다. 이 페이지에서 결제하거나 등급을 올릴 수는 없습니다.',
     columns: {
@@ -93,19 +93,19 @@ export const marketing = {
     },
     basic: {
       name: 'basic',
-      monthlyCredits: '200 크레딧',
+      monthlyCredits: '220 크레딧',
       price: '$2',
       models: '등록된 모든 모델',
     },
     pro: {
       name: 'pro',
-      monthlyCredits: '500 크레딧',
+      monthlyCredits: '575 크레딧',
       price: '$5',
       models: '등록된 모든 모델',
     },
     max: {
       name: 'max',
-      monthlyCredits: '1,000 크레딧',
+      monthlyCredits: '1,200 크레딧',
       price: '$10',
       models: '등록된 모든 모델',
     },

@@ -69,7 +69,7 @@ export const marketing = {
   },
   plans: {
     title: 'Plans',
-    body: 'A plan decides how many AI jobs you may start per day, how much AI spend you have per day and per month, and which models you can choose.',
+    body: 'A plan decides one thing: how many credits you receive each month. AI work is counted in credits, and every plan can choose from the same models.',
     assignment:
       'Plans are assigned to an account by the operator. There is no way to pay or upgrade from this page.',
     columns: {
@@ -86,19 +86,19 @@ export const marketing = {
     },
     basic: {
       name: 'basic',
-      monthlyCredits: '200 credits',
+      monthlyCredits: '220 credits',
       price: '$2',
       models: 'Every registered model',
     },
     pro: {
       name: 'pro',
-      monthlyCredits: '500 credits',
+      monthlyCredits: '575 credits',
       price: '$5',
       models: 'Every registered model',
     },
     max: {
       name: 'max',
-      monthlyCredits: '1,000 credits',
+      monthlyCredits: '1,200 credits',
       price: '$10',
       models: 'Every registered model',
     },

@@ -33,14 +33,15 @@
 | T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260907.ix |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
 | T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | blocked@260907 |
-| T024 | The public plans copy tells the truth about what a plan decides | MARKETING QUOTA | T020 | todo |
 
 ## next
 - create-task AUTH QUOTA ARCH MARKETING BILLING next — every prerequisite is decided, so the whole payment surface is decomposable; T020..T024 (todo) must take QUOTA@4 · MARKETING@3 · ARCH@2 in that pass
-- implement-task T024 (pw) closes this wave; every base must move to QUOTA@4 · MARKETING@3 · ARCH@2 on claim
+- create-task AUTH QUOTA ARCH MARKETING BILLING is the next wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface); T020..T024 are done; every base must move to QUOTA@4 · MARKETING@3 · ARCH@2 on claim
 - PUBLISH chain: T007 needs one ARCH-27 run on the Mac (and CI green) to close · T019 blocked on the live editor survey → update-ssot PUBLISH → create-task re-decomposes it · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260907 T024 done — /about no longer claims a plan decides daily job counts or a model range, and its figures match the raised ladder; a claim-level assertion now guards the sentence
+- 260907 T024 claimed (pw), base MARKETING@2→@3 QUOTA@3→@4 LANG@1 ARCH@1→@2: MARKETING r3 binds the access sentence and the CTA to self-signup SHIPPING, which it has not, so this task still writes the operator path
 - 260907 T023 done — /plans compares four rungs side by side from md:, each stating about how many posts its grant buys, with pro marked under THEME-37 by the new stroke-accent role
 - 260907 T023 claimed (pw), base QUOTA@3→@4 THEME@3 LANG@1 ARCH@1→@2: r4 changes the grant window and the bonus, neither of which the comparison table renders
 - 260907 T022 done — the header carries the balance as a link to /plans, the popover reaches the ladder from every tier, and one 30s-stale GetMyPlan entry serves both
@@ -59,5 +60,3 @@
 - 260907 create-ssot BILLING start
 - 260907 update-ssot QUOTA r3 MARKETING r2 THEME r3 done (grants +10/15/20 %, par-rate credit purchase, kind-ordered consumption, header credit entry to /plans, /plans reshaped with a recommended rung, one promotional border exception; the money side moved out to BILLING, which does not exist yet)
 - 260907 WARN T008 (todo) quotes MARKETING@1 and must take @2; no doing task sits inside QUOTA, MARKETING or THEME
-- 260907 T007 tests+packaging complete and green on linux; only the macOS ARCH-27 / CI half is unverified. WARN launchd.Uninstall used to bootout unconditionally, so `go test` on a Mac would have stopped a real agent — now behind a test seam
-- 260907 update-ssot QUOTA MARKETING start (pricing rework: grant bonus, always-on credit purchase, lot order, /plans entry + comparison, plans copy drift)

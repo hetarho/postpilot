@@ -22,6 +22,9 @@ const COPY = {
     publishing: /실제 환경 검증이 진행 중/,
     assignment: /요금제는 운영자가 계정에 지정합니다/,
     master: /사용자가 받을 수 있는 등급이 아닙니다/,
+    // Claims the product does not own (QUOTA-2, QUOTA-19): a plan decides the monthly grant
+    // and nothing else — no daily job count, no spend allowance, no model range.
+    unownedPlanClaims: ['하루', '일일', '사용 금액', '범위'],
     facts: /화면을 여는 것만으로는 AI 작업이 시작되지 않습니다/,
   },
   en: {
@@ -45,18 +48,19 @@ const COPY = {
     publishing: /live verification is still in progress/,
     assignment: /Plans are assigned to an account by the operator/,
     master: /not a tier a user can be given/,
+    unownedPlanClaims: ['per day', 'daily', 'spend', 'range of'],
     facts: /Opening a screen never starts AI work/,
   },
 } as const
 
-/** The shipped ladder, copied from `backend/internal/plan`'s limits table by way of
- *  spec/legacy/policy/plans.md. A divergence between this table and the page is a copy bug — the whole
- *  point of A17 — so the test states the numbers rather than reading them from the catalog. */
+/** The shipped ladder, copied from `backend/internal/plan`'s grant table. A divergence
+ *  between this table and the page is a copy bug — the whole point of A17 (MARKETING-5) — so
+ *  the test states the numbers rather than reading them from anywhere. */
 const PLANS = [
   { name: 'free', credits: '50', price: /무료|Free/ },
-  { name: 'basic', credits: '200', price: '$2' },
-  { name: 'pro', credits: '500', price: '$5' },
-  { name: 'max', credits: '1,000', price: '$10' },
+  { name: 'basic', credits: '220', price: '$2' },
+  { name: 'pro', credits: '575', price: '$5' },
+  { name: 'max', credits: '1,200', price: '$10' },
 ] as const
 
 afterEach(() => {
@@ -130,6 +134,18 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     expect(plans.getByText(copy.assignment)).toBeInTheDocument()
     expect(plans.queryByRole('button')).not.toBeInTheDocument()
     expect(plans.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  // A17 again, as a claim rather than a layout: the section may only say what a plan
+  // actually decides (MARKETING-4, MARKETING-5). This case fails on the sentence, not on
+  // where it sits, so re-introducing "so many jobs a day" is caught wherever it is written.
+  it('claims nothing about a plan beyond its monthly grant', async () => {
+    render()
+    const plans = await screen.findByRole('region', { name: copy.sections[3] })
+
+    for (const claim of copy.unownedPlanClaims) {
+      expect(plans.textContent).not.toContain(claim)
+    }
   })
 
   // A5/A11: Login is the page's only product CTA, and nothing here collects anything.
