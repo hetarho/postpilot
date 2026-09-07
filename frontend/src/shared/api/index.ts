@@ -52,7 +52,12 @@ export {
 } from './gen/postpilot/v1/auth_pb'
 export type { User, GetMeResponse } from './gen/postpilot/v1/auth_pb'
 export { BillingService, Term as ProtoTerm } from './gen/postpilot/v1/billing_pb'
-export { GetMyBillingResponseSchema, QuotePriceResponseSchema } from './gen/postpilot/v1/billing_pb'
+export {
+  GetMyBillingResponseSchema,
+  QuotePriceResponseSchema,
+  RegisterPaymentMethodResponseSchema,
+  RemovePaymentMethodResponseSchema,
+} from './gen/postpilot/v1/billing_pb'
 export type {
   BillingSubscription as ProtoBillingSubscription,
   BillingPaymentMethod as ProtoBillingPaymentMethod,
@@ -60,6 +65,7 @@ export type {
   BillingPurchase as ProtoBillingPurchase,
   GetMyBillingResponse,
   QuotePriceResponse,
+  RegisterPaymentMethodResponse,
 } from './gen/postpilot/v1/billing_pb'
 export { HealthService, PingResponseSchema } from './gen/postpilot/v1/health_pb'
 export { AdminService, Plan as ProtoPlan, PlanService } from './gen/postpilot/v1/plan_pb'

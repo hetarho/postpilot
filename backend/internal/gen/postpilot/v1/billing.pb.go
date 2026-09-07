@@ -604,6 +604,182 @@ func (x *GetMyBillingResponse) GetCustomerKey() string {
 	return ""
 }
 
+type RegisterPaymentMethodRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AuthKey       string                 `protobuf:"bytes,1,opt,name=auth_key,json=authKey,proto3" json:"auth_key,omitempty"`
+	CustomerKey   string                 `protobuf:"bytes,2,opt,name=customer_key,json=customerKey,proto3" json:"customer_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterPaymentMethodRequest) Reset() {
+	*x = RegisterPaymentMethodRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterPaymentMethodRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterPaymentMethodRequest) ProtoMessage() {}
+
+func (x *RegisterPaymentMethodRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterPaymentMethodRequest.ProtoReflect.Descriptor instead.
+func (*RegisterPaymentMethodRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *RegisterPaymentMethodRequest) GetAuthKey() string {
+	if x != nil {
+		return x.AuthKey
+	}
+	return ""
+}
+
+func (x *RegisterPaymentMethodRequest) GetCustomerKey() string {
+	if x != nil {
+		return x.CustomerKey
+	}
+	return ""
+}
+
+type RegisterPaymentMethodResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PaymentMethod *BillingPaymentMethod  `protobuf:"bytes,1,opt,name=payment_method,json=paymentMethod,proto3" json:"payment_method,omitempty"`
+	BonusGranted  bool                   `protobuf:"varint,2,opt,name=bonus_granted,json=bonusGranted,proto3" json:"bonus_granted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterPaymentMethodResponse) Reset() {
+	*x = RegisterPaymentMethodResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterPaymentMethodResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterPaymentMethodResponse) ProtoMessage() {}
+
+func (x *RegisterPaymentMethodResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterPaymentMethodResponse.ProtoReflect.Descriptor instead.
+func (*RegisterPaymentMethodResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RegisterPaymentMethodResponse) GetPaymentMethod() *BillingPaymentMethod {
+	if x != nil {
+		return x.PaymentMethod
+	}
+	return nil
+}
+
+func (x *RegisterPaymentMethodResponse) GetBonusGranted() bool {
+	if x != nil {
+		return x.BonusGranted
+	}
+	return false
+}
+
+type RemovePaymentMethodRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemovePaymentMethodRequest) Reset() {
+	*x = RemovePaymentMethodRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemovePaymentMethodRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemovePaymentMethodRequest) ProtoMessage() {}
+
+func (x *RemovePaymentMethodRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemovePaymentMethodRequest.ProtoReflect.Descriptor instead.
+func (*RemovePaymentMethodRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{8}
+}
+
+type RemovePaymentMethodResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemovePaymentMethodResponse) Reset() {
+	*x = RemovePaymentMethodResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemovePaymentMethodResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemovePaymentMethodResponse) ProtoMessage() {}
+
+func (x *RemovePaymentMethodResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemovePaymentMethodResponse.ProtoReflect.Descriptor instead.
+func (*RemovePaymentMethodResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{9}
+}
+
 type QuotePriceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Plan          Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
@@ -614,7 +790,7 @@ type QuotePriceRequest struct {
 
 func (x *QuotePriceRequest) Reset() {
 	*x = QuotePriceRequest{}
-	mi := &file_postpilot_v1_billing_proto_msgTypes[6]
+	mi := &file_postpilot_v1_billing_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -626,7 +802,7 @@ func (x *QuotePriceRequest) String() string {
 func (*QuotePriceRequest) ProtoMessage() {}
 
 func (x *QuotePriceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_billing_proto_msgTypes[6]
+	mi := &file_postpilot_v1_billing_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -639,7 +815,7 @@ func (x *QuotePriceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuotePriceRequest.ProtoReflect.Descriptor instead.
 func (*QuotePriceRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *QuotePriceRequest) GetPlan() Plan {
@@ -668,7 +844,7 @@ type QuotePriceResponse struct {
 
 func (x *QuotePriceResponse) Reset() {
 	*x = QuotePriceResponse{}
-	mi := &file_postpilot_v1_billing_proto_msgTypes[7]
+	mi := &file_postpilot_v1_billing_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -680,7 +856,7 @@ func (x *QuotePriceResponse) String() string {
 func (*QuotePriceResponse) ProtoMessage() {}
 
 func (x *QuotePriceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_billing_proto_msgTypes[7]
+	mi := &file_postpilot_v1_billing_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -693,7 +869,7 @@ func (x *QuotePriceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuotePriceResponse.ProtoReflect.Descriptor instead.
 func (*QuotePriceResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *QuotePriceResponse) GetUsdCents() int32 {
@@ -781,7 +957,15 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	"\x0epayment_method\x18\x02 \x01(\v2\".postpilot.v1.BillingPaymentMethodR\rpaymentMethod\x124\n" +
 	"\ahistory\x18\x03 \x03(\v2\x1a.postpilot.v1.BillingEventR\ahistory\x12;\n" +
 	"\tpurchases\x18\x04 \x03(\v2\x1d.postpilot.v1.BillingPurchaseR\tpurchases\x12!\n" +
-	"\fcustomer_key\x18\x05 \x01(\tR\vcustomerKey\"c\n" +
+	"\fcustomer_key\x18\x05 \x01(\tR\vcustomerKey\"\\\n" +
+	"\x1cRegisterPaymentMethodRequest\x12\x19\n" +
+	"\bauth_key\x18\x01 \x01(\tR\aauthKey\x12!\n" +
+	"\fcustomer_key\x18\x02 \x01(\tR\vcustomerKey\"\x8f\x01\n" +
+	"\x1dRegisterPaymentMethodResponse\x12I\n" +
+	"\x0epayment_method\x18\x01 \x01(\v2\".postpilot.v1.BillingPaymentMethodR\rpaymentMethod\x12#\n" +
+	"\rbonus_granted\x18\x02 \x01(\bR\fbonusGranted\"\x1c\n" +
+	"\x1aRemovePaymentMethodRequest\"\x1d\n" +
+	"\x1bRemovePaymentMethodResponse\"c\n" +
 	"\x11QuotePriceRequest\x12&\n" +
 	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12&\n" +
 	"\x04term\x18\x02 \x01(\x0e2\x12.postpilot.v1.TermR\x04term\"\x85\x01\n" +
@@ -793,9 +977,11 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	"\x04Term\x12\x14\n" +
 	"\x10TERM_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fTERM_MONTHLY\x10\x01\x12\x0f\n" +
-	"\vTERM_ANNUAL\x10\x022\xbc\x01\n" +
+	"\vTERM_ANNUAL\x10\x022\x9e\x03\n" +
 	"\x0eBillingService\x12W\n" +
-	"\fGetMyBilling\x12!.postpilot.v1.GetMyBillingRequest\x1a\".postpilot.v1.GetMyBillingResponse\"\x00\x12Q\n" +
+	"\fGetMyBilling\x12!.postpilot.v1.GetMyBillingRequest\x1a\".postpilot.v1.GetMyBillingResponse\"\x00\x12r\n" +
+	"\x15RegisterPaymentMethod\x12*.postpilot.v1.RegisterPaymentMethodRequest\x1a+.postpilot.v1.RegisterPaymentMethodResponse\"\x00\x12l\n" +
+	"\x13RemovePaymentMethod\x12(.postpilot.v1.RemovePaymentMethodRequest\x1a).postpilot.v1.RemovePaymentMethodResponse\"\x00\x12Q\n" +
 	"\n" +
 	"QuotePrice\x12\x1f.postpilot.v1.QuotePriceRequest\x1a .postpilot.v1.QuotePriceResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
@@ -812,41 +998,50 @@ func file_postpilot_v1_billing_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_billing_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_postpilot_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_postpilot_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_postpilot_v1_billing_proto_goTypes = []any{
-	(Term)(0),                    // 0: postpilot.v1.Term
-	(*BillingSubscription)(nil),  // 1: postpilot.v1.BillingSubscription
-	(*BillingPaymentMethod)(nil), // 2: postpilot.v1.BillingPaymentMethod
-	(*BillingEvent)(nil),         // 3: postpilot.v1.BillingEvent
-	(*BillingPurchase)(nil),      // 4: postpilot.v1.BillingPurchase
-	(*GetMyBillingRequest)(nil),  // 5: postpilot.v1.GetMyBillingRequest
-	(*GetMyBillingResponse)(nil), // 6: postpilot.v1.GetMyBillingResponse
-	(*QuotePriceRequest)(nil),    // 7: postpilot.v1.QuotePriceRequest
-	(*QuotePriceResponse)(nil),   // 8: postpilot.v1.QuotePriceResponse
-	(Plan)(0),                    // 9: postpilot.v1.Plan
+	(Term)(0),                             // 0: postpilot.v1.Term
+	(*BillingSubscription)(nil),           // 1: postpilot.v1.BillingSubscription
+	(*BillingPaymentMethod)(nil),          // 2: postpilot.v1.BillingPaymentMethod
+	(*BillingEvent)(nil),                  // 3: postpilot.v1.BillingEvent
+	(*BillingPurchase)(nil),               // 4: postpilot.v1.BillingPurchase
+	(*GetMyBillingRequest)(nil),           // 5: postpilot.v1.GetMyBillingRequest
+	(*GetMyBillingResponse)(nil),          // 6: postpilot.v1.GetMyBillingResponse
+	(*RegisterPaymentMethodRequest)(nil),  // 7: postpilot.v1.RegisterPaymentMethodRequest
+	(*RegisterPaymentMethodResponse)(nil), // 8: postpilot.v1.RegisterPaymentMethodResponse
+	(*RemovePaymentMethodRequest)(nil),    // 9: postpilot.v1.RemovePaymentMethodRequest
+	(*RemovePaymentMethodResponse)(nil),   // 10: postpilot.v1.RemovePaymentMethodResponse
+	(*QuotePriceRequest)(nil),             // 11: postpilot.v1.QuotePriceRequest
+	(*QuotePriceResponse)(nil),            // 12: postpilot.v1.QuotePriceResponse
+	(Plan)(0),                             // 13: postpilot.v1.Plan
 }
 var file_postpilot_v1_billing_proto_depIdxs = []int32{
-	9,  // 0: postpilot.v1.BillingSubscription.plan:type_name -> postpilot.v1.Plan
+	13, // 0: postpilot.v1.BillingSubscription.plan:type_name -> postpilot.v1.Plan
 	0,  // 1: postpilot.v1.BillingSubscription.term:type_name -> postpilot.v1.Term
-	9,  // 2: postpilot.v1.BillingSubscription.scheduled_plan:type_name -> postpilot.v1.Plan
+	13, // 2: postpilot.v1.BillingSubscription.scheduled_plan:type_name -> postpilot.v1.Plan
 	0,  // 3: postpilot.v1.BillingSubscription.scheduled_term:type_name -> postpilot.v1.Term
-	9,  // 4: postpilot.v1.BillingEvent.plan:type_name -> postpilot.v1.Plan
+	13, // 4: postpilot.v1.BillingEvent.plan:type_name -> postpilot.v1.Plan
 	0,  // 5: postpilot.v1.BillingEvent.term:type_name -> postpilot.v1.Term
 	1,  // 6: postpilot.v1.GetMyBillingResponse.subscription:type_name -> postpilot.v1.BillingSubscription
 	2,  // 7: postpilot.v1.GetMyBillingResponse.payment_method:type_name -> postpilot.v1.BillingPaymentMethod
 	3,  // 8: postpilot.v1.GetMyBillingResponse.history:type_name -> postpilot.v1.BillingEvent
 	4,  // 9: postpilot.v1.GetMyBillingResponse.purchases:type_name -> postpilot.v1.BillingPurchase
-	9,  // 10: postpilot.v1.QuotePriceRequest.plan:type_name -> postpilot.v1.Plan
-	0,  // 11: postpilot.v1.QuotePriceRequest.term:type_name -> postpilot.v1.Term
-	5,  // 12: postpilot.v1.BillingService.GetMyBilling:input_type -> postpilot.v1.GetMyBillingRequest
-	7,  // 13: postpilot.v1.BillingService.QuotePrice:input_type -> postpilot.v1.QuotePriceRequest
-	6,  // 14: postpilot.v1.BillingService.GetMyBilling:output_type -> postpilot.v1.GetMyBillingResponse
-	8,  // 15: postpilot.v1.BillingService.QuotePrice:output_type -> postpilot.v1.QuotePriceResponse
-	14, // [14:16] is the sub-list for method output_type
-	12, // [12:14] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	2,  // 10: postpilot.v1.RegisterPaymentMethodResponse.payment_method:type_name -> postpilot.v1.BillingPaymentMethod
+	13, // 11: postpilot.v1.QuotePriceRequest.plan:type_name -> postpilot.v1.Plan
+	0,  // 12: postpilot.v1.QuotePriceRequest.term:type_name -> postpilot.v1.Term
+	5,  // 13: postpilot.v1.BillingService.GetMyBilling:input_type -> postpilot.v1.GetMyBillingRequest
+	7,  // 14: postpilot.v1.BillingService.RegisterPaymentMethod:input_type -> postpilot.v1.RegisterPaymentMethodRequest
+	9,  // 15: postpilot.v1.BillingService.RemovePaymentMethod:input_type -> postpilot.v1.RemovePaymentMethodRequest
+	11, // 16: postpilot.v1.BillingService.QuotePrice:input_type -> postpilot.v1.QuotePriceRequest
+	6,  // 17: postpilot.v1.BillingService.GetMyBilling:output_type -> postpilot.v1.GetMyBillingResponse
+	8,  // 18: postpilot.v1.BillingService.RegisterPaymentMethod:output_type -> postpilot.v1.RegisterPaymentMethodResponse
+	10, // 19: postpilot.v1.BillingService.RemovePaymentMethod:output_type -> postpilot.v1.RemovePaymentMethodResponse
+	12, // 20: postpilot.v1.BillingService.QuotePrice:output_type -> postpilot.v1.QuotePriceResponse
+	17, // [17:21] is the sub-list for method output_type
+	13, // [13:17] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_billing_proto_init() }
@@ -861,7 +1056,7 @@ func file_postpilot_v1_billing_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_billing_proto_rawDesc), len(file_postpilot_v1_billing_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   8,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

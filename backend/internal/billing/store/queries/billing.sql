@@ -24,3 +24,23 @@ FROM credit_purchases WHERE user_id = ? ORDER BY charged_at DESC, id DESC;
 INSERT INTO provider_notifications (
     provider, event_type, payment_key, order_id, status, payload, received_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- name: UpsertPaymentMethod :exec
+INSERT INTO payment_methods (
+    user_id, provider, billing_key, customer_key, card_label, registered_at
+) VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(user_id) DO UPDATE SET
+    provider = excluded.provider,
+    billing_key = excluded.billing_key,
+    customer_key = excluded.customer_key,
+    card_label = excluded.card_label,
+    registered_at = excluded.registered_at;
+
+-- name: DeletePaymentMethod :exec
+DELETE FROM payment_methods WHERE user_id = ?;
+
+-- name: InsertBillingEvent :exec
+INSERT INTO billing_events (
+    user_id, kind, tier, term, credits, usd_cents, krw_per_usd_e4, rate_date,
+    krw, provider_payment_key, order_id, note, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);

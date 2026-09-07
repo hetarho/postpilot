@@ -62,7 +62,7 @@ VALUES (?, ?, ?, ?, ?);
 -- name: DeleteAdmissionForJob :exec
 DELETE FROM usage_admissions WHERE job_id = ?;
 
--- name: InsertLotIfAbsent :exec
+-- name: InsertLotIfAbsent :execrows
 -- For a grant whose id is derived from what it is FOR rather than randomly: the signup
 -- monthly window today and the payment-method bonus later. Re-running the operation must
 -- not mint a second lot.

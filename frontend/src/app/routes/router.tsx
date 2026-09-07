@@ -280,6 +280,34 @@ const billingRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/billing'), 'BillingPage'),
 })
 
+const billingMethodSuccessRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/billing/method/success',
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { authKey?: string; customerKey?: string } => ({
+    authKey: typeof search.authKey === 'string' ? search.authKey : undefined,
+    customerKey: typeof search.customerKey === 'string' ? search.customerKey : undefined,
+  }),
+  component: lazyRouteComponent(
+    () => import('@/pages/billing-method-success'),
+    'BillingMethodSuccessPage',
+  ),
+})
+
+const billingMethodFailRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/billing/method/fail',
+  validateSearch: (search: Record<string, unknown>): { code?: string; message?: string } => ({
+    code: typeof search.code === 'string' ? search.code : undefined,
+    message: typeof search.message === 'string' ? search.message : undefined,
+  }),
+  component: lazyRouteComponent(
+    () => import('@/pages/billing-method-fail'),
+    'BillingMethodFailPage',
+  ),
+})
+
 const accountRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/account',
@@ -442,6 +470,8 @@ export const routeTree = rootRoute.addChildren([
     guidelinesRoute,
     plansRoute,
     billingRoute,
+    billingMethodSuccessRoute,
+    billingMethodFailRoute,
     accountRoute,
     voiceLayoutRoute.addChildren([
       voiceRoute,
@@ -474,5 +504,6 @@ declare module '@tanstack/react-router' {
   }
   interface HistoryState {
     notice?: 'password-changed'
+    billingRegistration?: { cardLabel: string; bonusGranted: boolean }
   }
 }

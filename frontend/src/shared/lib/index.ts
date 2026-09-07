@@ -26,6 +26,7 @@ export {
   yamlString,
 } from './blocks'
 export { copyImage, copyText } from './clipboard'
+export { loadScript } from './script'
 export type { BlockVisitor } from './blocks'
 export type { CopyFallbackElement, CopyImageResult } from './clipboard'
 export {

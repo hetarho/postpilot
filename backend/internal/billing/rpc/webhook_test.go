@@ -57,8 +57,8 @@ type webhookStore struct {
 	notifications []billing.ProviderNotification
 }
 
-func (s *webhookStore) InWriteTx(ctx context.Context, fn func(billing.Store) error) error {
-	return fn(s)
+func (s *webhookStore) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits) error) error {
+	return fn(s, nil)
 }
 func (s *webhookStore) Subscription(context.Context, string) (billing.Subscription, bool, error) {
 	return billing.Subscription{}, false, nil
@@ -74,3 +74,6 @@ func (s *webhookStore) InsertProviderNotification(_ context.Context, notificatio
 	s.notifications = append(s.notifications, notification)
 	return nil
 }
+func (s *webhookStore) UpsertPaymentMethod(context.Context, billing.PaymentMethod) error { return nil }
+func (s *webhookStore) DeletePaymentMethod(context.Context, string) error                { return nil }
+func (s *webhookStore) InsertEvent(context.Context, billing.Event) error                 { return nil }

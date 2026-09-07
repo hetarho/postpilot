@@ -10,6 +10,8 @@ import "postpilot/v1/plan.proto";
 // the client comes from this contract; the KRW quote moves with the published daily rate.
 service BillingService {
   rpc GetMyBilling(GetMyBillingRequest) returns (GetMyBillingResponse) {}
+  rpc RegisterPaymentMethod(RegisterPaymentMethodRequest) returns (RegisterPaymentMethodResponse) {}
+  rpc RemovePaymentMethod(RemovePaymentMethodRequest) returns (RemovePaymentMethodResponse) {}
   rpc QuotePrice(QuotePriceRequest) returns (QuotePriceResponse) {}
 }
 
@@ -80,6 +82,20 @@ message GetMyBillingResponse {
   repeated BillingPurchase purchases = 4;
   string customer_key = 5;
 }
+
+message RegisterPaymentMethodRequest {
+  string auth_key = 1;
+  string customer_key = 2;
+}
+
+message RegisterPaymentMethodResponse {
+  BillingPaymentMethod payment_method = 1;
+  bool bonus_granted = 2;
+}
+
+message RemovePaymentMethodRequest {}
+
+message RemovePaymentMethodResponse {}
 
 message QuotePriceRequest {
   Plan plan = 1;

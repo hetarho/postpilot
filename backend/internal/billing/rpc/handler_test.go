@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -12,6 +13,29 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/plan"
 )
+
+func TestPaymentMethodFailuresHaveStableCodesAndReasons(t *testing.T) {
+	tests := []struct {
+		err    error
+		code   connect.Code
+		reason string
+	}{
+		{billing.ErrEmailVerificationRequired, connect.CodeFailedPrecondition, "EMAIL_VERIFICATION_REQUIRED"},
+		{billing.ErrCustomerKeyMismatch, connect.CodeInvalidArgument, "CUSTOMER_KEY_MISMATCH"},
+		{billing.ErrUnavailable, connect.CodeFailedPrecondition, "BILLING_UNAVAILABLE"},
+	}
+	for _, test := range tests {
+		err := registrationError("alice", test.err)
+		detail := billingErrorDetail(t, err)
+		if connect.CodeOf(err) != test.code || detail.GetReason() != test.reason {
+			t.Errorf("%s: code=%s reason=%s", test.reason, connect.CodeOf(err), detail.GetReason())
+		}
+	}
+	removeErr := removalError("alice", billing.ErrSubscriptionNeedsMethod)
+	if connect.CodeOf(removeErr) != connect.CodeFailedPrecondition || billingErrorDetail(t, removeErr).GetReason() != "SUBSCRIPTION_NEEDS_METHOD" {
+		t.Errorf("subscription removal refusal = %v", removeErr)
+	}
+}
 
 func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 	now := time.Date(2026, 9, 8, 1, 2, 3, 0, time.UTC)
@@ -68,8 +92,8 @@ type handlerStore struct {
 	events       []billing.Event
 }
 
-func (s handlerStore) InWriteTx(ctx context.Context, fn func(billing.Store) error) error {
-	return fn(s)
+func (s handlerStore) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits) error) error {
+	return fn(s, nil)
 }
 func (s handlerStore) Subscription(context.Context, string) (billing.Subscription, bool, error) {
 	if s.subscription == nil {
@@ -90,6 +114,9 @@ func (handlerStore) Purchases(context.Context, string) ([]billing.Purchase, erro
 func (handlerStore) InsertProviderNotification(context.Context, billing.ProviderNotification) error {
 	return nil
 }
+func (handlerStore) UpsertPaymentMethod(context.Context, billing.PaymentMethod) error { return nil }
+func (handlerStore) DeletePaymentMethod(context.Context, string) error                { return nil }
+func (handlerStore) InsertEvent(context.Context, billing.Event) error                 { return nil }
 
 type handlerProvider struct{}
 
@@ -111,4 +138,21 @@ type handlerRates struct{}
 
 func (handlerRates) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
 	return 13_925_000, true, nil
+}
+
+func billingErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
+	t.Helper()
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) || len(connectErr.Details()) != 1 {
+		t.Fatalf("error = %T, details unavailable", err)
+	}
+	value, valueErr := connectErr.Details()[0].Value()
+	if valueErr != nil {
+		t.Fatal(valueErr)
+	}
+	detail, ok := value.(*postpilotv1.AppErrorDetail)
+	if !ok {
+		t.Fatalf("detail = %T", value)
+	}
+	return detail
 }

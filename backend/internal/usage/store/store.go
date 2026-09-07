@@ -34,6 +34,13 @@ func New(writer, reader *sql.DB) *Store {
 	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
 }
 
+// NewTx binds usage operations to a transaction connection owned by a composition-level
+// coordinator. It exists for money flows that must update billing rows and credit lots in
+// one SQLite transaction without either context reading the other's tables.
+func NewTx(conn *sql.Conn) *Store {
+	return &Store{write: sqlc.New(conn), read: sqlc.New(conn)}
+}
+
 // InWriteTx runs fn against a store bound to one write transaction.
 //
 // BEGIN IMMEDIATE is the point: SQLite would otherwise start a deferred transaction that
@@ -126,12 +133,12 @@ func (s *Store) InsertLot(ctx context.Context, lot usage.Lot) error {
 	return nil
 }
 
-func (s *Store) InsertLotIfAbsent(ctx context.Context, lot usage.Lot) error {
+func (s *Store) InsertLotIfAbsent(ctx context.Context, lot usage.Lot) (bool, error) {
 	expires := sql.NullString{}
 	if lot.ExpiresAt != nil {
 		expires = sql.NullString{String: formatTime(*lot.ExpiresAt), Valid: true}
 	}
-	err := s.write.InsertLotIfAbsent(ctx, sqlc.InsertLotIfAbsentParams{
+	rows, err := s.write.InsertLotIfAbsent(ctx, sqlc.InsertLotIfAbsentParams{
 		ID:        lot.ID,
 		UserID:    lot.UserID,
 		Kind:      string(lot.Kind),
@@ -141,9 +148,9 @@ func (s *Store) InsertLotIfAbsent(ctx context.Context, lot usage.Lot) error {
 		CreatedAt: formatTime(lot.CreatedAt),
 	})
 	if err != nil {
-		return fmt.Errorf("insert credit lot if absent: %w", err)
+		return false, fmt.Errorf("insert credit lot if absent: %w", err)
 	}
-	return nil
+	return rows > 0, nil
 }
 
 func (s *Store) RaiseLot(ctx context.Context, lotID string, credits int) error {

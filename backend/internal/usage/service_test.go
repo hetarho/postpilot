@@ -86,13 +86,13 @@ func (f *fakeStore) InsertLot(_ context.Context, lot Lot) error {
 	return nil
 }
 
-func (f *fakeStore) InsertLotIfAbsent(ctx context.Context, lot Lot) error {
+func (f *fakeStore) InsertLotIfAbsent(ctx context.Context, lot Lot) (bool, error) {
 	for _, existing := range f.lots {
 		if existing.ID == lot.ID {
-			return nil
+			return false, nil
 		}
 	}
-	return f.InsertLot(ctx, lot)
+	return true, f.InsertLot(ctx, lot)
 }
 
 func (f *fakeStore) RaiseLot(_ context.Context, lotID string, credits int) error {
@@ -355,10 +355,10 @@ func TestBillingCreditOperationsPreserveLotInvariants(t *testing.T) {
 	if err := svc.VoidUntouchedLot(ctx, purchasedID); !errors.Is(err, ErrLotTouched) {
 		t.Fatalf("touched void = %v, want ErrLotTouched", err)
 	}
-	if err := svc.GrantBonusOnce(ctx, "payment-method:alice", "alice", 100); err != nil {
+	if created, err := svc.GrantBonusOnce(ctx, "payment-method:alice", "alice", 100); err != nil || !created {
 		t.Fatalf("GrantBonusOnce: %v", err)
 	}
-	if err := svc.GrantBonusOnce(ctx, "payment-method:alice", "alice", 100); err != nil {
+	if created, err := svc.GrantBonusOnce(ctx, "payment-method:alice", "alice", 100); err != nil || created {
 		t.Fatalf("GrantBonusOnce retry: %v", err)
 	}
 	if got := len(store.lots); got != 3 {

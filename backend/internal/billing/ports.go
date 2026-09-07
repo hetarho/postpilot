@@ -9,12 +9,15 @@ import (
 )
 
 type Store interface {
-	InWriteTx(ctx context.Context, fn func(Store) error) error
+	InWriteTx(ctx context.Context, fn func(Store, Credits) error) error
 	Subscription(ctx context.Context, userID string) (Subscription, bool, error)
 	PaymentMethod(ctx context.Context, userID string) (PaymentMethod, bool, error)
 	Events(ctx context.Context, userID string, limit int) ([]Event, error)
 	Purchases(ctx context.Context, userID string) ([]Purchase, error)
 	InsertProviderNotification(ctx context.Context, notification ProviderNotification) error
+	UpsertPaymentMethod(ctx context.Context, method PaymentMethod) error
+	DeletePaymentMethod(ctx context.Context, userID string) error
+	InsertEvent(ctx context.Context, event Event) error
 }
 
 type Provider interface {
@@ -35,7 +38,7 @@ type Credits interface {
 	OpenPurchasedLot(ctx context.Context, userID string, credits int) (lotID string, err error)
 	VoidUntouchedLot(ctx context.Context, lotID string) error
 	RestoreLot(ctx context.Context, lotID string, credits int) error
-	GrantBonusOnce(ctx context.Context, id, userID string, credits int) error
+	GrantBonusOnce(ctx context.Context, id, userID string, credits int) (created bool, err error)
 }
 
 type Plans interface {

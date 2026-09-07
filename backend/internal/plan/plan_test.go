@@ -302,3 +302,9 @@ func TestInsufficientCreditsCarriesItsWholeExplanation(t *testing.T) {
 		}
 	}
 }
+
+func TestPaymentMethodBonusCredits(t *testing.T) {
+	if plan.PaymentMethodBonusCredits != 100 {
+		t.Fatalf("PaymentMethodBonusCredits = %d, want 100", plan.PaymentMethodBonusCredits)
+	}
+}

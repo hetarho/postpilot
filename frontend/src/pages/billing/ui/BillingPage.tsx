@@ -1,11 +1,31 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMyBilling } from '@/entities/subscription'
+import { RegisterPaymentMethodButton } from '@/features/register-payment-method'
+import { RemovePaymentMethodButton } from '@/features/remove-payment-method'
+import { formatDate } from '@/shared/lib'
 import { Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 export function BillingPage() {
   const { t } = useTranslation(['billing', 'common'])
   const { myBilling, isPending, isError } = useMyBilling()
+  const navigate = useNavigate()
+  const initialRegistration = useRouterState({
+    select: (state) => state.location.state.billingRegistration,
+  })
+  const [registration] = useState(initialRegistration)
+  const noticeCleared = useRef(false)
+
+  useEffect(() => {
+    if (!registration || noticeCleared.current) return
+    noticeCleared.current = true
+    void navigate({
+      to: '/billing',
+      replace: true,
+      state: (previous) => ({ ...previous, billingRegistration: undefined }),
+    })
+  }, [navigate, registration])
 
   return (
     <main className={pageStyles()}>
@@ -13,6 +33,16 @@ export function BillingPage() {
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('description', { ns: 'billing' })}
       </Typography>
+
+      {registration && (
+        <Notice tone="success" role="status" className="mt-6">
+          {t(registration.bonusGranted ? 'registration.doneWithBonus' : 'registration.done', {
+            ns: 'billing',
+            label: registration.cardLabel,
+            credits: 100,
+          })}
+        </Notice>
+      )}
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -46,9 +76,34 @@ export function BillingPage() {
               {t('paymentMethod.heading', { ns: 'billing' })}
             </Typography>
             {!myBilling.paymentMethod && (
-              <Typography variant="body" className="text-content-secondary">
-                {t('paymentMethod.empty', { ns: 'billing' })}
-              </Typography>
+              <>
+                <Typography variant="body" className="text-content-secondary">
+                  {t('paymentMethod.empty', { ns: 'billing' })}
+                </Typography>
+                <RegisterPaymentMethodButton customerKey={myBilling.customerKey} />
+              </>
+            )}
+            {myBilling.paymentMethod && (
+              <>
+                <dl className="grid gap-1">
+                  <dt className={typographyStyles({ variant: 'label' })}>
+                    {t('paymentMethod.card', { ns: 'billing' })}
+                  </dt>
+                  <dd className={typographyStyles({ variant: 'fieldTitle' })}>
+                    {myBilling.paymentMethod.cardLabel}
+                  </dd>
+                  <dt className={typographyStyles({ variant: 'label', className: 'mt-2' })}>
+                    {t('paymentMethod.registeredAt', { ns: 'billing' })}
+                  </dt>
+                  <dd className={typographyStyles({ variant: 'body' })}>
+                    {formatDate(myBilling.paymentMethod.registeredAt)}
+                  </dd>
+                </dl>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <RegisterPaymentMethodButton customerKey={myBilling.customerKey} registered />
+                  <RemovePaymentMethodButton />
+                </div>
+              </>
             )}
           </section>
           <section className="grid gap-2">

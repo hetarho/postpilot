@@ -16,18 +16,33 @@ import (
 const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
-	writer *sql.DB
-	write  *sqlc.Queries
-	read   *sqlc.Queries
+	writer       *sql.DB
+	write        *sqlc.Queries
+	read         *sqlc.Queries
+	credits      billing.Credits
+	creditsForTx func(*sql.Conn) billing.Credits
 }
 
 func New(writer, reader *sql.DB) *Store {
 	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
 }
 
-func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store) error) error {
+// SetCreditsForTx attaches the usage adapter at the composition root. The factory binds
+// that adapter to this store's transaction connection, so billing can atomically record a
+// method registration and its once-only credit lot without either store importing the other.
+func (s *Store) SetCreditsForTx(factory func(*sql.Conn) billing.Credits) {
+	s.creditsForTx = factory
+}
+
+func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits) error) error {
 	if s.writer == nil {
-		return fn(s)
+		if s.credits == nil {
+			return errors.New("billing transaction credits are not configured")
+		}
+		return fn(s, s.credits)
+	}
+	if s.creditsForTx == nil {
+		return errors.New("billing transaction credit factory is not configured")
 	}
 	conn, err := s.writer.Conn(ctx)
 	if err != nil {
@@ -37,8 +52,13 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store) error) err
 	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
 		return fmt.Errorf("begin billing transaction: %w", err)
 	}
-	scoped := &Store{write: sqlc.New(conn), read: sqlc.New(conn)}
-	if err := fn(scoped); err != nil {
+	credits := s.creditsForTx(conn)
+	if credits == nil {
+		_ = rollback(ctx, conn)
+		return errors.New("billing transaction credit factory returned nil")
+	}
+	scoped := &Store{write: sqlc.New(conn), read: sqlc.New(conn), credits: credits}
+	if err := fn(scoped, credits); err != nil {
 		if rollbackErr := rollback(ctx, conn); rollbackErr != nil {
 			return errors.Join(err, rollbackErr)
 		}
@@ -46,6 +66,40 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store) error) err
 	}
 	if _, err := conn.ExecContext(ctx, "COMMIT"); err != nil {
 		return fmt.Errorf("commit billing transaction: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) UpsertPaymentMethod(ctx context.Context, method billing.PaymentMethod) error {
+	err := s.write.UpsertPaymentMethod(ctx, sqlc.UpsertPaymentMethodParams{
+		UserID: method.UserID, Provider: method.Provider, BillingKey: method.BillingKey,
+		CustomerKey: method.CustomerKey, CardLabel: method.CardLabel,
+		RegisteredAt: formatTime(method.RegisteredAt),
+	})
+	if err != nil {
+		return fmt.Errorf("upsert payment method: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) DeletePaymentMethod(ctx context.Context, userID string) error {
+	if err := s.write.DeletePaymentMethod(ctx, userID); err != nil {
+		return fmt.Errorf("delete payment method: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) InsertEvent(ctx context.Context, event billing.Event) error {
+	err := s.write.InsertBillingEvent(ctx, sqlc.InsertBillingEventParams{
+		UserID: event.UserID, Kind: event.Kind, Tier: planNull(event.Tier),
+		Term: termNull(event.Term), Credits: nullableInt(event.Credits),
+		UsdCents: nullableInt(event.USDCents), KrwPerUsdE4: nullableInt64(event.KRWPerUSDE4),
+		RateDate: stringNull(event.RateDate), Krw: nullableInt(event.KRW),
+		ProviderPaymentKey: stringNull(event.ProviderPaymentKey), OrderID: stringNull(event.OrderID),
+		Note: stringNull(event.Note), CreatedAt: formatTime(event.CreatedAt),
+	})
+	if err != nil {
+		return fmt.Errorf("insert billing event: %w", err)
 	}
 	return nil
 }
@@ -227,6 +281,36 @@ func stringPtr(value sql.NullString) *string {
 }
 func nullString(value string) sql.NullString {
 	return sql.NullString{String: value, Valid: value != ""}
+}
+func stringNull(value *string) sql.NullString {
+	if value == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: *value, Valid: true}
+}
+func nullableInt(value *int) sql.NullInt64 {
+	if value == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: int64(*value), Valid: true}
+}
+func nullableInt64(value *int64) sql.NullInt64 {
+	if value == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: *value, Valid: true}
+}
+func planNull(value *plan.Plan) sql.NullString {
+	if value == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: value.String(), Valid: true}
+}
+func termNull(value *billing.Term) sql.NullString {
+	if value == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: string(*value), Valid: true}
 }
 func parseTime(value string) (time.Time, error) {
 	parsed, err := time.Parse(time.RFC3339Nano, value)

@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/billing.proto.
  */
 export const file_postpilot_v1_billing: GenFile = /*@__PURE__*/
-  fileDesc("Chpwb3N0cGlsb3QvdjEvYmlsbGluZy5wcm90bxIMcG9zdHBpbG90LnYxIqUCChNCaWxsaW5nU3Vic2NyaXB0aW9uEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0SEQoJYW5jaG9yX2F0GAMgASgJEhIKCnRlcm1fc3RhcnQYBCABKAkSEAoIdGVybV9lbmQYBSABKAkSFQoNbmV4dF9ncmFudF9hdBgGIAEoCRISCgphdXRvX3JlbmV3GAcgASgIEioKDnNjaGVkdWxlZF9wbGFuGAggASgOMhIucG9zdHBpbG90LnYxLlBsYW4SKgoOc2NoZWR1bGVkX3Rlcm0YCSABKA4yEi5wb3N0cGlsb3QudjEuVGVybRIOCgZzdGF0dXMYCiABKAkiQQoUQmlsbGluZ1BheW1lbnRNZXRob2QSEgoKY2FyZF9sYWJlbBgBIAEoCRIVCg1yZWdpc3RlcmVkX2F0GAIgASgJIpoCCgxCaWxsaW5nRXZlbnQSCgoCaWQYASABKAMSDAoEa2luZBgCIAEoCRIgCgRwbGFuGAMgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgEIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtEg8KB2NyZWRpdHMYBSABKAUSEQoJdXNkX2NlbnRzGAYgASgFEhYKDmtyd19wZXJfdXNkX2U0GAcgASgDEhEKCXJhdGVfZGF0ZRgIIAEoCRILCgNrcncYCSABKAMSHAoUcHJvdmlkZXJfcGF5bWVudF9rZXkYCiABKAkSEAoIb3JkZXJfaWQYCyABKAkSDAoEbm90ZRgMIAEoCRISCgpjcmVhdGVkX2F0GA0gASgJIrcBCg9CaWxsaW5nUHVyY2hhc2USCgoCaWQYASABKAkSDgoGbG90X2lkGAIgASgJEg8KB2NyZWRpdHMYAyABKAUSEQoJdXNkX2NlbnRzGAQgASgFEgsKA2tydxgFIAEoAxIcChRwcm92aWRlcl9wYXltZW50X2tleRgGIAEoCRIQCghvcmRlcl9pZBgHIAEoCRISCgpjaGFyZ2VkX2F0GAggASgJEhMKC3JlZnVuZGVkX2F0GAkgASgJIhUKE0dldE15QmlsbGluZ1JlcXVlc3QigAIKFEdldE15QmlsbGluZ1Jlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uEjoKDnBheW1lbnRfbWV0aG9kGAIgASgLMiIucG9zdHBpbG90LnYxLkJpbGxpbmdQYXltZW50TWV0aG9kEisKB2hpc3RvcnkYAyADKAsyGi5wb3N0cGlsb3QudjEuQmlsbGluZ0V2ZW50EjAKCXB1cmNoYXNlcxgEIAMoCzIdLnBvc3RwaWxvdC52MS5CaWxsaW5nUHVyY2hhc2USFAoMY3VzdG9tZXJfa2V5GAUgASgJIlcKEVF1b3RlUHJpY2VSZXF1ZXN0EiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0iXwoSUXVvdGVQcmljZVJlc3BvbnNlEhEKCXVzZF9jZW50cxgBIAEoBRILCgNrcncYAiABKAMSFgoOa3J3X3Blcl91c2RfZTQYAyABKAMSEQoJcmF0ZV9kYXRlGAQgASgJKj8KBFRlcm0SFAoQVEVSTV9VTlNQRUNJRklFRBAAEhAKDFRFUk1fTU9OVEhMWRABEg8KC1RFUk1fQU5OVUFMEAIyvAEKDkJpbGxpbmdTZXJ2aWNlElcKDEdldE15QmlsbGluZxIhLnBvc3RwaWxvdC52MS5HZXRNeUJpbGxpbmdSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkdldE15QmlsbGluZ1Jlc3BvbnNlIgASUQoKUXVvdGVQcmljZRIfLnBvc3RwaWxvdC52MS5RdW90ZVByaWNlUmVxdWVzdBogLnBvc3RwaWxvdC52MS5RdW90ZVByaWNlUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_plan]);
+  fileDesc("Chpwb3N0cGlsb3QvdjEvYmlsbGluZy5wcm90bxIMcG9zdHBpbG90LnYxIqUCChNCaWxsaW5nU3Vic2NyaXB0aW9uEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0SEQoJYW5jaG9yX2F0GAMgASgJEhIKCnRlcm1fc3RhcnQYBCABKAkSEAoIdGVybV9lbmQYBSABKAkSFQoNbmV4dF9ncmFudF9hdBgGIAEoCRISCgphdXRvX3JlbmV3GAcgASgIEioKDnNjaGVkdWxlZF9wbGFuGAggASgOMhIucG9zdHBpbG90LnYxLlBsYW4SKgoOc2NoZWR1bGVkX3Rlcm0YCSABKA4yEi5wb3N0cGlsb3QudjEuVGVybRIOCgZzdGF0dXMYCiABKAkiQQoUQmlsbGluZ1BheW1lbnRNZXRob2QSEgoKY2FyZF9sYWJlbBgBIAEoCRIVCg1yZWdpc3RlcmVkX2F0GAIgASgJIpoCCgxCaWxsaW5nRXZlbnQSCgoCaWQYASABKAMSDAoEa2luZBgCIAEoCRIgCgRwbGFuGAMgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgEIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtEg8KB2NyZWRpdHMYBSABKAUSEQoJdXNkX2NlbnRzGAYgASgFEhYKDmtyd19wZXJfdXNkX2U0GAcgASgDEhEKCXJhdGVfZGF0ZRgIIAEoCRILCgNrcncYCSABKAMSHAoUcHJvdmlkZXJfcGF5bWVudF9rZXkYCiABKAkSEAoIb3JkZXJfaWQYCyABKAkSDAoEbm90ZRgMIAEoCRISCgpjcmVhdGVkX2F0GA0gASgJIrcBCg9CaWxsaW5nUHVyY2hhc2USCgoCaWQYASABKAkSDgoGbG90X2lkGAIgASgJEg8KB2NyZWRpdHMYAyABKAUSEQoJdXNkX2NlbnRzGAQgASgFEgsKA2tydxgFIAEoAxIcChRwcm92aWRlcl9wYXltZW50X2tleRgGIAEoCRIQCghvcmRlcl9pZBgHIAEoCRISCgpjaGFyZ2VkX2F0GAggASgJEhMKC3JlZnVuZGVkX2F0GAkgASgJIhUKE0dldE15QmlsbGluZ1JlcXVlc3QigAIKFEdldE15QmlsbGluZ1Jlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uEjoKDnBheW1lbnRfbWV0aG9kGAIgASgLMiIucG9zdHBpbG90LnYxLkJpbGxpbmdQYXltZW50TWV0aG9kEisKB2hpc3RvcnkYAyADKAsyGi5wb3N0cGlsb3QudjEuQmlsbGluZ0V2ZW50EjAKCXB1cmNoYXNlcxgEIAMoCzIdLnBvc3RwaWxvdC52MS5CaWxsaW5nUHVyY2hhc2USFAoMY3VzdG9tZXJfa2V5GAUgASgJIkYKHFJlZ2lzdGVyUGF5bWVudE1ldGhvZFJlcXVlc3QSEAoIYXV0aF9rZXkYASABKAkSFAoMY3VzdG9tZXJfa2V5GAIgASgJInIKHVJlZ2lzdGVyUGF5bWVudE1ldGhvZFJlc3BvbnNlEjoKDnBheW1lbnRfbWV0aG9kGAEgASgLMiIucG9zdHBpbG90LnYxLkJpbGxpbmdQYXltZW50TWV0aG9kEhUKDWJvbnVzX2dyYW50ZWQYAiABKAgiHAoaUmVtb3ZlUGF5bWVudE1ldGhvZFJlcXVlc3QiHQobUmVtb3ZlUGF5bWVudE1ldGhvZFJlc3BvbnNlIlcKEVF1b3RlUHJpY2VSZXF1ZXN0EiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0iXwoSUXVvdGVQcmljZVJlc3BvbnNlEhEKCXVzZF9jZW50cxgBIAEoBRILCgNrcncYAiABKAMSFgoOa3J3X3Blcl91c2RfZTQYAyABKAMSEQoJcmF0ZV9kYXRlGAQgASgJKj8KBFRlcm0SFAoQVEVSTV9VTlNQRUNJRklFRBAAEhAKDFRFUk1fTU9OVEhMWRABEg8KC1RFUk1fQU5OVUFMEAIyngMKDkJpbGxpbmdTZXJ2aWNlElcKDEdldE15QmlsbGluZxIhLnBvc3RwaWxvdC52MS5HZXRNeUJpbGxpbmdSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkdldE15QmlsbGluZ1Jlc3BvbnNlIgAScgoVUmVnaXN0ZXJQYXltZW50TWV0aG9kEioucG9zdHBpbG90LnYxLlJlZ2lzdGVyUGF5bWVudE1ldGhvZFJlcXVlc3QaKy5wb3N0cGlsb3QudjEuUmVnaXN0ZXJQYXltZW50TWV0aG9kUmVzcG9uc2UiABJsChNSZW1vdmVQYXltZW50TWV0aG9kEigucG9zdHBpbG90LnYxLlJlbW92ZVBheW1lbnRNZXRob2RSZXF1ZXN0GikucG9zdHBpbG90LnYxLlJlbW92ZVBheW1lbnRNZXRob2RSZXNwb25zZSIAElEKClF1b3RlUHJpY2USHy5wb3N0cGlsb3QudjEuUXVvdGVQcmljZVJlcXVlc3QaIC5wb3N0cGlsb3QudjEuUXVvdGVQcmljZVJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_plan]);
 
 /**
  * @generated from message postpilot.v1.BillingSubscription
@@ -293,6 +293,76 @@ export const GetMyBillingResponseSchema: GenMessage<GetMyBillingResponse> = /*@_
   messageDesc(file_postpilot_v1_billing, 5);
 
 /**
+ * @generated from message postpilot.v1.RegisterPaymentMethodRequest
+ */
+export type RegisterPaymentMethodRequest = Message<"postpilot.v1.RegisterPaymentMethodRequest"> & {
+  /**
+   * @generated from field: string auth_key = 1;
+   */
+  authKey: string;
+
+  /**
+   * @generated from field: string customer_key = 2;
+   */
+  customerKey: string;
+};
+
+/**
+ * Describes the message postpilot.v1.RegisterPaymentMethodRequest.
+ * Use `create(RegisterPaymentMethodRequestSchema)` to create a new message.
+ */
+export const RegisterPaymentMethodRequestSchema: GenMessage<RegisterPaymentMethodRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 6);
+
+/**
+ * @generated from message postpilot.v1.RegisterPaymentMethodResponse
+ */
+export type RegisterPaymentMethodResponse = Message<"postpilot.v1.RegisterPaymentMethodResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.BillingPaymentMethod payment_method = 1;
+   */
+  paymentMethod?: BillingPaymentMethod | undefined;
+
+  /**
+   * @generated from field: bool bonus_granted = 2;
+   */
+  bonusGranted: boolean;
+};
+
+/**
+ * Describes the message postpilot.v1.RegisterPaymentMethodResponse.
+ * Use `create(RegisterPaymentMethodResponseSchema)` to create a new message.
+ */
+export const RegisterPaymentMethodResponseSchema: GenMessage<RegisterPaymentMethodResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 7);
+
+/**
+ * @generated from message postpilot.v1.RemovePaymentMethodRequest
+ */
+export type RemovePaymentMethodRequest = Message<"postpilot.v1.RemovePaymentMethodRequest"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.RemovePaymentMethodRequest.
+ * Use `create(RemovePaymentMethodRequestSchema)` to create a new message.
+ */
+export const RemovePaymentMethodRequestSchema: GenMessage<RemovePaymentMethodRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 8);
+
+/**
+ * @generated from message postpilot.v1.RemovePaymentMethodResponse
+ */
+export type RemovePaymentMethodResponse = Message<"postpilot.v1.RemovePaymentMethodResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.RemovePaymentMethodResponse.
+ * Use `create(RemovePaymentMethodResponseSchema)` to create a new message.
+ */
+export const RemovePaymentMethodResponseSchema: GenMessage<RemovePaymentMethodResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 9);
+
+/**
  * @generated from message postpilot.v1.QuotePriceRequest
  */
 export type QuotePriceRequest = Message<"postpilot.v1.QuotePriceRequest"> & {
@@ -312,7 +382,7 @@ export type QuotePriceRequest = Message<"postpilot.v1.QuotePriceRequest"> & {
  * Use `create(QuotePriceRequestSchema)` to create a new message.
  */
 export const QuotePriceRequestSchema: GenMessage<QuotePriceRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_billing, 6);
+  messageDesc(file_postpilot_v1_billing, 10);
 
 /**
  * @generated from message postpilot.v1.QuotePriceResponse
@@ -344,7 +414,7 @@ export type QuotePriceResponse = Message<"postpilot.v1.QuotePriceResponse"> & {
  * Use `create(QuotePriceResponseSchema)` to create a new message.
  */
 export const QuotePriceResponseSchema: GenMessage<QuotePriceResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_billing, 7);
+  messageDesc(file_postpilot_v1_billing, 11);
 
 /**
  * @generated from enum postpilot.v1.Term
@@ -386,6 +456,22 @@ export const BillingService: GenService<{
     methodKind: "unary";
     input: typeof GetMyBillingRequestSchema;
     output: typeof GetMyBillingResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.BillingService.RegisterPaymentMethod
+   */
+  registerPaymentMethod: {
+    methodKind: "unary";
+    input: typeof RegisterPaymentMethodRequestSchema;
+    output: typeof RegisterPaymentMethodResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.BillingService.RemovePaymentMethod
+   */
+  removePaymentMethod: {
+    methodKind: "unary";
+    input: typeof RemovePaymentMethodRequestSchema;
+    output: typeof RemovePaymentMethodResponseSchema;
   },
   /**
    * @generated from rpc postpilot.v1.BillingService.QuotePrice

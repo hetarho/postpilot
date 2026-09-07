@@ -67,6 +67,11 @@ const microusdPerCredit = 10_000
 const (
 	ChargeBase       = 2
 	ChargeMultiplier = 3
+
+	// PaymentMethodBonusCredits is the one non-expiring grant earned by registering a
+	// payment method (BILLING-10, QUOTA-9). The usage context persists it; billing decides
+	// when the account qualifies.
+	PaymentMethodBonusCredits = 100
 )
 
 // monthlyCredits is the product rule for what a tier is granted each month. Zero means

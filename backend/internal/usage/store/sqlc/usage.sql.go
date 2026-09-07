@@ -187,7 +187,7 @@ func (q *Queries) InsertLot(ctx context.Context, arg InsertLotParams) error {
 	return err
 }
 
-const insertLotIfAbsent = `-- name: InsertLotIfAbsent :exec
+const insertLotIfAbsent = `-- name: InsertLotIfAbsent :execrows
 INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO NOTHING
@@ -206,8 +206,8 @@ type InsertLotIfAbsentParams struct {
 // For a grant whose id is derived from what it is FOR rather than randomly: the signup
 // monthly window today and the payment-method bonus later. Re-running the operation must
 // not mint a second lot.
-func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentParams) error {
-	_, err := q.db.ExecContext(ctx, insertLotIfAbsent,
+func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, insertLotIfAbsent,
 		arg.ID,
 		arg.UserID,
 		arg.Kind,
@@ -216,7 +216,10 @@ func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentPa
 		arg.ExpiresAt,
 		arg.CreatedAt,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const lotsInConsumptionOrder = `-- name: LotsInConsumptionOrder :many

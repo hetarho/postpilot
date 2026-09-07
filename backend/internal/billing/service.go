@@ -65,6 +65,77 @@ func (s *Service) GetMyBilling(ctx context.Context, userID string) (AccountBilli
 	return result, nil
 }
 
+func (s *Service) RegisterPaymentMethod(ctx context.Context, userID, authKey, customerKey string) (PaymentMethodRegistration, error) {
+	if !s.Enabled() {
+		return PaymentMethodRegistration{}, ErrUnavailable
+	}
+	email, verified, err := s.accounts.VerifiedEmail(ctx, userID)
+	if err != nil {
+		return PaymentMethodRegistration{}, err
+	}
+	if !verified || email == "" {
+		return PaymentMethodRegistration{}, ErrEmailVerificationRequired
+	}
+	expectedKey := CustomerKey(userID)
+	if customerKey != expectedKey {
+		return PaymentMethodRegistration{}, ErrCustomerKeyMismatch
+	}
+	issued, err := s.provider.IssueBillingKey(ctx, authKey, customerKey)
+	if err != nil {
+		return PaymentMethodRegistration{}, err
+	}
+	if issued.CustomerKey != expectedKey {
+		return PaymentMethodRegistration{}, ErrCustomerKeyMismatch
+	}
+	now := s.now()
+	method := PaymentMethod{
+		UserID: userID, Provider: "toss", BillingKey: issued.Value,
+		CustomerKey: expectedKey, CardLabel: issued.CardLabel, RegisteredAt: now,
+	}
+	result := PaymentMethodRegistration{PaymentMethod: method}
+	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits) error {
+		if err := tx.UpsertPaymentMethod(ctx, method); err != nil {
+			return err
+		}
+		note := issued.CardLabel
+		if err := tx.InsertEvent(ctx, Event{UserID: userID, Kind: "method_registered", Note: &note, CreatedAt: now}); err != nil {
+			return err
+		}
+		created, err := credits.GrantBonusOnce(
+			ctx, "payment-method-bonus:"+userID, userID, plan.PaymentMethodBonusCredits,
+		)
+		if err != nil {
+			return err
+		}
+		if created {
+			amount := plan.PaymentMethodBonusCredits
+			if err := tx.InsertEvent(ctx, Event{UserID: userID, Kind: "grant", Credits: &amount, CreatedAt: now}); err != nil {
+				return err
+			}
+		}
+		result.BonusGranted = created
+		return nil
+	})
+	if err != nil {
+		return PaymentMethodRegistration{}, err
+	}
+	return result, nil
+}
+
+func (s *Service) RemovePaymentMethod(ctx context.Context, userID string) error {
+	if !s.Enabled() {
+		return ErrUnavailable
+	}
+	subscription, found, err := s.store.Subscription(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if found && subscription.Status == "active" && subscription.AutoRenew {
+		return ErrSubscriptionNeedsMethod
+	}
+	return s.store.DeletePaymentMethod(ctx, userID)
+}
+
 func (s *Service) QuotePrice(ctx context.Context, tier plan.Plan, term Term) (Quote, error) {
 	if !s.Enabled() {
 		return Quote{}, ErrUnavailable

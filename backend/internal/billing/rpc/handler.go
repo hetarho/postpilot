@@ -45,6 +45,35 @@ func (h *Handler) GetMyBilling(ctx context.Context, _ *connect.Request[postpilot
 	return connect.NewResponse(response), nil
 }
 
+func (h *Handler) RegisterPaymentMethod(ctx context.Context, req *connect.Request[postpilotv1.RegisterPaymentMethodRequest]) (*connect.Response[postpilotv1.RegisterPaymentMethodResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	registered, err := h.service.RegisterPaymentMethod(ctx, userID, req.Msg.GetAuthKey(), req.Msg.GetCustomerKey())
+	if err != nil {
+		return nil, registrationError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.RegisterPaymentMethodResponse{
+		PaymentMethod: &postpilotv1.BillingPaymentMethod{
+			CardLabel:    registered.PaymentMethod.CardLabel,
+			RegisteredAt: instant(registered.PaymentMethod.RegisteredAt),
+		},
+		BonusGranted: registered.BonusGranted,
+	}), nil
+}
+
+func (h *Handler) RemovePaymentMethod(ctx context.Context, _ *connect.Request[postpilotv1.RemovePaymentMethodRequest]) (*connect.Response[postpilotv1.RemovePaymentMethodResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	if err := h.service.RemovePaymentMethod(ctx, userID); err != nil {
+		return nil, removalError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.RemovePaymentMethodResponse{}), nil
+}
+
 func (h *Handler) QuotePrice(ctx context.Context, req *connect.Request[postpilotv1.QuotePriceRequest]) (*connect.Response[postpilotv1.QuotePriceResponse], error) {
 	if _, ok := auth.UserFromContext(ctx); !ok {
 		return nil, authRequired()
@@ -143,6 +172,33 @@ func termToProto(value billing.Term) postpilotv1.Term {
 	return postpilotv1.Term_TERM_UNSPECIFIED
 }
 func instant(value time.Time) string { return value.UTC().Format(time.RFC3339) }
+
+func registrationError(userID string, err error) error {
+	switch {
+	case errors.Is(err, billing.ErrUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+	case errors.Is(err, billing.ErrEmailVerificationRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "verified email required", "EMAIL_VERIFICATION_REQUIRED", nil)
+	case errors.Is(err, billing.ErrCustomerKeyMismatch):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "customer key does not match account", "CUSTOMER_KEY_MISMATCH", nil)
+	default:
+		slog.Error("payment method registration failed", "user_id", userID, "err", err)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not register payment method", "UNKNOWN_FAILURE", nil)
+	}
+}
+
+func removalError(userID string, err error) error {
+	switch {
+	case errors.Is(err, billing.ErrUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+	case errors.Is(err, billing.ErrSubscriptionNeedsMethod):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "subscription needs a payment method", "SUBSCRIPTION_NEEDS_METHOD", nil)
+	default:
+		slog.Error("payment method removal failed", "user_id", userID, "err", err)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not remove payment method", "UNKNOWN_FAILURE", nil)
+	}
+}
+
 func authRequired() error {
 	return rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
 }

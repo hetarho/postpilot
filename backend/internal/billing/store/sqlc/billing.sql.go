@@ -10,6 +10,15 @@ import (
 	"database/sql"
 )
 
+const deletePaymentMethod = `-- name: DeletePaymentMethod :exec
+DELETE FROM payment_methods WHERE user_id = ?
+`
+
+func (q *Queries) DeletePaymentMethod(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, deletePaymentMethod, userID)
+	return err
+}
+
 const getPaymentMethod = `-- name: GetPaymentMethod :one
 SELECT user_id, provider, billing_key, customer_key, card_label, registered_at
 FROM payment_methods WHERE user_id = ?
@@ -57,6 +66,48 @@ func (q *Queries) GetSubscription(ctx context.Context, userID string) (Subscript
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const insertBillingEvent = `-- name: InsertBillingEvent :exec
+INSERT INTO billing_events (
+    user_id, kind, tier, term, credits, usd_cents, krw_per_usd_e4, rate_date,
+    krw, provider_payment_key, order_id, note, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`
+
+type InsertBillingEventParams struct {
+	UserID             string
+	Kind               string
+	Tier               sql.NullString
+	Term               sql.NullString
+	Credits            sql.NullInt64
+	UsdCents           sql.NullInt64
+	KrwPerUsdE4        sql.NullInt64
+	RateDate           sql.NullString
+	Krw                sql.NullInt64
+	ProviderPaymentKey sql.NullString
+	OrderID            sql.NullString
+	Note               sql.NullString
+	CreatedAt          string
+}
+
+func (q *Queries) InsertBillingEvent(ctx context.Context, arg InsertBillingEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertBillingEvent,
+		arg.UserID,
+		arg.Kind,
+		arg.Tier,
+		arg.Term,
+		arg.Credits,
+		arg.UsdCents,
+		arg.KrwPerUsdE4,
+		arg.RateDate,
+		arg.Krw,
+		arg.ProviderPaymentKey,
+		arg.OrderID,
+		arg.Note,
+		arg.CreatedAt,
+	)
+	return err
 }
 
 const insertProviderNotification = `-- name: InsertProviderNotification :exec
@@ -175,4 +226,37 @@ func (q *Queries) ListCreditPurchases(ctx context.Context, userID string) ([]Cre
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertPaymentMethod = `-- name: UpsertPaymentMethod :exec
+INSERT INTO payment_methods (
+    user_id, provider, billing_key, customer_key, card_label, registered_at
+) VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(user_id) DO UPDATE SET
+    provider = excluded.provider,
+    billing_key = excluded.billing_key,
+    customer_key = excluded.customer_key,
+    card_label = excluded.card_label,
+    registered_at = excluded.registered_at
+`
+
+type UpsertPaymentMethodParams struct {
+	UserID       string
+	Provider     string
+	BillingKey   string
+	CustomerKey  string
+	CardLabel    string
+	RegisteredAt string
+}
+
+func (q *Queries) UpsertPaymentMethod(ctx context.Context, arg UpsertPaymentMethodParams) error {
+	_, err := q.db.ExecContext(ctx, upsertPaymentMethod,
+		arg.UserID,
+		arg.Provider,
+		arg.BillingKey,
+		arg.CustomerKey,
+		arg.CardLabel,
+		arg.RegisteredAt,
+	)
+	return err
 }

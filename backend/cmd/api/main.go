@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -212,6 +213,9 @@ func main() {
 	)
 	ledger.SetAnchors(usageAnchors{auth: authSvc})
 	billingStore := billingstore.New(handle.Writer, handle.Reader)
+	billingStore.SetCreditsForTx(func(conn *sql.Conn) billing.Credits {
+		return usage.NewService(usagestore.NewTx(conn), nil, 0)
+	})
 	var paymentProvider billing.Provider
 	var exchangeRates billing.Rates
 	if cfg.BillingEnabled {

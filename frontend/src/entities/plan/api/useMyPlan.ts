@@ -1,4 +1,5 @@
-import { useQuery } from '@connectrpc/connect-query'
+import type { Transport } from '@connectrpc/connect'
+import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query'
 import { PlanService } from '@/shared/api'
 import { PLAN_BALANCE_STALE_MS } from '@/shared/config'
 import type { MyPlan } from '../model/types'
@@ -22,4 +23,13 @@ export function useMyPlan(enabled = true): {
     { enabled, staleTime: PLAN_BALANCE_STALE_MS },
   )
   return { myPlan: toMyPlan(data), isPending, isError }
+}
+
+export function myPlanQueryKey(transport: Transport) {
+  return createConnectQueryKey({
+    schema: PlanService.method.getMyPlan,
+    input: {},
+    transport,
+    cardinality: 'finite',
+  })
 }

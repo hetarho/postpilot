@@ -68,10 +68,11 @@ func (s *Service) OpenMonthlyLot(ctx context.Context, userID string, tier plan.P
 		return errors.New("open monthly lot: invalid user, tier, or window")
 	}
 	credits := plan.MonthlyCredits(tier)
-	return s.store.InsertLotIfAbsent(ctx, Lot{
+	_, err := s.store.InsertLotIfAbsent(ctx, Lot{
 		ID: monthlyLotID(userID, start), UserID: userID, Kind: LotMonthly,
 		Granted: credits, Remaining: credits, ExpiresAt: &end, CreatedAt: s.now(),
 	})
+	return err
 }
 
 func (s *Service) RaiseMonthlyLot(ctx context.Context, userID string, credits int) error {
@@ -125,9 +126,9 @@ func (s *Service) RestoreLot(ctx context.Context, lotID string, credits int) err
 	return nil
 }
 
-func (s *Service) GrantBonusOnce(ctx context.Context, id, userID string, credits int) error {
+func (s *Service) GrantBonusOnce(ctx context.Context, id, userID string, credits int) (bool, error) {
 	if id == "" || userID == "" || credits <= 0 {
-		return errors.New("grant bonus: id, user, and positive credits are required")
+		return false, errors.New("grant bonus: id, user, and positive credits are required")
 	}
 	return s.store.InsertLotIfAbsent(ctx, Lot{ID: id, UserID: userID, Kind: LotBonus, Granted: credits, Remaining: credits, CreatedAt: s.now()})
 }
@@ -250,7 +251,7 @@ func (s *Service) renew(
 	// The lapsed lot is not deleted: it is already excluded from every balance by its own
 	// expiry, and keeping it leaves the grant history readable.
 	granted := plan.MonthlyCredits(acting)
-	if err := tx.InsertLotIfAbsent(ctx, Lot{
+	if _, err := tx.InsertLotIfAbsent(ctx, Lot{
 		ID: monthlyLotID(userID, start), UserID: userID, Kind: LotMonthly,
 		Granted: granted, Remaining: granted,
 		ExpiresAt: &end, CreatedAt: now,

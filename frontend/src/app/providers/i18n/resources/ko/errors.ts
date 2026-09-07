@@ -15,6 +15,11 @@ export const errors = {
   EMAIL_ALREADY_VERIFIED: '이미 인증된 이메일 주소가 있어요.',
   PASSWORD_NOT_SET: '이 계정에는 비밀번호가 없어요. 비밀번호 찾기를 이용해 주세요.',
   CURRENT_PASSWORD_WRONG: '현재 비밀번호가 맞지 않아요.',
+  EMAIL_VERIFICATION_REQUIRED: '결제 수단을 등록하려면 이메일 인증이 필요해요.',
+  CUSTOMER_KEY_MISMATCH: '결제 수단 등록 정보가 현재 계정과 맞지 않아요.',
+  SUBSCRIPTION_NEEDS_METHOD:
+    '자동 갱신 중인 구독에는 결제 수단이 필요해요. 먼저 구독을 취소해 주세요.',
+  BILLING_UNAVAILABLE: '현재 결제 기능을 사용할 수 없어요.',
   POST_NOT_FOUND: '글을 찾을 수 없어요.',
   POST_FORBIDDEN: '이 글에 접근할 수 없어요.',
   POST_BUSY: '이 글에서 다른 작업이 진행 중이에요.',

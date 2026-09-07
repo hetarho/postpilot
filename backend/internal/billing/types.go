@@ -5,10 +5,17 @@ package billing
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/base64"
+	"errors"
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
+)
+
+var (
+	ErrEmailVerificationRequired = errors.New("verified email required")
+	ErrCustomerKeyMismatch       = errors.New("customer key mismatch")
+	ErrSubscriptionNeedsMethod   = errors.New("active renewing subscription needs a payment method")
 )
 
 type Term string
@@ -90,6 +97,11 @@ type AccountBilling struct {
 	CustomerKey   string
 }
 
+type PaymentMethodRegistration struct {
+	PaymentMethod PaymentMethod
+	BonusGranted  bool
+}
+
 type BillingKey struct {
 	Value       string
 	CardLabel   string
@@ -138,7 +150,10 @@ func (e *ProviderError) Error() string { return e.Code + ": " + e.Message }
 // CustomerKey is opaque, stable, and contains no account identifier Toss could expose.
 func CustomerKey(userID string) string {
 	sum := sha256.Sum256([]byte("postpilot:" + userID))
-	return hex.EncodeToString(sum[:])
+	// Toss's current JS SDK caps customerKey at 50 characters and requires at least one
+	// permitted special character. The prefix guarantees `_`; raw base64url keeps the full
+	// 256-bit digest while fitting in 46 characters.
+	return "pp_" + base64.RawURLEncoding.EncodeToString(sum[:])
 }
 
 // KRWFor converts an all-in USD-cent price through a KRW/USD rate stored at four decimal
