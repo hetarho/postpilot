@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { EstimatorCombo, EstimatorComboName } from '@/entities/plan'
 import { PLAN_ESTIMATE_BOUNDS } from '@/shared/config'
-import { SegmentedControl, Slider, Typography } from '@/shared/ui'
+import { PromoFrame, SegmentedControl, Slider, Typography } from '@/shared/ui'
 import type { EstimateInput } from '../model/estimate-input'
 
 /** The three sliders and the combo switch above the rungs.
@@ -28,7 +28,9 @@ export function PlanEstimator({
   const { t } = useTranslation('plans')
 
   return (
-    <div className="bg-surface-raised mt-8 rounded-lg p-4">
+    // The estimator wears the same stroke as the rungs it prices: it is one promotional
+    // surface, and a plain panel above four framed cards would read as a different screen.
+    <PromoFrame className="mt-8">
       <Typography variant="title" as="h2">
         {t('estimator.title')}
       </Typography>
@@ -88,6 +90,6 @@ export function PlanEstimator({
           {t('estimator.unset')}
         </Typography>
       )}
-    </div>
+    </PromoFrame>
   )
 }

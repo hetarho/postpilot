@@ -62,15 +62,16 @@ describe('the plan comparison', () => {
     const marked = screen.getAllByText('가장 합리적')
     expect(marked).toHaveLength(1)
 
-    const proCard = marked[0].closest('div.rounded-lg') as HTMLElement
-    expect(proCard).toHaveClass('border', 'border-stroke-accent', 'shadow-md')
-    expect(within(proCard).getByRole('heading', { name: 'Pro' })).toBeInTheDocument()
-
-    // No other rung carries a stroke: the accent marks a choice, it does not decorate.
-    const stroked = (await rungs()).filter((item) =>
-      item.firstElementChild?.classList.contains('border-stroke-accent'),
-    )
-    expect(stroked).toHaveLength(1)
+    // Every rung wears the promotional stroke; the recommended one wears it wider and casts a
+    // shadow (THEME-37), and the badge above is what carries the meaning.
+    const items = await rungs()
+    const frames = items.map((item) => item.firstElementChild as HTMLElement)
+    expect(frames.filter((frame) => frame.querySelector('[data-promo-stroke]'))).toHaveLength(4)
+    const wide = frames.filter((frame) => frame.classList.contains('shadow-md'))
+    expect(wide).toHaveLength(1)
+    expect(wide[0]).toHaveClass('p-0.5')
+    expect(within(wide[0]).getByRole('heading', { name: 'Pro' })).toBeInTheDocument()
+    expect(within(wide[0]).getByText('가장 합리적')).toBeInTheDocument()
   })
 
   // QUOTA-29: an exhausted balance blocks AI work and nothing else, which is the one thing
@@ -86,6 +87,28 @@ describe('the plan comparison', () => {
     expect(notice.closest('[role="status"]')).toHaveTextContent(
       '글을 쓰고 고치고 내보내는 건 그대로 할 수 있어요.',
     )
+  })
+})
+
+describe('the promotional stroke', () => {
+  // THEME-37 scopes the one gradient in this design language to a surface whose job is to be
+  // chosen from. Another route rendering it would be the exception spreading.
+  it('frames the ladder and its estimator, and nothing on another screen', async () => {
+    renderAppAt('/plans', {
+      user: { ...USER, plan: ProtoPlan.FREE },
+      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
+    })
+
+    await rungs()
+    // Four rungs plus the estimator above them.
+    expect(document.querySelectorAll('[data-promo-stroke]')).toHaveLength(5)
+  })
+
+  it('leaves other screens unframed', async () => {
+    renderAppAt('/posts', { user: { ...USER, plan: ProtoPlan.FREE } })
+
+    await screen.findByRole('heading', { name: '내 글' })
+    expect(document.querySelectorAll('[data-promo-stroke]')).toHaveLength(0)
   })
 })
 

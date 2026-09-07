@@ -8,7 +8,7 @@ import {
   type EstimatorComboName,
   type PlanOffer,
 } from '@/entities/plan'
-import { Badge, Button, Notice, Typography, pageStyles } from '@/shared/ui'
+import { Badge, Button, Notice, PromoFrame, Typography, pageStyles } from '@/shared/ui'
 import { firstCombo, useEstimateInput, type EstimateInput } from '../model/estimate-input'
 import { PlanEstimator } from './PlanEstimator'
 
@@ -111,12 +111,11 @@ export function PlansPage() {
 /** One rung. A card here is the case §1.4 allows: an item in a grid of peers, whose contents
  *  read as one unit and apart from the rung above and below it.
  *
- *  The recommended rung is the one border in the app that is not one of the four structural
- *  exceptions: a promotional surface may mark exactly ONE option with an accent stroke
- *  (THEME-37). The stroke, the shadow and the badge all hang off the single `recommended`
- *  flag the server sends, so a second emphasised card is impossible by construction rather
- *  than by review. It gets no filled CTA — one CTA per view, and every rung's action is
- *  disabled until BILLING ships. */
+ *  Every rung wears the promotional stroke and the recommended one wears it wider, which is
+ *  the exception THEME-37 opens for a surface whose job is to be chosen from. The badge, not
+ *  the glow, is what says which rung is recommended, and the flag comes from the server so a
+ *  second marked card is impossible by construction rather than by review. It gets no filled
+ *  CTA — one CTA per view, and every rung's action is disabled until BILLING ships. */
 function PlanCard({
   offer,
   current,
@@ -134,13 +133,7 @@ function PlanCard({
   const posts = rates ? postsPerGrant(offer.monthlyCredits, rates, input) : undefined
 
   return (
-    <div
-      className={
-        offer.recommended
-          ? 'bg-surface-raised border-stroke-accent rounded-lg border p-4 shadow-md'
-          : 'bg-surface-raised rounded-lg p-4'
-      }
-    >
+    <PromoFrame marked={offer.recommended}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <Typography variant="title" as="h2">
           {planLabel(offer.plan)}
@@ -168,6 +161,6 @@ function PlanCard({
           {t('compare.select')}
         </Button>
       )}
-    </div>
+    </PromoFrame>
   )
 }
