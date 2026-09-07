@@ -255,6 +255,9 @@ type Config struct {
 	MailDriver   string
 	ResendAPIKey string
 	MailFrom     string
+	// Google sign-in is optional, but a half-configured OAuth client is never useful.
+	GoogleClientID     string
+	GoogleClientSecret string
 
 	// R2Endpoint is the S3-compatible endpoint the API itself calls (HEAD, DELETE, LIST).
 	R2Endpoint string
@@ -384,14 +387,16 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:           getenv("PORT", "8080"),
-		CORSOrigin:     getenv("CORS_ORIGIN", "http://localhost:2564"),
-		ClientIPHeader: os.Getenv("CLIENT_IP_HEADER"),
-		DBPath:         getenv("DB_PATH", "data/postpilot.db"),
-		SessionTTL:     sessionTTL,
-		MailDriver:     strings.ToLower(strings.TrimSpace(getenv("MAIL_DRIVER", "log"))),
-		ResendAPIKey:   os.Getenv("RESEND_API_KEY"),
-		MailFrom:       os.Getenv("MAIL_FROM"),
+		Port:               getenv("PORT", "8080"),
+		CORSOrigin:         getenv("CORS_ORIGIN", "http://localhost:2564"),
+		ClientIPHeader:     os.Getenv("CLIENT_IP_HEADER"),
+		DBPath:             getenv("DB_PATH", "data/postpilot.db"),
+		SessionTTL:         sessionTTL,
+		MailDriver:         strings.ToLower(strings.TrimSpace(getenv("MAIL_DRIVER", "log"))),
+		ResendAPIKey:       os.Getenv("RESEND_API_KEY"),
+		MailFrom:           os.Getenv("MAIL_FROM"),
+		GoogleClientID:     strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
+		GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
 
 		R2Endpoint:        os.Getenv("R2_ENDPOINT"),
 		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
@@ -430,6 +435,9 @@ func Load() (*Config, error) {
 		}
 	default:
 		return nil, fmt.Errorf("MAIL_DRIVER: must be log or resend, got %q", cfg.MailDriver)
+	}
+	if (cfg.GoogleClientID == "") != (cfg.GoogleClientSecret == "") {
+		return nil, fmt.Errorf("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be set or both be empty")
 	}
 
 	if err := validateOrigin(cfg.CORSOrigin); err != nil {

@@ -10,6 +10,30 @@ import (
 	"database/sql"
 )
 
+const bindGoogleIdentity = `-- name: BindGoogleIdentity :execrows
+UPDATE users
+SET google_subject = ?1,
+    email_verified_at = COALESCE(email_verified_at, ?2)
+WHERE id = ?3
+  AND (google_subject IS NULL OR google_subject = ?1)
+`
+
+type BindGoogleIdentityParams struct {
+	GoogleSubject   sql.NullString
+	EmailVerifiedAt sql.NullString
+	ID              string
+}
+
+// The subject check and verification side effect are one write. The guard prevents a
+// stale service read from replacing an identity another request has just attached.
+func (q *Queries) BindGoogleIdentity(ctx context.Context, arg BindGoogleIdentityParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, bindGoogleIdentity, arg.GoogleSubject, arg.EmailVerifiedAt, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const clearLoginFailures = `-- name: ClearLoginFailures :exec
 UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = ?
 `
@@ -249,6 +273,43 @@ type GetUserByEmailRow struct {
 func (q *Queries) GetUserByEmail(ctx context.Context, email sql.NullString) (GetUserByEmailRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
 	var i GetUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.PasswordHash,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.EmailUnreachableAt,
+		&i.FailedLogins,
+		&i.LockedUntil,
+		&i.GoogleSubject,
+		&i.Plan,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserByGoogleSubject = `-- name: GetUserByGoogleSubject :one
+SELECT id, password_hash, email, email_verified_at, email_unreachable_at,
+       failed_logins, locked_until, google_subject, plan, created_at
+FROM users WHERE google_subject = ?
+`
+
+type GetUserByGoogleSubjectRow struct {
+	ID                 string
+	PasswordHash       string
+	Email              sql.NullString
+	EmailVerifiedAt    sql.NullString
+	EmailUnreachableAt sql.NullString
+	FailedLogins       int64
+	LockedUntil        sql.NullString
+	GoogleSubject      sql.NullString
+	Plan               string
+	CreatedAt          string
+}
+
+func (q *Queries) GetUserByGoogleSubject(ctx context.Context, googleSubject sql.NullString) (GetUserByGoogleSubjectRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByGoogleSubject, googleSubject)
+	var i GetUserByGoogleSubjectRow
 	err := row.Scan(
 		&i.ID,
 		&i.PasswordHash,

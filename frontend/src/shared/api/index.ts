@@ -40,6 +40,7 @@ export {
   ChangePasswordResponseSchema,
   GetMeResponseSchema,
   LoginResponseSchema,
+  SignInWithGoogleResponseSchema,
   LogoutResponseSchema,
   RegisterEmailResponseSchema,
   RequestPasswordResetResponseSchema,

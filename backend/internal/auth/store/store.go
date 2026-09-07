@@ -91,6 +91,20 @@ func (s *Store) GetUserByEmail(ctx context.Context, email string) (auth.User, er
 	)
 }
 
+func (s *Store) GetUserByGoogleSubject(ctx context.Context, subject string) (auth.User, error) {
+	row, err := s.read.GetUserByGoogleSubject(ctx, nullableString(subject))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return auth.User{}, auth.ErrUserNotFound
+		}
+		return auth.User{}, fmt.Errorf("select user by google subject: %w", err)
+	}
+	return mapUser(
+		row.ID, row.PasswordHash, row.Email, row.EmailVerifiedAt, row.EmailUnreachableAt,
+		row.FailedLogins, row.LockedUntil, row.GoogleSubject, row.Plan, row.CreatedAt,
+	)
+}
+
 func (s *Store) SetEmail(ctx context.Context, id, email string, verifiedAt *time.Time) error {
 	if err := s.write.SetEmail(ctx, sqlc.SetEmailParams{
 		Email: email, EmailVerifiedAt: nullableTime(verifiedAt), ID: id,
@@ -99,6 +113,22 @@ func (s *Store) SetEmail(ctx context.Context, id, email string, verifiedAt *time
 			return auth.ErrDuplicateUser
 		}
 		return fmt.Errorf("set user email: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) BindGoogleIdentity(ctx context.Context, id, subject string, verifiedAt time.Time) error {
+	rows, err := s.write.BindGoogleIdentity(ctx, sqlc.BindGoogleIdentityParams{
+		GoogleSubject: nullableString(subject), EmailVerifiedAt: nullableTime(&verifiedAt), ID: id,
+	})
+	if err != nil {
+		if isUniqueViolation(err) {
+			return auth.ErrGoogleAccountMismatch
+		}
+		return fmt.Errorf("bind google identity: %w", err)
+	}
+	if rows == 0 {
+		return auth.ErrGoogleAccountMismatch
 	}
 	return nil
 }

@@ -5,6 +5,9 @@
  *  backend (vite.config.ts), which also sidesteps CORS. */
 export const API_URL = import.meta.env.VITE_API_URL ?? ''
 
+/** Public OAuth client identifier. Empty is the supported feature-off state. */
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() ?? ''
+
 /** Theme is a browser-local interface preference, never deployment or account state. */
 export const THEME_PREFERENCE_STORAGE_KEY = 'postpilot.theme' as const
 export const DEFAULT_THEME_PREFERENCE = 'system' as const

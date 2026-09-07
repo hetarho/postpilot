@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { GoogleSignInButton } from '@/features/sign-in-with-google'
 import { useSignUp } from '@/features/sign-up'
 import { useResendVerification } from '@/features/verify-email'
 import {
@@ -124,6 +125,7 @@ export function SignupPage() {
                 {t('signup.submit', { ns: 'auth' })}
               </Button>
             </form>
+            <GoogleSignInButton redirect={redirect} />
             <nav
               className="mt-6 flex items-center justify-center gap-3"
               aria-label={t('links.more', { ns: 'auth' })}

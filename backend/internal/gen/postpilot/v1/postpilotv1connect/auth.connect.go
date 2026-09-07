@@ -48,6 +48,9 @@ const (
 	AuthServiceResetPasswordProcedure = "/postpilot.v1.AuthService/ResetPassword"
 	// AuthServiceLoginProcedure is the fully-qualified name of the AuthService's Login RPC.
 	AuthServiceLoginProcedure = "/postpilot.v1.AuthService/Login"
+	// AuthServiceSignInWithGoogleProcedure is the fully-qualified name of the AuthService's
+	// SignInWithGoogle RPC.
+	AuthServiceSignInWithGoogleProcedure = "/postpilot.v1.AuthService/SignInWithGoogle"
 	// AuthServiceLogoutProcedure is the fully-qualified name of the AuthService's Logout RPC.
 	AuthServiceLogoutProcedure = "/postpilot.v1.AuthService/Logout"
 	// AuthServiceGetMeProcedure is the fully-qualified name of the AuthService's GetMe RPC.
@@ -76,6 +79,8 @@ type AuthServiceClient interface {
 	ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error)
 	// Sets the session cookie on the HTTP response.
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
+	// Exchanges a Google authorization code and sets the same session cookie as Login.
+	SignInWithGoogle(context.Context, *connect.Request[v1.SignInWithGoogleRequest]) (*connect.Response[v1.SignInWithGoogleResponse], error)
 	// Revokes the session row server-side and clears the cookie.
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Session probe for app boot; the interceptor answers 401 when there is no session.
@@ -133,6 +138,12 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("Login")),
 			connect.WithClientOptions(opts...),
 		),
+		signInWithGoogle: connect.NewClient[v1.SignInWithGoogleRequest, v1.SignInWithGoogleResponse](
+			httpClient,
+			baseURL+AuthServiceSignInWithGoogleProcedure,
+			connect.WithSchema(authServiceMethods.ByName("SignInWithGoogle")),
+			connect.WithClientOptions(opts...),
+		),
 		logout: connect.NewClient[v1.LogoutRequest, v1.LogoutResponse](
 			httpClient,
 			baseURL+AuthServiceLogoutProcedure,
@@ -168,6 +179,7 @@ type authServiceClient struct {
 	requestPasswordReset *connect.Client[v1.RequestPasswordResetRequest, v1.RequestPasswordResetResponse]
 	resetPassword        *connect.Client[v1.ResetPasswordRequest, v1.ResetPasswordResponse]
 	login                *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	signInWithGoogle     *connect.Client[v1.SignInWithGoogleRequest, v1.SignInWithGoogleResponse]
 	logout               *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
 	getMe                *connect.Client[v1.GetMeRequest, v1.GetMeResponse]
 	registerEmail        *connect.Client[v1.RegisterEmailRequest, v1.RegisterEmailResponse]
@@ -202,6 +214,11 @@ func (c *authServiceClient) ResetPassword(ctx context.Context, req *connect.Requ
 // Login calls postpilot.v1.AuthService.Login.
 func (c *authServiceClient) Login(ctx context.Context, req *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
 	return c.login.CallUnary(ctx, req)
+}
+
+// SignInWithGoogle calls postpilot.v1.AuthService.SignInWithGoogle.
+func (c *authServiceClient) SignInWithGoogle(ctx context.Context, req *connect.Request[v1.SignInWithGoogleRequest]) (*connect.Response[v1.SignInWithGoogleResponse], error) {
+	return c.signInWithGoogle.CallUnary(ctx, req)
 }
 
 // Logout calls postpilot.v1.AuthService.Logout.
@@ -240,6 +257,8 @@ type AuthServiceHandler interface {
 	ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error)
 	// Sets the session cookie on the HTTP response.
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
+	// Exchanges a Google authorization code and sets the same session cookie as Login.
+	SignInWithGoogle(context.Context, *connect.Request[v1.SignInWithGoogleRequest]) (*connect.Response[v1.SignInWithGoogleResponse], error)
 	// Revokes the session row server-side and clears the cookie.
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Session probe for app boot; the interceptor answers 401 when there is no session.
@@ -293,6 +312,12 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("Login")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceSignInWithGoogleHandler := connect.NewUnaryHandler(
+		AuthServiceSignInWithGoogleProcedure,
+		svc.SignInWithGoogle,
+		connect.WithSchema(authServiceMethods.ByName("SignInWithGoogle")),
+		connect.WithHandlerOptions(opts...),
+	)
 	authServiceLogoutHandler := connect.NewUnaryHandler(
 		AuthServiceLogoutProcedure,
 		svc.Logout,
@@ -331,6 +356,8 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceResetPasswordHandler.ServeHTTP(w, r)
 		case AuthServiceLoginProcedure:
 			authServiceLoginHandler.ServeHTTP(w, r)
+		case AuthServiceSignInWithGoogleProcedure:
+			authServiceSignInWithGoogleHandler.ServeHTTP(w, r)
 		case AuthServiceLogoutProcedure:
 			authServiceLogoutHandler.ServeHTTP(w, r)
 		case AuthServiceGetMeProcedure:
@@ -370,6 +397,10 @@ func (UnimplementedAuthServiceHandler) ResetPassword(context.Context, *connect.R
 
 func (UnimplementedAuthServiceHandler) Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.Login is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) SignInWithGoogle(context.Context, *connect.Request[v1.SignInWithGoogleRequest]) (*connect.Response[v1.SignInWithGoogleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.SignInWithGoogle is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error) {

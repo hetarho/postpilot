@@ -1,8 +1,7 @@
-import { create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { appFailureFromConnect, AuthService, GetMeResponseSchema } from '@/shared/api'
-import { getMeQueryKey } from './session-queries'
+import { appFailureFromConnect, AuthService } from '@/shared/api'
+import { seedSessionCache } from './session-queries'
 
 /** Logs in and seeds the session cache from the response.
  *
@@ -20,10 +19,7 @@ export function useLogin() {
       // protobuf message, not a plain object literal.
       // The tier is seeded with the id: the shell's first paint gates master-only surfaces
       // on it, and a seed that carried only the id would render them wrong for one refetch.
-      queryClient.setQueryData(
-        getMeQueryKey(transport),
-        create(GetMeResponseSchema, { user: data.user, plan: data.plan }),
-      )
+      seedSessionCache(queryClient, transport, data)
     },
   })
 

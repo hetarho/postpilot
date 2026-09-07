@@ -32,6 +32,15 @@ func (m *recordingMailer) Send(_ context.Context, mail auth.Mail) error {
 	return nil
 }
 
+type googleIdentity struct {
+	claims auth.GoogleClaims
+	err    error
+}
+
+func (g googleIdentity) Exchange(context.Context, string, string, string) (auth.GoogleClaims, error) {
+	return g.claims, g.err
+}
+
 // newServer wires the real handler and interceptor over a real SQLite store and
 // returns a client speaking to them across a real HTTP server.
 //
@@ -103,6 +112,50 @@ func TestLoginSetCookieAttributes(t *testing.T) {
 	}
 	if strings.Contains(res.Msg.String(), token) {
 		t.Errorf("the session token leaked into the response body: %s", res.Msg.String())
+	}
+}
+
+func TestGoogleSignInIsPublicAndSetsTheLoginCookie(t *testing.T) {
+	store := newStore(t)
+	svc := auth.NewService(store, sessionTTL)
+	svc.SetGoogle(googleIdentity{claims: auth.GoogleClaims{
+		Subject: "google-1", Email: "person@example.com", EmailVerified: true,
+	}})
+	mux := http.NewServeMux()
+	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
+		authrpc.NewHandler(svc, sessionTTL),
+		connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), "")),
+	))
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	client := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+
+	res, err := client.SignInWithGoogle(context.Background(), connect.NewRequest(&postpilotv1.SignInWithGoogleRequest{
+		Code: "code", CodeVerifier: "verifier", RedirectUri: "https://postpilot.example.com/login/google/callback",
+	}))
+	if err != nil {
+		t.Fatalf("SignInWithGoogle: %v", err)
+	}
+	token := sessionToken(t, res.Header().Get("Set-Cookie"))
+	wantCookie := "pp_session=" + token + "; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax"
+	if got := res.Header().Get("Set-Cookie"); got != wantCookie {
+		t.Fatalf("Set-Cookie = %q, want %q", got, wantCookie)
+	}
+	if res.Msg.GetUser().GetId() != "person@example.com" || res.Msg.GetPlan() != postpilotv1.Plan_PLAN_FREE {
+		t.Fatalf("response = %v", res.Msg)
+	}
+}
+
+func TestGoogleSignInDisabledIsAStablePublicRefusal(t *testing.T) {
+	client, _ := newServer(t)
+	_, err := client.SignInWithGoogle(context.Background(), connect.NewRequest(&postpilotv1.SignInWithGoogleRequest{
+		Code: "code", CodeVerifier: "verifier", RedirectUri: "https://postpilot.example.com/login/google/callback",
+	}))
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("SignInWithGoogle = %v, want failed_precondition", err)
+	}
+	if reason := authAppErrorDetail(t, err).GetReason(); reason != "GOOGLE_SIGNIN_DISABLED" {
+		t.Fatalf("reason = %q", reason)
 	}
 }
 

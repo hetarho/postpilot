@@ -3,11 +3,12 @@
 // The route guard runs outside React, so it cannot use the hooks — but it must read and
 // write the SAME cache entry the hooks do, or logging in would populate one entry while
 // the guard keeps checking another.
+import { create } from '@bufbuild/protobuf'
 import { type Transport, Code, ConnectError } from '@connectrpc/connect'
 import { createConnectQueryKey, createQueryOptions } from '@connectrpc/connect-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { planFromProto } from '@/entities/plan/@x/session'
-import { AuthService, type GetMeResponse } from '@/shared/api'
+import { AuthService, GetMeResponseSchema, type GetMeResponse } from '@/shared/api'
 import { SESSION_STALE_MS } from '@/shared/config'
 import type { SessionUser } from '../model/types'
 
@@ -52,6 +53,18 @@ export function getMeQueryKey(transport: Transport) {
     transport,
     cardinality: 'finite',
   })
+}
+
+/** Seeds the exact session entry read by hooks and route guards after either login flow. */
+export function seedSessionCache(
+  queryClient: QueryClient,
+  transport: Transport,
+  response: Pick<GetMeResponse, 'user' | 'plan'>,
+) {
+  queryClient.setQueryData(
+    getMeQueryKey(transport),
+    create(GetMeResponseSchema, { user: response.user, plan: response.plan }),
+  )
 }
 
 function getMeQueryOptions(transport: Transport) {

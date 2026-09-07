@@ -121,6 +121,40 @@ func TestEmailLookupAndMarks(t *testing.T) {
 	}
 }
 
+func TestGoogleIdentityLookupAndJoinVerifiesOnce(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	if err := s.CreateUser(ctx, auth.User{
+		ID: "alice", Email: "alice@example.com", PasswordHash: "hash",
+		Plan: plan.Free, CreatedAt: now.Add(-time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.BindGoogleIdentity(ctx, "alice", "google-alice", now); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.GetUserByGoogleSubject(ctx, "google-alice")
+	if err != nil || got.ID != "alice" || got.EmailVerifiedAt == nil || !got.EmailVerifiedAt.Equal(now) {
+		t.Fatalf("GetUserByGoogleSubject = %+v, %v", got, err)
+	}
+
+	later := now.Add(time.Hour)
+	if err := s.BindGoogleIdentity(ctx, "alice", "google-alice", later); err != nil {
+		t.Fatal(err)
+	}
+	got, err = s.GetUser(ctx, "alice")
+	if err != nil || got.EmailVerifiedAt == nil || !got.EmailVerifiedAt.Equal(now) {
+		t.Fatalf("existing verification instant changed: %+v, %v", got, err)
+	}
+	if err := s.BindGoogleIdentity(ctx, "alice", "different-subject", later); !errors.Is(err, auth.ErrGoogleAccountMismatch) {
+		t.Fatalf("mismatch error = %v", err)
+	}
+	if _, err := s.GetUserByGoogleSubject(ctx, "missing"); !errors.Is(err, auth.ErrUserNotFound) {
+		t.Fatalf("missing subject error = %v", err)
+	}
+}
+
 func TestUpdatePasswordHashPreservesLockState(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)

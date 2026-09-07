@@ -77,6 +77,9 @@ verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함
 | `WEB_ORIGIN` | GitHub repo **variable** | CORS preflight가 흉내낼 브라우저 origin (`https://postpilot.<도메인>`) — 스택 `.env`의 `CORS_ORIGIN`과 같아야 한다 |
 | `CLIENT_IP_HEADER` | 스택 `.env` | 인증 요청 IP 기준. 로컬은 비워 direct peer를 쓰고, 유일한 ingress가 Caddy인 배포는 `X-Forwarded-For` |
 | `VITE_API_URL` | Cloudflare Worker → Settings → Build → Variables | 프론트 빌드 타임 주입(번들에 박히는 공개값) |
+| `GOOGLE_CLIENT_ID` | 스택 `.env` | Google OAuth 웹 클라이언트 ID. secret과 둘 다 비우면 Google 로그인이 꺼진다 |
+| `GOOGLE_CLIENT_SECRET` | 스택 `.env` | Google OAuth 웹 클라이언트 secret. ID와 한쪽만 설정하면 API가 기동하지 않는다 |
+| `VITE_GOOGLE_CLIENT_ID` | Cloudflare Worker → Settings → Build → Variables | 같은 Google OAuth 클라이언트의 공개 ID. 비우면 로그인·회원가입의 Google 버튼이 숨겨진다 |
 | `postpilot build token` | Cloudflare가 자동 관리 (Worker → Settings → Build → API token) | Workers Builds 배포 인증. 빌드가 10001 인증 에러로 죽으면 여기서 재발급 |
 | 스택 `.env` | VPS `/srv/postpilot-{staging,prod}/.env` (`chmod 600`, 비추적) | 런타임 설정 — 키 목록은 `.env.production.example` |
 | edge `.env` | VPS `/srv/edge/.env` (박스 공유 — **덮어쓰지 말고 append**) | `POSTPILOT_API_DOMAIN_PROD`(+staging을 띄울 때만 `..._STAGING`). 도메인만, 접두사 필수 — 이유는 §4. 템플릿: `deploy/edge/.env.example` |
@@ -244,7 +247,9 @@ verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함
 10. **Cloudflare Worker**(프론트): 리포 import(이름 `postpilot` = `wrangler.jsonc`의 name),
    production 브랜치 `main`, build `pnpm --filter ./frontend build`,
    deploy `npx wrangler deploy`, version `npx wrangler versions upload`,
-   변수 `VITE_API_URL` 입력, 커스텀 도메인 연결.
+   변수 `VITE_API_URL`, Google 로그인을 쓸 때 `VITE_GOOGLE_CLIENT_ID` 입력, 커스텀 도메인 연결.
+   Google Cloud Console의 같은 OAuth 웹 클라이언트에 `<web origin>/login/google/callback`
+   (예: `https://postpilot.haeram.me/login/google/callback`)을 승인된 리디렉션 URI로 등록한다.
 
 11. **첫 계정**: 배포가 끝나면 §4의 `adduser`로 계정을 만든다. 만들기 전까지는 로그인할
     방법이 없다 — 마이그레이션은 기동 때 이미 돌았으므로 이 단계만 남는다.

@@ -99,6 +99,22 @@ func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.Lo
 	return res, nil
 }
 
+// SignInWithGoogle exchanges Google's short-lived code and emits the same host-only
+// session cookie as password Login.
+func (h *Handler) SignInWithGoogle(ctx context.Context, req *connect.Request[postpilotv1.SignInWithGoogleRequest]) (*connect.Response[postpilotv1.SignInWithGoogleResponse], error) {
+	user, rawToken, err := h.svc.SignInWithGoogleCode(
+		ctx, req.Msg.GetCode(), req.Msg.GetCodeVerifier(), req.Msg.GetRedirectUri(),
+	)
+	if err != nil {
+		return nil, googleSignInError(err)
+	}
+	res := connect.NewResponse(&postpilotv1.SignInWithGoogleResponse{
+		User: userToProto(user), Plan: planrpc.ToProto(user.Plan),
+	})
+	res.Header().Add("Set-Cookie", h.sessionCookie(rawToken, int(h.sessionTTL.Seconds())).String())
+	return res, nil
+}
+
 // Logout revokes the session and clears the cookie.
 func (h *Handler) Logout(ctx context.Context, req *connect.Request[postpilotv1.LogoutRequest]) (*connect.Response[postpilotv1.LogoutResponse], error) {
 	if err := h.svc.Logout(ctx, cookieValue(req.Header())); err != nil {
@@ -184,6 +200,23 @@ func authMutationError(operation string, err error) error {
 	default:
 		slog.Error(operation+" failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, operation+" failed", "UNKNOWN_FAILURE", nil)
+	}
+}
+
+func googleSignInError(err error) error {
+	switch {
+	case errors.Is(err, auth.ErrGoogleSignInDisabled):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google sign-in disabled", "GOOGLE_SIGNIN_DISABLED", nil)
+	case errors.Is(err, auth.ErrGoogleEmailUnverified):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google email unverified", "GOOGLE_EMAIL_UNVERIFIED", nil)
+	case errors.Is(err, auth.ErrGoogleAccountMismatch):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google account mismatch", "GOOGLE_ACCOUNT_MISMATCH", nil)
+	case errors.Is(err, auth.ErrGoogleSignInFailed):
+		slog.Info("google sign-in refused", "err", err)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google sign-in failed", "GOOGLE_SIGNIN_FAILED", nil)
+	default:
+		slog.Error("google sign-in failed", "err", err)
+		return rpcserver.NewAppError(connect.CodeInternal, "google sign-in failed", "UNKNOWN_FAILURE", nil)
 	}
 }
 

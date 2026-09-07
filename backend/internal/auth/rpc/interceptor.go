@@ -35,6 +35,7 @@ var publicProcedures = map[string]bool{
 	postpilotv1connect.AuthServiceRequestPasswordResetProcedure: true,
 	postpilotv1connect.AuthServiceResetPasswordProcedure:        true,
 	postpilotv1connect.AuthServiceLoginProcedure:                true,
+	postpilotv1connect.AuthServiceSignInWithGoogleProcedure:     true,
 	postpilotv1connect.AuthServiceLogoutProcedure:               true,
 	postpilotv1connect.HealthServicePingProcedure:               true,
 }
@@ -48,6 +49,7 @@ var throttledProcedures = map[string]string{
 	postpilotv1connect.AuthServiceResendVerificationProcedure:   auth.ThrottleResend,
 	postpilotv1connect.AuthServiceRequestPasswordResetProcedure: auth.ThrottleResetRequest,
 	postpilotv1connect.AuthServiceResetPasswordProcedure:        auth.ThrottleReset,
+	postpilotv1connect.AuthServiceSignInWithGoogleProcedure:     auth.ThrottleGoogle,
 }
 
 // Agent procedures are not authenticated by the human HttpOnly session. The

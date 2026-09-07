@@ -98,6 +98,29 @@ func TestLoadClientIPHeader(t *testing.T) {
 	}
 }
 
+func TestLoadGoogleCredentialsArePaired(t *testing.T) {
+	for name, values := range map[string][2]string{
+		"id only":     {"client-id", ""},
+		"secret only": {"", "client-secret"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("GOOGLE_CLIENT_ID", values[0])
+			t.Setenv("GOOGLE_CLIENT_SECRET", values[1])
+			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "GOOGLE_CLIENT_ID") {
+				t.Fatalf("Load error = %v", err)
+			}
+		})
+	}
+	t.Run("both", func(t *testing.T) {
+		t.Setenv("GOOGLE_CLIENT_ID", "client-id")
+		t.Setenv("GOOGLE_CLIENT_SECRET", "client-secret")
+		cfg, err := Load()
+		if err != nil || cfg.GoogleClientID != "client-id" || cfg.GoogleClientSecret != "client-secret" {
+			t.Fatalf("Load = (%+v, %v)", cfg, err)
+		}
+	})
+}
+
 func TestLoadDefaults(t *testing.T) {
 	t.Setenv("PORT", "")
 	t.Setenv("CORS_ORIGIN", "")

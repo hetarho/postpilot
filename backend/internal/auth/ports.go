@@ -30,6 +30,21 @@ type Mailer interface {
 	Send(ctx context.Context, m Mail) error
 }
 
+// GoogleClaims are the identity facts the Google adapter has validated. The auth
+// context deliberately receives no access token: sign-in needs an identity, not
+// continuing authority over a Google account.
+type GoogleClaims struct {
+	Subject       string
+	Email         string
+	EmailVerified bool
+}
+
+// GoogleIdentity exchanges the short-lived authorization code. Declared by its
+// consumer so the domain does not depend on Google's HTTP protocol.
+type GoogleIdentity interface {
+	Exchange(ctx context.Context, code, codeVerifier, redirectURI string) (GoogleClaims, error)
+}
+
 // ErrRecipientRejected is the one provider outcome the domain handles specially. It marks
 // the address unreachable so later transactional events do not retry it forever.
 var ErrRecipientRejected = errors.New("mail recipient rejected")
@@ -44,7 +59,9 @@ type Store interface {
 	CreateUser(ctx context.Context, u User) error
 	GetUser(ctx context.Context, id string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByGoogleSubject(ctx context.Context, subject string) (User, error)
 	SetEmail(ctx context.Context, id, email string, verifiedAt *time.Time) error
+	BindGoogleIdentity(ctx context.Context, id, subject string, verifiedAt time.Time) error
 	MarkEmailVerified(ctx context.Context, id string, at time.Time) error
 	MarkEmailUnreachable(ctx context.Context, id string, at time.Time) error
 	UpdatePasswordHash(ctx context.Context, id, passwordHash string) error

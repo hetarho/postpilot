@@ -33,6 +33,7 @@ import (
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/generation"
 	generationrpc "github.com/postpilot/backend/internal/generation/rpc"
+	"github.com/postpilot/backend/internal/googleauth"
 	"github.com/postpilot/backend/internal/guideline"
 	guidelinerpc "github.com/postpilot/backend/internal/guideline/rpc"
 	guidelinestore "github.com/postpilot/backend/internal/guideline/store"
@@ -183,6 +184,11 @@ func main() {
 	}
 	authSvc.SetMailer(mailer)
 	authSvc.SetWebOrigin(cfg.CORSOrigin)
+	if cfg.GoogleClientID != "" {
+		googleIdentity := googleauth.New(cfg.GoogleClientID, cfg.GoogleClientSecret, http.DefaultClient)
+		googleIdentity.SetAllowedOrigin(cfg.CORSOrigin)
+		authSvc.SetGoogle(googleIdentity)
+	}
 	authThrottle := auth.NewThrottle()
 	if n, err := authSvc.SweepExpired(ctx); err != nil {
 		// Stale rows are harmless — they fail the expiry check on lookup anyway — so a

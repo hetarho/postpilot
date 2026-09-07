@@ -31,6 +31,7 @@ type Service struct {
 	store      Store
 	ttl        time.Duration
 	mailer     Mailer
+	google     GoogleIdentity
 	webOrigin  string
 	bootstraps []AccountBootstrap
 
@@ -78,6 +79,10 @@ func (s *Service) SetBootstraps(bootstraps ...AccountBootstrap) {
 // SetMailer attaches the delivery edge after the auth service is constructed. A caller that
 // reaches send without this wiring receives an error; transactional mail is never dropped.
 func (s *Service) SetMailer(mailer Mailer) { s.mailer = mailer }
+
+// SetGoogle attaches the optional Google authorization-code exchange edge. Leaving it
+// nil is the supported disabled configuration rather than an incomplete service.
+func (s *Service) SetGoogle(identity GoogleIdentity) { s.google = identity }
 
 // SetWebOrigin supplies the browser origin used to build verification and reset URLs.
 func (s *Service) SetWebOrigin(origin string) {
@@ -499,6 +504,84 @@ func (s *Service) Login(ctx context.Context, loginID, password string) (User, st
 		return User{}, "", ErrInvalidCredentials
 	}
 
+	return s.issueSession(ctx, user, now)
+}
+
+// SignInWithGoogleCode exchanges the browser's one-time authorization code before
+// handing the validated facts to the domain join rule. Disabled is explicit so a
+// deployment with no Google credentials gives the callback a stable refusal.
+func (s *Service) SignInWithGoogleCode(ctx context.Context, code, codeVerifier, redirectURI string) (User, string, error) {
+	if s.google == nil {
+		return User{}, "", ErrGoogleSignInDisabled
+	}
+	claims, err := s.google.Exchange(ctx, code, codeVerifier, redirectURI)
+	if err != nil {
+		return User{}, "", fmt.Errorf("%w: %v", ErrGoogleSignInFailed, err)
+	}
+	return s.SignInWithGoogle(ctx, claims)
+}
+
+// SignInWithGoogle joins on the provider's stable subject first and the normalized
+// verified email second. Password lockouts intentionally do not participate: Google
+// has just proved the identity without guessing the account password.
+func (s *Service) SignInWithGoogle(ctx context.Context, claims GoogleClaims) (User, string, error) {
+	if !claims.EmailVerified || strings.TrimSpace(claims.Email) == "" {
+		return User{}, "", ErrGoogleEmailUnverified
+	}
+	email, err := normalizedEmail(claims.Email)
+	if err != nil || strings.TrimSpace(claims.Subject) == "" {
+		return User{}, "", ErrGoogleEmailUnverified
+	}
+	claims.Subject = strings.TrimSpace(claims.Subject)
+
+	user, err := s.store.GetUserByGoogleSubject(ctx, claims.Subject)
+	if err == nil {
+		return s.issueSession(ctx, user, s.now())
+	}
+	if !errors.Is(err, ErrUserNotFound) {
+		return User{}, "", fmt.Errorf("look up google subject: %w", err)
+	}
+
+	user, err = s.store.GetUserByEmail(ctx, email)
+	found := err == nil
+	if err != nil && !errors.Is(err, ErrUserNotFound) {
+		return User{}, "", fmt.Errorf("look up google email: %w", err)
+	}
+	now := s.now()
+	if found {
+		if user.GoogleSubject != "" && user.GoogleSubject != claims.Subject {
+			return User{}, "", ErrGoogleAccountMismatch
+		}
+		if err := s.store.BindGoogleIdentity(ctx, user.ID, claims.Subject, now); err != nil {
+			if errors.Is(err, ErrGoogleAccountMismatch) {
+				return User{}, "", ErrGoogleAccountMismatch
+			}
+			return User{}, "", fmt.Errorf("join google identity: %w", err)
+		}
+		user.GoogleSubject = claims.Subject
+		if user.EmailVerifiedAt == nil {
+			user.EmailVerifiedAt = &now
+		}
+		return s.issueSession(ctx, user, now)
+	}
+
+	user = User{
+		ID: email, Email: email, PasswordHash: "", EmailVerifiedAt: &now,
+		GoogleSubject: claims.Subject, Plan: plan.Free, CreatedAt: now,
+	}
+	if err := s.store.CreateUser(ctx, user); err != nil {
+		if errors.Is(err, ErrDuplicateUser) {
+			return User{}, "", ErrGoogleAccountMismatch
+		}
+		return User{}, "", fmt.Errorf("create google account: %w", err)
+	}
+	if err := s.runBootstraps(ctx, user.ID); err != nil {
+		return User{}, "", fmt.Errorf("bootstrap google account: %w", err)
+	}
+	return s.issueSession(ctx, user, now)
+}
+
+func (s *Service) issueSession(ctx context.Context, user User, now time.Time) (User, string, error) {
 	raw, hashed, err := newSessionToken()
 	if err != nil {
 		return User{}, "", err

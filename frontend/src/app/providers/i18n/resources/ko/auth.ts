@@ -17,6 +17,12 @@ export const auth = {
     forgotPassword: '비밀번호 찾기',
     more: '계정 메뉴',
   },
+  google: {
+    continue: 'Google로 계속하기',
+    checking: 'Google 로그인을 완료하고 있어요',
+    failed: 'Google 로그인을 완료하지 못했어요',
+    back: '로그인으로',
+  },
   signup: {
     intro: '이메일로 Postpilot 계정을 만드세요',
     passwordHint: '8자 이상 입력해 주세요.',

@@ -31,7 +31,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T046 | todo |
-| T033 | Google sign-in: SPA-initiated code + PKCE, exchanged by the backend into a session | AUTH ARCH | T032 | todo |
 | T035 | /about states the self-signup path: Get started as the one CTA, Log in as the quiet link | MARKETING AUTH THEME ARCH | T030 | todo |
 | T036 | Billing foundation: schema, the append-only money ledger, the provider and rate adapters, the read RPC and the billing screen | BILLING ARCH QUOTA AUTH | T034 | todo |
 | T037 | Register a payment method through the hosted card window and grant the 100-credit bonus once | BILLING QUOTA AUTH | T036 T030 | todo |
@@ -45,10 +44,12 @@
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
 
 ## next
-- implement-task T033 → T035 → T036 → T037 → T038 → T039 → T040
+- implement-task T035 → T036 → T037 → T038 → T039 → T040
 - T042 blocked on ONE live survey pass on a clean writer draft: does 문단 서식 변경 convert the caret's paragraph or its whole component when the component holds two or more paragraphs (same for 인용구), what does Enter from a converted block open, and how does the list toolbar behave there — the owner must discard the leftover dirty draft in the browser first, since navigating away from it raises a `beforeunload` dialog the driver surface cannot dismiss · T044 is claimable NOW (dep T042 is only for the shared plumbing, which has landed) · then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260908 T033 done
+- 260908 T033 claimed (cx)
 - 260908 T032 done
 - 260908 T032 claimed (cx)
 - 260908 T031 done
@@ -66,6 +67,4 @@
 - 260908 create-task PUBLISH → T042..T046 (the r4 vocabulary and body mutations, caret-relative image insertion, the settings layer, the commit fence with the post-view readback, the daemon wiring); T019 is superseded and moved to done with every box unchecked because its acceptance was written against r3, and T008's dep moves T019→T046
 - 260907 update-ssot PUBLISH r4 done — a `filling_settings` stage joins the progress list, the settings layer is a versioned step that occludes the editor so body and photos precede it (PUBLISH-37), readback observes the post through the account's post-view URL while still reporting the permalink, and the locator-derived caret positions an inserted image; the frame-scoped driver addition r3 was expected to need is NOT required
 - 260907 T019 live survey done on the owner's Mac — all three blockers answered: an image inserts immediately after the caret's component (no placeholder, no pre-allocated ordinal), the settings layer takes TWO clicks and OCCLUDES the body so body mutations must come first, and `PostView.naver` serves a published post in its own document in the editor's own `.se-component` vocabulary, so readback needs no frame-scoped driver surface. Also found: `Enter` appends a paragraph INSIDE one `se-text` component, and the list control exists only while the caret is in a text block. WARN an unsaved scratch draft with one survey quote, paragraph and uploaded image is left in the writer — discard it, do not publish
-- 260907 create-task GEN → T041 (the naming rule as two per-language constants beside the grounding ones, write prompt only; the revise golden stays byte-identical and the observe prompt is untouched)
 - 260907 update-ssot GEN r3 done — the memo names the subject in prose, alt and caption (GEN-44); the observe stage stays context-free (GEN-45x) ← the caption already rides the write call that holds the memo (prompts.go perPost), so the gap was naming authority, not a missing input
-- 260907 T007 done — ARCH-27 passed on the owner's Mac and CI's macOS agent job is green; the red backend job on main was T021's fixed-width timestamp parse (one run in ten), fixed in 4a923a6 by reading with RFC3339Nano like the post and auth stores. T019 stays blocked on the live survey; T008 waits behind it

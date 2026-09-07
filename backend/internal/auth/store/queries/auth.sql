@@ -17,11 +17,25 @@ SELECT id, password_hash, email, email_verified_at, email_unreachable_at,
        failed_logins, locked_until, google_subject, plan, created_at
 FROM users WHERE email = ?;
 
+-- name: GetUserByGoogleSubject :one
+SELECT id, password_hash, email, email_verified_at, email_unreachable_at,
+       failed_logins, locked_until, google_subject, plan, created_at
+FROM users WHERE google_subject = ?;
+
 -- name: SetEmail :exec
 UPDATE users
 SET email = NULLIF(sqlc.arg(email), ''),
     email_verified_at = sqlc.narg(email_verified_at)
 WHERE id = sqlc.arg(id);
+
+-- name: BindGoogleIdentity :execrows
+-- The subject check and verification side effect are one write. The guard prevents a
+-- stale service read from replacing an identity another request has just attached.
+UPDATE users
+SET google_subject = sqlc.arg(google_subject),
+    email_verified_at = COALESCE(email_verified_at, sqlc.arg(email_verified_at))
+WHERE id = sqlc.arg(id)
+  AND (google_subject IS NULL OR google_subject = sqlc.arg(google_subject));
 
 -- name: MarkEmailVerified :exec
 UPDATE users SET email_verified_at = ? WHERE id = ?;

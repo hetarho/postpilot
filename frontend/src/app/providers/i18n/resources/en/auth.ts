@@ -17,6 +17,12 @@ export const auth = {
     forgotPassword: 'Forgot password',
     more: 'Account links',
   },
+  google: {
+    continue: 'Continue with Google',
+    checking: 'Completing Google sign-in',
+    failed: 'Could not complete Google sign-in',
+    back: 'Back to log in',
+  },
   signup: {
     intro: 'Create your Postpilot account with email',
     passwordHint: 'Use at least 8 characters.',

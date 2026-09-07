@@ -27,6 +27,8 @@ service AuthService {
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {}
   // Sets the session cookie on the HTTP response.
   rpc Login(LoginRequest) returns (LoginResponse) {}
+  // Exchanges a Google authorization code and sets the same session cookie as Login.
+  rpc SignInWithGoogle(SignInWithGoogleRequest) returns (SignInWithGoogleResponse) {}
   // Revokes the session row server-side and clears the cookie.
   rpc Logout(LogoutRequest) returns (LogoutResponse) {}
   // Session probe for app boot; the interceptor answers 401 when there is no session.
@@ -78,6 +80,17 @@ message LoginResponse {
   User user = 1;
   // The same tier GetMe reports. It rides the login response so the first authenticated
   // paint after a login gates on the real tier instead of on nothing.
+  Plan plan = 2;
+}
+
+message SignInWithGoogleRequest {
+  string code = 1;
+  string code_verifier = 2;
+  string redirect_uri = 3;
+}
+
+message SignInWithGoogleResponse {
+  User user = 1;
   Plan plan = 2;
 }
 

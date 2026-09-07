@@ -35,12 +35,16 @@ var ErrNoSession = errors.New("no session")
 var ErrLinkInvalid = errors.New("auth link is invalid")
 
 var (
-	ErrInvalidEmail         = errors.New("invalid email")
-	ErrPasswordTooShort     = errors.New("password too short")
-	ErrPasswordTooLong      = errors.New("password too long")
-	ErrEmailAlreadyVerified = errors.New("email already verified")
-	ErrPasswordNotSet       = errors.New("password not set")
-	ErrCurrentPasswordWrong = errors.New("current password wrong")
+	ErrInvalidEmail          = errors.New("invalid email")
+	ErrPasswordTooShort      = errors.New("password too short")
+	ErrPasswordTooLong       = errors.New("password too long")
+	ErrEmailAlreadyVerified  = errors.New("email already verified")
+	ErrPasswordNotSet        = errors.New("password not set")
+	ErrCurrentPasswordWrong  = errors.New("current password wrong")
+	ErrGoogleSignInDisabled  = errors.New("google sign-in disabled")
+	ErrGoogleEmailUnverified = errors.New("google email unverified")
+	ErrGoogleAccountMismatch = errors.New("google account mismatch")
+	ErrGoogleSignInFailed    = errors.New("google sign-in failed")
 )
 
 // User is an account. The password hash never leaves this package's boundary: the

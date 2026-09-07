@@ -14,6 +14,7 @@ import {
   GetMeResponseSchema,
   ProtoPlan,
   LoginResponseSchema,
+  SignInWithGoogleResponseSchema,
   LogoutResponseSchema,
   RegisterEmailResponseSchema,
   RequestPasswordResetResponseSchema,
@@ -58,7 +59,8 @@ export interface FakeAuthOptions {
   registerEmailFails?: boolean
   resetPasswordFails?: boolean
   changePasswordFails?: 'wrong-current' | 'not-set'
-  tooManyAttempts?: 'login' | 'signup' | 'resend' | 'reset_request' | 'reset'
+  googleFailure?: 'GOOGLE_EMAIL_UNVERIFIED' | 'GOOGLE_ACCOUNT_MISMATCH' | 'GOOGLE_SIGNIN_DISABLED'
+  tooManyAttempts?: 'login' | 'signup' | 'resend' | 'reset_request' | 'reset' | 'google'
   /** Records every procedure the transport was asked for. */
   calls?: string[]
   /** The PostService the signed-in screens call. Present by default (with no posts) so a
@@ -105,6 +107,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerEmailFails,
     resetPasswordFails,
     changePasswordFails,
+    googleFailure,
     tooManyAttempts,
     calls,
   } = options
@@ -146,6 +149,31 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
           email: session.email ?? '',
           emailVerified: session.emailVerified ?? false,
           hasPassword: session.hasPassword ?? true,
+        },
+        plan: session.plan ?? ProtoPlan.MASTER,
+      })
+    })
+    rpc(AuthService.method.signInWithGoogle, () => {
+      calls?.push('SignInWithGoogle')
+      if (tooManyAttempts === 'google') {
+        throw connectAppError('TOO_MANY_ATTEMPTS', Code.ResourceExhausted, {
+          retry_at: '2026-09-30T15:00:00Z',
+        })
+      }
+      if (googleFailure) throw connectAppError(googleFailure, Code.FailedPrecondition)
+      session = {
+        id: user?.id ?? 'google@example.com',
+        plan: user?.plan,
+        email: user?.email ?? 'google@example.com',
+        emailVerified: true,
+        hasPassword: user?.hasPassword ?? false,
+      }
+      return create(SignInWithGoogleResponseSchema, {
+        user: {
+          id: session.id,
+          email: session.email,
+          emailVerified: true,
+          hasPassword: session.hasPassword,
         },
         plan: session.plan ?? ProtoPlan.MASTER,
       })

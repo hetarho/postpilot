@@ -99,6 +99,24 @@ const signupRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/signup'), 'SignupPage'),
 })
 
+// The OAuth provider lands here before a Postpilot session exists. It is therefore a
+// direct public child with no reverse/session guard; the page validates its per-tab state.
+const googleSignInCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login/google/callback',
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { code?: string; state?: string; error?: string } => ({
+    code: typeof search.code === 'string' ? search.code : undefined,
+    state: typeof search.state === 'string' ? search.state : undefined,
+    error: typeof search.error === 'string' ? search.error : undefined,
+  }),
+  component: lazyRouteComponent(
+    () => import('@/pages/google-sign-in-callback'),
+    'GoogleSignInCallbackPage',
+  ),
+})
+
 const verifyEmailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/verify-email',
@@ -401,6 +419,7 @@ const postEditorRoute = createRoute({
 export const routeTree = rootRoute.addChildren([
   loginRoute,
   signupRoute,
+  googleSignInCallbackRoute,
   verifyEmailRoute,
   forgotPasswordRoute,
   resetPasswordRoute,

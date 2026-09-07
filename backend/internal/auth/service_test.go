@@ -32,6 +32,12 @@ func (f *fakeStore) CreateUser(_ context.Context, u User) error {
 	if _, exists := f.users[u.ID]; exists {
 		return ErrDuplicateUser
 	}
+	for _, existing := range f.users {
+		if (u.Email != "" && existing.Email == u.Email) ||
+			(u.GoogleSubject != "" && existing.GoogleSubject == u.GoogleSubject) {
+			return ErrDuplicateUser
+		}
+	}
 	f.users[u.ID] = u
 	return nil
 }
@@ -53,6 +59,15 @@ func (f *fakeStore) GetUserByEmail(_ context.Context, email string) (User, error
 	return User{}, ErrUserNotFound
 }
 
+func (f *fakeStore) GetUserByGoogleSubject(_ context.Context, subject string) (User, error) {
+	for _, user := range f.users {
+		if user.GoogleSubject == subject {
+			return user, nil
+		}
+	}
+	return User{}, ErrUserNotFound
+}
+
 func (f *fakeStore) SetEmail(_ context.Context, id, email string, verifiedAt *time.Time) error {
 	user, ok := f.users[id]
 	if !ok {
@@ -60,6 +75,27 @@ func (f *fakeStore) SetEmail(_ context.Context, id, email string, verifiedAt *ti
 	}
 	user.Email = email
 	user.EmailVerifiedAt = verifiedAt
+	f.users[id] = user
+	return nil
+}
+
+func (f *fakeStore) BindGoogleIdentity(_ context.Context, id, subject string, verifiedAt time.Time) error {
+	user, ok := f.users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+	if user.GoogleSubject != "" && user.GoogleSubject != subject {
+		return ErrGoogleAccountMismatch
+	}
+	for otherID, existing := range f.users {
+		if otherID != id && existing.GoogleSubject == subject {
+			return ErrGoogleAccountMismatch
+		}
+	}
+	user.GoogleSubject = subject
+	if user.EmailVerifiedAt == nil {
+		user.EmailVerifiedAt = &verifiedAt
+	}
 	f.users[id] = user
 	return nil
 }
@@ -319,6 +355,104 @@ func TestLoginSuccessIssuesSession(t *testing.T) {
 	}
 	if want := now.Add(720 * time.Hour); !session.ExpiresAt.Equal(want) {
 		t.Errorf("expires_at = %v, want %v (login + 30d)", session.ExpiresAt, want)
+	}
+}
+
+func TestGoogleSignInJoinsBySubjectEvenWhenPasswordLocked(t *testing.T) {
+	now := time.Date(2026, 9, 8, 8, 0, 0, 0, time.UTC)
+	store := newFakeStore()
+	lockedUntil := now.Add(10 * time.Minute)
+	verifiedAt := now.Add(-time.Hour)
+	store.users["alice"] = User{
+		ID: "alice", Email: "old@example.com", EmailVerifiedAt: &verifiedAt,
+		GoogleSubject: "google-1", LockedUntil: &lockedUntil, Plan: plan.Pro, CreatedAt: now.Add(-time.Hour),
+	}
+	svc := NewService(store, time.Hour)
+	svc.now = func() time.Time { return now }
+
+	user, raw, err := svc.SignInWithGoogle(context.Background(), GoogleClaims{
+		Subject: "google-1", Email: "new@example.com", EmailVerified: true,
+	})
+	if err != nil {
+		t.Fatalf("SignInWithGoogle: %v", err)
+	}
+	if user.ID != "alice" || raw == "" || len(store.sessions) != 1 {
+		t.Fatalf("sign-in result = user %q token %t sessions %d", user.ID, raw != "", len(store.sessions))
+	}
+}
+
+func TestGoogleSignInJoinsByEmailAndVerifies(t *testing.T) {
+	now := time.Date(2026, 9, 8, 8, 0, 0, 0, time.UTC)
+	store := newFakeStore()
+	store.users["legacy"] = User{ID: "legacy", Email: "person@example.com", Plan: plan.Free, CreatedAt: now.Add(-time.Hour)}
+	svc := NewService(store, time.Hour)
+	svc.now = func() time.Time { return now }
+
+	user, _, err := svc.SignInWithGoogle(context.Background(), GoogleClaims{
+		Subject: "google-2", Email: " PERSON@EXAMPLE.COM ", EmailVerified: true,
+	})
+	if err != nil {
+		t.Fatalf("SignInWithGoogle: %v", err)
+	}
+	stored := store.users["legacy"]
+	if user.ID != "legacy" || stored.GoogleSubject != "google-2" || stored.EmailVerifiedAt == nil || !stored.EmailVerifiedAt.Equal(now) {
+		t.Fatalf("joined user = %+v, stored = %+v", user, stored)
+	}
+}
+
+func TestGoogleSignInRefusesMismatchedSubject(t *testing.T) {
+	store := newFakeStore()
+	store.users["alice"] = User{ID: "alice", Email: "alice@example.com", GoogleSubject: "google-a", Plan: plan.Free}
+	svc := NewService(store, time.Hour)
+
+	_, _, err := svc.SignInWithGoogle(context.Background(), GoogleClaims{
+		Subject: "google-b", Email: "alice@example.com", EmailVerified: true,
+	})
+	if !errors.Is(err, ErrGoogleAccountMismatch) {
+		t.Fatalf("error = %v, want ErrGoogleAccountMismatch", err)
+	}
+}
+
+func TestGoogleSignInCreatesVerifiedPasswordlessAccountAndBootstraps(t *testing.T) {
+	now := time.Date(2026, 9, 8, 8, 0, 0, 0, time.UTC)
+	store := newFakeStore()
+	svc := NewService(store, time.Hour)
+	svc.now = func() time.Time { return now }
+	var bootstrapped []string
+	svc.SetBootstraps(func(_ context.Context, id string) error {
+		bootstrapped = append(bootstrapped, id)
+		return nil
+	})
+
+	user, _, err := svc.SignInWithGoogle(context.Background(), GoogleClaims{
+		Subject: "google-new", Email: "NEW@EXAMPLE.COM", EmailVerified: true,
+	})
+	if err != nil {
+		t.Fatalf("SignInWithGoogle: %v", err)
+	}
+	if user.ID != "new@example.com" || user.Email != user.ID || user.PasswordHash != "" || user.EmailVerifiedAt == nil || user.GoogleSubject != "google-new" || user.Plan != plan.Free {
+		t.Fatalf("new user = %+v", user)
+	}
+	if len(bootstrapped) != 1 || bootstrapped[0] != user.ID {
+		t.Fatalf("bootstraps = %v", bootstrapped)
+	}
+	if _, _, err := svc.Login(context.Background(), user.ID, "anything"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("password login error = %v, want ErrInvalidCredentials", err)
+	}
+}
+
+func TestGoogleSignInRefusesAbsentOrUnverifiedEmail(t *testing.T) {
+	svc := NewService(newFakeStore(), time.Hour)
+	for name, claims := range map[string]GoogleClaims{
+		"absent":     {Subject: "google", EmailVerified: true},
+		"unverified": {Subject: "google", Email: "person@example.com"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, _, err := svc.SignInWithGoogle(context.Background(), claims)
+			if !errors.Is(err, ErrGoogleEmailUnverified) {
+				t.Fatalf("error = %v, want ErrGoogleEmailUnverified", err)
+			}
+		})
 	}
 }
 

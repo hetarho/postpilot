@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useLogin } from '@/entities/session'
+import { GoogleSignInButton } from '@/features/sign-in-with-google'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 import {
   AppFailureMessage,
@@ -152,6 +153,7 @@ export function LoginPage() {
             {t('login.submit', { ns: 'auth' })}
           </Button>
         </form>
+        <GoogleSignInButton redirect={redirect} />
         {/* Below the credential action and OUTSIDE the form: a secondary link inside it would be
             one more tab stop between the password field and 로그인, and a link is not part of the
             submission. It changes nothing about the form's failure or redirect behavior. */}
