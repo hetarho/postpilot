@@ -62,7 +62,7 @@ describe('the template directory', () => {
     )
 
     // A12: mounting the list calls no provider and enqueues nothing ([I5]).
-    const allowed = ['GetMe', 'ListTemplates']
+    const allowed = ['GetMe', 'GetMyPlan', 'ListTemplates']
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 

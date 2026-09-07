@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { act, cleanup, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import { AuthService, ProtoPlan } from '@/shared/api'
@@ -418,7 +418,10 @@ describe('theme preferences in the real route tree', () => {
       user: { id: 'alice' },
       readyRole: 'heading' as const,
       readyName: '내 글',
-      expectedCalls: ['GetMe', 'ListPosts'],
+      // The shell reads the balance for its credit control (QUOTA-27), so the authenticated
+      // surface's baseline is three calls; what this case pins is that the preferences add
+      // none of their own.
+      expectedCalls: ['GetMe', 'GetMyPlan', 'ListPosts'],
     },
   ])(
     'reaches and applies all three preferences on the $surface surface without an RPC',
@@ -567,23 +570,36 @@ describe('theme preferences in the real route tree', () => {
     expect(calls).toEqual(callsBeforeSelection)
   })
 
-  it('keeps the 320px authenticated header to three icon controls, account at the shell edge', async () => {
+  it('keeps the 320px authenticated header to the balance and three icon controls, account at the shell edge', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 })
     window.dispatchEvent(new Event('resize'))
     const user = userEvent.setup()
     renderAppAt('/posts', { user: { id: 'alice' } })
 
     expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    const header = screen.getByRole('banner')
+    const credits = within(header).getByRole('link', { name: /플랜/ })
     const theme = screen.getByRole('button', { name: '테마' })
     const locale = screen.getByRole('button', { name: '언어' })
     const account = screen.getByRole('button', { name: '내 계정' })
-    // Reading order: theme · locale · account — the account control owns the viewport-side edge,
-    // so its right-aligned panel lands inside the 320px shell gutters.
+    // Reading order: credits · theme · locale · account. The balance leads because it is a
+    // destination rather than a preference, and the account control keeps the viewport-side
+    // edge so its right-aligned panel lands inside the 320px shell gutters.
+    expect(credits.compareDocumentPosition(theme) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
     expect(theme.compareDocumentPosition(locale) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
     expect(locale.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
     for (const trigger of [theme, locale, account]) {
       expect(trigger).toHaveClass('size-11')
     }
+    // A text-sized control earns its 44px in width the only way it can, and the header holds
+    // nothing else: the destinations are the phone's bottom bar at this width, so the
+    // header's own nav is not painted here.
+    expect(credits).toHaveClass('min-h-11', 'px-2')
+    expect(within(header).getByRole('navigation', { name: '주요' })).toHaveClass('hidden')
+    // The cluster is exactly these four: one link to the ladder and three icon triggers.
+    const cluster = credits.parentElement as HTMLElement
+    expect(within(cluster).getAllByRole('link')).toHaveLength(1)
+    expect(within(cluster).getAllByRole('button')).toHaveLength(3)
 
     await user.click(account)
     expect(screen.getByRole('dialog', { name: '내 계정' })).toHaveClass('right-0', 'w-72')

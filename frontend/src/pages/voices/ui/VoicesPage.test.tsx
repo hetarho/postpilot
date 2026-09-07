@@ -80,7 +80,8 @@ describe('the voice directory', () => {
     // Looking at the directory changes nothing and asks no model anything ([I5]).
     expect(
       calls.filter(
-        (call) => !['GetMe', 'ListVoices', 'ListModels', 'GetSelections'].includes(call),
+        (call) =>
+          !['GetMe', 'GetMyPlan', 'ListVoices', 'ListModels', 'GetSelections'].includes(call),
       ),
     ).toEqual([])
   })

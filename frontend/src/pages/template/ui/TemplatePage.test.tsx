@@ -243,7 +243,7 @@ describe('the template screen', () => {
     await user.click(screen.getByRole('button', { name: '저장' }))
     await screen.findByText('저장했어요.')
 
-    const allowed = ['GetMe', 'ListTemplates', 'UpdateTemplate']
+    const allowed = ['GetMe', 'GetMyPlan', 'ListTemplates', 'UpdateTemplate']
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 

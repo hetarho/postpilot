@@ -65,7 +65,13 @@ describe('the guideline list', () => {
     expect(within(items[2]).getByText('적용 대상 없음')).toBeInTheDocument()
 
     // A15: mounting the screen starts no job and calls no provider ([I5]).
-    const allowed = ['GetMe', 'ListGuidelines', 'ListGuidelineCandidates', 'ListTemplates']
+    const allowed = [
+      'GetMe',
+      'GetMyPlan',
+      'ListGuidelines',
+      'ListGuidelineCandidates',
+      'ListTemplates',
+    ]
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 
@@ -286,7 +292,13 @@ describe('the guideline candidate section', () => {
     expect(within(items[1]).queryByText('1번 요청함')).not.toBeInTheDocument()
 
     // A12: reading the section calls no provider and enqueues nothing ([I5]).
-    const allowed = ['GetMe', 'ListGuidelines', 'ListGuidelineCandidates', 'ListTemplates']
+    const allowed = [
+      'GetMe',
+      'GetMyPlan',
+      'ListGuidelines',
+      'ListGuidelineCandidates',
+      'ListTemplates',
+    ]
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 

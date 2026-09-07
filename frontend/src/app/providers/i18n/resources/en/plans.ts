@@ -24,6 +24,10 @@ export const plans = {
     empty: 'You are out of credits.',
     viewPlans: 'See plans',
   },
+  badge: {
+    label: 'Plan {{tier}}, {{count}} credits left',
+    labelUnlimited: 'Plan {{tier}}, unlimited credits',
+  },
   estimate: {
     perPost: 'About {{credits}} credits per post',
     posts: 'About {{count}} posts with your remaining credits',

@@ -1,13 +1,16 @@
 import { useQuery } from '@connectrpc/connect-query'
 import { PlanService } from '@/shared/api'
+import { PLAN_BALANCE_STALE_MS } from '@/shared/config'
 import type { MyPlan } from '../model/types'
 import { toMyPlan } from './plan-mappers'
 
 /** The caller's own tier, limits and live usage.
  *
- *  `staleTime: 0` because the numbers move with every job the account starts: this is
- *  mounted inside a panel that opens on demand, so a refetch per open is exactly the cost
- *  of showing a figure the user can trust. */
+ *  Two surfaces read this now — the header's credit control and the account popover
+ *  (QUOTA-27) — so it carries a short stale window rather than refetching on every mount:
+ *  opening the popover over a header that already has the figure must not cost a second
+ *  request. The window is short enough that a job which actually spent credits is reflected
+ *  long before the user can look. */
 export function useMyPlan(enabled = true): {
   myPlan: MyPlan | undefined
   isPending: boolean
@@ -16,7 +19,7 @@ export function useMyPlan(enabled = true): {
   const { data, isPending, isError } = useQuery(
     PlanService.method.getMyPlan,
     {},
-    { enabled, staleTime: 0 },
+    { enabled, staleTime: PLAN_BALANCE_STALE_MS },
   )
   return { myPlan: toMyPlan(data), isPending, isError }
 }

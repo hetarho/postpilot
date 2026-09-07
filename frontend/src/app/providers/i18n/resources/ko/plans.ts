@@ -24,6 +24,10 @@ export const plans = {
     empty: '크레딧을 다 썼어요.',
     viewPlans: '플랜 보기',
   },
+  badge: {
+    label: '플랜 {{tier}}, 남은 크레딧 {{count}}',
+    labelUnlimited: '플랜 {{tier}}, 크레딧 제한 없음',
+  },
   estimate: {
     perPost: '글 1편당 약 {{credits}} 크레딧',
     posts: '남은 크레딧으로 약 {{count}}편 쓸 수 있어요',

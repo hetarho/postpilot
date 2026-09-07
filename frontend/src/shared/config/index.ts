@@ -112,6 +112,12 @@ export const UPLOAD_CONVERT_CONCURRENCY = 2
  *  instant. */
 export const MODEL_CATALOG_STALE_MS = 5 * 60_000
 
+/** How long a credit balance is trusted before it is re-asked. The shell's credit control
+ *  and the account popover read one cache entry, so a window is what keeps opening the
+ *  popover from costing a second request; a generation takes far longer than this, so the
+ *  figure is never stale by the time a job has actually moved it. */
+export const PLAN_BALANCE_STALE_MS = 30_000
+
 /** The provider slugs the operator's catalog screen lifts to the top, in this order; every
  *  other vendor follows alphabetically.
  *

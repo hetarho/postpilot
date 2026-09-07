@@ -157,19 +157,22 @@ function PlanPanel({ close }: { close: () => void }) {
                 </li>
               ))}
             </ul>
-            <Link
-              to="/plans"
-              onClick={close}
-              className={typographyStyles({
-                variant: 'label',
-                className:
-                  'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2',
-              })}
-            >
-              {t('balance.viewPlans')}
-            </Link>
           </>
         )}
+        {/* Outside the branch: the ladder is worth reaching from every tier, including the
+            operator's, and hiding the one link to it behind "has a meter" was why `/plans`
+            went unreachable for a master account (QUOTA-27). */}
+        <Link
+          to="/plans"
+          onClick={close}
+          className={typographyStyles({
+            variant: 'label',
+            className:
+              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2',
+          })}
+        >
+          {t('balance.viewPlans')}
+        </Link>
       </section>
       {myPlan.plan === 'master' && (
         <Link

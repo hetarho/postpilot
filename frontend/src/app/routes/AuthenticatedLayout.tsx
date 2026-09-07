@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { Logo, typographyStyles } from '@/shared/ui'
 import { AccountMenu } from '@/widgets/account-menu'
+import { CreditBadge } from '@/widgets/credit-badge'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
 import { endSession } from '../model/end-session'
 
@@ -143,9 +144,13 @@ export function AuthenticatedLayout() {
             ))}
           </nav>
         </div>
-        {/* Three quiet session controls, viewport-side last: theme, locale, account. Their
-            right-aligned panels then land inside the 320px shell gutters (§8.5). */}
+        {/* The credit control and then three quiet session controls, viewport-side last:
+            theme, locale, account. Their right-aligned panels then land inside the 320px
+            shell gutters (§8.5). The balance leads the cluster because it is a destination
+            rather than a preference, and the account trigger stays last so the panel it
+            opens keeps the corner it was measured against. */}
         <div className="flex shrink-0 items-center gap-2">
+          <CreditBadge />
           <InterfacePreferences />
           <AccountMenu
             // Where logout lands is the shell's decision, not the widget's. The widget resolves

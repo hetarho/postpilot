@@ -32,7 +32,7 @@ describe('AccountMenu', () => {
 
   // Change 19 A10: the shell shows the tier, and every number behind it comes from
   // GetMyPlan — nothing about a grant is known to the client until the server says it.
-  it('fetches the balance and its lots only when the popover opens', async () => {
+  it('renders the lots behind the balance the shell already read', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     renderAppAt('/posts', {
@@ -55,11 +55,13 @@ describe('AccountMenu', () => {
     })
 
     await screen.findByRole('button', { name: '내 계정' })
-    // The panel is what costs a request, so nothing is asked until it is opened.
-    expect(calls).not.toContain('GetMyPlan')
+    // The shell's credit control reads the balance now (QUOTA-27), so the figure is already
+    // on screen and opening the panel adds no request of its own.
+    await screen.findByRole('link', { name: /플랜 Free/ })
+    expect(calls.filter((call) => call === 'GetMyPlan')).toHaveLength(1)
 
     const panel = await openAccountPopover(user)
-    expect(calls).toContain('GetMyPlan')
+    expect(calls.filter((call) => call === 'GetMyPlan')).toHaveLength(1)
     expect(within(panel).getByText('Free')).toBeInTheDocument()
 
     expect(await within(panel).findByText('62 크레딧')).toBeInTheDocument()
@@ -92,6 +94,9 @@ describe('AccountMenu', () => {
     expect(await within(panel).findByText('제한 없음')).toBeInTheDocument()
     expect(within(panel).queryAllByRole('meter')).toHaveLength(0)
     expect(within(panel).getByRole('link', { name: '운영 관리' })).toHaveClass('min-h-11')
+    // The ladder is reachable from every tier: this link used to live inside the "has a
+    // meter" branch, which left the operator account with no way to `/plans` (QUOTA-27).
+    expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()
   })
 
   it('does not offer the admin screen to a tier that cannot use it', async () => {
