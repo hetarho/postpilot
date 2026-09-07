@@ -55,6 +55,11 @@ export interface Quote {
   rateDate: string
 }
 
+export interface ChangeQuote extends Quote {
+  appliedNow: boolean
+  effectiveAt: string
+}
+
 export interface MyBilling {
   subscription: Subscription | undefined
   paymentMethod: PaymentMethod | undefined

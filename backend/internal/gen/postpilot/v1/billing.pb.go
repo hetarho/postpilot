@@ -876,6 +876,350 @@ func (x *SubscribeResponse) GetSubscription() *BillingSubscription {
 	return nil
 }
 
+type ChangeSubscriptionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Plan          Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
+	Term          Term                   `protobuf:"varint,2,opt,name=term,proto3,enum=postpilot.v1.Term" json:"term,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangeSubscriptionRequest) Reset() {
+	*x = ChangeSubscriptionRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeSubscriptionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeSubscriptionRequest) ProtoMessage() {}
+
+func (x *ChangeSubscriptionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangeSubscriptionRequest.ProtoReflect.Descriptor instead.
+func (*ChangeSubscriptionRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ChangeSubscriptionRequest) GetPlan() Plan {
+	if x != nil {
+		return x.Plan
+	}
+	return Plan_PLAN_UNSPECIFIED
+}
+
+func (x *ChangeSubscriptionRequest) GetTerm() Term {
+	if x != nil {
+		return x.Term
+	}
+	return Term_TERM_UNSPECIFIED
+}
+
+type ChangeSubscriptionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subscription  *BillingSubscription   `protobuf:"bytes,1,opt,name=subscription,proto3" json:"subscription,omitempty"`
+	AppliedNow    bool                   `protobuf:"varint,2,opt,name=applied_now,json=appliedNow,proto3" json:"applied_now,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangeSubscriptionResponse) Reset() {
+	*x = ChangeSubscriptionResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeSubscriptionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeSubscriptionResponse) ProtoMessage() {}
+
+func (x *ChangeSubscriptionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangeSubscriptionResponse.ProtoReflect.Descriptor instead.
+func (*ChangeSubscriptionResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ChangeSubscriptionResponse) GetSubscription() *BillingSubscription {
+	if x != nil {
+		return x.Subscription
+	}
+	return nil
+}
+
+func (x *ChangeSubscriptionResponse) GetAppliedNow() bool {
+	if x != nil {
+		return x.AppliedNow
+	}
+	return false
+}
+
+type CancelScheduledChangeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelScheduledChangeRequest) Reset() {
+	*x = CancelScheduledChangeRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelScheduledChangeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelScheduledChangeRequest) ProtoMessage() {}
+
+func (x *CancelScheduledChangeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelScheduledChangeRequest.ProtoReflect.Descriptor instead.
+func (*CancelScheduledChangeRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{14}
+}
+
+type CancelScheduledChangeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subscription  *BillingSubscription   `protobuf:"bytes,1,opt,name=subscription,proto3" json:"subscription,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelScheduledChangeResponse) Reset() {
+	*x = CancelScheduledChangeResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelScheduledChangeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelScheduledChangeResponse) ProtoMessage() {}
+
+func (x *CancelScheduledChangeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelScheduledChangeResponse.ProtoReflect.Descriptor instead.
+func (*CancelScheduledChangeResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CancelScheduledChangeResponse) GetSubscription() *BillingSubscription {
+	if x != nil {
+		return x.Subscription
+	}
+	return nil
+}
+
+type CancelSubscriptionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelSubscriptionRequest) Reset() {
+	*x = CancelSubscriptionRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelSubscriptionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelSubscriptionRequest) ProtoMessage() {}
+
+func (x *CancelSubscriptionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelSubscriptionRequest.ProtoReflect.Descriptor instead.
+func (*CancelSubscriptionRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{16}
+}
+
+type CancelSubscriptionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subscription  *BillingSubscription   `protobuf:"bytes,1,opt,name=subscription,proto3" json:"subscription,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelSubscriptionResponse) Reset() {
+	*x = CancelSubscriptionResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelSubscriptionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelSubscriptionResponse) ProtoMessage() {}
+
+func (x *CancelSubscriptionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelSubscriptionResponse.ProtoReflect.Descriptor instead.
+func (*CancelSubscriptionResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CancelSubscriptionResponse) GetSubscription() *BillingSubscription {
+	if x != nil {
+		return x.Subscription
+	}
+	return nil
+}
+
+type ResumeSubscriptionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeSubscriptionRequest) Reset() {
+	*x = ResumeSubscriptionRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeSubscriptionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeSubscriptionRequest) ProtoMessage() {}
+
+func (x *ResumeSubscriptionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeSubscriptionRequest.ProtoReflect.Descriptor instead.
+func (*ResumeSubscriptionRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{18}
+}
+
+type ResumeSubscriptionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subscription  *BillingSubscription   `protobuf:"bytes,1,opt,name=subscription,proto3" json:"subscription,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeSubscriptionResponse) Reset() {
+	*x = ResumeSubscriptionResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeSubscriptionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeSubscriptionResponse) ProtoMessage() {}
+
+func (x *ResumeSubscriptionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeSubscriptionResponse.ProtoReflect.Descriptor instead.
+func (*ResumeSubscriptionResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ResumeSubscriptionResponse) GetSubscription() *BillingSubscription {
+	if x != nil {
+		return x.Subscription
+	}
+	return nil
+}
+
 type QuotePriceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Plan          Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
@@ -886,7 +1230,7 @@ type QuotePriceRequest struct {
 
 func (x *QuotePriceRequest) Reset() {
 	*x = QuotePriceRequest{}
-	mi := &file_postpilot_v1_billing_proto_msgTypes[12]
+	mi := &file_postpilot_v1_billing_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -898,7 +1242,7 @@ func (x *QuotePriceRequest) String() string {
 func (*QuotePriceRequest) ProtoMessage() {}
 
 func (x *QuotePriceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_billing_proto_msgTypes[12]
+	mi := &file_postpilot_v1_billing_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -911,7 +1255,7 @@ func (x *QuotePriceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuotePriceRequest.ProtoReflect.Descriptor instead.
 func (*QuotePriceRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{12}
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *QuotePriceRequest) GetPlan() Plan {
@@ -940,7 +1284,7 @@ type QuotePriceResponse struct {
 
 func (x *QuotePriceResponse) Reset() {
 	*x = QuotePriceResponse{}
-	mi := &file_postpilot_v1_billing_proto_msgTypes[13]
+	mi := &file_postpilot_v1_billing_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -952,7 +1296,7 @@ func (x *QuotePriceResponse) String() string {
 func (*QuotePriceResponse) ProtoMessage() {}
 
 func (x *QuotePriceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_billing_proto_msgTypes[13]
+	mi := &file_postpilot_v1_billing_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -965,7 +1309,7 @@ func (x *QuotePriceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuotePriceResponse.ProtoReflect.Descriptor instead.
 func (*QuotePriceResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{13}
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *QuotePriceResponse) GetUsdCents() int32 {
@@ -992,6 +1336,142 @@ func (x *QuotePriceResponse) GetKrwPerUsdE4() int64 {
 func (x *QuotePriceResponse) GetRateDate() string {
 	if x != nil {
 		return x.RateDate
+	}
+	return ""
+}
+
+type QuoteChangeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Plan          Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
+	Term          Term                   `protobuf:"varint,2,opt,name=term,proto3,enum=postpilot.v1.Term" json:"term,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuoteChangeRequest) Reset() {
+	*x = QuoteChangeRequest{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuoteChangeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuoteChangeRequest) ProtoMessage() {}
+
+func (x *QuoteChangeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuoteChangeRequest.ProtoReflect.Descriptor instead.
+func (*QuoteChangeRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *QuoteChangeRequest) GetPlan() Plan {
+	if x != nil {
+		return x.Plan
+	}
+	return Plan_PLAN_UNSPECIFIED
+}
+
+func (x *QuoteChangeRequest) GetTerm() Term {
+	if x != nil {
+		return x.Term
+	}
+	return Term_TERM_UNSPECIFIED
+}
+
+type QuoteChangeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UsdCents      int32                  `protobuf:"varint,1,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
+	Krw           int64                  `protobuf:"varint,2,opt,name=krw,proto3" json:"krw,omitempty"`
+	KrwPerUsdE4   int64                  `protobuf:"varint,3,opt,name=krw_per_usd_e4,json=krwPerUsdE4,proto3" json:"krw_per_usd_e4,omitempty"`
+	RateDate      string                 `protobuf:"bytes,4,opt,name=rate_date,json=rateDate,proto3" json:"rate_date,omitempty"`
+	AppliedNow    bool                   `protobuf:"varint,5,opt,name=applied_now,json=appliedNow,proto3" json:"applied_now,omitempty"`
+	EffectiveAt   string                 `protobuf:"bytes,6,opt,name=effective_at,json=effectiveAt,proto3" json:"effective_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuoteChangeResponse) Reset() {
+	*x = QuoteChangeResponse{}
+	mi := &file_postpilot_v1_billing_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuoteChangeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuoteChangeResponse) ProtoMessage() {}
+
+func (x *QuoteChangeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_billing_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuoteChangeResponse.ProtoReflect.Descriptor instead.
+func (*QuoteChangeResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *QuoteChangeResponse) GetUsdCents() int32 {
+	if x != nil {
+		return x.UsdCents
+	}
+	return 0
+}
+
+func (x *QuoteChangeResponse) GetKrw() int64 {
+	if x != nil {
+		return x.Krw
+	}
+	return 0
+}
+
+func (x *QuoteChangeResponse) GetKrwPerUsdE4() int64 {
+	if x != nil {
+		return x.KrwPerUsdE4
+	}
+	return 0
+}
+
+func (x *QuoteChangeResponse) GetRateDate() string {
+	if x != nil {
+		return x.RateDate
+	}
+	return ""
+}
+
+func (x *QuoteChangeResponse) GetAppliedNow() bool {
+	if x != nil {
+		return x.AppliedNow
+	}
+	return false
+}
+
+func (x *QuoteChangeResponse) GetEffectiveAt() string {
+	if x != nil {
+		return x.EffectiveAt
 	}
 	return ""
 }
@@ -1066,6 +1546,22 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12&\n" +
 	"\x04term\x18\x02 \x01(\x0e2\x12.postpilot.v1.TermR\x04term\"Z\n" +
 	"\x11SubscribeResponse\x12E\n" +
+	"\fsubscription\x18\x01 \x01(\v2!.postpilot.v1.BillingSubscriptionR\fsubscription\"k\n" +
+	"\x19ChangeSubscriptionRequest\x12&\n" +
+	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12&\n" +
+	"\x04term\x18\x02 \x01(\x0e2\x12.postpilot.v1.TermR\x04term\"\x84\x01\n" +
+	"\x1aChangeSubscriptionResponse\x12E\n" +
+	"\fsubscription\x18\x01 \x01(\v2!.postpilot.v1.BillingSubscriptionR\fsubscription\x12\x1f\n" +
+	"\vapplied_now\x18\x02 \x01(\bR\n" +
+	"appliedNow\"\x1e\n" +
+	"\x1cCancelScheduledChangeRequest\"f\n" +
+	"\x1dCancelScheduledChangeResponse\x12E\n" +
+	"\fsubscription\x18\x01 \x01(\v2!.postpilot.v1.BillingSubscriptionR\fsubscription\"\x1b\n" +
+	"\x19CancelSubscriptionRequest\"c\n" +
+	"\x1aCancelSubscriptionResponse\x12E\n" +
+	"\fsubscription\x18\x01 \x01(\v2!.postpilot.v1.BillingSubscriptionR\fsubscription\"\x1b\n" +
+	"\x19ResumeSubscriptionRequest\"c\n" +
+	"\x1aResumeSubscriptionResponse\x12E\n" +
 	"\fsubscription\x18\x01 \x01(\v2!.postpilot.v1.BillingSubscriptionR\fsubscription\"c\n" +
 	"\x11QuotePriceRequest\x12&\n" +
 	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12&\n" +
@@ -1074,18 +1570,34 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	"\tusd_cents\x18\x01 \x01(\x05R\busdCents\x12\x10\n" +
 	"\x03krw\x18\x02 \x01(\x03R\x03krw\x12#\n" +
 	"\x0ekrw_per_usd_e4\x18\x03 \x01(\x03R\vkrwPerUsdE4\x12\x1b\n" +
-	"\trate_date\x18\x04 \x01(\tR\brateDate*?\n" +
+	"\trate_date\x18\x04 \x01(\tR\brateDate\"d\n" +
+	"\x12QuoteChangeRequest\x12&\n" +
+	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12&\n" +
+	"\x04term\x18\x02 \x01(\x0e2\x12.postpilot.v1.TermR\x04term\"\xca\x01\n" +
+	"\x13QuoteChangeResponse\x12\x1b\n" +
+	"\tusd_cents\x18\x01 \x01(\x05R\busdCents\x12\x10\n" +
+	"\x03krw\x18\x02 \x01(\x03R\x03krw\x12#\n" +
+	"\x0ekrw_per_usd_e4\x18\x03 \x01(\x03R\vkrwPerUsdE4\x12\x1b\n" +
+	"\trate_date\x18\x04 \x01(\tR\brateDate\x12\x1f\n" +
+	"\vapplied_now\x18\x05 \x01(\bR\n" +
+	"appliedNow\x12!\n" +
+	"\feffective_at\x18\x06 \x01(\tR\veffectiveAt*?\n" +
 	"\x04Term\x12\x14\n" +
 	"\x10TERM_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fTERM_MONTHLY\x10\x01\x12\x0f\n" +
-	"\vTERM_ANNUAL\x10\x022\xee\x03\n" +
+	"\vTERM_ANNUAL\x10\x022\xf9\a\n" +
 	"\x0eBillingService\x12W\n" +
 	"\fGetMyBilling\x12!.postpilot.v1.GetMyBillingRequest\x1a\".postpilot.v1.GetMyBillingResponse\"\x00\x12r\n" +
 	"\x15RegisterPaymentMethod\x12*.postpilot.v1.RegisterPaymentMethodRequest\x1a+.postpilot.v1.RegisterPaymentMethodResponse\"\x00\x12l\n" +
 	"\x13RemovePaymentMethod\x12(.postpilot.v1.RemovePaymentMethodRequest\x1a).postpilot.v1.RemovePaymentMethodResponse\"\x00\x12N\n" +
-	"\tSubscribe\x12\x1e.postpilot.v1.SubscribeRequest\x1a\x1f.postpilot.v1.SubscribeResponse\"\x00\x12Q\n" +
+	"\tSubscribe\x12\x1e.postpilot.v1.SubscribeRequest\x1a\x1f.postpilot.v1.SubscribeResponse\"\x00\x12i\n" +
+	"\x12ChangeSubscription\x12'.postpilot.v1.ChangeSubscriptionRequest\x1a(.postpilot.v1.ChangeSubscriptionResponse\"\x00\x12r\n" +
+	"\x15CancelScheduledChange\x12*.postpilot.v1.CancelScheduledChangeRequest\x1a+.postpilot.v1.CancelScheduledChangeResponse\"\x00\x12i\n" +
+	"\x12CancelSubscription\x12'.postpilot.v1.CancelSubscriptionRequest\x1a(.postpilot.v1.CancelSubscriptionResponse\"\x00\x12i\n" +
+	"\x12ResumeSubscription\x12'.postpilot.v1.ResumeSubscriptionRequest\x1a(.postpilot.v1.ResumeSubscriptionResponse\"\x00\x12Q\n" +
 	"\n" +
-	"QuotePrice\x12\x1f.postpilot.v1.QuotePriceRequest\x1a .postpilot.v1.QuotePriceResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"QuotePrice\x12\x1f.postpilot.v1.QuotePriceRequest\x1a .postpilot.v1.QuotePriceResponse\"\x00\x12T\n" +
+	"\vQuoteChange\x12 .postpilot.v1.QuoteChangeRequest\x1a!.postpilot.v1.QuoteChangeResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_billing_proto_rawDescOnce sync.Once
@@ -1100,7 +1612,7 @@ func file_postpilot_v1_billing_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_billing_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_postpilot_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_postpilot_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_postpilot_v1_billing_proto_goTypes = []any{
 	(Term)(0),                             // 0: postpilot.v1.Term
 	(*BillingSubscription)(nil),           // 1: postpilot.v1.BillingSubscription
@@ -1115,42 +1627,70 @@ var file_postpilot_v1_billing_proto_goTypes = []any{
 	(*RemovePaymentMethodResponse)(nil),   // 10: postpilot.v1.RemovePaymentMethodResponse
 	(*SubscribeRequest)(nil),              // 11: postpilot.v1.SubscribeRequest
 	(*SubscribeResponse)(nil),             // 12: postpilot.v1.SubscribeResponse
-	(*QuotePriceRequest)(nil),             // 13: postpilot.v1.QuotePriceRequest
-	(*QuotePriceResponse)(nil),            // 14: postpilot.v1.QuotePriceResponse
-	(Plan)(0),                             // 15: postpilot.v1.Plan
+	(*ChangeSubscriptionRequest)(nil),     // 13: postpilot.v1.ChangeSubscriptionRequest
+	(*ChangeSubscriptionResponse)(nil),    // 14: postpilot.v1.ChangeSubscriptionResponse
+	(*CancelScheduledChangeRequest)(nil),  // 15: postpilot.v1.CancelScheduledChangeRequest
+	(*CancelScheduledChangeResponse)(nil), // 16: postpilot.v1.CancelScheduledChangeResponse
+	(*CancelSubscriptionRequest)(nil),     // 17: postpilot.v1.CancelSubscriptionRequest
+	(*CancelSubscriptionResponse)(nil),    // 18: postpilot.v1.CancelSubscriptionResponse
+	(*ResumeSubscriptionRequest)(nil),     // 19: postpilot.v1.ResumeSubscriptionRequest
+	(*ResumeSubscriptionResponse)(nil),    // 20: postpilot.v1.ResumeSubscriptionResponse
+	(*QuotePriceRequest)(nil),             // 21: postpilot.v1.QuotePriceRequest
+	(*QuotePriceResponse)(nil),            // 22: postpilot.v1.QuotePriceResponse
+	(*QuoteChangeRequest)(nil),            // 23: postpilot.v1.QuoteChangeRequest
+	(*QuoteChangeResponse)(nil),           // 24: postpilot.v1.QuoteChangeResponse
+	(Plan)(0),                             // 25: postpilot.v1.Plan
 }
 var file_postpilot_v1_billing_proto_depIdxs = []int32{
-	15, // 0: postpilot.v1.BillingSubscription.plan:type_name -> postpilot.v1.Plan
+	25, // 0: postpilot.v1.BillingSubscription.plan:type_name -> postpilot.v1.Plan
 	0,  // 1: postpilot.v1.BillingSubscription.term:type_name -> postpilot.v1.Term
-	15, // 2: postpilot.v1.BillingSubscription.scheduled_plan:type_name -> postpilot.v1.Plan
+	25, // 2: postpilot.v1.BillingSubscription.scheduled_plan:type_name -> postpilot.v1.Plan
 	0,  // 3: postpilot.v1.BillingSubscription.scheduled_term:type_name -> postpilot.v1.Term
-	15, // 4: postpilot.v1.BillingEvent.plan:type_name -> postpilot.v1.Plan
+	25, // 4: postpilot.v1.BillingEvent.plan:type_name -> postpilot.v1.Plan
 	0,  // 5: postpilot.v1.BillingEvent.term:type_name -> postpilot.v1.Term
 	1,  // 6: postpilot.v1.GetMyBillingResponse.subscription:type_name -> postpilot.v1.BillingSubscription
 	2,  // 7: postpilot.v1.GetMyBillingResponse.payment_method:type_name -> postpilot.v1.BillingPaymentMethod
 	3,  // 8: postpilot.v1.GetMyBillingResponse.history:type_name -> postpilot.v1.BillingEvent
 	4,  // 9: postpilot.v1.GetMyBillingResponse.purchases:type_name -> postpilot.v1.BillingPurchase
 	2,  // 10: postpilot.v1.RegisterPaymentMethodResponse.payment_method:type_name -> postpilot.v1.BillingPaymentMethod
-	15, // 11: postpilot.v1.SubscribeRequest.plan:type_name -> postpilot.v1.Plan
+	25, // 11: postpilot.v1.SubscribeRequest.plan:type_name -> postpilot.v1.Plan
 	0,  // 12: postpilot.v1.SubscribeRequest.term:type_name -> postpilot.v1.Term
 	1,  // 13: postpilot.v1.SubscribeResponse.subscription:type_name -> postpilot.v1.BillingSubscription
-	15, // 14: postpilot.v1.QuotePriceRequest.plan:type_name -> postpilot.v1.Plan
-	0,  // 15: postpilot.v1.QuotePriceRequest.term:type_name -> postpilot.v1.Term
-	5,  // 16: postpilot.v1.BillingService.GetMyBilling:input_type -> postpilot.v1.GetMyBillingRequest
-	7,  // 17: postpilot.v1.BillingService.RegisterPaymentMethod:input_type -> postpilot.v1.RegisterPaymentMethodRequest
-	9,  // 18: postpilot.v1.BillingService.RemovePaymentMethod:input_type -> postpilot.v1.RemovePaymentMethodRequest
-	11, // 19: postpilot.v1.BillingService.Subscribe:input_type -> postpilot.v1.SubscribeRequest
-	13, // 20: postpilot.v1.BillingService.QuotePrice:input_type -> postpilot.v1.QuotePriceRequest
-	6,  // 21: postpilot.v1.BillingService.GetMyBilling:output_type -> postpilot.v1.GetMyBillingResponse
-	8,  // 22: postpilot.v1.BillingService.RegisterPaymentMethod:output_type -> postpilot.v1.RegisterPaymentMethodResponse
-	10, // 23: postpilot.v1.BillingService.RemovePaymentMethod:output_type -> postpilot.v1.RemovePaymentMethodResponse
-	12, // 24: postpilot.v1.BillingService.Subscribe:output_type -> postpilot.v1.SubscribeResponse
-	14, // 25: postpilot.v1.BillingService.QuotePrice:output_type -> postpilot.v1.QuotePriceResponse
-	21, // [21:26] is the sub-list for method output_type
-	16, // [16:21] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	25, // 14: postpilot.v1.ChangeSubscriptionRequest.plan:type_name -> postpilot.v1.Plan
+	0,  // 15: postpilot.v1.ChangeSubscriptionRequest.term:type_name -> postpilot.v1.Term
+	1,  // 16: postpilot.v1.ChangeSubscriptionResponse.subscription:type_name -> postpilot.v1.BillingSubscription
+	1,  // 17: postpilot.v1.CancelScheduledChangeResponse.subscription:type_name -> postpilot.v1.BillingSubscription
+	1,  // 18: postpilot.v1.CancelSubscriptionResponse.subscription:type_name -> postpilot.v1.BillingSubscription
+	1,  // 19: postpilot.v1.ResumeSubscriptionResponse.subscription:type_name -> postpilot.v1.BillingSubscription
+	25, // 20: postpilot.v1.QuotePriceRequest.plan:type_name -> postpilot.v1.Plan
+	0,  // 21: postpilot.v1.QuotePriceRequest.term:type_name -> postpilot.v1.Term
+	25, // 22: postpilot.v1.QuoteChangeRequest.plan:type_name -> postpilot.v1.Plan
+	0,  // 23: postpilot.v1.QuoteChangeRequest.term:type_name -> postpilot.v1.Term
+	5,  // 24: postpilot.v1.BillingService.GetMyBilling:input_type -> postpilot.v1.GetMyBillingRequest
+	7,  // 25: postpilot.v1.BillingService.RegisterPaymentMethod:input_type -> postpilot.v1.RegisterPaymentMethodRequest
+	9,  // 26: postpilot.v1.BillingService.RemovePaymentMethod:input_type -> postpilot.v1.RemovePaymentMethodRequest
+	11, // 27: postpilot.v1.BillingService.Subscribe:input_type -> postpilot.v1.SubscribeRequest
+	13, // 28: postpilot.v1.BillingService.ChangeSubscription:input_type -> postpilot.v1.ChangeSubscriptionRequest
+	15, // 29: postpilot.v1.BillingService.CancelScheduledChange:input_type -> postpilot.v1.CancelScheduledChangeRequest
+	17, // 30: postpilot.v1.BillingService.CancelSubscription:input_type -> postpilot.v1.CancelSubscriptionRequest
+	19, // 31: postpilot.v1.BillingService.ResumeSubscription:input_type -> postpilot.v1.ResumeSubscriptionRequest
+	21, // 32: postpilot.v1.BillingService.QuotePrice:input_type -> postpilot.v1.QuotePriceRequest
+	23, // 33: postpilot.v1.BillingService.QuoteChange:input_type -> postpilot.v1.QuoteChangeRequest
+	6,  // 34: postpilot.v1.BillingService.GetMyBilling:output_type -> postpilot.v1.GetMyBillingResponse
+	8,  // 35: postpilot.v1.BillingService.RegisterPaymentMethod:output_type -> postpilot.v1.RegisterPaymentMethodResponse
+	10, // 36: postpilot.v1.BillingService.RemovePaymentMethod:output_type -> postpilot.v1.RemovePaymentMethodResponse
+	12, // 37: postpilot.v1.BillingService.Subscribe:output_type -> postpilot.v1.SubscribeResponse
+	14, // 38: postpilot.v1.BillingService.ChangeSubscription:output_type -> postpilot.v1.ChangeSubscriptionResponse
+	16, // 39: postpilot.v1.BillingService.CancelScheduledChange:output_type -> postpilot.v1.CancelScheduledChangeResponse
+	18, // 40: postpilot.v1.BillingService.CancelSubscription:output_type -> postpilot.v1.CancelSubscriptionResponse
+	20, // 41: postpilot.v1.BillingService.ResumeSubscription:output_type -> postpilot.v1.ResumeSubscriptionResponse
+	22, // 42: postpilot.v1.BillingService.QuotePrice:output_type -> postpilot.v1.QuotePriceResponse
+	24, // 43: postpilot.v1.BillingService.QuoteChange:output_type -> postpilot.v1.QuoteChangeResponse
+	34, // [34:44] is the sub-list for method output_type
+	24, // [24:34] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_billing_proto_init() }
@@ -1165,7 +1705,7 @@ func file_postpilot_v1_billing_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_billing_proto_rawDesc), len(file_postpilot_v1_billing_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   14,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -1,6 +1,7 @@
 export type {
   BillingEvent,
   BillingTerm,
+  ChangeQuote,
   MyBilling,
   PaymentMethod,
   Purchase,
@@ -13,8 +14,17 @@ export {
   termToProto,
   toMyBilling,
   toQuote,
+  toChangeQuote,
+  toSubscription,
 } from './api/billing-mappers'
 export { myBillingQueryKey, useMyBilling } from './api/useMyBilling'
 export { useQuote } from './api/useQuote'
 export { useSubscribe } from './api/useSubscribe'
+export {
+  useCancelScheduledChange,
+  useCancelSubscription,
+  useChangeSubscription,
+  useQuoteChange,
+  useResumeSubscription,
+} from './api/useSubscriptionChanges'
 export { useRegisterPaymentMethod, useRemovePaymentMethod } from './api/usePaymentMethod'

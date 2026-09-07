@@ -1,8 +1,15 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { planLabel, useMyPlan } from '@/entities/plan'
-import { useMyBilling, useQuote, useSubscribe, type BillingTerm } from '@/entities/subscription'
+import { planLabel, PLANS, useMyPlan } from '@/entities/plan'
+import {
+  useChangeSubscription,
+  useMyBilling,
+  useQuote,
+  useQuoteChange,
+  useSubscribe,
+  type BillingTerm,
+} from '@/entities/subscription'
 import { RegisterPaymentMethodButton } from '@/features/register-payment-method'
 import { formatNumber } from '@/shared/lib'
 import {
@@ -24,24 +31,49 @@ export function BillingCheckoutPage() {
   const [term, setTerm] = useState<BillingTerm>('monthly')
   const { myPlan, isPending: planPending, isError: planError } = useMyPlan()
   const { myBilling, isPending: billingPending, isError: billingError } = useMyBilling()
-  const { quote, isPending: quotePending, isError: quoteError } = useQuote(tier, term)
+  const activeSubscription =
+    myBilling?.subscription?.status === 'active' ? myBilling.subscription : undefined
+  const isUpgrade = Boolean(
+    activeSubscription?.plan &&
+    tier &&
+    PLANS.indexOf(tier) > PLANS.indexOf(activeSubscription.plan),
+  )
+  const selectedTerm = isUpgrade ? (activeSubscription?.term ?? term) : term
+  const standardQuote = useQuote(tier, selectedTerm, !isUpgrade)
+  const changeQuote = useQuoteChange(
+    isUpgrade ? tier : undefined,
+    isUpgrade ? selectedTerm : undefined,
+  )
+  const quote = isUpgrade ? changeQuote.quote : standardQuote.quote
+  const quotePending = isUpgrade ? changeQuote.isPending : standardQuote.isPending
+  const quoteError = isUpgrade ? changeQuote.isError : standardQuote.isError
   const subscribe = useSubscribe()
+  const change = useChangeSubscription()
   const navigate = useNavigate()
   const offer = myPlan?.offers.find((candidate) => candidate.plan === tier)
   const invalid =
-    tier === undefined || (myPlan !== undefined && (!offer || myPlan.plan === 'master'))
+    tier === undefined ||
+    (myPlan !== undefined &&
+      (!offer ||
+        myPlan.plan === 'master' ||
+        (activeSubscription?.plan !== undefined &&
+          PLANS.indexOf(tier) <= PLANS.indexOf(activeSubscription.plan))))
   const returnTo = tier ? `/billing/checkout?tier=${tier}` : '/billing/checkout'
 
   const submit = async () => {
     if (!tier || !myBilling?.paymentMethod) return
     try {
-      await subscribe.subscribe(tier, term)
+      if (isUpgrade) {
+        await change.changeSubscription(tier, selectedTerm)
+      } else {
+        await subscribe.subscribe(tier, selectedTerm)
+      }
       void navigate({
         to: '/billing',
         replace: true,
         state: (previous) => ({
           ...previous,
-          billingSubscription: { tier: planLabel(tier) },
+          billingSubscription: { tier: planLabel(tier), changed: isUpgrade },
         }),
       })
     } catch {
@@ -87,16 +119,22 @@ export function BillingCheckoutPage() {
             <Typography variant="title" as="h2">
               {t('checkout.termHeading', { ns: 'billing' })}
             </Typography>
-            <SegmentedControl
-              value={term}
-              options={terms.map((value) => ({
-                value,
-                label: t(`checkout.term.${value}`, { ns: 'billing' }),
-              }))}
-              onChange={setTerm}
-              ariaLabel={t('checkout.termHeading', { ns: 'billing' })}
-            />
-            {term === 'annual' && (
+            {isUpgrade ? (
+              <Typography variant="fieldTitle">
+                {t(`checkout.term.${selectedTerm}`, { ns: 'billing' })}
+              </Typography>
+            ) : (
+              <SegmentedControl
+                value={term}
+                options={terms.map((value) => ({
+                  value,
+                  label: t(`checkout.term.${value}`, { ns: 'billing' }),
+                }))}
+                onChange={setTerm}
+                ariaLabel={t('checkout.termHeading', { ns: 'billing' })}
+              />
+            )}
+            {selectedTerm === 'annual' && !isUpgrade && (
               <Typography variant="meta" className="text-content-secondary">
                 {t('checkout.annualValue', { ns: 'billing' })}
               </Typography>
@@ -126,6 +164,11 @@ export function BillingCheckoutPage() {
                 <Typography variant="meta" className="text-content-secondary max-w-measure">
                   {t('checkout.moving', { ns: 'billing' })}
                 </Typography>
+                {isUpgrade && (
+                  <Typography variant="meta" className="text-content-secondary max-w-measure">
+                    {t('checkout.chargedNow', { ns: 'billing' })}
+                  </Typography>
+                )}
               </>
             )}
           </section>
@@ -149,14 +192,18 @@ export function BillingCheckoutPage() {
             )}
           </section>
 
-          {subscribe.errorMessage && (
+          {(subscribe.errorMessage || change.errorMessage) && (
             <Notice tone="danger" role="alert">
-              {subscribe.errorMessage}
+              {subscribe.errorMessage || change.errorMessage}
             </Notice>
           )}
           {myBilling.paymentMethod && quote && (
-            <Button variant="cta" pending={subscribe.isPending} onClick={() => void submit()}>
-              {t('checkout.submit', { ns: 'billing' })}
+            <Button
+              variant="cta"
+              pending={subscribe.isPending || change.isPending}
+              onClick={() => void submit()}
+            >
+              {t(isUpgrade ? 'checkout.upgradeSubmit' : 'checkout.submit', { ns: 'billing' })}
             </Button>
           )}
           <Link

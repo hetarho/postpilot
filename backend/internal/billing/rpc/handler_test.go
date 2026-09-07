@@ -56,6 +56,25 @@ func TestSubscriptionFailuresHaveStableCodesAndReasons(t *testing.T) {
 	}
 }
 
+func TestSubscriptionChangeFailuresHaveStableCodesAndReasons(t *testing.T) {
+	tests := []struct {
+		err    error
+		code   connect.Code
+		reason string
+	}{
+		{billing.ErrSubscriptionRequired, connect.CodeFailedPrecondition, "SUBSCRIPTION_REQUIRED"},
+		{billing.ErrNoChange, connect.CodeFailedPrecondition, "NO_CHANGE"},
+		{billing.ErrNoScheduledChange, connect.CodeFailedPrecondition, "NO_SCHEDULED_CHANGE"},
+		{billing.ErrChangeUnsupported, connect.CodeInvalidArgument, "CHANGE_UNSUPPORTED"},
+	}
+	for _, test := range tests {
+		err := changeError("alice", test.err)
+		if connect.CodeOf(err) != test.code || billingErrorDetail(t, err).GetReason() != test.reason {
+			t.Errorf("%s = %v", test.reason, err)
+		}
+	}
+}
+
 func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 	now := time.Date(2026, 9, 8, 1, 2, 3, 0, time.UTC)
 	tier, term, amount := plan.Pro, billing.TermMonthly, 500
@@ -101,6 +120,25 @@ func TestBillingHandlerReturnsTheContractQuoteWithoutDerivingItInTheTransport(t 
 		t.Fatal(err)
 	}
 	if response.Msg.GetUsdCents() != 2000 || response.Msg.GetKrw() != 27850 || response.Msg.GetKrwPerUsdE4() != 13925000 || response.Msg.GetRateDate() == "" {
+		t.Fatalf("quote = %+v", response.Msg)
+	}
+}
+
+func TestBillingHandlerMapsAnUpgradeQuote(t *testing.T) {
+	anchor := time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC)
+	service := billing.NewService(handlerStore{subscription: &billing.Subscription{
+		UserID: "alice", Tier: plan.Basic, Term: billing.TermMonthly, AnchorAt: anchor,
+		TermStart: anchor, TermEnd: time.Date(2100, 1, 8, 0, 0, 0, 0, time.UTC),
+		NextGrantAt: time.Date(2100, 1, 8, 0, 0, 0, 0, time.UTC), AutoRenew: true, Status: "active",
+	}}, handlerProvider{}, handlerRates{}, nil, nil, nil, nil)
+	handler := NewHandler(service)
+	response, err := handler.QuoteChange(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&postpilotv1.QuoteChangeRequest{
+		Plan: postpilotv1.Plan_PLAN_MAX, Term: postpilotv1.Term_TERM_MONTHLY,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Msg.GetUsdCents() != 800 || response.Msg.GetKrw() != 11_140 || !response.Msg.GetAppliedNow() || response.Msg.GetEffectiveAt() == "" {
 		t.Fatalf("quote = %+v", response.Msg)
 	}
 }

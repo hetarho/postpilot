@@ -136,7 +136,14 @@ func (s *Service) grantAnnualWindow(ctx context.Context, subscription Subscripti
 }
 
 func (s *Service) renew(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
-	quote, err := s.quoteAt(ctx, subscription.Tier, subscription.Term, now)
+	tier, term := subscription.Tier, subscription.Term
+	if subscription.ScheduledTier != nil {
+		tier = *subscription.ScheduledTier
+	}
+	if subscription.ScheduledTerm != nil {
+		term = *subscription.ScheduledTerm
+	}
+	quote, err := s.quoteAt(ctx, tier, term, now)
 	if err != nil {
 		return subscription, err
 	}
@@ -148,38 +155,50 @@ func (s *Service) renew(ctx context.Context, subscription Subscription, now time
 	orderID := subscriptionOrderID(subscription.UserID, start)
 	var payment Payment
 	if found {
-		payment, err = s.chargeSubscription(ctx, method, subscription.Tier, subscription.Term, quote, orderID)
+		payment, err = s.chargeSubscription(ctx, method, tier, term, quote, orderID)
 	} else {
 		err = ErrPaymentMethodRequired
 	}
 	if err != nil {
-		return s.lapseFailedRenewal(ctx, subscription, quote, orderID, now)
+		return s.lapseFailedRenewal(ctx, subscription, tier, term, quote, orderID, now)
 	}
 
 	updated := subscription
+	updated.Tier = tier
+	updated.Term = term
 	updated.TermStart = start
-	updated.TermEnd = TermEnd(subscription.AnchorAt, start, subscription.Term)
+	updated.TermEnd = TermEnd(subscription.AnchorAt, start, term)
 	updated.NextGrantAt = plan.NextRenewal(subscription.AnchorAt, start)
+	updated.ScheduledTier = nil
+	updated.ScheduledTerm = nil
 	updated.UpdatedAt = now
-	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits, _ Plans) error {
+	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits, plans Plans) error {
 		if err := tx.UpsertSubscription(ctx, updated); err != nil {
 			return err
 		}
-		if err := tx.InsertEvent(ctx, chargeEvent(subscription.UserID, subscription.Tier, subscription.Term, quote, payment, orderID, now)); err != nil {
+		if err := tx.InsertEvent(ctx, chargeEvent(subscription.UserID, tier, term, quote, payment, orderID, now)); err != nil {
 			return err
 		}
-		return credits.OpenMonthlyLot(ctx, subscription.UserID, subscription.Tier, start, updated.NextGrantAt)
+		if tier != subscription.Tier {
+			if err := tx.InsertEvent(ctx, Event{UserID: subscription.UserID, Kind: "tier_change", Tier: &tier, Term: &term, CreatedAt: now}); err != nil {
+				return err
+			}
+			if err := plans.AssignTier(ctx, subscription.UserID, tier); err != nil {
+				return err
+			}
+		}
+		return credits.OpenMonthlyLot(ctx, subscription.UserID, tier, start, updated.NextGrantAt)
 	})
 	if err != nil {
 		return subscription, err
 	}
-	if err := s.sendMail(ctx, subscription.UserID, RenewalMail(subscription.Tier, subscription.Term, quote)); err != nil {
+	if err := s.sendMail(ctx, subscription.UserID, RenewalMail(tier, term, quote)); err != nil {
 		return updated, err
 	}
 	return updated, nil
 }
 
-func (s *Service) lapseFailedRenewal(ctx context.Context, subscription Subscription, quote Quote, orderID string, now time.Time) (Subscription, error) {
+func (s *Service) lapseFailedRenewal(ctx context.Context, subscription Subscription, tier plan.Plan, term Term, quote Quote, orderID string, now time.Time) (Subscription, error) {
 	updated := subscription
 	updated.Status = "lapsed"
 	updated.UpdatedAt = now
@@ -191,12 +210,12 @@ func (s *Service) lapseFailedRenewal(ctx context.Context, subscription Subscript
 			return err
 		}
 		note := orderID
-		return tx.InsertEvent(ctx, Event{UserID: subscription.UserID, Kind: "renewal_failed", Tier: &subscription.Tier, Term: &subscription.Term, USDCents: &quote.USDCents, KRWPerUSDE4: &quote.RatePerUSDE4, RateDate: &quote.RateDate, KRW: &quote.KRW, Note: &note, CreatedAt: now})
+		return tx.InsertEvent(ctx, Event{UserID: subscription.UserID, Kind: "renewal_failed", Tier: &tier, Term: &term, USDCents: &quote.USDCents, KRWPerUSDE4: &quote.RatePerUSDE4, RateDate: &quote.RateDate, KRW: &quote.KRW, Note: &note, CreatedAt: now})
 	})
 	if err != nil {
 		return subscription, err
 	}
-	if err := s.sendMail(ctx, subscription.UserID, RenewalFailedMail(subscription.Tier, subscription.Term, quote)); err != nil {
+	if err := s.sendMail(ctx, subscription.UserID, RenewalFailedMail(tier, term, quote)); err != nil {
 		return updated, err
 	}
 	return updated, nil

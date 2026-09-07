@@ -45,9 +45,24 @@ const (
 	// BillingServiceSubscribeProcedure is the fully-qualified name of the BillingService's Subscribe
 	// RPC.
 	BillingServiceSubscribeProcedure = "/postpilot.v1.BillingService/Subscribe"
+	// BillingServiceChangeSubscriptionProcedure is the fully-qualified name of the BillingService's
+	// ChangeSubscription RPC.
+	BillingServiceChangeSubscriptionProcedure = "/postpilot.v1.BillingService/ChangeSubscription"
+	// BillingServiceCancelScheduledChangeProcedure is the fully-qualified name of the BillingService's
+	// CancelScheduledChange RPC.
+	BillingServiceCancelScheduledChangeProcedure = "/postpilot.v1.BillingService/CancelScheduledChange"
+	// BillingServiceCancelSubscriptionProcedure is the fully-qualified name of the BillingService's
+	// CancelSubscription RPC.
+	BillingServiceCancelSubscriptionProcedure = "/postpilot.v1.BillingService/CancelSubscription"
+	// BillingServiceResumeSubscriptionProcedure is the fully-qualified name of the BillingService's
+	// ResumeSubscription RPC.
+	BillingServiceResumeSubscriptionProcedure = "/postpilot.v1.BillingService/ResumeSubscription"
 	// BillingServiceQuotePriceProcedure is the fully-qualified name of the BillingService's QuotePrice
 	// RPC.
 	BillingServiceQuotePriceProcedure = "/postpilot.v1.BillingService/QuotePrice"
+	// BillingServiceQuoteChangeProcedure is the fully-qualified name of the BillingService's
+	// QuoteChange RPC.
+	BillingServiceQuoteChangeProcedure = "/postpilot.v1.BillingService/QuoteChange"
 )
 
 // BillingServiceClient is a client for the postpilot.v1.BillingService service.
@@ -56,7 +71,12 @@ type BillingServiceClient interface {
 	RegisterPaymentMethod(context.Context, *connect.Request[v1.RegisterPaymentMethodRequest]) (*connect.Response[v1.RegisterPaymentMethodResponse], error)
 	RemovePaymentMethod(context.Context, *connect.Request[v1.RemovePaymentMethodRequest]) (*connect.Response[v1.RemovePaymentMethodResponse], error)
 	Subscribe(context.Context, *connect.Request[v1.SubscribeRequest]) (*connect.Response[v1.SubscribeResponse], error)
+	ChangeSubscription(context.Context, *connect.Request[v1.ChangeSubscriptionRequest]) (*connect.Response[v1.ChangeSubscriptionResponse], error)
+	CancelScheduledChange(context.Context, *connect.Request[v1.CancelScheduledChangeRequest]) (*connect.Response[v1.CancelScheduledChangeResponse], error)
+	CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error)
+	ResumeSubscription(context.Context, *connect.Request[v1.ResumeSubscriptionRequest]) (*connect.Response[v1.ResumeSubscriptionResponse], error)
 	QuotePrice(context.Context, *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error)
+	QuoteChange(context.Context, *connect.Request[v1.QuoteChangeRequest]) (*connect.Response[v1.QuoteChangeResponse], error)
 }
 
 // NewBillingServiceClient constructs a client for the postpilot.v1.BillingService service. By
@@ -94,10 +114,40 @@ func NewBillingServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(billingServiceMethods.ByName("Subscribe")),
 			connect.WithClientOptions(opts...),
 		),
+		changeSubscription: connect.NewClient[v1.ChangeSubscriptionRequest, v1.ChangeSubscriptionResponse](
+			httpClient,
+			baseURL+BillingServiceChangeSubscriptionProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ChangeSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelScheduledChange: connect.NewClient[v1.CancelScheduledChangeRequest, v1.CancelScheduledChangeResponse](
+			httpClient,
+			baseURL+BillingServiceCancelScheduledChangeProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("CancelScheduledChange")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelSubscription: connect.NewClient[v1.CancelSubscriptionRequest, v1.CancelSubscriptionResponse](
+			httpClient,
+			baseURL+BillingServiceCancelSubscriptionProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("CancelSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		resumeSubscription: connect.NewClient[v1.ResumeSubscriptionRequest, v1.ResumeSubscriptionResponse](
+			httpClient,
+			baseURL+BillingServiceResumeSubscriptionProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ResumeSubscription")),
+			connect.WithClientOptions(opts...),
+		),
 		quotePrice: connect.NewClient[v1.QuotePriceRequest, v1.QuotePriceResponse](
 			httpClient,
 			baseURL+BillingServiceQuotePriceProcedure,
 			connect.WithSchema(billingServiceMethods.ByName("QuotePrice")),
+			connect.WithClientOptions(opts...),
+		),
+		quoteChange: connect.NewClient[v1.QuoteChangeRequest, v1.QuoteChangeResponse](
+			httpClient,
+			baseURL+BillingServiceQuoteChangeProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("QuoteChange")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -109,7 +159,12 @@ type billingServiceClient struct {
 	registerPaymentMethod *connect.Client[v1.RegisterPaymentMethodRequest, v1.RegisterPaymentMethodResponse]
 	removePaymentMethod   *connect.Client[v1.RemovePaymentMethodRequest, v1.RemovePaymentMethodResponse]
 	subscribe             *connect.Client[v1.SubscribeRequest, v1.SubscribeResponse]
+	changeSubscription    *connect.Client[v1.ChangeSubscriptionRequest, v1.ChangeSubscriptionResponse]
+	cancelScheduledChange *connect.Client[v1.CancelScheduledChangeRequest, v1.CancelScheduledChangeResponse]
+	cancelSubscription    *connect.Client[v1.CancelSubscriptionRequest, v1.CancelSubscriptionResponse]
+	resumeSubscription    *connect.Client[v1.ResumeSubscriptionRequest, v1.ResumeSubscriptionResponse]
 	quotePrice            *connect.Client[v1.QuotePriceRequest, v1.QuotePriceResponse]
+	quoteChange           *connect.Client[v1.QuoteChangeRequest, v1.QuoteChangeResponse]
 }
 
 // GetMyBilling calls postpilot.v1.BillingService.GetMyBilling.
@@ -132,9 +187,34 @@ func (c *billingServiceClient) Subscribe(ctx context.Context, req *connect.Reque
 	return c.subscribe.CallUnary(ctx, req)
 }
 
+// ChangeSubscription calls postpilot.v1.BillingService.ChangeSubscription.
+func (c *billingServiceClient) ChangeSubscription(ctx context.Context, req *connect.Request[v1.ChangeSubscriptionRequest]) (*connect.Response[v1.ChangeSubscriptionResponse], error) {
+	return c.changeSubscription.CallUnary(ctx, req)
+}
+
+// CancelScheduledChange calls postpilot.v1.BillingService.CancelScheduledChange.
+func (c *billingServiceClient) CancelScheduledChange(ctx context.Context, req *connect.Request[v1.CancelScheduledChangeRequest]) (*connect.Response[v1.CancelScheduledChangeResponse], error) {
+	return c.cancelScheduledChange.CallUnary(ctx, req)
+}
+
+// CancelSubscription calls postpilot.v1.BillingService.CancelSubscription.
+func (c *billingServiceClient) CancelSubscription(ctx context.Context, req *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error) {
+	return c.cancelSubscription.CallUnary(ctx, req)
+}
+
+// ResumeSubscription calls postpilot.v1.BillingService.ResumeSubscription.
+func (c *billingServiceClient) ResumeSubscription(ctx context.Context, req *connect.Request[v1.ResumeSubscriptionRequest]) (*connect.Response[v1.ResumeSubscriptionResponse], error) {
+	return c.resumeSubscription.CallUnary(ctx, req)
+}
+
 // QuotePrice calls postpilot.v1.BillingService.QuotePrice.
 func (c *billingServiceClient) QuotePrice(ctx context.Context, req *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error) {
 	return c.quotePrice.CallUnary(ctx, req)
+}
+
+// QuoteChange calls postpilot.v1.BillingService.QuoteChange.
+func (c *billingServiceClient) QuoteChange(ctx context.Context, req *connect.Request[v1.QuoteChangeRequest]) (*connect.Response[v1.QuoteChangeResponse], error) {
+	return c.quoteChange.CallUnary(ctx, req)
 }
 
 // BillingServiceHandler is an implementation of the postpilot.v1.BillingService service.
@@ -143,7 +223,12 @@ type BillingServiceHandler interface {
 	RegisterPaymentMethod(context.Context, *connect.Request[v1.RegisterPaymentMethodRequest]) (*connect.Response[v1.RegisterPaymentMethodResponse], error)
 	RemovePaymentMethod(context.Context, *connect.Request[v1.RemovePaymentMethodRequest]) (*connect.Response[v1.RemovePaymentMethodResponse], error)
 	Subscribe(context.Context, *connect.Request[v1.SubscribeRequest]) (*connect.Response[v1.SubscribeResponse], error)
+	ChangeSubscription(context.Context, *connect.Request[v1.ChangeSubscriptionRequest]) (*connect.Response[v1.ChangeSubscriptionResponse], error)
+	CancelScheduledChange(context.Context, *connect.Request[v1.CancelScheduledChangeRequest]) (*connect.Response[v1.CancelScheduledChangeResponse], error)
+	CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error)
+	ResumeSubscription(context.Context, *connect.Request[v1.ResumeSubscriptionRequest]) (*connect.Response[v1.ResumeSubscriptionResponse], error)
 	QuotePrice(context.Context, *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error)
+	QuoteChange(context.Context, *connect.Request[v1.QuoteChangeRequest]) (*connect.Response[v1.QuoteChangeResponse], error)
 }
 
 // NewBillingServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -177,10 +262,40 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 		connect.WithSchema(billingServiceMethods.ByName("Subscribe")),
 		connect.WithHandlerOptions(opts...),
 	)
+	billingServiceChangeSubscriptionHandler := connect.NewUnaryHandler(
+		BillingServiceChangeSubscriptionProcedure,
+		svc.ChangeSubscription,
+		connect.WithSchema(billingServiceMethods.ByName("ChangeSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceCancelScheduledChangeHandler := connect.NewUnaryHandler(
+		BillingServiceCancelScheduledChangeProcedure,
+		svc.CancelScheduledChange,
+		connect.WithSchema(billingServiceMethods.ByName("CancelScheduledChange")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceCancelSubscriptionHandler := connect.NewUnaryHandler(
+		BillingServiceCancelSubscriptionProcedure,
+		svc.CancelSubscription,
+		connect.WithSchema(billingServiceMethods.ByName("CancelSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceResumeSubscriptionHandler := connect.NewUnaryHandler(
+		BillingServiceResumeSubscriptionProcedure,
+		svc.ResumeSubscription,
+		connect.WithSchema(billingServiceMethods.ByName("ResumeSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
 	billingServiceQuotePriceHandler := connect.NewUnaryHandler(
 		BillingServiceQuotePriceProcedure,
 		svc.QuotePrice,
 		connect.WithSchema(billingServiceMethods.ByName("QuotePrice")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceQuoteChangeHandler := connect.NewUnaryHandler(
+		BillingServiceQuoteChangeProcedure,
+		svc.QuoteChange,
+		connect.WithSchema(billingServiceMethods.ByName("QuoteChange")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/postpilot.v1.BillingService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -193,8 +308,18 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 			billingServiceRemovePaymentMethodHandler.ServeHTTP(w, r)
 		case BillingServiceSubscribeProcedure:
 			billingServiceSubscribeHandler.ServeHTTP(w, r)
+		case BillingServiceChangeSubscriptionProcedure:
+			billingServiceChangeSubscriptionHandler.ServeHTTP(w, r)
+		case BillingServiceCancelScheduledChangeProcedure:
+			billingServiceCancelScheduledChangeHandler.ServeHTTP(w, r)
+		case BillingServiceCancelSubscriptionProcedure:
+			billingServiceCancelSubscriptionHandler.ServeHTTP(w, r)
+		case BillingServiceResumeSubscriptionProcedure:
+			billingServiceResumeSubscriptionHandler.ServeHTTP(w, r)
 		case BillingServiceQuotePriceProcedure:
 			billingServiceQuotePriceHandler.ServeHTTP(w, r)
+		case BillingServiceQuoteChangeProcedure:
+			billingServiceQuoteChangeHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -220,6 +345,26 @@ func (UnimplementedBillingServiceHandler) Subscribe(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.Subscribe is not implemented"))
 }
 
+func (UnimplementedBillingServiceHandler) ChangeSubscription(context.Context, *connect.Request[v1.ChangeSubscriptionRequest]) (*connect.Response[v1.ChangeSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.ChangeSubscription is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) CancelScheduledChange(context.Context, *connect.Request[v1.CancelScheduledChangeRequest]) (*connect.Response[v1.CancelScheduledChangeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.CancelScheduledChange is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.CancelSubscription is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ResumeSubscription(context.Context, *connect.Request[v1.ResumeSubscriptionRequest]) (*connect.Response[v1.ResumeSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.ResumeSubscription is not implemented"))
+}
+
 func (UnimplementedBillingServiceHandler) QuotePrice(context.Context, *connect.Request[v1.QuotePriceRequest]) (*connect.Response[v1.QuotePriceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.QuotePrice is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) QuoteChange(context.Context, *connect.Request[v1.QuoteChangeRequest]) (*connect.Response[v1.QuoteChangeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.QuoteChange is not implemented"))
 }

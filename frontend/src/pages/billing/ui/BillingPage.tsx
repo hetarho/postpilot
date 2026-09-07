@@ -5,6 +5,7 @@ import { planLabel } from '@/entities/plan'
 import { useMyBilling, useQuote, type BillingEvent } from '@/entities/subscription'
 import { RegisterPaymentMethodButton } from '@/features/register-payment-method'
 import { RemovePaymentMethodButton } from '@/features/remove-payment-method'
+import { BillingSubscriptionActions } from '@/features/manage-subscription'
 import { formatDate, formatDateTime, formatNumber } from '@/shared/lib'
 import { Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
@@ -55,7 +56,10 @@ export function BillingPage() {
       )}
       {subscribed && (
         <Notice tone="success" role="status" className="mt-6">
-          {t('subscription.started', { ns: 'billing', tier: subscribed.tier })}
+          {t(subscribed.changed ? 'subscription.changed' : 'subscription.started', {
+            ns: 'billing',
+            tier: subscribed.tier,
+          })}
         </Notice>
       )}
 
@@ -86,7 +90,10 @@ export function BillingPage() {
               </>
             )}
             {myBilling.subscription && (
-              <SubscriptionDetails subscription={myBilling.subscription} quote={quote} />
+              <>
+                <SubscriptionDetails subscription={myBilling.subscription} quote={quote} />
+                <BillingSubscriptionActions subscription={myBilling.subscription} />
+              </>
             )}
           </section>
           <section className="grid gap-2">
@@ -255,6 +262,10 @@ function eventKindKey(kind: string) {
       return 'history.kind.renewal_failed' as const
     case 'cancelled':
       return 'history.kind.cancelled' as const
+    case 'cancel_scheduled':
+      return 'history.kind.cancel_scheduled' as const
+    case 'change_scheduled':
+      return 'history.kind.change_scheduled' as const
     case 'method_registered':
       return 'history.kind.method_registered' as const
     default:

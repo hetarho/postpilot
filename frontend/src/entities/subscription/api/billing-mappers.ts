@@ -5,11 +5,13 @@ import {
   type ProtoBillingEvent,
   type ProtoBillingPurchase,
   type ProtoBillingSubscription,
+  type QuoteChangeResponse,
   type QuotePriceResponse,
 } from '@/shared/api'
 import type {
   BillingEvent,
   BillingTerm,
+  ChangeQuote,
   MyBilling,
   Purchase,
   Quote,
@@ -26,7 +28,7 @@ export function termToProto(term: BillingTerm): ProtoTerm {
   return term === 'annual' ? ProtoTerm.ANNUAL : ProtoTerm.MONTHLY
 }
 
-function toSubscription(value: ProtoBillingSubscription): Subscription {
+export function toSubscription(value: ProtoBillingSubscription): Subscription {
   return {
     plan: planFromProto(value.plan),
     term: termFromProto(value.term),
@@ -38,6 +40,18 @@ function toSubscription(value: ProtoBillingSubscription): Subscription {
     scheduledPlan: planFromProto(value.scheduledPlan),
     scheduledTerm: termFromProto(value.scheduledTerm),
     status: value.status,
+  }
+}
+
+export function toChangeQuote(response: QuoteChangeResponse | undefined): ChangeQuote | undefined {
+  if (!response) return undefined
+  return {
+    usdCents: response.usdCents,
+    krw: response.krw,
+    ratePerUsdE4: response.krwPerUsdE4,
+    rateDate: response.rateDate,
+    appliedNow: response.appliedNow,
+    effectiveAt: response.effectiveAt,
   }
 }
 

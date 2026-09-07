@@ -67,6 +67,9 @@ export const plans = {
     priceFree: 'Free',
     current: 'Your current plan',
     select: 'Subscribe',
+    upgrade: 'Upgrade',
+    nextBilling: 'From next billing date',
+    cancelFromBilling: 'Cancel from Billing',
     blockedHeading: 'Out of credits',
     blockedBody:
       'Starting AI work needs credits. Writing, editing and exporting keep working as they are.',

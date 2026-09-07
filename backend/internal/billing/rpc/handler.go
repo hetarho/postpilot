@@ -91,6 +91,59 @@ func (h *Handler) Subscribe(ctx context.Context, req *connect.Request[postpilotv
 	return connect.NewResponse(&postpilotv1.SubscribeResponse{Subscription: toProtoSubscription(subscription)}), nil
 }
 
+func (h *Handler) ChangeSubscription(ctx context.Context, req *connect.Request[postpilotv1.ChangeSubscriptionRequest]) (*connect.Response[postpilotv1.ChangeSubscriptionResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	tier, tierOK := planrpc.FromProto(req.Msg.GetPlan())
+	term, termOK := termFromProto(req.Msg.GetTerm())
+	if !tierOK || !termOK {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", "TIER_NOT_SUBSCRIBABLE", nil)
+	}
+	subscription, appliedNow, err := h.service.ChangeSubscription(ctx, userID, tier, term)
+	if err != nil {
+		return nil, changeError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.ChangeSubscriptionResponse{Subscription: toProtoSubscription(subscription), AppliedNow: appliedNow}), nil
+}
+
+func (h *Handler) CancelScheduledChange(ctx context.Context, _ *connect.Request[postpilotv1.CancelScheduledChangeRequest]) (*connect.Response[postpilotv1.CancelScheduledChangeResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	subscription, err := h.service.CancelScheduledChange(ctx, userID)
+	if err != nil {
+		return nil, changeError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.CancelScheduledChangeResponse{Subscription: toProtoSubscription(subscription)}), nil
+}
+
+func (h *Handler) CancelSubscription(ctx context.Context, _ *connect.Request[postpilotv1.CancelSubscriptionRequest]) (*connect.Response[postpilotv1.CancelSubscriptionResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	subscription, err := h.service.CancelSubscription(ctx, userID)
+	if err != nil {
+		return nil, changeError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.CancelSubscriptionResponse{Subscription: toProtoSubscription(subscription)}), nil
+}
+
+func (h *Handler) ResumeSubscription(ctx context.Context, _ *connect.Request[postpilotv1.ResumeSubscriptionRequest]) (*connect.Response[postpilotv1.ResumeSubscriptionResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	subscription, err := h.service.ResumeSubscription(ctx, userID)
+	if err != nil {
+		return nil, changeError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.ResumeSubscriptionResponse{Subscription: toProtoSubscription(subscription)}), nil
+}
+
 func (h *Handler) QuotePrice(ctx context.Context, req *connect.Request[postpilotv1.QuotePriceRequest]) (*connect.Response[postpilotv1.QuotePriceResponse], error) {
 	if _, ok := auth.UserFromContext(ctx); !ok {
 		return nil, authRequired()
@@ -109,6 +162,26 @@ func (h *Handler) QuotePrice(ctx context.Context, req *connect.Request[postpilot
 		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not quote price", "UNKNOWN_FAILURE", nil)
 	}
 	return connect.NewResponse(&postpilotv1.QuotePriceResponse{UsdCents: int32(quote.USDCents), Krw: int64(quote.KRW), KrwPerUsdE4: quote.RatePerUSDE4, RateDate: quote.RateDate}), nil
+}
+
+func (h *Handler) QuoteChange(ctx context.Context, req *connect.Request[postpilotv1.QuoteChangeRequest]) (*connect.Response[postpilotv1.QuoteChangeResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, authRequired()
+	}
+	tier, tierOK := planrpc.FromProto(req.Msg.GetPlan())
+	term, termOK := termFromProto(req.Msg.GetTerm())
+	if !tierOK || !termOK {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", "TIER_NOT_SUBSCRIBABLE", nil)
+	}
+	quote, err := h.service.QuoteChange(ctx, userID, tier, term)
+	if err != nil {
+		return nil, changeError(userID, err)
+	}
+	return connect.NewResponse(&postpilotv1.QuoteChangeResponse{
+		UsdCents: int32(quote.USDCents), Krw: int64(quote.KRW), KrwPerUsdE4: quote.RatePerUSDE4,
+		RateDate: quote.RateDate, AppliedNow: quote.AppliedNow, EffectiveAt: instant(quote.EffectiveAt),
+	}), nil
 }
 
 func toProtoSubscription(value billing.Subscription) *postpilotv1.BillingSubscription {
@@ -231,6 +304,30 @@ func subscriptionError(userID string, err error) error {
 	default:
 		slog.Error("subscription start failed", "user_id", userID, "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, "could not start subscription", "UNKNOWN_FAILURE", nil)
+	}
+}
+
+func changeError(userID string, err error) error {
+	switch {
+	case errors.Is(err, billing.ErrUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+	case errors.Is(err, billing.ErrTierNotSubscribable):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tier is not subscribable", "TIER_NOT_SUBSCRIBABLE", nil)
+	case errors.Is(err, billing.ErrSubscriptionRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "active subscription required", "SUBSCRIPTION_REQUIRED", nil)
+	case errors.Is(err, billing.ErrNoChange):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "subscription already has this selection", "NO_CHANGE", nil)
+	case errors.Is(err, billing.ErrNoScheduledChange):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "no scheduled subscription change", "NO_SCHEDULED_CHANGE", nil)
+	case errors.Is(err, billing.ErrChangeUnsupported):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "change tier and term separately", "CHANGE_UNSUPPORTED", nil)
+	case errors.Is(err, billing.ErrPaymentMethodRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", "PAYMENT_METHOD_REQUIRED", nil)
+	case errors.Is(err, billing.ErrChargeFailed):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", "CHARGE_FAILED", nil)
+	default:
+		slog.Error("subscription change failed", "user_id", userID, "err", err)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not change subscription", "UNKNOWN_FAILURE", nil)
 	}
 }
 

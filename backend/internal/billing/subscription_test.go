@@ -275,13 +275,19 @@ type monthlyWindow struct {
 	tier       plan.Plan
 	start, end time.Time
 }
-type subscriptionCredits struct{ windows []monthlyWindow }
+type subscriptionCredits struct {
+	windows []monthlyWindow
+	raises  []int
+}
 
 func (c *subscriptionCredits) OpenMonthlyLot(_ context.Context, userID string, tier plan.Plan, start, end time.Time) error {
 	c.windows = append(c.windows, monthlyWindow{userID: userID, tier: tier, start: start, end: end})
 	return nil
 }
-func (*subscriptionCredits) RaiseMonthlyLot(context.Context, string, int) error { return nil }
+func (c *subscriptionCredits) RaiseMonthlyLot(_ context.Context, _ string, credits int) error {
+	c.raises = append(c.raises, credits)
+	return nil
+}
 func (*subscriptionCredits) OpenPurchasedLot(context.Context, string, int) (string, error) {
 	return "", nil
 }

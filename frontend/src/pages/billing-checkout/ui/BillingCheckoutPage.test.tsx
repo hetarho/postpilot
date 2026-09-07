@@ -17,6 +17,33 @@ const verifiedUser = {
 }
 
 describe('BillingCheckoutPage', () => {
+  it('quotes and applies an active subscriber upgrade immediately, then refreshes plan data', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const changeRequests: Array<{ plan: ProtoPlan; term: ProtoTerm }> = []
+    const { router } = renderAppAt('/billing/checkout?tier=max', {
+      user: { ...verifiedUser, plan: ProtoPlan.PRO },
+      calls,
+      plans: { plan: ProtoPlan.PRO },
+      billing: {
+        subscription: true,
+        paymentMethod: true,
+        subscriptionState: { plan: ProtoPlan.PRO, term: ProtoTerm.MONTHLY },
+        changeRequests,
+      },
+    })
+
+    await waitFor(() => expect(calls).toContain('QuoteChange'))
+    expect(await screen.findByText('$5.00 · 7,000원')).toBeInTheDocument()
+    expect(screen.getByText('지금 결제되는 업그레이드 금액입니다.')).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '연간' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '지금 결제하고 업그레이드' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/billing'))
+    expect(changeRequests).toEqual([{ plan: ProtoPlan.MAX, term: ProtoTerm.MONTHLY }])
+    expect(calls.filter((call) => call === 'GetMyPlan').length).toBeGreaterThan(1)
+    expect(await screen.findByText('Max 플랜으로 업그레이드했습니다.')).toBeInTheDocument()
+  })
+
   it('quotes monthly and annual terms from the server and starts the selected subscription', async () => {
     const user = userEvent.setup()
     const subscribeRequests: Array<{ plan: ProtoPlan; term: ProtoTerm }> = []

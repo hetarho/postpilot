@@ -3,13 +3,15 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   postsPerGrant,
+  PLANS,
   useMyPlan,
   planLabel,
   type EstimatorCombo,
   type EstimatorComboName,
   type PlanOffer,
 } from '@/entities/plan'
-import { billablePlan } from '@/entities/subscription'
+import { billablePlan, useMyBilling, type BillingTerm } from '@/entities/subscription'
+import { ScheduledChangeButton } from '@/features/manage-subscription'
 import { Badge, Notice, PromoFrame, Typography, buttonStyles, pageStyles } from '@/shared/ui'
 import { firstCombo, useEstimateInput, type EstimateInput } from '../model/estimate-input'
 import { PlanEstimator } from './PlanEstimator'
@@ -27,6 +29,7 @@ import { PlanEstimator } from './PlanEstimator'
 export function PlansPage() {
   const { t } = useTranslation(['plans', 'common'])
   const { myPlan, isPending, isError } = useMyPlan()
+  const { myBilling } = useMyBilling()
   const [input, setInput] = useEstimateInput()
   const [chosen, setChosen] = useState<EstimatorComboName | undefined>(undefined)
 
@@ -90,6 +93,12 @@ export function PlansPage() {
                   actions={myPlan.plan !== 'master'}
                   rates={rates}
                   input={input}
+                  subscribedPlan={
+                    myBilling?.subscription?.status === 'active'
+                      ? myBilling.subscription.plan
+                      : undefined
+                  }
+                  subscribedTerm={myBilling?.subscription?.term}
                 />
               </li>
             ))}
@@ -122,12 +131,16 @@ function PlanCard({
   actions,
   rates,
   input,
+  subscribedPlan,
+  subscribedTerm,
 }: {
   offer: PlanOffer
   current: boolean
   actions: boolean
   rates: EstimatorCombo | undefined
   input: EstimateInput
+  subscribedPlan: PlanOffer['plan']
+  subscribedTerm: BillingTerm | undefined
 }) {
   const { t } = useTranslation('plans')
   // The whole of this card's arithmetic: the server owns the charge formula and published the
@@ -159,12 +172,29 @@ function PlanCard({
           : t('compare.priceFree')}
       </Typography>
       {!current && actions && billablePlan(offer.plan) && (
-        <Link
-          to="/billing/checkout"
-          search={{ tier: offer.plan }}
-          className={buttonStyles({ variant: 'secondary', className: 'mt-3' })}
-        >
-          {t('compare.select')}
+        <div className="mt-3">
+          {subscribedPlan &&
+          subscribedTerm &&
+          PLANS.indexOf(offer.plan) < PLANS.indexOf(subscribedPlan) ? (
+            <ScheduledChangeButton
+              plan={offer.plan}
+              term={subscribedTerm}
+              label={t('compare.nextBilling')}
+            />
+          ) : (
+            <Link
+              to="/billing/checkout"
+              search={{ tier: offer.plan }}
+              className={buttonStyles({ variant: 'secondary' })}
+            >
+              {subscribedPlan ? t('compare.upgrade') : t('compare.select')}
+            </Link>
+          )}
+        </div>
+      )}
+      {!current && actions && offer.plan === 'free' && subscribedPlan && (
+        <Link to="/billing" className={buttonStyles({ variant: 'secondary', className: 'mt-3' })}>
+          {t('compare.cancelFromBilling')}
         </Link>
       )}
     </PromoFrame>

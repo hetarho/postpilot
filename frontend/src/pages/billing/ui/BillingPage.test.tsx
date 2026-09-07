@@ -1,10 +1,52 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { ProtoPlan } from '@/shared/api'
+import { ProtoPlan, ProtoTerm } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
 describe('BillingPage', () => {
+  it('shows and cancels a scheduled subscription change', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      calls,
+      billing: {
+        populated: true,
+        subscriptionState: {
+          plan: ProtoPlan.PRO,
+          term: ProtoTerm.MONTHLY,
+          scheduledPlan: ProtoPlan.BASIC,
+          scheduledTerm: ProtoTerm.MONTHLY,
+        },
+      },
+    })
+
+    expect(await screen.findByText(/Basic · 월간으로 변경 예정/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '예약 취소' }))
+    await waitFor(() => expect(calls).toContain('CancelScheduledChange'))
+    expect(await screen.findByRole('button', { name: '연간으로 바꾸기' })).toBeInTheDocument()
+  })
+
+  it('confirms cancellation without removing credits and can resume before term end', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      calls,
+      billing: { populated: true },
+    })
+
+    await user.click(await screen.findByRole('button', { name: '구독 해지' }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveTextContent('남은 크레딧을 그대로 쓸 수 있습니다')
+    await user.click(within(dialog).getByRole('button', { name: '구독 해지' }))
+    expect(await screen.findByRole('button', { name: '해지 취소' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '해지 취소' }))
+    await waitFor(() => expect(calls).toContain('ResumeSubscription'))
+    expect(await screen.findByRole('button', { name: '구독 해지' })).toBeInTheDocument()
+  })
+
   it('renders the empty money surface in contract order', async () => {
     const calls: string[] = []
     renderAppAt('/billing', { user: { id: 'alice', plan: ProtoPlan.FREE }, calls })

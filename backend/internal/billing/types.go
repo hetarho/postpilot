@@ -18,6 +18,10 @@ var (
 	ErrSubscriptionNeedsMethod   = errors.New("active renewing subscription needs a payment method")
 	ErrTierNotSubscribable       = errors.New("tier is not subscribable")
 	ErrSubscriptionExists        = errors.New("active subscription already exists")
+	ErrSubscriptionRequired      = errors.New("active subscription required")
+	ErrNoChange                  = errors.New("subscription already has the requested tier and term")
+	ErrNoScheduledChange         = errors.New("subscription has no scheduled change")
+	ErrChangeUnsupported         = errors.New("changing tier and term together is unsupported")
 	ErrPaymentMethodRequired     = errors.New("payment method required")
 	ErrChargeFailed              = errors.New("charge failed")
 )
@@ -91,6 +95,12 @@ type Quote struct {
 	KRW          int
 	RatePerUSDE4 int64
 	RateDate     string
+}
+
+type ChangeQuote struct {
+	Quote
+	AppliedNow  bool
+	EffectiveAt time.Time
 }
 
 type AccountBilling struct {

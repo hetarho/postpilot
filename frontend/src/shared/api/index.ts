@@ -53,10 +53,15 @@ export {
 export type { User, GetMeResponse } from './gen/postpilot/v1/auth_pb'
 export { BillingService, Term as ProtoTerm } from './gen/postpilot/v1/billing_pb'
 export {
+  CancelScheduledChangeResponseSchema,
+  CancelSubscriptionResponseSchema,
+  ChangeSubscriptionResponseSchema,
   GetMyBillingResponseSchema,
+  QuoteChangeResponseSchema,
   QuotePriceResponseSchema,
   RegisterPaymentMethodResponseSchema,
   RemovePaymentMethodResponseSchema,
+  ResumeSubscriptionResponseSchema,
   SubscribeResponseSchema,
 } from './gen/postpilot/v1/billing_pb'
 export type {
@@ -65,6 +70,7 @@ export type {
   BillingEvent as ProtoBillingEvent,
   BillingPurchase as ProtoBillingPurchase,
   GetMyBillingResponse,
+  QuoteChangeResponse,
   QuotePriceResponse,
   RegisterPaymentMethodResponse,
   SubscribeResponse,

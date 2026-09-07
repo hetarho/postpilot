@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ProtoPlan } from '@/shared/api'
+import { ProtoPlan, ProtoTerm } from '@/shared/api'
 import { PLAN_ESTIMATE_STORAGE_KEY } from '@/shared/config'
 import { renderAppAt } from '@/test/app'
 
@@ -20,6 +20,36 @@ async function rungs() {
 }
 
 describe('the plan comparison', () => {
+  it('routes an active subscriber to upgrade, scheduled downgrade, and Billing cancellation', async () => {
+    const user = userEvent.setup()
+    const changeRequests: Array<{ plan: ProtoPlan; term: ProtoTerm }> = []
+    renderAppAt('/plans', {
+      user: { ...USER, plan: ProtoPlan.PRO },
+      plans: { plan: ProtoPlan.PRO, balance: { credits: 500, unlimited: false } },
+      billing: {
+        subscription: true,
+        subscriptionState: { plan: ProtoPlan.PRO, term: ProtoTerm.MONTHLY },
+        changeRequests,
+      },
+    })
+
+    const items = await rungs()
+    expect(
+      within(items[0]).getByRole('link', { name: '구독 해지는 결제 관리에서' }),
+    ).toHaveAttribute('href', '/billing')
+    expect(within(items[3]).getByRole('link', { name: '업그레이드' })).toHaveAttribute(
+      'href',
+      '/billing/checkout?tier=max',
+    )
+    await user.click(within(items[1]).getByRole('button', { name: '다음 결제일부터' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent('지금은 결제되지 않습니다.')
+    await user.click(within(dialog).getByRole('button', { name: '변경 예약' }))
+    await waitFor(() =>
+      expect(changeRequests).toEqual([{ plan: ProtoPlan.BASIC, term: ProtoTerm.MONTHLY }]),
+    )
+  })
+
   it('lists every rung with what its grant buys, side by side upward', async () => {
     renderAppAt('/plans', {
       user: { ...USER, plan: ProtoPlan.BASIC },

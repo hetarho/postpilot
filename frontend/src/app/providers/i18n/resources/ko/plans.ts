@@ -66,6 +66,9 @@ export const plans = {
     priceFree: '무료',
     current: '지금 쓰는 플랜',
     select: '구독하기',
+    upgrade: '업그레이드',
+    nextBilling: '다음 결제일부터',
+    cancelFromBilling: '구독 해지는 결제 관리에서',
     blockedHeading: '크레딧이 부족해요',
     blockedBody:
       'AI 작업을 시작하려면 크레딧이 필요해요. 글을 쓰고 고치고 내보내는 건 그대로 할 수 있어요.',

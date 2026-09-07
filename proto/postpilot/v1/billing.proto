@@ -13,7 +13,12 @@ service BillingService {
   rpc RegisterPaymentMethod(RegisterPaymentMethodRequest) returns (RegisterPaymentMethodResponse) {}
   rpc RemovePaymentMethod(RemovePaymentMethodRequest) returns (RemovePaymentMethodResponse) {}
   rpc Subscribe(SubscribeRequest) returns (SubscribeResponse) {}
+  rpc ChangeSubscription(ChangeSubscriptionRequest) returns (ChangeSubscriptionResponse) {}
+  rpc CancelScheduledChange(CancelScheduledChangeRequest) returns (CancelScheduledChangeResponse) {}
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
+  rpc ResumeSubscription(ResumeSubscriptionRequest) returns (ResumeSubscriptionResponse) {}
   rpc QuotePrice(QuotePriceRequest) returns (QuotePriceResponse) {}
+  rpc QuoteChange(QuoteChangeRequest) returns (QuoteChangeResponse) {}
 }
 
 enum Term {
@@ -107,6 +112,34 @@ message SubscribeResponse {
   BillingSubscription subscription = 1;
 }
 
+message ChangeSubscriptionRequest {
+  Plan plan = 1;
+  Term term = 2;
+}
+
+message ChangeSubscriptionResponse {
+  BillingSubscription subscription = 1;
+  bool applied_now = 2;
+}
+
+message CancelScheduledChangeRequest {}
+
+message CancelScheduledChangeResponse {
+  BillingSubscription subscription = 1;
+}
+
+message CancelSubscriptionRequest {}
+
+message CancelSubscriptionResponse {
+  BillingSubscription subscription = 1;
+}
+
+message ResumeSubscriptionRequest {}
+
+message ResumeSubscriptionResponse {
+  BillingSubscription subscription = 1;
+}
+
 message QuotePriceRequest {
   Plan plan = 1;
   Term term = 2;
@@ -117,4 +150,18 @@ message QuotePriceResponse {
   int64 krw = 2;
   int64 krw_per_usd_e4 = 3;
   string rate_date = 4;
+}
+
+message QuoteChangeRequest {
+  Plan plan = 1;
+  Term term = 2;
+}
+
+message QuoteChangeResponse {
+  int32 usd_cents = 1;
+  int64 krw = 2;
+  int64 krw_per_usd_e4 = 3;
+  string rate_date = 4;
+  bool applied_now = 5;
+  string effective_at = 6;
 }
