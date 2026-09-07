@@ -287,7 +287,7 @@ describe('the public About route', () => {
     expect(router.state.location.search).toEqual({ redirect: '/posts' })
   })
 
-  // A4: the login page reaches About, and About's Login CTA delegates to the unchanged guard.
+  // A4: the login page reaches About, and About's quiet Login link delegates to the unchanged guard.
   it('links login → about → login, with the guard still deciding', async () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/login')
@@ -328,7 +328,7 @@ describe('the public About route', () => {
     expect(router.state.location.search).toEqual({})
   })
 
-  // A14: a signed-in visitor following About's Login CTA is redirected by the EXISTING login
+  // A14: a signed-in visitor following About's Login link is redirected by the EXISTING login
   // guard, not by anything About does.
   it('sends a signed-in visitor home through the login guard', async () => {
     const user = userEvent.setup()

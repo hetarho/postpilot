@@ -11,13 +11,14 @@ export const marketing = {
   },
   header: {
     nav: 'About',
+    getStarted: 'Get started',
     login: 'Log in',
   },
   hero: {
     title: 'Photos and rough notes into a blog draft in your own voice',
     body: 'Upload the photos you took and a few lines of notes, and Postpilot writes a draft you can paste into your blog, in a voice profile you trained. Reading it and making one pass of edits is part of the same flow.',
     access:
-      'There is no signup. Accounts are created by the operator, and plans are assigned by the operator too.',
+      'An email address and password open an account, and you verify the address by mail before your first login. Google sign-in is also available.',
   },
   flow: {
     title: 'How it works',

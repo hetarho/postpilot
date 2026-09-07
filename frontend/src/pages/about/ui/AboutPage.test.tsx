@@ -10,8 +10,10 @@ const COPY = {
   ko: {
     h1: '사진과 메모를 내 말투의 블로그 초안으로',
     sections: ['어떻게 쓰나요', '다른 점', '결과물은 어디로 가나요', '요금제', '통제와 데이터'],
+    getStarted: '시작하기',
     login: '로그인',
-    access: /가입 절차는 없습니다/,
+    access:
+      /이메일 주소와 비밀번호로 계정을 만들고, 첫 로그인 전에 메일로 주소를 인증합니다. Google 로그인도 사용할 수 있습니다/,
     steps: [
       '말투·용도·출력 언어를 고릅니다',
       '사진과 메모를 올립니다',
@@ -36,8 +38,10 @@ const COPY = {
       'Plans',
       'Control and data',
     ],
+    getStarted: 'Get started',
     login: 'Log in',
-    access: /There is no signup/,
+    access:
+      /An email address and password open an account, and you verify the address by mail before your first login. Google sign-in is also available/,
     steps: [
       'Pick a voice, a purpose, and the output language',
       'Add photos and rough notes',
@@ -148,19 +152,25 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     }
   })
 
-  // A5/A11: Login is the page's only product CTA, and nothing here collects anything.
-  it('offers Login as the only product action and no form or third-party asset', async () => {
-    const { container } = render()
+  // MARKETING-6/16: Get started is the one filled CTA; Login stays quiet and alone carries
+  // the blocked destination. The explanation itself still collects nothing.
+  it('offers one signup CTA, a quiet login link, and no form or third-party asset', async () => {
+    initializeI18n(locale)
+    const { container } = renderAppAt('/about?redirect=%2Fposts%2Fwelcome')
     await screen.findByRole('heading', { level: 1 })
 
-    const productLinks = screen
-      .getAllByRole('link')
-      .filter((link) => link.getAttribute('href')?.startsWith('http') === false)
-    expect(productLinks).toHaveLength(1)
-    expect(productLinks[0]).toHaveAccessibleName(copy.login)
-    expect(productLinks[0]).toHaveAttribute('href', '/login')
+    const getStarted = screen.getByRole('link', { name: copy.getStarted })
+    const login = screen.getByRole('link', { name: copy.login })
+    expect(getStarted).toHaveAttribute('href', '/signup')
+    expect(getStarted.className).toContain('bg-button-cta-bg')
+    const loginURL = new URL(login.getAttribute('href') ?? '', 'https://postpilot.test')
+    expect(loginURL.pathname).toBe('/login')
+    expect(loginURL.searchParams.get('redirect')).toBe('/posts/welcome')
+    expect(login.className).not.toContain('bg-button-cta-bg')
+    expect(login.className).toContain('min-h-11')
+    expect(container.querySelectorAll('.bg-button-cta-bg')).toHaveLength(1)
 
-    // No signup/contact/waitlist/purchase surface of any kind.
+    // No signup/contact/waitlist/purchase form on this page; the CTA links to its owner.
     expect(container.querySelector('form')).toBeNull()
     expect(container.querySelector('input')).toBeNull()
     expect(container.querySelector('textarea')).toBeNull()
@@ -210,6 +220,7 @@ describe('the About page layout invariants', () => {
     expect(header?.className).toContain('sticky')
     const login = screen.getByRole('link', { name: '로그인' })
     expect(login.className).toContain('min-h-11')
+    expect(screen.getByRole('link', { name: '시작하기' }).className).toContain('min-h-11')
     for (const name of ['테마', '언어']) {
       expect(screen.getByRole('button', { name }).className).toMatch(/min-h-11|size-11/)
     }
@@ -225,8 +236,10 @@ describe('the About page layout invariants', () => {
     renderAppAt('/about')
     await screen.findByRole('heading', { level: 1 })
 
-    // The wordmark is not a link on its own page. Login comes first, then the two menus stay at
-    // the viewport edge so their right-aligned panels cannot cross the 320px left edge.
+    // The wordmark is not a link on its own page. CTA then quiet Login come first, and the two
+    // menus stay viewport-side so their right-aligned panels cannot cross the 320px left edge.
+    await user.tab()
+    expect(screen.getByRole('link', { name: '시작하기' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('link', { name: '로그인' })).toHaveFocus()
     await user.tab()
