@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/postpilot/agent/internal/browser"
@@ -36,7 +37,8 @@ const editorObservationScript = `(() => {
 
   const editorRoot = Boolean(document.querySelector('.blog_editor'));
   const body = document.querySelector('.se-body.__se-body');
-  const layer = document.querySelector('div[class^="layer_popup__"][class*="is_show__"]');
+  const settingsLayers = [...document.querySelectorAll('div[class^="layer_popup__"][class*="is_show__"]')];
+  const layer = settingsLayers.length === 1 ? settingsLayers[0] : null;
 
   // Naver preloads a hidden captcha iframe on the writer, so presence is not a challenge;
   // only a control the user can actually see counts.
@@ -91,7 +93,6 @@ const editorObservationScript = `(() => {
   const title = titleModule && !titleModule.classList.contains('se-is-empty') ? nodeText(titleModule) : '';
 
   const categoryRadios = layer ? [...layer.querySelectorAll('input[type=radio][data-testid^="categoryBtn_"]')] : [];
-  const categoryIDs = categoryRadios.map((radio) => String(radio.getAttribute('data-testid')).slice('categoryBtn_'.length));
   let category = {id: '', name: '', selected: false};
   for (const radio of categoryRadios) {
     if (!radio.checked) continue;
@@ -109,9 +110,6 @@ const editorObservationScript = `(() => {
     const label = holder ? holder.querySelector('label[class^="radio_label__"]') : null;
     visibility = {id: visibilityByTestID[String(radio.getAttribute('data-testid'))] || '', name: norm(label && label.textContent), selected: true};
   }
-  const visibilityComplete = Object.keys(visibilityByTestID)
-    .every((testID) => visibilityRadios.filter((radio) => radio.getAttribute('data-testid') === testID).length === 1);
-
   const tags = layer ? [...layer.querySelectorAll('span[class^="tag__"]')].map((n) => norm(n.textContent).replace(/^#/, '')).filter(Boolean) : [];
 
   const images = [...document.querySelectorAll('.se-component.se-image')];
@@ -129,7 +127,7 @@ const editorObservationScript = `(() => {
     href: location.href,
     auth,
     editor_root: editorRoot,
-    settings_layer: Boolean(layer),
+    settings_layer: settingsLayers.length === 1,
     title,
     blocks,
     image_count: imageOrdinal,
@@ -148,8 +146,8 @@ const editorObservationScript = `(() => {
       // open_settings does not report a vanished control.
       open_settings: count('button[class^="publish_btn__"]'),
       tags: layer ? layer.querySelectorAll('input[class^="tag_input__"]').length : 0,
-      category: categoryIDs.length > 0 && new Set(categoryIDs).size === categoryIDs.length ? 1 : categoryIDs.length,
-      visibility: visibilityComplete ? 1 : visibilityRadios.length
+      category: layer ? layer.querySelectorAll('button[class^="selectbox_button__"]').length : 0,
+      visibility: visibilityRadios.length
     },
     final_controls: layer ? layer.querySelectorAll('button[class^="confirm_btn__"]').length : 0,
     unversioned_publish_like: unversionedPublishLike
@@ -252,6 +250,7 @@ func (p *CDPPort) Observe(ctx context.Context) (Snapshot, error) {
 		Tags:                           append([]string{}, observation.Tags...),
 		Category:                       SelectedSetting(observation.Category),
 		Visibility:                     SelectedSetting(observation.Visibility),
+		SettingsLayerOpen:              observation.SettingsLayer,
 		LocatorMatches:                 locatorMatches(observation.LocatorMatches),
 		UnversionedPublishLikeControls: observation.UnversionedPublishLike,
 		NativeDialogOpen:               false,
@@ -276,6 +275,9 @@ func (p *CDPPort) Apply(ctx context.Context, mutation Mutation) error {
 	if p.settingsOpen && isBodyMutation(mutation.Kind) {
 		return PortError{Kind: FailureEditorChanged}
 	}
+	if !p.settingsOpen && slices.Contains([]MutationKind{MutationTags, MutationCategory, MutationVisibility}, mutation.Kind) {
+		return PortError{Kind: FailureEditorChanged}
+	}
 	switch mutation.Kind {
 	case MutationTitle:
 		if err := p.resolveAndClick(ctx, "title", 0); err != nil {
@@ -285,17 +287,113 @@ func (p *CDPPort) Apply(ctx context.Context, mutation Mutation) error {
 	case MutationText:
 		return p.appendParagraph(ctx, mutation.Text)
 	case MutationOpenSettings:
-		if err := p.activate(ctx, "settings_open", ""); err != nil {
+		if p.settingsOpen {
+			return PortError{Kind: FailureEditorChanged}
+		}
+		if err := p.resolveAndClick(ctx, "settings_open", 0); err != nil {
 			return err
 		}
+		// Once the opener was clicked, an ambiguous observation must never permit another
+		// body write: the layer may be covering the editor even if its shape changed.
 		p.settingsOpen = true
+		state, err := p.settingsState(ctx)
+		if err != nil || state.LayerMatches != 1 || state.Tags != 1 || state.Category != 1 || state.Visibility != 4 {
+			return PortError{Kind: FailureEditorChanged}
+		}
 		return nil
+	case MutationTags:
+		return p.applyTags(ctx, mutation.Values)
+	case MutationCategory:
+		return p.applyCategory(ctx, mutation.ID, mutation.Name)
+	case MutationVisibility:
+		return p.applyVisibility(ctx, mutation.ID)
 	default:
-		// Every remaining kind lands with its own task: the image path in T043, the three
-		// settings in T044. Refusing here keeps a half-built driver from typing into a
-		// live editor it cannot finish (PUBLISH-19).
+		// Every remaining kind lands with its own task. Refusing here keeps a half-built
+		// driver from writing to a live editor it cannot finish (PUBLISH-19).
 		return PortError{Kind: FailureSafe}
 	}
+}
+
+func (p *CDPPort) applyTags(ctx context.Context, values []string) error {
+	normalized, ok := uniqueTags(values)
+	if !ok || len(normalized) == 0 || !slices.Equal(normalized, values) {
+		return PortError{Kind: FailureSafe}
+	}
+	for _, value := range values {
+		if err := p.requireSettingsState(ctx, MutationTags); err != nil {
+			return err
+		}
+		// The reviewed target is tag_input__, never the adjacent fake_input__ decoy.
+		if err := p.resolveAndClick(ctx, "tag_input", 0); err != nil {
+			return err
+		}
+		if err := p.typeText(ctx, value); err != nil {
+			return err
+		}
+		if err := p.page.PressEnter(ctx); err != nil {
+			return PortError{Kind: FailureEditorChanged}
+		}
+	}
+	return nil
+}
+
+func (p *CDPPort) applyCategory(ctx context.Context, id, name string) error {
+	if strings.TrimSpace(id) == "" || strings.TrimSpace(name) == "" {
+		return PortError{Kind: FailureSafe}
+	}
+	if err := p.requireSettingsState(ctx, MutationCategory); err != nil {
+		return err
+	}
+	opener, err := p.setting(ctx, "category_open", "", "")
+	if err != nil || opener.Matches != 1 || !opener.Actionable {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	if !opener.Expanded {
+		if err := p.clickSetting(ctx, opener); err != nil {
+			return err
+		}
+		opener, err = p.setting(ctx, "category_open", "", "")
+		if err != nil || opener.Matches != 1 || !opener.Expanded {
+			return PortError{Kind: FailureEditorChanged}
+		}
+	}
+	choice, err := p.setting(ctx, "category", id, name)
+	if err != nil || choice.Matches != 1 || choice.GroupMatches == 0 || !choice.Expanded || !choice.NameMatches || !choice.Actionable {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	if !choice.Checked {
+		if err := p.clickSetting(ctx, choice); err != nil {
+			return err
+		}
+	}
+	verified, err := p.setting(ctx, "category", id, name)
+	if err != nil || verified.Matches != 1 || !verified.Expanded || !verified.NameMatches || !verified.Checked {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	return nil
+}
+
+func (p *CDPPort) applyVisibility(ctx context.Context, id string) error {
+	if visibilityName(id) == "" {
+		return PortError{Kind: FailureSafe}
+	}
+	if err := p.requireSettingsState(ctx, MutationVisibility); err != nil {
+		return err
+	}
+	choice, err := p.setting(ctx, "visibility", id, "")
+	if err != nil || choice.Matches != 1 || choice.GroupMatches != 4 || !choice.Actionable {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	if !choice.Checked {
+		if err := p.clickSetting(ctx, choice); err != nil {
+			return err
+		}
+	}
+	verified, err := p.setting(ctx, "visibility", id, "")
+	if err != nil || verified.Matches != 1 || verified.GroupMatches != 4 || !verified.Checked {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	return nil
 }
 
 // appendParagraph opens the next paragraph at the end of the body and types into it.
@@ -374,13 +472,14 @@ func snapshotToken(snapshot Snapshot) string {
 		Tags           []string        `json:"tags"`
 		Category       SelectedSetting `json:"category"`
 		Visibility     SelectedSetting `json:"visibility"`
+		SettingsLayer  bool            `json:"settings_layer_open"`
 		LocatorMatches map[string]int  `json:"locator_matches"`
 		Unversioned    int             `json:"unversioned_publish_like"`
 		NativeDialog   bool            `json:"native_dialog_open"`
 	}{
 		snapshot.TargetID, snapshot.URL, snapshot.AccountID, snapshot.SignatureID, snapshot.Auth,
 		snapshot.Title, snapshot.Body, snapshot.ImageCount, snapshot.Tags, snapshot.Category,
-		snapshot.Visibility, matches, snapshot.UnversionedPublishLikeControls, snapshot.NativeDialogOpen,
+		snapshot.Visibility, snapshot.SettingsLayerOpen, matches, snapshot.UnversionedPublishLikeControls, snapshot.NativeDialogOpen,
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {

@@ -90,6 +90,10 @@ func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: strings.Join(lines, "\n")})
 	case MutationOpenSettings:
 		port.settingsOpen = true
+		port.snapshot.SettingsLayerOpen = true
+		port.snapshot.LocatorMatches[MutationTags] = 1
+		port.snapshot.LocatorMatches[MutationCategory] = 1
+		port.snapshot.LocatorMatches[MutationVisibility] = 4
 	case MutationUploadImage:
 		// r4: nothing pre-created the image, so the upload is what adds it. The live editor
 		// puts it immediately after the block holding the caret; this fake appends, which is
@@ -110,7 +114,7 @@ func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 	case MutationCategory:
 		port.snapshot.Category = SelectedSetting{ID: mutation.ID, Name: mutation.Name, Selected: true}
 	case MutationVisibility:
-		port.snapshot.Visibility = SelectedSetting{ID: mutation.ID, Selected: true}
+		port.snapshot.Visibility = SelectedSetting{ID: mutation.ID, Name: visibilityName(mutation.ID), Selected: true}
 	}
 	if port.tamper != nil {
 		port.tamper(mutation, &port.snapshot)
@@ -178,6 +182,7 @@ func basePort() *fakePort {
 	for _, kind := range reviewedMutationKinds {
 		locators[kind] = 1
 	}
+	locators[MutationTags], locators[MutationCategory], locators[MutationVisibility] = 0, 0, 0
 	return &fakePort{snapshot: Snapshot{Token: "initial", TargetID: "page-1", URL: "https://blog.naver.com/PostWriteForm.naver?blogId=alice", AccountID: "alice", SignatureID: manifestSignature(), Auth: AuthReady, LocatorMatches: locators}}
 }
 
@@ -241,7 +246,8 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if port.mutations[5].Ordinal != 0 || port.mutations[7].Ordinal != 1 || port.mutations[5].AssetPath != input.AssetPaths[0] || port.mutations[7].AssetPath != input.AssetPaths[1] {
 		t.Fatalf("upload order changed: %+v", port.mutations)
 	}
-	if len(result.Prepared.Snapshot.Body) != 6 || result.Prepared.Snapshot.Body[4].Caption != "Caption A" || result.Prepared.Snapshot.ImageCount != 2 || !result.Prepared.Snapshot.Category.Selected || !result.Prepared.Snapshot.Visibility.Selected {
+	if len(result.Prepared.Snapshot.Body) != 6 || result.Prepared.Snapshot.Body[4].Caption != "Caption A" || result.Prepared.Snapshot.ImageCount != 2 || !result.Prepared.Snapshot.Category.Selected || !result.Prepared.Snapshot.Visibility.Selected || !result.Prepared.Snapshot.SettingsLayerOpen ||
+		result.Prepared.Snapshot.LocatorMatches[MutationTags] != 1 || result.Prepared.Snapshot.LocatorMatches[MutationCategory] != 1 || result.Prepared.Snapshot.LocatorMatches[MutationVisibility] != 4 {
 		t.Fatalf("snapshot=%+v", result.Prepared.Snapshot)
 	}
 	// The four text blocks keep the manifest's relative order and the two images follow
@@ -249,6 +255,46 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	// the body pass. Putting each image back at its manifest position is T043's work.
 	if result.Prepared.Snapshot.Body[1].Kind != SemanticText || result.Prepared.Snapshot.Body[1].Text != "Heading" || result.Prepared.Snapshot.Body[2].Kind != SemanticText || result.Prepared.Snapshot.Body[2].Text != "“Quote”" || result.Prepared.Snapshot.Body[3].Kind != SemanticText || result.Prepared.Snapshot.Body[3].Text != "- one\n- two" {
 		t.Fatalf("plain-text Naver mapping changed: %+v", result.Prepared.Snapshot.Body)
+	}
+}
+
+func TestPublisherUsesThePostOpenLocatorCountsForEverySetting(t *testing.T) {
+	for _, test := range []struct {
+		kind MutationKind
+		bad  int
+	}{{MutationTags, 0}, {MutationCategory, 0}, {MutationVisibility, 1}} {
+		t.Run(string(test.kind), func(t *testing.T) {
+			port := basePort()
+			port.tamper = func(mutation Mutation, snapshot *Snapshot) {
+				if mutation.Kind == MutationOpenSettings {
+					snapshot.LocatorMatches[test.kind] = test.bad
+				}
+			}
+			result := (Publisher{Port: port}).Prepare(context.Background(), completeInput(t), &recordingReporter{})
+			if result.Status != PreparationFailed || result.Failure == nil || result.Failure.Kind != FailureEditorChanged {
+				t.Fatalf("result = %+v", result)
+			}
+			for _, mutation := range port.mutations {
+				if mutation.Kind == test.kind {
+					t.Fatalf("%s was applied with locator count %d", test.kind, test.bad)
+				}
+			}
+		})
+	}
+}
+
+func TestPublisherKeepsAnExactEmptyTagCollectionWithoutANoopMutation(t *testing.T) {
+	input := completeInput(t)
+	input.Manifest.Tags = nil
+	port := basePort()
+	result := (Publisher{Port: port}).Prepare(context.Background(), input, &recordingReporter{})
+	if result.Status != PreparationReady || result.Prepared == nil || len(result.Prepared.Snapshot.Tags) != 0 {
+		t.Fatalf("result = %+v", result)
+	}
+	for _, mutation := range port.mutations {
+		if mutation.Kind == MutationTags {
+			t.Fatal("an empty tag set emitted a no-op tag mutation")
+		}
 	}
 }
 

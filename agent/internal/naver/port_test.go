@@ -34,10 +34,23 @@ func healthyObservation() map[string]any {
 		"visibility":  map[string]any{"id": "public", "name": "전체공개", "selected": true},
 		"locator_matches": map[string]int{
 			"title": 1, "text": 1, "heading": 1, "quote": 1, "list": 1, "open_settings": 1,
-			"upload_image": 1, "image_caption": 1, "tags": 1, "category": 1, "visibility": 1,
+			"upload_image": 1, "image_caption": 1, "tags": 1, "category": 1, "visibility": 4,
 		},
 		"final_controls": 1, "unversioned_publish_like": 0,
 	}
+}
+
+func closedObservation() map[string]any {
+	observation := healthyObservation()
+	observation["settings_layer"] = false
+	observation["tags"] = []string{}
+	observation["category"] = map[string]any{"id": "", "name": "", "selected": false}
+	observation["visibility"] = map[string]any{"id": "", "name": "", "selected": false}
+	matches := maps.Clone(observation["locator_matches"].(map[string]int))
+	matches["tags"], matches["category"], matches["visibility"] = 0, 0, 0
+	observation["locator_matches"] = matches
+	observation["final_controls"] = 0
+	return observation
 }
 
 type fakeEditor struct {
@@ -46,13 +59,20 @@ type fakeEditor struct {
 	evaluateErr bool
 	emptyAX     bool
 
-	// The driver's two reviewed functions, scripted. A nil hook resolves one match.
+	// The driver's reviewed functions, scripted. Nil hooks resolve the healthy shape.
 	point    func(target string, ordinal int) driverPoint
 	activate func(control, id string) driverActivation
+	state    func() driverSettingsState
+	setting  func(control, id, name string) driverSetting
 
-	mu     sync.Mutex
-	calls  int
-	inputs []string
+	mu               sync.Mutex
+	calls            int
+	inputs           []string
+	pendingControl   string
+	pendingID        string
+	pendingName      string
+	pendingText      string
+	categoryExpanded bool
 }
 
 func (editor *fakeEditor) record(entry string) {
@@ -65,6 +85,87 @@ func (editor *fakeEditor) recorded() []string {
 	editor.mu.Lock()
 	defer editor.mu.Unlock()
 	return slices.Clone(editor.inputs)
+}
+
+func (editor *fakeEditor) settingsState() driverSettingsState {
+	if editor.state != nil {
+		return editor.state()
+	}
+	if open, _ := editor.observation["settings_layer"].(bool); !open {
+		return driverSettingsState{}
+	}
+	matches, _ := editor.observation["locator_matches"].(map[string]int)
+	return driverSettingsState{LayerMatches: 1, Tags: matches["tags"], Category: matches["category"], Visibility: matches["visibility"]}
+}
+
+func (editor *fakeEditor) settingState(control, id, name string) driverSetting {
+	if editor.setting != nil {
+		return editor.setting(control, id, name)
+	}
+	open, _ := editor.observation["settings_layer"].(bool)
+	if !open {
+		return driverSetting{}
+	}
+	base := driverSetting{Matches: 1, Actionable: true, X: 30, Y: 40, NameMatches: true}
+	switch control {
+	case "category_open":
+		base.GroupMatches = 1
+		base.Expanded = editor.categoryExpanded
+	case "category":
+		base.GroupMatches = 11
+		base.Expanded = editor.categoryExpanded
+		selected, _ := editor.observation["category"].(map[string]any)
+		base.Checked = selected["selected"] == true && selected["id"] == id
+	case "visibility":
+		base.GroupMatches = 4
+		base.Expanded = true
+		selected, _ := editor.observation["visibility"].(map[string]any)
+		base.Checked = selected["selected"] == true && selected["id"] == id
+	}
+	return base
+}
+
+func (editor *fakeEditor) remember(control, id, name string) {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	editor.pendingControl, editor.pendingID, editor.pendingName = control, id, name
+}
+
+func (editor *fakeEditor) applyPendingClick() {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	switch editor.pendingControl {
+	case "settings_open":
+		editor.observation["settings_layer"] = true
+		matches := maps.Clone(editor.observation["locator_matches"].(map[string]int))
+		matches["tags"], matches["category"], matches["visibility"] = 1, 1, 4
+		editor.observation["locator_matches"] = matches
+	case "category_open":
+		editor.categoryExpanded = true
+	case "category":
+		editor.observation["category"] = map[string]any{"id": editor.pendingID, "name": editor.pendingName, "selected": true}
+	case "visibility":
+		editor.observation["visibility"] = map[string]any{"id": editor.pendingID, "name": visibilityName(editor.pendingID), "selected": true}
+	}
+}
+
+func (editor *fakeEditor) rememberText(value string) {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	if editor.pendingControl == "tag_input" {
+		editor.pendingText = value
+	}
+}
+
+func (editor *fakeEditor) commitTag() {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	if editor.pendingControl != "tag_input" || editor.pendingText == "" {
+		return
+	}
+	tags, _ := editor.observation["tags"].([]string)
+	editor.observation["tags"] = append(tags, editor.pendingText)
+	editor.pendingText = ""
 }
 
 func startFakeCDP(t *testing.T, editor *fakeEditor) string {
@@ -132,16 +233,26 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 					}
 				case "Runtime.callFunctionOn":
 					declaration, _ := call.Params["functionDeclaration"].(string)
-					first, second := callArgs(call.Params)
+					first, second, third := callArgs(call.Params)
 					switch {
-					case strings.Contains(declaration, "'body_end'"):
+					case strings.Contains(declaration, "const caretEnd"):
 						resolved := driverPoint{Matches: 1, X: 10, Y: 20}
 						if editor.point != nil {
 							ordinal, _ := second.(float64)
 							target, _ := first.(string)
 							resolved = editor.point(target, int(ordinal))
 						}
-						editor.record("point:" + toString(first))
+						target := toString(first)
+						editor.record("point:" + target)
+						editor.remember(target, "", "")
+						result = map[string]any{"result": map[string]any{"value": resolved}}
+					case strings.Contains(declaration, "layer_matches: layers.length"):
+						result = map[string]any{"result": map[string]any{"value": editor.settingsState()}}
+					case strings.Contains(declaration, "name_matches"):
+						control, id, name := toString(first), toString(second), toString(third)
+						resolved := editor.settingState(control, id, name)
+						editor.record("setting:" + control + ":" + id)
+						editor.remember(control, id, name)
 						result = map[string]any{"result": map[string]any{"value": resolved}}
 					case strings.Contains(declaration, "'settings_open'"):
 						resolved := driverActivation{Matches: 1, Activated: true}
@@ -155,13 +266,17 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 				case "Input.dispatchMouseEvent":
 					if phase, _ := call.Params["type"].(string); phase == "mousePressed" {
 						editor.record("click")
+					} else if phase == "mouseReleased" {
+						editor.applyPendingClick()
 					}
 				case "Input.insertText":
 					text, _ := call.Params["text"].(string)
 					editor.record("text:" + text)
+					editor.rememberText(text)
 				case "Input.dispatchKeyEvent":
 					if phase, _ := call.Params["type"].(string); phase == "rawKeyDown" {
 						editor.record("enter")
+						editor.commitTag()
 					}
 				}
 				if _, failed := response["error"]; !failed {
@@ -210,7 +325,7 @@ func TestObserveProjectsTheLiveEditorTheWayTheNaverExportMapsIt(t *testing.T) {
 	}
 	if snapshot.Title != "제목입니다" || snapshot.ImageCount != 1 ||
 		snapshot.Category != (SelectedSetting{ID: "17", Name: "식당", Selected: true}) ||
-		snapshot.Visibility != (SelectedSetting{ID: "public", Name: "전체공개", Selected: true}) {
+		snapshot.Visibility != (SelectedSetting{ID: "public", Name: "전체공개", Selected: true}) || !snapshot.SettingsLayerOpen {
 		t.Fatalf("settings=%+v", snapshot)
 	}
 	want := []SemanticBlock{
@@ -223,7 +338,7 @@ func TestObserveProjectsTheLiveEditorTheWayTheNaverExportMapsIt(t *testing.T) {
 		t.Fatalf("body=%+v, want %+v", snapshot.Body, want)
 	}
 	for kind, matches := range snapshot.LocatorMatches {
-		if matches != 1 {
+		if matches != expectedLocatorMatches(kind) {
 			t.Fatalf("locator %s matched %d times", kind, matches)
 		}
 	}
@@ -276,7 +391,7 @@ func TestObserveReportsMissingRenamedAndDuplicateControls(t *testing.T) {
 		{name: "missing category", kind: MutationCategory, value: 0},
 		{name: "renamed final surface", kind: MutationTags, value: 0},
 		{name: "duplicate title", kind: MutationTitle, value: 2},
-		{name: "duplicate visibility group", kind: MutationVisibility, value: 4},
+		{name: "duplicate visibility group", kind: MutationVisibility, value: 5},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			observation := healthyObservation()
@@ -383,6 +498,7 @@ func TestSnapshotTokenTracksEveryObservedFieldAndNothingElse(t *testing.T) {
 		{name: "visibility", change: func(o map[string]any) {
 			o["visibility"] = map[string]any{"id": "private", "name": "비공개", "selected": true}
 		}},
+		{name: "settings layer", change: func(o map[string]any) { o["settings_layer"] = false }},
 		{name: "auth", change: func(o map[string]any) { o["auth"] = "captcha" }},
 		{name: "locator matches", change: func(o map[string]any) {
 			matches := maps.Clone(o["locator_matches"].(map[string]int))
@@ -414,7 +530,7 @@ func asPortError(err error, out *PortError) bool {
 }
 
 // callArgs unwraps the {value: …} argument envelope Runtime.callFunctionOn takes.
-func callArgs(params map[string]any) (any, any) {
+func callArgs(params map[string]any) (any, any, any) {
 	list, _ := params["arguments"].([]any)
 	value := func(index int) any {
 		if index >= len(list) {
@@ -423,7 +539,7 @@ func callArgs(params map[string]any) (any, any) {
 		entry, _ := list[index].(map[string]any)
 		return entry["value"]
 	}
-	return value(0), value(1)
+	return value(0), value(1), value(2)
 }
 
 func toString(value any) string {

@@ -227,8 +227,9 @@ func (p *Page) InsertText(ctx context.Context, text string) error {
 	return p.client.call(ctx, "Input.insertText", map[string]any{"text": text}, nil)
 }
 
-// PressEnter sends the one editing key the SmartEditor block model needs to open the next
-// block. It is never used to submit: PUBLISH-21 fails closed on keyboard submission.
+// PressEnter sends the one editing key SmartEditor needs to open the next body paragraph
+// or commit the current tag. It is never used to submit: PUBLISH-21 fails closed on
+// keyboard submission.
 func (p *Page) PressEnter(ctx context.Context) error {
 	for _, phase := range []string{"rawKeyDown", "keyUp"} {
 		if err := p.client.call(ctx, "Input.dispatchKeyEvent", map[string]any{

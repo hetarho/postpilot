@@ -10,7 +10,7 @@ import (
 func applyPort(t *testing.T, editor *fakeEditor) *CDPPort {
 	t.Helper()
 	if editor.observation == nil {
-		editor.observation = healthyObservation()
+		editor.observation = closedObservation()
 	}
 	port, err := NewCDPPort(context.Background(), startFakeCDP(t, editor))
 	if err != nil {
@@ -111,7 +111,7 @@ func TestApplyRefusesEveryBodyWriteOnceTheSettingsLayerIsOpen(t *testing.T) {
 	if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
 		t.Fatalf("open settings: %v", err)
 	}
-	if got := editor.recorded(); !slices.Contains(got, "activate:settings_open") {
+	if got := editor.recorded(); !slices.Contains(got, "point:settings_open") {
 		t.Fatalf("the opener was not activated: %v", got)
 	}
 	for _, kind := range bodyMutationKinds {
@@ -130,12 +130,17 @@ func TestApplyRefusesEveryBodyWriteOnceTheSettingsLayerIsOpen(t *testing.T) {
 // The opener has to resolve to exactly one control, and a layer that refuses to open is a
 // failure rather than a silently skipped step.
 func TestApplyOpenSettingsFailsClosedOnADuplicateOrUnopenableOpener(t *testing.T) {
-	for name, activation := range map[string]driverActivation{
-		"duplicate":  {Matches: 2},
-		"unopenable": {Matches: 1, Activated: false},
+	for name, matches := range map[string]int{
+		"duplicate":  2,
+		"unopenable": 0,
 	} {
 		t.Run(name, func(t *testing.T) {
-			editor := &fakeEditor{activate: func(string, string) driverActivation { return activation }}
+			editor := &fakeEditor{point: func(target string, _ int) driverPoint {
+				if target == "settings_open" {
+					return driverPoint{Matches: matches}
+				}
+				return driverPoint{Matches: 1, X: 10, Y: 20}
+			}}
 			port := applyPort(t, editor)
 			err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings})
 			var portErr PortError
@@ -151,10 +156,233 @@ func TestApplyOpenSettingsFailsClosedOnADuplicateOrUnopenableOpener(t *testing.T
 	}
 }
 
+func TestApplyOpenSettingsRequiresOneShownLayerAndTransitionsItsLocators(t *testing.T) {
+	editor := &fakeEditor{}
+	port := applyPort(t, editor)
+	before, err := port.Observe(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.SettingsLayerOpen || before.LocatorMatches[MutationTags] != 0 || before.LocatorMatches[MutationCategory] != 0 || before.LocatorMatches[MutationVisibility] != 0 {
+		t.Fatalf("closed snapshot = %+v", before)
+	}
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
+		t.Fatal(err)
+	}
+	after, err := port.Observe(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !after.SettingsLayerOpen || after.LocatorMatches[MutationTags] != 1 || after.LocatorMatches[MutationCategory] != 1 || after.LocatorMatches[MutationVisibility] != 4 {
+		t.Fatalf("open snapshot = %+v", after)
+	}
+	if got := editor.recorded(); !slices.Equal(got, []string{"point:settings_open", "click"}) {
+		t.Fatalf("driver actions = %v", got)
+	}
+}
+
+func TestApplyOpenSettingsFailsClosedWhenTheShownLayerIsMissingOrDuplicated(t *testing.T) {
+	for name, layers := range map[string]int{"missing": 0, "duplicated": 2} {
+		t.Run(name, func(t *testing.T) {
+			editor := &fakeEditor{state: func() driverSettingsState { return driverSettingsState{LayerMatches: layers} }}
+			port := applyPort(t, editor)
+			err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings})
+			var portErr PortError
+			if !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+				t.Fatalf("err = %v, want editor_changed", err)
+			}
+			// The opener was activated, so ambiguity poisons subsequent body writes even if
+			// the malformed layer cannot be represented as a valid snapshot.
+			if err := port.Apply(context.Background(), Mutation{Kind: MutationTitle, Text: "제목"}); !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+				t.Fatalf("body write after ambiguous open = %v", err)
+			}
+		})
+	}
+}
+
+func TestApplySettingsFailBeforeTheLayerOpens(t *testing.T) {
+	for _, mutation := range []Mutation{
+		{Kind: MutationTags, Values: []string{"tag"}},
+		{Kind: MutationCategory, ID: "7", Name: "Travel"},
+		{Kind: MutationVisibility, ID: "public"},
+	} {
+		editor := &fakeEditor{}
+		port := applyPort(t, editor)
+		var portErr PortError
+		if err := port.Apply(context.Background(), mutation); !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+			t.Fatalf("%s before open: %v", mutation.Kind, err)
+		}
+		if got := editor.recorded(); len(got) != 0 {
+			t.Fatalf("%s touched the page: %v", mutation.Kind, got)
+		}
+	}
+}
+
+func TestApplyTagsUsesOnlyTheRealInputAndKeepsExactOrder(t *testing.T) {
+	t.Run("decoy is refused", func(t *testing.T) {
+		editor := &fakeEditor{point: func(target string, _ int) driverPoint {
+			if target == "tag_input" {
+				return driverPoint{Matches: 0}
+			}
+			return driverPoint{Matches: 1, X: 10, Y: 20}
+		}}
+		port := applyPort(t, editor)
+		if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
+			t.Fatal(err)
+		}
+		var portErr PortError
+		if err := port.Apply(context.Background(), Mutation{Kind: MutationTags, Values: []string{"one"}}); !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+			t.Fatalf("err = %v", err)
+		}
+		if slices.Contains(editor.recorded(), "text:one") {
+			t.Fatalf("tag reached an unreviewed input: %v", editor.recorded())
+		}
+	})
+
+	t.Run("three in order", func(t *testing.T) {
+		editor := &fakeEditor{}
+		port := applyPort(t, editor)
+		if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"one", "둘", "three words"}
+		if err := port.Apply(context.Background(), Mutation{Kind: MutationTags, Values: want}); err != nil {
+			t.Fatal(err)
+		}
+		snapshot, err := port.Observe(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(snapshot.Tags, want) {
+			t.Fatalf("tags = %v, want %v", snapshot.Tags, want)
+		}
+	})
+
+	t.Run("duplicate", func(t *testing.T) {
+		editor := &fakeEditor{}
+		port := applyPort(t, editor)
+		if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
+			t.Fatal(err)
+		}
+		before := len(editor.recorded())
+		var portErr PortError
+		if err := port.Apply(context.Background(), Mutation{Kind: MutationTags, Values: []string{"same", "same"}}); !errors.As(err, &portErr) || portErr.Kind != FailureSafe {
+			t.Fatalf("err = %v", err)
+		}
+		if len(editor.recorded()) != before {
+			t.Fatalf("duplicate tag touched the page: %v", editor.recorded()[before:])
+		}
+	})
+}
+
+func TestApplyCategoryRequiresTheFrozenIDAndName(t *testing.T) {
+	for name, choice := range map[string]driverSetting{
+		"missing id":            {Matches: 0, GroupMatches: 11, Expanded: true, NameMatches: false},
+		"name mismatch":         {Matches: 1, GroupMatches: 11, Actionable: true, Expanded: true, NameMatches: false},
+		"radio stays unchecked": {Matches: 1, GroupMatches: 11, Actionable: true, Expanded: true, NameMatches: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			editor := &fakeEditor{setting: func(control, _, _ string) driverSetting {
+				if control == "category_open" {
+					return driverSetting{Matches: 1, GroupMatches: 1, Actionable: true, Expanded: true, NameMatches: true}
+				}
+				return choice
+			}}
+			port := applyPort(t, editor)
+			if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
+				t.Fatal(err)
+			}
+			var portErr PortError
+			if err := port.Apply(context.Background(), Mutation{Kind: MutationCategory, ID: "7", Name: "Travel"}); !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+				t.Fatalf("err = %v", err)
+			}
+		})
+	}
+}
+
+func TestApplyCategoryRefusesASelectboxThatDoesNotExpand(t *testing.T) {
+	editor := &fakeEditor{setting: func(control, _, _ string) driverSetting {
+		if control == "category_open" {
+			return driverSetting{Matches: 1, GroupMatches: 1, Actionable: true, Expanded: false, NameMatches: true}
+		}
+		return driverSetting{Matches: 1, GroupMatches: 11, Actionable: true, Expanded: true, Checked: true, NameMatches: true}
+	}}
+	port := applyPort(t, editor)
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
+		t.Fatal(err)
+	}
+	var portErr PortError
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationCategory, ID: "7", Name: "Travel"}); !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestApplyCategoryOpensTheSelectboxAndVerifiesTheCheckedRadio(t *testing.T) {
+	editor := &fakeEditor{}
+	port := applyPort(t, editor)
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
+		t.Fatal(err)
+	}
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationCategory, ID: "7", Name: "Travel"}); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := port.Observe(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.Category != (SelectedSetting{ID: "7", Name: "Travel", Selected: true}) {
+		t.Fatalf("category = %+v", snapshot.Category)
+	}
+}
+
+func TestApplyEachVisibilityUsesItsFixedRadioAndVerifiesChecked(t *testing.T) {
+	for _, id := range []string{"public", "neighbor", "both_neighbor", "private"} {
+		t.Run(id, func(t *testing.T) {
+			editor := &fakeEditor{}
+			port := applyPort(t, editor)
+			if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
+				t.Fatal(err)
+			}
+			if err := port.Apply(context.Background(), Mutation{Kind: MutationVisibility, ID: id}); err != nil {
+				t.Fatal(err)
+			}
+			snapshot, err := port.Observe(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if snapshot.Visibility != (SelectedSetting{ID: id, Name: visibilityName(id), Selected: true}) {
+				t.Fatalf("visibility = %+v", snapshot.Visibility)
+			}
+		})
+	}
+}
+
+func TestApplyFailsWhenTheLayerClosesMidSettingsSequence(t *testing.T) {
+	calls := 0
+	editor := &fakeEditor{state: func() driverSettingsState {
+		calls++
+		if calls >= 3 {
+			return driverSettingsState{}
+		}
+		return driverSettingsState{LayerMatches: 1, Tags: 1, Category: 1, Visibility: 4}
+	}}
+	port := applyPort(t, editor)
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationOpenSettings}); err != nil {
+		t.Fatal(err)
+	}
+	var portErr PortError
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationTags, Values: []string{"first", "second"}}); !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+		t.Fatalf("err = %v", err)
+	}
+	if slices.Contains(editor.recorded(), "text:second") {
+		t.Fatalf("second tag was typed after the layer closed: %v", editor.recorded())
+	}
+}
+
 // The kinds this signed release does not implement yet refuse rather than half-writing a
 // live editor (PUBLISH-19).
 func TestApplyRefusesTheKindsThisReleaseDoesNotImplement(t *testing.T) {
-	for _, kind := range []MutationKind{MutationHeading, MutationQuote, MutationList, MutationUploadImage, MutationImageCaption, MutationTags, MutationCategory, MutationVisibility} {
+	for _, kind := range []MutationKind{MutationHeading, MutationQuote, MutationList, MutationUploadImage, MutationImageCaption} {
 		editor := &fakeEditor{}
 		port := applyPort(t, editor)
 		var portErr PortError

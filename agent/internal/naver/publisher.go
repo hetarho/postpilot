@@ -107,6 +107,9 @@ type Snapshot struct {
 	Tags        []string
 	Category    SelectedSetting
 	Visibility  SelectedSetting
+	// SettingsLayerOpen is true only when exactly one reviewed shown settings layer is
+	// present. It is part of the full fence snapshot, not an inferred driver state.
+	SettingsLayerOpen bool
 	// Rebuilt from the current DOM and full accessibility tree. The publisher
 	// requires one exact reviewed semantic match for its next typed mutation.
 	LocatorMatches                 map[MutationKind]int
@@ -376,7 +379,9 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 		return fail(failure)
 	}
 	expected.TargetID, expected.URL = current.TargetID, current.URL
-	if current.Title != "" || len(current.Body) != 0 || current.ImageCount != 0 || len(current.Tags) != 0 {
+	if current.Title != "" || len(current.Body) != 0 || current.ImageCount != 0 || len(current.Tags) != 0 ||
+		current.SettingsLayerOpen || current.Category.Selected || current.Visibility.Selected ||
+		current.LocatorMatches[MutationTags] != 0 || current.LocatorMatches[MutationCategory] != 0 || current.LocatorMatches[MutationVisibility] != 0 {
 		return fail(FailureEditorChanged)
 	}
 	if err := reporter.Advance(ctx, publishing.StageFillingContent); err != nil {
@@ -441,15 +446,17 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 	tags := normalizeTags(manifestCopy.GetTags())
 	categoryID, categoryName := manifestCopy.GetCategoryId(), manifestCopy.GetCategoryName()
 	visibility := visibilityID(manifestCopy.GetVisibility())
-	plan = append(plan,
-		plannedMutation{
-			mutation: Mutation{Kind: MutationOpenSettings},
-			update:   func(*Snapshot) {},
-		},
-		plannedMutation{
+	plan = append(plan, plannedMutation{
+		mutation: Mutation{Kind: MutationOpenSettings},
+		update:   func(snapshot *Snapshot) { snapshot.SettingsLayerOpen = true },
+	})
+	if len(tags) > 0 {
+		plan = append(plan, plannedMutation{
 			mutation: Mutation{Kind: MutationTags, Values: tags},
 			update:   func(snapshot *Snapshot) { snapshot.Tags = slices.Clone(tags) },
-		},
+		})
+	}
+	plan = append(plan,
 		plannedMutation{
 			mutation: Mutation{Kind: MutationCategory, ID: categoryID, Name: categoryName},
 			update: func(snapshot *Snapshot) {
@@ -458,7 +465,9 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 		},
 		plannedMutation{
 			mutation: Mutation{Kind: MutationVisibility, ID: visibility},
-			update:   func(snapshot *Snapshot) { snapshot.Visibility = SelectedSetting{ID: visibility, Selected: true} },
+			update: func(snapshot *Snapshot) {
+				snapshot.Visibility = SelectedSetting{ID: visibility, Name: visibilityName(visibility), Selected: true}
+			},
 		},
 	)
 
@@ -501,7 +510,7 @@ func (p Publisher) mutate(ctx context.Context, expected Snapshot, mutation Mutat
 		}
 		return FailureEditorChanged
 	}
-	if before.LocatorMatches[mutation.Kind] != 1 {
+	if before.LocatorMatches[mutation.Kind] != expectedLocatorMatches(mutation.Kind) {
 		return FailureEditorChanged
 	}
 	if err := p.Port.Apply(ctx, mutation); err != nil {
@@ -668,9 +677,32 @@ func visibilityID(value postpilotv1.PublishVisibility) string {
 	}
 }
 
+func visibilityName(id string) string {
+	switch id {
+	case "public":
+		return "전체공개"
+	case "neighbor":
+		return "이웃공개"
+	case "both_neighbor":
+		return "서로이웃공개"
+	case "private":
+		return "비공개"
+	default:
+		return ""
+	}
+}
+
+func expectedLocatorMatches(kind MutationKind) int {
+	if kind == MutationVisibility {
+		return 4
+	}
+	return 1
+}
+
 func equalSnapshot(got, want Snapshot) bool {
 	return got.TargetID == want.TargetID && got.URL == want.URL && got.AccountID == want.AccountID && got.SignatureID == want.SignatureID && got.Auth == want.Auth && got.Title == want.Title &&
-		got.ImageCount == want.ImageCount && slices.Equal(got.Tags, want.Tags) && got.Category == want.Category && got.Visibility == want.Visibility && equalBlocks(got.Body, want.Body)
+		got.ImageCount == want.ImageCount && slices.Equal(got.Tags, want.Tags) && got.Category == want.Category && got.Visibility == want.Visibility &&
+		got.SettingsLayerOpen == want.SettingsLayerOpen && equalBlocks(got.Body, want.Body)
 }
 
 func equalBlocks(left, right []SemanticBlock) bool {

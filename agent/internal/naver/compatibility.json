@@ -26,7 +26,7 @@
     "image_caption": {"css": ".se-component.se-image .se-module-text.se-caption", "ax_role": "textbox"},
     "open_settings": {"css": "button[class^=publish_btn__]", "ax_role": "button"},
     "tags": {"css": "div[class^=layer_popup__][class*=is_show__] input[class^=tag_input__]", "ax_role": "combobox"},
-    "category": {"css": "div[class^=layer_popup__][class*=is_show__] input[type=radio][data-testid^=categoryBtn_]", "ax_role": "radio", "state_attribute": "checked"},
+    "category": {"css": "div[class^=layer_popup__][class*=is_show__] button[class^=selectbox_button__]", "ax_role": "button", "state_attribute": "aria-expanded"},
     "visibility": {"css": "div[class^=layer_popup__][class*=is_show__] input[type=radio][data-testid^=openType_]", "ax_role": "radio", "state_attribute": "checked"}
   },
   "final_control_accessible_names": ["발행"]
