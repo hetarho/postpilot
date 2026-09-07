@@ -15,13 +15,14 @@ import (
 type fakeStore struct {
 	users    map[string]User
 	sessions map[string]Session
+	links    map[string]Link
 
 	createSessionErr error
 	deleteCalls      []string
 }
 
 func newFakeStore() *fakeStore {
-	return &fakeStore{users: map[string]User{}, sessions: map[string]Session{}}
+	return &fakeStore{users: map[string]User{}, sessions: map[string]Session{}, links: map[string]Link{}}
 }
 
 func (f *fakeStore) CreateUser(_ context.Context, u User) error {
@@ -38,6 +39,46 @@ func (f *fakeStore) GetUser(_ context.Context, id string) (User, error) {
 		return User{}, ErrUserNotFound
 	}
 	return u, nil
+}
+
+func (f *fakeStore) GetUserByEmail(_ context.Context, email string) (User, error) {
+	for _, user := range f.users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+	return User{}, ErrUserNotFound
+}
+
+func (f *fakeStore) SetEmail(_ context.Context, id, email string, verifiedAt *time.Time) error {
+	user, ok := f.users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+	user.Email = email
+	user.EmailVerifiedAt = verifiedAt
+	f.users[id] = user
+	return nil
+}
+
+func (f *fakeStore) MarkEmailVerified(_ context.Context, id string, at time.Time) error {
+	user, ok := f.users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+	user.EmailVerifiedAt = &at
+	f.users[id] = user
+	return nil
+}
+
+func (f *fakeStore) MarkEmailUnreachable(_ context.Context, id string, at time.Time) error {
+	user, ok := f.users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+	user.EmailUnreachableAt = &at
+	f.users[id] = user
+	return nil
 }
 
 func (f *fakeStore) GetUserPlan(_ context.Context, id string) (plan.Plan, error) {
@@ -111,6 +152,50 @@ func (f *fakeStore) DeleteExpiredSessions(_ context.Context, before time.Time) (
 		}
 	}
 	return n, nil
+}
+
+func (f *fakeStore) DeleteSessionsForUser(_ context.Context, userID string) error {
+	for token, session := range f.sessions {
+		if session.UserID == userID {
+			delete(f.sessions, token)
+		}
+	}
+	return nil
+}
+
+func (f *fakeStore) CreateLink(_ context.Context, link Link) error {
+	f.links[link.TokenHash] = link
+	return nil
+}
+
+func (f *fakeStore) ConsumeLink(_ context.Context, tokenHash string, purpose LinkPurpose, now time.Time) (Link, error) {
+	link, ok := f.links[tokenHash]
+	if !ok || link.Purpose != purpose || link.UsedAt != nil || !now.Before(link.ExpiresAt) {
+		return Link{}, ErrLinkInvalid
+	}
+	link.UsedAt = &now
+	f.links[tokenHash] = link
+	return link, nil
+}
+
+func (f *fakeStore) InvalidateLinks(_ context.Context, userID string, purpose LinkPurpose, now time.Time) error {
+	for token, link := range f.links {
+		if link.UserID == userID && link.Purpose == purpose && link.UsedAt == nil {
+			link.UsedAt = &now
+			f.links[token] = link
+		}
+	}
+	return nil
+}
+
+type fakeMailer struct {
+	sent []Mail
+	err  error
+}
+
+func (m *fakeMailer) Send(_ context.Context, mail Mail) error {
+	m.sent = append(m.sent, mail)
+	return m.err
 }
 
 // newTestService returns a service with a frozen clock and a seeded account.
@@ -240,6 +325,45 @@ func TestLoginStoreFailureIsNotACredentialError(t *testing.T) {
 	}
 	if errors.Is(err, ErrInvalidCredentials) {
 		t.Errorf("error = %v, want an infrastructure error, not ErrInvalidCredentials", err)
+	}
+}
+
+func TestSendSkipsAndRecordsUnreachableAddresses(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	svc, store := newTestService(t, now)
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+	user := store.users["alice"]
+	user.Email = "alice@example.com"
+	store.users[user.ID] = user
+	message := existingAccountMail(user.Email)
+
+	unreachableAt := now.Add(-time.Hour)
+	user.EmailUnreachableAt = &unreachableAt
+	if err := svc.send(context.Background(), user, message); err != nil {
+		t.Fatal(err)
+	}
+	if len(mailer.sent) != 0 {
+		t.Fatal("mail was sent to an address already marked unreachable")
+	}
+
+	user.EmailUnreachableAt = nil
+	mailer.err = ErrRecipientRejected
+	if err := svc.send(context.Background(), user, message); err != nil {
+		t.Fatal(err)
+	}
+	marked := store.users[user.ID].EmailUnreachableAt
+	if marked == nil || !marked.Equal(now) {
+		t.Fatalf("rejected recipient marked at %v, want %v", marked, now)
+	}
+}
+
+func TestSendFailsWhenNoMailerIsWired(t *testing.T) {
+	svc, store := newTestService(t, time.Now())
+	user := store.users["alice"]
+	user.Email = "alice@example.com"
+	if err := svc.send(context.Background(), user, existingAccountMail(user.Email)); err == nil {
+		t.Fatal("send silently dropped mail with no adapter")
 	}
 }
 

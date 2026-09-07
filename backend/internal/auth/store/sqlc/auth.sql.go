@@ -7,7 +7,73 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
+
+const consumeLink = `-- name: ConsumeLink :one
+UPDATE auth_links SET used_at = ?
+WHERE token_hash = ?
+  AND purpose = ?
+  AND used_at IS NULL
+  AND expires_at > ?
+RETURNING token_hash, user_id, purpose, email, expires_at, used_at, created_at
+`
+
+type ConsumeLinkParams struct {
+	UsedAt    sql.NullString
+	TokenHash string
+	Purpose   string
+	ExpiresAt string
+}
+
+func (q *Queries) ConsumeLink(ctx context.Context, arg ConsumeLinkParams) (AuthLink, error) {
+	row := q.db.QueryRowContext(ctx, consumeLink,
+		arg.UsedAt,
+		arg.TokenHash,
+		arg.Purpose,
+		arg.ExpiresAt,
+	)
+	var i AuthLink
+	err := row.Scan(
+		&i.TokenHash,
+		&i.UserID,
+		&i.Purpose,
+		&i.Email,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createLink = `-- name: CreateLink :exec
+INSERT INTO auth_links (
+  token_hash, user_id, purpose, email, expires_at, used_at, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?)
+`
+
+type CreateLinkParams struct {
+	TokenHash string
+	UserID    string
+	Purpose   string
+	Email     string
+	ExpiresAt string
+	UsedAt    sql.NullString
+	CreatedAt string
+}
+
+func (q *Queries) CreateLink(ctx context.Context, arg CreateLinkParams) error {
+	_, err := q.db.ExecContext(ctx, createLink,
+		arg.TokenHash,
+		arg.UserID,
+		arg.Purpose,
+		arg.Email,
+		arg.ExpiresAt,
+		arg.UsedAt,
+		arg.CreatedAt,
+	)
+	return err
+}
 
 const createSession = `-- name: CreateSession :exec
 INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)
@@ -32,14 +98,23 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 
 const createUser = `-- name: CreateUser :exec
 
-INSERT INTO users (id, password_hash, plan, created_at) VALUES (?, ?, ?, ?)
+INSERT INTO users (
+  id, password_hash, email, email_verified_at, email_unreachable_at,
+  failed_logins, locked_until, google_subject, plan, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateUserParams struct {
-	ID           string
-	PasswordHash string
-	Plan         string
-	CreatedAt    string
+	ID                 string
+	PasswordHash       string
+	Email              sql.NullString
+	EmailVerifiedAt    sql.NullString
+	EmailUnreachableAt sql.NullString
+	FailedLogins       int64
+	LockedUntil        sql.NullString
+	GoogleSubject      sql.NullString
+	Plan               string
+	CreatedAt          string
 }
 
 // Queries for the auth context. sqlc compiles these into internal/auth/store/sqlc;
@@ -48,6 +123,12 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	_, err := q.db.ExecContext(ctx, createUser,
 		arg.ID,
 		arg.PasswordHash,
+		arg.Email,
+		arg.EmailVerifiedAt,
+		arg.EmailUnreachableAt,
+		arg.FailedLogins,
+		arg.LockedUntil,
+		arg.GoogleSubject,
 		arg.Plan,
 		arg.CreatedAt,
 	)
@@ -75,6 +156,15 @@ func (q *Queries) DeleteSession(ctx context.Context, token string) error {
 	return err
 }
 
+const deleteSessionsForUser = `-- name: DeleteSessionsForUser :exec
+DELETE FROM sessions WHERE user_id = ?
+`
+
+func (q *Queries) DeleteSessionsForUser(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, deleteSessionsForUser, userID)
+	return err
+}
+
 const getSessionByToken = `-- name: GetSessionByToken :one
 SELECT token, user_id, expires_at, created_at FROM sessions WHERE token = ?
 `
@@ -92,14 +182,22 @@ func (q *Queries) GetSessionByToken(ctx context.Context, token string) (Session,
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, password_hash, plan, created_at FROM users WHERE id = ?
+SELECT id, password_hash, email, email_verified_at, email_unreachable_at,
+       failed_logins, locked_until, google_subject, plan, created_at
+FROM users WHERE id = ?
 `
 
 type GetUserRow struct {
-	ID           string
-	PasswordHash string
-	Plan         string
-	CreatedAt    string
+	ID                 string
+	PasswordHash       string
+	Email              sql.NullString
+	EmailVerifiedAt    sql.NullString
+	EmailUnreachableAt sql.NullString
+	FailedLogins       int64
+	LockedUntil        sql.NullString
+	GoogleSubject      sql.NullString
+	Plan               string
+	CreatedAt          string
 }
 
 func (q *Queries) GetUser(ctx context.Context, id string) (GetUserRow, error) {
@@ -108,6 +206,49 @@ func (q *Queries) GetUser(ctx context.Context, id string) (GetUserRow, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.PasswordHash,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.EmailUnreachableAt,
+		&i.FailedLogins,
+		&i.LockedUntil,
+		&i.GoogleSubject,
+		&i.Plan,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, password_hash, email, email_verified_at, email_unreachable_at,
+       failed_logins, locked_until, google_subject, plan, created_at
+FROM users WHERE email = ?
+`
+
+type GetUserByEmailRow struct {
+	ID                 string
+	PasswordHash       string
+	Email              sql.NullString
+	EmailVerifiedAt    sql.NullString
+	EmailUnreachableAt sql.NullString
+	FailedLogins       int64
+	LockedUntil        sql.NullString
+	GoogleSubject      sql.NullString
+	Plan               string
+	CreatedAt          string
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email sql.NullString) (GetUserByEmailRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i GetUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.PasswordHash,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.EmailUnreachableAt,
+		&i.FailedLogins,
+		&i.LockedUntil,
+		&i.GoogleSubject,
 		&i.Plan,
 		&i.CreatedAt,
 	)
@@ -125,14 +266,38 @@ func (q *Queries) GetUserPlan(ctx context.Context, id string) (string, error) {
 	return plan, err
 }
 
+const invalidateLinks = `-- name: InvalidateLinks :exec
+UPDATE auth_links SET used_at = ?
+WHERE user_id = ? AND purpose = ? AND used_at IS NULL
+`
+
+type InvalidateLinksParams struct {
+	UsedAt  sql.NullString
+	UserID  string
+	Purpose string
+}
+
+func (q *Queries) InvalidateLinks(ctx context.Context, arg InvalidateLinksParams) error {
+	_, err := q.db.ExecContext(ctx, invalidateLinks, arg.UsedAt, arg.UserID, arg.Purpose)
+	return err
+}
+
 const listUsers = `-- name: ListUsers :many
-SELECT id, plan, created_at FROM users ORDER BY created_at, id
+SELECT id, email, email_verified_at, email_unreachable_at, failed_logins,
+       locked_until, google_subject, plan, created_at
+FROM users ORDER BY created_at, id
 `
 
 type ListUsersRow struct {
-	ID        string
-	Plan      string
-	CreatedAt string
+	ID                 string
+	Email              sql.NullString
+	EmailVerifiedAt    sql.NullString
+	EmailUnreachableAt sql.NullString
+	FailedLogins       int64
+	LockedUntil        sql.NullString
+	GoogleSubject      sql.NullString
+	Plan               string
+	CreatedAt          string
 }
 
 func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
@@ -144,7 +309,17 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	var items []ListUsersRow
 	for rows.Next() {
 		var i ListUsersRow
-		if err := rows.Scan(&i.ID, &i.Plan, &i.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.EmailVerifiedAt,
+			&i.EmailUnreachableAt,
+			&i.FailedLogins,
+			&i.LockedUntil,
+			&i.GoogleSubject,
+			&i.Plan,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -156,6 +331,52 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const markEmailUnreachable = `-- name: MarkEmailUnreachable :exec
+UPDATE users SET email_unreachable_at = ? WHERE id = ?
+`
+
+type MarkEmailUnreachableParams struct {
+	EmailUnreachableAt sql.NullString
+	ID                 string
+}
+
+func (q *Queries) MarkEmailUnreachable(ctx context.Context, arg MarkEmailUnreachableParams) error {
+	_, err := q.db.ExecContext(ctx, markEmailUnreachable, arg.EmailUnreachableAt, arg.ID)
+	return err
+}
+
+const markEmailVerified = `-- name: MarkEmailVerified :exec
+UPDATE users SET email_verified_at = ? WHERE id = ?
+`
+
+type MarkEmailVerifiedParams struct {
+	EmailVerifiedAt sql.NullString
+	ID              string
+}
+
+func (q *Queries) MarkEmailVerified(ctx context.Context, arg MarkEmailVerifiedParams) error {
+	_, err := q.db.ExecContext(ctx, markEmailVerified, arg.EmailVerifiedAt, arg.ID)
+	return err
+}
+
+const setEmail = `-- name: SetEmail :exec
+UPDATE users
+SET email = NULLIF(?1, ''),
+    email_verified_at = ?2
+WHERE id = ?3
+`
+
+type SetEmailParams struct {
+	Email           interface{}
+	EmailVerifiedAt sql.NullString
+	ID              string
+}
+
+func (q *Queries) SetEmail(ctx context.Context, arg SetEmailParams) error {
+	_, err := q.db.ExecContext(ctx, setEmail, arg.Email, arg.EmailVerifiedAt, arg.ID)
+	return err
 }
 
 const setUserPlan = `-- name: SetUserPlan :execrows

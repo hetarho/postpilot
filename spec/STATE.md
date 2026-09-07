@@ -31,7 +31,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T046 | todo |
-| T029 | Email identity columns, single-use link rows, and the transactional mail port | AUTH ARCH | - | todo |
 | T030 | Self-signup, email verification before the first session, and the account's email surface | AUTH QUOTA ARCH | T029 T034 | todo |
 | T031 | Password reset by a 1-hour emailed link, and the signed-in password change | AUTH ARCH | T030 | todo |
 | T032 | Per-IP throttling of the public writes and the auto-releasing account lockout | AUTH ARCH | T031 | todo |
@@ -50,10 +49,12 @@
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
 
 ## next
-- implement-task T029 → T034 → T030 → T031 → T032 → T033 → T035 → T036 → T037 → T038 → T039 → T040
+- implement-task T034 → T030 → T031 → T032 → T033 → T035 → T036 → T037 → T038 → T039 → T040
 - T042 blocked on ONE live survey pass on a clean writer draft: does 문단 서식 변경 convert the caret's paragraph or its whole component when the component holds two or more paragraphs (same for 인용구), what does Enter from a converted block open, and how does the list toolbar behave there — the owner must discard the leftover dirty draft in the browser first, since navigating away from it raises a `beforeunload` dialog the driver surface cannot dismiss · T044 is claimable NOW (dep T042 is only for the shared plumbing, which has landed) · then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260908 T029 done
+- 260908 T029 claimed (cx)
 - 260908 T041 done
 - 260908 STATE restored T029..T040 and the consumed AUTH ARCH MARKETING BILLING revisions after spec lint exposed their pre-existing omission
 - 260908 T041 claimed (cx)
@@ -72,5 +73,3 @@
 - 260907 T026 claimed (pw)
 - 260907 T025 done — four operator-assigned combos price a post by photo·video·1000 chars in milli-credits, published through GetMyPlan; the worst-case reference post is gone
 - 260907 T025 claimed (pw)
-- 260907 create-task QUOTA THEME → T025..T028 (combos + published rates, the operator's assignment, the /plans calculator, the animated promotional stroke); T023's worst-case reference post and its copy are removed in T025/T027
-- 260907 update-ssot QUOTA r5 THEME r4 done (the post estimate becomes proportional over adjustable characters·photos·videos across four operator-assigned combos, and a promotional surface may animate a gradient stroke on every option)

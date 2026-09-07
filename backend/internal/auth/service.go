@@ -18,8 +18,10 @@ const SessionCookieName = "pp_session"
 // Service is the auth context's behavior. It owns every rule about how a login
 // succeeds, how long a session lives, and what a failure is allowed to reveal.
 type Service struct {
-	store Store
-	ttl   time.Duration
+	store     Store
+	ttl       time.Duration
+	mailer    Mailer
+	webOrigin string
 
 	// now and verify are seams for tests in this package, not configuration. Keeping
 	// them unexported means the production API has no test-only surface, while a
@@ -49,6 +51,36 @@ func NewService(store Store, ttl time.Duration) *Service {
 // upgrade that owes credits fails loudly rather than moving the tier and dropping the
 // grant on the floor.
 func (s *Service) SetMonthlyTopUp(topUp MonthlyTopUp) { s.topUp = topUp }
+
+// SetMailer attaches the delivery edge after the auth service is constructed. A caller that
+// reaches send without this wiring receives an error; transactional mail is never dropped.
+func (s *Service) SetMailer(mailer Mailer) { s.mailer = mailer }
+
+// SetWebOrigin supplies the browser origin used to build verification and reset URLs.
+func (s *Service) SetWebOrigin(origin string) {
+	s.webOrigin = strings.TrimRight(strings.TrimSpace(origin), "/")
+}
+
+// send applies the permanent-recipient policy before and after the delivery adapter.
+func (s *Service) send(ctx context.Context, user User, mail Mail) error {
+	if user.EmailUnreachableAt != nil {
+		slog.InfoContext(ctx, "transactional mail skipped for unreachable address", "user_id", user.ID, "to", mail.To)
+		return nil
+	}
+	if s.mailer == nil {
+		return errors.New("auth mailer is not wired")
+	}
+	if err := s.mailer.Send(ctx, mail); err != nil {
+		if !errors.Is(err, ErrRecipientRejected) {
+			return fmt.Errorf("send transactional mail: %w", err)
+		}
+		if err := s.store.MarkEmailUnreachable(ctx, user.ID, s.now()); err != nil {
+			return fmt.Errorf("mark rejected email unreachable: %w", err)
+		}
+		return nil
+	}
+	return nil
+}
 
 // Login verifies credentials and issues a session, returning the user and the RAW
 // token for the cookie. The raw token is returned exactly once, here; it is never

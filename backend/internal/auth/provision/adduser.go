@@ -18,6 +18,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
@@ -66,6 +67,7 @@ func Run(ctx context.Context, args []string, bootstraps ...Bootstrap) error {
 	}
 
 	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
+	svc.SetMailer(mail.NewLog())
 	if err := svc.CreateUser(ctx, loginID, password, tier); err != nil {
 		if errors.Is(err, auth.ErrDuplicateUser) {
 			if bootErr := runBootstraps(ctx, handle, loginID, bootstraps); bootErr != nil {
@@ -142,6 +144,7 @@ func SetPlan(ctx context.Context, args []string, topUp CreditTopUp) error {
 	}
 
 	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
+	svc.SetMailer(mail.NewLog())
 	if topUp != nil {
 		svc.SetMonthlyTopUp(func(ctx context.Context, userID string, credits int) error {
 			return topUp(ctx, handle, userID, credits)
@@ -192,6 +195,7 @@ func GrantCredits(ctx context.Context, args []string, grant CreditGrant) error {
 	}
 
 	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
+	svc.SetMailer(mail.NewLog())
 	if _, err := svc.PlanOf(ctx, loginID); err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			return fmt.Errorf("account %q does not exist", loginID)

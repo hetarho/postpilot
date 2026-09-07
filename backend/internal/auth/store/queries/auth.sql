@@ -2,10 +2,32 @@
 -- internal/auth/store maps the generated rows to domain types.
 
 -- name: CreateUser :exec
-INSERT INTO users (id, password_hash, plan, created_at) VALUES (?, ?, ?, ?);
+INSERT INTO users (
+  id, password_hash, email, email_verified_at, email_unreachable_at,
+  failed_logins, locked_until, google_subject, plan, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetUser :one
-SELECT id, password_hash, plan, created_at FROM users WHERE id = ?;
+SELECT id, password_hash, email, email_verified_at, email_unreachable_at,
+       failed_logins, locked_until, google_subject, plan, created_at
+FROM users WHERE id = ?;
+
+-- name: GetUserByEmail :one
+SELECT id, password_hash, email, email_verified_at, email_unreachable_at,
+       failed_logins, locked_until, google_subject, plan, created_at
+FROM users WHERE email = ?;
+
+-- name: SetEmail :exec
+UPDATE users
+SET email = NULLIF(sqlc.arg(email), ''),
+    email_verified_at = sqlc.narg(email_verified_at)
+WHERE id = sqlc.arg(id);
+
+-- name: MarkEmailVerified :exec
+UPDATE users SET email_verified_at = ? WHERE id = ?;
+
+-- name: MarkEmailUnreachable :exec
+UPDATE users SET email_unreachable_at = ? WHERE id = ?;
 
 -- name: GetUserPlan :one
 SELECT plan FROM users WHERE id = ?;
@@ -19,7 +41,9 @@ WHERE users.id = ?
   AND (users.plan <> 'master' OR (SELECT COUNT(*) FROM users AS m WHERE m.plan = 'master') > 1);
 
 -- name: ListUsers :many
-SELECT id, plan, created_at FROM users ORDER BY created_at, id;
+SELECT id, email, email_verified_at, email_unreachable_at, failed_logins,
+       locked_until, google_subject, plan, created_at
+FROM users ORDER BY created_at, id;
 
 -- name: CreateSession :exec
 INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?);
@@ -32,3 +56,23 @@ DELETE FROM sessions WHERE token = ?;
 
 -- name: DeleteExpiredSessions :execrows
 DELETE FROM sessions WHERE expires_at < ?;
+
+-- name: DeleteSessionsForUser :exec
+DELETE FROM sessions WHERE user_id = ?;
+
+-- name: CreateLink :exec
+INSERT INTO auth_links (
+  token_hash, user_id, purpose, email, expires_at, used_at, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- name: ConsumeLink :one
+UPDATE auth_links SET used_at = ?
+WHERE token_hash = ?
+  AND purpose = ?
+  AND used_at IS NULL
+  AND expires_at > ?
+RETURNING token_hash, user_id, purpose, email, expires_at, used_at, created_at;
+
+-- name: InvalidateLinks :exec
+UPDATE auth_links SET used_at = ?
+WHERE user_id = ? AND purpose = ? AND used_at IS NULL;

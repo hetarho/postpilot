@@ -35,7 +35,15 @@ func TestUserRoundTrip(t *testing.T) {
 	// A sub-second, non-UTC timestamp: the store must normalize it, and the value that
 	// comes back must be the same instant.
 	created := time.Date(2026, 3, 1, 12, 30, 45, 123456789, time.FixedZone("KST", 9*3600))
-	want := auth.User{ID: "alice", PasswordHash: "$argon2id$...", Plan: plan.Basic, CreatedAt: created}
+	verified := created.Add(time.Hour)
+	unreachable := created.Add(2 * time.Hour)
+	locked := created.Add(3 * time.Hour)
+	want := auth.User{
+		ID: "alice", PasswordHash: "$argon2id$...", Email: "alice@example.com",
+		EmailVerifiedAt: &verified, EmailUnreachableAt: &unreachable,
+		FailedLogins: 4, LockedUntil: &locked, GoogleSubject: "google-alice",
+		Plan: plan.Basic, CreatedAt: created,
+	}
 
 	if err := s.CreateUser(ctx, want); err != nil {
 		t.Fatalf("CreateUser: %v", err)
@@ -45,11 +53,67 @@ func TestUserRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetUser: %v", err)
 	}
-	if got.ID != want.ID || got.PasswordHash != want.PasswordHash || got.Plan != want.Plan {
+	if got.ID != want.ID || got.PasswordHash != want.PasswordHash || got.Email != want.Email ||
+		got.FailedLogins != want.FailedLogins || got.GoogleSubject != want.GoogleSubject || got.Plan != want.Plan {
 		t.Errorf("user = %+v, want %+v", got, want)
 	}
 	if !got.CreatedAt.Equal(want.CreatedAt) {
 		t.Errorf("created_at = %v, want the same instant as %v", got.CreatedAt, want.CreatedAt)
+	}
+	for name, pair := range map[string][2]*time.Time{
+		"email_verified_at":    {got.EmailVerifiedAt, want.EmailVerifiedAt},
+		"email_unreachable_at": {got.EmailUnreachableAt, want.EmailUnreachableAt},
+		"locked_until":         {got.LockedUntil, want.LockedUntil},
+	} {
+		if pair[0] == nil || !pair[0].Equal(*pair[1]) {
+			t.Errorf("%s = %v, want %v", name, pair[0], pair[1])
+		}
+	}
+
+	listed, err := s.ListUsers(ctx)
+	if err != nil || len(listed) != 1 {
+		t.Fatalf("ListUsers = %+v, %v", listed, err)
+	}
+	if listed[0].PasswordHash != "" {
+		t.Fatal("ListUsers exposed the password hash")
+	}
+	if listed[0].Email != want.Email || listed[0].GoogleSubject != want.GoogleSubject || listed[0].FailedLogins != want.FailedLogins {
+		t.Errorf("listed user lost identity fields: %+v", listed[0])
+	}
+}
+
+func TestEmailLookupAndMarks(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	now := time.Date(2026, 9, 8, 12, 0, 0, 123, time.UTC)
+	if err := s.CreateUser(ctx, auth.User{ID: "legacy", PasswordHash: "hash", Plan: plan.Free, CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetEmail(ctx, "legacy", "legacy@example.com", nil); err != nil {
+		t.Fatal(err)
+	}
+	found, err := s.GetUserByEmail(ctx, "legacy@example.com")
+	if err != nil || found.ID != "legacy" || found.EmailVerifiedAt != nil {
+		t.Fatalf("GetUserByEmail = %+v, %v", found, err)
+	}
+	verified := now.Add(time.Hour)
+	unreachable := now.Add(2 * time.Hour)
+	if err := s.MarkEmailVerified(ctx, "legacy", verified); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MarkEmailUnreachable(ctx, "legacy", unreachable); err != nil {
+		t.Fatal(err)
+	}
+	found, err = s.GetUser(ctx, "legacy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found.EmailVerifiedAt == nil || !found.EmailVerifiedAt.Equal(verified) ||
+		found.EmailUnreachableAt == nil || !found.EmailUnreachableAt.Equal(unreachable) {
+		t.Fatalf("marked user = %+v", found)
+	}
+	if _, err := s.GetUserByEmail(ctx, "missing@example.com"); !errors.Is(err, auth.ErrUserNotFound) {
+		t.Fatalf("missing email error = %v, want ErrUserNotFound", err)
 	}
 }
 
@@ -101,6 +165,74 @@ func TestSessionRoundTripAndDelete(t *testing.T) {
 	}
 	if _, err := s.GetSession(ctx, "abc123"); !errors.Is(err, auth.ErrNoSession) {
 		t.Errorf("error after delete = %v, want ErrNoSession", err)
+	}
+}
+
+func TestDeleteSessionsForUser(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	now := time.Now()
+	for _, id := range []string{"alice", "bob"} {
+		if err := s.CreateUser(ctx, auth.User{ID: id, PasswordHash: "hash", Plan: plan.Free, CreatedAt: now}); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.CreateSession(ctx, auth.Session{Token: id, UserID: id, ExpiresAt: now.Add(time.Hour), CreatedAt: now}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.DeleteSessionsForUser(ctx, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GetSession(ctx, "alice"); !errors.Is(err, auth.ErrNoSession) {
+		t.Fatalf("alice session survived: %v", err)
+	}
+	if _, err := s.GetSession(ctx, "bob"); err != nil {
+		t.Fatalf("bob session was deleted: %v", err)
+	}
+}
+
+func TestAuthLinkConsumeIsSingleUseAndRejectsExpiry(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	if err := s.CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	link := auth.Link{
+		TokenHash: "live", UserID: "alice", Purpose: auth.LinkPurposeVerifyEmail,
+		Email: "alice@example.com", ExpiresAt: now.Add(time.Hour), CreatedAt: now,
+	}
+	if err := s.CreateLink(ctx, link); err != nil {
+		t.Fatal(err)
+	}
+	consumed, err := s.ConsumeLink(ctx, "live", auth.LinkPurposeVerifyEmail, now.Add(time.Minute))
+	if err != nil || consumed.UsedAt == nil || !consumed.UsedAt.Equal(now.Add(time.Minute)) {
+		t.Fatalf("ConsumeLink = %+v, %v", consumed, err)
+	}
+	if _, err := s.ConsumeLink(ctx, "live", auth.LinkPurposeVerifyEmail, now.Add(2*time.Minute)); !errors.Is(err, auth.ErrLinkInvalid) {
+		t.Fatalf("replay error = %v, want ErrLinkInvalid", err)
+	}
+
+	expired := link
+	expired.TokenHash = "expired"
+	expired.ExpiresAt = now.Add(-time.Nanosecond)
+	if err := s.CreateLink(ctx, expired); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ConsumeLink(ctx, "expired", auth.LinkPurposeVerifyEmail, now); !errors.Is(err, auth.ErrLinkInvalid) {
+		t.Fatalf("expired error = %v, want ErrLinkInvalid", err)
+	}
+
+	open := link
+	open.TokenHash = "invalidate"
+	if err := s.CreateLink(ctx, open); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.InvalidateLinks(ctx, "alice", auth.LinkPurposeVerifyEmail, now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ConsumeLink(ctx, "invalidate", auth.LinkPurposeVerifyEmail, now.Add(4*time.Minute)); !errors.Is(err, auth.ErrLinkInvalid) {
+		t.Fatalf("invalidated error = %v, want ErrLinkInvalid", err)
 	}
 }
 

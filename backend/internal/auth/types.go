@@ -30,13 +30,23 @@ var ErrUserNotFound = errors.New("user not found")
 // or expired. The three are indistinguishable to the caller by design.
 var ErrNoSession = errors.New("no session")
 
+// ErrLinkInvalid collapses an unknown, expired, already-used, or wrong-purpose link into
+// one result. A caller must not be able to discover which stored credential once existed.
+var ErrLinkInvalid = errors.New("auth link is invalid")
+
 // User is an account. The password hash never leaves this package's boundary: the
 // store loads it for verification and the rpc layer maps only the id outward.
 type User struct {
-	ID           string
-	PasswordHash string
-	Plan         plan.Plan
-	CreatedAt    time.Time
+	ID                 string
+	PasswordHash       string
+	Email              string
+	EmailVerifiedAt    *time.Time
+	EmailUnreachableAt *time.Time
+	FailedLogins       int
+	LockedUntil        *time.Time
+	GoogleSubject      string
+	Plan               plan.Plan
+	CreatedAt          time.Time
 }
 
 // ErrLastMaster refuses the demotion that would leave the deployment with no operator
@@ -55,3 +65,23 @@ type Session struct {
 // Expired reports whether the session is past its fixed lifetime. Sessions do not
 // slide: the PRD fixes the window at 30 days from login (plan 01, Non-goals).
 func (s Session) Expired(now time.Time) bool { return !now.Before(s.ExpiresAt) }
+
+// LinkPurpose is the closed set enforced again by auth_links' CHECK constraint.
+type LinkPurpose string
+
+const (
+	LinkPurposeVerifyEmail   LinkPurpose = "verify_email"
+	LinkPurposeResetPassword LinkPurpose = "reset_password"
+)
+
+// Link is one revocable email credential. TokenHash is the SHA-256 hex of the raw value
+// sent in the URL; the raw credential is never persisted.
+type Link struct {
+	TokenHash string
+	UserID    string
+	Purpose   LinkPurpose
+	Email     string
+	ExpiresAt time.Time
+	UsedAt    *time.Time
+	CreatedAt time.Time
+}

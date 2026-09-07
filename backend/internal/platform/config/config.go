@@ -243,6 +243,11 @@ type Config struct {
 	DBPath string
 	// SessionTTL is how long a session is valid after login.
 	SessionTTL time.Duration
+	// MailDriver selects the delivery edge. Local development logs complete messages;
+	// production uses Resend's HTTPS API.
+	MailDriver   string
+	ResendAPIKey string
+	MailFrom     string
 
 	// R2Endpoint is the S3-compatible endpoint the API itself calls (HEAD, DELETE, LIST).
 	R2Endpoint string
@@ -372,10 +377,13 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:       getenv("PORT", "8080"),
-		CORSOrigin: getenv("CORS_ORIGIN", "http://localhost:2564"),
-		DBPath:     getenv("DB_PATH", "data/postpilot.db"),
-		SessionTTL: sessionTTL,
+		Port:         getenv("PORT", "8080"),
+		CORSOrigin:   getenv("CORS_ORIGIN", "http://localhost:2564"),
+		DBPath:       getenv("DB_PATH", "data/postpilot.db"),
+		SessionTTL:   sessionTTL,
+		MailDriver:   strings.ToLower(strings.TrimSpace(getenv("MAIL_DRIVER", "log"))),
+		ResendAPIKey: os.Getenv("RESEND_API_KEY"),
+		MailFrom:     os.Getenv("MAIL_FROM"),
 
 		R2Endpoint:        os.Getenv("R2_ENDPOINT"),
 		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
@@ -400,6 +408,21 @@ func Load() (*Config, error) {
 		VoicePersonalization: defaultVoicePersonalizationConfig(),
 	}
 	cfg.R2PublicEndpoint = getenv("R2_PUBLIC_ENDPOINT", cfg.R2Endpoint)
+
+	switch cfg.MailDriver {
+	case "log":
+		// The logging adapter does not use provider credentials. Values left in a local
+		// shell are deliberately ignored rather than turning development boot-fatal.
+	case "resend":
+		if strings.TrimSpace(cfg.ResendAPIKey) == "" {
+			return nil, fmt.Errorf("RESEND_API_KEY is required when MAIL_DRIVER=resend")
+		}
+		if strings.TrimSpace(cfg.MailFrom) == "" {
+			return nil, fmt.Errorf("MAIL_FROM is required when MAIL_DRIVER=resend")
+		}
+	default:
+		return nil, fmt.Errorf("MAIL_DRIVER: must be log or resend, got %q", cfg.MailDriver)
+	}
 
 	if err := validateOrigin(cfg.CORSOrigin); err != nil {
 		return nil, fmt.Errorf("CORS_ORIGIN: %w", err)

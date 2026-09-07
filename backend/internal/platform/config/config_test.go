@@ -111,6 +111,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.LLMReasoning.Observe != llm.ReasoningLow || cfg.LLMReasoning.Write != llm.ReasoningLow {
 		t.Errorf("LLMReasoning = %+v", cfg.LLMReasoning)
 	}
+	if cfg.MailDriver != "log" {
+		t.Errorf("MailDriver = %q, want log", cfg.MailDriver)
+	}
 	// A7: the observation budget is derived from the batch size, not from the writer's.
 	if got, want := cfg.LLMCompletionBudget.Observation(), 4*observeBudgetPerPhoto; got != want {
 		t.Errorf("observation budget = %d, want %d for a batch of 4", got, want)
@@ -120,6 +123,53 @@ func TestLoadDefaults(t *testing.T) {
 	if got := cfg.LLMCompletionBudget.Write(nil, false); got != 8192 {
 		t.Errorf("no-target write budget = %d, want the configured fallback 8192", got)
 	}
+}
+
+func TestLoadMailDriver(t *testing.T) {
+	t.Run("log ignores provider settings", func(t *testing.T) {
+		t.Setenv("MAIL_DRIVER", "log")
+		t.Setenv("RESEND_API_KEY", "")
+		t.Setenv("MAIL_FROM", "")
+		cfg, err := Load()
+		if err != nil || cfg.MailDriver != "log" {
+			t.Fatalf("Load = %+v, %v", cfg, err)
+		}
+	})
+
+	t.Run("resend requires key", func(t *testing.T) {
+		t.Setenv("MAIL_DRIVER", "resend")
+		t.Setenv("RESEND_API_KEY", "")
+		t.Setenv("MAIL_FROM", "mail@example.com")
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "RESEND_API_KEY") {
+			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("resend requires sender", func(t *testing.T) {
+		t.Setenv("MAIL_DRIVER", "resend")
+		t.Setenv("RESEND_API_KEY", "re_secret")
+		t.Setenv("MAIL_FROM", "")
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "MAIL_FROM") {
+			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("resend resolves", func(t *testing.T) {
+		t.Setenv("MAIL_DRIVER", "resend")
+		t.Setenv("RESEND_API_KEY", "re_secret")
+		t.Setenv("MAIL_FROM", "PostPilot <mail@example.com>")
+		cfg, err := Load()
+		if err != nil || cfg.MailDriver != "resend" || cfg.ResendAPIKey != "re_secret" || cfg.MailFrom != "PostPilot <mail@example.com>" {
+			t.Fatalf("Load = %+v, %v", cfg, err)
+		}
+	})
+
+	t.Run("unknown", func(t *testing.T) {
+		t.Setenv("MAIL_DRIVER", "smtp")
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "MAIL_DRIVER") {
+			t.Fatalf("error = %v", err)
+		}
+	})
 }
 
 // The photo-row ceiling is env and boot-fatal when it cannot describe a row, because the

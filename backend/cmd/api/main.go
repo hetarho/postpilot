@@ -41,6 +41,7 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/llm/openaicompat"
+	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/modelcatalog"
 	"github.com/postpilot/backend/internal/modelcatalog/openrouter"
 	modelcatalogrpc "github.com/postpilot/backend/internal/modelcatalog/rpc"
@@ -177,6 +178,12 @@ func main() {
 	}
 
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), cfg.SessionTTL)
+	var mailer auth.Mailer = mail.NewLog()
+	if cfg.MailDriver == "resend" {
+		mailer = mail.NewResend(cfg.ResendAPIKey, cfg.MailFrom, http.DefaultClient)
+	}
+	authSvc.SetMailer(mailer)
+	authSvc.SetWebOrigin(cfg.CORSOrigin)
 	if n, err := authSvc.SweepExpired(ctx); err != nil {
 		// Stale rows are harmless — they fail the expiry check on lookup anyway — so a
 		// sweep failure is not worth refusing to serve over.
@@ -1514,6 +1521,7 @@ func experimentVoiceError(err error) error {
 // to repair an account, and a repair must not mint a second signup bonus.
 func creditBootstrap(ctx context.Context, handle *db.DB, userID string) error {
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour)
+	authSvc.SetMailer(mail.NewLog())
 	acting, err := authSvc.PlanOf(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("resolve provisioned plan: %w", err)

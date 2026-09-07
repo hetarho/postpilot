@@ -4,6 +4,20 @@
 
 package sqlc
 
+import (
+	"database/sql"
+)
+
+type AuthLink struct {
+	TokenHash string
+	UserID    string
+	Purpose   string
+	Email     string
+	ExpiresAt string
+	UsedAt    sql.NullString
+	CreatedAt string
+}
+
 type Session struct {
 	Token     string
 	UserID    string

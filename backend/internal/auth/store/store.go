@@ -42,10 +42,16 @@ func New(writer, reader *sql.DB) *Store {
 
 func (s *Store) CreateUser(ctx context.Context, u auth.User) error {
 	err := s.write.CreateUser(ctx, sqlc.CreateUserParams{
-		ID:           u.ID,
-		PasswordHash: u.PasswordHash,
-		Plan:         u.Plan.String(),
-		CreatedAt:    formatTime(u.CreatedAt),
+		ID:                 u.ID,
+		PasswordHash:       u.PasswordHash,
+		Email:              nullableString(u.Email),
+		EmailVerifiedAt:    nullableTime(u.EmailVerifiedAt),
+		EmailUnreachableAt: nullableTime(u.EmailUnreachableAt),
+		FailedLogins:       int64(u.FailedLogins),
+		LockedUntil:        nullableTime(u.LockedUntil),
+		GoogleSubject:      nullableString(u.GoogleSubject),
+		Plan:               u.Plan.String(),
+		CreatedAt:          formatTime(u.CreatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -65,15 +71,54 @@ func (s *Store) GetUser(ctx context.Context, id string) (auth.User, error) {
 		return auth.User{}, fmt.Errorf("select user: %w", err)
 	}
 
-	createdAt, err := parseTime(row.CreatedAt)
+	return mapUser(
+		row.ID, row.PasswordHash, row.Email, row.EmailVerifiedAt, row.EmailUnreachableAt,
+		row.FailedLogins, row.LockedUntil, row.GoogleSubject, row.Plan, row.CreatedAt,
+	)
+}
+
+func (s *Store) GetUserByEmail(ctx context.Context, email string) (auth.User, error) {
+	row, err := s.read.GetUserByEmail(ctx, nullableString(email))
 	if err != nil {
-		return auth.User{}, fmt.Errorf("user %s: %w", row.ID, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return auth.User{}, auth.ErrUserNotFound
+		}
+		return auth.User{}, fmt.Errorf("select user by email: %w", err)
 	}
-	stored, err := plan.Parse(row.Plan)
-	if err != nil {
-		return auth.User{}, fmt.Errorf("user %s: %w", row.ID, err)
+	return mapUser(
+		row.ID, row.PasswordHash, row.Email, row.EmailVerifiedAt, row.EmailUnreachableAt,
+		row.FailedLogins, row.LockedUntil, row.GoogleSubject, row.Plan, row.CreatedAt,
+	)
+}
+
+func (s *Store) SetEmail(ctx context.Context, id, email string, verifiedAt *time.Time) error {
+	if err := s.write.SetEmail(ctx, sqlc.SetEmailParams{
+		Email: email, EmailVerifiedAt: nullableTime(verifiedAt), ID: id,
+	}); err != nil {
+		if isUniqueViolation(err) {
+			return auth.ErrDuplicateUser
+		}
+		return fmt.Errorf("set user email: %w", err)
 	}
-	return auth.User{ID: row.ID, PasswordHash: row.PasswordHash, Plan: stored, CreatedAt: createdAt}, nil
+	return nil
+}
+
+func (s *Store) MarkEmailVerified(ctx context.Context, id string, at time.Time) error {
+	if err := s.write.MarkEmailVerified(ctx, sqlc.MarkEmailVerifiedParams{
+		EmailVerifiedAt: nullableTime(&at), ID: id,
+	}); err != nil {
+		return fmt.Errorf("mark email verified: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) MarkEmailUnreachable(ctx context.Context, id string, at time.Time) error {
+	if err := s.write.MarkEmailUnreachable(ctx, sqlc.MarkEmailUnreachableParams{
+		EmailUnreachableAt: nullableTime(&at), ID: id,
+	}); err != nil {
+		return fmt.Errorf("mark email unreachable: %w", err)
+	}
+	return nil
 }
 
 func (s *Store) GetUserPlan(ctx context.Context, id string) (plan.Plan, error) {
@@ -116,15 +161,14 @@ func (s *Store) ListUsers(ctx context.Context) ([]auth.User, error) {
 	}
 	users := make([]auth.User, 0, len(rows))
 	for _, row := range rows {
-		createdAt, err := parseTime(row.CreatedAt)
+		user, err := mapUser(
+			row.ID, "", row.Email, row.EmailVerifiedAt, row.EmailUnreachableAt,
+			row.FailedLogins, row.LockedUntil, row.GoogleSubject, row.Plan, row.CreatedAt,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("user %s: %w", row.ID, err)
+			return nil, err
 		}
-		stored, err := plan.Parse(row.Plan)
-		if err != nil {
-			return nil, fmt.Errorf("user %s: %w", row.ID, err)
-		}
-		users = append(users, auth.User{ID: row.ID, Plan: stored, CreatedAt: createdAt})
+		users = append(users, user)
 	}
 	return users, nil
 }
@@ -183,6 +227,104 @@ func (s *Store) DeleteExpiredSessions(ctx context.Context, before time.Time) (in
 	return n, nil
 }
 
+func (s *Store) DeleteSessionsForUser(ctx context.Context, userID string) error {
+	if err := s.write.DeleteSessionsForUser(ctx, userID); err != nil {
+		return fmt.Errorf("delete user sessions: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) CreateLink(ctx context.Context, link auth.Link) error {
+	if err := s.write.CreateLink(ctx, sqlc.CreateLinkParams{
+		TokenHash: link.TokenHash,
+		UserID:    link.UserID,
+		Purpose:   string(link.Purpose),
+		Email:     link.Email,
+		ExpiresAt: formatTime(link.ExpiresAt),
+		UsedAt:    nullableTime(link.UsedAt),
+		CreatedAt: formatTime(link.CreatedAt),
+	}); err != nil {
+		return fmt.Errorf("insert auth link: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) ConsumeLink(ctx context.Context, tokenHash string, purpose auth.LinkPurpose, now time.Time) (auth.Link, error) {
+	row, err := s.write.ConsumeLink(ctx, sqlc.ConsumeLinkParams{
+		UsedAt: nullableTime(&now), TokenHash: tokenHash, Purpose: string(purpose), ExpiresAt: formatTime(now),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return auth.Link{}, auth.ErrLinkInvalid
+		}
+		return auth.Link{}, fmt.Errorf("consume auth link: %w", err)
+	}
+	return mapLink(row)
+}
+
+func (s *Store) InvalidateLinks(ctx context.Context, userID string, purpose auth.LinkPurpose, now time.Time) error {
+	if err := s.write.InvalidateLinks(ctx, sqlc.InvalidateLinksParams{
+		UsedAt: nullableTime(&now), UserID: userID, Purpose: string(purpose),
+	}); err != nil {
+		return fmt.Errorf("invalidate auth links: %w", err)
+	}
+	return nil
+}
+
+func mapUser(
+	id, passwordHash string,
+	email, verified, unreachable sql.NullString,
+	failedLogins int64,
+	lockedUntil, googleSubject sql.NullString,
+	storedPlan, created string,
+) (auth.User, error) {
+	createdAt, err := parseTime(created)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("user %s: %w", id, err)
+	}
+	parsedPlan, err := plan.Parse(storedPlan)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("user %s: %w", id, err)
+	}
+	emailVerifiedAt, err := parseNullableTime(verified)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("user %s email_verified_at: %w", id, err)
+	}
+	emailUnreachableAt, err := parseNullableTime(unreachable)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("user %s email_unreachable_at: %w", id, err)
+	}
+	locked, err := parseNullableTime(lockedUntil)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("user %s locked_until: %w", id, err)
+	}
+	return auth.User{
+		ID: id, PasswordHash: passwordHash, Email: email.String,
+		EmailVerifiedAt: emailVerifiedAt, EmailUnreachableAt: emailUnreachableAt,
+		FailedLogins: int(failedLogins), LockedUntil: locked, GoogleSubject: googleSubject.String,
+		Plan: parsedPlan, CreatedAt: createdAt,
+	}, nil
+}
+
+func mapLink(row sqlc.AuthLink) (auth.Link, error) {
+	expiresAt, err := parseTime(row.ExpiresAt)
+	if err != nil {
+		return auth.Link{}, fmt.Errorf("auth link expires_at: %w", err)
+	}
+	usedAt, err := parseNullableTime(row.UsedAt)
+	if err != nil {
+		return auth.Link{}, fmt.Errorf("auth link used_at: %w", err)
+	}
+	createdAt, err := parseTime(row.CreatedAt)
+	if err != nil {
+		return auth.Link{}, fmt.Errorf("auth link created_at: %w", err)
+	}
+	return auth.Link{
+		TokenHash: row.TokenHash, UserID: row.UserID, Purpose: auth.LinkPurpose(row.Purpose),
+		Email: row.Email, ExpiresAt: expiresAt, UsedAt: usedAt, CreatedAt: createdAt,
+	}, nil
+}
+
 // formatTime normalizes to UTC before formatting so stored values sort against each
 // other regardless of the offset the caller's clock happened to carry.
 func formatTime(t time.Time) string { return t.UTC().Format(writeLayout) }
@@ -195,6 +337,28 @@ func parseTime(v string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("parse timestamp %q: %w", v, err)
 	}
 	return t, nil
+}
+
+func nullableString(value string) sql.NullString {
+	return sql.NullString{String: value, Valid: value != ""}
+}
+
+func nullableTime(value *time.Time) sql.NullString {
+	if value == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: formatTime(*value), Valid: true}
+}
+
+func parseNullableTime(value sql.NullString) (*time.Time, error) {
+	if !value.Valid {
+		return nil, nil
+	}
+	parsed, err := parseTime(value.String)
+	if err != nil {
+		return nil, err
+	}
+	return &parsed, nil
 }
 
 // isUniqueViolation detects a primary-key collision.
