@@ -69,10 +69,6 @@ const (
 	ChargeMultiplier = 3
 )
 
-// SignupBonusCredits is the one-time grant a free account is provisioned with, on top of
-// its first monthly lot.
-const SignupBonusCredits = 50
-
 // monthlyCredits is the product rule for what a tier is granted each month. Zero means
 // unlimited, not a zero allowance: only master carries it, and master is never refused.
 var monthlyCredits = map[Plan]int{
@@ -268,17 +264,28 @@ func Charge(costMicrousd int64) int {
 // when a month ends.
 var seoul = time.FixedZone("Asia/Seoul", 9*60*60)
 
-// MonthWindow returns the calendar month containing t: its start (inclusive) and the
-// instant it renews (exclusive). The renewal boundary is calendar rather than
-// per-account-anniversary so every refusal can name a date a user already understands.
-func MonthWindow(t time.Time) (start, end time.Time) {
-	local := t.In(seoul)
-	start = time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, seoul)
-	return start, start.AddDate(0, 1, 0)
+// AnchorWindow returns the grant window containing now. The anchor contributes only its
+// Seoul day of month: each boundary lands on that day, or the last day when the month is
+// shorter, and returns to the original day in the next long month.
+func AnchorWindow(anchor, now time.Time) (start, end time.Time) {
+	anchorDay := anchor.In(seoul).Day()
+	localNow := now.In(seoul)
+	start = anchorBoundary(localNow.Year(), localNow.Month(), anchorDay)
+	if start.After(localNow) {
+		previous := time.Date(localNow.Year(), localNow.Month()-1, 1, 0, 0, 0, 0, seoul)
+		start = anchorBoundary(previous.Year(), previous.Month(), anchorDay)
+	}
+	next := time.Date(start.Year(), start.Month()+1, 1, 0, 0, 0, 0, seoul)
+	return start, anchorBoundary(next.Year(), next.Month(), anchorDay)
 }
 
-// NextRenewal is the instant the monthly grant after the one containing t opens.
-func NextRenewal(t time.Time) time.Time {
-	_, end := MonthWindow(t)
+func anchorBoundary(year int, month time.Month, anchorDay int) time.Time {
+	lastDay := time.Date(year, month+1, 0, 0, 0, 0, 0, seoul).Day()
+	return time.Date(year, month, min(anchorDay, lastDay), 0, 0, 0, 0, seoul)
+}
+
+// NextRenewal is the exclusive end of the anchor window containing now.
+func NextRenewal(anchor, now time.Time) time.Time {
+	_, end := AnchorWindow(anchor, now)
 	return end
 }

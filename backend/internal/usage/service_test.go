@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -238,8 +239,18 @@ func (m fakeModels) Lookup(ref llm.ModelRef) (llm.ModelInfo, bool) {
 	return info, ok
 }
 
+type fakeAnchors struct {
+	anchor time.Time
+	err    error
+}
+
+func (a fakeAnchors) AnchorFor(context.Context, string) (time.Time, error) {
+	return a.anchor, a.err
+}
+
 // seoulNoon is a fixed instant inside one Asia/Seoul month, far from either boundary.
 var seoulNoon = time.Date(2026, 9, 15, 3, 0, 0, 0, time.UTC) // 15 Sep, 12:00 KST
+var testAnchor = time.Date(2025, 1, 1, 0, 0, 0, 0, time.FixedZone("Asia/Seoul", 9*60*60))
 
 // cheap costs 2300 micro-USD at the hold's assumed shape, which charges 3 credits.
 var cheapRef = llm.ModelRef{ProviderID: "openrouter", ModelID: "cheap"}
@@ -256,6 +267,7 @@ func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 	t.Helper()
 	store := newFakeStore()
 	svc := NewService(store, pricedModels, maxCompletion)
+	svc.SetAnchors(fakeAnchors{anchor: testAnchor})
 	svc.now = func() time.Time { return now }
 	seq := 0
 	svc.newID = func() string { seq++; return fmt.Sprintf("lot-new-%d", seq) }
@@ -265,7 +277,7 @@ func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 // openMonthly is a monthly lot already open for the current month, so a test about the
 // hold itself does not also trigger the renewal that a first access performs.
 func openMonthly(userID string, remaining int) Lot {
-	end := plan.NextRenewal(seoulNoon)
+	end := plan.NextRenewal(testAnchor, seoulNoon)
 	return Lot{
 		ID: "monthly-open", UserID: userID, Kind: LotMonthly,
 		Granted: remaining, Remaining: remaining, ExpiresAt: &end,
@@ -374,7 +386,7 @@ func TestHoldRefusesWhatTheBalanceCannotCoverAndWritesNothing(t *testing.T) {
 // needs no rule of its own — it falls out of the one ordering.
 func TestConsumptionSpendsTheSoonestExpiryFirst(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
-	monthEnd := plan.NextRenewal(seoulNoon)
+	monthEnd := plan.NextRenewal(testAnchor, seoulNoon)
 	later := monthEnd.AddDate(0, 2, 0)
 	store.lots = []Lot{
 		{ID: "no-expiry", UserID: "alice", Kind: LotBonus, Granted: 100, Remaining: 100},
@@ -424,8 +436,8 @@ func TestRenewalOpensTheMonthlyGrantOnAccess(t *testing.T) {
 	if balance.Credits != plan.MonthlyCredits(plan.Basic) {
 		t.Errorf("credits = %d, want the basic grant %d", balance.Credits, plan.MonthlyCredits(plan.Basic))
 	}
-	if !balance.RenewsAt.Equal(plan.NextRenewal(seoulNoon)) {
-		t.Errorf("renews at %s, want the month boundary %s", balance.RenewsAt, plan.NextRenewal(seoulNoon))
+	if !balance.RenewsAt.Equal(plan.NextRenewal(testAnchor, seoulNoon)) {
+		t.Errorf("renews at %s, want the anchor boundary %s", balance.RenewsAt, plan.NextRenewal(testAnchor, seoulNoon))
 	}
 	if len(store.lots) != 1 {
 		t.Fatalf("lots = %+v, want exactly one opened", store.lots)
@@ -437,6 +449,90 @@ func TestRenewalOpensTheMonthlyGrantOnAccess(t *testing.T) {
 	}
 	if len(store.lots) != 1 {
 		t.Errorf("lots = %+v, want the same one", store.lots)
+	}
+}
+
+func TestRenewalUsesOneDeterministicLotPerAnchorWindow(t *testing.T) {
+	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
+	anchor := time.Date(2025, 1, 20, 11, 0, 0, 0, seoul)
+	now := time.Date(2026, 9, 15, 12, 0, 0, 0, seoul)
+	store := newFakeStore()
+	svc := NewService(store, pricedModels, maxCompletion)
+	svc.SetAnchors(fakeAnchors{anchor: anchor})
+	svc.now = func() time.Time { return now }
+
+	first, err := svc.BalanceFor(context.Background(), "alice", plan.Basic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(store.lots) != 1 || store.lots[0].ID != "monthly:alice:2026-08-20" {
+		t.Fatalf("first lots = %+v, want the deterministic August window", store.lots)
+	}
+	if store.lots[0].Granted != plan.MonthlyCredits(plan.Basic) ||
+		store.lots[0].Remaining != plan.MonthlyCredits(plan.Basic) ||
+		store.lots[0].ExpiresAt == nil || !store.lots[0].ExpiresAt.Equal(first.RenewsAt) {
+		t.Errorf("first lot = %+v, balance = %+v", store.lots[0], first)
+	}
+	if _, err := svc.BalanceFor(context.Background(), "alice", plan.Basic); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.lots) != 1 {
+		t.Fatalf("second open in one window minted %d lots", len(store.lots))
+	}
+
+	now = first.RenewsAt
+	second, err := svc.BalanceFor(context.Background(), "alice", plan.Basic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(store.lots) != 2 || store.lots[1].ID != "monthly:alice:2026-09-20" {
+		t.Fatalf("next-window lots = %+v, want the September window beside the lapsed row", store.lots)
+	}
+	if !second.RenewsAt.Equal(time.Date(2026, 10, 20, 0, 0, 0, 0, seoul)) {
+		t.Errorf("next renewal = %s, want October 20", second.RenewsAt)
+	}
+}
+
+func TestLegacyCalendarLotTransitionsThroughOneShortAnchorCycle(t *testing.T) {
+	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
+	anchor := time.Date(2025, 1, 20, 0, 0, 0, 0, seoul)
+	now := time.Date(2026, 9, 15, 12, 0, 0, 0, seoul)
+	calendarExpiry := time.Date(2026, 10, 1, 0, 0, 0, 0, seoul)
+	store := newFakeStore()
+	store.lots = []Lot{{
+		ID: "legacy-calendar", UserID: "alice", Kind: LotMonthly,
+		Granted: 50, Remaining: 50, ExpiresAt: &calendarExpiry,
+	}}
+	svc := NewService(store, pricedModels, maxCompletion)
+	svc.SetAnchors(fakeAnchors{anchor: anchor})
+	svc.now = func() time.Time { return now }
+
+	legacy, err := svc.BalanceFor(context.Background(), "alice", plan.Free)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !legacy.RenewsAt.Equal(calendarExpiry) || len(store.lots) != 1 {
+		t.Fatalf("legacy balance = %+v lots=%+v, want it active until October 1", legacy, store.lots)
+	}
+
+	now = calendarExpiry
+	transition, err := svc.BalanceFor(context.Background(), "alice", plan.Free)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantTransitionEnd := time.Date(2026, 10, 20, 0, 0, 0, 0, seoul)
+	if !transition.RenewsAt.Equal(wantTransitionEnd) || store.lots[1].ID != "monthly:alice:2026-09-20" {
+		t.Fatalf("transition = %+v lot=%+v, want the short October 1-20 cycle", transition, store.lots[1])
+	}
+
+	now = wantTransitionEnd
+	full, err := svc.BalanceFor(context.Background(), "alice", plan.Free)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(store.lots) != 3 || store.lots[2].ID != "monthly:alice:2026-10-20" ||
+		!full.RenewsAt.Equal(time.Date(2026, 11, 20, 0, 0, 0, 0, seoul)) {
+		t.Fatalf("full cycle = %+v lots=%+v", full, store.lots)
 	}
 }
 
@@ -460,6 +556,14 @@ func TestRenewalAfterTheBoundaryOpensTheNextGrant(t *testing.T) {
 
 func TestMasterIsNeverRefusedButIsStillHeldAndRecorded(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
+	wantRenewal := plan.NextRenewal(testAnchor, seoulNoon)
+	balance, err := svc.BalanceFor(context.Background(), "root", plan.Master)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !balance.Unlimited || !balance.RenewsAt.Equal(wantRenewal) {
+		t.Fatalf("master balance = %+v, want unlimited and renewal %s", balance, wantRenewal)
+	}
 
 	// No lots at all: an account that would be refused on any other tier.
 	if err := svc.Hold(context.Background(), holdStart("root", plan.Master, "job-1", PlannedCall{Ref: cheapRef, Count: 3})); err != nil {
@@ -614,20 +718,24 @@ func TestReleaseReturnsTheWholeHold(t *testing.T) {
 	}
 }
 
-func TestSignupBonusIsGrantedOnce(t *testing.T) {
-	svc, store := newTestService(t, seoulNoon)
+func TestRenewingOperationsFailWhenAnchorsAreNotWired(t *testing.T) {
+	store := newFakeStore()
+	svc := NewService(store, pricedModels, maxCompletion)
 	ctx := context.Background()
 
-	for range 3 {
-		if err := svc.GrantSignupBonus(ctx, "alice", plan.SignupBonusCredits); err != nil {
-			t.Fatal(err)
-		}
+	checks := map[string]func() error{
+		"balance": func() error { _, err := svc.BalanceFor(ctx, "alice", plan.Free); return err },
+		"ensure":  func() error { return svc.EnsureMonthlyLot(ctx, "alice", plan.Free) },
+		"hold": func() error {
+			return svc.Hold(ctx, holdStart("alice", plan.Free, "job", PlannedCall{Ref: cheapRef, Count: 1}))
+		},
 	}
-	if len(store.lots) != 1 {
-		t.Fatalf("lots = %d, want one bonus however many times provisioning is rerun", len(store.lots))
-	}
-	if store.lots[0].Granted != plan.SignupBonusCredits || store.lots[0].ExpiresAt != nil {
-		t.Errorf("bonus lot = %+v, want %d credits with no expiry", store.lots[0], plan.SignupBonusCredits)
+	for name, check := range checks {
+		t.Run(name, func(t *testing.T) {
+			if err := check(); err == nil || !strings.Contains(err.Error(), "anchors") {
+				t.Fatalf("error = %v, want a loud anchor-wiring failure", err)
+			}
+		})
 	}
 }
 

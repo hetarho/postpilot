@@ -255,6 +255,18 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email sql.NullString) (Get
 	return i, err
 }
 
+const getUserCreatedAt = `-- name: GetUserCreatedAt :one
+SELECT created_at FROM users WHERE id = ?
+`
+
+// The usage anchor needs only this instant; never load the password hash for it.
+func (q *Queries) GetUserCreatedAt(ctx context.Context, id string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getUserCreatedAt, id)
+	var created_at string
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
 const getUserPlan = `-- name: GetUserPlan :one
 SELECT plan FROM users WHERE id = ?
 `

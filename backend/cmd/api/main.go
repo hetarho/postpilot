@@ -46,7 +46,6 @@ import (
 	"github.com/postpilot/backend/internal/modelcatalog/openrouter"
 	modelcatalogrpc "github.com/postpilot/backend/internal/modelcatalog/rpc"
 	modelcatalogstore "github.com/postpilot/backend/internal/modelcatalog/store"
-	"github.com/postpilot/backend/internal/plan"
 	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
@@ -199,6 +198,7 @@ func main() {
 		usagestore.New(handle.Writer, handle.Reader), registry,
 		int64(cfg.LLMMaxTokensDefault),
 	)
+	ledger.SetAnchors(usageAnchors{auth: authSvc})
 	// A tier upgrade owes credits for the cycle already running (QUOTA-35). The auth
 	// service is built before the ledger, so it takes the credit side here rather than as a
 	// constructor argument -- the same shape as the catalog's reasoning-spend reader below.
@@ -1518,7 +1518,7 @@ func experimentVoiceError(err error) error {
 // creditBootstrap gives a freshly provisioned account the credits its tier is granted,
 // so it can spend from its first request rather than from whichever one happens to renew
 // it. It is idempotent for the same reason the voice bootstrap is: `adduser` may be rerun
-// to repair an account, and a repair must not mint a second signup bonus.
+// to repair an account, and a repair must not mint a second monthly lot.
 func creditBootstrap(ctx context.Context, handle *db.DB, userID string) error {
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour)
 	authSvc.SetMailer(mail.NewLog())
@@ -1527,13 +1527,9 @@ func creditBootstrap(ctx context.Context, handle *db.DB, userID string) error {
 		return fmt.Errorf("resolve provisioned plan: %w", err)
 	}
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
+	ledger.SetAnchors(usageAnchors{auth: authSvc})
 	if err := ledger.EnsureMonthlyLot(ctx, userID, acting); err != nil {
 		return fmt.Errorf("open monthly grant: %w", err)
-	}
-	if acting == plan.Free {
-		if err := ledger.GrantSignupBonus(ctx, userID, plan.SignupBonusCredits); err != nil {
-			return fmt.Errorf("grant signup bonus: %w", err)
-		}
 	}
 	return nil
 }
@@ -1542,14 +1538,27 @@ func creditBootstrap(ctx context.Context, handle *db.DB, userID string) error {
 // `api setplan`. It is the same ledger call the RPC path gets, injected here because the
 // auth context must not learn about credit_lots.
 func topUpMonthlyLot(ctx context.Context, handle *db.DB, userID string, credits int) error {
+	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour)
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
+	ledger.SetAnchors(usageAnchors{auth: authSvc})
 	return ledger.TopUpMonthlyLot(ctx, userID, credits)
 }
 
 // grantCreditsTo opens a bonus lot from the operator's shell.
 func grantCreditsTo(ctx context.Context, handle *db.DB, userID string, credits int, expiresAt *time.Time) error {
+	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour)
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
+	ledger.SetAnchors(usageAnchors{auth: authSvc})
 	return ledger.Grant(ctx, userID, credits, expiresAt)
+}
+
+// usageAnchors is the composition seam between the credit ledger and account identity.
+// T038 can prefer a subscription start here without teaching either context about the
+// other's persistence.
+type usageAnchors struct{ auth *auth.Service }
+
+func (a usageAnchors) AnchorFor(ctx context.Context, userID string) (time.Time, error) {
+	return a.auth.CreatedAt(ctx, userID)
 }
 
 // estimatorCombos hands the plan edge the priced combos the catalog owns, mapping the

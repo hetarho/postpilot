@@ -23,8 +23,9 @@ const holdInputTokens = 30_000
 
 // Service is the credit gate and the ledger writer.
 type Service struct {
-	store  Store
-	models Models
+	store   Store
+	models  Models
+	anchors Anchors
 
 	// maxCompletionTokens is the same cap the registry sends on a call that sets none. It is
 	// only a fallback for a planned call whose caller did not declare a stage budget.
@@ -43,6 +44,11 @@ func NewService(store Store, models Models, maxCompletionTokens int64) *Service 
 		now:                 time.Now, newID: newID,
 	}
 }
+
+// SetAnchors attaches the account-specific monthly-window resolver. It is required for
+// every path that renews a balance; an unwired ledger fails instead of silently reverting
+// to a calendar month.
+func (s *Service) SetAnchors(anchors Anchors) { s.anchors = anchors }
 
 func newID() string {
 	buf := make([]byte, 16)
@@ -146,8 +152,17 @@ func (s *Service) spend(
 func (s *Service) renew(
 	ctx context.Context, tx Store, userID string, acting plan.Plan, now time.Time,
 ) (time.Time, error) {
+	if s.anchors == nil {
+		return time.Time{}, errors.New("usage: monthly anchors are not wired")
+	}
+	anchor, err := s.anchors.AnchorFor(ctx, userID)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("resolve monthly anchor: %w", err)
+	}
+	start, end := plan.AnchorWindow(anchor, now)
+
 	if plan.Unlimited(acting) {
-		return plan.NextRenewal(now), nil
+		return end, nil
 	}
 
 	current, found, err := tx.ActiveMonthlyLot(ctx, userID, now)
@@ -160,16 +175,19 @@ func (s *Service) renew(
 
 	// The lapsed lot is not deleted: it is already excluded from every balance by its own
 	// expiry, and keeping it leaves the grant history readable.
-	expires := plan.NextRenewal(now)
 	granted := plan.MonthlyCredits(acting)
-	if err := tx.InsertLot(ctx, Lot{
-		ID: s.newID(), UserID: userID, Kind: LotMonthly,
+	if err := tx.InsertLotIfAbsent(ctx, Lot{
+		ID: monthlyLotID(userID, start), UserID: userID, Kind: LotMonthly,
 		Granted: granted, Remaining: granted,
-		ExpiresAt: &expires, CreatedAt: now,
+		ExpiresAt: &end, CreatedAt: now,
 	}); err != nil {
 		return time.Time{}, err
 	}
-	return expires, nil
+	return end, nil
+}
+
+func monthlyLotID(userID string, start time.Time) string {
+	return "monthly:" + userID + ":" + start.In(time.FixedZone("Asia/Seoul", 9*60*60)).Format(time.DateOnly)
 }
 
 // worstCaseMicrousd prices every call the work will make at its largest possible shape.
@@ -452,20 +470,6 @@ func (s *Service) SpendableCredits(ctx context.Context, userID string, acting pl
 // before anything is started.
 func (s *Service) CreditsFor(calls []PlannedCall) int {
 	return plan.Charge(s.worstCaseMicrousd(calls))
-}
-
-// GrantSignupBonus opens the one-time grant a free account is provisioned with.
-//
-// The lot's id is derived from the account rather than random, so provisioning that is
-// re-run to repair an account cannot mint a second bonus.
-func (s *Service) GrantSignupBonus(ctx context.Context, userID string, credits int) error {
-	if credits <= 0 {
-		return nil
-	}
-	return s.store.InsertLotIfAbsent(ctx, Lot{
-		ID: "signup-bonus:" + userID, UserID: userID, Kind: LotBonus,
-		Granted: credits, Remaining: credits, CreatedAt: s.now(),
-	})
 }
 
 // EnsureMonthlyLot opens the tier's monthly grant if the account has none that is

@@ -204,8 +204,8 @@ type InsertLotIfAbsentParams struct {
 }
 
 // For a grant whose id is derived from what it is FOR rather than randomly: the signup
-// bonus. `adduser` is rerunnable to repair an account, and a repair must not mint a
-// second bonus.
+// monthly window today and the payment-method bonus later. Re-running the operation must
+// not mint a second lot.
 func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentParams) error {
 	_, err := q.db.ExecContext(ctx, insertLotIfAbsent,
 		arg.ID,

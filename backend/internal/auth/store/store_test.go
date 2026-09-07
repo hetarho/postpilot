@@ -60,6 +60,10 @@ func TestUserRoundTrip(t *testing.T) {
 	if !got.CreatedAt.Equal(want.CreatedAt) {
 		t.Errorf("created_at = %v, want the same instant as %v", got.CreatedAt, want.CreatedAt)
 	}
+	anchor, err := s.GetUserCreatedAt(ctx, "alice")
+	if err != nil || !anchor.Equal(want.CreatedAt) {
+		t.Errorf("GetUserCreatedAt = %v, %v; want %v", anchor, err, want.CreatedAt)
+	}
 	for name, pair := range map[string][2]*time.Time{
 		"email_verified_at":    {got.EmailVerifiedAt, want.EmailVerifiedAt},
 		"email_unreachable_at": {got.EmailUnreachableAt, want.EmailUnreachableAt},

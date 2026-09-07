@@ -136,6 +136,21 @@ func (s *Store) GetUserPlan(ctx context.Context, id string) (plan.Plan, error) {
 	return stored, nil
 }
 
+func (s *Store) GetUserCreatedAt(ctx context.Context, id string) (time.Time, error) {
+	value, err := s.read.GetUserCreatedAt(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return time.Time{}, auth.ErrUserNotFound
+		}
+		return time.Time{}, fmt.Errorf("select user creation time: %w", err)
+	}
+	createdAt, err := parseTime(value)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("user %s creation time: %w", id, err)
+	}
+	return createdAt, nil
+}
+
 // SetUserPlan carries the last-master guard inside its statement, so it reports which of the
 // two reasons a zero-row update had rather than guessing.
 func (s *Store) SetUserPlan(ctx context.Context, id string, p plan.Plan) error {

@@ -65,3 +65,10 @@ type Store interface {
 type Models interface {
 	Lookup(ref llm.ModelRef) (llm.ModelInfo, bool)
 }
+
+// Anchors resolves the account-specific day that monthly credit windows follow. Auth owns
+// the account creation instant today; the composition root can prefer a subscription start
+// later without making the ledger read either context's tables.
+type Anchors interface {
+	AnchorFor(ctx context.Context, userID string) (time.Time, error)
+}

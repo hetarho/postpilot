@@ -58,8 +58,8 @@ DELETE FROM usage_admissions WHERE job_id = ?;
 
 -- name: InsertLotIfAbsent :exec
 -- For a grant whose id is derived from what it is FOR rather than randomly: the signup
--- bonus. `adduser` is rerunnable to repair an account, and a repair must not mint a
--- second bonus.
+-- monthly window today and the payment-method bonus later. Re-running the operation must
+-- not mint a second lot.
 INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO NOTHING;

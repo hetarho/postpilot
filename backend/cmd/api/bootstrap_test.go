@@ -82,6 +82,40 @@ func (j *trackingVoiceJobs) FailQueuedPersonalization(context.Context, string, s
 	return false, nil
 }
 
+func TestCreditBootstrapOpensOnlyOneMonthlyLotForAFreeAccount(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "credits.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	createdAt := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{
+		ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: createdAt,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err := creditBootstrap(ctx, handle, "alice"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var count int
+	var kind string
+	if err := handle.Reader.QueryRowContext(ctx,
+		"SELECT COUNT(*), MIN(kind) FROM credit_lots WHERE user_id = ?", "alice",
+	).Scan(&count, &kind); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 || kind != "monthly" {
+		t.Fatalf("lots = %d of kind %q, want exactly one monthly lot", count, kind)
+	}
+}
+
 // Plan 10 A2: a new account cannot create a post until the adduser bootstrap has given it
 // an active default voice, and rerunning the bootstrap never duplicates that voice.
 func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {

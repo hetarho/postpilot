@@ -47,6 +47,8 @@ type Store interface {
 	// acting plan on every authenticated request, and loading a password hash that often
 	// widens the blast radius of any log or dump for a value nothing on that path reads.
 	GetUserPlan(ctx context.Context, id string) (plan.Plan, error)
+	// GetUserCreatedAt is the equally narrow account anchor read used by the credit ledger.
+	GetUserCreatedAt(ctx context.Context, id string) (time.Time, error)
 	SetUserPlan(ctx context.Context, id string, p plan.Plan) error
 	ListUsers(ctx context.Context) ([]User, error)
 

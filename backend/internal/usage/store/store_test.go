@@ -34,6 +34,12 @@ const maxCompletion = 10_000
 // oneCallHold is what one priced call holds: the per-request base plus three credits.
 const oneCallHold = 5
 
+type fixedAnchors struct{ anchor time.Time }
+
+func (a fixedAnchors) AnchorFor(context.Context, string) (time.Time, error) {
+	return a.anchor, nil
+}
+
 func newService(t *testing.T) *usage.Service {
 	t.Helper()
 	svc, _ := newServiceWithDB(t)
@@ -60,7 +66,9 @@ func newServiceWithDB(t *testing.T) (*usage.Service, *db.DB) {
 			t.Fatalf("seed user %s: %v", id, err)
 		}
 	}
-	return usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion), handle
+	svc := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion)
+	svc.SetAnchors(fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
+	return svc, handle
 }
 
 // insertLot writes a lot the Go paths cannot open — a purchased one, or a monthly one with a

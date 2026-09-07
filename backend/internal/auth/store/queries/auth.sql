@@ -32,6 +32,10 @@ UPDATE users SET email_unreachable_at = ? WHERE id = ?;
 -- name: GetUserPlan :one
 SELECT plan FROM users WHERE id = ?;
 
+-- name: GetUserCreatedAt :one
+-- The usage anchor needs only this instant; never load the password hash for it.
+SELECT created_at FROM users WHERE id = ?;
+
 -- name: SetUserPlan :execrows
 -- The last-master guard is part of the statement, not a check before it: two concurrent
 -- demotions that each counted two masters would both commit and leave the deployment with

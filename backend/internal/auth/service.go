@@ -185,6 +185,12 @@ func (s *Service) PlanOf(ctx context.Context, userID string) (plan.Plan, error) 
 	return s.store.GetUserPlan(ctx, userID)
 }
 
+// CreatedAt returns the account creation instant used as its monthly-credit anchor while
+// it has no subscription. The store query behind it deliberately loads no credential data.
+func (s *Service) CreatedAt(ctx context.Context, userID string) (time.Time, error) {
+	return s.store.GetUserCreatedAt(ctx, userID)
+}
+
 // ListUsers returns every account for the operator screen, without password hashes.
 func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	users, err := s.store.ListUsers(ctx)

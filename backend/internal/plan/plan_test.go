@@ -193,24 +193,94 @@ func TestChargeNeverShrinksAsCostGrows(t *testing.T) {
 	}
 }
 
-func TestMonthWindowIsTheSeoulCalendarMonth(t *testing.T) {
+func TestAnchorWindowClampsShortMonthsAndReturnsToTheAnchorDay(t *testing.T) {
 	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
+	anchor := time.Date(2025, 1, 31, 12, 0, 0, 0, seoul)
 
-	// 15:30 UTC on the 31st is already the 1st of the next month in Seoul, which is the
-	// case a UTC calendar would put in the wrong window.
-	at := time.Date(2026, 3, 31, 15, 30, 0, 0, time.UTC)
-	start, end := plan.MonthWindow(at)
+	for _, tc := range []struct {
+		name      string
+		now       time.Time
+		wantStart time.Time
+		wantEnd   time.Time
+	}{
+		{
+			name:      "ordinary February",
+			now:       time.Date(2026, 2, 15, 3, 0, 0, 0, time.UTC),
+			wantStart: time.Date(2026, 1, 31, 0, 0, 0, 0, seoul),
+			wantEnd:   time.Date(2026, 2, 28, 0, 0, 0, 0, seoul),
+		},
+		{
+			name:      "ordinary March returns to 31",
+			now:       time.Date(2026, 3, 10, 3, 0, 0, 0, time.UTC),
+			wantStart: time.Date(2026, 2, 28, 0, 0, 0, 0, seoul),
+			wantEnd:   time.Date(2026, 3, 31, 0, 0, 0, 0, seoul),
+		},
+		{
+			name:      "leap February",
+			now:       time.Date(2028, 2, 15, 3, 0, 0, 0, time.UTC),
+			wantStart: time.Date(2028, 1, 31, 0, 0, 0, 0, seoul),
+			wantEnd:   time.Date(2028, 2, 29, 0, 0, 0, 0, seoul),
+		},
+		{
+			name:      "leap March returns to 31",
+			now:       time.Date(2028, 3, 10, 3, 0, 0, 0, time.UTC),
+			wantStart: time.Date(2028, 2, 29, 0, 0, 0, 0, seoul),
+			wantEnd:   time.Date(2028, 3, 31, 0, 0, 0, 0, seoul),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end := plan.AnchorWindow(anchor, tc.now)
+			if !start.Equal(tc.wantStart) || !end.Equal(tc.wantEnd) {
+				t.Errorf("window = [%s, %s), want [%s, %s)", start, end, tc.wantStart, tc.wantEnd)
+			}
+			if got := plan.NextRenewal(anchor, tc.now); !got.Equal(tc.wantEnd) {
+				t.Errorf("NextRenewal = %s, want %s", got, tc.wantEnd)
+			}
+		})
+	}
+}
 
-	wantStart := time.Date(2026, 4, 1, 0, 0, 0, 0, seoul)
-	if !start.Equal(wantStart) {
-		t.Errorf("month start = %s, want %s", start, wantStart)
+func TestAnchorWindowBoundariesUseTheSeoulCalendar(t *testing.T) {
+	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
+	cases := []struct {
+		name      string
+		anchor    time.Time
+		now       time.Time
+		wantStart time.Time
+		wantEnd   time.Time
+	}{
+		{
+			name:      "day one is a calendar month",
+			anchor:    time.Date(2025, 1, 1, 0, 0, 0, 0, seoul),
+			now:       time.Date(2026, 3, 31, 15, 30, 0, 0, time.UTC),
+			wantStart: time.Date(2026, 4, 1, 0, 0, 0, 0, seoul),
+			wantEnd:   time.Date(2026, 5, 1, 0, 0, 0, 0, seoul),
+		},
+		{
+			name:      "before this months anchor uses previous month",
+			anchor:    time.Date(2025, 1, 20, 0, 0, 0, 0, seoul),
+			now:       time.Date(2026, 9, 10, 12, 0, 0, 0, seoul),
+			wantStart: time.Date(2026, 8, 20, 0, 0, 0, 0, seoul),
+			wantEnd:   time.Date(2026, 9, 20, 0, 0, 0, 0, seoul),
+		},
+		{
+			name:      "exact anchor boundary opens the new window",
+			anchor:    time.Date(2025, 1, 20, 0, 0, 0, 0, seoul),
+			now:       time.Date(2026, 9, 19, 15, 0, 0, 0, time.UTC),
+			wantStart: time.Date(2026, 9, 20, 0, 0, 0, 0, seoul),
+			wantEnd:   time.Date(2026, 10, 20, 0, 0, 0, 0, seoul),
+		},
 	}
-	wantEnd := time.Date(2026, 5, 1, 0, 0, 0, 0, seoul)
-	if !end.Equal(wantEnd) {
-		t.Errorf("month end = %s, want %s", end, wantEnd)
-	}
-	if !plan.NextRenewal(at).Equal(end) {
-		t.Errorf("NextRenewal = %s, want the month end %s", plan.NextRenewal(at), end)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end := plan.AnchorWindow(tc.anchor, tc.now)
+			if !start.Equal(tc.wantStart) || !end.Equal(tc.wantEnd) {
+				t.Errorf("window = [%s, %s), want [%s, %s)", start, end, tc.wantStart, tc.wantEnd)
+			}
+			if start.Location().String() != "Asia/Seoul" || end.Location().String() != "Asia/Seoul" {
+				t.Errorf("locations = %q/%q, want fixed Seoul", start.Location(), end.Location())
+			}
+		})
 	}
 }
 

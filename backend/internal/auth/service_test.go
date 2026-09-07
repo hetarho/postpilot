@@ -89,6 +89,14 @@ func (f *fakeStore) GetUserPlan(_ context.Context, id string) (plan.Plan, error)
 	return u.Plan, nil
 }
 
+func (f *fakeStore) GetUserCreatedAt(_ context.Context, id string) (time.Time, error) {
+	u, ok := f.users[id]
+	if !ok {
+		return time.Time{}, ErrUserNotFound
+	}
+	return u.CreatedAt, nil
+}
+
 // SetUserPlan mirrors the real statement's guard, which refuses to demote the only master.
 func (f *fakeStore) SetUserPlan(_ context.Context, id string, p plan.Plan) error {
 	u, ok := f.users[id]
