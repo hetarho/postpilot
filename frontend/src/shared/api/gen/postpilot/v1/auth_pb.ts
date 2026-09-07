@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/auth.proto.
  */
 export const file_postpilot_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb3N0cGlsb3QvdjEvYXV0aC5wcm90bxIMcG9zdHBpbG90LnYxIjAKDVNpZ251cFJlcXVlc3QSDQoFZW1haWwYASABKAkSEAoIcGFzc3dvcmQYAiABKAkiEAoOU2lnbnVwUmVzcG9uc2UiKgoZUmVzZW5kVmVyaWZpY2F0aW9uUmVxdWVzdBINCgVlbWFpbBgBIAEoCSIcChpSZXNlbmRWZXJpZmljYXRpb25SZXNwb25zZSIjChJWZXJpZnlFbWFpbFJlcXVlc3QSDQoFdG9rZW4YASABKAkiFQoTVmVyaWZ5RW1haWxSZXNwb25zZSIyCgxMb2dpblJlcXVlc3QSEAoIbG9naW5faWQYASABKAkSEAoIcGFzc3dvcmQYAiABKAkiUwoNTG9naW5SZXNwb25zZRIgCgR1c2VyGAEgASgLMhIucG9zdHBpbG90LnYxLlVzZXISIAoEcGxhbhgCIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuIg8KDUxvZ291dFJlcXVlc3QiEAoOTG9nb3V0UmVzcG9uc2UiDgoMR2V0TWVSZXF1ZXN0IlMKDUdldE1lUmVzcG9uc2USIAoEdXNlchgBIAEoCzISLnBvc3RwaWxvdC52MS5Vc2VyEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbiIlChRSZWdpc3RlckVtYWlsUmVxdWVzdBINCgVlbWFpbBgBIAEoCSIXChVSZWdpc3RlckVtYWlsUmVzcG9uc2UiOQoEVXNlchIKCgJpZBgBIAEoCRINCgVlbWFpbBgCIAEoCRIWCg5lbWFpbF92ZXJpZmllZBgDIAEoCDLABAoLQXV0aFNlcnZpY2USRQoGU2lnbnVwEhsucG9zdHBpbG90LnYxLlNpZ251cFJlcXVlc3QaHC5wb3N0cGlsb3QudjEuU2lnbnVwUmVzcG9uc2UiABJpChJSZXNlbmRWZXJpZmljYXRpb24SJy5wb3N0cGlsb3QudjEuUmVzZW5kVmVyaWZpY2F0aW9uUmVxdWVzdBooLnBvc3RwaWxvdC52MS5SZXNlbmRWZXJpZmljYXRpb25SZXNwb25zZSIAElQKC1ZlcmlmeUVtYWlsEiAucG9zdHBpbG90LnYxLlZlcmlmeUVtYWlsUmVxdWVzdBohLnBvc3RwaWxvdC52MS5WZXJpZnlFbWFpbFJlc3BvbnNlIgASQgoFTG9naW4SGi5wb3N0cGlsb3QudjEuTG9naW5SZXF1ZXN0GhsucG9zdHBpbG90LnYxLkxvZ2luUmVzcG9uc2UiABJFCgZMb2dvdXQSGy5wb3N0cGlsb3QudjEuTG9nb3V0UmVxdWVzdBocLnBvc3RwaWxvdC52MS5Mb2dvdXRSZXNwb25zZSIAEkIKBUdldE1lEhoucG9zdHBpbG90LnYxLkdldE1lUmVxdWVzdBobLnBvc3RwaWxvdC52MS5HZXRNZVJlc3BvbnNlIgASWgoNUmVnaXN0ZXJFbWFpbBIiLnBvc3RwaWxvdC52MS5SZWdpc3RlckVtYWlsUmVxdWVzdBojLnBvc3RwaWxvdC52MS5SZWdpc3RlckVtYWlsUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_plan]);
+  fileDesc("Chdwb3N0cGlsb3QvdjEvYXV0aC5wcm90bxIMcG9zdHBpbG90LnYxIjAKDVNpZ251cFJlcXVlc3QSDQoFZW1haWwYASABKAkSEAoIcGFzc3dvcmQYAiABKAkiEAoOU2lnbnVwUmVzcG9uc2UiKgoZUmVzZW5kVmVyaWZpY2F0aW9uUmVxdWVzdBINCgVlbWFpbBgBIAEoCSIcChpSZXNlbmRWZXJpZmljYXRpb25SZXNwb25zZSIjChJWZXJpZnlFbWFpbFJlcXVlc3QSDQoFdG9rZW4YASABKAkiFQoTVmVyaWZ5RW1haWxSZXNwb25zZSIsChtSZXF1ZXN0UGFzc3dvcmRSZXNldFJlcXVlc3QSDQoFZW1haWwYASABKAkiHgocUmVxdWVzdFBhc3N3b3JkUmVzZXRSZXNwb25zZSI7ChRSZXNldFBhc3N3b3JkUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIUCgxuZXdfcGFzc3dvcmQYAiABKAkiFwoVUmVzZXRQYXNzd29yZFJlc3BvbnNlIjIKDExvZ2luUmVxdWVzdBIQCghsb2dpbl9pZBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSJTCg1Mb2dpblJlc3BvbnNlEiAKBHVzZXIYASABKAsyEi5wb3N0cGlsb3QudjEuVXNlchIgCgRwbGFuGAIgASgOMhIucG9zdHBpbG90LnYxLlBsYW4iDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiUwoNR2V0TWVSZXNwb25zZRIgCgR1c2VyGAEgASgLMhIucG9zdHBpbG90LnYxLlVzZXISIAoEcGxhbhgCIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuIiUKFFJlZ2lzdGVyRW1haWxSZXF1ZXN0Eg0KBWVtYWlsGAEgASgJIhcKFVJlZ2lzdGVyRW1haWxSZXNwb25zZSJHChVDaGFuZ2VQYXNzd29yZFJlcXVlc3QSGAoQY3VycmVudF9wYXNzd29yZBgBIAEoCRIUCgxuZXdfcGFzc3dvcmQYAiABKAkiGAoWQ2hhbmdlUGFzc3dvcmRSZXNwb25zZSJPCgRVc2VyEgoKAmlkGAEgASgJEg0KBWVtYWlsGAIgASgJEhYKDmVtYWlsX3ZlcmlmaWVkGAMgASgIEhQKDGhhc19wYXNzd29yZBgEIAEoCDLsBgoLQXV0aFNlcnZpY2USRQoGU2lnbnVwEhsucG9zdHBpbG90LnYxLlNpZ251cFJlcXVlc3QaHC5wb3N0cGlsb3QudjEuU2lnbnVwUmVzcG9uc2UiABJpChJSZXNlbmRWZXJpZmljYXRpb24SJy5wb3N0cGlsb3QudjEuUmVzZW5kVmVyaWZpY2F0aW9uUmVxdWVzdBooLnBvc3RwaWxvdC52MS5SZXNlbmRWZXJpZmljYXRpb25SZXNwb25zZSIAElQKC1ZlcmlmeUVtYWlsEiAucG9zdHBpbG90LnYxLlZlcmlmeUVtYWlsUmVxdWVzdBohLnBvc3RwaWxvdC52MS5WZXJpZnlFbWFpbFJlc3BvbnNlIgASbwoUUmVxdWVzdFBhc3N3b3JkUmVzZXQSKS5wb3N0cGlsb3QudjEuUmVxdWVzdFBhc3N3b3JkUmVzZXRSZXF1ZXN0GioucG9zdHBpbG90LnYxLlJlcXVlc3RQYXNzd29yZFJlc2V0UmVzcG9uc2UiABJaCg1SZXNldFBhc3N3b3JkEiIucG9zdHBpbG90LnYxLlJlc2V0UGFzc3dvcmRSZXF1ZXN0GiMucG9zdHBpbG90LnYxLlJlc2V0UGFzc3dvcmRSZXNwb25zZSIAEkIKBUxvZ2luEhoucG9zdHBpbG90LnYxLkxvZ2luUmVxdWVzdBobLnBvc3RwaWxvdC52MS5Mb2dpblJlc3BvbnNlIgASRQoGTG9nb3V0EhsucG9zdHBpbG90LnYxLkxvZ291dFJlcXVlc3QaHC5wb3N0cGlsb3QudjEuTG9nb3V0UmVzcG9uc2UiABJCCgVHZXRNZRIaLnBvc3RwaWxvdC52MS5HZXRNZVJlcXVlc3QaGy5wb3N0cGlsb3QudjEuR2V0TWVSZXNwb25zZSIAEloKDVJlZ2lzdGVyRW1haWwSIi5wb3N0cGlsb3QudjEuUmVnaXN0ZXJFbWFpbFJlcXVlc3QaIy5wb3N0cGlsb3QudjEuUmVnaXN0ZXJFbWFpbFJlc3BvbnNlIgASXQoOQ2hhbmdlUGFzc3dvcmQSIy5wb3N0cGlsb3QudjEuQ2hhbmdlUGFzc3dvcmRSZXF1ZXN0GiQucG9zdHBpbG90LnYxLkNoYW5nZVBhc3N3b3JkUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_plan]);
 
 /**
  * @generated from message postpilot.v1.SignupRequest
@@ -110,6 +110,71 @@ export const VerifyEmailResponseSchema: GenMessage<VerifyEmailResponse> = /*@__P
   messageDesc(file_postpilot_v1_auth, 5);
 
 /**
+ * @generated from message postpilot.v1.RequestPasswordResetRequest
+ */
+export type RequestPasswordResetRequest = Message<"postpilot.v1.RequestPasswordResetRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+};
+
+/**
+ * Describes the message postpilot.v1.RequestPasswordResetRequest.
+ * Use `create(RequestPasswordResetRequestSchema)` to create a new message.
+ */
+export const RequestPasswordResetRequestSchema: GenMessage<RequestPasswordResetRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 6);
+
+/**
+ * @generated from message postpilot.v1.RequestPasswordResetResponse
+ */
+export type RequestPasswordResetResponse = Message<"postpilot.v1.RequestPasswordResetResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.RequestPasswordResetResponse.
+ * Use `create(RequestPasswordResetResponseSchema)` to create a new message.
+ */
+export const RequestPasswordResetResponseSchema: GenMessage<RequestPasswordResetResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 7);
+
+/**
+ * @generated from message postpilot.v1.ResetPasswordRequest
+ */
+export type ResetPasswordRequest = Message<"postpilot.v1.ResetPasswordRequest"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * @generated from field: string new_password = 2;
+   */
+  newPassword: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ResetPasswordRequest.
+ * Use `create(ResetPasswordRequestSchema)` to create a new message.
+ */
+export const ResetPasswordRequestSchema: GenMessage<ResetPasswordRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 8);
+
+/**
+ * @generated from message postpilot.v1.ResetPasswordResponse
+ */
+export type ResetPasswordResponse = Message<"postpilot.v1.ResetPasswordResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.ResetPasswordResponse.
+ * Use `create(ResetPasswordResponseSchema)` to create a new message.
+ */
+export const ResetPasswordResponseSchema: GenMessage<ResetPasswordResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 9);
+
+/**
  * @generated from message postpilot.v1.LoginRequest
  */
 export type LoginRequest = Message<"postpilot.v1.LoginRequest"> & {
@@ -129,7 +194,7 @@ export type LoginRequest = Message<"postpilot.v1.LoginRequest"> & {
  * Use `create(LoginRequestSchema)` to create a new message.
  */
 export const LoginRequestSchema: GenMessage<LoginRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 6);
+  messageDesc(file_postpilot_v1_auth, 10);
 
 /**
  * @generated from message postpilot.v1.LoginResponse
@@ -154,7 +219,7 @@ export type LoginResponse = Message<"postpilot.v1.LoginResponse"> & {
  * Use `create(LoginResponseSchema)` to create a new message.
  */
 export const LoginResponseSchema: GenMessage<LoginResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 7);
+  messageDesc(file_postpilot_v1_auth, 11);
 
 /**
  * @generated from message postpilot.v1.LogoutRequest
@@ -167,7 +232,7 @@ export type LogoutRequest = Message<"postpilot.v1.LogoutRequest"> & {
  * Use `create(LogoutRequestSchema)` to create a new message.
  */
 export const LogoutRequestSchema: GenMessage<LogoutRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 8);
+  messageDesc(file_postpilot_v1_auth, 12);
 
 /**
  * @generated from message postpilot.v1.LogoutResponse
@@ -180,7 +245,7 @@ export type LogoutResponse = Message<"postpilot.v1.LogoutResponse"> & {
  * Use `create(LogoutResponseSchema)` to create a new message.
  */
 export const LogoutResponseSchema: GenMessage<LogoutResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 9);
+  messageDesc(file_postpilot_v1_auth, 13);
 
 /**
  * @generated from message postpilot.v1.GetMeRequest
@@ -193,7 +258,7 @@ export type GetMeRequest = Message<"postpilot.v1.GetMeRequest"> & {
  * Use `create(GetMeRequestSchema)` to create a new message.
  */
 export const GetMeRequestSchema: GenMessage<GetMeRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 10);
+  messageDesc(file_postpilot_v1_auth, 14);
 
 /**
  * @generated from message postpilot.v1.GetMeResponse
@@ -218,7 +283,7 @@ export type GetMeResponse = Message<"postpilot.v1.GetMeResponse"> & {
  * Use `create(GetMeResponseSchema)` to create a new message.
  */
 export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 11);
+  messageDesc(file_postpilot_v1_auth, 15);
 
 /**
  * @generated from message postpilot.v1.RegisterEmailRequest
@@ -235,7 +300,7 @@ export type RegisterEmailRequest = Message<"postpilot.v1.RegisterEmailRequest"> 
  * Use `create(RegisterEmailRequestSchema)` to create a new message.
  */
 export const RegisterEmailRequestSchema: GenMessage<RegisterEmailRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 12);
+  messageDesc(file_postpilot_v1_auth, 16);
 
 /**
  * @generated from message postpilot.v1.RegisterEmailResponse
@@ -248,7 +313,42 @@ export type RegisterEmailResponse = Message<"postpilot.v1.RegisterEmailResponse"
  * Use `create(RegisterEmailResponseSchema)` to create a new message.
  */
 export const RegisterEmailResponseSchema: GenMessage<RegisterEmailResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 13);
+  messageDesc(file_postpilot_v1_auth, 17);
+
+/**
+ * @generated from message postpilot.v1.ChangePasswordRequest
+ */
+export type ChangePasswordRequest = Message<"postpilot.v1.ChangePasswordRequest"> & {
+  /**
+   * @generated from field: string current_password = 1;
+   */
+  currentPassword: string;
+
+  /**
+   * @generated from field: string new_password = 2;
+   */
+  newPassword: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ChangePasswordRequest.
+ * Use `create(ChangePasswordRequestSchema)` to create a new message.
+ */
+export const ChangePasswordRequestSchema: GenMessage<ChangePasswordRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 18);
+
+/**
+ * @generated from message postpilot.v1.ChangePasswordResponse
+ */
+export type ChangePasswordResponse = Message<"postpilot.v1.ChangePasswordResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.ChangePasswordResponse.
+ * Use `create(ChangePasswordResponseSchema)` to create a new message.
+ */
+export const ChangePasswordResponseSchema: GenMessage<ChangePasswordResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_auth, 19);
 
 /**
  * User is everything the client may know about an account. Password material never crosses
@@ -271,6 +371,11 @@ export type User = Message<"postpilot.v1.User"> & {
    * @generated from field: bool email_verified = 3;
    */
   emailVerified: boolean;
+
+  /**
+   * @generated from field: bool has_password = 4;
+   */
+  hasPassword: boolean;
 };
 
 /**
@@ -278,7 +383,7 @@ export type User = Message<"postpilot.v1.User"> & {
  * Use `create(UserSchema)` to create a new message.
  */
 export const UserSchema: GenMessage<User> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_auth, 14);
+  messageDesc(file_postpilot_v1_auth, 20);
 
 /**
  * auth.proto is the identity slice of the contract. Accounts may be created by their
@@ -323,6 +428,27 @@ export const AuthService: GenService<{
     output: typeof VerifyEmailResponseSchema;
   },
   /**
+   * Sends a reset link only when the address belongs to a verified account. The empty
+   * response reveals no account state.
+   *
+   * @generated from rpc postpilot.v1.AuthService.RequestPasswordReset
+   */
+  requestPasswordReset: {
+    methodKind: "unary";
+    input: typeof RequestPasswordResetRequestSchema;
+    output: typeof RequestPasswordResetResponseSchema;
+  },
+  /**
+   * Replaces the password through a single-use reset link and revokes every session.
+   *
+   * @generated from rpc postpilot.v1.AuthService.ResetPassword
+   */
+  resetPassword: {
+    methodKind: "unary";
+    input: typeof ResetPasswordRequestSchema;
+    output: typeof ResetPasswordResponseSchema;
+  },
+  /**
    * Sets the session cookie on the HTTP response.
    *
    * @generated from rpc postpilot.v1.AuthService.Login
@@ -361,6 +487,16 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof RegisterEmailRequestSchema;
     output: typeof RegisterEmailResponseSchema;
+  },
+  /**
+   * Replaces the password after checking the current one and revokes every session.
+   *
+   * @generated from rpc postpilot.v1.AuthService.ChangePassword
+   */
+  changePassword: {
+    methodKind: "unary";
+    input: typeof ChangePasswordRequestSchema;
+    output: typeof ChangePasswordResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_auth, 0);

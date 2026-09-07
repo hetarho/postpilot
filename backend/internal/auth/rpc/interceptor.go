@@ -28,12 +28,14 @@ const unauthenticatedMessage = "unauthenticated"
 // Everything else is closed by default: a new service is protected the moment it is
 // mounted, with no change here.
 var publicProcedures = map[string]bool{
-	postpilotv1connect.AuthServiceSignupProcedure:             true,
-	postpilotv1connect.AuthServiceResendVerificationProcedure: true,
-	postpilotv1connect.AuthServiceVerifyEmailProcedure:        true,
-	postpilotv1connect.AuthServiceLoginProcedure:              true,
-	postpilotv1connect.AuthServiceLogoutProcedure:             true,
-	postpilotv1connect.HealthServicePingProcedure:             true,
+	postpilotv1connect.AuthServiceSignupProcedure:               true,
+	postpilotv1connect.AuthServiceResendVerificationProcedure:   true,
+	postpilotv1connect.AuthServiceVerifyEmailProcedure:          true,
+	postpilotv1connect.AuthServiceRequestPasswordResetProcedure: true,
+	postpilotv1connect.AuthServiceResetPasswordProcedure:        true,
+	postpilotv1connect.AuthServiceLoginProcedure:                true,
+	postpilotv1connect.AuthServiceLogoutProcedure:               true,
+	postpilotv1connect.HealthServicePingProcedure:               true,
 }
 
 // Agent procedures are not authenticated by the human HttpOnly session. The

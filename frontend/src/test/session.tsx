@@ -10,12 +10,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { create } from '@bufbuild/protobuf'
 import {
   AuthService,
+  ChangePasswordResponseSchema,
   GetMeResponseSchema,
   ProtoPlan,
   LoginResponseSchema,
   LogoutResponseSchema,
   RegisterEmailResponseSchema,
+  RequestPasswordResetResponseSchema,
   ResendVerificationResponseSchema,
+  ResetPasswordResponseSchema,
   SignupResponseSchema,
   VerifyEmailResponseSchema,
 } from '@/shared/api'
@@ -39,7 +42,13 @@ export interface FakeAuthOptions {
    *  accounts to it: every test written before the ladder existed assumed an account with
    *  full authority, and that is what those accounts became. A test about a gated surface
    *  sets a lower tier explicitly. */
-  user?: { id: string; plan?: ProtoPlan; email?: string; emailVerified?: boolean }
+  user?: {
+    id: string
+    plan?: ProtoPlan
+    email?: string
+    emailVerified?: boolean
+    hasPassword?: boolean
+  }
   /** Makes Login answer 401, like wrong credentials. */
   loginFails?: boolean
   /** Makes Logout fail, like an API that went away mid-session. */
@@ -47,6 +56,8 @@ export interface FakeAuthOptions {
   signupFails?: boolean
   verificationFails?: boolean
   registerEmailFails?: boolean
+  resetPasswordFails?: boolean
+  changePasswordFails?: 'wrong-current' | 'not-set'
   /** Records every procedure the transport was asked for. */
   calls?: string[]
   /** The PostService the signed-in screens call. Present by default (with no posts) so a
@@ -91,6 +102,8 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     signupFails,
     verificationFails,
     registerEmailFails,
+    resetPasswordFails,
+    changePasswordFails,
     calls,
   } = options
   let session = user
@@ -105,6 +118,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
           id: session.id,
           email: session.email ?? '',
           emailVerified: session.emailVerified ?? false,
+          hasPassword: session.hasPassword ?? true,
         },
         plan: session.plan ?? ProtoPlan.MASTER,
       })
@@ -117,12 +131,14 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
         plan: user?.plan,
         email: user?.email,
         emailVerified: user?.emailVerified,
+        hasPassword: user?.hasPassword,
       }
       return create(LoginResponseSchema, {
         user: {
           id: session.id,
           email: session.email ?? '',
           emailVerified: session.emailVerified ?? false,
+          hasPassword: session.hasPassword ?? true,
         },
         plan: session.plan ?? ProtoPlan.MASTER,
       })
@@ -149,6 +165,17 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
       }
       return create(VerifyEmailResponseSchema, {})
     })
+    rpc(AuthService.method.requestPasswordReset, () => {
+      calls?.push('RequestPasswordReset')
+      return create(RequestPasswordResetResponseSchema, {})
+    })
+    rpc(AuthService.method.resetPassword, () => {
+      calls?.push('ResetPassword')
+      if (resetPasswordFails) {
+        throw connectAppError('RESET_LINK_INVALID', Code.FailedPrecondition)
+      }
+      return create(ResetPasswordResponseSchema, {})
+    })
     rpc(AuthService.method.registerEmail, (request) => {
       calls?.push('RegisterEmail')
       if (registerEmailFails) {
@@ -156,6 +183,17 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
       }
       if (session) session = { ...session, email: request.email, emailVerified: false }
       return create(RegisterEmailResponseSchema, {})
+    })
+    rpc(AuthService.method.changePassword, () => {
+      calls?.push('ChangePassword')
+      if (changePasswordFails === 'wrong-current') {
+        throw connectAppError('CURRENT_PASSWORD_WRONG', Code.FailedPrecondition)
+      }
+      if (changePasswordFails === 'not-set') {
+        throw connectAppError('PASSWORD_NOT_SET', Code.FailedPrecondition)
+      }
+      session = undefined
+      return create(ChangePasswordResponseSchema, {})
     })
     registerPostService(router, { calls, ...options.posts })
     registerProviderService(router, { calls, ...options.providers })

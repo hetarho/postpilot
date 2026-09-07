@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useLogin } from '@/entities/session'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
@@ -8,6 +8,7 @@ import {
   Button,
   FieldLabel,
   Logo,
+  Notice,
   TextField,
   Typography,
   typographyStyles,
@@ -21,10 +22,24 @@ export function LoginPage() {
   const { t } = useTranslation(['auth', 'marketing'])
   const { redirect } = useSearch({ from: '/login' })
   const navigate = useNavigate()
+  const initialNotice = useRouterState({ select: (state) => state.location.state.notice })
+  const [passwordChanged] = useState(initialNotice === 'password-changed')
+  const noticeCleared = useRef(false)
   const login = useLogin()
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const invalidCredentials = login.failure?.reason === 'INVALID_CREDENTIALS'
+
+  useEffect(() => {
+    if (!passwordChanged || noticeCleared.current) return
+    noticeCleared.current = true
+    void navigate({
+      to: '/login',
+      search: isInAppPath(redirect) ? { redirect } : {},
+      replace: true,
+      state: (previous) => ({ ...previous, notice: undefined }),
+    })
+  }, [navigate, passwordChanged, redirect])
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -49,6 +64,11 @@ export function LoginPage() {
         <InterfacePreferences />
       </div>
       <div className="w-full max-w-xs">
+        {passwordChanged && (
+          <Notice tone="info" role="status" className="mb-4">
+            {t('login.passwordChanged', { ns: 'auth' })}
+          </Notice>
+        )}
         <form onSubmit={onSubmit} className="w-full">
           {/* The app icon is decorative beside the labelled wordmark, so the pair remains one
             concise heading for assistive technology. The compact phone lockup keeps the submit
@@ -136,7 +156,7 @@ export function LoginPage() {
             one more tab stop between the password field and 로그인, and a link is not part of the
             submission. It changes nothing about the form's failure or redirect behavior. */}
         <nav
-          className="mt-6 flex items-center justify-center gap-3"
+          className="mt-6 flex flex-wrap items-center justify-center gap-3"
           aria-label={t('links.more', { ns: 'auth' })}
         >
           <Link
@@ -149,6 +169,17 @@ export function LoginPage() {
             })}
           >
             {t('links.signup', { ns: 'auth' })}
+          </Link>
+          <Link
+            to="/forgot-password"
+            search={isInAppPath(redirect) ? { redirect } : {}}
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline',
+            })}
+          >
+            {t('links.forgotPassword', { ns: 'auth' })}
           </Link>
           <Link
             to="/about"

@@ -20,6 +20,11 @@ service AuthService {
   rpc ResendVerification(ResendVerificationRequest) returns (ResendVerificationResponse) {}
   // Consumes a verification link. Verification never creates a session.
   rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse) {}
+  // Sends a reset link only when the address belongs to a verified account. The empty
+  // response reveals no account state.
+  rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse) {}
+  // Replaces the password through a single-use reset link and revokes every session.
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {}
   // Sets the session cookie on the HTTP response.
   rpc Login(LoginRequest) returns (LoginResponse) {}
   // Revokes the session row server-side and clears the cookie.
@@ -28,6 +33,8 @@ service AuthService {
   rpc GetMe(GetMeRequest) returns (GetMeResponse) {}
   // Adds the first email address to an authenticated legacy account.
   rpc RegisterEmail(RegisterEmailRequest) returns (RegisterEmailResponse) {}
+  // Replaces the password after checking the current one and revokes every session.
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {}
 }
 
 message SignupRequest {
@@ -48,6 +55,19 @@ message VerifyEmailRequest {
 }
 
 message VerifyEmailResponse {}
+
+message RequestPasswordResetRequest {
+  string email = 1;
+}
+
+message RequestPasswordResetResponse {}
+
+message ResetPasswordRequest {
+  string token = 1;
+  string new_password = 2;
+}
+
+message ResetPasswordResponse {}
 
 message LoginRequest {
   string login_id = 1;
@@ -80,10 +100,18 @@ message RegisterEmailRequest {
 
 message RegisterEmailResponse {}
 
+message ChangePasswordRequest {
+  string current_password = 1;
+  string new_password = 2;
+}
+
+message ChangePasswordResponse {}
+
 // User is everything the client may know about an account. Password material never crosses
 // this contract.
 message User {
   string id = 1;
   string email = 2;
   bool email_verified = 3;
+  bool has_password = 4;
 }

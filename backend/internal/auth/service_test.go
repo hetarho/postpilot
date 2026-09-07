@@ -20,6 +20,7 @@ type fakeStore struct {
 
 	createSessionErr error
 	deleteCalls      []string
+	passwordOps      []string
 }
 
 func newFakeStore() *fakeStore {
@@ -78,6 +79,17 @@ func (f *fakeStore) MarkEmailUnreachable(_ context.Context, id string, at time.T
 		return ErrUserNotFound
 	}
 	user.EmailUnreachableAt = &at
+	f.users[id] = user
+	return nil
+}
+
+func (f *fakeStore) UpdatePasswordHash(_ context.Context, id, passwordHash string) error {
+	user, ok := f.users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+	f.passwordOps = append(f.passwordOps, "update")
+	user.PasswordHash = passwordHash
 	f.users[id] = user
 	return nil
 }
@@ -164,6 +176,7 @@ func (f *fakeStore) DeleteExpiredSessions(_ context.Context, before time.Time) (
 }
 
 func (f *fakeStore) DeleteSessionsForUser(_ context.Context, userID string) error {
+	f.passwordOps = append(f.passwordOps, "delete-sessions")
 	for token, session := range f.sessions {
 		if session.UserID == userID {
 			delete(f.sessions, token)
@@ -216,6 +229,18 @@ func verificationToken(t *testing.T, mail Mail) string {
 		}
 	}
 	t.Fatalf("verification mail has no token URL: %s", mail.Text)
+	return ""
+}
+
+func passwordResetToken(t *testing.T, mail Mail) string {
+	t.Helper()
+	for _, line := range strings.Split(mail.Text, "\n") {
+		parsed, err := url.Parse(line)
+		if err == nil && parsed.Path == "/reset-password" && parsed.Query().Get("token") != "" {
+			return parsed.Query().Get("token")
+		}
+	}
+	t.Fatalf("password reset mail has no token URL: %s", mail.Text)
 	return ""
 }
 
@@ -585,6 +610,155 @@ func TestRegisterEmailHidesTakenAddressThenVerifiesTheHappyPath(t *testing.T) {
 	}
 	if err := svc.RegisterEmail(context.Background(), "alice", "other@example.com"); !errors.Is(err, ErrEmailAlreadyVerified) {
 		t.Fatalf("verified account register = %v, want ErrEmailAlreadyVerified", err)
+	}
+}
+
+func TestRequestPasswordResetHidesAccountStateInvalidatesOlderLinksAndFloorsBursts(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	svc, store := newTestService(t, now)
+	svc.now = func() time.Time { return now }
+	svc.SetWebOrigin("https://postpilot.example.com")
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+
+	verifiedAt := now.Add(-time.Hour)
+	verified := store.users["alice"]
+	verified.Email = "alice@example.com"
+	verified.EmailVerifiedAt = &verifiedAt
+	store.users[verified.ID] = verified
+	store.users["waiting@example.com"] = User{
+		ID: "waiting@example.com", Email: "waiting@example.com", Plan: plan.Free,
+	}
+
+	for _, email := range []string{"missing@example.com", "waiting@example.com", "ALICE@EXAMPLE.COM"} {
+		if err := svc.RequestPasswordReset(context.Background(), email); err != nil {
+			t.Errorf("RequestPasswordReset(%q) = %v, want nil", email, err)
+		}
+	}
+	if len(mailer.sent) != 1 {
+		t.Fatalf("reset requests sent %d messages, want only the verified account's one", len(mailer.sent))
+	}
+	first := passwordResetToken(t, mailer.sent[0])
+	for range 3 {
+		if err := svc.RequestPasswordReset(context.Background(), "alice@example.com"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(mailer.sent) != 1 {
+		t.Fatalf("reset burst sent %d messages, want one", len(mailer.sent))
+	}
+
+	now = now.Add(ResendFloor)
+	if err := svc.RequestPasswordReset(context.Background(), "alice@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if len(mailer.sent) != 2 {
+		t.Fatalf("post-floor reset messages = %d, want two", len(mailer.sent))
+	}
+	if err := svc.ResetPassword(context.Background(), first, "new-password"); !errors.Is(err, ErrLinkInvalid) {
+		t.Fatalf("older reset link = %v, want ErrLinkInvalid", err)
+	}
+	secondHash := hashToken(passwordResetToken(t, mailer.sent[1]))
+	if got := store.links[secondHash].ExpiresAt; !got.Equal(now.Add(ResetLinkTTL)) {
+		t.Fatalf("reset expiry = %v, want %v", got, now.Add(ResetLinkTTL))
+	}
+}
+
+func TestResetPasswordIsSingleUseExpiresRevokesSessionsAndPreservesLock(t *testing.T) {
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	svc, store := newTestService(t, now)
+	svc.SetWebOrigin("https://postpilot.example.com")
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+	verifiedAt := now.Add(-time.Hour)
+	lockedUntil := now.Add(15 * time.Minute)
+	user := store.users["alice"]
+	user.Email = "alice@example.com"
+	user.EmailVerifiedAt = &verifiedAt
+	user.FailedLogins = 4
+	user.LockedUntil = &lockedUntil
+	store.users[user.ID] = user
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.RequestPasswordReset(context.Background(), user.Email); err != nil {
+		t.Fatal(err)
+	}
+	raw := passwordResetToken(t, mailer.sent[0])
+	store.passwordOps = nil
+	if err := svc.ResetPassword(context.Background(), raw, "new-password"); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(store.passwordOps, ","); got != "update,delete-sessions" {
+		t.Fatalf("password operations = %q, want update,delete-sessions", got)
+	}
+	if len(store.sessions) != 0 {
+		t.Fatalf("sessions after reset = %d, want 0", len(store.sessions))
+	}
+	changed := store.users["alice"]
+	if changed.FailedLogins != 4 || changed.LockedUntil == nil || !changed.LockedUntil.Equal(lockedUntil) {
+		t.Fatalf("reset changed lock state: %+v", changed)
+	}
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("old password login = %v, want ErrInvalidCredentials", err)
+	}
+	if _, _, err := svc.Login(context.Background(), "alice", "new-password"); err != nil {
+		t.Fatalf("new password login: %v", err)
+	}
+	if err := svc.ResetPassword(context.Background(), raw, "another-password"); !errors.Is(err, ErrLinkInvalid) {
+		t.Fatalf("reset replay = %v, want ErrLinkInvalid", err)
+	}
+
+	expiredRaw, expiredHash, err := NewLinkToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.links[expiredHash] = Link{
+		TokenHash: expiredHash, UserID: "alice", Purpose: LinkPurposeResetPassword,
+		Email: user.Email, ExpiresAt: now, CreatedAt: now.Add(-ResetLinkTTL),
+	}
+	if err := svc.ResetPassword(context.Background(), expiredRaw, "another-password"); !errors.Is(err, ErrLinkInvalid) {
+		t.Fatalf("expired reset = %v, want ErrLinkInvalid", err)
+	}
+}
+
+func TestChangePasswordChecksCurrentPasswordAndRevokesEverySession(t *testing.T) {
+	svc, store := newTestService(t, time.Now())
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.ChangePassword(context.Background(), "alice", "wrong", "new-password"); !errors.Is(err, ErrCurrentPasswordWrong) {
+		t.Fatalf("wrong current password = %v, want ErrCurrentPasswordWrong", err)
+	}
+	if len(store.sessions) != 2 {
+		t.Fatalf("wrong current password deleted sessions: %d remain", len(store.sessions))
+	}
+
+	store.passwordOps = nil
+	if err := svc.ChangePassword(context.Background(), "alice", "s3cret", "new-password"); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(store.passwordOps, ","); got != "update,delete-sessions" {
+		t.Fatalf("password operations = %q, want update,delete-sessions", got)
+	}
+	if len(store.sessions) != 0 {
+		t.Fatalf("sessions after change = %d, want 0", len(store.sessions))
+	}
+	if _, _, err := svc.Login(context.Background(), "alice", "new-password"); err != nil {
+		t.Fatalf("new password login: %v", err)
+	}
+
+	google := store.users["alice"]
+	google.PasswordHash = ""
+	store.users[google.ID] = google
+	if err := svc.ChangePassword(context.Background(), "alice", "anything", "another-password"); !errors.Is(err, ErrPasswordNotSet) {
+		t.Fatalf("Google-only change = %v, want ErrPasswordNotSet", err)
 	}
 }
 

@@ -108,6 +108,32 @@ const verifyEmailRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/verify-email'), 'VerifyEmailPage'),
 })
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/forgot-password',
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
+  beforeLoad: async ({ context, search }) => {
+    if (await hasActivePublicSession(context)) {
+      throw redirect({
+        to: isInAppPath(search.redirect) ? search.redirect : SIGNED_IN_HOME,
+        replace: true,
+      })
+    }
+  },
+  component: lazyRouteComponent(() => import('@/pages/forgot-password'), 'ForgotPasswordPage'),
+})
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  validateSearch: (search: Record<string, unknown>): { token?: string } => ({
+    token: typeof search.token === 'string' ? search.token : undefined,
+  }),
+  component: lazyRouteComponent(() => import('@/pages/reset-password'), 'ResetPasswordPage'),
+})
+
 // Public, and structurally so: a direct child of the root route, beside /login and NOT under the
 // authenticated layout below. No beforeLoad, no loader, no session branch — mounting /about must
 // not issue GetMe, because the page exists for visitors who have no account at all (plan 15).
@@ -376,6 +402,8 @@ export const routeTree = rootRoute.addChildren([
   loginRoute,
   signupRoute,
   verifyEmailRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
   aboutRoute,
   authenticatedRoute.addChildren([
     indexRoute,
@@ -417,5 +445,8 @@ export const router = createRouter({
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
+  }
+  interface HistoryState {
+    notice?: 'password-changed'
   }
 }

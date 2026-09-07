@@ -39,6 +39,8 @@ var (
 	ErrPasswordTooShort     = errors.New("password too short")
 	ErrPasswordTooLong      = errors.New("password too long")
 	ErrEmailAlreadyVerified = errors.New("email already verified")
+	ErrPasswordNotSet       = errors.New("password not set")
+	ErrCurrentPasswordWrong = errors.New("current password wrong")
 )
 
 // User is an account. The password hash never leaves this package's boundary: the

@@ -34,6 +34,7 @@ export function toSessionUser(
     id: response.user.id,
     ...(response.user.email ? { email: response.user.email } : {}),
     emailVerified: response.user.emailVerified,
+    hasPassword: response.user.hasPassword,
     plan: planFromProto(response.plan),
   }
 }

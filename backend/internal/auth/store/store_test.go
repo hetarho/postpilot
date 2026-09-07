@@ -121,6 +121,29 @@ func TestEmailLookupAndMarks(t *testing.T) {
 	}
 }
 
+func TestUpdatePasswordHashPreservesLockState(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	lockedUntil := now.Add(time.Hour)
+	if err := s.CreateUser(ctx, auth.User{
+		ID: "alice", PasswordHash: "old-hash", FailedLogins: 4, LockedUntil: &lockedUntil,
+		Plan: plan.Free, CreatedAt: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.UpdatePasswordHash(ctx, "alice", "new-hash"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.GetUser(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.PasswordHash != "new-hash" || got.FailedLogins != 4 || got.LockedUntil == nil || !got.LockedUntil.Equal(lockedUntil) {
+		t.Fatalf("updated user = %+v", got)
+	}
+}
+
 func TestGetUserUnknown(t *testing.T) {
 	if _, err := newStore(t).GetUser(context.Background(), "nobody"); !errors.Is(err, auth.ErrUserNotFound) {
 		t.Errorf("error = %v, want ErrUserNotFound (sql.ErrNoRows must not escape the store)", err)

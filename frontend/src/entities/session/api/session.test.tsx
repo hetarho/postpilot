@@ -42,7 +42,7 @@ describe('session cache', () => {
     })
     await expect(loadSession(queryClient, transport)).resolves.toEqual({
       status: 'active',
-      user: { id: 'alice', emailVerified: false, plan: 'master' },
+      user: { id: 'alice', emailVerified: false, hasPassword: true, plan: 'master' },
     })
   })
 
@@ -92,7 +92,7 @@ describe('loadSession', () => {
     const transport = createFakeAuthTransport({ user: { id: 'alice' } })
     await expect(loadSession(createTestQueryClient(), transport)).resolves.toEqual({
       status: 'active',
-      user: { id: 'alice', emailVerified: false, plan: 'master' },
+      user: { id: 'alice', emailVerified: false, hasPassword: true, plan: 'master' },
     })
   })
 

@@ -29,6 +29,10 @@ UPDATE users SET email_verified_at = ? WHERE id = ?;
 -- name: MarkEmailUnreachable :exec
 UPDATE users SET email_unreachable_at = ? WHERE id = ?;
 
+-- name: UpdatePasswordHash :exec
+-- Deliberately changes no lockout columns: a mailed credential must not unlock an account.
+UPDATE users SET password_hash = ? WHERE id = ?;
+
 -- name: GetUserPlan :one
 SELECT plan FROM users WHERE id = ?;
 

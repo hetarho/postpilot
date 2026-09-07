@@ -37,11 +37,14 @@ export type { Failure as ProtoFailure } from './gen/postpilot/v1/error_pb'
 // rename stops at this directory instead of rippling through the slices.
 export { AuthService } from './gen/postpilot/v1/auth_pb'
 export {
+  ChangePasswordResponseSchema,
   GetMeResponseSchema,
   LoginResponseSchema,
   LogoutResponseSchema,
   RegisterEmailResponseSchema,
+  RequestPasswordResetResponseSchema,
   ResendVerificationResponseSchema,
+  ResetPasswordResponseSchema,
   SignupResponseSchema,
   VerifyEmailResponseSchema,
 } from './gen/postpilot/v1/auth_pb'

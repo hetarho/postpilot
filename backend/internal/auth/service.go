@@ -169,6 +169,53 @@ func (s *Service) ResendVerification(ctx context.Context, rawEmail string) error
 	return s.sendVerification(ctx, user)
 }
 
+// RequestPasswordReset builds the same credential material before it knows whether an
+// address can receive it. Only a verified owner gets a stored link and mail; every valid
+// address receives the same nil result.
+func (s *Service) RequestPasswordReset(ctx context.Context, rawEmail string) error {
+	email, err := normalizedEmail(rawEmail)
+	if err != nil {
+		return err
+	}
+	raw, tokenHash, err := NewLinkToken()
+	if err != nil {
+		return err
+	}
+	linkURL, err := s.passwordResetLink(raw)
+	if err != nil {
+		return err
+	}
+	mail := passwordResetMail(email, linkURL)
+
+	user, found, err := s.accountForEmail(ctx, email)
+	if err != nil || !found {
+		return err
+	}
+	if user.EmailVerifiedAt == nil {
+		return nil
+	}
+	now := s.now()
+	if !s.reserveResend(email, now) {
+		return nil
+	}
+	if err := s.store.InvalidateLinks(ctx, user.ID, LinkPurposeResetPassword, now); err != nil {
+		s.releaseResend(email, now)
+		return fmt.Errorf("invalidate password reset links: %w", err)
+	}
+	if err := s.store.CreateLink(ctx, Link{
+		TokenHash: tokenHash, UserID: user.ID, Purpose: LinkPurposeResetPassword,
+		Email: email, ExpiresAt: now.Add(ResetLinkTTL), CreatedAt: now,
+	}); err != nil {
+		s.releaseResend(email, now)
+		return fmt.Errorf("create password reset link: %w", err)
+	}
+	if err := s.send(ctx, user, mail); err != nil {
+		s.releaseResend(email, now)
+		return err
+	}
+	return nil
+}
+
 // VerifyEmail consumes one verification credential, marks the address, and repairs every
 // idempotent account default. It never creates a session.
 func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
@@ -189,6 +236,30 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		return fmt.Errorf("bootstrap verified account: %w", err)
 	}
 	return nil
+}
+
+// ResetPassword proves ownership with a single-use mailed credential, then replaces the
+// password and revokes every session. Password validation and hashing happen first so a
+// correct link is not burned by a fixable form error.
+func (s *Service) ResetPassword(ctx context.Context, rawToken, newPassword string) error {
+	if err := validatePasswordLength(newPassword); err != nil {
+		return err
+	}
+	newHash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	if rawToken == "" {
+		return ErrLinkInvalid
+	}
+	link, err := s.store.ConsumeLink(ctx, hashToken(rawToken), LinkPurposeResetPassword, s.now())
+	if err != nil {
+		if errors.Is(err, ErrLinkInvalid) {
+			return ErrLinkInvalid
+		}
+		return fmt.Errorf("consume password reset link: %w", err)
+	}
+	return s.setPassword(ctx, link.UserID, newHash)
 }
 
 // RegisterEmail gives an authenticated emailless account its first address. A taken
@@ -228,6 +299,34 @@ func (s *Service) RegisterEmail(ctx context.Context, userID, rawEmail string) er
 	user.Email = email
 	user.EmailVerifiedAt = nil
 	return s.sendVerification(ctx, user)
+}
+
+// ChangePassword proves the current password without reclassifying a bad proof as a lost
+// session. A Google-only account has no current password and must use the mailed reset path.
+func (s *Service) ChangePassword(ctx context.Context, userID, currentPassword, newPassword string) error {
+	user, err := s.store.GetUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user.PasswordHash == "" {
+		return ErrPasswordNotSet
+	}
+	ok, err := s.verify(currentPassword, user.PasswordHash)
+	if err != nil {
+		slog.Error("stored password hash is unusable during password change", "user_id", user.ID, "err", err)
+		return ErrCurrentPasswordWrong
+	}
+	if !ok {
+		return ErrCurrentPasswordWrong
+	}
+	if err := validatePasswordLength(newPassword); err != nil {
+		return err
+	}
+	newHash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	return s.setPassword(ctx, user.ID, newHash)
 }
 
 func normalizedEmail(raw string) (string, error) {
@@ -328,6 +427,19 @@ func (s *Service) runBootstraps(ctx context.Context, userID string) error {
 		if err := bootstrap(ctx, userID); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// setPassword is the one mutation path shared by reset and signed-in change. The hash
+// is durable before sessions are revoked, so no session is ended unless the replacement
+// credential can already authenticate the owner.
+func (s *Service) setPassword(ctx context.Context, userID, newHash string) error {
+	if err := s.store.UpdatePasswordHash(ctx, userID, newHash); err != nil {
+		return fmt.Errorf("set password: %w", err)
+	}
+	if err := s.store.DeleteSessionsForUser(ctx, userID); err != nil {
+		return fmt.Errorf("password changed but session revocation failed: %w", err)
 	}
 	return nil
 }

@@ -40,6 +40,12 @@ const (
 	AuthServiceResendVerificationProcedure = "/postpilot.v1.AuthService/ResendVerification"
 	// AuthServiceVerifyEmailProcedure is the fully-qualified name of the AuthService's VerifyEmail RPC.
 	AuthServiceVerifyEmailProcedure = "/postpilot.v1.AuthService/VerifyEmail"
+	// AuthServiceRequestPasswordResetProcedure is the fully-qualified name of the AuthService's
+	// RequestPasswordReset RPC.
+	AuthServiceRequestPasswordResetProcedure = "/postpilot.v1.AuthService/RequestPasswordReset"
+	// AuthServiceResetPasswordProcedure is the fully-qualified name of the AuthService's ResetPassword
+	// RPC.
+	AuthServiceResetPasswordProcedure = "/postpilot.v1.AuthService/ResetPassword"
 	// AuthServiceLoginProcedure is the fully-qualified name of the AuthService's Login RPC.
 	AuthServiceLoginProcedure = "/postpilot.v1.AuthService/Login"
 	// AuthServiceLogoutProcedure is the fully-qualified name of the AuthService's Logout RPC.
@@ -49,6 +55,9 @@ const (
 	// AuthServiceRegisterEmailProcedure is the fully-qualified name of the AuthService's RegisterEmail
 	// RPC.
 	AuthServiceRegisterEmailProcedure = "/postpilot.v1.AuthService/RegisterEmail"
+	// AuthServiceChangePasswordProcedure is the fully-qualified name of the AuthService's
+	// ChangePassword RPC.
+	AuthServiceChangePasswordProcedure = "/postpilot.v1.AuthService/ChangePassword"
 )
 
 // AuthServiceClient is a client for the postpilot.v1.AuthService service.
@@ -60,6 +69,11 @@ type AuthServiceClient interface {
 	ResendVerification(context.Context, *connect.Request[v1.ResendVerificationRequest]) (*connect.Response[v1.ResendVerificationResponse], error)
 	// Consumes a verification link. Verification never creates a session.
 	VerifyEmail(context.Context, *connect.Request[v1.VerifyEmailRequest]) (*connect.Response[v1.VerifyEmailResponse], error)
+	// Sends a reset link only when the address belongs to a verified account. The empty
+	// response reveals no account state.
+	RequestPasswordReset(context.Context, *connect.Request[v1.RequestPasswordResetRequest]) (*connect.Response[v1.RequestPasswordResetResponse], error)
+	// Replaces the password through a single-use reset link and revokes every session.
+	ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error)
 	// Sets the session cookie on the HTTP response.
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	// Revokes the session row server-side and clears the cookie.
@@ -68,6 +82,8 @@ type AuthServiceClient interface {
 	GetMe(context.Context, *connect.Request[v1.GetMeRequest]) (*connect.Response[v1.GetMeResponse], error)
 	// Adds the first email address to an authenticated legacy account.
 	RegisterEmail(context.Context, *connect.Request[v1.RegisterEmailRequest]) (*connect.Response[v1.RegisterEmailResponse], error)
+	// Replaces the password after checking the current one and revokes every session.
+	ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the postpilot.v1.AuthService service. By default, it
@@ -99,6 +115,18 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("VerifyEmail")),
 			connect.WithClientOptions(opts...),
 		),
+		requestPasswordReset: connect.NewClient[v1.RequestPasswordResetRequest, v1.RequestPasswordResetResponse](
+			httpClient,
+			baseURL+AuthServiceRequestPasswordResetProcedure,
+			connect.WithSchema(authServiceMethods.ByName("RequestPasswordReset")),
+			connect.WithClientOptions(opts...),
+		),
+		resetPassword: connect.NewClient[v1.ResetPasswordRequest, v1.ResetPasswordResponse](
+			httpClient,
+			baseURL+AuthServiceResetPasswordProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ResetPassword")),
+			connect.WithClientOptions(opts...),
+		),
 		login: connect.NewClient[v1.LoginRequest, v1.LoginResponse](
 			httpClient,
 			baseURL+AuthServiceLoginProcedure,
@@ -123,18 +151,27 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("RegisterEmail")),
 			connect.WithClientOptions(opts...),
 		),
+		changePassword: connect.NewClient[v1.ChangePasswordRequest, v1.ChangePasswordResponse](
+			httpClient,
+			baseURL+AuthServiceChangePasswordProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ChangePassword")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	signup             *connect.Client[v1.SignupRequest, v1.SignupResponse]
-	resendVerification *connect.Client[v1.ResendVerificationRequest, v1.ResendVerificationResponse]
-	verifyEmail        *connect.Client[v1.VerifyEmailRequest, v1.VerifyEmailResponse]
-	login              *connect.Client[v1.LoginRequest, v1.LoginResponse]
-	logout             *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
-	getMe              *connect.Client[v1.GetMeRequest, v1.GetMeResponse]
-	registerEmail      *connect.Client[v1.RegisterEmailRequest, v1.RegisterEmailResponse]
+	signup               *connect.Client[v1.SignupRequest, v1.SignupResponse]
+	resendVerification   *connect.Client[v1.ResendVerificationRequest, v1.ResendVerificationResponse]
+	verifyEmail          *connect.Client[v1.VerifyEmailRequest, v1.VerifyEmailResponse]
+	requestPasswordReset *connect.Client[v1.RequestPasswordResetRequest, v1.RequestPasswordResetResponse]
+	resetPassword        *connect.Client[v1.ResetPasswordRequest, v1.ResetPasswordResponse]
+	login                *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	logout               *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
+	getMe                *connect.Client[v1.GetMeRequest, v1.GetMeResponse]
+	registerEmail        *connect.Client[v1.RegisterEmailRequest, v1.RegisterEmailResponse]
+	changePassword       *connect.Client[v1.ChangePasswordRequest, v1.ChangePasswordResponse]
 }
 
 // Signup calls postpilot.v1.AuthService.Signup.
@@ -150,6 +187,16 @@ func (c *authServiceClient) ResendVerification(ctx context.Context, req *connect
 // VerifyEmail calls postpilot.v1.AuthService.VerifyEmail.
 func (c *authServiceClient) VerifyEmail(ctx context.Context, req *connect.Request[v1.VerifyEmailRequest]) (*connect.Response[v1.VerifyEmailResponse], error) {
 	return c.verifyEmail.CallUnary(ctx, req)
+}
+
+// RequestPasswordReset calls postpilot.v1.AuthService.RequestPasswordReset.
+func (c *authServiceClient) RequestPasswordReset(ctx context.Context, req *connect.Request[v1.RequestPasswordResetRequest]) (*connect.Response[v1.RequestPasswordResetResponse], error) {
+	return c.requestPasswordReset.CallUnary(ctx, req)
+}
+
+// ResetPassword calls postpilot.v1.AuthService.ResetPassword.
+func (c *authServiceClient) ResetPassword(ctx context.Context, req *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error) {
+	return c.resetPassword.CallUnary(ctx, req)
 }
 
 // Login calls postpilot.v1.AuthService.Login.
@@ -172,6 +219,11 @@ func (c *authServiceClient) RegisterEmail(ctx context.Context, req *connect.Requ
 	return c.registerEmail.CallUnary(ctx, req)
 }
 
+// ChangePassword calls postpilot.v1.AuthService.ChangePassword.
+func (c *authServiceClient) ChangePassword(ctx context.Context, req *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error) {
+	return c.changePassword.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the postpilot.v1.AuthService service.
 type AuthServiceHandler interface {
 	// Creates an unverified free account and sends its verification mail. The empty
@@ -181,6 +233,11 @@ type AuthServiceHandler interface {
 	ResendVerification(context.Context, *connect.Request[v1.ResendVerificationRequest]) (*connect.Response[v1.ResendVerificationResponse], error)
 	// Consumes a verification link. Verification never creates a session.
 	VerifyEmail(context.Context, *connect.Request[v1.VerifyEmailRequest]) (*connect.Response[v1.VerifyEmailResponse], error)
+	// Sends a reset link only when the address belongs to a verified account. The empty
+	// response reveals no account state.
+	RequestPasswordReset(context.Context, *connect.Request[v1.RequestPasswordResetRequest]) (*connect.Response[v1.RequestPasswordResetResponse], error)
+	// Replaces the password through a single-use reset link and revokes every session.
+	ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error)
 	// Sets the session cookie on the HTTP response.
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	// Revokes the session row server-side and clears the cookie.
@@ -189,6 +246,8 @@ type AuthServiceHandler interface {
 	GetMe(context.Context, *connect.Request[v1.GetMeRequest]) (*connect.Response[v1.GetMeResponse], error)
 	// Adds the first email address to an authenticated legacy account.
 	RegisterEmail(context.Context, *connect.Request[v1.RegisterEmailRequest]) (*connect.Response[v1.RegisterEmailResponse], error)
+	// Replaces the password after checking the current one and revokes every session.
+	ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -216,6 +275,18 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("VerifyEmail")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceRequestPasswordResetHandler := connect.NewUnaryHandler(
+		AuthServiceRequestPasswordResetProcedure,
+		svc.RequestPasswordReset,
+		connect.WithSchema(authServiceMethods.ByName("RequestPasswordReset")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceResetPasswordHandler := connect.NewUnaryHandler(
+		AuthServiceResetPasswordProcedure,
+		svc.ResetPassword,
+		connect.WithSchema(authServiceMethods.ByName("ResetPassword")),
+		connect.WithHandlerOptions(opts...),
+	)
 	authServiceLoginHandler := connect.NewUnaryHandler(
 		AuthServiceLoginProcedure,
 		svc.Login,
@@ -240,6 +311,12 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("RegisterEmail")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceChangePasswordHandler := connect.NewUnaryHandler(
+		AuthServiceChangePasswordProcedure,
+		svc.ChangePassword,
+		connect.WithSchema(authServiceMethods.ByName("ChangePassword")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceSignupProcedure:
@@ -248,6 +325,10 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceResendVerificationHandler.ServeHTTP(w, r)
 		case AuthServiceVerifyEmailProcedure:
 			authServiceVerifyEmailHandler.ServeHTTP(w, r)
+		case AuthServiceRequestPasswordResetProcedure:
+			authServiceRequestPasswordResetHandler.ServeHTTP(w, r)
+		case AuthServiceResetPasswordProcedure:
+			authServiceResetPasswordHandler.ServeHTTP(w, r)
 		case AuthServiceLoginProcedure:
 			authServiceLoginHandler.ServeHTTP(w, r)
 		case AuthServiceLogoutProcedure:
@@ -256,6 +337,8 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceGetMeHandler.ServeHTTP(w, r)
 		case AuthServiceRegisterEmailProcedure:
 			authServiceRegisterEmailHandler.ServeHTTP(w, r)
+		case AuthServiceChangePasswordProcedure:
+			authServiceChangePasswordHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -277,6 +360,14 @@ func (UnimplementedAuthServiceHandler) VerifyEmail(context.Context, *connect.Req
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.VerifyEmail is not implemented"))
 }
 
+func (UnimplementedAuthServiceHandler) RequestPasswordReset(context.Context, *connect.Request[v1.RequestPasswordResetRequest]) (*connect.Response[v1.RequestPasswordResetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.RequestPasswordReset is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.ResetPassword is not implemented"))
+}
+
 func (UnimplementedAuthServiceHandler) Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.Login is not implemented"))
 }
@@ -291,4 +382,8 @@ func (UnimplementedAuthServiceHandler) GetMe(context.Context, *connect.Request[v
 
 func (UnimplementedAuthServiceHandler) RegisterEmail(context.Context, *connect.Request[v1.RegisterEmailRequest]) (*connect.Response[v1.RegisterEmailResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.RegisterEmail is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AuthService.ChangePassword is not implemented"))
 }

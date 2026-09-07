@@ -5,6 +5,7 @@ export const auth = {
     password: '비밀번호',
     submit: '로그인',
     failed: '아이디 또는 비밀번호가 맞지 않아요',
+    passwordChanged: '비밀번호를 바꿨어요. 다시 로그인해 주세요.',
   },
   field: {
     email: '이메일',
@@ -13,6 +14,7 @@ export const auth = {
   links: {
     login: '로그인',
     signup: '회원가입',
+    forgotPassword: '비밀번호 찾기',
     more: '계정 메뉴',
   },
   signup: {
@@ -51,5 +53,31 @@ export const auth = {
     intro: '인증 메일을 받을 주소를 등록해 주세요.',
     submit: '인증 메일 보내기',
     sent: '{{email}}로 인증 메일을 보냈어요.',
+  },
+  forgotPassword: {
+    heading: '비밀번호 찾기',
+    intro: '계정에 등록하고 인증한 이메일을 입력해 주세요.',
+    submit: '재설정 메일 보내기',
+    sentHeading: '메일을 확인해 주세요',
+    sentBody: '{{email}} 계정이 있다면 비밀번호 재설정 링크를 보냈어요.',
+  },
+  resetPassword: {
+    heading: '새 비밀번호 설정',
+    intro: '앞으로 로그인할 새 비밀번호를 입력해 주세요.',
+    newPassword: '새 비밀번호',
+    passwordHint: '8자 이상 입력해 주세요.',
+    submit: '비밀번호 재설정',
+    successHeading: '비밀번호를 바꿨어요',
+    successBody: '새 비밀번호로 로그인해 주세요.',
+    requestAgain: '재설정 메일 다시 받기',
+  },
+  changePassword: {
+    heading: '비밀번호 변경',
+    intro: '변경하면 이 기기를 포함한 모든 기기에서 로그아웃돼요.',
+    currentPassword: '현재 비밀번호',
+    newPassword: '새 비밀번호',
+    submit: '비밀번호 변경',
+    noPassword:
+      '이 계정에는 현재 비밀번호가 없어요. 로그아웃한 뒤 비밀번호 찾기에서 새로 설정해 주세요.',
   },
 } as const

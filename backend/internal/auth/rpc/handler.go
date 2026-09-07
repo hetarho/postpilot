@@ -57,6 +57,23 @@ func (h *Handler) VerifyEmail(ctx context.Context, req *connect.Request[postpilo
 	return connect.NewResponse(&postpilotv1.VerifyEmailResponse{}), nil
 }
 
+func (h *Handler) RequestPasswordReset(ctx context.Context, req *connect.Request[postpilotv1.RequestPasswordResetRequest]) (*connect.Response[postpilotv1.RequestPasswordResetResponse], error) {
+	if err := h.svc.RequestPasswordReset(ctx, req.Msg.GetEmail()); err != nil {
+		return nil, authMutationError("request password reset", err)
+	}
+	return connect.NewResponse(&postpilotv1.RequestPasswordResetResponse{}), nil
+}
+
+func (h *Handler) ResetPassword(ctx context.Context, req *connect.Request[postpilotv1.ResetPasswordRequest]) (*connect.Response[postpilotv1.ResetPasswordResponse], error) {
+	if err := h.svc.ResetPassword(ctx, req.Msg.GetToken(), req.Msg.GetNewPassword()); err != nil {
+		if errors.Is(err, auth.ErrLinkInvalid) {
+			return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "password reset link invalid", "RESET_LINK_INVALID", nil)
+		}
+		return nil, authMutationError("reset password", err)
+	}
+	return connect.NewResponse(&postpilotv1.ResetPasswordResponse{}), nil
+}
+
 // Login authenticates and hands back a session cookie.
 func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.LoginRequest]) (*connect.Response[postpilotv1.LoginResponse], error) {
 	user, rawToken, err := h.svc.Login(ctx, req.Msg.GetLoginId(), req.Msg.GetPassword())
@@ -130,9 +147,21 @@ func (h *Handler) RegisterEmail(ctx context.Context, req *connect.Request[postpi
 	return connect.NewResponse(&postpilotv1.RegisterEmailResponse{}), nil
 }
 
+func (h *Handler) ChangePassword(ctx context.Context, req *connect.Request[postpilotv1.ChangePasswordRequest]) (*connect.Response[postpilotv1.ChangePasswordResponse], error) {
+	userID, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+	}
+	if err := h.svc.ChangePassword(ctx, userID, req.Msg.GetCurrentPassword(), req.Msg.GetNewPassword()); err != nil {
+		return nil, authMutationError("change password", err)
+	}
+	return connect.NewResponse(&postpilotv1.ChangePasswordResponse{}), nil
+}
+
 func userToProto(user auth.User) *postpilotv1.User {
 	return &postpilotv1.User{
 		Id: user.ID, Email: user.Email, EmailVerified: user.EmailVerifiedAt != nil,
+		HasPassword: user.PasswordHash != "",
 	}
 }
 
@@ -148,6 +177,10 @@ func authMutationError(operation string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "verification link invalid", "VERIFICATION_LINK_INVALID", nil)
 	case errors.Is(err, auth.ErrEmailAlreadyVerified):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "email already verified", "EMAIL_ALREADY_VERIFIED", nil)
+	case errors.Is(err, auth.ErrPasswordNotSet):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "password not set", "PASSWORD_NOT_SET", nil)
+	case errors.Is(err, auth.ErrCurrentPasswordWrong):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "current password wrong", "CURRENT_PASSWORD_WRONG", nil)
 	default:
 		slog.Error(operation+" failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, operation+" failed", "UNKNOWN_FAILURE", nil)

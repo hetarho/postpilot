@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,13 @@ const sessionTTL = 720 * time.Hour
 type discardMailer struct{}
 
 func (discardMailer) Send(context.Context, auth.Mail) error { return nil }
+
+type recordingMailer struct{ sent []auth.Mail }
+
+func (m *recordingMailer) Send(_ context.Context, mail auth.Mail) error {
+	m.sent = append(m.sent, mail)
+	return nil
+}
 
 // newServer wires the real handler and interceptor over a real SQLite store and
 // returns a client speaking to them across a real HTTP server.
@@ -90,6 +98,9 @@ func TestLoginSetCookieAttributes(t *testing.T) {
 	if !res.Msg.GetUser().GetEmailVerified() {
 		t.Error("user email_verified = false, want true")
 	}
+	if !res.Msg.GetUser().GetHasPassword() {
+		t.Error("user has_password = false, want true")
+	}
 	if strings.Contains(res.Msg.String(), token) {
 		t.Errorf("the session token leaked into the response body: %s", res.Msg.String())
 	}
@@ -147,6 +158,9 @@ func TestInterceptorGuardsEveryProcedure(t *testing.T) {
 	if !res.Msg.GetUser().GetEmailVerified() {
 		t.Error("user email_verified = false, want true")
 	}
+	if !res.Msg.GetUser().GetHasPassword() {
+		t.Error("user has_password = false, want true")
+	}
 }
 
 func TestInterceptorPublicSignupAndVerificationSetButProtectsRegisterEmail(t *testing.T) {
@@ -168,11 +182,130 @@ func TestInterceptorPublicSignupAndVerificationSetButProtectsRegisterEmail(t *te
 	})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("VerifyEmail without cookie = %v, want its domain failure rather than 401", err)
 	}
+	if _, err := client.RequestPasswordReset(ctx, connect.NewRequest(&postpilotv1.RequestPasswordResetRequest{
+		Email: "alice@example.com",
+	})); err != nil {
+		t.Fatalf("RequestPasswordReset without cookie: %v", err)
+	}
+	if _, err := client.ResetPassword(ctx, connect.NewRequest(&postpilotv1.ResetPasswordRequest{
+		Token: "not-a-token", NewPassword: "new-password",
+	})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("ResetPassword without cookie = %v, want its domain failure rather than 401", err)
+	} else if detail := authAppErrorDetail(t, err); detail.GetReason() != "RESET_LINK_INVALID" {
+		t.Fatalf("ResetPassword reason = %q, want RESET_LINK_INVALID", detail.GetReason())
+	}
 	if _, err := client.RegisterEmail(ctx, connect.NewRequest(&postpilotv1.RegisterEmailRequest{
 		Email: "alice@example.com",
 	})); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("RegisterEmail without cookie = %v, want 401", err)
 	}
+	if _, err := client.ChangePassword(ctx, connect.NewRequest(&postpilotv1.ChangePasswordRequest{
+		CurrentPassword: "s3cret", NewPassword: "new-password",
+	})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("ChangePassword without cookie = %v, want 401", err)
+	}
+}
+
+func TestResetPasswordRevokesThePreResetCookie(t *testing.T) {
+	store := newStore(t)
+	svc := auth.NewService(store, sessionTTL)
+	mailer := &recordingMailer{}
+	svc.SetMailer(mailer)
+	svc.SetWebOrigin("https://postpilot.example.com")
+	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
+		t.Fatal(err)
+	}
+	verifiedAt := time.Now()
+	if err := store.SetEmail(context.Background(), "alice", "alice@example.com", &verifiedAt); err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
+		authrpc.NewHandler(svc, sessionTTL),
+		connect.WithInterceptors(authrpc.NewInterceptor(svc)),
+	))
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	client := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+
+	loginRes, err := client.Login(context.Background(), connect.NewRequest(&postpilotv1.LoginRequest{
+		LoginId: "alice", Password: "s3cret",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cookie := "pp_session=" + sessionToken(t, loginRes.Header().Get("Set-Cookie"))
+	if _, err := client.RequestPasswordReset(context.Background(), connect.NewRequest(&postpilotv1.RequestPasswordResetRequest{
+		Email: "alice@example.com",
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if len(mailer.sent) != 1 {
+		t.Fatalf("reset mails = %d, want 1", len(mailer.sent))
+	}
+	raw := resetTokenFromMail(t, mailer.sent[0])
+	if _, err := client.ResetPassword(context.Background(), connect.NewRequest(&postpilotv1.ResetPasswordRequest{
+		Token: raw, NewPassword: "new-password",
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.GetMe(context.Background(), withCookie(&postpilotv1.GetMeRequest{}, cookie)); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("GetMe with pre-reset cookie = %v, want unauthenticated", err)
+	}
+	if err := loginError(t, client, "alice", "s3cret"); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("old password login = %v, want unauthenticated", err)
+	}
+	if _, err := client.Login(context.Background(), connect.NewRequest(&postpilotv1.LoginRequest{
+		LoginId: "alice", Password: "new-password",
+	})); err != nil {
+		t.Fatalf("new password login: %v", err)
+	}
+}
+
+func TestChangePasswordFailureReasonsStayInsideTheLiveSession(t *testing.T) {
+	t.Run("wrong current password", func(t *testing.T) {
+		client, _ := newServer(t)
+		cookie := login(t, client)
+		_, err := client.ChangePassword(context.Background(), withCookie(&postpilotv1.ChangePasswordRequest{
+			CurrentPassword: "wrong", NewPassword: "new-password",
+		}, cookie))
+		if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+			t.Fatalf("ChangePassword = %v, want failed_precondition", err)
+		}
+		if detail := authAppErrorDetail(t, err); detail.GetReason() != "CURRENT_PASSWORD_WRONG" {
+			t.Fatalf("reason = %q, want CURRENT_PASSWORD_WRONG", detail.GetReason())
+		}
+	})
+
+	t.Run("password not set", func(t *testing.T) {
+		store := newStore(t)
+		svc := auth.NewService(store, sessionTTL)
+		if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
+			t.Fatal(err)
+		}
+		mux := http.NewServeMux()
+		mux.Handle(postpilotv1connect.NewAuthServiceHandler(
+			authrpc.NewHandler(svc, sessionTTL),
+			connect.WithInterceptors(authrpc.NewInterceptor(svc)),
+		))
+		server := httptest.NewServer(mux)
+		defer server.Close()
+		client := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+		cookie := login(t, client)
+		if err := store.UpdatePasswordHash(context.Background(), "alice", ""); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := client.ChangePassword(context.Background(), withCookie(&postpilotv1.ChangePasswordRequest{
+			CurrentPassword: "anything", NewPassword: "new-password",
+		}, cookie))
+		if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+			t.Fatalf("ChangePassword = %v, want failed_precondition", err)
+		}
+		if detail := authAppErrorDetail(t, err); detail.GetReason() != "PASSWORD_NOT_SET" {
+			t.Fatalf("reason = %q, want PASSWORD_NOT_SET", detail.GetReason())
+		}
+	})
 }
 
 func TestUnverifiedCorrectPasswordIsWireIdenticalToWrongPassword(t *testing.T) {
@@ -324,6 +457,18 @@ func sessionToken(t *testing.T, setCookie string) string {
 		}
 	}
 	t.Fatalf("no pp_session cookie in %q", setCookie)
+	return ""
+}
+
+func resetTokenFromMail(t *testing.T, mail auth.Mail) string {
+	t.Helper()
+	for _, line := range strings.Split(mail.Text, "\n") {
+		parsed, err := url.Parse(line)
+		if err == nil && parsed.Path == "/reset-password" && parsed.Query().Get("token") != "" {
+			return parsed.Query().Get("token")
+		}
+	}
+	t.Fatalf("password reset mail has no token URL: %s", mail.Text)
 	return ""
 }
 

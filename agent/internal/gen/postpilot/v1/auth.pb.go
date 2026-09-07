@@ -269,6 +269,174 @@ func (*VerifyEmailResponse) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{5}
 }
 
+type RequestPasswordResetRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestPasswordResetRequest) Reset() {
+	*x = RequestPasswordResetRequest{}
+	mi := &file_postpilot_v1_auth_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestPasswordResetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestPasswordResetRequest) ProtoMessage() {}
+
+func (x *RequestPasswordResetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_auth_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestPasswordResetRequest.ProtoReflect.Descriptor instead.
+func (*RequestPasswordResetRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *RequestPasswordResetRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+type RequestPasswordResetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestPasswordResetResponse) Reset() {
+	*x = RequestPasswordResetResponse{}
+	mi := &file_postpilot_v1_auth_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestPasswordResetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestPasswordResetResponse) ProtoMessage() {}
+
+func (x *RequestPasswordResetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_auth_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestPasswordResetResponse.ProtoReflect.Descriptor instead.
+func (*RequestPasswordResetResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{7}
+}
+
+type ResetPasswordRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	NewPassword   string                 `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetPasswordRequest) Reset() {
+	*x = ResetPasswordRequest{}
+	mi := &file_postpilot_v1_auth_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetPasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetPasswordRequest) ProtoMessage() {}
+
+func (x *ResetPasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_auth_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetPasswordRequest.ProtoReflect.Descriptor instead.
+func (*ResetPasswordRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ResetPasswordRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *ResetPasswordRequest) GetNewPassword() string {
+	if x != nil {
+		return x.NewPassword
+	}
+	return ""
+}
+
+type ResetPasswordResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetPasswordResponse) Reset() {
+	*x = ResetPasswordResponse{}
+	mi := &file_postpilot_v1_auth_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetPasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetPasswordResponse) ProtoMessage() {}
+
+func (x *ResetPasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_auth_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetPasswordResponse.ProtoReflect.Descriptor instead.
+func (*ResetPasswordResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{9}
+}
+
 type LoginRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	LoginId       string                 `protobuf:"bytes,1,opt,name=login_id,json=loginId,proto3" json:"login_id,omitempty"`
@@ -279,7 +447,7 @@ type LoginRequest struct {
 
 func (x *LoginRequest) Reset() {
 	*x = LoginRequest{}
-	mi := &file_postpilot_v1_auth_proto_msgTypes[6]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -291,7 +459,7 @@ func (x *LoginRequest) String() string {
 func (*LoginRequest) ProtoMessage() {}
 
 func (x *LoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_auth_proto_msgTypes[6]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -304,7 +472,7 @@ func (x *LoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
 func (*LoginRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *LoginRequest) GetLoginId() string {
@@ -333,7 +501,7 @@ type LoginResponse struct {
 
 func (x *LoginResponse) Reset() {
 	*x = LoginResponse{}
-	mi := &file_postpilot_v1_auth_proto_msgTypes[7]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -345,7 +513,7 @@ func (x *LoginResponse) String() string {
 func (*LoginResponse) ProtoMessage() {}
 
 func (x *LoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_auth_proto_msgTypes[7]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -358,7 +526,7 @@ func (x *LoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
 func (*LoginResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *LoginResponse) GetUser() *User {
@@ -383,7 +551,7 @@ type LogoutRequest struct {
 
 func (x *LogoutRequest) Reset() {
 	*x = LogoutRequest{}
-	mi := &file_postpilot_v1_auth_proto_msgTypes[8]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -395,7 +563,7 @@ func (x *LogoutRequest) String() string {
 func (*LogoutRequest) ProtoMessage() {}
 
 func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_auth_proto_msgTypes[8]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -408,7 +576,7 @@ func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
 func (*LogoutRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{8}
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{12}
 }
 
 type LogoutResponse struct {
@@ -419,7 +587,7 @@ type LogoutResponse struct {
 
 func (x *LogoutResponse) Reset() {
 	*x = LogoutResponse{}
-	mi := &file_postpilot_v1_auth_proto_msgTypes[9]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -431,7 +599,7 @@ func (x *LogoutResponse) String() string {
 func (*LogoutResponse) ProtoMessage() {}
 
 func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_auth_proto_msgTypes[9]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -444,7 +612,7 @@ func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
 func (*LogoutResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{9}
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{13}
 }
 
 type GetMeRequest struct {
@@ -455,7 +623,7 @@ type GetMeRequest struct {
 
 func (x *GetMeRequest) Reset() {
 	*x = GetMeRequest{}
-	mi := &file_postpilot_v1_auth_proto_msgTypes[10]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -467,7 +635,7 @@ func (x *GetMeRequest) String() string {
 func (*GetMeRequest) ProtoMessage() {}
 
 func (x *GetMeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_auth_proto_msgTypes[10]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -480,7 +648,7 @@ func (x *GetMeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMeRequest.ProtoReflect.Descriptor instead.
 func (*GetMeRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{10}
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{14}
 }
 
 type GetMeResponse struct {
@@ -495,7 +663,7 @@ type GetMeResponse struct {
 
 func (x *GetMeResponse) Reset() {
 	*x = GetMeResponse{}
-	mi := &file_postpilot_v1_auth_proto_msgTypes[11]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -507,7 +675,7 @@ func (x *GetMeResponse) String() string {
 func (*GetMeResponse) ProtoMessage() {}
 
 func (x *GetMeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_auth_proto_msgTypes[11]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -520,7 +688,7 @@ func (x *GetMeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMeResponse.ProtoReflect.Descriptor instead.
 func (*GetMeResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{11}
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetMeResponse) GetUser() *User {
@@ -546,7 +714,7 @@ type RegisterEmailRequest struct {
 
 func (x *RegisterEmailRequest) Reset() {
 	*x = RegisterEmailRequest{}
-	mi := &file_postpilot_v1_auth_proto_msgTypes[12]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -558,7 +726,7 @@ func (x *RegisterEmailRequest) String() string {
 func (*RegisterEmailRequest) ProtoMessage() {}
 
 func (x *RegisterEmailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_auth_proto_msgTypes[12]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -571,7 +739,7 @@ func (x *RegisterEmailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterEmailRequest.ProtoReflect.Descriptor instead.
 func (*RegisterEmailRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{12}
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RegisterEmailRequest) GetEmail() string {
@@ -589,7 +757,7 @@ type RegisterEmailResponse struct {
 
 func (x *RegisterEmailResponse) Reset() {
 	*x = RegisterEmailResponse{}
-	mi := &file_postpilot_v1_auth_proto_msgTypes[13]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -601,7 +769,7 @@ func (x *RegisterEmailResponse) String() string {
 func (*RegisterEmailResponse) ProtoMessage() {}
 
 func (x *RegisterEmailResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_auth_proto_msgTypes[13]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -614,7 +782,95 @@ func (x *RegisterEmailResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterEmailResponse.ProtoReflect.Descriptor instead.
 func (*RegisterEmailResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{13}
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{17}
+}
+
+type ChangePasswordRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CurrentPassword string                 `protobuf:"bytes,1,opt,name=current_password,json=currentPassword,proto3" json:"current_password,omitempty"`
+	NewPassword     string                 `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ChangePasswordRequest) Reset() {
+	*x = ChangePasswordRequest{}
+	mi := &file_postpilot_v1_auth_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePasswordRequest) ProtoMessage() {}
+
+func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_auth_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangePasswordRequest.ProtoReflect.Descriptor instead.
+func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ChangePasswordRequest) GetCurrentPassword() string {
+	if x != nil {
+		return x.CurrentPassword
+	}
+	return ""
+}
+
+func (x *ChangePasswordRequest) GetNewPassword() string {
+	if x != nil {
+		return x.NewPassword
+	}
+	return ""
+}
+
+type ChangePasswordResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangePasswordResponse) Reset() {
+	*x = ChangePasswordResponse{}
+	mi := &file_postpilot_v1_auth_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePasswordResponse) ProtoMessage() {}
+
+func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_auth_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangePasswordResponse.ProtoReflect.Descriptor instead.
+func (*ChangePasswordResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{19}
 }
 
 // User is everything the client may know about an account. Password material never crosses
@@ -624,13 +880,14 @@ type User struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
 	EmailVerified bool                   `protobuf:"varint,3,opt,name=email_verified,json=emailVerified,proto3" json:"email_verified,omitempty"`
+	HasPassword   bool                   `protobuf:"varint,4,opt,name=has_password,json=hasPassword,proto3" json:"has_password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *User) Reset() {
 	*x = User{}
-	mi := &file_postpilot_v1_auth_proto_msgTypes[14]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -642,7 +899,7 @@ func (x *User) String() string {
 func (*User) ProtoMessage() {}
 
 func (x *User) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_auth_proto_msgTypes[14]
+	mi := &file_postpilot_v1_auth_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -655,7 +912,7 @@ func (x *User) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use User.ProtoReflect.Descriptor instead.
 func (*User) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{14}
+	return file_postpilot_v1_auth_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *User) GetId() string {
@@ -679,6 +936,13 @@ func (x *User) GetEmailVerified() bool {
 	return false
 }
 
+func (x *User) GetHasPassword() bool {
+	if x != nil {
+		return x.HasPassword
+	}
+	return false
+}
+
 var File_postpilot_v1_auth_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_auth_proto_rawDesc = "" +
@@ -693,7 +957,14 @@ const file_postpilot_v1_auth_proto_rawDesc = "" +
 	"\x1aResendVerificationResponse\"*\n" +
 	"\x12VerifyEmailRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"\x15\n" +
-	"\x13VerifyEmailResponse\"E\n" +
+	"\x13VerifyEmailResponse\"3\n" +
+	"\x1bRequestPasswordResetRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\"\x1e\n" +
+	"\x1cRequestPasswordResetResponse\"O\n" +
+	"\x14ResetPasswordRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12!\n" +
+	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\"\x17\n" +
+	"\x15ResetPasswordResponse\"E\n" +
 	"\fLoginRequest\x12\x19\n" +
 	"\blogin_id\x18\x01 \x01(\tR\aloginId\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"_\n" +
@@ -708,19 +979,27 @@ const file_postpilot_v1_auth_proto_rawDesc = "" +
 	"\x04plan\x18\x02 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\",\n" +
 	"\x14RegisterEmailRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\"\x17\n" +
-	"\x15RegisterEmailResponse\"S\n" +
+	"\x15RegisterEmailResponse\"e\n" +
+	"\x15ChangePasswordRequest\x12)\n" +
+	"\x10current_password\x18\x01 \x01(\tR\x0fcurrentPassword\x12!\n" +
+	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\"\x18\n" +
+	"\x16ChangePasswordResponse\"v\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12%\n" +
-	"\x0eemail_verified\x18\x03 \x01(\bR\remailVerified2\xc0\x04\n" +
+	"\x0eemail_verified\x18\x03 \x01(\bR\remailVerified\x12!\n" +
+	"\fhas_password\x18\x04 \x01(\bR\vhasPassword2\xec\x06\n" +
 	"\vAuthService\x12E\n" +
 	"\x06Signup\x12\x1b.postpilot.v1.SignupRequest\x1a\x1c.postpilot.v1.SignupResponse\"\x00\x12i\n" +
 	"\x12ResendVerification\x12'.postpilot.v1.ResendVerificationRequest\x1a(.postpilot.v1.ResendVerificationResponse\"\x00\x12T\n" +
-	"\vVerifyEmail\x12 .postpilot.v1.VerifyEmailRequest\x1a!.postpilot.v1.VerifyEmailResponse\"\x00\x12B\n" +
+	"\vVerifyEmail\x12 .postpilot.v1.VerifyEmailRequest\x1a!.postpilot.v1.VerifyEmailResponse\"\x00\x12o\n" +
+	"\x14RequestPasswordReset\x12).postpilot.v1.RequestPasswordResetRequest\x1a*.postpilot.v1.RequestPasswordResetResponse\"\x00\x12Z\n" +
+	"\rResetPassword\x12\".postpilot.v1.ResetPasswordRequest\x1a#.postpilot.v1.ResetPasswordResponse\"\x00\x12B\n" +
 	"\x05Login\x12\x1a.postpilot.v1.LoginRequest\x1a\x1b.postpilot.v1.LoginResponse\"\x00\x12E\n" +
 	"\x06Logout\x12\x1b.postpilot.v1.LogoutRequest\x1a\x1c.postpilot.v1.LogoutResponse\"\x00\x12B\n" +
 	"\x05GetMe\x12\x1a.postpilot.v1.GetMeRequest\x1a\x1b.postpilot.v1.GetMeResponse\"\x00\x12Z\n" +
-	"\rRegisterEmail\x12\".postpilot.v1.RegisterEmailRequest\x1a#.postpilot.v1.RegisterEmailResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\rRegisterEmail\x12\".postpilot.v1.RegisterEmailRequest\x1a#.postpilot.v1.RegisterEmailResponse\"\x00\x12]\n" +
+	"\x0eChangePassword\x12#.postpilot.v1.ChangePasswordRequest\x1a$.postpilot.v1.ChangePasswordResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_auth_proto_rawDescOnce sync.Once
@@ -734,46 +1013,58 @@ func file_postpilot_v1_auth_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_auth_proto_rawDescData
 }
 
-var file_postpilot_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_postpilot_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_postpilot_v1_auth_proto_goTypes = []any{
-	(*SignupRequest)(nil),              // 0: postpilot.v1.SignupRequest
-	(*SignupResponse)(nil),             // 1: postpilot.v1.SignupResponse
-	(*ResendVerificationRequest)(nil),  // 2: postpilot.v1.ResendVerificationRequest
-	(*ResendVerificationResponse)(nil), // 3: postpilot.v1.ResendVerificationResponse
-	(*VerifyEmailRequest)(nil),         // 4: postpilot.v1.VerifyEmailRequest
-	(*VerifyEmailResponse)(nil),        // 5: postpilot.v1.VerifyEmailResponse
-	(*LoginRequest)(nil),               // 6: postpilot.v1.LoginRequest
-	(*LoginResponse)(nil),              // 7: postpilot.v1.LoginResponse
-	(*LogoutRequest)(nil),              // 8: postpilot.v1.LogoutRequest
-	(*LogoutResponse)(nil),             // 9: postpilot.v1.LogoutResponse
-	(*GetMeRequest)(nil),               // 10: postpilot.v1.GetMeRequest
-	(*GetMeResponse)(nil),              // 11: postpilot.v1.GetMeResponse
-	(*RegisterEmailRequest)(nil),       // 12: postpilot.v1.RegisterEmailRequest
-	(*RegisterEmailResponse)(nil),      // 13: postpilot.v1.RegisterEmailResponse
-	(*User)(nil),                       // 14: postpilot.v1.User
-	(Plan)(0),                          // 15: postpilot.v1.Plan
+	(*SignupRequest)(nil),                // 0: postpilot.v1.SignupRequest
+	(*SignupResponse)(nil),               // 1: postpilot.v1.SignupResponse
+	(*ResendVerificationRequest)(nil),    // 2: postpilot.v1.ResendVerificationRequest
+	(*ResendVerificationResponse)(nil),   // 3: postpilot.v1.ResendVerificationResponse
+	(*VerifyEmailRequest)(nil),           // 4: postpilot.v1.VerifyEmailRequest
+	(*VerifyEmailResponse)(nil),          // 5: postpilot.v1.VerifyEmailResponse
+	(*RequestPasswordResetRequest)(nil),  // 6: postpilot.v1.RequestPasswordResetRequest
+	(*RequestPasswordResetResponse)(nil), // 7: postpilot.v1.RequestPasswordResetResponse
+	(*ResetPasswordRequest)(nil),         // 8: postpilot.v1.ResetPasswordRequest
+	(*ResetPasswordResponse)(nil),        // 9: postpilot.v1.ResetPasswordResponse
+	(*LoginRequest)(nil),                 // 10: postpilot.v1.LoginRequest
+	(*LoginResponse)(nil),                // 11: postpilot.v1.LoginResponse
+	(*LogoutRequest)(nil),                // 12: postpilot.v1.LogoutRequest
+	(*LogoutResponse)(nil),               // 13: postpilot.v1.LogoutResponse
+	(*GetMeRequest)(nil),                 // 14: postpilot.v1.GetMeRequest
+	(*GetMeResponse)(nil),                // 15: postpilot.v1.GetMeResponse
+	(*RegisterEmailRequest)(nil),         // 16: postpilot.v1.RegisterEmailRequest
+	(*RegisterEmailResponse)(nil),        // 17: postpilot.v1.RegisterEmailResponse
+	(*ChangePasswordRequest)(nil),        // 18: postpilot.v1.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil),       // 19: postpilot.v1.ChangePasswordResponse
+	(*User)(nil),                         // 20: postpilot.v1.User
+	(Plan)(0),                            // 21: postpilot.v1.Plan
 }
 var file_postpilot_v1_auth_proto_depIdxs = []int32{
-	14, // 0: postpilot.v1.LoginResponse.user:type_name -> postpilot.v1.User
-	15, // 1: postpilot.v1.LoginResponse.plan:type_name -> postpilot.v1.Plan
-	14, // 2: postpilot.v1.GetMeResponse.user:type_name -> postpilot.v1.User
-	15, // 3: postpilot.v1.GetMeResponse.plan:type_name -> postpilot.v1.Plan
+	20, // 0: postpilot.v1.LoginResponse.user:type_name -> postpilot.v1.User
+	21, // 1: postpilot.v1.LoginResponse.plan:type_name -> postpilot.v1.Plan
+	20, // 2: postpilot.v1.GetMeResponse.user:type_name -> postpilot.v1.User
+	21, // 3: postpilot.v1.GetMeResponse.plan:type_name -> postpilot.v1.Plan
 	0,  // 4: postpilot.v1.AuthService.Signup:input_type -> postpilot.v1.SignupRequest
 	2,  // 5: postpilot.v1.AuthService.ResendVerification:input_type -> postpilot.v1.ResendVerificationRequest
 	4,  // 6: postpilot.v1.AuthService.VerifyEmail:input_type -> postpilot.v1.VerifyEmailRequest
-	6,  // 7: postpilot.v1.AuthService.Login:input_type -> postpilot.v1.LoginRequest
-	8,  // 8: postpilot.v1.AuthService.Logout:input_type -> postpilot.v1.LogoutRequest
-	10, // 9: postpilot.v1.AuthService.GetMe:input_type -> postpilot.v1.GetMeRequest
-	12, // 10: postpilot.v1.AuthService.RegisterEmail:input_type -> postpilot.v1.RegisterEmailRequest
-	1,  // 11: postpilot.v1.AuthService.Signup:output_type -> postpilot.v1.SignupResponse
-	3,  // 12: postpilot.v1.AuthService.ResendVerification:output_type -> postpilot.v1.ResendVerificationResponse
-	5,  // 13: postpilot.v1.AuthService.VerifyEmail:output_type -> postpilot.v1.VerifyEmailResponse
-	7,  // 14: postpilot.v1.AuthService.Login:output_type -> postpilot.v1.LoginResponse
-	9,  // 15: postpilot.v1.AuthService.Logout:output_type -> postpilot.v1.LogoutResponse
-	11, // 16: postpilot.v1.AuthService.GetMe:output_type -> postpilot.v1.GetMeResponse
-	13, // 17: postpilot.v1.AuthService.RegisterEmail:output_type -> postpilot.v1.RegisterEmailResponse
-	11, // [11:18] is the sub-list for method output_type
-	4,  // [4:11] is the sub-list for method input_type
+	6,  // 7: postpilot.v1.AuthService.RequestPasswordReset:input_type -> postpilot.v1.RequestPasswordResetRequest
+	8,  // 8: postpilot.v1.AuthService.ResetPassword:input_type -> postpilot.v1.ResetPasswordRequest
+	10, // 9: postpilot.v1.AuthService.Login:input_type -> postpilot.v1.LoginRequest
+	12, // 10: postpilot.v1.AuthService.Logout:input_type -> postpilot.v1.LogoutRequest
+	14, // 11: postpilot.v1.AuthService.GetMe:input_type -> postpilot.v1.GetMeRequest
+	16, // 12: postpilot.v1.AuthService.RegisterEmail:input_type -> postpilot.v1.RegisterEmailRequest
+	18, // 13: postpilot.v1.AuthService.ChangePassword:input_type -> postpilot.v1.ChangePasswordRequest
+	1,  // 14: postpilot.v1.AuthService.Signup:output_type -> postpilot.v1.SignupResponse
+	3,  // 15: postpilot.v1.AuthService.ResendVerification:output_type -> postpilot.v1.ResendVerificationResponse
+	5,  // 16: postpilot.v1.AuthService.VerifyEmail:output_type -> postpilot.v1.VerifyEmailResponse
+	7,  // 17: postpilot.v1.AuthService.RequestPasswordReset:output_type -> postpilot.v1.RequestPasswordResetResponse
+	9,  // 18: postpilot.v1.AuthService.ResetPassword:output_type -> postpilot.v1.ResetPasswordResponse
+	11, // 19: postpilot.v1.AuthService.Login:output_type -> postpilot.v1.LoginResponse
+	13, // 20: postpilot.v1.AuthService.Logout:output_type -> postpilot.v1.LogoutResponse
+	15, // 21: postpilot.v1.AuthService.GetMe:output_type -> postpilot.v1.GetMeResponse
+	17, // 22: postpilot.v1.AuthService.RegisterEmail:output_type -> postpilot.v1.RegisterEmailResponse
+	19, // 23: postpilot.v1.AuthService.ChangePassword:output_type -> postpilot.v1.ChangePasswordResponse
+	14, // [14:24] is the sub-list for method output_type
+	4,  // [4:14] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
 	4,  // [4:4] is the sub-list for extension extendee
 	0,  // [0:4] is the sub-list for field type_name
@@ -791,7 +1082,7 @@ func file_postpilot_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_auth_proto_rawDesc), len(file_postpilot_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

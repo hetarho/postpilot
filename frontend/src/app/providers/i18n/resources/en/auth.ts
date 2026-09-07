@@ -5,6 +5,7 @@ export const auth = {
     password: 'Password',
     submit: 'Log in',
     failed: 'The login ID or password is incorrect',
+    passwordChanged: 'Password changed. Please log in again.',
   },
   field: {
     email: 'Email',
@@ -13,6 +14,7 @@ export const auth = {
   links: {
     login: 'Log in',
     signup: 'Sign up',
+    forgotPassword: 'Forgot password',
     more: 'Account links',
   },
   signup: {
@@ -52,5 +54,31 @@ export const auth = {
     intro: 'Add the address that should receive your verification mail.',
     submit: 'Send verification mail',
     sent: 'We sent a verification email to {{email}}.',
+  },
+  forgotPassword: {
+    heading: 'Forgot password',
+    intro: 'Enter the verified email registered to your account.',
+    submit: 'Send reset mail',
+    sentHeading: 'Check your mail',
+    sentBody: 'If an account exists for {{email}}, we sent it a password reset link.',
+  },
+  resetPassword: {
+    heading: 'Set a new password',
+    intro: 'Enter the new password you will use to log in.',
+    newPassword: 'New password',
+    passwordHint: 'Use at least 8 characters.',
+    submit: 'Reset password',
+    successHeading: 'Password changed',
+    successBody: 'Log in with your new password.',
+    requestAgain: 'Request another reset mail',
+  },
+  changePassword: {
+    heading: 'Change password',
+    intro: 'Changing it logs you out on this device and every other device.',
+    currentPassword: 'Current password',
+    newPassword: 'New password',
+    submit: 'Change password',
+    noPassword:
+      'This account has no current password. Log out, then set one through Forgot password.',
   },
 } as const

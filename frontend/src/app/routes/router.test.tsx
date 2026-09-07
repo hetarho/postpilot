@@ -92,6 +92,10 @@ describe('login screen', () => {
     const { router } = renderAppAt('/login', { loginFails: true })
 
     expect(await screen.findByRole('link', { name: '회원가입' })).toHaveAttribute('href', '/signup')
+    expect(screen.getByRole('link', { name: '비밀번호 찾기' })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    )
 
     await user.type(screen.getByLabelText('이메일 또는 아이디'), 'ghost')
     await user.type(screen.getByLabelText('비밀번호'), 'pw')

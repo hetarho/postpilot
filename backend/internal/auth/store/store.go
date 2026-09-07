@@ -121,6 +121,15 @@ func (s *Store) MarkEmailUnreachable(ctx context.Context, id string, at time.Tim
 	return nil
 }
 
+func (s *Store) UpdatePasswordHash(ctx context.Context, id, passwordHash string) error {
+	if err := s.write.UpdatePasswordHash(ctx, sqlc.UpdatePasswordHashParams{
+		PasswordHash: passwordHash, ID: id,
+	}); err != nil {
+		return fmt.Errorf("update password hash: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) GetUserPlan(ctx context.Context, id string) (plan.Plan, error) {
 	value, err := s.read.GetUserPlan(ctx, id)
 	if err != nil {

@@ -412,3 +412,18 @@ func (q *Queries) SetUserPlan(ctx context.Context, arg SetUserPlanParams) (int64
 	}
 	return result.RowsAffected()
 }
+
+const updatePasswordHash = `-- name: UpdatePasswordHash :exec
+UPDATE users SET password_hash = ? WHERE id = ?
+`
+
+type UpdatePasswordHashParams struct {
+	PasswordHash string
+	ID           string
+}
+
+// Deliberately changes no lockout columns: a mailed credential must not unlock an account.
+func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
+	_, err := q.db.ExecContext(ctx, updatePasswordHash, arg.PasswordHash, arg.ID)
+	return err
+}
