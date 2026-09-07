@@ -30,15 +30,15 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T007 | Agent automated test suite and LaunchAgent packaging | PUBLISH | T006 | doing@260907.ix |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T019 | todo |
 | T019 | Naver editor mutations, the commit port and the daemon publisher wiring | PUBLISH | T018 T007 | blocked@260907 |
 
 ## next
 - create-task AUTH QUOTA ARCH MARKETING BILLING is the next wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface); every base takes QUOTA@5 · THEME@4 · MARKETING@3 · ARCH@2 on claim, then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
-- PUBLISH chain: T007 needs one ARCH-27 run on the Mac (and CI green) to close · T019 blocked on the live editor survey → update-ssot PUBLISH → create-task re-decomposes it · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
+- PUBLISH chain: T007 is closed, so T019's deps are met but it stays blocked on the live editor survey (block appending, the three format menus, image insertion position, the settings-layer opening step, the published post's #mainFrame) → update-ssot PUBLISH (frame-scoped readback in PUBLISH-20, the layer-opening step) → create-task re-decomposes it · T008 last, its base taking MARKETING@3 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260907 T007 done — ARCH-27 passed on the owner's Mac and CI's macOS agent job is green; the red backend job on main was T021's fixed-width timestamp parse (one run in ten), fixed in 4a923a6 by reading with RFC3339Nano like the post and auth stores. T019 stays blocked on the live survey; T008 waits behind it
 - 260907 T028 done — the four rungs and the estimator wear a rotating accent-gradient stroke, transform-only and frozen still under reduced motion; the estimator wave is complete
 - 260907 T028 claimed (pw)
 - 260907 T027 done — /plans answers "몇 편" from three sliders and a combo switch, with no request per change; free 4 · basic 19 · pro 52 · max 108 at the default case
@@ -58,4 +58,3 @@
 - 260907 T022 claimed (pw), base QUOTA@3→@4 THEME@3 ARCH@1→@2: r4 touches the grant window and the bonus, neither of which this header control reads
 - 260907 T021 done — lots order by kind (monthly→bonus→purchased), a purchased kind exists for BILLING to fill, and an upgrade raises the running cycle on both tier-change paths. WARN sqlc slices emitted SQL by byte offset: a multi-byte character in a query comment silently generates unparseable SQL (pinned in usage.sql)
 - 260907 T021 claimed (pw), base QUOTA@3→@4 ARCH@1→@2: r4 moves the grant WINDOW (QUOTA-37) while this task moves the lot ORDER and the upgrade top-up — the anchor is its own task in the AUTH bundle
-- 260907 T020 done — the ladder is 220/575/1200, and GetMyPlan now publishes each rung's post estimate (32 credits per reference post) and the recommended rung; WARN spec lint flags every domain id over 6 chars (TEMPLATE PUBLISH MARKETING, and now BILLING) against FORMAT
