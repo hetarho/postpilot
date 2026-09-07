@@ -10,8 +10,8 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 2 | 1 | ARCH-1✎ 5✎ 23✎ | 0 |
-| AUTH | 2 | 1 | AUTH-1✎ 2✎ 3✎ 4✎ 5✎ 17✎ 30✎ 33+ 34+ 35+ 36+ 37+ 38+ 39+ 40+ 41+ | 0 |
+| ARCH | 2 | 2 | - | 0 |
+| AUTH | 2 | 2 | - | 0 |
 | QUOTA | 5 | 5 | - | 0 |
 | POST | 2 | 2 | - | 0 |
 | VOICE | 1 | 1 | - | 1 |
@@ -23,15 +23,26 @@
 | PUBLISH | 4 | 4 | - | 0 |
 | LANG | 1 | 1 | - | 0 |
 | THEME | 4 | 4 | - | 0 |
-| MARKETING | 3 | 2 | MARKETING-6✎ 11✎ 16+ | 0 |
+| MARKETING | 3 | 3 | - | 0 |
 | VIDEO | 1 | 1 | - | 1 |
-| BILLING | 2 | 0 | all | 0 |
+| BILLING | 2 | 2 | - | 0 |
 
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T046 | todo |
-| T041 | The memo names the subject in prose, alt and caption | GEN | - | todo |
+| T029 | Email identity columns, single-use link rows, and the transactional mail port | AUTH ARCH | - | todo |
+| T030 | Self-signup, email verification before the first session, and the account's email surface | AUTH QUOTA ARCH | T029 T034 | todo |
+| T031 | Password reset by a 1-hour emailed link, and the signed-in password change | AUTH ARCH | T030 | todo |
+| T032 | Per-IP throttling of the public writes and the auto-releasing account lockout | AUTH ARCH | T031 | todo |
+| T033 | Google sign-in: SPA-initiated code + PKCE, exchanged by the backend into a session | AUTH ARCH | T032 | todo |
+| T034 | Remove the provisioning bonus and move the monthly grant window to the anchor day | AUTH QUOTA BILLING ARCH | - | todo |
+| T035 | /about states the self-signup path: Get started as the one CTA, Log in as the quiet link | MARKETING AUTH THEME ARCH | T030 | todo |
+| T036 | Billing foundation: schema, the append-only money ledger, the provider and rate adapters, the read RPC and the billing screen | BILLING ARCH QUOTA AUTH | T034 | todo |
+| T037 | Register a payment method through the hosted card window and grant the 100-credit bonus once | BILLING QUOTA AUTH | T036 T030 | todo |
+| T038 | Subscribe from a rung, renew on the anchor day, and drop to free the moment a renewal fails | BILLING QUOTA MARKETING AUTH ARCH | T037 | todo |
+| T039 | Upgrade at once, schedule downgrades and term shortening for the next anchor, cancel and resume | BILLING QUOTA ARCH | T038 | todo |
+| T040 | Buy credits at par at any time, and refund an untouched purchase within seven days | BILLING QUOTA ARCH | T037 | todo |
 | T042 | The r4 mutation vocabulary and the body mutations | PUBLISH | T018 | blocked@260908 |
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
 | T044 | The settings layer, and tags, category and visibility inside it | PUBLISH | T042 | todo |
@@ -39,11 +50,13 @@
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
 
 ## next
-- create-task AUTH QUOTA ARCH MARKETING BILLING is the next wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface); every base takes QUOTA@5 · THEME@4 · MARKETING@3 · ARCH@2 on claim, then create-task for the AUTH·BILLING wave (self-signup, the anchor window, the payment-method bonus, the whole payment surface)
+- implement-task T029 → T034 → T030 → T031 → T032 → T033 → T035 → T036 → T037 → T038 → T039 → T040
 - T042 blocked on ONE live survey pass on a clean writer draft: does 문단 서식 변경 convert the caret's paragraph or its whole component when the component holds two or more paragraphs (same for 인용구), what does Enter from a converted block open, and how does the list toolbar behave there — the owner must discard the leftover dirty draft in the browser first, since navigating away from it raises a `beforeunload` dialog the driver surface cannot dismiss · T044 is claimable NOW (dep T042 is only for the shared plumbing, which has landed) · then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
-- implement-task T041 — one prompt-side change with no dep, independent of the PUBLISH chain and of the AUTH·BILLING wave
 
 ## log
+- 260908 T041 done
+- 260908 STATE restored T029..T040 and the consumed AUTH ARCH MARKETING BILLING revisions after spec lint exposed their pre-existing omission
+- 260908 T041 claimed (cx)
 - 260908 T042 blocked — the r4 vocabulary, the order-checked plan, `Apply` for title/text/open_settings and the occlusion latch are shipped and green; heading·quote·list wait on one unobserved fact (what 문단 서식 변경 converts when the caret's component holds two paragraphs). WARN fixed two real driver bugs on the way: `body_end` could put the caret in the document TITLE (it is a .se-component inside .se-body), and it aimed at each box's CENTRE, which lands mid-text on a paragraph that fills its line
 - 260908 create-task PUBLISH → T042..T046 (the r4 vocabulary and body mutations, caret-relative image insertion, the settings layer, the commit fence with the post-view readback, the daemon wiring); T019 is superseded and moved to done with every box unchecked because its acceptance was written against r3, and T008's dep moves T019→T046
 - 260907 update-ssot PUBLISH r4 done — a `filling_settings` stage joins the progress list, the settings layer is a versioned step that occludes the editor so body and photos precede it (PUBLISH-37), readback observes the post through the account's post-view URL while still reporting the permalink, and the locator-derived caret positions an inserted image; the frame-scoped driver addition r3 was expected to need is NOT required
@@ -61,6 +74,3 @@
 - 260907 T025 claimed (pw)
 - 260907 create-task QUOTA THEME → T025..T028 (combos + published rates, the operator's assignment, the /plans calculator, the animated promotional stroke); T023's worst-case reference post and its copy are removed in T025/T027
 - 260907 update-ssot QUOTA r5 THEME r4 done (the post estimate becomes proportional over adjustable characters·photos·videos across four operator-assigned combos, and a promotional surface may animate a gradient stroke on every option)
-- 260907 WARN T023 shipped the worst-case 32-credit reference post and its caveat copy — QUOTA-36 r5 replaces both, so create-task must plan the removal, not just an addition
-- 260907 T024 done — /about no longer claims a plan decides daily job counts or a model range, and its figures match the raised ladder; a claim-level assertion now guards the sentence
-- 260907 T024 claimed (pw), base MARKETING@2→@3 QUOTA@3→@4 LANG@1 ARCH@1→@2: MARKETING r3 binds the access sentence and the CTA to self-signup SHIPPING, which it has not, so this task still writes the operator path

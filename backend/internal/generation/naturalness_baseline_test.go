@@ -74,9 +74,57 @@ func TestNaturalnessBaselineIsSharedByWriteAndRevise(t *testing.T) {
 	}
 }
 
-// The pre-naturalness goldens are the pre-change baseline both fixed-text additions are
-// stated against: job 36's stylistic section and job 35's grounding line. Removing exactly
-// those two leaves the legacy bytes, which is what keeps "one deliberate delta each" checkable.
+func TestMemoNamingAuthorityIsInWritePromptsOnly(t *testing.T) {
+	for name, test := range map[string]struct {
+		prompt    string
+		grounding string
+		scope     string
+		naming    string
+	}{
+		"Korean": {
+			prompt:    firstOf(BuildWritePrompt(Profile{}, nil, "memo", "title", nil, nil, nil, nil)),
+			grounding: koreanGrounding,
+			scope:     koreanGroundingWriteScope,
+			naming:    koreanNaming,
+		},
+		"English": {
+			prompt:    firstOf(BuildWritePromptForLanguage(LanguageEnglish, Profile{}, nil, "memo", "title", nil, nil, nil, nil, nil)),
+			grounding: englishGrounding,
+			scope:     englishGroundingWriteScope,
+			naming:    englishNaming,
+		},
+	} {
+		if strings.Count(test.prompt, test.naming) != 1 {
+			t.Errorf("%s write prompt does not contain the naming rule exactly once", name)
+		}
+		wantLines := test.grounding + " " + test.scope + "\n" + test.naming + "\n"
+		if !strings.Contains(test.prompt, wantLines) {
+			t.Errorf("%s naming rule is not on its own line immediately after grounding", name)
+		}
+	}
+
+	for name, test := range map[string]struct {
+		prompt string
+		naming string
+	}{
+		"Korean": {
+			prompt: firstOf(BuildRevisePrompt(Profile{}, *revisionContent("body"), nil, "shorten", nil, nil, nil)),
+			naming: koreanNaming,
+		},
+		"English": {
+			prompt: firstOf(BuildRevisePromptForLanguage(LanguageEnglish, Profile{}, *revisionContent("body"), nil, "shorten", nil, nil, nil)),
+			naming: englishNaming,
+		},
+	} {
+		if strings.Contains(test.prompt, test.naming) {
+			t.Errorf("%s revise prompt contains the write-only naming rule", name)
+		}
+	}
+}
+
+// The pre-naturalness goldens are the baseline the fixed-text additions are stated against:
+// job 36's stylistic section, job 35's grounding line, and T041's write-only naming line.
+// Removing exactly those additions leaves the legacy bytes, which keeps each delta checkable.
 //
 // Change 25 renamed the concept the fixed output-language line names (용도 → 템플릿) in BOTH
 // the current and the legacy goldens, so this check still sees exactly two additions rather
@@ -95,8 +143,9 @@ func TestFixedTextAdditionsAreTheOnlyGoldenDelta(t *testing.T) {
 		for _, scope := range []string{koreanGroundingWriteScope, koreanGroundingReviseScope} {
 			stripped = strings.Replace(stripped, "\n"+koreanGrounding+" "+scope, "", 1)
 		}
+		stripped = strings.Replace(stripped, "\n"+koreanNaming, "", 1)
 		if stripped != legacySystem {
-			t.Errorf("%s changed by more than the inserted baseline and grounding line", pair.current)
+			t.Errorf("%s changed by more than the inserted baseline, grounding, and naming lines", pair.current)
 		}
 		if currentUser != legacyUser {
 			t.Errorf("%s changed the per-post user material", pair.current)

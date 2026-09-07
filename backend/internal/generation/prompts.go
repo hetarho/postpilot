@@ -53,8 +53,13 @@ const koreanGroundingReviseScope = "이 기준은 수정 요청으로 새로 쓰
 
 const englishGroundingReviseScope = "Apply this only to sentences the request makes you write or touch; leave every sentence outside the request exactly as it is, without re-checking its facts."
 
+const koreanNaming = "메모가 대상의 이름을 주고 사진 관찰은 그 대상을 일반적으로만 설명한다면, 본문과 IMAGE alt 및 caption에서 메모의 이름을 사용하세요. 사진 관찰이 뒷받침하지 않는 대상을 메모만으로 쓰면 안 됩니다."
+
+const englishNaming = "When the memo names a subject that the photo observations describe only generically, use the memo's name in prose and in IMAGE alt and caption. This does not permit writing about any subject the photo observations do not support."
+
 const WritePrompt = `첨부 사진 관찰과 메모를 바탕으로 자연스러운 한국어 블로그 글을 작성하세요.
 ` + koreanGrounding + " " + koreanGroundingWriteScope + `
+` + koreanNaming + `
 반드시 하나의 문단마다 TEXT 블록 하나만 사용하세요.
 IMAGE 블록은 제공된 정확한 파일명만 사용하고, 목록에 없는 이미지를 절대 만들어내지 마세요.
 IMAGE 블록은 사진이 글의 흐름상 가장 자연스러운 위치에 오도록 배치하세요.
@@ -63,6 +68,7 @@ IMAGE 블록은 사진이 글의 흐름상 가장 자연스러운 위치에 오�
 
 const englishWritePrompt = `Write a natural English blog post from the photo observations and memo.
 ` + englishGrounding + " " + englishGroundingWriteScope + `
+` + englishNaming + `
 Use exactly one TEXT block for each paragraph.
 IMAGE blocks may use only the exact filenames provided. Never invent an image that is not in the list.
 Place each IMAGE block where the photo fits most naturally in the flow of the post.
