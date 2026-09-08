@@ -214,6 +214,9 @@ type subscriptionStore struct {
 	plans             *subscriptionPlans
 	mailer            *subscriptionMailer
 	upsertFailureUser string
+	// markRefundedErr fails the step that marks a purchase refunded, which is the crash a
+	// resumable refund has to survive.
+	markRefundedErr error
 }
 
 func newSubscriptionStore() *subscriptionStore {
@@ -271,10 +274,16 @@ func (s *subscriptionStore) InsertEvent(_ context.Context, event Event) error {
 	return nil
 }
 func (s *subscriptionStore) InsertPurchase(_ context.Context, purchase Purchase) error {
+	// Refundable is derived, never stored: the real store has no such column, so a row read
+	// back must not carry the flag the caller was handed.
+	purchase.Refundable = false
 	s.purchases[purchase.ID] = purchase
 	return nil
 }
 func (s *subscriptionStore) MarkPurchaseRefunded(_ context.Context, userID, purchaseID string, at time.Time) (bool, error) {
+	if s.markRefundedErr != nil {
+		return false, s.markRefundedErr
+	}
 	purchase, found := s.purchases[purchaseID]
 	if !found || purchase.UserID != userID || purchase.RefundedAt != nil {
 		return false, nil
@@ -407,8 +416,19 @@ func (p *subscriptionProvider) PaymentByOrder(_ context.Context, orderID string)
 	return payment, ok, nil
 }
 func (p *subscriptionProvider) Refund(_ context.Context, paymentKey, reason string) error {
+	if p.refundErr != nil {
+		return p.refundErr
+	}
 	p.refunds = append(p.refunds, paymentKey+":"+reason)
-	return p.refundErr
+	// A refunded payment stops being a live charge. It is the only evidence a resumed refund
+	// has that the money already left, so the fake has to report it the way the provider does.
+	for orderID, payment := range p.payments {
+		if payment.PaymentKey == paymentKey {
+			payment.Status = "CANCELED"
+			p.payments[orderID] = payment
+		}
+	}
+	return nil
 }
 func (*subscriptionProvider) ParseNotification(*http.Request) (Notification, error) {
 	return Notification{}, nil

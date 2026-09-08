@@ -133,6 +133,113 @@ func TestRefundPurchaseEnforcesWindowAndUntouchedLot(t *testing.T) {
 	})
 }
 
+// A refund is three steps against two systems — void the lot, refund the card, mark the row
+// — and a failure at the last one used to leave the money back, the credits gone and the
+// purchase reported as PURCHASE_SPENT forever (review/diff-260908 F3).
+func TestRefundPurchaseResumesAfterAFailedMark(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, seoul)
+
+	cases := []struct {
+		name string
+		// arrange runs on a fresh fixture, before the refund under test.
+		arrange func(store *subscriptionStore, provider *subscriptionProvider, service *Service, purchase Purchase)
+		wantErr error
+		// wantRefunds is how many times the provider was asked to refund, counting any call
+		// arrange made.
+		wantRefunds int
+		wantMarked  bool
+	}{
+		{
+			name:        "happy path refunds once and marks the row",
+			arrange:     func(*subscriptionStore, *subscriptionProvider, *Service, Purchase) {},
+			wantRefunds: 1,
+			wantMarked:  true,
+		},
+		{
+			name: "a mark failure is finished by the retry",
+			arrange: func(store *subscriptionStore, _ *subscriptionProvider, service *Service, purchase Purchase) {
+				store.markRefundedErr = errors.New("write failed")
+				if _, err := service.RefundPurchase(context.Background(), "alice", purchase.ID); err == nil {
+					t.Fatal("first attempt should have failed at the mark")
+				}
+				store.markRefundedErr = nil
+			},
+			wantRefunds: 1,
+			wantMarked:  true,
+		},
+		{
+			name: "a live charge behind a touched lot is a spent purchase",
+			arrange: func(store *subscriptionStore, _ *subscriptionProvider, _ *Service, purchase Purchase) {
+				store.credits.lots[purchase.LotID].remaining--
+			},
+			wantErr:     ErrPurchaseSpent,
+			wantRefunds: 0,
+		},
+		{
+			name: "a voided lot with no provider record is not evidence of a refund",
+			arrange: func(store *subscriptionStore, provider *subscriptionProvider, _ *Service, purchase Purchase) {
+				store.credits.lots[purchase.LotID].remaining = 0
+				delete(provider.payments, purchase.OrderID)
+			},
+			wantErr:     ErrPurchaseSpent,
+			wantRefunds: 0,
+		},
+		{
+			name: "a purchase already marked refunded is not refundable again",
+			arrange: func(store *subscriptionStore, _ *subscriptionProvider, service *Service, purchase Purchase) {
+				if _, err := service.RefundPurchase(context.Background(), "alice", purchase.ID); err != nil {
+					t.Fatal(err)
+				}
+			},
+			wantErr:     ErrPurchaseNotFound,
+			wantRefunds: 1,
+			wantMarked:  true,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			store, provider, service, purchase := purchasedFixture(t, now)
+			testCase.arrange(store, provider, service, purchase)
+
+			refunded, err := service.RefundPurchase(ctx, "alice", purchase.ID)
+			if !errors.Is(err, testCase.wantErr) {
+				t.Fatalf("refund err = %v, want %v", err, testCase.wantErr)
+			}
+			if len(provider.refunds) != testCase.wantRefunds {
+				t.Fatalf("provider refunds = %+v, want %d", provider.refunds, testCase.wantRefunds)
+			}
+			stored := store.purchases[purchase.ID]
+			if (stored.RefundedAt != nil) != testCase.wantMarked {
+				t.Fatalf("stored purchase = %+v, want marked=%v", stored, testCase.wantMarked)
+			}
+			if testCase.wantErr != nil {
+				return
+			}
+			if refunded.RefundedAt == nil || refunded.Refundable {
+				t.Fatalf("returned purchase = %+v", refunded)
+			}
+			if store.credits.lots[purchase.LotID].remaining != 0 {
+				t.Fatalf("lot = %+v, want voided", store.credits.lots[purchase.LotID])
+			}
+			var refunds int
+			for _, event := range store.events {
+				if event.Kind == "refund" {
+					refunds++
+				}
+			}
+			if refunds != 1 {
+				t.Fatalf("refund ledger rows = %d, want exactly one", refunds)
+			}
+			view, err := service.GetMyBilling(ctx, "alice")
+			if err != nil || len(view.Purchases) != 1 || view.Purchases[0].RefundedAt == nil || view.Purchases[0].Refundable {
+				t.Fatalf("billing view = %+v, err=%v", view.Purchases, err)
+			}
+		})
+	}
+}
+
 func TestGetMyBillingComputesRefundableFromWindowAndLot(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, seoul)
 	store, _, service, purchase := purchasedFixture(t, now)
