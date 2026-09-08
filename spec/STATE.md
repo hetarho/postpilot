@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | ARCH | 2 | 2 | - | 0 |
 | AUTH | 2 | 2 | - | 0 |
-| QUOTA | 5 | 5 | - | 0 |
+| QUOTA | 6 | 6 | - | 0 |
 | POST | 2 | 2 | - | 0 |
 | VOICE | 1 | 1 | - | 1 |
 | GEN | 3 | 3 | - | 0 |
@@ -25,7 +25,12 @@
 | THEME | 4 | 4 | - | 0 |
 | MARKETING | 3 | 3 | - | 0 |
 | VIDEO | 1 | 1 | - | 1 |
-| BILLING | 2 | 2 | - | 0 |
+| BILLING | 4 | 4 | - | 0 |
+
+## review
+| id | st |
+|---|---|
+| diff-260908 | converted@260908 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -35,12 +40,27 @@
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUBLISH | T044 T043 | todo |
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
+| T047 | The subscription's own credit window, and an upgrade that cannot lose a charge | QUOTA | - | todo |
+| T048 | A purchase refund that can be finished after a crash | ARCH | - | todo |
+| T049 | The annual upgrade's span and its unit price | BILLING | T047 | todo |
+| T050 | The billing screen's refundability read | ARCH | - | todo |
+| T051 | The boot renewal pass belongs to the worker | ARCH | - | todo |
+| T052 | A bounded provider webhook | ARCH | - | todo |
+| T053 | One resend reservation per purpose | ARCH | - | todo |
+| T054 | Every backend failure reason the browser can be handed | ARCH | - | todo |
 
 ## next
-- unblock T042 with ONE live survey pass on a clean writer draft: does 문단 서식 변경 convert the caret's paragraph or its whole component when the component holds two or more paragraphs (same for 인용구), what does Enter from a converted block open, and how does the list toolbar behave there — the owner must discard the leftover dirty draft in the browser first, since navigating away from it raises a `beforeunload` dialog the driver surface cannot dismiss
-- then implement T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
+- implement-task T047 — it is the only one of the eight that carries a planning decision (QUOTA-42) as well as two live money bugs, and T049 waits on it
+- then T048 T050 T051 T052 T053 T054 in any order: all six are independent and none touches another's files
+- the PUBLISH chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260908 create-task T047-T054 from BILLING@4 QUOTA@6 review/diff-260908
+- 260908 create-task BILLING review/diff-260908 start
+- 260908 update-ssot BILLING r3 r4 · QUOTA r6 (QUOTA-42+)
+- 260908 update-ssot BILLING start
+- 260908 review-code diff-260908 ready: F1-F8 F13 adopted, F9-F12 held
+- 260908 review-code diff-260908 start
 - 260908 T044 done
 - 260908 T044 claimed (cx)
 - 260908 T040 done
@@ -55,9 +75,3 @@
 - 260908 T036 claimed (cx)
 - 260908 T035 done
 - 260908 T035 claimed (cx)
-- 260908 T033 done
-- 260908 T033 claimed (cx)
-- 260908 T032 done
-- 260908 T032 claimed (cx)
-- 260908 T031 done
-- 260908 T031 claimed (cx)

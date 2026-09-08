@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r5 | Every account carries one plan that grants monthly credits on its own anchor day, extra credits are purchasable at par at any time, and LLM work is held at job start and settled against a persisted ledger; master is the operator tier and the money side belongs to BILLING. Migrated from legacy policy/plans.md, plan/17, tech/usage-quota-and-plan-gating.md; r2 carries legacy change 28 (not yet built).
+> r6 | Every account carries one plan that grants monthly credits on its own anchor day, extra credits are purchasable at par at any time, and LLM work is held at job start and settled against a persisted ledger; master is the operator tier and the money side belongs to BILLING. Migrated from legacy policy/plans.md, plan/17, tech/usage-quota-and-plan-gating.md; r2 carries legacy change 28 (not yet built).
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | basic | pro | max | master`, a `users.plan` column with a CHECK so an off-ladder value cannot be stored; `free` is the provisioning default (`api adduser <id> [--plan=<tier>]`, flag accepted in either order)
@@ -43,6 +43,7 @@
 - QUOTA-39 [o] four estimator combos — `quality` · `balanced` · `value` · `cheapest` — each pair one registered `photo-analysis` model with one registered `writing` model (→MODEL-13), are assigned by the operator through a third AdminService procedure, and are named on screen by the combo rather than by the models behind them; a combo whose models are unassigned or no longer registered is left out of what the client is given rather than falling back to another model ← quoting real prices means the comparison moves with the operator's curation, and an invented price that never moves would be the alternative
 - QUOTA-40 [o] the server publishes, per combo, credits per photo · per video · per 1 000 characters of finished text · and a per-post base for the call overhead a count does not scale (→QUOTA-10); it derives them from the combo's real model prices through the same charge formula, over code-owned token assumptions — tokens per photo, per video at an assumed duration, output tokens per character, prompt overhead per call — and the client only multiplies and floors ← the formula stays in one place while a slider stays instant
 - QUOTA-41 [o] `/plans` carries the estimate as an interaction above the rungs: characters, photos and videos are adjustable within code-owned defaults and bounds (photos capped by QUOTA-24's 30), one of the four combos is selected, and every rung's post count recomputes as they move with no request per change; it is display-only and gates nothing
+- QUOTA-42 [o] starting a subscription is not a tier change (→QUOTA-35): the account's current monthly window closes at that instant and its unspent remainder does not carry over, while a fresh window opens on the subscription day carrying the new tier's whole monthly grant (→QUOTA-37, →BILLING-3) ← an upgrade keeps the cycle it has already paid for and owes only a difference, but a first charge buys a whole month and must hand over a whole month's credits
 
 ## flow
 - job start → Enqueue → Hold(renew the anchor-window lot → price planned calls → spend lots in order) → ok(admission + hold lots → job row) | refused(INSUFFICIENT_CREDITS, no row)
@@ -58,6 +59,7 @@
 - not yet built as of 260907: QUOTA-32 QUOTA-33 (legacy change 28) and every r3 · r4 decision
 
 ## chg
+- r6 260908 QUOTA-42+ starting a subscription closes the running window with no carry-over and opens a fresh full-grant one, unlike an upgrade which keeps its cycle
 - r5 260907 QUOTA-25✎ 26✎ 28✎ 36✎ 39+ 40+ 41+ the post estimate moves from one worst-case reference post to a proportional one over adjustable characters · photos · videos, priced by four operator-assigned model combos whose unit rates the server publishes, and admin procedures 2→3
 - r4 260907 QUOTA-9✎ 12✎ 37+ 38+ the grant window moves calendar-month→subscription anchor day, and the 50-credit account-creation bonus becomes a 100-credit payment-method bonus
 - r3 260907 QUOTA-3✎ 7✎ 9✎ 12✎ 26✎ 27✎ 28✎ 30✎ 34+ 35+ 36+ grants basic 200→220 pro 500→575 max 1000→1200, par-rate credit purchase, consumption order expiry-only→kind (monthly→bonus→purchased), header credit control into /plans, /plans reshaped with a recommended rung and post estimates, payments out of scope→BILLING
