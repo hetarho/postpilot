@@ -1,9 +1,14 @@
 import i18next from 'i18next'
 import {
+  TEMPLATE_ASK_LABEL_MAX_CHARS,
+  TEMPLATE_ASK_MAX_PER_BODY,
+  TEMPLATE_ASK_VALUE_MAX_CHARS,
   TEMPLATE_DESCRIPTION_MAX_CHARS,
   TEMPLATE_BODY_MAX_CHARS,
   TEMPLATE_NAME_MAX_CHARS,
+  TEMPLATE_PHOTO_ROW_MAX,
 } from '@/shared/config'
+import type { ParseOptions } from '../lib/grammar'
 
 /** A reusable 템플릿 brief (spec/legacy/policy/templates.md): what a kind of post is for and how that
  *  kind must be written. Authored text only — nothing here is learned or inferred, and the
@@ -33,7 +38,18 @@ export const TEMPLATE_LIMITS = {
   name: TEMPLATE_NAME_MAX_CHARS,
   description: TEMPLATE_DESCRIPTION_MAX_CHARS,
   body: TEMPLATE_BODY_MAX_CHARS,
+  /** A data field's title, and one post's answer to it (TEMPLATE-43). */
+  askLabel: TEMPLATE_ASK_LABEL_MAX_CHARS,
+  askValue: TEMPLATE_ASK_VALUE_MAX_CHARS,
 } as const
+
+/** The configured ceilings the parser needs, in ONE place: every surface that parses a body —
+ *  the builder, the source view, the write screen's fields — has to use the same two, and a
+ *  call site that assembled its own would be a config literal in a component (ARCH-21). */
+export const TEMPLATE_PARSE_OPTIONS: ParseOptions = {
+  photoRowMax: TEMPLATE_PHOTO_ROW_MAX,
+  askMaxPerBody: TEMPLATE_ASK_MAX_PER_BODY,
+}
 
 /** How the empty template is written wherever it can be chosen or shown. */
 export function noTemplateLabel(): string {

@@ -134,6 +134,10 @@ func renderNodes(out *strings.Builder, state *renderState, nodes []Node) {
 			out.WriteString("<note>")
 			out.WriteString(Decode(node.Text))
 			out.WriteString("</note>")
+		case NodeAsk:
+			// A data field is resolved against the POST's answers at the freeze
+			// (TEMPLATE-45), which is not this change: until then it contributes nothing,
+			// and nothing can author one yet.
 		case NodeSlot:
 			renderSlot(out, state, node)
 		case NodeRepeat:

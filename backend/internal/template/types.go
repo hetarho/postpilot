@@ -63,11 +63,18 @@ type Limits struct {
 	// a row's width rather than a total: four thumbnails is what still reads on a 360 px
 	// phone, and the browser mirrors the same number.
 	PhotoRowMax int
+	// AskLabelMaxChars bounds a data field's title and AskMaxPerBody how many one body may
+	// declare (TEMPLATE-43). The title is bounded like a name rather than like prose: it is
+	// a question the write screen puts over a textarea, and a form long enough to push the
+	// memo off a phone costs more than the invented sentence it prevents.
+	AskLabelMaxChars int
+	AskMaxPerBody    int
 }
 
 func (l Limits) valid() bool {
 	return l.NameMaxChars > 0 && l.DescriptionMaxChars > 0 && l.BodyMaxChars > 0 &&
-		l.MaxPerAccount > 0 && l.MaxRepeatExpansion > 0 && l.PhotoRowMax > 0
+		l.MaxPerAccount > 0 && l.MaxRepeatExpansion > 0 && l.PhotoRowMax > 0 &&
+		l.AskLabelMaxChars > 0 && l.AskMaxPerBody > 0
 }
 
 // Template is the aggregate. Body is the single source of truth for the template's shape:

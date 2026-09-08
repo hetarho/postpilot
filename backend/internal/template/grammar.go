@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// NodeKind is one of the grammar's five constructs (spec/legacy/tech/post-template-grammar.md §2).
+// NodeKind is one of the grammar's six constructs (spec/legacy/tech/post-template-grammar.md §2).
 type NodeKind string
 
 const (
@@ -15,6 +15,11 @@ const (
 	NodeSlot    NodeKind = "slot"
 	NodeNote    NodeKind = "note"
 	NodeRepeat  NodeKind = "repeat"
+	// NodeAsk is a position whose facts the POST's author supplies rather than the model
+	// inventing them (TEMPLATE-43). Its Label is the title the write screen shows over the
+	// field; a blank element is the verbatim flavor and a text-holding one is the write
+	// flavor. Nothing here resolves it — that happens at the freeze (TEMPLATE-45).
+	NodeAsk NodeKind = "ask"
 )
 
 // SlotKind is what a reserved position holds. photo is the only kind the app can resolve by
@@ -43,9 +48,9 @@ type Node struct {
 	Kind     NodeKind
 	Source   string
 	Line     int
-	Text     string   // write · note
+	Text     string   // write · note · ask (empty on an ask means the verbatim flavor)
 	SlotKind SlotKind // slot
-	Label    string   // slot
+	Label    string   // slot · ask
 	// Count is how many photos a photo position holds side by side (TEMPLATE-38). It is 1
 	// when the attribute is absent and 0 on every node that is not a photo slot, so a
 	// non-zero Count always means "this position binds this many photos".
@@ -80,6 +85,13 @@ const (
 	// 1 … PhotoRowMax. It is its own reason rather than malformed_tag because the attribute
 	// parsed fine — it is the VALUE the author has to go fix.
 	ReasonInvalidCount = "invalid_count"
+	// The three ways an `ask` can be wrong (TEMPLATE-20). ReasonAskInRepeat is its own
+	// reason rather than unknown_tag because the tag is real and it is the PLACE that is
+	// wrong: how many fields a template asks for must not depend on how many photos this
+	// post happens to carry.
+	ReasonDuplicateAskLabel = "duplicate_ask_label"
+	ReasonAskInRepeat       = "ask_in_repeat"
+	ReasonTooManyAsks       = "too_many_asks"
 )
 
 // ParseOptions carries what the grammar cannot know by itself. The photo-row ceiling is
@@ -87,6 +99,10 @@ const (
 // would make the shared fixture depend on the environment it runs in.
 type ParseOptions struct {
 	PhotoRowMax int
+	// AskMaxPerBody bounds how many data fields one body may declare
+	// (TEMPLATE_ASK_MAX_PER_BODY). It is configuration for the same reason PhotoRowMax is,
+	// and the shared fixture declares its own so a case means one thing on both sides.
+	AskMaxPerBody int
 }
 
 var tagNames = map[string]NodeKind{
@@ -94,6 +110,7 @@ var tagNames = map[string]NodeKind{
 	"slot":   NodeSlot,
 	"note":   NodeNote,
 	"repeat": NodeRepeat,
+	"ask":    NodeAsk,
 }
 
 // Parse turns a body into an ordered node list. A body that does not parse cannot be saved:
@@ -109,7 +126,56 @@ func Parse(body string, opts ParseOptions) ([]Node, error) {
 		// nothing it could be closing.
 		return nil, &ParseError{Line: lineAt(body, end), Reason: ReasonUnexpectedClose}
 	}
+	if err := checkAsks(nodes, opts.AskMaxPerBody); err != nil {
+		return nil, err
+	}
 	return nodes, nil
+}
+
+// checkAsks enforces the two body-WIDE rules a single tag cannot see: labels are unique and
+// there are at most AskMaxPerBody of them (TEMPLATE-43).
+//
+// One pass in body order, duplicate before count on the same node: a duplicate names the
+// exact thing to go fix, while the count only says there is one field too many. Both parsers
+// walk it identically, which is what keeps the shared fixture meaningful.
+func checkAsks(nodes []Node, maxPerBody int) error {
+	seen := map[string]bool{}
+	var walk func([]Node) error
+	walk = func(list []Node) error {
+		for _, node := range list {
+			if node.Kind == NodeRepeat {
+				if err := walk(node.Children); err != nil {
+					return err
+				}
+				continue
+			}
+			if node.Kind != NodeAsk {
+				continue
+			}
+			label := Decode(node.Label)
+			if seen[label] {
+				return &ParseError{Line: node.Line, Reason: ReasonDuplicateAskLabel}
+			}
+			seen[label] = true
+			if len(seen) > maxPerBody {
+				return &ParseError{Line: node.Line, Reason: ReasonTooManyAsks}
+			}
+		}
+		return nil
+	}
+	return walk(nodes)
+}
+
+// Asks returns the body's data fields in body order. It is how the save path reaches their
+// labels without re-walking the tree itself.
+func Asks(nodes []Node) []Node {
+	out := make([]Node, 0, 4)
+	for _, node := range nodes {
+		if node.Kind == NodeAsk {
+			out = append(out, node)
+		}
+	}
+	return out
 }
 
 // Serialize is Parse's exact inverse for anything Parse accepted.
@@ -244,6 +310,35 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 			Kind: NodeSlot, Source: body[at:afterOpen], Line: line,
 			SlotKind: kind, Label: attrs["label"], Count: count,
 		}, afterOpen, nil
+
+	case NodeAsk:
+		// The PLACE is checked before the attributes: a field inside a repeat is wrong
+		// wherever its label is.
+		if inRepeat {
+			return Node{}, 0, &ParseError{Line: line, Reason: ReasonAskInRepeat}
+		}
+		rawLabel, ok := attrs["label"]
+		if !ok || isBlank(Decode(rawLabel)) {
+			return Node{}, 0, &ParseError{Line: line, Reason: ReasonMissingAttribute}
+		}
+		if selfClosing {
+			return Node{
+				Kind: NodeAsk, Source: body[at:afterOpen], Line: line, Label: rawLabel,
+			}, afterOpen, nil
+		}
+		inner, afterClose, err := readTextBody(body, afterOpen, name, line)
+		if err != nil {
+			return Node{}, 0, err
+		}
+		// A blank element is the verbatim flavor, and it is normalized to an empty Text so
+		// "no instruction" is one value rather than three whitespace variants. The Source
+		// slice keeps the author's own bytes, so serialization is still exact.
+		if isBlank(Decode(inner)) {
+			inner = ""
+		}
+		return Node{
+			Kind: NodeAsk, Source: body[at:afterClose], Line: line, Label: rawLabel, Text: inner,
+		}, afterClose, nil
 
 	case NodeWrite, NodeNote:
 		if selfClosing {

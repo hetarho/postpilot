@@ -20,6 +20,7 @@ func testLimits() Limits {
 	return Limits{
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
 		MaxPerAccount: 3, MaxRepeatExpansion: 40, PhotoRowMax: fixtureParseOptions.PhotoRowMax,
+		AskLabelMaxChars: 40, AskMaxPerBody: fixtureParseOptions.AskMaxPerBody,
 	}
 }
 

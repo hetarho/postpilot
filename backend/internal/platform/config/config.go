@@ -370,6 +370,13 @@ type Config struct {
 	// photos stand side by side in one row (TEMPLATE-38). It is env because the browser
 	// mirrors it as VITE_TEMPLATE_PHOTO_ROW_MAX and both sides have to move together.
 	TemplatePhotoRowMax int
+	// The data-field ceilings (TEMPLATE-43): a field's title, one answer's text, and how
+	// many fields one body may declare. All three are mirrored in the browser — the title
+	// and the answer as live counters, the count as the refusal the builder states — so
+	// they are env on both sides like TemplatePhotoRowMax.
+	TemplateAskLabelMaxChars int
+	TemplateAskValueMaxChars int
+	TemplateAskMaxPerBody    int
 
 	// Writing-guideline ceilings. GuidelineTextMaxChars bounds one authored rule;
 	// GuidelineMaxPerAccount bounds how many an account may hold, because every applicable
@@ -570,6 +577,21 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.TemplatePhotoRowMax = templatePhotoRow
+	templateAskLabel, err := positiveInt("TEMPLATE_ASK_LABEL_MAX_CHARS", "40")
+	if err != nil {
+		return nil, err
+	}
+	cfg.TemplateAskLabelMaxChars = templateAskLabel
+	templateAskValue, err := positiveInt("TEMPLATE_ASK_VALUE_MAX_CHARS", "500")
+	if err != nil {
+		return nil, err
+	}
+	cfg.TemplateAskValueMaxChars = templateAskValue
+	templateAskCount, err := positiveInt("TEMPLATE_ASK_MAX_PER_BODY", "10")
+	if err != nil {
+		return nil, err
+	}
+	cfg.TemplateAskMaxPerBody = templateAskCount
 
 	guidelineText, err := positiveInt("GUIDELINE_TEXT_MAX_CHARS", "300")
 	if err != nil {

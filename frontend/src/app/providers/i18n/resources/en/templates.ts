@@ -147,6 +147,9 @@ Send the body only — no explanation and no code fence. Write it in the languag
       empty_write: 'nothing to write',
       empty_note: 'the note is empty',
       invalid_count: 'photos per row must be between 1 and {{max}}',
+      duplicate_ask_label: 'another field already asks under that title',
+      ask_in_repeat: 'a field inside 사진마다 반복 cannot ask for data',
+      too_many_asks: 'at most {{askMax}} fields may ask for data',
     },
   },
   slot: {

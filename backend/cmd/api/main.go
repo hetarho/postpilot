@@ -321,6 +321,8 @@ func main() {
 			BodyMaxChars: cfg.TemplateBodyMaxChars, MaxPerAccount: cfg.TemplateMaxPerAccount,
 			MaxRepeatExpansion: cfg.TemplateMaxRepeatExpansion,
 			PhotoRowMax:        cfg.TemplatePhotoRowMax,
+			AskLabelMaxChars:   cfg.TemplateAskLabelMaxChars,
+			AskMaxPerBody:      cfg.TemplateAskMaxPerBody,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})

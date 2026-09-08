@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { decode } from '../lib/grammar'
 import {
+  asksForData,
   blockKindKey,
   blockSummary,
   canInsert,
   endPosition,
   fromBody,
   insertAt,
+  isCompleteBlock,
   newBlock,
   outline,
   photoSummaryKey,
@@ -14,11 +16,12 @@ import {
   repeatPhotoCount,
   reorder,
   toBody,
+  toValidBody,
   type BuilderBlock,
 } from './blocks'
 
 // The ceiling the shared fixture declares, so this suite and the grammar suite agree.
-const options = { photoRowMax: 4 }
+const options = { photoRowMax: 4, askMaxPerBody: 3 }
 // What an unlabelled legacy position falls back to. The real strings come from i18n; these
 // stand in for them, which is the whole point of passing them rather than looking them up.
 const legacy = { place: '지도', link: '링크' }
@@ -275,5 +278,64 @@ describe('the position a touched row leaves behind', () => {
 
   it('has no position for a block that is gone', () => {
     expect(positionAfter(composition, 'nope')).toBeNull()
+  })
+})
+
+describe('a row that asks the post for its data', () => {
+  it('serializes the write flavor with its instruction and the verbatim flavor self-closing', () => {
+    const blocks: BuilderBlock[] = [
+      { id: 'a', kind: 'write', text: '별점과 한 줄 총평을 쓰세요', ask: '총평 별점' },
+      { id: 'b', kind: 'text', text: '', ask: '방문일' },
+    ]
+    expect(toBody(blocks)).toBe(
+      '<ask label="총평 별점">별점과 한 줄 총평을 쓰세요</ask>\n<ask label="방문일"/>',
+    )
+  })
+
+  it('reads an instruction-bearing field back as an AI가 쓰는 글 row', () => {
+    expect(read('<ask label="총평 별점">별점과 총평</ask>')).toEqual([
+      { id: expect.any(String), kind: 'write', text: '별점과 총평', ask: '총평 별점' },
+    ])
+  })
+
+  it('reads an empty field back as a 고정 문구 row', () => {
+    expect(read('<ask label="방문일"/>')).toEqual([
+      { id: expect.any(String), kind: 'text', text: '', ask: '방문일' },
+    ])
+  })
+
+  it('round-trips both flavors byte for byte', () => {
+    for (const body of [
+      '<ask label="총평 별점">별점과 총평</ask>',
+      '<ask label="방문일"/>',
+      '오늘의 기록\n<ask label="방문일"/>\n<slot kind="photo"/>\n<ask label="총평">총평</ask>',
+    ]) {
+      expect(toBody(read(body))).toBe(body)
+    }
+  })
+
+  it('escapes a title the way any other authored text is escaped', () => {
+    const body = toBody([{ id: 'a', kind: 'text', text: '', ask: '네이버 "별점"' }])
+    expect(body).toBe('<ask label="네이버 &quot;별점&quot;"/>')
+    expect(read(body)).toEqual([
+      { id: expect.any(String), kind: 'text', text: '', ask: '네이버 "별점"' },
+    ])
+  })
+
+  // A row is complete when it can serialize without changing meaning: a 고정 문구 needs only
+  // its title, while an AI가 쓰는 글 without an instruction would emit an empty element — the
+  // OTHER flavor — so it stays out of the body until it says something.
+  it('needs a title, and an instruction too when the model writes there', () => {
+    expect(isCompleteBlock({ id: 'a', kind: 'text', text: '', ask: '방문일' })).toBe(true)
+    expect(isCompleteBlock({ id: 'b', kind: 'text', text: '', ask: '   ' })).toBe(false)
+    expect(isCompleteBlock({ id: 'c', kind: 'write', text: '', ask: '총평' })).toBe(false)
+    expect(isCompleteBlock({ id: 'd', kind: 'write', text: '총평', ask: '총평' })).toBe(true)
+    expect(toValidBody([{ id: 'c', kind: 'write', text: '', ask: '총평' }])).toBe('')
+  })
+
+  it('says which rows ask for data', () => {
+    expect(asksForData({ id: 'a', kind: 'write', text: 'x', ask: '총평' })).toBe(true)
+    expect(asksForData({ id: 'b', kind: 'write', text: 'x' })).toBe(false)
+    expect(asksForData({ id: 'c', kind: 'photo', count: 1 })).toBe(false)
   })
 })

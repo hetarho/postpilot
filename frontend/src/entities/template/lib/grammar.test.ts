@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { decode, parse, serialize, type TemplateNode } from './grammar'
+import { askFields, decode, parse, serialize, type TemplateNode } from './grammar'
 
 // The node reference is local to this file on purpose: the app tsconfig deliberately does not
 // expose node types, so app code cannot reach the filesystem. Reading the shared fixture is a
@@ -33,9 +33,12 @@ const fixturePath = resolve(
 )
 const fixture = JSON.parse(readFileSync(fixturePath, 'utf8'))
 const cases: FixtureCase[] = fixture.cases
-/** The ceiling the FIXTURE declares, never this deployment's own: a `count` case has to mean
- *  the same thing on both sides, which is exactly what this file exists to guarantee. */
-const options = { photoRowMax: fixture.photoRowMax as number }
+/** The ceilings the FIXTURE declares, never this deployment's own: a `count` or a data-field
+ *  case has to mean the same thing on both sides, which is exactly what this file guarantees. */
+const options = {
+  photoRowMax: fixture.photoRowMax as number,
+  askMaxPerBody: fixture.askMaxPerBody as number,
+}
 
 function expectNodes(got: readonly TemplateNode[], want: readonly FixtureNode[], path: string) {
   expect(
@@ -54,6 +57,10 @@ function expectNodes(got: readonly TemplateNode[], want: readonly FixtureNode[],
       expect(decode(actual.label ?? ''), at).toBe(expected.label)
       expect(actual.count, at).toBe(expected.count)
     }
+    if (expected.t === 'ask') {
+      expect(decode(actual.label ?? ''), at).toBe(expected.label)
+      expect(decode(actual.text ?? ''), at).toBe(expected.text)
+    }
     if (expected.t === 'repeat') {
       expect(actual.each, at).toBe(expected.each)
       expectNodes(actual.children ?? [], expected.children ?? [], at)
@@ -62,8 +69,9 @@ function expectNodes(got: readonly TemplateNode[], want: readonly FixtureNode[],
 }
 
 describe('template grammar against the shared fixtures', () => {
-  it('runs the ceiling the fixture declares', () => {
+  it('runs the ceilings the fixture declares', () => {
     expect(options.photoRowMax).toBeGreaterThan(0)
+    expect(options.askMaxPerBody).toBeGreaterThan(0)
   })
 
   it('reads at least one accepted and one refused case', () => {
@@ -140,5 +148,37 @@ describe('the TypeScript parser agrees with the Go parser', () => {
       }
     }
     expect(disagreements.slice(0, 10)).toEqual([])
+  })
+})
+
+/** What the write screen reads off a body (TEMPLATE-43). It is the one place ① learns which
+ *  fields exist, so it has to answer for a body nobody can fix from there. */
+describe('the data fields a body asks for', () => {
+  it('lists them in body order with the flavor each one feeds', () => {
+    expect(
+      askFields(
+        '오늘의 기록\n<ask label="방문일"/>\n<slot kind="photo"/>\n<ask label="총평">총평을 쓰세요</ask>',
+        options,
+      ),
+    ).toEqual([
+      { label: '방문일', flavor: 'verbatim' },
+      { label: '총평', flavor: 'write' },
+    ])
+  })
+
+  it('decodes a title the way the builder shows it', () => {
+    expect(askFields('<ask label="네이버 &quot;별점&quot;"/>', options)).toEqual([
+      { label: '네이버 "별점"', flavor: 'verbatim' },
+    ])
+  })
+
+  it('asks for nothing when the body has no field', () => {
+    expect(askFields('<write>인트로</write>', options)).toEqual([])
+  })
+
+  // ① is not where a broken template is fixed: it renders no fields rather than an error.
+  it('asks for nothing when the body does not parse', () => {
+    expect(askFields('<ask label="총평"/>\n<ask label="총평"/>', options)).toEqual([])
+    expect(askFields('<writer>', options)).toEqual([])
   })
 })

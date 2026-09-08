@@ -31,7 +31,7 @@ func (s *Service) Limits() Limits { return s.limits }
 // than in the parser so the shared fixture can pin its own ceiling and never depend on the
 // environment the test runs in.
 func (s *Service) parseOptions() ParseOptions {
-	return ParseOptions{PhotoRowMax: s.limits.PhotoRowMax}
+	return ParseOptions{PhotoRowMax: s.limits.PhotoRowMax, AskMaxPerBody: s.limits.AskMaxPerBody}
 }
 
 func (s *Service) List(ctx context.Context, userID string) ([]Template, error) {
@@ -185,8 +185,19 @@ func (s *Service) validBody(value string) (string, error) {
 	if chars := utf8.RuneCountInString(trimmed); chars > s.limits.BodyMaxChars {
 		return "", &FieldTooLongError{Field: "body", Chars: chars, Max: s.limits.BodyMaxChars}
 	}
-	if _, err := Parse(trimmed, s.parseOptions()); err != nil {
+	nodes, err := Parse(trimmed, s.parseOptions())
+	if err != nil {
 		return "", err
+	}
+	// A data field's TITLE is bounded here rather than by a parse reason: TEMPLATE-20's
+	// reason list is the grammar's, and a configured ceiling inside it would make the shared
+	// fixture depend on the deployment. It refuses like any other over-long field, which is
+	// a message the editor already renders.
+	for _, ask := range Asks(nodes) {
+		label := Decode(ask.Label)
+		if chars := utf8.RuneCountInString(label); chars > s.limits.AskLabelMaxChars {
+			return "", &FieldTooLongError{Field: "ask_label", Chars: chars, Max: s.limits.AskLabelMaxChars}
+		}
 	}
 	return trimmed, nil
 }

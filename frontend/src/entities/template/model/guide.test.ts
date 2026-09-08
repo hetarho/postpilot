@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
 import { TEMPLATE_BODY_MAX_CHARS, TEMPLATE_PHOTO_ROW_MAX } from '@/shared/config'
 import { PARSE_REASONS, parse } from '../lib/grammar'
+import { TEMPLATE_PARSE_OPTIONS } from './types'
 import { GUIDE_EXAMPLE_BODY, formatGuide } from './guide'
 
 afterEach(() => initializeI18n('ko'))
@@ -32,7 +33,7 @@ describe.each(['ko', 'en'] as const)('the format guide in %s', (language) => {
 
   // The example is a BODY, and this is what stops it drifting from the grammar it teaches.
   it('carries an example the real parser accepts', () => {
-    const result = parse(GUIDE_EXAMPLE_BODY, { photoRowMax: TEMPLATE_PHOTO_ROW_MAX })
+    const result = parse(GUIDE_EXAMPLE_BODY, TEMPLATE_PARSE_OPTIONS)
     expect(result.ok).toBe(true)
     expect(guide()).toContain(GUIDE_EXAMPLE_BODY)
   })
@@ -68,9 +69,11 @@ describe.each(['ko', 'en'] as const)('every parse reason has copy in %s', (langu
   it('renders a sentence rather than a key', async () => {
     const i18n = initializeI18n(language)
     for (const reason of PARSE_REASONS) {
-      const text = i18n.t(`builder.reasons.${reason}`, { ns: 'templates', max: 4 })
+      const text = i18n.t(`builder.reasons.${reason}`, { ns: 'templates', max: 4, askMax: 3 })
       expect(text, reason).not.toBe(`builder.reasons.${reason}`)
       expect(text, reason).not.toBe('')
+      // A reason whose number never arrived reads as `{{max}}` at the user.
+      expect(text, reason).not.toContain('{{')
     }
   })
 })

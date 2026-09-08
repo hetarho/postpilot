@@ -4,16 +4,22 @@
     "and TypeScript (frontend/src/entities/template/lib/grammar.test.ts). A new grammar rule lands",
     "here first — this file is the only mechanism that keeps two implementations of one grammar",
     "honest. Node shapes: literal{raw} · write{text} · slot{kind,label,count} · note{text} ·",
-    "repeat{each,children}. Every ok case is also asserted to serialize back to `body` byte-exactly.",
+    "repeat{each,children} · ask{label,text}. Every ok case is also asserted to serialize back to",
+    "`body` byte-exactly.",
     "`photoRowMax` below is the ceiling BOTH harnesses must parse with — never the deployment's",
     "own TEMPLATE_PHOTO_ROW_MAX, or a count case would mean different things on the two sides.",
     "A photo slot's `count` is 1 when the attribute is absent and 0 on every non-photo slot. The",
     "value must be plain ASCII digits after trimming the shared blank set: `+2` and `2.0` are",
     "invalid_count in both parsers rather than coerced, because Go's and JavaScript's number",
     "parsers disagree about exactly those forms.",
-    "See spec/legacy/tech/post-template-grammar.md."
+    "See spec/legacy/tech/post-template-grammar.md.",
+    "`askMaxPerBody` is the data-field ceiling BOTH harnesses parse with, deliberately smaller than",
+    "the deployment's TEMPLATE_ASK_MAX_PER_BODY so a too_many_asks case stays short. An ask's `text`",
+    "is empty for the verbatim flavor — the self-closing form, the empty element and a blank one all",
+    "normalize to it — and non-empty for the write flavor."
   ],
   "photoRowMax": 4,
+  "askMaxPerBody": 3,
   "cases": [
     {
       "name": "empty body",
@@ -581,6 +587,178 @@
           ]
         }
       ]
+    },
+    {
+      "name": "a data field with an instruction",
+      "body": "<ask label=\"총평 별점\">별점과 한 줄 총평을 쓰세요</ask>",
+      "nodes": [
+        {
+          "t": "ask",
+          "label": "총평 별점",
+          "text": "별점과 한 줄 총평을 쓰세요"
+        }
+      ]
+    },
+    {
+      "name": "a self-closing data field takes the answer verbatim",
+      "body": "<ask label=\"방문일\"/>",
+      "nodes": [
+        {
+          "t": "ask",
+          "label": "방문일",
+          "text": ""
+        }
+      ]
+    },
+    {
+      "name": "an empty element is the same node as the self-closing form",
+      "body": "<ask label=\"방문일\"></ask>",
+      "nodes": [
+        {
+          "t": "ask",
+          "label": "방문일",
+          "text": ""
+        }
+      ]
+    },
+    {
+      "name": "a whitespace-only data field is the verbatim flavor on both sides",
+      "body": "<ask label=\"방문일\">　 </ask>",
+      "nodes": [
+        {
+          "t": "ask",
+          "label": "방문일",
+          "text": ""
+        }
+      ]
+    },
+    {
+      "name": "a quote in a data field title round-trips through its escape",
+      "body": "<ask label=\"네이버 &quot;별점&quot;\"/>",
+      "nodes": [
+        {
+          "t": "ask",
+          "label": "네이버 \"별점\"",
+          "text": ""
+        }
+      ]
+    },
+    {
+      "name": "an escaped angle bracket in a data field title round-trips",
+      "body": "<ask label=\"&lt;별점&gt;\">별점을 쓰세요</ask>",
+      "nodes": [
+        {
+          "t": "ask",
+          "label": "<별점>",
+          "text": "별점을 쓰세요"
+        }
+      ]
+    },
+    {
+      "name": "data fields stand beside the other constructs",
+      "body": "오늘의 기록\n<ask label=\"방문일\"/>\n<slot kind=\"photo\"/>\n<ask label=\"총평\">총평을 쓰세요</ask>",
+      "nodes": [
+        {
+          "t": "literal",
+          "raw": "오늘의 기록\n"
+        },
+        {
+          "t": "ask",
+          "label": "방문일",
+          "text": ""
+        },
+        {
+          "t": "literal",
+          "raw": "\n"
+        },
+        {
+          "t": "slot",
+          "kind": "photo",
+          "label": "",
+          "count": 1
+        },
+        {
+          "t": "literal",
+          "raw": "\n"
+        },
+        {
+          "t": "ask",
+          "label": "총평",
+          "text": "총평을 쓰세요"
+        }
+      ]
+    },
+    {
+      "name": "a data field without a title",
+      "body": "<ask/>",
+      "error": {
+        "line": 1,
+        "reason": "missing_attribute"
+      }
+    },
+    {
+      "name": "a data field with an empty title",
+      "body": "<ask label=\"\"/>",
+      "error": {
+        "line": 1,
+        "reason": "missing_attribute"
+      }
+    },
+    {
+      "name": "a data field with a blank title",
+      "body": "<ask label=\"​ \"/>",
+      "error": {
+        "line": 1,
+        "reason": "missing_attribute"
+      }
+    },
+    {
+      "name": "two data fields with one title",
+      "body": "<ask label=\"총평\"/>\n<ask label=\"총평\"/>",
+      "error": {
+        "line": 2,
+        "reason": "duplicate_ask_label"
+      }
+    },
+    {
+      "name": "a data field inside a repeat",
+      "body": "<repeat each=\"photo\">\n<ask label=\"이 사진\"/>\n</repeat>",
+      "error": {
+        "line": 2,
+        "reason": "ask_in_repeat"
+      }
+    },
+    {
+      "name": "more data fields than the ceiling",
+      "body": "<ask label=\"a\"/>\n<ask label=\"b\"/>\n<ask label=\"c\"/>\n<ask label=\"d\"/>",
+      "error": {
+        "line": 4,
+        "reason": "too_many_asks"
+      }
+    },
+    {
+      "name": "a nested tag inside a data field",
+      "body": "<ask label=\"총평\"><write>a</write></ask>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "an unclosed data field",
+      "body": "<ask label=\"총평\">총평을",
+      "error": {
+        "line": 1,
+        "reason": "unclosed_tag"
+      }
+    },
+    {
+      "name": "an orphan data field close",
+      "body": "</ask>",
+      "error": {
+        "line": 1,
+        "reason": "unexpected_close"
+      }
     }
   ]
 }

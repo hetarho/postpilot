@@ -4,6 +4,7 @@ import { Link, useBlocker, useNavigate, useParams } from '@tanstack/react-router
 import { useSession } from '@/entities/session'
 import {
   TEMPLATE_LIMITS,
+  TEMPLATE_PARSE_OPTIONS,
   TemplateComposition,
   TemplateSource,
   canSaveTemplate,
@@ -12,7 +13,6 @@ import {
   useTemplates,
   type Template,
 } from '@/entities/template'
-import { TEMPLATE_PHOTO_ROW_MAX } from '@/shared/config'
 import { useCreateTemplate } from '@/features/create-template'
 import { useUpdateTemplate } from '@/features/edit-template'
 import {
@@ -172,7 +172,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   // they cannot disagree. The builder emits only bodies that parse, so this changes nothing for a
   // builder-only flow — it is what makes "a body that does not parse cannot be saved from EITHER
   // mode" true (TEMPLATE-30, TEMPLATE-7).
-  const parsed = parse(trimmed.body, { photoRowMax: TEMPLATE_PHOTO_ROW_MAX })
+  const parsed = parse(trimmed.body, TEMPLATE_PARSE_OPTIONS)
   const blocked = !dirty || !canSaveTemplate(trimmed) || !parsed.ok || pending
 
   // A REF, not state: the post-save redirect below runs in the same tick as the state update

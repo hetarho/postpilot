@@ -145,6 +145,9 @@ export const templates = {
       empty_write: '무엇을 쓸지 비어 있어요',
       empty_note: '메모가 비어 있어요',
       invalid_count: '가로 사진 수가 1~{{max}} 사이가 아니에요',
+      duplicate_ask_label: '같은 제목의 데이터 받기가 이미 있어요',
+      ask_in_repeat: '사진마다 반복 안에서는 데이터를 받을 수 없어요',
+      too_many_asks: '데이터 받기는 최대 {{askMax}}개까지예요',
     },
   },
   slot: {

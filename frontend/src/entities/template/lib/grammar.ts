@@ -8,13 +8,13 @@
  *  `backend/internal/template/testdata/grammar/cases.json`, which both test suites read. A
  *  new rule lands there first. The server stays authoritative on a save. */
 
-export type NodeKind = 'literal' | 'write' | 'slot' | 'note' | 'repeat'
+export type NodeKind = 'literal' | 'write' | 'slot' | 'note' | 'repeat' | 'ask'
 export type SlotKind = 'photo' | 'place' | 'link'
 
 const SLOT_KINDS: readonly string[] = ['photo', 'place', 'link']
 /** Attached photos are the only countable material a post has. */
 const EACH_VALUES: readonly string[] = ['photo']
-const TAG_NAMES: readonly string[] = ['write', 'slot', 'note', 'repeat']
+const TAG_NAMES: readonly string[] = ['write', 'slot', 'note', 'repeat', 'ask']
 
 /** One parsed construct. `source` is the node's exact source slice and serialization re-emits
  *  it verbatim, which is what makes `serialize(parse(body)) === body` by construction — for a
@@ -27,10 +27,11 @@ export interface TemplateNode {
   kind: NodeKind
   source: string
   line: number
-  /** write · note */
+  /** write · note · ask — empty on an ask means the verbatim flavor */
   text?: string
   /** slot */
   slotKind?: SlotKind
+  /** slot · ask (an ask's is the title the write screen shows over the field) */
   label?: string
   /** How many photos a photo position holds side by side. 1 when the attribute is absent and
    *  0 on every node that is not a photo slot, so a non-zero count always means "this position
@@ -55,6 +56,11 @@ export type ParseReason =
   /** A photo position's `count` that is not an integer in 1 … photoRowMax. Its own reason
    *  rather than malformed_tag: the attribute parsed fine, it is the VALUE to go fix. */
   | 'invalid_count'
+  /** The three ways a data field can be wrong. `ask_in_repeat` is its own reason rather than
+   *  `unknown_tag` because the tag is real and it is the PLACE that is wrong. */
+  | 'duplicate_ask_label'
+  | 'ask_in_repeat'
+  | 'too_many_asks'
 
 /** Every reason a body can be refused, as a list.
  *
@@ -73,6 +79,9 @@ export const PARSE_REASONS: readonly ParseReason[] = [
   'empty_write',
   'empty_note',
   'invalid_count',
+  'duplicate_ask_label',
+  'ask_in_repeat',
+  'too_many_asks',
 ]
 
 export interface ParseFailure {
@@ -88,6 +97,9 @@ export type ParseResult = { ok: true; nodes: TemplateNode[] } | { ok: false; fai
  *  test runs — the Go parser takes the same option for the same reason. */
 export interface ParseOptions {
   photoRowMax: number
+  /** How many data fields one body may declare (`TEMPLATE_ASK_MAX_PER_BODY`). Configuration
+   *  for the same reason `photoRowMax` is, and the shared fixture declares its own. */
+  askMaxPerBody: number
 }
 
 /** The ONE definition of "this text says nothing", shared with the Go parser.
@@ -140,7 +152,58 @@ export function parse(body: string, options: ParseOptions): ParseResult {
   if (scan.end !== body.length) {
     return { ok: false, failure: { line: lineAt(body, scan.end), reason: 'unexpected_close' } }
   }
+  const asks = checkAsks(scan.nodes, options.askMaxPerBody)
+  if (asks) return { ok: false, failure: asks }
   return { ok: true, nodes: scan.nodes }
+}
+
+/** The two body-WIDE rules a single tag cannot see: titles are unique and there are at most
+ *  `askMaxPerBody` of them.
+ *
+ *  One pass in body order, duplicate before count on the same node — a duplicate names the
+ *  exact thing to go fix, while the count only says there is one field too many. The Go parser
+ *  walks it identically, which is what keeps the shared fixture meaningful. */
+function checkAsks(
+  nodes: readonly TemplateNode[],
+  maxPerBody: number,
+  seen: Set<string> = new Set(),
+): ParseFailure | null {
+  for (const node of nodes) {
+    if (node.kind === 'repeat') {
+      const nested = checkAsks(node.children ?? [], maxPerBody, seen)
+      if (nested) return nested
+      continue
+    }
+    if (node.kind !== 'ask') continue
+    const label = decode(node.label ?? '')
+    if (seen.has(label)) return { line: node.line, reason: 'duplicate_ask_label' }
+    seen.add(label)
+    if (seen.size > maxPerBody) return { line: node.line, reason: 'too_many_asks' }
+  }
+  return null
+}
+
+/** The body's data fields in body order, as the write screen needs them: a title to put over a
+ *  textarea and which flavor the answer feeds (TEMPLATE-43).
+ *
+ *  It never throws and never reports a parse failure — ① is not where a broken template is
+ *  fixed, so a body that does not parse simply asks for nothing. */
+export function askFields(body: string, options: ParseOptions): AskField[] {
+  const result = parse(body, options)
+  if (!result.ok) return []
+  return result.nodes
+    .filter((node) => node.kind === 'ask')
+    .map((node) => ({
+      label: decode(node.label ?? ''),
+      flavor: (node.text ?? '') === '' ? ('verbatim' as const) : ('write' as const),
+    }))
+}
+
+export interface AskField {
+  label: string
+  /** `verbatim` puts the answer on the page as typed; `write` hands it to the model as the
+   *  only facts that position's prose may state. */
+  flavor: 'verbatim' | 'write'
 }
 
 type Scan = { ok: true; nodes: TemplateNode[]; end: number } | { ok: false; failure: ParseFailure }
@@ -231,6 +294,33 @@ function parseTag(
         count,
       },
       after: head.after,
+    }
+  }
+
+  if (name === 'ask') {
+    // The PLACE is checked before the attributes: a field inside a repeat is wrong wherever
+    // its title is.
+    if (inRepeat) return { ok: false, failure: { line, reason: 'ask_in_repeat' } }
+    const rawLabel = head.attrs.get('label')
+    if (rawLabel === undefined || isBlank(decode(rawLabel))) {
+      return { ok: false, failure: { line, reason: 'missing_attribute' } }
+    }
+    if (head.selfClosing) {
+      return {
+        ok: true,
+        node: { kind: 'ask', source: body.slice(at, head.after), line, label: rawLabel, text: '' },
+        after: head.after,
+      }
+    }
+    const inner = readTextBody(body, head.after, name, line)
+    if (!inner.ok) return inner
+    // A blank element is the verbatim flavor, normalized to an empty text so "no instruction"
+    // is one value rather than three whitespace variants. `source` keeps the author's bytes.
+    const text = isBlank(decode(inner.text)) ? '' : inner.text
+    return {
+      ok: true,
+      node: { kind: 'ask', source: body.slice(at, inner.after), line, label: rawLabel, text },
+      after: inner.after,
     }
   }
 

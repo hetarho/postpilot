@@ -20,7 +20,7 @@ import {
   type PaletteKind,
   type Position,
 } from '../model/blocks'
-import { remainingChars, TEMPLATE_LIMITS } from '../model/types'
+import { remainingChars, TEMPLATE_LIMITS, TEMPLATE_PARSE_OPTIONS } from '../model/types'
 import { TEMPLATE_PHOTO_ROW_MAX } from '@/shared/config'
 import {
   Badge,
@@ -212,15 +212,10 @@ function Composition({
 /** The one place the two things the model cannot look up are supplied: the configured row
  *  ceiling, and what an unlabelled legacy position is called once it is read as fixed text. */
 function readBody(body: string, t: TFunction<'templates'>): BodyRead {
-  return fromBody(
-    body,
-    decode,
-    { photoRowMax: TEMPLATE_PHOTO_ROW_MAX },
-    {
-      place: t('builder.legacy.place'),
-      link: t('builder.legacy.link'),
-    },
-  )
+  return fromBody(body, decode, TEMPLATE_PARSE_OPTIONS, {
+    place: t('builder.legacy.place'),
+    link: t('builder.legacy.link'),
+  })
 }
 
 function readBlocks(body: string, t: TFunction<'templates'>): BuilderBlock[] {

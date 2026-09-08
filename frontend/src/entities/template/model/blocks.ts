@@ -14,11 +14,23 @@ import {
  *  anything the builder produced, which is what change 25 AC8 asks for — and it is the only
  *  way a body is authored, since the grammar itself is never shown to anyone (change 30). */
 export type BuilderBlock =
-  | { id: string; kind: 'write'; text: string }
-  | { id: string; kind: 'text'; text: string }
+  | { id: string; kind: 'write'; text: string; ask?: string }
+  | { id: string; kind: 'text'; text: string; ask?: string }
   | { id: string; kind: 'photo'; count: number }
   | { id: string; kind: 'note'; text: string }
   | { id: string; kind: 'repeat'; children: BuilderBlock[] }
+
+/** 데이터 받기 on a row: `ask` holds the TITLE the post's author is asked under (TEMPLATE-44).
+ *  It rides the two rows whose text a post can decide — an AI가 쓰는 글 keeps its instruction
+ *  beside the title, and a 고정 문구's own text is replaced by what the author types, so the
+ *  title IS that row's authored content. */
+export function askTitle(block: BuilderBlock): string {
+  return block.kind === 'write' || block.kind === 'text' ? (block.ask ?? '').trim() : ''
+}
+
+export function asksForData(block: BuilderBlock): boolean {
+  return askTitle(block) !== ''
+}
 
 /** What a person actually picks from the palette — and, since the retirement of the place and
  *  link positions, the whole vocabulary of blocks there is. A thing the author fills in later
@@ -57,6 +69,16 @@ export function newBlock(kind: BuilderBlockKind): BuilderBlock {
 /** One block's source. A slot's label and a write's instruction are user text, so both are
  *  escaped on the way in — the parser decodes them on the way back out. */
 function blockSource(block: BuilderBlock): string {
+  const ask = askTitle(block)
+  if (ask !== '' && (block.kind === 'write' || block.kind === 'text')) {
+    const label = encode(ask)
+    // The write flavor keeps its instruction inside the element and the verbatim flavor is
+    // self-closing. `isCompleteBlock` is what keeps a write row from ever serializing without
+    // one — an empty element would silently mean the other flavor.
+    return block.kind === 'write'
+      ? `<ask label="${label}">${encode(block.text)}</ask>`
+      : `<ask label="${label}"/>`
+  }
   switch (block.kind) {
     case 'write':
       return `<write>${encode(block.text)}</write>`
@@ -122,6 +144,18 @@ function fromNodes(
       case 'note':
         blocks.push({ id: nextBlockId(), kind: 'note', text: decodeText(node.text ?? '') })
         break
+      case 'ask': {
+        // The flavor decides which ROW it is: an instruction makes it an AI가 쓰는 글 row, an
+        // empty element a 고정 문구 row whose text the post's author supplies (TEMPLATE-43).
+        const ask = decodeText(node.label ?? '')
+        const text = decodeText(node.text ?? '')
+        blocks.push(
+          text === ''
+            ? { id: nextBlockId(), kind: 'text', text: '', ask }
+            : { id: nextBlockId(), kind: 'write', text, ask },
+        )
+        break
+      }
       case 'slot': {
         if (node.slotKind === 'photo') {
           blocks.push({ id: nextBlockId(), kind: 'photo', count: node.count ?? 1 })
@@ -179,6 +213,12 @@ export function reorder<T>(items: readonly T[], from: number, to: number): T[] {
  *  state and left out of the body until it says something. Without this the builder would
  *  produce a body its own parser refuses, the instant a block is added. */
 export function isCompleteBlock(block: BuilderBlock): boolean {
+  // A row asking for data needs its TITLE, and an AI가 쓰는 글 row needs its instruction too:
+  // without one it would serialize as an empty element, which is the other flavor.
+  if (askTitle(block) !== '') {
+    return block.kind === 'text' || (block.kind === 'write' && block.text.trim() !== '')
+  }
+
   switch (block.kind) {
     case 'write':
     case 'note':

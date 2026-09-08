@@ -32,6 +32,12 @@ func TestCorpusMatchesTheCommittedFile(t *testing.T) {
 		// whole slots the corpus would never actually exercise invalid_count.
 		"count=\"2\"", "count=\"9\"", "count=\"x\"",
 		"<slot kind=\"photo\" count=\"2\"/>", "<slot kind=\"photo\" count=\"9\"/>",
+		// Data fields (TEMPLATE-43). Both flavors as whole tags, the open/close pieces so the
+		// generator can also build broken ones, and one repeated title so duplicate_ask_label
+		// and too_many_asks are actually reachable. Growing this alphabet reshuffles every
+		// generated body — that is inherent, and the verdicts are what the diff is read for.
+		"<ask label=\"총평\"/>", "<ask label=\"총평\">별점</ask>", "<ask label=\"방문일\"/>",
+		"<ask label=\"총평\">", "</ask>", "<ask/>", "<ask label=\"\"/>", "label=\"총평\"",
 	}
 	type entry struct {
 		Body   string `json:"body"`

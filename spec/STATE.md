@@ -11,19 +11,19 @@
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
 | ARCH | 2 | 2 | - | 0 |
-| AUTH | 2 | 2 | - | 0 |
+| AUTH | 3 | 3 | - | 0 |
 | QUOTA | 6 | 6 | - | 0 |
-| POST | 2 | 2 | - | 0 |
+| POST | 3 | 3 | - | 0 |
 | VOICE | 1 | 1 | - | 1 |
-| GEN | 3 | 3 | - | 0 |
+| GEN | 4 | 4 | - | 0 |
 | MODEL | 3 | 3 | - | 0 |
-| TEMPLATE | 3 | 3 | - | 1 |
+| TEMPLATE | 4 | 4 | - | 1 |
 | GUIDE | 1 | 1 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
 | PUBLISH | 4 | 4 | - | 0 |
 | LANG | 1 | 1 | - | 0 |
-| THEME | 4 | 4 | - | 0 |
-| MARKETING | 3 | 3 | - | 0 |
+| THEME | 6 | 4 | THEME-19✎ THEME-37✎ THEME-8✎ 15✎ 18✎ 23✎ 27✎ 29✎ 34✎ | 0 |
+| MARKETING | 4 | 3 | MARKETING-5✎ 6✎ 11✎ 12✎ 13✎ 15✎ | 0 |
 | VIDEO | 1 | 1 | - | 1 |
 | BILLING | 4 | 4 | - | 0 |
 
@@ -40,13 +40,27 @@
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUBLISH | T044 T043 | todo |
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
+| T056 | The post's template answers: table, autosave field, and the way to generation | POST TEMPLATE | - | todo |
+| T057 | Resolving the data fields at enqueue and fencing their values in the prompt | TEMPLATE GEN POST | T055 T056 | todo |
+| T058 | 데이터 받기: the switch on the builder's two text rows | TEMPLATE THEME | T055 | todo |
+| T059 | The template's data fields in ①, under the memo | POST TEMPLATE | T055 T056 | todo |
 
 ## next
-- the eight review-sourced tasks (T047-T054) are done; only the PUBLISH chain remains, and it is blocked on a human survey pass
-- spec-wide, out of scope for any of them: `haeram-spec-creator lint` rejects PUBLISH BILLING TEMPLATE MARKETING against FORMAT's `2-6 uppercase` id rule — either the rule or the four domain ids has to move, and it is a planning decision
+- `implement-task T056`; T058 is unblocked too (it depended on T055 alone) and touches disjoint files, so the two can run in parallel — then T057, then T059
+- also owed: `create-task THEME MARKETING` for THEME@6 · MARKETING@4 from the parallel session, whose THEME-29 already carries the `Switch` T058 needs; BEFORE T058, TEMPLATE-41 excludes `label` from the format guide while TEMPLATE-43's `ask` requires that attribute (`guide.test.ts` asserts the guide holds no `label=`), so update-ssot TEMPLATE must name the retired SLOT label specifically or rename the attribute — owner's call; and `haeram-spec-creator lint` still rejects PUBLISH BILLING TEMPLATE MARKETING against FORMAT's `2-6 uppercase` id rule
 - the PUBLISH chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
-
 ## log
+- 260909 T055 done
+- 260909 update-ssot THEME r6 (THEME-37✎ promotional exemption · 23✎ pointer floor · 29✎ sizes + Switch/promo roster · 8 15 18 19 27 34✎) · MARKETING r4 (5✎ 6✎ 11✎ 12✎ 13✎ 15✎); warning: T058 (todo) is based on THEME@5 — r6 touches neither `Switch`'s behaviour nor the builder, so its base only needs re-stamping at claim
+- 260909 update-ssot THEME MARKETING start (promotional-surface exemption, pointer-based control sizes, /about header and plan cards)
+- 260909 update-ssot AUTH r3 (AUTH-23✎ 24✎): the delta is already in the code (hotfix 3fbbe46), so tasked 2→3 and no create-task is owed
+- 260909 update-ssot AUTH start
+- 260909 T055 claimed (ask)
+- 260909 create-task T055-T059 from TEMPLATE@4 POST@3 GEN@4
+- 260909 THEME row reconciled to rev 5 (file r5, STATE read 4; the r5 delta was never registered)
+- 260908 create-task TEMPLATE POST GEN start
+- 260908 update-ssot TEMPLATE r4 (TEMPLATE-43+ 44+ 45+ 46+) · POST r3 (POST-62+) · GEN r4
+- 260908 update-ssot TEMPLATE start
 - 260908 T054 done
 - 260908 T054 claimed (op5)
 - 260908 T053 done
@@ -56,14 +70,3 @@
 - 260908 T051 done
 - 260908 T051 claimed (op5)
 - 260908 T050 done
-- 260908 T050 claimed (op5)
-- 260908 T049 done
-- 260908 T049 claimed (op5)
-- 260908 T048 done
-- 260908 T048 claimed (op5)
-- 260908 T047 done
-- 260908 T047 claimed (op5)
-- 260908 create-task T047-T054 from BILLING@4 QUOTA@6 review/diff-260908
-- 260908 create-task BILLING review/diff-260908 start
-- 260908 update-ssot BILLING r3 r4 · QUOTA r6 (QUOTA-42+)
-- 260908 update-ssot BILLING start

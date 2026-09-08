@@ -264,6 +264,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 		template.Limits{
 			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
+			AskLabelMaxChars: 40, AskMaxPerBody: 10,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
@@ -446,6 +447,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 		template.Limits{
 			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
+			AskLabelMaxChars: 40, AskMaxPerBody: 10,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
@@ -557,6 +559,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 		template.Limits{
 			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
+			AskLabelMaxChars: 40, AskMaxPerBody: 10,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})

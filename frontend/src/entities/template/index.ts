@@ -3,6 +3,7 @@ export {
   noTemplateLabel,
   NO_TEMPLATE_VALUE,
   TEMPLATE_LIMITS,
+  TEMPLATE_PARSE_OPTIONS,
   canSaveTemplate,
   detachWarning,
   emptyTemplateRef,
@@ -15,6 +16,7 @@ export { invalidateTemplates } from './api/template-cache'
 export { templateErrorMessage } from './api/template-errors'
 export { TemplateRefLabel } from './ui/TemplateRefLabel'
 export {
+  askFields,
   decode,
   encode,
   parse,
@@ -23,6 +25,7 @@ export {
   type ParseFailure,
   type ParseOptions,
   type ParseReason,
+  type AskField,
   type SlotKind,
   type TemplateNode,
 } from './lib/grammar'

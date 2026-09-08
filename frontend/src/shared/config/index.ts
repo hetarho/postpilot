@@ -141,6 +141,17 @@ export const PLAN_ESTIMATE_DEFAULTS = { chars: 1_000, photos: 5, videos: 0 } as 
 /** Where the reader's own case is kept between visits. Namespaced like the theme's key. */
 export const PLAN_ESTIMATE_STORAGE_KEY = 'postpilot.plan-estimate'
 
+/** How far apart the plan ladder's rungs arrive, in milliseconds. Each rung's rise animation
+ *  starts this much after the one before it, so four cards read as one ladder unfolding rather
+ *  than four things appearing at once — and short enough that the last rung is still up before
+ *  a reader has finished the first. */
+export const PROMO_RISE_STAGGER_MS = 60
+
+/** How long a plan card's post count takes to climb to a new value as a slider moves. Long
+ *  enough to read as a count rather than a flicker, short enough to have settled before the
+ *  thumb reaches the next slider stop. */
+export const PROMO_COUNT_UP_MS = 480
+
 /** The provider slugs the operator's catalog screen lifts to the top, in this order; every
  *  other vendor follows alphabetically.
  *
@@ -314,6 +325,23 @@ export const TEMPLATE_BODY_MAX_CHARS = positiveIntEnv(
  *  builder's stepper cannot offer a value the server's parser would refuse on save, so the two
  *  numbers have to be raised together. */
 export const TEMPLATE_PHOTO_ROW_MAX = positiveIntEnv(import.meta.env.VITE_TEMPLATE_PHOTO_ROW_MAX, 4)
+
+/** The data-field ceilings, mirrored from `TEMPLATE_ASK_*` (TEMPLATE-43): a field's title, one
+ *  answer's text, and how many fields one body may declare. The first two are live counters and
+ *  the third is a refusal the builder states before the server has to; the backend stays
+ *  authoritative on all three. */
+export const TEMPLATE_ASK_LABEL_MAX_CHARS = positiveIntEnv(
+  import.meta.env.VITE_TEMPLATE_ASK_LABEL_MAX_CHARS,
+  40,
+)
+export const TEMPLATE_ASK_VALUE_MAX_CHARS = positiveIntEnv(
+  import.meta.env.VITE_TEMPLATE_ASK_VALUE_MAX_CHARS,
+  500,
+)
+export const TEMPLATE_ASK_MAX_PER_BODY = positiveIntEnv(
+  import.meta.env.VITE_TEMPLATE_ASK_MAX_PER_BODY,
+  10,
+)
 
 /** Writing-guideline (작문 지침) text ceiling, mirrored from `GUIDELINE_TEXT_MAX_CHARS` for the
  *  live counter; the server stays authoritative. The per-account cap is deliberately not

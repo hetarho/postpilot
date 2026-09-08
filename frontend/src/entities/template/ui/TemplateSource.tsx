@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { COPY_FEEDBACK_MS } from '@/shared/config'
+import {
+  COPY_FEEDBACK_MS,
+  TEMPLATE_ASK_MAX_PER_BODY,
+  TEMPLATE_PHOTO_ROW_MAX,
+} from '@/shared/config'
 import { copyText } from '@/shared/lib'
 import {
   Button,
@@ -100,7 +104,12 @@ export function TemplateSource({
         <FieldMessage id={errorId} role="alert">
           {t('source.error', {
             line: failure.line,
-            reason: t(`builder.reasons.${failure.reason}`),
+            // Both ceilings travel with every reason: two of them interpolate one, and a
+            // reason rendered without its number shows the user a literal `{{max}}`.
+            reason: t(`builder.reasons.${failure.reason}`, {
+              max: TEMPLATE_PHOTO_ROW_MAX,
+              askMax: TEMPLATE_ASK_MAX_PER_BODY,
+            }),
           })}
         </FieldMessage>
       )}
