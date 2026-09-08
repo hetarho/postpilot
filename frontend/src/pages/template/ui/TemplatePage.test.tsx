@@ -323,3 +323,44 @@ describe('the template screen', () => {
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   })
 })
+
+describe('a template whose rows ask the post for data', () => {
+  // TEMPLATE-44: the flip is an edit of that block like any other, so it opens 저장 by itself —
+  // nothing else about the row has to change for the template to have become a different one.
+  it('opens 저장 on the flip alone', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/new')
+
+    await user.type(await screen.findByLabelText('이름'), '리뷰')
+    await user.click(paletteButton('고정 문구'))
+    await user.type(screen.getByLabelText('들어갈 문구'), '방문일')
+    const save = screen.getByRole('button', { name: '저장' })
+    expect(save).toBeEnabled()
+
+    await user.click(screen.getByRole('switch', { name: '데이터 받기' }))
+    expect(screen.getByLabelText('입력란 제목')).toHaveValue('방문일')
+    expect(save).toBeEnabled()
+  })
+
+  // The parser refuses a body with a repeated title outright, so the builder never emits one:
+  // the colliding row is left out of the body and 저장 is refused instead, which is what keeps a
+  // save from silently dropping the row the author is looking at.
+  it('refuses 저장 while two rows ask under one title, and says so on the row', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/new')
+
+    await user.type(await screen.findByLabelText('이름'), '리뷰')
+    await user.click(paletteButton('고정 문구'))
+    await user.type(screen.getByLabelText('들어갈 문구'), '방문일')
+    await user.click(screen.getByRole('switch', { name: '데이터 받기' }))
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+
+    // A second row asking under the same title.
+    await user.click(paletteButton('고정 문구'))
+    await user.type(screen.getByLabelText('들어갈 문구'), '방문일')
+    await user.click(screen.getAllByRole('switch', { name: '데이터 받기' })[0])
+
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    expect(screen.getByRole('alert').textContent).toContain('제목')
+  })
+})

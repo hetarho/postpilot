@@ -23,13 +23,24 @@ export type BuilderBlock =
 /** 데이터 받기 on a row: `ask` holds the TITLE the post's author is asked under (TEMPLATE-44).
  *  It rides the two rows whose text a post can decide — an AI가 쓰는 글 keeps its instruction
  *  beside the title, and a 고정 문구's own text is replaced by what the author types, so the
- *  title IS that row's authored content. */
+ *  title IS that row's authored content.
+ *
+ *  ABSENT and EMPTY are different states: `undefined` is a row that does not ask, `''` is a row
+ *  that asks and whose title is not typed yet. Deriving the switch from "the title says
+ *  something" would collapse the field the moment someone cleared it to retype it, and an empty
+ *  title simply keeps the row out of the body the way an empty `<write>` already does. */
+/** The two rows whose text a post can decide: an AI가 쓰는 글 and a 고정 문구 (TEMPLATE-44). A
+ *  사진 holds an attachment and an AI에게만 하는 말 reaches no reader, so neither can ask. */
+export type AskableBlock = Extract<BuilderBlock, { kind: 'write' | 'text' }>
+
 export function askTitle(block: BuilderBlock): string {
   return block.kind === 'write' || block.kind === 'text' ? (block.ask ?? '').trim() : ''
 }
 
+/** Whether this row ASKS, which is the switch's own state — not whether its title says
+ *  something yet. */
 export function asksForData(block: BuilderBlock): boolean {
-  return askTitle(block) !== ''
+  return (block.kind === 'write' || block.kind === 'text') && block.ask !== undefined
 }
 
 /** What a person actually picks from the palette — and, since the retirement of the place and
@@ -230,14 +241,20 @@ export function isCompleteBlock(block: BuilderBlock): boolean {
   }
 }
 
-/** The body a block list contributes, incomplete rows omitted. */
+/** The body a block list contributes, incomplete rows omitted — and a row whose data-field
+ *  title collides with an earlier one, because the parser refuses such a body outright and the
+ *  builder must never emit one it cannot read back (TEMPLATE-29). The row stays in the editor
+ *  saying why it is not in the template yet, and 저장 is refused while it is. */
 export function toValidBody(blocks: readonly BuilderBlock[]): string {
+  const colliding = duplicateAskTitles(blocks)
+  const contributes = (block: BuilderBlock) =>
+    isCompleteBlock(block) && !colliding.has(askTitle(block))
   return toBody(
     blocks
-      .filter(isCompleteBlock)
+      .filter(contributes)
       .map((block) =>
         block.kind === 'repeat'
-          ? { ...block, children: block.children.filter(isCompleteBlock) }
+          ? { ...block, children: block.children.filter(contributes) }
           : block,
       ),
   )
@@ -271,6 +288,11 @@ export function repeatPhotoCount(block: BuilderBlock): number {
  *  returns "", and the row says so in its own words rather than showing an empty line.
  */
 export function blockSummary(block: BuilderBlock): string {
+  // A row that asks the post's author for its data reads as the QUESTION it will ask: that is
+  // the row's identity in the outline, and a 고정 문구 row has no text of its own left
+  // (TEMPLATE-44). The instruction stays in the expanded panel.
+  const ask = askTitle(block)
+  if (ask !== '') return ask
   switch (block.kind) {
     case 'write':
     case 'note':
@@ -292,6 +314,28 @@ export function photoSummaryKey(
   count: number,
 ): 'composition.summary.photo' | 'composition.summary.photoRow' {
   return count > 1 ? 'composition.summary.photoRow' : 'composition.summary.photo'
+}
+
+/** Which titles more than one row asks under. The parser refuses such a body outright
+ *  (`duplicate_ask_label`), so the editor has to be able to say WHICH two collided — a refusal
+ *  naming a line number cannot point at a row (TEMPLATE-44). */
+export function duplicateAskTitles(blocks: readonly BuilderBlock[]): Set<string> {
+  const seen = new Set<string>()
+  const duplicates = new Set<string>()
+  const walk = (list: readonly BuilderBlock[]) => {
+    for (const block of list) {
+      if (block.kind === 'repeat') {
+        walk(block.children)
+        continue
+      }
+      const title = askTitle(block)
+      if (title === '') continue
+      if (seen.has(title)) duplicates.add(title)
+      seen.add(title)
+    }
+  }
+  walk(blocks)
+  return duplicates
 }
 
 /** One block, with everything needed to ADDRESS it: which group it belongs to and where in that

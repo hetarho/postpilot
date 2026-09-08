@@ -4,9 +4,12 @@ import type { TFunction } from 'i18next'
 import { Trash2 } from 'lucide-react'
 import { decode } from '../lib/grammar'
 import {
+  asksForData,
+  askTitle,
   blockKindKey,
   blockSummary,
   canInsert,
+  duplicateAskTitles,
   endPosition,
   fromBody,
   insertAt,
@@ -15,6 +18,7 @@ import {
   repeatPhotoCount,
   reorder,
   toValidBody,
+  type AskableBlock,
   type BodyRead,
   type BuilderBlock,
   type PaletteKind,
@@ -25,10 +29,12 @@ import { TEMPLATE_PHOTO_ROW_MAX } from '@/shared/config'
 import {
   Badge,
   Button,
+  FieldCount,
   FieldLabel,
   FieldMessage,
   SortableList,
   Stepper,
+  Switch,
   TextField,
   Textarea,
   Typography,
@@ -55,6 +61,7 @@ export function TemplateComposition({
   disabled = false,
   className,
   onFixInSource,
+  onAskConflict,
 }: {
   value: string
   onChange: (body: string) => void
@@ -63,10 +70,21 @@ export function TemplateComposition({
   /** Switches the screen to 원문 with the caret in the text. Absent when there is no source mode
    *  to switch to, which is why the clear action can never be the only way out. */
   onFixInSource?: () => void
+  /** Two rows are asking under one title. Such a row is left OUT of the emitted body — the
+   *  parser refuses a body with a repeated title, and the builder must never emit one it cannot
+   *  read back — so the caller has to refuse 저장 or the row would be silently dropped from a
+   *  saved template (TEMPLATE-44). */
+  onAskConflict?: (conflicted: boolean) => void
 }) {
   const { t } = useTranslation('templates')
   return readBody(value, t).ok ? (
-    <Composition value={value} onChange={onChange} disabled={disabled} className={className} />
+    <Composition
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      className={className}
+      onAskConflict={onAskConflict}
+    />
   ) : (
     <Unreadable
       disabled={disabled}
@@ -119,11 +137,13 @@ function Composition({
   onChange,
   disabled,
   className,
+  onAskConflict,
 }: {
   value: string
   onChange: (body: string) => void
   disabled: boolean
   className?: string
+  onAskConflict?: (conflicted: boolean) => void
 }) {
   const { t } = useTranslation('templates')
   const id = useId()
@@ -172,8 +192,16 @@ function Composition({
     setAimedAt(result.inserted.id)
   }
 
+  const duplicates = duplicateAskTitles(blocks)
+  // Reported upward rather than derived by the caller: the colliding row is not in the body it
+  // can see, so there would be nothing left there to notice.
+  const conflicted = duplicates.size > 0
+  useEffect(() => onAskConflict?.(conflicted), [conflicted, onAskConflict])
+
   const context: RowContext = {
     disabled,
+    nested: false,
+    duplicates,
     openId,
     aimedAt: aimIsAtEnd ? null : aimedAt,
     onOpen: (blockId) => {
@@ -231,6 +259,13 @@ interface RowContext {
   aimedAt: string | null
   onOpen: (blockId: string) => void
   onTouch: (blockId: string) => void
+  /** Inside a 사진마다 반복, where a row may not ask for data: how many fields a template asks
+   *  for is the template's own answer and must not depend on this post's photo count
+   *  (TEMPLATE-43). The switch is shown DISABLED with its reason rather than hidden — a control
+   *  that silently disappears in a nested list reads as a bug. */
+  nested: boolean
+  /** Titles more than one row asks under, so the offending rows can say so in place. */
+  duplicates: Set<string>
 }
 
 /** One sibling group. A repeat's children are the same list one level down, which is what keeps
@@ -384,6 +419,9 @@ function BlockRow({
         <Badge tone={block.kind === 'repeat' ? 'accent' : 'neutral'}>
           {t(`builder.palette.${blockKindKey(block)}`)}
         </Badge>
+        {/* The row keeps its KIND and adds the mark: what it contributes to the post has not
+            changed, only where its words come from (TEMPLATE-44). */}
+        {asksForData(block) && <Badge tone="accent">{t('builder.block.asksForData')}</Badge>}
         <span
           className={typographyStyles({
             variant: 'body',
@@ -398,7 +436,7 @@ function BlockRow({
 
       {open && (
         <div id={`${id}-fields`} className="pt-1 pb-3">
-          <BlockFields block={block} disabled={context.disabled} onChange={onChange} />
+          <BlockFields block={block} context={context} onChange={onChange} />
           <Button
             variant="danger"
             size="compact"
@@ -423,7 +461,7 @@ function BlockRow({
           ) : (
             <BlockList
               blocks={block.children}
-              context={context}
+              context={{ ...context, nested: true }}
               onChange={(children) => onChange({ ...block, children })}
             />
           )}
@@ -444,25 +482,29 @@ function BlockRow({
  *  all: its content is its children, which are rows of their own. */
 function BlockFields({
   block,
-  disabled,
+  context,
   onChange,
 }: {
   block: BuilderBlock
-  disabled: boolean
+  context: RowContext
   onChange: (next: BuilderBlock) => void
 }) {
   const { t } = useTranslation('templates')
   const id = useId()
+  const disabled = context.disabled
   switch (block.kind) {
     case 'write':
       return (
-        <Field
-          id={id}
-          label={t('builder.block.instruction')}
-          value={block.text}
-          disabled={disabled}
-          onChange={(text) => onChange({ ...block, text })}
-        />
+        <>
+          <AskFields block={block} context={context} onChange={onChange} />
+          <Field
+            id={id}
+            label={t('builder.block.instruction')}
+            value={block.text}
+            disabled={disabled}
+            onChange={(text) => onChange({ ...block, text })}
+          />
+        </>
       )
     case 'note':
       return (
@@ -476,14 +518,23 @@ function BlockFields({
       )
     case 'text':
       return (
-        <Field
-          id={id}
-          label={t('builder.block.text')}
-          value={block.text}
-          disabled={disabled}
-          multiline
-          onChange={(text) => onChange({ ...block, text })}
-        />
+        <>
+          <AskFields block={block} context={context} onChange={onChange} />
+          {/* A 고정 문구 that asks for data has no text of ITS own left — what the post's author
+              types takes its place, so the title is this row's whole authored content
+              (TEMPLATE-44). The text is kept underneath, which is what makes turning the switch
+              back off restore it. */}
+          {!asksForData(block) && (
+            <Field
+              id={id}
+              label={t('builder.block.text')}
+              value={block.text}
+              disabled={disabled}
+              multiline
+              onChange={(text) => onChange({ ...block, text })}
+            />
+          )}
+        </>
       )
     case 'photo':
       return (
@@ -509,12 +560,91 @@ function BlockFields({
   }
 }
 
+/** 데이터 받기 on one row: the switch, and the title it asks under once it is on.
+ *
+ *  Turning it on SEEDS the title from the row's own text, which is what makes the flip cheap for
+ *  a body the author already wrote — a 고정 문구 line reading `총평 별점` becomes the question.
+ *  The seed is skipped when that text would not fit the title's own ceiling: a title the server
+ *  refuses would leave a draft that cannot be saved, which is worse than an empty field with a
+ *  counter beside it.
+ *
+ *  Turning it off drops the title and the row's authored text is there again, because nothing
+ *  ever cleared it. */
+function AskFields({
+  block,
+  context,
+  onChange,
+}: {
+  block: AskableBlock
+  context: RowContext
+  onChange: (next: BuilderBlock) => void
+}) {
+  const { t } = useTranslation('templates')
+  const id = useId()
+  // The field shows the RAW title, not the trimmed one: trimming what is in the input would eat
+  // a space the moment it is typed, so `총평 별점` could never be written. Trimming belongs to
+  // serialization and to the duplicate check, which is what `askTitle` is for.
+  const raw = block.ask ?? ''
+  const title = askTitle(block)
+  // The SWITCH's state, not the title's: clearing the title to retype it must not collapse the
+  // field under the caret.
+  const on = asksForData(block)
+  const duplicate = title !== '' && context.duplicates.has(title)
+
+  return (
+    <div className="mb-3">
+      <div className="flex min-h-11 items-center gap-3">
+        <Switch
+          aria-label={t('builder.block.asksForData')}
+          checked={on}
+          disabled={context.disabled || context.nested}
+          onChange={(event) => {
+            if (!event.target.checked) {
+              onChange({ ...block, ask: undefined })
+              return
+            }
+            const seed = block.text.replace(/\s+/g, ' ').trim()
+            onChange({ ...block, ask: seed.length <= TEMPLATE_LIMITS.askLabel ? seed : '' })
+          }}
+        />
+        <Typography variant="body" as="span" className="min-w-0 flex-1">
+          {t('builder.block.asksForData')}
+        </Typography>
+      </div>
+      {context.nested ? (
+        <FieldMessage>{t('builder.block.askInRepeat')}</FieldMessage>
+      ) : (
+        <Typography variant="meta" as="p">
+          {t('builder.block.asksForDataHelp')}
+        </Typography>
+      )}
+      {on && (
+        <div className="mt-3">
+          <Field
+            id={`${id}-ask`}
+            label={t('builder.block.askTitle')}
+            value={raw}
+            disabled={context.disabled}
+            max={TEMPLATE_LIMITS.askLabel}
+            invalid={duplicate}
+            message={duplicate ? t('builder.reasons.duplicate_ask_label') : undefined}
+            onChange={(next) => onChange({ ...block, ask: next })}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Field({
   id,
   label,
   value,
   disabled,
   multiline = false,
+  max,
+  invalid = false,
+  message,
   onChange,
 }: {
   id: string
@@ -522,8 +652,14 @@ function Field({
   value: string
   disabled: boolean
   multiline?: boolean
+  /** Present only where the server bounds this field on its own — the data field's title. The
+   *  counter mirrors that ceiling; the backend stays authoritative. */
+  max?: number
+  invalid?: boolean
+  message?: string
   onChange: (value: string) => void
 }) {
+  const messageId = message ? `${id}-message` : undefined
   return (
     <div>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
@@ -543,10 +679,18 @@ function Field({
           value={value}
           disabled={disabled}
           autoComplete="off"
+          aria-invalid={invalid || undefined}
+          aria-describedby={messageId}
           onChange={(event) => onChange(event.target.value)}
           className="mt-1"
         />
       )}
+      {message && (
+        <FieldMessage id={messageId} role="alert">
+          {message}
+        </FieldMessage>
+      )}
+      {max !== undefined && <FieldCount left={remainingChars(value, max)} />}
     </div>
   )
 }

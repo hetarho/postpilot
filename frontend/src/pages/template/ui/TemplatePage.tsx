@@ -173,7 +173,11 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   // builder-only flow — it is what makes "a body that does not parse cannot be saved from EITHER
   // mode" true (TEMPLATE-30, TEMPLATE-7).
   const parsed = parse(trimmed.body, TEMPLATE_PARSE_OPTIONS)
-  const blocked = !dirty || !canSaveTemplate(trimmed) || !parsed.ok || pending
+  // Two rows asking under one title. The composition leaves such a row OUT of the body, so the
+  // draft parses and nothing here would otherwise notice — and saving would silently drop the
+  // row the author is looking at (TEMPLATE-44).
+  const [askConflict, setAskConflict] = useState(false)
+  const blocked = !dirty || !canSaveTemplate(trimmed) || !parsed.ok || askConflict || pending
 
   // A REF, not state: the post-save redirect below runs in the same tick as the state update
   // that would clear `dirty`, and the blocker reads its render-time closure — so without this the
@@ -283,6 +287,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
             />
           ) : (
             <TemplateComposition
+              onAskConflict={setAskConflict}
               value={draft.body}
               onChange={field('body')}
               disabled={pending}

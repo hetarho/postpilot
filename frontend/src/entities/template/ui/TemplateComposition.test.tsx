@@ -318,3 +318,95 @@ describe('the composition editor', () => {
     expect(screen.getByRole('button', { name: '구성 비우고 다시 만들기' })).toBeInTheDocument()
   })
 })
+
+describe('데이터 받기', () => {
+  const switchOn = (rowIndex: number) => within(rows()[rowIndex]).getByRole('switch')
+
+  it('is offered on the two rows whose text a post can decide, and on no other kind', async () => {
+    render(
+      <Editor
+        initial={'<write>인트로</write>\n고정 문구\n<slot kind="photo"/>\n<note>메모</note>'}
+      />,
+    )
+    for (const [index, offered] of [
+      [0, true],
+      [1, true],
+      [2, false],
+      [3, false],
+    ] as const) {
+      await userEvent.click(toggle(index))
+      const control = within(rows()[index]).queryByRole('switch')
+      expect(Boolean(control), `row ${index}`).toBe(offered)
+      await userEvent.click(toggle(index))
+    }
+  })
+
+  it('turns an AI가 쓰는 글 row into a field the post answers, keeping its instruction', async () => {
+    render(<Editor initial={'<write>별점과 총평</write>'} />)
+    await userEvent.click(toggle(0))
+    await userEvent.click(switchOn(0))
+    // The title is seeded from the row's own text, so a short line becomes the question.
+    expect(screen.getByLabelText('입력란 제목')).toHaveValue('별점과 총평')
+    expect(body()).toBe('<ask label="별점과 총평">별점과 총평</ask>')
+
+    await userEvent.clear(screen.getByLabelText('입력란 제목'))
+    await userEvent.type(screen.getByLabelText('입력란 제목'), '총평 별점')
+    expect(body()).toBe('<ask label="총평 별점">별점과 총평</ask>')
+    // The instruction is still editable beside the title.
+    expect(screen.getByLabelText('무엇을 쓸지')).toHaveValue('별점과 총평')
+  })
+
+  it('replaces a 고정 문구 row text with the title, and restores it when switched off', async () => {
+    render(<Editor initial={'방문일'} />)
+    await userEvent.click(toggle(0))
+    await userEvent.click(switchOn(0))
+    expect(screen.getByLabelText('입력란 제목')).toHaveValue('방문일')
+    // Its own text field is gone: what the author types takes its place.
+    expect(screen.queryByLabelText('글에 들어갈 문구')).not.toBeInTheDocument()
+    expect(body()).toBe('<ask label="방문일"/>')
+
+    await userEvent.click(switchOn(0))
+    expect(screen.queryByLabelText('입력란 제목')).not.toBeInTheDocument()
+    // Nothing ever cleared the row's text, so turning the switch off brings it back.
+    expect(body()).toBe('방문일')
+  })
+
+  it('shows the switch disabled with its reason inside 사진마다 반복', async () => {
+    render(<Editor initial={'<repeat each="photo">\n<write>사진 설명</write>\n</repeat>'} />)
+    // Row 0 is the repeat, row 1 its child.
+    await userEvent.click(toggle(1))
+    const control = switchOn(1)
+    expect(control).toBeDisabled()
+    expect(within(rows()[1]).getByText(/사진마다 반복 안에서는/)).toBeInTheDocument()
+  })
+
+  it('keeps the row kind and marks it, and reads as the question in the outline', async () => {
+    render(<Editor initial={'<ask label="총평 별점">별점과 총평</ask>'} />)
+    expect(summaries()[0]).toContain('AI가 쓰는 글')
+    expect(summaries()[0]).toContain('데이터 받기')
+    expect(summaries()[0]).toContain('총평 별점')
+  })
+
+  it('says which two rows collided rather than only refusing the body', async () => {
+    render(<Editor initial={'<ask label="총평"/>\n<write>인트로</write>'} />)
+    await userEvent.click(toggle(1))
+    await userEvent.click(switchOn(1))
+    await userEvent.clear(screen.getByLabelText('입력란 제목'))
+    await userEvent.type(screen.getByLabelText('입력란 제목'), '총평')
+    // The parser would refuse the whole body at a line number; the row says it in place.
+    expect(within(rows()[1]).getByRole('alert').textContent).toContain('제목')
+    expect(screen.getByLabelText('입력란 제목')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('round-trips a body that already asks for data', async () => {
+    const initial = '오늘의 기록\n<ask label="방문일"/>\n<ask label="총평">총평을 쓰세요</ask>'
+    render(<Editor initial={initial} />)
+    expect(rows()).toHaveLength(3)
+    // Touching a row re-emits the whole body: what the builder writes back is byte-identical to
+    // what it read (TEMPLATE-29).
+    await userEvent.click(toggle(0))
+    expect(body()).toBe(initial)
+    expect(summaries()[1]).toContain('방문일')
+    expect(summaries()[2]).toContain('총평')
+  })
+})

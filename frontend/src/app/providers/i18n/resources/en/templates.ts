@@ -81,12 +81,14 @@ export const templates = {
 [What a template does]
 A template is the skeleton of a post. It decides the order and what goes where; it never decides tone or word choice.
 
-[The five things you can write]
+[The six things you can write]
 - Plain text: appears in the post exactly as written.
 - <write>what to write</write>: the AI writes here as instructed. The instruction itself never appears in the post.
 - <slot kind="photo"/>: one attached photo goes here. With a count, as in <slot kind="photo" count="2"/>, that many stand side by side in one row.
 - <repeat each="photo">…</repeat>: what is inside repeats once per group of photos.
 - <note>note to the AI</note>: only the AI reads it; it never appears in the post.
+- <ask label="field title"/>: what the author types on the write screen goes here exactly as typed.
+- <ask label="field title">what to write</ask>: the AI writes here using only what the author typed as its facts.
 
 [Rules that must hold]
 - write, note and repeat must be closed.
@@ -94,7 +96,9 @@ A template is the skeleton of a post. It decides the order and what goes where; 
 - count is a whole number from 1 to {{photoRowMax}}. Without it, one photo.
 - repeat takes only each="photo", and a repeat may not contain a repeat.
 - write and note may never be empty.
-- Any tag other than those five is refused.
+- ask must carry a label, no two may share one in the same body, none may sit inside a repeat, and one body holds at most {{askMax}}.
+- Use ask only for what the author has to supply each time — a rating, a visit date, a price: facts the AI cannot know.
+- Any tag other than those six is refused.
 - To write a literal < in a sentence, write &lt; instead.
 - The whole body may not exceed {{bodyMax}} characters.
 
@@ -123,6 +127,12 @@ Send the body only — no explanation and no code fence. Write it in the languag
       link: 'Link',
     },
     block: {
+      asksForData: 'Ask for data',
+      asksForDataHelp:
+        'On, the write screen asks you for what goes here instead of the AI inventing it.',
+      askTitle: 'Field title',
+      askInRepeat:
+        'A row inside Repeat per photos cannot ask for data: how many fields there are must not depend on the photo count.',
       instruction: 'What to write',
       text: 'Text to include',
       label: 'Name for this position',
