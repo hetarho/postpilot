@@ -31,6 +31,8 @@ export const errors = {
   POST_MACHINE_BASELINE_REQUIRED: 'A saved AI baseline is required.',
   POST_TARGET_LANGUAGE_REQUIRED: 'Select a target language for the post.',
   POST_TARGET_LANGUAGE_UNSUPPORTED: 'That post language is not supported.',
+  POST_TEMPLATE_ANSWER_TOO_LONG: 'That is too long. Up to {{max}} characters.',
+  POST_TEMPLATE_ANSWER_INVALID: 'Check the fields you filled in.',
   POST_FILENAME_TAKEN: 'A photo with that filename already exists.',
   UPLOAD_INVALID: 'Check the uploaded photo and try again.',
   UPLOAD_NOT_FOUND: 'Could not find the upload.',

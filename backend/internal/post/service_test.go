@@ -77,7 +77,7 @@ func mustCreatePost(t *testing.T, svc *Service, userID, title string) Post {
 	t.Helper()
 	voiceID := defaultVoiceFor(userID)
 	language := LanguageKorean
-	created, err := svc.SaveDraft(context.Background(), userID, "", title, "", &voiceID, nil, &language)
+	created, err := svc.SaveDraft(context.Background(), userID, "", title, "", &voiceID, nil, &language, nil)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 
 	voiceID := aliceVoice
 	language := LanguageKorean
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "first", &voiceID, nil, &language)
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "first", &voiceID, nil, &language, nil)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 		t.Errorf("status = %q, want draft", created.Status)
 	}
 
-	updated, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "second", nil, nil, nil)
+	updated, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "second", nil, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestSaveDraftKeepsTheSlugOnRetitle(t *testing.T) {
 	svc, _, _ := newTestService(t)
 	created := mustCreatePost(t, svc, alice, "Jeju")
 
-	renamed, err := svc.SaveDraft(context.Background(), alice, created.Slug, "Something else entirely", "", nil, nil, nil)
+	renamed, err := svc.SaveDraft(context.Background(), alice, created.Slug, "Something else entirely", "", nil, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestOwnership(t *testing.T) {
 		if _, err := svc.Get(ctx, bob, mine.Slug); !errors.Is(err, ErrForbidden) {
 			t.Errorf("Get = %v, want ErrForbidden", err)
 		}
-		if _, err := svc.SaveDraft(ctx, bob, mine.Slug, "x", "y", nil, nil, nil); !errors.Is(err, ErrForbidden) {
+		if _, err := svc.SaveDraft(ctx, bob, mine.Slug, "x", "y", nil, nil, nil, nil); !errors.Is(err, ErrForbidden) {
 			t.Errorf("SaveDraft = %v, want ErrForbidden", err)
 		}
 		if _, _, _, err := svc.CreateUpload(ctx, bob, mine.Slug, "a.jpg", AttachmentPhoto); !errors.Is(err, ErrForbidden) {
@@ -194,7 +194,7 @@ func TestOwnership(t *testing.T) {
 		if _, err := svc.Get(ctx, alice, "nope"); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Get = %v, want ErrNotFound", err)
 		}
-		if _, err := svc.SaveDraft(ctx, alice, "nope", "x", "y", nil, nil, nil); !errors.Is(err, ErrNotFound) {
+		if _, err := svc.SaveDraft(ctx, alice, "nope", "x", "y", nil, nil, nil, nil); !errors.Is(err, ErrNotFound) {
 			t.Errorf("SaveDraft = %v, want ErrNotFound", err)
 		}
 	})
@@ -935,7 +935,7 @@ func TestCreatePostRetriesWhenTheSlugIsTakenMidFlight(t *testing.T) {
 
 	voiceID := aliceVoice
 	language := LanguageKorean
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, nil, &language)
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, nil, &language, nil)
 	if err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}

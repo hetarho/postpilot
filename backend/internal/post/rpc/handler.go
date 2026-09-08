@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,7 +47,8 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		}
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post target language", reason, nil)
 	}
-	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(), req.Msg.VoiceId, req.Msg.TemplateId, targetLanguage)
+	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(),
+		req.Msg.VoiceId, req.Msg.TemplateId, targetLanguage, fromProtoTemplateAnswers(req.Msg.GetTemplateAnswers()))
 	if err != nil {
 		return nil, toConnectError("save draft", err)
 	}
@@ -236,6 +238,17 @@ func actingUser(ctx context.Context) (string, error) {
 // with the detail kept in the log — an unexpected failure must not leak a SQL string or
 // a bucket name to a client.
 func toConnectError(op string, err error) error {
+	// A typed error carries the numbers the message needs, so it is matched before the
+	// sentinel switch — the same shape the template context's field-too-long refusal uses.
+	var answerTooLong *post.TemplateAnswerTooLongError
+	if errors.As(err, &answerTooLong) {
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template answer is too long",
+			"POST_TEMPLATE_ANSWER_TOO_LONG", map[string]string{
+				"field":  answerTooLong.Field,
+				"max":    strconv.Itoa(answerTooLong.Max),
+				"actual": strconv.Itoa(answerTooLong.Chars),
+			})
+	}
 	switch {
 	case errors.Is(err, post.ErrNotFound):
 		if op == "confirm upload" {
@@ -244,6 +257,9 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "post resource not found", "POST_NOT_FOUND", nil)
 	case errors.Is(err, post.ErrForbidden):
 		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", "POST_FORBIDDEN", nil)
+	case errors.Is(err, post.ErrTemplateAnswerInvalid):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument,
+			"a template answer needs a label, and one label at most once", "POST_TEMPLATE_ANSWER_INVALID", nil)
 	case errors.Is(err, post.ErrDuplicateFilename):
 		// One namespace across photos and videos, so the message names neither kind.
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "filename already exists in this post", "POST_FILENAME_TAKEN", nil)
@@ -289,6 +305,36 @@ func toConnectError(op string, err error) error {
 	}
 }
 
+// fromProtoTemplateAnswers carries the request's answers inward as-is. Each entry is an
+// upsert of that label and an empty list means "no answer in this save", so there is nothing
+// to distinguish here between absent and empty (POST-62).
+func fromProtoTemplateAnswers(answers []*postpilotv1.TemplateAnswer) []post.TemplateAnswer {
+	if len(answers) == 0 {
+		return nil
+	}
+	out := make([]post.TemplateAnswer, 0, len(answers))
+	for _, answer := range answers {
+		out = append(out, post.TemplateAnswer{
+			Label:   answer.GetLabel(),
+			Text:    answer.GetText(),
+			Enabled: answer.GetEnabled(),
+		})
+	}
+	return out
+}
+
+func toProtoTemplateAnswers(answers []post.TemplateAnswer) []*postpilotv1.TemplateAnswer {
+	out := make([]*postpilotv1.TemplateAnswer, 0, len(answers))
+	for _, answer := range answers {
+		out = append(out, &postpilotv1.TemplateAnswer{
+			Label:   answer.Label,
+			Text:    answer.Text,
+			Enabled: answer.Enabled,
+		})
+	}
+	return out
+}
+
 func toProtoPost(p post.Post) *postpilotv1.Post {
 	images := make([]*postpilotv1.Image, 0, len(p.Images))
 	for _, img := range p.Images {
@@ -326,6 +372,7 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		Template:                toProtoTemplateRef(p.Template),
 		TargetLanguage:          languageToProto(p.TargetLanguage),
 		ContentLanguage:         optionalLanguageToProto(p.ContentLanguage),
+		TemplateAnswers:         toProtoTemplateAnswers(p.TemplateAnswers),
 	}
 }
 

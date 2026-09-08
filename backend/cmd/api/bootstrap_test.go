@@ -217,7 +217,7 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	}
 	guess := "any"
 	language := post.LanguageKorean
-	if _, err := postSvc.SaveDraft(ctx, "alice", "", "first", "", &guess, nil, &language); !errors.Is(err, post.ErrVoiceNotFound) {
+	if _, err := postSvc.SaveDraft(ctx, "alice", "", "first", "", &guess, nil, &language, nil); !errors.Is(err, post.ErrVoiceNotFound) {
 		t.Fatalf("post before bootstrap = %v", err)
 	}
 	for range 2 {
@@ -229,7 +229,7 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	if err != nil || len(voices) != 1 || !voices[0].IsDefault || voices[0].Name != voice.DefaultVoiceName {
 		t.Fatalf("voices after two bootstraps = %+v err=%v", voices, err)
 	}
-	created, err := postSvc.SaveDraft(ctx, "alice", "", "first", "", &voices[0].ID, nil, &language)
+	created, err := postSvc.SaveDraft(ctx, "alice", "", "first", "", &voices[0].ID, nil, &language, nil)
 	if err != nil || created.VoiceID != voices[0].ID || created.Voice.Name != voice.DefaultVoiceName {
 		t.Fatalf("post after bootstrap = %+v err=%v", created, err)
 	}
@@ -279,7 +279,12 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	saved, err := postSvc.SaveDraft(ctx, "alice", "", "제주", "", &defaultVoice.ID, &created.ID, &language)
+	postSvc.SetTemplateAnswerLimits(40, 500)
+	saved, err := postSvc.SaveDraft(ctx, "alice", "", "제주", "", &defaultVoice.ID, &created.ID, &language,
+		[]post.TemplateAnswer{
+			{Label: "총평 별점", Text: "4.5점", Enabled: true},
+			{Label: "방문일", Text: "2026-03-01", Enabled: false},
+		})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,6 +295,16 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	}
 	if input.TemplateID != created.ID {
 		t.Fatalf("the adapter dropped the template: TemplateID=%q, want %q", input.TemplateID, created.ID)
+	}
+	// The post's own answers ride the same seam, for the same reason the id does: the enqueue
+	// resolves the template's data fields against them, and an adapter that dropped them would
+	// make every field render as if the author had answered nothing (POST-62).
+	if len(input.TemplateAnswers) != 2 {
+		t.Fatalf("the adapter dropped the answers: %+v", input.TemplateAnswers)
+	}
+	if input.TemplateAnswers[0] != (generation.TemplateAnswer{Label: "방문일", Text: "2026-03-01", Enabled: false}) ||
+		input.TemplateAnswers[1] != (generation.TemplateAnswer{Label: "총평 별점", Text: "4.5점", Enabled: true}) {
+		t.Fatalf("answers = %+v", input.TemplateAnswers)
 	}
 
 	// The render is where the two contexts actually meet: generation hands over the frozen
@@ -322,8 +337,29 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 		t.Fatalf("the frozen template did not reach the prompt:\n%s", system)
 	}
 
+	// Deleting the TEMPLATE detaches the post and cascades the template's own links, and the
+	// answers survive it: they are keyed by the label they were typed under and nothing about
+	// them points at a template, so a delete cannot take what a person wrote with it (POST-62).
+	detached, err := templateSvc.Delete(ctx, "alice", created.ID)
+	if err != nil {
+		t.Fatalf("delete template: %v", err)
+	}
+	if detached != 1 {
+		t.Fatalf("detached = %d, want 1", detached)
+	}
+	orphaned, err := postSvc.Get(ctx, "alice", saved.Slug)
+	if err != nil {
+		t.Fatalf("Get after the template was deleted: %v", err)
+	}
+	if orphaned.TemplateID != "" {
+		t.Errorf("the post still names the deleted template: %q", orphaned.TemplateID)
+	}
+	if len(orphaned.TemplateAnswers) != 2 || orphaned.TemplateAnswers[1].Text != "4.5점" {
+		t.Errorf("the delete took the answers with it: %+v", orphaned.TemplateAnswers)
+	}
+
 	// A post left on 없음 resolves to no brief, so the prompt is the pre-template one.
-	plain, err := postSvc.SaveDraft(ctx, "alice", "", "템플릿 없는 글", "", &defaultVoice.ID, nil, &language)
+	plain, err := postSvc.SaveDraft(ctx, "alice", "", "템플릿 없는 글", "", &defaultVoice.ID, nil, &language, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,7 +404,7 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 		t.Fatal(err)
 	}
 	target := post.LanguageEnglish
-	created, err := postSvc.SaveDraft(ctx, "alice", "", "English final", "", &defaultVoice.ID, nil, &target)
+	created, err := postSvc.SaveDraft(ctx, "alice", "", "English final", "", &defaultVoice.ID, nil, &target, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,7 +518,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	saved, err := postSvc.SaveDraft(ctx, "alice", "", "무인 떡집", "", &defaultVoice.ID, &review.ID, &language)
+	saved, err := postSvc.SaveDraft(ctx, "alice", "", "무인 떡집", "", &defaultVoice.ID, &review.ID, &language, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -514,7 +550,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 
 	// A post left on 없음 receives the global group alone.
-	plain, err := postSvc.SaveDraft(ctx, "alice", "", "템플릿 없는 글", "", &defaultVoice.ID, nil, &language)
+	plain, err := postSvc.SaveDraft(ctx, "alice", "", "템플릿 없는 글", "", &defaultVoice.ID, nil, &language, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -580,7 +616,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	saved, err := postSvc.SaveDraft(ctx, "alice", "", "무인 떡집", "", &defaultVoice.ID, nil, &language)
+	saved, err := postSvc.SaveDraft(ctx, "alice", "", "무인 떡집", "", &defaultVoice.ID, nil, &language, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

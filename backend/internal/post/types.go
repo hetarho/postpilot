@@ -118,7 +118,38 @@ var (
 	// ErrLanguageRequired is returned at create/machine-write boundaries when the
 	// caller supplies no concrete supported language.
 	ErrLanguageRequired = errors.New("a content language is required")
+	// ErrTemplateAnswerInvalid is an answer with no label, or two answers in one request
+	// naming the same one. Both are the client sending something no screen can produce, so
+	// they share a refusal rather than each carrying their own wire reason.
+	ErrTemplateAnswerInvalid = errors.New("a template answer needs a label, and one label at most once")
 )
+
+// TemplateAnswer is what a post answers to one data field its template declared (POST-62).
+//
+// Label is the field's title AND the key it is stored under: it is text the template
+// authored, not an id, so a rename or a template swap leaves the answer alone rather than
+// destroying what someone typed.
+//
+// Enabled false means "I have nothing for this". Text is kept either way — the switch and an
+// empty Text mean the same thing to the enqueue, and losing what was typed would make trying
+// a field twice expensive.
+type TemplateAnswer struct {
+	Label   string
+	Text    string
+	Enabled bool
+}
+
+// TemplateAnswerTooLongError names which half was too long and both counts, so the handler
+// builds one message without re-deriving the limit.
+type TemplateAnswerTooLongError struct {
+	Field string
+	Chars int
+	Max   int
+}
+
+func (e *TemplateAnswerTooLongError) Error() string {
+	return fmt.Sprintf("template answer %s has %d characters; at most %d are allowed", e.Field, e.Chars, e.Max)
+}
 
 // Language is the post context's pure, canonical language value. Proto enums and SQL
 // strings are converted only in rpc/ and store/ respectively.
@@ -194,6 +225,10 @@ type Post struct {
 	FinalizedRevision      int64
 	FinalizedAt            *time.Time
 	Observations           []Observation
+
+	// TemplateAnswers is what this post answers to its template's data fields, by label,
+	// ordered by label. Populated by Get like Images and Videos are.
+	TemplateAnswers []TemplateAnswer
 
 	// Images and Videos are populated by Get, not by the store's post lookup.
 	Images              []Image

@@ -67,7 +67,7 @@ func TestFinalizeAllowsCrossLanguageContentAndPreservesProvenance(t *testing.T) 
 	ctx := context.Background()
 	voiceID := aliceVoice // Korean source voice.
 	target := LanguageEnglish
-	created, err := svc.SaveDraft(ctx, alice, "", "English target", "", &voiceID, nil, &target)
+	created, err := svc.SaveDraft(ctx, alice, "", "English target", "", &voiceID, nil, &target, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestSecondFinalizeOfTheSameRevisionDoesNotRewriteTheTitle(t *testing.T) {
 	if _, err := svc.Finalize(ctx, alice, created.Slug, 1); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "사람이 고친 제목", "", nil, nil, nil); err != nil {
+	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "사람이 고친 제목", "", nil, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	again, err := svc.Finalize(ctx, alice, created.Slug, 1)

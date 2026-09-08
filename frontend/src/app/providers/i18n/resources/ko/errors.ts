@@ -31,6 +31,8 @@ export const errors = {
   POST_MACHINE_BASELINE_REQUIRED: '저장된 AI 기준 본문이 필요해요.',
   POST_TARGET_LANGUAGE_REQUIRED: '글의 대상 언어를 선택해 주세요.',
   POST_TARGET_LANGUAGE_UNSUPPORTED: '지원하지 않는 글 언어예요.',
+  POST_TEMPLATE_ANSWER_TOO_LONG: '입력한 내용이 너무 길어요. {{max}}자까지 쓸 수 있어요.',
+  POST_TEMPLATE_ANSWER_INVALID: '입력란을 확인해 주세요.',
   POST_FILENAME_TAKEN: '같은 이름의 사진이 이미 있어요.',
   UPLOAD_INVALID: '업로드한 사진 정보를 확인해 주세요.',
   UPLOAD_NOT_FOUND: '업로드를 찾을 수 없어요.',

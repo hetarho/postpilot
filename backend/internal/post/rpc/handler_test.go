@@ -44,6 +44,7 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"video ceiling", "create upload", post.ErrTooManyVideos, connect.CodeFailedPrecondition, "POST_VIDEO_LIMIT"},
 		{"video container", "create upload", post.ErrUnsupportedVideo, connect.CodeInvalidArgument, "UPLOAD_VIDEO_UNSUPPORTED"},
 		{"video", "confirm upload", post.ErrInvalidVideo, connect.CodeInvalidArgument, "UPLOAD_VIDEO_INVALID"},
+		{"answer invalid", "save draft", post.ErrTemplateAnswerInvalid, connect.CodeInvalidArgument, "POST_TEMPLATE_ANSWER_INVALID"},
 	}
 
 	for _, test := range cases {
@@ -186,5 +187,54 @@ func TestVideoProjection(t *testing.T) {
 	if got.GetId() != "v1" || got.GetFilename() != "clip.mp4" || got.GetDurationMs() != 5_000 ||
 		got.GetContentType() != "video/mp4" || got.GetViewUrl() != "https://storage.example/clip" {
 		t.Errorf("video = %+v", got)
+	}
+}
+
+// The typed answer refusal carries the numbers the message needs, so it is asserted apart
+// from the parameterless sentinels above.
+func TestToConnectErrorCarriesTheAnswerBound(t *testing.T) {
+	got := toConnectError("save draft", errors.Join(errors.New("private context"),
+		&post.TemplateAnswerTooLongError{Field: "text", Chars: 501, Max: 500}))
+	if connect.CodeOf(got) != connect.CodeInvalidArgument {
+		t.Fatalf("code = %v", connect.CodeOf(got))
+	}
+	detail := postAppErrorDetail(t, got)
+	want := map[string]string{"field": "text", "max": "500", "actual": "501"}
+	if detail.GetReason() != "POST_TEMPLATE_ANSWER_TOO_LONG" || !reflect.DeepEqual(detail.GetParams(), want) {
+		t.Errorf("detail = %#v, want %q with %v", detail, "POST_TEMPLATE_ANSWER_TOO_LONG", want)
+	}
+	if strings.Contains(got.Error(), "private") {
+		t.Error("the wrapped context reached the client")
+	}
+}
+
+// The request's answers travel inward as-is, and an empty list is "no answer in this save"
+// rather than a clear (POST-62).
+func TestTemplateAnswersCrossTheWireBothWays(t *testing.T) {
+	if fromProtoTemplateAnswers(nil) != nil {
+		t.Error("an absent list should carry nothing inward")
+	}
+	if got := fromProtoTemplateAnswers([]*postpilotv1.TemplateAnswer{}); got != nil {
+		t.Errorf("an empty list should carry nothing inward, got %+v", got)
+	}
+	inward := fromProtoTemplateAnswers([]*postpilotv1.TemplateAnswer{
+		{Label: "총평 별점", Text: "4.5점", Enabled: true},
+		{Label: "방문일", Enabled: false},
+	})
+	want := []post.TemplateAnswer{
+		{Label: "총평 별점", Text: "4.5점", Enabled: true},
+		{Label: "방문일", Text: "", Enabled: false},
+	}
+	if !reflect.DeepEqual(inward, want) {
+		t.Errorf("inward = %+v, want %+v", inward, want)
+	}
+	outward := toProtoTemplateAnswers(want)
+	if len(outward) != 2 || outward[0].GetLabel() != "총평 별점" || outward[0].GetText() != "4.5점" ||
+		!outward[0].GetEnabled() || outward[1].GetEnabled() {
+		t.Errorf("outward = %+v", outward)
+	}
+	// A post with no answers sends an empty list, never a nil the client has to guard.
+	if got := toProtoTemplateAnswers(nil); got == nil || len(got) != 0 {
+		t.Errorf("no answers should marshal as an empty list, got %+v", got)
 	}
 }

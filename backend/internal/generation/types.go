@@ -127,6 +127,14 @@ type TemplatePhotoRow struct {
 	Filenames []string
 }
 
+// TemplateAnswer is one answer the post gives to a data field its template declared. It
+// reaches this context only to be handed to the template context's render at enqueue.
+type TemplateAnswer struct {
+	Label   string
+	Text    string
+	Enabled bool
+}
+
 // TemplateSlot is one position the app cannot fill by itself. It stays honest rather than
 // filled: the model is told not to write prose there, and a person fills it after export.
 type TemplateSlot struct {
@@ -145,9 +153,13 @@ type PostInput struct {
 	// Guidelines is the frozen 작문 지침 material in injection order, filled at enqueue from
 	// TemplateID like Template is. Handlers never resolve guidelines live either.
 	Guidelines []string
-	Title      string
-	Memo       string
-	Images     []Image
+	// TemplateAnswers is what the post answers to its template's data fields, read at
+	// enqueue like TemplateID. The freeze resolves them into the rendered brief, so no
+	// handler ever reads one: the payload already carries the result (POST-62, TEMPLATE-45).
+	TemplateAnswers []TemplateAnswer
+	Title           string
+	Memo            string
+	Images          []Image
 	// Observations is the post's stored observation snapshot, read only at enqueue so the
 	// selection and what it carries over can both be frozen there. No handler reads a live
 	// snapshot: it reads the payload, which is what makes the frozen decision hold.

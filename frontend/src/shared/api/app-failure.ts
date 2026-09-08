@@ -135,6 +135,10 @@ export const appFailureSpecs = {
   VIDEO_NOT_PUBLISHABLE: {},
   POST_VIDEO_LIMIT: {},
   POST_PHOTO_LIMIT: {},
+  // A data-field answer the client should have bounded itself: the write screen counts both
+  // halves down, so these only appear when something bypassed it (TEMPLATE-43).
+  POST_TEMPLATE_ANSWER_TOO_LONG: { required: ['max'], optional: ['field', 'actual'] },
+  POST_TEMPLATE_ANSWER_INVALID: {},
   UPLOAD_VIDEO_UNSUPPORTED: {},
   UPLOAD_VIDEO_INVALID: {},
   GENERATION_TARGET_LENGTH_INVALID: {},

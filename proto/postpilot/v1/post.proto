@@ -159,6 +159,9 @@ message Post {
   // `images` rather than discriminated inside it so a client can tell the kinds apart
   // without reading a field that older messages do not carry.
   repeated Video videos = 23;
+  // The answers this post gives to its template's data fields, by label. A reload seeds ①'s
+  // fields from these; labels the current template does not declare are not rendered.
+  repeated TemplateAnswer template_answers = 24;
 }
 
 message Image {
@@ -269,6 +272,19 @@ message StartRevisionResponse {
   string job_id = 1;
 }
 
+// One answer a post gives to a data field its template declared (POST-62, TEMPLATE-43).
+//
+// `label` is the field's title AND its key: a template rename or a swap leaves the answer
+// where it was rather than destroying what someone typed, and an answer whose label the
+// current template no longer carries is kept and never shown.
+message TemplateAnswer {
+  string label = 1;
+  string text = 2;
+  // Off means "I have nothing for this". The field keeps its text and the enqueue drops the
+  // whole block, so the model is never asked to write a section it has no facts for.
+  bool enabled = 3;
+}
+
 message SavePostDraftRequest {
   // Empty on the first save of a new post.
   string slug = 1;
@@ -285,6 +301,10 @@ message SavePostDraftRequest {
   optional string template_id = 5;
   // Required on create; absent preserves the stored target on an update.
   optional ContentLanguage target_language = 6;
+  // Each entry is an UPSERT of that label: an absent label is preserved, an empty list
+  // changes nothing, and nothing here ever deletes an answer. Clearing one is an empty
+  // `text`, which the enqueue reads the same way it reads a switched-off field.
+  repeated TemplateAnswer template_answers = 7;
 }
 
 message SavePostDraftResponse {

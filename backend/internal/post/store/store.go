@@ -122,6 +122,62 @@ func (s *Store) AssignTemplate(ctx context.Context, slug, userID string, templat
 	return n == 1, nil
 }
 
+// UpsertTemplateAnswers writes the request's answers in ONE transaction, one upsert per
+// label. All-or-nothing matters here for the same reason it does elsewhere in this store: a
+// partially applied autosave would leave the write screen showing a set no single save ever
+// produced.
+//
+// Nothing deletes. Clearing an answer is an empty Text, and a label the current template no
+// longer declares is left where it is so a rename or a swap back does not lose it (POST-62).
+func (s *Store) UpsertTemplateAnswers(ctx context.Context, slug string, answers []post.TemplateAnswer, updatedAt time.Time) error {
+	if len(answers) == 0 {
+		return nil
+	}
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin template answers: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op once committed
+
+	q := s.write.WithTx(tx)
+	stamp := formatTime(updatedAt)
+	for _, answer := range answers {
+		enabled := int64(0)
+		if answer.Enabled {
+			enabled = 1
+		}
+		if err := q.UpsertPostTemplateAnswer(ctx, sqlc.UpsertPostTemplateAnswerParams{
+			PostSlug:  slug,
+			Label:     answer.Label,
+			Answer:    answer.Text,
+			Enabled:   enabled,
+			UpdatedAt: stamp,
+		}); err != nil {
+			return fmt.Errorf("upsert template answer: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit template answers: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) ListTemplateAnswers(ctx context.Context, slug string) ([]post.TemplateAnswer, error) {
+	rows, err := s.read.ListPostTemplateAnswers(ctx, slug)
+	if err != nil {
+		return nil, fmt.Errorf("select template answers: %w", err)
+	}
+	answers := make([]post.TemplateAnswer, 0, len(rows))
+	for _, row := range rows {
+		answers = append(answers, post.TemplateAnswer{
+			Label:   row.Label,
+			Text:    row.Answer,
+			Enabled: row.Enabled != 0,
+		})
+	}
+	return answers, nil
+}
+
 // SQLite reports every composite-FK refusal with the same generic message, so which
 // reference was violated is decided by which write raised it: only a template write asks
 // isTemplateOwnershipViolation, and only a voice write asks isVoiceOwnershipViolation. The

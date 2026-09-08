@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // Service is the drafting context's behavior. Every method takes the acting user id
@@ -31,6 +32,12 @@ type Service struct {
 	livePublish    LivePublishFinder
 	voices         VoiceDirectory
 	templates      TemplateDirectory
+
+	// answerLabelMax and answerValueMax bound one data-field answer (TEMPLATE-43). Zero
+	// refuses every non-empty answer, which is the safe direction for a server whose config
+	// did not supply them — the same rule the video ceilings follow.
+	answerLabelMax int
+	answerValueMax int
 
 	// now and newID are seams for tests in this package, not configuration.
 	now   func() time.Time
@@ -84,6 +91,13 @@ func (s *Service) SetVideoLimits(maxVideos int, maxVideoBytes int64, maxSeconds 
 	s.maxVideoMillis = int64(maxSeconds) * 1000
 }
 
+// SetTemplateAnswerLimits wires the data-field answer ceilings (TEMPLATE-43), for the same
+// reason SetVideoLimits is a setter: every existing caller of NewService means photos.
+func (s *Service) SetTemplateAnswerLimits(labelMax, valueMax int) {
+	s.answerLabelMax = labelMax
+	s.answerValueMax = valueMax
+}
+
 // NewService wires the context with its store, its object storage, the presigned URL
 // lifetimes, and the largest object it will accept as a photo.
 func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, maxBytes int64, maxPhotos int, jobs ...ActiveJobFinder) *Service {
@@ -115,9 +129,15 @@ func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, ma
 // templateID is presence-aware too, with one more case, because a post may legitimately have
 // none: nil preserves, a present empty string clears, and a present non-empty value assigns.
 // It is validated before anything else is written, so a bad id applies nothing at all.
-func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID, templateID *string, targetLanguage *Language) (Post, error) {
+func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID, templateID *string, targetLanguage *Language, answers []TemplateAnswer) (Post, error) {
 	if targetLanguage != nil && !targetLanguage.Valid() {
 		return Post{}, ErrLanguageRequired
+	}
+	// Validated with the template assignment, ahead of every write: a request carrying a bad
+	// answer must mint no post and change no title (POST-62).
+	answers, err := s.validTemplateAnswers(answers)
+	if err != nil {
+		return Post{}, err
 	}
 	// Ahead of every write, including the create: a request naming an unknown or foreign
 	// template must leave the post exactly as it was, title and memo included.
@@ -137,7 +157,15 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 		if err != nil {
 			return Post{}, err
 		}
-		return s.createPost(ctx, userID, title, memo, target.ID, targetTemplate, *targetLanguage)
+		created, err := s.createPost(ctx, userID, title, memo, target.ID, targetTemplate, *targetLanguage)
+		if err != nil {
+			return Post{}, err
+		}
+		// After the insert, because the answers reference the slug it just minted.
+		if err := s.store.UpsertTemplateAnswers(ctx, created.Slug, answers, s.now()); err != nil {
+			return Post{}, fmt.Errorf("save template answers: %w", err)
+		}
+		return s.Get(ctx, userID, created.Slug)
 	}
 
 	found, err := s.ownedPost(ctx, userID, slug)
@@ -156,6 +184,11 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	}
 
 	now := s.now()
+	// Written after ownedPost, which is what scopes the answer rows to this account: the
+	// table is keyed by slug alone, like the post's images and videos.
+	if err := s.store.UpsertTemplateAnswers(ctx, slug, answers, now); err != nil {
+		return Post{}, fmt.Errorf("save template answers: %w", err)
+	}
 	updated, err := s.store.UpdateDraft(ctx, slug, userID, title, memo, targetLanguage, now)
 	if err != nil {
 		return Post{}, fmt.Errorf("update draft: %w", err)
@@ -167,6 +200,36 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	}
 
 	return s.Get(ctx, userID, slug)
+}
+
+// validTemplateAnswers trims what a label may not carry and bounds both halves. It is a pure
+// function of the request: a label the current template does not declare is NOT an error,
+// because a post keeps the answers it was given under an earlier template (POST-62).
+//
+// An answer is normalized rather than dropped when its text is blank: the enqueue reads a
+// blank answer the way it reads a switched-off field, so both survive to the freeze and
+// neither has to be special-cased here.
+func (s *Service) validTemplateAnswers(answers []TemplateAnswer) ([]TemplateAnswer, error) {
+	if len(answers) == 0 {
+		return nil, nil
+	}
+	out := make([]TemplateAnswer, 0, len(answers))
+	seen := make(map[string]bool, len(answers))
+	for _, answer := range answers {
+		label := strings.TrimSpace(answer.Label)
+		if label == "" || seen[label] {
+			return nil, ErrTemplateAnswerInvalid
+		}
+		seen[label] = true
+		if chars := utf8.RuneCountInString(label); chars > s.answerLabelMax {
+			return nil, &TemplateAnswerTooLongError{Field: "label", Chars: chars, Max: s.answerLabelMax}
+		}
+		if chars := utf8.RuneCountInString(answer.Text); chars > s.answerValueMax {
+			return nil, &TemplateAnswerTooLongError{Field: "text", Chars: chars, Max: s.answerValueMax}
+		}
+		out = append(out, TemplateAnswer{Label: label, Text: answer.Text, Enabled: answer.Enabled})
+	}
+	return out, nil
 }
 
 // reassignVoice moves an idle post to another active owned voice. It is refused while a
@@ -402,8 +465,14 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 		videos[i].ViewURL = url
 	}
 
+	answers, err := s.store.ListTemplateAnswers(ctx, slug)
+	if err != nil {
+		return Post{}, fmt.Errorf("list template answers: %w", err)
+	}
+
 	found.Images = images
 	found.Videos = videos
+	found.TemplateAnswers = answers
 	if s.jobs != nil {
 		found.ActiveJob, err = s.jobs.ActiveForPost(ctx, slug)
 		if err != nil {
@@ -569,6 +638,13 @@ func (s *Service) AttachedImages(ctx context.Context, userID, slug string) (Post
 	found.Videos, err = s.store.ListVideos(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list attached videos: %w", err)
+	}
+	// The enqueue reads this projection, and the answers are part of what it has to freeze
+	// (POST-62): without them here the template's data fields would resolve as if the post
+	// had answered nothing.
+	found.TemplateAnswers, err = s.store.ListTemplateAnswers(ctx, slug)
+	if err != nil {
+		return Post{}, fmt.Errorf("list attached template answers: %w", err)
 	}
 	refs, err := s.voiceRefs(ctx, userID)
 	if err != nil {

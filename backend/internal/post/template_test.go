@@ -37,7 +37,7 @@ func TestSaveDraftAssignsClearsOrPreservesTheTemplate(t *testing.T) {
 	blank := ""
 	language := LanguageKorean
 
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "memo", &voiceID, &review, &language)
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "memo", &voiceID, &review, &language, nil)
 	if err != nil || created.TemplateID != review {
 		t.Fatalf("create with a template: %+v err=%v", created, err)
 	}
@@ -46,19 +46,19 @@ func TestSaveDraftAssignsClearsOrPreservesTheTemplate(t *testing.T) {
 	}
 
 	// Absent is what ordinary autosave sends. It must not disturb the assignment.
-	kept, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 2", nil, nil, nil)
+	kept, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 2", nil, nil, nil, nil)
 	if err != nil || kept.TemplateID != review {
 		t.Fatalf("absent template changed the assignment: %+v err=%v", kept, err)
 	}
 
 	// A present empty string is the explicit 없음.
-	cleared, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 3", nil, &blank, nil)
+	cleared, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 3", nil, &blank, nil, nil)
 	if err != nil || cleared.TemplateID != "" || cleared.Template != (TemplateRef{}) {
 		t.Fatalf("clear failed: %+v err=%v", cleared, err)
 	}
 
 	// And a present id assigns again, from 없음, with no voice in the request.
-	reassigned, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 4", nil, &review, nil)
+	reassigned, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 4", nil, &review, nil, nil)
 	if err != nil || reassigned.TemplateID != review {
 		t.Fatalf("reassign failed: %+v err=%v", reassigned, err)
 	}
@@ -75,7 +75,7 @@ func TestSaveDraftRejectsAnUnknownOrForeignTemplateAndAppliesNothingElse(t *test
 	for name, id := range map[string]string{"unknown": "template-nobody", "foreign": "template-bob"} {
 		t.Run(name, func(t *testing.T) {
 			bad := id
-			if _, err := svc.SaveDraft(ctx, alice, created.Slug, "새 제목", "새 메모", nil, &bad, nil); !errors.Is(err, ErrTemplateNotFound) {
+			if _, err := svc.SaveDraft(ctx, alice, created.Slug, "새 제목", "새 메모", nil, &bad, nil, nil); !errors.Is(err, ErrTemplateNotFound) {
 				t.Fatalf("SaveDraft = %v, want ErrTemplateNotFound", err)
 			}
 			current := store.posts[created.Slug]
@@ -83,7 +83,7 @@ func TestSaveDraftRejectsAnUnknownOrForeignTemplateAndAppliesNothingElse(t *test
 				t.Fatalf("a refused template let the rest of the request through: %+v", current)
 			}
 			language := LanguageKorean
-			if _, err := svc.SaveDraft(ctx, alice, "", "새 글", "", &voiceID, &bad, &language); !errors.Is(err, ErrTemplateNotFound) {
+			if _, err := svc.SaveDraft(ctx, alice, "", "새 글", "", &voiceID, &bad, &language, nil); !errors.Is(err, ErrTemplateNotFound) {
 				t.Fatalf("create = %v, want ErrTemplateNotFound", err)
 			}
 			if len(store.posts) != 1 {
@@ -111,7 +111,7 @@ func TestAssigningATemplateTouchesNoContentOrFinalizationState(t *testing.T) {
 	before := store.posts[created.Slug]
 
 	review := "template-review"
-	after, err := svc.SaveDraft(ctx, alice, created.Slug, before.Title, before.Memo, nil, &review, nil)
+	after, err := svc.SaveDraft(ctx, alice, created.Slug, before.Title, before.Memo, nil, &review, nil, nil)
 	if err != nil {
 		t.Fatalf("assignment refused on a finalized post: %v", err)
 	}
@@ -136,7 +136,7 @@ func TestGetAndListProjectTheTemplateName(t *testing.T) {
 	review := "template-review"
 	voiceID := defaultVoiceFor(alice)
 	language := LanguageKorean
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, &review, &language)
+	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, &review, &language, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestWithoutATemplateDirectoryPostsStillWorkAndAssignmentIsRefused(t *testin
 		t.Fatalf("get without a directory: %+v err=%v", found.Template, err)
 	}
 	review := "template-review"
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", nil, &review, nil); err == nil {
+	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", nil, &review, nil, nil); err == nil {
 		t.Fatal("assignment succeeded without a template directory")
 	}
 }

@@ -18,6 +18,8 @@ type fakeStore struct {
 	images  map[string]Image
 	videos  map[string]Video
 	uploads map[string]Upload
+	// answers is keyed by slug then label, the way the table is keyed.
+	answers map[string]map[string]TemplateAnswer
 
 	// slugTaken lets a test simulate another request claiming a slug between the
 	// existence check and the insert — the race the retry loop exists for.
@@ -30,6 +32,7 @@ func newFakeStore() *fakeStore {
 		images:  map[string]Image{},
 		videos:  map[string]Video{},
 		uploads: map[string]Upload{},
+		answers: map[string]map[string]TemplateAnswer{},
 	}
 }
 
@@ -111,6 +114,39 @@ func (f *fakeStore) ReassignVoice(_ context.Context, slug, userID, voiceID strin
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
 	return true, nil
+}
+
+// UpsertTemplateAnswers mirrors the real upsert: one row per label, nothing ever deleted, so
+// a label the current template no longer declares stays where it is.
+func (f *fakeStore) UpsertTemplateAnswers(_ context.Context, slug string, answers []TemplateAnswer, _ time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(answers) == 0 {
+		return nil
+	}
+	if f.answers[slug] == nil {
+		f.answers[slug] = map[string]TemplateAnswer{}
+	}
+	for _, answer := range answers {
+		f.answers[slug][answer.Label] = answer
+	}
+	return nil
+}
+
+// ListTemplateAnswers returns them ordered by label, like the query's ORDER BY.
+func (f *fakeStore) ListTemplateAnswers(_ context.Context, slug string) ([]TemplateAnswer, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	labels := make([]string, 0, len(f.answers[slug]))
+	for label := range f.answers[slug] {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	out := make([]TemplateAnswer, 0, len(labels))
+	for _, label := range labels {
+		out = append(out, f.answers[slug][label])
+	}
+	return out, nil
 }
 
 // AssignTemplate mirrors the real single UPDATE: only the assignment and updated_at move.

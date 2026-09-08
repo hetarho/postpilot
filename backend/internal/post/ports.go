@@ -115,6 +115,13 @@ type Store interface {
 	// reassignment it must not disturb content, revisions, the machine baseline or
 	// finalization, and it is allowed in every status.
 	AssignTemplate(ctx context.Context, slug, userID string, templateID *string, updatedAt time.Time) (bool, error)
+	// UpsertTemplateAnswers writes one row per answer in ONE transaction, keyed by label.
+	// It never deletes: clearing an answer is an empty Text, which the enqueue reads the way
+	// it reads a switched-off field, and a label the current template no longer declares is
+	// kept so a rename or a swap back does not destroy what was typed.
+	UpsertTemplateAnswers(ctx context.Context, slug string, answers []TemplateAnswer, updatedAt time.Time) error
+	// ListTemplateAnswers returns the post's answers ordered by label.
+	ListTemplateAnswers(ctx context.Context, slug string) ([]TemplateAnswer, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	ListPosts(ctx context.Context, userID string) ([]Summary, error)
 	DeletePost(ctx context.Context, slug, userID string) (bool, error)

@@ -294,6 +294,7 @@ func main() {
 		postJobFinder{queue: jobQueue},
 	)
 	postSvc.SetVideoLimits(cfg.MaxVideosPerPost, cfg.MaxVideoBytes, cfg.MaxVideoSeconds)
+	postSvc.SetTemplateAnswerLimits(cfg.TemplateAskLabelMaxChars, cfg.TemplateAskValueMaxChars)
 	publishSvc := publishing.NewService(
 		publishingstore.New(handle.Writer, handle.Reader),
 		publishingPosts{service: postSvc},
@@ -1027,6 +1028,14 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		// was write-only from this context's point of view before change 21, which is why
 		// every retry re-paid for eyesight the post already had.
 		Observations: make([]generation.Observation, 0, len(found.Observations)),
+		// The post's own answers to the template's data fields. Like TemplateID they are
+		// read here and resolved only by the enqueue, through the template context's port.
+		TemplateAnswers: make([]generation.TemplateAnswer, 0, len(found.TemplateAnswers)),
+	}
+	for _, answer := range found.TemplateAnswers {
+		input.TemplateAnswers = append(input.TemplateAnswers, generation.TemplateAnswer{
+			Label: answer.Label, Text: answer.Text, Enabled: answer.Enabled,
+		})
 	}
 	if found.ContentLanguage != nil {
 		contentLanguage := generation.Language(*found.ContentLanguage)
