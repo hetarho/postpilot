@@ -40,6 +40,41 @@ func NewService(store Store, provider Provider, rates Rates, credits Credits, pl
 
 func (s *Service) Enabled() bool { return s.provider != nil && s.rates != nil }
 
+// markRefundable fills in the refund button's state for a whole screen.
+//
+// One query for every in-window purchase rather than one per purchase: the per-purchase read
+// runs on the single writer (ARCH-10), so a read-only screen used to queue N statements ahead
+// of every concurrent generation hold. An account with nothing in window asks nothing.
+func (s *Service) markRefundable(ctx context.Context, purchases []Purchase, now time.Time) error {
+	if s.credits == nil {
+		return nil
+	}
+	candidates := make([]string, 0, len(purchases))
+	for _, purchase := range purchases {
+		if refundableWindow(purchase, now) {
+			candidates = append(candidates, purchase.LotID)
+		}
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+	untouched, err := s.credits.UntouchedLots(ctx, candidates)
+	if err != nil {
+		return err
+	}
+	for index := range purchases {
+		purchase := &purchases[index]
+		purchase.Refundable = refundableWindow(*purchase, now) && untouched[purchase.LotID]
+	}
+	return nil
+}
+
+// refundableWindow is everything about refundability that the purchase row alone answers:
+// it has not been refunded and it is still inside the seven days.
+func refundableWindow(purchase Purchase, now time.Time) bool {
+	return purchase.RefundedAt == nil && now.Before(purchase.ChargedAt.Add(refundWindow))
+}
+
 func (s *Service) GetMyBilling(ctx context.Context, userID string) (AccountBilling, error) {
 	subscription, hasSubscription, err := s.store.Subscription(ctx, userID)
 	if err != nil {
@@ -57,17 +92,8 @@ func (s *Service) GetMyBilling(ctx context.Context, userID string) (AccountBilli
 	if err != nil {
 		return AccountBilling{}, err
 	}
-	now := s.now()
-	for index := range purchases {
-		purchase := &purchases[index]
-		if purchase.RefundedAt != nil || !now.Before(purchase.ChargedAt.Add(refundWindow)) || s.credits == nil {
-			continue
-		}
-		untouched, err := s.credits.LotUntouched(ctx, purchase.LotID)
-		if err != nil {
-			return AccountBilling{}, err
-		}
-		purchase.Refundable = untouched
+	if err := s.markRefundable(ctx, purchases, s.now()); err != nil {
+		return AccountBilling{}, err
 	}
 	result := AccountBilling{History: history, Purchases: purchases, CustomerKey: CustomerKey(userID)}
 	if hasSubscription {

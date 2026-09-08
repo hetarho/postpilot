@@ -152,6 +152,20 @@ func (f *fakeStore) LotUntouched(_ context.Context, lotID string) (bool, error) 
 	return false, nil
 }
 
+func (f *fakeStore) UntouchedPurchasedLots(_ context.Context, lotIDs []string) ([]string, error) {
+	wanted := map[string]bool{}
+	for _, id := range lotIDs {
+		wanted[id] = true
+	}
+	var untouched []string
+	for _, lot := range f.lots {
+		if wanted[lot.ID] && lot.Kind == LotPurchased && lot.Granted > 0 && lot.Remaining == lot.Granted {
+			untouched = append(untouched, lot.ID)
+		}
+	}
+	return untouched, nil
+}
+
 func (f *fakeStore) RestoreLot(_ context.Context, lotID string, credits int) (bool, error) {
 	for i := range f.lots {
 		if f.lots[i].ID == lotID && f.lots[i].Remaining+credits <= f.lots[i].Granted {

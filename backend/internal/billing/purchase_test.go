@@ -254,6 +254,59 @@ func TestGetMyBillingComputesRefundableFromWindowAndLot(t *testing.T) {
 	}
 }
 
+// A screenful of purchases is one refundability read, not one per row: the per-purchase
+// answer used to come off the single writer, so a read-only screen queued N statements ahead
+// of every concurrent hold (review/diff-260908 F4).
+func TestGetMyBillingResolvesEveryPurchaseInOneRead(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, seoul)
+	store := newSubscriptionStore()
+	provider := newSubscriptionProvider()
+	service := newSubscriptionService(store, provider, now)
+
+	ids := []string{"whole", "spent", "refunded", "expired"}
+	for _, id := range ids {
+		service.newID = func() string { return id }
+		if _, err := service.PurchaseCredits(ctx, "alice", 500); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store.credits.lots[store.purchases["spent"].LotID].remaining--
+	if _, err := service.RefundPurchase(ctx, "alice", "refunded"); err != nil {
+		t.Fatal(err)
+	}
+	expired := store.purchases["expired"]
+	expired.ChargedAt = now.Add(-refundWindow)
+	store.purchases["expired"] = expired
+	store.credits.untouchedReads = 0
+
+	view, err := service.GetMyBilling(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	refundable := map[string]bool{}
+	for _, purchase := range view.Purchases {
+		refundable[purchase.ID] = purchase.Refundable
+	}
+	if !refundable["whole"] || refundable["spent"] || refundable["refunded"] || refundable["expired"] {
+		t.Fatalf("refundability = %+v", refundable)
+	}
+	if store.credits.untouchedReads != 1 {
+		t.Fatalf("refundability reads = %d, want exactly one for four purchases", store.credits.untouchedReads)
+	}
+
+	// Nothing in window, nothing to ask: neither an empty purchase list nor an all-stale one
+	// issues a query.
+	store.credits.untouchedReads = 0
+	store.purchases = map[string]Purchase{}
+	if _, err := service.GetMyBilling(ctx, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if store.credits.untouchedReads != 0 {
+		t.Fatalf("refundability reads with no purchases = %d, want none", store.credits.untouchedReads)
+	}
+}
+
 func purchasedFixture(t *testing.T, now time.Time) (*subscriptionStore, *subscriptionProvider, *Service, Purchase) {
 	t.Helper()
 	store := newSubscriptionStore()

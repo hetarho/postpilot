@@ -156,6 +156,27 @@ func (s *Service) LotUntouched(ctx context.Context, lotID string) (bool, error) 
 	return s.store.LotUntouched(ctx, lotID)
 }
 
+// UntouchedLots answers, for each of the given purchased lots, whether it is still whole.
+//
+// It is the plural read behind a screen that renders a refund button per purchase: one
+// statement on the read pool instead of one writer statement per row, which would queue a
+// read-only screen behind every concurrent hold (ARCH-10 caps the writer at one connection).
+// A lot the query does not return is absent, spent, or not a purchase, and answers false.
+func (s *Service) UntouchedLots(ctx context.Context, lotIDs []string) (map[string]bool, error) {
+	if len(lotIDs) == 0 {
+		return nil, nil
+	}
+	ids, err := s.store.UntouchedPurchasedLots(ctx, lotIDs)
+	if err != nil {
+		return nil, err
+	}
+	untouched := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		untouched[id] = true
+	}
+	return untouched, nil
+}
+
 func (s *Service) RestoreLot(ctx context.Context, lotID string, credits int) error {
 	if credits <= 0 {
 		return errors.New("restore lot: credits must be positive")

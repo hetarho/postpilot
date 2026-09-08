@@ -42,6 +42,10 @@ type Store interface {
 	RaiseLot(ctx context.Context, lotID string, credits int) error
 	VoidUntouchedLot(ctx context.Context, lotID string) (bool, error)
 	LotUntouched(ctx context.Context, lotID string) (bool, error)
+	// UntouchedPurchasedLots answers the same question for many lots at once, on the read
+	// pool. It is for a screen deciding what to render, never for an answer about to decide
+	// a write — that is what LotUntouched's writer read is for.
+	UntouchedPurchasedLots(ctx context.Context, lotIDs []string) ([]string, error)
 	RestoreLot(ctx context.Context, lotID string, credits int) (bool, error)
 	// SpendFromLot and RefundToLot move credits within one lot. Both are guarded in SQL by
 	// the amount available, so a concurrent write cannot drive a lot past its own bounds

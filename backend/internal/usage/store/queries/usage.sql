@@ -48,6 +48,19 @@ SELECT EXISTS(
     WHERE id = ? AND kind = 'purchased' AND granted > 0 AND remaining = granted
 );
 
+-- name: UntouchedPurchasedLots :many
+-- Which of these purchased lots are still whole, in one statement. A billing screen asks
+-- about every purchase it is about to render, and the answer only decides whether a button
+-- appears, so this one reads on the read pool rather than on the single writer that the
+-- balance reads deliberately use.
+--
+-- sqlc.slice keeps the variable IN list a prepared statement rather than concatenated SQL.
+SELECT id FROM credit_lots
+WHERE id IN (sqlc.slice('ids'))
+  AND kind = 'purchased'
+  AND granted > 0
+  AND remaining = granted;
+
 -- name: RestoreLot :execrows
 UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted;
 

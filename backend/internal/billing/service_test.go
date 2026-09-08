@@ -183,9 +183,10 @@ func (*registrationCredits) OpenPurchasedLot(context.Context, string, int) (stri
 	return "", nil
 }
 func (*registrationCredits) VoidUntouchedLot(context.Context, string) error { return nil }
-func (*registrationCredits) LotUntouched(context.Context, string) (bool, error) {
-	return false, nil
+func (*registrationCredits) UntouchedLots(context.Context, []string) (map[string]bool, error) {
+	return nil, nil
 }
+
 func (*registrationCredits) RestoreLot(context.Context, string, int) error { return nil }
 func (c *registrationCredits) GrantBonusOnce(_ context.Context, id, _ string, _ int) (bool, error) {
 	if c.grants[id] {

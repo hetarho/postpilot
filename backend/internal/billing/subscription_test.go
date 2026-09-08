@@ -323,6 +323,9 @@ type subscriptionCredits struct {
 	raises  []int
 	lots    map[string]*purchaseLot
 	lotSeq  int
+	// untouchedReads counts the plural refundability reads: a screen must ask once, and an
+	// account with nothing in window must not ask at all.
+	untouchedReads int
 }
 
 type purchaseLot struct{ granted, remaining int }
@@ -356,9 +359,14 @@ func (c *subscriptionCredits) VoidUntouchedLot(_ context.Context, lotID string) 
 	lot.remaining = 0
 	return nil
 }
-func (c *subscriptionCredits) LotUntouched(_ context.Context, lotID string) (bool, error) {
-	lot, found := c.lots[lotID]
-	return found && lot.granted > 0 && lot.remaining == lot.granted, nil
+func (c *subscriptionCredits) UntouchedLots(_ context.Context, lotIDs []string) (map[string]bool, error) {
+	c.untouchedReads++
+	untouched := map[string]bool{}
+	for _, id := range lotIDs {
+		lot, found := c.lots[id]
+		untouched[id] = found && lot.granted > 0 && lot.remaining == lot.granted
+	}
+	return untouched, nil
 }
 func (c *subscriptionCredits) RestoreLot(_ context.Context, lotID string, credits int) error {
 	lot, found := c.lots[lotID]

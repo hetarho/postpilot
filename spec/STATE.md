@@ -40,18 +40,19 @@
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUBLISH | T044 T043 | todo |
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
-| T050 | The billing screen's refundability read | ARCH | - | todo |
 | T051 | The boot renewal pass belongs to the worker | ARCH | - | todo |
 | T052 | A bounded provider webhook | ARCH | - | todo |
 | T053 | One resend reservation per purpose | ARCH | - | todo |
 | T054 | Every backend failure reason the browser can be handed | ARCH | - | todo |
 
 ## next
-- implement-task T050 T051 T052 T053 T054 in any order: all five are independent and none touches another's files
+- implement-task T051 T052 T053 T054 in any order: all four are independent and none touches another's files
 - spec-wide, out of scope for any of them: `haeram-spec-creator lint` rejects PUBLISH BILLING TEMPLATE MARKETING against FORMAT's `2-6 uppercase` id rule — either the rule or the four domain ids has to move, and it is a planning decision
 - the PUBLISH chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260908 T050 done
+- 260908 T050 claimed (op5)
 - 260908 T049 done
 - 260908 T049 claimed (op5)
 - 260908 T048 done
@@ -70,5 +71,3 @@
 - 260908 T040 claimed (cx)
 - 260908 T039 done
 - 260908 T039 claimed (cx)
-- 260908 T038 done
-- 260908 T038 claimed (cx)

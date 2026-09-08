@@ -373,6 +373,46 @@ func TestTopUpMonthlyLotRaisesTheRunningCycle(t *testing.T) {
 
 // An account with no current monthly lot is a no-op: its next request opens one at the new
 // tier's size anyway, and inventing one here would double the grant.
+// The plural refundability read: many lots in one statement, and on the READ pool, which is
+// what keeps a read-only billing screen from queueing behind the single writer (ARCH-10).
+func TestUntouchedLotsAnswersManyLotsOffTheReadPool(t *testing.T) {
+	ctx := context.Background()
+	svc, handle := newServiceWithDB(t)
+	created := time.Now().UTC()
+	insertLot(t, handle, "purchased:whole", "alice", "purchased", 500, nil, created)
+	insertLot(t, handle, "purchased:spent", "alice", "purchased", 500, nil, created)
+	insertLot(t, handle, "monthly:not-a-purchase", "alice", "monthly", 500, nil, created)
+	if _, err := handle.Writer.ExecContext(ctx,
+		"UPDATE credit_lots SET remaining = remaining - 1 WHERE id = ?", "purchased:spent"); err != nil {
+		t.Fatal(err)
+	}
+
+	untouched, err := svc.UntouchedLots(ctx, []string{"purchased:whole", "purchased:spent", "monthly:not-a-purchase", "purchased:absent"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !untouched["purchased:whole"] || untouched["purchased:spent"] || untouched["monthly:not-a-purchase"] || untouched["purchased:absent"] {
+		t.Fatalf("untouched = %+v", untouched)
+	}
+	if len(untouched) != 1 {
+		t.Fatalf("untouched holds %d ids, want only the whole one", len(untouched))
+	}
+
+	// No lots asked about, no statement issued: an account with nothing in window must not
+	// pay for a query at all.
+	if answer, err := svc.UntouchedLots(ctx, nil); err != nil || answer != nil {
+		t.Fatalf("empty read = %+v, %v", answer, err)
+	}
+
+	// A store with NO writer proves which pool the query used: reaching for the writer here
+	// would panic on the nil pool rather than answer.
+	readOnly := usage.NewService(usagestore.New(nil, handle.Reader), pricedModels{}, maxCompletion)
+	answer, err := readOnly.UntouchedLots(ctx, []string{"purchased:whole", "purchased:spent"})
+	if err != nil || !answer["purchased:whole"] || answer["purchased:spent"] {
+		t.Fatalf("read-pool answer = %+v, %v", answer, err)
+	}
+}
+
 func TestTopUpMonthlyLotIsANoOpWithNoRunningCycle(t *testing.T) {
 	svc, handle := newServiceWithDB(t)
 	ctx := context.Background()

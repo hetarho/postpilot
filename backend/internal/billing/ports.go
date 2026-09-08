@@ -47,7 +47,11 @@ type Credits interface {
 	RaiseMonthlyLot(ctx context.Context, userID string, credits int) error
 	OpenPurchasedLot(ctx context.Context, userID string, credits int) (lotID string, err error)
 	VoidUntouchedLot(ctx context.Context, lotID string) error
-	LotUntouched(ctx context.Context, lotID string) (bool, error)
+	// UntouchedLots answers "is this purchase still whole" for a screenful of purchases in
+	// one read-pool query. Billing consumes only the plural read — the single writer-bound
+	// one is for an answer about to decide a write, which billing reaches through
+	// VoidUntouchedLot instead. Billing still learns nothing about credit_lots (ARCH-7).
+	UntouchedLots(ctx context.Context, lotIDs []string) (map[string]bool, error)
 	RestoreLot(ctx context.Context, lotID string, credits int) error
 	GrantBonusOnce(ctx context.Context, id, userID string, credits int) (created bool, err error)
 }

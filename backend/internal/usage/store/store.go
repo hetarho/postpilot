@@ -210,6 +210,17 @@ func (s *Store) VoidUntouchedLot(ctx context.Context, lotID string) (bool, error
 	return rows > 0, nil
 }
 
+func (s *Store) UntouchedPurchasedLots(ctx context.Context, lotIDs []string) ([]string, error) {
+	if len(lotIDs) == 0 {
+		return nil, nil
+	}
+	ids, err := s.read.UntouchedPurchasedLots(ctx, lotIDs)
+	if err != nil {
+		return nil, fmt.Errorf("read untouched purchased lots: %w", err)
+	}
+	return ids, nil
+}
+
 func (s *Store) RestoreLot(ctx context.Context, lotID string, credits int) (bool, error) {
 	rows, err := s.write.RestoreLot(ctx, sqlc.RestoreLotParams{
 		Remaining: int64(credits), ID: lotID, Remaining_2: int64(credits),

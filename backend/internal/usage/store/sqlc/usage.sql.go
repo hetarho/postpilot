@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
 const activeMonthlyLot = `-- name: ActiveMonthlyLot :one
@@ -533,6 +534,53 @@ func (q *Queries) UnsettledHoldJobs(ctx context.Context) ([]string, error) {
 			return nil, err
 		}
 		items = append(items, job_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const untouchedPurchasedLots = `-- name: UntouchedPurchasedLots :many
+SELECT id FROM credit_lots
+WHERE id IN (/*SLICE:ids*/?)
+  AND kind = 'purchased'
+  AND granted > 0
+  AND remaining = granted
+`
+
+// Which of these purchased lots are still whole, in one statement. A billing screen asks
+// about every purchase it is about to render, and the answer only decides whether a button
+// appears, so this one reads on the read pool rather than on the single writer that the
+// balance reads deliberately use.
+//
+// sqlc.slice keeps the variable IN list a prepared statement rather than concatenated SQL.
+func (q *Queries) UntouchedPurchasedLots(ctx context.Context, ids []string) ([]string, error) {
+	query := untouchedPurchasedLots
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
