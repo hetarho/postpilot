@@ -230,11 +230,6 @@ func main() {
 		billingMailer{mailer: mailer},
 	)
 	ledger.SetAnchors(usageAnchors{auth: authSvc, billing: billingSvc})
-	if cfg.BillingEnabled {
-		if err := billingSvc.RunDue(ctx, time.Now()); err != nil {
-			slog.Error("billing boot renewal pass failed", "err", err)
-		}
-	}
 	authSvc.SetBootstraps(
 		func(ctx context.Context, userID string) error {
 			return defaultVoiceBootstrap(ctx, handle, userID)
@@ -1651,14 +1646,30 @@ func (a usageAnchors) AnchorFor(ctx context.Context, userID string) (time.Time, 
 }
 
 func runBillingWorker(ctx context.Context, service *billing.Service) {
-	ticker := time.NewTicker(config.BillingTickInterval)
+	runBillingPasses(ctx, config.BillingTickInterval, func(now time.Time) error {
+		return service.RunDue(ctx, now)
+	})
+}
+
+// runBillingPasses catches up once and then once per tick, inside the caller's goroutine.
+//
+// The catch-up pass is here rather than in composition on purpose: a pass charges cards,
+// looks up rates and sends mail per due account on default HTTP timeouts, so a backlog after
+// an outage would keep the listener — and `/health` with it — shut long enough for the
+// health-gated rollout to roll the release back (ARCH-32). A pass that fails or runs long
+// costs its own tick and nothing else.
+func runBillingPasses(ctx context.Context, interval time.Duration, pass func(time.Time) error) {
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	if err := pass(time.Now()); err != nil {
+		slog.Error("billing renewal pass failed", "err", err, "boot", true)
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case now := <-ticker.C:
-			if err := service.RunDue(ctx, now); err != nil {
+			if err := pass(now); err != nil {
 				slog.Error("billing renewal pass failed", "err", err)
 			}
 		}
