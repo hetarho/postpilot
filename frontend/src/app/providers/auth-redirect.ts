@@ -20,6 +20,13 @@ interface AuthRedirectDeps {
  *  this — App.tsx is what wires the two together. */
 export function registerAuthRedirect({ router, queryClient }: AuthRedirectDeps): () => void {
   return onUnauthenticated(() => {
+    // A visitor on a public page has no session to lose, and every public credential route
+    // probes for one in beforeLoad — so that probe's own 401 reaches this listener. Acting
+    // on it threw the visitor from /signup to /login before the form could render, and wiped
+    // the caches of a page that was working. The event only means "a session died" on a
+    // screen that required one.
+    if (!onAuthenticatedScreen(router)) return
+
     queryClient.removeQueries()
     endSession()
 
@@ -33,4 +40,13 @@ export function registerAuthRedirect({ router, queryClient }: AuthRedirectDeps):
       replace: true,
     })
   })
+}
+
+/** Whether the screen the user is standing on is inside the authenticated subtree.
+ *
+ *  Read from the matched routes rather than from a list of public paths kept here: the route
+ *  tree is where that fact lives, and a second list would drift the first time a public page
+ *  is added. `/authenticated` is the layout every signed-in screen is a child of. */
+function onAuthenticatedScreen(router: typeof AppRouter): boolean {
+  return router.state.matches.some((match) => match.routeId === '/authenticated')
 }
