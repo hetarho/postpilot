@@ -47,7 +47,7 @@ describe('InterfacePreferences', () => {
       const localeTrigger = within(container).getByRole('button', { name: language })
       // Icon-only 44px triggers; the theme one wears the stored preference (System = monitor).
       for (const trigger of [themeTrigger, localeTrigger]) {
-        expect(trigger).toHaveClass('size-11')
+        expect(trigger).toHaveClass('size-10', 'pointer-coarse:size-11')
         expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
       }
       expect(themeTrigger.querySelector('svg')).toHaveClass('lucide-monitor')

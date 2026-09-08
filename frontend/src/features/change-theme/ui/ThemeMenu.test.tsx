@@ -65,7 +65,7 @@ describe('ThemeMenu', () => {
       render(<Harness initial="dark" />)
 
       const trigger = screen.getByRole('button', { name: label })
-      expect(trigger).toHaveClass('size-11')
+      expect(trigger).toHaveClass('size-10', 'pointer-coarse:size-11')
       expect(trigger).toHaveAccessibleDescription(
         locale === 'ko' ? '현재 테마 설정: 어둡게' : 'Current theme preference: Dark',
       )

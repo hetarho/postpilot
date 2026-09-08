@@ -26,6 +26,7 @@ export const marketing = {
     body: '찍어 둔 사진과 몇 줄 메모를 올리면, 내가 만들어 둔 말투 프로필로 블로그에 붙일 수 있는 초안까지 만듭니다. 읽어 보고 한 번 고치는 것까지가 한 흐름입니다.',
     access:
       '이메일 주소와 비밀번호로 계정을 만들고, 첫 로그인 전에 메일로 주소를 인증합니다. Google 로그인도 사용할 수 있습니다.',
+    haveAccount: '이미 계정이 있나요?',
   },
   flow: {
     title: '어떻게 쓰나요',
@@ -79,36 +80,6 @@ export const marketing = {
     title: '요금제',
     body: '요금제가 정하는 것은 매달 받는 크레딧뿐입니다. AI 작업은 크레딧으로 계산되고, 고를 수 있는 모델은 모든 요금제가 같습니다.',
     assignment: '구독자는 플랜 화면에서 원하는 등급을 고르고 결제해 구독을 시작할 수 있습니다.',
-    columns: {
-      plan: '요금제',
-      monthlyCredits: '매달 받는 크레딧',
-      price: '월 요금',
-      models: '모델',
-    },
-    free: {
-      name: 'free',
-      monthlyCredits: '50 크레딧',
-      price: '무료',
-      models: '등록된 모든 모델',
-    },
-    basic: {
-      name: 'basic',
-      monthlyCredits: '220 크레딧',
-      price: '$2',
-      models: '등록된 모든 모델',
-    },
-    pro: {
-      name: 'pro',
-      monthlyCredits: '575 크레딧',
-      price: '$5',
-      models: '등록된 모든 모델',
-    },
-    max: {
-      name: 'max',
-      monthlyCredits: '1,200 크레딧',
-      price: '$10',
-      models: '등록된 모든 모델',
-    },
     master:
       'master는 운영자 등급입니다. 사용량 제한이 없고 네이버 자동 발행과 계정 관리를 담당하며, 사용자가 받을 수 있는 등급이 아닙니다.',
   },

@@ -90,4 +90,25 @@ describe('the admin screen', () => {
     expect(await screen.findByRole('heading', { name: '모델 관리' })).toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: 'root 계정의 플랜' })).not.toBeInTheDocument()
   })
+
+  // The estimator combos are the third tab rather than a section under the catalog: the catalog
+  // runs to hundreds of rows, and a section beneath it was a screen and a half out of sight.
+  it('keeps the estimator combos on their own tab, not under the catalog', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin', {
+      user: MASTER,
+      plans: { plan: ProtoPlan.MASTER, accounts: [{ id: 'root', plan: ProtoPlan.MASTER }] },
+    })
+
+    await user.click(await screen.findByRole('link', { name: '모델 관리' }))
+    await screen.findByRole('heading', { name: '모델 관리' })
+    expect(screen.queryByRole('region', { name: '편수 기준 조합' })).not.toBeInTheDocument()
+
+    const estimatorTab = screen.getByRole('link', { name: '편수 기준 조합' })
+    expect(estimatorTab).toHaveAttribute('href', '/admin/estimator')
+    await user.click(estimatorTab)
+    expect(await screen.findByRole('region', { name: '편수 기준 조합' })).toBeInTheDocument()
+    expect(estimatorTab).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('heading', { name: '모델 관리' })).not.toBeInTheDocument()
+  })
 })

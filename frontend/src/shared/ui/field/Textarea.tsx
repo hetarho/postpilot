@@ -73,7 +73,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       }}
       className={twMerge(
         clsx(
-          'text-field-fg placeholder:text-field-placeholder disabled:text-content-disabled min-h-11 w-full resize-none disabled:opacity-50',
+          'text-field-fg placeholder:text-field-placeholder disabled:text-content-disabled min-h-10 w-full resize-none disabled:opacity-50 pointer-coarse:min-h-11',
           // `resize()` owns overflow-y from here on (see above); this is only the pre-measurement
           // state, so the first paint never flashes a scrollbar.
           autoGrow && 'overflow-hidden',

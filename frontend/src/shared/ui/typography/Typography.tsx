@@ -6,6 +6,9 @@ import { typographyStyles, type TypographyVariant } from './typographyStyles'
  *  are independent — a third-level heading can still look like `title`, and a post row's display
  *  text is not a heading at all. */
 const DEFAULT_ELEMENT: Record<TypographyVariant, ElementType> = {
+  // A hero figure is a number on a card, never the outline's top level: `p` unless the caller
+  // says otherwise.
+  hero: 'p',
   display: 'h1',
   title: 'h2',
   fieldTitle: 'h3',

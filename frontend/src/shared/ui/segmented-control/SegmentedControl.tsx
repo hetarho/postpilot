@@ -58,7 +58,7 @@ export function SegmentedControl<T extends string>({
       // page or to the browser's back gesture (§4.4).
       className={twMerge(
         clsx(
-          'bg-surface-recessed flex min-h-11 gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 select-none',
+          'bg-surface-recessed flex min-h-10 gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 select-none pointer-coarse:min-h-11',
           disabled && 'opacity-50',
         ),
         className,
@@ -78,7 +78,7 @@ export function SegmentedControl<T extends string>({
           // app/styles/index.css is the app's one focus indicator (§9), and a second ring stacked
           // inside a `p-1` container paints across the neighbouring tabs.
           className={twMerge(
-            'min-h-11 flex-1 shrink-0 rounded-sm px-4 text-sm whitespace-nowrap transition-colors',
+            'min-h-10 flex-1 shrink-0 rounded-sm px-4 text-sm whitespace-nowrap transition-colors pointer-coarse:min-h-11',
             option.value === value
               ? 'bg-surface-raised text-content-primary shadow-sm'
               : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',

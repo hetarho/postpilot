@@ -151,7 +151,7 @@ export function Menu<T extends string>({
                 tabIndex={-1}
                 onClick={() => select(option.value)}
                 className={clsx(
-                  'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm whitespace-nowrap transition-colors',
+                  'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-9 w-full items-center gap-3 rounded-md px-3 text-sm whitespace-nowrap transition-colors pointer-coarse:min-h-11',
                   checked ? 'text-content-primary font-medium' : 'text-content-secondary',
                 )}
               >

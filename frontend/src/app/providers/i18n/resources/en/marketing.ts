@@ -19,6 +19,7 @@ export const marketing = {
     body: 'Upload the photos you took and a few lines of notes, and Postpilot writes a draft you can paste into your blog, in a voice profile you trained. Reading it and making one pass of edits is part of the same flow.',
     access:
       'An email address and password open an account, and you verify the address by mail before your first login. Google sign-in is also available.',
+    haveAccount: 'Already have an account?',
   },
   flow: {
     title: 'How it works',
@@ -73,36 +74,6 @@ export const marketing = {
     body: 'A plan decides one thing: how many credits you receive each month. AI work is counted in credits, and every plan can choose from the same models.',
     assignment:
       'Subscribers choose a tier on the Plans screen and pay there to start a subscription.',
-    columns: {
-      plan: 'Plan',
-      monthlyCredits: 'Credits a month',
-      price: 'Monthly price',
-      models: 'Models',
-    },
-    free: {
-      name: 'free',
-      monthlyCredits: '50 credits',
-      price: 'Free',
-      models: 'Every registered model',
-    },
-    basic: {
-      name: 'basic',
-      monthlyCredits: '220 credits',
-      price: '$2',
-      models: 'Every registered model',
-    },
-    pro: {
-      name: 'pro',
-      monthlyCredits: '575 credits',
-      price: '$5',
-      models: 'Every registered model',
-    },
-    max: {
-      name: 'max',
-      monthlyCredits: '1,200 credits',
-      price: '$10',
-      models: 'Every registered model',
-    },
     master:
       'master is the operator tier. It has no usage limits and owns automated Naver publishing and account administration. It is not a tier a user can be given.',
   },

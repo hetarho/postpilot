@@ -17,7 +17,7 @@ describe('AccountMenu', () => {
     renderAppAt('/posts', { user: { ...USER, plan: ProtoPlan.FREE } })
 
     const trigger = await screen.findByRole('button', { name: '내 계정' })
-    expect(trigger).toHaveClass('rounded-full', 'size-11')
+    expect(trigger).toHaveClass('rounded-full', 'size-10', 'pointer-coarse:size-11')
     expect(trigger.querySelector('svg')).toHaveClass('lucide-user-round', 'size-5')
     expect(trigger).not.toHaveTextContent('A')
     // The header itself carries no id text or logout button until the popover opens.
@@ -32,6 +32,30 @@ describe('AccountMenu', () => {
       '/account',
     )
     expect(within(panel).getByRole('button', { name: '로그아웃' })).toBeInTheDocument()
+  })
+
+  // The panel is a menu, not a page: the destinations are icon rows whose whole strip is the
+  // target, in one landmark, with the one action as the last row in the same shape.
+  it('lists the destinations as menu rows and logout as the last row', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts', {
+      user: { ...USER, plan: ProtoPlan.FREE },
+      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
+    })
+
+    const panel = await openAccountPopover(user)
+    const menu = within(panel).getByRole('navigation', { name: '계정 메뉴' })
+    const rows = within(menu).getAllByRole('link')
+    expect(rows.map((row) => row.textContent)).toEqual(['계정 설정', '플랜 보기', '결제 관리'])
+    for (const row of rows) {
+      // Menu rows rest at 36px under a mouse and keep the 44px touch floor (THEME-23).
+      expect(row).toHaveClass('min-h-9', 'pointer-coarse:min-h-11', 'flex', 'rounded-md', '-mx-3')
+      expect(row).toHaveClass('hover:bg-row-bg-hover')
+      expect(row.querySelector('svg')).not.toBeNull()
+    }
+    const logout = within(panel).getByRole('button', { name: '로그아웃' })
+    expect(logout).toHaveClass('-mx-3', 'justify-start')
+    expect(logout.querySelector('svg.lucide-log-out')).not.toBeNull()
   })
 
   // Change 19 A10: the shell shows the tier, and every number behind it comes from
@@ -66,7 +90,11 @@ describe('AccountMenu', () => {
 
     const panel = await openAccountPopover(user)
     expect(calls.filter((call) => call === 'GetMyPlan')).toHaveLength(1)
-    expect(within(panel).getByText('Free')).toBeInTheDocument()
+    // The tier chip sits in the identity block's corner, beside the id rather than under the
+    // links, so the panel opens on who this is and what they are on.
+    const tier = within(panel).getByText('Free')
+    expect(tier.parentElement).toHaveClass('justify-between')
+    expect(within(tier.parentElement as HTMLElement).getByText('alice')).toBeInTheDocument()
 
     expect(await within(panel).findByText('62 크레딧')).toBeInTheDocument()
     // The lots behind the total: one lapses at the boundary, one does not, and a single
@@ -100,7 +128,20 @@ describe('AccountMenu', () => {
     const panel = await openAccountPopover(user)
     expect(await within(panel).findByText('제한 없음')).toBeInTheDocument()
     expect(within(panel).queryAllByRole('meter')).toHaveLength(0)
-    expect(within(panel).getByRole('link', { name: '운영 관리' })).toHaveClass('min-h-11')
+    // The operator chip is the first thing in the panel's top-right corner.
+    const operator = within(panel).getByText('운영자')
+    expect(operator.parentElement).toHaveClass('justify-between')
+    expect(within(operator.parentElement as HTMLElement).getByText('alice')).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: '운영 관리' })).toHaveClass(
+      'pointer-coarse:min-h-11',
+    )
+    // Administration is the last destination row, after the three every account gets.
+    const menu = within(panel).getByRole('navigation', { name: '계정 메뉴' })
+    expect(
+      within(menu)
+        .getAllByRole('link')
+        .map((row) => row.textContent),
+    ).toEqual(['계정 설정', '플랜 보기', '결제 관리', '운영 관리'])
     // The ladder is reachable from every tier: this link used to live inside the "has a
     // meter" branch, which left the operator account with no way to `/plans` (QUOTA-27).
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()

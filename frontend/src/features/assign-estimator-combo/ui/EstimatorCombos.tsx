@@ -17,10 +17,11 @@ const COMBOS = ['quality', 'balanced', 'value', 'cheapest'] as const
 
 /** Which models a comparison screen's post counts are priced with (QUOTA-39).
  *
- *  It sits on the 모델 관리 tab because assigning a price tier IS curation: the two models it
- *  names must be registered to the stage they serve, and this is the screen where that
- *  registration happens. The assignments ride the same `ListCatalog` read the tab already
- *  makes, so the section costs no request of its own.
+ *  Assigning a price tier IS curation: the two models it names must be registered to the stage
+ *  they serve on the 모델 관리 tab, and the pickers here offer only what that tab registered.
+ *  It has its own tab under `/admin` because the catalog runs to several hundred rows and a
+ *  section beneath it was out of sight; the assignments still ride the same `ListCatalog` read,
+ *  so the tab costs the same one request the catalog does.
  *
  *  A combo needs BOTH models before it means anything, so a half-chosen pair is not sent: the
  *  call carries the complete assignment or waits. */
@@ -36,9 +37,8 @@ export function EstimatorCombos() {
   const writers = catalog.entries.filter((entry) => entry.purposes.includes('writing'))
 
   return (
-    // Named so the section is a landmark: the tab already holds the catalog's own list, and
-    // an operator jumping by region needs to be able to reach this one.
-    <section aria-labelledby={titleId} className="mt-10 grid gap-4">
+    // Named so the section is a landmark an operator jumping by region can reach directly.
+    <section aria-labelledby={titleId} className="mt-8 grid gap-4">
       <div className="grid gap-1">
         <Typography variant="title" as="h2" id={titleId}>
           {t('combos.title')}

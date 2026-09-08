@@ -4,11 +4,16 @@ import { twMerge } from 'tailwind-merge'
 /** The §3 type roles (design-language). `input` is deliberately absent: the 16px phone floor
  *  belongs to the field primitives, and exposing it here would invite callers to size fields. */
 export type TypographyVariant =
-  'display' | 'title' | 'fieldTitle' | 'body' | 'label' | 'meta' | 'eyebrow'
+  'hero' | 'display' | 'title' | 'fieldTitle' | 'body' | 'label' | 'meta' | 'eyebrow'
 
 /** The one place the §3 recipes exist. Slices never compose raw size/weight/tracking utilities —
  *  `pnpm lint:style` rejects them outside shared/ui — so hierarchy cannot drift per call site. */
 const VARIANT_STYLES: Record<TypographyVariant, string> = {
+  /* The one figure a PROMOTIONAL surface leads with — a plan's price (THEME-37). Larger than the
+     screen's `display` on purpose: on a surface whose job is to be chosen from, the thing being
+     compared outranks the page's own name. It is not a heading and never carries prose; a slice
+     outside the plan ladder reaching for it is the promotional exception spreading. */
+  hero: 'text-3xl font-bold tracking-tight sm:text-4xl',
   display: 'text-2xl font-semibold tracking-tight',
   title: 'text-lg font-semibold tracking-tight',
   /* A field's own heading, where it stands beside the step title rather than under it: SMALLER

@@ -608,7 +608,7 @@ describe('theme preferences in the real route tree', () => {
     expect(theme.compareDocumentPosition(locale) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
     expect(locale.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
     for (const trigger of [theme, locale, account]) {
-      expect(trigger).toHaveClass('size-11')
+      expect(trigger).toHaveClass('size-10', 'pointer-coarse:size-11')
     }
     // A text-sized control earns its 44px in width the only way it can, and the header holds
     // nothing else: the destinations are the phone's bottom bar at this width, so the
@@ -827,8 +827,10 @@ describe('localized registered-route smoke', () => {
           'button, select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"])',
         )
         for (const control of directControls) {
+          // Every control keeps its touch floor under a coarse pointer (THEME-23): the 44px
+          // floor, or `compact`'s documented 36px step below it.
           expect(control.className, `${routeCase.path}: ${control.tagName}`).toMatch(
-            /(?:^|\s)(?:min-h-11|size-11)(?:\s|$)/,
+            /(?:^|\s)(?:min-h-11|size-11|pointer-coarse:min-h-11|pointer-coarse:min-h-9|pointer-coarse:size-11)(?:\s|$)/,
           )
         }
         for (const choice of main.querySelectorAll('input[type="checkbox"], input[type="radio"]')) {

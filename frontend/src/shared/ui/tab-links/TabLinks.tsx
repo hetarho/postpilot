@@ -46,7 +46,7 @@ export function TabLinks({
     <nav
       aria-label={ariaLabel}
       className={twMerge(
-        'bg-surface-recessed @container flex min-h-11 gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1',
+        'bg-surface-recessed @container flex min-h-10 gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 pointer-coarse:min-h-11',
         className,
       )}
     >
@@ -62,10 +62,11 @@ export function TabLinks({
           // Exact: every tab is a sibling address under one layout, so a prefix match would leave
           // the first tab marked current on all of the others.
           activeOptions={{ exact: true }}
-          // `px-4` pays for `min-h-11`: it sets only the height, and '말투' is two Hangul at 14px —
-          // a 28x44 target without the padding (§4.1, §4.2).
+          // `px-4` pays for the height floor: it sets only the height, and '말투' is two Hangul at
+          // 14px — a 28px-wide target without the padding (§4.1, §4.2). 40px under a mouse, 44
+          // under a thumb (THEME-23).
           className={clsx(
-            'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active inline-flex min-h-11 flex-1 items-center justify-center rounded-sm text-sm whitespace-nowrap transition-colors',
+            'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active inline-flex min-h-10 flex-1 items-center justify-center rounded-sm text-sm whitespace-nowrap transition-colors pointer-coarse:min-h-11',
             compactCapable
               ? '@tabs:shrink-0 @tabs:basis-auto @tabs:flex-row @tabs:px-1 min-w-0 flex-col gap-0.5 px-1'
               : 'shrink-0 basis-auto px-4',

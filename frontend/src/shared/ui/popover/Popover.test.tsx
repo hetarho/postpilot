@@ -19,7 +19,7 @@ it('opens from the keyboard, closes on Escape, and restores trigger focus', asyn
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(trigger).toHaveFocus()
-  expect(trigger).toHaveClass('min-h-11')
+  expect(trigger).toHaveClass('min-h-10', 'pointer-coarse:min-h-11')
 })
 
 it('bounds a below-header panel to the viewport and lets its contents scroll', async () => {

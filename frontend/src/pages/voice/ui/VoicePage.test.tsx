@@ -172,7 +172,7 @@ describe('the voice tab row', () => {
     // Korean labels, and every tab keeps the 44px floor.
     expect(screen.getByRole('navigation', { name: '말투 설정' })).toHaveClass('overflow-x-auto')
     tabs.forEach((tab) => {
-      expect(tab).toHaveClass('min-h-11')
+      expect(tab).toHaveClass('min-h-10', 'pointer-coarse:min-h-11')
       expect(tab).toHaveClass('whitespace-nowrap')
     })
 

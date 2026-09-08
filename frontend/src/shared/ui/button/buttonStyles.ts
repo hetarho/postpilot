@@ -19,24 +19,32 @@ const VARIANT_STYLES: Record<ButtonVariant, string> = {
     'bg-button-ghost-bg text-button-danger-quiet-fg pointer-coarse:bg-button-danger-quiet-bg-hover hover:bg-button-danger-quiet-bg-hover active:bg-button-danger-quiet-bg-hover',
 }
 
-/** Horizontal padding is a function of the height the control actually has, not of the padding
- *  that was written (design-language §4.2). `min-h-11` is a 44px TOUCH FLOOR: it overrides the
- *  computed height, so a `py-2` control ends up with ~12px of effective vertical padding. Pairing
- *  that with `px-3` gives a 1:1 box, and because text is far wider than it is tall a 1:1 control
- *  always reads squat. `px-4` restores the ~2:1 ratio; the committing action takes one step more
- *  so it is also the physically heavier target.
+/** The control's height follows the POINTER, not the device (THEME-23). Under a coarse pointer —
+ *  a thumb — the 44px touch floor stays (`pointer-coarse:min-h-11`); under a fine pointer the
+ *  control rests at 40px, the web's own norm for a button (WCAG 2.5.8 asks 24, Apple asks 44 for
+ *  touch, Material draws 40 on a 48 target), because a 44px button under a mouse reads as a touch
+ *  layout blown up. The primitive carries both values so no slice ever sizes a control.
  *
- *  `compact` is the ONE documented step below the 44px floor (36px, still far above the 24px WCAG
- *  2.5.8 minimum). It exists for a low-emphasis WAY OUT that shares a dock with the reading area
- *  it would otherwise cover — 둘 다 사용하지 않기 over an A/B draft. A committing action never takes
- *  it. Inside a `sm:` flex row it stretches back to its siblings' height, so the shorter box is a
- *  phone-only saving. */
+ *  Horizontal padding is a function of the height the control actually has, not of the padding
+ *  that was written (design-language §4.2). The height floor overrides the computed height, so a
+ *  `py-2` control ends up with ~10–12px of effective vertical padding. Pairing that with `px-3`
+ *  gives a 1:1 box, and because text is far wider than it is tall a 1:1 control always reads
+ *  squat. `px-4` restores the ~2:1 ratio; the committing action takes one step more so it is also
+ *  the physically heavier target.
+ *
+ *  `compact` is the ONE documented step below the floor (32px, 36px on touch — still above the
+ *  24px WCAG 2.5.8 minimum). It exists for a low-emphasis WAY OUT that shares a dock with the
+ *  reading area it would otherwise cover — 둘 다 사용하지 않기 over an A/B draft. A committing action
+ *  never takes it. Inside a `sm:` flex row it stretches back to its siblings' height, so the
+ *  shorter box is a phone-only saving. */
 function sizeStyles(size: ButtonSize, variant: ButtonVariant): string {
-  if (size === 'icon') return 'size-11 shrink-0 p-0'
-  // 36px against a 20px line box leaves 8px of effective vertical padding, so `px-4` keeps §4.2's
+  if (size === 'icon') return 'size-10 pointer-coarse:size-11 shrink-0 p-0'
+  // 32px against a 20px line box leaves 6px of effective vertical padding, so `px-4` keeps §4.2's
   // 2 : 1 ratio rather than turning the shorter control into a square one.
-  if (size === 'compact') return 'min-h-9 px-4'
-  return variant === 'cta' ? 'min-h-11 px-5' : 'min-h-11 px-4'
+  if (size === 'compact') return 'min-h-8 pointer-coarse:min-h-9 px-4'
+  return variant === 'cta'
+    ? 'min-h-10 pointer-coarse:min-h-11 px-5'
+    : 'min-h-10 pointer-coarse:min-h-11 px-4'
 }
 
 /** Shared visual contract for native buttons and elements that must retain their own

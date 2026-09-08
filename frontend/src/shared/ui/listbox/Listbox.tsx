@@ -275,7 +275,7 @@ export function Listbox<T>({
         onKeyDown={onTriggerKeyDown}
         // The field well the native select wore, minus the native control. `px-4` against the
         // ~12px the 44px floor produces is the §4.2 ratio; the type is the `input` role (§3.1).
-        className="bg-field-bg text-field-fg hover:bg-field-bg-hover focus:bg-field-bg-focus disabled:text-content-disabled flex min-h-11 w-full items-center gap-2 rounded-md px-4 py-2 text-left text-base disabled:opacity-50 sm:text-sm"
+        className="bg-field-bg text-field-fg hover:bg-field-bg-hover focus:bg-field-bg-focus disabled:text-content-disabled flex min-h-10 w-full items-center gap-2 rounded-md px-4 py-2 text-left text-base disabled:opacity-50 sm:text-sm pointer-coarse:min-h-11"
       >
         <span
           id={valueId}
@@ -328,7 +328,7 @@ export function Listbox<T>({
                   tabIndex={-1}
                   onClick={() => select(option)}
                   className={clsx(
-                    'flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors',
+                    'flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors pointer-coarse:min-h-11',
                     option.disabled
                       ? 'text-content-disabled'
                       : clsx(

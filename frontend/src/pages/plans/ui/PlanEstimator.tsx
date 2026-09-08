@@ -29,8 +29,9 @@ export function PlanEstimator({
 
   return (
     // The estimator wears the same stroke as the rungs it prices: it is one promotional
-    // surface, and a plain panel above four framed cards would read as a different screen.
-    <PromoFrame className="mt-8">
+    // surface, and a plain panel above four framed cards would read as a different screen. The
+    // caller's stage supplies the spacing above it.
+    <PromoFrame>
       <Typography variant="title" as="h2">
         {t('estimator.title')}
       </Typography>

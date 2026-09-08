@@ -1,7 +1,11 @@
 import type { ReactNode } from 'react'
+import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Eye, Layers, PencilLine, SlidersHorizontal } from 'lucide-react'
-import { Typography, typographyStyles } from '@/shared/ui'
+import { isInAppPath } from '@/shared/lib'
+import { PromoStage, Typography, typographyStyles } from '@/shared/ui'
+import { PlanLadder } from '@/widgets/plan-ladder'
+import { PUBLIC_LADDER } from '../model/ladder'
 import { useAboutMetadata } from '../model/useAboutMetadata'
 import { AboutHeader } from './AboutHeader'
 
@@ -9,20 +13,25 @@ import { AboutHeader } from './AboutHeader'
  *
  *  It reads nothing and writes nothing: no session probe, no query, no mutation, no provider call
  *  ([I5]) — which is also why it is a direct child of the root route rather than of the
- *  authenticated layout. The plans section is static localized copy, deliberately not a
- *  `GetMyPlan` read: a visitor with no account has no plan to read, and the ladder is a product
- *  fact, not this visitor's state.
+ *  authenticated layout. The plans section is the same promotional ladder `/plans` shows, fed
+ *  from a static code-owned table rather than a `GetMyPlan` read (MARKETING-5): a visitor with
+ *  no account has no plan to read, and the ladder is a product fact, not this visitor's state.
  *
  *  Sections are separated by spacing and one surface step, never by bordered card stacks
- *  (design-language §1.3/§1.4). */
+ *  (design-language §1.3/§1.4) — the plan cards being the one promotional exception (THEME-37). */
 export function AboutPage() {
   const { t } = useTranslation('marketing')
   useAboutMetadata()
+  // Handed straight back to /login so a detour through this page does not cost the visitor the
+  // destination their session expired on. Filtered here as well as there: an off-site value must
+  // never survive a round trip through a public page (MARKETING-2).
+  const { redirect } = useSearch({ from: '/about' })
+  const carried = isInAppPath(redirect) ? redirect : undefined
 
   return (
     <div className="bg-surface-base text-content-primary flex min-h-full flex-col">
       <AboutHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 sm:px-6">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 sm:px-6 lg:max-w-5xl lg:px-8">
         <section aria-labelledby="about-hero" className="pt-10 sm:pt-16">
           <Typography variant="display" id="about-hero">
             {t('hero.title')}
@@ -32,6 +41,26 @@ export function AboutPage() {
           </Typography>
           <Typography variant="body" className="text-content-tertiary max-w-measure mt-3">
             {t('hero.access')}
+          </Typography>
+          {/* The quiet way in for someone who already has an account, where the account path is
+              being explained rather than as a second control in the header (MARKETING-6). A bare
+              text link keeps its 44px box at every pointer — nothing visible is oversized. */}
+          <Typography
+            variant="body"
+            className="text-content-secondary mt-1 flex flex-wrap items-center gap-x-2"
+          >
+            <span>{t('hero.haveAccount')}</span>
+            <Link
+              to="/login"
+              search={carried ? { redirect: carried } : {}}
+              className={typographyStyles({
+                variant: 'label',
+                className:
+                  'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center underline',
+              })}
+            >
+              {t('header.login')}
+            </Link>
           </Typography>
         </section>
 
@@ -113,59 +142,14 @@ export function AboutPage() {
           <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
             {t('plans.body')}
           </Typography>
-          {/* Scrolls inside its own container: five columns of Korean headers do not fit 320px,
-              and the page itself must never scroll sideways (design-language §1.5). */}
-          <div className="-mx-4 mt-4 overflow-x-auto overscroll-x-contain px-4 sm:mx-0 sm:px-0">
-            {/* The label role carries the table's 14px; every visible cell sets its own colour. */}
-            <table
-              className={typographyStyles({
-                variant: 'label',
-                className: 'w-full min-w-md text-left',
-              })}
-            >
-              <caption className="sr-only">{t('plans.title')}</caption>
-              <thead className={typographyStyles({ variant: 'label' })}>
-                <tr>
-                  <th scope="col" className="py-2 pr-4">
-                    {t('plans.columns.plan')}
-                  </th>
-                  <th scope="col" className="py-2 pr-4">
-                    {t('plans.columns.monthlyCredits')}
-                  </th>
-                  <th scope="col" className="py-2 pr-4">
-                    {t('plans.columns.price')}
-                  </th>
-                  <th scope="col" className="py-2">
-                    {t('plans.columns.models')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-divider divide-y">
-                {(['free', 'basic', 'pro', 'max'] as const).map((tier) => (
-                  <tr key={tier}>
-                    <th
-                      scope="row"
-                      className={typographyStyles({
-                        variant: 'label',
-                        mono: true,
-                        className: 'text-content-primary py-3 pr-4',
-                      })}
-                    >
-                      {t(`plans.${tier}.name`)}
-                    </th>
-                    <td className="text-content-secondary py-3 pr-4 whitespace-nowrap">
-                      {t(`plans.${tier}.monthlyCredits`)}
-                    </td>
-                    <td className="text-content-secondary py-3 pr-4 whitespace-nowrap">
-                      {t(`plans.${tier}.price`)}
-                    </td>
-                    <td className="text-content-secondary py-3">{t(`plans.${tier}.models`)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Typography variant="body" className="text-content-secondary max-w-measure mt-4">
+          {/* The same promotional cards `/plans` shows, on their stage (THEME-37, MARKETING-5):
+              static figures, the code-owned recommended mark, no action on any card — plans are
+              presented here, never sold (MARKETING-6). The section title is this page's `h2`, so
+              the tier names take `h3`. */}
+          <PromoStage className="mt-5">
+            <PlanLadder offers={PUBLIC_LADDER} headingLevel="h3" />
+          </PromoStage>
+          <Typography variant="body" className="text-content-secondary max-w-measure mt-5">
             {t('plans.assignment')}
           </Typography>
           <Typography variant="body" className="text-content-tertiary max-w-measure mt-2">

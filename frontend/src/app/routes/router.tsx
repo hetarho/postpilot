@@ -219,7 +219,7 @@ const publishingAgentsRoute = createRoute({
 // Master-only, and redirected rather than refused: the account HAS a session, so bouncing it to
 // /login would be a lie. The redirect is UX only — every admin procedure is refused server-side
 // for a non-master caller, whatever route the client managed to render.
-// The two operator surfaces share one frame and one guard; each keeps its own address so a tab
+// The three operator surfaces share one frame and one guard; each keeps its own address so a tab
 // is bookmarkable and the back button moves between them.
 const adminRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -240,6 +240,12 @@ const adminModelsRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: '/models',
   component: lazyRouteComponent(() => import('@/pages/admin'), 'AdminModelsPage'),
+})
+
+const adminEstimatorRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/estimator',
+  component: lazyRouteComponent(() => import('@/pages/admin'), 'AdminEstimatorPage'),
 })
 
 const voicesRoute = createRoute({
@@ -478,7 +484,7 @@ export const routeTree = rootRoute.addChildren([
     indexRoute,
     postsRoute,
     publishingAgentsRoute,
-    adminRoute.addChildren([adminAccountsRoute, adminModelsRoute]),
+    adminRoute.addChildren([adminAccountsRoute, adminModelsRoute, adminEstimatorRoute]),
     voicesRoute,
     templatesRoute,
     newTemplateRoute,

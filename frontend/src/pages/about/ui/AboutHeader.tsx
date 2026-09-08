@@ -1,48 +1,39 @@
-import { Link, useSearch } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { isInAppPath } from '@/shared/lib'
-import { buttonStyles, Logo, typographyStyles } from '@/shared/ui'
+import { buttonStyles, Logo } from '@/shared/ui'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
 
-/** The public header: wordmark, the way in, Login, and the shared preferences.
+/** The public header: wordmark, the way in, and the shared preferences — ONE row at every width
+ *  (MARKETING-11).
+ *
+ *  It used to stack on a phone, the wordmark over a centred pair of Get started and Login, which
+ *  left the wordmark flush against the top edge and two controls reading as two buttons. Now the
+ *  bar is the same shape the app's own header has: the wordmark at the gutter, the controls
+ *  viewport-side, everything centred in the bar's height. The quiet Login link lives in the hero
+ *  under the access sentence (MARKETING-6), where a returning visitor is already reading about
+ *  the account path, so the header carries exactly one action.
  *
  *  Sticky because Get started is this page's ONE filled CTA and the page is long — one repeated
- *  at the bottom would be the second one plan 15 forbids, so the single one stays reachable
- *  instead. `pb-safe-b` is not needed here (it is top-anchored), but `pt-safe-t` is: on a notched
- *  phone in landscape the inset is on the leading edge.
+ *  at the bottom would be the second one MARKETING-6 forbids, so the single one stays reachable
+ *  instead. `pt-safe-t` is what a notched phone in landscape needs on its leading edge.
  *
- *  Both actions stay router links because they navigate; the quiet Login link alone preserves
- *  the destination that led through this public page. */
+ *  The wordmark is a step smaller on a phone than in the app: at 320px the row holds the mark,
+ *  the CTA and two icon buttons at their touch size, and `h-6` is the 5px that would push it into
+ *  horizontal scroll. */
 export function AboutHeader() {
   const { t } = useTranslation('marketing')
-  // Handed straight back to /login so a detour through this page does not cost the visitor the
-  // destination their session expired on. Filtered here as well as there: an off-site value must
-  // never survive a round trip through a public page.
-  const { redirect } = useSearch({ from: '/about' })
-  const carried = isInAppPath(redirect) ? redirect : undefined
   return (
-    <header className="bg-surface-raised pt-safe-t sticky top-0 z-20 flex min-h-14 flex-col items-center justify-between gap-1 px-4 pb-1 sm:min-h-16 sm:flex-row sm:gap-2 sm:px-6 sm:pb-0">
+    <header className="bg-surface-raised pt-safe-t sticky top-0 z-20 flex min-h-14 items-center justify-between gap-3 px-4 sm:min-h-16 sm:px-6">
       {/* The wordmark is the page's own identity here, not a link: `/about` IS this page, and a
           link to the current route is a dead control. */}
-      <Logo className="h-6 shrink-0" />
-      <div className="flex w-full min-w-0 items-center justify-center gap-1 sm:w-auto sm:justify-end sm:gap-2">
+      <Logo className="h-5 shrink-0 sm:h-6" />
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <Link to="/signup" className={buttonStyles({ variant: 'cta', className: 'shrink-0' })}>
           {t('header.getStarted')}
         </Link>
-        <Link
-          to="/login"
-          search={carried ? { redirect: carried } : {}}
-          className={typographyStyles({
-            variant: 'label',
-            className:
-              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 shrink-0 items-center px-1 underline',
-          })}
-        >
-          {t('header.login')}
-        </Link>
-        {/* Keep the two right-aligned menu panels viewport-side last. At 320px, putting actions
-            after them pushed the theme trigger far enough left that its 176px panel crossed the
-            viewport edge even though the header row itself still fit. */}
+        {/* The two right-aligned menu panels stay viewport-side last. At 320px, putting the
+            action after them pushed the theme trigger far enough left that its 176px panel
+            crossed the viewport edge even though the header row itself still fit. */}
         <InterfacePreferences />
       </div>
     </header>

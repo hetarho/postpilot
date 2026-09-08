@@ -68,7 +68,11 @@ describe('the plan comparison', () => {
 
     // Every figure is the server's, including how many posts the grant covers (QUOTA-36).
     expect(within(items[1]).getByText('매달 220 크레딧')).toBeInTheDocument()
-    expect(within(items[1]).getByText('월 $2')).toBeInTheDocument()
+    // The price is the card's one hero figure, with the period beside it rather than inside it.
+    expect(within(items[1]).getByText('$2')).toHaveClass('text-3xl')
+    expect(within(items[1]).getByText('/ 월')).toBeInTheDocument()
+    expect(within(items[0]).getByText('무료')).toHaveClass('text-3xl')
+    expect(within(items[0]).queryByText('/ 월')).not.toBeInTheDocument()
 
     // The current and free rungs offer nothing to press; another paid rung enters checkout.
     expect(within(items[1]).getByText('지금 쓰는 플랜')).toBeInTheDocument()
@@ -92,16 +96,45 @@ describe('the plan comparison', () => {
     const marked = screen.getAllByText('가장 합리적')
     expect(marked).toHaveLength(1)
 
-    // Every rung wears the promotional stroke; the recommended one wears it wider and casts a
-    // shadow (THEME-37), and the badge above is what carries the meaning.
+    // Every rung wears the promotional stroke; the recommended one wears it wider, casts a
+    // shadow and glows (THEME-37), and the badge above is what carries the meaning.
     const items = await rungs()
     const frames = items.map((item) => item.firstElementChild as HTMLElement)
     expect(frames.filter((frame) => frame.querySelector('[data-promo-stroke]'))).toHaveLength(4)
     const wide = frames.filter((frame) => frame.classList.contains('shadow-md'))
     expect(wide).toHaveLength(1)
-    expect(wide[0]).toHaveClass('p-0.5')
+    expect(wide[0].querySelector('[data-promo-stroke]')).toHaveClass('p-0.5')
     expect(within(wide[0]).getByRole('heading', { name: 'Pro' })).toBeInTheDocument()
     expect(within(wide[0]).getByText('가장 합리적')).toBeInTheDocument()
+    // Exactly one halo, and it belongs to the marked rung; the desk lifts that rung a step.
+    expect(document.querySelectorAll('[data-promo-glow]')).toHaveLength(1)
+    expect(wide[0].querySelector('[data-promo-glow]')).not.toBeNull()
+    expect(wide[0]).toHaveClass('lg:scale-105')
+    // Its subscribe action is the view's one filled CTA; every other rung stays secondary.
+    expect(within(wide[0]).getByRole('link', { name: '구독하기' })).toHaveClass('bg-button-cta-bg')
+    expect(within(items[3]).getByRole('link', { name: '구독하기' })).toHaveClass(
+      'bg-button-secondary-bg',
+    )
+    expect(document.querySelectorAll('.bg-button-cta-bg')).toHaveLength(1)
+  })
+
+  // The ladder arrives as one gesture: each rung rises a beat after the one before it, once, on
+  // mount — sliders moving afterwards recompute the figures without replaying it.
+  it('staggers the rungs into place on arrival', async () => {
+    renderAppAt('/plans', {
+      user: { ...USER, plan: ProtoPlan.FREE },
+      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
+    })
+
+    const items = await rungs()
+    const frames = items.map((item) => item.firstElementChild as HTMLElement)
+    for (const frame of frames) expect(frame).toHaveClass('animate-rise')
+    expect(frames.map((frame) => frame.style.animationDelay)).toEqual([
+      '0ms',
+      '60ms',
+      '120ms',
+      '180ms',
+    ])
   })
 
   it('offers no subscription actions to an operator account', async () => {
@@ -141,8 +174,11 @@ describe('the promotional stroke', () => {
     })
 
     await rungs()
-    // Four rungs plus the estimator above them.
+    // Four rungs plus the estimator above them, all on one aurora stage.
     expect(document.querySelectorAll('[data-promo-stroke]')).toHaveLength(5)
+    expect(document.querySelectorAll('[data-promo-aurora]')).toHaveLength(1)
+    // The hero figure is gradient ink, clipped to the glyphs.
+    expect(screen.getByText('$5')).toHaveClass('bg-promo-text', 'bg-clip-text', 'text-transparent')
   })
 
   it('leaves other screens unframed', async () => {
@@ -150,6 +186,7 @@ describe('the promotional stroke', () => {
 
     await screen.findByRole('heading', { name: '내 글' })
     expect(document.querySelectorAll('[data-promo-stroke]')).toHaveLength(0)
+    expect(document.querySelectorAll('[data-promo-aurora]')).toHaveLength(0)
   })
 })
 
@@ -191,9 +228,10 @@ describe('the plan estimator', () => {
     fireEvent.change(screen.getByRole('slider', { name: '글자 수' }), { target: { value: '600' } })
     fireEvent.change(screen.getByRole('slider', { name: '사진' }), { target: { value: '0' } })
 
+    // The figure COUNTS to its new value rather than swapping (THEME-37), so it is awaited.
     const items = await rungs()
-    expect(within(items[1]).getByText('매달 약 29편')).toBeInTheDocument()
-    expect(within(items[3]).getByText('매달 약 162편')).toBeInTheDocument()
+    expect(await within(items[1]).findByText('매달 약 29편')).toBeInTheDocument()
+    expect(await within(items[3]).findByText('매달 약 162편')).toBeInTheDocument()
     expect(calls).toEqual(before)
   })
 
@@ -218,7 +256,7 @@ describe('the plan estimator', () => {
     await user.click(screen.getByRole('tab', { name: '최저가' }))
     items = await rungs()
     // 1900 + 5x723 + 360 = 5,875 milli a post.
-    expect(within(items[1]).getByText('매달 약 37편')).toBeInTheDocument()
+    expect(await within(items[1]).findByText('매달 약 37편')).toBeInTheDocument()
 
     fireEvent.change(screen.getByRole('slider', { name: '사진' }), { target: { value: '12' } })
     await waitFor(() => expect(screen.getByRole('slider', { name: '사진' })).toHaveValue('12'))

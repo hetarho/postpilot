@@ -24,6 +24,8 @@ const COPY = {
     publishing: /실제 환경 검증이 진행 중/,
     assignment: /플랜 화면에서 원하는 등급을 고르고 결제해 구독을 시작할 수 있습니다/,
     master: /사용자가 받을 수 있는 등급이 아닙니다/,
+    recommended: '가장 합리적',
+    haveAccount: '이미 계정이 있나요?',
     // Claims the product does not own (QUOTA-2, QUOTA-19): a plan decides the monthly grant
     // and nothing else — no daily job count, no spend allowance, no model range.
     unownedPlanClaims: ['하루', '일일', '사용 금액', '범위'],
@@ -52,6 +54,8 @@ const COPY = {
     publishing: /live verification is still in progress/,
     assignment: /choose a tier on the Plans screen and pay there to start a subscription/,
     master: /not a tier a user can be given/,
+    recommended: 'Best value',
+    haveAccount: 'Already have an account?',
     unownedPlanClaims: ['per day', 'daily', 'spend', 'range of'],
     facts: /Opening a screen never starts AI work/,
   },
@@ -61,10 +65,10 @@ const COPY = {
  *  between this table and the page is a copy bug — the whole point of A17 (MARKETING-5) — so
  *  the test states the numbers rather than reading them from anywhere. */
 const PLANS = [
-  { name: 'free', credits: '50', price: /무료|Free/ },
-  { name: 'basic', credits: '220', price: '$2' },
-  { name: 'pro', credits: '575', price: '$5' },
-  { name: 'max', credits: '1,200', price: '$10' },
+  { name: 'Free', credits: /\b50\b/, price: /무료|Free/ },
+  { name: 'Basic', credits: /\b220\b/, price: '$2' },
+  { name: 'Pro', credits: /\b575\b/, price: '$5' },
+  { name: 'Max', credits: /\b1200\b/, price: '$10' },
 ] as const
 
 afterEach(() => {
@@ -120,24 +124,41 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     expect(outputs.getByText(copy.publishing)).toBeInTheDocument()
   })
 
-  // A17: the tier values equal plan 17's shipped limits table, master is operator-only, and the
-  // purchase path is named without adding a second commercial control to this public explainer.
-  it('presents exactly the shipped plan ladder with no purchase affordance', async () => {
+  // A17 / MARKETING-5: the tier values equal the shipped grant table and are presented as the
+  // same promotional cards `/plans` shows; master is operator-only prose, and the purchase path
+  // is named without adding a second commercial control to this public explainer.
+  it('presents exactly the shipped plan ladder as cards with no purchase affordance', async () => {
     render()
     const plans = within(await screen.findByRole('region', { name: copy.sections[3] }))
 
-    for (const tier of PLANS) {
-      const row = plans.getByRole('row', { name: new RegExp(`^${tier.name}\\b`) })
-      const cells = within(row).getAllByRole('cell')
-      expect(cells[0]).toHaveTextContent(tier.credits)
-      expect(cells[1]).toHaveTextContent(tier.price)
-    }
-    // master appears only as prose about the operator tier — never as a fourth obtainable row.
-    expect(plans.getAllByRole('row')).toHaveLength(PLANS.length + 1)
+    const cards = plans.getAllByRole('listitem')
+    expect(cards).toHaveLength(PLANS.length)
+    PLANS.forEach((tier, index) => {
+      const card = within(cards[index])
+      // The section title is the page's h2, so the tier names step down to h3.
+      expect(card.getByRole('heading', { level: 3, name: tier.name })).toBeInTheDocument()
+      expect(card.getByText(tier.credits)).toBeInTheDocument()
+      // The price is the card's hero figure — matched by its role, since the free tier's price
+      // word is also its name.
+      expect(card.getAllByText(tier.price).some((el) => el.classList.contains('text-3xl'))).toBe(
+        true,
+      )
+    })
+    // The same code-owned recommended rung `/plans` marks, and only that one (MARKETING-15).
+    expect(plans.getAllByText(copy.recommended)).toHaveLength(1)
+    expect(within(cards[2]).getByText(copy.recommended)).toBeInTheDocument()
+    // No estimate: it needs the operator's priced combos, which a visitor never reads.
+    expect(plans.queryByText(/매달 약|About \d+ posts/)).not.toBeInTheDocument()
+    // master appears only as prose about the operator tier — never as a fifth card.
     expect(plans.getByText(copy.master)).toBeInTheDocument()
     expect(plans.getByText(copy.assignment)).toBeInTheDocument()
     expect(plans.queryByRole('button')).not.toBeInTheDocument()
     expect(plans.queryByRole('link')).not.toBeInTheDocument()
+    // The cards are the promotional surface, on their stage (THEME-37).
+    expect(
+      plans.getByRole('list').closest('[class~="isolate"]')?.querySelector('[data-promo-aurora]'),
+    ).not.toBeNull()
+    expect(document.querySelectorAll('[data-promo-stroke]')).toHaveLength(PLANS.length)
   })
 
   // A17 again, as a claim rather than a layout: the section may only say what a plan
@@ -152,8 +173,9 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     }
   })
 
-  // MARKETING-6/16: Get started is the one filled CTA; Login stays quiet and alone carries
-  // the blocked destination. The explanation itself still collects nothing.
+  // MARKETING-6/16: Get started is the one filled CTA and the header's only action; Login is a
+  // quiet link in the hero and alone carries the blocked destination. The explanation itself
+  // still collects nothing.
   it('offers one signup CTA, a quiet login link, and no form or third-party asset', async () => {
     initializeI18n(locale)
     const { container } = renderAppAt('/about?redirect=%2Fposts%2Fwelcome')
@@ -163,6 +185,16 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     const login = screen.getByRole('link', { name: copy.login })
     expect(getStarted).toHaveAttribute('href', '/signup')
     expect(getStarted.className).toContain('bg-button-cta-bg')
+    expect(getStarted.closest('header')).not.toBeNull()
+    // The one link in the header is the CTA — Login is not a second button beside it.
+    expect(
+      within(container.querySelector('header') as HTMLElement).getAllByRole('link'),
+    ).toHaveLength(1)
+    expect(login.closest('header')).toBeNull()
+    expect(login.closest('section')).toBe(
+      screen.getByRole('heading', { level: 1 }).closest('section'),
+    )
+    expect(screen.getByText(copy.haveAccount)).toBeInTheDocument()
     const loginURL = new URL(login.getAttribute('href') ?? '', 'https://postpilot.test')
     expect(loginURL.pathname).toBe('/login')
     expect(loginURL.searchParams.get('redirect')).toBe('/posts/welcome')
@@ -188,41 +220,52 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
 
 /** The structural half of the 320px/keyboard pass (A12, A13). A physical device sweep cannot be
  *  asserted here, so the invariants that a future edit could silently break are pinned instead:
- *  the one element too wide for 320px scrolls inside itself, the page has no second vertical
- *  scroller, every header control keeps its 44px floor, and edge-anchored chrome is inset-padded. */
+ *  the plan cards stack unprefixed so nothing is wider than 320px, the page has no second
+ *  vertical scroller, every header control keeps the pointer floor, and edge-anchored chrome is
+ *  inset-padded. */
 describe('the About page layout invariants', () => {
   beforeEach(() => {
     initializeI18n('ko')
   })
 
-  it('keeps the wide plans table inside its own horizontal scroller', async () => {
+  it('stacks the plan cards on a phone and keeps one vertical scroller', async () => {
     const { container } = renderAppAt('/about')
     await screen.findByRole('heading', { level: 1 })
 
-    const table = container.querySelector('table')
-    expect(table).not.toBeNull()
-    const scroller = table?.parentElement
-    // The table is the only thing on the page wider than 320px. It scrolls itself, so the page
-    // body never does (design-language §1.5).
-    expect(scroller?.className).toContain('overflow-x-auto')
-    expect(scroller?.className).toContain('overscroll-x-contain')
+    // No table any more — the ladder is cards, and a card stack is never wider than the column.
+    expect(container.querySelector('table')).toBeNull()
+    const ladder = within(screen.getByRole('region', { name: '요금제' })).getByRole('list')
+    // Unprefixed, the grid is one column: the columns only arrive with `md:` and `lg:`.
+    expect(ladder.className.split(/\s+/).filter((name) => name.startsWith('grid-cols-'))).toEqual(
+      [],
+    )
+    expect(ladder).toHaveClass('md:grid-cols-2', 'lg:grid-cols-4')
     for (const element of container.querySelectorAll('*')) {
       expect(element.className.toString()).not.toContain('overflow-y-auto')
+      expect(element.className.toString()).not.toContain('overflow-x-auto')
     }
   })
 
-  it('keeps the header controls at the 44px floor and pads the safe areas', async () => {
+  it('keeps the header in one padded row with its controls at the pointer floor', async () => {
     const { container } = renderAppAt('/about')
     await screen.findByRole('heading', { level: 1 })
 
-    const header = container.querySelector('header')
-    expect(header?.className).toContain('pt-safe-t')
-    expect(header?.className).toContain('sticky')
+    const header = container.querySelector('header') as HTMLElement
+    expect(header.className).toContain('pt-safe-t')
+    expect(header.className).toContain('sticky')
+    // One row, centred in the bar's height, with a gap between the wordmark and the controls —
+    // never the wordmark stacked flush against the top edge over a centred pair of buttons.
+    expect(header).toHaveClass('flex', 'items-center', 'justify-between', 'min-h-14', 'px-4')
+    expect(header.className).not.toContain('flex-col')
+    expect(header.className).not.toContain('justify-center')
+    // The bare login link keeps its 44px box at every pointer; the CTA and the two icon
+    // triggers rest at 40px under a mouse and 44px under a thumb (THEME-23).
     const login = screen.getByRole('link', { name: '로그인' })
     expect(login.className).toContain('min-h-11')
-    expect(screen.getByRole('link', { name: '시작하기' }).className).toContain('min-h-11')
+    const getStarted = screen.getByRole('link', { name: '시작하기' })
+    expect(getStarted).toHaveClass('min-h-10', 'pointer-coarse:min-h-11')
     for (const name of ['테마', '언어']) {
-      expect(screen.getByRole('button', { name }).className).toMatch(/min-h-11|size-11/)
+      expect(screen.getByRole('button', { name })).toHaveClass('size-10', 'pointer-coarse:size-11')
     }
     // The inset is a MARGIN here: `pb-8 pb-safe-b` would collide and leave 0 on desktop.
     const footer = container.querySelector('footer')
@@ -236,15 +279,16 @@ describe('the About page layout invariants', () => {
     renderAppAt('/about')
     await screen.findByRole('heading', { level: 1 })
 
-    // The wordmark is not a link on its own page. CTA then quiet Login come first, and the two
-    // menus stay viewport-side so their right-aligned panels cannot cross the 320px left edge.
+    // The wordmark is not a link on its own page. The CTA comes first, then the two menus,
+    // which stay viewport-side so their right-aligned panels cannot cross the 320px left edge;
+    // the quiet Login link follows in the hero.
     await user.tab()
     expect(screen.getByRole('link', { name: '시작하기' })).toHaveFocus()
-    await user.tab()
-    expect(screen.getByRole('link', { name: '로그인' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('button', { name: '테마' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('button', { name: '언어' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('link', { name: '로그인' })).toHaveFocus()
   })
 })

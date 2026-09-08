@@ -44,7 +44,7 @@ describe('Listbox', () => {
   it('names itself with its label and its current option, and wears the field well', () => {
     render(<Harness />)
     const trigger = screen.getByRole('combobox', { name: '과일 배' })
-    expect(trigger).toHaveClass('bg-field-bg', 'min-h-11')
+    expect(trigger).toHaveClass('bg-field-bg', 'min-h-10', 'pointer-coarse:min-h-11')
     expect(trigger).toHaveAttribute('aria-haspopup', 'listbox')
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()

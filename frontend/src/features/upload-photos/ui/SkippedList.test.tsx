@@ -20,7 +20,7 @@ describe('SkippedList', () => {
 
     expect(screen.getByText(name)).toHaveClass('min-w-0', 'flex-1', 'truncate')
     const dismiss = screen.getByRole('button', { name: `${name} 목록에서 지우기` })
-    expect(dismiss).toHaveClass('size-11', 'shrink-0')
+    expect(dismiss).toHaveClass('size-10', 'pointer-coarse:size-11', 'shrink-0')
     await user.click(dismiss)
     expect(onDismiss).toHaveBeenCalledWith('skipped-1')
   })

@@ -36,7 +36,7 @@ describe('Menu', () => {
     render(<Harness />)
 
     const trigger = screen.getByRole('button', { name: 'Fruit' })
-    expect(trigger).toHaveClass('size-11')
+    expect(trigger).toHaveClass('size-10', 'pointer-coarse:size-11')
     expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
     expect(trigger).toHaveAccessibleDescription('Current: pear')
     await user.click(trigger)

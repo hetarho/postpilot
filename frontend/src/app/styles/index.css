@@ -180,6 +180,14 @@
   --physical-scrim: var(--palette-mauve-950);
   --physical-on-scrim: var(--palette-white);
   --physical-shadow: var(--palette-black);
+
+  /* promotional hues — the ONE place a foundation reaches past the accent family (THEME-37).
+     Three saturated steps for the aurora blobs behind a promotional surface: the accent's own
+     violet, the blue and the gold from the other ramps, at the lightness where a blurred blob
+     glows on the night ground instead of vanishing into it. */
+  --promo-hue-a: var(--palette-violet-500);
+  --promo-hue-b: var(--palette-blue-500);
+  --promo-hue-c: var(--palette-gold-300);
 }
 
 /* `day`: the same semantic roles on a light ground. */
@@ -228,6 +236,11 @@
   --physical-scrim: var(--palette-mauve-950);
   --physical-on-scrim: var(--palette-white);
   --physical-shadow: var(--palette-mauve-950);
+
+  /* Lighter steps on the day ground: a pastel aurora rather than neon on white. */
+  --promo-hue-a: var(--palette-violet-300);
+  --promo-hue-b: var(--palette-blue-300);
+  --promo-hue-c: var(--palette-gold-200);
 }
 
 /* ── Tier 3: functional roles ──────────────────────────────────────────────────────────────── */
@@ -299,10 +312,24 @@
   /* The one gradient this design language allows, and only around an option a promotional
      surface is asking to be chosen (THEME-37). Three stops on the accent foundation: accent is
      action and identity, here the choice the product is pointing at, and it stays a STROKE so
-     accent still never fills an area. */
+     accent still never fills an area. All three are accent steps — the stroke no longer turns,
+     so a near-ground stop in the middle would read as a border with a piece missing rather than
+     as a highlight passing through. */
   --stroke-promo-from: var(--intent-accent);
-  --stroke-promo-via: var(--intent-accent-subtle);
-  --stroke-promo-to: var(--intent-accent-hover);
+  --stroke-promo-via: var(--intent-accent-hover);
+  --stroke-promo-to: var(--intent-accent-active);
+  /* The rest of the promotional vocabulary (THEME-37), and nothing outside a promotional surface
+     may wear any of it: the three aurora blobs a `PromoStage` drifts behind its options, the
+     pointer spotlight a `PromoFrame` shows under a fine pointer, and the two stops `PromoText`
+     paints a hero figure with. The text stops are the accent and the info foundations — both
+     contrast-audited on every surface (THEME-7) — so gradient text stays readable where a hue
+     picked for glow would not. */
+  --promo-aurora-1: var(--promo-hue-a);
+  --promo-aurora-2: var(--promo-hue-b);
+  --promo-aurora-3: var(--promo-hue-c);
+  --promo-spot: var(--intent-accent);
+  --promo-text-from: var(--intent-accent);
+  --promo-text-to: var(--intent-info);
 
   /* a slider: a bounded number the reader operates. Its roles are separate from the meter's
      because a meter REPORTS and a slider is OPERATED — sharing one would make either
@@ -435,24 +462,53 @@
      place on the screen. The period is its own value rather than a `--duration-*` token — those
      three are interaction feedback, and a loop this slow would read as a stall at any of them. */
   --animate-progress-sweep: progress-sweep 1.4s var(--ease-standard) infinite;
-  /* A promotional stroke turning slowly behind the option it frames (THEME-37). Its own
-     period, like the progress sweep's: the three interaction durations are feedback, and an
-     ambient loop at any of them would read as something waiting to finish. The keyframes carry
-     the centring translate because an animation's `transform` REPLACES the class's, and it
-     animates `transform` alone so four of these cost no layout work (THEME-28). Reduced motion
-     is honoured by the global rule at the end of this file, which freezes it at its first
-     frame — a still gradient stroke rather than no stroke at all. */
-  --animate-promo-spin: promo-spin 8s linear infinite;
-  --background-image-promo-stroke: conic-gradient(
-    from 0turn,
+  /* The promotional stroke (THEME-37): a still diagonal sweep through the three accent stops,
+     painted once as the frame's background. It used to turn behind the option, and a highlight
+     travelling along the top of a border read as a loading indicator rather than a finish
+     (owner decision 2026-09-09) — so the stroke holds still and the marked option's HALO is the
+     only thing that breathes. */
+  --background-image-promo-stroke: linear-gradient(
+    135deg,
     var(--color-stroke-promo-from),
     var(--color-stroke-promo-via),
-    var(--color-stroke-promo-to),
-    var(--color-stroke-promo-from)
+    var(--color-stroke-promo-to)
   );
-  /* The rotating layer must cover the frame's diagonal at every angle, so it is a square twice
-     the frame's width rather than an inset box whose corners would show through. */
-  --spacing-promo-layer: 200%;
+  /* The halo behind the ONE option a promotional surface marks (THEME-37): the same stroke
+     gradient once more, blurred by the frame and breathing. It animates opacity alone, so it is
+     compositor work, and the reduced-motion rule leaves a still halo rather than none. Its own
+     slow period, like the progress sweep's: the three interaction durations are feedback, and
+     an ambient loop at any of them would read as something waiting to finish. */
+  --animate-promo-glow: promo-glow 3.2s var(--ease-standard) infinite alternate;
+  /* The spotlight a `PromoFrame` shows under a fine pointer: a soft disc of the accent centred on
+     where the pointer is, which the frame writes into `--spot-x` / `--spot-y` as it moves. The
+     disc is a tint (`color-mix`), never a fill, so the text it passes under keeps its contrast.
+     Named `spotlight`, NOT `spot`: `bg-<name>` resolves a `--color-<name>` before a
+     `--background-image-<name>`, and the colour role `promo-spot` exists — sharing the name made
+     `bg-promo-spot` a solid accent fill that covered every card on hover. */
+  --background-image-promo-spotlight: radial-gradient(
+    14rem circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    color-mix(in oklab, var(--color-promo-spot) 22%, transparent),
+    transparent 70%
+  );
+  /* Gradient text for a promotional surface's hero figure: left to right through the two audited
+     text stops. `PromoText` clips it to the glyphs. */
+  --background-image-promo-text: linear-gradient(
+    90deg,
+    var(--color-promo-text-from),
+    var(--color-promo-text-to)
+  );
+  /* The aurora behind a `PromoStage`: three blurred blobs drifting on `transform` alone, each on
+     its own long period and direction so the pattern never visibly repeats. Slow on purpose — the
+     backdrop is weather, not an event — and the reduced-motion rule holds all three at their first
+     frame, which is a still aurora rather than a blank stage. */
+  --animate-aurora-1: aurora-1 26s var(--ease-standard) infinite alternate;
+  --animate-aurora-2: aurora-2 31s var(--ease-standard) infinite alternate;
+  --animate-aurora-3: aurora-3 23s var(--ease-standard) infinite alternate;
+  /* A promotional option ARRIVING: it rises a step and fades in once, on mount. The slow
+     duration on the emphasized ease is the sheet's arrival recipe (THEME-28), and `both` holds
+     the first frame through the delay a staggered ladder hands each rung, so a later rung is
+     absent rather than visible-then-jumping while it waits. */
+  --animate-rise: rise var(--duration-slow) var(--ease-emphasized) both;
 
   @keyframes scrim-in {
     from {
@@ -488,12 +544,42 @@
       transform: scale(0.96);
     }
   }
-  @keyframes promo-spin {
+  @keyframes promo-glow {
     from {
-      transform: translate(-50%, -50%) rotate(0turn);
+      opacity: 0.45;
     }
     to {
-      transform: translate(-50%, -50%) rotate(1turn);
+      opacity: 0.85;
+    }
+  }
+  @keyframes aurora-1 {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(30%, 20%) scale(1.25);
+    }
+  }
+  @keyframes aurora-2 {
+    from {
+      transform: translate(0, 0) scale(1.1);
+    }
+    to {
+      transform: translate(-35%, -15%) scale(0.9);
+    }
+  }
+  @keyframes aurora-3 {
+    from {
+      transform: translate(0, 0) scale(0.95);
+    }
+    to {
+      transform: translate(20%, -30%) scale(1.2);
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
     }
   }
   @keyframes progress-sweep {
@@ -572,6 +658,12 @@
   --color-stroke-promo-from: var(--stroke-promo-from);
   --color-stroke-promo-via: var(--stroke-promo-via);
   --color-stroke-promo-to: var(--stroke-promo-to);
+  --color-promo-aurora-1: var(--promo-aurora-1);
+  --color-promo-aurora-2: var(--promo-aurora-2);
+  --color-promo-aurora-3: var(--promo-aurora-3);
+  --color-promo-spot: var(--promo-spot);
+  --color-promo-text-from: var(--promo-text-from);
+  --color-promo-text-to: var(--promo-text-to);
   --color-notice-danger-bg: var(--notice-danger-bg);
   --color-notice-danger-fg: var(--notice-danger-fg);
   --color-notice-success-bg: var(--notice-success-bg);

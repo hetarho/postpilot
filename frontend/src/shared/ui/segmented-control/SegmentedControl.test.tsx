@@ -17,7 +17,7 @@ it('supports click and wrapping arrow-key selection with 44px targets', async ()
     />,
   )
   const tabs = screen.getAllByRole('tab')
-  expect(tabs[0]).toHaveClass('min-h-11')
+  expect(tabs[0]).toHaveClass('min-h-10', 'pointer-coarse:min-h-11')
   await userEvent.setup().click(tabs[1])
   expect(onChange).toHaveBeenCalledWith('b')
   tabs[0].focus()
