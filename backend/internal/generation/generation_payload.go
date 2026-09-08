@@ -14,6 +14,14 @@ type templatePayload struct {
 	// Rows is omitempty so a payload written before photo rows existed decodes as a
 	// template with none, which is exactly what it is.
 	Rows []templateRowJSON `json:"rows,omitempty"`
+	// Facts is omitempty for the same reason, and because a template whose data fields were
+	// all switched off has to be byte-identical to one that never declared any.
+	Facts []templateFactJSON `json:"facts,omitempty"`
+}
+
+type templateFactJSON struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
 }
 
 type templateRowJSON struct {
@@ -189,7 +197,11 @@ func encodeTemplate(brief *TemplateBrief) *templatePayload {
 	for _, row := range brief.Rows {
 		rows = append(rows, templateRowJSON{Count: row.Count, Filenames: row.Filenames})
 	}
-	return &templatePayload{Name: brief.Name, Body: brief.Body, Slots: slots, Rows: rows}
+	facts := make([]templateFactJSON, 0, len(brief.Facts))
+	for _, fact := range brief.Facts {
+		facts = append(facts, templateFactJSON{Label: fact.Label, Value: fact.Value})
+	}
+	return &templatePayload{Name: brief.Name, Body: brief.Body, Slots: slots, Rows: rows, Facts: facts}
 }
 
 // decodeTemplate reads a payload written before templates existed as "no template" rather
@@ -206,5 +218,9 @@ func decodeTemplate(payload *templatePayload) *TemplateBrief {
 	for _, row := range payload.Rows {
 		rows = append(rows, TemplatePhotoRow{Count: row.Count, Filenames: row.Filenames})
 	}
-	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Slots: slots, Rows: rows}
+	facts := make([]TemplateFact, 0, len(payload.Facts))
+	for _, fact := range payload.Facts {
+		facts = append(facts, TemplateFact{Label: fact.Label, Value: fact.Value})
+	}
+	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Slots: slots, Rows: rows, Facts: facts}
 }

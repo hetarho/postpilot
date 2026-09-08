@@ -223,11 +223,15 @@ type fakeTemplateBriefs struct {
 	deleted   bool
 	calls     int
 	filenames []string
+	// answers records what the enqueue handed over, so a test can prove the post's own
+	// answers reached the render rather than being dropped at the seam.
+	answers []TemplateAnswer
 }
 
-func (f *fakeTemplateBriefs) RenderedFor(_ context.Context, _, templateID string, filenames []string) (TemplateBrief, bool, error) {
+func (f *fakeTemplateBriefs) RenderedFor(_ context.Context, _, templateID string, filenames []string, answers []TemplateAnswer) (TemplateBrief, bool, error) {
 	f.calls++
 	f.filenames = filenames
+	f.answers = answers
 	if f.deleted || templateID == "" {
 		return TemplateBrief{}, false, nil
 	}
@@ -302,5 +306,36 @@ func TestTheEnqueuePassesTheFrozenAttachmentOrderToTheRender(t *testing.T) {
 	}
 	if got := strings.Join(briefs.filenames, ","); got != "IMG_1.jpg,IMG_2.jpg" {
 		t.Fatalf("render saw filenames %q, want the post's attachment order", got)
+	}
+}
+
+// The post's answers ride the same seam as its attachment order, and for the same reason: the
+// freeze has to see exactly what the author had typed when the run started, so the render is
+// handed them once and no handler ever reads one (TEMPLATE-45, POST-62).
+func TestTheEnqueuePassesThePostAnswersToTheRenderOnce(t *testing.T) {
+	ctx := context.Background()
+	briefs := &fakeTemplateBriefs{brief: *testBrief()}
+	answers := []TemplateAnswer{
+		{Label: "총평 별점", Text: "4.5점", Enabled: true},
+		{Label: "방문일", Text: "2026-03-01", Enabled: false},
+	}
+	posts := &fakePosts{input: PostInput{
+		Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "template-review",
+		Images: []Image{{Filename: "IMG_1.jpg"}}, TemplateAnswers: answers,
+	}}
+	models := newFakeModels()
+	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
+	svc := templateAwareService(t, briefs, posts, &fakeJobs{id: "job"}, models)
+
+	if _, err := svc.Start(ctx, StartRequest{
+		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if briefs.calls != 1 {
+		t.Fatalf("the render was consulted %d times, want exactly 1 (the enqueue)", briefs.calls)
+	}
+	if len(briefs.answers) != 2 || briefs.answers[0] != answers[0] || briefs.answers[1] != answers[1] {
+		t.Fatalf("render saw answers %+v, want %+v", briefs.answers, answers)
 	}
 }

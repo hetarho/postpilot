@@ -118,6 +118,18 @@ type TemplateBrief struct {
 	// blocks (TEMPLATE-40), and this is where the author's row intent waits for whatever
 	// finally carries it downstream (→TEMPLATE-39).
 	Rows []TemplatePhotoRow
+	// Facts are the data fields the freeze resolved, in body order — the values already
+	// substituted into Body and fenced there. It is carried beside the body so the prompt
+	// builder can tell whether this brief holds any fact at all without re-parsing it, which
+	// is what decides one legend line (TEMPLATE-45, TEMPLATE-46).
+	Facts []TemplateFact
+}
+
+// TemplateFact is one data field that survived the freeze: the title the author asked under
+// and the text the post's author typed.
+type TemplateFact struct {
+	Label string
+	Value string
 }
 
 // TemplatePhotoRow is one photo position after binding: how many photos it asked to stand

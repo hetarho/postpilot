@@ -211,7 +211,7 @@ func TestAForeignIDIsIndistinguishableFromAnUnknownOne(t *testing.T) {
 		if _, err := svc.Delete(ctx, "alice", id); !errors.Is(err, ErrNotFound) {
 			t.Fatalf("%s delete error = %v", label, err)
 		}
-		if _, ok, err := svc.RenderedFor(ctx, "alice", id, nil); ok || err != nil {
+		if _, ok, err := svc.RenderedFor(ctx, "alice", id, nil, nil); ok || err != nil {
 			t.Fatalf("%s render = ok:%v err:%v", label, ok, err)
 		}
 	}
@@ -227,7 +227,7 @@ func TestRenderedForExpandsAndBounds(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rendered, ok, err := svc.RenderedFor(ctx, "alice", created.ID, []string{"a.jpg", "b.jpg"})
+	rendered, ok, err := svc.RenderedFor(ctx, "alice", created.ID, []string{"a.jpg", "b.jpg"}, nil)
 	if err != nil || !ok {
 		t.Fatalf("render: ok=%v err=%v", ok, err)
 	}
@@ -242,7 +242,7 @@ func TestRenderedForExpandsAndBounds(t *testing.T) {
 	}
 
 	// An empty id is a post with no template: absence, not an error.
-	if _, ok, err := svc.RenderedFor(ctx, "alice", "", nil); ok || err != nil {
+	if _, ok, err := svc.RenderedFor(ctx, "alice", "", nil, nil); ok || err != nil {
 		t.Fatalf("empty id = ok:%v err:%v", ok, err)
 	}
 
@@ -250,7 +250,7 @@ func TestRenderedForExpandsAndBounds(t *testing.T) {
 	for i := range many {
 		many[i] = "p.jpg"
 	}
-	if _, _, err := svc.RenderedFor(ctx, "alice", created.ID, many); !errors.Is(err, ErrExpansionTooLarge) {
+	if _, _, err := svc.RenderedFor(ctx, "alice", created.ID, many, nil); !errors.Is(err, ErrExpansionTooLarge) {
 		t.Fatalf("over-bound render error = %v", err)
 	}
 }

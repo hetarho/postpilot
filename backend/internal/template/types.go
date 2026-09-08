@@ -106,6 +106,28 @@ func (p Patch) empty() bool {
 	return p.Name == nil && p.Description == nil && p.Body == nil
 }
 
+// Answer is what one post supplies for one data field, handed in by the caller at enqueue.
+//
+// Off and blank are ONE case here (TEMPLATE-45): the switch says "I have nothing for this"
+// and a field left empty says the same thing, so both drop the whole position rather than
+// asking the model to write a section it has no facts for.
+type Answer struct {
+	Label   string
+	Text    string
+	Enabled bool
+}
+
+// usable reports whether this answer survives to the prompt.
+func (a Answer) usable() bool { return a.Enabled && !isBlank(a.Text) }
+
+// Fact is one data field that DID survive, in body order: the title the author asked under
+// and the text the post's author typed. It is frozen beside the body so the prompt builder
+// can tell whether the rendered text carries any fact at all without re-parsing it.
+type Fact struct {
+	Label string
+	Value string
+}
+
 // Rendered is the prompt-facing projection: one template expanded for one post's photos and
 // rendered into the text the write and revise prompts carry, plus the slots it declared in
 // document order.
@@ -126,6 +148,10 @@ type Rendered struct {
 	// downstream (→TEMPLATE-39); the rendered body itself stays n adjacent single-photo
 	// tokens in the meantime (TEMPLATE-40).
 	Rows []PhotoRow
+	// Facts are the data fields this render resolved, in body order. Empty means the body
+	// declared none or every one of them was off or blank — which is the same thing to
+	// everything downstream (TEMPLATE-45).
+	Facts []Fact
 }
 
 // PhotoRow is one photo position after binding: how many photos it asked for and the ones

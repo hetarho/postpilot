@@ -330,7 +330,7 @@ func (s *Service) freezeTemplate(ctx context.Context, post PostInput) (*Template
 	if s.templates == nil || post.TemplateID == "" {
 		return nil, nil
 	}
-	brief, ok, err := s.templates.RenderedFor(ctx, post.UserID, post.TemplateID, postFilenames(post))
+	brief, ok, err := s.templates.RenderedFor(ctx, post.UserID, post.TemplateID, postFilenames(post), post.TemplateAnswers)
 	if err != nil {
 		return nil, fmt.Errorf("render template: %w", err)
 	}

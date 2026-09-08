@@ -309,7 +309,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 
 	// The render is where the two contexts actually meet: generation hands over the frozen
 	// attachment order and receives prompt text plus the slots that text declared.
-	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, []string{"IMG_1.jpg", "IMG_2.jpg"})
+	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, []string{"IMG_1.jpg", "IMG_2.jpg"}, nil)
 	if err != nil || !ok {
 		t.Fatalf("render: ok=%v err=%v", ok, err)
 	}

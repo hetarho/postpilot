@@ -27,7 +27,7 @@ func renderInterview(t *testing.T, filenames []string) Rendered {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rendered, err := Render("정보성 식당 리뷰", nodes, filenames, 40)
+	rendered, err := Render("정보성 식당 리뷰", nodes, filenames, 40, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,10 +90,10 @@ func TestRenderRefusesAnExpansionOverTheBound(t *testing.T) {
 	for i := range filenames {
 		filenames[i] = "p.jpg"
 	}
-	if _, err := Render("x", nodes, filenames, 40); !errors.Is(err, ErrExpansionTooLarge) {
+	if _, err := Render("x", nodes, filenames, 40, nil); !errors.Is(err, ErrExpansionTooLarge) {
 		t.Fatalf("error = %v, want ErrExpansionTooLarge", err)
 	}
-	if _, err := Render("x", nodes, filenames[:40], 40); err != nil {
+	if _, err := Render("x", nodes, filenames[:40], 40, nil); err != nil {
 		t.Fatalf("40 iterations must be allowed: %v", err)
 	}
 }
@@ -103,7 +103,7 @@ func TestRenderNumbersSlotsInDocumentOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rendered, err := Render("x", nodes, nil, 40)
+	rendered, err := Render("x", nodes, nil, 40, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestRenderDecodesEscapesForThePrompt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rendered, err := Render("x", nodes, nil, 40)
+	rendered, err := Render("x", nodes, nil, 40, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestRenderBindsACountedPositionAsOneRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg"}, 40)
+	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg"}, 40, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestRenderGroupsARepeatByItsPositionCount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg"}, 40)
+	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg"}, 40, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func TestRenderShortensTheLastIterationInsteadOfRepeatingAPhoto(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg", "c.jpg", "d.jpg"}, 40)
+	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg", "c.jpg", "d.jpg"}, 40, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func TestRenderBindsEachPhotoOnlyOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg"}, 40)
+	rendered, err := Render("x", nodes, []string{"a.jpg", "b.jpg"}, 40, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func TestRenderRecordsNoRowForAPositionThatBoundNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rendered, err := Render("x", nodes, []string{"a.jpg"}, 40)
+	rendered, err := Render("x", nodes, []string{"a.jpg"}, 40, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func TestRenderRecordsNoRowForAPositionThatBoundNothing(t *testing.T) {
 	}
 	assertRows(t, rendered.Rows, []PhotoRow{{Count: 2, Filenames: []string{"a.jpg"}}})
 
-	empty, err := Render("x", nodes, nil, 40)
+	empty, err := Render("x", nodes, nil, 40, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,10 +244,10 @@ func TestRenderBoundsIterationsRatherThanPhotos(t *testing.T) {
 	for i := range filenames {
 		filenames[i] = "p.jpg"
 	}
-	if _, err := Render("x", nodes, filenames, 21); err != nil {
+	if _, err := Render("x", nodes, filenames, 21, nil); err != nil {
 		t.Fatalf("21 iterations must be allowed: %v", err)
 	}
-	if _, err := Render("x", nodes, filenames, 20); !errors.Is(err, ErrExpansionTooLarge) {
+	if _, err := Render("x", nodes, filenames, 20, nil); !errors.Is(err, ErrExpansionTooLarge) {
 		t.Fatalf("error = %v, want ErrExpansionTooLarge", err)
 	}
 }

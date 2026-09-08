@@ -838,8 +838,12 @@ func (a postCandidateLinks) DetachPost(ctx context.Context, userID, postSlug str
 //
 // The expansion bound is enforced on the other side, so an error here is a real refusal that
 // must stop the start rather than fall back to "no template".
-func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID string, filenames []string) (generation.TemplateBrief, bool, error) {
-	rendered, ok, err := a.service.RenderedFor(ctx, userID, templateID, filenames)
+func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID string, filenames []string, answers []generation.TemplateAnswer) (generation.TemplateBrief, bool, error) {
+	owned := make([]template.Answer, 0, len(answers))
+	for _, answer := range answers {
+		owned = append(owned, template.Answer{Label: answer.Label, Text: answer.Text, Enabled: answer.Enabled})
+	}
+	rendered, ok, err := a.service.RenderedFor(ctx, userID, templateID, filenames, owned)
 	if err != nil || !ok {
 		return generation.TemplateBrief{}, false, err
 	}
@@ -851,7 +855,11 @@ func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID
 	for _, row := range rendered.Rows {
 		rows = append(rows, generation.TemplatePhotoRow{Count: row.Count, Filenames: row.Filenames})
 	}
-	return generation.TemplateBrief{Name: rendered.Name, Body: rendered.Body, Slots: slots, Rows: rows}, true, nil
+	facts := make([]generation.TemplateFact, 0, len(rendered.Facts))
+	for _, fact := range rendered.Facts {
+		facts = append(facts, generation.TemplateFact{Label: fact.Label, Value: fact.Value})
+	}
+	return generation.TemplateBrief{Name: rendered.Name, Body: rendered.Body, Slots: slots, Rows: rows, Facts: facts}, true, nil
 }
 
 // experimentVoices adapts the directory for the experiment context: only an owned, active

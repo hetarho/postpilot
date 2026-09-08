@@ -113,16 +113,17 @@ func (s *Service) Delete(ctx context.Context, userID, id string) (int, error) {
 // RenderedFor is this context's published behavior for prompt builders: one owned template,
 // expanded for this post's photos and rendered into prompt text.
 //
-// The photo filenames are an argument rather than something this context looks up, because
-// expansion has to see exactly the attachment set the caller froze — resolving them here
-// would let a photo added between the two reads change what was frozen.
+// The photo filenames and the post's answers are arguments rather than something this
+// context looks up, because the freeze has to see exactly the attachment set and the exact
+// answers the caller froze — resolving either here would let a photo attached or a field
+// edited between the two reads change what was frozen.
 //
 // `ok` false is the ordinary "the post has none, or it was deleted since" case: absence is
 // not an error, because a prompt without a template is a valid prompt. A body that no longer
 // parses is treated the same way rather than failing the run — it can only happen if a row
 // was edited outside the service, and refusing to generate would be a worse answer than
 // generating without a shape.
-func (s *Service) RenderedFor(ctx context.Context, userID, id string, filenames []string) (Rendered, bool, error) {
+func (s *Service) RenderedFor(ctx context.Context, userID, id string, filenames []string, answers []Answer) (Rendered, bool, error) {
 	if strings.TrimSpace(id) == "" {
 		return Rendered{}, false, nil
 	}
@@ -137,7 +138,7 @@ func (s *Service) RenderedFor(ctx context.Context, userID, id string, filenames 
 	if err != nil {
 		return Rendered{}, false, nil
 	}
-	rendered, err := Render(found.Name, nodes, filenames, s.limits.MaxRepeatExpansion)
+	rendered, err := Render(found.Name, nodes, filenames, s.limits.MaxRepeatExpansion, answers)
 	if err != nil {
 		return Rendered{}, false, err
 	}
