@@ -40,14 +40,15 @@
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUBLISH | T044 T043 | todo |
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
-| T054 | Every backend failure reason the browser can be handed | ARCH | - | todo |
 
 ## next
-- implement-task T054 — the last of the eight review-sourced tasks
+- the eight review-sourced tasks (T047-T054) are done; only the PUBLISH chain remains, and it is blocked on a human survey pass
 - spec-wide, out of scope for any of them: `haeram-spec-creator lint` rejects PUBLISH BILLING TEMPLATE MARKETING against FORMAT's `2-6 uppercase` id rule — either the rule or the four domain ids has to move, and it is a planning decision
 - the PUBLISH chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 
 ## log
+- 260908 T054 done
+- 260908 T054 claimed (op5)
 - 260908 T053 done
 - 260908 T053 claimed (op5)
 - 260908 T052 done
@@ -66,5 +67,3 @@
 - 260908 create-task BILLING review/diff-260908 start
 - 260908 update-ssot BILLING r3 r4 · QUOTA r6 (QUOTA-42+)
 - 260908 update-ssot BILLING start
-- 260908 review-code diff-260908 ready: F1-F8 F13 adopted, F9-F12 held
-- 260908 review-code diff-260908 start

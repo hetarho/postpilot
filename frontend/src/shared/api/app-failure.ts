@@ -32,6 +32,7 @@ export const appFailureSpecs = {
   SUBSCRIPTION_NEEDS_METHOD: {},
   BILLING_UNAVAILABLE: {},
   TIER_NOT_SUBSCRIBABLE: {},
+  BILLING_SELECTION_INVALID: {},
   SUBSCRIPTION_EXISTS: {},
   SUBSCRIPTION_REQUIRED: {},
   NO_CHANGE: {},
@@ -93,6 +94,7 @@ export const appFailureSpecs = {
   TEMPLATE_LIMIT_REACHED: {},
   TEMPLATE_FIELD_TOO_LONG: { required: ['actual', 'max'], optional: ['field'] },
   TEMPLATE_PARSE_FAILED: { required: ['line', 'reason'] },
+  PURPOSE_NOT_FOUND: {},
   GUIDELINE_NOT_FOUND: {},
   GUIDELINE_TEXT_REQUIRED: {},
   GUIDELINE_TEXT_TOO_LONG: { required: ['actual', 'max'] },
@@ -104,6 +106,13 @@ export const appFailureSpecs = {
   MODEL_STAGE_REQUIRED: {},
   MODEL_STAGE_INVALID: {},
   MODEL_NOT_REGISTERED: {},
+  MODEL_PURPOSE_INVALID: {},
+  MODEL_PURPOSE_INELIGIBLE: {},
+  MODEL_PURPOSE_NOT_REGISTERED: {},
+  // The operator's estimator-combo assignment (QUOTA-39): a combo that is not one of the
+  // four, or a request missing the combo or one of its two models.
+  COMBO_UNKNOWN: {},
+  COMBO_INCOMPLETE: {},
   MODEL_DISABLED: {},
   MODEL_UNSUITABLE: {},
   MODEL_CANDIDATES_DUPLICATE: {},
@@ -125,6 +134,7 @@ export const appFailureSpecs = {
   // The finalized content places a clip, which the agent cannot carry yet (VIDEO-16).
   VIDEO_NOT_PUBLISHABLE: {},
   POST_VIDEO_LIMIT: {},
+  POST_PHOTO_LIMIT: {},
   UPLOAD_VIDEO_UNSUPPORTED: {},
   UPLOAD_VIDEO_INVALID: {},
   GENERATION_TARGET_LENGTH_INVALID: {},
