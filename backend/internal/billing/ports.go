@@ -38,6 +38,11 @@ type Rates interface {
 }
 
 type Credits interface {
+	// StartMonthlyWindow opens the window a first subscription charge paid for: the running
+	// window closes with no carry-over and the tier's whole grant opens (QUOTA-42).
+	StartMonthlyWindow(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error
+	// OpenMonthlyLot opens a renewal's window, which is absent-only: a renewal keeps the
+	// anchor it already has, so re-running one must not rewrite a window already granted.
 	OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error
 	RaiseMonthlyLot(ctx context.Context, userID string, credits int) error
 	OpenPurchasedLot(ctx context.Context, userID string, credits int) (lotID string, err error)

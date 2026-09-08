@@ -305,6 +305,9 @@ type monthlyWindow struct {
 	userID     string
 	tier       plan.Plan
 	start, end time.Time
+	// started marks the window a first subscription charge opened (QUOTA-42) rather than a
+	// renewal's absent-only one; both land in `windows` so a count still reads as windows.
+	started bool
 }
 type subscriptionCredits struct {
 	windows []monthlyWindow
@@ -317,6 +320,10 @@ type purchaseLot struct{ granted, remaining int }
 
 func (c *subscriptionCredits) OpenMonthlyLot(_ context.Context, userID string, tier plan.Plan, start, end time.Time) error {
 	c.windows = append(c.windows, monthlyWindow{userID: userID, tier: tier, start: start, end: end})
+	return nil
+}
+func (c *subscriptionCredits) StartMonthlyWindow(_ context.Context, userID string, tier plan.Plan, start, end time.Time) error {
+	c.windows = append(c.windows, monthlyWindow{userID: userID, tier: tier, start: start, end: end, started: true})
 	return nil
 }
 func (c *subscriptionCredits) RaiseMonthlyLot(_ context.Context, _ string, credits int) error {

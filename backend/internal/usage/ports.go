@@ -28,6 +28,14 @@ type Store interface {
 	// InsertLotIfAbsent is the same write for a grant whose id identifies what it is for
 	// rather than being random, so re-running the thing that grants it is harmless.
 	InsertLotIfAbsent(ctx context.Context, lot Lot) (created bool, err error)
+	// UpsertLot writes a lot whose id says which window it is, overwriting what that id
+	// held. It is the subscription's own window (QUOTA-42), where the free window's id can
+	// already be taken and the tier's grant must win rather than be dropped.
+	UpsertLot(ctx context.Context, lot Lot) error
+	// ExpireMonthlyLotsExcept closes every monthly lot the account still holds, except the
+	// one whose window is opening, by moving its expiry to `at`. The exception is what keeps
+	// opening a window idempotent.
+	ExpireMonthlyLotsExcept(ctx context.Context, userID, exceptLotID string, at time.Time) error
 	// RaiseLot grows a lot the account already holds, granted and remaining together. It
 	// is the upgrade top-up (QUOTA-35) and the only write that edits a grant already
 	// given; a renewal opens a new lot instead.

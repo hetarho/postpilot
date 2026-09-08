@@ -171,6 +171,10 @@ type registrationPlans struct{}
 func (registrationPlans) AssignTier(context.Context, string, plan.Plan) error { return nil }
 func (registrationPlans) TierOf(context.Context, string) (plan.Plan, error)   { return plan.Free, nil }
 
+func (*registrationCredits) StartMonthlyWindow(context.Context, string, plan.Plan, time.Time, time.Time) error {
+	return nil
+}
+
 func (*registrationCredits) OpenMonthlyLot(context.Context, string, plan.Plan, time.Time, time.Time) error {
 	return nil
 }

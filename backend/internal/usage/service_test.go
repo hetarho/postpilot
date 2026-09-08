@@ -95,6 +95,33 @@ func (f *fakeStore) InsertLotIfAbsent(ctx context.Context, lot Lot) (bool, error
 	return true, f.InsertLot(ctx, lot)
 }
 
+func (f *fakeStore) UpsertLot(ctx context.Context, lot Lot) error {
+	for i := range f.lots {
+		if f.lots[i].ID == lot.ID {
+			f.lots[i].Granted = lot.Granted
+			f.lots[i].Remaining = lot.Remaining
+			f.lots[i].ExpiresAt = lot.ExpiresAt
+			return nil
+		}
+	}
+	return f.InsertLot(ctx, lot)
+}
+
+func (f *fakeStore) ExpireMonthlyLotsExcept(_ context.Context, userID, exceptLotID string, at time.Time) error {
+	for i := range f.lots {
+		lot := f.lots[i]
+		if lot.UserID != userID || lot.Kind != LotMonthly || lot.ID == exceptLotID {
+			continue
+		}
+		if lot.ExpiresAt == nil || !lot.ExpiresAt.After(at) {
+			continue
+		}
+		stamp := at
+		f.lots[i].ExpiresAt = &stamp
+	}
+	return nil
+}
+
 func (f *fakeStore) RaiseLot(_ context.Context, lotID string, credits int) error {
 	f.raiseCalls++
 	for i := range f.lots {

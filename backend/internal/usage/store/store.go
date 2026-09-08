@@ -161,6 +161,37 @@ func (s *Store) InsertLotIfAbsent(ctx context.Context, lot usage.Lot) (bool, err
 	return rows > 0, nil
 }
 
+func (s *Store) UpsertLot(ctx context.Context, lot usage.Lot) error {
+	expires := sql.NullString{}
+	if lot.ExpiresAt != nil {
+		expires = sql.NullString{String: formatTime(*lot.ExpiresAt), Valid: true}
+	}
+	err := s.write.UpsertLot(ctx, sqlc.UpsertLotParams{
+		ID:        lot.ID,
+		UserID:    lot.UserID,
+		Kind:      string(lot.Kind),
+		Granted:   int64(lot.Granted),
+		Remaining: int64(lot.Remaining),
+		ExpiresAt: expires,
+		CreatedAt: formatTime(lot.CreatedAt),
+	})
+	if err != nil {
+		return fmt.Errorf("upsert credit lot: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) ExpireMonthlyLotsExcept(ctx context.Context, userID, exceptLotID string, at time.Time) error {
+	stamp := sql.NullString{String: formatTime(at), Valid: true}
+	err := s.write.ExpireMonthlyLotsExcept(ctx, sqlc.ExpireMonthlyLotsExceptParams{
+		ExpiresAt: stamp, UserID: userID, ID: exceptLotID, ExpiresAt_2: stamp,
+	})
+	if err != nil {
+		return fmt.Errorf("expire monthly credit lots: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) RaiseLot(ctx context.Context, lotID string, credits int) error {
 	err := s.write.RaiseLot(ctx, sqlc.RaiseLotParams{
 		Granted: int64(credits), Remaining: int64(credits), ID: lotID,

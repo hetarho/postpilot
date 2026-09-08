@@ -47,6 +47,36 @@ func (q *Queries) DeleteAdmissionForJob(ctx context.Context, jobID string) error
 	return err
 }
 
+const expireMonthlyLotsExcept = `-- name: ExpireMonthlyLotsExcept :exec
+UPDATE credit_lots SET expires_at = ?
+WHERE user_id = ?
+  AND kind = 'monthly'
+  AND id <> ?
+  AND expires_at IS NOT NULL
+  AND expires_at > ?
+`
+
+type ExpireMonthlyLotsExceptParams struct {
+	ExpiresAt   sql.NullString
+	UserID      string
+	ID          string
+	ExpiresAt_2 sql.NullString
+}
+
+// Closes the monthly window an account is running at the instant a new one opens, keeping
+// the row for history the way a lapsed window is kept (QUOTA-12). The excepted id is the
+// window being opened: without it a re-run would expire the lot the upsert had just
+// written, and the pair would stop being idempotent.
+func (q *Queries) ExpireMonthlyLotsExcept(ctx context.Context, arg ExpireMonthlyLotsExceptParams) error {
+	_, err := q.db.ExecContext(ctx, expireMonthlyLotsExcept,
+		arg.ExpiresAt,
+		arg.UserID,
+		arg.ID,
+		arg.ExpiresAt_2,
+	)
+	return err
+}
+
 const holdDebitsForJob = `-- name: HoldDebitsForJob :many
 SELECT lot_id, credits FROM credit_hold_lots WHERE job_id = ? ORDER BY rowid
 `
@@ -511,6 +541,44 @@ func (q *Queries) UnsettledHoldJobs(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertLot = `-- name: UpsertLot :exec
+INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    granted = excluded.granted,
+    remaining = excluded.remaining,
+    expires_at = excluded.expires_at
+`
+
+type UpsertLotParams struct {
+	ID        string
+	UserID    string
+	Kind      string
+	Granted   int64
+	Remaining int64
+	ExpiresAt sql.NullString
+	CreatedAt string
+}
+
+// The window write behind a subscription's first charge (QUOTA-42). Unlike
+// InsertLotIfAbsent it overwrites whatever the window's id already held, because the
+// values come from the tier and the window rather than from the row: an account that signs
+// up and subscribes on the same anchor date derives the SAME id for its free window and for
+// the one it just paid for, and keeping the free grant there would silently discard the
+// tier's. Overwriting is also what makes the operation idempotent under a provider retry.
+func (q *Queries) UpsertLot(ctx context.Context, arg UpsertLotParams) error {
+	_, err := q.db.ExecContext(ctx, upsertLot,
+		arg.ID,
+		arg.UserID,
+		arg.Kind,
+		arg.Granted,
+		arg.Remaining,
+		arg.ExpiresAt,
+		arg.CreatedAt,
+	)
+	return err
 }
 
 const voidUntouchedLot = `-- name: VoidUntouchedLot :execrows

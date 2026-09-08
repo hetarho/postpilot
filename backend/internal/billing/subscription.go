@@ -66,7 +66,9 @@ func (s *Service) Subscribe(ctx context.Context, userID string, tier plan.Plan, 
 		if err := plans.AssignTier(ctx, userID, tier); err != nil {
 			return err
 		}
-		return credits.OpenMonthlyLot(ctx, userID, tier, now, next)
+		// Not OpenMonthlyLot: a first charge buys a whole month, so the free window it
+		// replaces closes here and its remainder does not carry over (QUOTA-42).
+		return credits.StartMonthlyWindow(ctx, userID, tier, now, next)
 	})
 	if err != nil {
 		return Subscription{}, err
