@@ -28,6 +28,18 @@ func TestWebhookReReadsAndStoresProviderPayment(t *testing.T) {
 	}
 }
 
+// A well-formed notification about an order the provider does not know writes nothing: the
+// public body is never the source of a stored fact.
+func TestWebhookWritesNothingForAPaymentTheProviderDoesNotKnow(t *testing.T) {
+	store := &webhookStore{}
+	handler := NewWebhookHandler(webhookProvider{unknownPayment: true}, store)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/webhooks/toss", strings.NewReader(`{}`)))
+	if response.Code != http.StatusBadGateway || len(store.notifications) != 0 {
+		t.Fatalf("status=%d rows=%+v", response.Code, store.notifications)
+	}
+}
+
 func TestWebhookRejectsUnparseableBody(t *testing.T) {
 	handler := NewWebhookHandler(webhookProvider{parseErr: errors.New("bad")}, &webhookStore{})
 	response := httptest.NewRecorder()
@@ -37,7 +49,10 @@ func TestWebhookRejectsUnparseableBody(t *testing.T) {
 	}
 }
 
-type webhookProvider struct{ parseErr error }
+type webhookProvider struct {
+	parseErr       error
+	unknownPayment bool
+}
 
 func (p webhookProvider) IssueBillingKey(context.Context, string, string) (billing.BillingKey, error) {
 	return billing.BillingKey{}, nil
@@ -46,6 +61,9 @@ func (p webhookProvider) Charge(context.Context, billing.ChargeRequest) (billing
 	return billing.Payment{}, nil
 }
 func (p webhookProvider) PaymentByOrder(context.Context, string) (billing.Payment, bool, error) {
+	if p.unknownPayment {
+		return billing.Payment{}, false, nil
+	}
 	return billing.Payment{PaymentKey: "verified-payment", OrderID: "verified-order", Status: "DONE"}, true, nil
 }
 func (p webhookProvider) Refund(context.Context, string, string) error { return nil }

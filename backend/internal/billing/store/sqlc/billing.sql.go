@@ -197,6 +197,7 @@ const insertProviderNotification = `-- name: InsertProviderNotification :exec
 INSERT INTO provider_notifications (
     provider, event_type, payment_key, order_id, status, payload, received_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT DO NOTHING
 `
 
 type InsertProviderNotificationParams struct {
@@ -209,6 +210,9 @@ type InsertProviderNotificationParams struct {
 	ReceivedAt string
 }
 
+// A redelivery of the same provider state is the same fact, and migration 0032 makes that
+// an index rather than a convention. Tolerating the conflict is deliberate: a webhook that
+// answered 500 to a repeat would only make the provider redeliver it again.
 func (q *Queries) InsertProviderNotification(ctx context.Context, arg InsertProviderNotificationParams) error {
 	_, err := q.db.ExecContext(ctx, insertProviderNotification,
 		arg.Provider,

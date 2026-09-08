@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -513,7 +514,14 @@ func main() {
 			},
 		},
 		Routes: map[string]http.Handler{
-			"/webhooks/toss": billingrpc.NewWebhookHandler(paymentProvider, billingStore),
+			// These plain routes bypass the Connect interceptors, so the throttle the
+			// authenticated public writes get has to be put on this one here. Composition is
+			// also the only place it can go: billing/rpc importing auth is the wrong
+			// direction (ARCH-7).
+			"/webhooks/toss": throttledRoute(
+				authThrottle, auth.ThrottleWebhook, cfg.ClientIPHeader,
+				billingrpc.NewWebhookHandler(paymentProvider, billingStore),
+			),
 		},
 	})
 
@@ -1643,6 +1651,25 @@ func (a usageAnchors) AnchorFor(ctx context.Context, userID string) (time.Time, 
 		}
 	}
 	return a.auth.CreatedAt(ctx, userID)
+}
+
+// throttledRoute puts the per-IP window in front of a plain HTTP route.
+//
+// It refuses BEFORE the handler runs, which is the point: the webhook's first act is an
+// outbound call to the payment provider, so a refusal that happened afterwards would already
+// have spent what it was meant to protect. The client IP is resolved exactly as the auth
+// interceptor resolves it, so the configured ingress header means one thing across the
+// process.
+func throttledRoute(throttle *auth.Throttle, class, clientIPHeader string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		retryAt, allowed := throttle.Allow(class, auth.ClientIP(r.Header, r.RemoteAddr, clientIPHeader), time.Now())
+		if !allowed {
+			w.Header().Set("Retry-After", strconv.Itoa(max(int(time.Until(retryAt).Seconds()), 1)))
+			http.Error(w, "too many requests", http.StatusTooManyRequests)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func runBillingWorker(ctx context.Context, service *billing.Service) {
