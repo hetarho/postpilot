@@ -22,6 +22,17 @@ export type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
 export interface Draft {
   title: string
   memo: string
+  /** The answers to the selected template's data fields, in the order ① renders them. They ride
+   *  the same debounce as the memo because they are the same input: what the next run is given
+   *  (POST-62). Every entry is an UPSERT of that label, so sending the whole current set is
+   *  always safe — it cannot disturb an answer this editor is not showing. */
+  answers: TemplateAnswerDraft[]
+}
+
+export interface TemplateAnswerDraft {
+  label: string
+  text: string
+  enabled: boolean
 }
 
 /** Performs one save and resolves with the post's slug.
@@ -171,8 +182,48 @@ function retryDelay(attempt: number): number {
   return Math.min(AUTOSAVE_RETRY_BASE_MS * 2 ** (attempt - 1), AUTOSAVE_RETRY_MAX_MS)
 }
 
-function sameDraft(a: Draft, b: Draft): boolean {
-  return a.title === b.title && a.memo === b.memo
+/** DIRECTIONAL: `held` is what the editor holds and `saved` what the server does. Both call
+ *  sites pass them in that order, and the answers half needs it — see `answersSettled`. */
+function sameDraft(held: Draft, saved: Draft): boolean {
+  return (
+    held.title === saved.title &&
+    held.memo === saved.memo &&
+    answersSettled(held.answers, saved.answers)
+  )
+}
+
+/** Whether the answers the editor holds are already what the server holds.
+ *
+ *  It is a per-label check over the fields ON SCREEN rather than a whole-set comparison,
+ *  because the patch is upsert-only: a draft carries the selected template's fields and nothing
+ *  else, so a post holding answers under another template — or under none, with the picker on
+ *  없음 — must not read as dirty and fire a save nobody asked for.
+ *
+ *  A field with no saved row is settled while it holds the DEFAULT the screen renders for it
+ *  (empty and switched on). Otherwise every post with a template and no answers yet would be
+ *  dirty the moment its editor mounted. */
+function answersSettled(held: TemplateAnswerDraft[], saved: TemplateAnswerDraft[]): boolean {
+  return held.every((answer) => {
+    const stored = saved.find((candidate) => candidate.label === answer.label)
+    if (stored) return stored.text === answer.text && stored.enabled === answer.enabled
+    return answer.text === '' && answer.enabled
+  })
+}
+
+/** The baseline after a save: what the server held, with what this save carried laid over it.
+ *  Replacing it outright would drop the labels this save did not carry, and the editor would
+ *  then re-send them the next time its template made them visible again. */
+function mergeAnswers(
+  saved: TemplateAnswerDraft[],
+  sent: TemplateAnswerDraft[],
+): TemplateAnswerDraft[] {
+  const merged = saved.map((answer) => ({ ...answer }))
+  for (const answer of sent) {
+    const at = merged.findIndex((candidate) => candidate.label === answer.label)
+    if (at === -1) merged.push({ ...answer })
+    else merged[at] = { ...answer }
+  }
+  return merged
 }
 
 /** True while someone is waiting for this draft to become a post. Then "typed back to
@@ -359,7 +410,7 @@ async function run(queue: Queue): Promise<void> {
     queue.sending = undefined
     queue.attempts = 0
     queue.failed = false
-    queue.saved = sent
+    queue.saved = { ...sent, answers: mergeAnswers(queue.saved.answers, sent.answers) }
     if (sentVoice !== undefined) queue.savedVoiceId = sentVoice
     if (sentTemplate !== undefined) queue.savedTemplateId = sentTemplate
     if (sentTargetLanguage !== undefined) queue.savedTargetLanguage = sentTargetLanguage
@@ -553,7 +604,9 @@ export function attachDraftQueue(options: {
         return
       }
 
-      attached.pending = { ...draft }
+      // The answers are copied too: the queue must not share backing storage with an array
+      // the caller mutates next.
+      attached.pending = { ...draft, answers: draft.answers.map((answer) => ({ ...answer })) }
       publish(attached)
       // Not during a backoff: that timer already covers sending the newest text, and
       // restarting the debounce on every keystroke would defeat the backoff entirely.

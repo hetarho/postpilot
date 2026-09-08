@@ -1,7 +1,12 @@
 import { useLayoutEffect, useEffect, useRef, useState } from 'react'
 import { useSavePostDraft } from '@/entities/post'
 import { contentLanguageToProto, type ContentLanguage } from '@/shared/api'
-import { type DraftQueueHandle, type SaveState, attachDraftQueue } from './draft-queue'
+import {
+  attachDraftQueue,
+  type DraftQueueHandle,
+  type SaveState,
+  type TemplateAnswerDraft,
+} from './draft-queue'
 
 export interface UseAutosaveArgs {
   /** The post as the server last reported it, or undefined for a draft with no slug yet.
@@ -14,11 +19,15 @@ export interface UseAutosaveArgs {
         voice: { id: string }
         template: { id: string }
         targetLanguage: ContentLanguage
+        templateAnswers: TemplateAnswerDraft[]
       }
     | undefined
   /** What is in the inputs right now. */
   title: string
   memo: string
+  /** The answers to the selected template's data fields, in the order ① renders them. They ride
+   *  the memo's debounce because they are the same input (POST-62). */
+  answers: TemplateAnswerDraft[]
   /** The voice a draft with no post yet will be created in. Once the post exists its
    *  assignment changes only through `reassign` — never by this value moving — so a stale
    *  server value re-rendering the editor cannot undo a choice still in flight. */
@@ -41,6 +50,7 @@ export function useAutosave({
   post,
   title,
   memo,
+  answers,
   voiceId,
   templateId,
   targetLanguage,
@@ -71,6 +81,7 @@ export function useAutosave({
   const voiceRef = useRef(voiceId)
   const templateRef = useRef(templateId)
   const targetLanguageRef = useRef(targetLanguage)
+  const answersRef = useRef(answers)
 
   // Layout effects throughout, not passive ones. A passive effect runs after paint and can
   // be deferred past a `pagehide` or a `visibilitychange`, and the keystroke it had not
@@ -82,6 +93,7 @@ export function useAutosave({
     voiceRef.current = voiceId
     templateRef.current = templateId
     targetLanguageRef.current = targetLanguage
+    answersRef.current = answers
   })
 
   // Keyed by the slug alone, not by the post object: every successful save reseeds the
@@ -92,7 +104,13 @@ export function useAutosave({
     const opened = postRef.current
     const handle = attachDraftQueue({
       slug: opened?.slug,
-      saved: { title: opened?.title ?? '', memo: opened?.memo ?? '' },
+      // The stored answers are the baseline like the title and the memo are, or the fields
+      // would read as dirty the moment the editor mounted.
+      saved: {
+        title: opened?.title ?? '',
+        memo: opened?.memo ?? '',
+        answers: opened?.templateAnswers ?? [],
+      },
       voiceId: opened?.voice.id ?? voiceRef.current,
       templateId: opened?.template.id ?? templateRef.current,
       targetLanguage: opened?.targetLanguage ?? targetLanguageRef.current,
@@ -101,6 +119,9 @@ export function useAutosave({
           slug,
           title: draft.title,
           memo: draft.memo,
+          // Every entry is an upsert of that label, so the whole current set goes with any
+          // save that carries anything at all (POST-62).
+          templateAnswers: draft.answers,
           voiceId,
           templateId,
           targetLanguage:
@@ -129,9 +150,11 @@ export function useAutosave({
 
   // Declared after the attach above, so the queue exists by the time the first text
   // arrives.
+  // The answers are compared by value, so a new array with the same contents on every render
+  // costs nothing but a comparison.
   useLayoutEffect(() => {
-    queueRef.current?.queue({ title, memo })
-  }, [title, memo])
+    queueRef.current?.queue({ title, memo, answers })
+  }, [title, memo, answers])
 
   // Only a draft with no post yet follows the picker (see `UseAutosaveArgs.voiceId`).
   useLayoutEffect(() => {

@@ -53,6 +53,12 @@ export const posts = {
     },
   },
   editor: {
+    answers: {
+      heading: 'Template fields',
+      help: 'What this template asks for. The post states only the facts you put here.',
+      include: 'Include {{title}}',
+      excluded: 'This field is left out of the post.',
+    },
     steps: { generate: 'Generate', refine: 'Refine', finish: 'Finish' },
     backToList: '← Posts',
     backToListPlain: 'Back to posts',

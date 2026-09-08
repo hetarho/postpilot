@@ -25,6 +25,14 @@ export function toPostDraft(post: Post): PostDraft {
     updatedAt: post.updatedAt,
     voice: toVoiceRef(post.voice),
     template: toTemplateRef(post.template),
+    // Plain data, and deliberately not filtered against the current template here: which
+    // labels are shown is the write screen's business, and dropping the rest would lose an
+    // answer typed under a template the post is about to be assigned again (POST-62).
+    templateAnswers: post.templateAnswers.map((answer) => ({
+      label: answer.label,
+      text: answer.text,
+      enabled: answer.enabled,
+    })),
     images: post.images.map(toPostImage),
     videos: post.videos.map(toPostVideo),
     activeJob: post.activeJob ? toGenerationJob(post.activeJob) : undefined,

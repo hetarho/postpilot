@@ -2120,6 +2120,7 @@ describe('the post voice', () => {
       slug: '',
       voiceId: 'voice-default',
       templateId: undefined,
+      templateAnswers: [],
       targetLanguage: 'ko',
     })
     // The editor the mint mounted shows the same voice, and later saves leave it alone.
@@ -2130,6 +2131,7 @@ describe('the post voice', () => {
       slug: '20260828-제주',
       voiceId: undefined,
       templateId: undefined,
+      templateAnswers: [],
       targetLanguage: undefined,
     })
   })
@@ -2154,6 +2156,7 @@ describe('the post voice', () => {
           slug: '',
           voiceId: 'voice-review',
           templateId: undefined,
+          templateAnswers: [],
           targetLanguage: 'ko',
         }),
       AUTOSAVED,
@@ -2182,7 +2185,9 @@ describe('the post voice', () => {
     await user.click(within(dialog).getByRole('button', { name: '말투 변경' }))
 
     await waitFor(() =>
-      expect(draftSaves).toEqual([{ slug: '20260820-jeju', voiceId: 'voice-review' }]),
+      expect(draftSaves).toEqual([
+        { slug: '20260820-jeju', voiceId: 'voice-review', templateAnswers: [] },
+      ]),
     )
     await waitFor(() => expect(picker).toHaveTextContent('리뷰'))
     await user.keyboard('{Escape}')
@@ -2374,7 +2379,9 @@ describe('the post voice', () => {
     await user.click(within(await confirmDialog()).getByRole('button', { name: '말투 변경' }))
 
     await waitFor(() =>
-      expect(draftSaves).toEqual([{ slug: '20260820-jeju', voiceId: 'voice-review' }]),
+      expect(draftSaves).toEqual([
+        { slug: '20260820-jeju', voiceId: 'voice-review', templateAnswers: [] },
+      ]),
     )
     await waitFor(() => expect(screen.queryAllByText('삭제된 말투 · 옛 말투')).toHaveLength(0))
     await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
@@ -2794,5 +2801,91 @@ describe('sentence feedback', () => {
     })
     await screen.findByRole('button', { name: '말투 학습' })
     expect(screen.queryByRole('button', { name: '문장 의견' })).not.toBeInTheDocument()
+  })
+})
+
+// POST-54 · POST-62: the selected template's data fields belong to ①, under the memo, because
+// they are the material 글 생성 works from. They autosave on the memo's own queue.
+describe('the template data fields in ①', () => {
+  const AUTOSAVED = { timeout: 4_000 }
+  const WITH_FIELDS = [
+    {
+      id: 'template-review',
+      name: '정보성 식당 리뷰',
+      body: '<write>인트로</write>\n<ask label="방문일"/>\n<ask label="총평 별점">별점과 총평</ask>',
+    },
+  ]
+
+  it('seeds the fields from what the post already answered', async () => {
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/20260301-jeju', {
+      user: USER,
+      posts: {
+        draftSaves,
+        posts: [
+          {
+            slug: '20260301-jeju',
+            title: '제주',
+            memo: '갔다',
+            template: { id: 'template-review', name: '정보성 식당 리뷰' },
+            templateAnswers: [{ label: '총평 별점', text: '4.5점', enabled: false }],
+          },
+        ],
+        templates: [{ id: 'template-review', name: '정보성 식당 리뷰' }],
+      },
+      templates: { templates: WITH_FIELDS },
+    })
+
+    // Both fields, in body order, with the stored answer and switch on the second.
+    expect(await screen.findByLabelText('방문일')).toHaveValue('')
+    const rated = screen.getByLabelText('총평 별점')
+    expect(rated).toHaveValue('4.5점')
+    // Off keeps its text and greys the field: the switch is a decision the author can take back.
+    expect(rated).toBeDisabled()
+    expect(screen.getByRole('switch', { name: '총평 별점 넣기' })).not.toBeChecked()
+    // A mount is not an edit: the fields the post has not answered read as their default, so
+    // nothing is queued and no save goes out.
+    expect(draftSaves).toEqual([])
+  })
+
+  it('autosaves an answer on the memo’s own queue', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/20260301-jeju', {
+      user: USER,
+      posts: {
+        draftSaves,
+        posts: [
+          {
+            slug: '20260301-jeju',
+            title: '제주',
+            memo: '갔다',
+            template: { id: 'template-review', name: '정보성 식당 리뷰' },
+          },
+        ],
+        templates: [{ id: 'template-review', name: '정보성 식당 리뷰' }],
+      },
+      templates: { templates: WITH_FIELDS },
+    })
+
+    await user.type(await screen.findByLabelText('방문일'), '2026-03-01')
+    await waitFor(() => expect(draftSaves.length).toBeGreaterThan(0), AUTOSAVED)
+    const last = draftSaves[draftSaves.length - 1]
+    // The whole set on screen rides one save; every entry is an upsert of its own label.
+    expect(last.templateAnswers).toEqual([
+      { label: '방문일', text: '2026-03-01', enabled: true },
+      { label: '총평 별점', text: '', enabled: true },
+    ])
+  })
+
+  it('renders no field section for a post on 없음', async () => {
+    renderAppAt('/posts/20260301-jeju', {
+      user: USER,
+      posts: { posts: [{ slug: '20260301-jeju', title: '제주', memo: '갔다' }] },
+      templates: { templates: WITH_FIELDS },
+    })
+
+    expect(await screen.findByLabelText('메모')).toBeInTheDocument()
+    expect(screen.queryByText('템플릿 입력란')).not.toBeInTheDocument()
   })
 })

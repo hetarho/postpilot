@@ -32,16 +32,18 @@ function setup(
       // These cases are about the text pipeline, so every post here is 없음. The 템플릿 half of
       // the queue has its own file.
       useAutosave({
-        post: post && { ...post, template: { id: '' } },
+        post: post && { ...post, template: { id: '' }, templateAnswers: [] },
         title,
         memo,
+        // These cases are about the text pipeline; the data fields have their own file.
+        answers: [],
         voiceId: post?.voice.id ?? 'voice-default',
         templateId: '',
         targetLanguage: post?.targetLanguage ?? initialTarget,
       }),
     {
       wrapper: withProviders(transport, createTestQueryClient()),
-      initialProps: { title: post?.title ?? '', memo: post?.memo ?? '' },
+      initialProps: { title: post?.title ?? '', memo: post?.memo ?? '', answers: [] },
     },
   )
   return {
@@ -87,7 +89,7 @@ describe('useAutosave', () => {
   it('sends a concrete locale-derived target on the first create request', async () => {
     const { rerender, draftSaves } = setup(undefined, {}, 'en')
 
-    act(() => rerender({ title: 'First post', memo: '' }))
+    act(() => rerender({ title: 'First post', memo: '', answers: [] }))
     await tick(AUTOSAVE_DEBOUNCE_MS)
 
     expect(draftSaves[0]).toMatchObject({
@@ -111,7 +113,7 @@ describe('useAutosave', () => {
   it('saves a beat after the typing stops', async () => {
     const { rerender, saves, result } = setup(EXISTING)
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날' }))
+    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
     expect(result.current.state).toBe('dirty')
     await tick(AUTOSAVE_DEBOUNCE_MS)
 
@@ -126,7 +128,7 @@ describe('useAutosave', () => {
   ])('flushes the pending save when %s', async (_name, leave) => {
     const { rerender, saves } = setup(EXISTING)
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날' }))
+    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
     await act(async () => {
       leave()
       await vi.advanceTimersByTimeAsync(0)
@@ -138,7 +140,7 @@ describe('useAutosave', () => {
   it('flushes the pending save when the editor unmounts', async () => {
     const { rerender, unmount, saves } = setup(EXISTING)
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날' }))
+    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
     await act(async () => {
       unmount()
       await vi.advanceTimersByTimeAsync(0)
@@ -162,16 +164,18 @@ describe('useAutosave', () => {
         slug: EXISTING.slug,
         voiceId: 'voice-review',
         templateId: undefined,
+        templateAnswers: [],
         targetLanguage: undefined,
       },
     ])
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날' }))
+    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
     await tick(AUTOSAVE_DEBOUNCE_MS)
     expect(draftSaves[1]).toEqual({
       slug: EXISTING.slug,
       voiceId: undefined,
       templateId: undefined,
+      templateAnswers: [],
       targetLanguage: undefined,
     })
   })
@@ -197,7 +201,7 @@ describe('useAutosave', () => {
   it('treats a response without a post as a failed save', async () => {
     const { rerender, result } = setup(EXISTING, { saveReturnsNoPost: true })
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날' }))
+    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
     await tick(AUTOSAVE_DEBOUNCE_MS)
 
     expect(result.current.state).toBe('error')

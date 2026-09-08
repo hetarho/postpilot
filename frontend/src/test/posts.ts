@@ -24,7 +24,9 @@ import {
   PostService,
   PostSummarySchema,
   type ProtoGenerationJob,
+  type ProtoTemplateAnswer,
   type ProtoTemplateRef,
+  TemplateAnswerSchema,
   TemplateRefSchema,
   type Observation,
   type PostContent,
@@ -82,6 +84,10 @@ export interface FakeDraftSave {
   voiceId: string | undefined
   templateId: string | undefined
   targetLanguage: ContentLanguage | undefined
+  /** The data-field answers this save carried, exactly as they arrived. Every entry is an
+   *  upsert of that label, so a test can prove one save carried the whole set on screen and
+   *  nothing else (POST-62). */
+  templateAnswers: Array<{ label: string; text: string; enabled: boolean }>
 }
 
 /** One clip on a fake post. Only the fields a test actually varies; the rest are filled with
@@ -105,6 +111,8 @@ export interface FakePostRow {
   updatedAt?: string
   voice?: FakePostVoice
   template?: FakePostTemplate
+  /** What this post already answers to its template's data fields. */
+  templateAnswers?: Array<{ label: string; text?: string; enabled?: boolean }>
   machineBaselineVoiceId?: string
   images?: FakeImageRow[]
   videos?: FakeVideoRow[]
@@ -169,6 +177,7 @@ type Row = {
   updatedAt: string
   voice: ProtoVoiceRef
   template?: ProtoTemplateRef
+  templateAnswers: ProtoTemplateAnswer[]
   images: Image[]
   videos: Video[]
   activeJob?: ProtoGenerationJob
@@ -225,6 +234,21 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     return toVoiceRef(voice)
   }
 
+  /** The server's rule: each entry sets that label, an absent label is preserved, and nothing
+   *  is ever deleted. */
+  function upsertAnswers(
+    saved: ProtoTemplateAnswer[],
+    incoming: ProtoTemplateAnswer[],
+  ): ProtoTemplateAnswer[] {
+    const merged = [...saved]
+    for (const answer of incoming) {
+      const at = merged.findIndex((candidate) => candidate.label === answer.label)
+      if (at === -1) merged.push(answer)
+      else merged[at] = answer
+    }
+    return merged
+  }
+
   function toRow(row: FakePostRow): Row {
     const voice = row.voice ?? DEFAULT_POST_VOICE
     return {
@@ -236,6 +260,13 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       updatedAt: row.updatedAt ?? DEFAULT_UPDATED_AT,
       voice: toVoiceRef(voice),
       template: row.template ? toTemplateRef(row.template) : undefined,
+      templateAnswers: (row.templateAnswers ?? []).map((answer) =>
+        create(TemplateAnswerSchema, {
+          label: answer.label,
+          text: answer.text ?? '',
+          enabled: answer.enabled ?? true,
+        }),
+      ),
       machineBaselineVoiceId:
         row.machineBaselineVoiceId ?? ((row.machineBaselineRevision ?? 0n) > 0n ? voice.id : ''),
       images: (row.images ?? []).map((image) =>
@@ -347,6 +378,11 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       slug: req.slug,
       voiceId: req.voiceId,
       templateId: req.templateId,
+      templateAnswers: req.templateAnswers.map((answer) => ({
+        label: answer.label,
+        text: answer.text,
+        enabled: answer.enabled,
+      })),
       targetLanguage:
         req.targetLanguage === undefined ? undefined : contentLanguageFromProto(req.targetLanguage),
     })
@@ -398,6 +434,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       updatedAt: DEFAULT_UPDATED_AT,
       voice,
       template,
+      // Upsert per label, never a replacement of the set — the server's rule, so a test cannot
+      // pass here on behavior the server would not produce.
+      templateAnswers: upsertAnswers(existing?.templateAnswers ?? [], req.templateAnswers),
       images: existing?.images ?? [],
       videos: existing?.videos ?? [],
       activeJob: existing?.activeJob,

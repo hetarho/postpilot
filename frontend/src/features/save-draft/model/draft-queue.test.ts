@@ -11,10 +11,10 @@ import {
   discardDraftQueues,
 } from './draft-queue'
 
-const EMPTY: Draft = { title: '', memo: '' }
+const EMPTY: Draft = { title: '', memo: '', answers: [] }
 
-function draft(title: string, memo = ''): Draft {
-  return { title, memo }
+function draft(title: string, memo = '', answers: Draft['answers'] = []): Draft {
+  return { title, memo, answers }
 }
 
 /** A backend whose failures and timing a test can decide. */

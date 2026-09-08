@@ -48,6 +48,12 @@ export const posts = {
     newBlock: { text: '새 문단', heading: '새 소제목', quote: '새 인용문', list: '새 항목' },
   },
   editor: {
+    answers: {
+      heading: '템플릿 입력란',
+      help: '템플릿이 요구하는 내용이에요. 여기 적은 사실만 사용해서 글을 써요.',
+      include: '{{title}} 넣기',
+      excluded: '이 칸은 글에서 빠져요.',
+    },
     steps: { generate: '글 생성', refine: '글 다듬기', finish: '글 완성' },
     backToList: '← 글 목록',
     backToListPlain: '글 목록으로',

@@ -1,8 +1,21 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { FailureNotice, isTerminal } from '@/entities/generation-job'
-import { hasContent, useRefreshPostImages, type PostDraft } from '@/entities/post'
+import {
+  hasContent,
+  useRefreshPostImages,
+  type PostDraft,
+  type PostTemplateAnswer,
+} from '@/entities/post'
 import { useSession } from '@/entities/session'
 import {
   useVoiceProfile,
@@ -10,6 +23,7 @@ import {
   voiceContentLanguageMismatchReason,
   type VoiceRef,
 } from '@/entities/voice'
+import { useTemplates } from '@/entities/template'
 import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import { GenerationActions, type GenerationActionsHandle } from '@/features/generate-post'
 import {
@@ -23,6 +37,12 @@ import { VoiceLearningPanel, useVoiceLearning } from '@/features/finalize-post'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { discardDraftQueue, peekPendingDraft, useAutosave } from '@/features/save-draft'
+import {
+  TemplateAnswerFields,
+  answerFields,
+  toAnswerPatch,
+  withAnswer,
+} from '@/features/fill-template-answers'
 import { PostTemplateSelect } from '@/features/select-post-template'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import {
@@ -111,10 +131,31 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   const [newTargetLanguage, setNewTargetLanguage] = useState<ContentLanguage>(() => activeLocale())
   const targetLanguage = post?.targetLanguage ?? newTargetLanguage
 
+  // The template's data fields, as ① renders them. They are derived from the SELECTED template's
+  // body and the post's stored answers, with the local edits laid over the top — the queue owns
+  // durability, so this state only has to survive between keystrokes (POST-62).
+  const { templates } = useTemplates(ownerId)
+  const selectedTemplate = templates.find((candidate) => candidate.id === templateId)
+  const storedAnswers = post?.templateAnswers ?? []
+  const [answerEdits, setAnswerEdits] = useState<PostTemplateAnswer[]>([])
+  const fields = useMemo(() => {
+    const merged = [...storedAnswers]
+    for (const edit of answerEdits) {
+      const at = merged.findIndex((answer) => answer.label === edit.label)
+      if (at === -1) merged.push(edit)
+      else merged[at] = edit
+    }
+    return answerFields(selectedTemplate, merged)
+  }, [selectedTemplate, storedAnswers, answerEdits])
+  // A stable identity per content, because the queue compares drafts by value and `useAutosave`
+  // holds this in a dependency array.
+  const answers = useMemo(() => toAnswerPatch(fields), [fields])
+
   const autosave = useAutosave({
     post,
     title,
     memo,
+    answers,
     voiceId,
     templateId,
     targetLanguage,
@@ -182,6 +223,12 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     <TitleField value={title} onChange={setTitle} fieldRef={titleRef} nextRef={memoRef} />
   )
   const memoField = <MemoField value={memo} onChange={setMemo} fieldRef={memoRef} />
+  const answerFieldsPanel = (
+    <TemplateAnswerFields
+      fields={fields}
+      onChange={(label, change) => setAnswerEdits(toAnswerPatch(withAnswer(fields, label, change)))}
+    />
+  )
 
   // Everything the next AI run is given, in one surface. Every callback goes through the autosave
   // queue for an existing post, and through local state for a draft the server has not created.
@@ -327,6 +374,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           onStepChange={setStep}
           titleField={titleField}
           memoField={memoField}
+          answerFields={answerFieldsPanel}
           dockHeader={dockHeader}
           onOpenBrief={() => briefRef.current?.open()}
           targetLength={targetLength}
@@ -340,6 +388,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
           {titleField}
           {memoField}
+          {answerFieldsPanel}
           <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
           <EditorVoiceWarning ownerId={ownerId} voice={voice} />
           {/* A draft with no post yet has no committing action, but its 말투 and the rest of the
@@ -564,6 +613,7 @@ function LifecycleSteps({
   onStepChange,
   titleField,
   memoField,
+  answerFields,
   dockHeader,
   onOpenBrief,
   targetLength,
@@ -578,6 +628,9 @@ function LifecycleSteps({
   onStepChange: (step: EditorStep) => void
   titleField: ReactNode
   memoField: ReactNode
+  /** The selected template's data fields. ①'s material, so it renders with the memo it sits
+   *  under rather than anywhere the run is configured (POST-54). */
+  answerFields: ReactNode
   dockHeader: ReactNode
   onOpenBrief: () => void
   targetLength?: number
@@ -629,6 +682,7 @@ function LifecycleSteps({
     <>
       {titleField}
       {memoField}
+      {answerFields}
       <EditorPhotos post={post} ensureSlug={ensureSlug} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
 

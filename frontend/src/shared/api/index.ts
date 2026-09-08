@@ -125,10 +125,12 @@ export {
   StartGenerationResponseSchema,
   StartRevisionRequestSchema,
   StartRevisionResponseSchema,
+  TemplateAnswerSchema,
   VoiceRefSchema,
 } from './gen/postpilot/v1/post_pb'
 export type {
   Block,
+  TemplateAnswer as ProtoTemplateAnswer,
   VoiceRef as ProtoVoiceRef,
   GenerationJob as ProtoGenerationJob,
   GetGenerationResponse,

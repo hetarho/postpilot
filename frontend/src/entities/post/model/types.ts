@@ -13,6 +13,14 @@ import type { ContentLanguage, Observation, PostContent } from '@/shared/api'
  *  rippling into every consumer. */
 export type PostStatus = 'draft' | 'review' | 'finalized'
 
+/** One answer a post gives to a data field its template declared. `enabled` off means "I have
+ *  nothing for this": the text is kept and the enqueue drops the whole block. */
+export interface PostTemplateAnswer {
+  label: string
+  text: string
+  enabled: boolean
+}
+
 export interface PostDraft {
   slug: string
   title: string
@@ -26,6 +34,10 @@ export interface PostDraft {
   /** The 템플릿 the post is written for, or an empty ref for 없음. Optional by design: unlike the
    *  voice, the server never picks one (spec/legacy/policy/templates.md). */
   template: TemplateRef
+  /** What this post answers to its template's data fields, by label. ① seeds its fields from
+   *  these; a label the current template does not declare is kept and never rendered
+   *  (POST-62). */
+  templateAnswers: PostTemplateAnswer[]
   images: PostImage[]
   /** The post's second attachment kind, ordered like the photos. Separate from `images`
    *  rather than discriminated inside it: almost every surface renders the two differently,
