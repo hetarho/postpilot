@@ -35,8 +35,11 @@ type Service struct {
 	webOrigin  string
 	bootstraps []AccountBootstrap
 
-	resendMu   sync.Mutex
-	lastResend map[string]time.Time
+	resendMu sync.Mutex
+	// lastResend is the in-process 60-second floor, keyed by purpose AND address: a
+	// verification and a password reset for one address are two different mails, and one
+	// must never silently suppress the other.
+	lastResend map[resendKey]time.Time
 
 	// now and verify are seams for tests in this package, not configuration. Keeping
 	// them unexported means the production API has no test-only surface, while a
@@ -61,7 +64,7 @@ func NewService(store Store, ttl time.Duration) *Service {
 
 	return &Service{
 		store: store, ttl: ttl, now: time.Now, verify: VerifyPassword,
-		lastResend: make(map[string]time.Time),
+		lastResend: make(map[resendKey]time.Time),
 	}
 }
 
@@ -202,22 +205,22 @@ func (s *Service) RequestPasswordReset(ctx context.Context, rawEmail string) err
 		return nil
 	}
 	now := s.now()
-	if !s.reserveResend(email, now) {
+	if !s.reserveResend(LinkPurposeResetPassword, email, now) {
 		return nil
 	}
 	if err := s.store.InvalidateLinks(ctx, user.ID, LinkPurposeResetPassword, now); err != nil {
-		s.releaseResend(email, now)
+		s.releaseResend(LinkPurposeResetPassword, email, now)
 		return fmt.Errorf("invalidate password reset links: %w", err)
 	}
 	if err := s.store.CreateLink(ctx, Link{
 		TokenHash: tokenHash, UserID: user.ID, Purpose: LinkPurposeResetPassword,
 		Email: email, ExpiresAt: now.Add(ResetLinkTTL), CreatedAt: now,
 	}); err != nil {
-		s.releaseResend(email, now)
+		s.releaseResend(LinkPurposeResetPassword, email, now)
 		return fmt.Errorf("create password reset link: %w", err)
 	}
 	if err := s.send(ctx, user, mail); err != nil {
-		s.releaseResend(email, now)
+		s.releaseResend(LinkPurposeResetPassword, email, now)
 		return err
 	}
 	return nil
@@ -375,57 +378,67 @@ func (s *Service) accountForEmail(ctx context.Context, email string) (User, bool
 
 func (s *Service) sendVerification(ctx context.Context, user User) error {
 	now := s.now()
-	if !s.reserveResend(user.Email, now) {
+	if !s.reserveResend(LinkPurposeVerifyEmail, user.Email, now) {
 		return nil
 	}
 	raw, tokenHash, err := NewLinkToken()
 	if err != nil {
-		s.releaseResend(user.Email, now)
+		s.releaseResend(LinkPurposeVerifyEmail, user.Email, now)
 		return err
 	}
 	linkURL, err := s.verificationLink(raw)
 	if err != nil {
-		s.releaseResend(user.Email, now)
+		s.releaseResend(LinkPurposeVerifyEmail, user.Email, now)
 		return err
 	}
 	if err := s.store.InvalidateLinks(ctx, user.ID, LinkPurposeVerifyEmail, now); err != nil {
-		s.releaseResend(user.Email, now)
+		s.releaseResend(LinkPurposeVerifyEmail, user.Email, now)
 		return fmt.Errorf("invalidate verification links: %w", err)
 	}
 	if err := s.store.CreateLink(ctx, Link{
 		TokenHash: tokenHash, UserID: user.ID, Purpose: LinkPurposeVerifyEmail,
 		Email: user.Email, ExpiresAt: now.Add(VerifyLinkTTL), CreatedAt: now,
 	}); err != nil {
-		s.releaseResend(user.Email, now)
+		s.releaseResend(LinkPurposeVerifyEmail, user.Email, now)
 		return fmt.Errorf("create verification link: %w", err)
 	}
 	if err := s.send(ctx, user, verificationMail(user.Email, linkURL)); err != nil {
-		s.releaseResend(user.Email, now)
+		s.releaseResend(LinkPurposeVerifyEmail, user.Email, now)
 		return err
 	}
 	return nil
 }
 
-func (s *Service) reserveResend(email string, now time.Time) bool {
+// resendKey is what the floor applies to: one address's mails of one purpose. The per-IP
+// throttle classes have always been separate per purpose (ThrottleResend,
+// ThrottleResetRequest) and this in-process floor now matches that shape.
+type resendKey struct {
+	purpose LinkPurpose
+	email   string
+}
+
+func (s *Service) reserveResend(purpose LinkPurpose, email string, now time.Time) bool {
 	s.resendMu.Lock()
 	defer s.resendMu.Unlock()
-	for address, sentAt := range s.lastResend {
+	for key, sentAt := range s.lastResend {
 		if !now.Before(sentAt.Add(ResendFloor)) {
-			delete(s.lastResend, address)
+			delete(s.lastResend, key)
 		}
 	}
-	if sentAt, exists := s.lastResend[email]; exists && now.Before(sentAt.Add(ResendFloor)) {
+	key := resendKey{purpose: purpose, email: email}
+	if sentAt, exists := s.lastResend[key]; exists && now.Before(sentAt.Add(ResendFloor)) {
 		return false
 	}
-	s.lastResend[email] = now
+	s.lastResend[key] = now
 	return true
 }
 
-func (s *Service) releaseResend(email string, reservedAt time.Time) {
+func (s *Service) releaseResend(purpose LinkPurpose, email string, reservedAt time.Time) {
 	s.resendMu.Lock()
 	defer s.resendMu.Unlock()
-	if s.lastResend[email].Equal(reservedAt) {
-		delete(s.lastResend, email)
+	key := resendKey{purpose: purpose, email: email}
+	if s.lastResend[key].Equal(reservedAt) {
+		delete(s.lastResend, key)
 	}
 }
 

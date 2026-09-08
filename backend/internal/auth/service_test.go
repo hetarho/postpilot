@@ -830,6 +830,112 @@ func TestResendVerificationHidesAccountStateAndFloorsBursts(t *testing.T) {
 	}
 }
 
+// The floor used to be keyed by address alone, so whichever mail came first silently
+// suppressed the other: the handler still reported success to avoid address enumeration, and
+// the user waited for a mail that was never sent (review/diff-260908 F7).
+//
+// The sequence a real account hits: verify the address, then ask for a password reset in the
+// same minute. A reset only acts on a verified address and a verification only on an
+// unverified one, so this is the order the two purposes can actually collide in.
+func TestAVerificationDoesNotSuppressAResetForTheSameAddress(t *testing.T) {
+	ctx := context.Background()
+	const email = "alice@example.com"
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	store := newFakeStore()
+	svc := NewService(store, time.Hour)
+	svc.now = func() time.Time { return now }
+	svc.SetWebOrigin("https://postpilot.example.com")
+	mailer := &fakeMailer{}
+	svc.SetMailer(mailer)
+	store.users[email] = User{ID: email, Email: email}
+
+	if err := svc.ResendVerification(ctx, email); err != nil {
+		t.Fatal(err)
+	}
+	// The address is verified, and the account asks for a reset well inside the floor.
+	verified := store.users[email]
+	verified.EmailVerifiedAt = &now
+	store.users[email] = verified
+	now = now.Add(time.Second)
+	if err := svc.RequestPasswordReset(ctx, email); err != nil {
+		t.Fatal(err)
+	}
+
+	purposes := map[LinkPurpose]int{}
+	for _, link := range store.links {
+		purposes[link.Purpose]++
+	}
+	if len(mailer.sent) != 2 || purposes[LinkPurposeVerifyEmail] != 1 || purposes[LinkPurposeResetPassword] != 1 {
+		t.Fatalf("messages = %d, links = %+v, want one of each purpose", len(mailer.sent), purposes)
+	}
+
+	// The floor still holds inside the reset purpose.
+	now = now.Add(time.Second)
+	if err := svc.RequestPasswordReset(ctx, email); err != nil {
+		t.Fatal(err)
+	}
+	if len(mailer.sent) != 2 {
+		t.Fatalf("messages after a repeat reset = %d, want the floor to hold", len(mailer.sent))
+	}
+	// And it expires.
+	now = now.Add(ResendFloor)
+	if err := svc.RequestPasswordReset(ctx, email); err != nil {
+		t.Fatal(err)
+	}
+	if len(mailer.sent) != 3 {
+		t.Fatalf("messages after the floor = %d, want the reset to send again", len(mailer.sent))
+	}
+}
+
+// The reservation itself, in both orders and on both sides of a release: the flow above can
+// only reach one order, but the map key is what the defect was about.
+func TestResendReservationsAreIndependentPerPurpose(t *testing.T) {
+	const email = "alice@example.com"
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+
+	for _, order := range []struct {
+		name         string
+		first, other LinkPurpose
+	}{
+		{name: "verification first", first: LinkPurposeVerifyEmail, other: LinkPurposeResetPassword},
+		{name: "reset first", first: LinkPurposeResetPassword, other: LinkPurposeVerifyEmail},
+	} {
+		t.Run(order.name, func(t *testing.T) {
+			svc := NewService(newFakeStore(), time.Hour)
+			if !svc.reserveResend(order.first, email, now) {
+				t.Fatal("first reservation refused")
+			}
+			if !svc.reserveResend(order.other, email, now.Add(time.Second)) {
+				t.Fatal("the other purpose was refused inside the first one's floor")
+			}
+			// Within one purpose the floor holds.
+			if svc.reserveResend(order.first, email, now.Add(2*time.Second)) {
+				t.Fatal("a repeat in the same purpose was allowed inside the floor")
+			}
+			// Releasing one purpose frees only that one. Half a floor in, so the other
+			// purpose's reservation from a second ago is still comfortably inside its own.
+			svc.releaseResend(order.first, email, now)
+			midway := now.Add(ResendFloor / 2)
+			if !svc.reserveResend(order.first, email, midway) {
+				t.Fatal("a released purpose stayed reserved")
+			}
+			if svc.reserveResend(order.other, email, midway) {
+				t.Fatal("releasing one purpose freed the other")
+			}
+			// The floor expires per purpose, and the sweep drops only what has expired: at
+			// this instant the other purpose's reservation (from now+1s) is over, while the
+			// first's (from halfway) still has half a floor to run.
+			expiry := now.Add(time.Second + ResendFloor)
+			if !svc.reserveResend(order.other, email, expiry) {
+				t.Fatal("the floor did not expire")
+			}
+			if svc.reserveResend(order.first, email, expiry) {
+				t.Fatal("an unexpired reservation was swept")
+			}
+		})
+	}
+}
+
 func TestLoginByEmailAndUnverifiedOrGoogleOnlyCredentialsStayGeneric(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	svc, store := newTestService(t, now)
