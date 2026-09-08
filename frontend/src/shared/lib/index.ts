@@ -27,6 +27,7 @@ export {
 } from './blocks'
 export { copyImage, copyText } from './clipboard'
 export { loadScript } from './script'
+export { prefersReducedMotion } from './motion'
 export type { BlockVisitor } from './blocks'
 export type { CopyFallbackElement, CopyImageResult } from './clipboard'
 export {

@@ -1,9 +1,11 @@
 import { useRef, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { PROMO_TILT_MAX_DEG, PROMO_TILT_PERSPECTIVE_PX } from '@/shared/config'
+import { prefersReducedMotion } from '@/shared/lib'
 
 /** A promotional frame: content on its own surface, inside a still stroke of accent gradient,
- *  with a spotlight that follows a fine pointer across it.
+ *  that TILTS toward a fine pointer and carries a spotlight under it.
  *
  *  It is one of the three promotional primitives (THEME-37): the exemption from the design
  *  language's restraint is scoped to the plan ladder, the estimator, `/about`'s plans and any
@@ -15,11 +17,16 @@ import { twMerge } from 'tailwind-merge'
  *  turned a highlight around the edge, and a light travelling along the top of a border read as a
  *  loading indicator rather than a finish (owner decision 2026-09-09).
  *
- *  The SPOTLIGHT is a soft accent disc centred on the pointer, faded in under `hover:` — which
- *  Tailwind compiles to `(hover: hover)`, so a touchscreen never pays for it. The pointer position
- *  is written straight into two custom properties on the frame rather than into React state: a
- *  pointer moves at 60–120 Hz and a render per event would make the card the slowest thing on the
- *  page for no visible gain.
+ *  The TILT is the card answering the hand: as a mouse crosses it the card rotates a few degrees
+ *  toward the pointer, seen from a long perspective so it reads as a card catching the light and
+ *  not as a panel falling over, and settles flat when the pointer leaves. Only `transform` moves,
+ *  and the frame's own `transition-transform` smooths every step, so the tilt lags the pointer by
+ *  a beat the way a physical card would. A touch never tilts — a finger covers what it presses,
+ *  and there is no hover to leave — and reduced motion leaves the card flat. The SPOTLIGHT is a
+ *  soft accent disc centred on the pointer, faded in under `hover:` — which Tailwind compiles to
+ *  `(hover: hover)`, so a touchscreen never pays for it. Both the angle and the spot are written
+ *  straight into styles on the frame rather than into React state: a pointer moves at 60–120 Hz
+ *  and a render per event would make the card the slowest thing on the page for no visible gain.
  *
  *  `marked` is the one option a view recommends: a wider stroke, a shadow, and a HALO — the same
  *  gradient once more, blurred and breathing behind the card, which is what lets the marked
@@ -48,14 +55,31 @@ export function PromoFrame({
     const root = rootRef.current
     if (!root) return
     const rect = root.getBoundingClientRect()
-    root.style.setProperty('--spot-x', `${event.clientX - rect.left}px`)
-    root.style.setProperty('--spot-y', `${event.clientY - rect.top}px`)
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    root.style.setProperty('--spot-x', `${x}px`)
+    root.style.setProperty('--spot-y', `${y}px`)
+    if (event.pointerType === 'touch' || prefersReducedMotion() || !rect.width || !rect.height) {
+      return
+    }
+    // The pointer's offset from the card's centre, -0.5 … 0.5 on each axis. The card leans
+    // TOWARD the pointer: a pointer at the top edge tips the top away from the viewer.
+    const dx = x / rect.width - 0.5
+    const dy = y / rect.height - 0.5
+    const tiltX = (-dy * PROMO_TILT_MAX_DEG).toFixed(2)
+    const tiltY = (dx * PROMO_TILT_MAX_DEG).toFixed(2)
+    root.style.transform = `perspective(${PROMO_TILT_PERSPECTIVE_PX}px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`
+  }
+
+  const onPointerLeave = () => {
+    rootRef.current?.style.removeProperty('transform')
   }
 
   return (
     <div
       ref={rootRef}
       onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
       className={twMerge(
         // `isolate` so the halo's negative z-index stays inside this frame — without its own
         // stacking context the layer would sink behind the page and vanish. `group` is what

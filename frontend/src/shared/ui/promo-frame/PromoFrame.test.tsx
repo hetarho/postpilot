@@ -37,7 +37,7 @@ describe('PromoFrame', () => {
     expect(spot).not.toHaveClass('bg-promo-spot')
   })
 
-  it('writes the pointer position into the frame as it moves', () => {
+  it('writes the pointer position into the frame and tilts toward it as a mouse moves', () => {
     const { container } = render(
       <PromoFrame>
         <p>Pro</p>
@@ -45,9 +45,32 @@ describe('PromoFrame', () => {
     )
     const frame = container.firstElementChild as HTMLElement
     frame.getBoundingClientRect = () => ({ left: 100, top: 50, width: 200, height: 100 }) as DOMRect
-    fireEvent.pointerMove(frame, { clientX: 160, clientY: 90 })
-    expect(frame.style.getPropertyValue('--spot-x')).toBe('60px')
-    expect(frame.style.getPropertyValue('--spot-y')).toBe('40px')
+    // Upper-right quadrant: the card tips its top away and its right side away, both toward
+    // the pointer, at a fraction of the 7° maximum.
+    fireEvent.pointerMove(frame, { clientX: 250, clientY: 60, pointerType: 'mouse' })
+    expect(frame.style.getPropertyValue('--spot-x')).toBe('150px')
+    expect(frame.style.getPropertyValue('--spot-y')).toBe('10px')
+    // x = 150 of 200 → +0.25 of the width → a quarter of the maximum; y = 10 of 100 → -0.4.
+    expect(frame.style.transform).toBe('perspective(900px) rotateX(2.80deg) rotateY(1.75deg)')
+
+    // The pointer leaving settles the card flat again.
+    fireEvent.pointerLeave(frame)
+    expect(frame.style.transform).toBe('')
+  })
+
+  // A finger covers what it presses and has no hover to leave, so a touch moves the spot's
+  // anchor and nothing else.
+  it('does not tilt for a touch pointer', () => {
+    const { container } = render(
+      <PromoFrame>
+        <p>Pro</p>
+      </PromoFrame>,
+    )
+    const frame = container.firstElementChild as HTMLElement
+    frame.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100 }) as DOMRect
+    fireEvent.pointerMove(frame, { clientX: 180, clientY: 20, pointerType: 'touch' })
+    expect(frame.style.getPropertyValue('--spot-x')).toBe('180px')
+    expect(frame.style.transform).toBe('')
   })
 
   // One option per view is carried further, and never by the glow alone: the caller puts a

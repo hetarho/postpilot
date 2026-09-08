@@ -237,10 +237,11 @@
   --physical-on-scrim: var(--palette-white);
   --physical-shadow: var(--palette-mauve-950);
 
-  /* Lighter steps on the day ground: a pastel aurora rather than neon on white. */
-  --promo-hue-a: var(--palette-violet-300);
-  --promo-hue-b: var(--palette-blue-300);
-  --promo-hue-c: var(--palette-gold-200);
+  /* One step lighter than night's on the day ground — a soft aurora rather than neon on white,
+     but a step deeper than pastel, which the shader's blend washed out to nothing. */
+  --promo-hue-a: var(--palette-violet-400);
+  --promo-hue-b: var(--palette-blue-400);
+  --promo-hue-c: var(--palette-gold-300);
 }
 
 /* ── Tier 3: functional roles ──────────────────────────────────────────────────────────────── */

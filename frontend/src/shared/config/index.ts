@@ -152,6 +152,20 @@ export const PROMO_RISE_STAGGER_MS = 60
  *  thumb reaches the next slider stop. */
 export const PROMO_COUNT_UP_MS = 480
 
+/** How far a promotional card tilts toward a fine pointer, in degrees at the card's edge, and
+ *  the perspective distance the tilt is seen from. Seven degrees is where a card still reads as
+ *  a card answering the hand rather than a panel falling over; a shorter perspective makes the
+ *  same angle look like a cheap trick. */
+export const PROMO_TILT_MAX_DEG = 7
+export const PROMO_TILT_PERSPECTIVE_PX = 900
+
+/** The aurora shader's frame budget. Thirty frames a second is more than a slow drift needs and
+ *  half what a display will ask for, so the stage costs battery like a video, not like a game. */
+export const PROMO_AURORA_MIN_FRAME_MS = 33
+/** The shader renders at this fraction of the stage's CSS pixels: the picture is smooth noise
+ *  the browser scales up, so full resolution would buy nothing visible for four times the work. */
+export const PROMO_AURORA_RESOLUTION_SCALE = 0.5
+
 /** The provider slugs the operator's catalog screen lifts to the top, in this order; every
  *  other vendor follows alphabetically.
  *

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { prefersReducedMotion } from '@/shared/lib'
 
 /** Easing for a figure that is being counted up to: fast at first, settling at the end, so the
  *  eye reads the destination rather than the journey. */
@@ -19,10 +20,6 @@ const scheduleFrame: (callback: (now: number) => void) => () => void =
         const timer = setTimeout(() => callback(performance.now()), 16)
         return () => clearTimeout(timer)
       }
-
-function prefersReducedMotion(): boolean {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-}
 
 /** A whole number that counts up (or down) to `target` instead of swapping to it — the plan
  *  ladder's post counts as the reader drags a slider (THEME-37).
