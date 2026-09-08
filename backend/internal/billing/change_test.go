@@ -104,39 +104,90 @@ func TestChangeSubscriptionClassifiesAndChargesOnlyUpgrades(t *testing.T) {
 	})
 }
 
-func TestAnnualUpgradeChargesOnlyRemainingWholeWindows(t *testing.T) {
+// An upgrade's span counts the running month as whole and prices it at a twelfth of the
+// annual price (BILLING-18): counting only completed windows made an upgrade inside the last
+// month free and charged a fresh term for eleven of the twelve windows it grants.
+func TestUpgradeChargesTheMonthsStillToRunAtTheTermsOwnUnitPrice(t *testing.T) {
 	ctx := context.Background()
 	anchor := time.Date(2026, 1, 15, 0, 0, 0, 0, seoul)
-	termEnd := time.Date(2027, 1, 15, 0, 0, 0, 0, seoul)
+	annualEnd := time.Date(2027, 1, 15, 0, 0, 0, 0, seoul)
+	monthlyEnd := time.Date(2026, 2, 15, 0, 0, 0, 0, seoul)
+
+	// basic 200c/mo, pro 500c/mo; annual is ten months for twelve, so 2000c and 5000c a year
+	// and a monthly equivalent of 250c on the difference.
+	annualDifference := PriceCents(plan.Pro, TermAnnual) - PriceCents(plan.Basic, TermAnnual)
 
 	for _, test := range []struct {
-		name, user string
-		now        time.Time
-		wantCents  int
-		wantCalls  int
+		name      string
+		term      Term
+		termEnd   time.Time
+		now       time.Time
+		wantCents int
 	}{
-		{name: "seven full windows remain", user: "alice", now: time.Date(2026, 6, 14, 23, 0, 0, 0, seoul), wantCents: 2_100, wantCalls: 1},
-		{name: "final partial month is free", user: "bob", now: time.Date(2026, 12, 15, 1, 0, 0, 0, seoul), wantCents: 0, wantCalls: 0},
+		{
+			name: "the term's first day is charged for all twelve windows",
+			term: TermAnnual, termEnd: annualEnd, now: anchor,
+			wantCents: annualDifference,
+		},
+		{
+			name: "mid-term counts the running month whole",
+			term: TermAnnual, termEnd: annualEnd, now: time.Date(2026, 6, 14, 23, 0, 0, 0, seoul),
+			wantCents: 2_000,
+		},
+		{
+			name: "an anchor boundary belongs to the window it opens",
+			term: TermAnnual, termEnd: annualEnd, now: time.Date(2026, 6, 15, 0, 0, 0, 0, seoul),
+			wantCents: 1_750,
+		},
+		{
+			name: "the last window is charged for one month, never nothing",
+			term: TermAnnual, termEnd: annualEnd, now: time.Date(2026, 12, 15, 1, 0, 0, 0, seoul),
+			wantCents: annualDifference / 12,
+		},
+		{
+			name: "a monthly term is the full difference between the two monthly prices",
+			term: TermMonthly, termEnd: monthlyEnd, now: time.Date(2026, 1, 20, 0, 0, 0, 0, seoul),
+			wantCents: plan.MonthlyPriceCents(plan.Pro) - plan.MonthlyPriceCents(plan.Basic),
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			store := newSubscriptionStore()
-			if test.wantCalls > 0 {
-				store.methods[test.user] = testMethod(test.user)
-			}
-			store.subscriptions[test.user] = activeSubscription(test.user, plan.Basic, TermAnnual, anchor, termEnd, termEnd, true)
+			store.subscriptions["alice"] = activeSubscription("alice", plan.Basic, test.term, anchor, test.termEnd, test.termEnd, true)
 			provider := newSubscriptionProvider()
 			service := newSubscriptionService(store, provider, test.now)
-			quote, err := service.QuoteChange(ctx, test.user, plan.Pro, TermAnnual)
-			if err != nil || quote.USDCents != test.wantCents {
-				t.Fatalf("quote=%+v err=%v", quote, err)
+
+			quote, err := service.QuoteChange(ctx, "alice", plan.Pro, test.term)
+			if err != nil || quote.USDCents != test.wantCents || !quote.AppliedNow {
+				t.Fatalf("quote=%+v err=%v, want %d cents", quote, err, test.wantCents)
 			}
-			if _, applied, err := service.ChangeSubscription(ctx, test.user, plan.Pro, TermAnnual); err != nil || !applied {
+			if _, applied, err := service.ChangeSubscription(ctx, "alice", plan.Pro, test.term); err != nil || !applied {
 				t.Fatalf("applied=%v err=%v", applied, err)
 			}
-			if len(provider.requests) != test.wantCalls || kinds(store.events) != map[bool]string{true: "tier_change", false: "charge,tier_change"}[test.wantCalls == 0] {
-				t.Fatalf("calls=%d events=%s", len(provider.requests), kinds(store.events))
+			// The quote and the card must never disagree: the charge is what the provider
+			// was actually asked for.
+			if len(provider.requests) != 1 || provider.requests[0].KRW != quote.KRW {
+				t.Fatalf("charge requests = %+v, quote KRW = %d", provider.requests, quote.KRW)
+			}
+			if kinds(store.events) != "charge,tier_change" {
+				t.Fatalf("events = %s", kinds(store.events))
 			}
 		})
+	}
+}
+
+// The identity that makes the rule self-consistent: twelve windows at a twelfth of the
+// annual difference is the annual difference, with nothing lost to integer division.
+func TestAnnualUpgradeOnTheFirstDayCostsTheAnnualDifference(t *testing.T) {
+	anchor := time.Date(2026, 1, 15, 0, 0, 0, 0, seoul)
+	termEnd := time.Date(2027, 1, 15, 0, 0, 0, 0, seoul)
+	if months := monthsStillToRun(anchor, termEnd, anchor); months != 12 {
+		t.Fatalf("months still to run on the first day = %d, want 12", months)
+	}
+	for _, tier := range []plan.Plan{plan.Pro, plan.Max} {
+		difference := PriceCents(tier, TermAnnual) - PriceCents(plan.Basic, TermAnnual)
+		if difference*12/12 != difference {
+			t.Fatalf("%s: %d cents does not survive the twelfth", tier, difference)
+		}
 	}
 }
 
