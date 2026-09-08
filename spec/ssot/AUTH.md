@@ -1,5 +1,5 @@
 # AUTH accounts, passwords, sessions
-> r2 | Operator-provisioned accounts, id + password login, 30-day HttpOnly cookie sessions, and the single interceptor that turns a request into an acting user. Migrated from legacy policy/auth.md and plan/01.
+> r3 | Operator-provisioned accounts, id + password login, 30-day HttpOnly cookie sessions, and the single interceptor that turns a request into an acting user. Migrated from legacy policy/auth.md and plan/01.
 
 ## decisions
 - AUTH-1 [o] anyone may sign themselves up: AuthService carries Login · Logout · GetMe plus Signup, ResendVerification, VerifyEmail, RequestPasswordReset, ResetPassword and the Google sign-in exchange, and every one of the added procedures is public (→AUTH-17) ← paid subscriptions need an account a stranger can open without the operator
@@ -24,8 +24,8 @@
 - AUTH-20 [o] authenticated handlers take the acting user from the context, never from a request payload — a user id in a message is a claim by the caller, not a fact
 - AUTH-21 [o] publishing-agent bearer tokens are device capabilities, not human sessions: agent procedures bypass the cookie interceptor and fail closed in their own; a cookie cannot claim or advance a job and a bearer token cannot list, start, or cancel a publication; the raw device token is returned once at pairing, stored only in macOS Keychain, and represented server-side by sha256 of 32 random bytes with revocation rechecked per request (lifecycle in PUBLISH)
 - AUTH-22 [o] the token never reaches JavaScript and no `Authorization` header exists anywhere; the SPA and the API are different origins in production, so every RPC opts into credentials through a fetch wrapper the transport is built with ← connect-web has no credentials option
-- AUTH-23 [o] a 401 on any procedure except Login means the session is gone and the app returns to `/login`; Login is exempt because its 401 means a wrong password, which the form reports itself
-- AUTH-24 [o] every protected screen is a child of one pathless guard route (`id: 'authenticated'`) — protected by placement, not by remembering; `/login` carries the reverse guard and, unlike the protected one, swallows an outage so the login form always renders
+- AUTH-23 [o] a 401 returns the app to `/login` only from a screen that required a session; on a public page it is the expected answer to that page's own reverse guard and changes nothing, and Login's 401 is the form's own wrong-password message ← read as a lost session from anywhere, a visitor's own probe threw them off `/signup` and `/forgot-password` before either form could render
+- AUTH-24 [o] every protected screen is a child of one pathless guard route (`id: 'authenticated'`) — protected by placement, not by remembering; `/login`, `/signup` and `/forgot-password` each carry the reverse guard and, unlike the protected one, swallow an outage so the form always renders
 - AUTH-25 [o] the guard trusts a resolved session for `SESSION_STALE_MS` (30 s) before re-checking ← a session revoked elsewhere must stop granting access without a full reload, without paying a round-trip per click
 - AUTH-26 [o] `loadSession` answers `active | signed-out` and throws only for failures that are not an answer; a 200 with no user is signed-out; an outage is not a logout and reaches the error boundary instead of a login form that cannot work
 - AUTH-27 [o] the post-login `redirect` param is followed only if resolving it against the origin stays in the app (`//host` and `/\host` both leave); anything else falls back to `/` ← the router does not check `to` against known routes
@@ -59,5 +59,6 @@
 - tests that pin it: dummy-path timing test (AUTH-9) · 401 on every non-public procedure · exact cookie attributes · replayed cookie after Logout is 401 · redirect validation · guard and reverse-guard behaviour
 
 ## chg
+- r3 260909 AUTH-23✎ a 401 "any procedure except Login → back to /login"→only from a screen that required a session · AUTH-24✎ the reverse guard "/login"→/login + /signup + /forgot-password
 - r2 260907 AUTH-1✎ "no registration surface"→self-signup · AUTH-2✎ "operator only"→owner or operator · AUTH-3✎ provisioning bonus 50→none · AUTH-4✎ "no reset flow"→1-hour emailed link · AUTH-5✎ out-of-scope list drops IP rate limiting · lockout · social login (→AUTH-36 37 39) · AUTH-17✎ public procedures 3→9 · AUTH-30✎ login form +signup · reset · Google links · AUTH-33+ 34+ 35+ 36+ 37+ 38+ 39+ 40+ 41+ email as the login id, verification before the first session, enumeration-proof answers, throttling, auto-releasing lockout, Google join, emailless legacy accounts, transactional mail
 - r1 260905 initial (migrated from legacy policy/auth.md, plan/01; built by jobs 01 · 02, account menu by change 11)
