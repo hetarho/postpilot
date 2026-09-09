@@ -28,6 +28,17 @@
 
 /* ── Tier 1: palette ────────────────────────────────────────────────────────────────────────── */
 :root {
+  /* Fixed media colours: these preview the output artifact, independently of UI theme. */
+  --palette-clip-coral: #ff6b5f;
+  --palette-clip-amber: #ffb23f;
+  --palette-clip-lime: #b8d94a;
+  --palette-clip-teal: #43c5b5;
+  --palette-clip-blue: #5b8def;
+  --palette-clip-violet: #8b6fe8;
+  --palette-clip-pink: #e96aae;
+  --palette-clip-ink: #19171c;
+  --palette-clip-paper: #fff4d9;
+  --palette-clip-white: #ffffff;
   /* mauve — the neutral. Hue 298 (the primary's hue) at a whisper-level chroma: ~5% of the
      violet ramp's peak, so greys read as "cool, faintly violet" without ever reading as purple.
      Chroma tapers only at the near-white end to stay in gamut. */
@@ -603,6 +614,16 @@
 }
 
 @theme inline {
+  --color-clip-coral: var(--palette-clip-coral);
+  --color-clip-amber: var(--palette-clip-amber);
+  --color-clip-lime: var(--palette-clip-lime);
+  --color-clip-teal: var(--palette-clip-teal);
+  --color-clip-blue: var(--palette-clip-blue);
+  --color-clip-violet: var(--palette-clip-violet);
+  --color-clip-pink: var(--palette-clip-pink);
+  --color-clip-ink: var(--palette-clip-ink);
+  --color-clip-paper: var(--palette-clip-paper);
+  --color-clip-white: var(--palette-clip-white);
   /* compositional foundations */
   --color-surface-lowest: var(--surface-lowest);
   --color-surface-recessed: var(--surface-recessed);

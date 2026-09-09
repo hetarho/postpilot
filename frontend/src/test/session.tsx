@@ -31,6 +31,7 @@ import { type FakeExperimentsOptions, registerExperimentService } from './experi
 import { type FakePublishingOptions, registerPublishingService } from './publishing'
 import { type FakeGuidelinesOptions, registerGuidelineService } from './guidelines'
 import { type FakeTemplatesOptions, registerTemplateService } from './templates'
+import { type FakeClipsOptions, registerClipService } from './clips'
 import { type FakeModelCatalogOptions, registerModelCatalogService } from './model-catalog'
 import { type FakePlansOptions, registerPlanServices } from './plans'
 import { type FakeBillingOptions, registerBillingService } from './billing'
@@ -79,6 +80,7 @@ export interface FakeAuthOptions {
   /** The acting account's 템플릿 briefs. Present by default with none, so every screen that
    *  mounts the selector reads an empty directory rather than an "unimplemented" error. */
   templates?: FakeTemplatesOptions
+  clips?: FakeClipsOptions
   /** The acting account's 작문 지침. Present by default with none, so a screen that mounts the
    *  list reads an empty one rather than an "unimplemented" error. */
   guidelines?: FakeGuidelinesOptions
@@ -259,6 +261,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerExperimentService(router, { calls, ...options.experiments })
     registerPublishingService(router, { calls, ...options.publishing })
     registerTemplateService(router, { calls, ...options.templates })
+    registerClipService(router, { calls, ownerId: options.user?.id, ...options.clips })
     registerGuidelineService(router, { calls, ...options.guidelines })
     registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
     registerBillingService(router, { calls, ...options.billing })

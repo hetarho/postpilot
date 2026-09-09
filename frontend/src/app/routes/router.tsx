@@ -292,6 +292,22 @@ const plansRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/plans'), 'PlansPage'),
 })
 
+const videoTemplatesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/video-templates',
+  component: lazyRouteComponent(() => import('@/pages/video-templates'), 'VideoTemplatesPage'),
+})
+const newVideoTemplateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/video-templates/new',
+  component: lazyRouteComponent(() => import('@/pages/video-template'), 'VideoTemplatePage'),
+})
+const videoTemplateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/video-templates/$templateId',
+  component: lazyRouteComponent(() => import('@/pages/video-template'), 'VideoTemplatePage'),
+})
+
 const billingRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/billing',
@@ -501,6 +517,9 @@ export const routeTree = rootRoute.addChildren([
     templatesRoute,
     newTemplateRoute,
     templateRoute,
+    videoTemplatesRoute,
+    newVideoTemplateRoute,
+    videoTemplateRoute,
     guidelinesRoute,
     plansRoute,
     billingRoute,
@@ -538,6 +557,7 @@ declare module '@tanstack/react-router' {
     router: typeof router
   }
   interface HistoryState {
+    clipDetachedCount?: number
     notice?: 'password-changed'
     billingRegistration?: { cardLabel: string; bonusGranted: boolean }
     billingSubscription?: { tier: string; changed?: boolean }
