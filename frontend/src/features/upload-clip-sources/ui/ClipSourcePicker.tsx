@@ -15,9 +15,11 @@ const ACCEPT = [
 export function ClipSourcePicker({
   upload,
   disabled,
+  processing = false,
 }: {
   upload: ReturnType<typeof useClipSourceUpload>
   disabled?: boolean
+  processing?: boolean
 }) {
   const { t } = useTranslation('clips')
   const inputId = useId()
@@ -31,7 +33,7 @@ export function ClipSourcePicker({
       <Typography variant="body" className="text-content-secondary" id={`${inputId}-disclosure`}>
         {t('source.disclosure')}
       </Typography>
-      {disabled && (
+      {disabled && !processing && (
         <Typography variant="body" className="text-content-secondary">
           {t('source.saveFirst')}
         </Typography>
@@ -66,6 +68,7 @@ export function ClipSourcePicker({
           <Button
             variant="ghost"
             pending={upload.phase === 'cancelling'}
+            disabled={processing}
             onClick={() => void upload.cancel()}
           >
             {t('source.cancel')}

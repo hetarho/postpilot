@@ -434,7 +434,7 @@ func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
 				t.Fatal("failed transaction enqueued old result deletion", deletes)
 			}
 			j, _ := h.queue.Get(context.Background(), id, "alice")
-			if j.Status != "failed" || j.Failure == nil || j.Failure.Params["stage"] == "" {
+			if j.Status != "failed" || j.Failure == nil || j.Stage == "" || j.Stage == "cleanup" {
 				t.Fatal(j)
 			}
 			if mode == "hold" || mode == "probe" || mode == "download" {

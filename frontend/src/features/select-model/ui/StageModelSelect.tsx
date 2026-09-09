@@ -29,10 +29,14 @@ export function StageModelSelect({
   stage,
   className,
   optional = false,
+  disabled = false,
+  requireVideoInput = false,
 }: {
   stage: StageName
   className?: string
   optional?: boolean
+  disabled?: boolean
+  requireVideoInput?: boolean
 }) {
   const { t } = useTranslation('models')
   const id = useId()
@@ -66,7 +70,7 @@ export function StageModelSelect({
     ...models.map((model) => ({
       value: refKey(model.ref),
       label: optionLabel(model),
-      disabled: model.disabled || !model.affordable,
+      disabled: model.disabled || !model.affordable || (requireVideoInput && !model.videoInput),
     })),
   ]
 
@@ -83,12 +87,19 @@ export function StageModelSelect({
         aria-labelledby={labelId}
         value={value}
         options={options}
-        disabled={isPending || save.isPending}
+        disabled={disabled || isPending || save.isPending}
         aria-invalid={isError || Boolean(save.failure) || undefined}
         aria-describedby={describedBy || undefined}
         onChange={(next) => {
           const chosen = models.find((model) => refKey(model.ref) === next)
-          if (chosen && !chosen.disabled && chosen.affordable) save.save(stage, chosen.ref)
+          if (
+            !disabled &&
+            chosen &&
+            !chosen.disabled &&
+            chosen.affordable &&
+            (!requireVideoInput || chosen.videoInput)
+          )
+            save.save(stage, chosen.ref)
         }}
         className="mt-1"
       />

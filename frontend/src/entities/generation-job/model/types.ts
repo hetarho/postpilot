@@ -15,6 +15,7 @@ export interface GenerationJob {
   progressTotal: number
   failure: AppFailure | undefined
   postSlug: string
+  clipProjectId?: string
   observeModel: ModelRef | undefined
   writeModel: ModelRef | undefined
   createdAt: string
@@ -38,7 +39,14 @@ const RATIO_STAGES = new Set(['observe', 'compare_observe', 'compare_write', 'co
  *  An unrecognized or not-yet-set stage is a running job like any other, so it takes the generic
  *  running label rather than announcing that nothing has happened yet. This is also why a voice
  *  `seed` run finally says something true: it hits this branch. */
-export function progressLabel(job: Pick<GenerationJob, 'stage'>): string {
+export const CLIP_STAGES = ['prepare', 'analyze', 'plan', 'render', 'save', 'cleanup'] as const
+export function progressLabel(
+  job: Pick<GenerationJob, 'stage'> & Partial<Pick<GenerationJob, 'kind'>>,
+): string {
+  if (job.kind === 'generate_clip' || job.kind === 'render_clip') {
+    const stage = CLIP_STAGES.find((stage) => stage === job.stage)
+    return i18next.t(stage ? `generation.stage.${stage}` : 'generation.running', { ns: 'clips' })
+  }
   switch (job.stage) {
     case 'observe':
       return i18next.t('generation.observing', { ns: 'posts' })
@@ -61,8 +69,12 @@ export function progressLabel(job: Pick<GenerationJob, 'stage'>): string {
  *  puts the same 2px track into its indeterminate state instead of a second control. A total of
  *  zero is also `undefined`: 0/0 is not "complete". */
 export function progressRatio(
-  job: Pick<GenerationJob, 'stage' | 'progressDone' | 'progressTotal'>,
+  job: Pick<GenerationJob, 'stage' | 'progressDone' | 'progressTotal'> &
+    Partial<Pick<GenerationJob, 'kind'>>,
 ): { done: number; total: number } | undefined {
-  if (!RATIO_STAGES.has(job.stage) || job.progressTotal <= 0) return undefined
+  const clipRatio =
+    (job.kind === 'generate_clip' || job.kind === 'render_clip') &&
+    ['prepare', 'analyze'].includes(job.stage)
+  if ((!RATIO_STAGES.has(job.stage) && !clipRatio) || job.progressTotal <= 0) return undefined
   return { done: job.progressDone, total: job.progressTotal }
 }

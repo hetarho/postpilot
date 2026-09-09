@@ -81,7 +81,7 @@ export class ClipSourceSession {
     this.publish('idle')
     // No asynchronous discard from unmount/unload. The server's lease and orphan sweep own it.
   }
-  /** Called when a processing attempt ends; its worker owns remote cleanup. */
+  /** Releases local bytes once a worker owns the batch (or its attempt ends). */
   finishAttempt() {
     this.epoch++
     this.controller?.abort()

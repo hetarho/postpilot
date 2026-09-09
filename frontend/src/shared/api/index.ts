@@ -36,6 +36,7 @@ export {
   CreateClipSourceBatchResponseSchema,
   ConfirmClipSourceResponseSchema,
   DiscardClipSourceBatchResponseSchema,
+  StartClipGenerationResponseSchema,
 } from './gen/postpilot/v1/clip_pb'
 export type {
   VideoTemplate as ProtoVideoTemplate,

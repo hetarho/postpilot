@@ -37,16 +37,17 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
-| T077 | Clip generation progress, preview and download | CLIP THEME LANG | T072 T076 | todo |
 | T078 | Manual clip-plan save and credit-free rerender | CLIP QUOTA | T071 T074 T076 | todo |
 | T079 | Clip correction workspace | CLIP THEME LANG | T077 T078 | todo |
 | T080 | Grouped writing and video navigation | CLIP THEME | T070 T072 | todo |
 
 ## next
-- Implement and commit T077 through T080 sequentially; clip AI must remain within a successful full-run credit reservation
+- Implement and commit T078 through T080 sequentially; clip AI must remain within a successful full-run credit reservation
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
 - T008 is the last PUB task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job. Read T042 T043 T045 T046 results for the live surveys and the wiring's typed preflight; update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
 ## log
+- 260910 T077 done; durable progress, guarded generation, preview/download and localized credit refusal; all local gates and isolated responsive browser checks pass
+- 260910 T077 claimed (clp)
 - 260910 T076 done; durable streaming pipeline, failure-safe cleanup/result retention and strict reservation-capped credits; all local gates, concurrent/race tests and actual nonroot renderer smoke pass
 - 260910 T046 done; the daemon has a real publisher factory (a browser per job so the activation latch is never reused, typed preflight failures for release, browser, login and account), install NOT run live because it would claim the owner's queued job — that belongs in T008
 - 260910 T046 claimed (wir)
@@ -64,6 +65,3 @@
 - 260910 T074 done; exact caption/video renderer, every local gate and nonroot Docker smoke pass; owner confirms Naver web acceptance of all three ratios
 - 260910 T045 claimed (fnc)
 - 260910 T074 reclaimed (clp): owner confirms web acceptance of all three MP4s with a screenshot showing their 15-second durations; final freshness and gates before commit
-- 260910 T043 done; photos interleave at their manifest positions, and four live defects fixed — the photo-library sidebar occluding every caret point, points read outside the viewport, an upload returning before the editor settled, and insertText leaving its last word uncommitted (4 of 5 writes lost it); driver signature → smarteditor-one-20260910-a5
-- 260910 T074 gate rechecked (clp): owner picker result is still absent; preserve blocked status and the sequential commit boundary
-- 260910 T074 blocked: all local gates and actual nonroot renderer smoke pass; mandatory owner-assisted Naver picker acceptance remains unverified, so no completion commit

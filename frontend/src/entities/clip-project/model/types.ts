@@ -1,3 +1,5 @@
+import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
+
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
 export type ClipRatio = (typeof CLIP_RATIOS)[number]
 export const CLIP_PROJECT_LIMITS = {
@@ -19,7 +21,15 @@ export interface ClipProject extends ClipProjectDraft {
   updatedAt: string
   editPlanRevision: number
   renderedPlanRevision: number
-  result?: { contentType: string; bytes: number; durationMs: number; createdAt: string }
+  latestJob?: GenerationJob
+  result?: {
+    contentType: string
+    bytes: number
+    durationMs: number
+    createdAt: string
+    viewUrl?: string
+    downloadUrl?: string
+  }
 }
 export interface ClipSourceMetadata {
   filename: string

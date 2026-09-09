@@ -67,6 +67,9 @@ export function ClipsPage() {
                   </span>
                   <Typography variant="meta">{t(`ratio.${project.ratio}`)}</Typography>
                   <Typography variant="meta">
+                    {t(project.result ? 'generation.hasResult' : 'generation.noResult')}
+                  </Typography>
+                  <Typography variant="meta">
                     {t('project.summaryDuration', { seconds: project.targetDurationMs / 1000 })}
                   </Typography>
                   <Typography variant="meta" className="break-words">

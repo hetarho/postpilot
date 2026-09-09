@@ -157,7 +157,8 @@ func (e *StageFailure) Failure() llm.Failure {
 	if f.Params == nil {
 		f.Params = map[string]string{}
 	}
-	f.Params["stage"] = e.Stage
+	// The durable job already owns Stage. Adding it to reason-specific params
+	// would violate the frontend's strict failure allowlist (including credits).
 	return f
 }
 func (s *GenerationService) Run(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {

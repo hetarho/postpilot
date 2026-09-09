@@ -17,10 +17,12 @@ import {
   CreateClipSourceBatchResponseSchema,
   ConfirmClipSourceResponseSchema,
   DiscardClipSourceBatchResponseSchema,
+  StartClipGenerationResponseSchema,
   type ProtoClipSourceBatch,
 } from '@/shared/api'
 import type { ClipRecipe } from '@/entities/clip-template'
-import type { ClipProjectDraft } from '@/entities/clip-project'
+import type { ClipProject, ClipProjectDraft } from '@/entities/clip-project'
+import { toFakeProto, type FakeGenerationJobRow } from './jobs'
 import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
@@ -29,8 +31,18 @@ export interface FakeClipTemplate extends ClipRecipe {
   projectCount?: number
   ownerId?: string
 }
+export interface FakeClipProject extends ClipProjectDraft {
+  id: string
+  ownerId?: string
+  result?: ClipProject['result']
+  latestJob?: FakeGenerationJobRow
+}
 export interface FakeClipsOptions {
-  projects?: Array<ClipProjectDraft & { id: string; ownerId?: string }>
+  projects?: FakeClipProject[]
+  readProject?: (project: FakeClipProject) => FakeClipProject
+  generationStarts?: unknown[]
+  generationJobId?: string
+  generationFails?: boolean
   projectWrites?: ClipProjectDraft[]
   projectSaveFails?: boolean
   projectListFails?: boolean
@@ -48,14 +60,16 @@ export interface FakeClipsOptions {
   detachedCount?: number
 }
 export function registerClipService(router: ConnectRouter, options: FakeClipsOptions = {}) {
-  const projects = new Map(
+  const projects = new Map<string, FakeClipProject>(
     (options.projects ?? [])
       .filter((p) => !p.ownerId || p.ownerId === options.ownerId)
       .map((p) => [p.id, { ...p, answers: p.answers.map((a) => ({ ...a })) }]),
   )
-  const projectProto = (p: ClipProjectDraft & { id: string }) =>
+  const projectProto = (p: FakeClipProject) =>
     create(ClipProjectSchema, {
       ...p,
+      result: p.result ? { ...p.result, bytes: BigInt(p.result.bytes) } : undefined,
+      latestJob: p.latestJob ? toFakeProto(p.latestJob) : undefined,
       createdAt: '2026-09-10T00:00:00Z',
       updatedAt: '2026-09-10T00:00:00Z',
     })
@@ -131,7 +145,9 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.calls?.push('GetClipProject')
     const p = projects.get(req.id)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
-    return create(GetClipProjectResponseSchema, { project: projectProto(p) })
+    return create(GetClipProjectResponseSchema, {
+      project: projectProto(options.readProject?.(p) ?? p),
+    })
   })
   router.rpc(ClipService.method.createClipProject, (req) => {
     options.calls?.push('CreateClipProject')
@@ -171,6 +187,25 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     return create(DeleteClipProjectResponseSchema, {})
   })
   const batches = new Map<string, ProtoClipSourceBatch>()
+  router.rpc(ClipService.method.startClipGeneration, (req) => {
+    options.calls?.push('StartClipGeneration')
+    options.generationStarts?.push(req)
+    if (options.generationFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    const p = projects.get(req.projectId)
+    const b = batches.get(req.batchId)
+    if (!p || !b || b.state !== 'ready')
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    b.state = 'consuming'
+    const jobId = options.generationJobId ?? 'clip-job'
+    p.latestJob = {
+      id: jobId,
+      kind: 'generate_clip',
+      status: 'queued',
+      stage: 'prepare',
+      clipProjectId: p.id,
+    }
+    return create(StartClipGenerationResponseSchema, { jobId })
+  })
   router.rpc(ClipService.method.createClipSourceBatch, (req) => {
     options.calls?.push('CreateClipSourceBatch')
     options.sourceRequests?.push(req)

@@ -195,7 +195,7 @@ describe('clip page local upload lifecycle', () => {
     expect(json).not.toMatch(/blob:|clip.mp4|storage.test/)
     expect(calls.filter((c) => c === 'CreateClipSourceBatch')).toHaveLength(1)
     expect(calls.filter((c) => c === 'ConfirmClipSource')).toHaveLength(1)
-    expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: '선택 취소' }))
     await screen.findByText('원본 영상을 다시 선택해 주세요')
     expect(calls).toContain('DiscardClipSourceBatch')

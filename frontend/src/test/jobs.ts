@@ -26,6 +26,7 @@ export interface FakeGenerationJobRow {
   failureParams?: Record<string, string>
   targetLanguage?: ContentLanguage
   postSlug?: string
+  clipProjectId?: string
 }
 
 export interface FakeJobsOptions {
@@ -37,6 +38,7 @@ export interface FakeJobsOptions {
   startFails?: boolean
   starts?: FakeGenerationStart[]
   revisions?: FakeRevisionStart[]
+  onRead?: (job: FakeGenerationJobRow) => void
 }
 
 export interface FakeGenerationStart {
@@ -77,6 +79,7 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
     sequenceIndex += 1
     const found = sequenced?.id === req.id ? sequenced : jobs.get(req.id)
     if (!found) throw connectAppError('JOB_NOT_FOUND', Code.NotFound)
+    options.onRead?.(found)
     return create(GetGenerationResponseSchema, { job: toFakeProto(found) })
   })
   router.rpc(GenerationService.method.startGeneration, (req) => {

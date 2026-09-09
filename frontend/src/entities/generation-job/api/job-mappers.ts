@@ -20,6 +20,7 @@ export function toGenerationJob(job: ProtoGenerationJob): GenerationJob {
     progressTotal: job.progressTotal,
     failure: job.failure || job.status === 'failed' ? appFailureFromProto(job.failure) : undefined,
     postSlug: job.postSlug,
+    clipProjectId: job.clipProjectId || undefined,
     observeModel: toModelRef(job.observeModel),
     writeModel: toModelRef(job.writeModel),
     createdAt: job.createdAt,

@@ -41,6 +41,9 @@ export function ClipProjectForm({
   children,
   status,
   progress,
+  disabled = false,
+  actions,
+  refusal,
 }: {
   ownerId: string
   stored?: ClipProject
@@ -48,6 +51,9 @@ export function ClipProjectForm({
   children?: ReactNode
   status?: (saved: boolean) => ReactNode
   progress?: ReactNode
+  disabled?: boolean
+  actions?: (ready: boolean) => ReactNode
+  refusal?: ReactNode
 }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
@@ -65,7 +71,7 @@ export function ClipProjectForm({
   const selected = templates.templates.find((v) => v.id === draft.videoTemplateId)
   const valid = validClipProject(draft, selected?.informationFields)
   const dirty = JSON.stringify(normalizeClipProject(draft)) !== baseline
-  const pending = save.isPending || remove.isPending
+  const pending = disabled || save.isPending || remove.isPending
   const guard = () => dirty && !leaving.current
   const blocker = useBlocker({
     shouldBlockFn: guard,
@@ -81,7 +87,7 @@ export function ClipProjectForm({
   }
   const failure = save.error ?? remove.error
   const submit = async () => {
-    if (!valid || (!dirty && stored) || submitting.current) return
+    if (pending || !valid || (!dirty && stored) || submitting.current) return
     submitting.current = true
     try {
       const value = await save.mutateAsync({ id: stored?.id, draft })
@@ -99,7 +105,7 @@ export function ClipProjectForm({
     }
   }
   const deleteProject = async () => {
-    if (!stored || submitting.current) return
+    if (pending || !stored || submitting.current) return
     submitting.current = true
     try {
       await remove.mutateAsync(stored.id)
@@ -266,6 +272,7 @@ export function ClipProjectForm({
       </form>
       {children}
       <ActionBar className="mt-auto">
+        {refusal}
         {failure && (
           <div role="alert" className="mb-3">
             <AppFailureMessage failure={appFailureFromConnect(failure)} />
@@ -280,13 +287,14 @@ export function ClipProjectForm({
           <Button
             form="clip-project-form"
             type="submit"
-            variant="cta"
+            variant={actions && !dirty ? 'secondary' : 'cta'}
             className="w-full sm:w-auto"
             pending={save.isPending}
             disabled={!valid || (!!stored && !dirty) || pending}
           >
             {t(stored ? 'project.save' : 'project.create')}
           </Button>
+          {actions?.(valid && !dirty && !pending)}
         </div>
       </ActionBar>
       <Dialog
