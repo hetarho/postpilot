@@ -76,6 +76,7 @@ func TestEveryProcedureRequiresActor(t *testing.T) {
 	h := NewHandler(nil)
 	ctx := context.Background()
 	calls := []func() error{
+		func() error { _, e := h.StartClipGeneration(ctx, nil); return e },
 		func() error { _, e := h.CreateClipSourceBatch(ctx, nil); return e }, func() error { _, e := h.ConfirmClipSource(ctx, nil); return e }, func() error { _, e := h.DiscardClipSourceBatch(ctx, nil); return e },
 		func() error { _, e := h.ListVideoTemplates(ctx, nil); return e }, func() error { _, e := h.CreateVideoTemplate(ctx, nil); return e }, func() error { _, e := h.UpdateVideoTemplate(ctx, nil); return e }, func() error { _, e := h.DeleteVideoTemplate(ctx, nil); return e },
 		func() error { _, e := h.ListClipProjects(ctx, nil); return e }, func() error { _, e := h.CreateClipProject(ctx, nil); return e }, func() error { _, e := h.GetClipProject(ctx, nil); return e }, func() error { _, e := h.UpdateClipProject(ctx, nil); return e }, func() error { _, e := h.DeleteClipProject(ctx, nil); return e },
@@ -113,5 +114,23 @@ func TestWireHasNoOwnerClaimOrRatioUpdate(t *testing.T) {
 	fields := (&v1.UpdateClipProjectRequest{}).ProtoReflect().Descriptor().Fields()
 	if fields.ByName(protoreflect.Name("ratio")) != nil {
 		t.Fatal("ratio is mutable")
+	}
+}
+
+func TestResultWireExposesURLsButNoPrivateObjectKey(t *testing.T) {
+	p := projectProto(clip.Project{ID: "clip", UserID: "alice", Analysis: "private analysis", EditPlan: "private plan", Result: &clip.Result{Key: "clip-results/private", ViewURL: "https://signed/inline", DownloadURL: "https://signed/download", Bytes: 5, DurationMS: 15000}})
+	if p.Result.GetViewUrl() != "https://signed/inline" || p.Result.GetDownloadUrl() != "https://signed/download" {
+		t.Fatal(p)
+	}
+	for _, name := range []protoreflect.Name{"key", "object_key", "user_id"} {
+		if p.Result.ProtoReflect().Descriptor().Fields().ByName(name) != nil {
+			t.Fatal("private result field on wire", name)
+		}
+	}
+	fields := (&v1.StartClipGenerationRequest{}).ProtoReflect().Descriptor().Fields()
+	for _, name := range []protoreflect.Name{"project_id", "batch_id", "observe_model", "write_model"} {
+		if fields.ByName(name) == nil {
+			t.Fatal("missing generation input", name)
+		}
 	}
 }

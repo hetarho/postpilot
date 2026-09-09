@@ -25,4 +25,7 @@ SELECT * FROM clip_source_batches WHERE state='cleanup_pending' ORDER BY created
 -- name: RemoveSourceBatch :exec
 DELETE FROM clip_source_batches WHERE id=? AND user_id=? AND state='cleanup_pending';
 -- name: SourceKeyExists :one
-SELECT EXISTS(SELECT 1 FROM clip_source_leases WHERE object_key=?) AS present;
+SELECT EXISTS(SELECT clip_source_leases.object_key FROM clip_source_leases WHERE clip_source_leases.object_key=sqlc.arg(key) UNION ALL SELECT clip_proxy_leases.object_key FROM clip_proxy_leases WHERE clip_proxy_leases.object_key=sqlc.arg(key)) AS present;
+
+-- name: ListBatchProxies :many
+SELECT object_key FROM clip_proxy_leases WHERE batch_id=?;

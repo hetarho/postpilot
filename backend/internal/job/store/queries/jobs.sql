@@ -1,14 +1,15 @@
 -- name: InsertJob :exec
 INSERT INTO generation_jobs (
-    id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total,
+    id, post_slug, user_id, voice_id, clip_project_id, dispatch_ready, kind, status, stage, progress_done, progress_total,
     error, observe_model, write_model, target_language, payload, created_at, updated_at,
     started_at, finished_at
-) VALUES (?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, ?, NULL, NULL);
+) VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, ?, NULL, NULL);
 
 -- name: PickNextQueued :one
 UPDATE generation_jobs
 SET status = 'running',
     stage = CASE kind
+        WHEN 'generate_clip' THEN 'prepare'
         WHEN 'analyze_voice' THEN 'analyze'
         WHEN 'learn_voice' THEN 'learn'
         WHEN 'compare_voice_rule' THEN 'compare_rule'
@@ -24,7 +25,7 @@ SET status = 'running',
     updated_at = ?
 WHERE id = (
     SELECT id FROM generation_jobs
-    WHERE status = 'queued'
+    WHERE status = 'queued' AND dispatch_ready=1
     ORDER BY created_at, id
     LIMIT 1
 )
@@ -74,7 +75,7 @@ LIMIT 1;
 
 -- name: ActiveForUserKind :one
 SELECT * FROM generation_jobs
-WHERE user_id = ? AND kind = ? AND post_slug IS NULL
+WHERE user_id = ? AND kind = ? AND post_slug IS NULL AND clip_project_id IS NULL
   AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1;
@@ -104,3 +105,12 @@ LIMIT 1;
 
 -- name: GetJobByID :one
 SELECT * FROM generation_jobs WHERE id = ?;
+
+-- name: ActiveForClip :one
+SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1;
+-- name: LatestForClip :one
+SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? ORDER BY created_at DESC,id DESC LIMIT 1;
+-- name: ActivateClip :execrows
+UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind='generate_clip' AND status='queued' AND dispatch_ready=0;
+-- name: SweepUnactivatedClips :execrows
+UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind='generate_clip' AND status='queued' AND dispatch_ready=0;

@@ -30,4 +30,6 @@ type GenerationJob struct {
 	ErrorReason     sql.NullString
 	ErrorParams     sql.NullString
 	TechnicalDetail sql.NullString
+	ClipProjectID   sql.NullString
+	DispatchReady   int64
 }

@@ -17,6 +17,12 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	if input.Kind == "" || input.UserID == "" {
 		return "", fmt.Errorf("enqueue job: kind and user are required")
 	}
+	if input.ClipProjectID != "" && input.Kind != KindGenerateClip {
+		return "", ErrInvalidTarget
+	}
+	if input.Kind == KindGenerateClip && (input.ClipProjectID == "" || input.PostSlug != nil || input.VoiceID != "" || input.ObserveModel == "" || input.WriteModel == "") {
+		return "", ErrInvalidTarget
+	}
 	if (input.Kind == KindGenerate || input.Kind == KindRevise) && input.TargetLanguage == "" {
 		return "", fmt.Errorf("enqueue job: target language is required for %s", input.Kind)
 	}
@@ -34,7 +40,7 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 
 	now := q.now()
 	found := Job{
-		ID: q.newID(), Kind: input.Kind, UserID: input.UserID, PostSlug: input.PostSlug, VoiceID: input.VoiceID,
+		ID: q.newID(), Kind: input.Kind, UserID: input.UserID, PostSlug: input.PostSlug, VoiceID: input.VoiceID, ClipProjectID: input.ClipProjectID,
 		Status: StatusQueued, ObserveModel: input.ObserveModel, WriteModel: input.WriteModel,
 		TargetLanguage: input.TargetLanguage,
 		Payload:        append([]byte(nil), input.Payload...), CreatedAt: now, UpdatedAt: now,
@@ -43,7 +49,7 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	// The hold precedes the insert so a refused start leaves no job row at all. The error
 	// is returned unwrapped: the credit refusal it carries is matched by type at every rpc
 	// edge above, and wrapping it here would say nothing a caller needs.
-	if q.admitter != nil {
+	if q.admitter != nil && input.Kind != KindGenerateClip {
 		if err := q.admitter.Hold(ctx, Start{
 			UserID: input.UserID, Kind: input.Kind, JobID: found.ID, Calls: input.plannedCalls(),
 		}); err != nil {
@@ -86,6 +92,13 @@ func (q *Queue) releaseAdmission(ctx context.Context, jobID string) {
 // activeForInput checks every guard the row will be inserted under. Voice-owned work may
 // also point at a post, so it must satisfy both the post guard and the (voice, kind) guard.
 func (q *Queue) activeForInput(ctx context.Context, input NewJob) (*Job, error) {
+	if input.ClipProjectID != "" {
+		s, ok := q.store.(ClipStore)
+		if !ok {
+			return nil, ErrInvalidTarget
+		}
+		return s.ActiveForClip(ctx, input.UserID, input.ClipProjectID)
+	}
 	if input.PostSlug != nil {
 		active, err := q.store.ActiveForPostUser(ctx, *input.PostSlug, input.UserID)
 		if err != nil || active != nil {

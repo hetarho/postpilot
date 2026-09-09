@@ -38,10 +38,11 @@ type TemplatePatch struct {
 }
 type Answer struct{ Label, Text string }
 type Result struct {
-	Key, ContentType string
-	Bytes            int64
-	DurationMS       int
-	CreatedAt        time.Time
+	Key, ContentType     string
+	ViewURL, DownloadURL string
+	Bytes                int64
+	DurationMS           int
+	CreatedAt            time.Time
 }
 type Project struct {
 	ID, UserID, Title, VideoTemplateID, Ratio string

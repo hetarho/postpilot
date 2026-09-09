@@ -33,6 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ClipServiceStartClipGenerationProcedure is the fully-qualified name of the ClipService's
+	// StartClipGeneration RPC.
+	ClipServiceStartClipGenerationProcedure = "/postpilot.v1.ClipService/StartClipGeneration"
 	// ClipServiceListVideoTemplatesProcedure is the fully-qualified name of the ClipService's
 	// ListVideoTemplates RPC.
 	ClipServiceListVideoTemplatesProcedure = "/postpilot.v1.ClipService/ListVideoTemplates"
@@ -73,6 +76,7 @@ const (
 
 // ClipServiceClient is a client for the postpilot.v1.ClipService service.
 type ClipServiceClient interface {
+	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error)
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
 	UpdateVideoTemplate(context.Context, *connect.Request[v1.UpdateVideoTemplateRequest]) (*connect.Response[v1.UpdateVideoTemplateResponse], error)
@@ -98,6 +102,12 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	clipServiceMethods := v1.File_postpilot_v1_clip_proto.Services().ByName("ClipService").Methods()
 	return &clipServiceClient{
+		startClipGeneration: connect.NewClient[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse](
+			httpClient,
+			baseURL+ClipServiceStartClipGenerationProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("StartClipGeneration")),
+			connect.WithClientOptions(opts...),
+		),
 		listVideoTemplates: connect.NewClient[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse](
 			httpClient,
 			baseURL+ClipServiceListVideoTemplatesProcedure,
@@ -175,6 +185,7 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // clipServiceClient implements ClipServiceClient.
 type clipServiceClient struct {
+	startClipGeneration    *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
 	listVideoTemplates     *connect.Client[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse]
 	createVideoTemplate    *connect.Client[v1.CreateVideoTemplateRequest, v1.CreateVideoTemplateResponse]
 	updateVideoTemplate    *connect.Client[v1.UpdateVideoTemplateRequest, v1.UpdateVideoTemplateResponse]
@@ -187,6 +198,11 @@ type clipServiceClient struct {
 	createClipSourceBatch  *connect.Client[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse]
 	confirmClipSource      *connect.Client[v1.ConfirmClipSourceRequest, v1.ConfirmClipSourceResponse]
 	discardClipSourceBatch *connect.Client[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse]
+}
+
+// StartClipGeneration calls postpilot.v1.ClipService.StartClipGeneration.
+func (c *clipServiceClient) StartClipGeneration(ctx context.Context, req *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	return c.startClipGeneration.CallUnary(ctx, req)
 }
 
 // ListVideoTemplates calls postpilot.v1.ClipService.ListVideoTemplates.
@@ -251,6 +267,7 @@ func (c *clipServiceClient) DiscardClipSourceBatch(ctx context.Context, req *con
 
 // ClipServiceHandler is an implementation of the postpilot.v1.ClipService service.
 type ClipServiceHandler interface {
+	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error)
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
 	UpdateVideoTemplate(context.Context, *connect.Request[v1.UpdateVideoTemplateRequest]) (*connect.Response[v1.UpdateVideoTemplateResponse], error)
@@ -272,6 +289,12 @@ type ClipServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	clipServiceMethods := v1.File_postpilot_v1_clip_proto.Services().ByName("ClipService").Methods()
+	clipServiceStartClipGenerationHandler := connect.NewUnaryHandler(
+		ClipServiceStartClipGenerationProcedure,
+		svc.StartClipGeneration,
+		connect.WithSchema(clipServiceMethods.ByName("StartClipGeneration")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipServiceListVideoTemplatesHandler := connect.NewUnaryHandler(
 		ClipServiceListVideoTemplatesProcedure,
 		svc.ListVideoTemplates,
@@ -346,6 +369,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 	)
 	return "/postpilot.v1.ClipService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case ClipServiceStartClipGenerationProcedure:
+			clipServiceStartClipGenerationHandler.ServeHTTP(w, r)
 		case ClipServiceListVideoTemplatesProcedure:
 			clipServiceListVideoTemplatesHandler.ServeHTTP(w, r)
 		case ClipServiceCreateVideoTemplateProcedure:
@@ -378,6 +403,10 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 
 // UnimplementedClipServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedClipServiceHandler struct{}
+
+func (UnimplementedClipServiceHandler) StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.StartClipGeneration is not implemented"))
+}
 
 func (UnimplementedClipServiceHandler) ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.ListVideoTemplates is not implemented"))

@@ -329,6 +329,8 @@ type ClipResult struct {
 	Bytes         int64                  `protobuf:"varint,2,opt,name=bytes,proto3" json:"bytes,omitempty"`
 	DurationMs    int32                  `protobuf:"varint,3,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
 	CreatedAt     string                 `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ViewUrl       string                 `protobuf:"bytes,5,opt,name=view_url,json=viewUrl,proto3" json:"view_url,omitempty"`
+	DownloadUrl   string                 `protobuf:"bytes,6,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -391,20 +393,35 @@ func (x *ClipResult) GetCreatedAt() string {
 	return ""
 }
 
+func (x *ClipResult) GetViewUrl() string {
+	if x != nil {
+		return x.ViewUrl
+	}
+	return ""
+}
+
+func (x *ClipResult) GetDownloadUrl() string {
+	if x != nil {
+		return x.DownloadUrl
+	}
+	return ""
+}
+
 type ClipProject struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Title           string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	VideoTemplateId string                 `protobuf:"bytes,3,opt,name=video_template_id,json=videoTemplateId,proto3" json:"video_template_id,omitempty"`
 	// Exactly vertical, horizontal or square; immutable after creation.
-	Ratio                string        `protobuf:"bytes,4,opt,name=ratio,proto3" json:"ratio,omitempty"`
-	TargetDurationMs     int32         `protobuf:"varint,5,opt,name=target_duration_ms,json=targetDurationMs,proto3" json:"target_duration_ms,omitempty"`
-	Answers              []*ClipAnswer `protobuf:"bytes,6,rep,name=answers,proto3" json:"answers,omitempty"`
-	Result               *ClipResult   `protobuf:"bytes,7,opt,name=result,proto3" json:"result,omitempty"`
-	EditPlanRevision     int32         `protobuf:"varint,8,opt,name=edit_plan_revision,json=editPlanRevision,proto3" json:"edit_plan_revision,omitempty"`
-	RenderedPlanRevision int32         `protobuf:"varint,9,opt,name=rendered_plan_revision,json=renderedPlanRevision,proto3" json:"rendered_plan_revision,omitempty"`
-	CreatedAt            string        `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt            string        `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Ratio                string         `protobuf:"bytes,4,opt,name=ratio,proto3" json:"ratio,omitempty"`
+	TargetDurationMs     int32          `protobuf:"varint,5,opt,name=target_duration_ms,json=targetDurationMs,proto3" json:"target_duration_ms,omitempty"`
+	Answers              []*ClipAnswer  `protobuf:"bytes,6,rep,name=answers,proto3" json:"answers,omitempty"`
+	Result               *ClipResult    `protobuf:"bytes,7,opt,name=result,proto3" json:"result,omitempty"`
+	EditPlanRevision     int32          `protobuf:"varint,8,opt,name=edit_plan_revision,json=editPlanRevision,proto3" json:"edit_plan_revision,omitempty"`
+	RenderedPlanRevision int32          `protobuf:"varint,9,opt,name=rendered_plan_revision,json=renderedPlanRevision,proto3" json:"rendered_plan_revision,omitempty"`
+	CreatedAt            string         `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt            string         `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	LatestJob            *GenerationJob `protobuf:"bytes,12,opt,name=latest_job,json=latestJob,proto3" json:"latest_job,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -514,6 +531,13 @@ func (x *ClipProject) GetUpdatedAt() string {
 		return x.UpdatedAt
 	}
 	return ""
+}
+
+func (x *ClipProject) GetLatestJob() *GenerationJob {
+	if x != nil {
+		return x.LatestJob
+	}
+	return nil
 }
 
 type ListVideoTemplatesRequest struct {
@@ -2006,11 +2030,123 @@ func (*DiscardClipSourceBatchResponse) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{34}
 }
 
+type StartClipGenerationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	BatchId       string                 `protobuf:"bytes,2,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	ObserveModel  *ModelRef              `protobuf:"bytes,3,opt,name=observe_model,json=observeModel,proto3" json:"observe_model,omitempty"`
+	WriteModel    *ModelRef              `protobuf:"bytes,4,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartClipGenerationRequest) Reset() {
+	*x = StartClipGenerationRequest{}
+	mi := &file_postpilot_v1_clip_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartClipGenerationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartClipGenerationRequest) ProtoMessage() {}
+
+func (x *StartClipGenerationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartClipGenerationRequest.ProtoReflect.Descriptor instead.
+func (*StartClipGenerationRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *StartClipGenerationRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *StartClipGenerationRequest) GetBatchId() string {
+	if x != nil {
+		return x.BatchId
+	}
+	return ""
+}
+
+func (x *StartClipGenerationRequest) GetObserveModel() *ModelRef {
+	if x != nil {
+		return x.ObserveModel
+	}
+	return nil
+}
+
+func (x *StartClipGenerationRequest) GetWriteModel() *ModelRef {
+	if x != nil {
+		return x.WriteModel
+	}
+	return nil
+}
+
+type StartClipGenerationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartClipGenerationResponse) Reset() {
+	*x = StartClipGenerationResponse{}
+	mi := &file_postpilot_v1_clip_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartClipGenerationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartClipGenerationResponse) ProtoMessage() {}
+
+func (x *StartClipGenerationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartClipGenerationResponse.ProtoReflect.Descriptor instead.
+func (*StartClipGenerationResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *StartClipGenerationResponse) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
 var File_postpilot_v1_clip_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
-	"\x17postpilot/v1/clip.proto\x12\fpostpilot.v1\"D\n" +
+	"\x17postpilot/v1/clip.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/post.proto\x1a\x1bpostpilot/v1/provider.proto\"D\n" +
 	"\x14ClipInformationField\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x16\n" +
 	"\x06prompt\x18\x02 \x01(\tR\x06prompt\"S\n" +
@@ -2034,7 +2170,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"ClipAnswer\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x12\n" +
-	"\x04text\x18\x02 \x01(\tR\x04text\"\x85\x01\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\"\xc3\x01\n" +
 	"\n" +
 	"ClipResult\x12!\n" +
 	"\fcontent_type\x18\x01 \x01(\tR\vcontentType\x12\x14\n" +
@@ -2042,7 +2178,9 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\vduration_ms\x18\x03 \x01(\x05R\n" +
 	"durationMs\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\xab\x03\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
+	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xe7\x03\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -2057,7 +2195,9 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\tR\tupdatedAt\"\x1b\n" +
+	"updated_at\x18\v \x01(\tR\tupdatedAt\x12:\n" +
+	"\n" +
+	"latest_job\x18\f \x01(\v2\x1b.postpilot.v1.GenerationJobR\tlatestJob\"\x1b\n" +
 	"\x19ListVideoTemplatesRequest\"W\n" +
 	"\x1aListVideoTemplatesResponse\x129\n" +
 	"\ttemplates\x18\x01 \x03(\v2\x1b.postpilot.v1.VideoTemplateR\ttemplates\"\xdf\x01\n" +
@@ -2162,9 +2302,19 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x05batch\x18\x01 \x01(\v2\x1d.postpilot.v1.ClipSourceBatchR\x05batch\":\n" +
 	"\x1dDiscardClipSourceBatchRequest\x12\x19\n" +
 	"\bbatch_id\x18\x01 \x01(\tR\abatchId\" \n" +
-	"\x1eDiscardClipSourceBatchResponse2\x91\n" +
+	"\x1eDiscardClipSourceBatchResponse\"\xcc\x01\n" +
+	"\x1aStartClipGenerationRequest\x12\x1d\n" +
 	"\n" +
-	"\vClipService\x12i\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x19\n" +
+	"\bbatch_id\x18\x02 \x01(\tR\abatchId\x12;\n" +
+	"\robserve_model\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x127\n" +
+	"\vwrite_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"writeModel\"4\n" +
+	"\x1bStartClipGenerationResponse\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId2\xff\n" +
+	"\n" +
+	"\vClipService\x12l\n" +
+	"\x13StartClipGeneration\x12(.postpilot.v1.StartClipGenerationRequest\x1a).postpilot.v1.StartClipGenerationResponse\"\x00\x12i\n" +
 	"\x12ListVideoTemplates\x12'.postpilot.v1.ListVideoTemplatesRequest\x1a(.postpilot.v1.ListVideoTemplatesResponse\"\x00\x12l\n" +
 	"\x13CreateVideoTemplate\x12(.postpilot.v1.CreateVideoTemplateRequest\x1a).postpilot.v1.CreateVideoTemplateResponse\"\x00\x12l\n" +
 	"\x13UpdateVideoTemplate\x12(.postpilot.v1.UpdateVideoTemplateRequest\x1a).postpilot.v1.UpdateVideoTemplateResponse\"\x00\x12l\n" +
@@ -2190,7 +2340,7 @@ func file_postpilot_v1_clip_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_clip_proto_rawDescData
 }
 
-var file_postpilot_v1_clip_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_postpilot_v1_clip_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_postpilot_v1_clip_proto_goTypes = []any{
 	(*ClipInformationField)(nil),           // 0: postpilot.v1.ClipInformationField
 	(*ClipInformationFields)(nil),          // 1: postpilot.v1.ClipInformationFields
@@ -2227,61 +2377,70 @@ var file_postpilot_v1_clip_proto_goTypes = []any{
 	(*ConfirmClipSourceResponse)(nil),      // 32: postpilot.v1.ConfirmClipSourceResponse
 	(*DiscardClipSourceBatchRequest)(nil),  // 33: postpilot.v1.DiscardClipSourceBatchRequest
 	(*DiscardClipSourceBatchResponse)(nil), // 34: postpilot.v1.DiscardClipSourceBatchResponse
-	nil,                                    // 35: postpilot.v1.ClipSourceUpload.HeadersEntry
+	(*StartClipGenerationRequest)(nil),     // 35: postpilot.v1.StartClipGenerationRequest
+	(*StartClipGenerationResponse)(nil),    // 36: postpilot.v1.StartClipGenerationResponse
+	nil,                                    // 37: postpilot.v1.ClipSourceUpload.HeadersEntry
+	(*GenerationJob)(nil),                  // 38: postpilot.v1.GenerationJob
+	(*ModelRef)(nil),                       // 39: postpilot.v1.ModelRef
 }
 var file_postpilot_v1_clip_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.ClipInformationFields.values:type_name -> postpilot.v1.ClipInformationField
 	0,  // 1: postpilot.v1.VideoTemplate.information_fields:type_name -> postpilot.v1.ClipInformationField
 	4,  // 2: postpilot.v1.ClipProject.answers:type_name -> postpilot.v1.ClipAnswer
 	5,  // 3: postpilot.v1.ClipProject.result:type_name -> postpilot.v1.ClipResult
-	3,  // 4: postpilot.v1.ListVideoTemplatesResponse.templates:type_name -> postpilot.v1.VideoTemplate
-	0,  // 5: postpilot.v1.CreateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationField
-	3,  // 6: postpilot.v1.CreateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
-	1,  // 7: postpilot.v1.UpdateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationFields
-	2,  // 8: postpilot.v1.UpdateVideoTemplateRequest.copy_styles:type_name -> postpilot.v1.ClipCopyStyles
-	3,  // 9: postpilot.v1.UpdateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
-	6,  // 10: postpilot.v1.ListClipProjectsResponse.projects:type_name -> postpilot.v1.ClipProject
-	4,  // 11: postpilot.v1.CreateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
-	6,  // 12: postpilot.v1.CreateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
-	6,  // 13: postpilot.v1.GetClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
-	4,  // 14: postpilot.v1.UpdateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
-	6,  // 15: postpilot.v1.UpdateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
-	25, // 16: postpilot.v1.ClipSource.metadata:type_name -> postpilot.v1.ClipSourceMetadata
-	26, // 17: postpilot.v1.ClipSourceBatch.sources:type_name -> postpilot.v1.ClipSource
-	35, // 18: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
-	25, // 19: postpilot.v1.CreateClipSourceBatchRequest.sources:type_name -> postpilot.v1.ClipSourceMetadata
-	27, // 20: postpilot.v1.CreateClipSourceBatchResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	28, // 21: postpilot.v1.CreateClipSourceBatchResponse.uploads:type_name -> postpilot.v1.ClipSourceUpload
-	27, // 22: postpilot.v1.ConfirmClipSourceResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	7,  // 23: postpilot.v1.ClipService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
-	9,  // 24: postpilot.v1.ClipService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
-	11, // 25: postpilot.v1.ClipService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
-	13, // 26: postpilot.v1.ClipService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
-	15, // 27: postpilot.v1.ClipService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
-	17, // 28: postpilot.v1.ClipService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
-	19, // 29: postpilot.v1.ClipService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
-	21, // 30: postpilot.v1.ClipService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
-	23, // 31: postpilot.v1.ClipService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
-	29, // 32: postpilot.v1.ClipService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
-	31, // 33: postpilot.v1.ClipService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
-	33, // 34: postpilot.v1.ClipService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
-	8,  // 35: postpilot.v1.ClipService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
-	10, // 36: postpilot.v1.ClipService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
-	12, // 37: postpilot.v1.ClipService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
-	14, // 38: postpilot.v1.ClipService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
-	16, // 39: postpilot.v1.ClipService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
-	18, // 40: postpilot.v1.ClipService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
-	20, // 41: postpilot.v1.ClipService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
-	22, // 42: postpilot.v1.ClipService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
-	24, // 43: postpilot.v1.ClipService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
-	30, // 44: postpilot.v1.ClipService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
-	32, // 45: postpilot.v1.ClipService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
-	34, // 46: postpilot.v1.ClipService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
-	35, // [35:47] is the sub-list for method output_type
-	23, // [23:35] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	38, // 4: postpilot.v1.ClipProject.latest_job:type_name -> postpilot.v1.GenerationJob
+	3,  // 5: postpilot.v1.ListVideoTemplatesResponse.templates:type_name -> postpilot.v1.VideoTemplate
+	0,  // 6: postpilot.v1.CreateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationField
+	3,  // 7: postpilot.v1.CreateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
+	1,  // 8: postpilot.v1.UpdateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationFields
+	2,  // 9: postpilot.v1.UpdateVideoTemplateRequest.copy_styles:type_name -> postpilot.v1.ClipCopyStyles
+	3,  // 10: postpilot.v1.UpdateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
+	6,  // 11: postpilot.v1.ListClipProjectsResponse.projects:type_name -> postpilot.v1.ClipProject
+	4,  // 12: postpilot.v1.CreateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
+	6,  // 13: postpilot.v1.CreateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
+	6,  // 14: postpilot.v1.GetClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
+	4,  // 15: postpilot.v1.UpdateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
+	6,  // 16: postpilot.v1.UpdateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
+	25, // 17: postpilot.v1.ClipSource.metadata:type_name -> postpilot.v1.ClipSourceMetadata
+	26, // 18: postpilot.v1.ClipSourceBatch.sources:type_name -> postpilot.v1.ClipSource
+	37, // 19: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
+	25, // 20: postpilot.v1.CreateClipSourceBatchRequest.sources:type_name -> postpilot.v1.ClipSourceMetadata
+	27, // 21: postpilot.v1.CreateClipSourceBatchResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	28, // 22: postpilot.v1.CreateClipSourceBatchResponse.uploads:type_name -> postpilot.v1.ClipSourceUpload
+	27, // 23: postpilot.v1.ConfirmClipSourceResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	39, // 24: postpilot.v1.StartClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	39, // 25: postpilot.v1.StartClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	35, // 26: postpilot.v1.ClipService.StartClipGeneration:input_type -> postpilot.v1.StartClipGenerationRequest
+	7,  // 27: postpilot.v1.ClipService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
+	9,  // 28: postpilot.v1.ClipService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
+	11, // 29: postpilot.v1.ClipService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
+	13, // 30: postpilot.v1.ClipService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
+	15, // 31: postpilot.v1.ClipService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
+	17, // 32: postpilot.v1.ClipService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
+	19, // 33: postpilot.v1.ClipService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
+	21, // 34: postpilot.v1.ClipService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
+	23, // 35: postpilot.v1.ClipService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
+	29, // 36: postpilot.v1.ClipService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
+	31, // 37: postpilot.v1.ClipService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
+	33, // 38: postpilot.v1.ClipService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
+	36, // 39: postpilot.v1.ClipService.StartClipGeneration:output_type -> postpilot.v1.StartClipGenerationResponse
+	8,  // 40: postpilot.v1.ClipService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
+	10, // 41: postpilot.v1.ClipService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
+	12, // 42: postpilot.v1.ClipService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
+	14, // 43: postpilot.v1.ClipService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
+	16, // 44: postpilot.v1.ClipService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
+	18, // 45: postpilot.v1.ClipService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
+	20, // 46: postpilot.v1.ClipService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
+	22, // 47: postpilot.v1.ClipService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
+	24, // 48: postpilot.v1.ClipService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
+	30, // 49: postpilot.v1.ClipService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
+	32, // 50: postpilot.v1.ClipService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
+	34, // 51: postpilot.v1.ClipService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
+	39, // [39:52] is the sub-list for method output_type
+	26, // [26:39] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_proto_init() }
@@ -2289,6 +2448,8 @@ func file_postpilot_v1_clip_proto_init() {
 	if File_postpilot_v1_clip_proto != nil {
 		return
 	}
+	file_postpilot_v1_post_proto_init()
+	file_postpilot_v1_provider_proto_init()
 	file_postpilot_v1_clip_proto_msgTypes[11].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[21].OneofWrappers = []any{}
 	type x struct{}
@@ -2297,7 +2458,7 @@ func file_postpilot_v1_clip_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_proto_rawDesc), len(file_postpilot_v1_clip_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   36,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

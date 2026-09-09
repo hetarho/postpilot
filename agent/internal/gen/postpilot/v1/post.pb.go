@@ -1148,6 +1148,7 @@ type GenerationJob struct {
 	UpdatedAt      string          `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	TargetLanguage ContentLanguage `protobuf:"varint,13,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
 	Failure        *Failure        `protobuf:"bytes,14,opt,name=failure,proto3" json:"failure,omitempty"`
+	ClipProjectId  string          `protobuf:"bytes,15,opt,name=clip_project_id,json=clipProjectId,proto3" json:"clip_project_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1279,6 +1280,13 @@ func (x *GenerationJob) GetFailure() *Failure {
 		return x.Failure
 	}
 	return nil
+}
+
+func (x *GenerationJob) GetClipProjectId() string {
+	if x != nil {
+		return x.ClipProjectId
+	}
+	return ""
 }
 
 type GetGenerationRequest struct {
@@ -2941,7 +2949,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x0ftarget_language\x18\t \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
 	"\x10content_language\x18\n" +
 	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12\x12\n" +
-	"\x04tags\x18\v \x03(\tR\x04tags\"\x91\x04\n" +
+	"\x04tags\x18\v \x03(\tR\x04tags\"\xb9\x04\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
@@ -2960,7 +2968,8 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\f \x01(\tR\tupdatedAt\x12F\n" +
 	"\x0ftarget_language\x18\r \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12/\n" +
-	"\afailure\x18\x0e \x01(\v2\x15.postpilot.v1.FailureR\afailure\"&\n" +
+	"\afailure\x18\x0e \x01(\v2\x15.postpilot.v1.FailureR\afailure\x12&\n" +
+	"\x0fclip_project_id\x18\x0f \x01(\tR\rclipProjectId\"&\n" +
 	"\x14GetGenerationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x15GetGenerationResponse\x12-\n" +

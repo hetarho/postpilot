@@ -2,8 +2,12 @@ syntax = "proto3";
 package postpilot.v1;
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
+import "postpilot/v1/post.proto";
+import "postpilot/v1/provider.proto";
+
 // All procedures derive the owner from the authenticated session.
 service ClipService {
+  rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
   rpc ListVideoTemplates(ListVideoTemplatesRequest) returns (ListVideoTemplatesResponse) {}
   rpc CreateVideoTemplate(CreateVideoTemplateRequest) returns (CreateVideoTemplateResponse) {}
   rpc UpdateVideoTemplate(UpdateVideoTemplateRequest) returns (UpdateVideoTemplateResponse) {}
@@ -39,6 +43,8 @@ message ClipResult {
   int64 bytes = 2;
   int32 duration_ms = 3;
   string created_at = 4;
+  string view_url = 5;
+  string download_url = 6;
 }
 message ClipProject {
   string id = 1;
@@ -53,6 +59,7 @@ message ClipProject {
   int32 rendered_plan_revision = 9;
   string created_at = 10;
   string updated_at = 11;
+  GenerationJob latest_job = 12;
 }
 message ListVideoTemplatesRequest {}
 message ListVideoTemplatesResponse { repeated VideoTemplate templates = 1; }
@@ -133,3 +140,10 @@ message ConfirmClipSourceRequest { string batch_id = 1; string source_id = 2; }
 message ConfirmClipSourceResponse { ClipSourceBatch batch = 1; }
 message DiscardClipSourceBatchRequest { string batch_id = 1; }
 message DiscardClipSourceBatchResponse {}
+message StartClipGenerationRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+}
+message StartClipGenerationResponse { string job_id = 1; }

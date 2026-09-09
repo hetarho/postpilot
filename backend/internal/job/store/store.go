@@ -28,7 +28,7 @@ func New(writer, reader *sql.DB) *Store {
 func (s *Store) Insert(ctx context.Context, found job.Job) error {
 	err := s.write.InsertJob(ctx, sqlc.InsertJobParams{
 		ID: found.ID, PostSlug: nullStringPtr(found.PostSlug), UserID: found.UserID, VoiceID: nullString(found.VoiceID),
-		Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
+		ClipProjectID: nullString(found.ClipProjectID), DispatchReady: dispatchReady(found.Kind), Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
 		WriteModel: nullString(found.WriteModel), Payload: string(found.Payload),
 		TargetLanguage: nullString(found.TargetLanguage),
 		CreatedAt:      formatTime(found.CreatedAt), UpdatedAt: formatTime(found.UpdatedAt),
@@ -37,6 +37,9 @@ func (s *Store) Insert(ctx context.Context, found job.Job) error {
 		message := strings.ToLower(err.Error())
 		if strings.Contains(message, "unique constraint failed") || strings.Contains(message, "active voice job already exists") {
 			return job.ErrActiveConflict
+		}
+		if strings.Contains(message, "clip job target unavailable") {
+			return job.ErrInvalidTarget
 		}
 		if strings.Contains(message, "job voice must be active") {
 			return job.ErrVoiceUnavailable
@@ -240,7 +243,7 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 		return job.Job{}, fmt.Errorf("job %s failure: %w", row.ID, err)
 	}
 	return job.Job{
-		ID: row.ID, PostSlug: stringPtr(row.PostSlug), UserID: row.UserID, VoiceID: row.VoiceID.String, Kind: row.Kind,
+		ID: row.ID, PostSlug: stringPtr(row.PostSlug), UserID: row.UserID, VoiceID: row.VoiceID.String, Kind: row.Kind, ClipProjectID: row.ClipProjectID.String,
 		Status: row.Status, Stage: row.Stage.String, ProgressDone: int(row.ProgressDone),
 		ProgressTotal: int(row.ProgressTotal), Failure: failure,
 		ObserveModel: row.ObserveModel.String, WriteModel: row.WriteModel.String, TargetLanguage: row.TargetLanguage.String,
@@ -356,4 +359,46 @@ func parseOptionalTime(value sql.NullString) (*time.Time, error) {
 		return nil, err
 	}
 	return &parsed, nil
+}
+
+func dispatchReady(kind string) int64 {
+	if kind == job.KindGenerateClip {
+		return 0
+	}
+	return 1
+}
+
+func (s *Store) LatestForClip(ctx context.Context, user, id string) (*job.Job, error) {
+	r, err := s.read.LatestForClip(ctx, sqlc.LatestForClipParams{UserID: user, ClipProjectID: nullString(id)})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	j, err := toJob(r)
+	return &j, err
+}
+func (s *Store) ActiveForClip(ctx context.Context, user, id string) (*job.Job, error) {
+	r, err := s.read.ActiveForClip(ctx, sqlc.ActiveForClipParams{UserID: user, ClipProjectID: nullString(id)})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	j, err := toJob(r)
+	return &j, err
+}
+func (s *Store) ActivateClip(ctx context.Context, user, id string) (bool, error) {
+	n, err := s.write.ActivateClip(ctx, sqlc.ActivateClipParams{UserID: user, ID: id})
+	return n == 1, err
+}
+func (s *Store) SweepUnactivatedClips(ctx context.Context, f job.Failure) (int64, error) {
+	r, p, d, err := failureColumns(&f)
+	if err != nil {
+		return 0, err
+	}
+	now := formatTime(time.Now())
+	return s.write.SweepUnactivatedClips(ctx, sqlc.SweepUnactivatedClipsParams{ErrorReason: r, ErrorParams: p, TechnicalDetail: d, FinishedAt: nullString(now), UpdatedAt: now})
 }

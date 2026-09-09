@@ -332,6 +332,11 @@ func main() {
 		slog.Error("clip workspace cleanup failed", "err", err)
 		os.Exit(1)
 	}
+	clipGeneration, err := newClipGeneration(ctx, cfg, clipStore, clipSvc, clipSources, bucket, clipMedia, meteredModels, jobQueue)
+	if err != nil {
+		slog.Error("clip generation initialization failed", "err", err)
+		os.Exit(1)
+	}
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
@@ -509,7 +514,7 @@ func main() {
 				return postpilotv1connect.NewTemplateServiceHandler(templaterpc.NewHandler(templateSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
-				return postpilotv1connect.NewClipServiceHandler(cliprpc.NewHandler(clipSvc).WithSources(clipSources), opts...)
+				return postpilotv1connect.NewClipServiceHandler(cliprpc.NewHandler(clipSvc).WithSources(clipSources).WithGeneration(clipGeneration, jobQueue), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewGuidelineServiceHandler(guidelinerpc.NewHandler(guidelineSvc), opts...)
@@ -557,7 +562,7 @@ func main() {
 		cfg.OrphanMinAge,
 	)
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
-	go clipSources.Run(ctx, cfg.ClipSourceSweepInterval)
+	go clipGeneration.RunSweep(ctx, cfg.ClipSourceSweepInterval)
 	go experiment.NewSweeper(experimentStore).Run(ctx, cfg.ExperimentSweepInterval)
 	go publishing.NewSweeper(publishSvc, cfg.PublishOrphanMinAge, cfg.PublishLeaseTTL).Run(ctx, cfg.PublishOrphanSweepInterval)
 	go func() {
@@ -1812,6 +1817,11 @@ type meteredRegistry struct {
 }
 
 func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm.Request) (llm.Response, error) {
+	if work, ok := usage.WorkFromContext(ctx); ok && work.Kind == job.KindGenerateClip {
+		if err := job.ConsumeClipCall(ctx, work.UserID, work.JobID, ref.String(), req.MaxTokens); err != nil {
+			return llm.Response{}, err
+		}
+	}
 	response, err := m.Registry.Complete(ctx, ref, req)
 	// A ledger failure never fails the user's work: the tokens are already spent, and the
 	// budget it protects is a soft cap enforced at the NEXT admission.

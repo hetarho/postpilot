@@ -37,9 +37,10 @@ type SourceLease struct {
 	ActualBytes int64
 }
 type SourceBatch struct {
-	ID, UserID, ProjectID, State string
-	CreatedAt, ExpiresAt         time.Time
-	Sources                      []SourceLease
+	ID, UserID, ProjectID, State, JobID string
+	ProxyKeys                           []string
+	CreatedAt, ExpiresAt                time.Time
+	Sources                             []SourceLease
 }
 type SignedSourcePut struct {
 	URL     string
@@ -186,7 +187,7 @@ func (s *SourceService) Discard(ctx context.Context, user, id string) error {
 	return nil // deletion intent is durable; storage retries no longer need the client
 }
 
-// Finish is worker-only: callers must first make the associated job terminal.
+// Finish is worker-only: the handler must have finished every use of source pixels.
 func (s *SourceService) Finish(ctx context.Context, user, id string) error {
 	b, err := s.store.MarkSourceCleanup(ctx, user, id, true)
 	if errors.Is(err, ErrNotFound) {
@@ -213,6 +214,11 @@ func (s *SourceService) cleanup(ctx context.Context, b SourceBatch) error {
 		return ErrSourceState
 	}
 	var errs []error
+	for _, key := range b.ProxyKeys {
+		if err := s.objects.Delete(ctx, key); err != nil {
+			errs = append(errs, errors.New("delete clip proxy failed"))
+		}
+	}
 	for _, source := range b.Sources {
 		if err := s.objects.Delete(ctx, source.Key); err != nil {
 			errs = append(errs, fmt.Errorf("delete source %s", source.ID))

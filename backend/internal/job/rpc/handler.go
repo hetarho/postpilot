@@ -54,7 +54,7 @@ func ToProto(found *job.JobSummary) *postpilotv1.GenerationJob {
 	return &postpilotv1.GenerationJob{
 		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),
-		PostSlug: postSlug, ObserveModel: modelRef(found.ObserveModel),
+		PostSlug: postSlug, ClipProjectId: found.ClipProjectID, ObserveModel: modelRef(found.ObserveModel),
 		WriteModel: modelRef(found.WriteModel), TargetLanguage: languageToProto(found.TargetLanguage), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt: found.UpdatedAt.UTC().Format(time.RFC3339), Failure: failureToProto(found.Failure),
 	}

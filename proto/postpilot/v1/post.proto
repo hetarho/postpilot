@@ -234,6 +234,7 @@ message GenerationJob {
   string updated_at = 12;
   ContentLanguage target_language = 13;
   Failure failure = 14;
+  string clip_project_id = 15;
 }
 
 message GetGenerationRequest {

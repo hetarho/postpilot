@@ -36,6 +36,7 @@ type ClipSourceBatch struct {
 	State     string
 	CreatedAt string
 	ExpiresAt string
+	JobID     sql.NullString
 }
 
 type ClipSourceLease struct {

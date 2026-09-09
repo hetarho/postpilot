@@ -8,14 +8,45 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/job"
+	jobrpc "github.com/postpilot/backend/internal/job/rpc"
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"log/slog"
 	"time"
 )
 
 type Handler struct {
-	service *clip.Service
-	sources *clip.SourceService
+	service    *clip.Service
+	sources    *clip.SourceService
+	generation *clip.GenerationService
+	jobs       *job.Queue
+}
+
+func (h *Handler) WithGeneration(g *clip.GenerationService, j *job.Queue) *Handler {
+	h.generation = g
+	h.jobs = j
+	return h
+}
+
+func (h *Handler) StartClipGeneration(ctx context.Context, req *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.generation == nil {
+		return nil, toConnectError(errors.New("clip generation unavailable"))
+	}
+	observe := llm.ModelRef{ProviderID: req.Msg.GetObserveModel().GetProviderId(), ModelID: req.Msg.GetObserveModel().GetModelId()}
+	write := llm.ModelRef{ProviderID: req.Msg.GetWriteModel().GetProviderId(), ModelID: req.Msg.GetWriteModel().GetModelId()}
+	id, err := h.generation.Start(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String())
+	if err != nil {
+		if errors.Is(err, llm.ErrUnsupported) {
+			return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "video input is required", "MODEL_VIDEO_UNSUPPORTED", map[string]string{"model": observe.String()})
+		}
+		return nil, toConnectError(err)
+	}
+	return connect.NewResponse(&v1.StartClipGenerationResponse{JobId: id}), nil
 }
 
 func NewHandler(service *clip.Service) *Handler                     { return &Handler{service: service} }
@@ -29,6 +60,14 @@ func actingUser(ctx context.Context) (string, error) {
 }
 func toConnectError(err error) error {
 	switch {
+	case errors.Is(err, clip.ErrBusy):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is busy", "CLIP_BUSY", nil)
+	case errors.Is(err, llm.ErrModelUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model is unavailable", "MODEL_UNAVAILABLE", nil)
+	case errors.Is(err, llm.ErrProviderDisabled):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model provider is disabled", "PROVIDER_DISABLED", nil)
+	case errors.Is(err, clip.ErrInvalidMedia):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip media is invalid", "CLIP_INVALID_MEDIA", nil)
 	case errors.Is(err, clip.ErrCopyTooLong):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip copy does not fit", "CLIP_COPY_TOO_LONG", nil)
 	case errors.Is(err, clip.ErrSourceState):
@@ -71,7 +110,7 @@ func projectProto(p clip.Project) *v1.ClipProject {
 		out.Answers = append(out.Answers, &v1.ClipAnswer{Label: a.Label, Text: a.Text})
 	}
 	if r := p.Result; r != nil {
-		out.Result = &v1.ClipResult{ContentType: r.ContentType, Bytes: r.Bytes, DurationMs: int32(r.DurationMS), CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339Nano)}
+		out.Result = &v1.ClipResult{ContentType: r.ContentType, Bytes: r.Bytes, DurationMs: int32(r.DurationMS), CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339Nano), ViewUrl: r.ViewURL, DownloadUrl: r.DownloadURL}
 	}
 	return out
 }
@@ -169,7 +208,15 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	return connect.NewResponse(&v1.GetClipProjectResponse{Project: projectProto(value)}), nil
+	out := projectProto(value)
+	if h.jobs != nil {
+		j, err := h.jobs.LatestForClip(ctx, user, value.ID)
+		if err != nil {
+			return nil, toConnectError(err)
+		}
+		out.LatestJob = jobrpc.ToProto(j)
+	}
+	return connect.NewResponse(&v1.GetClipProjectResponse{Project: out}), nil
 }
 func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1.UpdateClipProjectRequest]) (*connect.Response[v1.UpdateClipProjectResponse], error) {
 	user, err := actingUser(ctx)

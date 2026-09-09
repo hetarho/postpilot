@@ -72,6 +72,11 @@ export const errors = {
     'The videos are processing or the upload has expired. Check progress, then select the source videos again.',
   CLIP_NOT_FOUND: 'Could not find the clip or video template.',
   CLIP_COPY_TOO_LONG: 'This caption does not fit in two lines. Shorten it and try again.',
+  CLIP_BUSY: 'A clip job is still running. Wait for it to finish.',
+  CLIP_INVALID_MEDIA:
+    'The source video could not be verified. Select supported, uncorrupted videos again.',
+  CLIP_PROCESSING_FAILED:
+    'Clip processing failed. Your previous result is preserved. Select the sources again to retry.',
   CLIP_TEMPLATE_NAME_TAKEN: 'A video template with that name already exists.',
   TEMPLATE_NOT_FOUND: 'Could not find the template.',
   PURPOSE_NOT_FOUND: 'Could not find the template you chose. Pick one again.',

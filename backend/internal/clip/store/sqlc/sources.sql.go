@@ -27,7 +27,7 @@ func (q *Queries) FenceSourceProjectDeletion(ctx context.Context, arg FenceSourc
 }
 
 const getSourceBatch = `-- name: GetSourceBatch :one
-SELECT id, user_id, project_id, state, created_at, expires_at FROM clip_source_batches WHERE id=? AND user_id=?
+SELECT id, user_id, project_id, state, created_at, expires_at, job_id FROM clip_source_batches WHERE id=? AND user_id=?
 `
 
 type GetSourceBatchParams struct {
@@ -45,6 +45,7 @@ func (q *Queries) GetSourceBatch(ctx context.Context, arg GetSourceBatchParams) 
 		&i.State,
 		&i.CreatedAt,
 		&i.ExpiresAt,
+		&i.JobID,
 	)
 	return i, err
 }
@@ -113,8 +114,35 @@ func (q *Queries) InsertSourceLease(ctx context.Context, arg InsertSourceLeasePa
 	return err
 }
 
+const listBatchProxies = `-- name: ListBatchProxies :many
+SELECT object_key FROM clip_proxy_leases WHERE batch_id=?
+`
+
+func (q *Queries) ListBatchProxies(ctx context.Context, batchID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listBatchProxies, batchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var object_key string
+		if err := rows.Scan(&object_key); err != nil {
+			return nil, err
+		}
+		items = append(items, object_key)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProjectSourceBatches = `-- name: ListProjectSourceBatches :many
-SELECT id, user_id, project_id, state, created_at, expires_at FROM clip_source_batches WHERE project_id=? AND user_id=? ORDER BY created_at,id
+SELECT id, user_id, project_id, state, created_at, expires_at, job_id FROM clip_source_batches WHERE project_id=? AND user_id=? ORDER BY created_at,id
 `
 
 type ListProjectSourceBatchesParams struct {
@@ -138,6 +166,7 @@ func (q *Queries) ListProjectSourceBatches(ctx context.Context, arg ListProjectS
 			&i.State,
 			&i.CreatedAt,
 			&i.ExpiresAt,
+			&i.JobID,
 		); err != nil {
 			return nil, err
 		}
@@ -153,7 +182,7 @@ func (q *Queries) ListProjectSourceBatches(ctx context.Context, arg ListProjectS
 }
 
 const listSourceCleanup = `-- name: ListSourceCleanup :many
-SELECT id, user_id, project_id, state, created_at, expires_at FROM clip_source_batches WHERE state='cleanup_pending' ORDER BY created_at,id
+SELECT id, user_id, project_id, state, created_at, expires_at, job_id FROM clip_source_batches WHERE state='cleanup_pending' ORDER BY created_at,id
 `
 
 func (q *Queries) ListSourceCleanup(ctx context.Context) ([]ClipSourceBatch, error) {
@@ -172,6 +201,7 @@ func (q *Queries) ListSourceCleanup(ctx context.Context) ([]ClipSourceBatch, err
 			&i.State,
 			&i.CreatedAt,
 			&i.ExpiresAt,
+			&i.JobID,
 		); err != nil {
 			return nil, err
 		}
@@ -312,11 +342,11 @@ func (q *Queries) SetSourceLeaseReady(ctx context.Context, arg SetSourceLeaseRea
 }
 
 const sourceKeyExists = `-- name: SourceKeyExists :one
-SELECT EXISTS(SELECT 1 FROM clip_source_leases WHERE object_key=?) AS present
+SELECT EXISTS(SELECT clip_source_leases.object_key FROM clip_source_leases WHERE clip_source_leases.object_key=?1 UNION ALL SELECT clip_proxy_leases.object_key FROM clip_proxy_leases WHERE clip_proxy_leases.object_key=?1) AS present
 `
 
-func (q *Queries) SourceKeyExists(ctx context.Context, objectKey string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, sourceKeyExists, objectKey)
+func (q *Queries) SourceKeyExists(ctx context.Context, key string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, sourceKeyExists, key)
 	var present bool
 	err := row.Scan(&present)
 	return present, err

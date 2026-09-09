@@ -68,6 +68,11 @@ export const errors = {
     '영상이 처리 중이거나 업로드가 만료됐어요. 진행 상태를 확인한 뒤 원본 영상을 다시 선택해 주세요.',
   CLIP_NOT_FOUND: '클립 또는 영상 템플릿을 찾을 수 없어요.',
   CLIP_COPY_TOO_LONG: '문구가 두 줄 안에 들어가지 않아요. 문구를 줄인 뒤 다시 시도해 주세요.',
+  CLIP_BUSY: '클립 작업이 진행 중이에요. 완료될 때까지 기다려 주세요.',
+  CLIP_INVALID_MEDIA:
+    '원본 영상을 확인하지 못했어요. 지원되는 정상 영상 파일을 다시 선택해 주세요.',
+  CLIP_PROCESSING_FAILED:
+    '클립 처리에 실패했어요. 이전 결과는 보존돼요. 원본 영상을 다시 선택해 재시도해 주세요.',
   CLIP_TEMPLATE_NAME_TAKEN: '같은 이름의 영상 템플릿이 이미 있어요.',
   TEMPLATE_NOT_FOUND: '템플릿을 찾을 수 없어요.',
   PURPOSE_NOT_FOUND: '선택한 템플릿을 찾을 수 없어요. 다시 선택해 주세요.',

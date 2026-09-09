@@ -388,6 +388,11 @@ func (s *Service) Settle(ctx context.Context, jobID string) error {
 			return err
 		}
 		actual := plan.Charge(spent)
+		// A clip reserves its complete run after probing. Never debit another lot for
+		// provider overage: raw cost remains in the ledger, user credit is capped.
+		if admission.Kind == "generate_clip" {
+			actual = min(actual, admission.HoldCredits)
+		}
 
 		switch {
 		case actual < admission.HoldCredits:
@@ -533,6 +538,13 @@ func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, stage string
 	}
 	if callErr != nil && u.PromptTokens == 0 && u.CompletionTokens == 0 && !u.CostReported {
 		return nil
+	}
+	if work.Kind == "generate_clip" {
+		// A provider can report paid usage while worker shutdown cancels its call.
+		// Preserve that evidence for boot settlement without permitting another call.
+		recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		ctx = recordCtx
 	}
 	if stage == "" {
 		stage = work.StageFor(ref)

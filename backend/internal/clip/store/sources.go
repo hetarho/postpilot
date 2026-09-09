@@ -18,7 +18,12 @@ func sourceBatchRow(ctx context.Context, q *sqlc.Queries, r sqlc.ClipSourceBatch
 	if err != nil {
 		return clip.SourceBatch{}, err
 	}
-	out := clip.SourceBatch{ID: r.ID, UserID: r.UserID, ProjectID: r.ProjectID, State: r.State, CreatedAt: created, ExpiresAt: expires}
+	out := clip.SourceBatch{ID: r.ID, UserID: r.UserID, ProjectID: r.ProjectID, State: r.State, JobID: r.JobID.String, CreatedAt: created, ExpiresAt: expires}
+	proxies, err := q.ListBatchProxies(ctx, r.ID)
+	if err != nil {
+		return out, err
+	}
+	out.ProxyKeys = proxies
 	rows, err := q.ListSourceLeases(ctx, sqlc.ListSourceLeasesParams{BatchID: r.ID, UserID: r.UserID})
 	if err != nil {
 		return out, err

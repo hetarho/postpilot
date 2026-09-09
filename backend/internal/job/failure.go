@@ -50,6 +50,10 @@ func failureFromError(err error) Failure {
 		return Failure{Reason: FailureReasonHandlerMissing}
 	}
 	normalized := llm.NormalizeFailure(err)
+	var detailed interface{ Failure() llm.Failure }
+	if errors.As(err, &detailed) {
+		normalized = detailed.Failure()
+	}
 	return Failure{
 		Reason:          normalized.Reason,
 		Params:          cloneParams(normalized.Params),

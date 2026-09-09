@@ -12,12 +12,14 @@ import (
 )
 
 type Service struct {
-	store   Store
-	limits  Limits
-	sources *SourceService
+	store      Store
+	limits     Limits
+	sources    *SourceService
+	generation *GenerationService
 }
 
-func (s *Service) SetSources(sources *SourceService) { s.sources = sources }
+func (s *Service) SetGeneration(g *GenerationService) { s.generation = g }
+func (s *Service) SetSources(sources *SourceService)  { s.sources = sources }
 
 func NewService(store Store, limits Limits) *Service {
 	for _, n := range []int{limits.NameChars, limits.GuidanceChars, limits.FieldCount, limits.LabelChars, limits.PromptChars, limits.TitleChars, limits.AnswerChars, limits.MinDurationMS, limits.MaxDurationMS} {
@@ -143,7 +145,16 @@ func (s *Service) ListProjects(ctx context.Context, user string) ([]Project, err
 	return s.store.ListProjects(ctx, user)
 }
 func (s *Service) GetProject(ctx context.Context, user, id string) (Project, error) {
-	return s.store.GetProject(ctx, user, id)
+	p, err := s.store.GetProject(ctx, user, id)
+	if err != nil || p.Result == nil || s.generation == nil {
+		return p, err
+	}
+	p.Result.ViewURL, err = s.generation.objects.PresignRead(ctx, p.Result.Key, "clip.mp4", false, s.generation.cfg.ReadTTL)
+	if err != nil {
+		return Project{}, err
+	}
+	p.Result.DownloadURL, err = s.generation.objects.PresignRead(ctx, p.Result.Key, "clip.mp4", true, s.generation.cfg.ReadTTL)
+	return p, err
 }
 func (s *Service) duration(ms int) bool {
 	return ms >= s.limits.MinDurationMS && ms <= s.limits.MaxDurationMS
@@ -168,6 +179,15 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 	return p, nil
 }
 func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectPatch) (Project, error) {
+	if s.generation != nil {
+		active, err := s.generation.jobs.Active(ctx, user, id)
+		if err != nil {
+			return Project{}, err
+		}
+		if active != nil {
+			return Project{}, ErrBusy
+		}
+	}
 	if _, err := s.store.GetProject(ctx, user, id); err != nil {
 		return Project{}, err
 	}

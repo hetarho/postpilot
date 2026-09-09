@@ -31,7 +31,7 @@ type Config struct {
 
 // Budgets is copied into the durable job's planned calls before any provider work.
 // The request path reads these same values, never the registry's default budget.
-type Budgets struct{ Observe, Plan int }
+type Budgets = clip.CompletionBudgets
 type Service struct {
 	models   Models
 	captions CaptionSizer
@@ -50,7 +50,7 @@ func New(models Models, captions CaptionSizer, cfg Config) (*Service, error) {
 	return &Service{models, captions, cfg}, nil
 }
 func (s *Service) Budgets() Budgets {
-	return Budgets{s.cfg.ObserveCompletionTokens, s.cfg.PlanCompletionTokens}
+	return Budgets{Observe: s.cfg.ObserveCompletionTokens, Plan: s.cfg.PlanCompletionTokens}
 }
 
 type StageError struct {

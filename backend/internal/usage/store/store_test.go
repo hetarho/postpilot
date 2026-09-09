@@ -109,6 +109,12 @@ func holdFor(jobID string) usage.Start {
 // BEGIN IMMEDIATE every one of these requests reads the same balance and passes, which is
 // how a 50-credit account spends 100.
 func TestConcurrentHoldsCannotOverspendOneBalance(t *testing.T) {
+	for _, kind := range []string{"generate", "generate_clip"} {
+		t.Run(kind, func(t *testing.T) { concurrentHolds(t, kind) })
+	}
+}
+
+func concurrentHolds(t *testing.T, kind string) {
 	svc := newService(t)
 	ctx := context.Background()
 
@@ -128,7 +134,9 @@ func TestConcurrentHoldsCannotOverspendOneBalance(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start
-			results[i] = svc.Hold(context.Background(), holdFor(string(rune('a'+i))))
+			request := holdFor(string(rune('a' + i)))
+			request.Kind = kind
+			results[i] = svc.Hold(context.Background(), request)
 		}()
 	}
 	close(start)

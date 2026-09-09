@@ -66,6 +66,7 @@ type NewJob struct {
 	UserID         string
 	PostSlug       *string
 	VoiceID        string
+	ClipProjectID  string
 	ObserveModel   string
 	WriteModel     string
 	TargetLanguage string
@@ -164,6 +165,7 @@ type Job struct {
 	UserID         string
 	PostSlug       *string
 	VoiceID        string
+	ClipProjectID  string
 	Status         string
 	Stage          string
 	ProgressDone   int
@@ -186,6 +188,7 @@ type JobSummary struct {
 	UserID         string
 	PostSlug       *string
 	VoiceID        string
+	ClipProjectID  string
 	Status         string
 	Stage          string
 	ProgressDone   int
@@ -200,7 +203,7 @@ type JobSummary struct {
 
 func summarize(found Job) *JobSummary {
 	return &JobSummary{
-		ID: found.ID, Kind: found.Kind, UserID: found.UserID, PostSlug: found.PostSlug, VoiceID: found.VoiceID,
+		ID: found.ID, Kind: found.Kind, UserID: found.UserID, PostSlug: found.PostSlug, VoiceID: found.VoiceID, ClipProjectID: found.ClipProjectID,
 		Status: found.Status, Stage: found.Stage, ProgressDone: found.ProgressDone,
 		ProgressTotal: found.ProgressTotal, Failure: cloneFailure(found.Failure),
 		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel, TargetLanguage: found.TargetLanguage,

@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r1 | An account-owned workflow turns multiple pieces of experience footage into a downloadable, Naver Clip-ready video through a reusable video template, AI-selected cuts, exact styled copy and a lightweight correction pass, independently of blog posts.
+> r2 | An account-owned workflow turns multiple pieces of experience footage into a downloadable, Naver Clip-ready video through a reusable video template, AI-selected cuts, exact styled copy and a lightweight correction pass, independently of blog posts.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, target duration, aspect ratio, analysis, edit plan and latest successful result
@@ -20,7 +20,7 @@
 - CLIP-16 [o] scene changes use a short restrained fade
 - CLIP-17 [o] the correction screen lets the owner reorder or delete cuts, extend or shorten each cut within its source range, edit its copy, change its approved copy position or style and adjust its original-audio volume
 - CLIP-18 [o] original audio is retained by default and volume is controlled per cut
-- CLIP-19 [o] AI analysis and AI composition regeneration consume the account's existing credits; admission, settlement and exhaustion follow QUOTA
+- CLIP-19 [o] AI analysis and AI composition regeneration consume the account's existing credits; a durable preparation stage verifies all source durations before reserving the complete AI run under QUOTA-43; no AI call may precede a successful reservation
 - CLIP-20 [o] manual corrections, rerendering the corrected plan, preview and download consume no additional credits
 - CLIP-21 [o] source videos are transient processing inputs and are never retained as project assets; the project retains only its metadata, latest successful result, analysis and edit plan until deletion ← source footage dominates storage and already remains on the owner's device
 - CLIP-22 [o] the upload surface states before selection that source video is sent to an external video-analysis provider and is discarded after the active processing attempt
@@ -33,7 +33,7 @@
 
 ## flow
 - create: 영상 → 클립 → 새 클립 → choose video template → answer its information fields → choose ratio and target duration → disclose external analysis → select source videos → generate
-- generate: analyze sources → choose and order ranges → write and place copy → render → preview
+- generate: create job → prepare and verify sources → reserve credits (refused: fail without AI or debit, preserve previous result, clean sources) → analyze sources → choose and order ranges → write and place copy → render → preview
 - correct: preview → change cuts · copy · placement · style · volume → reselect sources if absent → rerender → download
 - failure: analysis or render fails → keep project and previous result → identify stage → reselect sources if absent → retry
 - delete: delete project → remove retained result · analysis · edit plan · metadata
@@ -45,4 +45,5 @@
 - delivery must satisfy the current Naver Clip upload contract for all three ratios
 
 ## chg
+- r2 260910 CLIP-19✎ generic QUOTA admission→durable preparation then full-run credit reservation before any AI call
 - r1 260909 initial

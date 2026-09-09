@@ -30,6 +30,9 @@ var _ clip.Store = (*Store)(nil)
 func stamp(t time.Time) string         { return t.UTC().Format(timeLayout) }
 func nullable(s string) sql.NullString { return sql.NullString{String: s, Valid: s != ""} }
 func dbError(err error) error {
+	if err != nil && strings.Contains(err.Error(), "clip busy") {
+		return clip.ErrBusy
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return clip.ErrNotFound
 	}
@@ -319,6 +322,15 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 }
 func (s *Store) DeleteProject(ctx context.Context, user, id string) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
+		p, err := getProject(ctx, q, user, id)
+		if err != nil {
+			return struct{}{}, err
+		}
+		if p.Result != nil {
+			if err = q.EnqueueObjectDeletion(ctx, sqlc.EnqueueObjectDeletionParams{ObjectKey: p.Result.Key, CreatedAt: stamp(time.Now())}); err != nil {
+				return struct{}{}, err
+			}
+		}
 		batches, err := q.ListProjectSourceBatches(ctx, sqlc.ListProjectSourceBatchesParams{ProjectID: id, UserID: user})
 		if err != nil {
 			return struct{}{}, err
