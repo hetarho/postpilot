@@ -3,6 +3,7 @@ package naver
 import (
 	"context"
 	"strings"
+	"time"
 )
 
 // Reviewed driver functions. Each is a package-level constant from this signed release and
@@ -34,27 +35,57 @@ const bodyParagraphsJS = `  const bodyParagraphs = () => {
     }
     return collected;
   };
+  const paragraphText = (node) => {
+    const nodes = [...node.querySelectorAll('span.__se-node')];
+    return (nodes.length ? nodes.map((n) => n.textContent).join('') : node.textContent).trim();
+  };
+  const writtenParagraphs = () => bodyParagraphs().filter((node) => paragraphText(node) !== '');
 `
 
 // driverPointFn returns the viewport point of the single element that backs one text target.
 // The caller must treat the point as valid only for the action it is about to take.
 const driverPointFn = `function (target, ordinal) {
-  const point = (node) => {
+  // A point is only usable if it is actually in the viewport and actually hits the element
+  // the locator resolved. Both were assumptions until 260910, when an image upload opened
+  // Naver's photo-library sidebar — aside.se-sidebar, 300 px wide, OVERLAYING the editor's
+  // right edge — and every caret click resolved cleanly, landed on the sidebar and left the
+  // caret outside the document. PUB-19 says scroll and viewport cannot be product
+  // authority, so the element is brought into view first, and PUB-36's "the live geometry
+  // of the single element its locator just resolved" is then verified by hit test rather
+  // than assumed.
+  const reveal = (node) => {
+    const box = node.getBoundingClientRect();
+    if (box.top >= 0 && box.bottom <= window.innerHeight) return;
+    node.scrollIntoView({block: 'center', inline: 'nearest'});
+  };
+  const hitsComponent = (node, x, y) => {
+    const at = document.elementFromPoint(x, y);
+    if (!at) return false;
+    if (at === node || node.contains(at)) return true;
+    const owner = node.closest('.se-component');
+    return Boolean(owner && at.closest('.se-component') === owner);
+  };
+  const hitsControl = (node, x, y) => {
+    const at = document.elementFromPoint(x, y);
+    return Boolean(at && (at === node || node.contains(at) || at.closest('button') === node));
+  };
+  const at = (node, place, verify) => {
     if (!node) return {matches: 0, x: 0, y: 0};
+    reveal(node);
     const box = node.getBoundingClientRect();
     if (box.width <= 0 || box.height <= 0) return {matches: 0, x: 0, y: 0};
-    return {matches: 1, x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2)};
+    const candidate = place(box);
+    if (!verify(node, candidate.x, candidate.y)) return {matches: 0, x: 0, y: 0};
+    return {matches: 1, x: candidate.x, y: candidate.y};
   };
+  const centre = (box) => ({x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2)});
   // caretEnd aims at the paragraph's trailing edge rather than its centre. A box centre
   // lands at the text's end only while the text stops short of it; on a paragraph that
   // fills or wraps its line the centre lands mid-text and the next insertion would split
   // it. Verified live 2026-09-07.
-  const caretEnd = (node) => {
-    if (!node) return {matches: 0, x: 0, y: 0};
-    const box = node.getBoundingClientRect();
-    if (box.width <= 0 || box.height <= 0) return {matches: 0, x: 0, y: 0};
-    return {matches: 1, x: Math.round(box.left + box.width * 0.98), y: Math.round(box.bottom - box.height * 0.25)};
-  };
+  const trailing = (box) => ({x: Math.round(box.left + box.width * 0.98), y: Math.round(box.bottom - box.height * 0.25)});
+  const point = (node) => at(node, centre, hitsControl);
+  const caretEnd = (node) => at(node, trailing, hitsComponent);
   if (target === 'title') {
     const nodes = document.querySelectorAll('.se-component.se-documentTitle .se-title-text');
     return nodes.length === 1 ? point(nodes[0]) : {matches: nodes.length, x: 0, y: 0};
@@ -63,18 +94,36 @@ const driverPointFn = `function (target, ordinal) {
     const paragraphs = bodyParagraphs();
     return paragraphs.length === 0 ? {matches: 0, x: 0, y: 0} : caretEnd(paragraphs[paragraphs.length - 1]);
   }
-  // body_paragraph addresses one paragraph by its position in that order. A negative
+  // body_paragraph addresses one paragraph by its position among the NON-EMPTY ones, which
+  // is the same order the projection reports and therefore the manifest's own block order.
+  // Empty paragraphs are editor chrome — the slot SmartEditor leaves after an image, the
+  // quotation's empty 출처 — and counting them would shift every later index. A negative
   // ordinal counts from the end, so -1 is the paragraph the last write produced.
   if (target === 'body_paragraph') {
-    const paragraphs = bodyParagraphs();
+    const paragraphs = writtenParagraphs();
     return caretEnd(paragraphs[ordinal < 0 ? paragraphs.length + ordinal : ordinal]);
+  }
+  if (target === 'image_add') {
+    const buttons = document.querySelectorAll('button.se-image-toolbar-button');
+    return buttons.length === 1 ? point(buttons[0]) : {matches: buttons.length, x: 0, y: 0};
+  }
+  // An empty caption module has NO BOX until its image is selected — it measured 0 x 0 on
+  // a freshly uploaded photo and 320 x 24 the moment the image was clicked (verified live
+  // 2026-09-10) — so a caption is always preceded by selecting its image through this
+  // target. Selecting changes no document content; it only reveals the caption field.
+  if (target === 'image_select') {
+    const images = document.querySelectorAll('.se-body.__se-body .se-component.se-image');
+    const image = images[ordinal];
+    if (!image) return {matches: 0, x: 0, y: 0};
+    const modules = image.querySelectorAll('.se-module-image');
+    return modules.length === 1 ? at(modules[0], centre, hitsComponent) : {matches: modules.length, x: 0, y: 0};
   }
   if (target === 'image_caption') {
     const images = document.querySelectorAll('.se-body.__se-body .se-component.se-image');
     const image = images[ordinal];
     if (!image) return {matches: 0, x: 0, y: 0};
     const captions = image.querySelectorAll('.se-module-text.se-caption');
-    return captions.length === 1 ? point(captions[0]) : {matches: captions.length, x: 0, y: 0};
+    return captions.length === 1 ? at(captions[0], centre, hitsComponent) : {matches: captions.length, x: 0, y: 0};
   }
   if (target === 'settings_open') {
     const layers = document.querySelectorAll('div[class^="layer_popup__"][class*="is_show__"]');
@@ -97,10 +146,10 @@ const driverPointFn = `function (target, ordinal) {
 // how many items its list has. Every conversion asserts this before resolving a control and
 // again after activating it, because a paragraph conversion is not always visible to the
 // projection (Naver exports a section title as plain text).
-const driverParagraphStateFn = `function (index) {
-` + bodyParagraphsJS + `  const paragraphs = bodyParagraphs();
+const driverParagraphStateFn = `function (target, index) {
+` + bodyParagraphsJS + `  const paragraphs = target === 'body_paragraph' ? writtenParagraphs() : bodyParagraphs();
   const paragraph = paragraphs[index < 0 ? paragraphs.length + index : index];
-  if (!paragraph) return {matches: 0, total: paragraphs.length, kind: '', in_list: false, in_cite: false, list_items: 0};
+  if (!paragraph) return {matches: 0, total: paragraphs.length, kind: '', in_list: false, in_cite: false, list_items: 0, empty: false};
   const component = paragraph.closest('.se-component');
   const kind = ['se-text', 'se-sectionTitle', 'se-quotation'].find((name) => component.classList.contains(name)) || '';
   const item = paragraph.closest('li.se-text-list-item');
@@ -111,8 +160,26 @@ const driverParagraphStateFn = `function (index) {
     kind,
     in_list: Boolean(item),
     in_cite: Boolean(paragraph.closest('.se-module-text.se-cite')),
-    list_items: list ? list.querySelectorAll('li.se-text-list-item').length : 0
+    list_items: list ? list.querySelectorAll('li.se-text-list-item').length : 0,
+    empty: paragraphText(paragraph) === ''
   };
+}`
+
+// driverImageStateFn counts the editor's images and how many of them Naver has finished
+// processing — a settled image is one whose resource resolved to an https URL. Nothing about
+// an upload is evidence until this settles: at the moment an image appears but is not yet
+// settled, SmartEditor is still splitting the caret's component, and the projection catches
+// a paragraph whose tail has been detached but not yet reattached. That is exactly how a
+// clean-editor run read "LIVE T1 첫 " for a paragraph that had just read back whole
+// (observed live 2026-09-10).
+const driverImageStateFn = `function () {
+  const images = [...document.querySelectorAll('.se-body.__se-body .se-component.se-image')];
+  let settled = 0;
+  for (const image of images) {
+    const resource = image.querySelector('img.se-image-resource');
+    if (resource && /^https:\/\//.test(resource.src)) settled += 1;
+  }
+  return {images: images.length, settled};
 }`
 
 // driverSettingsStateFn observes only the three fixed setting surfaces within exactly one
@@ -230,6 +297,20 @@ const driverActivateFn = `function (control, id) {
       node = radios.length === 1 ? (radios[0].closest('li,div,span') || {}).querySelector('label[class^="radio_label__"]') : null;
       break;
     }
+    // Naver opens its photo-library sidebar when an image is uploaded, and that sidebar
+    // overlays the editor's right edge — which is where every caret point is taken. Closing
+    // it is a versioned step of the upload, and a sidebar that is already gone is a no-op
+    // rather than a refusal. Verified live 2026-09-10.
+    case 'close_library': {
+      const sidebars = [...document.querySelectorAll('aside.se-sidebar')].filter((node) => {
+        const box = node.getBoundingClientRect();
+        return box.width > 0 && box.height > 0 && getComputedStyle(node).visibility !== 'hidden';
+      });
+      if (sidebars.length === 0) return {matches: 1, activated: false, already: true};
+      if (sidebars.length !== 1) return {matches: sidebars.length, activated: false};
+      pick([...sidebars[0].querySelectorAll('button.se-sidebar-close-button')]);
+      break;
+    }
     case 'format_menu': pick([...document.querySelectorAll('button.se-text-format-toolbar-button')]); break;
     case 'format_text': pick([...document.querySelectorAll('button.se-toolbar-option-text-format-text-button')]); break;
     case 'format_heading': pick([...document.querySelectorAll('button.se-toolbar-option-text-format-sectionTitle-button')]); break;
@@ -263,6 +344,12 @@ type driverParagraphState struct {
 	InList    bool   `json:"in_list"`
 	InCite    bool   `json:"in_cite"`
 	ListItems int    `json:"list_items"`
+	Empty     bool   `json:"empty"`
+}
+
+type driverImageState struct {
+	Images  int `json:"images"`
+	Settled int `json:"settled"`
 }
 
 type driverSettingsState struct {
@@ -299,12 +386,47 @@ func (p *CDPPort) resolveAndClick(ctx context.Context, target string, ordinal in
 	return nil
 }
 
-func (p *CDPPort) paragraphState(ctx context.Context, index int) (driverParagraphState, error) {
+func (p *CDPPort) paragraphState(ctx context.Context, target string, index int) (driverParagraphState, error) {
 	var state driverParagraphState
-	if err := p.page.CallFunction(ctx, driverParagraphStateFn, []any{index}, &state); err != nil {
+	if err := p.page.CallFunction(ctx, driverParagraphStateFn, []any{target, index}, &state); err != nil {
 		return driverParagraphState{}, PortError{Kind: FailureEditorChanged}
 	}
 	return state, nil
+}
+
+func (p *CDPPort) imageState(ctx context.Context) (driverImageState, error) {
+	var state driverImageState
+	if err := p.page.CallFunction(ctx, driverImageStateFn, nil, &state); err != nil {
+		return driverImageState{}, PortError{Kind: FailureEditorChanged}
+	}
+	return state, nil
+}
+
+// awaitImage waits for exactly one more settled image and for nothing else. An upload that
+// adds none, adds two, or never finishes processing all fail closed — a resolved path or an
+// accepted upload call is never evidence on its own (PUB-21).
+func (p *CDPPort) awaitImage(ctx context.Context, want int) error {
+	deadline := time.Now().Add(p.settle)
+	for {
+		state, err := p.imageState(ctx)
+		if err != nil {
+			return err
+		}
+		if state.Images > want {
+			return PortError{Kind: FailureEditorChanged}
+		}
+		if state.Images == want && state.Settled == want {
+			return nil
+		}
+		if !time.Now().Before(deadline) {
+			return PortError{Kind: FailureEditorChanged}
+		}
+		select {
+		case <-ctx.Done():
+			return PortError{Kind: FailureEditorChanged}
+		case <-time.After(uploadPollInterval):
+		}
+	}
 }
 
 func (p *CDPPort) settingsState(ctx context.Context) (driverSettingsState, error) {
@@ -354,6 +476,26 @@ func (p *CDPPort) activate(ctx context.Context, control, id string) error {
 		return PortError{Kind: FailureEditorChanged}
 	}
 	if activation.Matches != 1 || (!activation.Activated && !activation.Already) {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	return nil
+}
+
+// enterText writes manifest text and COMMITS it. Input.insertText leaves everything after
+// the last space uncommitted in SmartEditor: the DOM shows the whole string, but the first
+// structural change — an image insertion or a paragraph conversion rebuilding that paragraph
+// — discards the pending word. Measured live on 2026-09-10: without the trailing key 4 of 5
+// writes lost their last word, with it 0 of 5. Only a key commits; a caret-only key (End)
+// does not, and waiting up to 8s does not reliably either.
+//
+// Enter is safe in every module this is used for: in the title and in a caption it changes
+// nothing observable, and in the body it opens the next paragraph, which the following write
+// then types into instead of adding one of its own.
+func (p *CDPPort) enterText(ctx context.Context, text string) error {
+	if err := p.typeText(ctx, text); err != nil {
+		return err
+	}
+	if err := p.page.PressEnter(ctx); err != nil {
 		return PortError{Kind: FailureEditorChanged}
 	}
 	return nil

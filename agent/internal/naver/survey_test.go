@@ -13,6 +13,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -632,14 +635,1512 @@ func TestSurveyDriverProbe(t *testing.T) {
 	t.Logf("body_paragraph99 matches=%d (must be 0: an out-of-range index fails closed)", beyond.Matches)
 
 	for _, index := range []int{0, -1} {
-		state, err := s.port.paragraphState(ctx, index)
+		state, err := s.port.paragraphState(ctx, "body_paragraph", index)
 		if err != nil {
 			t.Fatalf("paragraph state %d: %v", index, err)
 		}
-		t.Logf("paragraphState(%2d) matches=%d total=%d kind=%q in_list=%t in_cite=%t list_items=%d",
-			index, state.Matches, state.Total, state.Kind, state.InList, state.InCite, state.ListItems)
+		t.Logf("paragraphState(%2d) matches=%d total=%d kind=%q in_list=%t in_cite=%t list_items=%d empty=%t",
+			index, state.Matches, state.Total, state.Kind, state.InList, state.InCite, state.ListItems, state.Empty)
 	}
 	if end.Matches != 1 || first.Matches != 1 || beyond.Matches != 0 {
 		t.Fatalf("the new body locators did not resolve as expected on a live writer")
 	}
+}
+
+// uploadImage performs the sequence T019 verified on 260907, so a survey pass can ask WHERE
+// the editor puts the result: intercept the chooser, resolve and click the image button,
+// then hand the hidden input exactly one file.
+func (s *survey) uploadImage(path string) {
+	s.t.Helper()
+	if err := s.port.page.InterceptFileChooser(s.ctx); err != nil {
+		s.t.Fatalf("intercept chooser: %v", err)
+	}
+	s.act("image_add")
+	if err := s.port.page.SetFileInputFiles(s.ctx, "input[type=file]#hidden-file", []string{path}); err != nil {
+		s.t.Fatalf("set files %s: %v", path, err)
+	}
+	s.t.Logf("  upload           %s", path)
+	time.Sleep(2500 * time.Millisecond)
+	// The upload opens Naver's photo-library sidebar, which overlays the editor's right
+	// edge and swallows every caret click taken there.
+	s.act("close_library")
+	time.Sleep(400 * time.Millisecond)
+}
+
+// surveyPhotos returns the throwaway JPEGs this survey uploads. They are scratch files, not
+// a job's enumerated assets: the harness is not the shipped upload path.
+func surveyPhotos(t *testing.T) []string {
+	t.Helper()
+	dir := os.Getenv("POSTPILOT_SURVEY_PHOTOS")
+	if dir == "" {
+		t.Skip("set POSTPILOT_SURVEY_PHOTOS to a directory of small JPEGs")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read %s: %v", dir, err)
+	}
+	photos := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if strings.HasSuffix(strings.ToLower(entry.Name()), ".jpg") {
+			photos = append(photos, filepath.Join(dir, entry.Name()))
+		}
+	}
+	if len(photos) < 3 {
+		t.Fatalf("need at least three JPEGs in %s, found %d", dir, len(photos))
+	}
+	sort.Strings(photos)
+	return photos
+}
+
+// TestSurveyT043Images answers the four placement questions T043 cannot be built without.
+// A clean draft is required: every answer is about where an image lands relative to the
+// blocks around it.
+func TestSurveyT043Images(t *testing.T) {
+	photos := surveyPhotos(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, true)
+	defer s.port.Close()
+
+	// ── (I1) a LEADING image: the caret sits in the editor's own empty leading paragraph
+	// and no block precedes the image.
+	if err := s.port.resolveAndClick(ctx, "body_end", 0); err != nil {
+		t.Fatalf("seat caret in the leading paragraph: %v", err)
+	}
+	s.dump("I0 empty draft, caret in the leading paragraph")
+	s.uploadImage(photos[0])
+	s.dump("I1 ANSWER — where a leading image landed, and what is left before it")
+	s.dumpModules("I1 module layer of the image component")
+	s.dumpProjection()
+
+	// ── (I2) can a paragraph be appended AFTER an image, and what does body_end resolve to?
+	var end driverPoint
+	if err := s.port.page.CallFunction(ctx, driverPointFn, []any{"body_end", 0}, &end); err != nil {
+		t.Fatalf("body_end after an image: %v", err)
+	}
+	t.Logf("  body_end after the image: matches=%d point=(%.0f,%.0f)", end.Matches, end.X, end.Y)
+	if err := s.port.appendParagraph(ctx, "IMG P1 이미지 다음 문단"); err != nil {
+		t.Logf("  appendParagraph after an image FAILED: %v", err)
+	}
+	s.dump("I2 ANSWER — a paragraph appended after an image")
+
+	// ── (I3) the caret in the LAST paragraph of a multi-paragraph component.
+	s.enter()
+	s.write("IMG P2 둘째 문단")
+	s.enter()
+	s.write("IMG P3 셋째 문단")
+	s.dump("I3 setup — one component holding three paragraphs")
+	s.seatCaret()
+	s.uploadImage(photos[1])
+	s.dump("I3 ANSWER — the caret was in the LAST paragraph")
+
+	// ── (I4) the caret in a MIDDLE paragraph: does the component split at the caret, or
+	// does the image land after the whole component? This is the one that decides whether
+	// images can be interleaved between text blocks at all.
+	middle := -1
+	for _, component := range s.last.Components {
+		if strings.Contains(component.Classes, "se-text") && !strings.Contains(component.Classes, "se-documentTitle") && len(component.Units) >= 2 {
+			middle = component.Index
+		}
+	}
+	if middle < 0 {
+		t.Fatal("no multi-paragraph text component to aim at")
+	}
+	var point driverPoint
+	if err := s.port.page.CallFunction(ctx, surveyCaretFn, []any{middle, 0}, &point); err != nil {
+		t.Fatalf("seat caret in the first paragraph of component %d: %v", middle, err)
+	}
+	if point.Matches != 1 {
+		t.Fatalf("component %d resolved %d units", middle, point.Matches)
+	}
+	if err := s.port.page.ClickPoint(ctx, point.X, point.Y); err != nil {
+		t.Fatalf("click: %v", err)
+	}
+	time.Sleep(250 * time.Millisecond)
+	s.dump("I4 setup — caret in the FIRST of several paragraphs of one component")
+	s.uploadImage(photos[2])
+	s.dump("I4 ANSWER — did the component split at the caret, or did the image follow it whole?")
+	s.dumpProjection()
+
+	t.Log("\nsurvey complete. Nothing was saved and no publish control was resolved.\n" +
+		"Discard this draft in the dedicated browser.")
+}
+
+// surveyHitTestFn reports what actually sits at one resolved point, and the addressed
+// paragraph's own box. A click that resolves cleanly but leaves the caret outside the body
+// means something is over the point, and this is the only way to see what.
+const surveyHitTestFn = `function (x, y) {
+` + bodyParagraphsJS + `  const describe = (node) => {
+    if (!node) return {tag: '', classes: '', component: ''};
+    const component = node.closest ? node.closest('.se-component') : null;
+    return {
+      tag: node.tagName || '',
+      classes: String(node.className || '').replace(/\s+/g, ' ').trim(),
+      component: component ? String(component.className).replace(/\s+/g, ' ').trim() : ''
+    };
+  };
+  const paragraphs = bodyParagraphs();
+  const last = paragraphs[paragraphs.length - 1];
+  const box = last ? last.getBoundingClientRect() : null;
+  const stack = (document.elementsFromPoint ? [...document.elementsFromPoint(x, y)] : []).slice(0, 5);
+  return {
+    hit: describe(document.elementFromPoint(x, y)),
+    stack: stack.map(describe),
+    last_box: box ? {left: Math.round(box.left), top: Math.round(box.top), width: Math.round(box.width), height: Math.round(box.height)} : null,
+    scroll_y: Math.round(window.scrollY),
+    inner_height: window.innerHeight,
+    active: describe(document.activeElement)
+  };
+}`
+
+type surveyHitTest struct {
+	Hit struct {
+		Tag       string `json:"tag"`
+		Classes   string `json:"classes"`
+		Component string `json:"component"`
+	} `json:"hit"`
+	Stack []struct {
+		Tag       string `json:"tag"`
+		Classes   string `json:"classes"`
+		Component string `json:"component"`
+	} `json:"stack"`
+	LastBox *struct {
+		Left   int `json:"left"`
+		Top    int `json:"top"`
+		Width  int `json:"width"`
+		Height int `json:"height"`
+	} `json:"last_box"`
+	ScrollY     int `json:"scroll_y"`
+	InnerHeight int `json:"inner_height"`
+	Active      struct {
+		Tag       string `json:"tag"`
+		Classes   string `json:"classes"`
+		Component string `json:"component"`
+	} `json:"active"`
+}
+
+// TestSurveyHitTest is read-only. It resolves body_end and reports what is at that point.
+func TestSurveyHitTest(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+
+	var end driverPoint
+	if err := s.port.page.CallFunction(ctx, driverPointFn, []any{"body_end", 0}, &end); err != nil {
+		t.Fatalf("body_end: %v", err)
+	}
+	var hit surveyHitTest
+	if err := s.port.page.CallFunction(ctx, surveyHitTestFn, []any{end.X, end.Y}, &hit); err != nil {
+		t.Fatalf("hit test: %v", err)
+	}
+	t.Logf("body_end matches=%d point=(%.0f,%.0f)", end.Matches, end.X, end.Y)
+	if hit.LastBox != nil {
+		t.Logf("last paragraph box left=%d top=%d width=%d height=%d", hit.LastBox.Left, hit.LastBox.Top, hit.LastBox.Width, hit.LastBox.Height)
+	}
+	t.Logf("scrollY=%d innerHeight=%d", hit.ScrollY, hit.InnerHeight)
+	t.Logf("activeElement  <%s.%s> in [%s]", hit.Active.Tag, hit.Active.Classes, hit.Active.Component)
+	t.Logf("elementFromPoint <%s.%s> in [%s]", hit.Hit.Tag, hit.Hit.Classes, hit.Hit.Component)
+	for index, node := range hit.Stack {
+		t.Logf("  stack[%d] <%s.%s> in [%s]", index, node.Tag, node.Classes, node.Component)
+	}
+}
+
+// surveySidebarFn measures the sidebar the image upload opens and enumerates every control
+// inside it that looks like a close affordance, so the driver can either avoid the occluded
+// region or close the panel through a versioned control.
+const surveySidebarFn = `function () {
+  const norm = (v) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  const rect = (node) => {
+    if (!node) return null;
+    const box = node.getBoundingClientRect();
+    return {left: Math.round(box.left), top: Math.round(box.top), width: Math.round(box.width), height: Math.round(box.height)};
+  };
+  const sidebars = [...document.querySelectorAll('aside.se-sidebar, .se-sidebar')];
+  const shown = sidebars.filter((node) => {
+    const box = node.getBoundingClientRect();
+    return box.width > 0 && box.height > 0 && getComputedStyle(node).visibility !== 'hidden';
+  });
+  const buttons = [];
+  for (const sidebar of shown) {
+    for (const button of sidebar.querySelectorAll('button')) {
+      const label = norm(button.getAttribute('aria-label') || button.textContent);
+      const classes = norm(button.className);
+      if (/close|닫기|접기/i.test(label + ' ' + classes)) {
+        buttons.push({label, classes, rect: rect(button)});
+      }
+    }
+  }
+  const body = document.querySelector('.se-body.__se-body');
+  return {
+    sidebar_total: sidebars.length,
+    sidebar_shown: shown.length,
+    sidebar_classes: shown.map((node) => norm(node.className)),
+    sidebar_rects: shown.map(rect),
+    body_rect: rect(body),
+    close_candidates: buttons
+  };
+}`
+
+// TestSurveySidebar is read-only.
+func TestSurveySidebar(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	var dump map[string]any
+	if err := s.port.page.CallFunction(ctx, surveySidebarFn, []any{}, &dump); err != nil {
+		t.Fatalf("sidebar: %v", err)
+	}
+	encoded, _ := json.MarshalIndent(dump, "", "  ")
+	t.Logf("\n%s", encoded)
+}
+
+// TestSurveyT043Placement answers the placement questions that do NOT need a clean draft,
+// so a run aborted by the sidebar occlusion can be continued without asking the owner to
+// clear the editor again. It closes the sidebar first, since a previous upload leaves it
+// over the editor's right edge where every caret point is taken.
+func TestSurveyT043Placement(t *testing.T) {
+	photos := surveyPhotos(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+
+	s.act("close_library")
+	time.Sleep(400 * time.Millisecond)
+	s.dump("P0 sidebar closed")
+
+	// ── (I2) a paragraph appended AFTER an image, now that the point is reachable.
+	if err := s.port.appendParagraph(ctx, "IMG P1 이미지 다음 문단"); err != nil {
+		t.Fatalf("appendParagraph after an image: %v", err)
+	}
+	s.dump("P1 ANSWER (I2) — a paragraph appended after an image")
+
+	// ── (I3) the caret in the LAST paragraph of a multi-paragraph component.
+	s.enter()
+	s.write("IMG P2 둘째 문단")
+	s.enter()
+	s.write("IMG P3 셋째 문단")
+	s.dump("P2 setup — one component holding three paragraphs")
+	tail := s.lastPlainText()
+	s.seatComponent(tail)
+	s.uploadImage(photos[3])
+	s.dump("P3 ANSWER (I3) — the caret was in the LAST paragraph of that component")
+	s.dumpProjection()
+
+	// ── (I4) the caret in the FIRST of several paragraphs of one component. This decides
+	// whether an image can be interleaved BETWEEN two text blocks at all.
+	if err := s.port.appendParagraph(ctx, "IMG P4 중간 대상"); err != nil {
+		t.Fatalf("append P4: %v", err)
+	}
+	s.enter()
+	s.write("IMG P5 뒤따르는 문단")
+	s.dump("P4 setup — a fresh component with two paragraphs")
+	middle := s.lastPlainText()
+	var point driverPoint
+	if err := s.port.page.CallFunction(ctx, surveyCaretFn, []any{middle, 0}, &point); err != nil {
+		t.Fatalf("seat caret in the first paragraph of component %d: %v", middle, err)
+	}
+	if point.Matches != 1 {
+		t.Fatalf("component %d resolved %d units", middle, point.Matches)
+	}
+	if err := s.port.page.ClickPoint(ctx, point.X, point.Y); err != nil {
+		t.Fatalf("click: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	s.dump("P5 setup — caret in the FIRST of two paragraphs")
+	s.uploadImage(photos[4])
+	s.dump("P6 ANSWER (I4) — did the component split at the caret, or did the image follow it whole?")
+	s.dumpProjection()
+
+	t.Log("\nsurvey complete. Nothing was saved and no publish control was resolved.")
+}
+
+// TestSurveyT043MiddleParagraph is the one case P6 could not answer: the caret at the END of
+// a NON-EMPTY paragraph that has a following paragraph in the same component. That is
+// exactly the shape a TEXT, IMAGE, TEXT manifest reaches after the write pass, so whether
+// SmartEditor splits the component here decides whether images can be interleaved at all.
+func TestSurveyT043MiddleParagraph(t *testing.T) {
+	photos := surveyPhotos(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	s.act("close_library")
+	time.Sleep(400 * time.Millisecond)
+	s.dump("M0 current draft")
+
+	// Find a component whose FIRST unit is non-empty and which has at least two units.
+	target, unit := -1, -1
+	for _, component := range s.last.Components {
+		if !strings.Contains(component.Classes, "se-text") || strings.Contains(component.Classes, "se-documentTitle") {
+			continue
+		}
+		for index, candidate := range component.Units {
+			if strings.TrimSpace(candidate.Text) != "" && index+1 < len(component.Units) && strings.TrimSpace(component.Units[index+1].Text) != "" {
+				target, unit = component.Index, index
+				break
+			}
+		}
+		if target >= 0 {
+			break
+		}
+	}
+	if target < 0 {
+		t.Fatal("no component holds a non-empty paragraph followed by another non-empty one")
+	}
+	// Address it through the SHIPPED body_paragraph target, which reveals the element and
+	// hit-tests the point. The harness's own caret helper does neither, and on a document
+	// this long it clicked the sticky toolbar instead of the paragraph.
+	global := 0
+	for _, component := range s.last.Components {
+		if !strings.Contains(component.Classes, "se-text") && !strings.Contains(component.Classes, "se-sectionTitle") && !strings.Contains(component.Classes, "se-quotation") {
+			continue
+		}
+		if strings.Contains(component.Classes, "se-documentTitle") {
+			continue
+		}
+		if component.Index == target {
+			global += unit
+			break
+		}
+		global += len(component.Units)
+	}
+	t.Logf("aiming at component[%d] unit[%d] = body_paragraph %d", target, unit, global)
+	var point driverPoint
+	if err := s.port.page.CallFunction(ctx, driverPointFn, []any{"body_paragraph", global}, &point); err != nil {
+		t.Fatalf("seat caret: %v", err)
+	}
+	if point.Matches != 1 {
+		t.Fatalf("resolved %d units", point.Matches)
+	}
+	if err := s.port.page.ClickPoint(ctx, point.X, point.Y); err != nil {
+		t.Fatalf("click: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	s.dump("M1 setup — caret at the end of a non-empty paragraph with another after it")
+	s.uploadImage(photos[5])
+	s.dump("M2 ANSWER — where the image landed relative to that paragraph")
+	s.dumpProjection()
+}
+
+// TestSurveyLiveBodyPath drives the SHIPPED Apply path against the live editor for a mini
+// manifest that exercises every body kind plus one interleaved photo, then compares the
+// projection. It is the live counterpart of the fake-CDP tests: the fakes prove the driver's
+// shape, this proves the shape matches SmartEditor.
+//
+// It REQUIRES a clean draft. An earlier attempt ran against a draft polluted by previous
+// survey passes, whose leftover list swallowed every later paragraph as another list item —
+// the trap T042 documented — and the failure looked like a driver defect when it was the
+// draft. In the real flow no write ever follows a conversion, so a clean start is also the
+// only faithful one.
+func TestSurveyLiveBodyPath(t *testing.T) {
+	photo := os.Getenv("POSTPILOT_SURVEY_PHOTOS")
+	if photo == "" {
+		t.Skip("set POSTPILOT_SURVEY_PHOTOS")
+	}
+	photo = filepath.Join(photo, "live.jpg")
+	if _, err := os.Stat(photo); err != nil {
+		t.Skipf("no live.jpg in the survey photo directory: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, true)
+	defer s.port.Close()
+	port := s.port
+
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close the library first: %v", err)
+	}
+	base, err := port.Observe(ctx)
+	if err != nil {
+		t.Fatalf("observe: %v", err)
+	}
+	written, err := port.paragraphState(ctx, "body_paragraph", -1)
+	if err != nil {
+		t.Fatalf("paragraph count: %v", err)
+	}
+	offset := written.Total
+	if written.Matches == 0 {
+		offset = 0
+	}
+	t.Logf("starting from %d body blocks and %d written paragraphs; %d images",
+		len(base.Body), offset, base.ImageCount)
+
+	// The write pass, in manifest order, with the photo where the manifest puts it.
+	apply := func(mutation Mutation) {
+		t.Helper()
+		if err := port.Apply(ctx, mutation); err != nil {
+			t.Fatalf("apply %s: %v", mutation.Kind, err)
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	const firstBlock = "LIVE T1 첫 문단"
+	apply(Mutation{Kind: MutationText, Text: firstBlock})
+	// The very first block goes into SmartEditor's own opening paragraph, the one carrying
+	// the writer's placeholder. A clean run on 260910 read that paragraph back SHORT
+	// ("LIVE T1 첫 "), while typing into a post-image empty paragraph and into an existing
+	// one both read back exact — so this is asserted on its own, before anything else can
+	// confuse the diagnosis.
+	afterFirst, err := port.Observe(ctx)
+	if err != nil {
+		t.Fatalf("observe after the first write: %v", err)
+	}
+	if len(afterFirst.Body) != len(base.Body)+1 {
+		t.Fatalf("the first write produced %d blocks, want one: %+v", len(afterFirst.Body)-len(base.Body), afterFirst.Body)
+	}
+	if got := afterFirst.Body[len(base.Body)].Text; got != firstBlock {
+		var dump map[string]any
+		_ = port.page.CallFunction(ctx, surveyParagraphTextFn, []any{}, &dump)
+		encoded, _ := json.Marshal(dump)
+		t.Fatalf("the first write into the editor's own opening paragraph read back %q, want %q\nparagraph: %s", got, firstBlock, encoded)
+	}
+	t.Logf("the first write read back exact: %q", firstBlock)
+	apply(Mutation{Kind: MutationUploadImage, Ordinal: base.ImageCount, AssetPath: photo})
+	// A caption addresses its image by DOCUMENT ordinal. In a real run that equals the
+	// upload ordinal, because photos are uploaded in manifest order into a document built
+	// in the same order — but this test appends to a draft whose existing images sit after
+	// the insertion point, so the ordinal is read back from the projection instead.
+	afterUpload, err := port.Observe(ctx)
+	if err != nil {
+		t.Fatalf("observe after the upload: %v", err)
+	}
+	newOrdinal := -1
+	for index, block := range afterUpload.Body {
+		if block.Kind == SemanticText && block.Text == "LIVE T1 첫 문단" && index+1 < len(afterUpload.Body) && afterUpload.Body[index+1].Kind == SemanticImage {
+			newOrdinal = afterUpload.Body[index+1].Ordinal
+		}
+	}
+	if newOrdinal < 0 {
+		t.Fatalf("the photo did not land immediately after the paragraph it follows: %+v", afterUpload.Body)
+	}
+	t.Logf("the photo landed at document ordinal %d, immediately after its paragraph", newOrdinal)
+	apply(Mutation{Kind: MutationImageCaption, Ordinal: newOrdinal, Text: "LIVE 캡션"})
+	apply(Mutation{Kind: MutationText, Text: "LIVE T2 사진 다음"})
+	apply(Mutation{Kind: MutationHeading, Text: "LIVE H1 소제목", Level: 2})
+	apply(Mutation{Kind: MutationText, Text: "LIVE Q1 인용 대상"})
+	apply(Mutation{Kind: MutationText, Text: "LIVE L1 항목 하나"})
+	s.dump("LIVE write pass complete")
+
+	// The conversion pass, backwards.
+	apply(Mutation{Kind: MutationList, Ordinal: offset + 4, Items: []string{"LIVE L1 항목 하나", "LIVE L2 항목 둘", "LIVE L3 항목 셋"}})
+	apply(Mutation{Kind: MutationQuote, Text: "LIVE Q1 인용 대상", Ordinal: offset + 3})
+	s.dump("LIVE conversion pass complete")
+
+	final, err := port.Observe(ctx)
+	if err != nil {
+		t.Fatalf("final observe: %v", err)
+	}
+	s.dumpProjection()
+	added := final.Body[len(base.Body):]
+	if len(added) > 0 && added[0].Kind != SemanticText {
+		t.Fatalf("the first block this test added is %+v", added[0])
+	}
+	want := []SemanticBlock{
+		{Kind: SemanticText, Text: "LIVE T1 첫 문단"},
+		{Kind: SemanticImage, Ordinal: newOrdinal, Caption: "LIVE 캡션", Uploaded: true},
+		{Kind: SemanticText, Text: "LIVE T2 사진 다음"},
+		{Kind: SemanticText, Text: "LIVE H1 소제목"},
+		{Kind: SemanticText, Text: "“LIVE Q1 인용 대상”"},
+		{Kind: SemanticText, Text: "- LIVE L1 항목 하나\n- LIVE L2 항목 둘\n- LIVE L3 항목 셋"},
+	}
+	if len(added) != len(want) {
+		t.Fatalf("the body gained %d blocks, want %d: %+v", len(added), len(want), added)
+	}
+	for index := range want {
+		if added[index].Kind != want[index].Kind || added[index].Text != want[index].Text ||
+			added[index].Caption != want[index].Caption || added[index].Uploaded != want[index].Uploaded {
+			t.Fatalf("added[%d] = %+v, want %+v", index, added[index], want[index])
+		}
+	}
+	if final.ImageCount != base.ImageCount+1 {
+		t.Fatalf("image count went %d → %d", base.ImageCount, final.ImageCount)
+	}
+	t.Log("\nLIVE: the shipped body path reproduced the manifest exactly, photo interleaved.")
+}
+
+// surveyCaptionProbeFn reports why a caption module's point does or does not resolve.
+const surveyCaptionProbeFn = `function (ordinal) {
+  const describe = (node) => {
+    if (!node) return {tag: '', classes: '', component: ''};
+    const component = node.closest ? node.closest('.se-component') : null;
+    return {
+      tag: node.tagName || '',
+      classes: String(node.className || '').replace(/\s+/g, ' ').trim(),
+      component: component ? String(component.className).replace(/\s+/g, ' ').trim() : ''
+    };
+  };
+  const images = document.querySelectorAll('.se-body.__se-body .se-component.se-image');
+  const image = images[ordinal];
+  if (!image) return {images: images.length, found: false};
+  const captions = image.querySelectorAll('.se-module-text.se-caption');
+  if (captions.length !== 1) return {images: images.length, found: true, captions: captions.length};
+  const caption = captions[0];
+  const box = caption.getBoundingClientRect();
+  const x = Math.round(box.left + box.width / 2);
+  const y = Math.round(box.top + box.height / 2);
+  return {
+    images: images.length, found: true, captions: 1,
+    rect: {left: Math.round(box.left), top: Math.round(box.top), width: Math.round(box.width), height: Math.round(box.height)},
+    inner_height: window.innerHeight,
+    hit: describe(document.elementFromPoint(x, y)),
+    same_component: Boolean(document.elementFromPoint(x, y) && document.elementFromPoint(x, y).closest('.se-component') === image)
+  };
+}`
+
+// TestSurveyCaptionProbe is read-only.
+func TestSurveyCaptionProbe(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	ordinal := 0
+	if value := os.Getenv("POSTPILOT_SURVEY_ORDINAL"); value != "" {
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			t.Fatalf("bad ordinal: %v", err)
+		}
+		ordinal = parsed
+	}
+	var probe map[string]any
+	if err := s.port.page.CallFunction(ctx, surveyCaptionProbeFn, []any{ordinal}, &probe); err != nil {
+		t.Fatalf("caption probe: %v", err)
+	}
+	encoded, _ := json.MarshalIndent(probe, "", "  ")
+	t.Logf("caption %d:\n%s", ordinal, encoded)
+	var point driverPoint
+	if err := s.port.page.CallFunction(ctx, driverPointFn, []any{"image_caption", ordinal}, &point); err != nil {
+		t.Fatalf("driver point: %v", err)
+	}
+	t.Logf("driverPointFn(image_caption, %d) = matches %d at (%.0f,%.0f)", ordinal, point.Matches, point.X, point.Y)
+}
+
+// surveyImagePointFn returns the point of one image's own module, so a survey can select the
+// image and see whether that is what gives its empty caption module a box.
+const surveyImagePointFn = `function (ordinal) {
+  const images = document.querySelectorAll('.se-body.__se-body .se-component.se-image');
+  const image = images[ordinal];
+  if (!image) return {matches: 0, x: 0, y: 0};
+  const module = image.querySelector('.se-module-image') || image;
+  module.scrollIntoView({block: 'center', inline: 'nearest'});
+  const box = module.getBoundingClientRect();
+  if (box.width <= 0 || box.height <= 0) return {matches: 0, x: 0, y: 0};
+  const x = Math.round(box.left + box.width / 2);
+  const y = Math.round(box.top + box.height / 2);
+  const at = document.elementFromPoint(x, y);
+  if (!at || at.closest('.se-component') !== image) return {matches: 0, x: 0, y: 0};
+  return {matches: 1, x, y};
+}`
+
+// TestSurveyCaptionAfterSelectingTheImage asks what gives an empty caption module a box.
+func TestSurveyCaptionAfterSelectingTheImage(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	if err := s.port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close library: %v", err)
+	}
+	ordinal := 0
+	if value := os.Getenv("POSTPILOT_SURVEY_ORDINAL"); value != "" {
+		ordinal, _ = strconv.Atoi(value)
+	}
+	probe := func(label string) {
+		var dump map[string]any
+		if err := s.port.page.CallFunction(ctx, surveyCaptionProbeFn, []any{ordinal}, &dump); err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		encoded, _ := json.Marshal(dump)
+		t.Logf("%-22s %s", label, encoded)
+		var point driverPoint
+		if err := s.port.page.CallFunction(ctx, driverPointFn, []any{"image_caption", ordinal}, &point); err != nil {
+			t.Fatalf("%s point: %v", label, err)
+		}
+		t.Logf("%-22s driverPointFn(image_caption) matches=%d", label, point.Matches)
+	}
+	probe("before selecting")
+
+	var image driverPoint
+	if err := s.port.page.CallFunction(ctx, surveyImagePointFn, []any{ordinal}, &image); err != nil {
+		t.Fatalf("image point: %v", err)
+	}
+	t.Logf("image %d point matches=%d (%.0f,%.0f)", ordinal, image.Matches, image.X, image.Y)
+	if image.Matches != 1 {
+		t.Fatal("the image module did not resolve")
+	}
+	if err := s.port.page.ClickPoint(ctx, image.X, image.Y); err != nil {
+		t.Fatalf("click the image: %v", err)
+	}
+	time.Sleep(600 * time.Millisecond)
+	probe("after selecting")
+
+	// If the caption is now reachable, prove it takes text.
+	var point driverPoint
+	if err := s.port.page.CallFunction(ctx, driverPointFn, []any{"image_caption", ordinal}, &point); err != nil {
+		t.Fatalf("point: %v", err)
+	}
+	if point.Matches == 1 {
+		if err := s.port.Apply(ctx, Mutation{Kind: MutationImageCaption, Ordinal: ordinal, Text: "선택 후 캡션"}); err != nil {
+			t.Fatalf("caption after selecting: %v", err)
+		}
+		time.Sleep(400 * time.Millisecond)
+		s.dumpProjection()
+	}
+}
+
+// TestSurveyCaptionRoundTrip selects one image, captions it and reads the module back.
+func TestSurveyCaptionRoundTrip(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	if err := s.port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close library: %v", err)
+	}
+	ordinal := 0
+	if value := os.Getenv("POSTPILOT_SURVEY_ORDINAL"); value != "" {
+		ordinal, _ = strconv.Atoi(value)
+	}
+	var image driverPoint
+	if err := s.port.page.CallFunction(ctx, surveyImagePointFn, []any{ordinal}, &image); err != nil || image.Matches != 1 {
+		t.Fatalf("image point: %v matches=%d", err, image.Matches)
+	}
+	if err := s.port.page.ClickPoint(ctx, image.X, image.Y); err != nil {
+		t.Fatalf("select the image: %v", err)
+	}
+	time.Sleep(600 * time.Millisecond)
+	if err := s.port.Apply(ctx, Mutation{Kind: MutationImageCaption, Ordinal: ordinal, Text: "라운드트립 캡션"}); err != nil {
+		t.Fatalf("caption: %v", err)
+	}
+	time.Sleep(600 * time.Millisecond)
+	s.dumpModules("caption round trip — the image component's modules")
+	s.dumpProjection()
+}
+
+// surveySelectionFn reports exactly where the caret sits inside its paragraph, so a survey
+// can tell which step of a sequence moved it.
+const surveySelectionFn = `function () {
+  const sel = window.getSelection();
+  if (!sel || !sel.anchorNode) return {found: false};
+  const node = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+  const paragraph = node.closest ? node.closest('p.se-text-paragraph, li.se-text-list-item') : null;
+  const text = paragraph ? [...paragraph.querySelectorAll('span.__se-node')].map((n) => n.textContent).join('') : '';
+  // Where the caret is in the paragraph's own text, counted across its text nodes.
+  let before = 0;
+  if (paragraph && sel.anchorNode.nodeType === 3) {
+    const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      if (walker.currentNode === sel.anchorNode) { before += sel.anchorOffset; break; }
+      before += walker.currentNode.textContent.length;
+    }
+  }
+  const box = paragraph ? paragraph.getBoundingClientRect() : null;
+  let textRight = 0;
+  if (paragraph) {
+    const range = document.createRange();
+    range.selectNodeContents(paragraph);
+    const rects = [...range.getClientRects()];
+    textRight = rects.length ? Math.round(rects[rects.length - 1].right) : 0;
+  }
+  return {
+    found: true,
+    node_type: sel.anchorNode.nodeType,
+    anchor_offset: sel.anchorOffset,
+    caret_in_text: before,
+    text,
+    text_length: text.length,
+    paragraph_box: box ? {left: Math.round(box.left), width: Math.round(box.width), top: Math.round(box.top), height: Math.round(box.height)} : null,
+    text_right: textRight,
+    lines: paragraph ? [...(() => { const r = document.createRange(); r.selectNodeContents(paragraph); return r.getClientRects(); })()].length : 0
+  };
+}`
+
+// TestSurveyCaretDrift finds which step of the upload sequence moves the caret mid-text.
+func TestSurveyCaretDrift(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close library: %v", err)
+	}
+	report := func(label string) {
+		var dump map[string]any
+		if err := port.page.CallFunction(ctx, surveySelectionFn, []any{}, &dump); err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		encoded, _ := json.Marshal(dump)
+		t.Logf("%-28s %s", label, encoded)
+	}
+	if err := port.Apply(ctx, Mutation{Kind: MutationText, Text: "DRIFT 문단 하나 둘 셋"}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	report("after the write")
+
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	report("after close_library")
+
+	var end driverPoint
+	if err := port.page.CallFunction(ctx, driverPointFn, []any{"body_end", 0}, &end); err != nil {
+		t.Fatalf("body_end: %v", err)
+	}
+	t.Logf("body_end resolved matches=%d at (%.0f,%.0f)", end.Matches, end.X, end.Y)
+	if err := port.page.ClickPoint(ctx, end.X, end.Y); err != nil {
+		t.Fatalf("click: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	report("after the body_end click")
+
+	var button driverPoint
+	if err := port.page.CallFunction(ctx, driverPointFn, []any{"image_add", 0}, &button); err != nil {
+		t.Fatalf("image_add: %v", err)
+	}
+	t.Logf("image_add resolved matches=%d at (%.0f,%.0f)", button.Matches, button.X, button.Y)
+}
+
+// TestSurveyUploadSplit reproduces the exact upload sequence step by step and reports the
+// selection before the file is handed over, which is the only moment left that could put the
+// caret mid-text.
+func TestSurveyUploadSplit(t *testing.T) {
+	dir := os.Getenv("POSTPILOT_SURVEY_PHOTOS")
+	if dir == "" {
+		t.Skip("set POSTPILOT_SURVEY_PHOTOS")
+	}
+	photo := filepath.Join(dir, "live.jpg")
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	report := func(label string) {
+		var dump map[string]any
+		if err := port.page.CallFunction(ctx, surveySelectionFn, []any{}, &dump); err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		encoded, _ := json.Marshal(dump)
+		t.Logf("%-30s %s", label, encoded)
+	}
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	if err := port.Apply(ctx, Mutation{Kind: MutationText, Text: "SPLIT 하나 둘 셋 넷"}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	time.Sleep(400 * time.Millisecond)
+	report("1 after the write")
+
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	if err := port.resolveAndClick(ctx, "body_end", 0); err != nil {
+		t.Fatalf("body_end: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	report("2 after the body_end click")
+
+	if err := port.page.InterceptFileChooser(ctx); err != nil {
+		t.Fatalf("intercept: %v", err)
+	}
+	report("3 after enabling interception")
+
+	if err := port.resolveAndClick(ctx, "image_add", 0); err != nil {
+		t.Fatalf("image_add: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	report("4 after the image button click")
+
+	if err := port.page.SetFileInputFiles(ctx, hiddenFileInput, []string{photo}); err != nil {
+		t.Fatalf("set files: %v", err)
+	}
+	time.Sleep(2500 * time.Millisecond)
+	report("5 after the upload")
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	s.dump("6 the result")
+	s.dumpProjection()
+}
+
+// surveyParagraphTextFn shows how the last body paragraph is actually built: which of its
+// children SmartEditor has wrapped in a `__se-node` span and which are still raw. The
+// projection reads only `__se-node` spans, so anything unwrapped is invisible to it.
+const surveyParagraphTextFn = `function () {
+` + bodyParagraphsJS + `  const paragraphs = bodyParagraphs();
+  const paragraph = paragraphs[paragraphs.length - 1];
+  if (!paragraph) return {found: false};
+  const children = [...paragraph.childNodes].map((node) => ({
+    type: node.nodeType,
+    tag: node.tagName || '',
+    classes: String(node.className || '').replace(/\s+/g, ' ').trim(),
+    se_node: node.nodeType === 1 && node.classList.contains('__se-node'),
+    text: node.textContent
+  }));
+  const nodeText = [...paragraph.querySelectorAll('span.__se-node')].map((n) => n.textContent).join('');
+  return {
+    found: true,
+    node_text: nodeText,
+    text_content: paragraph.textContent,
+    equal: nodeText === paragraph.textContent,
+    children
+  };
+}`
+
+// TestSurveyProjectionLag reads the last paragraph immediately after a write and again after
+// a pause, to see whether the projection can read a freshly typed paragraph short.
+func TestSurveyProjectionLag(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	report := func(label string) {
+		var dump map[string]any
+		if err := port.page.CallFunction(ctx, surveyParagraphTextFn, []any{}, &dump); err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		encoded, _ := json.Marshal(dump)
+		t.Logf("%-24s %s", label, encoded)
+	}
+	if err := port.Apply(ctx, Mutation{Kind: MutationText, Text: "LAG 하나 둘 셋 문단"}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	report("immediately")
+	time.Sleep(200 * time.Millisecond)
+	report("after 200ms")
+	time.Sleep(400 * time.Millisecond)
+	report("after 600ms")
+	time.Sleep(1200 * time.Millisecond)
+	report("after 1.8s")
+	snapshot, err := port.Observe(ctx)
+	if err != nil {
+		t.Fatalf("observe: %v", err)
+	}
+	if len(snapshot.Body) > 0 {
+		t.Logf("projection's last block: %q", snapshot.Body[len(snapshot.Body)-1].Text)
+	}
+}
+
+// TestSurveyEmptyTargetWrite exercises the branch that types straight into an already-empty
+// paragraph instead of pressing Enter — the branch a clean editor always takes on its first
+// block, and the one under suspicion for losing the tail of the inserted text.
+func TestSurveyEmptyTargetWrite(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	before, err := port.paragraphState(ctx, "body_end", -1)
+	if err != nil {
+		t.Fatalf("state: %v", err)
+	}
+	t.Logf("append target: matches=%d empty=%t kind=%q", before.Matches, before.Empty, before.Kind)
+	if !before.Empty {
+		t.Skip("the draft's last paragraph is not empty; run this right after an image upload")
+	}
+	const text = "EMPTY 하나 둘 셋 문단"
+	if err := port.Apply(ctx, Mutation{Kind: MutationText, Text: text}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	time.Sleep(500 * time.Millisecond)
+	var dump map[string]any
+	if err := port.page.CallFunction(ctx, surveyParagraphTextFn, []any{}, &dump); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	encoded, _ := json.Marshal(dump)
+	t.Logf("after the empty-target write: %s", encoded)
+	snapshot, err := port.Observe(ctx)
+	if err != nil {
+		t.Fatalf("observe: %v", err)
+	}
+	last := snapshot.Body[len(snapshot.Body)-1]
+	t.Logf("projection's last block: %q (want %q)", last.Text, text)
+	if last.Text != text {
+		t.Fatalf("the empty-target write lost text: got %q, want %q", last.Text, text)
+	}
+}
+
+// surveyCaretMapFn asks the browser which caret position the driver's own trailing-edge
+// point maps to, and compares it with the paragraph's text length. If they differ, the
+// 98 %-width rule is landing mid-text rather than at the end.
+const surveyCaretMapFn = `function (index) {
+` + bodyParagraphsJS + `  const paragraphs = bodyParagraphs();
+  const paragraph = paragraphs[index < 0 ? paragraphs.length + index : index];
+  if (!paragraph) return {found: false, total: paragraphs.length};
+  paragraph.scrollIntoView({block: 'center', inline: 'nearest'});
+  const box = paragraph.getBoundingClientRect();
+  const text = [...paragraph.querySelectorAll('span.__se-node')].map((n) => n.textContent).join('');
+  const probe = (x, y) => {
+    const at = document.elementFromPoint(x, y);
+    let offset = -1;
+    let container = '';
+    if (document.caretRangeFromPoint) {
+      const range = document.caretRangeFromPoint(x, y);
+      if (range) {
+        offset = range.startOffset;
+        container = range.startContainer.textContent || '';
+      }
+    }
+    return {x: Math.round(x), y: Math.round(y), hit: at ? String(at.className || at.tagName) : '', offset, container};
+  };
+  const range = document.createRange();
+  range.selectNodeContents(paragraph);
+  const rects = [...range.getClientRects()].map((r) => ({left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom)}));
+  return {
+    found: true,
+    text,
+    text_length: text.length,
+    box: {left: Math.round(box.left), right: Math.round(box.right), width: Math.round(box.width), top: Math.round(box.top), bottom: Math.round(box.bottom), height: Math.round(box.height)},
+    text_rects: rects,
+    at_98: probe(box.left + box.width * 0.98, box.bottom - box.height * 0.25),
+    at_centre: probe(box.left + box.width / 2, box.top + box.height / 2),
+    at_text_end: rects.length ? probe(rects[rects.length - 1].right + 4, (rects[rects.length - 1].top + rects[rects.length - 1].bottom) / 2) : null
+  };
+}`
+
+// TestSurveyCaretMap is read-only.
+func TestSurveyCaretMap(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	if err := s.port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	var dump map[string]any
+	index := -1
+	if value := os.Getenv("POSTPILOT_SURVEY_ORDINAL"); value != "" {
+		index, _ = strconv.Atoi(value)
+	}
+	if err := s.port.page.CallFunction(ctx, surveyCaretMapFn, []any{index}, &dump); err != nil {
+		t.Fatalf("caret map: %v", err)
+	}
+	encoded, _ := json.MarshalIndent(dump, "", "  ")
+	t.Logf("\n%s", encoded)
+}
+
+// TestSurveyTailLoss isolates which step of the upload sequence drops the tail of a freshly
+// written paragraph. It never uploads anything: it writes, reads back, clicks the image
+// button, and reads back again.
+func TestSurveyTailLoss(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	read := func(label string) string {
+		var dump struct {
+			NodeText string `json:"node_text"`
+		}
+		if err := port.page.CallFunction(ctx, surveyParagraphTextFn, []any{}, &dump); err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		t.Logf("%-34s %q", label, dump.NodeText)
+		return dump.NodeText
+	}
+	for _, text := range []string{"TRUNC 하나 둘 문단", "TRUNC ASCII TAIL"} {
+		t.Run(text, func(t *testing.T) {
+			if err := port.Apply(ctx, Mutation{Kind: MutationText, Text: text}); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+			time.Sleep(400 * time.Millisecond)
+			if got := read("1 after the write"); got != text {
+				t.Fatalf("the write itself lost text: %q", got)
+			}
+			if err := port.resolveAndClick(ctx, "body_end", 0); err != nil {
+				t.Fatalf("body_end: %v", err)
+			}
+			time.Sleep(300 * time.Millisecond)
+			read("2 after the body_end click")
+			if err := port.page.InterceptFileChooser(ctx); err != nil {
+				t.Fatalf("intercept: %v", err)
+			}
+			read("3 after enabling interception")
+			if err := port.resolveAndClick(ctx, "image_add", 0); err != nil {
+				t.Fatalf("image_add: %v", err)
+			}
+			time.Sleep(600 * time.Millisecond)
+			got := read("4 after the image button click")
+			if got != text {
+				t.Errorf("the image button click dropped the tail: %q, want %q", got, text)
+			}
+		})
+	}
+}
+
+// TestSurveyEmptyThenUpload is the reproduction that needs no clean draft: an upload always
+// leaves a trailing EMPTY paragraph, so every iteration takes the same no-Enter write branch
+// the editor's own opening paragraph takes, and then uploads. It reports how much of each
+// string survives.
+func TestSurveyEmptyThenUpload(t *testing.T) {
+	dir := os.Getenv("POSTPILOT_SURVEY_PHOTOS")
+	if dir == "" {
+		t.Skip("set POSTPILOT_SURVEY_PHOTOS")
+	}
+	photos := surveyPhotos(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	read := func() string {
+		var dump struct {
+			NodeText string `json:"node_text"`
+		}
+		if err := port.page.CallFunction(ctx, surveyParagraphTextFn, []any{}, &dump); err != nil {
+			t.Fatalf("read: %v", err)
+		}
+		return dump.NodeText
+	}
+	texts := []string{"ABCDEFGHIJKL", "가나다라마바사아", "MIX 하나 둘 문단"}
+	for index, text := range texts {
+		state, err := port.paragraphState(ctx, "body_end", -1)
+		if err != nil {
+			t.Fatalf("state: %v", err)
+		}
+		t.Logf("── %q: append target empty=%t", text, state.Empty)
+		if err := port.Apply(ctx, Mutation{Kind: MutationText, Text: text}); err != nil {
+			t.Fatalf("write %q: %v", text, err)
+		}
+		time.Sleep(400 * time.Millisecond)
+		wrote := read()
+		if err := port.Apply(ctx, Mutation{Kind: MutationUploadImage, AssetPath: photos[index%len(photos)]}); err != nil {
+			t.Fatalf("upload after %q: %v", text, err)
+		}
+		time.Sleep(600 * time.Millisecond)
+		after, err := port.Observe(ctx)
+		if err != nil {
+			t.Fatalf("observe: %v", err)
+		}
+		t.Logf("   wrote %q; the body after the upload:", wrote)
+		for position, block := range after.Body {
+			t.Logf("      [%d] %-6s %q", position, block.Kind, block.Text)
+		}
+	}
+}
+
+// surveyAllParagraphsFn compares, for every body paragraph, what the projection reads
+// (`span.__se-node` only) against the paragraph's real textContent, and lists its children.
+// If they disagree, the projection is losing text the editor still holds.
+const surveyAllParagraphsFn = `function () {
+` + bodyParagraphsJS + `  return bodyParagraphs().map((paragraph, index) => {
+    const nodeText = [...paragraph.querySelectorAll('span.__se-node')].map((n) => n.textContent).join('');
+    return {
+      index,
+      node_text: nodeText,
+      text_content: paragraph.textContent,
+      agree: nodeText === paragraph.textContent,
+      children: [...paragraph.childNodes].map((node) => ({
+        type: node.nodeType,
+        tag: node.tagName || '',
+        classes: String(node.className || '').replace(/\s+/g, ' ').trim(),
+        se_node: node.nodeType === 1 && node.classList.contains('__se-node'),
+        text: node.textContent
+      }))
+    };
+  });
+}`
+
+// TestSurveyProjectionVsDOM is read-only.
+func TestSurveyProjectionVsDOM(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	if err := s.port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	var dump []struct {
+		Index       int    `json:"index"`
+		NodeText    string `json:"node_text"`
+		TextContent string `json:"text_content"`
+		Agree       bool   `json:"agree"`
+		Children    []struct {
+			Type    int    `json:"type"`
+			Tag     string `json:"tag"`
+			Classes string `json:"classes"`
+			SeNode  bool   `json:"se_node"`
+			Text    string `json:"text"`
+		} `json:"children"`
+	}
+	if err := s.port.page.CallFunction(ctx, surveyAllParagraphsFn, []any{}, &dump); err != nil {
+		t.Fatalf("paragraphs: %v", err)
+	}
+	for _, paragraph := range dump {
+		mark := "  "
+		if !paragraph.Agree {
+			mark = "!!"
+		}
+		t.Logf("%s [%d] projection %q  vs  DOM %q", mark, paragraph.Index, paragraph.NodeText, paragraph.TextContent)
+		if paragraph.Agree {
+			continue
+		}
+		for _, child := range paragraph.Children {
+			t.Logf("        child type=%d <%s.%s> se_node=%t %q", child.Type, child.Tag, child.Classes, child.SeNode, child.Text)
+		}
+	}
+}
+
+// TestSurveyEnterCommitsTheWord tests the two write variants against the same empty target:
+// insertText alone, and Enter-then-insertText. The upload after each shows which one leaves
+// the trailing word committed.
+func TestSurveyEnterCommitsTheWord(t *testing.T) {
+	photos := surveyPhotos(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	survivor := func(text string) string {
+		snapshot, err := port.Observe(ctx)
+		if err != nil {
+			t.Fatalf("observe: %v", err)
+		}
+		for _, block := range snapshot.Body {
+			if block.Kind == SemanticText && block.Text == text {
+				return block.Text
+			}
+		}
+		best := ""
+		for _, block := range snapshot.Body {
+			if block.Kind == SemanticText && strings.HasPrefix(text, block.Text) && len(block.Text) > len(best) {
+				best = block.Text
+			}
+		}
+		return best
+	}
+	run := func(label, text string, pressEnter bool, photo string) {
+		state, err := port.paragraphState(ctx, "body_end", -1)
+		if err != nil {
+			t.Fatalf("state: %v", err)
+		}
+		if err := port.resolveAndClick(ctx, "body_end", 0); err != nil {
+			t.Fatalf("click: %v", err)
+		}
+		if pressEnter {
+			if err := port.page.PressEnter(ctx); err != nil {
+				t.Fatalf("enter: %v", err)
+			}
+		}
+		if err := port.typeText(ctx, text); err != nil {
+			t.Fatalf("type: %v", err)
+		}
+		time.Sleep(400 * time.Millisecond)
+		if err := port.Apply(ctx, Mutation{Kind: MutationUploadImage, AssetPath: photo}); err != nil {
+			t.Fatalf("upload: %v", err)
+		}
+		time.Sleep(500 * time.Millisecond)
+		got := survivor(text)
+		verdict := "INTACT"
+		if got != text {
+			verdict = "LOST THE TAIL"
+		}
+		t.Logf("%-28s target empty=%t enter=%t → %q [%s]", label, state.Empty, pressEnter, got, verdict)
+	}
+	run("insertText alone", "AAA BBB CCCWORD", false, photos[0])
+	run("Enter then insertText", "DDD EEE FFFWORD", true, photos[1])
+
+	// Enter AFTER the text: it commits the pending word and leaves the caret in a fresh
+	// empty paragraph, which the image then follows — so the photo still lands immediately
+	// after its block, with one empty paragraph between them that the projection drops.
+	trailing := func(label, text, photo string) {
+		if err := port.resolveAndClick(ctx, "body_end", 0); err != nil {
+			t.Fatalf("click: %v", err)
+		}
+		if err := port.page.PressEnter(ctx); err != nil {
+			t.Fatalf("enter: %v", err)
+		}
+		if err := port.typeText(ctx, text); err != nil {
+			t.Fatalf("type: %v", err)
+		}
+		if err := port.page.PressEnter(ctx); err != nil {
+			t.Fatalf("trailing enter: %v", err)
+		}
+		time.Sleep(400 * time.Millisecond)
+		if err := port.Apply(ctx, Mutation{Kind: MutationUploadImage, AssetPath: photo}); err != nil {
+			t.Fatalf("upload: %v", err)
+		}
+		time.Sleep(500 * time.Millisecond)
+		got := survivor(text)
+		verdict := "INTACT"
+		if got != text {
+			verdict = "LOST THE TAIL"
+		}
+		t.Logf("%-28s → %q [%s]", label, got, verdict)
+	}
+	trailing("text then trailing Enter", "GGG HHH IIIWORD", photos[2])
+
+	// Two paragraphs in one component, uploading at the end of the second: the shape that
+	// read back intact on 260910 before the empty-target write was introduced.
+	if err := port.resolveAndClick(ctx, "body_end", 0); err != nil {
+		t.Fatalf("click: %v", err)
+	}
+	if err := port.page.PressEnter(ctx); err != nil {
+		t.Fatalf("enter: %v", err)
+	}
+	if err := port.typeText(ctx, "JJJ KKK FIRSTWORD"); err != nil {
+		t.Fatalf("type: %v", err)
+	}
+	if err := port.page.PressEnter(ctx); err != nil {
+		t.Fatalf("enter: %v", err)
+	}
+	if err := port.typeText(ctx, "LLL MMM SECONDWORD"); err != nil {
+		t.Fatalf("type: %v", err)
+	}
+	time.Sleep(400 * time.Millisecond)
+	if err := port.Apply(ctx, Mutation{Kind: MutationUploadImage, AssetPath: photos[3]}); err != nil {
+		t.Fatalf("upload: %v", err)
+	}
+	time.Sleep(500 * time.Millisecond)
+	t.Logf("%-28s first=%q second=%q", "two paragraphs, upload last",
+		survivor("JJJ KKK FIRSTWORD"), survivor("LLL MMM SECONDWORD"))
+}
+
+// TestSurveyListTailCommit asks how a list's LAST item can have its pending word committed.
+// A trailing Enter commits it but opens another list item, so the question is what the
+// editor does with an empty one and whether a second Enter leaves the list.
+func TestSurveyListTailCommit(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	show := func(label string) {
+		snapshot, err := port.Observe(ctx)
+		if err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		last := ""
+		if len(snapshot.Body) > 0 {
+			last = snapshot.Body[len(snapshot.Body)-1].Text
+		}
+		t.Logf("%-26s blocks=%d last=%q", label, len(snapshot.Body), last)
+	}
+	// Build a list the shipped way: write item one as a paragraph, convert, then Enter+type.
+	if err := port.Apply(ctx, Mutation{Kind: MutationText, Text: "LIST ONE ALPHA"}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	written, err := port.paragraphState(ctx, "body_paragraph", -1)
+	if err != nil {
+		t.Fatalf("state: %v", err)
+	}
+	index := written.Total - 1
+	if err := port.Apply(ctx, Mutation{Kind: MutationList, Ordinal: index, Items: []string{"LIST ONE ALPHA", "LIST TWO BETA", "LIST THREE GAMMA"}}); err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	show("after the list")
+
+	// One Enter: commits the last item's word and opens another item.
+	if err := port.page.PressEnter(ctx); err != nil {
+		t.Fatalf("enter: %v", err)
+	}
+	time.Sleep(400 * time.Millisecond)
+	show("after one Enter")
+
+	// A second Enter on the empty item: does the editor drop it and leave the list?
+	if err := port.page.PressEnter(ctx); err != nil {
+		t.Fatalf("enter: %v", err)
+	}
+	time.Sleep(400 * time.Millisecond)
+	show("after two Enters")
+	s.dumpProjection()
+}
+
+// TestSurveyCommitIsAKeyNotAWait decides the fix. If waiting commits the pending word, the
+// answer is a settle wait after every write. If only a key commits it, the answer is a
+// trailing key — which then has to be arranged separately for the title, a caption and a
+// list's last item.
+func TestSurveyCommitIsAKeyNotAWait(t *testing.T) {
+	photos := surveyPhotos(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	survivor := func(text string) string {
+		snapshot, err := port.Observe(ctx)
+		if err != nil {
+			t.Fatalf("observe: %v", err)
+		}
+		best := ""
+		for _, block := range snapshot.Body {
+			if block.Kind == SemanticText && strings.HasPrefix(text, block.Text) && len(block.Text) > len(best) {
+				best = block.Text
+			}
+		}
+		return best
+	}
+	try := func(label, text string, wait time.Duration, photo string) {
+		if err := port.resolveAndClick(ctx, "body_end", 0); err != nil {
+			t.Fatalf("click: %v", err)
+		}
+		if err := port.page.PressEnter(ctx); err != nil {
+			t.Fatalf("enter: %v", err)
+		}
+		if err := port.typeText(ctx, text); err != nil {
+			t.Fatalf("type: %v", err)
+		}
+		time.Sleep(wait)
+		if err := port.Apply(ctx, Mutation{Kind: MutationUploadImage, AssetPath: photo}); err != nil {
+			t.Fatalf("upload: %v", err)
+		}
+		time.Sleep(500 * time.Millisecond)
+		got := survivor(text)
+		verdict := "INTACT"
+		if got != text {
+			verdict = "LOST THE TAIL"
+		}
+		t.Logf("%-34s waited %-6s → %q [%s]", label, wait, got, verdict)
+	}
+	try("no wait", "WAIT AAA ZEROWORD", 0, photos[0])
+	try("waited 3s", "WAIT BBB THREEWORD", 3*time.Second, photos[1])
+	try("waited 8s", "WAIT CCC EIGHTWORD", 8*time.Second, photos[2])
+}
+
+// TestSurveyCommitRace measures it instead of theorising: the same write-then-upload shape,
+// repeated, with and without a trailing Enter. A pending trailing word is lost only when the
+// image insertion beats SmartEditor's own commit tick, so the question is not whether the
+// loss happens but how reliably a trailing Enter prevents it.
+func TestSurveyCommitRace(t *testing.T) {
+	photos := surveyPhotos(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	survivor := func(text string) string {
+		snapshot, err := port.Observe(ctx)
+		if err != nil {
+			t.Fatalf("observe: %v", err)
+		}
+		best := ""
+		for _, block := range snapshot.Body {
+			if block.Kind == SemanticText && strings.HasPrefix(text, block.Text) && len(block.Text) > len(best) {
+				best = block.Text
+			}
+		}
+		return best
+	}
+	round := func(label string, trailingEnter bool, rounds int) {
+		lost := 0
+		for index := 0; index < rounds; index++ {
+			text := fmt.Sprintf("RACE %s %02d TAILWORD", label, index)
+			if err := port.resolveAndClick(ctx, "body_end", 0); err != nil {
+				t.Fatalf("click: %v", err)
+			}
+			if err := port.page.PressEnter(ctx); err != nil {
+				t.Fatalf("enter: %v", err)
+			}
+			if err := port.typeText(ctx, text); err != nil {
+				t.Fatalf("type: %v", err)
+			}
+			if trailingEnter {
+				if err := port.page.PressEnter(ctx); err != nil {
+					t.Fatalf("trailing enter: %v", err)
+				}
+			}
+			if err := port.Apply(ctx, Mutation{Kind: MutationUploadImage, AssetPath: photos[index%len(photos)]}); err != nil {
+				t.Fatalf("upload: %v", err)
+			}
+			if got := survivor(text); got != text {
+				lost++
+				t.Logf("   %s round %d LOST: %q", label, index, got)
+			}
+		}
+		t.Logf("%-22s trailing Enter=%-5t → %d of %d lost the tail", label, trailingEnter, lost, rounds)
+	}
+	round("bare", false, 5)
+	round("committed", true, 5)
+}
+
+// TestSurveyTitleAndCaptionCommit checks whether the same trailing Enter is safe in the two
+// other places text is entered: the document title and an image's caption module.
+func TestSurveyTitleAndCaptionCommit(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+	defer cancel()
+	s := openSurvey(t, ctx, false)
+	defer s.port.Close()
+	port := s.port
+	if err := port.activate(ctx, "close_library", ""); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	base, err := port.Observe(ctx)
+	if err != nil {
+		t.Fatalf("observe: %v", err)
+	}
+	t.Logf("title before %q; %d blocks, %d images", base.Title, len(base.Body), base.ImageCount)
+
+	// The title, then Enter.
+	if err := port.Apply(ctx, Mutation{Kind: MutationTitle, Text: "TITLE 하나 TAILWORD"}); err != nil {
+		t.Fatalf("title: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	mid, _ := port.Observe(ctx)
+	t.Logf("title after the write  %q (blocks=%d)", mid.Title, len(mid.Body))
+	if err := port.page.PressEnter(ctx); err != nil {
+		t.Fatalf("title enter: %v", err)
+	}
+	time.Sleep(400 * time.Millisecond)
+	after, err := port.Observe(ctx)
+	if err != nil {
+		t.Fatalf("observe: %v", err)
+	}
+	t.Logf("title after Enter      %q (blocks=%d → %d)", after.Title, len(mid.Body), len(after.Body))
+
+	// A caption, then Enter, on the last image.
+	if base.ImageCount == 0 {
+		t.Skip("no image in the draft to caption")
+	}
+	ordinal := base.ImageCount - 1
+	if err := port.Apply(ctx, Mutation{Kind: MutationImageCaption, Ordinal: ordinal, Text: "CAP 하나 TAILWORD"}); err != nil {
+		t.Fatalf("caption: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	beforeEnter, _ := port.Observe(ctx)
+	if err := port.page.PressEnter(ctx); err != nil {
+		t.Fatalf("caption enter: %v", err)
+	}
+	time.Sleep(400 * time.Millisecond)
+	afterEnter, err := port.Observe(ctx)
+	if err != nil {
+		t.Fatalf("observe: %v", err)
+	}
+	find := func(snapshot Snapshot) string {
+		for _, block := range snapshot.Body {
+			if block.Kind == SemanticImage && block.Ordinal == ordinal {
+				return block.Caption
+			}
+		}
+		return "<none>"
+	}
+	t.Logf("caption after the write %q (blocks=%d, images=%d)", find(beforeEnter), len(beforeEnter.Body), beforeEnter.ImageCount)
+	t.Logf("caption after Enter     %q (blocks=%d, images=%d)", find(afterEnter), len(afterEnter.Body), afterEnter.ImageCount)
 }

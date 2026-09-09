@@ -198,12 +198,64 @@ func assertPlanOrder(plan []plannedMutation) error {
 			lastConversion = step.mutation.Ordinal
 			continue
 		}
-		if converted && (step.mutation.Kind == MutationText || step.mutation.Kind == MutationHeading) {
+		if converted && isBodyMutation(step.mutation.Kind) {
+			// Every remaining body kind places itself from the caret or from a paragraph
+			// index, and a landed conversion has moved both.
 			return fmt.Errorf("%s planned after a quote or list conversion", step.mutation.Kind)
 		}
 	}
 	if opened != 1 {
 		return fmt.Errorf("the settings layer must be opened exactly once, planned %d", opened)
+	}
+	return nil
+}
+
+// plannedBody replays a plan's body appends to learn the index the NEXT block will occupy.
+// It exists because a conversion and a caption both address a block by its position in the
+// projection, and with photos interleaved that position is no longer the block's position
+// among the text blocks.
+func plannedBody(plan []plannedMutation) []SemanticBlock {
+	var snapshot Snapshot
+	for _, step := range plan {
+		step.update(&snapshot)
+	}
+	return snapshot.Body
+}
+
+// assertEnumeratedAssets refuses a plan whose upload names a path outside this job's
+// enumerated asset set, or whose upload count disagrees with it, and refuses an asset path
+// on any other kind. PUB-19 allows only enumerated current-job JPEG paths to reach the
+// restricted upload operation, and Prepare builds the plan from that very set — so this is a
+// structural guard on the plan rather than a reachable branch, which is exactly why it is
+// asserted instead of assumed.
+func assertEnumeratedAssets(plan []plannedMutation, paths []string) error {
+	// Each enumerated asset is consumed exactly once, so an upload naming a path outside
+	// the set and an upload naming the same file twice are both refused.
+	remaining := make(map[string]struct{}, len(paths))
+	for _, path := range paths {
+		remaining[path] = struct{}{}
+	}
+	uploads := 0
+	for _, step := range plan {
+		if step.mutation.Kind != MutationUploadImage {
+			if step.mutation.AssetPath != "" {
+				return fmt.Errorf("%s carries an asset path", step.mutation.Kind)
+			}
+			continue
+		}
+		// PUB-21: one at a time in exact manifest-ordinal order. A plan that jumps, repeats
+		// or reverses an ordinal is refused before anything is uploaded.
+		if step.mutation.Ordinal != uploads {
+			return fmt.Errorf("upload %d carries ordinal %d", uploads, step.mutation.Ordinal)
+		}
+		uploads++
+		if _, ok := remaining[step.mutation.AssetPath]; !ok {
+			return fmt.Errorf("upload_image names a path that is not one of this job's %d unconsumed enumerated assets", len(paths))
+		}
+		delete(remaining, step.mutation.AssetPath)
+	}
+	if uploads != len(paths) || len(remaining) != 0 {
+		return fmt.Errorf("planned %d uploads for %d enumerated assets", uploads, len(paths))
 	}
 	return nil
 }
@@ -417,15 +469,20 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 		update:   func(snapshot *Snapshot) { snapshot.Title = title },
 	}}
 
-	// The body is written in two passes. The first enters every block as a plain paragraph
-	// in manifest order, converting a heading in the same step; the second converts the
-	// quotes and lists. They cannot be interleaved: a converted quotation traps the caret in
-	// its 출처 module and a converted list turns the next Enter into another list item, so a
-	// paragraph written after either would land in the wrong place (verified live
-	// 2026-09-10). The second pass runs backwards so that the paragraphs a conversion
-	// inserts never shift an index still to be converted.
+	// The body runs in two passes. The first walks the manifest IN ORDER, writing each text
+	// block as a plain paragraph and uploading each photo where it belongs — a photo needs
+	// no index at all, because SmartEditor splits the caret's text component at the caret's
+	// paragraph and puts the image between the halves, and the caret is already at the end
+	// of the block just written (verified live 2026-09-10). A heading converts inside its
+	// own write, since Naver exports a section title as plain text and a separate step could
+	// never move the snapshot token.
+	//
+	// The second pass converts the quotes and lists. Those cannot be interleaved: a
+	// converted quotation traps the caret in its 출처 module and a converted list turns the
+	// next Enter into another list item, so anything written after either would land in the
+	// wrong place. It runs BACKWARDS so the paragraphs a conversion inserts never shift an
+	// index still to be converted.
 	imageOrdinal := 0
-	imageCaptions := make([]string, 0, len(paths))
 	conversions := make([]plannedMutation, 0, len(manifestCopy.GetContent().GetBlocks()))
 	paragraphIndex := 0
 	for _, block := range manifestCopy.GetContent().GetBlocks() {
@@ -433,8 +490,27 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 		if planErr != nil {
 			return fail(FailureSafe)
 		}
+		bodyIndex := len(plannedBody(plan))
 		if planned.written.Kind == SemanticImage {
-			imageCaptions = append(imageCaptions, block.GetCaption())
+			if imageOrdinal >= len(paths) {
+				return fail(FailureAssetMissing)
+			}
+			ordinal, path, written := imageOrdinal, paths[imageOrdinal], planned.written
+			written.Uploaded = true
+			plan = append(plan, plannedMutation{
+				mutation: Mutation{Kind: MutationUploadImage, Ordinal: ordinal, AssetPath: path},
+				update: func(snapshot *Snapshot) {
+					snapshot.ImageCount++
+					snapshot.Body = append(snapshot.Body, written)
+				},
+			})
+			if caption := block.GetCaption(); caption != "" {
+				index := bodyIndex
+				plan = append(plan, plannedMutation{
+					mutation: Mutation{Kind: MutationImageCaption, Ordinal: ordinal, Text: caption},
+					update:   func(snapshot *Snapshot) { snapshot.Body[index].Caption = caption },
+				})
+			}
 			imageOrdinal++
 			continue
 		}
@@ -444,43 +520,23 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 			update:   func(snapshot *Snapshot) { snapshot.Body = append(snapshot.Body, written) },
 		})
 		if planned.conversion.Kind != "" {
-			index, converted := paragraphIndex, planned.converted
+			index, converted := bodyIndex, planned.converted
 			conversions = append(conversions, plannedMutation{
 				mutation: planned.conversion,
 				update:   func(snapshot *Snapshot) { snapshot.Body[index].Text = converted },
 			})
 		}
+		// A photo produces no paragraph of its own — its caption module lives inside the
+		// image component and never enters the body-paragraph order — so only the text
+		// blocks advance the index a conversion addresses. Each of them contributes exactly
+		// one paragraph at write time, a list included: its remaining items arrive with its
+		// own conversion, after every earlier index has already been used.
 		paragraphIndex++
 	}
 	slices.Reverse(conversions)
 	plan = append(plan, conversions...)
 	if imageOrdinal != len(paths) {
 		return fail(FailureSafe)
-	}
-
-	for ordinal, path := range paths {
-		ordinal, path := ordinal, path
-		plan = append(plan, plannedMutation{
-			mutation: Mutation{Kind: MutationUploadImage, Ordinal: ordinal, AssetPath: path},
-			update: func(snapshot *Snapshot) {
-				snapshot.ImageCount++
-				snapshot.Body = append(snapshot.Body, SemanticBlock{Kind: SemanticImage, Ordinal: ordinal, Uploaded: true})
-			},
-		})
-		caption := imageCaptions[ordinal]
-		if caption == "" {
-			continue
-		}
-		plan = append(plan, plannedMutation{
-			mutation: Mutation{Kind: MutationImageCaption, Ordinal: ordinal, Text: caption},
-			update: func(snapshot *Snapshot) {
-				for index := range snapshot.Body {
-					if snapshot.Body[index].Kind == SemanticImage && snapshot.Body[index].Ordinal == ordinal {
-						snapshot.Body[index].Caption = caption
-					}
-				}
-			},
-		})
 	}
 
 	tags := normalizeTags(manifestCopy.GetTags())
@@ -513,6 +569,9 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 
 	if err := assertPlanOrder(plan); err != nil {
 		return fail(FailureSafe)
+	}
+	if err := assertEnumeratedAssets(plan, paths); err != nil {
+		return fail(FailureAssetMissing)
 	}
 
 	photosAnnounced := false

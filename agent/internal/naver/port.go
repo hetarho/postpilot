@@ -10,9 +10,16 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/postpilot/agent/internal/browser"
 )
+
+// hiddenFileInput is the one upload control the driver hands files to. It is created on
+// demand by the image button's click, which is why the upload LOCATOR counts that button
+// instead (see the observation script) and why this selector never appears in a locator
+// count. Verified live 2026-09-07.
+const hiddenFileInput = "input[type=file]#hidden-file"
 
 // editorObservationScript is reviewed local release code. It reads only the versioned
 // SmartEditor surface and returns inert data: no string it returns is ever evaluated,
@@ -58,15 +65,18 @@ const editorObservationScript = `(() => {
       const kinds = component.classList;
       if (kinds.contains('se-documentTitle')) continue;
       if (kinds.contains('se-image')) {
-        imageOrdinal += 1;
         const caption = component.querySelector('.se-module-text.se-caption');
         const resource = component.querySelector('img.se-image-resource');
+        // The ordinal is 0-based, the same convention the manifest's assets and every
+        // upload_image / image_caption mutation use. It was 1-based until 260910, which no
+        // fake ever caught because the projection was only ever compared against itself.
         blocks.push({
           kind: 'image', text: '', ordinal: imageOrdinal,
           caption: caption && !caption.classList.contains('se-is-empty') ? nodeText(caption) : '',
           uploaded: Boolean(resource && /^https:\/\//.test(resource.src)),
           source: resource ? norm(resource.alt) : ''
         });
+        imageOrdinal += 1;
       } else if (kinds.contains('se-sectionTitle')) {
         blocks.push({kind: 'text', text: nodeText(component), ordinal: 0, caption: '', uploaded: false, source: ''});
       } else if (kinds.contains('se-quotation')) {
@@ -140,7 +150,11 @@ const editorObservationScript = `(() => {
       heading: count('.se-body.__se-body'),
       quote: count('.se-body.__se-body'),
       list: count('.se-body.__se-body'),
-      upload_image: count('input[type=file]#hidden-file'),
+      // The image button is what the driver resolves and clicks. The hidden file input does
+      // not exist until that click creates it, so counting the input here would make
+      // Publisher.mutate's pre-check unsatisfiable for every upload (verified live
+      // 2026-09-07).
+      upload_image: count('button.se-image-toolbar-button'),
       image_caption: captionsWellFormed ? 1 : 0,
       // The opener stays countable once the layer is already open, so re-observing after
       // open_settings does not report a vanished control.
@@ -187,6 +201,13 @@ type editorObservation struct {
 
 var writerBlogID = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
 
+const (
+	// uploadSettleTimeout bounds the wait for one photo to appear and finish processing.
+	// Nothing is retried while it runs: the driver only re-observes.
+	uploadSettleTimeout = 30 * time.Second
+	uploadPollInterval  = 250 * time.Millisecond
+)
+
 // CDPPort is the deterministic observation half of Port. It owns the reviewed SmartEditor
 // locator set and binds every observation to one dedicated CDP page.
 type CDPPort struct {
@@ -195,6 +216,8 @@ type CDPPort struct {
 	// settingsOpen latches when the publish settings layer opens. It never clears: the
 	// layer occludes the editor and no body write may follow it (PUBLISH-37).
 	settingsOpen bool
+	// settle bounds awaitImage. It is a field so a test can shorten it.
+	settle time.Duration
 }
 
 // NewCDPPort binds the sole dedicated page. It never navigates: the caller has already
@@ -208,7 +231,7 @@ func NewCDPPort(ctx context.Context, cdpURL string) (*CDPPort, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CDPPort{page: page, manifest: manifest}, nil
+	return &CDPPort{page: page, manifest: manifest, settle: uploadSettleTimeout}, nil
 }
 
 func (p *CDPPort) Close() error { return p.page.Close() }
@@ -283,7 +306,7 @@ func (p *CDPPort) Apply(ctx context.Context, mutation Mutation) error {
 		if err := p.resolveAndClick(ctx, "title", 0); err != nil {
 			return err
 		}
-		return p.typeText(ctx, mutation.Text)
+		return p.enterText(ctx, mutation.Text)
 	case MutationText:
 		return p.appendParagraph(ctx, mutation.Text)
 	case MutationHeading:
@@ -292,6 +315,10 @@ func (p *CDPPort) Apply(ctx context.Context, mutation Mutation) error {
 		return p.applyQuote(ctx, mutation.Ordinal)
 	case MutationList:
 		return p.applyList(ctx, mutation.Ordinal, mutation.Items)
+	case MutationUploadImage:
+		return p.applyUploadImage(ctx, mutation.AssetPath)
+	case MutationImageCaption:
+		return p.applyImageCaption(ctx, mutation.Ordinal, mutation.Text)
 	case MutationOpenSettings:
 		if p.settingsOpen {
 			return PortError{Kind: FailureEditorChanged}
@@ -367,7 +394,7 @@ func (p *CDPPort) applyList(ctx context.Context, index int, items []string) erro
 	if err := p.activate(ctx, "list_bullet", ""); err != nil {
 		return err
 	}
-	converted, err := p.paragraphState(ctx, index)
+	converted, err := p.paragraphState(ctx, "body_paragraph", index)
 	if err != nil {
 		return err
 	}
@@ -382,7 +409,16 @@ func (p *CDPPort) applyList(ctx context.Context, index int, items []string) erro
 			return err
 		}
 	}
-	final, err := p.paragraphState(ctx, index)
+	// The last item needs its trailing word committed like every other write, and inside a
+	// list the committing Enter opens another item. A second Enter on that empty item drops
+	// it and leaves the list, so the list keeps exactly the manifest's items. Verified live
+	// 2026-09-10.
+	for range 2 {
+		if err := p.page.PressEnter(ctx); err != nil {
+			return PortError{Kind: FailureEditorChanged}
+		}
+	}
+	final, err := p.paragraphState(ctx, "body_paragraph", index)
 	if err != nil {
 		return err
 	}
@@ -390,6 +426,82 @@ func (p *CDPPort) applyList(ctx context.Context, index int, items []string) erro
 		return PortError{Kind: FailureEditorChanged}
 	}
 	return nil
+}
+
+// applyUploadImage inserts ONE photo at the position the caret gives it. Every fact in this
+// sequence was verified live: the hidden input does not exist until the image button is
+// clicked (260907); SmartEditor splits the caret's text component at the caret's PARAGRAPH
+// and puts the image between the halves, so the caret is the whole position (260910); and
+// the upload opens Naver's photo-library sidebar, which overlays the editor's right edge
+// where every caret point is taken, so it is closed on both sides of the sequence (260910).
+//
+// The caret goes to the document's last paragraph, which after the write of the block this
+// image must follow IS that block's paragraph — and on a still-empty editor is SmartEditor's
+// own opening paragraph, which a leading image consumes. No ordinal, no pre-allocated slot
+// and no remembered point takes part (PUB-36).
+func (p *CDPPort) applyUploadImage(ctx context.Context, path string) error {
+	if strings.TrimSpace(path) == "" {
+		return PortError{Kind: FailureSafe}
+	}
+	if err := p.activate(ctx, "close_library", ""); err != nil {
+		return err
+	}
+	before, err := p.imageState(ctx)
+	if err != nil {
+		return err
+	}
+	if before.Images != before.Settled {
+		// A photo still processing from an earlier step would make "exactly one more" a
+		// guess rather than an observation.
+		return PortError{Kind: FailureEditorChanged}
+	}
+	if err := p.resolveAndClick(ctx, "body_end", 0); err != nil {
+		return err
+	}
+	// Interception first: the click below is what would otherwise open the native chooser,
+	// and a native dialog suspends the page's scripts and poisons every later observation.
+	if err := p.page.InterceptFileChooser(ctx); err != nil {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	if err := p.resolveAndClick(ctx, "image_add", 0); err != nil {
+		return err
+	}
+	if err := p.page.SetFileInputFiles(ctx, hiddenFileInput, []string{path}); err != nil {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	// The upload is not finished when the call returns: SmartEditor is still splitting the
+	// caret's component around the new image, and observing then reads a paragraph whose
+	// tail has been detached. Wait for exactly one more SETTLED image before returning.
+	if err := p.awaitImage(ctx, before.Images+1); err != nil {
+		return err
+	}
+	return p.activate(ctx, "close_library", "")
+}
+
+// applyImageCaption resolves the caption module of ONE addressed image ordinal and enters
+// the caption there. The module is created with its image and reads back its placeholder
+// while empty, which is why the projection reads it only when it is not `se-is-empty`; an
+// empty caption is never written at all, so a photo with no caption keeps the placeholder
+// and contributes nothing to the body.
+func (p *CDPPort) applyImageCaption(ctx context.Context, ordinal int, text string) error {
+	if ordinal < 0 {
+		return PortError{Kind: FailureSafe}
+	}
+	if strings.TrimSpace(text) == "" {
+		return PortError{Kind: FailureSafe}
+	}
+	// The image is selected first: an empty caption module has no box until then, so its
+	// point resolves to nothing and the caption could never be reached (verified live
+	// 2026-09-10). Selecting writes nothing — it only reveals the field.
+	if err := p.resolveAndClick(ctx, "image_select", ordinal); err != nil {
+		return err
+	}
+	// An ordinal with no image, or an image whose caption module is missing or duplicated,
+	// resolves to a count other than one and fails closed before the caption is typed.
+	if err := p.resolveAndClick(ctx, "image_caption", ordinal); err != nil {
+		return err
+	}
+	return p.enterText(ctx, text)
 }
 
 // convertParagraph puts the caret in one addressed paragraph and converts it through the
@@ -410,7 +522,7 @@ func (p *CDPPort) convertParagraph(ctx context.Context, index int, option, want 
 	if err := p.activate(ctx, option, ""); err != nil {
 		return err
 	}
-	after, err := p.paragraphState(ctx, index)
+	after, err := p.paragraphState(ctx, "body_paragraph", index)
 	if err != nil {
 		return err
 	}
@@ -425,7 +537,7 @@ func (p *CDPPort) convertParagraph(ctx context.Context, index int, option, want 
 // carries a different property toolbar, and converting the wrong paragraph is exactly the
 // silent corruption PUBLISH-19 forbids guessing about.
 func (p *CDPPort) requirePlainParagraph(ctx context.Context, index int) error {
-	state, err := p.paragraphState(ctx, index)
+	state, err := p.paragraphState(ctx, "body_paragraph", index)
 	if err != nil {
 		return err
 	}
@@ -523,13 +635,26 @@ func (p *CDPPort) applyVisibility(ctx context.Context, id string) error {
 // component, which is why the projection counts paragraphs and not components. Verified
 // live 2026-09-07.
 func (p *CDPPort) appendParagraph(ctx context.Context, text string) error {
+	// An empty append target is not chrome to step over: SmartEditor's own opening
+	// paragraph and the slot it leaves after an image are both empty, and pressing Enter
+	// there strands a blank paragraph the published post would render as a blank line.
+	// Verified live 2026-09-10.
+	before, err := p.paragraphState(ctx, "body_end", -1)
+	if err != nil {
+		return err
+	}
+	if before.Matches != 1 {
+		return PortError{Kind: FailureEditorChanged}
+	}
 	if err := p.resolveAndClick(ctx, "body_end", 0); err != nil {
 		return err
 	}
-	if err := p.page.PressEnter(ctx); err != nil {
-		return PortError{Kind: FailureEditorChanged}
+	if !before.Empty {
+		if err := p.page.PressEnter(ctx); err != nil {
+			return PortError{Kind: FailureEditorChanged}
+		}
 	}
-	return p.typeText(ctx, text)
+	return p.enterText(ctx, text)
 }
 
 func writerAccount(current string) (string, error) {

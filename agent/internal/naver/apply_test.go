@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func applyPort(t *testing.T, editor *fakeEditor) *CDPPort {
@@ -18,6 +20,9 @@ func applyPort(t *testing.T, editor *fakeEditor) *CDPPort {
 	if err != nil {
 		t.Fatalf("bind: %v", err)
 	}
+	// The real settle deadline is 30s; a fake never needs it and a refusal must not stall
+	// the suite.
+	port.settle = 300 * time.Millisecond
 	t.Cleanup(func() { _ = port.Close() })
 	return port
 }
@@ -30,7 +35,9 @@ func TestApplyTitleResolvesItsOwnControlThenTypes(t *testing.T) {
 	if err := port.Apply(context.Background(), Mutation{Kind: MutationTitle, Text: "제목"}); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
-	want := []string{"point:title", "click", "text:제목"}
+	// The trailing Enter commits the title's last word; it changes nothing observable in
+	// the title module (verified live 2026-09-10).
+	want := []string{"point:title", "click", "text:제목", "enter"}
 	if got := editor.recorded(); !slices.Equal(got, want) {
 		t.Fatalf("driver actions = %v, want %v", got, want)
 	}
@@ -45,7 +52,7 @@ func TestApplyTextOpensTheNextParagraphAtTheBodyEnd(t *testing.T) {
 	if err := port.Apply(context.Background(), Mutation{Kind: MutationText, Text: "본문"}); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
-	want := []string{"point:body_end", "click", "enter", "text:본문"}
+	want := []string{"point:body_end", "click", "enter", "text:본문", "enter"}
 	if got := editor.recorded(); !slices.Equal(got, want) {
 		t.Fatalf("driver actions = %v, want %v", got, want)
 	}
@@ -410,9 +417,9 @@ func TestPlanOrderRefusesADocumentWriteAfterTheSettingsLayerOpens(t *testing.T) 
 		return plannedMutation{mutation: Mutation{Kind: kind, Ordinal: ordinal}, update: func(*Snapshot) {}}
 	}
 	valid := []plannedMutation{
-		step(MutationTitle), step(MutationText), step(MutationHeading), step(MutationText), step(MutationText),
+		step(MutationTitle), step(MutationText), step(MutationHeading),
+		step(MutationUploadImage), step(MutationImageCaption), step(MutationText), step(MutationText),
 		convert(MutationList, 3), convert(MutationQuote, 2),
-		step(MutationUploadImage), step(MutationImageCaption),
 		step(MutationOpenSettings), step(MutationTags), step(MutationCategory), step(MutationVisibility),
 	}
 	if err := assertPlanOrder(valid); err != nil {
@@ -428,6 +435,8 @@ func TestPlanOrderRefusesADocumentWriteAfterTheSettingsLayerOpens(t *testing.T) 
 		"text after a quote conversion":   {step(MutationTitle), step(MutationText), convert(MutationQuote, 0), step(MutationText), step(MutationOpenSettings)},
 		"heading after a list conversion": {step(MutationTitle), step(MutationText), convert(MutationList, 0), step(MutationHeading), step(MutationOpenSettings)},
 		"conversions running forwards":    {step(MutationTitle), step(MutationText), step(MutationText), convert(MutationQuote, 0), convert(MutationList, 1), step(MutationOpenSettings)},
+		"an upload after a conversion":    {step(MutationTitle), step(MutationText), convert(MutationQuote, 0), step(MutationUploadImage), step(MutationOpenSettings)},
+		"a caption after a conversion":    {step(MutationTitle), step(MutationText), convert(MutationQuote, 0), step(MutationImageCaption), step(MutationOpenSettings)},
 		"one paragraph converted twice":   {step(MutationTitle), step(MutationText), convert(MutationQuote, 0), convert(MutationList, 0), step(MutationOpenSettings)},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -470,9 +479,11 @@ func TestApplyAppendsASecondParagraphThroughTheSameBodyEndTarget(t *testing.T) {
 			t.Fatalf("apply %q: %v", text, err)
 		}
 	}
+	// Each write ends with the Enter that commits its last word, and the next write types
+	// into the paragraph that Enter opened rather than adding one of its own.
 	want := []string{
-		"point:body_end", "click", "enter", "text:첫 문단",
-		"point:body_end", "click", "enter", "text:둘째 문단",
+		"point:body_end", "click", "enter", "text:첫 문단", "enter",
+		"point:body_end", "click", "text:둘째 문단", "enter",
 	}
 	if got := editor.recorded(); !slices.Equal(got, want) {
 		t.Fatalf("driver actions = %v, want %v", got, want)
@@ -489,7 +500,7 @@ func TestApplyHeadingWritesTheParagraphThenConvertsThatParagraph(t *testing.T) {
 		t.Fatalf("apply: %v", err)
 	}
 	want := []string{
-		"point:body_end", "click", "enter", "text:소제목",
+		"point:body_end", "click", "enter", "text:소제목", "enter",
 		"point:body_paragraph", "click", "activate:format_menu", "activate:format_heading",
 	}
 	if got := editor.recorded(); !slices.Equal(got, want) {
@@ -528,9 +539,11 @@ func TestApplyListConvertsThenAppendsTheRemainingItems(t *testing.T) {
 	if err := port.Apply(context.Background(), mutation); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
+	// The two Enters after the last item commit its trailing word and drop the empty item
+	// that committing Enter opened.
 	want := []string{
 		"point:body_paragraph", "click", "activate:list_menu", "activate:list_bullet",
-		"enter", "text:둘", "enter", "text:셋",
+		"enter", "text:둘", "enter", "text:셋", "enter", "enter",
 	}
 	if got := editor.recorded(); !slices.Equal(got, want) {
 		t.Fatalf("driver actions = %v, want %v", got, want)
@@ -739,5 +752,420 @@ func TestBodyCaretAimsAtTheTrailingEdgeRatherThanTheBoxCentre(t *testing.T) {
 	}
 	if centreX >= trailingX {
 		t.Fatalf("centre x=%v is not left of the trailing edge x=%v", centreX, trailingX)
+	}
+}
+
+// A caption is entered into the caption module of ONE addressed image ordinal. The module
+// is created with its image, so the ordinal is the whole address: no selector and no
+// remembered point reach the driver from the caller.
+func TestApplyImageCaptionResolvesTheAddressedOrdinalThenTypes(t *testing.T) {
+	editor := &fakeEditor{}
+	port := applyPort(t, editor)
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationImageCaption, Ordinal: 3, Text: "캡션"}); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	want := []string{"point:image_select", "click", "point:image_caption", "click", "text:캡션", "enter"}
+	if got := editor.recorded(); !slices.Equal(got, want) {
+		t.Fatalf("driver actions = %v, want %v", got, want)
+	}
+}
+
+// A caption applied to an ordinal with no image, or to an image whose caption module is
+// missing or duplicated, fails closed before any text is typed (PUB-21). The same holds when
+// the image itself cannot be selected, since an unselected image keeps its caption boxless.
+func TestApplyImageCaptionRefusesAWrongOrdinalOrAmbiguousModule(t *testing.T) {
+	for name, resolved := range map[string]driverPoint{
+		"no image at that ordinal": {Matches: 0},
+		"two caption modules":      {Matches: 2},
+	} {
+		t.Run(name, func(t *testing.T) {
+			editor := &fakeEditor{point: func(string, int) driverPoint { return resolved }}
+			port := applyPort(t, editor)
+			err := port.Apply(context.Background(), Mutation{Kind: MutationImageCaption, Ordinal: 9, Text: "캡션"})
+			var portErr PortError
+			if !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+				t.Fatalf("err = %v, want editor_changed", err)
+			}
+			if got := editor.recorded(); slices.Contains(got, "text:캡션") {
+				t.Fatalf("a caption was typed anyway: %v", got)
+			}
+		})
+	}
+}
+
+// An empty caption is not written at all: the placeholder the module carries while empty is
+// the editor's own chrome, and typing a blank string into it would be a planning fault.
+func TestApplyImageCaptionRefusesAnEmptyCaption(t *testing.T) {
+	for name, text := range map[string]string{"empty": "", "blank": "   "} {
+		t.Run(name, func(t *testing.T) {
+			editor := &fakeEditor{}
+			port := applyPort(t, editor)
+			var portErr PortError
+			if err := port.Apply(context.Background(), Mutation{Kind: MutationImageCaption, Ordinal: 0, Text: text}); !errors.As(err, &portErr) || portErr.Kind != FailureSafe {
+				t.Fatalf("err = %v, want safe", err)
+			}
+			if got := editor.recorded(); len(got) != 0 {
+				t.Fatalf("the page was touched anyway: %v", got)
+			}
+		})
+	}
+}
+
+// A caption module reads back its placeholder while empty, so the projection must read it
+// only when the module is not `se-is-empty`. An image with no caption contributes an empty
+// caption to the body, never the placeholder string.
+func TestProjectionNeverReadsTheCaptionPlaceholderAsContent(t *testing.T) {
+	observation := closedObservation()
+	blocks := observation["blocks"].([]map[string]any)
+	blocks[3] = map[string]any{
+		"kind": "image", "text": "", "ordinal": 0,
+		// What the script yields for an `se-is-empty` module: the empty string, never
+		// 사진 설명을 입력하세요.
+		"caption": "", "uploaded": true, "source": "a.jpg",
+	}
+	editor := &fakeEditor{observation: observation}
+	port := applyPort(t, editor)
+	snapshot, err := port.Observe(context.Background())
+	if err != nil {
+		t.Fatalf("observe: %v", err)
+	}
+	for _, block := range snapshot.Body {
+		if strings.Contains(block.Caption, "사진 설명") {
+			t.Fatalf("the placeholder entered the projection: %+v", block)
+		}
+	}
+	if snapshot.Body[3].Kind != SemanticImage || snapshot.Body[3].Caption != "" {
+		t.Fatalf("image block = %+v", snapshot.Body[3])
+	}
+	if !strings.Contains(editorObservationScript, "se-is-empty") {
+		t.Fatal("the observation script no longer guards the caption's empty state")
+	}
+}
+
+// The upload locator is the image BUTTON, not the hidden file input: the input does not
+// exist until that button is clicked, so counting the input would make Publisher.mutate's
+// pre-check unsatisfiable for every upload.
+func TestUploadLocatorCountsTheImageButtonRatherThanTheHiddenInput(t *testing.T) {
+	manifest, err := Manifest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := manifest.SemanticLocators["upload_image"].CSS; got != "button.se-image-toolbar-button" {
+		t.Fatalf("upload_image locator = %q", got)
+	}
+	if strings.Contains(editorObservationScript, "upload_image: count('input[type=file]#hidden-file')") {
+		t.Fatal("the observation still counts the hidden input as the upload locator")
+	}
+	if !strings.Contains(editorObservationScript, "upload_image: count('button.se-image-toolbar-button')") {
+		t.Fatal("the observation does not count the image button as the upload locator")
+	}
+	if expectedLocatorMatches(MutationUploadImage) != 1 {
+		t.Fatal("the upload pre-check no longer expects exactly one match")
+	}
+}
+
+// PUB-19: only enumerated current-job JPEG paths may reach the restricted upload operation.
+// Prepare builds the plan from that set, so this guard is structural — it refuses a plan
+// that named anything else, planned the wrong number of uploads, or hung an asset path on a
+// kind that has no business carrying one.
+func TestPlanRefusesAnyAssetPathOutsideTheJobsEnumeratedSet(t *testing.T) {
+	paths := []string{"/jobs/x/0000.jpg", "/jobs/x/0001.jpg"}
+	upload := func(ordinal int, path string) plannedMutation {
+		return plannedMutation{mutation: Mutation{Kind: MutationUploadImage, Ordinal: ordinal, AssetPath: path}, update: func(*Snapshot) {}}
+	}
+	step := func(kind MutationKind) plannedMutation {
+		return plannedMutation{mutation: Mutation{Kind: kind}, update: func(*Snapshot) {}}
+	}
+	valid := []plannedMutation{step(MutationTitle), upload(0, paths[0]), upload(1, paths[1]), step(MutationOpenSettings)}
+	if err := assertEnumeratedAssets(valid, paths); err != nil {
+		t.Fatalf("the enumerated plan was refused: %v", err)
+	}
+	for name, plan := range map[string][]plannedMutation{
+		"a path outside the set":     {upload(0, paths[0]), upload(1, "/etc/passwd")},
+		"another job's asset":        {upload(0, paths[0]), upload(1, "/jobs/y/0000.jpg")},
+		"a relative path":            {upload(0, paths[0]), upload(1, "0001.jpg")},
+		"too few uploads":            {upload(0, paths[0])},
+		"the same asset twice":       {upload(0, paths[0]), upload(1, paths[0])},
+		"an asset path on a caption": {upload(0, paths[0]), upload(1, paths[1]), {mutation: Mutation{Kind: MutationImageCaption, AssetPath: paths[0]}, update: func(*Snapshot) {}}},
+		// PUB-21's ordinal order, refused three ways.
+		"ordinals reversed":   {upload(1, paths[1]), upload(0, paths[0])},
+		"an ordinal skipped":  {upload(0, paths[0]), upload(2, paths[1])},
+		"an ordinal repeated": {upload(0, paths[0]), upload(0, paths[1])},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := assertEnumeratedAssets(plan, paths); err == nil {
+				t.Fatal("the plan was accepted")
+			}
+		})
+	}
+}
+
+// PUB-36: geometry is read at action time and never recorded, stored, replayed or carried
+// between mutations or runs. This walks every type the image path crosses and proves none of
+// them has a field that could hold a resolved point, and that the port itself keeps no such
+// field between calls.
+func TestNoTypeOnTheImagePathCanHoldResolvedGeometry(t *testing.T) {
+	// Exact names for the ones that are whole words on their own, substrings for the rest.
+	// "Body" is not geometry just because it ends in a y.
+	exact := []string{"x", "y", "left", "top", "right", "bottom", "width", "height", "offset", "position"}
+	substring := []string{"point", "rect", "coord", "viewport", "screenx", "geometry", "clientx", "clienty"}
+	walked := 0
+	var walk func(t *testing.T, typ reflect.Type, path string)
+	walk = func(t *testing.T, typ reflect.Type, path string) {
+		for typ.Kind() == reflect.Pointer || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
+			typ = typ.Elem()
+		}
+		if typ.Kind() != reflect.Struct {
+			return
+		}
+		walked++
+		for index := 0; index < typ.NumField(); index++ {
+			field := typ.Field(index)
+			lowered := strings.ToLower(field.Name)
+			if slices.Contains(exact, lowered) {
+				t.Fatalf("%s.%s could hold resolved geometry", path, field.Name)
+			}
+			for _, banned := range substring {
+				if strings.Contains(lowered, banned) {
+					t.Fatalf("%s.%s could hold resolved geometry", path, field.Name)
+				}
+			}
+			if field.Type == reflect.TypeOf(driverPoint{}) {
+				t.Fatalf("%s.%s retains a resolved point", path, field.Name)
+			}
+			if field.Type.Kind() == reflect.Struct && field.Type.PkgPath() == typ.PkgPath() {
+				walk(t, field.Type, path+"."+field.Name)
+			}
+		}
+	}
+	for _, subject := range []any{Mutation{}, SemanticBlock{}, Snapshot{}, Prepared{}, PreparationResult{}, Readback{}, FinalControl{}} {
+		typ := reflect.TypeOf(subject)
+		walk(t, typ, typ.Name())
+	}
+	if walked < 7 {
+		t.Fatalf("walked only %d types", walked)
+	}
+	// The port holds the settings latch and the manifest, and nothing shaped like a point.
+	portType := reflect.TypeOf(CDPPort{})
+	for index := 0; index < portType.NumField(); index++ {
+		if portType.Field(index).Type == reflect.TypeOf(driverPoint{}) {
+			t.Fatalf("CDPPort.%s caches a resolved point between calls", portType.Field(index).Name)
+		}
+	}
+}
+
+// The upload is one atomic sequence, and its order matters: the photo-library sidebar that a
+// previous upload left over the editor is closed first, the caret is placed from the body's
+// own last paragraph, interception is enabled BEFORE the click that would otherwise open the
+// native chooser, and the hidden input — which that click is what creates — receives exactly
+// one enumerated path. Verified live 2026-09-07 and 2026-09-10.
+func TestApplyUploadImageRunsTheWholeSequenceInOrder(t *testing.T) {
+	editor := &fakeEditor{}
+	port := applyPort(t, editor)
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationUploadImage, Ordinal: 0, AssetPath: "/jobs/x/0000.jpg"}); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	want := []string{
+		"activate:close_library",
+		"point:body_end", "click",
+		"intercept",
+		"point:image_add", "click",
+		"query:input[type=file]#hidden-file", "upload:/jobs/x/0000.jpg",
+		"activate:close_library",
+	}
+	if got := editor.recorded(); !slices.Equal(got, want) {
+		t.Fatalf("driver actions = %v, want %v", got, want)
+	}
+	if !slices.Equal(editor.uploaded, []string{"/jobs/x/0000.jpg"}) {
+		t.Fatalf("uploaded %v, want exactly one file", editor.uploaded)
+	}
+}
+
+// The upload locator is satisfiable before the click and the input only exists after it: the
+// pre-check counts the image button, and the file input is absent until the button is
+// clicked. This pins both halves of that timing.
+func TestTheHiddenFileInputIsAbsentAtPreCheckTimeAndPresentAtUploadTime(t *testing.T) {
+	editor := &fakeEditor{}
+	port := applyPort(t, editor)
+	snapshot, err := port.Observe(context.Background())
+	if err != nil {
+		t.Fatalf("observe: %v", err)
+	}
+	if snapshot.LocatorMatches[MutationUploadImage] != 1 {
+		t.Fatalf("the upload pre-check saw %d matches before any click", snapshot.LocatorMatches[MutationUploadImage])
+	}
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationUploadImage, AssetPath: "/jobs/x/0000.jpg"}); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	got := editor.recorded()
+	query := slices.Index(got, "query:input[type=file]#hidden-file")
+	click := slices.Index(got, "point:image_add")
+	if query < 0 || click < 0 || query < click {
+		t.Fatalf("the hidden input was resolved before the button that creates it: %v", got)
+	}
+	if !slices.Equal(editor.uploaded, []string{"/jobs/x/0000.jpg"}) {
+		t.Fatalf("uploaded %v", editor.uploaded)
+	}
+}
+
+// The hidden input is created on demand, so it can also fail to appear. That is an editor
+// mismatch, not a retryable hiccup: no file is handed anywhere and the upload fails closed.
+func TestApplyUploadImageRefusesWhenTheFileInputNeverAppears(t *testing.T) {
+	editor := &fakeEditor{fileInputMissing: true}
+	port := applyPort(t, editor)
+	err := port.Apply(context.Background(), Mutation{Kind: MutationUploadImage, AssetPath: "/jobs/x/0000.jpg"})
+	var portErr PortError
+	if !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+		t.Fatalf("err = %v, want editor_changed", err)
+	}
+	if len(editor.uploaded) != 0 {
+		t.Fatalf("a file was handed over anyway: %v", editor.uploaded)
+	}
+}
+
+// An upload with no path is a planning fault and never touches the page.
+func TestApplyUploadImageRefusesAnEmptyPath(t *testing.T) {
+	editor := &fakeEditor{}
+	port := applyPort(t, editor)
+	var portErr PortError
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationUploadImage, AssetPath: "  "}); !errors.As(err, &portErr) || portErr.Kind != FailureSafe {
+		t.Fatalf("err = %v, want safe", err)
+	}
+	if got := editor.recorded(); len(got) != 0 {
+		t.Fatalf("the page was touched anyway: %v", got)
+	}
+}
+
+// The photo-library sidebar overlays the editor's right edge, which is exactly where a caret
+// point is taken. A sidebar that will not close is a refusal, because the caret click after
+// it would land on the panel rather than in the document.
+func TestApplyUploadImageRefusesASidebarThatWillNotClose(t *testing.T) {
+	for name, resolved := range map[string]driverActivation{
+		"the close control is gone":  {Matches: 0},
+		"two panels are shown":       {Matches: 2},
+		"the control does not click": {Matches: 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			editor := &fakeEditor{activate: func(control, _ string) driverActivation {
+				if control == "close_library" {
+					return resolved
+				}
+				return driverActivation{Matches: 1, Activated: true}
+			}}
+			port := applyPort(t, editor)
+			err := port.Apply(context.Background(), Mutation{Kind: MutationUploadImage, AssetPath: "/jobs/x/0000.jpg"})
+			var portErr PortError
+			if !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+				t.Fatalf("err = %v, want editor_changed", err)
+			}
+			if len(editor.uploaded) != 0 {
+				t.Fatalf("a file was handed over anyway: %v", editor.uploaded)
+			}
+		})
+	}
+}
+
+// A caret point that resolves but does not actually hit the element the locator resolved is
+// refused rather than clicked. That is not defensive: an image upload opens a 300 px sidebar
+// over the editor's right edge, and every caret click taken there landed on the panel and
+// left the caret outside the document (observed live 2026-09-10).
+func TestTheDriverVerifiesACaretPointActuallyHitsItsParagraph(t *testing.T) {
+	if !strings.Contains(driverPointFn, "elementFromPoint") {
+		t.Fatal("the driver no longer hit-tests the point it is about to click")
+	}
+	if !strings.Contains(driverPointFn, "scrollIntoView") {
+		t.Fatal("the driver no longer brings the resolved element into view before reading its rect")
+	}
+	// Both body caret branches and both control branches go through the verifying helper.
+	for _, target := range []string{"body_end", "body_paragraph", "image_add", "image_select", "image_caption"} {
+		clause := "if (target === '" + target + "')"
+		start := strings.Index(driverPointFn, clause)
+		if start < 0 {
+			t.Fatalf("the driver has no %s branch", target)
+		}
+		rest := driverPointFn[start+len(clause):]
+		if next := strings.Index(rest, "if (target === "); next >= 0 {
+			rest = rest[:next]
+		}
+		if !strings.Contains(rest, "caretEnd(") && !strings.Contains(rest, "point(") && !strings.Contains(rest, "at(") {
+			t.Fatalf("%s resolves a point without the verifying helper: %s", target, rest)
+		}
+	}
+}
+
+// An empty append target is typed into rather than stepped over with Enter: SmartEditor's
+// own opening paragraph and the slot it leaves after an image are both empty, and pressing
+// Enter there strands a blank paragraph the published post would render as a blank line.
+func TestApplyTextTypesIntoAnAlreadyEmptyParagraphWithoutALeadingEnter(t *testing.T) {
+	editor := &fakeEditor{paragraph: func(int) driverParagraphState {
+		return driverParagraphState{Matches: 1, Total: 1, Kind: "se-text", Empty: true}
+	}}
+	port := applyPort(t, editor)
+	if err := port.Apply(context.Background(), Mutation{Kind: MutationText, Text: "첫 문단"}); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	want := []string{"point:body_end", "click", "text:첫 문단", "enter"}
+	if got := editor.recorded(); !slices.Equal(got, want) {
+		t.Fatalf("driver actions = %v, want %v", got, want)
+	}
+}
+
+// A photo counts only once a fresh observation shows exactly one more SETTLED image. Until
+// then SmartEditor is still splitting the caret's component around the new image and the
+// projection reads a paragraph whose tail has been detached — which is how a clean-editor
+// run read back "LIVE T1 첫 " for a paragraph that had just read whole. An upload that adds
+// none, adds two, or never finishes processing all fail closed (PUB-21).
+func TestApplyUploadImageWaitsForExactlyOneSettledImage(t *testing.T) {
+	for name, editor := range map[string]*fakeEditor{
+		"no image appeared": {imageAddsNone: true},
+		"two images added":  {imageAddsTwo: true},
+		"never finishes":    {imageNeverSettle: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			port := applyPort(t, editor)
+			err := port.Apply(context.Background(), Mutation{Kind: MutationUploadImage, AssetPath: "/jobs/x/0000.jpg"})
+			var portErr PortError
+			if !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+				t.Fatalf("err = %v, want editor_changed", err)
+			}
+		})
+	}
+}
+
+// An upload refuses to start while an earlier photo is still processing: "exactly one more"
+// has to be an observation, not a guess about which of two pending images is ours.
+func TestApplyUploadImageRefusesWhileAnEarlierPhotoIsStillProcessing(t *testing.T) {
+	editor := &fakeEditor{baseImages: 2, imageNeverSettle: true}
+	// One upload already happened, so the fake reports an unsettled image before this one.
+	editor.uploaded = []string{"/jobs/x/0000.jpg"}
+	port := applyPort(t, editor)
+	err := port.Apply(context.Background(), Mutation{Kind: MutationUploadImage, AssetPath: "/jobs/x/0001.jpg"})
+	var portErr PortError
+	if !errors.As(err, &portErr) || portErr.Kind != FailureEditorChanged {
+		t.Fatalf("err = %v, want editor_changed", err)
+	}
+	if slices.Contains(editor.recorded(), "upload:/jobs/x/0001.jpg") {
+		t.Fatalf("the second file was handed over anyway: %v", editor.recorded())
+	}
+}
+
+// Eight photos in a row each settle before the next begins, so the count the driver requires
+// is always "one more than what this upload started from".
+func TestApplyUploadImageCountsUpAcrossEightPhotos(t *testing.T) {
+	editor := &fakeEditor{}
+	port := applyPort(t, editor)
+	for ordinal := 0; ordinal < 8; ordinal++ {
+		path := fmt.Sprintf("/jobs/x/%04d.jpg", ordinal)
+		if err := port.Apply(context.Background(), Mutation{Kind: MutationUploadImage, Ordinal: ordinal, AssetPath: path}); err != nil {
+			t.Fatalf("upload %d: %v", ordinal, err)
+		}
+	}
+	if len(editor.uploaded) != 8 {
+		t.Fatalf("uploaded %v", editor.uploaded)
+	}
+	for ordinal, path := range editor.uploaded {
+		if path != fmt.Sprintf("/jobs/x/%04d.jpg", ordinal) {
+			t.Fatalf("upload %d handed over %q", ordinal, path)
+		}
 	}
 }

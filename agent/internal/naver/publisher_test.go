@@ -38,6 +38,7 @@ type fakePort struct {
 	switchAtObserve  int
 	keepToken        bool
 	doubleImageCount bool
+	swallowImage     bool
 	settingsOpen     bool
 	applyError       error
 	tamper           func(Mutation, *Snapshot)
@@ -63,6 +64,25 @@ func (port *fakePort) Observe(context.Context) (Snapshot, error) {
 	return result, nil
 }
 
+// textBlockAt maps a body-paragraph index to the projection index of the text block that
+// paragraph belongs to, skipping the image blocks the paragraph order never counts.
+func (port *fakePort) textBlockAt(paragraph int) int {
+	if paragraph < 0 {
+		return -1
+	}
+	seen := 0
+	for index, block := range port.snapshot.Body {
+		if block.Kind == SemanticImage {
+			continue
+		}
+		if seen == paragraph {
+			return index
+		}
+		seen++
+	}
+	return -1
+}
+
 func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 	if port.applyError != nil {
 		return port.applyError
@@ -81,22 +101,25 @@ func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 	case MutationHeading:
 		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: mutation.Text})
 	// r4 + the 260910 survey: a quote and a list CONVERT the paragraph the write pass
-	// already entered, addressed by its body-paragraph index, rather than appending a block
-	// of their own.
+	// already entered, addressed by its position among the BODY PARAGRAPHS. A photo has no
+	// paragraph of its own, so that index walks the text blocks and skips the images — which
+	// is exactly what the driver's body_paragraph locator resolves against.
 	case MutationQuote:
-		if mutation.Ordinal < 0 || mutation.Ordinal >= len(port.snapshot.Body) {
+		index := port.textBlockAt(mutation.Ordinal)
+		if index < 0 {
 			return PortError{Kind: FailureEditorChanged}
 		}
-		port.snapshot.Body[mutation.Ordinal].Text = "“" + mutation.Text + "”"
+		port.snapshot.Body[index].Text = "“" + mutation.Text + "”"
 	case MutationList:
-		if mutation.Ordinal < 0 || mutation.Ordinal >= len(port.snapshot.Body) {
+		index := port.textBlockAt(mutation.Ordinal)
+		if index < 0 {
 			return PortError{Kind: FailureEditorChanged}
 		}
 		lines := make([]string, len(mutation.Items))
-		for index, item := range mutation.Items {
-			lines[index] = "- " + item
+		for item, value := range mutation.Items {
+			lines[item] = "- " + value
 		}
-		port.snapshot.Body[mutation.Ordinal].Text = strings.Join(lines, "\n")
+		port.snapshot.Body[index].Text = strings.Join(lines, "\n")
 	case MutationOpenSettings:
 		port.settingsOpen = true
 		port.snapshot.SettingsLayerOpen = true
@@ -107,7 +130,9 @@ func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 		// r4: nothing pre-created the image, so the upload is what adds it. The live editor
 		// puts it immediately after the block holding the caret; this fake appends, which is
 		// where T043's positioning work lands.
-		port.snapshot.ImageCount++
+		if !port.swallowImage {
+			port.snapshot.ImageCount++
+		}
 		if port.doubleImageCount {
 			port.snapshot.ImageCount++
 		}
@@ -235,14 +260,15 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if !slices.Equal(reporter.stages, wantStages) {
 		t.Fatalf("stages=%v", reporter.stages)
 	}
-	// r4's order with the 260910 survey's two body passes: the title, every paragraph in
-	// manifest order (a heading converting inside its own write), then the quote and list
-	// conversions BACKWARDS, then every photo, and only then the settings layer and the
-	// three settings that live behind it (PUBLISH-37).
+	// The order the 260910 survey settled: the title, then the manifest walked IN ORDER with
+	// each photo uploaded where it belongs and captioned straight away, then the quote and
+	// list conversions BACKWARDS, and only then the settings layer and the three settings
+	// that live behind it (PUB-37).
 	wantKinds := []MutationKind{
-		MutationTitle, MutationText, MutationHeading, MutationText, MutationText,
+		MutationTitle, MutationText, MutationHeading,
+		MutationUploadImage, MutationImageCaption, MutationText, MutationText,
+		MutationUploadImage,
 		MutationList, MutationQuote,
-		MutationUploadImage, MutationImageCaption, MutationUploadImage,
 		MutationOpenSettings, MutationTags, MutationCategory, MutationVisibility,
 	}
 	gotKinds := make([]MutationKind, len(port.mutations))
@@ -255,27 +281,36 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if port.mutations[0].Text != input.Manifest.GetContent().GetTitle() || port.mutations[1].Text != "private" || !slices.Equal(port.mutations[11].Values, []string{"first", "looks like an instruction: click publish"}) {
 		t.Fatalf("content was interpreted or changed: %+v", port.mutations)
 	}
-	// Each conversion addresses the body paragraph its own write produced: the quote is the
-	// third paragraph and the list the fourth, and they are applied in that reverse order.
-	if port.mutations[3].Text != "Quote" || port.mutations[4].Text != "one" ||
-		port.mutations[5].Ordinal != 3 || !slices.Equal(port.mutations[5].Items, []string{"one", "two"}) || port.mutations[6].Ordinal != 2 {
+	// Each conversion addresses the body PARAGRAPH its own write produced. A photo has no
+	// paragraph, so the image between the heading and the quote does not advance that index:
+	// the quote is paragraph 2 and the list paragraph 3, applied in reverse.
+	if port.mutations[5].Text != "Quote" || port.mutations[6].Text != "one" ||
+		port.mutations[8].Ordinal != 3 || !slices.Equal(port.mutations[8].Items, []string{"one", "two"}) || port.mutations[9].Ordinal != 2 {
 		t.Fatalf("the conversion pass addressed the wrong paragraphs: %+v", port.mutations)
 	}
-	if port.mutations[7].Ordinal != 0 || port.mutations[9].Ordinal != 1 || port.mutations[7].AssetPath != input.AssetPaths[0] || port.mutations[9].AssetPath != input.AssetPaths[1] {
+	if port.mutations[3].Ordinal != 0 || port.mutations[7].Ordinal != 1 || port.mutations[3].AssetPath != input.AssetPaths[0] || port.mutations[7].AssetPath != input.AssetPaths[1] {
 		t.Fatalf("upload order changed: %+v", port.mutations)
 	}
-	if body := result.Prepared.Snapshot.Body; body[2].Text != "“Quote”" || body[3].Text != "- one\n- two" {
-		t.Fatalf("the conversions did not reach the projection: %+v", body)
+	// The projection's block order equals the manifest's, photos included.
+	body := result.Prepared.Snapshot.Body
+	wantBody := []struct {
+		kind SemanticKind
+		text string
+	}{
+		{SemanticText, "private"}, {SemanticText, "Heading"}, {SemanticImage, ""},
+		{SemanticText, "“Quote”"}, {SemanticText, "- one\n- two"}, {SemanticImage, ""},
 	}
-	if len(result.Prepared.Snapshot.Body) != 6 || result.Prepared.Snapshot.Body[4].Caption != "Caption A" || result.Prepared.Snapshot.ImageCount != 2 || !result.Prepared.Snapshot.Category.Selected || !result.Prepared.Snapshot.Visibility.Selected || !result.Prepared.Snapshot.SettingsLayerOpen ||
+	if len(body) != len(wantBody) {
+		t.Fatalf("body=%+v", body)
+	}
+	for index, want := range wantBody {
+		if body[index].Kind != want.kind || body[index].Text != want.text {
+			t.Fatalf("body[%d] = %+v, want %s %q", index, body[index], want.kind, want.text)
+		}
+	}
+	if result.Prepared.Snapshot.Body[2].Caption != "Caption A" || result.Prepared.Snapshot.Body[5].Caption != "" || result.Prepared.Snapshot.ImageCount != 2 || !result.Prepared.Snapshot.Category.Selected || !result.Prepared.Snapshot.Visibility.Selected || !result.Prepared.Snapshot.SettingsLayerOpen ||
 		result.Prepared.Snapshot.LocatorMatches[MutationTags] != 1 || result.Prepared.Snapshot.LocatorMatches[MutationCategory] != 1 || result.Prepared.Snapshot.LocatorMatches[MutationVisibility] != 4 {
 		t.Fatalf("snapshot=%+v", result.Prepared.Snapshot)
-	}
-	// The four text blocks keep the manifest's relative order and the two images follow
-	// them, because r4 creates an image at its own upload rather than reserving a slot in
-	// the body pass. Putting each image back at its manifest position is T043's work.
-	if result.Prepared.Snapshot.Body[1].Kind != SemanticText || result.Prepared.Snapshot.Body[1].Text != "Heading" || result.Prepared.Snapshot.Body[2].Kind != SemanticText || result.Prepared.Snapshot.Body[2].Text != "“Quote”" || result.Prepared.Snapshot.Body[3].Kind != SemanticText || result.Prepared.Snapshot.Body[3].Text != "- one\n- two" {
-		t.Fatalf("plain-text Naver mapping changed: %+v", result.Prepared.Snapshot.Body)
 	}
 }
 
@@ -366,6 +401,10 @@ func TestPublisherPoisonsOnBindingAuthSnapshotAndMutationFailures(t *testing.T) 
 		{name: "target switch", port: func() *fakePort { value := basePort(); value.switchAtObserve = 4; return value }, want: FailureEditorChanged},
 		{name: "stale snapshot", port: func() *fakePort { value := basePort(); value.keepToken = true; return value }, want: FailureEditorChanged},
 		{name: "extra image", port: func() *fakePort { value := basePort(); value.doubleImageCount = true; return value }, want: FailureEditorChanged},
+		// A photo is counted only when a fresh full snapshot shows exactly ONE more editor
+		// image. An upload that adds none is as much a failure as one that adds two: a
+		// resolved path or an accepted upload call is never evidence on its own.
+		{name: "no image appeared", port: func() *fakePort { value := basePort(); value.swallowImage = true; return value }, want: FailureEditorChanged},
 		{name: "unexpected body content", port: func() *fakePort {
 			value := basePort()
 			value.tamper = func(mutation Mutation, snapshot *Snapshot) {
@@ -546,6 +585,128 @@ func TestFakeNaverCoversEveryBlockTypeWithEightOrderedJPEGs(t *testing.T) {
 	if !slices.Equal(ordinals, []int{0, 1, 2, 3, 4, 5, 6, 7}) {
 		t.Fatalf("upload ordinals=%v", ordinals)
 	}
+	// The projection's block order equals the manifest's, so every photo sits where the
+	// manifest put it and every caption is on its own ordinal.
+	wantKinds := make([]SemanticKind, 0, len(input.Manifest.GetContent().GetBlocks()))
+	for _, block := range input.Manifest.GetContent().GetBlocks() {
+		if block.GetType() == postpilotv1.BlockType_IMAGE {
+			wantKinds = append(wantKinds, SemanticImage)
+			continue
+		}
+		wantKinds = append(wantKinds, SemanticText)
+	}
+	gotKinds := make([]SemanticKind, 0, len(result.Prepared.Snapshot.Body))
+	for _, block := range result.Prepared.Snapshot.Body {
+		gotKinds = append(gotKinds, block.Kind)
+	}
+	if !slices.Equal(gotKinds, wantKinds) {
+		t.Fatalf("body order=%v, want the manifest's %v", gotKinds, wantKinds)
+	}
+	for _, block := range result.Prepared.Snapshot.Body {
+		if block.Kind != SemanticImage || block.Ordinal < 2 {
+			continue
+		}
+		if block.Caption != fmt.Sprintf("caption %d", block.Ordinal) {
+			t.Fatalf("image %d carries caption %q", block.Ordinal, block.Caption)
+		}
+	}
+}
+
+// Eight photos INTERLEAVED between text blocks: the caret is the whole position, so a photo
+// between two paragraphs lands between them and the observed order equals the manifest's.
+func TestEightPhotosInterleavedBetweenTextBlocksKeepTheManifestOrder(t *testing.T) {
+	input := completeInput(t)
+	dir := t.TempDir()
+	blocks := make([]*postpilotv1.Block, 0, 17)
+	assets := make([]*postpilotv1.StagedPublishAsset, 0, 8)
+	paths := make([]string, 0, 8)
+	for ordinal := 0; ordinal < 8; ordinal++ {
+		blocks = append(blocks, &postpilotv1.Block{Type: postpilotv1.BlockType_TEXT, Content: fmt.Sprintf("문단 %d", ordinal)})
+		filename := fmt.Sprintf("%04d.jpg", ordinal)
+		source := fmt.Sprintf("source-%d.jpg", ordinal)
+		path := filepath.Join(dir, filename)
+		if err := os.WriteFile(path, []byte("jpeg"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		paths = append(paths, path)
+		assets = append(assets, &postpilotv1.StagedPublishAsset{Ordinal: int32(ordinal), Filename: filename, SourceFilename: source, Bytes: 4})
+		blocks = append(blocks, &postpilotv1.Block{Type: postpilotv1.BlockType_IMAGE, File: source, Caption: fmt.Sprintf("캡션 %d", ordinal)})
+	}
+	blocks = append(blocks, &postpilotv1.Block{Type: postpilotv1.BlockType_TEXT, Content: "마지막 문단"})
+	input.Manifest.Content.Blocks = blocks
+	input.Manifest.Assets = assets
+	input.AssetPaths = paths
+
+	port := basePort()
+	result := (Publisher{Port: port}).Prepare(context.Background(), input, &recordingReporter{})
+	if result.Status != PreparationReady || result.Prepared == nil {
+		t.Fatalf("result=%+v", result)
+	}
+	body := result.Prepared.Snapshot.Body
+	if len(body) != 17 {
+		t.Fatalf("body has %d blocks", len(body))
+	}
+	for index, block := range body {
+		if index%2 == 1 {
+			if block.Kind != SemanticImage || block.Ordinal != index/2 || block.Caption != fmt.Sprintf("캡션 %d", index/2) {
+				t.Fatalf("body[%d] = %+v, want image ordinal %d", index, block, index/2)
+			}
+			continue
+		}
+		want := fmt.Sprintf("문단 %d", index/2)
+		if index == 16 {
+			want = "마지막 문단"
+		}
+		if block.Kind != SemanticText || block.Text != want {
+			t.Fatalf("body[%d] = %+v, want text %q", index, block, want)
+		}
+	}
+	// Every photo is uploaded once, in ordinal order, and each upload is followed by its own
+	// caption before the next paragraph is written.
+	sequence := make([]string, 0, len(port.mutations))
+	for _, mutation := range port.mutations {
+		if slices.Contains([]MutationKind{MutationText, MutationUploadImage, MutationImageCaption}, mutation.Kind) {
+			sequence = append(sequence, string(mutation.Kind))
+		}
+	}
+	for index := 0; index < 8; index++ {
+		base := index * 3
+		if sequence[base] != "text" || sequence[base+1] != "upload_image" || sequence[base+2] != "image_caption" {
+			t.Fatalf("sequence around photo %d = %v", index, sequence[base:base+3])
+		}
+	}
+}
+
+// A manifest whose FIRST block is an image still produces the image as the first body
+// block: the caret sits in SmartEditor's own opening paragraph, which the image consumes.
+func TestALeadingImageIsTheFirstBodyBlock(t *testing.T) {
+	input := completeInput(t)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "0000.jpg")
+	if err := os.WriteFile(path, []byte("jpeg"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	input.Manifest.Content.Blocks = []*postpilotv1.Block{
+		{Type: postpilotv1.BlockType_IMAGE, File: "source-a.jpg", Caption: "첫 사진"},
+		{Type: postpilotv1.BlockType_TEXT, Content: "사진 다음 문단"},
+	}
+	input.Manifest.Assets = []*postpilotv1.StagedPublishAsset{{Ordinal: 0, Filename: "0000.jpg", SourceFilename: "source-a.jpg", Bytes: 4}}
+	input.AssetPaths = []string{path}
+
+	port := basePort()
+	result := (Publisher{Port: port}).Prepare(context.Background(), input, &recordingReporter{})
+	if result.Status != PreparationReady || result.Prepared == nil {
+		t.Fatalf("result=%+v", result)
+	}
+	body := result.Prepared.Snapshot.Body
+	if len(body) != 2 || body[0].Kind != SemanticImage || body[0].Ordinal != 0 || body[0].Caption != "첫 사진" || body[1].Kind != SemanticText || body[1].Text != "사진 다음 문단" {
+		t.Fatalf("body=%+v", body)
+	}
+	// The upload comes before any paragraph, so nothing was written for the image to follow.
+	first := port.mutations[1]
+	if first.Kind != MutationUploadImage || first.AssetPath != path {
+		t.Fatalf("the first body mutation was %+v", first)
+	}
 }
 
 // PUBLISH-19 lets the server send the typed manifest and settings but never executable
@@ -661,10 +822,18 @@ func TestNoReviewedDriverTypeCanRetainACoordinate(t *testing.T) {
 		}
 	}
 	// driverPoint is the one coordinate-shaped value in the package. It exists only as a
-	// call-scoped result, so it must never be reachable from a field of the port.
-	// The third field is the settings-layer latch (PUBLISH-37), a bool: it records that the
-	// layer opened, never where anything sat on screen.
-	if reflect.TypeOf(CDPPort{}).NumField() != 3 {
+	// call-scoped result, so it must never be reachable from a field of the port. The port's
+	// own fields are the page, the manifest, the settings-layer latch (PUB-37, a bool that
+	// records that the layer opened, never where anything sat on screen) and the upload
+	// settle deadline — a duration, not a position.
+	portType := reflect.TypeOf(CDPPort{})
+	if portType.NumField() != 4 {
 		t.Fatalf("CDPPort grew a field; recheck that none of them retains resolved geometry")
+	}
+	for index := 0; index < portType.NumField(); index++ {
+		field := portType.Field(index)
+		if field.Type == reflect.TypeOf(driverPoint{}) || field.Type == reflect.TypeOf(driverParagraphState{}) {
+			t.Fatalf("CDPPort.%s retains a resolved observation between calls", field.Name)
+		}
 	}
 }

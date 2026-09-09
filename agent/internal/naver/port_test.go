@@ -26,7 +26,7 @@ func healthyObservation() map[string]any {
 			{"kind": "text", "text": "본문 문단", "ordinal": 0, "caption": "", "uploaded": false, "source": ""},
 			{"kind": "text", "text": "“인용”", "ordinal": 0, "caption": "", "uploaded": false, "source": ""},
 			{"kind": "text", "text": "- 하나\n- 둘", "ordinal": 0, "caption": "", "uploaded": false, "source": ""},
-			{"kind": "image", "text": "", "ordinal": 1, "caption": "캡션", "uploaded": true, "source": "a.jpg"},
+			{"kind": "image", "text": "", "ordinal": 0, "caption": "캡션", "uploaded": true, "source": "a.jpg"},
 		},
 		"image_count": 1,
 		"tags":        []string{"태그"},
@@ -70,6 +70,18 @@ type fakeEditor struct {
 	// assertions can be exercised.
 	deafList  bool
 	deafEnter bool
+	// The upload surface. fileInputMissing models the hidden input never appearing after
+	// the image button's click, which is a live failure mode: the input is created on
+	// demand by that click.
+	fileInputMissing bool
+	uploaded         []string
+	// The image surface after an upload: how many images the editor holds and how many have
+	// finished processing. baseImages seeds the count so the fake starts consistent with its
+	// observation, and the knobs model the three ways an upload fails to settle.
+	baseImages       int
+	imageAddsNone    bool
+	imageAddsTwo     bool
+	imageNeverSettle bool
 
 	mu               sync.Mutex
 	calls            int
@@ -81,9 +93,11 @@ type fakeEditor struct {
 	categoryExpanded bool
 	// The fake's model of the one addressed paragraph: a conversion switches its component
 	// kind, which is exactly what the port re-observes after activating a control.
-	convertedKind string
-	inList        bool
-	listItems     int
+	convertedKind    string
+	inList           bool
+	listItems        int
+	pendingEmptyItem bool
+	bodyEndEmpty     bool
 }
 
 func (editor *fakeEditor) record(entry string) {
@@ -98,7 +112,7 @@ func (editor *fakeEditor) recorded() []string {
 	return slices.Clone(editor.inputs)
 }
 
-func (editor *fakeEditor) paragraphState(index int) driverParagraphState {
+func (editor *fakeEditor) paragraphState(target string, index int) driverParagraphState {
 	if editor.paragraph != nil {
 		return editor.paragraph(index)
 	}
@@ -108,7 +122,13 @@ func (editor *fakeEditor) paragraphState(index int) driverParagraphState {
 	if editor.convertedKind != "" {
 		kind = editor.convertedKind
 	}
-	return driverParagraphState{Matches: 1, Total: 1, Kind: kind, InList: editor.inList, ListItems: editor.listItems}
+	state := driverParagraphState{Matches: 1, Total: 1, Kind: kind, InList: editor.inList, ListItems: editor.listItems}
+	// The append target is empty exactly when the last thing that happened there was the
+	// Enter that committed the previous write.
+	if target == "body_end" {
+		state.Empty = editor.bodyEndEmpty
+	}
+	return state
 }
 
 // convert models what the live editor does when one of the paragraph controls is activated:
@@ -130,13 +150,35 @@ func (editor *fakeEditor) convert(control string) {
 	}
 }
 
-// growList models Enter inside a list item appending another LI to the same UL.
+// growList models Enter inside a list: it appends another LI, and a SECOND Enter on that
+// still-empty item drops it and leaves the list — which is how the last item's trailing word
+// is committed without changing the list. The addressed paragraph stays in the list either
+// way, so inList is not cleared.
 func (editor *fakeEditor) growList() {
 	editor.mu.Lock()
 	defer editor.mu.Unlock()
-	if editor.inList && !editor.deafEnter {
-		editor.listItems++
+	if !editor.inList {
+		editor.bodyEndEmpty = true
+		return
 	}
+	if editor.deafEnter {
+		return
+	}
+	if editor.pendingEmptyItem {
+		editor.listItems--
+		editor.pendingEmptyItem = false
+		return
+	}
+	editor.listItems++
+	editor.pendingEmptyItem = true
+}
+
+// fillList models text typed into the item the last Enter opened.
+func (editor *fakeEditor) fillList() {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	editor.pendingEmptyItem = false
+	editor.bodyEndEmpty = false
 }
 
 func (editor *fakeEditor) settingsState() driverSettingsState {
@@ -298,9 +340,26 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 						editor.record("point:" + target)
 						editor.remember(target, "", "")
 						result = map[string]any{"result": map[string]any{"value": resolved}}
+					case strings.Contains(declaration, "settled += 1"):
+						editor.mu.Lock()
+						added := len(editor.uploaded)
+						editor.mu.Unlock()
+						images := editor.baseImages
+						switch {
+						case editor.imageAddsNone:
+						case editor.imageAddsTwo:
+							images += added * 2
+						default:
+							images += added
+						}
+						settled := images
+						if editor.imageNeverSettle && added > 0 {
+							settled = images - 1
+						}
+						result = map[string]any{"result": map[string]any{"value": driverImageState{Images: images, Settled: settled}}}
 					case strings.Contains(declaration, "list_items: list ?"):
-						index, _ := first.(float64)
-						result = map[string]any{"result": map[string]any{"value": editor.paragraphState(int(index))}}
+						index, _ := second.(float64)
+						result = map[string]any{"result": map[string]any{"value": editor.paragraphState(toString(first), int(index))}}
 					case strings.Contains(declaration, "layer_matches: layers.length"):
 						result = map[string]any{"result": map[string]any{"value": editor.settingsState()}}
 					case strings.Contains(declaration, "name_matches"):
@@ -321,6 +380,32 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 						}
 						result = map[string]any{"result": map[string]any{"value": resolved}}
 					}
+				case "Page.setInterceptFileChooserDialog":
+					if enabled, _ := call.Params["enabled"].(bool); enabled {
+						editor.record("intercept")
+					}
+				case "DOM.getDocument":
+					result = map[string]any{"root": map[string]any{"nodeId": 1}}
+				case "DOM.querySelector":
+					selector, _ := call.Params["selector"].(string)
+					nodeID := 0
+					// The hidden input exists only once the image button has been clicked,
+					// which is what makes counting it as the upload locator impossible.
+					if selector == "input[type=file]#hidden-file" && !editor.fileInputMissing && slices.Contains(editor.recorded(), "point:image_add") {
+						nodeID = 7
+					}
+					editor.record("query:" + selector)
+					result = map[string]any{"nodeId": nodeID}
+				case "DOM.setFileInputFiles":
+					files, _ := call.Params["files"].([]any)
+					names := make([]string, 0, len(files))
+					for _, file := range files {
+						names = append(names, toString(file))
+					}
+					editor.mu.Lock()
+					editor.uploaded = append(editor.uploaded, names...)
+					editor.mu.Unlock()
+					editor.record("upload:" + strings.Join(names, "|"))
 				case "Input.dispatchMouseEvent":
 					if phase, _ := call.Params["type"].(string); phase == "mousePressed" {
 						editor.record("click")
@@ -331,6 +416,7 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 					text, _ := call.Params["text"].(string)
 					editor.record("text:" + text)
 					editor.rememberText(text)
+					editor.fillList()
 				case "Input.dispatchKeyEvent":
 					if phase, _ := call.Params["type"].(string); phase == "rawKeyDown" {
 						editor.record("enter")
@@ -391,7 +477,7 @@ func TestObserveProjectsTheLiveEditorTheWayTheNaverExportMapsIt(t *testing.T) {
 		{Kind: SemanticText, Text: "본문 문단"},
 		{Kind: SemanticText, Text: "“인용”"},
 		{Kind: SemanticText, Text: "- 하나\n- 둘"},
-		{Kind: SemanticImage, Ordinal: 1, Caption: "캡션", Uploaded: true},
+		{Kind: SemanticImage, Ordinal: 0, Caption: "캡션", Uploaded: true},
 	}
 	if !equalBlocks(snapshot.Body, want) {
 		t.Fatalf("body=%+v, want %+v", snapshot.Body, want)

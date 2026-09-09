@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "driver_version": "1.0.0",
-  "signature_id": "smarteditor-one-20260910-a4",
+  "signature_id": "smarteditor-one-20260910-a5",
   "protocol_version": "1.3",
   "chromium_min_major": 136,
   "chromium_max_major": 152,
@@ -22,7 +22,7 @@
     "heading": {"css": ".se-body.__se-body", "ax_role": "textbox"},
     "quote": {"css": ".se-body.__se-body", "ax_role": "textbox"},
     "list": {"css": ".se-body.__se-body", "ax_role": "textbox"},
-    "upload_image": {"css": "input[type=file]#hidden-file", "ax_role": "button"},
+    "upload_image": {"css": "button.se-image-toolbar-button", "ax_role": "button"},
     "image_caption": {"css": ".se-component.se-image .se-module-text.se-caption", "ax_role": "textbox"},
     "open_settings": {"css": "button[class^=publish_btn__]", "ax_role": "button"},
     "tags": {"css": "div[class^=layer_popup__][class*=is_show__] input[class^=tag_input__]", "ax_role": "combobox"},

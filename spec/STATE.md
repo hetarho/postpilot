@@ -37,10 +37,9 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
-| T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUB | T042 | doing@260910.img |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUB | T044 T043 | todo |
 | T046 | Wiring the real publisher into the daemon | PUB | T045 | todo |
-| T074 | Deterministic caption and video renderer | CLIP | T073 | todo |
+| T074 | Deterministic caption and video renderer | CLIP | T073 | blocked@260910 |
 | T075 | Timecoded clip analysis and AI edit planning | CLIP VIDEO MODEL | T069 | todo |
 | T076 | Durable clip generation and result retention | CLIP QUOTA VIDEO MODEL | T071 T074 T075 | todo |
 | T077 | Clip generation progress, preview and download | CLIP THEME LANG | T072 T076 | todo |
@@ -49,10 +48,15 @@
 | T080 | Grouped writing and video navigation | CLIP THEME | T070 T072 | todo |
 
 ## next
-- implement-task T074, then implement and commit T075 through T080 sequentially
+- T074 local gates pass; obtain owner-assisted Naver picker acceptance of the three synthetic MP4s before marking done and committing, then implement and commit T075 through T080 sequentially
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
-- the PUB chain is unblocked: read T042's result and two-pass body plan before T043 (the 260910 survey found paragraph conversions split the component, 인용구 starts with 출처, only headings escape by Enter, and lists need plain text). T043 still needs ONE live first-block-image survey using `agent/internal/naver/survey_test.go`; then T045 → T046 → T008 (re-read PUB@4 base); update-ssot PUB for VIDEO-17 + TMPL-39 after T008.
+- the PUB body path is done and live-verified (T042 T043): read BOTH results before T045 — the 260910 surveys found that paragraph conversions split the component, 인용구 is born with a 출처 module, an image splits the caret's component and so needs no index, the photo-library sidebar overlays every caret point, and `Input.insertText` leaves its last word uncommitted until a key follows it (4 of 5 writes lost it). Next is T045 → T046 → T008 (re-read PUB@4 base); update-ssot PUB for VIDEO-17 + TMPL-39 after T008
+- T045 inherits the build-tagged survey harness in `agent/internal/naver/survey_test.go` for its own live checks, and must keep `image_caption`'s document-ordinal assumption true when it counts strip-grouped images
 ## log
+- 260910 T043 done; photos interleave at their manifest positions, and four live defects fixed — the photo-library sidebar occluding every caret point, points read outside the viewport, an upload returning before the editor settled, and insertText leaving its last word uncommitted (4 of 5 writes lost it); driver signature → smarteditor-one-20260910-a5
+- 260910 T074 gate rechecked (clp): owner picker result is still absent; preserve blocked status and the sequential commit boundary
+- 260910 T074 blocked: all local gates and actual nonroot renderer smoke pass; mandatory owner-assisted Naver picker acceptance remains unverified, so no completion commit
+- 260910 T074 claimed (clp)
 - 260910 T073 done; bounded media adapter and real nonroot Docker smoke pass, dev media version matches
 - 260910 T073 claimed (clp)
 - 260910 T072 done; clip setup, page-local direct uploads and all local gates pass
@@ -69,7 +73,3 @@
 - 260910 T069 claimed (clp); owner authorized fixing spec lint and continuing through T080
 - 260910 T069 blocked: code gates pass; mandatory spec lint rejects existing TMPL/PUB/MKT/BILL ids; owner exception requested
 - 260909 T069 claimed (clp)
-- 260909 create-task T069 T070 T071 T072 T073 T074 T075 T076 T077 T078 T079 T080 from CLIP@1 (foundation → templates/source/media/AI → generation/result → correction; grouped nav after both video pages)
-- 260909 T068 done
-- 260909 T068 claimed (srch)
-- 260909 T067 done (the dock change also landed on /voices and /templates)
