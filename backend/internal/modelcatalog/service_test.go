@@ -3,6 +3,7 @@ package modelcatalog_test
 import (
 	"context"
 	"errors"
+	"maps"
 	"reflect"
 	"slices"
 	"testing"
@@ -19,7 +20,9 @@ var testNow = time.Date(2026, 9, 3, 9, 0, 0, 0, time.UTC)
 type fakeStore struct {
 	rows      map[string]modelcatalog.Model
 	refreshes int
+	syncs     int
 	listErr   error
+	syncErr   error
 	combos    map[modelcatalog.Combo]modelcatalog.ComboAssignment
 }
 
@@ -106,8 +109,35 @@ func (s *fakeStore) DeregisterPurpose(_ context.Context, modelID string, purpose
 		return nil
 	}
 	row.Purposes = slices.DeleteFunc(slices.Clone(row.Purposes), func(p modelcatalog.Purpose) bool { return p == purpose })
+	// The effort lives on the registration row (migration 0021), so removing the
+	// registration removes it — the real store deletes the row this map stands in for.
+	if _, ok := row.Reasoning[purpose]; ok {
+		row.Reasoning = maps.Clone(row.Reasoning)
+		delete(row.Reasoning, purpose)
+	}
 	row.UpdatedAt = at
 	s.rows[modelID] = row
+	return nil
+}
+
+// SyncPurposes is the document path's one write. The fake applies the writes in order; the
+// real store's atomicity is pinned in store_test.
+func (s *fakeStore) SyncPurposes(ctx context.Context, writes []modelcatalog.PurposeWrite, at time.Time) error {
+	if s.syncErr != nil {
+		return s.syncErr
+	}
+	s.syncs++
+	for _, write := range writes {
+		if write.Register {
+			if err := s.RegisterPurpose(ctx, write.Model, write.Purpose); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := s.DeregisterPurpose(ctx, write.Model.ModelID, write.Purpose, at); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

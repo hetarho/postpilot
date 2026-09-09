@@ -30,6 +30,11 @@ type Store interface {
 	// as on an operator's uncheck. It is one transaction so the catalog is never
 	// half-refreshed.
 	RefreshAvailability(ctx context.Context, seen []Candidate, at time.Time) error
+	// SyncPurposes applies a whole paste in ONE transaction (MODEL-53): every registration
+	// the document adds and every one it drops, or nothing at all. Each write is the same
+	// one the single-model path makes — a registration upserts the row snapshot, a
+	// deregistration deletes the registration row and takes its effort override with it.
+	SyncPurposes(ctx context.Context, writes []PurposeWrite, at time.Time) error
 	// ListCombos returns every estimator assignment that exists, in combo order. A combo
 	// with no row is simply absent.
 	ListCombos(ctx context.Context) ([]ComboAssignment, error)

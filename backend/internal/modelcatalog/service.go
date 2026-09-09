@@ -270,30 +270,17 @@ func (s *Service) SetPurpose(ctx context.Context, modelID string, purpose Purpos
 
 	row := existing
 	row.ModelID = modelID
-	if offered {
-		row.ProviderSlug = candidate.ProviderSlug
-		row.Label = candidate.Label
-		row.Vision = candidate.Vision
-		row.StructuredOutput = candidate.StructuredOutput
-		row.ImageOutput = candidate.ImageOutput
-		row.VideoOutput = candidate.VideoOutput
-		row.VideoInput = candidate.VideoInput
-		row.ContextTokens = candidate.ContextTokens
-		row.InputUSDPerMillion = candidate.InputUSDPerMillion
-		row.OutputUSDPerMillion = candidate.OutputUSDPerMillion
-		// The reasoning capability is part of the same upstream snapshot as the flags and the
-		// pricing above, so a register refreshes it exactly as it refreshes those (change 27).
-		row.ReasoningCapability = candidate.ReasoningCapability
-		row.PricingCheckedAt = now.UTC().Format(time.DateOnly)
-		row.Listed = true
-		row.LastSeenAt = now
-	}
-	if !purpose.EligibleFor(row) {
-		return Model{}, fmt.Errorf("%w: %s for %s", ErrPurposeIneligible, modelID, purpose)
-	}
 	row.UpdatedAt = now
 	if !hasRow {
 		row.CreatedAt = now
+	}
+	if offered {
+		// The reasoning capability is part of the same upstream snapshot as the flags and the
+		// pricing, so a register refreshes it exactly as it refreshes those (change 27).
+		row = rowFromCandidate(existing, hasRow, candidate, now)
+	}
+	if !purpose.EligibleFor(row) {
+		return Model{}, fmt.Errorf("%w: %s for %s", ErrPurposeIneligible, modelID, purpose)
 	}
 
 	if err := s.store.RegisterPurpose(ctx, row, purpose); err != nil {
@@ -619,4 +606,198 @@ func pricerFor(m Model) plan.Pricer {
 		})
 		return cost.Microusd, cost.Source == llm.CostEstimated
 	}
+}
+
+// DocumentPurposePlan is what applying the paste would do to one purpose. Unchanged is
+// carried as well as the two deltas so the operator's diff can say "already in place"
+// instead of leaving a registration unexplained.
+type DocumentPurposePlan struct {
+	Purpose    Purpose
+	Register   []string
+	Deregister []string
+	Unchanged  []string
+}
+
+// DocumentPlan is the answer to both preview and apply. Applied is false whenever anything
+// was refused, and Issues then holds every reason: the two calls report identically, so a
+// rejection discovered at apply time (the catalog moved between the calls) renders exactly
+// like one discovered at preview.
+type DocumentPlan struct {
+	Purposes []DocumentPurposePlan
+	Issues   []DocumentIssue
+	// FetchError is set when the provider catalog could not be read. The document path
+	// needs the live snapshot to create a row for an id nobody has curated yet, so an
+	// unreadable catalog refuses the whole paste rather than degrading to stored rows the
+	// way Browse does.
+	FetchError string
+	Applied    bool
+}
+
+// PreviewDocument parses, validates and reports — and writes nothing, including the
+// availability bookkeeping a Browse would do (MODEL-54).
+func (s *Service) PreviewDocument(ctx context.Context, text string) (DocumentPlan, error) {
+	plan, _, err := s.planDocument(ctx, text)
+	return plan, err
+}
+
+// ApplyDocument re-parses and re-validates the same text from scratch and then applies it
+// in one transaction. It accepts no preview token by design: the catalog moves between the
+// two calls, and a token would let a stale diff be committed against a catalog that no
+// longer matches it.
+func (s *Service) ApplyDocument(ctx context.Context, text string) (DocumentPlan, error) {
+	plan, writes, err := s.planDocument(ctx, text)
+	if err != nil {
+		return DocumentPlan{}, err
+	}
+	if plan.FetchError != "" || len(plan.Issues) > 0 {
+		return plan, nil
+	}
+	if len(writes) > 0 {
+		if err := s.store.SyncPurposes(ctx, writes, s.now()); err != nil {
+			return DocumentPlan{}, fmt.Errorf("sync catalog document: %w", err)
+		}
+		s.invalidate(ctx)
+	}
+	plan.Applied = true
+	return plan, nil
+}
+
+// ExportDocument renders every purpose's current registrations in the same protocol, so the
+// operator edits what is actually there instead of writing a document from memory
+// (MODEL-55).
+func (s *Service) ExportDocument(ctx context.Context) (string, error) {
+	rows, err := s.store.List(ctx)
+	if err != nil {
+		return "", fmt.Errorf("list curated models: %w", err)
+	}
+	registrations := make(map[Purpose][]string, len(Purposes))
+	for _, row := range rows {
+		for _, purpose := range row.Purposes {
+			registrations[purpose] = append(registrations[purpose], row.ModelID)
+		}
+	}
+	return RenderDocument(registrations), nil
+}
+
+// planDocument is the one path preview and apply share, so the two can never disagree about
+// what a document means. It returns the plan the operator sees and the writes that would
+// realize it; the writes are empty whenever anything was refused.
+func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, []PurposeWrite, error) {
+	doc, issues := ParseDocument(text)
+
+	// The live read comes before anything else that could fail, and a failure ends the call:
+	// an id nobody has curated has no row to register, and only the snapshot can make one.
+	var snapshot Snapshot
+	if s.upstream == nil {
+		return DocumentPlan{Issues: issues, FetchError: "no upstream catalog is configured"}, nil, nil
+	}
+	found, err := s.upstream.Fetch(ctx, false)
+	if err != nil {
+		slog.Warn("model catalog fetch failed", "err", err)
+		return DocumentPlan{Issues: issues, FetchError: "the provider catalog could not be read"}, nil, nil
+	}
+	snapshot = found
+
+	rows, err := s.store.List(ctx)
+	if err != nil {
+		return DocumentPlan{}, nil, fmt.Errorf("list curated models: %w", err)
+	}
+	curated := make(map[string]Model, len(rows))
+	for _, row := range rows {
+		curated[row.ModelID] = row
+	}
+	offered := make(map[string]Candidate, len(snapshot.Candidates))
+	for _, candidate := range snapshot.Candidates {
+		offered[candidate.ModelID] = candidate
+	}
+
+	var (
+		plan   = DocumentPlan{Issues: issues}
+		writes []PurposeWrite
+		now    = s.now()
+	)
+	for _, section := range doc.Sections {
+		wanted := make(map[string]bool, len(section.ModelIDs))
+		purposePlan := DocumentPurposePlan{Purpose: section.Purpose}
+
+		for i, modelID := range section.ModelIDs {
+			line := section.Lines[i]
+			existing, hasRow := curated[modelID]
+			candidate, isOffered := offered[modelID]
+			if !isOffered {
+				// The read succeeded, so an id it does not carry is genuinely not on offer.
+				// Which of the two causes it is decides what the operator has to do: curate
+				// a different model, or accept that one they already had is gone (MODEL-20).
+				cause := IssueUnknownModel
+				if hasRow {
+					cause = IssueUnlisted
+				}
+				plan.Issues = append(plan.Issues, DocumentIssue{Line: line, Text: modelID, Cause: cause})
+				continue
+			}
+			row := rowFromCandidate(existing, hasRow, candidate, now)
+			if !section.Purpose.EligibleFor(row) {
+				plan.Issues = append(plan.Issues, DocumentIssue{Line: line, Text: modelID, Cause: IssueIneligible})
+				continue
+			}
+			wanted[modelID] = true
+			if hasRow && slices.Contains(existing.Purposes, section.Purpose) {
+				purposePlan.Unchanged = append(purposePlan.Unchanged, modelID)
+				continue
+			}
+			purposePlan.Register = append(purposePlan.Register, modelID)
+			writes = append(writes, PurposeWrite{Model: row, Purpose: section.Purpose, Register: true})
+		}
+
+		// Whatever holds the purpose today and the section does not name is dropped: the
+		// section is the purpose's complete membership (MODEL-52).
+		for _, row := range rows {
+			if wanted[row.ModelID] || !slices.Contains(row.Purposes, section.Purpose) {
+				continue
+			}
+			purposePlan.Deregister = append(purposePlan.Deregister, row.ModelID)
+			writes = append(writes, PurposeWrite{
+				Model: Model{ModelID: row.ModelID}, Purpose: section.Purpose,
+			})
+		}
+
+		slices.Sort(purposePlan.Register)
+		slices.Sort(purposePlan.Deregister)
+		slices.Sort(purposePlan.Unchanged)
+		plan.Purposes = append(plan.Purposes, purposePlan)
+	}
+
+	if len(plan.Issues) > 0 {
+		// Nothing is applied when anything was refused, so the writes are not handed back at
+		// all rather than left for a caller to remember to check.
+		return plan, nil, nil
+	}
+	return plan, writes, nil
+}
+
+// rowFromCandidate is the row a registration would write: the stored curation, if any, with
+// the live snapshot laid over it. It is the same overlay SetPurpose performs, kept in one
+// place so the two paths cannot drift into writing different rows for the same model.
+func rowFromCandidate(existing Model, hasRow bool, candidate Candidate, now time.Time) Model {
+	row := existing
+	row.ModelID = candidate.ModelID
+	row.ProviderSlug = candidate.ProviderSlug
+	row.Label = candidate.Label
+	row.Vision = candidate.Vision
+	row.StructuredOutput = candidate.StructuredOutput
+	row.ImageOutput = candidate.ImageOutput
+	row.VideoOutput = candidate.VideoOutput
+	row.VideoInput = candidate.VideoInput
+	row.ContextTokens = candidate.ContextTokens
+	row.InputUSDPerMillion = candidate.InputUSDPerMillion
+	row.OutputUSDPerMillion = candidate.OutputUSDPerMillion
+	row.ReasoningCapability = candidate.ReasoningCapability
+	row.PricingCheckedAt = now.UTC().Format(time.DateOnly)
+	row.Listed = true
+	row.LastSeenAt = now
+	row.UpdatedAt = now
+	if !hasRow {
+		row.CreatedAt = now
+	}
+	return row
 }

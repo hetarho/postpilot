@@ -21,6 +21,451 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// CatalogDocumentIssue is one refused line. Any issue at all refuses the WHOLE document: a
+// half-applied sync would silently deregister what the refused lines were meant to keep.
+//
+// `cause` is a short slug the operator surface renders with its own copy (bad_version,
+// unknown_purpose, duplicate_section, id_before_section, malformed_line, duplicate_id,
+// unknown_model, unlisted_model, purpose_ineligible). It is master-only admin detail, not
+// one of the normalized user-facing failure reasons.
+type CatalogDocumentIssue struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 1-based, over the document as pasted — including the lines the parser ignores.
+	Line          int32  `protobuf:"varint,1,opt,name=line,proto3" json:"line,omitempty"`
+	Text          string `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
+	Cause         string `protobuf:"bytes,3,opt,name=cause,proto3" json:"cause,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CatalogDocumentIssue) Reset() {
+	*x = CatalogDocumentIssue{}
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CatalogDocumentIssue) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CatalogDocumentIssue) ProtoMessage() {}
+
+func (x *CatalogDocumentIssue) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CatalogDocumentIssue.ProtoReflect.Descriptor instead.
+func (*CatalogDocumentIssue) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *CatalogDocumentIssue) GetLine() int32 {
+	if x != nil {
+		return x.Line
+	}
+	return 0
+}
+
+func (x *CatalogDocumentIssue) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *CatalogDocumentIssue) GetCause() string {
+	if x != nil {
+		return x.Cause
+	}
+	return ""
+}
+
+// CatalogDocumentPurposePlan is what applying would do to ONE purpose. A purpose the
+// document gives no section for is absent from the plan entirely: it is untouched, which is
+// not the same as an empty diff.
+type CatalogDocumentPurposePlan struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Purpose  string                 `protobuf:"bytes,1,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	Register []string               `protobuf:"bytes,2,rep,name=register,proto3" json:"register,omitempty"`
+	// The ids that hold this purpose today and the document does not list. A section is the
+	// purpose's complete membership, so omission is a deregistration.
+	Deregister    []string `protobuf:"bytes,3,rep,name=deregister,proto3" json:"deregister,omitempty"`
+	Unchanged     []string `protobuf:"bytes,4,rep,name=unchanged,proto3" json:"unchanged,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CatalogDocumentPurposePlan) Reset() {
+	*x = CatalogDocumentPurposePlan{}
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CatalogDocumentPurposePlan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CatalogDocumentPurposePlan) ProtoMessage() {}
+
+func (x *CatalogDocumentPurposePlan) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CatalogDocumentPurposePlan.ProtoReflect.Descriptor instead.
+func (*CatalogDocumentPurposePlan) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CatalogDocumentPurposePlan) GetPurpose() string {
+	if x != nil {
+		return x.Purpose
+	}
+	return ""
+}
+
+func (x *CatalogDocumentPurposePlan) GetRegister() []string {
+	if x != nil {
+		return x.Register
+	}
+	return nil
+}
+
+func (x *CatalogDocumentPurposePlan) GetDeregister() []string {
+	if x != nil {
+		return x.Deregister
+	}
+	return nil
+}
+
+func (x *CatalogDocumentPurposePlan) GetUnchanged() []string {
+	if x != nil {
+		return x.Unchanged
+	}
+	return nil
+}
+
+type PreviewCatalogDocumentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Document      string                 `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PreviewCatalogDocumentRequest) Reset() {
+	*x = PreviewCatalogDocumentRequest{}
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PreviewCatalogDocumentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PreviewCatalogDocumentRequest) ProtoMessage() {}
+
+func (x *PreviewCatalogDocumentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PreviewCatalogDocumentRequest.ProtoReflect.Descriptor instead.
+func (*PreviewCatalogDocumentRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PreviewCatalogDocumentRequest) GetDocument() string {
+	if x != nil {
+		return x.Document
+	}
+	return ""
+}
+
+type PreviewCatalogDocumentResponse struct {
+	state    protoimpl.MessageState        `protogen:"open.v1"`
+	Purposes []*CatalogDocumentPurposePlan `protobuf:"bytes,1,rep,name=purposes,proto3" json:"purposes,omitempty"`
+	Issues   []*CatalogDocumentIssue       `protobuf:"bytes,2,rep,name=issues,proto3" json:"issues,omitempty"`
+	// Set when the provider catalog could not be read. This path needs the live snapshot to
+	// create a row for an id nobody has curated yet, so an unreadable catalog refuses the
+	// paste instead of degrading to stored rows the way ListCatalog does.
+	FetchError    string `protobuf:"bytes,3,opt,name=fetch_error,json=fetchError,proto3" json:"fetch_error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PreviewCatalogDocumentResponse) Reset() {
+	*x = PreviewCatalogDocumentResponse{}
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PreviewCatalogDocumentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PreviewCatalogDocumentResponse) ProtoMessage() {}
+
+func (x *PreviewCatalogDocumentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PreviewCatalogDocumentResponse.ProtoReflect.Descriptor instead.
+func (*PreviewCatalogDocumentResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PreviewCatalogDocumentResponse) GetPurposes() []*CatalogDocumentPurposePlan {
+	if x != nil {
+		return x.Purposes
+	}
+	return nil
+}
+
+func (x *PreviewCatalogDocumentResponse) GetIssues() []*CatalogDocumentIssue {
+	if x != nil {
+		return x.Issues
+	}
+	return nil
+}
+
+func (x *PreviewCatalogDocumentResponse) GetFetchError() string {
+	if x != nil {
+		return x.FetchError
+	}
+	return ""
+}
+
+type ApplyCatalogDocumentRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The same text the preview was run on, re-validated here from scratch.
+	Document      string `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApplyCatalogDocumentRequest) Reset() {
+	*x = ApplyCatalogDocumentRequest{}
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplyCatalogDocumentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplyCatalogDocumentRequest) ProtoMessage() {}
+
+func (x *ApplyCatalogDocumentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplyCatalogDocumentRequest.ProtoReflect.Descriptor instead.
+func (*ApplyCatalogDocumentRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ApplyCatalogDocumentRequest) GetDocument() string {
+	if x != nil {
+		return x.Document
+	}
+	return ""
+}
+
+type ApplyCatalogDocumentResponse struct {
+	state      protoimpl.MessageState        `protogen:"open.v1"`
+	Purposes   []*CatalogDocumentPurposePlan `protobuf:"bytes,1,rep,name=purposes,proto3" json:"purposes,omitempty"`
+	Issues     []*CatalogDocumentIssue       `protobuf:"bytes,2,rep,name=issues,proto3" json:"issues,omitempty"`
+	FetchError string                        `protobuf:"bytes,3,opt,name=fetch_error,json=fetchError,proto3" json:"fetch_error,omitempty"`
+	// False when anything was refused, and then nothing was written. A rejection discovered
+	// here rather than at preview is the catalog having moved, and renders identically.
+	Applied       bool `protobuf:"varint,4,opt,name=applied,proto3" json:"applied,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApplyCatalogDocumentResponse) Reset() {
+	*x = ApplyCatalogDocumentResponse{}
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplyCatalogDocumentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplyCatalogDocumentResponse) ProtoMessage() {}
+
+func (x *ApplyCatalogDocumentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplyCatalogDocumentResponse.ProtoReflect.Descriptor instead.
+func (*ApplyCatalogDocumentResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ApplyCatalogDocumentResponse) GetPurposes() []*CatalogDocumentPurposePlan {
+	if x != nil {
+		return x.Purposes
+	}
+	return nil
+}
+
+func (x *ApplyCatalogDocumentResponse) GetIssues() []*CatalogDocumentIssue {
+	if x != nil {
+		return x.Issues
+	}
+	return nil
+}
+
+func (x *ApplyCatalogDocumentResponse) GetFetchError() string {
+	if x != nil {
+		return x.FetchError
+	}
+	return ""
+}
+
+func (x *ApplyCatalogDocumentResponse) GetApplied() bool {
+	if x != nil {
+		return x.Applied
+	}
+	return false
+}
+
+type ExportCatalogDocumentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportCatalogDocumentRequest) Reset() {
+	*x = ExportCatalogDocumentRequest{}
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportCatalogDocumentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportCatalogDocumentRequest) ProtoMessage() {}
+
+func (x *ExportCatalogDocumentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportCatalogDocumentRequest.ProtoReflect.Descriptor instead.
+func (*ExportCatalogDocumentRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{6}
+}
+
+type ExportCatalogDocumentResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Every purpose, including the ones with no registration, so pasting this straight back
+	// previews as no change.
+	Document      string `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportCatalogDocumentResponse) Reset() {
+	*x = ExportCatalogDocumentResponse{}
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportCatalogDocumentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportCatalogDocumentResponse) ProtoMessage() {}
+
+func (x *ExportCatalogDocumentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportCatalogDocumentResponse.ProtoReflect.Descriptor instead.
+func (*ExportCatalogDocumentResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ExportCatalogDocumentResponse) GetDocument() string {
+	if x != nil {
+		return x.Document
+	}
+	return ""
+}
+
 // CatalogEntry is one row of the operator's browse list.
 type CatalogEntry struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
@@ -115,7 +560,7 @@ type CatalogEntry struct {
 
 func (x *CatalogEntry) Reset() {
 	*x = CatalogEntry{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[0]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -127,7 +572,7 @@ func (x *CatalogEntry) String() string {
 func (*CatalogEntry) ProtoMessage() {}
 
 func (x *CatalogEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[0]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -140,7 +585,7 @@ func (x *CatalogEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CatalogEntry.ProtoReflect.Descriptor instead.
 func (*CatalogEntry) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{0}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CatalogEntry) GetModelId() string {
@@ -338,7 +783,7 @@ type ReasoningSpend struct {
 
 func (x *ReasoningSpend) Reset() {
 	*x = ReasoningSpend{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[1]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -350,7 +795,7 @@ func (x *ReasoningSpend) String() string {
 func (*ReasoningSpend) ProtoMessage() {}
 
 func (x *ReasoningSpend) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[1]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -363,7 +808,7 @@ func (x *ReasoningSpend) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReasoningSpend.ProtoReflect.Descriptor instead.
 func (*ReasoningSpend) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{1}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ReasoningSpend) GetCalls() int64 {
@@ -408,7 +853,7 @@ type ListCatalogRequest struct {
 
 func (x *ListCatalogRequest) Reset() {
 	*x = ListCatalogRequest{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[2]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -420,7 +865,7 @@ func (x *ListCatalogRequest) String() string {
 func (*ListCatalogRequest) ProtoMessage() {}
 
 func (x *ListCatalogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[2]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -433,7 +878,7 @@ func (x *ListCatalogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCatalogRequest.ProtoReflect.Descriptor instead.
 func (*ListCatalogRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{2}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListCatalogRequest) GetRefresh() bool {
@@ -463,7 +908,7 @@ type EstimatorComboAssignment struct {
 
 func (x *EstimatorComboAssignment) Reset() {
 	*x = EstimatorComboAssignment{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -475,7 +920,7 @@ func (x *EstimatorComboAssignment) String() string {
 func (*EstimatorComboAssignment) ProtoMessage() {}
 
 func (x *EstimatorComboAssignment) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[3]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -488,7 +933,7 @@ func (x *EstimatorComboAssignment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EstimatorComboAssignment.ProtoReflect.Descriptor instead.
 func (*EstimatorComboAssignment) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{3}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *EstimatorComboAssignment) GetCombo() string {
@@ -531,7 +976,7 @@ type ListCatalogResponse struct {
 
 func (x *ListCatalogResponse) Reset() {
 	*x = ListCatalogResponse{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -543,7 +988,7 @@ func (x *ListCatalogResponse) String() string {
 func (*ListCatalogResponse) ProtoMessage() {}
 
 func (x *ListCatalogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[4]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -556,7 +1001,7 @@ func (x *ListCatalogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCatalogResponse.ProtoReflect.Descriptor instead.
 func (*ListCatalogResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{4}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListCatalogResponse) GetEntries() []*CatalogEntry {
@@ -599,8 +1044,9 @@ type SetModelPurposeRequest struct {
 	ModelId string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
 	// One of the purpose slugs CatalogEntry.purposes uses.
 	Purpose string `protobuf:"bytes,2,opt,name=purpose,proto3" json:"purpose,omitempty"`
-	// true registers, false deregisters. Deregistering keeps the curated row (and its
-	// reasoning override); it only stops serving the model to that purpose.
+	// true registers, false deregisters. Deregistering keeps the curated row — the operator's
+	// curation returns intact on re-registration — but not the effort override, which lives
+	// on the registration itself since change 24 and goes with it.
 	Registered    bool `protobuf:"varint,3,opt,name=registered,proto3" json:"registered,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -608,7 +1054,7 @@ type SetModelPurposeRequest struct {
 
 func (x *SetModelPurposeRequest) Reset() {
 	*x = SetModelPurposeRequest{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[5]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -620,7 +1066,7 @@ func (x *SetModelPurposeRequest) String() string {
 func (*SetModelPurposeRequest) ProtoMessage() {}
 
 func (x *SetModelPurposeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[5]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -633,7 +1079,7 @@ func (x *SetModelPurposeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetModelPurposeRequest.ProtoReflect.Descriptor instead.
 func (*SetModelPurposeRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{5}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SetModelPurposeRequest) GetModelId() string {
@@ -666,7 +1112,7 @@ type SetModelPurposeResponse struct {
 
 func (x *SetModelPurposeResponse) Reset() {
 	*x = SetModelPurposeResponse{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[6]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -678,7 +1124,7 @@ func (x *SetModelPurposeResponse) String() string {
 func (*SetModelPurposeResponse) ProtoMessage() {}
 
 func (x *SetModelPurposeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[6]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -691,7 +1137,7 @@ func (x *SetModelPurposeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetModelPurposeResponse.ProtoReflect.Descriptor instead.
 func (*SetModelPurposeResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SetModelPurposeResponse) GetEntry() *CatalogEntry {
@@ -725,7 +1171,7 @@ type UpdateModelRequest struct {
 
 func (x *UpdateModelRequest) Reset() {
 	*x = UpdateModelRequest{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[7]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -737,7 +1183,7 @@ func (x *UpdateModelRequest) String() string {
 func (*UpdateModelRequest) ProtoMessage() {}
 
 func (x *UpdateModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[7]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -750,7 +1196,7 @@ func (x *UpdateModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateModelRequest.ProtoReflect.Descriptor instead.
 func (*UpdateModelRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UpdateModelRequest) GetModelId() string {
@@ -783,7 +1229,7 @@ type UpdateModelResponse struct {
 
 func (x *UpdateModelResponse) Reset() {
 	*x = UpdateModelResponse{}
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[8]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -795,7 +1241,7 @@ func (x *UpdateModelResponse) String() string {
 func (*UpdateModelResponse) ProtoMessage() {}
 
 func (x *UpdateModelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[8]
+	mi := &file_postpilot_v1_model_catalog_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -808,7 +1254,7 @@ func (x *UpdateModelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateModelResponse.ProtoReflect.Descriptor instead.
 func (*UpdateModelResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{8}
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateModelResponse) GetEntry() *CatalogEntry {
@@ -822,7 +1268,36 @@ var File_postpilot_v1_model_catalog_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\n" +
-	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"\xc4\b\n" +
+	" postpilot/v1/model_catalog.proto\x12\fpostpilot.v1\"T\n" +
+	"\x14CatalogDocumentIssue\x12\x12\n" +
+	"\x04line\x18\x01 \x01(\x05R\x04line\x12\x12\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n" +
+	"\x05cause\x18\x03 \x01(\tR\x05cause\"\x90\x01\n" +
+	"\x1aCatalogDocumentPurposePlan\x12\x18\n" +
+	"\apurpose\x18\x01 \x01(\tR\apurpose\x12\x1a\n" +
+	"\bregister\x18\x02 \x03(\tR\bregister\x12\x1e\n" +
+	"\n" +
+	"deregister\x18\x03 \x03(\tR\n" +
+	"deregister\x12\x1c\n" +
+	"\tunchanged\x18\x04 \x03(\tR\tunchanged\";\n" +
+	"\x1dPreviewCatalogDocumentRequest\x12\x1a\n" +
+	"\bdocument\x18\x01 \x01(\tR\bdocument\"\xc3\x01\n" +
+	"\x1ePreviewCatalogDocumentResponse\x12D\n" +
+	"\bpurposes\x18\x01 \x03(\v2(.postpilot.v1.CatalogDocumentPurposePlanR\bpurposes\x12:\n" +
+	"\x06issues\x18\x02 \x03(\v2\".postpilot.v1.CatalogDocumentIssueR\x06issues\x12\x1f\n" +
+	"\vfetch_error\x18\x03 \x01(\tR\n" +
+	"fetchError\"9\n" +
+	"\x1bApplyCatalogDocumentRequest\x12\x1a\n" +
+	"\bdocument\x18\x01 \x01(\tR\bdocument\"\xdb\x01\n" +
+	"\x1cApplyCatalogDocumentResponse\x12D\n" +
+	"\bpurposes\x18\x01 \x03(\v2(.postpilot.v1.CatalogDocumentPurposePlanR\bpurposes\x12:\n" +
+	"\x06issues\x18\x02 \x03(\v2\".postpilot.v1.CatalogDocumentIssueR\x06issues\x12\x1f\n" +
+	"\vfetch_error\x18\x03 \x01(\tR\n" +
+	"fetchError\x12\x18\n" +
+	"\aapplied\x18\x04 \x01(\bR\aapplied\"\x1e\n" +
+	"\x1cExportCatalogDocumentRequest\";\n" +
+	"\x1dExportCatalogDocumentResponse\x12\x1a\n" +
+	"\bdocument\x18\x01 \x01(\tR\bdocument\"\xc4\b\n" +
 	"\fCatalogEntry\x12\x19\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12#\n" +
 	"\rprovider_slug\x18\x02 \x01(\tR\fproviderSlug\x12\x14\n" +
@@ -888,11 +1363,14 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\apurpose\x18\x05 \x01(\tR\apurposeB\x13\n" +
 	"\x11_reasoning_effortJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04\"G\n" +
 	"\x13UpdateModelResponse\x120\n" +
-	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry2\xa3\x02\n" +
+	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry2\xff\x04\n" +
 	"\x13ModelCatalogService\x12T\n" +
 	"\vListCatalog\x12 .postpilot.v1.ListCatalogRequest\x1a!.postpilot.v1.ListCatalogResponse\"\x00\x12`\n" +
 	"\x0fSetModelPurpose\x12$.postpilot.v1.SetModelPurposeRequest\x1a%.postpilot.v1.SetModelPurposeResponse\"\x00\x12T\n" +
-	"\vUpdateModel\x12 .postpilot.v1.UpdateModelRequest\x1a!.postpilot.v1.UpdateModelResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\vUpdateModel\x12 .postpilot.v1.UpdateModelRequest\x1a!.postpilot.v1.UpdateModelResponse\"\x00\x12u\n" +
+	"\x16PreviewCatalogDocument\x12+.postpilot.v1.PreviewCatalogDocumentRequest\x1a,.postpilot.v1.PreviewCatalogDocumentResponse\"\x00\x12o\n" +
+	"\x14ApplyCatalogDocument\x12).postpilot.v1.ApplyCatalogDocumentRequest\x1a*.postpilot.v1.ApplyCatalogDocumentResponse\"\x00\x12r\n" +
+	"\x15ExportCatalogDocument\x12*.postpilot.v1.ExportCatalogDocumentRequest\x1a+.postpilot.v1.ExportCatalogDocumentResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_model_catalog_proto_rawDescOnce sync.Once
@@ -906,35 +1384,53 @@ func file_postpilot_v1_model_catalog_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_model_catalog_proto_rawDescData
 }
 
-var file_postpilot_v1_model_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_postpilot_v1_model_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_postpilot_v1_model_catalog_proto_goTypes = []any{
-	(*CatalogEntry)(nil),             // 0: postpilot.v1.CatalogEntry
-	(*ReasoningSpend)(nil),           // 1: postpilot.v1.ReasoningSpend
-	(*ListCatalogRequest)(nil),       // 2: postpilot.v1.ListCatalogRequest
-	(*EstimatorComboAssignment)(nil), // 3: postpilot.v1.EstimatorComboAssignment
-	(*ListCatalogResponse)(nil),      // 4: postpilot.v1.ListCatalogResponse
-	(*SetModelPurposeRequest)(nil),   // 5: postpilot.v1.SetModelPurposeRequest
-	(*SetModelPurposeResponse)(nil),  // 6: postpilot.v1.SetModelPurposeResponse
-	(*UpdateModelRequest)(nil),       // 7: postpilot.v1.UpdateModelRequest
-	(*UpdateModelResponse)(nil),      // 8: postpilot.v1.UpdateModelResponse
+	(*CatalogDocumentIssue)(nil),           // 0: postpilot.v1.CatalogDocumentIssue
+	(*CatalogDocumentPurposePlan)(nil),     // 1: postpilot.v1.CatalogDocumentPurposePlan
+	(*PreviewCatalogDocumentRequest)(nil),  // 2: postpilot.v1.PreviewCatalogDocumentRequest
+	(*PreviewCatalogDocumentResponse)(nil), // 3: postpilot.v1.PreviewCatalogDocumentResponse
+	(*ApplyCatalogDocumentRequest)(nil),    // 4: postpilot.v1.ApplyCatalogDocumentRequest
+	(*ApplyCatalogDocumentResponse)(nil),   // 5: postpilot.v1.ApplyCatalogDocumentResponse
+	(*ExportCatalogDocumentRequest)(nil),   // 6: postpilot.v1.ExportCatalogDocumentRequest
+	(*ExportCatalogDocumentResponse)(nil),  // 7: postpilot.v1.ExportCatalogDocumentResponse
+	(*CatalogEntry)(nil),                   // 8: postpilot.v1.CatalogEntry
+	(*ReasoningSpend)(nil),                 // 9: postpilot.v1.ReasoningSpend
+	(*ListCatalogRequest)(nil),             // 10: postpilot.v1.ListCatalogRequest
+	(*EstimatorComboAssignment)(nil),       // 11: postpilot.v1.EstimatorComboAssignment
+	(*ListCatalogResponse)(nil),            // 12: postpilot.v1.ListCatalogResponse
+	(*SetModelPurposeRequest)(nil),         // 13: postpilot.v1.SetModelPurposeRequest
+	(*SetModelPurposeResponse)(nil),        // 14: postpilot.v1.SetModelPurposeResponse
+	(*UpdateModelRequest)(nil),             // 15: postpilot.v1.UpdateModelRequest
+	(*UpdateModelResponse)(nil),            // 16: postpilot.v1.UpdateModelResponse
 }
 var file_postpilot_v1_model_catalog_proto_depIdxs = []int32{
-	1, // 0: postpilot.v1.CatalogEntry.reasoning_spend:type_name -> postpilot.v1.ReasoningSpend
-	0, // 1: postpilot.v1.ListCatalogResponse.entries:type_name -> postpilot.v1.CatalogEntry
-	3, // 2: postpilot.v1.ListCatalogResponse.estimator_combos:type_name -> postpilot.v1.EstimatorComboAssignment
-	0, // 3: postpilot.v1.SetModelPurposeResponse.entry:type_name -> postpilot.v1.CatalogEntry
-	0, // 4: postpilot.v1.UpdateModelResponse.entry:type_name -> postpilot.v1.CatalogEntry
-	2, // 5: postpilot.v1.ModelCatalogService.ListCatalog:input_type -> postpilot.v1.ListCatalogRequest
-	5, // 6: postpilot.v1.ModelCatalogService.SetModelPurpose:input_type -> postpilot.v1.SetModelPurposeRequest
-	7, // 7: postpilot.v1.ModelCatalogService.UpdateModel:input_type -> postpilot.v1.UpdateModelRequest
-	4, // 8: postpilot.v1.ModelCatalogService.ListCatalog:output_type -> postpilot.v1.ListCatalogResponse
-	6, // 9: postpilot.v1.ModelCatalogService.SetModelPurpose:output_type -> postpilot.v1.SetModelPurposeResponse
-	8, // 10: postpilot.v1.ModelCatalogService.UpdateModel:output_type -> postpilot.v1.UpdateModelResponse
-	8, // [8:11] is the sub-list for method output_type
-	5, // [5:8] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	1,  // 0: postpilot.v1.PreviewCatalogDocumentResponse.purposes:type_name -> postpilot.v1.CatalogDocumentPurposePlan
+	0,  // 1: postpilot.v1.PreviewCatalogDocumentResponse.issues:type_name -> postpilot.v1.CatalogDocumentIssue
+	1,  // 2: postpilot.v1.ApplyCatalogDocumentResponse.purposes:type_name -> postpilot.v1.CatalogDocumentPurposePlan
+	0,  // 3: postpilot.v1.ApplyCatalogDocumentResponse.issues:type_name -> postpilot.v1.CatalogDocumentIssue
+	9,  // 4: postpilot.v1.CatalogEntry.reasoning_spend:type_name -> postpilot.v1.ReasoningSpend
+	8,  // 5: postpilot.v1.ListCatalogResponse.entries:type_name -> postpilot.v1.CatalogEntry
+	11, // 6: postpilot.v1.ListCatalogResponse.estimator_combos:type_name -> postpilot.v1.EstimatorComboAssignment
+	8,  // 7: postpilot.v1.SetModelPurposeResponse.entry:type_name -> postpilot.v1.CatalogEntry
+	8,  // 8: postpilot.v1.UpdateModelResponse.entry:type_name -> postpilot.v1.CatalogEntry
+	10, // 9: postpilot.v1.ModelCatalogService.ListCatalog:input_type -> postpilot.v1.ListCatalogRequest
+	13, // 10: postpilot.v1.ModelCatalogService.SetModelPurpose:input_type -> postpilot.v1.SetModelPurposeRequest
+	15, // 11: postpilot.v1.ModelCatalogService.UpdateModel:input_type -> postpilot.v1.UpdateModelRequest
+	2,  // 12: postpilot.v1.ModelCatalogService.PreviewCatalogDocument:input_type -> postpilot.v1.PreviewCatalogDocumentRequest
+	4,  // 13: postpilot.v1.ModelCatalogService.ApplyCatalogDocument:input_type -> postpilot.v1.ApplyCatalogDocumentRequest
+	6,  // 14: postpilot.v1.ModelCatalogService.ExportCatalogDocument:input_type -> postpilot.v1.ExportCatalogDocumentRequest
+	12, // 15: postpilot.v1.ModelCatalogService.ListCatalog:output_type -> postpilot.v1.ListCatalogResponse
+	14, // 16: postpilot.v1.ModelCatalogService.SetModelPurpose:output_type -> postpilot.v1.SetModelPurposeResponse
+	16, // 17: postpilot.v1.ModelCatalogService.UpdateModel:output_type -> postpilot.v1.UpdateModelResponse
+	3,  // 18: postpilot.v1.ModelCatalogService.PreviewCatalogDocument:output_type -> postpilot.v1.PreviewCatalogDocumentResponse
+	5,  // 19: postpilot.v1.ModelCatalogService.ApplyCatalogDocument:output_type -> postpilot.v1.ApplyCatalogDocumentResponse
+	7,  // 20: postpilot.v1.ModelCatalogService.ExportCatalogDocument:output_type -> postpilot.v1.ExportCatalogDocumentResponse
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_model_catalog_proto_init() }
@@ -942,15 +1438,15 @@ func file_postpilot_v1_model_catalog_proto_init() {
 	if File_postpilot_v1_model_catalog_proto != nil {
 		return
 	}
-	file_postpilot_v1_model_catalog_proto_msgTypes[0].OneofWrappers = []any{}
-	file_postpilot_v1_model_catalog_proto_msgTypes[7].OneofWrappers = []any{}
+	file_postpilot_v1_model_catalog_proto_msgTypes[8].OneofWrappers = []any{}
+	file_postpilot_v1_model_catalog_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_model_catalog_proto_rawDesc), len(file_postpilot_v1_model_catalog_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

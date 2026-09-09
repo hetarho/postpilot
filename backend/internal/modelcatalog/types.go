@@ -149,6 +149,14 @@ type Model struct {
 	UpdatedAt  time.Time
 }
 
+// PurposeWrite is one registration change inside a document sync. Register carries the row
+// to upsert; a deregistration needs the id alone, and leaves Model zero but for ModelID.
+type PurposeWrite struct {
+	Model    Model
+	Purpose  Purpose
+	Register bool
+}
+
 // Candidate is one model the upstream catalog currently offers. It carries no curation —
 // that is what a Model adds.
 type Candidate struct {

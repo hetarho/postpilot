@@ -486,3 +486,80 @@ func TestRefreshAvailability_RefreshesTheReasoningCapability(t *testing.T) {
 		t.Fatal("an override outside the new list is not reported as drifted")
 	}
 }
+
+// MODEL-53: a document is applied whole or not at all. The failure is forced with the
+// purpose CHECK constraint the schema already carries, so the rollback is the database's
+// own — the point is that the registration written before it does not survive.
+func TestSyncPurposes_AppliesEverythingOrNothing(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	row, err := s.Get(ctx, "anthropic/claude-sonnet-5")
+	if err != nil {
+		t.Fatalf("read seeded row: %v", err)
+	}
+
+	err = s.SyncPurposes(ctx, []modelcatalog.PurposeWrite{
+		{Model: row, Purpose: modelcatalog.PurposeWriting, Register: true},
+		{Model: row, Purpose: modelcatalog.Purpose("audio-analysis"), Register: true},
+	}, testNow)
+	if err == nil {
+		t.Fatal("want the invalid write to fail the sync")
+	}
+
+	after, err := s.Get(ctx, "anthropic/claude-sonnet-5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(after.Purposes) != 0 {
+		t.Errorf("purposes = %v, want none — the first write must have rolled back with the second", after.Purposes)
+	}
+}
+
+func TestSyncPurposes_RegistersAndDeregistersInOnePass(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	sonnet, err := s.Get(ctx, "anthropic/claude-sonnet-5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RegisterPurpose(ctx, sonnet, modelcatalog.PurposeWriting); err != nil {
+		t.Fatal(err)
+	}
+	// An effort on the registration, to prove the deregistration takes it along.
+	effort := llm.ReasoningLow
+	if _, err := s.Patch(ctx, sonnet.ModelID, modelcatalog.Patch{
+		Reasoning: &effort, Purpose: modelcatalog.PurposeWriting,
+	}, testNow); err != nil {
+		t.Fatal(err)
+	}
+	grok, err := s.Get(ctx, "x-ai/grok-4.6")
+	if err != nil {
+		t.Skipf("seed does not carry x-ai/grok-4.6: %v", err)
+	}
+
+	err = s.SyncPurposes(ctx, []modelcatalog.PurposeWrite{
+		{Model: grok, Purpose: modelcatalog.PurposeWriting, Register: true},
+		{Model: modelcatalog.Model{ModelID: sonnet.ModelID}, Purpose: modelcatalog.PurposeWriting},
+	}, testNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	after, err := s.Get(ctx, sonnet.ModelID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(after.Purposes) != 0 {
+		t.Errorf("purposes = %v, want the registration gone", after.Purposes)
+	}
+	if got, ok := after.Reasoning[modelcatalog.PurposeWriting]; ok {
+		t.Errorf("effort = %q, want it removed with the registration row", got)
+	}
+	registered, err := s.Get(ctx, grok.ModelID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(registered.Purposes) != 1 || registered.Purposes[0] != modelcatalog.PurposeWriting {
+		t.Errorf("purposes = %v, want writing", registered.Purposes)
+	}
+}

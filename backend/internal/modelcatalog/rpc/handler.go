@@ -105,6 +105,64 @@ func (h *Handler) UpdateModel(ctx context.Context, req *connect.Request[postpilo
 	return connect.NewResponse(&postpilotv1.UpdateModelResponse{Entry: toProtoEntry(modelcatalog.EntryOf(model, patch.Purpose))}), nil
 }
 
+func (h *Handler) PreviewCatalogDocument(ctx context.Context, req *connect.Request[postpilotv1.PreviewCatalogDocumentRequest]) (*connect.Response[postpilotv1.PreviewCatalogDocumentResponse], error) {
+	plan, err := h.svc.PreviewDocument(ctx, req.Msg.GetDocument())
+	if err != nil {
+		return nil, toConnectError("preview catalog document", err)
+	}
+	return connect.NewResponse(&postpilotv1.PreviewCatalogDocumentResponse{
+		Purposes:   toProtoDocumentPlan(plan.Purposes),
+		Issues:     toProtoDocumentIssues(plan.Issues),
+		FetchError: plan.FetchError,
+	}), nil
+}
+
+func (h *Handler) ApplyCatalogDocument(ctx context.Context, req *connect.Request[postpilotv1.ApplyCatalogDocumentRequest]) (*connect.Response[postpilotv1.ApplyCatalogDocumentResponse], error) {
+	plan, err := h.svc.ApplyDocument(ctx, req.Msg.GetDocument())
+	if err != nil {
+		return nil, toConnectError("apply catalog document", err)
+	}
+	// A refused document is an answer, not an error: the operator gets the same per-line
+	// detail the preview gives, rather than one code standing for nine causes.
+	return connect.NewResponse(&postpilotv1.ApplyCatalogDocumentResponse{
+		Purposes:   toProtoDocumentPlan(plan.Purposes),
+		Issues:     toProtoDocumentIssues(plan.Issues),
+		FetchError: plan.FetchError,
+		Applied:    plan.Applied,
+	}), nil
+}
+
+func (h *Handler) ExportCatalogDocument(ctx context.Context, _ *connect.Request[postpilotv1.ExportCatalogDocumentRequest]) (*connect.Response[postpilotv1.ExportCatalogDocumentResponse], error) {
+	document, err := h.svc.ExportDocument(ctx)
+	if err != nil {
+		return nil, toConnectError("export catalog document", err)
+	}
+	return connect.NewResponse(&postpilotv1.ExportCatalogDocumentResponse{Document: document}), nil
+}
+
+func toProtoDocumentPlan(purposes []modelcatalog.DocumentPurposePlan) []*postpilotv1.CatalogDocumentPurposePlan {
+	out := make([]*postpilotv1.CatalogDocumentPurposePlan, 0, len(purposes))
+	for _, purpose := range purposes {
+		out = append(out, &postpilotv1.CatalogDocumentPurposePlan{
+			Purpose:    string(purpose.Purpose),
+			Register:   purpose.Register,
+			Deregister: purpose.Deregister,
+			Unchanged:  purpose.Unchanged,
+		})
+	}
+	return out
+}
+
+func toProtoDocumentIssues(issues []modelcatalog.DocumentIssue) []*postpilotv1.CatalogDocumentIssue {
+	out := make([]*postpilotv1.CatalogDocumentIssue, 0, len(issues))
+	for _, issue := range issues {
+		out = append(out, &postpilotv1.CatalogDocumentIssue{
+			Line: int32(issue.Line), Text: issue.Text, Cause: issue.Cause,
+		})
+	}
+	return out
+}
+
 func toProtoEntry(e modelcatalog.Entry) *postpilotv1.CatalogEntry {
 	purposes := make([]string, 0, len(e.Purposes))
 	for _, purpose := range e.Purposes {

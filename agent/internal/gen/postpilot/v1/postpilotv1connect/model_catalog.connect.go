@@ -42,6 +42,15 @@ const (
 	// ModelCatalogServiceUpdateModelProcedure is the fully-qualified name of the ModelCatalogService's
 	// UpdateModel RPC.
 	ModelCatalogServiceUpdateModelProcedure = "/postpilot.v1.ModelCatalogService/UpdateModel"
+	// ModelCatalogServicePreviewCatalogDocumentProcedure is the fully-qualified name of the
+	// ModelCatalogService's PreviewCatalogDocument RPC.
+	ModelCatalogServicePreviewCatalogDocumentProcedure = "/postpilot.v1.ModelCatalogService/PreviewCatalogDocument"
+	// ModelCatalogServiceApplyCatalogDocumentProcedure is the fully-qualified name of the
+	// ModelCatalogService's ApplyCatalogDocument RPC.
+	ModelCatalogServiceApplyCatalogDocumentProcedure = "/postpilot.v1.ModelCatalogService/ApplyCatalogDocument"
+	// ModelCatalogServiceExportCatalogDocumentProcedure is the fully-qualified name of the
+	// ModelCatalogService's ExportCatalogDocument RPC.
+	ModelCatalogServiceExportCatalogDocumentProcedure = "/postpilot.v1.ModelCatalogService/ExportCatalogDocument"
 )
 
 // ModelCatalogServiceClient is a client for the postpilot.v1.ModelCatalogService service.
@@ -58,6 +67,16 @@ type ModelCatalogServiceClient interface {
 	// Change one curated model. Absent fields are not edits, so two operators changing
 	// different properties of one model do not overwrite each other.
 	UpdateModel(context.Context, *connect.Request[v1.UpdateModelRequest]) (*connect.Response[v1.UpdateModelResponse], error)
+	// Read a pasted document and report what applying it would do, writing NOTHING — not the
+	// registrations, not the availability bookkeeping a ListCatalog would do.
+	PreviewCatalogDocument(context.Context, *connect.Request[v1.PreviewCatalogDocumentRequest]) (*connect.Response[v1.PreviewCatalogDocumentResponse], error)
+	// Apply a pasted document: every named purpose's registrations are synced whole, in one
+	// transaction, or nothing is. The document text is validated again from scratch — this
+	// takes no preview token, because the catalog moves between the two calls.
+	ApplyCatalogDocument(context.Context, *connect.Request[v1.ApplyCatalogDocumentRequest]) (*connect.Response[v1.ApplyCatalogDocumentResponse], error)
+	// Render the current registrations of all five purposes as the same document, so the
+	// operator edits what is there rather than writing one from memory.
+	ExportCatalogDocument(context.Context, *connect.Request[v1.ExportCatalogDocumentRequest]) (*connect.Response[v1.ExportCatalogDocumentResponse], error)
 }
 
 // NewModelCatalogServiceClient constructs a client for the postpilot.v1.ModelCatalogService
@@ -89,14 +108,35 @@ func NewModelCatalogServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(modelCatalogServiceMethods.ByName("UpdateModel")),
 			connect.WithClientOptions(opts...),
 		),
+		previewCatalogDocument: connect.NewClient[v1.PreviewCatalogDocumentRequest, v1.PreviewCatalogDocumentResponse](
+			httpClient,
+			baseURL+ModelCatalogServicePreviewCatalogDocumentProcedure,
+			connect.WithSchema(modelCatalogServiceMethods.ByName("PreviewCatalogDocument")),
+			connect.WithClientOptions(opts...),
+		),
+		applyCatalogDocument: connect.NewClient[v1.ApplyCatalogDocumentRequest, v1.ApplyCatalogDocumentResponse](
+			httpClient,
+			baseURL+ModelCatalogServiceApplyCatalogDocumentProcedure,
+			connect.WithSchema(modelCatalogServiceMethods.ByName("ApplyCatalogDocument")),
+			connect.WithClientOptions(opts...),
+		),
+		exportCatalogDocument: connect.NewClient[v1.ExportCatalogDocumentRequest, v1.ExportCatalogDocumentResponse](
+			httpClient,
+			baseURL+ModelCatalogServiceExportCatalogDocumentProcedure,
+			connect.WithSchema(modelCatalogServiceMethods.ByName("ExportCatalogDocument")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // modelCatalogServiceClient implements ModelCatalogServiceClient.
 type modelCatalogServiceClient struct {
-	listCatalog     *connect.Client[v1.ListCatalogRequest, v1.ListCatalogResponse]
-	setModelPurpose *connect.Client[v1.SetModelPurposeRequest, v1.SetModelPurposeResponse]
-	updateModel     *connect.Client[v1.UpdateModelRequest, v1.UpdateModelResponse]
+	listCatalog            *connect.Client[v1.ListCatalogRequest, v1.ListCatalogResponse]
+	setModelPurpose        *connect.Client[v1.SetModelPurposeRequest, v1.SetModelPurposeResponse]
+	updateModel            *connect.Client[v1.UpdateModelRequest, v1.UpdateModelResponse]
+	previewCatalogDocument *connect.Client[v1.PreviewCatalogDocumentRequest, v1.PreviewCatalogDocumentResponse]
+	applyCatalogDocument   *connect.Client[v1.ApplyCatalogDocumentRequest, v1.ApplyCatalogDocumentResponse]
+	exportCatalogDocument  *connect.Client[v1.ExportCatalogDocumentRequest, v1.ExportCatalogDocumentResponse]
 }
 
 // ListCatalog calls postpilot.v1.ModelCatalogService.ListCatalog.
@@ -114,6 +154,21 @@ func (c *modelCatalogServiceClient) UpdateModel(ctx context.Context, req *connec
 	return c.updateModel.CallUnary(ctx, req)
 }
 
+// PreviewCatalogDocument calls postpilot.v1.ModelCatalogService.PreviewCatalogDocument.
+func (c *modelCatalogServiceClient) PreviewCatalogDocument(ctx context.Context, req *connect.Request[v1.PreviewCatalogDocumentRequest]) (*connect.Response[v1.PreviewCatalogDocumentResponse], error) {
+	return c.previewCatalogDocument.CallUnary(ctx, req)
+}
+
+// ApplyCatalogDocument calls postpilot.v1.ModelCatalogService.ApplyCatalogDocument.
+func (c *modelCatalogServiceClient) ApplyCatalogDocument(ctx context.Context, req *connect.Request[v1.ApplyCatalogDocumentRequest]) (*connect.Response[v1.ApplyCatalogDocumentResponse], error) {
+	return c.applyCatalogDocument.CallUnary(ctx, req)
+}
+
+// ExportCatalogDocument calls postpilot.v1.ModelCatalogService.ExportCatalogDocument.
+func (c *modelCatalogServiceClient) ExportCatalogDocument(ctx context.Context, req *connect.Request[v1.ExportCatalogDocumentRequest]) (*connect.Response[v1.ExportCatalogDocumentResponse], error) {
+	return c.exportCatalogDocument.CallUnary(ctx, req)
+}
+
 // ModelCatalogServiceHandler is an implementation of the postpilot.v1.ModelCatalogService service.
 type ModelCatalogServiceHandler interface {
 	// The provider's live catalog merged with what has been curated, plus every curated model
@@ -128,6 +183,16 @@ type ModelCatalogServiceHandler interface {
 	// Change one curated model. Absent fields are not edits, so two operators changing
 	// different properties of one model do not overwrite each other.
 	UpdateModel(context.Context, *connect.Request[v1.UpdateModelRequest]) (*connect.Response[v1.UpdateModelResponse], error)
+	// Read a pasted document and report what applying it would do, writing NOTHING — not the
+	// registrations, not the availability bookkeeping a ListCatalog would do.
+	PreviewCatalogDocument(context.Context, *connect.Request[v1.PreviewCatalogDocumentRequest]) (*connect.Response[v1.PreviewCatalogDocumentResponse], error)
+	// Apply a pasted document: every named purpose's registrations are synced whole, in one
+	// transaction, or nothing is. The document text is validated again from scratch — this
+	// takes no preview token, because the catalog moves between the two calls.
+	ApplyCatalogDocument(context.Context, *connect.Request[v1.ApplyCatalogDocumentRequest]) (*connect.Response[v1.ApplyCatalogDocumentResponse], error)
+	// Render the current registrations of all five purposes as the same document, so the
+	// operator edits what is there rather than writing one from memory.
+	ExportCatalogDocument(context.Context, *connect.Request[v1.ExportCatalogDocumentRequest]) (*connect.Response[v1.ExportCatalogDocumentResponse], error)
 }
 
 // NewModelCatalogServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -155,6 +220,24 @@ func NewModelCatalogServiceHandler(svc ModelCatalogServiceHandler, opts ...conne
 		connect.WithSchema(modelCatalogServiceMethods.ByName("UpdateModel")),
 		connect.WithHandlerOptions(opts...),
 	)
+	modelCatalogServicePreviewCatalogDocumentHandler := connect.NewUnaryHandler(
+		ModelCatalogServicePreviewCatalogDocumentProcedure,
+		svc.PreviewCatalogDocument,
+		connect.WithSchema(modelCatalogServiceMethods.ByName("PreviewCatalogDocument")),
+		connect.WithHandlerOptions(opts...),
+	)
+	modelCatalogServiceApplyCatalogDocumentHandler := connect.NewUnaryHandler(
+		ModelCatalogServiceApplyCatalogDocumentProcedure,
+		svc.ApplyCatalogDocument,
+		connect.WithSchema(modelCatalogServiceMethods.ByName("ApplyCatalogDocument")),
+		connect.WithHandlerOptions(opts...),
+	)
+	modelCatalogServiceExportCatalogDocumentHandler := connect.NewUnaryHandler(
+		ModelCatalogServiceExportCatalogDocumentProcedure,
+		svc.ExportCatalogDocument,
+		connect.WithSchema(modelCatalogServiceMethods.ByName("ExportCatalogDocument")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.ModelCatalogService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ModelCatalogServiceListCatalogProcedure:
@@ -163,6 +246,12 @@ func NewModelCatalogServiceHandler(svc ModelCatalogServiceHandler, opts ...conne
 			modelCatalogServiceSetModelPurposeHandler.ServeHTTP(w, r)
 		case ModelCatalogServiceUpdateModelProcedure:
 			modelCatalogServiceUpdateModelHandler.ServeHTTP(w, r)
+		case ModelCatalogServicePreviewCatalogDocumentProcedure:
+			modelCatalogServicePreviewCatalogDocumentHandler.ServeHTTP(w, r)
+		case ModelCatalogServiceApplyCatalogDocumentProcedure:
+			modelCatalogServiceApplyCatalogDocumentHandler.ServeHTTP(w, r)
+		case ModelCatalogServiceExportCatalogDocumentProcedure:
+			modelCatalogServiceExportCatalogDocumentHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -182,4 +271,16 @@ func (UnimplementedModelCatalogServiceHandler) SetModelPurpose(context.Context, 
 
 func (UnimplementedModelCatalogServiceHandler) UpdateModel(context.Context, *connect.Request[v1.UpdateModelRequest]) (*connect.Response[v1.UpdateModelResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelCatalogService.UpdateModel is not implemented"))
+}
+
+func (UnimplementedModelCatalogServiceHandler) PreviewCatalogDocument(context.Context, *connect.Request[v1.PreviewCatalogDocumentRequest]) (*connect.Response[v1.PreviewCatalogDocumentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelCatalogService.PreviewCatalogDocument is not implemented"))
+}
+
+func (UnimplementedModelCatalogServiceHandler) ApplyCatalogDocument(context.Context, *connect.Request[v1.ApplyCatalogDocumentRequest]) (*connect.Response[v1.ApplyCatalogDocumentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelCatalogService.ApplyCatalogDocument is not implemented"))
+}
+
+func (UnimplementedModelCatalogServiceHandler) ExportCatalogDocument(context.Context, *connect.Request[v1.ExportCatalogDocumentRequest]) (*connect.Response[v1.ExportCatalogDocumentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelCatalogService.ExportCatalogDocument is not implemented"))
 }

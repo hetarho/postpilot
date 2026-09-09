@@ -10,7 +10,218 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/model_catalog.proto.
  */
 export const file_postpilot_v1_model_catalog: GenFile = /*@__PURE__*/
-  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIsAFCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgIEhMKC3ZpZGVvX2lucHV0GBwgASgIEjoKD3JlYXNvbmluZ19zcGVuZBgTIAEoCzIcLnBvc3RwaWxvdC52MS5SZWFzb25pbmdTcGVuZEgAiAEBEg8KB3JlYXNvbnMYFCABKAgSGQoRcmVhc29uaW5nX2VmZm9ydHMYFSADKAkSIAoYcmVhc29uaW5nX2RlZmF1bHRfZWZmb3J0GBYgASgJEhsKE3JlYXNvbmluZ19tYW5kYXRvcnkYFyABKAgSHwoXcmVhc29uaW5nX25hdGl2ZV9lZmZvcnQYGCABKAgSHAoUcmVhc29uaW5nX21heF90b2tlbnMYGSABKAgSGQoRcmVhc29uaW5nX2RyaWZ0ZWQYGiABKAgSFwoPcmVhc29uaW5nX2tub3duGBsgASgIQhIKEF9yZWFzb25pbmdfc3BlbmRKBAgLEAxKBAgMEA0icwoOUmVhc29uaW5nU3BlbmQSDQoFY2FsbHMYASABKAMSGAoQcmVhc29uaW5nX3Rva2VucxgCIAEoAxIZChFjb21wbGV0aW9uX3Rva2VucxgDIAEoAxIdChVyZWFzb25pbmdfdHJ1bmNhdGlvbnMYBCABKAMiNgoSTGlzdENhdGFsb2dSZXF1ZXN0Eg8KB3JlZnJlc2gYASABKAgSDwoHcHVycG9zZRgCIAEoCSJbChhFc3RpbWF0b3JDb21ib0Fzc2lnbm1lbnQSDQoFY29tYm8YASABKAkSGAoQb2JzZXJ2ZV9tb2RlbF9pZBgCIAEoCRIWCg53cml0ZV9tb2RlbF9pZBgDIAEoCSLBAQoTTGlzdENhdGFsb2dSZXNwb25zZRIrCgdlbnRyaWVzGAEgAygLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeRISCgpmZXRjaGVkX2F0GAIgASgJEhIKCmZyb21fY2FjaGUYAyABKAgSEwoLZmV0Y2hfZXJyb3IYBCABKAkSQAoQZXN0aW1hdG9yX2NvbWJvcxgFIAMoCzImLnBvc3RwaWxvdC52MS5Fc3RpbWF0b3JDb21ib0Fzc2lnbm1lbnQiTwoWU2V0TW9kZWxQdXJwb3NlUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCRIPCgdwdXJwb3NlGAIgASgJEhIKCnJlZ2lzdGVyZWQYAyABKAgiRAoXU2V0TW9kZWxQdXJwb3NlUmVzcG9uc2USKQoFZW50cnkYASABKAsyGi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0VudHJ5IncKElVwZGF0ZU1vZGVsUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCRIdChByZWFzb25pbmdfZWZmb3J0GAQgASgJSACIAQESDwoHcHVycG9zZRgFIAEoCUITChFfcmVhc29uaW5nX2VmZm9ydEoECAIQA0oECAMQBCJAChNVcGRhdGVNb2RlbFJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeTKjAgoTTW9kZWxDYXRhbG9nU2VydmljZRJUCgtMaXN0Q2F0YWxvZxIgLnBvc3RwaWxvdC52MS5MaXN0Q2F0YWxvZ1JlcXVlc3QaIS5wb3N0cGlsb3QudjEuTGlzdENhdGFsb2dSZXNwb25zZSIAEmAKD1NldE1vZGVsUHVycG9zZRIkLnBvc3RwaWxvdC52MS5TZXRNb2RlbFB1cnBvc2VSZXF1ZXN0GiUucG9zdHBpbG90LnYxLlNldE1vZGVsUHVycG9zZVJlc3BvbnNlIgASVAoLVXBkYXRlTW9kZWwSIC5wb3N0cGlsb3QudjEuVXBkYXRlTW9kZWxSZXF1ZXN0GiEucG9zdHBpbG90LnYxLlVwZGF0ZU1vZGVsUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
+  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIkEKFENhdGFsb2dEb2N1bWVudElzc3VlEgwKBGxpbmUYASABKAUSDAoEdGV4dBgCIAEoCRINCgVjYXVzZRgDIAEoCSJmChpDYXRhbG9nRG9jdW1lbnRQdXJwb3NlUGxhbhIPCgdwdXJwb3NlGAEgASgJEhAKCHJlZ2lzdGVyGAIgAygJEhIKCmRlcmVnaXN0ZXIYAyADKAkSEQoJdW5jaGFuZ2VkGAQgAygJIjEKHVByZXZpZXdDYXRhbG9nRG9jdW1lbnRSZXF1ZXN0EhAKCGRvY3VtZW50GAEgASgJIqUBCh5QcmV2aWV3Q2F0YWxvZ0RvY3VtZW50UmVzcG9uc2USOgoIcHVycG9zZXMYASADKAsyKC5wb3N0cGlsb3QudjEuQ2F0YWxvZ0RvY3VtZW50UHVycG9zZVBsYW4SMgoGaXNzdWVzGAIgAygLMiIucG9zdHBpbG90LnYxLkNhdGFsb2dEb2N1bWVudElzc3VlEhMKC2ZldGNoX2Vycm9yGAMgASgJIi8KG0FwcGx5Q2F0YWxvZ0RvY3VtZW50UmVxdWVzdBIQCghkb2N1bWVudBgBIAEoCSK0AQocQXBwbHlDYXRhbG9nRG9jdW1lbnRSZXNwb25zZRI6CghwdXJwb3NlcxgBIAMoCzIoLnBvc3RwaWxvdC52MS5DYXRhbG9nRG9jdW1lbnRQdXJwb3NlUGxhbhIyCgZpc3N1ZXMYAiADKAsyIi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0RvY3VtZW50SXNzdWUSEwoLZmV0Y2hfZXJyb3IYAyABKAkSDwoHYXBwbGllZBgEIAEoCCIeChxFeHBvcnRDYXRhbG9nRG9jdW1lbnRSZXF1ZXN0IjEKHUV4cG9ydENhdGFsb2dEb2N1bWVudFJlc3BvbnNlEhAKCGRvY3VtZW50GAEgASgJIsAFCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgIEhMKC3ZpZGVvX2lucHV0GBwgASgIEjoKD3JlYXNvbmluZ19zcGVuZBgTIAEoCzIcLnBvc3RwaWxvdC52MS5SZWFzb25pbmdTcGVuZEgAiAEBEg8KB3JlYXNvbnMYFCABKAgSGQoRcmVhc29uaW5nX2VmZm9ydHMYFSADKAkSIAoYcmVhc29uaW5nX2RlZmF1bHRfZWZmb3J0GBYgASgJEhsKE3JlYXNvbmluZ19tYW5kYXRvcnkYFyABKAgSHwoXcmVhc29uaW5nX25hdGl2ZV9lZmZvcnQYGCABKAgSHAoUcmVhc29uaW5nX21heF90b2tlbnMYGSABKAgSGQoRcmVhc29uaW5nX2RyaWZ0ZWQYGiABKAgSFwoPcmVhc29uaW5nX2tub3duGBsgASgIQhIKEF9yZWFzb25pbmdfc3BlbmRKBAgLEAxKBAgMEA0icwoOUmVhc29uaW5nU3BlbmQSDQoFY2FsbHMYASABKAMSGAoQcmVhc29uaW5nX3Rva2VucxgCIAEoAxIZChFjb21wbGV0aW9uX3Rva2VucxgDIAEoAxIdChVyZWFzb25pbmdfdHJ1bmNhdGlvbnMYBCABKAMiNgoSTGlzdENhdGFsb2dSZXF1ZXN0Eg8KB3JlZnJlc2gYASABKAgSDwoHcHVycG9zZRgCIAEoCSJbChhFc3RpbWF0b3JDb21ib0Fzc2lnbm1lbnQSDQoFY29tYm8YASABKAkSGAoQb2JzZXJ2ZV9tb2RlbF9pZBgCIAEoCRIWCg53cml0ZV9tb2RlbF9pZBgDIAEoCSLBAQoTTGlzdENhdGFsb2dSZXNwb25zZRIrCgdlbnRyaWVzGAEgAygLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeRISCgpmZXRjaGVkX2F0GAIgASgJEhIKCmZyb21fY2FjaGUYAyABKAgSEwoLZmV0Y2hfZXJyb3IYBCABKAkSQAoQZXN0aW1hdG9yX2NvbWJvcxgFIAMoCzImLnBvc3RwaWxvdC52MS5Fc3RpbWF0b3JDb21ib0Fzc2lnbm1lbnQiTwoWU2V0TW9kZWxQdXJwb3NlUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCRIPCgdwdXJwb3NlGAIgASgJEhIKCnJlZ2lzdGVyZWQYAyABKAgiRAoXU2V0TW9kZWxQdXJwb3NlUmVzcG9uc2USKQoFZW50cnkYASABKAsyGi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0VudHJ5IncKElVwZGF0ZU1vZGVsUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCRIdChByZWFzb25pbmdfZWZmb3J0GAQgASgJSACIAQESDwoHcHVycG9zZRgFIAEoCUITChFfcmVhc29uaW5nX2VmZm9ydEoECAIQA0oECAMQBCJAChNVcGRhdGVNb2RlbFJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeTL/BAoTTW9kZWxDYXRhbG9nU2VydmljZRJUCgtMaXN0Q2F0YWxvZxIgLnBvc3RwaWxvdC52MS5MaXN0Q2F0YWxvZ1JlcXVlc3QaIS5wb3N0cGlsb3QudjEuTGlzdENhdGFsb2dSZXNwb25zZSIAEmAKD1NldE1vZGVsUHVycG9zZRIkLnBvc3RwaWxvdC52MS5TZXRNb2RlbFB1cnBvc2VSZXF1ZXN0GiUucG9zdHBpbG90LnYxLlNldE1vZGVsUHVycG9zZVJlc3BvbnNlIgASVAoLVXBkYXRlTW9kZWwSIC5wb3N0cGlsb3QudjEuVXBkYXRlTW9kZWxSZXF1ZXN0GiEucG9zdHBpbG90LnYxLlVwZGF0ZU1vZGVsUmVzcG9uc2UiABJ1ChZQcmV2aWV3Q2F0YWxvZ0RvY3VtZW50EisucG9zdHBpbG90LnYxLlByZXZpZXdDYXRhbG9nRG9jdW1lbnRSZXF1ZXN0GiwucG9zdHBpbG90LnYxLlByZXZpZXdDYXRhbG9nRG9jdW1lbnRSZXNwb25zZSIAEm8KFEFwcGx5Q2F0YWxvZ0RvY3VtZW50EikucG9zdHBpbG90LnYxLkFwcGx5Q2F0YWxvZ0RvY3VtZW50UmVxdWVzdBoqLnBvc3RwaWxvdC52MS5BcHBseUNhdGFsb2dEb2N1bWVudFJlc3BvbnNlIgAScgoVRXhwb3J0Q2F0YWxvZ0RvY3VtZW50EioucG9zdHBpbG90LnYxLkV4cG9ydENhdGFsb2dEb2N1bWVudFJlcXVlc3QaKy5wb3N0cGlsb3QudjEuRXhwb3J0Q2F0YWxvZ0RvY3VtZW50UmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
+
+/**
+ * CatalogDocumentIssue is one refused line. Any issue at all refuses the WHOLE document: a
+ * half-applied sync would silently deregister what the refused lines were meant to keep.
+ *
+ * `cause` is a short slug the operator surface renders with its own copy (bad_version,
+ * unknown_purpose, duplicate_section, id_before_section, malformed_line, duplicate_id,
+ * unknown_model, unlisted_model, purpose_ineligible). It is master-only admin detail, not
+ * one of the normalized user-facing failure reasons.
+ *
+ * @generated from message postpilot.v1.CatalogDocumentIssue
+ */
+export type CatalogDocumentIssue = Message<"postpilot.v1.CatalogDocumentIssue"> & {
+  /**
+   * 1-based, over the document as pasted — including the lines the parser ignores.
+   *
+   * @generated from field: int32 line = 1;
+   */
+  line: number;
+
+  /**
+   * @generated from field: string text = 2;
+   */
+  text: string;
+
+  /**
+   * @generated from field: string cause = 3;
+   */
+  cause: string;
+};
+
+/**
+ * Describes the message postpilot.v1.CatalogDocumentIssue.
+ * Use `create(CatalogDocumentIssueSchema)` to create a new message.
+ */
+export const CatalogDocumentIssueSchema: GenMessage<CatalogDocumentIssue> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 0);
+
+/**
+ * CatalogDocumentPurposePlan is what applying would do to ONE purpose. A purpose the
+ * document gives no section for is absent from the plan entirely: it is untouched, which is
+ * not the same as an empty diff.
+ *
+ * @generated from message postpilot.v1.CatalogDocumentPurposePlan
+ */
+export type CatalogDocumentPurposePlan = Message<"postpilot.v1.CatalogDocumentPurposePlan"> & {
+  /**
+   * @generated from field: string purpose = 1;
+   */
+  purpose: string;
+
+  /**
+   * @generated from field: repeated string register = 2;
+   */
+  register: string[];
+
+  /**
+   * The ids that hold this purpose today and the document does not list. A section is the
+   * purpose's complete membership, so omission is a deregistration.
+   *
+   * @generated from field: repeated string deregister = 3;
+   */
+  deregister: string[];
+
+  /**
+   * @generated from field: repeated string unchanged = 4;
+   */
+  unchanged: string[];
+};
+
+/**
+ * Describes the message postpilot.v1.CatalogDocumentPurposePlan.
+ * Use `create(CatalogDocumentPurposePlanSchema)` to create a new message.
+ */
+export const CatalogDocumentPurposePlanSchema: GenMessage<CatalogDocumentPurposePlan> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 1);
+
+/**
+ * @generated from message postpilot.v1.PreviewCatalogDocumentRequest
+ */
+export type PreviewCatalogDocumentRequest = Message<"postpilot.v1.PreviewCatalogDocumentRequest"> & {
+  /**
+   * @generated from field: string document = 1;
+   */
+  document: string;
+};
+
+/**
+ * Describes the message postpilot.v1.PreviewCatalogDocumentRequest.
+ * Use `create(PreviewCatalogDocumentRequestSchema)` to create a new message.
+ */
+export const PreviewCatalogDocumentRequestSchema: GenMessage<PreviewCatalogDocumentRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 2);
+
+/**
+ * @generated from message postpilot.v1.PreviewCatalogDocumentResponse
+ */
+export type PreviewCatalogDocumentResponse = Message<"postpilot.v1.PreviewCatalogDocumentResponse"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.CatalogDocumentPurposePlan purposes = 1;
+   */
+  purposes: CatalogDocumentPurposePlan[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.CatalogDocumentIssue issues = 2;
+   */
+  issues: CatalogDocumentIssue[];
+
+  /**
+   * Set when the provider catalog could not be read. This path needs the live snapshot to
+   * create a row for an id nobody has curated yet, so an unreadable catalog refuses the
+   * paste instead of degrading to stored rows the way ListCatalog does.
+   *
+   * @generated from field: string fetch_error = 3;
+   */
+  fetchError: string;
+};
+
+/**
+ * Describes the message postpilot.v1.PreviewCatalogDocumentResponse.
+ * Use `create(PreviewCatalogDocumentResponseSchema)` to create a new message.
+ */
+export const PreviewCatalogDocumentResponseSchema: GenMessage<PreviewCatalogDocumentResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 3);
+
+/**
+ * @generated from message postpilot.v1.ApplyCatalogDocumentRequest
+ */
+export type ApplyCatalogDocumentRequest = Message<"postpilot.v1.ApplyCatalogDocumentRequest"> & {
+  /**
+   * The same text the preview was run on, re-validated here from scratch.
+   *
+   * @generated from field: string document = 1;
+   */
+  document: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ApplyCatalogDocumentRequest.
+ * Use `create(ApplyCatalogDocumentRequestSchema)` to create a new message.
+ */
+export const ApplyCatalogDocumentRequestSchema: GenMessage<ApplyCatalogDocumentRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 4);
+
+/**
+ * @generated from message postpilot.v1.ApplyCatalogDocumentResponse
+ */
+export type ApplyCatalogDocumentResponse = Message<"postpilot.v1.ApplyCatalogDocumentResponse"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.CatalogDocumentPurposePlan purposes = 1;
+   */
+  purposes: CatalogDocumentPurposePlan[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.CatalogDocumentIssue issues = 2;
+   */
+  issues: CatalogDocumentIssue[];
+
+  /**
+   * @generated from field: string fetch_error = 3;
+   */
+  fetchError: string;
+
+  /**
+   * False when anything was refused, and then nothing was written. A rejection discovered
+   * here rather than at preview is the catalog having moved, and renders identically.
+   *
+   * @generated from field: bool applied = 4;
+   */
+  applied: boolean;
+};
+
+/**
+ * Describes the message postpilot.v1.ApplyCatalogDocumentResponse.
+ * Use `create(ApplyCatalogDocumentResponseSchema)` to create a new message.
+ */
+export const ApplyCatalogDocumentResponseSchema: GenMessage<ApplyCatalogDocumentResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 5);
+
+/**
+ * @generated from message postpilot.v1.ExportCatalogDocumentRequest
+ */
+export type ExportCatalogDocumentRequest = Message<"postpilot.v1.ExportCatalogDocumentRequest"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.ExportCatalogDocumentRequest.
+ * Use `create(ExportCatalogDocumentRequestSchema)` to create a new message.
+ */
+export const ExportCatalogDocumentRequestSchema: GenMessage<ExportCatalogDocumentRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 6);
+
+/**
+ * @generated from message postpilot.v1.ExportCatalogDocumentResponse
+ */
+export type ExportCatalogDocumentResponse = Message<"postpilot.v1.ExportCatalogDocumentResponse"> & {
+  /**
+   * Every purpose, including the ones with no registration, so pasting this straight back
+   * previews as no change.
+   *
+   * @generated from field: string document = 1;
+   */
+  document: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ExportCatalogDocumentResponse.
+ * Use `create(ExportCatalogDocumentResponseSchema)` to create a new message.
+ */
+export const ExportCatalogDocumentResponseSchema: GenMessage<ExportCatalogDocumentResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 7);
 
 /**
  * CatalogEntry is one row of the operator's browse list.
@@ -231,7 +442,7 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
  * Use `create(CatalogEntrySchema)` to create a new message.
  */
 export const CatalogEntrySchema: GenMessage<CatalogEntry> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 0);
+  messageDesc(file_postpilot_v1_model_catalog, 8);
 
 /**
  * ReasoningSpend is a recent window of one model's completion budget at one stage.
@@ -265,7 +476,7 @@ export type ReasoningSpend = Message<"postpilot.v1.ReasoningSpend"> & {
  * Use `create(ReasoningSpendSchema)` to create a new message.
  */
 export const ReasoningSpendSchema: GenMessage<ReasoningSpend> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 1);
+  messageDesc(file_postpilot_v1_model_catalog, 9);
 
 /**
  * @generated from message postpilot.v1.ListCatalogRequest
@@ -293,7 +504,7 @@ export type ListCatalogRequest = Message<"postpilot.v1.ListCatalogRequest"> & {
  * Use `create(ListCatalogRequestSchema)` to create a new message.
  */
 export const ListCatalogRequestSchema: GenMessage<ListCatalogRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 2);
+  messageDesc(file_postpilot_v1_model_catalog, 10);
 
 /**
  * One combo's current assignment, for the operator's own screen. Empty ids mean the combo
@@ -323,7 +534,7 @@ export type EstimatorComboAssignment = Message<"postpilot.v1.EstimatorComboAssig
  * Use `create(EstimatorComboAssignmentSchema)` to create a new message.
  */
 export const EstimatorComboAssignmentSchema: GenMessage<EstimatorComboAssignment> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 3);
+  messageDesc(file_postpilot_v1_model_catalog, 11);
 
 /**
  * @generated from message postpilot.v1.ListCatalogResponse
@@ -369,7 +580,7 @@ export type ListCatalogResponse = Message<"postpilot.v1.ListCatalogResponse"> & 
  * Use `create(ListCatalogResponseSchema)` to create a new message.
  */
 export const ListCatalogResponseSchema: GenMessage<ListCatalogResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 4);
+  messageDesc(file_postpilot_v1_model_catalog, 12);
 
 /**
  * @generated from message postpilot.v1.SetModelPurposeRequest
@@ -388,8 +599,9 @@ export type SetModelPurposeRequest = Message<"postpilot.v1.SetModelPurposeReques
   purpose: string;
 
   /**
-   * true registers, false deregisters. Deregistering keeps the curated row (and its
-   * reasoning override); it only stops serving the model to that purpose.
+   * true registers, false deregisters. Deregistering keeps the curated row — the operator's
+   * curation returns intact on re-registration — but not the effort override, which lives
+   * on the registration itself since change 24 and goes with it.
    *
    * @generated from field: bool registered = 3;
    */
@@ -401,7 +613,7 @@ export type SetModelPurposeRequest = Message<"postpilot.v1.SetModelPurposeReques
  * Use `create(SetModelPurposeRequestSchema)` to create a new message.
  */
 export const SetModelPurposeRequestSchema: GenMessage<SetModelPurposeRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 5);
+  messageDesc(file_postpilot_v1_model_catalog, 13);
 
 /**
  * @generated from message postpilot.v1.SetModelPurposeResponse
@@ -418,7 +630,7 @@ export type SetModelPurposeResponse = Message<"postpilot.v1.SetModelPurposeRespo
  * Use `create(SetModelPurposeResponseSchema)` to create a new message.
  */
 export const SetModelPurposeResponseSchema: GenMessage<SetModelPurposeResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 6);
+  messageDesc(file_postpilot_v1_model_catalog, 14);
 
 /**
  * @generated from message postpilot.v1.UpdateModelRequest
@@ -460,7 +672,7 @@ export type UpdateModelRequest = Message<"postpilot.v1.UpdateModelRequest"> & {
  * Use `create(UpdateModelRequestSchema)` to create a new message.
  */
 export const UpdateModelRequestSchema: GenMessage<UpdateModelRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 7);
+  messageDesc(file_postpilot_v1_model_catalog, 15);
 
 /**
  * @generated from message postpilot.v1.UpdateModelResponse
@@ -477,7 +689,7 @@ export type UpdateModelResponse = Message<"postpilot.v1.UpdateModelResponse"> & 
  * Use `create(UpdateModelResponseSchema)` to create a new message.
  */
 export const UpdateModelResponseSchema: GenMessage<UpdateModelResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 8);
+  messageDesc(file_postpilot_v1_model_catalog, 16);
 
 /**
  * model_catalog.proto is the OPERATOR's half of the model story (plan 18, change 20):
@@ -527,6 +739,40 @@ export const ModelCatalogService: GenService<{
     methodKind: "unary";
     input: typeof UpdateModelRequestSchema;
     output: typeof UpdateModelResponseSchema;
+  },
+  /**
+   * Read a pasted document and report what applying it would do, writing NOTHING — not the
+   * registrations, not the availability bookkeeping a ListCatalog would do.
+   *
+   * @generated from rpc postpilot.v1.ModelCatalogService.PreviewCatalogDocument
+   */
+  previewCatalogDocument: {
+    methodKind: "unary";
+    input: typeof PreviewCatalogDocumentRequestSchema;
+    output: typeof PreviewCatalogDocumentResponseSchema;
+  },
+  /**
+   * Apply a pasted document: every named purpose's registrations are synced whole, in one
+   * transaction, or nothing is. The document text is validated again from scratch — this
+   * takes no preview token, because the catalog moves between the two calls.
+   *
+   * @generated from rpc postpilot.v1.ModelCatalogService.ApplyCatalogDocument
+   */
+  applyCatalogDocument: {
+    methodKind: "unary";
+    input: typeof ApplyCatalogDocumentRequestSchema;
+    output: typeof ApplyCatalogDocumentResponseSchema;
+  },
+  /**
+   * Render the current registrations of all five purposes as the same document, so the
+   * operator edits what is there rather than writing one from memory.
+   *
+   * @generated from rpc postpilot.v1.ModelCatalogService.ExportCatalogDocument
+   */
+  exportCatalogDocument: {
+    methodKind: "unary";
+    input: typeof ExportCatalogDocumentRequestSchema;
+    output: typeof ExportCatalogDocumentResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_model_catalog, 0);

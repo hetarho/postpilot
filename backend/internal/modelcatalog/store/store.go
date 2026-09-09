@@ -206,7 +206,8 @@ func (s *Store) RegisterPurpose(ctx context.Context, m modelcatalog.Model, purpo
 
 // DeregisterPurpose removes one registration and stamps updated_at in the same
 // transaction — a deregistration is a curation edit. The catalog row itself stays, so the
-// reasoning override survives a full deregistration the way it survived `enabled = 0`.
+// operator's curation returns intact on re-registration; the effort override does not,
+// because migration 0021 moved it onto the registration row this DELETE removes (MODEL-20).
 func (s *Store) DeregisterPurpose(ctx context.Context, modelID string, purpose modelcatalog.Purpose, at time.Time) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
@@ -227,6 +228,57 @@ func (s *Store) DeregisterPurpose(ctx context.Context, modelID string, purpose m
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit deregister model purpose: %w", err)
+	}
+	return nil
+}
+
+// SyncPurposes applies a whole document's registration changes in one transaction
+// (MODEL-53). It is built from the same two writes the single-model path uses, so a paste
+// and a checkbox cannot produce different rows: a registration upserts the row snapshot and
+// inserts the registration, a deregistration deletes it and takes its effort override with
+// it. Nothing is visible to a reader until every write in the document has landed.
+func (s *Store) SyncPurposes(ctx context.Context, writes []modelcatalog.PurposeWrite, at time.Time) error {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin catalog document sync: %w", err)
+	}
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	stamp := formatTime(at)
+	for _, write := range writes {
+		// The purpose CHECK the schema carries cannot catch this one: the registration
+		// insert is OR IGNORE, so an unknown purpose would be silently skipped rather than
+		// refused. Checking per write, inside the transaction, means a bad one rolls back
+		// whatever the document already wrote.
+		if _, err := modelcatalog.ParsePurpose(string(write.Purpose)); err != nil {
+			return err
+		}
+		if write.Register {
+			if err := upsert(ctx, q, write.Model); err != nil {
+				return err
+			}
+			err = q.AddCatalogModelPurpose(ctx, sqlc.AddCatalogModelPurposeParams{
+				ModelID: write.Model.ModelID, Purpose: string(write.Purpose), CreatedAt: stamp,
+			})
+			if err != nil {
+				return fmt.Errorf("add catalog model purpose: %w", err)
+			}
+			continue
+		}
+		err = q.RemoveCatalogModelPurpose(ctx, sqlc.RemoveCatalogModelPurposeParams{
+			ModelID: write.Model.ModelID, Purpose: string(write.Purpose),
+		})
+		if err != nil {
+			return fmt.Errorf("remove catalog model purpose: %w", err)
+		}
+		if err := q.TouchCatalogModelCuration(ctx, sqlc.TouchCatalogModelCurationParams{
+			UpdatedAt: stamp, ModelID: write.Model.ModelID,
+		}); err != nil {
+			return fmt.Errorf("stamp catalog model curation: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit catalog document sync: %w", err)
 	}
 	return nil
 }

@@ -26,6 +26,77 @@ service ModelCatalogService {
   // Change one curated model. Absent fields are not edits, so two operators changing
   // different properties of one model do not overwrite each other.
   rpc UpdateModel(UpdateModelRequest) returns (UpdateModelResponse) {}
+  // Read a pasted document and report what applying it would do, writing NOTHING — not the
+  // registrations, not the availability bookkeeping a ListCatalog would do.
+  rpc PreviewCatalogDocument(PreviewCatalogDocumentRequest) returns (PreviewCatalogDocumentResponse) {}
+  // Apply a pasted document: every named purpose's registrations are synced whole, in one
+  // transaction, or nothing is. The document text is validated again from scratch — this
+  // takes no preview token, because the catalog moves between the two calls.
+  rpc ApplyCatalogDocument(ApplyCatalogDocumentRequest) returns (ApplyCatalogDocumentResponse) {}
+  // Render the current registrations of all five purposes as the same document, so the
+  // operator edits what is there rather than writing one from memory.
+  rpc ExportCatalogDocument(ExportCatalogDocumentRequest) returns (ExportCatalogDocumentResponse) {}
+}
+
+// CatalogDocumentIssue is one refused line. Any issue at all refuses the WHOLE document: a
+// half-applied sync would silently deregister what the refused lines were meant to keep.
+//
+// `cause` is a short slug the operator surface renders with its own copy (bad_version,
+// unknown_purpose, duplicate_section, id_before_section, malformed_line, duplicate_id,
+// unknown_model, unlisted_model, purpose_ineligible). It is master-only admin detail, not
+// one of the normalized user-facing failure reasons.
+message CatalogDocumentIssue {
+  // 1-based, over the document as pasted — including the lines the parser ignores.
+  int32 line = 1;
+  string text = 2;
+  string cause = 3;
+}
+
+// CatalogDocumentPurposePlan is what applying would do to ONE purpose. A purpose the
+// document gives no section for is absent from the plan entirely: it is untouched, which is
+// not the same as an empty diff.
+message CatalogDocumentPurposePlan {
+  string purpose = 1;
+  repeated string register = 2;
+  // The ids that hold this purpose today and the document does not list. A section is the
+  // purpose's complete membership, so omission is a deregistration.
+  repeated string deregister = 3;
+  repeated string unchanged = 4;
+}
+
+message PreviewCatalogDocumentRequest {
+  string document = 1;
+}
+
+message PreviewCatalogDocumentResponse {
+  repeated CatalogDocumentPurposePlan purposes = 1;
+  repeated CatalogDocumentIssue issues = 2;
+  // Set when the provider catalog could not be read. This path needs the live snapshot to
+  // create a row for an id nobody has curated yet, so an unreadable catalog refuses the
+  // paste instead of degrading to stored rows the way ListCatalog does.
+  string fetch_error = 3;
+}
+
+message ApplyCatalogDocumentRequest {
+  // The same text the preview was run on, re-validated here from scratch.
+  string document = 1;
+}
+
+message ApplyCatalogDocumentResponse {
+  repeated CatalogDocumentPurposePlan purposes = 1;
+  repeated CatalogDocumentIssue issues = 2;
+  string fetch_error = 3;
+  // False when anything was refused, and then nothing was written. A rejection discovered
+  // here rather than at preview is the catalog having moved, and renders identically.
+  bool applied = 4;
+}
+
+message ExportCatalogDocumentRequest {}
+
+message ExportCatalogDocumentResponse {
+  // Every purpose, including the ones with no registration, so pasting this straight back
+  // previews as no change.
+  string document = 1;
 }
 
 // CatalogEntry is one row of the operator's browse list.
@@ -163,8 +234,9 @@ message SetModelPurposeRequest {
   string model_id = 1;
   // One of the purpose slugs CatalogEntry.purposes uses.
   string purpose = 2;
-  // true registers, false deregisters. Deregistering keeps the curated row (and its
-  // reasoning override); it only stops serving the model to that purpose.
+  // true registers, false deregisters. Deregistering keeps the curated row — the operator's
+  // curation returns intact on re-registration — but not the effort override, which lives
+  // on the registration itself since change 24 and goes with it.
   bool registered = 3;
 }
 
