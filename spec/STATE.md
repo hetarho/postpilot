@@ -39,7 +39,6 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUB | T044 T043 | doing@260910.fnc |
 | T046 | Wiring the real publisher into the daemon | PUB | T045 | todo |
-| T075 | Timecoded clip analysis and AI edit planning | CLIP VIDEO MODEL | T069 | todo |
 | T076 | Durable clip generation and result retention | CLIP QUOTA VIDEO MODEL | T071 T074 T075 | todo |
 | T077 | Clip generation progress, preview and download | CLIP THEME LANG | T072 T076 | todo |
 | T078 | Manual clip-plan save and credit-free rerender | CLIP QUOTA | T071 T074 T076 | todo |
@@ -47,10 +46,12 @@
 | T080 | Grouped writing and video navigation | CLIP THEME | T070 T072 | todo |
 
 ## next
-- Implement and commit T075 through T080 sequentially; T074's three ratios are owner-verified in Naver web
+- Implement and commit T076 through T080 sequentially; T074's three ratios are owner-verified in Naver web
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
 - the PUB body path is done and live-verified (T042 T043): read BOTH results before T045 — the 260910 surveys found that paragraph conversions split the component, 인용구 is born with a 출처 module, an image splits the caret's component and so needs no index, the photo-library sidebar overlays every caret point, and `Input.insertText` leaves its last word uncommitted until a key follows it (4 of 5 writes lost it). Next is T045 → T046 → T008 (re-read PUB@4 base); update-ssot PUB for VIDEO-17 + TMPL-39 after T008; T045 inherits the build-tagged survey harness in `agent/internal/naver/survey_test.go` for its own live checks, and must keep `image_caption`'s document-ordinal assumption true when it counts strip-grouped images
 ## log
+- 260910 T075 done; strict timecoded AI contracts, safe caption placement/exposure, typed budgets and all local gates pass
+- 260910 T075 claimed (clp)
 - 260910 T074 done; exact caption/video renderer, every local gate and nonroot Docker smoke pass; owner confirms Naver web acceptance of all three ratios
 - 260910 T045 claimed (fnc)
 - 260910 T074 reclaimed (clp): owner confirms web acceptance of all three MP4s with a screenshot showing their 15-second durations; final freshness and gates before commit
@@ -69,5 +70,3 @@
 - 260910 T070 done; UI/contract/CI gates pass; pre-existing 320 px header wordmark/plan overlap noted for later shell review
 - 260910 T042 claimed (bdy); the live survey answered all four questions that blocked it
 - 260910 T070 claimed (clp)
-- 260910 T069 done; all code gates and spec lint pass after identifier repair
-- 260910 spec identifier repair: TEMPLATE→TMPL, PUBLISH→PUB, MARKETING→MKT, BILLING→BILL; names and references only, no policy or revision change

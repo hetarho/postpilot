@@ -282,3 +282,35 @@ func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canva
 	}
 	return png, nil
 }
+
+// CaptionSize uses precisely the same shaping and fit as the final PNG. It needs
+// no source pixels, and its temporary SVG is scoped to a private workspace.
+func (r *Rendering) CaptionSize(ctx context.Context, ratio string, c clip.Caption) (width, height float64, err error) {
+	canvas, err := clip.ClipCanvas(ratio)
+	if err != nil || !clip.ValidCopy(c, r.cfg.MaxCopyRunes) {
+		return 0, 0, clip.ErrInvalid
+	}
+	if strings.TrimSpace(c.Text) == "" {
+		return 0, 0, nil
+	}
+	if err := r.checkCopy(c.Text); err != nil {
+		return 0, 0, err
+	}
+	err = r.media.WithWorkspace(ctx, "clip-caption-size", func(ws clip.MediaWorkspace) error {
+		candidates, values, err := copyCandidates(c.Text)
+		if err != nil {
+			return err
+		}
+		bounds, err := r.measure(ctx, ws, values, copyRecipes[c.Style].Weight)
+		if err != nil {
+			return err
+		}
+		layout, err := fitCopy(canvas, c, candidates, bounds)
+		if err != nil {
+			return err
+		}
+		width, height = layout.Region.Width, layout.Region.Height
+		return nil
+	})
+	return
+}

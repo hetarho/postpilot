@@ -15,13 +15,26 @@ var ErrCopyTooLong = errors.New("CLIP_COPY_TOO_LONG")
 // normalized values, never arbitrary filter expressions or pixel coordinates.
 type Point struct{ X, Y float64 }
 type Region struct{ X, Y, Width, Height float64 }
-type Copy struct{ Text, Position, Style, Accent string }
-type EditCut struct {
+type Caption struct {
+	Text, Position, Style, Accent string
+	// Relative to the trimmed cut. Both zero preserves the whole-cut default.
+	StartMS, EndMS int
+}
+type Copy = Caption
+type Cut struct {
 	ID, SourceID, Fingerprint string
 	StartMS, EndMS            int
 	Focal                     Point
 	Copy                      Copy
 	Volume                    *float64 // nil keeps original audio; explicit zero mutes it
+}
+type EditCut = Cut
+
+func (c Cut) CaptionWindow() (int, int) {
+	if c.Copy.StartMS == 0 && c.Copy.EndMS == 0 {
+		return 0, c.EndMS - c.StartMS
+	}
+	return c.Copy.StartMS, c.Copy.EndMS
 }
 
 func (c EditCut) OriginalVolume() float64 {
@@ -100,10 +113,14 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			return ErrCopyTooLong
 		}
 		s, ok := byID[c.SourceID]
-		if !ok || c.Fingerprint != s.Fingerprint || strings.TrimSpace(c.ID) == "" || seen[c.ID] || c.StartMS < 0 || c.EndMS > s.Info.DurationMS || c.EndMS-c.StartMS <= 2*cfg.FadeMS || !normalized(c.Focal.X) || !normalized(c.Focal.Y) || !normalized(c.OriginalVolume()) || !ValidCopy(c.Copy, cfg.MaxCopyRunes) {
+		if !ok || c.Fingerprint != s.Fingerprint || strings.TrimSpace(c.ID) == "" || seen[c.ID] || c.StartMS < 0 || c.StartMS >= c.EndMS || c.EndMS > s.Info.DurationMS || c.EndMS-c.StartMS <= 2*cfg.FadeMS || !normalized(c.Focal.X) || !normalized(c.Focal.Y) || !normalized(c.OriginalVolume()) || !ValidCopy(c.Copy, cfg.MaxCopyRunes) {
 			return ErrInvalid
 		}
 		seen[c.ID] = true
+		captionStart, captionEnd := c.CaptionWindow()
+		if captionStart < 0 || captionEnd <= captionStart || captionEnd > c.EndMS-c.StartMS {
+			return ErrInvalid
+		}
 		if c.EndMS-c.StartMS > cfg.MaxDurationMS+cfg.FadeMS*(len(plan.Cuts)-1)-total {
 			return ErrInvalid
 		}

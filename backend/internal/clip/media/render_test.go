@@ -128,6 +128,16 @@ func TestRenderFilterGoldens(t *testing.T) {
 		t.Fatal(frames)
 	}
 }
+
+func TestCaptionExposureUsesOnlyValidatedCutRelativeTimes(t *testing.T) {
+	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
+	canvas, _ := clip.ClipCanvas("vertical")
+	c := clip.Cut{EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Caption{StartMS: 1000, EndMS: 12000}}
+	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 450, true, false)
+	if !strings.Contains(graph, ":enable='gte(t,1.000)*lt(t,12.000)'") {
+		t.Fatal(graph)
+	}
+}
 func TestCopyMeasurementAndExplicitFontArguments(t *testing.T) {
 	fake := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) { return []byte("m0,1,120,500,100\n"), nil }}
 	a := newAdapter(t, fake)

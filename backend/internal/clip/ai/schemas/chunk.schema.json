@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_id", "chunk_index", "segments"],
+  "properties": {
+    "source_id": { "type": "string" },
+    "chunk_index": { "type": "integer", "minimum": 0 },
+    "segments": {
+      "type": "array", "minItems": 1, "maxItems": 60,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["start_ms", "end_ms", "event", "subjects", "speech", "quality", "focal", "avoid"],
+        "properties": {
+          "start_ms": { "type": "integer" },
+          "end_ms": { "type": "integer" },
+          "event": { "type": "string", "maxLength": 2000 },
+          "subjects": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 2000 } },
+          "speech": { "type": "string", "maxLength": 2000 },
+          "quality": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "focal": {
+            "type": "object", "additionalProperties": false, "required": ["x", "y"],
+            "properties": { "x": { "type": "number", "minimum": 0, "maximum": 1 }, "y": { "type": "number", "minimum": 0, "maximum": 1 } }
+          },
+          "avoid": {
+            "type": "object", "additionalProperties": false, "required": ["x", "y", "width", "height"],
+            "properties": {
+              "x": { "type": "number", "minimum": 0, "maximum": 1 },
+              "y": { "type": "number", "minimum": 0, "maximum": 1 },
+              "width": { "type": "number", "minimum": 0, "maximum": 1 },
+              "height": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -33,7 +33,11 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 	var graph strings.Builder
 	fmt.Fprintf(&graph, "[0:V:0]trim=duration=%s,setpts=PTS-STARTPTS,fps=%d,scale=%d:%d:force_original_aspect_ratio=increase:force_divisible_by=2:reset_sar=1,crop=%d:%d:x='max(0,min(iw-ow,iw*%.6f-ow/2))':y='max(0,min(ih-oh,ih*%.6f-oh/2))',setsar=1,format=yuv420p[base];", seconds(c.EndMS-c.StartMS), cfg.FPS, canvas.Width, canvas.Height, canvas.Width, canvas.Height, c.Focal.X, c.Focal.Y)
 	if plate {
-		graph.WriteString("[base][1:v:0]overlay=0:0:format=auto:shortest=0[copy];[copy]")
+		graph.WriteString("[base][1:v:0]overlay=0:0:format=auto:shortest=0")
+		if c.Copy.StartMS != 0 || c.Copy.EndMS != 0 {
+			fmt.Fprintf(&graph, ":enable='gte(t,%s)*lt(t,%s)'", seconds(c.Copy.StartMS), seconds(c.Copy.EndMS))
+		}
+		graph.WriteString("[copy];[copy]")
 	} else {
 		graph.WriteString("[base]")
 	}

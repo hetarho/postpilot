@@ -66,10 +66,10 @@ func TestRenderSmoke(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	for _, variant := range []string{"vertical", "horizontal", "square", "silent-rounded", "audio-rounded"} {
+	for _, variant := range []string{"vertical", "horizontal", "square", "silent-rounded", "audio-rounded", "caption-timed"} {
 		t.Run(variant, func(t *testing.T) {
 			ratio := variant
-			if variant == "silent-rounded" || variant == "audio-rounded" {
+			if variant == "silent-rounded" || variant == "audio-rounded" || variant == "caption-timed" {
 				ratio = "square"
 			}
 			err := a.WithWorkspace(t.Context(), ratio, func(ws clip.MediaWorkspace) error {
@@ -84,7 +84,7 @@ func TestRenderSmoke(t *testing.T) {
 						args = append(args, "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000")
 					}
 					length := "6"
-					if variant == "silent-rounded" || variant == "audio-rounded" {
+					if variant == "silent-rounded" || variant == "audio-rounded" || variant == "caption-timed" {
 						length = "16"
 					}
 					args = append(args, "-t", length, "-c:v", "libx264", "-preset", "ultrafast", "-threads", "2", "-pix_fmt", "yuv420p")
@@ -134,6 +134,16 @@ func TestRenderSmoke(t *testing.T) {
 					plan.Cuts[0].EndMS = 15017
 					plan.Cuts[0].Copy.Text = ""
 				}
+				if variant == "caption-timed" {
+					plan.Cuts = plan.Cuts[:1]
+					plan.Cuts[0].EndMS = 15000
+					plan.Cuts[0].Copy.StartMS = 4000
+					plan.Cuts[0].Copy.EndMS = 10000
+					width, height, err := r.CaptionSize(t.Context(), ratio, plan.Cuts[0].Copy)
+					if err != nil || width <= 0 || height <= 0 {
+						return fmt.Errorf("measure timed caption: %v", err)
+					}
+				}
 				result, err := r.Render(t.Context(), ws, plan, sources, load)
 				if err != nil {
 					return err
@@ -150,6 +160,31 @@ func TestRenderSmoke(t *testing.T) {
 					t.Fatal("MP4 is not fast-start")
 				}
 				if variant == "silent-rounded" || variant == "audio-rounded" {
+					return nil
+				}
+				if variant == "caption-timed" {
+					for i, at := range []string{"2", "7", "12"} {
+						path := filepath.Join(ws.Path, fmt.Sprintf("timed-%d.png", i))
+						if _, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", at, "-i", result.Path, "-frames:v", "1", "-c:v", "png", "-threads", "1", path); err != nil {
+							return err
+						}
+						frame, err := readPNG(path)
+						if err != nil {
+							return err
+						}
+						bright := 0
+						for y := 0; y < frame.Bounds().Dy(); y += 2 {
+							for x := 0; x < frame.Bounds().Dx(); x += 2 {
+								red, green, _, _ := frame.At(x, y).RGBA()
+								if red > 50000 && green > 50000 {
+									bright++
+								}
+							}
+						}
+						if (i == 1 && bright < 100) || (i != 1 && bright != 0) {
+							t.Fatalf("caption exposure at %ss: %d bright pixels", at, bright)
+						}
+					}
 					return nil
 				}
 				canvas, _ := clip.ClipCanvas(ratio)
