@@ -28,6 +28,7 @@ import (
 // a committed list plus this comment is the honest gate at that seam.
 var publicFailureReasons = []string{
 	"CLIP_INVALID_INPUT",
+	"CLIP_COPY_TOO_LONG",
 	"CLIP_SOURCE_UNAVAILABLE",
 	"CLIP_NOT_FOUND",
 	"CLIP_TEMPLATE_NAME_TAKEN",

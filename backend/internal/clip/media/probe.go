@@ -22,6 +22,7 @@ type probeDocument struct {
 		Height            int    `json:"height"`
 		FrameRate         string `json:"avg_frame_rate"`
 		SampleAspectRatio string `json:"sample_aspect_ratio"`
+		PixelFormat       string `json:"pix_fmt"`
 		Disposition       struct {
 			Attached int `json:"attached_pic"`
 		} `json:"disposition"`
@@ -93,6 +94,7 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 			return clip.MediaInfo{}, clip.ErrInvalidMedia
 		}
 		info.Width, info.Height = s.Width, s.Height
+		info.PixelFormat, info.SampleAspectRatio = s.PixelFormat, s.SampleAspectRatio
 		if n, d := ratio(s.SampleAspectRatio, ":"); n > 0 {
 			info.Width = int(math.Round(float64(s.Width) * float64(n) / float64(d)))
 		}

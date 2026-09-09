@@ -91,7 +91,7 @@ func TestStableFailureDetails(t *testing.T) {
 		err    error
 		code   connect.Code
 		reason string
-	}{{clip.ErrInvalid, connect.CodeInvalidArgument, "CLIP_INVALID_INPUT"}, {clip.ErrNotFound, connect.CodeNotFound, "CLIP_NOT_FOUND"}, {clip.ErrDuplicateName, connect.CodeAlreadyExists, "CLIP_TEMPLATE_NAME_TAKEN"}} {
+	}{{clip.ErrInvalid, connect.CodeInvalidArgument, "CLIP_INVALID_INPUT"}, {clip.ErrCopyTooLong, connect.CodeInvalidArgument, "CLIP_COPY_TOO_LONG"}, {clip.ErrNotFound, connect.CodeNotFound, "CLIP_NOT_FOUND"}, {clip.ErrDuplicateName, connect.CodeAlreadyExists, "CLIP_TEMPLATE_NAME_TAKEN"}} {
 		err := toConnectError(tc.err)
 		var ce *connect.Error
 		if !errors.As(err, &ce) || ce.Code() != tc.code || len(ce.Details()) != 1 {

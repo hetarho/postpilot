@@ -2,9 +2,16 @@ FROM golang:1.26-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a4279
 COPY build/media-tools.sh /build-media-tools.sh
 RUN sh /build-media-tools.sh
 
+FROM rust:alpine@sha256:1716b3aa042d735f4566d14dc54e8037de9d69556e2d5dd58131d93a613d173d AS render-build
+COPY build/render-tools.sh /build-render-tools.sh
+RUN sh /build-render-tools.sh
+
 FROM golang:1.26-alpine
 COPY --from=media-build /opt/media/bin/ffmpeg /opt/media/bin/ffprobe /usr/local/bin/
 COPY --from=media-build /opt/media/share/ /usr/share/postpilot-media/
+COPY --from=render-build /opt/render/bin/resvg /usr/local/bin/resvg
+COPY --from=render-build /opt/render/share/ /usr/share/postpilot-render/
+COPY assets/fonts/ /usr/share/postpilot-fonts/
 
 WORKDIR /app
 

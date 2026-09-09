@@ -29,6 +29,8 @@ func actingUser(ctx context.Context) (string, error) {
 }
 func toConnectError(err error) error {
 	switch {
+	case errors.Is(err, clip.ErrCopyTooLong):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip copy does not fit", "CLIP_COPY_TOO_LONG", nil)
 	case errors.Is(err, clip.ErrSourceState):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip source batch is not available", "CLIP_SOURCE_UNAVAILABLE", nil)
 	case errors.Is(err, clip.ErrNotFound):

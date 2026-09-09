@@ -27,6 +27,7 @@ type MediaStream struct {
 	Kind, Codec string
 }
 type MediaInfo struct {
+	PixelFormat, SampleAspectRatio           string
 	DurationMS, Width, Height, Rotation      int
 	FrameRateNumerator, FrameRateDenominator int
 	HasAudio                                 bool

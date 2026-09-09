@@ -1,6 +1,6 @@
 module github.com/postpilot/backend
 
-go 1.26
+go 1.26.0
 
 require (
 	connectrpc.com/connect v1.20.0
@@ -13,8 +13,10 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/joho/godotenv v1.5.1
 	github.com/pressly/goose/v3 v3.27.3
+	github.com/rivo/uniseg v0.4.7
 	github.com/rs/cors v1.11.1
 	golang.org/x/crypto v0.55.0
+	golang.org/x/image v0.46.0
 	golang.org/x/net v0.57.0
 	golang.org/x/term v0.45.0
 	google.golang.org/protobuf v1.36.11
@@ -43,9 +45,9 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/sethvargo/go-retry v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	modernc.org/libc v1.74.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

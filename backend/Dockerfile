@@ -8,6 +8,10 @@ FROM golang:1.26-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a4279
 COPY backend/build/media-tools.sh /build-media-tools.sh
 RUN sh /build-media-tools.sh
 
+FROM rust:alpine@sha256:1716b3aa042d735f4566d14dc54e8037de9d69556e2d5dd58131d93a613d173d AS render-build
+COPY backend/build/render-tools.sh /build-render-tools.sh
+RUN sh /build-render-tools.sh
+
 FROM golang:1.26-alpine AS builder
 WORKDIR /src
 # Cache modules first — this layer is reused unless go.mod/go.sum change.
@@ -23,6 +27,10 @@ WORKDIR /
 COPY --from=builder /api /api
 COPY --from=media-build /opt/media/bin/ffmpeg /opt/media/bin/ffprobe /usr/local/bin/
 COPY --from=media-build /opt/media/share/ /usr/share/postpilot-media/
+COPY --from=render-build /opt/render/bin/resvg /usr/local/bin/resvg
+COPY --from=render-build /opt/render/share/ /usr/share/postpilot-render/
+COPY backend/build/render-tools.sh backend/build/RENDER.md /usr/share/postpilot-render/
+COPY backend/assets/fonts/ /usr/share/postpilot-fonts/
 COPY backend/build/media-tools.sh backend/build/MEDIA.md /usr/share/postpilot-media/
 # The model registry ships with the image it was written for. A stack may still mount
 # its own file over /config/providers.yaml (or point PROVIDERS_CONFIG elsewhere).
@@ -36,7 +44,7 @@ ENTRYPOINT ["/api"]
 FROM runtime AS media-smoke
 COPY --from=builder /media.test /media.test
 ENV CLIP_MEDIA_SMOKE=1
-RUN ["/media.test", "-test.run=TestMediaSmoke", "-test.v"]
+RUN ["/media.test", "-test.run=Test(Media|Render)Smoke", "-test.v"]
 
 FROM runtime AS production
 # This dependency makes the real-binary nonroot smoke a mandatory image-build gate.

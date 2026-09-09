@@ -299,6 +299,7 @@ type Config struct {
 	ClipSourceBatchTTL                            time.Duration
 	ClipSourceSweepInterval                       time.Duration
 	ClipWorkRoot, ClipFFmpegPath, ClipFFprobePath string
+	ClipResvgPath, ClipFontPath                   string
 	ClipWorkStaleAge, ClipMediaTimeout            time.Duration
 
 	// OrphanSweepInterval is how often unconfirmed uploads and stray objects are cleaned
