@@ -88,6 +88,7 @@ export const appFailureSpecs = {
   VOICE_INSUFFICIENT_SOURCES: { required: ['min'] },
   VOICE_INVALID_LIFECYCLE: {},
   CLIP_INVALID_INPUT: {},
+  CLIP_SOURCE_UNAVAILABLE: {},
   CLIP_NOT_FOUND: {},
   CLIP_TEMPLATE_NAME_TAKEN: {},
   TEMPLATE_NOT_FOUND: {},

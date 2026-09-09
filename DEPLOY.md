@@ -230,6 +230,9 @@ verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함
    `<img>`라 규칙 없이도 계속 보이므로, "목록에는 보이는데 내보내기에서만 안 보인다"가
    이 규칙이 빠졌을 때의 증상이다. 배포 마지막 단계가 `GET` preflight를 검증하므로 `GET`이
    빠진 버킷은 배포가 실패한다(§2).
+   클립 원본 업로드는 `Content-Type`과 `If-None-Match: *`를 서명해 확인된 원본의
+   덮어쓰기를 막는다. `allowed.headers`의 `if-none-match`도 함께 적용해야 한다.
+   저장소 정책은 자동 변경하지 않으므로 클립 기능을 배포하기 전에 갱신된 파일을 적용한다.
    > `wrangler r2 bucket cors set --file`이 받는 JSON은 대시보드가 쓰는
    > `[{"AllowedOrigins": …}]` 배열이 아니라 `{"rules":[{"allowed":{…}}]}` 형태다.
    > `deploy/r2-cors.json`이 그 형태로 들어 있다.

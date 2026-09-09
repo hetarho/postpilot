@@ -13,6 +13,9 @@ service ClipService {
   rpc GetClipProject(GetClipProjectRequest) returns (GetClipProjectResponse) {}
   rpc UpdateClipProject(UpdateClipProjectRequest) returns (UpdateClipProjectResponse) {}
   rpc DeleteClipProject(DeleteClipProjectRequest) returns (DeleteClipProjectResponse) {}
+  rpc CreateClipSourceBatch(CreateClipSourceBatchRequest) returns (CreateClipSourceBatchResponse) {}
+  rpc ConfirmClipSource(ConfirmClipSourceRequest) returns (ConfirmClipSourceResponse) {}
+  rpc DiscardClipSourceBatch(DiscardClipSourceBatchRequest) returns (DiscardClipSourceBatchResponse) {}
 }
 message ClipInformationField { string label = 1; string prompt = 2; }
 message ClipInformationFields { repeated ClipInformationField values = 1; }
@@ -95,3 +98,38 @@ message UpdateClipProjectRequest {
 message UpdateClipProjectResponse { ClipProject project = 1; }
 message DeleteClipProjectRequest { string id = 1; }
 message DeleteClipProjectResponse {}
+// Source bytes travel directly to object storage, never in an RPC body.
+message ClipSourceMetadata {
+  string filename = 1;
+  string content_type = 2;
+  int64 bytes = 3;
+  int32 duration_ms = 4;
+  int32 width = 5;
+  int32 height = 6;
+  string fingerprint = 7;
+}
+message ClipSource {
+  string id = 1;
+  ClipSourceMetadata metadata = 2;
+  string state = 3;
+  int64 actual_bytes = 4;
+}
+message ClipSourceBatch {
+  string id = 1;
+  string project_id = 2;
+  string state = 3;
+  repeated ClipSource sources = 4;
+  string expires_at = 5;
+}
+message ClipSourceUpload {
+  string source_id = 1;
+  string put_url = 2;
+  map<string,string> headers = 3;
+  string expires_at = 4;
+}
+message CreateClipSourceBatchRequest { string project_id = 1; repeated ClipSourceMetadata sources = 2; }
+message CreateClipSourceBatchResponse { ClipSourceBatch batch = 1; repeated ClipSourceUpload uploads = 2; }
+message ConfirmClipSourceRequest { string batch_id = 1; string source_id = 2; }
+message ConfirmClipSourceResponse { ClipSourceBatch batch = 1; }
+message DiscardClipSourceBatchRequest { string batch_id = 1; }
+message DiscardClipSourceBatchResponse {}

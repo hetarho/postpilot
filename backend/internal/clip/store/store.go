@@ -318,5 +318,17 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 	})
 }
 func (s *Store) DeleteProject(ctx context.Context, user, id string) error {
-	return affected(s.write.DeleteClipProject(ctx, sqlc.DeleteClipProjectParams{ID: id, UserID: user}))
+	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
+		batches, err := q.ListProjectSourceBatches(ctx, sqlc.ListProjectSourceBatchesParams{ProjectID: id, UserID: user})
+		if err != nil {
+			return struct{}{}, err
+		}
+		for _, b := range batches {
+			if b.State != "cleanup_pending" {
+				return struct{}{}, clip.ErrSourceState
+			}
+		}
+		return struct{}{}, affected(q.DeleteClipProject(ctx, sqlc.DeleteClipProjectParams{ID: id, UserID: user}))
+	})
+	return err
 }

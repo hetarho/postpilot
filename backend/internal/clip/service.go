@@ -12,9 +12,12 @@ import (
 )
 
 type Service struct {
-	store  Store
-	limits Limits
+	store   Store
+	limits  Limits
+	sources *SourceService
 }
+
+func (s *Service) SetSources(sources *SourceService) { s.sources = sources }
 
 func NewService(store Store, limits Limits) *Service {
 	for _, n := range []int{limits.NameChars, limits.GuidanceChars, limits.FieldCount, limits.LabelChars, limits.PromptChars, limits.TitleChars, limits.AnswerChars, limits.MinDurationMS, limits.MaxDurationMS} {
@@ -191,6 +194,11 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 	return s.store.UpdateProject(ctx, user, id, p, time.Now())
 }
 func (s *Service) DeleteProject(ctx context.Context, user, id string) error {
+	if s.sources != nil {
+		if err := s.sources.PrepareProjectDelete(ctx, user, id); err != nil {
+			return err
+		}
+	}
 	return s.store.DeleteProject(ctx, user, id)
 }
 

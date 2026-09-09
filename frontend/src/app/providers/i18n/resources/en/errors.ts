@@ -68,6 +68,8 @@ export const errors = {
   VOICE_INSUFFICIENT_SOURCES: 'At least {{min}} sources are required to learn this voice.',
   VOICE_INVALID_LIFECYCLE: "This action is not available in the voice's current state.",
   CLIP_INVALID_INPUT: 'Check the clip or video template fields and their limits.',
+  CLIP_SOURCE_UNAVAILABLE:
+    'The videos are processing or the upload has expired. Check progress, then select the source videos again.',
   CLIP_NOT_FOUND: 'Could not find the clip or video template.',
   CLIP_TEMPLATE_NAME_TAKEN: 'A video template with that name already exists.',
   TEMPLATE_NOT_FOUND: 'Could not find the template.',

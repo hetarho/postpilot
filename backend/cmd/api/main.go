@@ -318,7 +318,10 @@ func main() {
 	// learns that only through this adapter, never by importing internal/publishing.
 	postSvc.SetLivePublishFinder(postPublications{service: publishSvc})
 
-	clipSvc := clip.NewService(clipstore.New(handle.Writer, handle.Reader), config.ClipLimits())
+	clipStore := clipstore.New(handle.Writer, handle.Reader)
+	clipSvc := clip.NewService(clipStore, config.ClipLimits())
+	clipSources := clip.NewSourceService(clipStore, bucket, config.ClipSourceLimits(cfg.ClipSourceBatchTTL, cfg.PresignPutTTL))
+	clipSvc.SetSources(clipSources)
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
@@ -496,7 +499,7 @@ func main() {
 				return postpilotv1connect.NewTemplateServiceHandler(templaterpc.NewHandler(templateSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
-				return postpilotv1connect.NewClipServiceHandler(cliprpc.NewHandler(clipSvc), opts...)
+				return postpilotv1connect.NewClipServiceHandler(cliprpc.NewHandler(clipSvc).WithSources(clipSources), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewGuidelineServiceHandler(guidelinerpc.NewHandler(guidelineSvc), opts...)
@@ -544,6 +547,7 @@ func main() {
 		cfg.OrphanMinAge,
 	)
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
+	go clipSources.Run(ctx, cfg.ClipSourceSweepInterval)
 	go experiment.NewSweeper(experimentStore).Run(ctx, cfg.ExperimentSweepInterval)
 	go publishing.NewSweeper(publishSvc, cfg.PublishOrphanMinAge, cfg.PublishLeaseTTL).Run(ctx, cfg.PublishOrphanSweepInterval)
 	go func() {

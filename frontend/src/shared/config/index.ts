@@ -78,6 +78,21 @@ export const UPLOAD_MAX_FILE_MB = 25
  *  converted. */
 export const UPLOAD_MAX_PHOTOS_PER_POST = 30
 
+/** T071 admission mirrors. The API and media probe remain authoritative. */
+export const CLIP_SOURCE_MAX_COUNT = 20
+export const CLIP_SOURCE_MAX_FILENAME_CHARS = 255
+export const CLIP_SOURCE_MAX_DURATION_MS = 30 * 60 * 1000
+export const CLIP_SOURCE_MAX_FILE_BYTES = 2 * 1024 * 1024 * 1024
+export const CLIP_SOURCE_MAX_BATCH_BYTES = 8 * 1024 * 1024 * 1024
+export const CLIP_SOURCE_BATCH_TTL_MS = 6 * 60 * 60 * 1000
+export const CLIP_SOURCE_FINGERPRINT_CHUNK_BYTES = 64 * 1024
+export const CLIP_SOURCE_CONTAINERS: Readonly<Record<string, readonly string[]>> = {
+  mp4: ['video/mp4'],
+  mov: ['video/quicktime'],
+  m4v: ['video/x-m4v', 'video/mp4'],
+  webm: ['video/webm'],
+}
+
 /** Compared case-insensitively against the extension of the selected file. Anything else
  *  is listed as skipped, never uploaded. */
 export const UPLOAD_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'] as const

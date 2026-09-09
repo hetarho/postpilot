@@ -13,9 +13,13 @@ import (
 	"time"
 )
 
-type Handler struct{ service *clip.Service }
+type Handler struct {
+	service *clip.Service
+	sources *clip.SourceService
+}
 
-func NewHandler(service *clip.Service) *Handler { return &Handler{service: service} }
+func NewHandler(service *clip.Service) *Handler                     { return &Handler{service: service} }
+func (h *Handler) WithSources(sources *clip.SourceService) *Handler { h.sources = sources; return h }
 func actingUser(ctx context.Context) (string, error) {
 	user, ok := auth.UserFromContext(ctx)
 	if !ok {
@@ -25,6 +29,8 @@ func actingUser(ctx context.Context) (string, error) {
 }
 func toConnectError(err error) error {
 	switch {
+	case errors.Is(err, clip.ErrSourceState):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip source batch is not available", "CLIP_SOURCE_UNAVAILABLE", nil)
 	case errors.Is(err, clip.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "clip or video template not found", "CLIP_NOT_FOUND", nil)
 	case errors.Is(err, clip.ErrDuplicateName):

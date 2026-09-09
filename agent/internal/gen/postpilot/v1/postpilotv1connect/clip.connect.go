@@ -60,6 +60,15 @@ const (
 	// ClipServiceDeleteClipProjectProcedure is the fully-qualified name of the ClipService's
 	// DeleteClipProject RPC.
 	ClipServiceDeleteClipProjectProcedure = "/postpilot.v1.ClipService/DeleteClipProject"
+	// ClipServiceCreateClipSourceBatchProcedure is the fully-qualified name of the ClipService's
+	// CreateClipSourceBatch RPC.
+	ClipServiceCreateClipSourceBatchProcedure = "/postpilot.v1.ClipService/CreateClipSourceBatch"
+	// ClipServiceConfirmClipSourceProcedure is the fully-qualified name of the ClipService's
+	// ConfirmClipSource RPC.
+	ClipServiceConfirmClipSourceProcedure = "/postpilot.v1.ClipService/ConfirmClipSource"
+	// ClipServiceDiscardClipSourceBatchProcedure is the fully-qualified name of the ClipService's
+	// DiscardClipSourceBatch RPC.
+	ClipServiceDiscardClipSourceBatchProcedure = "/postpilot.v1.ClipService/DiscardClipSourceBatch"
 )
 
 // ClipServiceClient is a client for the postpilot.v1.ClipService service.
@@ -73,6 +82,9 @@ type ClipServiceClient interface {
 	GetClipProject(context.Context, *connect.Request[v1.GetClipProjectRequest]) (*connect.Response[v1.GetClipProjectResponse], error)
 	UpdateClipProject(context.Context, *connect.Request[v1.UpdateClipProjectRequest]) (*connect.Response[v1.UpdateClipProjectResponse], error)
 	DeleteClipProject(context.Context, *connect.Request[v1.DeleteClipProjectRequest]) (*connect.Response[v1.DeleteClipProjectResponse], error)
+	CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error)
+	ConfirmClipSource(context.Context, *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error)
+	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
 }
 
 // NewClipServiceClient constructs a client for the postpilot.v1.ClipService service. By default, it
@@ -140,20 +152,41 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(clipServiceMethods.ByName("DeleteClipProject")),
 			connect.WithClientOptions(opts...),
 		),
+		createClipSourceBatch: connect.NewClient[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse](
+			httpClient,
+			baseURL+ClipServiceCreateClipSourceBatchProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("CreateClipSourceBatch")),
+			connect.WithClientOptions(opts...),
+		),
+		confirmClipSource: connect.NewClient[v1.ConfirmClipSourceRequest, v1.ConfirmClipSourceResponse](
+			httpClient,
+			baseURL+ClipServiceConfirmClipSourceProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("ConfirmClipSource")),
+			connect.WithClientOptions(opts...),
+		),
+		discardClipSourceBatch: connect.NewClient[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse](
+			httpClient,
+			baseURL+ClipServiceDiscardClipSourceBatchProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("DiscardClipSourceBatch")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // clipServiceClient implements ClipServiceClient.
 type clipServiceClient struct {
-	listVideoTemplates  *connect.Client[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse]
-	createVideoTemplate *connect.Client[v1.CreateVideoTemplateRequest, v1.CreateVideoTemplateResponse]
-	updateVideoTemplate *connect.Client[v1.UpdateVideoTemplateRequest, v1.UpdateVideoTemplateResponse]
-	deleteVideoTemplate *connect.Client[v1.DeleteVideoTemplateRequest, v1.DeleteVideoTemplateResponse]
-	listClipProjects    *connect.Client[v1.ListClipProjectsRequest, v1.ListClipProjectsResponse]
-	createClipProject   *connect.Client[v1.CreateClipProjectRequest, v1.CreateClipProjectResponse]
-	getClipProject      *connect.Client[v1.GetClipProjectRequest, v1.GetClipProjectResponse]
-	updateClipProject   *connect.Client[v1.UpdateClipProjectRequest, v1.UpdateClipProjectResponse]
-	deleteClipProject   *connect.Client[v1.DeleteClipProjectRequest, v1.DeleteClipProjectResponse]
+	listVideoTemplates     *connect.Client[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse]
+	createVideoTemplate    *connect.Client[v1.CreateVideoTemplateRequest, v1.CreateVideoTemplateResponse]
+	updateVideoTemplate    *connect.Client[v1.UpdateVideoTemplateRequest, v1.UpdateVideoTemplateResponse]
+	deleteVideoTemplate    *connect.Client[v1.DeleteVideoTemplateRequest, v1.DeleteVideoTemplateResponse]
+	listClipProjects       *connect.Client[v1.ListClipProjectsRequest, v1.ListClipProjectsResponse]
+	createClipProject      *connect.Client[v1.CreateClipProjectRequest, v1.CreateClipProjectResponse]
+	getClipProject         *connect.Client[v1.GetClipProjectRequest, v1.GetClipProjectResponse]
+	updateClipProject      *connect.Client[v1.UpdateClipProjectRequest, v1.UpdateClipProjectResponse]
+	deleteClipProject      *connect.Client[v1.DeleteClipProjectRequest, v1.DeleteClipProjectResponse]
+	createClipSourceBatch  *connect.Client[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse]
+	confirmClipSource      *connect.Client[v1.ConfirmClipSourceRequest, v1.ConfirmClipSourceResponse]
+	discardClipSourceBatch *connect.Client[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse]
 }
 
 // ListVideoTemplates calls postpilot.v1.ClipService.ListVideoTemplates.
@@ -201,6 +234,21 @@ func (c *clipServiceClient) DeleteClipProject(ctx context.Context, req *connect.
 	return c.deleteClipProject.CallUnary(ctx, req)
 }
 
+// CreateClipSourceBatch calls postpilot.v1.ClipService.CreateClipSourceBatch.
+func (c *clipServiceClient) CreateClipSourceBatch(ctx context.Context, req *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error) {
+	return c.createClipSourceBatch.CallUnary(ctx, req)
+}
+
+// ConfirmClipSource calls postpilot.v1.ClipService.ConfirmClipSource.
+func (c *clipServiceClient) ConfirmClipSource(ctx context.Context, req *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error) {
+	return c.confirmClipSource.CallUnary(ctx, req)
+}
+
+// DiscardClipSourceBatch calls postpilot.v1.ClipService.DiscardClipSourceBatch.
+func (c *clipServiceClient) DiscardClipSourceBatch(ctx context.Context, req *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error) {
+	return c.discardClipSourceBatch.CallUnary(ctx, req)
+}
+
 // ClipServiceHandler is an implementation of the postpilot.v1.ClipService service.
 type ClipServiceHandler interface {
 	ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error)
@@ -212,6 +260,9 @@ type ClipServiceHandler interface {
 	GetClipProject(context.Context, *connect.Request[v1.GetClipProjectRequest]) (*connect.Response[v1.GetClipProjectResponse], error)
 	UpdateClipProject(context.Context, *connect.Request[v1.UpdateClipProjectRequest]) (*connect.Response[v1.UpdateClipProjectResponse], error)
 	DeleteClipProject(context.Context, *connect.Request[v1.DeleteClipProjectRequest]) (*connect.Response[v1.DeleteClipProjectResponse], error)
+	CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error)
+	ConfirmClipSource(context.Context, *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error)
+	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
 }
 
 // NewClipServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -275,6 +326,24 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(clipServiceMethods.ByName("DeleteClipProject")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipServiceCreateClipSourceBatchHandler := connect.NewUnaryHandler(
+		ClipServiceCreateClipSourceBatchProcedure,
+		svc.CreateClipSourceBatch,
+		connect.WithSchema(clipServiceMethods.ByName("CreateClipSourceBatch")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceConfirmClipSourceHandler := connect.NewUnaryHandler(
+		ClipServiceConfirmClipSourceProcedure,
+		svc.ConfirmClipSource,
+		connect.WithSchema(clipServiceMethods.ByName("ConfirmClipSource")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceDiscardClipSourceBatchHandler := connect.NewUnaryHandler(
+		ClipServiceDiscardClipSourceBatchProcedure,
+		svc.DiscardClipSourceBatch,
+		connect.WithSchema(clipServiceMethods.ByName("DiscardClipSourceBatch")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.ClipService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ClipServiceListVideoTemplatesProcedure:
@@ -295,6 +364,12 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceUpdateClipProjectHandler.ServeHTTP(w, r)
 		case ClipServiceDeleteClipProjectProcedure:
 			clipServiceDeleteClipProjectHandler.ServeHTTP(w, r)
+		case ClipServiceCreateClipSourceBatchProcedure:
+			clipServiceCreateClipSourceBatchHandler.ServeHTTP(w, r)
+		case ClipServiceConfirmClipSourceProcedure:
+			clipServiceConfirmClipSourceHandler.ServeHTTP(w, r)
+		case ClipServiceDiscardClipSourceBatchProcedure:
+			clipServiceDiscardClipSourceBatchHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -338,4 +413,16 @@ func (UnimplementedClipServiceHandler) UpdateClipProject(context.Context, *conne
 
 func (UnimplementedClipServiceHandler) DeleteClipProject(context.Context, *connect.Request[v1.DeleteClipProjectRequest]) (*connect.Response[v1.DeleteClipProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.DeleteClipProject is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.CreateClipSourceBatch is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) ConfirmClipSource(context.Context, *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.ConfirmClipSource is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.DiscardClipSourceBatch is not implemented"))
 }

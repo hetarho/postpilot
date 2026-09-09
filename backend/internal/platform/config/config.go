@@ -295,7 +295,9 @@ type Config struct {
 	// PresignPutTTL bounds an upload URL; it is also how long the uploads row is valid.
 	PresignPutTTL time.Duration
 	// PresignGetTTL bounds a view URL. The frontend never persists one.
-	PresignGetTTL time.Duration
+	PresignGetTTL           time.Duration
+	ClipSourceBatchTTL      time.Duration
+	ClipSourceSweepInterval time.Duration
 
 	// OrphanSweepInterval is how often unconfirmed uploads and stray objects are cleaned
 	// up. The PRD leaves the cadence undecided (§9.5); daily is the provisional default.
@@ -497,6 +499,17 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("ORPHAN_SWEEP_INTERVAL: must be positive, got %s", sweep)
 	}
 	cfg.OrphanSweepInterval = sweep
+	cfg.ClipSourceBatchTTL, err = positiveDuration("CLIP_SOURCE_BATCH_TTL", "6h")
+	if err != nil {
+		return nil, err
+	}
+	if cfg.ClipSourceBatchTTL < cfg.PresignPutTTL {
+		return nil, fmt.Errorf("CLIP_SOURCE_BATCH_TTL: must not be shorter than the upload URL TTL")
+	}
+	cfg.ClipSourceSweepInterval, err = positiveDuration("CLIP_SOURCE_SWEEP_INTERVAL", "10m")
+	if err != nil {
+		return nil, err
+	}
 
 	batchSize, err := strconv.Atoi(getenv("OBSERVE_BATCH_SIZE", "4"))
 	if err != nil || batchSize <= 0 {

@@ -26,6 +26,33 @@ type ClipProject struct {
 	RenderedPlanRevision int64
 	CreatedAt            string
 	UpdatedAt            string
+	Deleting             int64
+}
+
+type ClipSourceBatch struct {
+	ID        string
+	UserID    string
+	ProjectID string
+	State     string
+	CreatedAt string
+	ExpiresAt string
+}
+
+type ClipSourceLease struct {
+	ID            string
+	BatchID       string
+	UserID        string
+	ObjectKey     string
+	Filename      string
+	ContentType   string
+	Fingerprint   string
+	DeclaredBytes int64
+	ActualBytes   int64
+	DurationMs    int64
+	Width         int64
+	Height        int64
+	State         string
+	Ordinal       int64
 }
 
 type VideoTemplate struct {

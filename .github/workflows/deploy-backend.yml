@@ -302,3 +302,22 @@ jobs:
               cat "$headers_file" >&2
               exit 1
             fi
+            # Clip input PUTs are conditional, so their preflight must allow both signed headers.
+            curl --silent --show-error \
+              --dump-header "$headers_file" --output /dev/null \
+              --request OPTIONS \
+              --header "Origin: ${WEB_ORIGIN}" \
+              --header 'Access-Control-Request-Method: PUT' \
+              --header 'Access-Control-Request-Headers: content-type,if-none-match' \
+              "${endpoint}/${bucket}/cors-preflight-probe"
+            if ! grep --ignore-case '^access-control-allow-methods:.*PUT' "$headers_file"; then
+              echo "bucket ${bucket} must allow clip input PUT: apply deploy/r2-cors.json" >&2
+              exit 1
+            fi
+            for required_header in content-type if-none-match; do
+              if ! grep --ignore-case "^access-control-allow-headers:.*${required_header}" "$headers_file" \
+                && ! grep --ignore-case '^access-control-allow-headers:.*\*' "$headers_file"; then
+                echo "bucket ${bucket} must allow ${required_header}: apply deploy/r2-cors.json" >&2
+                exit 1
+              fi
+            done

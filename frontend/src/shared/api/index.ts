@@ -31,12 +31,21 @@ export {
   GetClipProjectResponseSchema,
   UpdateClipProjectResponseSchema,
   DeleteClipProjectResponseSchema,
+  ClipSourceMetadataSchema,
+  ClipSourceBatchSchema,
+  CreateClipSourceBatchResponseSchema,
+  ConfirmClipSourceResponseSchema,
+  DiscardClipSourceBatchResponseSchema,
 } from './gen/postpilot/v1/clip_pb'
 export type {
   VideoTemplate as ProtoVideoTemplate,
   ClipProject as ProtoClipProject,
   ClipInformationField as ProtoClipInformationField,
   ClipAnswer as ProtoClipAnswer,
+  ClipSourceMetadata as ProtoClipSourceMetadata,
+  ClipSourceBatch as ProtoClipSourceBatch,
+  ClipSource as ProtoClipSource,
+  ClipSourceUpload as ProtoClipSourceUpload,
 } from './gen/postpilot/v1/clip_pb'
 export {
   contentLanguages,
