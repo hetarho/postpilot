@@ -105,9 +105,23 @@ WHERE model_id = ? AND purpose = ?;
 
 -- Availability, step 1: assume nothing is offered any more. Step 2 puts back everything the
 -- provider actually listed, in the same transaction, so no reader sees the gap. updated_at
--- is untouched: an availability sweep is not a curation edit.
+-- is untouched here: an availability sweep is not a curation edit.
 -- name: UnlistAllCatalogModels :exec
 UPDATE catalog_models SET listed = 0;
+
+-- Availability, step 3 (MODEL-20): a model the source stopped offering loses every
+-- registration in the same transaction. Losing a registration IS a curation change, so the
+-- rows that had one are stamped first; the row itself survives (the effort lives on the
+-- registration and goes with it) so the model comes back as an unregistered candidate when
+-- the source offers it again.
+-- name: TouchUnlistedRegisteredCatalogModels :exec
+UPDATE catalog_models SET updated_at = ?
+WHERE listed = 0
+  AND EXISTS (SELECT 1 FROM catalog_model_purposes p WHERE p.model_id = catalog_models.model_id);
+
+-- name: DeregisterUnlistedCatalogModels :exec
+DELETE FROM catalog_model_purposes
+WHERE model_id IN (SELECT model_id FROM catalog_models WHERE listed = 0);
 
 -- name: MarkCatalogModelSeen :exec
 UPDATE catalog_models

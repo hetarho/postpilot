@@ -154,8 +154,16 @@ func (c *Client) get(ctx context.Context) ([]modelcatalog.Candidate, error) {
 	}
 
 	out := make([]modelcatalog.Candidate, 0, len(doc.Data))
-	skipped := 0
+	skipped, batch := 0, 0
 	for _, item := range doc.Data {
+		// The source lists every model a second time as its `:batch` variant — the
+		// asynchronous batch endpoint's half-price twin. Every stage call here is
+		// synchronous, so the variant could serve nothing: it is never a candidate and
+		// never curatable (MODEL-50). `:free` and unsuffixed ids pass through untouched.
+		if isBatchVariant(item.ID) {
+			batch++
+			continue
+		}
 		candidate, ok := toCandidate(item)
 		if !ok {
 			skipped++
@@ -168,7 +176,19 @@ func (c *Client) get(ctx context.Context) ([]modelcatalog.Candidate, error) {
 		// otherwise write hundreds of identical warnings on every refresh.
 		slog.Warn("skipped unusable catalog entries", "count", skipped, "total", len(doc.Data))
 	}
+	if batch > 0 {
+		// Expected on every read (72 of 502 on 2026-09-09), so it is not the shape-change
+		// warning above: a count at debug level is enough to see the filter working.
+		slog.Debug("dropped batch catalog variants", "count", batch, "total", len(doc.Data))
+	}
 	return out, nil
+}
+
+// isBatchVariant recognizes the source's `<model>:batch` id form. The variant suffix is the
+// part after the first colon; a provider slug never contains one.
+func isBatchVariant(id string) bool {
+	_, variant, found := strings.Cut(strings.TrimSpace(id), ":")
+	return found && variant == "batch"
 }
 
 // toCandidate maps one upstream entry. An entry without an id or a name cannot be shown or

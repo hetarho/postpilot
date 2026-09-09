@@ -25,8 +25,10 @@ type Store interface {
 	// deregistration is a curation edit. The catalog row itself always survives.
 	DeregisterPurpose(ctx context.Context, modelID string, purpose Purpose, at time.Time) error
 	// RefreshAvailability records what a SUCCESSFUL upstream read saw: the seen models get
-	// a fresh snapshot and last_seen_at, everything else is marked unlisted. It is one
-	// transaction so the catalog is never half-refreshed.
+	// a fresh snapshot and last_seen_at, everything else is marked unlisted AND loses every
+	// registration (MODEL-20) — the row survives, the registration-bound effort does not,
+	// as on an operator's uncheck. It is one transaction so the catalog is never
+	// half-refreshed.
 	RefreshAvailability(ctx context.Context, seen []Candidate, at time.Time) error
 	// ListCombos returns every estimator assignment that exists, in combo order. A combo
 	// with no row is simply absent.

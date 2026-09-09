@@ -167,18 +167,22 @@ func (s *Service) Browse(ctx context.Context, refresh bool, purpose Purpose) (Br
 			entry.Reasoning = row.Reasoning[purpose]
 			// Drift is derived from the LIVE capability, not the stored snapshot: the point of
 			// the warning is that the source's list moved away from what the operator chose.
-			// It is a flag only — the override is kept and still sent (change 27, and plan
-			// 18's own `listed = 0` precedent).
+			// It is a flag only — the override is kept and still sent (MODEL-22); delisting
+			// is the one automatic deregistration, and it happens in the store (MODEL-20).
 			entry.ReasoningDrifted = candidate.DriftedFrom(entry.Reasoning)
 			delete(curated, candidate.ModelID)
 		}
 		entry.ReasoningSpend = spend[entry.ModelID]
 		entries = append(entries, entry)
 	}
-	// What is left is curated but unoffered. It keeps the snapshot taken when it was last
-	// seen, so the row still reads as a model rather than as an id.
+	// What is left is curated but not in this snapshot. A row a successful read has
+	// marked unlisted is not shown at all (MODEL-20): its registrations are already gone,
+	// so there is nothing for the operator to do with it, and it comes back as a live
+	// unregistered candidate when the source offers it again. Only a
+	// still-listed row the snapshot lacks is emitted, which is the degraded path (a failed
+	// or empty read served from the stored rows) keeping its last-seen snapshot.
 	for _, row := range rows {
-		if _, still := curated[row.ModelID]; !still {
+		if _, still := curated[row.ModelID]; !still || !row.Listed {
 			continue
 		}
 		entry := EntryOf(row, purpose)

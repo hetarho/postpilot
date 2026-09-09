@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,6 +39,11 @@ const catalogDocument = `{"data":[
    "architecture":{"input_modalities":["text","image","video"],"output_modalities":["text"]},
    "pricing":{"prompt":"0.0000005","completion":"0.000002"},
    "supported_parameters":["structured_outputs"]},
+  {"id":"openai/gpt-x:batch","name":"OpenAI: GPT X (batch)","created":1788362056,
+   "context_length":1048576,
+   "architecture":{"input_modalities":["text","image"],"output_modalities":["text"]},
+   "pricing":{"prompt":"0.000000625","completion":"0.000002125"},
+   "supported_parameters":["structured_outputs","tools","reasoning"]},
   {"id":"","name":"Nameless id","created":1},
   {"id":"broken/no-name","created":1}
 ]}`
@@ -76,6 +82,14 @@ func TestFetch_MapsUpstreamFieldsAndSkipsUnusableEntries(t *testing.T) {
 	}
 	if len(snapshot.Candidates) != 5 {
 		t.Fatalf("candidates = %d, want the five usable entries", len(snapshot.Candidates))
+	}
+	// MODEL-50: the `:batch` twin is the asynchronous endpoint's half-price listing of a
+	// model the catalog already has. It is dropped at mapping — never a candidate — while
+	// the unsuffixed id it duplicates is kept.
+	for _, candidate := range snapshot.Candidates {
+		if strings.HasSuffix(candidate.ModelID, ":batch") {
+			t.Errorf("a batch variant became a candidate: %s", candidate.ModelID)
+		}
 	}
 	first := snapshot.Candidates[0]
 	if first.ModelID != "openai/gpt-x" || first.ProviderSlug != "openai" || first.Label != "OpenAI: GPT X" {

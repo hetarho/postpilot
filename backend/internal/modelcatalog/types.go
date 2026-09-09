@@ -142,6 +142,7 @@ type Model struct {
 	// — a model serves it to nobody.
 	Reasoning map[Purpose]llm.ReasoningEffort
 	// Listed: the upstream catalog still offered this model at the last successful refresh.
+	// An unlisted row has no registrations (the refresh removed them) and is not browsed.
 	Listed     bool
 	LastSeenAt time.Time
 	CreatedAt  time.Time
@@ -238,9 +239,9 @@ func (c ReasoningCapability) AcceptsEffort(effort llm.ReasoningEffort) bool {
 
 // DriftedFrom reports an override the source no longer lists — a revised model, a replaced
 // slug. It is derived at read time from the two fields rather than stored, because it must
-// follow the catalog; and it is a WARNING only. Plan 18's `listed = 0` precedent applies:
-// the source's list changing is not a mandate to rewrite an operator's decision, so the
-// value is kept and still sent.
+// follow the catalog; and it is a WARNING only (MODEL-22): the source's list changing is not
+// a mandate to rewrite an operator's effort decision, so the value is kept and still sent.
+// The one automatic retirement is delisting, which deregisters the model (MODEL-20).
 func (c ReasoningCapability) DriftedFrom(effort llm.ReasoningEffort) bool {
 	// Neither "no override" nor `unset` is a claim about what the model accepts, so neither
 	// can drift.

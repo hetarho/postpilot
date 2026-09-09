@@ -298,6 +298,75 @@ func TestRefreshAvailability_MarksSeenAndUnlistsTheRest(t *testing.T) {
 	}
 }
 
+// MODEL-20: a registered model the read did not see loses every registration in the same
+// transaction — and with it the effort override, which belongs to the registration
+// (MODEL-7), exactly as an operator's uncheck does. The row survives, `listed = 0`, with a
+// curation stamp, so the model is offered again if the source lists it again.
+func TestRefreshAvailability_DeregistersWhatItDidNotSee(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+
+	gone := modelcatalog.Model{
+		ModelID: "acme/gone", ProviderSlug: "acme", Label: "Gone", Listed: true,
+		CreatedAt: testNow, UpdatedAt: testNow,
+	}
+	for _, purpose := range []modelcatalog.Purpose{modelcatalog.PurposeWriting, modelcatalog.PurposeStyleAnalysis} {
+		if err := s.RegisterPurpose(ctx, gone, purpose); err != nil {
+			t.Fatal(err)
+		}
+	}
+	effort := llm.ReasoningLow
+	if _, err := s.Patch(ctx, gone.ModelID, modelcatalog.Patch{Purpose: modelcatalog.PurposeWriting, Reasoning: &effort}, testNow); err != nil {
+		t.Fatal(err)
+	}
+	// A registered row the read DID see, and an unregistered unseen row: neither is stamped.
+	kept := modelcatalog.Model{
+		ModelID: "acme/kept", ProviderSlug: "acme", Label: "Kept", Listed: true,
+		CreatedAt: testNow, UpdatedAt: testNow,
+	}
+	if err := s.RegisterPurpose(ctx, kept, modelcatalog.PurposeWriting); err != nil {
+		t.Fatal(err)
+	}
+
+	at := testNow.Add(48 * time.Hour)
+	seen := []modelcatalog.Candidate{{ModelID: "acme/kept", ProviderSlug: "acme", Label: "Kept"}}
+	if err := s.RefreshAvailability(ctx, seen, at); err != nil {
+		t.Fatal(err)
+	}
+
+	row, err := s.Get(ctx, gone.ModelID)
+	if err != nil {
+		t.Fatalf("the delisted row was removed: %v", err)
+	}
+	if row.Listed || len(row.Purposes) != 0 {
+		t.Errorf("delisted row: listed=%v purposes=%v, want unlisted with none", row.Listed, row.Purposes)
+	}
+	if !row.UpdatedAt.Equal(at) {
+		t.Errorf("updated_at = %v, want the refresh time: losing a registration is a curation change", row.UpdatedAt)
+	}
+	if len(row.Reasoning) != 0 {
+		t.Errorf("effort override = %v, want none: it belongs to the registration that was removed", row.Reasoning)
+	}
+
+	still, err := s.Get(ctx, kept.ModelID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !still.Listed || len(still.Purposes) != 1 || !still.UpdatedAt.Equal(testNow) {
+		t.Errorf("seen row was touched: listed=%v purposes=%v updated=%v", still.Listed, still.Purposes, still.UpdatedAt)
+	}
+	// The seeded rows had no registrations to lose, so the sweep must not have stamped them.
+	rows, err := s.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range rows {
+		if r.ModelID != gone.ModelID && r.ModelID != kept.ModelID && r.UpdatedAt.Equal(at) {
+			t.Errorf("%s was stamped without losing a registration", r.ModelID)
+		}
+	}
+}
+
 // A1/A2: the six capability fields survive a round trip, and the source's descending effort
 // order survives the comma-joined storage form.
 func TestReasoningCapability_RoundTrip(t *testing.T) {

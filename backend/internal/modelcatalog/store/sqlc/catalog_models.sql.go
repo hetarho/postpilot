@@ -54,6 +54,16 @@ func (q *Queries) AssignEstimatorCombo(ctx context.Context, arg AssignEstimatorC
 	return err
 }
 
+const deregisterUnlistedCatalogModels = `-- name: DeregisterUnlistedCatalogModels :exec
+DELETE FROM catalog_model_purposes
+WHERE model_id IN (SELECT model_id FROM catalog_models WHERE listed = 0)
+`
+
+func (q *Queries) DeregisterUnlistedCatalogModels(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deregisterUnlistedCatalogModels)
+	return err
+}
+
 const getCatalogModel = `-- name: GetCatalogModel :one
 SELECT model_id, provider_slug, label, vision, structured_output, image_output, video_output,
        video_input, reasons, reasoning_efforts, reasoning_default_effort, reasoning_mandatory,
@@ -419,13 +429,29 @@ func (q *Queries) TouchCatalogModelCuration(ctx context.Context, arg TouchCatalo
 	return err
 }
 
+const touchUnlistedRegisteredCatalogModels = `-- name: TouchUnlistedRegisteredCatalogModels :exec
+UPDATE catalog_models SET updated_at = ?
+WHERE listed = 0
+  AND EXISTS (SELECT 1 FROM catalog_model_purposes p WHERE p.model_id = catalog_models.model_id)
+`
+
+// Availability, step 3 (MODEL-20): a model the source stopped offering loses every
+// registration in the same transaction. Losing a registration IS a curation change, so the
+// rows that had one are stamped first; the row itself survives (the effort lives on the
+// registration and goes with it) so the model comes back as an unregistered candidate when
+// the source offers it again.
+func (q *Queries) TouchUnlistedRegisteredCatalogModels(ctx context.Context, updatedAt string) error {
+	_, err := q.db.ExecContext(ctx, touchUnlistedRegisteredCatalogModels, updatedAt)
+	return err
+}
+
 const unlistAllCatalogModels = `-- name: UnlistAllCatalogModels :exec
 UPDATE catalog_models SET listed = 0
 `
 
 // Availability, step 1: assume nothing is offered any more. Step 2 puts back everything the
 // provider actually listed, in the same transaction, so no reader sees the gap. updated_at
-// is untouched: an availability sweep is not a curation edit.
+// is untouched here: an availability sweep is not a curation edit.
 func (q *Queries) UnlistAllCatalogModels(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, unlistAllCatalogModels)
 	return err

@@ -125,6 +125,10 @@ func (s *fakeStore) RefreshAvailability(_ context.Context, seen []modelcatalog.C
 			row.Vision, row.StructuredOutput = candidate.Vision, candidate.StructuredOutput
 			row.ImageOutput, row.VideoOutput = candidate.ImageOutput, candidate.VideoOutput
 			row.LastSeenAt = at
+		} else if len(row.Purposes) > 0 {
+			// MODEL-20, as the real store does it: unlisted loses every registration — and
+			// the effort that belongs to each registration (MODEL-7) — but keeps the row.
+			row.Purposes, row.Reasoning, row.UpdatedAt = nil, nil, at
 		}
 		s.rows[id] = row
 	}
@@ -183,8 +187,9 @@ func newService(t *testing.T, store modelcatalog.Store, upstream modelcatalog.Up
 	return svc
 }
 
-// A2: the browse list is the live catalog annotated with curation, PLUS the curated models
-// the provider has stopped offering — the case that would otherwise silently disappear.
+// A2: the browse list is the live catalog annotated with curation. A curated model the
+// provider has stopped offering is deregistered by the read and not shown (MODEL-20) — the
+// operator has nothing left to do with it — while its row stays in the store for a return.
 func TestBrowse_MergesLiveCatalogWithCuratedRows(t *testing.T) {
 	store := newFakeStore(
 		curated("openai/gpt-x", modelcatalog.PurposeWriting),
@@ -199,11 +204,11 @@ func TestBrowse_MergesLiveCatalogWithCuratedRows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(browse.Entries) != 4 {
-		t.Fatalf("entries = %d, want 3 offered plus 1 retired", len(browse.Entries))
+	if len(browse.Entries) != 3 {
+		t.Fatalf("entries = %d, want the 3 offered and no retired row", len(browse.Entries))
 	}
 	// Grouped by vendor, newest first inside a vendor.
-	want := []string{"anthropic/claude-y", "openai/gpt-w", "openai/gpt-x", "retired/model"}
+	want := []string{"anthropic/claude-y", "openai/gpt-w", "openai/gpt-x"}
 	for i, id := range want {
 		if browse.Entries[i].ModelID != id {
 			t.Errorf("entry %d = %s, want %s", i, browse.Entries[i].ModelID, id)
@@ -220,14 +225,61 @@ func TestBrowse_MergesLiveCatalogWithCuratedRows(t *testing.T) {
 	if byID["anthropic/claude-y"].Curated || len(byID["anthropic/claude-y"].Purposes) != 0 {
 		t.Errorf("an un-curated candidate looks curated: %+v", byID["anthropic/claude-y"])
 	}
-	// The retired one keeps the snapshot it was last seen with, so the row still reads as a
-	// model rather than an id.
-	retired := byID["retired/model"]
-	if !retired.Curated || retired.Listed || retired.Label != "retired/model" {
-		t.Errorf("retired entry = %+v", retired)
+	if _, shown := byID["retired/model"]; shown {
+		t.Error("a delisted model was offered on the screen")
+	}
+	// The row survives, unregistered, and the registry no longer serves it.
+	retired, ok := store.rows["retired/model"]
+	if !ok || retired.Listed || len(retired.Purposes) != 0 {
+		t.Errorf("retired row = %+v / %v, want kept, unlisted, unregistered", retired, ok)
+	}
+	if _, served := svc.Lookup("retired/model"); served {
+		t.Error("the registry still serves a delisted model")
 	}
 	if store.refreshes != 1 {
 		t.Errorf("refreshes = %d, want one bookkeeping write for the live read", store.refreshes)
+	}
+}
+
+// MODEL-20 on the degraded path: a row an earlier successful read unlisted stays hidden
+// while the fetch is failing — the stored rows are served, but not that one.
+func TestBrowse_HidesADelistedRowWhenTheFetchFails(t *testing.T) {
+	delisted := curated("retired/model")
+	delisted.Listed = false
+	store := newFakeStore(curated("openai/gpt-x", modelcatalog.PurposeWriting), delisted)
+	svc := newService(t, store, &fakeUpstream{err: errors.New("network down")})
+
+	browse, err := svc.Browse(context.Background(), true, modelcatalog.PurposeWriting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(browse.Entries) != 1 || browse.Entries[0].ModelID != "openai/gpt-x" {
+		t.Fatalf("entries = %+v, want only the listed curated row", browse.Entries)
+	}
+}
+
+// MODEL-20: a model the source offers again is an unregistered candidate on a row that still
+// exists — the operator re-checks a box and sets the effort again, as after any uncheck.
+func TestBrowse_AReturningModelIsOfferedAgainUnregistered(t *testing.T) {
+	returning := curated("retired/model")
+	returning.Listed = false
+	store := newFakeStore(returning)
+	upstream := &fakeUpstream{candidates: []modelcatalog.Candidate{candidate("retired/model", 10)}}
+	svc := newService(t, store, upstream)
+
+	browse, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(browse.Entries) != 1 {
+		t.Fatalf("entries = %+v, want the returning model once", browse.Entries)
+	}
+	got := browse.Entries[0]
+	if !got.Listed || !got.Curated || len(got.Purposes) != 0 {
+		t.Errorf("returning entry = %+v, want listed, curated, unregistered", got)
+	}
+	if got.Reasoning != llm.ReasoningUnspecified {
+		t.Errorf("effort = %v, want none: the override went with the registration", got.Reasoning)
 	}
 }
 
@@ -527,7 +579,11 @@ func TestBrowse_AttachesTheReasoningSpendForTheListedPurpose(t *testing.T) {
 		curated("openai/quiet", modelcatalog.PurposeWriting),
 		curated("openai/unmeasured", modelcatalog.PurposeWriting),
 	)
-	svc := newService(t, store, &fakeUpstream{})
+	// The three are offered live: a successful read that lacked them would deregister and
+	// hide them (MODEL-20), and this test is about the spend column, not that.
+	svc := newService(t, store, &fakeUpstream{candidates: []modelcatalog.Candidate{
+		candidate("openai/reasoner", 3), candidate("openai/quiet", 2), candidate("openai/unmeasured", 1),
+	}})
 	svc.SetReasoningSpend(fakeSpend{rows: map[string][]modelcatalog.SpendRow{
 		llm.StageNameWrite: {
 			{Model: "openai/reasoner", Calls: 3, ReasoningTokens: 24_000, CompletionTokens: 24_300, ReasoningTruncations: 2},
@@ -579,7 +635,8 @@ func TestBrowse_AttachesTheReasoningSpendForTheListedPurpose(t *testing.T) {
 // The signal is evidence beside a control, so a ledger that cannot answer must never be what
 // stops an operator from curating.
 func TestBrowse_SurvivesAFailingSpendRead(t *testing.T) {
-	svc := newService(t, newFakeStore(curated("openai/gpt-x", modelcatalog.PurposeWriting)), &fakeUpstream{})
+	svc := newService(t, newFakeStore(curated("openai/gpt-x", modelcatalog.PurposeWriting)),
+		&fakeUpstream{candidates: []modelcatalog.Candidate{candidate("openai/gpt-x", 1)}})
 	svc.SetReasoningSpend(fakeSpend{err: errors.New("ledger unavailable")})
 
 	browse, err := svc.Browse(context.Background(), false, modelcatalog.PurposeWriting)

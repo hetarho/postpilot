@@ -233,10 +233,12 @@ func (s *Store) DeregisterPurpose(ctx context.Context, modelID string, purpose m
 
 // RefreshAvailability records what one successful upstream read saw.
 //
-// Everything is unlisted first and the seen models are put back in the same transaction,
-// so no reader ever observes the gap and a model the provider dropped needs no separate
-// delete pass. Only rows that already exist are touched: the catalog stores what an
-// operator curated, not the four hundred models they did not.
+// Everything is unlisted first, the seen models are put back, and whatever is still
+// unlisted loses its registrations — all in the same transaction, so no reader ever
+// observes the gap or a hidden-but-registered row (MODEL-20). Only rows that already exist
+// are touched: the catalog stores what an operator curated, not the four hundred models
+// they did not. The unlisted row is kept; its per-purpose effort goes with the registration,
+// as it does on an operator's uncheck.
 func (s *Store) RefreshAvailability(ctx context.Context, seen []modelcatalog.Candidate, at time.Time) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
@@ -275,6 +277,13 @@ func (s *Store) RefreshAvailability(ctx context.Context, seen []modelcatalog.Can
 		if err != nil {
 			return fmt.Errorf("mark catalog model seen: %w", err)
 		}
+	}
+	// Stamp before deleting: the stamp's predicate is "still has a registration".
+	if err := q.TouchUnlistedRegisteredCatalogModels(ctx, stamp); err != nil {
+		return fmt.Errorf("stamp delisted catalog models: %w", err)
+	}
+	if err := q.DeregisterUnlistedCatalogModels(ctx); err != nil {
+		return fmt.Errorf("deregister delisted catalog models: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit catalog refresh: %w", err)
