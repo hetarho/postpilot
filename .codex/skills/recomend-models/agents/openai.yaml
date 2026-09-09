@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recommend Models"
+  short_description: "OpenRouter 라이브 카탈로그에서 탭별 4단계 모델 추천"
+  default_prompt: "Use $recomend-models to recommend catalog models per 모델 관리 tab from the live OpenRouter catalog."
