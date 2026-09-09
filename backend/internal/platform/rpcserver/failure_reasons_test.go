@@ -27,6 +27,9 @@ import (
 // The proto carries no enum for them (ARCH-3 keeps generated code to the proto contract), so
 // a committed list plus this comment is the honest gate at that seam.
 var publicFailureReasons = []string{
+	"CLIP_INVALID_INPUT",
+	"CLIP_NOT_FOUND",
+	"CLIP_TEMPLATE_NAME_TAKEN",
 	"AUTH_REQUIRED",
 	"BILLING_SELECTION_INVALID",
 	"BILLING_UNAVAILABLE",

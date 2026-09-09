@@ -31,6 +31,9 @@ import (
 	"github.com/postpilot/backend/internal/billing"
 	billingrpc "github.com/postpilot/backend/internal/billing/rpc"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
+	"github.com/postpilot/backend/internal/clip"
+	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
+	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/experiment"
 	experimentrpc "github.com/postpilot/backend/internal/experiment/rpc"
 	experimentstore "github.com/postpilot/backend/internal/experiment/store"
@@ -315,6 +318,7 @@ func main() {
 	// learns that only through this adapter, never by importing internal/publishing.
 	postSvc.SetLivePublishFinder(postPublications{service: publishSvc})
 
+	clipSvc := clip.NewService(clipstore.New(handle.Writer, handle.Reader), config.ClipLimits())
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
@@ -490,6 +494,9 @@ func main() {
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewTemplateServiceHandler(templaterpc.NewHandler(templateSvc), opts...)
+			},
+			func(opts ...connect.HandlerOption) (string, http.Handler) {
+				return postpilotv1connect.NewClipServiceHandler(cliprpc.NewHandler(clipSvc), opts...)
 			},
 			func(opts ...connect.HandlerOption) (string, http.Handler) {
 				return postpilotv1connect.NewGuidelineServiceHandler(guidelinerpc.NewHandler(guidelineSvc), opts...)

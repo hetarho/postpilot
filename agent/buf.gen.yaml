@@ -15,6 +15,7 @@ plugins:
     out: agent/internal/gen
     opt:
       - paths=source_relative
+      - Mpostpilot/v1/clip.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/auth.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/billing.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/error.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
@@ -35,6 +36,7 @@ plugins:
     out: agent/internal/gen
     opt:
       - paths=source_relative
+      - Mpostpilot/v1/clip.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/auth.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/billing.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/error.proto=github.com/postpilot/agent/internal/gen/postpilot/v1

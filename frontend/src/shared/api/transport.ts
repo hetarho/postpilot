@@ -16,6 +16,7 @@ import { API_URL } from '@/shared/config'
 import { emitUnauthenticated } from './auth-events'
 import { AuthService } from './gen/postpilot/v1/auth_pb'
 import { BillingService } from './gen/postpilot/v1/billing_pb'
+import { ClipService } from './gen/postpilot/v1/clip_pb'
 import { HealthService } from './gen/postpilot/v1/health_pb'
 import { ModelCatalogService } from './gen/postpilot/v1/model_catalog_pb'
 import { ModelExperimentService } from './gen/postpilot/v1/model_experiment_pb'
@@ -92,6 +93,7 @@ export const publishingClientFor = (clientTransport: Transport) =>
 
 /** Typed client for the acting account's reusable 용도 briefs. */
 export const templateClient = createClient(TemplateService, transport)
+export const clipClient = createClient(ClipService, transport)
 
 /** Typed client for the acting account's voice profile. */
 export const voiceClient = createClient(VoiceService, transport)

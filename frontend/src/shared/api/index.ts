@@ -9,6 +9,7 @@ export {
   publishingClient,
   publishingClientFor,
   templateClient,
+  clipClient,
   voiceClient,
   voiceLearningClient,
   voiceValidationClient,
@@ -17,6 +18,26 @@ export {
   unauthenticatedInterceptor,
 } from './transport'
 export { onUnauthenticated, emitUnauthenticated } from './auth-events'
+export {
+  ClipService,
+  VideoTemplateSchema,
+  ClipProjectSchema,
+  ListVideoTemplatesResponseSchema,
+  CreateVideoTemplateResponseSchema,
+  UpdateVideoTemplateResponseSchema,
+  DeleteVideoTemplateResponseSchema,
+  ListClipProjectsResponseSchema,
+  CreateClipProjectResponseSchema,
+  GetClipProjectResponseSchema,
+  UpdateClipProjectResponseSchema,
+  DeleteClipProjectResponseSchema,
+} from './gen/postpilot/v1/clip_pb'
+export type {
+  VideoTemplate as ProtoVideoTemplate,
+  ClipProject as ProtoClipProject,
+  ClipInformationField as ProtoClipInformationField,
+  ClipAnswer as ProtoClipAnswer,
+} from './gen/postpilot/v1/clip_pb'
 export {
   contentLanguages,
   contentLanguageFromProto,

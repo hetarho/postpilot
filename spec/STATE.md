@@ -25,7 +25,7 @@
 | THEME | 8 | 8 | - | 0 |
 | MARKETING | 4 | 4 | - | 0 |
 | VIDEO | 1 | 1 | - | 1 |
-| CLIP | 1 | 0 | all | 0 |
+| CLIP | 1 | 1 | - | 0 |
 | BILLING | 4 | 4 | - | 0 |
 
 ## review
@@ -41,19 +41,27 @@
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUBLISH | T044 T043 | todo |
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
+| T069 | Clip and video-template domain foundation | CLIP | - | blocked@260910 |
+| T070 | Video-template management UI | CLIP THEME | T069 | todo |
+| T071 | Transient clip-source batches and cleanup | CLIP | T069 | todo |
+| T072 | Clip setup and direct-upload UI | CLIP THEME | T070 T071 | todo |
+| T073 | Clip media probe, analysis proxies and isolated workspaces | CLIP | T069 | todo |
+| T074 | Deterministic caption and video renderer | CLIP | T073 | todo |
+| T075 | Timecoded clip analysis and AI edit planning | CLIP VIDEO MODEL | T069 | todo |
+| T076 | Durable clip generation and result retention | CLIP QUOTA VIDEO MODEL | T071 T074 T075 | todo |
+| T077 | Clip generation progress, preview and download | CLIP THEME LANG | T072 T076 | todo |
+| T078 | Manual clip-plan save and credit-free rerender | CLIP QUOTA | T071 T074 T076 | todo |
+| T079 | Clip correction workspace | CLIP THEME LANG | T077 T078 | todo |
+| T080 | Grouped writing and video navigation | CLIP THEME | T070 T072 | todo |
 
 ## next
-- create-task CLIP from CLIP@1 (independent clip projects, video templates, AI cut planning, correction, transient sources and downloadable Naver-ready results)
-- the post list round is shipped end to end (T066 T067 T068): 새 글 docks at every width on `/posts` `/voices` `/templates`, and `/posts` narrows by title/tag search + status filter held in `q` and `status`
-- T067 changes the dock on `/voices` and `/templates` too, since THEME-24 is design language; that was the owner's accepted reading at update-ssot
-- the paste protocol shipped end to end (T064 BE + T065 FE) and MODEL@8 is fully tasked; the next code work is the PUBLISH chain below
-- T063 shipped the tag count option end to end (BE + FE gates green); next code work is the PUBLISH chain below
-- update-ssot VOICE: VOICE-42✎ (r2) named a frozen tag count, but the rule comparison prompt emits prose and never asks for tags — drop the words or say what they would change
-- Google sign-in is live end to end as of 260909 (AUTH-43): OAuth client registered, `GOOGLE_CLIENT_ID/SECRET` on the VPS `.env`, `VITE_GOOGLE_CLIENT_ID` in the Cloudflare build, button visible on `/login` and `/signup`, and the owner's real Google login succeeded
-- the template data fields are done end to end (T055-T059): `pnpm --filter ./frontend test`, the Go suite, both lints and the build are green, and the four commits are on main
-- also owed (THEME@6 · MARKETING@4 were implemented directly by the session that revised them, so no create-task is owed there, and THEME-29 already carries the `Switch` T058 needs — T058 re-stamps its base to THEME@6 at claim): BEFORE T058, TEMPLATE-41 excludes `label` from the format guide while TEMPLATE-43's `ask` requires that attribute (`guide.test.ts` asserts the guide holds no `label=`), so update-ssot TEMPLATE must name the retired SLOT label specifically or rename the attribute — owner's call; and `haeram-spec-creator lint` still rejects PUBLISH BILLING TEMPLATE MARKETING against FORMAT's `2-6 uppercase` id rule
+- unblock T069: implementation and code gates pass; existing spec ID lint failures need an owner exception or identifier migration; then implement and commit T070 through T080 sequentially
+- spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TEMPLATE for the retired SLOT `label` vs `<ask label>` conflict, update-ssot LANG to add the `clips` namespace, and resolve the existing overlong PUBLISH BILLING TEMPLATE MARKETING ids
 - the PUBLISH chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 ## log
+- 260910 T069 blocked: code gates pass; mandatory spec lint rejects existing TEMPLATE/PUBLISH/MARKETING/BILLING ids; owner exception requested
+- 260909 T069 claimed (clp)
+- 260909 create-task T069 T070 T071 T072 T073 T074 T075 T076 T077 T078 T079 T080 from CLIP@1 (foundation → templates/source/media/AI → generation/result → correction; grouped nav after both video pages)
 - 260909 T068 done
 - 260909 T068 claimed (srch)
 - 260909 T067 done (the dock change also landed on /voices and /templates)
@@ -71,6 +79,3 @@
 - 260909 update-ssot MODEL r8 (MODEL-53✎); no doing task in scope, T065 (todo) unaffected — its ssot is MODEL-52 54 55 56
 - 260909 update-ssot MODEL start (MODEL-53 reject causes vs what the context can see)
 - 260909 T064 done
-- 260909 T064 claimed (cdp)
-- 260909 create-task T064 T065 from MODEL@7 (BE / FE split; live catalog read is mandatory for preview and apply)
-- 260909 create-task MODEL start
