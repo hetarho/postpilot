@@ -17,16 +17,16 @@
 | VOICE | 2 | 2 | - | 1 |
 | GEN | 5 | 5 | - | 0 |
 | MODEL | 8 | 8 | - | 0 |
-| TEMPLATE | 4 | 4 | - | 1 |
+| TMPL | 4 | 4 | - | 1 |
 | GUIDE | 1 | 1 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
-| PUBLISH | 4 | 4 | - | 0 |
+| PUB | 4 | 4 | - | 0 |
 | LANG | 2 | 2 | - | 0 |
 | THEME | 8 | 8 | - | 0 |
-| MARKETING | 4 | 4 | - | 0 |
+| MKT | 4 | 4 | - | 0 |
 | VIDEO | 1 | 1 | - | 1 |
 | CLIP | 1 | 1 | - | 0 |
-| BILLING | 4 | 4 | - | 0 |
+| BILL | 4 | 4 | - | 0 |
 
 ## review
 | id | st |
@@ -36,12 +36,11 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T046 | todo |
-| T042 | The r4 mutation vocabulary and the body mutations | PUBLISH | T018 | blocked@260908 |
-| T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
-| T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUBLISH | T044 T043 | todo |
-| T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
-| T069 | Clip and video-template domain foundation | CLIP | - | blocked@260910 |
+| T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
+| T042 | The r4 mutation vocabulary and the body mutations | PUB | T018 | blocked@260908 |
+| T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUB | T042 | todo |
+| T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUB | T044 T043 | todo |
+| T046 | Wiring the real publisher into the daemon | PUB | T045 | todo |
 | T070 | Video-template management UI | CLIP THEME | T069 | todo |
 | T071 | Transient clip-source batches and cleanup | CLIP | T069 | todo |
 | T072 | Clip setup and direct-upload UI | CLIP THEME | T070 T071 | todo |
@@ -55,11 +54,14 @@
 | T080 | Grouped writing and video navigation | CLIP THEME | T070 T072 | todo |
 
 ## next
-- unblock T069: implementation and code gates pass; existing spec ID lint failures need an owner exception or identifier migration; then implement and commit T070 through T080 sequentially
-- spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TEMPLATE for the retired SLOT `label` vs `<ask label>` conflict, update-ssot LANG to add the `clips` namespace, and resolve the existing overlong PUBLISH BILLING TEMPLATE MARKETING ids
-- the PUBLISH chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
+- implement-task T070, then implement and commit T071 through T080 sequentially
+- spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
+- the PUB chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUB@4 · update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
 ## log
-- 260910 T069 blocked: code gates pass; mandatory spec lint rejects existing TEMPLATE/PUBLISH/MARKETING/BILLING ids; owner exception requested
+- 260910 T069 done; all code gates and spec lint pass after identifier repair
+- 260910 spec identifier repair: TEMPLATE→TMPL, PUBLISH→PUB, MARKETING→MKT, BILLING→BILL; names and references only, no policy or revision change
+- 260910 T069 claimed (clp); owner authorized fixing spec lint and continuing through T080
+- 260910 T069 blocked: code gates pass; mandatory spec lint rejects existing TMPL/PUB/MKT/BILL ids; owner exception requested
 - 260909 T069 claimed (clp)
 - 260909 create-task T069 T070 T071 T072 T073 T074 T075 T076 T077 T078 T079 T080 from CLIP@1 (foundation → templates/source/media/AI → generation/result → correction; grouped nav after both video pages)
 - 260909 T068 done
@@ -76,6 +78,3 @@
 - 260909 update-ssot POST THEME start (post list: 새 글 as a dock at every width, filter + search by title/tag)
 - 260909 create-ssot CLIP start
 - 260909 T065 claimed (blk)
-- 260909 update-ssot MODEL r8 (MODEL-53✎); no doing task in scope, T065 (todo) unaffected — its ssot is MODEL-52 54 55 56
-- 260909 update-ssot MODEL start (MODEL-53 reject causes vs what the context can see)
-- 260909 T064 done

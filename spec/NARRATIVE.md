@@ -1,6 +1,6 @@
 # Postpilot 이야기
 
-> as of ARCH@1 AUTH@1 QUOTA@2 POST@1 VOICE@1 GEN@1 MODEL@2 TEMPLATE@1 GUIDE@1 EXPORT@1 PUBLISH@2 LANG@1 THEME@1 MARKETING@1 | 260905 | 독자: 신규 합류 팀 동료
+> as of ARCH@1 AUTH@1 QUOTA@2 POST@1 VOICE@1 GEN@1 MODEL@2 TMPL@1 GUIDE@1 EXPORT@1 PUB@2 LANG@1 THEME@1 MKT@1 | 260905 | 독자: 신규 합류 팀 동료
 
 이 문서를 읽으면 Postpilot이 왜 존재하는지, 어떤 원칙으로 동작하는지, 지금 무엇이 완성됐고 무엇이 남았는지 이해할 수 있습니다. 상세한 제품 결정은 `spec/ssot/`, 진행 상태는 `spec/STATE.md`가 기준입니다. 이 글과 기준 문서가 다르면 기준 문서를 따릅니다.
 
