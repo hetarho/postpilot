@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -237,5 +238,24 @@ func TestTemplateAnswersCrossTheWireBothWays(t *testing.T) {
 	// A post with no answers sends an empty list, never a nil the client has to guard.
 	if got := toProtoTemplateAnswers(nil); got == nil || len(got) != 0 {
 		t.Errorf("no answers should marshal as an empty list, got %+v", got)
+	}
+}
+
+// The list narrows by tag in the browser (POST-65), so the summary mapper has to carry the
+// tags across the seam — and a post with none must arrive as an empty repeated field rather
+// than as a single blank tag the client would then render.
+func TestToProtoSummaryCarriesTags(t *testing.T) {
+	tagged := toProtoSummary(post.Summary{
+		Slug: "20260828-jeju", Title: "제주 3일", Status: "review",
+		UpdatedAt: time.Date(2026, 8, 28, 11, 58, 0, 0, time.UTC),
+		Tags:      []string{"제주", "카페"},
+	})
+	if want := []string{"제주", "카페"}; !reflect.DeepEqual(tagged.GetTags(), want) {
+		t.Errorf("tags = %v, want %v", tagged.GetTags(), want)
+	}
+
+	untagged := toProtoSummary(post.Summary{Slug: "20260820-busan", Status: "draft"})
+	if len(untagged.GetTags()) != 0 {
+		t.Errorf("tags = %v, want none", untagged.GetTags())
 	}
 }

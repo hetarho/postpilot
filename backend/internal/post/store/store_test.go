@@ -347,6 +347,47 @@ func TestListPostsFallsBackToGeneratedTitle(t *testing.T) {
 	}
 }
 
+// The list is searched by tag (POST-65), and a tag lives inside the content JSON rather
+// than in a column — so the row's content is what has to answer, in the order it was
+// written, and a post nobody has generated yet answers with nothing at all.
+func TestListPostsCarriesContentTags(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	tagged := seedPost(t, s, "tagged", "alice", testNow)
+	empty := seedPost(t, s, "empty-tags", "alice", testNow.Add(-time.Hour))
+	seedPost(t, s, "no-content", "alice", testNow.Add(-2*time.Hour))
+
+	if updated, err := s.UpdateGeneratedContent(ctx, tagged.Slug, tagged.UserID,
+		post.PostContent{Title: "Jeju", Tags: []string{"제주", "카페"}}, post.LanguageKorean, testNow); err != nil || !updated {
+		t.Fatalf("generated content: updated=%v err=%v", updated, err)
+	}
+	if updated, err := s.UpdateGeneratedContent(ctx, empty.Slug, empty.UserID,
+		post.PostContent{Title: "Busan"}, post.LanguageKorean, testNow); err != nil || !updated {
+		t.Fatalf("generated content: updated=%v err=%v", updated, err)
+	}
+
+	got, err := s.ListPosts(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("got %d summaries, want 3", len(got))
+	}
+	bySlug := map[string][]string{}
+	for _, summary := range got {
+		bySlug[summary.Slug] = summary.Tags
+	}
+	if want := []string{"제주", "카페"}; !reflect.DeepEqual(bySlug["tagged"], want) {
+		t.Errorf("tagged tags = %v, want %v", bySlug["tagged"], want)
+	}
+	if len(bySlug["empty-tags"]) != 0 {
+		t.Errorf("empty-tags tags = %v, want none", bySlug["empty-tags"])
+	}
+	if len(bySlug["no-content"]) != 0 {
+		t.Errorf("no-content tags = %v, want none", bySlug["no-content"])
+	}
+}
+
 // The list orders on a plain string comparison of updated_at, so the stored format has
 // to be fixed-width — a trimmed fraction would sort "…08.5Z" after "…08.51Z".
 func TestListPostsOrdersSubSecondTimestamps(t *testing.T) {

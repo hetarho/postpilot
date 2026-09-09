@@ -340,6 +340,9 @@ type Summary struct {
 	PendingExperimentID string
 	TargetLanguage      Language
 	ContentLanguage     *Language
+	// Tags of the current content revision (POST-65). The list narrows by them, and a post
+	// whose content has not been written yet simply carries none.
+	Tags []string
 }
 
 // ActiveJob is the snapshot the post context publishes on read models. It is owned by

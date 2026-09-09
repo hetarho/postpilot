@@ -214,6 +214,9 @@ message PostSummary {
   TemplateRef template = 8;
   ContentLanguage target_language = 9;
   ContentLanguage content_language = 10;
+  // The current content revision's tags, so the list can be searched by tag (POST-65). Empty
+  // for a post whose content has not been written yet.
+  repeated string tags = 11;
 }
 
 message GenerationJob {

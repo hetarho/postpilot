@@ -121,20 +121,28 @@ func (h *Handler) ListPosts(ctx context.Context, _ *connect.Request[postpilotv1.
 
 	posts := make([]*postpilotv1.PostSummary, 0, len(summaries))
 	for _, s := range summaries {
-		posts = append(posts, &postpilotv1.PostSummary{
-			Slug:                s.Slug,
-			Title:               s.Title,
-			Status:              s.Status,
-			UpdatedAt:           s.UpdatedAt.UTC().Format(timeLayout),
-			ActiveJob:           toProtoActiveJob(s.ActiveJob),
-			PendingExperimentId: s.PendingExperimentID,
-			Voice:               toProtoVoiceRef(s.Voice),
-			Template:            toProtoTemplateRef(s.Template),
-			TargetLanguage:      languageToProto(s.TargetLanguage),
-			ContentLanguage:     optionalLanguageToProto(s.ContentLanguage),
-		})
+		posts = append(posts, toProtoSummary(s))
 	}
 	return connect.NewResponse(&postpilotv1.ListPostsResponse{Posts: posts}), nil
+}
+
+// toProtoSummary is the list read model's half of the transport mapper (ARCH-7). It sits
+// beside the other to-proto helpers rather than inline in the handler so the mapping can be
+// pinned without standing up a service.
+func toProtoSummary(s post.Summary) *postpilotv1.PostSummary {
+	return &postpilotv1.PostSummary{
+		Slug:                s.Slug,
+		Title:               s.Title,
+		Status:              s.Status,
+		UpdatedAt:           s.UpdatedAt.UTC().Format(timeLayout),
+		ActiveJob:           toProtoActiveJob(s.ActiveJob),
+		PendingExperimentId: s.PendingExperimentID,
+		Voice:               toProtoVoiceRef(s.Voice),
+		Template:            toProtoTemplateRef(s.Template),
+		TargetLanguage:      languageToProto(s.TargetLanguage),
+		ContentLanguage:     optionalLanguageToProto(s.ContentLanguage),
+		Tags:                s.Tags,
+	}
 }
 
 func (h *Handler) DeletePost(ctx context.Context, req *connect.Request[postpilotv1.DeletePostRequest]) (*connect.Response[postpilotv1.DeletePostResponse], error) {

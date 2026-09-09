@@ -340,15 +340,23 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 		if err != nil {
 			return nil, fmt.Errorf("post %s: %w", row.Slug, err)
 		}
-		title := row.Title
-		if strings.TrimSpace(title) == "" && row.Content.Valid {
-			content, err := unmarshalContent(row.Content.String)
+		// Decoded ONCE per row and used for both the blank-title fallback and the tags: the
+		// list reads every post the account owns, so a second unmarshal per row would double
+		// the JSON cost of the screen's one request.
+		var content *post.PostContent
+		if row.Content.Valid {
+			content, err = unmarshalContent(row.Content.String)
 			if err != nil {
 				return nil, fmt.Errorf("post %s: %w", row.Slug, err)
 			}
-			if content != nil {
-				title = content.Title
-			}
+		}
+		title := row.Title
+		if strings.TrimSpace(title) == "" && content != nil {
+			title = content.Title
+		}
+		var tags []string
+		if content != nil && len(content.Tags) > 0 {
+			tags = content.Tags
 		}
 		summaries = append(summaries, post.Summary{
 			Slug:            row.Slug,
@@ -361,6 +369,7 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 			UpdatedAt:       updatedAt,
 			TargetLanguage:  post.Language(row.TargetLanguage),
 			ContentLanguage: nullableLanguage(row.ContentLanguage),
+			Tags:            tags,
 		})
 	}
 	return summaries, nil

@@ -1017,8 +1017,11 @@ type PostSummary struct {
 	Template            *TemplateRef           `protobuf:"bytes,8,opt,name=template,proto3" json:"template,omitempty"`
 	TargetLanguage      ContentLanguage        `protobuf:"varint,9,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
 	ContentLanguage     ContentLanguage        `protobuf:"varint,10,opt,name=content_language,json=contentLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"content_language,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// The current content revision's tags, so the list can be searched by tag (POST-65). Empty
+	// for a post whose content has not been written yet.
+	Tags          []string `protobuf:"bytes,11,rep,name=tags,proto3" json:"tags,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PostSummary) Reset() {
@@ -1119,6 +1122,13 @@ func (x *PostSummary) GetContentLanguage() ContentLanguage {
 		return x.ContentLanguage
 	}
 	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *PostSummary) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
 }
 
 type GenerationJob struct {
@@ -2916,7 +2926,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\bview_url\x18\x06 \x01(\tR\aviewUrl\x12\x1f\n" +
 	"\vduration_ms\x18\a \x01(\x03R\n" +
 	"durationMs\x12!\n" +
-	"\fcontent_type\x18\b \x01(\tR\vcontentType\"\xd5\x03\n" +
+	"\fcontent_type\x18\b \x01(\tR\vcontentType\"\xe9\x03\n" +
 	"\vPostSummary\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
@@ -2930,7 +2940,8 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\btemplate\x18\b \x01(\v2\x19.postpilot.v1.TemplateRefR\btemplate\x12F\n" +
 	"\x0ftarget_language\x18\t \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
 	"\x10content_language\x18\n" +
-	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\"\x91\x04\n" +
+	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12\x12\n" +
+	"\x04tags\x18\v \x03(\tR\x04tags\"\x91\x04\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
