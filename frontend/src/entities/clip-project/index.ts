@@ -22,3 +22,19 @@ export {
   useClipProject,
   useClipProjectMutations,
 } from './api/clip-project'
+export {
+  COPY_POSITIONS,
+  copyClipPlan,
+  editClipPlan,
+  requiredClipSources,
+  validateClipPlan,
+} from './model/edit-plan'
+export type {
+  ClipCaption,
+  ClipEditCut,
+  ClipEditPlan,
+  ClipEditingState,
+  RetainedClipSource,
+  ClipEdit,
+} from './model/edit-plan'
+export { toClipEditingState, clipPlanToProto } from './api/edit-plan'

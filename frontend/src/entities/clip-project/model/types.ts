@@ -1,4 +1,5 @@
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
+import type { ClipEditingState } from './edit-plan'
 
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
 export type ClipRatio = (typeof CLIP_RATIOS)[number]
@@ -22,6 +23,7 @@ export interface ClipProject extends ClipProjectDraft {
   editPlanRevision: number
   renderedPlanRevision: number
   latestJob?: GenerationJob
+  editing?: ClipEditingState
   result?: {
     contentType: string
     bytes: number

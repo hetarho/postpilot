@@ -18,10 +18,18 @@ import {
   ConfirmClipSourceResponseSchema,
   DiscardClipSourceBatchResponseSchema,
   StartClipGenerationResponseSchema,
+  SaveClipEditPlanResponseSchema,
+  StartClipRenderResponseSchema,
+  ClipEditingStateSchema,
   type ProtoClipSourceBatch,
 } from '@/shared/api'
 import type { ClipRecipe } from '@/entities/clip-template'
-import type { ClipProject, ClipProjectDraft } from '@/entities/clip-project'
+import {
+  toClipEditingState,
+  type ClipProject,
+  type ClipProjectDraft,
+  type ClipEditPlan,
+} from '@/entities/clip-project'
 import { toFakeProto, type FakeGenerationJobRow } from './jobs'
 import { connectAppError } from './app-error'
 
@@ -36,6 +44,9 @@ export interface FakeClipProject extends ClipProjectDraft {
   ownerId?: string
   result?: ClipProject['result']
   latestJob?: FakeGenerationJobRow
+  editing?: ClipProject['editing']
+  editPlanRevision?: number
+  renderedPlanRevision?: number
 }
 export interface FakeClipsOptions {
   projects?: FakeClipProject[]
@@ -43,6 +54,11 @@ export interface FakeClipsOptions {
   generationStarts?: unknown[]
   generationJobId?: string
   generationFails?: boolean
+  renderStarts?: unknown[]
+  renderJobId?: string
+  renderFails?: boolean
+  planWrites?: Array<{ revision: number; plan: ClipEditPlan }>
+  planSaveConflict?: boolean
   projectWrites?: ClipProjectDraft[]
   projectSaveFails?: boolean
   projectListFails?: boolean
@@ -187,6 +203,38 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     return create(DeleteClipProjectResponseSchema, {})
   })
   const batches = new Map<string, ProtoClipSourceBatch>()
+  router.rpc(ClipService.method.saveClipEditPlan, (req) => {
+    options.calls?.push('SaveClipEditPlan')
+    const p = projects.get(req.projectId)
+    if (!p?.editing) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (options.planSaveConflict || req.expectedRevision !== p.editPlanRevision)
+      throw connectAppError('CLIP_PLAN_CONFLICT', Code.Aborted)
+    p.editing = toClipEditingState(create(ClipEditingStateSchema, { ...p.editing, plan: req.plan }))
+    options.planWrites?.push({ revision: req.expectedRevision, plan: p.editing.plan })
+    p.editPlanRevision = (p.editPlanRevision ?? 0) + 1
+    return create(SaveClipEditPlanResponseSchema, { project: projectProto(p) })
+  })
+  router.rpc(ClipService.method.startClipRender, (req) => {
+    options.calls?.push('StartClipRender')
+    options.renderStarts?.push(req)
+    if (options.renderFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    const p = projects.get(req.projectId),
+      b = batches.get(req.batchId)
+    if (!p || !b || b.state !== 'ready')
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    if (p.editPlanRevision !== req.expectedRevision)
+      throw connectAppError('CLIP_PLAN_CONFLICT', Code.Aborted)
+    b.state = 'consuming'
+    const jobId = options.renderJobId ?? 'clip-render-job'
+    p.latestJob = {
+      id: jobId,
+      kind: 'render_clip',
+      status: 'queued',
+      stage: 'prepare',
+      clipProjectId: p.id,
+    }
+    return create(StartClipRenderResponseSchema, { jobId })
+  })
   router.rpc(ClipService.method.startClipGeneration, (req) => {
     options.calls?.push('StartClipGeneration')
     options.generationStarts?.push(req)

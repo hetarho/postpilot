@@ -33,8 +33,10 @@ export function SortableList({
   labels,
   density = 'comfortable',
   className,
+  disabled = false,
 }: {
   items: readonly SortableItem[]
+  disabled?: boolean
   /** Moves the item at `from` so it sits at `to`. The caller owns the list. */
   onReorder: (from: number, to: number) => void
   labels: { drag: string; up: string; down: string }
@@ -55,8 +57,12 @@ export function SortableList({
       {items.map((item, index) => (
         <li
           key={item.id}
-          draggable
+          draggable={!disabled}
           onDragStart={(event) => {
+            if (disabled) {
+              event.preventDefault()
+              return
+            }
             // A list may hold another list (a template's repeat holds its children). Drag events
             // bubble, so without this the inner row's drag would ALSO start one in the outer
             // list, and dropping would move the whole nested block instead of the row inside it.
@@ -74,6 +80,7 @@ export function SortableList({
             setOver(index)
           }}
           onDrop={(event) => {
+            if (disabled) return
             if (dragging === null) return
             event.stopPropagation()
             event.preventDefault()
@@ -113,7 +120,7 @@ export function SortableList({
               variant="ghost"
               size="icon"
               aria-label={labels.up}
-              disabled={index === 0}
+              disabled={disabled || index === 0}
               onClick={() => onReorder(index, index - 1)}
             >
               <ChevronUp className="size-5" />
@@ -122,7 +129,7 @@ export function SortableList({
               variant="ghost"
               size="icon"
               aria-label={labels.down}
-              disabled={index === items.length - 1}
+              disabled={disabled || index === items.length - 1}
               onClick={() => onReorder(index, index + 1)}
             >
               <ChevronDown className="size-5" />

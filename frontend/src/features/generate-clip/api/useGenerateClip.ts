@@ -15,24 +15,39 @@ export function useGenerateClip(ownerId: string, project: ClipProject) {
   const observe = useStageSelection('observe')
   const write = useStageSelection('write')
   const selectionPending = useSelectionSavePending()
-  const [startedId, setStartedId] = useState('')
+  const [started, setStarted] = useState<{ id: string; previous?: string }>()
   const [localFailure, setLocalFailure] = useState<AppFailure>()
   const starting = useRef(false)
   const consumed = useRef(new Set<string>())
   const mutation = useMutation({
-    mutationFn: async (batchId: string) => {
-      const response = await createClient(ClipService, transport).startClipGeneration({
-        projectId: project.id,
-        batchId,
-        observeModel: observe.selected ?? undefined,
-        writeModel: write.selected ?? undefined,
-      })
+    mutationFn: async (
+      input:
+        | { kind: 'generate'; batchId: string }
+        | { kind: 'render'; batchId: string; revision: number },
+    ) => {
+      const client = createClient(ClipService, transport)
+      const response =
+        input.kind === 'render'
+          ? await client.startClipRender({
+              projectId: project.id,
+              batchId: input.batchId,
+              expectedRevision: input.revision,
+            })
+          : await client.startClipGeneration({
+              projectId: project.id,
+              batchId: input.batchId,
+              observeModel: observe.selected ?? undefined,
+              writeModel: write.selected ?? undefined,
+            })
       if (!response.jobId) throw new Error('Missing durable clip job')
       return response
     },
     retry: false,
   })
-  const id = startedId || project.latestJob?.id || ''
+  const id =
+    started && (!project.latestJob || project.latestJob.id === started.previous)
+      ? started.id
+      : (project.latestJob?.id ?? started?.id ?? '')
   const poll = useJob(id, [clipProjectsKey(transport, ownerId), myPlanQueryKey(transport)])
   const job = poll.job ?? (project.latestJob?.id === id ? project.latestJob : undefined)
   const busy = mutation.isPending || (!!id && (!job || !isTerminal(job)))
@@ -66,14 +81,47 @@ export function useGenerateClip(ownerId: string, project: ClipProject) {
     setLocalFailure(undefined)
     starting.current = true
     try {
-      const response = await mutation.mutateAsync(batch.id)
+      const response = await mutation.mutateAsync({ kind: 'generate', batchId: batch.id })
       consumed.current.add(batch.id)
-      setStartedId(response.jobId)
+      setStarted({ id: response.jobId, previous: project.latestJob?.id })
       onOwned()
       void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
     } catch {
       // An ambiguous response may hide an accepted job: refresh the owned snapshot,
       // never retry the paid start automatically or discard server-owned inputs.
+      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+    } finally {
+      starting.current = false
+    }
+  }
+  async function render(batch: ReadyClipBatch | undefined, revision: number, onOwned: () => void) {
+    if (
+      starting.current ||
+      busy ||
+      !batch ||
+      revision !== project.editPlanRevision ||
+      !project.editing ||
+      consumed.current.has(batch.id)
+    )
+      return
+    const required = new Set(project.editing.plan.cuts.map((c) => c.fingerprint))
+    if (
+      !readyClipBatch(batch, project.id, Date.now()) ||
+      batch.sources.length !== required.size ||
+      batch.sources.some((s) => !required.delete(s.metadata.fingerprint))
+    ) {
+      setLocalFailure({ reason: 'CLIP_SOURCE_UNAVAILABLE', params: {} })
+      return
+    }
+    setLocalFailure(undefined)
+    starting.current = true
+    try {
+      const response = await mutation.mutateAsync({ kind: 'render', batchId: batch.id, revision })
+      consumed.current.add(batch.id)
+      setStarted({ id: response.jobId, previous: project.latestJob?.id })
+      onOwned()
+      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+    } catch {
       void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
     } finally {
       starting.current = false
@@ -88,5 +136,6 @@ export function useGenerateClip(ownerId: string, project: ClipProject) {
     pollFailed: poll.isError,
     checkAgain: poll.refetch,
     start,
+    render,
   }
 }

@@ -44,6 +44,8 @@ export function ClipProjectForm({
   disabled = false,
   actions,
   refusal,
+  showStatus = true,
+  onSaveStateChange,
 }: {
   ownerId: string
   stored?: ClipProject
@@ -52,8 +54,10 @@ export function ClipProjectForm({
   status?: (saved: boolean) => ReactNode
   progress?: ReactNode
   disabled?: boolean
-  actions?: (ready: boolean) => ReactNode
+  actions?: (ready: boolean, dirty: boolean) => ReactNode
   refusal?: ReactNode
+  showStatus?: boolean
+  onSaveStateChange?: (saved: boolean) => void
 }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
@@ -83,6 +87,7 @@ export function ClipProjectForm({
   }, [valid, dirty, pending, onUploadAllowed])
   const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) => {
     setSaved(false)
+    onSaveStateChange?.(false)
     setDraft((current) => ({ ...current, [key]: value }))
   }
   const failure = save.error ?? remove.error
@@ -94,6 +99,7 @@ export function ClipProjectForm({
       setDraft(projectDraft(value))
       setBaseline(JSON.stringify(normalizeClipProject(value)))
       setSaved(true)
+      onSaveStateChange?.(true)
       if (!stored) {
         leaving.current = true
         await navigate({ to: '/clips/$clipId', params: { clipId: value.id }, replace: true })
@@ -120,11 +126,13 @@ export function ClipProjectForm({
   return (
     <>
       {progress}
-      <div role="status" aria-live="polite" className="mt-4">
-        {status
-          ? status(saved)
-          : saved && <Typography variant="meta">{t('project.saved')}</Typography>}
-      </div>
+      {showStatus && (
+        <div role="status" aria-live="polite" className="mt-4">
+          {status
+            ? status(saved)
+            : saved && <Typography variant="meta">{t('project.saved')}</Typography>}
+        </div>
+      )}
       <form
         id="clip-project-form"
         className="mt-6"
@@ -294,7 +302,7 @@ export function ClipProjectForm({
           >
             {t(stored ? 'project.save' : 'project.create')}
           </Button>
-          {actions?.(valid && !dirty && !pending)}
+          {actions?.(valid && !dirty && !pending, dirty)}
         </div>
       </ActionBar>
       <Dialog

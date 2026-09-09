@@ -3,6 +3,7 @@ import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClipService, type ProtoClipProject, type ProtoClipSourceBatch } from '@/shared/api'
 import { toGenerationJob } from '@/entities/generation-job/@x/clip-project'
+import { toClipEditingState } from './edit-plan'
 import {
   CLIP_RATIOS,
   normalizeClipProject,
@@ -28,6 +29,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     editPlanRevision: value.editPlanRevision,
     renderedPlanRevision: value.renderedPlanRevision,
     latestJob: value.latestJob ? toGenerationJob(value.latestJob) : undefined,
+    editing: value.editing ? toClipEditingState(value.editing) : undefined,
     result: value.result
       ? {
           contentType: value.result.contentType,

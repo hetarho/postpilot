@@ -6,6 +6,7 @@ import { DirectUploadError } from '@/shared/lib/upload'
 import { formatDuration } from '@/shared/lib/video'
 import { AppFailureMessage, Button, ProgressBar, Typography, buttonStyles } from '@/shared/ui'
 import { ClipSelectionError } from '../model/manifest'
+import { ClipSourceMismatchError } from '../model/reselection'
 import type { useClipSourceUpload } from '../model/useClipSourceUpload'
 
 const ACCEPT = [
@@ -16,10 +17,12 @@ export function ClipSourcePicker({
   upload,
   disabled,
   processing = false,
+  correction = false,
 }: {
   upload: ReturnType<typeof useClipSourceUpload>
   disabled?: boolean
   processing?: boolean
+  correction?: boolean
 }) {
   const { t } = useTranslation('clips')
   const inputId = useId()
@@ -31,11 +34,11 @@ export function ClipSourcePicker({
         {t('source.title')}
       </Typography>
       <Typography variant="body" className="text-content-secondary" id={`${inputId}-disclosure`}>
-        {t('source.disclosure')}
+        {t(correction ? 'correction.sourceDisclosure' : 'source.disclosure')}
       </Typography>
       {disabled && !processing && (
         <Typography variant="body" className="text-content-secondary">
-          {t('source.saveFirst')}
+          {t(correction ? 'correction.saveFirst' : 'source.saveFirst')}
         </Typography>
       )}
       <div className="flex flex-wrap items-center gap-3">
@@ -77,7 +80,20 @@ export function ClipSourcePicker({
       </div>
       {error !== undefined && (
         <div role="alert">
-          {error instanceof ClipSelectionError ? (
+          {error instanceof ClipSourceMismatchError ? (
+            <>
+              {!!error.missing.length && (
+                <Typography variant="body" className="break-words">
+                  {t('correction.missingSources', { names: error.missing.join(', ') })}
+                </Typography>
+              )}
+              {!!error.unexpected.length && (
+                <Typography variant="body" className="break-words">
+                  {t('correction.unexpectedSources', { names: error.unexpected.join(', ') })}
+                </Typography>
+              )}
+            </>
+          ) : error instanceof ClipSelectionError ? (
             <Typography variant="body">{t(`source.error.${error.reason}`)}</Typography>
           ) : error instanceof DirectUploadError ? (
             <Typography variant="body">{t('source.error.network')}</Typography>
@@ -93,15 +109,17 @@ export function ClipSourcePicker({
               <Typography variant="label" className="block break-words">
                 {entry.metadata.filename}
               </Typography>
-              <video
-                controls
-                preload="metadata"
-                src={entry.previewURL}
-                width={entry.metadata.width}
-                height={entry.metadata.height}
-                aria-label={entry.metadata.filename}
-                className="aspect-video w-full rounded-md"
-              />
+              {!correction && (
+                <video
+                  controls
+                  preload="metadata"
+                  src={entry.previewURL}
+                  width={entry.metadata.width}
+                  height={entry.metadata.height}
+                  aria-label={entry.metadata.filename}
+                  className="aspect-video w-full rounded-md"
+                />
+              )}
               {!entry.confirmed && (
                 <ProgressBar label={entry.metadata.filename} done={entry.percent} total={100} />
               )}
