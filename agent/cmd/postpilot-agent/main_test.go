@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	postpilotv1 "github.com/postpilot/agent/internal/gen/postpilot/v1"
 	"io"
 	"log/slog"
 	"os"
@@ -21,10 +22,196 @@ import (
 	"github.com/postpilot/agent/internal/singleton"
 )
 
-func TestRunAgentsRefusesBeforeClaimWithoutDeterministicPublisher(t *testing.T) {
-	err := runAgents(config.Paths{}, nil)
-	if err == nil || !strings.Contains(err.Error(), "deterministic Naver publisher is not implemented") {
-		t.Fatalf("runAgents error = %v", err)
+// The daemon is wired to the real factory now. A nil one is a wiring fault rather than a
+// state to run in, and `run` must never hand one over.
+func TestRunCommandWiresTheRealPublisherFactory(t *testing.T) {
+	if err := runAgents(config.Paths{}, nil); err == nil || !strings.Contains(err.Error(), "no publisher factory") {
+		t.Fatalf("runAgents with no factory = %v", err)
+	}
+	// newPublisher is what `run` passes, and it is a publisherFactory.
+	var factory publisherFactory = newPublisher
+	if factory == nil {
+		t.Fatal("newPublisher does not satisfy publisherFactory")
+	}
+}
+
+// The factory builds one publisher per paired connection and refuses a connection the daemon
+// must not run at all: an unarmed or incomplete one, or a browser outside the supported
+// Chromium family (PUB-18).
+func TestNewPublisherRefusesAConnectionItCouldNotRun(t *testing.T) {
+	supported := browser.Discover()
+	if len(supported) == 0 {
+		t.Skip("no supported Chromium-family browser on this machine")
+	}
+	base := config.Connection{
+		ID: "connection", Label: "Mac", APIURL: "https://api.example.com", AgentID: "agent",
+		KeychainAccount: "key", BrowserBinary: supported[0].Binary, BrowserLabel: supported[0].Label,
+		PlatformAccountID: "alice", ProfileDir: t.TempDir(), CompatibilitySignature: "sig",
+		LeaseTTLSeconds: 45, Armed: true,
+	}
+	if _, err := newPublisher(base); err != nil {
+		t.Fatalf("a complete armed connection was refused: %v", err)
+	}
+	// Arming is the DAEMON's filter (unseenArmedConnections), not the factory's; what the
+	// factory refuses is a connection it could not run at all.
+	incomplete := base
+	incomplete.KeychainAccount = ""
+	if _, err := newPublisher(incomplete); err == nil {
+		t.Fatal("an incomplete connection got a publisher")
+	}
+	shortLease := base
+	shortLease.LeaseTTLSeconds = 1
+	if _, err := newPublisher(shortLease); err == nil {
+		t.Fatal("a lease too short for the heartbeat got a publisher")
+	}
+	foreign := base
+	foreign.BrowserBinary = "/usr/bin/true"
+	if _, err := newPublisher(foreign); err == nil {
+		t.Fatal("a browser outside the supported family got a publisher")
+	}
+}
+
+// fakeSession is a browser.Session the wiring can hand around without launching anything.
+func fakeSession(cdpURL string) *browser.Session { return &browser.Session{CDPURL: cdpURL} }
+
+type stubPort struct {
+	naver.CommitPort
+	closed bool
+}
+
+func (s *stubPort) Close() error {
+	s.closed = true
+	return nil
+}
+
+func fenceConnection() config.Connection {
+	return config.Connection{
+		ID: "connection", BrowserBinary: "/browser", ProfileDir: "/profile",
+		PlatformAccountID: "alice", CompatibilitySignature: "smarteditor-test",
+	}
+}
+
+// The typed terminal result for each failure the wiring can see itself, and the proof that
+// none of them reaches further than it has to: a signature mismatch never opens a browser,
+// and a browser that will not launch never binds a port.
+func TestConnectionPublisherMapsEveryPreflightFailureToItsTypedResult(t *testing.T) {
+	for name, test := range map[string]struct {
+		arrange     func(*publisherBoundaries)
+		failOpen    bool
+		failBind    bool
+		wantFailure naver.FailureKind
+		wantOpened  bool
+		wantBound   bool
+	}{
+		"signature mismatch": {
+			arrange:     func(b *publisherBoundaries) { b.signature = func() (string, error) { return "another-release", nil } },
+			wantFailure: naver.FailureEditorChanged,
+		},
+		"no signature at all": {
+			arrange: func(b *publisherBoundaries) {
+				b.signature = func() (string, error) { return "", errors.New("no manifest") }
+			},
+			wantFailure: naver.FailureEditorChanged,
+		},
+		"browser will not launch": {
+			failOpen:    true,
+			wantFailure: naver.FailureBrowserLost, wantOpened: true,
+		},
+		"login expired": {
+			arrange: func(b *publisherBoundaries) {
+				b.identity = func(context.Context, string) (browser.NaverIdentity, error) {
+					return browser.NaverIdentity{}, errors.New("no blog identity")
+				}
+			},
+			wantFailure: naver.FailureLoginExpired, wantOpened: true,
+		},
+		"another account's profile": {
+			arrange: func(b *publisherBoundaries) {
+				b.identity = func(context.Context, string) (browser.NaverIdentity, error) {
+					return browser.NaverIdentity{BlogID: "mallory"}, nil
+				}
+			},
+			wantFailure: naver.FailureAccountMismatch, wantOpened: true,
+		},
+		"the page cannot be bound": {
+			failBind:    true,
+			wantFailure: naver.FailureBrowserLost, wantOpened: true, wantBound: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			opened, bound := false, false
+			boundaries := publisherBoundaries{
+				signature: func() (string, error) { return "smarteditor-test", nil },
+				openEditor: func(binary, profileDir string) (*browser.Session, error) {
+					opened = true
+					if binary != "/browser" || profileDir != "/profile" {
+						t.Fatalf("the wrong browser or profile was opened: %q %q", binary, profileDir)
+					}
+					if test.failOpen {
+						return nil, errors.New("no browser")
+					}
+					return fakeSession("ws://127.0.0.1:1/devtools/browser/one"), nil
+				},
+				identity: func(context.Context, string) (browser.NaverIdentity, error) {
+					return browser.NaverIdentity{BlogID: "alice"}, nil
+				},
+				bindPort: func(context.Context, string) (naverPort, error) {
+					bound = true
+					if test.failBind {
+						return nil, errors.New("two pages")
+					}
+					return &stubPort{}, nil
+				},
+			}
+			if test.arrange != nil {
+				test.arrange(&boundaries)
+			}
+			publisher := connectionPublisher{connection: fenceConnection(), boundaries: boundaries}
+			result, err := publisher.Run(context.Background(), t.TempDir(), nil)
+			if err != nil {
+				t.Fatalf("the wiring returned an error instead of a typed result: %v", err)
+			}
+			if result.Status != "failed" || result.FailureKind != string(test.wantFailure) {
+				t.Fatalf("result = %+v, want failure %s", result, test.wantFailure)
+			}
+			// A browser is only opened once the release agrees, and only bound once the
+			// account is proven.
+			if opened != test.wantOpened {
+				t.Fatalf("browser opened = %t, want %t", opened, test.wantOpened)
+			}
+			if bound != test.wantBound {
+				t.Fatalf("page bound = %t, want %t", bound, test.wantBound)
+			}
+		})
+	}
+}
+
+// A run that gets past the preflight closes both the port and the session, whatever the
+// publisher then decides: PUB-18 wants the browser this daemon launched closed after the run
+// it was launched for, and a leaked CDP connection would strand the next job.
+func TestConnectionPublisherAlwaysReleasesThePortAndTheSession(t *testing.T) {
+	port := &stubPort{}
+	publisher := connectionPublisher{connection: fenceConnection(), boundaries: publisherBoundaries{
+		signature: func() (string, error) { return "smarteditor-test", nil },
+		openEditor: func(string, string) (*browser.Session, error) {
+			return fakeSession("ws://127.0.0.1:1/devtools/browser/one"), nil
+		},
+		identity: func(context.Context, string) (browser.NaverIdentity, error) {
+			return browser.NaverIdentity{BlogID: "alice"}, nil
+		},
+		bindPort: func(context.Context, string) (naverPort, error) { return port, nil },
+	}}
+	// A nil manifest in the job directory is the publisher's own safe refusal, which is
+	// enough to prove the release path runs and unwinds.
+	result, err := publisher.Run(context.Background(), t.TempDir(), nil)
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if result.Status != "failed" {
+		t.Fatalf("result = %+v", result)
+	}
+	if !port.closed {
+		t.Fatal("the bound page was left open after the run")
 	}
 }
 
@@ -262,5 +449,72 @@ func TestARestartClearsPayloadsLeftBehindByAKilledRun(t *testing.T) {
 	}
 	if _, statErr := os.Stat(filepath.Join(jobs, "connection-1")); statErr != nil {
 		t.Fatalf("the restart removed the stable connection directory: %v", statErr)
+	}
+}
+
+// wiringAPI is the durable server, reduced to what one job's boundaries need.
+type wiringAPI struct {
+	progress  []postpilotv1.PublishStage
+	completed []string
+	failures  []postpilotv1.PublishFailureKind
+}
+
+func (a *wiringAPI) Renew(context.Context, string, string) error { return nil }
+
+func (a *wiringAPI) Progress(_ context.Context, _, _ string, _ int64, stage postpilotv1.PublishStage) error {
+	a.progress = append(a.progress, stage)
+	return nil
+}
+
+func (a *wiringAPI) Complete(_ context.Context, _, _ string, _ int64, url string) error {
+	a.completed = append(a.completed, url)
+	return nil
+}
+
+func (a *wiringAPI) Fail(_ context.Context, _, _ string, _ int64, kind postpilotv1.PublishFailureKind, _ string) error {
+	a.failures = append(a.failures, kind)
+	return nil
+}
+
+// One job driven end to end through the REAL factory shape: the executor claims it, the
+// connection publisher runs its preflight, and the job reaches a terminal result the server
+// is told about. The browser and the bound page are the only fakes — everything between the
+// claim and the durable report is the daemon's own code.
+func TestRunAgentsDrivesOneJobThroughTheRealFactoryShape(t *testing.T) {
+	api := &wiringAPI{}
+	port := &stubPort{}
+	publisher := connectionPublisher{connection: fenceConnection(), boundaries: publisherBoundaries{
+		signature: func() (string, error) { return "smarteditor-test", nil },
+		openEditor: func(string, string) (*browser.Session, error) {
+			return fakeSession("ws://127.0.0.1:1/devtools/browser/one"), nil
+		},
+		identity: func(context.Context, string) (browser.NaverIdentity, error) {
+			return browser.NaverIdentity{BlogID: "alice"}, nil
+		},
+		bindPort: func(context.Context, string) (naverPort, error) { return port, nil },
+	}}
+	executor := publishing.Executor{
+		API: api, Publisher: publisher, JobsRoot: t.TempDir(), ConnectionID: "connection",
+		HeartbeatEvery: time.Second, Timeout: 10 * time.Second,
+		Logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
+	}
+	claim := &postpilotv1.ClaimPublishJobResponse{
+		Job:        &postpilotv1.PublishJob{Id: "job", ProgressSequence: 1},
+		Manifest:   &postpilotv1.PublishManifest{JobId: "job", ExpectedPlatformAccountId: "alice"},
+		LeaseToken: "lease", LeaseTtlSeconds: 45,
+	}
+	if err := executor.Execute(context.Background(), claim); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	// The manifest carries no content, so the publisher's own validation refuses it safely —
+	// which is a terminal result reported to the server, not a panic or a silent retry.
+	if len(api.failures) != 1 || api.failures[0] != postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE {
+		t.Fatalf("failures = %v", api.failures)
+	}
+	if len(api.completed) != 0 {
+		t.Fatalf("a job with no content was completed: %v", api.completed)
+	}
+	if !port.closed {
+		t.Fatal("the bound page was left open after the job")
 	}
 }

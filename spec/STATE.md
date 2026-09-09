@@ -37,7 +37,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
-| T046 | Wiring the real publisher into the daemon | PUB | T045 | todo |
 | T076 | Durable clip generation and result retention | CLIP QUOTA VIDEO MODEL | T071 T074 T075 | doing@260910.clp |
 | T077 | Clip generation progress, preview and download | CLIP THEME LANG | T072 T076 | todo |
 | T078 | Manual clip-plan save and credit-free rerender | CLIP QUOTA | T071 T074 T076 | todo |
@@ -47,8 +46,10 @@
 ## next
 - Implement and commit T076 through T080 sequentially; clip AI must remain within a successful full-run credit reservation
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
-- the PUB chain's driver is complete and the fence is built (T042 T043 T045): read those three results before T046 — the live surveys and the appended-enum trap are recorded there. T046 wires the real publisher into the daemon and is the last task before T008's authorized live smoke, whose base must be re-read at PUB@4; update-ssot PUB for VIDEO-17 + TMPL-39 after T008
+- T008 is the last PUB task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job. Read T042 T043 T045 T046 results for the live surveys and the wiring's typed preflight; update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
 ## log
+- 260910 T046 done; the daemon has a real publisher factory (a browser per job so the activation latch is never reused, typed preflight failures for release, browser, login and account), install NOT run live because it would claim the owner's queued job — that belongs in T008
+- 260910 T046 claimed (wir)
 - 260910 T045 done; CDPPort implements CommitPort (arming bound to its observation, one latched activation, post-view readback reporting the canonical permalink) and PUB-13 r4's filling_settings landed end to end — proto, migration 0037 rebuilding publish_jobs, backend, agent and FE; the appended enum number broke two order checks that read stage order off it, both now use an explicit rank
 - 260910 T076 claimed (clp); approved deferred admission with reservation-capped credit usage
 - 260910 create-task CLIP QUOTA done; T076/T077 absorb deferred admission and strict reserved-credit protection, T078 remains credit-free
@@ -67,5 +68,3 @@
 - 260910 T074 gate rechecked (clp): owner picker result is still absent; preserve blocked status and the sequential commit boundary
 - 260910 T074 blocked: all local gates and actual nonroot renderer smoke pass; mandatory owner-assisted Naver picker acceptance remains unverified, so no completion commit
 - 260910 T074 claimed (clp)
-- 260910 T073 done; bounded media adapter and real nonroot Docker smoke pass, dev media version matches
-- 260910 T073 claimed (clp)

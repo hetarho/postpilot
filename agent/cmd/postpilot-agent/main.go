@@ -49,7 +49,7 @@ func run() error {
 		defer stop()
 		return (setup.Server{Paths: paths, Keychain: credentials.Keychain{}, ProbePublisher: naver.Probe}).Run(ctx)
 	case "run":
-		return runAgents(paths, nil)
+		return runAgents(paths, newPublisher)
 	case "install":
 		binary, err := os.Executable()
 		if err != nil {
@@ -74,6 +74,105 @@ func run() error {
 }
 
 type publisherFactory func(config.Connection) (publishing.Publisher, error)
+
+// naverPort is the driver surface one job needs: the commit-fence port plus the close that
+// releases its CDP connection.
+type naverPort interface {
+	naver.CommitPort
+	Close() error
+}
+
+// publisherBoundaries are the three edges the real publisher is built from — the browser,
+// Naver's own account resolution, and the driver release this build carries. They are fields
+// so the wiring can be exercised without launching a browser (PUB-29).
+type publisherBoundaries struct {
+	openEditor func(binary, profileDir string) (*browser.Session, error)
+	identity   func(ctx context.Context, cdpURL string) (browser.NaverIdentity, error)
+	bindPort   func(ctx context.Context, cdpURL string) (naverPort, error)
+	signature  func() (string, error)
+}
+
+func defaultPublisherBoundaries() publisherBoundaries {
+	return publisherBoundaries{
+		openEditor: browser.OpenEditor,
+		identity:   browser.ObserveNaverIdentity,
+		bindPort: func(ctx context.Context, cdpURL string) (naverPort, error) {
+			return naver.NewCDPPort(ctx, cdpURL)
+		},
+		signature: func() (string, error) {
+			manifest, err := naver.Manifest()
+			if err != nil {
+				return "", err
+			}
+			return manifest.SignatureID, nil
+		},
+	}
+}
+
+// newPublisher gives one paired connection its own deterministic publisher. Nothing is
+// launched here: a browser is opened per JOB, because the commit port's activation latch
+// (PUB-15) may never be carried from one run to the next, and PUB-18 wants a browser this
+// daemon launched closed again after the run it was launched for.
+func newPublisher(connection config.Connection) (publishing.Publisher, error) {
+	if err := config.ValidateConnection(connection); err != nil {
+		return nil, err
+	}
+	if _, ok := browser.Supported(connection.BrowserBinary); !ok {
+		return nil, fmt.Errorf("connection %s: browser %q is not a supported Chromium family binary", connection.ID, connection.BrowserBinary)
+	}
+	return connectionPublisher{connection: connection, boundaries: defaultPublisherBoundaries()}, nil
+}
+
+// connectionPublisher turns one job directory into one publication attempt for one paired
+// account. Every failure it can see itself becomes a typed terminal result; everything it
+// cannot is left to the deterministic publisher, which is the only thing that classifies the
+// editor (PUB-16).
+type connectionPublisher struct {
+	connection config.Connection
+	boundaries publisherBoundaries
+}
+
+var _ publishing.Publisher = connectionPublisher{}
+
+func terminalFailure(kind naver.FailureKind) publishing.Result {
+	return publishing.Result{Status: "failed", FailureKind: string(kind)}
+}
+
+func (c connectionPublisher) Run(ctx context.Context, dir string, reporter publishing.Reporter) (publishing.Result, error) {
+	// The driver release is checked against what this connection's own probe recorded, before
+	// a browser is touched: PUB-19 keeps a connection unready until a fresh probe agrees with
+	// the release that is actually running, and until then a job fails closed rather than
+	// driving an editor this build has not verified.
+	signature, err := c.boundaries.signature()
+	if err != nil || signature == "" || signature != c.connection.CompatibilitySignature {
+		return terminalFailure(naver.FailureEditorChanged), nil
+	}
+	session, err := c.boundaries.openEditor(c.connection.BrowserBinary, c.connection.ProfileDir)
+	if err != nil {
+		return terminalFailure(naver.FailureBrowserLost), nil
+	}
+	// Close releases only a browser THIS process launched; a setup or login browser the owner
+	// left open is reused and never killed (PUB-18).
+	defer func() { _ = session.Close() }()
+
+	// This is also the navigation: Naver's signed-in session resolves the id-less writer
+	// entry to the account's own blog, and this reads the id it chose. A profile whose login
+	// has expired cannot reach its own writer, which is exactly what this failure means.
+	identity, err := c.boundaries.identity(ctx, session.CDPURL)
+	if err != nil {
+		return terminalFailure(naver.FailureLoginExpired), nil
+	}
+	if identity.BlogID != c.connection.PlatformAccountID {
+		return terminalFailure(naver.FailureAccountMismatch), nil
+	}
+
+	port, err := c.boundaries.bindPort(ctx, session.CDPURL)
+	if err != nil {
+		return terminalFailure(naver.FailureBrowserLost), nil
+	}
+	defer func() { _ = port.Close() }()
+	return naver.Publisher{Port: port}.Run(ctx, dir, reporter)
+}
 
 const connectionReloadInterval = 2 * time.Second
 
@@ -115,7 +214,9 @@ func runAgents(paths config.Paths, newPublisher publisherFactory) error {
 
 func runAgentsWith(paths config.Paths, newPublisher publisherFactory, keychain credentials.Store) error {
 	if newPublisher == nil {
-		return errors.New("deterministic Naver publisher is not implemented; finish Job 25 before starting the LaunchAgent")
+		// The factory is injected so the daemon can be exercised with a fake. A nil one is
+		// a wiring fault, not a state the daemon should try to run in.
+		return errors.New("no publisher factory was wired into the daemon")
 	}
 	processLock, err := singleton.Acquire(filepath.Join(paths.Root, "run.lock"))
 	if err != nil {
