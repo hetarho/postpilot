@@ -11,7 +11,7 @@
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
 | ARCH | 2 | 2 | - | 0 |
-| AUTH | 5 | 3 | AUTH-30✎ AUTH-42+ AUTH-43+ | 0 |
+| AUTH | 5 | 5 | - | 0 |
 | QUOTA | 6 | 6 | - | 0 |
 | POST | 3 | 3 | - | 0 |
 | VOICE | 1 | 1 | - | 1 |
@@ -35,6 +35,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T060 | Titled login and signup screens with password confirmation | AUTH | - | todo |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUBLISH MARKETING | T007 T046 | todo |
 | T042 | The r4 mutation vocabulary and the body mutations | PUBLISH | T018 | blocked@260908 |
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUBLISH | T042 | todo |
@@ -42,11 +43,13 @@
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
 
 ## next
-- create-task AUTH (r5: AUTH-30✎ 42+ 43+ — the titled login/signup screens with password confirmation, and the Google rollout: OAuth client + `GOOGLE_CLIENT_ID/SECRET` on the VPS .env + `VITE_GOOGLE_CLIENT_ID` in the Cloudflare build)
+- implement-task T060 (titled login/signup + password confirmation); AUTH-43 is ops, not code — the owner registers a Google OAuth web client (redirect `<app origin>/login/google/callback`), sets `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` in `/srv/postpilot-prod/.env` and `VITE_GOOGLE_CLIENT_ID` in the Cloudflare Worker build variables, then redeploys both
 - the template data fields are done end to end (T055-T059): `pnpm --filter ./frontend test`, the Go suite, both lints and the build are green, and the four commits are on main
 - also owed (THEME@6 · MARKETING@4 were implemented directly by the session that revised them, so no create-task is owed there, and THEME-29 already carries the `Switch` T058 needs — T058 re-stamps its base to THEME@6 at claim): BEFORE T058, TEMPLATE-41 excludes `label` from the format guide while TEMPLATE-43's `ask` requires that attribute (`guide.test.ts` asserts the guide holds no `label=`), so update-ssot TEMPLATE must name the retired SLOT label specifically or rename the attribute — owner's call; and `haeram-spec-creator lint` still rejects PUBLISH BILLING TEMPLATE MARKETING against FORMAT's `2-6 uppercase` id rule
 - the PUBLISH chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 ## log
+- 260909 create-task T060 from AUTH@5 (AUTH-43 has no code delta: env, gating and DEPLOY.md rows exist — owner ops)
+- 260909 create-task AUTH start
 - 260909 update-ssot AUTH r5 (AUTH-42✎ password confirmation · AUTH-45 ?→x no guest mode)
 - 260909 update-ssot AUTH r4 (AUTH-30✎ 42+ 43+ 44x 45?) — QUOTA untouched until AUTH-45 is answered; no doing task in scope
 - 260909 update-ssot AUTH QUOTA start (login/signup distinction, Google sign-in rollout, signed-out free tier)
