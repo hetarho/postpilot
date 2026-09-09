@@ -45,11 +45,12 @@
 ## next
 - implement-task T063 (tag_count option; independent of T062, either order)
 - update-ssot VOICE: VOICE-42✎ (r2) named a frozen tag count, but the rule comparison prompt emits prose and never asks for tags — drop the words or say what they would change
-- AUTH-43 is ops, not code (T060 shipped the screens): the owner registers a Google OAuth web client (redirect `<app origin>/login/google/callback`), sets `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` in `/srv/postpilot-prod/.env` and `VITE_GOOGLE_CLIENT_ID` in the Cloudflare Worker build variables, then redeploys both
+- Google sign-in is live end to end as of 260909 (AUTH-43): OAuth client registered, `GOOGLE_CLIENT_ID/SECRET` on the VPS `.env`, `VITE_GOOGLE_CLIENT_ID` in the Cloudflare build, button visible on `/login` and `/signup`; one real Google login by the owner is the remaining smoke check
 - the template data fields are done end to end (T055-T059): `pnpm --filter ./frontend test`, the Go suite, both lints and the build are green, and the four commits are on main
 - also owed (THEME@6 · MARKETING@4 were implemented directly by the session that revised them, so no create-task is owed there, and THEME-29 already carries the `Switch` T058 needs — T058 re-stamps its base to THEME@6 at claim): BEFORE T058, TEMPLATE-41 excludes `label` from the format guide while TEMPLATE-43's `ask` requires that attribute (`guide.test.ts` asserts the guide holds no `label=`), so update-ssot TEMPLATE must name the retired SLOT label specifically or rename the attribute — owner's call; and `haeram-spec-creator lint` still rejects PUBLISH BILLING TEMPLATE MARKETING against FORMAT's `2-6 uppercase` id rule
 - the PUBLISH chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUBLISH@4 · update-ssot PUBLISH for VIDEO-17 + TEMPLATE-39 after T008 closes
 ## log
+- 260909 AUTH-43 ops done: Google OAuth client + env on both ends, button live on /login and /signup
 - 260909 create-task T063 from POST@4 GEN@5 LANG@2 MODEL@6; VOICE r2 no-op (no code impact: the rule comparison prompt asks for no tags)
 - 260909 T062 done
 - 260909 T062 claimed (srt)
@@ -69,4 +70,3 @@
 - 260909 create-task AUTH start
 - 260909 update-ssot AUTH r5 (AUTH-42✎ password confirmation · AUTH-45 ?→x no guest mode)
 - 260909 update-ssot AUTH r4 (AUTH-30✎ 42+ 43+ 44x 45?) — QUOTA untouched until AUTH-45 is answered; no doing task in scope
-- 260909 update-ssot AUTH QUOTA start (login/signup distinction, Google sign-in rollout, signed-out free tier)
