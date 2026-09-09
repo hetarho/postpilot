@@ -2,8 +2,10 @@
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
 import {
+  type ProtoApplyCatalogDocumentResponse,
   type ProtoCatalogEntry,
   type ProtoListCatalogResponse,
+  type ProtoPreviewCatalogDocumentResponse,
   type ProtoModelInfo,
   type ProtoModelRef,
   type ProtoSelection,
@@ -16,6 +18,7 @@ import {
 import type {
   AdminCatalogEntry,
   CatalogBrowse,
+  CatalogDocumentPlan,
   CatalogModel,
   ComparisonPair,
   ModelRef,
@@ -216,4 +219,33 @@ export function listRecommendationSetsQueryKey(transport: Transport) {
     transport,
     cardinality: 'finite',
   })
+}
+
+/** Preview and apply answer with the same shape; `applied` is the only thing apply adds, and a
+ *  preview is never applied. A purpose slug this build does not know is dropped rather than
+ *  rendered blank, the same rule the stage enum follows above. */
+export function toCatalogDocumentPlan(
+  response: ProtoPreviewCatalogDocumentResponse | ProtoApplyCatalogDocumentResponse,
+): CatalogDocumentPlan {
+  return {
+    purposes: response.purposes.flatMap((purpose) =>
+      isModelPurpose(purpose.purpose)
+        ? [
+            {
+              purpose: purpose.purpose,
+              register: purpose.register,
+              deregister: purpose.deregister,
+              unchanged: purpose.unchanged,
+            },
+          ]
+        : [],
+    ),
+    issues: response.issues.map((issue) => ({
+      line: issue.line,
+      text: issue.text,
+      cause: issue.cause,
+    })),
+    fetchError: response.fetchError,
+    applied: 'applied' in response ? response.applied : false,
+  }
 }

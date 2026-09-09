@@ -212,6 +212,33 @@ export interface CatalogBrowse {
   estimatorCombos: readonly EstimatorComboAssignment[]
 }
 
+/** One line the server refused, with the slug it refused it for. The operator surface maps the
+ *  slug to its own copy: these are master-only admin detail, not one of the normalized
+ *  user-facing failure reasons. */
+export interface CatalogDocumentIssue {
+  line: number
+  text: string
+  cause: string
+}
+
+/** What applying a pasted document would do to one purpose. A purpose the document gives no
+ *  section for is ABSENT from the plan — untouched, which is not an empty diff. */
+export interface CatalogDocumentPurposePlan {
+  purpose: ModelPurpose
+  register: string[]
+  deregister: string[]
+  unchanged: string[]
+}
+
+/** The answer to both preview and apply: they report identically, so a rejection the catalog
+ *  moved into between the two renders exactly like one caught at preview. */
+export interface CatalogDocumentPlan {
+  purposes: CatalogDocumentPurposePlan[]
+  issues: CatalogDocumentIssue[]
+  fetchError: string
+  applied: boolean
+}
+
 export function refKey(ref: ModelRef): string {
   return `${ref.providerId}/${ref.modelId}`
 }

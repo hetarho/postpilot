@@ -25,6 +25,7 @@ import {
   type CatalogSort,
 } from '../model/catalog-view'
 import { CatalogModelList } from './CatalogModelList'
+import { CatalogDocumentPanel } from './CatalogDocumentPanel'
 
 /** The operator's model curation surface: browse what the provider offers, narrow it, and check
  *  the models this installation will let its accounts use — PER PURPOSE (change 20). Each tab
@@ -53,6 +54,12 @@ export function ModelCatalogManager() {
   // Sort is not a filter: filters narrow, sort orders. It lives beside them and, like them,
   // survives a tab switch.
   const [sort, setSort] = useState<CatalogSort>(DEFAULT_SORT)
+  // One 일괄 편집 entry for all five tabs, not one per tab: a pasted document names any
+  // purpose, so a per-tab control would misstate what a paste changes.
+  const [documentOpen, setDocumentOpen] = useState(false)
+  // Bumped on every open so the panel remounts with empty state instead of an effect
+  // clearing the previous session's paste and diff.
+  const [documentSession, setDocumentSession] = useState(0)
   const controlsId = useId()
   const searchId = `${controlsId}-search`
   const providerId = `${controlsId}-provider`
@@ -178,6 +185,15 @@ export function ModelCatalogManager() {
         <Button variant="secondary" onClick={refresh.refresh} pending={refresh.isPending}>
           {t('catalog.refresh')}
         </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setDocumentSession((session) => session + 1)
+            setDocumentOpen(true)
+          }}
+        >
+          {t('document.title')}
+        </Button>
         <Typography variant="meta" role="status" className="min-w-0 break-words">
           {catalog.fetchedAt
             ? t(catalog.fromCache ? 'catalog.fetchedCached' : 'catalog.fetchedLive', {
@@ -208,6 +224,12 @@ export function ModelCatalogManager() {
           {t(emptyMessageKey(catalog.entries.length, tabEntries.length))}
         </Typography>
       )}
+      <CatalogDocumentPanel
+        key={documentSession}
+        open={documentOpen}
+        onClose={() => setDocumentOpen(false)}
+      />
+
       {visible.length > 0 && (
         <>
           <Typography variant="meta" className="mt-6 block">

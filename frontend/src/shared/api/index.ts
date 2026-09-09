@@ -149,14 +149,19 @@ export type {
 } from './gen/postpilot/v1/post_pb'
 export { ModelCatalogService } from './gen/postpilot/v1/model_catalog_pb'
 export {
+  ApplyCatalogDocumentResponseSchema,
   CatalogEntrySchema,
+  ExportCatalogDocumentResponseSchema,
   ListCatalogResponseSchema,
+  PreviewCatalogDocumentResponseSchema,
   SetModelPurposeResponseSchema,
   UpdateModelResponseSchema,
 } from './gen/postpilot/v1/model_catalog_pb'
 export type {
   CatalogEntry as ProtoCatalogEntry,
   ListCatalogResponse as ProtoListCatalogResponse,
+  ApplyCatalogDocumentResponse as ProtoApplyCatalogDocumentResponse,
+  PreviewCatalogDocumentResponse as ProtoPreviewCatalogDocumentResponse,
 } from './gen/postpilot/v1/model_catalog_pb'
 export { ProviderService, Stage, SelectionSlot } from './gen/postpilot/v1/provider_pb'
 export {

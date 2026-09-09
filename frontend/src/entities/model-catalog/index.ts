@@ -1,6 +1,9 @@
 export type {
   AdminCatalogEntry,
   CatalogBrowse,
+  CatalogDocumentIssue,
+  CatalogDocumentPlan,
+  CatalogDocumentPurposePlan,
   EstimatorComboAssignment,
   CatalogModel,
   ComparisonPair,
@@ -25,6 +28,11 @@ export {
   stageLabel,
 } from './model/types'
 export { useModels } from './api/useModels'
+export {
+  useApplyCatalogDocument,
+  useCatalogDocument,
+  usePreviewCatalogDocument,
+} from './api/useCatalogDocument'
 export {
   useAdminCatalog,
   useRefreshCatalog,

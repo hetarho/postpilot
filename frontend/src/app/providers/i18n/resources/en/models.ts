@@ -214,4 +214,46 @@ export const models = {
     reasoningSpendHeavy:
       'This model may not be honoring the effort you set. Lower it, or consider another model',
   },
+  document: {
+    title: 'Bulk edit',
+    description:
+      'When the list is already written — a recommendation, a set you keep elsewhere — paste it as one document instead of checking rows one at a time.',
+    syncWarning:
+      'A section is that purpose\u2019s final list: registrations it leaves out are removed, and a purpose the document does not name is left alone.',
+    currentTitle: 'Currently registered',
+    currentHint:
+      'Copy this, edit it, and paste it below to change exactly what you mean to change.',
+    currentLoading: 'Loading…',
+    currentFailed: 'The current registrations could not be read.',
+    pasteLabel: 'Paste',
+    pastePlaceholder: '# postpilot models v1',
+    close: 'Close',
+    preview: 'Preview',
+    apply: 'Apply',
+    diffTitle: 'Applying this would',
+    diffEmpty: 'The document names no purpose.',
+    noChange: 'No change',
+    register: 'Register {{count}}',
+    deregister: 'Deregister {{count}}',
+    unchanged: 'Already registered {{count}}',
+    untouched: 'Purposes the document does not name are left alone: {{purposes}}',
+    rejected:
+      '{{count}} lines could not be read, so nothing was applied. Fix them below and preview again.',
+    issueLine: 'Line {{line}}',
+    issueCause: {
+      bad_version: 'The first line must be `# postpilot models v1`.',
+      unknown_purpose: 'Not one of the five purposes.',
+      duplicate_section: 'This purpose appears twice. One section is its whole list.',
+      id_before_section: 'This model comes before any purpose section.',
+      malformed_line: 'One bare model id per line — no table cells, quotes or backticks.',
+      duplicate_id: 'The same model appears twice in this section.',
+      unknown_model: 'The provider does not offer this model.',
+      unlisted_model: 'The provider has stopped offering this model.',
+      purpose_ineligible: 'This model lacks the capability this purpose requires.',
+      unknown: 'This line cannot be applied.',
+    },
+    fetchFailed:
+      'The provider catalog could not be read, so nothing was applied. Try again in a moment.',
+    applied: 'Applied. {{registered}} registered, {{deregistered}} deregistered.',
+  },
 } as const

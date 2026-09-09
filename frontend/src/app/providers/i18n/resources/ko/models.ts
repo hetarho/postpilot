@@ -212,4 +212,45 @@ export const models = {
     reasoningSpendHeavy:
       '설정한 강도를 이 모델이 따르지 않을 수 있어요. 강도를 낮추거나 다른 모델을 고려하세요',
   },
+  document: {
+    title: '일괄 편집',
+    description:
+      '추천 목록처럼 이미 정리된 모델 목록이 있다면, 한 줄씩 체크하는 대신 문서 하나를 붙여넣어 한 번에 반영할 수 있어요.',
+    syncWarning:
+      '문서에 적은 섹션은 그 용도의 최종 목록이에요. 목록에 없는 기존 등록은 해제되고, 문서에 없는 용도는 그대로 둡니다.',
+    currentTitle: '지금 등록 상태',
+    currentHint: '이걸 복사해 고친 뒤 아래에 붙여넣으면, 바꾸려는 것만 정확히 바꿀 수 있어요.',
+    currentLoading: '불러오는 중…',
+    currentFailed: '지금 등록 상태를 불러오지 못했어요.',
+    pasteLabel: '붙여넣기',
+    pastePlaceholder: '# postpilot models v1',
+    close: '닫기',
+    preview: '미리보기',
+    apply: '확정',
+    diffTitle: '적용하면 이렇게 바뀌어요',
+    diffEmpty: '문서가 아무 용도도 지정하지 않았어요.',
+    noChange: '바뀌는 것 없음',
+    register: '등록 {{count}}개',
+    deregister: '해제 {{count}}개',
+    unchanged: '이미 등록됨 {{count}}개',
+    untouched: '문서에 없는 용도는 그대로예요: {{purposes}}',
+    rejected:
+      '{{count}}줄을 읽지 못해서 아무것도 반영하지 않았어요. 아래를 고치고 다시 미리보기 하세요.',
+    issueLine: '{{line}}번째 줄',
+    issueCause: {
+      bad_version: '첫 줄은 `# postpilot models v1` 이어야 해요.',
+      unknown_purpose: '없는 용도 이름이에요.',
+      duplicate_section: '같은 용도가 두 번 나왔어요. 한 섹션이 그 용도의 전체 목록이에요.',
+      id_before_section: '용도 섹션보다 먼저 나온 모델이에요.',
+      malformed_line: '모델 아이디만 한 줄에 하나씩 적어 주세요. 표·따옴표·백틱은 넣지 마세요.',
+      duplicate_id: '같은 섹션에 같은 모델이 두 번 있어요.',
+      unknown_model: '제공사 목록에 없는 모델이에요.',
+      unlisted_model: '제공사가 더 이상 제공하지 않는 모델이에요.',
+      purpose_ineligible: '이 용도에 필요한 기능이 없는 모델이에요.',
+      unknown: '이 줄은 반영할 수 없어요.',
+    },
+    fetchFailed:
+      '제공사의 모델 목록을 읽지 못해서 아무것도 반영하지 않았어요. 잠시 뒤에 다시 시도해 주세요.',
+    applied: '반영했어요. 등록 {{registered}}개, 해제 {{deregistered}}개.',
+  },
 } as const

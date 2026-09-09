@@ -7,8 +7,11 @@ import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
   AdminService,
+  ApplyCatalogDocumentResponseSchema,
+  ExportCatalogDocumentResponseSchema,
   ListCatalogResponseSchema,
   ModelCatalogService,
+  PreviewCatalogDocumentResponseSchema,
   SetEstimatorComboResponseSchema,
   ProtoPlan,
   SetModelPurposeResponseSchema,
@@ -17,6 +20,15 @@ import {
 import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
+
+const DOCUMENT_VERSION_LINE = '# postpilot models v1'
+const PURPOSES = [
+  'photo-analysis',
+  'style-analysis',
+  'writing',
+  'image-generation',
+  'video-generation',
+]
 
 export interface FakeCatalogEntry {
   modelId: string
@@ -147,6 +159,125 @@ export function registerModelCatalogService(
         }
       }),
     })
+
+  // The document path, modelled to the same contract the server holds: a section is the
+  // purpose's whole membership, any refused line refuses everything, and the live read is
+  // what makes an uncurated id registerable — so a failed fetch refuses rather than degrades.
+  const planDocument = (text: string) => {
+    const issues: Array<{ line: number; text: string; cause: string }> = []
+    const sections: Array<{ purpose: string; ids: string[] }> = []
+    let versioned = false
+    text.split('\n').forEach((raw, index) => {
+      const line = raw.trim()
+      const number = index + 1
+      if (line === '') return
+      if (!versioned) {
+        if (line !== DOCUMENT_VERSION_LINE)
+          issues.push({ line: number, text: line, cause: 'bad_version' })
+        versioned = true
+        return
+      }
+      if (line.startsWith('#')) return
+      if (line.startsWith('[')) {
+        const purpose = line.replace(/^\[|\]$/g, '')
+        if (!PURPOSES.includes(purpose)) {
+          issues.push({ line: number, text: line, cause: 'unknown_purpose' })
+          return
+        }
+        sections.push({ purpose, ids: [] })
+        return
+      }
+      if (/[\s|`"',]/.test(line)) {
+        issues.push({ line: number, text: line, cause: 'malformed_line' })
+        return
+      }
+      const section = sections.at(-1)
+      if (!section) {
+        issues.push({ line: number, text: line, cause: 'id_before_section' })
+        return
+      }
+      const entry = entries.find((candidate) => candidate.modelId === line)
+      if (!entry) {
+        issues.push({ line: number, text: line, cause: 'unknown_model' })
+        return
+      }
+      if (section.purpose === 'photo-analysis' && !(entry.vision ?? false)) {
+        issues.push({ line: number, text: line, cause: 'purpose_ineligible' })
+        return
+      }
+      section.ids.push(line)
+    })
+    if (!versioned) issues.push({ line: 1, text: '', cause: 'bad_version' })
+    const purposes = sections.map((section) => ({
+      purpose: section.purpose,
+      register: section.ids.filter(
+        (id) => !(entries.find((e) => e.modelId === id)?.purposes ?? []).includes(section.purpose),
+      ),
+      deregister: entries
+        .filter(
+          (entry) =>
+            (entry.purposes ?? []).includes(section.purpose) &&
+            !section.ids.includes(entry.modelId),
+        )
+        .map((entry) => entry.modelId),
+      unchanged: section.ids.filter((id) =>
+        (entries.find((e) => e.modelId === id)?.purposes ?? []).includes(section.purpose),
+      ),
+    }))
+    return { purposes, issues, sections }
+  }
+
+  rpc(ModelCatalogService.method.exportCatalogDocument, () => {
+    calls?.push('ExportCatalogDocument')
+    const body = PURPOSES.map((purpose) => {
+      const ids = entries
+        .filter((entry) => (entry.purposes ?? []).includes(purpose))
+        .map((entry) => entry.modelId)
+        .sort()
+      return [`[${purpose}]`, ...ids].join('\n')
+    }).join('\n\n')
+    return create(ExportCatalogDocumentResponseSchema, {
+      document: `${DOCUMENT_VERSION_LINE}\n\n${body}\n`,
+    })
+  })
+
+  rpc(ModelCatalogService.method.previewCatalogDocument, (req) => {
+    calls?.push('PreviewCatalogDocument')
+    if (options.fetchFails) {
+      return create(PreviewCatalogDocumentResponseSchema, {
+        fetchError: 'the provider catalog could not be read',
+      })
+    }
+    const { purposes, issues } = planDocument(req.document)
+    return create(PreviewCatalogDocumentResponseSchema, {
+      purposes: issues.length > 0 ? [] : purposes,
+      issues,
+    })
+  })
+
+  rpc(ModelCatalogService.method.applyCatalogDocument, (req) => {
+    calls?.push(`ApplyCatalogDocument:${req.document.length}`)
+    if (options.fetchFails) {
+      return create(ApplyCatalogDocumentResponseSchema, {
+        fetchError: 'the provider catalog could not be read',
+      })
+    }
+    const { purposes, issues } = planDocument(req.document)
+    if (issues.length > 0) {
+      return create(ApplyCatalogDocumentResponseSchema, { issues, applied: false })
+    }
+    entries = entries.map((entry) => {
+      let next = [...(entry.purposes ?? [])]
+      for (const purpose of purposes) {
+        if (purpose.register.includes(entry.modelId)) next = [...next, purpose.purpose]
+        if (purpose.deregister.includes(entry.modelId)) {
+          next = next.filter((value) => value !== purpose.purpose)
+        }
+      }
+      return { ...entry, purposes: next, curated: next.length > 0 || (entry.curated ?? false) }
+    })
+    return create(ApplyCatalogDocumentResponseSchema, { purposes, issues: [], applied: true })
+  })
 
   rpc(ModelCatalogService.method.listCatalog, (req) => {
     calls?.push(
