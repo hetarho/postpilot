@@ -368,9 +368,10 @@ describe('the model catalog tab', () => {
     expect(within(row).getByText(/사진 해석/)).toBeInTheDocument()
   })
 
-  // A6 (plan 18): a curated model the provider no longer offers is badged and counted, and
-  // nothing is deregistered on its behalf.
-  it('flags a withdrawn model for the operator instead of retiring it', async () => {
+  // MODEL-20: the server deregisters and hides a model the provider no longer offers, so the
+  // screen carries no 제공 종료 badge and no banner for one — were a `listed: false` entry ever
+  // to arrive, it renders as a plain row.
+  it('shows no withdrawn badge or banner for a delisted entry', async () => {
     renderAppAt('/admin/models', {
       user: MASTER,
       modelCatalog: {
@@ -388,12 +389,63 @@ describe('the model catalog tab', () => {
     })
 
     const row = await screen.findByRole('listitem')
-    expect(within(row).getByText('제공 종료')).toBeInTheDocument()
-    // Still registered: retiring it is the operator's decision, not the screen's.
-    expect(within(row).getByRole('checkbox', { name: '이 용도에 사용' })).toBeChecked()
-    expect(
-      await screen.findByText(/모델 1개를 제공사가 더 이상 제공하지 않아요/),
-    ).toBeInTheDocument()
+    expect(within(row).queryByText('제공 종료')).not.toBeInTheDocument()
+    expect(screen.queryByText(/더 이상 제공하지 않아요/)).not.toBeInTheDocument()
+  })
+
+  // MODEL-28: the operator can read the catalog by price. Output price is the key, input
+  // breaks a tie, and a model with no published price sits last whichever way the list runs.
+  it('sorts by price when asked and keeps unpriced models last', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'openai/dear',
+            label: 'Dear',
+            inputUsdPerMillion: '10',
+            outputUsdPerMillion: '50',
+            sourceCreatedAt: 900n,
+          },
+          {
+            modelId: 'openai/cheap',
+            label: 'Cheap',
+            inputUsdPerMillion: '0.5',
+            outputUsdPerMillion: '2',
+            sourceCreatedAt: 100n,
+          },
+          {
+            modelId: 'nobody/mid',
+            label: 'Mid',
+            inputUsdPerMillion: '1',
+            outputUsdPerMillion: '9.5',
+            sourceCreatedAt: 500n,
+          },
+          { modelId: 'nobody/video', label: 'Video', videoOutput: true, sourceCreatedAt: 700n },
+        ],
+      },
+    })
+
+    await screen.findByRole('heading', { name: '모델 관리' })
+    await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(4))
+    // Default: featured vendor first, newest first within it, then the rest.
+    expect(modelNames()).toEqual(['openai/dear', 'openai/cheap', 'nobody/video', 'nobody/mid'])
+
+    await chooseOption(user, screen.getByRole('combobox', { name: /정렬 기본/ }), '가격 낮은순')
+    await waitFor(() =>
+      expect(modelNames()).toEqual(['openai/cheap', 'nobody/mid', 'openai/dear', 'nobody/video']),
+    )
+
+    await chooseOption(
+      user,
+      screen.getByRole('combobox', { name: /정렬 가격 낮은순/ }),
+      '가격 높은순',
+    )
+    await waitFor(() =>
+      expect(modelNames()).toEqual(['openai/dear', 'nobody/mid', 'openai/cheap', 'nobody/video']),
+    )
   })
 
   // A7 (plan 18): an unreadable provider catalog degrades to curated rows and says so, rather

@@ -173,6 +173,12 @@ export const models = {
     searchPlaceholder: '모델 이름이나 아이디',
     provider: '제공사',
     allProviders: '전체 제공사',
+    sort: '정렬',
+    sortOption: {
+      default: '기본',
+      'price-asc': '가격 낮은순',
+      'price-desc': '가격 높은순',
+    },
     filterVision: '이미지 입력 가능',
     filterStructured: '구조화 출력 가능',
     filterEnabled: '이 용도에 등록된 모델만',
@@ -192,11 +198,6 @@ export const models = {
     imageOutput: '이미지 생성',
     videoOutput: '비디오 생성',
     registeredPurposes: '등록된 용도: {{purposes}}',
-    delisted: '제공 종료',
-    delistedBanner_one:
-      '등록해 둔 모델 {{count}}개를 제공사가 더 이상 제공하지 않아요. 사용자에게는 사용할 수 없는 모델로 표시되니, 확인한 뒤에 체크를 해제해 주세요.',
-    delistedBanner_other:
-      '등록해 둔 모델 {{count}}개를 제공사가 더 이상 제공하지 않아요. 사용자에게는 사용할 수 없는 모델로 표시되니, 확인한 뒤에 체크를 해제해 주세요.',
     context: '컨텍스트 {{tokens}} 토큰',
     price: '100만 토큰당 입력 ${{in}} · 출력 ${{out}}',
     priceUnpublished: '토큰 단가 미공개',

@@ -174,6 +174,12 @@ export const models = {
     searchPlaceholder: 'Model name or id',
     provider: 'Provider',
     allProviders: 'All providers',
+    sort: 'Sort',
+    sortOption: {
+      default: 'Default',
+      'price-asc': 'Price: low to high',
+      'price-desc': 'Price: high to low',
+    },
     filterVision: 'Accepts images',
     filterStructured: 'Structured output',
     filterEnabled: 'Registered for this purpose only',
@@ -193,11 +199,6 @@ export const models = {
     imageOutput: 'Image output',
     videoOutput: 'Video output',
     registeredPurposes: 'Registered purposes: {{purposes}}',
-    delisted: 'Withdrawn',
-    delistedBanner_one:
-      '{{count}} registered model is no longer offered by the provider. Users see it as unavailable — review it and uncheck it.',
-    delistedBanner_other:
-      '{{count}} registered models are no longer offered by the provider. Users see them as unavailable — review them and uncheck them.',
     context: '{{tokens}} token context',
     price: '${{in}} in · ${{out}} out per 1M tokens',
     priceUnpublished: 'No published token price',

@@ -79,7 +79,6 @@ export function CatalogModelRow({
         {entry.structuredOutput && <Badge>{t('catalog.structured')}</Badge>}
         {entry.imageOutput && <Badge>{t('catalog.imageOutput')}</Badge>}
         {entry.videoOutput && <Badge>{t('catalog.videoOutput')}</Badge>}
-        {entry.curated && !entry.listed && <Badge tone="warning">{t('catalog.delisted')}</Badge>}
         {entry.contextTokens > 0n && (
           <Typography variant="meta">
             {t('catalog.context', { tokens: Number(entry.contextTokens).toLocaleString() })}
@@ -128,8 +127,7 @@ export function CatalogModelRow({
                 }}
                 className="mt-1"
               />
-              {/* A warning, never a correction: the override is kept and still sent, exactly
-                  as a delisted model is kept rather than retired. */}
+              {/* A warning, never a correction: the override is kept and still sent (MODEL-22). */}
               {entry.reasoning.drifted && (
                 <Typography
                   variant="meta"

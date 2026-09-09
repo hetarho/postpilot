@@ -65,19 +65,49 @@ export function providerSlugs(entries: readonly AdminCatalogEntry[]): string[] {
   return slugs.sort(compareProviders)
 }
 
-/** Featured vendors first in their configured order, then everyone else alphabetically, and
- *  inside a vendor the newest model first — a catalog is read to find what is new.
+/** How the operator has ordered the list (MODEL-28). `default` is the provider/newest order
+ *  below; the price orders key on the output price, because output tokens are what the app's
+ *  spend is made of, so one key is enough. */
+export type CatalogSort = 'default' | 'price-asc' | 'price-desc'
+
+export const CATALOG_SORTS: readonly CatalogSort[] = ['default', 'price-asc', 'price-desc']
+
+export const DEFAULT_SORT: CatalogSort = 'default'
+
+/** `default`: featured vendors first in their configured order, then everyone else
+ *  alphabetically, and inside a vendor the newest model first — a catalog is read to find
+ *  what is new. The price orders sort by output price per million, tie-break on input price,
+ *  then fall back to the default order; a model with no published price (video, 토큰 단가
+ *  미공개) comes last in BOTH directions — "unknown" is neither the cheapest nor the dearest.
  *
  *  Sorting here rather than on the server is deliberate: the whole catalog arrives in one
- *  response, and which vendors are worth lifting is a display preference the browser owns. */
-export function sortEntries(entries: readonly AdminCatalogEntry[]): AdminCatalogEntry[] {
-  return [...entries].sort((a, b) => {
+ *  response, and how to read it is a display preference the browser owns. The price strings
+ *  are decimal; `Number` is fine for ORDERING them (no arithmetic, nothing is displayed from
+ *  the converted value). */
+export function sortEntries(
+  entries: readonly AdminCatalogEntry[],
+  sort: CatalogSort = DEFAULT_SORT,
+): AdminCatalogEntry[] {
+  const byDefault = [...entries].sort((a, b) => {
     const byProvider = compareProviders(a.providerSlug, b.providerSlug)
     if (byProvider !== 0) return byProvider
     if (a.sourceCreatedAt !== b.sourceCreatedAt)
       return a.sourceCreatedAt > b.sourceCreatedAt ? -1 : 1
     return a.modelId < b.modelId ? -1 : a.modelId > b.modelId ? 1 : 0
   })
+  if (sort === 'default') return byDefault
+
+  const direction = sort === 'price-asc' ? 1 : -1
+  const priced = byDefault.filter((entry) => entry.outputUsdPerMillion !== '')
+  const unpriced = byDefault.filter((entry) => entry.outputUsdPerMillion === '')
+  // `sort` is stable, so equal prices keep the default order they arrived in.
+  priced.sort((a, b) => {
+    const byOutput = Number(a.outputUsdPerMillion) - Number(b.outputUsdPerMillion)
+    if (byOutput !== 0) return byOutput * direction
+    const byInput = Number(a.inputUsdPerMillion) - Number(b.inputUsdPerMillion)
+    return Number.isNaN(byInput) ? 0 : byInput * direction
+  })
+  return [...priced, ...unpriced]
 }
 
 /** The operator's own narrowing, applied over a tab's `visibleInTab` slice — the forced
@@ -101,13 +131,6 @@ export function filterEntries(
       entry.modelId.toLowerCase().includes(needle) || entry.label.toLowerCase().includes(needle)
     )
   })
-}
-
-/** Curated models the provider has stopped offering. They stay selectable-looking to nobody —
- *  users see them disabled — but they need an operator to retire them, so the screen counts
- *  them rather than acting on its own. */
-export function delistedCount(entries: readonly AdminCatalogEntry[]): number {
-  return entries.filter((entry) => entry.curated && !entry.listed).length
 }
 
 function compareProviders(a: string, b: string): number {

@@ -13,14 +13,16 @@ import {
   Typography,
 } from '@/shared/ui'
 import {
+  CATALOG_SORTS,
+  DEFAULT_SORT,
   NO_FILTERS,
-  delistedCount,
   filterEntries,
   isGatedPurpose,
   providerSlugs,
   sortEntries,
   visibleInTab,
   type CatalogFilters,
+  type CatalogSort,
 } from '../model/catalog-view'
 import { CatalogModelList } from './CatalogModelList'
 
@@ -48,10 +50,15 @@ export function ModelCatalogManager() {
   const { catalog, isPending, isError } = useAdminCatalog(purpose)
   const refresh = useRefreshCatalog(purpose)
   const [filters, setFilters] = useState<CatalogFilters>(NO_FILTERS)
+  // Sort is not a filter: filters narrow, sort orders. It lives beside them and, like them,
+  // survives a tab switch.
+  const [sort, setSort] = useState<CatalogSort>(DEFAULT_SORT)
   const controlsId = useId()
   const searchId = `${controlsId}-search`
   const providerId = `${controlsId}-provider`
   const providerLabelId = `${providerId}-label`
+  const sortId = `${controlsId}-sort`
+  const sortLabelId = `${sortId}-label`
   const panelId = `${controlsId}-purpose-panel`
 
   const sorted = useMemo(() => sortEntries(catalog.entries), [catalog.entries])
@@ -61,12 +68,13 @@ export function ModelCatalogManager() {
     () => sorted.filter((entry) => visibleInTab(entry, purpose)),
     [sorted, purpose],
   )
+  // The operator's order runs last, over the filtered slice — so choosing a sort never
+  // re-runs the gate or the filters, and every row the list virtualizes is already in place.
   const visible = useMemo(
-    () => filterEntries(tabEntries, filters, purpose),
-    [tabEntries, filters, purpose],
+    () => sortEntries(filterEntries(tabEntries, filters, purpose), sort),
+    [tabEntries, filters, purpose, sort],
   )
   const vendors = useMemo(() => providerSlugs(catalog.entries), [catalog.entries])
-  const delisted = useMemo(() => delistedCount(catalog.entries), [catalog.entries])
 
   const patch = (next: Partial<CatalogFilters>) =>
     setFilters((current) => ({ ...current, ...next }))
@@ -131,6 +139,22 @@ export function ModelCatalogManager() {
             className="mt-1"
           />
         </div>
+        <div className="min-w-0">
+          <FieldLabel id={sortLabelId} htmlFor={sortId}>
+            {t('catalog.sort')}
+          </FieldLabel>
+          <Listbox<CatalogSort>
+            id={sortId}
+            value={sort}
+            options={CATALOG_SORTS.map((value) => ({
+              value,
+              label: t(`catalog.sortOption.${value}`),
+            }))}
+            aria-labelledby={sortLabelId}
+            onChange={setSort}
+            className="mt-1"
+          />
+        </div>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           {(
             [
@@ -166,11 +190,6 @@ export function ModelCatalogManager() {
       {catalog.fetchError !== '' && (
         <Notice tone="warning" role="status" className="mt-4">
           {t('catalog.fetchFailed')}
-        </Notice>
-      )}
-      {delisted > 0 && (
-        <Notice tone="warning" role="status" className="mt-4">
-          {t('catalog.delistedBanner', { count: delisted })}
         </Notice>
       )}
       {isError && (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { REASONING_EFFORTS, type AdminCatalogEntry } from '@/entities/model-catalog'
-import { offersReasoningControl, reasoningOptionsFor } from './catalog-view'
+import { offersReasoningControl, reasoningOptionsFor, sortEntries } from './catalog-view'
 
 function entry(over: Partial<AdminCatalogEntry> = {}): AdminCatalogEntry {
   return {
@@ -34,6 +34,85 @@ function entry(over: Partial<AdminCatalogEntry> = {}): AdminCatalogEntry {
     ...over,
   }
 }
+
+describe('sortEntries', () => {
+  const cheap = entry({
+    modelId: 'b/cheap',
+    providerSlug: 'b',
+    inputUsdPerMillion: '0.5',
+    outputUsdPerMillion: '2',
+  })
+  const dear = entry({
+    modelId: 'a/dear',
+    providerSlug: 'a',
+    inputUsdPerMillion: '10',
+    outputUsdPerMillion: '50',
+  })
+  // Lexically "9.5" sorts after "10"; numerically it is the smaller.
+  const nine = entry({
+    modelId: 'c/nine',
+    providerSlug: 'c',
+    inputUsdPerMillion: '1',
+    outputUsdPerMillion: '9.5',
+  })
+  const ten = entry({
+    modelId: 'c/ten',
+    providerSlug: 'c',
+    inputUsdPerMillion: '2',
+    outputUsdPerMillion: '10',
+  })
+  // Same output price as `ten`; a cheaper input breaks the tie.
+  const tenCheapIn = entry({
+    modelId: 'c/ten-cheap-in',
+    providerSlug: 'c',
+    inputUsdPerMillion: '1',
+    outputUsdPerMillion: '10',
+  })
+  const video = entry({ modelId: 'd/video', providerSlug: 'd', videoOutput: true })
+  const all = [video, ten, dear, nine, cheap, tenCheapIn]
+  const ids = (entries: AdminCatalogEntry[]) => entries.map((e) => e.modelId)
+
+  it('keeps the provider/newest order by default', () => {
+    expect(ids(sortEntries(all))).toEqual(ids(sortEntries(all, 'default')))
+    // Non-featured vendors alphabetically, ids within one when created at the same time.
+    expect(ids(sortEntries(all, 'default'))).toEqual([
+      'a/dear',
+      'b/cheap',
+      'c/nine',
+      'c/ten',
+      'c/ten-cheap-in',
+      'd/video',
+    ])
+  })
+
+  it('orders by output price numerically, input as the tie-break, unpriced last', () => {
+    expect(ids(sortEntries(all, 'price-asc'))).toEqual([
+      'b/cheap',
+      'c/nine',
+      'c/ten-cheap-in',
+      'c/ten',
+      'a/dear',
+      'd/video',
+    ])
+  })
+
+  it('reverses the priced order and still leaves unpriced models last', () => {
+    expect(ids(sortEntries(all, 'price-desc'))).toEqual([
+      'a/dear',
+      'c/ten',
+      'c/ten-cheap-in',
+      'c/nine',
+      'b/cheap',
+      'd/video',
+    ])
+  })
+
+  it('does not mutate its input', () => {
+    const input = [...all]
+    sortEntries(input, 'price-asc')
+    expect(ids(input)).toEqual(ids(all))
+  })
+})
 
 describe('reasoningOptionsFor', () => {
   // A3, against a real model: deepseek/deepseek-v4-pro-0813 accepts max·high·low and NOT

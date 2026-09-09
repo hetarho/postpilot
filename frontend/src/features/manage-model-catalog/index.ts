@@ -1,8 +1,9 @@
 export { ModelCatalogManager } from './ui/ModelCatalogManager'
-export type { CatalogFilters } from './model/catalog-view'
+export type { CatalogFilters, CatalogSort } from './model/catalog-view'
 export {
+  CATALOG_SORTS,
+  DEFAULT_SORT,
   NO_FILTERS,
-  delistedCount,
   filterEntries,
   providerSlugs,
   sortEntries,
