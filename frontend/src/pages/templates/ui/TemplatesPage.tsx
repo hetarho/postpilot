@@ -70,16 +70,16 @@ export function TemplatesPage() {
             </section>
           )}
 
-          {/* One instance at every width, and a PHONE dock: the reach argument is the only thing
-              holding this bar up, and it evaporates with the thumb (§4.3). */}
+          {/* One instance, docked at every width: the thumb is why it is full-bleed on a phone,
+              and a list that scrolls is why it stays docked above one (§4.3, THEME-24). */}
           <ActionBar
-            dock="phone"
+            dock="list"
             ariaLabel={t('page.newDockAria', { ns: 'templates' })}
             className="mt-auto"
           >
             <Link
               to="/templates/new"
-              className={buttonStyles({ variant: 'cta', className: 'w-full' })}
+              className={buttonStyles({ variant: 'cta', className: 'w-full sm:w-auto' })}
             >
               {t('page.new', { ns: 'templates' })}
             </Link>

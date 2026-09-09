@@ -1,29 +1,30 @@
 import type { ReactNode } from 'react'
 import { twMerge } from 'tailwind-merge'
 
-/** How far up the widths the bar keeps its DOCK treatment — the sticky, rounded, shadowed card. */
+/** Which shape the dock takes above the phone. It docks at EVERY width either way (THEME-24):
+ *  a list long enough to scroll pushes its one add action below the fold otherwise, and that is
+ *  the action the screen exists for. */
 export type ActionBarDock =
-  /** Every width. For a scroller whose CONTENT is tall no matter how wide the window is: the
-   *  editor's draft, an experiment's two candidate columns. What makes the bar stick there is the
-   *  distance between the thing and the control that commits it, not the thumb — so it does not
-   *  go away when the thumb does. */
+  /** Spans the column. For a scroller whose CONTENT is tall no matter how wide the window is:
+   *  the editor's draft, an experiment's two candidate columns. What makes the bar stick there is
+   *  the distance between the thing and the control that commits it, not the thumb. */
   | 'always'
-  /** The phone only. For a bar carrying a list's ONE add action. From `sm:` up the reach argument
-   *  evaporates (§4.3), and what is left is a floating card holding a single left-aligned button
-   *  over a half-empty page — which reads as debris, not as a dock. So above the phone the card
-   *  dissolves and the bar becomes what it actually is: the list's last row, with its action
-   *  spanning the column. */
-  | 'phone'
+  /** Shrinks to its contents and settles against the right edge from `sm:` up. For a bar carrying
+   *  a list's ONE add action: full-bleed in the thumb's band on a phone, and above it a bar only
+   *  as wide as its button — which is what keeps it from being the full-width card holding one
+   *  left-aligned button that the retired phone-only rule was written against. */
+  | 'list'
 
-/** `phone` is `always` minus the card, from `sm:` up. Each reset undoes exactly one thing the
- *  dock treatment does — the position, the plane, the corner, the shadow, the inset that held the
- *  contents off the card's edge — and `sm:mt-8` replaces the caller's `mt-auto`, so the bar sits
- *  under the last row instead of being pushed to the bottom of a half-empty viewport. */
+/** `list` is `always` plus the shrink: same sticky plane, corner and shadow at every width, and
+ *  from `sm:` up `w-fit` + `ml-auto` take it down to the width of what it holds. The caller keeps
+ *  `mt-auto`, so a short list still pushes the bar to the bottom of the viewport rather than
+ *  leaving it under the last row. */
+const DOCK_BASE =
+  'bg-surface-highest bottom-dock-nav sm:pb-dock-b sticky z-20 mt-6 rounded-xl p-3 shadow-md sm:bottom-4 sm:p-4'
+
 const DOCK_STYLES: Record<ActionBarDock, string> = {
-  always:
-    'bg-surface-highest bottom-dock-nav sm:pb-dock-b sticky z-20 mt-6 rounded-xl p-3 shadow-md sm:bottom-4 sm:p-4',
-  phone:
-    'bg-surface-highest bottom-dock-nav sticky z-20 mt-6 rounded-xl p-3 shadow-md sm:static sm:mt-8 sm:rounded-none sm:bg-transparent sm:p-0 sm:shadow-none',
+  always: DOCK_BASE,
+  list: `${DOCK_BASE} sm:ml-auto sm:w-fit`,
 }
 
 /** Docks a view's committing actions in the thumb's band instead of leaving them wherever the

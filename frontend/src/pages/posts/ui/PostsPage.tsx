@@ -162,18 +162,22 @@ export function PostsPage() {
       {/* ONE 새 글, in the same place the voice directory puts its own add action. It used to be
           two — a docked bar on the phone and a second copy beside the heading from `sm:` up — which
           is two links to the same route in the DOM and two things to keep in step for a button
-          that is never ambiguous about what it does. On the phone it docks in the thumb's band: in
+          that is never ambiguous about what it does. It docks in the thumb's band on a phone: in
           the top-right corner it was ~820px above the bottom edge of a 430x932 phone, a re-grip
           away from the one action this screen exists for (§4.3), and above the empty state that
           points at it. `mt-auto` puts it at the bottom of a SHORT list; `sticky` keeps it there
-          once the list is long enough to scroll. From `sm:` up it is the list's last row, spanning
-          the column. */}
+          once the list is long enough to scroll — at EVERY width, because a desk list scrolls too
+          and the button went with it (THEME-24). Above the phone it shrinks to the width of the
+          button and settles against the right edge. */}
       <ActionBar
-        dock="phone"
+        dock="list"
         ariaLabel={t('list.writingAria', { ns: 'posts' })}
         className="mx-4 mt-auto sm:mx-6 lg:mx-8"
       >
-        <Link to="/posts/new" className={buttonStyles({ variant: 'cta', className: 'w-full' })}>
+        <Link
+          to="/posts/new"
+          className={buttonStyles({ variant: 'cta', className: 'w-full sm:w-auto' })}
+        >
           {t('new', { ns: 'posts' })}
         </Link>
       </ActionBar>

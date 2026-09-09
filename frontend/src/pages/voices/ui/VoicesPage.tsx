@@ -91,17 +91,16 @@ export function VoicesPage() {
 
           {/* One instance at every width, not a phone bar plus a desktop copy: the trigger owns
               the sheet's open state, and two of them would be two overlays waiting to be opened.
-              On the phone it docks — `mt-auto` puts it below a short list, `sticky` keeps it there
-              once the list is long enough to scroll (§4.3). From `sm:` up the card dissolves and
-              it is simply the list's last row. The action spans the column at every width: a lone
-              button left-aligned inside a full-width bar reads as a stray control rather than as
-              the one thing this screen adds. */}
+              It docks at every width — `mt-auto` puts it below a short list, `sticky` keeps it
+              there once the list is long enough to scroll (§4.3, THEME-24). Above the phone the
+              bar narrows to its trigger and sits against the right edge, so the action stays
+              full-bleed only where the thumb needs it. */}
           <ActionBar
-            dock="phone"
+            dock="list"
             ariaLabel={t('create.dockAria', { ns: 'voices' })}
             className="mt-auto"
           >
-            <CreateVoiceSheet ownerId={ownerId} className="w-full" />
+            <CreateVoiceSheet ownerId={ownerId} className="w-full sm:w-auto" />
           </ActionBar>
         </>
       )}
