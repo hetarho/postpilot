@@ -60,6 +60,8 @@ func actingUser(ctx context.Context) (string, error) {
 }
 func toConnectError(err error) error {
 	switch {
+	case errors.Is(err, clip.ErrPlanConflict):
+		return rpcserver.NewAppError(connect.CodeAborted, "clip edit plan changed", "CLIP_PLAN_CONFLICT", nil)
 	case errors.Is(err, clip.ErrBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is busy", "CLIP_BUSY", nil)
 	case errors.Is(err, llm.ErrModelUnavailable):
@@ -209,6 +211,13 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 		return nil, toConnectError(err)
 	}
 	out := projectProto(value)
+	if h.generation != nil {
+		state, err := h.generation.EditingState(value)
+		if err != nil {
+			return nil, toConnectError(err)
+		}
+		out.Editing = editingProto(state)
+	}
 	if h.jobs != nil {
 		j, err := h.jobs.LatestForClip(ctx, user, value.ID)
 		if err != nil {

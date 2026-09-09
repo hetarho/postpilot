@@ -82,7 +82,7 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	// rows are all written by now, so this is the first moment the hold can be reconciled
 	// against what the work actually cost. A failure here strands credits until the boot
 	// sweep, which is why it must not also fail the job.
-	if q.admitter != nil {
+	if q.admitter != nil && found.Kind != KindRenderClip {
 		q.admitter.Settle(finishCtx, found.ID)
 	}
 }

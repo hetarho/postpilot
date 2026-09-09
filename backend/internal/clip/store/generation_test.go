@@ -160,12 +160,21 @@ func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.Planning
 }
 
 type rendererFake struct {
-	fail  error
-	calls int
+	fail        error
+	calls       int
+	captionErr  error
+	panicRender bool
+}
+
+func (r *rendererFake) CaptionSize(context.Context, string, clip.Caption) (float64, float64, error) {
+	return 10, 10, r.captionErr
 }
 
 func (r *rendererFake) Render(ctx context.Context, ws clip.MediaWorkspace, p clip.EditPlan, _ []clip.RenderSource, loader clip.RenderSourceLoader) (clip.RenderedVideo, error) {
 	r.calls++
+	if r.panicRender {
+		panic("render panic")
+	}
 	if r.fail != nil {
 		return clip.RenderedVideo{}, r.fail
 	}
@@ -204,7 +213,11 @@ func (*clipAdmitter) OpenHolds(context.Context) ([]string, error) { return nil, 
 type generationJobs struct{ q *job.Queue }
 
 func (j generationJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, error) {
-	return j.q.Enqueue(ctx, job.NewJob{Kind: job.KindGenerateClip, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
+	kind := job.KindGenerateClip
+	if s.RenderOnly {
+		kind = job.KindRenderClip
+	}
+	return j.q.Enqueue(ctx, job.NewJob{Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
 }
 func (j generationJobs) Activate(ctx context.Context, user, id string) error {
 	return j.q.ActivateClip(ctx, user, id)
@@ -282,6 +295,7 @@ func generationSetup(t *testing.T) *generationHarness {
 	admitter := &clipAdmitter{media: media}
 	queue.Admit(admitter)
 	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: config.ClipSourceLimits(6*time.Hour, 10*time.Minute), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
+	cfg.Render = config.ClipRender(&config.Config{})
 	service := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg)
 	projects.SetGeneration(service)
 	return &generationHarness{service, projects, st, d, sources, objects, media, planner, renderer, admitter, queue, jobs, template, project, batch, cfg}

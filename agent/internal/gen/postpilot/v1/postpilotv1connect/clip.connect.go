@@ -33,6 +33,12 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ClipServiceSaveClipEditPlanProcedure is the fully-qualified name of the ClipService's
+	// SaveClipEditPlan RPC.
+	ClipServiceSaveClipEditPlanProcedure = "/postpilot.v1.ClipService/SaveClipEditPlan"
+	// ClipServiceStartClipRenderProcedure is the fully-qualified name of the ClipService's
+	// StartClipRender RPC.
+	ClipServiceStartClipRenderProcedure = "/postpilot.v1.ClipService/StartClipRender"
 	// ClipServiceStartClipGenerationProcedure is the fully-qualified name of the ClipService's
 	// StartClipGeneration RPC.
 	ClipServiceStartClipGenerationProcedure = "/postpilot.v1.ClipService/StartClipGeneration"
@@ -76,6 +82,8 @@ const (
 
 // ClipServiceClient is a client for the postpilot.v1.ClipService service.
 type ClipServiceClient interface {
+	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
+	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error)
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
@@ -102,6 +110,18 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	clipServiceMethods := v1.File_postpilot_v1_clip_proto.Services().ByName("ClipService").Methods()
 	return &clipServiceClient{
+		saveClipEditPlan: connect.NewClient[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse](
+			httpClient,
+			baseURL+ClipServiceSaveClipEditPlanProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("SaveClipEditPlan")),
+			connect.WithClientOptions(opts...),
+		),
+		startClipRender: connect.NewClient[v1.StartClipRenderRequest, v1.StartClipRenderResponse](
+			httpClient,
+			baseURL+ClipServiceStartClipRenderProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("StartClipRender")),
+			connect.WithClientOptions(opts...),
+		),
 		startClipGeneration: connect.NewClient[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse](
 			httpClient,
 			baseURL+ClipServiceStartClipGenerationProcedure,
@@ -185,6 +205,8 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // clipServiceClient implements ClipServiceClient.
 type clipServiceClient struct {
+	saveClipEditPlan       *connect.Client[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse]
+	startClipRender        *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
 	startClipGeneration    *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
 	listVideoTemplates     *connect.Client[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse]
 	createVideoTemplate    *connect.Client[v1.CreateVideoTemplateRequest, v1.CreateVideoTemplateResponse]
@@ -198,6 +220,16 @@ type clipServiceClient struct {
 	createClipSourceBatch  *connect.Client[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse]
 	confirmClipSource      *connect.Client[v1.ConfirmClipSourceRequest, v1.ConfirmClipSourceResponse]
 	discardClipSourceBatch *connect.Client[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse]
+}
+
+// SaveClipEditPlan calls postpilot.v1.ClipService.SaveClipEditPlan.
+func (c *clipServiceClient) SaveClipEditPlan(ctx context.Context, req *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error) {
+	return c.saveClipEditPlan.CallUnary(ctx, req)
+}
+
+// StartClipRender calls postpilot.v1.ClipService.StartClipRender.
+func (c *clipServiceClient) StartClipRender(ctx context.Context, req *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error) {
+	return c.startClipRender.CallUnary(ctx, req)
 }
 
 // StartClipGeneration calls postpilot.v1.ClipService.StartClipGeneration.
@@ -267,6 +299,8 @@ func (c *clipServiceClient) DiscardClipSourceBatch(ctx context.Context, req *con
 
 // ClipServiceHandler is an implementation of the postpilot.v1.ClipService service.
 type ClipServiceHandler interface {
+	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
+	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error)
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
@@ -289,6 +323,18 @@ type ClipServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	clipServiceMethods := v1.File_postpilot_v1_clip_proto.Services().ByName("ClipService").Methods()
+	clipServiceSaveClipEditPlanHandler := connect.NewUnaryHandler(
+		ClipServiceSaveClipEditPlanProcedure,
+		svc.SaveClipEditPlan,
+		connect.WithSchema(clipServiceMethods.ByName("SaveClipEditPlan")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceStartClipRenderHandler := connect.NewUnaryHandler(
+		ClipServiceStartClipRenderProcedure,
+		svc.StartClipRender,
+		connect.WithSchema(clipServiceMethods.ByName("StartClipRender")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipServiceStartClipGenerationHandler := connect.NewUnaryHandler(
 		ClipServiceStartClipGenerationProcedure,
 		svc.StartClipGeneration,
@@ -369,6 +415,10 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 	)
 	return "/postpilot.v1.ClipService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case ClipServiceSaveClipEditPlanProcedure:
+			clipServiceSaveClipEditPlanHandler.ServeHTTP(w, r)
+		case ClipServiceStartClipRenderProcedure:
+			clipServiceStartClipRenderHandler.ServeHTTP(w, r)
 		case ClipServiceStartClipGenerationProcedure:
 			clipServiceStartClipGenerationHandler.ServeHTTP(w, r)
 		case ClipServiceListVideoTemplatesProcedure:
@@ -403,6 +453,14 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 
 // UnimplementedClipServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedClipServiceHandler struct{}
+
+func (UnimplementedClipServiceHandler) SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.SaveClipEditPlan is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.StartClipRender is not implemented"))
+}
 
 func (UnimplementedClipServiceHandler) StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.StartClipGeneration is not implemented"))

@@ -73,6 +73,8 @@ export const errors = {
   CLIP_NOT_FOUND: 'Could not find the clip or video template.',
   CLIP_COPY_TOO_LONG: 'This caption does not fit in two lines. Shorten it and try again.',
   CLIP_BUSY: 'A clip job is still running. Wait for it to finish.',
+  CLIP_PLAN_CONFLICT:
+    'The saved edit plan changed. Keep your edits and reload the latest revision before saving again.',
   CLIP_INVALID_MEDIA:
     'The source video could not be verified. Select supported, uncorrupted videos again.',
   CLIP_PROCESSING_FAILED:

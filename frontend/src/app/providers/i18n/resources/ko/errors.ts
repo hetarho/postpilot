@@ -69,6 +69,8 @@ export const errors = {
   CLIP_NOT_FOUND: '클립 또는 영상 템플릿을 찾을 수 없어요.',
   CLIP_COPY_TOO_LONG: '문구가 두 줄 안에 들어가지 않아요. 문구를 줄인 뒤 다시 시도해 주세요.',
   CLIP_BUSY: '클립 작업이 진행 중이에요. 완료될 때까지 기다려 주세요.',
+  CLIP_PLAN_CONFLICT:
+    '저장된 수정본이 변경되었어요. 작성 중인 내용은 유지한 채 최신 버전을 확인한 뒤 다시 저장해 주세요.',
   CLIP_INVALID_MEDIA:
     '원본 영상을 확인하지 못했어요. 지원되는 정상 영상 파일을 다시 선택해 주세요.',
   CLIP_PROCESSING_FAILED:

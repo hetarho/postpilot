@@ -89,6 +89,17 @@ func (q *Queries) EnqueueObjectDeletion(ctx context.Context, arg EnqueueObjectDe
 	return err
 }
 
+const hasActiveClipJob = `-- name: HasActiveClipJob :one
+SELECT COUNT(*) FROM generation_jobs WHERE clip_project_id=? AND status IN ('queued','running')
+`
+
+func (q *Queries) HasActiveClipJob(ctx context.Context, clipProjectID sql.NullString) (int64, error) {
+	row := q.db.QueryRowContext(ctx, hasActiveClipJob, clipProjectID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const linkSourceJob = `-- name: LinkSourceJob :execrows
 UPDATE clip_source_batches SET state='consuming',job_id=? WHERE id=? AND user_id=? AND state='ready' AND expires_at>?
 `
@@ -193,6 +204,32 @@ func (q *Queries) ResultKeys(ctx context.Context) ([]sql.NullString, error) {
 	return items, nil
 }
 
+const saveCorrection = `-- name: SaveCorrection :execrows
+UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND edit_plan_revision=?
+`
+
+type SaveCorrectionParams struct {
+	EditPlanJson     sql.NullString
+	UpdatedAt        string
+	ID               string
+	UserID           string
+	EditPlanRevision int64
+}
+
+func (q *Queries) SaveCorrection(ctx context.Context, arg SaveCorrectionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, saveCorrection,
+		arg.EditPlanJson,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+		arg.EditPlanRevision,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const saveGeneration = `-- name: SaveGeneration :execrows
 UPDATE clip_projects SET analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0
 `
@@ -222,6 +259,40 @@ func (q *Queries) SaveGeneration(ctx context.Context, arg SaveGenerationParams) 
 		arg.UpdatedAt,
 		arg.UserID,
 		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const saveRender = `-- name: SaveRender :execrows
+UPDATE clip_projects SET result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND edit_plan_revision=?
+`
+
+type SaveRenderParams struct {
+	ResultKey         sql.NullString
+	ResultContentType sql.NullString
+	ResultBytes       sql.NullInt64
+	ResultDurationMs  sql.NullInt64
+	ResultCreatedAt   sql.NullString
+	UpdatedAt         string
+	ID                string
+	UserID            string
+	EditPlanRevision  int64
+}
+
+func (q *Queries) SaveRender(ctx context.Context, arg SaveRenderParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, saveRender,
+		arg.ResultKey,
+		arg.ResultContentType,
+		arg.ResultBytes,
+		arg.ResultDurationMs,
+		arg.ResultCreatedAt,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+		arg.EditPlanRevision,
 	)
 	if err != nil {
 		return 0, err

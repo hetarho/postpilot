@@ -30,6 +30,9 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	queue.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
 	}))
+	queue.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+		return service.RunRender(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
+	}))
 	return service, nil
 }
 
@@ -39,7 +42,11 @@ type clipModels struct{ meteredRegistry }
 func (m clipModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) { return m.Lookup(ref) }
 
 func (a clipJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, error) {
-	id, err := a.queue.Enqueue(ctx, job.NewJob{Kind: job.KindGenerateClip, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
+	kind := job.KindGenerateClip
+	if s.RenderOnly {
+		kind = job.KindRenderClip
+	}
+	id, err := a.queue.Enqueue(ctx, job.NewJob{Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
 	if errors.Is(err, job.ErrActiveConflict) {
 		return "", clip.ErrBusy
 	}

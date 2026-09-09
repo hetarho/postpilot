@@ -18,3 +18,9 @@ SELECT object_key FROM clip_object_deletions ORDER BY created_at,object_key;
 DELETE FROM clip_object_deletions WHERE object_key=?;
 -- name: ResultKeys :many
 SELECT result_key FROM clip_projects WHERE result_key IS NOT NULL;
+-- name: SaveCorrection :execrows
+UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND edit_plan_revision=?;
+-- name: SaveRender :execrows
+UPDATE clip_projects SET result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND edit_plan_revision=?;
+-- name: HasActiveClipJob :one
+SELECT COUNT(*) FROM generation_jobs WHERE clip_project_id=? AND status IN ('queued','running');

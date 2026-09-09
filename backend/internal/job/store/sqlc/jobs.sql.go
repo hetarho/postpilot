@@ -11,7 +11,7 @@ import (
 )
 
 const activateClip = `-- name: ActivateClip :execrows
-UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind='generate_clip' AND status='queued' AND dispatch_ready=0
+UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0
 `
 
 type ActivateClipParams struct {
@@ -620,7 +620,7 @@ func (q *Queries) SweepRunning(ctx context.Context, arg SweepRunningParams) (int
 }
 
 const sweepUnactivatedClips = `-- name: SweepUnactivatedClips :execrows
-UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind='generate_clip' AND status='queued' AND dispatch_ready=0
+UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0
 `
 
 type SweepUnactivatedClipsParams struct {

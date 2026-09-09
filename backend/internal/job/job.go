@@ -62,6 +62,8 @@ func (e *ErrAlreadyInProgress) Unwrap() error { return ErrActiveConflict }
 // and so voice-owned kinds are guarded per voice rather than per account. The job context
 // only carries the id; it never reads voice tables.
 type NewJob struct {
+	// Only render_clip can opt out, and it must declare no possible model call.
+	NonMetered     bool
 	Kind           string
 	UserID         string
 	PostSlug       *string

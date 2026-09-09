@@ -91,6 +91,7 @@ export const appFailureSpecs = {
   CLIP_COPY_TOO_LONG: {},
   CLIP_SOURCE_UNAVAILABLE: {},
   CLIP_BUSY: {},
+  CLIP_PLAN_CONFLICT: {},
   CLIP_INVALID_MEDIA: {},
   CLIP_PROCESSING_FAILED: {},
   CLIP_NOT_FOUND: {},

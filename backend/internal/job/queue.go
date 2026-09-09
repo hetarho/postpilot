@@ -17,7 +17,13 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	if input.Kind == "" || input.UserID == "" {
 		return "", fmt.Errorf("enqueue job: kind and user are required")
 	}
-	if input.ClipProjectID != "" && input.Kind != KindGenerateClip {
+	if input.ClipProjectID != "" && input.Kind != KindGenerateClip && input.Kind != KindRenderClip {
+		return "", ErrInvalidTarget
+	}
+	if input.NonMetered != (input.Kind == KindRenderClip) {
+		return "", ErrInvalidTarget
+	}
+	if input.Kind == KindRenderClip && (input.ClipProjectID == "" || input.PostSlug != nil || input.VoiceID != "" || input.TargetLanguage != "" || input.ObserveModel != "" || input.WriteModel != "" || len(input.ExtraModels) > 0 || len(input.CallCounts) > 0 || len(input.PricingCalls) > 0) {
 		return "", ErrInvalidTarget
 	}
 	if input.Kind == KindGenerateClip && (input.ClipProjectID == "" || input.PostSlug != nil || input.VoiceID != "" || input.ObserveModel == "" || input.WriteModel == "") {
@@ -49,7 +55,7 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	// The hold precedes the insert so a refused start leaves no job row at all. The error
 	// is returned unwrapped: the credit refusal it carries is matched by type at every rpc
 	// edge above, and wrapping it here would say nothing a caller needs.
-	if q.admitter != nil && input.Kind != KindGenerateClip {
+	if q.admitter != nil && input.Kind != KindGenerateClip && !input.NonMetered {
 		if err := q.admitter.Hold(ctx, Start{
 			UserID: input.UserID, Kind: input.Kind, JobID: found.ID, Calls: input.plannedCalls(),
 		}); err != nil {
@@ -58,7 +64,9 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	}
 
 	if err := q.store.Insert(ctx, found); err != nil {
-		q.releaseAdmission(ctx, found.ID)
+		if !input.NonMetered {
+			q.releaseAdmission(ctx, found.ID)
+		}
 		if errors.Is(err, ErrActiveConflict) {
 			active, lookupErr := q.activeForInput(ctx, input)
 			if lookupErr == nil && active != nil {

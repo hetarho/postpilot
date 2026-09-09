@@ -8,6 +8,7 @@ import (
 )
 
 const KindGenerateClip = "generate_clip"
+const KindRenderClip = "render_clip"
 
 var ErrCreditAllowance = errors.New("clip call has no reserved credit allowance")
 

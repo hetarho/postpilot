@@ -11,6 +11,15 @@ import (
 var _ clip.GenerationStore = (*Store)(nil)
 
 func (s *Store) LinkSourceJob(ctx context.Context, user, batch, job string, now time.Time) error {
+	return s.linkSourceJob(ctx, user, batch, job, 0, now)
+}
+func (s *Store) LinkRenderSourceJob(ctx context.Context, user, batch, job string, revision int, now time.Time) error {
+	if revision <= 0 {
+		return clip.ErrPlanConflict
+	}
+	return s.linkSourceJob(ctx, user, batch, job, revision, now)
+}
+func (s *Store) linkSourceJob(ctx context.Context, user, batch, job string, revision int, now time.Time) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
 		b, err := getSourceBatch(ctx, q, user, batch)
 		if err != nil {
@@ -22,6 +31,15 @@ func (s *Store) LinkSourceJob(ctx context.Context, user, batch, job string, now 
 		}
 		if deleting != 0 {
 			return struct{}{}, clip.ErrBusy
+		}
+		if revision > 0 {
+			p, e := getProject(ctx, q, user, b.ProjectID)
+			if e != nil {
+				return struct{}{}, e
+			}
+			if p.EditPlanRevision != revision {
+				return struct{}{}, clip.ErrPlanConflict
+			}
 		}
 		n, err := q.LinkSourceJob(ctx, sqlc.LinkSourceJobParams{JobID: nullable(job), ID: batch, UserID: user, ExpiresAt: stamp(now)})
 		if err != nil {

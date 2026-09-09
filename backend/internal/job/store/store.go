@@ -362,7 +362,7 @@ func parseOptionalTime(value sql.NullString) (*time.Time, error) {
 }
 
 func dispatchReady(kind string) int64 {
-	if kind == job.KindGenerateClip {
+	if kind == job.KindGenerateClip || kind == job.KindRenderClip {
 		return 0
 	}
 	return 1

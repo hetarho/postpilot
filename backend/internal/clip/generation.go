@@ -98,12 +98,22 @@ func (s *GenerationService) Start(ctx context.Context, user, id, batch, observe,
 	if err != nil {
 		return "", err
 	}
-	job, err := s.jobs.Enqueue(ctx, GenerationStart{user, id, observe, write, payload})
+	return s.enqueue(ctx, GenerationStart{UserID: user, ProjectID: id, Observe: observe, Write: write, Payload: payload}, batch, 0)
+}
+
+func (s *GenerationService) enqueue(ctx context.Context, input GenerationStart, batch string, revision int) (string, error) {
+	user := input.UserID
+	job, err := s.jobs.Enqueue(ctx, input)
 	if err != nil {
 		return "", err
 	}
 	// A queued row is invisible to the dispatcher until its source lease is linked.
-	if err = s.store.LinkSourceJob(ctx, user, batch, job, time.Now()); err == nil {
+	if input.RenderOnly {
+		err = s.store.LinkRenderSourceJob(ctx, user, batch, job, revision, time.Now())
+	} else {
+		err = s.store.LinkSourceJob(ctx, user, batch, job, time.Now())
+	}
+	if err == nil {
 		err = s.jobs.Activate(ctx, user, job)
 	}
 	if err != nil {
@@ -148,6 +158,8 @@ func (e *StageFailure) Failure() llm.Failure {
 		f = llm.Failure{Reason: "CLIP_COPY_TOO_LONG"}
 	case errors.Is(e.Cause, ErrInvalid):
 		f = llm.Failure{Reason: "CLIP_INVALID_INPUT"}
+	case errors.Is(e.Cause, ErrPlanConflict):
+		f = llm.Failure{Reason: "CLIP_PLAN_CONFLICT"}
 	case errors.Is(e.Cause, ErrSourceState), errors.Is(e.Cause, ErrNotFound):
 		f = llm.Failure{Reason: "CLIP_SOURCE_UNAVAILABLE"}
 	}
@@ -194,7 +206,8 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		return ErrSourceState
 	}
 	set := func(name string, done, total int) { stage = name; progress(name, done, total) }
-	var analysisJSON, planJSON []byte
+	var analysisJSON []byte
+	var planJSON string
 	var result Result
 	err = s.media.WithWorkspace(ctx, job, func(ws MediaWorkspace) error {
 		set("prepare", 0, len(b.Sources))
@@ -262,7 +275,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if err != nil {
 			return err
 		}
-		planJSON, err = json.Marshal(edit)
+		planJSON, err = EncodeEditPlan(edit, p.Template.CopyStyles)
 		if err != nil {
 			return err
 		}
@@ -274,7 +287,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	}
 	// Publish only after local cleanup has succeeded too. Any earlier failure
 	// leaves the old result intact and the new object to the minimum-age sweep.
-	if err = s.store.SaveGeneration(ctx, user, project, string(analysisJSON), string(planJSON), result); err != nil {
+	if err = s.store.SaveGeneration(ctx, user, project, string(analysisJSON), planJSON, result); err != nil {
 		return err
 	}
 	set("cleanup", 0, 1)

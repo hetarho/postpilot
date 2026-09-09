@@ -17,6 +17,9 @@ type Planner interface {
 type GenerationStore interface {
 	GetSourceBatch(context.Context, string, string) (SourceBatch, error)
 	LinkSourceJob(context.Context, string, string, string, time.Time) error
+	LinkRenderSourceJob(context.Context, string, string, string, int, time.Time) error
+	SaveCorrection(context.Context, string, string, int, string) (Project, error)
+	SaveRender(context.Context, string, string, int, Result) error
 	BatchForJob(context.Context, string, string) (SourceBatch, error)
 	ListConsumingBatches(context.Context) ([]SourceBatch, error)
 	AddProxy(context.Context, string, string, string) error
@@ -29,6 +32,7 @@ type GenerationStore interface {
 type GenerationStart struct {
 	UserID, ProjectID, Observe, Write string
 	Payload                           []byte
+	RenderOnly                        bool
 }
 type ClipJob struct{ ID, Status, Stage string }
 type GenerationJobs interface {
@@ -51,6 +55,7 @@ type ProcessingObjects interface {
 	ListResults(context.Context) ([]StoredObject, error)
 }
 type GenerationConfig struct {
+	Render                                RenderConfig
 	Media                                 MediaConfig
 	Analysis                              AnalysisLimits
 	ReadTTL, CleanupTimeout, OrphanMinAge time.Duration

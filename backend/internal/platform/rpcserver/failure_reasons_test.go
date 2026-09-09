@@ -28,6 +28,7 @@ import (
 // a committed list plus this comment is the honest gate at that seam.
 var publicFailureReasons = []string{
 	"CLIP_BUSY",
+	"CLIP_PLAN_CONFLICT",
 	"CLIP_INVALID_MEDIA",
 	"CLIP_INVALID_INPUT",
 	"CLIP_COPY_TOO_LONG",

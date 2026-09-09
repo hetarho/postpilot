@@ -111,6 +111,6 @@ SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status I
 -- name: LatestForClip :one
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? ORDER BY created_at DESC,id DESC LIMIT 1;
 -- name: ActivateClip :execrows
-UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind='generate_clip' AND status='queued' AND dispatch_ready=0;
+UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0;
 -- name: SweepUnactivatedClips :execrows
-UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind='generate_clip' AND status='queued' AND dispatch_ready=0;
+UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0;

@@ -1817,6 +1817,9 @@ type meteredRegistry struct {
 }
 
 func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm.Request) (llm.Response, error) {
+	if work, ok := usage.WorkFromContext(ctx); ok && work.Kind == job.KindRenderClip {
+		return llm.Response{}, job.ErrCreditAllowance
+	}
 	if work, ok := usage.WorkFromContext(ctx); ok && work.Kind == job.KindGenerateClip {
 		if err := job.ConsumeClipCall(ctx, work.UserID, work.JobID, ref.String(), req.MaxTokens); err != nil {
 			return llm.Response{}, err
