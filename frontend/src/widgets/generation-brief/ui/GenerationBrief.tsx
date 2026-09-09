@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
 import type { ContentLanguage } from '@/shared/api'
 import { CandidatePairSelect } from '@/features/configure-model-pair'
-import { GenerationOptions } from '@/features/generate-post'
+import { GenerationOptions, type GenerationOptionValues } from '@/features/generate-post'
 import { StageModelSelect } from '@/features/select-model'
 import { PostLanguageSelect } from '@/features/select-post-language'
 import { Popover, Typography, type PopoverHandle } from '@/shared/ui'
@@ -15,17 +15,18 @@ interface GenerationBriefProps {
   onTargetLanguageSelect: (language: ContentLanguage) => Promise<void> | void
   /** Decides whether the observe model is optional — a post with no photo never observes. */
   photoCount: number
-  /** Absent for a draft with no post yet: a target length has no slug to save against. */
-  targetLength?: {
+  /** Absent for a draft with no post yet: the options have no slug to save against. */
+  options?: {
     slug: string
-    value?: number
+    targetLength?: number
+    tagCount: number
     disabled: boolean
-    onSaved: (value?: number) => void
+    onSaved: (values: GenerationOptionValues) => void
   }
 }
 
 /** Everything the next AI run is given that is a SETTING rather than a per-draft decision:
- *  관찰 모델 · 작성 모델 · 작성 A/B 후보 · 글 언어 · 목표 분량.
+ *  관찰 모델 · 작성 모델 · 작성 A/B 후보 · 글 언어 · 목표 분량 · 태그 개수.
  *
  *  It is a WIDGET because it composes four different `features/*` slices and a feature may not
  *  import a sibling feature (ARCHITECTURE §3). Every callback is supplied by `pages/editor`, so
@@ -45,7 +46,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
       frozenLanguage,
       onTargetLanguageSelect,
       photoCount,
-      targetLength,
+      options,
     },
     ref,
   ) {
@@ -94,17 +95,18 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
               frozenLanguage={frozenLanguage}
               onSelect={onTargetLanguageSelect}
             />
-            {targetLength && (
+            {options && (
               <div>
                 <Typography variant="label" as="p">
                   {t('generation.brief.length', { ns: 'posts' })}
                 </Typography>
                 <GenerationOptions
-                  key={`${targetLength.slug}-${targetLength.value ?? 'natural'}`}
-                  slug={targetLength.slug}
-                  targetLength={targetLength.value}
-                  disabled={targetLength.disabled}
-                  onSaved={targetLength.onSaved}
+                  key={`${options.slug}-${options.targetLength ?? 'natural'}-${options.tagCount}`}
+                  slug={options.slug}
+                  targetLength={options.targetLength}
+                  tagCount={options.tagCount}
+                  disabled={options.disabled}
+                  onSaved={options.onSaved}
                   onClose={close}
                 />
               </div>

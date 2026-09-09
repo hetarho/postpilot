@@ -67,14 +67,14 @@ func TestParseContentFallbacksAndBadOutput(t *testing.T) {
 		"prose wrapper": "결과입니다.\n" + plain + "\n끝",
 	} {
 		t.Run(name, func(t *testing.T) {
-			content, err := ParseContent(raw)
+			content, err := ParseContent(raw, 4)
 			if err != nil || content.Title != "제목" || len(content.Blocks) != 1 {
 				t.Fatalf("content=%+v err=%v", content, err)
 			}
 		})
 	}
 	raw := strings.Repeat("가", BadOutputErrorHeadChars+20)
-	_, err := ParseContent(raw)
+	_, err := ParseContent(raw, 4)
 	var bad *ErrBadOutput
 	if !errors.As(err, &bad) {
 		t.Fatalf("err = %v, want ErrBadOutput", err)
@@ -85,7 +85,7 @@ func TestParseContentFallbacksAndBadOutput(t *testing.T) {
 	if !errors.Is(err, llm.ErrBadOutput) {
 		t.Fatalf("bad output must normalize to llm.ErrBadOutput: %v", err)
 	}
-	if _, err := ParseContent(`{"title":"missing required fields"}`); err == nil {
+	if _, err := ParseContent(`{"title":"missing required fields"}`, 4); err == nil {
 		t.Fatal("schema-incomplete content was accepted")
 	}
 }
@@ -103,7 +103,7 @@ func TestBuildWritePromptOrderAndRules(t *testing.T) {
 			t.Fatalf("profile order wrong: %v\n%s", positions, system)
 		}
 	}
-	for _, required := range []string{"하나의 문단마다 TEXT 블록 하나", "목록에 없는 이미지를 절대", "3–6개", "고유 사실, 주제, 문구를 복사하지", "같은 종결어미를 2문장보다 많이"} {
+	for _, required := range []string{"하나의 문단마다 TEXT 블록 하나", "목록에 없는 이미지를 절대", "정확히 4개의 tags", "고유 사실, 주제, 문구를 복사하지", "같은 종결어미를 2문장보다 많이"} {
 		if !strings.Contains(system, required) {
 			t.Errorf("system prompt missing %q", required)
 		}
@@ -294,16 +294,20 @@ func TestGenerateWithNoPhotosSkipsObserveAndPersistsReviewInput(t *testing.T) {
 func TestGenerateUsesFrozenTargetInsteadOfLaterPostOption(t *testing.T) {
 	current := 1600
 	frozen := 850
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, TargetLength: &current}}
+	// The same rule for the tag count (GEN-46): the live post says 3, the frozen job says 9.
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, TargetLength: &current, TagCount: 3}}
 	models := newFakeModels()
 	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
 		if !strings.Contains(request.System, "목표 길이: 약 850자") || strings.Contains(request.System, "1600") {
 			t.Fatalf("prompt did not use frozen target: %s", request.System)
 		}
+		if !strings.Contains(request.System, "정확히 9개의 tags") || strings.Contains(request.System, "정확히 3개의 tags") {
+			t.Fatalf("prompt did not use the frozen tag count: %s", request.System)
+		}
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), TargetLength: &frozen}, func(string, int, int) {}); err != nil {
+	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), TargetLength: &frozen, TagCount: 9}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 }

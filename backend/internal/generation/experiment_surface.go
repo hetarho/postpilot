@@ -269,6 +269,8 @@ func decodeExperimentSnapshot(raw []byte, kind string) (experimentSnapshot, erro
 			return experimentSnapshot{}, ErrLanguageRequired
 		}
 		snapshot.Post.TargetLanguage = snapshot.TargetLanguage
+		// A snapshot frozen before the tag count existed prompts for the default (GEN-46).
+		snapshot.Post.TagCount = resolveTagCount(snapshot.Post.TagCount)
 	}
 	return snapshot, nil
 }

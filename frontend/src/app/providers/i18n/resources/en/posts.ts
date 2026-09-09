@@ -158,6 +158,8 @@ export const posts = {
       useTarget: 'Use a target length',
       target: 'Target length',
       range: 'Enter between {{min}} and {{max}} characters.',
+      tagCount: 'Tag count',
+      tagCountRange: 'Enter between {{min}} and {{max}}.',
       failed: 'Could not save the options.',
     },
   },

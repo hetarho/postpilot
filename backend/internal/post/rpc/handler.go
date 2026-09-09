@@ -76,7 +76,7 @@ func (h *Handler) SavePostGenerationOptions(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	saved, err := h.svc.SaveGenerationOptions(ctx, userID, req.Msg.GetSlug(), optionalTargetLength(req.Msg.TargetLength))
+	saved, err := h.svc.SaveGenerationOptions(ctx, userID, req.Msg.GetSlug(), optionalTargetLength(req.Msg.TargetLength), optionalTargetLength(req.Msg.TagCount))
 	if err != nil {
 		return nil, toConnectError("save post generation options", err)
 	}
@@ -287,6 +287,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has no machine baseline", "POST_MACHINE_BASELINE_REQUIRED", nil)
 	case errors.Is(err, post.ErrPostNotFinalized):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post is not finalized", "POST_NOT_FINALIZED", nil)
+	case errors.Is(err, post.ErrInvalidTagCount):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tag count out of range", "POST_TAG_COUNT_INVALID", nil)
 	case errors.Is(err, post.ErrInvalidContent):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post content", "POST_CONTENT_INVALID", nil)
 	case errors.Is(err, post.ErrVoiceRequired):
@@ -365,6 +367,7 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		MachineBaselineRevision: p.MachineBaselineRevision,
 		CanFinalize:             p.Content != nil,
 		TargetLength:            protoTargetLength(p.TargetLength),
+		TagCount:                protoTargetLength(&p.TagCount),
 		FinalizedRevision:       p.FinalizedRevision,
 		FinalizedAt:             formatOptionalTime(p.FinalizedAt),
 		Voice:                   toProtoVoiceRef(p.Voice),

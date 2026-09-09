@@ -118,6 +118,7 @@ export const errors = {
   UPLOAD_VIDEO_UNSUPPORTED: 'That video format is not supported.',
   UPLOAD_VIDEO_INVALID: 'The video could not be uploaded. Check its length and size.',
   GENERATION_TARGET_LENGTH_INVALID: 'Check the target length.',
+  POST_TAG_COUNT_INVALID: 'Check the tag count.',
   GENERATION_ALREADY_RUNNING: 'An AI job is already running for this post.',
   GENERATION_VOICE_MISMATCH: 'The selected voice differs from the voice saved on the post.',
   REVISION_INSTRUCTION_REQUIRED: 'Enter a revision request.',

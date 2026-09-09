@@ -155,6 +155,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 	}
 	request.ContentLanguage = *post.ContentLanguage
 	request.TargetLength = cloneOptionalInt(post.TargetLength)
+	request.TagCount = resolveTagCount(post.TagCount)
 	request.ContentChars = contentChars(post.Content)
 	voiceID, err := activeVoice(post)
 	if err != nil {
@@ -188,7 +189,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Guidelines = texts
-	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, texts, request.WriteNativeEffort)
+	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, texts, request.TagCount, request.WriteNativeEffort)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
 	}
@@ -208,6 +209,8 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", ErrLanguageRequired
 	}
 	request.TargetLanguage = post.TargetLanguage
+	// From the post, never from the request: there is no per-run override to carry (GEN-46).
+	request.TagCount = resolveTagCount(post.TagCount)
 	voiceID, err := activeVoice(post)
 	if err != nil {
 		return "", err

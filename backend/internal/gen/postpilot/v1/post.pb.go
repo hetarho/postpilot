@@ -593,8 +593,12 @@ type Post struct {
 	// The answers this post gives to its template's data fields, by label. A reload seeds ①'s
 	// fields from these; labels the current template does not declare are not rendered.
 	TemplateAnswers []*TemplateAnswer `protobuf:"bytes,24,rep,name=template_answers,json=templateAnswers,proto3" json:"template_answers,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// How many tags a run asks the model for (POST-63). Always filled by the server — a post
+	// never saved with one reads as the default — and `optional` only so a client can tell
+	// "filled" from a zero an older server never sends.
+	TagCount      *int32 `protobuf:"varint,25,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Post) Reset() {
@@ -793,6 +797,13 @@ func (x *Post) GetTemplateAnswers() []*TemplateAnswer {
 		return x.TemplateAnswers
 	}
 	return nil
+}
+
+func (x *Post) GetTagCount() int32 {
+	if x != nil && x.TagCount != nil {
+		return *x.TagCount
+	}
+	return 0
 }
 
 type Image struct {
@@ -1954,9 +1965,12 @@ func (x *SavePostContentResponse) GetPost() *Post {
 }
 
 type SavePostGenerationOptionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Slug          string                 `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
-	TargetLength  *int32                 `protobuf:"varint,2,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Slug         string                 `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
+	TargetLength *int32                 `protobuf:"varint,2,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
+	// Presence-aware, unlike target_length: absent keeps the stored count, a value replaces it.
+	// The range is the server's (POST_TAG_COUNT_INVALID), 1–10.
+	TagCount      *int32 `protobuf:"varint,3,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2001,6 +2015,13 @@ func (x *SavePostGenerationOptionsRequest) GetSlug() string {
 func (x *SavePostGenerationOptionsRequest) GetTargetLength() int32 {
 	if x != nil && x.TargetLength != nil {
 		return *x.TargetLength
+	}
+	return 0
+}
+
+func (x *SavePostGenerationOptionsRequest) GetTagCount() int32 {
+	if x != nil && x.TagCount != nil {
+		return *x.TagCount
 	}
 	return 0
 }
@@ -2845,7 +2866,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
 	"\adeleted\x18\x03 \x01(\bR\adeleted\x12F\n" +
-	"\x0fsource_language\x18\x04 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\xeb\b\n" +
+	"\x0fsource_language\x18\x04 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\x9b\t\n" +
 	"\x04Post\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -2874,8 +2895,11 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x0ftarget_language\x18\x15 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
 	"\x10content_language\x18\x16 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12+\n" +
 	"\x06videos\x18\x17 \x03(\v2\x13.postpilot.v1.VideoR\x06videos\x12G\n" +
-	"\x10template_answers\x18\x18 \x03(\v2\x1c.postpilot.v1.TemplateAnswerR\x0ftemplateAnswersB\x10\n" +
-	"\x0e_target_length\"\x92\x01\n" +
+	"\x10template_answers\x18\x18 \x03(\v2\x1c.postpilot.v1.TemplateAnswerR\x0ftemplateAnswers\x12 \n" +
+	"\ttag_count\x18\x19 \x01(\x05H\x01R\btagCount\x88\x01\x01B\x10\n" +
+	"\x0e_target_lengthB\f\n" +
+	"\n" +
+	"_tag_count\"\x92\x01\n" +
 	"\x05Image\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x14\n" +
@@ -2974,11 +2998,14 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\acontent\x18\x02 \x01(\v2\x19.postpilot.v1.PostContentR\acontent\x12+\n" +
 	"\x11expected_revision\x18\x03 \x01(\x03R\x10expectedRevisionJ\x04\b\x04\x10\x05\"A\n" +
 	"\x17SavePostContentResponse\x12&\n" +
-	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"r\n" +
+	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\xa2\x01\n" +
 	" SavePostGenerationOptionsRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12(\n" +
-	"\rtarget_length\x18\x02 \x01(\x05H\x00R\ftargetLength\x88\x01\x01B\x10\n" +
-	"\x0e_target_length\"K\n" +
+	"\rtarget_length\x18\x02 \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12 \n" +
+	"\ttag_count\x18\x03 \x01(\x05H\x01R\btagCount\x88\x01\x01B\x10\n" +
+	"\x0e_target_lengthB\f\n" +
+	"\n" +
+	"_tag_count\"K\n" +
 	"!SavePostGenerationOptionsResponse\x12&\n" +
 	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"V\n" +
 	"\x13FinalizePostRequest\x12\x12\n" +

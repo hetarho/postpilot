@@ -8,6 +8,7 @@ import {
   type RefObject,
 } from 'react'
 import { useTranslation } from 'react-i18next'
+import { POST_TAG_COUNT_DEFAULT } from '@/shared/config'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { FailureNotice, isTerminal } from '@/entities/generation-job'
 import {
@@ -218,6 +219,14 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     setServerTargetLength(post?.targetLength)
     setTargetLength(post?.targetLength)
   }
+  // The tag count rides the same pattern. It is not sent by any start call — the server reads
+  // it off the post (GEN-46) — so the local copy only keeps the brief's field current.
+  const [tagCount, setTagCount] = useState(post?.tagCount ?? POST_TAG_COUNT_DEFAULT)
+  const [serverTagCount, setServerTagCount] = useState(post?.tagCount)
+  if (serverTagCount !== post?.tagCount) {
+    setServerTagCount(post?.tagCount)
+    setTagCount(post?.tagCount ?? POST_TAG_COUNT_DEFAULT)
+  }
 
   const titleField = (
     <TitleField value={title} onChange={setTitle} fieldRef={titleRef} nextRef={memoRef} />
@@ -245,15 +254,20 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       }
       onTargetLanguageSelect={post ? autosave.assignTargetLanguage : setNewTargetLanguage}
       photoCount={post?.images.length ?? 0}
-      targetLength={
+      options={
         post
           ? {
               slug: post.slug,
-              value: targetLength,
-              // The length is the one field in the brief a running job has already frozen; the
-              // others are still worth changing for the NEXT run, which is why only this one greys.
+              targetLength,
+              tagCount,
+              // The length and the tag count are the fields in the brief a running job has already
+              // frozen; the others are still worth changing for the NEXT run, which is why only
+              // these grey.
               disabled: Boolean(post.activeJob && !isTerminal(post.activeJob)),
-              onSaved: setTargetLength,
+              onSaved: (values) => {
+                setTargetLength(values.targetLength)
+                setTagCount(values.tagCount)
+              },
             }
           : undefined
       }

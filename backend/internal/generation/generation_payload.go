@@ -49,9 +49,12 @@ type observationPayload struct {
 }
 
 type generationPayload struct {
-	TargetLanguage string           `json:"target_language"`
-	TargetLength   *int             `json:"target_length,omitempty"`
-	Template       *templatePayload `json:"template,omitempty"`
+	TargetLanguage string `json:"target_language"`
+	TargetLength   *int   `json:"target_length,omitempty"`
+	// Omitted when zero so a payload frozen before the member existed decodes unchanged;
+	// the decoder resolves 0 to the default (GEN-46).
+	TagCount int              `json:"tag_count,omitempty"`
+	Template *templatePayload `json:"template,omitempty"`
 	// The applicable guideline texts in injection order, frozen exactly as Template is. A
 	// payload written before guidelines existed decodes with this absent, which is "none".
 	Guidelines []string `json:"guidelines,omitempty"`
@@ -73,6 +76,7 @@ type generationPayload struct {
 type GenerationOptions struct {
 	TargetLanguage Language
 	TargetLength   *int
+	TagCount       int
 	Template       *TemplateBrief
 	Guidelines     []string
 	// ObserveFiles carries presence: nil observes every attached photo, non-nil-but-empty
@@ -90,6 +94,7 @@ func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
 	return json.Marshal(generationPayload{
 		TargetLanguage:    options.TargetLanguage.String(),
 		TargetLength:      cloneOptionalInt(options.TargetLength),
+		TagCount:          options.TagCount,
 		Template:          encodeTemplate(options.Template),
 		Guidelines:        cloneTexts(options.Guidelines),
 		ObserveFiles:      cloneOptionalTexts(options.ObserveFiles),
@@ -103,7 +108,7 @@ func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
 // A payload written before templates existed simply decodes with the field absent.
 func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 	if len(raw) == 0 {
-		return GenerationOptions{TargetLanguage: LanguageKorean}, nil
+		return GenerationOptions{TargetLanguage: LanguageKorean, TagCount: resolveTagCount(0)}, nil
 	}
 	var payload generationPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
@@ -125,6 +130,7 @@ func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 	return GenerationOptions{
 		TargetLanguage:    language,
 		TargetLength:      cloneOptionalInt(payload.TargetLength),
+		TagCount:          resolveTagCount(payload.TagCount),
 		Template:          decodeTemplate(payload.Template),
 		Guidelines:        cloneTexts(payload.Guidelines),
 		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),

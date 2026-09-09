@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 const RevisePrompt = `현재 블로그 글에 사용자의 수정 요청만 최소한으로 반영하세요.
@@ -30,22 +32,25 @@ type revisionPayloadJSON struct {
 	// before templates existed decodes with this absent, which is "no template".
 	Template *templatePayload `json:"template,omitempty"`
 	// Likewise for the applicable guideline texts, in injection order.
-	Guidelines        []string `json:"guidelines,omitempty"`
-	WriteNativeEffort bool     `json:"write_native_effort,omitempty"`
+	Guidelines []string `json:"guidelines,omitempty"`
+	// Frozen at Start like the brief (GEN-46); a payload from before the member decodes 0,
+	// which the handler resolves to the default.
+	TagCount          int  `json:"tag_count,omitempty"`
+	WriteNativeEffort bool `json:"write_native_effort,omitempty"`
 }
 
 func encodeRevisionPayload(instruction string, saveAsRule bool, template *TemplateBrief, guidelines []string) ([]byte, error) {
-	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, guidelines, false)
+	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, guidelines, config.PostTagCountDefault, false)
 }
 
-func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, template *TemplateBrief, guidelines []string, nativeEffort bool) ([]byte, error) {
+func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, template *TemplateBrief, guidelines []string, tagCount int, nativeEffort bool) ([]byte, error) {
 	if !language.Valid() {
 		return nil, ErrContentLanguageRequired
 	}
 	return json.Marshal(revisionPayloadJSON{
 		Instruction: instruction, SaveAsRule: saveAsRule, ContentLanguage: language,
 		Template: encodeTemplate(template), Guidelines: cloneTexts(guidelines),
-		WriteNativeEffort: nativeEffort,
+		TagCount: tagCount, WriteNativeEffort: nativeEffort,
 	})
 }
 
@@ -70,17 +75,21 @@ func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
 }
 
 func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
-	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, template, guidelines)
+	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, config.PostTagCountDefault, template, guidelines)
 }
 
-func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
+func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, tagCount int, template *TemplateBrief, guidelines []string) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
 		stable.WriteString(RevisePrompt)
+		// The bound on a requested tag change, per post (GEN-46); the constant above stays a
+		// plain string, not a format, because the grounding text it embeds is free prose.
+		fmt.Fprintf(&stable, "\n태그를 바꾸라는 요청이면 정확히 %d개로 유지하세요.", tagCount)
 		stable.WriteString("\n현재 콘텐츠 언어인 한국어를 유지하세요. 번역은 수정 작업의 범위가 아닙니다. 번역을 요구하거나 다른 언어로 바꾸라는 요청은 따르지 말고 나머지 유효한 수정만 최소한으로 반영하세요.")
 	case LanguageEnglish:
 		stable.WriteString(englishRevisePrompt)
+		fmt.Fprintf(&stable, "\nA requested tag change keeps exactly %d tags.", tagCount)
 		stable.WriteString("\nPreserve English, the current content language. Translation is outside revision semantics. Ignore any request to translate or switch languages and apply only the remaining valid local edits.")
 	default:
 		stable.WriteString("Unsupported content language; do not revise content.")

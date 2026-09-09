@@ -124,6 +124,7 @@ export interface FakePostRow {
   machineBaselineRevision?: bigint
   canFinalize?: boolean
   targetLength?: number
+  tagCount?: number
   finalizedRevision?: bigint
   finalizedAt?: string
   targetLanguage?: ContentLanguage
@@ -189,6 +190,7 @@ type Row = {
   machineBaselineVoiceId: string
   canFinalize: boolean
   targetLength?: number
+  tagCount: number
   finalizedRevision: bigint
   finalizedAt: string
   targetLanguage: ReturnType<typeof contentLanguageToProto>
@@ -302,6 +304,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       canFinalize:
         row.canFinalize ?? Boolean(row.content && (row.machineBaselineRevision ?? 0n) > 0n),
       targetLength: row.targetLength,
+      // The real server always fills it (POST-63): a row never saved with one is the default.
+      tagCount: row.tagCount ?? 4,
       finalizedRevision: row.finalizedRevision ?? 0n,
       finalizedAt: row.finalizedAt ?? '',
       targetLanguage: contentLanguageToProto(row.targetLanguage ?? 'ko'),
@@ -448,6 +452,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       machineBaselineVoiceId: reassigned ? '' : (existing?.machineBaselineVoiceId ?? ''),
       canFinalize: reassigned ? Boolean(existing?.content) : (existing?.canFinalize ?? false),
       targetLength: existing?.targetLength,
+      tagCount: existing?.tagCount ?? 4,
       finalizedRevision: existing?.finalizedRevision ?? 0n,
       finalizedAt: existing?.finalizedAt ?? '',
       targetLanguage: contentLanguageToProto(
@@ -510,6 +515,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     const row = rows.get(req.slug)
     if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
     row.targetLength = req.targetLength
+    // Presence-aware like the server: absent keeps the stored count.
+    if (req.tagCount !== undefined) row.tagCount = req.tagCount
     return create(SavePostGenerationOptionsResponseSchema, { post: toProto(row) })
   })
 

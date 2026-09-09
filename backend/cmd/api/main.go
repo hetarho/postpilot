@@ -446,7 +446,7 @@ func main() {
 		return generationSvc.Generate(ctx, generation.GenerateJob{
 			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID,
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
-			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, Template: options.Template,
+			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, TagCount: options.TagCount, Template: options.Template,
 			Guidelines: options.Guidelines, ObserveFiles: options.ObserveFiles, Observations: options.Observations,
 			WriteNativeEffort: options.WriteNativeEffort,
 		}, generation.Progress(progress))
@@ -1031,6 +1031,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		// no-op — every prompt would be built as if no post ever had a 템플릿.
 		TemplateID:   found.TemplateID,
 		TargetLength: found.TargetLength,
+		TagCount:     found.TagCount,
 		Images:       make([]generation.Image, 0, len(found.Images)+len(found.Videos)),
 		// The stored contact sheet, read here so the ENQUEUE can decide what to reuse. It
 		// was write-only from this context's point of view before change 21, which is why
@@ -1175,7 +1176,7 @@ type generationJobs struct {
 func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest) (string, error) {
 	slug := request.PostSlug
 	payload, err := generation.EncodeGenerationPayload(generation.GenerationOptions{
-		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, Template: request.Template,
+		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, TagCount: request.TagCount, Template: request.Template,
 		Guidelines: request.Guidelines, ObserveFiles: request.ObserveFiles, Observations: request.Observations,
 	})
 	if err != nil {

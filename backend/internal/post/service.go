@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // Service is the drafting context's behavior. Every method takes the acting user id
@@ -754,22 +756,33 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 	return s.Get(ctx, userID, slug)
 }
 
-func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, targetLength *int) (Post, error) {
+// SaveGenerationOptions replaces the target length (nil clears it to natural length) and,
+// when tagCount is present, the tag count; an absent tagCount keeps the stored one (POST-63).
+// The two presence rules differ because the two fields do: the length has a real "none",
+// the count never does, so absence can only mean "not this time".
+func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, targetLength *int, tagCount *int) (Post, error) {
 	if targetLength != nil && *targetLength <= 0 {
 		return Post{}, &InvalidContentError{Reason: "target length must be positive"}
+	}
+	if tagCount != nil && (*tagCount < config.PostTagCountMin || *tagCount > config.PostTagCountMax) {
+		return Post{}, ErrInvalidTagCount
 	}
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
 		return Post{}, err
 	}
-	if equalOptionalInt(found.TargetLength, targetLength) {
+	nextTagCount := found.TagCount
+	if tagCount != nil {
+		nextTagCount = *tagCount
+	}
+	if equalOptionalInt(found.TargetLength, targetLength) && nextTagCount == found.TagCount {
 		return s.Get(ctx, userID, slug)
 	}
 	contentStore, ok := s.store.(ContentStore)
 	if !ok {
 		return Post{}, errors.New("post content store is not configured")
 	}
-	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, targetLength, s.now())
+	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, targetLength, nextTagCount, s.now())
 	if err != nil {
 		return Post{}, err
 	}

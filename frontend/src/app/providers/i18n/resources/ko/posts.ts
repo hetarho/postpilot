@@ -153,6 +153,8 @@ export const posts = {
       useTarget: '목표 글자 수 사용',
       target: '목표 글자 수',
       range: '{{min}}–{{max}}자로 입력해 주세요.',
+      tagCount: '태그 개수',
+      tagCountRange: '{{min}}–{{max}}개로 입력해 주세요.',
       failed: '옵션을 저장하지 못했어요.',
     },
   },

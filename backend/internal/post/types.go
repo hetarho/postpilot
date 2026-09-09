@@ -102,6 +102,7 @@ var (
 	ErrPostPublishing       = errors.New("post has a live publish job")
 	ErrStaleContentRevision = errors.New("post content revision is stale")
 	ErrInvalidContent       = errors.New("invalid post content")
+	ErrInvalidTagCount      = errors.New("tag count out of range")
 	ErrNoMachineBaseline    = errors.New("post has no machine baseline to finalize")
 	ErrPostNotFinalized     = errors.New("post content is not finalized")
 	// ErrVoiceRequired: a create (or a present voice_id) arrived without a concrete voice.
@@ -222,9 +223,12 @@ type Post struct {
 	// current voice agree.
 	MachineBaselineVoiceID string
 	TargetLength           *int
-	FinalizedRevision      int64
-	FinalizedAt            *time.Time
-	Observations           []Observation
+	// TagCount is how many tags a run asks for (POST-63). Always concrete: the store reads a
+	// row never saved with one as config.PostTagCountDefault, so no caller sees "unset".
+	TagCount          int
+	FinalizedRevision int64
+	FinalizedAt       *time.Time
+	Observations      []Observation
 
 	// TemplateAnswers is what this post answers to its template's data fields, by label,
 	// ordered by label. Populated by Get like Images and Videos are.

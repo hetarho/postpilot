@@ -180,6 +180,11 @@ type PostInput struct {
 	TargetLanguage  Language
 	ContentLanguage *Language
 	TargetLength    *int
+	// TagCount is how many tags the prompt asks for (POST-63). Read from the post at enqueue
+	// and frozen like TargetLength; a write-experiment snapshot carries it inside this struct,
+	// so a different count is a different input hash. 0 is only ever a legacy decode and
+	// resolves to the default.
+	TagCount int `json:"tag_count,omitempty"`
 	// WriteNativeEffort is frozen from the selected catalog model at enqueue, so the hold
 	// and a delayed execution use the same completion budget even if curation changes.
 	WriteNativeEffort bool
@@ -206,6 +211,8 @@ type StartRequest struct {
 	WriteModel     string
 	TargetLanguage Language
 	TargetLength   *int
+	// TagCount is read from the post at Start, never from the request (GEN-46).
+	TagCount int
 	// Template is resolved from the post server-side at Start and frozen into the payload;
 	// the request never carries one. Nil means the post had none, or it was deleted first.
 	Template *TemplateBrief
@@ -234,6 +241,7 @@ type GenerateJob struct {
 	WriteModel     string
 	TargetLanguage Language
 	TargetLength   *int
+	TagCount       int
 	Template       *TemplateBrief
 	Guidelines     []string
 	// ObserveFiles carries PRESENCE, not just emptiness. Nil is a job queued before this
@@ -259,8 +267,11 @@ type StartRevisionRequest struct {
 	Guidelines      []string
 	// The enqueue adapter uses the same frozen length facts as the revision handler to price
 	// the completion budget. Neither field is sent by the client or persisted independently.
-	TargetLength      *int
-	ContentChars      int
+	TargetLength *int
+	ContentChars int
+	// TagCount is frozen into the revision payload at Start (GEN-46); the handler prompts
+	// with the payload value, not the live post's.
+	TagCount          int
 	WriteNativeEffort bool
 }
 

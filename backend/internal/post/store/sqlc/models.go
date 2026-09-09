@@ -40,6 +40,7 @@ type Post struct {
 	TemplateID              sql.NullString
 	TargetLanguage          string
 	ContentLanguage         sql.NullString
+	TagCount                sql.NullInt64
 }
 
 type Upload struct {

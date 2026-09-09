@@ -112,6 +112,7 @@ export const errors = {
   UPLOAD_VIDEO_UNSUPPORTED: '지원하지 않는 영상 형식이에요.',
   UPLOAD_VIDEO_INVALID: '영상을 올리지 못했어요. 길이나 크기를 확인해 주세요.',
   GENERATION_TARGET_LENGTH_INVALID: '목표 글자 수를 확인해 주세요.',
+  POST_TAG_COUNT_INVALID: '태그 개수를 확인해 주세요.',
   GENERATION_ALREADY_RUNNING: '이 글에서 AI 작업이 이미 진행 중이에요.',
   GENERATION_VOICE_MISMATCH: '글에 저장된 말투와 선택한 말투가 달라요.',
   REVISION_INSTRUCTION_REQUIRED: '수정 요청을 입력해 주세요.',

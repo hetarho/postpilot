@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store/sqlc"
 )
@@ -243,9 +244,10 @@ func (s *Store) SaveContent(ctx context.Context, slug, userID string, content po
 	return n == 1, nil
 }
 
-func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, updatedAt time.Time) (bool, error) {
+func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, updatedAt time.Time) (bool, error) {
 	n, err := s.write.SavePostGenerationOptions(ctx, sqlc.SavePostGenerationOptionsParams{
-		TargetLength: optionalInt64(targetLength), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+		TargetLength: optionalInt64(targetLength), TagCount: sql.NullInt64{Int64: int64(tagCount), Valid: true},
+		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("save post generation options: %w", err)
@@ -760,6 +762,7 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		MachineBaselineRevision: row.MachineBaselineRevision,
 		MachineBaselineVoiceID:  row.MachineBaselineVoiceID.String,
 		TargetLength:            optionalInt(row.TargetLength),
+		TagCount:                tagCountOrDefault(row.TagCount),
 		FinalizedRevision:       row.FinalizedRevision.Int64,
 		FinalizedAt:             finalizedAt,
 		Observations:            observations,
@@ -814,6 +817,15 @@ func optionalInt(value sql.NullInt64) *int {
 	}
 	result := int(value.Int64)
 	return &result
+}
+
+// tagCountOrDefault is where NULL becomes the default (POST-63): rows from before the
+// column existed, and rows never saved through the options call, read as 4 with no backfill.
+func tagCountOrDefault(value sql.NullInt64) int {
+	if !value.Valid {
+		return config.PostTagCountDefault
+	}
+	return int(value.Int64)
 }
 
 func optionalInt64(value *int) sql.NullInt64 {

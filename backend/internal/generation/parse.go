@@ -81,7 +81,11 @@ type observationsJSON struct {
 	Observations []observationJSON `json:"observations"`
 }
 
-func ParseContent(raw string) (*PostContent, error) {
+// ParseContent turns the model's text into a PostContent. tagCount is the frozen per-post
+// count: a longer tag list keeps its first tagCount entries in model order and a shorter one
+// is accepted as written (GEN-46) — failing a paid write over a miscount is worse than a
+// shorter list. A missing `tags` key is still bad output.
+func ParseContent(raw string, tagCount int) (*PostContent, error) {
 	candidate, ok := jsonCandidate(raw)
 	if !ok {
 		return nil, badOutput(raw)
@@ -94,8 +98,8 @@ func ParseContent(raw string) (*PostContent, error) {
 	if err := json.Unmarshal([]byte(candidate), &wire); err != nil {
 		return nil, badOutput(raw)
 	}
-	if len(wire.Tags) < TagsMin || len(wire.Tags) > TagsMax {
-		return nil, badOutput(raw)
+	if tagCount > 0 && len(wire.Tags) > tagCount {
+		wire.Tags = wire.Tags[:tagCount]
 	}
 	content := &PostContent{Title: wire.Title, Summary: wire.Summary, Tags: wire.Tags}
 	for _, block := range wire.Blocks {

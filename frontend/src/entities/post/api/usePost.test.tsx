@@ -107,6 +107,8 @@ it('exposes the required mount refresh even while cached post detail is availabl
   })
 
   expect(view.result.current.post?.targetLength).toBe(900)
+  // A message without the member (an older server) reads as the default count (POST-63).
+  expect(view.result.current.post?.tagCount).toBe(4)
   expect(view.result.current.isPending).toBe(false)
   expect(view.result.current.isFetching).toBe(true)
 

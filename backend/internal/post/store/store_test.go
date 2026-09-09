@@ -227,7 +227,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	seedPost(t, s, "editable", "alice", testNow)
 	baseline := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "생성 문장입니다."}}}
 	target1400 := 1400
-	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1400, testNow); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1400, 4, testNow); err != nil || !updated {
 		t.Fatalf("option save: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", baseline, post.LanguageKorean, testNow); err != nil || !updated {
@@ -241,7 +241,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 		t.Fatalf("stale save: updated=%v err=%v", updated, err)
 	}
 	target1500 := 1500
-	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1500, testNow.Add(time.Minute)); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1500, 7, testNow.Add(time.Minute)); err != nil || !updated {
 		t.Fatalf("option update: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.Finalize(ctx, "editable", "alice", "machine", 2, testNow.Add(2*time.Minute)); err != nil || !updated {

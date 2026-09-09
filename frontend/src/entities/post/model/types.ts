@@ -54,6 +54,8 @@ export interface PostDraft {
   machineBaselineVoiceId: string
   canFinalize: boolean
   targetLength?: number
+  /** Always concrete: the server fills it and an older message falls back to the default. */
+  tagCount: number
   finalizedRevision: bigint
   finalizedAt: string
   targetLanguage: ContentLanguage

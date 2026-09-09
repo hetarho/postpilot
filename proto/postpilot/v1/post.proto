@@ -162,6 +162,10 @@ message Post {
   // The answers this post gives to its template's data fields, by label. A reload seeds ①'s
   // fields from these; labels the current template does not declare are not rendered.
   repeated TemplateAnswer template_answers = 24;
+  // How many tags a run asks the model for (POST-63). Always filled by the server — a post
+  // never saved with one reads as the default — and `optional` only so a client can tell
+  // "filled" from a zero an older server never sends.
+  optional int32 tag_count = 25;
 }
 
 message Image {
@@ -323,6 +327,9 @@ message SavePostContentResponse { Post post = 1; }
 message SavePostGenerationOptionsRequest {
   string slug = 1;
   optional int32 target_length = 2;
+  // Presence-aware, unlike target_length: absent keeps the stored count, a value replaces it.
+  // The range is the server's (POST_TAG_COUNT_INVALID), 1–10.
+  optional int32 tag_count = 3;
 }
 message SavePostGenerationOptionsResponse { Post post = 1; }
 

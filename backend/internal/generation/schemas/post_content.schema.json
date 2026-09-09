@@ -5,7 +5,7 @@
     "properties": {
       "title": {"type": "string"},
       "summary": {"type": "string"},
-    "tags": {"type": "array", "minItems": 3, "maxItems": 6, "items": {"type": "string"}},
+    "tags": {"type": "array", "items": {"type": "string"}},
       "blocks": {
         "type": "array",
         "items": {

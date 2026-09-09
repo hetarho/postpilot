@@ -32,7 +32,7 @@ UPDATE posts SET content = ?, content_revision = content_revision + 1,
 WHERE slug = ? AND user_id = ? AND content_revision = ?;
 
 -- name: SavePostGenerationOptions :execrows
-UPDATE posts SET target_length = ?, updated_at = ?
+UPDATE posts SET target_length = ?, tag_count = ?, updated_at = ?
 WHERE slug = ? AND user_id = ?;
 
 -- Finalizing also copies the confirmed AI title into posts.title (spec/legacy/policy/posts.md). ONE
@@ -48,7 +48,8 @@ WHERE slug = ? AND user_id = ? AND content_revision = ?
 -- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
-       target_length, finalized_revision, finalized_at, template_id, target_language, content_language
+       target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
+       tag_count
 FROM posts WHERE slug = ?;
 
 -- name: GetLearningSnapshot :one

@@ -54,6 +54,17 @@ const maxVideoBytes int64 = 200 << 20 // 200 MiB
 // has to price is unbounded.
 const maxPhotosPerPost = 30
 
+// The per-post tag count (POST-63): what a post never saved with one reads as, and the
+// range SavePostGenerationOptions accepts. Exported and shared here rather than declared in
+// `internal/post` because `internal/generation` needs the default too — for a queued payload
+// or a write-experiment snapshot frozen before the member existed — and may not import post.
+// The frontend mirrors the three as POST_TAG_COUNT_DEFAULT / _MIN / _MAX.
+const (
+	PostTagCountDefault = 4
+	PostTagCountMin     = 1
+	PostTagCountMax     = 10
+)
+
 // llmStageTimeout bounds one provider call. Generation takes 30 s – 2 min and a long
 // draft can take longer on a slow model (PRD §6.6); the API is a long-lived container,
 // so the bound exists to fail a hung call, not to fit a platform limit.

@@ -297,6 +297,14 @@ export const POST_TARGET_LENGTH_MAX = 10_000
  *  overwritten by it. */
 export const POST_TARGET_LENGTH_DEFAULT = 1_000
 
+/** How many tags a run asks for (POST-63). Unlike the length there is no "natural" count to
+ *  opt into: a post never saved with one reads as the default, and the field is always shown.
+ *  The server owns the same three values (`config.PostTagCount*`) and refuses anything outside
+ *  the range with POST_TAG_COUNT_INVALID. */
+export const POST_TAG_COUNT_DEFAULT = 4
+export const POST_TAG_COUNT_MIN = 1
+export const POST_TAG_COUNT_MAX = 10
+
 /** How long the HEIC decoder worker stays alive after its last file. Its WASM heap does
  *  not shrink after a 12 MP decode, so it is not kept for a whole session; the chunk is
  *  in the browser cache, so bringing it back for the next batch is cheap. */

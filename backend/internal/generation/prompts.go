@@ -3,6 +3,8 @@ package generation
 import (
 	"fmt"
 	"strings"
+
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 const ObservePrompt = `사진마다 파일명을 정확히 대응해 관찰 사실만 반환하세요. 추측하거나 이야기를 만들지 마세요.
@@ -191,22 +193,24 @@ func writeGuidelinesSection(out *strings.Builder, guidelines []string) {
 // consumers that explicitly request the established Korean contract. Runtime work uses
 // BuildWritePromptForLanguage with its frozen language.
 func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
-	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, template, guidelines)
+	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, config.PostTagCountDefault, template, guidelines)
 }
 
-func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames, videoFilenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
+// tagCount is the frozen per-post count (GEN-46); the sentence stays in the stable part
+// where the fixed range used to be, so the golden order is unchanged.
+func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames, videoFilenames []string, targetLength *int, tagCount int, template *TemplateBrief, guidelines []string) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
 		stable.WriteString(WritePrompt)
-		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, %d–%d개의 tags, blocks를 반환하세요.", TagsMin, TagsMax)
+		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, 정확히 %d개의 tags, blocks를 반환하세요.", tagCount)
 		stable.WriteString("\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
 		if len(videoFilenames) > 0 {
 			stable.WriteString(videoWriteInstructions)
 		}
 	case LanguageEnglish:
 		stable.WriteString(englishWritePrompt)
-		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, %d–%d tags, and blocks.", TagsMin, TagsMax)
+		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, exactly %d tags, and blocks.", tagCount)
 		stable.WriteString("\nThe output language is English. Write the title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
 		if len(videoFilenames) > 0 {
 			stable.WriteString(englishVideoWriteInstructions)

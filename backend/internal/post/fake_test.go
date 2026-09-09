@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // fakeStore is an in-memory post.Store. These tests are about the context's rules —
@@ -41,6 +43,11 @@ func (f *fakeStore) CreatePost(_ context.Context, p Post) error {
 	defer f.mu.Unlock()
 	if _, exists := f.posts[p.Slug]; exists {
 		return ErrDuplicateSlug
+	}
+	// The real store reads a NULL tag_count as the default (POST-63); the fake mirrors that
+	// at insert so a freshly created post reads the same way through both.
+	if p.TagCount == 0 {
+		p.TagCount = config.PostTagCountDefault
 	}
 	f.posts[p.Slug] = p
 	return nil
@@ -186,7 +193,7 @@ func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content 
 	return true, nil
 }
 
-func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, targetLength *int, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, targetLength *int, tagCount int, updatedAt time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
@@ -194,6 +201,7 @@ func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string
 		return false, nil
 	}
 	existing.TargetLength = targetLength
+	existing.TagCount = tagCount
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
 	return true, nil

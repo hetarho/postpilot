@@ -6,6 +6,7 @@ import { toPostVideo } from '@/entities/video/@x/post'
 import { toGenerationJob } from '@/entities/generation-job/@x/post'
 import { toTemplateRef } from '@/entities/template/@x/post'
 import { toVoiceRef } from '@/entities/voice/@x/post'
+import { POST_TAG_COUNT_DEFAULT } from '@/shared/config'
 import {
   contentLanguageFromProto,
   PostService,
@@ -44,6 +45,7 @@ export function toPostDraft(post: Post): PostDraft {
     machineBaselineVoiceId: post.machineBaselineVoiceId,
     canFinalize: post.canFinalize,
     targetLength: post.targetLength,
+    tagCount: post.tagCount ?? POST_TAG_COUNT_DEFAULT,
     finalizedRevision: post.finalizedRevision,
     finalizedAt: post.finalizedAt,
     targetLanguage: requireContentLanguage(post.targetLanguage),

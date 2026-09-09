@@ -79,9 +79,10 @@ function renderBrief(
       targetLanguage="ko"
       onTargetLanguageSelect={vi.fn()}
       photoCount={0}
-      targetLength={{
+      options={{
         slug: 'post-a',
-        value: undefined,
+        targetLength: undefined,
+        tagCount: 4,
         disabled: false,
         onSaved: vi.fn(),
       }}
@@ -119,6 +120,8 @@ describe('GenerationBrief', () => {
       expect(screen.queryByRole('combobox', { name: absent })).not.toBeInTheDocument()
     }
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeInTheDocument()
+    // The tag count sits under the length, always visible, holding the post's value (POST-63).
+    expect(screen.getByLabelText('태그 개수')).toHaveValue(4)
     // The A/B pair is chosen HERE now, so the way out to the AI 모델 page that stood in for it is
     // gone — following it mid-draft cost the user their place.
     expect(panel.textContent).not.toContain('AI 모델에서 두 후보 설정')
@@ -197,10 +200,11 @@ describe('GenerationBrief', () => {
   // is absent rather than offered and refused.
   it('omits 목표 분량 before the post exists', async () => {
     const user = userEvent.setup()
-    renderBrief({ targetLength: undefined })
+    renderBrief({ options: undefined })
 
     await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
     expect(screen.queryByLabelText('목표 글자 수 사용')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('태그 개수')).not.toBeInTheDocument()
     expect(await screen.findByRole('combobox', { name: /작성 모델/ })).toBeInTheDocument()
   })
 })

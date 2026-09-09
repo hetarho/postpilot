@@ -332,7 +332,7 @@ func TestWritePromptSeparatesVideoMaterialAndLeavesAPhotoOnlyPostUntouched(t *te
 		{File: "a.mp4", Scene: "해변", Events: []string{"파도가 친다"}, Speech: "좋다"},
 	}
 	system, user := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), observations,
-		"MEMO", "TITLE", []string{"IMG_1.jpg"}, []string{"a.mp4"}, nil, nil, nil)
+		"MEMO", "TITLE", []string{"IMG_1.jpg"}, []string{"a.mp4"}, nil, 4, nil, nil)
 
 	for _, want := range []string{
 		"첨부 사진 파일명(정확히 일치해야 함): IMG_1.jpg",
@@ -357,7 +357,7 @@ func TestWritePromptSeparatesVideoMaterialAndLeavesAPhotoOnlyPostUntouched(t *te
 
 	// And with no video: the fixed prompt and the per-post material are what they always were.
 	plainSystem, plainUser := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), observations[:1],
-		"MEMO", "TITLE", []string{"IMG_1.jpg"}, nil, nil, nil, nil)
+		"MEMO", "TITLE", []string{"IMG_1.jpg"}, nil, nil, 4, nil, nil)
 	if strings.Contains(plainSystem, "VIDEO") || strings.Contains(plainUser, "영상") {
 		t.Errorf("a photo-only post was told about videos:\n%s\n%s", plainSystem, plainUser)
 	}

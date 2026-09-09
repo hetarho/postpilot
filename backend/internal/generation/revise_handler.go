@@ -38,9 +38,10 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	for _, image := range post.Images {
 		filenames = append(filenames, image.Filename)
 	}
-	// The brief and the 지침 come from the frozen payload, never from the live rows, exactly
-	// as the generate handler does it.
-	system, user := BuildRevisePromptForLanguage(payload.ContentLanguage, profile, *post.Content, filenames, payload.Instruction, post.TargetLength, decodeTemplate(payload.Template), payload.Guidelines)
+	// The brief, the 지침 and the tag count come from the frozen payload, never from the
+	// live rows, exactly as the generate handler does it.
+	tagCount := resolveTagCount(payload.TagCount)
+	system, user := BuildRevisePromptForLanguage(payload.ContentLanguage, profile, *post.Content, filenames, payload.Instruction, post.TargetLength, tagCount, decodeTemplate(payload.Template), payload.Guidelines)
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
@@ -59,7 +60,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if err != nil {
 		return providerCallError("글 수정", err)
 	}
-	content, err := ParseContent(response.Text)
+	content, err := ParseContent(response.Text, tagCount)
 	if err != nil {
 		return responseParseError(response, err)
 	}

@@ -21,7 +21,10 @@ func (s *Service) write(ctx context.Context, post PostInput, observations []Obse
 
 func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Profile, observations []Observation, model llm.ModelRef) (PostContent, llm.Usage, error) {
 	photos, videos := AttachmentNames(post.Images)
-	system, user := BuildWritePromptForLanguage(post.TargetLanguage, profile, observations, post.Memo, post.Title, photos, videos, post.TargetLength, post.Template, post.Guidelines)
+	// A snapshot frozen before the member existed carries 0 here; the prompt and the parser
+	// must agree on one number, so it is resolved once.
+	tagCount := resolveTagCount(post.TagCount)
+	system, user := BuildWritePromptForLanguage(post.TargetLanguage, profile, observations, post.Memo, post.Title, photos, videos, post.TargetLength, tagCount, post.Template, post.Guidelines)
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
@@ -36,7 +39,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	if err != nil {
 		return PostContent{}, response.Usage, providerCallError("글 작성", err)
 	}
-	content, err := ParseContent(response.Text)
+	content, err := ParseContent(response.Text, tagCount)
 	if err != nil {
 		return PostContent{}, response.Usage, responseParseError(response, err)
 	}

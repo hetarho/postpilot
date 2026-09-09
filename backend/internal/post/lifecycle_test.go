@@ -14,7 +14,7 @@ func TestFinalizedLifecycleKeepsIdenticalSavesAndDemotesChangedContent(t *testin
 		t.Fatal(err)
 	}
 	target := 900
-	withOption, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, &target)
+	withOption, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, &target, nil)
 	if err != nil || withOption.ContentRevision != 1 || withOption.Status != StatusReview {
 		t.Fatalf("option changed lifecycle: %+v err=%v", withOption, err)
 	}

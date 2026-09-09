@@ -3,6 +3,7 @@ export { GenerationOptions } from './ui/GenerationOptions'
 export { ReobservePicker } from './ui/ReobservePicker'
 export type { GenerationActionsHandle } from './ui/GenerationActions'
 export { useStartWriteExperiment } from './api/useStartWriteExperiment'
+export type { GenerationOptionValues } from './api/useGenerationOptions'
 export { needsPicker } from './model/reobserve'
 export {
   ordinaryGenerationPreconditions,
