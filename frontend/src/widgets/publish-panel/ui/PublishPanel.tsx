@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { publishStageLabel, usePublishJob } from '@/entities/publish-job'
+import { isBeforeCommitFence, publishStageLabel, usePublishJob } from '@/entities/publish-job'
 import { usePublishingAgents } from '@/entities/publishing-agent'
 import { PublishPostForm } from '@/features/publish-post'
-import { PublishStage, PublishStatus } from '@/shared/api'
+import { PublishStatus } from '@/shared/api'
 import { Button, Notice, Typography } from '@/shared/ui'
 
 export function PublishPanel({
@@ -35,7 +35,7 @@ export function PublishPanel({
     (job.status === PublishStatus.QUEUED ||
       job.status === PublishStatus.RUNNING ||
       job.status === PublishStatus.NEEDS_ATTENTION) &&
-    job.stage < PublishStage.COMMITTING
+    isBeforeCommitFence(job.stage)
 
   return (
     <section aria-labelledby="publish-heading" className="mt-12">

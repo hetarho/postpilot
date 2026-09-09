@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PublishingAgent } from '@/entities/publishing-agent'
-import type { PublishJob } from '@/entities/publish-job'
+import { isBeforeCommitFence, type PublishJob } from '@/entities/publish-job'
 import {
   appFailureFromConnect,
   type AppFailure,
-  PublishStage,
   PublishStatus,
   PublishVisibility,
 } from '@/shared/api'
@@ -79,7 +78,7 @@ export function PublishPostForm({
   const canCancel =
     job !== undefined &&
     (running || job.status === PublishStatus.NEEDS_ATTENTION) &&
-    job.stage < PublishStage.COMMITTING
+    isBeforeCommitFence(job.stage)
 
   if (!selected) {
     if (!canCancel || !job) return null

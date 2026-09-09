@@ -35,6 +35,30 @@ export const TERMINAL_PUBLISH_STATUSES = new Set([
   PublishStatus.CANCELED,
 ])
 
+// PUB-13's order. It cannot be read off the enum's numbers: FILLING_SETTINGS was appended so
+// that adding it could not renumber the stages after it, so it numbers HIGHER than COMMITTING
+// while belonging before it. Comparing numbers hid the cancel button for a job that is still
+// pre-commit and cancellable.
+const STAGE_RANK: Record<PublishStage, number> = {
+  [PublishStage.UNSPECIFIED]: 0,
+  [PublishStage.QUEUED]: 1,
+  [PublishStage.CLAIMED]: 2,
+  [PublishStage.PREPARING]: 3,
+  [PublishStage.OPENING_EDITOR]: 4,
+  [PublishStage.FILLING_CONTENT]: 5,
+  [PublishStage.UPLOADING_PHOTOS]: 6,
+  [PublishStage.FILLING_SETTINGS]: 7,
+  [PublishStage.COMMITTING]: 8,
+  [PublishStage.VERIFYING]: 9,
+  [PublishStage.PUBLISHED]: 10,
+}
+
+/** True while the job has not reached the commit fence, which is the only window in which
+ * cancelling is legal (PUB-13). */
+export function isBeforeCommitFence(stage: PublishStage): boolean {
+  return (STAGE_RANK[stage] ?? 0) < STAGE_RANK[PublishStage.COMMITTING]
+}
+
 export function publishStageLabel(stage: PublishStage): string {
   switch (stage) {
     case PublishStage.QUEUED:
