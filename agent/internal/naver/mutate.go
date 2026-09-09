@@ -10,6 +10,32 @@ import (
 // become part of an instruction. None of them types, uploads or activates anything: they
 // resolve a versioned control, report how many matched, and return its live geometry.
 
+// bodyParagraphsJS is the document's body text in paragraph order: a text component's own
+// paragraphs plus the paragraphs of the components a conversion produced. The document TITLE
+// is a .se-component inside .se-body and an image's caption is a paragraph too, so both are
+// excluded by component kind rather than by a descendant query.
+//
+// Verified live 2026-09-10: 문단 서식 변경 moves the caret's paragraph into its OWN
+// se-sectionTitle or se-quotation component, so a set scoped to `.se-component.se-text`
+// alone stops at the last unconverted paragraph — an append after a heading would then land
+// before the heading instead of after it.
+const bodyParagraphsJS = `  const bodyParagraphs = () => {
+    const body = document.querySelector('.se-body.__se-body');
+    if (!body) return [];
+    const collected = [];
+    for (const component of body.querySelectorAll('.se-component')) {
+      if (component.parentElement && component.parentElement.closest('.se-component')) continue;
+      const kinds = component.classList;
+      if (!kinds.contains('se-text') && !kinds.contains('se-sectionTitle') && !kinds.contains('se-quotation')) continue;
+      for (const paragraph of component.querySelectorAll('p.se-text-paragraph')) {
+        if (paragraph.closest('.se-module-text.se-caption')) continue;
+        collected.push(paragraph);
+      }
+    }
+    return collected;
+  };
+`
+
 // driverPointFn returns the viewport point of the single element that backs one text target.
 // The caller must treat the point as valid only for the action it is about to take.
 const driverPointFn = `function (target, ordinal) {
@@ -33,15 +59,15 @@ const driverPointFn = `function (target, ordinal) {
     const nodes = document.querySelectorAll('.se-component.se-documentTitle .se-title-text');
     return nodes.length === 1 ? point(nodes[0]) : {matches: nodes.length, x: 0, y: 0};
   }
-  if (target === 'body_end') {
-    const body = document.querySelector('.se-body.__se-body');
-    if (!body) return {matches: 0, x: 0, y: 0};
-    // The document title is a .se-component INSIDE .se-body, and an image's caption is a
-    // paragraph too, so an unqualified descendant query can put the caret in the title or
-    // under a photo. Only a text component's own paragraphs are body text.
-    const paragraphs = [...body.querySelectorAll('.se-component.se-text .se-module-text.__se-unit p.se-text-paragraph')];
-    if (paragraphs.length === 0) return {matches: 0, x: 0, y: 0};
-    return caretEnd(paragraphs[paragraphs.length - 1]);
+` + bodyParagraphsJS + `  if (target === 'body_end') {
+    const paragraphs = bodyParagraphs();
+    return paragraphs.length === 0 ? {matches: 0, x: 0, y: 0} : caretEnd(paragraphs[paragraphs.length - 1]);
+  }
+  // body_paragraph addresses one paragraph by its position in that order. A negative
+  // ordinal counts from the end, so -1 is the paragraph the last write produced.
+  if (target === 'body_paragraph') {
+    const paragraphs = bodyParagraphs();
+    return caretEnd(paragraphs[ordinal < 0 ? paragraphs.length + ordinal : ordinal]);
   }
   if (target === 'image_caption') {
     const images = document.querySelectorAll('.se-body.__se-body .se-component.se-image');
@@ -64,6 +90,29 @@ const driverPointFn = `function (target, ordinal) {
     return inputs.length === 1 ? point(inputs[0]) : {matches: inputs.length, x: 0, y: 0};
   }
   return {matches: 0, x: 0, y: 0};
+}`
+
+// driverParagraphStateFn observes one addressed paragraph without touching it: which kind of
+// component now holds it, whether it sits in a list item or in a quotation's 출처 module, and
+// how many items its list has. Every conversion asserts this before resolving a control and
+// again after activating it, because a paragraph conversion is not always visible to the
+// projection (Naver exports a section title as plain text).
+const driverParagraphStateFn = `function (index) {
+` + bodyParagraphsJS + `  const paragraphs = bodyParagraphs();
+  const paragraph = paragraphs[index < 0 ? paragraphs.length + index : index];
+  if (!paragraph) return {matches: 0, total: paragraphs.length, kind: '', in_list: false, in_cite: false, list_items: 0};
+  const component = paragraph.closest('.se-component');
+  const kind = ['se-text', 'se-sectionTitle', 'se-quotation'].find((name) => component.classList.contains(name)) || '';
+  const item = paragraph.closest('li.se-text-list-item');
+  const list = item ? item.closest('ul.se-text-list, ol.se-text-list') : null;
+  return {
+    matches: 1,
+    total: paragraphs.length,
+    kind,
+    in_list: Boolean(item),
+    in_cite: Boolean(paragraph.closest('.se-module-text.se-cite')),
+    list_items: list ? list.querySelectorAll('li.se-text-list-item').length : 0
+  };
 }`
 
 // driverSettingsStateFn observes only the three fixed setting surfaces within exactly one
@@ -207,6 +256,15 @@ type driverActivation struct {
 	Already   bool `json:"already"`
 }
 
+type driverParagraphState struct {
+	Matches   int    `json:"matches"`
+	Total     int    `json:"total"`
+	Kind      string `json:"kind"`
+	InList    bool   `json:"in_list"`
+	InCite    bool   `json:"in_cite"`
+	ListItems int    `json:"list_items"`
+}
+
 type driverSettingsState struct {
 	LayerMatches int `json:"layer_matches"`
 	Tags         int `json:"tags"`
@@ -239,6 +297,14 @@ func (p *CDPPort) resolveAndClick(ctx context.Context, target string, ordinal in
 		return PortError{Kind: FailureEditorChanged}
 	}
 	return nil
+}
+
+func (p *CDPPort) paragraphState(ctx context.Context, index int) (driverParagraphState, error) {
+	var state driverParagraphState
+	if err := p.page.CallFunction(ctx, driverParagraphStateFn, []any{index}, &state); err != nil {
+		return driverParagraphState{}, PortError{Kind: FailureEditorChanged}
+	}
+	return state, nil
 }
 
 func (p *CDPPort) settingsState(ctx context.Context) (driverSettingsState, error) {

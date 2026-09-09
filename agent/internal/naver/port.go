@@ -286,6 +286,12 @@ func (p *CDPPort) Apply(ctx context.Context, mutation Mutation) error {
 		return p.typeText(ctx, mutation.Text)
 	case MutationText:
 		return p.appendParagraph(ctx, mutation.Text)
+	case MutationHeading:
+		return p.applyHeading(ctx, mutation.Text)
+	case MutationQuote:
+		return p.applyQuote(ctx, mutation.Ordinal)
+	case MutationList:
+		return p.applyList(ctx, mutation.Ordinal, mutation.Items)
 	case MutationOpenSettings:
 		if p.settingsOpen {
 			return PortError{Kind: FailureEditorChanged}
@@ -312,6 +318,121 @@ func (p *CDPPort) Apply(ctx context.Context, mutation Mutation) error {
 		// driver from writing to a live editor it cannot finish (PUBLISH-19).
 		return PortError{Kind: FailureSafe}
 	}
+}
+
+// applyHeading writes the paragraph and converts it in the SAME step. The conversion alone
+// is invisible to the projection — Naver exports a section title as plain text, so the
+// observed snapshot would not change — and Publisher.mutate requires every mutation to move
+// the snapshot token. Writing first and converting the paragraph just written keeps the new
+// text block as the step's one observable change.
+func (p *CDPPort) applyHeading(ctx context.Context, text string) error {
+	if err := p.appendParagraph(ctx, text); err != nil {
+		return err
+	}
+	return p.convertParagraph(ctx, -1, "format_heading", "se-sectionTitle")
+}
+
+// applyQuote converts a paragraph the write pass already entered, and enters no text of its
+// own. 인용구 is born with an empty `se-cite` (출처) module whose paragraph is the new
+// component's LAST one, so text typed after the conversion would land in the citation
+// instead of the quote. Verified live 2026-09-10.
+func (p *CDPPort) applyQuote(ctx context.Context, index int) error {
+	return p.convertParagraph(ctx, index, "format_quote", "se-quotation")
+}
+
+// applyList converts the paragraph the write pass entered as the list's first item, then
+// appends the remaining items with Enter: Enter from a list item adds another LI to the SAME
+// UL, which is the only way one manifest LIST block with N items is built. The list control
+// exists only while the caret sits in a plain text paragraph — with the caret inside a
+// quotation it resolved 0 live — so the kind assertion below is a precondition, not a
+// defence. Verified live 2026-09-10.
+func (p *CDPPort) applyList(ctx context.Context, index int, items []string) error {
+	if len(items) == 0 {
+		return PortError{Kind: FailureSafe}
+	}
+	for _, item := range items {
+		if strings.TrimSpace(item) == "" {
+			return PortError{Kind: FailureSafe}
+		}
+	}
+	if err := p.requirePlainParagraph(ctx, index); err != nil {
+		return err
+	}
+	if err := p.resolveAndClick(ctx, "body_paragraph", index); err != nil {
+		return err
+	}
+	if err := p.activate(ctx, "list_menu", ""); err != nil {
+		return err
+	}
+	if err := p.activate(ctx, "list_bullet", ""); err != nil {
+		return err
+	}
+	converted, err := p.paragraphState(ctx, index)
+	if err != nil {
+		return err
+	}
+	if converted.Matches != 1 || !converted.InList || converted.ListItems != 1 {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	for _, item := range items[1:] {
+		if err := p.page.PressEnter(ctx); err != nil {
+			return PortError{Kind: FailureEditorChanged}
+		}
+		if err := p.typeText(ctx, item); err != nil {
+			return err
+		}
+	}
+	final, err := p.paragraphState(ctx, index)
+	if err != nil {
+		return err
+	}
+	if final.Matches != 1 || !final.InList || final.ListItems != len(items) {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	return nil
+}
+
+// convertParagraph puts the caret in one addressed paragraph and converts it through the
+// paragraph-format toolbar. The option controls do not exist until the menu is open — they
+// resolve 0 while it is closed — so the option is counted after the menu opens, the same
+// shape the settings layer uses. Nothing is typed on this path, so a refused option leaves
+// the document exactly as the write pass left it.
+func (p *CDPPort) convertParagraph(ctx context.Context, index int, option, want string) error {
+	if err := p.requirePlainParagraph(ctx, index); err != nil {
+		return err
+	}
+	if err := p.resolveAndClick(ctx, "body_paragraph", index); err != nil {
+		return err
+	}
+	if err := p.activate(ctx, "format_menu", ""); err != nil {
+		return err
+	}
+	if err := p.activate(ctx, option, ""); err != nil {
+		return err
+	}
+	after, err := p.paragraphState(ctx, index)
+	if err != nil {
+		return err
+	}
+	if after.Matches != 1 || after.Kind != want {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	return nil
+}
+
+// requirePlainParagraph refuses every conversion whose target is not still an unconverted
+// body paragraph: a section title, a quotation, a citation module or an existing list item
+// carries a different property toolbar, and converting the wrong paragraph is exactly the
+// silent corruption PUBLISH-19 forbids guessing about.
+func (p *CDPPort) requirePlainParagraph(ctx context.Context, index int) error {
+	state, err := p.paragraphState(ctx, index)
+	if err != nil {
+		return err
+	}
+	if state.Matches != 1 || state.Kind != "se-text" || state.InList || state.InCite {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	return nil
 }
 
 func (p *CDPPort) applyTags(ctx context.Context, values []string) error {

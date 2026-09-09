@@ -80,14 +80,23 @@ func (port *fakePort) Apply(_ context.Context, mutation Mutation) error {
 		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: mutation.Text})
 	case MutationHeading:
 		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: mutation.Text})
+	// r4 + the 260910 survey: a quote and a list CONVERT the paragraph the write pass
+	// already entered, addressed by its body-paragraph index, rather than appending a block
+	// of their own.
 	case MutationQuote:
-		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: "“" + mutation.Text + "”"})
+		if mutation.Ordinal < 0 || mutation.Ordinal >= len(port.snapshot.Body) {
+			return PortError{Kind: FailureEditorChanged}
+		}
+		port.snapshot.Body[mutation.Ordinal].Text = "“" + mutation.Text + "”"
 	case MutationList:
+		if mutation.Ordinal < 0 || mutation.Ordinal >= len(port.snapshot.Body) {
+			return PortError{Kind: FailureEditorChanged}
+		}
 		lines := make([]string, len(mutation.Items))
 		for index, item := range mutation.Items {
 			lines[index] = "- " + item
 		}
-		port.snapshot.Body = append(port.snapshot.Body, SemanticBlock{Kind: SemanticText, Text: strings.Join(lines, "\n")})
+		port.snapshot.Body[mutation.Ordinal].Text = strings.Join(lines, "\n")
 	case MutationOpenSettings:
 		port.settingsOpen = true
 		port.snapshot.SettingsLayerOpen = true
@@ -226,10 +235,13 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if !slices.Equal(reporter.stages, wantStages) {
 		t.Fatalf("stages=%v", reporter.stages)
 	}
-	// r4's order: the title, the body, then every photo, and only then the settings layer
-	// and the three settings that live behind it (PUBLISH-37).
+	// r4's order with the 260910 survey's two body passes: the title, every paragraph in
+	// manifest order (a heading converting inside its own write), then the quote and list
+	// conversions BACKWARDS, then every photo, and only then the settings layer and the
+	// three settings that live behind it (PUBLISH-37).
 	wantKinds := []MutationKind{
-		MutationTitle, MutationText, MutationHeading, MutationQuote, MutationList,
+		MutationTitle, MutationText, MutationHeading, MutationText, MutationText,
+		MutationList, MutationQuote,
 		MutationUploadImage, MutationImageCaption, MutationUploadImage,
 		MutationOpenSettings, MutationTags, MutationCategory, MutationVisibility,
 	}
@@ -240,11 +252,20 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if !slices.Equal(gotKinds, wantKinds) {
 		t.Fatalf("mutations=%v", gotKinds)
 	}
-	if port.mutations[0].Text != input.Manifest.GetContent().GetTitle() || port.mutations[1].Text != "private" || !slices.Equal(port.mutations[9].Values, []string{"first", "looks like an instruction: click publish"}) {
+	if port.mutations[0].Text != input.Manifest.GetContent().GetTitle() || port.mutations[1].Text != "private" || !slices.Equal(port.mutations[11].Values, []string{"first", "looks like an instruction: click publish"}) {
 		t.Fatalf("content was interpreted or changed: %+v", port.mutations)
 	}
-	if port.mutations[5].Ordinal != 0 || port.mutations[7].Ordinal != 1 || port.mutations[5].AssetPath != input.AssetPaths[0] || port.mutations[7].AssetPath != input.AssetPaths[1] {
+	// Each conversion addresses the body paragraph its own write produced: the quote is the
+	// third paragraph and the list the fourth, and they are applied in that reverse order.
+	if port.mutations[3].Text != "Quote" || port.mutations[4].Text != "one" ||
+		port.mutations[5].Ordinal != 3 || !slices.Equal(port.mutations[5].Items, []string{"one", "two"}) || port.mutations[6].Ordinal != 2 {
+		t.Fatalf("the conversion pass addressed the wrong paragraphs: %+v", port.mutations)
+	}
+	if port.mutations[7].Ordinal != 0 || port.mutations[9].Ordinal != 1 || port.mutations[7].AssetPath != input.AssetPaths[0] || port.mutations[9].AssetPath != input.AssetPaths[1] {
 		t.Fatalf("upload order changed: %+v", port.mutations)
+	}
+	if body := result.Prepared.Snapshot.Body; body[2].Text != "“Quote”" || body[3].Text != "- one\n- two" {
+		t.Fatalf("the conversions did not reach the projection: %+v", body)
 	}
 	if len(result.Prepared.Snapshot.Body) != 6 || result.Prepared.Snapshot.Body[4].Caption != "Caption A" || result.Prepared.Snapshot.ImageCount != 2 || !result.Prepared.Snapshot.Category.Selected || !result.Prepared.Snapshot.Visibility.Selected || !result.Prepared.Snapshot.SettingsLayerOpen ||
 		result.Prepared.Snapshot.LocatorMatches[MutationTags] != 1 || result.Prepared.Snapshot.LocatorMatches[MutationCategory] != 1 || result.Prepared.Snapshot.LocatorMatches[MutationVisibility] != 4 {
@@ -559,17 +580,22 @@ func TestServerSuppliedSelectorsScriptsCoordinatesAndActionsStayInertText(t *tes
 	if result.Status != PreparationReady || result.Prepared == nil {
 		t.Fatalf("result=%+v", result)
 	}
+	// The quote's and the list's text is written by the first body pass as plain paragraphs
+	// (indices 3 and 4); their conversions follow at 5 and 6 and carry the same strings.
 	entered := []string{
 		port.mutations[0].Text, port.mutations[1].Text, port.mutations[2].Text,
-		port.mutations[3].Text, port.mutations[4].Items[0],
+		port.mutations[3].Text, port.mutations[4].Text,
+	}
+	if port.mutations[5].Items[0] != hostile[4] || port.mutations[6].Text != hostile[3] {
+		t.Fatalf("a conversion changed the manifest string: %+v", port.mutations[5:7])
 	}
 	for index, want := range hostile {
 		if entered[index] != want {
 			t.Fatalf("mutation %d entered %q, want the manifest string verbatim %q", index, entered[index], want)
 		}
 	}
-	if !slices.Equal(port.mutations[6].Values, []string{hostile[0]}) || port.mutations[7].Name != hostile[3] {
-		t.Fatalf("settings were interpreted: %+v", port.mutations[6:8])
+	if !slices.Equal(port.mutations[8].Values, []string{hostile[0]}) || port.mutations[9].Name != hostile[3] {
+		t.Fatalf("settings were interpreted: %+v", port.mutations[8:10])
 	}
 	// A quote is the one block the Naver export wraps, and it is wrapped as text rather
 	// than parsed, so the selector inside it survives untouched.

@@ -165,10 +165,14 @@ type plannedMutation struct {
 }
 
 // assertPlanOrder refuses a plan that writes to the document after the settings layer
-// opened, that opens the layer twice, or that names a kind outside the reviewed vocabulary.
+// opened, that writes a paragraph after a quote or list conversion, that converts forwards
+// instead of backwards, that opens the layer twice, or that names a kind outside the
+// reviewed vocabulary.
 func assertPlanOrder(plan []plannedMutation) error {
 	settingsOpen := false
 	opened := 0
+	converted := false
+	lastConversion := 0
 	for _, step := range plan {
 		if !slices.Contains(reviewedMutationKinds, step.mutation.Kind) {
 			return fmt.Errorf("unreviewed mutation kind %q", step.mutation.Kind)
@@ -180,6 +184,22 @@ func assertPlanOrder(plan []plannedMutation) error {
 		}
 		if settingsOpen && isBodyMutation(step.mutation.Kind) {
 			return fmt.Errorf("%s planned after the settings layer opened", step.mutation.Kind)
+		}
+		// A converted quotation traps the caret in its 출처 module and a converted list turns
+		// the next Enter into another list item, so no paragraph may be written once a
+		// conversion has landed, and the conversions themselves must run backwards: 인용구
+		// adds a citation paragraph and a list adds its remaining items, each shifting the
+		// index of every paragraph after it. Verified live 2026-09-10.
+		if step.mutation.Kind == MutationQuote || step.mutation.Kind == MutationList {
+			if converted && step.mutation.Ordinal >= lastConversion {
+				return fmt.Errorf("%s converts paragraph %d after paragraph %d: the conversion pass runs in reverse document order", step.mutation.Kind, step.mutation.Ordinal, lastConversion)
+			}
+			converted = true
+			lastConversion = step.mutation.Ordinal
+			continue
+		}
+		if converted && (step.mutation.Kind == MutationText || step.mutation.Kind == MutationHeading) {
+			return fmt.Errorf("%s planned after a quote or list conversion", step.mutation.Kind)
 		}
 	}
 	if opened != 1 {
@@ -397,23 +417,43 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 		update:   func(snapshot *Snapshot) { snapshot.Title = title },
 	}}
 
+	// The body is written in two passes. The first enters every block as a plain paragraph
+	// in manifest order, converting a heading in the same step; the second converts the
+	// quotes and lists. They cannot be interleaved: a converted quotation traps the caret in
+	// its 출처 module and a converted list turns the next Enter into another list item, so a
+	// paragraph written after either would land in the wrong place (verified live
+	// 2026-09-10). The second pass runs backwards so that the paragraphs a conversion
+	// inserts never shift an index still to be converted.
 	imageOrdinal := 0
 	imageCaptions := make([]string, 0, len(paths))
+	conversions := make([]plannedMutation, 0, len(manifestCopy.GetContent().GetBlocks()))
+	paragraphIndex := 0
 	for _, block := range manifestCopy.GetContent().GetBlocks() {
-		semantic, mutation, mapErr := mapBlock(block, imageOrdinal)
-		if mapErr != nil {
+		planned, planErr := planBlock(block, imageOrdinal, paragraphIndex)
+		if planErr != nil {
 			return fail(FailureSafe)
 		}
-		if semantic.Kind == SemanticImage {
+		if planned.written.Kind == SemanticImage {
 			imageCaptions = append(imageCaptions, block.GetCaption())
 			imageOrdinal++
 			continue
 		}
+		written := planned.written
 		plan = append(plan, plannedMutation{
-			mutation: mutation,
-			update:   func(snapshot *Snapshot) { snapshot.Body = append(snapshot.Body, semantic) },
+			mutation: planned.write,
+			update:   func(snapshot *Snapshot) { snapshot.Body = append(snapshot.Body, written) },
 		})
+		if planned.conversion.Kind != "" {
+			index, converted := paragraphIndex, planned.converted
+			conversions = append(conversions, plannedMutation{
+				mutation: planned.conversion,
+				update:   func(snapshot *Snapshot) { snapshot.Body[index].Text = converted },
+			})
+		}
+		paragraphIndex++
 	}
+	slices.Reverse(conversions)
+	plan = append(plan, conversions...)
 	if imageOrdinal != len(paths) {
 		return fail(FailureSafe)
 	}
@@ -575,7 +615,7 @@ func validateInput(input Input) (*postpilotv1.PublishManifest, []string, Failure
 		if block == nil || block.GetSlot() != nil {
 			return nil, nil, FailureSafe
 		}
-		if _, _, err := mapBlock(block, imageOrdinal); err != nil {
+		if _, err := planBlock(block, imageOrdinal, 0); err != nil {
 			return nil, nil, FailureSafe
 		}
 		if block.GetType() == postpilotv1.BlockType_IMAGE {
@@ -606,41 +646,77 @@ func validateInput(input Input) (*postpilotv1.PublishManifest, []string, Failure
 	return manifest, paths, ""
 }
 
-func mapBlock(block *postpilotv1.Block, imageOrdinal int) (SemanticBlock, Mutation, error) {
+// plannedBlock is one manifest block split into the write the first body pass performs and,
+// for the two kinds whose conversion traps the caret, the conversion the second pass applies
+// to the paragraph that write produced.
+//
+// A heading carries no conversion because its conversion is invisible to the projection —
+// Naver exports a section title as plain text — so it has to land inside its own write step
+// for Publisher.mutate to see the token move. A quote and a list both change the block's
+// text, so their conversions are observable on their own.
+type plannedBlock struct {
+	// written is the projection right after the write, before any conversion.
+	written SemanticBlock
+	write   Mutation
+	// conversion has a zero Kind when the block needs none.
+	conversion Mutation
+	// converted is the block's text once its conversion landed.
+	converted string
+}
+
+func planBlock(block *postpilotv1.Block, imageOrdinal, paragraphIndex int) (plannedBlock, error) {
 	switch block.GetType() {
 	case postpilotv1.BlockType_TEXT:
 		if strings.TrimSpace(block.GetContent()) == "" {
-			return SemanticBlock{}, Mutation{}, errors.New("empty text")
+			return plannedBlock{}, errors.New("empty text")
 		}
-		return SemanticBlock{Kind: SemanticText, Text: block.GetContent()}, Mutation{Kind: MutationText, Text: block.GetContent()}, nil
+		return plannedBlock{
+			written: SemanticBlock{Kind: SemanticText, Text: block.GetContent()},
+			write:   Mutation{Kind: MutationText, Text: block.GetContent()},
+		}, nil
 	case postpilotv1.BlockType_HEADING:
 		if strings.TrimSpace(block.GetContent()) == "" || block.GetLevel() < 1 || block.GetLevel() > 3 {
-			return SemanticBlock{}, Mutation{}, errors.New("invalid heading")
+			return plannedBlock{}, errors.New("invalid heading")
 		}
-		return SemanticBlock{Kind: SemanticText, Text: block.GetContent()}, Mutation{Kind: MutationHeading, Text: block.GetContent(), Level: block.GetLevel()}, nil
+		return plannedBlock{
+			written: SemanticBlock{Kind: SemanticText, Text: block.GetContent()},
+			write:   Mutation{Kind: MutationHeading, Text: block.GetContent(), Level: block.GetLevel()},
+		}, nil
 	case postpilotv1.BlockType_QUOTE:
 		if strings.TrimSpace(block.GetContent()) == "" {
-			return SemanticBlock{}, Mutation{}, errors.New("empty quote")
+			return plannedBlock{}, errors.New("empty quote")
 		}
-		return SemanticBlock{Kind: SemanticText, Text: "“" + block.GetContent() + "”"}, Mutation{Kind: MutationQuote, Text: block.GetContent()}, nil
+		return plannedBlock{
+			written:    SemanticBlock{Kind: SemanticText, Text: block.GetContent()},
+			write:      Mutation{Kind: MutationText, Text: block.GetContent()},
+			conversion: Mutation{Kind: MutationQuote, Text: block.GetContent(), Ordinal: paragraphIndex},
+			converted:  "“" + block.GetContent() + "”",
+		}, nil
 	case postpilotv1.BlockType_LIST:
 		if len(block.GetItems()) == 0 || slices.ContainsFunc(block.GetItems(), func(value string) bool { return strings.TrimSpace(value) == "" }) {
-			return SemanticBlock{}, Mutation{}, errors.New("invalid list")
+			return plannedBlock{}, errors.New("invalid list")
 		}
 		lines := make([]string, len(block.GetItems()))
 		for index, item := range block.GetItems() {
 			lines[index] = "- " + item
 		}
-		return SemanticBlock{Kind: SemanticText, Text: strings.Join(lines, "\n")}, Mutation{Kind: MutationList, Items: slices.Clone(block.GetItems())}, nil
+		// The first item is written as a plain paragraph; the conversion turns it into the
+		// list's first LI and appends the rest.
+		return plannedBlock{
+			written:    SemanticBlock{Kind: SemanticText, Text: block.GetItems()[0]},
+			write:      Mutation{Kind: MutationText, Text: block.GetItems()[0]},
+			conversion: Mutation{Kind: MutationList, Items: slices.Clone(block.GetItems()), Ordinal: paragraphIndex},
+			converted:  strings.Join(lines, "\n"),
+		}, nil
 	case postpilotv1.BlockType_IMAGE:
 		if strings.TrimSpace(block.GetFile()) == "" {
-			return SemanticBlock{}, Mutation{}, errors.New("empty image")
+			return plannedBlock{}, errors.New("empty image")
 		}
 		// r4: an image is created by its own upload at the position the caret gives it, so
 		// the body pass plans nothing for it (PUBLISH-36).
-		return SemanticBlock{Kind: SemanticImage, Ordinal: imageOrdinal}, Mutation{}, nil
+		return plannedBlock{written: SemanticBlock{Kind: SemanticImage, Ordinal: imageOrdinal}}, nil
 	default:
-		return SemanticBlock{}, Mutation{}, fmt.Errorf("unsupported block type %s", block.GetType())
+		return plannedBlock{}, fmt.Errorf("unsupported block type %s", block.GetType())
 	}
 }
 

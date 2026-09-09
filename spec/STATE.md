@@ -37,11 +37,10 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
-| T042 | The r4 mutation vocabulary and the body mutations | PUB | T018 | blocked@260908 |
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUB | T042 | todo |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUB | T044 T043 | todo |
 | T046 | Wiring the real publisher into the daemon | PUB | T045 | todo |
-| T071 | Transient clip-source batches and cleanup | CLIP | T069 | todo |
+| T071 | Transient clip-source batches and cleanup | CLIP | T069 | doing@260910.clp |
 | T072 | Clip setup and direct-upload UI | CLIP THEME | T070 T071 | todo |
 | T073 | Clip media probe, analysis proxies and isolated workspaces | CLIP | T069 | todo |
 | T074 | Deterministic caption and video renderer | CLIP | T073 | todo |
@@ -55,9 +54,13 @@
 ## next
 - implement-task T071, then implement and commit T072 through T080 sequentially
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
-- the PUB chain stays as it was: unblock T042 with ONE live survey pass on a clean writer draft (does 문단 서식 변경 convert the caret's paragraph or its whole component on a multi-paragraph component, same for 인용구, what Enter from a converted block opens, how the list toolbar behaves there — the owner must discard the leftover dirty draft first), then T043 → T045 → T046 → T008, whose base must be re-read at PUB@4 · update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
+- the PUB chain is unblocked: T042 is done and its `## result` carries the 260910 live survey (paragraph conversions split the component, 인용구 is born with a 출처 module, only a heading escapes by Enter, the list control needs a plain text paragraph) plus the two-pass body plan every later task inherits — read it before T043. Next is T043 → T045 → T046 → T008, whose base must be re-read at PUB@4 · update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
+- T043 needs ONE live pass for the one image mechanic never surveyed: a manifest whose FIRST block is an image, with no preceding block to hold the caret. The build-tagged survey harness in `agent/internal/naver/survey_test.go` is left in place for it
 ## log
+- 260910 T042 done; the four blocked questions answered by a live survey, the body plan is now two passes with the conversions reversed, driver signature → smarteditor-one-20260910-a4
+- 260910 T071 claimed (clp)
 - 260910 T070 done; UI/contract/CI gates pass; pre-existing 320 px header wordmark/plan overlap noted for later shell review
+- 260910 T042 claimed (bdy); the live survey answered all four questions that blocked it
 - 260910 T070 claimed (clp)
 - 260910 T069 done; all code gates and spec lint pass after identifier repair
 - 260910 spec identifier repair: TEMPLATE→TMPL, PUBLISH→PUB, MARKETING→MKT, BILLING→BILL; names and references only, no policy or revision change
@@ -74,5 +77,3 @@
 - 260909 create-task CLIP start
 - 260909 create-task T066 T067 T068 from POST@5 THEME@8 (BE `PostSummary.tags` · the list dock at every width incl. /voices and /templates · the FE narrowing); T068 deps on T066 for the field and on T067 for the shared PostsPage.tsx
 - 260909 create-ssot CLIP r1 (CLIP-1+ … 28+: independent projects, video templates, AI-selected cuts, correction, transient sources, result-only retention and no direct publishing) — create-task CLIP owed
-- 260909 create-task POST THEME start
-- 260909 update-ssot POST r5 THEME r8 (POST-43✎ 64+ 65+ 66+ 67+ 68+ 69+ · THEME-24✎ a list's add dock is no longer phone-only); no doing task in scope (T065 is MODEL) — create-task POST THEME owed

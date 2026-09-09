@@ -60,10 +60,16 @@ type fakeEditor struct {
 	emptyAX     bool
 
 	// The driver's reviewed functions, scripted. Nil hooks resolve the healthy shape.
-	point    func(target string, ordinal int) driverPoint
-	activate func(control, id string) driverActivation
-	state    func() driverSettingsState
-	setting  func(control, id, name string) driverSetting
+	point     func(target string, ordinal int) driverPoint
+	activate  func(control, id string) driverActivation
+	state     func() driverSettingsState
+	setting   func(control, id, name string) driverSetting
+	paragraph func(index int) driverParagraphState
+	// deafList makes an activated list control leave the paragraph unconverted, and
+	// deafEnter makes Enter inside a list add no item, so the port's post-conversion
+	// assertions can be exercised.
+	deafList  bool
+	deafEnter bool
 
 	mu               sync.Mutex
 	calls            int
@@ -73,6 +79,11 @@ type fakeEditor struct {
 	pendingName      string
 	pendingText      string
 	categoryExpanded bool
+	// The fake's model of the one addressed paragraph: a conversion switches its component
+	// kind, which is exactly what the port re-observes after activating a control.
+	convertedKind string
+	inList        bool
+	listItems     int
 }
 
 func (editor *fakeEditor) record(entry string) {
@@ -85,6 +96,47 @@ func (editor *fakeEditor) recorded() []string {
 	editor.mu.Lock()
 	defer editor.mu.Unlock()
 	return slices.Clone(editor.inputs)
+}
+
+func (editor *fakeEditor) paragraphState(index int) driverParagraphState {
+	if editor.paragraph != nil {
+		return editor.paragraph(index)
+	}
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	kind := "se-text"
+	if editor.convertedKind != "" {
+		kind = editor.convertedKind
+	}
+	return driverParagraphState{Matches: 1, Total: 1, Kind: kind, InList: editor.inList, ListItems: editor.listItems}
+}
+
+// convert models what the live editor does when one of the paragraph controls is activated:
+// 소제목 and 인용구 move the caret's paragraph into its own component, and 글머리 기호 turns it
+// into the first item of a list in place (verified live 2026-09-10).
+func (editor *fakeEditor) convert(control string) {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	switch control {
+	case "format_heading":
+		editor.convertedKind = "se-sectionTitle"
+	case "format_quote":
+		editor.convertedKind = "se-quotation"
+	case "list_bullet":
+		if editor.deafList {
+			return
+		}
+		editor.inList, editor.listItems = true, 1
+	}
+}
+
+// growList models Enter inside a list item appending another LI to the same UL.
+func (editor *fakeEditor) growList() {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	if editor.inList && !editor.deafEnter {
+		editor.listItems++
+	}
 }
 
 func (editor *fakeEditor) settingsState() driverSettingsState {
@@ -246,6 +298,9 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 						editor.record("point:" + target)
 						editor.remember(target, "", "")
 						result = map[string]any{"result": map[string]any{"value": resolved}}
+					case strings.Contains(declaration, "list_items: list ?"):
+						index, _ := first.(float64)
+						result = map[string]any{"result": map[string]any{"value": editor.paragraphState(int(index))}}
 					case strings.Contains(declaration, "layer_matches: layers.length"):
 						result = map[string]any{"result": map[string]any{"value": editor.settingsState()}}
 					case strings.Contains(declaration, "name_matches"):
@@ -261,6 +316,9 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 							resolved = editor.activate(control, toString(second))
 						}
 						editor.record("activate:" + toString(first))
+						if resolved.Matches == 1 && (resolved.Activated || resolved.Already) {
+							editor.convert(toString(first))
+						}
 						result = map[string]any{"result": map[string]any{"value": resolved}}
 					}
 				case "Input.dispatchMouseEvent":
@@ -277,6 +335,7 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 					if phase, _ := call.Params["type"].(string); phase == "rawKeyDown" {
 						editor.record("enter")
 						editor.commitTag()
+						editor.growList()
 					}
 				}
 				if _, failed := response["error"]; !failed {
