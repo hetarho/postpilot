@@ -16,7 +16,7 @@
 | POST | 4 | 4 | - | 0 |
 | VOICE | 2 | 2 | - | 1 |
 | GEN | 5 | 5 | - | 0 |
-| MODEL | 8 | 7 | MODEL-53✎ | 0 |
+| MODEL | 8 | 8 | - | 0 |
 | TEMPLATE | 4 | 4 | - | 1 |
 | GUIDE | 1 | 1 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
@@ -42,7 +42,7 @@
 | T046 | Wiring the real publisher into the daemon | PUBLISH | T045 | todo |
 
 ## next
-- create-task MODEL from MODEL@8 — expected no-op: MODEL-53✎ only makes the SSOT say what T064 (done) already implements; the paste protocol shipped end to end (T064 BE + T065 FE), so the next code work is the PUBLISH chain below
+- the paste protocol shipped end to end (T064 BE + T065 FE) and MODEL@8 is fully tasked; the next code work is the PUBLISH chain below
 - T063 shipped the tag count option end to end (BE + FE gates green); next code work is the PUBLISH chain below
 - update-ssot VOICE: VOICE-42✎ (r2) named a frozen tag count, but the rule comparison prompt emits prose and never asks for tags — drop the words or say what they would change
 - Google sign-in is live end to end as of 260909 (AUTH-43): OAuth client registered, `GOOGLE_CLIENT_ID/SECRET` on the VPS `.env`, `VITE_GOOGLE_CLIENT_ID` in the Cloudflare build, button visible on `/login` and `/signup`, and the owner's real Google login succeeded
