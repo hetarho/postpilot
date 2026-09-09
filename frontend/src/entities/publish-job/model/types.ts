@@ -49,6 +49,8 @@ export function publishStageLabel(stage: PublishStage): string {
       return i18next.t('stage.fillingContent', { ns: 'publishing' })
     case PublishStage.UPLOADING_PHOTOS:
       return i18next.t('stage.uploadingPhotos', { ns: 'publishing' })
+    case PublishStage.FILLING_SETTINGS:
+      return i18next.t('stage.fillingSettings', { ns: 'publishing' })
     case PublishStage.COMMITTING:
       return i18next.t('stage.committing', { ns: 'publishing' })
     case PublishStage.VERIFYING:

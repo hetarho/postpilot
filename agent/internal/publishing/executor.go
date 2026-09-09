@@ -51,6 +51,10 @@ const (
 	StageOpeningEditor   Stage = "opening_editor"
 	StageFillingContent  Stage = "filling_content"
 	StageUploadingPhotos Stage = "uploading_photos"
+	// StageFillingSettings covers the tags, category and visibility that live behind the
+	// layer covering the editor. PUB-13 r4 puts it between the photos and the fence, and
+	// the server accepts single steps only, so it is reported, never skipped.
+	StageFillingSettings Stage = "filling_settings"
 	StageCommitting      Stage = "committing"
 	StageVerifying       Stage = "verifying"
 )
@@ -124,8 +128,12 @@ func (e Executor) Execute(ctx context.Context, claim *postpilotv1.ClaimPublishJo
 	}
 	sequence, stage := reporter.State()
 	if runErr != nil {
+		// At or after the fence the outcome is ambiguous and the server turns it into
+		// outcome_unknown (PUB-15); before it, the job requeues safely. The comparison goes
+		// through the rank, not the enum's numbers: FILLING_SETTINGS was appended to the
+		// enum, so it numbers HIGHER than COMMITTING while belonging before it.
 		kind := postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE
-		if stage >= postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING {
+		if publisherStageRank[stage] >= publisherStageRank[postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING] {
 			kind = postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST
 		}
 		return e.fail(ctx, claim, sequence+1, kind, runErr.Error())
@@ -296,6 +304,18 @@ type progressReporter struct {
 	closed     bool
 }
 
+// publisherStageRank is the one place the agent holds PUB-13's order.
+var publisherStageRank = map[postpilotv1.PublishStage]int{
+	postpilotv1.PublishStage_PUBLISH_STAGE_CLAIMED:          1,
+	postpilotv1.PublishStage_PUBLISH_STAGE_PREPARING:        2,
+	postpilotv1.PublishStage_PUBLISH_STAGE_OPENING_EDITOR:   3,
+	postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_CONTENT:  4,
+	postpilotv1.PublishStage_PUBLISH_STAGE_UPLOADING_PHOTOS: 5,
+	postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_SETTINGS: 6,
+	postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING:       7,
+	postpilotv1.PublishStage_PUBLISH_STAGE_VERIFYING:        8,
+}
+
 func newProgressReporter(api API, jobID, leaseToken string, sequence int64) *progressReporter {
 	return &progressReporter{
 		api: api, jobID: jobID, leaseToken: leaseToken, sequence: sequence,
@@ -325,7 +345,12 @@ func (s *progressReporter) Advance(ctx context.Context, stage Stage) error {
 	if s.closed {
 		return errors.New("publisher reported progress after returning a terminal result")
 	}
-	if next != s.stage+1 {
+	// The order is PUB-13's, held in an explicit rank rather than read off the protobuf
+	// enum's numbers: FILLING_SETTINGS was appended to the enum so that adding it could not
+	// renumber the stages after it, so enum arithmetic no longer says anything about order.
+	current, known := publisherStageRank[s.stage]
+	following, ok := publisherStageRank[next]
+	if !known || !ok || following != current+1 {
 		return errors.New("publisher reported non-monotonic progress")
 	}
 	sequence := s.sequence + 1
@@ -343,6 +368,7 @@ var publisherStages = map[Stage]postpilotv1.PublishStage{
 	StageOpeningEditor:   postpilotv1.PublishStage_PUBLISH_STAGE_OPENING_EDITOR,
 	StageFillingContent:  postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_CONTENT,
 	StageUploadingPhotos: postpilotv1.PublishStage_PUBLISH_STAGE_UPLOADING_PHOTOS,
+	StageFillingSettings: postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_SETTINGS,
 	StageCommitting:      postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING,
 	StageVerifying:       postpilotv1.PublishStage_PUBLISH_STAGE_VERIFYING,
 }

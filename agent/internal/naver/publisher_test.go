@@ -256,7 +256,9 @@ func TestPublisherMapsEveryBlockAndReturnsOneVerifiedReadyResult(t *testing.T) {
 	if result.Status != PreparationReady || result.Prepared == nil || result.Failure != nil || result.Prepared.SnapshotToken == "" {
 		t.Fatalf("result=%+v", result)
 	}
-	wantStages := []publishing.Stage{publishing.StagePreparing, publishing.StageOpeningEditor, publishing.StageFillingContent, publishing.StageUploadingPhotos}
+	// PUB-13 r4: filling_settings sits between the photos and the fence, and the settings
+	// layer opening is the boundary that announces it.
+	wantStages := []publishing.Stage{publishing.StagePreparing, publishing.StageOpeningEditor, publishing.StageFillingContent, publishing.StageUploadingPhotos, publishing.StageFillingSettings}
 	if !slices.Equal(reporter.stages, wantStages) {
 		t.Fatalf("stages=%v", reporter.stages)
 	}
@@ -490,7 +492,7 @@ func TestRunCrossesTheFenceBeforeOneActivationAndExactReadback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantStages := []publishing.Stage{publishing.StagePreparing, publishing.StageOpeningEditor, publishing.StageFillingContent, publishing.StageUploadingPhotos, publishing.StageCommitting, publishing.StageVerifying}
+	wantStages := []publishing.Stage{publishing.StagePreparing, publishing.StageOpeningEditor, publishing.StageFillingContent, publishing.StageUploadingPhotos, publishing.StageFillingSettings, publishing.StageCommitting, publishing.StageVerifying}
 	if result.Status != "published" || result.PublishedURL != "https://blog.naver.com/alice/123456" || port.activationCount != 1 || port.armedToken == "" || !slices.Equal(reporter.stages, wantStages) {
 		t.Fatalf("result=%+v activations=%d token=%q stages=%v", result, port.activationCount, port.armedToken, reporter.stages)
 	}
@@ -823,16 +825,17 @@ func TestNoReviewedDriverTypeCanRetainACoordinate(t *testing.T) {
 	}
 	// driverPoint is the one coordinate-shaped value in the package. It exists only as a
 	// call-scoped result, so it must never be reachable from a field of the port. The port's
-	// own fields are the page, the manifest, the settings-layer latch (PUB-37, a bool that
-	// records that the layer opened, never where anything sat on screen) and the upload
-	// settle deadline — a duration, not a position.
+	// own fields are the page, the manifest, the settings-layer latch (PUB-37) and the
+	// activation latch (PUB-15) — both bools recording that something happened, never where
+	// anything sat on screen — the settle deadline, a duration, and the armed pre-fence
+	// Snapshot, which is a projection and carries no geometry (walked above).
 	portType := reflect.TypeOf(CDPPort{})
-	if portType.NumField() != 4 {
+	if portType.NumField() != 6 {
 		t.Fatalf("CDPPort grew a field; recheck that none of them retains resolved geometry")
 	}
 	for index := 0; index < portType.NumField(); index++ {
 		field := portType.Field(index)
-		if field.Type == reflect.TypeOf(driverPoint{}) || field.Type == reflect.TypeOf(driverParagraphState{}) {
+		if field.Type == reflect.TypeOf(driverPoint{}) || field.Type == reflect.TypeOf(driverParagraphState{}) || field.Type == reflect.TypeOf(driverFinalControl{}) {
 			t.Fatalf("CDPPort.%s retains a resolved observation between calls", field.Name)
 		}
 	}

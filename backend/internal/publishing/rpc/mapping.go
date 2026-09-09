@@ -127,6 +127,8 @@ func fromProtoStage(value postpilotv1.PublishStage) publishing.Stage {
 		return publishing.StageFillingContent
 	case postpilotv1.PublishStage_PUBLISH_STAGE_UPLOADING_PHOTOS:
 		return publishing.StageUploadingPhotos
+	case postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_SETTINGS:
+		return publishing.StageFillingSettings
 	case postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING:
 		return publishing.StageCommitting
 	case postpilotv1.PublishStage_PUBLISH_STAGE_VERIFYING:
@@ -150,6 +152,8 @@ func toProtoStage(value publishing.Stage) postpilotv1.PublishStage {
 		return postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_CONTENT
 	case publishing.StageUploadingPhotos:
 		return postpilotv1.PublishStage_PUBLISH_STAGE_UPLOADING_PHOTOS
+	case publishing.StageFillingSettings:
+		return postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_SETTINGS
 	case publishing.StageCommitting:
 		return postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING
 	case publishing.StageVerifying:

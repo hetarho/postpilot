@@ -512,3 +512,62 @@ func (p *CDPPort) typeText(ctx context.Context, text string) error {
 	}
 	return nil
 }
+
+// driverFinalControlFn resolves the ONE control the fence may activate, inside the one shown
+// settings layer, and reports enough to refuse everything else. It matches on the stable
+// `data-testid="seOnePublishBtn"` rather than on the hashed CSS-module class, and it never
+// clicks: ArmFinal is an observation and ActivateFinal is the only thing that acts.
+//
+// The layer also holds `nowTimeRadioBtn` / `preTimeRadioBtn` — the scheduled-publish choice
+// (verified live 2026-09-07) — which is exactly the publish-like control that must not be
+// confused with the immediate one. It is counted so arming can refuse rather than guess.
+const driverFinalControlFn = `function (allowed) {
+  const norm = (v) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  const names = Array.isArray(allowed) ? allowed.map(norm) : [];
+  const layers = document.querySelectorAll('div[class^="layer_popup__"][class*="is_show__"]');
+  const empty = (matches) => ({matches, layer_matches: layers.length, name: '', scheduled: 0, versioned: 0, actionable: false, x: 0, y: 0});
+  if (layers.length !== 1) return empty(0);
+  const layer = layers[0];
+  // Every control in the layer that carries a final-control accessible name, however it is
+  // classed. A second one is an unreviewed duplicate and must fail closed.
+  const versioned = [...layer.querySelectorAll('button[class^="confirm_btn__"]')];
+  const namedLike = [...layer.querySelectorAll('button')].filter((button) => names.includes(norm(button.getAttribute('aria-label') || button.textContent)));
+  const scheduled = layer.querySelectorAll('[data-testid="nowTimeRadioBtn"], [data-testid="preTimeRadioBtn"]').length;
+  const exact = [...layer.querySelectorAll('button[data-testid="seOnePublishBtn"]')];
+  if (exact.length !== 1 || namedLike.length !== 1 || versioned.length !== 1 || exact[0] !== namedLike[0] || exact[0] !== versioned[0]) {
+    return {matches: exact.length, layer_matches: 1, name: '', scheduled, versioned: versioned.length, actionable: false, x: 0, y: 0};
+  }
+  const button = exact[0];
+  const name = norm(button.getAttribute('aria-label') || button.textContent);
+  if (!names.includes(name)) {
+    return {matches: 1, layer_matches: 1, name, scheduled, versioned: 1, actionable: false, x: 0, y: 0};
+  }
+  const box = button.getBoundingClientRect();
+  if (box.width <= 0 || box.height <= 0) {
+    return {matches: 1, layer_matches: 1, name, scheduled, versioned: 1, actionable: false, x: 0, y: 0};
+  }
+  const x = Math.round(box.left + box.width / 2);
+  const y = Math.round(box.top + box.height / 2);
+  const at = document.elementFromPoint(x, y);
+  const hits = Boolean(at && (at === button || button.contains(at) || at.closest('button') === button));
+  return {matches: 1, layer_matches: 1, name, scheduled, versioned: 1, actionable: hits, x: hits ? x : 0, y: hits ? y : 0};
+}`
+
+type driverFinalControl struct {
+	Matches      int     `json:"matches"`
+	LayerMatches int     `json:"layer_matches"`
+	Name         string  `json:"name"`
+	Scheduled    int     `json:"scheduled"`
+	Versioned    int     `json:"versioned"`
+	Actionable   bool    `json:"actionable"`
+	X            float64 `json:"x"`
+	Y            float64 `json:"y"`
+}
+
+func (p *CDPPort) finalControl(ctx context.Context, allowed []string) (driverFinalControl, error) {
+	var control driverFinalControl
+	if err := p.page.CallFunction(ctx, driverFinalControlFn, []any{allowed}, &control); err != nil {
+		return driverFinalControl{}, PortError{Kind: FailureEditorChanged}
+	}
+	return control, nil
+}

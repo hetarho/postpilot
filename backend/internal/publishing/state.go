@@ -2,10 +2,12 @@ package publishing
 
 import "fmt"
 
+// stageRank is the order PUB-13 fixes. It is the only place that order lives: the protobuf
+// enum numbers append and the stage column stores names, so neither carries it.
 var stageRank = map[Stage]int{
 	StageQueued: 0, StageClaimed: 1, StagePreparing: 2, StageOpeningEditor: 3,
-	StageFillingContent: 4, StageUploadingPhotos: 5, StageCommitting: 6,
-	StageVerifying: 7, StagePublished: 8,
+	StageFillingContent: 4, StageUploadingPhotos: 5, StageFillingSettings: 6,
+	StageCommitting: 7, StageVerifying: 8, StagePublished: 9,
 }
 
 // ValidateProgress accepts an idempotent same-stage heartbeat or the next legal

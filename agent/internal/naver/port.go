@@ -168,6 +168,105 @@ const editorObservationScript = `(() => {
   };
 })()`
 
+// readbackObservationScript reads the PUBLISHED post. PUB-20 r4 sends the readback to the
+// account's own post-view URL because the permalink is a frameset whose iframe is built by
+// JavaScript — nothing static matches there — while `PostView.naver` serves the same post in
+// the bound page's OWN top-level document, in the very `.se-component` vocabulary the editor
+// uses (verified live 2026-09-07 against a real post: one se-documentTitle, nine se-text,
+// eight se-image, one se-imageStrip, one se-placesMap).
+//
+// It projects the body EXACTLY as the editor script does, because the fence compares the two
+// snapshots for equality. The one shape the editor has no name for is `se-imageStrip`, a
+// grouped row: its member images are counted and ordered like any other, or an eight-photo
+// post reads back short.
+const readbackObservationScript = `(() => {
+  const norm = (value) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+  const nodeText = (root) => root ? [...root.querySelectorAll('span.__se-node')].map((n) => n.textContent).join('') : '';
+  const textOf = (root) => {
+    if (!root) return '';
+    const nodes = [...root.querySelectorAll('span.__se-node')];
+    return nodes.length ? nodes.map((n) => n.textContent).join('') : norm(root.textContent);
+  };
+
+  const blocks = [];
+  let imageOrdinal = 0;
+  // scope is the image's own module for a strip member, or the whole component otherwise.
+  const pushImage = (scope, fallbackCaption) => {
+    const caption = scope.querySelector('.se-module-text.se-caption') || fallbackCaption;
+    const resource = scope.querySelector('img.se-image-resource') || scope.querySelector('img');
+    blocks.push({
+      kind: 'image', text: '', ordinal: imageOrdinal,
+      caption: caption && !caption.classList.contains('se-is-empty') ? nodeText(caption) : '',
+      uploaded: Boolean(resource && /^https:\/\//.test(resource.src)),
+      source: resource ? norm(resource.alt) : ''
+    });
+    imageOrdinal += 1;
+  };
+
+  const container = document.querySelector('.se-main-container') || document.body;
+  const components = container ? [...container.querySelectorAll('.se-component')] : [];
+  for (const component of components) {
+    const kinds = component.classList;
+    if (kinds.contains('se-documentTitle')) continue;
+    // A strip owns its images; its members must not also be walked as top-level components.
+    if (component.parentElement && component.parentElement.closest('.se-component.se-imageStrip')) continue;
+    if (kinds.contains('se-imageStrip')) {
+      // A strip groups several photos into one row and carries ONE caption for the row, so
+      // each member is counted in order and inherits it when it has none of its own.
+      const shared = component.querySelector('.se-module-text.se-caption');
+      for (const member of component.querySelectorAll('.se-module-image')) pushImage(member, shared);
+      continue;
+    }
+    if (component.parentElement && component.parentElement.closest('.se-component')) continue;
+    if (kinds.contains('se-image')) {
+      pushImage(component, null);
+    } else if (kinds.contains('se-sectionTitle')) {
+      blocks.push({kind: 'text', text: textOf(component), ordinal: 0, caption: '', uploaded: false, source: ''});
+    } else if (kinds.contains('se-quotation')) {
+      const quoted = component.querySelector('.se-module-text.se-quote') || component;
+      blocks.push({kind: 'text', text: '“' + textOf(quoted) + '”', ordinal: 0, caption: '', uploaded: false, source: ''});
+    } else if (kinds.contains('se-text')) {
+      for (const unit of component.querySelectorAll('.se-module-text')) {
+        for (const child of unit.children) {
+          if (child.tagName === 'UL' || child.tagName === 'OL') {
+            const items = [...child.querySelectorAll('li.se-text-list-item')].map((li) => textOf(li));
+            blocks.push({kind: 'text', text: items.map((item) => '- ' + item).join('\n'), ordinal: 0, caption: '', uploaded: false, source: ''});
+          } else if (child.tagName === 'P') {
+            const text = textOf(child);
+            if (text !== '') blocks.push({kind: 'text', text, ordinal: 0, caption: '', uploaded: false, source: ''});
+          }
+        }
+      }
+    }
+  }
+
+  const titleModule = document.querySelector('.se-module-text.se-title-text');
+  const tags = [...document.querySelectorAll('.wrap_tag .__se-hash-tag')].map((n) => norm(n.textContent).replace(/^#/, '')).filter(Boolean);
+  const category = document.querySelector('.category_title');
+  return {
+    href: location.href,
+    title: titleModule ? textOf(titleModule) : '',
+    blocks,
+    image_count: imageOrdinal,
+    tags,
+    category_name: category ? norm(category.textContent) : '',
+    // A published post is not an editor: nothing here may be mistaken for one.
+    editor_root: Boolean(document.querySelector('.blog_editor')),
+    settings_layer: document.querySelectorAll('div[class^="layer_popup__"][class*="is_show__"]').length
+  };
+})()`
+
+type readbackObservation struct {
+	Href          string          `json:"href"`
+	Title         string          `json:"title"`
+	Blocks        []observedBlock `json:"blocks"`
+	ImageCount    int             `json:"image_count"`
+	Tags          []string        `json:"tags"`
+	CategoryName  string          `json:"category_name"`
+	EditorRoot    bool            `json:"editor_root"`
+	SettingsLayer int             `json:"settings_layer"`
+}
+
 type observedBlock struct {
 	Kind     string `json:"kind"`
 	Text     string `json:"text"`
@@ -216,8 +315,16 @@ type CDPPort struct {
 	// settingsOpen latches when the publish settings layer opens. It never clears: the
 	// layer occludes the editor and no body write may follow it (PUBLISH-37).
 	settingsOpen bool
-	// settle bounds awaitImage. It is a field so a test can shorten it.
+	// settle bounds awaitImage and the post-activation permalink wait. It is a field so a
+	// test can shorten it.
 	settle time.Duration
+	// activated latches when ActivateFinal is ISSUED, not when it returns: a crash inside
+	// that call is exactly the ambiguity PUB-15 turns into outcome_unknown, so nothing may
+	// arm, activate or write again afterwards.
+	activated bool
+	// armed is the pre-fence snapshot ArmFinal verified. Readback carries visibility — and
+	// the category's id — from it, because a published post renders neither (PUB-15).
+	armed Snapshot
 }
 
 // NewCDPPort binds the sole dedicated page. It never navigates: the caller has already
@@ -295,6 +402,10 @@ func (p *CDPPort) Observe(ctx context.Context) (Snapshot, error) {
 // resolved from a body element's own geometry would land on the layer. The latch below
 // refuses that in the port rather than trusting the plan.
 func (p *CDPPort) Apply(ctx context.Context, mutation Mutation) error {
+	if p.activated {
+		// Nothing may touch the document once the one activation has been issued.
+		return PortError{Kind: FailureEditorChanged}
+	}
 	if p.settingsOpen && isBodyMutation(mutation.Kind) {
 		return PortError{Kind: FailureEditorChanged}
 	}
@@ -733,4 +844,214 @@ func snapshotToken(snapshot Snapshot) string {
 	}
 	sum := sha256.Sum256(encoded)
 	return hex.EncodeToString(sum[:])
+}
+
+// permalinkPath matches the canonical post path Naver's editor reaches after publishing.
+var permalinkPath = regexp.MustCompile(`^/([A-Za-z0-9_-]{3,32})/([1-9][0-9]*)$`)
+
+var _ CommitPort = (*CDPPort)(nil)
+
+// ArmFinal is an OBSERVATION. It re-proves the bound target, requires the arming token to
+// still equal a current full observation — so any interaction since preparation invalidates
+// it (PUB-22) — and returns the one control whose accessible name is in the versioned
+// allowlist. It clicks nothing.
+//
+// The returned handle carries no geometry: PUB-36 keeps the point at action time, so
+// ActivateFinal resolves the control again and binds the two together through an opaque id
+// derived from the control's identity and the very observation that armed it.
+func (p *CDPPort) ArmFinal(ctx context.Context, token string, allowed []string) (FinalControl, error) {
+	if p.activated {
+		return FinalControl{}, PortError{Kind: FailureEditorChanged}
+	}
+	if strings.TrimSpace(token) == "" || len(allowed) == 0 {
+		return FinalControl{}, PortError{Kind: FailureSafe}
+	}
+	snapshot, err := p.Observe(ctx)
+	if err != nil {
+		return FinalControl{}, err
+	}
+	if snapshot.Token != token {
+		// The document moved since preparation froze it. Nothing may be armed against a
+		// snapshot that is no longer current.
+		return FinalControl{}, PortError{Kind: FailureEditorChanged}
+	}
+	if !snapshot.SettingsLayerOpen || snapshot.UnversionedPublishLikeControls != 0 {
+		return FinalControl{}, PortError{Kind: FailureEditorChanged}
+	}
+	control, err := p.finalControl(ctx, allowed)
+	if err != nil {
+		return FinalControl{}, err
+	}
+	// A missing, duplicated, renamed or unversioned control, and a layer offering the
+	// scheduled choice without the immediate one, all leave the count refusing to arm.
+	if control.LayerMatches != 1 || control.Matches != 1 || control.Versioned != 1 || !control.Actionable ||
+		!slices.Contains(allowed, control.Name) {
+		return FinalControl{Matches: control.Matches, AccessibleName: control.Name}, nil
+	}
+	p.armed = snapshot
+	return FinalControl{OpaqueID: finalControlID(token, control.Name), AccessibleName: control.Name, Matches: 1}, nil
+}
+
+// finalControlID ties one armed control to the exact observation that armed it. It is opaque
+// on purpose: it is neither a selector nor a position, and a caller cannot construct one.
+func finalControlID(token, name string) string {
+	sum := sha256.Sum256([]byte("final-control\x00" + token + "\x00" + name))
+	return hex.EncodeToString(sum[:16])
+}
+
+// ActivateFinal sends EXACTLY ONE low-level activation, with no loop, retry, fallback or
+// second attempt anywhere in its call chain. The latch is set before the call is issued,
+// because a crash inside it is the case PUB-15 turns into outcome_unknown rather than a
+// failure that could be retried.
+func (p *CDPPort) ActivateFinal(ctx context.Context, control FinalControl) error {
+	if p.activated {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	if control.Matches != 1 || control.OpaqueID == "" || p.armed.Token == "" ||
+		control.OpaqueID != finalControlID(p.armed.Token, control.AccessibleName) {
+		return PortError{Kind: FailureSafe}
+	}
+	// Resolve the control's live geometry now, under the same identity it was armed with.
+	resolved, err := p.finalControl(ctx, []string{control.AccessibleName})
+	if err != nil {
+		return err
+	}
+	if resolved.LayerMatches != 1 || resolved.Matches != 1 || resolved.Versioned != 1 || !resolved.Actionable ||
+		resolved.Name != control.AccessibleName {
+		return PortError{Kind: FailureEditorChanged}
+	}
+	p.activated = true
+	if err := p.page.ClickPoint(ctx, resolved.X, resolved.Y); err != nil {
+		// The activation may or may not have reached Naver. That ambiguity is the designed
+		// result and is never retried here.
+		return PortError{Kind: FailureEditorChanged}
+	}
+	return nil
+}
+
+// Readback verifies the publication by reading the post through the paired account's own
+// post-view URL, and reports the CANONICAL permalink (PUB-20 r4). The numeric id is taken
+// from the permalink the editor itself reached after activation — never from user input and
+// never guessed.
+func (p *CDPPort) Readback(ctx context.Context, targetID string) (Readback, error) {
+	if !p.activated || p.armed.Token == "" {
+		return Readback{}, PortError{Kind: FailureSafe}
+	}
+	if targetID == "" || targetID != p.page.TargetID() || targetID != p.armed.TargetID {
+		return Readback{}, PortError{Kind: FailureEditorChanged}
+	}
+	account, postID, err := p.awaitPermalink(ctx)
+	if err != nil {
+		return Readback{}, err
+	}
+	if account != p.armed.AccountID {
+		return Readback{}, PortError{Kind: FailureEditorChanged}
+	}
+	postView := "https://blog.naver.com/PostView.naver?blogId=" + url.QueryEscape(account) + "&logNo=" + url.QueryEscape(postID)
+	if err := p.page.Navigate(ctx, postView); err != nil {
+		return Readback{}, PortError{Kind: FailureEditorChanged}
+	}
+	snapshot, err := p.observeReadback(ctx, account)
+	if err != nil {
+		return Readback{}, err
+	}
+	return Readback{PublishedURL: "https://blog.naver.com/" + account + "/" + postID, Snapshot: snapshot}, nil
+}
+
+// awaitPermalink waits for the bound page to reach the account's own post permalink and
+// returns the account and numeric id it exposes. It only re-reads the URL: a target switch,
+// a second page or a foreign host poisons the run instead of being waited out.
+func (p *CDPPort) awaitPermalink(ctx context.Context) (string, string, error) {
+	deadline := time.Now().Add(p.settle)
+	for {
+		current, err := p.page.Recheck(ctx)
+		if err != nil {
+			return "", "", PortError{Kind: FailureEditorChanged}
+		}
+		parsed, parseErr := url.Parse(current)
+		if parseErr != nil || parsed.Scheme != "https" || !strings.EqualFold(parsed.Hostname(), "blog.naver.com") {
+			return "", "", PortError{Kind: FailureEditorChanged}
+		}
+		if match := permalinkPath.FindStringSubmatch(parsed.EscapedPath()); match != nil {
+			return match[1], match[2], nil
+		}
+		// Naver may also land on the post-view form itself before settling.
+		if parsed.EscapedPath() == "/PostView.naver" {
+			blogID := strings.TrimSpace(parsed.Query().Get("blogId"))
+			logNo := strings.TrimSpace(parsed.Query().Get("logNo"))
+			if writerBlogID.MatchString(blogID) && numericPostID.MatchString(logNo) {
+				return blogID, logNo, nil
+			}
+		}
+		if !time.Now().Before(deadline) {
+			return "", "", PortError{Kind: FailureEditorChanged}
+		}
+		select {
+		case <-ctx.Done():
+			return "", "", PortError{Kind: FailureEditorChanged}
+		case <-time.After(uploadPollInterval):
+		}
+	}
+}
+
+// observeReadback reads the published post. It has its own URL predicate because Observe
+// deliberately requires the writer's URL, and its own script because the post is a document
+// rather than an editor — but the body it projects is the editor's projection exactly, since
+// the fence compares them for equality.
+func (p *CDPPort) observeReadback(ctx context.Context, account string) (Snapshot, error) {
+	before, err := p.page.Recheck(ctx)
+	if err != nil {
+		return Snapshot{}, PortError{Kind: FailureEditorChanged}
+	}
+	var observation readbackObservation
+	if err := p.page.Evaluate(ctx, readbackObservationScript, &observation); err != nil {
+		return Snapshot{}, PortError{Kind: FailureEditorChanged}
+	}
+	if _, err := p.page.AccessibilityRoles(ctx); err != nil {
+		return Snapshot{}, PortError{Kind: FailureEditorChanged}
+	}
+	after, err := p.page.Recheck(ctx)
+	if err != nil || after != before || observation.Href != after {
+		return Snapshot{}, PortError{Kind: FailureEditorChanged}
+	}
+	readAccount, err := postViewAccount(after)
+	if err != nil || readAccount != account {
+		return Snapshot{}, PortError{Kind: FailureEditorChanged}
+	}
+	if observation.EditorRoot || observation.SettingsLayer != 0 {
+		// A writer, not a post. Reading one for the other would verify nothing.
+		return Snapshot{}, PortError{Kind: FailureEditorChanged}
+	}
+	snapshot := Snapshot{
+		TargetID:    p.page.TargetID(),
+		URL:         after,
+		AccountID:   readAccount,
+		SignatureID: p.manifest.SignatureID,
+		Auth:        AuthReady,
+		Title:       observation.Title,
+		Body:        semanticBlocks(observation.Blocks),
+		ImageCount:  observation.ImageCount,
+		Tags:        append([]string{}, observation.Tags...),
+		// The published post shows the category's NAME and no id, and shows no visibility at
+		// all, so the id and the visibility are carried from the verified pre-fence snapshot
+		// while the name is the thing this readback actually proves (PUB-15).
+		Category:   SelectedSetting{ID: p.armed.Category.ID, Name: observation.CategoryName, Selected: true},
+		Visibility: p.armed.Visibility,
+	}
+	snapshot.LocatorMatches = map[MutationKind]int{}
+	snapshot.Token = snapshotToken(snapshot)
+	return snapshot, nil
+}
+
+// postViewAccount reads the blog identity from the post-view URL the driver itself built.
+func postViewAccount(current string) (string, error) {
+	parsed, err := url.Parse(current)
+	if err != nil || parsed.Scheme != "https" || parsed.Hostname() != "blog.naver.com" || parsed.EscapedPath() != "/PostView.naver" {
+		return "", errors.New("dedicated page is not the versioned Naver post view")
+	}
+	blogID := strings.TrimSpace(parsed.Query().Get("blogId"))
+	if !writerBlogID.MatchString(blogID) {
+		return "", errors.New("Naver post view exposed no blog identity")
+	}
+	return blogID, nil
 }

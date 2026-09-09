@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | ARCH | 2 | 2 | - | 0 |
 | AUTH | 5 | 5 | - | 0 |
-| QUOTA | 6 | 6 | - | 0 |
+| QUOTA | 7 | 7 | - | 0 |
 | POST | 5 | 5 | - | 0 |
 | VOICE | 2 | 2 | - | 1 |
 | GEN | 5 | 5 | - | 0 |
@@ -25,7 +25,7 @@
 | THEME | 8 | 8 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 1 | 1 | - | 1 |
-| CLIP | 1 | 1 | - | 0 |
+| CLIP | 2 | 2 | - | 0 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -37,19 +37,27 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
-| T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUB | T044 T043 | doing@260910.fnc |
 | T046 | Wiring the real publisher into the daemon | PUB | T045 | todo |
-| T076 | Durable clip generation and result retention | CLIP QUOTA VIDEO MODEL | T071 T074 T075 | todo |
+| T076 | Durable clip generation and result retention | CLIP QUOTA VIDEO MODEL | T071 T074 T075 | doing@260910.clp |
 | T077 | Clip generation progress, preview and download | CLIP THEME LANG | T072 T076 | todo |
 | T078 | Manual clip-plan save and credit-free rerender | CLIP QUOTA | T071 T074 T076 | todo |
 | T079 | Clip correction workspace | CLIP THEME LANG | T077 T078 | todo |
 | T080 | Grouped writing and video navigation | CLIP THEME | T070 T072 | todo |
 
 ## next
-- Implement and commit T076 through T080 sequentially; T074's three ratios are owner-verified in Naver web
+- Implement and commit T076 through T080 sequentially; clip AI must remain within a successful full-run credit reservation
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
-- the PUB body path is done and live-verified (T042 T043): read BOTH results before T045 — the 260910 surveys found that paragraph conversions split the component, 인용구 is born with a 출처 module, an image splits the caret's component and so needs no index, the photo-library sidebar overlays every caret point, and `Input.insertText` leaves its last word uncommitted until a key follows it (4 of 5 writes lost it). Next is T045 → T046 → T008 (re-read PUB@4 base); update-ssot PUB for VIDEO-17 + TMPL-39 after T008; T045 inherits the build-tagged survey harness in `agent/internal/naver/survey_test.go` for its own live checks, and must keep `image_caption`'s document-ordinal assumption true when it counts strip-grouped images
+- the PUB chain's driver is complete and the fence is built (T042 T043 T045): read those three results before T046 — the live surveys and the appended-enum trap are recorded there. T046 wires the real publisher into the daemon and is the last task before T008's authorized live smoke, whose base must be re-read at PUB@4; update-ssot PUB for VIDEO-17 + TMPL-39 after T008
 ## log
+- 260910 T045 done; CDPPort implements CommitPort (arming bound to its observation, one latched activation, post-view readback reporting the canonical permalink) and PUB-13 r4's filling_settings landed end to end — proto, migration 0037 rebuilding publish_jobs, backend, agent and FE; the appended enum number broke two order checks that read stage order off it, both now use an explicit rank
+- 260910 T076 claimed (clp); approved deferred admission with reservation-capped credit usage
+- 260910 create-task CLIP QUOTA done; T076/T077 absorb deferred admission and strict reserved-credit protection, T078 remains credit-free
+- 260910 create-task CLIP QUOTA start; T076 returned to todo after the owner's order decision
+- 260910 update-ssot CLIP QUOTA done; durable preparation before admission, fail-closed AI and reservation-capped clip debit
+- 260910 update-ssot CLIP QUOTA start; owner approves durable preparation before admission and prioritizes preventing credit overuse
+- 260910 update-ssot CLIP QUOTA start; awaiting the owner's preparation/admission order decision before any revision
+- 260910 T076 blocked: exact probed-duration holds must precede job insertion, but source probing is long-running worker work; no T076 implementation or completion commit
+- 260910 T076 claimed (clp)
 - 260910 T075 done; strict timecoded AI contracts, safe caption placement/exposure, typed budgets and all local gates pass
 - 260910 T075 claimed (clp)
 - 260910 T074 done; exact caption/video renderer, every local gate and nonroot Docker smoke pass; owner confirms Naver web acceptance of all three ratios
@@ -61,12 +69,3 @@
 - 260910 T074 claimed (clp)
 - 260910 T073 done; bounded media adapter and real nonroot Docker smoke pass, dev media version matches
 - 260910 T073 claimed (clp)
-- 260910 T072 done; clip setup, page-local direct uploads and all local gates pass
-- 260910 T043 claimed (img)
-- 260910 T072 claimed (clp)
-- 260910 T071 done; retryable transient-source cleanup, conditional direct upload and all local gates pass
-- 260910 T042 done; the four blocked questions answered by a live survey, the body plan is now two passes with the conversions reversed, driver signature → smarteditor-one-20260910-a4
-- 260910 T071 claimed (clp)
-- 260910 T070 done; UI/contract/CI gates pass; pre-existing 320 px header wordmark/plan overlap noted for later shell review
-- 260910 T042 claimed (bdy); the live survey answered all four questions that blocked it
-- 260910 T070 claimed (clp)

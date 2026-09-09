@@ -574,7 +574,13 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 		return fail(FailureAssetMissing)
 	}
 
-	photosAnnounced := false
+	// The two stages the plan itself decides. `uploading_photos` is announced at the first
+	// photo — with photos interleaved that is early in the body, which is fine: the sequence
+	// only has to be monotonic. `filling_settings` is announced when the settings layer
+	// opens, which is exactly the boundary PUB-13 r4 named. Both are announced ONCE, and a
+	// manifest with no photo still reaches `filling_settings` because the server accepts a
+	// single forward step and the layer always opens.
+	photosAnnounced, settingsAnnounced := false, false
 	for _, step := range plan {
 		if !photosAnnounced && step.mutation.Kind == MutationUploadImage {
 			if err := reporter.Advance(ctx, publishing.StageUploadingPhotos); err != nil {
@@ -582,9 +588,20 @@ func (p Publisher) Prepare(ctx context.Context, input Input, reporter publishing
 			}
 			photosAnnounced = true
 		}
-		// PUBLISH-13 r4 adds a `filling_settings` stage here. It is a proto, backend and
-		// frontend contract change and belongs to T045 with the rest of the fence
-		// reporting; until then the settings run under `uploading_photos`.
+		if !settingsAnnounced && step.mutation.Kind == MutationOpenSettings {
+			if !photosAnnounced {
+				// A post with no photo still owes the stage it would have passed through:
+				// the server refuses a two-step jump, so the sequence stays contiguous.
+				if err := reporter.Advance(ctx, publishing.StageUploadingPhotos); err != nil {
+					return fail(FailureSafe)
+				}
+				photosAnnounced = true
+			}
+			if err := reporter.Advance(ctx, publishing.StageFillingSettings); err != nil {
+				return fail(FailureSafe)
+			}
+			settingsAnnounced = true
+		}
 		if failure = p.mutate(ctx, expected, step.mutation, step.update); failure != "" {
 			return fail(failure)
 		}

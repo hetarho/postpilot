@@ -11,6 +11,7 @@ export const publishing = {
     openingEditor: '네이버 편집기 여는 중',
     fillingContent: '글 입력 중',
     uploadingPhotos: '사진 올리는 중',
+    fillingSettings: '태그·카테고리 설정 중',
     committing: '네이버에 최종 발행 중',
     verifying: '발행 결과 확인 중',
     published: '발행 완료',

@@ -60,6 +60,7 @@ type fakeEditor struct {
 	emptyAX     bool
 
 	// The driver's reviewed functions, scripted. Nil hooks resolve the healthy shape.
+	final     func(allowed []string) driverFinalControl
 	point     func(target string, ordinal int) driverPoint
 	activate  func(control, id string) driverActivation
 	state     func() driverSettingsState
@@ -98,6 +99,14 @@ type fakeEditor struct {
 	listItems        int
 	pendingEmptyItem bool
 	bodyEndEmpty     bool
+	// The post-publish surface. The page shows the writer until the fence's activation, then
+	// the permalink Naver lands on, then whatever the driver navigates to — which is how
+	// the readback's own URL predicate gets exercised.
+	permalink   string
+	navigatedTo string
+	activations int
+	finalReads  int
+	postView    map[string]any
 }
 
 func (editor *fakeEditor) record(entry string) {
@@ -179,6 +188,29 @@ func (editor *fakeEditor) fillList() {
 	defer editor.mu.Unlock()
 	editor.pendingEmptyItem = false
 	editor.bodyEndEmpty = false
+}
+
+// evaluateFailsFrom makes every later observation fail, which is how a browser loss or a
+// process death reaches the port: the page stops answering.
+func (port *CDPPort) evaluateFailsFrom(editor *fakeEditor) {
+	editor.mu.Lock()
+	defer editor.mu.Unlock()
+	editor.evaluateErr = true
+}
+
+func (editor *fakeEditor) finalControlState(allowed []string) driverFinalControl {
+	if editor.final != nil {
+		return editor.final(allowed)
+	}
+	open, _ := editor.observation["settings_layer"].(bool)
+	if !open {
+		return driverFinalControl{}
+	}
+	name := "발행"
+	if len(allowed) > 0 {
+		name = allowed[0]
+	}
+	return driverFinalControl{Matches: 1, LayerMatches: 1, Name: name, Versioned: 1, Actionable: true, X: 90, Y: 120}
 }
 
 func (editor *fakeEditor) settingsState() driverSettingsState {
@@ -276,7 +308,16 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 			editor.calls++
 			call := editor.calls
 			editor.mu.Unlock()
-			targets := []map[string]any{page("page-1", fakeWriterURL)}
+			editor.mu.Lock()
+			current := fakeWriterURL
+			if editor.activations > 0 && editor.permalink != "" {
+				current = editor.permalink
+			}
+			if editor.navigatedTo != "" {
+				current = editor.navigatedTo
+			}
+			editor.mu.Unlock()
+			targets := []map[string]any{page("page-1", current)}
 			if editor.targetsFor != nil {
 				if custom := editor.targetsFor(call); custom != nil {
 					targets = custom
@@ -319,6 +360,8 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 				case "Runtime.evaluate":
 					if editor.evaluateErr {
 						response["error"] = map[string]any{"code": -32000, "message": "Execution context was destroyed"}
+					} else if expression, _ := call.Params["expression"].(string); strings.Contains(expression, "category_title") {
+						result = map[string]any{"result": map[string]any{"value": editor.postView}}
 					} else if expression, _ := call.Params["expression"].(string); expression == "document" {
 						// CallFunction resolves the document once before every reviewed call.
 						result = map[string]any{"result": map[string]any{"objectId": "document-1"}}
@@ -340,6 +383,18 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 						editor.record("point:" + target)
 						editor.remember(target, "", "")
 						result = map[string]any{"result": map[string]any{"value": resolved}}
+					case strings.Contains(declaration, "seOnePublishBtn"):
+						allowed := []string{}
+						if list, ok := first.([]any); ok {
+							for _, value := range list {
+								allowed = append(allowed, toString(value))
+							}
+						}
+						editor.record("final:" + strings.Join(allowed, "|"))
+						editor.mu.Lock()
+						editor.finalReads++
+						editor.mu.Unlock()
+						result = map[string]any{"result": map[string]any{"value": editor.finalControlState(allowed)}}
 					case strings.Contains(declaration, "settled += 1"):
 						editor.mu.Lock()
 						added := len(editor.uploaded)
@@ -384,6 +439,13 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 					if enabled, _ := call.Params["enabled"].(bool); enabled {
 						editor.record("intercept")
 					}
+				case "Page.enable":
+				case "Page.navigate":
+					destination, _ := call.Params["url"].(string)
+					editor.mu.Lock()
+					editor.navigatedTo = destination
+					editor.mu.Unlock()
+					editor.record("navigate:" + destination)
 				case "DOM.getDocument":
 					result = map[string]any{"root": map[string]any{"nodeId": 1}}
 				case "DOM.querySelector":
@@ -411,6 +473,13 @@ func startFakeCDP(t *testing.T, editor *fakeEditor) string {
 						editor.record("click")
 					} else if phase == "mouseReleased" {
 						editor.applyPendingClick()
+						editor.mu.Lock()
+						// The second resolve of the final control is ActivateFinal's, so the
+						// click that follows it is the one activation.
+						if editor.finalReads >= 2 && editor.permalink != "" {
+							editor.activations++
+						}
+						editor.mu.Unlock()
 					}
 				case "Input.insertText":
 					text, _ := call.Params["text"].(string)

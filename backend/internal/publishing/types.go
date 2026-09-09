@@ -40,6 +40,10 @@ const (
 	StageOpeningEditor   Stage = "opening_editor"
 	StageFillingContent  Stage = "filling_content"
 	StageUploadingPhotos Stage = "uploading_photos"
+	// StageFillingSettings is where tags, category and visibility are entered. They live
+	// behind a layer that covers the editor, so the body and every photo are complete
+	// before it opens (PUB-37), which is why it sits between the photos and the fence.
+	StageFillingSettings Stage = "filling_settings"
 	StageCommitting      Stage = "committing"
 	StageVerifying       Stage = "verifying"
 	StagePublished       Stage = "published"

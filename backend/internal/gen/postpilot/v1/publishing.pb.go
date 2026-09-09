@@ -147,21 +147,27 @@ const (
 	PublishStage_PUBLISH_STAGE_COMMITTING       PublishStage = 7
 	PublishStage_PUBLISH_STAGE_VERIFYING        PublishStage = 8
 	PublishStage_PUBLISH_STAGE_PUBLISHED        PublishStage = 9
+	// Appended rather than numbered between UPLOADING_PHOTOS and COMMITTING, where it
+	// belongs in PUB-13's sequence: renumbering the later stages would be a breaking wire
+	// change for every stored and in-flight job. The order lives in the server's stage rank,
+	// never in these numbers.
+	PublishStage_PUBLISH_STAGE_FILLING_SETTINGS PublishStage = 10
 )
 
 // Enum value maps for PublishStage.
 var (
 	PublishStage_name = map[int32]string{
-		0: "PUBLISH_STAGE_UNSPECIFIED",
-		1: "PUBLISH_STAGE_QUEUED",
-		2: "PUBLISH_STAGE_CLAIMED",
-		3: "PUBLISH_STAGE_PREPARING",
-		4: "PUBLISH_STAGE_OPENING_EDITOR",
-		5: "PUBLISH_STAGE_FILLING_CONTENT",
-		6: "PUBLISH_STAGE_UPLOADING_PHOTOS",
-		7: "PUBLISH_STAGE_COMMITTING",
-		8: "PUBLISH_STAGE_VERIFYING",
-		9: "PUBLISH_STAGE_PUBLISHED",
+		0:  "PUBLISH_STAGE_UNSPECIFIED",
+		1:  "PUBLISH_STAGE_QUEUED",
+		2:  "PUBLISH_STAGE_CLAIMED",
+		3:  "PUBLISH_STAGE_PREPARING",
+		4:  "PUBLISH_STAGE_OPENING_EDITOR",
+		5:  "PUBLISH_STAGE_FILLING_CONTENT",
+		6:  "PUBLISH_STAGE_UPLOADING_PHOTOS",
+		7:  "PUBLISH_STAGE_COMMITTING",
+		8:  "PUBLISH_STAGE_VERIFYING",
+		9:  "PUBLISH_STAGE_PUBLISHED",
+		10: "PUBLISH_STAGE_FILLING_SETTINGS",
 	}
 	PublishStage_value = map[string]int32{
 		"PUBLISH_STAGE_UNSPECIFIED":      0,
@@ -174,6 +180,7 @@ var (
 		"PUBLISH_STAGE_COMMITTING":       7,
 		"PUBLISH_STAGE_VERIFYING":        8,
 		"PUBLISH_STAGE_PUBLISHED":        9,
+		"PUBLISH_STAGE_FILLING_SETTINGS": 10,
 	}
 )
 
@@ -2728,7 +2735,7 @@ const file_postpilot_v1_publishing_proto_rawDesc = "" +
 	"\x15PUBLISH_STATUS_FAILED\x10\x04\x12\"\n" +
 	"\x1ePUBLISH_STATUS_NEEDS_ATTENTION\x10\x05\x12\"\n" +
 	"\x1ePUBLISH_STATUS_OUTCOME_UNKNOWN\x10\x06\x12\x1b\n" +
-	"\x17PUBLISH_STATUS_CANCELED\x10\a*\xc0\x02\n" +
+	"\x17PUBLISH_STATUS_CANCELED\x10\a*\xe4\x02\n" +
 	"\fPublishStage\x12\x1d\n" +
 	"\x19PUBLISH_STAGE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14PUBLISH_STAGE_QUEUED\x10\x01\x12\x19\n" +
@@ -2739,7 +2746,9 @@ const file_postpilot_v1_publishing_proto_rawDesc = "" +
 	"\x1ePUBLISH_STAGE_UPLOADING_PHOTOS\x10\x06\x12\x1c\n" +
 	"\x18PUBLISH_STAGE_COMMITTING\x10\a\x12\x1b\n" +
 	"\x17PUBLISH_STAGE_VERIFYING\x10\b\x12\x1b\n" +
-	"\x17PUBLISH_STAGE_PUBLISHED\x10\t*\xbe\x02\n" +
+	"\x17PUBLISH_STAGE_PUBLISHED\x10\t\x12\"\n" +
+	"\x1ePUBLISH_STAGE_FILLING_SETTINGS\x10\n" +
+	"*\xbe\x02\n" +
 	"\x12PublishFailureKind\x12\x1f\n" +
 	"\x1bPUBLISH_FAILURE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14PUBLISH_FAILURE_SAFE\x10\x01\x12!\n" +

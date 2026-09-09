@@ -70,7 +70,7 @@ func (*renewalAPI) Fail(context.Context, string, string, int64, postpilotv1.Publ
 func TestReporterPersistsCommitFenceBeforeReturning(t *testing.T) {
 	api := &fakeAPI{}
 	reporter := newProgressReporter(api, "job", "lease", 1)
-	stages := []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageCommitting, StageVerifying}
+	stages := []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageFillingSettings, StageCommitting, StageVerifying}
 	for _, stage := range stages {
 		if err := reporter.Advance(context.Background(), stage); err != nil {
 			t.Fatal(err)
@@ -79,8 +79,13 @@ func TestReporterPersistsCommitFenceBeforeReturning(t *testing.T) {
 			t.Fatalf("acknowledged before persistence: got %v", got)
 		}
 	}
-	if api.calls[4].stage != postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING {
-		t.Fatal("commit fence was not the fifth durable transition")
+	// PUB-13 r4 put filling_settings between the photos and the fence, so the fence is now
+	// the sixth durable transition rather than the fifth.
+	if api.calls[4].stage != postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_SETTINGS {
+		t.Fatalf("the settings stage was not the fifth durable transition: %v", api.calls[4].stage)
+	}
+	if api.calls[5].stage != postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING {
+		t.Fatalf("commit fence was not the sixth durable transition: %v", api.calls[5].stage)
 	}
 }
 
@@ -107,7 +112,7 @@ func TestReporterRejectsSkippedAndPostTerminalProgress(t *testing.T) {
 
 func advanceAllStages(t *testing.T, ctx context.Context, reporter Reporter) {
 	t.Helper()
-	for _, stage := range []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageCommitting, StageVerifying} {
+	for _, stage := range []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageFillingSettings, StageCommitting, StageVerifying} {
 		if err := reporter.Advance(ctx, stage); err != nil {
 			t.Fatalf("progress %s: %v", stage, err)
 		}
@@ -256,8 +261,8 @@ func TestExecutorClassifiesProcessLossOnEitherSideOfTheFence(t *testing.T) {
 		stages      []Stage
 		wantFailure postpilotv1.PublishFailureKind
 	}{
-		{name: "before fence", stages: []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos}, wantFailure: postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE},
-		{name: "after fence", stages: []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageCommitting}, wantFailure: postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST},
+		{name: "before fence", stages: []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageFillingSettings}, wantFailure: postpilotv1.PublishFailureKind_PUBLISH_FAILURE_SAFE},
+		{name: "after fence", stages: []Stage{StagePreparing, StageOpeningEditor, StageFillingContent, StageUploadingPhotos, StageFillingSettings, StageCommitting}, wantFailure: postpilotv1.PublishFailureKind_PUBLISH_FAILURE_BROWSER_LOST},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			api := &fakeAPI{}
@@ -420,5 +425,35 @@ func TestLeaseRenewalFailureCancelsPublisherAndLeavesServerToRecoverLease(t *tes
 	}
 	if !strings.Contains(logs.String(), "lease renewal failed") {
 		t.Fatalf("renewal failure was not logged safely: %s", logs.String())
+	}
+}
+
+// The protobuf enum numbers no longer say anything about order: FILLING_SETTINGS was
+// appended so that adding it could not renumber the stages after it, which means it numbers
+// HIGHER than COMMITTING while belonging before it. Anything that ordered stages by those
+// numbers would classify a pre-fence failure as post-fence, so this pins the trap itself.
+func TestStageOrderComesFromTheRankAndNotTheEnumNumbers(t *testing.T) {
+	if postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_SETTINGS <= postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING {
+		t.Fatal("filling_settings no longer numbers above committing; this guard needs rewriting")
+	}
+	if publisherStageRank[postpilotv1.PublishStage_PUBLISH_STAGE_FILLING_SETTINGS] >= publisherStageRank[postpilotv1.PublishStage_PUBLISH_STAGE_COMMITTING] {
+		t.Fatal("the rank does not put filling_settings before the fence")
+	}
+	// Every stage the publisher can report has a rank, and the ranks are contiguous.
+	seen := map[int]Stage{}
+	for stage, proto := range publisherStages {
+		rank, ok := publisherStageRank[proto]
+		if !ok {
+			t.Fatalf("stage %s has no rank", stage)
+		}
+		if other, clash := seen[rank]; clash {
+			t.Fatalf("stages %s and %s share rank %d", stage, other, rank)
+		}
+		seen[rank] = stage
+	}
+	for rank := 2; rank <= len(seen)+1; rank++ {
+		if _, ok := seen[rank]; !ok {
+			t.Fatalf("rank %d is missing, so a legal step would look like a skip", rank)
+		}
 	}
 }

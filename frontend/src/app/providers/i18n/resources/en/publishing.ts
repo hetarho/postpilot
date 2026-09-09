@@ -12,6 +12,7 @@ export const publishing = {
     openingEditor: 'Opening the Naver editor',
     fillingContent: 'Entering the post',
     uploadingPhotos: 'Uploading photos',
+    fillingSettings: 'Entering tags and category',
     committing: 'Publishing to Naver',
     verifying: 'Verifying the published post',
     published: 'Published',
