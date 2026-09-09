@@ -74,6 +74,9 @@ export interface PostListItem {
   pendingExperimentId: string
   targetLanguage: ContentLanguage
   contentLanguage: ContentLanguage | undefined
+  /** The current content revision's tags (POST-65), so the list can be narrowed by them. Empty
+   *  until something has written content for the post. */
+  tags: string[]
 }
 
 /** Shown in place of a title nobody has typed yet. A list of blank rows would be

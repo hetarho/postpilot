@@ -30,6 +30,7 @@ import {
   TemplateRefSchema,
   type Observation,
   type PostContent,
+  PostContentSchema,
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
@@ -113,6 +114,10 @@ export interface FakePostRow {
   template?: FakePostTemplate
   /** What this post already answers to its template's data fields. */
   templateAnswers?: Array<{ label: string; text?: string; enabled?: boolean }>
+  /** Shorthand for a post whose content carries these tags. A tag lives inside the content
+   *  (POST-65), so passing them without `content` synthesizes the minimal content that would
+   *  hold them — which is also the only way a real post comes to have one. */
+  tags?: string[]
   machineBaselineVoiceId?: string
   images?: FakeImageRow[]
   videos?: FakeVideoRow[]
@@ -296,7 +301,11 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         }),
       ),
       activeJob: row.activeJob ? toFakeProto(row.activeJob) : undefined,
-      content: row.content,
+      content:
+        row.content ??
+        (row.tags
+          ? create(PostContentSchema, { title: row.title ?? '', tags: row.tags })
+          : undefined),
       observations: row.observations ?? [],
       pendingExperimentId: row.pendingExperimentId ?? '',
       contentRevision: row.contentRevision ?? 0n,
@@ -358,7 +367,11 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     calls?.push('ListPosts')
     if (listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListPostsResponseSchema, {
-      posts: [...rows.values()].map((row) => create(PostSummarySchema, row)),
+      // The summary's tags are the content's, read out of the content the way the server
+      // reads them rather than out of a column of their own (POST-65).
+      posts: [...rows.values()].map((row) =>
+        create(PostSummarySchema, { ...row, tags: row.content?.tags ?? [] }),
+      ),
     })
   })
 

@@ -65,6 +65,7 @@ export function toPostListItem(summary: PostSummary): PostListItem {
     pendingExperimentId: summary.pendingExperimentId,
     targetLanguage: requireContentLanguage(summary.targetLanguage),
     contentLanguage: contentLanguageFromProto(summary.contentLanguage),
+    tags: summary.tags,
   }
 }
 

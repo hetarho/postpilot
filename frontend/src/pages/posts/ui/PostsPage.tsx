@@ -1,8 +1,9 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { displayTitle, postStatusLabel, usePosts, type PostListItem } from '@/entities/post'
 import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
+import { narrowPosts, PostListControls, type PostNarrowing } from '@/features/filter-posts'
 import { TemplateRefLabel } from '@/entities/template'
 import { VoiceRefLabel } from '@/entities/voice'
 import { formatRelativeTime } from '@/shared/lib'
@@ -41,13 +42,34 @@ function postStatusTone(status: string): BadgeTone {
   return 'neutral'
 }
 
-/** The way back to unfinished work (PRD F-8). The server returns only the acting user's
- *  posts, newest first — this screen does not sort or filter. */
+/** The way back to unfinished work (PRD F-8). The server returns only the acting user's posts,
+ *  newest first and all of them; the search and the status filter narrow that one answer here in
+ *  the browser (POST-65, POST-66), reading and writing the URL so the narrowing survives opening
+ *  a post, coming back, a reload and a shared link (POST-67). */
 export function PostsPage() {
   const { t } = useTranslation(['posts', 'common'])
   const { posts, isPending, isFetching, isError, refetch } = usePosts()
   const { experiments } = useExperiments()
   const byId = new Map(experiments.map((experiment) => [experiment.id, experiment]))
+  const narrowing: PostNarrowing = useSearch({ from: '/authenticated/posts' })
+  const navigate = useNavigate()
+  // `replace`, not a push: a history entry per keystroke would make 뒤로 mean "one character
+  // ago" instead of "the screen I came from". An emptied field drops the param rather than
+  // carrying `?q=`.
+  const narrow = (next: PostNarrowing) =>
+    void navigate({
+      to: '/posts',
+      search: { q: next.q?.trim() === '' ? undefined : next.q, status: next.status },
+      replace: true,
+    })
+  const narrowed = narrowPosts(posts, narrowing)
+  const noMatch = !isPending && !isError && posts.length > 0 && narrowed.length === 0
+  const statusLabel = narrowing.status ? t(`list.filter.${narrowing.status}`, { ns: 'posts' }) : ''
+  const noMatchText = narrowing.q?.trim()
+    ? narrowing.status
+      ? t('list.noMatch.both', { ns: 'posts', q: narrowing.q.trim(), status: statusLabel })
+      : t('list.noMatch.query', { ns: 'posts', q: narrowing.q.trim() })
+    : t('list.noMatch.status', { ns: 'posts', status: statusLabel })
 
   return (
     // The page gutter lives on each block rather than on `main`, so the list rows can run edge to
@@ -58,6 +80,13 @@ export function PostsPage() {
     >
       <div className="px-4 sm:px-6 lg:px-8">
         <Typography variant="display">{t('list.mine', { ns: 'posts' })}</Typography>
+      </div>
+
+      {/* On the screen at every post count (POST-68): a search that appears at some number of
+          posts is a second layout for the same page, and the count it would appear at is exactly
+          where someone starts needing it. */}
+      <div className="mt-6 px-4 sm:px-6 lg:px-8">
+        <PostListControls narrowing={narrowing} onChange={narrow} />
       </div>
 
       {isError && (
@@ -89,8 +118,23 @@ export function PostsPage() {
         </Typography>
       )}
 
+      {/* A narrowing that matches nothing is NOT the same screen as an account with no posts
+          (POST-69): it names what is narrowing, so the user can see it is their own query and
+          not an empty account, and it offers the one way back to the whole list. Page text, no
+          card and no illustration. */}
+      {noMatch && (
+        <div className="mt-8 px-4 sm:px-6 lg:px-8">
+          <Typography variant="body" role="status" className="text-content-tertiary">
+            {noMatchText}
+          </Typography>
+          <Button variant="ghost" onClick={() => narrow({})} className="mt-2 -ml-3">
+            {t('list.reset', { ns: 'posts' })}
+          </Button>
+        </div>
+      )}
+
       <ul className="divide-divider mt-4 shrink-0 divide-y">
-        {posts.map((post) => {
+        {narrowed.map(({ post, matchedTags }) => {
           const status = rowStatus(
             post,
             post.pendingExperimentId ? byId.get(post.pendingExperimentId) : undefined,
@@ -122,6 +166,15 @@ export function PostsPage() {
                   template={post.template}
                   className={typographyStyles({ variant: 'meta' })}
                 />
+                {/* Only the tags the search actually matched, and only while it did (POST-65).
+                    A row kept by a word its title never shows looks arbitrary otherwise; as
+                    metadata rather than the chips ② uses, because a fourth object in a 360px
+                    row is what pushed the title down to ten Hangul in the first place. */}
+                {matchedTags.length > 0 && (
+                  <span className={typographyStyles({ variant: 'meta', className: 'truncate' })}>
+                    {matchedTags.map((tag) => `#${tag}`).join(' ')}
+                  </span>
+                )}
                 <time
                   dateTime={post.updatedAt}
                   className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}
