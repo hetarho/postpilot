@@ -22,7 +22,7 @@ import {
 
 export function VoiceValidationPage() {
   const { t } = useTranslation(['voices', 'common'])
-  const { voiceId, id } = useParams({ from: '/authenticated/voices/$voiceId/validations/$id' })
+  const { voiceId = '', id = '' } = useParams({ strict: false })
   const { user } = useSession()
   const transport = useTransport()
   const key = voiceValidationQueryKey(transport, user?.id ?? '', voiceId, id)

@@ -43,9 +43,8 @@ export function NewDraftPage() {
 /** `/posts/$slug` — an existing post. */
 export function PostEditorPage() {
   const { t } = useTranslation(['posts', 'common'])
-  // The '/authenticated' prefix is the id of the pathless guard layout every signed-in
-  // route hangs off (app/routes/router.tsx) — the URL itself is still '/posts/<slug>'.
-  const { slug } = useParams({ from: '/authenticated/posts/$slug' })
+  // The page owns its public parameter, not the shell's pathless layout ids.
+  const { slug = '' } = useParams({ strict: false })
   const { post, isPending, failure, refetch } = usePost(slug)
 
   if (failure) {

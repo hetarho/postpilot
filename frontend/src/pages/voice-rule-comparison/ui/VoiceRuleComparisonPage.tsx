@@ -28,7 +28,7 @@ import { TextCandidateComparison } from '@/widgets/candidate-comparison'
 
 export function VoiceRuleComparisonPage() {
   const { t } = useTranslation(['voices', 'common'])
-  const { voiceId, id } = useParams({ from: '/authenticated/voices/$voiceId/rules/$id/compare' })
+  const { voiceId = '', id = '' } = useParams({ strict: false })
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const transport = useTransport()

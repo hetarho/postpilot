@@ -28,7 +28,7 @@ export function VoiceScreen({
   children: (context: VoiceScreenContext) => ReactNode
 }) {
   const { t } = useTranslation(['voices', 'common'])
-  const { voiceId } = useParams({ from: '/authenticated/voices/$voiceId' })
+  const { voiceId = '' } = useParams({ strict: false })
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { profile, isPending, isError, refetch } = useVoiceProfile(ownerId, voiceId)

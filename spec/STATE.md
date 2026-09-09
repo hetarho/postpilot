@@ -37,13 +37,14 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
-| T080 | Grouped writing and video navigation | CLIP THEME | T070 T072 | todo |
 
 ## next
-- Implement and commit T080; clip AI must remain within a successful full-run credit reservation
+- No remaining CLIP tasks: T069 through T080 are complete; T008 is outside this clip workstream
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
 - T008 is the last PUB task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job. Read T042 T043 T045 T046 results for the live surveys and the wiring's typed preflight; update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
 ## log
+- 260910 T080 done; grouped navigation and responsive credit-safe header; all local gates and ordinary/master browser checks pass
+- 260910 T080 claimed (clp); CLIP r2 admission delta is unrelated to grouped navigation
 - 260910 T079 done; accessible correction workspace, exact source reselection and guarded free rerender; all local gates and responsive browser checks pass
 - 260910 T079 claimed (clp); CLIP r2 admission delta does not change this credit-free correction UI
 - 260910 T078 done; optimistic corrections, exact source-subset rerender, zero credit/provider path and recovery; all local gates and targeted race tests pass
@@ -61,5 +62,3 @@
 - 260910 update-ssot CLIP QUOTA start; owner approves durable preparation before admission and prioritizes preventing credit overuse
 - 260910 update-ssot CLIP QUOTA start; awaiting the owner's preparation/admission order decision before any revision
 - 260910 T076 blocked: exact probed-duration holds must precede job insertion, but source probing is long-running worker work; no T076 implementation or completion commit
-- 260910 T076 claimed (clp)
-- 260910 T075 done; strict timecoded AI contracts, safe caption placement/exposure, typed budgets and all local gates pass

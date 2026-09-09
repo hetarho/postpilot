@@ -51,7 +51,7 @@ export function PostsPage() {
   const { posts, isPending, isFetching, isError, refetch } = usePosts()
   const { experiments } = useExperiments()
   const byId = new Map(experiments.map((experiment) => [experiment.id, experiment]))
-  const narrowing: PostNarrowing = useSearch({ from: '/authenticated/posts' })
+  const narrowing: PostNarrowing = useSearch({ strict: false })
   const navigate = useNavigate()
   // `replace`, not a push: a history entry per keystroke would make 뒤로 mean "one character
   // ago" instead of "the screen I came from". An emptied field drops the param rather than

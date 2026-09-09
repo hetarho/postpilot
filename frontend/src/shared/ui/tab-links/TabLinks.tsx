@@ -14,6 +14,8 @@ export interface TabLink {
   icon?: ComponentType<{ className?: string }>
   /** Route params for a `to` with dynamic segments, such as the voice a tab row belongs to. */
   params?: Record<string, string>
+  /** Group tabs remain current on their descendant addresses; sibling panels stay exact. */
+  exact?: boolean
 }
 
 /** A tab row whose tabs are ADDRESSES. `SegmentedControl` is the same shape driven by `onChange`,
@@ -61,7 +63,7 @@ export function TabLinks({
           aria-label={compactCapable ? item.label : undefined}
           // Exact: every tab is a sibling address under one layout, so a prefix match would leave
           // the first tab marked current on all of the others.
-          activeOptions={{ exact: true }}
+          activeOptions={{ exact: item.exact ?? true }}
           // `px-4` pays for the height floor: it sets only the height, and '말투' is two Hangul at
           // 14px — a 28px-wide target without the padding (§4.1, §4.2). 40px under a mouse, 44
           // under a thumb (THEME-23).

@@ -395,7 +395,7 @@
      ordinary utilities (`pb-safe-b`, `bottom-nav`) instead of the arbitrary values §1.2 forbids.
      env() resolves at use time and is 0 until index.html sets viewport-fit=cover — design-language
      §8.1. --spacing-nav is the phone tab bar's full height so content and docked bars can clear it. */
-  /* The sticky top bar's height from `sm:` up (`min-h-16`), and the desk sidebar that hangs from
+  /* The sticky top bar's desk height, and the sidebar that hangs from
      its bottom edge. Three files offset past that bar — the sidebar, the editor's status bar, the
      models page's stage switch — and a `16` repeated in three places is a number that drifts.
      `dvh`, not `vh`, for the same reason the sheet uses it (§8.1). */
@@ -824,6 +824,14 @@ summary,
 ::selection {
   background-color: var(--color-selection-bg);
   color: var(--color-selection-fg);
+}
+
+/* The laptop header has a dedicated navigation row; all sticky offsets consume
+   this same token. At the desk breakpoint navigation moves into the rail. */
+@media (40rem <= width < 64rem) {
+  :root {
+    --spacing-header: 6rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

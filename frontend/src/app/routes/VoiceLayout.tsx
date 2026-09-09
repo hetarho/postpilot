@@ -35,7 +35,7 @@ const VOICE_TABS: readonly (Omit<TabLink, 'params' | 'label' | 'shortLabel'> & {
  *  before any tab asks for a profile that does not exist. */
 export function VoiceLayout() {
   const { t } = useTranslation(['nav', 'voices', 'common'])
-  const { voiceId } = useParams({ from: '/authenticated/voices/$voiceId' })
+  const { voiceId = '' } = useParams({ strict: false })
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { voices, isPending, isError, isFetching, refetch } = useVoices(ownerId)

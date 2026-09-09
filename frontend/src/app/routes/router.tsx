@@ -16,6 +16,8 @@ import { transport } from '@/shared/api'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
 import { queryClient } from '../providers/query-client'
 import { AuthenticatedLayout } from './AuthenticatedLayout'
+import { WritingLayout } from './WritingLayout'
+import { VideoLayout } from './VideoLayout'
 import { RootLayout } from './RootLayout'
 import { RouteError } from './RouteError'
 import { RoutePending } from './RoutePending'
@@ -188,6 +190,17 @@ const authenticatedRoute = createRoute({
   component: AuthenticatedLayout,
 })
 
+const writingGroupRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  id: 'writing',
+  component: WritingLayout,
+})
+const videoGroupRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  id: 'video',
+  component: VideoLayout,
+})
+
 // Kept as a redirect rather than dropped: '/' is what a bookmark, a bare domain and an
 // older remembered `?redirect=` all resolve to.
 const indexRoute = createRoute({
@@ -199,7 +212,7 @@ const indexRoute = createRoute({
 })
 
 const postsRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/posts',
   // The narrowing is an address (POST-67): opening a post and coming back, a reload and a
   // shared link all keep it. Anything the list cannot honour is dropped rather than refused —
@@ -261,13 +274,13 @@ const adminEstimatorRoute = createRoute({
 })
 
 const voicesRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/voices',
   component: lazyRouteComponent(() => import('@/pages/voices'), 'VoicesPage'),
 })
 
 const templatesRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/templates',
   component: lazyRouteComponent(() => import('@/pages/templates'), 'TemplatesPage'),
 })
@@ -275,13 +288,13 @@ const templatesRoute = createRoute({
 // `new` is declared before `$templateId` so the static path cannot be swallowed by the param,
 // exactly as `/posts/new` sits before `/posts/$slug` below.
 const newTemplateRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/templates/new',
   component: lazyRouteComponent(() => import('@/pages/template'), 'TemplatePage'),
 })
 
 const templateRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/templates/$templateId',
   component: lazyRouteComponent(() => import('@/pages/template'), 'TemplatePage'),
 })
@@ -293,32 +306,32 @@ const plansRoute = createRoute({
 })
 
 const videoTemplatesRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => videoGroupRoute,
   path: '/video-templates',
   component: lazyRouteComponent(() => import('@/pages/video-templates'), 'VideoTemplatesPage'),
 })
 const clipsRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => videoGroupRoute,
   path: '/clips',
   component: lazyRouteComponent(() => import('@/pages/clips'), 'ClipsPage'),
 })
 const newClipRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => videoGroupRoute,
   path: '/clips/new',
   component: lazyRouteComponent(() => import('@/pages/clip'), 'ClipPage'),
 })
 const clipRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => videoGroupRoute,
   path: '/clips/$clipId',
   component: lazyRouteComponent(() => import('@/pages/clip'), 'ClipPage'),
 })
 const newVideoTemplateRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => videoGroupRoute,
   path: '/video-templates/new',
   component: lazyRouteComponent(() => import('@/pages/video-template'), 'VideoTemplatePage'),
 })
 const videoTemplateRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => videoGroupRoute,
   path: '/video-templates/$templateId',
   component: lazyRouteComponent(() => import('@/pages/video-template'), 'VideoTemplatePage'),
 })
@@ -380,7 +393,7 @@ const accountRoute = createRoute({
 })
 
 const guidelinesRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/guidelines',
   component: lazyRouteComponent(() => import('@/pages/guidelines'), 'GuidelinesPage'),
 })
@@ -389,7 +402,7 @@ const guidelinesRoute = createRoute({
 // share the tab row. The two detail screens further down stay OUTSIDE it — they are full-width
 // review surfaces with their own back link, not a sixth tab.
 const voiceLayoutRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/voices/$voiceId',
   component: lazyRouteComponent(() => import('./VoiceLayout'), 'VoiceLayout'),
 })
@@ -486,7 +499,7 @@ const modelExperimentRoute = createRoute({
 })
 
 const voiceRuleComparisonRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/voices/$voiceId/rules/$id/compare',
   component: lazyRouteComponent(
     () => import('@/pages/voice-rule-comparison'),
@@ -495,7 +508,7 @@ const voiceRuleComparisonRoute = createRoute({
 })
 
 const voiceValidationRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/voices/$voiceId/validations/$id',
   component: lazyRouteComponent(() => import('@/pages/voice-validation'), 'VoiceValidationPage'),
 })
@@ -503,13 +516,13 @@ const voiceValidationRoute = createRoute({
 // A static segment outranks '$slug', so this route — not the editor below — is what
 // '/posts/new' matches.
 const newDraftRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/posts/new',
   component: NewDraftPage,
 })
 
 const postEditorRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
+  getParentRoute: () => writingGroupRoute,
   path: '/posts/$slug',
   component: PostEditorPage,
 })
@@ -525,41 +538,45 @@ export const routeTree = rootRoute.addChildren([
   aboutRoute,
   authenticatedRoute.addChildren([
     indexRoute,
-    postsRoute,
+    writingGroupRoute.addChildren([
+      postsRoute,
+      newDraftRoute,
+      postEditorRoute,
+      voicesRoute,
+      templatesRoute,
+      newTemplateRoute,
+      templateRoute,
+      guidelinesRoute,
+      voiceLayoutRoute.addChildren([
+        voiceRoute,
+        voiceVersionsRoute,
+        voiceImportRoute,
+        voiceRulesRoute,
+        voiceValidationsRoute,
+      ]),
+      voiceRuleComparisonRoute,
+      voiceValidationRoute,
+    ]),
+    videoGroupRoute.addChildren([
+      clipsRoute,
+      newClipRoute,
+      clipRoute,
+      videoTemplatesRoute,
+      newVideoTemplateRoute,
+      videoTemplateRoute,
+    ]),
     publishingAgentsRoute,
     adminRoute.addChildren([adminAccountsRoute, adminModelsRoute, adminEstimatorRoute]),
-    voicesRoute,
-    templatesRoute,
-    newTemplateRoute,
-    templateRoute,
-    videoTemplatesRoute,
-    clipsRoute,
-    newClipRoute,
-    clipRoute,
-    newVideoTemplateRoute,
-    videoTemplateRoute,
-    guidelinesRoute,
     plansRoute,
     billingRoute,
     billingCheckoutRoute,
     billingMethodSuccessRoute,
     billingMethodFailRoute,
     accountRoute,
-    voiceLayoutRoute.addChildren([
-      voiceRoute,
-      voiceVersionsRoute,
-      voiceImportRoute,
-      voiceRulesRoute,
-      voiceValidationsRoute,
-    ]),
     legacyVoiceRoute,
     legacyVoiceTabRoute,
     aiModelsRoute,
     modelExperimentRoute,
-    voiceRuleComparisonRoute,
-    voiceValidationRoute,
-    newDraftRoute,
-    postEditorRoute,
   ]),
 ])
 
