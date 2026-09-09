@@ -2,6 +2,7 @@ import type { Transport } from '@connectrpc/connect'
 import { createUploadHandshake } from '@/entities/image'
 import { IMAGE_JPEG_QUALITY, IMAGE_MAX_LONG_EDGE_PX } from '@/shared/config'
 import { decodeImage, resizeToJpeg } from '@/shared/lib'
+import { putBlobWithProgress } from '@/shared/lib/upload'
 import type { UploadPipeline } from '../model/upload-batch'
 
 /** The real pipeline: browser decode + resize, then the handshake around a direct PUT to
@@ -52,26 +53,5 @@ export function putWithProgress(
   blob: Blob,
   onProgress: (percent: number) => void,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest()
-    request.open('PUT', putUrl)
-    request.setRequestHeader('Content-Type', contentType)
-    request.upload.addEventListener('progress', (event) => {
-      if (!event.lengthComputable || event.total <= 0) return
-      onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)))
-    })
-    request.addEventListener('load', () => {
-      if (request.status >= 200 && request.status < 300) {
-        // The last progress event can arrive before the response does; a card left at 98%
-        // beside a confirmed clip would read as a stall.
-        onProgress(100)
-        resolve()
-        return
-      }
-      reject(new Error(`PUT failed: ${request.status}`))
-    })
-    request.addEventListener('error', () => reject(new Error('PUT failed')))
-    request.addEventListener('abort', () => reject(new Error('PUT aborted')))
-    request.send(blob)
-  })
+  return putBlobWithProgress(putUrl, { 'Content-Type': contentType }, blob, onProgress)
 }

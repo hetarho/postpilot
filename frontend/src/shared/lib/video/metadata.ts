@@ -27,8 +27,12 @@ export class VideoUnreadableError extends Error {
  *  the metadata it was asked for. The object URL is revoked on every path — resolve, reject
  *  and timeout alike — because a leaked one pins the whole file in memory.
  */
-export function readVideoMetadata(file: Blob): Promise<VideoMetadata> {
+export function readVideoMetadata(file: Blob, signal?: AbortSignal): Promise<VideoMetadata> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Metadata read aborted', 'AbortError'))
+      return
+    }
     const url = URL.createObjectURL(file)
     const element = document.createElement('video')
     element.preload = 'metadata'
@@ -39,6 +43,7 @@ export function readVideoMetadata(file: Blob): Promise<VideoMetadata> {
       if (settled) return
       settled = true
       clearTimeout(timer)
+      signal?.removeEventListener('abort', abort)
       element.removeAttribute('src')
       // `load()` after clearing the source is what actually stops a fetch already in
       // flight; without it a 200 MB read keeps going for a file nobody is waiting on.
@@ -51,6 +56,8 @@ export function readVideoMetadata(file: Blob): Promise<VideoMetadata> {
       () => done(() => reject(new VideoUnreadableError())),
       METADATA_TIMEOUT_MS,
     )
+    const abort = () => done(() => reject(new DOMException('Metadata read aborted', 'AbortError')))
+    signal?.addEventListener('abort', abort, { once: true })
 
     element.addEventListener('loadedmetadata', () => {
       const seconds = element.duration

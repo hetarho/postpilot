@@ -297,6 +297,21 @@ const videoTemplatesRoute = createRoute({
   path: '/video-templates',
   component: lazyRouteComponent(() => import('@/pages/video-templates'), 'VideoTemplatesPage'),
 })
+const clipsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/clips',
+  component: lazyRouteComponent(() => import('@/pages/clips'), 'ClipsPage'),
+})
+const newClipRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/clips/new',
+  component: lazyRouteComponent(() => import('@/pages/clip'), 'ClipPage'),
+})
+const clipRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/clips/$clipId',
+  component: lazyRouteComponent(() => import('@/pages/clip'), 'ClipPage'),
+})
 const newVideoTemplateRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/video-templates/new',
@@ -518,6 +533,9 @@ export const routeTree = rootRoute.addChildren([
     newTemplateRoute,
     templateRoute,
     videoTemplatesRoute,
+    clipsRoute,
+    newClipRoute,
+    clipRoute,
     newVideoTemplateRoute,
     videoTemplateRoute,
     guidelinesRoute,

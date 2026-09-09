@@ -35,6 +35,20 @@ afterEach(() => {
 })
 
 describe('readVideoMetadata', () => {
+  it('aborts pending metadata reads and revokes their URLs immediately', async () => {
+    const video = fakeVideoElement()
+    const spies = stub(video)
+    const controller = new AbortController()
+    const reading = readVideoMetadata(file(), controller.signal)
+    controller.abort()
+    await expect(reading).rejects.toMatchObject({ name: 'AbortError' })
+    expect(spies.revoked).toHaveBeenCalledOnce()
+    expect(video.element.load).toHaveBeenCalledOnce()
+    await expect(readVideoMetadata(file(), controller.signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    })
+    expect(spies.objectUrl).toHaveBeenCalledOnce()
+  })
   // VIDEO-4: nothing decodes a frame. The element only ever loads metadata, and the object URL
   // is revoked either way — a leaked one pins the whole 200 MB file in memory.
   it('reads the duration and dimensions without decoding, then revokes the url', async () => {
