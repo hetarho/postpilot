@@ -1,5 +1,6 @@
 export const auth = {
   login: {
+    heading: 'Log in',
     intro: 'Log in to continue',
     id: 'Email or username',
     password: 'Password',
@@ -10,11 +11,14 @@ export const auth = {
   field: {
     email: 'Email',
     password: 'Password',
+    passwordConfirm: 'Confirm password',
   },
   links: {
     login: 'Log in',
     signup: 'Sign up',
     forgotPassword: 'Forgot password',
+    noAccount: 'No account yet?',
+    haveAccount: 'Already have an account?',
     more: 'Account links',
   },
   google: {
@@ -24,8 +28,10 @@ export const auth = {
     back: 'Back to log in',
   },
   signup: {
+    heading: 'Sign up',
     intro: 'Create your Postpilot account with email',
     passwordHint: 'Use at least 8 characters.',
+    passwordMismatch: 'The passwords do not match',
     submit: 'Sign up',
     mailedHeading: 'Check your mail',
     mailedBody:

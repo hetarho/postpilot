@@ -70,17 +70,21 @@ export function LoginPage() {
             {t('login.passwordChanged', { ns: 'auth' })}
           </Notice>
         )}
-        <form onSubmit={onSubmit} className="w-full">
-          {/* The app icon is decorative beside the labelled wordmark, so the pair remains one
-            concise heading for assistive technology. The compact phone lockup keeps the submit
-            path above the software keyboard; wider screens give the mark its full presence. */}
+        <form onSubmit={onSubmit} className="w-full" aria-labelledby="login-heading">
+          {/* The lockup is brand, not the heading: login and signup share it, and the word under
+            it is what tells the two screens apart (AUTH-42). The compact phone lockup keeps the
+            submit path above the software keyboard; wider screens give the mark its full presence. */}
+          <div className="flex flex-col items-center gap-1 sm:gap-4">
+            <img src="/favicon.svg" alt="" className="h-10 w-10 sm:h-20 sm:w-20" />
+            <Logo className="h-8 sm:h-9" />
+          </div>
           <Typography
             variant="display"
             as="h1"
-            className="flex flex-col items-center gap-1 sm:gap-4"
+            id="login-heading"
+            className="mt-4 text-center sm:mt-6"
           >
-            <img src="/favicon.svg" alt="" className="h-10 w-10 sm:h-20 sm:w-20" />
-            <Logo className="h-8 sm:h-9" />
+            {t('login.heading', { ns: 'auth' })}
           </Typography>
           <Typography variant="body" className="text-content-secondary mt-1 text-center">
             {t('login.intro', { ns: 'auth' })}
@@ -156,46 +160,50 @@ export function LoginPage() {
         <GoogleSignInButton redirect={redirect} />
         {/* Below the credential action and OUTSIDE the form: a secondary link inside it would be
             one more tab stop between the password field and 로그인, and a link is not part of the
-            submission. It changes nothing about the form's failure or redirect behavior. */}
+            submission. It changes nothing about the form's failure or redirect behavior. The way
+            to signup is a question with its answer, not a bare label beside 비밀번호 찾기 — the
+            sentence is what a visitor on the wrong screen reads first (AUTH-42). The link keeps
+            the bare verb as its accessible name. */}
         <nav
-          className="mt-6 flex flex-wrap items-center justify-center gap-3"
+          className="mt-6 flex flex-col items-center gap-2"
           aria-label={t('links.more', { ns: 'auth' })}
         >
-          <Link
-            to="/signup"
-            search={isInAppPath(redirect) ? { redirect } : {}}
-            className={typographyStyles({
-              variant: 'label',
-              className:
-                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline',
-            })}
-          >
-            {t('links.signup', { ns: 'auth' })}
-          </Link>
-          <Link
-            to="/forgot-password"
-            search={isInAppPath(redirect) ? { redirect } : {}}
-            className={typographyStyles({
-              variant: 'label',
-              className:
-                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline',
-            })}
-          >
-            {t('links.forgotPassword', { ns: 'auth' })}
-          </Link>
-          <Link
-            to="/about"
-            // The blocked destination travels with the visitor: About hands it back to this page,
-            // so reading the explanation mid-login does not reset where they were going.
-            search={isInAppPath(redirect) ? { redirect } : {}}
-            className={typographyStyles({
-              variant: 'label',
-              className:
-                'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline',
-            })}
-          >
-            {t('about.link', { ns: 'marketing' })}
-          </Link>
+          <Typography variant="label" as="p" className="text-content-secondary">
+            {t('links.noAccount', { ns: 'auth' })}{' '}
+            <Link
+              to="/signup"
+              search={isInAppPath(redirect) ? { redirect } : {}}
+              className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-1 underline"
+            >
+              {t('links.signup', { ns: 'auth' })}
+            </Link>
+          </Typography>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/forgot-password"
+              search={isInAppPath(redirect) ? { redirect } : {}}
+              className={typographyStyles({
+                variant: 'label',
+                className:
+                  'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline',
+              })}
+            >
+              {t('links.forgotPassword', { ns: 'auth' })}
+            </Link>
+            <Link
+              to="/about"
+              // The blocked destination travels with the visitor: About hands it back to this page,
+              // so reading the explanation mid-login does not reset where they were going.
+              search={isInAppPath(redirect) ? { redirect } : {}}
+              className={typographyStyles({
+                variant: 'label',
+                className:
+                  'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline',
+              })}
+            >
+              {t('about.link', { ns: 'marketing' })}
+            </Link>
+          </div>
         </nav>
       </div>
     </main>

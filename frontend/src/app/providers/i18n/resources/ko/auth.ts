@@ -1,5 +1,6 @@
 export const auth = {
   login: {
+    heading: '로그인',
     intro: '계속하려면 로그인하세요',
     id: '이메일 또는 아이디',
     password: '비밀번호',
@@ -10,11 +11,14 @@ export const auth = {
   field: {
     email: '이메일',
     password: '비밀번호',
+    passwordConfirm: '비밀번호 확인',
   },
   links: {
     login: '로그인',
     signup: '회원가입',
     forgotPassword: '비밀번호 찾기',
+    noAccount: '계정이 없으세요?',
+    haveAccount: '이미 계정이 있으세요?',
     more: '계정 메뉴',
   },
   google: {
@@ -24,8 +28,10 @@ export const auth = {
     back: '로그인으로',
   },
   signup: {
+    heading: '회원가입',
     intro: '이메일로 Postpilot 계정을 만드세요',
     passwordHint: '8자 이상 입력해 주세요.',
+    passwordMismatch: '비밀번호가 서로 달라요',
     submit: '가입하기',
     mailedHeading: '메일을 확인해 주세요',
     mailedBody: '{{email}}로 인증 링크를 보냈어요. 이미 가입된 주소여도 안내 메일이 도착해요.',

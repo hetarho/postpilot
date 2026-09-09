@@ -17,6 +17,7 @@ describe('SignupPage', () => {
     expect(email).toHaveAttribute('type', 'text')
     await user.type(email, 'Alice@Example.com')
     await user.type(screen.getByLabelText('비밀번호'), 'password1')
+    await user.type(screen.getByLabelText('비밀번호 확인'), 'password1')
     await user.click(screen.getByRole('button', { name: '가입하기' }))
 
     expect(await screen.findByRole('heading', { name: '메일을 확인해 주세요' })).toBeInTheDocument()
@@ -27,6 +28,47 @@ describe('SignupPage', () => {
     await waitFor(() =>
       expect(calls.filter((call) => call === 'ResendVerification')).toHaveLength(1),
     )
+  })
+
+  // AUTH-42: the screen names itself and leads back to login through a sentence whose link keeps
+  // the bare verb as its name.
+  it('is titled 회원가입 and leads to login through a question with its answer', async () => {
+    renderAppAt('/signup?redirect=%2Fposts')
+
+    expect(await screen.findByRole('heading', { level: 1, name: '회원가입' })).toBeInTheDocument()
+    expect(screen.getByText('이미 계정이 있으세요?')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '로그인' })).toHaveAttribute(
+      'href',
+      '/login?redirect=%2Fposts',
+    )
+    expect(screen.getByLabelText('비밀번호 확인')).toHaveAttribute('autocomplete', 'new-password')
+  })
+
+  it('refuses a password mismatch in the form and sends nothing', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/signup', { calls })
+
+    await user.type(await screen.findByLabelText('이메일'), 'alice@example.com')
+    const password = screen.getByLabelText('비밀번호')
+    const confirm = screen.getByLabelText('비밀번호 확인')
+    await user.type(password, 'password1')
+    await user.type(confirm, 'password2')
+    await user.click(screen.getByRole('button', { name: '가입하기' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('비밀번호가 서로 달라요')
+    expect(password).toHaveAttribute('aria-invalid', 'true')
+    expect(confirm).toHaveAttribute('aria-invalid', 'true')
+    expect(calls.filter((call) => call === 'Signup')).toHaveLength(0)
+
+    // Retyping clears the mark; a matching pair then submits as before.
+    await user.clear(confirm)
+    expect(password).not.toHaveAttribute('aria-invalid')
+    await user.type(confirm, 'password1')
+    await user.click(screen.getByRole('button', { name: '가입하기' }))
+    expect(await screen.findByRole('heading', { name: '메일을 확인해 주세요' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: '회원가입' })).toBeInTheDocument()
+    expect(calls.filter((call) => call === 'Signup')).toHaveLength(1)
   })
 
   it('reverse-guards an already signed-in visitor', async () => {
@@ -40,6 +82,7 @@ describe('SignupPage', () => {
 
     await user.type(await screen.findByLabelText('이메일'), 'alice@example.com')
     await user.type(screen.getByLabelText('비밀번호'), 'password1')
+    await user.type(screen.getByLabelText('비밀번호 확인'), 'password1')
     await user.click(screen.getByRole('button', { name: '가입하기' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
