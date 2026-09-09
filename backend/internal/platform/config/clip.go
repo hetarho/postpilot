@@ -5,6 +5,16 @@ import (
 	"time"
 )
 
+func ClipMedia(cfg *Config) clip.MediaConfig {
+	return clip.MediaConfig{
+		WorkRoot: cfg.ClipWorkRoot, FFmpegPath: cfg.ClipFFmpegPath, FFprobePath: cfg.ClipFFprobePath,
+		StaleAge: cfg.ClipWorkStaleAge, OperationTimeout: cfg.ClipMediaTimeout, WaitDelay: 2 * time.Second,
+		ChunkDurationMS: 60000, LongEdge: 720, FPS: 30, Threads: 2, CRF: 28, AudioRate: 48000, AudioBitrate: 96000,
+		StdoutLimit: 64 * 1024, StderrLimit: 8 * 1024, MaxStreams: 64, MaxDimension: 16384, DurationToleranceMS: 1000,
+		Sources: ClipSourceLimits(cfg.ClipSourceBatchTTL, cfg.PresignPutTTL),
+	}
+}
+
 const (
 	ClipTemplateNameChars       = 40
 	ClipGuidanceChars           = 4000

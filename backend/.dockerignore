@@ -1,0 +1,8 @@
+.git
+.env*
+data
+tmp
+bin
+api
+*.db*
+*.test

@@ -40,7 +40,6 @@
 | T043 | Caret-relative image insertion, one-at-a-time upload and captions | PUB | T042 | doing@260910.img |
 | T045 | The commit fence: arming, one activation, and readback through the post-view URL | PUB | T044 T043 | todo |
 | T046 | Wiring the real publisher into the daemon | PUB | T045 | todo |
-| T073 | Clip media probe, analysis proxies and isolated workspaces | CLIP | T069 | todo |
 | T074 | Deterministic caption and video renderer | CLIP | T073 | todo |
 | T075 | Timecoded clip analysis and AI edit planning | CLIP VIDEO MODEL | T069 | todo |
 | T076 | Durable clip generation and result retention | CLIP QUOTA VIDEO MODEL | T071 T074 T075 | todo |
@@ -50,10 +49,12 @@
 | T080 | Grouped writing and video navigation | CLIP THEME | T070 T072 | todo |
 
 ## next
-- implement-task T073, then implement and commit T074 through T080 sequentially
+- implement-task T074, then implement and commit T075 through T080 sequentially
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
 - the PUB chain is unblocked: read T042's result and two-pass body plan before T043 (the 260910 survey found paragraph conversions split the component, 인용구 starts with 출처, only headings escape by Enter, and lists need plain text). T043 still needs ONE live first-block-image survey using `agent/internal/naver/survey_test.go`; then T045 → T046 → T008 (re-read PUB@4 base); update-ssot PUB for VIDEO-17 + TMPL-39 after T008.
 ## log
+- 260910 T073 done; bounded media adapter and real nonroot Docker smoke pass, dev media version matches
+- 260910 T073 claimed (clp)
 - 260910 T072 done; clip setup, page-local direct uploads and all local gates pass
 - 260910 T043 claimed (img)
 - 260910 T072 claimed (clp)
@@ -72,4 +73,3 @@
 - 260909 T068 done
 - 260909 T068 claimed (srch)
 - 260909 T067 done (the dock change also landed on /voices and /templates)
-- 260909 T067 claimed (dock)

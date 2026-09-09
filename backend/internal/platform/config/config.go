@@ -295,9 +295,11 @@ type Config struct {
 	// PresignPutTTL bounds an upload URL; it is also how long the uploads row is valid.
 	PresignPutTTL time.Duration
 	// PresignGetTTL bounds a view URL. The frontend never persists one.
-	PresignGetTTL           time.Duration
-	ClipSourceBatchTTL      time.Duration
-	ClipSourceSweepInterval time.Duration
+	PresignGetTTL                                 time.Duration
+	ClipSourceBatchTTL                            time.Duration
+	ClipSourceSweepInterval                       time.Duration
+	ClipWorkRoot, ClipFFmpegPath, ClipFFprobePath string
+	ClipWorkStaleAge, ClipMediaTimeout            time.Duration
 
 	// OrphanSweepInterval is how often unconfirmed uploads and stray objects are cleaned
 	// up. The PRD leaves the cadence undecided (§9.5); daily is the provisional default.
@@ -508,6 +510,9 @@ func Load() (*Config, error) {
 	}
 	cfg.ClipSourceSweepInterval, err = positiveDuration("CLIP_SOURCE_SWEEP_INTERVAL", "10m")
 	if err != nil {
+		return nil, err
+	}
+	if err := loadClipMedia(cfg); err != nil {
 		return nil, err
 	}
 

@@ -32,6 +32,7 @@ import (
 	billingrpc "github.com/postpilot/backend/internal/billing/rpc"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
 	"github.com/postpilot/backend/internal/clip"
+	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/experiment"
@@ -322,6 +323,15 @@ func main() {
 	clipSvc := clip.NewService(clipStore, config.ClipLimits())
 	clipSources := clip.NewSourceService(clipStore, bucket, config.ClipSourceLimits(cfg.ClipSourceBatchTTL, cfg.PresignPutTTL))
 	clipSvc.SetSources(clipSources)
+	clipMedia, err := clipmedia.New(config.ClipMedia(cfg), nil)
+	if err != nil {
+		slog.Error("clip media initialization failed", "err", err)
+		os.Exit(1)
+	}
+	if err := clipMedia.CleanupStale(ctx, time.Now()); err != nil {
+		slog.Error("clip workspace cleanup failed", "err", err)
+		os.Exit(1)
+	}
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{

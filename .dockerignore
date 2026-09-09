@@ -1,0 +1,12 @@
+# Production builds use repository-root context; include only the backend sources.
+**
+!backend
+!backend/**
+backend/.env*
+backend/data
+backend/tmp
+backend/bin
+backend/api
+backend/*.db*
+backend/*.test
+backend/**/.git
