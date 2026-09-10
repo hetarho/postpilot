@@ -3,6 +3,7 @@ package store_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/store"
@@ -294,15 +295,15 @@ func generationSetup(t *testing.T) *generationHarness {
 	queue := job.New(jobs, time.Millisecond)
 	admitter := &clipAdmitter{media: media}
 	queue.Admit(admitter)
-	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: config.ClipSourceLimits(6*time.Hour, 10*time.Minute), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
+	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: config.ClipSourceLimits(6*time.Hour, 10*time.Minute), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, QuoteTTL: 5 * time.Minute, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
 	cfg.Render = config.ClipRender(&config.Config{})
-	service := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg)
+	service := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg).WithCredits(&quotePricing{}, nil)
 	projects.SetGeneration(service)
 	return &generationHarness{service, projects, st, d, sources, objects, media, planner, renderer, admitter, queue, jobs, template, project, batch, cfg}
 }
 func (h *generationHarness) start(t *testing.T) string {
 	t.Helper()
-	id, err := h.service.Start(context.Background(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
+	id, err := startApproved(context.Background(), h.service, "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,55 +353,38 @@ func (h *generationHarness) assertClean(t *testing.T) {
 		}
 	}
 }
-func TestGenerationProbesBeforeExactReservationAndFreezesInputs(t *testing.T) {
+func TestApprovedGenerationFreezesInputsButRunnerRemainsClosed(t *testing.T) {
 	h := generationSetup(t)
-	h.start(t)
-	if len(h.admitter.calls) != 0 {
-		t.Fatal("held at enqueue")
-	}
-	guidance := "changed after enqueue"
-	if _, err := h.projects.UpdateTemplate(context.Background(), "alice", h.template.ID, clip.TemplatePatch{CutGuidance: &guidance}); err != nil {
+	id := h.start(t)
+	j, err := h.jobs.GetByID(context.Background(), id)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.projects.DeleteTemplate(context.Background(), "alice", h.template.ID); err != nil {
-		t.Fatal("template detach must not invalidate frozen work", err)
+	var snapshot struct {
+		Version  int
+		Template clip.Recipe
+		Answers  []clip.Answer
+		Approval *clip.GenerationApproval
 	}
-	if err := h.projects.DeleteProject(context.Background(), "alice", h.project.ID); !errors.Is(err, clip.ErrBusy) {
-		t.Fatal("busy delete", err)
+	if json.Unmarshal(j.Payload, &snapshot) != nil || snapshot.Version != 2 || snapshot.Approval == nil || snapshot.Approval.MaxCredits <= 0 || snapshot.Approval.Pricing.ObservationCalls != 3 {
+		t.Fatal(string(j.Payload))
 	}
-	if err := h.run(t); err != nil {
+	guidance := "changed after enqueue"
+	if _, err = h.projects.UpdateTemplate(context.Background(), "alice", h.template.ID, clip.TemplatePatch{CutGuidance: &guidance}); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.Template.CutGuidance == guidance || len(snapshot.Answers) != 1 || snapshot.Answers[0].Text != "서울" {
+		t.Fatal(snapshot)
+	}
+	if err = h.projects.DeleteProject(context.Background(), "alice", h.project.ID); !errors.Is(err, clip.ErrBusy) {
+		t.Fatal(err)
+	}
+	if err = h.run(t); !errors.Is(err, clip.ErrQuoteRequired) {
 		t.Fatal(err)
 	}
 	h.assertClean(t)
-	if len(h.admitter.calls) != 1 || len(h.admitter.calls[0].Calls) != 2 || h.admitter.calls[0].Calls[0].Count != 3 || h.admitter.calls[0].Calls[1].CompletionTokens != 32768 {
-		t.Fatal("wrong actual call reservation", h.admitter.calls)
-	}
-	if h.planner.observe != 3 || h.planner.plans != 1 || h.planner.input.Template.CutGuidance == guidance || len(h.planner.input.Answers) != 1 || h.planner.input.Answers[0].Text != "서울" {
-		t.Fatal("snapshot changed", h.planner)
-	}
-	if h.media.maxSources != 1 || h.objects.downloads[h.batch.Sources[0].Key] != 3 || h.objects.downloads[h.batch.Sources[1].Key] != 2 {
-		t.Fatal("sources not staged sequentially or unused source rendered", h.objects.downloads)
-	}
-	p, err := h.projects.GetProject(context.Background(), "alice", h.project.ID)
-	if err != nil || p.Result == nil || !strings.Contains(p.Result.ViewURL, "inline") || !strings.Contains(p.Result.DownloadURL, "attachment") || p.Analysis == "" || p.EditPlan == "" || p.EditPlanRevision != 1 || p.RenderedPlanRevision != 1 {
-		t.Fatal(p, err)
-	}
-	stored, _ := h.store.GetProject(context.Background(), "alice", p.ID)
-	if stored.Result.ViewURL != "" || strings.Contains(stored.Analysis, "https://") {
-		t.Fatal("signed URL retained")
-	}
-	if err = h.projects.DeleteProject(context.Background(), "alice", p.ID); err != nil {
-		t.Fatal(err)
-	}
-	keys, _ := h.store.DeletionKeys(context.Background())
-	if len(keys) != 1 || keys[0] != p.Result.Key {
-		t.Fatal(keys)
-	}
-	if err = h.service.Sweep(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := h.objects.info[p.Result.Key]; ok {
-		t.Fatal("retained deleted result")
+	if len(h.admitter.calls) != 0 || h.media.probes != 0 || h.planner.observe != 0 || h.planner.plans != 0 || len(h.objects.downloads) != 0 {
+		t.Fatal("staged runner performed work")
 	}
 }
 func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
@@ -451,10 +435,9 @@ func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
 			if j.Status != "failed" || j.Failure == nil || j.Stage == "" || j.Stage == "cleanup" {
 				t.Fatal(j)
 			}
-			if mode == "hold" || mode == "probe" || mode == "download" {
-				if len(h.admitter.calls) != 0 || h.planner.observe != 0 || h.planner.plans != 0 {
-					t.Fatal("unreserved provider call")
-				}
+			// All execution paths remain closed during T082.
+			if len(h.admitter.calls) != 0 || h.planner.observe != 0 || h.planner.plans != 0 {
+				t.Fatal("unreserved provider call")
 			}
 		})
 	}
@@ -483,33 +466,27 @@ func TestGenerationCrashRecoveryNeverTouchesActiveBatch(t *testing.T) {
 	}
 	h.assertClean(t)
 }
-func TestGenerationPanicStillMarksSourceCleanup(t *testing.T) {
+func TestGenerationDoesNotEnterPanicProneMediaUntilGuardedRunnerExists(t *testing.T) {
 	h := generationSetup(t)
 	h.start(t)
 	h.media.panicChunks = true
-	j, err := h.jobs.PickNextQueued(context.Background(), time.Now())
-	if err != nil {
+	if err := h.run(t); !errors.Is(err, clip.ErrQuoteRequired) {
 		t.Fatal(err)
 	}
-	func() {
-		defer func() {
-			if recover() == nil {
-				t.Fatal("expected panic")
-			}
-		}()
-		_ = h.service.Run(context.Background(), "alice", j.ID, j.ClipProjectID, j.Payload, func(string, int, int) {})
-	}()
 	h.assertClean(t)
+	if h.media.probes != 0 || h.planner.observe != 0 {
+		t.Fatal("entered unavailable runner")
+	}
 }
 func TestGenerationOwnerAndModelGatesBeforeEnqueue(t *testing.T) {
 	h := generationSetup(t)
 	for _, user := range []string{"bob", "missing"} {
-		if _, err := h.service.Start(context.Background(), user, h.project.ID, h.batch.ID, "p/o", "p/w"); !errors.Is(err, clip.ErrNotFound) {
+		if _, err := startApproved(context.Background(), h.service, user, h.project.ID, h.batch.ID, "p/o", "p/w"); !errors.Is(err, clip.ErrNotFound) {
 			t.Fatal(err)
 		}
 	}
 	h.planner.gate = llm.ErrUnsupported
-	if _, err := h.service.Start(context.Background(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w"); !errors.Is(err, llm.ErrUnsupported) {
+	if _, err := startApproved(context.Background(), h.service, "alice", h.project.ID, h.batch.ID, "p/o", "p/w"); !errors.Is(err, llm.ErrUnsupported) {
 		t.Fatal(err)
 	}
 	if n, err := h.queue.ActiveForClip(context.Background(), "alice", h.project.ID); err != nil || n != nil {

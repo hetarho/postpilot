@@ -8,6 +8,18 @@ import (
 	"database/sql"
 )
 
+type ClipGenerationQuote struct {
+	ID            string
+	UserID        string
+	ProjectID     string
+	BatchID       string
+	InputDigest   string
+	PricingJson   string
+	MaxCredits    int64
+	ExpiresAt     string
+	ConsumedJobID sql.NullString
+}
+
 type ClipProject struct {
 	ID                   string
 	UserID               string

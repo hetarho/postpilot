@@ -253,11 +253,12 @@ func (s *Store) RefundToLot(ctx context.Context, lotID string, credits int) erro
 
 func (s *Store) InsertAdmission(ctx context.Context, admission usage.Admission) error {
 	err := s.write.InsertAdmission(ctx, sqlc.InsertAdmissionParams{
-		UserID:      admission.UserID,
-		Kind:        admission.Kind,
-		JobID:       admission.JobID,
-		HoldCredits: int64(admission.HoldCredits),
-		CreatedAt:   formatTime(admission.CreatedAt),
+		UserID:             admission.UserID,
+		Kind:               admission.Kind,
+		JobID:              admission.JobID,
+		HoldCredits:        int64(admission.HoldCredits),
+		CreatedAt:          formatTime(admission.CreatedAt),
+		ApprovedMaxCredits: nullableCredits(admission.ApprovedMaxCredits),
 	})
 	if err != nil {
 		return fmt.Errorf("insert admission: %w", err)
@@ -304,6 +305,7 @@ func (s *Store) HoldForJob(
 	return usage.Admission{
 		UserID: row.UserID, Kind: row.Kind, JobID: row.JobID,
 		HoldCredits: int(row.HoldCredits), CreatedAt: created,
+		ApprovedMaxCredits: optionalCredits(row.ApprovedMaxCredits),
 	}, debits, true, nil
 }
 

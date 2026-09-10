@@ -37,8 +37,8 @@ func TestGenerationActivationCompensationNeverDeletesRunningInputs(t *testing.T)
 					}
 				}
 			}
-			s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg)
-			id, err := s.Start(context.Background(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
+			s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg).WithCredits(&quotePricing{}, nil)
+			id, err := startApproved(context.Background(), s, "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
 			if running {
 				if err != nil || id == "" {
 					t.Fatal(id, err)
@@ -69,7 +69,7 @@ func TestGenerationLinkFailureLeavesReadyBatchRetryable(t *testing.T) {
 	if _, err := h.db.Writer.Exec("CREATE TRIGGER refuse_clip_link BEFORE UPDATE OF job_id ON clip_source_batches BEGIN SELECT RAISE(ABORT,'link failed'); END"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.service.Start(context.Background(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w"); err == nil {
+	if _, err := startApproved(context.Background(), h.service, "alice", h.project.ID, h.batch.ID, "p/o", "p/w"); err == nil {
 		t.Fatal("link failure hidden")
 	}
 	b, err := h.store.GetSourceBatch(context.Background(), "alice", h.batch.ID)
@@ -178,10 +178,7 @@ func TestGenerationReplacementQueuesOnlyPreviousResult(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.objects.info[old.Key] = clip.SourceObjectInfo{Bytes: 5}
-	h.start(t)
-	if err := h.run(t); err != nil {
-		t.Fatal(err)
-	}
+	seedCompletedGeneration(t, h)
 	p, err := h.store.GetProject(context.Background(), "alice", h.project.ID)
 	if err != nil || p.Result.Key == old.Key || p.EditPlanRevision != 2 || p.RenderedPlanRevision != 2 {
 		t.Fatal(p, err)

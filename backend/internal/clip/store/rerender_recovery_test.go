@@ -39,7 +39,7 @@ func TestRenderRejectsRevisionRaceBeforeLinkWithoutConsumingSources(t *testing.T
 	if err != nil || j.Status != job.StatusFailed {
 		t.Fatal(j, err)
 	}
-	if len(h.admitter.calls) != 1 {
+	if len(h.admitter.calls) != 0 {
 		t.Fatal("charged at failed enqueue")
 	}
 }
@@ -99,7 +99,7 @@ func TestRenderCancellationMalformedPanicAndBootAlwaysClean(t *testing.T) {
 			if err != nil || got.Result.Key != p.Result.Key || got.EditPlan != p.EditPlan {
 				t.Fatal(got, err)
 			}
-			if len(h.admitter.calls) != 1 || h.planner.plans != 1 {
+			if len(h.admitter.calls) != 0 || h.planner.plans != 0 {
 				t.Fatal("recovery charged")
 			}
 		})

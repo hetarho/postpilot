@@ -247,7 +247,8 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 	}
 	return job.Job{
 		ID: row.ID, PostSlug: stringPtr(row.PostSlug), UserID: row.UserID, VoiceID: row.VoiceID.String, Kind: row.Kind, ClipProjectID: row.ClipProjectID.String,
-		Status: row.Status, Stage: row.Stage.String, ProgressDone: int(row.ProgressDone),
+		DispatchReady: row.DispatchReady != 0,
+		Status:        row.Status, Stage: row.Stage.String, ProgressDone: int(row.ProgressDone),
 		ProgressTotal: int(row.ProgressTotal), Failure: failure,
 		ObserveModel: row.ObserveModel.String, WriteModel: row.WriteModel.String, TargetLanguage: row.TargetLanguage.String,
 		Payload: []byte(row.Payload), CreatedAt: created, UpdatedAt: updated,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/postpilot/backend/internal/job"
+	"github.com/postpilot/backend/internal/llm"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -36,7 +37,7 @@ func TestClipDeferredAdmissionAndConcurrentCallAllowance(t *testing.T) {
 		t.Fatal("unlinked job dispatched", err)
 	}
 	calls := []job.PlannedCall{{Ref: "p/observe", Count: 3, CompletionTokens: 8192}, {Ref: "p/write", Count: 1, CompletionTokens: 32768}}
-	if _, err = h.queue.ReserveClip(ctx, "alice", id, calls); !errors.Is(err, job.ErrCreditAllowance) {
+	if _, err = h.queue.ReserveClip(ctx, "alice", id, calls, approvedClipCalls(3)); !errors.Is(err, job.ErrCreditAllowance) {
 		t.Fatal("queued job reserved", err)
 	}
 	if err = h.queue.ActivateClip(ctx, "alice", id); err != nil {
@@ -46,15 +47,24 @@ func TestClipDeferredAdmissionAndConcurrentCallAllowance(t *testing.T) {
 	if err != nil || j.Stage != "prepare" || j.ClipProjectID != "clip" {
 		t.Fatal(j, err)
 	}
-	if _, err = h.queue.ReserveClip(ctx, "bob", id, calls); !errors.Is(err, job.ErrCreditAllowance) {
+	if _, err = h.queue.ReserveClip(ctx, "bob", id, calls, approvedClipCalls(3)); !errors.Is(err, job.ErrCreditAllowance) {
 		t.Fatal("foreign allowance", err)
 	}
-	admitted, err := h.queue.ReserveClip(ctx, "alice", id, calls)
+	admitted, err := h.queue.ReserveClip(ctx, "alice", id, calls, approvedClipCalls(3))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(a.starts) != 1 || a.starts[0].Calls[0].Count != 3 || a.starts[0].Calls[1].CompletionTokens != 32768 {
 		t.Fatal(a.starts)
+	}
+	if _, err = h.queue.ReserveClip(ctx, "alice", id, calls); !errors.Is(err, job.ErrCreditAllowance) {
+		t.Fatal("legacy reservation accepted", err)
+	}
+	if _, err = job.ConsumeClipPolicy(admitted, "alice", id, "p/observe", 8192, "write"); !errors.Is(err, job.ErrCreditAllowance) {
+		t.Fatal("wrong stage consumed allowance", err)
+	}
+	if a.starts[0].Clip == nil || a.starts[0].Clip.ApprovedMaxCredits != 100 || a.starts[0].Clip.Calls[0].Policy.InputUSDPerMillion != "0.1" {
+		t.Fatal("admission lost approved pricing")
 	}
 	for _, bad := range []struct {
 		user, id, ref string
@@ -130,8 +140,15 @@ func TestClipRefusedReservationReturnsNoAllowance(t *testing.T) {
 	if _, err = h.store.PickNextQueued(ctx, time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	admitted, err := h.queue.ReserveClip(ctx, "alice", id, []job.PlannedCall{{Ref: "p/observe", Count: 1, CompletionTokens: 8192}})
+	admitted, err := h.queue.ReserveClip(ctx, "alice", id, []job.PlannedCall{{Ref: "p/observe", Count: 1, CompletionTokens: 8192}, {Ref: "p/write", Count: 1, CompletionTokens: 32768}}, approvedClipCalls(1))
 	if admitted != nil || !errors.Is(err, a.refuse) {
 		t.Fatal(admitted, err)
 	}
+}
+
+func approvedClipCalls(count int) job.ClipReservation {
+	return job.ClipReservation{ApprovedMaxCredits: 100, Calls: []job.ClipCall{
+		{Policy: llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "observe"}, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.7"}, Count: count},
+		{Policy: llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "write"}, Stage: "write", CompletionTokens: 32768, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.7"}, Count: 1},
+	}}
 }

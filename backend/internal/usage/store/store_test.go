@@ -136,6 +136,9 @@ func concurrentHolds(t *testing.T, kind string) {
 			<-start
 			request := holdFor(string(rune('a' + i)))
 			request.Kind = kind
+			if kind == "generate_clip" {
+				request.Clip = approvedStoreClip()
+			}
 			results[i] = svc.Hold(context.Background(), request)
 		}()
 	}

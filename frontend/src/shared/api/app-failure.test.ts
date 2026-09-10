@@ -6,6 +6,19 @@ import { AppErrorDetailSchema, FailureSchema } from './gen/postpilot/v1/error_pb
 import { appFailureFromConnect, appFailureFromProto, normalizeAppFailure } from './app-failure'
 
 describe('application failure boundary', () => {
+  it('keeps an approved clip ceiling refusal typed without accepting extra metadata', () => {
+    const reason = 'CLIP_CREDIT_CEILING_EXCEEDED'
+    const params = { required: '20', approved: '18' }
+    expect(normalizeAppFailure({ reason, params })).toEqual({ reason, params })
+    expect(normalizeAppFailure({ reason, params: { required: '20' } })).toEqual({
+      reason: 'UNKNOWN_FAILURE',
+      params: {},
+    })
+    expect(normalizeAppFailure({ reason, params: { ...params, media: 'private' } })).toEqual({
+      reason: 'UNKNOWN_FAILURE',
+      params: {},
+    })
+  })
   it('decodes one known Connect detail without consulting rawMessage', () => {
     const error = new ConnectError('private backend prose', Code.InvalidArgument, undefined, [
       {

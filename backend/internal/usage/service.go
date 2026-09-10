@@ -219,8 +219,27 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 
 	now := s.now()
 	required := plan.Charge(s.worstCaseMicrousd(start.Calls))
+	var approved *int
+	if start.Kind == "generate_clip" {
+		if start.Clip == nil {
+			return ErrClipApproval
+		}
+		var err error
+		required, err = ClipCredits(start.Clip.Calls)
+		if err != nil {
+			return err
+		}
+		cap := start.Clip.ApprovedMaxCredits
+		if cap < 0 {
+			return ErrClipApproval
+		}
+		approved = &cap
+	}
 
 	return s.store.InWriteTx(ctx, func(tx Store) error {
+		if approved != nil && required > *approved {
+			return &CreditCeilingError{Required: required, Approved: *approved}
+		}
 		renewsAt, err := s.renew(ctx, tx, start.UserID, start.Plan, now)
 		if err != nil {
 			return err
@@ -238,7 +257,7 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 
 		if err := tx.InsertAdmission(ctx, Admission{
 			UserID: start.UserID, Kind: start.Kind, JobID: start.JobID,
-			HoldCredits: required, CreatedAt: now,
+			HoldCredits: required, CreatedAt: now, ApprovedMaxCredits: approved,
 		}); err != nil {
 			return err
 		}
@@ -395,7 +414,11 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 		// A clip reserves its complete run after probing. Never debit another lot for
 		// provider overage: raw cost remains in the ledger, user credit is capped.
 		if admission.Kind == "generate_clip" {
-			actual = min(plan.Charge(cost.ConfirmedMicrousd), admission.HoldCredits)
+			ceiling := admission.HoldCredits
+			if admission.ApprovedMaxCredits != nil {
+				ceiling = min(ceiling, *admission.ApprovedMaxCredits)
+			}
+			actual = boundedClipCharge(cost.ConfirmedMicrousd, ceiling)
 			if outcome == OutcomeFailed && cost.ConfirmedMicrousd == 0 {
 				// No confirmed billable work: waive even the infrastructure base. Missing
 				// usage stays unknown in the ledger; it is not a reported zero supplier bill.
@@ -504,6 +527,11 @@ func (s *Service) OpenHolds(ctx context.Context) ([]string, error) {
 // records its tokens; only its estimate is lost.
 func (s *Service) Record(ctx context.Context, call Call) error {
 	info, _ := s.models.Lookup(call.Model)
+	if call.Kind == "generate_clip" {
+		if policy, ok := frozenCallPrice(ctx, call); ok {
+			info.InputUSDPerMillion, info.OutputUSDPerMillion = policy.InputUSDPerMillion, policy.OutputUSDPerMillion
+		}
+	}
 	cost := llm.ResolveCost(llm.CostInput{
 		PromptTokens:        int64(call.Usage.PromptTokens),
 		CompletionTokens:    int64(call.Usage.CompletionTokens),

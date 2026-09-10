@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"github.com/postpilot/backend/internal/llm"
 	"time"
 )
 
@@ -32,6 +33,16 @@ type Start struct {
 	Kind   string
 	JobID  string
 	Calls  []PlannedCall
+	Clip   *ClipReservation
+}
+
+type ClipCall struct {
+	Policy llm.CallPolicy
+	Count  int
+}
+type ClipReservation struct {
+	ApprovedMaxCredits int
+	Calls              []ClipCall
 }
 
 // PlannedCall is one model the job will run, how many times, and the completion budget each

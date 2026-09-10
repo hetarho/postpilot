@@ -33,8 +33,13 @@ type GenerationStart struct {
 	UserID, ProjectID, Observe, Write string
 	Payload                           []byte
 	RenderOnly                        bool
+	Quote                             *GenerationQuote
 }
-type ClipJob struct{ ID, Status, Stage string }
+type ClipJob struct {
+	ID, Status, Stage, Kind string
+	Payload                 []byte
+	DispatchReady           bool
+}
 type GenerationJobs interface {
 	Enqueue(context.Context, GenerationStart) (string, error)
 	Activate(context.Context, string, string) error
@@ -59,6 +64,7 @@ type GenerationConfig struct {
 	Media                                 MediaConfig
 	Analysis                              AnalysisLimits
 	ReadTTL, CleanupTimeout, OrphanMinAge time.Duration
+	QuoteTTL                              time.Duration
 }
 
 const ResultPrefix = "clip-results/"

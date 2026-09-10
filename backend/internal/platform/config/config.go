@@ -297,6 +297,7 @@ type Config struct {
 	// PresignGetTTL bounds a view URL. The frontend never persists one.
 	PresignGetTTL                                 time.Duration
 	ClipSourceBatchTTL                            time.Duration
+	ClipQuoteTTL                                  time.Duration
 	ClipSourceSweepInterval                       time.Duration
 	ClipWorkRoot, ClipFFmpegPath, ClipFFprobePath string
 	ClipResvgPath, ClipFontPath                   string
@@ -508,6 +509,10 @@ func Load() (*Config, error) {
 	}
 	if cfg.ClipSourceBatchTTL < cfg.PresignPutTTL {
 		return nil, fmt.Errorf("CLIP_SOURCE_BATCH_TTL: must not be shorter than the upload URL TTL")
+	}
+	cfg.ClipQuoteTTL, err = positiveDuration("CLIP_QUOTE_TTL", "5m")
+	if err != nil {
+		return nil, err
 	}
 	cfg.ClipSourceSweepInterval, err = positiveDuration("CLIP_SOURCE_SWEEP_INTERVAL", "10m")
 	if err != nil {

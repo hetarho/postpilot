@@ -14,6 +14,7 @@ func TestClipSettlementNeverDebitsAboveReservation(t *testing.T) {
 	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 100, Remaining: 100}}
 	start := holdStart("alice", plan.Free, "clip", PlannedCall{Ref: cheapRef, Count: 3, CompletionTokens: 8192})
 	start.Kind = "generate_clip"
+	start.Clip = approvedTestClip()
 	if err := svc.Hold(context.Background(), start); err != nil {
 		t.Fatal(err)
 	}

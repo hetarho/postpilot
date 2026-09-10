@@ -16,7 +16,7 @@ func TestMigration0038PreservesExistingJobsAndGuards(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), "0038_") {
+		if strings.Compare(e.Name(), "0038_") >= 0 {
 			continue
 		}
 		body, err := migrationsFS.ReadFile("migrations/" + e.Name())

@@ -1821,9 +1821,11 @@ func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm
 		return llm.Response{}, job.ErrCreditAllowance
 	}
 	if work, ok := usage.WorkFromContext(ctx); ok && work.Kind == job.KindGenerateClip {
-		if err := job.ConsumeClipCall(ctx, work.UserID, work.JobID, ref.String(), req.MaxTokens); err != nil {
+		policy, err := job.ConsumeClipPolicy(ctx, work.UserID, work.JobID, ref.String(), req.MaxTokens, req.Stage)
+		if err != nil {
 			return llm.Response{}, err
 		}
+		ctx = usage.WithCallPrice(ctx, work.UserID, work.JobID, policy)
 	}
 	response, err := m.Registry.Complete(ctx, ref, req)
 	// A ledger failure never fails the user's work: the tokens are already spent, and the
@@ -1865,8 +1867,16 @@ func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
 			Ref: parseRegistryRef(call.Ref), Count: call.Count, CompletionTokens: int64(call.CompletionTokens),
 		})
 	}
+	var clipReservation *usage.ClipReservation
+	if start.Clip != nil {
+		clipReservation = &usage.ClipReservation{ApprovedMaxCredits: start.Clip.ApprovedMaxCredits}
+		for _, c := range start.Clip.Calls {
+			clipReservation.Calls = append(clipReservation.Calls, usage.PricedCall{Policy: c.Policy, Count: c.Count})
+		}
+	}
 	return a.ledger.Hold(ctx, usage.Start{
 		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: calls,
+		Clip: clipReservation,
 	})
 }
 

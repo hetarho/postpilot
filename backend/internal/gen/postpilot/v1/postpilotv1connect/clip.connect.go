@@ -42,6 +42,9 @@ const (
 	// ClipServiceStartClipGenerationProcedure is the fully-qualified name of the ClipService's
 	// StartClipGeneration RPC.
 	ClipServiceStartClipGenerationProcedure = "/postpilot.v1.ClipService/StartClipGeneration"
+	// ClipServiceQuoteClipGenerationProcedure is the fully-qualified name of the ClipService's
+	// QuoteClipGeneration RPC.
+	ClipServiceQuoteClipGenerationProcedure = "/postpilot.v1.ClipService/QuoteClipGeneration"
 	// ClipServiceListVideoTemplatesProcedure is the fully-qualified name of the ClipService's
 	// ListVideoTemplates RPC.
 	ClipServiceListVideoTemplatesProcedure = "/postpilot.v1.ClipService/ListVideoTemplates"
@@ -85,6 +88,7 @@ type ClipServiceClient interface {
 	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
+	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error)
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
 	UpdateVideoTemplate(context.Context, *connect.Request[v1.UpdateVideoTemplateRequest]) (*connect.Response[v1.UpdateVideoTemplateResponse], error)
@@ -126,6 +130,12 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ClipServiceStartClipGenerationProcedure,
 			connect.WithSchema(clipServiceMethods.ByName("StartClipGeneration")),
+			connect.WithClientOptions(opts...),
+		),
+		quoteClipGeneration: connect.NewClient[v1.QuoteClipGenerationRequest, v1.QuoteClipGenerationResponse](
+			httpClient,
+			baseURL+ClipServiceQuoteClipGenerationProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("QuoteClipGeneration")),
 			connect.WithClientOptions(opts...),
 		),
 		listVideoTemplates: connect.NewClient[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse](
@@ -208,6 +218,7 @@ type clipServiceClient struct {
 	saveClipEditPlan       *connect.Client[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse]
 	startClipRender        *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
 	startClipGeneration    *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
+	quoteClipGeneration    *connect.Client[v1.QuoteClipGenerationRequest, v1.QuoteClipGenerationResponse]
 	listVideoTemplates     *connect.Client[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse]
 	createVideoTemplate    *connect.Client[v1.CreateVideoTemplateRequest, v1.CreateVideoTemplateResponse]
 	updateVideoTemplate    *connect.Client[v1.UpdateVideoTemplateRequest, v1.UpdateVideoTemplateResponse]
@@ -235,6 +246,11 @@ func (c *clipServiceClient) StartClipRender(ctx context.Context, req *connect.Re
 // StartClipGeneration calls postpilot.v1.ClipService.StartClipGeneration.
 func (c *clipServiceClient) StartClipGeneration(ctx context.Context, req *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
 	return c.startClipGeneration.CallUnary(ctx, req)
+}
+
+// QuoteClipGeneration calls postpilot.v1.ClipService.QuoteClipGeneration.
+func (c *clipServiceClient) QuoteClipGeneration(ctx context.Context, req *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
+	return c.quoteClipGeneration.CallUnary(ctx, req)
 }
 
 // ListVideoTemplates calls postpilot.v1.ClipService.ListVideoTemplates.
@@ -302,6 +318,7 @@ type ClipServiceHandler interface {
 	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
+	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error)
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
 	UpdateVideoTemplate(context.Context, *connect.Request[v1.UpdateVideoTemplateRequest]) (*connect.Response[v1.UpdateVideoTemplateResponse], error)
@@ -339,6 +356,12 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		ClipServiceStartClipGenerationProcedure,
 		svc.StartClipGeneration,
 		connect.WithSchema(clipServiceMethods.ByName("StartClipGeneration")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceQuoteClipGenerationHandler := connect.NewUnaryHandler(
+		ClipServiceQuoteClipGenerationProcedure,
+		svc.QuoteClipGeneration,
+		connect.WithSchema(clipServiceMethods.ByName("QuoteClipGeneration")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipServiceListVideoTemplatesHandler := connect.NewUnaryHandler(
@@ -421,6 +444,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceStartClipRenderHandler.ServeHTTP(w, r)
 		case ClipServiceStartClipGenerationProcedure:
 			clipServiceStartClipGenerationHandler.ServeHTTP(w, r)
+		case ClipServiceQuoteClipGenerationProcedure:
+			clipServiceQuoteClipGenerationHandler.ServeHTTP(w, r)
 		case ClipServiceListVideoTemplatesProcedure:
 			clipServiceListVideoTemplatesHandler.ServeHTTP(w, r)
 		case ClipServiceCreateVideoTemplateProcedure:
@@ -464,6 +489,10 @@ func (UnimplementedClipServiceHandler) StartClipRender(context.Context, *connect
 
 func (UnimplementedClipServiceHandler) StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.StartClipGeneration is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.QuoteClipGeneration is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error) {

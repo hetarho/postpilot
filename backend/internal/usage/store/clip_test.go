@@ -12,6 +12,7 @@ func TestClipDuplicateReservationCannotDebitAgain(t *testing.T) {
 	ctx := context.Background()
 	request := holdFor("clip-once")
 	request.Kind = "generate_clip"
+	request.Clip = approvedStoreClip()
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}

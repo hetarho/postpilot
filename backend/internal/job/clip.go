@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"errors"
+	"github.com/postpilot/backend/internal/llm"
 	"math"
 	"sync"
 )
@@ -18,6 +19,23 @@ type ClipStore interface {
 	ActiveForClip(context.Context, string, string) (*Job, error)
 	ActivateClip(context.Context, string, string) (bool, error)
 	SweepUnactivatedClips(context.Context, Failure) (int64, error)
+}
+
+// LatestClipSnapshot is an internal owner-scoped read for approval recovery. The
+// durable payload is never added to the public job summary or RPC projection.
+func (q *Queue) LatestClipSnapshot(ctx context.Context, user, id string) (*Job, error) {
+	s, ok := q.store.(ClipStore)
+	if !ok {
+		return nil, errors.New("clip job store unavailable")
+	}
+	j, err := s.LatestForClip(ctx, user, id)
+	if err != nil || j == nil {
+		return nil, err
+	}
+	if j.UserID != user || j.ClipProjectID != id {
+		return nil, ErrNotFound
+	}
+	return j, nil
 }
 
 func (q *Queue) LatestForClip(ctx context.Context, user, id string) (*JobSummary, error) {
@@ -77,15 +95,20 @@ type callKey struct {
 	budget int
 }
 type allowance struct {
-	mu        sync.Mutex
-	user, job string
-	remaining map[callKey]int
+	mu          sync.Mutex
+	user, job   string
+	remaining   map[callKey]int
+	policies    map[callKey]llm.CallPolicy
+	approvedMax int
 }
 
 // ReserveClip is deliberately worker-only: a queued/foreign/different-kind job cannot
 // acquire an allowance. A failed Hold returns no usable context. The ledger's unique
 // job key prevents a second successful reservation, including after a crash.
-func (q *Queue) ReserveClip(ctx context.Context, user, id string, calls []PlannedCall) (context.Context, error) {
+func (q *Queue) ReserveClip(ctx context.Context, user, id string, calls []PlannedCall, approval ...ClipReservation) (context.Context, error) {
+	if len(approval) != 1 || approval[0].ApprovedMaxCredits < 0 || len(approval[0].Calls) != 2 {
+		return nil, ErrCreditAllowance
+	}
 	j, err := q.store.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -94,6 +117,7 @@ func (q *Queue) ReserveClip(ctx context.Context, user, id string, calls []Planne
 		return nil, ErrCreditAllowance
 	}
 	remaining := map[callKey]int{}
+	policies := map[callKey]llm.CallPolicy{}
 	if len(calls) == 0 {
 		return nil, ErrCreditAllowance
 	}
@@ -107,28 +131,63 @@ func (q *Queue) ReserveClip(ctx context.Context, user, id string, calls []Planne
 		}
 		remaining[key] += c.Count
 	}
-	if err := q.admitter.Hold(ctx, Start{UserID: user, Kind: j.Kind, JobID: id, Calls: normalizePlannedCalls(calls)}); err != nil {
+	for i, c := range approval[0].Calls {
+		p := c.Policy
+		if !p.Valid() || c.Count <= 0 || c.Count > 49 {
+			return nil, ErrCreditAllowance
+		}
+		if i == 0 && (p.Stage != "observe" || p.Ref.String() != j.ObserveModel || p.CompletionTokens != 8192) {
+			return nil, ErrCreditAllowance
+		}
+		if i == 1 && (p.Stage != "write" || p.Ref.String() != j.WriteModel || c.Count != 1 || p.CompletionTokens != 32768) {
+			return nil, ErrCreditAllowance
+		}
+		key := callKey{p.Ref.String(), p.CompletionTokens}
+		if remaining[key] != c.Count {
+			return nil, ErrCreditAllowance
+		}
+		policies[key] = p
+	}
+	if len(policies) != len(remaining) {
+		return nil, ErrCreditAllowance
+	}
+	approved := approval[0]
+	approved.Calls = append([]ClipCall(nil), approved.Calls...)
+	if err := q.admitter.Hold(ctx, Start{UserID: user, Kind: j.Kind, JobID: id, Calls: normalizePlannedCalls(calls), Clip: &approved}); err != nil {
 		return nil, err
 	}
-	return context.WithValue(ctx, allowanceKey{}, &allowance{user: user, job: id, remaining: remaining}), nil
+	return context.WithValue(ctx, allowanceKey{}, &allowance{user: user, job: id, remaining: remaining, policies: policies, approvedMax: approved.ApprovedMaxCredits}), nil
 }
 
 // ConsumeClipCall runs at the metered LLM boundary, before any provider invocation.
 // Failed calls consume a slot too: an unplanned retry is still an extra paid call.
 func ConsumeClipCall(ctx context.Context, user, id, ref string, budget int) error {
+	_, err := consumeClipPolicy(ctx, user, id, ref, budget, "")
+	return err
+}
+
+func ConsumeClipPolicy(ctx context.Context, user, id, ref string, budget int, stage string) (llm.CallPolicy, error) {
+	if stage == "" {
+		return llm.CallPolicy{}, ErrCreditAllowance
+	}
+	return consumeClipPolicy(ctx, user, id, ref, budget, stage)
+}
+
+func consumeClipPolicy(ctx context.Context, user, id, ref string, budget int, stage string) (llm.CallPolicy, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return llm.CallPolicy{}, err
 	}
 	a, ok := ctx.Value(allowanceKey{}).(*allowance)
 	if !ok || a.user != user || a.job != id {
-		return ErrCreditAllowance
+		return llm.CallPolicy{}, ErrCreditAllowance
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	key := callKey{ref, budget}
-	if a.remaining[key] <= 0 {
-		return ErrCreditAllowance
+	p, ok := a.policies[key]
+	if a.remaining[key] <= 0 || !ok || !p.Valid() || (stage != "" && p.Stage != stage) {
+		return llm.CallPolicy{}, ErrCreditAllowance
 	}
 	a.remaining[key]--
-	return nil
+	return p, nil
 }

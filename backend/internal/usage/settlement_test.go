@@ -30,6 +30,7 @@ func TestClipFailedSettlementUsesOnlyConfirmedBillableEvidence(t *testing.T) {
 			store.lots = []Lot{openMonthly("alice", 100)}
 			start := holdStart("alice", plan.Free, "clip", PlannedCall{Ref: cheapRef, Count: 10, CompletionTokens: 8192})
 			start.Kind = "generate_clip"
+			start.Clip = approvedTestClip()
 			if err := svc.Hold(context.Background(), start); err != nil {
 				t.Fatal(err)
 			}
@@ -81,6 +82,9 @@ func TestFailureWaiverIsClipAndOutcomeSpecific(t *testing.T) {
 			store.lots = []Lot{{ID: "purchased", UserID: "alice", Kind: LotPurchased, Granted: 100, Remaining: 100}}
 			start := holdStart("alice", tc.tier, "job", PlannedCall{Ref: cheapRef, Count: 2})
 			start.Kind = tc.kind
+			if start.Kind == "generate_clip" {
+				start.Clip = approvedTestClip()
+			}
 			if err := svc.Hold(context.Background(), start); err != nil {
 				t.Fatal(err)
 			}
@@ -109,6 +113,7 @@ func TestFailedCallPreservesReportedZeroForSettlement(t *testing.T) {
 	store.lots = []Lot{openMonthly("alice", 100)}
 	start := holdStart("alice", plan.Free, "clip", PlannedCall{Ref: cheapRef, Count: 2})
 	start.Kind = "generate_clip"
+	start.Clip = approvedTestClip()
 	if err := svc.Hold(context.Background(), start); err != nil {
 		t.Fatal(err)
 	}

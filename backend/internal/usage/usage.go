@@ -36,15 +36,17 @@ type Start struct {
 	Kind   string
 	JobID  string
 	Calls  []PlannedCall
+	Clip   *ClipReservation
 }
 
 // Admission is the durable record of an admitted start and the credits held for it.
 type Admission struct {
-	UserID      string
-	Kind        string
-	JobID       string
-	HoldCredits int
-	CreatedAt   time.Time
+	UserID             string
+	Kind               string
+	JobID              string
+	HoldCredits        int
+	CreatedAt          time.Time
+	ApprovedMaxCredits *int
 }
 
 // TerminalOutcome is supplied by the job owner after its terminal state is durable.

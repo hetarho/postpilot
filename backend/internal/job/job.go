@@ -162,6 +162,7 @@ func normalizePlannedCalls(input []PlannedCall) []PlannedCall {
 
 // Job is the worker-facing record, including the kind-specific payload.
 type Job struct {
+	DispatchReady  bool
 	ID             string
 	Kind           string
 	UserID         string

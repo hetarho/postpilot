@@ -23,6 +23,7 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 		return nil, err
 	}
 	service := clip.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipJobs{queue}, config.ClipGeneration(cfg))
+	service.WithCredits(clipQuotePricing{registry: models.Registry, cfg: config.ClipAI(cfg)}, clipAccounting{ledger: models.ledger})
 	projects.SetGeneration(service)
 	if _, err = queue.SweepUnactivatedClips(ctx); err != nil {
 		return nil, err

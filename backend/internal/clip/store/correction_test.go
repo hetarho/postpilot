@@ -15,10 +15,7 @@ import (
 func completedClip(t *testing.T) (*generationHarness, clip.Project, clip.CorrectionPlan) {
 	t.Helper()
 	h := generationSetup(t)
-	h.start(t)
-	if err := h.run(t); err != nil {
-		t.Fatal(err)
-	}
+	seedCompletedGeneration(t, h)
 	p, err := h.projects.GetProject(context.Background(), "alice", h.project.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -128,7 +125,7 @@ func TestCorrectionSaveConflictSubsetRenderAndZeroUsage(t *testing.T) {
 	if got.EditPlan != saved.EditPlan || got.Analysis != old.Analysis || got.EditPlanRevision != 2 || got.RenderedPlanRevision != 2 || got.Result.Key == old.Result.Key {
 		t.Fatal(got)
 	}
-	if len(h.admitter.calls) != 1 || h.planner.observe != 3 || h.planner.plans != 1 {
+	if len(h.admitter.calls) != 0 || h.planner.observe != 0 || h.planner.plans != 0 {
 		t.Fatal("render used AI or credits")
 	}
 	for _, table := range []string{"usage_admissions", "usage_events"} {
@@ -185,7 +182,7 @@ func TestCorrectionFailuresPreserveSavedPlanAndOldVideo(t *testing.T) {
 			if _, err = h.store.GetSourceBatch(ctx, "alice", b.ID); !errors.Is(err, clip.ErrNotFound) {
 				t.Fatal(err)
 			}
-			if h.planner.plans != 1 || len(h.admitter.calls) != 1 {
+			if h.planner.plans != 0 || len(h.admitter.calls) != 0 {
 				t.Fatal("render charged")
 			}
 		})

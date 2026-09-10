@@ -64,6 +64,14 @@ export const errors = {
   VOICE_INSUFFICIENT_SOURCES: '말투를 배우려면 최소 {{min}}개의 자료가 필요해요.',
   VOICE_INVALID_LIFECYCLE: '현재 말투 상태에서는 이 작업을 할 수 없어요.',
   CLIP_INVALID_INPUT: '클립 또는 영상 템플릿의 입력값과 제한을 확인해 주세요.',
+  CLIP_QUOTE_REQUIRED: '생성을 시작하려면 예상 최대 크레딧을 확인하고 승인해 주세요.',
+  CLIP_QUOTE_EXPIRED: '크레딧 견적이 만료됐어요. 새 견적을 확인하고 다시 승인해 주세요.',
+  CLIP_QUOTE_CHANGED:
+    '영상, 설정 또는 모델 요금이 변경됐어요. 새 견적을 확인하고 다시 승인해 주세요.',
+  CLIP_CREDIT_CEILING_EXCEEDED:
+    '필요한 {{required}} 크레딧이 승인한 최대 {{approved}} 크레딧을 초과해 시작하지 않았어요. 새 견적을 확인해 주세요.',
+  CLIP_MODEL_PRICING_UNAVAILABLE:
+    '선택한 모델의 요금을 확인할 수 없어 생성을 시작하지 않았어요. 다른 모델을 선택하거나 잠시 후 다시 시도해 주세요.',
   CLIP_SOURCE_UNAVAILABLE:
     '영상이 처리 중이거나 업로드가 만료됐어요. 진행 상태를 확인한 뒤 원본 영상을 다시 선택해 주세요.',
   CLIP_NOT_FOUND: '클립 또는 영상 템플릿을 찾을 수 없어요.',

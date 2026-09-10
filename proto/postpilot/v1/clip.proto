@@ -10,6 +10,7 @@ service ClipService {
   rpc SaveClipEditPlan(SaveClipEditPlanRequest) returns (SaveClipEditPlanResponse) {}
   rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
   rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
+  rpc QuoteClipGeneration(QuoteClipGenerationRequest) returns (QuoteClipGenerationResponse) {}
   rpc ListVideoTemplates(ListVideoTemplatesRequest) returns (ListVideoTemplatesResponse) {}
   rpc CreateVideoTemplate(CreateVideoTemplateRequest) returns (CreateVideoTemplateResponse) {}
   rpc UpdateVideoTemplate(UpdateVideoTemplateRequest) returns (UpdateVideoTemplateResponse) {}
@@ -64,6 +65,18 @@ message ClipProject {
   GenerationJob latest_job = 12;
   // Detail only: retained metadata and a structured correction draft, never source URLs.
   ClipEditingState editing = 13;
+  ClipAccounting accounting = 14;
+}
+message ClipAccounting {
+  string job_id = 1;
+  // not_reserved | reserved | settling | settled | exempt | unavailable
+  string status = 2;
+  optional int32 approved_max_credits = 3;
+  optional int32 reserved_credits = 4;
+  optional int32 final_charge_credits = 5;
+  optional int32 refund_credits = 6;
+  optional int32 shadow_charge_credits = 7;
+  bool settled = 8;
 }
 message ListVideoTemplatesRequest {}
 message ListVideoTemplatesResponse { repeated VideoTemplate templates = 1; }
@@ -149,8 +162,32 @@ message StartClipGenerationRequest {
   string batch_id = 2;
   ModelRef observe_model = 3;
   ModelRef write_model = 4;
+  string quote_id = 5;
+  optional int32 approved_max_credits = 6;
 }
 message StartClipGenerationResponse { string job_id = 1; }
+message QuoteClipGenerationRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+}
+message ClipPricedCall {
+  ModelRef model = 1;
+  string stage = 2;
+  int32 calls = 3;
+  int32 prompt_tokens = 4;
+  int32 completion_tokens = 5;
+  string reasoning = 6;
+  string input_usd_per_million = 7;
+  string output_usd_per_million = 8;
+}
+message QuoteClipGenerationResponse {
+  string quote_id = 1;
+  int32 max_credits = 2;
+  string expires_at = 3;
+  repeated ClipPricedCall priced_calls = 4;
+}
 message ClipCaption {
   string text = 1;
   string position = 2;

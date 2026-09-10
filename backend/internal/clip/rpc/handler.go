@@ -39,7 +39,12 @@ func (h *Handler) StartClipGeneration(ctx context.Context, req *connect.Request[
 	}
 	observe := llm.ModelRef{ProviderID: req.Msg.GetObserveModel().GetProviderId(), ModelID: req.Msg.GetObserveModel().GetModelId()}
 	write := llm.ModelRef{ProviderID: req.Msg.GetWriteModel().GetProviderId(), ModelID: req.Msg.GetWriteModel().GetModelId()}
-	id, err := h.generation.Start(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String())
+	var maxCredits *int
+	if req.Msg.ApprovedMaxCredits != nil {
+		value := int(*req.Msg.ApprovedMaxCredits)
+		maxCredits = &value
+	}
+	id, err := h.generation.Start(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String(), clip.QuoteApproval{QuoteID: req.Msg.QuoteId, MaxCredits: maxCredits})
 	if err != nil {
 		if errors.Is(err, llm.ErrUnsupported) {
 			return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "video input is required", "MODEL_VIDEO_UNSUPPORTED", map[string]string{"model": observe.String()})
@@ -60,6 +65,14 @@ func actingUser(ctx context.Context) (string, error) {
 }
 func toConnectError(err error) error {
 	switch {
+	case errors.Is(err, clip.ErrQuoteRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit approval required", "CLIP_QUOTE_REQUIRED", nil)
+	case errors.Is(err, clip.ErrQuoteExpired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote expired", "CLIP_QUOTE_EXPIRED", nil)
+	case errors.Is(err, clip.ErrQuoteChanged):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote changed", "CLIP_QUOTE_CHANGED", nil)
+	case errors.Is(err, clip.ErrPricingUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip model pricing unavailable", "CLIP_MODEL_PRICING_UNAVAILABLE", nil)
 	case errors.Is(err, clip.ErrPlanConflict):
 		return rpcserver.NewAppError(connect.CodeAborted, "clip edit plan changed", "CLIP_PLAN_CONFLICT", nil)
 	case errors.Is(err, clip.ErrBusy):
@@ -217,6 +230,11 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 			return nil, toConnectError(err)
 		}
 		out.Editing = editingProto(state)
+		accounting, err := h.generation.Accounting(ctx, user, value.ID)
+		if err != nil {
+			return nil, toConnectError(err)
+		}
+		out.Accounting = accountingProto(accounting)
 	}
 	if h.jobs != nil {
 		j, err := h.jobs.LatestForClip(ctx, user, value.ID)

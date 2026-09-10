@@ -39,6 +39,39 @@ func (q *Queries) ActiveMonthlyLot(ctx context.Context, arg ActiveMonthlyLotPara
 	return i, err
 }
 
+const clipAccountingForJob = `-- name: ClipAccountingForJob :one
+SELECT a.approved_max_credits, a.hold_credits, a.settled_credits, a.settled_at,
+       CAST(COALESCE((SELECT SUM(h.credits) FROM credit_hold_lots h WHERE h.job_id = a.job_id), 0) AS INTEGER) AS debited_credits
+FROM usage_admissions a
+WHERE a.user_id = ? AND a.job_id = ? AND a.kind = 'generate_clip'
+`
+
+type ClipAccountingForJobParams struct {
+	UserID string
+	JobID  string
+}
+
+type ClipAccountingForJobRow struct {
+	ApprovedMaxCredits sql.NullInt64
+	HoldCredits        int64
+	SettledCredits     sql.NullInt64
+	SettledAt          sql.NullString
+	DebitedCredits     int64
+}
+
+func (q *Queries) ClipAccountingForJob(ctx context.Context, arg ClipAccountingForJobParams) (ClipAccountingForJobRow, error) {
+	row := q.db.QueryRowContext(ctx, clipAccountingForJob, arg.UserID, arg.JobID)
+	var i ClipAccountingForJobRow
+	err := row.Scan(
+		&i.ApprovedMaxCredits,
+		&i.HoldCredits,
+		&i.SettledCredits,
+		&i.SettledAt,
+		&i.DebitedCredits,
+	)
+	return i, err
+}
+
 const costForJob = `-- name: CostForJob :one
 SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) AS total_microusd,
        CAST(COALESCE(SUM(CASE
@@ -133,16 +166,17 @@ func (q *Queries) HoldDebitsForJob(ctx context.Context, jobID string) ([]HoldDeb
 }
 
 const insertAdmission = `-- name: InsertAdmission :exec
-INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at, approved_max_credits)
+VALUES (?, ?, ?, ?, ?, ?)
 `
 
 type InsertAdmissionParams struct {
-	UserID      string
-	Kind        string
-	JobID       string
-	HoldCredits int64
-	CreatedAt   string
+	UserID             string
+	Kind               string
+	JobID              string
+	HoldCredits        int64
+	CreatedAt          string
+	ApprovedMaxCredits sql.NullInt64
 }
 
 func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams) error {
@@ -152,6 +186,7 @@ func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams
 		arg.JobID,
 		arg.HoldCredits,
 		arg.CreatedAt,
+		arg.ApprovedMaxCredits,
 	)
 	return err
 }
@@ -367,17 +402,18 @@ func (q *Queries) MarkAdmissionSettled(ctx context.Context, arg MarkAdmissionSet
 }
 
 const openAdmissionForJob = `-- name: OpenAdmissionForJob :one
-SELECT user_id, kind, job_id, hold_credits, created_at
+SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits
 FROM usage_admissions
 WHERE job_id = ? AND settled_at IS NULL
 `
 
 type OpenAdmissionForJobRow struct {
-	UserID      string
-	Kind        string
-	JobID       string
-	HoldCredits int64
-	CreatedAt   string
+	UserID             string
+	Kind               string
+	JobID              string
+	HoldCredits        int64
+	CreatedAt          string
+	ApprovedMaxCredits sql.NullInt64
 }
 
 // Only an unsettled admission is returned, which is what makes settlement idempotent: a
@@ -391,6 +427,7 @@ func (q *Queries) OpenAdmissionForJob(ctx context.Context, jobID string) (OpenAd
 		&i.JobID,
 		&i.HoldCredits,
 		&i.CreatedAt,
+		&i.ApprovedMaxCredits,
 	)
 	return i, err
 }

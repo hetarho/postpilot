@@ -25,7 +25,7 @@ func TestSQLiteClipFailureSettlementEvidenceAndConcurrency(t *testing.T) {
 		{name: "reported positive", calls: []llm.Usage{{CostMicrousd: 100, CostReported: true}}, want: 3, wantSource: "reported"},
 		{name: "estimated from usage", calls: []llm.Usage{{PromptTokens: 100}}, want: 3, wantSource: "estimated"},
 		{name: "partial and unknown", calls: []llm.Usage{{CostMicrousd: 100, CostReported: true}, {}}, want: 3, wantSource: "reported"},
-		{name: "over reservation", calls: []llm.Usage{{CostMicrousd: 5_000_000, CostReported: true}}, want: oneCallHold, wantSource: "reported"},
+		{name: "over reservation", calls: []llm.Usage{{CostMicrousd: 5_000_000, CostReported: true}}, want: 5, wantSource: "reported"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			svc, handle := newServiceWithDB(t)
@@ -36,6 +36,7 @@ func TestSQLiteClipFailureSettlementEvidenceAndConcurrency(t *testing.T) {
 			}
 			request := holdFor("clip")
 			request.Kind = "generate_clip"
+			request.Clip = approvedStoreClip()
 			if err := svc.Hold(ctx, request); err != nil {
 				t.Fatal(err)
 			}
@@ -109,6 +110,7 @@ func TestSQLiteClipRefundRollbackRestoresOriginalLotsAndExpiry(t *testing.T) {
 	insertLot(t, handle, "purchased", "alice", "purchased", 20, nil, time.Now())
 	request := holdFor("clip")
 	request.Kind = "generate_clip"
+	request.Clip = approvedStoreClip()
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}
@@ -165,6 +167,7 @@ func TestSQLiteSettledClipIsNotRetroactivelyWaived(t *testing.T) {
 	ctx := context.Background()
 	request := holdFor("legacy-clip")
 	request.Kind = "generate_clip"
+	request.Clip = approvedStoreClip()
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}
@@ -195,6 +198,7 @@ func TestSQLiteMasterClipRecordsCostWithoutDebitingLots(t *testing.T) {
 	insertLot(t, handle, "master-purchased", "alice", "purchased", 100, nil, time.Now())
 	request := holdFor("master-clip")
 	request.Kind, request.Plan = "generate_clip", plan.Master
+	request.Clip = approvedStoreClip()
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}
@@ -218,4 +222,13 @@ func TestSQLiteMasterClipRecordsCostWithoutDebitingLots(t *testing.T) {
 	if err := handle.Reader.QueryRow("SELECT COUNT(*) FROM credit_hold_lots WHERE job_id=?", request.JobID).Scan(&debitRows); err != nil || debitRows != 0 {
 		t.Fatal(debitRows, err)
 	}
+}
+
+// Two bounded calls at known frozen rates cost 5 credits, preserving the lot
+// split used by the existing failure-settlement regression fixtures.
+func approvedStoreClip() *usage.ClipReservation {
+	return &usage.ClipReservation{ApprovedMaxCredits: 5, Calls: []usage.PricedCall{
+		{Policy: llm.CallPolicy{Ref: pricedRef, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "0.15", OutputUSDPerMillion: "0"}, Count: 1},
+		{Policy: llm.CallPolicy{Ref: pricedRef, Stage: "write", CompletionTokens: 32768, InputUSDPerMillion: "0.15", OutputUSDPerMillion: "0"}, Count: 1},
+	}}
 }
