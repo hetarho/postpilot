@@ -62,6 +62,18 @@ message CatalogDocumentPurposePlan {
   // purpose's complete membership, so omission is a deregistration.
   repeated string deregister = 3;
   repeated string unchanged = 4;
+  // The registrations the document KEEPS but re-grades (MODEL-59). Its own list rather
+  // than part of unchanged: a curator's list pasted without levels clears every one of
+  // them, and that has to be visible before the operator confirms.
+  repeated CatalogDocumentLevelChange relevel = 5;
+}
+
+// CatalogDocumentLevelChange is one registration's grade moving. Either side may be "" —
+// that is what setting a first level and clearing one look like.
+message CatalogDocumentLevelChange {
+  string model_id = 1;
+  string from = 2;
+  string to = 3;
 }
 
 message PreviewCatalogDocumentRequest {

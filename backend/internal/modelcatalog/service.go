@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -649,6 +650,19 @@ type DocumentPurposePlan struct {
 	Register   []string
 	Deregister []string
 	Unchanged  []string
+	// Relevel is the registrations the document keeps but re-grades, including to and from
+	// unset. It is its own list rather than a footnote on Unchanged because a curator's
+	// list pasted without levels clears every one of them, and the operator has to see that
+	// before confirming (MODEL-54, MODEL-59).
+	Relevel []LevelChange
+}
+
+// LevelChange is one registration's grade moving. Either side may be "" — that is what
+// setting a first level and clearing one look like.
+type LevelChange struct {
+	ModelID string
+	From    Level
+	To      Level
 }
 
 // DocumentPlan is the answer to both preview and apply. Applied is false whenever anything
@@ -703,10 +717,12 @@ func (s *Service) ExportDocument(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("list curated models: %w", err)
 	}
-	registrations := make(map[Purpose][]string, len(Purposes))
+	registrations := make(map[Purpose][]DocumentEntry, len(Purposes))
 	for _, row := range rows {
 		for _, purpose := range row.Purposes {
-			registrations[purpose] = append(registrations[purpose], row.ModelID)
+			registrations[purpose] = append(registrations[purpose], DocumentEntry{
+				ModelID: row.ModelID, Level: row.Levels[purpose],
+			})
 		}
 	}
 	return RenderDocument(registrations), nil
@@ -750,11 +766,11 @@ func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, 
 		now    = s.now()
 	)
 	for _, section := range doc.Sections {
-		wanted := make(map[string]bool, len(section.ModelIDs))
+		wanted := make(map[string]bool, len(section.Entries))
 		purposePlan := DocumentPurposePlan{Purpose: section.Purpose}
 
-		for i, modelID := range section.ModelIDs {
-			line := section.Lines[i]
+		for _, entry := range section.Entries {
+			modelID, line := entry.ModelID, entry.Line
 			existing, hasRow := curated[modelID]
 			candidate, isOffered := offered[modelID]
 			if !isOffered {
@@ -774,12 +790,25 @@ func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, 
 				continue
 			}
 			wanted[modelID] = true
+			// Every listed id is written, registered or not: the write also carries the
+			// level, and setting it to what it already is costs nothing while leaving the
+			// document as the single statement of the purpose's state (MODEL-52).
+			writes = append(writes, PurposeWrite{
+				Model: row, Purpose: section.Purpose, Register: true, Level: entry.Level,
+			})
 			if hasRow && slices.Contains(existing.Purposes, section.Purpose) {
+				if current := existing.Levels[section.Purpose]; current != entry.Level {
+					purposePlan.Relevel = append(purposePlan.Relevel, LevelChange{
+						ModelID: modelID, From: current, To: entry.Level,
+					})
+					continue
+				}
 				purposePlan.Unchanged = append(purposePlan.Unchanged, modelID)
 				continue
 			}
+			// A new registration is a Register and nothing else: its level is part of
+			// arriving, not a change to something that was already there.
 			purposePlan.Register = append(purposePlan.Register, modelID)
-			writes = append(writes, PurposeWrite{Model: row, Purpose: section.Purpose, Register: true})
 		}
 
 		// Whatever holds the purpose today and the section does not name is dropped: the
@@ -797,6 +826,9 @@ func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, 
 		slices.Sort(purposePlan.Register)
 		slices.Sort(purposePlan.Deregister)
 		slices.Sort(purposePlan.Unchanged)
+		slices.SortFunc(purposePlan.Relevel, func(a, b LevelChange) int {
+			return strings.Compare(a.ModelID, b.ModelID)
+		})
 		plan.Purposes = append(plan.Purposes, purposePlan)
 	}
 

@@ -151,6 +151,18 @@ func (s *fakeStore) SyncPurposes(ctx context.Context, writes []modelcatalog.Purp
 			if err := s.RegisterPurpose(ctx, write.Model, write.Purpose); err != nil {
 				return err
 			}
+			// The document carries the level for every id it lists, so a listed id without
+			// one CLEARS what was there (MODEL-59) — the real store's UPDATE says the same.
+			row := s.rows[write.Model.ModelID]
+			if write.Level == "" {
+				delete(row.Levels, write.Purpose)
+			} else {
+				if row.Levels == nil {
+					row.Levels = map[modelcatalog.Purpose]modelcatalog.Level{}
+				}
+				row.Levels[write.Purpose] = write.Level
+			}
+			s.rows[write.Model.ModelID] = row
 			continue
 		}
 		if err := s.DeregisterPurpose(ctx, write.Model.ModelID, write.Purpose, at); err != nil {

@@ -26,6 +26,7 @@ const (
 	IssueOrphanID         = "id_before_section"
 	IssueMalformedLine    = "malformed_line"
 	IssueDuplicateID      = "duplicate_id"
+	IssueUnknownLevel     = "unknown_level"
 	// Validation causes: the text parsed, but the catalog refuses it.
 	IssueUnknownModel = "unknown_model"
 	IssueUnlisted     = "unlisted_model"
@@ -40,15 +41,24 @@ type DocumentIssue struct {
 	Cause string
 }
 
-// DocumentSection is one purpose and the ids listed under it, in the order they appear.
+// DocumentEntry is one id line: the model, the level it named, and where it sat.
+type DocumentEntry struct {
+	ModelID string
+	// Level is what the line's second token said, or "" when it carried none. An id-only
+	// line is a real instruction to leave the registration unlevelled (MODEL-59), not a
+	// missing value to be filled in from what is stored.
+	Level Level
+	// Line is the 1-based document line, so an issue about this entry can point at it.
+	Line int
+}
+
+// DocumentSection is one purpose and the entries listed under it, in the order they appear.
 type DocumentSection struct {
 	Purpose Purpose
 	// Line is where the header sits, so a validation issue about the section itself can
 	// point at something.
-	Line     int
-	ModelIDs []string
-	// Lines[i] is the document line ModelIDs[i] came from.
-	Lines []int
+	Line    int
+	Entries []DocumentEntry
 }
 
 // Document is a parsed paste. Only the purposes it actually names are present: a purpose
@@ -116,23 +126,42 @@ func ParseDocument(text string) (Document, []DocumentIssue) {
 			current = len(doc.Sections) - 1
 			continue
 		}
-		if !looksLikeModelID(line) {
-			// A pasted table row, a bullet, a quoted id: anything that is not bare is
-			// refused rather than guessed at.
+		// An id line is one or two tokens: the model, and optionally its level (MODEL-59).
+		// Fields() rather than Cut() so any run of spaces or a tab separates them — the
+		// format stays forgiving about whitespace and strict about everything else.
+		fields := strings.Fields(line)
+		if len(fields) > 2 || !looksLikeModelID(fields[0]) {
+			// A pasted table row, a bullet, a quoted id, a third token: anything that is not
+			// the grammar is refused rather than guessed at.
 			issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueMalformedLine})
 			continue
+		}
+		modelID := fields[0]
+		var level Level
+		if len(fields) == 2 {
+			parsed, err := ParseLevel(fields[1])
+			if err != nil {
+				// The id is fine and only the grade is wrong, so the operator is told which
+				// half to fix rather than being sent to look at the whole line.
+				issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueUnknownLevel})
+				continue
+			}
+			level = parsed
 		}
 		if current < 0 {
 			issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueOrphanID})
 			continue
 		}
-		if seenID[current][line] {
+		if seenID[current][modelID] {
+			// Listing one model twice is ambiguous whatever the levels say — two lines
+			// disagreeing about the grade is exactly the case a "last wins" rule would hide.
 			issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueDuplicateID})
 			continue
 		}
-		seenID[current][line] = true
-		doc.Sections[current].ModelIDs = append(doc.Sections[current].ModelIDs, line)
-		doc.Sections[current].Lines = append(doc.Sections[current].Lines, number)
+		seenID[current][modelID] = true
+		doc.Sections[current].Entries = append(doc.Sections[current].Entries, DocumentEntry{
+			ModelID: modelID, Level: level, Line: number,
+		})
 	}
 
 	if !versioned {
@@ -142,14 +171,21 @@ func ParseDocument(text string) (Document, []DocumentIssue) {
 	return doc, issues
 }
 
-// looksLikeModelID keeps the parser strict: a source id is one bare token. Whitespace is
-// what separates a real id from the table cell, bullet or numbered line somebody pasted
-// around it.
-func looksLikeModelID(line string) bool {
-	if line == "" || strings.ContainsAny(line, " \t|`\"',") {
+// looksLikeModelID keeps the parser strict: a source id is one bare `vendor/model` token.
+// The caller has already split the line on whitespace, so what is left to refuse is the
+// punctuation a table cell or quoted id drags along — and anything with no slug in it.
+//
+// The slash requirement earns its keep now that a line may carry two tokens (MODEL-59):
+// without it a markdown bullet reads as the id `-` followed by an unknown level, which
+// sends the operator to fix the wrong half of a line whose real problem is the bullet.
+// Every id the source publishes is `vendor/model` (MODEL-18 takes the segment before the
+// slash as the grouping key), so nothing legitimate is turned away.
+func looksLikeModelID(token string) bool {
+	if token == "" || strings.ContainsAny(token, " \t|`\"',") || strings.ContainsAny(token, "[]") {
 		return false
 	}
-	return !strings.ContainsAny(line, "[]")
+	slug, rest, ok := strings.Cut(token, "/")
+	return ok && slug != "" && rest != ""
 }
 
 // RenderDocument writes the protocol for the registrations given (MODEL-55). Every purpose
@@ -159,7 +195,7 @@ func looksLikeModelID(line string) bool {
 // The output is byte-stable: fixed purpose order, ids sorted within a section, one trailing
 // newline, and no comment lines beyond the version. Nothing derived from prices or labels
 // is written, because a comment that goes stale is worse than no comment.
-func RenderDocument(registrations map[Purpose][]string) string {
+func RenderDocument(registrations map[Purpose][]DocumentEntry) string {
 	var b strings.Builder
 	b.WriteString(DocumentVersionLine)
 	b.WriteString("\n")
@@ -167,10 +203,16 @@ func RenderDocument(registrations map[Purpose][]string) string {
 		b.WriteString("\n[")
 		b.WriteString(string(purpose))
 		b.WriteString("]\n")
-		ids := slices.Clone(registrations[purpose])
-		slices.Sort(ids)
-		for _, id := range ids {
-			b.WriteString(id)
+		entries := slices.Clone(registrations[purpose])
+		slices.SortFunc(entries, func(a, b DocumentEntry) int { return strings.Compare(a.ModelID, b.ModelID) })
+		for _, entry := range entries {
+			b.WriteString(entry.ModelID)
+			// An unset level writes NO second token rather than an empty one, so the line an
+			// operator reads back is the line they would have written themselves.
+			if entry.Level != "" {
+				b.WriteString(" ")
+				b.WriteString(string(entry.Level))
+			}
 			b.WriteString("\n")
 		}
 	}

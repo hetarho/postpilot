@@ -37,14 +37,18 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T093 | The catalog document carries the level | MODEL | T092 | todo |
 | T094 | 모델 관리: 등급 Listbox, 등급순 sort, unset mark, document diff level changes | MODEL | T093 T095 | todo |
 | T095 | User selectors show the level and order 가성비 → 최고 | MODEL LANG | T092 | todo |
+| T096 | Complete multi-source clip planning and playable generation | CLIP QUOTA ARCH | T091 | doing@260911.fix |
 
 ## next
-- implement-task T093 (then T095 → T094); after T093 lands, re-teach `/recomend-models` to emit `<id> <level>` lines — its id-only block would clear every set level under MODEL-59
+- Complete T096 through actual multi-source analysis, composition and playable rendering; additional paid verification must remain strictly below USD 0.10 in aggregate, preserve concurrent model work
+- implement-task T095 (then T094); `/recomend-models` now needs re-teaching to emit `<id> <level>` lines — its id-only block clears every set level under MODEL-59
 - T008 needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job; once it closes, update-ssot PUB for VIDEO-17 + TMPL-39
 ## log
+- 260911 T093 done; `<id> [level]` grammar, relevel preview, level-aware sync/export; tightened looksLikeModelID to need a slash so a bullet is malformed_line again, not unknown_level
+- 260911 T096 working (fix); owner caps all additional paid verification strictly below USD 0.10, reserve each next call before dispatch and retain unknown usage at its maximum; multi-source and safe diagnostic regressions pass
+- 260911 T093 claimed (lvl)
 - 260911 T092 done; level column 0040, per-registration domain/store/RPC and the stage-keyed llm+ModelInfo wire; ARCH-26 and gen idempotence pass, FE untouched and still builds
 - 260911 T091 delivered (fix); 2d484e8 pushed, CI https://github.com/hetarho/postpilot/actions/runs/34506698657 and rollout https://github.com/hetarho/postpilot/actions/runs/34506698910 pass; exact production image running, /health ok, restarts=0 and OOM=false; no further paid call or user-media replay
 - 260911 T092 claimed (lvl); chaining T092→T093→T095→T094, commit per task on main
@@ -62,6 +66,3 @@
 - 260911 T089 done; the 후보 queue is a counted disclosure below the list with sequential bulk accept/dismiss and per-row refusals; all local gates and day/night browser checks pass
 - 260911 T089 claimed (cnd)
 - 260911 T088 done; the 지침 page is the list with one docked 새 지침 sheet; all local gates and day/night browser checks pass
-- 260911 T090 local verification passed (diag); diagnostics, privacy/usage/race tests, production media image and unchanged-side gates pass; push awaits scope approval for two unrelated ancestor commits, remote CI/deployment pending
-- 260911 T088 claimed (gdl)
-- 260911 T087 done; two-level navigation chrome, plane-separated and stuck to the viewport, with one composed chrome-offset token; all local gates and CDP browser checks pass

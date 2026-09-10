@@ -696,3 +696,65 @@ func TestLevel_GoesWithTheRegistration(t *testing.T) {
 		t.Fatalf("after delisting purposes = %v levels = %v, want both gone", got.Purposes, got.Levels)
 	}
 }
+
+// T093/MODEL-59: the sync writes the level for every id the document lists — setting one,
+// clearing one — and a failure later in the same document rolls both back with everything
+// else. The real transaction, not the fake's in-order replay.
+func TestSyncPurposes_WritesLevelsAtomically(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	sonnet, err := s.Get(ctx, "anthropic/claude-sonnet-5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	grok, err := s.Get(ctx, "x-ai/grok-4.6")
+	if err != nil {
+		t.Skipf("seed does not carry x-ai/grok-4.6: %v", err)
+	}
+	for _, row := range []modelcatalog.Model{sonnet, grok} {
+		if err := s.RegisterPurpose(ctx, row, modelcatalog.PurposeWriting); err != nil {
+			t.Fatal(err)
+		}
+	}
+	top := modelcatalog.LevelTop
+	if _, err := s.Patch(ctx, grok.ModelID, modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Level: &top,
+	}, testNow); err != nil {
+		t.Fatal(err)
+	}
+
+	// A document whose last write is invalid must leave the levels above untouched.
+	err = s.SyncPurposes(ctx, []modelcatalog.PurposeWrite{
+		{Model: sonnet, Purpose: modelcatalog.PurposeWriting, Register: true, Level: modelcatalog.LevelPremium},
+		{Model: grok, Purpose: modelcatalog.Purpose("audio-analysis"), Register: true},
+	}, testNow)
+	if err == nil {
+		t.Fatal("want the invalid write to fail the sync")
+	}
+	after, err := s.Get(ctx, sonnet.ModelID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, ok := after.Levels[modelcatalog.PurposeWriting]; ok {
+		t.Errorf("level = %q, want the rolled-back sync to have written nothing", got)
+	}
+
+	// The same document without the bad line: one id gains a level, one loses the one it had.
+	err = s.SyncPurposes(ctx, []modelcatalog.PurposeWrite{
+		{Model: sonnet, Purpose: modelcatalog.PurposeWriting, Register: true, Level: modelcatalog.LevelPremium},
+		{Model: grok, Purpose: modelcatalog.PurposeWriting, Register: true},
+	}, testNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after, err = s.Get(ctx, sonnet.ModelID); err != nil {
+		t.Fatal(err)
+	} else if after.Levels[modelcatalog.PurposeWriting] != modelcatalog.LevelPremium {
+		t.Errorf("sonnet level = %v, want premium", after.Levels)
+	}
+	if after, err = s.Get(ctx, grok.ModelID); err != nil {
+		t.Fatal(err)
+	} else if got, ok := after.Levels[modelcatalog.PurposeWriting]; ok {
+		t.Errorf("grok level = %q, want cleared by an id-only line", got)
+	}
+}

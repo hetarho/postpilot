@@ -147,11 +147,18 @@ func (h *Handler) ExportCatalogDocument(ctx context.Context, _ *connect.Request[
 func toProtoDocumentPlan(purposes []modelcatalog.DocumentPurposePlan) []*postpilotv1.CatalogDocumentPurposePlan {
 	out := make([]*postpilotv1.CatalogDocumentPurposePlan, 0, len(purposes))
 	for _, purpose := range purposes {
+		relevel := make([]*postpilotv1.CatalogDocumentLevelChange, 0, len(purpose.Relevel))
+		for _, change := range purpose.Relevel {
+			relevel = append(relevel, &postpilotv1.CatalogDocumentLevelChange{
+				ModelId: change.ModelID, From: string(change.From), To: string(change.To),
+			})
+		}
 		out = append(out, &postpilotv1.CatalogDocumentPurposePlan{
 			Purpose:    string(purpose.Purpose),
 			Register:   purpose.Register,
 			Deregister: purpose.Deregister,
 			Unchanged:  purpose.Unchanged,
+			Relevel:    relevel,
 		})
 	}
 	return out

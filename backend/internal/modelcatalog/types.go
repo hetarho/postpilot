@@ -198,6 +198,10 @@ type PurposeWrite struct {
 	Model    Model
 	Purpose  Purpose
 	Register bool
+	// Level is the grade the document gave this registration, "" when its line carried
+	// none. A registering write always sets it, so an id-only line CLEARS a level that was
+	// there (MODEL-59) — the section is the purpose's whole state, levels included.
+	Level Level
 }
 
 // Candidate is one model the upstream catalog currently offers. It carries no curation —

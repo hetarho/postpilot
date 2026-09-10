@@ -246,10 +246,13 @@ func TestDocumentRefusesWhenTheCatalogCannotBeRead(t *testing.T) {
 }
 
 func TestExportDocumentRoundTripsToNoChange(t *testing.T) {
-	store := newFakeStore(
-		curated("anthropic/claude-sonnet-5", modelcatalog.PurposeWriting),
-		curated("google/gemini-3.8-flash", modelcatalog.PurposePhotoAnalysis, modelcatalog.PurposeStyleAnalysis),
-	)
+	sonnet := curated("anthropic/claude-sonnet-5", modelcatalog.PurposeWriting)
+	sonnet.Levels = map[modelcatalog.Purpose]modelcatalog.Level{modelcatalog.PurposeWriting: modelcatalog.LevelTop}
+	gemini := curated("google/gemini-3.8-flash", modelcatalog.PurposePhotoAnalysis, modelcatalog.PurposeStyleAnalysis)
+	// One graded registration and one deliberately ungraded, so the round trip proves both
+	// halves: a level survives the render, and an absent one is not invented.
+	gemini.Levels = map[modelcatalog.Purpose]modelcatalog.Level{modelcatalog.PurposePhotoAnalysis: modelcatalog.LevelValue}
+	store := newFakeStore(sonnet, gemini)
 	upstream := &fakeUpstream{candidates: []modelcatalog.Candidate{
 		candidate("anthropic/claude-sonnet-5", 10), candidate("google/gemini-3.8-flash", 20),
 	}}
@@ -267,14 +270,150 @@ func TestExportDocumentRoundTripsToNoChange(t *testing.T) {
 		t.Fatalf("the exported document must be valid, got %v", plan.Issues)
 	}
 	for _, purpose := range plan.Purposes {
-		if len(purpose.Register) > 0 || len(purpose.Deregister) > 0 {
-			t.Errorf("%s: pasting an export straight back must change nothing, got +%v -%v",
-				purpose.Purpose, purpose.Register, purpose.Deregister)
+		if len(purpose.Register) > 0 || len(purpose.Deregister) > 0 || len(purpose.Relevel) > 0 {
+			t.Errorf("%s: pasting an export straight back must change nothing, got +%v -%v ~%v",
+				purpose.Purpose, purpose.Register, purpose.Deregister, purpose.Relevel)
 		}
 	}
 	// Every purpose is present, so the export is a complete statement rather than a partial
 	// edit — an empty section really does deregister.
 	if len(plan.Purposes) != len(modelcatalog.Purposes) {
 		t.Errorf("purposes = %d, want all five", len(plan.Purposes))
+	}
+}
+
+// T093/MODEL-54: a document that re-grades a registration it keeps reports it as its own
+// change — not as "unchanged", and not buried in the deregistration list.
+func TestPreviewDocumentReportsRelevelWithoutWriting(t *testing.T) {
+	sonnet := curated("anthropic/claude-sonnet-5", modelcatalog.PurposeWriting)
+	sonnet.Levels = map[modelcatalog.Purpose]modelcatalog.Level{modelcatalog.PurposeWriting: modelcatalog.LevelBalanced}
+	graded := curated("x-ai/grok-4.6", modelcatalog.PurposeWriting)
+	graded.Levels = map[modelcatalog.Purpose]modelcatalog.Level{modelcatalog.PurposeWriting: modelcatalog.LevelTop}
+	store := newFakeStore(sonnet, graded, curated("z-ai/glm-5.3", modelcatalog.PurposeWriting))
+	upstream := &fakeUpstream{candidates: []modelcatalog.Candidate{
+		candidate("anthropic/claude-sonnet-5", 10), candidate("x-ai/grok-4.6", 20), candidate("z-ai/glm-5.3", 30),
+	}}
+	svc := newService(t, store, upstream)
+
+	text := modelcatalog.DocumentVersionLine + "\n[writing]\n" +
+		// balanced → top
+		"anthropic/claude-sonnet-5 top\n" +
+		// top → unset: an id-only line clears a grade, and that must be visible
+		"x-ai/grok-4.6\n" +
+		// unset → unset: genuinely nothing to say
+		"z-ai/glm-5.3\n"
+	plan, err := svc.PreviewDocument(context.Background(), text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writing := planFor(t, plan, modelcatalog.PurposeWriting)
+	want := []modelcatalog.LevelChange{
+		{ModelID: "anthropic/claude-sonnet-5", From: modelcatalog.LevelBalanced, To: modelcatalog.LevelTop},
+		{ModelID: "x-ai/grok-4.6", From: modelcatalog.LevelTop, To: ""},
+	}
+	if !reflect.DeepEqual(writing.Relevel, want) {
+		t.Errorf("relevel = %v, want %v", writing.Relevel, want)
+	}
+	if !reflect.DeepEqual(writing.Unchanged, []string{"z-ai/glm-5.3"}) {
+		t.Errorf("unchanged = %v, want only the model whose grade did not move", writing.Unchanged)
+	}
+	if len(writing.Register) != 0 || len(writing.Deregister) != 0 {
+		t.Errorf("a re-grade is not a registration change: +%v -%v", writing.Register, writing.Deregister)
+	}
+	// A preview writes nothing, levels included.
+	if got := store.rows["anthropic/claude-sonnet-5"].Levels[modelcatalog.PurposeWriting]; got != modelcatalog.LevelBalanced {
+		t.Errorf("preview wrote a level: %q", got)
+	}
+	if store.syncs != 0 {
+		t.Errorf("syncs = %d, want none", store.syncs)
+	}
+}
+
+// T093/MODEL-59: applying writes the grade for every id the section lists — setting one on
+// a registration that had none, and clearing one whose line no longer names it.
+func TestApplyDocumentSetsAndClearsLevels(t *testing.T) {
+	graded := curated("x-ai/grok-4.6", modelcatalog.PurposeWriting)
+	graded.Levels = map[modelcatalog.Purpose]modelcatalog.Level{modelcatalog.PurposeWriting: modelcatalog.LevelTop}
+	store := newFakeStore(graded, curated("anthropic/claude-sonnet-5", modelcatalog.PurposeWriting))
+	upstream := &fakeUpstream{candidates: []modelcatalog.Candidate{
+		candidate("x-ai/grok-4.6", 20), candidate("anthropic/claude-sonnet-5", 10),
+		candidate("z-ai/glm-5.3-flash", 30),
+	}}
+	svc := newService(t, store, upstream)
+
+	text := modelcatalog.DocumentVersionLine + "\n[writing]\n" +
+		"anthropic/claude-sonnet-5 premium\n" + // already registered, gains a grade
+		"x-ai/grok-4.6\n" + // already registered and graded, loses it
+		"z-ai/glm-5.3-flash value\n" // brand new, arrives graded
+	plan, err := svc.ApplyDocument(context.Background(), text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !plan.Applied {
+		t.Fatalf("not applied: %v", plan.Issues)
+	}
+	if got := store.rows["anthropic/claude-sonnet-5"].Levels[modelcatalog.PurposeWriting]; got != modelcatalog.LevelPremium {
+		t.Errorf("sonnet level = %q, want premium", got)
+	}
+	if got, ok := store.rows["x-ai/grok-4.6"].Levels[modelcatalog.PurposeWriting]; ok {
+		t.Errorf("grok level = %q, want cleared by its id-only line", got)
+	}
+	if got := store.rows["z-ai/glm-5.3-flash"].Levels[modelcatalog.PurposeWriting]; got != modelcatalog.LevelValue {
+		t.Errorf("new registration level = %q, want value", got)
+	}
+	// A new registration is a Register and nothing else — its grade is part of arriving.
+	writing := planFor(t, plan, modelcatalog.PurposeWriting)
+	if !reflect.DeepEqual(writing.Register, []string{"z-ai/glm-5.3-flash"}) {
+		t.Errorf("register = %v", writing.Register)
+	}
+}
+
+// T093/MODEL-53: a bad grade refuses the WHOLE document, so the lines around it are not
+// half-applied — the same rule every other cause follows.
+func TestDocumentRefusesWholeOnABadLevel(t *testing.T) {
+	store := newFakeStore(curated("anthropic/claude-sonnet-5", modelcatalog.PurposeWriting))
+	upstream := &fakeUpstream{candidates: []modelcatalog.Candidate{
+		candidate("anthropic/claude-sonnet-5", 10), candidate("z-ai/glm-5.3-flash", 30),
+	}}
+	svc := newService(t, store, upstream)
+
+	text := modelcatalog.DocumentVersionLine + "\n[writing]\n" +
+		"anthropic/claude-sonnet-5 top\n" +
+		"z-ai/glm-5.3-flash legendary\n"
+	plan, err := svc.ApplyDocument(context.Background(), text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Applied {
+		t.Fatal("a document with a bad level must not apply")
+	}
+	if len(plan.Issues) != 1 || plan.Issues[0].Cause != modelcatalog.IssueUnknownLevel || plan.Issues[0].Line != 4 {
+		t.Fatalf("issues = %v, want one unknown_level on line 4", plan.Issues)
+	}
+	if store.syncs != 0 {
+		t.Errorf("syncs = %d, want none — the valid line above must not land either", store.syncs)
+	}
+	if _, ok := store.rows["anthropic/claude-sonnet-5"].Levels[modelcatalog.PurposeWriting]; ok {
+		t.Error("the accepted line's grade was written despite the refusal")
+	}
+}
+
+// T093/MODEL-20: a deregistration takes the grade with it, exactly as it takes the effort.
+func TestApplyDocumentDropsTheLevelWithTheRegistration(t *testing.T) {
+	graded := curated("x-ai/grok-4.6", modelcatalog.PurposeWriting)
+	graded.Levels = map[modelcatalog.Purpose]modelcatalog.Level{modelcatalog.PurposeWriting: modelcatalog.LevelTop}
+	store := newFakeStore(graded, curated("anthropic/claude-sonnet-5", modelcatalog.PurposeWriting))
+	upstream := &fakeUpstream{candidates: []modelcatalog.Candidate{
+		candidate("x-ai/grok-4.6", 20), candidate("anthropic/claude-sonnet-5", 10),
+	}}
+	svc := newService(t, store, upstream)
+
+	if _, err := svc.ApplyDocument(context.Background(), document(
+		[]string{"writing", "anthropic/claude-sonnet-5"},
+	)); err != nil {
+		t.Fatal(err)
+	}
+	if got, ok := store.rows["x-ai/grok-4.6"].Levels[modelcatalog.PurposeWriting]; ok {
+		t.Errorf("level = %q, want it gone with the registration", got)
 	}
 }

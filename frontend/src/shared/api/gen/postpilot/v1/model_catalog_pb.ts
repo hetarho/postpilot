@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/model_catalog.proto.
  */
 export const file_postpilot_v1_model_catalog: GenFile = /*@__PURE__*/
-  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIkEKFENhdGFsb2dEb2N1bWVudElzc3VlEgwKBGxpbmUYASABKAUSDAoEdGV4dBgCIAEoCRINCgVjYXVzZRgDIAEoCSJmChpDYXRhbG9nRG9jdW1lbnRQdXJwb3NlUGxhbhIPCgdwdXJwb3NlGAEgASgJEhAKCHJlZ2lzdGVyGAIgAygJEhIKCmRlcmVnaXN0ZXIYAyADKAkSEQoJdW5jaGFuZ2VkGAQgAygJIjEKHVByZXZpZXdDYXRhbG9nRG9jdW1lbnRSZXF1ZXN0EhAKCGRvY3VtZW50GAEgASgJIqUBCh5QcmV2aWV3Q2F0YWxvZ0RvY3VtZW50UmVzcG9uc2USOgoIcHVycG9zZXMYASADKAsyKC5wb3N0cGlsb3QudjEuQ2F0YWxvZ0RvY3VtZW50UHVycG9zZVBsYW4SMgoGaXNzdWVzGAIgAygLMiIucG9zdHBpbG90LnYxLkNhdGFsb2dEb2N1bWVudElzc3VlEhMKC2ZldGNoX2Vycm9yGAMgASgJIi8KG0FwcGx5Q2F0YWxvZ0RvY3VtZW50UmVxdWVzdBIQCghkb2N1bWVudBgBIAEoCSK0AQocQXBwbHlDYXRhbG9nRG9jdW1lbnRSZXNwb25zZRI6CghwdXJwb3NlcxgBIAMoCzIoLnBvc3RwaWxvdC52MS5DYXRhbG9nRG9jdW1lbnRQdXJwb3NlUGxhbhIyCgZpc3N1ZXMYAiADKAsyIi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0RvY3VtZW50SXNzdWUSEwoLZmV0Y2hfZXJyb3IYAyABKAkSDwoHYXBwbGllZBgEIAEoCCIeChxFeHBvcnRDYXRhbG9nRG9jdW1lbnRSZXF1ZXN0IjEKHUV4cG9ydENhdGFsb2dEb2N1bWVudFJlc3BvbnNlEhAKCGRvY3VtZW50GAEgASgJIs8FCgxDYXRhbG9nRW50cnkSEAoIbW9kZWxfaWQYASABKAkSFQoNcHJvdmlkZXJfc2x1ZxgCIAEoCRINCgVsYWJlbBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZ2aXNpb24YBSABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBiABKAgSFgoOY29udGV4dF90b2tlbnMYByABKAMSHQoVaW5wdXRfdXNkX3Blcl9taWxsaW9uGAggASgJEh4KFm91dHB1dF91c2RfcGVyX21pbGxpb24YCSABKAkSDwoHY3VyYXRlZBgKIAEoCBIOCgZsaXN0ZWQYDSABKAgSGAoQcmVhc29uaW5nX2VmZm9ydBgOIAEoCRIZChFzb3VyY2VfY3JlYXRlZF9hdBgPIAEoAxIQCghwdXJwb3NlcxgQIAMoCRIUCgxpbWFnZV9vdXRwdXQYESABKAgSFAoMdmlkZW9fb3V0cHV0GBIgASgIEhMKC3ZpZGVvX2lucHV0GBwgASgIEjoKD3JlYXNvbmluZ19zcGVuZBgTIAEoCzIcLnBvc3RwaWxvdC52MS5SZWFzb25pbmdTcGVuZEgAiAEBEg8KB3JlYXNvbnMYFCABKAgSGQoRcmVhc29uaW5nX2VmZm9ydHMYFSADKAkSIAoYcmVhc29uaW5nX2RlZmF1bHRfZWZmb3J0GBYgASgJEhsKE3JlYXNvbmluZ19tYW5kYXRvcnkYFyABKAgSHwoXcmVhc29uaW5nX25hdGl2ZV9lZmZvcnQYGCABKAgSHAoUcmVhc29uaW5nX21heF90b2tlbnMYGSABKAgSGQoRcmVhc29uaW5nX2RyaWZ0ZWQYGiABKAgSFwoPcmVhc29uaW5nX2tub3duGBsgASgIEg0KBWxldmVsGB0gASgJQhIKEF9yZWFzb25pbmdfc3BlbmRKBAgLEAxKBAgMEA0icwoOUmVhc29uaW5nU3BlbmQSDQoFY2FsbHMYASABKAMSGAoQcmVhc29uaW5nX3Rva2VucxgCIAEoAxIZChFjb21wbGV0aW9uX3Rva2VucxgDIAEoAxIdChVyZWFzb25pbmdfdHJ1bmNhdGlvbnMYBCABKAMiNgoSTGlzdENhdGFsb2dSZXF1ZXN0Eg8KB3JlZnJlc2gYASABKAgSDwoHcHVycG9zZRgCIAEoCSJbChhFc3RpbWF0b3JDb21ib0Fzc2lnbm1lbnQSDQoFY29tYm8YASABKAkSGAoQb2JzZXJ2ZV9tb2RlbF9pZBgCIAEoCRIWCg53cml0ZV9tb2RlbF9pZBgDIAEoCSLBAQoTTGlzdENhdGFsb2dSZXNwb25zZRIrCgdlbnRyaWVzGAEgAygLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeRISCgpmZXRjaGVkX2F0GAIgASgJEhIKCmZyb21fY2FjaGUYAyABKAgSEwoLZmV0Y2hfZXJyb3IYBCABKAkSQAoQZXN0aW1hdG9yX2NvbWJvcxgFIAMoCzImLnBvc3RwaWxvdC52MS5Fc3RpbWF0b3JDb21ib0Fzc2lnbm1lbnQiTwoWU2V0TW9kZWxQdXJwb3NlUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCRIPCgdwdXJwb3NlGAIgASgJEhIKCnJlZ2lzdGVyZWQYAyABKAgiRAoXU2V0TW9kZWxQdXJwb3NlUmVzcG9uc2USKQoFZW50cnkYASABKAsyGi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0VudHJ5IpUBChJVcGRhdGVNb2RlbFJlcXVlc3QSEAoIbW9kZWxfaWQYASABKAkSHQoQcmVhc29uaW5nX2VmZm9ydBgEIAEoCUgAiAEBEg8KB3B1cnBvc2UYBSABKAkSEgoFbGV2ZWwYBiABKAlIAYgBAUITChFfcmVhc29uaW5nX2VmZm9ydEIICgZfbGV2ZWxKBAgCEANKBAgDEAQiQAoTVXBkYXRlTW9kZWxSZXNwb25zZRIpCgVlbnRyeRgBIAEoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnky/wQKE01vZGVsQ2F0YWxvZ1NlcnZpY2USVAoLTGlzdENhdGFsb2cSIC5wb3N0cGlsb3QudjEuTGlzdENhdGFsb2dSZXF1ZXN0GiEucG9zdHBpbG90LnYxLkxpc3RDYXRhbG9nUmVzcG9uc2UiABJgCg9TZXRNb2RlbFB1cnBvc2USJC5wb3N0cGlsb3QudjEuU2V0TW9kZWxQdXJwb3NlUmVxdWVzdBolLnBvc3RwaWxvdC52MS5TZXRNb2RlbFB1cnBvc2VSZXNwb25zZSIAElQKC1VwZGF0ZU1vZGVsEiAucG9zdHBpbG90LnYxLlVwZGF0ZU1vZGVsUmVxdWVzdBohLnBvc3RwaWxvdC52MS5VcGRhdGVNb2RlbFJlc3BvbnNlIgASdQoWUHJldmlld0NhdGFsb2dEb2N1bWVudBIrLnBvc3RwaWxvdC52MS5QcmV2aWV3Q2F0YWxvZ0RvY3VtZW50UmVxdWVzdBosLnBvc3RwaWxvdC52MS5QcmV2aWV3Q2F0YWxvZ0RvY3VtZW50UmVzcG9uc2UiABJvChRBcHBseUNhdGFsb2dEb2N1bWVudBIpLnBvc3RwaWxvdC52MS5BcHBseUNhdGFsb2dEb2N1bWVudFJlcXVlc3QaKi5wb3N0cGlsb3QudjEuQXBwbHlDYXRhbG9nRG9jdW1lbnRSZXNwb25zZSIAEnIKFUV4cG9ydENhdGFsb2dEb2N1bWVudBIqLnBvc3RwaWxvdC52MS5FeHBvcnRDYXRhbG9nRG9jdW1lbnRSZXF1ZXN0GisucG9zdHBpbG90LnYxLkV4cG9ydENhdGFsb2dEb2N1bWVudFJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
+  fileDesc("CiBwb3N0cGlsb3QvdjEvbW9kZWxfY2F0YWxvZy5wcm90bxIMcG9zdHBpbG90LnYxIkEKFENhdGFsb2dEb2N1bWVudElzc3VlEgwKBGxpbmUYASABKAUSDAoEdGV4dBgCIAEoCRINCgVjYXVzZRgDIAEoCSKhAQoaQ2F0YWxvZ0RvY3VtZW50UHVycG9zZVBsYW4SDwoHcHVycG9zZRgBIAEoCRIQCghyZWdpc3RlchgCIAMoCRISCgpkZXJlZ2lzdGVyGAMgAygJEhEKCXVuY2hhbmdlZBgEIAMoCRI5CgdyZWxldmVsGAUgAygLMigucG9zdHBpbG90LnYxLkNhdGFsb2dEb2N1bWVudExldmVsQ2hhbmdlIkgKGkNhdGFsb2dEb2N1bWVudExldmVsQ2hhbmdlEhAKCG1vZGVsX2lkGAEgASgJEgwKBGZyb20YAiABKAkSCgoCdG8YAyABKAkiMQodUHJldmlld0NhdGFsb2dEb2N1bWVudFJlcXVlc3QSEAoIZG9jdW1lbnQYASABKAkipQEKHlByZXZpZXdDYXRhbG9nRG9jdW1lbnRSZXNwb25zZRI6CghwdXJwb3NlcxgBIAMoCzIoLnBvc3RwaWxvdC52MS5DYXRhbG9nRG9jdW1lbnRQdXJwb3NlUGxhbhIyCgZpc3N1ZXMYAiADKAsyIi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0RvY3VtZW50SXNzdWUSEwoLZmV0Y2hfZXJyb3IYAyABKAkiLwobQXBwbHlDYXRhbG9nRG9jdW1lbnRSZXF1ZXN0EhAKCGRvY3VtZW50GAEgASgJIrQBChxBcHBseUNhdGFsb2dEb2N1bWVudFJlc3BvbnNlEjoKCHB1cnBvc2VzGAEgAygLMigucG9zdHBpbG90LnYxLkNhdGFsb2dEb2N1bWVudFB1cnBvc2VQbGFuEjIKBmlzc3VlcxgCIAMoCzIiLnBvc3RwaWxvdC52MS5DYXRhbG9nRG9jdW1lbnRJc3N1ZRITCgtmZXRjaF9lcnJvchgDIAEoCRIPCgdhcHBsaWVkGAQgASgIIh4KHEV4cG9ydENhdGFsb2dEb2N1bWVudFJlcXVlc3QiMQodRXhwb3J0Q2F0YWxvZ0RvY3VtZW50UmVzcG9uc2USEAoIZG9jdW1lbnQYASABKAkizwUKDENhdGFsb2dFbnRyeRIQCghtb2RlbF9pZBgBIAEoCRIVCg1wcm92aWRlcl9zbHVnGAIgASgJEg0KBWxhYmVsGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEg4KBnZpc2lvbhgFIAEoCBIZChFzdHJ1Y3R1cmVkX291dHB1dBgGIAEoCBIWCg5jb250ZXh0X3Rva2VucxgHIAEoAxIdChVpbnB1dF91c2RfcGVyX21pbGxpb24YCCABKAkSHgoWb3V0cHV0X3VzZF9wZXJfbWlsbGlvbhgJIAEoCRIPCgdjdXJhdGVkGAogASgIEg4KBmxpc3RlZBgNIAEoCBIYChByZWFzb25pbmdfZWZmb3J0GA4gASgJEhkKEXNvdXJjZV9jcmVhdGVkX2F0GA8gASgDEhAKCHB1cnBvc2VzGBAgAygJEhQKDGltYWdlX291dHB1dBgRIAEoCBIUCgx2aWRlb19vdXRwdXQYEiABKAgSEwoLdmlkZW9faW5wdXQYHCABKAgSOgoPcmVhc29uaW5nX3NwZW5kGBMgASgLMhwucG9zdHBpbG90LnYxLlJlYXNvbmluZ1NwZW5kSACIAQESDwoHcmVhc29ucxgUIAEoCBIZChFyZWFzb25pbmdfZWZmb3J0cxgVIAMoCRIgChhyZWFzb25pbmdfZGVmYXVsdF9lZmZvcnQYFiABKAkSGwoTcmVhc29uaW5nX21hbmRhdG9yeRgXIAEoCBIfChdyZWFzb25pbmdfbmF0aXZlX2VmZm9ydBgYIAEoCBIcChRyZWFzb25pbmdfbWF4X3Rva2VucxgZIAEoCBIZChFyZWFzb25pbmdfZHJpZnRlZBgaIAEoCBIXCg9yZWFzb25pbmdfa25vd24YGyABKAgSDQoFbGV2ZWwYHSABKAlCEgoQX3JlYXNvbmluZ19zcGVuZEoECAsQDEoECAwQDSJzCg5SZWFzb25pbmdTcGVuZBINCgVjYWxscxgBIAEoAxIYChByZWFzb25pbmdfdG9rZW5zGAIgASgDEhkKEWNvbXBsZXRpb25fdG9rZW5zGAMgASgDEh0KFXJlYXNvbmluZ190cnVuY2F0aW9ucxgEIAEoAyI2ChJMaXN0Q2F0YWxvZ1JlcXVlc3QSDwoHcmVmcmVzaBgBIAEoCBIPCgdwdXJwb3NlGAIgASgJIlsKGEVzdGltYXRvckNvbWJvQXNzaWdubWVudBINCgVjb21ibxgBIAEoCRIYChBvYnNlcnZlX21vZGVsX2lkGAIgASgJEhYKDndyaXRlX21vZGVsX2lkGAMgASgJIsEBChNMaXN0Q2F0YWxvZ1Jlc3BvbnNlEisKB2VudHJpZXMYASADKAsyGi5wb3N0cGlsb3QudjEuQ2F0YWxvZ0VudHJ5EhIKCmZldGNoZWRfYXQYAiABKAkSEgoKZnJvbV9jYWNoZRgDIAEoCBITCgtmZXRjaF9lcnJvchgEIAEoCRJAChBlc3RpbWF0b3JfY29tYm9zGAUgAygLMiYucG9zdHBpbG90LnYxLkVzdGltYXRvckNvbWJvQXNzaWdubWVudCJPChZTZXRNb2RlbFB1cnBvc2VSZXF1ZXN0EhAKCG1vZGVsX2lkGAEgASgJEg8KB3B1cnBvc2UYAiABKAkSEgoKcmVnaXN0ZXJlZBgDIAEoCCJEChdTZXRNb2RlbFB1cnBvc2VSZXNwb25zZRIpCgVlbnRyeRgBIAEoCzIaLnBvc3RwaWxvdC52MS5DYXRhbG9nRW50cnkilQEKElVwZGF0ZU1vZGVsUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCRIdChByZWFzb25pbmdfZWZmb3J0GAQgASgJSACIAQESDwoHcHVycG9zZRgFIAEoCRISCgVsZXZlbBgGIAEoCUgBiAEBQhMKEV9yZWFzb25pbmdfZWZmb3J0QggKBl9sZXZlbEoECAIQA0oECAMQBCJAChNVcGRhdGVNb2RlbFJlc3BvbnNlEikKBWVudHJ5GAEgASgLMhoucG9zdHBpbG90LnYxLkNhdGFsb2dFbnRyeTL/BAoTTW9kZWxDYXRhbG9nU2VydmljZRJUCgtMaXN0Q2F0YWxvZxIgLnBvc3RwaWxvdC52MS5MaXN0Q2F0YWxvZ1JlcXVlc3QaIS5wb3N0cGlsb3QudjEuTGlzdENhdGFsb2dSZXNwb25zZSIAEmAKD1NldE1vZGVsUHVycG9zZRIkLnBvc3RwaWxvdC52MS5TZXRNb2RlbFB1cnBvc2VSZXF1ZXN0GiUucG9zdHBpbG90LnYxLlNldE1vZGVsUHVycG9zZVJlc3BvbnNlIgASVAoLVXBkYXRlTW9kZWwSIC5wb3N0cGlsb3QudjEuVXBkYXRlTW9kZWxSZXF1ZXN0GiEucG9zdHBpbG90LnYxLlVwZGF0ZU1vZGVsUmVzcG9uc2UiABJ1ChZQcmV2aWV3Q2F0YWxvZ0RvY3VtZW50EisucG9zdHBpbG90LnYxLlByZXZpZXdDYXRhbG9nRG9jdW1lbnRSZXF1ZXN0GiwucG9zdHBpbG90LnYxLlByZXZpZXdDYXRhbG9nRG9jdW1lbnRSZXNwb25zZSIAEm8KFEFwcGx5Q2F0YWxvZ0RvY3VtZW50EikucG9zdHBpbG90LnYxLkFwcGx5Q2F0YWxvZ0RvY3VtZW50UmVxdWVzdBoqLnBvc3RwaWxvdC52MS5BcHBseUNhdGFsb2dEb2N1bWVudFJlc3BvbnNlIgAScgoVRXhwb3J0Q2F0YWxvZ0RvY3VtZW50EioucG9zdHBpbG90LnYxLkV4cG9ydENhdGFsb2dEb2N1bWVudFJlcXVlc3QaKy5wb3N0cGlsb3QudjEuRXhwb3J0Q2F0YWxvZ0RvY3VtZW50UmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
 
 /**
  * CatalogDocumentIssue is one refused line. Any issue at all refuses the WHOLE document: a
@@ -79,6 +79,15 @@ export type CatalogDocumentPurposePlan = Message<"postpilot.v1.CatalogDocumentPu
    * @generated from field: repeated string unchanged = 4;
    */
   unchanged: string[];
+
+  /**
+   * The registrations the document KEEPS but re-grades (MODEL-59). Its own list rather
+   * than part of unchanged: a curator's list pasted without levels clears every one of
+   * them, and that has to be visible before the operator confirms.
+   *
+   * @generated from field: repeated postpilot.v1.CatalogDocumentLevelChange relevel = 5;
+   */
+  relevel: CatalogDocumentLevelChange[];
 };
 
 /**
@@ -87,6 +96,36 @@ export type CatalogDocumentPurposePlan = Message<"postpilot.v1.CatalogDocumentPu
  */
 export const CatalogDocumentPurposePlanSchema: GenMessage<CatalogDocumentPurposePlan> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_model_catalog, 1);
+
+/**
+ * CatalogDocumentLevelChange is one registration's grade moving. Either side may be "" —
+ * that is what setting a first level and clearing one look like.
+ *
+ * @generated from message postpilot.v1.CatalogDocumentLevelChange
+ */
+export type CatalogDocumentLevelChange = Message<"postpilot.v1.CatalogDocumentLevelChange"> & {
+  /**
+   * @generated from field: string model_id = 1;
+   */
+  modelId: string;
+
+  /**
+   * @generated from field: string from = 2;
+   */
+  from: string;
+
+  /**
+   * @generated from field: string to = 3;
+   */
+  to: string;
+};
+
+/**
+ * Describes the message postpilot.v1.CatalogDocumentLevelChange.
+ * Use `create(CatalogDocumentLevelChangeSchema)` to create a new message.
+ */
+export const CatalogDocumentLevelChangeSchema: GenMessage<CatalogDocumentLevelChange> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_model_catalog, 2);
 
 /**
  * @generated from message postpilot.v1.PreviewCatalogDocumentRequest
@@ -103,7 +142,7 @@ export type PreviewCatalogDocumentRequest = Message<"postpilot.v1.PreviewCatalog
  * Use `create(PreviewCatalogDocumentRequestSchema)` to create a new message.
  */
 export const PreviewCatalogDocumentRequestSchema: GenMessage<PreviewCatalogDocumentRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 2);
+  messageDesc(file_postpilot_v1_model_catalog, 3);
 
 /**
  * @generated from message postpilot.v1.PreviewCatalogDocumentResponse
@@ -134,7 +173,7 @@ export type PreviewCatalogDocumentResponse = Message<"postpilot.v1.PreviewCatalo
  * Use `create(PreviewCatalogDocumentResponseSchema)` to create a new message.
  */
 export const PreviewCatalogDocumentResponseSchema: GenMessage<PreviewCatalogDocumentResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 3);
+  messageDesc(file_postpilot_v1_model_catalog, 4);
 
 /**
  * @generated from message postpilot.v1.ApplyCatalogDocumentRequest
@@ -153,7 +192,7 @@ export type ApplyCatalogDocumentRequest = Message<"postpilot.v1.ApplyCatalogDocu
  * Use `create(ApplyCatalogDocumentRequestSchema)` to create a new message.
  */
 export const ApplyCatalogDocumentRequestSchema: GenMessage<ApplyCatalogDocumentRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 4);
+  messageDesc(file_postpilot_v1_model_catalog, 5);
 
 /**
  * @generated from message postpilot.v1.ApplyCatalogDocumentResponse
@@ -188,7 +227,7 @@ export type ApplyCatalogDocumentResponse = Message<"postpilot.v1.ApplyCatalogDoc
  * Use `create(ApplyCatalogDocumentResponseSchema)` to create a new message.
  */
 export const ApplyCatalogDocumentResponseSchema: GenMessage<ApplyCatalogDocumentResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 5);
+  messageDesc(file_postpilot_v1_model_catalog, 6);
 
 /**
  * @generated from message postpilot.v1.ExportCatalogDocumentRequest
@@ -201,7 +240,7 @@ export type ExportCatalogDocumentRequest = Message<"postpilot.v1.ExportCatalogDo
  * Use `create(ExportCatalogDocumentRequestSchema)` to create a new message.
  */
 export const ExportCatalogDocumentRequestSchema: GenMessage<ExportCatalogDocumentRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 6);
+  messageDesc(file_postpilot_v1_model_catalog, 7);
 
 /**
  * @generated from message postpilot.v1.ExportCatalogDocumentResponse
@@ -221,7 +260,7 @@ export type ExportCatalogDocumentResponse = Message<"postpilot.v1.ExportCatalogD
  * Use `create(ExportCatalogDocumentResponseSchema)` to create a new message.
  */
 export const ExportCatalogDocumentResponseSchema: GenMessage<ExportCatalogDocumentResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 7);
+  messageDesc(file_postpilot_v1_model_catalog, 8);
 
 /**
  * CatalogEntry is one row of the operator's browse list.
@@ -455,7 +494,7 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
  * Use `create(CatalogEntrySchema)` to create a new message.
  */
 export const CatalogEntrySchema: GenMessage<CatalogEntry> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 8);
+  messageDesc(file_postpilot_v1_model_catalog, 9);
 
 /**
  * ReasoningSpend is a recent window of one model's completion budget at one stage.
@@ -489,7 +528,7 @@ export type ReasoningSpend = Message<"postpilot.v1.ReasoningSpend"> & {
  * Use `create(ReasoningSpendSchema)` to create a new message.
  */
 export const ReasoningSpendSchema: GenMessage<ReasoningSpend> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 9);
+  messageDesc(file_postpilot_v1_model_catalog, 10);
 
 /**
  * @generated from message postpilot.v1.ListCatalogRequest
@@ -517,7 +556,7 @@ export type ListCatalogRequest = Message<"postpilot.v1.ListCatalogRequest"> & {
  * Use `create(ListCatalogRequestSchema)` to create a new message.
  */
 export const ListCatalogRequestSchema: GenMessage<ListCatalogRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 10);
+  messageDesc(file_postpilot_v1_model_catalog, 11);
 
 /**
  * One combo's current assignment, for the operator's own screen. Empty ids mean the combo
@@ -547,7 +586,7 @@ export type EstimatorComboAssignment = Message<"postpilot.v1.EstimatorComboAssig
  * Use `create(EstimatorComboAssignmentSchema)` to create a new message.
  */
 export const EstimatorComboAssignmentSchema: GenMessage<EstimatorComboAssignment> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 11);
+  messageDesc(file_postpilot_v1_model_catalog, 12);
 
 /**
  * @generated from message postpilot.v1.ListCatalogResponse
@@ -593,7 +632,7 @@ export type ListCatalogResponse = Message<"postpilot.v1.ListCatalogResponse"> & 
  * Use `create(ListCatalogResponseSchema)` to create a new message.
  */
 export const ListCatalogResponseSchema: GenMessage<ListCatalogResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 12);
+  messageDesc(file_postpilot_v1_model_catalog, 13);
 
 /**
  * @generated from message postpilot.v1.SetModelPurposeRequest
@@ -626,7 +665,7 @@ export type SetModelPurposeRequest = Message<"postpilot.v1.SetModelPurposeReques
  * Use `create(SetModelPurposeRequestSchema)` to create a new message.
  */
 export const SetModelPurposeRequestSchema: GenMessage<SetModelPurposeRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 13);
+  messageDesc(file_postpilot_v1_model_catalog, 14);
 
 /**
  * @generated from message postpilot.v1.SetModelPurposeResponse
@@ -643,7 +682,7 @@ export type SetModelPurposeResponse = Message<"postpilot.v1.SetModelPurposeRespo
  * Use `create(SetModelPurposeResponseSchema)` to create a new message.
  */
 export const SetModelPurposeResponseSchema: GenMessage<SetModelPurposeResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 14);
+  messageDesc(file_postpilot_v1_model_catalog, 15);
 
 /**
  * @generated from message postpilot.v1.UpdateModelRequest
@@ -697,7 +736,7 @@ export type UpdateModelRequest = Message<"postpilot.v1.UpdateModelRequest"> & {
  * Use `create(UpdateModelRequestSchema)` to create a new message.
  */
 export const UpdateModelRequestSchema: GenMessage<UpdateModelRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 15);
+  messageDesc(file_postpilot_v1_model_catalog, 16);
 
 /**
  * @generated from message postpilot.v1.UpdateModelResponse
@@ -714,7 +753,7 @@ export type UpdateModelResponse = Message<"postpilot.v1.UpdateModelResponse"> & 
  * Use `create(UpdateModelResponseSchema)` to create a new message.
  */
 export const UpdateModelResponseSchema: GenMessage<UpdateModelResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_model_catalog, 16);
+  messageDesc(file_postpilot_v1_model_catalog, 17);
 
 /**
  * model_catalog.proto is the OPERATOR's half of the model story (plan 18, change 20):

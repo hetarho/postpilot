@@ -286,6 +286,17 @@ func (s *Store) SyncPurposes(ctx context.Context, writes []modelcatalog.PurposeW
 			if err != nil {
 				return fmt.Errorf("add catalog model purpose: %w", err)
 			}
+			// The level is set for EVERY listed id, not only the ones that moved: the
+			// registration insert is OR IGNORE, so this is the statement that makes an
+			// already-registered model's grade match the document — and an id-only line
+			// clears one that was there (MODEL-59).
+			if _, err := q.UpdateCatalogModelPurposeLevel(ctx, sqlc.UpdateCatalogModelPurposeLevelParams{
+				Level:   nullString(string(write.Level)),
+				ModelID: write.Model.ModelID,
+				Purpose: string(write.Purpose),
+			}); err != nil {
+				return fmt.Errorf("update catalog model purpose level: %w", err)
+			}
 			continue
 		}
 		err = q.RemoveCatalogModelPurpose(ctx, sqlc.RemoveCatalogModelPurposeParams{
