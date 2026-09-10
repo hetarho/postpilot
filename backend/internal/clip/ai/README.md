@@ -1,10 +1,11 @@
 # Clip observation and planning boundary
 
-`Service.ObserveChunk` makes exactly one `observe` call with one freshly signed
-proxy URL. Relative integer times are clamped to that chunk, then offset once.
+`Service.ObserveChunk` makes exactly one `observe` call with one verified,
+file-backed inline/static MP4. Relative integer times are clamped to that chunk,
+then offset once. Every request carries the complete admitted T083 price policy.
 `clip.MergeAnalyses` requires the complete manifest-ordered chunk sequence and
 returns no partial result when an id, range, fingerprint or sequence is invalid.
-The caller owns signing, proxy cleanup and persistence; none happens in this adapter.
+The caller owns file lifetime and persistence; no cloud proxy is uploaded or signed.
 
 `Service.Plan` makes exactly one `write` call with the frozen recipe, exact answers,
 ratio, target and merged facts. It accepts no source pixels or URLs. Closed schemas
@@ -18,11 +19,14 @@ Real bundled-font glyph measurement drives placement. Source-space avoidance box
 are projected through the focal cover crop and can move copy only among the three
 approved positions. Manually edited plans do not invoke this automatic placement.
 
-T076 must freeze `Service.Budgets()` into its actual `PlannedCall.CompletionTokens`:
+The worker freezes `Service.Budgets()` into its actual `PlannedCall.CompletionTokens`:
 8192 for each probed 60-second chunk and 32768 for the single composition call.
 There is no provider call at enqueue time here. Every runtime request passes the
 same explicit budget and stage through the metered registry; the worker owns credit
-admission, settlement, durable stage progress, previous-result retention and retry.
+admission, settlement, durable stage progress and previous-result retention. Old
+version-1 jobs and token-only price snapshots are refused. There is no automatic
+retry. Preparation checks known recipe/answer/prompt bounds before reservation;
+the planner checks complete structured input again without silently truncating it.
 
 Official API contracts rechecked on 2026-09-10:
 
@@ -30,8 +34,10 @@ Official API contracts rechecked on 2026-09-10:
   `video_url` supports compatible models, but arbitrary URL delivery varies by
   upstream provider; Gemini AI Studio documents YouTube-only URL input and Vertex
   documents no URL input. A `video_input` flag alone is not proof that a particular
-  endpoint accepts a private-storage signed URL. Unsupported delivery must fail;
-  this adapter never uploads bytes inline or substitutes a different model.
+  endpoint accepts a private-storage signed URL. Clip observation requires the
+  adapter-owned inline/static profile; T083 streams the base64 request with bounded
+  memory and pins the admitted endpoint, parameters, price limits and no fallback.
+  Ordinary post-video URLs remain a separate, independently gated workflow.
 - [Structured output](https://openrouter.ai/docs/guides/features/structured-outputs):
   the existing LLM adapter owns `response_format` and capability handling.
 - [FFmpeg timeline editing](https://ffmpeg.org/ffmpeg-filters.html#Timeline-editing):

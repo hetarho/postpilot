@@ -73,6 +73,12 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote changed", "CLIP_QUOTE_CHANGED", nil)
 	case errors.Is(err, clip.ErrPricingUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip model pricing unavailable", "CLIP_MODEL_PRICING_UNAVAILABLE", nil)
+	case errors.Is(err, clip.ErrModelInputUnsupported):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip model input unsupported", "CLIP_MODEL_INPUT_UNSUPPORTED", nil)
+	case errors.Is(err, clip.ErrWorkspaceLimit):
+		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip workspace limit", "CLIP_WORKSPACE_LIMIT", nil)
+	case errors.Is(err, clip.ErrAnalysisTooLarge):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip analysis copy limit", "CLIP_ANALYSIS_TOO_LARGE", nil)
 	case errors.Is(err, clip.ErrPlanConflict):
 		return rpcserver.NewAppError(connect.CodeAborted, "clip edit plan changed", "CLIP_PLAN_CONFLICT", nil)
 	case errors.Is(err, clip.ErrBusy):

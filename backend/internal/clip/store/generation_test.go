@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/job"
@@ -23,11 +24,12 @@ import (
 
 type processingObjects struct {
 	*sourceObjects
-	downloads  map[string]int
-	results    []clip.StoredObject
-	listErr    error
-	short      bool
-	failUpload bool
+	downloads      map[string]int
+	results        []clip.StoredObject
+	listErr        error
+	short          bool
+	failUpload     bool
+	uploads, signs []string
 }
 
 func (o *processingObjects) Download(ctx context.Context, key string, w io.Writer, limit int64) (int64, error) {
@@ -39,6 +41,7 @@ func (o *processingObjects) Download(ctx context.Context, key string, w io.Write
 	return io.CopyN(w, bytes.NewReader(make([]byte, n)), n)
 }
 func (o *processingObjects) Upload(_ context.Context, key string, r io.ReadSeeker, n int64, mime string) error {
+	o.uploads = append(o.uploads, key)
 	o.info[key] = clip.SourceObjectInfo{Bytes: n, ContentType: mime}
 	if strings.HasPrefix(key, clip.ResultPrefix) {
 		o.results = append(o.results, clip.StoredObject{Key: key, Modified: time.Now()})
@@ -56,6 +59,7 @@ func (o *processingObjects) Upload(_ context.Context, key string, r io.ReadSeeke
 	return nil
 }
 func (o *processingObjects) PresignRead(_ context.Context, key, filename string, attachment bool, _ time.Duration) (string, error) {
+	o.signs = append(o.signs, key)
 	suffix := "inline"
 	if attachment {
 		suffix = "attachment"
@@ -79,6 +83,10 @@ type mediaFake struct {
 	maxSources  int
 	panicChunks bool
 	cleanupErr  error
+	workspace   string
+	prepared    []clip.AnalysisChunk
+	capacityErr error
+	chunkHook   func(*clip.AnalysisChunk) error
 }
 
 func (m *mediaFake) WithWorkspace(ctx context.Context, _ string, fn func(clip.MediaWorkspace) error) error {
@@ -87,7 +95,8 @@ func (m *mediaFake) WithWorkspace(ctx context.Context, _ string, fn func(clip.Me
 		return err
 	}
 	defer os.RemoveAll(dir)
-	if err := fn(clip.MediaWorkspace{Path: dir}); err != nil {
+	m.workspace = dir
+	if err := fn(clip.MediaWorkspace{Path: dir, CheckCapacity: func(int64) error { return m.capacityErr }}); err != nil {
 		return err
 	}
 	return m.cleanupErr
@@ -104,15 +113,22 @@ func (m *mediaFake) PrepareAnalysisChunks(_ context.Context, ws clip.MediaWorksp
 		panic("media panic")
 	}
 	for index, offset := 0, 0; offset < s.Info.DurationMS; index, offset = index+1, offset+60000 {
-		p := filepath.Join(ws.Path, "proxy.mp4")
+		p := filepath.Join(ws.Path, fmt.Sprintf("proxy-%s-%d.mp4", s.SourceID, index))
 		if err := os.WriteFile(p, []byte("proxy"), 0600); err != nil {
 			return err
 		}
-		err := fn(clip.AnalysisChunk{Path: p, SourceID: s.SourceID, Fingerprint: s.Fingerprint, Index: index, OffsetMS: offset, DurationMS: min(60000, s.Info.DurationMS-offset)})
-		_ = os.Remove(p)
+		duration := min(60000, s.Info.DurationMS-offset)
+		c := clip.AnalysisChunk{Path: p, SourceID: s.SourceID, Fingerprint: s.Fingerprint, Index: index, OffsetMS: offset, DurationMS: duration, Bytes: 5, Info: clip.MediaInfo{ContainerDurationMS: duration, Width: 720, Height: 404}}
+		if m.chunkHook != nil {
+			if err := m.chunkHook(&c); err != nil {
+				return err
+			}
+		}
+		err := fn(c)
 		if err != nil {
 			return err
 		}
+		m.prepared = append(m.prepared, c)
 	}
 	return nil
 }
@@ -137,9 +153,25 @@ func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
 func (*plannerFake) Budgets() clip.CompletionBudgets {
 	return clip.CompletionBudgets{Observe: 8192, Plan: 32768}
 }
+func (*plannerFake) ValidatePreparation(llm.ModelRef, clip.PlanningInput, []clip.AnalysisSource) error {
+	return nil
+}
 func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.ChunkInput) (clip.ChunkAnalysis, llm.Usage, error) {
-	if err := job.ConsumeClipCall(ctx, "alice", p.id, r.String(), 8192); err != nil {
+	frozen, err := job.ConsumeClipPolicy(ctx, "alice", p.id, r.String(), 8192, "observe")
+	if err != nil {
 		return clip.ChunkAnalysis{}, llm.Usage{}, err
+	}
+	if frozen != c.Policy || c.Video.Open == nil || c.Video.Size != 5 || c.Video.DurationMS <= 0 || c.Video.DurationMS > 60000 {
+		return clip.ChunkAnalysis{}, llm.Usage{}, errors.New("missing frozen inline input")
+	}
+	f, err := c.Video.Open(ctx)
+	if err != nil {
+		return clip.ChunkAnalysis{}, llm.Usage{}, err
+	}
+	data, err := io.ReadAll(f)
+	_ = f.Close()
+	if err != nil || string(data) != "proxy" {
+		return clip.ChunkAnalysis{}, llm.Usage{}, errors.New("wrong proxy bytes")
 	}
 	p.observe++
 	if p.observeErr != nil {
@@ -148,8 +180,12 @@ func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.C
 	return clip.ChunkAnalysis{SourceID: c.Source.ID, Fingerprint: c.Source.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Segments: []clip.Segment{{StartMS: c.OffsetMS, EndMS: c.OffsetMS + c.DurationMS, Event: "scene", Quality: "usable", Focal: clip.Point{X: .5, Y: .5}}}}, llm.Usage{}, nil
 }
 func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
-	if err := job.ConsumeClipCall(ctx, "alice", p.id, r.String(), 32768); err != nil {
+	frozen, err := job.ConsumeClipPolicy(ctx, "alice", p.id, r.String(), 32768, "write")
+	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	if in.Policy != frozen {
+		return clip.EditPlan{}, llm.Usage{}, errors.New("missing frozen plan policy")
 	}
 	p.plans++
 	p.input = in
@@ -180,7 +216,16 @@ func (r *rendererFake) Render(ctx context.Context, ws clip.MediaWorkspace, p cli
 		return clip.RenderedVideo{}, r.fail
 	}
 	for _, c := range p.Cuts {
-		if err := loader(ctx, c.SourceID, func(clip.MediaSource) error { return nil }); err != nil {
+		if err := loader(ctx, c.SourceID, func(s clip.MediaSource) error {
+			if !strings.HasPrefix(filepath.Base(s.Path), "source-") || s.Info.Width != 1920 || s.SourceID != c.SourceID {
+				return errors.New("render received proxy instead of original")
+			}
+			data, err := os.ReadFile(s.Path)
+			if string(data) == "proxy" {
+				return errors.New("render received proxy bytes")
+			}
+			return err
+		}); err != nil {
 			return clip.RenderedVideo{}, err
 		}
 	}
@@ -200,6 +245,17 @@ type clipAdmitter struct {
 func (a *clipAdmitter) Hold(_ context.Context, s job.Start) error {
 	if a.media.probes != 2 {
 		return errors.New("reservation preceded full manifest probe")
+	}
+	if len(a.media.prepared) != 3 {
+		return errors.New("reservation preceded all proxies")
+	}
+	for _, c := range a.media.prepared {
+		if f, err := os.Stat(c.Path); err != nil || f.Size() != c.Bytes {
+			return errors.New("reservation lost a proxy")
+		}
+	}
+	if files, _ := filepath.Glob(filepath.Join(a.media.workspace, "source-*")); len(files) != 0 {
+		return errors.New("original retained at reservation")
 	}
 	if a.refuse != nil {
 		return a.refuse
@@ -226,8 +282,9 @@ func (j generationJobs) Activate(ctx context.Context, user, id string) error {
 func (j generationJobs) FailQueued(ctx context.Context, user, id string) (bool, error) {
 	return j.q.FailQueued(ctx, id, user, job.Failure{Reason: "CLIP_PROCESSING_FAILED"})
 }
-func (j generationJobs) Reserve(ctx context.Context, user, id, o, w string, n int, b clip.CompletionBudgets) (context.Context, error) {
-	return j.q.ReserveClip(ctx, user, id, []job.PlannedCall{{Ref: o, Count: n, CompletionTokens: b.Observe}, {Ref: w, Count: 1, CompletionTokens: b.Plan}})
+func (j generationJobs) ReserveApproved(ctx context.Context, user, id string, approval clip.GenerationApproval, n int) (context.Context, error) {
+	p := approval.Pricing
+	return j.q.ReserveClip(ctx, user, id, []job.PlannedCall{{Ref: p.Observe.Ref.String(), Count: n, CompletionTokens: p.Observe.CompletionTokens}, {Ref: p.Plan.Ref.String(), Count: 1, CompletionTokens: p.Plan.CompletionTokens}}, job.ClipReservation{ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: n}, {Policy: p.Plan, Count: 1}}})
 }
 func (j generationJobs) Active(ctx context.Context, user, id string) (*clip.ClipJob, error) {
 	found, err := j.q.ActiveForClip(ctx, user, id)
@@ -297,6 +354,7 @@ func generationSetup(t *testing.T) *generationHarness {
 	queue.Admit(admitter)
 	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: config.ClipSourceLimits(6*time.Hour, 10*time.Minute), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, QuoteTTL: 5 * time.Minute, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
 	cfg.Render = config.ClipRender(&config.Config{})
+	cfg.Media.AnalysisMaxBytes, cfg.Media.PreparedMaxBytes, cfg.Media.WorkspaceMaxBytes = 8<<20, 512<<20, 8<<30
 	service := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg).WithCredits(&quotePricing{}, nil)
 	projects.SetGeneration(service)
 	return &generationHarness{service, projects, st, d, sources, objects, media, planner, renderer, admitter, queue, jobs, template, project, batch, cfg}
@@ -353,7 +411,7 @@ func (h *generationHarness) assertClean(t *testing.T) {
 		}
 	}
 }
-func TestApprovedGenerationFreezesInputsButRunnerRemainsClosed(t *testing.T) {
+func TestApprovedGenerationPreparesAllThenUsesFrozenInputs(t *testing.T) {
 	h := generationSetup(t)
 	id := h.start(t)
 	j, err := h.jobs.GetByID(context.Background(), id)
@@ -379,12 +437,18 @@ func TestApprovedGenerationFreezesInputsButRunnerRemainsClosed(t *testing.T) {
 	if err = h.projects.DeleteProject(context.Background(), "alice", h.project.ID); !errors.Is(err, clip.ErrBusy) {
 		t.Fatal(err)
 	}
-	if err = h.run(t); !errors.Is(err, clip.ErrQuoteRequired) {
+	if err = h.run(t); err != nil {
 		t.Fatal(err)
 	}
 	h.assertClean(t)
-	if len(h.admitter.calls) != 0 || h.media.probes != 0 || h.planner.observe != 0 || h.planner.plans != 0 || len(h.objects.downloads) != 0 {
-		t.Fatal("staged runner performed work")
+	if len(h.admitter.calls) != 1 || h.media.probes != 2 || h.planner.observe != 3 || h.planner.plans != 1 || h.renderer.calls != 1 || h.media.maxSources != 1 {
+		t.Fatal("incorrect prepare/admit/analyze/render counts")
+	}
+	if h.planner.input.Template.CutGuidance == guidance || h.planner.input.Policy != snapshot.Approval.Pricing.Plan {
+		t.Fatal("used changed inputs")
+	}
+	if h.objects.downloads[h.batch.Sources[0].Key] != 2 || h.objects.downloads[h.batch.Sources[1].Key] != 1 {
+		t.Fatal("preparation redownloaded a source", h.objects.downloads)
 	}
 }
 func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
@@ -435,9 +499,12 @@ func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
 			if j.Status != "failed" || j.Failure == nil || j.Stage == "" || j.Stage == "cleanup" {
 				t.Fatal(j)
 			}
-			// All execution paths remain closed during T082.
-			if len(h.admitter.calls) != 0 || h.planner.observe != 0 || h.planner.plans != 0 {
-				t.Fatal("unreserved provider call")
+			if mode == "hold" || mode == "probe" || mode == "download" {
+				if len(h.admitter.calls) != 0 || h.planner.observe != 0 || h.planner.plans != 0 {
+					t.Fatal("preparation failure reached paid work")
+				}
+			} else if len(h.admitter.calls) != 1 || h.planner.observe < 1 {
+				t.Fatal("paid failure did not run the reserved sequence")
 			}
 		})
 	}
@@ -466,16 +533,21 @@ func TestGenerationCrashRecoveryNeverTouchesActiveBatch(t *testing.T) {
 	}
 	h.assertClean(t)
 }
-func TestGenerationDoesNotEnterPanicProneMediaUntilGuardedRunnerExists(t *testing.T) {
+func TestGenerationPreparationPanicCleansWithoutAdmission(t *testing.T) {
 	h := generationSetup(t)
 	h.start(t)
 	h.media.panicChunks = true
-	if err := h.run(t); !errors.Is(err, clip.ErrQuoteRequired) {
-		t.Fatal(err)
-	}
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Error("missing media panic")
+			}
+		}()
+		_ = h.run(t)
+	}()
 	h.assertClean(t)
-	if h.media.probes != 0 || h.planner.observe != 0 {
-		t.Fatal("entered unavailable runner")
+	if h.media.probes != 1 || h.planner.observe != 0 || len(h.admitter.calls) != 0 {
+		t.Fatal("preparation panic reached paid work")
 	}
 }
 func TestGenerationOwnerAndModelGatesBeforeEnqueue(t *testing.T) {

@@ -44,7 +44,7 @@ ENTRYPOINT ["/api"]
 FROM runtime AS media-smoke
 COPY --from=builder /media.test /media.test
 ENV CLIP_MEDIA_SMOKE=1
-RUN ["/media.test", "-test.run=Test(Media|Render)Smoke", "-test.v"]
+RUN ["/media.test", "-test.run=Test(MediaSmoke|MediaProfileSmoke|RenderSmoke)", "-test.v"]
 
 FROM runtime AS production
 # This dependency makes the real-binary nonroot smoke a mandatory image-build gate.

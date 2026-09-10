@@ -53,6 +53,9 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 	return graph.String()
 }
 func compositionGraph(cfg clip.RenderConfig, frames []int, audio bool) string {
+	return compositionVideoGraph(cfg, frames, audio, "yuv420p")
+}
+func compositionVideoGraph(cfg clip.RenderConfig, frames []int, audio bool, pixelFormat string) string {
 	var graph strings.Builder
 	for i, n := range frames {
 		fmt.Fprintf(&graph, "[%d:v:0]settb=AVTB,setpts=PTS-STARTPTS[v%d];", i, i)
@@ -72,14 +75,17 @@ func compositionGraph(cfg clip.RenderConfig, frames []int, audio bool) string {
 		}
 		elapsed += frames[i] - fadeFrames
 	}
-	fmt.Fprintf(&graph, "[%s]trim=end_frame=%d,setpts=PTS-STARTPTS,format=yuv420p[v]", v, elapsed)
+	fmt.Fprintf(&graph, "[%s]trim=end_frame=%d,setpts=PTS-STARTPTS,format=%s[v]", v, elapsed, pixelFormat)
 	if audio {
 		fmt.Fprintf(&graph, ";[%s]atrim=end_sample=%d,asetpts=PTS-STARTPTS[a]", a, elapsed*cfg.AudioRate/cfg.FPS)
 	}
 	return graph.String()
 }
 func (r *Rendering) encodeArgs(audio bool) []string {
-	a := []string{"-map", "[v]", "-c:v", "libx264", "-preset", "veryfast", "-crf", strconv.Itoa(r.cfg.CRF), "-threads", strconv.Itoa(r.media.cfg.Threads), "-r", strconv.Itoa(r.cfg.FPS), "-fps_mode", "cfr", "-pix_fmt", "yuv420p"}
+	return r.encodeProfile(audio, r.cfg.CRF, "yuv420p")
+}
+func (r *Rendering) encodeProfile(audio bool, crf int, pixelFormat string) []string {
+	a := []string{"-map", "[v]", "-c:v", "libx264", "-preset", "veryfast", "-crf", strconv.Itoa(crf), "-threads", strconv.Itoa(r.media.cfg.Threads), "-r", strconv.Itoa(r.cfg.FPS), "-fps_mode", "cfr", "-pix_fmt", pixelFormat}
 	if audio {
 		a = append(a, "-map", "[a]", "-c:a", "aac", "-b:a", strconv.Itoa(r.cfg.AudioBitrate), "-ar", strconv.Itoa(r.cfg.AudioRate), "-ac", "2")
 	} else {
@@ -100,8 +106,8 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 	}
 	args = append(args, "-filter_complex", cutGraph(r.cfg, canvas, cut, source.Info, frames, plate != "", audio))
 	args = append(args, r.encodeArgs(audio)...)
-	args = append(args, "-t", frameSeconds(frames, r.cfg.FPS), path)
-	if _, err := r.media.run(ctx, ws, r.media.cfg.FFmpegPath, args...); err != nil {
+	args = append(args, "-t", frameSeconds(frames, r.cfg.FPS))
+	if err := r.runRender(ctx, ws, path, args); err != nil {
 		return err
 	}
 	return r.media.sourcePath(ws, path)
@@ -179,14 +185,12 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 			}
 		}
 	}()
-	args := r.baseArgs()
-	for _, path := range cutPaths {
-		args = append(args, "-threads", strconv.Itoa(r.media.cfg.Threads), "-protocol_whitelist", "file,pipe", "-i", path)
+	args, err := r.compositionInputs(ctx, ws, cutPaths, frames, audio, &paths)
+	if err != nil {
+		return result, err
 	}
-	args = append(args, "-filter_complex", compositionGraph(r.cfg, frames, audio))
 	args = append(args, r.encodeArgs(audio)...)
-	args = append(args, output)
-	if _, err = r.media.run(ctx, ws, r.media.cfg.FFmpegPath, args...); err != nil {
+	if err = r.runRender(ctx, ws, output, args); err != nil {
 		return result, err
 	}
 	info, err := r.media.Probe(ctx, ws, output)
@@ -206,4 +210,31 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 		return result, err
 	}
 	return clip.RenderedVideo{Path: output, Info: info, Bytes: stat.Size()}, nil
+}
+
+func (r *Rendering) runRender(ctx context.Context, ws clip.MediaWorkspace, output string, args []string) error {
+	// One file is written at a time. Reserve/check its entire file bound before
+	// starting the encoder and leave muxer/packet headroom inside that bound.
+	// -fs is a resource stop only: reaching it fails, never a successful render.
+	ceiling := r.media.cfg.Sources.MaxFileBytes
+	if ceiling <= diskHeadroom {
+		return clip.ErrWorkspaceLimit
+	}
+	if err := r.media.capacity(ws, ceiling); err != nil {
+		return err
+	}
+	limit := ceiling - diskHeadroom
+	args = append(args, "-fs", strconv.FormatInt(limit, 10), output)
+	_, err := r.media.runBounded(ctx, ws, r.media.cfg.FFmpegPath, output, limit, clip.ErrWorkspaceLimit, args...)
+	if err != nil {
+		return err
+	}
+	info, err := os.Stat(output)
+	if err != nil {
+		return err
+	}
+	if info.Size() >= limit {
+		return clip.ErrWorkspaceLimit
+	}
+	return nil
 }

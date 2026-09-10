@@ -1823,6 +1823,10 @@ type meteredRegistry struct {
 }
 
 func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm.Request) (llm.Response, error) {
+	work, hasWork := usage.WorkFromContext(ctx)
+	if req.Execution != nil && (!hasWork || work.Kind != job.KindGenerateClip) {
+		return llm.Response{}, job.ErrCreditAllowance
+	}
 	if work, ok := usage.WorkFromContext(ctx); ok && work.Kind == job.KindRenderClip {
 		return llm.Response{}, job.ErrCreditAllowance
 	}
@@ -1830,6 +1834,9 @@ func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm
 		policy, err := job.ConsumeClipPolicy(ctx, work.UserID, work.JobID, ref.String(), req.MaxTokens, req.Stage)
 		if err != nil {
 			return llm.Response{}, err
+		}
+		if req.Execution == nil || req.Execution.Call != policy || !req.Execution.Matches(ref, req) {
+			return llm.Response{}, job.ErrCreditAllowance
 		}
 		ctx = usage.WithCallPrice(ctx, work.UserID, work.JobID, policy)
 	}

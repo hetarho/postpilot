@@ -3,9 +3,12 @@ package media
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -101,26 +104,53 @@ func TestProbeRefusesInvalidInputs(t *testing.T) {
 		}
 	}
 }
-func TestChunksAreSequentialBoundedAndRemoved(t *testing.T) {
+
+// A synthetic encoder/prober pair keeps transport-free unit tests honest about
+// the new post-encode verification calls and the proxy's actual presentation time.
+func chunkRunner() func(context.Context, Command) ([]byte, error) {
+	type encoded struct {
+		duration string
+		audio    bool
+	}
+	files := map[string]encoded{}
+	return func(_ context.Context, c Command) ([]byte, error) {
+		last := c.Args[len(c.Args)-1]
+		if strings.HasSuffix(c.Binary, "ffprobe") {
+			v := files[last]
+			audio := ""
+			if v.audio {
+				audio = fmt.Sprintf(`,{"index":1,"codec_type":"audio","codec_name":"aac","channels":1,"sample_rate":"48000","duration":%q}`, v.duration)
+			}
+			return []byte(fmt.Sprintf(`{"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":720,"height":404,"avg_frame_rate":"15/1","sample_aspect_ratio":"1:1","pix_fmt":"yuv420p","duration":%q}%s],"format":{"format_name":"mov,mp4","duration":%q}}`, v.duration, audio, v.duration)), nil
+		}
+		if slices.Contains(c.Args, "-progress") {
+			v := files[c.Args[slices.Index(c.Args, "-i")+1]]
+			d, _ := strconv.ParseFloat(v.duration, 64)
+			return []byte(fmt.Sprintf("frame=%d\nout_time_us=%d\nprogress=end\n", int(d*15), int64(d*1000000))), nil
+		}
+		files[last] = encoded{c.Args[slices.Index(c.Args, "-t")+1], slices.Contains(c.Args, "-c:a")}
+		return nil, os.WriteFile(last, []byte("proxy"), 0600)
+	}
+}
+
+func TestChunksAreSequentialBoundedAndRetained(t *testing.T) {
 	for _, audio := range []bool{false, true} {
 		t.Run(map[bool]string{true: "audio", false: "silent"}[audio], func(t *testing.T) {
-			r := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
-				return nil, os.WriteFile(c.Args[len(c.Args)-1], []byte("proxy"), 0600)
-			}}
+			r := &fakeRunner{run: chunkRunner()}
 			a := newAdapter(t, r)
 			var chunks []clip.AnalysisChunk
 			err := a.WithWorkspace(t.Context(), "job", func(ws clip.MediaWorkspace) error {
-				return a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 61000, HasAudio: audio}}, func(c clip.AnalysisChunk) error {
+				return a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 61000, Width: 1280, Height: 720, HasAudio: audio}}, func(c clip.AnalysisChunk) error {
 					files, err := os.ReadDir(ws.Path)
 					if err != nil {
 						return err
 					}
-					if len(files) != 2 {
-						t.Fatalf("source+current proxy expected: %v", files)
+					if len(files) != len(chunks)+2 || c.Bytes != 5 || c.Info.ContainerDurationMS != c.DurationMS {
+						t.Fatalf("source+all prepared proxies expected: %v", files)
 					}
 					if len(chunks) > 0 {
-						if _, err := os.Stat(chunks[0].Path); !os.IsNotExist(err) {
-							t.Fatal("previous chunk remains")
+						if _, err := os.Stat(chunks[0].Path); err != nil {
+							t.Fatal("previous prepared chunk was removed")
 						}
 					}
 					chunks = append(chunks, c)
@@ -134,14 +164,25 @@ func TestChunksAreSequentialBoundedAndRemoved(t *testing.T) {
 				t.Fatal(chunks)
 			}
 			for _, c := range r.calls {
+				if !slices.Contains(c.Args, "-c:v") {
+					continue
+				}
 				args := strings.Join(c.Args, " ")
-				for _, want := range []string{"-protocol_whitelist file,pipe", "-c:v libx264", "fps=30", "scale=720:720", "format=yuv420p", "-movflags +faststart", "-map_metadata -1"} {
+				for _, want := range []string{"-protocol_whitelist file,pipe", "-c:v libx264", "fps=15", "scale=720:404", "setsar=1", "format=yuv420p", "-movflags +faststart", "-map_metadata -1", "-maxrate 900000", "-bufsize 1800000", "-threads 1", "-filter_threads 1", "-fs 8388608"} {
 					if !strings.Contains(args, want) {
 						t.Fatalf("missing %s: %s", want, args)
 					}
 				}
 				if strings.Contains(args, "-c:a aac") != audio {
 					t.Fatal(args)
+				}
+				if audio && !strings.Contains(args, "-b:a 64000 -ar 48000 -ac 1") {
+					t.Fatal(args)
+				}
+			}
+			for _, c := range chunks {
+				if _, err := os.Stat(c.Path); !os.IsNotExist(err) {
+					t.Fatal("proxy survived workspace cleanup")
 				}
 			}
 		})
@@ -188,19 +229,20 @@ func TestCancellationAndChunkFailureCleanup(t *testing.T) {
 		t.Run(failure, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
+			base := chunkRunner()
 			r := &fakeRunner{run: func(ctx context.Context, c Command) ([]byte, error) {
 				if _, ok := ctx.Deadline(); !ok {
 					t.Fatal("no operation deadline")
 				}
-				_ = os.WriteFile(c.Args[len(c.Args)-1], []byte("partial"), 0600)
 				if failure == "runner" {
+					_ = os.WriteFile(c.Args[len(c.Args)-1], []byte("partial"), 0600)
 					return nil, errors.New("binary failed")
 				}
 				if failure == "cancel" {
 					cancel()
 					return nil, ctx.Err()
 				}
-				return nil, nil
+				return base(ctx, c)
 			}}
 			a := newAdapter(t, r)
 			var path string
@@ -208,7 +250,7 @@ func TestCancellationAndChunkFailureCleanup(t *testing.T) {
 				defer func() { _ = recover() }()
 				err := a.WithWorkspace(ctx, "job", func(ws clip.MediaWorkspace) error {
 					path = ws.Path
-					return a.PrepareAnalysisChunks(ctx, ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 61000}}, func(clip.AnalysisChunk) error {
+					return a.PrepareAnalysisChunks(ctx, ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 61000, Width: 1280, Height: 720}}, func(clip.AnalysisChunk) error {
 						if failure == "panic" {
 							panic("consumer")
 						}
@@ -222,7 +264,13 @@ func TestCancellationAndChunkFailureCleanup(t *testing.T) {
 			if _, err := os.Stat(path); !os.IsNotExist(err) {
 				t.Fatal("failed workspace remains")
 			}
-			if len(r.calls) != 1 {
+			encodes := 0
+			for _, c := range r.calls {
+				if slices.Contains(c.Args, "-c:v") {
+					encodes++
+				}
+			}
+			if encodes != 1 {
 				t.Fatal("prepared the next proxy after failure")
 			}
 		})

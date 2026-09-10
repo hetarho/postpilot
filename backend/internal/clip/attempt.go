@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/postpilot/backend/internal/llm"
+	"io"
 	"log/slog"
 	"net/url"
 	"os"
@@ -12,28 +13,75 @@ import (
 	"time"
 )
 
-func (s *GenerationService) withSource(ctx context.Context, ws MediaWorkspace, v SourceLease, info MediaInfo, fn func(MediaSource) error) error {
+func (s *GenerationService) withSource(ctx context.Context, ws MediaWorkspace, v SourceLease, info MediaInfo, fn func(MediaSource) error) (err error) {
+	if v.Bytes <= 0 || v.Bytes > s.cfg.Media.Sources.MaxFileBytes || v.ActualBytes != v.Bytes {
+		return ErrInvalidMedia
+	}
+	if ws.CheckCapacity == nil {
+		return ErrWorkspaceLimit
+	}
+	if err := ws.CheckCapacity(v.Bytes); err != nil {
+		return err
+	}
 	f, err := os.CreateTemp(ws.Path, "source-*"+filepath.Ext(v.Filename))
 	if err != nil {
 		return err
 	}
 	name := f.Name()
-	defer os.Remove(name)
+	defer func() {
+		if remove := os.Remove(name); remove != nil && !os.IsNotExist(remove) {
+			err = errors.Join(err, remove)
+		}
+	}()
 	defer f.Close()
-	n, err := s.objects.Download(ctx, v.Key, f, s.cfg.Media.Sources.MaxFileBytes)
+	w := &sourceWriter{ctx: ctx, file: f, remaining: v.Bytes, capacity: ws.CheckCapacity}
+	n, err := s.objects.Download(ctx, v.Key, w, v.Bytes)
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		if w.err != nil {
+			return w.err
+		}
 		return errors.New("clip source download failed")
 	}
-	if n != v.Bytes || n != v.ActualBytes {
+	if w.err != nil {
+		return w.err
+	}
+	if n != v.Bytes || w.remaining != 0 {
 		return ErrInvalidMedia
 	}
 	if err = f.Close(); err != nil {
 		return err
 	}
 	return fn(MediaSource{Path: name, SourceID: v.ID, Fingerprint: v.Fingerprint, Info: info})
+}
+
+type sourceWriter struct {
+	ctx       context.Context
+	file      *os.File
+	remaining int64
+	capacity  func(int64) error
+	err       error
+}
+
+func (w *sourceWriter) Write(p []byte) (int, error) {
+	if w.err == nil {
+		w.err = w.ctx.Err()
+	}
+	if w.err == nil && int64(len(p)) > w.remaining {
+		w.err = ErrInvalidMedia
+	}
+	if w.err == nil {
+		w.err = w.capacity(int64(len(p)))
+	}
+	if w.err != nil {
+		return 0, w.err
+	}
+	n, err := w.file.Write(p)
+	w.remaining -= int64(n)
+	w.err = err
+	return n, err
 }
 func (s *GenerationService) probeBatch(ctx context.Context, ws MediaWorkspace, b SourceBatch, progress func(int)) ([]AnalysisSource, []MediaInfo, int, error) {
 	var sources []AnalysisSource
@@ -76,31 +124,24 @@ func (s *GenerationService) uploadPath(ctx context.Context, key, path string, by
 	}
 	return nil
 }
-func (s *GenerationService) observe(ctx context.Context, b SourceBatch, c AnalysisChunk, input AnalysisSource, model llm.ModelRef) (ChunkAnalysis, error) {
-	key := SourcePrefix + url.PathEscape(b.UserID) + "/" + b.ID + "/proxy/" + newID() + ".mp4"
-	// Lease precedes upload; a failed/partial upload or crash therefore remains reapable.
-	if err := s.store.AddProxy(ctx, b.UserID, b.ID, key); err != nil {
-		return ChunkAnalysis{}, err
-	}
-	defer func() {
-		clean, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.cfg.CleanupTimeout)
-		defer cancel()
-		if err := s.objects.Delete(clean, key); err == nil {
-			_ = s.store.RemoveProxy(clean, key)
+func (s *GenerationService) observe(ctx context.Context, c AnalysisChunk, input AnalysisSource, policy llm.CallPolicy) (out ChunkAnalysis, err error) {
+	defer func() { err = errors.Join(err, os.Remove(c.Path)) }()
+	video := llm.InlineVideo{MIME: "video/mp4", Size: c.Bytes, DurationMS: int64(c.Info.ContainerDurationMS), Sampling: llm.VideoSamplingFixed, Open: func(ctx context.Context) (io.ReadCloser, error) {
+		if err := ctx.Err(); err != nil {
+			return nil, err
 		}
-	}()
-	info, err := os.Stat(c.Path)
-	if err != nil {
-		return ChunkAnalysis{}, err
-	}
-	if err = s.uploadPath(ctx, key, c.Path, info.Size()); err != nil {
-		return ChunkAnalysis{}, err
-	}
-	link, err := s.objects.PresignRead(ctx, key, "", false, s.cfg.ReadTTL)
-	if err != nil {
-		return ChunkAnalysis{}, errors.New("clip proxy signing failed")
-	}
-	out, _, err := s.planner.ObserveChunk(ctx, model, ChunkInput{Source: input, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, URL: link})
+		f, err := os.Open(c.Path)
+		if err != nil {
+			return nil, ErrInvalidMedia
+		}
+		info, err := f.Stat()
+		if err != nil || !info.Mode().IsRegular() || info.Size() != c.Bytes {
+			_ = f.Close()
+			return nil, ErrInvalidMedia
+		}
+		return f, nil
+	}}
+	out, _, err = s.planner.ObserveChunk(ctx, policy.Ref, ChunkInput{Source: input, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Video: video, Policy: policy})
 	return out, err
 }
 

@@ -27,6 +27,15 @@ type GenerationPricing struct {
 	Observe, Plan                llm.CallPolicy
 	ObservationCalls, MaxCredits int
 }
+
+// Both stages must have the complete enforceable profile, not a legacy pair of
+// catalog token prices. This value is frozen in the quote and checked at admission.
+func (p GenerationPricing) Valid() bool {
+	return p.Version == PricingPolicyVersion && p.ObservationCalls >= 1 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 &&
+		p.Observe.Valid() && p.Observe.Pricing.Valid() && p.Observe.Pricing.Delivery == llm.ExecutionInlineStatic && p.Observe.Stage == llm.StageNameObserve && p.Observe.CompletionTokens == 8192 &&
+		p.Plan.Valid() && p.Plan.Pricing.Valid() && p.Plan.Pricing.Delivery == llm.ExecutionTextOnly && p.Plan.Stage == llm.StageNameWrite && p.Plan.CompletionTokens == 32768
+}
+
 type GenerationQuote struct {
 	ID, UserID, ProjectID, BatchID, InputDigest, ConsumedJobID string
 	Pricing                                                    GenerationPricing

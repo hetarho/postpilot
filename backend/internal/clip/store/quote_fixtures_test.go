@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,9 @@ func (p *quotePricing) Freeze(_ context.Context, o, w llm.ModelRef, count int) (
 	}
 	a := llm.CallPolicy{Ref: o, Stage: "observe", CompletionTokens: 8192 + p.budgetDelta, InputUSDPerMillion: rate, OutputUSDPerMillion: "0.7"}
 	b := llm.CallPolicy{Ref: w, Stage: "write", CompletionTokens: 32768, InputUSDPerMillion: rate, OutputUSDPerMillion: "0.7"}
+	a.Pricing = llm.CallPricing{Version: 1, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionInlineStatic, PromptUSDPerMillion: rate, CompletionUSDPerMillion: "0.7", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}
+	b.Pricing = a.Pricing
+	b.Pricing.Delivery = llm.ExecutionTextOnly
 	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 1}})
 	return clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: a, Plan: b, ObservationCalls: count, MaxCredits: credits}, err
 }

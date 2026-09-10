@@ -137,7 +137,11 @@ func (r *Rendering) resvg(ctx context.Context, ws clip.MediaWorkspace, args ...s
 }
 func (r *Rendering) measure(ctx context.Context, ws clip.MediaWorkspace, values []string, weight int) (map[string]clip.Region, error) {
 	path := filepath.Join(ws.Path, "copy-measure.svg")
-	if err := os.WriteFile(path, []byte(measureSVG(values, weight)), 0600); err != nil {
+	data := []byte(measureSVG(values, weight))
+	if err := r.media.capacity(ws, int64(len(data))); err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		return nil, err
 	}
 	defer os.Remove(path)
@@ -270,7 +274,13 @@ func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canva
 	}
 	svg := filepath.Join(ws.Path, fmt.Sprintf("copy-%04d.svg", index))
 	png := filepath.Join(ws.Path, fmt.Sprintf("copy-%04d.png", index))
-	if err := os.WriteFile(svg, []byte(copySVG(canvas, c, layout)), 0600); err != nil {
+	data := []byte(copySVG(canvas, c, layout))
+	// A full RGBA canvas plus PNG/metadata headroom is small and known before
+	// rasterization. Reserve it before the subprocess, not after its write.
+	if err := r.media.capacity(ws, int64(len(data))+int64(canvas.Width)*int64(canvas.Height)*5); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(svg, data, 0600); err != nil {
 		return "", err
 	}
 	defer os.Remove(svg)

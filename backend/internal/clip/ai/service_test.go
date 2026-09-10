@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"reflect"
 	"strings"
@@ -42,7 +43,7 @@ func (f *fakeSizer) CaptionSize(context.Context, string, clip.Caption) (float64,
 }
 func newService(t *testing.T, raw string, structured bool) (*ai.Service, *fakeModels, *fakeSizer) {
 	t.Helper()
-	f := &fakeModels{info: llm.ModelInfo{Vision: true, VideoInput: true, StructuredOutput: structured, Stages: []string{llm.StageNameObserve, llm.StageNameWrite}}, response: llm.Response{Text: raw, Usage: llm.Usage{CompletionTokens: 100, PromptTokens: 200, CostReported: true, CostMicrousd: 10}}}
+	f := &fakeModels{info: llm.ModelInfo{Vision: true, VideoInput: true, VideoDelivery: llm.VideoDelivery{InlineStaticVideo: true}, StructuredOutput: structured, Stages: []string{llm.StageNameObserve, llm.StageNameWrite}}, response: llm.Response{Text: raw, Usage: llm.Usage{CompletionTokens: 100, PromptTokens: 200, CostReported: true, CostMicrousd: 10}}}
 	c := &fakeSizer{}
 	cfg := config.ClipAI(&config.Config{LLMReasoning: config.LLMReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}})
 	s, err := ai.New(f, c, cfg)
@@ -55,13 +56,23 @@ func source() clip.AnalysisSource {
 	return clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source", Fingerprint: "frozen-fingerprint", Info: clip.MediaInfo{DurationMS: 65000, Width: 1080, Height: 1920, HasAudio: true}}, Filename: "제주 & Seoul.mp4"}
 }
 func chunk() clip.ChunkInput {
-	return clip.ChunkInput{Source: source(), Index: 1, OffsetMS: 60000, DurationMS: 5000, URL: "https://storage.example/proxy.mp4?signature=private"}
+	return clip.ChunkInput{Source: source(), Index: 1, OffsetMS: 60000, DurationMS: 5000, Policy: testPolicy("observe"), Video: llm.InlineVideo{MIME: "video/mp4", Size: 3, DurationMS: 5000, Sampling: llm.VideoSamplingFixed, Open: func(context.Context) (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("mp4")), nil }}}
+}
+func testRef() llm.ModelRef {
+	return llm.ModelRef{ProviderID: "openrouter", ModelID: "explicit-observer"}
+}
+func testPolicy(stage string) llm.CallPolicy {
+	delivery, budget := llm.ExecutionInlineStatic, 8192
+	if stage == "write" {
+		delivery, budget = llm.ExecutionTextOnly, 32768
+	}
+	return llm.CallPolicy{Ref: testRef(), Stage: stage, CompletionTokens: budget, Reasoning: llm.ReasoningLow, InputUSDPerMillion: "1", OutputUSDPerMillion: "2", Pricing: llm.CallPricing{Version: 1, Fingerprint: strings.Repeat("a", 64), Delivery: delivery, PromptUSDPerMillion: "1", CompletionUSDPerMillion: "2", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}}
 }
 func observation() map[string]any {
 	return map[string]any{"source_id": "source", "chunk_index": 1, "segments": []any{map[string]any{"start_ms": 0, "end_ms": 5000, "event": "음식을 담는다", "subjects": []string{"접시"}, "speech": "", "quality": "steady and sharp", "focal": map[string]any{"x": .5, "y": .5}, "avoid": map[string]any{"x": .2, "y": .6, "width": .6, "height": .3}}}}
 }
 func planningInput() clip.PlanningInput {
-	return clip.PlanningInput{Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", CopyStyles: []string{"clean", "diary"}, Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Avoid: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}}}}}}
+	return clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", CopyStyles: []string{"clean", "diary"}, Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Avoid: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}}}}}}
 }
 func plan() map[string]any {
 	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": []any{map[string]any{"id": "cut-one", "source_id": "source", "start_ms": 0, "end_ms": 15000, "focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": "정확한 한글 & 여행", "start_ms": 1000, "end_ms": 14000, "position": "bottom", "style": "clean", "accent": "coral"}}}}
@@ -98,7 +109,7 @@ func TestObservationContractPlainFallbackOffsetAndSpeech(t *testing.T) {
 				t.Fatalf("bad request %+v", request)
 			}
 			parts := request.Messages[0].Parts
-			if len(parts) != 2 || parts[0].VideoURL != in.URL || parts[0].MIME != "video/mp4" || !strings.Contains(parts[1].Text, "60000") || !strings.Contains(parts[1].Text, in.Source.Filename) {
+			if len(parts) != 2 || parts[0].VideoURL != "" || parts[0].InlineVideo == nil || parts[0].InlineVideo.MIME != "video/mp4" || !request.Execution.Matches(ref, request) || request.Execution.Call != in.Policy || !strings.Contains(parts[1].Text, "60000") || !strings.Contains(parts[1].Text, in.Source.Filename) {
 				t.Fatal(parts)
 			}
 			if strings.Contains(raw(got), "signature") {
@@ -152,7 +163,7 @@ func TestObservationRejectsInvalidModelOutput(t *testing.T) {
 				v["segments"] = segments
 			}
 			s, f, _ := newService(t, raw(v), true)
-			if _, _, err := s.ObserveChunk(t.Context(), llm.ModelRef{}, chunk()); !errors.Is(err, llm.ErrBadOutput) {
+			if _, _, err := s.ObserveChunk(t.Context(), testRef(), chunk()); !errors.Is(err, llm.ErrBadOutput) {
 				t.Fatal(err)
 			}
 			if len(f.calls) != 1 {
@@ -165,7 +176,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 	for _, structured := range []bool{false, true} {
 		s, f, c := newService(t, "Here is the JSON:\n"+raw(plan()), structured)
 		in := planningInput()
-		got, usage, err := s.Plan(t.Context(), llm.ModelRef{}, in)
+		got, usage, err := s.Plan(t.Context(), testRef(), in)
 		if err != nil || usage != f.response.Usage || len(got.Cuts) != 1 {
 			t.Fatalf("%+v %v", got, err)
 		}
@@ -186,7 +197,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 			t.Fatalf("exact answers lost: %+v %v", data, err)
 		}
 		in.Analyses[0].Segments[0].Avoid = clip.Region{}
-		got, _, err = s.Plan(t.Context(), llm.ModelRef{}, in)
+		got, _, err = s.Plan(t.Context(), testRef(), in)
 		if err != nil || got.Cuts[0].Copy.Position != "bottom" {
 			t.Fatalf("safe model position moved: %+v %v", got, err)
 		}
@@ -257,7 +268,7 @@ func TestPlanRejectsEveryInvalidBoundaryWithoutRepair(t *testing.T) {
 				cut["start_ms"] = 1.5
 			}
 			s, f, c := newService(t, raw(v), false)
-			if _, _, err := s.Plan(t.Context(), llm.ModelRef{}, planningInput()); !errors.Is(err, llm.ErrBadOutput) {
+			if _, _, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, llm.ErrBadOutput) {
 				t.Fatalf("accepted bad plan: %v", err)
 			}
 			if len(f.calls) != 1 || c.calls != 0 {
@@ -276,9 +287,9 @@ func TestFailuresKeepStageUsageAndTruncationWithoutFallback(t *testing.T) {
 			var usage llm.Usage
 			var err error
 			if stage == "analyze" {
-				_, usage, err = s.ObserveChunk(t.Context(), llm.ModelRef{}, chunk())
+				_, usage, err = s.ObserveChunk(t.Context(), testRef(), chunk())
 			} else {
-				_, usage, err = s.Plan(t.Context(), llm.ModelRef{}, planningInput())
+				_, usage, err = s.Plan(t.Context(), testRef(), planningInput())
 			}
 			want := cause
 			if want == nil {
@@ -295,7 +306,7 @@ func TestFailuresKeepStageUsageAndTruncationWithoutFallback(t *testing.T) {
 	}
 }
 func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
-	for _, mode := range []string{"no video", "no vision", "wrong purpose", "disabled", "bad chunk", "bad URL", "missing answer", "duplicate source"} {
+	for _, mode := range []string{"no video", "no vision", "no inline", "wrong purpose", "disabled", "bad chunk", "bad inline", "missing policy", "missing answer", "duplicate source"} {
 		t.Run(mode, func(t *testing.T) {
 			s, f, _ := newService(t, raw(observation()), true)
 			in := chunk()
@@ -305,14 +316,18 @@ func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
 				f.info.VideoInput = false
 			case "no vision":
 				f.info.Vision = false
+			case "no inline":
+				f.info.VideoDelivery.InlineStaticVideo = false
+			case "missing policy":
+				in.Policy = llm.CallPolicy{}
 			case "wrong purpose":
 				f.info.Stages = []string{"video-generation"}
 			case "disabled":
 				f.info.Disabled = true
 			case "bad chunk":
 				in.OffsetMS++
-			case "bad URL":
-				in.URL = "file:///tmp/private.mp4"
+			case "bad inline":
+				in.Video.Open = nil
 			case "missing answer":
 				planIn.Answers = nil
 			case "duplicate source":
@@ -320,14 +335,36 @@ func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
 			}
 			var err error
 			if mode == "missing answer" || mode == "duplicate source" {
-				_, _, err = s.Plan(t.Context(), llm.ModelRef{}, planIn)
+				_, _, err = s.Plan(t.Context(), testRef(), planIn)
 			} else {
-				_, _, err = s.ObserveChunk(t.Context(), llm.ModelRef{}, in)
+				_, _, err = s.ObserveChunk(t.Context(), testRef(), in)
 			}
 			if err == nil || len(f.calls) != 0 {
 				t.Fatal("invalid admission called provider")
 			}
 		})
+	}
+}
+
+func TestPreparationChecksKnownPromptSizeBeforeAnyPaidWork(t *testing.T) {
+	s, f, _ := newService(t, "", true)
+	in := planningInput()
+	if err := s.ValidatePreparation(testRef(), in, []clip.AnalysisSource{source()}); err != nil {
+		t.Fatal(err)
+	}
+	in.Template.CutGuidance = strings.Repeat("가", 4000)
+	in.Template.InformationFields = nil
+	in.Answers = nil
+	for i := 0; i < 10; i++ {
+		label := fmt.Sprint(i)
+		in.Template.InformationFields = append(in.Template.InformationFields, clip.InformationField{Label: label, Prompt: strings.Repeat("나", 200)})
+		in.Answers = append(in.Answers, clip.Answer{Label: label, Text: strings.Repeat("다", 500)})
+	}
+	if err := s.ValidatePreparation(testRef(), in, []clip.AnalysisSource{source()}); !errors.Is(err, clip.ErrInvalid) {
+		t.Fatal("oversized known context accepted", err)
+	}
+	if len(f.calls) != 0 {
+		t.Fatal("preparation called provider")
 	}
 }
 func TestSchemasAreClosedAndReturnedAsCopies(t *testing.T) {
@@ -391,7 +428,7 @@ func TestPlanTwentySourcesNinetySecondsAndDistinctRangeReuse(t *testing.T) {
 	}
 	v["cuts"] = cuts
 	s, f, _ := newService(t, raw(v), false)
-	got, _, err := s.Plan(t.Context(), llm.ModelRef{}, in)
+	got, _, err := s.Plan(t.Context(), testRef(), in)
 	if err != nil || got.DurationMS != 90000 || len(got.Cuts) != 100 || got.Cuts[0].OriginalVolume() != 0 || got.Cuts[1].OriginalVolume() != 1 || len(f.calls) != 1 || f.calls[0].MaxTokens != 32768 {
 		t.Fatalf("%+v %v", got, err)
 	}
@@ -414,22 +451,22 @@ func TestStrictFieldsSilentSpeechCancellationAndCaptionFailure(t *testing.T) {
 			seg["focal"].(map[string]any)["x"] = nil
 		}
 		s, _, _ := newService(t, raw(v), false)
-		if _, _, err := s.ObserveChunk(t.Context(), llm.ModelRef{}, in); !errors.Is(err, llm.ErrBadOutput) {
+		if _, _, err := s.ObserveChunk(t.Context(), testRef(), in); !errors.Is(err, llm.ErrBadOutput) {
 			t.Fatalf("%s: %v", mode, err)
 		}
 	}
 	s, f, c := newService(t, raw(plan()), true)
 	c.err = clip.ErrCopyTooLong
-	if _, usage, err := s.Plan(t.Context(), llm.ModelRef{}, planningInput()); !errors.Is(err, clip.ErrCopyTooLong) || usage != f.response.Usage || len(f.calls) != 1 {
+	if _, usage, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, clip.ErrCopyTooLong) || usage != f.response.Usage || len(f.calls) != 1 {
 		t.Fatalf("%+v %v", usage, err)
 	}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	f.calls = nil
-	if _, _, err := s.Plan(ctx, llm.ModelRef{}, planningInput()); !errors.Is(err, context.Canceled) || len(f.calls) != 0 {
+	if _, _, err := s.Plan(ctx, testRef(), planningInput()); !errors.Is(err, context.Canceled) || len(f.calls) != 0 {
 		t.Fatal(err)
 	}
-	if _, _, err := s.ObserveChunk(ctx, llm.ModelRef{}, chunk()); !errors.Is(err, context.Canceled) || len(f.calls) != 0 {
+	if _, _, err := s.ObserveChunk(ctx, testRef(), chunk()); !errors.Is(err, context.Canceled) || len(f.calls) != 0 {
 		t.Fatal(err)
 	}
 }
@@ -440,7 +477,7 @@ func TestCutBoundsRejectIntegerWraparoundBeforeRendering(t *testing.T) {
 	c["start_ms"] = math.MaxInt - 10000
 	c["end_ms"] = math.MinInt + 4999
 	s, f, measure := newService(t, raw(v), true)
-	if _, _, err := s.Plan(t.Context(), llm.ModelRef{}, planningInput()); !errors.Is(err, llm.ErrBadOutput) || len(f.calls) != 1 || measure.calls != 0 {
+	if _, _, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, llm.ErrBadOutput) || len(f.calls) != 1 || measure.calls != 0 {
 		t.Fatalf("overflowed source range accepted: %v", err)
 	}
 }

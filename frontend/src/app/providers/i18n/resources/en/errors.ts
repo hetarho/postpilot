@@ -85,6 +85,12 @@ export const errors = {
     'The saved edit plan changed. Keep your edits and reload the latest revision before saving again.',
   CLIP_INVALID_MEDIA:
     'The source video could not be verified. Select supported, uncorrupted videos again.',
+  CLIP_ANALYSIS_TOO_LARGE:
+    'The analysis video could not be prepared within the safe size limit, so AI generation did not start. Check the sources before retrying.',
+  CLIP_WORKSPACE_LIMIT:
+    'Video processing stopped because temporary storage is insufficient. Your previous result is preserved. Try again later.',
+  CLIP_MODEL_INPUT_UNSUPPORTED:
+    'The selected model does not support clip video input. Choose a model that supports clip analysis.',
   CLIP_PROCESSING_FAILED:
     'Clip processing failed. Your previous result is preserved. Select the sources again to retry.',
   CLIP_TEMPLATE_NAME_TAKEN: 'A video template with that name already exists.',

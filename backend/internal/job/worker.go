@@ -71,7 +71,7 @@ func (q *Queue) run(ctx context.Context, found Job) {
 		status = StatusFailed
 		normalized := failureFromError(runErr)
 		failure = &normalized
-		slog.Error("job failed", "job", found.ID, "kind", found.Kind, "reason", normalized.Reason, "err", runErr)
+		logJobFailure(found, normalized, runErr)
 	}
 	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), finishTimeout)
 	defer cancel()
@@ -97,9 +97,23 @@ func (q *Queue) run(ctx context.Context, found Job) {
 func callHandler(ctx context.Context, handler Handler, found Job, progress Progress) (err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			slog.Error("job handler panicked", "job", found.ID, "kind", found.Kind, "panic", recovered)
+			attrs := []any{"job", found.ID, "kind", found.Kind}
+			if found.Kind != KindGenerateClip && found.Kind != KindRenderClip {
+				attrs = append(attrs, "panic", recovered)
+			}
+			slog.Error("job handler panicked", attrs...)
 			err = errHandlerPanicked
 		}
 	}()
 	return handler(ctx, found, progress)
+}
+
+// Clip failures may wrap subprocess stderr, media paths or provider bodies. Log
+// only the normalized reason even if an unexpected handler bypasses StageFailure.
+func logJobFailure(found Job, failure Failure, err error) {
+	attrs := []any{"job", found.ID, "kind", found.Kind, "reason", failure.Reason}
+	if found.Kind != KindGenerateClip && found.Kind != KindRenderClip {
+		attrs = append(attrs, "err", err)
+	}
+	slog.Error("job failed", attrs...)
 }

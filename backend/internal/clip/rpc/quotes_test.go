@@ -38,3 +38,16 @@ func TestApprovalAndAccountingWirePreservesPresence(t *testing.T) {
 		t.Fatal(settled)
 	}
 }
+
+func TestPreparationFailuresHaveStableReasons(t *testing.T) {
+	for err, reason := range map[error]string{clip.ErrAnalysisTooLarge: "CLIP_ANALYSIS_TOO_LARGE", clip.ErrWorkspaceLimit: "CLIP_WORKSPACE_LIMIT", clip.ErrModelInputUnsupported: "CLIP_MODEL_INPUT_UNSUPPORTED"} {
+		var ce *connect.Error
+		if e := toConnectError(err); !errors.As(e, &ce) || len(ce.Details()) != 1 {
+			t.Fatal(e)
+		}
+		detail, e := ce.Details()[0].Value()
+		if e != nil || detail.(*v1.AppErrorDetail).Reason != reason {
+			t.Fatal(detail, e)
+		}
+	}
+}

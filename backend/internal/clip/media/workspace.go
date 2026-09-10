@@ -29,11 +29,13 @@ func unsafeRoot(root string) bool {
 }
 
 type Adapter struct {
-	cfg      clip.MediaConfig
-	runner   Runner
-	mu       sync.Mutex
-	active   map[string]bool
-	rootInfo os.FileInfo
+	cfg       clip.MediaConfig
+	runner    Runner
+	mu        sync.Mutex
+	active    map[string]bool
+	rootInfo  os.FileInfo
+	process   chan struct{}
+	diskCheck func(string, int64) error
 }
 
 var _ clip.Media = (*Adapter)(nil)
@@ -46,8 +48,11 @@ func New(cfg clip.MediaConfig, runner Runner) (*Adapter, error) {
 	if home != "" && filepath.Clean(home) == cfg.WorkRoot {
 		return nil, errors.New("clip work root must not be a home directory")
 	}
-	if cfg.StaleAge <= 0 || cfg.OperationTimeout <= 0 || cfg.WaitDelay <= 0 || cfg.ChunkDurationMS <= 0 || cfg.ChunkDurationMS > 60000 || cfg.LongEdge <= 0 || cfg.LongEdge > 720 || cfg.FPS != 30 || cfg.Threads <= 0 || cfg.StdoutLimit <= 0 || cfg.StderrLimit <= 0 || cfg.MaxStreams <= 0 || cfg.MaxDimension <= 0 || cfg.FFmpegPath == "" || cfg.FFprobePath == "" {
+	if cfg.StaleAge <= 0 || cfg.OperationTimeout <= 0 || cfg.WaitDelay <= 0 || cfg.ChunkDurationMS <= 0 || cfg.ChunkDurationMS > 60000 || cfg.LongEdge <= 0 || cfg.LongEdge > 720 || cfg.FPS != 15 || cfg.Threads != 1 || cfg.StdoutLimit <= 0 || cfg.StderrLimit <= 0 || cfg.MaxStreams <= 0 || cfg.MaxDimension <= 0 || cfg.FFmpegPath == "" || cfg.FFprobePath == "" {
 		return nil, errors.New("invalid clip media configuration")
+	}
+	if cfg.AnalysisMaxBytes <= 0 || cfg.AnalysisMaxBytes > 8<<20 || cfg.PreparedMaxBytes < cfg.AnalysisMaxBytes || cfg.PreparedMaxBytes > 512<<20 || cfg.WorkspaceMaxBytes < cfg.PreparedMaxBytes || cfg.WorkspaceMaxBytes > 8<<30 || cfg.VideoMaxRate <= 0 || cfg.VideoBufferSize <= 0 || cfg.RetryMaxRate <= 0 || cfg.RetryMaxRate >= cfg.VideoMaxRate || cfg.RetryBufferSize <= 0 || cfg.DiskCheckInterval <= 0 {
+		return nil, errors.New("invalid clip resource limits")
 	}
 	if err := os.MkdirAll(cfg.WorkRoot, 0700); err != nil {
 		return nil, fmt.Errorf("create clip work root: %w", err)
@@ -101,7 +106,7 @@ func New(cfg clip.MediaConfig, runner Runner) (*Adapter, error) {
 	if runner == nil {
 		runner = ExecRunner{StdoutLimit: cfg.StdoutLimit, StderrLimit: cfg.StderrLimit, WaitDelay: cfg.WaitDelay}
 	}
-	return &Adapter{cfg: cfg, runner: runner, active: map[string]bool{}, rootInfo: info}, nil
+	return &Adapter{cfg: cfg, runner: runner, active: map[string]bool{}, rootInfo: info, process: make(chan struct{}, 1), diskCheck: availableDisk}, nil
 }
 func (a *Adapter) validRoot() error {
 	info, err := os.Lstat(a.cfg.WorkRoot)
@@ -169,6 +174,7 @@ func (a *Adapter) WithWorkspace(ctx context.Context, jobID string, fn func(clip.
 	a.mu.Lock()
 	a.active[ws.Path] = true
 	a.mu.Unlock()
+	ws.CheckCapacity = func(additional int64) error { return a.capacity(ws, additional) }
 	defer func() {
 		cleanup := a.removeWorkspace(ws)
 		a.mu.Lock()

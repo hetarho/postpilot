@@ -72,7 +72,7 @@ func TestMediaSmoke(t *testing.T) {
 					if err != nil {
 						return err
 					}
-					if max(probe.Width, probe.Height) > 720 || probe.FrameRateNumerator != 30*probe.FrameRateDenominator || probe.HasAudio != fixture.audio || math.Abs(float64(probe.DurationMS-chunk.DurationMS)) > 50 {
+					if max(probe.Width, probe.Height) > 720 || probe.FrameRateNumerator != 15*probe.FrameRateDenominator || probe.HasAudio != fixture.audio || math.Abs(float64(probe.DurationMS-chunk.DurationMS)) > 67 || chunk.Bytes > 8<<20 || chunk.Bytes <= 0 || probe.ContainerDurationMS > 60000 {
 						t.Fatalf("proxy=%+v chunk=%+v", probe, chunk)
 					}
 					if probe.Rotation != 0 || (probe.Height > probe.Width) != fixture.rotate {
@@ -87,8 +87,8 @@ func TestMediaSmoke(t *testing.T) {
 					if err != nil {
 						return err
 					}
-					if len(files) != 2 {
-						t.Fatalf("disk contains more than source+proxy: %v", files)
+					if len(files) != len(chunks)+2 {
+						t.Fatalf("disk differs from source+prepared proxies: %v", files)
 					}
 					chunks = append(chunks, chunk)
 					return nil
@@ -103,8 +103,8 @@ func TestMediaSmoke(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				if len(files) != 1 {
-					t.Fatal("proxy survived callback")
+				if len(files) != len(chunks)+1 {
+					t.Fatal("prepared proxy lost before analysis")
 				}
 				return nil
 			})

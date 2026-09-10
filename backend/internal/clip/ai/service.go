@@ -2,10 +2,10 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
-	"net/url"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -78,8 +78,8 @@ func (s *Service) model(ref llm.ModelRef, stage string) (llm.ModelInfo, error) {
 		}
 		return info, llm.ErrProviderDisabled
 	}
-	if stage == llm.StageNameObserve && (!info.Vision || !info.VideoInput) {
-		return info, llm.ErrUnsupported
+	if stage == llm.StageNameObserve && (!info.Vision || !info.VideoInput || !info.VideoDelivery.InlineStaticVideo) {
+		return info, clip.ErrModelInputUnsupported
 	}
 	return info, nil
 }
@@ -97,18 +97,21 @@ func (s *Service) ObserveChunk(ctx context.Context, model llm.ModelRef, input cl
 	if err := clip.ValidateChunkInput(s.cfg.Analysis, input); err != nil {
 		return clip.ChunkAnalysis{}, llm.Usage{}, err
 	}
-	u, err := url.Parse(input.URL)
-	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.User != nil || u.Fragment != "" {
-		return clip.ChunkAnalysis{}, llm.Usage{}, clip.ErrInvalid
-	}
 	info, err := s.model(model, llm.StageNameObserve)
 	if err != nil {
 		return clip.ChunkAnalysis{}, llm.Usage{}, stageError("analyze", err)
 	}
+	execution, err := executionPolicy(input.Policy, model, llm.StageNameObserve, s.cfg.ObserveCompletionTokens, llm.ExecutionInlineStatic)
+	if err != nil {
+		return clip.ChunkAnalysis{}, llm.Usage{}, err
+	}
 	system, user := BuildObservePrompt(input)
-	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.VideoPart(input.URL, "video/mp4"), llm.TextPart(user)}}}, Stage: llm.StageNameObserve, Reasoning: s.cfg.ObserveReasoning, MaxTokens: s.cfg.ObserveCompletionTokens}
+	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.InlineVideoPart(input.Video), llm.TextPart(user)}}}, Stage: llm.StageNameObserve, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if info.StructuredOutput {
 		request.JSONSchema = ChunkSchema()
+	}
+	if !execution.Matches(model, request) || input.Video.Size > 8<<20 || !boundedPrompt(system, user, request.JSONSchema, llm.ExecutionInlineStatic) {
+		return clip.ChunkAnalysis{}, llm.Usage{}, clip.ErrInvalid
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
@@ -128,10 +131,17 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, stageError("plan", err)
 	}
+	execution, err := executionPolicy(input.Policy, model, llm.StageNameWrite, s.cfg.PlanCompletionTokens, llm.ExecutionTextOnly)
+	if err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
 	system, user := BuildPlanPrompt(input, s.cfg.Render.FadeMS)
-	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: s.cfg.PlanReasoning, MaxTokens: s.cfg.PlanCompletionTokens}
+	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if info.StructuredOutput {
 		request.JSONSchema = PlanSchema()
+	}
+	if !boundedPrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly) {
+		return clip.EditPlan{}, llm.Usage{}, clip.ErrInvalid
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
@@ -165,10 +175,31 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 	}
 	return result, response.Usage, nil
 }
+
+func executionPolicy(p llm.CallPolicy, ref llm.ModelRef, stage string, budget int, delivery llm.ExecutionDelivery) (*llm.ExecutionPolicy, error) {
+	if !p.Valid() || !p.Pricing.Valid() || p.Pricing.Delivery != delivery || p.Ref != ref || p.Stage != stage || p.CompletionTokens != budget {
+		return nil, clip.ErrPricingUnavailable
+	}
+	return &llm.ExecutionPolicy{Call: p, Delivery: delivery, NoFallback: true, RequireParameters: true}, nil
+}
+
+func boundedPrompt(system, user string, schema json.RawMessage, delivery llm.ExecutionDelivery) bool {
+	// Account for JSON escaping and reserve request/routing overhead. Never
+	// silently truncate observations or make an extra paid summarization call.
+	data, err := json.Marshal(struct {
+		System, User string
+		Schema       json.RawMessage
+	}{system, user, schema})
+	limit := llm.ClipInputUnits - 2048
+	if delivery == llm.ExecutionInlineStatic {
+		limit -= 20000
+	}
+	return err == nil && len(data) <= limit
+}
 func within(value string, minimum, maximum int) bool {
 	return utf8.ValidString(value) && utf8.RuneCountInString(value) >= minimum && utf8.RuneCountInString(value) <= maximum
 }
-func validateInput(cfg Config, in clip.PlanningInput) error {
+func validateSettings(cfg Config, in clip.PlanningInput) error {
 	if _, err := clip.ClipCanvas(in.Ratio); err != nil {
 		return err
 	}
@@ -187,6 +218,13 @@ func validateInput(cfg Config, in clip.PlanningInput) error {
 			return clip.ErrInvalid
 		}
 		delete(fields, a.Label)
+	}
+	return nil
+}
+
+func validateInput(cfg Config, in clip.PlanningInput) error {
+	if err := validateSettings(cfg, in); err != nil {
+		return err
 	}
 	sources := make([]clip.AnalysisSource, 0, len(in.Analyses))
 	for _, a := range in.Analyses {

@@ -62,9 +62,6 @@ func (a clipJobs) Activate(ctx context.Context, user, id string) error {
 func (a clipJobs) FailQueued(ctx context.Context, user, id string) (bool, error) {
 	return a.queue.FailQueued(ctx, id, user, job.Failure{Reason: "CLIP_PROCESSING_FAILED"})
 }
-func (a clipJobs) Reserve(ctx context.Context, user, id, observe, write string, chunks int, b clip.CompletionBudgets) (context.Context, error) {
-	return a.queue.ReserveClip(ctx, user, id, clipPricingCalls(observe, write, chunks, b))
-}
 func (a clipJobs) Active(ctx context.Context, user, id string) (*clip.ClipJob, error) {
 	j, err := a.queue.ActiveForClip(ctx, user, id)
 	return clipJob(j), err

@@ -49,11 +49,45 @@ home directory or a shared temporary root. Only stale `postpilot-clip-<32 hex>`
 children are removed. `CLIP_WORK_STALE_AGE` defaults to 6 hours and
 `CLIP_MEDIA_TIMEOUT` to 15 minutes per binary call.
 
-The T076 consumer must stage one source at a time under the callback's workspace,
-probe it, remove it before staging another source, and retain only `MediaInfo`.
-After validating the whole manifest and reserving the exact chunk count, it can
-stage each source again for observation. `PrepareAnalysisChunks` synchronously
-hands off one proxy at a time and removes that proxy even if the consumer fails or
-panics. `WithWorkspace` owns final cleanup; cancellation never bypasses cleanup.
-This bounds local footage to the current source (at most 2 GiB) and current proxy.
-Cloud source/proxy cleanup remains the durable worker's responsibility.
+The T084 consumer downloads each original once for preparation, probes and converts
+that same file, then removes it before the next original. Every analysis copy is
+fully decoded and its timing, dimensions, codecs, audio and bytes are verified
+before the one exact-count credit reservation. Paths remain workspace-owned until
+their individual observations finish; no proxy is uploaded or presigned. Old cloud
+proxy records remain sweepable. Cancellation and panic retain both local workspace
+cleanup and durable original-source cleanup.
+
+Analysis is 15 FPS H.264/yuv420p, CRF 28, long edge at most 720 without upscaling,
+900 kbit/s maximum video rate with a 1,800 kbit buffer, and mono AAC 48 kHz/64 kbit/s.
+An oversized copy gets one full same-interval retry at 650/1,300 kbit; it cannot
+create extra chunks, omit coverage or retry AI. Each copy is at most 60 seconds
+and 8 MiB. Exact audio sample trimming prevents AAC packetization from producing
+a 60.011-second container. Timestamp gaps are filled/trimmed (`async=1`, no soft
+time stretching), preserving speech synchronization rather than closing gaps.
+
+Bounds: one global job worker, one media subprocess at a time, one original up to
+2 GiB, prepared copies up to 512 MiB, complete workspace up to 8 GiB. Before credit
+admission the filesystem must have room for the remaining entire workspace bound.
+Downloads check capacity on every write; subprocesses check before starting and
+every 100 ms while writing, with output file limits and muxer headroom. Root and
+workspace ownership validation also applies to these checks. Nested caption-only
+workspaces share the subprocess semaphore without locking the outer workspace.
+
+Full-resolution composition uses a balanced tree with at most two video decoders
+per subprocess. Intermediate video nodes are lossless H.264 4:4:4; final rendering
+keeps 30 FPS, CRF 20 and yuv420p. Original cut audio bypasses the intermediate nodes
+and receives the existing one final AAC composition pass. The same bounded path
+serves paid generation and credit-free rerender.
+
+`TestMediaProfileSmoke` additionally checks deterministic noisy/moving 60-second
+video, VFR and locally synthesized speech. The 60-second fixture produced a
+7,372,694-byte proxy with an exact 60,000 ms playable timeline; same-offset speech
+correlation checks cover its beginning, middle and end. The tests use real pinned
+binaries in the nonroot runtime and no paid provider call. A separate runtime run
+enforces `--memory 1g --cpus 2 --network none`; T086 owns the full 20-source stress.
+
+Additional option references checked for T084:
+
+- https://ffmpeg.org/ffmpeg-codecs.html#libx264_002c-libx264rgb — CRF, VBV and lossless encoding
+- https://ffmpeg.org/ffmpeg-filters.html#atrim — exact sample bounds
+- https://ffmpeg.org/ffmpeg-resampler.html — first timestamps and hard gap compensation

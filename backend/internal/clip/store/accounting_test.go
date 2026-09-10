@@ -48,7 +48,8 @@ func TestProjectAccountingDistinguishesEverySettlementPhase(t *testing.T) {
 	if err != nil || a.Status != "reserved" || a.FinalCharge != nil {
 		t.Fatal(a, err)
 	}
-	if err = h.run(t); !errors.Is(err, clip.ErrQuoteRequired) {
+	h.planner.id = id
+	if err = h.run(t); err != nil {
 		t.Fatal(err)
 	}
 	a, err = h.service.Accounting(ctx, "alice", h.project.ID)

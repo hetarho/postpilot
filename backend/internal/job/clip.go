@@ -133,13 +133,13 @@ func (q *Queue) ReserveClip(ctx context.Context, user, id string, calls []Planne
 	}
 	for i, c := range approval[0].Calls {
 		p := c.Policy
-		if !p.Valid() || c.Count <= 0 || c.Count > 49 {
+		if !p.Valid() || !p.Pricing.Valid() || c.Count <= 0 || c.Count > 49 {
 			return nil, ErrCreditAllowance
 		}
-		if i == 0 && (p.Stage != "observe" || p.Ref.String() != j.ObserveModel || p.CompletionTokens != 8192) {
+		if i == 0 && (p.Stage != "observe" || p.Ref.String() != j.ObserveModel || p.CompletionTokens != 8192 || p.Pricing.Delivery != llm.ExecutionInlineStatic) {
 			return nil, ErrCreditAllowance
 		}
-		if i == 1 && (p.Stage != "write" || p.Ref.String() != j.WriteModel || c.Count != 1 || p.CompletionTokens != 32768) {
+		if i == 1 && (p.Stage != "write" || p.Ref.String() != j.WriteModel || c.Count != 1 || p.CompletionTokens != 32768 || p.Pricing.Delivery != llm.ExecutionTextOnly) {
 			return nil, ErrCreditAllowance
 		}
 		key := callKey{p.Ref.String(), p.CompletionTokens}

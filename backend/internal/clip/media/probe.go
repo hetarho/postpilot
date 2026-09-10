@@ -23,6 +23,9 @@ type probeDocument struct {
 		FrameRate         string `json:"avg_frame_rate"`
 		SampleAspectRatio string `json:"sample_aspect_ratio"`
 		PixelFormat       string `json:"pix_fmt"`
+		Duration          string `json:"duration"`
+		Channels          int    `json:"channels"`
+		SampleRate        string `json:"sample_rate"`
 		Disposition       struct {
 			Attached int `json:"attached_pic"`
 		} `json:"disposition"`
@@ -36,14 +39,6 @@ type probeDocument struct {
 	} `json:"format"`
 }
 
-func (a *Adapter) run(ctx context.Context, ws clip.MediaWorkspace, binary string, args ...string) ([]byte, error) {
-	if err := a.validWorkspace(ws, true); err != nil {
-		return nil, err
-	}
-	ctx, cancel := context.WithTimeout(ctx, a.cfg.OperationTimeout)
-	defer cancel()
-	return a.runner.Run(ctx, Command{Binary: binary, Dir: ws.Path, Args: args})
-}
 func ratio(value string, separator string) (int, int) {
 	parts := strings.Split(value, separator)
 	if len(parts) != 2 {
@@ -79,17 +74,23 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 	if !slices.Contains(strings.Split(doc.Format.Name, ","), container) {
 		return clip.MediaInfo{}, clip.ErrInvalidMedia
 	}
-	info := clip.MediaInfo{}
+	info := clip.MediaInfo{ContainerDurationMS: durationMS(doc.Format.Duration)}
 	found := false
 	for _, s := range doc.Streams {
 		info.Streams = append(info.Streams, clip.MediaStream{Index: s.Index, Kind: s.Kind, Codec: s.Codec})
 		if s.Kind == "audio" {
+			if !info.HasAudio {
+				info.AudioDurationMS = durationMS(s.Duration)
+				info.AudioChannels = s.Channels
+				info.AudioRate, _ = strconv.Atoi(s.SampleRate)
+			}
 			info.HasAudio = true
 		}
 		if s.Kind != "video" || s.Disposition.Attached != 0 || found {
 			continue
 		}
 		found = true
+		info.VideoDurationMS = durationMS(s.Duration)
 		if s.Width <= 0 || s.Height <= 0 || s.Width > a.cfg.MaxDimension || s.Height > a.cfg.MaxDimension {
 			return clip.MediaInfo{}, clip.ErrInvalidMedia
 		}
@@ -147,6 +148,21 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 		return clip.MediaInfo{}, clip.ErrInvalidMedia
 	}
 	info.DurationMS = int(math.Round(float64(micros) / 1000))
+	info.DecodedDurationMS = info.DurationMS
+	// MP4 edit lists exclude AAC encoder padding from the playable timeline.
+	// Cross-check every declared selected-stream endpoint against a full decode
+	// before using it; otherwise a 60 s source could produce a spurious 11 ms
+	// second chunk. Never let a short container declaration hide a longer stream.
+	if info.VideoDurationMS > 0 && info.ContainerDurationMS >= info.VideoDurationMS && info.ContainerDurationMS >= info.AudioDurationMS && info.ContainerDurationMS <= a.cfg.Sources.MaxDurationMS && abs(info.ContainerDurationMS-info.DecodedDurationMS) <= 22 {
+		info.DurationMS = info.ContainerDurationMS
+	}
 	return info, nil
+}
+func durationMS(raw string) int {
+	n, err := strconv.ParseFloat(raw, 64)
+	if err != nil || math.IsNaN(n) || math.IsInf(n, 0) || n <= 0 || n > 86400 {
+		return 0
+	}
+	return int(math.Round(n * 1000))
 }
 func seconds(ms int) string { return strconv.FormatFloat(float64(ms)/1000, 'f', 3, 64) }

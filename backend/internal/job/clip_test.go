@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -147,8 +148,16 @@ func TestClipRefusedReservationReturnsNoAllowance(t *testing.T) {
 }
 
 func approvedClipCalls(count int) job.ClipReservation {
-	return job.ClipReservation{ApprovedMaxCredits: 100, Calls: []job.ClipCall{
+	r := job.ClipReservation{ApprovedMaxCredits: 100, Calls: []job.ClipCall{
 		{Policy: llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "observe"}, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.7"}, Count: count},
 		{Policy: llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "write"}, Stage: "write", CompletionTokens: 32768, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.7"}, Count: 1},
 	}}
+	for i := range r.Calls {
+		delivery := llm.ExecutionInlineStatic
+		if i == 1 {
+			delivery = llm.ExecutionTextOnly
+		}
+		r.Calls[i].Policy.Pricing = llm.CallPricing{Version: 1, Fingerprint: strings.Repeat("a", 64), Delivery: delivery, PromptUSDPerMillion: "0.1", CompletionUSDPerMillion: "0.7", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}
+	}
+	return r
 }

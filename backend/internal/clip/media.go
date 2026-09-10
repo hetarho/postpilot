@@ -12,8 +12,13 @@ import (
 
 var ErrInvalidMedia = errors.New("clip source media is invalid or unsupported")
 
+var ErrAnalysisTooLarge = errors.New("clip analysis copy exceeds its limit")
+var ErrWorkspaceLimit = errors.New("clip workspace capacity exceeded")
+var ErrModelInputUnsupported = errors.New("clip model input is unsupported")
+
 // Media owns local processing only; it never sees a signed URL or an object store.
-// Workspaces and chunk paths are callback-scoped and must not be persisted.
+// Chunk paths live until explicitly released or their workspace ends; they are
+// runtime metadata only and must never enter a persisted project or job.
 type Media interface {
 	WithWorkspace(context.Context, string, func(MediaWorkspace) error) error
 	Probe(context.Context, MediaWorkspace, string) (MediaInfo, error)
@@ -21,17 +26,25 @@ type Media interface {
 	CleanupStale(context.Context, time.Time) error
 }
 
-type MediaWorkspace struct{ Path string }
+type MediaWorkspace struct {
+	Path string
+	// CheckCapacity checks actual workspace usage and filesystem availability.
+	// It is a runtime-only capability, shared by downloads and subprocesses.
+	CheckCapacity func(additional int64) error
+}
 type MediaStream struct {
 	Index       int
 	Kind, Codec string
 }
 type MediaInfo struct {
-	PixelFormat, SampleAspectRatio           string
-	DurationMS, Width, Height, Rotation      int
-	FrameRateNumerator, FrameRateDenominator int
-	HasAudio                                 bool
-	Streams                                  []MediaStream
+	PixelFormat, SampleAspectRatio                        string
+	DurationMS, Width, Height, Rotation                   int
+	FrameRateNumerator, FrameRateDenominator              int
+	HasAudio                                              bool
+	ContainerDurationMS, VideoDurationMS, AudioDurationMS int
+	DecodedDurationMS                                     int
+	AudioChannels, AudioRate                              int
+	Streams                                               []MediaStream
 }
 type ProbedSource struct {
 	Metadata SourceMetadata
@@ -44,6 +57,8 @@ type MediaSource struct {
 type AnalysisChunk struct {
 	Path, SourceID, Fingerprint string
 	Index, OffsetMS, DurationMS int
+	Bytes                       int64
+	Info                        MediaInfo
 }
 type MediaConfig struct {
 	WorkRoot, FFmpegPath, FFprobePath                                     string
@@ -51,6 +66,9 @@ type MediaConfig struct {
 	ChunkDurationMS, LongEdge, FPS, Threads, CRF, AudioRate, AudioBitrate int
 	StdoutLimit, StderrLimit, MaxStreams, MaxDimension                    int
 	DurationToleranceMS                                                   int
+	AnalysisMaxBytes, PreparedMaxBytes, WorkspaceMaxBytes                 int64
+	VideoMaxRate, VideoBufferSize, RetryMaxRate, RetryBufferSize          int
+	DiskCheckInterval                                                     time.Duration
 	Sources                                                               SourceConfig
 }
 

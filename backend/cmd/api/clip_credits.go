@@ -53,7 +53,7 @@ func (a clipJobs) Latest(ctx context.Context, user, id string) (*clip.ClipJob, e
 // reach this through a request-supplied price or a client-side duration estimate.
 func (a clipJobs) ReserveApproved(ctx context.Context, user, id string, approval clip.GenerationApproval, chunks int) (context.Context, error) {
 	p := approval.Pricing
-	if chunks < 1 || chunks > p.ObservationCalls || p.Version != clip.PricingPolicyVersion || approval.MaxCredits != p.MaxCredits || approval.QuoteID == "" {
+	if chunks < 1 || chunks > p.ObservationCalls || !p.Valid() || approval.MaxCredits != p.MaxCredits || approval.QuoteID == "" {
 		return nil, job.ErrCreditAllowance
 	}
 	calls := clipPricingCalls(p.Observe.Ref.String(), p.Plan.Ref.String(), chunks, clip.CompletionBudgets{Observe: p.Observe.CompletionTokens, Plan: p.Plan.CompletionTokens})

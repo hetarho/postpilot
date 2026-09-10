@@ -119,7 +119,8 @@ func TestExpiredQuoteRefusesBeforeEnqueueButAcceptedSnapshotSurvivesCleanup(t *t
 	if retry, err := accept(h, q); err != nil || retry != id {
 		t.Fatal(retry, err)
 	}
-	if err = h.run(t); !errors.Is(err, clip.ErrQuoteRequired) {
+	h.planner.id = id
+	if err = h.run(t); err != nil {
 		t.Fatal(err)
 	}
 	h.assertClean(t)

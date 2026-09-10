@@ -1,6 +1,7 @@
 package clip
 
 import (
+	"github.com/postpilot/backend/internal/llm"
 	"math"
 	"strings"
 )
@@ -25,7 +26,8 @@ type SourceAnalysis struct {
 type ChunkInput struct {
 	Source                      AnalysisSource
 	Index, OffsetMS, DurationMS int
-	URL                         string
+	Video                       llm.InlineVideo
+	Policy                      llm.CallPolicy
 }
 type ChunkAnalysis struct {
 	SourceID, Fingerprint       string
@@ -41,6 +43,7 @@ type PlanningInput struct {
 	Ratio            string
 	TargetDurationMS int
 	Analyses         []SourceAnalysis
+	Policy           llm.CallPolicy
 }
 
 func ValidRegion(r Region) bool {
