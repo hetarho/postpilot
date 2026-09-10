@@ -111,18 +111,20 @@ func (c *Client) strictHTTP() *http.Client {
 }
 
 func (c *Client) completeStrict(ctx context.Context, req llm.Request) (out llm.Response, err error) {
+	diagnostic := llm.CallDiagnostic{Operation: "preflight"}
+	defer func() {
+		if err != nil {
+			out.Text = ""
+			err = strictDiagnostic(err, diagnostic)
+		}
+	}()
 	// Even a metadata GET must not precede rejection of an oversized payload. A
 	// maximum-length endpoint tag makes this bound conservative before discovery.
 	if _, _, err = c.strictEnvelope(req, strings.Repeat("x", maxEndpointTag), clipLimits); err != nil {
 		return out, err
 	}
-	defer func() {
-		if err != nil {
-			out.Text = ""
-			err = sanitizedStrictError(err)
-		}
-	}()
 	client := c.strictHTTP()
+	diagnostic.Operation = "metadata"
 	endpoint, err := c.strictEndpoint(ctx, client, req)
 	if err != nil {
 		return out, err
@@ -131,6 +133,7 @@ func (c *Client) completeStrict(ctx context.Context, req llm.Request) (out llm.R
 	if err != nil {
 		return out, err
 	}
+	diagnostic.Operation = "body"
 	body, size, err := streamStrictBody(ctx, envelope, video)
 	if err != nil {
 		return out, err
@@ -149,16 +152,26 @@ func (c *Client) completeStrict(ctx context.Context, req llm.Request) (out llm.R
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "text/event-stream, application/json")
+	diagnostic.Operation = "transport"
 	resp, err := client.Do(httpReq)
 	if err != nil {
 		return out, err
 	}
 	defer resp.Body.Close()
+	diagnostic.Operation = "response"
+	diagnostic.HTTPStatus = resp.StatusCode
+	diagnostic.RequestID = c.responseRequestID(resp.Header)
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		// A failed HTTP response may still carry purchased usage. Read it once,
 		// bounded, preserve evidence and sanitize the separately mapped failure.
 		raw, readErr := io.ReadAll(io.LimitReader(resp.Body, clipLimits.ResponseBytes+1))
 		if readErr != nil || int64(len(raw)) > clipLimits.ResponseBytes {
+			if readErr != nil {
+				diagnostic.Class = strictFailureClass(readErr, diagnostic)
+			}
+			if int64(len(raw)) > clipLimits.ResponseBytes {
+				diagnostic.Class = "response_limit"
+			}
 			return out, llm.ErrBadOutput
 		}
 		out, _ = c.readJSON(bytes.NewReader(raw))
@@ -177,6 +190,7 @@ func (c *Client) completeStrict(ctx context.Context, req llm.Request) (out llm.R
 		}
 	}
 	if limited.N == 0 {
+		diagnostic.Class = "response_limit"
 		return out, llm.ErrBadOutput
 	}
 	if err != nil {
@@ -198,7 +212,7 @@ func sanitizedStrictError(err error) error {
 	}
 	var provider *llm.ProviderError
 	if errors.As(err, &provider) {
-		return &llm.ProviderError{Status: provider.Status, Message: "provider rejected the bounded request", Kind: provider.Kind}
+		return &llm.ProviderError{Status: provider.Status, Code: provider.Code, Message: "provider rejected the bounded request", Kind: provider.Kind}
 	}
 	for _, kind := range []error{context.Canceled, context.DeadlineExceeded, llm.ErrUnsupported, llm.ErrBadOutput, llm.ErrRateLimited, llm.ErrModelUnavailable} {
 		if errors.Is(err, kind) {

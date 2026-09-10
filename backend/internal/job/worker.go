@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 	"time"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 // A terminal write is one SQLite update. It gets a fresh, bounded context so a
@@ -109,11 +111,31 @@ func callHandler(ctx context.Context, handler Handler, found Job, progress Progr
 }
 
 // Clip failures may wrap subprocess stderr, media paths or provider bodies. Log
-// only the normalized reason even if an unexpected handler bypasses StageFailure.
+// only normalized metadata even if an unexpected handler bypasses StageFailure.
 func logJobFailure(found Job, failure Failure, err error) {
 	attrs := []any{"job", found.ID, "kind", found.Kind, "reason", failure.Reason}
 	if found.Kind != KindGenerateClip && found.Kind != KindRenderClip {
 		attrs = append(attrs, "err", err)
+	} else {
+		var staged interface{ FailureStage() string }
+		if errors.As(err, &staged) {
+			switch stage := staged.FailureStage(); stage {
+			case "prepare", "analyze", "plan", "render", "save", "cleanup":
+				attrs = append(attrs, "stage", stage)
+			}
+		}
+		if diagnostic, ok := llm.DiagnosticOf(err); ok {
+			attrs = append(attrs, "operation", diagnostic.Operation, "error_class", diagnostic.Class)
+			if diagnostic.HTTPStatus != 0 {
+				attrs = append(attrs, "http_status", diagnostic.HTTPStatus)
+			}
+			if diagnostic.UpstreamCode != 0 {
+				attrs = append(attrs, "upstream_code", diagnostic.UpstreamCode)
+			}
+			if diagnostic.RequestID != "" {
+				attrs = append(attrs, "request_id", diagnostic.RequestID)
+			}
+		}
 	}
 	slog.Error("job failed", attrs...)
 }

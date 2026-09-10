@@ -52,3 +52,19 @@ Official API contracts rechecked on 2026-09-10:
 Provider, malformed output and completion truncation retain their normalized LLM
 reason and returned usage through `StageError`; no raw model output is included in
 diagnostic text. `CLIP_COPY_TOO_LONG` remains the renderer's distinct failure.
+
+## Private failure diagnostics
+
+Failed clip jobs log `job`, `kind`, `reason`, and the known clip `stage`. Strict
+provider failures additionally carry `operation` (preflight, metadata, body,
+transport or response), a code-owned `error_class`, and available `http_status`,
+numeric `upstream_code` and validated `request_id`. In-stream errors can have
+HTTP 200 with a different upstream status. IDs come only from the response's
+`X-Request-ID`, `Request-ID` or `CF-Ray`; unknown formats and reflected credentials
+are omitted. No ID is invented when none was received.
+
+No provider prose, raw errors, request/response bodies, prompts, media paths, data
+URLs, authorization headers or arbitrary header values are logged. These fields
+are server-only and do not change public error messages, usage evidence, credit
+settlement or retry behavior. Use the job ID to join the existing stage/accounting
+records; a missing usage record is not proof that the provider billed nothing.

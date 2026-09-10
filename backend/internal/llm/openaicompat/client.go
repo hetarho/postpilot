@@ -381,7 +381,7 @@ func (c *Client) apply(chunk chatChunk, text *strings.Builder, out *llm.Response
 	// A provider can fail mid-stream (a quota reached after the headers went out) and
 	// says so inside the body rather than with a status code.
 	if chunk.Error != nil {
-		return &llm.ProviderError{Provider: c.name, Status: http.StatusOK, Message: chunk.Error.Message, Kind: kindOfMessage(chunk.Error)}
+		return &llm.ProviderError{Provider: c.name, Status: http.StatusOK, Code: numericErrorCode(chunk.Error.Code), Message: chunk.Error.Message, Kind: kindOfMessage(chunk.Error)}
 	}
 	for _, choice := range chunk.Choices {
 		text.WriteString(choice.Message.Content)
@@ -448,7 +448,11 @@ func (c *Client) httpError(resp *http.Response) error {
 	case (resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusBadRequest) && modelNotFound.MatchString(message):
 		kind = llm.ErrModelUnavailable
 	}
-	return &llm.ProviderError{Provider: c.name, Status: resp.StatusCode, Message: message, Kind: kind}
+	var code int
+	if envelope.Error != nil {
+		code = numericErrorCode(envelope.Error.Code)
+	}
+	return &llm.ProviderError{Provider: c.name, Status: resp.StatusCode, Code: code, Message: message, Kind: kind}
 }
 
 // kindOfMessage classifies an error delivered inside a 200 body, where there is no

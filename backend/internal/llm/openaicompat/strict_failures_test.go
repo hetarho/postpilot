@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 func TestStrictFailureResponsesPreserveUsageWithoutReplaying(t *testing.T) {
@@ -20,7 +22,7 @@ func TestStrictFailureResponsesPreserveUsageWithoutReplaying(t *testing.T) {
 	}{
 		"http error usage":   {403, false, `{"error":{"message":"private-canary"},"usage":{"cost":0.004,"prompt_tokens":10}}`, 4000},
 		"http reported zero": {403, false, `{"error":{"message":"private-canary"},"usage":{"cost":0}}`, 0},
-		"stream error":       {200, true, "data: {\"usage\":{\"cost\":0.004}}\n\ndata: {\"error\":{\"message\":\"private-canary\"}}\n\n", 4000},
+		"stream error":       {200, true, "data: {\"usage\":{\"cost\":0.004}}\n\ndata: {\"error\":{\"code\":403,\"message\":\"private-canary\"}}\n\n", 4000},
 		"stream truncation":  {200, true, "data: {\"usage\":{\"cost\":0.004},\"choices\":[{\"delta\":{\"content\":\"private-canary\"},\"finish_reason\":\"length\"}]}\n\ndata: [DONE]\n\n", 4000},
 		"unfinished stream":  {200, true, "data: {\"usage\":{\"cost\":0.004},\"choices\":[{\"delta\":{\"content\":\"private-canary\"}}]}\n\n", 4000},
 	} {
@@ -33,6 +35,7 @@ func TestStrictFailureResponsesPreserveUsageWithoutReplaying(t *testing.T) {
 					return
 				}
 				posts.Add(1)
+				w.Header().Set("X-Request-ID", "req-0123456789abcdef")
 				_, _ = io.Copy(io.Discard, r.Body)
 				if tc.stream {
 					w.Header().Set("Content-Type", "text/event-stream")
@@ -41,6 +44,13 @@ func TestStrictFailureResponsesPreserveUsageWithoutReplaying(t *testing.T) {
 				_, _ = io.WriteString(w, tc.body)
 			})
 			out, err := c.Complete(context.Background(), req)
+			info, ok := llm.DiagnosticOf(err)
+			if !ok || info.Operation != "response" || info.HTTPStatus != tc.status || info.RequestID != "req-0123456789abcdef" {
+				t.Fatal("response diagnostic lost", info)
+			}
+			if name == "stream error" && (info.Class != "provider_error" || info.UpstreamCode != 403) {
+				t.Fatal("in-stream upstream status lost", info)
+			}
 			if err == nil || posts.Load() != 1 || out.Text != "" || !out.Usage.CostReported || out.Usage.CostMicrousd != tc.cost || strings.Contains(err.Error(), "canary") {
 				t.Fatalf("out=%+v err=%v posts=%d", out, err, posts.Load())
 			}

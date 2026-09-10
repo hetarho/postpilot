@@ -3,9 +3,11 @@ package clip
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 )
 
@@ -17,6 +19,18 @@ func TestClipFailureUsesOnlyReasonSpecificParams(t *testing.T) {
 	f = (&StageFailure{Stage: "prepare", Cause: ErrInvalidMedia}).Failure()
 	if f.Reason != "CLIP_INVALID_MEDIA" || len(f.Params) != 0 {
 		t.Fatal(f)
+	}
+}
+
+func TestClipDiagnosticMetadataDoesNotChangePublicFailure(t *testing.T) {
+	cause := errors.New("bounded provider request failed")
+	want := (&StageFailure{Stage: "analyze", Cause: cause}).Failure()
+	err := &StageFailure{Stage: "analyze", Cause: llm.WithCallDiagnostic(cause, llm.CallDiagnostic{Operation: "response", Class: "http_error", HTTPStatus: 403, RequestID: "req-0123456789abcdef"})}
+	if !reflect.DeepEqual(err.Failure(), want) || err.FailureStage() != "analyze" || !errors.Is(err, cause) {
+		t.Fatal("public failure changed", err.Failure())
+	}
+	if _, ok := llm.DiagnosticOf(err); !ok {
+		t.Fatal("stage wrapper lost server diagnostics")
 	}
 }
 

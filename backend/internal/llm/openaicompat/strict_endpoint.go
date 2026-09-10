@@ -25,7 +25,13 @@ type pricedEndpoint struct {
 }
 
 // Discovery is bounded, read-only and never retried. Metadata is not a model call.
-func (c *Client) priceEndpoints(ctx context.Context, client *http.Client, model string) ([]pricedEndpoint, error) {
+func (c *Client) priceEndpoints(ctx context.Context, client *http.Client, model string) (endpoints []pricedEndpoint, err error) {
+	diagnostic := llm.CallDiagnostic{Operation: "metadata"}
+	defer func() {
+		if err != nil {
+			err = strictDiagnostic(err, diagnostic)
+		}
+	}()
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/models/"+model+"/endpoints", nil)
 	if err != nil {
 		return nil, llm.ErrUnsupported
@@ -36,14 +42,22 @@ func (c *Client) priceEndpoints(ctx context.Context, client *http.Client, model 
 	request.Header.Set("Accept", "application/json")
 	resp, err := client.Do(request)
 	if err != nil {
-		return nil, sanitizedStrictError(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
+	diagnostic.HTTPStatus = resp.StatusCode
+	diagnostic.RequestID = c.responseRequestID(resp.Header)
 	if resp.StatusCode != http.StatusOK {
 		return nil, llm.ErrUnsupported
 	}
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, clipLimits.EndpointBytes+1))
 	if err != nil || int64(len(raw)) > clipLimits.EndpointBytes {
+		if err != nil {
+			diagnostic.Class = strictFailureClass(err, diagnostic)
+		}
+		if int64(len(raw)) > clipLimits.EndpointBytes {
+			diagnostic.Class = "response_limit"
+		}
 		return nil, llm.ErrUnsupported
 	}
 	var response struct {
@@ -53,6 +67,7 @@ func (c *Client) priceEndpoints(ctx context.Context, client *http.Client, model 
 		} `json:"data"`
 	}
 	if json.Unmarshal(raw, &response) != nil || response.Data.ID != model || len(response.Data.Endpoints) == 0 || len(response.Data.Endpoints) > 128 {
+		diagnostic.Class = "invalid_response"
 		return nil, llm.ErrUnsupported
 	}
 	return response.Data.Endpoints, nil

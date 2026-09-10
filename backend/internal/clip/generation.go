@@ -117,8 +117,9 @@ type StageFailure struct {
 
 // The worker logs Error(), so redaction must apply here as well as to the public
 // Failure projection. Unwrap retains the original cause for classification/tests.
-func (e *StageFailure) Error() string { return fmt.Sprintf("clip %s: %s", e.Stage, e.Failure().Reason) }
-func (e *StageFailure) Unwrap() error { return e.Cause }
+func (e *StageFailure) Error() string        { return fmt.Sprintf("clip %s: %s", e.Stage, e.Failure().Reason) }
+func (e *StageFailure) Unwrap() error        { return e.Cause }
+func (e *StageFailure) FailureStage() string { return e.Stage }
 func (e *StageFailure) Failure() llm.Failure {
 	f := llm.NormalizeFailure(e.Cause)
 	var credits *plan.InsufficientCreditsError

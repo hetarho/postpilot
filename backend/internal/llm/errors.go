@@ -130,6 +130,7 @@ func failureReason(err error) string {
 type ProviderError struct {
 	Provider string
 	Status   int
+	Code     int // Optional numeric upstream status, diagnostic-only.
 	Message  string
 	// Kind is the sentinel this failure normalizes to, or nil for a generic failure.
 	Kind error
