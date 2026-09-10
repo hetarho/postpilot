@@ -19,9 +19,9 @@ func TestClipSettlementNeverDebitsAboveReservation(t *testing.T) {
 	}
 	held := store.admissions[0].HoldCredits
 	remaining := store.balance("alice", seoulNoon)
-	store.events = append(store.events, Event{UserID: "alice", JobID: "clip", CostMicrousd: 5_000_000})
+	store.events = append(store.events, Event{UserID: "alice", JobID: "clip", CostMicrousd: 5_000_000, CostSource: llm.CostReported})
 	for range 2 {
-		if err := svc.Settle(context.Background(), "clip"); err != nil {
+		if err := svc.Settle(context.Background(), "clip", OutcomeSucceeded); err != nil {
 			t.Fatal(err)
 		}
 	}

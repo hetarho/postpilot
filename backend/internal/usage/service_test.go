@@ -282,14 +282,17 @@ func (f *fakeStore) ReasoningSpend(_ context.Context, stage string, since time.T
 	return out, nil
 }
 
-func (f *fakeStore) SumCostForJob(_ context.Context, jobID string) (int64, error) {
-	var total int64
+func (f *fakeStore) CostForJob(_ context.Context, jobID string) (JobCost, error) {
+	var cost JobCost
 	for _, event := range f.events {
 		if event.JobID == jobID {
-			total += event.CostMicrousd
+			cost.TotalMicrousd += event.CostMicrousd
+			if event.CostMicrousd > 0 && (event.CostSource == llm.CostReported || event.CostSource == llm.CostEstimated) {
+				cost.ConfirmedMicrousd += event.CostMicrousd
+			}
 		}
 	}
-	return total, nil
+	return cost, nil
 }
 
 func (f *fakeStore) balance(userID string, now time.Time) int {
@@ -733,7 +736,7 @@ func TestSettleLeavesAnExemptTiersLotsAlone(t *testing.T) {
 	// Far more than the recorded hold priced.
 	store.events = append(store.events, Event{UserID: "root", JobID: "job-1", CostMicrousd: 5_000_000})
 
-	if err := svc.Settle(ctx, "job-1"); err != nil {
+	if err := svc.Settle(ctx, "job-1", OutcomeSucceeded); err != nil {
 		t.Fatal(err)
 	}
 	if got := store.balance("root", seoulNoon); got != 100 {
@@ -754,7 +757,7 @@ func TestSettleRefundsTheUnusedRemainderToTheSameLots(t *testing.T) {
 	// The work actually cost one credit of provider spend: 2 + 3 = 5 charged.
 	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 10_000})
 
-	if err := svc.Settle(ctx, "job-1"); err != nil {
+	if err := svc.Settle(ctx, "job-1", OutcomeSucceeded); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := store.settled["job-1"], 5; got != want {
@@ -775,11 +778,11 @@ func TestSettleIsIdempotent(t *testing.T) {
 	}
 	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 10_000})
 
-	if err := svc.Settle(ctx, "job-1"); err != nil {
+	if err := svc.Settle(ctx, "job-1", OutcomeSucceeded); err != nil {
 		t.Fatal(err)
 	}
 	after := store.balance("alice", seoulNoon)
-	if err := svc.Settle(ctx, "job-1"); err != nil {
+	if err := svc.Settle(ctx, "job-1", OutcomeSucceeded); err != nil {
 		t.Fatal(err)
 	}
 	if got := store.balance("alice", seoulNoon); got != after {
@@ -800,7 +803,7 @@ func TestSettleAboveTheHoldNeverDrivesTheBalanceNegative(t *testing.T) {
 	// Far more than the hold priced.
 	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 5_000_000})
 
-	if err := svc.Settle(ctx, "job-1"); err != nil {
+	if err := svc.Settle(ctx, "job-1", OutcomeSucceeded); err != nil {
 		t.Fatal(err)
 	}
 	if got := store.balance("alice", seoulNoon); got < 0 {

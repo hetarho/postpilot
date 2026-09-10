@@ -788,6 +788,28 @@ func TestStoreRejectsFailureThatDoesNotMatchTerminalStatus(t *testing.T) {
 	}
 }
 
+func TestFinishCannotClaimSuccessAfterAnotherTerminalWrite(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: "terminal-race", UserID: "alice", PostSlug: postSlug("post-a")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.store.PickNextQueued(ctx, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.store.Finish(ctx, id, job.StatusDone, nil, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.store.Finish(ctx, id, job.StatusFailed, &job.Failure{Reason: job.FailureReasonUnknown}, time.Now()); err == nil {
+		t.Fatal("a no-op terminal write falsely confirmed failure")
+	}
+	got, err := h.store.GetByID(ctx, id)
+	if err != nil || got.Status != job.StatusDone {
+		t.Fatal(got, err)
+	}
+}
+
 // recordingAdmitter stands in for the credit gate. The queue is deliberately ignorant of
 // what a refusal means, so the fake only has to answer yes or no and remember what it was
 // asked.
@@ -795,6 +817,7 @@ type recordingAdmitter struct {
 	starts   []job.Start
 	released []string
 	settled  []string
+	outcomes []string
 	open     []string
 	refuse   error
 }
@@ -811,8 +834,9 @@ func (a *recordingAdmitter) Release(_ context.Context, jobID string) {
 	a.released = append(a.released, jobID)
 }
 
-func (a *recordingAdmitter) Settle(_ context.Context, jobID string) {
+func (a *recordingAdmitter) Settle(_ context.Context, jobID, status string) {
 	a.settled = append(a.settled, jobID)
+	a.outcomes = append(a.outcomes, status)
 }
 
 func (a *recordingAdmitter) OpenHolds(context.Context) ([]string, error) {

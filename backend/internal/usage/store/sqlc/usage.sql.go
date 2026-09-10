@@ -39,6 +39,28 @@ func (q *Queries) ActiveMonthlyLot(ctx context.Context, arg ActiveMonthlyLotPara
 	return i, err
 }
 
+const costForJob = `-- name: CostForJob :one
+SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) AS total_microusd,
+       CAST(COALESCE(SUM(CASE
+           WHEN cost_source IN ('reported', 'estimated') AND cost_microusd > 0
+           THEN cost_microusd ELSE 0 END), 0) AS INTEGER) AS confirmed_microusd
+FROM usage_events WHERE job_id = ?
+`
+
+type CostForJobRow struct {
+	TotalMicrousd     int64
+	ConfirmedMicrousd int64
+}
+
+// COALESCE keeps a job with no recorded call a 0 rather than a NULL the row mapper would
+// have to special-case; the CAST is what makes sqlc type the result int64.
+func (q *Queries) CostForJob(ctx context.Context, jobID string) (CostForJobRow, error) {
+	row := q.db.QueryRowContext(ctx, costForJob, jobID)
+	var i CostForJobRow
+	err := row.Scan(&i.TotalMicrousd, &i.ConfirmedMicrousd)
+	return i, err
+}
+
 const deleteAdmissionForJob = `-- name: DeleteAdmissionForJob :exec
 DELETE FROM usage_admissions WHERE job_id = ?
 `
@@ -502,19 +524,6 @@ type SpendFromLotParams struct {
 func (q *Queries) SpendFromLot(ctx context.Context, arg SpendFromLotParams) error {
 	_, err := q.db.ExecContext(ctx, spendFromLot, arg.Remaining, arg.ID, arg.Remaining_2)
 	return err
-}
-
-const sumCostForJob = `-- name: SumCostForJob :one
-SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) FROM usage_events WHERE job_id = ?
-`
-
-// COALESCE keeps a job with no recorded call a 0 rather than a NULL the row mapper would
-// have to special-case; the CAST is what makes sqlc type the result int64.
-func (q *Queries) SumCostForJob(ctx context.Context, jobID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, sumCostForJob, jobID)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
 }
 
 const unsettledHoldJobs = `-- name: UnsettledHoldJobs :many

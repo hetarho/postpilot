@@ -70,8 +70,8 @@ type Store interface {
 	InsertEvent(ctx context.Context, event Event) error
 	// ReasoningSpend aggregates recorded calls at one stage since `since`, per model.
 	ReasoningSpend(ctx context.Context, stage string, since time.Time) ([]ReasoningSpend, error)
-	// SumCostForJob is what the job actually spent, the figure settlement charges.
-	SumCostForJob(ctx context.Context, jobID string) (int64, error)
+	// CostForJob preserves the distinction between priced evidence and unavailable cost.
+	CostForJob(ctx context.Context, jobID string) (JobCost, error)
 }
 
 // Models resolves a ref's registry metadata. The hold needs its prices to estimate a

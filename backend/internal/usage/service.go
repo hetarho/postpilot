@@ -23,6 +23,7 @@ const holdInputTokens = 30_000
 
 var ErrLotTouched = errors.New("credit lot has already been touched")
 var ErrLotNotFound = errors.New("credit lot was not found")
+var ErrSettlementOutcome = errors.New("settlement requires a persisted terminal outcome")
 
 // Service is the credit gate and the ledger writer.
 type Service struct {
@@ -368,7 +369,10 @@ func (s *Service) worstCaseMicrousd(calls []PlannedCall) int64 {
 //
 // It is idempotent on the open-hold predicate, so a terminal transition that runs twice —
 // a retry, or the boot sweep meeting a job that just finished — cannot refund twice.
-func (s *Service) Settle(ctx context.Context, jobID string) error {
+func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutcome) error {
+	if outcome != OutcomeSucceeded && outcome != OutcomeFailed {
+		return ErrSettlementOutcome
+	}
 	if jobID == "" {
 		return nil
 	}
@@ -383,15 +387,20 @@ func (s *Service) Settle(ctx context.Context, jobID string) error {
 			return nil
 		}
 
-		spent, err := tx.SumCostForJob(ctx, jobID)
+		cost, err := tx.CostForJob(ctx, jobID)
 		if err != nil {
 			return err
 		}
-		actual := plan.Charge(spent)
+		actual := plan.Charge(cost.TotalMicrousd)
 		// A clip reserves its complete run after probing. Never debit another lot for
 		// provider overage: raw cost remains in the ledger, user credit is capped.
 		if admission.Kind == "generate_clip" {
-			actual = min(actual, admission.HoldCredits)
+			actual = min(plan.Charge(cost.ConfirmedMicrousd), admission.HoldCredits)
+			if outcome == OutcomeFailed && cost.ConfirmedMicrousd == 0 {
+				// No confirmed billable work: waive even the infrastructure base. Missing
+				// usage stays unknown in the ledger; it is not a reported zero supplier bill.
+				actual = 0
+			}
 		}
 
 		switch {

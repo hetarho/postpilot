@@ -334,12 +334,12 @@ func (s *Store) DeleteAdmissionForJob(ctx context.Context, jobID string) error {
 	return nil
 }
 
-func (s *Store) SumCostForJob(ctx context.Context, jobID string) (int64, error) {
-	total, err := s.write.SumCostForJob(ctx, jobID)
+func (s *Store) CostForJob(ctx context.Context, jobID string) (usage.JobCost, error) {
+	cost, err := s.write.CostForJob(ctx, jobID)
 	if err != nil {
-		return 0, fmt.Errorf("sum job cost: %w", err)
+		return usage.JobCost{}, fmt.Errorf("read job cost: %w", err)
 	}
-	return total, nil
+	return usage.JobCost{TotalMicrousd: cost.TotalMicrousd, ConfirmedMicrousd: cost.ConfirmedMicrousd}, nil
 }
 
 func (s *Store) InsertEvent(ctx context.Context, event usage.Event) error {

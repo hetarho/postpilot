@@ -36,7 +36,7 @@ UPDATE generation_jobs
 SET stage = ?, progress_done = ?, progress_total = ?, updated_at = ?
 WHERE id = ? AND status = 'running';
 
--- name: FinishJob :exec
+-- name: FinishJob :execrows
 UPDATE generation_jobs
 SET status = ?, error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
     finished_at = ?, updated_at = ?

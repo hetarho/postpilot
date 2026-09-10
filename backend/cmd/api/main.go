@@ -1876,8 +1876,15 @@ func (a jobAdmission) Release(ctx context.Context, jobID string) {
 	}
 }
 
-func (a jobAdmission) Settle(ctx context.Context, jobID string) {
-	if err := a.ledger.Settle(ctx, jobID); err != nil {
+func (a jobAdmission) Settle(ctx context.Context, jobID, terminalStatus string) {
+	var outcome usage.TerminalOutcome
+	switch terminalStatus {
+	case job.StatusDone:
+		outcome = usage.OutcomeSucceeded
+	case job.StatusFailed:
+		outcome = usage.OutcomeFailed
+	}
+	if err := a.ledger.Settle(ctx, jobID, outcome); err != nil {
 		slog.Error("settle hold failed", "job", jobID, "err", err)
 	}
 }

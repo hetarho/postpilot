@@ -160,7 +160,11 @@ FROM usage_events
 WHERE stage = ? AND created_at >= ?
 GROUP BY model;
 
--- name: SumCostForJob :one
+-- name: CostForJob :one
 -- COALESCE keeps a job with no recorded call a 0 rather than a NULL the row mapper would
 -- have to special-case; the CAST is what makes sqlc type the result int64.
-SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) FROM usage_events WHERE job_id = ?;
+SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) AS total_microusd,
+       CAST(COALESCE(SUM(CASE
+           WHEN cost_source IN ('reported', 'estimated') AND cost_microusd > 0
+           THEN cost_microusd ELSE 0 END), 0) AS INTEGER) AS confirmed_microusd
+FROM usage_events WHERE job_id = ?;

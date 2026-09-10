@@ -47,6 +47,22 @@ type Admission struct {
 	CreatedAt   time.Time
 }
 
+// TerminalOutcome is supplied by the job owner after its terminal state is durable.
+// The zero value cannot authorize settlement, particularly a clip failure waiver.
+type TerminalOutcome string
+
+const (
+	OutcomeSucceeded TerminalOutcome = "succeeded"
+	OutcomeFailed    TerminalOutcome = "failed"
+)
+
+// JobCost keeps historical total accounting separate from confirmed priced evidence.
+// Unknown provider cost must not become billable merely because a row exists.
+type JobCost struct {
+	TotalMicrousd     int64
+	ConfirmedMicrousd int64
+}
+
 // LotDebit is how much of one hold came out of one lot. Settlement refunds against these
 // rather than against the consumption order: by the time a job ends a lot may have
 // expired or a new one opened, and refunding into the wrong lot would move credits

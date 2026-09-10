@@ -84,12 +84,15 @@ func (s *Store) Finish(ctx context.Context, id, status string, failure *job.Fail
 	if err != nil {
 		return fmt.Errorf("finish job failure: %w", err)
 	}
-	err = s.write.FinishJob(ctx, sqlc.FinishJobParams{
+	changed, err := s.write.FinishJob(ctx, sqlc.FinishJobParams{
 		Status: status, ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
 		FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now), ID: id,
 	})
 	if err != nil {
 		return fmt.Errorf("finish job: %w", err)
+	}
+	if changed != 1 {
+		return errors.New("finish job: no running job changed")
 	}
 	return nil
 }

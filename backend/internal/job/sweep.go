@@ -57,7 +57,7 @@ func (q *Queue) SweepOpenHolds(ctx context.Context) (int, error) {
 		if found.Kind == KindRenderClip {
 			continue
 		}
-		q.admitter.Settle(ctx, id)
+		q.admitter.Settle(ctx, id, found.Status)
 		settled++
 	}
 	return settled, nil

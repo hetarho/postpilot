@@ -77,13 +77,20 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	defer cancel()
 	if err := q.store.Finish(finishCtx, found.ID, status, failure, q.now()); err != nil {
 		slog.Error("finish job failed", "job", found.ID, "status", status, "err", err)
+		// The write may have committed despite returning an error. Only a persisted
+		// terminal outcome can authorize settlement; otherwise recovery owns the hold.
+		persisted, readErr := q.store.GetByID(finishCtx, found.ID)
+		if readErr != nil || (persisted.Status != StatusDone && persisted.Status != StatusFailed) {
+			return
+		}
+		status = persisted.Status
 	}
 	// Settling after the terminal write, on the same detached context: the job's ledger
 	// rows are all written by now, so this is the first moment the hold can be reconciled
 	// against what the work actually cost. A failure here strands credits until the boot
 	// sweep, which is why it must not also fail the job.
 	if q.admitter != nil && found.Kind != KindRenderClip {
-		q.admitter.Settle(finishCtx, found.ID)
+		q.admitter.Settle(finishCtx, found.ID, status)
 	}
 }
 

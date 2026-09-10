@@ -349,7 +349,7 @@ func (q *Queries) FailQueuedJob(ctx context.Context, arg FailQueuedJobParams) (i
 	return result.RowsAffected()
 }
 
-const finishJob = `-- name: FinishJob :exec
+const finishJob = `-- name: FinishJob :execrows
 UPDATE generation_jobs
 SET status = ?, error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
     finished_at = ?, updated_at = ?
@@ -366,8 +366,8 @@ type FinishJobParams struct {
 	ID              string
 }
 
-func (q *Queries) FinishJob(ctx context.Context, arg FinishJobParams) error {
-	_, err := q.db.ExecContext(ctx, finishJob,
+func (q *Queries) FinishJob(ctx context.Context, arg FinishJobParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, finishJob,
 		arg.Status,
 		arg.ErrorReason,
 		arg.ErrorParams,
@@ -376,7 +376,10 @@ func (q *Queries) FinishJob(ctx context.Context, arg FinishJobParams) error {
 		arg.UpdatedAt,
 		arg.ID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getJobByID = `-- name: GetJobByID :one

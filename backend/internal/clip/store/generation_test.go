@@ -207,7 +207,7 @@ func (a *clipAdmitter) Hold(_ context.Context, s job.Start) error {
 	return nil
 }
 func (*clipAdmitter) Release(context.Context, string)             {}
-func (*clipAdmitter) Settle(context.Context, string)              {}
+func (*clipAdmitter) Settle(context.Context, string, string)      {}
 func (*clipAdmitter) OpenHolds(context.Context) ([]string, error) { return nil, nil }
 
 type generationJobs struct{ q *job.Queue }

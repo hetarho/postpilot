@@ -220,7 +220,7 @@ func TestSettleRefundsAgainstTheRecordedLedger(t *testing.T) {
 	}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.Settle(ctx, "job"); err != nil {
+	if err := svc.Settle(ctx, "job", usage.OutcomeSucceeded); err != nil {
 		t.Fatal(err)
 	}
 
@@ -235,7 +235,7 @@ func TestSettleRefundsAgainstTheRecordedLedger(t *testing.T) {
 	}
 
 	// Settling twice must not refund twice.
-	if err := svc.Settle(ctx, "job"); err != nil {
+	if err := svc.Settle(ctx, "job", usage.OutcomeSucceeded); err != nil {
 		t.Fatal(err)
 	}
 	again, err := svc.BalanceFor(ctx, "alice", plan.Free)

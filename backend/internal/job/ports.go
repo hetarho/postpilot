@@ -16,10 +16,11 @@ import (
 type Admitter interface {
 	Hold(ctx context.Context, start Start) error
 	Release(ctx context.Context, jobID string)
-	// Settle reconciles a finished job's hold against what it actually spent. It takes no
+	// Settle receives the persisted terminal status, never a handler's tentative outcome.
+	// It reconciles a finished job's hold against what it actually spent. It takes no
 	// error: a hold that cannot be settled must not turn a finished job into a failed one,
 	// so the adapter logs and the boot sweep retries.
-	Settle(ctx context.Context, jobID string)
+	Settle(ctx context.Context, jobID, terminalStatus string)
 	// OpenHolds lists jobs whose hold has not been reconciled yet. The queue matches them
 	// against its own rows, so the ledger never has to read the job table.
 	OpenHolds(ctx context.Context) ([]string, error)
