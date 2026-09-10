@@ -22,6 +22,9 @@ COPY backend/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /api ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /media.test ./internal/clip/media
 
+FROM builder AS release-builder
+RUN CGO_ENABLED=0 GOOS=linux go test -c -o /clip-release.test ./cmd/api
+
 FROM gcr.io/distroless/static-debian12:nonroot AS runtime
 WORKDIR /
 COPY --from=builder /api /api
@@ -45,6 +48,13 @@ FROM runtime AS media-smoke
 COPY --from=builder /media.test /media.test
 ENV CLIP_MEDIA_SMOKE=1
 RUN ["/media.test", "-test.run=Test(MediaSmoke|MediaProfileSmoke|RenderSmoke)", "-test.v"]
+
+# Explicit local regression target: never contacts a real provider or stack.
+FROM runtime AS release-smoke
+COPY --from=release-builder /clip-release.test /clip-release.test
+COPY backend/internal/clip/media/testdata/speech.m4a /usr/share/postpilot-media/speech.m4a
+ENV CLIP_RELEASE_SMOKE=1
+ENTRYPOINT ["/clip-release.test", "-test.run=^TestClipRelease$", "-test.v", "-test.timeout=45m"]
 
 FROM runtime AS production
 # This dependency makes the real-binary nonroot smoke a mandatory image-build gate.

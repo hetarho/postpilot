@@ -44,7 +44,10 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 	fmt.Fprintf(&graph, "trim=end_frame=%d,setpts=PTS-STARTPTS,format=yuv420p[v]", frames)
 	if withAudio {
 		if source.HasAudio {
-			fmt.Fprintf(&graph, ";[0:a:0]atrim=duration=%s,asetpts=PTS-STARTPTS,aresample=%d,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=%.6f", seconds(c.EndMS-c.StartMS), cfg.AudioRate, c.OriginalVolume())
+			// Preserve the seek-relative audio clock before resetting timestamps.
+			// An AAC frame can start one packet after video; resetting STARTPTS
+			// first pulled speech ~21 ms earlier and closed real timestamp gaps.
+			fmt.Fprintf(&graph, ";[0:a:0]aresample=%d:async=1:min_hard_comp=0:first_pts=0,atrim=duration=%s,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=%.6f", cfg.AudioRate, seconds(c.EndMS-c.StartMS), c.OriginalVolume())
 		} else {
 			fmt.Fprintf(&graph, ";anullsrc=r=%d:cl=stereo", cfg.AudioRate)
 		}

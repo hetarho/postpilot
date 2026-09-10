@@ -86,6 +86,76 @@ correlation checks cover its beginning, middle and end. The tests use real pinne
 binaries in the nonroot runtime and no paid provider call. A separate runtime run
 enforces `--memory 1g --cpus 2 --network none`; T086 owns the full 20-source stress.
 
+## Isolated release regression
+
+Run from the repository root. These targets use production's pinned binaries,
+font and nonroot runtime, but only temporary SQLite databases, synthetic media
+and a counted loopback HTTP provider. Do not supply an env file, credentials,
+host database mounts or user footage. `--network none` still permits loopback.
+
+```sh
+docker build -f backend/Dockerfile --target release-smoke -t postpilot-clip-release:local .
+docker run --rm --network none --memory 1g --memory-swap 1g --cpus 2 postpilot-clip-release:local
+docker run --rm --network none --memory 1g --memory-swap 1g --cpus 2 -e CLIP_RELEASE_STRESS=1 postpilot-clip-release:local
+docker build -f backend/Dockerfile --target media-smoke -t postpilot-clip-media:local .
+docker run --rm --network none --memory 1g --memory-swap 1g --cpus 2 --entrypoint /media.test postpilot-clip-media:local -test.run='Test(MediaSmoke|MediaProfileSmoke|RenderSmoke)' -test.v -test.timeout=15m
+```
+
+`TestClipRelease` drives authenticated quote/start/poll through the real handlers,
+SQLite source linkage, queue, frozen OpenRouter-compatible transport, usage ledger,
+media adapter and original-footage renderer. Every verified proxy must exist before
+the hold and first completion. The HTTP stub checks exact Content-Length, static
+inline data, hashes of verified proxies, stage budgets, price bounds and disabled
+optional features. It never acts as an external AI quality evaluation.
+
+The ordinary-account matrix includes no-usage denial, partial paid failure,
+reported supplier overage above unequal approval/hold limits, unknown usage,
+malformed/truncated/oversized output, save failure, malformed last source,
+oversized last proxy, disk refusal, unknown/drifting media rates, legacy client,
+expired/changed approval, concurrent acceptance and an aborted HTTP response.
+Master uses a separate fixture. New worker instances recover interruptions at
+prepare/hold/partial-usage/save without installing a replay handler. The suites
+below additionally cover failed terminal/settlement writes and simultaneous lots.
+
+The stress case uses 19 distinct 61-second containers and one 641-second container
+(20 sources, exactly 30 minutes, 49 chunks); identity uses the browser's bounded
+v1 fingerprint, not filenames. Synthetic speech and simple frames deliberately
+separate count/duration stress from the high-motion quality case. Every original
+is independently downloaded/probed/prepared, then only selected originals are
+downloaded again for final rendering. The final 1920×1080/15-second result is
+decoded and speech is compared with the original at identical offsets.
+
+Metrics report cgroup-wide peak memory (including subprocesses and fixture setup),
+20 ms sampled workspace disk/proxy high-water marks, actual request/proxy bytes,
+simultaneous originals/workspaces/subprocesses, preparation/render/total elapsed
+time and approval/hold/charge/refund. Prepared paths are restatted at admission;
+intermediate originals and all proxy/request workspaces must disappear at terminal
+cleanup. Disk for the local fake bucket is fixture storage, not worker workspace.
+The separate noisy 60-second case measures both preparation and original rendering
+and checks proxy/final speech timing, VFR, rotation and silence.
+
+The release speech fixture caught a one-AAC-packet (~21.3 ms) early shift in final
+rendering: resetting audio STARTPTS before aligning its samples discarded the
+seek-relative clock. Cut rendering now applies `aresample` with `async=1`,
+`min_hard_comp=0` and `first_pts=0` before trimming/resetting the output clock;
+this preserves initial silence and gaps without stretching speech. The regression
+also covers a nonzero cut start and delayed source audio. See the official
+[resampler timestamp controls](https://www.ffmpeg.org/ffmpeg-resampler.html).
+
+```sh
+cd backend
+go test -race ./internal/usage/... ./internal/job/... ./internal/clip/... ./cmd/api -timeout 20m
+go test ./internal/llm/... ./internal/generation/... ./internal/experiment/... ./internal/provider/... ./internal/post/...
+```
+
+The regular tests pin conditional/cache/reasoning price units, known zero versus
+absent rates, frozen metadata drift, atomic refunds, legacy payload refusal and
+photo/signed-video-URL/free-rerender compatibility. Frontend regressions live in
+`ClipGeneration.test.tsx`, `ClipCorrection.test.tsx` and source-session tests;
+they cover quote invalidation, no automatic paid retry, owned preview lifetime,
+page exit and authoritative settlement lag. The release harness itself neither
+pushes nor deploys and requires no paid model completion.
+
 Additional option references checked for T084:
 
 - https://ffmpeg.org/ffmpeg-codecs.html#libx264_002c-libx264rgb — CRF, VBV and lossless encoding

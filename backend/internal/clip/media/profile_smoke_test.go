@@ -12,6 +12,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -44,6 +45,9 @@ func TestMediaProfileSmoke(t *testing.T) {
 	for _, vfr := range []bool{false, true} {
 		t.Run(map[bool]string{false: "noisy-60s-speech", true: "variable-frame-rate-speech"}[vfr], func(t *testing.T) {
 			start := time.Now()
+			var preparation, rendering time.Duration
+			stopSampling := sampleProfileDisk(cfg.WorkRoot)
+			defer stopSampling()
 			err := a.WithWorkspace(t.Context(), "profile", func(ws clip.MediaWorkspace) error {
 				// Eight deterministic noisy images loop as a moving high-entropy
 				// source. The production binary needs no extra synthetic filters.
@@ -91,6 +95,7 @@ func TestMediaProfileSmoke(t *testing.T) {
 				if err := os.Remove(speech); err != nil {
 					return err
 				}
+				prepareStart := time.Now()
 				info, err := a.Probe(t.Context(), ws, original)
 				if err != nil {
 					return err
@@ -136,13 +141,85 @@ func TestMediaProfileSmoke(t *testing.T) {
 				if chunks != 1 {
 					t.Fatal("padding created an extra paid chunk", chunks)
 				}
+				preparation = time.Since(prepareStart)
+				if !vfr {
+					r, err := NewRenderer(a, renderConfig(t))
+					if err != nil {
+						return err
+					}
+					renderStart := time.Now()
+					plan := clip.EditPlan{Ratio: "horizontal", DurationMS: 15000, Cuts: []clip.Cut{{ID: "profile-cut", SourceID: "profile", Fingerprint: "synthetic", EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Style: "clean", Position: "bottom"}}}}
+					result, err := r.Render(t.Context(), ws, plan, []clip.RenderSource{{ID: "profile", Fingerprint: "synthetic", Info: info}}, func(_ context.Context, id string, consume func(clip.MediaSource) error) error {
+						return consume(clip.MediaSource{Path: original, SourceID: id, Fingerprint: "synthetic", Info: info})
+					})
+					if err != nil {
+						return err
+					}
+					rendering = time.Since(renderStart)
+					if result.Info.Width != 1920 || result.Info.Height != 1080 || abs(result.Info.DurationMS-15000) > 34 || !result.Info.HasAudio {
+						t.Fatalf("noisy original render=%+v", result.Info)
+					}
+					for _, at := range []int{700, 3100, 10700} {
+						sourcePCM, err := speechWindow(t.Context(), a, ws, original, at)
+						if err != nil {
+							return err
+						}
+						outputPCM, err := speechWindow(t.Context(), a, ws, result.Path, at)
+						if err != nil {
+							return err
+						}
+						correlation := audioCorrelation(sourcePCM, outputPCM)
+						if correlation < .85 {
+							t.Fatalf("rendered speech at %d ms correlation %.4f", at, correlation)
+						}
+						t.Logf("rendered speech at %d ms: correlation %.4f", at, correlation)
+					}
+				}
 				return nil
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			t.Logf("elapsed: %s", time.Since(start))
+			t.Logf("elapsed: %s preparation: %s render: %s disk_peak_bytes: %d", time.Since(start), preparation, rendering, stopSampling())
 		})
+	}
+}
+
+// Sample while the real binaries write, including fixture construction and
+// intermediate render files; a successful final file alone is not a disk bound.
+func sampleProfileDisk(root string) func() int64 {
+	var peak atomic.Int64
+	stop, done := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(20 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				var size int64
+				_ = filepath.WalkDir(root, func(_ string, d os.DirEntry, err error) error {
+					if err == nil && !d.IsDir() {
+						if info, e := d.Info(); e == nil {
+							size += info.Size()
+						}
+					}
+					return nil
+				})
+				for old := peak.Load(); size > old && !peak.CompareAndSwap(old, size); old = peak.Load() {
+				}
+			}
+		}
+	}()
+	var stopped atomic.Bool
+	return func() int64 {
+		if stopped.CompareAndSwap(false, true) {
+			close(stop)
+		}
+		<-done
+		return peak.Load()
 	}
 }
 

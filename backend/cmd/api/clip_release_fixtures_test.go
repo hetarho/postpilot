@@ -1,0 +1,566 @@
+package main
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"math"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	clipmedia "github.com/postpilot/backend/internal/clip/media"
+	"github.com/postpilot/backend/internal/llm"
+)
+
+// All objects and HTTP responses are local synthetic fixtures. This adapter has
+// no cloud credentials, network client or connection to any development stack.
+type releaseObjects struct {
+	mu        sync.Mutex
+	root      string
+	paths     map[string]string
+	downloads map[string]int
+	uploads   int
+}
+
+type releaseLog struct {
+	mu       sync.Mutex
+	text     strings.Builder
+	exceeded bool
+}
+
+// Drop a real HTTP response after the server has accepted it. The client sees
+// cancellation, not a job id; recovery must only read the owned projection.
+type releaseAbortTransport struct {
+	http.RoundTripper
+	used   atomic.Bool
+	starts atomic.Int32
+}
+
+func (a *releaseAbortTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	start := strings.HasSuffix(r.URL.Path, "/StartClipGeneration")
+	if start {
+		a.starts.Add(1)
+	}
+	response, err := a.RoundTripper.RoundTrip(r)
+	if err == nil && start && a.used.CompareAndSwap(false, true) {
+		_ = response.Body.Close()
+		return nil, context.Canceled
+	}
+	return response, err
+}
+
+func (l *releaseLog) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	n := len(p)
+	remaining := max(0, (1<<20)-l.text.Len())
+	if n > remaining {
+		l.exceeded = true
+	}
+	_, _ = l.text.Write(p[:min(n, remaining)])
+	return n, nil
+}
+
+func (o *releaseObjects) PresignSource(_ context.Context, key, mime string, _ time.Duration) (clip.SignedSourcePut, error) {
+	return clip.SignedSourcePut{URL: "http://fixture.invalid/" + key, Headers: map[string]string{"Content-Type": mime}}, nil
+}
+func (o *releaseObjects) HeadSource(_ context.Context, key string) (clip.SourceObjectInfo, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	f, err := os.Stat(o.paths[key])
+	if err != nil {
+		return clip.SourceObjectInfo{}, clip.ErrNotFound
+	}
+	return clip.SourceObjectInfo{Bytes: f.Size(), ContentType: "video/mp4"}, nil
+}
+func (o *releaseObjects) Delete(_ context.Context, key string) error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	// Source fixture masters may represent multiple distinct uploads. Removing
+	// the object's mapping, not its reusable test fixture, models cloud deletion.
+	delete(o.paths, key)
+	return nil
+}
+func (o *releaseObjects) ListSourceKeys(context.Context) ([]string, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	var out []string
+	for k := range o.paths {
+		if !strings.HasPrefix(k, clip.ResultPrefix) {
+			out = append(out, k)
+		}
+	}
+	return out, nil
+}
+func (o *releaseObjects) Download(ctx context.Context, key string, w io.Writer, limit int64) (int64, error) {
+	o.mu.Lock()
+	p := o.paths[key]
+	o.downloads[key]++
+	o.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	f, err := os.Open(p)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return io.Copy(w, io.LimitReader(f, limit+1))
+}
+func (o *releaseObjects) Upload(_ context.Context, key string, r io.ReadSeeker, n int64, _ string) error {
+	if !strings.HasPrefix(key, clip.ResultPrefix) {
+		return errors.New("analysis proxy must never be uploaded")
+	}
+	f, err := os.CreateTemp(o.root, "result-")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	got, err := io.Copy(f, r)
+	if err != nil {
+		return err
+	}
+	if got != n {
+		return io.ErrUnexpectedEOF
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.paths[key] = f.Name()
+	o.uploads++
+	return nil
+}
+func (o *releaseObjects) PresignRead(_ context.Context, key, _ string, _ bool, _ time.Duration) (string, error) {
+	if !strings.HasPrefix(key, clip.ResultPrefix) {
+		return "", errors.New("source/proxy signed for analysis")
+	}
+	return "http://fixture.invalid/result", nil
+}
+func (o *releaseObjects) ListResults(context.Context) ([]clip.StoredObject, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	var out []clip.StoredObject
+	for k := range o.paths {
+		if strings.HasPrefix(k, clip.ResultPrefix) {
+			out = append(out, clip.StoredObject{Key: k, Modified: time.Now()})
+		}
+	}
+	return out, nil
+}
+
+type releaseMetrics struct {
+	mu                                                   sync.Mutex
+	prepared                                             []clip.AnalysisChunk
+	hashes                                               map[string]bool
+	workspace                                            string
+	disk, proxyBytes, maxProxy                           int64
+	maxOriginals, maxWorkspaces, maxProcesses, processes int
+	prepareTime, renderTime                              time.Duration
+	probeCount                                           int
+	mode                                                 string
+}
+
+func (m *releaseMetrics) scan(root string) {
+	var disk, proxies int64
+	originals, workspaces := 0, 0
+	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if strings.HasPrefix(d.Name(), "postpilot-clip-") {
+				workspaces++
+			}
+			return nil
+		}
+		info, e := d.Info()
+		if e != nil {
+			return nil
+		}
+		disk += info.Size()
+		if strings.HasPrefix(d.Name(), "source-") {
+			originals++
+		}
+		if strings.HasPrefix(d.Name(), "proxy-") {
+			proxies += info.Size()
+		}
+		return nil
+	})
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.disk = max(m.disk, disk)
+	m.proxyBytes = max(m.proxyBytes, proxies)
+	m.maxOriginals = max(m.maxOriginals, originals)
+	m.maxWorkspaces = max(m.maxWorkspaces, workspaces)
+}
+
+type releaseRunner struct {
+	clipmedia.ExecRunner
+	metrics *releaseMetrics
+	root    string
+}
+
+func (r releaseRunner) Run(ctx context.Context, c clipmedia.Command) ([]byte, error) {
+	r.metrics.mu.Lock()
+	r.metrics.processes++
+	r.metrics.maxProcesses = max(r.metrics.maxProcesses, r.metrics.processes)
+	r.metrics.mu.Unlock()
+	defer func() { r.metrics.scan(r.root); r.metrics.mu.Lock(); r.metrics.processes--; r.metrics.mu.Unlock() }()
+	return r.ExecRunner.Run(ctx, c)
+}
+
+type releaseMedia struct {
+	*clipmedia.Adapter
+	metrics *releaseMetrics
+	root    string
+}
+
+func (m *releaseMedia) WithWorkspace(ctx context.Context, id string, fn func(clip.MediaWorkspace) error) error {
+	return m.Adapter.WithWorkspace(ctx, id, func(ws clip.MediaWorkspace) error {
+		m.metrics.mu.Lock()
+		m.metrics.workspace = ws.Path
+		m.metrics.mu.Unlock()
+		if m.metrics.mode == "disk" {
+			ws.CheckCapacity = func(int64) error { return clip.ErrWorkspaceLimit }
+		}
+		return fn(ws)
+	})
+}
+func (m *releaseMedia) Probe(ctx context.Context, ws clip.MediaWorkspace, p string) (clip.MediaInfo, error) {
+	start := time.Now()
+	info, err := m.Adapter.Probe(ctx, ws, p)
+	m.metrics.mu.Lock()
+	m.metrics.probeCount++
+	m.metrics.prepareTime += time.Since(start)
+	m.metrics.mu.Unlock()
+	m.metrics.scan(m.root)
+	return info, err
+}
+func (m *releaseMedia) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, fn func(clip.AnalysisChunk) error) error {
+	start := time.Now()
+	defer func() { m.metrics.mu.Lock(); m.metrics.prepareTime += time.Since(start); m.metrics.mu.Unlock() }()
+	return m.Adapter.PrepareAnalysisChunks(ctx, ws, s, func(c clip.AnalysisChunk) error {
+		if m.metrics.mode == "oversized proxy" && m.metrics.probeCount == 2 {
+			c.Bytes = 8<<20 + 1
+		}
+		if err := fn(c); err != nil {
+			return err
+		}
+		f, err := os.Open(c.Path)
+		if err != nil {
+			return err
+		}
+		h := sha256.New()
+		_, err = io.Copy(h, f)
+		_ = f.Close()
+		if err != nil {
+			return err
+		}
+		m.metrics.mu.Lock()
+		m.metrics.prepared = append(m.metrics.prepared, c)
+		m.metrics.hashes[hex.EncodeToString(h.Sum(nil))] = true
+		m.metrics.maxProxy = max(m.metrics.maxProxy, c.Bytes)
+		m.metrics.mu.Unlock()
+		m.metrics.scan(m.root)
+		return nil
+	})
+}
+
+type releaseRenderer struct {
+	*clipmedia.Rendering
+	metrics *releaseMetrics
+}
+
+func (r releaseRenderer) Render(ctx context.Context, ws clip.MediaWorkspace, p clip.EditPlan, s []clip.RenderSource, loader clip.RenderSourceLoader) (clip.RenderedVideo, error) {
+	start := time.Now()
+	defer func() { r.metrics.mu.Lock(); r.metrics.renderTime += time.Since(start); r.metrics.mu.Unlock() }()
+	return r.Rendering.Render(ctx, ws, p, s, func(ctx context.Context, id string, consume func(clip.MediaSource) error) error {
+		return loader(ctx, id, func(source clip.MediaSource) error {
+			if !strings.HasPrefix(filepath.Base(source.Path), "source-") || source.Info.Width != 1280 {
+				return errors.New("renderer did not receive original geometry")
+			}
+			return consume(source)
+		})
+	})
+}
+
+type releaseModelSource struct{}
+
+const releaseModel = "google/gemini-2.5-flash"
+
+func (releaseModelSource) Models() []llm.SourceModel {
+	return []llm.SourceModel{{ModelID: releaseModel, Vision: true, VideoInput: true, StructuredOutput: true, ContextTokens: 1048576, InputUSDPerMillion: "0.3", OutputUSDPerMillion: "2.5", Stages: []string{"observe", "write"}}}
+}
+func (s releaseModelSource) Lookup(id string) (llm.SourceModel, bool) {
+	return s.Models()[0], id == releaseModel
+}
+
+type releaseProvider struct {
+	mode        string
+	posts, gets atomic.Int32
+	maxRequest  atomic.Int64
+	beforePost  func(int) error
+	metrics     *releaseMetrics
+	mu          sync.Mutex
+	violations  []string
+}
+
+func (p *releaseProvider) reject(w http.ResponseWriter, why string) {
+	p.mu.Lock()
+	p.violations = append(p.violations, why)
+	p.mu.Unlock()
+	http.Error(w, "fixture contract violation", 500)
+}
+func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == http.MethodGet {
+		p.gets.Add(1)
+		pricing := map[string]any{"prompt": "0.0000003", "completion": "0.0000025", "request": "0", "image": "0.0000003", "audio": "0.000001", "input_audio_cache": "0.0000001", "internal_reasoning": "0.0000025", "input_cache_read": "0.00000003", "input_cache_write": "0.0000000833333333333333", "web_search": "0.014", "discount": 0}
+		if p.mode == "unknown prices" {
+			delete(pricing, "audio")
+		}
+		if p.mode == "price drift" {
+			p.metrics.mu.Lock()
+			prepared := len(p.metrics.prepared)
+			p.metrics.mu.Unlock()
+			if prepared > 0 {
+				pricing["image"] = "0.0001"
+			}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"id": releaseModel, "endpoints": []any{map[string]any{"tag": "google-ai-studio", "model_id": releaseModel, "pricing": pricing, "supported_parameters": []string{"reasoning", "max_tokens", "response_format", "structured_outputs"}}}}})
+		return
+	}
+	if r.Method != http.MethodPost || !strings.HasSuffix(r.URL.Path, "/chat/completions") {
+		p.reject(w, "unexpected HTTP route")
+		return
+	}
+	n := int(p.posts.Add(1))
+	if p.beforePost != nil {
+		if err := p.beforePost(n); err != nil {
+			p.reject(w, err.Error())
+			return
+		}
+	}
+	if r.ContentLength <= 0 || r.ContentLength > 12<<20 || len(r.TransferEncoding) != 0 {
+		p.reject(w, "unbounded request")
+		return
+	}
+	for old := p.maxRequest.Load(); r.ContentLength > old && !p.maxRequest.CompareAndSwap(old, r.ContentLength); old = p.maxRequest.Load() {
+	}
+	data, err := io.ReadAll(io.LimitReader(r.Body, 12<<20+1))
+	if err != nil || int64(len(data)) != r.ContentLength {
+		p.reject(w, "short request")
+		return
+	}
+	var wire struct {
+		MaxTokens int `json:"max_tokens"`
+		Provider  struct {
+			AllowFallbacks    bool              `json:"allow_fallbacks"`
+			RequireParameters bool              `json:"require_parameters"`
+			MaxPrice          map[string]string `json:"max_price"`
+		} `json:"provider"`
+		Messages []struct {
+			Role    string          `json:"role"`
+			Content json.RawMessage `json:"content"`
+		} `json:"messages"`
+	}
+	if json.Unmarshal(data, &wire) != nil || wire.Provider.AllowFallbacks || !wire.Provider.RequireParameters || len(wire.Provider.MaxPrice) != 5 {
+		p.reject(w, "missing frozen routing")
+		return
+	}
+	if strings.Contains(string(data), "fixture.invalid") || strings.Contains(string(data), "cache_control") || strings.Contains(string(data), `"tools"`) {
+		p.reject(w, "unexpected URL or optional feature")
+		return
+	}
+	var metadata map[string]any
+	videoCount := 0
+	for _, msg := range wire.Messages {
+		if msg.Role != "user" {
+			continue
+		}
+		var text string
+		if json.Unmarshal(msg.Content, &text) == nil {
+			_ = json.Unmarshal([]byte(text), &metadata)
+			continue
+		}
+		var parts []struct {
+			Type  string                           `json:"type"`
+			Text  string                           `json:"text"`
+			Video struct{ URL, Processing string } `json:"video_url"`
+		}
+		if json.Unmarshal(msg.Content, &parts) != nil {
+			p.reject(w, "bad message")
+			return
+		}
+		for _, part := range parts {
+			if part.Type == "text" {
+				_ = json.Unmarshal([]byte(part.Text), &metadata)
+			}
+			if part.Type == "video_url" {
+				videoCount++
+				if part.Video.Processing != "static" || !strings.HasPrefix(part.Video.URL, "data:video/mp4;base64,") {
+					p.reject(w, "not bounded static inline")
+					return
+				}
+				raw, e := base64.StdEncoding.DecodeString(strings.TrimPrefix(part.Video.URL, "data:video/mp4;base64,"))
+				if e != nil || len(raw) > 8<<20 {
+					p.reject(w, "bad inline bytes")
+					return
+				}
+				h := sha256.Sum256(raw)
+				p.metrics.mu.Lock()
+				ok := p.metrics.hashes[hex.EncodeToString(h[:])]
+				p.metrics.mu.Unlock()
+				if !ok {
+					p.reject(w, "not a verified analysis proxy")
+					return
+				}
+			}
+		}
+	}
+	if p.mode == "denied" || p.mode == "partial" && n == 2 {
+		w.WriteHeader(403)
+		_, _ = io.WriteString(w, `{"error":{"message":"private-media-canary","code":403}}`)
+		return
+	}
+	if p.mode == "oversized response" {
+		_, _ = io.WriteString(w, strings.Repeat("x", (4<<20)+1))
+		return
+	}
+	var content any
+	if videoCount == 1 && wire.MaxTokens == 8192 {
+		content = map[string]any{"source_id": metadata["source_id"], "chunk_index": metadata["chunk_index"], "segments": []any{map[string]any{"start_ms": 0, "end_ms": metadata["chunk_duration_ms"], "event": "synthetic scene", "subjects": []string{"test pattern"}, "speech": "synthetic speech", "quality": "usable", "focal": map[string]float64{"x": .5, "y": .5}, "avoid": map[string]int{"x": 0, "y": 0, "width": 0, "height": 0}}}}
+	} else if videoCount == 0 && wire.MaxTokens == 32768 {
+		analyses, ok := metadata["analyses"].([]any)
+		if !ok || len(analyses) == 0 {
+			p.reject(w, "missing structured analyses")
+			return
+		}
+		source := analyses[0].(map[string]any)["source_id"]
+		content = map[string]any{"ratio": metadata["ratio"], "duration_ms": 15000, "cuts": []any{map[string]any{"id": "fixture-cut", "source_id": source, "start_ms": 0, "end_ms": 15000, "volume": 1, "focal": map[string]float64{"x": .5, "y": .5}, "caption": map[string]any{"text": "", "start_ms": 0, "end_ms": 15000, "position": "bottom", "style": "clean", "accent": ""}}}}
+		if p.mode == "seeked cut" {
+			cut := content.(map[string]any)["cuts"].([]any)[0].(map[string]any)
+			cut["start_ms"] = 1000
+			cut["end_ms"] = 16000
+		}
+	} else {
+		p.reject(w, "wrong observation/plan budget or modality")
+		return
+	}
+	encoded, _ := json.Marshal(content)
+	finish := "stop"
+	if p.mode == "malformed" {
+		encoded = []byte(`{"unknown":true}`)
+	}
+	if p.mode == "truncated" {
+		finish = "length"
+	}
+	cost := 0.001
+	if p.mode == "overage" {
+		cost = 1000
+	}
+	usage := map[string]any{"prompt_tokens": 120, "completion_tokens": 40, "completion_tokens_details": map[string]int{"reasoning_tokens": 10}, "cost": cost}
+	if p.mode == "unknown usage" {
+		delete(usage, "cost")
+		encoded = []byte(`{"unknown":true}`)
+	}
+	_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": string(encoded)}, "finish_reason": finish}}, "usage": usage})
+}
+
+func releaseCopy(source, dest string) error {
+	f, e := os.Open(source)
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+	w, e := os.Create(dest)
+	if e != nil {
+		return e
+	}
+	_, e = io.Copy(w, f)
+	return errors.Join(e, w.Close())
+}
+func releaseFingerprint(path string, duration int) (string, error) {
+	f, e := os.Open(path)
+	if e != nil {
+		return "", e
+	}
+	defer f.Close()
+	info, e := f.Stat()
+	if e != nil {
+		return "", e
+	}
+	mime := []byte("video/mp4")
+	prefix := make([]byte, 1+8+4+len(mime)+8)
+	prefix[0] = 1
+	binary.BigEndian.PutUint64(prefix[1:], uint64(info.Size()))
+	binary.BigEndian.PutUint32(prefix[9:], uint32(len(mime)))
+	copy(prefix[13:], mime)
+	binary.BigEndian.PutUint64(prefix[13+len(mime):], uint64(duration))
+	h := sha256.New()
+	_, _ = h.Write(prefix)
+	for _, at := range []int64{0, max(0, info.Size()-65536)} {
+		data := make([]byte, min(info.Size(), 65536))
+		if _, e = f.ReadAt(data, at); e != nil {
+			return "", e
+		}
+		_, _ = h.Write(data)
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func releaseSpeech(ctx context.Context, path string, at int) ([]byte, error) {
+	return releaseSpeechSpan(ctx, path, at, 200)
+}
+func releaseSpeechSpan(ctx context.Context, path string, at, span int) ([]byte, error) {
+	r := clipmedia.ExecRunner{StdoutLimit: 65536, StderrLimit: 8192, WaitDelay: 2 * time.Second}
+	return r.Run(ctx, clipmedia.Command{Binary: "/usr/local/bin/ffmpeg", Dir: filepath.Dir(path), Args: []string{"-v", "error", "-threads", "1", "-ss", fmt.Sprintf("%.3f", float64(at)/1000), "-i", path, "-t", fmt.Sprintf("%.3f", float64(span)/1000), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1"}})
+}
+
+func releaseBestLag(a, b []byte) (float64, float64) {
+	if min(len(a), len(b)) < 12800 {
+		return 0, 0
+	}
+	reference := a[3200:9600]
+	best, lag := -1.0, 0
+	for shift := -1600; shift <= 1600; shift++ {
+		c := releaseCorrelation(reference, b[3200+shift*2:9600+shift*2])
+		if c > best {
+			best, lag = c, shift
+		}
+	}
+	return float64(lag) / 16, best
+}
+
+func releaseTimelineSpeech(ctx context.Context, path string, at int) ([]byte, error) {
+	r := clipmedia.ExecRunner{StdoutLimit: 65536, StderrLimit: 8192, WaitDelay: 2 * time.Second}
+	return r.Run(ctx, clipmedia.Command{Binary: "/usr/local/bin/ffmpeg", Dir: filepath.Dir(path), Args: []string{"-v", "error", "-threads", "1", "-i", path, "-ss", fmt.Sprintf("%.3f", float64(at)/1000), "-t", "0.200", "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1"}})
+}
+func releaseCorrelation(a, b []byte) float64 {
+	n := min(len(a), len(b)) / 2
+	if n < 2000 {
+		return 0
+	}
+	var aa, bb, ab float64
+	for i := 0; i < n; i++ {
+		x, y := float64(int16(binary.LittleEndian.Uint16(a[2*i:]))), float64(int16(binary.LittleEndian.Uint16(b[2*i:])))
+		aa += x * x
+		bb += y * y
+		ab += x * y
+	}
+	if aa < 1 || bb < 1 {
+		return 0
+	}
+	return ab / math.Sqrt(aa*bb)
+}

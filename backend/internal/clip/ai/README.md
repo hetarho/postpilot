@@ -28,6 +28,12 @@ version-1 jobs and token-only price snapshots are refused. There is no automatic
 retry. Preparation checks known recipe/answer/prompt bounds before reservation;
 the planner checks complete structured input again without silently truncating it.
 
+The [isolated release harness](../../../build/MEDIA.md#isolated-release-regression)
+runs this adapter with real prepared media and a counted loopback HTTP completion
+stub through authenticated approval, durable admission and settlement. Stub success
+is evidence of the bounded wire/accounting contract, not of a live provider's
+acceptance, visual understanding or billing dashboard.
+
 Official API contracts rechecked on 2026-09-10:
 
 - [Video input](https://openrouter.ai/docs/guides/overview/multimodal/videos):
