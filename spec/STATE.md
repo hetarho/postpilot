@@ -38,14 +38,15 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T094 | 모델 관리: 등급 Listbox, 등급순 sort, unset mark, document diff level changes | MODEL | T093 T095 | todo |
-| T095 | User selectors show the level and order 가성비 → 최고 | MODEL LANG | T092 | todo |
 | T096 | Complete multi-source clip planning and playable generation | CLIP QUOTA ARCH | T091 | doing@260911.fix |
 
 ## next
 - Complete T096 through actual multi-source analysis, composition and playable rendering; additional paid verification must remain strictly below USD 0.10 in aggregate, preserve concurrent model work
-- implement-task T095 (then T094); `/recomend-models` now needs re-teaching to emit `<id> <level>` lines — its id-only block clears every set level under MODEL-59
+- implement-task T094 (last of the level series); then re-teach `/recomend-models` to emit `<id> <level>` lines — its id-only block clears every set level under MODEL-59
 - T008 needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job; once it closes, update-ssot PUB for VIDEO-17 + TMPL-39
 ## log
+- 260911 T095 done; per-stage grade on CatalogModel, ordering composed into filterForStage so all three selector call sites share it, grade leads every option label; full FE gate passes
+- 260911 T095 claimed (lvl)
 - 260911 T093 done; `<id> [level]` grammar, relevel preview, level-aware sync/export; tightened looksLikeModelID to need a slash so a bullet is malformed_line again, not unknown_level
 - 260911 T096 working (fix); owner caps all additional paid verification strictly below USD 0.10, reserve each next call before dispatch and retain unknown usage at its maximum; multi-source and safe diagnostic regressions pass
 - 260911 T093 claimed (lvl)
@@ -64,5 +65,3 @@
 - 260911 update-ssot VOICE TMPL LANG done (mnt); VOICE-42 drops the tag count and GEN-46✎ excludes rule comparison, TMPL scopes the retired `label` to `slot`, LANG-7 gains `billing` `clips`; all four revs are wording-only so tasked=rev
 - 260911 update-ssot VOICE TMPL LANG start (mnt); the three spec-maintenance items owed in next
 - 260911 T089 done; the 후보 queue is a counted disclosure below the list with sequential bulk accept/dismiss and per-row refusals; all local gates and day/night browser checks pass
-- 260911 T089 claimed (cnd)
-- 260911 T088 done; the 지침 page is the list with one docked 새 지침 sheet; all local gates and day/night browser checks pass

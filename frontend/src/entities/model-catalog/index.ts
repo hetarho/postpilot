@@ -16,6 +16,8 @@ export type {
   StageName,
   StageSelection,
 } from './model/types'
+export type { LevelName } from './model/level'
+export { LEVELS, isLevelName, levelOf, levelPrefix, orderModelsForStage } from './model/level'
 export {
   REASONING_EFFORTS,
   STAGES,

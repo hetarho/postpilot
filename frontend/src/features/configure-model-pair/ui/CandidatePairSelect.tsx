@@ -3,6 +3,7 @@ import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   filterForStage,
+  levelPrefix,
   refKey,
   type CatalogModel,
   type ModelRef,
@@ -118,7 +119,7 @@ function CandidatePairFields({
       })
       .map((model) => ({
         value: refKey(model.ref),
-        label: optionLabel(model),
+        label: optionLabel(model, stage),
         disabled: model.disabled || !model.affordable,
       }))
 
@@ -209,14 +210,17 @@ function CandidateField({
 /** The reason a model cannot be chosen, appended to its name. Only ever read inside the OPEN
  *  panel: `onChange` refuses a disabled row, so it can never become the trigger's value. A
  *  provider without a key is the more immediate obstacle, so that reason wins over cost. */
-function optionLabel(model: CatalogModel): string {
-  if (model.disabled) return `${model.label} (${model.disabledReason})`
+function optionLabel(model: CatalogModel, stage: StageName): string {
+  // The grade LEADS for the same reason it does in the stage selector: these two triggers
+  // sit side by side at half width, so the tail is the first thing to be cut.
+  const level = levelPrefix(model, stage)
+  if (model.disabled) return `${level}${model.label} (${model.disabledReason})`
   if (!model.affordable) {
     const reason = i18next.t('selectField.unaffordable', {
       ns: 'models',
       credits: model.requiredCredits,
     })
-    return `${model.label} (${reason})`
+    return `${level}${model.label} (${reason})`
   }
-  return model.label
+  return `${level}${model.label}`
 }

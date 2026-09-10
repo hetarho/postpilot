@@ -63,3 +63,46 @@ describe('ModelPairForm structured failures', () => {
     },
   )
 })
+
+describe('ModelPairForm levels (T095/MODEL-44)', () => {
+  const GRADED = [
+    {
+      providerId: 'openrouter',
+      modelId: 'flagship',
+      label: 'Flagship',
+      levels: { [Stage.WRITE]: 'top' as const },
+    },
+    { providerId: 'openrouter', modelId: 'ungraded', label: 'Ungraded' },
+    {
+      providerId: 'openrouter',
+      modelId: 'cheap',
+      label: 'Cheap',
+      levels: { [Stage.WRITE]: 'value' as const },
+    },
+  ]
+
+  // All three fields — the active model and both candidates — read the same list, so all
+  // three grade and order it identically. A picker that disagreed with its neighbour would
+  // read as a bug in the catalog rather than as a difference in the field.
+  it('grades and orders the active field and both candidate fields alike', async () => {
+    const user = userEvent.setup()
+    const transport = createFakeProviderTransport({ models: GRADED })
+    render(<ModelPairForm stage="write" />, {
+      wrapper: withProviders(transport, createTestQueryClient()),
+    })
+
+    const selects = await screen.findAllByRole('combobox')
+    expect(selects).toHaveLength(3)
+    for (const select of selects) {
+      await waitFor(() => expect(select).toBeEnabled())
+      await user.click(select)
+      const options = screen
+        .getAllByRole('option')
+        // This form DOES list its placeholder as a choice.
+        .slice(1)
+        .map((option) => option.textContent)
+      expect(options).toEqual(['가성비 · Cheap', '최고 · Flagship', 'Ungraded'])
+      await user.keyboard('{Escape}')
+    }
+  })
+})

@@ -18,6 +18,7 @@ const model = (
   inputUsdPerMillion: '',
   outputUsdPerMillion: '',
   pricingCheckedAt: '',
+  levels: {},
   requiredCredits: 5,
   affordable: true,
 })

@@ -17,6 +17,14 @@ export const models = {
     loadFailed: 'Could not load the combos.',
   },
   // Shown beside a model that takes VIDEO input — narrower than vision (VIDEO-11).
+  /** The operator's grade for a model at a stage (MODEL-57). Four words that answer "which
+   *  of these is the good one" without making the user read prices. */
+  level: {
+    value: 'Value',
+    balanced: 'Balanced',
+    premium: 'Premium',
+    top: 'Top',
+  },
   capability: { video: 'Video' },
   title: 'AI models',
   page: {

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   type CatalogModel,
   type StageName,
+  levelPrefix,
   refKey,
   useSaveSelection,
   useStageSelection,
@@ -71,7 +72,7 @@ export function StageModelSelect({
       : []),
     ...models.map((model) => ({
       value: refKey(model.ref),
-      label: optionLabel(model),
+      label: optionLabel(model, stage),
       disabled:
         model.disabled ||
         (!requireInlineStaticVideo && !model.affordable) ||
@@ -159,7 +160,7 @@ const UNAVAILABLE_VALUE = '__unavailable__'
  *  These strings are only ever read inside the OPEN panel, where the row wraps them — a disabled
  *  option can never become the closed trigger's value, because `onChange` refuses it and an
  *  unusable saved choice is rendered as the separate entry above. */
-function optionLabel(model: CatalogModel): string {
+function optionLabel(model: CatalogModel, stage: StageName): string {
   const badges = [
     model.vision && '👁',
     // Watching a clip is a capability of its own, and a post with a video needs it of the
@@ -177,5 +178,6 @@ function optionLabel(model: CatalogModel): string {
     : !model.affordable
       ? ` (${i18next.t('selectField.unaffordable', { ns: 'models', credits: model.requiredCredits })})`
       : ''
-  return `${model.label}${badges ? ` ${badges}` : ''}${reason}`
+  // The grade LEADS: the closed trigger truncates, so a trailing one is never read.
+  return `${levelPrefix(model, stage)}${model.label}${badges ? ` ${badges}` : ''}${reason}`
 }

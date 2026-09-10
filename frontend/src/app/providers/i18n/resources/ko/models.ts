@@ -17,6 +17,14 @@ export const models = {
     loadFailed: '조합을 불러오지 못했어요.',
   },
   // Shown beside a model that takes VIDEO input — narrower than vision (VIDEO-11).
+  /** The operator's grade for a model at a stage (MODEL-57). Four words that answer "which
+   *  of these is the good one" without making the user read prices. */
+  level: {
+    value: '가성비',
+    balanced: '밸런스',
+    premium: '고급',
+    top: '최고',
+  },
   capability: { video: '영상' },
   title: 'AI 모델',
   page: {

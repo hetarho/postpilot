@@ -40,6 +40,55 @@ function renderSelect(stage: 'observe' | 'write' | 'analyze', options: FakeProvi
   return { transport, queryClient }
 }
 
+describe('StageModelSelect levels (T095/MODEL-44)', () => {
+  const GRADED: FakeProvidersOptions['models'] = [
+    {
+      providerId: 'openrouter',
+      modelId: 'flagship',
+      label: 'Flagship',
+      levels: { [Stage.WRITE]: 'top' },
+    },
+    { providerId: 'openrouter', modelId: 'ungraded', label: 'Ungraded' },
+    {
+      providerId: 'openrouter',
+      modelId: 'cheap',
+      label: 'Cheap',
+      levels: { [Stage.WRITE]: 'value' },
+    },
+  ]
+
+  it('orders 가성비 first with the ungraded models last, and leads each label with its grade', async () => {
+    const user = userEvent.setup()
+    renderSelect('write', { models: GRADED })
+
+    await openPanel(user, /작성 모델/)
+    const options = screen
+      .getAllByRole('option')
+      // The placeholder is not a model.
+      .slice(1)
+      .map((option) => option.textContent)
+    expect(options).toEqual(['가성비 · Cheap', '최고 · Flagship', 'Ungraded'])
+  })
+
+  // A grade is per stage, so the same model can lead one picker and trail another.
+  it('reads only its own stage grade', async () => {
+    const user = userEvent.setup()
+    renderSelect('analyze', {
+      models: [
+        {
+          providerId: 'openrouter',
+          modelId: 'split',
+          label: 'Split',
+          levels: { [Stage.WRITE]: 'top' },
+        },
+      ],
+    })
+
+    await openPanel(user, /문체 분석 모델/)
+    expect(screen.getByRole('option', { name: 'Split' })).toBeInTheDocument()
+  })
+})
+
 describe('StageModelSelect', () => {
   // AC7: no default — the placeholder is selected and nothing was saved.
   it('starts empty for a fresh account', async () => {

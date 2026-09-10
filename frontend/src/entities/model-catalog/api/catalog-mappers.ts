@@ -28,6 +28,7 @@ import type {
   StageSelection,
 } from '../model/types'
 import { isModelPurpose, isReasoningEffort } from '../model/types'
+import { isLevelName } from '../model/level'
 
 const STAGE_TO_PROTO: Record<StageName, Stage> = {
   observe: Stage.OBSERVE,
@@ -65,6 +66,15 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
       const name = stageFromProto(stage)
       return name ? [name] : []
     }),
+    // Same posture as `stages`: a stage or a grade this build does not know is dropped
+    // rather than guessed at, so a newer server cannot make the picker render a word the
+    // copy has no entry for.
+    levels: Object.fromEntries(
+      info.levels.flatMap(({ stage, level }) => {
+        const name = stageFromProto(stage)
+        return name && isLevelName(level) ? [[name, level] as const] : []
+      }),
+    ),
     disabled: info.disabled,
     disabledReason: info.disabledReason,
     contextTokens: info.contextTokens,

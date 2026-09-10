@@ -47,6 +47,9 @@ export interface FakeModel {
   requiredCredits?: number
   /** What the server computed for THIS caller — the model's floor is above their tier. */
   affordable?: boolean
+  /** The operator's grade PER STAGE (MODEL-57). A stage left out is ungraded, which is what
+   *  every registration starts as — and what a test that says nothing about grades gets. */
+  levels?: Partial<Record<Stage, 'value' | 'balanced' | 'premium' | 'top'>>
 }
 
 export interface FakeSelection {
@@ -121,6 +124,12 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
             (model.vision
               ? [Stage.OBSERVE, Stage.WRITE, Stage.ANALYZE]
               : [Stage.WRITE, Stage.ANALYZE]),
+          // One entry per graded stage, exactly as the server sends it — an ungraded stage
+          // is ABSENT rather than an empty string.
+          levels: Object.entries(model.levels ?? {}).map(([stage, level]) => ({
+            stage: Number(stage) as Stage,
+            level,
+          })),
         }),
       ),
     })

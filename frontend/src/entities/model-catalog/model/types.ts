@@ -1,3 +1,4 @@
+import { orderModelsForStage, type LevelName } from './level'
 import i18next from 'i18next'
 import { MODEL_PURPOSES, type ModelPurpose } from '@/shared/config'
 
@@ -31,6 +32,9 @@ export interface CatalogModel {
   /** The stages this model is registered to serve (change 20). Each stage's picker lists
    *  exactly its members — fitness is never re-derived from capability flags here. */
   stages: readonly StageName[]
+  /** The operator's grade PER STAGE (MODEL-57), for the stages that have one. A stage
+   *  absent from this map is ungraded, which is what every registration starts as. */
+  levels: Partial<Record<StageName, LevelName>>
   disabled: boolean
   disabledReason: string
   contextTokens: bigint
@@ -257,7 +261,14 @@ export function isModelPurpose(value: string): value is ModelPurpose {
 /** A stage lists exactly the models registered to its purpose (change 20) — observe's old
  *  vision-only rule is subsumed, because photo-analysis registration already requires
  *  vision. Disabled models stay in the list — greyed, with the reason — rather than
- *  vanishing, so the user learns why a model is unavailable. */
+ *  vanishing, so the user learns why a model is unavailable.
+ *
+ *  The result is ORDERED 가성비 → 최고 with ungraded models last (MODEL-44). Ordering here
+ *  rather than at each call site is deliberate: three fields across two features ask this
+ *  question, and one of them forgetting to sort would look like a catalog bug. */
 export function filterForStage(models: readonly CatalogModel[], stage: StageName): CatalogModel[] {
-  return models.filter((model) => model.stages.includes(stage))
+  return orderModelsForStage(
+    models.filter((model) => model.stages.includes(stage)),
+    stage,
+  )
 }

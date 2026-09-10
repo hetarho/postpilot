@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   filterForStage,
+  levelPrefix,
   refKey,
   type ModelRef,
   type StageName,
@@ -74,6 +75,7 @@ function ModelPairFields({
     <div className="space-y-4">
       <ModelSelect
         label={t('active')}
+        stage={stage}
         value={active.selected ? refKey(active.selected) : ''}
         models={suitable}
         onChange={(key) => {
@@ -88,8 +90,20 @@ function ModelPairFields({
         error={saveActive.failure}
       />
       <div className="grid gap-4 sm:grid-cols-2">
-        <ModelSelect label={t('candidateA')} value={a} models={suitable} onChange={setA} />
-        <ModelSelect label={t('candidateB')} value={b} models={suitable} onChange={setB} />
+        <ModelSelect
+          label={t('candidateA')}
+          stage={stage}
+          value={a}
+          models={suitable}
+          onChange={setA}
+        />
+        <ModelSelect
+          label={t('candidateB')}
+          stage={stage}
+          value={b}
+          models={suitable}
+          onChange={setB}
+        />
       </div>
       {a && a === b && <FieldMessage>{t('differentModels')}</FieldMessage>}
       <div>
@@ -136,6 +150,7 @@ function ModelPairFields({
 
 function ModelSelect({
   label,
+  stage,
   value,
   models,
   onChange,
@@ -143,6 +158,8 @@ function ModelSelect({
   error,
 }: {
   label: string
+  /** Which stage's grade to show: a model is graded per stage, not once (MODEL-57). */
+  stage: StageName
   value: string
   models: ReturnType<typeof useModels>['models']
   onChange: (value: string) => void
@@ -170,7 +187,9 @@ function ModelSelect({
           { value: '', label: t('select') },
           ...models.map((model) => ({
             value: refKey(model.ref),
-            label: `${model.label}${model.disabled ? ` · ${model.disabledReason}` : ''}`,
+            // The grade leads here too, so the three fields that render this same list
+            // read identically (MODEL-44).
+            label: `${levelPrefix(model, stage)}${model.label}${model.disabled ? ` · ${model.disabledReason}` : ''}`,
             disabled: model.disabled,
           })),
         ]}
