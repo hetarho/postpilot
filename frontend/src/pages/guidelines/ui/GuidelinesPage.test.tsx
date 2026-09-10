@@ -309,6 +309,99 @@ describe('the guideline candidate section', () => {
     return within(found)
   }
 
+  const disclosure = async () => (await screen.findByText(/지침 후보 \d+개/)).closest('details')!
+
+  // GUIDE-22: the saved rules are what the screen is for, so the queue is folded away below them
+  // and says how much is waiting.
+  it('folds the queue away below the saved list with its pending count', async () => {
+    renderGuidelines({ candidates: CANDIDATES })
+
+    const details = await disclosure()
+    expect(details).not.toHaveAttribute('open')
+    const saved = await screen.findByRole('region', { name: '저장된 지침' })
+    // Below the list, not above it: DOCUMENT_POSITION_FOLLOWING.
+    expect(saved.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  // GUIDE-27: everything that passes is saved 전역, in one go.
+  it('accepts the whole queue as 전역 guidelines', async () => {
+    const user = userEvent.setup()
+    const creates: FakeGuidelinesOptions['creates'] = []
+    renderGuidelines({ candidates: CANDIDATES, creates })
+
+    await user.click(await screen.findByRole('button', { name: '전부 수락' }))
+
+    await waitFor(() => expect(creates).toHaveLength(3))
+    expect(creates.map((call) => call.text)).toEqual([
+      '여기 너무 광고 같아',
+      '존댓말로 써줘',
+      '문단을 짧게',
+    ])
+    // Each one carries its own row's id and the global scope, which takes no template ids.
+    expect(creates.map((call) => call.fromCandidateId)).toEqual([
+      'candidate-repeated',
+      'candidate-once',
+      'candidate-orphan',
+    ])
+    expect(creates.every((call) => call.scope === ProtoGuidelineScope.GLOBAL)).toBe(true)
+    expect(creates.every((call) => call.templateIds.length === 0)).toBe(true)
+    expect(
+      await screen.findByText('3개를 지침으로 저장했어요. 0개는 그대로 남았어요.'),
+    ).toBeInTheDocument()
+    const list = await section('저장된 지침')
+    await waitFor(() => expect(list.getByText('여기 너무 광고 같아')).toBeInTheDocument())
+  })
+
+  // GUIDE-27: one refusal must not hold back the rest, and it has to say which row it was.
+  it('keeps a refused candidate with its reason and saves the rest', async () => {
+    const user = userEvent.setup()
+    const creates: FakeGuidelinesOptions['creates'] = []
+    renderGuidelines({
+      // The middle one is already a saved rule, so the server refuses exactly that create.
+      candidates: [
+        { id: 'candidate-fresh', text: '가격을 지어내지 않기' },
+        { id: 'candidate-dupe', text: '없는 사실을 쓰지 않기' },
+        { id: 'candidate-last', text: '문단을 짧게' },
+      ],
+      creates,
+    })
+
+    await user.click(await screen.findByRole('button', { name: '전부 수락' }))
+
+    // The walk did not abort at the refusal: all three were attempted, two saved.
+    await waitFor(() => expect(creates).toHaveLength(3))
+    expect(
+      await screen.findByText('2개를 지침으로 저장했어요. 1개는 그대로 남았어요.'),
+    ).toBeInTheDocument()
+    const refused = await candidateRow('없는 사실을 쓰지 않기')
+    expect(refused.getByText('이미 같은 지침이 있어요.')).toBeInTheDocument()
+    // The two that saved left the queue; the refused one is still there to fix by hand.
+    const list = await section('후보 지침')
+    await waitFor(() => expect(list.getAllByRole('listitem')).toHaveLength(1))
+  })
+
+  // GUIDE-27: fifty rows at once have no undo, so this one asks — unlike a single 무시.
+  it('asks once before dismissing the whole queue and cancels cleanly', async () => {
+    const user = userEvent.setup()
+    const dismissals: string[] = []
+    renderGuidelines({ candidates: CANDIDATES, dismissals })
+
+    await user.click(await screen.findByRole('button', { name: '전부 거절' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    expect(dialog.getByText('후보 3개를 전부 거절할까요?')).toBeInTheDocument()
+    await user.click(dialog.getByRole('button', { name: '취소' }))
+    expect(dismissals).toEqual([])
+
+    await user.click(screen.getByRole('button', { name: '전부 거절' }))
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: '전부 거절' }),
+    )
+
+    await waitFor(() => expect(dismissals).toHaveLength(3))
+    expect(dismissals).toEqual(['candidate-repeated', 'candidate-once', 'candidate-orphan'])
+    expect(await screen.findByText('3개를 거절했어요.')).toBeInTheDocument()
+  })
+
   // A1/A2: the review order and the occurrence count, and nothing asked of a model.
   it('lists the pending candidates in review order with their occurrence count', async () => {
     const calls: string[] = []
@@ -521,6 +614,9 @@ describe('the guideline candidate section', () => {
     const list = await section('후보 지침')
     expect(list.getByText(/후보가 가득 차서/)).toBeInTheDocument()
     expect(list.queryAllByRole('listitem')).toHaveLength(0)
+    // Nothing to accept or reject in bulk when there is no row to move.
+    expect(list.queryByRole('button', { name: '전부 수락' })).not.toBeInTheDocument()
+    expect(list.queryByRole('button', { name: '전부 거절' })).not.toBeInTheDocument()
   })
 
   // Nothing waiting and room to record is the ordinary state: no section, no words about it.

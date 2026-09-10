@@ -1,7 +1,9 @@
+import { useState } from 'react'
+import { createClient } from '@connectrpc/connect'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { GuidelineService } from '@/shared/api'
-import type { GuidelineScope } from '../model/types'
+import { globalScope, type GuidelineScope } from '../model/types'
 import { invalidateGuidelineCandidates, invalidateGuidelines } from './guideline-cache'
 import { guidelineErrorMessage } from './guideline-errors'
 import { toScopePatch } from './guideline-queries'
@@ -76,5 +78,70 @@ export function useDeleteGuidelineCall(ownerId: string) {
     ...mutation,
     errorMessage: guidelineErrorMessage(mutation.error),
     remove: (id: string) => mutation.mutateAsync({ id }),
+  }
+}
+
+/** What a bulk run did: how many rows it moved, and which ones the server refused and why. */
+export interface BulkReviewOutcome {
+  moved: number
+  failures: { id: string; message: string }[]
+}
+
+/** 전부 수락 / 전부 거절 (GUIDE-27). Both walk the rows the user is looking at and call the
+ *  ordinary per-row procedure once each — there is no bulk endpoint, and there should not be one:
+ *  the create is what owns the text bound, the account cap and the duplicate rule, and a batch
+ *  that bypassed it would have to reimplement all three.
+ *
+ *  Sequential, never parallel: the dedupe read, the guideline check and the cap all run inside one
+ *  transaction per create, so concurrent creates race the cap. A refusal is collected and the walk
+ *  continues — one over-long candidate must not hold back the rest — and the caches are
+ *  invalidated once at the end rather than once per row. */
+export function useBulkReviewGuidelineCandidates(ownerId: string) {
+  const transport = useTransport()
+  const queryClient = useQueryClient()
+  const [running, setRunning] = useState<'approve' | 'dismiss' | null>(null)
+
+  const walk = async (
+    kind: 'approve' | 'dismiss',
+    ids: readonly { id: string; text: string }[],
+  ): Promise<BulkReviewOutcome> => {
+    const client = createClient(GuidelineService, transport)
+    const failures: BulkReviewOutcome['failures'] = []
+    let moved = 0
+    setRunning(kind)
+    try {
+      for (const candidate of ids) {
+        try {
+          if (kind === 'approve') {
+            // 전역, because a scope is a decision per rule and the ones that need a narrower one
+            // are exactly the ones worth opening 승인 for.
+            await client.createGuideline({
+              text: candidate.text.trim(),
+              ...toScopePatch(globalScope()),
+              fromCandidateId: candidate.id,
+            })
+          } else {
+            await client.dismissGuidelineCandidate({ id: candidate.id })
+          }
+          moved += 1
+        } catch (cause) {
+          failures.push({ id: candidate.id, message: guidelineErrorMessage(cause) })
+        }
+      }
+    } finally {
+      setRunning(null)
+      invalidateGuidelineCandidates(queryClient, transport, ownerId)
+      if (kind === 'approve' && moved > 0) invalidateGuidelines(queryClient, transport, ownerId)
+    }
+    return { moved, failures }
+  }
+
+  return {
+    running,
+    isPending: running !== null,
+    approveAll: (candidates: readonly { id: string; text: string }[]) =>
+      walk('approve', candidates),
+    dismissAll: (candidates: readonly { id: string; text: string }[]) =>
+      walk('dismiss', candidates),
   }
 }

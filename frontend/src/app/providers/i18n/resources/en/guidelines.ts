@@ -44,6 +44,14 @@ export const guidelines = {
       'This removes the guideline. AI work already started finishes with the guidelines it started with, and your posts, templates and voices are untouched.',
   },
   candidate: {
+    summary: 'Guideline candidates ({{count}})',
+    approveAll: 'Accept all',
+    dismissAll: 'Dismiss all',
+    dismissAllTitle: 'Dismiss all {{count}} candidates?',
+    dismissAllDescription:
+      'Every candidate here is marked dismissed. There is no undo, and the same request will not come back. You can still write the guideline by hand.',
+    approveAllResult: 'Saved {{count}} as guidelines. {{left}} were left here.',
+    dismissAllResult: 'Dismissed {{count}}.',
     section: 'Candidates',
     sectionHelp:
       'What your finished AI revisions asked for, recorded word for word. Nothing here reaches a post while it sits in this list — approving one is where you choose what it applies to.',

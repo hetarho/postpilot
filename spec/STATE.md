@@ -37,14 +37,15 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T089 | Guideline candidate disclosure with bulk review | GUIDE THEME ARCH | T088 | todo |
 | T090 | Safe clip failure diagnostics | ARCH CLIP | T086 | blocked@260911 |
 
 ## next
-- T090 implementation and local gates pass; confirm whether main push may also publish unrelated ancestor commits 6e81e3b/ca539e5, then verify remote CI/deployment before done; no paid retries. Separately implement-task T088 → T089 for the guideline screen
+- T090 implementation and local gates pass; confirm whether main push may also publish unrelated ancestor commits 6e81e3b/ca539e5, then verify remote CI/deployment before done; no paid retries. The 지침 screen (T087-T089) is done and committed on main
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
 - T008 is the last PUB task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job. Read T042 T043 T045 T046 results for the live surveys and the wiring's typed preflight; update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
 ## log
+- 260911 T089 done; the 후보 queue is a counted disclosure below the list with sequential bulk accept/dismiss and per-row refusals; all local gates and day/night browser checks pass
+- 260911 T089 claimed (cnd)
 - 260911 T088 done; the 지침 page is the list with one docked 새 지침 sheet; all local gates and day/night browser checks pass
 - 260911 T090 local verification passed (diag); diagnostics, privacy/usage/race tests, production media image and unchanged-side gates pass; push awaits scope approval for two unrelated ancestor commits, remote CI/deployment pending
 - 260911 T088 claimed (gdl)
@@ -63,5 +64,3 @@
 - 260910 T083 claimed (crd); resume approved r9 transport and modality-price implementation, preserve the paid-runner guard until T084 and unrelated work
 - 260910 create-task QUOTA done; T083–T086 now consume r9 with frozen multimodal quote/routing/settlement contracts, blocked T083 returned to todo by owner approval; archived T081–T082 unchanged
 - 260910 create-task QUOTA start; reconcile r9 into T083–T086 with documented modality units and frozen quote/routing/accounting contracts; user approved resuming the blocked task, preserve archived T081–T082
-- 260910 update-ssot QUOTA done; r9 explicitly covers applicable multimodal prices and sufficiently evidenced estimates, all user credit protections unchanged; no doing task affected, T083–T086 await task reconciliation and completed tasks remain immutable
-- 260910 update-ssot QUOTA start; approved modality-aware estimates and enforceable request pricing while preserving absolute user ceilings, no-usage failure protection and service-owned overage; preserve unrelated work

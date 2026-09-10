@@ -43,6 +43,14 @@ export const guidelines = {
       '이 지침을 지웁니다. 이미 시작된 AI 작업은 시작할 때의 지침으로 끝나고, 글과 본문·템플릿·말투는 그대로예요.',
   },
   candidate: {
+    summary: '지침 후보 {{count}}개',
+    approveAll: '전부 수락',
+    dismissAll: '전부 거절',
+    dismissAllTitle: '후보 {{count}}개를 전부 거절할까요?',
+    dismissAllDescription:
+      '고른 후보를 모두 무시 처리해요. 되돌릴 수 없고, 같은 요청이 다시 올라오지도 않아요. 지침은 언제든 직접 쓸 수 있어요.',
+    approveAllResult: '{{count}}개를 지침으로 저장했어요. {{left}}개는 그대로 남았어요.',
+    dismissAllResult: '{{count}}개를 거절했어요.',
     section: '후보 지침',
     sectionHelp:
       'AI 수정을 끝낼 때 보낸 요청을 그대로 모아 둔 목록이에요. 여기 있는 동안에는 어떤 글에도 적용되지 않고, 승인할 때 적용 범위를 고르면 지침으로 저장돼요.',
