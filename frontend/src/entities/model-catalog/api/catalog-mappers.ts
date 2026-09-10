@@ -108,6 +108,9 @@ export function toAdminCatalogEntry(entry: ProtoCatalogEntry): AdminCatalogEntry
     // A server newer than this build could name an effort this one has no control for.
     // Falling back to "no override" is the honest render: it is what the stage policy does.
     reasoningEffort: isReasoningEffort(entry.reasoningEffort) ? entry.reasoningEffort : '',
+    // Same posture again: a grade a newer server names that this build has no copy for
+    // renders as unset rather than as a raw slug.
+    level: isLevelName(entry.level) ? entry.level : '',
     reasoning: {
       reasons: entry.reasons,
       // Same defensive posture as the fallback above: a value a newer server publishes that
@@ -248,6 +251,13 @@ export function toCatalogDocumentPlan(
               register: purpose.register,
               deregister: purpose.deregister,
               unchanged: purpose.unchanged,
+              relevel: purpose.relevel.map((change) => ({
+                modelId: change.modelId,
+                // Either side may legitimately be '' (unset), and a grade this build does
+                // not know is shown as unset rather than as a raw slug.
+                from: isLevelName(change.from) ? change.from : '',
+                to: isLevelName(change.to) ? change.to : '',
+              })),
             },
           ]
         : [],

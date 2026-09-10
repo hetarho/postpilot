@@ -2,10 +2,12 @@ import { useId } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import {
+  LEVELS,
   reasoningShare,
   useSetModelPurpose,
   useUpdateModel,
   type AdminCatalogEntry,
+  type LevelName,
   type ReasoningEffortName,
   type ReasoningSpend,
 } from '@/entities/model-catalog'
@@ -28,7 +30,13 @@ import { offersReasoningControl, reasoningOptionsFor } from '../model/catalog-vi
  *  published list where there is one (change 27), so the operator cannot pick a value the
  *  model does not take. Beside it sits what the model actually spent at this stage — a
  *  declared list says what the model accepts, and the measurement says what it did with it:
- *  an unhonored effort behaves like sending none, and reasoning runs to the cap. */
+ *  an unhonored effort behaves like sending none, and reasoning runs to the cap.
+ *
+ *  The 등급 Listbox appears on its own condition — registered to THIS purpose, nothing more.
+ *  A model whose reasoning the source publishes nothing about still has a grade to set, and
+ *  the grade is the only thing on this screen a USER ever sees (MODEL-57). While it is unset
+ *  the row says so: an ungraded registration is served and selectable (MODEL-58), so nothing
+ *  else would tell the operator there is work left here. */
 export function CatalogModelRow({
   entry,
   purpose,
@@ -41,6 +49,7 @@ export function CatalogModelRow({
   const update = useUpdateModel()
   const rowId = useId()
   const reasoningLabelId = `${rowId}-reasoning`
+  const levelLabelId = `${rowId}-level`
 
   const pending = setPurpose.isPending || update.isPending
   const failure = setPurpose.failure ?? update.failure
@@ -106,6 +115,35 @@ export function CatalogModelRow({
 
       {registeredHere && (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="min-w-0">
+            <FieldLabel id={levelLabelId} htmlFor={`${rowId}-level-control`}>
+              {t('catalog.level')}
+            </FieldLabel>
+            <Listbox<LevelName | ''>
+              id={`${rowId}-level-control`}
+              value={entry.level}
+              options={[
+                { value: '', label: t('catalog.levelUnset') },
+                ...LEVELS.map((level) => ({ value: level, label: t(`level.${level}`) })),
+              ]}
+              disabled={pending}
+              aria-labelledby={levelLabelId}
+              onChange={(next) => {
+                if (next !== entry.level) update.update(entry.modelId, purpose, { level: next })
+              }}
+              className="mt-1"
+            />
+            {entry.level === '' && (
+              <Typography
+                variant="meta"
+                as="p"
+                role="status"
+                className="text-notice-warning-fg mt-1"
+              >
+                {t('catalog.levelMissing')}
+              </Typography>
+            )}
+          </div>
           {showReasoning && (
             <div className="min-w-0">
               <FieldLabel id={reasoningLabelId} htmlFor={`${rowId}-reasoning-control`}>

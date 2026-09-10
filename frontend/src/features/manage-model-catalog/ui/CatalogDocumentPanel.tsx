@@ -269,6 +269,27 @@ function DiffRow({ row }: { row: DocumentDiffRow }) {
           </ul>
         </div>
       )}
+      {/* Quieter than a deregistration — nobody loses a model — but its own group, because
+          a curator's list pasted with no grades clears every one of them (MODEL-59) and the
+          operator has to read that before 확정. */}
+      {row.relevel.length > 0 && (
+        <div className="mt-1">
+          <Typography variant="meta" className="text-content-secondary block">
+            {t('document.relevel', { count: row.relevel.length })}
+          </Typography>
+          <ul className="mt-1 grid gap-0.5">
+            {row.relevel.map((change) => (
+              <Typography key={change.modelId} variant="meta" as="li" className="break-all">
+                <Typography variant="meta" as="span" mono>
+                  {change.modelId}
+                </Typography>{' '}
+                · {change.from === '' ? t('document.levelUnset') : t(`level.${change.from}`)} →{' '}
+                {change.to === '' ? t('document.levelUnset') : t(`level.${change.to}`)}
+              </Typography>
+            ))}
+          </ul>
+        </div>
+      )}
       {row.unchanged.length > 0 && (
         <Typography variant="meta" className="text-content-tertiary mt-1 block">
           {t('document.unchanged', { count: row.unchanged.length })}

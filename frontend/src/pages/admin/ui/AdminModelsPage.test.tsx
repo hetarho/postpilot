@@ -659,3 +659,94 @@ describe('the model catalog tab', () => {
     expect(screen.queryByRole('heading', { name: '모델 관리' })).not.toBeInTheDocument()
   })
 })
+
+describe('the registration level (T094/MODEL-57)', () => {
+  const GRADED = (level?: string) => [
+    {
+      modelId: 'anthropic/claude-x',
+      label: 'Claude X',
+      vision: true,
+      curated: true,
+      purposes: ['photo-analysis', 'writing'],
+      ...(level ? { level: { 'photo-analysis': level } } : {}),
+    },
+  ]
+
+  it('sets and clears the grade, and marks the row while it is unset', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      calls,
+      modelCatalog: { entries: GRADED() },
+    })
+
+    // MODEL-58: an ungraded registration is served and selectable, so nothing else on this
+    // screen would tell the operator there is work left here.
+    expect(await screen.findByText(/등급을 아직 정하지 않았어요/)).toBeInTheDocument()
+
+    const level = await screen.findByRole('combobox', { name: /등급 등급 미지정/ })
+    await chooseOption(user, level, '가성비')
+    expect(calls).toContain('UpdateModel:photo-analysis::level=value')
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: /등급 가성비/ })).toBeInTheDocument(),
+    )
+    expect(screen.queryByText(/등급을 아직 정하지 않았어요/)).not.toBeInTheDocument()
+
+    // Clearing is a real request, not the absence of one.
+    await chooseOption(user, screen.getByRole('combobox', { name: /등급 가성비/ }), '등급 미지정')
+    expect(calls).toContain('UpdateModel:photo-analysis::level=')
+  })
+
+  it("shows only the active tab's grade", async () => {
+    // The same reason the effort is per registration: photo analysis pays for input tokens
+    // per photo and writing pays for output, so one model is two different bargains.
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: { entries: GRADED('top') },
+    })
+
+    expect(await screen.findByRole('combobox', { name: /등급 최고/ })).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: '글 작성' }))
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: /등급 등급 미지정/ })).toBeInTheDocument(),
+    )
+  })
+
+  it('offers 등급순 as a sort and puts the ungraded models last', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'anthropic/graded',
+            label: 'Graded',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis'],
+            level: { 'photo-analysis': 'value' },
+            sourceCreatedAt: 100n,
+          },
+          {
+            modelId: 'anthropic/ungraded',
+            label: 'Ungraded',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis'],
+            sourceCreatedAt: 900n,
+          },
+        ],
+      },
+    })
+
+    await screen.findByText('Graded')
+    // Newest-first by default, so the ungraded one leads until the sort is changed.
+    await chooseOption(user, screen.getByRole('combobox', { name: /정렬/ }), '등급순')
+    await waitFor(() => {
+      const labels = screen.getAllByText(/^(Graded|Ungraded)$/).map((node) => node.textContent)
+      expect(labels).toEqual(['Graded', 'Ungraded'])
+    })
+  })
+})

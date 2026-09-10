@@ -96,10 +96,82 @@ describe('the 일괄 편집 document panel', () => {
     expect(gate).toBeDefined()
     expect(gate!).toHaveTextContent('이 용도에 필요한 기능이 없는 모델이에요.')
     const malformed = rows.find((row) => within(row).queryByText('5번째 줄'))
-    expect(malformed!).toHaveTextContent('모델 아이디만 한 줄에 하나씩')
+    expect(malformed!).toHaveTextContent('한 줄에 모델 아이디 하나')
     expect(screen.getByRole('button', { name: '확정' })).toBeDisabled()
     // No diff is offered beside a refusal — there is nothing that would be applied.
     expect(screen.queryByText('적용하면 이렇게 바뀌어요')).not.toBeInTheDocument()
+  })
+
+  // MODEL-59: a re-grade is a change the operator has to be able to see and commit — a
+  // curator's list pasted with no grades clears every one of them.
+  it('renders level changes as their own group and lets a relevel-only document apply', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      calls,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'anthropic/claude-x',
+            label: 'Claude X',
+            vision: true,
+            curated: true,
+            purposes: ['writing'],
+            level: { writing: 'top' },
+          },
+          {
+            modelId: 'x-ai/grok-x',
+            label: 'Grok X',
+            vision: true,
+            curated: true,
+            purposes: ['writing'],
+          },
+        ],
+      },
+    })
+
+    await openPanel(user)
+    await user.click(paste())
+    // Neither membership changes: claude loses its grade, grok gains one.
+    await user.paste('# postpilot models v1\n[writing]\nanthropic/claude-x\nx-ai/grok-x value\n')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+
+    await screen.findByText('적용하면 이렇게 바뀌어요')
+    // The id and its two grades are one row; the id sits in its own span, so the assertion
+    // is over the row that holds both.
+    const regraded = screen.getByText('등급 변경 2개').closest('div')
+    const rows = within(regraded!).getAllByRole('listitem')
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'anthropic/claude-x · 최고 → 미지정',
+      'x-ai/grok-x · 미지정 → 가성비',
+    ])
+    // Nothing is registered or deregistered, and it is still committable.
+    expect(screen.queryByText(/^해제 /)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^등록 /)).not.toBeInTheDocument()
+
+    const confirm = screen.getByRole('button', { name: '확정' })
+    await waitFor(() => expect(confirm).toBeEnabled())
+    await user.click(confirm)
+    expect(calls.some((call) => call.startsWith('ApplyCatalogDocument'))).toBe(true)
+  })
+
+  // A bad grade is its own cause, so the operator is told which half of the line to fix.
+  it('rejects an unknown level with its own copy and keeps 확정 unavailable', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: CATALOG } })
+
+    await openPanel(user)
+    await user.click(paste())
+    await user.paste('# postpilot models v1\n[writing]\nanthropic/claude-x legendary\n')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+
+    const rows = await screen.findAllByRole('listitem')
+    const bad = rows.find((row) => within(row).queryByText('3번째 줄'))
+    expect(bad!).toHaveTextContent('등급 값이 잘못됐어요')
+    // Never another cause's copy.
+    expect(bad!).not.toHaveTextContent('한 줄에 모델 아이디 하나')
+    expect(screen.getByRole('button', { name: '확정' })).toBeDisabled()
   })
 
   // Editing after a preview invalidates it: 확정 must never commit a diff computed for text

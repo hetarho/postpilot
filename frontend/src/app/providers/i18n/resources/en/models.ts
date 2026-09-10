@@ -182,8 +182,12 @@ export const models = {
     searchPlaceholder: 'Model name or id',
     provider: 'Provider',
     allProviders: 'All providers',
+    level: 'Level',
+    levelUnset: 'No level',
+    levelMissing: 'No level set yet. It sorts after every graded model in the user picker.',
     sort: 'Sort',
     sortOption: {
+      level: 'By level',
       default: 'Default',
       'price-asc': 'Price: low to high',
       'price-desc': 'Price: high to low',
@@ -244,6 +248,8 @@ export const models = {
     register: 'Register {{count}}',
     deregister: 'Deregister {{count}}',
     unchanged: 'Already registered {{count}}',
+    relevel: '{{count}} level change(s)',
+    levelUnset: 'unset',
     untouched: 'Purposes the document does not name are left alone: {{purposes}}',
     rejected:
       '{{count}} lines could not be read, so nothing was applied. Fix them below and preview again.',
@@ -253,8 +259,10 @@ export const models = {
       unknown_purpose: 'Not one of the five purposes.',
       duplicate_section: 'This purpose appears twice. One section is its whole list.',
       id_before_section: 'This model comes before any purpose section.',
-      malformed_line: 'One bare model id per line — no table cells, quotes or backticks.',
+      malformed_line:
+        'One model id per line, optionally followed by one level. No tables, quotes or backticks.',
       duplicate_id: 'The same model appears twice in this section.',
+      unknown_level: 'That is not a level. Use one of value · balanced · premium · top.',
       unknown_model: 'The provider does not offer this model.',
       unlisted_model: 'The provider has stopped offering this model.',
       purpose_ineligible: 'This model lacks the capability this purpose requires.',

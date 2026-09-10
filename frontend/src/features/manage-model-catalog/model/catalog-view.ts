@@ -1,4 +1,5 @@
 import {
+  LEVELS,
   REASONING_EFFORTS,
   type AdminCatalogEntry,
   type ReasoningEffortName,
@@ -68,9 +69,9 @@ export function providerSlugs(entries: readonly AdminCatalogEntry[]): string[] {
 /** How the operator has ordered the list (MODEL-28). `default` is the provider/newest order
  *  below; the price orders key on the output price, because output tokens are what the app's
  *  spend is made of, so one key is enough. */
-export type CatalogSort = 'default' | 'price-asc' | 'price-desc'
+export type CatalogSort = 'default' | 'level' | 'price-asc' | 'price-desc'
 
-export const CATALOG_SORTS: readonly CatalogSort[] = ['default', 'price-asc', 'price-desc']
+export const CATALOG_SORTS: readonly CatalogSort[] = ['default', 'level', 'price-asc', 'price-desc']
 
 export const DEFAULT_SORT: CatalogSort = 'default'
 
@@ -79,6 +80,11 @@ export const DEFAULT_SORT: CatalogSort = 'default'
  *  what is new. The price orders sort by output price per million, tie-break on input price,
  *  then fall back to the default order; a model with no published price (video, 토큰 단가
  *  미공개) comes last in BOTH directions — "unknown" is neither the cheapest nor the dearest.
+ *
+ *  `level`: the operator's own grade for THIS tab, 가성비 first, with everything ungraded —
+ *  including the models not registered to this purpose at all — after it. The tab is about
+ *  this purpose's registrations, so an entry with no registration here has no grade here
+ *  either; that tail is the operator's backlog.
  *
  *  Sorting here rather than on the server is deliberate: the whole catalog arrives in one
  *  response, and how to read it is a display preference the browser owns. The price strings
@@ -96,6 +102,10 @@ export function sortEntries(
     return a.modelId < b.modelId ? -1 : a.modelId > b.modelId ? 1 : 0
   })
   if (sort === 'default') return byDefault
+  if (sort === 'level') {
+    // Stable, so the default order survives inside one grade.
+    return [...byDefault].sort((a, b) => levelRank(a) - levelRank(b))
+  }
 
   const direction = sort === 'price-asc' ? 1 : -1
   const priced = byDefault.filter((entry) => entry.outputUsdPerMillion !== '')
@@ -131,6 +141,11 @@ export function filterEntries(
       entry.modelId.toLowerCase().includes(needle) || entry.label.toLowerCase().includes(needle)
     )
   })
+}
+
+function levelRank(entry: AdminCatalogEntry): number {
+  // '' is unset AND is what an entry not registered to this tab carries: both sort last.
+  return entry.level === '' ? LEVELS.length : LEVELS.indexOf(entry.level)
 }
 
 function compareProviders(a: string, b: string): number {

@@ -11,6 +11,7 @@ export const DOCUMENT_ISSUE_CAUSES = [
   'id_before_section',
   'malformed_line',
   'duplicate_id',
+  'unknown_level',
   'unknown_model',
   'unlisted_model',
   'purpose_ineligible',
@@ -36,6 +37,9 @@ export interface DocumentDiff {
   untouched: ModelPurpose[]
   registerCount: number
   deregisterCount: number
+  /** Re-grades are counted separately from the two membership deltas: they are a real
+   *  change the document makes (MODEL-59) but not a change to WHO serves the purpose. */
+  relevelCount: number
 }
 
 export function documentDiff(plan: CatalogDocumentPlan | undefined): DocumentDiff {
@@ -43,7 +47,12 @@ export function documentDiff(plan: CatalogDocumentPlan | undefined): DocumentDif
   const rows = MODEL_PURPOSES.flatMap<DocumentDiffRow>((purpose) => {
     const row = named.get(purpose)
     if (!row) return []
-    return [{ ...row, touched: row.register.length > 0 || row.deregister.length > 0 }]
+    return [
+      {
+        ...row,
+        touched: row.register.length > 0 || row.deregister.length > 0 || row.relevel.length > 0,
+      },
+    ]
   })
   return {
     rows,
@@ -52,6 +61,7 @@ export function documentDiff(plan: CatalogDocumentPlan | undefined): DocumentDif
     untouched: MODEL_PURPOSES.filter((purpose) => !named.has(purpose)),
     registerCount: rows.reduce((total, row) => total + row.register.length, 0),
     deregisterCount: rows.reduce((total, row) => total + row.deregister.length, 0),
+    relevelCount: rows.reduce((total, row) => total + row.relevel.length, 0),
   }
 }
 
@@ -61,5 +71,8 @@ export function documentDiff(plan: CatalogDocumentPlan | undefined): DocumentDif
 export function canApply(plan: CatalogDocumentPlan | undefined): boolean {
   if (!plan || plan.fetchError !== '' || plan.issues.length > 0) return false
   const diff = documentDiff(plan)
-  return diff.registerCount > 0 || diff.deregisterCount > 0
+  // A re-grade counts as a change. A document that only moves grades around changes the
+  // catalog exactly as much as one that moves registrations (MODEL-59), and leaving it
+  // uncommittable would make the paste path unable to express what the export can write.
+  return diff.registerCount > 0 || diff.deregisterCount > 0 || diff.relevelCount > 0
 }

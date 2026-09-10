@@ -5,6 +5,7 @@ import type { Transport } from '@connectrpc/connect'
 import { ModelCatalogService, ProviderService, appFailureFromConnect } from '@/shared/api'
 import type { ModelPurpose } from '@/shared/config'
 import type { CatalogBrowse, ReasoningEffortName } from '../model/types'
+import type { LevelName } from '../model/level'
 import { toCatalogBrowse } from './catalog-mappers'
 
 const EMPTY: CatalogBrowse = {
@@ -89,12 +90,15 @@ export function useUpdateModel() {
     update: (
       modelId: string,
       purpose: ModelPurpose,
-      patch: { reasoningEffort?: ReasoningEffortName },
+      // Both halves are optional and independent: a request that names only one leaves the
+      // other exactly as it was, which is why the proto fields are `optional` (T092).
+      patch: { reasoningEffort?: ReasoningEffortName; level?: LevelName | '' },
     ) =>
       mutation.mutate({
         modelId,
         purpose,
         reasoningEffort: patch.reasoningEffort,
+        level: patch.level,
       }),
   }
 }

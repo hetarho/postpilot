@@ -37,14 +37,17 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T094 | 모델 관리: 등급 Listbox, 등급순 sort, unset mark, document diff level changes | MODEL | T093 T095 | todo |
-| T096 | Complete multi-source clip planning and playable generation | CLIP QUOTA ARCH | T091 | doing@260911.fix |
+| T096 | Complete multi-source clip planning and playable generation | CLIP QUOTA ARCH | T091 | blocked@260911 |
 
 ## next
-- Complete T096 through actual multi-source analysis, composition and playable rendering; additional paid verification must remain strictly below USD 0.10 in aggregate, preserve concurrent model work
-- implement-task T094 (last of the level series); then re-teach `/recomend-models` to emit `<id> <level>` lines — its id-only block clears every set level under MODEL-59
+- T096 needs the failed originals' local folder and bounded provider-replay consent; synthetic multi-source/live render and offline queued preview/download passed, reported spend USD 0.011057; preserve cumulative budget below USD 0.10 and leave original failure unresolved until reproduced
+- the MODEL r9 level series (T092–T095) is complete; re-teach `/recomend-models` to emit `<id> <level>` lines — its id-only block now clears every set level under MODEL-59
 - T008 needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job; once it closes, update-ssot PUB for VIDEO-17 + TMPL-39
 ## log
+- 260911 T094 done; 등급 Listbox + unset mark per registration, 등급순 sort, 등급 변경 diff group; canApply now counts a relevel, since a re-grade-only document was previewable but not committable
+- 260911 T096 blocked recheck (fix); same production plan failure with no raw output; two T094 test files now pass but web build has concurrent fixture type errors; remote main unchanged, original input still needed, paid total unchanged USD 0.011057
+- 260911 T096 blocked (fix); actual failed output unavailable and synthetic cases succeed, requested original input; paid total USD 0.011057, no more calls; BE/agent/race/media/codegen pass, concurrent T094 FE gates non-green; no T096 commit/push
+- 260911 T094 claimed (lvl)
 - 260911 T095 done; per-stage grade on CatalogModel, ordering composed into filterForStage so all three selector call sites share it, grade leads every option label; full FE gate passes
 - 260911 T095 claimed (lvl)
 - 260911 T093 done; `<id> [level]` grammar, relevel preview, level-aware sync/export; tightened looksLikeModelID to need a slash so a bullet is malformed_line again, not unknown_level
@@ -61,7 +64,3 @@
 - 260911 T091 resumed (fix); owner approved synthetic live verification up to USD 0.10 total, no historical replay or production settings change
 - 260911 T091 blocked (fix); inspected the actual wire and official contracts without an evidenced cause; ask for bounded synthetic live verification, no paid call or speculative code change
 - 260911 T091 claimed (fix); prioritize the actual analyze 400 and a playable end-to-end result over additional defensive features; preserve concurrent work and existing credit ceilings, no historical replay
-- 260911 T090 done; the push-scope hold cleared, 61fe2d2 is on main and CI/deploy are green on 7327d93
-- 260911 update-ssot VOICE TMPL LANG done (mnt); VOICE-42 drops the tag count and GEN-46✎ excludes rule comparison, TMPL scopes the retired `label` to `slot`, LANG-7 gains `billing` `clips`; all four revs are wording-only so tasked=rev
-- 260911 update-ssot VOICE TMPL LANG start (mnt); the three spec-maintenance items owed in next
-- 260911 T089 done; the 후보 queue is a counted disclosure below the list with sequential bulk accept/dismiss and per-row refusals; all local gates and day/night browser checks pass

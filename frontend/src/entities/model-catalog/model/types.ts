@@ -135,6 +135,10 @@ export interface AdminCatalogEntry {
   /** The override for the PURPOSE this listing was read for, not for the model. The same
    *  model shows its own value on every tab (change 24). */
   reasoningEffort: ReasoningEffortName
+  /** The operator's grade for the PURPOSE this listing was read for (MODEL-57), '' while
+   *  they have not set one. Per registration for the same reason the effort is: the same
+   *  model is a different bargain for an input-heavy task than for an output-heavy one. */
+  level: LevelName | ''
   /** What this model recently spent its completion budget on at the listed purpose's stage,
    *  or undefined when nothing has been recorded — which renders as nothing rather than as a
    *  zero that would read as a measurement. */
@@ -235,6 +239,18 @@ export interface CatalogDocumentPurposePlan {
   register: string[]
   deregister: string[]
   unchanged: string[]
+  /** The registrations the document KEEPS but re-grades (MODEL-59). Its own list because a
+   *  curator's paste with no grades clears every one of them, and that has to be readable
+   *  before 확정 rather than hidden inside "already in place". */
+  relevel: CatalogDocumentLevelChange[]
+}
+
+/** One registration's grade moving. Either side is '' when it is unset — that is what
+ *  setting a first grade and clearing one look like. */
+export interface CatalogDocumentLevelChange {
+  modelId: string
+  from: LevelName | ''
+  to: LevelName | ''
 }
 
 /** The answer to both preview and apply: they report identically, so a rejection the catalog

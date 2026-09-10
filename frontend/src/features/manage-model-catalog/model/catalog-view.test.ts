@@ -20,6 +20,7 @@ function entry(over: Partial<AdminCatalogEntry> = {}): AdminCatalogEntry {
     videoOutput: false,
     listed: true,
     reasoningEffort: '',
+    level: '',
     sourceCreatedAt: 0n,
     reasoning: {
       reasons: true,
@@ -189,5 +190,50 @@ describe('offersReasoningControl', () => {
         entry({ reasoning: { ...entry().reasoning, reasons: false, known: false } }),
       ),
     ).toBe(true)
+  })
+})
+
+describe('sortEntries by level (T094/MODEL-28)', () => {
+  it('orders 가성비 → 최고 with everything ungraded after it', () => {
+    const entries = [
+      entry({ modelId: 'a/top', level: 'top' }),
+      entry({ modelId: 'b/none' }),
+      entry({ modelId: 'c/value', level: 'value' }),
+      entry({ modelId: 'd/premium', level: 'premium' }),
+      entry({ modelId: 'e/balanced', level: 'balanced' }),
+    ]
+    expect(sortEntries(entries, 'level').map((e) => e.modelId)).toEqual([
+      'c/value',
+      'e/balanced',
+      'd/premium',
+      'a/top',
+      'b/none',
+    ])
+  })
+
+  it('sorts an entry not registered to this tab with the ungraded tail', () => {
+    // The tab is about THIS purpose's registrations, so a model with no registration here
+    // has no grade here either — it belongs in the operator's backlog, not above it.
+    const entries = [
+      entry({ modelId: 'a/unregistered', purposes: [], level: '' }),
+      entry({ modelId: 'b/graded', level: 'value' }),
+    ]
+    expect(sortEntries(entries, 'level').map((e) => e.modelId)).toEqual([
+      'b/graded',
+      'a/unregistered',
+    ])
+  })
+
+  it('keeps the default order inside one grade', () => {
+    // Same grade, same vendor: the default order is newest-first, and the level sort must
+    // not reshuffle it.
+    const entries = [
+      entry({ modelId: 'vendor/old', level: 'value', sourceCreatedAt: 1n }),
+      entry({ modelId: 'vendor/new', level: 'value', sourceCreatedAt: 9n }),
+    ]
+    expect(sortEntries(entries, 'level').map((e) => e.modelId)).toEqual([
+      'vendor/new',
+      'vendor/old',
+    ])
   })
 })

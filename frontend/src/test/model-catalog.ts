@@ -22,6 +22,8 @@ import { connectAppError } from './app-error'
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
 const DOCUMENT_VERSION_LINE = '# postpilot models v1'
+const LEVEL_VALUES = ['value', 'balanced', 'premium', 'top']
+
 const PURPOSES = [
   'photo-analysis',
   'style-analysis',
@@ -49,6 +51,9 @@ export interface FakeCatalogEntry {
   /** The effort PER PURPOSE, keyed by purpose slug — the server stores it on the
    *  registration, and each purpose tab shows and edits only its own (change 24). */
   reasoningEffort?: Record<string, string>
+  /** The operator's grade PER PURPOSE, keyed by purpose slug — like the effort, it lives on
+   *  the registration and each tab shows only its own (MODEL-57). */
+  level?: Record<string, string>
   /** Recent reasoning spend per purpose slug, as the ledger's aggregate reports it for that
    *  purpose's stage. A purpose absent from the map has no recorded call. */
   reasoningSpend?: Record<
@@ -122,6 +127,7 @@ export function registerModelCatalogService(
         videoOutput: entry.videoOutput ?? false,
         listed: entry.listed ?? true,
         reasoningEffort: entry.reasoningEffort?.[purpose] ?? '',
+        level: entry.level?.[purpose] ?? '',
         reasoningSpend: entry.reasoningSpend?.[purpose]
           ? {
               ...entry.reasoningSpend[purpose],
@@ -165,7 +171,7 @@ export function registerModelCatalogService(
   // what makes an uncurated id registerable — so a failed fetch refuses rather than degrades.
   const planDocument = (text: string) => {
     const issues: Array<{ line: number; text: string; cause: string }> = []
-    const sections: Array<{ purpose: string; ids: string[] }> = []
+    const sections: Array<{ purpose: string; ids: string[]; levels: Record<string, string> }> = []
     let versioned = false
     text.split('\n').forEach((raw, index) => {
       const line = raw.trim()
@@ -184,11 +190,24 @@ export function registerModelCatalogService(
           issues.push({ line: number, text: line, cause: 'unknown_purpose' })
           return
         }
-        sections.push({ purpose, ids: [] })
+        sections.push({ purpose, ids: [], levels: {} })
         return
       }
-      if (/[\s|`"',]/.test(line)) {
+      // `<id>` or `<id> <level>` (MODEL-59), parsed the way the server parses it so a test
+      // drives the real contract rather than a looser stub.
+      const fields = line.split(/\s+/)
+      const [modelId, levelToken] = fields
+      if (
+        fields.length > 2 ||
+        modelId === undefined ||
+        /[|`"',]/.test(modelId) ||
+        !/^[^/]+\/[^/]+$/.test(modelId)
+      ) {
         issues.push({ line: number, text: line, cause: 'malformed_line' })
+        return
+      }
+      if (levelToken !== undefined && !LEVEL_VALUES.includes(levelToken)) {
+        issues.push({ line: number, text: line, cause: 'unknown_level' })
         return
       }
       const section = sections.at(-1)
@@ -196,7 +215,7 @@ export function registerModelCatalogService(
         issues.push({ line: number, text: line, cause: 'id_before_section' })
         return
       }
-      const entry = entries.find((candidate) => candidate.modelId === line)
+      const entry = entries.find((candidate) => candidate.modelId === modelId)
       if (!entry) {
         issues.push({ line: number, text: line, cause: 'unknown_model' })
         return
@@ -205,7 +224,8 @@ export function registerModelCatalogService(
         issues.push({ line: number, text: line, cause: 'purpose_ineligible' })
         return
       }
-      section.ids.push(line)
+      section.ids.push(modelId)
+      section.levels[modelId] = levelToken ?? ''
     })
     if (!versioned) issues.push({ line: 1, text: '', cause: 'bad_version' })
     const purposes = sections.map((section) => ({
@@ -220,9 +240,21 @@ export function registerModelCatalogService(
             !section.ids.includes(entry.modelId),
         )
         .map((entry) => entry.modelId),
-      unchanged: section.ids.filter((id) =>
-        (entries.find((e) => e.modelId === id)?.purposes ?? []).includes(section.purpose),
-      ),
+      // Already registered AND graded the same: genuinely nothing to say.
+      unchanged: section.ids.filter((id) => {
+        const held = entries.find((e) => e.modelId === id)
+        return (
+          (held?.purposes ?? []).includes(section.purpose) &&
+          (held?.level?.[section.purpose] ?? '') === section.levels[id]
+        )
+      }),
+      relevel: section.ids.flatMap((id) => {
+        const held = entries.find((e) => e.modelId === id)
+        if (!(held?.purposes ?? []).includes(section.purpose)) return []
+        const from = held?.level?.[section.purpose] ?? ''
+        const to = section.levels[id] ?? ''
+        return from === to ? [] : [{ modelId: id, from, to }]
+      }),
     }))
     return { purposes, issues, sections }
   }
@@ -234,6 +266,11 @@ export function registerModelCatalogService(
         .filter((entry) => (entry.purposes ?? []).includes(purpose))
         .map((entry) => entry.modelId)
         .sort()
+        .map((modelId) => {
+          const level = entries.find((entry) => entry.modelId === modelId)?.level?.[purpose]
+          // An unset grade writes no second token, so an export pasted back is no change.
+          return level ? `${modelId} ${level}` : modelId
+        })
       return [`[${purpose}]`, ...ids].join('\n')
     }).join('\n\n')
     return create(ExportCatalogDocumentResponseSchema, {
@@ -262,19 +299,32 @@ export function registerModelCatalogService(
         fetchError: 'the provider catalog could not be read',
       })
     }
-    const { purposes, issues } = planDocument(req.document)
+    const { purposes, issues, sections } = planDocument(req.document)
     if (issues.length > 0) {
       return create(ApplyCatalogDocumentResponseSchema, { issues, applied: false })
     }
     entries = entries.map((entry) => {
       let next = [...(entry.purposes ?? [])]
-      for (const purpose of purposes) {
-        if (purpose.register.includes(entry.modelId)) next = [...next, purpose.purpose]
-        if (purpose.deregister.includes(entry.modelId)) {
-          next = next.filter((value) => value !== purpose.purpose)
+      const levels = { ...(entry.level ?? {}) }
+      for (const section of sections) {
+        if (!section.ids.includes(entry.modelId)) {
+          if ((entry.purposes ?? []).includes(section.purpose)) {
+            next = next.filter((value) => value !== section.purpose)
+            // The grade goes with the registration (MODEL-20).
+            delete levels[section.purpose]
+          }
+          continue
         }
+        if (!next.includes(section.purpose)) next = [...next, section.purpose]
+        // Every listed id gets its grade written, so an id-only line clears one.
+        levels[section.purpose] = section.levels[entry.modelId] ?? ''
       }
-      return { ...entry, purposes: next, curated: next.length > 0 || (entry.curated ?? false) }
+      return {
+        ...entry,
+        purposes: next,
+        level: levels,
+        curated: next.length > 0 || (entry.curated ?? false),
+      }
     })
     return create(ApplyCatalogDocumentResponseSchema, { purposes, issues: [], applied: true })
   })
@@ -336,7 +386,9 @@ export function registerModelCatalogService(
   })
 
   rpc(ModelCatalogService.method.updateModel, (req) => {
-    calls?.push(`UpdateModel:${req.purpose}:${req.reasoningEffort ?? ''}`)
+    calls?.push(
+      `UpdateModel:${req.purpose}:${req.reasoningEffort ?? ''}${req.level === undefined ? '' : `:level=${req.level}`}`,
+    )
     if (options.writeFails) throw connectAppError('MODEL_NOT_FOUND', Code.NotFound)
     // The server refuses an effort for a purpose the model does not serve; the fake holds the
     // same rule so a test cannot pass against a looser server than the real one. The reason
@@ -355,6 +407,11 @@ export function registerModelCatalogService(
               ...entry.reasoningEffort,
               [req.purpose]: req.reasoningEffort ?? entry.reasoningEffort?.[req.purpose] ?? '',
             },
+            // Independent halves: a request naming only one leaves the other alone (T092).
+            level: {
+              ...entry.level,
+              [req.purpose]: req.level ?? entry.level?.[req.purpose] ?? '',
+            },
           }
         : entry,
     )
@@ -365,6 +422,7 @@ export function registerModelCatalogService(
         curated: true,
         purposes: written?.purposes ?? [],
         reasoningEffort: written?.reasoningEffort?.[req.purpose] ?? '',
+        level: written?.level?.[req.purpose] ?? '',
         reasons: written?.reasoning?.reasons ?? true,
         reasoningEfforts: written?.reasoning?.efforts ?? [],
         reasoningDefaultEffort: written?.reasoning?.defaultEffort ?? '',

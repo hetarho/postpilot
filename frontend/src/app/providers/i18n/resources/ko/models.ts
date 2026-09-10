@@ -181,8 +181,12 @@ export const models = {
     searchPlaceholder: '모델 이름이나 아이디',
     provider: '제공사',
     allProviders: '전체 제공사',
+    level: '등급',
+    levelUnset: '등급 미지정',
+    levelMissing: '등급을 아직 정하지 않았어요. 사용자 목록에서는 등급 있는 모델 뒤에 놓입니다.',
     sort: '정렬',
     sortOption: {
+      level: '등급순',
       default: '기본',
       'price-asc': '가격 낮은순',
       'price-desc': '가격 높은순',
@@ -241,6 +245,8 @@ export const models = {
     register: '등록 {{count}}개',
     deregister: '해제 {{count}}개',
     unchanged: '이미 등록됨 {{count}}개',
+    relevel: '등급 변경 {{count}}개',
+    levelUnset: '미지정',
     untouched: '문서에 없는 용도는 그대로예요: {{purposes}}',
     rejected:
       '{{count}}줄을 읽지 못해서 아무것도 반영하지 않았어요. 아래를 고치고 다시 미리보기 하세요.',
@@ -250,8 +256,10 @@ export const models = {
       unknown_purpose: '없는 용도 이름이에요.',
       duplicate_section: '같은 용도가 두 번 나왔어요. 한 섹션이 그 용도의 전체 목록이에요.',
       id_before_section: '용도 섹션보다 먼저 나온 모델이에요.',
-      malformed_line: '모델 아이디만 한 줄에 하나씩 적어 주세요. 표·따옴표·백틱은 넣지 마세요.',
+      malformed_line:
+        '한 줄에 모델 아이디 하나, 뒤에 등급을 하나만 붙일 수 있어요. 표·따옴표·백틱은 넣지 마세요.',
       duplicate_id: '같은 섹션에 같은 모델이 두 번 있어요.',
+      unknown_level: '등급 값이 잘못됐어요. value · balanced · premium · top 중 하나여야 합니다.',
       unknown_model: '제공사 목록에 없는 모델이에요.',
       unlisted_model: '제공사가 더 이상 제공하지 않는 모델이에요.',
       purpose_ineligible: '이 용도에 필요한 기능이 없는 모델이에요.',
