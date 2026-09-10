@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useClipProject, requiredClipSources, type ClipProject } from '@/entities/clip-project'
@@ -6,7 +6,13 @@ import { useClipCorrection, ClipCorrectionWorkspace } from '@/features/correct-c
 import { useSession } from '@/entities/session'
 import { isTerminal, progressLabel, progressRatio } from '@/entities/generation-job'
 import { ClipProjectForm } from '@/features/edit-clip-project'
-import { ClipGenerationFailure, ClipResult, useGenerateClip } from '@/features/generate-clip'
+import {
+  ClipApprovalAction,
+  ClipCreditSettlement,
+  ClipGenerationFailure,
+  ClipResult,
+  useGenerateClip,
+} from '@/features/generate-clip'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker, useClipSourceUpload } from '@/features/upload-clip-sources'
 import { appFailureFromConnect } from '@/shared/api'
@@ -30,17 +36,19 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       ? requiredClipSources(correction.draft, project.editing.sources)
       : undefined
   const upload = useClipSourceUpload(project.id, required)
-  const generation = useGenerateClip(ownerId, project)
-  const handledJob = useRef(project.latestJob?.id)
+  const generation = useGenerateClip(ownerId, project, upload.attempt?.jobId)
+  const ownership = {
+    begin: upload.beginAttempt,
+    owned: upload.markOwned,
+    rejected: upload.rejectAttempt,
+  }
   const uploading = ['reading', 'uploading', 'cancelling'].includes(upload.phase)
   const job = generation.job
   const running = job && !isTerminal(job)
   useEffect(() => {
-    if (!job) return
-    const changed = job.id !== handledJob.current
-    handledJob.current = job.id
-    if (upload.readyBatch && (running || changed)) upload.finishAttempt()
-  }, [job, running, upload])
+    if (job && (job.status === 'done' || job.status === 'failed'))
+      upload.finishAttempt(job.id, job.status)
+  }, [job, upload])
   const ratio = running ? progressRatio(job) : undefined
   const label = running ? progressLabel(job) : t('source.phase.uploading')
   const pending = generation.busy || uploading
@@ -91,9 +99,18 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           </Button>
         </div>
       )}
+      {generation.uncertain && (
+        <div role="status" className="mt-4 space-y-2">
+          <Typography variant="body">{t('credits.uncertain')}</Typography>
+          <Button variant="ghost" onClick={generation.checkAgain}>
+            {t('credits.checkAttempt')}
+          </Button>
+        </div>
+      )}
       {project.result && (
         <ClipResult key={project.result.createdAt} ownerId={ownerId} project={project} />
       )}
+      <ClipCreditSettlement job={job} accounting={generation.accounting} />
       {editing && project.editing ? (
         <ClipCorrectionWorkspace
           correction={correction}
@@ -104,7 +121,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           renderFailure={generation.failure}
           onRender={() => {
             if (!correction.dirty && !correction.pending)
-              void generation.render(upload.readyBatch, correction.revision, upload.finishAttempt)
+              void generation.render(upload.readyBatch, correction.revision, ownership)
           }}
           onExit={() => {
             correction.reset()
@@ -164,23 +181,18 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
                   {t('correction.enter')}
                 </Button>
               )}
-              <Button
-                variant={ready ? 'cta' : 'secondary'}
-                className="w-full sm:w-auto"
+              <ClipApprovalAction
+                ownerId={ownerId}
+                project={project}
+                batch={upload.readyBatch}
+                observe={generation.observeRef}
+                write={generation.writeRef}
+                ready={ready && generation.modelsReady && !generation.busy}
                 pending={generation.starting}
-                disabled={
-                  !ready || !generation.modelsReady || !upload.readyBatch || generation.busy
+                onApprove={(quote) =>
+                  void generation.start(upload.readyBatch, ready, quote, ownership)
                 }
-                onClick={() =>
-                  void generation.start(upload.readyBatch, ready, upload.finishAttempt)
-                }
-              >
-                {t(
-                  project.result || job?.status === 'failed'
-                    ? 'generation.retry'
-                    : 'generation.generate',
-                )}
-              </Button>
+              />
             </>
           )}
         >
@@ -198,7 +210,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
             <Typography id="clip-models-heading" variant="title">
               {t('generation.models')}
             </Typography>
-            <StageModelSelect stage="observe" disabled={generation.busy} requireVideoInput />
+            <StageModelSelect stage="observe" disabled={generation.busy} requireInlineStaticVideo />
             <StageModelSelect stage="write" disabled={generation.busy} />
             {!generation.modelsReady && (
               <Typography variant="body" className="text-content-secondary">

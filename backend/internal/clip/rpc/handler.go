@@ -248,6 +248,17 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 			return nil, toConnectError(err)
 		}
 		out.LatestJob = jobrpc.ToProto(j)
+		if j != nil {
+			snapshot, err := h.jobs.LatestClipSnapshot(ctx, user, value.ID)
+			if err != nil {
+				return nil, toConnectError(err)
+			}
+			if snapshot != nil && snapshot.ID == j.ID && (snapshot.DispatchReady || snapshot.Status == job.StatusDone || snapshot.Status == job.StatusFailed) {
+				if a := clip.IdentifyAttempt(user, value.ID, snapshot.ID, snapshot.Kind, snapshot.Payload); a != nil {
+					out.LatestAttempt = &v1.ClipAttempt{JobId: a.JobID, BatchId: a.BatchID, QuoteId: a.QuoteID}
+				}
+			}
+		}
 	}
 	return connect.NewResponse(&v1.GetClipProjectResponse{Project: out}), nil
 }

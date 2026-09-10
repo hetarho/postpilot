@@ -41,6 +41,9 @@ export {
   ConfirmClipSourceResponseSchema,
   DiscardClipSourceBatchResponseSchema,
   StartClipGenerationResponseSchema,
+  QuoteClipGenerationResponseSchema,
+  ClipAccountingSchema,
+  ClipAttemptSchema,
 } from './gen/postpilot/v1/clip_pb'
 export type {
   VideoTemplate as ProtoVideoTemplate,
@@ -53,6 +56,8 @@ export type {
   ClipSourceBatch as ProtoClipSourceBatch,
   ClipSource as ProtoClipSource,
   ClipSourceUpload as ProtoClipSourceUpload,
+  ClipAccounting as ProtoClipAccounting,
+  QuoteClipGenerationResponse as ProtoClipQuote,
 } from './gen/postpilot/v1/clip_pb'
 export {
   contentLanguages,

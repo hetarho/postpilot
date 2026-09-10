@@ -23,6 +23,8 @@ export interface ClipProject extends ClipProjectDraft {
   editPlanRevision: number
   renderedPlanRevision: number
   latestJob?: GenerationJob
+  latestAttempt?: { jobId: string; batchId: string; quoteId: string }
+  accounting?: ClipAccounting
   editing?: ClipEditingState
   result?: {
     contentType: string
@@ -32,6 +34,23 @@ export interface ClipProject extends ClipProjectDraft {
     viewUrl?: string
     downloadUrl?: string
   }
+}
+export interface ClipAccounting {
+  jobId: string
+  status: 'not_reserved' | 'reserved' | 'settling' | 'settled' | 'exempt' | 'unavailable'
+  approvedMaxCredits?: number
+  reservedCredits?: number
+  finalChargeCredits?: number
+  refundCredits?: number
+  shadowChargeCredits?: number
+  settled: boolean
+}
+export interface ClipQuote {
+  quoteId: string
+  maxCredits: number
+  expiresAt: string
+  // Runtime approval binding contains only primitive settings/metadata, never media.
+  binding: string
 }
 export interface ClipSourceMetadata {
   filename: string

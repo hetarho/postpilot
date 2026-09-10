@@ -1,15 +1,18 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { act, fireEvent, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { initializeI18n } from '@/app/providers/i18n'
+import { endSession } from '@/app/model/end-session'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { putBlobWithProgress } from '@/shared/lib/upload'
-import { GenerationService, Stage } from '@/shared/api'
+import { GenerationService, Stage, ProtoPlan } from '@/shared/api'
+import { clipProjectsKey, type ClipAccounting } from '@/entities/clip-project'
 import { renderAppAt } from '@/test/app'
 import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
 import type { FakeGenerationJobRow, FakeJobsOptions } from '@/test/jobs'
 import type { FakeProvidersOptions } from '@/test/providers'
+import type { FakePlansOptions } from '@/test/plans'
 
 vi.mock('@/features/upload-clip-sources/model/manifest', async (original) => ({
   ...(await original<object>()),
@@ -48,6 +51,7 @@ const models: FakeProvidersOptions = {
       label: 'Video observer',
       vision: true,
       videoInput: true,
+      inlineStaticVideo: true,
       stages: [Stage.OBSERVE],
     },
     { providerId: 'p', modelId: 'w', label: 'Writer', stages: [Stage.WRITE] },
@@ -61,10 +65,12 @@ function mount(
   clips: FakeClipsOptions = {},
   jobs: FakeJobsOptions = {},
   providers: FakeProvidersOptions = models,
+  plans?: FakePlansOptions,
 ) {
   return renderAppAt('/clips/clip', {
     user: { id: 'alice' },
     providers,
+    plans,
     jobs,
     clips: {
       templates: [
@@ -98,14 +104,14 @@ async function selectSource() {
   vi.mocked(putBlobWithProgress).mockResolvedValue()
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:clip-source')
   const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-  const input = await screen.findByLabelText('원본 영상 선택')
+  const input = await screen.findByLabelText(/^원본 영상 (다시 )?선택$/)
   await waitFor(() => expect(input).toBeEnabled())
   const user = userEvent.setup()
   await user.upload(input, file)
   await screen.findByText('업로드 확인 완료')
   return { user, revoke }
 }
-it('starts once, releases local bytes, locks setup, then refetches the finished result', async () => {
+it('approves once, retains local previews until terminal, then releases and refetches the result', async () => {
   const calls: string[] = []
   const starts: unknown[] = []
   const job: FakeGenerationJobRow = {
@@ -132,7 +138,7 @@ it('starts once, releases local bytes, locks setup, then refetches the finished 
     },
   )
   const { user, revoke } = await selectSource()
-  const generate = screen.getByRole('button', { name: '생성' })
+  const generate = await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
   await waitFor(() => expect(generate).toBeEnabled())
   await user.dblClick(generate)
   await screen.findByText('영상 분석')
@@ -141,9 +147,12 @@ it('starts once, releases local bytes, locks setup, then refetches the finished 
     projectId: 'clip',
     observeModel: { providerId: 'p', modelId: 'o' },
     writeModel: { providerId: 'p', modelId: 'w' },
+    quoteId: 'quote-1',
+    approvedMaxCredits: 20,
   })
-  expect(revoke).toHaveBeenCalledWith('blob:clip-source')
-  expect(screen.queryByText('clip.mp4')).not.toBeInTheDocument()
+  expect(revoke).not.toHaveBeenCalled()
+  expect(screen.getByText('clip.mp4')).toBeInTheDocument()
+  expect(screen.getByLabelText('clip.mp4')).toHaveAttribute('src', 'blob:clip-source')
   expect(screen.getByLabelText('클립 제목')).toBeDisabled()
   expect(screen.getByRole('button', { name: '삭제' })).toBeDisabled()
   expect(screen.getByRole('combobox', { name: /관찰/ })).toBeDisabled()
@@ -163,6 +172,9 @@ it('starts once, releases local bytes, locks setup, then refetches the finished 
     })
   })
   const video = await screen.findByLabelText('클립 미리보기')
+  expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
+  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  expect(screen.getByText('clip.mp4 · 처리 완료 · 원본 재선택 필요')).toBeInTheDocument()
   expect(video).toHaveAttribute('src', result.viewUrl)
   expect(video).toHaveAttribute('controls')
   expect(video).toHaveAttribute('preload', 'metadata')
@@ -174,7 +186,9 @@ it('starts once, releases local bytes, locks setup, then refetches the finished 
   expect(calls).not.toContain('DiscardClipSourceBatch')
   // A new selection after completion must not be mistaken for the consumed batch.
   await selectSource()
-  expect(screen.getByRole('button', { name: '다시 생성' })).toBeEnabled()
+  expect(
+    await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }),
+  ).toBeEnabled()
 })
 it('keeps an older result visible on a durable credit refusal and requires a new batch', async () => {
   const job: FakeGenerationJobRow = {
@@ -192,7 +206,9 @@ it('keeps an older result visible on a durable credit refusal and requires a new
   expect(screen.getByRole('link', { name: '크레딧·요금제 확인' })).toHaveAttribute('href', '/plans')
   expect(screen.getByRole('button', { name: '다시 생성' })).toBeDisabled()
   await selectSource()
-  expect(screen.getByRole('button', { name: '다시 생성' })).toBeEnabled()
+  expect(
+    await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }),
+  ).toBeEnabled()
 })
 it('reloads saved results without originals and refreshes an expired preview only once automatically', async () => {
   let reads = 0
@@ -227,13 +243,304 @@ it('blocks non-video observers and never substitutes another registered model', 
   await selectSource()
   expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
   expect(starts).toHaveLength(0)
-  expect(screen.getByText('영상 입력을 지원하는 관찰 모델을 선택해 주세요.')).toBeInTheDocument()
+  expect(
+    screen.getByText('압축 영상의 직접 전송과 고정 샘플링을 지원하는 관찰 모델을 선택해 주세요.'),
+  ).toBeInTheDocument()
 })
 it('does not automatically retry a failed start request', async () => {
   const calls: string[] = []
   mount({ calls, generationFails: true })
   const { user } = await selectSource()
-  await user.click(screen.getByRole('button', { name: '생성' }))
+  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
   await screen.findByRole('alert')
   expect(calls.filter((c) => c === 'StartClipGeneration')).toHaveLength(1)
+})
+
+it('resolves a lost accepted response by owned identity reads without replaying the start', async () => {
+  const starts: unknown[] = [],
+    calls: string[] = []
+  const job: FakeGenerationJobRow = {
+    id: 'clip-job',
+    kind: 'generate_clip',
+    clipProjectId: 'clip',
+    status: 'running',
+    stage: 'analyze',
+  }
+  const view = mount(
+    { generationAmbiguous: true, generationStarts: starts, calls },
+    { jobs: [job] },
+  )
+  const { user, revoke } = await selectSource()
+  await user.dblClick(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await screen.findByText('영상 분석')
+  await waitFor(() => expect(screen.queryByText(/요청의 접수 여부를 확인/)).not.toBeInTheDocument())
+  expect(starts).toHaveLength(1)
+  expect(revoke).not.toHaveBeenCalled()
+  expect(screen.getByLabelText('clip.mp4')).toHaveAttribute('src', 'blob:clip-source')
+  expect(screen.getByLabelText('원본 영상 선택')).toBeDisabled()
+  view.unmount()
+  expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
+  expect(calls).not.toContain('DiscardClipSourceBatch')
+})
+
+it('does not attach an ambiguous selection to a different tab’s terminal job', async () => {
+  const starts: unknown[] = []
+  const other: FakeGenerationJobRow = {
+    id: 'other-job',
+    kind: 'generate_clip',
+    clipProjectId: 'clip',
+    status: 'failed',
+    stage: 'prepare',
+  }
+  const view = mount(
+    {
+      generationFails: true,
+      generationStarts: starts,
+      readProject: (p) => ({
+        ...p,
+        latestJob: other,
+        latestAttempt: { jobId: 'other-job', batchId: 'other-batch', quoteId: 'other-quote' },
+      }),
+    },
+    { jobs: [other] },
+  )
+  const { user, revoke } = await selectSource()
+  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await screen.findByText(/요청의 접수 여부를 확인/)
+  await user.click(screen.getByRole('button', { name: '접수된 작업 다시 확인' }))
+  expect(starts).toHaveLength(1)
+  expect(revoke).not.toHaveBeenCalled()
+  expect(screen.getByLabelText('clip.mp4')).toBeInTheDocument()
+  view.unmount()
+})
+
+it('invalidates a quote for dirty settings, even when reverted, without generating', async () => {
+  const quotes: unknown[] = [],
+    starts: unknown[] = []
+  mount({ quoteRequests: quotes, generationStarts: starts })
+  const { user } = await selectSource()
+  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  expect(quotes).toHaveLength(1)
+  const title = screen.getByLabelText('클립 제목')
+  await user.type(title, 'x')
+  expect(screen.queryByRole('button', { name: /승인하고 생성/ })).not.toBeInTheDocument()
+  expect(quotes).toHaveLength(1)
+  await user.keyboard('{Backspace}')
+  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  expect(quotes).toHaveLength(2)
+  expect(starts).toHaveLength(0)
+})
+
+it('refreshes the quote after a model change and never starts while that choice is saving', async () => {
+  const quotes: unknown[] = [],
+    starts: unknown[] = []
+  mount(
+    { quoteRequests: quotes, generationStarts: starts },
+    {},
+    {
+      ...models,
+      models: [
+        ...models.models!,
+        { providerId: 'p', modelId: 'w2', label: 'Writer two', stages: [Stage.WRITE] },
+      ],
+    },
+  )
+  const { user } = await selectSource()
+  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  await user.click(screen.getByRole('combobox', { name: /작성/ }))
+  await user.click(screen.getByRole('option', { name: 'Writer two' }))
+  await waitFor(() => expect(quotes).toHaveLength(2))
+  expect(quotes[1]).toMatchObject({ writeModel: { providerId: 'p', modelId: 'w2' } })
+  expect(starts).toHaveLength(0)
+})
+
+it('finishes the locally owned job even when another tab becomes the latest project job', async () => {
+  const own: FakeGenerationJobRow = {
+    id: 'clip-job',
+    kind: 'generate_clip',
+    clipProjectId: 'clip',
+    status: 'running',
+    stage: 'analyze',
+  }
+  const other: FakeGenerationJobRow = {
+    id: 'other-job',
+    kind: 'generate_clip',
+    clipProjectId: 'clip',
+    status: 'running',
+    stage: 'prepare',
+  }
+  let replaceLatest = false
+  const view = mount(
+    { readProject: (p) => (replaceLatest ? { ...p, latestJob: other } : p) },
+    { jobs: [own, other] },
+  )
+  const { user, revoke } = await selectSource()
+  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await screen.findByText('영상 분석')
+  replaceLatest = true
+  await act(() =>
+    view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
+  )
+  expect(revoke).not.toHaveBeenCalled()
+  expect(screen.getByLabelText('clip.mp4')).toBeInTheDocument()
+  own.status = 'failed'
+  await act(() =>
+    view.queryClient.refetchQueries({
+      queryKey: createConnectQueryKey({
+        schema: GenerationService.method.getGeneration,
+        input: { id: own.id },
+        transport: view.transport,
+        cardinality: 'finite',
+      }),
+    }),
+  )
+  await waitFor(() => expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source'))
+  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('원본 영상 선택')).toBeDisabled()
+})
+
+it('replaces source-bound quotes and sends only the newly displayed quote', async () => {
+  const quotes: unknown[] = [],
+    starts: unknown[] = []
+  mount({ quoteRequests: quotes, generationStarts: starts })
+  await selectSource()
+  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  const { user } = await selectSource()
+  await waitFor(() => expect(quotes).toHaveLength(2))
+  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await waitFor(() => expect(starts).toHaveLength(1))
+  expect(starts[0]).toMatchObject({
+    quoteId: 'quote-2',
+    approvedMaxCredits: 20,
+    batchId: 'batch-2',
+  })
+})
+
+it('expires approval and requires a refreshed displayed maximum and another explicit click', async () => {
+  const starts: unknown[] = [],
+    quotes: unknown[] = []
+  const options: FakeClipsOptions = {
+    quoteExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+    quoteRequests: quotes,
+    generationStarts: starts,
+  }
+  mount(options)
+  const { user } = await selectSource()
+  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 61_000)
+  await act(() => initializeI18n('en'))
+  fireEvent(window, new Event('focus'))
+  expect(
+    await screen.findByText('This approval window expired. Check a new ceiling.'),
+  ).toBeVisible()
+  expect(starts).toHaveLength(0)
+  await user.click(screen.getByRole('button', { name: 'Refresh maximum credits' }))
+  await waitFor(() => expect(quotes).toHaveLength(2))
+  expect(starts).toHaveLength(0)
+})
+
+it.each([false, true])(
+  'shows affordability without clearing model selections (master=%s)',
+  async (master) => {
+    const starts: unknown[] = []
+    mount({ quoteMaxCredits: 79, generationStarts: starts }, {}, models, {
+      plan: master ? ProtoPlan.MASTER : ProtoPlan.FREE,
+      balance: { credits: 12, unlimited: master, renewsAt: '2026-09-30T15:00:00Z' },
+    })
+    await selectSource()
+    const button = await screen.findByRole('button', { name: '최대 79 크레딧 · 승인하고 생성' })
+    if (master) {
+      expect(button).toBeEnabled()
+      expect(screen.getByText(/마스터는 크레딧을 차감하지/)).toBeVisible()
+    } else {
+      expect(button).toBeDisabled()
+      expect(screen.getByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeVisible()
+    }
+    expect(screen.getByRole('combobox', { name: /관찰/ })).toHaveTextContent('Video observer')
+    expect(starts).toHaveLength(0)
+  },
+)
+
+it('displays a pricing refusal beside generation while leaving the previous result downloadable', async () => {
+  mount({ projects: [{ ...project, result }], quoteFails: 'CLIP_MODEL_PRICING_UNAVAILABLE' })
+  await selectSource()
+  await screen.findByRole('alert')
+  expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+  expect(screen.getByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
+  expect(screen.getByRole('link', { name: '영상 다운로드' })).toBeEnabled()
+})
+
+it.each([0, 7])(
+  'keeps terminal settlement pending until the authoritative %s-credit charge arrives',
+  async (charge) => {
+    const job: FakeGenerationJobRow = {
+      id: 'settle-job',
+      kind: 'generate_clip',
+      clipProjectId: 'clip',
+      status: 'failed',
+      stage: 'analyze',
+      failureReason: 'CLIP_PROCESSING_FAILED',
+    }
+    let accounting: ClipAccounting = {
+      jobId: job.id,
+      status: 'settling',
+      approvedMaxCredits: 79,
+      reservedCredits: 40,
+      settled: false,
+    }
+    const view = mount(
+      {
+        projects: [{ ...project, result, latestJob: job }],
+        readProject: (p) => ({ ...p, accounting }),
+      },
+      { jobs: [job] },
+    )
+    await screen.findByText('영상 처리는 끝났고 크레딧을 정산하는 중이에요.')
+    const credit = within(screen.getByRole('region', { name: '이번 작업의 크레딧' }))
+    expect(credit.getByText('79 크레딧')).toBeVisible()
+    expect(credit.getByText('40 크레딧')).toBeVisible()
+    expect(credit.getAllByText('확인 중')).toHaveLength(2)
+    expect(credit.queryByText('0 크레딧')).not.toBeInTheDocument()
+    accounting = {
+      ...accounting,
+      status: 'settled',
+      finalChargeCredits: charge,
+      refundCredits: 40 - charge,
+      settled: true,
+    }
+    await act(() =>
+      view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
+    )
+    await screen.findByText('크레딧 정산이 완료됐어요.')
+    expect(credit.getByText(charge + ' 크레딧')).toBeVisible()
+    expect(credit.getAllByText(40 - charge + ' 크레딧').length).toBeGreaterThan(0)
+    expect(screen.getByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
+  },
+)
+
+it('releases previews immediately on logout and pagehide without discarding an accepted batch', async () => {
+  const calls: string[] = []
+  mount(
+    { calls },
+    {
+      jobs: [
+        {
+          id: 'clip-job',
+          kind: 'generate_clip',
+          clipProjectId: 'clip',
+          status: 'running',
+          stage: 'prepare',
+        },
+      ],
+    },
+  )
+  const { user, revoke } = await selectSource()
+  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await screen.findByRole('progressbar', { name: '원본 확인' })
+  act(endSession)
+  expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
+  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  fireEvent(window, new Event('pagehide'))
+  expect(revoke).toHaveBeenCalledTimes(1)
+  expect(calls).not.toContain('DiscardClipSourceBatch')
 })

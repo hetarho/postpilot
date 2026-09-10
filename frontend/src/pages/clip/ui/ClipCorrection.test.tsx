@@ -238,7 +238,7 @@ it('deletes a cut, reselects only its remaining source and rerenders once with n
   await waitFor(() => expect(starts).toHaveLength(1))
   expect(calls).not.toContain('StartClipGeneration')
   await screen.findByRole('progressbar', { name: '영상 렌더링' })
-  expect(revoke).toHaveBeenCalledWith('blob:source-a.mp4')
+  expect(revoke).not.toHaveBeenCalled()
   expect(cut().getByLabelText('자막 원문')).toBeDisabled()
   expect(screen.getByLabelText('클립 미리보기')).toBe(view.video)
   job.status = 'done'
@@ -260,6 +260,7 @@ it('deletes a cut, reselects only its remaining source and rerenders once with n
     ),
   )
   expect(screen.queryByLabelText('선택한 컷의 원본 미리보기')).not.toBeInTheDocument()
+  expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:source-a.mp4')
   expect(
     JSON.stringify(
       view.queryClient

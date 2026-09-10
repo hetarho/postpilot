@@ -66,6 +66,13 @@ message ClipProject {
   // Detail only: retained metadata and a structured correction draft, never source URLs.
   ClipEditingState editing = 13;
   ClipAccounting accounting = 14;
+  // Owner-only, byte-free identity for reconciling an ambiguous start response.
+  ClipAttempt latest_attempt = 15;
+}
+message ClipAttempt {
+  string job_id = 1;
+  string batch_id = 2;
+  string quote_id = 3;
 }
 message ClipAccounting {
   string job_id = 1;

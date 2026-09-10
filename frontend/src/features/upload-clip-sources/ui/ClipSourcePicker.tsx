@@ -27,6 +27,7 @@ export function ClipSourcePicker({
   const { t } = useTranslation('clips')
   const inputId = useId()
   const busy = ['reading', 'uploading', 'cancelling'].includes(upload.phase)
+  const locked = disabled || !!upload.attempt
   const error = upload.error
   return (
     <section aria-labelledby={`${inputId}-heading`} className="mt-10 space-y-4">
@@ -47,7 +48,7 @@ export function ClipSourcePicker({
           type="file"
           accept={ACCEPT}
           multiple
-          disabled={disabled || busy}
+          disabled={locked || busy}
           aria-describedby={`${inputId}-disclosure`}
           className="peer/source sr-only"
           onChange={(event) => {
@@ -58,7 +59,7 @@ export function ClipSourcePicker({
         />
         <label
           htmlFor={inputId}
-          aria-disabled={disabled || busy || undefined}
+          aria-disabled={locked || busy || undefined}
           className={buttonStyles({
             variant: 'secondary',
             className:
@@ -127,6 +128,17 @@ export function ClipSourcePicker({
                 {formatDuration(entry.metadata.durationMs)}
               </Typography>
               {entry.confirmed && <Typography variant="meta">{t('source.confirmed')}</Typography>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!!upload.summaries?.length && (
+        <ul className="space-y-2" aria-label={t('source.completed')}>
+          {upload.summaries.map((entry, index) => (
+            <li key={index} className="min-w-0">
+              <Typography variant="body" className="break-words">
+                {entry.filename} · {t(`source.outcome.${entry.status}`)}
+              </Typography>
             </li>
           ))}
         </ul>

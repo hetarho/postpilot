@@ -1,4 +1,31 @@
 export const clips = {
+  credits: {
+    title: 'Credits for this attempt',
+    quoting: 'Checking the maximum credit charge',
+    maximumHelp: 'This is a charge ceiling, not a prediction. The final charge may be lower.',
+    approve: 'Maximum {{amount, number}} credits · approve and generate',
+    expired: 'This approval window expired. Check a new ceiling.',
+    refresh: 'Refresh maximum credits',
+    exempt:
+      'Master accounts are not debited. Model compatibility and execution limits still apply.',
+    approved: 'Approved maximum',
+    reserved: 'Actual reservation',
+    charged: 'Final charge',
+    refunded: 'Returned credits',
+    amount: '{{amount, number}} credits',
+    pendingAmount: 'Pending',
+    preparing:
+      'All originals and analysis copies are prepared and verified before credits are reserved.',
+    held: 'Credits are reserved for AI work. The final charge is not yet known.',
+    settling: 'Video processing finished. Credit settlement is still pending.',
+    settled: 'Credit settlement is complete.',
+    unavailable: 'Checking authoritative accounting. Missing amounts are not shown as zero.',
+    noCharge:
+      'This failed attempt costs you zero credits. This does not claim that the external provider billed zero.',
+    uncertain:
+      'Checking whether your request was accepted without submitting it again. Leaving this page does not stop an accepted job.',
+    checkAttempt: 'Check accepted work again',
+  },
   correction: {
     enter: 'Edit',
     title: 'Edit cuts and captions',
@@ -60,10 +87,11 @@ export const clips = {
     failedAt: 'Failed during: {{stage}}',
     finished: 'Your clip is ready',
     models: 'Generation models',
-    videoRequired: 'Choose an observation model that supports video input.',
+    videoRequired:
+      'Choose an observation model supporting inline compressed video and static sampling.',
     selectModels: 'Choose an observation model and a writing model.',
     creditPolicy:
-      'After verifying sources, we reserve credits for the entire AI run. Insufficient credits means no AI call, and your charge never exceeds the reservation.',
+      'Generation requires approval of the displayed maximum. After every original and analysis copy is verified, credits are reserved once. Your charge never exceeds either approval or reservation. Failed work without confirmed billable usage costs nothing, including the base charge.',
     plans: 'Check credits and plans',
     reselection:
       'Select your source videos again to generate another clip. Previous originals are not retained.',
@@ -115,18 +143,23 @@ export const clips = {
   source: {
     title: 'Source videos',
     disclosure:
-      'Source videos are sent to an external video-analysis provider and deleted after the current processing attempt. Originals are not retained in the project. Refreshing or closing this page may require you to select the source videos again.',
+      'Compressed copies containing the selected footage and audible speech are sent through OpenRouter to an external video-analysis provider. This service deletes originals and analysis copies after the attempt and does not retain them in the project. This does not guarantee the external provider’s retention policy. Local previews remain until processing ends; refreshing or leaving may require source reselection.',
     select: 'Select source videos',
     replace: 'Reselect source videos',
     cancel: 'Cancel selection',
     saveFirst:
       'Choose a template, fill in its answers and save the setup before selecting source videos.',
     confirmed: 'Upload confirmed',
+    completed: 'Processed source filenames',
+    outcome: { done: 'Completed · reselect if needed', failed: 'Failed · reselect if needed' },
     phase: {
       idle: 'Please select the source videos again',
       reading: 'Reading video information',
       uploading: 'Uploading and checking source videos',
       ready: 'Upload ready',
+      accepting: 'Checking job acceptance',
+      owned: 'Processing accepted sources',
+      finished: 'Local originals released. Reselect them if needed.',
       cancelling: 'Cancelling selection',
       failed: 'Select the source videos again to retry uploading',
     },

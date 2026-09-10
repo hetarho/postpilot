@@ -7,3 +7,4 @@ export {
   ClipSelectionError,
 } from './model/manifest'
 export type { ClipUploadState, LocalClipSource } from './model/session'
+export { discardClipSourceSessions } from './model/session'

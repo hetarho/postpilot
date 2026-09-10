@@ -31,12 +31,14 @@ export function StageModelSelect({
   optional = false,
   disabled = false,
   requireVideoInput = false,
+  requireInlineStaticVideo = false,
 }: {
   stage: StageName
   className?: string
   optional?: boolean
   disabled?: boolean
   requireVideoInput?: boolean
+  requireInlineStaticVideo?: boolean
 }) {
   const { t } = useTranslation('models')
   const id = useId()
@@ -70,7 +72,12 @@ export function StageModelSelect({
     ...models.map((model) => ({
       value: refKey(model.ref),
       label: optionLabel(model),
-      disabled: model.disabled || !model.affordable || (requireVideoInput && !model.videoInput),
+      disabled:
+        model.disabled ||
+        (!requireInlineStaticVideo && !model.affordable) ||
+        (requireVideoInput && !model.videoInput) ||
+        (requireInlineStaticVideo &&
+          (!model.vision || !model.videoInput || !model.inlineStaticVideo)),
     })),
   ]
 
@@ -96,8 +103,10 @@ export function StageModelSelect({
             !disabled &&
             chosen &&
             !chosen.disabled &&
-            chosen.affordable &&
-            (!requireVideoInput || chosen.videoInput)
+            (requireInlineStaticVideo || chosen.affordable) &&
+            (!requireVideoInput || chosen.videoInput) &&
+            (!requireInlineStaticVideo ||
+              (chosen.vision && chosen.videoInput && chosen.inlineStaticVideo))
           )
             save.save(stage, chosen.ref)
         }}

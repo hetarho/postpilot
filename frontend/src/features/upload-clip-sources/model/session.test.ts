@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ClipSourceBatch, ClipSourceMetadata } from '@/entities/clip-project'
-import { ClipSourceSession, type SourcePipeline } from './session'
+import { ClipSourceSession, discardClipSourceSessions, type SourcePipeline } from './session'
+
+afterEach(discardClipSourceSessions)
 
 const files = [
   new File(['one'], 'one.mp4', { type: 'video/mp4' }),
@@ -65,18 +67,87 @@ function deferred<T>() {
   return { promise, resolve }
 }
 describe('page-owned clip source session', () => {
+  it.each(['done', 'failed'] as const)(
+    'keeps owned media until its own %s and revokes exactly once',
+    async (status) => {
+      const { session, pipeline } = fixture()
+      await session.select(files)
+      expect(session.beginAttempt('foreign')).toBe(false)
+      expect(session.beginAttempt('batch')).toBe(true)
+      expect(session.getSnapshot().readyBatch).toBeUndefined()
+      await session.cancel()
+      await session.select(files)
+      session.markOwned('foreign', 'old')
+      session.finishAttempt('old', status)
+      expect(pipeline.revokeURL).not.toHaveBeenCalled()
+      expect(pipeline.reserve).toHaveBeenCalledTimes(1)
+      session.markOwned('batch', 'job')
+      session.markOwned('batch', 'other-job')
+      session.finishAttempt('other-job', status)
+      expect(session.getSnapshot().attempt).toEqual({ batchId: 'batch', jobId: 'job' })
+      expect(session.getSnapshot().entries.map((e) => e.file)).toEqual(files)
+      session.finishAttempt('job', status)
+      session.finishAttempt('job', status)
+      session.dispose()
+      expect(pipeline.revokeURL).toHaveBeenCalledTimes(2)
+      expect(pipeline.discard).not.toHaveBeenCalled()
+    },
+  )
+  it('rejects stale terminal/ownership callbacks after a new selection', async () => {
+    const { session, pipeline, reservation } = fixture()
+    await session.select(files)
+    session.beginAttempt('batch')
+    session.markOwned('batch', 'old')
+    session.finishAttempt('old', 'failed')
+    reservation.batch.id = 'new-batch'
+    await session.select(files)
+    session.finishAttempt('old', 'done')
+    session.markOwned('batch', 'old')
+    expect(session.getSnapshot().readyBatch?.id).toBe('new-batch')
+    expect(session.getSnapshot().entries).toHaveLength(2)
+    expect(pipeline.revokeURL).toHaveBeenCalledTimes(2)
+  })
+  it('retains media while acceptance is ambiguous and restores only a definite refusal', async () => {
+    const { session, pipeline } = fixture()
+    await session.select(files)
+    session.beginAttempt('batch')
+    session.rejectAttempt('foreign')
+    expect(session.getSnapshot().phase).toBe('accepting')
+    session.rejectAttempt('batch')
+    expect(session.getSnapshot().readyBatch?.id).toBe('batch')
+    expect(pipeline.revokeURL).not.toHaveBeenCalled()
+    session.beginAttempt('batch')
+    session.markOwned('batch', 'job')
+    session.rejectAttempt('batch')
+    expect(session.getSnapshot().phase).toBe('owned')
+  })
+  it('logout clears owned media and late ownership cannot revive it', async () => {
+    const { session, pipeline } = fixture()
+    await session.select(files)
+    session.beginAttempt('batch')
+    discardClipSourceSessions()
+    session.markOwned('batch', 'late')
+    session.finishAttempt('late', 'done')
+    expect(session.getSnapshot()).toEqual({ phase: 'idle', entries: [] })
+    expect(pipeline.revokeURL).toHaveBeenCalledTimes(2)
+    expect(pipeline.discard).not.toHaveBeenCalled()
+  })
   it('reserves metadata once, uploads in order, confirms each and exposes only a typed ready batch', async () => {
     const { session, pipeline } = fixture()
     const snapshots: number[] = []
     session.subscribe(() => snapshots.push(session.getSnapshot().entries[0]?.percent ?? 0))
     await session.select(files)
-    expect(pipeline.reserve).toHaveBeenCalledExactlyOnceWith('project', manifest)
+    expect(pipeline.reserve).toHaveBeenCalledExactlyOnceWith(
+      'project',
+      manifest,
+      expect.any(AbortSignal),
+    )
     expect(pipeline.put.mock.calls.map((c) => c[2])).toEqual(files)
     expect(pipeline.put.mock.calls[0]?.[1]).toEqual({
       'If-None-Match': '*',
       'Content-Type': 'video/mp4',
     })
-    expect(pipeline.confirm.mock.calls).toEqual([
+    expect(pipeline.confirm.mock.calls.map((call) => call.slice(0, 2))).toEqual([
       ['batch', 'source-0'],
       ['batch', 'source-1'],
     ])
@@ -90,10 +161,18 @@ describe('page-owned clip source session', () => {
       ],
     })
     expect(JSON.stringify(session.getSnapshot().readyBatch)).not.toContain('blob:')
-    session.finishAttempt()
+    expect(session.beginAttempt('batch')).toBe(true)
+    session.markOwned('batch', 'job')
+    expect(pipeline.revokeURL).not.toHaveBeenCalled()
+    expect(session.getSnapshot().entries.map((e) => e.file)).toEqual(files)
+    session.finishAttempt('job', 'done')
     expect(pipeline.revokeURL.mock.calls).toEqual([['blob:one.mp4'], ['blob:two.mp4']])
     expect(pipeline.discard).not.toHaveBeenCalled()
-    expect(session.getSnapshot()).toEqual({ phase: 'idle', entries: [] })
+    expect(session.getSnapshot()).toEqual({
+      phase: 'finished',
+      entries: [],
+      summaries: files.map((file) => ({ filename: file.name, status: 'done' })),
+    })
   })
   it('rejects a client gate before reservation or previews', async () => {
     const { session, pipeline } = fixture()

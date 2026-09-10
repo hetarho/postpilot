@@ -37,14 +37,15 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
-| T085 | Clip credit approval and preview lifecycle | CLIP QUOTA ARCH | T084 | todo |
 | T086 | Clip credit and media release regressions | CLIP QUOTA VIDEO ARCH | T085 | todo |
 
 ## next
-- implement-task T085 → T086 with one verified commit each; T081–T084 are complete. After all six tasks are complete, push the series and verify remote CI. Preserve unrelated T008/navigation work
+- implement-task T086 with one verified commit; T081–T085 are complete. After all six tasks are complete, push the series and verify remote CI. Preserve unrelated T008/navigation work
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
 - T008 is the last PUB task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job. Read T042 T043 T045 T046 results for the live surveys and the wiring's typed preflight; update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
 ## log
+- 260910 T085 done; exact explicit server-ceiling approval, owned attempt-long previews and authoritative settlement UI; all local gates, race tests, 1469 frontend tests and ko/en 320/390/1024px browser checks pass, no paid call or push
+- 260910 T085 claimed (crd); explicit server-priced approval, attempt-long local previews and authoritative settlement UI; preserve unrelated work and never replay paid starts
 - 260910 T084 done; prepare-all verified inline media, exact frozen-policy reservation, bounded original rendering and cleanup; all local gates/races and nonroot 1GiB/2CPU smoke pass, no paid request or push
 - 260910 T084 claimed (crd); prepare every bounded proxy before exact reservation and guarded inline AI, preserve original rendering and cleanup, user ceilings take priority
 - 260910 T083 done; bounded inline/static transport, frozen multimodal quote/routing/usage policy and pre-enqueue URL gates; all local gates and targeted race tests pass, 1449 frontend tests, no paid call or push; paid runner remains closed until T084
@@ -63,5 +64,3 @@
 - 260910 update-ssot CLIP QUOTA VIDEO done; CLIP r3 QUOTA r8 VIDEO r2 pending task breakdown, no affected doing task or implementation changes; bounded inline analysis, approved ceilings, zero-charge unused failures and attempt-long previews
 - 260910 update-ssot CLIP QUOTA VIDEO start; apply approved bounded inline analysis, visible credit ceilings, no-usage failure protection and attempt-long local previews; documents only, preserve T008
 - 260910 update-ssot VIDEO CLIP start; paused for approval of bounded inline clip analysis proxies versus VIDEO-10 URL-only delivery; production read-only diagnostics found Gemini permission failures, zero recorded AI usage and 2-credit base settlements; no code, provider retries or production writes
-- 260910 clip bugfix start (clp); investigate reported analyze failure through PEM-authenticated read-only diagnostics; preserve credit caps and concurrent T008 edits
-- 260910 T080 done; grouped navigation and responsive credit-safe header; all local gates and ordinary/master browser checks pass

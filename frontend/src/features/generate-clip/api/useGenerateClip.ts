@@ -1,15 +1,47 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { clipProjectsKey, type ClipProject, type ReadyClipBatch } from '@/entities/clip-project'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  clipProjectsKey,
+  toClipProject,
+  type ClipProject,
+  type ClipQuote,
+  type ReadyClipBatch,
+} from '@/entities/clip-project'
 import { isTerminal, useJob } from '@/entities/generation-job'
 import { myPlanQueryKey } from '@/entities/plan'
-import { useSelectionSavePending, useStageSelection } from '@/entities/model-catalog'
+import { useSelectionSavePending, useStageSelection, type ModelRef } from '@/entities/model-catalog'
 import { ClipService, appFailureFromConnect, type AppFailure } from '@/shared/api'
-import { clipModelsReady, readyClipBatch } from '../model/preconditions'
+import { POLL_INTERVAL_MS } from '@/shared/config'
+import { clipModelsReady, clipQuoteBinding, readyClipBatch } from '../model/preconditions'
 
-export function useGenerateClip(ownerId: string, project: ClipProject) {
+interface Ownership {
+  begin(batchId: string): boolean
+  owned(batchId: string, jobId: string): void
+  rejected(batchId: string): void
+}
+type StartInput =
+  | { kind: 'generate'; batchId: string; quote: ClipQuote; observe: ModelRef; write: ModelRef }
+  | { kind: 'render'; batchId: string; revision: number }
+const DEFINITE_REFUSALS = new Set([
+  'CLIP_QUOTE_REQUIRED',
+  'CLIP_QUOTE_CHANGED',
+  'CLIP_QUOTE_EXPIRED',
+  'CLIP_MODEL_PRICING_UNAVAILABLE',
+  'CLIP_MODEL_INPUT_UNSUPPORTED',
+  'CLIP_SOURCE_UNAVAILABLE',
+  'CLIP_NOT_FOUND',
+  'CLIP_INVALID_INPUT',
+  'CLIP_BUSY',
+  'CLIP_PLAN_CONFLICT',
+  'MODEL_VIDEO_UNSUPPORTED',
+  'MODEL_UNAVAILABLE',
+  'PROVIDER_DISABLED',
+  'INSUFFICIENT_CREDITS',
+])
+
+export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobId?: string) {
   const transport = useTransport()
   const cache = useQueryClient()
   const observe = useStageSelection('observe')
@@ -17,14 +49,25 @@ export function useGenerateClip(ownerId: string, project: ClipProject) {
   const selectionPending = useSelectionSavePending()
   const [started, setStarted] = useState<{ id: string; previous?: string }>()
   const [localFailure, setLocalFailure] = useState<AppFailure>()
+  const [uncertain, setUncertain] = useState<{
+    batchId: string
+    quoteId?: string
+    ownership: Ownership
+  }>()
+  const unresolved = useRef<typeof uncertain>(undefined)
   const starting = useRef(false)
+  const active = useRef(true)
   const consumed = useRef(new Set<string>())
+  const usedQuotes = useRef(new Set<string>())
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+      unresolved.current = undefined
+    }
+  }, [])
   const mutation = useMutation({
-    mutationFn: async (
-      input:
-        | { kind: 'generate'; batchId: string }
-        | { kind: 'render'; batchId: string; revision: number },
-    ) => {
+    mutationFn: async (input: StartInput) => {
       const client = createClient(ClipService, transport)
       const response =
         input.kind === 'render'
@@ -36,34 +79,121 @@ export function useGenerateClip(ownerId: string, project: ClipProject) {
           : await client.startClipGeneration({
               projectId: project.id,
               batchId: input.batchId,
-              observeModel: observe.selected ?? undefined,
-              writeModel: write.selected ?? undefined,
+              observeModel: input.observe,
+              writeModel: input.write,
+              quoteId: input.quote.quoteId,
+              approvedMaxCredits: input.quote.maxCredits,
             })
       if (!response.jobId) throw new Error('Missing durable clip job')
       return response
     },
+    // Never pause a paid request offline and resume it on reconnect, nor replay it.
     retry: false,
+    networkMode: 'always',
+    gcTime: 0,
   })
-  const id =
+  const latestId =
     started && (!project.latestJob || project.latestJob.id === started.previous)
       ? started.id
       : (project.latestJob?.id ?? started?.id ?? '')
+  // Finish this page's accepted media owner even if another tab has already
+  // started a newer job by the time the project projection arrives.
+  const id = ownedJobId ?? latestId
   const poll = useJob(id, [clipProjectsKey(transport, ownerId), myPlanQueryKey(transport)])
-  const job = poll.job ?? (project.latestJob?.id === id ? project.latestJob : undefined)
-  const busy = mutation.isPending || (!!id && (!job || !isTerminal(job)))
+  const job =
+    poll.job?.id === id ? poll.job : project.latestJob?.id === id ? project.latestJob : undefined
+  const busy =
+    mutation.isPending ||
+    !!uncertain ||
+    (!!id && (!job || !isTerminal(job))) ||
+    (!!project.latestJob && project.latestJob.id !== id && !isTerminal(project.latestJob))
   const modelsReady = !selectionPending && clipModelsReady(observe, write)
-  const failure =
-    localFailure ??
-    (mutation.error
-      ? appFailureFromConnect(mutation.error)
-      : job?.status === 'failed'
-        ? job.failure
-        : undefined)
+  const resolution = useQuery({
+    queryKey: ['clip-start-resolution', transport, ownerId, project.id, uncertain?.batchId],
+    enabled: !!uncertain,
+    gcTime: 0,
+    staleTime: 0,
+    refetchInterval: uncertain ? POLL_INTERVAL_MS : false,
+    queryFn: async ({ signal }) => {
+      const response = await createClient(ClipService, transport).getClipProject(
+        { id: project.id },
+        { signal },
+      )
+      if (!response.project) throw new Error('Missing owned clip')
+      const found = toClipProject(response.project)
+      const attempt = found.latestAttempt
+      if (
+        active.current &&
+        uncertain &&
+        unresolved.current === uncertain &&
+        attempt &&
+        attempt.batchId === uncertain.batchId &&
+        attempt.quoteId === (uncertain.quoteId ?? '') &&
+        found.latestJob?.id === attempt.jobId
+      ) {
+        unresolved.current = undefined
+        uncertain.ownership.owned(uncertain.batchId, attempt.jobId)
+        setStarted({ id: attempt.jobId, previous: project.latestJob?.id })
+        setUncertain(undefined)
+        setLocalFailure(undefined)
+        void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+      }
+      return found
+    },
+  })
 
+  const accounting = project.accounting?.jobId === job?.id ? project.accounting : undefined
+  const balanceTransition = accounting
+    ? JSON.stringify([
+        accounting.jobId,
+        accounting.status,
+        accounting.reservedCredits,
+        accounting.settled,
+        accounting.finalChargeCredits,
+        accounting.refundCredits,
+      ])
+    : ''
+  useEffect(() => {
+    if (balanceTransition) void cache.invalidateQueries({ queryKey: myPlanQueryKey(transport) })
+  }, [balanceTransition, cache, transport])
+
+  async function submit(input: StartInput, ownership: Ownership) {
+    if (!ownership.begin(input.batchId)) return
+    starting.current = true
+    consumed.current.add(input.batchId)
+    setLocalFailure(undefined)
+    try {
+      const response = await mutation.mutateAsync(input)
+      if (!active.current) return
+      ownership.owned(input.batchId, response.jobId)
+      setStarted({ id: response.jobId, previous: project.latestJob?.id })
+      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+    } catch (error) {
+      if (!active.current) return
+      const failure = appFailureFromConnect(error)
+      setLocalFailure(failure)
+      if (DEFINITE_REFUSALS.has(failure.reason)) {
+        consumed.current.delete(input.batchId)
+        ownership.rejected(input.batchId)
+      } else {
+        const pending = {
+          batchId: input.batchId,
+          quoteId: input.kind === 'generate' ? input.quote.quoteId : undefined,
+          ownership,
+        }
+        unresolved.current = pending
+        setUncertain(pending)
+      }
+      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+    } finally {
+      starting.current = false
+    }
+  }
   async function start(
     batch: ReadyClipBatch | undefined,
     settingsReady: boolean,
-    onOwned: () => void,
+    quote: ClipQuote,
+    ownership: Ownership,
   ) {
     if (
       starting.current ||
@@ -71,30 +201,36 @@ export function useGenerateClip(ownerId: string, project: ClipProject) {
       !settingsReady ||
       !modelsReady ||
       !batch ||
-      consumed.current.has(batch.id)
+      consumed.current.has(batch.id) ||
+      usedQuotes.current.has(quote.quoteId) ||
+      !observe.selected ||
+      !write.selected
     )
       return
     if (!readyClipBatch(batch, project.id, Date.now())) {
       setLocalFailure({ reason: 'CLIP_SOURCE_UNAVAILABLE', params: {} })
       return
     }
-    setLocalFailure(undefined)
-    starting.current = true
-    try {
-      const response = await mutation.mutateAsync({ kind: 'generate', batchId: batch.id })
-      consumed.current.add(batch.id)
-      setStarted({ id: response.jobId, previous: project.latestJob?.id })
-      onOwned()
-      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
-    } catch {
-      // An ambiguous response may hide an accepted job: refresh the owned snapshot,
-      // never retry the paid start automatically or discard server-owned inputs.
-      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
-    } finally {
-      starting.current = false
+    if (
+      quote.binding !== clipQuoteBinding(project, batch, observe.selected, write.selected) ||
+      Date.parse(quote.expiresAt) <= Date.now()
+    ) {
+      setLocalFailure({ reason: 'CLIP_QUOTE_EXPIRED', params: {} })
+      return
     }
+    usedQuotes.current.add(quote.quoteId)
+    await submit(
+      {
+        kind: 'generate',
+        batchId: batch.id,
+        quote,
+        observe: observe.selected,
+        write: write.selected,
+      },
+      ownership,
+    )
   }
-  async function render(batch: ReadyClipBatch | undefined, revision: number, onOwned: () => void) {
+  async function render(batch: ReadyClipBatch | undefined, revision: number, ownership: Ownership) {
     if (
       starting.current ||
       busy ||
@@ -113,28 +249,24 @@ export function useGenerateClip(ownerId: string, project: ClipProject) {
       setLocalFailure({ reason: 'CLIP_SOURCE_UNAVAILABLE', params: {} })
       return
     }
-    setLocalFailure(undefined)
-    starting.current = true
-    try {
-      const response = await mutation.mutateAsync({ kind: 'render', batchId: batch.id, revision })
-      consumed.current.add(batch.id)
-      setStarted({ id: response.jobId, previous: project.latestJob?.id })
-      onOwned()
-      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
-    } catch {
-      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
-    } finally {
-      starting.current = false
-    }
+    await submit({ kind: 'render', batchId: batch.id, revision }, ownership)
   }
   return {
     job,
     busy,
     modelsReady,
-    failure,
+    accounting,
+    observeRef: observe.selected,
+    writeRef: write.selected,
+    failure: localFailure ?? (job?.status === 'failed' ? job.failure : undefined),
     starting: mutation.isPending,
-    pollFailed: poll.isError,
-    checkAgain: poll.refetch,
+    uncertain: !!uncertain,
+    pollFailed: poll.isError || (!!uncertain && resolution.isError),
+    checkAgain: () => {
+      poll.refetch()
+      if (uncertain) void resolution.refetch()
+      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+    },
     start,
     render,
   }

@@ -7,35 +7,42 @@ import { matchClipSources } from './reselection'
 
 export function useClipSourceUpload(projectId: string, required?: readonly RetainedClipSource[]) {
   const transport = useTransport()
-  // Plan field edits must not dispose already selected files when the required
-  // source metadata is unchanged. Only this byte-free projection is serialized.
-  const requiredJSON = JSON.stringify(required)
-  const stableRequired = useMemo(
-    () =>
-      requiredJSON === undefined ? undefined : (JSON.parse(requiredJSON) as RetainedClipSource[]),
-    [requiredJSON],
+  // A result/plan refetch must not replace the runtime owner of an accepted attempt.
+  const session = useMemo(
+    () => new ClipSourceSession(projectId, createClipSourcePipeline(transport)),
+    [projectId, transport],
   )
-  const session = useMemo(() => {
-    const pipeline = createClipSourcePipeline(transport)
-    const read = pipeline.read
-    return new ClipSourceSession(projectId, {
-      ...pipeline,
-      read: async (files, signal) => {
-        const manifest = await read(files, signal)
-        if (stableRequired) matchClipSources(manifest, stableRequired)
-        return manifest
-      },
-    })
-  }, [projectId, transport, stableRequired])
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot)
   useEffect(() => {
     session.activate()
-    return () => session.dispose()
+    const hide = () => session.dispose()
+    const show = () => session.activate()
+    window.addEventListener('pagehide', hide)
+    window.addEventListener('pageshow', show)
+    return () => {
+      window.removeEventListener('pagehide', hide)
+      window.removeEventListener('pageshow', show)
+      session.dispose()
+    }
   }, [session])
+  const requiredKey = JSON.stringify(required ?? null)
+  useEffect(() => session.changeConstraints(requiredKey), [session, requiredKey])
   return {
     ...state,
-    select: (files: File[]) => session.select(files),
+    select: (files: File[]) =>
+      session.select(
+        files,
+        required
+          ? (manifest) => {
+              matchClipSources(manifest, required)
+            }
+          : undefined,
+      ),
     cancel: () => session.cancel(),
-    finishAttempt: () => session.finishAttempt(),
+    beginAttempt: (batchId: string) => session.beginAttempt(batchId),
+    markOwned: (batchId: string, jobId: string) => session.markOwned(batchId, jobId),
+    rejectAttempt: (batchId: string) => session.rejectAttempt(batchId),
+    finishAttempt: (jobId: string, status: 'done' | 'failed') =>
+      session.finishAttempt(jobId, status),
   }
 }

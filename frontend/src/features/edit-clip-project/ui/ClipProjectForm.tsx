@@ -75,7 +75,15 @@ export function ClipProjectForm({
   const selected = templates.templates.find((v) => v.id === draft.videoTemplateId)
   const valid = validClipProject(draft, selected?.informationFields)
   const dirty = JSON.stringify(normalizeClipProject(draft)) !== baseline
+  const storedJSON = stored ? JSON.stringify(normalizeClipProject(stored)) : baseline
+  const synced = storedJSON === baseline
   const pending = disabled || save.isPending || remove.isPending
+  if (!synced && !dirty && !save.isPending) {
+    const refreshed = JSON.parse(storedJSON) as ClipProjectDraft
+    setDraft(refreshed)
+    setSeconds(String(refreshed.targetDurationMs / 1000))
+    setBaseline(storedJSON)
+  }
   const guard = () => dirty && !leaving.current
   const blocker = useBlocker({
     shouldBlockFn: guard,
@@ -83,8 +91,8 @@ export function ClipProjectForm({
     withResolver: true,
   })
   useEffect(() => {
-    onUploadAllowed?.(valid && !dirty && !pending)
-  }, [valid, dirty, pending, onUploadAllowed])
+    onUploadAllowed?.(valid && !dirty && synced && !pending)
+  }, [valid, dirty, synced, pending, onUploadAllowed])
   const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) => {
     setSaved(false)
     onSaveStateChange?.(false)
@@ -302,7 +310,7 @@ export function ClipProjectForm({
           >
             {t(stored ? 'project.save' : 'project.create')}
           </Button>
-          {actions?.(valid && !dirty && !pending, dirty)}
+          {actions?.(valid && !dirty && synced && !pending, dirty)}
         </div>
       </ActionBar>
       <Dialog

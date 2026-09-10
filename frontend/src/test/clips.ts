@@ -18,10 +18,12 @@ import {
   ConfirmClipSourceResponseSchema,
   DiscardClipSourceBatchResponseSchema,
   StartClipGenerationResponseSchema,
+  QuoteClipGenerationResponseSchema,
   SaveClipEditPlanResponseSchema,
   StartClipRenderResponseSchema,
   ClipEditingStateSchema,
   type ProtoClipSourceBatch,
+  type AppFailureReason,
 } from '@/shared/api'
 import type { ClipRecipe } from '@/entities/clip-template'
 import {
@@ -44,6 +46,8 @@ export interface FakeClipProject extends ClipProjectDraft {
   ownerId?: string
   result?: ClipProject['result']
   latestJob?: FakeGenerationJobRow
+  latestAttempt?: ClipProject['latestAttempt']
+  accounting?: ClipProject['accounting']
   editing?: ClipProject['editing']
   editPlanRevision?: number
   renderedPlanRevision?: number
@@ -54,6 +58,12 @@ export interface FakeClipsOptions {
   generationStarts?: unknown[]
   generationJobId?: string
   generationFails?: boolean
+  generationAmbiguous?: boolean
+  generationReject?: AppFailureReason
+  quoteRequests?: unknown[]
+  quoteMaxCredits?: number
+  quoteExpiresAt?: string
+  quoteFails?: AppFailureReason
   renderStarts?: unknown[]
   renderJobId?: string
   renderFails?: boolean
@@ -203,6 +213,23 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     return create(DeleteClipProjectResponseSchema, {})
   })
   const batches = new Map<string, ProtoClipSourceBatch>()
+  const quotes = new Map<string, { id: string; max: number }>()
+  let quoteNumber = 0
+  router.rpc(ClipService.method.quoteClipGeneration, (req) => {
+    options.calls?.push('QuoteClipGeneration')
+    options.quoteRequests?.push(req)
+    if (options.quoteFails) throw connectAppError(options.quoteFails, Code.FailedPrecondition)
+    const batch = batches.get(req.batchId)
+    if (!batch || batch.projectId !== req.projectId || batch.state !== 'ready')
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    const q = { id: `quote-${++quoteNumber}`, max: options.quoteMaxCredits ?? 20 }
+    quotes.set(batch.id, q)
+    return create(QuoteClipGenerationResponseSchema, {
+      quoteId: q.id,
+      maxCredits: q.max,
+      expiresAt: options.quoteExpiresAt ?? '2099-01-01T00:00:00Z',
+    })
+  })
   router.rpc(ClipService.method.saveClipEditPlan, (req) => {
     options.calls?.push('SaveClipEditPlan')
     const p = projects.get(req.projectId)
@@ -233,16 +260,22 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       stage: 'prepare',
       clipProjectId: p.id,
     }
+    p.latestAttempt = { jobId, batchId: b.id, quoteId: '' }
     return create(StartClipRenderResponseSchema, { jobId })
   })
   router.rpc(ClipService.method.startClipGeneration, (req) => {
     options.calls?.push('StartClipGeneration')
     options.generationStarts?.push(req)
     if (options.generationFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    if (options.generationReject)
+      throw connectAppError(options.generationReject, Code.FailedPrecondition)
     const p = projects.get(req.projectId)
     const b = batches.get(req.batchId)
     if (!p || !b || b.state !== 'ready')
       throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    const quote = quotes.get(b.id)
+    if (!quote || quote.id !== req.quoteId || quote.max !== req.approvedMaxCredits)
+      throw connectAppError('CLIP_QUOTE_REQUIRED', Code.FailedPrecondition)
     b.state = 'consuming'
     const jobId = options.generationJobId ?? 'clip-job'
     p.latestJob = {
@@ -252,6 +285,15 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       stage: 'prepare',
       clipProjectId: p.id,
     }
+    p.latestAttempt = { jobId, batchId: b.id, quoteId: quote.id }
+    p.accounting = {
+      jobId,
+      status: 'not_reserved',
+      approvedMaxCredits: quote.max,
+      reservedCredits: 0,
+      settled: false,
+    }
+    if (options.generationAmbiguous) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(StartClipGenerationResponseSchema, { jobId })
   })
   router.rpc(ClipService.method.createClipSourceBatch, (req) => {

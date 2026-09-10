@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClipService, type ProtoClipProject, type ProtoClipSourceBatch } from '@/shared/api'
 import { toGenerationJob } from '@/entities/generation-job/@x/clip-project'
 import { toClipEditingState } from './edit-plan'
+import { toClipAccounting } from './credits'
+import { POLL_INTERVAL_MS } from '@/shared/config'
 import {
   CLIP_RATIOS,
   normalizeClipProject,
@@ -29,6 +31,15 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     editPlanRevision: value.editPlanRevision,
     renderedPlanRevision: value.renderedPlanRevision,
     latestJob: value.latestJob ? toGenerationJob(value.latestJob) : undefined,
+    latestAttempt:
+      value.latestAttempt?.jobId && value.latestAttempt.batchId
+        ? {
+            jobId: value.latestAttempt.jobId,
+            batchId: value.latestAttempt.batchId,
+            quoteId: value.latestAttempt.quoteId,
+          }
+        : undefined,
+    accounting: value.accounting ? toClipAccounting(value.accounting) : undefined,
     editing: value.editing ? toClipEditingState(value.editing) : undefined,
     result: value.result
       ? {
@@ -84,13 +95,23 @@ export function useClipProjects(ownerId: string) {
 }
 export function useClipProject(ownerId: string, id: string | undefined) {
   const transport = useTransport()
-  return useQuery({
+  return useQuery<ClipProject>({
     queryKey: [...clipProjectsKey(transport, ownerId), 'detail', id],
     enabled: !!ownerId && !!id,
     staleTime: 0,
     refetchOnMount: 'always',
-    queryFn: async () => {
-      const response = await createClient(ClipService, transport).getClipProject({ id })
+    refetchInterval: (state) => {
+      const project = state.state.data
+      const job = project?.latestJob
+      if (!job) return false
+      if (job.status === 'queued' || job.status === 'running') return POLL_INTERVAL_MS
+      return job.kind === 'generate_clip' &&
+        (!project.accounting || project.accounting.jobId !== job.id || !project.accounting.settled)
+        ? POLL_INTERVAL_MS
+        : false
+    },
+    queryFn: async ({ signal }) => {
+      const response = await createClient(ClipService, transport).getClipProject({ id }, { signal })
       if (!response.project) throw new Error('Missing clip')
       return toClipProject(response.project)
     },

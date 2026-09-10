@@ -1,3 +1,5 @@
 export { useGenerateClip } from './api/useGenerateClip'
 export { ClipResult } from './ui/ClipResult'
 export { ClipGenerationFailure } from './ui/ClipGenerationFailure'
+export { ClipApprovalAction } from './ui/ClipApprovalAction'
+export { ClipCreditSettlement } from './ui/ClipCreditSettlement'

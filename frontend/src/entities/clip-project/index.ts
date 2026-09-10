@@ -13,6 +13,8 @@ export type {
   ClipSourceMetadata,
   ClipSourceBatch,
   ReadyClipBatch,
+  ClipAccounting,
+  ClipQuote,
 } from './model/types'
 export {
   clipProjectsKey,
@@ -38,3 +40,4 @@ export type {
   ClipEdit,
 } from './model/edit-plan'
 export { toClipEditingState, clipPlanToProto } from './api/edit-plan'
+export { toClipQuote, toClipAccounting } from './api/credits'

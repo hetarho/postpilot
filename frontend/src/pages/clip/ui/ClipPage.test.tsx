@@ -166,7 +166,7 @@ describe('clip page local upload lifecycle', () => {
     const view = mount('/clips/project', options)
     const input = await screen.findByLabelText('원본 영상 선택')
     await waitFor(() => expect(input).toBeEnabled())
-    const disclosure = screen.getByText(/원본 영상은 외부 영상 분석 제공자에게/)
+    const disclosure = screen.getByText(/선택한 영상과 들리는 말이 담긴 압축 사본을 OpenRouter/)
     expect(
       disclosure.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
