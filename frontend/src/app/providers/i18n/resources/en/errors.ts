@@ -131,7 +131,7 @@ export const errors = {
   GENERATION_WRITE_MODEL_REQUIRED: 'Select a writing model.',
   GENERATION_OBSERVE_MODEL_REQUIRED: 'Select a photo-observation model.',
   MODEL_VIDEO_UNSUPPORTED:
-    'The selected observation model cannot watch video. Choose one that supports it.',
+    'The selected observation model cannot read this post’s video links. Choose a model that supports signed video URLs.',
   VIDEO_NOT_PUBLISHABLE:
     'A post with a video cannot be published yet. Paste it yourself from the export tab.',
   POST_VIDEO_LIMIT: 'This post already holds the maximum number of videos.',

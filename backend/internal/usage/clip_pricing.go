@@ -67,11 +67,11 @@ func ClipCredits(calls []PricedCall) (int, error) {
 		if !call.Policy.Valid() || call.Count <= 0 || call.Count > 49 {
 			return 0, ErrClipPricing
 		}
-		cost := llm.ResolveCost(llm.CostInput{PromptTokens: holdInputTokens, CompletionTokens: int64(call.Policy.CompletionTokens), InputUSDPerMillion: call.Policy.InputUSDPerMillion, OutputUSDPerMillion: call.Policy.OutputUSDPerMillion})
-		if cost.Source != llm.CostEstimated || cost.Microusd < 0 || cost.Microusd > (math.MaxInt64-total)/int64(call.Count) {
+		cost, ok := call.Policy.QuoteMicrousd()
+		if !ok || cost > (math.MaxInt64-total)/int64(call.Count) {
 			return 0, ErrClipPricing
 		}
-		total += cost.Microusd * int64(call.Count)
+		total += cost * int64(call.Count)
 	}
 	// Charge multiplies in integer space; reject before either int64 or int can wrap.
 	if total > (math.MaxInt64-9999)/int64(plan.ChargeMultiplier) {

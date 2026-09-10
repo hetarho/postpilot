@@ -126,14 +126,14 @@ export const GenerationActions = forwardRef<
           mode === 'generation'
             ? await generation.start(
                 post.slug,
-                post.images.length ? observeSelection?.ref : undefined,
+                post.images.length || post.videos.length ? observeSelection?.ref : undefined,
                 writeSelection!.ref,
                 targetLength,
                 reobserveFiles,
               )
             : await comparison.start(
                 post.slug,
-                post.images.length ? observeSelection?.ref : undefined,
+                post.images.length || post.videos.length ? observeSelection?.ref : undefined,
                 writeA!.ref,
                 writeB!.ref,
                 targetLength,
@@ -155,6 +155,7 @@ export const GenerationActions = forwardRef<
       onStarted,
       ordinary,
       post.images.length,
+      post.videos.length,
       post.slug,
       sharedDisabled,
       targetLength,
@@ -184,6 +185,7 @@ export const GenerationActions = forwardRef<
       ordinary,
       post.images,
       post.observations,
+      post.videos,
       sharedDisabled,
       writeA,
       writeB,
@@ -353,5 +355,12 @@ function resolveSelection(
 ): GenerationModelSelection | undefined {
   if (!selected) return undefined
   const model = models.find((candidate) => sameRef(candidate.ref, selected))
-  return model ? { ref: selected, vision: model.vision, videoInput: model.videoInput } : undefined
+  return model
+    ? {
+        ref: selected,
+        vision: model.vision,
+        videoInput: model.videoInput,
+        signedVideoUrl: model.signedVideoUrl,
+      }
+    : undefined
 }

@@ -1,0 +1,43 @@
+{
+  "data": {
+    "id": "google/gemini-2.5-flash",
+    "endpoints": [
+      {
+        "tag": "google-vertex/eu",
+        "model_id": "google/gemini-2.5-flash",
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000025",
+          "image": "0.0000003",
+          "audio": "0.000001",
+          "input_audio_cache": "0.0000001",
+          "web_search": "0.014",
+          "internal_reasoning": "0.0000025",
+          "input_cache_read": "0.00000003",
+          "input_cache_write": "0.0000000833333333333333",
+          "discount": 0
+        },
+        "supported_parameters": ["reasoning", "include_reasoning", "structured_outputs", "response_format", "max_tokens", "temperature", "top_p", "seed", "tools", "tool_choice", "stop"],
+        "max_completion_tokens": 65535
+      },
+      {
+        "tag": "google-ai-studio/flex",
+        "model_id": "google/gemini-2.5-flash",
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.00000125",
+          "image": "0.00000015",
+          "audio": "0.0000005",
+          "input_audio_cache": "0.00000005",
+          "web_search": "0.014",
+          "internal_reasoning": "0.00000125",
+          "input_cache_read": "0.000000015",
+          "input_cache_write": "0.0000000416666666666667",
+          "discount": 0
+        },
+        "supported_parameters": ["reasoning", "include_reasoning", "structured_outputs", "response_format", "max_tokens", "temperature", "top_p", "seed", "tools", "tool_choice", "stop"],
+        "max_completion_tokens": 65535
+      }
+    ]
+  }
+}

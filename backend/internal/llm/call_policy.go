@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"context"
 	"math/big"
 	"regexp"
 	"slices"
@@ -15,6 +16,7 @@ type CallPolicy struct {
 	Reasoning                               ReasoningEffort
 	DisableReasoning                        bool
 	InputUSDPerMillion, OutputUSDPerMillion string
+	Pricing                                 CallPricing
 }
 
 var decimalPrice = regexp.MustCompile(`^(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]{1,3})?$`)
@@ -28,7 +30,29 @@ func ValidUnitPrice(value string) bool {
 }
 
 func (p CallPolicy) Valid() bool {
-	return p.Ref.ProviderID != "" && p.Ref.ModelID != "" && p.Stage != "" && p.CompletionTokens > 0 && p.Reasoning.Valid() && ValidUnitPrice(p.InputUSDPerMillion) && ValidUnitPrice(p.OutputUSDPerMillion)
+	return p.Ref.ProviderID != "" && p.Ref.ModelID != "" && p.Stage != "" && p.CompletionTokens > 0 && p.Reasoning.Valid() && ValidUnitPrice(p.InputUSDPerMillion) && ValidUnitPrice(p.OutputUSDPerMillion) && (p.Pricing == (CallPricing{}) || p.Pricing.Valid())
+}
+
+// FreezeExecution includes read-only adapter pricing discovery. This never calls
+// a model, and a provider without an enforceable price profile cannot quote clips.
+func (r *Registry) FreezeExecution(ctx context.Context, ref ModelRef, stage string, budget int, reasoning ReasoningEffort, delivery ExecutionDelivery) (CallPolicy, error) {
+	p, err := r.FreezeCall(ref, stage, budget, reasoning)
+	if err != nil {
+		return CallPolicy{}, err
+	}
+	provider, ok := r.provider.(ExecutionPricingProvider)
+	if !ok {
+		return CallPolicy{}, ErrUnsupported
+	}
+	if delivery == ExecutionInlineStatic {
+		info, found := r.Lookup(ref)
+		if !found || !info.VideoInput || !info.VideoDelivery.InlineStaticVideo {
+			return CallPolicy{}, ErrUnsupported
+		}
+	}
+	ctx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
+	defer cancel()
+	return provider.FreezePricing(ctx, p, delivery)
 }
 
 // FreezeCall resolves the very same reasoning override as Complete, without a call.

@@ -250,6 +250,13 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "an active voice is required", "EXPERIMENT_VOICE_REQUIRED", nil)
 	case errors.Is(err, experiment.ErrModelRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "two enabled suitable models are required", "EXPERIMENT_MODELS_REQUIRED", nil)
+	case errors.Is(err, experiment.ErrVideoUnsupported):
+		params := map[string]string{}
+		var unsupported *experiment.VideoUnsupportedError
+		if errors.As(err, &unsupported) {
+			params["model"] = unsupported.Model
+		}
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the observe model cannot read signed post video URLs", "MODEL_VIDEO_UNSUPPORTED", params)
 	case errors.Is(err, experiment.ErrLanguageRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", "POST_TARGET_LANGUAGE_REQUIRED", nil)
 	case errors.Is(err, experiment.ErrInvalidState):

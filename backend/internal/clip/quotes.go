@@ -20,7 +20,7 @@ var (
 	ErrPricingUnavailable = errors.New("clip model pricing unavailable")
 )
 
-const PricingPolicyVersion = 1
+const PricingPolicyVersion = 2
 
 type GenerationPricing struct {
 	Version                      int

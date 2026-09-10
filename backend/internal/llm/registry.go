@@ -49,6 +49,7 @@ type ModelInfo struct {
 	// VideoInput: the model takes a video part. Narrower than Vision and checked per
 	// request, not per stage — a video-blind model still serves a post with no clip.
 	VideoInput            bool
+	VideoDelivery         VideoDelivery
 	StructuredOutput      bool
 	ContextTokens         int64
 	InputUSDPerMillion    string
@@ -392,6 +393,9 @@ func (r *Registry) describe(m SourceModel) ModelInfo {
 		ReasoningNativeEffort: m.ReasoningNativeEffort,
 		Stages:                append([]string(nil), m.Stages...),
 	}
+	if delivery, ok := r.provider.(VideoDeliveryProvider); ok && m.VideoInput {
+		info.VideoDelivery = delivery.VideoDelivery(m.ModelID)
+	}
 	switch {
 	case r.disabled:
 		info.Disabled, info.DisabledReason = true, r.disabledReason
@@ -408,6 +412,9 @@ func (r *Registry) describe(m SourceModel) ModelInfo {
 // Unexported on purpose: handing the Provider out would let a caller skip the timeout
 // and the defaults that Complete applies. Callers that need the flags use Lookup.
 func (r *Registry) resolve(ref ModelRef, req Request) (SourceModel, error) {
+	if err := req.ValidateParts(); err != nil {
+		return SourceModel{}, err
+	}
 	if ref.ProviderID != r.providerID {
 		return SourceModel{}, fmt.Errorf("%w: %s is not registered", ErrModelUnavailable, ref)
 	}
@@ -441,6 +448,17 @@ func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Res
 		return Response{}, err
 	}
 	req.Model = ref.ModelID
+	if req.Execution != nil {
+		if !req.Execution.Matches(ref, req) || !slices.Contains(resolved.Stages, req.Stage) {
+			return Response{}, ErrUnsupported
+		}
+		if req.Execution.Delivery == ExecutionInlineStatic && !r.describe(resolved).VideoDelivery.InlineStaticVideo {
+			return Response{}, ErrUnsupported
+		}
+		ctx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
+		defer cancel()
+		return r.provider.Complete(ctx, req)
+	}
 	// This stage's override → the stage value the caller set → nothing sent. The order is
 	// unchanged in shape; the override half is what gained the stage dimension.
 	if override, ok := resolved.Reasoning[req.Stage]; ok && override != ReasoningUnspecified {

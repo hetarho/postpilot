@@ -21,21 +21,22 @@ func TestExperimentErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		reason string
 		params map[string]string
 	}{
-		"not found":               {experiment.ErrNotFound, connect.CodeNotFound, "EXPERIMENT_NOT_FOUND", nil},
-		"candidate not found":     {experiment.ErrCandidateNotFound, connect.CodeNotFound, "EXPERIMENT_CANDIDATE_NOT_FOUND", nil},
-		"forbidden":               {experiment.ErrForbidden, connect.CodePermissionDenied, "EXPERIMENT_FORBIDDEN", nil},
-		"stage":                   {experiment.ErrInvalidStage, connect.CodeInvalidArgument, "EXPERIMENT_STAGE_INVALID", nil},
-		"duplicate candidates":    {experiment.ErrDuplicateCandidates, connect.CodeInvalidArgument, "EXPERIMENT_CANDIDATES_DUPLICATE", nil},
-		"target length":           {experiment.ErrInvalidTargetLength, connect.CodeInvalidArgument, "EXPERIMENT_TARGET_LENGTH_INVALID", nil},
-		"voice required":          {experiment.ErrVoiceRequired, connect.CodeInvalidArgument, "EXPERIMENT_VOICE_REQUIRED", nil},
-		"models required":         {experiment.ErrModelRequired, connect.CodeFailedPrecondition, "EXPERIMENT_MODELS_REQUIRED", nil},
-		"target language":         {experiment.ErrLanguageRequired, connect.CodeFailedPrecondition, "POST_TARGET_LANGUAGE_REQUIRED", nil},
-		"state":                   {experiment.ErrInvalidState, connect.CodeFailedPrecondition, "EXPERIMENT_STATE_INVALID", nil},
-		"confirmation":            {experiment.ErrConfirmationRequired, connect.CodeFailedPrecondition, "EXPERIMENT_CONFIRMATION_REQUIRED", nil},
-		"snapshot":                {experiment.ErrSnapshotUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_SNAPSHOT_UNAVAILABLE", nil},
-		"retry model":             {experiment.ErrRetryModelUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_RETRY_MODEL_UNAVAILABLE", nil},
-		"voice unavailable":       {experiment.ErrVoiceUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_VOICE_UNAVAILABLE", nil},
-		"already running wrapped": {errors.Join(errors.New("private queue detail"), active), connect.CodeFailedPrecondition, "EXPERIMENT_ALREADY_RUNNING", map[string]string{"active_job_id": "job-active"}},
+		"not found":                {experiment.ErrNotFound, connect.CodeNotFound, "EXPERIMENT_NOT_FOUND", nil},
+		"candidate not found":      {experiment.ErrCandidateNotFound, connect.CodeNotFound, "EXPERIMENT_CANDIDATE_NOT_FOUND", nil},
+		"forbidden":                {experiment.ErrForbidden, connect.CodePermissionDenied, "EXPERIMENT_FORBIDDEN", nil},
+		"stage":                    {experiment.ErrInvalidStage, connect.CodeInvalidArgument, "EXPERIMENT_STAGE_INVALID", nil},
+		"duplicate candidates":     {experiment.ErrDuplicateCandidates, connect.CodeInvalidArgument, "EXPERIMENT_CANDIDATES_DUPLICATE", nil},
+		"target length":            {experiment.ErrInvalidTargetLength, connect.CodeInvalidArgument, "EXPERIMENT_TARGET_LENGTH_INVALID", nil},
+		"voice required":           {experiment.ErrVoiceRequired, connect.CodeInvalidArgument, "EXPERIMENT_VOICE_REQUIRED", nil},
+		"models required":          {experiment.ErrModelRequired, connect.CodeFailedPrecondition, "EXPERIMENT_MODELS_REQUIRED", nil},
+		"signed video unsupported": {&experiment.VideoUnsupportedError{Model: "provider/video"}, connect.CodeFailedPrecondition, "MODEL_VIDEO_UNSUPPORTED", map[string]string{"model": "provider/video"}},
+		"target language":          {experiment.ErrLanguageRequired, connect.CodeFailedPrecondition, "POST_TARGET_LANGUAGE_REQUIRED", nil},
+		"state":                    {experiment.ErrInvalidState, connect.CodeFailedPrecondition, "EXPERIMENT_STATE_INVALID", nil},
+		"confirmation":             {experiment.ErrConfirmationRequired, connect.CodeFailedPrecondition, "EXPERIMENT_CONFIRMATION_REQUIRED", nil},
+		"snapshot":                 {experiment.ErrSnapshotUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_SNAPSHOT_UNAVAILABLE", nil},
+		"retry model":              {experiment.ErrRetryModelUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_RETRY_MODEL_UNAVAILABLE", nil},
+		"voice unavailable":        {experiment.ErrVoiceUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_VOICE_UNAVAILABLE", nil},
+		"already running wrapped":  {errors.Join(errors.New("private queue detail"), active), connect.CodeFailedPrecondition, "EXPERIMENT_ALREADY_RUNNING", map[string]string{"active_job_id": "job-active"}},
 	}
 
 	for name, test := range tests {

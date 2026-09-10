@@ -56,6 +56,10 @@ message ModelInfo {
   // The model takes video input. `vision` says it can see a photo; this says it can watch
   // a clip, which is a strictly narrower set of models (VIDEO-11).
   bool video_input = 16;
+  // Adapter-derived workflow readiness, independent of catalog video_input.
+  // Unknown paths are false; neither field clears the recorded raw capability.
+  bool signed_video_url = 17;
+  bool inline_static_video = 18;
   bool disabled = 5;
   string disabled_reason = 6;
   int64 context_tokens = 7;

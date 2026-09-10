@@ -1,0 +1,22 @@
+{
+  "model": "google/gemini-2.5-flash",
+  "messages": [
+    {"role": "system", "content": "Analyze this synthetic fixture."},
+    {"role": "user", "content": [
+      {"type": "text", "text": "Describe the clip."},
+      {"type": "video_url", "video_url": {"url": "data:video/mp4;base64,YWJj", "processing": "static"}}
+    ]}
+  ],
+  "max_tokens": 8192,
+  "stream": true,
+  "stream_options": {"include_usage": true},
+  "response_format": {"type": "json_schema", "json_schema": {"name": "response", "schema": {"type": "object"}}},
+  "reasoning": {"effort": "low"},
+  "provider": {
+    "only": ["google-ai-studio"],
+    "order": ["google-ai-studio"],
+    "allow_fallbacks": false,
+    "require_parameters": true,
+    "max_price": {"prompt": "0.125", "completion": "0.75", "request": "0", "image": "0", "audio": "0"}
+  }
+}

@@ -56,6 +56,8 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
     label: info.label,
     vision: info.vision,
     videoInput: info.videoInput,
+    signedVideoUrl: info.signedVideoUrl,
+    inlineStaticVideo: info.inlineStaticVideo,
     structuredOutput: info.structuredOutput,
     // A stage this build does not know is skipped rather than invented, like everywhere
     // else the enum crosses.

@@ -126,7 +126,7 @@ export const errors = {
   GENERATION_WRITE_MODEL_REQUIRED: '작성 모델을 선택해 주세요.',
   GENERATION_OBSERVE_MODEL_REQUIRED: '사진 관찰 모델을 선택해 주세요.',
   MODEL_VIDEO_UNSUPPORTED:
-    '선택한 관찰 모델은 영상을 볼 수 없어요. 영상을 지원하는 모델을 골라 주세요.',
+    '선택한 관찰 모델은 이 글의 영상 링크를 읽을 수 없어요. 서명된 영상 URL을 지원하는 모델을 골라 주세요.',
   VIDEO_NOT_PUBLISHABLE: '영상이 들어간 글은 아직 발행할 수 없어요. 내보내기에서 직접 붙여 주세요.',
   POST_VIDEO_LIMIT: '한 글에 넣을 수 있는 영상 수를 넘었어요.',
   POST_PHOTO_LIMIT: '한 글에 넣을 수 있는 사진 수를 넘었어요.',

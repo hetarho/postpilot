@@ -237,6 +237,8 @@ func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
 		Label:               m.Info.Label,
 		Vision:              m.Info.Vision,
 		VideoInput:          m.Info.VideoInput,
+		SignedVideoUrl:      m.Info.VideoDelivery.SignedVideoURL,
+		InlineStaticVideo:   m.Info.VideoDelivery.InlineStaticVideo,
 		StructuredOutput:    m.Info.StructuredOutput,
 		Disabled:            m.Info.Disabled,
 		DisabledReason:      m.Info.DisabledReason,

@@ -267,6 +267,8 @@ describe('a model above the account tier', () => {
           label: 'Watcher',
           vision: true,
           videoInput: true,
+          signedVideoUrl: false,
+          inlineStaticVideo: true,
         },
         { providerId: 'openrouter', modelId: 'blind', label: 'Blind', vision: true },
       ],

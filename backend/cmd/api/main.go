@@ -1622,6 +1622,12 @@ func mapSnapshotError(err error) error {
 	switch {
 	case err == nil:
 		return nil
+	case errors.Is(err, generation.ErrVideoUnsupported):
+		var unsupported *generation.VideoUnsupportedError
+		if errors.As(err, &unsupported) {
+			return &experiment.VideoUnsupportedError{Model: unsupported.Model}
+		}
+		return experiment.ErrVideoUnsupported
 	case errors.Is(err, generation.ErrVoiceDeleted), errors.Is(err, generation.ErrVoiceMismatch), errors.Is(err, generation.ErrVoiceRequired):
 		return experiment.ErrVoiceUnavailable
 	case strings.Contains(err.Error(), "read photo"):

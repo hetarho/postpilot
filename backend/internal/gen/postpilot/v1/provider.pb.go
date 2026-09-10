@@ -190,7 +190,11 @@ type ModelInfo struct {
 	StructuredOutput bool `protobuf:"varint,4,opt,name=structured_output,json=structuredOutput,proto3" json:"structured_output,omitempty"`
 	// The model takes video input. `vision` says it can see a photo; this says it can watch
 	// a clip, which is a strictly narrower set of models (VIDEO-11).
-	VideoInput          bool   `protobuf:"varint,16,opt,name=video_input,json=videoInput,proto3" json:"video_input,omitempty"`
+	VideoInput bool `protobuf:"varint,16,opt,name=video_input,json=videoInput,proto3" json:"video_input,omitempty"`
+	// Adapter-derived workflow readiness, independent of catalog video_input.
+	// Unknown paths are false; neither field clears the recorded raw capability.
+	SignedVideoUrl      bool   `protobuf:"varint,17,opt,name=signed_video_url,json=signedVideoUrl,proto3" json:"signed_video_url,omitempty"`
+	InlineStaticVideo   bool   `protobuf:"varint,18,opt,name=inline_static_video,json=inlineStaticVideo,proto3" json:"inline_static_video,omitempty"`
 	Disabled            bool   `protobuf:"varint,5,opt,name=disabled,proto3" json:"disabled,omitempty"`
 	DisabledReason      string `protobuf:"bytes,6,opt,name=disabled_reason,json=disabledReason,proto3" json:"disabled_reason,omitempty"`
 	ContextTokens       int64  `protobuf:"varint,7,opt,name=context_tokens,json=contextTokens,proto3" json:"context_tokens,omitempty"`
@@ -272,6 +276,20 @@ func (x *ModelInfo) GetStructuredOutput() bool {
 func (x *ModelInfo) GetVideoInput() bool {
 	if x != nil {
 		return x.VideoInput
+	}
+	return false
+}
+
+func (x *ModelInfo) GetSignedVideoUrl() bool {
+	if x != nil {
+		return x.SignedVideoUrl
+	}
+	return false
+}
+
+func (x *ModelInfo) GetInlineStaticVideo() bool {
+	if x != nil {
+		return x.InlineStaticVideo
 	}
 	return false
 }
@@ -1241,14 +1259,16 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\bModelRef\x12\x1f\n" +
 	"\vprovider_id\x18\x01 \x01(\tR\n" +
 	"providerId\x12\x19\n" +
-	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\xb7\x04\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\x91\x05\n" +
 	"\tModelInfo\x12(\n" +
 	"\x03ref\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x16\n" +
 	"\x06vision\x18\x03 \x01(\bR\x06vision\x12+\n" +
 	"\x11structured_output\x18\x04 \x01(\bR\x10structuredOutput\x12\x1f\n" +
 	"\vvideo_input\x18\x10 \x01(\bR\n" +
-	"videoInput\x12\x1a\n" +
+	"videoInput\x12(\n" +
+	"\x10signed_video_url\x18\x11 \x01(\bR\x0esignedVideoUrl\x12.\n" +
+	"\x13inline_static_video\x18\x12 \x01(\bR\x11inlineStaticVideo\x12\x1a\n" +
 	"\bdisabled\x18\x05 \x01(\bR\bdisabled\x12'\n" +
 	"\x0fdisabled_reason\x18\x06 \x01(\tR\x0edisabledReason\x12%\n" +
 	"\x0econtext_tokens\x18\a \x01(\x03R\rcontextTokens\x121\n" +

@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | ARCH | 2 | 2 | - | 0 |
 | AUTH | 5 | 5 | - | 0 |
-| QUOTA | 8 | 8 | - | 0 |
+| QUOTA | 9 | 9 | - | 0 |
 | POST | 5 | 5 | - | 0 |
 | VOICE | 2 | 2 | - | 1 |
 | GEN | 5 | 5 | - | 0 |
@@ -37,16 +37,22 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
-| T083 | Bounded inline video and workflow routing | CLIP QUOTA VIDEO ARCH | T082 | todo |
 | T084 | Prepared inline clip generation | CLIP QUOTA ARCH | T083 | todo |
 | T085 | Clip credit approval and preview lifecycle | CLIP QUOTA ARCH | T084 | todo |
 | T086 | Clip credit and media release regressions | CLIP QUOTA VIDEO ARCH | T085 | todo |
 
 ## next
-- implement-task T083, then T084 → T085 → T086; T081–T082 are complete; add bounded inline transport and guarded preparation/execution before connecting approval/previews and release regressions; T008 stays separate
+- implement-task T084 → T086 with one verified commit each; T081–T083 are complete. After all six tasks are complete, push the series and verify remote CI. Preserve unrelated T008/navigation work
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
 - T008 is the last PUB task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job. Read T042 T043 T045 T046 results for the live surveys and the wiring's typed preflight; update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
 ## log
+- 260910 T083 done; bounded inline/static transport, frozen multimodal quote/routing/usage policy and pre-enqueue URL gates; all local gates and targeted race tests pass, 1449 frontend tests, no paid call or push; paid runner remains closed until T084
+- 260910 T083 claimed (crd); resume approved r9 transport and modality-price implementation, preserve the paid-runner guard until T084 and unrelated work
+- 260910 create-task QUOTA done; T083–T086 now consume r9 with frozen multimodal quote/routing/settlement contracts, blocked T083 returned to todo by owner approval; archived T081–T082 unchanged
+- 260910 create-task QUOTA start; reconcile r9 into T083–T086 with documented modality units and frozen quote/routing/accounting contracts; user approved resuming the blocked task, preserve archived T081–T082
+- 260910 update-ssot QUOTA done; r9 explicitly covers applicable multimodal prices and sufficiently evidenced estimates, all user credit protections unchanged; no doing task affected, T083–T086 await task reconciliation and completed tasks remain immutable
+- 260910 update-ssot QUOTA start; approved modality-aware estimates and enforceable request pricing while preserving absolute user ceilings, no-usage failure protection and service-owned overage; preserve unrelated work
+- 260910 T081–T086 delivery updated; after all six tasks are verified and individually committed, push the completed series and verify remote CI as authorized; no live provider call is authorized
 - 260910 T082 done; server quotes and exact approvals, atomic single-job linkage, durable capped admission/accounting and fail-closed staged runner; all local gates and safety race tests pass, no live AI or deployment
 - 260910 T082 claimed (crd); bind clip starts and reservations to server-issued approved ceilings with durable accounting, preserve unrelated navigation and T008 work
 - 260910 T081 done; evidence-based zero-charge failed clips, durable-outcome settlement and same-lot recovery; all local gates plus usage/job race suites pass, no live provider call or historical adjustment
@@ -60,10 +66,3 @@
 - 260910 T080 done; grouped navigation and responsive credit-safe header; all local gates and ordinary/master browser checks pass
 - 260910 T080 claimed (clp); CLIP r2 admission delta is unrelated to grouped navigation
 - 260910 T079 done; accessible correction workspace, exact source reselection and guarded free rerender; all local gates and responsive browser checks pass
-- 260910 T079 claimed (clp); CLIP r2 admission delta does not change this credit-free correction UI
-- 260910 T078 done; optimistic corrections, exact source-subset rerender, zero credit/provider path and recovery; all local gates and targeted race tests pass
-- 260910 T078 claimed (clp)
-- 260910 T077 done; durable progress, guarded generation, preview/download and localized credit refusal; all local gates and isolated responsive browser checks pass
-- 260910 T077 claimed (clp)
-- 260910 T076 done; durable streaming pipeline, failure-safe cleanup/result retention and strict reservation-capped credits; all local gates, concurrent/race tests and actual nonroot renderer smoke pass
-- 260910 T046 done; the daemon has a real publisher factory (a browser per job so the activation latch is never reused, typed preflight failures for release, browser, login and account), install NOT run live because it would claim the owner's queued job — that belongs in T008

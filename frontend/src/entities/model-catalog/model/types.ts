@@ -24,6 +24,9 @@ export interface CatalogModel {
   /** The model takes VIDEO input. Narrower than `vision` and checked per RUN, not per stage:
    *  a video-blind model still serves every post without a clip (VIDEO-11). */
   videoInput: boolean
+  /** Derived transport readiness. Missing (older snapshots) means unsupported. */
+  signedVideoUrl?: boolean
+  inlineStaticVideo?: boolean
   structuredOutput: boolean
   /** The stages this model is registered to serve (change 20). Each stage's picker lists
    *  exactly its members — fitness is never re-derived from capability flags here. */

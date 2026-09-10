@@ -135,6 +135,8 @@ export const posts = {
       observe: 'Select an observation model.',
       vision: 'Select an observation model that can see photos.',
       videoModel: 'The selected observation model cannot watch video. Choose one that supports it.',
+      videoUrl:
+        'The selected observation model cannot read this post’s video links. Choose a model that supports signed video URLs. Clip generation uses a different video input method.',
       write: 'Select an active writing model.',
       pair: 'Select two writing models for A/B comparison.',
       different: 'Select two different writing models.',

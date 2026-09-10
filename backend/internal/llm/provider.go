@@ -54,10 +54,13 @@ type Part struct {
 	// stale one fails the call rather than leaking a standing link.
 	VideoURL string
 	MIME     string
+	// InlineVideo is a runtime-only, bounded analysis copy, never a post attachment.
+	InlineVideo *InlineVideo
+	textSet     bool
 }
 
 // TextPart returns a text part.
-func TextPart(text string) Part { return Part{Text: text} }
+func TextPart(text string) Part { return Part{Text: text, textSet: true} }
 
 // ImagePart returns an image part.
 func ImagePart(image []byte, mime string) Part { return Part{Image: image, MIME: mime} }
@@ -69,7 +72,7 @@ func VideoPart(url, mime string) Part { return Part{VideoURL: url, MIME: mime} }
 func (p Part) IsImage() bool { return len(p.Image) > 0 }
 
 // IsVideo reports whether the part carries a video.
-func (p Part) IsVideo() bool { return p.VideoURL != "" }
+func (p Part) IsVideo() bool { return p.VideoURL != "" || p.InlineVideo != nil }
 
 // Message is one turn of the conversation.
 type Message struct {
@@ -102,6 +105,9 @@ type Request struct {
 	// strength and write at another in a single run. Empty means "no stage in particular",
 	// which resolves to no override and keeps whatever Reasoning the caller set.
 	Stage string
+	// Execution is mandatory for paid clip calls. It preserves the admitted policy;
+	// neither the registry nor an adapter may relax it or apply a newer override.
+	Execution *ExecutionPolicy
 }
 
 // HasImages reports whether any message carries an image part. It stays image-only: it is

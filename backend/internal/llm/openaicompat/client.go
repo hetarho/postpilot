@@ -78,6 +78,12 @@ func (c *Client) Name() string { return c.name }
 // here: a long draft can take minutes, and an idle connection with no bytes flowing is
 // what intermediaries cut (PRD §6.6). The stream never leaves the process.
 func (c *Client) Complete(ctx context.Context, req llm.Request) (llm.Response, error) {
+	if err := req.ValidateParts(); err != nil {
+		return llm.Response{}, err
+	}
+	if req.Execution != nil {
+		return c.completeStrict(ctx, req)
+	}
 	body, err := json.Marshal(c.buildRequest(req))
 	if err != nil {
 		return llm.Response{}, fmt.Errorf("%s: encode request: %w", c.name, err)
@@ -136,6 +142,7 @@ func (c *Client) Complete(ctx context.Context, req llm.Request) (llm.Response, e
 // --- request shape ---
 
 type chatRequest struct {
+	Provider       *strictRouting  `json:"provider,omitempty"`
 	Model          string          `json:"model"`
 	Messages       []chatMessage   `json:"messages"`
 	MaxTokens      int             `json:"max_tokens,omitempty"`
@@ -163,11 +170,11 @@ type imageURL struct {
 	URL string `json:"url"`
 }
 
-// videoURL is the multimodal video part: a URL the provider fetches, never bytes. It
-// carries the URL and nothing else — no `processing` object — which is the shape
-// OpenRouter documents for video input (checked 2026-09-06).
+// processing sits inside video_url next to url in Chat Completions. Ordinary
+// post URLs omit it; strict inline CLIP requests explicitly select static.
 type videoURL struct {
-	URL string `json:"url"`
+	URL        string `json:"url"`
+	Processing string `json:"processing,omitempty"`
 }
 
 type streamOptions struct {
@@ -232,6 +239,10 @@ func content(parts []llm.Part) any {
 	}
 	out := make([]contentPart, 0, len(parts))
 	for _, p := range parts {
+		if p.InlineVideo != nil {
+			out = append(out, contentPart{Type: "video_url", VideoURL: &videoURL{URL: "data:video/mp4;base64,", Processing: "static"}})
+			continue
+		}
 		if p.IsImage() {
 			mime := p.MIME
 			if mime == "" {

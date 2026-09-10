@@ -24,7 +24,7 @@ func (p *quotePricing) Freeze(_ context.Context, o, w llm.ModelRef, count int) (
 	a := llm.CallPolicy{Ref: o, Stage: "observe", CompletionTokens: 8192 + p.budgetDelta, InputUSDPerMillion: rate, OutputUSDPerMillion: "0.7"}
 	b := llm.CallPolicy{Ref: w, Stage: "write", CompletionTokens: 32768, InputUSDPerMillion: rate, OutputUSDPerMillion: "0.7"}
 	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 1}})
-	return clip.GenerationPricing{Version: 1, Observe: a, Plan: b, ObservationCalls: count, MaxCredits: credits}, err
+	return clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: a, Plan: b, ObservationCalls: count, MaxCredits: credits}, err
 }
 func startApproved(ctx context.Context, s *clip.GenerationService, user, id, batch, o, w string) (string, error) {
 	q, err := s.Quote(ctx, user, id, batch, o, w)

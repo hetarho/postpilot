@@ -295,7 +295,7 @@ func (s *Service) refuseVideoBlindObserveModel(images []Image, observe llm.Model
 		return nil
 	}
 	info, found := s.models.Resolve(observe)
-	if !found || !info.VideoInput {
+	if !found || !info.VideoInput || !info.VideoDelivery.SignedVideoURL {
 		return &VideoUnsupportedError{Model: observe.String()}
 	}
 	return nil

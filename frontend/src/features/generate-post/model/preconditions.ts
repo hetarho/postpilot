@@ -9,6 +9,7 @@ export interface GenerationModelSelection {
   /** The model takes VIDEO input. Checked only when the post actually carries a clip: watching
    *  is not a purpose, it is a per-run requirement (VIDEO-11). */
   videoInput?: boolean
+  signedVideoUrl?: boolean
 }
 
 /** Why an action cannot run, as a value the UI can branch on. String-matching a translated
@@ -21,6 +22,7 @@ export type GenerationBlocker =
   | 'observe'
   | 'vision'
   | 'videoModel'
+  | 'videoUrl'
   | 'write'
   | 'pair'
   | 'different'
@@ -32,6 +34,7 @@ const SETUP_BLOCKERS = new Set<GenerationBlocker>([
   'observe',
   'vision',
   'videoModel',
+  'videoUrl',
   'write',
   'pair',
   'different',
@@ -93,6 +96,13 @@ function sharedPreconditions(
       ok: false,
       reason: i18next.t('generation.blocked.videoModel', { ns: 'posts' }),
       blocker: 'videoModel',
+    }
+  }
+  if (videos.length > 0 && !observeSelection.signedVideoUrl) {
+    return {
+      ok: false,
+      reason: i18next.t('generation.blocked.videoUrl', { ns: 'posts' }),
+      blocker: 'videoUrl',
     }
   }
   return { ok: true, reason: '' }

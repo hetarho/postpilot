@@ -34,7 +34,8 @@ func videoModels() *fakeModels {
 	models := newFakeModels()
 	models.infos[videoObserveRef] = llm.ModelInfo{
 		Ref: videoObserveRef, Vision: true, VideoInput: true, StructuredOutput: true,
-		Stages: []string{llm.StageNameObserve, llm.StageNameWrite, llm.StageNameAnalyze},
+		VideoDelivery: llm.VideoDelivery{SignedVideoURL: true},
+		Stages:        []string{llm.StageNameObserve, llm.StageNameWrite, llm.StageNameAnalyze},
 	}
 	return models
 }

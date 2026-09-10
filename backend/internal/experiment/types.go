@@ -216,6 +216,13 @@ type JobRequest struct {
 
 type JobAlreadyInProgressError struct{ ActiveID string }
 
+// VideoUnsupportedError preserves a pre-enqueue input refusal across the
+// generation adapter without importing another context's domain into this one.
+type VideoUnsupportedError struct{ Model string }
+
+func (e *VideoUnsupportedError) Error() string { return ErrVideoUnsupported.Error() + ": " + e.Model }
+func (e *VideoUnsupportedError) Unwrap() error { return ErrVideoUnsupported }
+
 func (e *JobAlreadyInProgressError) Error() string {
 	return "experiment job already in progress: " + e.ActiveID
 }
@@ -225,6 +232,7 @@ var (
 	ErrForbidden             = errors.New("experiment belongs to another user")
 	ErrInvalidStage          = errors.New("invalid experiment stage")
 	ErrModelRequired         = errors.New("two enabled suitable models are required")
+	ErrVideoUnsupported      = errors.New("the observe model cannot read signed post video URLs")
 	ErrDuplicateCandidates   = errors.New("comparison candidates must differ")
 	ErrInvalidTargetLength   = errors.New("target length must be positive")
 	ErrLanguageRequired      = errors.New("a supported write target language is required")

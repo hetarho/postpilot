@@ -530,6 +530,11 @@ func (s *Service) Record(ctx context.Context, call Call) error {
 	if call.Kind == "generate_clip" {
 		if policy, ok := frozenCallPrice(ctx, call); ok {
 			info.InputUSDPerMillion, info.OutputUSDPerMillion = policy.InputUSDPerMillion, policy.OutputUSDPerMillion
+			if policy.Pricing.Version != 0 && !policy.Pricing.AggregateUsageSufficient {
+				// An admission upper bound is not a measured multimodal/cache bill.
+				// ResolveCost still preserves authoritative reported cost, including 0.
+				info.InputUSDPerMillion, info.OutputUSDPerMillion = "", ""
+			}
 		}
 	}
 	cost := llm.ResolveCost(llm.CostInput{

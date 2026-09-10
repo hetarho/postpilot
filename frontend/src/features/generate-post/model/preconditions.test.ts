@@ -152,7 +152,12 @@ describe('a post with a video', () => {
     vision: true,
     videoInput: false,
   }
-  const watcher = { ref: { providerId: 'p', modelId: 'watcher' }, vision: true, videoInput: true }
+  const watcher = {
+    ref: { providerId: 'p', modelId: 'watcher' },
+    vision: true,
+    videoInput: true,
+    signedVideoUrl: true,
+  }
   const write = { ref: { providerId: 'p', modelId: 'write' }, vision: false }
   const image = { id: 'image-1' }
   const clip = { id: 'video-1' }
@@ -179,6 +184,29 @@ describe('a post with a video', () => {
     expect(
       ordinaryGenerationPreconditions([image], videoBlind, write, undefined, undefined, []).ok,
     ).toBe(true)
+  })
+
+  it('refuses inline-only models for generation and A/B while preserving raw video capability', () => {
+    const inlineOnly = { ...watcher, signedVideoUrl: false, inlineStaticVideo: true }
+    const secondWriter = { ...write, ref: { ...write.ref, modelId: 'other-writer' } }
+    expect(
+      ordinaryGenerationPreconditions([image], inlineOnly, write, undefined, undefined, [clip])
+        .blocker,
+    ).toBe('videoUrl')
+    expect(
+      comparisonGenerationPreconditions(
+        [image],
+        inlineOnly,
+        write,
+        secondWriter,
+        undefined,
+        undefined,
+        [clip],
+      ).blocker,
+    ).toBe('videoUrl')
+    expect(ordinaryGenerationPreconditions([image], inlineOnly, write, undefined).ok).toBe(true)
+    expect(inlineOnly.videoInput).toBe(true)
+    expect(inlineOnly.inlineStaticVideo).toBe(true)
   })
 
   // The simpler thing to fix comes first: a model that cannot see a photo is refused for that.

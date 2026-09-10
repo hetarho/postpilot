@@ -457,6 +457,7 @@ type fakeRunner struct {
 	fail                                map[string]error
 	results                             map[string]CandidateResult
 	applyErr                            error
+	snapshotErr                         error
 	snapshotVoice                       string
 	snapshotTarget                      Language
 	omitSnapshotTarget                  bool
@@ -466,6 +467,9 @@ type fakeRunner struct {
 // explicit analyze voice.
 func (r *fakeRunner) Snapshot(_ context.Context, request StartRequest) (Snapshot, error) {
 	r.snapshotCalls++
+	if r.snapshotErr != nil {
+		return Snapshot{}, r.snapshotErr
+	}
 	voiceID := request.VoiceID
 	if request.Stage == StageWrite && r.snapshotVoice != "" {
 		voiceID = r.snapshotVoice
@@ -580,6 +584,15 @@ func newTestService() (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRun
 }
 
 var allStages = []string{"observe", "write", "analyze"}
+
+func TestVideoSnapshotRefusalPrecedesExperimentAndJobCreation(t *testing.T) {
+	svc, store, _, jobs, runner := newTestService()
+	runner.snapshotErr = &VideoUnsupportedError{Model: "p/inline-only"}
+	_, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
+	if !errors.Is(err, ErrVideoUnsupported) || len(store.rows) != 0 || len(jobs.ids) != 0 || runner.snapshotCalls != 1 || runner.runCalls != 0 {
+		t.Fatalf("refusal=%v rows=%d jobs=%d calls=%d", err, len(store.rows), len(jobs.ids), runner.runCalls)
+	}
+}
 
 func TestStartHandleChooseWriteExperiment(t *testing.T) {
 	svc, store, _, jobs, runner := newTestService()

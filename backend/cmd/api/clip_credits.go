@@ -15,14 +15,14 @@ type clipQuotePricing struct {
 	cfg      clipai.Config
 }
 
-func (p clipQuotePricing) Freeze(_ context.Context, observe, write llm.ModelRef, count int) (clip.GenerationPricing, error) {
-	a, err := p.registry.FreezeCall(observe, "observe", p.cfg.ObserveCompletionTokens, p.cfg.ObserveReasoning)
+func (p clipQuotePricing) Freeze(ctx context.Context, observe, write llm.ModelRef, count int) (clip.GenerationPricing, error) {
+	a, err := p.registry.FreezeExecution(ctx, observe, "observe", p.cfg.ObserveCompletionTokens, p.cfg.ObserveReasoning, llm.ExecutionInlineStatic)
 	if err != nil {
-		return clip.GenerationPricing{}, err
+		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
-	b, err := p.registry.FreezeCall(write, "write", p.cfg.PlanCompletionTokens, p.cfg.PlanReasoning)
+	b, err := p.registry.FreezeExecution(ctx, write, "write", p.cfg.PlanCompletionTokens, p.cfg.PlanReasoning, llm.ExecutionTextOnly)
 	if err != nil {
-		return clip.GenerationPricing{}, err
+		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
 	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 1}})
 	if err != nil {
