@@ -1,4 +1,14 @@
-import { Bot, FileText, Film, Send } from 'lucide-react'
+import {
+  Bot,
+  Clapperboard,
+  FileText,
+  Film,
+  LayoutTemplate,
+  ListChecks,
+  Scissors,
+  Send,
+  Speech,
+} from 'lucide-react'
 
 /** Shared by all three shell shapes. Group activity comes from an actual ancestor
  * match, never from a URL prefix (voices belongs to writing, not to /posts). */
@@ -34,17 +44,19 @@ export const DESTINATIONS = [
   },
 ] as const
 
-/** Text tabs deliberately retain the shared primitive's horizontal scrolling mode. */
+/** The second level is drawn with the first level's row shape (THEME-38), so a group destination
+ *  carries an icon exactly like a primary one. `글` repeats the primary icon deliberately: it is
+ *  the same destination seen one level down, not a different place. */
 export const CONTENT_GROUPS = {
   writing: [
-    { to: '/posts', labelKey: 'posts' },
-    { to: '/voices', labelKey: 'voices' },
-    { to: '/templates', labelKey: 'templates' },
-    { to: '/guidelines', labelKey: 'guidelines' },
+    { to: '/posts', labelKey: 'posts', icon: FileText },
+    { to: '/voices', labelKey: 'voices', icon: Speech },
+    { to: '/templates', labelKey: 'templates', icon: LayoutTemplate },
+    { to: '/guidelines', labelKey: 'guidelines', icon: ListChecks },
   ],
   video: [
-    { to: '/clips', labelKey: 'clips' },
-    { to: '/video-templates', labelKey: 'videoTemplates' },
+    { to: '/clips', labelKey: 'clips', icon: Scissors },
+    { to: '/video-templates', labelKey: 'videoTemplates', icon: Clapperboard },
   ],
 } as const
 

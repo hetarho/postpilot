@@ -18,11 +18,11 @@
 | GEN | 5 | 5 | - | 0 |
 | MODEL | 8 | 8 | - | 0 |
 | TMPL | 4 | 4 | - | 1 |
-| GUIDE | 1 | 1 | - | 0 |
+| GUIDE | 2 | 2 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
 | PUB | 4 | 4 | - | 0 |
 | LANG | 2 | 2 | - | 0 |
-| THEME | 8 | 8 | - | 0 |
+| THEME | 9 | 9 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
 | CLIP | 3 | 3 | - | 0 |
@@ -36,13 +36,21 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | todo |
+| T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
+| T088 | Guideline list with a docked create sheet | GUIDE THEME ARCH | - | todo |
+| T089 | Guideline candidate disclosure with bulk review | GUIDE THEME ARCH | T088 | todo |
+| T090 | Safe clip failure diagnostics | ARCH CLIP | T086 | doing@260911.diag |
 
 ## next
-- T081–T086 are complete with local verification; push the six task commits and verify remote CI. Preserve unrelated T008/navigation work; no further implementation in this series
+- implement-task T090 only: safe clip failure diagnostics, verify, commit and push; preserve concurrent T008/navigation work and do not replay paid model requests; separately implement-task T088 → T089 for the 지침 screen, which shares no file with the clip chain
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
 - T008 is the last PUB task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job. Read T042 T043 T045 T046 results for the live surveys and the wiring's typed preflight; update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
 ## log
+- 260911 T087 done; two-level navigation chrome, plane-separated and stuck to the viewport, with one composed chrome-offset token; all local gates and CDP browser checks pass
+- 260911 T090 claimed (diag); approved metadata-only clip diagnostics follow-up, no policy/billing/retry changes; verify and push only this fix
+- 260911 clip diagnostics start (diag); scope the approved metadata-only logging fix, preserve concurrent navigation work; no paid retry or provider payload logging
+- 260911 T087 claimed (nav)
+- 260910 T081–T086 delivered through 820eabc as six verified task commits; CI https://github.com/hetarho/postpilot/actions/runs/34486036362 and backend rollout https://github.com/hetarho/postpilot/actions/runs/34486036393 pass, Workers deployment succeeds; no live model completion or historical rebilling
 - 260910 T086 done; 25 authenticated release cases, 20-source/30-minute stress, 1GiB/2CPU real-media tests and all local gates pass; corrected AAC timing, no paid completion or production mutation, series ready for authorized push/CI
 - 260910 T086 claimed (crd); authenticated local release regressions, counted fake provider and bounded real-media stress; no paid provider calls or production mutations, push only after all gates pass
 - 260910 T085 done; exact explicit server-ceiling approval, owned attempt-long previews and authoritative settlement UI; all local gates, race tests, 1469 frontend tests and ko/en 320/390/1024px browser checks pass, no paid call or push
@@ -55,11 +63,6 @@
 - 260910 create-task QUOTA start; reconcile r9 into T083–T086 with documented modality units and frozen quote/routing/accounting contracts; user approved resuming the blocked task, preserve archived T081–T082
 - 260910 update-ssot QUOTA done; r9 explicitly covers applicable multimodal prices and sufficiently evidenced estimates, all user credit protections unchanged; no doing task affected, T083–T086 await task reconciliation and completed tasks remain immutable
 - 260910 update-ssot QUOTA start; approved modality-aware estimates and enforceable request pricing while preserving absolute user ceilings, no-usage failure protection and service-owned overage; preserve unrelated work
-- 260910 T081–T086 delivery updated; after all six tasks are verified and individually committed, push the completed series and verify remote CI as authorized; no live provider call is authorized
-- 260910 T082 done; server quotes and exact approvals, atomic single-job linkage, durable capped admission/accounting and fail-closed staged runner; all local gates and safety race tests pass, no live AI or deployment
-- 260910 T082 claimed (crd); bind clip starts and reservations to server-issued approved ceilings with durable accounting, preserve unrelated navigation and T008 work
-- 260910 T081 done; evidence-based zero-charge failed clips, durable-outcome settlement and same-lot recovery; all local gates plus usage/job race suites pass, no live provider call or historical adjustment
-- 260910 T081 claimed (crd); implement and verify T081–T086 sequentially with one completed-task commit each, preserve unrelated work
-- 260910 create-task CLIP QUOTA VIDEO done; T081–T086 consume CLIP r3 QUOTA r8 VIDEO r2 in credit-first order; CLIP-35 stays deferred without an implementation task, T008/archived tasks and concurrent nav work preserved, no code changes
-- 260910 create-task CLIP QUOTA VIDEO start; decompose approved ceilings, bounded inline analysis and preview lifecycle; preserve doing T008 and archived tasks, no implementation
-- 260910 update-ssot CLIP QUOTA VIDEO done; CLIP r3 QUOTA r8 VIDEO r2 pending task breakdown, no affected doing task or implementation changes; bounded inline analysis, approved ceilings, zero-charge unused failures and attempt-long previews
+- 260910 T083 blocked recheck 3; the same pricing-policy decision remains unapproved with unchanged task/SSOT contracts; mark the thread goal blocked, retain all work and completed commits, resume only after the owner resolves the pricing policy
+- 260910 T083 blocked recheck 2; begin and complete a read-only state audit, unchanged QUOTA@8/CLIP@3 and no pricing-policy approval; preserve the uncommitted work and paid-runner guard, no implementation/commit/push
+- 260910 T083 blocked (crd); public Gemini endpoint prices conflict with the task's zero-surcharge/token-only policy; strict transport and URL-gate work remains uncommitted, targeted backend/race and all 1445 frontend tests pass, no paid call or push; request a pricing-policy decision

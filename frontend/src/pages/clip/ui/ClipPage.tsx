@@ -70,7 +70,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   return (
     <>
       {(running || uploading) && (
-        <div className="sm:top-header sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8">
+        <div className="top-chrome sticky z-10 -mx-4 sm:-mx-6 lg:-mx-8">
           <ProgressBar
             label={label}
             done={

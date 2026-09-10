@@ -139,9 +139,9 @@ export function AIModelsPage() {
         {/* The switch drives four sections, the last of them ~1,000px below it, so it follows the
             scroll instead of existing only at the top of the section: otherwise comparing two
             stages' leaderboards is a ~1,000px round trip each way (§4.3). It carries the page's own
-            plane out to the gutters so the content scrolling underneath is covered, and clears the
-            desktop header, which is sticky and 64px tall from `sm:` up. */}
-        <div className="bg-surface-base sm:top-header sticky top-0 z-10 -mx-4 mt-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+            plane out to the gutters so the content scrolling underneath is covered, and clears
+            whatever chrome is sticky at this width through `top-chrome` (THEME-38). */}
+        <div className="bg-surface-base top-chrome sticky z-10 -mx-4 mt-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <SegmentedControl
             value={stage}
             options={stageOptions}

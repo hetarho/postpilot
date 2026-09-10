@@ -59,21 +59,39 @@ function assertPrimary(current: string | undefined, master = false, label = '주
     ).toEqual(current ? [current] : [])
   }
 }
+/** The group level is drawn twice — the band that stands in for the rail below the desk, and the
+ *  rail itself — because the two sit in different places in the document (THEME-38). */
+function assertGroup(label: string, tab: string) {
+  const shapes = screen.getAllByRole('navigation', { name: label })
+  expect(shapes).toHaveLength(2)
+  for (const shape of shapes) {
+    const links = within(shape).getAllByRole('link')
+    expect(
+      links
+        .filter((l) => l.getAttribute('aria-current') === 'page')
+        .map((l) => l.getAttribute('href')),
+    ).toEqual([tab])
+  }
+  return shapes
+}
 it.each(cases)(
   'preserves the direct $path address and both matched navigation levels',
   async ({ path, tab, primary, group }) => {
     const { router } = renderAppAt(path, { user: { id: 'alice', plan: ProtoPlan.FREE } })
-    const tabs = await screen.findByRole('navigation', { name: group })
+    await screen.findAllByRole('navigation', { name: group })
     await waitFor(() => expect(router.state.status).toBe('idle'))
     expect(router.state.location.pathname).toBe(path)
     assertPrimary(primary)
-    const selected = within(tabs)
-      .getAllByRole('link')
-      .filter((l) => l.getAttribute('aria-current') === 'page')
-    expect(selected.map((l) => l.getAttribute('href'))).toEqual([tab])
-    expect(tabs).toHaveClass('overflow-x-auto', 'overscroll-x-contain')
-    expect(tabs.className).not.toMatch(/(?:fixed|sticky|overflow-y)/)
-    expect(tabs.closest('.pb-nav')?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
+    const [band, rail] = assertGroup(group, tab)
+    // The band is chrome that stays put while the page scrolls: `top-0` while the header still
+    // scrolls away, under the header once that is sticky, and never its own vertical scroller.
+    expect(band).toHaveClass('sticky', 'top-0', 'sm:top-header', 'h-subnav')
+    expect(band).toHaveClass('overflow-x-auto', 'overscroll-x-contain')
+    expect(band!.className).not.toMatch(/(?:fixed|overflow-y-auto)/)
+    expect(rail!.closest('aside')).toHaveClass('lg:sticky', 'lg:top-header', 'lg:h-sidebar')
+    // Everything under the group clears the taller chrome; the page stays the one scroller.
+    expect(band!.closest('.chrome-subnav')).not.toBeNull()
+    expect(band!.closest('.pb-nav')?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
   },
 )
 
@@ -84,8 +102,9 @@ it.each(['/plans', '/billing', '/account', '/admin', '/admin/models', '/admin/es
     await screen.findAllByRole('navigation', { name: '주요' })
     await waitFor(() => expect(router.state.status).toBe('idle'))
     assertPrimary(undefined, true)
-    expect(screen.queryByRole('navigation', { name: '글 메뉴' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('navigation', { name: '글 메뉴' })).toHaveLength(0)
+    expect(screen.queryAllByRole('navigation', { name: '영상 메뉴' })).toHaveLength(0)
+    expect(document.querySelector('.chrome-subnav')).toBeNull()
     expect(screen.getByRole('link', { name: 'Postpilot 홈' })).toHaveAttribute('href', '/posts')
   },
 )
@@ -110,9 +129,11 @@ it('uses actual matched ids instead of prefix guesses', () => {
 })
 it('restores both active levels through browser history and keeps ko/en parity', async () => {
   const { router } = renderAppAt('/posts', { user: { id: 'root', plan: ProtoPlan.MASTER } })
-  await screen.findByRole('navigation', { name: '글 메뉴' })
+  await screen.findAllByRole('navigation', { name: '글 메뉴' })
   await userEvent.click(
-    within(screen.getByRole('navigation', { name: '글 메뉴' })).getByRole('link', { name: '말투' }),
+    within(screen.getAllByRole('navigation', { name: '글 메뉴' })[0]!).getByRole('link', {
+      name: '말투',
+    }),
   )
   await waitFor(() => expect(router.state.location.pathname).toBe('/voices'))
   await userEvent.click(
@@ -120,9 +141,9 @@ it('restores both active levels through browser history and keeps ko/en parity',
       name: '영상',
     }),
   )
-  await screen.findByRole('navigation', { name: '영상 메뉴' })
+  await screen.findAllByRole('navigation', { name: '영상 메뉴' })
   await userEvent.click(
-    within(screen.getByRole('navigation', { name: '영상 메뉴' })).getByRole('link', {
+    within(screen.getAllByRole('navigation', { name: '영상 메뉴' })[0]!).getByRole('link', {
       name: '영상 템플릿',
     }),
   )
@@ -136,16 +157,14 @@ it('restores both active levels through browser history and keeps ko/en parity',
   await act(async () => {
     router.history.back()
   })
-  await screen.findByRole('navigation', { name: '글 메뉴' })
+  await screen.findAllByRole('navigation', { name: '글 메뉴' })
   expect(router.state.location.pathname).toBe('/voices')
   assertPrimary('/posts', true)
-  expect(
-    within(screen.getByRole('navigation', { name: '글 메뉴' })).getByRole('link', { name: '말투' }),
-  ).toHaveAttribute('aria-current', 'page')
+  assertGroup('글 메뉴', '/voices')
   await act(async () => {
     router.history.forward()
   })
-  await screen.findByRole('navigation', { name: '영상 메뉴' })
+  await screen.findAllByRole('navigation', { name: '영상 메뉴' })
   assertPrimary('/clips', true)
   await act(async () => {
     initializeI18n('en')
@@ -165,9 +184,8 @@ it('restores both active levels through browser history and keeps ko/en parity',
       .getAllByRole('link')
       .map((l) => l.textContent),
   ).toEqual(['Posts', 'Videos', 'AI models', 'Publishing tools'])
-  const tabs = screen.getByRole('navigation', { name: 'Video navigation' })
-  expect(within(tabs).getByRole('link', { name: 'Clips' })).toHaveAttribute('aria-current', 'page')
-  expect(within(tabs).getByRole('link', { name: 'Video templates' })).toHaveAttribute(
+  const [band] = assertGroup('Video navigation', '/clips')
+  expect(within(band!).getByRole('link', { name: 'Video templates' })).toHaveAttribute(
     'href',
     '/video-templates',
   )

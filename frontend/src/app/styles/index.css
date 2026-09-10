@@ -401,6 +401,18 @@
      `dvh`, not `vh`, for the same reason the sheet uses it (§8.1). */
   --spacing-header: 4rem;
   --spacing-sidebar: calc(100dvh - var(--spacing-header));
+  /* The three chrome rows, each stated once so the offset tokens below can be composed from them
+     instead of from a literal that drifts when a row's padding changes (THEME-38). --spacing-bar
+     is the brand row from `sm:` up, --spacing-primaryrow the laptop's own primary navigation row,
+     and --spacing-subnav the group row that stands in for the group rail below the desk. */
+  --spacing-bar: 3.25rem;
+  --spacing-primaryrow: 2.75rem;
+  --spacing-subnav: 3rem;
+  /* The bottom edge of everything STICKY at the current width, which is what a page-level sticky
+     element must clear. It is 0 on a phone — the header scrolls away there and only a group row
+     sticks, which `chrome-subnav` adds back — the header from `sm:`, and the header alone again at
+     the desk, where the group is a rail rather than a row. */
+  --spacing-chrome: 0px;
   --spacing-safe-t: env(safe-area-inset-top, 0px);
   --spacing-safe-b: env(safe-area-inset-bottom, 0px);
   --spacing-nav: calc(3.5rem + env(safe-area-inset-bottom, 0px));
@@ -830,7 +842,27 @@ summary,
    this same token. At the desk breakpoint navigation moves into the rail. */
 @media (40rem <= width < 64rem) {
   :root {
-    --spacing-header: 6rem;
+    --spacing-header: calc(var(--spacing-bar) + var(--spacing-primaryrow));
+  }
+}
+
+/* From `sm:` the header itself is sticky, so it is what a page-level sticky element clears. */
+@media (width >= 40rem) {
+  :root {
+    --spacing-chrome: var(--spacing-header);
+  }
+}
+
+/* Set by the content-group layout on the subtree that renders under a group's second level, so a
+   sticky element inside a group clears the group row too — and stops doing so at the desk, where
+   that level is a rail beside the content rather than a row above it (THEME-38). */
+@utility chrome-subnav {
+  --spacing-chrome: var(--spacing-subnav);
+  @media (width >= 40rem) {
+    --spacing-chrome: calc(var(--spacing-header) + var(--spacing-subnav));
+  }
+  @media (width >= 64rem) {
+    --spacing-chrome: var(--spacing-header);
   }
 }
 

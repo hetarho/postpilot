@@ -332,7 +332,7 @@ function AddToolbar({
   // a thing the author fills in later is fixed text in their own words (TEMPLATE-37).
   const kinds: PaletteKind[] = ['write', 'text', 'photo', 'repeat', 'note']
   return (
-    <div className="bg-surface-base sm:top-header sticky top-0 z-10 -mx-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    <div className="bg-surface-base top-chrome sticky z-10 -mx-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
       <Typography variant="label" as="p" id={id}>
         {t('composition.add')}
       </Typography>
