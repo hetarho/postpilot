@@ -83,6 +83,7 @@ func (s *Service) setCache(rows []Model) {
 			ReasoningEfforts:      efforts,
 			ReasoningNativeEffort: row.NativeEffort,
 			Stages:                stagesOf(row),
+			Levels:                stageLevelsOf(row),
 			Delisted:              !row.Listed,
 		}
 		models = append(models, model)
@@ -165,6 +166,7 @@ func (s *Service) Browse(ctx context.Context, refresh bool, purpose Purpose) (Br
 		if row, ok := curated[candidate.ModelID]; ok {
 			entry.Curated, entry.Purposes = true, row.Purposes
 			entry.Reasoning = row.Reasoning[purpose]
+			entry.Level = row.Levels[purpose]
 			// Drift is derived from the LIVE capability, not the stored snapshot: the point of
 			// the warning is that the source's list moved away from what the operator chose.
 			// It is a flag only — the override is kept and still sent (MODEL-22); delisting
@@ -317,6 +319,30 @@ func stageReasoningOf(row Model) map[string]llm.ReasoningEffort {
 	return out
 }
 
+// stageLevelsOf projects the per-purpose levels onto the stage keys the llm boundary
+// carries, on exactly the terms stageReasoningOf uses: only a REGISTERED purpose
+// contributes, and a purpose that feeds no stage contributes nothing. The gate is NOT
+// re-checked here — a level is display metadata, and a model that lost its capability is
+// removed from the stage by stagesOf, which is the one place that decision belongs.
+func stageLevelsOf(row Model) map[string]string {
+	if len(row.Levels) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(row.Levels))
+	for _, purpose := range row.Purposes {
+		stage := purpose.Stage()
+		level := row.Levels[purpose]
+		if stage == "" || level == "" {
+			continue
+		}
+		out[stage] = string(level)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // stagesOf projects purpose registrations onto the user-facing stages the llm boundary
 // carries as opaque strings. Generation purposes map to no stage yet, so a model
 // registered only to them is invisible to every picker.
@@ -337,8 +363,8 @@ func stagesOf(row Model) []string {
 	return stages
 }
 
-// Update applies a partial curation edit for ONE (model, purpose) — today that is the
-// reasoning override; registration has its own write (SetPurpose).
+// Update applies a partial curation edit for ONE (model, purpose) — the reasoning override
+// and the level; registration has its own write (SetPurpose).
 //
 // The purpose is required and must be one the model is REGISTERED to: an effort on a purpose
 // the model serves to nobody would be a stored decision with no effect, and the control only
@@ -351,6 +377,13 @@ func (s *Service) Update(ctx context.Context, modelID string, patch Patch) (Mode
 	// before anything is read.
 	if patch.Reasoning != nil && !patch.Reasoning.Valid() {
 		return Model{}, fmt.Errorf("%w: %q", ErrInvalidReasoning, *patch.Reasoning)
+	}
+	// The level has only the enum gate: it gates nothing downstream (MODEL-58), so there is
+	// no model-side rule to check it against the way an effort has one.
+	if patch.Level != nil {
+		if _, err := ParseLevel(string(*patch.Level)); err != nil {
+			return Model{}, err
+		}
 	}
 	// Then the model rule (change 27): an effort outside a model's published list, or `none`
 	// on a model that cannot turn reasoning off, is refused. A model whose list the source

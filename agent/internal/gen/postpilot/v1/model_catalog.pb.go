@@ -554,8 +554,16 @@ type CatalogEntry struct {
 	// keep offering the full effort vocabulary rather than hide a control whose stored value is
 	// still being sent.
 	ReasoningKnown bool `protobuf:"varint,27,opt,name=reasoning_known,json=reasoningKnown,proto3" json:"reasoning_known,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// The operator's user-facing grade for THIS registration: "value" | "balanced" |
+	// "premium" | "top", or "" when they have not set one (MODEL-57). Like reasoning_effort
+	// above it belongs to the purpose being listed, not to the model — the same model can be
+	// the bargain for one task and the splurge for another.
+	//
+	// Display and ordering only. It gates nothing, and an unset level leaves the model fully
+	// selectable (MODEL-58).
+	Level         string `protobuf:"bytes,29,opt,name=level,proto3" json:"level,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CatalogEntry) Reset() {
@@ -768,6 +776,13 @@ func (x *CatalogEntry) GetReasoningKnown() bool {
 		return x.ReasoningKnown
 	}
 	return false
+}
+
+func (x *CatalogEntry) GetLevel() string {
+	if x != nil {
+		return x.Level
+	}
+	return ""
 }
 
 // ReasoningSpend is a recent window of one model's completion budget at one stage.
@@ -1164,7 +1179,14 @@ type UpdateModelRequest struct {
 	// Carried here rather than on SetModelPurposeRequest because registering and setting an
 	// effort are separate decisions: an operator changes the effort on a model that is already
 	// registered, and folding the two would make every effort edit re-assert a registration.
-	Purpose       string `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	Purpose string `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	// The registration's level (MODEL-57): "value" | "balanced" | "premium" | "top", and ""
+	// clears it. Refused when it is none of those, and — like the effort — refused for a
+	// purpose the model is not registered to.
+	//
+	// Optional so the two edits stay independent: a request that sets only the effort leaves
+	// the level exactly as it was, and vice versa.
+	Level         *string `protobuf:"bytes,6,opt,name=level,proto3,oneof" json:"level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1216,6 +1238,13 @@ func (x *UpdateModelRequest) GetReasoningEffort() string {
 func (x *UpdateModelRequest) GetPurpose() string {
 	if x != nil {
 		return x.Purpose
+	}
+	return ""
+}
+
+func (x *UpdateModelRequest) GetLevel() string {
+	if x != nil && x.Level != nil {
+		return *x.Level
 	}
 	return ""
 }
@@ -1297,7 +1326,7 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\aapplied\x18\x04 \x01(\bR\aapplied\"\x1e\n" +
 	"\x1cExportCatalogDocumentRequest\";\n" +
 	"\x1dExportCatalogDocumentResponse\x12\x1a\n" +
-	"\bdocument\x18\x01 \x01(\tR\bdocument\"\xc4\b\n" +
+	"\bdocument\x18\x01 \x01(\tR\bdocument\"\xda\b\n" +
 	"\fCatalogEntry\x12\x19\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12#\n" +
 	"\rprovider_slug\x18\x02 \x01(\tR\fproviderSlug\x12\x14\n" +
@@ -1326,7 +1355,8 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\x17reasoning_native_effort\x18\x18 \x01(\bR\x15reasoningNativeEffort\x120\n" +
 	"\x14reasoning_max_tokens\x18\x19 \x01(\bR\x12reasoningMaxTokens\x12+\n" +
 	"\x11reasoning_drifted\x18\x1a \x01(\bR\x10reasoningDrifted\x12'\n" +
-	"\x0freasoning_known\x18\x1b \x01(\bR\x0ereasoningKnownB\x12\n" +
+	"\x0freasoning_known\x18\x1b \x01(\bR\x0ereasoningKnown\x12\x14\n" +
+	"\x05level\x18\x1d \x01(\tR\x05levelB\x12\n" +
 	"\x10_reasoning_spendJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"\xb3\x01\n" +
 	"\x0eReasoningSpend\x12\x14\n" +
 	"\x05calls\x18\x01 \x01(\x03R\x05calls\x12)\n" +
@@ -1356,12 +1386,14 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"registered\x18\x03 \x01(\bR\n" +
 	"registered\"K\n" +
 	"\x17SetModelPurposeResponse\x120\n" +
-	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry\"\x9a\x01\n" +
+	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry\"\xbf\x01\n" +
 	"\x12UpdateModelRequest\x12\x19\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12.\n" +
 	"\x10reasoning_effort\x18\x04 \x01(\tH\x00R\x0freasoningEffort\x88\x01\x01\x12\x18\n" +
-	"\apurpose\x18\x05 \x01(\tR\apurposeB\x13\n" +
-	"\x11_reasoning_effortJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04\"G\n" +
+	"\apurpose\x18\x05 \x01(\tR\apurpose\x12\x19\n" +
+	"\x05level\x18\x06 \x01(\tH\x01R\x05level\x88\x01\x01B\x13\n" +
+	"\x11_reasoning_effortB\b\n" +
+	"\x06_levelJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04\"G\n" +
 	"\x13UpdateModelResponse\x120\n" +
 	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry2\xff\x04\n" +
 	"\x13ModelCatalogService\x12T\n" +

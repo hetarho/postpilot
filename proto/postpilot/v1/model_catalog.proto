@@ -189,6 +189,15 @@ message CatalogEntry {
   // keep offering the full effort vocabulary rather than hide a control whose stored value is
   // still being sent.
   bool reasoning_known = 27;
+
+  // The operator's user-facing grade for THIS registration: "value" | "balanced" |
+  // "premium" | "top", or "" when they have not set one (MODEL-57). Like reasoning_effort
+  // above it belongs to the purpose being listed, not to the model — the same model can be
+  // the bargain for one task and the splurge for another.
+  //
+  // Display and ordering only. It gates nothing, and an unset level leaves the model fully
+  // selectable (MODEL-58).
+  string level = 29;
 }
 
 // ReasoningSpend is a recent window of one model's completion budget at one stage.
@@ -263,6 +272,13 @@ message UpdateModelRequest {
   // effort are separate decisions: an operator changes the effort on a model that is already
   // registered, and folding the two would make every effort edit re-assert a registration.
   string purpose = 5;
+  // The registration's level (MODEL-57): "value" | "balanced" | "premium" | "top", and ""
+  // clears it. Refused when it is none of those, and — like the effort — refused for a
+  // purpose the model is not registered to.
+  //
+  // Optional so the two edits stay independent: a request that sets only the effort leaves
+  // the level exactly as it was, and vice versa.
+  optional string level = 6;
 }
 
 message UpdateModelResponse {

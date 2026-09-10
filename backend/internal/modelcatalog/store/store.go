@@ -42,7 +42,7 @@ func (s *Store) List(ctx context.Context) ([]modelcatalog.Model, error) {
 	byModel := map[string][]registration{}
 	for _, row := range registrations {
 		byModel[row.ModelID] = append(byModel[row.ModelID], registration{
-			Purpose: row.Purpose, ReasoningEffort: row.ReasoningEffort,
+			Purpose: row.Purpose, ReasoningEffort: row.ReasoningEffort, Level: row.Level,
 		})
 	}
 	out := make([]modelcatalog.Model, 0, len(rows))
@@ -56,11 +56,12 @@ func (s *Store) List(ctx context.Context) ([]modelcatalog.Model, error) {
 	return out, nil
 }
 
-// registration is one join row as both read paths carry it: the purpose and the effort the
-// operator set for THAT purpose.
+// registration is one join row as both read paths carry it: the purpose and the two
+// decisions the operator made for THAT purpose.
 type registration struct {
 	Purpose         string
 	ReasoningEffort sql.NullString
+	Level           sql.NullString
 }
 
 func (s *Store) Get(ctx context.Context, modelID string) (modelcatalog.Model, error) {
@@ -82,7 +83,7 @@ func get(ctx context.Context, q *sqlc.Queries, modelID string) (modelcatalog.Mod
 	registrations := make([]registration, 0, len(stored))
 	for _, item := range stored {
 		registrations = append(registrations, registration{
-			Purpose: item.Purpose, ReasoningEffort: item.ReasoningEffort,
+			Purpose: item.Purpose, ReasoningEffort: item.ReasoningEffort, Level: item.Level,
 		})
 	}
 	return toModel(row, registrations)
@@ -151,6 +152,18 @@ func (s *Store) Patch(ctx context.Context, modelID string, patch modelcatalog.Pa
 			current.Reasoning[patch.Purpose] = *patch.Reasoning
 		}
 	}
+	if patch.Level != nil {
+		// Same rule as the effort above: an empty level CLEARS it, so "unset" is one state
+		// in memory and on disk rather than two that only look alike.
+		if *patch.Level == "" {
+			delete(current.Levels, patch.Purpose)
+		} else {
+			if current.Levels == nil {
+				current.Levels = map[modelcatalog.Purpose]modelcatalog.Level{}
+			}
+			current.Levels[patch.Purpose] = *patch.Level
+		}
+	}
 	current.UpdatedAt = updatedAt
 
 	// The UPDATE matching zero rows is the refusal: the join row exists only for a purpose
@@ -165,6 +178,16 @@ func (s *Store) Patch(ctx context.Context, modelID string, patch modelcatalog.Pa
 	}
 	if n == 0 {
 		return modelcatalog.Model{}, fmt.Errorf("%w: %s for %s", modelcatalog.ErrPurposeNotRegistered, modelID, patch.Purpose)
+	}
+	// The level rides the same registration row, so it is written the same way. Both
+	// statements run whether or not their half of the patch was set: the value written is
+	// the merged current one, so an untouched field is rewritten as what it already was.
+	if _, err := q.UpdateCatalogModelPurposeLevel(ctx, sqlc.UpdateCatalogModelPurposeLevelParams{
+		Level:   nullString(string(current.Levels[patch.Purpose])),
+		ModelID: modelID,
+		Purpose: string(patch.Purpose),
+	}); err != nil {
+		return modelcatalog.Model{}, fmt.Errorf("update catalog model purpose level: %w", err)
 	}
 	// A curation edit stamps the row, the same way a (de)registration does.
 	if err := q.TouchCatalogModelCuration(ctx, sqlc.TouchCatalogModelCurationParams{
@@ -359,7 +382,7 @@ func toModel(row sqlc.GetCatalogModelRow, registrations []registration) (modelca
 			return modelcatalog.Model{}, fmt.Errorf("parse catalog model last_seen_at: %w", err)
 		}
 	}
-	purposes, reasoning, err := parseRegistrations(row.ModelID, registrations)
+	parsed, err := parseRegistrations(row.ModelID, registrations)
 	if err != nil {
 		return modelcatalog.Model{}, err
 	}
@@ -384,8 +407,9 @@ func toModel(row sqlc.GetCatalogModelRow, registrations []registration) (modelca
 		InputUSDPerMillion:  row.InputUsdPerMillion.String,
 		OutputUSDPerMillion: row.OutputUsdPerMillion.String,
 		PricingCheckedAt:    row.PricingCheckedAt.String,
-		Reasoning:           reasoning,
-		Purposes:            purposes,
+		Reasoning:           parsed.Reasoning,
+		Levels:              parsed.Levels,
+		Purposes:            parsed.Purposes,
 		Listed:              row.Listed == 1,
 		LastSeenAt:          lastSeen,
 		CreatedAt:           created,
@@ -393,33 +417,48 @@ func toModel(row sqlc.GetCatalogModelRow, registrations []registration) (modelca
 	}, nil
 }
 
-// parseRegistrations maps the join rows into the domain's two halves: which purposes the
-// model serves, and the effort the operator set for each. Both column CHECKs refuse anything
-// else, so a failure means the row was written by something other than this code.
-func parseRegistrations(modelID string, rows []registration) ([]modelcatalog.Purpose, map[modelcatalog.Purpose]llm.ReasoningEffort, error) {
-	purposes := make([]modelcatalog.Purpose, 0, len(rows))
-	var reasoning map[modelcatalog.Purpose]llm.ReasoningEffort
+// registrations is what the join rows say once parsed: which purposes the model serves and
+// the two per-registration decisions the operator made for each.
+type registrations struct {
+	Purposes  []modelcatalog.Purpose
+	Reasoning map[modelcatalog.Purpose]llm.ReasoningEffort
+	Levels    map[modelcatalog.Purpose]modelcatalog.Level
+}
+
+// parseRegistrations maps the join rows into that shape. Every column CHECK refuses
+// anything else, so a failure means the row was written by something other than this code.
+func parseRegistrations(modelID string, rows []registration) (registrations, error) {
+	out := registrations{Purposes: make([]modelcatalog.Purpose, 0, len(rows))}
 	for _, row := range rows {
 		purpose, err := modelcatalog.ParsePurpose(row.Purpose)
 		if err != nil {
-			return nil, nil, fmt.Errorf("catalog model %s: %w", modelID, err)
+			return registrations{}, fmt.Errorf("catalog model %s: %w", modelID, err)
 		}
-		purposes = append(purposes, purpose)
-		if !row.ReasoningEffort.Valid {
-			continue
+		out.Purposes = append(out.Purposes, purpose)
+		if row.ReasoningEffort.Valid {
+			effort := llm.ReasoningEffort(row.ReasoningEffort.String)
+			if !effort.Valid() {
+				return registrations{}, fmt.Errorf("catalog model %s %s: unknown reasoning_effort %q", modelID, purpose, row.ReasoningEffort.String)
+			}
+			if out.Reasoning == nil {
+				out.Reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{}
+			}
+			out.Reasoning[purpose] = effort
 		}
-		effort := llm.ReasoningEffort(row.ReasoningEffort.String)
-		if !effort.Valid() {
-			return nil, nil, fmt.Errorf("catalog model %s %s: unknown reasoning_effort %q", modelID, purpose, row.ReasoningEffort.String)
+		if row.Level.Valid {
+			level, err := modelcatalog.ParseLevel(row.Level.String)
+			if err != nil {
+				return registrations{}, fmt.Errorf("catalog model %s %s: %w", modelID, purpose, err)
+			}
+			if out.Levels == nil {
+				out.Levels = map[modelcatalog.Purpose]modelcatalog.Level{}
+			}
+			out.Levels[purpose] = level
 		}
-		if reasoning == nil {
-			reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{}
-		}
-		reasoning[purpose] = effort
 	}
 	// The join rows arrive in column order; the domain order is the display order.
-	modelcatalog.SortPurposes(purposes)
-	return purposes, reasoning, nil
+	modelcatalog.SortPurposes(out.Purposes)
+	return out, nil
 }
 
 func boolToInt(value bool) int64 {

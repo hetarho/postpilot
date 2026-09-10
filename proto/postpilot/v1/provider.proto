@@ -77,6 +77,21 @@ message ModelInfo {
   // The stages this model is registered to serve (change 20): each stage's picker lists
   // exactly its members — the client never re-derives stage fitness from capability flags.
   repeated Stage stages = 15;
+  // The operator's grade for this model AT EACH STAGE, for the stages that have one
+  // (MODEL-57). A picker shows its own stage's level and orders by it, 가성비 first; a stage
+  // absent from this list has no level and sorts last (MODEL-58).
+  //
+  // Display and ordering only — an unlevelled model is as selectable as a levelled one.
+  repeated StageLevel levels = 19;
+}
+
+// StageLevel is one stage's level for a model. A repeated message rather than a map
+// because a proto map cannot be keyed by an enum, and keying it by the stage's wire string
+// would hand the client a name it otherwise never has to know.
+message StageLevel {
+  Stage stage = 1;
+  // "value" | "balanced" | "premium" | "top". Never "" — a stage with no level is absent.
+  string level = 2;
 }
 
 message Selection {

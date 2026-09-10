@@ -14,14 +14,14 @@
 | AUTH | 5 | 5 | - | 0 |
 | QUOTA | 9 | 9 | - | 0 |
 | POST | 5 | 5 | - | 0 |
-| VOICE | 2 | 2 | - | 1 |
-| GEN | 5 | 5 | - | 0 |
-| MODEL | 8 | 8 | - | 0 |
-| TMPL | 4 | 4 | - | 1 |
+| VOICE | 3 | 3 | - | 1 |
+| GEN | 6 | 6 | - | 0 |
+| MODEL | 9 | 9 | - | 0 |
+| TMPL | 5 | 5 | - | 1 |
 | GUIDE | 2 | 2 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
 | PUB | 4 | 4 | - | 0 |
-| LANG | 2 | 2 | - | 0 |
+| LANG | 3 | 3 | - | 0 |
 | THEME | 9 | 9 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
@@ -37,13 +37,22 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
+| T093 | The catalog document carries the level | MODEL | T092 | todo |
+| T094 | 모델 관리: 등급 Listbox, 등급순 sort, unset mark, document diff level changes | MODEL | T093 T095 | todo |
+| T095 | User selectors show the level and order 가성비 → 최고 | MODEL LANG | T092 | todo |
 
 ## next
-- T008 is the last remaining task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job
-- spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, update-ssot LANG to add the `clips` namespace, and update-ssot PUB for VIDEO-17 + TMPL-39 once T008 closes
+- implement-task T093 (then T095 → T094); after T093 lands, re-teach `/recomend-models` to emit `<id> <level>` lines — its id-only block would clear every set level under MODEL-59
+- T008 needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job; once it closes, update-ssot PUB for VIDEO-17 + TMPL-39
 ## log
+- 260911 T092 done; level column 0040, per-registration domain/store/RPC and the stage-keyed llm+ModelInfo wire; ARCH-26 and gen idempotence pass, FE untouched and still builds
 - 260911 T091 delivered (fix); 2d484e8 pushed, CI https://github.com/hetarho/postpilot/actions/runs/34506698657 and rollout https://github.com/hetarho/postpilot/actions/runs/34506698910 pass; exact production image running, /health ok, restarts=0 and OOM=false; no further paid call or user-media replay
+- 260911 T092 claimed (lvl); chaining T092→T093→T095→T094, commit per task on main
+- 260911 create-task MODEL done (tier); r9 → T092 BE column+wire · T093 BE document · T095 FE selectors · T094 FE admin; MODEL tasked=9
 - 260911 T091 done (fix); corrected constrained output schemas, actual observation/planning and 15s Korean-captioned MP4 passed; all local gates/races green, reported test cost USD 0.003055 and conservative total USD 0.056321 within approval; no commit/push/deploy
+- 260911 create-task MODEL start (tier); r9 delta MODEL-57+ 58+ 59+ and the eight ✎ lines
+- 260911 update-ssot MODEL done (tier); r9 adds MODEL-57+ 58+ 59+ and touches 20 27 28 44 52 53 54 55 — no →MODEL ref elsewhere is affected and no doing task holds MODEL
+- 260911 update-ssot MODEL start (tier); registered models carry a user-facing level label, shown beside the model and used for ordering
 - 260911 T091 resumed (fix); owner approved synthetic live verification up to USD 0.10 total, no historical replay or production settings change
 - 260911 T091 blocked (fix); inspected the actual wire and official contracts without an evidenced cause; ask for bounded synthetic live verification, no paid call or speculative code change
 - 260911 T091 claimed (fix); prioritize the actual analyze 400 and a playable end-to-end result over additional defensive features; preserve concurrent work and existing credit ceilings, no historical replay
@@ -56,9 +65,3 @@
 - 260911 T090 local verification passed (diag); diagnostics, privacy/usage/race tests, production media image and unchanged-side gates pass; push awaits scope approval for two unrelated ancestor commits, remote CI/deployment pending
 - 260911 T088 claimed (gdl)
 - 260911 T087 done; two-level navigation chrome, plane-separated and stuck to the viewport, with one composed chrome-offset token; all local gates and CDP browser checks pass
-- 260911 T090 claimed (diag); approved metadata-only clip diagnostics follow-up, no policy/billing/retry changes; verify and push only this fix
-- 260911 clip diagnostics start (diag); scope the approved metadata-only logging fix, preserve concurrent navigation work; no paid retry or provider payload logging
-- 260911 T087 claimed (nav)
-- 260910 T081–T086 delivered through 820eabc as six verified task commits; CI https://github.com/hetarho/postpilot/actions/runs/34486036362 and backend rollout https://github.com/hetarho/postpilot/actions/runs/34486036393 pass, Workers deployment succeeds; no live model completion or historical rebilling
-- 260910 T086 done; 25 authenticated release cases, 20-source/30-minute stress, 1GiB/2CPU real-media tests and all local gates pass; corrected AAC timing, no paid completion or production mutation, series ready for authorized push/CI
-- 260910 T086 claimed (crd); authenticated local release regressions, counted fake provider and bounded real-media stress; no paid provider calls or production mutations, push only after all gates pass

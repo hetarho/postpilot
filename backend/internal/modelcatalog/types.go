@@ -36,6 +36,8 @@ var (
 	// ErrPurposeNotRegistered: an effort was set for a purpose this model does not serve.
 	// The control only appears once registered, and the server holds the same rule.
 	ErrPurposeNotRegistered = errors.New("model is not registered to purpose")
+	// ErrInvalidLevel: the requested per-registration level is not one of the four.
+	ErrInvalidLevel = errors.New("invalid model level")
 )
 
 // Purpose is one use the product puts a model to. Registration is per purpose (change 20):
@@ -110,6 +112,43 @@ func (p Purpose) EligibleFor(m Model) bool {
 	}
 }
 
+// Level is the operator's user-facing grade for ONE registration (MODEL-57): four words
+// that tell a user which of the offered models is the cheap one and which is the good one,
+// without making them read prices.
+//
+// It is set per registration and never derived. The same model is a different bargain for
+// an input-heavy stage than for an output-heavy one, and a price band moves every time the
+// source reprices — a level computed from either would be wrong the week after it was
+// written. Free models get no level of their own: a $0 price already says free.
+//
+// It gates nothing (MODEL-58). Display and ordering only.
+type Level string
+
+const (
+	LevelValue    Level = "value"
+	LevelBalanced Level = "balanced"
+	LevelPremium  Level = "premium"
+	LevelTop      Level = "top"
+)
+
+// Levels in ASCENDING order — 가성비 · 밸런스 · 고급 · 최고. Every surface that orders by
+// level orders by this slice, so the admin tab and the user's picker cannot disagree.
+var Levels = []Level{LevelValue, LevelBalanced, LevelPremium, LevelTop}
+
+// ParseLevel accepts the stored/wire form. The empty string is UNSET and parses fine: it
+// is the state every registration starts in, and clearing a level is a normal edit.
+func ParseLevel(s string) (Level, error) {
+	if s == "" {
+		return "", nil
+	}
+	for _, level := range Levels {
+		if string(level) == s {
+			return level, nil
+		}
+	}
+	return "", fmt.Errorf("%w: %q", ErrInvalidLevel, s)
+}
+
 // Model is one curated row: the operator's decisions plus the snapshot of upstream facts
 // taken when the row was written or last refreshed.
 type Model struct {
@@ -141,6 +180,10 @@ type Model struct {
 	// the stage policy. An unregistered purpose has no effort to carry, which is consistent
 	// — a model serves it to nobody.
 	Reasoning map[Purpose]llm.ReasoningEffort
+	// Levels is the operator's level PER REGISTRATION, keyed by purpose, on the same terms
+	// as Reasoning: a property of "this model doing this task". A purpose absent from the
+	// map is unset, which is what every registration is until the operator decides.
+	Levels map[Purpose]Level
 	// Listed: the upstream catalog still offered this model at the last successful refresh.
 	// An unlisted row has no registrations (the refresh removed them) and is not browsed.
 	Listed     bool
@@ -283,7 +326,10 @@ type Entry struct {
 	// is read one purpose tab at a time, so the evidence and the control shown on a tab
 	// belong to that tab (change 24).
 	Reasoning llm.ReasoningEffort
-	Listed    bool
+	// Level is the level for the PURPOSE being listed, on the same terms as Reasoning: the
+	// browse list is read one tab at a time, and a level belongs to the tab it was set on.
+	Level  Level
+	Listed bool
 	// ReasoningSpend is the recent reasoning-vs-completion split for this model at the
 	// purpose being listed, or nil when nothing has been recorded for it. It is what makes a
 	// model ignoring its effort visible BEFORE it fails a user's job — the only reliable
@@ -338,7 +384,7 @@ func EntryOf(m Model, purpose Purpose) Entry {
 			ReasoningCapability: m.ReasoningCapability,
 		},
 		Curated: true, Purposes: m.Purposes,
-		Reasoning: m.Reasoning[purpose], Listed: m.Listed,
+		Reasoning: m.Reasoning[purpose], Level: m.Levels[purpose], Listed: m.Listed,
 		ReasoningDrifted: m.DriftedFrom(m.Reasoning[purpose]),
 		// A stored row can only be trusted about reasoning if it says something: see Known.
 		ReasoningKnown: m.Known(),
@@ -364,6 +410,9 @@ type Browse struct {
 type Patch struct {
 	Purpose   Purpose
 	Reasoning *llm.ReasoningEffort
+	// Level: a non-nil pointer to "" CLEARS the level, which is why this is a pointer and
+	// not a bare Level — the two requests "leave it alone" and "unset it" are different.
+	Level *Level
 }
 
 // ProviderSlugOf is the vendor segment of an upstream model id — "openai" in

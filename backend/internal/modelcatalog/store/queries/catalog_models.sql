@@ -37,12 +37,12 @@ FROM catalog_models
 WHERE model_id = ?;
 
 -- name: ListCatalogModelPurposes :many
-SELECT model_id, purpose, reasoning_effort
+SELECT model_id, purpose, reasoning_effort, level
 FROM catalog_model_purposes
 ORDER BY model_id, purpose;
 
 -- name: GetCatalogModelPurposes :many
-SELECT purpose, reasoning_effort
+SELECT purpose, reasoning_effort, level
 FROM catalog_model_purposes
 WHERE model_id = ?
 ORDER BY purpose;
@@ -84,6 +84,14 @@ ON CONFLICT(model_id) DO UPDATE SET
 -- name: UpdateCatalogModelPurposeReasoning :execrows
 UPDATE catalog_model_purposes
 SET reasoning_effort = ?
+WHERE model_id = ? AND purpose = ?;
+
+-- The level is a property of the REGISTRATION too (MODEL-57), so it is written the same
+-- way and refused the same way: the WHERE matching zero rows IS the refusal. NULL clears.
+-- Separate from the reasoning statement because the document sync writes only this half.
+-- name: UpdateCatalogModelPurposeLevel :execrows
+UPDATE catalog_model_purposes
+SET level = ?
 WHERE model_id = ? AND purpose = ?;
 
 -- A deregistration is a curation edit, so it stamps updated_at without touching the

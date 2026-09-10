@@ -563,3 +563,136 @@ func TestSyncPurposes_RegistersAndDeregistersInOnePass(t *testing.T) {
 		t.Errorf("purposes = %v, want writing", registered.Purposes)
 	}
 }
+
+// T092/MODEL-57: the level rides the registration exactly as the effort does — set per
+// purpose, cleared by an empty value, refused for a purpose the model does not serve.
+func TestPatch_LevelRidesTheRegistration(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	id := "anthropic/claude-sonnet-5"
+
+	row, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, purpose := range []modelcatalog.Purpose{modelcatalog.PurposeWriting, modelcatalog.PurposePhotoAnalysis} {
+		if err := s.RegisterPurpose(ctx, row, purpose); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A fresh registration starts unset — nothing is derived from price or capability.
+	if fresh, err := s.Get(ctx, id); err != nil {
+		t.Fatal(err)
+	} else if len(fresh.Levels) != 0 {
+		t.Fatalf("levels on a fresh registration = %v, want none", fresh.Levels)
+	}
+
+	top := modelcatalog.LevelTop
+	updated, err := s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposeWriting, Level: &top}, testNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Levels[modelcatalog.PurposeWriting] != modelcatalog.LevelTop {
+		t.Errorf("levels = %v, want top on writing", updated.Levels)
+	}
+	// Per REGISTRATION: the same model is a different bargain for another task.
+	value := modelcatalog.LevelValue
+	if _, err := s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposePhotoAnalysis, Level: &value}, testNow); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Levels[modelcatalog.PurposeWriting] != modelcatalog.LevelTop ||
+		got.Levels[modelcatalog.PurposePhotoAnalysis] != modelcatalog.LevelValue {
+		t.Fatalf("levels = %v, want top on writing and value on photo-analysis", got.Levels)
+	}
+
+	// A patch that names only the effort leaves the level exactly where it was.
+	high := llm.ReasoningHigh
+	updated, err = s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposeWriting, Reasoning: &high}, testNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Levels[modelcatalog.PurposeWriting] != modelcatalog.LevelTop {
+		t.Errorf("levels after an effort-only patch = %v, want top kept", updated.Levels)
+	}
+
+	// An empty level is a real request: it clears back to unset.
+	cleared := modelcatalog.Level("")
+	updated, err = s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposeWriting, Level: &cleared}, testNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := updated.Levels[modelcatalog.PurposeWriting]; ok {
+		t.Errorf("levels = %v, want writing cleared", updated.Levels)
+	}
+	if updated.Levels[modelcatalog.PurposePhotoAnalysis] != modelcatalog.LevelValue {
+		t.Errorf("clearing one purpose changed another: %v", updated.Levels)
+	}
+
+	if _, err := s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposeStyleAnalysis, Level: &top}, testNow); !errors.Is(err, modelcatalog.ErrPurposeNotRegistered) {
+		t.Fatalf("level on an unregistered purpose = %v, want ErrPurposeNotRegistered", err)
+	}
+}
+
+// T092/MODEL-20: the level is registration-bound, so every path that drops a registration
+// drops it too — an uncheck, and the delisting a refresh performs. Re-registering starts
+// unset rather than resurrecting a stale grade.
+func TestLevel_GoesWithTheRegistration(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	id := "anthropic/claude-sonnet-5"
+
+	row, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RegisterPurpose(ctx, row, modelcatalog.PurposeWriting); err != nil {
+		t.Fatal(err)
+	}
+	premium := modelcatalog.LevelPremium
+	if _, err := s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposeWriting, Level: &premium}, testNow); err != nil {
+		t.Fatal(err)
+	}
+	// Re-registering an already-registered purpose keeps it: INSERT OR IGNORE only
+	// refreshes the row snapshot.
+	if err := s.RegisterPurpose(ctx, row, modelcatalog.PurposeWriting); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.Get(ctx, id); err != nil {
+		t.Fatal(err)
+	} else if got.Levels[modelcatalog.PurposeWriting] != modelcatalog.LevelPremium {
+		t.Fatalf("levels after a re-register = %v, want premium kept", got.Levels)
+	}
+
+	if err := s.DeregisterPurpose(ctx, id, modelcatalog.PurposeWriting, testNow); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RegisterPurpose(ctx, row, modelcatalog.PurposeWriting); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Levels) != 0 {
+		t.Fatalf("levels after uncheck and re-register = %v, want unset", got.Levels)
+	}
+
+	// The delisting a successful refresh performs is the same deregistration (MODEL-20).
+	if _, err := s.Patch(ctx, id, modelcatalog.Patch{Purpose: modelcatalog.PurposeWriting, Level: &premium}, testNow); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RefreshAvailability(ctx, nil, testNow); err != nil {
+		t.Fatal(err)
+	}
+	got, err = s.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Purposes) != 0 || len(got.Levels) != 0 {
+		t.Fatalf("after delisting purposes = %v levels = %v, want both gone", got.Purposes, got.Levels)
+	}
+}

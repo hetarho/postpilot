@@ -73,10 +73,14 @@ func (s *fakeStore) Patch(_ context.Context, modelID string, patch modelcatalog.
 	if !ok {
 		return modelcatalog.Model{}, modelcatalog.ErrNotFound
 	}
-	if patch.Reasoning != nil {
+	// Both halves of the patch live on the registration row, so both refuse a purpose the
+	// model does not serve — the real store's UPDATE matching zero rows says the same.
+	if patch.Reasoning != nil || patch.Level != nil {
 		if !slices.Contains(row.Purposes, patch.Purpose) {
 			return modelcatalog.Model{}, modelcatalog.ErrPurposeNotRegistered
 		}
+	}
+	if patch.Reasoning != nil {
 		if *patch.Reasoning == llm.ReasoningUnspecified {
 			delete(row.Reasoning, patch.Purpose)
 		} else {
@@ -84,6 +88,16 @@ func (s *fakeStore) Patch(_ context.Context, modelID string, patch modelcatalog.
 				row.Reasoning = map[modelcatalog.Purpose]llm.ReasoningEffort{}
 			}
 			row.Reasoning[patch.Purpose] = *patch.Reasoning
+		}
+	}
+	if patch.Level != nil {
+		if *patch.Level == "" {
+			delete(row.Levels, patch.Purpose)
+		} else {
+			if row.Levels == nil {
+				row.Levels = map[modelcatalog.Purpose]modelcatalog.Level{}
+			}
+			row.Levels[patch.Purpose] = *patch.Level
 		}
 	}
 	row.UpdatedAt = updatedAt
@@ -109,11 +123,16 @@ func (s *fakeStore) DeregisterPurpose(_ context.Context, modelID string, purpose
 		return nil
 	}
 	row.Purposes = slices.DeleteFunc(slices.Clone(row.Purposes), func(p modelcatalog.Purpose) bool { return p == purpose })
-	// The effort lives on the registration row (migration 0021), so removing the
-	// registration removes it — the real store deletes the row this map stands in for.
+	// The effort and the level both live on the registration row (migrations 0021, 0040),
+	// so removing the registration removes them — the real store deletes the row these maps
+	// stand in for.
 	if _, ok := row.Reasoning[purpose]; ok {
 		row.Reasoning = maps.Clone(row.Reasoning)
 		delete(row.Reasoning, purpose)
+	}
+	if _, ok := row.Levels[purpose]; ok {
+		row.Levels = maps.Clone(row.Levels)
+		delete(row.Levels, purpose)
 	}
 	row.UpdatedAt = at
 	s.rows[modelID] = row
@@ -1102,5 +1121,124 @@ func TestComboRates_OmitsWhatCannotBeQuoted(t *testing.T) {
 	}
 	if priced[0].ObserveLabel != "vendor/eyes" || priced[0].WriteLabel != "vendor/pen" {
 		t.Errorf("labels = %q / %q", priced[0].ObserveLabel, priced[0].WriteLabel)
+	}
+}
+
+// T092/MODEL-57: a level is set per registration and reaches the registry view keyed by
+// STAGE, the same projection the effort gets. Two purposes of one model hold two
+// independent levels — the whole reason the column is on the registration.
+func TestUpdate_LevelIsPerRegistrationAndReachesTheStageView(t *testing.T) {
+	store := newFakeStore(curated("openai/gpt-x",
+		modelcatalog.PurposePhotoAnalysis, modelcatalog.PurposeWriting, modelcatalog.PurposeStyleAnalysis))
+	svc := newService(t, store, nil)
+	ctx := context.Background()
+
+	value, top := modelcatalog.LevelValue, modelcatalog.LevelTop
+	if _, err := svc.Update(ctx, "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposePhotoAnalysis, Level: &value,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Update(ctx, "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Level: &top,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	source, ok := svc.Lookup("openai/gpt-x")
+	if !ok {
+		t.Fatal("model missing from the registry view")
+	}
+	if got := source.Levels[llm.StageNameObserve]; got != string(modelcatalog.LevelValue) {
+		t.Errorf("observe level = %q, want value", got)
+	}
+	if got := source.Levels[llm.StageNameWrite]; got != string(modelcatalog.LevelTop) {
+		t.Errorf("write level = %q, want top", got)
+	}
+	// An untouched purpose carries no level at all rather than an empty one.
+	if got, ok := source.Levels[llm.StageNameAnalyze]; ok {
+		t.Errorf("analyze level = %q, want absent", got)
+	}
+
+	// Clearing is a real edit and removes the key rather than blanking it.
+	cleared := modelcatalog.Level("")
+	if _, err := svc.Update(ctx, "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Level: &cleared,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	source, _ = svc.Lookup("openai/gpt-x")
+	if got, ok := source.Levels[llm.StageNameWrite]; ok {
+		t.Errorf("write level after clearing = %q, want absent", got)
+	}
+	if source.Levels[llm.StageNameObserve] != string(modelcatalog.LevelValue) {
+		t.Errorf("clearing writing reached observe: %v", source.Levels)
+	}
+}
+
+// T092/MODEL-58: the level has the enum gate and the registration gate, and nothing else —
+// there is no model-side rule to check it against the way an effort has one.
+func TestUpdate_RefusesAnUnknownLevel(t *testing.T) {
+	svc := newService(t, newFakeStore(curated("openai/gpt-x", modelcatalog.PurposeWriting)), nil)
+	ctx := context.Background()
+
+	nonsense := modelcatalog.Level("legendary")
+	if _, err := svc.Update(ctx, "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Level: &nonsense,
+	}); !errors.Is(err, modelcatalog.ErrInvalidLevel) {
+		t.Errorf("bad level = %v, want ErrInvalidLevel", err)
+	}
+	top := modelcatalog.LevelTop
+	if _, err := svc.Update(ctx, "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposePhotoAnalysis, Level: &top,
+	}); !errors.Is(err, modelcatalog.ErrPurposeNotRegistered) {
+		t.Errorf("level on an unregistered purpose = %v, want ErrPurposeNotRegistered", err)
+	}
+}
+
+// T092/MODEL-57: the browse list is read one tab at a time, so an entry reports the level
+// of the purpose being listed — not another tab's, and not a merge of both.
+func TestBrowse_ReportsTheListedPurposesLevel(t *testing.T) {
+	store := newFakeStore(curated("openai/gpt-x",
+		modelcatalog.PurposePhotoAnalysis, modelcatalog.PurposeWriting))
+	svc := newService(t, store, nil)
+	ctx := context.Background()
+
+	value, top := modelcatalog.LevelValue, modelcatalog.LevelTop
+	if _, err := svc.Update(ctx, "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposePhotoAnalysis, Level: &value,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Update(ctx, "openai/gpt-x", modelcatalog.Patch{
+		Purpose: modelcatalog.PurposeWriting, Level: &top,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		purpose modelcatalog.Purpose
+		want    modelcatalog.Level
+	}{
+		{modelcatalog.PurposePhotoAnalysis, modelcatalog.LevelValue},
+		{modelcatalog.PurposeWriting, modelcatalog.LevelTop},
+		// Registered but never levelled: the tab shows the gap rather than a neighbour's grade.
+		{modelcatalog.PurposeStyleAnalysis, ""},
+	} {
+		browse, err := svc.Browse(ctx, false, tc.purpose)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var found bool
+		for _, entry := range browse.Entries {
+			if entry.ModelID != "openai/gpt-x" {
+				continue
+			}
+			found = true
+			if entry.Level != tc.want {
+				t.Errorf("%s tab level = %q, want %q", tc.purpose, entry.Level, tc.want)
+			}
+		}
+		if !found {
+			t.Fatalf("%s tab did not list the model", tc.purpose)
+		}
 	}
 }

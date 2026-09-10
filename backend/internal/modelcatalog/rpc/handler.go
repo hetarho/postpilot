@@ -98,6 +98,10 @@ func (h *Handler) UpdateModel(ctx context.Context, req *connect.Request[postpilo
 		effort := llm.ReasoningEffort(req.Msg.GetReasoningEffort())
 		patch.Reasoning = &effort
 	}
+	if req.Msg.Level != nil {
+		level := modelcatalog.Level(req.Msg.GetLevel())
+		patch.Level = &level
+	}
 	model, err := h.svc.Update(ctx, modelID, patch)
 	if err != nil {
 		return nil, toConnectError("update model", err)
@@ -185,6 +189,7 @@ func toProtoEntry(e modelcatalog.Entry) *postpilotv1.CatalogEntry {
 		Purposes:            purposes,
 		Listed:              e.Listed,
 		ReasoningEffort:     string(e.Reasoning),
+		Level:               string(e.Level),
 		SourceCreatedAt:     e.SourceCreatedAt,
 		ReasoningSpend:      toProtoReasoningSpend(e.ReasoningSpend),
 

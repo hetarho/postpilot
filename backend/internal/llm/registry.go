@@ -58,7 +58,10 @@ type ModelInfo struct {
 	ReasoningNativeEffort bool
 	// Stages this model may serve, passed through from the source verbatim (see
 	// SourceModel.Stages). Empty means no user-facing stage lists it.
-	Stages         []string
+	Stages []string
+	// Levels is the source's display grade per stage, passed through verbatim (see
+	// SourceModel.Levels). Nothing in the registry reads it.
+	Levels         map[string]string
 	Disabled       bool
 	DisabledReason string
 }
@@ -102,6 +105,11 @@ type SourceModel struct {
 	// same posture it takes to labels. An empty set is a model curated for a purpose no
 	// stage consumes yet (image/video generation).
 	Stages []string
+	// Levels is the source's user-facing grade for this model AT A STAGE, keyed by the same
+	// stage strings Stages uses. Display metadata the registry passes through without
+	// interpreting, exactly as it does Label: it gates nothing and resolves nothing. A stage
+	// absent from the map has no level, which is the state every registration starts in.
+	Levels map[string]string
 	// Delisted marks a model the upstream catalog no longer offered at the last successful
 	// refresh.
 	Delisted bool
@@ -392,6 +400,7 @@ func (r *Registry) describe(m SourceModel) ModelInfo {
 		PricingCheckedAt:      m.PricingCheckedAt,
 		ReasoningNativeEffort: m.ReasoningNativeEffort,
 		Stages:                append([]string(nil), m.Stages...),
+		Levels:                maps.Clone(m.Levels),
 	}
 	if delivery, ok := r.provider.(VideoDeliveryProvider); ok && m.VideoInput {
 		info.VideoDelivery = delivery.VideoDelivery(m.ModelID)

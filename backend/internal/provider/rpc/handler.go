@@ -225,11 +225,20 @@ func fromProtoStage(s postpilotv1.Stage) (provider.Stage, bool) {
 
 func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
 	stages := make([]postpilotv1.Stage, 0, len(m.Info.Stages))
+	levels := make([]*postpilotv1.StageLevel, 0, len(m.Info.Levels))
 	for _, value := range m.Info.Stages {
 		// A stage string this build does not know is skipped rather than sent as
 		// UNSPECIFIED: the client could not list the model under it anyway.
-		if stage, err := provider.ParseStage(value); err == nil {
-			stages = append(stages, stageToProto[stage])
+		stage, err := provider.ParseStage(value)
+		if err != nil {
+			continue
+		}
+		stages = append(stages, stageToProto[stage])
+		// Walking the stages rather than the level map keeps the two in step: a level for a
+		// stage this model does not serve cannot reach the client, and the order is the
+		// registry's rather than a map's.
+		if level := m.Info.Levels[value]; level != "" {
+			levels = append(levels, &postpilotv1.StageLevel{Stage: stageToProto[stage], Level: level})
 		}
 	}
 	return &postpilotv1.ModelInfo{
@@ -249,6 +258,7 @@ func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
 		RequiredCredits:     int32(m.RequiredCredits),
 		Affordable:          m.Affordable,
 		Stages:              stages,
+		Levels:              levels,
 	}
 }
 

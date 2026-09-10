@@ -130,7 +130,7 @@ func (q *Queries) GetCatalogModel(ctx context.Context, modelID string) (GetCatal
 }
 
 const getCatalogModelPurposes = `-- name: GetCatalogModelPurposes :many
-SELECT purpose, reasoning_effort
+SELECT purpose, reasoning_effort, level
 FROM catalog_model_purposes
 WHERE model_id = ?
 ORDER BY purpose
@@ -139,6 +139,7 @@ ORDER BY purpose
 type GetCatalogModelPurposesRow struct {
 	Purpose         string
 	ReasoningEffort sql.NullString
+	Level           sql.NullString
 }
 
 func (q *Queries) GetCatalogModelPurposes(ctx context.Context, modelID string) ([]GetCatalogModelPurposesRow, error) {
@@ -150,7 +151,7 @@ func (q *Queries) GetCatalogModelPurposes(ctx context.Context, modelID string) (
 	var items []GetCatalogModelPurposesRow
 	for rows.Next() {
 		var i GetCatalogModelPurposesRow
-		if err := rows.Scan(&i.Purpose, &i.ReasoningEffort); err != nil {
+		if err := rows.Scan(&i.Purpose, &i.ReasoningEffort, &i.Level); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -165,7 +166,7 @@ func (q *Queries) GetCatalogModelPurposes(ctx context.Context, modelID string) (
 }
 
 const listCatalogModelPurposes = `-- name: ListCatalogModelPurposes :many
-SELECT model_id, purpose, reasoning_effort
+SELECT model_id, purpose, reasoning_effort, level
 FROM catalog_model_purposes
 ORDER BY model_id, purpose
 `
@@ -174,6 +175,7 @@ type ListCatalogModelPurposesRow struct {
 	ModelID         string
 	Purpose         string
 	ReasoningEffort sql.NullString
+	Level           sql.NullString
 }
 
 func (q *Queries) ListCatalogModelPurposes(ctx context.Context) ([]ListCatalogModelPurposesRow, error) {
@@ -185,7 +187,12 @@ func (q *Queries) ListCatalogModelPurposes(ctx context.Context) ([]ListCatalogMo
 	var items []ListCatalogModelPurposesRow
 	for rows.Next() {
 		var i ListCatalogModelPurposesRow
-		if err := rows.Scan(&i.ModelID, &i.Purpose, &i.ReasoningEffort); err != nil {
+		if err := rows.Scan(
+			&i.ModelID,
+			&i.Purpose,
+			&i.ReasoningEffort,
+			&i.Level,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -455,6 +462,29 @@ UPDATE catalog_models SET listed = 0
 func (q *Queries) UnlistAllCatalogModels(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, unlistAllCatalogModels)
 	return err
+}
+
+const updateCatalogModelPurposeLevel = `-- name: UpdateCatalogModelPurposeLevel :execrows
+UPDATE catalog_model_purposes
+SET level = ?
+WHERE model_id = ? AND purpose = ?
+`
+
+type UpdateCatalogModelPurposeLevelParams struct {
+	Level   sql.NullString
+	ModelID string
+	Purpose string
+}
+
+// The level is a property of the REGISTRATION too (MODEL-57), so it is written the same
+// way and refused the same way: the WHERE matching zero rows IS the refusal. NULL clears.
+// Separate from the reasoning statement because the document sync writes only this half.
+func (q *Queries) UpdateCatalogModelPurposeLevel(ctx context.Context, arg UpdateCatalogModelPurposeLevelParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateCatalogModelPurposeLevel, arg.Level, arg.ModelID, arg.Purpose)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateCatalogModelPurposeReasoning = `-- name: UpdateCatalogModelPurposeReasoning :execrows
