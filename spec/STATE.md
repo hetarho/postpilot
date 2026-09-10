@@ -14,14 +14,14 @@
 | AUTH | 5 | 5 | - | 0 |
 | QUOTA | 9 | 9 | - | 0 |
 | POST | 5 | 5 | - | 0 |
-| VOICE | 3 | 3 | - | 1 |
-| GEN | 6 | 6 | - | 0 |
+| VOICE | 2 | 2 | - | 1 |
+| GEN | 5 | 5 | - | 0 |
 | MODEL | 8 | 8 | - | 0 |
-| TMPL | 5 | 5 | - | 1 |
+| TMPL | 4 | 4 | - | 1 |
 | GUIDE | 2 | 2 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
 | PUB | 4 | 4 | - | 0 |
-| LANG | 3 | 3 | - | 0 |
+| LANG | 2 | 2 | - | 0 |
 | THEME | 9 | 9 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
@@ -39,9 +39,15 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 
 ## next
+- Finish the authorized T091 push and verify its exact commit in CI and the deployed backend; no further paid model call or user-media replay
 - T008 is the last remaining task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, update-ssot LANG to add the `clips` namespace, and update-ssot PUB for VIDEO-17 + TMPL-39 once T008 closes
 ## log
+- 260911 T091 release started (fix); owner requested commit/push, isolate clip changes from concurrent work and verify remote CI/deployment without paid calls
+- 260911 T091 done (fix); corrected constrained output schemas, actual observation/planning and 15s Korean-captioned MP4 passed; all local gates/races green, reported test cost USD 0.003055 and conservative total USD 0.056321 within approval; no commit/push/deploy
+- 260911 T091 resumed (fix); owner approved synthetic live verification up to USD 0.10 total, no historical replay or production settings change
+- 260911 T091 blocked (fix); inspected the actual wire and official contracts without an evidenced cause; ask for bounded synthetic live verification, no paid call or speculative code change
+- 260911 T091 claimed (fix); prioritize the actual analyze 400 and a playable end-to-end result over additional defensive features; preserve concurrent work and existing credit ceilings, no historical replay
 - 260911 T090 done; the push-scope hold cleared, 61fe2d2 is on main and CI/deploy are green on 7327d93
 - 260911 update-ssot VOICE TMPL LANG done (mnt); VOICE-42 drops the tag count and GEN-46✎ excludes rule comparison, TMPL scopes the retired `label` to `slot`, LANG-7 gains `billing` `clips`; all four revs are wording-only so tasked=rev
 - 260911 update-ssot VOICE TMPL LANG start (mnt); the three spec-maintenance items owed in next
@@ -57,8 +63,3 @@
 - 260910 T081–T086 delivered through 820eabc as six verified task commits; CI https://github.com/hetarho/postpilot/actions/runs/34486036362 and backend rollout https://github.com/hetarho/postpilot/actions/runs/34486036393 pass, Workers deployment succeeds; no live model completion or historical rebilling
 - 260910 T086 done; 25 authenticated release cases, 20-source/30-minute stress, 1GiB/2CPU real-media tests and all local gates pass; corrected AAC timing, no paid completion or production mutation, series ready for authorized push/CI
 - 260910 T086 claimed (crd); authenticated local release regressions, counted fake provider and bounded real-media stress; no paid provider calls or production mutations, push only after all gates pass
-- 260910 T085 done; exact explicit server-ceiling approval, owned attempt-long previews and authoritative settlement UI; all local gates, race tests, 1469 frontend tests and ko/en 320/390/1024px browser checks pass, no paid call or push
-- 260910 T085 claimed (crd); explicit server-priced approval, attempt-long local previews and authoritative settlement UI; preserve unrelated work and never replay paid starts
-- 260910 T084 done; prepare-all verified inline media, exact frozen-policy reservation, bounded original rendering and cleanup; all local gates/races and nonroot 1GiB/2CPU smoke pass, no paid request or push
-- 260910 T084 claimed (crd); prepare every bounded proxy before exact reservation and guarded inline AI, preserve original rendering and cleanup, user ceilings take priority
-- 260910 T083 done; bounded inline/static transport, frozen multimodal quote/routing/usage policy and pre-enqueue URL gates; all local gates and targeted race tests pass, 1449 frontend tests, no paid call or push; paid runner remains closed until T084

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -105,7 +106,7 @@ func TestObservationContractPlainFallbackOffsetAndSpeech(t *testing.T) {
 				t.Fatalf("%+v %+v %v", got, usage, err)
 			}
 			request := f.calls[0]
-			if len(f.calls) != 1 || f.refs[0] != ref || request.Stage != llm.StageNameObserve || request.MaxTokens != s.Budgets().Observe || request.Reasoning != llm.ReasoningLow || (len(request.JSONSchema) > 0) != structured || !strings.Contains(request.System, string(ai.ChunkSchema())) {
+			if len(f.calls) != 1 || f.refs[0] != ref || request.Stage != llm.StageNameObserve || request.MaxTokens != s.Budgets().Observe || request.Reasoning != llm.ReasoningLow || (len(request.JSONSchema) > 0) != structured || !strings.Contains(request.System, `"maxLength": 2000`) {
 				t.Fatalf("bad request %+v", request)
 			}
 			parts := request.Messages[0].Parts
@@ -172,6 +173,82 @@ func TestObservationRejectsInvalidModelOutput(t *testing.T) {
 		})
 	}
 }
+
+func TestRecordedLiveClipResponses(t *testing.T) {
+	observationJSON, err := os.ReadFile("testdata/live-observation.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	planJSON, err := os.ReadFile("testdata/live-plan.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, models, _ := newService(t, string(observationJSON), true)
+	in := chunk()
+	in.Source = clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "synthetic", Fingerprint: "synthetic", Info: clip.MediaInfo{DurationMS: 15000, Width: 320, Height: 180, HasAudio: true}}, Filename: "synthetic.mp4"}
+	in.Index, in.OffsetMS, in.DurationMS = 0, 0, 15000
+	in.Video.DurationMS = 15000
+	observed, _, err := s.ObserveChunk(t.Context(), testRef(), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	limits := config.ClipAI(&config.Config{}).Analysis
+	analyses, err := clip.MergeAnalyses(limits, []clip.AnalysisSource{in.Source}, []clip.ChunkAnalysis{observed})
+	if err != nil {
+		t.Fatal(err)
+	}
+	models.response.Text = string(planJSON)
+	result, _, err := s.Plan(t.Context(), testRef(), clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "합성 영상 검증", CutGuidance: "15초 한 컷으로 구성하고 자막은 '영상 생성 확인'으로 해주세요.", CopyStyles: []string{"clean"}, Accent: "coral"}, Ratio: "horizontal", TargetDurationMS: 15000, Analyses: analyses})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.DurationMS != 15000 || len(result.Cuts) != 1 || result.Cuts[0].Copy.Text != "영상 생성 확인" || result.Cuts[0].Copy.StartMS != 1000 || result.Cuts[0].Copy.EndMS != 5000 {
+		t.Fatalf("unexpected plan: %+v", result)
+	}
+	if len(models.calls) != 2 || models.calls[0].MaxTokens != 8192 || models.calls[1].MaxTokens != 32768 {
+		t.Fatal("production budgets or call count changed")
+	}
+	if string(models.calls[0].JSONSchema) != string(ai.ChunkSchema()) || string(models.calls[1].JSONSchema) != string(ai.PlanSchema()) {
+		t.Fatal("did not send structural output schemas")
+	}
+	if models.calls[1].HasVideos() || models.calls[1].HasImages() {
+		t.Fatal("composition received pixels")
+	}
+}
+
+func TestStructuralOutputStillEnforcesDomainBounds(t *testing.T) {
+	for _, structured := range []bool{false, true} {
+		for _, field := range []string{"event", "speech", "quality", "subjects"} {
+			v := observation()
+			segment := firstSegment(v)
+			segment[field] = strings.Repeat("한", 2001)
+			if field == "subjects" {
+				subjects := make([]string, 21)
+				for i := range subjects {
+					subjects[i] = "valid subject"
+				}
+				segment[field] = subjects
+			}
+			s, f, _ := newService(t, raw(v), structured)
+			if _, _, err := s.ObserveChunk(t.Context(), testRef(), chunk()); !errors.Is(err, llm.ErrBadOutput) {
+				t.Fatalf("accepted out-of-bounds %s with structured=%v: %v", field, structured, err)
+			}
+			if len(f.calls) != 1 {
+				t.Fatal("paid repair attempted")
+			}
+		}
+		v := plan()
+		firstCut(v)["caption"].(map[string]any)["text"] = strings.Repeat("한", 501)
+		s, f, c := newService(t, raw(v), structured)
+		if _, _, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, clip.ErrCopyTooLong) {
+			t.Fatalf("accepted oversized caption: %v", err)
+		}
+		if len(f.calls) != 1 || c.calls != 0 {
+			t.Fatal("invalid result reached repair or rendering")
+		}
+	}
+}
+
 func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 	for _, structured := range []bool{false, true} {
 		s, f, c := newService(t, "Here is the JSON:\n"+raw(plan()), structured)
@@ -185,7 +262,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 			t.Fatalf("%+v", cut)
 		}
 		request := f.calls[0]
-		if len(f.calls) != 1 || request.HasVideos() || request.HasImages() || request.MaxTokens != s.Budgets().Plan || request.Stage != llm.StageNameWrite || (request.JSONSchema != nil) != structured || !strings.Contains(request.System, string(ai.PlanSchema())) {
+		if len(f.calls) != 1 || request.HasVideos() || request.HasImages() || request.MaxTokens != s.Budgets().Plan || request.Stage != llm.StageNameWrite || (request.JSONSchema != nil) != structured || !strings.Contains(request.System, `"maxLength": 500`) {
 			t.Fatal(request)
 		}
 		var data struct {
