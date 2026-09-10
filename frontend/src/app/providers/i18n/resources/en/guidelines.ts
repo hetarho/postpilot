@@ -4,7 +4,6 @@ export const guidelines = {
     description:
       'A guideline says what a post must avoid or watch out for. Saved guidelines apply to every post of this account, and can be narrowed to specific templates. Tone and sentence endings still follow your voice profile.',
     saved: 'Saved guidelines',
-    new: 'New guideline',
     empty: 'No guidelines saved yet',
     emptyHelp:
       'Save the sentence you keep deleting from every draft, once, here. For example, like this.',
@@ -26,6 +25,9 @@ export const guidelines = {
     templatesEmpty: 'Create a template first.',
   },
   create: {
+    open: 'New guideline',
+    dockAria: 'Add a guideline',
+    title: 'New guideline',
     text: 'Guideline',
     textPlaceholder: 'e.g. In unmanned-store posts, do not mention CCTV',
     help: 'One short rule per guideline. A guideline wins over a conflicting template instruction.',

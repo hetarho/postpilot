@@ -4,7 +4,6 @@ export const guidelines = {
     description:
       '지침은 글에서 피해야 할 내용과 주의할 점을 정해요. 저장하면 이 계정의 모든 글에 적용되고, 특정 템플릿에만 적용되게 좁힐 수도 있어요. 문체와 종결어미는 그대로 말투 프로필을 따릅니다.',
     saved: '저장된 지침',
-    new: '새 지침',
     empty: '아직 저장된 지침이 없어요',
     emptyHelp:
       '글을 받아 보고 매번 지우던 문장을 여기에 한 번만 저장해 두세요. 예를 들어 이런 식이에요.',
@@ -25,6 +24,9 @@ export const guidelines = {
     templatesEmpty: '먼저 템플릿을 하나 만들어 주세요.',
   },
   create: {
+    open: '새 지침',
+    dockAria: '지침 추가',
+    title: '새 지침',
     text: '지침',
     textPlaceholder: '예: 무인 매장 글에서 CCTV를 언급하지 않기',
     help: '한 줄에 규칙 하나씩, 짧게 적어 주세요. 지침이 템플릿의 요구와 충돌하면 지침을 우선합니다.',

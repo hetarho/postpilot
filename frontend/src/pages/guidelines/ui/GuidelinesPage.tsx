@@ -8,14 +8,22 @@ import {
   type GuidelineCandidate,
 } from '@/entities/guideline'
 import { useSession } from '@/entities/session'
-import { CreateGuidelineForm } from '@/features/create-guideline'
+import { CreateGuidelineSheet } from '@/features/create-guideline'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
 import { EditableGuidelineScope, EditableGuidelineText } from '@/features/edit-guideline'
 import {
   ApproveGuidelineCandidateButton,
   DismissGuidelineCandidateButton,
 } from '@/features/review-guideline-candidate'
-import { Badge, Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
+import {
+  ActionBar,
+  Badge,
+  Button,
+  Notice,
+  Typography,
+  pageStyles,
+  typographyStyles,
+} from '@/shared/ui'
 
 /** The account's 작문 지침 (plan 16). Composition only — every action is its own feature.
  *
@@ -29,7 +37,7 @@ export function GuidelinesPage() {
   const { guidelines, isPending, isError, isFetching, refetch } = useGuidelines(ownerId)
 
   return (
-    <main className={pageStyles({ width: 'wide' })}>
+    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
       <Typography variant="display">{t('title', { ns: 'guidelines' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'guidelines' })}
@@ -75,12 +83,16 @@ export function GuidelinesPage() {
             </section>
           )}
 
-          <section aria-labelledby="create-guideline-heading" className="mt-10">
-            <Typography variant="title" id="create-guideline-heading">
-              {t('page.new', { ns: 'guidelines' })}
-            </Typography>
-            <CreateGuidelineForm ownerId={ownerId} className="mt-3" />
-          </section>
+          {/* The page is the list; authoring happens behind this one trigger, the shape every
+              sibling directory uses (GUIDE-20, THEME-24). `mt-auto` puts the bar below a short
+              list and `sticky` keeps it in reach once the list is long enough to scroll. */}
+          <ActionBar
+            dock="list"
+            ariaLabel={t('create.dockAria', { ns: 'guidelines' })}
+            className="mt-auto"
+          >
+            <CreateGuidelineSheet ownerId={ownerId} className="w-full sm:w-auto" />
+          </ActionBar>
         </>
       )}
     </main>

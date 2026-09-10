@@ -35,6 +35,12 @@ function renderGuidelines(guidelines: FakeGuidelinesOptions = {}, calls: string[
 
 const section = async (name: string) => within(await screen.findByRole('region', { name }))
 
+/** The sheet is mounted only while open, so every creation flow starts by opening it (GUIDE-20). */
+async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '새 지침' }))
+  return within(await screen.findByRole('dialog'))
+}
+
 /** One row of the list, by its text. Every row carries the same pencils, so a query has to be
  *  scoped to a row to mean anything. */
 async function row(text: string) {
@@ -90,11 +96,35 @@ describe('the guideline list', () => {
     expect(calls.filter((call) => call === 'CreateGuideline')).toEqual([])
   })
 
+  // GUIDE-20: the page is the list. Authoring lives behind one docked trigger, the shape every
+  // sibling directory uses, and the dock keeps its natural width above the phone.
+  it('carries no standing form and docks one 새 지침 at every width', async () => {
+    const user = userEvent.setup()
+    renderGuidelines()
+
+    expect(await screen.findByRole('heading', { level: 1, name: '지침' })).toBeInTheDocument()
+    const trigger = await screen.findByRole('button', { name: '새 지침' })
+    expect(screen.queryByRole('region', { name: '새 지침' })).not.toBeInTheDocument()
+    // Nothing to type into until the trigger is used: the rows are read-first (GUIDE-20).
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+
+    expect(trigger).toHaveClass('w-full', 'sm:w-auto')
+    const dock = trigger.closest('[class*="sticky"]')
+    expect(dock).toHaveClass('sticky', 'sm:ml-auto', 'sm:w-fit', 'mt-auto')
+
+    const sheet = await openCreateSheet(user)
+    // One create surface at any width, and it opens with 전역 chosen and the room left stated.
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(sheet.getByRole('tab', { name: '전역' })).toHaveAttribute('aria-selected', 'true')
+    expect(sheet.getByText('300자 남음')).toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: '지침 만들기' })).toBeDisabled()
+  })
+
   it('creates a global guideline and shows it in the list', async () => {
     const user = userEvent.setup()
     const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
     renderGuidelines({ guidelines: [], creates })
-    const form = await section('새 지침')
+    const form = await openCreateSheet(user)
 
     await user.type(form.getByLabelText('지침'), '가격을 지어내지 않기')
     await user.click(form.getByRole('button', { name: '지침 만들기' }))
@@ -108,8 +138,8 @@ describe('the guideline list', () => {
     })
     const list = await section('저장된 지침')
     await waitFor(() => expect(list.getByText('가격을 지어내지 않기')).toBeInTheDocument())
-    // Only what was submitted is cleared.
-    expect(form.getByLabelText('지침')).toHaveValue('')
+    // A saved rule closes the sheet: the page is the list, and the next rule is a new decision.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   // A2/A14: a scoped create must name at least one owned template, picked from the directory.
@@ -117,7 +147,7 @@ describe('the guideline list', () => {
     const user = userEvent.setup()
     const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
     renderGuidelines({ guidelines: [], creates })
-    const form = await section('새 지침')
+    const form = await openCreateSheet(user)
 
     await user.type(form.getByLabelText('지침'), '협찬 표기를 빠뜨리지 않기')
     await user.click(form.getByRole('tab', { name: '특정 템플릿' }))
@@ -138,12 +168,14 @@ describe('the guideline list', () => {
   it('refuses a duplicate text with the server message and keeps what was typed', async () => {
     const user = userEvent.setup()
     renderGuidelines()
-    const form = await section('새 지침')
+    const form = await openCreateSheet(user)
 
     await user.type(form.getByLabelText('지침'), '없는 사실을 쓰지 않기')
     await user.click(form.getByRole('button', { name: '지침 만들기' }))
 
+    // The refusal is something to fix here, so the sheet stays open with the text in it.
     expect(await screen.findByText('이미 같은 지침이 있어요.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(form.getByLabelText('지침')).toHaveValue('없는 사실을 쓰지 않기')
   })
 

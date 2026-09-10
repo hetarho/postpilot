@@ -37,7 +37,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T088 | Guideline list with a docked create sheet | GUIDE THEME ARCH | - | todo |
 | T089 | Guideline candidate disclosure with bulk review | GUIDE THEME ARCH | T088 | todo |
 | T090 | Safe clip failure diagnostics | ARCH CLIP | T086 | blocked@260911 |
 
@@ -46,7 +45,9 @@
 - spec maintenance owed: update-ssot VOICE for VOICE-42's frozen tag-count wording, update-ssot TMPL for the retired SLOT `label` vs `<ask label>` conflict, and update-ssot LANG to add the `clips` namespace
 - T008 is the last PUB task and needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job. Read T042 T043 T045 T046 results for the live surveys and the wiring's typed preflight; update-ssot PUB for VIDEO-17 + TMPL-39 after T008 closes
 ## log
+- 260911 T088 done; the 지침 page is the list with one docked 새 지침 sheet; all local gates and day/night browser checks pass
 - 260911 T090 local verification passed (diag); diagnostics, privacy/usage/race tests, production media image and unchanged-side gates pass; push awaits scope approval for two unrelated ancestor commits, remote CI/deployment pending
+- 260911 T088 claimed (gdl)
 - 260911 T087 done; two-level navigation chrome, plane-separated and stuck to the viewport, with one composed chrome-offset token; all local gates and CDP browser checks pass
 - 260911 T090 claimed (diag); approved metadata-only clip diagnostics follow-up, no policy/billing/retry changes; verify and push only this fix
 - 260911 clip diagnostics start (diag); scope the approved metadata-only logging fix, preserve concurrent navigation work; no paid retry or provider payload logging
@@ -64,5 +65,3 @@
 - 260910 create-task QUOTA start; reconcile r9 into T083–T086 with documented modality units and frozen quote/routing/accounting contracts; user approved resuming the blocked task, preserve archived T081–T082
 - 260910 update-ssot QUOTA done; r9 explicitly covers applicable multimodal prices and sufficiently evidenced estimates, all user credit protections unchanged; no doing task affected, T083–T086 await task reconciliation and completed tasks remain immutable
 - 260910 update-ssot QUOTA start; approved modality-aware estimates and enforceable request pricing while preserving absolute user ceilings, no-usage failure protection and service-owned overage; preserve unrelated work
-- 260910 T083 blocked recheck 3; the same pricing-policy decision remains unapproved with unchanged task/SSOT contracts; mark the thread goal blocked, retain all work and completed commits, resume only after the owner resolves the pricing policy
-- 260910 T083 blocked recheck 2; begin and complete a read-only state audit, unchanged QUOTA@8/CLIP@3 and no pricing-policy approval; preserve the uncommitted work and paid-runner guard, no implementation/commit/push
