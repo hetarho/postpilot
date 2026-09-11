@@ -3,6 +3,7 @@ package clip
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/url"
 	"reflect"
@@ -197,14 +198,17 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 			return err
 		}
 		set("render", 0, 1)
-		video, err := s.renderer.Render(ctx, ws, plan, refs, func(ctx context.Context, id string, fn func(MediaSource) error) error {
+		load, releaseSource := s.renderLoader(ws, func(id string) (SourceLease, MediaInfo, bool) {
 			i, ok := leases[id]
 			if !ok {
-				return ErrNotFound
+				return SourceLease{}, MediaInfo{}, false
 			}
-			return s.withSource(ctx, ws, b.Sources[i], infos[i], func(source MediaSource) error { source.SourceID = id; return fn(source) })
+			return b.Sources[i], infos[i], true
 		})
-		if err != nil {
+		video, err := s.renderer.Render(ctx, ws, plan, refs, func(ctx context.Context, id string, fn func(MediaSource) error) error {
+			return load(ctx, id, func(source MediaSource) error { source.SourceID = id; return fn(source) })
+		})
+		if err = errors.Join(err, releaseSource()); err != nil {
 			return err
 		}
 		set("save", 0, 1)

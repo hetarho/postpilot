@@ -495,8 +495,9 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		content = map[string]any{"ratio": metadata["ratio"], "duration_ms": 15000, "hook": "", "cuts": fixtureCuts}
 		if strings.HasPrefix(p.mode, "multi-source") {
-			// 1200 ms, not 1000: CDS-37 admits no cut shorter than 1.2 s.
-			lengths := []int{2000, 2000, 1200, 2400, 2300, 2300, 2200, 2200}
+			// The recorded lengths, 1000 ms third cut included: CDS-37 r3 aims at
+			// 1.2 s (2.5 s under the 음식점 preset) and never refuses for it.
+			lengths := []int{2000, 2000, 1000, 2400, 2300, 2300, 2200, 2200}
 			if len(analyses) != len(lengths) {
 				p.reject(w, "multi-source fixture requires eight analyses")
 				return

@@ -311,12 +311,19 @@ func Transitions(scenes []string) []int {
 	return out
 }
 
-// CutBounds is CDS-37's length range for one scene, in milliseconds. A food
-// close-up has its own shorter ceiling; every other scene takes the shared one.
-func CutBounds(scene string) (int, int) {
-	maximum := Timing.CutMaxS
-	if Scene(scene) == "food" {
-		maximum = Timing.CutMaxFoodS
+// CutBounds is CDS-37's TARGET range for one cut, in milliseconds: the template
+// preset's own range where it names one (CDS-50), the shared 1.2–6.0 s where it
+// does not, and a food close-up capped at 4.0 s either way. These are editing
+// rhythm, not correctness: the compiler aims at them wherever the approved
+// timeline still allows and never refuses a plan for missing them (r3).
+func CutBounds(scene, preset string) (int, int) {
+	minimum, maximum := Timing.CutMinS, Timing.CutMaxS
+	if p, ok := Presets[preset]; ok && p.CutMinS > 0 && p.CutMaxS > 0 {
+		minimum, maximum = p.CutMinS, p.CutMaxS
 	}
-	return int(Timing.CutMinS * 1000), int(maximum * 1000)
+	if Scene(scene) == "food" {
+		maximum = min(maximum, Timing.CutMaxFoodS)
+	}
+	minimum = min(minimum, maximum)
+	return int(minimum * 1000), int(maximum * 1000)
 }

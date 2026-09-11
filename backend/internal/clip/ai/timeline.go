@@ -65,16 +65,15 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 			copy.EndMS = min(copy.EndMS, length)
 		}
 	}
-	// CDS-37's length bounds and CDS-36's transitions are the caller's, not the
-	// model's: the scene the observer reported decides both, so the same input
-	// joins the same cuts the same way (CDS-7).
+	// CDS-37's length targets and CDS-36's transitions are the caller's, not the
+	// model's: the scene the observer reported and the template's preset decide
+	// both, so the same input joins the same cuts the same way (CDS-7).
+	preset := in.Template.Preset
 	scenes := make([]string, len(plan.Cuts))
 	for i, c := range plan.Cuts {
 		scenes[i], _ = clip.CutScene(c, analyses[c.SourceID])
 	}
-	if err := holdCutLengths(plan, analyses, scenes); err != nil {
-		return err
-	}
+	holdCutLengths(plan, analyses, scenes, preset)
 	for i, ms := range design.Transitions(scenes) {
 		plan.Cuts[i].TransitionMS = ms
 	}
@@ -91,59 +90,52 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 	if !grow {
 		remaining = -remaining
 	}
-	room := make([]int, len(plan.Cuts))
-	for i, c := range plan.Cuts {
-		minimum, _ := design.CutBounds(scenes[i])
-		if grow {
-			room[i] = cutCeiling(plan, analyses, scenes, i) - c.EndMS
-		} else {
-			// Keep every selected cut, its own CDS-37 floor, the transitions
-			// that eat into it and a positive caption exposure.
-			room[i] = c.EndMS - c.StartMS - max(2*cfg.Render.FadeMS+1, c.FirstCopy().StartMS+1, minimum)
-		}
-	}
-	// Distribute the adjustment evenly, redistributing when a scene reaches
-	// its bound. Every pass finishes or exhausts a cut; work is bounded by cuts².
-	for remaining > 0 {
-		active := 0
-		for _, available := range room {
-			if available > 0 {
-				active++
+	// Two passes. The first keeps every cut inside its CDS-37 target; when no
+	// cut has room left there, the target yields — it is rhythm, not
+	// correctness — and the second pass uses the bounds that actually hold:
+	// the observed footage when growing, the transitions and the copy's start
+	// when shrinking (the existing plan_cut_fade bound). A reachable timeline is
+	// never refused for a target (CDS-37 r3).
+	for _, hard := range []bool{false, true} {
+		room := make([]int, len(plan.Cuts))
+		for i, c := range plan.Cuts {
+			minimum, _ := design.CutBounds(scenes[i], preset)
+			if grow {
+				room[i] = cutCeiling(plan, analyses, scenes, preset, i, hard) - c.EndMS
+			} else {
+				floor := max(2*cfg.Render.FadeMS+1, c.FirstCopy().StartMS+1)
+				if !hard {
+					floor = max(floor, minimum)
+				}
+				room[i] = c.EndMS - c.StartMS - floor
 			}
 		}
-		if active == 0 {
-			if !grow {
-				return outputError("plan_timeline")
-			}
-			// Every cut sits at its scene's ceiling or the end of its observed
-			// footage. The target is the owner's, but the footage is what it
-			// is: a clip the length floor accepts ships at the length the
-			// footage holds rather than being refused for the seconds it
-			// cannot have (a food-only shoot under CDS-37's 4.0 s cannot reach
-			// 30 s from 36 s of takes).
-			achieved := in.TargetDurationMS - remaining
-			if achieved < cfg.Render.MinDurationMS {
-				return outputError("plan_timeline")
-			}
-			for i := range plan.Cuts {
-				c := &plan.Cuts[i]
-				for j := range c.Copies {
-					c.Copies[j].EndMS = min(c.Copies[j].EndMS, c.EndMS-c.StartMS)
+		// Distribute the adjustment evenly, redistributing when a cut reaches
+		// its bound. Every pass finishes or exhausts a cut; work is bounded by cuts².
+		for remaining > 0 {
+			active := 0
+			for _, available := range room {
+				if available > 0 {
+					active++
 				}
 			}
-			plan.DurationMS = achieved
-			return nil
-		}
-		share := (remaining + active - 1) / active
-		for i := range plan.Cuts {
-			amount := min(room[i], share, remaining)
-			if grow {
-				plan.Cuts[i].EndMS += amount
-			} else {
-				plan.Cuts[i].EndMS -= amount
+			if active == 0 {
+				break
 			}
-			room[i] -= amount
-			remaining -= amount
+			share := (remaining + active - 1) / active
+			for i := range plan.Cuts {
+				amount := min(room[i], share, remaining)
+				if grow {
+					plan.Cuts[i].EndMS += amount
+				} else {
+					plan.Cuts[i].EndMS -= amount
+				}
+				room[i] -= amount
+				remaining -= amount
+			}
+		}
+		if remaining == 0 {
+			break
 		}
 	}
 	for i := range plan.Cuts {
@@ -152,14 +144,32 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 			c.Copies[j].EndMS = min(c.Copies[j].EndMS, c.EndMS-c.StartMS)
 		}
 	}
-	plan.DurationMS = in.TargetDurationMS
+	if remaining == 0 {
+		plan.DurationMS = in.TargetDurationMS
+		return nil
+	}
+	if !grow {
+		// Even at the fade floor the cuts hold more than the target: the model
+		// picked footage that cannot be trimmed to it.
+		return outputError("plan_timeline")
+	}
+	// Every cut sits at the end of its observed footage. The target is the
+	// owner's, but the footage is what it is: a clip the length floor accepts
+	// ships at the length the footage holds rather than being refused for the
+	// seconds it cannot have.
+	achieved := in.TargetDurationMS - remaining
+	if achieved < cfg.Render.MinDurationMS {
+		return outputError("plan_timeline")
+	}
+	plan.DurationMS = achieved
 	return nil
 }
 
-// cutCeiling is the furthest a cut's end may move: inside the segment it was
+// cutCeiling is the furthest a cut's end may move: inside the footage it was
 // observed in, never through an unobserved gap or into the next already-selected
-// range of the same source, and never past CDS-37's ceiling for its scene.
-func cutCeiling(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string, i int) int {
+// range of the same source, and — unless the target has yielded (hard) — never
+// past CDS-37's target ceiling for its scene and preset.
+func cutCeiling(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string, preset string, i int, hard bool) int {
 	c := plan.Cuts[i]
 	_, end := observedSpan(analyses[c.SourceID], c)
 	for j, other := range plan.Cuts {
@@ -173,7 +183,10 @@ func cutCeiling(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, sc
 			end = c.EndMS
 		}
 	}
-	_, maximum := design.CutBounds(scenes[i])
+	if hard {
+		return end
+	}
+	_, maximum := design.CutBounds(scenes[i], preset)
 	return min(end, c.StartMS+maximum)
 }
 
@@ -231,25 +244,22 @@ func cutFloor(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, i in
 	return max(0, start)
 }
 
-// holdCutLengths applies CDS-37: a cut over its scene's ceiling is trimmed to
-// it, and one under 1.2 s takes the room its own segment still has — forward
-// first, then backward, because moving the end keeps the cut's opening frame.
-// A cut with no room left in either direction is footage too short to read, and
-// the plan is refused rather than shipped under the floor.
-func holdCutLengths(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string) error {
+// holdCutLengths aims every cut at CDS-37's target: a cut over its target is
+// trimmed to it, one under it takes the room its own segment still has —
+// forward first, then backward, because moving the end keeps the cut's opening
+// frame — and one that still cannot reach the target is left as it is. Nothing
+// here refuses: the only hard length rule is the renderer's plan_cut_fade (r3).
+func holdCutLengths(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string, preset string) {
 	for i := range plan.Cuts {
 		c := &plan.Cuts[i]
-		minimum, maximum := design.CutBounds(scenes[i])
+		minimum, maximum := design.CutBounds(scenes[i], preset)
 		if c.EndMS-c.StartMS > maximum {
 			c.EndMS = c.StartMS + maximum
 		}
 		if c.EndMS-c.StartMS < minimum {
-			c.EndMS = min(c.StartMS+minimum, cutCeiling(plan, analyses, scenes, i))
+			c.EndMS = min(c.StartMS+minimum, cutCeiling(plan, analyses, scenes, preset, i, false))
 			if c.EndMS-c.StartMS < minimum {
 				c.StartMS = max(c.EndMS-minimum, cutFloor(plan, analyses, i))
-			}
-			if c.EndMS-c.StartMS < minimum {
-				return outputError("plan_cut_length")
 			}
 		}
 		// Whichever end moved, the caption still lives inside the cut.
@@ -259,5 +269,4 @@ func holdCutLengths(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis
 			c.Copies[j].EndMS = min(c.Copies[j].EndMS, length)
 		}
 	}
-	return nil
 }

@@ -314,15 +314,16 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		}
 		// The badge and the chips read the PROJECT, not the plan: always the
 		// owner's current campaign type and current answers.
-		video, err := s.renderer.Render(ctx, ws, edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent).WithStyles(p.Template.CopyStyles), renderSources, func(ctx context.Context, id string, fn func(MediaSource) error) error {
+		load, releaseSource := s.renderLoader(ws, func(id string) (SourceLease, MediaInfo, bool) {
 			for i, v := range b.Sources {
 				if v.ID == id {
-					return s.withSource(ctx, ws, v, sources[i].Info, fn)
+					return v, sources[i].Info, true
 				}
 			}
-			return ErrNotFound
+			return SourceLease{}, MediaInfo{}, false
 		})
-		if err != nil {
+		video, err := s.renderer.Render(ctx, ws, edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent).WithStyles(p.Template.CopyStyles), renderSources, load)
+		if err = errors.Join(err, releaseSource()); err != nil {
 			return err
 		}
 		set("save", 0, 1)

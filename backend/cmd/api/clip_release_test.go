@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -83,6 +84,10 @@ func (s releaseSaveStore) SaveGeneration(ctx context.Context, u, p, a, e string,
 }
 
 type releaseHarness struct {
+	// The plan the job persisted, so the speech probes below read the OUTPUT
+	// timeline the way the renderer laid it out rather than a mapping tuned to
+	// one compiler version.
+	plan           *v1.ClipEditPlan
 	t              *testing.T
 	d              *db.DB
 	client         postpilotv1connect.ClipServiceClient
@@ -626,8 +631,11 @@ func (h *releaseHarness) exercise(mode string) {
 			if persisted.GetDurationMs() != 15000 || len(persisted.GetCuts()) != 4 {
 				t.Fatal("compiled plan was not persisted", persisted)
 			}
-			// Synthetic 30fps encoding rounds the first source to 4300ms.
-			for i, end := range []int32{4300, 4600, 4600, 4600} {
+			// The 음식점 preset aims every cut at 2.5–4.0 s (CDS-37 r3, CDS-50): the
+			// first pass grows each cut to that ceiling — 200 ms for the first,
+			// 500 ms for the rest — and the 1.7 s the 15 s target still needs
+			// comes from the second pass, which lets the ceiling yield evenly.
+			for i, end := range []int32{4000, 4500, 4500, 4500} {
 				cut := persisted.Cuts[i]
 				if cut.EndMs != end || cut.GetCopy().GetEndMs() > cut.EndMs-cut.StartMs {
 					t.Fatal("persisted plan still has model timing errors")
@@ -647,6 +655,7 @@ func (h *releaseHarness) exercise(mode string) {
 				}
 			}
 		}
+		h.plan = got.GetEditing().GetPlan()
 		h.inspectResult()
 		h.objects.mu.Lock()
 		for i, key := range h.sourceKeys {
@@ -711,13 +720,12 @@ func (h *releaseHarness) exercise(mode string) {
 	h.metrics.mu.Lock()
 	defer h.metrics.mu.Unlock()
 	m := h.metrics
-	workspaceLimit := 1
-	if strings.HasPrefix(mode, "multi-source") {
-		// Caption measurement owns a short-lived scratch workspace inside the
-		// single generation job. Older fixtures have empty captions. Count the
-		// job workspace separately so this never permits concurrent media jobs.
-		workspaceLimit++
-	}
+	// Measurement owns a short-lived scratch workspace inside the single
+	// generation job: the captions' plates and, since T107, the ending card that
+	// every clip closes on — so every mode measures, empty captions or not. The
+	// job workspace is counted separately (maxJobWorkspaces) so this never
+	// permits concurrent media jobs.
+	workspaceLimit := 2
 	if m.maxOriginals > 1 || m.maxJobWorkspaces > 1 || m.maxWorkspaces > workspaceLimit || m.maxProcesses > 1 || len(m.prepared) > 49 || m.maxProxy > 8<<20 || m.disk > 8<<30 || m.proxyBytes > 512<<20 {
 		t.Fatalf("resource bound originals=%d job_workspaces=%d workspaces=%d processes=%d proxies=%d max_proxy=%d disk=%d", m.maxOriginals, m.maxJobWorkspaces, m.maxWorkspaces, m.maxProcesses, len(m.prepared), m.maxProxy, m.disk)
 	}
@@ -729,6 +737,22 @@ func usageChargeForRelease(calls int, mode string) int {
 	}
 	return plan.Charge(int64(calls) * 1000)
 }
+
+// sourceAt maps an output instant to the source millisecond the persisted plan
+// shows there, mirroring the renderer's cutOffsets.
+func (h *releaseHarness) sourceAt(at int) int {
+	elapsed := 0
+	for _, cut := range h.plan.GetCuts() {
+		start := elapsed - int(cut.GetTransitionMs())
+		end := start + int(cut.GetEndMs()-cut.GetStartMs())
+		if at >= start && at < end {
+			return int(cut.GetStartMs()) + (at - start)
+		}
+		elapsed = end
+	}
+	return -1
+}
+
 func (h *releaseHarness) inspectResult() {
 	h.objects.mu.Lock()
 	var path string
@@ -763,10 +787,14 @@ func (h *releaseHarness) inspectResult() {
 				originalAt += 1000
 			}
 			if strings.HasPrefix(h.metrics.mode, "multi-source") {
-				originalAt = map[int]int{700: 700, 3100: 1300, 10700: 2000}[at]
-			}
-			if h.metrics.mode == "multi-source-timing" {
-				originalAt = map[int]int{700: 700, 3100: 3100, 10700: 3700}[at]
+				// Every fixture source carries the same speech loop, so the source
+				// position an output instant shows is the persisted plan's cut
+				// arithmetic — the same offsets the renderer used (a transition
+				// starts a cut TransitionMS earlier on the output timeline).
+				originalAt = h.sourceAt(at)
+				if originalAt < 0 {
+					return fmt.Errorf("output instant %d ms lies outside the persisted plan", at)
+				}
 			}
 			x, e := releaseSpeech(h.t.Context(), h.firstFixture, originalAt)
 			if e != nil {
@@ -781,6 +809,14 @@ func (h *releaseHarness) inspectResult() {
 				x, _ := releaseSpeechSpan(h.t.Context(), h.firstFixture, originalAt-100, 400)
 				y, _ := releaseSpeechSpan(h.t.Context(), p, at-100, 400)
 				lag, best := releaseBestLag(x, y)
+				// A cut the compiler reconciled to an arbitrary millisecond is
+				// encoded on whole frames, so a later cut's audio may sit up to one
+				// frame from the plan's arithmetic. That is quantization, not a
+				// misaligned source: the speech must still match exactly within it.
+				if best >= .85 && math.Abs(lag) <= 1000.0/30 {
+					h.t.Logf("original/output speech at %d ms correlation %.4f at a %.1f ms frame lag (%.4f)", at, correlation, lag, best)
+					continue
+				}
 				x, _ = releaseTimelineSpeech(h.t.Context(), h.firstFixture, originalAt)
 				y, _ = releaseTimelineSpeech(h.t.Context(), p, at)
 				return fmt.Errorf("original/output speech at %d ms correlation %.4f; best lag %.4f ms correlation %.4f; decoded timeline correlation %.4f", at, correlation, lag, best, releaseCorrelation(x, y))

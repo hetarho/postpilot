@@ -13,48 +13,105 @@ import (
 	"time"
 )
 
-func (s *GenerationService) withSource(ctx context.Context, ws MediaWorkspace, v SourceLease, info MediaInfo, fn func(MediaSource) error) (err error) {
-	if v.Bytes <= 0 || v.Bytes > s.cfg.Media.Sources.MaxFileBytes || v.ActualBytes != v.Bytes {
-		return ErrInvalidMedia
-	}
-	if ws.CheckCapacity == nil {
-		return ErrWorkspaceLimit
-	}
-	if err := ws.CheckCapacity(v.Bytes); err != nil {
-		return err
-	}
-	f, err := os.CreateTemp(ws.Path, "source-*"+filepath.Ext(v.Filename))
+func (s *GenerationService) withSource(ctx context.Context, ws MediaWorkspace, v SourceLease, info MediaInfo, fn func(MediaSource) error) error {
+	source, release, err := s.fetchSource(ctx, ws, v, info)
 	if err != nil {
 		return err
 	}
+	return errors.Join(fn(source), release())
+}
+
+// fetchSource downloads one verified original into the workspace and hands back
+// the file and the call that removes it. The bytes are bounded by the lease and
+// the workspace's capacity before and during the download.
+func (s *GenerationService) fetchSource(ctx context.Context, ws MediaWorkspace, v SourceLease, info MediaInfo) (source MediaSource, release func() error, err error) {
+	if v.Bytes <= 0 || v.Bytes > s.cfg.Media.Sources.MaxFileBytes || v.ActualBytes != v.Bytes {
+		return MediaSource{}, nil, ErrInvalidMedia
+	}
+	if ws.CheckCapacity == nil {
+		return MediaSource{}, nil, ErrWorkspaceLimit
+	}
+	if err := ws.CheckCapacity(v.Bytes); err != nil {
+		return MediaSource{}, nil, err
+	}
+	f, err := os.CreateTemp(ws.Path, "source-*"+filepath.Ext(v.Filename))
+	if err != nil {
+		return MediaSource{}, nil, err
+	}
 	name := f.Name()
-	defer func() {
+	remove := func() error {
 		if remove := os.Remove(name); remove != nil && !os.IsNotExist(remove) {
-			err = errors.Join(err, remove)
+			return remove
+		}
+		return nil
+	}
+	// A failed download leaves nothing behind; the caller gets no release to call.
+	defer func() {
+		if err != nil {
+			_ = f.Close()
+			err = errors.Join(err, remove())
 		}
 	}()
-	defer f.Close()
 	w := &sourceWriter{ctx: ctx, file: f, remaining: v.Bytes, capacity: ws.CheckCapacity}
 	n, err := s.objects.Download(ctx, v.Key, w, v.Bytes)
 	if err != nil {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return MediaSource{}, nil, ctx.Err()
 		}
 		if w.err != nil {
-			return w.err
+			return MediaSource{}, nil, w.err
 		}
-		return errors.New("clip source download failed")
+		return MediaSource{}, nil, errors.New("clip source download failed")
 	}
 	if w.err != nil {
-		return w.err
+		return MediaSource{}, nil, w.err
 	}
 	if n != v.Bytes || w.remaining != 0 {
-		return ErrInvalidMedia
+		return MediaSource{}, nil, ErrInvalidMedia
 	}
 	if err = f.Close(); err != nil {
-		return err
+		return MediaSource{}, nil, err
 	}
-	return fn(MediaSource{Path: name, SourceID: v.ID, Fingerprint: v.Fingerprint, Info: info})
+	return MediaSource{Path: name, SourceID: v.ID, Fingerprint: v.Fingerprint, Info: info}, remove, nil
+}
+
+// renderLoader serves the renderer's per-cut source requests from one held
+// download at a time: consecutive cuts of the same source read the copy the
+// previous cut fetched, and asking for another source releases it first. A take
+// cut three times is downloaded once, and never more than one original sits in
+// the workspace beside the proxies — the bound the release gate holds. The
+// returned release drops whatever is still held once the render is over.
+func (s *GenerationService) renderLoader(ws MediaWorkspace, resolve func(string) (SourceLease, MediaInfo, bool)) (RenderSourceLoader, func() error) {
+	var heldID string
+	var held MediaSource
+	var drop func() error
+	release := func() error {
+		if drop == nil {
+			return nil
+		}
+		d := drop
+		drop, heldID = nil, ""
+		return d()
+	}
+	loader := func(ctx context.Context, id string, fn func(MediaSource) error) error {
+		if drop != nil && heldID == id {
+			return fn(held)
+		}
+		if err := release(); err != nil {
+			return err
+		}
+		lease, info, ok := resolve(id)
+		if !ok {
+			return ErrNotFound
+		}
+		source, d, err := s.fetchSource(ctx, ws, lease, info)
+		if err != nil {
+			return err
+		}
+		held, heldID, drop = source, id, d
+		return fn(source)
+	}
+	return loader, release
 }
 
 type sourceWriter struct {

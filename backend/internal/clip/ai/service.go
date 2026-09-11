@@ -255,7 +255,7 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 		limit = min(limit, analysis.Source.Info.DurationMS, cut.EndMS+max(0, slack))
 		// CDS-37's ceiling holds through the exposure extension too: a cut may
 		// pass its scene's maximum only by what the copy's own minimum needs.
-		_, maximum := design.CutBounds(scene)
+		_, maximum := design.CutBounds(scene, plan.Preset)
 		limit = min(limit, cut.StartMS+max(maximum, clip.MinExposureMS(written.Text)+design.Timing.SubExtendMS+2*design.Timing.CopyLeadMS))
 		placed, err := s.captions.FixedElements(ctx, input.Ratio, input.Disclosure, plan.ChipLabels(cut), input.Answers)
 		if err != nil {

@@ -278,13 +278,14 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	}
 	models.response.Text = string(planJSON)
 	input := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "합성 영상 검증", CutGuidance: "15초 한 컷으로 구성하고 자막은 '영상 생성 확인'으로 해주세요.", CopyStyles: []string{"clean"}, Accent: "coral"}, Ratio: "horizontal", TargetDurationMS: 15000, Analyses: analyses}
-	// The recorded response is ONE fifteen-second take, which is exactly what
-	// CDS-37 now refuses: no cut may run past 6.0 s, and a single cut cannot then
-	// reach the fifteen-second floor. The evidence is kept as it was recorded and
-	// the refusal is what it proves.
-	var diagnostic interface{ OutputValidationCode() string }
-	if _, _, err = s.Plan(t.Context(), testRef(), input); !errors.As(err, &diagnostic) || diagnostic.OutputValidationCode() != "plan_timeline" {
-		t.Fatalf("a single-take plan is no longer executable under CDS-37: %v", err)
+	// The recorded response is ONE fifteen-second take. CDS-37's 6.0 s is a
+	// target, not a gate (r3): the compiler trims to it, finds the approved
+	// fifteen seconds unreachable that way, lets the target yield and ships the
+	// take the model chose. The evidence is kept as it was recorded and its
+	// executability is what it proves.
+	single, _, err := s.Plan(t.Context(), testRef(), input)
+	if err != nil || single.DurationMS != 15000 || len(single.Cuts) != 1 || single.Cuts[0].EndMS-single.Cuts[0].StartMS != 15000 {
+		t.Fatalf("the recorded single take no longer compiles: %+v %v", single.Cuts, err)
 	}
 	// The same words over three cuts — what the design system does admit — still
 	// compile, and nothing but the cut count changed.

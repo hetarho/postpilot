@@ -151,12 +151,16 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 		in := planningInput()
 		base := in.Analyses[0]
 		in.Analyses = nil
-		for i := 0; i < 3; i++ {
+		// The second and third sources are used to their last observed frame:
+		// under CDS-37 r3 a target ceiling yields when the approved timeline needs
+		// it, so only footage that does not exist can leave a cut without room.
+		for i, duration := range []int{65000, 6000, 4500} {
 			a := base
 			a.Source.ID = fmt.Sprintf("source-%d", i)
 			a.Source.Fingerprint = fmt.Sprintf("hash-%d", i)
-			a.Source.Info.DurationMS = 65000
+			a.Source.Info.DurationMS = duration
 			a.Segments = slices.Clone(base.Segments)
+			a.Segments[0].EndMS = duration
 			in.Analyses = append(in.Analyses, a)
 		}
 		return in
@@ -197,7 +201,7 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 				// its copy so late that almost nothing may be trimmed.
 				cuts = nil
 				for i := 0; i < 4; i++ {
-					c := shortCut(fmt.Sprint("late-", i), fmt.Sprintf("source-%d", i%3), 0, 6000)
+					c := shortCut(fmt.Sprint("late-", i), fmt.Sprintf("source-%d", i%2), 0, 6000)
 					c["caption"].(map[string]any)["start_ms"] = 5000
 					c["caption"].(map[string]any)["end_ms"] = 5900
 					cuts = append(cuts, c)
@@ -253,7 +257,7 @@ func TestCompilerJoinsScenesAndHoldsCutLengths(t *testing.T) {
 		if cut.TransitionMS != want[i] {
 			t.Fatalf("cut %d joined with %d ms, want %d: %v", i, cut.TransitionMS, want[i], want)
 		}
-		minimum, maximum := design.CutBounds(scenes[i])
+		minimum, maximum := design.CutBounds(scenes[i], "")
 		if length := cut.EndMS - cut.StartMS; length < minimum || length > maximum {
 			t.Fatalf("cut %d is %d ms, outside %s's %d..%d", i, length, scenes[i], minimum, maximum)
 		}
@@ -267,23 +271,79 @@ func TestCompilerJoinsScenesAndHoldsCutLengths(t *testing.T) {
 	}
 }
 
-// A cut with no room to reach CDS-37's floor is footage too short to read, and
-// the plan is refused rather than shipped under it.
-func TestACutThatCannotReachTheFloorIsRefused(t *testing.T) {
+// CDS-37 r3: a cut with no room to reach its target is left as it is, and the
+// plan compiles — the other cuts take the length the approved timeline needs,
+// past their own target where they must.
+func TestACutThatCannotReachTheTargetIsKeptAndThePlanCompiles(t *testing.T) {
 	in := planningInput()
-	in.Analyses[0].Source.Info.DurationMS = 900
-	in.Analyses[0].Segments[0].EndMS = 900
-	wire := plan()
-	cuts := wire["cuts"].([]any)[:1]
-	c := cuts[0].(map[string]any)
-	c["end_ms"] = 900
-	c["caption"].(map[string]any)["start_ms"], c["caption"].(map[string]any)["end_ms"] = 100, 800
-	wire["cuts"] = cuts
-	s, _, measure := newService(t, raw(wire), true)
-	_, _, err := s.Plan(t.Context(), testRef(), in)
-	var diagnostic interface{ OutputValidationCode() string }
-	if !errors.As(err, &diagnostic) || diagnostic.OutputValidationCode() != "plan_cut_length" || measure.calls != 0 {
-		t.Fatalf("a cut under the floor was composed anyway: %v", err)
+	base := in.Analyses[0]
+	in.Analyses = nil
+	for i := 0; i < 3; i++ {
+		a := base
+		a.Source.ID = fmt.Sprintf("source-%d", i)
+		a.Source.Fingerprint = fmt.Sprintf("hash-%d", i)
+		a.Segments = slices.Clone(base.Segments)
+		in.Analyses = append(in.Analyses, a)
+	}
+	// 900 ms of footage in all: under every target, and nowhere to grow.
+	in.Analyses[0].Source.Info.DurationMS, in.Analyses[0].Segments[0].EndMS = 900, 900
+	cut := func(id, source string, start, end int) map[string]any {
+		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+			"caption": map[string]any{"text": "여행", "start_ms": 100, "end_ms": end - start - 100, "short_text": "여행", "keyword": ""}}
+	}
+	wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행",
+		"cuts": []any{cut("short", "source-0", 0, 900), cut("b", "source-1", 0, 6000), cut("c", "source-2", 0, 6000)}}
+	s, _, _ := newService(t, raw(wire), true)
+	plan, _, err := s.Plan(t.Context(), testRef(), in)
+	if err != nil {
+		t.Fatalf("a cut under the target refused the plan: %v", err)
+	}
+	if plan.DurationMS != 15000 || plan.Cuts[0].EndMS != 900 || plan.Cuts[1].EndMS <= 6000 || plan.Cuts[2].EndMS <= 6000 {
+		t.Fatalf("plan = %+v", plan.Cuts)
+	}
+}
+
+// The 카페 preset aims at 4–6 s. Four 4 s cuts hold 16 s against a 15 s target
+// and cannot all keep their floor: the target yields and the plan compiles at
+// the approved length rather than failing.
+func TestPresetTargetYieldsToTheApprovedDuration(t *testing.T) {
+	in := planningInput()
+	in.Template.Preset = "cafe"
+	base := in.Analyses[0]
+	in.Analyses = nil
+	cuts := []any{}
+	for i := 0; i < 4; i++ {
+		a := base
+		a.Source.ID = fmt.Sprintf("source-%d", i)
+		a.Source.Fingerprint = fmt.Sprintf("hash-%d", i)
+		a.Segments = slices.Clone(base.Segments)
+		in.Analyses = append(in.Analyses, a)
+		// 4.2 s each: 16.8 s, outside the tolerance of a 15 s target, and the
+		// preset's floor holds only 800 ms of the 1.8 s that has to go.
+		cuts = append(cuts, map[string]any{"id": fmt.Sprint("cut-", i), "source_id": a.Source.ID, "start_ms": 0, "end_ms": 4200, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": 1500, "short_text": "여행", "keyword": ""}})
+	}
+	s, _, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 16800, "hook": "정확한 여행", "cuts": cuts}), true)
+	plan, _, err := s.Plan(t.Context(), testRef(), in)
+	if err != nil {
+		t.Fatalf("the preset's floor refused a reachable timeline: %v", err)
+	}
+	total := 0
+	for _, c := range plan.Cuts {
+		total += c.EndMS - c.StartMS
+		if minimum, _ := design.CutBounds("scenery", "cafe"); c.EndMS-c.StartMS >= minimum {
+			t.Fatalf("cut %s kept the preset floor at the target's expense: %+v", c.ID, c)
+		}
+	}
+	if plan.DurationMS != 15000 || total-plan.TransitionTotal() != 15000 {
+		t.Fatalf("duration %d total %d", plan.DurationMS, total)
+	}
+	// The same four cuts under the shared range hold their 1.2 s floor and shrink
+	// evenly inside the first pass.
+	in.Template.Preset = ""
+	s, _, _ = newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 16800, "hook": "정확한 여행", "cuts": cuts}), true)
+	if plan, _, err = s.Plan(t.Context(), testRef(), in); err != nil || plan.DurationMS != 15000 {
+		t.Fatalf("shared range: %+v %v", plan.DurationMS, err)
 	}
 }
 
@@ -304,13 +364,15 @@ func TestFootageBoundClipShipsAtTheLengthItHolds(t *testing.T) {
 		in.Analyses = append(in.Analyses, a)
 	}
 	scene, _ := clip.CutScene(clip.Cut{SourceID: "source-0"}, in.Analyses[0])
-	_, ceiling := design.CutBounds(scene)
+	_, ceiling := design.CutBounds(scene, "")
 	cut := func(id, source string, start, end int) map[string]any {
 		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": end - start - 200, "short_text": "여행", "keyword": ""}}
 	}
-	// Two cuts at the ceiling and one that has used all of its source: the
-	// footage holds 2×ceiling + 4.5 s, and the target asks for 3 s more.
+	// Every source is used to its last observed frame: the footage holds
+	// 2×ceiling + 4.5 s, the target asks for 3 s more, and no pass has room.
+	in.Analyses[0].Source.Info.DurationMS, in.Analyses[0].Segments[0].EndMS = ceiling, ceiling
+	in.Analyses[1].Source.Info.DurationMS, in.Analyses[1].Segments[0].EndMS = ceiling, ceiling
 	in.Analyses[2].Source.Info.DurationMS, in.Analyses[2].Segments[0].EndMS = 4500, 4500
 	held := 2*ceiling + 4500
 	in.TargetDurationMS = held + 3000
@@ -341,7 +403,7 @@ func TestACutMayGrowAcrossTouchingSegments(t *testing.T) {
 		in.Analyses = append(in.Analyses, a)
 	}
 	scene, _ := clip.CutScene(clip.Cut{SourceID: "source-0"}, in.Analyses[0])
-	_, ceiling := design.CutBounds(scene)
+	_, ceiling := design.CutBounds(scene, "")
 	first, second := base.Segments[0], base.Segments[0]
 	first.EndMS, second.StartMS = 2800, 2800
 	in.Analyses[0].Segments = []clip.Segment{first, second}
