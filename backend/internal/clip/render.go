@@ -70,6 +70,15 @@ type EditPlan struct {
 	Facts      []Answer
 	// The template's category preset, which fixes the chip priority (CDS-50).
 	Preset string
+	// The opening card's title, written by the model under CDS-42 and rendered
+	// by the hook card; empty when it could not be grounded.
+	Hook string
+	// What the model wrote per cut, parallel to Cuts, before the compiler placed
+	// it. It is the compiler's input and is never stored with the plan.
+	Written []Written
+	// What the compiler decided per cut, in the same order: the class it read,
+	// the scene it read it in and the fallback it had to use, if any.
+	Decisions []Composition
 }
 type RenderSource struct {
 	ID, Fingerprint string
@@ -137,9 +146,22 @@ func MinExposureMS(text string) int {
 	return design.Timing.SubMinBaseMS + design.Timing.SubMinPerCharMS*CopyChars(text)
 }
 func normalized(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) && v >= 0 && v <= 1 }
+
+// Normalized reports whether a value is a usable 0..1 fraction — a focal
+// coordinate or an original-audio gain.
+func Normalized(v float64) bool { return normalized(v) }
 func ValidCopy(c Copy, maxRunes int) bool {
+	if !utf8.ValidString(c.Text) || utf8.RuneCountInString(c.Text) > maxRunes || !ValidAccent(c.Accent) {
+		return false
+	}
+	// A cut with NO copy carries no placement at all: the design system has
+	// nothing to place there, so it names no anchor, alignment or style. That is
+	// what a dropped copy looks like (CDS-41's last fallback).
+	if strings.TrimSpace(c.Text) == "" && c.Anchor == "" && c.Align == "" && c.Style == "" {
+		return c.Keyword == ""
+	}
 	_, known := design.Styles[c.Style]
-	return utf8.ValidString(c.Text) && utf8.RuneCountInString(c.Text) <= maxRunes && slices.Contains(CopyAnchors, c.Anchor) && slices.Contains(CopyAligns, c.Align) && known && ValidAccent(c.Accent)
+	return slices.Contains(CopyAnchors, c.Anchor) && slices.Contains(CopyAligns, c.Align) && known
 }
 
 // planViolation preserves the invalid-plan identity and a content-free cause.

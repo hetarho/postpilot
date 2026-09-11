@@ -251,6 +251,12 @@ func verifySequence(m Manifest) error {
 		if from < 0 || to < 0 {
 			return ViolationAnchorStep
 		}
+		// Only between cuts that share a style: a style change is a deliberate
+		// visual change, and CDS-40 can demand one whose anchors are further
+		// apart than a step (see SelectAnchor).
+		if style[cut] != style[cuts[i-1]] {
+			continue
+		}
 		if to-from > 1 || from-to > 1 {
 			return ViolationAnchorStep
 		}

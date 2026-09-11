@@ -1,15 +1,26 @@
 {
-  "cuts": [
-    {
-      "caption": {
-        "accent": "coral", "end_ms": 5000, "position": "bottom",
-        "start_ms": 1000, "style": "clean", "text": "영상 생성 확인"
-      },
-      "end_ms": 15000,
-      "focal": { "x": 0.5, "y": 0.5 },
-      "id": "synthetic_cut_1", "source_id": "synthetic", "start_ms": 0, "volume": 1
-    }
-  ],
-  "duration_ms": 15000,
-  "ratio": "horizontal"
+ "cuts": [
+  {
+   "caption": {
+    "end_ms": 5000,
+    "keyword": "",
+    "short_text": "영상 생성 확인",
+    "start_ms": 1000,
+    "text": "영상 생성 확인"
+   },
+   "chips": [],
+   "end_ms": 15000,
+   "focal": {
+    "x": 0.5,
+    "y": 0.5
+   },
+   "id": "synthetic_cut_1",
+   "source_id": "synthetic",
+   "start_ms": 0,
+   "volume": 1
+  }
+ ],
+ "duration_ms": 15000,
+ "hook": "영상 생성 확인",
+ "ratio": "horizontal"
 }

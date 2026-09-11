@@ -1,333 +1,349 @@
 {
-  "Input": {
-    "Template": {
-      "Name": "일상",
-      "InformationFields": null,
-      "CutGuidance": "균등분할",
-      "CopyStyles": [
-        "clean",
-        "memo"
-      ],
-      "Accent": "amber"
-    },
-    "Answers": null,
-    "Ratio": "vertical",
-    "TargetDurationMS": 15000,
-    "Analyses": [
-      {
-        "Source": {
-          "ID": "00000000000000000000000000000001",
-          "Fingerprint": "da937ef41cf7e0bcd7c76081dc329a0235f44d7bc76b0669f28404361ca08b86",
-          "Info": {
-            "DurationMS": 4300,
-            "Width": 1440,
-            "Height": 1920,
-            "HasAudio": true
-          },
-          "Filename": "synthetic-1.mp4"
-        },
-        "Segments": [
-          {
-            "StartMS": 0,
-            "EndMS": 4300,
-            "Event": "Animated test pattern with moving lines and geometric shapes over color bars",
-            "Speech": "",
-            "Quality": "Clear synthetic motion graphics test feed",
-            "Subjects": [
-              "color bars",
-              "geometric patterns"
-            ],
-            "Focal": {
-              "X": 0.5,
-              "Y": 0.5
-            },
-            "Avoid": {
-              "X": 0,
-              "Y": 0,
-              "Width": 0,
-              "Height": 0
-            }
-          }
-        ]
+ "Input": {
+  "Analyses": [
+   {
+    "Segments": [
+     {
+      "EndMS": 4300,
+      "Event": "Animated test pattern with moving lines and geometric shapes over color bars",
+      "Focal": {
+       "X": 0.5,
+       "Y": 0.5
       },
-      {
-        "Source": {
-          "ID": "00000000000000000000000000000002",
-          "Fingerprint": "e9d33e4141b1ad6c3e1fd708cb4caa1346e4da636b0e0f1b2ee8defd6e5cfb98",
-          "Info": {
-            "DurationMS": 3744,
-            "Width": 1440,
-            "Height": 1920,
-            "HasAudio": true
-          },
-          "Filename": "synthetic-2.mp4"
-        },
-        "Segments": [
-          {
-            "StartMS": 0,
-            "EndMS": 3744,
-            "Event": "A synthetic multi-colored test pattern with bouncing lines, shifting geometric bars, and dot patterns animates continuously.",
-            "Speech": "",
-            "Quality": "Computer generated graphics with sharp lines and solid colors.",
-            "Subjects": [
-              "geometric animation",
-              "color bars",
-              "bouncing line"
-            ],
-            "Focal": {
-              "X": 0.5,
-              "Y": 0.5
-            },
-            "Avoid": {
-              "X": 0.55,
-              "Y": 0.6,
-              "Width": 0.35,
-              "Height": 0.35
-            }
-          }
-        ]
+      "Quality": "Clear synthetic motion graphics test feed",
+      "ReadableText": false,
+      "Scene": "scenery",
+      "Speech": "",
+      "StartMS": 0,
+      "Subject": {
+       "Height": 0,
+       "Width": 0,
+       "X": 0,
+       "Y": 0
       },
-      {
-        "Source": {
-          "ID": "00000000000000000000000000000003",
-          "Fingerprint": "9b912d78fe4ff2a03a7704feef16ee822056911efe005c9e89012d8e5a59436f",
-          "Info": {
-            "DurationMS": 1480,
-            "Width": 1440,
-            "Height": 1920,
-            "HasAudio": true
-          },
-          "Filename": "synthetic-3.mp4"
-        },
-        "Segments": [
-          {
-            "StartMS": 0,
-            "EndMS": 1480,
-            "Event": "Color bars with animated geometric lines, a dotted grid box, and changing shapes.",
-            "Speech": "",
-            "Quality": "Synthetic digital test pattern video, steady with clear colors.",
-            "Subjects": [
-              "geometric shapes",
-              "color bars"
-            ],
-            "Focal": {
-              "X": 0.5,
-              "Y": 0.5
-            },
-            "Avoid": {
-              "X": 0.55,
-              "Y": 0.55,
-              "Width": 0.35,
-              "Height": 0.35
-            }
-          }
-        ]
-      },
-      {
-        "Source": {
-          "ID": "00000000000000000000000000000004",
-          "Fingerprint": "56d1438d7d0592657900650d1ef14e6bf996f6213f6a43fab650af7cf30c157b",
-          "Info": {
-            "DurationMS": 5010,
-            "Width": 1440,
-            "Height": 1920,
-            "HasAudio": true
-          },
-          "Filename": "synthetic-4.mp4"
-        },
-        "Segments": [
-          {
-            "StartMS": 0,
-            "EndMS": 5010,
-            "Event": "Animated vertical colored bars and moving geometric shapes, lines, and patterns.",
-            "Speech": "",
-            "Quality": "Computer-generated abstract graphics, high clarity.",
-            "Subjects": [
-              "geometric patterns",
-              "colored stripes"
-            ],
-            "Focal": {
-              "X": 0.5,
-              "Y": 0.5
-            },
-            "Avoid": {
-              "X": 0,
-              "Y": 0,
-              "Width": 0,
-              "Height": 0
-            }
-          }
-        ]
-      },
-      {
-        "Source": {
-          "ID": "00000000000000000000000000000005",
-          "Fingerprint": "ad5ac24cc7a65778a9306abf81a629281e2ae7366db5732c9f997b69b9c169f9",
-          "Info": {
-            "DurationMS": 5108,
-            "Width": 1440,
-            "Height": 1920,
-            "HasAudio": true
-          },
-          "Filename": "synthetic-5.mp4"
-        },
-        "Segments": [
-          {
-            "StartMS": 0,
-            "EndMS": 5108,
-            "Event": "Animated vertical colored bars with shifting geometric shapes, lines, and dotted patterns.",
-            "Speech": "",
-            "Quality": "Computer-generated synthetic graphics, high contrast and sharp lines, no camera motion.",
-            "Subjects": [
-              "geometric patterns",
-              "color bars"
-            ],
-            "Focal": {
-              "X": 0.5,
-              "Y": 0.5
-            },
-            "Avoid": {
-              "X": 0,
-              "Y": 0,
-              "Width": 0,
-              "Height": 0
-            }
-          }
-        ]
-      },
-      {
-        "Source": {
-          "ID": "00000000000000000000000000000006",
-          "Fingerprint": "2c5d8d395e5319a46b532c7a6cf1c44e064a05997f68fd62c104f71a137c8cc6",
-          "Info": {
-            "DurationMS": 4508,
-            "Width": 1920,
-            "Height": 1440,
-            "HasAudio": true
-          },
-          "Filename": "synthetic-6.mp4"
-        },
-        "Segments": [
-          {
-            "StartMS": 0,
-            "EndMS": 4508,
-            "Event": "Geometric animation with moving lines, bars, and shapes across multicolored vertical stripes.",
-            "Speech": "",
-            "Quality": "Computer-generated digital graphic, sharp and stable.",
-            "Subjects": [
-              "geometric shapes",
-              "colored stripes",
-              "moving lines"
-            ],
-            "Focal": {
-              "X": 0.5,
-              "Y": 0.5
-            },
-            "Avoid": {
-              "X": 0.6,
-              "Y": 0.62,
-              "Width": 0.25,
-              "Height": 0.25
-            }
-          }
-        ]
-      },
-      {
-        "Source": {
-          "ID": "00000000000000000000000000000007",
-          "Fingerprint": "419c98c60f96e507bc2f67db84b5cc7976e0449dd5ab3710d9e4e22b04d75ba5",
-          "Info": {
-            "DurationMS": 5433,
-            "Width": 1440,
-            "Height": 1920,
-            "HasAudio": true
-          },
-          "Filename": "synthetic-7.mp4"
-        },
-        "Segments": [
-          {
-            "StartMS": 0,
-            "EndMS": 5433,
-            "Event": "Animated test pattern with moving lines and geometric shapes across vertical color bars.",
-            "Speech": "",
-            "Quality": "Synthetic motion graphics animation with clear digital rendering.",
-            "Subjects": [
-              "geometric patterns",
-              "color bars"
-            ],
-            "Focal": {
-              "X": 0.5,
-              "Y": 0.5
-            },
-            "Avoid": {
-              "X": 0,
-              "Y": 0,
-              "Width": 0,
-              "Height": 0
-            }
-          }
-        ]
-      },
-      {
-        "Source": {
-          "ID": "00000000000000000000000000000008",
-          "Fingerprint": "cf096e32b786f988d10481f5e37896eb17228639584f8a1673615c58ab17ca48",
-          "Info": {
-            "DurationMS": 6702,
-            "Width": 1440,
-            "Height": 1920,
-            "HasAudio": true
-          },
-          "Filename": "synthetic-8.mp4"
-        },
-        "Segments": [
-          {
-            "StartMS": 0,
-            "EndMS": 6702,
-            "Event": "Abstract geometric shapes and lines moving across vertical colored stripes.",
-            "Speech": "",
-            "Quality": "Digital animation, clear lines, high saturation, sharp contrast.",
-            "Subjects": [
-              "geometric shapes",
-              "moving lines"
-            ],
-            "Focal": {
-              "X": 0.5,
-              "Y": 0.5
-            },
-            "Avoid": {
-              "X": 0,
-              "Y": 0,
-              "Width": 0,
-              "Height": 0
-            }
-          }
-        ]
-      }
-    ]
-  },
-  "Responses": [
-    {
-      "Text": "{\n  \"cuts\": [\n    {\n      \"caption\": {\n        \"accent\": \"amber\",\n        \"end_ms\": 3500,\n        \"position\": \"bottom\",\n        \"start_ms\": 500,\n        \"style\": \"memo\",\n        \"text\": \"다채로운 색상의 테스트 패턴\"\n      },\n      \"end_ms\": 4000,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_1\",\n      \"source_id\": \"00000000000000000000000000000001\",\n      \"start_ms\": 0,\n      \"volume\": 1\n    },\n    {\n      \"caption\": {\n        \"accent\": \"amber\",\n        \"end_ms\": 3200,\n        \"position\": \"bottom\",\n        \"start_ms\": 400,\n        \"style\": \"memo\",\n        \"text\": \"움직이는 기하학적 선과 도형\"\n      },\n      \"end_ms\": 3500,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_2\",\n      \"source_id\": \"00000000000000000000000000000002\",\n      \"start_ms\": 0,\n      \"volume\": 1\n    },\n    {\n      \"caption\": {\n        \"accent\": \"amber\",\n        \"end_ms\": 3600,\n        \"position\": \"bottom\",\n        \"start_ms\": 400,\n        \"style\": \"memo\",\n        \"text\": \"수직 줄무늬 위로 흐르는 그래픽\"\n      },\n      \"end_ms\": 4000,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_3\",\n      \"source_id\": \"00000000000000000000000000000004\",\n      \"start_ms\": 0,\n      \"volume\": 1\n    },\n    {\n      \"caption\": {\n        \"accent\": \"amber\",\n        \"end_ms\": 3800,\n        \"position\": \"bottom\",\n        \"start_ms\": 500,\n        \"style\": \"memo\",\n        \"text\": \"선명하게 변화하는 화면\"\n      },\n      \"end_ms\": 4100,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_4\",\n      \"source_id\": \"00000000000000000000000000000005\",\n      \"start_ms\": 0,\n      \"volume\": 1\n    }\n  ],\n  \"duration_ms\": 15000,\n  \"ratio\": \"vertical\"\n}",
-      "Usage": {
-        "PromptTokens": 2470,
-        "CompletionTokens": 767,
-        "ReasoningTokens": 0,
-        "CostMicrousd": 2364,
-        "CostReported": true
-      },
-      "FinishReason": "stop"
-    },
-    {
-      "Text": "{\n  \"cuts\": [\n    {\n      \"caption\": {\n        \"accent\": \"amber\",\n        \"end_ms\": 3500,\n        \"position\": \"bottom\",\n        \"start_ms\": 500,\n        \"style\": \"memo\",\n        \"text\": \"움직이는 컬러바 패턴\"\n      },\n      \"end_ms\": 4000,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_01\",\n      \"source_id\": \"00000000000000000000000000000001\",\n      \"start_ms\": 0,\n      \"volume\": 1.0\n    },\n    {\n      \"caption\": {\n        \"accent\": \"amber\",\n        \"end_ms\": 3400,\n        \"position\": \"bottom\",\n        \"start_ms\": 500,\n        \"style\": \"memo\",\n        \"text\": \"다채로운 기하학 그래픽\"\n      },\n      \"end_ms\": 3900,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_02\",\n      \"source_id\": \"00000000000000000000000000000004\",\n      \"start_ms\": 0,\n      \"volume\": 1.0\n    },\n    {\n      \"caption\": {\n        \"accent\": \"amber\",\n        \"end_ms\": 3400,\n        \"position\": \"bottom\",\n        \"start_ms\": 500,\n        \"style\": \"memo\",\n        \"text\": \"선명한 테스트 패턴 화면\"\n      },\n      \"end_ms\": 3900,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_03\",\n      \"source_id\": \"00000000000000000000000000000005\",\n      \"start_ms\": 0,\n      \"volume\": 1.0\n    },\n    {\n      \"caption\": {\n        \"accent\": \"amber\",\n        \"end_ms\": 3300,\n        \"position\": \"bottom\",\n        \"start_ms\": 500,\n        \"style\": \"memo\",\n        \"text\": \"생동감 있는 모션 그래픽\"\n      },\n      \"end_ms\": 3800,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_04\",\n      \"source_id\": \"00000000000000000000000000000007\",\n      \"start_ms\": 0,\n      \"volume\": 1.0\n    }\n  ],\n  \"duration_ms\": 15000,\n  \"ratio\": \"vertical\"\n}",
-      "Usage": {
-        "PromptTokens": 2443,
-        "CompletionTokens": 770,
-        "ReasoningTokens": 0,
-        "CostMicrousd": 2360,
-        "CostReported": true
-      },
-      "FinishReason": "stop"
+      "Subjects": [
+       "color bars",
+       "geometric patterns"
+      ]
+     }
+    ],
+    "Source": {
+     "Filename": "synthetic-1.mp4",
+     "Fingerprint": "da937ef41cf7e0bcd7c76081dc329a0235f44d7bc76b0669f28404361ca08b86",
+     "ID": "00000000000000000000000000000001",
+     "Info": {
+      "DurationMS": 4300,
+      "HasAudio": true,
+      "Height": 1920,
+      "Width": 1440
+     }
     }
-  ]
+   },
+   {
+    "Segments": [
+     {
+      "EndMS": 3744,
+      "Event": "A synthetic multi-colored test pattern with bouncing lines, shifting geometric bars, and dot patterns animates continuously.",
+      "Focal": {
+       "X": 0.5,
+       "Y": 0.5
+      },
+      "Quality": "Computer generated graphics with sharp lines and solid colors.",
+      "ReadableText": false,
+      "Scene": "scenery",
+      "Speech": "",
+      "StartMS": 0,
+      "Subject": {
+       "Height": 0.35,
+       "Width": 0.35,
+       "X": 0.55,
+       "Y": 0.6
+      },
+      "Subjects": [
+       "geometric animation",
+       "color bars",
+       "bouncing line"
+      ]
+     }
+    ],
+    "Source": {
+     "Filename": "synthetic-2.mp4",
+     "Fingerprint": "e9d33e4141b1ad6c3e1fd708cb4caa1346e4da636b0e0f1b2ee8defd6e5cfb98",
+     "ID": "00000000000000000000000000000002",
+     "Info": {
+      "DurationMS": 3744,
+      "HasAudio": true,
+      "Height": 1920,
+      "Width": 1440
+     }
+    }
+   },
+   {
+    "Segments": [
+     {
+      "EndMS": 1480,
+      "Event": "Color bars with animated geometric lines, a dotted grid box, and changing shapes.",
+      "Focal": {
+       "X": 0.5,
+       "Y": 0.5
+      },
+      "Quality": "Synthetic digital test pattern video, steady with clear colors.",
+      "ReadableText": false,
+      "Scene": "scenery",
+      "Speech": "",
+      "StartMS": 0,
+      "Subject": {
+       "Height": 0.35,
+       "Width": 0.35,
+       "X": 0.55,
+       "Y": 0.55
+      },
+      "Subjects": [
+       "geometric shapes",
+       "color bars"
+      ]
+     }
+    ],
+    "Source": {
+     "Filename": "synthetic-3.mp4",
+     "Fingerprint": "9b912d78fe4ff2a03a7704feef16ee822056911efe005c9e89012d8e5a59436f",
+     "ID": "00000000000000000000000000000003",
+     "Info": {
+      "DurationMS": 1480,
+      "HasAudio": true,
+      "Height": 1920,
+      "Width": 1440
+     }
+    }
+   },
+   {
+    "Segments": [
+     {
+      "EndMS": 5010,
+      "Event": "Animated vertical colored bars and moving geometric shapes, lines, and patterns.",
+      "Focal": {
+       "X": 0.5,
+       "Y": 0.5
+      },
+      "Quality": "Computer-generated abstract graphics, high clarity.",
+      "ReadableText": false,
+      "Scene": "scenery",
+      "Speech": "",
+      "StartMS": 0,
+      "Subject": {
+       "Height": 0,
+       "Width": 0,
+       "X": 0,
+       "Y": 0
+      },
+      "Subjects": [
+       "geometric patterns",
+       "colored stripes"
+      ]
+     }
+    ],
+    "Source": {
+     "Filename": "synthetic-4.mp4",
+     "Fingerprint": "56d1438d7d0592657900650d1ef14e6bf996f6213f6a43fab650af7cf30c157b",
+     "ID": "00000000000000000000000000000004",
+     "Info": {
+      "DurationMS": 5010,
+      "HasAudio": true,
+      "Height": 1920,
+      "Width": 1440
+     }
+    }
+   },
+   {
+    "Segments": [
+     {
+      "EndMS": 5108,
+      "Event": "Animated vertical colored bars with shifting geometric shapes, lines, and dotted patterns.",
+      "Focal": {
+       "X": 0.5,
+       "Y": 0.5
+      },
+      "Quality": "Computer-generated synthetic graphics, high contrast and sharp lines, no camera motion.",
+      "ReadableText": false,
+      "Scene": "scenery",
+      "Speech": "",
+      "StartMS": 0,
+      "Subject": {
+       "Height": 0,
+       "Width": 0,
+       "X": 0,
+       "Y": 0
+      },
+      "Subjects": [
+       "geometric patterns",
+       "color bars"
+      ]
+     }
+    ],
+    "Source": {
+     "Filename": "synthetic-5.mp4",
+     "Fingerprint": "ad5ac24cc7a65778a9306abf81a629281e2ae7366db5732c9f997b69b9c169f9",
+     "ID": "00000000000000000000000000000005",
+     "Info": {
+      "DurationMS": 5108,
+      "HasAudio": true,
+      "Height": 1920,
+      "Width": 1440
+     }
+    }
+   },
+   {
+    "Segments": [
+     {
+      "EndMS": 4508,
+      "Event": "Geometric animation with moving lines, bars, and shapes across multicolored vertical stripes.",
+      "Focal": {
+       "X": 0.5,
+       "Y": 0.5
+      },
+      "Quality": "Computer-generated digital graphic, sharp and stable.",
+      "ReadableText": false,
+      "Scene": "scenery",
+      "Speech": "",
+      "StartMS": 0,
+      "Subject": {
+       "Height": 0.25,
+       "Width": 0.25,
+       "X": 0.6,
+       "Y": 0.62
+      },
+      "Subjects": [
+       "geometric shapes",
+       "colored stripes",
+       "moving lines"
+      ]
+     }
+    ],
+    "Source": {
+     "Filename": "synthetic-6.mp4",
+     "Fingerprint": "2c5d8d395e5319a46b532c7a6cf1c44e064a05997f68fd62c104f71a137c8cc6",
+     "ID": "00000000000000000000000000000006",
+     "Info": {
+      "DurationMS": 4508,
+      "HasAudio": true,
+      "Height": 1440,
+      "Width": 1920
+     }
+    }
+   },
+   {
+    "Segments": [
+     {
+      "EndMS": 5433,
+      "Event": "Animated test pattern with moving lines and geometric shapes across vertical color bars.",
+      "Focal": {
+       "X": 0.5,
+       "Y": 0.5
+      },
+      "Quality": "Synthetic motion graphics animation with clear digital rendering.",
+      "ReadableText": false,
+      "Scene": "scenery",
+      "Speech": "",
+      "StartMS": 0,
+      "Subject": {
+       "Height": 0,
+       "Width": 0,
+       "X": 0,
+       "Y": 0
+      },
+      "Subjects": [
+       "geometric patterns",
+       "color bars"
+      ]
+     }
+    ],
+    "Source": {
+     "Filename": "synthetic-7.mp4",
+     "Fingerprint": "419c98c60f96e507bc2f67db84b5cc7976e0449dd5ab3710d9e4e22b04d75ba5",
+     "ID": "00000000000000000000000000000007",
+     "Info": {
+      "DurationMS": 5433,
+      "HasAudio": true,
+      "Height": 1920,
+      "Width": 1440
+     }
+    }
+   },
+   {
+    "Segments": [
+     {
+      "EndMS": 6702,
+      "Event": "Abstract geometric shapes and lines moving across vertical colored stripes.",
+      "Focal": {
+       "X": 0.5,
+       "Y": 0.5
+      },
+      "Quality": "Digital animation, clear lines, high saturation, sharp contrast.",
+      "ReadableText": false,
+      "Scene": "scenery",
+      "Speech": "",
+      "StartMS": 0,
+      "Subject": {
+       "Height": 0,
+       "Width": 0,
+       "X": 0,
+       "Y": 0
+      },
+      "Subjects": [
+       "geometric shapes",
+       "moving lines"
+      ]
+     }
+    ],
+    "Source": {
+     "Filename": "synthetic-8.mp4",
+     "Fingerprint": "cf096e32b786f988d10481f5e37896eb17228639584f8a1673615c58ab17ca48",
+     "ID": "00000000000000000000000000000008",
+     "Info": {
+      "DurationMS": 6702,
+      "HasAudio": true,
+      "Height": 1920,
+      "Width": 1440
+     }
+    }
+   }
+  ],
+  "Answers": null,
+  "Ratio": "vertical",
+  "TargetDurationMS": 15000,
+  "Template": {
+   "Accent": "amber",
+   "CopyStyles": [
+    "clean",
+    "memo"
+   ],
+   "CutGuidance": "균등분할",
+   "InformationFields": null,
+   "Name": "일상"
+  }
+ },
+ "Responses": [
+  {
+   "FinishReason": "stop",
+   "Text": "{\n  \"cuts\": [\n    {\n      \"caption\": {\n        \"end_ms\": 3500,\n        \"keyword\": \"\",\n        \"short_text\": \"다채로운 색상의 테스트 패턴\",\n        \"start_ms\": 500,\n        \"text\": \"다채로운 색상의 테스트 패턴\"\n      },\n      \"chips\": [],\n      \"end_ms\": 4000,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_1\",\n      \"source_id\": \"00000000000000000000000000000001\",\n      \"start_ms\": 0,\n      \"volume\": 1\n    },\n    {\n      \"caption\": {\n        \"end_ms\": 3200,\n        \"keyword\": \"\",\n        \"short_text\": \"움직이는 기하학적 선과 도형\",\n        \"start_ms\": 400,\n        \"text\": \"움직이는 기하학적 선과 도형\"\n      },\n      \"chips\": [],\n      \"end_ms\": 3500,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_2\",\n      \"source_id\": \"00000000000000000000000000000002\",\n      \"start_ms\": 0,\n      \"volume\": 1\n    },\n    {\n      \"caption\": {\n        \"end_ms\": 3600,\n        \"keyword\": \"\",\n        \"short_text\": \"수직 줄무늬 위로 흐르는 그래픽\",\n        \"start_ms\": 400,\n        \"text\": \"수직 줄무늬 위로 흐르는 그래픽\"\n      },\n      \"chips\": [],\n      \"end_ms\": 4000,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_3\",\n      \"source_id\": \"00000000000000000000000000000004\",\n      \"start_ms\": 0,\n      \"volume\": 1\n    },\n    {\n      \"caption\": {\n        \"end_ms\": 3800,\n        \"keyword\": \"\",\n        \"short_text\": \"선명하게 변화하는 화면\",\n        \"start_ms\": 500,\n        \"text\": \"선명하게 변화하는 화면\"\n      },\n      \"chips\": [],\n      \"end_ms\": 4100,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_4\",\n      \"source_id\": \"00000000000000000000000000000005\",\n      \"start_ms\": 0,\n      \"volume\": 1\n    }\n  ],\n  \"duration_ms\": 15000,\n  \"hook\": \"테스트 패턴\",\n  \"ratio\": \"vertical\"\n}",
+   "Usage": {
+    "CompletionTokens": 767,
+    "CostMicrousd": 2364,
+    "CostReported": true,
+    "PromptTokens": 2470,
+    "ReasoningTokens": 0
+   }
+  },
+  {
+   "FinishReason": "stop",
+   "Text": "{\n  \"cuts\": [\n    {\n      \"caption\": {\n        \"end_ms\": 3500,\n        \"keyword\": \"\",\n        \"short_text\": \"움직이는 컬러바 패턴\",\n        \"start_ms\": 500,\n        \"text\": \"움직이는 컬러바 패턴\"\n      },\n      \"chips\": [],\n      \"end_ms\": 4000,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_01\",\n      \"source_id\": \"00000000000000000000000000000001\",\n      \"start_ms\": 0,\n      \"volume\": 1.0\n    },\n    {\n      \"caption\": {\n        \"end_ms\": 3400,\n        \"keyword\": \"\",\n        \"short_text\": \"다채로운 기하학 그래픽\",\n        \"start_ms\": 500,\n        \"text\": \"다채로운 기하학 그래픽\"\n      },\n      \"chips\": [],\n      \"end_ms\": 3900,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_02\",\n      \"source_id\": \"00000000000000000000000000000004\",\n      \"start_ms\": 0,\n      \"volume\": 1.0\n    },\n    {\n      \"caption\": {\n        \"end_ms\": 3400,\n        \"keyword\": \"\",\n        \"short_text\": \"선명한 테스트 패턴 화면\",\n        \"start_ms\": 500,\n        \"text\": \"선명한 테스트 패턴 화면\"\n      },\n      \"chips\": [],\n      \"end_ms\": 3900,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_03\",\n      \"source_id\": \"00000000000000000000000000000005\",\n      \"start_ms\": 0,\n      \"volume\": 1.0\n    },\n    {\n      \"caption\": {\n        \"end_ms\": 3300,\n        \"keyword\": \"\",\n        \"short_text\": \"생동감 있는 모션 그래픽\",\n        \"start_ms\": 500,\n        \"text\": \"생동감 있는 모션 그래픽\"\n      },\n      \"chips\": [],\n      \"end_ms\": 3800,\n      \"focal\": {\n        \"x\": 0.5,\n        \"y\": 0.5\n      },\n      \"id\": \"cut_04\",\n      \"source_id\": \"00000000000000000000000000000007\",\n      \"start_ms\": 0,\n      \"volume\": 1.0\n    }\n  ],\n  \"duration_ms\": 15000,\n  \"hook\": \"테스트 패턴\",\n  \"ratio\": \"vertical\"\n}",
+   "Usage": {
+    "CompletionTokens": 770,
+    "CostMicrousd": 2360,
+    "CostReported": true,
+    "PromptTokens": 2443,
+    "ReasoningTokens": 0
+   }
+  }
+ ]
 }

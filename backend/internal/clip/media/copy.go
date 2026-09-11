@@ -632,6 +632,34 @@ func (r *Rendering) rasterize(ctx context.Context, ws clip.MediaWorkspace, canva
 	return png, nil
 }
 
+// FixedElements places the disclosure badge and a cut's chips and returns them
+// as manifest elements, so the composer can keep copy off them (CDS-45). Like
+// CaptionSize it needs no source pixels and scopes its SVG to its own workspace.
+func (r *Rendering) FixedElements(ctx context.Context, ratio, disclosure string, labels []string, answers []clip.Answer) (out clip.Manifest, err error) {
+	canvas, err := clip.ClipCanvas(ratio)
+	if err != nil {
+		return nil, err
+	}
+	phrase, ok := design.Disclosure[disclosure]
+	if !ok {
+		return nil, clip.ErrDisclosureRequired
+	}
+	texts := map[string]string{}
+	for _, a := range answers {
+		texts[a.Label] = a.Text
+	}
+	err = r.media.WithWorkspace(ctx, "clip-fixed-elements", func(ws clip.MediaWorkspace) error {
+		f, err := r.badgeAndChips(ctx, ws, canvas, ratio, phrase, labels, texts)
+		if err != nil {
+			return err
+		}
+		// The window is the composer's concern; only the regions matter here.
+		out = f.Elements(1, 0, 0, 1)
+		return nil
+	})
+	return out, err
+}
+
 // CaptionSize uses precisely the same shaping and fit as the final PNG. It needs
 // no source pixels, and its temporary SVG is scoped to a private workspace.
 func (r *Rendering) CaptionSize(ctx context.Context, ratio string, c clip.Caption) (width, height float64, err error) {

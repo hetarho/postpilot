@@ -9,7 +9,7 @@
       "type": "array", "minItems": 1, "maxItems": 60,
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["start_ms", "end_ms", "event", "subjects", "speech", "quality", "focal", "avoid"],
+        "required": ["start_ms", "end_ms", "event", "subjects", "speech", "quality", "focal", "scene", "readable_text", "subject"],
         "properties": {
           "start_ms": { "type": "integer" },
           "end_ms": { "type": "integer" },
@@ -21,7 +21,9 @@
             "type": "object", "additionalProperties": false, "required": ["x", "y"],
             "properties": { "x": { "type": "number", "minimum": 0, "maximum": 1 }, "y": { "type": "number", "minimum": 0, "maximum": 1 } }
           },
-          "avoid": {
+          "scene": { "type": "string", "enum": ["food", "exterior", "interior", "menu", "person", "product", "scenery"] },
+          "readable_text": { "type": "boolean" },
+          "subject": {
             "type": "object", "additionalProperties": false, "required": ["x", "y", "width", "height"],
             "properties": {
               "x": { "type": "number", "minimum": 0, "maximum": 1 },

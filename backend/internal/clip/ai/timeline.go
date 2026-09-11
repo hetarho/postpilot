@@ -2,6 +2,7 @@ package ai
 
 import (
 	"math"
+	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
 )
@@ -22,8 +23,22 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 		analyses[a.Source.ID] = a
 	}
 	total := -cfg.Render.FadeMS * (len(plan.Cuts) - 1)
+	seen := map[string]bool{}
 	for i := range plan.Cuts {
 		c := &plan.Cuts[i]
+		// Identity, focal point and gain are checked HERE, before the design
+		// system measures anything: a plan the model got wrong must not cost a
+		// single glyph measurement.
+		if strings.TrimSpace(c.ID) == "" || seen[c.ID] {
+			return outputError("plan_cut_identity")
+		}
+		seen[c.ID] = true
+		if !clip.Normalized(c.Focal.X) || !clip.Normalized(c.Focal.Y) {
+			return outputError("plan_focal")
+		}
+		if !clip.Normalized(c.OriginalVolume()) {
+			return outputError("plan_volume")
+		}
 		a, ok := analyses[c.SourceID]
 		if !ok || c.Fingerprint != a.Source.Fingerprint {
 			return outputError("plan_source")

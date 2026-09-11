@@ -3,6 +3,7 @@ package ai_test
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -41,7 +42,8 @@ func TestComposeActualFailureTimingWithoutAnotherPaidCall(t *testing.T) {
 			t.Fatal(err)
 		}
 		assertExecutableTimeline(t, in, got)
-		if got.DurationMS != 15000 || len(got.Cuts) != 4 || captions.calls != 4 || len(models.calls) != 1 || usage != models.response.Usage {
+		// Up to one measurement per candidate anchor and no more (CDS-38).
+		if got.DurationMS != 15000 || len(got.Cuts) != 4 || captions.calls > 8 || captions.calls < 4 || len(models.calls) != 1 || usage != models.response.Usage {
 			t.Fatal("composition changed target, selected cuts, calls or settlement")
 		}
 		for i, c := range got.Cuts {
@@ -50,8 +52,20 @@ func TestComposeActualFailureTimingWithoutAnotherPaidCall(t *testing.T) {
 			}
 			original := wire["cuts"].([]any)[i].(map[string]any)
 			p := original["caption"].(map[string]any)
-			if c.SourceID != original["source_id"] || c.StartMS != original["start_ms"] || c.Copy.Text != p["text"] || c.Copy.StartMS != p["start_ms"] || c.Copy.Style != "memo" || c.Copy.Accent != "amber" || c.OriginalVolume() != 1 {
-				t.Fatal("lost selected footage, copy, style or original audio")
+			// The footage the model selected is kept exactly; the copy is its
+			// words (or the shorter alternative it supplied), and the placement
+			// and window are the design system's (CDS-7, CDS-27).
+			if c.SourceID != original["source_id"] || c.StartMS != original["start_ms"] || c.OriginalVolume() != 1 {
+				t.Fatal("lost selected footage or original audio")
+			}
+			if c.Copy.Text != p["text"] && c.Copy.Text != p["short_text"] {
+				t.Fatalf("copy %q is neither what was written nor its alternative", c.Copy.Text)
+			}
+			if c.Copy.Accent != "amber" || !slices.Contains(in.Template.CopyStyles, c.Copy.Style) {
+				t.Fatalf("cut %d styling: %+v", i, c.Copy)
+			}
+			if start, end := c.CaptionWindow(); start != 120 || end != c.EndMS-c.StartMS-120 {
+				t.Fatalf("cut %d window %d..%d", i, start, end)
 			}
 		}
 		again, _, err := s.Plan(t.Context(), testRef(), in)
@@ -104,8 +118,12 @@ func TestComposeCorrectsArithmeticAndExposureButKeepsValidTiming(t *testing.T) {
 				t.Fatalf("compilation: %+v %v", got, err)
 			}
 			assertExecutableTimeline(t, in, got)
-			if got.Cuts[0].Copy.StartMS != 1000 || got.Cuts[0].Copy.EndMS != min(p["end_ms"].(int), 15000) {
-				t.Fatal("changed existing caption exposure other than clipping at cut end")
+			// The copy's window is CDS-27's, whatever the model asked for: cut
+			// start + 120 ms to cut end − 120 ms, and it always fits the cut.
+			cut := got.Cuts[0]
+			start, end := cut.CaptionWindow()
+			if start != 120 || end != cut.EndMS-cut.StartMS-120 || end <= start {
+				t.Fatalf("caption window %d..%d in a %d ms cut", start, end, cut.EndMS-cut.StartMS)
 			}
 		})
 	}

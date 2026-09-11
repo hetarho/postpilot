@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -44,7 +45,9 @@ type segmentJSON struct {
 	Speech   *string     `json:"speech"`
 	Quality  *string     `json:"quality"`
 	Focal    *pointJSON  `json:"focal"`
-	Avoid    *regionJSON `json:"avoid"`
+	Scene    *string     `json:"scene"`
+	Readable *bool       `json:"readable_text"`
+	Subject  *regionJSON `json:"subject"`
 }
 type chunkJSON struct {
 	SourceID *string        `json:"source_id"`
@@ -52,28 +55,22 @@ type chunkJSON struct {
 	Segments *[]segmentJSON `json:"segments"`
 }
 
-// The model chooses the vertical anchor only. The alignment is the style's own
-// (CDS-23..26) until CDS-38's deterministic selection replaces both in T105.
-func defaultAlign(style string) string { return design.Styles[style].Align }
-
-// Only 크게 강조 and 형광펜 accent one word (CDS-25, CDS-26); for every other
-// style a keyword would be an accent the design system does not draw.
-func keywordOf(value *string, style string) string {
-	s := design.Styles[style]
-	if value == nil || (!s.Highlight && s.Stroke == "") {
+func optional(value *string) string {
+	if value == nil {
 		return ""
 	}
 	return *value
 }
 
 type captionJSON struct {
-	Text     *string `json:"text"`
-	Start    *int    `json:"start_ms"`
-	End      *int    `json:"end_ms"`
-	Position *string `json:"position"`
-	Keyword  *string `json:"keyword"`
-	Style    *string `json:"style"`
-	Accent   *string `json:"accent"`
+	Text  *string `json:"text"`
+	Start *int    `json:"start_ms"`
+	End   *int    `json:"end_ms"`
+	// The same fact in 14 characters or fewer, and the one word the sentence
+	// turns on. The model no longer names a position, a style or an accent:
+	// those are the design system's, not a judgement (CDS-7).
+	ShortText *string `json:"short_text"`
+	Keyword   *string `json:"keyword"`
 }
 type cutJSON struct {
 	ID       *string         `json:"id"`
@@ -82,11 +79,13 @@ type cutJSON struct {
 	End      *int            `json:"end_ms"`
 	Focal    *pointJSON      `json:"focal"`
 	Caption  *captionJSON    `json:"caption"`
+	Chips    *[]string       `json:"chips"`
 	Volume   json.RawMessage `json:"volume"`
 }
 type planJSON struct {
 	Ratio    *string    `json:"ratio"`
 	Duration *int       `json:"duration_ms"`
+	Hook     *string    `json:"hook"`
 	Cuts     *[]cutJSON `json:"cuts"`
 }
 
@@ -149,6 +148,10 @@ func (s *shape) accepts(value any) bool {
 		if _, ok := value.(json.Number); !ok {
 			return false
 		}
+	case "boolean":
+		if _, ok := value.(bool); !ok {
+			return false
+		}
 	default:
 		return false
 	}
@@ -186,16 +189,30 @@ func parseChunk(cfg Config, input clip.ChunkInput, raw string) (clip.ChunkAnalys
 	result := clip.ChunkAnalysis{SourceID: input.Source.ID, Fingerprint: input.Source.Fingerprint, Index: input.Index, OffsetMS: input.OffsetMS, DurationMS: input.DurationMS}
 	for _, s := range *wire.Segments {
 		focal, focalOK := s.Focal.domain()
-		avoid, avoidOK := s.Avoid.domain()
-		if s.Start == nil || s.End == nil || *s.Start >= *s.End || s.Event == nil || s.Subjects == nil || s.Speech == nil || s.Quality == nil || !focalOK || !avoidOK {
+		subject, subjectOK := s.Subject.domain()
+		if s.Start == nil || s.End == nil || *s.Start >= *s.End || s.Event == nil || s.Subjects == nil || s.Speech == nil || s.Quality == nil || !focalOK || !subjectOK {
 			return clip.ChunkAnalysis{}, llm.ErrBadOutput
+		}
+		// The model is told the seven scene ids, so an eighth is bad output, not
+		// something to map away. The tolerance for a scene-less segment belongs
+		// to STORED analyses written before scenes existed, and lives in
+		// design.Scene where the domain reads them.
+		scene, readable := design.Guards.DefaultScene, false
+		if s.Scene != nil {
+			if _, known := design.SceneStyles[*s.Scene]; !known {
+				return clip.ChunkAnalysis{}, llm.ErrBadOutput
+			}
+			scene = *s.Scene
+		}
+		if s.Readable != nil {
+			readable = *s.Readable
 		}
 		if !input.Source.Info.HasAudio && strings.TrimSpace(*s.Speech) != "" {
 			return clip.ChunkAnalysis{}, llm.ErrBadOutput
 		}
 		// Clamp locally BEFORE adding the authoritative source offset.
 		start, end := max(0, min(input.DurationMS, *s.Start)), max(0, min(input.DurationMS, *s.End))
-		result.Segments = append(result.Segments, clip.Segment{StartMS: input.OffsetMS + start, EndMS: input.OffsetMS + end, Event: *s.Event, Subjects: *s.Subjects, Speech: *s.Speech, Quality: *s.Quality, Focal: focal, Avoid: avoid})
+		result.Segments = append(result.Segments, clip.Segment{StartMS: input.OffsetMS + start, EndMS: input.OffsetMS + end, Event: *s.Event, Subjects: *s.Subjects, Speech: *s.Speech, Quality: *s.Quality, Focal: focal, Scene: scene, ReadableText: readable, Subject: subject})
 	}
 	if err := clip.ValidateSegments(cfg.Analysis, result.Segments, input.OffsetMS, input.OffsetMS+input.DurationMS); err != nil {
 		return clip.ChunkAnalysis{}, llm.ErrBadOutput
@@ -214,7 +231,10 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 	for _, analysis := range input.Analyses {
 		byID[analysis.Source.ID] = analysis.Source
 	}
-	result := clip.EditPlan{Ratio: *wire.Ratio, DurationMS: *wire.Duration}
+	if utf8.RuneCountInString(optional(wire.Hook)) > cfg.Render.MaxCopyRunes {
+		return clip.EditPlan{}, clip.ErrCopyTooLong
+	}
+	result := clip.EditPlan{Ratio: *wire.Ratio, DurationMS: *wire.Duration, Hook: optional(wire.Hook)}
 	for _, c := range *wire.Cuts {
 		focal, ok := c.Focal.domain()
 		if !ok || c.ID == nil || utf8.RuneCountInString(*c.ID) > cfg.MaxCutIDRunes || c.SourceID == nil || c.Start == nil || c.End == nil || c.Caption == nil {
@@ -225,11 +245,18 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 		if !exists {
 			return clip.EditPlan{}, outputError("plan_source")
 		}
-		if p.Text == nil || p.Start == nil || p.End == nil || p.Position == nil || p.Style == nil || p.Accent == nil {
+		if p.Text == nil || p.Start == nil || p.End == nil {
 			return clip.EditPlan{}, outputError("plan_caption_fields")
 		}
 		if *p.End <= *p.Start {
 			return clip.EditPlan{}, outputError("plan_caption_time")
+		}
+		// The 500-rune ceiling is the contract's, not a design fallback: text
+		// past it is refused outright rather than shortened or dropped.
+		for _, text := range []string{*p.Text, optional(p.ShortText), optional(p.Keyword)} {
+			if utf8.RuneCountInString(text) > cfg.Render.MaxCopyRunes {
+				return clip.EditPlan{}, clip.ErrCopyTooLong
+			}
 		}
 		volume := 1.0
 		if len(c.Volume) != 0 {
@@ -237,12 +264,23 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 				return clip.EditPlan{}, outputError("plan_volume")
 			}
 		}
-		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Copy: clip.Caption{Text: *p.Text, StartMS: *p.Start, EndMS: *p.End, Anchor: *p.Position, Align: defaultAlign(*p.Style), Keyword: keywordOf(p.Keyword, *p.Style), Style: *p.Style, Accent: *p.Accent}})
+		chips := []string{}
+		if c.Chips != nil {
+			for _, label := range *c.Chips {
+				if !slices.Contains(design.Fact.Chips, label) {
+					return clip.EditPlan{}, outputError("plan_chip_label")
+				}
+				chips = append(chips, label)
+			}
+		}
+		// The caption arrives as WORDS only; the compiler places it.
+		written := clip.Written{Text: *p.Text, ShortText: optional(p.ShortText), Keyword: optional(p.Keyword)}
+		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Chips: chips, Copy: clip.Caption{Text: written.Text, StartMS: *p.Start, EndMS: *p.End}})
+		result.Written = append(result.Written, written)
 	}
+	// The timeline is compiled here; the design system's own decisions and the
+	// final validation happen in Plan, which owns the measurement port.
 	if err := composeTimeline(cfg, input, &result); err != nil {
-		return clip.EditPlan{}, err
-	}
-	if err := validatePlan(cfg, input, result); err != nil {
 		return clip.EditPlan{}, err
 	}
 	return result, nil

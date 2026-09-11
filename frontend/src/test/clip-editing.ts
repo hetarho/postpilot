@@ -20,6 +20,7 @@ export function clipEditingFixture(): ClipEditingState {
           startMs: 0,
           endMs: 0,
         },
+        chips: [],
         volumePermille: 1000,
       })),
     },

@@ -22,11 +22,15 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
       durationMs: value.plan.durationMs,
       cuts: value.plan.cuts.map((c) => {
         const copy = c.copy
+        // A cut whose copy the composer dropped arrives with no placement:
+        // valid, and the correction screen shows it as a cut with no text.
+        const placed = (copy?.text ?? '').trim() !== ''
         if (
           !copy ||
-          !COPY_ANCHORS.includes(copy.position as ClipCaption['anchor']) ||
-          !COPY_ALIGNS.includes(copy.align as ClipCaption['align']) ||
-          !COPY_STYLES.includes(copy.style as CopyStyle) ||
+          (placed &&
+            (!COPY_ANCHORS.includes(copy.position as ClipCaption['anchor']) ||
+              !COPY_ALIGNS.includes(copy.align as ClipCaption['align']) ||
+              !COPY_STYLES.includes(copy.style as CopyStyle))) ||
           !CLIP_ACCENTS.includes(copy.accent as ClipAccent)
         )
           throw new Error('Invalid clip caption')
@@ -37,6 +41,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           startMs: c.startMs,
           endMs: c.endMs,
           volumePermille: c.volumePermille,
+          chips: [...c.chips],
           copy: {
             text: copy.text,
             startMs: copy.startMs,
@@ -76,6 +81,7 @@ export function clipPlanToProto(plan: ClipEditPlan) {
       startMs: c.startMs,
       endMs: c.endMs,
       volumePermille: c.volumePermille,
+      chips: [...c.chips],
       // `position` carries the anchor on the wire; the field kept its number
       // through the vocabulary change (CDS-12).
       copy: { ...c.copy, position: c.copy.anchor },

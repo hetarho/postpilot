@@ -12,7 +12,7 @@ func analysisSource(id string, duration int) clip.AnalysisSource {
 	return clip.AnalysisSource{RenderSource: clip.RenderSource{ID: id, Fingerprint: "fingerprint-" + id, Info: clip.MediaInfo{DurationMS: duration, Width: 1080, Height: 1920, HasAudio: true}}, Filename: id + ".mp4"}
 }
 func analysisSegment(start, end int) clip.Segment {
-	return clip.Segment{StartMS: start, EndMS: end, Event: "음식을 접시에 담는다", Quality: "stable, in focus", Focal: clip.Point{X: .5, Y: .5}, Avoid: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}}
+	return clip.Segment{StartMS: start, EndMS: end, Event: "음식을 접시에 담는다", Quality: "stable, in focus", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}}
 }
 func TestMergeAnalysesPinsCompleteManifestAndAbsoluteTime(t *testing.T) {
 	l := config.ClipAI(&config.Config{}).Analysis
@@ -78,7 +78,7 @@ func TestCaptionAvoidFollowsCoverCrop(t *testing.T) {
 	}
 	a.Source.Info.Width = 1920
 	a.Source.Info.Height = 1080
-	a.Segments[0].Avoid = clip.Region{Width: .1, Height: 1}
+	a.Segments[0].Subject = clip.Region{Width: .1, Height: 1}
 	if got := clip.CaptionAvoid(canvas, cut, a); got != (clip.Region{}) {
 		t.Fatalf("cropped-out subject remains: %+v", got)
 	}

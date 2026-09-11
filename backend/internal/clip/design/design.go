@@ -194,6 +194,32 @@ type Facts struct {
 	} `json:"defaults"`
 }
 
+// CDS-39's sentence classes, as data: the units that make a number a NUM, the
+// markers and length that make a sentence a HOOK, and the length and endings
+// that keep one a FACT.
+type ClassRules struct {
+	NumUnits        []string `json:"num_units"`
+	HookMarkers     []string `json:"hook_markers"`
+	HookMaxChars    int      `json:"hook_max_chars"`
+	FactMaxChars    int      `json:"fact_max_chars"`
+	FactVerbEndings []string `json:"fact_verb_endings"`
+}
+
+// CDS-40's guards. Every value is a rule, not a tuning knob.
+type GuardRules struct {
+	Fallback        string   `json:"fallback"`
+	BoldMax         int      `json:"bold_max"`
+	BoldFirstCut    int      `json:"bold_first_cut"`
+	RunMax          int      `json:"run_max"`
+	RunAlternate    []string `json:"run_alternate"`
+	MenuAnchors     []string `json:"menu_anchors"`
+	SubjectCoverMax float64  `json:"subject_cover_max"`
+	DefaultScene    string   `json:"default_scene"`
+}
+type VoiceRules struct {
+	Banned []string `json:"banned"`
+}
+
 type MotionTokens struct {
 	InMS  int        `json:"in_ms"`
 	InDY  float64    `json:"in_dy"`
@@ -210,6 +236,9 @@ type TimingTokens struct {
 	BadgeMinHeadS   float64 `json:"badge_min_head_s"`
 	BadgeMinTailS   float64 `json:"badge_min_tail_s"`
 	ChipMinS        float64 `json:"chip_min_s"`
+	CopyLeadMS      int     `json:"copy_lead_ms"`
+	SubExtendMS     int     `json:"sub_extend_ms"`
+	SubOccupancyMin float64 `json:"sub_occupancy_min"`
 }
 type TransitionTokens struct {
 	Default      string  `json:"default"`
@@ -231,25 +260,29 @@ type LumaTokens struct {
 	SigmaThreshold float64 `json:"sigma_threshold"`
 }
 type system struct {
-	Ratios            map[string]RatioLayout `json:"ratios"`
-	SafeNaverEstimate Region                 `json:"safe_naver_estimate"`
-	OverlayEstimate   OverlayEstimate        `json:"overlay_estimate"`
-	Type              map[string]TypeRole    `json:"type"`
-	Color             map[string]Paint       `json:"color"`
-	Shadow            map[string]ShadowPaint `json:"shadow"`
-	Scrim             map[string]ScrimPaint  `json:"scrim"`
-	Accent            map[string]string      `json:"accent"`
-	Spacing           SpacingTokens          `json:"spacing"`
-	Styles            map[string]StyleRule   `json:"styles"`
-	Presets           map[string]Preset      `json:"presets"`
-	Disclosure        map[string]string      `json:"disclosure"`
-	CTA               map[string]string      `json:"cta"`
-	Facts             Facts                  `json:"facts"`
-	Motion            MotionTokens           `json:"motion"`
-	Timing            TimingTokens           `json:"timing"`
-	Transition        TransitionTokens       `json:"transition"`
-	Audio             AudioTokens            `json:"audio"`
-	Luma              LumaTokens             `json:"luma"`
+	Ratios            map[string]RatioLayout       `json:"ratios"`
+	SafeNaverEstimate Region                       `json:"safe_naver_estimate"`
+	OverlayEstimate   OverlayEstimate              `json:"overlay_estimate"`
+	Type              map[string]TypeRole          `json:"type"`
+	Color             map[string]Paint             `json:"color"`
+	Shadow            map[string]ShadowPaint       `json:"shadow"`
+	Scrim             map[string]ScrimPaint        `json:"scrim"`
+	Accent            map[string]string            `json:"accent"`
+	Spacing           SpacingTokens                `json:"spacing"`
+	Styles            map[string]StyleRule         `json:"styles"`
+	Presets           map[string]Preset            `json:"presets"`
+	Disclosure        map[string]string            `json:"disclosure"`
+	CTA               map[string]string            `json:"cta"`
+	Facts             Facts                        `json:"facts"`
+	Classes           ClassRules                   `json:"classes"`
+	SceneStyles       map[string]map[string]string `json:"scene_styles"`
+	Guards            GuardRules                   `json:"guards"`
+	Voice             VoiceRules                   `json:"voice"`
+	Motion            MotionTokens                 `json:"motion"`
+	Timing            TimingTokens                 `json:"timing"`
+	Transition        TransitionTokens             `json:"transition"`
+	Audio             AudioTokens                  `json:"audio"`
+	Luma              LumaTokens                   `json:"luma"`
 }
 
 var loaded = parse()
@@ -290,6 +323,10 @@ var (
 	Disclosure        = loaded.Disclosure
 	CTA               = loaded.CTA
 	Fact              = loaded.Facts
+	Classes           = loaded.Classes
+	SceneStyles       = loaded.SceneStyles
+	Guards            = loaded.Guards
+	Voice             = loaded.Voice
 	Motion            = loaded.Motion
 	Timing            = loaded.Timing
 	Transition        = loaded.Transition

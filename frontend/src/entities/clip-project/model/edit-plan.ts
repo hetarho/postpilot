@@ -28,6 +28,8 @@ export interface ClipEditCut {
   startMs: number
   endMs: number
   copy: ClipCaption
+  /** Reserved fact labels whose chips belong on this cut, at most two. */
+  chips: string[]
   volumePermille: number
 }
 export interface ClipEditPlan {
@@ -53,7 +55,10 @@ export interface ClipEditingState {
   maxDurationMs: number
 }
 export function copyClipPlan(plan: ClipEditPlan): ClipEditPlan {
-  return { ...plan, cuts: plan.cuts.map((c) => ({ ...c, copy: { ...c.copy } })) }
+  return {
+    ...plan,
+    cuts: plan.cuts.map((c) => ({ ...c, chips: [...c.chips], copy: { ...c.copy } })),
+  }
 }
 export type ClipEdit =
   | { type: 'move'; from: number; to: number }
@@ -115,9 +120,15 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
       copyEnd:
         !integer(c.copy.endMs) ||
         (!whole && (c.copy.endMs <= c.copy.startMs || c.copy.endMs > duration)),
-      anchor: !COPY_ANCHORS.includes(c.copy.anchor) || !COPY_ALIGNS.includes(c.copy.align),
+      // A cut whose copy the composer dropped carries no placement at all, and
+      // that is a valid plan — the cut simply shows its footage.
+      anchor:
+        c.copy.text.trim() !== '' &&
+        (!COPY_ANCHORS.includes(c.copy.anchor) || !COPY_ALIGNS.includes(c.copy.align)),
       keyword: c.copy.keyword !== '' && !c.copy.text.includes(c.copy.keyword),
-      style: !COPY_STYLES.includes(c.copy.style) || !state.copyStyles.includes(c.copy.style),
+      style:
+        c.copy.text.trim() !== '' &&
+        (!COPY_STYLES.includes(c.copy.style) || !state.copyStyles.includes(c.copy.style)),
       accent: !CLIP_ACCENTS.includes(c.copy.accent),
       volume: !integer(c.volumePermille) || c.volumePermille < 0 || c.volumePermille > 1000,
     }

@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -20,6 +21,15 @@ type Models interface {
 }
 type CaptionSizer interface {
 	CaptionSize(context.Context, string, clip.Caption) (float64, float64, error)
+	// FixedElements is the disclosure badge and this cut's chips, already placed.
+	// Copy yields to them and never displaces them (CDS-45), so the selector has
+	// to see them before it chooses an anchor.
+	FixedElements(ctx context.Context, ratio, disclosure string, labels []string, answers []clip.Answer) (clip.Manifest, error)
+	// Layout lays the whole composed plan out and gates it on the design
+	// system's verifier (CDS-52), touching no source pixel. The composer runs it
+	// on its own result so a residual violation is a COMPOSITION failure with
+	// the check named, not a surprise at render time.
+	Layout(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource) (clip.Manifest, error)
 }
 type Config struct {
 	Analysis                                                                                          clip.AnalysisLimits
@@ -151,31 +161,102 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 	if err != nil {
 		return clip.EditPlan{}, response.Usage, stageError("plan", llm.ResponseParseError(response, err))
 	}
+	if err := s.compose(ctx, input, &result); err != nil {
+		return clip.EditPlan{}, response.Usage, stageError("plan", err)
+	}
+	if err := validatePlan(s.cfg, input, result); err != nil {
+		return clip.EditPlan{}, response.Usage, stageError("plan", llm.ResponseParseError(response, err))
+	}
+	return result, response.Usage, nil
+}
+
+// compose is where every placement decision is made — by the CDS tables, never
+// by the model. It measures each candidate plate through the renderer's own
+// shaping, so the anchor it picks is the anchor that actually fits.
+func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *clip.EditPlan) error {
 	canvas, _ := clip.ClipCanvas(input.Ratio)
 	byID := map[string]clip.SourceAnalysis{}
 	for _, a := range input.Analyses {
 		byID[a.Source.ID] = a
 	}
-	for i, cut := range result.Cuts {
-		if strings.TrimSpace(cut.Copy.Text) == "" {
-			continue
-		}
-		width, height, err := s.captions.CaptionSize(ctx, input.Ratio, cut.Copy)
+	measured := func(c clip.Caption) (clip.Region, bool, error) {
+		width, height, err := s.captions.CaptionSize(ctx, input.Ratio, c)
 		if err != nil {
 			if errors.Is(err, clip.ErrInvalid) {
-				err = outputError("caption_measurement")
+				return clip.Region{}, false, outputError("caption_measurement")
 			}
-			return clip.EditPlan{}, response.Usage, stageError("plan", err)
+			return clip.Region{}, false, err
 		}
-		anchor, err := clip.PickCopyAnchor(canvas, cut.Copy.Anchor, cut.Copy.Align, width, height, clip.CaptionAvoid(canvas, cut, byID[cut.SourceID]))
-		if err != nil {
-			return clip.EditPlan{}, response.Usage, stageError("plan", err)
+		if width <= 0 || height <= 0 {
+			return clip.Region{}, false, nil
 		}
-		result.Cuts[i].Copy.Anchor = anchor
+		region, err := clip.PlaceCopy(canvas, c.Anchor, c.Align, width, height)
+		return region, err == nil, nil
 	}
-	return result, response.Usage, nil
+	// The plan's own preset and facts decide which chips a cut can carry.
+	plan.Preset, plan.Facts, plan.Disclosure = input.Template.Preset, input.Answers, input.Disclosure
+	// CDS-41 may lengthen a cut to fit its copy, but the timeline is already
+	// reconciled to the owner's approved target, so the extension may only use
+	// the slack that target still allows.
+	slack := min(s.cfg.TargetToleranceMS-abs(plan.DurationMS-input.TargetDurationMS), s.cfg.Render.MaxDurationMS-plan.DurationMS)
+	history, previous := design.StyleHistory{}, ""
+	// The badge and the chips are placed before any copy, and copy yields to
+	// them (CDS-45); T107's cards join this list.
+	for i, cut := range plan.Cuts {
+		analysis := byID[cut.SourceID]
+		scene, readable := clip.CutScene(cut, analysis)
+		written := clip.Written{Answers: input.Answers}
+		if i < len(plan.Written) {
+			written = plan.Written[i]
+			written.Answers = input.Answers
+		}
+		// A cut may only be extended inside the segment it already came from, and
+		// never past the source or the target's remaining slack.
+		limit := cut.EndMS
+		for _, seg := range analysis.Segments {
+			if seg.StartMS <= cut.StartMS && seg.EndMS > limit {
+				limit = seg.EndMS
+			}
+		}
+		limit = min(limit, analysis.Source.Info.DurationMS, cut.EndMS+max(0, slack))
+		placed, err := s.captions.FixedElements(ctx, input.Ratio, input.Disclosure, plan.ChipLabels(cut), input.Answers)
+		if err != nil {
+			return err
+		}
+		composed, decision, err := clip.Compose(canvas, cut, written, scene, readable, clip.CutSubject(canvas, cut, analysis), placed, input.Template.CopyStyles, input.Template.Accent, history, previous, limit, measured)
+		if err != nil {
+			return err
+		}
+		grown := composed.EndMS - cut.EndMS
+		slack, plan.DurationMS = slack-grown, plan.DurationMS+grown
+		plan.Cuts[i] = composed
+		plan.Decisions = append(plan.Decisions, decision)
+		if strings.TrimSpace(composed.Copy.Text) != "" {
+			history = append(history, composed.Copy.Style)
+			previous = composed.Copy.Anchor
+		}
+	}
+	// The hook is dropped rather than shown ungrounded; T107 then renders the
+	// card without a title.
+	if !clip.Grounded(plan.Hook, input.Answers) || clip.CopyChars(plan.Hook) > design.Type["hook"].Chars {
+		plan.Hook = ""
+	}
+	// The guards above make V13 and V14 hold by construction; this is what
+	// catches anything they do not, before a single byte is downloaded.
+	sources := make([]clip.RenderSource, 0, len(input.Analyses))
+	for _, a := range input.Analyses {
+		sources = append(sources, a.Source.RenderSource)
+	}
+	_, err := s.captions.Layout(ctx, *plan, sources)
+	return err
 }
 
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
 func executionPolicy(p llm.CallPolicy, ref llm.ModelRef, stage string, budget int, delivery llm.ExecutionDelivery) (*llm.ExecutionPolicy, error) {
 	if !p.Valid() || !p.Pricing.Valid() || p.Pricing.Delivery != delivery || p.Ref != ref || p.Stage != stage || p.CompletionTokens != budget {
 		return nil, clip.ErrPricingUnavailable
@@ -260,6 +341,11 @@ func validatePlan(cfg Config, in clip.PlanningInput, plan clip.EditPlan) error {
 		return fmt.Errorf("%w: %w", llm.ErrBadOutput, err)
 	}
 	for _, cut := range plan.Cuts {
+		// A cut whose copy the compiler dropped has no style and no accent to
+		// check (CDS-41's last fallback).
+		if strings.TrimSpace(cut.Copy.Text) == "" {
+			continue
+		}
 		if !slices.Contains(in.Template.CopyStyles, cut.Copy.Style) {
 			return outputError("plan_style")
 		}

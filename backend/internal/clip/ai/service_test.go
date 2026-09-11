@@ -14,6 +14,7 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/ai"
+	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/config"
 )
@@ -34,13 +35,38 @@ func (f *fakeModels) Complete(_ context.Context, ref llm.ModelRef, request llm.R
 }
 
 type fakeSizer struct {
-	err   error
-	calls int
+	err       error
+	fixedErr  error
+	layoutErr error
+	calls     int
+	fixed     int
+	layouts   int
+}
+
+// The composer verifies its own result through this port (CDS-52).
+func (f *fakeSizer) Layout(context.Context, clip.EditPlan, []clip.RenderSource) (clip.Manifest, error) {
+	f.layouts++
+	return nil, f.layoutErr
 }
 
 func (f *fakeSizer) CaptionSize(context.Context, string, clip.Caption) (float64, float64, error) {
 	f.calls++
 	return 500, 100, f.err
+}
+
+// The badge and the chips the composer must keep copy off. The fixture puts the
+// badge where 9:16 puts it (CDS-31) and no chips, so the anchor walk is driven
+// by the subject box alone.
+func (f *fakeSizer) FixedElements(_ context.Context, _, disclosure string, labels []string, _ []clip.Answer) (clip.Manifest, error) {
+	f.fixed++
+	if f.fixedErr != nil {
+		return nil, f.fixedErr
+	}
+	out := clip.Manifest{{Kind: "badge", Region: design.Region{X: 768, Y: 270, Width: 120, Height: 60}}}
+	for i := range labels {
+		out = append(out, design.Element{Kind: "chip", Region: design.Region{X: 96, Y: 290 + float64(i)*76, Width: 300, Height: 60}})
+	}
+	return out, nil
 }
 func newService(t *testing.T, raw string, structured bool) (*ai.Service, *fakeModels, *fakeSizer) {
 	t.Helper()
@@ -70,13 +96,14 @@ func testPolicy(stage string) llm.CallPolicy {
 	return llm.CallPolicy{Ref: testRef(), Stage: stage, CompletionTokens: budget, Reasoning: llm.ReasoningLow, InputUSDPerMillion: "1", OutputUSDPerMillion: "2", Pricing: llm.CallPricing{Version: 1, Fingerprint: strings.Repeat("a", 64), Delivery: delivery, PromptUSDPerMillion: "1", CompletionUSDPerMillion: "2", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}}
 }
 func observation() map[string]any {
-	return map[string]any{"source_id": "source", "chunk_index": 1, "segments": []any{map[string]any{"start_ms": 0, "end_ms": 5000, "event": "음식을 담는다", "subjects": []string{"접시"}, "speech": "", "quality": "steady and sharp", "focal": map[string]any{"x": .5, "y": .5}, "avoid": map[string]any{"x": .2, "y": .6, "width": .6, "height": .3}}}}
+	return map[string]any{"source_id": "source", "chunk_index": 1, "segments": []any{map[string]any{"start_ms": 0, "end_ms": 5000, "event": "음식을 담는다", "subjects": []string{"접시"}, "speech": "", "quality": "steady and sharp", "focal": map[string]any{"x": .5, "y": .5}, "scene": "food", "readable_text": false, "subject": map[string]any{"x": .2, "y": .6, "width": .6, "height": .3}}}}
 }
 func planningInput() clip.PlanningInput {
-	return clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", CopyStyles: []string{"clean", "memo"}, Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Avoid: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}}}}}}
+	return clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", CopyStyles: []string{"clean", "memo"}, Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}}}}}}
 }
 func plan() map[string]any {
-	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": []any{map[string]any{"id": "cut-one", "source_id": "source", "start_ms": 0, "end_ms": 15000, "focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": "정확한 한글 & 여행", "start_ms": 1000, "end_ms": 14000, "position": "bottom", "style": "clean", "accent": "coral"}}}}
+	// Words only: the model no longer names a position, a style or an accent.
+	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행", "cuts": []any{map[string]any{"id": "cut-one", "source_id": "source", "start_ms": 0, "end_ms": 15000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{}, "caption": map[string]any{"text": "정확한 한글 & 여행", "start_ms": 1000, "end_ms": 14000, "short_text": "한글 여행", "keyword": ""}}}}
 }
 func raw(value any) string {
 	data, err := json.Marshal(value)
@@ -120,7 +147,7 @@ func TestObservationContractPlainFallbackOffsetAndSpeech(t *testing.T) {
 	}
 }
 func TestObservationRejectsInvalidModelOutput(t *testing.T) {
-	for _, mode := range []string{"source", "index", "extra", "missing", "null", "no description", "outside", "backwards", "zero", "fractional", "overlap", "focal", "avoid", "empty", "too many"} {
+	for _, mode := range []string{"source", "index", "extra", "missing", "null", "no description", "outside", "backwards", "zero", "fractional", "overlap", "focal", "subject", "scene", "readable", "empty", "too many"} {
 		t.Run(mode, func(t *testing.T) {
 			v := observation()
 			seg := firstSegment(v)
@@ -152,8 +179,12 @@ func TestObservationRejectsInvalidModelOutput(t *testing.T) {
 				v["segments"] = []any{seg, seg}
 			case "focal":
 				seg["focal"].(map[string]any)["x"] = -.1
-			case "avoid":
-				seg["avoid"].(map[string]any)["width"] = 1
+			case "subject":
+				seg["subject"].(map[string]any)["width"] = 1
+			case "scene":
+				seg["scene"] = "bathroom"
+			case "readable":
+				seg["readable_text"] = "yes"
 			case "empty":
 				v["segments"] = []any{}
 			case "too many":
@@ -202,8 +233,15 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.DurationMS != 15000 || len(result.Cuts) != 1 || result.Cuts[0].Copy.Text != "영상 생성 확인" || result.Cuts[0].Copy.StartMS != 1000 || result.Cuts[0].Copy.EndMS != 5000 {
+	cut := result.Cuts[0]
+	start, end := cut.CaptionWindow()
+	if result.DurationMS != 15000 || len(result.Cuts) != 1 || cut.Copy.Text != "영상 생성 확인" || start != 120 || end != 14880 {
 		t.Fatalf("unexpected plan: %+v", result)
+	}
+	// The recorded response named no style or position; the design system chose
+	// both from the scene and the sentence (CDS-39, CDS-40).
+	if cut.Copy.Style != "clean" || cut.Copy.Anchor != "bottom" || cut.Copy.Align != "center" || result.Decisions[0].Class != "FACT" {
+		t.Fatalf("placement was not the design system's: %+v %+v", cut.Copy, result.Decisions)
 	}
 	if len(models.calls) != 2 || models.calls[0].MaxTokens != 8192 || models.calls[1].MaxTokens != 32768 {
 		t.Fatal("production budgets or call count changed")
@@ -258,10 +296,22 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 			t.Fatalf("%+v %v", got, err)
 		}
 		cut := got.Cuts[0]
-		// One anchor step down from the model's BOTTOM, which is as far as CDS-38
-		// lets consecutive placement move, and clear of the avoid region.
-		if cut.Copy.Anchor != "lower_mid" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 || cut.Copy.StartMS != 1000 || cut.Copy.EndMS != 14000 || c.calls != 1 {
+		// Nothing here was chosen by the model: a noun-led sentence on a food
+		// close-up is 메모 by CDS-40, and 메모's own first candidate is TOP/LEFT
+		// (CDS-24) — which clears the subject box at the bottom of the frame.
+		if cut.Copy.Style != "memo" || cut.Copy.Align != "left" || cut.Copy.Anchor != "top" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 {
 			t.Fatalf("%+v", cut)
+		}
+		// 메모 has two candidate anchors (CDS-24), so the selector measures the
+		// plate at both and at neither more, and the composition is verified
+		// exactly once before the plan is returned (CDS-52).
+		if c.calls != 2 || c.fixed != 1 || c.layouts != 1 {
+			t.Fatalf("%d measurements, %d fixed-element reads, %d verifications", c.calls, c.fixed, c.layouts)
+		}
+		// The window is CDS-27's, not the model's: cut start + 120 ms to cut end
+		// − 120 ms, which a zero start and end resolve to.
+		if start, end := cut.CaptionWindow(); start != 120 || end != 14880 {
+			t.Fatalf("caption window %d..%d", start, end)
 		}
 		request := f.calls[0]
 		if len(f.calls) != 1 || request.HasVideos() || request.HasImages() || request.MaxTokens != s.Budgets().Plan || request.Stage != llm.StageNameWrite || (request.JSONSchema != nil) != structured || !strings.Contains(request.System, `"maxLength": 500`) {
@@ -275,10 +325,12 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		if err := json.Unmarshal([]byte(request.Messages[0].Parts[0].Text), &data); err != nil || data.Answers[0].Text != in.Answers[0].Text {
 			t.Fatalf("exact answers lost: %+v %v", data, err)
 		}
-		in.Analyses[0].Segments[0].Avoid = clip.Region{}
+		// With no subject box 메모 still takes its own default anchor: the table
+		// decides, and the box only ever moves it off a subject (CDS-38).
+		in.Analyses[0].Segments[0].Subject = clip.Region{}
 		got, _, err = s.Plan(t.Context(), testRef(), in)
-		if err != nil || got.Cuts[0].Copy.Anchor != "bottom" {
-			t.Fatalf("safe model position moved: %+v %v", got, err)
+		if err != nil || got.Cuts[0].Copy.Anchor != "top" || got.Cuts[0].Copy.Align != "left" {
+			t.Fatalf("the default anchor moved: %+v %v", got, err)
 		}
 	}
 }
@@ -533,6 +585,13 @@ func TestStrictFieldsSilentSpeechCancellationAndCaptionFailure(t *testing.T) {
 	c.err = clip.ErrCopyTooLong
 	if _, usage, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, clip.ErrCopyTooLong) || usage != f.response.Usage || len(f.calls) != 1 {
 		t.Fatalf("%+v %v", usage, err)
+	}
+	// A verifier failure on the composer's own result is a composition failure
+	// with the check named, and no paid call is retried.
+	s, f, c = newService(t, raw(plan()), true)
+	c.layoutErr = clip.ErrInvalid
+	if _, _, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, clip.ErrInvalid) || len(f.calls) != 1 {
+		t.Fatalf("composition verification: %v", err)
 	}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()

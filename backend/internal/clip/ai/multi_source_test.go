@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -38,8 +39,9 @@ func TestRecordedMultiSourcePlans(t *testing.T) {
 			if err != nil || len(got.Cuts) != 4 || got.DurationMS != 15000 || got.Ratio != "vertical" {
 				t.Fatalf("recorded plan rejected: %+v %v", got, err)
 			}
-			if len(models.calls) != 1 || captions.calls != 4 || usage != response.Usage {
-				t.Fatal("lost call, caption or usage evidence")
+			// One paid call, and at most one measurement per candidate anchor.
+			if len(models.calls) != 1 || captions.calls > 2*len(got.Cuts) || captions.calls < len(got.Cuts) || usage != response.Usage {
+				t.Fatalf("lost call, caption or usage evidence: %d measurements", captions.calls)
 			}
 		})
 	}
@@ -61,12 +63,12 @@ func multiSourcePlan() (clip.PlanningInput, map[string]any) {
 		}
 		in.Analyses = append(in.Analyses, clip.SourceAnalysis{
 			Source:   clip.AnalysisSource{RenderSource: clip.RenderSource{ID: id, Fingerprint: id, Info: clip.MediaInfo{DurationMS: duration, Width: width, Height: height, HasAudio: true}}, Filename: fmt.Sprintf("synthetic-%d.mp4", i)},
-			Segments: []clip.Segment{{EndMS: duration, Event: "합성 도형이 움직인다", Subjects: []string{"도형"}, Quality: "sharp", Focal: clip.Point{X: .5, Y: .5}}},
+			Segments: []clip.Segment{{EndMS: duration, Event: "합성 도형이 움직인다", Subjects: []string{"도형"}, Quality: "sharp", Focal: clip.Point{X: .5, Y: .5}, Scene: "scenery"}},
 		})
-		cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": id, "start_ms": 0, "end_ms": lengths[i], "volume": 1,
-			"focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": fmt.Sprintf("장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "position": "bottom", "style": "memo", "accent": "amber"}})
+		cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": id, "start_ms": 0, "end_ms": lengths[i], "volume": 1, "chips": []string{},
+			"focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": "조용한 장면", "start_ms": 0, "end_ms": lengths[i], "short_text": "장면", "keyword": ""}})
 	}
-	return in, map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
+	return in, map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "여덟 장면", "cuts": cuts}
 }
 
 func TestEightShortSourcesComposeWithExactFadeTimeline(t *testing.T) {
@@ -77,18 +79,40 @@ func TestEightShortSourcesComposeWithExactFadeTimeline(t *testing.T) {
 		if err != nil || len(got.Cuts) != 8 || got.DurationMS != 15000 || got.Ratio != in.Ratio {
 			t.Fatalf("multi-source plan: %+v %v", got, err)
 		}
-		if len(models.calls) != 1 || captions.calls != 8 || usage != models.response.Usage {
-			t.Fatal("call/measurement/usage contract changed")
+		// One paid call, and at most one measurement per candidate anchor: the
+		// selector measures what it might choose, never more (CDS-38).
+		if len(models.calls) != 1 || captions.calls > 2*len(got.Cuts) || captions.calls < len(got.Cuts) || usage != models.response.Usage {
+			t.Fatalf("call/measurement/usage contract changed: %d calls, %d measurements", len(models.calls), captions.calls)
 		}
-		total := 0
+		total, dropped, styles := 0, 0, map[string]int{}
 		for i, cut := range got.Cuts {
 			total += cut.EndMS - cut.StartMS
-			if cut.SourceID != in.Analyses[i].Source.ID || cut.EndMS > in.Analyses[i].Source.Info.DurationMS || cut.Copy.Style != "memo" || cut.Copy.Accent != "amber" {
-				t.Fatal("lost source or approved styling", i)
+			if cut.SourceID != in.Analyses[i].Source.ID || cut.EndMS > in.Analyses[i].Source.Info.DurationMS {
+				t.Fatal("lost source", i)
 			}
+			// A cut too short for its copy's earned exposure carries none: CDS-41
+			// shortens, then extends, then drops, and the choice is recorded.
+			if cut.Copy.Text == "" {
+				if got.Decisions[i].Fallback != "dropped" {
+					t.Fatalf("cut %d lost its copy silently: %+v", i, got.Decisions[i])
+				}
+				dropped++
+				continue
+			}
+			if cut.Copy.Accent != "amber" || !slices.Contains(in.Template.CopyStyles, cut.Copy.Style) {
+				t.Fatalf("cut %d used %q outside the approved set", i, cut.Copy.Style)
+			}
+			styles[cut.Copy.Style]++
 		}
 		if total-200*(len(got.Cuts)-1) != got.DurationMS || models.calls[0].HasVideos() || models.calls[0].HasImages() {
 			t.Fatal("invalid timeline or non-text planning")
+		}
+		if len(styles) < 2 {
+			t.Fatalf("eight identical sentences all took one style: %v", styles)
+		}
+		// Exactly the 1200 ms cut is too short to earn its copy's exposure.
+		if dropped != 1 {
+			t.Fatalf("%d copies dropped", dropped)
 		}
 	}
 }
@@ -103,8 +127,11 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 		{"source identity", "plan_source", func(v map[string]any) { firstCut(v)["source_id"] = "private-canary" }},
 		{"duplicate cut", "plan_cut_identity", func(v map[string]any) { v["cuts"].([]any)[1].(map[string]any)["id"] = firstCut(v)["id"] }},
 		{"ratio", "plan_ratio", func(v map[string]any) { v["ratio"] = "horizontal" }},
-		{"style", "plan_style", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["style"] = "bold" }},
-		{"accent", "plan_accent", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["accent"] = "coral" }},
+		// A style or an accent is no longer part of the contract, so naming one
+		// is an unknown property, not a disallowed value.
+		{"style", "output_shape", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["style"] = "bold" }},
+		{"accent", "output_shape", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["accent"] = "coral" }},
+		{"chip label", "plan_chip_label", func(v map[string]any) { firstCut(v)["chips"] = []string{"주차"} }},
 		{"shape", "output_shape", func(v map[string]any) { v["private-canary"] = "private-canary" }},
 		{"field type", "output_field_type", func(v map[string]any) { firstCut(v)["start_ms"] = 1.5 }},
 	} {

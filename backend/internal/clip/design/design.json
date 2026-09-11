@@ -339,6 +339,33 @@
     },
     "defaults": { "chips": ["위치", "가격", "메뉴"], "cta": "blog" }
   },
+  "classes": {
+    "num_units": ["원", "분", "인", "%", "개", "시", "배"],
+    "hook_markers": ["이유", "비밀", "진짜", "솔직히", "결론", "이거"],
+    "hook_max_chars": 11,
+    "fact_max_chars": 15,
+    "fact_verb_endings": ["다", "요", "죠"]
+  },
+  "scene_styles": {
+    "food": { "NUM": "mark", "HOOK": "bold", "FACT": "memo", "DESC": "clean" },
+    "interior": { "NUM": "mark", "HOOK": "bold", "FACT": "memo", "DESC": "clean" },
+    "product": { "NUM": "mark", "HOOK": "bold", "FACT": "memo", "DESC": "clean" },
+    "exterior": { "NUM": "memo", "HOOK": "bold", "FACT": "memo", "DESC": "clean" },
+    "menu": { "NUM": "memo", "HOOK": "clean", "FACT": "memo", "DESC": "clean" },
+    "person": { "NUM": "clean", "HOOK": "bold", "FACT": "clean", "DESC": "clean" },
+    "scenery": { "NUM": "clean", "HOOK": "bold", "FACT": "memo", "DESC": "clean" }
+  },
+  "guards": {
+    "fallback": "clean",
+    "bold_max": 2,
+    "bold_first_cut": 2,
+    "run_max": 3,
+    "run_alternate": ["clean", "memo"],
+    "menu_anchors": ["top", "bottom"],
+    "subject_cover_max": 0.15,
+    "default_scene": "scenery"
+  },
+  "voice": { "banned": ["ㅋㅋ", "ㄹㅇ", "최고", "역대급"] },
   "motion": { "in_ms": 180, "in_dy": 12, "out_ms": 120, "ease": [0.22, 1, 0.36, 1] },
   "timing": {
     "sub_min_base_ms": 900,
@@ -349,7 +376,10 @@
     "end_card_s": 2.5,
     "badge_min_head_s": 3,
     "badge_min_tail_s": 3,
-    "chip_min_s": 2
+    "chip_min_s": 2,
+    "copy_lead_ms": 120,
+    "sub_extend_ms": 240,
+    "sub_occupancy_min": 0.6
   },
   "transition": { "default": "cut", "fade_ms": 200, "fade_ratio_max": 0.4 },
   "audio": {

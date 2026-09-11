@@ -235,7 +235,7 @@ func TestStylesMotionTimingTransitionAudioAndLuma(t *testing.T) {
 		t.Fatal("motion", design.Motion)
 	}
 	// CDS-41, CDS-37, CDS-28, CDS-29, CDS-5.
-	if design.Timing != (design.TimingTokens{SubMinBaseMS: 900, SubMinPerCharMS: 90, CutMinS: 1.2, CutMaxS: 6, HookCardS: 1.5, EndCardS: 2.5, BadgeMinHeadS: 3, BadgeMinTailS: 3, ChipMinS: 2}) {
+	if design.Timing != (design.TimingTokens{SubMinBaseMS: 900, SubMinPerCharMS: 90, CutMinS: 1.2, CutMaxS: 6, HookCardS: 1.5, EndCardS: 2.5, BadgeMinHeadS: 3, BadgeMinTailS: 3, ChipMinS: 2, CopyLeadMS: 120, SubExtendMS: 240, SubOccupancyMin: 0.6}) {
 		t.Fatal("timing", design.Timing)
 	}
 	// CDS-36.

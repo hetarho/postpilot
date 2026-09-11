@@ -12,4 +12,12 @@ The [Gemini structured-output contract](https://ai.google.dev/gemini-api/docs/st
 
 Production now sends only type, properties, required, items, enum and additionalProperties to the output grammar. The full embedded contracts remain in the prompts, and server parsing still checks counts, ranges, string lengths, source grounding, enums and timing before rendering. Non-clip requests, model choices, pricing, completion ceilings and retry policies are unchanged.
 
+Both recorded responses were MECHANICALLY migrated when T105 moved style and
+position out of the model's hands: each segment's keep-out box became the
+principal-subject box it was already measuring, `scene` and `readable_text` took
+their documented defaults, and each caption lost the position, style and accent
+the contract no longer asks for and gained `short_text` and `keyword`. Nothing
+else was edited, and no new paid call was made — the fixtures still pin the
+parser against real provider output, not against a hand-written response.
+
 These text fixtures can be replayed locally without a credential or a paid call: `cd backend && go test ./internal/clip/ai`. Exploratory live-call code and generated media are not shipped in the repository or run by CI.
