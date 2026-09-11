@@ -313,6 +313,18 @@ const videoTemplatesRoute = createRoute({
 const clipsRoute = createRoute({
   getParentRoute: () => videoGroupRoute,
   path: '/clips',
+  // The narrowing is an address (CLIP-41): opening a project and coming back, a reload and a
+  // shared link all keep it. Anything the list cannot honour is dropped rather than refused — a
+  // hand-edited URL should show the directory, not an error.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { q?: string; status?: 'draft' | 'refining' | 'finished' } => ({
+    q: typeof search.q === 'string' && search.q !== '' ? search.q : undefined,
+    status:
+      search.status === 'draft' || search.status === 'refining' || search.status === 'finished'
+        ? search.status
+        : undefined,
+  }),
   component: lazyRouteComponent(() => import('@/pages/clips'), 'ClipsPage'),
 })
 const newClipRoute = createRoute({

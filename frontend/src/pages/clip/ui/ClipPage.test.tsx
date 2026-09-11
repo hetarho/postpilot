@@ -65,12 +65,13 @@ describe('clip directory and setup', () => {
   it('lists the persisted metadata and navigates to a ratio-immutable project', async () => {
     const user = userEvent.setup()
     mount('/clips')
-    const list = within(await screen.findByRole('region', { name: '저장된 클립' }))
+    const list = within(await screen.findByRole('list', { name: '저장된 클립' }))
     const link = await list.findByRole('link', { name: /제주 여행/ })
+    // The row carries the badge, the template and the ratio as metadata, and a relative time
+    // (CLIP-41). The target duration lives on the project's own screen.
+    expect(link).toHaveTextContent('초안')
     expect(link).toHaveTextContent('세로 9:16')
-    expect(link).toHaveTextContent('목표 30초')
     await waitFor(() => expect(link).toHaveTextContent('여행'))
-    expect(link).toHaveTextContent('수정')
     expect(screen.getAllByRole('link', { name: '새 클립' })).toHaveLength(1)
     await user.click(link)
     expect(await screen.findByLabelText('클립 제목')).toHaveValue('제주 여행')
