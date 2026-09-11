@@ -95,13 +95,11 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 		name, code string
 		mutate     func(map[string]any)
 	}{
-		{"timeline", "plan_timeline", func(v map[string]any) { v["duration_ms"] = 15001 }},
 		{"source range", "plan_cut_range", func(v map[string]any) { firstCut(v)["end_ms"] = 5000 }},
-		{"caption time", "plan_caption_time", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["end_ms"] = 2001 }},
+		{"caption time", "plan_caption_time", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["start_ms"] = 2000 }},
 		{"source identity", "plan_source", func(v map[string]any) { firstCut(v)["source_id"] = "private-canary" }},
 		{"duplicate cut", "plan_cut_identity", func(v map[string]any) { v["cuts"].([]any)[1].(map[string]any)["id"] = firstCut(v)["id"] }},
 		{"ratio", "plan_ratio", func(v map[string]any) { v["ratio"] = "horizontal" }},
-		{"target", "plan_target_duration", func(v map[string]any) { v["duration_ms"] = 18000 }},
 		{"style", "plan_style", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["style"] = "clean" }},
 		{"accent", "plan_accent", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["accent"] = "coral" }},
 		{"shape", "output_shape", func(v map[string]any) { v["private-canary"] = "private-canary" }},

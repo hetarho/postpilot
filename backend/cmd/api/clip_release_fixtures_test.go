@@ -469,7 +469,7 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			cut["start_ms"] = 1000
 			cut["end_ms"] = 16000
 		}
-		if p.mode == "multi-source" {
+		if strings.HasPrefix(p.mode, "multi-source") {
 			lengths := []int{2000, 2000, 1000, 2400, 2300, 2300, 2200, 2200}
 			if len(analyses) != len(lengths) {
 				p.reject(w, "multi-source fixture requires eight analyses")
@@ -480,6 +480,25 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": analysis.(map[string]any)["source_id"], "start_ms": 0, "end_ms": lengths[i], "volume": 1, "focal": map[string]float64{"x": .5, "y": .5}, "caption": map[string]any{"text": fmt.Sprintf("한글 장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "position": "bottom", "style": "diary", "accent": "amber"}})
 			}
 			content.(map[string]any)["cuts"] = cuts
+			if p.mode == "multi-source-timing" {
+				// The real failing response's timing shape, with synthetic copy
+				// and source IDs. Exercise compilation through the actual queue.
+				selected := []int{0, 3, 6, 7}
+				starts, ends := []int{0, 500, 1000, 1000}, []int{3800, 4000, 4000, 4000}
+				var timingCuts []any
+				for i, index := range selected {
+					cut := cuts[index].(map[string]any)
+					cut["start_ms"], cut["end_ms"] = starts[i], ends[i]
+					caption := cut["caption"].(map[string]any)
+					caption["start_ms"], caption["end_ms"] = 400, 3600
+					if i == 0 {
+						caption["start_ms"], caption["end_ms"] = 500, 3500
+					}
+					timingCuts = append(timingCuts, cut)
+				}
+				content.(map[string]any)["cuts"] = timingCuts
+				content.(map[string]any)["duration_ms"] = 15200
+			}
 		}
 	} else {
 		p.reject(w, "wrong observation/plan budget or modality")

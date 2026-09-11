@@ -281,7 +281,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 	}
 }
 func TestPlanRejectsEveryInvalidBoundaryWithoutRepair(t *testing.T) {
-	for _, mode := range []string{"unknown source", "empty cuts", "duplicate id", "empty id", "long id", "negative start", "outside source", "backwards", "short cut", "duration mismatch", "under minimum", "over maximum", "target drift", "wrong ratio", "caption negative", "caption past cut", "caption backwards", "caption missing", "free position", "disallowed style", "disallowed accent", "free coordinates", "music", "gain over", "gain under", "gain null", "fractional"} {
+	for _, mode := range []string{"unknown source", "empty cuts", "duplicate id", "empty id", "long id", "negative start", "outside source", "backwards", "short cut", "wrong ratio", "caption negative", "caption outside cut", "caption backwards", "caption missing", "free position", "disallowed style", "disallowed accent", "free coordinates", "music", "gain over", "gain under", "gain null", "fractional"} {
 		t.Run(mode, func(t *testing.T) {
 			v := plan()
 			cut := firstCut(v)
@@ -306,21 +306,13 @@ func TestPlanRejectsEveryInvalidBoundaryWithoutRepair(t *testing.T) {
 				cut["start_ms"] = 16000
 			case "short cut":
 				cut["end_ms"] = 400
-			case "duration mismatch":
-				cut["end_ms"] = 15001
-			case "under minimum":
-				v["duration_ms"] = 14999
-			case "over maximum":
-				v["duration_ms"] = 90001
-			case "target drift":
-				v["duration_ms"] = 17000
-				cut["end_ms"] = 17000
 			case "wrong ratio":
 				v["ratio"] = "square"
 			case "caption negative":
 				caption["start_ms"] = -1
-			case "caption past cut":
-				caption["end_ms"] = 15001
+			case "caption outside cut":
+				caption["start_ms"] = 15000
+				caption["end_ms"] = 16000
 			case "caption backwards":
 				caption["start_ms"] = 14000
 			case "caption missing":

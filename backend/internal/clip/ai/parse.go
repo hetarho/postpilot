@@ -222,6 +222,9 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 		}
 		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Copy: clip.Caption{Text: *p.Text, StartMS: *p.Start, EndMS: *p.End, Position: *p.Position, Style: *p.Style, Accent: *p.Accent}})
 	}
+	if err := composeTimeline(cfg, input, &result); err != nil {
+		return clip.EditPlan{}, err
+	}
 	if err := validatePlan(cfg, input, result); err != nil {
 		return clip.EditPlan{}, err
 	}

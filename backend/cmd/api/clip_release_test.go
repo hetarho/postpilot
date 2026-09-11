@@ -151,7 +151,7 @@ func TestClipRelease(t *testing.T) {
 		t.Run("20-sources-30-minutes", func(t *testing.T) { h := newReleaseHarness(t, "success", true); h.exercise("success") })
 		return
 	}
-	for _, mode := range []string{"success", "multi-source", "seeked cut", "delayed audio", "master", "denied", "partial", "overage", "unknown usage", "malformed", "truncated", "oversized response", "save failure", "malformed last source", "oversized proxy", "disk", "unknown prices", "price drift", "legacy client", "expired quote", "changed quote", "aborted client", "restart prepare", "restart hold", "restart partial", "restart save"} {
+	for _, mode := range []string{"success", "multi-source", "multi-source-timing", "seeked cut", "delayed audio", "master", "denied", "partial", "overage", "unknown usage", "malformed", "truncated", "oversized response", "save failure", "malformed last source", "oversized proxy", "disk", "unknown prices", "price drift", "legacy client", "expired quote", "changed quote", "aborted client", "restart prepare", "restart hold", "restart partial", "restart save"} {
 		t.Run(mode, func(t *testing.T) { h := newReleaseHarness(t, mode, false); h.exercise(mode) })
 	}
 }
@@ -222,7 +222,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	st := clipstore.New(d.Writer, d.Reader)
 	projects := clip.NewService(st, config.ClipLimits())
 	objects := &releaseObjects{root: root, paths: map[string]string{}, downloads: map[string]int{}}
-	if mode == "multi-source" {
+	if strings.HasPrefix(mode, "multi-source") {
 		blob := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.URL.Query().Get("key")
 			objects.mu.Lock()
@@ -268,7 +268,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	}
 	recipe := clip.Recipe{Name: "synthetic release", InformationFields: []clip.InformationField{{Label: "place", Prompt: "where"}}, CopyStyles: []string{"clean"}}
 	ratio := "horizontal"
-	if mode == "multi-source" {
+	if strings.HasPrefix(mode, "multi-source") {
 		recipe.CopyStyles, recipe.Accent, recipe.CutGuidance, ratio = []string{"diary"}, "amber", "균등분할", "vertical"
 	}
 	template, err := projects.CreateTemplate(ctx, "release-user", recipe)
@@ -284,7 +284,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 		t.Fatal("unauthenticated access", err)
 	}
 	durations := []int{16000, 16000}
-	if mode == "multi-source" {
+	if strings.HasPrefix(mode, "multi-source") {
 		durations = []int{4290, 3744, 1480, 5010, 5108, 4508, 5428, 6702}
 	}
 	if mode == "overage" {
@@ -323,7 +323,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 			t.Fatal(e)
 		}
 		width, height := int32(1280), int32(720)
-		if mode == "multi-source" {
+		if strings.HasPrefix(mode, "multi-source") {
 			width, height = 1440, 1920
 			if i == 5 {
 				width, height = height, width
@@ -399,7 +399,7 @@ func (h *releaseHarness) fixture(root string, duration int) string {
 	// Repetition is only fixture construction, never an analysis shortcut. Each
 	// declared source is downloaded, fully decoded and encoded independently.
 	args := []string{"-hide_banner", "-nostdin", "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=1280x720:r=30", "-stream_loop", "-1", "-i", "/usr/share/postpilot-media/speech.m4a", "-t", fmt.Sprintf("%.3f", float64(duration)/1000), "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2", path}
-	if h.metrics.mode == "multi-source" {
+	if strings.HasPrefix(h.metrics.mode, "multi-source") {
 		args[7] = "color=c=blue:s=1440x1920:r=30"
 		if duration == 4508 {
 			args[7] = "color=c=blue:s=1920x1440:r=30"
@@ -614,7 +614,20 @@ func (h *releaseHarness) exercise(mode string) {
 		if got.Result == nil {
 			t.Fatal("no result")
 		}
-		if mode == "multi-source" {
+		if mode == "multi-source-timing" {
+			persisted := got.GetEditing().GetPlan()
+			if persisted.GetDurationMs() != 15000 || len(persisted.GetCuts()) != 4 {
+				t.Fatal("compiled plan was not persisted", persisted)
+			}
+			// Synthetic 30fps encoding rounds the first source to 4300ms.
+			for i, end := range []int32{4300, 4600, 4600, 4600} {
+				cut := persisted.Cuts[i]
+				if cut.EndMs != end || cut.GetCopy().GetEndMs() > cut.EndMs-cut.StartMs {
+					t.Fatal("persisted plan still has model timing errors")
+				}
+			}
+		}
+		if strings.HasPrefix(mode, "multi-source") {
 			for _, url := range []string{got.Result.ViewUrl, got.Result.DownloadUrl} {
 				response, err := http.Get(url)
 				if err != nil {
@@ -631,8 +644,11 @@ func (h *releaseHarness) exercise(mode string) {
 		h.objects.mu.Lock()
 		for i, key := range h.sourceKeys {
 			want := 1
-			if i == 0 || mode == "multi-source" {
+			if i == 0 || strings.HasPrefix(mode, "multi-source") {
 				want = 2
+			}
+			if mode == "multi-source-timing" && i != 0 && i != 3 && i != 6 && i != 7 {
+				want = 1
 			}
 			if h.objects.downloads[key] != want {
 				t.Errorf("source %d downloads=%d want=%d", i, h.objects.downloads[key], want)
@@ -689,7 +705,7 @@ func (h *releaseHarness) exercise(mode string) {
 	defer h.metrics.mu.Unlock()
 	m := h.metrics
 	workspaceLimit := 1
-	if mode == "multi-source" {
+	if strings.HasPrefix(mode, "multi-source") {
 		// Caption measurement owns a short-lived scratch workspace inside the
 		// single generation job. Older fixtures have empty captions. Count the
 		// job workspace separately so this never permits concurrent media jobs.
@@ -728,7 +744,7 @@ func (h *releaseHarness) inspectResult() {
 			return err
 		}
 		width, height := 1920, 1080
-		if h.metrics.mode == "multi-source" {
+		if strings.HasPrefix(h.metrics.mode, "multi-source") {
 			width, height = 1080, 1920
 		}
 		if info.Width != width || info.Height != height || info.DurationMS < 15000 || info.DurationMS > 15034 || !info.HasAudio {
@@ -739,8 +755,11 @@ func (h *releaseHarness) inspectResult() {
 			if h.metrics.mode == "seeked cut" {
 				originalAt += 1000
 			}
-			if h.metrics.mode == "multi-source" {
+			if strings.HasPrefix(h.metrics.mode, "multi-source") {
 				originalAt = map[int]int{700: 700, 3100: 1300, 10700: 2000}[at]
+			}
+			if h.metrics.mode == "multi-source-timing" {
+				originalAt = map[int]int{700: 700, 3100: 3100, 10700: 3700}[at]
 			}
 			x, e := releaseSpeech(h.t.Context(), h.firstFixture, originalAt)
 			if e != nil {
