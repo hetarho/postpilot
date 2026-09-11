@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SAVE_STATUS_SETTLED_MS } from '@/shared/config'
-import type { SaveState } from './draft-queue'
+import {
+  resolveSaveStatus,
+  SAVE_STATUS_LABEL_KEYS,
+  type SaveState,
+  type SaveStatusState,
+} from '@/shared/lib'
 
-/** What the status line has to say about the save, once `saved` has been allowed to settle.
- *  `quiet` is "nothing", and it is a state the queue itself does not have. */
-export type SaveStatusState = 'quiet' | 'dirty' | 'saving' | 'saved' | 'error'
+export type { SaveStatusState }
 
 /** The PRESENTATION of `SaveState`, and only that.
  *
@@ -34,14 +37,7 @@ export function useSaveStatus(state: SaveState): { state: SaveStatusState; label
     return () => clearTimeout(timer)
   }, [state])
 
-  const resolved: SaveStatusState =
-    state === 'idle' || (state === 'saved' && settled) ? 'quiet' : state
-  const label = {
-    quiet: '',
-    dirty: t('state.savePending'),
-    saving: t('action.saving'),
-    saved: t('state.saved'),
-    error: t('state.saveRetrying'),
-  }[resolved]
-  return { state: resolved, label }
+  const resolved = resolveSaveStatus(state, settled)
+  const key = SAVE_STATUS_LABEL_KEYS[resolved]
+  return { state: resolved, label: key ? t(key) : '' }
 }

@@ -16,10 +16,15 @@ export function DeleteClipProjectButton({
   ownerId,
   project,
   disabled = false,
+  onDeleted,
 }: {
   ownerId: string
   project: Pick<ClipProject, 'id'>
   disabled?: boolean
+  /** Run after the server confirms the delete and BEFORE the navigation unmounts the page. The
+   *  settings autosave queue is what has to be stopped here, and it belongs to a sibling feature
+   *  slice this one may not import (ARCH-13), so the page supplies the call. */
+  onDeleted?: () => void
 }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
@@ -37,6 +42,7 @@ export function DeleteClipProjectButton({
       return
     }
     setConfirming(false)
+    onDeleted?.()
     await navigate({ to: '/clips', replace: true })
   }
 

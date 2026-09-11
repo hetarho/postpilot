@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { useClipProject, requiredClipSources, type ClipProject } from '@/entities/clip-project'
 import { useClipCorrection, ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { useSession } from '@/entities/session'
-import { ClipProjectForm } from '@/features/edit-clip-project'
+import { ClipProjectForm, useClipDraftSave } from '@/features/edit-clip-project'
 import { DeleteClipProjectButton } from '@/features/delete-clip-project'
+import { discardClipDraftQueue } from '@/features/edit-clip-project'
 import {
   ClipApprovalAction,
   ClipCreditSettlement,
@@ -28,12 +29,7 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 import { clipStepLabel, clipSteps, stepForProject, type ClipStep } from '../model/steps'
-import {
-  ClipProgressBar,
-  ClipStatusLine,
-  type CorrectionStatus,
-  type SaveStatus,
-} from './ClipStatus'
+import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipStatus'
 
 const STEP_PANEL_ID = 'clip-step-panel'
 
@@ -87,11 +83,10 @@ function ClipStepWaiting({ message, onGo }: { message: string; onGo: () => void 
  *  bar and no delete: just the settings and the one committing action that mints it, which stays
  *  explicit because the ratio it carries can never be changed again (CLIP-9, CLIP-39). */
 function NewClip({ ownerId }: { ownerId: string }) {
-  const { t } = useTranslation('clips')
-  const [saved, setSaved] = useState(false)
-  const save: SaveStatus = { failing: false, label: saved ? t('project.saved') : '' }
   return (
     <>
+      {/* The status region is mounted before there is a project to have a status: a live region
+          inserted already holding its message announces nothing. */}
       <ClipTopRow
         status={
           <ClipStatusLine
@@ -99,11 +94,11 @@ function NewClip({ ownerId }: { ownerId: string }) {
             job={undefined}
             upload={{ phase: 'idle' }}
             correction="clean"
-            save={save}
+            save={{ failing: false, label: '' }}
           />
         }
       />
-      <ClipProjectForm ownerId={ownerId} onSaveStateChange={setSaved} />
+      <ClipProjectForm ownerId={ownerId} />
     </>
   )
 }
@@ -122,8 +117,10 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     setFollowed(derived)
     setStep(derived)
   }
-  const [saved, setSaved] = useState(false)
   const [uploadAllowed, setUploadAllowed] = useState(false)
+  // The settings' autosave is watched HERE, not inside ①: the queue outlives the panel, so a save
+  // in flight or failing has to stay on the line while the owner is on ② or ③ (CLIP-39).
+  const save = useClipDraftSave(project.id)
 
   // Every hook the workspace runs on lives HERE, above the panels: the steps are panels of ONE
   // mounted page (CLIP-36), so changing step cannot remount the upload session, restart the job
@@ -166,13 +163,11 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     : project.editPlanRevision > project.renderedPlanRevision
       ? 'unrendered'
       : 'clean'
-  const save: SaveStatus = { failing: false, label: saved ? t('project.saved') : '' }
 
   const generatePanel = (
     <ClipProjectForm
       ownerId={ownerId}
       stored={project}
-      onSaveStateChange={setSaved}
       disabled={pending}
       onUploadAllowed={setUploadAllowed}
       refusal={<ClipGenerationFailure failure={generation.failure} />}
@@ -185,7 +180,15 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           write={generation.writeRef}
           ready={ready && generation.modelsReady && !generation.busy}
           pending={generation.starting}
-          onApprove={(quote) => void generation.start(upload.readyBatch, ready, quote, ownership)}
+          // The queue is flushed BEFORE the run starts, so an approval can never be committed
+          // against settings the server has not taken (CLIP-39). A refusal stops the start; the
+          // status line is already saying the save failed.
+          onApprove={(quote) => {
+            void save
+              .flush()
+              .then(() => generation.start(upload.readyBatch, ready, quote, ownership))
+              .catch(() => undefined)
+          }}
         />
       )}
     >
@@ -291,7 +294,16 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
             save={save}
           />
         }
-        actions={<DeleteClipProjectButton ownerId={ownerId} project={project} disabled={pending} />}
+        actions={
+          <DeleteClipProjectButton
+            ownerId={ownerId}
+            project={project}
+            disabled={pending}
+            // A queue outlives its form, so a retry left running would keep saving an id the
+            // server no longer has. Stopped before the navigation unmounts the page.
+            onDeleted={() => discardClipDraftQueue(project.id)}
+          />
+        }
       />
       <SegmentedControl
         value={step}

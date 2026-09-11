@@ -17,7 +17,9 @@ import type { ContentLanguage } from '@/shared/api'
  *
  *  `error` is not terminal: a retry is already scheduled. It exists so nobody is told
  *  "저장됨" while the server holds something older. */
-export type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+import type { SaveState } from '@/shared/lib'
+
+export type { SaveState }
 
 export interface Draft {
   title: string

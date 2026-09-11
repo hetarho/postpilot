@@ -28,6 +28,8 @@ export {
 export { copyImage, copyText } from './clipboard'
 export { loadScript } from './script'
 export { prefersReducedMotion } from './motion'
+export { resolveSaveStatus, SAVE_STATUS_LABEL_KEYS } from './save-state'
+export type { SaveState, SaveStatusState } from './save-state'
 export type { BlockVisitor } from './blocks'
 export type { CopyFallbackElement, CopyImageResult } from './clipboard'
 export {

@@ -14,6 +14,7 @@ import {
 } from '@/entities/clip-project'
 import { useClipTemplates } from '@/entities/clip-template'
 import { appFailureFromConnect } from '@/shared/api'
+import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
 import {
   ActionBar,
   AppFailureMessage,
@@ -42,7 +43,6 @@ export function ClipProjectForm({
   disabled = false,
   actions,
   refusal,
-  onSaveStateChange,
 }: {
   ownerId: string
   stored?: ClipProject
@@ -51,16 +51,21 @@ export function ClipProjectForm({
   disabled?: boolean
   actions?: (ready: boolean, dirty: boolean) => ReactNode
   refusal?: ReactNode
-  onSaveStateChange?: (saved: boolean) => void
 }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
   const templates = useClipTemplates(ownerId)
-  const [draft, setDraft] = useState<ClipProjectDraft>(() =>
-    stored ? projectDraft(stored) : emptyClipProject(),
+  // A draft the queue still owes the server outranks what the server last reported: it is what
+  // the previous mount of this form was in the middle of saving when a step change unmounted it
+  // (CLIP-39). Read, not consumed — a component body may run more than once per mount.
+  const queued = stored ? peekPendingClipDraft(stored.id) : undefined
+  const [draft, setDraft] = useState<ClipProjectDraft>(
+    () => queued ?? (stored ? projectDraft(stored) : emptyClipProject()),
   )
   const [seconds, setSeconds] = useState(String(draft.targetDurationMs / 1000))
-  const [baseline, setBaseline] = useState(JSON.stringify(normalizeClipProject(draft)))
+  const [baseline, setBaseline] = useState(
+    JSON.stringify(normalizeClipProject(stored ? projectDraft(stored) : draft)),
+  )
   const { save } = useClipProjectMutations(ownerId)
   const submitting = useRef(false)
   const leaving = useRef(false)
@@ -76,7 +81,9 @@ export function ClipProjectForm({
     setSeconds(String(refreshed.targetDurationMs / 1000))
     setBaseline(storedJSON)
   }
-  const guard = () => dirty && !leaving.current
+  // `/clips/new` only. A minted project autosaves, so there is nothing to lose by leaving it —
+  // and a dialog that asks anyway is a save button in disguise (CLIP-39).
+  const guard = () => !stored && dirty && !leaving.current
   const blocker = useBlocker({
     shouldBlockFn: guard,
     enableBeforeUnload: guard,
@@ -85,23 +92,34 @@ export function ClipProjectForm({
   useEffect(() => {
     onUploadAllowed?.(valid && !dirty && synced && !pending)
   }, [valid, dirty, synced, pending, onUploadAllowed])
+  /** The queue's one way to reach the server, and the one place `baseline` moves for an autosave.
+   *  A form unmounted before the answer lands simply does not move it — the next mount derives it
+   *  from the refreshed `stored` instead. */
+  const send = async (next: ClipProjectDraft) => {
+    if (!stored) return
+    const value = await save.mutateAsync({ id: stored.id, draft: next })
+    setBaseline(JSON.stringify(normalizeClipProject(value)))
+  }
   const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) => {
-    onSaveStateChange?.(false)
-    setDraft((current) => ({ ...current, [key]: value }))
+    const next = { ...draft, [key]: value }
+    setDraft(next)
+    // An invalid draft is never sent: the server would refuse it, and the field says so itself.
+    // It stays local until it is valid again, and then goes out with everything else.
+    if (stored && validClipProject(next, selected?.informationFields))
+      queueClipDraft(stored.id, next, send)
   }
   const failure = save.error
+  /** `/clips/new`'s one committing action. An existing project has no submit — the queue saves it
+   *  a beat after each pause — and the ratio is why this one stayed explicit (CLIP-9). */
   const submit = async () => {
-    if (pending || !valid || (!dirty && stored) || submitting.current) return
+    if (pending || !valid || stored || submitting.current) return
     submitting.current = true
     try {
-      const value = await save.mutateAsync({ id: stored?.id, draft })
+      const value = await save.mutateAsync({ draft })
       setDraft(projectDraft(value))
       setBaseline(JSON.stringify(normalizeClipProject(value)))
-      onSaveStateChange?.(true)
-      if (!stored) {
-        leaving.current = true
-        await navigate({ to: '/clips/$clipId', params: { clipId: value.id }, replace: true })
-      }
+      leaving.current = true
+      await navigate({ to: '/clips/$clipId', params: { clipId: value.id }, replace: true })
     } catch {
       /* Preserve all local fields after a refusal. */
     } finally {
@@ -264,16 +282,20 @@ export function ClipProjectForm({
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-3">
-          <Button
-            form="clip-project-form"
-            type="submit"
-            variant={actions && !dirty ? 'secondary' : 'cta'}
-            className="w-full sm:w-auto"
-            pending={save.isPending}
-            disabled={!valid || (!!stored && !dirty) || pending}
-          >
-            {t(stored ? 'project.save' : 'project.create')}
-          </Button>
+          {/* Only `/clips/new` commits by hand (CLIP-39). An existing project has no 저장: the
+              queue saves it a beat after each pause and the page's one status line says so. */}
+          {!stored && (
+            <Button
+              form="clip-project-form"
+              type="submit"
+              variant="cta"
+              className="w-full sm:w-auto"
+              pending={save.isPending}
+              disabled={!valid || pending}
+            >
+              {t('project.create')}
+            </Button>
+          )}
           {actions?.(valid && !dirty && synced && !pending, dirty)}
         </div>
       </ActionBar>

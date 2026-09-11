@@ -5,6 +5,7 @@ import { renderAppAt } from '@/test/app'
 import type { FakeClipsOptions } from '@/test/clips'
 import type { ClipProjectDraft } from '@/entities/clip-project'
 import { readSourceManifest } from '@/features/upload-clip-sources'
+import { discardClipDraftQueues } from '@/features/edit-clip-project'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 
 vi.mock('@/features/upload-clip-sources/model/manifest', async (original) => ({
@@ -40,7 +41,12 @@ const mount = (path: string, clips: FakeClipsOptions = {}) =>
       ...clips,
     },
   })
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  // The settings autosave queue is module state that outlives its form on purpose (CLIP-39), so
+  // an unsent draft would leak into the next test the way it would leak into the next session.
+  discardClipDraftQueues()
+})
 async function fillSetup() {
   const user = userEvent.setup()
   await user.type(await screen.findByLabelText('클립 제목'), ' 새 경험 ')
@@ -140,15 +146,34 @@ describe('clip directory and setup', () => {
     const user = userEvent.setup()
     const title = await screen.findByLabelText('클립 제목')
     await user.type(title, ' 기록')
+    // Nothing is pressed: the settings save themselves a beat after the typing stops (CLIP-39),
+    // and the picker simply waits for the server to have them.
+    expect(screen.queryByRole('button', { name: '설정 저장' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('원본 영상 선택')).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: '설정 저장' }))
-    await screen.findByText('저장했어요')
+    expect(await screen.findByText('저장됨', undefined, { timeout: 4000 })).toBeInTheDocument()
     expect(projectWrites[0]).toMatchObject({
       title: '제주 여행 기록',
       ratio: 'vertical',
       answers: expect.arrayContaining([{ label: '이전 질문', text: '보존' }]),
     })
     expect(screen.getByLabelText('원본 영상 선택')).toBeEnabled()
+  })
+  it('lets the owner leave an autosaved project, and still guards an unminted one', async () => {
+    const user = userEvent.setup()
+    const { router, unmount } = mount('/clips/project')
+    await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
+    // No dialog: there is nothing to lose by leaving a project that saves itself (CLIP-39).
+    await user.click(screen.getByRole('link', { name: '클립 목록' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    unmount()
+
+    const created = mount('/clips/new')
+    await user.type(await screen.findByLabelText('클립 제목'), '새 클립')
+    await user.click(screen.getByRole('link', { name: '클립 목록' }))
+    // `/clips/new` is the one screen whose input is not queued anywhere yet.
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(created.router.state.location.pathname).toBe('/clips/new')
   })
   it.each(['unknown', 'foreign'])('does not expose %s project metadata', async (id) => {
     mount(`/clips/${id}`, { projects: [{ ...project, id: 'foreign', ownerId: 'bob' }] })
