@@ -35,7 +35,7 @@ func TestTemplateValidationUsesScalarsAndPreservesExactGuidance(t *testing.T) {
 	ctx := context.Background()
 	store := &memoryStore{}
 	s := clip.NewService(store, config.ClipLimits())
-	value, err := s.CreateTemplate(ctx, "owner", clip.Recipe{Name: strings.Repeat("한", 40), CutGuidance: "  Preserve exact\n안내  ", CopyStyles: []string{"clean", "diary", "emphasis"}})
+	value, err := s.CreateTemplate(ctx, "owner", clip.Recipe{Name: strings.Repeat("한", 40), CutGuidance: "  Preserve exact\n안내  ", CopyStyles: []string{"clean", "memo", "bold"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,9 @@ func TestTemplateValidationUsesScalarsAndPreservesExactGuidance(t *testing.T) {
 	if value.CutGuidance != "  Preserve exact\n안내  " {
 		t.Fatal("guidance rewritten")
 	}
-	for _, patch := range []clip.TemplatePatch{{Name: ptr("")}, {CutGuidance: ptr(strings.Repeat("한", 4001))}, {Accent: ptr("arbitrary")}, {CopyStyles: ptr([]string{})}, {InformationFields: ptr([]clip.InformationField{{Label: "x", Prompt: " "}})}} {
+	// An approved set must keep 깔끔하게 (every CDS fallback lands on it), hold no
+	// duplicate and name none of the retired style ids.
+	for _, patch := range []clip.TemplatePatch{{Name: ptr("")}, {CutGuidance: ptr(strings.Repeat("한", 4001))}, {Accent: ptr("arbitrary")}, {CopyStyles: ptr([]string{})}, {CopyStyles: ptr([]string{"memo", "bold"})}, {CopyStyles: ptr([]string{"clean", "clean"})}, {CopyStyles: ptr([]string{"clean", "diary"})}, {InformationFields: ptr([]clip.InformationField{{Label: "x", Prompt: " "}})}} {
 		if _, err := s.UpdateTemplate(ctx, "owner", value.ID, patch); !errors.Is(err, clip.ErrInvalid) {
 			t.Fatalf("invalid patch accepted: %+v %v", patch, err)
 		}

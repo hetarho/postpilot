@@ -16,6 +16,7 @@ import (
 	"unicode"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/rivo/uniseg"
 	"golang.org/x/image/font/sfnt"
 )
@@ -26,8 +27,12 @@ const fontFamily = "Pretendard Variable"
 type CopyRecipe struct{ FontSize, MinFontSize, Weight, Padding, Radius int }
 
 // Mirrored by entities/clip-template/model/types.ts; tested against that source.
+// The four CDS-22 style ids. T102 renamed them and gave 형광펜 its t.mark size
+// (CDS-19); drawing each style to CDS-23..26 is T103's, which takes its tokens
+// from the design package instead of this table.
 var copyRecipes = map[string]CopyRecipe{
-	"clean": {54, 36, 600, 28, 24}, "diary": {44, 32, 600, 22, 16}, "emphasis": {76, 48, 800, 24, 0},
+	"clean": {54, 36, 600, 28, 24}, "memo": {44, 32, 600, 22, 16},
+	"bold": {76, 48, 800, 24, 0}, "mark": {60, 52, 800, 24, 0},
 }
 var accentColors = map[string]string{"coral": "#ff6b5f", "amber": "#ffb23f", "lime": "#b8d94a", "teal": "#43c5b5", "blue": "#5b8def", "violet": "#8b6fe8", "pink": "#e96aae"}
 
@@ -40,7 +45,7 @@ type Rendering struct {
 var _ clip.Renderer = (*Rendering)(nil)
 
 func NewRenderer(media *Adapter, cfg clip.RenderConfig) (*Rendering, error) {
-	if media == nil || cfg.FadeMS != 200 || cfg.FPS != 30 || cfg.MaxCuts <= 0 || cfg.MaxCopyRunes <= 0 || cfg.MinDurationMS != 15000 || cfg.MaxDurationMS != 90000 || !filepath.IsAbs(cfg.ResvgPath) || !filepath.IsAbs(cfg.FontPath) {
+	if media == nil || cfg.FadeMS != design.Transition.FadeMS || cfg.FPS != 30 || cfg.MaxCuts <= 0 || cfg.MaxCopyRunes <= 0 || cfg.MinDurationMS != 15000 || cfg.MaxDurationMS != 90000 || !filepath.IsAbs(cfg.ResvgPath) || !filepath.IsAbs(cfg.FontPath) {
 		return nil, errors.New("invalid clip renderer configuration")
 	}
 	info, err := os.Lstat(cfg.FontPath)
@@ -204,7 +209,7 @@ func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[
 			height += float64((len(lines)-1)*size) / 4
 			width += float64(2 * recipe.Padding)
 			height += float64(2 * recipe.Padding)
-			region, err := clip.PlaceCopy(canvas, c.Position, math.Ceil(width), math.Ceil(height))
+			region, err := clip.PlaceCopy(canvas, c.Anchor, c.Align, math.Ceil(width), math.Ceil(height))
 			if err == nil && width < bestWidth {
 				best = copyLayout{lines, scaled, region, size, recipe}
 				bestWidth = width
@@ -220,13 +225,18 @@ func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[
 	}
 	return copyLayout{}, clip.ErrCopyTooLong
 }
+
+// 크게 강조 and 형광펜 carry no plate (CDS-25, CDS-26); their stroke and scrim
+// treatment is T103's.
+func plated(style string) bool { return design.Styles[style].Plate != "" }
+
 func copySVG(canvas clip.Canvas, c clip.Copy, l copyLayout) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">`, canvas.Width, canvas.Height)
 	p := l.Region
-	if c.Style != "emphasis" {
+	if plated(c.Style) {
 		fill, opacity := "#19171c", "0.78"
-		if c.Style == "diary" {
+		if c.Style == "memo" {
 			fill, opacity = "#fff4d9", "1"
 		}
 		fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%d" fill="%s" fill-opacity="%s"/>`, p.X, p.Y, p.Width, p.Height, l.Recipe.Radius, fill, opacity)
@@ -240,10 +250,10 @@ func copySVG(canvas clip.Canvas, c clip.Copy, l copyLayout) string {
 		x := p.X + (p.Width-bounds.Width)/2 - bounds.X
 		y := top - bounds.Y
 		fill, stroke, strokeWidth := "#ffffff", "none", 0
-		if c.Style == "diary" {
+		if c.Style == "memo" {
 			fill = "#19171c"
 		}
-		if c.Style == "emphasis" {
+		if !plated(c.Style) {
 			stroke = "#19171c"
 			strokeWidth = 8
 		}

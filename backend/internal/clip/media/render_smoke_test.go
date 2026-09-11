@@ -50,7 +50,7 @@ func TestRenderSmoke(t *testing.T) {
 			t.Fatal("variable font weight was ignored")
 		}
 		canvas, _ := clip.ClipCanvas("vertical")
-		plate, err := r.copyPlate(t.Context(), ws, canvas, clip.Copy{Text: "한글 여행", Style: "clean", Position: "bottom"}, 0)
+		plate, err := r.copyPlate(t.Context(), ws, canvas, clip.Copy{Text: "한글 여행", Style: "clean", Anchor: "bottom", Align: "center"}, 0)
 		if err != nil {
 			return err
 		}
@@ -120,9 +120,9 @@ func TestRenderSmoke(t *testing.T) {
 					sources = append(sources, clip.RenderSource{ID: id, Fingerprint: id, Info: infos[id]})
 				}
 				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, Cuts: []clip.EditCut{
-					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "정확한 한글 & 여행", Style: "clean", Position: "bottom", Accent: "coral"}},
-					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copy: clip.Copy{Text: "기록처럼 <오늘>", Style: "diary", Position: "top", Accent: "teal"}},
-					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "emphasis", Position: "center", Accent: "amber"}},
+					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}},
+					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copy: clip.Copy{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "top", Align: "left", Accent: "teal"}},
+					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "lower_mid", Align: "center", Accent: "amber"}},
 				}}
 				if variant == "silent-rounded" || variant == "audio-rounded" {
 					plan.DurationMS = 15017

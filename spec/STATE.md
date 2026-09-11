@@ -25,7 +25,8 @@
 | THEME | 10 | 10 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 4 | 4 | - | 0 |
+| CLIP | 6 | 6 | - | 0 |
+| CDS | 1 | 1 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -37,11 +38,31 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
+| T103 | Four copy styles, entrance and exit motion, the layout manifest and the verifier | CDS CLIP LANG | - | todo |
+| T104 | Disclosure badge, information chips, category presets and the project's facts | CDS CLIP LANG | - | todo |
+| T105 | Deterministic composition: scene-aware analysis, sentence classes, style and anchor selection, exposure and grounding | CDS CLIP | T103 T104 | todo |
+| T106 | The clip surfaces speak the design system: four styles, anchors, presets, disclosure and CTA | CDS CLIP THEME LANG | T104 | todo |
+| T107 | Hook and ending cards, the Paperlogy face and brightness-aware scrims | CDS CLIP | T105 T106 | todo |
+| T108 | Conditional transitions and loudness normalisation | CDS CLIP | T105 T106 | todo |
+| T109 | Two sequential copies on a long cut | CDS CLIP | T108 | todo |
+| T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T107 T108 | todo |
+| T111 | Vendor-neutral clip-analysis qualification and strict routing | CLIP QUOTA VIDEO MODEL LANG ARCH | - | todo |
+| T112 | Clip-analysis model eligibility picker | CLIP LANG ARCH | T111 | todo |
 
 ## next
-- the CLIP r4 + THEME r10 unification is complete (T097–T101), so `ClipTemplateEditor` is free: the CDS task that adds the category preset and the four styles builds on its new shape rather than waiting on it
+- implement-task T103 (four styles, motion, layout manifest, verifier) then T104 in either order, T105 → T106 → T107 · T108 → T109; T110 needs the owner with the Naver app and closes CDS-11. T111 → T112 are independent of this chain
+- T102 landed the design package: every following CDS task reads `backend/internal/clip/design` and its byte-identical mirror `frontend/src/shared/config/clip-design.json`, never a literal. The renderer still draws the pre-CDS three plates under the four new ids and its own accent hexes (T103 owns both), and the clip surfaces still have no preset, alignment control, disclosure or CTA (T106's)
 - T008 needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job; once it closes, update-ssot PUB for VIDEO-17 + TMPL-39
 ## log
+- 260911 T102 done (cds); one embedded `design.json` (+ byte-identical FE mirror) pins every CDS constant, `Caption` speaks anchors/alignments and the four style ids, migration 0041 and a read-time token belt carry every stored plan and template over, and `ValidateEditPlan` enforces the per-style line/char limits and CDS-41 exposure; 16:9/1:1 LEFT·RIGHT·CENTER and their scrim rectangles are derived from CDS-47/48's stated numbers (in the task result), and CDS-23's "26 total" vs 2 × 14 wants an update-ssot
+- 260911 create-task CLIP done (prov); CLIP r6 → T111 vendor-neutral backend qualification/routing · T112 clip picker/reasons; CLIP tasked=6; T111 is independent of T102
+- 260911 update-ssot TMPL POST start (len)
+- 260911 create-task CLIP start (prov)
+- 260911 update-ssot CLIP done (prov); r6 removes provider/model-family admission allowlists, qualifies every registered video-input observer by current inline endpoint/request/price compatibility, and gives ineligible models a stable reason; T102 is unaffected
+- 260911 update-ssot CLIP start (prov)
+- 260911 T102 claimed (cds)
+- 260911 create-task CDS done (dsgn); CDS r1 + CLIP r5 → T102 vocabulary/constants · T103 styles/motion/verifier · T104 badge/chips/presets/facts · T105 deterministic composition · T106 FE · T107 cards/Paperlogy/scrims · T108 transitions/loudness · T109 two copies · T110 Naver QA; CDS tasked=1, CLIP tasked=5; CDS-41's regenerate-twice is read as an in-call short_text alternative (no unplanned paid call) — owner to confirm or return via update-ssot
+- 260911 create-task CDS start (dsgn); CDS r1 (all) + CLIP r5 delta CLIP-4✎ 13✎ 14✎ 15✎ 16✎ 18✎ 28✎; T101 shares ClipTemplateEditor with the preset/style task
 - 260911 T101 done (tpl); 영상 템플릿 목록·상세가 글 템플릿 화면 모양으로, 삭제는 행으로 옮기며 연결 해제 수를 삭제 전에 경고; `clipDetachedCount` 라우터 상태 제거; locale parity 테스트가 en 누락을 잡음
 - 260911 T101 claimed (tpl); the dsgn session confirmed no CDS code task exists and is touching no code, so this takes `ClipTemplateEditor.tsx` first
 - 260911 T100 done (dir); `/clips` takes the post list's rows, badge, relative time and URL-carried search/filter; `ListControls` lifted into `shared/ui` and `filter-posts` rewired onto it unchanged; the badge reads the job first, the filter reads the state only
@@ -52,9 +73,4 @@
 - 260911 T098 claimed (auto)
 - 260911 T097 done (wksp); three steps from durable state, editor top row, one status region with CLIP-38's precedence, one dock per step, delete as its own slice; the bar follows the project's state and a failed attempt opens on its retry step, and the unsaved-correction guard moved up to the page; full FE gate green
 - 260911 T097 claimed (wksp)
-- 260911 create-task CLIP THEME merged (unif); a parallel session's CLIP r5 + CDS r1 landed mid-run in the shared tree, so T097..T101 were rebased to CLIP@5 and T101 took `ClipTemplateEditor` first; this commit carries the r4 delta only — the r5 ✎ lines and the CDS rows stay with that session
-- 260911 create-task CLIP THEME done (unif); r4+r10 → T097 workspace shape · T098 settings autosave · T099 BE list latest job · T100 `/clips` rows and narrowing · T101 영상 템플릿 screens; CLIP tasked=4, THEME tasked=10; no proto change and CLIP-9's fixed ratio untouched
-- 260911 create-task CLIP THEME start (unif); CLIP r4 delta CLIP-36+ 37+ 38+ 39+ 40+ 41+ 42+ CLIP-17✎ and THEME r10 THEME-39+
-- 260911 update-ssot CLIP THEME done (unif); THEME-39 makes the lifecycle shape a product rule, CLIP r4 adopts it on all five clip surfaces; owner chose 3 steps, autosave, the full post list and the 영상 템플릿 screens in scope, with 클립 만들기 kept on `/clips/new` so CLIP-9's fixed ratio and the BE's ratio-less patch stand
-- 260911 update-ssot CLIP THEME start (unif); the clip working surface and directory diverge from the post editor's step bar, one status region, one dock and row shape
-- 260911 T096 done; original failure reproduced and fixed by bounded deterministic timeline compilation; real 15s MP4 and authenticated queue/storage/download verified; e850fa8 pushed, CI 34549381300 and deployment 34549381321 pass, exact production image healthy; reported paid total USD 0.020052
+- 260911 create-task CLIP THEME merged (unif); the dsgn session's CLIP r5 + CDS r1 landed mid-run — CLIP is now 5/4 with only the r5 ✎ delta pending, T097..T101 rebased to CLIP@5, and T101 shares `ClipTemplateEditor` with the coming CDS work (category preset CLIP-4✎, four styles CLIP-14✎) so the two must be serialized

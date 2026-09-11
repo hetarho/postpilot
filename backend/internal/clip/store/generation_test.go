@@ -193,7 +193,7 @@ func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.Planning
 		return clip.EditPlan{}, llm.Usage{}, p.errorPlan
 	}
 	s := in.Analyses[0].Source
-	return clip.EditPlan{Ratio: in.Ratio, DurationMS: in.TargetDurationMS, Cuts: []clip.Cut{{ID: "cut", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: in.TargetDurationMS, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "서울", Style: "clean", Position: "bottom"}}}}, llm.Usage{}, nil
+	return clip.EditPlan{Ratio: in.Ratio, DurationMS: in.TargetDurationMS, Cuts: []clip.Cut{{ID: "cut", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: in.TargetDurationMS, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "서울", Style: "clean", Anchor: "bottom", Align: "center"}}}}, llm.Usage{}, nil
 }
 
 type rendererFake struct {

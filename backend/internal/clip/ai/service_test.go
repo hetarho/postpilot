@@ -73,7 +73,7 @@ func observation() map[string]any {
 	return map[string]any{"source_id": "source", "chunk_index": 1, "segments": []any{map[string]any{"start_ms": 0, "end_ms": 5000, "event": "음식을 담는다", "subjects": []string{"접시"}, "speech": "", "quality": "steady and sharp", "focal": map[string]any{"x": .5, "y": .5}, "avoid": map[string]any{"x": .2, "y": .6, "width": .6, "height": .3}}}}
 }
 func planningInput() clip.PlanningInput {
-	return clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", CopyStyles: []string{"clean", "diary"}, Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Avoid: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}}}}}}
+	return clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", CopyStyles: []string{"clean", "memo"}, Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Avoid: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}}}}}}
 }
 func plan() map[string]any {
 	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": []any{map[string]any{"id": "cut-one", "source_id": "source", "start_ms": 0, "end_ms": 15000, "focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": "정확한 한글 & 여행", "start_ms": 1000, "end_ms": 14000, "position": "bottom", "style": "clean", "accent": "coral"}}}}
@@ -258,7 +258,9 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 			t.Fatalf("%+v %v", got, err)
 		}
 		cut := got.Cuts[0]
-		if cut.Copy.Position != "top" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 || cut.Copy.StartMS != 1000 || cut.Copy.EndMS != 14000 || c.calls != 1 {
+		// One anchor step down from the model's BOTTOM, which is as far as CDS-38
+		// lets consecutive placement move, and clear of the avoid region.
+		if cut.Copy.Anchor != "lower_mid" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 || cut.Copy.StartMS != 1000 || cut.Copy.EndMS != 14000 || c.calls != 1 {
 			t.Fatalf("%+v", cut)
 		}
 		request := f.calls[0]
@@ -275,7 +277,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		}
 		in.Analyses[0].Segments[0].Avoid = clip.Region{}
 		got, _, err = s.Plan(t.Context(), testRef(), in)
-		if err != nil || got.Cuts[0].Copy.Position != "bottom" {
+		if err != nil || got.Cuts[0].Copy.Anchor != "bottom" {
 			t.Fatalf("safe model position moved: %+v %v", got, err)
 		}
 	}
@@ -320,7 +322,7 @@ func TestPlanRejectsEveryInvalidBoundaryWithoutRepair(t *testing.T) {
 			case "free position":
 				caption["position"] = "anywhere"
 			case "disallowed style":
-				caption["style"] = "emphasis"
+				caption["style"] = "bold"
 			case "disallowed accent":
 				caption["accent"] = "blue"
 			case "free coordinates":
@@ -488,6 +490,9 @@ func TestPlanTwentySourcesNinetySecondsAndDistinctRangeReuse(t *testing.T) {
 		c["source_id"] = fmt.Sprintf("source-%d", i%20)
 		c["end_ms"] = 1098
 		p := c["caption"].(map[string]any)
+		// A 1098 ms cut pays for two characters of exposure and no more (CDS-41);
+		// this fixture is about a hundred cuts and ninety seconds, not about copy.
+		p["text"] = "여행"
 		p["start_ms"] = 0
 		p["end_ms"] = 1098
 		if i == 0 {

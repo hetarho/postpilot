@@ -140,9 +140,9 @@ it('keeps the result mounted across every edit and saves exact fields with its r
   change('자막 끝 (컷 내 ms)', '2000')
   change('원본 소리 (%)', '25')
   await userEvent.click(cut().getByRole('combobox', { name: /자막 위치/ }))
-  await userEvent.click(screen.getByRole('option', { name: '가운데' }))
+  await userEvent.click(screen.getByRole('option', { name: '아래쪽 중간' }))
   await userEvent.click(cut().getByRole('combobox', { name: /자막 스타일/ }))
-  await userEvent.click(screen.getByRole('option', { name: '기록처럼' }))
+  await userEvent.click(screen.getByRole('option', { name: '메모' }))
   await userEvent.click(cut().getByRole('combobox', { name: /강조 색상/ }))
   await userEvent.click(screen.getByRole('option', { name: '청록' }))
   await userEvent.click(screen.getAllByRole('button', { name: '아래로 이동' })[0]!)
@@ -163,8 +163,11 @@ it('keeps the result mounted across every edit and saves exact fields with its r
           volumePermille: 250,
           copy: {
             text: '정확한 한국어 <copy>',
-            style: 'diary',
-            position: 'center',
+            style: 'memo',
+            // The anchor the wire calls `position`; it round-trips through the
+            // proto mapper on the way back, so a lost mapping fails here.
+            anchor: 'lower_mid',
+            align: 'center',
             accent: 'teal',
             startMs: 200,
             endMs: 2000,

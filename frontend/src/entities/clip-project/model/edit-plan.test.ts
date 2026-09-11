@@ -30,8 +30,8 @@ it('immutably edits every field, reorders/deletes and recalculates fade overlap'
         text: '정확한 <문구>',
         startMs: 200,
         endMs: 3000,
-        position: 'center',
-        style: 'diary',
+        anchor: 'lower_mid',
+        style: 'memo',
         accent: 'teal',
       },
     },
@@ -140,6 +140,7 @@ it('accepts muted/full source audio and refuses a non-approved style', () => {
   const state = clipEditingFixture()
   state.plan.cuts[0]!.volumePermille = 0
   expect(validateClipPlan(state.plan, state).valid).toBe(true)
-  state.copyStyles = ['diary']
+  state.copyStyles = ['clean', 'memo']
+  state.plan.cuts[0]!.copy.style = 'bold'
   expect(validateClipPlan(state.plan, state).cuts[0]!.style).toBe(true)
 })

@@ -6,7 +6,9 @@ export const CLIP_TEMPLATE_LIMITS = {
   prompt: 200,
 } as const
 
-export const COPY_STYLES = ['clean', 'diary', 'emphasis'] as const
+/** The four CDS copy styles, one per role: clean 깔끔하게 narrative, memo 메모 fact,
+ *  bold 크게 강조 emotion and hook, mark 형광펜 one number or keyword. */
+export const COPY_STYLES = ['clean', 'memo', 'bold', 'mark'] as const
 export type CopyStyle = (typeof COPY_STYLES)[number]
 export const CLIP_ACCENTS = [
   '',
@@ -37,12 +39,18 @@ export interface ClipTemplate extends ClipRecipe {
   updatedAt: string
 }
 
-// Canvas-space measurements mirrored by the deterministic renderer (T074).
+// Canvas-space measurements mirrored by the deterministic renderer (T074). The
+// authoritative type scale now lives in shared/config/clip-design.json; T103
+// takes the preview and the renderer onto it when it draws the four styles.
 export const COPY_STYLE_MEASUREMENTS = {
   clean: { fontSize: 54, minFontSize: 36, weight: 600, padding: 28, radius: 24 },
-  diary: { fontSize: 44, minFontSize: 32, weight: 600, padding: 22, radius: 16 },
-  emphasis: { fontSize: 76, minFontSize: 48, weight: 800, padding: 24, radius: 0 },
+  memo: { fontSize: 44, minFontSize: 32, weight: 600, padding: 22, radius: 16 },
+  bold: { fontSize: 76, minFontSize: 48, weight: 800, padding: 24, radius: 0 },
+  mark: { fontSize: 60, minFontSize: 52, weight: 800, padding: 24, radius: 0 },
 } as const
+
+/** An unplated style paints its text with a stroke instead of a box (CDS-25, CDS-26). */
+export const PLATED_COPY_STYLES: readonly CopyStyle[] = ['clean', 'memo']
 
 export function emptyClipRecipe(): ClipRecipe {
   return { name: '', informationFields: [], cutGuidance: '', copyStyles: ['clean'], accent: '' }
@@ -86,6 +94,9 @@ export function validateClipRecipe(value: ClipRecipe) {
     fieldCount: recipe.informationFields.length > CLIP_TEMPLATE_LIMITS.fields,
     styles:
       recipe.copyStyles.length === 0 ||
+      // Every CDS fallback lands on 깔끔하게, so an approved set without it
+      // cannot render; the server refuses one too.
+      !recipe.copyStyles.includes('clean') ||
       new Set(recipe.copyStyles).size !== recipe.copyStyles.length ||
       recipe.copyStyles.some((v) => !COPY_STYLES.includes(v)),
     accent: !CLIP_ACCENTS.includes(recipe.accent),

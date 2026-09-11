@@ -1,0 +1,235 @@
+{
+  "ratios": {
+    "vertical": {
+      "canvas": { "width": 1080, "height": 1920 },
+      "safe": { "x": 64, "y": 250, "width": 856, "height": 1170 },
+      "anchor": {
+        "top": 290,
+        "upper_mid": 700,
+        "lower_mid": 1100,
+        "bottom": 1380,
+        "left": 96,
+        "center": 540,
+        "right": 888
+      },
+      "copy_max_width": 856,
+      "hook_size": 84,
+      "hook_card": { "width": 792, "center_y": 840 },
+      "end_card": { "width": 792, "center_y": 1040 },
+      "chip": { "x": 96, "y": 290, "max_width": 600, "columns": 1 },
+      "badge": { "right": 888, "top": 270 },
+      "scrim_top": { "x": 0, "y": 250, "width": 1080, "height": 310 },
+      "scrim_bottom": { "x": 0, "y": 1040, "width": 1080, "height": 380 }
+    },
+    "horizontal": {
+      "canvas": { "width": 1920, "height": 1080 },
+      "safe": { "x": 96, "y": 72, "width": 1728, "height": 936 },
+      "anchor": {
+        "top": 112,
+        "upper_mid": 420,
+        "lower_mid": 660,
+        "bottom": 968,
+        "left": 96,
+        "center": 960,
+        "right": 1824
+      },
+      "copy_max_width": 960,
+      "hook_size": 72,
+      "hook_card": { "width": 1120, "center_y": 540 },
+      "end_card": { "width": 1120, "center_y": 540 },
+      "chip": { "x": 96, "y": 112, "max_width": 600, "columns": 2 },
+      "badge": { "right": 1824, "top": 92 },
+      "scrim_top": { "x": 0, "y": 72, "width": 1920, "height": 200 },
+      "scrim_bottom": { "x": 0, "y": 748, "width": 1920, "height": 260 }
+    },
+    "square": {
+      "canvas": { "width": 1080, "height": 1080 },
+      "safe": { "x": 64, "y": 72, "width": 952, "height": 936 },
+      "anchor": {
+        "top": 112,
+        "upper_mid": 420,
+        "lower_mid": 660,
+        "bottom": 968,
+        "left": 64,
+        "center": 540,
+        "right": 1016
+      },
+      "copy_max_width": 952,
+      "hook_size": 76,
+      "hook_card": { "width": 880, "center_y": 540 },
+      "end_card": { "width": 880, "center_y": 560 },
+      "chip": { "x": 64, "y": 112, "max_width": 600, "columns": 1 },
+      "badge": { "right": 1016, "top": 92 },
+      "scrim_top": { "x": 0, "y": 72, "width": 1080, "height": 200 },
+      "scrim_bottom": { "x": 0, "y": 748, "width": 1080, "height": 260 }
+    }
+  },
+  "safe_naver_estimate": { "x": 64, "y": 230, "width": 866, "height": 1210 },
+  "overlay_estimate": {
+    "top": 230,
+    "bottom": 1440,
+    "right": 930,
+    "right_from_y": 1000,
+    "left": 64
+  },
+  "type": {
+    "hook": {
+      "size": 84,
+      "min": 72,
+      "face": "paperlogy",
+      "weight": 800,
+      "tracking": -0.02,
+      "line_height": 1.15,
+      "chars": 9
+    },
+    "title": {
+      "size": 72,
+      "min": 64,
+      "face": "pretendard",
+      "weight": 800,
+      "tracking": -0.02,
+      "line_height": 1.2,
+      "chars": 11
+    },
+    "mark": {
+      "size": 60,
+      "min": 52,
+      "face": "pretendard",
+      "weight": 800,
+      "tracking": -0.01,
+      "line_height": 1.3,
+      "chars": 0
+    },
+    "body": {
+      "size": 56,
+      "min": 48,
+      "face": "pretendard",
+      "weight": 700,
+      "tracking": -0.01,
+      "line_height": 1.3,
+      "chars": 14
+    },
+    "caption": {
+      "size": 44,
+      "min": 40,
+      "face": "pretendard",
+      "weight": 600,
+      "tracking": 0,
+      "line_height": 1.3,
+      "chars": 18
+    },
+    "label": {
+      "size": 36,
+      "min": 34,
+      "face": "pretendard",
+      "weight": 600,
+      "tracking": 0.02,
+      "line_height": 1.2,
+      "chars": 0
+    },
+    "badge": {
+      "size": 40,
+      "min": 40,
+      "face": "pretendard",
+      "weight": 700,
+      "tracking": 0.02,
+      "line_height": 1,
+      "chars": 0
+    }
+  },
+  "color": {
+    "ink_900": { "hex": "#111111", "alpha": 0.72 },
+    "ink_900s": { "hex": "#111111", "alpha": 0.88 },
+    "paper_50": { "hex": "#FFFCF5", "alpha": 0.94 },
+    "text_white": { "hex": "#FFFFFF", "alpha": 1 },
+    "text_ink": { "hex": "#1A1A1A", "alpha": 1 },
+    "text_muted": { "hex": "#FFFFFF", "alpha": 0.72 },
+    "stroke_dark": { "hex": "#0B0B0B", "alpha": 0.85 },
+    "badge_ad": { "hex": "#111111", "alpha": 0.8 }
+  },
+  "shadow": {
+    "text": { "hex": "#000000", "alpha": 0.55, "blur": 12, "dx": 0, "dy": 4 },
+    "card": { "hex": "#000000", "alpha": 0.35, "blur": 32, "dx": 0, "dy": 8 }
+  },
+  "scrim": {
+    "top": { "hex": "#000000", "from": 0.45, "to": 0 },
+    "bottom": { "hex": "#000000", "from": 0, "to": 0.55 }
+  },
+  "accent": {
+    "coral": "#FF6B57",
+    "amber": "#FFB020",
+    "lime": "#9BD53A",
+    "teal": "#2BB8A6",
+    "blue": "#3D7BFF",
+    "violet": "#8A63FF",
+    "pink": "#FF6FB5"
+  },
+  "spacing": {
+    "pad_box": { "v": 22, "h": 32 },
+    "pad_chip": { "v": 12, "h": 20 },
+    "gap_stack": 16,
+    "gap_chip": 12,
+    "radius_box": 16,
+    "radius_chip": 999,
+    "radius_card": 24,
+    "bar_accent": 8,
+    "stroke_text": 6,
+    "underline_mark": { "height_em": 0.42, "raise_em": 0.28, "extend": 6 }
+  },
+  "styles": {
+    "clean": {
+      "type": "body",
+      "plate": "ink_900",
+      "lines": 2,
+      "chars": 14,
+      "anchor": "bottom",
+      "anchor_alt": "",
+      "align": "center"
+    },
+    "memo": {
+      "type": "caption",
+      "plate": "paper_50",
+      "lines": 1,
+      "chars": 18,
+      "anchor": "top",
+      "anchor_alt": "bottom",
+      "align": "left"
+    },
+    "bold": {
+      "type": "title",
+      "plate": "",
+      "lines": 2,
+      "chars": 11,
+      "anchor": "upper_mid",
+      "anchor_alt": "lower_mid",
+      "align": "center"
+    },
+    "mark": {
+      "type": "mark",
+      "plate": "",
+      "lines": 1,
+      "chars": 16,
+      "anchor": "bottom",
+      "anchor_alt": "",
+      "align": "center"
+    }
+  },
+  "motion": { "in_ms": 180, "in_dy": 12, "out_ms": 120, "ease": [0.22, 1, 0.36, 1] },
+  "timing": {
+    "sub_min_base_ms": 900,
+    "sub_min_per_char_ms": 90,
+    "cut_min_s": 1.2,
+    "cut_max_s": 6,
+    "hook_card_s": 1.5,
+    "end_card_s": 2.5,
+    "badge_min_head_s": 3,
+    "badge_min_tail_s": 3
+  },
+  "transition": { "default": "cut", "fade_ms": 200, "fade_ratio_max": 0.4 },
+  "audio": {
+    "loudnorm": { "i": -16, "tp": -1.5, "lra": 11 },
+    "crossfade_ms": 60,
+    "hook_dip_db": -6
+  },
+  "luma": { "scrim_threshold": 0.6, "sigma_threshold": 0.25 }
+}

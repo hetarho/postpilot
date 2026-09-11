@@ -63,7 +63,41 @@ func strictJSON(raw string, out any) error {
 	}
 	return nil
 }
+
+// The exact tokens migration 0041 rewrites, applied again on read. `encoding/json`
+// emits no whitespace and each token carries its own quotes and key, so a caption's
+// own text can never match one: a `"` inside text is escaped as `\"`. This is a belt
+// for the window between the binary swap and the migration — and for a plan written
+// by the old binary in it — never the authority.
+var legacyPlanTokens = [][2]string{
+	{`"Style":"diary"`, `"Style":"memo"`},
+	{`"Style":"emphasis"`, `"Style":"bold"`},
+	// The plan freezes the template's approved set as a bare JSON array, so those
+	// elements carry no key. Each token holds the structural character on BOTH
+	// sides instead: a `[`, `,` or `]` beside a quote cannot occur inside an
+	// encoded string, while a bare `"diary"` would also match a caption whose
+	// text is the word diary.
+	{`["diary",`, `["memo",`},
+	{`,"diary",`, `,"memo",`},
+	{`,"diary"]`, `,"memo"]`},
+	{`["diary"]`, `["memo"]`},
+	{`["emphasis",`, `["bold",`},
+	{`,"emphasis",`, `,"bold",`},
+	{`,"emphasis"]`, `,"bold"]`},
+	{`["emphasis"]`, `["bold"]`},
+	{`"Position":"center"`, `"Position":"lower_mid"`},
+	// The key rename carries the alignment the old vocabulary had no field for.
+	{`"Position":"`, `"Align":"center","Anchor":"`},
+}
+
+func migrateStoredPlan(raw string) string {
+	for _, t := range legacyPlanTokens {
+		raw = strings.ReplaceAll(raw, t[0], t[1])
+	}
+	return raw
+}
 func DecodeEditPlan(raw string) (EditPlan, []string, error) {
+	raw = migrateStoredPlan(raw)
 	var marker struct{ Version int }
 	if json.Unmarshal([]byte(raw), &marker) != nil {
 		return EditPlan{}, nil, ErrInvalid

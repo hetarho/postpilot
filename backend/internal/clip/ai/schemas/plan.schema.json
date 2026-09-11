@@ -26,8 +26,8 @@
               "text": { "type": "string", "maxLength": 500 },
               "start_ms": { "type": "integer", "minimum": 0 },
               "end_ms": { "type": "integer", "minimum": 1 },
-              "position": { "type": "string", "enum": ["top", "center", "bottom"] },
-              "style": { "type": "string", "enum": ["clean", "diary", "emphasis"] },
+              "position": { "type": "string", "enum": ["top", "upper_mid", "lower_mid", "bottom"] },
+              "style": { "type": "string", "enum": ["clean", "memo", "bold", "mark"] },
               "accent": { "type": "string", "enum": ["", "coral", "amber", "lime", "teal", "blue", "violet", "pink"] }
             }
           }

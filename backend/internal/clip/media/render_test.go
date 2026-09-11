@@ -69,8 +69,8 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 	canvas, _ := clip.ClipCanvas("vertical")
 	text := `한글 & <여행>`
 	bounds := map[string]clip.Region{text: {X: 1, Y: -80, Width: 500, Height: 100}}
-	for _, style := range []string{"clean", "diary", "emphasis"} {
-		c := clip.Copy{Text: text, Position: "bottom", Style: style, Accent: "coral"}
+	for _, style := range []string{"clean", "memo", "bold", "mark"} {
+		c := clip.Copy{Text: text, Anchor: "bottom", Align: "center", Style: style, Accent: "coral"}
 		l, err := fitCopy(canvas, c, [][]string{{text}}, bounds)
 		if err != nil {
 			t.Fatal(err)
@@ -85,7 +85,7 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	c := clip.Copy{Text: "one two", Style: "clean", Position: "top"}
+	c := clip.Copy{Text: "one two", Style: "clean", Anchor: "top", Align: "left"}
 	b := map[string]clip.Region{"one two": {Width: 2500, Height: 100}, "one ": {Width: 800, Height: 100}, "two": {Width: 800, Height: 100}}
 	l, err := fitCopy(canvas, c, [][]string{{"one two"}, {"one ", "two"}}, b)
 	if err != nil || len(l.Lines) != 2 || l.FontSize != 54 {
@@ -179,7 +179,7 @@ func TestRenderDoesNotLoadInvalidPlansOrLeakOnFailure(t *testing.T) {
 			a := newAdapter(t, fake)
 			r := testRenderer(t, a)
 			s := clip.RenderSource{ID: "source", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 20000, Width: 1920, Height: 1080}}
-			plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.EditCut{{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Style: "clean", Position: "bottom"}}}}
+			plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.EditCut{{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Style: "clean", Anchor: "bottom", Align: "center"}}}}
 			if mode == "invalid" {
 				plan.DurationMS = 14000
 			}

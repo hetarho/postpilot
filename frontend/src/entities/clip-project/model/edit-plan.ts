@@ -5,10 +5,15 @@ import {
   type CopyStyle,
 } from '@/entities/clip-template/@x/clip-project'
 
-export const COPY_POSITIONS = ['top', 'center', 'bottom'] as const
+/** A caption's VERTICAL anchor (CDS-12): the proto field is still called
+ *  `position`, and its three former values top/center/bottom are gone. */
+export const COPY_ANCHORS = ['top', 'upper_mid', 'lower_mid', 'bottom'] as const
+/** Horizontal alignment against that anchor. */
+export const COPY_ALIGNS = ['center', 'left', 'right'] as const
 export interface ClipCaption {
   text: string
-  position: (typeof COPY_POSITIONS)[number]
+  anchor: (typeof COPY_ANCHORS)[number]
+  align: (typeof COPY_ALIGNS)[number]
   style: CopyStyle
   accent: ClipAccent
   startMs: number
@@ -108,7 +113,7 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
       copyEnd:
         !integer(c.copy.endMs) ||
         (!whole && (c.copy.endMs <= c.copy.startMs || c.copy.endMs > duration)),
-      position: !COPY_POSITIONS.includes(c.copy.position),
+      anchor: !COPY_ANCHORS.includes(c.copy.anchor) || !COPY_ALIGNS.includes(c.copy.align),
       style: !COPY_STYLES.includes(c.copy.style) || !state.copyStyles.includes(c.copy.style),
       accent: !CLIP_ACCENTS.includes(c.copy.accent),
       volume: !integer(c.volumePermille) || c.volumePermille < 0 || c.volumePermille > 1000,

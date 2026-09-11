@@ -50,7 +50,7 @@ func TestComposeActualFailureTimingWithoutAnotherPaidCall(t *testing.T) {
 			}
 			original := wire["cuts"].([]any)[i].(map[string]any)
 			p := original["caption"].(map[string]any)
-			if c.SourceID != original["source_id"] || c.StartMS != original["start_ms"] || c.Copy.Text != p["text"] || c.Copy.StartMS != p["start_ms"] || c.Copy.Style != "diary" || c.Copy.Accent != "amber" || c.OriginalVolume() != 1 {
+			if c.SourceID != original["source_id"] || c.StartMS != original["start_ms"] || c.Copy.Text != p["text"] || c.Copy.StartMS != p["start_ms"] || c.Copy.Style != "memo" || c.Copy.Accent != "amber" || c.OriginalVolume() != 1 {
 				t.Fatal("lost selected footage, copy, style or original audio")
 			}
 		}

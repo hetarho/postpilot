@@ -27,6 +27,7 @@ import {
 } from '@/shared/api'
 import type { ClipRecipe } from '@/entities/clip-template'
 import {
+  clipPlanToProto,
   toClipEditingState,
   type ClipProject,
   type ClipProjectDraft,
@@ -91,9 +92,14 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       .filter((p) => !p.ownerId || p.ownerId === options.ownerId)
       .map((p) => [p.id, { ...p, answers: p.answers.map((a) => ({ ...a })) }]),
   )
+  // `editing` is the domain shape, whose caption carries an anchor; the wire
+  // still calls that field `position` (CDS-12), so it goes through the mapper.
   const projectProto = (p: FakeClipProject) =>
     create(ClipProjectSchema, {
       ...p,
+      editing: p.editing
+        ? create(ClipEditingStateSchema, { ...p.editing, plan: clipPlanToProto(p.editing.plan) })
+        : undefined,
       result: p.result ? { ...p.result, bytes: BigInt(p.result.bytes) } : undefined,
       latestJob: p.latestJob ? toFakeProto(p.latestJob) : undefined,
       createdAt: '2026-09-10T00:00:00Z',

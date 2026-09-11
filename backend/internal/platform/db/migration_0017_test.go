@@ -100,3 +100,6 @@ func TestMigration0017RescuesAPreStructuredStyleguide(t *testing.T) {
 		}
 	}
 }
+
+// A JSON helper the 0041 fixture shares; the db package has no other need for one.
+func jsonInto(raw string, out any) error { return json.Unmarshal([]byte(raw), out) }

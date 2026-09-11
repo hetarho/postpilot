@@ -55,7 +55,7 @@ func seedCompletedGeneration(t *testing.T, h *generationHarness) {
 		analyses = append(analyses, clip.SourceAnalysis{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: info}, Filename: s.Filename}, Segments: []clip.Segment{{EndMS: info.DurationMS, Event: "scene", Quality: "usable", Focal: clip.Point{X: .5, Y: .5}}}})
 	}
 	s := h.batch.Sources[0]
-	p := clip.EditPlan{Ratio: h.project.Ratio, DurationMS: h.project.TargetDurationMS, Cuts: []clip.Cut{{ID: "cut", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: h.project.TargetDurationMS, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "서울", Style: "clean", Position: "bottom"}}}}
+	p := clip.EditPlan{Ratio: h.project.Ratio, DurationMS: h.project.TargetDurationMS, Cuts: []clip.Cut{{ID: "cut", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: h.project.TargetDurationMS, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "서울", Style: "clean", Anchor: "bottom", Align: "center"}}}}
 	encoded, err := clip.EncodeEditPlan(p, h.template.CopyStyles)
 	if err != nil {
 		t.Fatal(err)

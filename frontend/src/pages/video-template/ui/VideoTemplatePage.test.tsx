@@ -59,7 +59,7 @@ describe('video template workflow', () => {
     await user.click(await region.findByRole('link', { name: /여행/ }))
     expect(await screen.findByLabelText('템플릿 이름')).toHaveValue('여행')
     expect(router.state.location.pathname).toBe('/video-templates/owned')
-    expect(screen.getAllByRole('img', { name: '오늘의 좋은 순간' })).toHaveLength(3)
+    expect(screen.getAllByRole('img', { name: '오늘의 좋은 순간' })).toHaveLength(4)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
   it('creates one complete recipe and keeps the saved route clean', async () => {
@@ -92,12 +92,16 @@ describe('video template workflow', () => {
     await user.click(screen.getByRole('button', { name: '정보 2 삭제' }))
     await user.click(screen.getByRole('checkbox', { name: '깔끔하게' }))
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
-    await user.click(screen.getByRole('checkbox', { name: '기록처럼' }))
+    // 메모 alone is still refused: every CDS fallback lands on 깔끔하게, so an
+    // approved set without it could not render.
+    await user.click(screen.getByRole('checkbox', { name: '메모' }))
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: '깔끔하게' }))
     await user.click(screen.getByRole('button', { name: '저장' }))
     await screen.findByText('저장했어요')
     expect(writes[0]).toMatchObject({
       informationFields: [{ label: '음식', prompt: '무엇을 먹었나요?' }],
-      copyStyles: ['diary'],
+      copyStyles: ['memo', 'clean'],
     })
   })
   it('keeps edits after a localized server refusal', async () => {

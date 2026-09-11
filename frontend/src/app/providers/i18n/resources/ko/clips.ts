@@ -44,7 +44,7 @@ export const clips = {
     copyStart: '자막 시작 (컷 내 ms)',
     copyEnd: '자막 끝 (컷 내 ms)',
     position: '자막 위치',
-    positions: { top: '상단', center: '가운데', bottom: '하단' },
+    anchors: { top: '상단', upper_mid: '위쪽 중간', lower_mid: '아래쪽 중간', bottom: '하단' },
     volume: '원본 소리 (%)',
     rangeError: '원본의 0~{{max}} ms 안에서 시작보다 끝이 늦어야 해요.',
     cutDurationError: '컷 길이는 {{min}} ms보다 길어야 해요.',
@@ -235,7 +235,7 @@ export const clips = {
     leaveBody: '저장하지 않은 영상 템플릿 변경사항이 사라져요.',
     leave: '나가기',
   },
-  style: { clean: '깔끔하게', diary: '기록처럼', emphasis: '강조형' },
+  style: { clean: '깔끔하게', memo: '메모', bold: '크게 강조', mark: '형광펜' },
   accent: {
     none: '기본',
     coral: '코랄',

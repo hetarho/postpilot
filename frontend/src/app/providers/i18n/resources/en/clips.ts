@@ -46,7 +46,7 @@ export const clips = {
     copyStart: 'Caption start (cut ms)',
     copyEnd: 'Caption end (cut ms)',
     position: 'Caption position',
-    positions: { top: 'Top', center: 'Center', bottom: 'Bottom' },
+    anchors: { top: 'Top', upper_mid: 'Upper middle', lower_mid: 'Lower middle', bottom: 'Bottom' },
     volume: 'Original audio (%)',
     rangeError: 'Keep start before end within the source’s 0–{{max}} ms.',
     cutDurationError: 'Each cut must be longer than {{min}} ms.',
@@ -241,7 +241,7 @@ export const clips = {
     leaveBody: 'Your unsaved video template changes will be lost.',
     leave: 'Leave',
   },
-  style: { clean: 'Clean', diary: 'Diary', emphasis: 'Emphasis' },
+  style: { clean: 'Clean', memo: 'Memo', bold: 'Bold', mark: 'Highlight' },
   accent: {
     none: 'Neutral',
     coral: 'Coral',

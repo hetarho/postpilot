@@ -477,7 +477,7 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			var cuts []any
 			for i, analysis := range analyses {
-				cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": analysis.(map[string]any)["source_id"], "start_ms": 0, "end_ms": lengths[i], "volume": 1, "focal": map[string]float64{"x": .5, "y": .5}, "caption": map[string]any{"text": fmt.Sprintf("한글 장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "position": "bottom", "style": "diary", "accent": "amber"}})
+				cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": analysis.(map[string]any)["source_id"], "start_ms": 0, "end_ms": lengths[i], "volume": 1, "focal": map[string]float64{"x": .5, "y": .5}, "caption": map[string]any{"text": fmt.Sprintf("한글 장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "position": "bottom", "style": "memo", "accent": "amber"}})
 			}
 			content.(map[string]any)["cuts"] = cuts
 			if p.mode == "multi-source-timing" {

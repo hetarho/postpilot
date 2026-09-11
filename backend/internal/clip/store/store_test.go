@@ -37,7 +37,7 @@ func setup(t *testing.T) (*clip.Service, *store.Store, *db.DB) {
 	return clip.NewService(s, config.ClipLimits()), s, d
 }
 func recipe() clip.Recipe {
-	return clip.Recipe{Name: " 여행 ", InformationFields: []clip.InformationField{{Label: " 장소 ", Prompt: " 어디였나요? "}}, CopyStyles: []string{"clean", "diary"}, Accent: "teal"}
+	return clip.Recipe{Name: " 여행 ", InformationFields: []clip.InformationField{{Label: " 장소 ", Prompt: " 어디였나요? "}}, CopyStyles: []string{"clean", "memo"}, Accent: "teal"}
 }
 func create(t *testing.T, s *clip.Service) (clip.VideoTemplate, clip.Project) {
 	t.Helper()

@@ -117,7 +117,9 @@ func (x *ClipInformationFields) GetValues() []*ClipInformationField {
 	return nil
 }
 
-// Stable style ids: clean, diary, emphasis.
+// Stable style ids, one per role: clean (깔끔하게) narrative, memo (메모) fact,
+// bold (크게 강조) emotion and hook, mark (형광펜) one number or keyword. A
+// template's approved set always contains clean: every fallback lands on it.
 type ClipCopyStyles struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Values        []string               `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
@@ -2582,13 +2584,19 @@ func (x *QuoteClipGenerationResponse) GetPricedCalls() []*ClipPricedCall {
 }
 
 type ClipCaption struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
-	Position      string                 `protobuf:"bytes,2,opt,name=position,proto3" json:"position,omitempty"`
-	Style         string                 `protobuf:"bytes,3,opt,name=style,proto3" json:"style,omitempty"`
-	Accent        string                 `protobuf:"bytes,4,opt,name=accent,proto3" json:"accent,omitempty"`
-	StartMs       int32                  `protobuf:"varint,5,opt,name=start_ms,json=startMs,proto3" json:"start_ms,omitempty"`
-	EndMs         int32                  `protobuf:"varint,6,opt,name=end_ms,json=endMs,proto3" json:"end_ms,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Text  string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	// The caption's VERTICAL anchor: top, upper_mid, lower_mid or bottom. The
+	// field keeps its number through the vocabulary change; the three former
+	// values top/center/bottom no longer exist, and center became lower_mid.
+	Position string `protobuf:"bytes,2,opt,name=position,proto3" json:"position,omitempty"`
+	Style    string `protobuf:"bytes,3,opt,name=style,proto3" json:"style,omitempty"`
+	Accent   string `protobuf:"bytes,4,opt,name=accent,proto3" json:"accent,omitempty"`
+	StartMs  int32  `protobuf:"varint,5,opt,name=start_ms,json=startMs,proto3" json:"start_ms,omitempty"`
+	EndMs    int32  `protobuf:"varint,6,opt,name=end_ms,json=endMs,proto3" json:"end_ms,omitempty"`
+	// Horizontal alignment against the anchor: center, left or right. Separate
+	// from the anchor because the anchor-step rule reasons over the anchor alone.
+	Align         string `protobuf:"bytes,7,opt,name=align,proto3" json:"align,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2663,6 +2671,13 @@ func (x *ClipCaption) GetEndMs() int32 {
 		return x.EndMs
 	}
 	return 0
+}
+
+func (x *ClipCaption) GetAlign() string {
+	if x != nil {
+		return x.Align
+	}
+	return ""
 }
 
 type ClipEditCut struct {
@@ -3419,14 +3434,15 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"maxCredits\x12\x1d\n" +
 	"\n" +
 	"expires_at\x18\x03 \x01(\tR\texpiresAt\x12?\n" +
-	"\fpriced_calls\x18\x04 \x03(\v2\x1c.postpilot.v1.ClipPricedCallR\vpricedCalls\"\x9d\x01\n" +
+	"\fpriced_calls\x18\x04 \x03(\v2\x1c.postpilot.v1.ClipPricedCallR\vpricedCalls\"\xb3\x01\n" +
 	"\vClipCaption\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12\x1a\n" +
 	"\bposition\x18\x02 \x01(\tR\bposition\x12\x14\n" +
 	"\x05style\x18\x03 \x01(\tR\x05style\x12\x16\n" +
 	"\x06accent\x18\x04 \x01(\tR\x06accent\x12\x19\n" +
 	"\bstart_ms\x18\x05 \x01(\x05R\astartMs\x12\x15\n" +
-	"\x06end_ms\x18\x06 \x01(\x05R\x05endMs\"\xe6\x01\n" +
+	"\x06end_ms\x18\x06 \x01(\x05R\x05endMs\x12\x14\n" +
+	"\x05align\x18\a \x01(\tR\x05align\"\xe6\x01\n" +
 	"\vClipEditCut\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12 \n" +

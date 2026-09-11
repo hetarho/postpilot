@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 type Service struct {
@@ -43,16 +45,26 @@ func bounded(s string, min, max int) bool {
 	n := utf8.RuneCountInString(s)
 	return utf8.ValidString(s) && n >= min && n <= max
 }
+
+// Empty is neutral; the seven others are the CDS-15 palette, one per project.
 func ValidAccent(s string) bool {
-	return slices.Contains([]string{"", "coral", "amber", "lime", "teal", "blue", "violet", "pink"}, s)
+	if s == "" {
+		return true
+	}
+	_, ok := design.Accent[s]
+	return ok
 }
+
+// A template approves a subset of the four CDS-22 styles and must always keep
+// 깔끔하게: every CDS fallback — a 메모 over its limit, a third 크게 강조, a
+// 형광펜 with two keywords, a pairing under 4.5:1 — lands on it.
 func ValidCopyStyles(values []string) bool {
-	if len(values) == 0 || len(values) > 3 {
+	if len(values) == 0 || len(values) > len(design.Styles) || !slices.Contains(values, "clean") {
 		return false
 	}
 	seen := map[string]bool{}
 	for _, s := range values {
-		if seen[s] || !slices.Contains([]string{"clean", "diary", "emphasis"}, s) {
+		if _, ok := design.Styles[s]; seen[s] || !ok {
 			return false
 		}
 		seen[s] = true

@@ -27,7 +27,8 @@ export {
   useClipProjectMutations,
 } from './api/clip-project'
 export {
-  COPY_POSITIONS,
+  COPY_ANCHORS,
+  COPY_ALIGNS,
   copyClipPlan,
   editClipPlan,
   requiredClipSources,

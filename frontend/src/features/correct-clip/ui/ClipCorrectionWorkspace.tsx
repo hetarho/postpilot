@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { COPY_POSITIONS, type ClipEditCut, type ClipEditingState } from '@/entities/clip-project'
+import { COPY_ANCHORS, type ClipEditCut, type ClipEditingState } from '@/entities/clip-project'
 import { CLIP_ACCENTS, CopyStylePreview } from '@/entities/clip-template'
 import type { AppFailure } from '@/shared/api'
 import {
@@ -279,20 +279,20 @@ export function ClipCorrectionWorkspace({
                       {t('correction.captionWindowHelp')}
                     </Typography>
                     <div>
-                      <FieldLabel id={`${prefix}-position-label`} htmlFor={`${prefix}-position`}>
+                      <FieldLabel id={`${prefix}-anchor-label`} htmlFor={`${prefix}-anchor`}>
                         {t('correction.position')}
                       </FieldLabel>
                       <Listbox
-                        id={`${prefix}-position`}
-                        aria-labelledby={`${prefix}-position-label`}
-                        value={cut.copy.position}
+                        id={`${prefix}-anchor`}
+                        aria-labelledby={`${prefix}-anchor-label`}
+                        value={cut.copy.anchor}
                         disabled={busy}
-                        onChange={(position) =>
-                          patch({ type: 'copy', id: cut.id, patch: { position } })
+                        onChange={(anchor) =>
+                          patch({ type: 'copy', id: cut.id, patch: { anchor } })
                         }
-                        options={COPY_POSITIONS.map((value) => ({
+                        options={COPY_ANCHORS.map((value) => ({
                           value,
-                          label: t(`correction.positions.${value}`),
+                          label: t(`correction.anchors.${value}`),
                         }))}
                       />
                     </div>

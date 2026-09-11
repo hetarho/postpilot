@@ -12,7 +12,8 @@ export function clipEditingFixture(): ClipEditingState {
         endMs: 10000,
         copy: {
           text: `caption ${id}`,
-          position: 'bottom',
+          anchor: 'bottom',
+          align: 'center',
           style: 'clean',
           accent: '',
           startMs: 0,
@@ -29,7 +30,7 @@ export function clipEditingFixture(): ClipEditingState {
       width: 1920,
       height: 1080,
     })),
-    copyStyles: ['clean', 'diary', 'emphasis'],
+    copyStyles: ['clean', 'memo', 'bold'],
     fadeMs: 200,
     maxCuts: 100,
     maxCopyRunes: 500,

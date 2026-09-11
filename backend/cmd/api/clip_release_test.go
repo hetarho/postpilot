@@ -269,7 +269,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	recipe := clip.Recipe{Name: "synthetic release", InformationFields: []clip.InformationField{{Label: "place", Prompt: "where"}}, CopyStyles: []string{"clean"}}
 	ratio := "horizontal"
 	if strings.HasPrefix(mode, "multi-source") {
-		recipe.CopyStyles, recipe.Accent, recipe.CutGuidance, ratio = []string{"diary"}, "amber", "균등분할", "vertical"
+		recipe.CopyStyles, recipe.Accent, recipe.CutGuidance, ratio = []string{"clean", "memo"}, "amber", "균등분할", "vertical"
 	}
 	template, err := projects.CreateTemplate(ctx, "release-user", recipe)
 	if err != nil {

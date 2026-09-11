@@ -1,4 +1,9 @@
-import { COPY_STYLE_MEASUREMENTS, type ClipAccent, type CopyStyle } from '../model/types'
+import {
+  COPY_STYLE_MEASUREMENTS,
+  PLATED_COPY_STYLES,
+  type ClipAccent,
+  type CopyStyle,
+} from '../model/types'
 
 const accentClasses: Record<ClipAccent, string> = {
   '': 'fill-clip-white',
@@ -31,14 +36,14 @@ export function CopyStylePreview({
       data-copy-style={style}
     >
       <rect width="1080" height="240" className="fill-surface-recessed" />
-      {style !== 'emphasis' && (
+      {PLATED_COPY_STYLES.includes(style) && (
         <rect
           x="72"
           y="48"
           width="936"
           height="144"
           rx={recipe.radius}
-          className={style === 'diary' ? 'fill-clip-paper' : 'fill-clip-ink'}
+          className={style === 'memo' ? 'fill-clip-paper' : 'fill-clip-ink'}
           fillOpacity={style === 'clean' ? 0.78 : 1}
         />
       )}
@@ -53,13 +58,13 @@ export function CopyStylePreview({
         fontSize={recipe.fontSize}
         fontWeight={recipe.weight}
         className={
-          style === 'diary'
+          style === 'memo'
             ? 'fill-clip-ink'
-            : style === 'emphasis'
+            : !PLATED_COPY_STYLES.includes(style)
               ? 'fill-clip-white stroke-clip-ink'
               : 'fill-clip-white'
         }
-        strokeWidth={style === 'emphasis' ? 8 : 0}
+        strokeWidth={PLATED_COPY_STYLES.includes(style) ? 0 : 8}
         paintOrder="stroke fill"
       >
         {text}

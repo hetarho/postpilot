@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -50,6 +51,11 @@ type chunkJSON struct {
 	Index    *int           `json:"chunk_index"`
 	Segments *[]segmentJSON `json:"segments"`
 }
+
+// The model chooses the vertical anchor only. The alignment is the style's own
+// (CDS-23..26) until CDS-38's deterministic selection replaces both in T105.
+func defaultAlign(style string) string { return design.Styles[style].Align }
+
 type captionJSON struct {
 	Text     *string `json:"text"`
 	Start    *int    `json:"start_ms"`
@@ -220,7 +226,7 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 				return clip.EditPlan{}, outputError("plan_volume")
 			}
 		}
-		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Copy: clip.Caption{Text: *p.Text, StartMS: *p.Start, EndMS: *p.End, Position: *p.Position, Style: *p.Style, Accent: *p.Accent}})
+		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Copy: clip.Caption{Text: *p.Text, StartMS: *p.Start, EndMS: *p.End, Anchor: *p.Position, Align: defaultAlign(*p.Style), Style: *p.Style, Accent: *p.Accent}})
 	}
 	if err := composeTimeline(cfg, input, &result); err != nil {
 		return clip.EditPlan{}, err

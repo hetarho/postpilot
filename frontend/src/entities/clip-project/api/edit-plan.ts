@@ -6,7 +6,8 @@ import {
 } from '@/entities/clip-template/@x/clip-project'
 import type { ProtoClipEditingState } from '@/shared/api'
 import {
-  COPY_POSITIONS,
+  COPY_ALIGNS,
+  COPY_ANCHORS,
   type ClipCaption,
   type ClipEditingState,
   type ClipEditPlan,
@@ -23,7 +24,8 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
         const copy = c.copy
         if (
           !copy ||
-          !COPY_POSITIONS.includes(copy.position as ClipCaption['position']) ||
+          !COPY_ANCHORS.includes(copy.position as ClipCaption['anchor']) ||
+          !COPY_ALIGNS.includes(copy.align as ClipCaption['align']) ||
           !COPY_STYLES.includes(copy.style as CopyStyle) ||
           !CLIP_ACCENTS.includes(copy.accent as ClipAccent)
         )
@@ -39,7 +41,8 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
             text: copy.text,
             startMs: copy.startMs,
             endMs: copy.endMs,
-            position: copy.position as ClipCaption['position'],
+            anchor: copy.position as ClipCaption['anchor'],
+            align: copy.align as ClipCaption['align'],
             style: copy.style as CopyStyle,
             accent: copy.accent as ClipAccent,
           },
@@ -72,7 +75,9 @@ export function clipPlanToProto(plan: ClipEditPlan) {
       startMs: c.startMs,
       endMs: c.endMs,
       volumePermille: c.volumePermille,
-      copy: { ...c.copy },
+      // `position` carries the anchor on the wire; the field kept its number
+      // through the vocabulary change (CDS-12).
+      copy: { ...c.copy, position: c.copy.anchor },
     })),
   }
 }

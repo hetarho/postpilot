@@ -46,9 +46,12 @@ func TestRecordedMultiSourcePlans(t *testing.T) {
 }
 
 func multiSourcePlan() (clip.PlanningInput, map[string]any) {
-	in := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "여덟 장면", CopyStyles: []string{"diary"}, Accent: "amber"}, Ratio: "vertical", TargetDurationMS: 15000}
+	in := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "여덟 장면", CopyStyles: []string{"clean", "memo"}, Accent: "amber"}, Ratio: "vertical", TargetDurationMS: 15000}
 	durations := []int{4290, 3744, 1480, 5010, 5108, 4508, 5428, 6702}
-	lengths := []int{2000, 2000, 1000, 2400, 2300, 2300, 2200, 2200}
+	// The third cut is 1200 ms, not 1000: a three-character copy earns 1170 ms of
+	// exposure (CDS-41) and a cut cannot be shorter than the copy it carries. The
+	// eight still sum to 16400, the fade timeline's 15000.
+	lengths := []int{2000, 2000, 1200, 2200, 2300, 2300, 2200, 2200}
 	var cuts []any
 	for i, duration := range durations {
 		id := fmt.Sprintf("%032x", i+1)
@@ -61,7 +64,7 @@ func multiSourcePlan() (clip.PlanningInput, map[string]any) {
 			Segments: []clip.Segment{{EndMS: duration, Event: "합성 도형이 움직인다", Subjects: []string{"도형"}, Quality: "sharp", Focal: clip.Point{X: .5, Y: .5}}},
 		})
 		cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": id, "start_ms": 0, "end_ms": lengths[i], "volume": 1,
-			"focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": fmt.Sprintf("장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "position": "bottom", "style": "diary", "accent": "amber"}})
+			"focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": fmt.Sprintf("장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "position": "bottom", "style": "memo", "accent": "amber"}})
 	}
 	return in, map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
 }
@@ -80,7 +83,7 @@ func TestEightShortSourcesComposeWithExactFadeTimeline(t *testing.T) {
 		total := 0
 		for i, cut := range got.Cuts {
 			total += cut.EndMS - cut.StartMS
-			if cut.SourceID != in.Analyses[i].Source.ID || cut.EndMS > in.Analyses[i].Source.Info.DurationMS || cut.Copy.Style != "diary" || cut.Copy.Accent != "amber" {
+			if cut.SourceID != in.Analyses[i].Source.ID || cut.EndMS > in.Analyses[i].Source.Info.DurationMS || cut.Copy.Style != "memo" || cut.Copy.Accent != "amber" {
 				t.Fatal("lost source or approved styling", i)
 			}
 		}
@@ -100,7 +103,7 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 		{"source identity", "plan_source", func(v map[string]any) { firstCut(v)["source_id"] = "private-canary" }},
 		{"duplicate cut", "plan_cut_identity", func(v map[string]any) { v["cuts"].([]any)[1].(map[string]any)["id"] = firstCut(v)["id"] }},
 		{"ratio", "plan_ratio", func(v map[string]any) { v["ratio"] = "horizontal" }},
-		{"style", "plan_style", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["style"] = "clean" }},
+		{"style", "plan_style", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["style"] = "bold" }},
 		{"accent", "plan_accent", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["accent"] = "coral" }},
 		{"shape", "output_shape", func(v map[string]any) { v["private-canary"] = "private-canary" }},
 		{"field type", "output_field_type", func(v map[string]any) { firstCut(v)["start_ms"] = 1.5 }},

@@ -17,10 +17,18 @@ bounds. The minimum-size failure is `CLIP_COPY_TOO_LONG`; unsupported glyphs and
 control characters are invalid input, never substituted images or fonts.
 Pretendard is pinned with its OFL notice in `backend/assets/fonts/pretendard`.
 Style sizes, weights, padding, radius and accents match the T070 preview contract.
+The four style ids are clean, memo, bold and mark; every approved set keeps clean,
+because every design-system fallback lands on it.
 
-The three product-owned safe regions are deliberately conservative, not a claim
-about an exact Naver overlay layout. Captions can only occupy top, center or bottom
-within the region; an AI avoid region chooses among those same positions. Source
+The three safe areas and every placement number come from one embedded
+configuration file, `internal/clip/design/design.json`, which the frontend mirrors
+byte for byte; nothing here is a literal. 9:16 is the cross-platform intersection
+SA-C (64, 250, 856, 1170), 16:9 is (96, 72, 1728, 936) and 1:1 is (64, 72, 952,
+936). A caption resolves one of four vertical anchors (top, upper_mid, lower_mid,
+bottom) and one alignment (center, left, right) to a plate region, and a region
+that would leave the safe area by any pixel is refused rather than nudged — 9:16's
+safe area is deliberately off-centre, so a full-width centred plate misses it. An
+AI avoid region chooses among those same four anchors. Source
 focal points drive cover-cropping, never stretch-to-fit. Times are integer ms until
 the binary boundary. The plan duration is `sum(cut durations) - 200*(cuts-1)`.
 Cumulative frame rounding avoids per-cut rounding drift at constant 30 fps.

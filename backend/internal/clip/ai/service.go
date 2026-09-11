@@ -167,11 +167,11 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 			}
 			return clip.EditPlan{}, response.Usage, stageError("plan", err)
 		}
-		position, err := clip.PickCopyPosition(canvas, cut.Copy.Position, width, height, clip.CaptionAvoid(canvas, cut, byID[cut.SourceID]))
+		anchor, err := clip.PickCopyAnchor(canvas, cut.Copy.Anchor, cut.Copy.Align, width, height, clip.CaptionAvoid(canvas, cut, byID[cut.SourceID]))
 		if err != nil {
 			return clip.EditPlan{}, response.Usage, stageError("plan", err)
 		}
-		result.Cuts[i].Copy.Position = position
+		result.Cuts[i].Copy.Anchor = anchor
 	}
 	return result, response.Usage, nil
 }
